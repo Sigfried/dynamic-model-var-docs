@@ -20,11 +20,12 @@ Interactive documentation browser for the BioData Catalyst Harmonized Model (BDC
 - **Variable Specifications**: [Variable specs Table S1](https://docs.google.com/spreadsheets/d/1PDaX266_H0haa0aabMYQ6UNtEKT5-ClMarP0FvNntN8/edit?gid=0#gid=0) (saved locally as `public/source_data/HV/variable-specs-S1.tsv`)
 
 ### Model Overview
-- **49 classes** organized in inheritance hierarchy from root `Entity` class
+- **47 classes** in the BDCHM schema
 - **7 slots** (shared attributes across classes)
 - **40 enums** (constrained value sets)
-- **152 variables** mapped to model classes
-  - Distribution is heavily skewed: 114 variables map to `MeasurementObservation` alone
+- **151 variables** mapped to model classes
+  - Distribution is heavily skewed: 103 variables (68%) map to `MeasurementObservation`
+  - Other concentrations: 20 → Condition, 17 → DrugExposure, 3 → Demography, 3 → Procedure
 
 ## Development
 

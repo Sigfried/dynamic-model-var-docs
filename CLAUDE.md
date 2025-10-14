@@ -18,12 +18,13 @@ Interactive documentation for the BioData Catalyst Harmonized Model (BDCHM), a L
   - Must manually sync TSV with spreadsheet when updated
 
 ### Data Model Statistics
-- **49 classes** (organized in inheritance hierarchy from root Entity class)
+- **47 classes** in the schema
 - **7 slots** (shared attributes across classes)
 - **40 enums** (constrained value sets)
-- **152 variables** mapping to model classes
-  - Heavily skewed distribution: 114 variables → MeasurementObservation (75%!)
-  - Other concentrations: 12 → Condition, 11 → Drug Exposure, 5 → Demography
+- **151 variables** mapping to model classes
+  - Heavily skewed distribution: 103 variables → MeasurementObservation (68%)
+  - Other concentrations: 20 → Condition, 17 → DrugExposure, 3 → Demography, 3 → Procedure
+  - Plus: 2 → SDoHObservation, 2 → Person, 1 → Observation
 
 ## Architecture Decisions
 
@@ -55,24 +56,33 @@ This is a **hierarchical data model**, not an arbitrary network. The class hiera
 ## Data Processing Notes
 
 ### Class Hierarchy
-- Root: `Entity` (abstract)
-- Major branches:
-  - Person → Participant pathway
-  - Specimen (with related activity classes)
-  - Observation → MeasurementObservation, SdohObservation, etc.
-  - Exposure → DrugExposure, DeviceExposure
-  - Clinical: Condition, Procedure, Visit
-  - Administrative: ResearchStudy, Organization, Consent
+The schema uses a shallow hierarchy with several root-level classes:
+- **Observation family**: Observation → MeasurementObservation, SdohObservation, etc.
+- **Exposure family**: Exposure → DrugExposure, DeviceExposure
+- **Person/Participant**: Person → Participant (demographics)
+- **Specimen family**: Specimen + related activity classes (SpecimenCreationActivity, etc.)
+- **Clinical**: Condition, Procedure, Visit
+- **Administrative**: ResearchStudy, Organization, Consent
+- **Data structures**: ObservationSet, MeasurementObservationSet, etc.
+
+**Implementation Notes**:
+- The current parent detection uses name-based heuristics (e.g., "MeasurementObservation" contains "Observation" → parent)
+- This should ideally be replaced with proper inheritance parsing from the schema's `allOf` or similar constructs
+- The schema has no single root "Entity" class - multiple top-level classes exist
+- Consider whether adding a synthetic root node would improve navigation UX
 
 ### Variable Distribution
-The mapping is heavily concentrated:
-- 114 variables → MeasurementObservation (75% of all variables!)
-- 12 → Condition
-- 11 → Drug Exposure
-- 5 → Demography
-- Rest distributed across other classes
+The mapping is heavily concentrated in MeasurementObservation:
+- **103 variables → MeasurementObservation (68% of all variables!)**
+- 20 → Condition
+- 17 → DrugExposure
+- 3 → Demography
+- 3 → Procedure
+- 2 → SDoHObservation
+- 2 → Person
+- 1 → Observation
 
-This concentration needs special handling in the UI to avoid overwhelming users.
+This concentration requires special UI handling to avoid overwhelming users when viewing MeasurementObservation.
 
 ## Implementation Status
 
@@ -146,10 +156,11 @@ This concentration needs special handling in the UI to avoid overwhelming users.
 ## Special Considerations
 
 ### MeasurementObservation Concentration
-With 114 variables (75% of total) mapped to a single class, special UI treatment is needed:
+With 103 variables (68% of total) mapped to a single class, special UI treatment is needed:
 - Pagination or virtualization for variable lists
-- Grouping/filtering within the class
+- Grouping/filtering within the class (e.g., by measurement type, body system)
 - Visual indicators of density in tree view
+- Consider sub-categorization by CURIE prefix or variable type
 
 ### Future Enhancements to Consider
 - Permalink/URL state for sharing specific views

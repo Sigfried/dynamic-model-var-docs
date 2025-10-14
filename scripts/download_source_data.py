@@ -14,7 +14,7 @@ from urllib import request
 from urllib.error import URLError, HTTPError
 
 
-local_source_dir = "source_data"
+local_source_dir = "public/source_data"
 repo_sources = {
     "HM": {         # dependency_name
         "repo": "RTIInternational/NHLBI-BDC-DMC-HM",
