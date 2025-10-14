@@ -1,21 +1,29 @@
-# CLAUDE.md - LinkML Interactive Documentation Project
+# CLAUDE.md - Development Guide
 
 ## Project Overview
-Building interactive documentation for a LinkML data model (BioData Catalyst Harmonized Model - BDCHM) that bidirectionally connects model elements to variable specifications.
+Interactive documentation for the BioData Catalyst Harmonized Model (BDCHM), a LinkML data model. The application provides bidirectional navigation between model classes and variable specifications.
 
-**Tech Stack**: React + Vite + D3.js (minimal, for specific visualizations only)
+**Tech Stack**: React + TypeScript + Vite + Tailwind CSS + D3.js (minimal)
 
-## Data Model Stats
+## Data Files and Updates
+
+### Primary Data Sources
+- **Model Schema**: Use `generated/bdchm.schema.json` (generated from `bdchm.yaml`)
+  - Source: [BDCHM GitHub](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/blob/main/generated/bdchm.schema.json)
+  - Generated on push to main via GitHub Actions workflow
+  - Uses LinkML's `gen-json-schema` tool
+
+- **Variable Specifications**: `source_data/variable-specs-S1.tsv`
+  - Source: [Variable specs Table S1 (Google Sheet)](https://docs.google.com/spreadsheets/d/1PDaX266_H0haa0aabMYQ6UNtEKT5-ClMarP0FvNntN8/edit?gid=0#gid=0)
+  - Must manually sync TSV with spreadsheet when updated
+
+### Data Model Statistics
 - **49 classes** (organized in inheritance hierarchy from root Entity class)
 - **7 slots** (shared attributes across classes)
 - **40 enums** (constrained value sets)
-- **152 variables** mapping to model classes (heavily skewed: 114 → MeasurementObservation)
-
-## Core Files
-- `bdchm.yaml` - LinkML schema definition, source of model truth. But actually use
-                 the generated json file for the application:
-  - `generated/bdchm.schema.json`
-- `variable-specs-S1.tsv` - Variable specifications with mappings to BDCHM classes
+- **152 variables** mapping to model classes
+  - Heavily skewed distribution: 114 variables → MeasurementObservation (75%!)
+  - Other concentrations: 12 → Condition, 11 → Drug Exposure, 5 → Demography
 
 ## Architecture Decisions
 
@@ -66,51 +74,85 @@ The mapping is heavily concentrated:
 
 This concentration needs special handling in the UI to avoid overwhelming users.
 
-## Implementation Plan
+## Implementation Status
 
-### Phase 1: Core Two-Panel Layout
-1. Load model schema
-2. Parse TSV variable specs
-3. Build class hierarchy tree (left panel)
-4. Build detail view (right panel)
-5. Wire up selection/navigation
+### Phase 1: Core Two-Panel Layout ✓ COMPLETE
+- Schema loading and parsing
+- TSV variable spec parsing
+- Class hierarchy tree component (left panel)
+- Detail view component (right panel)
+- Selection/navigation wiring
+- Basic styling with Tailwind
 
-### Phase 2: Search and Filter
-1. Full-text search across classes and variables
-2. Filter by class type, variable count, etc.
-3. Highlight search results in tree
+**Current structure:**
+- `App.tsx`: Main container with two-panel layout
+- `ClassTree.tsx`: Collapsible tree view of class hierarchy
+- `DetailView.tsx`: Class details and variable list
+- `dataLoader.ts`: Schema/TSV loading and hierarchy building
+- `types.ts`: TypeScript type definitions
 
-### Phase 3: Enhanced Details
-1. Show class attributes, slots used, enums referenced
-2. Show variable specs with sortable table
-3. Add bidirectional links (from variable back to class)
+### Phase 2: Search and Filter (TODO)
+- Full-text search across classes and variables
+- Filter by class type, variable count, etc.
+- Highlight search results in tree
+- Search/filter UI in header
 
-### Phase 4: Optional Advanced Views
-1. Bipartite graph for filtered subsets
-2. Enum usage matrix
-3. Export/permalink functionality
+### Phase 3: Enhanced Details (TODO)
+- Show class attributes, slots used, enums referenced
+- Sortable/filterable variable tables
+- Bidirectional links (from variable back to class)
+- Show inheritance chains
+
+### Phase 4: Optional Advanced Views (TODO)
+- Bipartite graph for filtered subsets
+- Enum usage matrix
+- Export/permalink functionality
 
 ## Development Guidelines
+
+### Code Style
+- Use ES modules (import/export) syntax, not CommonJS
+- TypeScript for type safety
+- Destructure imports when possible
+- Component-based architecture (small, reusable React components)
+
+### Priorities
 - **Time-constrained**: Prioritize working over perfect
-- **Component reusability**: Break down complex views into simple React components
-- **Minimal D3**: Only use D3 where React alone is insufficient (e.g., specific layouts)
+- **Usability over "cool"**: Focus on practical exploration tools, not flashy visualizations
+- **Minimal D3**: Only use D3 where React alone is insufficient (e.g., force layouts, specific graph algorithms)
 - **Tailwind CSS**: For rapid styling without CSS wrestling
 
-## Key User Questions to Answer
-- "What classes use this enum?"
-- "What's the inheritance chain for Specimen?"
-- "Show me everything related to observations"
-- "Which variables map to Condition class?"
-- "What are the units/data types for these measurements?"
+### Testing and Type Checking
+- Run `npm run build` or type checker after significant changes
+- Prefer running single tests when available
 
-## Constraints and Assumptions
-- No cycles expected in the data model
-- Single inheritance only (class hierarchy is a tree)
-- Variable-to-class mapping is many-to-one (multiple variables can map to same class)
+## Technical Constraints and Assumptions
+
+### Data Model Structure
+- **Single inheritance**: Class hierarchy is a tree, not a DAG (no multiple inheritance in practice)
+- **No cycles**: Model is acyclic
+- **Many-to-one variable mapping**: Multiple variables can map to same class
+- **Bipartite structure**: Variables-to-classes creates a bipartite graph when visualized
+
+### User Expectations
 - Users are domain experts who understand LinkML concepts
+- Need to answer questions like:
+  - "What classes use this enum?"
+  - "What's the inheritance chain for Specimen?"
+  - "Show me everything related to observations"
+  - "Which variables map to Condition class?"
+  - "What are the units/data types for these measurements?"
 
-## Notes
-- Vite for fast iteration and HMR
-- Focus on usability over "cool" visualizations
-- Build for exploration since specific use cases are vague
-- MeasurementObservation might need special UI treatment due to variable concentration
+## Special Considerations
+
+### MeasurementObservation Concentration
+With 114 variables (75% of total) mapped to a single class, special UI treatment is needed:
+- Pagination or virtualization for variable lists
+- Grouping/filtering within the class
+- Visual indicators of density in tree view
+
+### Future Enhancements to Consider
+- Permalink/URL state for sharing specific views
+- Export functionality (JSON, CSV, etc.)
+- Enum usage matrix showing class-enum relationships
+- Bipartite graph for filtered subsets of classes/variables
