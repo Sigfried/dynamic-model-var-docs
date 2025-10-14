@@ -1,41 +1,84 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState, useEffect } from 'react';
+import ClassTree from './components/ClassTree';
+import DetailView from './components/DetailView';
+import { loadSchema, loadVariableSpecs, buildClassHierarchy } from './utils/dataLoader';
+import type { ClassNode } from './types';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [classHierarchy, setClassHierarchy] = useState<ClassNode[]>([]);
+  const [selectedClass, setSelectedClass] = useState<ClassNode>();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>();
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setLoading(true);
+        const [schema, variables] = await Promise.all([
+          loadSchema(),
+          loadVariableSpecs()
+        ]);
+
+        const hierarchy = buildClassHierarchy(schema, variables);
+        setClassHierarchy(hierarchy);
+        setLoading(false);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load data');
+        setLoading(false);
+      }
+    }
+
+    loadData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="text-xl font-semibold mb-2">Loading BDCHM Model...</div>
+          <div className="text-gray-500">Please wait</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="text-xl font-semibold mb-2 text-red-600">Error</div>
+          <div className="text-gray-700">{error}</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <>
-        <div
-            className="mx-auto flex max-w-sm items-center gap-x-4 rounded-xl bg-white p-6 shadow-lg outline outline-black/5 dark:bg-slate-800 dark:shadow-none dark:-outline-offset-1 dark:outline-white/10">
-            <div>
-                <div className="text-xl font-medium text-black dark:text-white">ChitChat</div>
-                <p className="text-xl text-blue-700">You have a new message!</p>
-            </div>
+    <div className="flex flex-col h-screen">
+      {/* Header */}
+      <header className="bg-blue-600 text-white px-6 py-4 border-b border-blue-700">
+        <h1 className="text-2xl font-bold">BDCHM Interactive Documentation</h1>
+        <p className="text-sm text-blue-100">BioData Catalyst Harmonized Model Explorer</p>
+      </header>
 
-            <a href="https://vite.dev" target="_blank">
-                <img src={viteLogo} className="logo" alt="Vite logo"/>
-            </a>
-            <a href="https://react.dev" target="_blank">
-                <img src={reactLogo} className="logo react" alt="React logo"/>
-            </a>
+      {/* Main content: Two-panel layout */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left panel: Class tree */}
+        <div className="w-1/3 min-w-[300px] max-w-[500px]">
+          <ClassTree
+            nodes={classHierarchy}
+            onSelectClass={setSelectedClass}
+            selectedClass={selectedClass}
+          />
         </div>
-        <h1>Vite + React</h1>
-        <div className="card">
-            <button onClick={() => setCount((count) => count + 1)}>
-                count is {count}
-            </button>
-            <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
+
+        {/* Right panel: Detail view */}
+        <div className="flex-1">
+          <DetailView selectedClass={selectedClass} />
+        </div>
       </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    </div>
+  );
 }
 
-export default App
+export default App;
