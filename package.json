@@ -9,7 +9,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "setup-python": "cd scripts && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt",
+    "download-data": "cd scripts && (test -d .venv || npm run setup-python) && .venv/bin/python download_source_data.py"
   },
   "dependencies": {
     "react": "^19.1.1",

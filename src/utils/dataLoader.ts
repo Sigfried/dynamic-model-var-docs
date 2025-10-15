@@ -1,13 +1,35 @@
 // Utilities for loading and parsing schema and variable specs
 
-import type { LinkMLSchema, VariableSpec, ClassNode } from '../types';
+import type { VariableSpec, ClassNode } from '../types';
 
-export async function loadSchema(): Promise<LinkMLSchema> {
-  const response = await fetch(`${import.meta.env.BASE_URL}source_data/HM/bdchm.schema.json`);
+interface ClassMetadata {
+  name: string;
+  description: string;
+  parent?: string;
+  abstract: boolean;
+  attributes: Record<string, any>;
+  slots: string[];
+}
+
+interface SchemaMetadata {
+  classes: Record<string, ClassMetadata>;
+  slots: Record<string, any>;
+  enums: Record<string, any>;
+}
+
+export async function loadSchema(): Promise<Map<string, ClassMetadata>> {
+  const response = await fetch(`${import.meta.env.BASE_URL}source_data/HM/bdchm.metadata.json`);
   if (!response.ok) {
-    throw new Error(`Failed to load schema: ${response.statusText}`);
+    throw new Error(`Failed to load schema metadata: ${response.statusText}`);
   }
-  return response.json();
+  const metadata: SchemaMetadata = await response.json();
+
+  const classes = new Map<string, ClassMetadata>();
+  Object.entries(metadata.classes).forEach(([name, classDef]) => {
+    classes.set(name, classDef);
+  });
+
+  return classes;
 }
 
 export async function loadVariableSpecs(): Promise<VariableSpec[]> {
@@ -32,63 +54,8 @@ export async function loadVariableSpecs(): Promise<VariableSpec[]> {
   });
 }
 
-function isClass(def: any): boolean {
-  return def.type === 'object' && def.properties !== undefined;
-}
-
-function extractEnumReferences(properties: Record<string, any>): string[] {
-  const enumRefs = new Set<string>();
-
-  Object.values(properties).forEach(prop => {
-    // Check for direct $ref
-    if (prop.$ref && typeof prop.$ref === 'string') {
-      // Extract enum name from $ref like "#/$defs/ConditionConceptEnum"
-      const match = prop.$ref.match(/#\/\$defs\/(.+)/);
-      if (match && match[1].endsWith('Enum')) {
-        enumRefs.add(match[1]);
-      }
-    }
-
-    // Check for $ref in items (for array properties)
-    if (prop.items && prop.items.$ref && typeof prop.items.$ref === 'string') {
-      const match = prop.items.$ref.match(/#\/\$defs\/(.+)/);
-      if (match && match[1].endsWith('Enum')) {
-        enumRefs.add(match[1]);
-      }
-    }
-  });
-
-  return Array.from(enumRefs).sort();
-}
-
-function findParent(className: string, schema: LinkMLSchema): string | undefined {
-  // Look through all class definitions to find if this class extends another
-  // In LinkML/JSON Schema, inheritance is typically indicated by allOf or specific patterns
-  // For now, we'll use a simple heuristic based on common patterns
-
-  const def = schema.$defs[className];
-  if (!def || !isClass(def)) return undefined;
-
-  // Common parent classes in the model (from documentation)
-  const knownParents = [
-    'Entity', 'Person', 'Participant', 'Specimen', 'Observation',
-    'MeasurementObservation', 'SdohObservation', 'Exposure',
-    'DrugExposure', 'DeviceExposure', 'Condition', 'Procedure',
-    'Visit', 'ResearchStudy', 'Organization', 'Consent'
-  ];
-
-  // Check if class name suggests inheritance (e.g., MeasurementObservation contains Observation)
-  for (const parent of knownParents) {
-    if (className !== parent && className.includes(parent)) {
-      return parent;
-    }
-  }
-
-  return undefined;
-}
-
 export function buildClassHierarchy(
-  schema: LinkMLSchema,
+  schema: Map<string, ClassMetadata>,
   variables: VariableSpec[]
 ): ClassNode[] {
   // Group variables by class
@@ -104,23 +71,20 @@ export function buildClassHierarchy(
   // Build flat list of all classes
   const classMap = new Map<string, ClassNode>();
 
-  Object.entries(schema.$defs).forEach(([name, def]) => {
-    if (isClass(def)) {
-      const vars = variablesByClass.get(name) || [];
-      const properties = 'properties' in def ? def.properties : undefined;
-      classMap.set(name, {
-        name,
-        description: def.description,
-        parent: findParent(name, schema),
-        children: [],
-        variableCount: vars.length,
-        variables: vars,
-        properties,
-        isEnum: false,
-        enumReferences: properties ? extractEnumReferences(properties) : undefined,
-        requiredProperties: 'required' in def ? def.required : undefined
-      });
-    }
+  schema.forEach((classMetadata) => {
+    const vars = variablesByClass.get(classMetadata.name) || [];
+    classMap.set(classMetadata.name, {
+      name: classMetadata.name,
+      description: classMetadata.description,
+      parent: classMetadata.parent,
+      children: [],
+      variableCount: vars.length,
+      variables: vars,
+      properties: classMetadata.attributes,
+      isEnum: false,
+      enumReferences: undefined, // Could extract from attributes if needed
+      requiredProperties: undefined
+    });
   });
 
   // Build tree structure by linking parents and children
