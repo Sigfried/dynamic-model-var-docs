@@ -4,6 +4,29 @@ interface DetailViewProps {
   selectedClass?: ClassNode;
 }
 
+function formatPropertyType(propDef: any): string {
+  // Handle $ref to enum
+  if (propDef.$ref) {
+    const match = propDef.$ref.match(/#\/\$defs\/(.+)/);
+    return match ? match[1] : propDef.$ref;
+  }
+
+  // Handle array types
+  if (Array.isArray(propDef.type)) {
+    return propDef.type.filter((t: string) => t !== 'null').join(' | ');
+  }
+
+  // Handle items (for arrays)
+  if (propDef.items) {
+    const itemType = propDef.items.$ref
+      ? propDef.items.$ref.match(/#\/\$defs\/(.+)/)?.[1] || 'object'
+      : propDef.items.type || 'object';
+    return `array<${itemType}>`;
+  }
+
+  return propDef.type || 'unknown';
+}
+
 export default function DetailView({ selectedClass }: DetailViewProps) {
   if (!selectedClass) {
     return (
@@ -35,10 +58,48 @@ export default function DetailView({ selectedClass }: DetailViewProps) {
           </div>
         )}
 
+        {/* Required Properties */}
+        {selectedClass.requiredProperties && selectedClass.requiredProperties.length > 0 && (
+          <div>
+            <h2 className="text-lg font-semibold mb-2">Required Properties</h2>
+            <div className="flex flex-wrap gap-2">
+              {selectedClass.requiredProperties.map(prop => (
+                <span
+                  key={prop}
+                  className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm font-mono"
+                >
+                  {prop}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Enum References */}
+        {selectedClass.enumReferences && selectedClass.enumReferences.length > 0 && (
+          <div>
+            <h2 className="text-lg font-semibold mb-2">
+              Referenced Enums ({selectedClass.enumReferences.length})
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {selectedClass.enumReferences.map(enumName => (
+                <span
+                  key={enumName}
+                  className="px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full text-sm font-mono"
+                >
+                  {enumName}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Properties */}
         {selectedClass.properties && Object.keys(selectedClass.properties).length > 0 && (
           <div>
-            <h2 className="text-lg font-semibold mb-2">Properties</h2>
+            <h2 className="text-lg font-semibold mb-2">
+              Properties ({Object.keys(selectedClass.properties).length})
+            </h2>
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
@@ -55,19 +116,27 @@ export default function DetailView({ selectedClass }: DetailViewProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {Object.entries(selectedClass.properties).map(([propName, propDef]) => (
-                    <tr key={propName} className="hover:bg-gray-50 dark:hover:bg-slate-700">
-                      <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-mono text-sm">
-                        {propName}
-                      </td>
-                      <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm">
-                        {Array.isArray(propDef.type) ? propDef.type.join(' | ') : propDef.type}
-                      </td>
-                      <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm">
-                        {propDef.description || '-'}
-                      </td>
-                    </tr>
-                  ))}
+                  {Object.entries(selectedClass.properties).map(([propName, propDef]) => {
+                    const isRequired = selectedClass.requiredProperties?.includes(propName);
+                    return (
+                      <tr key={propName} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                        <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-mono text-sm">
+                          {propName}
+                          {isRequired && (
+                            <span className="ml-2 text-red-600 dark:text-red-400" title="Required">
+                              *
+                            </span>
+                          )}
+                        </td>
+                        <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm font-mono">
+                          {formatPropertyType(propDef)}
+                        </td>
+                        <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm">
+                          {propDef.description || '-'}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

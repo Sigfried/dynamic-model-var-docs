@@ -38,4 +38,6 @@ export interface ClassNode {
   variables: VariableSpec[];
   properties?: Record<string, any>;
   isEnum: boolean;
+  enumReferences?: string[]; // List of enum names this class references
+  requiredProperties?: string[]; // List of required property names
 }

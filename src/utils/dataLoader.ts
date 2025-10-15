@@ -36,6 +36,31 @@ function isClass(def: any): boolean {
   return def.type === 'object' && def.properties !== undefined;
 }
 
+function extractEnumReferences(properties: Record<string, any>): string[] {
+  const enumRefs = new Set<string>();
+
+  Object.values(properties).forEach(prop => {
+    // Check for direct $ref
+    if (prop.$ref && typeof prop.$ref === 'string') {
+      // Extract enum name from $ref like "#/$defs/ConditionConceptEnum"
+      const match = prop.$ref.match(/#\/\$defs\/(.+)/);
+      if (match && match[1].endsWith('Enum')) {
+        enumRefs.add(match[1]);
+      }
+    }
+
+    // Check for $ref in items (for array properties)
+    if (prop.items && prop.items.$ref && typeof prop.items.$ref === 'string') {
+      const match = prop.items.$ref.match(/#\/\$defs\/(.+)/);
+      if (match && match[1].endsWith('Enum')) {
+        enumRefs.add(match[1]);
+      }
+    }
+  });
+
+  return Array.from(enumRefs).sort();
+}
+
 function findParent(className: string, schema: LinkMLSchema): string | undefined {
   // Look through all class definitions to find if this class extends another
   // In LinkML/JSON Schema, inheritance is typically indicated by allOf or specific patterns
@@ -82,6 +107,7 @@ export function buildClassHierarchy(
   Object.entries(schema.$defs).forEach(([name, def]) => {
     if (isClass(def)) {
       const vars = variablesByClass.get(name) || [];
+      const properties = 'properties' in def ? def.properties : undefined;
       classMap.set(name, {
         name,
         description: def.description,
@@ -89,8 +115,10 @@ export function buildClassHierarchy(
         children: [],
         variableCount: vars.length,
         variables: vars,
-        properties: 'properties' in def ? def.properties : undefined,
-        isEnum: false
+        properties,
+        isEnum: false,
+        enumReferences: properties ? extractEnumReferences(properties) : undefined,
+        requiredProperties: 'required' in def ? def.required : undefined
       });
     }
   });
