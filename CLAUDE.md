@@ -8,14 +8,15 @@ Interactive documentation for the BioData Catalyst Harmonized Model (BDCHM), a L
 ## Data Files and Updates
 
 ### Primary Data Sources
-- **Model Schema**: Use `generated/bdchm.schema.json` (generated from `bdchm.yaml`)
-  - Source: [BDCHM GitHub](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/blob/main/generated/bdchm.schema.json)
-  - Generated on push to main via GitHub Actions workflow
-  - Uses LinkML's `gen-json-schema` tool
+- **Model Schema**: `bdchm.yaml` (LinkML source) → `bdchm.metadata.json` (runtime data)
+  - Source: [BDCHM GitHub - bdchm.yaml](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/blob/main/src/bdchm/schema/bdchm.yaml)
+  - Python script downloads YAML and generates `public/source_data/HM/bdchm.metadata.json`
+  - Metadata includes class hierarchy with proper `is_a` inheritance, slots, and enums
+  - Update data: `npm run download-data` (sets up Python venv, downloads files, generates metadata)
 
 - **Variable Specifications**: `source_data/variable-specs-S1.tsv`
   - Source: [Variable specs Table S1 (Google Sheet)](https://docs.google.com/spreadsheets/d/1PDaX266_H0haa0aabMYQ6UNtEKT5-ClMarP0FvNntN8/edit?gid=0#gid=0)
-  - Must manually sync TSV with spreadsheet when updated
+  - Auto-downloaded by `npm run download-data` script
 
 ### Data Model Statistics
 - **47 classes** in the schema
@@ -66,8 +67,7 @@ The schema uses a shallow hierarchy with several root-level classes:
 - **Data structures**: ObservationSet, MeasurementObservationSet, etc.
 
 **Implementation Notes**:
-- The current parent detection uses name-based heuristics (e.g., "MeasurementObservation" contains "Observation" → parent)
-- This should ideally be replaced with proper inheritance parsing from the schema's `allOf` or similar constructs
+- Parent-child relationships are extracted from the YAML schema's `is_a` field
 - The schema has no single root "Entity" class - multiple top-level classes exist
 - Consider whether adding a synthetic root node would improve navigation UX
 

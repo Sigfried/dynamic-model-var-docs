@@ -16,8 +16,13 @@ Interactive documentation browser for the BioData Catalyst Harmonized Model (BDC
   - Variable specifications (data type, units, CURIE, description)
 
 ### Data Sources
-- **Model Schema**: [bdchm.schema.json](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/blob/main/generated/bdchm.schema.json) (saved locally in `public/source_data/HM/`)
-- **Variable Specifications**: [Variable specs Table S1](https://docs.google.com/spreadsheets/d/1PDaX266_H0haa0aabMYQ6UNtEKT5-ClMarP0FvNntN8/edit?gid=0#gid=0) (saved locally as `public/source_data/HV/variable-specs-S1.tsv`)
+- **Model Schema**: [bdchm.yaml](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/blob/main/src/bdchm/schema/bdchm.yaml) (LinkML source)
+  - Python script generates `bdchm.metadata.json` with class hierarchy, slots, and enums
+  - Saved locally in `public/source_data/HM/`
+- **Variable Specifications**: [Variable specs Table S1](https://docs.google.com/spreadsheets/d/1PDaX266_H0haa0aabMYQ6UNtEKT5-ClMarP0FvNntN8/edit?gid=0#gid=0)
+  - Saved locally as `public/source_data/HV/variable-specs-S1.tsv`
+
+**Update data files**: Run `npm run download-data` to fetch latest YAML schema and variable specs, and generate metadata.
 
 ### Model Overview
 - **47 classes** in the BDCHM schema
