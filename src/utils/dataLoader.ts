@@ -3,7 +3,7 @@
 import type { LinkMLSchema, VariableSpec, ClassNode } from '../types';
 
 export async function loadSchema(): Promise<LinkMLSchema> {
-  const response = await fetch('/source_data/HM/bdchm.schema.json');
+  const response = await fetch(`${import.meta.env.BASE_URL}source_data/HM/bdchm.schema.json`);
   if (!response.ok) {
     throw new Error(`Failed to load schema: ${response.statusText}`);
   }
@@ -11,15 +11,14 @@ export async function loadSchema(): Promise<LinkMLSchema> {
 }
 
 export async function loadVariableSpecs(): Promise<VariableSpec[]> {
-  const response = await fetch('/source_data/HV/variable-specs-S1.tsv');
+  const response = await fetch(`${import.meta.env.BASE_URL}source_data/HV/variable-specs-S1.tsv`);
   if (!response.ok) {
     throw new Error(`Failed to load variable specs: ${response.statusText}`);
   }
 
   const text = await response.text();
   const lines = text.trim().split('\n');
-  const headers = lines[0].split('\t');
-
+  // Skip header row
   return lines.slice(1).map(line => {
     const values = line.split('\t');
     return {
@@ -35,10 +34,6 @@ export async function loadVariableSpecs(): Promise<VariableSpec[]> {
 
 function isClass(def: any): boolean {
   return def.type === 'object' && def.properties !== undefined;
-}
-
-function isEnum(def: any): boolean {
-  return def.enum !== undefined;
 }
 
 function findParent(className: string, schema: LinkMLSchema): string | undefined {
@@ -94,7 +89,7 @@ export function buildClassHierarchy(
         children: [],
         variableCount: vars.length,
         variables: vars,
-        properties: def.properties,
+        properties: 'properties' in def ? def.properties : undefined,
         isEnum: false
       });
     }
