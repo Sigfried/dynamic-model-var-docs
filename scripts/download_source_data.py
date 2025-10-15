@@ -29,8 +29,7 @@ repo_sources = {
         "repo": "RTIInternational/NHLBI-BDC-DMC-HM",
         "commit": "0e7a22c",
         "file_paths": [
-          "src/bdchm/schema/bdchm.yaml",
-          "generated/bdchm.schema.json"
+          "src/bdchm/schema/bdchm.yaml"
         ],
     },
     "HV": {         # dependency_name
