@@ -64,41 +64,43 @@ Show the model topology with all relationship types visible:
 
 ### Panel System Architecture
 
+**Terminology clarification**: A **panel** is a vertical container that can display multiple **sections** (Class Hierarchy, Enumerations, Slots, Variables). The UI can support multiple panels side-by-side with SVG links connecting related elements between panels.
+
 The overview should support multiple view configurations through checkboxes/toggles, allowing users to see different aspects of the model simultaneously.
 
-#### Panel Section Toggles
+#### Section Toggles (within a panel)
 Control which entity types are shown as separate collapsible sections:
-- [ ] **Classes** - Show class hierarchy tree
+- [x] **Classes** - Show class hierarchy tree (✓ implemented)
 - [ ] **Enums** - Show enumeration value sets
 - [ ] **Slots** - Show shared attribute definitions
 - [ ] **Variables** - Show variable specifications
 
-Each checked section gets its own collapsible panel in the left sidebar.
+Each checked section appears as a collapsible section within the panel.
 
 #### Nested Display Options (Under Classes)
-When Classes panel is visible, control what's nested/shown within each class node:
+When Classes section is visible, control what's nested/shown within each class node:
 - [ ] **All properties** - Show all attributes inline
 - [ ] **Associated class properties** - Show only attributes with class ranges
-- [x] **Enum properties** - Show only attributes with enum ranges (useful!)
+- [x] **Enum properties** - Show only attributes with enum ranges (✓ implemented)
 - [x] **Slots** - Show inherited slot usage
 - [ ] **Variables** - Show mapped variables inline (might be overwhelming for MeasurementObservation)
 
 #### Nested Display Options (Under Enums)
-When Enums panel is visible:
+When Enums section is visible:
 - [ ] **Used by classes** - Show which classes reference this enum
 - [ ] **Used by slots** - Show which slots use this enum
 
 #### Nested Display Options (Under Slots)
-When Slots panel is visible:
+When Slots section is visible:
 - [ ] **Used by classes** - Show which classes use this slot
 - [ ] **Type/Range** - Show the slot's range type
 
 #### Link Visualization Between Panels
-When multiple panels are shown, visualize relationships with SVG connecting lines:
+When multiple panels are shown side-by-side, visualize relationships with SVG connecting lines:
 - [ ] **Associated classes** - Draw lines for class→class references
-- [ ] **Enums** - Draw lines from classes to enum panels
+- [ ] **Enums** - Draw lines from classes to enum sections
 - [ ] **Slots** - Draw lines showing slot usage
-- [ ] **Variables** - Draw lines from classes to variable panels
+- [ ] **Variables** - Draw lines from classes to variable sections
 
 **Interaction model**:
 - Links render with low opacity (0.2-0.3) by default
@@ -118,13 +120,14 @@ When multiple panels are shown, visualize relationships with SVG connecting line
 
 **Data structures needed**:
 - Reverse indices: enum→classes, slot→classes, class→classes (associations)
-- Bounding boxes for each rendered element (for link positioning)
+- Bounding boxes for each rendered element (for link positioning when using multiple panels)
 - Hover state tracking
 
 **Rendering approach**:
-- CSS Grid or Flexbox for panel layout
-- SVG overlay for inter-panel links
-- React state for toggle checkboxes
+- **Content**: Regular HTML/React components using CSS Grid or Flexbox
+- **Links**: SVG overlay positioned absolutely over the panels
+- **Bounding boxes**: Track DOM element positions for SVG link endpoints
+- React state for section toggles
 - Consider using `react-spring` or similar for smooth opacity transitions
 
 **Performance**:
@@ -134,39 +137,67 @@ When multiple panels are shown, visualize relationships with SVG connecting line
 
 ---
 
-## Better Implementation Plan
+## Implementation Status & Roadmap
 
-### Current Status
-✓ **Phase 1 DONE**: Basic two-panel layout with class tree and detail view
-- Only shows `is_a` hierarchy
-- Shows variables mapped to classes
+### Completed: Phases 1-2
+
+✓ **Phase 1**: Basic two-panel layout with class tree and detail view
+- Class hierarchy display (`is_a` inheritance tree)
 - Basic selection/navigation
-- ✓ Type bug fixed: now uses `range` field
-- ✓ Icons for multivalued ([]) and required (*)
-- ✓ Color coding for primitive/enum/class with hover legend
+- Variable mapping display
+- Type bug fixed: now uses `range` field correctly
 
-### Recommended Next Steps
+✓ **Phase 2**: Easy Details + Basic Navigation
+- Class attributes table with ranges displayed in detail view
+- Color coding: green (primitive), purple (enum), blue (class)
+- Icons: `*` (required), `[]` (multivalued)
+- Hover legend for type categories
+- Clickable navigation from property ranges to class/enum definitions
+- Reverse indices built: enum→classes, slot→classes mappings
+- Enum detail view (shows enum values and "used by" lists)
+- Slot detail view (shows slot definitions and usage)
 
-**Phase 2: Easy Details + Basic Navigation**
-1. Show class attributes with ranges in detail view
-2. Make ranges clickable (click enum name → navigate to enum definition)
-3. Show "used by" lists for enums (which classes reference this enum)
-4. Display slot definitions
-5. Add variable detail view (click variable → show full specs)
+### Current Architecture
+```
+src/
+├── components/
+│   ├── ClassTree.tsx      # Left panel: collapsible class tree (is_a only)
+│   ├── DetailView.tsx     # Right panel: shows class/enum/slot details + variables
+│   ├── EnumPanel.tsx      # Enum detail display component
+│   └── SlotPanel.tsx      # Slot detail display component
+├── utils/
+│   └── dataLoader.ts      # Schema/TSV parsing, builds class tree + reverse indices
+├── types.ts               # TypeScript definitions
+└── App.tsx                # Main layout
+```
 
-**Phase 3: Search and Filter**
+### In Progress: Phase 3a - Section System
+
+**Next immediate task**: Add Variables section to the panel
+- Create collapsible Variables section in left sidebar
+- Display all 151 variables grouped/sortable
+- Click variable → show full specs in detail view
+- Virtualize the list (103 variables map to MeasurementObservation alone)
+
+**After Variables section**: Support multiple panels with SVG links
+- Refactor layout to support 1-2 panels side-by-side
+- Add SVG overlay for drawing links between related elements
+- Implement bounding box tracking for link positioning
+- Add hover/click interactions for links
+
+### Upcoming: Phase 3b - Search and Filter
 1. Search bar with full-text search across all entities
 2. Filter controls (checkboxes for class families, variable count slider)
-3. Highlight search results in tree
-4. View toggles (show/hide enums, variables, certain class families)
+3. Highlight search results in tree/sections
+4. Section toggles (show/hide Classes, Enums, Slots, Variables)
 
-**Phase 4: Neighborhood Zoom**
+### Future: Phase 4 - Neighborhood Zoom
 1. "Focus mode" that shows only k-hop neighborhood around selected element
 2. Relationship type filters ("show only `is_a` relationships" vs "show associations")
 3. Breadcrumb trail showing navigation path
 4. "Reset to full view" button
 
-**Phase 5: Advanced Overview (if time allows)**
+### Future: Phase 5 - Advanced Overview (if time allows)
 1. Multiple view modes:
    - Tree view (current)
    - Network view (classes + associations, filterable by relationship type)
@@ -217,20 +248,20 @@ When multiple panels are shown, visualize relationships with SVG connecting line
 
 ## Key Use Cases (Sorted by Implementation Priority)
 
-### Easy (implement first)
-1. "Which variables map to Condition class?" - already works
-2. "What are the units/data types for these measurements?" - show in detail view
-3. "What's the inheritance chain for Specimen?" - trace `is_a` upward
+### Easy (✓ implemented)
+1. ✓ "Which variables map to Condition class?" - works via class detail view
+2. ✓ "What are the units/data types for these measurements?" - shown in detail view
+3. ✓ "What's the inheritance chain for Specimen?" - visible in class tree structure
 
-### Medium
-4. "What classes use ConditionConceptEnum?" - build reverse index enum→classes
-5. "Show me all attributes for MeasurementObservation" - display all slots+attributes
-6. "Find all references to Participant" - search + show usages
+### Medium (✓ implemented)
+4. ✓ "What classes use ConditionConceptEnum?" - reverse index built, shown in enum detail view
+5. ✓ "Show me all attributes for MeasurementObservation" - all slots+attributes displayed in property table
+6. "Find all references to Participant" - requires search (Phase 3b)
 
-### Hard (requires graph exploration)
-7. "Show me everything related to observations" - k-hop neighborhood
-8. "What's the full specimen workflow?" - follow activity relationships
-9. "Compare two classes" - side-by-side detail views
+### Hard (requires graph exploration - future)
+7. "Show me everything related to observations" - k-hop neighborhood (Phase 4)
+8. "What's the full specimen workflow?" - follow activity relationships (requires relationship visualization)
+9. "Compare two classes" - side-by-side detail views (requires multi-panel support)
 
 ---
 
@@ -241,17 +272,8 @@ When multiple panels are shown, visualize relationships with SVG connecting line
 - Variables: `variable-specs-S1.tsv` (downloaded from Google Sheets)
 - Update command: `npm run download-data`
 
-### Current Architecture
-```
-src/
-├── components/
-│   ├── ClassTree.tsx      # Left panel: collapsible class tree (is_a only)
-│   └── DetailView.tsx     # Right panel: class details + variables
-├── utils/
-│   └── dataLoader.ts      # Schema/TSV parsing, builds class tree
-├── types.ts               # TypeScript definitions
-└── App.tsx                # Main layout
-```
+### Architecture
+See "Implementation Status & Roadmap" section above for current architecture details.
 
 ### MeasurementObservation Challenge
 103 variables map to a single class (68% of all variables). Requires:
@@ -363,45 +385,3 @@ The following **semantic relationship patterns** were identified during analysis
 - Use for suggestions/enhancements, not core functionality
 - Keep structural navigation as primary interface
 
----
-
-## Current Implementation Status (Updated 2025-10-20)
-
-### What's Working
-- ✓ Two-panel layout (class tree + detail view)
-- ✓ Class hierarchy display (`is_a` inheritance)
-- ✓ Variable mapping display
-- ✓ Property table with correct `range` types
-- ✓ Color coding: green (primitive), purple (enum), blue (class)
-- ✓ Icons: `*` (required), `[]` (multivalued)
-- ✓ Hover legend for type categories
-
-### What's NOT Working Yet
-- No enum panel/display (only shown as references in class properties)
-- No slot panel/display
-- No clickable navigation between related elements
-- No reverse indices (enum→classes, slot→classes)
-- No inter-panel link visualization
-- No search/filter
-- No view toggles/checkboxes
-
-### Next Immediate Steps (in priority order)
-
-1. **Build reverse indices** - Create data structures mapping:
-   - Enum → which classes use it
-   - Slot → which classes use it
-   - Class → which classes reference it (for associations)
-
-2. **Make ranges clickable** - Click on enum/class name in property table → navigate to that entity
-
-3. **Add enum panel** - Show enums in left sidebar with:
-   - Enum name + description
-   - List of valid values
-   - "Used by" list (via reverse index)
-
-4. **Add slot panel** - Show shared slots with:
-   - Slot name + description
-   - Range type
-   - "Used by" list
-
-5. **Then**: Implement flexible panel toggles as documented above
