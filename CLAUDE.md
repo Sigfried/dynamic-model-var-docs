@@ -60,6 +60,80 @@ Show the model topology with all relationship types visible:
 
 ---
 
+## Flexible Overview Design
+
+### Panel System Architecture
+
+The overview should support multiple view configurations through checkboxes/toggles, allowing users to see different aspects of the model simultaneously.
+
+#### Panel Section Toggles
+Control which entity types are shown as separate collapsible sections:
+- [ ] **Classes** - Show class hierarchy tree
+- [ ] **Enums** - Show enumeration value sets
+- [ ] **Slots** - Show shared attribute definitions
+- [ ] **Variables** - Show variable specifications
+
+Each checked section gets its own collapsible panel in the left sidebar.
+
+#### Nested Display Options (Under Classes)
+When Classes panel is visible, control what's nested/shown within each class node:
+- [ ] **All properties** - Show all attributes inline
+- [ ] **Associated class properties** - Show only attributes with class ranges
+- [x] **Enum properties** - Show only attributes with enum ranges (useful!)
+- [x] **Slots** - Show inherited slot usage
+- [ ] **Variables** - Show mapped variables inline (might be overwhelming for MeasurementObservation)
+
+#### Nested Display Options (Under Enums)
+When Enums panel is visible:
+- [ ] **Used by classes** - Show which classes reference this enum
+- [ ] **Used by slots** - Show which slots use this enum
+
+#### Nested Display Options (Under Slots)
+When Slots panel is visible:
+- [ ] **Used by classes** - Show which classes use this slot
+- [ ] **Type/Range** - Show the slot's range type
+
+#### Link Visualization Between Panels
+When multiple panels are shown, visualize relationships with SVG connecting lines:
+- [ ] **Associated classes** - Draw lines for class→class references
+- [ ] **Enums** - Draw lines from classes to enum panels
+- [ ] **Slots** - Draw lines showing slot usage
+- [ ] **Variables** - Draw lines from classes to variable panels
+
+**Interaction model**:
+- Links render with low opacity (0.2-0.3) by default
+- On hover over a link: increase opacity to 1.0
+- On hover over a linked element (class/enum/etc): highlight all connected links
+- On click: navigate/focus on the linked element
+
+#### Why This Design Works
+
+1. **Structural, not semantic** - Toggles based on entity types (class/enum/slot) are structural
+2. **Progressive disclosure** - Start with minimal view, expand as needed
+3. **Avoids hard-coded categories** - Users filter by range type, not semantic groupings
+4. **Scalable** - Handles large models by letting users hide irrelevant sections
+5. **Supports exploration** - Visual links help discover relationships
+
+### Implementation Considerations
+
+**Data structures needed**:
+- Reverse indices: enum→classes, slot→classes, class→classes (associations)
+- Bounding boxes for each rendered element (for link positioning)
+- Hover state tracking
+
+**Rendering approach**:
+- CSS Grid or Flexbox for panel layout
+- SVG overlay for inter-panel links
+- React state for toggle checkboxes
+- Consider using `react-spring` or similar for smooth opacity transitions
+
+**Performance**:
+- Virtualize long lists (especially for MeasurementObservation's 103 variables)
+- Debounce hover events
+- Render links only for visible elements (viewport culling)
+
+---
+
 ## Better Implementation Plan
 
 ### Current Status
@@ -67,6 +141,9 @@ Show the model topology with all relationship types visible:
 - Only shows `is_a` hierarchy
 - Shows variables mapped to classes
 - Basic selection/navigation
+- ✓ Type bug fixed: now uses `range` field
+- ✓ Icons for multivalued ([]) and required (*)
+- ✓ Color coding for primitive/enum/class with hover legend
 
 ### Recommended Next Steps
 
@@ -213,3 +290,118 @@ But default view should be structured (tree/table), not force-directed chaos.
 - ES modules (import/export), not CommonJS
 - Destructure imports where possible
 - Run type checker after changes: `npm run build`
+
+---
+
+## Implementation Notes & Lessons Learned
+
+### LinkML Metadata Structure Gotchas
+
+**Bug fix reference**: DetailView.tsx originally looked for `propDef.type` (JSON Schema convention) but LinkML metadata uses `propDef.range` for type information.
+
+**Attribute structure in `bdchm.metadata.json`**:
+```json
+{
+  "classes": {
+    "Specimen": {
+      "attributes": {
+        "specimen_type": {
+          "range": "SpecimenTypeEnum",
+          "description": "...",
+          "multivalued": false,
+          "required": false
+        }
+      }
+    }
+  }
+}
+```
+
+Key fields:
+- `range`: The type (primitive, enum name, or class name)
+- `multivalued`: Boolean indicating array vs single value
+- `required`: Boolean for required attributes
+- `description`: Free text
+
+### Structural vs Semantic Categorization
+
+**Current approach** (structural - safe from schema changes):
+- Categorize by `range` value:
+  - **Primitive**: Known set (`string`, `integer`, `float`, etc.)
+  - **Enum**: Range ends with `Enum`
+  - **Class**: Everything else
+- Filter/toggle by entity type: class, enum, slot, variable
+
+**DO NOT hard-code semantic categories** like "containment" vs "association" vs "activity" - these could break with schema updates.
+
+### REMINDER: Semantic Insights for Future Use
+
+The following **semantic relationship patterns** were identified during analysis and could be valuable for:
+- User-facing documentation/tooltips
+- Search result grouping
+- Suggested exploration paths
+- AI-assisted query answering
+
+**Semantic patterns identified**:
+
+1. **Containment/Part-of**: `parent_specimen`, `parent_container`, `part_of`
+2. **Association**: `associated_participant`, `source_participant`, `performed_by`
+3. **Activity/Process**: `creation_activity`, `processing_activity`, `storage_activity`
+4. **Measurement**: `value_quantity`, `range_low`, `range_high`, `quantity_measure`
+5. **Provenance**: `*_provenance`, `derived_from`
+6. **Organization/Study**: `member_of_research_study`, `originating_site`
+
+**Potential future features using semantic patterns**:
+- "Show specimen workflow" - follow activity relationships
+- "Show participant data" - trace associated_participant links
+- "Explain this class" - generate natural language description using relationship semantics
+- Smart search: "find containment relationships" could match `parent_*` and `part_of` patterns
+
+**Implementation approach when ready**:
+- Extract patterns from attribute names (regex/keyword matching)
+- Make patterns configurable (JSON/YAML file of patterns)
+- Use for suggestions/enhancements, not core functionality
+- Keep structural navigation as primary interface
+
+---
+
+## Current Implementation Status (Updated 2025-10-20)
+
+### What's Working
+- ✓ Two-panel layout (class tree + detail view)
+- ✓ Class hierarchy display (`is_a` inheritance)
+- ✓ Variable mapping display
+- ✓ Property table with correct `range` types
+- ✓ Color coding: green (primitive), purple (enum), blue (class)
+- ✓ Icons: `*` (required), `[]` (multivalued)
+- ✓ Hover legend for type categories
+
+### What's NOT Working Yet
+- No enum panel/display (only shown as references in class properties)
+- No slot panel/display
+- No clickable navigation between related elements
+- No reverse indices (enum→classes, slot→classes)
+- No inter-panel link visualization
+- No search/filter
+- No view toggles/checkboxes
+
+### Next Immediate Steps (in priority order)
+
+1. **Build reverse indices** - Create data structures mapping:
+   - Enum → which classes use it
+   - Slot → which classes use it
+   - Class → which classes reference it (for associations)
+
+2. **Make ranges clickable** - Click on enum/class name in property table → navigate to that entity
+
+3. **Add enum panel** - Show enums in left sidebar with:
+   - Enum name + description
+   - List of valid values
+   - "Used by" list (via reverse index)
+
+4. **Add slot panel** - Show shared slots with:
+   - Slot name + description
+   - Range type
+   - "Used by" list
+
+5. **Then**: Implement flexible panel toggles as documented above

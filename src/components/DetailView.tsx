@@ -1,33 +1,85 @@
+import React from 'react';
 import type { ClassNode } from '../types';
 
 interface DetailViewProps {
   selectedClass?: ClassNode;
 }
 
+// Primitive types in LinkML
+const PRIMITIVE_TYPES = new Set([
+  'string', 'integer', 'boolean', 'float', 'double', 'decimal',
+  'date', 'datetime', 'time', 'uriorcurie', 'uri', 'ncname'
+]);
+
+type RangeCategory = 'primitive' | 'enum' | 'class' | 'unknown';
+
+function categorizeRange(range: string): RangeCategory {
+  if (!range || range === 'unknown') return 'unknown';
+  if (PRIMITIVE_TYPES.has(range.toLowerCase())) return 'primitive';
+  if (range.endsWith('Enum')) return 'enum';
+  return 'class';
+}
+
+function getRangeColor(category: RangeCategory): string {
+  switch (category) {
+    case 'primitive':
+      return 'text-green-700 dark:text-green-400';
+    case 'enum':
+      return 'text-purple-700 dark:text-purple-400';
+    case 'class':
+      return 'text-blue-700 dark:text-blue-400';
+    default:
+      return 'text-gray-500 dark:text-gray-400';
+  }
+}
+
 function formatPropertyType(propDef: any): string {
-  // Handle $ref to enum
-  if (propDef.$ref) {
-    const match = propDef.$ref.match(/#\/\$defs\/(.+)/);
-    return match ? match[1] : propDef.$ref;
+  // LinkML metadata uses 'range' field for type information
+  const range = propDef.range || 'unknown';
+
+  // If multivalued, show as array
+  if (propDef.multivalued) {
+    return `array<${range}>`;
   }
 
-  // Handle array types
-  if (Array.isArray(propDef.type)) {
-    return propDef.type.filter((t: string) => t !== 'null').join(' | ');
-  }
+  return range;
+}
 
-  // Handle items (for arrays)
-  if (propDef.items) {
-    const itemType = propDef.items.$ref
-      ? propDef.items.$ref.match(/#\/\$defs\/(.+)/)?.[1] || 'object'
-      : propDef.items.type || 'object';
-    return `array<${itemType}>`;
-  }
-
-  return propDef.type || 'unknown';
+function TypeLegend() {
+  return (
+    <div className="absolute right-0 top-0 mt-8 mr-4 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg shadow-lg p-4 text-sm z-10 min-w-[200px]">
+      <h4 className="font-semibold mb-2">Type Categories</h4>
+      <div className="space-y-1">
+        <div className="flex items-center gap-2">
+          <span className="text-green-700 dark:text-green-400 font-mono">primitive</span>
+          <span className="text-gray-600 dark:text-gray-400 text-xs">string, integer, etc.</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-purple-700 dark:text-purple-400 font-mono">enum</span>
+          <span className="text-gray-600 dark:text-gray-400 text-xs">constrained values</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-blue-700 dark:text-blue-400 font-mono">class</span>
+          <span className="text-gray-600 dark:text-gray-400 text-xs">other model classes</span>
+        </div>
+      </div>
+      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-slate-600 space-y-1">
+        <div className="flex items-center gap-2">
+          <span className="text-red-600 dark:text-red-400">*</span>
+          <span className="text-gray-600 dark:text-gray-400 text-xs">required</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-gray-600 dark:text-gray-400">[]</span>
+          <span className="text-gray-600 dark:text-gray-400 text-xs">multivalued</span>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function DetailView({ selectedClass }: DetailViewProps) {
+  const [showLegend, setShowLegend] = React.useState(false);
+
   if (!selectedClass) {
     return (
       <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
@@ -96,10 +148,23 @@ export default function DetailView({ selectedClass }: DetailViewProps) {
 
         {/* Properties */}
         {selectedClass.properties && Object.keys(selectedClass.properties).length > 0 && (
-          <div>
-            <h2 className="text-lg font-semibold mb-2">
-              Properties ({Object.keys(selectedClass.properties).length})
-            </h2>
+          <div className="relative">
+            <div className="flex items-center gap-2 mb-2">
+              <h2 className="text-lg font-semibold">
+                Properties ({Object.keys(selectedClass.properties).length})
+              </h2>
+              <button
+                onMouseEnter={() => setShowLegend(true)}
+                onMouseLeave={() => setShowLegend(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                title="Show legend"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+            {showLegend && <TypeLegend />}
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
@@ -117,18 +182,28 @@ export default function DetailView({ selectedClass }: DetailViewProps) {
                 </thead>
                 <tbody>
                   {Object.entries(selectedClass.properties).map(([propName, propDef]) => {
-                    const isRequired = selectedClass.requiredProperties?.includes(propName);
+                    const range = propDef.range || 'unknown';
+                    const category = categorizeRange(range);
+                    const colorClass = getRangeColor(category);
+
                     return (
                       <tr key={propName} className="hover:bg-gray-50 dark:hover:bg-slate-700">
                         <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-mono text-sm">
-                          {propName}
-                          {isRequired && (
-                            <span className="ml-2 text-red-600 dark:text-red-400" title="Required">
-                              *
-                            </span>
-                          )}
+                          <div className="flex items-center gap-2">
+                            <span>{propName}</span>
+                            {propDef.required && (
+                              <span className="text-red-600 dark:text-red-400" title="Required">
+                                *
+                              </span>
+                            )}
+                            {propDef.multivalued && (
+                              <span className="text-gray-600 dark:text-gray-400 text-xs" title="Multivalued">
+                                []
+                              </span>
+                            )}
+                          </div>
                         </td>
-                        <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm font-mono">
+                        <td className={`border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm font-mono ${colorClass}`}>
                           {formatPropertyType(propDef)}
                         </td>
                         <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm">
