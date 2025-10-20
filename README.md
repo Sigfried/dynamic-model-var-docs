@@ -1,95 +1,66 @@
 # BDCHM Interactive Documentation
 
-Interactive documentation browser for the BioData Catalyst Harmonized Model (BDCHM) that bidirectionally connects LinkML model elements to variable specifications.
+Interactive documentation browser for the [BioData Catalyst Harmonized Model (BDCHM)](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM) - a LinkML data model connecting clinical/observational classes to variable specifications.
 
-## Current Features (Phase 1)
+## Features
 
-### Two-Panel Layout
-- **Left Panel**: Collapsible tree view of class hierarchy
-  - Shows all 49 BDCHM classes organized by inheritance
-  - Displays variable counts for each class
-  - Click to select and explore classes
+### Browse the Model
+- **Class hierarchy tree** - Explore 47 classes organized by inheritance relationships
+- **Variable mapping** - See which of the 151 variables map to each class
+- **Class details** - View definitions, attributes, and relationships
+- **Variable specifications** - Data types, units, CURIEs, descriptions
 
-- **Right Panel**: Detailed view of selected class
-  - Class definition and metadata
-  - List of variables mapped to the class
-  - Variable specifications (data type, units, CURIE, description)
+### What You Can Explore
+- Inheritance chains (e.g., `MeasurementObservation is_a Observation`)
+- Which variables map to which classes
+- Class attributes and their value ranges (enums, other classes, primitives)
+- Specimen lineage, activity workflows, observation structures
 
 ### Data Sources
-- **Model Schema**: [bdchm.yaml](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/blob/main/src/bdchm/schema/bdchm.yaml) (LinkML source)
-  - Python script generates `bdchm.metadata.json` with class hierarchy, slots, and enums
-  - Saved locally in `public/source_data/HM/`
-- **Variable Specifications**: [Variable specs Table S1](https://docs.google.com/spreadsheets/d/1PDaX266_H0haa0aabMYQ6UNtEKT5-ClMarP0FvNntN8/edit?gid=0#gid=0)
-  - Saved locally as `public/source_data/HV/variable-specs-S1.tsv`
+The application uses two primary data sources:
+- **Model Schema**: [bdchm.yaml](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/blob/main/src/bdchm/schema/bdchm.yaml) → processed into `bdchm.metadata.json`
+- **Variable Specs**: [Table S1 (Google Sheet)](https://docs.google.com/spreadsheets/d/1PDaX266_H0haa0aabMYQ6UNtEKT5-ClMarP0FvNntN8/edit?gid=0#gid=0) → `variable-specs-S1.tsv`
 
-**Update data files**: Run `npm run download-data` to fetch latest YAML schema and variable specs, and generate metadata.
+**To update data**: Run `npm run download-data`
 
-### Model Overview
-- **47 classes** in the BDCHM schema
-- **7 slots** (shared attributes across classes)
-- **40 enums** (constrained value sets)
-- **151 variables** mapped to model classes
-  - Distribution is heavily skewed: 103 variables (68%) map to `MeasurementObservation`
-  - Other concentrations: 20 → Condition, 17 → DrugExposure, 3 → Demography, 3 → Procedure
-
-## Development
+## Getting Started
 
 ### Prerequisites
 - Node.js (recent version with ES modules support)
 - npm or pnpm
+- Python 3.9+ and poetry (for data download script)
 
-### Getting Started
+### Installation & Development
 ```bash
 # Install dependencies
 npm install
+
+# Download/update source data
+npm run download-data
 
 # Run development server
 npm run dev
 
 # Build for production
 npm run build
+
+# Deploy to GitHub Pages
+npm run deploy
 ```
 
 ### Tech Stack
-- React + TypeScript
-- Vite (for fast development and HMR)
-- Tailwind CSS (for styling)
-- D3.js (minimal usage, only for specific visualizations)
+- React + TypeScript + Vite
+- Tailwind CSS for styling
+- D3.js (minimal - only for specific visualizations)
 
-## Planned Features
+## Roadmap
 
-### Phase 2: Search and Filter
-- Full-text search across all classes and variables
-- Faceted filters (e.g., "show only classes with >5 variables")
-- View toggles between different aspects (classes only, classes+enums, classes+variables)
-- Highlight search results in tree view
+Future features planned:
+- **Search & filter**: Full-text search, faceted filters, view toggles
+- **Enhanced navigation**: Bidirectional links, clickable enums, inheritance chains
+- **Neighborhood exploration**: Show k-hop neighbors, relationship type filters
+- **Advanced views**: Network graphs, enum-class matrix, comparison views
 
-### Phase 3: Enhanced Details
-- Show class attributes, slots used, and enums referenced
-- Sortable/filterable variable tables
-- Bidirectional navigation (from variable back to class)
-- Show inheritance chains and class relationships
+## Contributing
 
-### Phase 4: Advanced Views
-- Bipartite graph visualization for filtered subsets of classes/variables
-- Matrix/adjacency view showing which classes use which enums
-- Export and permalink functionality for sharing specific views
-
-## Project Structure
-```
-src/
-├── components/
-│   ├── ClassTree.tsx      # Left panel: collapsible class hierarchy
-│   └── DetailView.tsx     # Right panel: class/variable details
-├── utils/
-│   └── dataLoader.ts      # Schema and variable spec loading/parsing
-├── types.ts               # TypeScript type definitions
-└── App.tsx                # Main application component
-```
-
-## Key Use Cases
-- "What classes use this enum?"
-- "What's the inheritance chain for Specimen?"
-- "Show me everything related to observations"
-- "Which variables map to Condition class?"
-- "What are the units/data types for these measurements?"
+See [CLAUDE.md](CLAUDE.md) for development context, architecture decisions, and implementation notes.
