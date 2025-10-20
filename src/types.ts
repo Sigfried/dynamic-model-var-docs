@@ -21,3 +21,39 @@ export interface ClassNode {
   enumReferences?: string[]; // List of enum names this class references
   requiredProperties?: string[]; // List of required property names
 }
+
+export interface EnumValue {
+  key: string;
+  description?: string;
+}
+
+export interface EnumDefinition {
+  name: string;
+  description?: string;
+  permissible_values: EnumValue[];
+  usedByClasses: string[]; // Classes that reference this enum
+}
+
+export interface SlotDefinition {
+  name: string;
+  description?: string;
+  range?: string;
+  slot_uri?: string;
+  identifier?: boolean;
+  required?: boolean;
+  multivalued?: boolean;
+  usedByClasses: string[]; // Classes that use this slot
+}
+
+export interface ReverseIndices {
+  enumToClasses: Map<string, Set<string>>; // enum name -> class names
+  slotToClasses: Map<string, Set<string>>; // slot name -> class names
+  classToClasses: Map<string, Set<string>>; // class name -> classes that reference it
+}
+
+export interface ModelData {
+  classHierarchy: ClassNode[];
+  enums: Map<string, EnumDefinition>;
+  slots: Map<string, SlotDefinition>;
+  reverseIndices: ReverseIndices;
+}

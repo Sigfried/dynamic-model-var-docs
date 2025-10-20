@@ -1,8 +1,22 @@
 import React from 'react';
-import type { ClassNode } from '../types';
+import type { ClassNode, EnumDefinition, SlotDefinition } from '../types';
+
+type SelectedEntity = ClassNode | EnumDefinition | SlotDefinition;
 
 interface DetailViewProps {
-  selectedClass?: ClassNode;
+  selectedEntity?: SelectedEntity;
+  onNavigate?: (entityName: string, entityType: 'class' | 'enum' | 'slot') => void;
+  enums?: Map<string, EnumDefinition>;
+  slots?: Map<string, SlotDefinition>;
+  classes?: Map<string, ClassNode>;
+}
+
+function isEnumDefinition(entity: SelectedEntity): entity is EnumDefinition {
+  return 'permissible_values' in entity;
+}
+
+function isSlotDefinition(entity: SelectedEntity): entity is SlotDefinition {
+  return 'slot_uri' in entity || ('range' in entity && !('children' in entity) && !('permissible_values' in entity));
 }
 
 // Primitive types in LinkML
@@ -31,18 +45,6 @@ function getRangeColor(category: RangeCategory): string {
     default:
       return 'text-gray-500 dark:text-gray-400';
   }
-}
-
-function formatPropertyType(propDef: any): string {
-  // LinkML metadata uses 'range' field for type information
-  const range = propDef.range || 'unknown';
-
-  // If multivalued, show as array
-  if (propDef.multivalued) {
-    return `array<${range}>`;
-  }
-
-  return range;
 }
 
 function TypeLegend() {
@@ -77,18 +79,197 @@ function TypeLegend() {
   );
 }
 
-export default function DetailView({ selectedClass }: DetailViewProps) {
+export default function DetailView({ selectedEntity, onNavigate, enums, slots, classes }: DetailViewProps) {
   const [showLegend, setShowLegend] = React.useState(false);
 
-  if (!selectedClass) {
+  // Helper function to determine entity type and navigate
+  const handleRangeClick = (rangeName: string) => {
+    if (!onNavigate) return;
+
+    if (enums?.has(rangeName)) {
+      onNavigate(rangeName, 'enum');
+    } else if (slots?.has(rangeName)) {
+      onNavigate(rangeName, 'slot');
+    } else if (classes?.has(rangeName)) {
+      onNavigate(rangeName, 'class');
+    }
+  };
+
+  // Helper function to determine if a range is clickable
+  const isRangeClickable = (rangeName: string): boolean => {
+    return !!(enums?.has(rangeName) || slots?.has(rangeName) || classes?.has(rangeName));
+  };
+
+  if (!selectedEntity) {
     return (
       <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
         <div className="text-center">
-          <p className="text-lg">Select a class from the tree to view details</p>
+          <p className="text-lg">Select a class, enum, or slot to view details</p>
         </div>
       </div>
     );
   }
+
+  // Handle enum details
+  if (isEnumDefinition(selectedEntity)) {
+    return (
+      <div className="h-full overflow-y-auto bg-white dark:bg-slate-800 text-left">
+        <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4">
+          <h1 className="text-2xl font-bold text-left">{selectedEntity.name}</h1>
+          <p className="text-sm text-purple-600 dark:text-purple-400 mt-1">Enumeration</p>
+        </div>
+
+        <div className="p-6 space-y-6 text-left">
+          {selectedEntity.description && (
+            <div>
+              <h2 className="text-lg font-semibold mb-2">Description</h2>
+              <p className="text-gray-700 dark:text-gray-300">{selectedEntity.description}</p>
+            </div>
+          )}
+
+          <div>
+            <h2 className="text-lg font-semibold mb-2">
+              Permissible Values ({selectedEntity.permissible_values.length})
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-slate-700">
+                    <th className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-left">Value</th>
+                    <th className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-left">Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedEntity.permissible_values.map((value, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                      <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-mono text-sm">
+                        {value.key}
+                      </td>
+                      <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm">
+                        {value.description || '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {selectedEntity.usedByClasses.length > 0 && (
+            <div>
+              <h2 className="text-lg font-semibold mb-2">
+                Used By Classes ({selectedEntity.usedByClasses.length})
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {selectedEntity.usedByClasses.map(className => (
+                  <button
+                    key={className}
+                    onClick={() => handleRangeClick(className)}
+                    className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm font-mono hover:bg-blue-200 dark:hover:bg-blue-800 cursor-pointer transition-colors"
+                  >
+                    {className}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Handle slot details
+  if (isSlotDefinition(selectedEntity)) {
+    return (
+      <div className="h-full overflow-y-auto bg-white dark:bg-slate-800 text-left">
+        <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4">
+          <h1 className="text-2xl font-bold text-left">{selectedEntity.name}</h1>
+          <p className="text-sm text-green-600 dark:text-green-400 mt-1">Slot</p>
+        </div>
+
+        <div className="p-6 space-y-6 text-left">
+          {selectedEntity.description && (
+            <div>
+              <h2 className="text-lg font-semibold mb-2">Description</h2>
+              <p className="text-gray-700 dark:text-gray-300">{selectedEntity.description}</p>
+            </div>
+          )}
+
+          <div>
+            <h2 className="text-lg font-semibold mb-2">Properties</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <tbody>
+                  {selectedEntity.range && (
+                    <tr className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                      <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">Range</td>
+                      <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-mono text-sm">
+                        {selectedEntity.range}
+                      </td>
+                    </tr>
+                  )}
+                  {selectedEntity.slot_uri && (
+                    <tr className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                      <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">URI</td>
+                      <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-mono text-sm">
+                        {selectedEntity.slot_uri}
+                      </td>
+                    </tr>
+                  )}
+                  {selectedEntity.identifier !== undefined && (
+                    <tr className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                      <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">Identifier</td>
+                      <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm">
+                        {selectedEntity.identifier ? 'Yes' : 'No'}
+                      </td>
+                    </tr>
+                  )}
+                  {selectedEntity.required !== undefined && (
+                    <tr className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                      <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">Required</td>
+                      <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm">
+                        {selectedEntity.required ? 'Yes' : 'No'}
+                      </td>
+                    </tr>
+                  )}
+                  {selectedEntity.multivalued !== undefined && (
+                    <tr className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                      <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">Multivalued</td>
+                      <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm">
+                        {selectedEntity.multivalued ? 'Yes' : 'No'}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {selectedEntity.usedByClasses.length > 0 && (
+            <div>
+              <h2 className="text-lg font-semibold mb-2">
+                Used By Classes ({selectedEntity.usedByClasses.length})
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {selectedEntity.usedByClasses.map(className => (
+                  <button
+                    key={className}
+                    onClick={() => handleRangeClick(className)}
+                    className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm font-mono hover:bg-blue-200 dark:hover:bg-blue-800 cursor-pointer transition-colors"
+                  >
+                    {className}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Handle class details (original code)
+  const selectedClass = selectedEntity as ClassNode;
 
   return (
     <div className="h-full overflow-y-auto bg-white dark:bg-slate-800 text-left">
@@ -135,12 +316,13 @@ export default function DetailView({ selectedClass }: DetailViewProps) {
             </h2>
             <div className="flex flex-wrap gap-2">
               {selectedClass.enumReferences.map(enumName => (
-                <span
+                <button
                   key={enumName}
-                  className="px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full text-sm font-mono"
+                  onClick={() => handleRangeClick(enumName)}
+                  className="px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full text-sm font-mono hover:bg-purple-200 dark:hover:bg-purple-800 cursor-pointer transition-colors"
                 >
                   {enumName}
-                </span>
+                </button>
               ))}
             </div>
           </div>
@@ -185,6 +367,7 @@ export default function DetailView({ selectedClass }: DetailViewProps) {
                     const range = propDef.range || 'unknown';
                     const category = categorizeRange(range);
                     const colorClass = getRangeColor(category);
+                    const clickable = isRangeClickable(range);
 
                     return (
                       <tr key={propName} className="hover:bg-gray-50 dark:hover:bg-slate-700">
@@ -204,7 +387,18 @@ export default function DetailView({ selectedClass }: DetailViewProps) {
                           </div>
                         </td>
                         <td className={`border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm font-mono ${colorClass}`}>
-                          {formatPropertyType(propDef)}
+                          {propDef.multivalued && 'array<'}
+                          {clickable ? (
+                            <button
+                              onClick={() => handleRangeClick(range)}
+                              className="underline hover:opacity-70 transition-opacity"
+                            >
+                              {range}
+                            </button>
+                          ) : (
+                            <span>{range}</span>
+                          )}
+                          {propDef.multivalued && '>'}
                         </td>
                         <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm">
                           {propDef.description || '-'}

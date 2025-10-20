@@ -1,6 +1,14 @@
 // Utilities for loading and parsing schema and variable specs
 
-import type { VariableSpec, ClassNode } from '../types';
+import type {
+  VariableSpec,
+  ClassNode,
+  EnumDefinition,
+  EnumValue,
+  SlotDefinition,
+  ReverseIndices,
+  ModelData
+} from '../types';
 
 interface ClassMetadata {
   name: string;
@@ -8,7 +16,7 @@ interface ClassMetadata {
   parent?: string;
   abstract: boolean;
   attributes: Record<string, any>;
-  slots: string[];
+  slots?: string | string[]; // Can be string or array in raw metadata, normalized to array
 }
 
 interface SchemaMetadata {
@@ -17,15 +25,23 @@ interface SchemaMetadata {
   enums: Record<string, any>;
 }
 
-export async function loadSchema(): Promise<Map<string, ClassMetadata>> {
+async function loadSchemaMetadata(): Promise<SchemaMetadata> {
   const response = await fetch(`${import.meta.env.BASE_URL}source_data/HM/bdchm.metadata.json`);
   if (!response.ok) {
     throw new Error(`Failed to load schema metadata: ${response.statusText}`);
   }
-  const metadata: SchemaMetadata = await response.json();
+  return await response.json();
+}
+
+export async function loadSchema(): Promise<Map<string, ClassMetadata>> {
+  const metadata = await loadSchemaMetadata();
 
   const classes = new Map<string, ClassMetadata>();
   Object.entries(metadata.classes).forEach(([name, classDef]) => {
+    // Normalize slots: convert string to array
+    if (classDef.slots && typeof classDef.slots === 'string') {
+      classDef.slots = [classDef.slots];
+    }
     classes.set(name, classDef);
   });
 
@@ -107,4 +123,153 @@ export function buildClassHierarchy(
   roots.forEach(sortChildren);
 
   return roots;
+}
+
+function loadEnums(metadata: SchemaMetadata): Map<string, EnumDefinition> {
+  const enums = new Map<string, EnumDefinition>();
+
+  Object.entries(metadata.enums || {}).forEach(([name, enumDef]) => {
+    const permissible_values: EnumValue[] = [];
+
+    if (enumDef.permissible_values) {
+      Object.entries(enumDef.permissible_values).forEach(([key, valueDef]: [string, any]) => {
+        permissible_values.push({
+          key,
+          description: valueDef?.description
+        });
+      });
+    }
+
+    enums.set(name, {
+      name,
+      description: enumDef.description,
+      permissible_values,
+      usedByClasses: [] // Will be populated by reverse index
+    });
+  });
+
+  return enums;
+}
+
+function loadSlots(metadata: SchemaMetadata): Map<string, SlotDefinition> {
+  const slots = new Map<string, SlotDefinition>();
+
+  Object.entries(metadata.slots || {}).forEach(([name, slotDef]) => {
+    slots.set(name, {
+      name,
+      description: slotDef.description,
+      range: slotDef.range,
+      slot_uri: slotDef.slot_uri,
+      identifier: slotDef.identifier,
+      required: slotDef.required,
+      multivalued: slotDef.multivalued,
+      usedByClasses: [] // Will be populated by reverse index
+    });
+  });
+
+  return slots;
+}
+
+function buildReverseIndices(
+  schema: Map<string, ClassMetadata>,
+  enums: Map<string, EnumDefinition>,
+  slots: Map<string, SlotDefinition>
+): ReverseIndices {
+  const enumToClasses = new Map<string, Set<string>>();
+  const slotToClasses = new Map<string, Set<string>>();
+  const classToClasses = new Map<string, Set<string>>();
+
+  // Initialize sets for all enums and slots
+  enums.forEach((_, enumName) => {
+    enumToClasses.set(enumName, new Set());
+  });
+
+  slots.forEach((_, slotName) => {
+    slotToClasses.set(slotName, new Set());
+  });
+
+  // Scan through all class attributes to build indices
+  schema.forEach((classDef, className) => {
+    // Check attributes for enum and class references
+    if (classDef.attributes) {
+      Object.entries(classDef.attributes).forEach(([, attrDef]) => {
+        const range = attrDef.range;
+
+        if (range) {
+          // Check if it's an enum
+          if (enums.has(range)) {
+            if (!enumToClasses.has(range)) {
+              enumToClasses.set(range, new Set());
+            }
+            enumToClasses.get(range)!.add(className);
+          }
+          // Check if it's a class (but not a primitive type)
+          else if (schema.has(range)) {
+            if (!classToClasses.has(range)) {
+              classToClasses.set(range, new Set());
+            }
+            classToClasses.get(range)!.add(className);
+          }
+        }
+      });
+    }
+
+    // Check slots usage
+    if (classDef.slots && Array.isArray(classDef.slots)) {
+      classDef.slots.forEach((slotName: string) => {
+        if (!slotToClasses.has(slotName)) {
+          slotToClasses.set(slotName, new Set());
+        }
+        slotToClasses.get(slotName)!.add(className);
+      });
+    }
+  });
+
+  // Update enum and slot definitions with their usage
+  enumToClasses.forEach((classes, enumName) => {
+    const enumDef = enums.get(enumName);
+    if (enumDef) {
+      enumDef.usedByClasses = Array.from(classes).sort();
+    }
+  });
+
+  slotToClasses.forEach((classes, slotName) => {
+    const slotDef = slots.get(slotName);
+    if (slotDef) {
+      slotDef.usedByClasses = Array.from(classes).sort();
+    }
+  });
+
+  return {
+    enumToClasses,
+    slotToClasses,
+    classToClasses
+  };
+}
+
+export async function loadModelData(): Promise<ModelData> {
+  const metadata = await loadSchemaMetadata();
+  const variables = await loadVariableSpecs();
+
+  const schema = new Map<string, ClassMetadata>();
+  Object.entries(metadata.classes).forEach(([name, classDef]) => {
+    // Normalize slots: convert string to array
+    if (classDef.slots && typeof classDef.slots === 'string') {
+      classDef.slots = [classDef.slots];
+    }
+    schema.set(name, classDef);
+  });
+
+  const enums = loadEnums(metadata);
+  const slots = loadSlots(metadata);
+  const reverseIndices = buildReverseIndices(schema, enums, slots);
+
+  const classHierarchy = buildClassHierarchy(schema, variables);
+
+  return {
+    classHierarchy,
+    enums,
+    slots,
+    reverseIndices
+  };
 }
