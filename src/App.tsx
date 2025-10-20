@@ -2,16 +2,18 @@ import { useState, useEffect } from 'react';
 import ClassTree from './components/ClassTree';
 import EnumPanel from './components/EnumPanel';
 import SlotPanel from './components/SlotPanel';
+import VariablesSection from './components/VariablesSection';
 import DetailView from './components/DetailView';
 import { loadModelData } from './utils/dataLoader';
-import type { ClassNode, EnumDefinition, SlotDefinition, ModelData } from './types';
+import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec, ModelData } from './types';
 
-type SelectedEntity = ClassNode | EnumDefinition | SlotDefinition | undefined;
+type SelectedEntity = ClassNode | EnumDefinition | SlotDefinition | VariableSpec | undefined;
 
 interface PanelToggles {
   showClasses: boolean;
   showEnums: boolean;
   showSlots: boolean;
+  showVariables: boolean;
 }
 
 function App() {
@@ -21,7 +23,8 @@ function App() {
   const [panelToggles, setPanelToggles] = useState<PanelToggles>({
     showClasses: true,
     showEnums: true,
-    showSlots: true
+    showSlots: true,
+    showVariables: true
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
@@ -126,6 +129,15 @@ function App() {
               />
               <span>Slots</span>
             </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={panelToggles.showVariables}
+                onChange={(e) => setPanelToggles({ ...panelToggles, showVariables: e.target.checked })}
+                className="w-4 h-4"
+              />
+              <span>Variables</span>
+            </label>
           </div>
         </div>
       </header>
@@ -146,12 +158,12 @@ function App() {
           </div>
         )}
 
-        {/* Middle sidebar: Enum and Slot panels */}
-        {(panelToggles.showEnums || panelToggles.showSlots) && (
+        {/* Middle sidebar: Enum, Slot, and Variable sections */}
+        {(panelToggles.showEnums || panelToggles.showSlots || panelToggles.showVariables) && (
           <div className="flex flex-col w-1/4 min-w-[250px] max-w-[400px]">
             {/* Enum panel */}
             {panelToggles.showEnums && (
-              <div className={`flex-1 overflow-hidden ${panelToggles.showSlots ? 'border-b border-gray-200 dark:border-slate-700' : ''}`}>
+              <div className={`flex-1 overflow-hidden ${(panelToggles.showSlots || panelToggles.showVariables) ? 'border-b border-gray-200 dark:border-slate-700' : ''}`}>
                 <EnumPanel
                   enums={modelData?.enums || new Map()}
                   onSelectEnum={(enumDef) => setSelectedEntity(enumDef)}
@@ -161,11 +173,21 @@ function App() {
             )}
             {/* Slot panel */}
             {panelToggles.showSlots && (
-              <div className="flex-1 overflow-hidden">
+              <div className={`flex-1 overflow-hidden ${panelToggles.showVariables ? 'border-b border-gray-200 dark:border-slate-700' : ''}`}>
                 <SlotPanel
                   slots={modelData?.slots || new Map()}
                   onSelectSlot={(slotDef) => setSelectedEntity(slotDef)}
                   selectedSlot={selectedEntity && 'slot_uri' in selectedEntity ? selectedEntity as SlotDefinition : undefined}
+                />
+              </div>
+            )}
+            {/* Variables section */}
+            {panelToggles.showVariables && (
+              <div className="flex-1 overflow-hidden">
+                <VariablesSection
+                  variables={modelData?.variables || []}
+                  onSelectVariable={(variable) => setSelectedEntity(variable)}
+                  selectedVariable={selectedEntity && 'variableLabel' in selectedEntity ? selectedEntity as VariableSpec : undefined}
                 />
               </div>
             )}

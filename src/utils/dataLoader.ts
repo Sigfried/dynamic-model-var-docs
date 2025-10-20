@@ -270,6 +270,7 @@ export async function loadModelData(): Promise<ModelData> {
     classHierarchy,
     enums,
     slots,
+    variables,
     reverseIndices
   };
 }

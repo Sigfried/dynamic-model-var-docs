@@ -55,5 +55,6 @@ export interface ModelData {
   classHierarchy: ClassNode[];
   enums: Map<string, EnumDefinition>;
   slots: Map<string, SlotDefinition>;
+  variables: VariableSpec[];
   reverseIndices: ReverseIndices;
 }

@@ -1,7 +1,7 @@
 import React from 'react';
-import type { ClassNode, EnumDefinition, SlotDefinition } from '../types';
+import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
 
-type SelectedEntity = ClassNode | EnumDefinition | SlotDefinition;
+type SelectedEntity = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
 
 interface DetailViewProps {
   selectedEntity?: SelectedEntity;
@@ -17,6 +17,10 @@ function isEnumDefinition(entity: SelectedEntity): entity is EnumDefinition {
 
 function isSlotDefinition(entity: SelectedEntity): entity is SlotDefinition {
   return 'slot_uri' in entity || ('range' in entity && !('children' in entity) && !('permissible_values' in entity));
+}
+
+function isVariableSpec(entity: SelectedEntity): entity is VariableSpec {
+  return 'variableLabel' in entity && 'bdchmElement' in entity;
 }
 
 // Primitive types in LinkML
@@ -104,7 +108,71 @@ export default function DetailView({ selectedEntity, onNavigate, enums, slots, c
     return (
       <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
         <div className="text-center">
-          <p className="text-lg">Select a class, enum, or slot to view details</p>
+          <p className="text-lg">Select a class, enum, slot, or variable to view details</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle variable details
+  if (isVariableSpec(selectedEntity)) {
+    return (
+      <div className="h-full overflow-y-auto bg-white dark:bg-slate-800 text-left">
+        <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4">
+          <h1 className="text-2xl font-bold text-left">{selectedEntity.variableLabel}</h1>
+          <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">Variable</p>
+        </div>
+
+        <div className="p-6 space-y-6 text-left">
+          {selectedEntity.variableDescription && (
+            <div>
+              <h2 className="text-lg font-semibold mb-2">Description</h2>
+              <p className="text-gray-700 dark:text-gray-300">{selectedEntity.variableDescription}</p>
+            </div>
+          )}
+
+          <div>
+            <h2 className="text-lg font-semibold mb-2">Specifications</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <tbody>
+                  <tr className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                    <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">BDCHM Element</td>
+                    <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-mono text-sm">
+                      <button
+                        onClick={() => handleRangeClick(selectedEntity.bdchmElement)}
+                        className={`${classes?.has(selectedEntity.bdchmElement) ? 'text-blue-700 dark:text-blue-400 underline hover:opacity-70 transition-opacity' : ''}`}
+                      >
+                        {selectedEntity.bdchmElement}
+                      </button>
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                    <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">Data Type</td>
+                    <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm">
+                      {selectedEntity.dataType}
+                    </td>
+                  </tr>
+                  {selectedEntity.ucumUnit && (
+                    <tr className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                      <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">UCUM Unit</td>
+                      <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-mono text-sm">
+                        {selectedEntity.ucumUnit}
+                      </td>
+                    </tr>
+                  )}
+                  {selectedEntity.curie && (
+                    <tr className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                      <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">CURIE</td>
+                      <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-mono text-sm">
+                        {selectedEntity.curie}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     );
