@@ -152,7 +152,7 @@ export default function PanelLayout({
 
   // If no panels are visible, render nothing
   if (!showLeft && !showDetail && !showRight) {
-    return <div className="flex-1 flex items-center justify-center text-gray-500">No panels active</div>;
+    return <div className="flex-1 flex items-center justify-center text-gray-4500">No panels active</div>;
   }
 
   return (
@@ -161,8 +161,16 @@ export default function PanelLayout({
       {showLeft && (
         <>
           <div
-            className="overflow-hidden border-r border-gray-200 dark:border-slate-700 transition-all duration-500 flex-shrink-0"
-            style={{ width: leftPanelEmpty ? `${EMPTY_PANEL_WIDTH}px` : `${actualWidths.left}%` }}
+            className={`overflow-hidden border-r border-gray-200 dark:border-slate-700 transition-all duration-4500 ${
+              !showDetail && showRight && !rightPanelEmpty && !leftPanelEmpty ? '' : 'flex-shrink-0'
+            }`}
+            style={
+              leftPanelEmpty
+                ? { width: `${EMPTY_PANEL_WIDTH}px` }
+                : !showDetail && showRight && !rightPanelEmpty
+                ? { flex: 1 } // Use flex when both panels shown without detail
+                : { width: `${actualWidths.left}%` }
+            }
           >
             {leftPanel}
           </div>
@@ -182,7 +190,7 @@ export default function PanelLayout({
       {/* Detail Panel */}
       {showDetail && (
         <>
-          <div className="overflow-hidden transition-all duration-500 flex-1">
+          <div className="overflow-hidden transition-all duration-4500 flex-1">
             {detailPanel}
           </div>
 
@@ -211,8 +219,16 @@ export default function PanelLayout({
 
           {/* Right Panel */}
           <div
-            className="overflow-hidden border-l border-gray-200 dark:border-slate-700 transition-all duration-500 flex-shrink-0"
-            style={{ width: rightPanelEmpty ? `${EMPTY_PANEL_WIDTH}px` : `${actualWidths.right}%` }}
+            className={`overflow-hidden border-l border-gray-200 dark:border-slate-700 transition-all duration-4500 ${
+              !showDetail && showLeft && !leftPanelEmpty && !rightPanelEmpty ? '' : 'flex-shrink-0'
+            }`}
+            style={
+              rightPanelEmpty
+                ? { width: `${EMPTY_PANEL_WIDTH}px` }
+                : !showDetail && showLeft && !leftPanelEmpty
+                ? { flex: 1 } // Use flex when both panels shown without detail
+                : { width: `${actualWidths.right}%` }
+            }
           >
             {rightPanel}
           </div>

@@ -18,6 +18,7 @@ function App() {
   const [showUrlHelp, setShowUrlHelp] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [hasLocalStorage, setHasLocalStorage] = useState(false);
+  const [hasRestoredFromURL, setHasRestoredFromURL] = useState(false);
 
   // Load initial state from URL or localStorage
   const initialState = getInitialState();
@@ -64,8 +65,10 @@ function App() {
     loadData();
   }, []);
 
-  // Restore selected entity from URL after data loads
+  // Restore selected entity from URL after data loads (runs once)
   useEffect(() => {
+    // Only run once after data loads
+    if (hasRestoredFromURL) return;
     if (!modelData || classMap.size === 0) return;
 
     // Parse current URL to get selected entity info
@@ -73,11 +76,12 @@ function App() {
     const selectedEntityName = params.get('sel');
     const selectedEntityType = params.get('selType') as 'class' | 'enum' | 'slot' | 'variable' | null;
 
+    // Mark as restored regardless of whether there was a selection in the URL
+    setHasRestoredFromURL(true);
+
     if (!selectedEntityName || !selectedEntityType) return;
 
-    // Only restore if nothing is currently selected
-    if (selectedEntity) return;
-
+    // Restore the selected entity
     if (selectedEntityType === 'class') {
       const classNode = classMap.get(selectedEntityName);
       if (classNode) setSelectedEntity(classNode);
@@ -91,7 +95,7 @@ function App() {
       const variable = modelData.variables.find(v => v.variableLabel === selectedEntityName);
       if (variable) setSelectedEntity(variable);
     }
-  }, [modelData, classMap, selectedEntity]);
+  }, [modelData, classMap, hasRestoredFromURL]);
 
   // Determine selected entity name and type for state persistence
   const getSelectedEntityInfo = () => {
