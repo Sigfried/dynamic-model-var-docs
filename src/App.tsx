@@ -17,6 +17,7 @@ function App() {
   const [error, setError] = useState<string>();
   const [showUrlHelp, setShowUrlHelp] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  const [hasLocalStorage, setHasLocalStorage] = useState(false);
 
   // Load initial state from URL or localStorage
   const initialState = getInitialState();
@@ -24,14 +25,17 @@ function App() {
   const [rightSections, setRightSections] = useState<SectionType[]>(initialState.rightSections);
   const [widths, setWidths] = useState(initialState.widths);
 
-  // Redirect to add trailing slash if missing
+  // Check if localStorage has saved state
   useEffect(() => {
-    const path = window.location.pathname;
-    const base = '/dynamic-model-var-docs';
-    if (path === base) {
-      // Redirect to add trailing slash
-      window.location.replace(base + '/' + window.location.search);
-    }
+    const checkLocalStorage = () => {
+      try {
+        const stored = localStorage.getItem('bdchm-app-state');
+        setHasLocalStorage(!!stored);
+      } catch {
+        setHasLocalStorage(false);
+      }
+    };
+    checkLocalStorage();
   }, []);
 
   useEffect(() => {
@@ -60,33 +64,34 @@ function App() {
     loadData();
   }, []);
 
-  // Restore selected entity from initial state after data loads
+  // Restore selected entity from URL after data loads
   useEffect(() => {
-    if (modelData && !selectedEntity && initialState.selectedEntityName && initialState.selectedEntityType) {
-      const { selectedEntityName, selectedEntityType } = initialState;
+    if (!modelData || classMap.size === 0) return;
 
-      if (selectedEntityType === 'class') {
-        // Build flat map to find class
-        const map = new Map<string, ClassNode>();
-        const addClassToMap = (node: ClassNode) => {
-          map.set(node.name, node);
-          node.children.forEach(addClassToMap);
-        };
-        modelData.classHierarchy.forEach(addClassToMap);
-        const classNode = map.get(selectedEntityName);
-        if (classNode) setSelectedEntity(classNode);
-      } else if (selectedEntityType === 'enum') {
-        const enumDef = modelData.enums.get(selectedEntityName);
-        if (enumDef) setSelectedEntity(enumDef);
-      } else if (selectedEntityType === 'slot') {
-        const slotDef = modelData.slots.get(selectedEntityName);
-        if (slotDef) setSelectedEntity(slotDef);
-      } else if (selectedEntityType === 'variable') {
-        const variable = modelData.variables.find(v => v.variableLabel === selectedEntityName);
-        if (variable) setSelectedEntity(variable);
-      }
+    // Parse current URL to get selected entity info
+    const params = new URLSearchParams(window.location.search);
+    const selectedEntityName = params.get('sel');
+    const selectedEntityType = params.get('selType') as 'class' | 'enum' | 'slot' | 'variable' | null;
+
+    if (!selectedEntityName || !selectedEntityType) return;
+
+    // Only restore if nothing is currently selected
+    if (selectedEntity) return;
+
+    if (selectedEntityType === 'class') {
+      const classNode = classMap.get(selectedEntityName);
+      if (classNode) setSelectedEntity(classNode);
+    } else if (selectedEntityType === 'enum') {
+      const enumDef = modelData.enums.get(selectedEntityName);
+      if (enumDef) setSelectedEntity(enumDef);
+    } else if (selectedEntityType === 'slot') {
+      const slotDef = modelData.slots.get(selectedEntityName);
+      if (slotDef) setSelectedEntity(slotDef);
+    } else if (selectedEntityType === 'variable') {
+      const variable = modelData.variables.find(v => v.variableLabel === selectedEntityName);
+      if (variable) setSelectedEntity(variable);
     }
-  }, [modelData]);
+  }, [modelData, classMap, selectedEntity]);
 
   // Determine selected entity name and type for state persistence
   const getSelectedEntityInfo = () => {
@@ -122,8 +127,21 @@ function App() {
       selectedEntityType: type
     };
     saveStateToLocalStorage(state);
+    setHasLocalStorage(true);
     setShowSaveConfirm(true);
     setTimeout(() => setShowSaveConfirm(false), 2000);
+  };
+
+  // Reset layout (clear localStorage)
+  const handleResetLayout = () => {
+    try {
+      localStorage.removeItem('bdchm-app-state');
+      setHasLocalStorage(false);
+      setShowSaveConfirm(true);
+      setTimeout(() => setShowSaveConfirm(false), 2000);
+    } catch (err) {
+      console.error('Failed to clear localStorage:', err);
+    }
   };
 
   // Navigation handler
@@ -202,18 +220,33 @@ function App() {
               Variables
             </a>
             <div className="relative">
-              <button
-                onClick={handleSaveLayout}
-                className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded transition-colors relative"
-                title="Save current layout to browser storage"
-              >
-                Save Layout
-                {showSaveConfirm && (
-                  <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-green-700 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
-                    Layout saved!
-                  </span>
-                )}
-              </button>
+              {hasLocalStorage ? (
+                <button
+                  onClick={handleResetLayout}
+                  className="px-3 py-1 bg-orange-600 hover:bg-orange-700 rounded transition-colors relative"
+                  title="Clear saved layout from browser storage"
+                >
+                  Reset Layout
+                  {showSaveConfirm && (
+                    <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-orange-700 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                      Layout reset!
+                    </span>
+                  )}
+                </button>
+              ) : (
+                <button
+                  onClick={handleSaveLayout}
+                  className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded transition-colors relative"
+                  title="Save current layout to browser storage"
+                >
+                  Save Layout
+                  {showSaveConfirm && (
+                    <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-green-700 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                      Layout saved!
+                    </span>
+                  )}
+                </button>
+              )}
             </div>
             <div className="relative">
               <button
@@ -240,6 +273,14 @@ function App() {
                       <span className="font-mono bg-gray-100 dark:bg-slate-800 px-1 py-0.5 rounded">w=30,40,30</span>
                       <span className="ml-2">Panel widths (%)</span>
                     </div>
+                    <div>
+                      <span className="font-mono bg-gray-100 dark:bg-slate-800 px-1 py-0.5 rounded">sel=Condition</span>
+                      <span className="ml-2">Selected entity name</span>
+                    </div>
+                    <div>
+                      <span className="font-mono bg-gray-100 dark:bg-slate-800 px-1 py-0.5 rounded">selType=class</span>
+                      <span className="ml-2">Entity type (class/enum/slot/variable)</span>
+                    </div>
                     <div className="mt-3 pt-2 border-t border-gray-200 dark:border-slate-600">
                       <div className="font-semibold mb-1">Section codes:</div>
                       <div className="grid grid-cols-2 gap-1">
@@ -263,20 +304,18 @@ function App() {
       {/* Main content: Panel layout */}
       <PanelLayout
         leftPanel={
-          modelData ? (
-            <ElementsPanel
-              position="left"
-              sections={leftSections}
-              onSectionsChange={setLeftSections}
-              forceSingleColumn={rightSections.length > 0}
-              classHierarchy={modelData.classHierarchy}
-              enums={modelData.enums}
-              slots={modelData.slots}
-              variables={modelData.variables}
-              selectedEntity={selectedEntity}
-              onSelectEntity={setSelectedEntity}
-            />
-          ) : undefined
+          <ElementsPanel
+            position="left"
+            sections={leftSections}
+            onSectionsChange={setLeftSections}
+            forceSingleColumn={rightSections.length > 0}
+            classHierarchy={modelData?.classHierarchy || []}
+            enums={modelData?.enums || new Map()}
+            slots={modelData?.slots || new Map()}
+            variables={modelData?.variables || []}
+            selectedEntity={selectedEntity}
+            onSelectEntity={setSelectedEntity}
+          />
         }
         leftPanelEmpty={leftSections.length === 0}
         detailPanel={
@@ -292,20 +331,18 @@ function App() {
           ) : undefined
         }
         rightPanel={
-          modelData ? (
-            <ElementsPanel
-              position="right"
-              sections={rightSections}
-              onSectionsChange={setRightSections}
-              forceSingleColumn={leftSections.length > 0}
-              classHierarchy={modelData.classHierarchy}
-              enums={modelData.enums}
-              slots={modelData.slots}
-              variables={modelData.variables}
-              selectedEntity={selectedEntity}
-              onSelectEntity={setSelectedEntity}
-            />
-          ) : undefined
+          <ElementsPanel
+            position="right"
+            sections={rightSections}
+            onSectionsChange={setRightSections}
+            forceSingleColumn={leftSections.length > 0}
+            classHierarchy={modelData?.classHierarchy || []}
+            enums={modelData?.enums || new Map()}
+            slots={modelData?.slots || new Map()}
+            variables={modelData?.variables || []}
+            selectedEntity={selectedEntity}
+            onSelectEntity={setSelectedEntity}
+          />
         }
         rightPanelEmpty={rightSections.length === 0}
         initialWidths={widths}

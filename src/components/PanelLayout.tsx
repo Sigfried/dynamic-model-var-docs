@@ -33,21 +33,31 @@ export default function PanelLayout({
 
   // Calculate actual widths based on visible panels
   const getActualWidths = () => {
-    const visiblePanels = [showLeft, showDetail, showRight].filter(Boolean).length;
+    // Count non-empty, visible panels (detail is never empty if visible)
+    const leftVisible = showLeft && !leftPanelEmpty;
+    const rightVisible = showRight && !rightPanelEmpty;
+    const nonEmptyPanels = [leftVisible, showDetail, rightVisible].filter(Boolean).length;
 
-    if (visiblePanels === 0) return { left: 0, middle: 0, right: 0 };
-    if (visiblePanels === 1) {
-      if (showLeft) return { left: 100, middle: 0, right: 0 };
+    if (nonEmptyPanels === 0) return { left: 0, middle: 0, right: 0 };
+
+    // Single non-empty panel - take full width
+    if (nonEmptyPanels === 1) {
+      if (leftVisible) return { left: 100, middle: 0, right: 0 };
       if (showDetail) return { left: 0, middle: 100, right: 0 };
       return { left: 0, middle: 0, right: 100 };
     }
-    if (visiblePanels === 2) {
-      if (showLeft && showDetail) return { left: widths.left, middle: 100 - widths.left, right: 0 };
-      if (showLeft && showRight) return { left: widths.left, middle: 0, right: 100 - widths.left };
-      return { left: 0, middle: widths.middle, right: 100 - widths.middle };
+
+    // Two non-empty panels
+    if (nonEmptyPanels === 2) {
+      if (leftVisible && showDetail) return { left: widths.left, middle: 100 - widths.left, right: 0 };
+      if (leftVisible && rightVisible) {
+        // Both element panels shown - default to equal widths (50/50)
+        return { left: widths.left || 50, middle: 0, right: widths.right || 50 };
+      }
+      if (showDetail && rightVisible) return { left: 0, middle: widths.middle, right: 100 - widths.middle };
     }
 
-    // All 3 panels visible
+    // All 3 panels visible and non-empty
     return widths;
   };
 
@@ -118,7 +128,14 @@ export default function PanelLayout({
   const handleMouseUp = () => {
     if (isDragging) {
       setIsDragging(null);
-      onWidthsChange?.(widths);
+      // Round widths to whole numbers before saving
+      const roundedWidths = {
+        left: Math.round(widths.left),
+        middle: Math.round(widths.middle),
+        right: Math.round(widths.right)
+      };
+      setWidths(roundedWidths);
+      onWidthsChange?.(roundedWidths);
     }
   };
 
@@ -150,8 +167,8 @@ export default function PanelLayout({
             {leftPanel}
           </div>
 
-          {/* Left Divider */}
-          {(showDetail || showRight) && (
+          {/* Left Divider - only show if left panel is not empty and there's something to the right */}
+          {!leftPanelEmpty && (showDetail || showRight) && (
             <div
               className={`w-1 bg-gray-200 dark:bg-slate-700 hover:bg-blue-400 dark:hover:bg-blue-600 cursor-col-resize transition-colors ${
                 isDragging === 'left' ? 'bg-blue-500' : ''
@@ -165,19 +182,12 @@ export default function PanelLayout({
       {/* Detail Panel */}
       {showDetail && (
         <>
-          <div
-            className="overflow-hidden transition-all duration-500 flex-1"
-            style={{
-              width: (showLeft && !leftPanelEmpty) || (showRight && !rightPanelEmpty)
-                ? `${actualWidths.middle}%`
-                : undefined
-            }}
-          >
+          <div className="overflow-hidden transition-all duration-500 flex-1">
             {detailPanel}
           </div>
 
-          {/* Right Divider */}
-          {showRight && (
+          {/* Right Divider - only show if right panel is not empty */}
+          {showRight && !rightPanelEmpty && (
             <div
               className={`w-1 bg-gray-200 dark:bg-slate-700 hover:bg-blue-400 dark:hover:bg-blue-600 cursor-col-resize transition-colors ${
                 isDragging === 'right' ? 'bg-blue-500' : ''
@@ -188,19 +198,25 @@ export default function PanelLayout({
         </>
       )}
 
-      {/* Gutter between left and right when no detail panel */}
-      {!showDetail && showLeft && showRight && (
-        <div className="w-8 bg-gray-100 dark:bg-slate-800 border-x border-gray-200 dark:border-slate-700 flex-shrink-0" />
-      )}
-
-      {/* Right Panel */}
+      {/* Spacer to push elements when needed */}
       {showRight && (
-        <div
-          className="overflow-hidden border-l border-gray-200 dark:border-slate-700 transition-all duration-500 flex-shrink-0"
-          style={{ width: rightPanelEmpty ? `${EMPTY_PANEL_WIDTH}px` : `${actualWidths.right}%` }}
-        >
-          {rightPanel}
-        </div>
+        <>
+          {/* Spacer before right panel when it's empty - pushes it to right edge */}
+          {rightPanelEmpty && <div className="flex-1" />}
+
+          {/* Gutter between left and right when no detail panel but both are non-empty */}
+          {!showDetail && !leftPanelEmpty && !rightPanelEmpty && (
+            <div className="w-8 bg-gray-100 dark:bg-slate-800 border-x border-gray-200 dark:border-slate-700 flex-shrink-0" />
+          )}
+
+          {/* Right Panel */}
+          <div
+            className="overflow-hidden border-l border-gray-200 dark:border-slate-700 transition-all duration-500 flex-shrink-0"
+            style={{ width: rightPanelEmpty ? `${EMPTY_PANEL_WIDTH}px` : `${actualWidths.right}%` }}
+          >
+            {rightPanel}
+          </div>
+        </>
       )}
     </div>
   );

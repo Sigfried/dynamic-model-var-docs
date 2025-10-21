@@ -205,7 +205,25 @@ src/
 - Add hover/click interactions for links
 - Filter links by relationship type (inheritance, enum usage, associations)
 
-### Upcoming: Phase 3b - Search and Filter
+### Upcoming: Phase 3c - Custom Preset Management (Future)
+
+**User-managed presets**: Replace hard-coded presets with user-customizable ones
+- **Save Preset** button (replaces current "Save Layout"/"Reset Layout"):
+  - Prompts user for preset name
+  - Saves current panel configuration (sections + widths) to localStorage
+  - Format similar to shareable URL but with user-friendly names
+  - Optional: exclude widths from preset (let layout adapt to content)
+- **Preset Management**:
+  - Display saved presets in header with user-assigned names
+  - Add small X or remove icon to each preset button (including defaults)
+  - When localStorage is empty, seed with default presets (Classes Only, Classes + Enums, All, Variables)
+  - User can delete default presets if desired
+- **Benefits**:
+  - Users can save their frequently-used configurations
+  - Presets become personalized to user's workflow
+  - No need for separate "Save Layout" vs "Reset Layout" buttons
+
+### Upcoming: Phase 3d - Search and Filter
 1. Search bar with full-text search across all entities
 2. Filter controls (checkboxes for class families, variable count slider)
 3. Highlight search results in tree/sections
