@@ -141,7 +141,7 @@ When multiple panels are shown side-by-side, visualize relationships with SVG co
 
 ## Implementation Status & Roadmap
 
-### Completed: Phases 1-3a
+### Completed: Phases 1-3b
 
 ✓ **Phase 1**: Basic two-panel layout with class tree and detail view
 - Class hierarchy display (`is_a` inheritance tree)
@@ -163,56 +163,71 @@ When multiple panels are shown side-by-side, visualize relationships with SVG co
 ✓ **Phase 3a**: Dual Panel System with State Persistence
 - Reusable ElementsPanel component with section toggles (C/E/S/V icons)
 - Independent left and right panels, each supporting all 4 section types
-- DetailPanel hidden when nothing selected (animated transitions)
-- 3-column layout: [Left Elements | Details | Right Elements]
-- Draggable panel dividers for width customization (default 30%|40%|30%)
 - State persistence via query string + localStorage
 - Preset configurations accessible via header links
 - Section components: ClassSection, EnumSection, SlotSection, VariablesSection
 - Multi-column grid within panels when multiple sections active
 
+✓ **Phase 3b**: Multiple Detail Dialogs with Full State Persistence
+- Non-modal draggable dialogs for entity details (replaces center detail panel)
+- Multiple dialogs open simultaneously with cascading positions (40px offset)
+- 8-way resizable (N, S, E, W, NE, NW, SE, SW handles)
+- Responsive table layouts: variables split at 1700px, enums at 1000px
+- Full state persistence: all dialog positions and sizes saved to URL
+- URL format: `?dialogs=type:name:x,y,w,h;type:name:x,y,w,h`
+- Escape key closes oldest/bottommost dialog only
+- Clicking entity in dialog opens new dialog (not replace existing)
+
 ### Current Architecture
 ```
 src/
 ├── components/
-│   ├── PanelLayout.tsx       # 3-column layout manager with draggable dividers
+│   ├── PanelLayout.tsx       # Simple 2-panel layout (left/right) with justify-between
 │   ├── ElementsPanel.tsx     # Reusable panel with section icon toggles
-│   ├── DetailPanel.tsx       # Shows entity details (hidden when nothing selected)
+│   ├── DetailDialog.tsx      # Draggable/resizable dialog for entity details
+│   ├── DetailPanel.tsx       # Content renderer for entity details (used in DetailDialog)
 │   ├── ClassSection.tsx      # Class hierarchy tree display
 │   ├── EnumSection.tsx       # Enumeration list display
 │   ├── SlotSection.tsx       # Slot definitions list display
 │   └── VariablesSection.tsx  # Variables list display (all 151 variables)
 ├── utils/
 │   ├── dataLoader.ts         # Schema/TSV parsing, builds class tree + reverse indices
-│   └── statePersistence.ts   # URL/localStorage state management + presets
+│   └── statePersistence.ts   # URL/localStorage state management + presets + dialog states
 ├── types.ts                  # TypeScript definitions
 └── App.tsx                   # Main app with state management
 ```
 
 **Key Features**:
 - **Flexible Layout**: Toggle any combination of sections in left/right panels
+- **Multiple Dialogs**: Open unlimited detail dialogs, each draggable and resizable
 - **State Persistence**: URL params (shareable links) + localStorage (user preference)
 - **Presets**: Classes Only, Classes+Enums, All Sections, Variable Explorer
-- **Animated Transitions**: Smooth panel show/hide (300ms duration)
-- **Draggable Dividers**: User-customizable panel widths (15% minimum per panel)
-- **Query String Format**: `?l=c,e&r=s,v&w=25,50,25` (compact codes: c=classes, e=enums, s=slots, v=variables)
+- **Query String Format**:
+  - Panels: `?l=c,e&r=s,v` (compact codes: c=classes, e=enums, s=slots, v=variables)
+  - Dialogs: `?dialogs=type:name:x,y,w,h;type:name:x,y,w,h`
 
-### Next: Phase 3b - SVG Link Visualization (Future)
+### Next: Phase 3c - SVG Link Visualization
 
-**Not yet implemented**: Visual links between panels
+**Visual links between panels** - Show relationships with SVG connecting lines
 - Add SVG overlay for drawing relationship lines between elements
 - Implement bounding box tracking for link positioning
 - Add hover/click interactions for links
 - Filter links by relationship type (inheritance, enum usage, associations)
 
-### Upcoming: Phase 3c - Custom Preset Management (Future)
+**Implementation approach**:
+- SVG layer positioned absolutely over PanelLayout
+- Track DOM element positions using refs and ResizeObserver
+- Draw bezier curves or straight lines between related elements
+- Interaction: hover to highlight, click to navigate
+- Performance: only render links for visible elements
+
+### Upcoming: Phase 3e - Custom Preset Management (Future)
 
 **User-managed presets**: Replace hard-coded presets with user-customizable ones
 - **Save Preset** button (replaces current "Save Layout"/"Reset Layout"):
   - Prompts user for preset name
-  - Saves current panel configuration (sections + widths) to localStorage
+  - Saves current panel configuration (sections + dialogs) to localStorage
   - Format similar to shareable URL but with user-friendly names
-  - Optional: exclude widths from preset (let layout adapt to content)
 - **Preset Management**:
   - Display saved presets in header with user-assigned names
   - Add small X or remove icon to each preset button (including defaults)
@@ -223,19 +238,19 @@ src/
   - Presets become personalized to user's workflow
   - No need for separate "Save Layout" vs "Reset Layout" buttons
 
-### Upcoming: Phase 3d - Search and Filter
+### Future: Phase 4 - Search and Filter
 1. Search bar with full-text search across all entities
 2. Filter controls (checkboxes for class families, variable count slider)
 3. Highlight search results in tree/sections
-4. Section toggles (show/hide Classes, Enums, Slots, Variables)
+4. Quick navigation: search results open in new dialogs
 
-### Future: Phase 4 - Neighborhood Zoom
+### Future: Phase 5 - Neighborhood Zoom
 1. "Focus mode" that shows only k-hop neighborhood around selected element
 2. Relationship type filters ("show only `is_a` relationships" vs "show associations")
 3. Breadcrumb trail showing navigation path
 4. "Reset to full view" button
 
-### Future: Phase 5 - Advanced Overview (if time allows)
+### Future: Phase 6 - Advanced Overview (if time allows)
 1. Multiple view modes:
    - Tree view (current)
    - Network view (classes + associations, filterable by relationship type)

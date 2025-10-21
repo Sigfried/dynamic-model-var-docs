@@ -5,10 +5,13 @@ Interactive documentation browser for the [BioData Catalyst Harmonized Model (BD
 ## Features
 
 ### Browse the Model
+- **Dual panel layout** - Show different sections (Classes, Enums, Slots, Variables) side-by-side
 - **Class hierarchy tree** - Explore 47 classes organized by inheritance relationships
+- **Multiple detail dialogs** - Open, drag, and resize multiple entity details simultaneously
 - **Variable mapping** - See which of the 151 variables map to each class
-- **Class details** - View definitions, attributes, and relationships
-- **Variable specifications** - Data types, units, CURIEs, descriptions
+- **Clickable navigation** - Navigate between related entities (classes, enums, slots)
+- **State persistence** - Shareable URLs preserve panel layout and open dialogs
+- **Responsive tables** - Large tables split into columns for easier viewing
 
 ### What You Can Explore
 - Inheritance chains (e.g., `MeasurementObservation is_a Observation`)
@@ -55,9 +58,16 @@ npm run deploy
 
 ## Roadmap
 
-Future features planned:
-- **Search & filter**: Full-text search, faceted filters, view toggles
-- **Enhanced navigation**: Bidirectional links, clickable enums, inheritance chains
+Current features:
+- ✅ **Dual panel layout** with section toggles (Classes, Enums, Slots, Variables)
+- ✅ **Multiple draggable/resizable dialogs** with full state persistence
+- ✅ **Clickable navigation** between classes, enums, and slots
+- ✅ **Shareable URLs** that preserve layout and dialog positions
+
+Upcoming features:
+- **SVG link visualization**: Draw connections between related elements across panels
+- **Search & filter**: Full-text search, faceted filters, quick navigation
+- **Custom presets**: Save frequently-used panel configurations
 - **Neighborhood exploration**: Show k-hop neighbors, relationship type filters
 - **Advanced views**: Network graphs, enum-class matrix, comparison views
 
