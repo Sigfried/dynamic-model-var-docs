@@ -299,6 +299,145 @@ src/
 
 ---
 
+## Understanding LinkML: Slots, Attributes, and Slot Usage
+
+**Critical Context**: BDCHM is modeled using LinkML, which has specific terminology and patterns. Understanding these concepts is essential for correctly interpreting and displaying the schema.
+
+### Core Concepts
+
+#### 1. **Slots** (Top-Level Reusable Definitions)
+Slots are reusable property definitions that can be referenced by multiple classes. Think of them as "shared field templates."
+
+- **Location in schema**: Top-level `slots:` section
+- **Example in BDCHM**: The schema defines 7 top-level slots like `id`, `identifier`, `description`, etc.
+- **Usage**: Classes reference these slots by name in their `slots:` list
+- **Benefits**: Define once, reuse across classes; promotes consistency
+
+```yaml
+# In bdchm.yaml
+slots:
+  identifier:
+    range: string
+    description: A unique identifier for the thing
+```
+
+#### 2. **Attributes** (Inline Slot Declarations)
+Attributes are class-specific slot definitions written inline within a class. They are **syntactic sugar** for defining slots that only apply to one class.
+
+- **Location in schema**: Within a class definition under `attributes:`
+- **Example in BDCHM**: `Specimen.specimen_type`, `Condition.condition_concept` (hundreds of these)
+- **Semantic equivalence**: Attributes are really just inline slot definitions
+- **Why use attributes**: Convenience when a slot only applies to one class
+
+```yaml
+# In bdchm.yaml
+classes:
+  Specimen:
+    attributes:
+      specimen_type:
+        range: SpecimenTypeEnum
+        description: The type of specimen
+```
+
+**Key Insight**: From LinkML docs: "Attributes are really just a convenient shorthand for being able to declare slots 'inline'."
+
+#### 3. **Slot Usage** (Class-Specific Refinements)
+Slot usage allows a class to customize/refine a slot it inherits or references. This is how inheritance hierarchies progressively specialize behavior.
+
+- **Location in schema**: Within a class definition under `slot_usage:`
+- **Purpose**: Add constraints, change range, make required, etc.
+- **Example in BDCHM**:
+  - Abstract class `QuestionnaireResponseValue` has a generic `value` slot
+  - Concrete subclasses use `slot_usage` to constrain `value` to specific types:
+    - `QuestionnaireResponseValueString` → `value: range: string`
+    - `QuestionnaireResponseValueInteger` → `value: range: integer`
+    - `QuestionnaireResponseValueBoolean` → `value: range: boolean`
+
+```yaml
+# In bdchm.yaml
+classes:
+  QuestionnaireResponseValue:  # Abstract
+    abstract: true
+    slots:
+      - value
+
+  QuestionnaireResponseValueString:  # Concrete subclass
+    is_a: QuestionnaireResponseValue
+    slot_usage:
+      value:
+        range: string  # Refine the inherited slot
+```
+
+**Key Insight**: Slot usage is essential for understanding how abstract classes become concrete.
+
+### UI Display Implications
+
+#### Merging Slots and Attributes
+Since attributes are just inline slots, the UI should:
+1. **Display them together** in a unified "Slots" table (not separate "Attributes" and "Slots" tables)
+2. **Indicate source** via a column:
+   - "Inline" for attributes
+   - "Slot: {slotName}" for top-level slots (with clickable link)
+   - "Inherited from {ParentClass}" for inherited slots
+3. **Show customizations**: Indicate when a slot has `slot_usage` refinements
+
+#### Inherited Slots
+Classes inherit all slots/attributes from their parents. The UI should:
+1. Show inherited slots in a **collapsible section** (to reduce clutter)
+2. **Link to parent class** for each inherited slot
+3. **Highlight overrides** if a child class uses `slot_usage` to refine an inherited slot
+
+#### Example UI for `MeasurementObservation` (inherits from `Observation`)
+
+```
+Class: MeasurementObservation (inherits from Observation)
+Abstract: false
+
+[Collapsed by default]
+▶ Inherited Slots (5 from Observation)
+  - focus_of (range: Participant | Specimen) [Inherited from Observation]
+  - method_type (range: string) [Inherited from Observation]
+  ...
+
+[Always visible]
+Slots (20)
+┌─────────────────────┬──────────────────┬───────────────────┬─────────────────┐
+│ Slot                │ Type             │ Source            │ Description     │
+├─────────────────────┼──────────────────┼───────────────────┼─────────────────┤
+│ observation_type    │ MeasurementOb... │ Inline            │ The type of ... │
+│ value_quantity      │ Quantity         │ Inline            │ The quantity... │
+│ id                  │ string           │ Slot: id          │ A unique id ... │
+└─────────────────────┴──────────────────┴───────────────────┴─────────────────┘
+```
+
+### Data Extraction Updates Required
+
+**Current state**: `bdchm.metadata.json` does NOT include `slot_usage`.
+
+**Fix**: Modify `scripts/download_source_data.py` in `generate_metadata()`:
+
+```python
+for class_name, class_def in schema.get("classes", {}).items():
+    metadata["classes"][class_name] = {
+        "name": class_name,
+        "description": class_def.get("description", ""),
+        "parent": class_def.get("is_a"),
+        "abstract": class_def.get("abstract", False),
+        "attributes": class_def.get("attributes", {}),
+        "slots": class_def.get("slots", []),
+        "slot_usage": class_def.get("slot_usage", {})  # ADD THIS
+    }
+```
+
+After updating, run: `python3 scripts/download_source_data.py --metadata-only`
+
+### References
+
+- LinkML Slots Documentation: https://linkml.io/linkml/schemas/slots.html
+- LinkML FAQ: When to use attributes vs slots: https://linkml.io/linkml/faq/modeling.html#when-should-i-use-attributes-vs-slots
+
+---
+
 ## Key Use Cases (Sorted by Implementation Priority)
 
 ### Easy (✓ implemented)

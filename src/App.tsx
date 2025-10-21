@@ -87,6 +87,9 @@ function App() {
 
     // Restore dialogs from new format
     if (urlState.dialogs && urlState.dialogs.length > 0) {
+      const restoredDialogs: OpenDialog[] = [];
+      let dialogIdCounter = 0;
+
       urlState.dialogs.forEach(dialogState => {
         let entity: SelectedEntity | null = null;
 
@@ -101,13 +104,23 @@ function App() {
         }
 
         if (entity) {
-          handleOpenDialog(
+          restoredDialogs.push({
+            id: `dialog-${dialogIdCounter}`,
             entity,
-            { x: dialogState.x, y: dialogState.y },
-            { width: dialogState.width, height: dialogState.height }
-          );
+            x: dialogState.x,
+            y: dialogState.y,
+            width: dialogState.width,
+            height: dialogState.height
+          });
+          dialogIdCounter++;
         }
       });
+
+      // Set all dialogs at once
+      if (restoredDialogs.length > 0) {
+        setOpenDialogs(restoredDialogs);
+        setNextDialogId(dialogIdCounter);
+      }
     }
     // Legacy: Restore from old format (sel + selType)
     else {
@@ -127,7 +140,17 @@ function App() {
           entity = modelData.variables.find(v => v.variableLabel === selectedEntityName) || null;
         }
 
-        if (entity) handleOpenDialog(entity);
+        if (entity) {
+          setOpenDialogs([{
+            id: 'dialog-0',
+            entity,
+            x: 100,
+            y: window.innerHeight - 400,
+            width: 900,
+            height: 350
+          }]);
+          setNextDialogId(1);
+        }
       }
     }
   }, [modelData, classMap, hasRestoredFromURL]);
