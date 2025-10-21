@@ -4,7 +4,6 @@ type EntityType = 'class' | 'enum' | 'slot' | 'variable';
 interface AppState {
   leftSections: SectionType[];
   rightSections: SectionType[];
-  widths: { left: number; middle: number; right: number };
   selectedEntityName?: string;
   selectedEntityType?: EntityType;
 }
@@ -49,15 +48,6 @@ export function parseStateFromURL(): Partial<AppState> | null {
       .filter(Boolean) as SectionType[];
   }
 
-  // Parse widths
-  const widthsParam = params.get('w');
-  if (widthsParam) {
-    const [left, middle, right] = widthsParam.split(',').map(Number);
-    if (left && middle && right && left + middle + right === 100) {
-      state.widths = { left, middle, right };
-    }
-  }
-
   // Parse selected entity
   const selectedName = params.get('sel');
   const selectedType = params.get('selType') as EntityType | null;
@@ -83,14 +73,6 @@ export function saveStateToURL(state: AppState): void {
   // Save right panel sections
   if (state.rightSections.length > 0) {
     params.set('r', state.rightSections.map(s => sectionToCode[s]).join(','));
-  }
-
-  // Save widths (only if not default)
-  const defaultWidths = { left: 30, middle: 40, right: 30 };
-  if (state.widths.left !== defaultWidths.left ||
-      state.widths.middle !== defaultWidths.middle ||
-      state.widths.right !== defaultWidths.right) {
-    params.set('w', `${state.widths.left},${state.widths.middle},${state.widths.right}`);
   }
 
   // Save selected entity
@@ -138,14 +120,12 @@ export function getInitialState(): AppState {
 
   const defaultState: AppState = {
     leftSections: ['classes'],
-    rightSections: [],
-    widths: { left: 30, middle: 40, right: 30 }
+    rightSections: []
   };
 
   return {
     leftSections: urlState?.leftSections ?? localState?.leftSections ?? defaultState.leftSections,
-    rightSections: urlState?.rightSections ?? localState?.rightSections ?? defaultState.rightSections,
-    widths: urlState?.widths ?? localState?.widths ?? defaultState.widths
+    rightSections: urlState?.rightSections ?? localState?.rightSections ?? defaultState.rightSections
   };
 }
 
@@ -155,23 +135,19 @@ export function getInitialState(): AppState {
 export const PRESETS = {
   classesOnly: {
     leftSections: ['classes'] as SectionType[],
-    rightSections: [] as SectionType[],
-    widths: { left: 100, middle: 0, right: 0 }
+    rightSections: [] as SectionType[]
   },
   classesAndEnums: {
     leftSections: ['classes'] as SectionType[],
-    rightSections: ['enums'] as SectionType[],
-    widths: { left: 30, middle: 40, right: 30 }
+    rightSections: ['enums'] as SectionType[]
   },
   allSections: {
     leftSections: ['classes', 'enums'] as SectionType[],
-    rightSections: ['slots', 'variables'] as SectionType[],
-    widths: { left: 25, middle: 50, right: 25 }
+    rightSections: ['slots', 'variables'] as SectionType[]
   },
   variableExplorer: {
     leftSections: ['variables'] as SectionType[],
-    rightSections: ['classes'] as SectionType[],
-    widths: { left: 30, middle: 40, right: 30 }
+    rightSections: ['classes'] as SectionType[]
   }
 };
 
@@ -188,13 +164,6 @@ export function generatePresetURL(presetKey: keyof typeof PRESETS): string {
 
   if (preset.rightSections.length > 0) {
     params.set('r', preset.rightSections.map(s => sectionToCode[s]).join(','));
-  }
-
-  const defaultWidths = { left: 30, middle: 40, right: 30 };
-  if (preset.widths.left !== defaultWidths.left ||
-      preset.widths.middle !== defaultWidths.middle ||
-      preset.widths.right !== defaultWidths.right) {
-    params.set('w', `${preset.widths.left},${preset.widths.middle},${preset.widths.right}`);
   }
 
   return `${window.location.pathname}?${params.toString()}`;

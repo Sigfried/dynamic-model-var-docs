@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import ElementsPanel from './components/ElementsPanel';
-import DetailPanel from './components/DetailPanel';
+import DetailPopup from './components/DetailPopup';
 import PanelLayout from './components/PanelLayout';
 import { loadModelData } from './utils/dataLoader';
 import { getInitialState, saveStateToURL, saveStateToLocalStorage, generatePresetURL } from './utils/statePersistence';
@@ -24,7 +24,6 @@ function App() {
   const initialState = getInitialState();
   const [leftSections, setLeftSections] = useState<SectionType[]>(initialState.leftSections);
   const [rightSections, setRightSections] = useState<SectionType[]>(initialState.rightSections);
-  const [widths, setWidths] = useState(initialState.widths);
 
   // Check if localStorage has saved state
   useEffect(() => {
@@ -113,12 +112,11 @@ function App() {
     const state = {
       leftSections,
       rightSections,
-      widths,
       selectedEntityName: name,
       selectedEntityType: type
     };
     saveStateToURL(state);
-  }, [leftSections, rightSections, widths, selectedEntity]);
+  }, [leftSections, rightSections, selectedEntity]);
 
   // Save current layout to localStorage
   const handleSaveLayout = () => {
@@ -126,7 +124,6 @@ function App() {
     const state = {
       leftSections,
       rightSections,
-      widths,
       selectedEntityName: name,
       selectedEntityType: type
     };
@@ -322,18 +319,6 @@ function App() {
           />
         }
         leftPanelEmpty={leftSections.length === 0}
-        detailPanel={
-          selectedEntity ? (
-            <DetailPanel
-              selectedEntity={selectedEntity}
-              onNavigate={handleNavigate}
-              onClose={() => setSelectedEntity(undefined)}
-              enums={modelData?.enums}
-              slots={modelData?.slots}
-              classes={classMap}
-            />
-          ) : undefined
-        }
         rightPanel={
           <ElementsPanel
             position="right"
@@ -349,9 +334,19 @@ function App() {
           />
         }
         rightPanelEmpty={rightSections.length === 0}
-        initialWidths={widths}
-        onWidthsChange={setWidths}
       />
+
+      {/* Detail popup */}
+      {selectedEntity && (
+        <DetailPopup
+          selectedEntity={selectedEntity}
+          onNavigate={handleNavigate}
+          onClose={() => setSelectedEntity(undefined)}
+          enums={modelData?.enums}
+          slots={modelData?.slots}
+          classes={classMap}
+        />
+      )}
     </div>
   );
 }
