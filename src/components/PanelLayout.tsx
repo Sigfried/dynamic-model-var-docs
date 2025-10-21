@@ -13,10 +13,10 @@ export default function PanelLayout({
   leftPanelEmpty = false,
   rightPanelEmpty = false
 }: PanelLayoutProps) {
-  const EMPTY_PANEL_WIDTH = 60; // Fixed width in pixels for empty panels
+  const EMPTY_PANEL_WIDTH = 180; // Fixed width in pixels for empty panels (enough for 4 icon buttons)
 
   return (
-    <div className="flex-1 flex overflow-hidden">
+    <div className="flex-1 flex overflow-hidden justify-between">
       {/* Left Panel */}
       <div
         className="overflow-hidden border-r border-gray-200 dark:border-slate-700 flex-shrink-0"

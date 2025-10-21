@@ -1,17 +1,22 @@
 import { useState, useEffect } from 'react';
 import ElementsPanel from './components/ElementsPanel';
-import DetailPopup from './components/DetailPopup';
+import DetailDialog from './components/DetailDialog';
 import PanelLayout from './components/PanelLayout';
 import { loadModelData } from './utils/dataLoader';
 import { getInitialState, saveStateToURL, saveStateToLocalStorage, generatePresetURL } from './utils/statePersistence';
 import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec, ModelData } from './types';
 
-type SelectedEntity = ClassNode | EnumDefinition | SlotDefinition | VariableSpec | undefined;
+type SelectedEntity = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
 type SectionType = 'classes' | 'enums' | 'slots' | 'variables';
+
+interface OpenDialog {
+  id: string;
+  entity: SelectedEntity;
+}
 
 function App() {
   const [modelData, setModelData] = useState<ModelData>();
-  const [selectedEntity, setSelectedEntity] = useState<SelectedEntity>();
+  const [openDialogs, setOpenDialogs] = useState<OpenDialog[]>([]);
   const [classMap, setClassMap] = useState<Map<string, ClassNode>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
@@ -19,6 +24,7 @@ function App() {
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [hasLocalStorage, setHasLocalStorage] = useState(false);
   const [hasRestoredFromURL, setHasRestoredFromURL] = useState(false);
+  const [nextDialogId, setNextDialogId] = useState(0);
 
   // Load initial state from URL or localStorage
   const initialState = getInitialState();
@@ -80,34 +86,36 @@ function App() {
 
     if (!selectedEntityName || !selectedEntityType) return;
 
-    // Restore the selected entity
+    // Restore the selected entity as a dialog
+    let entity: SelectedEntity | null = null;
     if (selectedEntityType === 'class') {
-      const classNode = classMap.get(selectedEntityName);
-      if (classNode) setSelectedEntity(classNode);
+      entity = classMap.get(selectedEntityName) || null;
     } else if (selectedEntityType === 'enum') {
-      const enumDef = modelData.enums.get(selectedEntityName);
-      if (enumDef) setSelectedEntity(enumDef);
+      entity = modelData.enums.get(selectedEntityName) || null;
     } else if (selectedEntityType === 'slot') {
-      const slotDef = modelData.slots.get(selectedEntityName);
-      if (slotDef) setSelectedEntity(slotDef);
+      entity = modelData.slots.get(selectedEntityName) || null;
     } else if (selectedEntityType === 'variable') {
-      const variable = modelData.variables.find(v => v.variableLabel === selectedEntityName);
-      if (variable) setSelectedEntity(variable);
+      entity = modelData.variables.find(v => v.variableLabel === selectedEntityName) || null;
     }
+
+    if (entity) handleOpenDialog(entity);
   }, [modelData, classMap, hasRestoredFromURL]);
 
-  // Determine selected entity name and type for state persistence
+  // Determine selected entity name and type for state persistence (use first dialog)
   const getSelectedEntityInfo = () => {
-    if (!selectedEntity) return { name: undefined, type: undefined };
-    if ('children' in selectedEntity) return { name: selectedEntity.name, type: 'class' as const };
-    if ('permissible_values' in selectedEntity) return { name: selectedEntity.name, type: 'enum' as const };
-    if ('slot_uri' in selectedEntity) return { name: selectedEntity.name, type: 'slot' as const };
-    if ('variableLabel' in selectedEntity) return { name: selectedEntity.variableLabel, type: 'variable' as const };
+    if (openDialogs.length === 0) return { name: undefined, type: undefined };
+    const entity = openDialogs[0].entity;
+    if ('children' in entity) return { name: entity.name, type: 'class' as const };
+    if ('permissible_values' in entity) return { name: entity.name, type: 'enum' as const };
+    if ('slot_uri' in entity) return { name: entity.name, type: 'slot' as const };
+    if ('variableLabel' in entity) return { name: entity.variableLabel, type: 'variable' as const };
     return { name: undefined, type: undefined };
   };
 
-  // Save state when it changes
+  // Save state when it changes (but only after initial restoration)
   useEffect(() => {
+    if (!hasRestoredFromURL) return; // Don't save until we've restored from URL
+
     const { name, type } = getSelectedEntityInfo();
     const state = {
       leftSections,
@@ -116,7 +124,7 @@ function App() {
       selectedEntityType: type
     };
     saveStateToURL(state);
-  }, [leftSections, rightSections, selectedEntity]);
+  }, [leftSections, rightSections, openDialogs, hasRestoredFromURL]);
 
   // Save current layout to localStorage
   const handleSaveLayout = () => {
@@ -145,17 +153,31 @@ function App() {
     }
   };
 
-  // Navigation handler
+  // Dialog management
+  const handleOpenDialog = (entity: SelectedEntity) => {
+    const newDialog: OpenDialog = {
+      id: `dialog-${nextDialogId}`,
+      entity
+    };
+    setOpenDialogs(prev => [...prev, newDialog]);
+    setNextDialogId(prev => prev + 1);
+  };
+
+  const handleCloseDialog = (id: string) => {
+    setOpenDialogs(prev => prev.filter(d => d.id !== id));
+  };
+
+  // Navigation handler - now opens a new dialog
   const handleNavigate = (entityName: string, entityType: 'class' | 'enum' | 'slot') => {
     if (entityType === 'enum') {
       const enumDef = modelData?.enums.get(entityName);
-      if (enumDef) setSelectedEntity(enumDef);
+      if (enumDef) handleOpenDialog(enumDef);
     } else if (entityType === 'slot') {
       const slotDef = modelData?.slots.get(entityName);
-      if (slotDef) setSelectedEntity(slotDef);
+      if (slotDef) handleOpenDialog(slotDef);
     } else if (entityType === 'class') {
       const classNode = classMap.get(entityName);
-      if (classNode) setSelectedEntity(classNode);
+      if (classNode) handleOpenDialog(classNode);
     }
   };
 
@@ -314,8 +336,8 @@ function App() {
             enums={modelData?.enums || new Map()}
             slots={modelData?.slots || new Map()}
             variables={modelData?.variables || []}
-            selectedEntity={selectedEntity}
-            onSelectEntity={setSelectedEntity}
+            selectedEntity={openDialogs.length > 0 ? openDialogs[0].entity : undefined}
+            onSelectEntity={handleOpenDialog}
           />
         }
         leftPanelEmpty={leftSections.length === 0}
@@ -329,24 +351,26 @@ function App() {
             enums={modelData?.enums || new Map()}
             slots={modelData?.slots || new Map()}
             variables={modelData?.variables || []}
-            selectedEntity={selectedEntity}
-            onSelectEntity={setSelectedEntity}
+            selectedEntity={openDialogs.length > 0 ? openDialogs[0].entity : undefined}
+            onSelectEntity={handleOpenDialog}
           />
         }
         rightPanelEmpty={rightSections.length === 0}
       />
 
-      {/* Detail popup */}
-      {selectedEntity && (
-        <DetailPopup
-          selectedEntity={selectedEntity}
+      {/* Detail dialogs - render all open dialogs */}
+      {openDialogs.map((dialog, index) => (
+        <DetailDialog
+          key={dialog.id}
+          selectedEntity={dialog.entity}
           onNavigate={handleNavigate}
-          onClose={() => setSelectedEntity(undefined)}
+          onClose={() => handleCloseDialog(dialog.id)}
           enums={modelData?.enums}
           slots={modelData?.slots}
           classes={classMap}
+          dialogIndex={index}
         />
-      )}
+      ))}
     </div>
   );
 }

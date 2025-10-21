@@ -10,6 +10,7 @@ interface DetailPanelProps {
   enums?: Map<string, EnumDefinition>;
   slots?: Map<string, SlotDefinition>;
   classes?: Map<string, ClassNode>;
+  dialogWidth?: number;
 }
 
 function isEnumDefinition(entity: SelectedEntity): entity is EnumDefinition {
@@ -84,7 +85,9 @@ function TypeLegend() {
   );
 }
 
-export default function DetailPanel({ selectedEntity, onNavigate, onClose, enums, slots, classes }: DetailPanelProps) {
+export default function DetailPanel({ selectedEntity, onNavigate, onClose, enums, slots, classes, dialogWidth = 900 }: DetailPanelProps) {
+  const useTwoColumnsForVariables = dialogWidth >= 1700;
+  const useTwoColumnsForEnums = dialogWidth >= 1000;
   const [showLegend, setShowLegend] = React.useState(false);
 
   // Helper function to determine entity type and navigate
@@ -224,28 +227,65 @@ export default function DetailPanel({ selectedEntity, onNavigate, onClose, enums
             <h2 className="text-lg font-semibold mb-2">
               Permissible Values ({selectedEntity.permissible_values.length})
             </h2>
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-gray-50 dark:bg-slate-700">
-                    <th className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-left">Value</th>
-                    <th className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-left">Description</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedEntity.permissible_values.map((value, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-700">
-                      <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-mono text-sm">
-                        {value.key}
-                      </td>
-                      <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm">
-                        {value.description || '-'}
-                      </td>
+            {useTwoColumnsForEnums && selectedEntity.permissible_values.length > 10 ? (
+              // Two-column layout for wide dialogs with many permissible values
+              <div className="grid grid-cols-2 gap-4">
+                {[0, 1].map(columnIndex => {
+                  const halfLength = Math.ceil(selectedEntity.permissible_values.length / 2);
+                  const startIdx = columnIndex * halfLength;
+                  const columnValues = selectedEntity.permissible_values.slice(startIdx, startIdx + halfLength);
+
+                  return (
+                    <div key={columnIndex} className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="bg-gray-50 dark:bg-slate-700">
+                            <th className="border border-gray-300 dark:border-slate-600 px-2 py-2 text-left text-sm">Value</th>
+                            <th className="border border-gray-300 dark:border-slate-600 px-2 py-2 text-left text-sm">Description</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {columnValues.map((value, idx) => (
+                            <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                              <td className="border border-gray-300 dark:border-slate-600 px-2 py-2 font-mono text-sm">
+                                {value.key}
+                              </td>
+                              <td className="border border-gray-300 dark:border-slate-600 px-2 py-2 text-sm">
+                                {value.description || '-'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              // Single-column layout for narrow dialogs or few values
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-slate-700">
+                      <th className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-left">Value</th>
+                      <th className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-left">Description</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {selectedEntity.permissible_values.map((value, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                        <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-mono text-sm">
+                          {value.key}
+                        </td>
+                        <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm">
+                          {value.description || '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           {selectedEntity.usedByClasses.length > 0 && (
@@ -541,50 +581,109 @@ export default function DetailPanel({ selectedEntity, onNavigate, onClose, enums
             <h2 className="text-lg font-semibold mb-2">
               Mapped Variables ({selectedClass.variables.length})
             </h2>
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-gray-50 dark:bg-slate-700">
-                    <th className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-left">
-                      Label
-                    </th>
-                    <th className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-left">
-                      Data Type
-                    </th>
-                    <th className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-left">
-                      Unit
-                    </th>
-                    <th className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-left">
-                      CURIE
-                    </th>
-                    <th className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-left">
-                      Description
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedClass.variables.map((variable, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-700">
-                      <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm font-medium">
-                        {variable.variableLabel}
-                      </td>
-                      <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm">
-                        {variable.dataType}
-                      </td>
-                      <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm font-mono">
-                        {variable.ucumUnit || '-'}
-                      </td>
-                      <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm font-mono">
-                        {variable.curie || '-'}
-                      </td>
-                      <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm">
-                        {variable.variableDescription || '-'}
-                      </td>
+            {useTwoColumnsForVariables && selectedClass.variables.length > 10 ? (
+              // Two-column layout for wide dialogs with many variables
+              <div className="grid grid-cols-2 gap-4">
+                {[0, 1].map(columnIndex => {
+                  const halfLength = Math.ceil(selectedClass.variables.length / 2);
+                  const startIdx = columnIndex * halfLength;
+                  const columnVars = selectedClass.variables.slice(startIdx, startIdx + halfLength);
+
+                  return (
+                    <div key={columnIndex} className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="bg-gray-50 dark:bg-slate-700">
+                            <th className="border border-gray-300 dark:border-slate-600 px-2 py-2 text-left text-sm">
+                              Label
+                            </th>
+                            <th className="border border-gray-300 dark:border-slate-600 px-2 py-2 text-left text-sm">
+                              Data Type
+                            </th>
+                            <th className="border border-gray-300 dark:border-slate-600 px-2 py-2 text-left text-sm">
+                              Unit
+                            </th>
+                            <th className="border border-gray-300 dark:border-slate-600 px-2 py-2 text-left text-sm">
+                              CURIE
+                            </th>
+                            <th className="border border-gray-300 dark:border-slate-600 px-2 py-2 text-left text-sm">
+                              Description
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {columnVars.map((variable, idx) => (
+                            <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                              <td className="border border-gray-300 dark:border-slate-600 px-2 py-2 text-sm font-medium">
+                                {variable.variableLabel}
+                              </td>
+                              <td className="border border-gray-300 dark:border-slate-600 px-2 py-2 text-sm">
+                                {variable.dataType}
+                              </td>
+                              <td className="border border-gray-300 dark:border-slate-600 px-2 py-2 text-sm font-mono">
+                                {variable.ucumUnit || '-'}
+                              </td>
+                              <td className="border border-gray-300 dark:border-slate-600 px-2 py-2 text-sm font-mono">
+                                {variable.curie || '-'}
+                              </td>
+                              <td className="border border-gray-300 dark:border-slate-600 px-2 py-2 text-sm">
+                                {variable.variableDescription || '-'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              // Single-column layout for narrow dialogs or few variables
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-slate-700">
+                      <th className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-left">
+                        Label
+                      </th>
+                      <th className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-left">
+                        Data Type
+                      </th>
+                      <th className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-left">
+                        Unit
+                      </th>
+                      <th className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-left">
+                        CURIE
+                      </th>
+                      <th className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-left">
+                        Description
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {selectedClass.variables.map((variable, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                        <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm font-medium">
+                          {variable.variableLabel}
+                        </td>
+                        <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm">
+                          {variable.dataType}
+                        </td>
+                        <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm font-mono">
+                          {variable.ucumUnit || '-'}
+                        </td>
+                        <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm font-mono">
+                          {variable.curie || '-'}
+                        </td>
+                        <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm">
+                          {variable.variableDescription || '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
