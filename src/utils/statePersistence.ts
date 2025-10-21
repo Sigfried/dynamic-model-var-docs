@@ -1,9 +1,20 @@
 type SectionType = 'classes' | 'enums' | 'slots' | 'variables';
 type EntityType = 'class' | 'enum' | 'slot' | 'variable';
 
+export interface DialogState {
+  entityName: string;
+  entityType: EntityType;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 interface AppState {
   leftSections: SectionType[];
   rightSections: SectionType[];
+  dialogs?: DialogState[];
+  // Legacy support - deprecated
   selectedEntityName?: string;
   selectedEntityType?: EntityType;
 }
@@ -48,12 +59,37 @@ export function parseStateFromURL(): Partial<AppState> | null {
       .filter(Boolean) as SectionType[];
   }
 
-  // Parse selected entity
-  const selectedName = params.get('sel');
-  const selectedType = params.get('selType') as EntityType | null;
-  if (selectedName && selectedType && ['class', 'enum', 'slot', 'variable'].includes(selectedType)) {
-    state.selectedEntityName = selectedName;
-    state.selectedEntityType = selectedType;
+  // Parse dialogs (new format)
+  const dialogsParam = params.get('dialogs');
+  if (dialogsParam) {
+    try {
+      // Format: type:name:x,y,w,h;type:name:x,y,w,h
+      state.dialogs = dialogsParam.split(';').map(dialogStr => {
+        const parts = dialogStr.split(':');
+        if (parts.length !== 3) return null;
+
+        const entityType = parts[0] as EntityType;
+        const entityName = parts[1];
+        const [x, y, width, height] = parts[2].split(',').map(Number);
+
+        if (!['class', 'enum', 'slot', 'variable'].includes(entityType)) return null;
+        if (isNaN(x) || isNaN(y) || isNaN(width) || isNaN(height)) return null;
+
+        return { entityType, entityName, x, y, width, height };
+      }).filter((d): d is DialogState => d !== null);
+    } catch (e) {
+      console.warn('Failed to parse dialogs from URL:', e);
+    }
+  }
+
+  // Legacy: Parse selected entity (for backwards compatibility)
+  if (!state.dialogs) {
+    const selectedName = params.get('sel');
+    const selectedType = params.get('selType') as EntityType | null;
+    if (selectedName && selectedType && ['class', 'enum', 'slot', 'variable'].includes(selectedType)) {
+      state.selectedEntityName = selectedName;
+      state.selectedEntityType = selectedType;
+    }
   }
 
   return Object.keys(state).length > 0 ? state : null;
@@ -75,8 +111,16 @@ export function saveStateToURL(state: AppState): void {
     params.set('r', state.rightSections.map(s => sectionToCode[s]).join(','));
   }
 
-  // Save selected entity
-  if (state.selectedEntityName && state.selectedEntityType) {
+  // Save dialogs (new format)
+  if (state.dialogs && state.dialogs.length > 0) {
+    // Format: type:name:x,y,w,h;type:name:x,y,w,h
+    const dialogsStr = state.dialogs.map(d =>
+      `${d.entityType}:${d.entityName}:${Math.round(d.x)},${Math.round(d.y)},${Math.round(d.width)},${Math.round(d.height)}`
+    ).join(';');
+    params.set('dialogs', dialogsStr);
+  }
+  // Legacy: Save selected entity (for backwards compatibility with old URLs)
+  else if (state.selectedEntityName && state.selectedEntityType) {
     params.set('sel', state.selectedEntityName);
     params.set('selType', state.selectedEntityType);
   }
@@ -123,10 +167,18 @@ export function getInitialState(): AppState {
     rightSections: []
   };
 
-  return {
+  const state: AppState = {
     leftSections: urlState?.leftSections ?? localState?.leftSections ?? defaultState.leftSections,
     rightSections: urlState?.rightSections ?? localState?.rightSections ?? defaultState.rightSections
   };
+
+  // Include dialogs if present in URL or localStorage
+  const dialogs = urlState?.dialogs ?? localState?.dialogs;
+  if (dialogs && dialogs.length > 0) {
+    state.dialogs = dialogs;
+  }
+
+  return state;
 }
 
 /**
