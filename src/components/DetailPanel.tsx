@@ -3,9 +3,10 @@ import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '..
 
 type SelectedEntity = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
 
-interface DetailViewProps {
+interface DetailPanelProps {
   selectedEntity?: SelectedEntity;
   onNavigate?: (entityName: string, entityType: 'class' | 'enum' | 'slot') => void;
+  onClose?: () => void;
   enums?: Map<string, EnumDefinition>;
   slots?: Map<string, SlotDefinition>;
   classes?: Map<string, ClassNode>;
@@ -83,7 +84,7 @@ function TypeLegend() {
   );
 }
 
-export default function DetailView({ selectedEntity, onNavigate, enums, slots, classes }: DetailViewProps) {
+export default function DetailPanel({ selectedEntity, onNavigate, onClose, enums, slots, classes }: DetailPanelProps) {
   const [showLegend, setShowLegend] = React.useState(false);
 
   // Helper function to determine entity type and navigate
@@ -105,13 +106,7 @@ export default function DetailView({ selectedEntity, onNavigate, enums, slots, c
   };
 
   if (!selectedEntity) {
-    return (
-      <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
-        <div className="text-center">
-          <p className="text-lg">Select a class, enum, slot, or variable to view details</p>
-        </div>
-      </div>
-    );
+    return null; // Hide panel when nothing is selected
   }
 
   // Handle variable details
@@ -119,8 +114,23 @@ export default function DetailView({ selectedEntity, onNavigate, enums, slots, c
     return (
       <div className="h-full overflow-y-auto bg-white dark:bg-slate-800 text-left">
         <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4">
-          <h1 className="text-2xl font-bold text-left">{selectedEntity.variableLabel}</h1>
-          <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">Variable</p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-2xl font-bold text-left">{selectedEntity.variableLabel}</h1>
+              <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">Variable</p>
+            </div>
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                title="Close detail panel"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="p-6 space-y-6 text-left">
@@ -183,8 +193,23 @@ export default function DetailView({ selectedEntity, onNavigate, enums, slots, c
     return (
       <div className="h-full overflow-y-auto bg-white dark:bg-slate-800 text-left">
         <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4">
-          <h1 className="text-2xl font-bold text-left">{selectedEntity.name}</h1>
-          <p className="text-sm text-purple-600 dark:text-purple-400 mt-1">Enumeration</p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-2xl font-bold text-left">{selectedEntity.name}</h1>
+              <p className="text-sm text-purple-600 dark:text-purple-400 mt-1">Enumeration</p>
+            </div>
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                title="Close detail panel"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="p-6 space-y-6 text-left">
@@ -251,8 +276,23 @@ export default function DetailView({ selectedEntity, onNavigate, enums, slots, c
     return (
       <div className="h-full overflow-y-auto bg-white dark:bg-slate-800 text-left">
         <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4">
-          <h1 className="text-2xl font-bold text-left">{selectedEntity.name}</h1>
-          <p className="text-sm text-green-600 dark:text-green-400 mt-1">Slot</p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-2xl font-bold text-left">{selectedEntity.name}</h1>
+              <p className="text-sm text-green-600 dark:text-green-400 mt-1">Slot</p>
+            </div>
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                title="Close detail panel"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="p-6 space-y-6 text-left">
@@ -342,12 +382,27 @@ export default function DetailView({ selectedEntity, onNavigate, enums, slots, c
   return (
     <div className="h-full overflow-y-auto bg-white dark:bg-slate-800 text-left">
       <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4">
-        <h1 className="text-2xl font-bold text-left">{selectedClass.name}</h1>
-        {selectedClass.parent && (
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 text-left">
-            extends {selectedClass.parent}
-          </p>
-        )}
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-2xl font-bold text-left">{selectedClass.name}</h1>
+            {selectedClass.parent && (
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 text-left">
+                extends {selectedClass.parent}
+              </p>
+            )}
+          </div>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              title="Close detail panel"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="p-6 space-y-6 text-left">

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { ClassNode } from '../types';
 
-interface ClassTreeProps {
+interface ClassSectionProps {
   nodes: ClassNode[];
   onSelectClass: (node: ClassNode) => void;
   selectedClass?: ClassNode;
@@ -64,13 +64,13 @@ function ClassTreeNode({ node, onSelectClass, selectedClass, level }: ClassTreeN
   );
 }
 
-export default function ClassTree({ nodes, onSelectClass, selectedClass }: ClassTreeProps) {
+export default function ClassSection({ nodes, onSelectClass, selectedClass }: ClassSectionProps) {
   return (
-    <div className="h-full overflow-y-auto border-r border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-left">
-      <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-4 py-3">
-        <h2 className="text-lg font-semibold text-left">Class Hierarchy</h2>
+    <div className="h-full flex flex-col bg-white dark:bg-slate-800 text-left">
+      <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-4 py-3 z-10">
+        <h2 className="text-lg font-semibold text-left">Classes</h2>
       </div>
-      <div className="p-2">
+      <div className="flex-1 overflow-y-auto p-2">
         {nodes.map((node) => (
           <ClassTreeNode
             key={node.name}

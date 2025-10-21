@@ -1,21 +1,21 @@
 import type { EnumDefinition } from '../types';
 
-interface EnumPanelProps {
+interface EnumSectionProps {
   enums: Map<string, EnumDefinition>;
   onSelectEnum: (enumDef: EnumDefinition) => void;
   selectedEnum?: EnumDefinition;
 }
 
-export default function EnumPanel({ enums, onSelectEnum, selectedEnum }: EnumPanelProps) {
+export default function EnumSection({ enums, onSelectEnum, selectedEnum }: EnumSectionProps) {
   // Convert to array and sort by name
   const enumList = Array.from(enums.values()).sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <div className="h-full overflow-y-auto border-r border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-left">
-      <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-4 py-3">
+    <div className="h-full flex flex-col bg-white dark:bg-slate-800 text-left">
+      <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-4 py-3 z-10">
         <h2 className="text-lg font-semibold text-left">Enumerations ({enums.size})</h2>
       </div>
-      <div className="p-2">
+      <div className="flex-1 overflow-y-auto p-2">
         {enumList.map((enumDef) => {
           const isSelected = selectedEnum?.name === enumDef.name;
 

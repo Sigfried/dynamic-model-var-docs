@@ -71,11 +71,13 @@ The overview should support multiple view configurations through checkboxes/togg
 #### Section Toggles (within a panel)
 Control which entity types are shown as separate collapsible sections:
 - [x] **Classes** - Show class hierarchy tree (✓ implemented)
-- [ ] **Enums** - Show enumeration value sets
-- [ ] **Slots** - Show shared attribute definitions
-- [ ] **Variables** - Show variable specifications
+- [x] **Enums** - Show enumeration value sets (✓ implemented)
+- [x] **Slots** - Show shared attribute definitions (✓ implemented)
+- [x] **Variables** - Show variable specifications (✓ implemented)
 
 Each checked section appears as a collapsible section within the panel.
+
+**Implementation**: Icon-based toggles (C/E/S/V) at top of each ElementsPanel, arranged horizontally to save vertical space.
 
 #### Nested Display Options (Under Classes)
 When Classes section is visible, control what's nested/shown within each class node:
@@ -139,7 +141,7 @@ When multiple panels are shown side-by-side, visualize relationships with SVG co
 
 ## Implementation Status & Roadmap
 
-### Completed: Phases 1-2
+### Completed: Phases 1-3a
 
 ✓ **Phase 1**: Basic two-panel layout with class tree and detail view
 - Class hierarchy display (`is_a` inheritance tree)
@@ -156,34 +158,52 @@ When multiple panels are shown side-by-side, visualize relationships with SVG co
 - Reverse indices built: enum→classes, slot→classes mappings
 - Enum detail view (shows enum values and "used by" lists)
 - Slot detail view (shows slot definitions and usage)
+- Variable detail view (shows variable specs)
+
+✓ **Phase 3a**: Dual Panel System with State Persistence
+- Reusable ElementsPanel component with section toggles (C/E/S/V icons)
+- Independent left and right panels, each supporting all 4 section types
+- DetailPanel hidden when nothing selected (animated transitions)
+- 3-column layout: [Left Elements | Details | Right Elements]
+- Draggable panel dividers for width customization (default 30%|40%|30%)
+- State persistence via query string + localStorage
+- Preset configurations accessible via header links
+- Section components: ClassSection, EnumSection, SlotSection, VariablesSection
+- Multi-column grid within panels when multiple sections active
 
 ### Current Architecture
 ```
 src/
 ├── components/
-│   ├── ClassTree.tsx      # Left panel: collapsible class tree (is_a only)
-│   ├── DetailView.tsx     # Right panel: shows class/enum/slot details + variables
-│   ├── EnumPanel.tsx      # Enum detail display component
-│   └── SlotPanel.tsx      # Slot detail display component
+│   ├── PanelLayout.tsx       # 3-column layout manager with draggable dividers
+│   ├── ElementsPanel.tsx     # Reusable panel with section icon toggles
+│   ├── DetailPanel.tsx       # Shows entity details (hidden when nothing selected)
+│   ├── ClassSection.tsx      # Class hierarchy tree display
+│   ├── EnumSection.tsx       # Enumeration list display
+│   ├── SlotSection.tsx       # Slot definitions list display
+│   └── VariablesSection.tsx  # Variables list display (all 151 variables)
 ├── utils/
-│   └── dataLoader.ts      # Schema/TSV parsing, builds class tree + reverse indices
-├── types.ts               # TypeScript definitions
-└── App.tsx                # Main layout
+│   ├── dataLoader.ts         # Schema/TSV parsing, builds class tree + reverse indices
+│   └── statePersistence.ts   # URL/localStorage state management + presets
+├── types.ts                  # TypeScript definitions
+└── App.tsx                   # Main app with state management
 ```
 
-### In Progress: Phase 3a - Section System
+**Key Features**:
+- **Flexible Layout**: Toggle any combination of sections in left/right panels
+- **State Persistence**: URL params (shareable links) + localStorage (user preference)
+- **Presets**: Classes Only, Classes+Enums, All Sections, Variable Explorer
+- **Animated Transitions**: Smooth panel show/hide (300ms duration)
+- **Draggable Dividers**: User-customizable panel widths (15% minimum per panel)
+- **Query String Format**: `?l=c,e&r=s,v&w=25,50,25` (compact codes: c=classes, e=enums, s=slots, v=variables)
 
-**Next immediate task**: Add Variables section to the panel
-- Create collapsible Variables section in left sidebar
-- Display all 151 variables grouped/sortable
-- Click variable → show full specs in detail view
-- Virtualize the list (103 variables map to MeasurementObservation alone)
+### Next: Phase 3b - SVG Link Visualization (Future)
 
-**After Variables section**: Support multiple panels with SVG links
-- Refactor layout to support 1-2 panels side-by-side
-- Add SVG overlay for drawing links between related elements
+**Not yet implemented**: Visual links between panels
+- Add SVG overlay for drawing relationship lines between elements
 - Implement bounding box tracking for link positioning
 - Add hover/click interactions for links
+- Filter links by relationship type (inheritance, enum usage, associations)
 
 ### Upcoming: Phase 3b - Search and Filter
 1. Search bar with full-text search across all entities

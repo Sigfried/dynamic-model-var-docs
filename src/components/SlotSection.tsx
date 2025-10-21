@@ -1,21 +1,21 @@
 import type { SlotDefinition } from '../types';
 
-interface SlotPanelProps {
+interface SlotSectionProps {
   slots: Map<string, SlotDefinition>;
   onSelectSlot: (slotDef: SlotDefinition) => void;
   selectedSlot?: SlotDefinition;
 }
 
-export default function SlotPanel({ slots, onSelectSlot, selectedSlot }: SlotPanelProps) {
+export default function SlotSection({ slots, onSelectSlot, selectedSlot }: SlotSectionProps) {
   // Convert to array and sort by name
   const slotList = Array.from(slots.values()).sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <div className="h-full overflow-y-auto border-r border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-left">
-      <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-4 py-3">
+    <div className="h-full flex flex-col bg-white dark:bg-slate-800 text-left">
+      <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-4 py-3 z-10">
         <h2 className="text-lg font-semibold text-left">Slots ({slots.size})</h2>
       </div>
-      <div className="p-2">
+      <div className="flex-1 overflow-y-auto p-2">
         {slotList.map((slotDef) => {
           const isSelected = selectedSlot?.name === slotDef.name;
 
