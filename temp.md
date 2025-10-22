@@ -1,78 +1,135 @@
-# Next Steps: Phase 6 - Link Overlay Component
+# temp.md - Current Session Notes
 
-## Context
-See CLAUDE.md for full implementation context and architecture decisions.
+> **Quick reference for immediate next steps**
+> See CLAUDE.md for complete architecture and implementation history
 
-## Current Status
-- ✅ Element architecture complete (ClassElement, EnumElement, SlotElement, VariableElement)
-- ✅ All panel sections have data-element-type and data-element-name attributes
-- ✅ Element.getRelationships() implemented for all element types
-- ✅ Element.getBoundingBox() can locate elements via unique IDs
+---
 
-## Objective
-Create LinkOverlay component to draw SVG connections between related elements across panels.
+## Current Status: Phase 3d - SVG Link Visualization (In Progress)
 
-## Implementation Steps
+### ✅ Completed This Session
 
-### 1. Create LinkOverlay.tsx Component
-Create `src/components/LinkOverlay.tsx` with:
-- SVG overlay positioned absolutely over PanelLayout
-- Track element positions using `document.querySelectorAll('[data-element-type]')`
-- Use ResizeObserver to update positions on layout changes
-- Listen to scroll events to update positions
+**Testing Infrastructure Setup**
+- Installed Vitest, React Testing Library, @testing-library/jest-dom
+- Created test setup with mocked `fetch` for file system access
+- All 67 tests passing ✅
 
-### 2. Compute Links
-- Query all visible elements with data attributes
-- For each element, call `Element.getRelationships()` to get relationship data
-- Build list of ComputedLink objects with source/target positions
-- Filter out links where either end is not visible
+**Test Suite Created**
+1. `data-integrity.test.ts` - Data completeness reporting (tracks YAML → JSON → ModelData pipeline)
+2. `dataLoader.test.ts` - Core data loading logic
+3. `ClassSection.test.tsx` - Component rendering tests
+4. `linkLogic.test.ts` - Element relationship detection (26 tests)
+5. `linkHelpers.test.ts` - SVG link utilities (27 tests)
 
-### 3. Render SVG Paths
-- Draw bezier curves between source and target positions
-- Color code by relationship type:
-  - Inheritance (`is_a`): one color
-  - Property references: another color
-  - Enum usage: another color
-- Default opacity: 0.2-0.3
-- Hover opacity: 1.0
-- Add arrowheads with SVG markers
+**Production Code (TDD)**
+- `src/utils/linkHelpers.ts` - Fully tested link utilities
+  - Relationship filtering functions
+  - Link building from relationships
+  - Geometric calculations (centers, anchor points, edge detection)
+  - SVG path generation (bezier curves, self-ref loops)
+  - Visual styling (colors, stroke widths)
 
-### 4. Interactions
-- On hover over link: increase opacity
-- On hover over element: highlight all connected links
-- On click: navigate to linked element (open dialog)
+**Element Architecture**
+- All Element classes (`ClassElement`, `EnumElement`, `SlotElement`, `VariableElement`) have working `getRelationships()` methods
+- Data attributes (`data-element-type`, `data-element-name`) in place for SVG positioning
 
-### 5. Performance
-- Only render links for elements in viewport (viewport culling)
-- For elements scrolled out of view, show partial links to panel edge
-- Use dashed stroke for partial links
-- Debounce position updates
+---
 
-### 6. Integration
-- Add LinkOverlay to PanelLayout.tsx
-- Pass necessary props: classHierarchy, enums, slots, variables
-- Ensure z-index layering is correct (links below dialogs, above panels)
+## Next Session: Complete Phase 3d
 
-## Self-Referential Links (Phase 7)
-Defer to next step. These should be rendered as looping curves inline within the element, not in LinkOverlay.
+### Step 4: Create LinkOverlay Component
 
-## Testing Checklist
-- [ ] Links appear between related elements
-- [ ] Links update when panels scroll
-- [ ] Links update when panels resize
-- [ ] Hover interactions work
-- [ ] Performance is acceptable with all sections visible
-- [ ] Links are color-coded correctly
-- [ ] Partial links show when elements scroll out of view
+**Goal**: Visual implementation using the tested logic layer
 
-## Files to Create
-- `src/components/LinkOverlay.tsx`
+**Tasks**:
+1. Create `src/components/LinkOverlay.tsx`
+   - Accepts visible elements from parent
+   - Queries DOM for element positions via data attributes
+   - Calls `element.getRelationships()` for each visible element
+   - Uses `linkHelpers` to filter and build link objects
+   - Renders SVG with paths, using helper functions for positioning/styling
 
-## Files to Modify
-- `src/components/PanelLayout.tsx` - add LinkOverlay component
-- `src/App.tsx` - pass data to LinkOverlay if needed
+2. Wire up to PanelLayout
+   - Add LinkOverlay as absolute-positioned layer over panels
+   - Pass visible element data from App state
+   - Initially render all links (no filtering UI)
 
-## Notes
-- Start with simple straight lines, then enhance to bezier curves
-- Can add link type filters later
-- Can add toggle to show/hide links later
+3. Visual verification
+   - Check inheritance links (blue, thick)
+   - Check enum property links (purple, medium)
+   - Check class property links (green, medium)
+   - Check self-referential links (loop style)
+
+### Step 5: Add Interactions & Controls
+
+**Tasks**:
+1. Filter controls (checkboxes/toggles):
+   - Show/hide inheritance
+   - Show/hide properties
+   - Show/hide enums only
+   - Show/hide class refs only
+   - Include self-refs (default: off)
+
+2. Hover interactions:
+   - Highlight link on hover (increase opacity/stroke width)
+   - Show tooltip with relationship info
+
+3. Click interactions:
+   - Navigate to target element (open dialog)
+
+4. Performance:
+   - Only render links for elements in viewport
+   - Debounce scroll/resize events
+   - Consider using React.memo for link components
+
+---
+
+## Testing Philosophy Applied This Session
+
+**What we tested (TDD)**:
+- ✅ Pure functions for filtering, calculations, path generation
+- ✅ Relationship detection logic in Element classes
+- ✅ All geometric calculations for link positioning
+
+**What we'll verify visually (next session)**:
+- SVG rendering aesthetics (curve smoothness, colors)
+- Layout and positioning (are links connecting correctly?)
+- Animations and hover effects
+- Performance with many links
+
+**Lessons learned**:
+- TDD works great for logic layers
+- Separating testable logic from visual components is key
+- Visual features still need manual verification, but tested logic gives confidence
+- Having 67 passing tests makes refactoring safe
+
+---
+
+## Quick Commands
+
+```bash
+# Run tests
+npm test              # Watch mode
+npm test -- --run     # Single run
+
+# Run specific test file
+npm test -- linkHelpers --run
+
+# Dev server
+npm run dev
+
+# Type check
+npm run build
+```
+
+---
+
+## Notes for README.md (Move Later)
+
+The testing documentation in CLAUDE.md (lines 231-314) should eventually move to README.md with:
+- Overview of test philosophy
+- How to run tests
+- What's tested vs. visually verified
+- How to add new tests
+
+Keep it concise in README, detailed in CLAUDE.md for development context.

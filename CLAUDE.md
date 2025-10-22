@@ -228,20 +228,137 @@ src/
   - Panels: `?l=c,e&r=s,v` (compact codes: c=classes, e=enums, s=slots, v=variables)
   - Dialogs: `?dialogs=type:name:x,y,w,h;type:name:x,y,w,h`
 
-### Next: Phase 3d - SVG Link Visualization
+### Testing Strategy & Test Suite Documentation
+
+**Current test coverage** (67 tests, all passing ✅):
+
+#### **Test Files:**
+1. **`data-integrity.test.ts`** (1 test) - Data completeness reporting
+   - Tracks data pipeline: YAML → Metadata → ModelData
+   - Reports missing fields (prefixes, imports) without failing
+   - Verifies all classes, enums, slots loaded correctly
+
+2. **`dataLoader.test.ts`** (9 tests) - Core data loading logic
+   - Model data loading and structure validation
+   - Hierarchical class tree construction
+   - Reverse index building (enum→classes, slot→classes)
+   - Variable mapping validation
+   - Slot and enum definition parsing
+   - Abstract class detection
+   - Data consistency checks (no duplicates, valid properties)
+
+3. **`ClassSection.test.tsx`** (4 tests) - Component rendering
+   - Class hierarchy rendering with nested structure
+   - Selected class highlighting
+   - Data attributes for element identification (for SVG links)
+   - Empty state handling
+
+4. **`linkLogic.test.ts`** (26 tests) - Element relationship detection
+   - **ClassElement relationships**: inheritance, enum properties, class references, self-refs
+   - **SlotElement relationships**: range detection for enums and classes
+   - **VariableElement relationships**: class mapping
+   - **EnumElement relationships**: no outgoing relationships
+   - **Link filtering**: by type, target type, visibility, self-refs
+   - **Combined filtering**: multiple criteria simultaneously
+
+5. **`linkHelpers.test.ts`** (27 tests) - SVG link utilities
+   - **Relationship filtering**: showInheritance, showProperties, onlyEnums, onlyClasses, visibility
+   - **Link building**: converting relationships to renderable objects
+   - **Geometric calculations**: center points, anchor point selection, edge detection
+   - **SVG path generation**: bezier curves, self-referential loops
+   - **Visual styling**: color mapping, stroke width by relationship type
+
+#### **Test Philosophy**
+
+**IMPORTANT: Expand test suite as features are developed**
+- ✅ Test data/logic layers separately from visual/rendering layers
+- ✅ Use TDD for non-visual features (data transformations, filtering, state management)
+- ✅ Use hybrid approach for visual features (test logic first, verify rendering manually)
+- ✅ Aim for tests that prevent regressions, not just achieve coverage
+
+**What we test vs. what we verify visually:**
+- ✅ **Test**: Pure functions, data transformations, filtering logic, geometric calculations
+- 👁️ **Visual verification**: SVG rendering, colors, animations, layout aesthetics, user interactions
+
+#### **Running Tests**
+
+```bash
+# Watch mode during development
+npm test
+
+# Single run for CI/verification
+npm test -- --run
+
+# Run specific test file
+npm test -- linkHelpers --run
+
+# Coverage report
+npm test:coverage
+```
+
+#### **Test Expansion Priorities**
+
+**Completed:**
+- ✅ Phase 3d logic tests (relationship detection, link filtering, SVG path generation)
+
+**Next:**
+1. **Soon**: DetailDialog interaction tests (drag, resize, escape key)
+2. **Future**: State persistence round-trip tests, search/filter tests
+3. **Future**: Integration tests for full navigation flows
+
+**Future testing enhancements** (when needed):
+1. **Integration tests**: Full navigation flows (click class → dialog opens, links connect properly)
+2. **E2E tests**: Using Playwright or Cypress for full user workflows
+3. **Visual regression**: Screenshot comparisons to catch unintended UI changes
+4. **Performance tests**: Large model handling, rendering speed with many links/dialogs
+
+---
+
+### In Progress: Phase 3d - SVG Link Visualization
 
 **Visual links between panels** - Show relationships with SVG connecting lines
-- Create LinkOverlay component for drawing relationship lines between elements
-- Implement bounding box tracking for link positioning using data attributes
-- Add hover/click interactions for links
-- Filter links by relationship type (inheritance, enum usage, associations)
-- Implement self-referential link rendering (looping curves)
+
+**Status**: Logic layer complete with comprehensive tests ✅
+
+#### **Completed (TDD approach)**:
+✅ **Step 1-3: Logic Tests & Implementation**
+- Created `src/test/linkLogic.test.ts` (26 tests)
+- Created `src/test/linkHelpers.test.ts` (27 tests)
+- Implemented `src/utils/linkHelpers.ts` with all tested utilities
+- All Element classes have `getRelationships()` method returning correct relationships
+- Comprehensive filtering logic (by type, visibility, self-refs)
+- Geometric calculations (anchor points, edge detection)
+- SVG path generation (bezier curves, self-ref loops)
+- Visual styling functions (colors, stroke widths)
+
+**What's tested and ready**:
+- ✅ Relationship detection for all element types
+- ✅ Link filtering by relationship type (inheritance, properties)
+- ✅ Link filtering by target type (enum, class)
+- ✅ Self-referential link detection
+- ✅ Visibility-based filtering
+- ✅ Bounding box calculations
+- ✅ SVG path generation algorithms
+- ✅ Color and stroke width mapping
+
+#### **Next Steps (Visual Implementation)**:
+**Step 4: Create LinkOverlay Component**
+- Build React component using tested helper functions
+- Wire up to actual DOM elements via data attributes
+- Render SVG paths with correct styling
+- Test visually in browser
+
+**Step 5: Add Interactions**
+- Hover to highlight links
+- Click links to navigate
+- Toggle controls for filtering link types
+- Performance optimization (viewport culling)
 
 **Implementation approach**:
 - SVG layer positioned absolutely over PanelLayout
-- Track DOM element positions using data-element-type/data-element-name attributes
-- Use Element.getRelationships() to determine which elements to connect
-- Draw bezier curves or straight lines between related elements
+- Track DOM element positions using `data-element-type` and `data-element-name` attributes
+- Use `Element.getRelationships()` to determine which elements to connect
+- Use `linkHelpers` utilities for filtering, positioning, and rendering
 - Interaction: hover to highlight, click to navigate
 - Performance: only render links for visible elements (viewport culling)
 
