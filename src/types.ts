@@ -20,6 +20,9 @@ export interface ClassNode {
   isEnum: boolean;
   enumReferences?: string[]; // List of enum names this class references
   requiredProperties?: string[]; // List of required property names
+  slots?: string[]; // Top-level slots referenced by this class
+  slot_usage?: Record<string, any>; // Refinements/constraints on inherited or referenced slots
+  abstract?: boolean; // Whether this class is abstract
 }
 
 export interface EnumValue {

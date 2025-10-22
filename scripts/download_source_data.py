@@ -131,7 +131,8 @@ def generate_metadata(yaml_path: Path, output_path: Path) -> bool:
                 "parent": class_def.get("is_a"),  # null if no parent
                 "abstract": class_def.get("abstract", False),
                 "attributes": attributes,
-                "slots": class_def.get("slots", [])
+                "slots": class_def.get("slots", []),
+                "slot_usage": class_def.get("slot_usage", {})
             }
 
         # Write metadata JSON

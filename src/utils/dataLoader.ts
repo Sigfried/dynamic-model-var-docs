@@ -48,6 +48,7 @@ interface ClassMetadata {
   abstract: boolean;
   attributes: Record<string, AttributeDefinition>;
   slots?: string | string[]; // Can be string or array in raw metadata, normalized to array
+  slot_usage?: Record<string, AttributeDefinition>; // Refinements/constraints on slots
 }
 
 interface SchemaMetadata {
@@ -105,6 +106,12 @@ export function buildClassHierarchy(
 
   schema.forEach((classMetadata) => {
     const vars = variablesByClass.get(classMetadata.name) || [];
+
+    // Normalize slots to array if present
+    const normalizedSlots = classMetadata.slots
+      ? (Array.isArray(classMetadata.slots) ? classMetadata.slots : [classMetadata.slots])
+      : undefined;
+
     classMap.set(classMetadata.name, {
       name: classMetadata.name,
       description: classMetadata.description,
@@ -115,7 +122,10 @@ export function buildClassHierarchy(
       properties: classMetadata.attributes,
       isEnum: false,
       enumReferences: undefined, // Could extract from attributes if needed
-      requiredProperties: undefined
+      requiredProperties: undefined,
+      slots: normalizedSlots,
+      slot_usage: classMetadata.slot_usage,
+      abstract: classMetadata.abstract
     });
   });
 
