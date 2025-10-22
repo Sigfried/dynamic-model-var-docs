@@ -22,6 +22,9 @@ export default function EnumSection({ enums, onSelectEnum, selectedEnum }: EnumS
           return (
             <div
               key={enumDef.name}
+              id={`enum-${enumDef.name}`}
+              data-element-type="enum"
+              data-element-name={enumDef.name}
               className={`flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700 ${
                 isSelected ? 'bg-purple-100 dark:bg-purple-900' : ''
               }`}

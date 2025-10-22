@@ -25,6 +25,9 @@ export default function VariablesSection({ variables, onSelectVariable, selected
           return (
             <div
               key={`${variable.bdchmElement}-${variable.variableLabel}-${idx}`}
+              id={`variable-${variable.variableLabel}`}
+              data-element-type="variable"
+              data-element-name={variable.variableLabel}
               className={`flex flex-col gap-1 px-2 py-2 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700 ${
                 isSelected ? 'bg-orange-100 dark:bg-orange-900' : ''
               }`}

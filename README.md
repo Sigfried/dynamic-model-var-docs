@@ -63,6 +63,8 @@ Current features:
 - ✅ **Multiple draggable/resizable dialogs** with full state persistence
 - ✅ **Clickable navigation** between classes, enums, and slots
 - ✅ **Shareable URLs** that preserve layout and dialog positions
+- ✅ **Abstract class indicators** in class hierarchy tree
+- ✅ **Element-based architecture** - refactored for maintainability and SVG link preparation
 
 Upcoming features:
 - **SVG link visualization**: Draw connections between related elements across panels

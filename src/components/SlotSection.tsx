@@ -22,6 +22,9 @@ export default function SlotSection({ slots, onSelectSlot, selectedSlot }: SlotS
           return (
             <div
               key={slotDef.name}
+              id={`slot-${slotDef.name}`}
+              data-element-type="slot"
+              data-element-name={slotDef.name}
               className={`flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700 ${
                 isSelected ? 'bg-green-100 dark:bg-green-900' : ''
               }`}

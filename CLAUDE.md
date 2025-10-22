@@ -1,5 +1,13 @@
 # CLAUDE.md - Development Context & Architecture
 
+> **📝 DOCUMENTATION MAINTENANCE**
+> This file contains the complete implementation context and architecture decisions.
+> **temp.md** contains only the immediate next steps.
+> As each step completes, move important details from temp.md to CLAUDE.md, then update temp.md with the next step.
+> Modifications happen in temp.md during implementation, then get consolidated here.
+
+---
+
 ## Core Insight: This is a Typed Graph, Not a Hierarchy
 
 The BDCHM model has multiple relationship types forming a rich graph structure:
@@ -178,22 +186,36 @@ When multiple panels are shown side-by-side, visualize relationships with SVG co
 - Escape key closes oldest/bottommost dialog only
 - Clicking entity in dialog opens new dialog (not replace existing)
 
+✓ **Phase 3c**: Element Architecture Refactoring (Preparation for SVG Links)
+- Created Element base class with ClassElement, EnumElement, SlotElement, VariableElement subclasses
+- Unified DetailTable component for responsive table rendering
+- Added data-element-type and data-element-name attributes to all panel sections
+- Standardized terminology: "entity" → "element" throughout codebase
+- Fixed all no-explicit-any lint errors
+- Abstract classes now display "abstract" label in class tree
+- Data pipeline updated to extract slot_usage from LinkML schema
+- TypeScript types updated with slots, slot_usage, and abstract fields
+- All elements ready for getBoundingBox() positioning via unique IDs
+
 ### Current Architecture
 ```
 src/
 ├── components/
 │   ├── PanelLayout.tsx       # Simple 2-panel layout (left/right) with justify-between
 │   ├── ElementsPanel.tsx     # Reusable panel with section icon toggles
-│   ├── DetailDialog.tsx      # Draggable/resizable dialog for entity details
-│   ├── DetailPanel.tsx       # Content renderer for entity details (used in DetailDialog)
-│   ├── ClassSection.tsx      # Class hierarchy tree display
-│   ├── EnumSection.tsx       # Enumeration list display
-│   ├── SlotSection.tsx       # Slot definitions list display
-│   └── VariablesSection.tsx  # Variables list display (all 151 variables)
+│   ├── DetailDialog.tsx      # Draggable/resizable dialog for element details
+│   ├── DetailPanel.tsx       # Content renderer for element details (used in DetailDialog)
+│   ├── DetailTable.tsx       # Generic responsive table component (NEW)
+│   ├── ClassSection.tsx      # Class hierarchy tree display (with data attributes)
+│   ├── EnumSection.tsx       # Enumeration list display (with data attributes)
+│   ├── SlotSection.tsx       # Slot definitions list display (with data attributes)
+│   └── VariablesSection.tsx  # Variables list display (with data attributes)
+├── models/
+│   └── Element.tsx           # Element base class + ClassElement, EnumElement, SlotElement, VariableElement (NEW)
 ├── utils/
-│   ├── dataLoader.ts         # Schema/TSV parsing, builds class tree + reverse indices
+│   ├── dataLoader.ts         # Schema/TSV parsing, builds class tree + reverse indices + slot_usage
 │   └── statePersistence.ts   # URL/localStorage state management + presets + dialog states
-├── types.ts                  # TypeScript definitions
+├── types.ts                  # TypeScript definitions (updated with slots, slot_usage, abstract)
 └── App.tsx                   # Main app with state management
 ```
 
@@ -206,20 +228,22 @@ src/
   - Panels: `?l=c,e&r=s,v` (compact codes: c=classes, e=enums, s=slots, v=variables)
   - Dialogs: `?dialogs=type:name:x,y,w,h;type:name:x,y,w,h`
 
-### Next: Phase 3c - SVG Link Visualization
+### Next: Phase 3d - SVG Link Visualization
 
 **Visual links between panels** - Show relationships with SVG connecting lines
-- Add SVG overlay for drawing relationship lines between elements
-- Implement bounding box tracking for link positioning
+- Create LinkOverlay component for drawing relationship lines between elements
+- Implement bounding box tracking for link positioning using data attributes
 - Add hover/click interactions for links
 - Filter links by relationship type (inheritance, enum usage, associations)
+- Implement self-referential link rendering (looping curves)
 
 **Implementation approach**:
 - SVG layer positioned absolutely over PanelLayout
-- Track DOM element positions using refs and ResizeObserver
+- Track DOM element positions using data-element-type/data-element-name attributes
+- Use Element.getRelationships() to determine which elements to connect
 - Draw bezier curves or straight lines between related elements
 - Interaction: hover to highlight, click to navigate
-- Performance: only render links for visible elements
+- Performance: only render links for visible elements (viewport culling)
 
 ### Upcoming: Phase 3e - Custom Preset Management (Future)
 
@@ -410,26 +434,17 @@ Slots (20)
 └─────────────────────┴──────────────────┴───────────────────┴─────────────────┘
 ```
 
-### Data Extraction Updates Required
+### Data Extraction (Completed)
 
-**Current state**: `bdchm.metadata.json` does NOT include `slot_usage`.
+**Current state** (as of 2025-01-22): `bdchm.metadata.json` includes complete LinkML schema data:
+- ✅ `slot_usage` extracted from all classes (9 classes use slot_usage)
+- ✅ `slots` array for classes that reference top-level slots
+- ✅ `abstract` flag for abstract classes
+- ✅ `attributes` (inline slot definitions)
 
-**Fix**: Modify `scripts/download_source_data.py` in `generate_metadata()`:
+**Implementation**: Modified `scripts/download_source_data.py` to extract all LinkML fields in `generate_metadata()`.
 
-```python
-for class_name, class_def in schema.get("classes", {}).items():
-    metadata["classes"][class_name] = {
-        "name": class_name,
-        "description": class_def.get("description", ""),
-        "parent": class_def.get("is_a"),
-        "abstract": class_def.get("abstract", False),
-        "attributes": class_def.get("attributes", {}),
-        "slots": class_def.get("slots", []),
-        "slot_usage": class_def.get("slot_usage", {})  # ADD THIS
-    }
-```
-
-After updating, run: `python3 scripts/download_source_data.py --metadata-only`
+**Command to regenerate**: `python3 scripts/download_source_data.py --metadata-only`
 
 ### References
 

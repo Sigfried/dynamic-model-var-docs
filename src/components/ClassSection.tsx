@@ -22,6 +22,9 @@ function ClassTreeNode({ node, onSelectClass, selectedClass, level }: ClassTreeN
   return (
     <div className="select-none">
       <div
+        id={`class-${node.name}`}
+        data-element-type="class"
+        data-element-name={node.name}
         className={`flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700 ${
           isSelected ? 'bg-blue-100 dark:bg-blue-900' : ''
         }`}
@@ -41,6 +44,11 @@ function ClassTreeNode({ node, onSelectClass, selectedClass, level }: ClassTreeN
         )}
         {!hasChildren && <span className="w-4" />}
         <span className="flex-1 text-sm font-medium">{node.name}</span>
+        {node.abstract && (
+          <span className="text-xs text-purple-600 dark:text-purple-400 italic mr-2">
+            abstract
+          </span>
+        )}
         {node.variableCount > 0 && (
           <span className="text-xs px-2 py-0.5 rounded bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-300">
             {node.variableCount}
