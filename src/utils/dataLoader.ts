@@ -10,19 +10,50 @@ import type {
   ModelData
 } from '../types';
 
+// Raw attribute definition from metadata JSON
+interface AttributeDefinition {
+  range: string;
+  description?: string;
+  required?: boolean;
+  multivalued?: boolean;
+  [key: string]: unknown; // Allow other LinkML fields
+}
+
+// Raw slot definition from metadata JSON
+interface SlotMetadata {
+  range?: string;
+  description?: string;
+  slot_uri?: string;
+  identifier?: boolean;
+  required?: boolean;
+  multivalued?: boolean;
+  [key: string]: unknown; // Allow other LinkML fields
+}
+
+// Raw enum definition from metadata JSON
+interface EnumMetadata {
+  description?: string;
+  permissible_values?: Record<string, {
+    description?: string;
+    meaning?: string;
+    [key: string]: unknown;
+  }>;
+  [key: string]: unknown; // Allow other LinkML fields
+}
+
 interface ClassMetadata {
   name: string;
   description: string;
   parent?: string;
   abstract: boolean;
-  attributes: Record<string, any>;
+  attributes: Record<string, AttributeDefinition>;
   slots?: string | string[]; // Can be string or array in raw metadata, normalized to array
 }
 
 interface SchemaMetadata {
   classes: Record<string, ClassMetadata>;
-  slots: Record<string, any>;
-  enums: Record<string, any>;
+  slots: Record<string, SlotMetadata>;
+  enums: Record<string, EnumMetadata>;
 }
 
 async function loadSchemaMetadata(): Promise<SchemaMetadata> {
@@ -31,21 +62,6 @@ async function loadSchemaMetadata(): Promise<SchemaMetadata> {
     throw new Error(`Failed to load schema metadata: ${response.statusText}`);
   }
   return await response.json();
-}
-
-export async function loadSchema(): Promise<Map<string, ClassMetadata>> {
-  const metadata = await loadSchemaMetadata();
-
-  const classes = new Map<string, ClassMetadata>();
-  Object.entries(metadata.classes).forEach(([name, classDef]) => {
-    // Normalize slots: convert string to array
-    if (classDef.slots && typeof classDef.slots === 'string') {
-      classDef.slots = [classDef.slots];
-    }
-    classes.set(name, classDef);
-  });
-
-  return classes;
 }
 
 export async function loadVariableSpecs(): Promise<VariableSpec[]> {
@@ -132,7 +148,7 @@ function loadEnums(metadata: SchemaMetadata): Map<string, EnumDefinition> {
     const permissible_values: EnumValue[] = [];
 
     if (enumDef.permissible_values) {
-      Object.entries(enumDef.permissible_values).forEach(([key, valueDef]: [string, any]) => {
+      Object.entries(enumDef.permissible_values).forEach(([key, valueDef]) => {
         permissible_values.push({
           key,
           description: valueDef?.description

@@ -115,12 +115,22 @@ def generate_metadata(yaml_path: Path, output_path: Path) -> bool:
 
         # Extract class information
         for class_name, class_def in schema.get("classes", {}).items():
+            attributes = class_def.get("attributes", {})
+
+            # Validate: attributes must be a dict (object), not a list (array)
+            if isinstance(attributes, list):
+                raise ValueError(
+                    f"Class '{class_name}' has array-based attributes. "
+                    f"This is a known issue in the source schema. "
+                    f"Please fix the schema at the source (bdchm.yaml) before proceeding."
+                )
+
             metadata["classes"][class_name] = {
                 "name": class_name,
                 "description": class_def.get("description", ""),
                 "parent": class_def.get("is_a"),  # null if no parent
                 "abstract": class_def.get("abstract", False),
-                "attributes": class_def.get("attributes", {}),
+                "attributes": attributes,
                 "slots": class_def.get("slots", [])
             }
 
@@ -202,6 +212,7 @@ Examples:
 
                 # Extract sheet ID from URL
                 # Format: https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit?gid={GID}#gid={GID}
+                #   "https://docs.google.com/spreadsheets/d/1PDaX266_H0haa0aabMYQ6UNtEKT5-ClMarP0FvNntN8/edit?gid=0#gid=0",
                 if "/d/" in sheet_url and "/edit" in sheet_url:
                     sheet_id = sheet_url.split("/d/")[1].split("/")[0]
                     gid = "0"  # default to first sheet

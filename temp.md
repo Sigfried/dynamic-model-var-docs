@@ -762,6 +762,50 @@ function SelfRefLink({ element, label }: { element: Element, label: string }) {
 
 Self-referential links are rendered inline with the element, not in the cross-panel LinkOverlay.
 
+## Pre-Refactoring Fixes (Completed)
+
+The following issues were identified and fixed before starting the refactor:
+
+### ✅ Fixed: Array-Based Attributes Validation
+**Issue**: Some classes in the source schema had array-based attributes instead of object-based (e.g., ResearchStudy). This caused runtime errors.
+
+**Fix**: Added validation in `scripts/download_source_data.py` that raises a clear error:
+```python
+if isinstance(attributes, list):
+    raise ValueError(
+        f"Class '{class_name}' has array-based attributes. "
+        f"This is a known issue in the source schema. "
+        f"Please fix the schema at the source (bdchm.yaml) before proceeding."
+    )
+```
+
+**Status**: Source schema has been fixed. Validation prevents regression.
+
+### ✅ Fixed: Removed Legacy URL Restore Code
+**Issue**: App.tsx contained 30 lines of legacy code supporting old URL format (`?sel=...&selType=...`).
+
+**Fix**: Deleted lines 125-154 in App.tsx. App was never deployed, so no old URLs exist.
+
+### ✅ Fixed: Added entityType to OpenDialog
+**Issue**: Duck typing was repeated in multiple places to determine entity type from entity object.
+
+**Fix**:
+- Added `entityType: 'class' | 'enum' | 'slot' | 'variable'` field to `OpenDialog` interface
+- Created `getEntityType()` helper (duck typing happens once)
+- Simplified `getDialogStates()` from 32 lines to 15 lines
+
+**Benefit**: Cleaner code, single source of truth for entity type.
+
+### ✅ Fixed: TypeScript any Types in dataLoader.ts
+**Issue**: Four uses of `any` type (lines 18, 24, 25, 120) caused lint errors.
+
+**Fix**: Created proper interfaces:
+- `AttributeDefinition` for class attributes
+- `SlotMetadata` for raw slot definitions
+- `EnumMetadata` for enum definitions with typed permissible_values
+
+---
+
 ## Implementation Plan
 
 ### Phase 1: Data Pipeline Updates
@@ -883,3 +927,37 @@ A: Yes! Benefits:
 - Easy to add new features (sorting, filtering) in one place
 
 The Element classes specify table configuration, DetailTable handles rendering.
+
+---
+
+## Future Improvements (Post-Refactor)
+
+### Generic Dialog Component
+**Current**: `DetailDialog` is coupled to entity details (duck typing for title, entity-specific logic).
+
+**Better abstraction**: Rename to `Dialog` and make generic:
+```typescript
+interface DialogProps {
+  title: string;
+  children: React.ReactNode;
+  onClose: () => void;
+  onChange?: (position, size) => void;
+  initialPosition?: { x: number; y: number };
+  initialSize?: { width: number; height: number };
+}
+```
+
+**Benefits**:
+- Reusable for any dialog content (not just entity details)
+- Cleaner separation of concerns (chrome vs content)
+- DetailPanel becomes just another child component
+
+### Improved Resize Handles
+**Current**: Small 3px or 8px handles at edges.
+
+**Improvement**: Make entire edge draggable (except near corners).
+- North/South: Full width minus 20px from corners
+- East/West: Full height minus 20px from corners
+- More intuitive UX
+
+**Implementation**: Larger hit boxes for edge handles, priority ordering for corner handles.

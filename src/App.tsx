@@ -12,6 +12,7 @@ type SectionType = 'classes' | 'enums' | 'slots' | 'variables';
 interface OpenDialog {
   id: string;
   entity: SelectedEntity;
+  entityType: 'class' | 'enum' | 'slot' | 'variable';
   x: number;
   y: number;
   width: number;
@@ -107,6 +108,7 @@ function App() {
           restoredDialogs.push({
             id: `dialog-${dialogIdCounter}`,
             entity,
+            entityType: dialogState.entityType,
             x: dialogState.x,
             y: dialogState.y,
             width: dialogState.width,
@@ -122,67 +124,19 @@ function App() {
         setNextDialogId(dialogIdCounter);
       }
     }
-    // Legacy: Restore from old format (sel + selType)
-    else {
-      const params = new URLSearchParams(window.location.search);
-      const selectedEntityName = params.get('sel');
-      const selectedEntityType = params.get('selType') as 'class' | 'enum' | 'slot' | 'variable' | null;
-
-      if (selectedEntityName && selectedEntityType) {
-        let entity: SelectedEntity | null = null;
-        if (selectedEntityType === 'class') {
-          entity = classMap.get(selectedEntityName) || null;
-        } else if (selectedEntityType === 'enum') {
-          entity = modelData.enums.get(selectedEntityName) || null;
-        } else if (selectedEntityType === 'slot') {
-          entity = modelData.slots.get(selectedEntityName) || null;
-        } else if (selectedEntityType === 'variable') {
-          entity = modelData.variables.find(v => v.variableLabel === selectedEntityName) || null;
-        }
-
-        if (entity) {
-          setOpenDialogs([{
-            id: 'dialog-0',
-            entity,
-            x: 100,
-            y: window.innerHeight - 400,
-            width: 900,
-            height: 350
-          }]);
-          setNextDialogId(1);
-        }
-      }
-    }
   }, [modelData, classMap, hasRestoredFromURL]);
 
   // Convert OpenDialog to DialogState
   const getDialogStates = (): DialogState[] => {
     return openDialogs.map(dialog => {
-      const entity = dialog.entity;
-      let entityName: string;
-      let entityType: 'class' | 'enum' | 'slot' | 'variable';
-
-      if ('children' in entity) {
-        entityName = entity.name;
-        entityType = 'class';
-      } else if ('permissible_values' in entity) {
-        entityName = entity.name;
-        entityType = 'enum';
-      } else if ('slot_uri' in entity) {
-        entityName = entity.name;
-        entityType = 'slot';
-      } else if ('variableLabel' in entity) {
-        entityName = entity.variableLabel;
-        entityType = 'variable';
-      } else {
-        // Fallback (should never happen)
-        entityName = 'unknown';
-        entityType = 'variable';
-      }
+      // Extract entity name (variables use 'variableLabel', others use 'name')
+      const entityName = dialog.entityType === 'variable'
+        ? (dialog.entity as VariableSpec).variableLabel
+        : (dialog.entity as ClassNode | EnumDefinition | SlotDefinition).name;
 
       return {
         entityName,
-        entityType,
+        entityType: dialog.entityType,
         x: dialog.x,
         y: dialog.y,
         width: dialog.width,
@@ -228,6 +182,14 @@ function App() {
     }
   };
 
+  // Helper to determine entity type
+  const getEntityType = (entity: SelectedEntity): 'class' | 'enum' | 'slot' | 'variable' => {
+    if ('children' in entity) return 'class';
+    if ('permissible_values' in entity) return 'enum';
+    if ('slot_uri' in entity) return 'slot';
+    return 'variable';
+  };
+
   // Dialog management
   const handleOpenDialog = (entity: SelectedEntity, position?: { x: number; y: number }, size?: { width: number; height: number }) => {
     const CASCADE_OFFSET = 40;
@@ -240,6 +202,7 @@ function App() {
     const newDialog: OpenDialog = {
       id: `dialog-${nextDialogId}`,
       entity,
+      entityType: getEntityType(entity),
       x: position?.x ?? defaultPosition.x,
       y: position?.y ?? defaultPosition.y,
       width: size?.width ?? defaultSize.width,
