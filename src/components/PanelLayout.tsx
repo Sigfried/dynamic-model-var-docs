@@ -20,7 +20,7 @@ export default function PanelLayout({
     <div className="flex-1 flex overflow-hidden">
       {/* Left Panel */}
       <div
-        className="overflow-hidden border-r border-gray-200 dark:border-slate-700 flex-shrink-0"
+        className="h-full overflow-hidden border-r border-gray-200 dark:border-slate-700 flex-shrink-0"
         style={{
           width: leftPanelEmpty ? `${EMPTY_PANEL_WIDTH}px` : undefined,
           maxWidth: leftPanelEmpty ? undefined : `${MAX_PANEL_WIDTH}px`,
@@ -37,7 +37,7 @@ export default function PanelLayout({
 
       {/* Right Panel */}
       <div
-        className="overflow-hidden border-l border-gray-200 dark:border-slate-700 flex-shrink-0"
+        className="h-full overflow-hidden border-l border-gray-200 dark:border-slate-700 flex-shrink-0"
         style={{
           width: rightPanelEmpty ? `${EMPTY_PANEL_WIDTH}px` : undefined,
           maxWidth: rightPanelEmpty ? undefined : `${MAX_PANEL_WIDTH}px`,

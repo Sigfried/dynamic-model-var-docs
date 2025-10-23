@@ -423,7 +423,7 @@ function App() {
       </header>
 
       {/* Main content: Panel layout with link overlay */}
-      <div className="relative flex-1 overflow-hidden">
+      <div className="flex relative overflow-hidden">
         <PanelLayout
           leftPanel={
             <ElementsPanel

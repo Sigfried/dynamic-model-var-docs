@@ -65,9 +65,11 @@ export default function ElementsPanel({
     const newSections = [...sections];
     const index = newSections.indexOf(section);
     if (index > -1) {
+      // Remove section
       newSections.splice(index, 1);
     } else {
-      newSections.push(section);
+      // Add to front (most recent at top)
+      newSections.unshift(section);
     }
     onSectionsChange(newSections);
   };
@@ -80,8 +82,8 @@ export default function ElementsPanel({
 
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-slate-900">
-      {/* Section toggles */}
-      <div className={`flex ${position === 'left' ? 'flex-row' : 'flex-row-reverse'} gap-2 p-2 border-b border-gray-200 dark:border-slate-700`}>
+      {/* Section toggles - always in C E S V order */}
+      <div className="flex flex-row gap-2 p-2 border-b border-gray-200 dark:border-slate-700">
         <SectionToggleButton
           sectionType="classes"
           active={activeSections.has('classes')}
@@ -104,48 +106,59 @@ export default function ElementsPanel({
         />
       </div>
 
-      {/* Sections container - always stack vertically, no grid */}
+      {/* Sections container - render in order of most recently selected */}
       {sections.length === 0 ? (
         <div className="flex-1 flex items-center justify-center text-gray-400 text-sm p-4 text-center">
           Click a section icon above to get started
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto">
-          {activeSections.has('classes') && (
-            <ClassSection
-              nodes={classHierarchy}
-              onSelectClass={onSelectEntity}
-              selectedClass={selectedEntity && isClassNode(selectedEntity) ? selectedEntity : undefined}
-              position={position}
-            />
-          )}
-
-          {activeSections.has('enums') && (
-            <EnumSection
-              enums={enums}
-              onSelectEnum={onSelectEntity}
-              selectedEnum={selectedEntity && isEnumDefinition(selectedEntity) ? selectedEntity : undefined}
-              position={position}
-            />
-          )}
-
-          {activeSections.has('slots') && (
-            <SlotSection
-              slots={slots}
-              onSelectSlot={onSelectEntity}
-              selectedSlot={selectedEntity && isSlotDefinition(selectedEntity) ? selectedEntity : undefined}
-              position={position}
-            />
-          )}
-
-          {activeSections.has('variables') && (
-            <VariablesSection
-              variables={variables}
-              onSelectVariable={onSelectEntity}
-              selectedVariable={selectedEntity && isVariableSpec(selectedEntity) ? selectedEntity : undefined}
-              position={position}
-            />
-          )}
+        <div className="flex-1 overflow-y-auto min-h-0">
+          {sections.map(section => {
+            switch (section) {
+              case 'classes':
+                return (
+                  <ClassSection
+                    key="classes"
+                    nodes={classHierarchy}
+                    onSelectClass={onSelectEntity}
+                    selectedClass={selectedEntity && isClassNode(selectedEntity) ? selectedEntity : undefined}
+                    position={position}
+                  />
+                );
+              case 'enums':
+                return (
+                  <EnumSection
+                    key="enums"
+                    enums={enums}
+                    onSelectEnum={onSelectEntity}
+                    selectedEnum={selectedEntity && isEnumDefinition(selectedEntity) ? selectedEntity : undefined}
+                    position={position}
+                  />
+                );
+              case 'slots':
+                return (
+                  <SlotSection
+                    key="slots"
+                    slots={slots}
+                    onSelectSlot={onSelectEntity}
+                    selectedSlot={selectedEntity && isSlotDefinition(selectedEntity) ? selectedEntity : undefined}
+                    position={position}
+                  />
+                );
+              case 'variables':
+                return (
+                  <VariablesSection
+                    key="variables"
+                    variables={variables}
+                    onSelectVariable={onSelectEntity}
+                    selectedVariable={selectedEntity && isVariableSpec(selectedEntity) ? selectedEntity : undefined}
+                    position={position}
+                  />
+                );
+              default:
+                return null;
+            }
+          })}
         </div>
       )}
     </div>
