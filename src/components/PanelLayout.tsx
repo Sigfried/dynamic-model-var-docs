@@ -5,13 +5,15 @@ interface PanelLayoutProps {
   rightPanel: ReactNode;
   leftPanelEmpty?: boolean;
   rightPanelEmpty?: boolean;
+  showSpacer?: boolean;
 }
 
 export default function PanelLayout({
   leftPanel,
   rightPanel,
   leftPanelEmpty = false,
-  rightPanelEmpty = false
+  rightPanelEmpty = false,
+  showSpacer = true
 }: PanelLayoutProps) {
   const EMPTY_PANEL_WIDTH = 180; // Fixed width in pixels for empty panels (enough for 4 icon buttons)
   const MAX_PANEL_WIDTH = 450; // Max width for non-empty panels to keep them compact
@@ -47,8 +49,8 @@ export default function PanelLayout({
         {rightPanel}
       </div>
 
-      {/* Spacer to push remaining space to the right */}
-      <div className="flex-1" />
+      {/* Spacer to push remaining space to the right - only show when not using stacked panels */}
+      {showSpacer && <div className="flex-1" />}
     </div>
   );
 }

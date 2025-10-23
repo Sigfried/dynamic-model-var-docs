@@ -362,31 +362,103 @@ npm test:coverage
 - No viewport culling (all links render, could impact performance with large models)
 - No filter controls UI (inheritance/properties toggles)
 
-### Next: Phase 3e - Adaptive Detail Panel Display
+---
+
+### ✅ Completed: Phase 3e - Adaptive Detail Panel Display
 
 **Responsive detail display**: Adapt between stacked panels and floating dialogs based on available space
 
-**Problem**: With narrow panels (max-width 450px), there's potentially significant empty space on the right side of the screen that could be better utilized for displaying element details.
+**Status**: Fully implemented ✅
 
-**Solution**: Adaptive layout based on available horizontal space
-- **When space available (≥600px empty)**: Display detail panels stacked vertically in the right space
-  - New panels added at the top, pushing older ones down
-  - Fixed position in the layout (not draggable)
-  - Scrollable if total height exceeds viewport
-- **When space limited (<600px)**: Use current DetailDialog system
-  - Draggable, resizable floating dialogs
-  - User has full control over positioning
+#### **Core Features**
+
+**Adaptive Behavior**:
+- Wide screens (≥1660px with both panels): Stacked detail panels on right
+- Narrow screens (<1660px): Draggable/resizable dialogs
+- Automatic smooth transition when resizing window
 
 **Duplicate Prevention**:
-Current behavior allows opening the same element multiple times, creating duplicate dialogs. Fix with one of two approaches:
-1. **Bring to top**: If element already shown, bring that panel/dialog to the top instead of creating duplicate
-2. **Replace old**: Create new panel/dialog as normal, but close the older duplicate
+- Clicking already-open element brings it to top (instead of creating duplicate)
+- Works across both stacked and dialog modes
 
-**Implementation Considerations**:
-- Measure available space on mount and window resize
-- Maintain single source of truth for open details (reuse existing dialog state)
-- Transition smoothly between modes when window resizes across threshold
-- Consider state persistence: should stacked panels save position like dialogs?
+#### **Implementation Details**
+
+**1. Space Measurement & Display Mode** (App.tsx:143-169)
+- `useEffect` calculates available horizontal space based on panel widths
+- Automatically switches between `'stacked'` and `'dialog'` modes at 600px threshold
+- Recalculates on window resize for smooth transitions
+
+**2. DetailPanelStack Component** (new file)
+- Reusable component for displaying detail panels stacked vertically
+- Fixed positioning (not draggable/resizable) with scrollable container
+- Same content as dialogs but optimized for side panel layout
+- Panels have min/max height (300px-500px) for better readability
+
+**3. DetailPanel Enhancements**
+- Added `hideHeader` prop to remove large entity name header
+- Added `hideCloseButton` prop to hide internal close button
+- Conditionally render header/button based on props
+- All entity types (class/enum/slot/variable) support hiding
+
+**4. Conditional Rendering** (App.tsx:513-557)
+- PanelLayout accepts `showSpacer` prop to hide flex-1 spacer in stacked mode
+- Stacked panels render in flex-1 space when mode = 'stacked'
+- Dialogs only render when mode = 'dialog'
+- Smooth automatic transition when resizing window
+
+#### **UX Polish**
+
+**Panel Headers**:
+- Newest panels appear at top (reversed array in DetailPanelStack)
+- Descriptive titles: "Class: Condition extends Entity", "Enum: ConditionConceptEnum", "Slot: id"
+- Entity type not shown for enums (name already ends with "Enum")
+- Type-based colored headers with white text:
+  - Blue-700: Classes
+  - Purple-700: Enums
+  - Green-700: Slots
+  - Orange-600: Variables
+- Bold text with `text-base` size, inheritance shown in smaller `text-sm`
+- Single close button in panel header (no duplicate inside)
+
+**Compact Spacing**:
+- Reduced padding from `p-6` to `p-4`
+- Reduced vertical spacing from `space-y-6` to `space-y-3`
+- Reduced heading margins from `mb-2` to `mb-1`
+- More compact display especially helpful in stacked panel mode
+
+**Empty State Handling**:
+- Permissible values section hidden if enum has no values
+- Reduces clutter for incomplete data
+
+**Clickable App Title**:
+- Click "BDCHM Interactive Documentation" to reset application
+- If saved layout exists: Resets to that saved layout (including dialogs)
+- If no saved layout: Resets to default (Classes Only preset)
+- Always accessible way to restore known-good state
+
+#### **Files Changed**
+
+1. **DetailPanel.tsx**
+   - Added `hideHeader` and `hideCloseButton` props
+   - Conditionally render entity name header and close button
+   - All entity types support hiding
+   - Reduced line spacing throughout (p-4, space-y-3, mb-1)
+   - Hide permissible values if empty
+
+2. **DetailPanelStack.tsx** (new)
+   - Reverse panels array so newest appears first
+   - `getPanelTitle()` helper generates descriptive JSX titles
+   - `getHeaderColor()` helper returns type-based colors
+   - Pass `hideHeader={true}` and `hideCloseButton={true}` to DetailPanel
+
+3. **App.tsx**
+   - Space measurement logic with 600px threshold
+   - Duplicate detection in `handleOpenDialog()`
+   - Conditional rendering: stacked vs dialog mode
+   - `handleResetApp()` restores saved layout including dialogs
+
+4. **PanelLayout.tsx**
+   - Added `showSpacer` prop to hide flex-1 spacer in stacked mode
 
 ### Future: Enhanced Element Metadata Display
 

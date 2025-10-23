@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import ElementsPanel from './components/ElementsPanel';
 import DetailDialog from './components/DetailDialog';
+import DetailPanelStack from './components/DetailPanelStack';
 import PanelLayout from './components/PanelLayout';
 import LinkOverlay from './components/LinkOverlay';
 import { loadModelData } from './utils/dataLoader';
@@ -42,6 +43,7 @@ function App() {
   const [hasLocalStorage, setHasLocalStorage] = useState(false);
   const [hasRestoredFromURL, setHasRestoredFromURL] = useState(false);
   const [nextDialogId, setNextDialogId] = useState(0);
+  const [displayMode, setDisplayMode] = useState<'stacked' | 'dialog'>('dialog');
 
   // Load initial state from URL or localStorage
   const initialState = getInitialState();
@@ -138,6 +140,33 @@ function App() {
     }
   }, [modelData, classMap, hasRestoredFromURL]);
 
+  // Measure available space and set display mode
+  useEffect(() => {
+    const PANEL_MAX_WIDTH = 450;
+    const EMPTY_PANEL_WIDTH = 180;
+    const GUTTER_WIDTH = 160;
+    const SPACE_THRESHOLD = 600;
+
+    const measureSpace = () => {
+      const windowWidth = window.innerWidth;
+
+      // Calculate panel widths
+      const leftWidth = leftSections.length === 0 ? EMPTY_PANEL_WIDTH : PANEL_MAX_WIDTH;
+      const rightWidth = rightSections.length === 0 ? EMPTY_PANEL_WIDTH : PANEL_MAX_WIDTH;
+      const gutterWidth = (leftSections.length > 0 && rightSections.length > 0) ? GUTTER_WIDTH : 0;
+
+      // Calculate remaining space
+      const usedSpace = leftWidth + rightWidth + gutterWidth;
+      const remaining = windowWidth - usedSpace;
+
+      setDisplayMode(remaining >= SPACE_THRESHOLD ? 'stacked' : 'dialog');
+    };
+
+    measureSpace();
+    window.addEventListener('resize', measureSpace);
+    return () => window.removeEventListener('resize', measureSpace);
+  }, [leftSections, rightSections]);
+
   // Convert OpenDialog to DialogState
   const getDialogStates = (): DialogState[] => {
     return openDialogs.map(dialog => {
@@ -194,6 +223,64 @@ function App() {
     }
   };
 
+  // Reset application to saved layout or default
+  const handleResetApp = () => {
+    const stored = localStorage.getItem('bdchm-app-state');
+    if (stored) {
+      // Reset to saved layout (including dialogs if present)
+      try {
+        const state = JSON.parse(stored);
+        setLeftSections(state.leftSections || []);
+        setRightSections(state.rightSections || []);
+
+        // Restore dialogs if they were in the saved state
+        if (state.dialogs && state.dialogs.length > 0 && modelData && classMap.size > 0) {
+          const restoredDialogs: OpenDialog[] = [];
+          let dialogIdCounter = nextDialogId;
+
+          state.dialogs.forEach((dialogState: DialogState) => {
+            let entity: SelectedEntity | null = null;
+
+            if (dialogState.entityType === 'class') {
+              entity = classMap.get(dialogState.entityName) || null;
+            } else if (dialogState.entityType === 'enum') {
+              entity = modelData.enums.get(dialogState.entityName) || null;
+            } else if (dialogState.entityType === 'slot') {
+              entity = modelData.slots.get(dialogState.entityName) || null;
+            } else if (dialogState.entityType === 'variable') {
+              entity = modelData.variables.find(v => v.variableLabel === dialogState.entityName) || null;
+            }
+
+            if (entity) {
+              restoredDialogs.push({
+                id: `dialog-${dialogIdCounter}`,
+                entity,
+                entityType: dialogState.entityType,
+                x: dialogState.x,
+                y: dialogState.y,
+                width: dialogState.width,
+                height: dialogState.height
+              });
+              dialogIdCounter++;
+            }
+          });
+
+          setOpenDialogs(restoredDialogs);
+          setNextDialogId(dialogIdCounter);
+        } else {
+          setOpenDialogs([]);
+        }
+      } catch (err) {
+        console.error('Failed to parse stored state:', err);
+      }
+    } else {
+      // Reset to default (classes only preset)
+      setLeftSections(['classes']);
+      setRightSections([]);
+      setOpenDialogs([]);
+    }
+  };
+
   // Helper to determine entity type
   const getEntityType = (entity: SelectedEntity): 'class' | 'enum' | 'slot' | 'variable' => {
     if ('children' in entity) return 'class';
@@ -204,6 +291,32 @@ function App() {
 
   // Dialog management
   const handleOpenDialog = (entity: SelectedEntity, position?: { x: number; y: number }, size?: { width: number; height: number }) => {
+    const entityType = getEntityType(entity);
+
+    // Get entity name (variables use 'variableLabel', others use 'name')
+    const entityName = entityType === 'variable'
+      ? (entity as VariableSpec).variableLabel
+      : (entity as ClassNode | EnumDefinition | SlotDefinition).name;
+
+    // Check if this entity is already open
+    const existingIndex = openDialogs.findIndex(d => {
+      const existingName = d.entityType === 'variable'
+        ? (d.entity as VariableSpec).variableLabel
+        : (d.entity as ClassNode | EnumDefinition | SlotDefinition).name;
+      return existingName === entityName && d.entityType === entityType;
+    });
+
+    // If already open, bring to top (move to end of array, which renders last = on top)
+    if (existingIndex !== -1) {
+      setOpenDialogs(prev => {
+        const updated = [...prev];
+        const [existing] = updated.splice(existingIndex, 1);
+        return [...updated, existing];
+      });
+      return;
+    }
+
+    // Otherwise, create new dialog
     const CASCADE_OFFSET = 40;
     const defaultPosition = {
       x: 100 + (openDialogs.length * CASCADE_OFFSET),
@@ -214,7 +327,7 @@ function App() {
     const newDialog: OpenDialog = {
       id: `dialog-${nextDialogId}`,
       entity,
-      entityType: getEntityType(entity),
+      entityType,
       x: position?.x ?? defaultPosition.x,
       y: position?.y ?? defaultPosition.y,
       width: size?.width ?? defaultSize.width,
@@ -307,7 +420,13 @@ function App() {
       <header className="bg-blue-600 text-white px-6 py-4 border-b border-blue-700">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">BDCHM Interactive Documentation</h1>
+            <h1
+              className="text-2xl font-bold cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={handleResetApp}
+              title="Click to reset application to saved layout or default"
+            >
+              BDCHM Interactive Documentation
+            </h1>
             <p className="text-sm text-blue-100">BioData Catalyst Harmonized Model Explorer</p>
           </div>
           <div className="flex items-center gap-4 text-sm">
@@ -453,7 +572,26 @@ function App() {
             />
           }
           rightPanelEmpty={rightSections.length === 0}
+          showSpacer={displayMode === 'dialog'}
         />
+
+        {/* Stacked detail panels (when enough space) */}
+        {displayMode === 'stacked' && openDialogs.length > 0 && (
+          <div className="flex-1 border-l border-gray-200 dark:border-slate-700">
+            <DetailPanelStack
+              panels={openDialogs.map(d => ({
+                id: d.id,
+                entity: d.entity,
+                entityType: d.entityType
+              }))}
+              onNavigate={handleNavigate}
+              onClose={handleCloseDialog}
+              enums={modelData?.enums}
+              slots={modelData?.slots}
+              classes={classMap}
+            />
+          </div>
+        )}
 
         {/* SVG Link Overlay */}
         {modelData && (
@@ -464,8 +602,8 @@ function App() {
         )}
       </div>
 
-      {/* Detail dialogs - render all open dialogs */}
-      {openDialogs.map((dialog, index) => (
+      {/* Detail dialogs - only render when in dialog mode */}
+      {displayMode === 'dialog' && openDialogs.map((dialog, index) => (
         <DetailDialog
           key={dialog.id}
           selectedEntity={dialog.entity}

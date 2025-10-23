@@ -5,84 +5,202 @@
 
 ---
 
-## Current Task: Phase 3e - Adaptive Detail Panel Display
+## Next: Expand Test Suite for Phase 3e
 
-### Goal
-Improve detail display by adapting to available screen space:
-- **Wide screens (≥600px empty)**: Stack detail panels vertically in the right space
-- **Narrow screens (<600px)**: Use current draggable DetailDialog system
+### Context
 
-### Requirements
+**Last test expansion**: Phase 3d (SVG link visualization)
+- 26 tests in `linkLogic.test.ts` (relationship detection)
+- 27 tests in `linkHelpers.test.ts` (SVG rendering utilities)
 
-**1. Measure Available Space**
-- Calculate empty horizontal space after left panel, gutter, and right panel
-- Recalculate on window resize
-- Threshold: 600px
+**Untested since then**: Phase 3e (adaptive detail panel display)
+- DetailPanelStack component
+- Adaptive layout switching logic
+- Duplicate prevention
+- Panel header styling
+- App title reset functionality
 
-**2. Stacked Panel Mode (when space available)**
-- Display details as fixed panels in the right space
-- Stack vertically with newest at top
-- Scrollable if total height exceeds viewport
-- Not draggable/resizable (fixed in layout)
+### Testing Philosophy Reminder
 
-**3. Dialog Mode (when space limited)**
-- Use current DetailDialog implementation
-- Draggable and resizable
-- Positioned freely by user
+From CLAUDE.md:
+- ✅ Test data/logic layers separately from visual/rendering layers
+- ✅ Use TDD for non-visual features (data transformations, filtering, state management)
+- ✅ Use hybrid approach for visual features (test logic first, verify rendering manually)
+- ✅ Aim for tests that prevent regressions, not just achieve coverage
 
-**4. Duplicate Prevention**
-Currently allows opening same element multiple times. Fix by choosing one approach:
-- **Option A**: If element already open, bring that panel/dialog to top
-- **Option B**: Create new panel/dialog but close the old duplicate
+**What we test vs. what we verify visually:**
+- ✅ **Test**: Pure functions, data transformations, filtering logic, state calculations
+- 👁️ **Visual verification**: Colors, animations, layout aesthetics, user interactions
 
-### Implementation Steps
+---
 
-1. Add `useEffect` to measure available space on mount and resize
-2. Add state for display mode: `'stacked' | 'dialog'`
-3. Create `DetailPanelStack` component for stacked mode
-4. Modify `handleOpenDialog` to:
-   - Check if element already open (compare type + name)
-   - If duplicate: bring to top OR close old one
-   - Use stacked panel when space available, dialog otherwise
-5. Update PanelLayout or App to render DetailPanelStack when in stacked mode
-6. Test transition between modes on window resize
+## Test Plan for Phase 3e
 
-### Design Decisions to Consider
+### Priority 1: Testable Logic (Add Tests)
 
-- Should stacked panels persist position in URL like dialogs?
-  - Probably not - they're auto-positioned
-- How to handle transition when resizing across threshold?
-  - Convert dialogs → stacked panels smoothly
-  - Preserve order (dialog z-index → stack position)
-- Close button behavior in stacked mode?
-  - Same as dialog mode - remove from openDialogs array
+#### 1. **Space Measurement Logic** (`App.tsx:143-169`)
+
+**Test file**: `src/test/adaptiveLayout.test.ts` (new)
+
+Test cases:
+- Calculate remaining space with both panels populated
+- Calculate remaining space with one panel empty
+- Calculate remaining space with no panels
+- Determine 'stacked' mode when space ≥ threshold
+- Determine 'dialog' mode when space < threshold
+- Handle edge case at exact threshold (600px)
+
+**Implementation approach**:
+- Extract space calculation to utility function in `src/utils/layoutHelpers.ts`
+- Test utility function in isolation
+- Mock window.innerWidth for deterministic tests
+
+#### 2. **Duplicate Detection** (`App.tsx:236-281`)
+
+**Test file**: `src/test/duplicateDetection.test.ts` (new)
+
+Test cases:
+- Detect duplicate class by name
+- Detect duplicate enum by name
+- Detect duplicate slot by name
+- Detect duplicate variable by variableLabel
+- Handle non-duplicate entities correctly
+- Find existing entity index correctly
+- Handle empty openDialogs array
+
+**Implementation approach**:
+- Extract duplicate detection to utility function
+- Test with mock entity data
+- Verify index finding logic
+
+#### 3. **Panel Title Generation** (`DetailPanelStack.tsx:36-59`)
+
+**Test file**: `src/test/panelTitles.test.ts` (new)
+
+Test cases:
+- Generate title for class without parent
+- Generate title for class with parent (includes "extends")
+- Generate title for enum (no "Enum:" prefix)
+- Generate title for slot
+- Generate title for variable
+- Render correct JSX structure (bold elements, text sizes)
+
+**Implementation approach**:
+- Test that function returns ReactElement
+- Use React Testing Library to render and verify text content
+- Check className attributes for styling
+
+#### 4. **Header Color Selection** (`DetailPanelStack.tsx:23-33`)
+
+**Test file**: `src/test/headerColors.test.ts` (new)
+
+Test cases:
+- Return blue color for ClassNode
+- Return purple color for EnumDefinition
+- Return green color for SlotDefinition
+- Return orange color for VariableSpec
+- Verify color strings include both light and dark variants
+
+**Implementation approach**:
+- Pure function test with mock entities
+- String matching for expected Tailwind classes
+
+### Priority 2: Component Rendering (Selective Tests)
+
+#### 5. **DetailPanelStack Rendering**
+
+**Test file**: `src/test/DetailPanelStack.test.tsx` (new)
+
+Test cases:
+- Render null when panels array is empty
+- Render panels in reversed order (newest first)
+- Apply correct header color for each entity type
+- Render close button for each panel
+- Pass hideHeader and hideCloseButton props to DetailPanel
+
+**Implementation approach**:
+- Use React Testing Library
+- Mock DetailPanel component to verify props
+- Test array reversal logic
+
+### Priority 3: Integration Tests (Future)
+
+#### 6. **Adaptive Mode Switching**
+
+**Test file**: `src/test/adaptiveModeIntegration.test.tsx` (new)
+
+Test cases:
+- Switch from 'dialog' to 'stacked' when resizing window wider
+- Switch from 'stacked' to 'dialog' when resizing window narrower
+- Preserve dialog data when switching modes
+- Maintain panel order across mode switches
+
+**Challenges**:
+- Requires mocking window.innerWidth and resize events
+- Needs full component tree (App + PanelLayout + panels)
+- May be slow / flaky
+- **Decision**: Defer to future if time-constrained
+
+### Priority 4: Not Testing (Visual Verification Only)
+
+These features are best verified manually in browser:
+- 👁️ Colored header backgrounds (visual correctness)
+- 👁️ Panel height constraints (300px-500px)
+- 👁️ Scrolling behavior in stacked mode
+- 👁️ Smooth transitions when resizing
+- 👁️ Hover effects on close button
+- 👁️ Typography (bold, text sizes, alignment)
+
+---
+
+## Implementation Order
+
+1. **Session 1**: Extract logic, write Priority 1 tests
+   - Create `src/utils/layoutHelpers.ts` with space calculation function
+   - Create `src/utils/duplicateDetection.ts` (or add to existing utils)
+   - Write tests for extracted functions
+   - Refactor App.tsx to use utility functions
+
+2. **Session 2**: Write Priority 2 component tests
+   - Create `DetailPanelStack.test.tsx`
+   - Create `panelTitles.test.ts` and `headerColors.test.ts`
+   - Test rendering and prop passing
+
+3. **Session 3** (optional): Integration tests
+   - Only if time allows
+   - Focus on critical user flows
+
+---
+
+## Success Criteria
+
+**Minimum viable test coverage**:
+- All pure functions tested (space calc, duplicate detection, color selection)
+- DetailPanelStack component rendering tested
+- Title generation tested
+- Test count: ~15-20 new tests
+
+**Stretch goals**:
+- Integration tests for mode switching
+- Round-trip tests for state persistence
+- Test count: ~30+ new tests
+
+**Current baseline**: 67 tests passing
 
 ---
 
 ## Quick Commands
 
 ```bash
-# Run tests
-npm test              # Watch mode
-npm test -- --run     # Single run
+# Run tests in watch mode
+npm test
 
-# Dev server
-npm run dev
+# Run specific test file
+npm test -- adaptiveLayout
+
+# Run all tests once
+npm test -- --run
 
 # Type check
 npm run build
 ```
-
----
-
-## Notes from Previous Session (Phase 3d)
-
-Phase 3d (SVG Link Visualization) is now complete with all bugs fixed:
-- ✅ Scrolling works (added `h-full` to panels, `flex` to main content)
-- ✅ Icon order consistent (C E S V in both panels)
-- ✅ Link positioning accurate (SVG coordinate adjustment)
-- ✅ Dynamic section ordering (most recent at top)
-- ✅ Links redraw on section changes (`requestAnimationFrame`)
-- ✅ All 67 tests passing
-
-See CLAUDE.md § Phase 3d for complete implementation details.
