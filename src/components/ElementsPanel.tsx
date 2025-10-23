@@ -11,7 +11,6 @@ interface ElementsPanelProps {
   position: 'left' | 'right';
   sections: SectionType[];
   onSectionsChange: (sections: SectionType[]) => void;
-  forceSingleColumn?: boolean;
   classHierarchy: ClassNode[];
   enums: Map<string, EnumDefinition>;
   slots: Map<string, SlotDefinition>;
@@ -53,7 +52,6 @@ export default function ElementsPanel({
   position,
   sections,
   onSectionsChange,
-  forceSingleColumn = false,
   classHierarchy,
   enums,
   slots,
@@ -73,8 +71,6 @@ export default function ElementsPanel({
     }
     onSectionsChange(newSections);
   };
-
-  const showMultiColumn = sections.length > 1 && !forceSingleColumn;
 
   // Helper to check if entity is of certain type
   const isClassNode = (entity: SelectedEntity): entity is ClassNode => 'children' in entity;
@@ -108,52 +104,52 @@ export default function ElementsPanel({
         />
       </div>
 
-      {/* Sections container */}
+      {/* Sections container - always stack vertically, no grid */}
       {sections.length === 0 ? (
         <div className="flex-1 flex items-center justify-center text-gray-400 text-sm p-4 text-center">
           Click a section icon above to get started
         </div>
       ) : (
-        <div className={`flex-1 overflow-hidden ${showMultiColumn ? 'grid grid-cols-2 gap-px bg-gray-200 dark:bg-slate-700' : 'flex flex-col'}`}>
+        <div className="flex-1 overflow-hidden flex flex-col">
           {activeSections.has('classes') && (
-          <div className="h-full overflow-hidden">
-            <ClassSection
-              nodes={classHierarchy}
-              onSelectClass={onSelectEntity}
-              selectedClass={selectedEntity && isClassNode(selectedEntity) ? selectedEntity : undefined}
-            />
-          </div>
-        )}
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <ClassSection
+                nodes={classHierarchy}
+                onSelectClass={onSelectEntity}
+                selectedClass={selectedEntity && isClassNode(selectedEntity) ? selectedEntity : undefined}
+              />
+            </div>
+          )}
 
-        {activeSections.has('enums') && (
-          <div className="h-full overflow-hidden">
-            <EnumSection
-              enums={enums}
-              onSelectEnum={onSelectEntity}
-              selectedEnum={selectedEntity && isEnumDefinition(selectedEntity) ? selectedEntity : undefined}
-            />
-          </div>
-        )}
+          {activeSections.has('enums') && (
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <EnumSection
+                enums={enums}
+                onSelectEnum={onSelectEntity}
+                selectedEnum={selectedEntity && isEnumDefinition(selectedEntity) ? selectedEntity : undefined}
+              />
+            </div>
+          )}
 
-        {activeSections.has('slots') && (
-          <div className="h-full overflow-hidden">
-            <SlotSection
-              slots={slots}
-              onSelectSlot={onSelectEntity}
-              selectedSlot={selectedEntity && isSlotDefinition(selectedEntity) ? selectedEntity : undefined}
-            />
-          </div>
-        )}
+          {activeSections.has('slots') && (
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <SlotSection
+                slots={slots}
+                onSelectSlot={onSelectEntity}
+                selectedSlot={selectedEntity && isSlotDefinition(selectedEntity) ? selectedEntity : undefined}
+              />
+            </div>
+          )}
 
-        {activeSections.has('variables') && (
-          <div className="h-full overflow-hidden">
-            <VariablesSection
-              variables={variables}
-              onSelectVariable={onSelectEntity}
-              selectedVariable={selectedEntity && isVariableSpec(selectedEntity) ? selectedEntity : undefined}
-            />
-          </div>
-        )}
+          {activeSections.has('variables') && (
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <VariablesSection
+                variables={variables}
+                onSelectVariable={onSelectEntity}
+                selectedVariable={selectedEntity && isVariableSpec(selectedEntity) ? selectedEntity : undefined}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -5,103 +5,51 @@
 
 ---
 
-## Current Status: Phase 3d - SVG Link Visualization (In Progress)
+## Current Status: Phase 3d - SVG Link Visualization (✅ Complete)
 
 ### ✅ Completed This Session
 
-**Testing Infrastructure Setup**
-- Installed Vitest, React Testing Library, @testing-library/jest-dom
-- Created test setup with mocked `fetch` for file system access
-- All 67 tests passing ✅
+**Phase 3d: Visual Implementation Complete**
+- Created `src/components/LinkOverlay.tsx` with full SVG link rendering
+- Fixed critical infinite render loop bug (memoized panel data in App.tsx)
+- Fixed missing sections bug (removed grid layout, sections now stack vertically)
+- Improved link visibility (opacity 0.2 → 1.0 on hover, stroke width increases)
+- Made panels narrower (max-width: 450px instead of flex: 1)
+- Documented feature request: show enum/slot/class counts
 
-**Test Suite Created**
-1. `data-integrity.test.ts` - Data completeness reporting (tracks YAML → JSON → ModelData pipeline)
-2. `dataLoader.test.ts` - Core data loading logic
-3. `ClassSection.test.tsx` - Component rendering tests
-4. `linkLogic.test.ts` - Element relationship detection (26 tests)
-5. `linkHelpers.test.ts` - SVG link utilities (27 tests)
+**Key Implementation Details**:
+- Links only show between left ↔ right panels (cross-panel filtering)
+- Inheritance links disabled (tree structure already shows this)
+- Hover: opacity 20% → 100%, stroke width increases to 3px
+- Link colors: purple (enum), green (class), blue (inheritance - disabled)
+- Self-referential links use loop style
 
-**Production Code (TDD)**
-- `src/utils/linkHelpers.ts` - Fully tested link utilities
-  - Relationship filtering functions
-  - Link building from relationships
-  - Geometric calculations (centers, anchor points, edge detection)
-  - SVG path generation (bezier curves, self-ref loops)
-  - Visual styling (colors, stroke widths)
+**Bug Fixes**:
+1. **Infinite render loop**: Memoized `leftPanelData` and `rightPanelData` in App.tsx
+2. **Missing sections**: Removed grid layout, changed to `flex flex-col` with `flex-1 min-h-0` on each section
+3. **Hover not working**: Added `pointerEvents: 'stroke'` to SVG paths
+4. **Panel width**: Changed from `flex: 1` to `max-width: 450px, min-width: 300px`
 
-**Element Architecture**
-- All Element classes (`ClassElement`, `EnumElement`, `SlotElement`, `VariableElement`) have working `getRelationships()` methods
-- Data attributes (`data-element-type`, `data-element-name`) in place for SVG positioning
-
----
-
-## Next Session: Complete Phase 3d
-
-### Step 4: Create LinkOverlay Component
-
-**Goal**: Visual implementation using the tested logic layer
-
-**Tasks**:
-1. Create `src/components/LinkOverlay.tsx`
-   - Accepts visible elements from parent
-   - Queries DOM for element positions via data attributes
-   - Calls `element.getRelationships()` for each visible element
-   - Uses `linkHelpers` to filter and build link objects
-   - Renders SVG with paths, using helper functions for positioning/styling
-
-2. Wire up to PanelLayout
-   - Add LinkOverlay as absolute-positioned layer over panels
-   - Pass visible element data from App state
-   - Initially render all links (no filtering UI)
-
-3. Visual verification
-   - Check inheritance links (blue, thick)
-   - Check enum property links (purple, medium)
-   - Check class property links (green, medium)
-   - Check self-referential links (loop style)
-
-### Step 5: Add Interactions & Controls
-
-**Tasks**:
-1. Filter controls (checkboxes/toggles):
-   - Show/hide inheritance
-   - Show/hide properties
-   - Show/hide enums only
-   - Show/hide class refs only
-   - Include self-refs (default: off)
-
-2. Hover interactions:
-   - Highlight link on hover (increase opacity/stroke width)
-   - Show tooltip with relationship info
-
-3. Click interactions:
-   - Navigate to target element (open dialog)
-
-4. Performance:
-   - Only render links for elements in viewport
-   - Debounce scroll/resize events
-   - Consider using React.memo for link components
+**All 67 tests still passing ✅**
 
 ---
 
-## Testing Philosophy Applied This Session
+## Next Steps: Future Enhancements
 
-**What we tested (TDD)**:
-- ✅ Pure functions for filtering, calculations, path generation
-- ✅ Relationship detection logic in Element classes
-- ✅ All geometric calculations for link positioning
+### Immediate Opportunities (Low-hanging fruit)
+1. **Click-to-navigate on links**: Add onClick handler to open target dialog
+2. **Link tooltips**: Show relationship details on hover
+3. **Filter controls UI**: Toggles for link types (inheritance/properties/enums/classes)
 
-**What we'll verify visually (next session)**:
-- SVG rendering aesthetics (curve smoothness, colors)
-- Layout and positioning (are links connecting correctly?)
-- Animations and hover effects
-- Performance with many links
+### Medium Priority
+4. **Enhanced element metadata**: Show enum/slot/class counts (see CLAUDE.md § Future: Enhanced Element Metadata Display)
+5. **Viewport culling**: Only render links for visible elements (performance)
+6. **Custom preset management**: User-saved layout configurations
 
-**Lessons learned**:
-- TDD works great for logic layers
-- Separating testable logic from visual components is key
-- Visual features still need manual verification, but tested logic gives confidence
-- Having 67 passing tests makes refactoring safe
+### Long-term (Phase 4+)
+7. **Search and filter**: Full-text search across all elements
+8. **Neighborhood zoom**: Show k-hop relationships around selected element
+9. **Advanced visualizations**: Network view, matrix view, statistics dashboard
 
 ---
 
@@ -112,9 +60,6 @@
 npm test              # Watch mode
 npm test -- --run     # Single run
 
-# Run specific test file
-npm test -- linkHelpers --run
-
 # Dev server
 npm run dev
 
@@ -124,12 +69,13 @@ npm run build
 
 ---
 
-## Notes for README.md (Move Later)
+## Session Summary
 
-The testing documentation in CLAUDE.md (lines 231-314) should eventually move to README.md with:
-- Overview of test philosophy
-- How to run tests
-- What's tested vs. visually verified
-- How to add new tests
+**Phase 3d complete!** The SVG link visualization is now fully functional with:
+- Cross-panel links rendering correctly
+- Improved hover interactions
+- Narrower, more readable panel layout
+- All critical bugs fixed
+- 67 tests still passing
 
-Keep it concise in README, detailed in CLAUDE.md for development context.
+The app is now at a good milestone - users can explore the BDCHM model with visual links showing relationships between elements in different panels.

@@ -1,13 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import ElementsPanel from './components/ElementsPanel';
 import DetailDialog from './components/DetailDialog';
 import PanelLayout from './components/PanelLayout';
+import LinkOverlay from './components/LinkOverlay';
 import { loadModelData } from './utils/dataLoader';
 import { getInitialState, saveStateToURL, saveStateToLocalStorage, generatePresetURL, type DialogState } from './utils/statePersistence';
 import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec, ModelData } from './types';
 
 type SelectedEntity = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
 type SectionType = 'classes' | 'enums' | 'slots' | 'variables';
+
+// Helper to flatten class hierarchy into a list
+function flattenClassHierarchy(nodes: ClassNode[]): ClassNode[] {
+  const result: ClassNode[] = [];
+  const visit = (node: ClassNode) => {
+    result.push(node);
+    node.children.forEach(visit);
+  };
+  nodes.forEach(visit);
+  return result;
+}
 
 interface OpenDialog {
   id: string;
@@ -236,6 +248,37 @@ function App() {
     }
   };
 
+  // Memoize panel data to prevent infinite re-renders in LinkOverlay
+  const leftPanelData = useMemo(() => ({
+    classes: leftSections.includes('classes') && modelData
+      ? flattenClassHierarchy(modelData.classHierarchy)
+      : [],
+    enums: leftSections.includes('enums') && modelData
+      ? modelData.enums
+      : new Map(),
+    slots: leftSections.includes('slots') && modelData
+      ? modelData.slots
+      : new Map(),
+    variables: leftSections.includes('variables') && modelData
+      ? modelData.variables
+      : []
+  }), [leftSections, modelData]);
+
+  const rightPanelData = useMemo(() => ({
+    classes: rightSections.includes('classes') && modelData
+      ? flattenClassHierarchy(modelData.classHierarchy)
+      : [],
+    enums: rightSections.includes('enums') && modelData
+      ? modelData.enums
+      : new Map(),
+    slots: rightSections.includes('slots') && modelData
+      ? modelData.slots
+      : new Map(),
+    variables: rightSections.includes('variables') && modelData
+      ? modelData.variables
+      : []
+  }), [rightSections, modelData]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -379,39 +422,47 @@ function App() {
         </div>
       </header>
 
-      {/* Main content: Panel layout */}
-      <PanelLayout
-        leftPanel={
-          <ElementsPanel
-            position="left"
-            sections={leftSections}
-            onSectionsChange={setLeftSections}
-            forceSingleColumn={rightSections.length > 0}
-            classHierarchy={modelData?.classHierarchy || []}
-            enums={modelData?.enums || new Map()}
-            slots={modelData?.slots || new Map()}
-            variables={modelData?.variables || []}
-            selectedEntity={openDialogs.length > 0 ? openDialogs[0].entity : undefined}
-            onSelectEntity={handleOpenDialog}
+      {/* Main content: Panel layout with link overlay */}
+      <div className="relative flex-1 overflow-hidden">
+        <PanelLayout
+          leftPanel={
+            <ElementsPanel
+              position="left"
+              sections={leftSections}
+              onSectionsChange={setLeftSections}
+              classHierarchy={modelData?.classHierarchy || []}
+              enums={modelData?.enums || new Map()}
+              slots={modelData?.slots || new Map()}
+              variables={modelData?.variables || []}
+              selectedEntity={openDialogs.length > 0 ? openDialogs[0].entity : undefined}
+              onSelectEntity={handleOpenDialog}
+            />
+          }
+          leftPanelEmpty={leftSections.length === 0}
+          rightPanel={
+            <ElementsPanel
+              position="right"
+              sections={rightSections}
+              onSectionsChange={setRightSections}
+              classHierarchy={modelData?.classHierarchy || []}
+              enums={modelData?.enums || new Map()}
+              slots={modelData?.slots || new Map()}
+              variables={modelData?.variables || []}
+              selectedEntity={openDialogs.length > 0 ? openDialogs[0].entity : undefined}
+              onSelectEntity={handleOpenDialog}
+            />
+          }
+          rightPanelEmpty={rightSections.length === 0}
+        />
+
+        {/* SVG Link Overlay */}
+        {modelData && (
+          <LinkOverlay
+            leftPanel={leftPanelData}
+            rightPanel={rightPanelData}
           />
-        }
-        leftPanelEmpty={leftSections.length === 0}
-        rightPanel={
-          <ElementsPanel
-            position="right"
-            sections={rightSections}
-            onSectionsChange={setRightSections}
-            forceSingleColumn={leftSections.length > 0}
-            classHierarchy={modelData?.classHierarchy || []}
-            enums={modelData?.enums || new Map()}
-            slots={modelData?.slots || new Map()}
-            variables={modelData?.variables || []}
-            selectedEntity={openDialogs.length > 0 ? openDialogs[0].entity : undefined}
-            onSelectEntity={handleOpenDialog}
-          />
-        }
-        rightPanelEmpty={rightSections.length === 0}
-      />
+        )}
+      </div>
 
       {/* Detail dialogs - render all open dialogs */}
       {openDialogs.map((dialog, index) => (

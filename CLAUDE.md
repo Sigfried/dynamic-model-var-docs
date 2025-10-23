@@ -314,53 +314,45 @@ npm test:coverage
 
 ---
 
-### In Progress: Phase 3d - SVG Link Visualization
+### ✅ Completed: Phase 3d - SVG Link Visualization
 
 **Visual links between panels** - Show relationships with SVG connecting lines
 
-**Status**: Logic layer complete with comprehensive tests ✅
+**Status**: Fully implemented and tested ✅
 
-#### **Completed (TDD approach)**:
-✅ **Step 1-3: Logic Tests & Implementation**
+#### **Implementation Summary**:
+✅ **Step 1-3: Logic Tests & Implementation** (TDD approach)
 - Created `src/test/linkLogic.test.ts` (26 tests)
 - Created `src/test/linkHelpers.test.ts` (27 tests)
 - Implemented `src/utils/linkHelpers.ts` with all tested utilities
-- All Element classes have `getRelationships()` method returning correct relationships
-- Comprehensive filtering logic (by type, visibility, self-refs)
-- Geometric calculations (anchor points, edge detection)
-- SVG path generation (bezier curves, self-ref loops)
-- Visual styling functions (colors, stroke widths)
+- All Element classes have `getRelationships()` method
+- Comprehensive filtering logic (by type, visibility, self-refs, cross-panel)
 
-**What's tested and ready**:
-- ✅ Relationship detection for all element types
-- ✅ Link filtering by relationship type (inheritance, properties)
-- ✅ Link filtering by target type (enum, class)
-- ✅ Self-referential link detection
-- ✅ Visibility-based filtering
-- ✅ Bounding box calculations
-- ✅ SVG path generation algorithms
-- ✅ Color and stroke width mapping
-
-#### **Next Steps (Visual Implementation)**:
-**Step 4: Create LinkOverlay Component**
-- Build React component using tested helper functions
-- Wire up to actual DOM elements via data attributes
-- Render SVG paths with correct styling
-- Test visually in browser
-
-**Step 5: Add Interactions**
-- Hover to highlight links
-- Click links to navigate
-- Toggle controls for filtering link types
-- Performance optimization (viewport culling)
-
-**Implementation approach**:
+✅ **Step 4: LinkOverlay Component**
+- Created `src/components/LinkOverlay.tsx`
 - SVG layer positioned absolutely over PanelLayout
-- Track DOM element positions using `data-element-type` and `data-element-name` attributes
-- Use `Element.getRelationships()` to determine which elements to connect
-- Use `linkHelpers` utilities for filtering, positioning, and rendering
-- Interaction: hover to highlight, click to navigate
-- Performance: only render links for visible elements (viewport culling)
+- Queries DOM for element positions via data attributes
+- Renders cross-panel links only (inheritance hidden - tree shows this)
+- Fixed infinite render loop (memoized panel data in App.tsx)
+
+✅ **Step 5: Visual Polish & Bug Fixes**
+- **Hover interaction**: Links change from 20% to 100% opacity + stroke width increases
+- **Cross-panel filtering**: Only shows links between left and right panels
+- **Inheritance disabled**: Tree structure already shows parent-child relationships
+- **Improved highlighting**: Lower default opacity (0.2), thicker hover stroke (3px)
+- **Compact panels**: Max-width 450px (instead of filling all space)
+
+**Link Styling**:
+- **Purple** (medium): Class → Enum property links
+- **Green** (medium): Class → Class reference links
+- **Blue** (thick): Inheritance (disabled by default)
+- **Self-referential**: Loop style for same-class references
+
+**Known Limitations** (for future work):
+- No click-to-navigate on links yet
+- No link tooltips showing relationship details
+- No viewport culling (all links render, could impact performance with large models)
+- No filter controls UI (inheritance/properties toggles)
 
 ### Upcoming: Phase 3e - Custom Preset Management (Future)
 
@@ -378,6 +370,30 @@ npm test:coverage
   - Users can save their frequently-used configurations
   - Presets become personalized to user's workflow
   - No need for separate "Save Layout" vs "Reset Layout" buttons
+
+### Future: Enhanced Element Metadata Display
+
+**Feature Request**: Show additional relationship counts for classes in tree view
+- **Current**: Only variable count shown (e.g., "Condition (20)")
+- **Desired**: Show counts for associated enums, slots, and classes
+- **Example**: "Condition (20 vars, 5 enums, 2 classes, 1 slot)"
+
+**Design Considerations**:
+- **Number placement**: Currently there's too much space between element name and count (panels stretch to fill width)
+  - **Solution implemented**: Panels now have max-width: 450px, creating more readable layout
+  - Numbers appear closer to element names
+  - Links can go from right edge of left panel to left edge of right panel
+- **Multiple counts display options**:
+  - Inline: `Condition (20v, 5e, 2c, 1s)` - compact but cryptic
+  - Badges: Colored badges for each count type
+  - Tooltip: Show detailed counts on hover
+  - Separate line: Show counts below element name (might be too tall)
+
+**Implementation Notes**:
+- Need to compute relationship counts in dataLoader.ts
+- Store in ClassNode type: `enumCount`, `slotCount`, `classRefCount`
+- Update ClassSection component to display multiple counts
+- Consider progressive disclosure: show variable count by default, others on hover/expand
 
 ### Future: Phase 4 - Search and Filter
 1. Search bar with full-text search across all entities
