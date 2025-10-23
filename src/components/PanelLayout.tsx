@@ -17,7 +17,7 @@ export default function PanelLayout({
   const MAX_PANEL_WIDTH = 450; // Max width for non-empty panels to keep them compact
 
   return (
-    <div className="flex-1 flex overflow-hidden justify-between">
+    <div className="flex-1 flex overflow-hidden">
       {/* Left Panel */}
       <div
         className="overflow-hidden border-r border-gray-200 dark:border-slate-700 flex-shrink-0"
@@ -32,7 +32,7 @@ export default function PanelLayout({
 
       {/* Center gutter - only show when both panels have content */}
       {!leftPanelEmpty && !rightPanelEmpty && (
-        <div className="w-8 bg-gray-100 dark:bg-slate-800 border-x border-gray-200 dark:border-slate-700 flex-shrink-0" />
+        <div className="w-40 bg-gray-100 dark:bg-slate-800 border-x border-gray-200 dark:border-slate-700 flex-shrink-0" />
       )}
 
       {/* Right Panel */}
@@ -46,6 +46,9 @@ export default function PanelLayout({
       >
         {rightPanel}
       </div>
+
+      {/* Spacer to push remaining space to the right */}
+      <div className="flex-1" />
     </div>
   );
 }

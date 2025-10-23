@@ -4,20 +4,21 @@ interface VariablesSectionProps {
   variables: VariableSpec[];
   onSelectVariable: (variable: VariableSpec) => void;
   selectedVariable?: VariableSpec;
+  position?: 'left' | 'right';
 }
 
-export default function VariablesSection({ variables, onSelectVariable, selectedVariable }: VariablesSectionProps) {
+export default function VariablesSection({ variables, onSelectVariable, selectedVariable, position }: VariablesSectionProps) {
   // Sort by label
   const sortedVariables = [...variables].sort((a, b) =>
     a.variableLabel.localeCompare(b.variableLabel)
   );
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-slate-800 text-left">
+    <div className="bg-white dark:bg-slate-800 text-left">
       <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-4 py-3 z-10">
         <h2 className="text-lg font-semibold text-left">Variables ({variables.length})</h2>
       </div>
-      <div className="flex-1 overflow-y-auto p-2">
+      <div className="p-2">
         {sortedVariables.map((variable, idx) => {
           const isSelected = selectedVariable?.variableLabel === variable.variableLabel
             && selectedVariable?.bdchmElement === variable.bdchmElement;
@@ -28,6 +29,7 @@ export default function VariablesSection({ variables, onSelectVariable, selected
               id={`variable-${variable.variableLabel}`}
               data-element-type="variable"
               data-element-name={variable.variableLabel}
+              data-panel-position={position}
               className={`flex flex-col gap-1 px-2 py-2 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700 ${
                 isSelected ? 'bg-orange-100 dark:bg-orange-900' : ''
               }`}

@@ -110,45 +110,41 @@ export default function ElementsPanel({
           Click a section icon above to get started
         </div>
       ) : (
-        <div className="flex-1 overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-y-auto">
           {activeSections.has('classes') && (
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <ClassSection
-                nodes={classHierarchy}
-                onSelectClass={onSelectEntity}
-                selectedClass={selectedEntity && isClassNode(selectedEntity) ? selectedEntity : undefined}
-              />
-            </div>
+            <ClassSection
+              nodes={classHierarchy}
+              onSelectClass={onSelectEntity}
+              selectedClass={selectedEntity && isClassNode(selectedEntity) ? selectedEntity : undefined}
+              position={position}
+            />
           )}
 
           {activeSections.has('enums') && (
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <EnumSection
-                enums={enums}
-                onSelectEnum={onSelectEntity}
-                selectedEnum={selectedEntity && isEnumDefinition(selectedEntity) ? selectedEntity : undefined}
-              />
-            </div>
+            <EnumSection
+              enums={enums}
+              onSelectEnum={onSelectEntity}
+              selectedEnum={selectedEntity && isEnumDefinition(selectedEntity) ? selectedEntity : undefined}
+              position={position}
+            />
           )}
 
           {activeSections.has('slots') && (
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <SlotSection
-                slots={slots}
-                onSelectSlot={onSelectEntity}
-                selectedSlot={selectedEntity && isSlotDefinition(selectedEntity) ? selectedEntity : undefined}
-              />
-            </div>
+            <SlotSection
+              slots={slots}
+              onSelectSlot={onSelectEntity}
+              selectedSlot={selectedEntity && isSlotDefinition(selectedEntity) ? selectedEntity : undefined}
+              position={position}
+            />
           )}
 
           {activeSections.has('variables') && (
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <VariablesSection
-                variables={variables}
-                onSelectVariable={onSelectEntity}
-                selectedVariable={selectedEntity && isVariableSpec(selectedEntity) ? selectedEntity : undefined}
-              />
-            </div>
+            <VariablesSection
+              variables={variables}
+              onSelectVariable={onSelectEntity}
+              selectedVariable={selectedEntity && isVariableSpec(selectedEntity) ? selectedEntity : undefined}
+              position={position}
+            />
           )}
         </div>
       )}

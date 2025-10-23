@@ -4,18 +4,19 @@ interface EnumSectionProps {
   enums: Map<string, EnumDefinition>;
   onSelectEnum: (enumDef: EnumDefinition) => void;
   selectedEnum?: EnumDefinition;
+  position?: 'left' | 'right';
 }
 
-export default function EnumSection({ enums, onSelectEnum, selectedEnum }: EnumSectionProps) {
+export default function EnumSection({ enums, onSelectEnum, selectedEnum, position }: EnumSectionProps) {
   // Convert to array and sort by name
   const enumList = Array.from(enums.values()).sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-slate-800 text-left">
+    <div className="bg-white dark:bg-slate-800 text-left">
       <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-4 py-3 z-10">
         <h2 className="text-lg font-semibold text-left">Enumerations ({enums.size})</h2>
       </div>
-      <div className="flex-1 overflow-y-auto p-2">
+      <div className="p-2">
         {enumList.map((enumDef) => {
           const isSelected = selectedEnum?.name === enumDef.name;
 
@@ -25,6 +26,7 @@ export default function EnumSection({ enums, onSelectEnum, selectedEnum }: EnumS
               id={`enum-${enumDef.name}`}
               data-element-type="enum"
               data-element-name={enumDef.name}
+              data-panel-position={position}
               className={`flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700 ${
                 isSelected ? 'bg-purple-100 dark:bg-purple-900' : ''
               }`}

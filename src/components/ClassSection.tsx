@@ -5,6 +5,7 @@ interface ClassSectionProps {
   nodes: ClassNode[];
   onSelectClass: (node: ClassNode) => void;
   selectedClass?: ClassNode;
+  position?: 'left' | 'right';
 }
 
 interface ClassTreeNodeProps {
@@ -12,9 +13,10 @@ interface ClassTreeNodeProps {
   onSelectClass: (node: ClassNode) => void;
   selectedClass?: ClassNode;
   level: number;
+  position?: 'left' | 'right';
 }
 
-function ClassTreeNode({ node, onSelectClass, selectedClass, level }: ClassTreeNodeProps) {
+function ClassTreeNode({ node, onSelectClass, selectedClass, level, position }: ClassTreeNodeProps) {
   const [isExpanded, setIsExpanded] = useState(level < 2); // Auto-expand first 2 levels
   const hasChildren = node.children.length > 0;
   const isSelected = selectedClass?.name === node.name;
@@ -25,6 +27,7 @@ function ClassTreeNode({ node, onSelectClass, selectedClass, level }: ClassTreeN
         id={`class-${node.name}`}
         data-element-type="class"
         data-element-name={node.name}
+        data-panel-position={position}
         className={`flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700 ${
           isSelected ? 'bg-blue-100 dark:bg-blue-900' : ''
         }`}
@@ -64,6 +67,7 @@ function ClassTreeNode({ node, onSelectClass, selectedClass, level }: ClassTreeN
               onSelectClass={onSelectClass}
               selectedClass={selectedClass}
               level={level + 1}
+              position={position}
             />
           ))}
         </div>
@@ -72,13 +76,13 @@ function ClassTreeNode({ node, onSelectClass, selectedClass, level }: ClassTreeN
   );
 }
 
-export default function ClassSection({ nodes, onSelectClass, selectedClass }: ClassSectionProps) {
+export default function ClassSection({ nodes, onSelectClass, selectedClass, position }: ClassSectionProps) {
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-slate-800 text-left">
+    <div className="bg-white dark:bg-slate-800 text-left">
       <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-4 py-3 z-10">
         <h2 className="text-lg font-semibold text-left">Classes</h2>
       </div>
-      <div className="flex-1 overflow-y-auto p-2">
+      <div className="p-2">
         {nodes.map((node) => (
           <ClassTreeNode
             key={node.name}
@@ -86,6 +90,7 @@ export default function ClassSection({ nodes, onSelectClass, selectedClass }: Cl
             onSelectClass={onSelectClass}
             selectedClass={selectedClass}
             level={0}
+            position={position}
           />
         ))}
       </div>
