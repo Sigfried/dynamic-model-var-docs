@@ -341,6 +341,14 @@ npm test:coverage
 - **Inheritance disabled**: Tree structure already shows parent-child relationships
 - **Improved highlighting**: Lower default opacity (0.2), thicker hover stroke (3px)
 - **Compact panels**: Max-width 450px (instead of filling all space)
+- **Debounced hover logging**: 300ms delay to prevent console spam
+
+✅ **Step 6: Final Polish & UX Improvements**
+- **Scrolling fixed**: Added `h-full` to panel containers and `flex` to main content panel (App.tsx:426)
+- **Icon order consistency**: Both panels now show C E S V order (removed `flex-row-reverse`)
+- **Link positioning corrected**: SVG coordinates adjusted relative to SVG origin (fixed 3-5 line offset)
+- **Dynamic section ordering**: Most recently toggled section appears at top of panel
+- **Link redrawing**: Added `useEffect` with `requestAnimationFrame` to redraw links on section changes
 
 **Link Styling**:
 - **Purple** (medium): Class → Enum property links
@@ -354,22 +362,31 @@ npm test:coverage
 - No viewport culling (all links render, could impact performance with large models)
 - No filter controls UI (inheritance/properties toggles)
 
-### Upcoming: Phase 3e - Custom Preset Management (Future)
+### Next: Phase 3e - Adaptive Detail Panel Display
 
-**User-managed presets**: Replace hard-coded presets with user-customizable ones
-- **Save Preset** button (replaces current "Save Layout"/"Reset Layout"):
-  - Prompts user for preset name
-  - Saves current panel configuration (sections + dialogs) to localStorage
-  - Format similar to shareable URL but with user-friendly names
-- **Preset Management**:
-  - Display saved presets in header with user-assigned names
-  - Add small X or remove icon to each preset button (including defaults)
-  - When localStorage is empty, seed with default presets (Classes Only, Classes + Enums, All, Variables)
-  - User can delete default presets if desired
-- **Benefits**:
-  - Users can save their frequently-used configurations
-  - Presets become personalized to user's workflow
-  - No need for separate "Save Layout" vs "Reset Layout" buttons
+**Responsive detail display**: Adapt between stacked panels and floating dialogs based on available space
+
+**Problem**: With narrow panels (max-width 450px), there's potentially significant empty space on the right side of the screen that could be better utilized for displaying element details.
+
+**Solution**: Adaptive layout based on available horizontal space
+- **When space available (≥600px empty)**: Display detail panels stacked vertically in the right space
+  - New panels added at the top, pushing older ones down
+  - Fixed position in the layout (not draggable)
+  - Scrollable if total height exceeds viewport
+- **When space limited (<600px)**: Use current DetailDialog system
+  - Draggable, resizable floating dialogs
+  - User has full control over positioning
+
+**Duplicate Prevention**:
+Current behavior allows opening the same element multiple times, creating duplicate dialogs. Fix with one of two approaches:
+1. **Bring to top**: If element already shown, bring that panel/dialog to the top instead of creating duplicate
+2. **Replace old**: Create new panel/dialog as normal, but close the older duplicate
+
+**Implementation Considerations**:
+- Measure available space on mount and window resize
+- Maintain single source of truth for open details (reuse existing dialog state)
+- Transition smoothly between modes when window resizes across threshold
+- Consider state persistence: should stacked panels save position like dialogs?
 
 ### Future: Enhanced Element Metadata Display
 
@@ -394,6 +411,23 @@ npm test:coverage
 - Store in ClassNode type: `enumCount`, `slotCount`, `classRefCount`
 - Update ClassSection component to display multiple counts
 - Consider progressive disclosure: show variable count by default, others on hover/expand
+
+### Future: Custom Preset Management
+
+**User-managed presets**: Replace hard-coded presets with user-customizable ones
+- **Save Preset** button (replaces current "Save Layout"/"Reset Layout"):
+  - Prompts user for preset name
+  - Saves current panel configuration (sections + dialogs) to localStorage
+  - Format similar to shareable URL but with user-friendly names
+- **Preset Management**:
+  - Display saved presets in header with user-assigned names
+  - Add small X or remove icon to each preset button (including defaults)
+  - When localStorage is empty, seed with default presets (Classes Only, Classes + Enums, All, Variables)
+  - User can delete default presets if desired
+- **Benefits**:
+  - Users can save their frequently-used configurations
+  - Presets become personalized to user's workflow
+  - No need for separate "Save Layout" vs "Reset Layout" buttons
 
 ### Future: Phase 4 - Search and Filter
 1. Search bar with full-text search across all entities

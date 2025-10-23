@@ -5,51 +5,57 @@
 
 ---
 
-## Current Status: Phase 3d - SVG Link Visualization (✅ Complete)
+## Current Task: Phase 3e - Adaptive Detail Panel Display
 
-### ✅ Completed This Session
+### Goal
+Improve detail display by adapting to available screen space:
+- **Wide screens (≥600px empty)**: Stack detail panels vertically in the right space
+- **Narrow screens (<600px)**: Use current draggable DetailDialog system
 
-**Phase 3d: Visual Implementation Complete**
-- Created `src/components/LinkOverlay.tsx` with full SVG link rendering
-- Fixed critical infinite render loop bug (memoized panel data in App.tsx)
-- Fixed missing sections bug (removed grid layout, sections now stack vertically)
-- Improved link visibility (opacity 0.2 → 1.0 on hover, stroke width increases)
-- Made panels narrower (max-width: 450px instead of flex: 1)
-- Documented feature request: show enum/slot/class counts
+### Requirements
 
-**Key Implementation Details**:
-- Links only show between left ↔ right panels (cross-panel filtering)
-- Inheritance links disabled (tree structure already shows this)
-- Hover: opacity 20% → 100%, stroke width increases to 3px
-- Link colors: purple (enum), green (class), blue (inheritance - disabled)
-- Self-referential links use loop style
+**1. Measure Available Space**
+- Calculate empty horizontal space after left panel, gutter, and right panel
+- Recalculate on window resize
+- Threshold: 600px
 
-**Bug Fixes**:
-1. **Infinite render loop**: Memoized `leftPanelData` and `rightPanelData` in App.tsx
-2. **Missing sections**: Removed grid layout, changed to `flex flex-col` with `flex-1 min-h-0` on each section
-3. **Hover not working**: Added `pointerEvents: 'stroke'` to SVG paths
-4. **Panel width**: Changed from `flex: 1` to `max-width: 450px, min-width: 300px`
+**2. Stacked Panel Mode (when space available)**
+- Display details as fixed panels in the right space
+- Stack vertically with newest at top
+- Scrollable if total height exceeds viewport
+- Not draggable/resizable (fixed in layout)
 
-**All 67 tests still passing ✅**
+**3. Dialog Mode (when space limited)**
+- Use current DetailDialog implementation
+- Draggable and resizable
+- Positioned freely by user
 
----
+**4. Duplicate Prevention**
+Currently allows opening same element multiple times. Fix by choosing one approach:
+- **Option A**: If element already open, bring that panel/dialog to top
+- **Option B**: Create new panel/dialog but close the old duplicate
 
-## Next Steps: Future Enhancements
+### Implementation Steps
 
-### Immediate Opportunities (Low-hanging fruit)
-1. **Click-to-navigate on links**: Add onClick handler to open target dialog
-2. **Link tooltips**: Show relationship details on hover
-3. **Filter controls UI**: Toggles for link types (inheritance/properties/enums/classes)
+1. Add `useEffect` to measure available space on mount and resize
+2. Add state for display mode: `'stacked' | 'dialog'`
+3. Create `DetailPanelStack` component for stacked mode
+4. Modify `handleOpenDialog` to:
+   - Check if element already open (compare type + name)
+   - If duplicate: bring to top OR close old one
+   - Use stacked panel when space available, dialog otherwise
+5. Update PanelLayout or App to render DetailPanelStack when in stacked mode
+6. Test transition between modes on window resize
 
-### Medium Priority
-4. **Enhanced element metadata**: Show enum/slot/class counts (see CLAUDE.md § Future: Enhanced Element Metadata Display)
-5. **Viewport culling**: Only render links for visible elements (performance)
-6. **Custom preset management**: User-saved layout configurations
+### Design Decisions to Consider
 
-### Long-term (Phase 4+)
-7. **Search and filter**: Full-text search across all elements
-8. **Neighborhood zoom**: Show k-hop relationships around selected element
-9. **Advanced visualizations**: Network view, matrix view, statistics dashboard
+- Should stacked panels persist position in URL like dialogs?
+  - Probably not - they're auto-positioned
+- How to handle transition when resizing across threshold?
+  - Convert dialogs → stacked panels smoothly
+  - Preserve order (dialog z-index → stack position)
+- Close button behavior in stacked mode?
+  - Same as dialog mode - remove from openDialogs array
 
 ---
 
@@ -69,13 +75,14 @@ npm run build
 
 ---
 
-## Session Summary
+## Notes from Previous Session (Phase 3d)
 
-**Phase 3d complete!** The SVG link visualization is now fully functional with:
-- Cross-panel links rendering correctly
-- Improved hover interactions
-- Narrower, more readable panel layout
-- All critical bugs fixed
-- 67 tests still passing
+Phase 3d (SVG Link Visualization) is now complete with all bugs fixed:
+- ✅ Scrolling works (added `h-full` to panels, `flex` to main content)
+- ✅ Icon order consistent (C E S V in both panels)
+- ✅ Link positioning accurate (SVG coordinate adjustment)
+- ✅ Dynamic section ordering (most recent at top)
+- ✅ Links redraw on section changes (`requestAnimationFrame`)
+- ✅ All 67 tests passing
 
-The app is now at a good milestone - users can explore the BDCHM model with visual links showing relationships between elements in different panels.
+See CLAUDE.md § Phase 3d for complete implementation details.
