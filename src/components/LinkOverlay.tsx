@@ -395,8 +395,8 @@ export default function LinkOverlay({
             stroke={color}
             strokeWidth={strokeWidth}
             markerEnd={markerEnd}
-            opacity={0.2}
-            className="transition-all duration-150 hover:opacity-100 hover:stroke-[3] cursor-pointer"
+            opacity={0.5}
+            className="transition-all hover:opacity-100 hover:stroke-[3] cursor-pointer"
             style={{ pointerEvents: 'stroke' }}
             onMouseEnter={() => {
               setHoveredLinkKey(linkKey);
@@ -441,166 +441,68 @@ export default function LinkOverlay({
       <defs>
         {/* Gradients for all source→target combinations */}
         {/* Create both left-to-right and right-to-left versions */}
-        {(['class', 'enum', 'slot', 'variable'] as const).flatMap(sourceType =>
-          (['class', 'enum', 'slot', 'variable'] as const).flatMap(targetType => [
-            // Left to right: source color → target color
-            <linearGradient
-              key={`${sourceType}-${targetType}`}
-              id={getLinkGradientId(sourceType, targetType)}
-              x1="0%" y1="0%" x2="100%" y2="0%"
-            >
-              <stop offset="0%" stopColor={getElementTypeColor(sourceType)} stopOpacity="0.5" />
-              <stop offset="100%" stopColor={getElementTypeColor(targetType)} stopOpacity="0.5" />
-            </linearGradient>,
-            // Right to left: still source color → target color (reversed gradient)
-            <linearGradient
-              key={`${sourceType}-${targetType}-reverse`}
-              id={`${getLinkGradientId(sourceType, targetType)}-reverse`}
-              x1="100%" y1="0%" x2="0%" y2="0%"
-            >
-              <stop offset="0%" stopColor={getElementTypeColor(sourceType)} stopOpacity="0.5" />
-              <stop offset="100%" stopColor={getElementTypeColor(targetType)} stopOpacity="0.5" />
-            </linearGradient>
-          ])
-        )}
+        {(() => {
+          const createGradient = (sourceType: 'class' | 'enum' | 'slot' | 'variable', targetType: 'class' | 'enum' | 'slot' | 'variable', reverse = false) => {
+            const id = reverse ? `${getLinkGradientId(sourceType, targetType)}-reverse` : getLinkGradientId(sourceType, targetType);
+            const [x1, x2] = reverse ? ["100%", "0%"] : ["0%", "100%"];
+
+            return (
+              <linearGradient
+                key={reverse ? `${sourceType}-${targetType}-reverse` : `${sourceType}-${targetType}`}
+                id={id}
+                x1={x1} y1="0%" x2={x2} y2="0%"
+              >
+                <stop offset="0%" stopColor={getElementTypeColor(sourceType)} stopOpacity="0.5" />
+                <stop offset="100%" stopColor={getElementTypeColor(targetType)} stopOpacity="0.5" />
+              </linearGradient>
+            );
+          };
+
+          return (['class', 'enum', 'slot', 'variable'] as const).flatMap(sourceType =>
+            (['class', 'enum', 'slot', 'variable'] as const).flatMap(targetType => [
+              createGradient(sourceType, targetType, false),
+              createGradient(sourceType, targetType, true)
+            ])
+          );
+        })()}
 
         {/* Arrow markers - one for each target element type */}
-        {/* Markers use target element color since arrow points to target */}
-        {/* Blue arrow for links to class targets */}
-        <marker
-          id="arrow-blue"
-          viewBox="0 0 10 10"
-          refX="0"
-          refY="5"
-          markerWidth="6"
-          markerHeight="6"
-          orient="auto"
-          markerUnits="userSpaceOnUse"
-        >
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6" fillOpacity="0.3" />
-        </marker>
+        {(() => {
+          const markerConfigs = [
+            { id: 'blue', color: '#3b82f6' },
+            { id: 'purple', color: '#a855f7' },
+            { id: 'green', color: '#10b981' },
+            { id: 'orange', color: '#f97316' },
+            { id: 'gray', color: '#6b7280' }
+          ];
 
-        {/* Purple arrow for links to enum targets */}
-        <marker
-          id="arrow-purple"
-          viewBox="0 0 10 10"
-          refX="0"
-          refY="5"
-          markerWidth="6"
-          markerHeight="6"
-          orient="auto"
-          markerUnits="userSpaceOnUse"
-        >
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#a855f7" fillOpacity="0.3" />
-        </marker>
+          const createMarker = (id: string, color: string, hover = false) => {
+            const markerId = hover ? `arrow-${id}-hover` : `arrow-${id}`;
+            const markerSize = hover ? 7 : 6;
+            const fillOpacity = hover ? undefined : 0.3;
 
-        {/* Green arrow for links to slot targets */}
-        <marker
-          id="arrow-green"
-          viewBox="0 0 10 10"
-          refX="0"
-          refY="5"
-          markerWidth="6"
-          markerHeight="6"
-          orient="auto"
-          markerUnits="userSpaceOnUse"
-        >
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" fillOpacity="0.3" />
-        </marker>
+            return (
+              <marker
+                key={markerId}
+                id={markerId}
+                viewBox="0 0 10 10"
+                refX="0"
+                refY="5"
+                markerWidth={markerSize}
+                markerHeight={markerSize}
+                orient="auto"
+                markerUnits="userSpaceOnUse"
+              >
+                <path d="M 0 0 L 10 5 L 0 10 z" fill={color} fillOpacity={fillOpacity} />
+              </marker>
+            );
+          };
 
-        {/* Orange arrow for links to variable targets */}
-        <marker
-          id="arrow-orange"
-          viewBox="0 0 10 10"
-          refX="0"
-          refY="5"
-          markerWidth="6"
-          markerHeight="6"
-          orient="auto"
-          markerUnits="userSpaceOnUse"
-        >
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#f97316" fillOpacity="0.3" />
-        </marker>
-
-        {/* Gray arrow for slot→class/enum links */}
-        <marker
-          id="arrow-gray"
-          viewBox="0 0 10 10"
-          refX="0"
-          refY="5"
-          markerWidth="6"
-          markerHeight="6"
-          orient="auto"
-          markerUnits="userSpaceOnUse"
-        >
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#6b7280" fillOpacity="0.3" />
-        </marker>
-
-        {/* Hover state markers - full opacity for highlighted links */}
-        <marker
-          id="arrow-blue-hover"
-          viewBox="0 0 10 10"
-          refX="0"
-          refY="5"
-          markerWidth="7"
-          markerHeight="7"
-          orient="auto"
-          markerUnits="userSpaceOnUse"
-        >
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6" />
-        </marker>
-
-        <marker
-          id="arrow-purple-hover"
-          viewBox="0 0 10 10"
-          refX="0"
-          refY="5"
-          markerWidth="7"
-          markerHeight="7"
-          orient="auto"
-          markerUnits="userSpaceOnUse"
-        >
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#a855f7" />
-        </marker>
-
-        <marker
-          id="arrow-green-hover"
-          viewBox="0 0 10 10"
-          refX="0"
-          refY="5"
-          markerWidth="7"
-          markerHeight="7"
-          orient="auto"
-          markerUnits="userSpaceOnUse"
-        >
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" />
-        </marker>
-
-        <marker
-          id="arrow-orange-hover"
-          viewBox="0 0 10 10"
-          refX="0"
-          refY="5"
-          markerWidth="7"
-          markerHeight="7"
-          orient="auto"
-          markerUnits="userSpaceOnUse"
-        >
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#f97316" />
-        </marker>
-
-        <marker
-          id="arrow-gray-hover"
-          viewBox="0 0 10 10"
-          refX="0"
-          refY="5"
-          markerWidth="7"
-          markerHeight="7"
-          orient="auto"
-          markerUnits="userSpaceOnUse"
-        >
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#6b7280" />
-        </marker>
+          return markerConfigs.flatMap(({ id, color }) => [
+            createMarker(id, color, false),
+            createMarker(id, color, true)
+          ]);
+        })()}
       </defs>
       {renderLinks()}
     </svg>
