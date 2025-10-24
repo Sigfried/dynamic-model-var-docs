@@ -1,5 +1,5 @@
-import { useState } from 'react';
 import type { VariableSpec } from '../types';
+import { useExpansionState } from '../hooks/useExpansionState';
 
 interface VariablesSectionProps {
   variables: VariableSpec[];
@@ -25,18 +25,8 @@ export default function VariablesSection({ variables, onSelectVariable, selected
     groupedVariables[className].sort((a, b) => a.variableLabel.localeCompare(b.variableLabel));
   });
 
-  // Track which classes are expanded (default: all collapsed to save space)
-  const [expandedClasses, setExpandedClasses] = useState<Set<string>>(new Set());
-
-  const toggleClass = (className: string) => {
-    const newExpanded = new Set(expandedClasses);
-    if (newExpanded.has(className)) {
-      newExpanded.delete(className);
-    } else {
-      newExpanded.add(className);
-    }
-    setExpandedClasses(newExpanded);
-  };
+  // Use shared expansion state hook (persisted to URL with key 'evc')
+  const [expandedClasses, toggleClass] = useExpansionState('evc', new Set());
 
   return (
     <div className="bg-white dark:bg-slate-800 text-left">

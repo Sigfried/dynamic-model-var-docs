@@ -14,9 +14,8 @@ interface AppState {
   leftSections: SectionType[];
   rightSections: SectionType[];
   dialogs?: DialogState[];
-  // Legacy support - deprecated
-  selectedEntityName?: string;
-  selectedEntityType?: EntityType;
+  expandedVariableClasses?: string[]; // Variable classes that are expanded
+  expandedClassNodes?: string[]; // Class tree nodes that are expanded
 }
 
 const STORAGE_KEY = 'bdchm-app-state';
@@ -82,14 +81,16 @@ export function parseStateFromURL(): Partial<AppState> | null {
     }
   }
 
-  // Legacy: Parse selected entity (for backwards compatibility)
-  if (!state.dialogs) {
-    const selectedName = params.get('sel');
-    const selectedType = params.get('selType') as EntityType | null;
-    if (selectedName && selectedType && ['class', 'enum', 'slot', 'variable'].includes(selectedType)) {
-      state.selectedEntityName = selectedName;
-      state.selectedEntityType = selectedType;
-    }
+  // Parse expanded variable classes
+  const expandedVarClassesParam = params.get('evc');
+  if (expandedVarClassesParam) {
+    state.expandedVariableClasses = expandedVarClassesParam.split(',').filter(Boolean);
+  }
+
+  // Parse expanded class nodes
+  const expandedClassNodesParam = params.get('ecn');
+  if (expandedClassNodesParam) {
+    state.expandedClassNodes = expandedClassNodesParam.split(',').filter(Boolean);
   }
 
   return Object.keys(state).length > 0 ? state : null;
@@ -111,7 +112,7 @@ export function saveStateToURL(state: AppState): void {
     params.set('r', state.rightSections.map(s => sectionToCode[s]).join(','));
   }
 
-  // Save dialogs (new format)
+  // Save dialogs
   if (state.dialogs && state.dialogs.length > 0) {
     // Format: type:name:x,y,w,h;type:name:x,y,w,h
     const dialogsStr = state.dialogs.map(d =>
@@ -119,10 +120,15 @@ export function saveStateToURL(state: AppState): void {
     ).join(';');
     params.set('dialogs', dialogsStr);
   }
-  // Legacy: Save selected entity (for backwards compatibility with old URLs)
-  else if (state.selectedEntityName && state.selectedEntityType) {
-    params.set('sel', state.selectedEntityName);
-    params.set('selType', state.selectedEntityType);
+
+  // Save expanded variable classes
+  if (state.expandedVariableClasses && state.expandedVariableClasses.length > 0) {
+    params.set('evc', state.expandedVariableClasses.join(','));
+  }
+
+  // Save expanded class nodes
+  if (state.expandedClassNodes && state.expandedClassNodes.length > 0) {
+    params.set('ecn', state.expandedClassNodes.join(','));
   }
 
   // Update URL without page reload
@@ -176,6 +182,18 @@ export function getInitialState(): AppState {
   const dialogs = urlState?.dialogs ?? localState?.dialogs;
   if (dialogs && dialogs.length > 0) {
     state.dialogs = dialogs;
+  }
+
+  // Include expanded variable classes if present
+  const expandedVariableClasses = urlState?.expandedVariableClasses ?? localState?.expandedVariableClasses;
+  if (expandedVariableClasses && expandedVariableClasses.length > 0) {
+    state.expandedVariableClasses = expandedVariableClasses;
+  }
+
+  // Include expanded class nodes if present
+  const expandedClassNodes = urlState?.expandedClassNodes ?? localState?.expandedClassNodes;
+  if (expandedClassNodes && expandedClassNodes.length > 0) {
+    state.expandedClassNodes = expandedClassNodes;
   }
 
   return state;

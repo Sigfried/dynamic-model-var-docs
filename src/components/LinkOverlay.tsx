@@ -53,11 +53,21 @@ export default function LinkOverlay({
       setScrollTick(tick => tick + 1);
     };
 
+    // Listen for expansion state changes (when sections expand/collapse)
+    const handleExpansionChange = () => {
+      // Use requestAnimationFrame to wait for DOM to update
+      requestAnimationFrame(() => {
+        setScrollTick(tick => tick + 1);
+      });
+    };
+
     // Listen for scroll events on the window
     window.addEventListener('scroll', handleScroll, true); // Use capture to catch all scrolls
+    window.addEventListener('expansionStateChanged', handleExpansionChange);
 
     return () => {
       window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('expansionStateChanged', handleExpansionChange);
     };
   }, []);
 
