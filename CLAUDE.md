@@ -22,46 +22,29 @@ The BDCHM model has multiple relationship types forming a rich graph structure:
 
 ---
 
-## Architecture Philosophy: Shneiderman's Mantra (But Not in Implementation Order!)
+## Architecture Philosophy: Shneiderman's Mantra
 
-### 1. Overview First (HARDEST - implement LAST)
+### 1. Overview First
 Show the model topology with all relationship types visible:
-- Class inheritance tree (✓ currently implemented)
-- Class→Enum usage patterns (TODO - complex)
-- Class→Class associations (TODO - requires graph visualization)
-- Slot definitions shared across classes (TODO)
+- Class inheritance tree (✓ implemented)
+- Class→Enum usage patterns
+- Class→Class associations
+- Slot definitions shared across classes
 - Visual density indicators (which classes have most variables/connections)
 
-**Why this is hard**:
-- Multiple overlapping graph structures
-- Need to support different "views" of the same data
-- Risk of visual clutter without careful design
-
-### 2. Zoom and Filter (EASIER - implement EARLY)
+### 2. Zoom and Filter
 - **Search**: Full-text across classes, variables, enums, slots
 - **Filter**: Faceted filtering (class type, variable count, relationship type)
 - **Zoom**: Show k-hop neighborhood around focal element
-  - "Show all classes within 2 hops of Specimen"
-  - "Show enum→class relationships for MeasurementObservationTypeEnum"
 - **View toggles**: Classes only, classes+enums, classes+variables, specific relationship types
 
-**Why this is easier**:
-- Standard UI patterns (search bars, checkboxes, sliders)
-- Data structures already support filtering
-- No complex layout algorithms needed
-
-### 3. Details on Demand (MIXED complexity)
-**Easy details** (implement early):
-- Show class definition and description
-- List variables mapped to class
+### 3. Details on Demand
+- Show class definitions and descriptions
+- List variables mapped to each class
 - Display variable specs (data type, units, CURIE)
-
-**Medium details**:
 - Show class attributes with their ranges
 - Sortable/filterable variable tables
 - Display slot definitions
-
-**Hard details**:
 - Bidirectional navigation between related elements
 - Show inheritance chain with attribute overrides
 - Display all incoming references to a class/enum
@@ -117,14 +100,6 @@ When multiple panels are shown side-by-side, visualize relationships with SVG co
 - On hover over a link: increase opacity to 1.0
 - On hover over a linked element (class/enum/etc): highlight all connected links
 - On click: navigate/focus on the linked element
-
-#### Why This Design Works
-
-1. **Structural, not semantic** - Toggles based on entity types (class/enum/slot) are structural
-2. **Progressive disclosure** - Start with minimal view, expand as needed
-3. **Avoids hard-coded categories** - Users filter by range type, not semantic groupings
-4. **Scalable** - Handles large models by letting users hide irrelevant sections
-5. **Supports exploration** - Visual links help discover relationships
 
 ### Implementation Considerations
 
@@ -440,66 +415,44 @@ npm test -- filename       # Run specific test file
 
 ---
 
-### Future: Enhanced Element Metadata Display
+## Future Features
 
-**Feature Request**: Show additional relationship counts for classes in tree view
+### Phase 4: Search and Filter
+Full-text search and filtering capabilities:
+- Search bar with full-text search across all entities
+- Filter controls (checkboxes for class families, variable count slider)
+- Highlight search results in tree/sections
+- Quick navigation: search results open in new dialogs
+
+### Phase 5: Neighborhood Zoom
+Focused exploration of related elements:
+- "Focus mode" that shows only k-hop neighborhood around selected element
+- Relationship type filters ("show only `is_a` relationships" vs "show associations")
+- Breadcrumb trail showing navigation path
+- "Reset to full view" button
+
+### Enhanced Element Metadata Display
+Show additional relationship counts for classes in tree view:
 - **Current**: Only variable count shown (e.g., "Condition (20)")
 - **Desired**: Show counts for associated enums, slots, and classes
 - **Example**: "Condition (20 vars, 5 enums, 2 classes, 1 slot)"
+- **Display options**: Inline codes, colored badges, tooltips, or separate lines
+- **Implementation**: Compute counts in dataLoader.ts, store in ClassNode type
 
-**Design Considerations**:
-- **Number placement**: Currently there's too much space between element name and count (panels stretch to fill width)
-  - **Solution implemented**: Panels now have max-width: 450px, creating more readable layout
-  - Numbers appear closer to element names
-  - Links can go from right edge of left panel to left edge of right panel
-- **Multiple counts display options**:
-  - Inline: `Condition (20v, 5e, 2c, 1s)` - compact but cryptic
-  - Badges: Colored badges for each count type
-  - Tooltip: Show detailed counts on hover
-  - Separate line: Show counts below element name (might be too tall)
+### Custom Preset Management
+User-managed presets replacing hard-coded ones:
+- Save Preset button (replaces current "Save Layout"/"Reset Layout")
+- Prompts user for preset name
+- Saves current panel configuration (sections + dialogs) to localStorage
+- Display saved presets in header with user-assigned names
+- Add remove icon to each preset button (including defaults)
+- When localStorage is empty, seed with default presets
 
-**Implementation Notes**:
-- Need to compute relationship counts in dataLoader.ts
-- Store in ClassNode type: `enumCount`, `slotCount`, `classRefCount`
-- Update ClassSection component to display multiple counts
-- Consider progressive disclosure: show variable count by default, others on hover/expand
-
-### Future: Custom Preset Management
-
-**User-managed presets**: Replace hard-coded presets with user-customizable ones
-- **Save Preset** button (replaces current "Save Layout"/"Reset Layout"):
-  - Prompts user for preset name
-  - Saves current panel configuration (sections + dialogs) to localStorage
-  - Format similar to shareable URL but with user-friendly names
-- **Preset Management**:
-  - Display saved presets in header with user-assigned names
-  - Add small X or remove icon to each preset button (including defaults)
-  - When localStorage is empty, seed with default presets (Classes Only, Classes + Enums, All, Variables)
-  - User can delete default presets if desired
-- **Benefits**:
-  - Users can save their frequently-used configurations
-  - Presets become personalized to user's workflow
-  - No need for separate "Save Layout" vs "Reset Layout" buttons
-
-### Future: Phase 4 - Search and Filter
-1. Search bar with full-text search across all entities
-2. Filter controls (checkboxes for class families, variable count slider)
-3. Highlight search results in tree/sections
-4. Quick navigation: search results open in new dialogs
-
-### Future: Phase 5 - Neighborhood Zoom
-1. "Focus mode" that shows only k-hop neighborhood around selected element
-2. Relationship type filters ("show only `is_a` relationships" vs "show associations")
-3. Breadcrumb trail showing navigation path
-4. "Reset to full view" button
-
-### Future: Phase 6 - Advanced Overview (if time allows)
-1. Multiple view modes:
-   - Tree view (current)
-   - Network view (classes + associations, filterable by relationship type)
-   - Matrix view (class-enum usage)
-2. Mini-map showing current focus area in context of full model
-3. Statistics dashboard (relationship counts, distribution charts)
+### Advanced Overview
+Multiple view modes and analytics:
+- Tree view (current), Network view, Matrix view (class-enum usage)
+- Mini-map showing current focus area in context of full model
+- Statistics dashboard (relationship counts, distribution charts)
 
 ---
 
@@ -682,7 +635,7 @@ Slots (20)
 ### Medium (✓ implemented)
 4. ✓ "What classes use ConditionConceptEnum?" - reverse index built, shown in enum detail view
 5. ✓ "Show me all attributes for MeasurementObservation" - all slots+attributes displayed in property table
-6. "Find all references to Participant" - requires search (Phase 3b)
+6. "Find all references to Participant" - requires search (Phase 4)
 
 ### Hard (requires graph exploration - future)
 7. "Show me everything related to observations" - k-hop neighborhood (Phase 4)

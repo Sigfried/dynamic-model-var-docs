@@ -403,3 +403,110 @@ When adding new features:
 5. **Run full test suite** before committing: `npm test -- --run`
 
 For questions about testing strategy, see [CLAUDE.md](CLAUDE.md) for architecture context.
+
+---
+
+## Archived: Phase 3e Test Plan
+
+> **This section documents the original test plan for Phase 3e (Adaptive Detail Panel Display).**
+> All Priority 1 tests have been implemented and are passing. Priorities 2-3 are optional future work.
+
+### Priority 1: Testable Logic (✅ Completed)
+
+#### 1. Space Measurement Logic
+**Test file**: `src/test/adaptiveLayout.test.ts` (23 tests) ✅
+
+Tests space calculation and display mode determination:
+- Calculate remaining space with both panels populated
+- Calculate remaining space with one panel empty
+- Calculate remaining space with no panels
+- Determine 'stacked' mode when space ≥ threshold
+- Determine 'dialog' mode when space < threshold
+- Handle edge case at exact threshold (600px)
+- Real-world screen sizes (1920px desktop, 1366px laptop, 4K, tablet)
+
+**Implementation**: Extracted to `src/utils/layoutHelpers.ts`
+
+#### 2. Duplicate Detection
+**Test file**: `src/test/duplicateDetection.test.ts` (28 tests) ✅
+
+Tests entity duplicate prevention:
+- Detect duplicate class by name
+- Detect duplicate enum by name
+- Detect duplicate slot by name
+- Detect duplicate variable by variableLabel
+- Handle non-duplicate entities correctly
+- Find existing entity index correctly
+- Handle empty arrays
+- Cross-type disambiguation (class vs enum with same name)
+
+**Implementation**: Extracted to `src/utils/duplicateDetection.ts`
+
+#### 3. Panel Title Generation
+**Test file**: `src/test/panelHelpers.test.tsx` (16 tests) ✅
+
+Tests panel title JSX generation:
+- Generate title for class without parent
+- Generate title for class with parent (includes "extends")
+- Generate title for enum
+- Generate title for slot
+- Generate title for variable
+- Render correct JSX structure (bold elements, text sizes)
+
+**Implementation**: Extracted to `src/utils/panelHelpers.tsx`
+
+#### 4. Header Color Selection
+**Test file**: `src/test/panelHelpers.test.tsx` (included in 16 tests above) ✅
+
+Tests type-based color selection:
+- Return blue color for ClassNode
+- Return purple color for EnumDefinition
+- Return green color for SlotDefinition
+- Return orange color for VariableSpec
+- Verify color strings include both light and dark variants
+
+**Implementation**: Extracted to `src/utils/panelHelpers.tsx`
+
+### Priority 2: Component Rendering (Optional Future Work)
+
+#### DetailPanelStack Rendering
+**Test file**: `src/test/DetailPanelStack.test.tsx` (not yet created)
+
+Potential tests:
+- Render null when panels array is empty
+- Render panels in reversed order (newest first)
+- Apply correct header color for each entity type
+- Render close button for each panel
+- Pass hideHeader and hideCloseButton props to DetailPanel
+
+**Implementation approach**:
+- Use React Testing Library
+- Mock DetailPanel component to verify props
+- Test array reversal logic
+
+### Priority 3: Integration Tests (Optional Future Work)
+
+#### Adaptive Mode Switching
+**Test file**: `src/test/adaptiveModeIntegration.test.tsx` (not yet created)
+
+Potential tests:
+- Switch from 'dialog' to 'stacked' when resizing window wider
+- Switch from 'stacked' to 'dialog' when resizing window narrower
+- Preserve dialog data when switching modes
+- Maintain panel order across mode switches
+
+**Challenges**:
+- Requires mocking window.innerWidth and resize events
+- Needs full component tree (App + PanelLayout + panels)
+- May be slow/flaky
+- Deferred unless critical regressions occur
+
+### Priority 4: Visual Verification Only
+
+These features are verified manually in browser:
+- Colored header backgrounds (visual correctness)
+- Panel height constraints (300px-500px)
+- Scrolling behavior in stacked mode
+- Smooth transitions when resizing
+- Hover effects on close button
+- Typography (bold, text sizes, alignment)
