@@ -228,109 +228,36 @@ src/
   - Panels: `?l=c,e&r=s,v` (compact codes: c=classes, e=enums, s=slots, v=variables)
   - Dialogs: `?dialogs=type:name:x,y,w,h;type:name:x,y,w,h`
 
-### Testing Strategy & Test Suite Documentation
+### Testing
 
-**Current test coverage** (134 tests, all passing ✅):
+**Current test coverage:** 134 tests across 8 test files (all passing ✅)
 
-#### **Test Files:**
-1. **`data-integrity.test.ts`** (1 test) - Data completeness reporting
-   - Tracks data pipeline: YAML → Metadata → ModelData
-   - Reports missing fields (prefixes, imports) without failing
-   - Verifies all classes, enums, slots loaded correctly
+The project uses a comprehensive testing strategy that separates testable logic into utility functions:
+- **Extract & test**: Pure functions, data transformations, calculations
+- **Verify visually**: React components, SVG rendering, animations, interactions
+- **TDD approach**: Write tests first for non-visual features
 
-2. **`dataLoader.test.ts`** (9 tests) - Core data loading logic
-   - Model data loading and structure validation
-   - Hierarchical class tree construction
-   - Reverse index building (enum→classes, slot→classes)
-   - Variable mapping validation
-   - Slot and enum definition parsing
-   - Abstract class detection
-   - Data consistency checks (no duplicates, valid properties)
-
-3. **`ClassSection.test.tsx`** (4 tests) - Component rendering
-   - Class hierarchy rendering with nested structure
-   - Selected class highlighting
-   - Data attributes for element identification (for SVG links)
-   - Empty state handling
-
-4. **`linkLogic.test.ts`** (26 tests) - Element relationship detection
-   - **ClassElement relationships**: inheritance, enum properties, class references, self-refs
-   - **SlotElement relationships**: range detection for enums and classes
-   - **VariableElement relationships**: class mapping
-   - **EnumElement relationships**: no outgoing relationships
-   - **Link filtering**: by type, target type, visibility, self-refs
-   - **Combined filtering**: multiple criteria simultaneously
-
-5. **`linkHelpers.test.ts`** (27 tests) - SVG link utilities
-   - **Relationship filtering**: showInheritance, showProperties, onlyEnums, onlyClasses, visibility
-   - **Link building**: converting relationships to renderable objects
-   - **Geometric calculations**: center points, anchor point selection, edge detection
-   - **SVG path generation**: bezier curves, self-referential loops
-   - **Visual styling**: color mapping, stroke width by relationship type
-
-6. **`adaptiveLayout.test.ts`** (23 tests) - Adaptive layout calculation
-   - **Space calculation**: remaining space with various panel configurations
-   - **Mode determination**: stacked vs dialog based on available space
-   - **Edge cases**: empty panels, exact threshold, negative space
-   - **Real-world scenarios**: common screen sizes (desktop, laptop, tablet, 4K)
-
-7. **`duplicateDetection.test.ts`** (28 tests) - Entity duplicate detection
-   - **Entity name extraction**: classes, enums, slots, variables
-   - **Entity type detection**: structural property checks
-   - **Duplicate finding**: by name and type, cross-type disambiguation
-   - **Edge cases**: empty arrays, multiple duplicates, same names across types
-
-8. **`panelHelpers.test.tsx`** (16 tests) - Panel title and color utilities
-   - **Header colors**: type-based color selection (blue/purple/green/orange)
-   - **Title generation**: JSX rendering for all entity types
-   - **Styling verification**: bold text, font sizes, inheritance display
-   - **React rendering**: ensures valid JSX structure
-
-#### **Test Philosophy**
-
-**IMPORTANT: Expand test suite as features are developed**
-- ✅ Test data/logic layers separately from visual/rendering layers
-- ✅ Use TDD for non-visual features (data transformations, filtering, state management)
-- ✅ Use hybrid approach for visual features (test logic first, verify rendering manually)
-- ✅ Aim for tests that prevent regressions, not just achieve coverage
-
-**What we test vs. what we verify visually:**
-- ✅ **Test**: Pure functions, data transformations, filtering logic, geometric calculations
-- 👁️ **Visual verification**: SVG rendering, colors, animations, layout aesthetics, user interactions
-
-#### **Running Tests**
-
+**Quick start:**
 ```bash
-# Watch mode during development
-npm test
-
-# Single run for CI/verification
-npm test -- --run
-
-# Run specific test file
-npm test -- linkHelpers --run
-
-# Coverage report
-npm test:coverage
+npm test                    # Watch mode during development
+npm test -- --run          # Single run for CI/verification
+npm test -- filename       # Run specific test file
 ```
 
-#### **Test Expansion Priorities**
+**Test coverage by area:**
+- Data loading & processing (10 tests)
+- Element relationships & SVG links (53 tests)
+- Adaptive layout logic (23 tests)
+- Duplicate detection (28 tests)
+- Panel helpers & styling (16 tests)
+- Component rendering (4 tests)
 
-**Completed:**
-- ✅ Phase 3d logic tests (relationship detection, link filtering, SVG path generation)
-- ✅ Phase 3e logic tests (space calculation, duplicate detection, panel helpers) - 67 new tests added
-
-**Next:**
-1. **Future** (optional): DetailPanelStack rendering tests
-2. **Future**: DetailDialog interaction tests (drag, resize, escape key)
-3. **Future**: State persistence round-trip tests, search/filter tests
-4. **Future**: Integration tests for full navigation flows
-
-**Future testing enhancements** (when needed):
-1. **Integration tests**: Full navigation flows (click class → dialog opens, links connect properly)
-2. **E2E tests**: Using Playwright or Cypress for full user workflows
-3. **Visual regression**: Screenshot comparisons to catch unintended UI changes
-4. **Performance tests**: Large model handling, rendering speed with many links/dialogs
+**See [TESTING.md](TESTING.md) for complete documentation:**
+- Detailed test file descriptions with examples
+- Testing philosophy and best practices
+- How to write new tests
+- Troubleshooting guide
+- Future testing priorities
 
 ---
 

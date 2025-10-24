@@ -56,6 +56,23 @@ npm run deploy
 - Tailwind CSS for styling
 - D3.js (minimal - only for specific visualizations)
 
+### Testing
+The project has comprehensive test coverage (134 tests) for core logic and utilities.
+
+```bash
+# Run tests in watch mode
+npm test
+
+# Run all tests once
+npm test -- --run
+```
+
+See [TESTING.md](TESTING.md) for complete testing documentation, including:
+- Testing philosophy and strategy
+- Detailed test file documentation
+- How to write new tests
+- Examples and troubleshooting
+
 ## Roadmap
 
 Current features:
@@ -75,4 +92,11 @@ Upcoming features:
 
 ## Contributing
 
-See [CLAUDE.md](CLAUDE.md) for development context, architecture decisions, and implementation notes.
+When adding new features:
+- Extract testable logic into utility functions
+- Write tests for data transformations and calculations
+- Run the full test suite before committing: `npm test -- --run`
+
+**Documentation:**
+- [CLAUDE.md](CLAUDE.md) - Development context, architecture decisions, implementation notes
+- [TESTING.md](TESTING.md) - Testing strategy, test file documentation, how to write tests
