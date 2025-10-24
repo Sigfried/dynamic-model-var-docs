@@ -31,64 +31,123 @@
 
 ---
 
-## Next: Complete Overview & Details Implementation
+## Next: Fix Current Annoyances
 
 **Status**: Ready to begin
 
-**Goal**: Complete the remaining Overview and Details features (Shneiderman's mantra steps 1 & 3) before moving to Search/Filter (step 2).
+**Priority**: Address usability issues with existing features before adding new ones.
 
-### What's Left
+### Immediate Issues to Fix
 
-#### 1. Enhanced Nested Display in Classes
-**Current**: Classes show enum properties and slots nested
-**Missing**:
-- [ ] Toggle to show **all properties** inline (not just enums/slots)
-- [ ] Toggle to show **only associated class properties** (class references)
-- [ ] Toggle to show **mapped variables** inline (might be overwhelming for MeasurementObservation with 103 vars)
+#### 1. Link Clutter with Variables (HIGH PRIORITY)
+**Problem**: 151 variables create overwhelming link density, "MeasurementObservation" shown 103 times
+**Solution**:
+- Remove the class name display (currently shown in small gray text below each variable)
+- Just show variable labels: "BMI", "Albumin in blood", etc.
+- The SVG links already show which class each variable maps to
+- Makes variable section more compact, reduces visual noise
 
-**UI**: Add toggle buttons/checkboxes in class section header
+**Current display** (VariablesSection.tsx lines 43-45):
+```
+BMI
+MeasurementObservation  ← REMOVE THIS
+```
 
-#### 2. Link Interaction Enhancements
-**Current**: Links show on hover with opacity change
-**Missing**:
-- [ ] **Click-to-navigate**: Clicking link opens target element in detail panel/dialog
-- [ ] **Link tooltips**: Show relationship details on hover (property name, relationship type)
-- [ ] **Filter controls UI**: Checkboxes to toggle link types (inheritance, properties, class refs, etc.)
+**After fix**:
+```
+BMI
+```
 
-**UI**: Filter controls could be in header or collapsible sidebar
+**Files**: `src/components/VariablesSection.tsx` (remove lines 43-45)
 
-#### 3. Enhanced Element Metadata Display
-**Current**: Classes show variable count only (e.g., "Condition (20)")
-**Missing**:
-- [ ] Show relationship counts: "Condition (20 vars, 5 enums, 2 classes, 1 slot)"
-- [ ] Display options: inline codes, colored badges, or tooltips
-- [ ] Compute counts in dataLoader.ts, store in ClassNode type
+#### 2. Hover Highlighting for Links (HIGH PRIORITY)
+**Problem**: Hard to see which links belong to which element
+**Solutions**:
+- Hover over element → highlight all its links
+- Optionally: scroll opposite panel to show link endpoints
+- Display relationship info (property name, relationship type) when highlighting
 
-### Implementation Priority
+**Files**: `src/components/LinkOverlay.tsx`, `src/components/ClassSection.tsx`, etc.
 
-**Start with #3** (Enhanced Metadata Display):
-- Most visible improvement
-- Pure data transformation (easy to test)
-- No complex UI interactions
-- Provides useful context for navigation
+#### 3. Slots vs Attributes Terminology (MEDIUM PRIORITY)
+**Problem**: Confusing terminology, slots not visible in class detail
+**Current issues**:
+- Using term "Properties" instead of "Slots"
+- Attributes are just inline slots (per LinkML)
+- Regular (reusable) slots not shown in class detail dialog
+- 7 reusable slots buried among hundreds of attributes in panel view
 
-**Then #2** (Link Interactions):
-- Improves discoverability
-- Makes links more useful
-- Filter controls help manage visual complexity
+**Solutions**:
+- Change "Properties" → "Slots" everywhere
+- Add note: "Called 'attributes' in LinkML model"
+- Show both reusable slots AND attributes in class detail dialog
+- Indicate source: "Inline" vs "Slot: id" (with link to slot definition)
+- Consider collapsible sections: "Inline Slots (20)" and "Reusable Slots (3)"
 
-**Finally #1** (Nested Display):
-- Most complex (multiple toggle states)
-- Need to decide on interaction model
-- Consider performance with large variable counts
+**Files**: `src/components/DetailPanel.tsx`, `src/types.ts`, various section components
 
-### Why Not Search/Filter Yet?
+#### 4. Scroll Indicators in Detail Dialogs (LOW PRIORITY)
+**Problem**: No indication of scrollable content or how much content exists
+**Solutions**:
+- Link section headers at top of dialog (jump to section)
+- Fade effect at bottom when more content below
+- Mini table of contents showing sections
 
-Per Shneiderman's mantra, the order is about **user experience**, not implementation:
-1. **Overview First** - Show model topology clearly (still incomplete)
-2. **Zoom and Filter** - Search and filtering (comes after overview is solid)
-3. **Details on Demand** - Entity details (mostly done, some gaps)
+**Files**: `src/components/DetailPanel.tsx`, `src/components/DetailDialog.tsx`
 
-We need to complete Overview and Details before adding Search/Filter capabilities.
+### Implementation Order
 
-See CLAUDE.md "Flexible Overview Design" and "Future Features" sections for detailed context.
+1. **Fix variable display** (quick win, huge visual improvement)
+2. **Hover highlighting** (improves link usability)
+3. **Slots terminology cleanup** (requires more thought about UI)
+4. **Scroll indicators** (polish, can be deferred)
+
+### Deferred Work (Lower Priority)
+
+- Enhanced nested display toggles
+- Enhanced metadata counts display
+- Search/Filter (comes after Overview/Details complete)
+
+---
+
+## Additional Issues to Address
+
+### GitHub Issue Management
+**Issue**: https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/issues/126
+- This issue describes the overall vision for this project
+- Make it more concise
+- Add subissues for specific features (ASK FIRST before creating)
+- Note: Colleagues watch the HM repo, not the dynamic-model-var-docs repo
+
+### Data Completeness Report
+**Issue**: Missing items from bdchm.yaml in our schema
+- Review output of `src/test/data-integrity.test.ts`
+- Check what prefixes, imports, types, etc. are missing
+- Verify completeness of classes, enums, slots
+
+**Run**: `npm test -- data-integrity --run`
+
+### External Link Integration
+**Feature**: Link prefixed IDs to external sites
+- **OMOP:123** → https://athena.ohdsi.org/search-terms/terms/123
+- **DUO:0000042** → http://purl.obolibrary.org/obo/DUO_0000042
+- Report undefined prefixes (e.g., `obo:ncbitaxon` - error or misunderstanding?)
+- Use prefix data from bdchm.yaml
+
+### Feature Parity with Official Docs
+**Reference**: https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/
+
+Features to add:
+1. **Types** - Import and display linkml:types
+2. **Dynamic enums** - Show which enums are dynamic (from enum metadata)
+3. **LinkML Source** - Collapsible "Details" section showing raw LinkML (see ConditionConceptEnum example)
+   - Note better convention: `<summary>Details</summary>` BELOW the title, not inside
+4. **Direct and Induced** - Show direct vs inherited slots (similar to attributes/slots handling)
+
+**Eventually** (longer term):
+- Partial ERDs (like at https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/Condition/)
+- We have the data for this, could use similar approach to attributes/slots
+
+---
+
+See CLAUDE.md for architecture context.
