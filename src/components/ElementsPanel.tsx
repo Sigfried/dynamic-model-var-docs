@@ -5,7 +5,7 @@ import VariablesSection from './VariablesSection';
 import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
 
 type SectionType = 'classes' | 'enums' | 'slots' | 'variables';
-type SelectedEntity = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
+type SelectedElement = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
 
 interface ElementsPanelProps {
   position: 'left' | 'right';
@@ -15,8 +15,8 @@ interface ElementsPanelProps {
   enums: Map<string, EnumDefinition>;
   slots: Map<string, SlotDefinition>;
   variables: VariableSpec[];
-  selectedEntity?: SelectedEntity;
-  onSelectEntity: (entity: SelectedEntity) => void;
+  selectedElement?: SelectedElement;
+  onSelectEntity: (entity: SelectedElement) => void;
 }
 
 interface SectionToggleButtonProps {
@@ -56,7 +56,7 @@ export default function ElementsPanel({
   enums,
   slots,
   variables,
-  selectedEntity,
+  selectedElement,
   onSelectEntity
 }: ElementsPanelProps) {
   const activeSections = new Set(sections);
@@ -75,10 +75,10 @@ export default function ElementsPanel({
   };
 
   // Helper to check if entity is of certain type
-  const isClassNode = (entity: SelectedEntity): entity is ClassNode => 'children' in entity;
-  const isEnumDefinition = (entity: SelectedEntity): entity is EnumDefinition => 'permissible_values' in entity;
-  const isSlotDefinition = (entity: SelectedEntity): entity is SlotDefinition => 'slot_uri' in entity;
-  const isVariableSpec = (entity: SelectedEntity): entity is VariableSpec => 'variableLabel' in entity;
+  const isClassNode = (entity: SelectedElement): entity is ClassNode => 'children' in entity;
+  const isEnumDefinition = (entity: SelectedElement): entity is EnumDefinition => 'permissible_values' in entity;
+  const isSlotDefinition = (entity: SelectedElement): entity is SlotDefinition => 'slot_uri' in entity;
+  const isVariableSpec = (entity: SelectedElement): entity is VariableSpec => 'variableLabel' in entity;
 
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-slate-900">
@@ -121,7 +121,7 @@ export default function ElementsPanel({
                     key="classes"
                     nodes={classHierarchy}
                     onSelectClass={onSelectEntity}
-                    selectedClass={selectedEntity && isClassNode(selectedEntity) ? selectedEntity : undefined}
+                    selectedClass={selectedElement && isClassNode(selectedElement) ? selectedElement : undefined}
                     position={position}
                   />
                 );
@@ -131,7 +131,7 @@ export default function ElementsPanel({
                     key="enums"
                     enums={enums}
                     onSelectEnum={onSelectEntity}
-                    selectedEnum={selectedEntity && isEnumDefinition(selectedEntity) ? selectedEntity : undefined}
+                    selectedEnum={selectedElement && isEnumDefinition(selectedElement) ? selectedElement : undefined}
                     position={position}
                   />
                 );
@@ -141,7 +141,7 @@ export default function ElementsPanel({
                     key="slots"
                     slots={slots}
                     onSelectSlot={onSelectEntity}
-                    selectedSlot={selectedEntity && isSlotDefinition(selectedEntity) ? selectedEntity : undefined}
+                    selectedSlot={selectedElement && isSlotDefinition(selectedElement) ? selectedElement : undefined}
                     position={position}
                   />
                 );
@@ -151,7 +151,7 @@ export default function ElementsPanel({
                     key="variables"
                     variables={variables}
                     onSelectVariable={onSelectEntity}
-                    selectedVariable={selectedEntity && isVariableSpec(selectedEntity) ? selectedEntity : undefined}
+                    selectedVariable={selectedElement && isVariableSpec(selectedElement) ? selectedElement : undefined}
                     position={position}
                   />
                 );

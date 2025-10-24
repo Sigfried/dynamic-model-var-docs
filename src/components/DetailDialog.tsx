@@ -2,11 +2,11 @@ import { useState, useRef, useEffect } from 'react';
 import DetailPanel from './DetailPanel';
 import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
 
-type SelectedEntity = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
+type SelectedElement = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
 
 interface DetailDialogProps {
-  selectedEntity: SelectedEntity;
-  onNavigate?: (entityName: string, entityType: 'class' | 'enum' | 'slot') => void;
+  selectedElement: SelectedElement;
+  onNavigate?: (elementName: string, elementType: 'class' | 'enum' | 'slot') => void;
   onClose: () => void;
   onChange?: (position: { x: number; y: number }, size: { width: number; height: number }) => void;
   enums?: Map<string, EnumDefinition>;
@@ -20,7 +20,7 @@ interface DetailDialogProps {
 type ResizeHandle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw' | null;
 
 export default function DetailDialog({
-  selectedEntity,
+  selectedElement,
   onNavigate,
   onClose,
   onChange,
@@ -180,9 +180,9 @@ export default function DetailDialog({
         onMouseDown={handleDragStart}
       >
         <div className="font-semibold text-gray-700 dark:text-gray-200">
-          {'children' in selectedEntity ? 'Class' :
-           'permissible_values' in selectedEntity ? 'Enum' :
-           'slot_uri' in selectedEntity ? 'Slot' : 'Variable'} Details
+          {'children' in selectedElement ? 'Class' :
+           'permissible_values' in selectedElement ? 'Enum' :
+           'slot_uri' in selectedElement ? 'Slot' : 'Variable'} Details
         </div>
         <button
           onClick={onClose}
@@ -195,7 +195,7 @@ export default function DetailDialog({
       {/* Content */}
       <div className="flex-1 overflow-hidden">
         <DetailPanel
-          selectedEntity={selectedEntity}
+          selectedElement={selectedElement}
           onNavigate={onNavigate}
           onClose={onClose}
           enums={enums}

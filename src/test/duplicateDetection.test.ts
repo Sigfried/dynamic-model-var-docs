@@ -4,11 +4,11 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-  getEntityName,
-  getEntityType,
+  getElementName,
+  getElementType,
   findDuplicateIndex,
   isDuplicate,
-  type EntityDescriptor
+  type ElementDescriptor
 } from '../utils/duplicateDetection';
 import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
 
@@ -45,56 +45,56 @@ const mockVariable: VariableSpec = {
   classMappedTo: 'Specimen'
 };
 
-describe('getEntityName', () => {
+describe('getElementName', () => {
   it('returns name for class entity', () => {
-    const name = getEntityName(mockClass, 'class');
+    const name = getElementName(mockClass, 'class');
     expect(name).toBe('Specimen');
   });
 
   it('returns name for enum entity', () => {
-    const name = getEntityName(mockEnum, 'enum');
+    const name = getElementName(mockEnum, 'enum');
     expect(name).toBe('SpecimenTypeEnum');
   });
 
   it('returns name for slot entity', () => {
-    const name = getEntityName(mockSlot, 'slot');
+    const name = getElementName(mockSlot, 'slot');
     expect(name).toBe('identifier');
   });
 
   it('returns variableLabel for variable entity', () => {
-    const name = getEntityName(mockVariable, 'variable');
+    const name = getElementName(mockVariable, 'variable');
     expect(name).toBe('specimen_type');
   });
 });
 
-describe('getEntityType', () => {
+describe('getElementType', () => {
   it('detects class by presence of children property', () => {
-    const type = getEntityType(mockClass);
+    const type = getElementType(mockClass);
     expect(type).toBe('class');
   });
 
   it('detects enum by presence of permissible_values property', () => {
-    const type = getEntityType(mockEnum);
+    const type = getElementType(mockEnum);
     expect(type).toBe('enum');
   });
 
   it('detects slot by presence of slot_uri property', () => {
-    const type = getEntityType(mockSlot);
+    const type = getElementType(mockSlot);
     expect(type).toBe('slot');
   });
 
   it('detects variable as fallback', () => {
-    const type = getEntityType(mockVariable);
+    const type = getElementType(mockVariable);
     expect(type).toBe('variable');
   });
 });
 
 describe('findDuplicateIndex', () => {
-  const entities: EntityDescriptor[] = [
-    { entity: mockClass, entityType: 'class' },
-    { entity: mockEnum, entityType: 'enum' },
-    { entity: mockSlot, entityType: 'slot' },
-    { entity: mockVariable, entityType: 'variable' }
+  const entities: ElementDescriptor[] = [
+    { element: mockClass, elementType: 'class' },
+    { element: mockEnum, elementType: 'enum' },
+    { element: mockSlot, elementType: 'slot' },
+    { element: mockVariable, elementType: 'variable' }
   ];
 
   it('finds duplicate class by name', () => {
@@ -150,9 +150,9 @@ describe('findDuplicateIndex', () => {
     const sameNameClass: ClassNode = { ...mockClass, name: 'SameName' };
     const sameNameEnum: EnumDefinition = { ...mockEnum, name: 'SameName' };
 
-    const entitiesWithSameName: EntityDescriptor[] = [
-      { entity: sameNameClass, entityType: 'class' },
-      { entity: sameNameEnum, entityType: 'enum' }
+    const entitiesWithSameName: ElementDescriptor[] = [
+      { element: sameNameClass, elementType: 'class' },
+      { element: sameNameEnum, elementType: 'enum' }
     ];
 
     // Should find class duplicate at index 0
@@ -170,10 +170,10 @@ describe('findDuplicateIndex', () => {
   });
 
   it('finds first occurrence when multiple duplicates exist', () => {
-    const entitiesWithDuplicates: EntityDescriptor[] = [
-      { entity: mockClass, entityType: 'class' },
-      { entity: mockClass, entityType: 'class' }, // Duplicate at index 1
-      { entity: mockClass, entityType: 'class' }  // Duplicate at index 2
+    const entitiesWithDuplicates: ElementDescriptor[] = [
+      { element: mockClass, elementType: 'class' },
+      { element: mockClass, elementType: 'class' }, // Duplicate at index 1
+      { element: mockClass, elementType: 'class' }  // Duplicate at index 2
     ];
 
     const index = findDuplicateIndex(entitiesWithDuplicates, mockClass, 'class');
@@ -182,11 +182,11 @@ describe('findDuplicateIndex', () => {
 });
 
 describe('isDuplicate', () => {
-  const entities: EntityDescriptor[] = [
-    { entity: mockClass, entityType: 'class' },
-    { entity: mockEnum, entityType: 'enum' },
-    { entity: mockSlot, entityType: 'slot' },
-    { entity: mockVariable, entityType: 'variable' }
+  const entities: ElementDescriptor[] = [
+    { element: mockClass, elementType: 'class' },
+    { element: mockEnum, elementType: 'enum' },
+    { element: mockSlot, elementType: 'slot' },
+    { element: mockVariable, elementType: 'variable' }
   ];
 
   it('returns true for duplicate class', () => {

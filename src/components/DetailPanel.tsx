@@ -1,11 +1,11 @@
 import React from 'react';
 import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
 
-type SelectedEntity = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
+type SelectedElement = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
 
 interface DetailPanelProps {
-  selectedEntity?: SelectedEntity;
-  onNavigate?: (entityName: string, entityType: 'class' | 'enum' | 'slot') => void;
+  selectedElement?: SelectedElement;
+  onNavigate?: (elementName: string, elementType: 'class' | 'enum' | 'slot') => void;
   onClose?: () => void;
   enums?: Map<string, EnumDefinition>;
   slots?: Map<string, SlotDefinition>;
@@ -15,15 +15,15 @@ interface DetailPanelProps {
   hideCloseButton?: boolean;  // Hide the internal close button (when handled externally)
 }
 
-function isEnumDefinition(entity: SelectedEntity): entity is EnumDefinition {
+function isEnumDefinition(entity: SelectedElement): entity is EnumDefinition {
   return 'permissible_values' in entity;
 }
 
-function isSlotDefinition(entity: SelectedEntity): entity is SlotDefinition {
+function isSlotDefinition(entity: SelectedElement): entity is SlotDefinition {
   return 'slot_uri' in entity || ('range' in entity && !('children' in entity) && !('permissible_values' in entity));
 }
 
-function isVariableSpec(entity: SelectedEntity): entity is VariableSpec {
+function isVariableSpec(entity: SelectedElement): entity is VariableSpec {
   return 'variableLabel' in entity && 'bdchmElement' in entity;
 }
 
@@ -87,7 +87,7 @@ function TypeLegend() {
   );
 }
 
-export default function DetailPanel({ selectedEntity, onNavigate, onClose, enums, slots, classes, dialogWidth = 900, hideHeader = false, hideCloseButton = false }: DetailPanelProps) {
+export default function DetailPanel({ selectedElement, onNavigate, onClose, enums, slots, classes, dialogWidth = 900, hideHeader = false, hideCloseButton = false }: DetailPanelProps) {
   const useTwoColumnsForVariables = dialogWidth >= 1700;
   const useTwoColumnsForEnums = dialogWidth >= 1000;
   const [showLegend, setShowLegend] = React.useState(false);
@@ -110,19 +110,19 @@ export default function DetailPanel({ selectedEntity, onNavigate, onClose, enums
     return !!(enums?.has(rangeName) || slots?.has(rangeName) || classes?.has(rangeName));
   };
 
-  if (!selectedEntity) {
+  if (!selectedElement) {
     return null; // Hide panel when nothing is selected
   }
 
   // Handle variable details
-  if (isVariableSpec(selectedEntity)) {
+  if (isVariableSpec(selectedElement)) {
     return (
       <div className="h-full overflow-y-auto bg-white dark:bg-slate-800 text-left">
         {!hideHeader && (
           <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4">
             <div className="flex justify-between items-start">
               <div>
-                <h1 className="text-2xl font-bold text-left">{selectedEntity.variableLabel}</h1>
+                <h1 className="text-2xl font-bold text-left">{selectedElement.variableLabel}</h1>
                 <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">Variable</p>
               </div>
               {onClose && !hideCloseButton && (
@@ -141,10 +141,10 @@ export default function DetailPanel({ selectedEntity, onNavigate, onClose, enums
         )}
 
         <div className="p-4 space-y-3 text-left">
-          {selectedEntity.variableDescription && (
+          {selectedElement.variableDescription && (
             <div>
               <h2 className="text-lg font-semibold mb-1">Description</h2>
-              <p className="text-gray-700 dark:text-gray-300">{selectedEntity.variableDescription}</p>
+              <p className="text-gray-700 dark:text-gray-300">{selectedElement.variableDescription}</p>
             </div>
           )}
 
@@ -157,32 +157,32 @@ export default function DetailPanel({ selectedEntity, onNavigate, onClose, enums
                     <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">BDCHM Element</td>
                     <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-mono text-sm">
                       <button
-                        onClick={() => handleRangeClick(selectedEntity.bdchmElement)}
-                        className={`${classes?.has(selectedEntity.bdchmElement) ? 'text-blue-700 dark:text-blue-400 underline hover:opacity-70 transition-opacity' : ''}`}
+                        onClick={() => handleRangeClick(selectedElement.bdchmElement)}
+                        className={`${classes?.has(selectedElement.bdchmElement) ? 'text-blue-700 dark:text-blue-400 underline hover:opacity-70 transition-opacity' : ''}`}
                       >
-                        {selectedEntity.bdchmElement}
+                        {selectedElement.bdchmElement}
                       </button>
                     </td>
                   </tr>
                   <tr className="hover:bg-gray-50 dark:hover:bg-slate-700">
                     <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">Data Type</td>
                     <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm">
-                      {selectedEntity.dataType}
+                      {selectedElement.dataType}
                     </td>
                   </tr>
-                  {selectedEntity.ucumUnit && (
+                  {selectedElement.ucumUnit && (
                     <tr className="hover:bg-gray-50 dark:hover:bg-slate-700">
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">UCUM Unit</td>
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-mono text-sm">
-                        {selectedEntity.ucumUnit}
+                        {selectedElement.ucumUnit}
                       </td>
                     </tr>
                   )}
-                  {selectedEntity.curie && (
+                  {selectedElement.curie && (
                     <tr className="hover:bg-gray-50 dark:hover:bg-slate-700">
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">CURIE</td>
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-mono text-sm">
-                        {selectedEntity.curie}
+                        {selectedElement.curie}
                       </td>
                     </tr>
                   )}
@@ -196,14 +196,14 @@ export default function DetailPanel({ selectedEntity, onNavigate, onClose, enums
   }
 
   // Handle enum details
-  if (isEnumDefinition(selectedEntity)) {
+  if (isEnumDefinition(selectedElement)) {
     return (
       <div className="h-full overflow-y-auto bg-white dark:bg-slate-800 text-left">
         {!hideHeader && (
           <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4">
             <div className="flex justify-between items-start">
               <div>
-                <h1 className="text-2xl font-bold text-left">{selectedEntity.name}</h1>
+                <h1 className="text-2xl font-bold text-left">{selectedElement.name}</h1>
                 <p className="text-sm text-purple-600 dark:text-purple-400 mt-1">Enumeration</p>
               </div>
               {onClose && !hideCloseButton && (
@@ -222,25 +222,25 @@ export default function DetailPanel({ selectedEntity, onNavigate, onClose, enums
         )}
 
         <div className="p-4 space-y-3 text-left">
-          {selectedEntity.description && (
+          {selectedElement.description && (
             <div>
               <h2 className="text-lg font-semibold mb-1">Description</h2>
-              <p className="text-gray-700 dark:text-gray-300">{selectedEntity.description}</p>
+              <p className="text-gray-700 dark:text-gray-300">{selectedElement.description}</p>
             </div>
           )}
 
-          {selectedEntity.permissible_values.length > 0 && (
+          {selectedElement.permissible_values.length > 0 && (
             <div>
               <h2 className="text-lg font-semibold mb-1">
-                Permissible Values ({selectedEntity.permissible_values.length})
+                Permissible Values ({selectedElement.permissible_values.length})
               </h2>
-              {useTwoColumnsForEnums && selectedEntity.permissible_values.length > 10 ? (
+              {useTwoColumnsForEnums && selectedElement.permissible_values.length > 10 ? (
               // Two-column layout for wide dialogs with many permissible values
               <div className="grid grid-cols-2 gap-4">
                 {[0, 1].map(columnIndex => {
-                  const halfLength = Math.ceil(selectedEntity.permissible_values.length / 2);
+                  const halfLength = Math.ceil(selectedElement.permissible_values.length / 2);
                   const startIdx = columnIndex * halfLength;
-                  const columnValues = selectedEntity.permissible_values.slice(startIdx, startIdx + halfLength);
+                  const columnValues = selectedElement.permissible_values.slice(startIdx, startIdx + halfLength);
 
                   return (
                     <div key={columnIndex} className="overflow-x-auto">
@@ -279,7 +279,7 @@ export default function DetailPanel({ selectedEntity, onNavigate, onClose, enums
                     </tr>
                   </thead>
                   <tbody>
-                    {selectedEntity.permissible_values.map((value, idx) => (
+                    {selectedElement.permissible_values.map((value, idx) => (
                       <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-700">
                         <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-mono text-sm">
                           {value.key}
@@ -296,13 +296,13 @@ export default function DetailPanel({ selectedEntity, onNavigate, onClose, enums
             </div>
           )}
 
-          {selectedEntity.usedByClasses.length > 0 && (
+          {selectedElement.usedByClasses.length > 0 && (
             <div>
               <h2 className="text-lg font-semibold mb-1">
-                Used By Classes ({selectedEntity.usedByClasses.length})
+                Used By Classes ({selectedElement.usedByClasses.length})
               </h2>
               <div className="flex flex-wrap gap-2">
-                {selectedEntity.usedByClasses.map(className => (
+                {selectedElement.usedByClasses.map(className => (
                   <button
                     key={className}
                     onClick={() => handleRangeClick(className)}
@@ -320,14 +320,14 @@ export default function DetailPanel({ selectedEntity, onNavigate, onClose, enums
   }
 
   // Handle slot details
-  if (isSlotDefinition(selectedEntity)) {
+  if (isSlotDefinition(selectedElement)) {
     return (
       <div className="h-full overflow-y-auto bg-white dark:bg-slate-800 text-left">
         {!hideHeader && (
           <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4">
             <div className="flex justify-between items-start">
               <div>
-                <h1 className="text-2xl font-bold text-left">{selectedEntity.name}</h1>
+                <h1 className="text-2xl font-bold text-left">{selectedElement.name}</h1>
                 <p className="text-sm text-green-600 dark:text-green-400 mt-1">Slot</p>
               </div>
               {onClose && !hideCloseButton && (
@@ -346,10 +346,10 @@ export default function DetailPanel({ selectedEntity, onNavigate, onClose, enums
         )}
 
         <div className="p-4 space-y-3 text-left">
-          {selectedEntity.description && (
+          {selectedElement.description && (
             <div>
               <h2 className="text-lg font-semibold mb-1">Description</h2>
-              <p className="text-gray-700 dark:text-gray-300">{selectedEntity.description}</p>
+              <p className="text-gray-700 dark:text-gray-300">{selectedElement.description}</p>
             </div>
           )}
 
@@ -358,43 +358,43 @@ export default function DetailPanel({ selectedEntity, onNavigate, onClose, enums
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <tbody>
-                  {selectedEntity.range && (
+                  {selectedElement.range && (
                     <tr className="hover:bg-gray-50 dark:hover:bg-slate-700">
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">Range</td>
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-mono text-sm">
-                        {selectedEntity.range}
+                        {selectedElement.range}
                       </td>
                     </tr>
                   )}
-                  {selectedEntity.slot_uri && (
+                  {selectedElement.slot_uri && (
                     <tr className="hover:bg-gray-50 dark:hover:bg-slate-700">
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">URI</td>
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-mono text-sm">
-                        {selectedEntity.slot_uri}
+                        {selectedElement.slot_uri}
                       </td>
                     </tr>
                   )}
-                  {selectedEntity.identifier !== undefined && (
+                  {selectedElement.identifier !== undefined && (
                     <tr className="hover:bg-gray-50 dark:hover:bg-slate-700">
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">Identifier</td>
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm">
-                        {selectedEntity.identifier ? 'Yes' : 'No'}
+                        {selectedElement.identifier ? 'Yes' : 'No'}
                       </td>
                     </tr>
                   )}
-                  {selectedEntity.required !== undefined && (
+                  {selectedElement.required !== undefined && (
                     <tr className="hover:bg-gray-50 dark:hover:bg-slate-700">
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">Required</td>
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm">
-                        {selectedEntity.required ? 'Yes' : 'No'}
+                        {selectedElement.required ? 'Yes' : 'No'}
                       </td>
                     </tr>
                   )}
-                  {selectedEntity.multivalued !== undefined && (
+                  {selectedElement.multivalued !== undefined && (
                     <tr className="hover:bg-gray-50 dark:hover:bg-slate-700">
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">Multivalued</td>
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm">
-                        {selectedEntity.multivalued ? 'Yes' : 'No'}
+                        {selectedElement.multivalued ? 'Yes' : 'No'}
                       </td>
                     </tr>
                   )}
@@ -403,13 +403,13 @@ export default function DetailPanel({ selectedEntity, onNavigate, onClose, enums
             </div>
           </div>
 
-          {selectedEntity.usedByClasses.length > 0 && (
+          {selectedElement.usedByClasses.length > 0 && (
             <div>
               <h2 className="text-lg font-semibold mb-1">
-                Used By Classes ({selectedEntity.usedByClasses.length})
+                Used By Classes ({selectedElement.usedByClasses.length})
               </h2>
               <div className="flex flex-wrap gap-2">
-                {selectedEntity.usedByClasses.map(className => (
+                {selectedElement.usedByClasses.map(className => (
                   <button
                     key={className}
                     onClick={() => handleRangeClick(className)}
@@ -427,7 +427,7 @@ export default function DetailPanel({ selectedEntity, onNavigate, onClose, enums
   }
 
   // Handle class details (original code)
-  const selectedClass = selectedEntity as ClassNode;
+  const selectedClass = selectedElement as ClassNode;
 
   return (
     <div className="h-full overflow-y-auto bg-white dark:bg-slate-800 text-left">

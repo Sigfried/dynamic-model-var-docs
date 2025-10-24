@@ -1,16 +1,16 @@
 import DetailPanel from './DetailPanel';
-import { getHeaderColor, getPanelTitle, type SelectedEntity } from '../utils/panelHelpers';
+import { getHeaderColor, getPanelTitle, type SelectedElement } from '../utils/panelHelpers';
 import type { ClassNode, EnumDefinition, SlotDefinition } from '../types';
 
 interface StackedPanel {
   id: string;
-  entity: SelectedEntity;
+  entity: SelectedElement;
   entityType: 'class' | 'enum' | 'slot' | 'variable';
 }
 
 interface DetailPanelStackProps {
   panels: StackedPanel[];
-  onNavigate?: (entityName: string, entityType: 'class' | 'enum' | 'slot') => void;
+  onNavigate?: (elementName: string, elementType: 'class' | 'enum' | 'slot') => void;
   onClose: (id: string) => void;
   enums?: Map<string, EnumDefinition>;
   slots?: Map<string, SlotDefinition>;
@@ -58,7 +58,7 @@ export default function DetailPanelStack({
           {/* Content */}
           <div className="flex-1 overflow-hidden">
             <DetailPanel
-              selectedEntity={panel.entity}
+              selectedElement={panel.entity}
               onNavigate={onNavigate}
               onClose={() => onClose(panel.id)}
               enums={enums}

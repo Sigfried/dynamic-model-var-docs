@@ -5,13 +5,13 @@
 import { type ReactElement } from 'react';
 import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
 
-export type SelectedEntity = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
+export type SelectedElement = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
 
 /**
  * Get header color classes based on entity type
  * Returns Tailwind CSS classes for background and border colors
  */
-export function getHeaderColor(entity: SelectedEntity): string {
+export function getHeaderColor(entity: SelectedElement): string {
   if ('children' in entity) {
     // ClassNode
     return 'bg-blue-700 dark:bg-blue-700 border-blue-800 dark:border-blue-600';
@@ -31,7 +31,7 @@ export function getHeaderColor(entity: SelectedEntity): string {
  * Generate descriptive title JSX for panel header
  * Returns styled ReactElement with bold titles and inheritance info
  */
-export function getPanelTitle(entity: SelectedEntity): ReactElement {
+export function getPanelTitle(entity: SelectedElement): ReactElement {
   if ('children' in entity) {
     // ClassNode
     const classNode = entity as ClassNode;

@@ -39,24 +39,73 @@
 
 ### Immediate Issues to Fix
 
-#### ✅ 1. Variable Section Usability (COMPLETED)
-**Problem**: 151 variables create overwhelming link density and excessive scrolling
+#### ✅ 1. Variable Section Usability & Link Improvements (COMPLETED)
+**Problems**:
+- 151 variables create overwhelming link density and excessive scrolling
+- Bidirectional class→class links draw both A→B and B→A
+- No visual indication of link direction
+
 **Solutions implemented**:
+
+**A. Variable Section**:
 1. **Removed redundant class names** - Was showing "MeasurementObservation" 103 times below each variable
-2. **Grouped variables by class** - Collapsible sections: "MeasurementObservation (103)", "Condition (X)", etc.
-3. **Reduced spacing** - Changed padding from `py-2` to `py-1` for tighter display
-4. **Default collapsed** - All classes start collapsed to minimize initial clutter
-5. **Visual hierarchy** - Triangle indicators (▶/▼) and indentation for nested variables
+2. **Grouped variables by class** - Collapsible sections: "MeasurementObservation (103)", etc.
+3. **Reduced spacing** - Changed padding from `py-2` to `py-1`
+4. **Default collapsed** - All classes start collapsed
+5. **URL persistence** - Expansion state saved to URL with `?evc=Class1,Class2`
+6. **Shared expansion hook** - Created `useExpansionState` hook for reuse across all sections
 
-**Result**: Much more compact and scannable. Users can see all classes at a glance and expand only the ones they need.
+**B. Link Directionality**:
+1. **Fixed bidirectional duplicates** - Only draw left→right for cross-panel relationships
+2. **Added directional arrowheads** - Subtle (0.3 opacity) by default, prominent on hover
+3. **Color-matched arrows** - Green (class→class), purple (class→enum), orange (variable→class), etc.
+4. **Immediate link rendering** - Links appear when sections expand (no scroll needed)
 
-**Files changed**: `src/components/VariablesSection.tsx`
-- Added grouping logic by `bdchmElement` (class name)
-- Added collapsible state management with useState
-- Sorted classes and variables alphabetically
+**Files changed**:
+- `src/components/VariablesSection.tsx` - Uses shared expansion hook
+- `src/hooks/useExpansionState.ts` - NEW: Shared expansion state with URL persistence
+- `src/components/LinkOverlay.tsx` - One-way links, arrowheads, expansion event listener
+- `src/utils/statePersistence.ts` - Added expansion state fields, removed legacy URL params
 - All tests passing (134/134)
 
-#### 2. Hover Highlighting for Links (HIGH PRIORITY)
+#### 2. Fix Arrowhead Positioning and Link Rendering (HIGH PRIORITY - BLOCKING)
+**Problems**:
+- Arrowheads extend past target element boundaries (looks bad)
+- Won't draw links from class to slot/var in LEFT→RIGHT direction (right→left works fine)
+- Link directionality fix was too aggressive - blocked non-bidirectional relationships
+
+**Root cause**: Changed link processing to only draw left→right for ALL relationships. Right panel now only processes self-refs. This breaks class→slot and class→var links when class is in left panel and slot/var is in right panel.
+
+**Solutions needed**:
+1. **Fix arrowhead positioning** - Adjust `refX` in marker definitions to stop at element boundary
+2. **Restore non-bidirectional links** - Only apply left→right restriction to class→class relationships
+3. **Test all link types** - Verify class→enum, class→slot, variable→class, slot→enum all work bidirectionally
+
+**Files**: `src/components/LinkOverlay.tsx`
+
+#### 3. Entity → Element Terminology Refactor (HIGH PRIORITY)
+**Problem**: Inconsistent terminology throughout codebase
+- Some code uses "entity" (SelectedEntity, entityType, entityName, selectedEntity)
+- Some code uses "element" (ClassElement, EnumElement, Element classes)
+- Need consistent "element" terminology everywhere
+
+**Scope**: ~100+ occurrences across 9 files
+- Types/interfaces: `SelectedEntity` → `SelectedElement`
+- Props: `selectedEntity` → `selectedElement`, `entityType` → `elementType`, `entityName` → `elementName`
+- Test files: Update mock data and assertions
+
+**Files to update**:
+- `src/utils/statePersistence.ts`
+- `src/components/DetailPanelStack.tsx`
+- `src/App.tsx`
+- `src/utils/panelHelpers.tsx`
+- `src/utils/duplicateDetection.ts`
+- `src/components/DetailPanel.tsx`
+- `src/components/ElementsPanel.tsx`
+- `src/components/DetailDialog.tsx`
+- `src/test/duplicateDetection.test.ts`
+
+#### 4. Hover Highlighting for Links (MEDIUM PRIORITY)
 **Problem**: Hard to see which links belong to which element
 **Solutions**:
 - Hover over element → highlight all its links

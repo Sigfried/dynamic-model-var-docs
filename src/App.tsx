@@ -7,10 +7,10 @@ import LinkOverlay from './components/LinkOverlay';
 import { loadModelData } from './utils/dataLoader';
 import { getInitialState, saveStateToURL, saveStateToLocalStorage, generatePresetURL, type DialogState } from './utils/statePersistence';
 import { calculateDisplayMode } from './utils/layoutHelpers';
-import { getEntityName, getEntityType, findDuplicateIndex } from './utils/duplicateDetection';
+import { getElementName, getElementType, findDuplicateIndex } from './utils/duplicateDetection';
 import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec, ModelData } from './types';
 
-type SelectedEntity = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
+type SelectedElement = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
 type SectionType = 'classes' | 'enums' | 'slots' | 'variables';
 
 // Helper to flatten class hierarchy into a list
@@ -26,8 +26,8 @@ function flattenClassHierarchy(nodes: ClassNode[]): ClassNode[] {
 
 interface OpenDialog {
   id: string;
-  entity: SelectedEntity;
-  entityType: 'class' | 'enum' | 'slot' | 'variable';
+  element: SelectedElement;
+  elementType: 'class' | 'enum' | 'slot' | 'variable';
   x: number;
   y: number;
   width: number;
@@ -108,23 +108,23 @@ function App() {
       let dialogIdCounter = 0;
 
       urlState.dialogs.forEach(dialogState => {
-        let entity: SelectedEntity | null = null;
+        let element: SelectedElement | null = null;
 
-        if (dialogState.entityType === 'class') {
-          entity = classMap.get(dialogState.entityName) || null;
-        } else if (dialogState.entityType === 'enum') {
-          entity = modelData.enums.get(dialogState.entityName) || null;
-        } else if (dialogState.entityType === 'slot') {
-          entity = modelData.slots.get(dialogState.entityName) || null;
-        } else if (dialogState.entityType === 'variable') {
-          entity = modelData.variables.find(v => v.variableLabel === dialogState.entityName) || null;
+        if (dialogState.elementType === 'class') {
+          element = classMap.get(dialogState.elementName) || null;
+        } else if (dialogState.elementType === 'enum') {
+          element = modelData.enums.get(dialogState.elementName) || null;
+        } else if (dialogState.elementType === 'slot') {
+          element = modelData.slots.get(dialogState.elementName) || null;
+        } else if (dialogState.elementType === 'variable') {
+          element = modelData.variables.find(v => v.variableLabel === dialogState.elementName) || null;
         }
 
-        if (entity) {
+        if (element) {
           restoredDialogs.push({
             id: `dialog-${dialogIdCounter}`,
-            entity,
-            entityType: dialogState.entityType,
+            element,
+            elementType: dialogState.elementType,
             x: dialogState.x,
             y: dialogState.y,
             width: dialogState.width,
@@ -158,11 +158,11 @@ function App() {
   // Convert OpenDialog to DialogState
   const getDialogStates = (): DialogState[] => {
     return openDialogs.map(dialog => {
-      const entityName = getEntityName(dialog.entity, dialog.entityType);
+      const elementName = getElementName(dialog.element, dialog.elementType);
 
       return {
-        entityName,
-        entityType: dialog.entityType,
+        elementName,
+        elementType: dialog.elementType,
         x: dialog.x,
         y: dialog.y,
         width: dialog.width,
@@ -224,23 +224,23 @@ function App() {
           let dialogIdCounter = nextDialogId;
 
           state.dialogs.forEach((dialogState: DialogState) => {
-            let entity: SelectedEntity | null = null;
+            let element: SelectedElement | null = null;
 
-            if (dialogState.entityType === 'class') {
-              entity = classMap.get(dialogState.entityName) || null;
-            } else if (dialogState.entityType === 'enum') {
-              entity = modelData.enums.get(dialogState.entityName) || null;
-            } else if (dialogState.entityType === 'slot') {
-              entity = modelData.slots.get(dialogState.entityName) || null;
-            } else if (dialogState.entityType === 'variable') {
-              entity = modelData.variables.find(v => v.variableLabel === dialogState.entityName) || null;
+            if (dialogState.elementType === 'class') {
+              element = classMap.get(dialogState.elementName) || null;
+            } else if (dialogState.elementType === 'enum') {
+              element = modelData.enums.get(dialogState.elementName) || null;
+            } else if (dialogState.elementType === 'slot') {
+              element = modelData.slots.get(dialogState.elementName) || null;
+            } else if (dialogState.elementType === 'variable') {
+              element = modelData.variables.find(v => v.variableLabel === dialogState.elementName) || null;
             }
 
-            if (entity) {
+            if (element) {
               restoredDialogs.push({
                 id: `dialog-${dialogIdCounter}`,
-                entity,
-                entityType: dialogState.entityType,
+                element,
+                elementType: dialogState.elementType,
                 x: dialogState.x,
                 y: dialogState.y,
                 width: dialogState.width,
@@ -266,17 +266,17 @@ function App() {
     }
   };
 
-  // Note: getEntityType is now imported from utils/duplicateDetection.ts
+  // Note: getElementType is now imported from utils/duplicateDetection.ts
 
   // Dialog management
-  const handleOpenDialog = (entity: SelectedEntity, position?: { x: number; y: number }, size?: { width: number; height: number }) => {
-    const entityType = getEntityType(entity);
+  const handleOpenDialog = (element: SelectedElement, position?: { x: number; y: number }, size?: { width: number; height: number }) => {
+    const elementType = getElementType(element);
 
-    // Check if this entity is already open using utility function
+    // Check if this element is already open using utility function
     const existingIndex = findDuplicateIndex(
-      openDialogs.map(d => ({ entity: d.entity, entityType: d.entityType })),
-      entity,
-      entityType
+      openDialogs.map(d => ({ element: d.element, elementType: d.elementType })),
+      element,
+      elementType
     );
 
     // If already open, bring to top (move to end of array, which renders last = on top)
@@ -299,8 +299,8 @@ function App() {
 
     const newDialog: OpenDialog = {
       id: `dialog-${nextDialogId}`,
-      entity,
-      entityType,
+      element,
+      elementType,
       x: position?.x ?? defaultPosition.x,
       y: position?.y ?? defaultPosition.y,
       width: size?.width ?? defaultSize.width,
@@ -321,15 +321,15 @@ function App() {
   };
 
   // Navigation handler - now opens a new dialog
-  const handleNavigate = (entityName: string, entityType: 'class' | 'enum' | 'slot') => {
-    if (entityType === 'enum') {
-      const enumDef = modelData?.enums.get(entityName);
+  const handleNavigate = (elementName: string, elementType: 'class' | 'enum' | 'slot') => {
+    if (elementType === 'enum') {
+      const enumDef = modelData?.enums.get(elementName);
       if (enumDef) handleOpenDialog(enumDef);
-    } else if (entityType === 'slot') {
-      const slotDef = modelData?.slots.get(entityName);
+    } else if (elementType === 'slot') {
+      const slotDef = modelData?.slots.get(elementName);
       if (slotDef) handleOpenDialog(slotDef);
-    } else if (entityType === 'class') {
-      const classNode = classMap.get(entityName);
+    } else if (elementType === 'class') {
+      const classNode = classMap.get(elementName);
       if (classNode) handleOpenDialog(classNode);
     }
   };
@@ -526,7 +526,7 @@ function App() {
               enums={modelData?.enums || new Map()}
               slots={modelData?.slots || new Map()}
               variables={modelData?.variables || []}
-              selectedEntity={openDialogs.length > 0 ? openDialogs[0].entity : undefined}
+              selectedElement={openDialogs.length > 0 ? openDialogs[0].element : undefined}
               onSelectEntity={handleOpenDialog}
             />
           }
@@ -540,7 +540,7 @@ function App() {
               enums={modelData?.enums || new Map()}
               slots={modelData?.slots || new Map()}
               variables={modelData?.variables || []}
-              selectedEntity={openDialogs.length > 0 ? openDialogs[0].entity : undefined}
+              selectedElement={openDialogs.length > 0 ? openDialogs[0].element : undefined}
               onSelectEntity={handleOpenDialog}
             />
           }
@@ -554,8 +554,8 @@ function App() {
             <DetailPanelStack
               panels={openDialogs.map(d => ({
                 id: d.id,
-                entity: d.entity,
-                entityType: d.entityType
+                entity: d.element,
+                entityType: d.elementType
               }))}
               onNavigate={handleNavigate}
               onClose={handleCloseDialog}
@@ -579,7 +579,7 @@ function App() {
       {displayMode === 'dialog' && openDialogs.map((dialog, index) => (
         <DetailDialog
           key={dialog.id}
-          selectedEntity={dialog.entity}
+          selectedElement={dialog.element}
           onNavigate={handleNavigate}
           onClose={() => handleCloseDialog(dialog.id)}
           onChange={(position, size) => handleDialogChange(dialog.id, position, size)}

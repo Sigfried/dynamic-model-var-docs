@@ -1,9 +1,9 @@
 type SectionType = 'classes' | 'enums' | 'slots' | 'variables';
-type EntityType = 'class' | 'enum' | 'slot' | 'variable';
+type ElementType = 'class' | 'enum' | 'slot' | 'variable';
 
 export interface DialogState {
-  entityName: string;
-  entityType: EntityType;
+  elementName: string;
+  elementType: ElementType;
   x: number;
   y: number;
   width: number;
@@ -67,14 +67,14 @@ export function parseStateFromURL(): Partial<AppState> | null {
         const parts = dialogStr.split(':');
         if (parts.length !== 3) return null;
 
-        const entityType = parts[0] as EntityType;
-        const entityName = parts[1];
+        const elementType = parts[0] as ElementType;
+        const elementName = parts[1];
         const [x, y, width, height] = parts[2].split(',').map(Number);
 
-        if (!['class', 'enum', 'slot', 'variable'].includes(entityType)) return null;
+        if (!['class', 'enum', 'slot', 'variable'].includes(elementType)) return null;
         if (isNaN(x) || isNaN(y) || isNaN(width) || isNaN(height)) return null;
 
-        return { entityType, entityName, x, y, width, height };
+        return { elementType, elementName, x, y, width, height };
       }).filter((d): d is DialogState => d !== null);
     } catch (e) {
       console.warn('Failed to parse dialogs from URL:', e);
@@ -116,7 +116,7 @@ export function saveStateToURL(state: AppState): void {
   if (state.dialogs && state.dialogs.length > 0) {
     // Format: type:name:x,y,w,h;type:name:x,y,w,h
     const dialogsStr = state.dialogs.map(d =>
-      `${d.entityType}:${d.entityName}:${Math.round(d.x)},${Math.round(d.y)},${Math.round(d.width)},${Math.round(d.height)}`
+      `${d.elementType}:${d.elementName}:${Math.round(d.x)},${Math.round(d.y)},${Math.round(d.width)},${Math.round(d.height)}`
     ).join(';');
     params.set('dialogs', dialogsStr);
   }

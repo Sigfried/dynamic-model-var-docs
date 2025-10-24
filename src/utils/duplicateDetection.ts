@@ -1,60 +1,60 @@
 /**
- * Utilities for detecting duplicate entities in dialog/panel lists
+ * Utilities for detecting duplicate elements in dialog/panel lists
  */
 
 import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
 
-export type SelectedEntity = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
+export type SelectedElement = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
 
-export interface EntityDescriptor {
-  entity: SelectedEntity;
-  entityType: 'class' | 'enum' | 'slot' | 'variable';
+export interface ElementDescriptor {
+  element: SelectedElement;
+  elementType: 'class' | 'enum' | 'slot' | 'variable';
 }
 
 /**
- * Get the unique identifier for an entity (name or variableLabel)
+ * Get the unique identifier for an element (name or variableLabel)
  */
-export function getEntityName(entity: SelectedEntity, entityType: 'class' | 'enum' | 'slot' | 'variable'): string {
-  if (entityType === 'variable') {
-    return (entity as VariableSpec).variableLabel;
+export function getElementName(element: SelectedElement, elementType: 'class' | 'enum' | 'slot' | 'variable'): string {
+  if (elementType === 'variable') {
+    return (element as VariableSpec).variableLabel;
   }
-  return (entity as ClassNode | EnumDefinition | SlotDefinition).name;
+  return (element as ClassNode | EnumDefinition | SlotDefinition).name;
 }
 
 /**
- * Determine entity type from the entity object structure
+ * Determine element type from the element object structure
  */
-export function getEntityType(entity: SelectedEntity): 'class' | 'enum' | 'slot' | 'variable' {
-  if ('children' in entity) return 'class';
-  if ('permissible_values' in entity) return 'enum';
-  if ('slot_uri' in entity) return 'slot';
+export function getElementType(element: SelectedElement): 'class' | 'enum' | 'slot' | 'variable' {
+  if ('children' in element) return 'class';
+  if ('permissible_values' in element) return 'enum';
+  if ('slot_uri' in element) return 'slot';
   return 'variable';
 }
 
 /**
- * Find the index of a duplicate entity in a list
+ * Find the index of a duplicate element in a list
  * Returns -1 if no duplicate is found
  */
 export function findDuplicateIndex(
-  entities: EntityDescriptor[],
-  targetEntity: SelectedEntity,
-  targetEntityType: 'class' | 'enum' | 'slot' | 'variable'
+  elements: ElementDescriptor[],
+  targetElement: SelectedElement,
+  targetElementType: 'class' | 'enum' | 'slot' | 'variable'
 ): number {
-  const targetName = getEntityName(targetEntity, targetEntityType);
+  const targetName = getElementName(targetElement, targetElementType);
 
-  return entities.findIndex(descriptor => {
-    const existingName = getEntityName(descriptor.entity, descriptor.entityType);
-    return existingName === targetName && descriptor.entityType === targetEntityType;
+  return elements.findIndex(descriptor => {
+    const existingName = getElementName(descriptor.element, descriptor.elementType);
+    return existingName === targetName && descriptor.elementType === targetElementType;
   });
 }
 
 /**
- * Check if an entity already exists in a list
+ * Check if an element already exists in a list
  */
 export function isDuplicate(
-  entities: EntityDescriptor[],
-  targetEntity: SelectedEntity,
-  targetEntityType: 'class' | 'enum' | 'slot' | 'variable'
+  elements: ElementDescriptor[],
+  targetElement: SelectedElement,
+  targetElementType: 'class' | 'enum' | 'slot' | 'variable'
 ): boolean {
-  return findDuplicateIndex(entities, targetEntity, targetEntityType) !== -1;
+  return findDuplicateIndex(elements, targetElement, targetElementType) !== -1;
 }
