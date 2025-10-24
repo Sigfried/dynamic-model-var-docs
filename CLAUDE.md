@@ -6,11 +6,15 @@
 > As each step completes, move important details from temp.md to CLAUDE.md, then update temp.md with the next step.
 > Modifications happen in temp.md during implementation, then get consolidated here.
 
+> **📖 READING THIS FILE**
+> Sections are collapsible for easier navigation. Click headers to expand/collapse.
+
 ---
 
-## Core Insight: This is a Typed Graph, Not a Hierarchy
+<h2>Core Insight: This is a Typed Graph, Not a Hierarchy</h2>
+<details>
+<summary>The BDCHM model has multiple relationship types forming a rich graph structure:</summary>
 
-The BDCHM model has multiple relationship types forming a rich graph structure:
 1. **Inheritance** (`is_a`) - class hierarchy tree
 2. **Class→Enum** - which classes use which constrained value sets
 3. **Class→Class associations** - domain relationships (participant, research study, specimen lineage)
@@ -20,9 +24,16 @@ The BDCHM model has multiple relationship types forming a rich graph structure:
 
 **Architecture implication**: We need UI patterns for exploring a typed graph, not just a tree.
 
+</details>
+
 ---
 
 ## Architecture Philosophy: Shneiderman's Mantra
+
+<details>
+<summary>Overview First, Zoom and Filter, Details on Demand - describes desired UX flow, not implementation order</summary>
+
+> **Note**: This describes the desired user experience flow, not implementation order.
 
 ### 1. Overview First
 Show the model topology with all relationship types visible:
@@ -49,9 +60,14 @@ Show the model topology with all relationship types visible:
 - Show inheritance chain with attribute overrides
 - Display all incoming references to a class/enum
 
+</details>
+
 ---
 
 ## Flexible Overview Design
+
+<details>
+<summary>Panel system architecture with section toggles and link visualization</summary>
 
 ### Panel System Architecture
 
@@ -75,25 +91,29 @@ When Classes section is visible, control what's nested/shown within each class n
 - [ ] **All properties** - Show all attributes inline
 - [ ] **Associated class properties** - Show only attributes with class ranges
 - [x] **Enum properties** - Show only attributes with enum ranges (✓ implemented)
-- [x] **Slots** - Show inherited slot usage
-- [ ] **Variables** - Show mapped variables inline (might be overwhelming for MeasurementObservation)
+- [x] **Slots** - Show inherited slot usage (✓ implemented)
+- [ ] **Variables** - Show mapped variables inline
 
-#### Nested Display Options (Under Enums)
-When Enums section is visible:
+> **Note**: Only classes support nesting currently. Enums, slots, and variables display as flat lists.
+
+#### Future: Nested Display Options (Under Enums)
+Potential nesting if we add associations beyond subclass relationships:
 - [ ] **Used by classes** - Show which classes reference this enum
 - [ ] **Used by slots** - Show which slots use this enum
 
-#### Nested Display Options (Under Slots)
-When Slots section is visible:
+#### Future: Nested Display Options (Under Slots)
+Potential nesting if we add associations beyond subclass relationships:
 - [ ] **Used by classes** - Show which classes use this slot
-- [ ] **Type/Range** - Show the slot's range type
+- [ ] **Type/Range** - Show the slot's range type inline
+
+> **Future consideration**: These nested displays would show associations beyond the current tree hierarchy.
 
 #### Link Visualization Between Panels
 When multiple panels are shown side-by-side, visualize relationships with SVG connecting lines:
-- [ ] **Associated classes** - Draw lines for class→class references
-- [ ] **Enums** - Draw lines from classes to enum sections
-- [ ] **Slots** - Draw lines showing slot usage
-- [ ] **Variables** - Draw lines from classes to variable sections
+- [x] **Class → Class** - Draw lines for class→class references (✓ green links implemented)
+- [x] **Class → Enum** - Draw lines from classes to enum properties (✓ purple links implemented)
+- [x] **Slot → Class/Enum** - Draw lines showing slot range types (✓ implemented)
+- [x] **Variable → Class** - Draw lines from variables to mapped classes (✓ implemented)
 
 **Interaction model**:
 - Links render with low opacity (0.2-0.3) by default
@@ -101,28 +121,21 @@ When multiple panels are shown side-by-side, visualize relationships with SVG co
 - On hover over a linked element (class/enum/etc): highlight all connected links
 - On click: navigate/focus on the linked element
 
-### Implementation Considerations
+### Future Performance Optimizations
 
-**Data structures needed**:
-- Reverse indices: enum→classes, slot→classes, class→classes (associations)
-- Bounding boxes for each rendered element (for link positioning when using multiple panels)
-- Hover state tracking
+When working with larger models or slower devices:
+- **Virtualize long lists**: MeasurementObservation has 103 variables; consider react-window or react-virtual
+- **Viewport culling for links**: Only render SVG links for visible elements
+- **Animation library**: Consider react-spring for smoother transitions (current CSS transitions work fine)
 
-**Rendering approach**:
-- **Content**: Regular HTML/React components using CSS Grid or Flexbox
-- **Links**: SVG overlay positioned absolutely over the panels
-- **Bounding boxes**: Track DOM element positions for SVG link endpoints
-- React state for section toggles
-- Consider using `react-spring` or similar for smooth opacity transitions
-
-**Performance**:
-- Virtualize long lists (especially for MeasurementObservation's 103 variables)
-- Debounce hover events
-- Render links only for visible elements (viewport culling)
+</details>
 
 ---
 
 ## Implementation Status & Roadmap
+
+<details>
+<summary>Complete history of Phases 1-3e: from basic layout to adaptive detail panels with SVG links</summary>
 
 ### Completed: Phases 1-3b
 
@@ -413,9 +426,14 @@ npm test -- filename       # Run specific test file
 
 **Test Results**: All 134 tests passing (up from 67 baseline) ✅
 
+</details>
+
 ---
 
 ## Future Features
+
+<details>
+<summary>Planned enhancements: search/filter, neighborhood zoom, metadata display, custom presets, advanced views</summary>
 
 ### Phase 4: Search and Filter
 Full-text search and filtering capabilities:
@@ -454,9 +472,14 @@ Multiple view modes and analytics:
 - Mini-map showing current focus area in context of full model
 - Statistics dashboard (relationship counts, distribution charts)
 
+</details>
+
 ---
 
 ## Data Model Statistics
+
+<details>
+<summary>47 classes, 7 slots, 40 enums, 151 variables - relationship type examples</summary>
 
 - **47 classes**, **7 slots**, **40 enums**
 - **151 variables** (heavily skewed: 103 → MeasurementObservation = 68%)
@@ -493,9 +516,14 @@ Multiple view modes and analytics:
 - `MeasurementObservation.range_low → Quantity`
 - `Specimen.quantity_measure → SpecimenQuantityObservation`
 
+</details>
+
 ---
 
 ## Understanding LinkML: Slots, Attributes, and Slot Usage
+
+<details>
+<summary>Critical terminology and patterns for BDCHM schema interpretation</summary>
 
 **Critical Context**: BDCHM is modeled using LinkML, which has specific terminology and patterns. Understanding these concepts is essential for correctly interpreting and displaying the schema.
 
@@ -623,9 +651,14 @@ Slots (20)
 - LinkML Slots Documentation: https://linkml.io/linkml/schemas/slots.html
 - LinkML FAQ: When to use attributes vs slots: https://linkml.io/linkml/faq/modeling.html#when-should-i-use-attributes-vs-slots
 
+</details>
+
 ---
 
 ## Key Use Cases (Sorted by Implementation Priority)
+
+<details>
+<summary>Common user questions and which features support them</summary>
 
 ### Easy (✓ implemented)
 1. ✓ "Which variables map to Condition class?" - works via class detail view
@@ -642,9 +675,14 @@ Slots (20)
 8. "What's the full specimen workflow?" - follow activity relationships (requires relationship visualization)
 9. "Compare two classes" - side-by-side detail views (requires multi-panel support)
 
+</details>
+
 ---
 
 ## Technical Notes
+
+<details>
+<summary>Data loading, architecture, graph visualization considerations</summary>
 
 ### Data Loading
 - Schema source: `bdchm.yaml` → `bdchm.metadata.json` (generated by Python/LinkML tools)
@@ -672,9 +710,14 @@ Force-directed layouts are useful for:
 
 But default view should be structured (tree/table), not force-directed chaos.
 
+</details>
+
 ---
 
 ## Development Priorities
+
+<details>
+<summary>Working > Perfect, Usability > "Cool", Incremental complexity, User testing</summary>
 
 1. **Working > Perfect** - time-constrained project
 2. **Usability > "Cool"** - practical exploration tools, not flashy viz
@@ -692,9 +735,14 @@ But default view should be structured (tree/table), not force-directed chaos.
 - Destructure imports where possible
 - Run type checker after changes: `npm run build`
 
+</details>
+
 ---
 
 ## Implementation Notes & Lessons Learned
+
+<details>
+<summary>LinkML gotchas, categorization approaches, semantic patterns for future use</summary>
 
 ### LinkML Metadata Structure Gotchas
 
@@ -763,4 +811,6 @@ The following **semantic relationship patterns** were identified during analysis
 - Make patterns configurable (JSON/YAML file of patterns)
 - Use for suggestions/enhancements, not core functionality
 - Keep structural navigation as primary interface
+
+</details>
 

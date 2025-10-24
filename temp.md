@@ -31,66 +31,64 @@
 
 ---
 
-## Next: Phase 4 - Search and Filter
+## Next: Complete Overview & Details Implementation
 
 **Status**: Ready to begin
 
-**Goal**: Add full-text search and filtering capabilities to help users quickly find and navigate to specific entities.
+**Goal**: Complete the remaining Overview and Details features (Shneiderman's mantra steps 1 & 3) before moving to Search/Filter (step 2).
 
-### Features to Implement
+### What's Left
 
-1. **Search Bar**
-   - Full-text search across all entities (classes, enums, slots, variables)
-   - Search by name, description, or other text fields
-   - Real-time filtering as user types
-   - Search results displayed in dropdown or dedicated results panel
+#### 1. Enhanced Nested Display in Classes
+**Current**: Classes show enum properties and slots nested
+**Missing**:
+- [ ] Toggle to show **all properties** inline (not just enums/slots)
+- [ ] Toggle to show **only associated class properties** (class references)
+- [ ] Toggle to show **mapped variables** inline (might be overwhelming for MeasurementObservation with 103 vars)
 
-2. **Search Results Display**
-   - Show entity type (class/enum/slot/variable) with each result
-   - Highlight matching text
-   - Group results by entity type
-   - Click result to open in detail dialog or stacked panel
+**UI**: Add toggle buttons/checkboxes in class section header
 
-3. **Filters**
-   - Faceted filtering by entity type (checkboxes)
-   - Variable count slider (for classes)
-   - Relationship type filters (has enum properties, has class references, etc.)
-   - Abstract vs concrete classes
-   - Clear all filters button
+#### 2. Link Interaction Enhancements
+**Current**: Links show on hover with opacity change
+**Missing**:
+- [ ] **Click-to-navigate**: Clicking link opens target element in detail panel/dialog
+- [ ] **Link tooltips**: Show relationship details on hover (property name, relationship type)
+- [ ] **Filter controls UI**: Checkboxes to toggle link types (inheritance, properties, class refs, etc.)
 
-4. **UI Placement**
-   - Search bar in header (always visible)
-   - Filter controls in collapsible sidebar or dropdown
-   - Integrate with existing panel system
-   - Don't interfere with current layout
+**UI**: Filter controls could be in header or collapsible sidebar
 
-### Implementation Approach
+#### 3. Enhanced Element Metadata Display
+**Current**: Classes show variable count only (e.g., "Condition (20)")
+**Missing**:
+- [ ] Show relationship counts: "Condition (20 vars, 5 enums, 2 classes, 1 slot)"
+- [ ] Display options: inline codes, colored badges, or tooltips
+- [ ] Compute counts in dataLoader.ts, store in ClassNode type
 
-**TDD where possible**:
-- Search logic (text matching, filtering) → pure functions → tested
-- Result ranking/sorting → testable
-- Filter combination logic → testable
+### Implementation Priority
 
-**Visual verification**:
-- Search UI layout and styling
-- Dropdown/results panel appearance
-- Highlight animation
+**Start with #3** (Enhanced Metadata Display):
+- Most visible improvement
+- Pure data transformation (easy to test)
+- No complex UI interactions
+- Provides useful context for navigation
 
-### Technical Considerations
+**Then #2** (Link Interactions):
+- Improves discoverability
+- Makes links more useful
+- Filter controls help manage visual complexity
 
-- Use existing data structures (classes, enums, slots, variables already loaded)
-- Build search index for performance (if needed)
-- Debounce search input (300ms)
-- Consider fuzzy matching (optional enhancement)
-- Keyboard navigation for search results (arrow keys, enter)
+**Finally #1** (Nested Display):
+- Most complex (multiple toggle states)
+- Need to decide on interaction model
+- Consider performance with large variable counts
 
-### Success Criteria
+### Why Not Search/Filter Yet?
 
-- User can search for any entity by name
-- Search results are relevant and ranked appropriately
-- Clicking result opens detail view
-- Filters work independently and in combination
-- Search performance is fast (< 100ms for typical queries)
-- All search/filter logic has test coverage
+Per Shneiderman's mantra, the order is about **user experience**, not implementation:
+1. **Overview First** - Show model topology clearly (still incomplete)
+2. **Zoom and Filter** - Search and filtering (comes after overview is solid)
+3. **Details on Demand** - Entity details (mostly done, some gaps)
 
-See CLAUDE.md "Future Features" section for additional context.
+We need to complete Overview and Details before adding Search/Filter capabilities.
+
+See CLAUDE.md "Flexible Overview Design" and "Future Features" sections for detailed context.
