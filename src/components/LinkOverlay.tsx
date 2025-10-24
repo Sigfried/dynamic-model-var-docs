@@ -441,16 +441,16 @@ export default function LinkOverlay({
       <defs>
         {/* Gradients for all source→target combinations */}
         {/* Create both left-to-right and right-to-left versions */}
-        {['class', 'enum', 'slot', 'variable'].flatMap(sourceType =>
-          ['class', 'enum', 'slot', 'variable'].flatMap(targetType => [
+        {(['class', 'enum', 'slot', 'variable'] as const).flatMap(sourceType =>
+          (['class', 'enum', 'slot', 'variable'] as const).flatMap(targetType => [
             // Left to right: source color → target color
             <linearGradient
               key={`${sourceType}-${targetType}`}
               id={getLinkGradientId(sourceType, targetType)}
               x1="0%" y1="0%" x2="100%" y2="0%"
             >
-              <stop offset="0%" stopColor={getElementTypeColor(sourceType as any)} stopOpacity="0.5" />
-              <stop offset="100%" stopColor={getElementTypeColor(targetType as any)} stopOpacity="0.5" />
+              <stop offset="0%" stopColor={getElementTypeColor(sourceType)} stopOpacity="0.5" />
+              <stop offset="100%" stopColor={getElementTypeColor(targetType)} stopOpacity="0.5" />
             </linearGradient>,
             // Right to left: still source color → target color (reversed gradient)
             <linearGradient
@@ -458,8 +458,8 @@ export default function LinkOverlay({
               id={`${getLinkGradientId(sourceType, targetType)}-reverse`}
               x1="100%" y1="0%" x2="0%" y2="0%"
             >
-              <stop offset="0%" stopColor={getElementTypeColor(sourceType as any)} stopOpacity="0.5" />
-              <stop offset="100%" stopColor={getElementTypeColor(targetType as any)} stopOpacity="0.5" />
+              <stop offset="0%" stopColor={getElementTypeColor(sourceType)} stopOpacity="0.5" />
+              <stop offset="100%" stopColor={getElementTypeColor(targetType)} stopOpacity="0.5" />
             </linearGradient>
           ])
         )}
