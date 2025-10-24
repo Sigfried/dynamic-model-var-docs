@@ -162,9 +162,7 @@ export default function LinkOverlay({
       });
     };
 
-    // Only process left→right to avoid bidirectional duplicate links
-    // For cross-panel relationships, we only draw left→right
-    // (If users want to see right→left relationships, they can swap panels)
+    // Process left panel (all cross-panel relationships)
     processElements(
       leftPanel.classes,
       leftPanel.enums,
@@ -174,10 +172,11 @@ export default function LinkOverlay({
       leftLinks
     );
 
-    // Right panel: only process self-referential links (not cross-panel)
-    // This avoids drawing both A→B and B→A for bidirectional relationships
-    const processRightPanelSelfRefs = () => {
-      // Only collect self-referential links from right panel
+    // Process right panel (all relationships EXCEPT class→class cross-panel)
+    // Class→class is bidirectional in the schema, so we only draw left→right
+    // All other relationship types (class→enum, class→slot, variable→class, slot→enum) are one-way
+    const processRightPanel = () => {
+      // Classes: filter out class→class cross-panel links (keep self-refs and non-class targets)
       rightPanel.classes.forEach(classData => {
         const element = new ClassElement(classData, allSlots);
         const relationships = element.getRelationships();
@@ -185,22 +184,51 @@ export default function LinkOverlay({
           ...filterOptions,
           showInheritance: false,
         });
-        const selfRefs = classLinks.filter(link => link.relationship.isSelfRef);
-        rightLinks.push(...selfRefs);
+        // Keep self-refs and links to non-class targets (enums, slots)
+        // Filter out class→class cross-panel links (to avoid bidirectional duplicates)
+        const filteredLinks = classLinks.filter(link => {
+          if (link.relationship.isSelfRef) return true; // Always keep self-refs
+          if (link.target.type !== 'class') return true; // Keep class→enum, class→slot
+          return !leftElements.has(link.target.name); // Filter out class→class if target in left panel
+        });
+        rightLinks.push(...filteredLinks);
       });
 
-      // Self-refs for other types (enums don't have relationships, slots/variables typically don't have self-refs)
-      // but include for completeness
+      // Enums: process all (enums have no outgoing relationships anyway)
+      rightPanel.enums.forEach(enumData => {
+        const element = new EnumElement(enumData);
+        const relationships = element.getRelationships();
+        const enumLinks = buildLinks('enum', enumData.name, relationships, filterOptions);
+        const crossPanelLinks = enumLinks.filter(link =>
+          link.relationship.isSelfRef || leftElements.has(link.target.name)
+        );
+        rightLinks.push(...crossPanelLinks);
+      });
+
+      // Slots: process all (slot→enum, slot→class are one-way)
       rightPanel.slots.forEach(slotData => {
         const element = new SlotElement(slotData);
         const relationships = element.getRelationships();
         const slotLinks = buildLinks('slot', slotData.name, relationships, filterOptions);
-        const selfRefs = slotLinks.filter(link => link.relationship.isSelfRef);
-        rightLinks.push(...selfRefs);
+        const crossPanelLinks = slotLinks.filter(link =>
+          link.relationship.isSelfRef || leftElements.has(link.target.name)
+        );
+        rightLinks.push(...crossPanelLinks);
+      });
+
+      // Variables: process all (variable→class is one-way)
+      rightPanel.variables.forEach(variableData => {
+        const element = new VariableElement(variableData);
+        const relationships = element.getRelationships();
+        const variableLinks = buildLinks('variable', variableData.variableLabel, relationships, filterOptions);
+        const crossPanelLinks = variableLinks.filter(link =>
+          link.relationship.isSelfRef || leftElements.has(link.target.name)
+        );
+        rightLinks.push(...crossPanelLinks);
       });
     };
 
-    processRightPanelSelfRefs();
+    processRightPanel();
 
     return { leftPanelLinks: leftLinks, rightPanelLinks: rightLinks };
   }, [
@@ -399,7 +427,7 @@ export default function LinkOverlay({
         <marker
           id="arrow-green"
           viewBox="0 0 10 10"
-          refX="9"
+          refX="8"
           refY="5"
           markerWidth="6"
           markerHeight="6"
@@ -413,7 +441,7 @@ export default function LinkOverlay({
         <marker
           id="arrow-purple"
           viewBox="0 0 10 10"
-          refX="9"
+          refX="8"
           refY="5"
           markerWidth="6"
           markerHeight="6"
@@ -427,7 +455,7 @@ export default function LinkOverlay({
         <marker
           id="arrow-orange"
           viewBox="0 0 10 10"
-          refX="9"
+          refX="8"
           refY="5"
           markerWidth="6"
           markerHeight="6"
@@ -441,7 +469,7 @@ export default function LinkOverlay({
         <marker
           id="arrow-blue"
           viewBox="0 0 10 10"
-          refX="9"
+          refX="8"
           refY="5"
           markerWidth="6"
           markerHeight="6"
@@ -455,7 +483,7 @@ export default function LinkOverlay({
         <marker
           id="arrow-gray"
           viewBox="0 0 10 10"
-          refX="9"
+          refX="8"
           refY="5"
           markerWidth="6"
           markerHeight="6"
@@ -469,7 +497,7 @@ export default function LinkOverlay({
         <marker
           id="arrow-green-hover"
           viewBox="0 0 10 10"
-          refX="9"
+          refX="8"
           refY="5"
           markerWidth="7"
           markerHeight="7"
@@ -482,7 +510,7 @@ export default function LinkOverlay({
         <marker
           id="arrow-purple-hover"
           viewBox="0 0 10 10"
-          refX="9"
+          refX="8"
           refY="5"
           markerWidth="7"
           markerHeight="7"
@@ -495,7 +523,7 @@ export default function LinkOverlay({
         <marker
           id="arrow-orange-hover"
           viewBox="0 0 10 10"
-          refX="9"
+          refX="8"
           refY="5"
           markerWidth="7"
           markerHeight="7"
@@ -508,7 +536,7 @@ export default function LinkOverlay({
         <marker
           id="arrow-blue-hover"
           viewBox="0 0 10 10"
-          refX="9"
+          refX="8"
           refY="5"
           markerWidth="7"
           markerHeight="7"
@@ -521,7 +549,7 @@ export default function LinkOverlay({
         <marker
           id="arrow-gray-hover"
           viewBox="0 0 10 10"
-          refX="9"
+          refX="8"
           refY="5"
           markerWidth="7"
           markerHeight="7"
