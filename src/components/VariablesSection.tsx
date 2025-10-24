@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { VariableSpec } from '../types';
 
 interface VariablesSectionProps {
@@ -8,10 +9,34 @@ interface VariablesSectionProps {
 }
 
 export default function VariablesSection({ variables, onSelectVariable, selectedVariable, position }: VariablesSectionProps) {
-  // Sort by label
-  const sortedVariables = [...variables].sort((a, b) =>
-    a.variableLabel.localeCompare(b.variableLabel)
-  );
+  // Group variables by class
+  const groupedVariables = variables.reduce((acc, variable) => {
+    const className = variable.bdchmElement;
+    if (!acc[className]) {
+      acc[className] = [];
+    }
+    acc[className].push(variable);
+    return acc;
+  }, {} as Record<string, VariableSpec[]>);
+
+  // Sort class names and variables within each group
+  const sortedClasses = Object.keys(groupedVariables).sort((a, b) => a.localeCompare(b));
+  sortedClasses.forEach(className => {
+    groupedVariables[className].sort((a, b) => a.variableLabel.localeCompare(b.variableLabel));
+  });
+
+  // Track which classes are expanded (default: all collapsed to save space)
+  const [expandedClasses, setExpandedClasses] = useState<Set<string>>(new Set());
+
+  const toggleClass = (className: string) => {
+    const newExpanded = new Set(expandedClasses);
+    if (newExpanded.has(className)) {
+      newExpanded.delete(className);
+    } else {
+      newExpanded.add(className);
+    }
+    setExpandedClasses(newExpanded);
+  };
 
   return (
     <div className="bg-white dark:bg-slate-800 text-left">
@@ -19,30 +44,58 @@ export default function VariablesSection({ variables, onSelectVariable, selected
         <h2 className="text-lg font-semibold text-left">Variables ({variables.length})</h2>
       </div>
       <div className="p-2">
-        {sortedVariables.map((variable, idx) => {
-          const isSelected = selectedVariable?.variableLabel === variable.variableLabel
-            && selectedVariable?.bdchmElement === variable.bdchmElement;
+        {sortedClasses.map((className) => {
+          const classVariables = groupedVariables[className];
+          const isExpanded = expandedClasses.has(className);
 
           return (
-            <div
-              key={`${variable.bdchmElement}-${variable.variableLabel}-${idx}`}
-              id={`variable-${variable.variableLabel}`}
-              data-element-type="variable"
-              data-element-name={variable.variableLabel}
-              data-panel-position={position}
-              className={`flex flex-col gap-1 px-2 py-2 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700 ${
-                isSelected ? 'bg-orange-100 dark:bg-orange-900' : ''
-              }`}
-              onClick={() => onSelectVariable(variable)}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="flex-1 text-sm font-medium truncate">
-                  {variable.variableLabel}
+            <div key={className} className="mb-2">
+              {/* Class header - collapsible */}
+              <div
+                className="flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700"
+                onClick={() => toggleClass(className)}
+              >
+                <span className="text-gray-500 dark:text-gray-400 select-none">
+                  {isExpanded ? '▼' : '▶'}
+                </span>
+                <span className="font-medium text-sm text-gray-700 dark:text-gray-300">
+                  {className}
+                </span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  ({classVariables.length})
                 </span>
               </div>
-              <span className="text-xs text-gray-600 dark:text-gray-400 font-mono">
-                {variable.bdchmElement}
-              </span>
+
+              {/* Variables list - only show when expanded */}
+              {isExpanded && (
+                <div className="ml-4 mt-1">
+                  {classVariables.map((variable, idx) => {
+                    const isSelected = selectedVariable?.variableLabel === variable.variableLabel
+                      && selectedVariable?.bdchmElement === variable.bdchmElement;
+
+                    return (
+                      <div
+                        key={`${variable.bdchmElement}-${variable.variableLabel}-${idx}`}
+                        id={`variable-${variable.variableLabel}`}
+                        data-element-type="variable"
+                        data-element-name={variable.variableLabel}
+                        data-panel-position={position}
+                        className={`px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700 ${
+                          isSelected ? 'bg-orange-100 dark:bg-orange-900' : ''
+                        }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelectVariable(variable);
+                        }}
+                      >
+                        <span className="text-sm truncate block">
+                          {variable.variableLabel}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })}

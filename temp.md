@@ -33,32 +33,28 @@
 
 ## Next: Fix Current Annoyances
 
-**Status**: Ready to begin
+**Status**: In progress
 
 **Priority**: Address usability issues with existing features before adding new ones.
 
 ### Immediate Issues to Fix
 
-#### 1. Link Clutter with Variables (HIGH PRIORITY)
-**Problem**: 151 variables create overwhelming link density, "MeasurementObservation" shown 103 times
-**Solution**:
-- Remove the class name display (currently shown in small gray text below each variable)
-- Just show variable labels: "BMI", "Albumin in blood", etc.
-- The SVG links already show which class each variable maps to
-- Makes variable section more compact, reduces visual noise
+#### ✅ 1. Variable Section Usability (COMPLETED)
+**Problem**: 151 variables create overwhelming link density and excessive scrolling
+**Solutions implemented**:
+1. **Removed redundant class names** - Was showing "MeasurementObservation" 103 times below each variable
+2. **Grouped variables by class** - Collapsible sections: "MeasurementObservation (103)", "Condition (X)", etc.
+3. **Reduced spacing** - Changed padding from `py-2` to `py-1` for tighter display
+4. **Default collapsed** - All classes start collapsed to minimize initial clutter
+5. **Visual hierarchy** - Triangle indicators (▶/▼) and indentation for nested variables
 
-**Current display** (VariablesSection.tsx lines 43-45):
-```
-BMI
-MeasurementObservation  ← REMOVE THIS
-```
+**Result**: Much more compact and scannable. Users can see all classes at a glance and expand only the ones they need.
 
-**After fix**:
-```
-BMI
-```
-
-**Files**: `src/components/VariablesSection.tsx` (remove lines 43-45)
+**Files changed**: `src/components/VariablesSection.tsx`
+- Added grouping logic by `bdchmElement` (class name)
+- Added collapsible state management with useState
+- Sorted classes and variables alphabetically
+- All tests passing (134/134)
 
 #### 2. Hover Highlighting for Links (HIGH PRIORITY)
 **Problem**: Hard to see which links belong to which element
