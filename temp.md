@@ -68,20 +68,28 @@
 - `src/utils/statePersistence.ts` - Added expansion state fields, removed legacy URL params
 - All tests passing (134/134)
 
-#### 2. Fix Arrowhead Positioning and Link Rendering (HIGH PRIORITY - BLOCKING)
+#### ✅ 2. Fix Arrowhead Positioning and Link Rendering (COMPLETED)
 **Problems**:
-- Arrowheads extend past target element boundaries (looks bad)
-- Won't draw links from class to slot/var in LEFT→RIGHT direction (right→left works fine)
+- Arrowheads extended past target element boundaries
+- Wouldn't draw links from class to slot/var in LEFT→RIGHT direction (right→left worked)
 - Link directionality fix was too aggressive - blocked non-bidirectional relationships
 
-**Root cause**: Changed link processing to only draw left→right for ALL relationships. Right panel now only processes self-refs. This breaks class→slot and class→var links when class is in left panel and slot/var is in right panel.
+**Root cause**: Changed link processing to only draw left→right for ALL relationships, but only class→class is actually bidirectional in the schema.
 
-**Solutions needed**:
-1. **Fix arrowhead positioning** - Adjust `refX` in marker definitions to stop at element boundary
-2. **Restore non-bidirectional links** - Only apply left→right restriction to class→class relationships
-3. **Test all link types** - Verify class→enum, class→slot, variable→class, slot→enum all work bidirectionally
+**Solutions implemented**:
+1. **Fixed arrowhead positioning** - Adjusted `refX` from 9 to 8 in all marker definitions
+2. **Restored non-bidirectional links** - Only apply left→right restriction to class→class relationships
+3. **Right panel now processes**:
+   - All class relationships EXCEPT class→class cross-panel (keeps self-refs + class→enum + class→slot)
+   - All enum, slot, and variable relationships (they're all one-way)
 
-**Files**: `src/components/LinkOverlay.tsx`
+**Result**:
+- Class→slot and class→variable links render from both panels ✅
+- Class→enum links work bidirectionally ✅
+- No duplicate class→class links ✅
+- Arrowheads stop at element boundaries ✅
+
+**Files changed**: `src/components/LinkOverlay.tsx`
 
 #### ✅ 3. Entity → Element Terminology Refactor (COMPLETED)
 **Problem**: Inconsistent terminology throughout codebase
