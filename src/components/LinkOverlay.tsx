@@ -45,6 +45,7 @@ export default function LinkOverlay({
 }: LinkOverlayProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [, setScrollTick] = useState(0);
+  const [hoveredLinkKey, setHoveredLinkKey] = useState<string | null>(null);
   const hoverTimeoutRef = useRef<number | null>(null);
 
   // Add scroll listener to update link positions
@@ -161,7 +162,9 @@ export default function LinkOverlay({
       });
     };
 
-    // Process left panel elements (looking for targets in right panel)
+    // Only process left→right to avoid bidirectional duplicate links
+    // For cross-panel relationships, we only draw left→right
+    // (If users want to see right→left relationships, they can swap panels)
     processElements(
       leftPanel.classes,
       leftPanel.enums,
@@ -171,15 +174,33 @@ export default function LinkOverlay({
       leftLinks
     );
 
-    // Process right panel elements (looking for targets in left panel)
-    processElements(
-      rightPanel.classes,
-      rightPanel.enums,
-      rightPanel.slots,
-      rightPanel.variables,
-      leftElements,
-      rightLinks
-    );
+    // Right panel: only process self-referential links (not cross-panel)
+    // This avoids drawing both A→B and B→A for bidirectional relationships
+    const processRightPanelSelfRefs = () => {
+      // Only collect self-referential links from right panel
+      rightPanel.classes.forEach(classData => {
+        const element = new ClassElement(classData, allSlots);
+        const relationships = element.getRelationships();
+        const classLinks = buildLinks('class', classData.name, relationships, {
+          ...filterOptions,
+          showInheritance: false,
+        });
+        const selfRefs = classLinks.filter(link => link.relationship.isSelfRef);
+        rightLinks.push(...selfRefs);
+      });
+
+      // Self-refs for other types (enums don't have relationships, slots/variables typically don't have self-refs)
+      // but include for completeness
+      rightPanel.slots.forEach(slotData => {
+        const element = new SlotElement(slotData);
+        const relationships = element.getRelationships();
+        const slotLinks = buildLinks('slot', slotData.name, relationships, filterOptions);
+        const selfRefs = slotLinks.filter(link => link.relationship.isSelfRef);
+        rightLinks.push(...selfRefs);
+      });
+    };
+
+    processRightPanelSelfRefs();
 
     return { leftPanelLinks: leftLinks, rightPanelLinks: rightLinks };
   }, [
@@ -246,6 +267,16 @@ export default function LinkOverlay({
     }
   };
 
+  // Helper to get marker ID based on link color and hover state
+  const getMarkerIdForColor = (color: string, isHovered: boolean = false): string => {
+    const suffix = isHovered ? '-hover' : '';
+    if (color.includes('#10b981')) return `arrow-green${suffix}`;  // class→class
+    if (color.includes('#a855f7')) return `arrow-purple${suffix}`; // class→enum
+    if (color.includes('#f97316')) return `arrow-orange${suffix}`; // variable→class
+    if (color.includes('#3b82f6')) return `arrow-blue${suffix}`;   // inheritance
+    return `arrow-gray${suffix}`; // slot→class/enum
+  };
+
   // Render links as SVG paths
   const renderLinks = () => {
     const allRenderedLinks: (React.JSX.Element | null)[] = [];
@@ -302,17 +333,28 @@ export default function LinkOverlay({
         const color = getLinkColor(link.relationship);
         const strokeWidth = getLinkStrokeWidth(link.relationship);
 
+        // Generate unique key for this link
+        const linkKey = `${sourcePanel}-${link.source.type}-${link.source.name}-${link.target.type}-${link.target.name}-${index}`;
+        const isHovered = hoveredLinkKey === linkKey;
+
+        const markerId = getMarkerIdForColor(color, isHovered);
+
+        // Don't add arrows to self-referential links (they look weird on loops)
+        const markerEnd = link.relationship.isSelfRef ? undefined : `url(#${markerId})`;
+
         return (
           <path
-            key={`${sourcePanel}-${link.source.type}-${link.source.name}-${link.target.type}-${link.target.name}-${index}`}
+            key={linkKey}
             d={pathData}
             fill="none"
             stroke={color}
             strokeWidth={strokeWidth}
+            markerEnd={markerEnd}
             opacity={0.2}
             className="transition-all duration-150 hover:opacity-100 hover:stroke-[3] cursor-pointer"
             style={{ pointerEvents: 'stroke' }}
             onMouseEnter={() => {
+              setHoveredLinkKey(linkKey);
               // Debounce console.log
               if (hoverTimeoutRef.current) {
                 clearTimeout(hoverTimeoutRef.current);
@@ -322,6 +364,7 @@ export default function LinkOverlay({
               }, 300);
             }}
             onMouseLeave={() => {
+              setHoveredLinkKey(null);
               // Clear timeout when mouse leaves
               if (hoverTimeoutRef.current) {
                 clearTimeout(hoverTimeoutRef.current);
@@ -349,6 +392,145 @@ export default function LinkOverlay({
         zIndex: 1
       }}
     >
+      {/* Arrow marker definitions - one for each link color */}
+      {/* Note: Markers have opacity built into fill to match line opacity at 0.2 */}
+      <defs>
+        {/* Green arrow for class→class links */}
+        <marker
+          id="arrow-green"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto"
+          markerUnits="userSpaceOnUse"
+        >
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" fillOpacity="0.3" />
+        </marker>
+
+        {/* Purple arrow for class→enum links */}
+        <marker
+          id="arrow-purple"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto"
+          markerUnits="userSpaceOnUse"
+        >
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#a855f7" fillOpacity="0.3" />
+        </marker>
+
+        {/* Orange arrow for variable→class links */}
+        <marker
+          id="arrow-orange"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto"
+          markerUnits="userSpaceOnUse"
+        >
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#f97316" fillOpacity="0.3" />
+        </marker>
+
+        {/* Blue arrow for inheritance (if enabled) */}
+        <marker
+          id="arrow-blue"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto"
+          markerUnits="userSpaceOnUse"
+        >
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6" fillOpacity="0.3" />
+        </marker>
+
+        {/* Gray arrow for slot→class/enum links */}
+        <marker
+          id="arrow-gray"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto"
+          markerUnits="userSpaceOnUse"
+        >
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#6b7280" fillOpacity="0.3" />
+        </marker>
+
+        {/* Hover state markers - full opacity for highlighted links */}
+        <marker
+          id="arrow-green-hover"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="7"
+          markerHeight="7"
+          orient="auto"
+          markerUnits="userSpaceOnUse"
+        >
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" />
+        </marker>
+
+        <marker
+          id="arrow-purple-hover"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="7"
+          markerHeight="7"
+          orient="auto"
+          markerUnits="userSpaceOnUse"
+        >
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#a855f7" />
+        </marker>
+
+        <marker
+          id="arrow-orange-hover"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="7"
+          markerHeight="7"
+          orient="auto"
+          markerUnits="userSpaceOnUse"
+        >
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#f97316" />
+        </marker>
+
+        <marker
+          id="arrow-blue-hover"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="7"
+          markerHeight="7"
+          orient="auto"
+          markerUnits="userSpaceOnUse"
+        >
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6" />
+        </marker>
+
+        <marker
+          id="arrow-gray-hover"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="7"
+          markerHeight="7"
+          orient="auto"
+          markerUnits="userSpaceOnUse"
+        >
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#6b7280" />
+        </marker>
+      </defs>
       {renderLinks()}
     </svg>
   );
