@@ -1,8 +1,6 @@
-import { type ReactElement } from 'react';
 import DetailPanel from './DetailPanel';
-import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
-
-type SelectedEntity = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
+import { getHeaderColor, getPanelTitle, type SelectedEntity } from '../utils/panelHelpers';
+import type { ClassNode, EnumDefinition, SlotDefinition } from '../types';
 
 interface StackedPanel {
   id: string;
@@ -19,44 +17,7 @@ interface DetailPanelStackProps {
   classes?: Map<string, ClassNode>;
 }
 
-// Helper to get header color based on entity type
-function getHeaderColor(entity: SelectedEntity): string {
-  if ('children' in entity) {
-    return 'bg-blue-700 dark:bg-blue-700 border-blue-800 dark:border-blue-600';
-  } else if ('permissible_values' in entity) {
-    return 'bg-purple-700 dark:bg-purple-700 border-purple-800 dark:border-purple-600';
-  } else if ('slot_uri' in entity) {
-    return 'bg-green-700 dark:bg-green-700 border-green-800 dark:border-green-600';
-  } else {
-    return 'bg-orange-600 dark:bg-orange-600 border-orange-700 dark:border-orange-500';
-  }
-}
-
-// Helper to generate descriptive title for panel header (returns JSX for styled title)
-function getPanelTitle(entity: SelectedEntity): ReactElement {
-  if ('children' in entity) {
-    // ClassNode
-    const classNode = entity as ClassNode;
-    return (
-      <span className="text-base">
-        <span className="font-bold">Class:</span> <span className="font-bold">{classNode.name}</span>
-        {classNode.parent && <span className="ml-1 text-sm">extends {classNode.parent}</span>}
-      </span>
-    );
-  } else if ('permissible_values' in entity) {
-    // EnumDefinition - don't show "Enum:" prefix since name ends with "Enum"
-    const enumDef = entity as EnumDefinition;
-    return <span className="text-base font-bold">{enumDef.name}</span>;
-  } else if ('slot_uri' in entity) {
-    // SlotDefinition
-    const slotDef = entity as SlotDefinition;
-    return <span className="text-base"><span className="font-bold">Slot:</span> <span className="font-bold">{slotDef.name}</span></span>;
-  } else {
-    // VariableSpec
-    const varSpec = entity as VariableSpec;
-    return <span className="text-base"><span className="font-bold">Variable:</span> <span className="font-bold">{varSpec.variableLabel}</span></span>;
-  }
-}
+// Note: getHeaderColor and getPanelTitle are now imported from utils/panelHelpers.tsx
 
 export default function DetailPanelStack({
   panels,

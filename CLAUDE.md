@@ -230,7 +230,7 @@ src/
 
 ### Testing Strategy & Test Suite Documentation
 
-**Current test coverage** (67 tests, all passing ✅):
+**Current test coverage** (134 tests, all passing ✅):
 
 #### **Test Files:**
 1. **`data-integrity.test.ts`** (1 test) - Data completeness reporting
@@ -268,6 +268,24 @@ src/
    - **SVG path generation**: bezier curves, self-referential loops
    - **Visual styling**: color mapping, stroke width by relationship type
 
+6. **`adaptiveLayout.test.ts`** (23 tests) - Adaptive layout calculation
+   - **Space calculation**: remaining space with various panel configurations
+   - **Mode determination**: stacked vs dialog based on available space
+   - **Edge cases**: empty panels, exact threshold, negative space
+   - **Real-world scenarios**: common screen sizes (desktop, laptop, tablet, 4K)
+
+7. **`duplicateDetection.test.ts`** (28 tests) - Entity duplicate detection
+   - **Entity name extraction**: classes, enums, slots, variables
+   - **Entity type detection**: structural property checks
+   - **Duplicate finding**: by name and type, cross-type disambiguation
+   - **Edge cases**: empty arrays, multiple duplicates, same names across types
+
+8. **`panelHelpers.test.tsx`** (16 tests) - Panel title and color utilities
+   - **Header colors**: type-based color selection (blue/purple/green/orange)
+   - **Title generation**: JSX rendering for all entity types
+   - **Styling verification**: bold text, font sizes, inheritance display
+   - **React rendering**: ensures valid JSX structure
+
 #### **Test Philosophy**
 
 **IMPORTANT: Expand test suite as features are developed**
@@ -300,11 +318,13 @@ npm test:coverage
 
 **Completed:**
 - ✅ Phase 3d logic tests (relationship detection, link filtering, SVG path generation)
+- ✅ Phase 3e logic tests (space calculation, duplicate detection, panel helpers) - 67 new tests added
 
 **Next:**
-1. **Soon**: DetailDialog interaction tests (drag, resize, escape key)
-2. **Future**: State persistence round-trip tests, search/filter tests
-3. **Future**: Integration tests for full navigation flows
+1. **Future** (optional): DetailPanelStack rendering tests
+2. **Future**: DetailDialog interaction tests (drag, resize, escape key)
+3. **Future**: State persistence round-trip tests, search/filter tests
+4. **Future**: Integration tests for full navigation flows
 
 **Future testing enhancements** (when needed):
 1. **Integration tests**: Full navigation flows (click class → dialog opens, links connect properly)
@@ -459,6 +479,39 @@ npm test:coverage
 
 4. **PanelLayout.tsx**
    - Added `showSpacer` prop to hide flex-1 spacer in stacked mode
+
+#### **Test Expansion (2025-01-22)**
+
+**Summary**: Extracted Phase 3e logic into testable utility functions and added comprehensive test coverage (67 new tests).
+
+**Utility Files Created**:
+1. `src/utils/layoutHelpers.ts` - Space calculation and display mode determination
+   - `calculateRemainingSpace()` - Calculate horizontal space after accounting for panels
+   - `determineDisplayMode()` - Determine 'stacked' vs 'dialog' mode based on space
+   - `calculateDisplayMode()` - Combined calculation from window width and panel counts
+
+2. `src/utils/duplicateDetection.ts` - Entity duplicate detection logic
+   - `getEntityName()` - Extract unique identifier (name or variableLabel)
+   - `getEntityType()` - Detect entity type from object structure
+   - `findDuplicateIndex()` - Find duplicate in array of entities
+   - `isDuplicate()` - Boolean check for duplicate existence
+
+3. `src/utils/panelHelpers.tsx` - Panel title and header color utilities
+   - `getHeaderColor()` - Type-based color selection (blue/purple/green/orange)
+   - `getPanelTitle()` - Generate descriptive JSX titles with styling
+
+**Test Files Created** (67 new tests):
+- `src/test/adaptiveLayout.test.ts` (23 tests)
+- `src/test/duplicateDetection.test.ts` (28 tests)
+- `src/test/panelHelpers.test.tsx` (16 tests)
+
+**Components Refactored**:
+- `App.tsx` - Uses layoutHelpers and duplicateDetection utilities
+- `DetailPanelStack.tsx` - Uses panelHelpers utilities
+
+**Test Results**: All 134 tests passing (up from 67 baseline) ✅
+
+---
 
 ### Future: Enhanced Element Metadata Display
 

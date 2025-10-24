@@ -6,6 +6,8 @@ import PanelLayout from './components/PanelLayout';
 import LinkOverlay from './components/LinkOverlay';
 import { loadModelData } from './utils/dataLoader';
 import { getInitialState, saveStateToURL, saveStateToLocalStorage, generatePresetURL, type DialogState } from './utils/statePersistence';
+import { calculateDisplayMode } from './utils/layoutHelpers';
+import { getEntityName, getEntityType, findDuplicateIndex } from './utils/duplicateDetection';
 import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec, ModelData } from './types';
 
 type SelectedEntity = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
@@ -142,24 +144,10 @@ function App() {
 
   // Measure available space and set display mode
   useEffect(() => {
-    const PANEL_MAX_WIDTH = 450;
-    const EMPTY_PANEL_WIDTH = 180;
-    const GUTTER_WIDTH = 160;
-    const SPACE_THRESHOLD = 600;
-
     const measureSpace = () => {
       const windowWidth = window.innerWidth;
-
-      // Calculate panel widths
-      const leftWidth = leftSections.length === 0 ? EMPTY_PANEL_WIDTH : PANEL_MAX_WIDTH;
-      const rightWidth = rightSections.length === 0 ? EMPTY_PANEL_WIDTH : PANEL_MAX_WIDTH;
-      const gutterWidth = (leftSections.length > 0 && rightSections.length > 0) ? GUTTER_WIDTH : 0;
-
-      // Calculate remaining space
-      const usedSpace = leftWidth + rightWidth + gutterWidth;
-      const remaining = windowWidth - usedSpace;
-
-      setDisplayMode(remaining >= SPACE_THRESHOLD ? 'stacked' : 'dialog');
+      const { mode } = calculateDisplayMode(windowWidth, leftSections.length, rightSections.length);
+      setDisplayMode(mode);
     };
 
     measureSpace();
@@ -170,10 +158,7 @@ function App() {
   // Convert OpenDialog to DialogState
   const getDialogStates = (): DialogState[] => {
     return openDialogs.map(dialog => {
-      // Extract entity name (variables use 'variableLabel', others use 'name')
-      const entityName = dialog.entityType === 'variable'
-        ? (dialog.entity as VariableSpec).variableLabel
-        : (dialog.entity as ClassNode | EnumDefinition | SlotDefinition).name;
+      const entityName = getEntityName(dialog.entity, dialog.entityType);
 
       return {
         entityName,
@@ -281,30 +266,18 @@ function App() {
     }
   };
 
-  // Helper to determine entity type
-  const getEntityType = (entity: SelectedEntity): 'class' | 'enum' | 'slot' | 'variable' => {
-    if ('children' in entity) return 'class';
-    if ('permissible_values' in entity) return 'enum';
-    if ('slot_uri' in entity) return 'slot';
-    return 'variable';
-  };
+  // Note: getEntityType is now imported from utils/duplicateDetection.ts
 
   // Dialog management
   const handleOpenDialog = (entity: SelectedEntity, position?: { x: number; y: number }, size?: { width: number; height: number }) => {
     const entityType = getEntityType(entity);
 
-    // Get entity name (variables use 'variableLabel', others use 'name')
-    const entityName = entityType === 'variable'
-      ? (entity as VariableSpec).variableLabel
-      : (entity as ClassNode | EnumDefinition | SlotDefinition).name;
-
-    // Check if this entity is already open
-    const existingIndex = openDialogs.findIndex(d => {
-      const existingName = d.entityType === 'variable'
-        ? (d.entity as VariableSpec).variableLabel
-        : (d.entity as ClassNode | EnumDefinition | SlotDefinition).name;
-      return existingName === entityName && d.entityType === entityType;
-    });
+    // Check if this entity is already open using utility function
+    const existingIndex = findDuplicateIndex(
+      openDialogs.map(d => ({ entity: d.entity, entityType: d.entityType })),
+      entity,
+      entityType
+    );
 
     // If already open, bring to top (move to end of array, which renders last = on top)
     if (existingIndex !== -1) {
