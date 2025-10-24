@@ -106,7 +106,39 @@
 - All 134 tests passing ✅
 - TypeScript compilation clean ✅
 
-#### 4. Hover Highlighting for Links (MEDIUM PRIORITY)
+#### ✅ 4. Gradient Link Colors (COMPLETED)
+**Problem**: Solid link colors were confusing - class→class, class→slot, and class→variable were all green even though classes are blue
+
+**Solution**: Implemented color gradients that transition from source element color to target element color
+- Blue class → Purple enum = blue-to-purple gradient
+- Orange variable → Blue class = orange-to-blue gradient
+- Blue class → Green slot = blue-to-green gradient
+- Makes relationship direction and target type visually intuitive
+
+**Implementation**:
+1. Added helper functions in `src/utils/linkHelpers.ts`:
+   - `getElementTypeColor()` - Maps element types to colors (blue/purple/green/orange)
+   - `getLinkGradientId()` - Generates unique gradient IDs like `gradient-class-enum`
+   - Modified `getLinkColor()` to return gradient URLs when sourceType provided
+
+2. Updated `src/components/LinkOverlay.tsx`:
+   - Added 32 `<linearGradient>` definitions (all source→target combinations × 2 directions)
+   - Each gradient has both normal and `-reverse` version for correct directionality
+   - Updated arrow markers to use target element colors
+   - Changed `getMarkerIdForColor()` to `getMarkerIdForTargetType()` for better logic
+   - Pass sourceType to `getLinkColor()` for gradient rendering
+   - Detect link direction (left→right vs right→left) and select appropriate gradient
+   - Increased gradient opacity from 0.2 to 0.5 for better visibility
+
+**Result**: Links now show intuitive color gradients from source to target element type
+- Gradients always flow source→target regardless of panel position
+- Opacity increased for better visibility (0.5 base, 1.0 on hover)
+- All 134 tests passing ✅
+- TypeScript compilation clean ✅
+
+**Files changed**: `src/utils/linkHelpers.ts`, `src/components/LinkOverlay.tsx`
+
+#### 5. Hover Highlighting for Links (MEDIUM PRIORITY)
 **Problem**: Hard to see which links belong to which element
 **Solutions**:
 - Hover over element → highlight all its links
@@ -115,7 +147,7 @@
 
 **Files**: `src/components/LinkOverlay.tsx`, `src/components/ClassSection.tsx`, etc.
 
-#### 3. Slots vs Attributes Terminology (MEDIUM PRIORITY)
+#### 6. Slots vs Attributes Terminology (MEDIUM PRIORITY)
 **Problem**: Confusing terminology, slots not visible in class detail
 **Current issues**:
 - Using term "Properties" instead of "Slots"
@@ -132,7 +164,7 @@
 
 **Files**: `src/components/DetailPanel.tsx`, `src/types.ts`, various section components
 
-#### 4. Scroll Indicators in Detail Dialogs (LOW PRIORITY)
+#### 7. Scroll Indicators in Detail Dialogs (LOW PRIORITY)
 **Problem**: No indication of scrollable content or how much content exists
 **Solutions**:
 - Link section headers at top of dialog (jump to section)

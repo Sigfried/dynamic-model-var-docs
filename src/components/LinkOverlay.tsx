@@ -15,6 +15,8 @@ import {
   generateSelfRefPath,
   getLinkColor,
   getLinkStrokeWidth,
+  getElementTypeColor,
+  getLinkGradientId,
   type Link,
   type LinkFilterOptions
 } from '../utils/linkHelpers';
@@ -295,14 +297,21 @@ export default function LinkOverlay({
     }
   };
 
-  // Helper to get marker ID based on link color and hover state
-  const getMarkerIdForColor = (color: string, isHovered: boolean = false): string => {
+  // Helper to get marker ID based on target element type and hover state
+  const getMarkerIdForTargetType = (targetType: string, isHovered: boolean = false): string => {
     const suffix = isHovered ? '-hover' : '';
-    if (color.includes('#10b981')) return `arrow-green${suffix}`;  // class→class
-    if (color.includes('#a855f7')) return `arrow-purple${suffix}`; // class→enum
-    if (color.includes('#f97316')) return `arrow-orange${suffix}`; // variable→class
-    if (color.includes('#3b82f6')) return `arrow-blue${suffix}`;   // inheritance
-    return `arrow-gray${suffix}`; // slot→class/enum
+    switch (targetType) {
+      case 'class':
+        return `arrow-blue${suffix}`;   // Blue for class targets
+      case 'enum':
+        return `arrow-purple${suffix}`; // Purple for enum targets
+      case 'slot':
+        return `arrow-green${suffix}`;  // Green for slot targets
+      case 'variable':
+        return `arrow-orange${suffix}`; // Orange for variable targets
+      default:
+        return `arrow-gray${suffix}`;
+    }
   };
 
   // Render links as SVG paths
@@ -333,6 +342,9 @@ export default function LinkOverlay({
         const sourceRect = sourceEl.getBoundingClientRect();
         const targetRect = targetEl.getBoundingClientRect();
 
+        // Determine link direction for gradient selection
+        const isLeftToRight = sourceRect.left < targetRect.left;
+
         // Generate path - adjust coordinates to be relative to SVG origin
         let pathData: string;
         if (link.relationship.isSelfRef) {
@@ -358,14 +370,19 @@ export default function LinkOverlay({
           pathData = generateDirectionalBezierPath(adjustedSource, adjustedTarget);
         }
 
-        const color = getLinkColor(link.relationship);
+        // Get gradient with correct direction
+        let color = getLinkColor(link.relationship, link.source.type);
+        // If gradient and going right-to-left, use reverse gradient
+        if (color.startsWith('url(#') && !isLeftToRight) {
+          color = color.replace(')', '-reverse)');
+        }
         const strokeWidth = getLinkStrokeWidth(link.relationship);
 
         // Generate unique key for this link
         const linkKey = `${sourcePanel}-${link.source.type}-${link.source.name}-${link.target.type}-${link.target.name}-${index}`;
         const isHovered = hoveredLinkKey === linkKey;
 
-        const markerId = getMarkerIdForColor(color, isHovered);
+        const markerId = getMarkerIdForTargetType(link.target.type, isHovered);
 
         // Don't add arrows to self-referential links (they look weird on loops)
         const markerEnd = link.relationship.isSelfRef ? undefined : `url(#${markerId})`;
@@ -420,12 +437,38 @@ export default function LinkOverlay({
         zIndex: 1
       }}
     >
-      {/* Arrow marker definitions - one for each link color */}
-      {/* Note: Markers have opacity built into fill to match line opacity at 0.2 */}
+      {/* Gradient and marker definitions */}
       <defs>
-        {/* Green arrow for class→class links */}
+        {/* Gradients for all source→target combinations */}
+        {/* Create both left-to-right and right-to-left versions */}
+        {['class', 'enum', 'slot', 'variable'].flatMap(sourceType =>
+          ['class', 'enum', 'slot', 'variable'].flatMap(targetType => [
+            // Left to right: source color → target color
+            <linearGradient
+              key={`${sourceType}-${targetType}`}
+              id={getLinkGradientId(sourceType, targetType)}
+              x1="0%" y1="0%" x2="100%" y2="0%"
+            >
+              <stop offset="0%" stopColor={getElementTypeColor(sourceType as any)} stopOpacity="0.5" />
+              <stop offset="100%" stopColor={getElementTypeColor(targetType as any)} stopOpacity="0.5" />
+            </linearGradient>,
+            // Right to left: still source color → target color (reversed gradient)
+            <linearGradient
+              key={`${sourceType}-${targetType}-reverse`}
+              id={`${getLinkGradientId(sourceType, targetType)}-reverse`}
+              x1="100%" y1="0%" x2="0%" y2="0%"
+            >
+              <stop offset="0%" stopColor={getElementTypeColor(sourceType as any)} stopOpacity="0.5" />
+              <stop offset="100%" stopColor={getElementTypeColor(targetType as any)} stopOpacity="0.5" />
+            </linearGradient>
+          ])
+        )}
+
+        {/* Arrow markers - one for each target element type */}
+        {/* Markers use target element color since arrow points to target */}
+        {/* Blue arrow for links to class targets */}
         <marker
-          id="arrow-green"
+          id="arrow-blue"
           viewBox="0 0 10 10"
           refX="0"
           refY="5"
@@ -434,10 +477,10 @@ export default function LinkOverlay({
           orient="auto"
           markerUnits="userSpaceOnUse"
         >
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" fillOpacity="0.3" />
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6" fillOpacity="0.3" />
         </marker>
 
-        {/* Purple arrow for class→enum links */}
+        {/* Purple arrow for links to enum targets */}
         <marker
           id="arrow-purple"
           viewBox="0 0 10 10"
@@ -451,7 +494,21 @@ export default function LinkOverlay({
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#a855f7" fillOpacity="0.3" />
         </marker>
 
-        {/* Orange arrow for variable→class links */}
+        {/* Green arrow for links to slot targets */}
+        <marker
+          id="arrow-green"
+          viewBox="0 0 10 10"
+          refX="0"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto"
+          markerUnits="userSpaceOnUse"
+        >
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" fillOpacity="0.3" />
+        </marker>
+
+        {/* Orange arrow for links to variable targets */}
         <marker
           id="arrow-orange"
           viewBox="0 0 10 10"
@@ -463,20 +520,6 @@ export default function LinkOverlay({
           markerUnits="userSpaceOnUse"
         >
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#f97316" fillOpacity="0.3" />
-        </marker>
-
-        {/* Blue arrow for inheritance (if enabled) */}
-        <marker
-          id="arrow-blue"
-          viewBox="0 0 10 10"
-          refX="0"
-          refY="5"
-          markerWidth="6"
-          markerHeight="6"
-          orient="auto"
-          markerUnits="userSpaceOnUse"
-        >
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6" fillOpacity="0.3" />
         </marker>
 
         {/* Gray arrow for slot→class/enum links */}
@@ -495,7 +538,7 @@ export default function LinkOverlay({
 
         {/* Hover state markers - full opacity for highlighted links */}
         <marker
-          id="arrow-green-hover"
+          id="arrow-blue-hover"
           viewBox="0 0 10 10"
           refX="0"
           refY="5"
@@ -504,7 +547,7 @@ export default function LinkOverlay({
           orient="auto"
           markerUnits="userSpaceOnUse"
         >
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" />
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6" />
         </marker>
 
         <marker
@@ -521,6 +564,19 @@ export default function LinkOverlay({
         </marker>
 
         <marker
+          id="arrow-green-hover"
+          viewBox="0 0 10 10"
+          refX="0"
+          refY="5"
+          markerWidth="7"
+          markerHeight="7"
+          orient="auto"
+          markerUnits="userSpaceOnUse"
+        >
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" />
+        </marker>
+
+        <marker
           id="arrow-orange-hover"
           viewBox="0 0 10 10"
           refX="0"
@@ -531,19 +587,6 @@ export default function LinkOverlay({
           markerUnits="userSpaceOnUse"
         >
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#f97316" />
-        </marker>
-
-        <marker
-          id="arrow-blue-hover"
-          viewBox="0 0 10 10"
-          refX="0"
-          refY="5"
-          markerWidth="7"
-          markerHeight="7"
-          orient="auto"
-          markerUnits="userSpaceOnUse"
-        >
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6" />
         </marker>
 
         <marker

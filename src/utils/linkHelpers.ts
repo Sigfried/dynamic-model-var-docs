@@ -251,12 +251,42 @@ export function generateSelfRefPath(rect: DOMRect): string {
 }
 
 /**
- * Get color for link based on relationship type
+ * Get color for an element type
+ */
+export function getElementTypeColor(type: 'class' | 'enum' | 'slot' | 'variable'): string {
+  switch (type) {
+    case 'class':
+      return '#3b82f6'; // Blue
+    case 'enum':
+      return '#a855f7'; // Purple
+    case 'slot':
+      return '#10b981'; // Green
+    case 'variable':
+      return '#f97316'; // Orange
+  }
+}
+
+/**
+ * Get gradient ID for a link based on source and target types
+ */
+export function getLinkGradientId(sourceType: string, targetType: string): string {
+  return `gradient-${sourceType}-${targetType}`;
+}
+
+/**
+ * Get color for link based on relationship type (legacy, now returns gradient URL)
  *
  * @param relationship - Relationship object
- * @returns CSS color string
+ * @param sourceType - Source element type
+ * @returns CSS color string or gradient URL
  */
-export function getLinkColor(relationship: Relationship): string {
+export function getLinkColor(relationship: Relationship, sourceType?: string): string {
+  // If sourceType provided, use gradient
+  if (sourceType && relationship.targetType) {
+    return `url(#${getLinkGradientId(sourceType, relationship.targetType)})`;
+  }
+
+  // Fallback to solid colors for legacy support
   switch (relationship.type) {
     case 'inherits':
       return '#3b82f6'; // Blue for inheritance
