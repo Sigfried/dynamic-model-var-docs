@@ -3,6 +3,7 @@
 
 import * as React from 'react';
 import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
+import { getElementHoverHandlers } from '../hooks/useElementHover';
 
 // Union type for all element data types
 export type ElementData = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
@@ -442,6 +443,187 @@ export class VariableElement extends Element {
       targetType: 'class',
       isSelfRef: false
     }];
+  }
+}
+
+// ============================================================================
+// ElementCollection - Manages groups of elements for panel rendering
+// ============================================================================
+
+export interface ElementCollectionCallbacks {
+  onSelect: (data: ElementData, type: 'class' | 'enum' | 'slot' | 'variable') => void;
+  onElementHover?: (element: { type: 'class' | 'enum' | 'slot' | 'variable'; name: string }) => void;
+  onElementLeave?: () => void;
+}
+
+export abstract class ElementCollection {
+  abstract readonly type: 'class' | 'enum' | 'slot' | 'variable';
+
+  /** Get human-readable label with count (e.g., "Enumerations (40)") */
+  abstract getLabel(): string;
+
+  /** Get section icon for toggle (C, E, S, or V) */
+  abstract getSectionIcon(): string;
+
+  /** Get default expansion state (set of expanded item names) */
+  abstract getDefaultExpansion(): Set<string>;
+
+  /** Get expansion state key for URL persistence (null if no expansion needed) */
+  abstract getExpansionKey(position: 'left' | 'right'): string | null;
+
+  /** Render items for the panel section */
+  abstract renderItems(
+    callbacks: ElementCollectionCallbacks,
+    position: 'left' | 'right',
+    selectedElement?: { type: string; name: string }
+  ): React.ReactElement[];
+}
+
+// EnumCollection - flat list of enumerations
+export class EnumCollection extends ElementCollection {
+  readonly type = 'enum' as const;
+  private enums: Map<string, EnumDefinition>;
+
+  constructor(enums: Map<string, EnumDefinition>) {
+    super();
+    this.enums = enums;
+  }
+
+  /** Factory: Create from raw data (called by dataLoader) */
+  static fromData(enums: Map<string, EnumDefinition>): EnumCollection {
+    return new EnumCollection(enums);
+  }
+
+  getLabel(): string {
+    return `Enumerations (${this.enums.size})`;
+  }
+
+  getSectionIcon(): string {
+    return 'E';
+  }
+
+  getDefaultExpansion(): Set<string> {
+    return new Set(); // No expansion for flat list
+  }
+
+  getExpansionKey(_position: 'left' | 'right'): string | null {
+    return null; // No expansion state needed
+  }
+
+  renderItems(
+    callbacks: ElementCollectionCallbacks,
+    position: 'left' | 'right',
+    selectedElement?: { type: string; name: string }
+  ): React.ReactElement[] {
+    // Sort enums by name
+    const enumList = Array.from(this.enums.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+
+    return enumList.map((enumDef) => {
+      const isSelected = selectedElement?.type === 'enum' && selectedElement?.name === enumDef.name;
+      const hoverHandlers = getElementHoverHandlers({
+        type: 'enum',
+        name: enumDef.name,
+        onElementHover: callbacks.onElementHover,
+        onElementLeave: callbacks.onElementLeave
+      });
+
+      return (
+        <div
+          key={enumDef.name}
+          id={`enum-${enumDef.name}`}
+          data-element-type="enum"
+          data-element-name={enumDef.name}
+          data-panel-position={position}
+          className={`flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700 ${
+            isSelected ? 'bg-purple-100 dark:bg-purple-900' : ''
+          }`}
+          onClick={() => callbacks.onSelect(enumDef, 'enum')}
+          {...hoverHandlers}
+        >
+          <span className="flex-1 text-sm font-medium">{enumDef.name}</span>
+          <span className="text-xs px-2 py-0.5 rounded bg-purple-200 dark:bg-purple-800 text-purple-700 dark:text-purple-300">
+            {enumDef.permissible_values.length}
+          </span>
+        </div>
+      );
+    });
+  }
+}
+
+// SlotCollection - flat list of slot definitions
+export class SlotCollection extends ElementCollection {
+  readonly type = 'slot' as const;
+  private slots: Map<string, SlotDefinition>;
+
+  constructor(slots: Map<string, SlotDefinition>) {
+    super();
+    this.slots = slots;
+  }
+
+  /** Factory: Create from raw data (called by dataLoader) */
+  static fromData(slots: Map<string, SlotDefinition>): SlotCollection {
+    return new SlotCollection(slots);
+  }
+
+  getLabel(): string {
+    return `Slots (${this.slots.size})`;
+  }
+
+  getSectionIcon(): string {
+    return 'S';
+  }
+
+  getDefaultExpansion(): Set<string> {
+    return new Set(); // No expansion for flat list
+  }
+
+  getExpansionKey(_position: 'left' | 'right'): string | null {
+    return null; // No expansion state needed
+  }
+
+  renderItems(
+    callbacks: ElementCollectionCallbacks,
+    position: 'left' | 'right',
+    selectedElement?: { type: string; name: string }
+  ): React.ReactElement[] {
+    // Sort slots by name
+    const slotList = Array.from(this.slots.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+
+    return slotList.map((slotDef) => {
+      const isSelected = selectedElement?.type === 'slot' && selectedElement?.name === slotDef.name;
+      const hoverHandlers = getElementHoverHandlers({
+        type: 'slot',
+        name: slotDef.name,
+        onElementHover: callbacks.onElementHover,
+        onElementLeave: callbacks.onElementLeave
+      });
+
+      return (
+        <div
+          key={slotDef.name}
+          id={`slot-${slotDef.name}`}
+          data-element-type="slot"
+          data-element-name={slotDef.name}
+          data-panel-position={position}
+          className={`flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700 ${
+            isSelected ? 'bg-green-100 dark:bg-green-900' : ''
+          }`}
+          onClick={() => callbacks.onSelect(slotDef, 'slot')}
+          {...hoverHandlers}
+        >
+          <span className="flex-1 text-sm font-medium">{slotDef.name}</span>
+          {slotDef.usedByClasses.length > 0 && (
+            <span className="text-xs px-2 py-0.5 rounded bg-green-200 dark:bg-green-800 text-green-700 dark:text-green-300">
+              {slotDef.usedByClasses.length}
+            </span>
+          )}
+        </div>
+      );
+    });
   }
 }
 

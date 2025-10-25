@@ -1,8 +1,8 @@
 import ClassSection from './ClassSection';
-import EnumSection from './EnumSection';
-import SlotSection from './SlotSection';
 import VariablesSection from './VariablesSection';
+import Section from './Section';
 import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
+import { EnumCollection, SlotCollection } from '../models/Element';
 
 type SectionType = 'classes' | 'enums' | 'slots' | 'variables';
 type SelectedElement = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
@@ -17,6 +17,11 @@ interface ElementsPanelProps {
   variables: VariableSpec[];
   selectedElement?: SelectedElement;
   onSelectEntity: (entity: SelectedElement) => void;
+  onElementHover?: (element: { type: 'class' | 'enum' | 'slot' | 'variable'; name: string }) => void;
+  onElementLeave?: () => void;
+  // New: collections (will replace raw data maps above)
+  enumCollection?: EnumCollection;
+  slotCollection?: SlotCollection;
 }
 
 interface SectionToggleButtonProps {
@@ -57,9 +62,17 @@ export default function ElementsPanel({
   slots,
   variables,
   selectedElement,
-  onSelectEntity
+  onSelectEntity,
+  onElementHover,
+  onElementLeave,
+  enumCollection: enumCollectionProp,
+  slotCollection: slotCollectionProp
 }: ElementsPanelProps) {
   const activeSections = new Set(sections);
+
+  // Use provided collections, or create from raw data (backward compatibility)
+  const enumCollection = enumCollectionProp || new EnumCollection(enums);
+  const slotCollection = slotCollectionProp || new SlotCollection(slots);
 
   const toggleSection = (section: SectionType) => {
     const newSections = [...sections];
@@ -79,6 +92,16 @@ export default function ElementsPanel({
   const isEnumDefinition = (entity: SelectedElement): entity is EnumDefinition => 'permissible_values' in entity;
   const isSlotDefinition = (entity: SelectedElement): entity is SlotDefinition => 'slot_uri' in entity;
   const isVariableSpec = (entity: SelectedElement): entity is VariableSpec => 'variableLabel' in entity;
+
+  // Helper to convert selectedElement to format expected by Section component
+  const getSelectedElementInfo = (): { type: string; name: string } | undefined => {
+    if (!selectedElement) return undefined;
+    if (isClassNode(selectedElement)) return { type: 'class', name: selectedElement.name };
+    if (isEnumDefinition(selectedElement)) return { type: 'enum', name: selectedElement.name };
+    if (isSlotDefinition(selectedElement)) return { type: 'slot', name: selectedElement.name };
+    if (isVariableSpec(selectedElement)) return { type: 'variable', name: selectedElement.variableLabel };
+    return undefined;
+  };
 
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-slate-900">
@@ -123,26 +146,36 @@ export default function ElementsPanel({
                     onSelectClass={onSelectEntity}
                     selectedClass={selectedElement && isClassNode(selectedElement) ? selectedElement : undefined}
                     position={position}
+                    onElementHover={onElementHover}
+                    onElementLeave={onElementLeave}
                   />
                 );
               case 'enums':
                 return (
-                  <EnumSection
+                  <Section
                     key="enums"
-                    enums={enums}
-                    onSelectEnum={onSelectEntity}
-                    selectedEnum={selectedElement && isEnumDefinition(selectedElement) ? selectedElement : undefined}
+                    collection={enumCollection}
+                    callbacks={{
+                      onSelect: onSelectEntity,
+                      onElementHover,
+                      onElementLeave
+                    }}
                     position={position}
+                    selectedElement={getSelectedElementInfo()}
                   />
                 );
               case 'slots':
                 return (
-                  <SlotSection
+                  <Section
                     key="slots"
-                    slots={slots}
-                    onSelectSlot={onSelectEntity}
-                    selectedSlot={selectedElement && isSlotDefinition(selectedElement) ? selectedElement : undefined}
+                    collection={slotCollection}
+                    callbacks={{
+                      onSelect: onSelectEntity,
+                      onElementHover,
+                      onElementLeave
+                    }}
                     position={position}
+                    selectedElement={getSelectedElementInfo()}
                   />
                 );
               case 'variables':
@@ -153,6 +186,8 @@ export default function ElementsPanel({
                     onSelectVariable={onSelectEntity}
                     selectedVariable={selectedElement && isVariableSpec(selectedElement) ? selectedElement : undefined}
                     position={position}
+                    onElementHover={onElementHover}
+                    onElementLeave={onElementLeave}
                   />
                 );
               default:

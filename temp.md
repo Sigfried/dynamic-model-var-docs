@@ -6,82 +6,145 @@
 
 ---
 
-## Current Priority: UI Polish & Usability
+## NEXT SESSION: Complete Element Collection Refactor
 
-### 1. Hover Highlighting for Links (NEXT UP)
-**Problem**: Hard to see which links belong to which element
+### Current State (2025-01-24)
 
-**Solutions**:
-- Hover over element → highlight all its links
-- Optionally: scroll opposite panel to show link endpoints
-- Display relationship info (property name, relationship type) when highlighting
+**What's Done:**
+- ✅ Created EnumCollection and SlotCollection classes in Element.tsx
+- ✅ Generic Section component replaces EnumSection and SlotSection
+- ✅ dataLoader.ts creates collections (no longer in components)
+- ✅ App.tsx passes collections to ElementsPanel
+- ✅ Hover highlighting implemented with helper function
 
-**Files**: `src/components/LinkOverlay.tsx`, `src/components/ClassSection.tsx`, etc.
+**Git Tag**: `pre-element-collection-refactor` (safe rollback point)
+
+**What's Left:**
+1. Implement ClassCollection with state persistence (lce/rce keys)
+2. Implement VariableCollection with state persistence (lve/rve keys)
+3. Remove old section components (ClassSection, EnumSection, SlotSection, VariablesSection)
+
+---
+
+## CRITICAL: Further Background Refactoring Needed
+
+### Problem: Element-Type-Specific Code Scattered Everywhere
+
+**Current issues:**
+- References to `class|enum|slot|variable` all over the codebase
+- References to `enumCollection|slotCollection` and other type-specific things
+- App.tsx has gotten way too long
+- types.ts has definitions that should be in model classes
+- PropertyDefinition should be in Slot class (or Class for now)
+- Relationship type and targetType values need centralization
+- Making MORE type-specific code even while refactoring
+
+### Goal: DRY Everything Into the Model Layer
+
+**Why**: This app is getting pretty good. Element types may change, but might also want to use it for **completely different model navigation apps**. Need to make it reusable.
+
+**Strategy**: Sequester as much element-type-specific logic as possible to Element.tsx and subclasses
+
+### Specific Refactoring Tasks
+
+#### 1. Move Types from types.ts to Model Classes
+- `PropertyDefinition` → belongs in Slot class (conceptually) or Class (for now)
+- `Relationship` → belongs in Element base class
+- `Relationship.type` and `Relationship.targetType` → should get values from central registry
+- Review what's still useful in types.ts, move to appropriate model classes
+
+#### 2. Consider Splitting Element.tsx
+- File is getting large with 4 subclasses + collections
+- Options:
+  - `models/elements/Element.ts` (base)
+  - `models/elements/ClassElement.ts`
+  - `models/elements/EnumElement.ts`
+  - `models/elements/SlotElement.ts`
+  - `models/elements/VariableElement.ts`
+  - `models/collections/ElementCollection.ts` (base)
+  - `models/collections/ClassCollection.ts`
+  - etc.
+
+#### 3. Centralize Element Type Registry
+Create a central place for element type metadata instead of hardcoding strings everywhere:
+
+```typescript
+// models/ElementRegistry.ts
+export const ELEMENT_TYPES = {
+  CLASS: { id: 'class', label: 'C', color: 'blue', ... },
+  ENUM: { id: 'enum', label: 'E', color: 'purple', ... },
+  SLOT: { id: 'slot', label: 'S', color: 'green', ... },
+  VARIABLE: { id: 'variable', label: 'V', color: 'orange', ... }
+} as const;
+```
+
+Then reference it everywhere instead of hardcoding.
+
+#### 4. Refactor App.tsx
+- Too long (600+ lines)
+- Extract logic into:
+  - `hooks/useModelData.ts` - data loading
+  - `hooks/useDialogState.ts` - dialog management
+  - `hooks/useLayoutState.ts` - panel layout persistence
+  - Keep App.tsx focused on composition
+
+#### 5. Make Collection Interface More Generic
+The app should work with **any** set of ElementCollections, not just the 4 we have now:
+
+```typescript
+// Instead of:
+collections: { enums: EnumCollection; slots: SlotCollection; }
+
+// More generic:
+collections: ElementCollection[]
+
+// Or:
+collections: Map<string, ElementCollection>
+```
+
+Then components iterate over collections without knowing types.
+
+---
+
+## After Background Refactoring: Resume Feature Work
+
+### 1. Hover Highlighting for Links
+**Status**: ✅ COMPLETED (2025-01-24)
+- Hover over element → highlights all its links
+- Links change from 20% → 100% opacity + stroke width
+- Helper function (not hook) for DRY event handlers
 
 ### 2. Slots vs Attributes Terminology
 **Problem**: Confusing terminology, slots not visible in class detail
 
-**Current issues**:
-- Using term "Properties" instead of "Slots"
-- Attributes are just inline slots (per LinkML)
-- Regular (reusable) slots not shown in class detail dialog
-- 7 reusable slots buried among hundreds of attributes in panel view
-
 **Solutions**:
 - Change "Properties" → "Slots" everywhere
-- Add note: "Called 'attributes' in LinkML model"
 - Show both reusable slots AND attributes in class detail dialog
 - Indicate source: "Inline" vs "Slot: id" (with link to slot definition)
-- Consider collapsible sections: "Inline Slots (20)" and "Reusable Slots (3)"
 
-**Files**: `src/components/DetailPanel.tsx`, `src/types.ts`, various section components
-
-### 3. Scroll Indicators in Detail Dialogs (LOW PRIORITY)
-**Problem**: No indication of scrollable content or how much content exists
-
-**Solutions**:
-- Link section headers at top of dialog (jump to section)
-- Fade effect at bottom when more content below
-- Mini table of contents showing sections
-
-**Files**: `src/components/DetailPanel.tsx`, `src/components/DetailDialog.tsx`
+### 3. Variable State Bug Fix
+**Current bug**: Both left and right panels share 'evc' key for variable expansion
+**Fix**: Use lve/rve (left/right variable expansion) keys based on panel position
+**Implementation**: ClassCollection and VariableCollection will handle this
 
 ---
 
-## Additional Issues to Address
-
-### GitHub Issue Management
-**Issue**: https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/issues/126
-- This issue describes the overall vision for this project
-- Make it more concise
-- Add subissues for specific features (ASK FIRST before creating)
-- Note: Colleagues watch the HM repo, not the dynamic-model-var-docs repo
-
-### Data Completeness Report
-**Issue**: Missing items from bdchm.yaml in our schema
-- Review output of `src/test/data-integrity.test.ts`
-- Check what prefixes, imports, types, etc. are missing
-- Verify completeness of classes, enums, slots
-
-**Run**: `npm test -- data-integrity --run`
+## Additional Issues to Address (Lower Priority)
 
 ### External Link Integration
-**Feature**: Link prefixed IDs to external sites
-- **OMOP:123** → https://athena.ohdsi.org/search-terms/terms/123
-- **DUO:0000042** → http://purl.obolibrary.org/obo/DUO_0000042
-- Report undefined prefixes (e.g., `obo:ncbitaxon` - error or misunderstanding?)
+- Link prefixed IDs to external sites (OMOP, DUO, etc.)
 - Use prefix data from bdchm.yaml
 
 ### Feature Parity with Official Docs
-**Reference**: https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/
+Reference: https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/
 
-Features to add:
 1. **Types** - Import and display linkml:types
-2. **Dynamic enums** - Show which enums are dynamic (from enum metadata)
-3. **LinkML Source** - Collapsible "Details" section showing raw LinkML (see ConditionConceptEnum example)
-   - Note better convention: `<summary>Details</summary>` BELOW the title, not inside
-4. **Direct and Induced** - Show direct vs inherited slots (similar to attributes/slots handling)
+2. **Dynamic enums** - Show which enums are dynamic
+3. **LinkML Source** - Collapsible raw LinkML view
+4. **Direct and Induced** - Show direct vs inherited slots
+5. **Partial ERDs** - Visual relationship diagrams
 
-**Eventually** (longer term):
-- Partial ERDs (like at https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/Condition/)
-- We have the data for this, could use similar approach to attributes/slots
+### GitHub Issue Management
+Issue: https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/issues/126
+- Make issue more concise
+- Add subissues for specific features (ASK FIRST)

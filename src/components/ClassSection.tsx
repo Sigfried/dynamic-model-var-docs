@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import type { ClassNode } from '../types';
+import { getElementHoverHandlers } from '../hooks/useElementHover';
 
 interface ClassSectionProps {
   nodes: ClassNode[];
   onSelectClass: (node: ClassNode) => void;
   selectedClass?: ClassNode;
   position?: 'left' | 'right';
+  onElementHover?: (element: { type: 'class' | 'enum' | 'slot' | 'variable'; name: string }) => void;
+  onElementLeave?: () => void;
 }
 
 interface ClassTreeNodeProps {
@@ -14,12 +17,15 @@ interface ClassTreeNodeProps {
   selectedClass?: ClassNode;
   level: number;
   position?: 'left' | 'right';
+  onElementHover?: (element: { type: 'class' | 'enum' | 'slot' | 'variable'; name: string }) => void;
+  onElementLeave?: () => void;
 }
 
-function ClassTreeNode({ node, onSelectClass, selectedClass, level, position }: ClassTreeNodeProps) {
+function ClassTreeNode({ node, onSelectClass, selectedClass, level, position, onElementHover, onElementLeave }: ClassTreeNodeProps) {
   const [isExpanded, setIsExpanded] = useState(level < 2); // Auto-expand first 2 levels
   const hasChildren = node.children.length > 0;
   const isSelected = selectedClass?.name === node.name;
+  const hoverHandlers = getElementHoverHandlers({ type: 'class', name: node.name, onElementHover, onElementLeave });
 
   return (
     <div className="select-none">
@@ -33,6 +39,7 @@ function ClassTreeNode({ node, onSelectClass, selectedClass, level, position }: 
         }`}
         style={{ paddingLeft: `${level * 16 + 8}px` }}
         onClick={() => onSelectClass(node)}
+        {...hoverHandlers}
       >
         {hasChildren && (
           <button
@@ -68,6 +75,8 @@ function ClassTreeNode({ node, onSelectClass, selectedClass, level, position }: 
               selectedClass={selectedClass}
               level={level + 1}
               position={position}
+              onElementHover={onElementHover}
+              onElementLeave={onElementLeave}
             />
           ))}
         </div>
@@ -76,7 +85,7 @@ function ClassTreeNode({ node, onSelectClass, selectedClass, level, position }: 
   );
 }
 
-export default function ClassSection({ nodes, onSelectClass, selectedClass, position }: ClassSectionProps) {
+export default function ClassSection({ nodes, onSelectClass, selectedClass, position, onElementHover, onElementLeave }: ClassSectionProps) {
   return (
     <div className="bg-white dark:bg-slate-800 text-left">
       <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-4 py-3 z-10">
@@ -91,6 +100,8 @@ export default function ClassSection({ nodes, onSelectClass, selectedClass, posi
             selectedClass={selectedClass}
             level={0}
             position={position}
+            onElementHover={onElementHover}
+            onElementLeave={onElementLeave}
           />
         ))}
       </div>

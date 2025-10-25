@@ -1,13 +1,16 @@
 import type { SlotDefinition } from '../types';
+import { getElementHoverHandlers } from '../hooks/useElementHover';
 
 interface SlotSectionProps {
   slots: Map<string, SlotDefinition>;
   onSelectSlot: (slotDef: SlotDefinition) => void;
   selectedSlot?: SlotDefinition;
   position?: 'left' | 'right';
+  onElementHover?: (element: { type: 'class' | 'enum' | 'slot' | 'variable'; name: string }) => void;
+  onElementLeave?: () => void;
 }
 
-export default function SlotSection({ slots, onSelectSlot, selectedSlot, position }: SlotSectionProps) {
+export default function SlotSection({ slots, onSelectSlot, selectedSlot, position, onElementHover, onElementLeave }: SlotSectionProps) {
   // Convert to array and sort by name
   const slotList = Array.from(slots.values()).sort((a, b) => a.name.localeCompare(b.name));
 
@@ -19,6 +22,7 @@ export default function SlotSection({ slots, onSelectSlot, selectedSlot, positio
       <div className="p-2">
         {slotList.map((slotDef) => {
           const isSelected = selectedSlot?.name === slotDef.name;
+          const hoverHandlers = getElementHoverHandlers({ type: 'slot', name: slotDef.name, onElementHover, onElementLeave });
 
           return (
             <div
@@ -31,6 +35,7 @@ export default function SlotSection({ slots, onSelectSlot, selectedSlot, positio
                 isSelected ? 'bg-green-100 dark:bg-green-900' : ''
               }`}
               onClick={() => onSelectSlot(slotDef)}
+              {...hoverHandlers}
             >
               <span className="flex-1 text-sm font-medium">{slotDef.name}</span>
               {slotDef.usedByClasses.length > 0 && (

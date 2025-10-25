@@ -60,4 +60,9 @@ export interface ModelData {
   slots: Map<string, SlotDefinition>;
   variables: VariableSpec[];
   reverseIndices: ReverseIndices;
+  // New: ElementCollections (will eventually replace raw data above)
+  collections: {
+    enums: import('./models/Element').EnumCollection;
+    slots: import('./models/Element').SlotCollection;
+  };
 }

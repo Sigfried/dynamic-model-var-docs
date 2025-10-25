@@ -38,12 +38,15 @@ export interface LinkOverlayProps {
   };
   /** Filter options for controlling which links to show */
   filterOptions?: LinkFilterOptions;
+  /** Currently hovered element for link highlighting */
+  hoveredElement?: { type: 'class' | 'enum' | 'slot' | 'variable'; name: string } | null;
 }
 
 export default function LinkOverlay({
   leftPanel,
   rightPanel,
-  filterOptions = {}
+  filterOptions = {},
+  hoveredElement
 }: LinkOverlayProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [, setScrollTick] = useState(0);
@@ -380,7 +383,13 @@ export default function LinkOverlay({
 
         // Generate unique key for this link
         const linkKey = `${sourcePanel}-${link.source.type}-${link.source.name}-${link.target.type}-${link.target.name}-${index}`;
-        const isHovered = hoveredLinkKey === linkKey;
+
+        // Check if link should be highlighted (either direct hover or element hover match)
+        const matchesHoveredElement = !!hoveredElement && (
+          (link.source.type === hoveredElement.type && link.source.name === hoveredElement.name) ||
+          (link.target.type === hoveredElement.type && link.target.name === hoveredElement.name)
+        );
+        const isHovered = hoveredLinkKey === linkKey || matchesHoveredElement;
 
         const markerId = getMarkerIdForTargetType(link.target.type, isHovered);
 
@@ -393,10 +402,10 @@ export default function LinkOverlay({
             d={pathData}
             fill="none"
             stroke={color}
-            strokeWidth={strokeWidth}
             markerEnd={markerEnd}
-            opacity={0.5}
-            className="transition-all hover:opacity-100 hover:stroke-[3] cursor-pointer"
+            opacity={isHovered ? 1.0 : 0.2}
+            strokeWidth={isHovered ? 3 : strokeWidth}
+            className="transition-all cursor-pointer"
             style={{ pointerEvents: 'stroke' }}
             onMouseEnter={() => {
               setHoveredLinkKey(linkKey);

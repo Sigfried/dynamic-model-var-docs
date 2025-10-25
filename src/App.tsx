@@ -46,6 +46,7 @@ function App() {
   const [hasRestoredFromURL, setHasRestoredFromURL] = useState(false);
   const [nextDialogId, setNextDialogId] = useState(0);
   const [displayMode, setDisplayMode] = useState<'stacked' | 'dialog'>('dialog');
+  const [hoveredElement, setHoveredElement] = useState<{ type: 'class' | 'enum' | 'slot' | 'variable'; name: string } | null>(null);
 
   // Load initial state from URL or localStorage
   const initialState = getInitialState();
@@ -528,6 +529,10 @@ function App() {
               variables={modelData?.variables || []}
               selectedElement={openDialogs.length > 0 ? openDialogs[0].element : undefined}
               onSelectEntity={handleOpenDialog}
+              onElementHover={setHoveredElement}
+              onElementLeave={() => setHoveredElement(null)}
+              enumCollection={modelData?.collections.enums}
+              slotCollection={modelData?.collections.slots}
             />
           }
           leftPanelEmpty={leftSections.length === 0}
@@ -542,6 +547,10 @@ function App() {
               variables={modelData?.variables || []}
               selectedElement={openDialogs.length > 0 ? openDialogs[0].element : undefined}
               onSelectEntity={handleOpenDialog}
+              onElementHover={setHoveredElement}
+              onElementLeave={() => setHoveredElement(null)}
+              enumCollection={modelData?.collections.enums}
+              slotCollection={modelData?.collections.slots}
             />
           }
           rightPanelEmpty={rightSections.length === 0}
@@ -571,6 +580,7 @@ function App() {
           <LinkOverlay
             leftPanel={leftPanelData}
             rightPanel={rightPanelData}
+            hoveredElement={hoveredElement}
           />
         )}
       </div>

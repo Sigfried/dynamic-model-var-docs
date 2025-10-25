@@ -1,14 +1,17 @@
 import type { VariableSpec } from '../types';
 import { useExpansionState } from '../hooks/useExpansionState';
+import { getElementHoverHandlers } from '../hooks/useElementHover';
 
 interface VariablesSectionProps {
   variables: VariableSpec[];
   onSelectVariable: (variable: VariableSpec) => void;
   selectedVariable?: VariableSpec;
   position?: 'left' | 'right';
+  onElementHover?: (element: { type: 'class' | 'enum' | 'slot' | 'variable'; name: string }) => void;
+  onElementLeave?: () => void;
 }
 
-export default function VariablesSection({ variables, onSelectVariable, selectedVariable, position }: VariablesSectionProps) {
+export default function VariablesSection({ variables, onSelectVariable, selectedVariable, position, onElementHover, onElementLeave }: VariablesSectionProps) {
   // Group variables by class
   const groupedVariables = variables.reduce((acc, variable) => {
     const className = variable.bdchmElement;
@@ -62,6 +65,7 @@ export default function VariablesSection({ variables, onSelectVariable, selected
                   {classVariables.map((variable, idx) => {
                     const isSelected = selectedVariable?.variableLabel === variable.variableLabel
                       && selectedVariable?.bdchmElement === variable.bdchmElement;
+                    const hoverHandlers = getElementHoverHandlers({ type: 'variable', name: variable.variableLabel, onElementHover, onElementLeave });
 
                     return (
                       <div
@@ -77,6 +81,7 @@ export default function VariablesSection({ variables, onSelectVariable, selected
                           e.stopPropagation();
                           onSelectVariable(variable);
                         }}
+                        {...hoverHandlers}
                       >
                         <span className="text-sm truncate block">
                           {variable.variableLabel}
