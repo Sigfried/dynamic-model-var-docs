@@ -637,17 +637,15 @@ export class SlotCollection extends ElementCollection {
 export class ClassCollection extends ElementCollection {
   readonly type = 'class' as const;
   private rootNodes: ClassNode[];
-  private slotDefinitions: Map<string, SlotDefinition>;
 
-  constructor(rootNodes: ClassNode[], slotDefinitions: Map<string, SlotDefinition>) {
+  constructor(rootNodes: ClassNode[]) {
     super();
     this.rootNodes = rootNodes;
-    this.slotDefinitions = slotDefinitions;
   }
 
   /** Factory: Create from raw data (called by dataLoader) */
-  static fromData(rootNodes: ClassNode[], slotDefinitions: Map<string, SlotDefinition>): ClassCollection {
-    return new ClassCollection(rootNodes, slotDefinitions);
+  static fromData(rootNodes: ClassNode[], _slotDefinitions: Map<string, SlotDefinition>): ClassCollection {
+    return new ClassCollection(rootNodes);
   }
 
   getLabel(): string {
