@@ -4,27 +4,34 @@
 
 import { type ReactElement } from 'react';
 import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
+import { ELEMENT_TYPES, type ElementTypeId } from '../models/ElementRegistry';
 
 export type SelectedElement = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
+
+/**
+ * Determine element type from SelectedElement union
+ */
+function getElementTypeId(element: SelectedElement): ElementTypeId {
+  if ('children' in element) {
+    return 'class';
+  } else if ('permissible_values' in element) {
+    return 'enum';
+  } else if ('slot_uri' in element) {
+    return 'slot';
+  } else {
+    return 'variable';
+  }
+}
 
 /**
  * Get header color classes based on element type
  * Returns Tailwind CSS classes for background and border colors
  */
 export function getHeaderColor(element: SelectedElement): string {
-  if ('children' in element) {
-    // ClassNode
-    return 'bg-blue-700 dark:bg-blue-700 border-blue-800 dark:border-blue-600';
-  } else if ('permissible_values' in element) {
-    // EnumDefinition
-    return 'bg-purple-700 dark:bg-purple-700 border-purple-800 dark:border-purple-600';
-  } else if ('slot_uri' in element) {
-    // SlotDefinition
-    return 'bg-green-700 dark:bg-green-700 border-green-800 dark:border-green-600';
-  } else {
-    // VariableSpec
-    return 'bg-orange-600 dark:bg-orange-600 border-orange-700 dark:border-orange-500';
-  }
+  const typeId = getElementTypeId(element);
+  const { color } = ELEMENT_TYPES[typeId];
+
+  return `${color.headerBg} ${color.headerBorder}`;
 }
 
 /**

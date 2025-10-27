@@ -4,6 +4,8 @@
 import * as React from 'react';
 import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
 import { getElementHoverHandlers } from '../hooks/useElementHover';
+import type { ElementTypeId, RelationshipTypeId } from './ElementRegistry';
+import { ELEMENT_TYPES } from './ElementRegistry';
 
 // Union type for all element data types
 export type ElementData = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
@@ -19,16 +21,16 @@ interface PropertyDefinition {
 
 // Relationship types for SVG link visualization
 export interface Relationship {
-  type: 'inherits' | 'property' | 'uses_enum' | 'references_class';
+  type: RelationshipTypeId;
   label?: string;           // Property name (for property relationships)
   target: string;           // Target element name
-  targetType: 'class' | 'enum' | 'slot' | 'variable';
+  targetType: ElementTypeId;
   isSelfRef?: boolean;      // True if target === this.name
 }
 
 // Base abstract class for all element types
 export abstract class Element {
-  abstract readonly type: 'class' | 'enum' | 'slot' | 'variable';
+  abstract readonly type: ElementTypeId;
   abstract readonly name: string;
   abstract readonly description: string | undefined;
 
@@ -451,13 +453,13 @@ export class VariableElement extends Element {
 // ============================================================================
 
 export interface ElementCollectionCallbacks {
-  onSelect: (data: ElementData, type: 'class' | 'enum' | 'slot' | 'variable') => void;
-  onElementHover?: (element: { type: 'class' | 'enum' | 'slot' | 'variable'; name: string }) => void;
+  onSelect: (data: ElementData, type: ElementTypeId) => void;
+  onElementHover?: (element: { type: ElementTypeId; name: string }) => void;
   onElementLeave?: () => void;
 }
 
 export abstract class ElementCollection {
-  abstract readonly type: 'class' | 'enum' | 'slot' | 'variable';
+  abstract readonly type: ElementTypeId;
 
   /** Get human-readable label with count (e.g., "Enumerations (40)") */
   abstract getLabel(): string;
@@ -497,11 +499,12 @@ export class EnumCollection extends ElementCollection {
   }
 
   getLabel(): string {
-    return `Enumerations (${this.enums.size})`;
+    const metadata = ELEMENT_TYPES[this.type];
+    return `${metadata.pluralLabel} (${this.enums.size})`;
   }
 
   getSectionIcon(): string {
-    return 'E';
+    return ELEMENT_TYPES[this.type].icon;
   }
 
   getDefaultExpansion(): Set<string> {
@@ -524,6 +527,8 @@ export class EnumCollection extends ElementCollection {
       a.name.localeCompare(b.name)
     );
 
+    const { color } = ELEMENT_TYPES[this.type];
+
     return enumList.map((enumDef) => {
       const isSelected = selectedElement?.type === 'enum' && selectedElement?.name === enumDef.name;
       const hoverHandlers = getElementHoverHandlers({
@@ -541,13 +546,13 @@ export class EnumCollection extends ElementCollection {
           data-element-name={enumDef.name}
           data-panel-position={position}
           className={`flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700 ${
-            isSelected ? 'bg-purple-100 dark:bg-purple-900' : ''
+            isSelected ? color.selectionBg : ''
           }`}
           onClick={() => callbacks.onSelect(enumDef, 'enum')}
           {...hoverHandlers}
         >
           <span className="flex-1 text-sm font-medium">{enumDef.name}</span>
-          <span className="text-xs px-2 py-0.5 rounded bg-purple-200 dark:bg-purple-800 text-purple-700 dark:text-purple-300">
+          <span className={`text-xs px-2 py-0.5 rounded ${color.badgeBg} ${color.badgeText}`}>
             {enumDef.permissible_values.length}
           </span>
         </div>
@@ -572,11 +577,12 @@ export class SlotCollection extends ElementCollection {
   }
 
   getLabel(): string {
-    return `Slots (${this.slots.size})`;
+    const metadata = ELEMENT_TYPES[this.type];
+    return `${metadata.pluralLabel} (${this.slots.size})`;
   }
 
   getSectionIcon(): string {
-    return 'S';
+    return ELEMENT_TYPES[this.type].icon;
   }
 
   getDefaultExpansion(): Set<string> {
@@ -599,6 +605,8 @@ export class SlotCollection extends ElementCollection {
       a.name.localeCompare(b.name)
     );
 
+    const { color } = ELEMENT_TYPES[this.type];
+
     return slotList.map((slotDef) => {
       const isSelected = selectedElement?.type === 'slot' && selectedElement?.name === slotDef.name;
       const hoverHandlers = getElementHoverHandlers({
@@ -616,14 +624,14 @@ export class SlotCollection extends ElementCollection {
           data-element-name={slotDef.name}
           data-panel-position={position}
           className={`flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700 ${
-            isSelected ? 'bg-green-100 dark:bg-green-900' : ''
+            isSelected ? color.selectionBg : ''
           }`}
           onClick={() => callbacks.onSelect(slotDef, 'slot')}
           {...hoverHandlers}
         >
           <span className="flex-1 text-sm font-medium">{slotDef.name}</span>
           {slotDef.usedByClasses.length > 0 && (
-            <span className="text-xs px-2 py-0.5 rounded bg-green-200 dark:bg-green-800 text-green-700 dark:text-green-300">
+            <span className={`text-xs px-2 py-0.5 rounded ${color.badgeBg} ${color.badgeText}`}>
               {slotDef.usedByClasses.length}
             </span>
           )}
@@ -649,11 +657,12 @@ export class ClassCollection extends ElementCollection {
   }
 
   getLabel(): string {
-    return `Classes (${this.countTotalNodes()})`;
+    const metadata = ELEMENT_TYPES[this.type];
+    return `${metadata.pluralLabel} (${this.countTotalNodes()})`;
   }
 
   getSectionIcon(): string {
-    return 'C';
+    return ELEMENT_TYPES[this.type].icon;
   }
 
   getDefaultExpansion(): Set<string> {
@@ -715,6 +724,8 @@ export class ClassCollection extends ElementCollection {
       onElementLeave: callbacks.onElementLeave
     });
 
+    const { color } = ELEMENT_TYPES[this.type];
+
     return (
       <div key={node.name} className="select-none">
         <div
@@ -723,7 +734,7 @@ export class ClassCollection extends ElementCollection {
           data-element-name={node.name}
           data-panel-position={position}
           className={`flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700 ${
-            isSelected ? 'bg-blue-100 dark:bg-blue-900' : ''
+            isSelected ? color.selectionBg : ''
           }`}
           style={{ paddingLeft: `${level * 16 + 8}px` }}
           onClick={() => callbacks.onSelect(node, 'class')}
@@ -748,7 +759,7 @@ export class ClassCollection extends ElementCollection {
             </span>
           )}
           {node.variableCount > 0 && (
-            <span className="text-xs px-2 py-0.5 rounded bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-300">
+            <span className={`text-xs px-2 py-0.5 rounded ${color.badgeBg} ${color.badgeText}`}>
               {node.variableCount}
             </span>
           )}
@@ -797,11 +808,12 @@ export class VariableCollection extends ElementCollection {
   }
 
   getLabel(): string {
-    return `Variables (${this.variables.length})`;
+    const metadata = ELEMENT_TYPES[this.type];
+    return `${metadata.pluralLabel} (${this.variables.length})`;
   }
 
   getSectionIcon(): string {
-    return 'V';
+    return ELEMENT_TYPES[this.type].icon;
   }
 
   getDefaultExpansion(): Set<string> {
@@ -821,6 +833,7 @@ export class VariableCollection extends ElementCollection {
   ): React.ReactElement[] {
     // Sort class names
     const sortedClasses = Array.from(this.groupedVariables.keys()).sort((a, b) => a.localeCompare(b));
+    const { color } = ELEMENT_TYPES[this.type];
 
     return sortedClasses.map(className => {
       const classVariables = this.groupedVariables.get(className)!;
@@ -865,7 +878,7 @@ export class VariableCollection extends ElementCollection {
                     data-element-name={variable.variableLabel}
                     data-panel-position={position}
                     className={`px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700 ${
-                      isSelected ? 'bg-orange-100 dark:bg-orange-900' : ''
+                      isSelected ? color.selectionBg : ''
                     }`}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -890,7 +903,7 @@ export class VariableCollection extends ElementCollection {
 // Factory function to create Element instances
 export function createElement(
   data: ElementData,
-  source: 'class' | 'enum' | 'slot' | 'variable',
+  source: ElementTypeId,
   context?: { slotDefinitions?: Map<string, SlotDefinition> }
 ): Element {
   switch (source) {

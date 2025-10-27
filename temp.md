@@ -48,8 +48,36 @@
   - Removed obsolete ClassSection.test.tsx
   - All 130 tests passing, type checking passes
 
+---
+
+## COMPLETED: Element Type Registry Centralization (2025-10-27)
+
+**Task 1 & 2 Done:**
+- ✅ Created `src/models/ElementRegistry.ts` with centralized metadata for all element types
+- ✅ Defined `ElementTypeId` and `RelationshipTypeId` types for type safety
+- ✅ Moved all hardcoded colors, labels, icons into registry
+- ✅ Updated Element.tsx to use `ElementTypeId` instead of string unions
+- ✅ Updated all 4 ElementCollection classes (Enum, Slot, Class, Variable) to use registry
+- ✅ Updated panelHelpers.tsx to use registry for header colors
+- ✅ Preserved exact original colors (bg-blue-700, etc.) with dark mode variants
+- ✅ All 135 tests passing, TypeScript compiles cleanly
+
+**Files Created:**
+- `src/models/ElementRegistry.ts` - Central registry with ELEMENT_TYPES and RELATIONSHIP_TYPES
+
+**Files Modified:**
+- `src/models/Element.tsx` - All element/collection classes now use ElementTypeId
+- `src/utils/panelHelpers.tsx` - Uses registry for getHeaderColor()
+- `src/test/panelHelpers.test.tsx` - Updated tests
+
+**Benefits Achieved:**
+- Single source of truth for element type metadata
+- Type-safe element type IDs throughout codebase
+- Easy to modify styling globally
+- Foundation for reusable architecture
+
 **Next:**
-- Consider the CRITICAL refactoring tasks below
+- Continue with remaining refactoring tasks below
 
 ---
 
@@ -57,32 +85,62 @@
 
 ### Problem: Element-Type-Specific Code Scattered Everywhere
 
-**Current issues:**
-- References to `class|enum|slot|variable` all over the codebase
-- References to `enumCollection|slotCollection` and other type-specific things
-- App.tsx has gotten way too long
-- types.ts has definitions that should be in model classes
-- PropertyDefinition should be in Slot class (or Class for now)
-- Relationship type and targetType values need centralization
-- Making MORE type-specific code even while refactoring
+**Remaining issues:**
+- ~~References to `class|enum|slot|variable` string unions~~ ✅ **FIXED** (now use ElementTypeId)
+- ~~Hardcoded colors, labels, icons~~ ✅ **FIXED** (now in ElementRegistry)
+- Element.tsx is large (919 lines) with 4 subclasses + 4 collections
+- App.tsx has gotten way too long (600+ lines)
+- Expansion state managed separately from other state (useExpansionState hook vs statePersistence.ts)
+- Dead code in statePersistence.ts (evc/ecn params no longer used)
+- Collections still referenced by specific type instead of generic interface
 
 ### Goal: DRY Everything Into the Model Layer
 
-**Why**: This app is getting pretty good. Element types may change, but might also want to use it for **completely different model navigation apps**. Need to make it reusable.
+**Why**:
+- When LinkML schema changes (e.g., combining attributes and slots display), we only update in one place
+- When persistence logic changes (e.g., consolidating expansion state), we don't have scattered updates across components
+- When adding features (search, filtering, k-hop neighborhoods), we have clean interfaces to work with
+- Easier to understand, debug, and test when logic is centralized in model classes
 
-**Strategy**: Sequester as much element-type-specific logic as possible to Element.tsx and subclasses
+**Strategy**:
+1. ~~Centralize element type metadata~~ ✅ **DONE**
+2. **Next**: Make collection interface generic (task 3)
+3. **Then**: Split Element.tsx into separate files (task 4)
+4. **Finally**: Refactor App.tsx (task 5) to use cleaner model and consolidate state management
 
-### Specific Refactoring Tasks
+### Specific Refactoring Tasks (Do in Order)
 
-#### 1. Move Types from types.ts to Model Classes
-- `PropertyDefinition` → belongs in Slot class (conceptually) or Class (for now)
-- `Relationship` → belongs in Element base class
-- `Relationship.type` and `Relationship.targetType` → should get values from central registry
-- Review what's still useful in types.ts, move to appropriate model classes
+#### 3. Make Collection Interface More Generic
+**Goal**: App should work with **any** set of ElementCollections, not just the 4 we have now.
 
-#### 2. Consider Splitting Element.tsx
-- File is getting large with 4 subclasses + collections
-- Options:
+**Current problem:**
+```typescript
+// App.tsx and components know specific collection types
+collections: {
+  enums: EnumCollection;
+  slots: SlotCollection;
+  classes: ClassCollection;
+  variables: VariableCollection;
+}
+```
+
+**Desired:**
+```typescript
+// Generic - components iterate without knowing types
+collections: ElementCollection[]
+// Or:
+collections: Map<ElementTypeId, ElementCollection>
+```
+
+**Benefits:**
+- Components don't need to know specific element types
+- Easy to add/remove element types
+- Foundation for reusable architecture
+
+#### 4. Consider Splitting Element.tsx (DO AFTER TASK 3)
+**Current state**: Element.tsx is 919 lines with 4 element classes + 4 collection classes
+
+**Options:**
   - `models/elements/Element.ts` (base)
   - `models/elements/ClassElement.ts`
   - `models/elements/EnumElement.ts`
@@ -90,46 +148,23 @@
   - `models/elements/VariableElement.ts`
   - `models/collections/ElementCollection.ts` (base)
   - `models/collections/ClassCollection.ts`
-  - etc.
+  - `models/collections/EnumCollection.ts`
+  - `models/collections/SlotCollection.ts`
+  - `models/collections/VariableCollection.ts`
+  - `models/elements/index.ts` (barrel export)
+  - `models/collections/index.ts` (barrel export)
 
-#### 3. Centralize Element Type Registry
-Create a central place for element type metadata instead of hardcoding strings everywhere:
+**Note**: Do this AFTER task 3 so we only touch imports once.
 
-```typescript
-// models/ElementRegistry.ts
-export const ELEMENT_TYPES = {
-  CLASS: { id: 'class', label: 'C', color: 'blue', ... },
-  ENUM: { id: 'enum', label: 'E', color: 'purple', ... },
-  SLOT: { id: 'slot', label: 'S', color: 'green', ... },
-  VARIABLE: { id: 'variable', label: 'V', color: 'orange', ... }
-} as const;
-```
-
-Then reference it everywhere instead of hardcoding.
-
-#### 4. Refactor App.tsx
+#### 5. Refactor App.tsx (DO THIS LAST - AFTER TASKS 3-4)
 - Too long (600+ lines)
 - Extract logic into:
   - `hooks/useModelData.ts` - data loading
   - `hooks/useDialogState.ts` - dialog management
-  - `hooks/useLayoutState.ts` - panel layout persistence
+  - `hooks/useLayoutState.ts` - panel layout + expansion state (consolidate useExpansionState)
   - Keep App.tsx focused on composition
-
-#### 5. Make Collection Interface More Generic
-The app should work with **any** set of ElementCollections, not just the 4 we have now:
-
-```typescript
-// Instead of:
-collections: { enums: EnumCollection; slots: SlotCollection; }
-
-// More generic:
-collections: ElementCollection[]
-
-// Or:
-collections: Map<string, ElementCollection>
-```
-
-Then components iterate over collections without knowing types.
+- **Consolidate expansion state**: Move expansion state from useExpansionState hook into statePersistence.ts
+- **Remove dead code**: Delete evc/ecn params from statePersistence.ts (replaced by lve/rve/lce/rce)
 
 ---
 
