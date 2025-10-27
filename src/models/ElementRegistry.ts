@@ -153,6 +153,13 @@ export function getRelationshipType(id: RelationshipTypeId): RelationshipTypeMet
 }
 
 /**
+ * Helper: Check if a string is a valid ElementTypeId
+ */
+export function isValidElementType(value: string): value is ElementTypeId {
+  return value in ELEMENT_TYPES;
+}
+
+/**
  * Helper: Get all element type IDs
  */
 export function getAllElementTypeIds(): ElementTypeId[] {

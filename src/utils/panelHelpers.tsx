@@ -9,27 +9,11 @@ import { ELEMENT_TYPES, type ElementTypeId } from '../models/ElementRegistry';
 export type SelectedElement = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
 
 /**
- * Determine element type from SelectedElement union
- */
-function getElementTypeId(element: SelectedElement): ElementTypeId {
-  if ('children' in element) {
-    return 'class';
-  } else if ('permissible_values' in element) {
-    return 'enum';
-  } else if ('slot_uri' in element) {
-    return 'slot';
-  } else {
-    return 'variable';
-  }
-}
-
-/**
  * Get header color classes based on element type
  * Returns Tailwind CSS classes for background and border colors
  */
-export function getHeaderColor(element: SelectedElement): string {
-  const typeId = getElementTypeId(element);
-  const { color } = ELEMENT_TYPES[typeId];
+export function getHeaderColor(elementType: ElementTypeId): string {
+  const { color } = ELEMENT_TYPES[elementType];
 
   return `${color.headerBg} ${color.headerBorder}`;
 }
@@ -38,8 +22,8 @@ export function getHeaderColor(element: SelectedElement): string {
  * Generate descriptive title JSX for panel header
  * Returns styled ReactElement with bold titles and inheritance info
  */
-export function getPanelTitle(element: SelectedElement): ReactElement {
-  if ('children' in element) {
+export function getPanelTitle(element: SelectedElement, elementType: ElementTypeId): ReactElement {
+  if (elementType === 'class') {
     // ClassNode
     const classNode = element as ClassNode;
     return (
@@ -48,11 +32,11 @@ export function getPanelTitle(element: SelectedElement): ReactElement {
         {classNode.parent && <span className="ml-1 text-sm">extends {classNode.parent}</span>}
       </span>
     );
-  } else if ('permissible_values' in element) {
+  } else if (elementType === 'enum') {
     // EnumDefinition - don't show "Enum:" prefix since name ends with "Enum"
     const enumDef = element as EnumDefinition;
     return <span className="text-base font-bold">{enumDef.name}</span>;
-  } else if ('slot_uri' in element) {
+  } else if (elementType === 'slot') {
     // SlotDefinition
     const slotDef = element as SlotDefinition;
     return <span className="text-base"><span className="font-bold">Slot:</span> <span className="font-bold">{slotDef.name}</span></span>;

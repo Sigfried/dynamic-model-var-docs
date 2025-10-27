@@ -22,16 +22,6 @@ export function getElementName(element: SelectedElement, elementType: 'class' | 
 }
 
 /**
- * Determine element type from the element object structure
- */
-export function getElementType(element: SelectedElement): 'class' | 'enum' | 'slot' | 'variable' {
-  if ('children' in element) return 'class';
-  if ('permissible_values' in element) return 'enum';
-  if ('slot_uri' in element) return 'slot';
-  return 'variable';
-}
-
-/**
  * Find the index of a duplicate element in a list
  * Returns -1 if no duplicate is found
  */

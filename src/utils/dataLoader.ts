@@ -293,11 +293,17 @@ export async function loadModelData(): Promise<ModelData> {
 
   const classHierarchy = buildClassHierarchy(schema, variables);
 
-  // Create element collections
+  // Create element collections as a Map for generic iteration
   const enumCollection = EnumCollection.fromData(enums);
   const slotCollection = SlotCollection.fromData(slots);
   const classCollection = ClassCollection.fromData(classHierarchy, slots);
   const variableCollection = VariableCollection.fromData(variables);
+
+  const collections = new Map();
+  collections.set('class', classCollection);
+  collections.set('enum', enumCollection);
+  collections.set('slot', slotCollection);
+  collections.set('variable', variableCollection);
 
   return {
     classHierarchy,
@@ -305,11 +311,6 @@ export async function loadModelData(): Promise<ModelData> {
     slots,
     variables,
     reverseIndices,
-    collections: {
-      classes: classCollection,
-      enums: enumCollection,
-      slots: slotCollection,
-      variables: variableCollection
-    }
+    collections
   };
 }

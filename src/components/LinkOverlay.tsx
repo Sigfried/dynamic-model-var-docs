@@ -10,6 +10,7 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
 import { ClassElement, EnumElement, SlotElement, VariableElement } from '../models/Element';
+import { getAllElementTypeIds, type ElementTypeId } from '../models/ElementRegistry';
 import {
   buildLinks,
   generateSelfRefPath,
@@ -39,7 +40,7 @@ export interface LinkOverlayProps {
   /** Filter options for controlling which links to show */
   filterOptions?: LinkFilterOptions;
   /** Currently hovered element for link highlighting */
-  hoveredElement?: { type: 'class' | 'enum' | 'slot' | 'variable'; name: string } | null;
+  hoveredElement?: { type: ElementTypeId; name: string } | null;
 }
 
 export default function LinkOverlay({
@@ -451,7 +452,7 @@ export default function LinkOverlay({
         {/* Gradients for all source→target combinations */}
         {/* Create both left-to-right and right-to-left versions */}
         {(() => {
-          const createGradient = (sourceType: 'class' | 'enum' | 'slot' | 'variable', targetType: 'class' | 'enum' | 'slot' | 'variable', reverse = false) => {
+          const createGradient = (sourceType: ElementTypeId, targetType: ElementTypeId, reverse = false) => {
             const id = reverse ? `${getLinkGradientId(sourceType, targetType)}-reverse` : getLinkGradientId(sourceType, targetType);
             const [x1, x2] = reverse ? ["100%", "0%"] : ["0%", "100%"];
 
@@ -467,8 +468,9 @@ export default function LinkOverlay({
             );
           };
 
-          return (['class', 'enum', 'slot', 'variable'] as const).flatMap(sourceType =>
-            (['class', 'enum', 'slot', 'variable'] as const).flatMap(targetType => [
+          const elementTypeIds = getAllElementTypeIds();
+          return elementTypeIds.flatMap(sourceType =>
+            elementTypeIds.flatMap(targetType => [
               createGradient(sourceType, targetType, false),
               createGradient(sourceType, targetType, true)
             ])

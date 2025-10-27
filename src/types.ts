@@ -60,11 +60,6 @@ export interface ModelData {
   slots: Map<string, SlotDefinition>;
   variables: VariableSpec[];
   reverseIndices: ReverseIndices;
-  // New: ElementCollections (will eventually replace raw data above)
-  collections: {
-    classes: import('./models/Element').ClassCollection;
-    enums: import('./models/Element').EnumCollection;
-    slots: import('./models/Element').SlotCollection;
-    variables: import('./models/Element').VariableCollection;
-  };
+  // Generic collections - keyed by ElementTypeId for iteration
+  collections: Map<import('./models/ElementRegistry').ElementTypeId, import('./models/Element').ElementCollection>;
 }

@@ -1,9 +1,9 @@
-type SectionType = 'classes' | 'enums' | 'slots' | 'variables';
-type ElementType = 'class' | 'enum' | 'slot' | 'variable';
+import type { ElementTypeId } from '../models/ElementRegistry';
+import { isValidElementType } from '../models/ElementRegistry';
 
 export interface DialogState {
   elementName: string;
-  elementType: ElementType;
+  elementType: ElementTypeId;
   x: number;
   y: number;
   width: number;
@@ -11,8 +11,8 @@ export interface DialogState {
 }
 
 interface AppState {
-  leftSections: SectionType[];
-  rightSections: SectionType[];
+  leftSections: ElementTypeId[];
+  rightSections: ElementTypeId[];
   dialogs?: DialogState[];
   expandedVariableClasses?: string[]; // Variable classes that are expanded
   expandedClassNodes?: string[]; // Class tree nodes that are expanded
@@ -20,19 +20,19 @@ interface AppState {
 
 const STORAGE_KEY = 'bdchm-app-state';
 
-// Section type mappings for URL (single character codes)
-const sectionToCode: Record<SectionType, string> = {
-  classes: 'c',
-  enums: 'e',
-  slots: 's',
-  variables: 'v'
+// Element type mappings for URL (single character codes)
+export const elementTypeToCode: Record<ElementTypeId, string> = {
+  class: 'c',
+  enum: 'e',
+  slot: 's',
+  variable: 'v'
 };
 
-const codeToSection: Record<string, SectionType> = {
-  c: 'classes',
-  e: 'enums',
-  s: 'slots',
-  v: 'variables'
+const codeToElementType: Record<string, ElementTypeId> = {
+  c: 'class',
+  e: 'enum',
+  s: 'slot',
+  v: 'variable'
 };
 
 /**
@@ -46,16 +46,16 @@ export function parseStateFromURL(): Partial<AppState> | null {
   const leftParam = params.get('l');
   if (leftParam) {
     state.leftSections = leftParam.split(',')
-      .map(code => codeToSection[code])
-      .filter(Boolean) as SectionType[];
+      .map(code => codeToElementType[code])
+      .filter(Boolean) as ElementTypeId[];
   }
 
   // Parse right panel sections
   const rightParam = params.get('r');
   if (rightParam) {
     state.rightSections = rightParam.split(',')
-      .map(code => codeToSection[code])
-      .filter(Boolean) as SectionType[];
+      .map(code => codeToElementType[code])
+      .filter(Boolean) as ElementTypeId[];
   }
 
   // Parse dialogs (new format)
@@ -67,11 +67,11 @@ export function parseStateFromURL(): Partial<AppState> | null {
         const parts = dialogStr.split(':');
         if (parts.length !== 3) return null;
 
-        const elementType = parts[0] as ElementType;
+        const elementType = parts[0];
         const elementName = parts[1];
         const [x, y, width, height] = parts[2].split(',').map(Number);
 
-        if (!['class', 'enum', 'slot', 'variable'].includes(elementType)) return null;
+        if (!isValidElementType(elementType)) return null;
         if (isNaN(x) || isNaN(y) || isNaN(width) || isNaN(height)) return null;
 
         return { elementType, elementName, x, y, width, height };
@@ -107,14 +107,14 @@ export function saveStateToURL(state: AppState): void {
 
   // Update left panel sections
   if (state.leftSections.length > 0) {
-    params.set('l', state.leftSections.map(s => sectionToCode[s]).join(','));
+    params.set('l', state.leftSections.map(s => elementTypeToCode[s]).join(','));
   } else {
     params.delete('l');
   }
 
   // Update right panel sections
   if (state.rightSections.length > 0) {
-    params.set('r', state.rightSections.map(s => sectionToCode[s]).join(','));
+    params.set('r', state.rightSections.map(s => elementTypeToCode[s]).join(','));
   } else {
     params.delete('r');
   }
@@ -182,7 +182,7 @@ export function getInitialState(): AppState {
   const localState = loadStateFromLocalStorage();
 
   const defaultState: AppState = {
-    leftSections: ['classes'],
+    leftSections: ['class'],
     rightSections: []
   };
 
@@ -217,20 +217,20 @@ export function getInitialState(): AppState {
  */
 export const PRESETS = {
   classesOnly: {
-    leftSections: ['classes'] as SectionType[],
-    rightSections: [] as SectionType[]
+    leftSections: ['class'] as ElementTypeId[],
+    rightSections: [] as ElementTypeId[]
   },
   classesAndEnums: {
-    leftSections: ['classes'] as SectionType[],
-    rightSections: ['enums'] as SectionType[]
+    leftSections: ['class'] as ElementTypeId[],
+    rightSections: ['enum'] as ElementTypeId[]
   },
   allSections: {
-    leftSections: ['classes', 'enums'] as SectionType[],
-    rightSections: ['slots', 'variables'] as SectionType[]
+    leftSections: ['class', 'enum'] as ElementTypeId[],
+    rightSections: ['slot', 'variable'] as ElementTypeId[]
   },
   variableExplorer: {
-    leftSections: ['variables'] as SectionType[],
-    rightSections: ['classes'] as SectionType[]
+    leftSections: ['variable'] as ElementTypeId[],
+    rightSections: ['class'] as ElementTypeId[]
   }
 };
 
@@ -242,11 +242,11 @@ export function generatePresetURL(presetKey: keyof typeof PRESETS): string {
   const params = new URLSearchParams();
 
   if (preset.leftSections.length > 0) {
-    params.set('l', preset.leftSections.map(s => sectionToCode[s]).join(','));
+    params.set('l', preset.leftSections.map(s => elementTypeToCode[s]).join(','));
   }
 
   if (preset.rightSections.length > 0) {
-    params.set('r', preset.rightSections.map(s => sectionToCode[s]).join(','));
+    params.set('r', preset.rightSections.map(s => elementTypeToCode[s]).join(','));
   }
 
   return `${window.location.pathname}?${params.toString()}`;

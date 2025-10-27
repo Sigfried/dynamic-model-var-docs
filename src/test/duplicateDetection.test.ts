@@ -5,7 +5,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   getElementName,
-  getElementType,
   findDuplicateIndex,
   isDuplicate,
   type ElementDescriptor
@@ -64,28 +63,6 @@ describe('getElementName', () => {
   it('returns variableLabel for variable element', () => {
     const name = getElementName(mockVariable, 'variable');
     expect(name).toBe('specimen_type');
-  });
-});
-
-describe('getElementType', () => {
-  it('detects class by presence of children property', () => {
-    const type = getElementType(mockClass);
-    expect(type).toBe('class');
-  });
-
-  it('detects enum by presence of permissible_values property', () => {
-    const type = getElementType(mockEnum);
-    expect(type).toBe('enum');
-  });
-
-  it('detects slot by presence of slot_uri property', () => {
-    const type = getElementType(mockSlot);
-    expect(type).toBe('slot');
-  });
-
-  it('detects variable as fallback', () => {
-    const type = getElementType(mockVariable);
-    expect(type).toBe('variable');
   });
 });
 

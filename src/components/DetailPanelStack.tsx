@@ -43,9 +43,9 @@ export default function DetailPanelStack({
           style={{ minHeight: '300px', maxHeight: '500px' }}
         >
           {/* Header with descriptive title and type-based color */}
-          <div className={`flex items-center justify-between px-4 py-2 ${getHeaderColor(panel.element)} border-b rounded-t-lg`}>
+          <div className={`flex items-center justify-between px-4 py-2 ${getHeaderColor(panel.elementType)} border-b rounded-t-lg`}>
             <div className="text-white">
-              {getPanelTitle(panel.element)}
+              {getPanelTitle(panel.element, panel.elementType)}
             </div>
             <button
               onClick={() => onClose(panel.id)}

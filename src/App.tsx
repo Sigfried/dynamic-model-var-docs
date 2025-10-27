@@ -5,13 +5,13 @@ import DetailPanelStack from './components/DetailPanelStack';
 import PanelLayout from './components/PanelLayout';
 import LinkOverlay from './components/LinkOverlay';
 import { loadModelData } from './utils/dataLoader';
-import { getInitialState, saveStateToURL, saveStateToLocalStorage, generatePresetURL, type DialogState } from './utils/statePersistence';
+import { getInitialState, saveStateToURL, saveStateToLocalStorage, generatePresetURL, elementTypeToCode, type DialogState } from './utils/statePersistence';
 import { calculateDisplayMode } from './utils/layoutHelpers';
-import { getElementName, getElementType, findDuplicateIndex } from './utils/duplicateDetection';
+import { getElementName, findDuplicateIndex } from './utils/duplicateDetection';
 import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec, ModelData } from './types';
+import type { ElementTypeId } from './models/ElementRegistry';
 
 type SelectedElement = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
-type SectionType = 'classes' | 'enums' | 'slots' | 'variables';
 
 // Helper to flatten class hierarchy into a list
 function flattenClassHierarchy(nodes: ClassNode[]): ClassNode[] {
@@ -27,7 +27,7 @@ function flattenClassHierarchy(nodes: ClassNode[]): ClassNode[] {
 interface OpenDialog {
   id: string;
   element: SelectedElement;
-  elementType: 'class' | 'enum' | 'slot' | 'variable';
+  elementType: ElementTypeId;
   x: number;
   y: number;
   width: number;
@@ -46,12 +46,12 @@ function App() {
   const [hasRestoredFromURL, setHasRestoredFromURL] = useState(false);
   const [nextDialogId, setNextDialogId] = useState(0);
   const [displayMode, setDisplayMode] = useState<'stacked' | 'dialog'>('dialog');
-  const [hoveredElement, setHoveredElement] = useState<{ type: 'class' | 'enum' | 'slot' | 'variable'; name: string } | null>(null);
+  const [hoveredElement, setHoveredElement] = useState<{ type: ElementTypeId; name: string } | null>(null);
 
   // Load initial state from URL or localStorage
   const initialState = getInitialState();
-  const [leftSections, setLeftSections] = useState<SectionType[]>(initialState.leftSections);
-  const [rightSections, setRightSections] = useState<SectionType[]>(initialState.rightSections);
+  const [leftSections, setLeftSections] = useState<ElementTypeId[]>(initialState.leftSections);
+  const [rightSections, setRightSections] = useState<ElementTypeId[]>(initialState.rightSections);
 
   // Check if localStorage has saved state
   useEffect(() => {
@@ -221,16 +221,12 @@ function App() {
         const params = new URLSearchParams();
 
         if (state.leftSections && state.leftSections.length > 0) {
-          const sectionCodes = state.leftSections.map((s: SectionType) =>
-            ({ classes: 'c', enums: 'e', slots: 's', variables: 'v' }[s])
-          ).join(',');
+          const sectionCodes = state.leftSections.map((s: ElementTypeId) => elementTypeToCode[s]).join(',');
           params.set('l', sectionCodes);
         }
 
         if (state.rightSections && state.rightSections.length > 0) {
-          const sectionCodes = state.rightSections.map((s: SectionType) =>
-            ({ classes: 'c', enums: 'e', slots: 's', variables: 'v' }[s])
-          ).join(',');
+          const sectionCodes = state.rightSections.map((s: ElementTypeId) => elementTypeToCode[s]).join(',');
           params.set('r', sectionCodes);
         }
 
@@ -255,11 +251,8 @@ function App() {
     }
   };
 
-  // Note: getElementType is now imported from utils/duplicateDetection.ts
-
   // Dialog management
-  const handleOpenDialog = (element: SelectedElement, position?: { x: number; y: number }, size?: { width: number; height: number }) => {
-    const elementType = getElementType(element);
+  const handleOpenDialog = (element: SelectedElement, elementType: ElementTypeId, position?: { x: number; y: number }, size?: { width: number; height: number }) => {
 
     // Check if this element is already open using utility function
     const existingIndex = findDuplicateIndex(
@@ -313,43 +306,43 @@ function App() {
   const handleNavigate = (elementName: string, elementType: 'class' | 'enum' | 'slot') => {
     if (elementType === 'enum') {
       const enumDef = modelData?.enums.get(elementName);
-      if (enumDef) handleOpenDialog(enumDef);
+      if (enumDef) handleOpenDialog(enumDef, elementType);
     } else if (elementType === 'slot') {
       const slotDef = modelData?.slots.get(elementName);
-      if (slotDef) handleOpenDialog(slotDef);
+      if (slotDef) handleOpenDialog(slotDef, elementType);
     } else if (elementType === 'class') {
       const classNode = classMap.get(elementName);
-      if (classNode) handleOpenDialog(classNode);
+      if (classNode) handleOpenDialog(classNode, elementType);
     }
   };
 
   // Memoize panel data to prevent infinite re-renders in LinkOverlay
   const leftPanelData = useMemo(() => ({
-    classes: leftSections.includes('classes') && modelData
+    classes: leftSections.includes('class') && modelData
       ? flattenClassHierarchy(modelData.classHierarchy)
       : [],
-    enums: leftSections.includes('enums') && modelData
+    enums: leftSections.includes('enum') && modelData
       ? modelData.enums
       : new Map(),
-    slots: leftSections.includes('slots') && modelData
+    slots: leftSections.includes('slot') && modelData
       ? modelData.slots
       : new Map(),
-    variables: leftSections.includes('variables') && modelData
+    variables: leftSections.includes('variable') && modelData
       ? modelData.variables
       : []
   }), [leftSections, modelData]);
 
   const rightPanelData = useMemo(() => ({
-    classes: rightSections.includes('classes') && modelData
+    classes: rightSections.includes('class') && modelData
       ? flattenClassHierarchy(modelData.classHierarchy)
       : [],
-    enums: rightSections.includes('enums') && modelData
+    enums: rightSections.includes('enum') && modelData
       ? modelData.enums
       : new Map(),
-    slots: rightSections.includes('slots') && modelData
+    slots: rightSections.includes('slot') && modelData
       ? modelData.slots
       : new Map(),
-    variables: rightSections.includes('variables') && modelData
+    variables: rightSections.includes('variable') && modelData
       ? modelData.variables
       : []
   }), [rightSections, modelData]);
@@ -511,18 +504,11 @@ function App() {
               position="left"
               sections={leftSections}
               onSectionsChange={setLeftSections}
-              classHierarchy={modelData?.classHierarchy || []}
-              enums={modelData?.enums || new Map()}
-              slots={modelData?.slots || new Map()}
-              variables={modelData?.variables || []}
+              collections={modelData?.collections || new Map()}
               selectedElement={openDialogs.length > 0 ? openDialogs[0].element : undefined}
               onSelectElement={handleOpenDialog}
               onElementHover={setHoveredElement}
               onElementLeave={() => setHoveredElement(null)}
-              classCollection={modelData?.collections.classes}
-              enumCollection={modelData?.collections.enums}
-              slotCollection={modelData?.collections.slots}
-              variableCollection={modelData?.collections.variables}
             />
           }
           leftPanelEmpty={leftSections.length === 0}
@@ -531,18 +517,11 @@ function App() {
               position="right"
               sections={rightSections}
               onSectionsChange={setRightSections}
-              classHierarchy={modelData?.classHierarchy || []}
-              enums={modelData?.enums || new Map()}
-              slots={modelData?.slots || new Map()}
-              variables={modelData?.variables || []}
+              collections={modelData?.collections || new Map()}
               selectedElement={openDialogs.length > 0 ? openDialogs[0].element : undefined}
               onSelectElement={handleOpenDialog}
               onElementHover={setHoveredElement}
               onElementLeave={() => setHoveredElement(null)}
-              classCollection={modelData?.collections.classes}
-              enumCollection={modelData?.collections.enums}
-              slotCollection={modelData?.collections.slots}
-              variableCollection={modelData?.collections.variables}
             />
           }
           rightPanelEmpty={rightSections.length === 0}

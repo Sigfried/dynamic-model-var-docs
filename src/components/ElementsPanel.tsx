@@ -1,54 +1,41 @@
 import Section from './Section';
 import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
-import { ClassCollection, EnumCollection, SlotCollection, VariableCollection } from '../models/Element';
+import type { ElementCollection } from '../models/Element';
+import type { ElementTypeId } from '../models/ElementRegistry';
+import { ELEMENT_TYPES, getAllElementTypeIds } from '../models/ElementRegistry';
 
-type SectionType = 'classes' | 'enums' | 'slots' | 'variables';
 type SelectedElement = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
 
 interface ElementsPanelProps {
   position: 'left' | 'right';
-  sections: SectionType[];
-  onSectionsChange: (sections: SectionType[]) => void;
-  classHierarchy: ClassNode[];
-  enums: Map<string, EnumDefinition>;
-  slots: Map<string, SlotDefinition>;
-  variables: VariableSpec[];
+  sections: ElementTypeId[];
+  onSectionsChange: (sections: ElementTypeId[]) => void;
+  collections: Map<ElementTypeId, ElementCollection>;
   selectedElement?: SelectedElement;
-  onSelectElement: (element: SelectedElement) => void;
-  onElementHover?: (element: { type: 'class' | 'enum' | 'slot' | 'variable'; name: string }) => void;
+  onSelectElement: (element: SelectedElement, elementType: ElementTypeId) => void;
+  onElementHover?: (element: { type: ElementTypeId; name: string }) => void;
   onElementLeave?: () => void;
-  // New: collections (will replace raw data maps above)
-  classCollection?: ClassCollection;
-  enumCollection?: EnumCollection;
-  slotCollection?: SlotCollection;
-  variableCollection?: VariableCollection;
 }
 
 interface SectionToggleButtonProps {
-  sectionType: SectionType;
+  elementTypeId: ElementTypeId;
   active: boolean;
   onClick: () => void;
 }
 
-function SectionToggleButton({ sectionType, active, onClick }: SectionToggleButtonProps) {
-  const config = {
-    classes: { label: 'C', title: 'Classes', color: 'bg-blue-500' },
-    enums: { label: 'E', title: 'Enums', color: 'bg-purple-500' },
-    slots: { label: 'S', title: 'Slots', color: 'bg-green-500' },
-    variables: { label: 'V', title: 'Variables', color: 'bg-orange-500' }
-  };
-
-  const { label, title, color } = config[sectionType];
+function SectionToggleButton({ elementTypeId, active, onClick }: SectionToggleButtonProps) {
+  const metadata = ELEMENT_TYPES[elementTypeId];
+  const { icon, pluralLabel, color } = metadata;
 
   return (
     <button
       onClick={onClick}
-      title={title}
+      title={pluralLabel}
       className={`w-8 h-8 rounded flex items-center justify-center text-white text-sm font-bold transition-all ${
-        active ? color : 'bg-gray-300 dark:bg-gray-600'
+        active ? `bg-${color.name}-500` : 'bg-gray-300 dark:bg-gray-600'
       } hover:scale-110`}
     >
-      {label}
+      {icon}
     </button>
   );
 }
@@ -57,36 +44,23 @@ export default function ElementsPanel({
   position,
   sections,
   onSectionsChange,
-  classHierarchy,
-  enums,
-  slots,
-  variables,
+  collections,
   selectedElement,
   onSelectElement,
   onElementHover,
-  onElementLeave,
-  classCollection: classCollectionProp,
-  enumCollection: enumCollectionProp,
-  slotCollection: slotCollectionProp,
-  variableCollection: variableCollectionProp
+  onElementLeave
 }: ElementsPanelProps) {
   const activeSections = new Set(sections);
 
-  // Use provided collections, or create from raw data (backward compatibility)
-  const classCollection = classCollectionProp || ClassCollection.fromData(classHierarchy, slots);
-  const enumCollection = enumCollectionProp || EnumCollection.fromData(enums);
-  const slotCollection = slotCollectionProp || SlotCollection.fromData(slots);
-  const variableCollection = variableCollectionProp || VariableCollection.fromData(variables);
-
-  const toggleSection = (section: SectionType) => {
+  const toggleSection = (elementTypeId: ElementTypeId) => {
     const newSections = [...sections];
-    const index = newSections.indexOf(section);
+    const index = newSections.indexOf(elementTypeId);
     if (index > -1) {
       // Remove section
       newSections.splice(index, 1);
     } else {
       // Add to front (most recent at top)
-      newSections.unshift(section);
+      newSections.unshift(elementTypeId);
     }
     onSectionsChange(newSections);
   };
@@ -107,30 +81,21 @@ export default function ElementsPanel({
     return undefined;
   };
 
+  // Get all available element type IDs for toggle buttons
+  const allElementTypeIds = getAllElementTypeIds();
+
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-slate-900">
       {/* Section toggles - always in C E S V order */}
       <div className="flex flex-row gap-2 p-2 border-b border-gray-200 dark:border-slate-700">
-        <SectionToggleButton
-          sectionType="classes"
-          active={activeSections.has('classes')}
-          onClick={() => toggleSection('classes')}
-        />
-        <SectionToggleButton
-          sectionType="enums"
-          active={activeSections.has('enums')}
-          onClick={() => toggleSection('enums')}
-        />
-        <SectionToggleButton
-          sectionType="slots"
-          active={activeSections.has('slots')}
-          onClick={() => toggleSection('slots')}
-        />
-        <SectionToggleButton
-          sectionType="variables"
-          active={activeSections.has('variables')}
-          onClick={() => toggleSection('variables')}
-        />
+        {allElementTypeIds.map(typeId => (
+          <SectionToggleButton
+            key={typeId}
+            elementTypeId={typeId}
+            active={activeSections.has(typeId)}
+            onClick={() => toggleSection(typeId)}
+          />
+        ))}
       </div>
 
       {/* Sections container - render in order of most recently selected */}
@@ -140,67 +105,23 @@ export default function ElementsPanel({
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto min-h-0">
-          {sections.map(section => {
-            switch (section) {
-              case 'classes':
-                return (
-                  <Section
-                    key="classes"
-                    collection={classCollection}
-                    callbacks={{
-                      onSelect: onSelectElement,
-                      onElementHover,
-                      onElementLeave
-                    }}
-                    position={position}
-                    selectedElement={getSelectedElementInfo()}
-                  />
-                );
-              case 'enums':
-                return (
-                  <Section
-                    key="enums"
-                    collection={enumCollection}
-                    callbacks={{
-                      onSelect: onSelectElement,
-                      onElementHover,
-                      onElementLeave
-                    }}
-                    position={position}
-                    selectedElement={getSelectedElementInfo()}
-                  />
-                );
-              case 'slots':
-                return (
-                  <Section
-                    key="slots"
-                    collection={slotCollection}
-                    callbacks={{
-                      onSelect: onSelectElement,
-                      onElementHover,
-                      onElementLeave
-                    }}
-                    position={position}
-                    selectedElement={getSelectedElementInfo()}
-                  />
-                );
-              case 'variables':
-                return (
-                  <Section
-                    key="variables"
-                    collection={variableCollection}
-                    callbacks={{
-                      onSelect: onSelectElement,
-                      onElementHover,
-                      onElementLeave
-                    }}
-                    position={position}
-                    selectedElement={getSelectedElementInfo()}
-                  />
-                );
-              default:
-                return null;
-            }
+          {sections.map(typeId => {
+            const collection = collections.get(typeId);
+            if (!collection) return null;
+
+            return (
+              <Section
+                key={typeId}
+                collection={collection}
+                callbacks={{
+                  onSelect: onSelectElement,
+                  onElementHover,
+                  onElementLeave
+                }}
+                position={position}
+                selectedElement={getSelectedElementInfo()}
+              />
+            );
           })}
         </div>
       )}
