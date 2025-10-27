@@ -35,7 +35,6 @@ interface OpenDialog {
 function App() {
   const [modelData, setModelData] = useState<ModelData>();
   const [openDialogs, setOpenDialogs] = useState<OpenDialog[]>([]);
-  const [classMap, setClassMap] = useState<Map<string, ClassNode>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [showUrlHelp, setShowUrlHelp] = useState(false);
@@ -70,16 +69,6 @@ function App() {
         setLoading(true);
         const data = await loadModelData();
         setModelData(data);
-
-        // Build flat map of class names to class nodes for navigation
-        const map = new Map<string, ClassNode>();
-        const addClassToMap = (node: ClassNode) => {
-          map.set(node.name, node);
-          node.children.forEach(addClassToMap);
-        };
-        data.classHierarchy.forEach(addClassToMap);
-        setClassMap(map);
-
         setLoading(false);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -94,7 +83,7 @@ function App() {
   useEffect(() => {
     // Only run once after data loads
     if (hasRestoredFromURL) return;
-    if (!modelData || classMap.size === 0) return;
+    if (!modelData) return;
 
     // Mark as restored
     setHasRestoredFromURL(true);
@@ -107,17 +96,9 @@ function App() {
       let dialogIdCounter = 0;
 
       urlState.dialogs.forEach(dialogState => {
-        let element: SelectedElement | null = null;
-
-        if (dialogState.elementType === 'class') {
-          element = classMap.get(dialogState.elementName) || null;
-        } else if (dialogState.elementType === 'enum') {
-          element = modelData.enums.get(dialogState.elementName) || null;
-        } else if (dialogState.elementType === 'slot') {
-          element = modelData.slots.get(dialogState.elementName) || null;
-        } else if (dialogState.elementType === 'variable') {
-          element = modelData.variables.find(v => v.variableLabel === dialogState.elementName) || null;
-        }
+        // Look up element using generic collection interface
+        const collection = modelData.collections.get(dialogState.elementType);
+        const element = collection?.getElement(dialogState.elementName) || null;
 
         if (element) {
           restoredDialogs.push({
@@ -139,7 +120,7 @@ function App() {
         setNextDialogId(dialogIdCounter);
       }
     }
-  }, [modelData, classMap, hasRestoredFromURL]);
+  }, [modelData, hasRestoredFromURL]);
 
   // Measure available space and set display mode
   useEffect(() => {
@@ -302,16 +283,9 @@ function App() {
 
   // Navigation handler - now opens a new dialog
   const handleNavigate = (elementName: string, elementType: 'class' | 'enum' | 'slot') => {
-    if (elementType === 'enum') {
-      const enumDef = modelData?.enums.get(elementName);
-      if (enumDef) handleOpenDialog(enumDef, elementType);
-    } else if (elementType === 'slot') {
-      const slotDef = modelData?.slots.get(elementName);
-      if (slotDef) handleOpenDialog(slotDef, elementType);
-    } else if (elementType === 'class') {
-      const classNode = classMap.get(elementName);
-      if (classNode) handleOpenDialog(classNode, elementType);
-    }
+    const collection = modelData?.collections.get(elementType);
+    const element = collection?.getElement(elementName);
+    if (element) handleOpenDialog(element, elementType);
   };
 
   // Memoize panel data to prevent infinite re-renders in LinkOverlay
