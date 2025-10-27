@@ -39,11 +39,17 @@
 
 ---
 
-## NEXT SESSION: Terminology Cleanup
+## COMPLETED: Terminology Cleanup (2025-01-27)
 
-**Remaining tasks:**
-1. Rename `entity` → `element` throughout codebase (avoiding confusion with Entity model class)
-2. Consider the CRITICAL refactoring tasks below
+**Done:**
+- ✅ Renamed `entity` → `element` throughout codebase (avoiding confusion with Entity model class)
+  - Updated all components, utilities, and tests
+  - Kept 'Entity' (capitalized) references to BDCHM model class intact
+  - Removed obsolete ClassSection.test.tsx
+  - All 130 tests passing, type checking passes
+
+**Next:**
+- Consider the CRITICAL refactoring tasks below
 
 ---
 
