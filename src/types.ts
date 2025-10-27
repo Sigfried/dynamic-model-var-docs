@@ -54,18 +54,11 @@ export interface SlotDefinition {
  */
 export type SelectedElement = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
 
-export interface ReverseIndices {
-  enumToClasses: Map<string, Set<string>>; // enum name -> class names
-  slotToClasses: Map<string, Set<string>>; // slot name -> class names
-  classToClasses: Map<string, Set<string>>; // class name -> classes that reference it
-}
-
+/**
+ * Model data structure - all element data is accessed via collections
+ */
 export interface ModelData {
-  classHierarchy: ClassNode[];
-  enums: Map<string, EnumDefinition>;
-  slots: Map<string, SlotDefinition>;
-  variables: VariableSpec[];
-  reverseIndices: ReverseIndices;
-  // Generic collections - keyed by ElementTypeId for iteration
+  // Generic collections - keyed by ElementTypeId
+  // Use collection.getElement(name) and collection.getAllElements() for lookups
   collections: Map<import('./models/ElementRegistry').ElementTypeId, import('./models/Element').ElementCollection>;
 }

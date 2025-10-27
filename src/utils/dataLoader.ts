@@ -6,7 +6,6 @@ import type {
   EnumDefinition,
   EnumValue,
   SlotDefinition,
-  ReverseIndices,
   ModelData
 } from '../types';
 import { EnumCollection, SlotCollection, ClassCollection, VariableCollection } from '../models/Element';
@@ -289,8 +288,6 @@ export async function loadModelData(): Promise<ModelData> {
 
   const enums = loadEnums(metadata);
   const slots = loadSlots(metadata);
-  const reverseIndices = buildReverseIndices(schema, enums, slots);
-
   const classHierarchy = buildClassHierarchy(schema, variables);
 
   // Create element collections as a Map for generic iteration
@@ -306,11 +303,6 @@ export async function loadModelData(): Promise<ModelData> {
   collections.set('variable', variableCollection);
 
   return {
-    classHierarchy,
-    enums,
-    slots,
-    variables,
-    reverseIndices,
     collections
   };
 }
