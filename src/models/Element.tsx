@@ -26,7 +26,7 @@ export interface Relationship {
   isSelfRef?: boolean;      // True if target === this.name
 }
 
-// Base abstract class for all entity types
+// Base abstract class for all element types
 export abstract class Element {
   abstract readonly type: 'class' | 'enum' | 'slot' | 'variable';
   abstract readonly name: string;

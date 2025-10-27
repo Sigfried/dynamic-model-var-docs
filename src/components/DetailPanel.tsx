@@ -11,20 +11,20 @@ interface DetailPanelProps {
   slots?: Map<string, SlotDefinition>;
   classes?: Map<string, ClassNode>;
   dialogWidth?: number;
-  hideHeader?: boolean;  // Hide the entity name header (when shown in dialog/panel header)
+  hideHeader?: boolean;  // Hide the element name header (when shown in dialog/panel header)
   hideCloseButton?: boolean;  // Hide the internal close button (when handled externally)
 }
 
-function isEnumDefinition(entity: SelectedElement): entity is EnumDefinition {
-  return 'permissible_values' in entity;
+function isEnumDefinition(element: SelectedElement): element is EnumDefinition {
+  return 'permissible_values' in element;
 }
 
-function isSlotDefinition(entity: SelectedElement): entity is SlotDefinition {
-  return 'slot_uri' in entity || ('range' in entity && !('children' in entity) && !('permissible_values' in entity));
+function isSlotDefinition(element: SelectedElement): element is SlotDefinition {
+  return 'slot_uri' in element || ('range' in element && !('children' in element) && !('permissible_values' in element));
 }
 
-function isVariableSpec(entity: SelectedElement): entity is VariableSpec {
-  return 'variableLabel' in entity && 'bdchmElement' in entity;
+function isVariableSpec(element: SelectedElement): element is VariableSpec {
+  return 'variableLabel' in element && 'bdchmElement' in element;
 }
 
 // Primitive types in LinkML
@@ -173,7 +173,7 @@ export default function DetailPanel({ selectedElement, onNavigate, onClose, enum
   const useTwoColumnsForEnums = dialogWidth >= 1000;
   const [showLegend, setShowLegend] = React.useState(false);
 
-  // Helper function to determine entity type and navigate
+  // Helper function to determine element type and navigate
   const handleRangeClick = (rangeName: string) => {
     if (!onNavigate) return;
 

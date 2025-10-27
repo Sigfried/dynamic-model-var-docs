@@ -4,8 +4,8 @@ import type { ClassNode, EnumDefinition, SlotDefinition } from '../types';
 
 interface StackedPanel {
   id: string;
-  entity: SelectedElement;
-  entityType: 'class' | 'enum' | 'slot' | 'variable';
+  element: SelectedElement;
+  elementType: 'class' | 'enum' | 'slot' | 'variable';
 }
 
 interface DetailPanelStackProps {
@@ -43,9 +43,9 @@ export default function DetailPanelStack({
           style={{ minHeight: '300px', maxHeight: '500px' }}
         >
           {/* Header with descriptive title and type-based color */}
-          <div className={`flex items-center justify-between px-4 py-2 ${getHeaderColor(panel.entity)} border-b rounded-t-lg`}>
+          <div className={`flex items-center justify-between px-4 py-2 ${getHeaderColor(panel.element)} border-b rounded-t-lg`}>
             <div className="text-white">
-              {getPanelTitle(panel.entity)}
+              {getPanelTitle(panel.element)}
             </div>
             <button
               onClick={() => onClose(panel.id)}
@@ -58,7 +58,7 @@ export default function DetailPanelStack({
           {/* Content */}
           <div className="flex-1 overflow-hidden">
             <DetailPanel
-              selectedElement={panel.entity}
+              selectedElement={panel.element}
               onNavigate={onNavigate}
               onClose={() => onClose(panel.id)}
               enums={enums}

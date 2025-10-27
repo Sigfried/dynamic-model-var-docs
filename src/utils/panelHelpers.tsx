@@ -8,17 +8,17 @@ import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '..
 export type SelectedElement = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
 
 /**
- * Get header color classes based on entity type
+ * Get header color classes based on element type
  * Returns Tailwind CSS classes for background and border colors
  */
-export function getHeaderColor(entity: SelectedElement): string {
-  if ('children' in entity) {
+export function getHeaderColor(element: SelectedElement): string {
+  if ('children' in element) {
     // ClassNode
     return 'bg-blue-700 dark:bg-blue-700 border-blue-800 dark:border-blue-600';
-  } else if ('permissible_values' in entity) {
+  } else if ('permissible_values' in element) {
     // EnumDefinition
     return 'bg-purple-700 dark:bg-purple-700 border-purple-800 dark:border-purple-600';
-  } else if ('slot_uri' in entity) {
+  } else if ('slot_uri' in element) {
     // SlotDefinition
     return 'bg-green-700 dark:bg-green-700 border-green-800 dark:border-green-600';
   } else {
@@ -31,27 +31,27 @@ export function getHeaderColor(entity: SelectedElement): string {
  * Generate descriptive title JSX for panel header
  * Returns styled ReactElement with bold titles and inheritance info
  */
-export function getPanelTitle(entity: SelectedElement): ReactElement {
-  if ('children' in entity) {
+export function getPanelTitle(element: SelectedElement): ReactElement {
+  if ('children' in element) {
     // ClassNode
-    const classNode = entity as ClassNode;
+    const classNode = element as ClassNode;
     return (
       <span className="text-base">
         <span className="font-bold">Class:</span> <span className="font-bold">{classNode.name}</span>
         {classNode.parent && <span className="ml-1 text-sm">extends {classNode.parent}</span>}
       </span>
     );
-  } else if ('permissible_values' in entity) {
+  } else if ('permissible_values' in element) {
     // EnumDefinition - don't show "Enum:" prefix since name ends with "Enum"
-    const enumDef = entity as EnumDefinition;
+    const enumDef = element as EnumDefinition;
     return <span className="text-base font-bold">{enumDef.name}</span>;
-  } else if ('slot_uri' in entity) {
+  } else if ('slot_uri' in element) {
     // SlotDefinition
-    const slotDef = entity as SlotDefinition;
+    const slotDef = element as SlotDefinition;
     return <span className="text-base"><span className="font-bold">Slot:</span> <span className="font-bold">{slotDef.name}</span></span>;
   } else {
     // VariableSpec
-    const varSpec = entity as VariableSpec;
+    const varSpec = element as VariableSpec;
     return <span className="text-base"><span className="font-bold">Variable:</span> <span className="font-bold">{varSpec.variableLabel}</span></span>;
   }
 }

@@ -1,5 +1,5 @@
 /**
- * Tests for duplicate entity detection logic
+ * Tests for duplicate element detection logic
  */
 
 import { describe, it, expect } from 'vitest';
@@ -12,7 +12,7 @@ import {
 } from '../utils/duplicateDetection';
 import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
 
-// Mock entities for testing
+// Mock elements for testing
 const mockClass: ClassNode = {
   name: 'Specimen',
   description: 'A sample class',
@@ -46,22 +46,22 @@ const mockVariable: VariableSpec = {
 };
 
 describe('getElementName', () => {
-  it('returns name for class entity', () => {
+  it('returns name for class element', () => {
     const name = getElementName(mockClass, 'class');
     expect(name).toBe('Specimen');
   });
 
-  it('returns name for enum entity', () => {
+  it('returns name for enum element', () => {
     const name = getElementName(mockEnum, 'enum');
     expect(name).toBe('SpecimenTypeEnum');
   });
 
-  it('returns name for slot entity', () => {
+  it('returns name for slot element', () => {
     const name = getElementName(mockSlot, 'slot');
     expect(name).toBe('identifier');
   });
 
-  it('returns variableLabel for variable entity', () => {
+  it('returns variableLabel for variable element', () => {
     const name = getElementName(mockVariable, 'variable');
     expect(name).toBe('specimen_type');
   });
@@ -145,7 +145,7 @@ describe('findDuplicateIndex', () => {
     expect(index).toBe(-1);
   });
 
-  it('distinguishes same name across different entity types', () => {
+  it('distinguishes same name across different element types', () => {
     // Create a class and enum with the same name
     const sameNameClass: ClassNode = { ...mockClass, name: 'SameName' };
     const sameNameEnum: EnumDefinition = { ...mockEnum, name: 'SameName' };

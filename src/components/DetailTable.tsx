@@ -1,4 +1,4 @@
-// Generic table component for entity details
+// Generic table component for element details
 // Supports responsive split layout, custom renderers, and clickable cells
 
 import * as React from 'react';

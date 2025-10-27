@@ -489,11 +489,11 @@ function App() {
                     </div>
                     <div>
                       <span className="font-mono bg-gray-100 dark:bg-slate-800 px-1 py-0.5 rounded">sel=Condition</span>
-                      <span className="ml-2">Selected entity name</span>
+                      <span className="ml-2">Selected element name</span>
                     </div>
                     <div>
                       <span className="font-mono bg-gray-100 dark:bg-slate-800 px-1 py-0.5 rounded">selType=class</span>
-                      <span className="ml-2">Entity type (class/enum/slot/variable)</span>
+                      <span className="ml-2">Element type (class/enum/slot/variable)</span>
                     </div>
                     <div className="mt-3 pt-2 border-t border-gray-200 dark:border-slate-600">
                       <div className="font-semibold mb-1">Section codes:</div>
@@ -528,7 +528,7 @@ function App() {
               slots={modelData?.slots || new Map()}
               variables={modelData?.variables || []}
               selectedElement={openDialogs.length > 0 ? openDialogs[0].element : undefined}
-              onSelectEntity={handleOpenDialog}
+              onSelectElement={handleOpenDialog}
               onElementHover={setHoveredElement}
               onElementLeave={() => setHoveredElement(null)}
               classCollection={modelData?.collections.classes}
@@ -548,7 +548,7 @@ function App() {
               slots={modelData?.slots || new Map()}
               variables={modelData?.variables || []}
               selectedElement={openDialogs.length > 0 ? openDialogs[0].element : undefined}
-              onSelectEntity={handleOpenDialog}
+              onSelectElement={handleOpenDialog}
               onElementHover={setHoveredElement}
               onElementLeave={() => setHoveredElement(null)}
               classCollection={modelData?.collections.classes}
@@ -567,8 +567,8 @@ function App() {
             <DetailPanelStack
               panels={openDialogs.map(d => ({
                 id: d.id,
-                entity: d.element,
-                entityType: d.elementType
+                element: d.element,
+                elementType: d.elementType
               }))}
               onNavigate={handleNavigate}
               onClose={handleCloseDialog}

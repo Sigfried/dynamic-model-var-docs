@@ -185,7 +185,7 @@ describe('getPanelTitle', () => {
   });
 
   describe('JSX Structure', () => {
-    it('returns ReactElement for all entity types', () => {
+    it('returns ReactElement for all element types', () => {
       expect(getPanelTitle(mockClassWithParent)).toBeDefined();
       expect(getPanelTitle(mockEnum)).toBeDefined();
       expect(getPanelTitle(mockSlot)).toBeDefined();
@@ -193,10 +193,10 @@ describe('getPanelTitle', () => {
     });
 
     it('renders valid JSX that can be rendered by React', () => {
-      const entities = [mockClassWithParent, mockEnum, mockSlot, mockVariable];
+      const elements = [mockClassWithParent, mockEnum, mockSlot, mockVariable];
 
-      entities.forEach(entity => {
-        const title = getPanelTitle(entity);
+      elements.forEach(element => {
+        const title = getPanelTitle(element);
         expect(() => render(title)).not.toThrow();
       });
     });

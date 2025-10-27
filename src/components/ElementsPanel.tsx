@@ -14,7 +14,7 @@ interface ElementsPanelProps {
   slots: Map<string, SlotDefinition>;
   variables: VariableSpec[];
   selectedElement?: SelectedElement;
-  onSelectEntity: (entity: SelectedElement) => void;
+  onSelectElement: (element: SelectedElement) => void;
   onElementHover?: (element: { type: 'class' | 'enum' | 'slot' | 'variable'; name: string }) => void;
   onElementLeave?: () => void;
   // New: collections (will replace raw data maps above)
@@ -62,7 +62,7 @@ export default function ElementsPanel({
   slots,
   variables,
   selectedElement,
-  onSelectEntity,
+  onSelectElement,
   onElementHover,
   onElementLeave,
   classCollection: classCollectionProp,
@@ -91,11 +91,11 @@ export default function ElementsPanel({
     onSectionsChange(newSections);
   };
 
-  // Helper to check if entity is of certain type
-  const isClassNode = (entity: SelectedElement): entity is ClassNode => 'children' in entity;
-  const isEnumDefinition = (entity: SelectedElement): entity is EnumDefinition => 'permissible_values' in entity;
-  const isSlotDefinition = (entity: SelectedElement): entity is SlotDefinition => 'slot_uri' in entity;
-  const isVariableSpec = (entity: SelectedElement): entity is VariableSpec => 'variableLabel' in entity;
+  // Helper to check if element is of certain type
+  const isClassNode = (element: SelectedElement): element is ClassNode => 'children' in element;
+  const isEnumDefinition = (element: SelectedElement): element is EnumDefinition => 'permissible_values' in element;
+  const isSlotDefinition = (element: SelectedElement): element is SlotDefinition => 'slot_uri' in element;
+  const isVariableSpec = (element: SelectedElement): element is VariableSpec => 'variableLabel' in element;
 
   // Helper to convert selectedElement to format expected by Section component
   const getSelectedElementInfo = (): { type: string; name: string } | undefined => {
@@ -148,7 +148,7 @@ export default function ElementsPanel({
                     key="classes"
                     collection={classCollection}
                     callbacks={{
-                      onSelect: onSelectEntity,
+                      onSelect: onSelectElement,
                       onElementHover,
                       onElementLeave
                     }}
@@ -162,7 +162,7 @@ export default function ElementsPanel({
                     key="enums"
                     collection={enumCollection}
                     callbacks={{
-                      onSelect: onSelectEntity,
+                      onSelect: onSelectElement,
                       onElementHover,
                       onElementLeave
                     }}
@@ -176,7 +176,7 @@ export default function ElementsPanel({
                     key="slots"
                     collection={slotCollection}
                     callbacks={{
-                      onSelect: onSelectEntity,
+                      onSelect: onSelectElement,
                       onElementHover,
                       onElementLeave
                     }}
@@ -190,7 +190,7 @@ export default function ElementsPanel({
                     key="variables"
                     collection={variableCollection}
                     callbacks={{
-                      onSelect: onSelectEntity,
+                      onSelect: onSelectElement,
                       onElementHover,
                       onElementLeave
                     }}
