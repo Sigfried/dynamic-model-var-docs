@@ -473,6 +473,12 @@ export abstract class ElementCollection {
   /** Get expansion state key for URL persistence (null if no expansion needed) */
   abstract getExpansionKey(position: 'left' | 'right'): string | null;
 
+  /** Get a single element by name/identifier */
+  abstract getElement(name: string): ElementData | null;
+
+  /** Get all elements in this collection as a flat array */
+  abstract getAllElements(): ElementData[];
+
   /** Render items for the panel section */
   abstract renderItems(
     callbacks: ElementCollectionCallbacks,
@@ -513,6 +519,14 @@ export class EnumCollection extends ElementCollection {
 
   getExpansionKey(_position: 'left' | 'right'): string | null {
     return null; // No expansion state needed
+  }
+
+  getElement(name: string): ElementData | null {
+    return this.enums.get(name) || null;
+  }
+
+  getAllElements(): ElementData[] {
+    return Array.from(this.enums.values());
   }
 
   renderItems(
@@ -591,6 +605,14 @@ export class SlotCollection extends ElementCollection {
 
   getExpansionKey(_position: 'left' | 'right'): string | null {
     return null; // No expansion state needed
+  }
+
+  getElement(name: string): ElementData | null {
+    return this.slots.get(name) || null;
+  }
+
+  getAllElements(): ElementData[] {
+    return Array.from(this.slots.values());
   }
 
   renderItems(
@@ -684,6 +706,27 @@ export class ClassCollection extends ElementCollection {
 
   getExpansionKey(position: 'left' | 'right'): string | null {
     return position === 'left' ? 'lce' : 'rce'; // left/right class expansion
+  }
+
+  getElement(name: string): ElementData | null {
+    // Recursively search tree for class by name
+    const searchRecursive = (nodes: ClassNode[]): ClassNode | null => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        const found = searchRecursive(node.children);
+        if (found) return found;
+      }
+      return null;
+    };
+    return searchRecursive(this.rootNodes);
+  }
+
+  getAllElements(): ElementData[] {
+    // Flatten tree to array
+    const flattenRecursive = (nodes: ClassNode[]): ClassNode[] => {
+      return nodes.flatMap(node => [node, ...flattenRecursive(node.children)]);
+    };
+    return flattenRecursive(this.rootNodes);
   }
 
   private countTotalNodes(): number {
@@ -822,6 +865,15 @@ export class VariableCollection extends ElementCollection {
 
   getExpansionKey(position: 'left' | 'right'): string | null {
     return position === 'left' ? 'lve' : 'rve'; // left/right variable expansion
+  }
+
+  getElement(name: string): ElementData | null {
+    // Variables use variableLabel as identifier
+    return this.variables.find(v => v.variableLabel === name) || null;
+  }
+
+  getAllElements(): ElementData[] {
+    return this.variables;
   }
 
   renderItems(
