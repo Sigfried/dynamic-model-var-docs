@@ -217,70 +217,41 @@ function App() {
       try {
         const state = JSON.parse(stored);
 
-        // Update URL immediately to saved state (clears current expansion params)
-        saveStateToURL(state);
+        // Build clean URL with only saved state params (no expansion params)
+        const params = new URLSearchParams();
 
-        setLeftSections(state.leftSections || []);
-        setRightSections(state.rightSections || []);
-
-        // Restore dialogs if they were in the saved state
-        if (state.dialogs && state.dialogs.length > 0 && modelData && classMap.size > 0) {
-          const restoredDialogs: OpenDialog[] = [];
-          let dialogIdCounter = nextDialogId;
-
-          state.dialogs.forEach((dialogState: DialogState) => {
-            let element: SelectedElement | null = null;
-
-            if (dialogState.elementType === 'class') {
-              element = classMap.get(dialogState.elementName) || null;
-            } else if (dialogState.elementType === 'enum') {
-              element = modelData.enums.get(dialogState.elementName) || null;
-            } else if (dialogState.elementType === 'slot') {
-              element = modelData.slots.get(dialogState.elementName) || null;
-            } else if (dialogState.elementType === 'variable') {
-              element = modelData.variables.find(v => v.variableLabel === dialogState.elementName) || null;
-            }
-
-            if (element) {
-              restoredDialogs.push({
-                id: `dialog-${dialogIdCounter}`,
-                element,
-                elementType: dialogState.elementType,
-                x: dialogState.x,
-                y: dialogState.y,
-                width: dialogState.width,
-                height: dialogState.height
-              });
-              dialogIdCounter++;
-            }
-          });
-
-          setOpenDialogs(restoredDialogs);
-          setNextDialogId(dialogIdCounter);
-        } else {
-          setOpenDialogs([]);
+        if (state.leftSections && state.leftSections.length > 0) {
+          const sectionCodes = state.leftSections.map((s: SectionType) =>
+            ({ classes: 'c', enums: 'e', slots: 's', variables: 'v' }[s])
+          ).join(',');
+          params.set('l', sectionCodes);
         }
 
-        // Force page reload to reset expansion state hooks
-        window.location.reload();
+        if (state.rightSections && state.rightSections.length > 0) {
+          const sectionCodes = state.rightSections.map((s: SectionType) =>
+            ({ classes: 'c', enums: 'e', slots: 's', variables: 'v' }[s])
+          ).join(',');
+          params.set('r', sectionCodes);
+        }
+
+        if (state.dialogs && state.dialogs.length > 0) {
+          const dialogsStr = state.dialogs.map((d: DialogState) =>
+            `${d.elementType}:${d.elementName}:${Math.round(d.x)},${Math.round(d.y)},${Math.round(d.width)},${Math.round(d.height)}`
+          ).join(';');
+          params.set('dialogs', dialogsStr);
+        }
+
+        // Navigate to clean URL (clears expansion params and triggers reload)
+        const newURL = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
+        window.location.href = newURL;
       } catch (err) {
         console.error('Failed to parse stored state:', err);
       }
     } else {
       // Reset to default (classes only preset)
-      // Clear URL to just the default state
-      const defaultState = {
-        leftSections: ['classes'] as SectionType[],
-        rightSections: [] as SectionType[]
-      };
-      saveStateToURL(defaultState);
-
-      setLeftSections(['classes']);
-      setRightSections([]);
-      setOpenDialogs([]);
-
-      // Force page reload to reset expansion state hooks
-      window.location.reload();
+      // Navigate to clean default URL (clears all params and triggers reload)
+      const newURL = `${window.location.pathname}?l=c`;
+      window.location.href = newURL;
     }
   };
 
