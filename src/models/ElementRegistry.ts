@@ -35,12 +35,21 @@ export interface ElementTypeMetadata {
 }
 
 /**
+ * Valid source/target pair for a relationship type
+ */
+export interface RelationshipPair {
+  source: ElementTypeId;
+  target: ElementTypeId;
+}
+
+/**
  * Relationship type metadata
  */
 export interface RelationshipTypeMetadata {
   readonly id: RelationshipTypeId;
   readonly label: string;
   readonly color: string;  // Gradient color for SVG links
+  readonly validPairs: readonly RelationshipPair[];  // Valid source→target combinations
 }
 
 /**
@@ -119,22 +128,38 @@ export const RELATIONSHIP_TYPES: Record<RelationshipTypeId, RelationshipTypeMeta
   inherits: {
     id: 'inherits',
     label: 'Inherits from',
-    color: '#3b82f6' // blue-500
+    color: '#3b82f6', // blue-500
+    validPairs: [
+      { source: 'class', target: 'class' }
+    ]
   },
   property: {
     id: 'property',
     label: 'Property',
-    color: '#8b5cf6' // purple-500
+    color: '#8b5cf6', // purple-500
+    validPairs: [
+      { source: 'class', target: 'class' },
+      { source: 'class', target: 'enum' },
+      { source: 'slot', target: 'class' },
+      { source: 'slot', target: 'enum' },
+      { source: 'variable', target: 'class' }
+    ]
   },
   uses_enum: {
     id: 'uses_enum',
     label: 'Uses enum',
-    color: '#06b6d4' // cyan-500
+    color: '#06b6d4', // cyan-500
+    validPairs: [
+      { source: 'class', target: 'enum' }
+    ]
   },
   references_class: {
     id: 'references_class',
     label: 'References class',
-    color: '#10b981' // green-500
+    color: '#10b981', // green-500
+    validPairs: [
+      { source: 'class', target: 'class' }
+    ]
   }
 } as const;
 
