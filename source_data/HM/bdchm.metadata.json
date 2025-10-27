@@ -6,7 +6,8 @@
       "parent": null,
       "abstract": true,
       "attributes": {},
-      "slots": "id"
+      "slots": "id",
+      "slot_usage": {}
     },
     "Person": {
       "name": "Person",
@@ -49,7 +50,8 @@
       },
       "slots": [
         "identity"
-      ]
+      ],
+      "slot_usage": {}
     },
     "Demography": {
       "name": "Demography",
@@ -74,7 +76,8 @@
         "identity",
         "associated_participant",
         "associated_visit"
-      ]
+      ],
+      "slot_usage": {}
     },
     "Participant": {
       "name": "Participant",
@@ -119,7 +122,8 @@
       "slots": [
         "associated_person",
         "identity"
-      ]
+      ],
+      "slot_usage": {}
     },
     "ResearchStudy": {
       "name": "ResearchStudy",
@@ -197,7 +201,8 @@
       },
       "slots": [
         "identity"
-      ]
+      ],
+      "slot_usage": {}
     },
     "Consent": {
       "name": "Consent",
@@ -219,7 +224,8 @@
           "description": "The point in time after which the consent record is invalid."
         }
       },
-      "slots": []
+      "slots": [],
+      "slot_usage": {}
     },
     "Visit": {
       "name": "Visit",
@@ -252,7 +258,8 @@
       },
       "slots": [
         "associated_participant"
-      ]
+      ],
+      "slot_usage": {}
     },
     "Organization": {
       "name": "Organization",
@@ -275,7 +282,8 @@
       },
       "slots": [
         "identity"
-      ]
+      ],
+      "slot_usage": {}
     },
     "TimePoint": {
       "name": "TimePoint",
@@ -300,7 +308,8 @@
           "description": "An event that occurred at the point in time specified by this TimePoint."
         }
       },
-      "slots": []
+      "slots": [],
+      "slot_usage": {}
     },
     "TimePeriod": {
       "name": "TimePeriod",
@@ -317,7 +326,8 @@
           "description": "When a period of time ended."
         }
       },
-      "slots": []
+      "slots": [],
+      "slot_usage": {}
     },
     "ResearchStudyCollection": {
       "name": "ResearchStudyCollection",
@@ -331,7 +341,8 @@
           "inlined": true
         }
       },
-      "slots": []
+      "slots": [],
+      "slot_usage": {}
     },
     "Questionnaire": {
       "name": "Questionnaire",
@@ -385,7 +396,8 @@
       },
       "slots": [
         "identity"
-      ]
+      ],
+      "slot_usage": {}
     },
     "QuestionnaireItem": {
       "name": "QuestionnaireItem",
@@ -408,7 +420,8 @@
       },
       "slots": [
         "identity"
-      ]
+      ],
+      "slot_usage": {}
     },
     "QuestionnaireResponse": {
       "name": "QuestionnaireResponse",
@@ -432,7 +445,8 @@
       },
       "slots": [
         "associated_visit"
-      ]
+      ],
+      "slot_usage": {}
     },
     "QuestionnaireResponseItem": {
       "name": "QuestionnaireResponseItem",
@@ -453,7 +467,8 @@
           "required": true
         }
       },
-      "slots": []
+      "slots": [],
+      "slot_usage": {}
     },
     "QuestionnaireResponseValue": {
       "name": "QuestionnaireResponseValue",
@@ -471,7 +486,8 @@
       },
       "slots": [
         "value"
-      ]
+      ],
+      "slot_usage": {}
     },
     "QuestionnaireResponseValueDecimal": {
       "name": "QuestionnaireResponseValueDecimal",
@@ -479,7 +495,13 @@
       "parent": "QuestionnaireResponseValue",
       "abstract": false,
       "attributes": {},
-      "slots": []
+      "slots": [],
+      "slot_usage": {
+        "value": {
+          "range": "decimal",
+          "required": true
+        }
+      }
     },
     "QuestionnaireResponseValueBoolean": {
       "name": "QuestionnaireResponseValueBoolean",
@@ -487,7 +509,13 @@
       "parent": "QuestionnaireResponseValue",
       "abstract": false,
       "attributes": {},
-      "slots": []
+      "slots": [],
+      "slot_usage": {
+        "value": {
+          "range": "boolean",
+          "required": true
+        }
+      }
     },
     "QuestionnaireResponseValueInteger": {
       "name": "QuestionnaireResponseValueInteger",
@@ -495,7 +523,13 @@
       "parent": "QuestionnaireResponseValue",
       "abstract": false,
       "attributes": {},
-      "slots": []
+      "slots": [],
+      "slot_usage": {
+        "value": {
+          "range": "integer",
+          "required": true
+        }
+      }
     },
     "QuestionnaireResponseValueTimePoint": {
       "name": "QuestionnaireResponseValueTimePoint",
@@ -503,7 +537,13 @@
       "parent": "QuestionnaireResponseValue",
       "abstract": false,
       "attributes": {},
-      "slots": []
+      "slots": [],
+      "slot_usage": {
+        "value": {
+          "range": "TimePoint",
+          "required": true
+        }
+      }
     },
     "QuestionnaireResponseValueString": {
       "name": "QuestionnaireResponseValueString",
@@ -511,7 +551,13 @@
       "parent": "QuestionnaireResponseValue",
       "abstract": false,
       "attributes": {},
-      "slots": []
+      "slots": [],
+      "slot_usage": {
+        "value": {
+          "range": "string",
+          "required": true
+        }
+      }
     },
     "Condition": {
       "name": "Condition",
@@ -558,7 +604,8 @@
         "identity",
         "associated_visit",
         "associated_participant"
-      ]
+      ],
+      "slot_usage": {}
     },
     "Procedure": {
       "name": "Procedure",
@@ -594,7 +641,8 @@
         "identity",
         "associated_visit",
         "associated_participant"
-      ]
+      ],
+      "slot_usage": {}
     },
     "ImagingStudy": {
       "name": "ImagingStudy",
@@ -637,7 +685,8 @@
       "slots": [
         "associated_visit",
         "associated_participant"
-      ]
+      ],
+      "slot_usage": {}
     },
     "Exposure": {
       "name": "Exposure",
@@ -668,7 +717,8 @@
         "identity",
         "associated_visit",
         "associated_participant"
-      ]
+      ],
+      "slot_usage": {}
     },
     "DrugExposure": {
       "name": "DrugExposure",
@@ -711,7 +761,8 @@
           "description": "Route of drug administration."
         }
       },
-      "slots": []
+      "slots": [],
+      "slot_usage": {}
     },
     "DeviceExposure": {
       "name": "DeviceExposure",
@@ -733,7 +784,8 @@
           "required": false
         }
       },
-      "slots": []
+      "slots": [],
+      "slot_usage": {}
     },
     "DimensionalObservation": {
       "name": "DimensionalObservation",
@@ -741,7 +793,8 @@
       "parent": "Observation",
       "abstract": false,
       "attributes": {},
-      "slots": []
+      "slots": [],
+      "slot_usage": {}
     },
     "DimensionalObservationSet": {
       "name": "DimensionalObservationSet",
@@ -749,7 +802,13 @@
       "parent": "ObservationSet",
       "abstract": false,
       "attributes": {},
-      "slots": []
+      "slots": [],
+      "slot_usage": {
+        "observations": {
+          "range": "DimensionalObservation",
+          "required": true
+        }
+      }
     },
     "File": {
       "name": "File",
@@ -798,7 +857,8 @@
       "slots": [
         "identity",
         "associated_participant"
-      ]
+      ],
+      "slot_usage": {}
     },
     "ImagingFile": {
       "name": "ImagingFile",
@@ -839,7 +899,8 @@
           "description": "(0008, 1090) Manufacturer's Model Name. The Digital Imaging and Communications in Medicine (DICOM) standard is the international standard to transmit, store, retrieve, print, process, and display medical imaging information."
         }
       },
-      "slots": []
+      "slots": [],
+      "slot_usage": {}
     },
     "Document": {
       "name": "Document",
@@ -876,7 +937,8 @@
       },
       "slots": [
         "identity"
-      ]
+      ],
+      "slot_usage": {}
     },
     "Specimen": {
       "name": "Specimen",
@@ -1137,7 +1199,8 @@
       },
       "slots": [
         "identity"
-      ]
+      ],
+      "slot_usage": {}
     },
     "SpecimenContainer": {
       "name": "SpecimenContainer",
@@ -1199,7 +1262,8 @@
           "required": false
         }
       },
-      "slots": []
+      "slots": [],
+      "slot_usage": {}
     },
     "SpecimenCreationActivity": {
       "name": "SpecimenCreationActivity",
@@ -1349,7 +1413,8 @@
           "required": false
         }
       },
-      "slots": []
+      "slots": [],
+      "slot_usage": {}
     },
     "SpecimenQualityObservation": {
       "name": "SpecimenQualityObservation",
@@ -1357,7 +1422,8 @@
       "parent": "Observation",
       "abstract": false,
       "attributes": {},
-      "slots": []
+      "slots": [],
+      "slot_usage": {}
     },
     "SpecimenQuantityObservation": {
       "name": "SpecimenQuantityObservation",
@@ -1365,7 +1431,8 @@
       "parent": "Observation",
       "abstract": false,
       "attributes": {},
-      "slots": []
+      "slots": [],
+      "slot_usage": {}
     },
     "SpecimenProcessingActivity": {
       "name": "SpecimenProcessingActivity",
@@ -1467,7 +1534,8 @@
           "required": false
         }
       },
-      "slots": []
+      "slots": [],
+      "slot_usage": {}
     },
     "SpecimenStorageActivity": {
       "name": "SpecimenStorageActivity",
@@ -1551,7 +1619,8 @@
           "required": false
         }
       },
-      "slots": []
+      "slots": [],
+      "slot_usage": {}
     },
     "SpecimenTransportActivity": {
       "name": "SpecimenTransportActivity",
@@ -1602,7 +1671,8 @@
           "required": false
         }
       },
-      "slots": []
+      "slots": [],
+      "slot_usage": {}
     },
     "BiologicProduct": {
       "name": "BiologicProduct",
@@ -1656,7 +1726,8 @@
       },
       "slots": [
         "identity"
-      ]
+      ],
+      "slot_usage": {}
     },
     "Substance": {
       "name": "Substance",
@@ -1713,7 +1784,8 @@
           "required": false
         }
       },
-      "slots": []
+      "slots": [],
+      "slot_usage": {}
     },
     "Quantity": {
       "name": "Quantity",
@@ -1746,7 +1818,8 @@
           "required": false
         }
       },
-      "slots": []
+      "slots": [],
+      "slot_usage": {}
     },
     "BodySite": {
       "name": "BodySite",
@@ -1791,7 +1864,8 @@
           "required": false
         }
       },
-      "slots": []
+      "slots": [],
+      "slot_usage": {}
     },
     "ObservationSet": {
       "name": "ObservationSet",
@@ -1837,7 +1911,8 @@
         "observations",
         "associated_visit",
         "associated_participant"
-      ]
+      ],
+      "slot_usage": {}
     },
     "Observation": {
       "name": "Observation",
@@ -1931,7 +2006,8 @@
       "slots": [
         "associated_visit",
         "associated_participant"
-      ]
+      ],
+      "slot_usage": {}
     },
     "MeasurementObservationSet": {
       "name": "MeasurementObservationSet",
@@ -1939,7 +2015,13 @@
       "parent": "ObservationSet",
       "abstract": false,
       "attributes": {},
-      "slots": []
+      "slots": [],
+      "slot_usage": {
+        "observations": {
+          "range": "MeasurementObservation",
+          "required": true
+        }
+      }
     },
     "MeasurementObservation": {
       "name": "MeasurementObservation",
@@ -1961,7 +2043,8 @@
           "range": "MeasurementObservationTypeEnum"
         }
       },
-      "slots": []
+      "slots": [],
+      "slot_usage": {}
     },
     "SdohObservationSet": {
       "name": "SdohObservationSet",
@@ -1969,7 +2052,16 @@
       "parent": "ObservationSet",
       "abstract": false,
       "attributes": {},
-      "slots": []
+      "slots": [],
+      "slot_usage": {
+        "observations": {
+          "range": "SdohObservation",
+          "required": true
+        },
+        "category": {
+          "range": "GravityDomainEnum"
+        }
+      }
     },
     "SdohObservation": {
       "name": "SdohObservation",
@@ -1982,7 +2074,12 @@
           "range": "QuestionnaireItem"
         }
       },
-      "slots": []
+      "slots": [],
+      "slot_usage": {
+        "category": {
+          "range": "GravityDomainEnum"
+        }
+      }
     },
     "CauseOfDeath": {
       "name": "CauseOfDeath",
@@ -2003,7 +2100,8 @@
           "required": true
         }
       },
-      "slots": []
+      "slots": [],
+      "slot_usage": {}
     }
   },
   "slots": {
