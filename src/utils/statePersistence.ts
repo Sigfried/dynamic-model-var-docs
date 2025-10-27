@@ -98,37 +98,50 @@ export function parseStateFromURL(): Partial<AppState> | null {
 
 /**
  * Save state to URL query string
+ * Preserves existing URL parameters that are not managed by this function
  */
 export function saveStateToURL(state: AppState): void {
-  const params = new URLSearchParams();
+  // Start with existing URL params to preserve parameters managed by other systems
+  // (e.g., lve, rve, lce, rce from useExpansionState hook)
+  const params = new URLSearchParams(window.location.search);
 
-  // Save left panel sections
+  // Update left panel sections
   if (state.leftSections.length > 0) {
     params.set('l', state.leftSections.map(s => sectionToCode[s]).join(','));
+  } else {
+    params.delete('l');
   }
 
-  // Save right panel sections
+  // Update right panel sections
   if (state.rightSections.length > 0) {
     params.set('r', state.rightSections.map(s => sectionToCode[s]).join(','));
+  } else {
+    params.delete('r');
   }
 
-  // Save dialogs
+  // Update dialogs
   if (state.dialogs && state.dialogs.length > 0) {
     // Format: type:name:x,y,w,h;type:name:x,y,w,h
     const dialogsStr = state.dialogs.map(d =>
       `${d.elementType}:${d.elementName}:${Math.round(d.x)},${Math.round(d.y)},${Math.round(d.width)},${Math.round(d.height)}`
     ).join(';');
     params.set('dialogs', dialogsStr);
+  } else {
+    params.delete('dialogs');
   }
 
-  // Save expanded variable classes
+  // Update expanded variable classes
   if (state.expandedVariableClasses && state.expandedVariableClasses.length > 0) {
     params.set('evc', state.expandedVariableClasses.join(','));
+  } else {
+    params.delete('evc');
   }
 
-  // Save expanded class nodes
+  // Update expanded class nodes
   if (state.expandedClassNodes && state.expandedClassNodes.length > 0) {
     params.set('ecn', state.expandedClassNodes.join(','));
+  } else {
+    params.delete('ecn');
   }
 
   // Update URL without page reload
