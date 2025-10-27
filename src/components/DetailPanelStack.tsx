@@ -1,6 +1,6 @@
 import DetailPanel from './DetailPanel';
-import { getHeaderColor, getPanelTitle, type SelectedElement } from '../utils/panelHelpers';
-import type { ClassNode, EnumDefinition, SlotDefinition } from '../types';
+import { getHeaderColor, getPanelTitle } from '../utils/panelHelpers';
+import type { ClassNode, EnumDefinition, SlotDefinition, SelectedElement } from '../types';
 
 interface StackedPanel {
   id: string;

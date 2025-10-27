@@ -150,9 +150,10 @@
    - Exported `elementTypeToCode` from statePersistence.ts
    - Imported and used in App.tsx instead of inline literals
 
-5. ⚠️ **PENDING**: Centralize `SelectedElement` union type definition
-   - Currently duplicated in multiple files
-   - Should export from single location
+5. ✅ **SelectedElement type centralized**: Export from types.ts
+   - Added to types.ts with documentation
+   - Updated all 8 files to import from types.ts
+   - Maintained backward compatibility via re-exports in panelHelpers and duplicateDetection
 
 **Critical bug fixed during this task:**
 - App.tsx `leftPanelData`/`rightPanelData` were checking for plural names ('classes', 'enums', 'slots', 'variables')

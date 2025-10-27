@@ -1,10 +1,8 @@
 import Section from './Section';
-import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
+import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec, SelectedElement } from '../types';
 import type { ElementCollection } from '../models/Element';
 import type { ElementTypeId } from '../models/ElementRegistry';
 import { ELEMENT_TYPES, getAllElementTypeIds } from '../models/ElementRegistry';
-
-type SelectedElement = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
 
 interface ElementsPanelProps {
   position: 'left' | 'right';

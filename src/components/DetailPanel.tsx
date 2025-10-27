@@ -1,7 +1,5 @@
 import React from 'react';
-import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
-
-type SelectedElement = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
+import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec, SelectedElement } from '../types';
 
 interface DetailPanelProps {
   selectedElement?: SelectedElement;

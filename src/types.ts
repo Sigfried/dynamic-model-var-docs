@@ -48,6 +48,12 @@ export interface SlotDefinition {
   usedByClasses: string[]; // Classes that use this slot
 }
 
+/**
+ * Union type representing any selectable element in the UI
+ * Used for element selection, navigation, and detail display
+ */
+export type SelectedElement = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
+
 export interface ReverseIndices {
   enumToClasses: Map<string, Set<string>>; // enum name -> class names
   slotToClasses: Map<string, Set<string>>; // slot name -> class names

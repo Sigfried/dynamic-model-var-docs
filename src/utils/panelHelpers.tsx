@@ -3,10 +3,11 @@
  */
 
 import { type ReactElement } from 'react';
-import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
+import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec, SelectedElement } from '../types';
 import { ELEMENT_TYPES, type ElementTypeId } from '../models/ElementRegistry';
 
-export type SelectedElement = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
+// Re-export SelectedElement for backward compatibility
+export type { SelectedElement };
 
 /**
  * Get header color classes based on element type

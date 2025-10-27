@@ -2,9 +2,10 @@
  * Utilities for detecting duplicate elements in dialog/panel lists
  */
 
-import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
+import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec, SelectedElement } from '../types';
 
-export type SelectedElement = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
+// Re-export SelectedElement for backward compatibility
+export type { SelectedElement };
 
 export interface ElementDescriptor {
   element: SelectedElement;

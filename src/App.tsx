@@ -8,10 +8,8 @@ import { loadModelData } from './utils/dataLoader';
 import { getInitialState, saveStateToURL, saveStateToLocalStorage, generatePresetURL, elementTypeToCode, type DialogState } from './utils/statePersistence';
 import { calculateDisplayMode } from './utils/layoutHelpers';
 import { getElementName, findDuplicateIndex } from './utils/duplicateDetection';
-import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec, ModelData } from './types';
+import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec, ModelData, SelectedElement } from './types';
 import type { ElementTypeId } from './models/ElementRegistry';
-
-type SelectedElement = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
 
 // Helper to flatten class hierarchy into a list
 function flattenClassHierarchy(nodes: ClassNode[]): ClassNode[] {
