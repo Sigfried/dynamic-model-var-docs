@@ -175,6 +175,63 @@
 - ✅ Validation in statePersistence (now uses isValidElementType)
 - ✅ Duplicate mappings in App.tsx (now imports from statePersistence)
 
+#### 3.6. Make Everything Truly Generic 🔄 **IN PROGRESS** (2025-01-27)
+**Goal**: Eliminate remaining structural duplication so adding/removing element types requires minimal changes.
+
+**Current problem**: Despite Task 3.5, we still have type-specific code in 13+ files:
+- ModelData has redundant fields: `classHierarchy`, `enums`, `slots`, `variables` AND `collections`
+- App.tsx has type-specific if/else for element lookups
+- LinkOverlay has hard-coded panel structure (`leftPanel.classes`, `leftPanel.enums`, etc.)
+- ReverseIndices has type-specific maps (`enumToClasses`, `slotToClasses`, `classToClasses`)
+
+**Strategy**: Push more logic into the model layer and registry
+
+**Sub-tasks**:
+1. Add lookup methods to ElementCollection:
+   - `getElement(name: string): ElementData | null`
+   - `getAllElements(): ElementData[]`
+
+2. Simplify ModelData to only:
+   - `collections: Map<ElementTypeId, ElementCollection>`
+   - Consider integrating reverse indices into registry or making them generic
+
+3. Enhance RELATIONSHIP_TYPES with source/target constraints:
+   ```typescript
+   property: {
+     id: 'property',
+     label: 'Property',
+     color: '#8b5cf6',
+     validPairs: [
+       { source: 'class', target: 'class' },
+       { source: 'class', target: 'enum' }
+     ]
+   }
+   ```
+
+4. Update App.tsx to use generic collection lookups instead of type-specific if/else
+
+5. Update LinkOverlay to accept generic panel structure:
+   ```typescript
+   leftPanel: Map<ElementTypeId, ElementCollection>
+   rightPanel: Map<ElementTypeId, ElementCollection>
+   ```
+
+6. Update all other components to eliminate type-specific conditionals
+
+**After these fixes, adding a new element type should require ONLY:**
+1. Add to ElementTypeId union in ElementRegistry
+2. Add metadata to ELEMENT_TYPES in ElementRegistry
+3. Add relationship metadata to RELATIONSHIP_TYPES (if new relationship types)
+4. Create new element/collection classes
+5. Add to dataLoader
+6. Update SelectedElement union (unavoidable for TypeScript)
+
+**No longer need to update:**
+- ❌ ModelData structure (just add to collections Map)
+- ❌ App.tsx element lookup logic (uses generic collection.getElement())
+- ❌ LinkOverlay panel structure (uses generic Map)
+- ❌ Type-specific if/else scattered throughout components
+
 #### 4. Split Element.tsx into Separate Files
 **Current state**: Element.tsx is 919 lines with 4 element classes + 4 collection classes
 
