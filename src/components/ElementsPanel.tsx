@@ -1,8 +1,6 @@
-import ClassSection from './ClassSection';
-import VariablesSection from './VariablesSection';
 import Section from './Section';
 import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
-import { EnumCollection, SlotCollection } from '../models/Element';
+import { ClassCollection, EnumCollection, SlotCollection, VariableCollection } from '../models/Element';
 
 type SectionType = 'classes' | 'enums' | 'slots' | 'variables';
 type SelectedElement = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
@@ -20,8 +18,10 @@ interface ElementsPanelProps {
   onElementHover?: (element: { type: 'class' | 'enum' | 'slot' | 'variable'; name: string }) => void;
   onElementLeave?: () => void;
   // New: collections (will replace raw data maps above)
+  classCollection?: ClassCollection;
   enumCollection?: EnumCollection;
   slotCollection?: SlotCollection;
+  variableCollection?: VariableCollection;
 }
 
 interface SectionToggleButtonProps {
@@ -65,14 +65,18 @@ export default function ElementsPanel({
   onSelectEntity,
   onElementHover,
   onElementLeave,
+  classCollection: classCollectionProp,
   enumCollection: enumCollectionProp,
-  slotCollection: slotCollectionProp
+  slotCollection: slotCollectionProp,
+  variableCollection: variableCollectionProp
 }: ElementsPanelProps) {
   const activeSections = new Set(sections);
 
   // Use provided collections, or create from raw data (backward compatibility)
-  const enumCollection = enumCollectionProp || new EnumCollection(enums);
-  const slotCollection = slotCollectionProp || new SlotCollection(slots);
+  const classCollection = classCollectionProp || ClassCollection.fromData(classHierarchy, slots);
+  const enumCollection = enumCollectionProp || EnumCollection.fromData(enums);
+  const slotCollection = slotCollectionProp || SlotCollection.fromData(slots);
+  const variableCollection = variableCollectionProp || VariableCollection.fromData(variables);
 
   const toggleSection = (section: SectionType) => {
     const newSections = [...sections];
@@ -140,14 +144,16 @@ export default function ElementsPanel({
             switch (section) {
               case 'classes':
                 return (
-                  <ClassSection
+                  <Section
                     key="classes"
-                    nodes={classHierarchy}
-                    onSelectClass={onSelectEntity}
-                    selectedClass={selectedElement && isClassNode(selectedElement) ? selectedElement : undefined}
+                    collection={classCollection}
+                    callbacks={{
+                      onSelect: onSelectEntity,
+                      onElementHover,
+                      onElementLeave
+                    }}
                     position={position}
-                    onElementHover={onElementHover}
-                    onElementLeave={onElementLeave}
+                    selectedElement={getSelectedElementInfo()}
                   />
                 );
               case 'enums':
@@ -180,14 +186,16 @@ export default function ElementsPanel({
                 );
               case 'variables':
                 return (
-                  <VariablesSection
+                  <Section
                     key="variables"
-                    variables={variables}
-                    onSelectVariable={onSelectEntity}
-                    selectedVariable={selectedElement && isVariableSpec(selectedElement) ? selectedElement : undefined}
+                    collection={variableCollection}
+                    callbacks={{
+                      onSelect: onSelectEntity,
+                      onElementHover,
+                      onElementLeave
+                    }}
                     position={position}
-                    onElementHover={onElementHover}
-                    onElementLeave={onElementLeave}
+                    selectedElement={getSelectedElementInfo()}
                   />
                 );
               default:

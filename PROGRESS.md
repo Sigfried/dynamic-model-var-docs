@@ -180,6 +180,34 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 
 ---
 
+## Phase 3f: Element Collection Architecture & LinkML Slot Inheritance
+
+**Completed**: January 2025
+
+### Key Features
+- **ElementCollection Classes**: Generic architecture with ClassCollection, EnumCollection, SlotCollection, VariableCollection
+- **Unified Section Component**: Single Section component replaces all type-specific section components
+- **Per-Panel State Persistence**:
+  - Classes: `lce`/`rce` (left/right class expansion)
+  - Variables: `lve`/`rve` (left/right variable expansion)
+  - Fixed bug where left and right panels shared variable expansion state
+- **LinkML Slot Inheritance**: Proper handling of slot inheritance and refinements
+  - Shows inherited slots from parent classes
+  - Shows referenced top-level slots
+  - Applies `slot_usage` refinements (range narrowing, required changes)
+  - Source column indicates: "Inline" / "Slot: {name}" / "← {ParentClass}"
+  - ⚡ indicator for refined slots
+- **Correct Type Links**: Links now point to refined types (e.g., MeasurementObservation not Observation)
+
+### Technical Details
+- Removed 4 type-specific section components (ClassSection, EnumSection, SlotSection, VariablesSection)
+- Created `collectAllSlots()` function to walk inheritance chain and apply refinements
+- ElementCollection interface with `getExpansionKey()`, `renderItems()`, factory methods
+- State persistence fully isolated per panel and per element type
+- Example: MeasurementObservationSet now correctly shows `observations: array<MeasurementObservation>` (not `Observation`)
+
+---
+
 ## Recent Enhancements (January 2025)
 
 ### Variable Section Improvements

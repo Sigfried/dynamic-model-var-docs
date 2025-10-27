@@ -6,23 +6,44 @@
 
 ---
 
-## NEXT SESSION: Complete Element Collection Refactor
+## COMPLETED: Element Collection Refactor (2025-01-27)
 
-### Current State (2025-01-24)
-
-**What's Done:**
+**All Done:**
 - ✅ Created EnumCollection and SlotCollection classes in Element.tsx
-- ✅ Generic Section component replaces EnumSection and SlotSection
-- ✅ dataLoader.ts creates collections (no longer in components)
-- ✅ App.tsx passes collections to ElementsPanel
+- ✅ Created ClassCollection with state persistence (lce/rce keys)
+- ✅ Created VariableCollection with state persistence (lve/rve keys)
+- ✅ Generic Section component replaces all type-specific sections
+- ✅ dataLoader.ts creates all four collections
+- ✅ Removed old section components (ClassSection, EnumSection, SlotSection, VariablesSection)
+- ✅ Fixed variable expansion bug (left/right panels now use separate lve/rve keys)
 - ✅ Hover highlighting implemented with helper function
 
-**Git Tag**: `pre-element-collection-refactor` (safe rollback point)
+**Git Tag**: `pre-element-collection-refactor` (safe rollback point before refactor)
 
-**What's Left:**
-1. Implement ClassCollection with state persistence (lce/rce keys)
-2. Implement VariableCollection with state persistence (lve/rve keys)
-3. Remove old section components (ClassSection, EnumSection, SlotSection, VariablesSection)
+---
+
+## COMPLETED: slot_usage Bug Fix (2025-01-27)
+
+**Fixed class slot display to properly handle LinkML inheritance:**
+- ✅ Shows inherited slots from parent classes
+- ✅ Shows referenced top-level slots
+- ✅ Applies slot_usage refinements (e.g., narrowing range, making required)
+- ✅ Added Source column showing: Inline / Slot: {name} / ← {ParentClass}
+- ✅ Added ⚡ indicator for refined slots
+- ✅ Links now point to refined types (e.g., MeasurementObservation not Observation)
+
+**Example**: MeasurementObservationSet now correctly shows:
+- `observations` slot with range `MeasurementObservation` (not `Observation`)
+- Source: `← ObservationSet`
+- ⚡ indicating slot_usage refinement applied
+
+---
+
+## NEXT SESSION: Terminology Cleanup
+
+**Remaining tasks:**
+1. Rename `entity` → `element` throughout codebase (avoiding confusion with Entity model class)
+2. Consider the CRITICAL refactoring tasks below
 
 ---
 
@@ -106,28 +127,6 @@ Then components iterate over collections without knowing types.
 
 ---
 
-## After Background Refactoring: Resume Feature Work
-
-### 1. Hover Highlighting for Links
-**Status**: ✅ COMPLETED (2025-01-24)
-- Hover over element → highlights all its links
-- Links change from 20% → 100% opacity + stroke width
-- Helper function (not hook) for DRY event handlers
-
-### 2. Slots vs Attributes Terminology
-**Problem**: Confusing terminology, slots not visible in class detail
-
-**Solutions**:
-- Change "Properties" → "Slots" everywhere
-- Show both reusable slots AND attributes in class detail dialog
-- Indicate source: "Inline" vs "Slot: id" (with link to slot definition)
-
-### 3. Variable State Bug Fix
-**Current bug**: Both left and right panels share 'evc' key for variable expansion
-**Fix**: Use lve/rve (left/right variable expansion) keys based on panel position
-**Implementation**: ClassCollection and VariableCollection will handle this
-
----
 
 ## Additional Issues to Address (Lower Priority)
 

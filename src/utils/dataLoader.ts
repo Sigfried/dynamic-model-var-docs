@@ -9,7 +9,7 @@ import type {
   ReverseIndices,
   ModelData
 } from '../types';
-import { EnumCollection, SlotCollection } from '../models/Element';
+import { EnumCollection, SlotCollection, ClassCollection, VariableCollection } from '../models/Element';
 
 // Raw attribute definition from metadata JSON
 interface AttributeDefinition {
@@ -296,6 +296,8 @@ export async function loadModelData(): Promise<ModelData> {
   // Create element collections
   const enumCollection = EnumCollection.fromData(enums);
   const slotCollection = SlotCollection.fromData(slots);
+  const classCollection = ClassCollection.fromData(classHierarchy, slots);
+  const variableCollection = VariableCollection.fromData(variables);
 
   return {
     classHierarchy,
@@ -304,8 +306,10 @@ export async function loadModelData(): Promise<ModelData> {
     variables,
     reverseIndices,
     collections: {
+      classes: classCollection,
       enums: enumCollection,
-      slots: slotCollection
+      slots: slotCollection,
+      variables: variableCollection
     }
   };
 }

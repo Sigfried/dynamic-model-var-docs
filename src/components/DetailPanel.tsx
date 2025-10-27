@@ -42,6 +42,87 @@ function categorizeRange(range: string): RangeCategory {
   return 'class';
 }
 
+// Slot/attribute information with source tracking
+interface SlotInfo {
+  name: string;
+  definition: any; // Property or slot definition with range, required, etc.
+  source: 'inline' | 'slot' | 'inherited'; // Where this slot comes from
+  sourceDetail?: string; // e.g., slot name or parent class name
+  isRefined?: boolean; // Whether slot_usage refinements are applied
+}
+
+/**
+ * Collect all slots/attributes for a class including:
+ * - Inline attributes
+ * - Referenced top-level slots
+ * - Inherited slots from parent classes
+ * - slot_usage refinements applied
+ */
+function collectAllSlots(
+  classNode: ClassNode,
+  classesMap: Map<string, ClassNode>,
+  slotsMap: Map<string, SlotDefinition>
+): SlotInfo[] {
+  const slotMap = new Map<string, SlotInfo>();
+
+  // Walk up the inheritance chain from root to current class
+  const inheritanceChain: ClassNode[] = [];
+  let current: ClassNode | undefined = classNode;
+  while (current) {
+    inheritanceChain.unshift(current); // Add to front
+    current = current.parent ? classesMap.get(current.parent) : undefined;
+  }
+
+  // Process each class in the chain (root to leaf)
+  for (const cls of inheritanceChain) {
+    const isCurrentClass = cls.name === classNode.name;
+
+    // Add inline attributes (properties)
+    if (cls.properties) {
+      for (const [propName, propDef] of Object.entries(cls.properties)) {
+        slotMap.set(propName, {
+          name: propName,
+          definition: { ...propDef },
+          source: isCurrentClass ? 'inline' : 'inherited',
+          sourceDetail: isCurrentClass ? undefined : cls.name
+        });
+      }
+    }
+
+    // Add referenced slots
+    if (cls.slots && cls.slots.length > 0) {
+      for (const slotName of cls.slots) {
+        const slotDef = slotsMap.get(slotName);
+        if (slotDef) {
+          slotMap.set(slotName, {
+            name: slotName,
+            definition: { ...slotDef },
+            source: isCurrentClass ? 'slot' : 'inherited',
+            sourceDetail: isCurrentClass ? slotName : cls.name
+          });
+        }
+      }
+    }
+  }
+
+  // Apply slot_usage refinements for the current class
+  if (classNode.slot_usage) {
+    for (const [slotName, refinements] of Object.entries(classNode.slot_usage)) {
+      const existing = slotMap.get(slotName);
+      if (existing) {
+        // Apply refinements (overwrite with new values)
+        existing.definition = {
+          ...existing.definition,
+          ...refinements
+        };
+        existing.isRefined = true;
+      }
+    }
+  }
+
+  return Array.from(slotMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+}
+
 function getRangeColor(category: RangeCategory): string {
   switch (category) {
     case 'primitive':
@@ -503,89 +584,119 @@ export default function DetailPanel({ selectedElement, onNavigate, onClose, enum
           </div>
         )}
 
-        {/* Properties */}
-        {selectedClass.properties && Object.keys(selectedClass.properties).length > 0 && (
-          <div className="relative">
-            <div className="flex items-center gap-2 mb-2">
-              <h2 className="text-lg font-semibold">
-                Properties ({Object.keys(selectedClass.properties).length})
-              </h2>
-              <button
-                onMouseEnter={() => setShowLegend(true)}
-                onMouseLeave={() => setShowLegend(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                title="Show legend"
-              >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </div>
-            {showLegend && <TypeLegend />}
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-gray-50 dark:bg-slate-700">
-                    <th className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-left">
-                      Property
-                    </th>
-                    <th className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-left">
-                      Type
-                    </th>
-                    <th className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-left">
-                      Description
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(selectedClass.properties).map(([propName, propDef]) => {
-                    const range = propDef.range || 'unknown';
-                    const category = categorizeRange(range);
-                    const colorClass = getRangeColor(category);
-                    const clickable = isRangeClickable(range);
+        {/* Slots (includes inline attributes, referenced slots, and inherited) */}
+        {(() => {
+          const allSlots = classes && slots ? collectAllSlots(selectedClass, classes, slots) : [];
+          return allSlots.length > 0 && (
+            <div className="relative">
+              <div className="flex items-center gap-2 mb-2">
+                <h2 className="text-lg font-semibold">
+                  Slots ({allSlots.length})
+                </h2>
+                <button
+                  onMouseEnter={() => setShowLegend(true)}
+                  onMouseLeave={() => setShowLegend(false)}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  title="Show legend"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+              {showLegend && <TypeLegend />}
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-slate-700">
+                      <th className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-left">
+                        Slot
+                      </th>
+                      <th className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-left">
+                        Type
+                      </th>
+                      <th className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-left">
+                        Source
+                      </th>
+                      <th className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-left">
+                        Description
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allSlots.map((slotInfo) => {
+                      const range = slotInfo.definition.range || 'unknown';
+                      const category = categorizeRange(range);
+                      const colorClass = getRangeColor(category);
+                      const clickable = isRangeClickable(range);
 
-                    return (
-                      <tr key={propName} className="hover:bg-gray-50 dark:hover:bg-slate-700">
-                        <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-mono text-sm">
-                          <div className="flex items-center gap-2">
-                            <span>{propName}</span>
-                            {propDef.required && (
-                              <span className="text-red-600 dark:text-red-400" title="Required">
-                                *
-                              </span>
+                      return (
+                        <tr key={slotInfo.name} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                          <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-mono text-sm">
+                            <div className="flex items-center gap-2">
+                              <span>{slotInfo.name}</span>
+                              {slotInfo.definition.required && (
+                                <span className="text-red-600 dark:text-red-400" title="Required">
+                                  *
+                                </span>
+                              )}
+                              {slotInfo.definition.multivalued && (
+                                <span className="text-gray-600 dark:text-gray-400 text-xs" title="Multivalued">
+                                  []
+                                </span>
+                              )}
+                              {slotInfo.isRefined && (
+                                <span className="text-blue-600 dark:text-blue-400 text-sm font-bold" title="Refined via slot_usage">
+                                  ⚡
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className={`border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm font-mono ${colorClass}`}>
+                            {slotInfo.definition.multivalued && 'array<'}
+                            {clickable ? (
+                              <button
+                                onClick={() => handleRangeClick(range)}
+                                className="underline hover:opacity-70 transition-opacity"
+                              >
+                                {range}
+                              </button>
+                            ) : (
+                              <span>{range}</span>
                             )}
-                            {propDef.multivalued && (
-                              <span className="text-gray-600 dark:text-gray-400 text-xs" title="Multivalued">
-                                []
-                              </span>
+                            {slotInfo.definition.multivalued && '>'}
+                          </td>
+                          <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-xs">
+                            {slotInfo.source === 'inline' && 'Inline'}
+                            {slotInfo.source === 'slot' && slotInfo.sourceDetail && (
+                              <button
+                                onClick={() => handleRangeClick(slotInfo.sourceDetail!)}
+                                className="text-green-700 dark:text-green-400 underline hover:opacity-70"
+                              >
+                                Slot: {slotInfo.sourceDetail}
+                              </button>
                             )}
-                          </div>
-                        </td>
-                        <td className={`border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm font-mono ${colorClass}`}>
-                          {propDef.multivalued && 'array<'}
-                          {clickable ? (
-                            <button
-                              onClick={() => handleRangeClick(range)}
-                              className="underline hover:opacity-70 transition-opacity"
-                            >
-                              {range}
-                            </button>
-                          ) : (
-                            <span>{range}</span>
-                          )}
-                          {propDef.multivalued && '>'}
-                        </td>
-                        <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm">
-                          {propDef.description || '-'}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                            {slotInfo.source === 'inherited' && slotInfo.sourceDetail && (
+                              <button
+                                onClick={() => handleRangeClick(slotInfo.sourceDetail!)}
+                                className="text-gray-600 dark:text-gray-400 underline hover:opacity-70"
+                              >
+                                ← {slotInfo.sourceDetail}
+                              </button>
+                            )}
+                          </td>
+                          <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm">
+                            {slotInfo.definition.description || '-'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Variables */}
         {selectedClass.variables && selectedClass.variables.length > 0 && (

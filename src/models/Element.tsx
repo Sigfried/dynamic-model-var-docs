@@ -475,7 +475,9 @@ export abstract class ElementCollection {
   abstract renderItems(
     callbacks: ElementCollectionCallbacks,
     position: 'left' | 'right',
-    selectedElement?: { type: string; name: string }
+    selectedElement?: { type: string; name: string },
+    expandedItems?: Set<string>,
+    toggleExpansion?: (item: string) => void
   ): React.ReactElement[];
 }
 
@@ -513,7 +515,9 @@ export class EnumCollection extends ElementCollection {
   renderItems(
     callbacks: ElementCollectionCallbacks,
     position: 'left' | 'right',
-    selectedElement?: { type: string; name: string }
+    selectedElement?: { type: string; name: string },
+    _expandedItems?: Set<string>,
+    _toggleExpansion?: (item: string) => void
   ): React.ReactElement[] {
     // Sort enums by name
     const enumList = Array.from(this.enums.values()).sort((a, b) =>
@@ -586,7 +590,9 @@ export class SlotCollection extends ElementCollection {
   renderItems(
     callbacks: ElementCollectionCallbacks,
     position: 'left' | 'right',
-    selectedElement?: { type: string; name: string }
+    selectedElement?: { type: string; name: string },
+    _expandedItems?: Set<string>,
+    _toggleExpansion?: (item: string) => void
   ): React.ReactElement[] {
     // Sort slots by name
     const slotList = Array.from(this.slots.values()).sort((a, b) =>
@@ -620,6 +626,259 @@ export class SlotCollection extends ElementCollection {
             <span className="text-xs px-2 py-0.5 rounded bg-green-200 dark:bg-green-800 text-green-700 dark:text-green-300">
               {slotDef.usedByClasses.length}
             </span>
+          )}
+        </div>
+      );
+    });
+  }
+}
+
+// ClassCollection - hierarchical tree of classes
+export class ClassCollection extends ElementCollection {
+  readonly type = 'class' as const;
+  private rootNodes: ClassNode[];
+  private slotDefinitions: Map<string, SlotDefinition>;
+
+  constructor(rootNodes: ClassNode[], slotDefinitions: Map<string, SlotDefinition>) {
+    super();
+    this.rootNodes = rootNodes;
+    this.slotDefinitions = slotDefinitions;
+  }
+
+  /** Factory: Create from raw data (called by dataLoader) */
+  static fromData(rootNodes: ClassNode[], slotDefinitions: Map<string, SlotDefinition>): ClassCollection {
+    return new ClassCollection(rootNodes, slotDefinitions);
+  }
+
+  getLabel(): string {
+    return `Classes (${this.countTotalNodes()})`;
+  }
+
+  getSectionIcon(): string {
+    return 'C';
+  }
+
+  getDefaultExpansion(): Set<string> {
+    // Auto-expand first 2 levels
+    const expanded = new Set<string>();
+    const collectUpToLevel = (nodes: ClassNode[], level: number) => {
+      if (level >= 2) return;
+      nodes.forEach(node => {
+        expanded.add(node.name);
+        collectUpToLevel(node.children, level + 1);
+      });
+    };
+    collectUpToLevel(this.rootNodes, 0);
+    return expanded;
+  }
+
+  getExpansionKey(position: 'left' | 'right'): string | null {
+    return position === 'left' ? 'lce' : 'rce'; // left/right class expansion
+  }
+
+  private countTotalNodes(): number {
+    const countRecursive = (nodes: ClassNode[]): number => {
+      return nodes.reduce((sum, node) => sum + 1 + countRecursive(node.children), 0);
+    };
+    return countRecursive(this.rootNodes);
+  }
+
+  renderItems(
+    callbacks: ElementCollectionCallbacks,
+    position: 'left' | 'right',
+    selectedElement?: { type: string; name: string },
+    expandedItems?: Set<string>,
+    toggleExpansion?: (item: string) => void
+  ): React.ReactElement[] {
+    return this.rootNodes.map(node =>
+      this.renderClassTreeNode(node, 0, callbacks, position, selectedElement, expandedItems, toggleExpansion)
+    );
+  }
+
+  private renderClassTreeNode(
+    node: ClassNode,
+    level: number,
+    callbacks: ElementCollectionCallbacks,
+    position: 'left' | 'right',
+    selectedElement?: { type: string; name: string },
+    expandedItems?: Set<string>,
+    toggleExpansion?: (item: string) => void
+  ): React.ReactElement {
+    const hasChildren = node.children.length > 0;
+    const isExpanded = expandedItems?.has(node.name) ?? false;
+    const isSelected = selectedElement?.type === 'class' && selectedElement?.name === node.name;
+    const hoverHandlers = getElementHoverHandlers({
+      type: 'class',
+      name: node.name,
+      onElementHover: callbacks.onElementHover,
+      onElementLeave: callbacks.onElementLeave
+    });
+
+    return (
+      <div key={node.name} className="select-none">
+        <div
+          id={`class-${node.name}`}
+          data-element-type="class"
+          data-element-name={node.name}
+          data-panel-position={position}
+          className={`flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700 ${
+            isSelected ? 'bg-blue-100 dark:bg-blue-900' : ''
+          }`}
+          style={{ paddingLeft: `${level * 16 + 8}px` }}
+          onClick={() => callbacks.onSelect(node, 'class')}
+          {...hoverHandlers}
+        >
+          {hasChildren && (
+            <button
+              className="w-4 h-4 flex items-center justify-center text-gray-500 hover:text-gray-700"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleExpansion?.(node.name);
+              }}
+            >
+              {isExpanded ? '▼' : '▶'}
+            </button>
+          )}
+          {!hasChildren && <span className="w-4" />}
+          <span className="flex-1 text-sm font-medium">{node.name}</span>
+          {node.abstract && (
+            <span className="text-xs text-purple-600 dark:text-purple-400 italic mr-2">
+              abstract
+            </span>
+          )}
+          {node.variableCount > 0 && (
+            <span className="text-xs px-2 py-0.5 rounded bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-300">
+              {node.variableCount}
+            </span>
+          )}
+        </div>
+        {hasChildren && isExpanded && (
+          <div>
+            {node.children.map(child =>
+              this.renderClassTreeNode(child, level + 1, callbacks, position, selectedElement, expandedItems, toggleExpansion)
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+}
+
+// VariableCollection - variables grouped by class
+export class VariableCollection extends ElementCollection {
+  readonly type = 'variable' as const;
+  private variables: VariableSpec[];
+  private groupedVariables: Map<string, VariableSpec[]>;
+
+  constructor(variables: VariableSpec[]) {
+    super();
+    this.variables = variables;
+
+    // Group variables by class
+    this.groupedVariables = new Map();
+    variables.forEach(variable => {
+      const className = variable.bdchmElement;
+      if (!this.groupedVariables.has(className)) {
+        this.groupedVariables.set(className, []);
+      }
+      this.groupedVariables.get(className)!.push(variable);
+    });
+
+    // Sort variables within each group
+    this.groupedVariables.forEach(vars => {
+      vars.sort((a, b) => a.variableLabel.localeCompare(b.variableLabel));
+    });
+  }
+
+  /** Factory: Create from raw data (called by dataLoader) */
+  static fromData(variables: VariableSpec[]): VariableCollection {
+    return new VariableCollection(variables);
+  }
+
+  getLabel(): string {
+    return `Variables (${this.variables.length})`;
+  }
+
+  getSectionIcon(): string {
+    return 'V';
+  }
+
+  getDefaultExpansion(): Set<string> {
+    return new Set(); // Start with all groups collapsed
+  }
+
+  getExpansionKey(position: 'left' | 'right'): string | null {
+    return position === 'left' ? 'lve' : 'rve'; // left/right variable expansion
+  }
+
+  renderItems(
+    callbacks: ElementCollectionCallbacks,
+    position: 'left' | 'right',
+    selectedElement?: { type: string; name: string },
+    expandedItems?: Set<string>,
+    toggleExpansion?: (item: string) => void
+  ): React.ReactElement[] {
+    // Sort class names
+    const sortedClasses = Array.from(this.groupedVariables.keys()).sort((a, b) => a.localeCompare(b));
+
+    return sortedClasses.map(className => {
+      const classVariables = this.groupedVariables.get(className)!;
+      const isExpanded = expandedItems?.has(className) ?? false;
+
+      return (
+        <div key={className} className="mb-2">
+          {/* Class header - collapsible */}
+          <div
+            className="flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700"
+            onClick={() => toggleExpansion?.(className)}
+          >
+            <span className="text-gray-500 dark:text-gray-400 select-none">
+              {isExpanded ? '▼' : '▶'}
+            </span>
+            <span className="font-medium text-sm text-gray-700 dark:text-gray-300">
+              {className}
+            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              ({classVariables.length})
+            </span>
+          </div>
+
+          {/* Variables list - only show when expanded */}
+          {isExpanded && (
+            <div className="ml-4 mt-1">
+              {classVariables.map((variable, idx) => {
+                const isSelected = selectedElement?.type === 'variable'
+                  && selectedElement?.name === variable.variableLabel;
+                const hoverHandlers = getElementHoverHandlers({
+                  type: 'variable',
+                  name: variable.variableLabel,
+                  onElementHover: callbacks.onElementHover,
+                  onElementLeave: callbacks.onElementLeave
+                });
+
+                return (
+                  <div
+                    key={`${variable.bdchmElement}-${variable.variableLabel}-${idx}`}
+                    id={`variable-${variable.variableLabel}`}
+                    data-element-type="variable"
+                    data-element-name={variable.variableLabel}
+                    data-panel-position={position}
+                    className={`px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700 ${
+                      isSelected ? 'bg-orange-100 dark:bg-orange-900' : ''
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      callbacks.onSelect(variable, 'variable');
+                    }}
+                    {...hoverHandlers}
+                  >
+                    <span className="text-sm truncate block">
+                      {variable.variableLabel}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       );

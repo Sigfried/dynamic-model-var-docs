@@ -62,7 +62,9 @@ export interface ModelData {
   reverseIndices: ReverseIndices;
   // New: ElementCollections (will eventually replace raw data above)
   collections: {
+    classes: import('./models/Element').ClassCollection;
     enums: import('./models/Element').EnumCollection;
     slots: import('./models/Element').SlotCollection;
+    variables: import('./models/Element').VariableCollection;
   };
 }

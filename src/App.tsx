@@ -531,8 +531,10 @@ function App() {
               onSelectEntity={handleOpenDialog}
               onElementHover={setHoveredElement}
               onElementLeave={() => setHoveredElement(null)}
+              classCollection={modelData?.collections.classes}
               enumCollection={modelData?.collections.enums}
               slotCollection={modelData?.collections.slots}
+              variableCollection={modelData?.collections.variables}
             />
           }
           leftPanelEmpty={leftSections.length === 0}
@@ -549,8 +551,10 @@ function App() {
               onSelectEntity={handleOpenDialog}
               onElementHover={setHoveredElement}
               onElementLeave={() => setHoveredElement(null)}
+              classCollection={modelData?.collections.classes}
               enumCollection={modelData?.collections.enums}
               slotCollection={modelData?.collections.slots}
+              variableCollection={modelData?.collections.variables}
             />
           }
           rightPanelEmpty={rightSections.length === 0}
