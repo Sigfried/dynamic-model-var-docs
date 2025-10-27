@@ -216,6 +216,10 @@ function App() {
       // Reset to saved layout (including dialogs if present)
       try {
         const state = JSON.parse(stored);
+
+        // Update URL immediately to saved state (clears current expansion params)
+        saveStateToURL(state);
+
         setLeftSections(state.leftSections || []);
         setRightSections(state.rightSections || []);
 
@@ -256,14 +260,27 @@ function App() {
         } else {
           setOpenDialogs([]);
         }
+
+        // Force page reload to reset expansion state hooks
+        window.location.reload();
       } catch (err) {
         console.error('Failed to parse stored state:', err);
       }
     } else {
       // Reset to default (classes only preset)
+      // Clear URL to just the default state
+      const defaultState = {
+        leftSections: ['classes'] as SectionType[],
+        rightSections: [] as SectionType[]
+      };
+      saveStateToURL(defaultState);
+
       setLeftSections(['classes']);
       setRightSections([]);
       setOpenDialogs([]);
+
+      // Force page reload to reset expansion state hooks
+      window.location.reload();
     }
   };
 

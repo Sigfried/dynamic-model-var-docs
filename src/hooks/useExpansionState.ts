@@ -2,17 +2,18 @@ import { useState, useEffect, useCallback } from 'react';
 
 /**
  * Custom hook for managing expansion state with URL persistence
+ * Only persists to URL when state differs from default (keeps URLs clean)
  *
- * @param key - Unique key for URL parameter (e.g., 'var-classes', 'class-nodes')
- * @param defaultExpanded - Optional set of items that should be expanded by default
+ * @param key - Unique key for URL parameter (e.g., 'lve', 'rve', 'lce', 'rce')
+ * @param defaultExpanded - Set of items that should be expanded by default
  * @returns [expandedItems, toggleItem] - Current expanded set and toggle function
  *
  * @example
- * // In VariablesSection:
- * const [expandedClasses, toggleClass] = useExpansionState('evc', new Set());
+ * // Variables (default: nothing expanded)
+ * const [expandedClasses, toggleClass] = useExpansionState('rve', new Set());
  *
- * // In ClassSection:
- * const [expandedNodes, toggleNode] = useExpansionState('ecn', getDefaultExpandedNodes());
+ * // Classes (default: first 2 levels expanded)
+ * const [expandedNodes, toggleNode] = useExpansionState('lce', getDefaultExpandedNodes());
  */
 export function useExpansionState(
   key: string,
@@ -46,19 +47,26 @@ export function useExpansionState(
     });
   }, []);
 
-  // Persist to URL whenever expanded items change
+  // Persist to URL whenever expanded items change (but only if different from default)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
 
-    if (expandedItems.size > 0) {
-      params.set(key, Array.from(expandedItems).join(','));
-    } else {
+    // Check if current state matches default
+    const isDefaultState =
+      expandedItems.size === defaultExpanded.size &&
+      Array.from(expandedItems).every(item => defaultExpanded.has(item));
+
+    if (isDefaultState) {
+      // State matches default, remove parameter to keep URL clean
       params.delete(key);
+    } else {
+      // State differs from default, persist to URL
+      params.set(key, Array.from(expandedItems).join(','));
     }
 
     const newURL = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
     window.history.replaceState({}, '', newURL);
-  }, [key, expandedItems]);
+  }, [key, expandedItems, defaultExpanded]);
 
   return [expandedItems, toggleItem];
 }

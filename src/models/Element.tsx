@@ -657,12 +657,15 @@ export class ClassCollection extends ElementCollection {
   }
 
   getDefaultExpansion(): Set<string> {
-    // Auto-expand first 2 levels
+    // Auto-expand first 2 levels (but only classes that have children)
     const expanded = new Set<string>();
     const collectUpToLevel = (nodes: ClassNode[], level: number) => {
       if (level >= 2) return;
       nodes.forEach(node => {
-        expanded.add(node.name);
+        // Only track expansion state for classes that have children
+        if (node.children.length > 0) {
+          expanded.add(node.name);
+        }
         collectUpToLevel(node.children, level + 1);
       });
     };
