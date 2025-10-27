@@ -186,7 +186,37 @@
 
 **Strategy**: Push more logic into the model layer and registry
 
-**Sub-tasks**:
+**Progress so far (5 commits):**
+- ✅ Added getElement() and getAllElements() to all ElementCollection classes
+- ✅ Added validPairs to RELATIONSHIP_TYPES in ElementRegistry
+- ✅ Simplified ModelData to only contain collections Map
+- ✅ Removed ReverseIndices interface (was never used in app)
+- ✅ Updated App.tsx element lookups to use collection.getElement()
+
+**What remains (CRITICAL - needs careful work):**
+1. **App.tsx panel data structure** - Currently builds type-specific structure for LinkOverlay
+   - Remove `flattenClassHierarchy()` function (no longer needed)
+   - Replace `leftPanelData`/`rightPanelData` useMemo - instead of building objects with classes/enums/slots/variables, just filter collections Map based on leftSections/rightSections
+   - New structure: `Map<ElementTypeId, ElementCollection>` containing only visible sections
+
+2. **LinkOverlay refactor** - Big change: needs to accept Map<ElementTypeId, ElementCollection>
+   - Change props from `{ classes, enums, slots, variables }` to `Map<ElementTypeId, ElementCollection>`
+   - Update `processElements()` helper to iterate over collections Map generically
+   - Replace type-specific loops (leftPanel.classes.forEach, leftPanel.enums.forEach...) with generic iteration over collection.getAllElements()
+   - Need special handling for slots - ClassElement constructor needs all slots, not just visible ones
+
+3. **DetailDialog/DetailPanel props** - Pass collections instead of separate enums/slots/classes
+   - DetailDialog currently receives: `enums?: Map<...>, slots?: Map<...>, classes?: Map<...>`
+   - Change to: `collections: Map<ElementTypeId, ElementCollection>`
+   - Update DetailDialog to pass collections to DetailPanel
+   - Update DetailPanel to use collections for navigation lookups
+
+4. **Tests** - dataLoader.test.ts will fail (expects old ModelData structure)
+   - Remove tests for reverseIndices (deleted)
+   - Update tests to check collections Map instead of separate fields
+   - May need to add tests for getAllElements() on each collection type
+
+**Sub-tasks (original plan):**
 1. Add lookup methods to ElementCollection:
    - `getElement(name: string): ElementData | null`
    - `getAllElements(): ElementData[]`
