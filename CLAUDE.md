@@ -157,55 +157,32 @@ When working with larger models or slower devices:
 ---
 ## Architectural Decision Points
 
-### OPEN QUESTION: What Is "selectedElement" Really Doing?
+### DECISION: Move renderItems to Section.tsx with Generic Tree Types
 
-**Status**: Resolved [TODO: delete or move appropriate parts to PROGRESS.md]
+**Status**: ✅ Decided, implementation in progress (see Phase 3h in PROGRESS.md)
 
-**The confusion:**
+**Problem**: renderItems() puts view code in model classes. Collections know their structure (tree vs flat vs grouped), but rendering should be in Section.tsx.
 
-1. **Type mismatch**: `SelectedElement` defined as union of raw data types (ClassNode | EnumDefinition | SlotDefinition | VariableSpec), but should probably be just `Element`
+**Solution**:
+1. ✅ Create generic Tree<T> types to replace ClassNode-specific hierarchy
+2. 🔄 Collections implement getRenderableItems() returning RenderableItem[]
+   - ✅ EnumCollection and SlotCollection done
+   - ⏳ ClassCollection and VariableCollection pending
+3. ⏳ RenderableItem has structure info (level, hasChildren, isExpanded) plus isClickable flag
+4. ⏳ Section.tsx renders RenderableItems generically
+5. ⏳ Variable group headers use actual ClassElement (not null or special type)
 
-2. **Inconsistent representations**:
-   - Sometimes `Element` instance
-   - Sometimes `{type: string, name: string}` object
-   - Sometimes `Element + type string`
-   - Sometimes just a name string
+**Benefits**:
+- Collections define structure as data, not React rendering
+- Section doesn't need type-specific conditionals
+- Easy to add new element types
+- Generic tree operations (flatten, search, traverse)
 
-3. **Unclear purpose**:
-   - NOT used for hover (separate `hoveredElement` exists)
-   - Passed to dialogs but unclear if necessary
-   - No visual indication of "selected" state beyond dialog opening
-   - App.tsx:467 passes `selectedElement={openDialogs[0].element}` to panels, but only used for renderItems isSelected logic
-
-4. **View code in model classes**:
-   - Each ElementCollection has renderItems() with isSelected logic
-   - Lots of redundant code between the 4 implementations
-   - Should this be in Section.tsx instead?
-   - Violates separation of concerns (view logic in model)
-
-**Questions to answer:**
-1. What is the actual purpose of tracking "selected" state?
-2. How does dialog restoration from URL work? (User couldn't find handleOpenDialog call during restoration)
-3. Can we eliminate selectedElement entirely and just use click handlers?
-4. Should renderItems be in model classes at all?
-
-**Proposed simplification:**
-- `selectedElement: Element | undefined` (not union of raw types)
-- Or just store name string and use `modelData.elementLookup.get(name)`
-- Move isSelected display logic from ElementCollection.renderItems to Section.tsx
-- Keep model classes focused on data, not view rendering
-
-**Impact on current refactor:**
-- Currently converting collections to store Element instances (not raw data)
-- Added temporary adapter in ElementsPanel using `(element as any).rawData` - code smell
-- Need to decide on selectedElement architecture before continuing
-- This affects how Elements flow through callback chain: Collection → Section → ElementsPanel → App
-
-**Recommendation**: Pause collection refactor, clarify selectedElement design, then proceed cleanly without temporary fixes.
+See temp.md "CURRENT WORK" section for detailed implementation status.
 
 ### OPEN QUESTION: Where Should Element Type Metadata Live?
 
-**Status**: Architecture decision needed
+**Status**: Deferred - keeping ElementRegistry.ts for now (working well)
 
 **Current approach:**
 - Separate `ElementRegistry.ts` file with:
