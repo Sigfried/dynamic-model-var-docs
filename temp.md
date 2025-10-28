@@ -188,9 +188,97 @@ All completed work from these sessions has been documented in **PROGRESS.md Phas
 
 ---
 
-### 🚨 CRITICAL DECISION NEEDED: selectedElement Confusion
+### ✅ RESOLVED: selectedElement Questions
 
-**User's observations:**
+**Decision made (2025-01-27):**
+1. ✅ Removed selectedElement highlighting from panels (was highlighting first dialog, should be last/topmost, not worth complexity)
+2. ✅ Renamed selectedElement → element in dialog components (more accurate - they display an element, not track selection)
+3. ✅ DetailPanel refactoring needed - added to plan below
+
+---
+
+### 🚨 NEXT: Move renderItems to Section.tsx with Generic Hierarchy
+
+**Decision made (2025-01-27):**
+- Move rendering from ElementCollection to Section.tsx
+- Create generic Hierarchy/TreeNode types first
+- Use RenderableItem interface to handle flat vs hierarchical rendering
+- Variable grouping becomes part of data structure (in dataLoader)
+
+**Implementation Plan:**
+
+**Step 1: Create Generic Hierarchy Types**
+```typescript
+// models/Hierarchy.ts
+interface TreeNode<T> {
+  data: T;
+  children: TreeNode<T>[];
+  parent?: TreeNode<T>;
+}
+
+class Hierarchy<T> {
+  roots: TreeNode<T>[];
+  flatten(): T[];
+  findByName(name: string): TreeNode<T> | null;
+}
+```
+
+**Step 2: RenderableItem Interface**
+```typescript
+interface RenderableItem {
+  id: string;
+  element: Element;        // Use actual ClassElement for variable group headers
+  level: number;           // 0 for root, 1+ for nested
+  hasChildren?: boolean;
+  isExpanded?: boolean;
+  isClickable: boolean;    // false = expand/collapse only, true = open dialog
+  badge?: string | number; // "(103)" for counts
+}
+```
+
+**Step 3: Variable Grouping in dataLoader**
+- Move grouping logic from VariableCollection.renderItems to dataLoader
+- Create grouped structure during data load
+- Variable group headers use the actual ClassElement (Option 2 - decided)
+
+**Step 4: Collections Implement getRenderableItems()**
+```typescript
+abstract class ElementCollection {
+  abstract getRenderableItems(
+    expandedItems?: Set<string>
+  ): RenderableItem[];
+}
+
+// EnumCollection, SlotCollection: flat lists
+// ClassCollection: tree structure with level
+// VariableCollection: ClassElement headers + nested VariableElements
+```
+
+**Step 5: Section.tsx Renders Generically**
+```typescript
+function Section() {
+  const items = collection.getRenderableItems(expandedItems);
+
+  return items.map(item => (
+    <ItemDisplay
+      item={item}
+      onClick={item.isClickable ? () => onSelect(item.element) :
+               item.hasChildren ? () => toggleExpansion(item.id) :
+               undefined}
+    />
+  ));
+}
+```
+
+**Benefits:**
+- Section doesn't need type-specific logic
+- Collections define structure as data, not React rendering
+- Generic hierarchy types work for classes AND variable groups
+- Easy to add new element types
+
+---
+
+### 🚨 CRITICAL DECISION NEEDED: selectedElement Confusion (ARCHIVED)
 
 1. **Type definition mismatch:**
    ```typescript
