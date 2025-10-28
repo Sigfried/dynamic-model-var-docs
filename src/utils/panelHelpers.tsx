@@ -14,8 +14,15 @@ export type { SelectedElement };
  * Returns Tailwind CSS classes for background and border colors
  */
 export function getHeaderColor(elementType: ElementTypeId): string {
-  const { color } = ELEMENT_TYPES[elementType];
+  const metadata = ELEMENT_TYPES[elementType];
 
+  // Safety check - if invalid type, return default gray
+  if (!metadata) {
+    console.error(`Invalid elementType: ${elementType}`);
+    return 'bg-gray-700 dark:bg-gray-700 border-gray-800 dark:border-gray-600';
+  }
+
+  const { color } = metadata;
   return `${color.headerBg} ${color.headerBorder}`;
 }
 
