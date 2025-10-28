@@ -1,181 +1,48 @@
-# CLAUDE.md - Development Context & Architecture
-
-> **📝 Purpose**: This file provides architecture philosophy, design patterns, and context to help AI assistants understand the codebase and make informed decisions.
+the distinction between temp.md and CLAUDE.md has more or less fallen apart. here's my idea for a new documentation structure
+> **📝 Purpose**: 
+> - Document upcoming tasks and discussions needed to specify them
 >
 > **See also**:
+> - README.md:
+>   - User-facing documentation
+>     - material that can go in app help or about screen
+>     - philosophy, current architecture, etc.
+>     - features
+>   - developer documentation
 > - **PROGRESS.md** - Completed work (for reporting)
-> - **temp.md** - Immediate next steps
 > - **TESTING.md** - Testing philosophy and practices
-> - **README.md** - User-facing documentation
 
----
-
-## Core Insight: This is a Typed Graph, Not a Hierarchy
-
-The BDCHM model has multiple relationship types forming a rich graph structure:
-
-1. **Inheritance** (`is_a`) - class hierarchy tree
-2. **Class→Enum** - which classes use which constrained value sets
-3. **Class→Class associations** - domain relationships (participant, research study, specimen lineage)
-4. **Containment** (`part_of`, `contained_in`, `parent_specimen`)
-5. **Activities/Processes** - temporal relationships (creation, processing, storage)
-6. **Measurements** - observation and quantity relationships
-
-**Architecture implication**: We need UI patterns for exploring a typed graph, not just a tree.
-
----
-
-## Architecture Philosophy: Shneiderman's Mantra
-
-**"Overview First, Zoom and Filter, Details on Demand"** - describes desired UX flow, not implementation order
-
-### 1. Overview First
-Show the model topology with all relationship types visible:
-- Class inheritance tree ✓
-- Class→Enum usage patterns ✓
-- Class→Class associations ✓
-- Slot definitions shared across classes ✓
-- Visual density indicators (which classes have most variables/connections) - future
-
-### 2. Zoom and Filter
-- **Search**: Full-text across classes, variables, enums, slots - future
-- **Filter**: Faceted filtering (class type, variable count, relationship type) - future
-- **Zoom**: Show k-hop neighborhood around focal element - future
-- **View toggles**: Classes only, classes+enums, etc. ✓
-
-### 3. Details on Demand
-- Show class definitions and descriptions ✓
-- List variables mapped to each class ✓
-- Display variable specs (data type, units, CURIE) ✓
-- Show class attributes with their ranges ✓
-- Sortable/filterable variable tables - future
-- Display slot definitions ✓
-- Bidirectional navigation between related elements ✓
-- Show inheritance chain with attribute overrides ✓
-- Display all incoming references to a class/enum ✓
-
----
-
-## Current Architecture
-
-**Panel System**:
-- Dual independent panels (left/right)
-- Each panel can show any combination of: Classes, Enums, Slots, Variables
-- SVG link overlay visualizes relationships with gradients
-- State persists to URL + localStorage
-
-**Detail Display**:
-- Wide screens: Stacked panels on right side
-- Narrow screens: Draggable/resizable dialogs
-- Multiple simultaneous detail views
-- Duplicate prevention
-
-**Data Flow**:
-```
-bdchm.yaml (LinkML schema)
-    ↓ Python script
-bdchm.metadata.json
-    ↓ dataLoader.ts
-ClassTree + Reverse Indices + Slot Usage
-    ↓
-Element classes (ClassElement, EnumElement, etc.)
-    ↓
-UI Components + SVG Links
-```
-
----
-
-## Understanding LinkML: Slots, Attributes, and Slot Usage
-
-**Critical Context**: BDCHM is modeled using LinkML, which has specific terminology and patterns.
-
-### Core Concepts
-
-#### 1. Slots (Top-Level Reusable Definitions)
-Slots are reusable property definitions that can be referenced by multiple classes.
-- **Location in schema**: Top-level `slots:` section
-- **Example**: The schema defines 7 top-level slots like `id`, `identifier`, `description`
-- **Usage**: Classes reference these slots by name in their `slots:` list
-
-#### 2. Attributes (Inline Slot Declarations)
-Attributes are class-specific slot definitions written inline within a class.
-- **Location in schema**: Within a class definition under `attributes:`
-- **Semantic equivalence**: Attributes are syntactic sugar for inline slot definitions
-- **Why use attributes**: Convenience when a slot only applies to one class
-
-**Key Insight**: From LinkML docs: "Attributes are really just a convenient shorthand for being able to declare slots 'inline'."
-
-#### 3. Slot Usage (Class-Specific Refinements)
-Slot usage allows a class to customize/refine a slot it inherits or references.
-- **Location in schema**: Within a class definition under `slot_usage:`
-- **Purpose**: Add constraints, change range, make required, etc.
-- **Example**: Abstract class `QuestionnaireResponseValue` has generic `value` slot, concrete subclasses use `slot_usage` to constrain it to specific types
-
-### UI Display Implications
-
-Since attributes are just inline slots, the UI should:
-1. **Display them together** in a unified table (not separate "Attributes" and "Slots" tables)
-2. **Indicate source** via a column:
-   - "Inline" for attributes
-   - "Slot: {slotName}" for top-level slots (with clickable link)
-   - "Inherited from {ParentClass}" for inherited slots
-3. **Show customizations**: Indicate when a slot has `slot_usage` refinements
-
-**References**:
-- LinkML Slots Documentation: https://linkml.io/linkml/schemas/slots.html
-- LinkML FAQ: https://linkml.io/linkml/faq/modeling.html#when-should-i-use-attributes-vs-slots
-
----
-
-## Data Model Statistics
-
-- **47 classes** with inheritance hierarchy
-- **40 enums** (constrained value sets)
-- **7 slots** (reusable attribute definitions)
-- **151 variables** (68% map to MeasurementObservation class)
-- Multiple root classes (no single "Entity" superclass)
-
-### Relationship Type Examples
-
-**Inheritance** (`is_a`):
-- `MeasurementObservation is_a Observation`
-- `Participant is_a Person`
-
-**Class→Enum**:
-- `Condition.condition_concept → ConditionConceptEnum`
-- `MeasurementObservation.observation_type → MeasurementObservationTypeEnum`
-
-**Class→Class (associations)**:
-- `Participant.member_of_research_study → ResearchStudy`
-- `Condition.associated_participant → Participant`
-- `File.derived_from → File` (recursive)
-
-**Containment/Part-of**:
-- `Specimen.parent_specimen → Specimen` (specimen lineage)
-- `SpecimenContainer.parent_container → SpecimenContainer` (nesting)
-
----
-
-## Key Use Cases (Sorted by Implementation Priority)
-
-### Easy (✓ implemented)
-1. ✓ "Which variables map to Condition class?"
-2. ✓ "What are the units/data types for these measurements?"
-3. ✓ "What's the inheritance chain for Specimen?"
-4. ✓ "What classes use ConditionConceptEnum?"
-5. ✓ "Show me all attributes for MeasurementObservation"
-
-### Medium (requires search - Phase 4)
-6. "Find all references to Participant"
-
-### Hard (requires graph exploration - future)
-7. "Show me everything related to observations" - k-hop neighborhood
-8. "What's the full specimen workflow?" - follow activity relationships
-9. "Compare two classes" - side-by-side detail views
+TODO:
+- move everything out of temp.md
+    - if it's an upcoming task, put it here
+    - if it's completed, put it in PROGRESS.md
+    - if it should be seen by users or developers, put it in README.md
+- maybe treat specific tasks and overall goals or features differently
+  - but don't redundantly list the same thing in features and in tasks
+  - if it's existing features, README
+  - if it's upcoming features, here
+- tasks related to specific features should be listed with those features
+- try to keep tasks in planned implementation order
+- for tasks/features dependent on upcoming discussions or open questions, list
+  them with the discussion/question descriptions
+- when questions are resolved, tasks can be separated from them and listed
+  with other tasks
+- try to remove redundancy
+- once documentation is refactored, it should be clearer to me where
+  i should put new tasks... now i forget the tasks i wanted to add that
+  prompted me to want documentation refactoring in the first place
 
 ---
 
 ## Future Features
+
+[moved from README.md]
+- **Search & filter**: Full-text search, faceted filters, quick navigation
+- **Custom presets**: Save frequently-used panel configurations
+- **Neighborhood exploration**: Show k-hop neighbors, relationship type filters
+- **Advanced views**: Network graphs, enum-class matrix, comparison views
+
+
 
 ### Architecture: Generalize Hierarchical Structure
 
@@ -288,27 +155,11 @@ When working with larger models or slower devices:
 - **Animation library**: Consider react-spring for smoother transitions (current CSS transitions work fine)
 
 ---
-
-## Development Priorities
-
-1. **Working > Perfect** - time-constrained project
-2. **Usability > "Cool"** - practical exploration tools, not flashy viz
-3. **Incremental complexity** - start with easy features, add advanced later
-4. **User testing** - validate navigation patterns with domain experts
-
-### Tech Stack
-- **React + TypeScript**: Type safety, component reuse
-- **Vite**: Fast dev server, HMR
-- **Tailwind CSS**: Rapid styling
-- **D3.js (minimal)**: Only for specific graph algorithms or layouts that React can't handle
-
----
-
 ## Architectural Decision Points
 
 ### OPEN QUESTION: What Is "selectedElement" Really Doing?
 
-**Status**: Architecture unclear, needs discussion before proceeding with refactor
+**Status**: Resolved [TODO: delete or move appropriate parts to PROGRESS.md]
 
 **The confusion:**
 

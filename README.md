@@ -1,4 +1,10 @@
-# BDCHM Interactive Documentation
+TODO:
+- remove redundancy below
+- mark stuff that should be included in the app
+    - on About screen, or
+    - contextual help
+
+# BDCHM Interactive Documentation App
 
 Interactive documentation browser for the [BioData Catalyst Harmonized Model (BDCHM)](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM) - a LinkML data model connecting clinical/observational classes to variable specifications.
 
@@ -13,11 +19,67 @@ Interactive documentation browser for the [BioData Catalyst Harmonized Model (BD
 - **State persistence** - Shareable URLs preserve panel layout and open dialogs
 - **Responsive tables** - Large tables split into columns for easier viewing
 
+Current features:
+- ✅ **Dual panel layout** with section toggles (Classes, Enums, Slots, Variables)
+- ✅ **Multiple draggable/resizable dialogs** with full state persistence
+- ✅ **Clickable navigation** between classes, enums, and slots
+- ✅ **Shareable URLs** that preserve layout and dialog positions
+- ✅ **Abstract class indicators** in class hierarchy tree
+- ✅ **Element-based architecture** - refactored for maintainability and SVG link preparation
+- ✅ **SVG link visualization**: Draw connections between related elements across panels
+
+Current Architecture
+
+**Panel System**:
+- Dual independent panels (left/right)
+- Each panel can show any combination of: Classes, Enums, Slots, Variables
+- SVG link overlay visualizes relationships with gradients
+- State persists to URL + localStorage
+
+**Detail Display**:
+- Wide screens: Stacked panels on right side
+- Narrow screens: Draggable/resizable dialogs
+- Multiple simultaneous detail views
+- 
 ### What You Can Explore
 - Inheritance chains (e.g., `MeasurementObservation is_a Observation`)
 - Which variables map to which classes
 - Class attributes and their value ranges (enums, other classes, primitives)
 - Specimen lineage, activity workflows, observation structures
+
+## Architecture Philosophy: Shneiderman's Mantra
+
+**"Overview First, Zoom and Filter, Details on Demand"** - describes desired UX flow, not implementation order
+
+### 1. Overview First
+Show the model topology with all relationship types visible:
+- Class inheritance tree ✓
+- Class→Enum usage patterns ✓
+- Class→Class associations ✓
+- Slot definitions shared across classes ✓
+- Visual density indicators (which classes have most variables/connections) - future
+
+### 2. Zoom and Filter
+- **Search**: Full-text across classes, variables, enums, slots - future
+- **Filter**: Faceted filtering (class type, variable count, relationship type) - future
+- **Zoom**: Show k-hop neighborhood around focal element - future
+- **View toggles**: Classes only, classes+enums, etc. ✓
+
+### 3. Details on Demand
+- Show class definitions and descriptions ✓
+- List variables mapped to each class ✓
+- Display variable specs (data type, units, CURIE) ✓
+- Show class attributes with their ranges ✓
+- Sortable/filterable variable tables - future
+- Display slot definitions ✓
+- Bidirectional navigation between related elements ✓
+- Show inheritance chain with attribute overrides ✓
+- Display all incoming references to a class/enum ✓
+
+---
+
+
+## Developer Notes
 
 ### Data Sources
 The application uses two primary data sources:
@@ -52,9 +114,12 @@ npm run deploy
 ```
 
 ### Tech Stack
-- React + TypeScript + Vite
-- Tailwind CSS for styling
-- D3.js (minimal - only for specific visualizations)
+- **React + TypeScript**: Type safety, component reuse
+- **Vite**: Fast dev server, HMR
+- **Tailwind CSS**: Rapid styling
+- **D3.js (minimal)**: Only for specific graph algorithms or layouts that React can't handle
+  **[Not using D3 so far. SVG link path generated directly, but consider using it]**
+
 
 ### Testing
 The project has comprehensive test coverage (134 tests) for core logic and utilities.
@@ -72,23 +137,6 @@ See [TESTING.md](TESTING.md) for complete testing documentation, including:
 - Detailed test file documentation
 - How to write new tests
 - Examples and troubleshooting
-
-## Roadmap
-
-Current features:
-- ✅ **Dual panel layout** with section toggles (Classes, Enums, Slots, Variables)
-- ✅ **Multiple draggable/resizable dialogs** with full state persistence
-- ✅ **Clickable navigation** between classes, enums, and slots
-- ✅ **Shareable URLs** that preserve layout and dialog positions
-- ✅ **Abstract class indicators** in class hierarchy tree
-- ✅ **Element-based architecture** - refactored for maintainability and SVG link preparation
-
-Upcoming features:
-- **SVG link visualization**: Draw connections between related elements across panels
-- **Search & filter**: Full-text search, faceted filters, quick navigation
-- **Custom presets**: Save frequently-used panel configurations
-- **Neighborhood exploration**: Show k-hop neighbors, relationship type filters
-- **Advanced views**: Network graphs, enum-class matrix, comparison views
 
 ## Contributing
 
