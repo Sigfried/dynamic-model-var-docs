@@ -2,7 +2,7 @@ import React from 'react';
 import type { EnumDefinition, SlotDefinition, VariableSpec, SelectedElement } from '../types';
 
 interface DetailPanelProps {
-  selectedElement?: SelectedElement;
+  element?: SelectedElement;
   onNavigate?: (elementName: string, elementType: 'class' | 'enum' | 'slot') => void;
   onClose?: () => void;
   dialogWidth?: number;
@@ -163,7 +163,7 @@ function TypeLegend() {
   );
 }
 
-export default function DetailPanel({ selectedElement, onNavigate, onClose, enums, slots, classes, dialogWidth = 900, hideHeader = false, hideCloseButton = false }: DetailPanelProps) {
+export default function DetailPanel({ element, onNavigate, onClose, enums, slots, classes, dialogWidth = 900, hideHeader = false, hideCloseButton = false }: DetailPanelProps) {
   const useTwoColumnsForVariables = dialogWidth >= 1700;
   const useTwoColumnsForEnums = dialogWidth >= 1000;
   const [showLegend, setShowLegend] = React.useState(false);
@@ -186,19 +186,19 @@ export default function DetailPanel({ selectedElement, onNavigate, onClose, enum
     return !!(enums?.has(rangeName) || slots?.has(rangeName) || classes?.has(rangeName));
   };
 
-  if (!selectedElement) {
+  if (!element) {
     return null; // Hide panel when nothing is selected
   }
 
   // Handle variable details
-  if (isVariableSpec(selectedElement)) {
+  if (isVariableSpec(element)) {
     return (
       <div className="h-full overflow-y-auto bg-white dark:bg-slate-800 text-left">
         {!hideHeader && (
           <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4">
             <div className="flex justify-between items-start">
               <div>
-                <h1 className="text-2xl font-bold text-left">{selectedElement.variableLabel}</h1>
+                <h1 className="text-2xl font-bold text-left">{element.variableLabel}</h1>
                 <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">Variable</p>
               </div>
               {onClose && !hideCloseButton && (
@@ -217,10 +217,10 @@ export default function DetailPanel({ selectedElement, onNavigate, onClose, enum
         )}
 
         <div className="p-4 space-y-3 text-left">
-          {selectedElement.variableDescription && (
+          {element.variableDescription && (
             <div>
               <h2 className="text-lg font-semibold mb-1">Description</h2>
-              <p className="text-gray-700 dark:text-gray-300">{selectedElement.variableDescription}</p>
+              <p className="text-gray-700 dark:text-gray-300">{element.variableDescription}</p>
             </div>
           )}
 
@@ -233,32 +233,32 @@ export default function DetailPanel({ selectedElement, onNavigate, onClose, enum
                     <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">BDCHM Element</td>
                     <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-mono text-sm">
                       <button
-                        onClick={() => handleRangeClick(selectedElement.bdchmElement)}
-                        className={`${classes?.has(selectedElement.bdchmElement) ? 'text-blue-700 dark:text-blue-400 underline hover:opacity-70 transition-opacity' : ''}`}
+                        onClick={() => handleRangeClick(element.bdchmElement)}
+                        className={`${classes?.has(element.bdchmElement) ? 'text-blue-700 dark:text-blue-400 underline hover:opacity-70 transition-opacity' : ''}`}
                       >
-                        {selectedElement.bdchmElement}
+                        {element.bdchmElement}
                       </button>
                     </td>
                   </tr>
                   <tr className="hover:bg-gray-50 dark:hover:bg-slate-700">
                     <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">Data Type</td>
                     <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm">
-                      {selectedElement.dataType}
+                      {element.dataType}
                     </td>
                   </tr>
-                  {selectedElement.ucumUnit && (
+                  {element.ucumUnit && (
                     <tr className="hover:bg-gray-50 dark:hover:bg-slate-700">
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">UCUM Unit</td>
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-mono text-sm">
-                        {selectedElement.ucumUnit}
+                        {element.ucumUnit}
                       </td>
                     </tr>
                   )}
-                  {selectedElement.curie && (
+                  {element.curie && (
                     <tr className="hover:bg-gray-50 dark:hover:bg-slate-700">
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">CURIE</td>
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-mono text-sm">
-                        {selectedElement.curie}
+                        {element.curie}
                       </td>
                     </tr>
                   )}
@@ -272,14 +272,14 @@ export default function DetailPanel({ selectedElement, onNavigate, onClose, enum
   }
 
   // Handle enum details
-  if (isEnumDefinition(selectedElement)) {
+  if (isEnumDefinition(element)) {
     return (
       <div className="h-full overflow-y-auto bg-white dark:bg-slate-800 text-left">
         {!hideHeader && (
           <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4">
             <div className="flex justify-between items-start">
               <div>
-                <h1 className="text-2xl font-bold text-left">{selectedElement.name}</h1>
+                <h1 className="text-2xl font-bold text-left">{element.name}</h1>
                 <p className="text-sm text-purple-600 dark:text-purple-400 mt-1">Enumeration</p>
               </div>
               {onClose && !hideCloseButton && (
@@ -298,25 +298,25 @@ export default function DetailPanel({ selectedElement, onNavigate, onClose, enum
         )}
 
         <div className="p-4 space-y-3 text-left">
-          {selectedElement.description && (
+          {element.description && (
             <div>
               <h2 className="text-lg font-semibold mb-1">Description</h2>
-              <p className="text-gray-700 dark:text-gray-300">{selectedElement.description}</p>
+              <p className="text-gray-700 dark:text-gray-300">{element.description}</p>
             </div>
           )}
 
-          {selectedElement.permissible_values.length > 0 && (
+          {element.permissible_values.length > 0 && (
             <div>
               <h2 className="text-lg font-semibold mb-1">
-                Permissible Values ({selectedElement.permissible_values.length})
+                Permissible Values ({element.permissible_values.length})
               </h2>
-              {useTwoColumnsForEnums && selectedElement.permissible_values.length > 10 ? (
+              {useTwoColumnsForEnums && element.permissible_values.length > 10 ? (
               // Two-column layout for wide dialogs with many permissible values
               <div className="grid grid-cols-2 gap-4">
                 {[0, 1].map(columnIndex => {
-                  const halfLength = Math.ceil(selectedElement.permissible_values.length / 2);
+                  const halfLength = Math.ceil(element.permissible_values.length / 2);
                   const startIdx = columnIndex * halfLength;
-                  const columnValues = selectedElement.permissible_values.slice(startIdx, startIdx + halfLength);
+                  const columnValues = element.permissible_values.slice(startIdx, startIdx + halfLength);
 
                   return (
                     <div key={columnIndex} className="overflow-x-auto">
@@ -355,7 +355,7 @@ export default function DetailPanel({ selectedElement, onNavigate, onClose, enum
                     </tr>
                   </thead>
                   <tbody>
-                    {selectedElement.permissible_values.map((value, idx) => (
+                    {element.permissible_values.map((value, idx) => (
                       <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-700">
                         <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-mono text-sm">
                           {value.key}
@@ -372,13 +372,13 @@ export default function DetailPanel({ selectedElement, onNavigate, onClose, enum
             </div>
           )}
 
-          {selectedElement.usedByClasses.length > 0 && (
+          {element.usedByClasses.length > 0 && (
             <div>
               <h2 className="text-lg font-semibold mb-1">
-                Used By Classes ({selectedElement.usedByClasses.length})
+                Used By Classes ({element.usedByClasses.length})
               </h2>
               <div className="flex flex-wrap gap-2">
-                {selectedElement.usedByClasses.map(className => (
+                {element.usedByClasses.map(className => (
                   <button
                     key={className}
                     onClick={() => handleRangeClick(className)}
@@ -396,14 +396,14 @@ export default function DetailPanel({ selectedElement, onNavigate, onClose, enum
   }
 
   // Handle slot details
-  if (isSlotDefinition(selectedElement)) {
+  if (isSlotDefinition(element)) {
     return (
       <div className="h-full overflow-y-auto bg-white dark:bg-slate-800 text-left">
         {!hideHeader && (
           <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4">
             <div className="flex justify-between items-start">
               <div>
-                <h1 className="text-2xl font-bold text-left">{selectedElement.name}</h1>
+                <h1 className="text-2xl font-bold text-left">{element.name}</h1>
                 <p className="text-sm text-green-600 dark:text-green-400 mt-1">Slot</p>
               </div>
               {onClose && !hideCloseButton && (
@@ -422,10 +422,10 @@ export default function DetailPanel({ selectedElement, onNavigate, onClose, enum
         )}
 
         <div className="p-4 space-y-3 text-left">
-          {selectedElement.description && (
+          {element.description && (
             <div>
               <h2 className="text-lg font-semibold mb-1">Description</h2>
-              <p className="text-gray-700 dark:text-gray-300">{selectedElement.description}</p>
+              <p className="text-gray-700 dark:text-gray-300">{element.description}</p>
             </div>
           )}
 
@@ -434,43 +434,43 @@ export default function DetailPanel({ selectedElement, onNavigate, onClose, enum
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <tbody>
-                  {selectedElement.range && (
+                  {element.range && (
                     <tr className="hover:bg-gray-50 dark:hover:bg-slate-700">
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">Range</td>
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-mono text-sm">
-                        {selectedElement.range}
+                        {element.range}
                       </td>
                     </tr>
                   )}
-                  {selectedElement.slot_uri && (
+                  {element.slot_uri && (
                     <tr className="hover:bg-gray-50 dark:hover:bg-slate-700">
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">URI</td>
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-mono text-sm">
-                        {selectedElement.slot_uri}
+                        {element.slot_uri}
                       </td>
                     </tr>
                   )}
-                  {selectedElement.identifier !== undefined && (
+                  {element.identifier !== undefined && (
                     <tr className="hover:bg-gray-50 dark:hover:bg-slate-700">
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">Identifier</td>
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm">
-                        {selectedElement.identifier ? 'Yes' : 'No'}
+                        {element.identifier ? 'Yes' : 'No'}
                       </td>
                     </tr>
                   )}
-                  {selectedElement.required !== undefined && (
+                  {element.required !== undefined && (
                     <tr className="hover:bg-gray-50 dark:hover:bg-slate-700">
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">Required</td>
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm">
-                        {selectedElement.required ? 'Yes' : 'No'}
+                        {element.required ? 'Yes' : 'No'}
                       </td>
                     </tr>
                   )}
-                  {selectedElement.multivalued !== undefined && (
+                  {element.multivalued !== undefined && (
                     <tr className="hover:bg-gray-50 dark:hover:bg-slate-700">
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 font-semibold">Multivalued</td>
                       <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm">
-                        {selectedElement.multivalued ? 'Yes' : 'No'}
+                        {element.multivalued ? 'Yes' : 'No'}
                       </td>
                     </tr>
                   )}
@@ -479,13 +479,13 @@ export default function DetailPanel({ selectedElement, onNavigate, onClose, enum
             </div>
           </div>
 
-          {selectedElement.usedByClasses.length > 0 && (
+          {element.usedByClasses.length > 0 && (
             <div>
               <h2 className="text-lg font-semibold mb-1">
-                Used By Classes ({selectedElement.usedByClasses.length})
+                Used By Classes ({element.usedByClasses.length})
               </h2>
               <div className="flex flex-wrap gap-2">
-                {selectedElement.usedByClasses.map(className => (
+                {element.usedByClasses.map(className => (
                   <button
                     key={className}
                     onClick={() => handleRangeClick(className)}
@@ -503,7 +503,7 @@ export default function DetailPanel({ selectedElement, onNavigate, onClose, enum
   }
 
   // Handle class details (original code)
-  const selectedClass = selectedElement as ClassNode;
+  const selectedClass = element as ClassNode;
 
   return (
     <div className="h-full overflow-y-auto bg-white dark:bg-slate-800 text-left">

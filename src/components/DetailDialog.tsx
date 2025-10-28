@@ -3,7 +3,7 @@ import DetailPanel from './DetailPanel';
 import type { SelectedElement } from '../types';
 
 interface DetailDialogProps {
-  selectedElement: SelectedElement;
+  element: SelectedElement;
   onNavigate?: (elementName: string, elementType: 'class' | 'enum' | 'slot') => void;
   onClose: () => void;
   onChange?: (position: { x: number; y: number }, size: { width: number; height: number }) => void;
@@ -15,7 +15,7 @@ interface DetailDialogProps {
 type ResizeHandle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw' | null;
 
 export default function DetailDialog({
-  selectedElement,
+  element,
   onNavigate,
   onClose,
   onChange,
@@ -172,9 +172,9 @@ export default function DetailDialog({
         onMouseDown={handleDragStart}
       >
         <div className="font-semibold text-gray-700 dark:text-gray-200">
-          {'children' in selectedElement ? 'Class' :
-           'permissible_values' in selectedElement ? 'Enum' :
-           'slot_uri' in selectedElement ? 'Slot' : 'Variable'} Details
+          {'children' in element ? 'Class' :
+           'permissible_values' in element ? 'Enum' :
+           'slot_uri' in element ? 'Slot' : 'Variable'} Details
         </div>
         <button
           onClick={onClose}
@@ -187,7 +187,7 @@ export default function DetailDialog({
       {/* Content */}
       <div className="flex-1 overflow-hidden">
         <DetailPanel
-          selectedElement={selectedElement}
+          element={element}
           onNavigate={onNavigate}
           onClose={onClose}
           dialogWidth={size.width}

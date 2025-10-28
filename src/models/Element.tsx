@@ -843,7 +843,7 @@ export class ClassCollection extends ElementCollection {
         {hasChildren && isExpanded && (
           <div>
             {node.children.map(child =>
-              this.renderClassTreeNode(child, level + 1, callbacks, position, selectedElement, expandedItems, toggleExpansion)
+              this.renderClassTreeNode(child, level + 1, callbacks, position, expandedItems, toggleExpansion)
             )}
           </div>
         )}

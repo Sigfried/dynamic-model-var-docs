@@ -515,7 +515,7 @@ function App() {
       {displayMode === 'dialog' && openDialogs.map((dialog, index) => (
         <DetailDialog
           key={dialog.id}
-          selectedElement={dialog.element}
+          element={dialog.element}
           onNavigate={handleNavigate}
           onClose={() => handleCloseDialog(dialog.id)}
           onChange={(position, size) => handleDialogChange(dialog.id, position, size)}

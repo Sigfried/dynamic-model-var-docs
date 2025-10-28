@@ -52,7 +52,7 @@ export default function DetailPanelStack({
           {/* Content */}
           <div className="flex-1 overflow-hidden">
             <DetailPanel
-              selectedElement={panel.element}
+              element={panel.element}
               onNavigate={onNavigate}
               onClose={() => onClose(panel.id)}
               dialogWidth={600}
