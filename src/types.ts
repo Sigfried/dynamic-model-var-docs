@@ -1,5 +1,7 @@
 // Core type definitions for the LinkML model and variable specs
 
+import type { Element } from './models/Element';
+
 export interface VariableSpec {
   bdchmElement: string;
   variableLabel: string;
@@ -61,4 +63,5 @@ export interface ModelData {
   // Generic collections - keyed by ElementTypeId
   // Use collection.getElement(name) and collection.getAllElements() for lookups
   collections: Map<import('./models/ElementRegistry').ElementTypeId, import('./models/Element').ElementCollection>;
+  elementLookup: Map<string, Element>
 }

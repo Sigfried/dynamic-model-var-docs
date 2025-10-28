@@ -1,116 +1,47 @@
 # temp.md - Immediate Next Steps
 
 > **Quick reference for current session work**
-> - **PROGRESS.md** - Completed work for reporting
-> - **CLAUDE.md** - Architecture, philosophy, future work
+> - **PROGRESS.md** - Completed work for reporting (see Phase 3g for recent work)
+> - **CLAUDE.md** - Architecture, philosophy, future work (see "Architectural Decision Points" section)
 
 ---
 
-## 🌙 AUTONOMOUS WORK SESSION (2025-01-27 Night)
+## 🚨 PAUSE: Architecture Discussion Needed (2025-01-27 Evening)
 
-**Task**: Continue Task 3.6 (Make Everything Truly Generic)
+**Current situation:**
+- In the middle of refactoring collections to store Element instances instead of raw data
+- EnumCollection converted ✅, but added temporary adapter with `(element as any).rawData` ⚠️
+- User noticed the adapter is a code smell and questioned the approach
 
-**Commits made**: 6 commits
-1. `c71ba81` - docs: Add Task 3.6 plan to temp.md
-2. `c294716` - feat: Add getElement() and getAllElements() to ElementCollection
-3. `ecd4828` - feat: Add validPairs to RELATIONSHIP_TYPES
-4. `42292be` - refactor: Simplify ModelData to only contain collections
-5. `e668660` - refactor: Update App.tsx element lookups to use collections
-6. `7812776` - docs: Update Task 3.6 progress in temp.md
+**Critical questions raised about selectedElement:**
+- See detailed analysis in **temp.md section below** and **CLAUDE.md "Architectural Decision Points"**
+- Need to understand what selectedElement is really doing before continuing refactor
+- May need to simplify/eliminate selectedElement concept
+- May need to move renderItems view code out of model classes into Section.tsx
 
-**Progress**:
-- ✅ Added generic lookup methods to all ElementCollection classes
-- ✅ Enhanced RELATIONSHIP_TYPES with validPairs constraints
-- ✅ Simplified ModelData to ONLY contain collections Map (removed classHierarchy, enums, slots, variables, reverseIndices)
-- ✅ Updated App.tsx element lookups to use generic collection.getElement()
+**Next steps:**
+1. Review the questions in the "CRITICAL DECISION NEEDED" section below
+2. Discuss and decide on selectedElement architecture
+3. Decide whether to:
+   - Continue collection refactor with temporary adapter, clean up later (Option B from discussion)
+   - Fix adapter first by updating App.tsx (Option A)
+   - Simplify selectedElement first, then continue (Option C)
 
-**Current state**:
-- Code compiles but app is broken (panel data structure incompatible with LinkOverlay)
-- Tests likely failing (dataLoader.test.ts expects old ModelData structure)
-
-**What needs to be done** (see Task 3.6 section below for details):
-1. **App.tsx panel data** - Replace type-specific structure with Map filtering
-2. **LinkOverlay refactor** - Accept Map<ElementTypeId, ElementCollection> instead of {classes, enums, slots, variables}
-3. **DetailDialog/DetailPanel** - Pass collections instead of separate props
-4. **Tests** - Update dataLoader.test.ts
-
-**Recommendation for morning**:
-Start with #1 (App.tsx panel data) - it's the simplest change. Then tackle #2 (LinkOverlay) which is the biggest/riskiest change.
+**Updated files ready for review:**
+- ✅ temp.md - This file (questions and analysis documented)
+- ✅ PROGRESS.md - Phase 3g added (completed work moved out of temp.md)
+- ✅ CLAUDE.md - "Architectural Decision Points" section added
 
 ---
 
-## COMPLETED: Element Collection Refactor (2025-01-27)
+## ✅ COMPLETED SESSIONS (moved to PROGRESS.md)
 
-**All Done:**
-- ✅ Created EnumCollection and SlotCollection classes in Element.tsx
-- ✅ Created ClassCollection with state persistence (lce/rce keys)
-- ✅ Created VariableCollection with state persistence (lve/rve keys)
-- ✅ Generic Section component replaces all type-specific sections
-- ✅ dataLoader.ts creates all four collections
-- ✅ Removed old section components (ClassSection, EnumSection, SlotSection, VariablesSection)
-- ✅ Fixed variable expansion bug (left/right panels now use separate lve/rve keys)
-- ✅ Hover highlighting implemented with helper function
-
-**Git Tag**: `pre-element-collection-refactor` (safe rollback point before refactor)
-
----
-
-## COMPLETED: slot_usage Bug Fix (2025-01-27)
-
-**Fixed class slot display to properly handle LinkML inheritance:**
-- ✅ Shows inherited slots from parent classes
-- ✅ Shows referenced top-level slots
-- ✅ Applies slot_usage refinements (e.g., narrowing range, making required)
-- ✅ Added Source column showing: Inline / Slot: {name} / ← {ParentClass}
-- ✅ Added ⚡ indicator for refined slots
-- ✅ Links now point to refined types (e.g., MeasurementObservation not Observation)
-
-**Example**: MeasurementObservationSet now correctly shows:
-- `observations` slot with range `MeasurementObservation` (not `Observation`)
-- Source: `← ObservationSet`
-- ⚡ indicating slot_usage refinement applied
-
----
-
-## COMPLETED: Terminology Cleanup (2025-01-27)
-
-**Done:**
-- ✅ Renamed `entity` → `element` throughout codebase (avoiding confusion with Entity model class)
-  - Updated all components, utilities, and tests
-  - Kept 'Entity' (capitalized) references to BDCHM model class intact
-  - Removed obsolete ClassSection.test.tsx
-  - All 130 tests passing, type checking passes
-
----
-
-## COMPLETED: Element Type Registry Centralization (2025-10-27)
-
-**Task 1 & 2 Done:**
-- ✅ Created `src/models/ElementRegistry.ts` with centralized metadata for all element types
-- ✅ Defined `ElementTypeId` and `RelationshipTypeId` types for type safety
-- ✅ Moved all hardcoded colors, labels, icons into registry
-- ✅ Updated Element.tsx to use `ElementTypeId` instead of string unions
-- ✅ Updated all 4 ElementCollection classes (Enum, Slot, Class, Variable) to use registry
-- ✅ Updated panelHelpers.tsx to use registry for header colors
-- ✅ Preserved exact original colors (bg-blue-700, etc.) with dark mode variants
-- ✅ All 135 tests passing, TypeScript compiles cleanly
-
-**Files Created:**
-- `src/models/ElementRegistry.ts` - Central registry with ELEMENT_TYPES and RELATIONSHIP_TYPES
-
-**Files Modified:**
-- `src/models/Element.tsx` - All element/collection classes now use ElementTypeId
-- `src/utils/panelHelpers.tsx` - Uses registry for getHeaderColor()
-- `src/test/panelHelpers.test.tsx` - Updated tests
-
-**Benefits Achieved:**
-- Single source of truth for element type metadata
-- Type-safe element type IDs throughout codebase
-- Easy to modify styling globally
-- Foundation for reusable architecture
-
-**Next:**
-- Continue with remaining refactoring tasks below
+All completed work from these sessions has been documented in **PROGRESS.md Phase 3g**:
+- 🌙 Autonomous Work Session (2025-01-27 Night) - Generic Collections completed
+- Element Collection Refactor (2025-01-27)
+- slot_usage Bug Fix (2025-01-27)
+- Terminology Cleanup (entity→element) (2025-01-27)
+- Element Type Registry Centralization (2025-10-27)
 
 ---
 
@@ -208,46 +139,111 @@ Start with #1 (App.tsx panel data) - it's the simplest change. Then tackle #2 (L
 - ✅ Validation in statePersistence (now uses isValidElementType)
 - ✅ Duplicate mappings in App.tsx (now imports from statePersistence)
 
-#### 3.6. Make Everything Truly Generic 🔄 **IN PROGRESS** (2025-01-27)
-**Goal**: Eliminate remaining structural duplication so adding/removing element types requires minimal changes.
+#### 3.6. Collections Store Elements, Not Raw Data 🔄 **IN PROGRESS** (2025-01-27)
+**Goal**: Eliminate redundant data wrapping - collections should store Element instances, not raw data.
 
-**Current problem**: Despite Task 3.5, we still have type-specific code in 13+ files:
-- ModelData has redundant fields: `classHierarchy`, `enums`, `slots`, `variables` AND `collections`
-- App.tsx has type-specific if/else for element lookups
-- LinkOverlay has hard-coded panel structure (`leftPanel.classes`, `leftPanel.enums`, etc.)
-- ReverseIndices has type-specific maps (`enumToClasses`, `slotToClasses`, `classToClasses`)
+**Original Task 3.6 status**: ✅ **COMPLETE** (moved to PROGRESS.md)
+- Simplified ModelData to only contain collections Map + elementLookup
+- Updated App.tsx/LinkOverlay to use generic collections
+- Tests updated
 
-**Strategy**: Push more logic into the model layer and registry
+**NEW PHASE: Element Storage Refactor**
 
-**Progress so far (5 commits):**
-- ✅ Added getElement() and getAllElements() to all ElementCollection classes
-- ✅ Added validPairs to RELATIONSHIP_TYPES in ElementRegistry
-- ✅ Simplified ModelData to only contain collections Map
-- ✅ Removed ReverseIndices interface (was never used in app)
-- ✅ Updated App.tsx element lookups to use collection.getElement()
+**Current problem**: Collections store raw data (EnumDefinition, ClassNode, etc.) and wrap them on-demand via createElement() factory. This is redundant - the Element instances already contain all the data.
 
-**What remains (CRITICAL - needs careful work):**
-1. **App.tsx panel data structure** - Currently builds type-specific structure for LinkOverlay
-   - Remove `flattenClassHierarchy()` function (no longer needed)
-   - Replace `leftPanelData`/`rightPanelData` useMemo - instead of building objects with classes/enums/slots/variables, just filter collections Map based on leftSections/rightSections
-   - New structure: `Map<ElementTypeId, ElementCollection>` containing only visible sections
+**Progress so far (2025-01-27 evening session):**
+1. ✅ Updated ElementCollection base class:
+   - Changed `getElement()` return: `ElementData | null` → `Element | null`
+   - Changed `getAllElements()` return: `ElementData[]` → `Element[]`
+   - Changed `onSelect` callback: `(data: ElementData, type: ElementTypeId)` → `(element: Element)`
 
-2. **LinkOverlay refactor** - Big change: needs to accept Map<ElementTypeId, ElementCollection>
-   - Change props from `{ classes, enums, slots, variables }` to `Map<ElementTypeId, ElementCollection>`
-   - Update `processElements()` helper to iterate over collections Map generically
-   - Replace type-specific loops (leftPanel.classes.forEach, leftPanel.enums.forEach...) with generic iteration over collection.getAllElements()
-   - Need special handling for slots - ClassElement constructor needs all slots, not just visible ones
+2. ✅ **EnumCollection fully converted**:
+   - Changed `private enums: Map<string, EnumDefinition>` → `Map<string, EnumElement>`
+   - Updated `fromData()` to wrap raw data into EnumElements immediately
+   - Updated renderItems to use EnumElement and new callback signature
+   - Added `get permissibleValues()` and `get rawData()` accessors to EnumElement
 
-3. **DetailDialog/DetailPanel props** - Pass collections instead of separate enums/slots/classes
-   - DetailDialog currently receives: `enums?: Map<...>, slots?: Map<...>, classes?: Map<...>`
-   - Change to: `collections: Map<ElementTypeId, ElementCollection>`
-   - Update DetailDialog to pass collections to DetailPanel
-   - Update DetailPanel to use collections for navigation lookups
+3. ⚠️ **Temporary fix applied** (needs cleanup):
+   - Added adapter in ElementsPanel.tsx to convert Element back to raw data
+   - Uses `(element as any).rawData` - bypasses type safety
+   - Added `rawData` getter to EnumElement
+   - **This is a code smell** - should update App.tsx to accept Elements instead
 
-4. **Tests** - dataLoader.test.ts will fail (expects old ModelData structure)
-   - Remove tests for reverseIndices (deleted)
-   - Update tests to check collections Map instead of separate fields
-   - May need to add tests for getAllElements() on each collection type
+**What remains:**
+1. **SlotCollection** - Convert to store SlotElement instances
+2. **VariableCollection** - Convert to store VariableElement instances
+3. **ClassCollection** - Convert to store ClassElement instances (tricky: currently stores ClassNode[] tree)
+4. **Pre-compute relationships** - Move getRelationships() into Element constructors, store as readonly property
+5. **Remove adapter** - Update App.tsx handleOpenDialog to accept Element directly
+6. **Remove createElement() factory** - No longer needed once collections store Elements
+7. **Remove getElementName() helper** - Use element.name directly (already works via polymorphism)
+8. **Replace categorizeRange() duck typing** - Use elementLookup map instead of checking if name ends with "Enum"
+9. **Remove ElementData type** - Once collections store Elements, this union type becomes obsolete
+
+**Testing strategy:**
+- Run existing unit tests after each collection conversion
+- Update broken tests
+- Manual browser check
+- Run typecheck
+
+---
+
+### 🚨 CRITICAL DECISION NEEDED: selectedElement Confusion
+
+**User's observations:**
+
+1. **Type definition mismatch:**
+   ```typescript
+   // types.ts - says it's a union of raw data types
+   export type SelectedElement = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
+   // Should just be Element instead? Or is this type even needed?
+   ```
+
+2. **Inconsistent usage - what does "selectedElement" actually mean?**
+   - Sometimes it's an `Element` instance
+   - Sometimes it's `{type: string, name: string}` object
+   - Sometimes it's `Element + type string`
+   - Sometimes it's just a name string
+
+3. **What is it used for?**
+   - NOT for hover state (there's separate `hoveredElement`)
+   - Passed to DetailDialog/DetailPanel - but is that necessary?
+   - When you click an element, dialog opens, but no other visual indication of "selected"
+   - `handleOpenDialog` expects `element: SelectedElement` param, but could just be `Element` (or name)
+
+4. **How does dialog state restoration work?**
+   - User couldn't find code that calls handleOpenDialog when restoring from URL
+   - Need to understand this better
+
+5. **Is this necessary? (App.tsx:467)**
+   ```typescript
+   selectedElement={openDialogs.length > 0 ? openDialogs[0].element : undefined}
+   ```
+   - Seems to only pass selectedElement to ElementCollection.renderItems
+   - But renderItems implementations have lots of redundant code
+   - Could/should be moved to Section.tsx instead of in model classes
+   - Other than tree vs list rendering (which will be abstracted), what differs between the 4 renderItems implementations?
+
+6. **Could isSelected logic move to Section.tsx?**
+   - Section would need its own logic for individual element display
+   - Would eliminate view code from model classes
+
+**Proposed simplification:**
+- `selectedElement` should just contain the Element instance (or just the name, since we can do `modelData.elementLookup.get(name)`)
+- Type should be `Element | undefined` instead of union of raw data types
+- Move renderItems view logic out of model classes into Section.tsx
+
+**Questions to answer before proceeding:**
+1. What is the actual purpose of tracking "selected" state?
+2. How does dialog restoration from URL work?
+3. Can we eliminate selectedElement entirely and just use click handlers?
+4. Should renderItems be in model classes at all, or should Section.tsx handle display?
+5. **Should ElementRegistry metadata be combined into model classes instead of separate file?**
+   - Current: Separate ElementRegistry.ts with ELEMENT_TYPES map containing colors, labels, icons
+   - Alternative: Each element class (ClassElement, EnumElement, etc.) has static metadata properties
+   - Where should this metadata live?
+
+**Recommendation:** Stop current refactor, discuss and decide on selectedElement architecture first, since it affects how collections and Elements interact with the UI.
 
 **Sub-tasks (original plan):**
 1. Add lookup methods to ElementCollection:

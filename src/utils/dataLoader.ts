@@ -196,6 +196,7 @@ function loadSlots(metadata: SchemaMetadata): Map<string, SlotDefinition> {
   return slots;
 }
 
+// todo: check that nothing in this function is needed and then delete it
 function buildReverseIndices(
   schema: Map<string, ClassMetadata>,
   enums: Map<string, EnumDefinition>,
@@ -302,6 +303,13 @@ export async function loadModelData(): Promise<ModelData> {
   collections.set('slot', slotCollection);
   collections.set('variable', variableCollection);
 
+  // Flatten all elements into name→element lookup map
+  const elementLookup = new Map<string, Element>();
+  collections.forEach(collection => {
+    collection.getAllElements().forEach(element => {
+      elementLookup.set(element.name, element);
+    });
+  });
   // Initialize element name lookup map for accurate type categorization
   const classNames = classCollection.getAllElements().map(c => c.name);
   const enumNames = Array.from(enums.keys());
@@ -309,6 +317,7 @@ export async function loadModelData(): Promise<ModelData> {
   initializeElementNameMap(classNames, enumNames, slotNames);
 
   return {
-    collections
+    collections,
+    elementLookup,
   };
 }

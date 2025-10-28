@@ -112,7 +112,12 @@ export default function ElementsPanel({
                 key={typeId}
                 collection={collection}
                 callbacks={{
-                  onSelect: onSelectElement,
+                  onSelect: (element) => {
+                    // Adapter: Convert Element back to raw data for legacy code
+                    // TODO: Eventually update App.tsx to accept Element directly
+                    const rawData = (element as any).rawData || element;
+                    onSelectElement(rawData, element.type);
+                  },
                   onElementHover,
                   onElementLeave
                 }}

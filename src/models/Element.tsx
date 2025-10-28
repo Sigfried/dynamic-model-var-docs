@@ -227,6 +227,9 @@ export class EnumElement extends Element {
 
   get name() { return this.data.name; }
   get description() { return this.data.description; }
+  get permissibleValues() { return this.data.permissible_values; }
+  /** @deprecated Temporary accessor for legacy code - use element properties directly */
+  get rawData() { return this.data; }
 
   renderPanelSection(
     _depth: number,
@@ -482,7 +485,7 @@ export class VariableElement extends Element {
 // ============================================================================
 
 export interface ElementCollectionCallbacks {
-  onSelect: (data: ElementData, type: ElementTypeId) => void;
+  onSelect: (element: Element) => void;
   onElementHover?: (element: { type: ElementTypeId; name: string }) => void;
   onElementLeave?: () => void;
 }
@@ -503,10 +506,10 @@ export abstract class ElementCollection {
   abstract getExpansionKey(position: 'left' | 'right'): string | null;
 
   /** Get a single element by name/identifier */
-  abstract getElement(name: string): ElementData | null;
+  abstract getElement(name: string): Element | null;
 
   /** Get all elements in this collection as a flat array */
-  abstract getAllElements(): ElementData[];
+  abstract getAllElements(): Element[];
 
   /** Render items for the panel section */
   abstract renderItems(
@@ -521,16 +524,21 @@ export abstract class ElementCollection {
 // EnumCollection - flat list of enumerations
 export class EnumCollection extends ElementCollection {
   readonly type = 'enum' as const;
-  private enums: Map<string, EnumDefinition>;
+  private enums: Map<string, EnumElement>;
 
-  constructor(enums: Map<string, EnumDefinition>) {
+  constructor(enums: Map<string, EnumElement>) {
     super();
     this.enums = enums;
   }
 
   /** Factory: Create from raw data (called by dataLoader) */
-  static fromData(enums: Map<string, EnumDefinition>): EnumCollection {
-    return new EnumCollection(enums);
+  static fromData(enumData: Map<string, EnumDefinition>): EnumCollection {
+    // Wrap raw EnumDefinitions into EnumElements
+    const elements = new Map<string, EnumElement>();
+    enumData.forEach((def, name) => {
+      elements.set(name, new EnumElement(def));
+    });
+    return new EnumCollection(elements);
   }
 
   getLabel(): string {
@@ -550,11 +558,11 @@ export class EnumCollection extends ElementCollection {
     return null; // No expansion state needed
   }
 
-  getElement(name: string): ElementData | null {
+  getElement(name: string): Element | null {
     return this.enums.get(name) || null;
   }
 
-  getAllElements(): ElementData[] {
+  getAllElements(): Element[] {
     return Array.from(this.enums.values());
   }
 
@@ -572,31 +580,31 @@ export class EnumCollection extends ElementCollection {
 
     const { color } = ELEMENT_TYPES[this.type];
 
-    return enumList.map((enumDef) => {
-      const isSelected = selectedElement?.type === 'enum' && selectedElement?.name === enumDef.name;
+    return enumList.map((enumElement) => {
+      const isSelected = selectedElement?.type === 'enum' && selectedElement?.name === enumElement.name;
       const hoverHandlers = getElementHoverHandlers({
         type: 'enum',
-        name: enumDef.name,
+        name: enumElement.name,
         onElementHover: callbacks.onElementHover,
         onElementLeave: callbacks.onElementLeave
       });
 
       return (
         <div
-          key={enumDef.name}
-          id={`enum-${enumDef.name}`}
+          key={enumElement.name}
+          id={`enum-${enumElement.name}`}
           data-element-type="enum"
-          data-element-name={enumDef.name}
+          data-element-name={enumElement.name}
           data-panel-position={position}
           className={`flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700 ${
             isSelected ? color.selectionBg : ''
           }`}
-          onClick={() => callbacks.onSelect(enumDef, 'enum')}
+          onClick={() => callbacks.onSelect(enumElement)}
           {...hoverHandlers}
         >
-          <span className="flex-1 text-sm font-medium">{enumDef.name}</span>
+          <span className="flex-1 text-sm font-medium">{enumElement.name}</span>
           <span className={`text-xs px-2 py-0.5 rounded ${color.badgeBg} ${color.badgeText}`}>
-            {enumDef.permissible_values.length}
+            {(enumElement as EnumElement).permissibleValues.length}
           </span>
         </div>
       );

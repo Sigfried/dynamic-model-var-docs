@@ -230,6 +230,53 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 
 ---
 
+## Phase 3g: Element Type Centralization & Generic Collections
+
+**Completed**: January 2025
+
+### Key Features
+- **ElementRegistry**: Centralized metadata for all element types (classes, enums, slots, variables)
+  - Single source of truth for colors, labels, icons, relationship types
+  - Type-safe `ElementTypeId` and `RelationshipTypeId` unions
+  - Eliminates hard-coded type checks scattered throughout codebase
+- **Generic Collections Architecture**: Collections stored in `Map<ElementTypeId, ElementCollection>`
+  - App.tsx uses generic collection lookups instead of type-specific if/else
+  - LinkOverlay accepts generic panel structure (Map-based)
+  - ElementsPanel iterates over collections generically
+- **Element Lookup Map**: `modelData.elementLookup` for name→Element mapping
+  - Eliminates duck typing (checking if name ends with "Enum")
+  - Fast lookups across all element types
+- **Relationship Constraints**: `validPairs` in RELATIONSHIP_TYPES defines source/target rules
+  - Example: `property` relationship valid for class→class and class→enum
+  - Enables type-safe relationship rendering
+
+### Technical Details
+- Created `src/models/ElementRegistry.ts` with ELEMENT_TYPES and RELATIONSHIP_TYPES
+- Simplified ModelData to only contain:
+  - `collections: Map<ElementTypeId, ElementCollection>`
+  - `elementLookup: Map<string, Element>`
+- Removed redundant fields: classHierarchy, enums, slots, variables (now accessed via collections)
+- Removed ReverseIndices interface (was never used in app)
+- All ElementCollection classes implement: `getElement(name)`, `getAllElements()`, `renderItems()`
+- Updated 13+ files to eliminate type-specific conditionals
+
+### Adding New Element Types
+After these changes, adding a new element type requires:
+1. Add to ElementTypeId union in ElementRegistry
+2. Add metadata to ELEMENT_TYPES
+3. Add relationship rules to RELATIONSHIP_TYPES (if needed)
+4. Create new element/collection classes
+5. Add to dataLoader
+6. Update SelectedElement union (TypeScript requirement)
+
+No longer need to update:
+- ✅ Hard-coded type checks in utilities
+- ✅ Element lookup logic in components
+- ✅ Panel structure in LinkOverlay
+- ✅ Section rendering in ElementsPanel
+
+---
+
 ## Testing
 
 **Current Coverage**: 134 tests across 8 test files (100% passing ✅)

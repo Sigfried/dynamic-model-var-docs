@@ -177,6 +177,51 @@ Since attributes are just inline slots, the UI should:
 
 ## Future Features
 
+### Architecture: Generalize Hierarchical Structure
+
+**Current limitation**: `ClassNode` has `children: ClassNode[]` - hierarchy is type-specific.
+
+**Problem**:
+- Only classes can be hierarchical
+- Can't reorganize views (e.g., show enums with classes nested under them)
+- Variables are grouped by class but not using a general hierarchy abstraction
+- Difficult to support alternate view modes
+
+**Proposed solution**: Generic tree/hierarchy types
+```typescript
+// Generic tree node
+interface TreeNode<T> {
+  data: T;
+  children: TreeNode<T>[];
+  parent?: TreeNode<T>;
+}
+
+// Heterogeneous trees (ClassElement with EnumElement children)
+interface HierarchyNode {
+  element: Element;
+  children: HierarchyNode[];
+}
+
+// Tree utilities
+class Hierarchy<T> {
+  roots: TreeNode<T>[];
+  flatten(): T[]
+  findByName(name: string): TreeNode<T> | null
+}
+```
+
+**Benefits**:
+- Any element type can be hierarchical
+- Flexible view reorganization (classes under enums, enums under classes, etc.)
+- Reusable tree operations (flatten, search, traverse)
+- Could support DAGs later if needed (e.g., multiple inheritance)
+
+**Implications**:
+- Would replace `ClassNode.children` with more general structure
+- Collections could support multiple hierarchy views
+- Panel sections could render any hierarchy type
+- Tests would need updating (currently assume ClassNode hierarchy)
+
 ### Phase 4: Search and Filter
 - Search bar with full-text search across all elements
 - Filter controls (checkboxes for class families, variable count slider)
@@ -256,6 +301,132 @@ When working with larger models or slower devices:
 - **Vite**: Fast dev server, HMR
 - **Tailwind CSS**: Rapid styling
 - **D3.js (minimal)**: Only for specific graph algorithms or layouts that React can't handle
+
+---
+
+## Architectural Decision Points
+
+### OPEN QUESTION: What Is "selectedElement" Really Doing?
+
+**Status**: Architecture unclear, needs discussion before proceeding with refactor
+
+**The confusion:**
+
+1. **Type mismatch**: `SelectedElement` defined as union of raw data types (ClassNode | EnumDefinition | SlotDefinition | VariableSpec), but should probably be just `Element`
+
+2. **Inconsistent representations**:
+   - Sometimes `Element` instance
+   - Sometimes `{type: string, name: string}` object
+   - Sometimes `Element + type string`
+   - Sometimes just a name string
+
+3. **Unclear purpose**:
+   - NOT used for hover (separate `hoveredElement` exists)
+   - Passed to dialogs but unclear if necessary
+   - No visual indication of "selected" state beyond dialog opening
+   - App.tsx:467 passes `selectedElement={openDialogs[0].element}` to panels, but only used for renderItems isSelected logic
+
+4. **View code in model classes**:
+   - Each ElementCollection has renderItems() with isSelected logic
+   - Lots of redundant code between the 4 implementations
+   - Should this be in Section.tsx instead?
+   - Violates separation of concerns (view logic in model)
+
+**Questions to answer:**
+1. What is the actual purpose of tracking "selected" state?
+2. How does dialog restoration from URL work? (User couldn't find handleOpenDialog call during restoration)
+3. Can we eliminate selectedElement entirely and just use click handlers?
+4. Should renderItems be in model classes at all?
+
+**Proposed simplification:**
+- `selectedElement: Element | undefined` (not union of raw types)
+- Or just store name string and use `modelData.elementLookup.get(name)`
+- Move isSelected display logic from ElementCollection.renderItems to Section.tsx
+- Keep model classes focused on data, not view rendering
+
+**Impact on current refactor:**
+- Currently converting collections to store Element instances (not raw data)
+- Added temporary adapter in ElementsPanel using `(element as any).rawData` - code smell
+- Need to decide on selectedElement architecture before continuing
+- This affects how Elements flow through callback chain: Collection → Section → ElementsPanel → App
+
+**Recommendation**: Pause collection refactor, clarify selectedElement design, then proceed cleanly without temporary fixes.
+
+### OPEN QUESTION: Where Should Element Type Metadata Live?
+
+**Status**: Architecture decision needed
+
+**Current approach:**
+- Separate `ElementRegistry.ts` file with:
+  - `ELEMENT_TYPES` map: colors, labels, icons, pluralLabel per type
+  - `RELATIONSHIP_TYPES` map: relationship metadata
+  - Helper functions: `getAllElementTypeIds()`, `isValidElementType()`
+- Element classes import from registry: `ELEMENT_TYPES[this.type]`
+
+**Alternative approach:**
+Put metadata directly in element classes as static properties:
+```typescript
+class ClassElement extends Element {
+  static readonly typeId = 'class' as const;
+  static readonly metadata = {
+    icon: 'C',
+    label: 'Class',
+    pluralLabel: 'Classes',
+    color: { name: 'blue', selectionBg: '...', ... }
+  };
+
+  readonly type = ClassElement.typeId;
+  // ...
+}
+```
+
+**Tradeoffs:**
+
+**Option A: Keep separate registry (current)**
+- ✅ All metadata in one place, easy to see full type system
+  - sg note: there are also types and interfaces in types.tx; should they move?
+- ✅ Can add new element types without touching existing files
+- ✅ Registry can have utility functions operating on all types
+- ✅ Clear separation: models focus on data, registry on metadata
+- ❌ Extra indirection: `ELEMENT_TYPES[this.type]` instead of `this.metadata`
+- ❌ Two places to update when adding element types
+
+**Option B: Metadata in element classes**
+- ✅ Metadata lives with the class it describes (better cohesion)
+- ✅ Less indirection: `ClassElement.metadata` is direct
+- ✅ TypeScript can enforce metadata completeness per class
+- ❌ Metadata scattered across multiple files
+- ❌ Harder to see full type system at a glance
+- ❌ Registry functions would need to iterate all classes
+
+**Hybrid option C: Classes define metadata, registry aggregates**
+```typescript
+// ClassElement.ts
+class ClassElement extends Element {
+  static readonly metadata = { ... };
+}
+
+// ElementRegistry.ts (generated/aggregated)
+export const ELEMENT_TYPES = {
+  class: ClassElement.metadata,
+  enum: EnumElement.metadata,
+  slot: SlotElement.metadata,
+  variable: VariableElement.metadata
+} as const;
+```
+- ✅ Metadata defined with classes (cohesion)
+- ✅ Registry provides convenient lookup
+- ❌ More complex, potential for sync issues
+
+**User's question:** "Is there any reason not to combine stuff from ElementRegistry into model classes? I'm not sure where to put it"
+
+**Considerations:**
+- If we move renderItems out of model classes (see selectedElement question), models become more data-focused → suggests keeping metadata separate
+- If element classes handle their own rendering, having metadata there makes sense
+- Current registry is only ~200 lines and provides nice overview of type system
+- Would split registry into 4+ files (one per element type) if moved into classes
+
+**Recommendation TBD** - Depends on outcome of renderItems/selectedElement discussion. If models stay focused on data (no view code), keep registry separate. If models handle their own display, move metadata into classes.
 
 ---
 
