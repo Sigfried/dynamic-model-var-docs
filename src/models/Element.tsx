@@ -6,6 +6,7 @@ import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '..
 import { getElementHoverHandlers } from '../hooks/useElementHover';
 import type { ElementTypeId, RelationshipTypeId } from './ElementRegistry';
 import { ELEMENT_TYPES } from './ElementRegistry';
+import type { RenderableItem } from './RenderableItem';
 
 // Union type for all element data types
 export type ElementData = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
@@ -511,6 +512,12 @@ export abstract class ElementCollection {
   /** Get all elements in this collection as a flat array */
   abstract getAllElements(): Element[];
 
+  /**
+   * Get renderable items for display in Section
+   * Returns items with structure/nesting info, ready for generic rendering
+   */
+  abstract getRenderableItems(expandedItems?: Set<string>): RenderableItem[];
+
   /** Render items for the panel section */
   abstract renderItems(
     callbacks: ElementCollectionCallbacks,
@@ -563,6 +570,21 @@ export class EnumCollection extends ElementCollection {
 
   getAllElements(): Element[] {
     return Array.from(this.enums.values());
+  }
+
+  getRenderableItems(_expandedItems?: Set<string>): RenderableItem[] {
+    // Sort enums by name
+    const enumList = Array.from(this.enums.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+
+    return enumList.map((enumElement) => ({
+      id: `enum-${enumElement.name}`,
+      element: enumElement,
+      level: 0,
+      isClickable: true,
+      badge: (enumElement as EnumElement).permissibleValues.length
+    }));
   }
 
   renderItems(
@@ -645,6 +667,21 @@ export class SlotCollection extends ElementCollection {
 
   getAllElements(): ElementData[] {
     return Array.from(this.slots.values());
+  }
+
+  getRenderableItems(_expandedItems?: Set<string>): RenderableItem[] {
+    // Sort slots by name
+    const slotList = Array.from(this.slots.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+
+    return slotList.map((slotDef) => ({
+      id: `slot-${slotDef.name}`,
+      element: slotDef as any, // TODO: Convert to SlotElement when slots become Elements
+      level: 0,
+      isClickable: true,
+      badge: slotDef.usedByClasses.length > 0 ? slotDef.usedByClasses.length : undefined
+    }));
   }
 
   /** Get underlying slots Map (needed for ClassElement constructor) */
