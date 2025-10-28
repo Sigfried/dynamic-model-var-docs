@@ -9,7 +9,6 @@ interface ElementsPanelProps {
   sections: ElementTypeId[];
   onSectionsChange: (sections: ElementTypeId[]) => void;
   collections: Map<ElementTypeId, ElementCollection>;
-  selectedElement?: SelectedElement;
   onSelectElement: (element: SelectedElement, elementType: ElementTypeId) => void;
   onElementHover?: (element: { type: ElementTypeId; name: string }) => void;
   onElementLeave?: () => void;
@@ -43,7 +42,6 @@ export default function ElementsPanel({
   sections,
   onSectionsChange,
   collections,
-  selectedElement,
   onSelectElement,
   onElementHover,
   onElementLeave
@@ -61,22 +59,6 @@ export default function ElementsPanel({
       newSections.unshift(elementTypeId);
     }
     onSectionsChange(newSections);
-  };
-
-  // Helper to check if element is of certain type
-  const isClassNode = (element: SelectedElement): element is ClassNode => 'children' in element;
-  const isEnumDefinition = (element: SelectedElement): element is EnumDefinition => 'permissible_values' in element;
-  const isSlotDefinition = (element: SelectedElement): element is SlotDefinition => 'slot_uri' in element;
-  const isVariableSpec = (element: SelectedElement): element is VariableSpec => 'variableLabel' in element;
-
-  // Helper to convert selectedElement to format expected by Section component
-  const getSelectedElementInfo = (): { type: string; name: string } | undefined => {
-    if (!selectedElement) return undefined;
-    if (isClassNode(selectedElement)) return { type: 'class', name: selectedElement.name };
-    if (isEnumDefinition(selectedElement)) return { type: 'enum', name: selectedElement.name };
-    if (isSlotDefinition(selectedElement)) return { type: 'slot', name: selectedElement.name };
-    if (isVariableSpec(selectedElement)) return { type: 'variable', name: selectedElement.variableLabel };
-    return undefined;
   };
 
   // Get all available element type IDs for toggle buttons
@@ -122,7 +104,6 @@ export default function ElementsPanel({
                   onElementLeave
                 }}
                 position={position}
-                selectedElement={getSelectedElementInfo()}
               />
             );
           })}

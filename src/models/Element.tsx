@@ -515,7 +515,6 @@ export abstract class ElementCollection {
   abstract renderItems(
     callbacks: ElementCollectionCallbacks,
     position: 'left' | 'right',
-    selectedElement?: { type: string; name: string },
     expandedItems?: Set<string>,
     toggleExpansion?: (item: string) => void
   ): React.ReactElement[];
@@ -569,7 +568,6 @@ export class EnumCollection extends ElementCollection {
   renderItems(
     callbacks: ElementCollectionCallbacks,
     position: 'left' | 'right',
-    selectedElement?: { type: string; name: string },
     _expandedItems?: Set<string>,
     _toggleExpansion?: (item: string) => void
   ): React.ReactElement[] {
@@ -581,7 +579,6 @@ export class EnumCollection extends ElementCollection {
     const { color } = ELEMENT_TYPES[this.type];
 
     return enumList.map((enumElement) => {
-      const isSelected = selectedElement?.type === 'enum' && selectedElement?.name === enumElement.name;
       const hoverHandlers = getElementHoverHandlers({
         type: 'enum',
         name: enumElement.name,
@@ -596,9 +593,7 @@ export class EnumCollection extends ElementCollection {
           data-element-type="enum"
           data-element-name={enumElement.name}
           data-panel-position={position}
-          className={`flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700 ${
-            isSelected ? color.selectionBg : ''
-          }`}
+          className="flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700"
           onClick={() => callbacks.onSelect(enumElement)}
           {...hoverHandlers}
         >
@@ -660,7 +655,6 @@ export class SlotCollection extends ElementCollection {
   renderItems(
     callbacks: ElementCollectionCallbacks,
     position: 'left' | 'right',
-    selectedElement?: { type: string; name: string },
     _expandedItems?: Set<string>,
     _toggleExpansion?: (item: string) => void
   ): React.ReactElement[] {
@@ -672,7 +666,6 @@ export class SlotCollection extends ElementCollection {
     const { color } = ELEMENT_TYPES[this.type];
 
     return slotList.map((slotDef) => {
-      const isSelected = selectedElement?.type === 'slot' && selectedElement?.name === slotDef.name;
       const hoverHandlers = getElementHoverHandlers({
         type: 'slot',
         name: slotDef.name,
@@ -687,9 +680,7 @@ export class SlotCollection extends ElementCollection {
           data-element-type="slot"
           data-element-name={slotDef.name}
           data-panel-position={position}
-          className={`flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700 ${
-            isSelected ? color.selectionBg : ''
-          }`}
+          className="flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700"
           onClick={() => callbacks.onSelect(slotDef, 'slot')}
           {...hoverHandlers}
         >
@@ -786,12 +777,11 @@ export class ClassCollection extends ElementCollection {
   renderItems(
     callbacks: ElementCollectionCallbacks,
     position: 'left' | 'right',
-    selectedElement?: { type: string; name: string },
     expandedItems?: Set<string>,
     toggleExpansion?: (item: string) => void
   ): React.ReactElement[] {
     return this.rootNodes.map(node =>
-      this.renderClassTreeNode(node, 0, callbacks, position, selectedElement, expandedItems, toggleExpansion)
+      this.renderClassTreeNode(node, 0, callbacks, position, expandedItems, toggleExpansion)
     );
   }
 
@@ -800,13 +790,11 @@ export class ClassCollection extends ElementCollection {
     level: number,
     callbacks: ElementCollectionCallbacks,
     position: 'left' | 'right',
-    selectedElement?: { type: string; name: string },
     expandedItems?: Set<string>,
     toggleExpansion?: (item: string) => void
   ): React.ReactElement {
     const hasChildren = node.children.length > 0;
     const isExpanded = expandedItems?.has(node.name) ?? false;
-    const isSelected = selectedElement?.type === 'class' && selectedElement?.name === node.name;
     const hoverHandlers = getElementHoverHandlers({
       type: 'class',
       name: node.name,
@@ -823,9 +811,7 @@ export class ClassCollection extends ElementCollection {
           data-element-type="class"
           data-element-name={node.name}
           data-panel-position={position}
-          className={`flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700 ${
-            isSelected ? color.selectionBg : ''
-          }`}
+          className="flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700"
           style={{ paddingLeft: `${level * 16 + 8}px` }}
           onClick={() => callbacks.onSelect(node, 'class')}
           {...hoverHandlers}
@@ -926,7 +912,6 @@ export class VariableCollection extends ElementCollection {
   renderItems(
     callbacks: ElementCollectionCallbacks,
     position: 'left' | 'right',
-    selectedElement?: { type: string; name: string },
     expandedItems?: Set<string>,
     toggleExpansion?: (item: string) => void
   ): React.ReactElement[] {
@@ -960,8 +945,6 @@ export class VariableCollection extends ElementCollection {
           {isExpanded && (
             <div className="ml-4 mt-1">
               {classVariables.map((variable, idx) => {
-                const isSelected = selectedElement?.type === 'variable'
-                  && selectedElement?.name === variable.variableLabel;
                 const hoverHandlers = getElementHoverHandlers({
                   type: 'variable',
                   name: variable.variableLabel,
@@ -976,9 +959,7 @@ export class VariableCollection extends ElementCollection {
                     data-element-type="variable"
                     data-element-name={variable.variableLabel}
                     data-panel-position={position}
-                    className={`px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700 ${
-                      isSelected ? color.selectionBg : ''
-                    }`}
+                    className="px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700"
                     onClick={(e) => {
                       e.stopPropagation();
                       callbacks.onSelect(variable, 'variable');

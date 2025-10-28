@@ -464,7 +464,6 @@ function App() {
               sections={leftSections}
               onSectionsChange={setLeftSections}
               collections={modelData?.collections || new Map()}
-              selectedElement={openDialogs.length > 0 ? openDialogs[0].element : undefined}
               onSelectElement={handleOpenDialog}
               onElementHover={setHoveredElement}
               onElementLeave={() => setHoveredElement(null)}
@@ -477,7 +476,6 @@ function App() {
               sections={rightSections}
               onSectionsChange={setRightSections}
               collections={modelData?.collections || new Map()}
-              selectedElement={openDialogs.length > 0 ? openDialogs[0].element : undefined}
               onSelectElement={handleOpenDialog}
               onElementHover={setHoveredElement}
               onElementLeave={() => setHoveredElement(null)}

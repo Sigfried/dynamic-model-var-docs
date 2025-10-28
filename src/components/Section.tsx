@@ -5,10 +5,9 @@ interface SectionProps {
   collection: ElementCollection;
   callbacks: ElementCollectionCallbacks;
   position: 'left' | 'right';
-  selectedElement?: { type: string; name: string };
 }
 
-export default function Section({ collection, callbacks, position, selectedElement }: SectionProps) {
+export default function Section({ collection, callbacks, position }: SectionProps) {
   // Check if this collection needs expansion state
   const expansionKey = collection.getExpansionKey(position);
   const defaultExpansion = collection.getDefaultExpansion();
@@ -24,7 +23,7 @@ export default function Section({ collection, callbacks, position, selectedEleme
         <h2 className="text-lg font-semibold text-left">{collection.getLabel()}</h2>
       </div>
       <div className="p-2">
-        {collection.renderItems(callbacks, position, selectedElement, expandedItems, toggleExpansion)}
+        {collection.renderItems(callbacks, position, expandedItems, toggleExpansion)}
       </div>
     </div>
   );
