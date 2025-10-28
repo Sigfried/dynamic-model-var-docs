@@ -615,6 +615,11 @@ export class SlotCollection extends ElementCollection {
     return Array.from(this.slots.values());
   }
 
+  /** Get underlying slots Map (needed for ClassElement constructor) */
+  getSlots(): Map<string, SlotDefinition> {
+    return this.slots;
+  }
+
   renderItems(
     callbacks: ElementCollectionCallbacks,
     position: 'left' | 'right',

@@ -9,7 +9,7 @@
 
 import { useMemo, useRef, useState, useEffect } from 'react';
 import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
-import { ClassElement, EnumElement, SlotElement, VariableElement } from '../models/Element';
+import { ClassElement, EnumElement, SlotElement, VariableElement, type ElementCollection } from '../models/Element';
 import { getAllElementTypeIds, type ElementTypeId } from '../models/ElementRegistry';
 import {
   buildLinks,
@@ -23,31 +23,24 @@ import {
 } from '../utils/linkHelpers';
 
 export interface LinkOverlayProps {
-  /** Elements visible in left panel */
-  leftPanel: {
-    classes: ClassNode[];
-    enums: Map<string, EnumDefinition>;
-    slots: Map<string, SlotDefinition>;
-    variables: VariableSpec[];
-  };
-  /** Elements visible in right panel */
-  rightPanel: {
-    classes: ClassNode[];
-    enums: Map<string, EnumDefinition>;
-    slots: Map<string, SlotDefinition>;
-    variables: VariableSpec[];
-  };
+  /** Elements visible in left panel (filtered collections) */
+  leftPanel: Map<ElementTypeId, ElementCollection>;
+  /** Elements visible in right panel (filtered collections) */
+  rightPanel: Map<ElementTypeId, ElementCollection>;
   /** Filter options for controlling which links to show */
   filterOptions?: LinkFilterOptions;
   /** Currently hovered element for link highlighting */
   hoveredElement?: { type: ElementTypeId; name: string } | null;
+  /** All slots from model (needed for ClassElement constructor) */
+  allSlots?: Map<string, SlotDefinition>;
 }
 
 export default function LinkOverlay({
   leftPanel,
   rightPanel,
   filterOptions = {},
-  hoveredElement
+  hoveredElement,
+  allSlots = new Map()
 }: LinkOverlayProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [, setScrollTick] = useState(0);
@@ -90,158 +83,111 @@ export default function LinkOverlay({
 
   // Build links from visible elements - use useMemo to prevent infinite loop
   const { leftPanelLinks, rightPanelLinks } = useMemo(() => {
+    // Helper to get element name (handles variable's variableLabel)
+    const getElementName = (element: ClassNode | EnumDefinition | SlotDefinition | VariableSpec, type: ElementTypeId): string => {
+      if (type === 'variable') {
+        return (element as VariableSpec).variableLabel;
+      }
+      return (element as ClassNode | EnumDefinition | SlotDefinition).name;
+    };
+
     // Build set of element names in each panel for cross-panel filtering
     const leftElements = new Set<string>();
     const rightElements = new Set<string>();
 
-    leftPanel.classes.forEach(c => leftElements.add(c.name));
-    leftPanel.enums.forEach((_, name) => leftElements.add(name));
-    leftPanel.slots.forEach((_, name) => leftElements.add(name));
-    leftPanel.variables.forEach(v => leftElements.add(v.variableLabel));
+    // Generic iteration over collections
+    leftPanel.forEach((collection, typeId) => {
+      collection.getAllElements().forEach(element => {
+        leftElements.add(getElementName(element, typeId));
+      });
+    });
 
-    rightPanel.classes.forEach(c => rightElements.add(c.name));
-    rightPanel.enums.forEach((_, name) => rightElements.add(name));
-    rightPanel.slots.forEach((_, name) => rightElements.add(name));
-    rightPanel.variables.forEach(v => rightElements.add(v.variableLabel));
-
-    // Combine all slots for ClassElement constructor
-    const allSlots = new Map([...leftPanel.slots, ...rightPanel.slots]);
+    rightPanel.forEach((collection, typeId) => {
+      collection.getAllElements().forEach(element => {
+        rightElements.add(getElementName(element, typeId));
+      });
+    });
 
     const leftLinks: Link[] = [];
     const rightLinks: Link[] = [];
 
-    // Helper to process elements from a panel
+    // Helper to create Element instance based on type
+    const createElement = (elementData: ClassNode | EnumDefinition | SlotDefinition | VariableSpec, type: ElementTypeId) => {
+      switch (type) {
+        case 'class':
+          return new ClassElement(elementData as ClassNode, allSlots);
+        case 'enum':
+          return new EnumElement(elementData as EnumDefinition);
+        case 'slot':
+          return new SlotElement(elementData as SlotDefinition);
+        case 'variable':
+          return new VariableElement(elementData as VariableSpec);
+      }
+    };
+
+    // Helper to process elements from a panel (generic over collections)
     const processElements = (
-      classes: ClassNode[],
-      enums: Map<string, EnumDefinition>,
-      slots: Map<string, SlotDefinition>,
-      variables: VariableSpec[],
+      collections: Map<ElementTypeId, ElementCollection>,
       targetPanel: Set<string>,
-      linksArray: Link[]
+      linksArray: Link[],
+      options: typeof filterOptions = filterOptions
     ) => {
-      // Classes
-      classes.forEach(classData => {
-        const element = new ClassElement(classData, allSlots);
-        const relationships = element.getRelationships();
-        const classLinks = buildLinks('class', classData.name, relationships, {
-          ...filterOptions,
-          showInheritance: false, // Disable inheritance - tree already shows this
+      collections.forEach((collection, typeId) => {
+        collection.getAllElements().forEach(elementData => {
+          const element = createElement(elementData, typeId);
+          const relationships = element.getRelationships();
+          const elementName = getElementName(elementData, typeId);
+
+          const links = buildLinks(typeId, elementName, relationships, {
+            ...options,
+            ...(typeId === 'class' ? { showInheritance: false } : {}) // Disable inheritance for classes
+          });
+
+          // Only keep cross-panel links (or self-refs)
+          const crossPanelLinks = links.filter(link =>
+            link.relationship.isSelfRef || targetPanel.has(link.target.name)
+          );
+          linksArray.push(...crossPanelLinks);
         });
-        // Only keep cross-panel links (or self-refs)
-        const crossPanelLinks = classLinks.filter(link =>
-          link.relationship.isSelfRef || targetPanel.has(link.target.name)
-        );
-        linksArray.push(...crossPanelLinks);
-      });
-
-      // Enums
-      enums.forEach(enumData => {
-        const element = new EnumElement(enumData);
-        const relationships = element.getRelationships();
-        const enumLinks = buildLinks('enum', enumData.name, relationships, filterOptions);
-        const crossPanelLinks = enumLinks.filter(link =>
-          link.relationship.isSelfRef || targetPanel.has(link.target.name)
-        );
-        linksArray.push(...crossPanelLinks);
-      });
-
-      // Slots
-      slots.forEach(slotData => {
-        const element = new SlotElement(slotData);
-        const relationships = element.getRelationships();
-        const slotLinks = buildLinks('slot', slotData.name, relationships, filterOptions);
-        const crossPanelLinks = slotLinks.filter(link =>
-          link.relationship.isSelfRef || targetPanel.has(link.target.name)
-        );
-        linksArray.push(...crossPanelLinks);
-      });
-
-      // Variables
-      variables.forEach(variableData => {
-        const element = new VariableElement(variableData);
-        const relationships = element.getRelationships();
-        const variableLinks = buildLinks('variable', variableData.variableLabel, relationships, filterOptions);
-        const crossPanelLinks = variableLinks.filter(link =>
-          link.relationship.isSelfRef || targetPanel.has(link.target.name)
-        );
-        linksArray.push(...crossPanelLinks);
       });
     };
 
     // Process left panel (all cross-panel relationships)
-    processElements(
-      leftPanel.classes,
-      leftPanel.enums,
-      leftPanel.slots,
-      leftPanel.variables,
-      rightElements,
-      leftLinks
-    );
+    processElements(leftPanel, rightElements, leftLinks);
 
     // Process right panel (all relationships EXCEPT class→class cross-panel)
     // Class→class is bidirectional in the schema, so we only draw left→right
     // All other relationship types (class→enum, class→slot, variable→class, slot→enum) are one-way
-    const processRightPanel = () => {
-      // Classes: filter out class→class cross-panel links (keep self-refs and non-class targets)
-      rightPanel.classes.forEach(classData => {
-        const element = new ClassElement(classData, allSlots);
+    rightPanel.forEach((collection, typeId) => {
+      collection.getAllElements().forEach(elementData => {
+        const element = createElement(elementData, typeId);
         const relationships = element.getRelationships();
-        const classLinks = buildLinks('class', classData.name, relationships, {
+        const elementName = getElementName(elementData, typeId);
+
+        const links = buildLinks(typeId, elementName, relationships, {
           ...filterOptions,
-          showInheritance: false,
+          ...(typeId === 'class' ? { showInheritance: false } : {})
         });
-        // Keep self-refs and links to non-class targets (enums, slots)
-        // Filter out class→class cross-panel links (to avoid bidirectional duplicates)
-        const filteredLinks = classLinks.filter(link => {
+
+        // Special handling for class→class to avoid bidirectional duplicates
+        const filteredLinks = links.filter(link => {
           if (link.relationship.isSelfRef) return true; // Always keep self-refs
-          if (link.target.type !== 'class') return true; // Keep class→enum, class→slot
-          return !leftElements.has(link.target.name); // Filter out class→class if target in left panel
+          if (!leftElements.has(link.target.name)) return false; // Not cross-panel
+
+          // For class→class links, filter out to avoid bidirectional duplicates
+          if (typeId === 'class' && link.target.type === 'class') {
+            return false;
+          }
+
+          return true; // Keep all other cross-panel links
         });
+
         rightLinks.push(...filteredLinks);
       });
-
-      // Enums: process all (enums have no outgoing relationships anyway)
-      rightPanel.enums.forEach(enumData => {
-        const element = new EnumElement(enumData);
-        const relationships = element.getRelationships();
-        const enumLinks = buildLinks('enum', enumData.name, relationships, filterOptions);
-        const crossPanelLinks = enumLinks.filter(link =>
-          link.relationship.isSelfRef || leftElements.has(link.target.name)
-        );
-        rightLinks.push(...crossPanelLinks);
-      });
-
-      // Slots: process all (slot→enum, slot→class are one-way)
-      rightPanel.slots.forEach(slotData => {
-        const element = new SlotElement(slotData);
-        const relationships = element.getRelationships();
-        const slotLinks = buildLinks('slot', slotData.name, relationships, filterOptions);
-        const crossPanelLinks = slotLinks.filter(link =>
-          link.relationship.isSelfRef || leftElements.has(link.target.name)
-        );
-        rightLinks.push(...crossPanelLinks);
-      });
-
-      // Variables: process all (variable→class is one-way)
-      rightPanel.variables.forEach(variableData => {
-        const element = new VariableElement(variableData);
-        const relationships = element.getRelationships();
-        const variableLinks = buildLinks('variable', variableData.variableLabel, relationships, filterOptions);
-        const crossPanelLinks = variableLinks.filter(link =>
-          link.relationship.isSelfRef || leftElements.has(link.target.name)
-        );
-        rightLinks.push(...crossPanelLinks);
-      });
-    };
-
-    processRightPanel();
+    });
 
     return { leftPanelLinks: leftLinks, rightPanelLinks: rightLinks };
-  }, [
-    leftPanel.classes, leftPanel.enums, leftPanel.slots, leftPanel.variables,
-    rightPanel.classes, rightPanel.enums, rightPanel.slots, rightPanel.variables,
-    filterOptions
-  ]);
+  }, [leftPanel, rightPanel, filterOptions, allSlots]);
 
   // Helper to find element in DOM with panel position
   const findElement = (type: string, name: string, panelPosition: 'left' | 'right'): HTMLElement | null => {

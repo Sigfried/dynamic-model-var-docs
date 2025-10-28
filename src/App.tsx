@@ -508,6 +508,7 @@ function App() {
             leftPanel={leftPanelData}
             rightPanel={rightPanelData}
             hoveredElement={hoveredElement}
+            allSlots={(modelData.collections.get('slot') as any)?.getSlots?.() || new Map()}
           />
         )}
       </div>
