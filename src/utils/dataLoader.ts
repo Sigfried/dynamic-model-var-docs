@@ -8,7 +8,7 @@ import type {
   SlotDefinition,
   ModelData
 } from '../types';
-import { EnumCollection, SlotCollection, ClassCollection, VariableCollection } from '../models/Element';
+import { EnumCollection, SlotCollection, ClassCollection, VariableCollection, initializeElementNameMap } from '../models/Element';
 
 // Raw attribute definition from metadata JSON
 interface AttributeDefinition {
@@ -301,6 +301,12 @@ export async function loadModelData(): Promise<ModelData> {
   collections.set('enum', enumCollection);
   collections.set('slot', slotCollection);
   collections.set('variable', variableCollection);
+
+  // Initialize element name lookup map for accurate type categorization
+  const classNames = classCollection.getAllElements().map(c => c.name);
+  const enumNames = Array.from(enums.keys());
+  const slotNames = Array.from(slots.keys());
+  initializeElementNameMap(classNames, enumNames, slotNames);
 
   return {
     collections

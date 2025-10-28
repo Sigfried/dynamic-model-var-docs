@@ -61,6 +61,24 @@ export abstract class Element {
   }
 }
 
+// Name → Type lookup for accurate categorization (avoids duck typing)
+let nameToTypeMap: Map<string, 'class' | 'enum' | 'slot'> | null = null;
+
+/**
+ * Initialize element name lookup map. Call this once after loading ModelData.
+ * Prevents duck typing (e.g., checking if name ends with "Enum")
+ */
+export function initializeElementNameMap(
+  classNames: string[],
+  enumNames: string[],
+  slotNames: string[]
+): void {
+  nameToTypeMap = new Map();
+  classNames.forEach(name => nameToTypeMap!.set(name, 'class'));
+  enumNames.forEach(name => nameToTypeMap!.set(name, 'enum'));
+  slotNames.forEach(name => nameToTypeMap!.set(name, 'slot'));
+}
+
 // Helper to categorize range types
 function categorizeRange(range: string): 'class' | 'enum' | 'primitive' {
   const primitives = ['string', 'integer', 'float', 'double', 'decimal', 'boolean', 'date', 'datetime', 'time', 'uri', 'uriorcurie'];
@@ -68,6 +86,15 @@ function categorizeRange(range: string): 'class' | 'enum' | 'primitive' {
   if (primitives.includes(range.toLowerCase())) {
     return 'primitive';
   }
+
+  // Use lookup map if available (avoids duck typing)
+  if (nameToTypeMap?.has(range)) {
+    const type = nameToTypeMap.get(range)!;
+    return type === 'slot' ? 'class' : type; // Treat slot refs as class relationships
+  }
+
+  // Fallback to duck typing if map not initialized (shouldn't happen in normal use)
+  console.warn(`categorizeRange: nameToTypeMap not initialized, falling back to duck typing for "${range}"`);
   if (range.endsWith('Enum')) {
     return 'enum';
   }
@@ -341,6 +368,8 @@ export class SlotElement extends Element {
     const rels: Relationship[] = [];
 
     // Slot range relationships
+    // Note: slot→enum is valid in LinkML but doesn't occur in BDCHM data
+    // (all 7 BDCHM slots have primitive or class ranges)
     if (this.data.range) {
       const rangeCategory = categorizeRange(this.data.range);
       if (rangeCategory !== 'primitive') {
