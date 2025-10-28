@@ -1,13 +1,10 @@
 import React from 'react';
-import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec, SelectedElement } from '../types';
+import type { EnumDefinition, SlotDefinition, VariableSpec, SelectedElement } from '../types';
 
 interface DetailPanelProps {
   selectedElement?: SelectedElement;
   onNavigate?: (elementName: string, elementType: 'class' | 'enum' | 'slot') => void;
   onClose?: () => void;
-  enums?: Map<string, EnumDefinition>;
-  slots?: Map<string, SlotDefinition>;
-  classes?: Map<string, ClassNode>;
   dialogWidth?: number;
   hideHeader?: boolean;  // Hide the element name header (when shown in dialog/panel header)
   hideCloseButton?: boolean;  // Hide the internal close button (when handled externally)

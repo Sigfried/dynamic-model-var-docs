@@ -8,19 +8,9 @@ import { loadModelData } from './utils/dataLoader';
 import { getInitialState, saveStateToURL, saveStateToLocalStorage, generatePresetURL, elementTypeToCode, type DialogState } from './utils/statePersistence';
 import { calculateDisplayMode } from './utils/layoutHelpers';
 import { getElementName, findDuplicateIndex } from './utils/duplicateDetection';
-import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec, ModelData, SelectedElement } from './types';
+import type { ModelData, SelectedElement } from './types';
 import type { ElementTypeId } from './models/ElementRegistry';
-
-// Helper to flatten class hierarchy into a list
-function flattenClassHierarchy(nodes: ClassNode[]): ClassNode[] {
-  const result: ClassNode[] = [];
-  const visit = (node: ClassNode) => {
-    result.push(node);
-    node.children.forEach(visit);
-  };
-  nodes.forEach(visit);
-  return result;
-}
+import type { ElementCollection } from './models/Element';
 
 interface OpenDialog {
   id: string;
@@ -289,35 +279,32 @@ function App() {
   };
 
   // Memoize panel data to prevent infinite re-renders in LinkOverlay
-  const leftPanelData = useMemo(() => ({
-    classes: leftSections.includes('class') && modelData
-      ? flattenClassHierarchy(modelData.classHierarchy)
-      : [],
-    enums: leftSections.includes('enum') && modelData
-      ? modelData.enums
-      : new Map(),
-    slots: leftSections.includes('slot') && modelData
-      ? modelData.slots
-      : new Map(),
-    variables: leftSections.includes('variable') && modelData
-      ? modelData.variables
-      : []
-  }), [leftSections, modelData]);
+  // Filter collections to only visible sections
+  const leftPanelData = useMemo(() => {
+    if (!modelData) return new Map<ElementTypeId, ElementCollection>();
 
-  const rightPanelData = useMemo(() => ({
-    classes: rightSections.includes('class') && modelData
-      ? flattenClassHierarchy(modelData.classHierarchy)
-      : [],
-    enums: rightSections.includes('enum') && modelData
-      ? modelData.enums
-      : new Map(),
-    slots: rightSections.includes('slot') && modelData
-      ? modelData.slots
-      : new Map(),
-    variables: rightSections.includes('variable') && modelData
-      ? modelData.variables
-      : []
-  }), [rightSections, modelData]);
+    const filtered = new Map<ElementTypeId, ElementCollection>();
+    leftSections.forEach(sectionId => {
+      const collection = modelData.collections.get(sectionId);
+      if (collection) {
+        filtered.set(sectionId, collection);
+      }
+    });
+    return filtered;
+  }, [leftSections, modelData]);
+
+  const rightPanelData = useMemo(() => {
+    if (!modelData) return new Map<ElementTypeId, ElementCollection>();
+
+    const filtered = new Map<ElementTypeId, ElementCollection>();
+    rightSections.forEach(sectionId => {
+      const collection = modelData.collections.get(sectionId);
+      if (collection) {
+        filtered.set(sectionId, collection);
+      }
+    });
+    return filtered;
+  }, [rightSections, modelData]);
 
   if (loading) {
     return (
@@ -511,9 +498,6 @@ function App() {
               }))}
               onNavigate={handleNavigate}
               onClose={handleCloseDialog}
-              enums={modelData?.enums}
-              slots={modelData?.slots}
-              classes={classMap}
             />
           </div>
         )}
@@ -536,9 +520,6 @@ function App() {
           onNavigate={handleNavigate}
           onClose={() => handleCloseDialog(dialog.id)}
           onChange={(position, size) => handleDialogChange(dialog.id, position, size)}
-          enums={modelData?.enums}
-          slots={modelData?.slots}
-          classes={classMap}
           dialogIndex={index}
           initialPosition={{ x: dialog.x, y: dialog.y }}
           initialSize={{ width: dialog.width, height: dialog.height }}

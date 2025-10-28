@@ -1,6 +1,6 @@
 import DetailPanel from './DetailPanel';
 import { getHeaderColor, getPanelTitle } from '../utils/panelHelpers';
-import type { ClassNode, EnumDefinition, SlotDefinition, SelectedElement } from '../types';
+import type { SelectedElement } from '../types';
 
 interface StackedPanel {
   id: string;
@@ -12,9 +12,6 @@ interface DetailPanelStackProps {
   panels: StackedPanel[];
   onNavigate?: (elementName: string, elementType: 'class' | 'enum' | 'slot') => void;
   onClose: (id: string) => void;
-  enums?: Map<string, EnumDefinition>;
-  slots?: Map<string, SlotDefinition>;
-  classes?: Map<string, ClassNode>;
 }
 
 // Note: getHeaderColor and getPanelTitle are now imported from utils/panelHelpers.tsx
@@ -22,10 +19,7 @@ interface DetailPanelStackProps {
 export default function DetailPanelStack({
   panels,
   onNavigate,
-  onClose,
-  enums,
-  slots,
-  classes
+  onClose
 }: DetailPanelStackProps) {
   if (panels.length === 0) {
     return null;
@@ -61,9 +55,6 @@ export default function DetailPanelStack({
               selectedElement={panel.element}
               onNavigate={onNavigate}
               onClose={() => onClose(panel.id)}
-              enums={enums}
-              slots={slots}
-              classes={classes}
               dialogWidth={600}
               hideHeader={true}
               hideCloseButton={true}

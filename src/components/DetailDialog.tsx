@@ -1,15 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import DetailPanel from './DetailPanel';
-import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec, SelectedElement } from '../types';
+import type { SelectedElement } from '../types';
 
 interface DetailDialogProps {
   selectedElement: SelectedElement;
   onNavigate?: (elementName: string, elementType: 'class' | 'enum' | 'slot') => void;
   onClose: () => void;
   onChange?: (position: { x: number; y: number }, size: { width: number; height: number }) => void;
-  enums?: Map<string, EnumDefinition>;
-  slots?: Map<string, SlotDefinition>;
-  classes?: Map<string, ClassNode>;
   dialogIndex?: number;
   initialPosition?: { x: number; y: number };
   initialSize?: { width: number; height: number };
@@ -22,9 +19,6 @@ export default function DetailDialog({
   onNavigate,
   onClose,
   onChange,
-  enums,
-  slots,
-  classes,
   dialogIndex = 0,
   initialPosition,
   initialSize
@@ -196,9 +190,6 @@ export default function DetailDialog({
           selectedElement={selectedElement}
           onNavigate={onNavigate}
           onClose={onClose}
-          enums={enums}
-          slots={slots}
-          classes={classes}
           dialogWidth={size.width}
         />
       </div>
