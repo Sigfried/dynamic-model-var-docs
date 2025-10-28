@@ -734,6 +734,11 @@ export class ClassCollection extends ElementCollection {
     return flattenRecursive(this.rootNodes);
   }
 
+  /** Get root nodes of class hierarchy (needed for tests and tree rendering) */
+  getRootNodes(): ClassNode[] {
+    return this.rootNodes;
+  }
+
   private countTotalNodes(): number {
     const countRecursive = (nodes: ClassNode[]): number => {
       return nodes.reduce((sum, node) => sum + 1 + countRecursive(node.children), 0);

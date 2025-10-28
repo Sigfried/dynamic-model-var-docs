@@ -2,6 +2,8 @@ import { describe, test, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { load as parseYaml } from 'js-yaml';
 import { loadModelData } from '../utils/dataLoader';
+import { ClassCollection, EnumCollection, SlotCollection, VariableCollection } from '../models/Element';
+import type { ClassNode } from '../types';
 
 /**
  * Data Completeness Test
@@ -69,6 +71,17 @@ describe('Data Completeness', () => {
 
     const modelData = await loadModelData();
 
+    // Extract collections
+    const classCollection = modelData.collections.get('class') as ClassCollection;
+    const enumCollection = modelData.collections.get('enum') as EnumCollection;
+    const slotCollection = modelData.collections.get('slot') as SlotCollection;
+    const variableCollection = modelData.collections.get('variable') as VariableCollection;
+
+    const classHierarchy = classCollection.getRootNodes();
+    const enums = enumCollection.getAllElements();
+    const slots = slotCollection.getSlots();
+    const variables = variableCollection.getAllElements();
+
     // 1. Check YAML → Metadata
     const yamlTopLevelFields = ['id', 'name', 'title', 'description', 'license',
                                  'see_also', 'prefixes', 'imports', 'default_prefix',
@@ -82,7 +95,7 @@ describe('Data Completeness', () => {
 
     // 2. Check Metadata → ModelData
     const metadataClassNames = Object.keys(metadataJson.classes || {});
-    const collectClassNames = (classes: typeof modelData.classHierarchy): Set<string> => {
+    const collectClassNames = (classes: ClassNode[]): Set<string> => {
       const names = new Set<string>();
       for (const cls of classes) {
         names.add(cls.name);
@@ -95,19 +108,19 @@ describe('Data Completeness', () => {
       }
       return names;
     };
-    const modelDataClassNames = collectClassNames(modelData.classHierarchy);
+    const modelDataClassNames = collectClassNames(classHierarchy);
     report.metadataToModelData.missingClasses = metadataClassNames.filter(
       name => !modelDataClassNames.has(name)
     );
 
     const metadataEnumNames = Object.keys(metadataJson.enums || {});
-    const modelDataEnumNames = new Set(modelData.enums.keys());
+    const modelDataEnumNames = new Set(enums.map(e => e.name));
     report.metadataToModelData.missingEnums = metadataEnumNames.filter(
       name => !modelDataEnumNames.has(name)
     );
 
     const metadataSlotNames = Object.keys(metadataJson.slots || {});
-    const modelDataSlotNames = new Set(modelData.slots.keys());
+    const modelDataSlotNames = new Set(slots.keys());
     report.metadataToModelData.missingSlots = metadataSlotNames.filter(
       name => !modelDataSlotNames.has(name)
     );
@@ -121,11 +134,11 @@ describe('Data Completeness', () => {
       });
 
       report.variableSpecs.totalVariables = tsvVariables.length;
-      report.variableSpecs.mappedVariables = modelData.variables.length;
+      report.variableSpecs.mappedVariables = variables.length;
 
       // Check if any variables didn't make it through
       const modelVariableSet = new Set(
-        modelData.variables.map(v => `${v.Class}_${v.Variable}`)
+        variables.map(v => `${v.Class}_${v.Variable}`)
       );
 
       // Note: This is a simplified check - actual mapping might be more complex

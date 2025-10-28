@@ -1,6 +1,7 @@
 import { describe, test, expect } from 'vitest';
 import { loadModelData } from '../utils/dataLoader';
-import type { ClassNode, ModelData } from '../types';
+import type { ClassNode } from '../types';
+import { ClassCollection, EnumCollection, SlotCollection, VariableCollection } from '../models/Element';
 
 describe('dataLoader', () => {
   describe('loadModelData', () => {
@@ -8,15 +9,24 @@ describe('dataLoader', () => {
       const data = await loadModelData();
 
       expect(data).toBeDefined();
-      expect(data.classHierarchy).toBeDefined();
-      expect(data.enums).toBeDefined();
-      expect(data.slots).toBeDefined();
-      expect(data.variables).toBeDefined();
-      expect(data.reverseIndices).toBeDefined();
+      expect(data.collections).toBeDefined();
+
+      const classCollection = data.collections.get('class');
+      const enumCollection = data.collections.get('enum');
+      const slotCollection = data.collections.get('slot');
+      const variableCollection = data.collections.get('variable');
+
+      expect(classCollection).toBeDefined();
+      expect(enumCollection).toBeDefined();
+      expect(slotCollection).toBeDefined();
+      expect(variableCollection).toBeDefined();
     });
 
     test('should create hierarchical class tree', async () => {
       const data = await loadModelData();
+
+      const classCollection = data.collections.get('class') as ClassCollection;
+      const classHierarchy = classCollection.getRootNodes();
 
       // Find a class with known parent (e.g., Participant is_a Entity)
       const findClass = (classes: ClassNode[], name: string): ClassNode | undefined => {
@@ -28,61 +38,33 @@ describe('dataLoader', () => {
         return undefined;
       };
 
-      const participant = findClass(data.classHierarchy, 'Participant');
+      const participant = findClass(classHierarchy, 'Participant');
       expect(participant).toBeDefined();
       expect(participant?.parent).toBe('Entity');
 
       // Check that root classes have no parent
-      const rootClasses = data.classHierarchy.filter(c => c.parent === null || c.parent === undefined);
+      const rootClasses = classHierarchy.filter(c => c.parent === null || c.parent === undefined);
       expect(rootClasses.length).toBeGreaterThan(0);
-    });
-
-    test('should build reverse indices correctly', async () => {
-      const data = await loadModelData();
-      const { reverseIndices } = data;
-
-      expect(reverseIndices.enumToClasses).toBeDefined();
-      expect(reverseIndices.slotToClasses).toBeDefined();
-
-      // The reverse indices might be empty if no classes use enums/slots
-      // Just verify the structure exists
-      expect(typeof reverseIndices.enumToClasses).toBe('object');
-      expect(typeof reverseIndices.slotToClasses).toBe('object');
-
-      // If there are any enum-using classes, verify bidirectional consistency
-      const findClassWithEnumProps = (classes: ClassNode[]): ClassNode | undefined => {
-        for (const cls of classes) {
-          // ClassNode uses enumReferences field
-          if (cls.enumReferences && cls.enumReferences.length > 0) {
-            return cls;
-          }
-          const found = findClassWithEnumProps(cls.children || []);
-          if (found) return found;
-        }
-        return undefined;
-      };
-
-      const sampleClass = findClassWithEnumProps(data.classHierarchy);
-      if (sampleClass && sampleClass.enumReferences && sampleClass.enumReferences.length > 0) {
-        const enumName = sampleClass.enumReferences[0];
-        expect(reverseIndices.enumToClasses[enumName]).toBeDefined();
-        expect(reverseIndices.enumToClasses[enumName]).toContain(sampleClass.name);
-      }
     });
 
     test('should load variables with correct class mapping', async () => {
       const data = await loadModelData();
 
-      expect(data.variables.length).toBeGreaterThan(0);
+      const variableCollection = data.collections.get('variable') as VariableCollection;
+      const variables = variableCollection.getAllElements();
+
+      expect(variables.length).toBeGreaterThan(0);
 
       // Each variable should have required fields from VariableSpec interface
-      const sampleVar = data.variables[0];
+      const sampleVar = variables[0];
       expect(sampleVar).toHaveProperty('bdchmElement');
       expect(sampleVar).toHaveProperty('variableLabel');
       expect(sampleVar).toHaveProperty('dataType');
 
       // Most variables should map to existing classes
       // (some might not due to data evolution)
+      const classCollection = data.collections.get('class') as ClassCollection;
+      const classHierarchy = classCollection.getRootNodes();
       const classNames = new Set<string>();
       const collectClassNames = (classes: ClassNode[]) => {
         for (const cls of classes) {
@@ -90,23 +72,26 @@ describe('dataLoader', () => {
           if (cls.children) collectClassNames(cls.children);
         }
       };
-      collectClassNames(data.classHierarchy);
+      collectClassNames(classHierarchy);
 
-      const unmappedVariables = data.variables.filter(
+      const unmappedVariables = variables.filter(
         v => !classNames.has(v.bdchmElement)
       );
       // Allow some unmapped variables (data evolution), but most should map
-      expect(unmappedVariables.length).toBeLessThan(data.variables.length * 0.1); // Less than 10%
+      expect(unmappedVariables.length).toBeLessThan(variables.length * 0.1); // Less than 10%
     });
 
     test('should parse slot definitions', async () => {
       const data = await loadModelData();
 
+      const slotCollection = data.collections.get('slot') as SlotCollection;
+      const slots = slotCollection.getSlots();
+
       // slots is a Map, not an object
-      expect(data.slots.size).toBeGreaterThan(0);
+      expect(slots.size).toBeGreaterThan(0);
 
       // Slots should have descriptions and ranges
-      const firstSlot = Array.from(data.slots.values())[0];
+      const firstSlot = Array.from(slots.values())[0];
       expect(firstSlot).toBeDefined();
       // Note: description and range are optional in LinkML
       if (firstSlot.description) {
@@ -117,11 +102,14 @@ describe('dataLoader', () => {
     test('should parse enum definitions with values', async () => {
       const data = await loadModelData();
 
-      // enums is a Map, not an object
-      expect(data.enums.size).toBeGreaterThan(0);
+      const enumCollection = data.collections.get('enum') as EnumCollection;
+      const enums = enumCollection.getAllElements();
+
+      // enums should have values
+      expect(enums.length).toBeGreaterThan(0);
 
       // Find an enum with values
-      const sampleEnum = Array.from(data.enums.values())[0];
+      const sampleEnum = enums[0];
 
       expect(sampleEnum).toBeDefined();
       if (sampleEnum.values && sampleEnum.values.length > 0) {
@@ -133,6 +121,9 @@ describe('dataLoader', () => {
     test('should mark abstract classes correctly', async () => {
       const data = await loadModelData();
 
+      const classCollection = data.collections.get('class') as ClassCollection;
+      const classHierarchy = classCollection.getRootNodes();
+
       const findClass = (classes: ClassNode[], name: string): ClassNode | undefined => {
         for (const cls of classes) {
           if (cls.name === name) return cls;
@@ -143,11 +134,11 @@ describe('dataLoader', () => {
       };
 
       // Entity is known to be abstract
-      const entity = findClass(data.classHierarchy, 'Entity');
+      const entity = findClass(classHierarchy, 'Entity');
       expect(entity?.abstract).toBe(true);
 
       // Participant is known to be concrete
-      const participant = findClass(data.classHierarchy, 'Participant');
+      const participant = findClass(classHierarchy, 'Participant');
       expect(participant?.abstract).toBe(false);
     });
   });
@@ -155,6 +146,9 @@ describe('dataLoader', () => {
   describe('data consistency', () => {
     test('should have consistent property counts', async () => {
       const data = await loadModelData();
+
+      const classCollection = data.collections.get('class') as ClassCollection;
+      const classHierarchy = classCollection.getRootNodes();
 
       // Total properties across all classes should match what we see in individual classes
       let totalProperties = 0;
@@ -167,13 +161,16 @@ describe('dataLoader', () => {
           if (cls.children) countProperties(cls.children);
         }
       };
-      countProperties(data.classHierarchy);
+      countProperties(classHierarchy);
 
       expect(totalProperties).toBeGreaterThan(0);
     });
 
     test('should have no duplicate class names', async () => {
       const data = await loadModelData();
+
+      const classCollection = data.collections.get('class') as ClassCollection;
+      const classHierarchy = classCollection.getRootNodes();
 
       const classNames = new Set<string>();
       const findDuplicates = (classes: ClassNode[]): string[] => {
@@ -190,7 +187,7 @@ describe('dataLoader', () => {
         return duplicates;
       };
 
-      const duplicates = findDuplicates(data.classHierarchy);
+      const duplicates = findDuplicates(classHierarchy);
       expect(duplicates).toEqual([]);
     });
   });
