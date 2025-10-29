@@ -145,13 +145,21 @@ class ClassCollection {
 ```
 
 **Implementation steps**:
-1. Add DTO interfaces to types.ts (ClassMetadata, VariableSpecRow, etc.) - keep existing interfaces temporarily
-2. Update Element classes to contain fields directly (not wrap interfaces)
-3. Add TreeNode<T> generic interface to types.ts
+1. ✅ Add DTO interfaces to types.ts (SchemaMetadata, ClassMetadata, etc.) - keep existing temporarily
+2. ✅ Add TreeNode<T> generic interface to types.ts
+3. ⏳ Update Element classes to contain fields directly (not wrap interfaces) - **IN PROGRESS**
 4. Update dataLoader to construct Element instances from DTOs
 5. Update collections to store TreeNode<Element>
 6. Remove old interfaces (ClassNode, EnumDefinition, etc.) from types.ts
 7. Update components to never import model-specific types
+
+**Status (commit 5e35d3e)**:
+- DTOs added to types.ts with clear sections
+- TreeNode<T> interface added
+- Old interfaces marked @deprecated
+- dataLoader updated to import DTOs from types.ts
+
+**Next action**: Step 3 is a large refactor touching Element classes, their usage in collections, and dataLoader construction logic. Need focused approach to avoid breaking everything.
 
 **Files to modify**:
 - `src/types.ts` - Add DTOs, add TreeNode<T>, eventually remove old interfaces
