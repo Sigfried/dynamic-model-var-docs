@@ -59,6 +59,13 @@ function App() {
         setLoading(true);
         const data = await loadModelData();
         setModelData(data);
+
+        // Make modelData accessible in console for debugging
+        (window as any).modelData = data;
+        console.log('ModelData loaded and available as window.modelData:', data);
+        console.log('Collections:', Array.from(data.collections.keys()));
+        console.log('Total elements:', data.elementLookup.size);
+
         setLoading(false);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data');

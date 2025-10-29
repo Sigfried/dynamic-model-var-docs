@@ -1,5 +1,5 @@
 // Element-based architecture for generic rendering and relationship tracking
-// See CLAUDE.md and temp.md for architecture details
+// See CLAUDE.md and ARCHITECTURE.md for architecture details
 
 import * as React from 'react';
 import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
@@ -105,17 +105,38 @@ function categorizeRange(range: string): 'class' | 'enum' | 'primitive' {
 // ClassElement - represents a class in the schema
 export class ClassElement extends Element {
   readonly type = 'class' as const;
-  private data: ClassNode;
-  private slotDefinitions: Map<string, SlotDefinition>;
+  readonly name: string;
+  readonly description: string | undefined;
+  readonly parent: string | undefined;
+  readonly children: ClassElement[];
+  readonly variableCount: number;
+  readonly variables: VariableSpec[];
+  readonly properties: Record<string, PropertyDefinition> | undefined;
+  readonly isEnum: boolean;
+  readonly enumReferences: string[] | undefined;
+  readonly requiredProperties: string[] | undefined;
+  readonly slots: string[] | undefined;
+  readonly slot_usage: Record<string, PropertyDefinition> | undefined;
+  readonly abstract: boolean | undefined;
+  private slotElements: Map<string, SlotElement>;
 
-  constructor(data: ClassNode, slotDefinitions: Map<string, SlotDefinition>) {
+  constructor(data: ClassNode, slotElements: Map<string, SlotElement>) {
     super();
-    this.data = data;
-    this.slotDefinitions = slotDefinitions;
+    this.name = data.name;
+    this.description = data.description;
+    this.parent = data.parent;
+    this.children = data.children.map(child => new ClassElement(child, slotElements));
+    this.variableCount = data.variableCount;
+    this.variables = data.variables;
+    this.properties = data.properties as Record<string, PropertyDefinition> | undefined;
+    this.isEnum = data.isEnum;
+    this.enumReferences = data.enumReferences;
+    this.requiredProperties = data.requiredProperties;
+    this.slots = data.slots;
+    this.slot_usage = data.slot_usage as Record<string, PropertyDefinition> | undefined;
+    this.abstract = data.abstract;
+    this.slotElements = slotElements;
   }
-
-  get name() { return this.data.name; }
-  get description() { return this.data.description; }
 
   renderPanelSection(
     depth: number,
@@ -131,15 +152,15 @@ export class ClassElement extends Element {
           data-element-name={this.name}
           style={{ paddingLeft: `${indent}px` }}
           className="cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 px-2 py-1"
-          onClick={() => onSelect(this.data, 'class')}
+          onClick={() => onSelect(this as unknown as ElementData, 'class')}
         >
           <span>{this.name}</span>
-          {this.data.variableCount > 0 && (
+          {this.variableCount > 0 && (
             <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-              ({this.data.variableCount})
+              ({this.variableCount})
             </span>
           )}
-          {this.data.abstract && (
+          {this.abstract && (
             <span className="text-xs text-purple-600 dark:text-purple-400 ml-2 italic">
               abstract
             </span>
@@ -147,8 +168,8 @@ export class ClassElement extends Element {
         </div>
 
         {/* Recursively render children */}
-        {this.data.children.map(childData =>
-          new ClassElement(childData, this.slotDefinitions).renderPanelSection(depth + 1, onSelect)
+        {this.children.map(child =>
+          child.renderPanelSection(depth + 1, onSelect)
         )}
       </div>
     );
@@ -162,7 +183,7 @@ export class ClassElement extends Element {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold">{this.name}</h1>
-            {this.data.abstract && (
+            {this.abstract && (
               <span className="px-2 py-1 text-xs bg-gray-200 dark:bg-slate-700 rounded">
                 Abstract
               </span>
@@ -183,18 +204,18 @@ export class ClassElement extends Element {
     const rels: Relationship[] = [];
 
     // Inheritance relationship
-    if (this.data.parent) {
+    if (this.parent) {
       rels.push({
         type: 'inherits',
-        target: this.data.parent,
+        target: this.parent,
         targetType: 'class',
         isSelfRef: false
       });
     }
 
     // Properties with non-primitive ranges
-    if (this.data.properties) {
-      Object.entries(this.data.properties).forEach(([propName, propDef]) => {
+    if (this.properties) {
+      Object.entries(this.properties).forEach(([propName, propDef]) => {
         const typedPropDef = propDef as PropertyDefinition;
         const range = typedPropDef.range;
         if (!range) return;
@@ -219,18 +240,18 @@ export class ClassElement extends Element {
 // EnumElement - represents an enumeration
 export class EnumElement extends Element {
   readonly type = 'enum' as const;
-  private data: EnumDefinition;
+  readonly name: string;
+  readonly description: string | undefined;
+  readonly permissibleValues: EnumValue[];
+  readonly usedByClasses: string[];
 
   constructor(data: EnumDefinition) {
     super();
-    this.data = data;
+    this.name = data.name;
+    this.description = data.description;
+    this.permissibleValues = data.permissible_values;
+    this.usedByClasses = data.usedByClasses;
   }
-
-  get name() { return this.data.name; }
-  get description() { return this.data.description; }
-  get permissibleValues() { return this.data.permissible_values; }
-  /** @deprecated Temporary accessor for legacy code - use element properties directly */
-  get rawData() { return this.data; }
 
   renderPanelSection(
     _depth: number,
@@ -243,11 +264,11 @@ export class EnumElement extends Element {
         data-element-type="enum"
         data-element-name={this.name}
         className="cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 px-2 py-1"
-        onClick={() => onSelect(this.data, 'enum')}
+        onClick={() => onSelect(this as unknown as ElementData, 'enum')}
       >
         {this.name}
         <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-          ({this.data.permissible_values.length})
+          ({this.permissibleValues.length})
         </span>
       </div>
     );
@@ -279,15 +300,26 @@ export class EnumElement extends Element {
 // SlotElement - represents a top-level slot definition
 export class SlotElement extends Element {
   readonly type = 'slot' as const;
-  private data: SlotDefinition;
+  readonly name: string;
+  readonly description: string | undefined;
+  readonly range: string | undefined;
+  readonly slot_uri: string | undefined;
+  readonly identifier: boolean | undefined;
+  readonly required: boolean | undefined;
+  readonly multivalued: boolean | undefined;
+  readonly usedByClasses: string[];
 
   constructor(data: SlotDefinition) {
     super();
-    this.data = data;
+    this.name = data.name;
+    this.description = data.description;
+    this.range = data.range;
+    this.slot_uri = data.slot_uri;
+    this.identifier = data.identifier;
+    this.required = data.required;
+    this.multivalued = data.multivalued;
+    this.usedByClasses = data.usedByClasses;
   }
-
-  get name() { return this.data.name; }
-  get description() { return this.data.description; }
 
   renderPanelSection(
     _depth: number,
@@ -300,12 +332,12 @@ export class SlotElement extends Element {
         data-element-type="slot"
         data-element-name={this.name}
         className="cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 px-2 py-1"
-        onClick={() => onSelect(this.data, 'slot')}
+        onClick={() => onSelect(this as unknown as ElementData, 'slot')}
       >
         {this.name}
-        {this.data.range && (
+        {this.range && (
           <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-            : {this.data.range}
+            : {this.range}
           </span>
         )}
       </div>
@@ -324,34 +356,34 @@ export class SlotElement extends Element {
 
         {/* Slot metadata */}
         <div className="space-y-2">
-          {this.data.range && (
+          {this.range && (
             <div>
               <span className="font-semibold">Range: </span>
-              <span>{this.data.range}</span>
+              <span>{this.range}</span>
             </div>
           )}
-          {this.data.required !== undefined && (
+          {this.required !== undefined && (
             <div>
               <span className="font-semibold">Required: </span>
-              <span>{this.data.required ? 'Yes' : 'No'}</span>
+              <span>{this.required ? 'Yes' : 'No'}</span>
             </div>
           )}
-          {this.data.multivalued !== undefined && (
+          {this.multivalued !== undefined && (
             <div>
               <span className="font-semibold">Multivalued: </span>
-              <span>{this.data.multivalued ? 'Yes' : 'No'}</span>
+              <span>{this.multivalued ? 'Yes' : 'No'}</span>
             </div>
           )}
         </div>
 
         {/* Used by classes */}
-        {this.data.usedByClasses && this.data.usedByClasses.length > 0 && (
+        {this.usedByClasses && this.usedByClasses.length > 0 && (
           <div>
             <h2 className="text-lg font-semibold mb-2">
-              Used By Classes ({this.data.usedByClasses.length})
+              Used By Classes ({this.usedByClasses.length})
             </h2>
             <ul className="list-disc list-inside space-y-1">
-              {this.data.usedByClasses.map(className => (
+              {this.usedByClasses.map(className => (
                 <li key={className}>
                   <button
                     className="text-blue-600 dark:text-blue-400 hover:underline"
@@ -374,12 +406,12 @@ export class SlotElement extends Element {
     // Slot range relationships
     // Note: slot→enum is valid in LinkML but doesn't occur in BDCHM data
     // (all 7 BDCHM slots have primitive or class ranges)
-    if (this.data.range) {
-      const rangeCategory = categorizeRange(this.data.range);
+    if (this.range) {
+      const rangeCategory = categorizeRange(this.range);
       if (rangeCategory !== 'primitive') {
         rels.push({
           type: 'property',
-          target: this.data.range,
+          target: this.range,
           targetType: rangeCategory,
           isSelfRef: false
         });
@@ -393,15 +425,22 @@ export class SlotElement extends Element {
 // VariableElement - represents a variable specification
 export class VariableElement extends Element {
   readonly type = 'variable' as const;
-  private data: VariableSpec;
+  readonly bdchmElement: string;
+  readonly name: string;  // variableLabel
+  readonly description: string;  // variableDescription
+  readonly dataType: string;
+  readonly ucumUnit: string;
+  readonly curie: string;
 
   constructor(data: VariableSpec) {
     super();
-    this.data = data;
+    this.bdchmElement = data.bdchmElement;
+    this.name = data.variableLabel;
+    this.description = data.variableDescription;
+    this.dataType = data.dataType;
+    this.ucumUnit = data.ucumUnit;
+    this.curie = data.curie;
   }
-
-  get name() { return this.data.variableLabel; }
-  get description() { return this.data.variableDescription; }
 
   renderPanelSection(
     _depth: number,
@@ -414,12 +453,12 @@ export class VariableElement extends Element {
         data-element-type="variable"
         data-element-name={this.name}
         className="cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 px-2 py-1 text-sm"
-        onClick={() => onSelect(this.data, 'variable')}
+        onClick={() => onSelect(this as unknown as ElementData, 'variable')}
       >
         <span>{this.name}</span>
-        {this.data.dataType && (
+        {this.dataType && (
           <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-            ({this.data.dataType})
+            ({this.dataType})
           </span>
         )}
       </div>
@@ -442,27 +481,27 @@ export class VariableElement extends Element {
             <span className="font-semibold">Mapped to: </span>
             <button
               className="text-blue-600 dark:text-blue-400 hover:underline"
-              onClick={() => onNavigate(this.data.bdchmElement, 'class')}
+              onClick={() => onNavigate(this.bdchmElement, 'class')}
             >
-              {this.data.bdchmElement}
+              {this.bdchmElement}
             </button>
           </div>
-          {this.data.dataType && (
+          {this.dataType && (
             <div>
               <span className="font-semibold">Data Type: </span>
-              <span>{this.data.dataType}</span>
+              <span>{this.dataType}</span>
             </div>
           )}
-          {this.data.ucumUnit && (
+          {this.ucumUnit && (
             <div>
               <span className="font-semibold">Unit: </span>
-              <span>{this.data.ucumUnit}</span>
+              <span>{this.ucumUnit}</span>
             </div>
           )}
-          {this.data.curie && (
+          {this.curie && (
             <div>
               <span className="font-semibold">CURIE: </span>
-              <span className="font-mono text-sm">{this.data.curie}</span>
+              <span className="font-mono text-sm">{this.curie}</span>
             </div>
           )}
         </div>
@@ -474,7 +513,7 @@ export class VariableElement extends Element {
     // Variable → Class relationship
     return [{
       type: 'property',
-      target: this.data.bdchmElement,
+      target: this.bdchmElement,
       targetType: 'class',
       isSelfRef: false
     }];
@@ -632,16 +671,21 @@ export class EnumCollection extends ElementCollection {
 // SlotCollection - flat list of slot definitions
 export class SlotCollection extends ElementCollection {
   readonly type = 'slot' as const;
-  private slots: Map<string, SlotDefinition>;
+  private slots: Map<string, SlotElement>;
 
-  constructor(slots: Map<string, SlotDefinition>) {
+  constructor(slots: Map<string, SlotElement>) {
     super();
     this.slots = slots;
   }
 
   /** Factory: Create from raw data (called by dataLoader) */
-  static fromData(slots: Map<string, SlotDefinition>): SlotCollection {
-    return new SlotCollection(slots);
+  static fromData(slotData: Map<string, SlotDefinition>): SlotCollection {
+    // Convert SlotDefinition DTOs to SlotElement instances
+    const elements = new Map<string, SlotElement>();
+    slotData.forEach((def, name) => {
+      elements.set(name, new SlotElement(def));
+    });
+    return new SlotCollection(elements);
   }
 
   getLabel(): string {
@@ -661,11 +705,11 @@ export class SlotCollection extends ElementCollection {
     return null; // No expansion state needed
   }
 
-  getElement(name: string): ElementData | null {
+  getElement(name: string): Element | null {
     return this.slots.get(name) || null;
   }
 
-  getAllElements(): ElementData[] {
+  getAllElements(): Element[] {
     return Array.from(this.slots.values());
   }
 
@@ -675,17 +719,17 @@ export class SlotCollection extends ElementCollection {
       a.name.localeCompare(b.name)
     );
 
-    return slotList.map((slotDef) => ({
-      id: `slot-${slotDef.name}`,
-      element: slotDef as any, // TODO: Convert to SlotElement when slots become Elements
+    return slotList.map((slotElement) => ({
+      id: `slot-${slotElement.name}`,
+      element: slotElement,
       level: 0,
       isClickable: true,
-      badge: slotDef.usedByClasses.length > 0 ? slotDef.usedByClasses.length : undefined
+      badge: slotElement.usedByClasses.length > 0 ? slotElement.usedByClasses.length : undefined
     }));
   }
 
   /** Get underlying slots Map (needed for ClassElement constructor) */
-  getSlots(): Map<string, SlotDefinition> {
+  getSlots(): Map<string, SlotElement> {
     return this.slots;
   }
 
@@ -702,29 +746,29 @@ export class SlotCollection extends ElementCollection {
 
     const { color } = ELEMENT_TYPES[this.type];
 
-    return slotList.map((slotDef) => {
+    return slotList.map((slotElement) => {
       const hoverHandlers = getElementHoverHandlers({
         type: 'slot',
-        name: slotDef.name,
+        name: slotElement.name,
         onElementHover: callbacks.onElementHover,
         onElementLeave: callbacks.onElementLeave
       });
 
       return (
         <div
-          key={slotDef.name}
-          id={`slot-${slotDef.name}`}
+          key={slotElement.name}
+          id={`slot-${slotElement.name}`}
           data-element-type="slot"
-          data-element-name={slotDef.name}
+          data-element-name={slotElement.name}
           data-panel-position={position}
           className="flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700"
-          onClick={() => callbacks.onSelect(slotDef, 'slot')}
+          onClick={() => callbacks.onSelect(slotElement)}
           {...hoverHandlers}
         >
-          <span className="flex-1 text-sm font-medium">{slotDef.name}</span>
-          {slotDef.usedByClasses.length > 0 && (
+          <span className="flex-1 text-sm font-medium">{slotElement.name}</span>
+          {slotElement.usedByClasses.length > 0 && (
             <span className={`text-xs px-2 py-0.5 rounded ${color.badgeBg} ${color.badgeText}`}>
-              {slotDef.usedByClasses.length}
+              {slotElement.usedByClasses.length}
             </span>
           )}
         </div>
@@ -736,16 +780,18 @@ export class SlotCollection extends ElementCollection {
 // ClassCollection - hierarchical tree of classes
 export class ClassCollection extends ElementCollection {
   readonly type = 'class' as const;
-  private rootNodes: ClassNode[];
+  private rootElements: ClassElement[];
 
-  constructor(rootNodes: ClassNode[]) {
+  constructor(rootElements: ClassElement[]) {
     super();
-    this.rootNodes = rootNodes;
+    this.rootElements = rootElements;
   }
 
   /** Factory: Create from raw data (called by dataLoader) */
-  static fromData(rootNodes: ClassNode[], _slotDefinitions: Map<string, SlotDefinition>): ClassCollection {
-    return new ClassCollection(rootNodes);
+  static fromData(rootNodes: ClassNode[], slotElements: Map<string, SlotElement>): ClassCollection {
+    // Convert ClassNode tree to ClassElement tree
+    const elements = rootNodes.map(node => new ClassElement(node, slotElements));
+    return new ClassCollection(elements);
   }
 
   getLabel(): string {
@@ -760,17 +806,17 @@ export class ClassCollection extends ElementCollection {
   getDefaultExpansion(): Set<string> {
     // Auto-expand first 2 levels (but only classes that have children)
     const expanded = new Set<string>();
-    const collectUpToLevel = (nodes: ClassNode[], level: number) => {
+    const collectUpToLevel = (elements: ClassElement[], level: number) => {
       if (level >= 2) return;
-      nodes.forEach(node => {
+      elements.forEach(element => {
         // Only track expansion state for classes that have children
-        if (node.children.length > 0) {
-          expanded.add(node.name);
+        if (element.children.length > 0) {
+          expanded.add(element.name);
         }
-        collectUpToLevel(node.children, level + 1);
+        collectUpToLevel(element.children, level + 1);
       });
     };
-    collectUpToLevel(this.rootNodes, 0);
+    collectUpToLevel(this.rootElements, 0);
     return expanded;
   }
 
@@ -778,37 +824,37 @@ export class ClassCollection extends ElementCollection {
     return position === 'left' ? 'lce' : 'rce'; // left/right class expansion
   }
 
-  getElement(name: string): ElementData | null {
+  getElement(name: string): Element | null {
     // Recursively search tree for class by name
-    const searchRecursive = (nodes: ClassNode[]): ClassNode | null => {
-      for (const node of nodes) {
-        if (node.name === name) return node;
-        const found = searchRecursive(node.children);
+    const searchRecursive = (elements: ClassElement[]): ClassElement | null => {
+      for (const element of elements) {
+        if (element.name === name) return element;
+        const found = searchRecursive(element.children);
         if (found) return found;
       }
       return null;
     };
-    return searchRecursive(this.rootNodes);
+    return searchRecursive(this.rootElements);
   }
 
-  getAllElements(): ElementData[] {
+  getAllElements(): Element[] {
     // Flatten tree to array
-    const flattenRecursive = (nodes: ClassNode[]): ClassNode[] => {
-      return nodes.flatMap(node => [node, ...flattenRecursive(node.children)]);
+    const flattenRecursive = (elements: ClassElement[]): ClassElement[] => {
+      return elements.flatMap(element => [element, ...flattenRecursive(element.children)]);
     };
-    return flattenRecursive(this.rootNodes);
+    return flattenRecursive(this.rootElements);
   }
 
   /** Get root nodes of class hierarchy (needed for tests and tree rendering) */
-  getRootNodes(): ClassNode[] {
-    return this.rootNodes;
+  getRootElements(): ClassElement[] {
+    return this.rootElements;
   }
 
   private countTotalNodes(): number {
-    const countRecursive = (nodes: ClassNode[]): number => {
-      return nodes.reduce((sum, node) => sum + 1 + countRecursive(node.children), 0);
+    const countRecursive = (elements: ClassElement[]): number => {
+      return elements.reduce((sum, element) => sum + 1 + countRecursive(element.children), 0);
     };
-    return countRecursive(this.rootNodes);
+    return countRecursive(this.rootElements);
   }
 
   renderItems(
@@ -817,24 +863,24 @@ export class ClassCollection extends ElementCollection {
     expandedItems?: Set<string>,
     toggleExpansion?: (item: string) => void
   ): React.ReactElement[] {
-    return this.rootNodes.map(node =>
-      this.renderClassTreeNode(node, 0, callbacks, position, expandedItems, toggleExpansion)
+    return this.rootElements.map(element =>
+      this.renderClassTreeNode(element, 0, callbacks, position, expandedItems, toggleExpansion)
     );
   }
 
   private renderClassTreeNode(
-    node: ClassNode,
+    element: ClassElement,
     level: number,
     callbacks: ElementCollectionCallbacks,
     position: 'left' | 'right',
     expandedItems?: Set<string>,
     toggleExpansion?: (item: string) => void
   ): React.ReactElement {
-    const hasChildren = node.children.length > 0;
-    const isExpanded = expandedItems?.has(node.name) ?? false;
+    const hasChildren = element.children.length > 0;
+    const isExpanded = expandedItems?.has(element.name) ?? false;
     const hoverHandlers = getElementHoverHandlers({
       type: 'class',
-      name: node.name,
+      name: element.name,
       onElementHover: callbacks.onElementHover,
       onElementLeave: callbacks.onElementLeave
     });
@@ -842,15 +888,15 @@ export class ClassCollection extends ElementCollection {
     const { color } = ELEMENT_TYPES[this.type];
 
     return (
-      <div key={node.name} className="select-none">
+      <div key={element.name} className="select-none">
         <div
-          id={`class-${node.name}`}
+          id={`class-${element.name}`}
           data-element-type="class"
-          data-element-name={node.name}
+          data-element-name={element.name}
           data-panel-position={position}
           className="flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700"
           style={{ paddingLeft: `${level * 16 + 8}px` }}
-          onClick={() => callbacks.onSelect(node, 'class')}
+          onClick={() => callbacks.onSelect(element)}
           {...hoverHandlers}
         >
           {hasChildren && (
@@ -858,28 +904,28 @@ export class ClassCollection extends ElementCollection {
               className="w-4 h-4 flex items-center justify-center text-gray-500 hover:text-gray-700"
               onClick={(e) => {
                 e.stopPropagation();
-                toggleExpansion?.(node.name);
+                toggleExpansion?.(element.name);
               }}
             >
               {isExpanded ? '▼' : '▶'}
             </button>
           )}
           {!hasChildren && <span className="w-4" />}
-          <span className="flex-1 text-sm font-medium">{node.name}</span>
-          {node.abstract && (
+          <span className="flex-1 text-sm font-medium">{element.name}</span>
+          {element.abstract && (
             <span className="text-xs text-purple-600 dark:text-purple-400 italic mr-2">
               abstract
             </span>
           )}
-          {node.variableCount > 0 && (
+          {element.variableCount > 0 && (
             <span className={`text-xs px-2 py-0.5 rounded ${color.badgeBg} ${color.badgeText}`}>
-              {node.variableCount}
+              {element.variableCount}
             </span>
           )}
         </div>
         {hasChildren && isExpanded && (
           <div>
-            {node.children.map(child =>
+            {element.children.map(child =>
               this.renderClassTreeNode(child, level + 1, callbacks, position, expandedItems, toggleExpansion)
             )}
           </div>
@@ -892,10 +938,10 @@ export class ClassCollection extends ElementCollection {
 // VariableCollection - variables grouped by class
 export class VariableCollection extends ElementCollection {
   readonly type = 'variable' as const;
-  private variables: VariableSpec[];
-  private groupedVariables: Map<string, VariableSpec[]>;
+  private variables: VariableElement[];
+  private groupedVariables: Map<string, VariableElement[]>;
 
-  constructor(variables: VariableSpec[]) {
+  constructor(variables: VariableElement[]) {
     super();
     this.variables = variables;
 
@@ -911,13 +957,15 @@ export class VariableCollection extends ElementCollection {
 
     // Sort variables within each group
     this.groupedVariables.forEach(vars => {
-      vars.sort((a, b) => a.variableLabel.localeCompare(b.variableLabel));
+      vars.sort((a, b) => a.name.localeCompare(b.name));
     });
   }
 
   /** Factory: Create from raw data (called by dataLoader) */
-  static fromData(variables: VariableSpec[]): VariableCollection {
-    return new VariableCollection(variables);
+  static fromData(variableData: VariableSpec[]): VariableCollection {
+    // Convert VariableSpec DTOs to VariableElement instances
+    const elements = variableData.map(spec => new VariableElement(spec));
+    return new VariableCollection(elements);
   }
 
   getLabel(): string {
@@ -937,12 +985,12 @@ export class VariableCollection extends ElementCollection {
     return position === 'left' ? 'lve' : 'rve'; // left/right variable expansion
   }
 
-  getElement(name: string): ElementData | null {
-    // Variables use variableLabel as identifier
-    return this.variables.find(v => v.variableLabel === name) || null;
+  getElement(name: string): Element | null {
+    // Variables use name (which is variableLabel) as identifier
+    return this.variables.find(v => v.name === name) || null;
   }
 
-  getAllElements(): ElementData[] {
+  getAllElements(): Element[] {
     return this.variables;
   }
 
@@ -984,27 +1032,27 @@ export class VariableCollection extends ElementCollection {
               {classVariables.map((variable, idx) => {
                 const hoverHandlers = getElementHoverHandlers({
                   type: 'variable',
-                  name: variable.variableLabel,
+                  name: variable.name,
                   onElementHover: callbacks.onElementHover,
                   onElementLeave: callbacks.onElementLeave
                 });
 
                 return (
                   <div
-                    key={`${variable.bdchmElement}-${variable.variableLabel}-${idx}`}
-                    id={`variable-${variable.variableLabel}`}
+                    key={`${variable.bdchmElement}-${variable.name}-${idx}`}
+                    id={`variable-${variable.name}`}
                     data-element-type="variable"
-                    data-element-name={variable.variableLabel}
+                    data-element-name={variable.name}
                     data-panel-position={position}
                     className="px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700"
                     onClick={(e) => {
                       e.stopPropagation();
-                      callbacks.onSelect(variable, 'variable');
+                      callbacks.onSelect(variable);
                     }}
                     {...hoverHandlers}
                   >
                     <span className="text-sm truncate block">
-                      {variable.variableLabel}
+                      {variable.name}
                     </span>
                   </div>
                 );

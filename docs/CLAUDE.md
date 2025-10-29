@@ -144,19 +144,250 @@ class ClassCollection {
 **Implementation steps**:
 1. ✅ Add DTO interfaces to types.ts (SchemaMetadata, ClassMetadata, etc.) - keep existing temporarily
 2. ✅ ~~Add TreeNode<T> generic interface to types.ts~~ - Already exists in models/Tree.ts
-3. ⏳ Update Element classes to contain fields directly (not wrap interfaces) - **IN PROGRESS**
-4. Update dataLoader to construct Element instances from DTOs
+3. ✅ Update Element classes to contain fields directly (not wrap interfaces)
+4. ✅ Update dataLoader to construct Element instances from DTOs
 5. Update collections to store TreeNode<Element>
 6. Remove old interfaces (ClassNode, EnumDefinition, etc.) from types.ts
 7. Update components to never import model-specific types
 
-**Status (commit 5e35d3e)**:
+**Status (latest)**:
+- ✅ Steps 1-4 complete
 - DTOs added to types.ts with clear sections
-- TreeNode<T> interface added
+- TreeNode<T> interface already exists in models/Tree.ts
 - Old interfaces marked @deprecated
-- dataLoader updated to import DTOs from types.ts
+- All Element classes (ClassElement, EnumElement, SlotElement, VariableElement) now own their fields directly
+- All Collection classes (EnumCollection, SlotCollection, ClassCollection, VariableCollection) now store Element instances
+- All `fromData()` factory methods convert DTOs to Element instances
+- dataLoader constructs Element instances and passes them to collections
+- TypeScript typecheck passes with no errors
 
-**Next action**: Step 3 is a large refactor touching Element classes, their usage in collections, and dataLoader construction logic. Need focused approach to avoid breaking everything.
+**Next action**: Step 5 is REQUIRED - Must convert to Tree<Element> structure
+
+**Why Step 5 is necessary**:
+Currently, collections have different internal structures:
+- ClassCollection: stores `ClassElement[]` with each ClassElement having `children: ClassElement[]`
+- VariableCollection: stores `groupedVariables: Map<string, VariableElement[]>`
+
+This means:
+- ClassCollection and VariableCollection do NOT have `getRenderableItems()` implemented
+- Section.tsx must use type-specific `renderItems()` which returns JSX
+- The view layer still needs to know about structural differences (tree vs grouped)
+
+**Goal of Step 5**: Unify all collections to use `Tree<Element>` from models/Tree.ts
+- ClassCollection: `Tree<ClassElement>` (convert from ClassElement[] with children)
+- VariableCollection: `Tree<Element>` (group headers become non-clickable parent TreeNodes)
+- EnumCollection/SlotCollection: `Tree<Element>` with single-level trees (all roots, no children)
+
+**Key Architectural Decisions**:
+1. **Tree construction logic in Collection.fromData()** - dataLoader calls fromData() with DTOs, collections build their trees
+2. **Tree provides data extraction** - `Tree.toRenderableItems()` converts tree to flat list with level info
+3. **Section.tsx does the rendering** - All JSX rendering moves to Section.tsx, collections return data only
+4. **ClassElement instances can be reused** - Variable groups use same ClassElement, just mark isClickable=false in RenderableItem
+
+**Answers to key questions**:
+- **Q: Where should tree construction logic live?**
+  A: In Collection.fromData() methods. Each collection knows how to structure its own tree (hierarchical for classes, flat for enums/slots, grouped for variables). dataLoader just calls fromData() with DTOs.
+
+- **Q: Does rendering logic go in Tree or Section?**
+  A: Tree provides data (`toRenderableItems()`), Section.tsx does all JSX rendering.
+
+- **Q: Where are badges used?**
+  A: In panel sections, rendered by `collection.renderItems()`. Currently NOT used by Section.tsx (it calls renderItems, not getRenderableItems). Badges show counts but it's unclear what they mean to users.
+
+- **Q: Do we need two copies of ClassElement for variables?**
+  A: No! Reuse the same ClassElement instance. Use `getIsClickable` callback in `toRenderableItems()` to mark level 0 as non-clickable for variable groups.
+
+**Implementation Plan**:
+
+1. **Add `Tree.toRenderableItems()` method** (models/Tree.ts)
+   ```typescript
+   class Tree<T extends Element> {
+     /**
+      * Convert tree to flat list of RenderableItems for display
+      * Respects expansion state to hide/show children
+      */
+     toRenderableItems(
+       expandedItems: Set<string>,
+       getIsClickable?: (node: TreeNode<T>, level: number) => boolean
+     ): RenderableItem[] {
+       const items: RenderableItem[] = [];
+
+       const traverse = (node: TreeNode<T>, level: number) => {
+         const hasChildren = node.children.length > 0;
+         const isExpanded = expandedItems.has(node.data.name);
+         const isClickable = getIsClickable ? getIsClickable(node, level) : true;
+
+         items.push({
+           id: `${node.data.type}-${node.data.name}`,
+           element: node.data,
+           level,
+           hasChildren,
+           isExpanded,
+           isClickable,
+           badge: node.data.getBadge() // Element provides badge value
+         });
+
+         // Only traverse children if expanded
+         if (isExpanded) {
+           node.children.forEach(child => traverse(child, level + 1));
+         }
+       };
+
+       this.roots.forEach(root => traverse(root, 0));
+       return items;
+     }
+   }
+   ```
+
+2. **Add simple `getBadge()` method to Element base class** (models/Element.tsx)
+   ```typescript
+   abstract class Element {
+     // ... existing properties ...
+
+     /**
+      * Badge value to display (e.g., count). Return undefined for no badge.
+      * NOTE: This is a temporary simple implementation. Badges will be overhauled
+      * in future to show multiple counts and clarify what they mean.
+      */
+     getBadge(): number | undefined {
+       return undefined; // Default: no badge
+     }
+   }
+
+   // Override in specific classes (keep simple - will be replaced):
+   class ClassElement extends Element {
+     getBadge() {
+       return this.variableCount > 0 ? this.variableCount : undefined;
+     }
+   }
+
+   class EnumElement extends Element {
+     getBadge() {
+       return this.permissibleValues.length;
+     }
+   }
+
+   class SlotElement extends Element {
+     getBadge() {
+       return this.usedByClasses.length > 0 ? this.usedByClasses.length : undefined;
+     }
+   }
+
+   // VariableElement: no badge override (returns undefined)
+   ```
+
+3. **Update Collection.fromData() to build trees** (models/Element.tsx)
+   ```typescript
+   // ClassCollection.fromData - Build hierarchical tree
+   static fromData(rootNodes: ClassNode[], slotElements: Map<string, SlotElement>): ClassCollection {
+     // Convert ClassNode tree (with children[]) to TreeNode<ClassElement>
+     const convertToTreeNode = (node: ClassNode): TreeNode<ClassElement> => {
+       const element = new ClassElement(node, slotElements);
+       const treeNode: TreeNode<ClassElement> = {
+         data: element,
+         children: node.children.map(convertToTreeNode),
+         parent: undefined
+       };
+       // Link parent references
+       treeNode.children.forEach(child => child.parent = treeNode);
+       return treeNode;
+     };
+     const roots = rootNodes.map(convertToTreeNode);
+     return new ClassCollection(new Tree(roots));
+   }
+
+   // EnumCollection.fromData - Build flat tree
+   static fromData(enumData: Map<string, EnumDefinition>): EnumCollection {
+     const roots = Array.from(enumData.values()).map(def => ({
+       data: new EnumElement(def),
+       children: [],
+       parent: undefined
+     }));
+     return new EnumCollection(new Tree(roots));
+   }
+
+   // SlotCollection.fromData - Build flat tree
+   static fromData(slotData: Map<string, SlotDefinition>): SlotCollection {
+     const roots = Array.from(slotData.values()).map(def => ({
+       data: new SlotElement(def),
+       children: [],
+       parent: undefined
+     }));
+     return new SlotCollection(new Tree(roots));
+   }
+
+   // VariableCollection.fromData - Build grouped tree
+   static fromData(variableData: VariableSpec[], classCollection: ClassCollection): VariableCollection {
+     // Group variables by class name
+     const grouped = new Map<string, VariableElement[]>();
+     variableData.forEach(spec => {
+       const element = new VariableElement(spec);
+       if (!grouped.has(element.bdchmElement)) {
+         grouped.set(element.bdchmElement, []);
+       }
+       grouped.get(element.bdchmElement)!.push(element);
+     });
+
+     // Create tree with ClassElement headers as parents
+     const roots: TreeNode<Element>[] = [];
+     grouped.forEach((variables, className) => {
+       const classElement = classCollection.getElement(className);
+       if (classElement) {
+         const headerNode: TreeNode<Element> = {
+           data: classElement,
+           children: variables.map(v => ({
+             data: v,
+             children: [],
+             parent: undefined
+           })),
+           parent: undefined
+         };
+         headerNode.children.forEach(child => child.parent = headerNode);
+         roots.push(headerNode);
+       }
+     });
+
+     return new VariableCollection(new Tree(roots));
+   }
+   ```
+
+4. **Update dataLoader to pass classCollection to VariableCollection** (utils/dataLoader.ts)
+   ```typescript
+   const classCollection = ClassCollection.fromData(classHierarchy, slotElements);
+   const enumCollection = EnumCollection.fromData(enums);
+   const slotCollection = SlotCollection.fromData(slots);
+   // Pass classCollection so variables can reuse ClassElement instances
+   const variableCollection = VariableCollection.fromData(variables, classCollection);
+   ```
+
+5. **Remove `children` from ClassElement** (models/Element.tsx)
+   - ClassElement currently has `children: ClassElement[]`
+   - This is now stored in TreeNode<ClassElement>, so remove from ClassElement
+   - Update any code that accesses `element.children` to work with Tree instead
+
+6. **Implement `getRenderableItems()` in all collections** (models/Element.tsx)
+   - ClassCollection: `return this.tree.toRenderableItems(expandedItems)`
+   - EnumCollection: `return this.tree.toRenderableItems(expandedItems)`
+   - SlotCollection: `return this.tree.toRenderableItems(expandedItems)`
+   - VariableCollection: `return this.tree.toRenderableItems(expandedItems, (node, level) => level > 0)`
+     - The callback makes level 0 (class headers) non-clickable, level 1+ (variables) clickable
+
+7. **Update Section.tsx to render RenderableItems**
+   - Change from `collection.renderItems()` → `collection.getRenderableItems()`
+   - Add rendering logic for RenderableItems (currently in each collection's renderItems)
+   - Render badges using ElementRegistry colors
+   - Handle expansion toggle clicks vs element selection clicks based on isClickable
+
+8. **Remove `renderItems()` methods from all collections**
+   - Once Section.tsx uses getRenderableItems(), delete the old renderItems() methods
+   - This completes the separation of data structure from rendering
+
+**Benefits after Step 5**:
+- All collections implement `getRenderableItems()` by calling `this.tree.toRenderableItems()`
+- Section.tsx can call `getRenderableItems()` generically, no type-specific logic needed
+- "Move renderItems to Section.tsx" phase becomes possible (currently blocked)
+- View layer truly separated from model structure
+- Tree handles all structural complexity (nesting, expansion, flattening)
 
 **Files to modify**:
 - `src/types.ts` - Add DTOs, add TreeNode<T>, eventually remove old interfaces
@@ -347,6 +578,34 @@ function Section() {
 **Files to modify**:
 - `src/App.tsx`
 - `src/utils/statePersistence.ts`
+
+---
+
+## Upcoming Work
+
+Listed in intended implementation order (top = next):
+
+### 🔄 Overhaul Badge Display System
+
+**Goal**: Make badges more informative and clear about what counts they represent
+
+**Current problems**:
+- Badges show single counts (enum values, slot usage, variable count) but it's unclear what they mean
+- Users might want to see multiple counts per element (e.g., class shows variable count but not enum/slot counts)
+- No labels on badges - just numbers in colored pills
+
+**Potential improvements**:
+- Multi-badge display: Show multiple counts per element (e.g., "103 vars, 5 enums, 2 slots")
+- Badge labels or tooltips: Make it clear what each number represents
+- Configurable: Let users choose which counts to display
+- Contextual: Different badge types for different views
+
+**Implementation approach TBD** - Need to design before implementing
+
+**Files likely affected**:
+- `src/models/Element.tsx` - Replace simple `getBadge(): number` with richer badge info
+- `src/components/Section.tsx` - Render multiple badges or labeled badges
+- `src/models/RenderableItem.ts` - Update badge field to support richer info
 
 ---
 

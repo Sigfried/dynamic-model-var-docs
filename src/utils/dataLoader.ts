@@ -253,7 +253,9 @@ export async function loadModelData(): Promise<ModelData> {
   // Create element collections as a Map for generic iteration
   const enumCollection = EnumCollection.fromData(enums);
   const slotCollection = SlotCollection.fromData(slots);
-  const classCollection = ClassCollection.fromData(classHierarchy, slots);
+  // ClassCollection needs SlotElement map, not SlotDefinition map
+  const slotElements = slotCollection.getSlots();
+  const classCollection = ClassCollection.fromData(classHierarchy, slotElements);
   const variableCollection = VariableCollection.fromData(variables);
 
   const collections = new Map();
