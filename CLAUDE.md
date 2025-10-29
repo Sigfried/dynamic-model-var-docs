@@ -67,14 +67,45 @@ _(Empty - use [PLAN] prefix to add tasks here before implementing them)_
 
 ---
 
-## Current Phase: 🔄 Collections Store Elements (Not Raw Data)
+## Current Phase: 🔄 Unify Class and Variable Data Structures
+
+**Goal**: Make both ClassCollection and VariableCollection use the Tree data model consistently
+
+**Why this is current phase**:
+- Pre-requisite for "Collections Store Elements" refactor
+- Currently ClassCollection uses Tree (`ClassNode[]`) but VariableCollection uses flat array with manual grouping
+- Both need same structure before we can create unified Element wrappers
+- Variables are already conceptually grouped by class, just need proper tree structure
+
+**Current inconsistency**:
+- **ClassCollection**: Stores `ClassNode[]` tree, parent/child relationships explicit
+- **VariableCollection**: Stores flat `VariableSpec[]`, groups in constructor, manual expand/collapse logic
+
+**Target state**:
+- Both use Tree model (likely shared type like `Tree<ClassNode>` and `Tree<VariableGroup>`)
+- Grouping logic moves from VariableCollection constructor to dataLoader
+- Expansion/collapse handled uniformly across both collections
+
+**Files to modify**:
+- `src/utils/dataLoader.ts` - Build variable tree structure (grouped by class)
+- `src/models/Element.tsx` - Update VariableCollection to accept tree structure
+- Consider: Create shared `Tree<T>` type for both collections
+
+**After this completes**: Can proceed with "Collections Store Elements" refactor
+
+---
+
+## Upcoming Work
+
+Listed in intended implementation order (top = next):
+
+### 🔄 Collections Store Elements (Not Raw Data)
 
 **Goal**: Complete model/view separation by making collections store Element instances instead of raw data types
 
-**Why this is current phase**:
+**Why this matters**:
 - Blocks DetailPanel bug fix (components need to use abstract Element, not raw model types)
-- Critical architectural foundation - must be complete before other refactoring
-- Enables proper polymorphism throughout the codebase
+- Critical architectural foundation - enables proper polymorphism throughout codebase
 
 **Remaining conversions**:
 1. **SlotCollection** - Convert to store SlotElement instances
