@@ -650,10 +650,8 @@ export class EnumCollection extends ElementCollection {
     _expandedItems?: Set<string>,
     _toggleExpansion?: (item: string) => void
   ): React.ReactElement[] {
-    // Sort enums by name
-    const enumList = Array.from(this.enums.values()).sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
+    // Get enums from tree (already sorted in fromData)
+    const enumList = this.tree.flatten();
 
     const { color } = ELEMENT_TYPES[this.type];
 
@@ -756,10 +754,8 @@ export class SlotCollection extends ElementCollection {
     _expandedItems?: Set<string>,
     _toggleExpansion?: (item: string) => void
   ): React.ReactElement[] {
-    // Sort slots by name
-    const slotList = Array.from(this.slots.values()).sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
+    // Get slots from tree (already sorted in fromData)
+    const slotList = this.tree.flatten();
 
     const { color } = ELEMENT_TYPES[this.type];
 
