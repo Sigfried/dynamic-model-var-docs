@@ -7,6 +7,7 @@ import { getElementHoverHandlers } from '../hooks/useElementHover';
 import type { ElementTypeId, RelationshipTypeId } from './ElementRegistry';
 import { ELEMENT_TYPES } from './ElementRegistry';
 import type { RenderableItem } from './RenderableItem';
+import { Tree, type TreeNode } from './Tree';
 
 // Union type for all element data types
 export type ElementData = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
@@ -592,26 +593,30 @@ export abstract class ElementCollection {
 // EnumCollection - flat list of enumerations
 export class EnumCollection extends ElementCollection {
   readonly type = 'enum' as const;
-  private enums: Map<string, EnumElement>;
+  private tree: Tree<EnumElement>;
 
-  constructor(enums: Map<string, EnumElement>) {
+  constructor(tree: Tree<EnumElement>) {
     super();
-    this.enums = enums;
+    this.tree = tree;
   }
 
   /** Factory: Create from raw data (called by dataLoader) */
   static fromData(enumData: Map<string, EnumDefinition>): EnumCollection {
-    // Wrap raw EnumDefinitions into EnumElements
-    const elements = new Map<string, EnumElement>();
-    enumData.forEach((def, name) => {
-      elements.set(name, new EnumElement(def));
-    });
-    return new EnumCollection(elements);
+    // Convert EnumDefinitions to flat tree (all roots, no children)
+    const roots: TreeNode<EnumElement>[] = Array.from(enumData.values())
+      .map(def => ({
+        data: new EnumElement(def),
+        children: [],
+        parent: undefined
+      }))
+      .sort((a, b) => a.data.name.localeCompare(b.data.name));
+
+    return new EnumCollection(new Tree(roots));
   }
 
   getLabel(): string {
     const metadata = ELEMENT_TYPES[this.type];
-    return `${metadata.pluralLabel} (${this.enums.size})`;
+    return `${metadata.pluralLabel} (${this.tree.roots.length})`;
   }
 
   getSectionIcon(): string {
@@ -627,26 +632,16 @@ export class EnumCollection extends ElementCollection {
   }
 
   getElement(name: string): Element | null {
-    return this.enums.get(name) || null;
+    const node = this.tree.find(element => element.name === name);
+    return node ? node.data : null;
   }
 
   getAllElements(): Element[] {
-    return Array.from(this.enums.values());
+    return this.tree.flatten();
   }
 
-  getRenderableItems(_expandedItems?: Set<string>): RenderableItem[] {
-    // Sort enums by name
-    const enumList = Array.from(this.enums.values()).sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
-
-    return enumList.map((enumElement) => ({
-      id: `enum-${enumElement.name}`,
-      element: enumElement,
-      level: 0,
-      isClickable: true,
-      badge: (enumElement as EnumElement).permissibleValues.length
-    }));
+  getRenderableItems(expandedItems?: Set<string>): RenderableItem[] {
+    return this.tree.toRenderableItems(expandedItems || new Set());
   }
 
   renderItems(
@@ -694,26 +689,30 @@ export class EnumCollection extends ElementCollection {
 // SlotCollection - flat list of slot definitions
 export class SlotCollection extends ElementCollection {
   readonly type = 'slot' as const;
-  private slots: Map<string, SlotElement>;
+  private tree: Tree<SlotElement>;
 
-  constructor(slots: Map<string, SlotElement>) {
+  constructor(tree: Tree<SlotElement>) {
     super();
-    this.slots = slots;
+    this.tree = tree;
   }
 
   /** Factory: Create from raw data (called by dataLoader) */
   static fromData(slotData: Map<string, SlotDefinition>): SlotCollection {
-    // Convert SlotDefinition DTOs to SlotElement instances
-    const elements = new Map<string, SlotElement>();
-    slotData.forEach((def, name) => {
-      elements.set(name, new SlotElement(def));
-    });
-    return new SlotCollection(elements);
+    // Convert SlotDefinitions to flat tree (all roots, no children)
+    const roots: TreeNode<SlotElement>[] = Array.from(slotData.values())
+      .map(def => ({
+        data: new SlotElement(def),
+        children: [],
+        parent: undefined
+      }))
+      .sort((a, b) => a.data.name.localeCompare(b.data.name));
+
+    return new SlotCollection(new Tree(roots));
   }
 
   getLabel(): string {
     const metadata = ELEMENT_TYPES[this.type];
-    return `${metadata.pluralLabel} (${this.slots.size})`;
+    return `${metadata.pluralLabel} (${this.tree.roots.length})`;
   }
 
   getSectionIcon(): string {
@@ -729,31 +728,26 @@ export class SlotCollection extends ElementCollection {
   }
 
   getElement(name: string): Element | null {
-    return this.slots.get(name) || null;
+    const node = this.tree.find(element => element.name === name);
+    return node ? node.data : null;
   }
 
   getAllElements(): Element[] {
-    return Array.from(this.slots.values());
+    return this.tree.flatten();
   }
 
-  getRenderableItems(_expandedItems?: Set<string>): RenderableItem[] {
-    // Sort slots by name
-    const slotList = Array.from(this.slots.values()).sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
-
-    return slotList.map((slotElement) => ({
-      id: `slot-${slotElement.name}`,
-      element: slotElement,
-      level: 0,
-      isClickable: true,
-      badge: slotElement.usedByClasses.length > 0 ? slotElement.usedByClasses.length : undefined
-    }));
+  getRenderableItems(expandedItems?: Set<string>): RenderableItem[] {
+    return this.tree.toRenderableItems(expandedItems || new Set());
   }
 
   /** Get underlying slots Map (needed for ClassElement constructor) */
   getSlots(): Map<string, SlotElement> {
-    return this.slots;
+    // Convert tree to Map for ClassElement constructor
+    const map = new Map<string, SlotElement>();
+    this.tree.flatten().forEach(slot => {
+      map.set(slot.name, slot);
+    });
+    return map;
   }
 
   renderItems(
