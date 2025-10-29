@@ -41,8 +41,7 @@ function DetailPanel({ element }: { element: Element }) {
 
 ## Tasks from Conversation
 
-- 📖 Move documentation files to docs/ directory → Add to Quick Items
-- 📖 Update DOC_CONVENTIONS.md to reference all documentation files → Add to Quick Items
+_(Empty - use [PLAN] prefix to add tasks here before implementing them)_
 
 ---
 
