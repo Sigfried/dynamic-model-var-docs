@@ -1,6 +1,5 @@
 import { describe, test, expect } from 'vitest';
 import { loadModelData } from '../utils/dataLoader';
-import type { ClassNode } from '../types';
 import { ClassCollection, EnumCollection, SlotCollection, VariableCollection } from '../models/Element';
 
 describe('dataLoader', () => {
@@ -26,24 +25,18 @@ describe('dataLoader', () => {
       const data = await loadModelData();
 
       const classCollection = data.collections.get('class') as ClassCollection;
-      const classHierarchy = classCollection.getRootNodes();
+      const rootElements = classCollection.getRootElements();
+
+      // getRootElements() returns ClassElement[], test that it's hierarchical by using getAllElements
+      const allClasses = classCollection.getAllElements();
 
       // Find a class with known parent (e.g., Participant is_a Entity)
-      const findClass = (classes: ClassNode[], name: string): ClassNode | undefined => {
-        for (const cls of classes) {
-          if (cls.name === name) return cls;
-          const found = findClass(cls.children || [], name);
-          if (found) return found;
-        }
-        return undefined;
-      };
-
-      const participant = findClass(classHierarchy, 'Participant');
+      const participant = allClasses.find(c => c.name === 'Participant');
       expect(participant).toBeDefined();
       expect(participant?.parent).toBe('Entity');
 
       // Check that root classes have no parent
-      const rootClasses = classHierarchy.filter(c => c.parent === null || c.parent === undefined);
+      const rootClasses = rootElements.filter(c => c.parent === null || c.parent === undefined);
       expect(rootClasses.length).toBeGreaterThan(0);
     });
 
@@ -55,24 +48,17 @@ describe('dataLoader', () => {
 
       expect(variables.length).toBeGreaterThan(0);
 
-      // Each variable should have required fields from VariableSpec interface
+      // Each variable should have required fields from VariableElement
       const sampleVar = variables[0];
       expect(sampleVar).toHaveProperty('bdchmElement');
-      expect(sampleVar).toHaveProperty('variableLabel');
+      expect(sampleVar).toHaveProperty('name');  // maps from variableLabel
       expect(sampleVar).toHaveProperty('dataType');
 
       // Most variables should map to existing classes
       // (some might not due to data evolution)
       const classCollection = data.collections.get('class') as ClassCollection;
-      const classHierarchy = classCollection.getRootNodes();
-      const classNames = new Set<string>();
-      const collectClassNames = (classes: ClassNode[]) => {
-        for (const cls of classes) {
-          classNames.add(cls.name);
-          if (cls.children) collectClassNames(cls.children);
-        }
-      };
-      collectClassNames(classHierarchy);
+      const allClasses = classCollection.getAllElements();
+      const classNames = new Set(allClasses.map(c => c.name));
 
       const unmappedVariables = variables.filter(
         v => !classNames.has(v.bdchmElement)
@@ -122,23 +108,14 @@ describe('dataLoader', () => {
       const data = await loadModelData();
 
       const classCollection = data.collections.get('class') as ClassCollection;
-      const classHierarchy = classCollection.getRootNodes();
-
-      const findClass = (classes: ClassNode[], name: string): ClassNode | undefined => {
-        for (const cls of classes) {
-          if (cls.name === name) return cls;
-          const found = findClass(cls.children || [], name);
-          if (found) return found;
-        }
-        return undefined;
-      };
+      const allClasses = classCollection.getAllElements();
 
       // Entity is known to be abstract
-      const entity = findClass(classHierarchy, 'Entity');
+      const entity = allClasses.find(c => c.name === 'Entity');
       expect(entity?.abstract).toBe(true);
 
       // Participant is known to be concrete
-      const participant = findClass(classHierarchy, 'Participant');
+      const participant = allClasses.find(c => c.name === 'Participant');
       expect(participant?.abstract).toBe(false);
     });
   });
@@ -148,20 +125,16 @@ describe('dataLoader', () => {
       const data = await loadModelData();
 
       const classCollection = data.collections.get('class') as ClassCollection;
-      const classHierarchy = classCollection.getRootNodes();
+      const allClasses = classCollection.getAllElements();
 
-      // Total properties across all classes should match what we see in individual classes
+      // Total properties across all classes should be greater than 0
       let totalProperties = 0;
-      const countProperties = (classes: ClassNode[]) => {
-        for (const cls of classes) {
-          // ClassNode uses `properties` field, not `attributes`
-          if (cls.properties) {
-            totalProperties += Object.keys(cls.properties).length;
-          }
-          if (cls.children) countProperties(cls.children);
+      for (const cls of allClasses) {
+        // ClassElement uses `properties` field
+        if (cls.properties) {
+          totalProperties += Object.keys(cls.properties).length;
         }
-      };
-      countProperties(classHierarchy);
+      }
 
       expect(totalProperties).toBeGreaterThan(0);
     });
@@ -170,24 +143,17 @@ describe('dataLoader', () => {
       const data = await loadModelData();
 
       const classCollection = data.collections.get('class') as ClassCollection;
-      const classHierarchy = classCollection.getRootNodes();
+      const allClasses = classCollection.getAllElements();
 
       const classNames = new Set<string>();
-      const findDuplicates = (classes: ClassNode[]): string[] => {
-        const duplicates: string[] = [];
-        for (const cls of classes) {
-          if (classNames.has(cls.name)) {
-            duplicates.push(cls.name);
-          }
-          classNames.add(cls.name);
-          if (cls.children) {
-            duplicates.push(...findDuplicates(cls.children));
-          }
+      const duplicates: string[] = [];
+      for (const cls of allClasses) {
+        if (classNames.has(cls.name)) {
+          duplicates.push(cls.name);
         }
-        return duplicates;
-      };
+        classNames.add(cls.name);
+      }
 
-      const duplicates = findDuplicates(classHierarchy);
       expect(duplicates).toEqual([]);
     });
   });

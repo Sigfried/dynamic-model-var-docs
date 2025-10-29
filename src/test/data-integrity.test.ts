@@ -77,9 +77,9 @@ describe('Data Completeness', () => {
     const slotCollection = modelData.collections.get('slot') as SlotCollection;
     const variableCollection = modelData.collections.get('variable') as VariableCollection;
 
-    const classHierarchy = classCollection.getRootNodes();
+    const classHierarchy = classCollection.getRootElements();
     const enums = enumCollection.getAllElements();
-    const slots = slotCollection.getSlots();
+    const slots = new Map(slotCollection.getSlots());
     const variables = variableCollection.getAllElements();
 
     // 1. Check YAML → Metadata
