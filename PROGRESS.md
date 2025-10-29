@@ -381,16 +381,6 @@ src/
 
 ---
 
-## Data Model Statistics
-
-- **47 classes** with inheritance hierarchy
-- **40 enums** (constrained value sets)
-- **7 slots** (reusable attribute definitions)
-- **151 variables** (68% map to MeasurementObservation class)
-- Multiple root classes (no single "Entity" superclass)
-
----
-
 ## Key Technical Achievements
 
 1. **Flexible Visualization**: Dual-panel system supporting any combination of classes, enums, slots, variables

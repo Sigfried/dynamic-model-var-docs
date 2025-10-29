@@ -6,7 +6,7 @@
 
 ---
 
-## Current Work
+## Phase 4: Fix DetailPanel Tests (Current Work)
 
 ### Fix DetailPanel Tests (10 failing)
 
@@ -21,9 +21,9 @@
 
 ---
 
-## Upcoming Tasks (In Implementation Order)
+## Phase 5: Move renderItems to Section.tsx (Upcoming)
 
-### 1. Complete getRenderableItems() Implementation
+### 5a. Complete getRenderableItems() Implementation
 
 **Goal**: Finish converting collections from renderItems() to getRenderableItems() pattern
 
@@ -50,7 +50,7 @@
 - `src/models/Element.tsx` - ClassCollection and VariableCollection implementations
 - `src/utils/dataLoader.ts` - Move variable grouping logic here
 
-### 2. Update Section.tsx to Render RenderableItems
+### 5b. Update Section.tsx to Render RenderableItems
 
 **Goal**: Remove type-specific rendering logic from Section.tsx, use generic RenderableItem rendering
 
@@ -82,14 +82,18 @@ function Section() {
 - `src/components/Section.tsx`
 - Create new component: `src/components/ItemDisplay.tsx` (or inline in Section)
 
-### 3. Remove renderItems() Method
+### 5c. Remove renderItems() Method
 
 **Goal**: Delete obsolete renderItems() after Section uses getRenderableItems()
 
 **Files to modify**:
 - `src/models/Element.tsx` - Remove renderItems() from all 4 collection classes
 
-### 4. Complete Collections Store Elements Refactor (Task 3.6)
+---
+
+## Phase 6: Collections Store Elements (Not Raw Data)
+
+### Complete Collections Store Elements Refactor
 
 **Goal**: Eliminate redundant wrapping - collections should store Element instances, not raw data
 
@@ -110,7 +114,9 @@ function Section() {
 - `src/utils/dataLoader.ts`
 - `src/types.ts` (remove ElementData)
 
-### 5. Split Element.tsx into Separate Files
+---
+
+## Phase 7: Split Element.tsx into Separate Files
 
 **Current state**: Element.tsx is 919 lines with 4 element classes + 4 collection classes
 
@@ -127,7 +133,9 @@ function Section() {
 - Smaller, more focused files
 - Easier to understand each element type in isolation
 
-### 6. Refactor App.tsx
+---
+
+## Phase 8: Refactor App.tsx
 
 **Current state**: App.tsx is 600+ lines, too long
 
@@ -152,9 +160,9 @@ function Section() {
 
 ---
 
-## Future Features (Phase 4+)
+## Future Features (Phase 9+)
 
-### Phase 4: Search and Filter
+### Phase 9: Search and Filter
 
 **Search functionality**:
 - Search bar with full-text search across all elements
@@ -166,7 +174,7 @@ function Section() {
 - Variable count slider
 - Relationship type toggles
 
-### Phase 5: Neighborhood Zoom
+### Phase 10: Neighborhood Zoom
 
 **Focus mode**:
 - Show only k-hop neighborhood around selected element

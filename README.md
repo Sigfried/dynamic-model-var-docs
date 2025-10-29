@@ -16,6 +16,11 @@ The BioData Catalyst Harmonized Model (BDCHM) is a LinkML schema that defines:
 - **7 slots** (reusable attribute definitions shared across classes)
 - **151 variables** (specific measurements/observations mapped to classes)
 
+**Model Statistics**:
+- Multiple root classes (no single "Entity" superclass)
+- 68% of variables (103) map to MeasurementObservation class
+- Rich graph structure with multiple relationship types
+
 ### What You Can Explore
 
 **Browse relationships**:
@@ -84,18 +89,6 @@ This principle guides the UX design:
 - Show inheritance chains with attribute overrides
 - Bidirectional navigation between related elements
 - Future: Sortable/filterable variable tables
-
-### Core Insight: This is a Typed Graph, Not Just a Hierarchy
-
-BDCHM has multiple relationship types forming a rich graph structure:
-1. **Inheritance** (`is_a`) - class hierarchy tree
-2. **Class→Enum** - which classes use which constrained value sets
-3. **Class→Class associations** - domain relationships (participant, research study, specimen lineage)
-4. **Containment** (`part_of`, `contained_in`, `parent_specimen`)
-5. **Activities/Processes** - temporal relationships (creation, processing, storage)
-6. **Measurements** - observation and quantity relationships
-
-**Architecture implication**: We need UI patterns for exploring a typed graph, not just a tree.
 
 ### Tech Stack
 
