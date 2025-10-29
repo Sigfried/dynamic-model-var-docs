@@ -10,16 +10,16 @@
 
 ## Tasks from Conversation
 
-_(Empty - use [PLAN] prefix to add tasks here before implementing them)_
+- 🔴 🪲 Fix dark mode display issues - app looks terrible in dark mode (see screenshot) → Add to Upcoming Work after "Terminology Consistency"
 
 ---
 
 ## Quick Items
 
-- 📝 Move doc files to docs directory
+- 📖 Move doc files to docs directory
   - Make `docs/images/temp/` for files like img.png that illustrate ephemeral issues
   - Store images that will be used ongoingly (in README mostly) in `docs/images/`
-- 🐛 Clicking class brings up detail box with gray title bar saying "Variable:" and missing the slots section (last worked at ecd4828, though blue color was slightly off from C icon color)
+- 🪲 Clicking class brings up detail box with gray title bar saying "Variable:" and missing the slots section (last worked at ecd4828, though blue color was slightly off from C icon color)
 
 ---
 
@@ -36,7 +36,7 @@ _(Empty - use [PLAN] prefix to add tasks here before implementing them)_
 
 ---
 
-## Current Phase: 🧪 🐛 Fix DetailPanel Tests & Bug
+## Current Phase: ✅ 🪲 Fix DetailPanel Tests & Bug
 
 ### Fix DetailPanel Tests (10 failing)
 
@@ -68,7 +68,7 @@ Listed in intended implementation order (top = next):
 
 ---
 
-### ♻️ Move renderItems to Section.tsx
+### 🔄 Move renderItems to Section.tsx
 
 #### a. Complete getRenderableItems() Implementation
 
@@ -138,7 +138,7 @@ function Section() {
 
 ---
 
-### ♻️ Collections Store Elements (Not Raw Data)
+### 🔄 Collections Store Elements (Not Raw Data)
 
 **Goal**: Eliminate redundant wrapping - collections should store Element instances, not raw data
 
@@ -161,7 +161,7 @@ function Section() {
 
 ---
 
-### ♻️ Split Element.tsx into Separate Files
+### 🔄 Split Element.tsx into Separate Files
 
 **Current state**: Element.tsx is 919 lines with 4 element classes + 4 collection classes
 
@@ -180,7 +180,7 @@ function Section() {
 
 ---
 
-### ♻️ Refactor App.tsx
+### 🔄 Refactor App.tsx
 
 **Current state**: App.tsx is 600+ lines, too long
 
@@ -263,7 +263,7 @@ Multiple view modes and analytics:
 
 ---
 
-### 📝 Terminology Consistency
+### 📖 Terminology Consistency
 
 **Problem**: Still using "Property" to denote attributes and slots
 
@@ -306,7 +306,7 @@ Missing features:
 
 ---
 
-### 📝 GitHub Issue Management
+### 📖 GitHub Issue Management
 
 Issue: https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/issues/126
 - Make issue more concise

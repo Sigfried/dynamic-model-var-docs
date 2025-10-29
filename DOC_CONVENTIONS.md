@@ -46,7 +46,7 @@
   - "Add to Upcoming Work" (do after current phase, specify position)
   - "Add to Questions" (needs clarification first)
 - Delete item when moved to appropriate section or implemented
-- Tag with type: 🐛 bug, ✨ feature, 📝 docs, ♻️ refactor, 🧪 test, 🔧 config
+- Tag with type: 🪲 bug, ✨ feature, 📖 docs, 🔄 refactor, ✅ test, ⚙️ config, ⚡ performance
 
 **Example**:
 ```markdown
@@ -69,7 +69,7 @@
 - Keep concise (1-2 lines per item)
 - Delete when done (NOT moved to PROGRESS.md - quick items don't go there)
 - Can mark subtasks as complete with ✅ (only whole phases go to PROGRESS.md)
-- Tag with type: 🐛 bug, ✨ feature, 📝 docs, ♻️ refactor, 🧪 test, 🔧 config
+- Tag with type: 🪲 bug, ✨ feature, 📖 docs, 🔄 refactor, ✅ test, ⚙️ config, ⚡ performance
 - Optional importance markers (for stakeholder visibility):
   - 🔴 High importance - Major impact on project goals
   - 🟡 Medium importance - Useful but not critical
@@ -120,7 +120,7 @@
 - Include status and concrete action items
 - Can mark subtasks as complete with ✅ (only whole completed phase moves to PROGRESS.md)
 - Move entire phase to PROGRESS.md when all work complete
-- Tag with type: 🐛 bug, ✨ feature, 📝 docs, ♻️ refactor, 🧪 test
+- Tag with type: 🪲 bug, ✨ feature, 📖 docs, 🔄 refactor, ✅ test, ⚡ performance
 - Tag with importance (for PROGRESS.md stakeholder visibility):
   - 🔴 High importance - Major features, critical fixes, architectural milestones
   - 🟡 Medium importance - Nice enhancements, quality improvements
@@ -147,7 +147,7 @@
 - Listed in **intended implementation order** (top = next)
 - NO phase numbers yet - just descriptions
 - Reorder freely as priorities change
-- Tag with type: 🐛 bug, ✨ feature, 📝 docs, ♻️ refactor, 🧪 test
+- Tag with type: 🪲 bug, ✨ feature, 📖 docs, 🔄 refactor, ✅ test, ⚡ performance
 - Tag with importance (helps stakeholders understand value when moved to PROGRESS.md):
   - 🔴 High importance - Major features, critical fixes, architectural milestones
   - 🟡 Medium importance - Nice enhancements, quality improvements
@@ -208,7 +208,7 @@ Listed in intended implementation order (top = next):
 - No importance markers needed (not yet prioritized)
 - No ordering required
 - Can be aspirational
-- Tag with type: 🐛 bug, ✨ feature, 📝 docs, ♻️ refactor, 🧪 test
+- Tag with type: 🪲 bug, ✨ feature, 📖 docs, 🔄 refactor, ✅ test, ⚡ performance
 - Move to "Upcoming Work" when prioritized (add importance marker then)
 - Use `<details>` to collapse long sections
 
@@ -288,12 +288,13 @@ Listed in intended implementation order (top = next):
 
 Use consistent emoji tags across all sections for type classification:
 
-- 🐛 **bug** - Fixes incorrect behavior
+- 🪲 **bug** - Fixes incorrect behavior
 - ✨ **feature** - Adds new functionality
-- 📝 **docs** - Documentation only
-- ♻️ **refactor** - Code restructuring without behavior change
-- 🧪 **test** - Test additions or modifications
-- 🔧 **config** - Configuration, build system, dependencies
+- 📖 **docs** - Documentation only
+- 🔄 **refactor** - Code restructuring without behavior change
+- ✅ **test** - Test additions or modifications
+- ⚙️ **config** - Configuration, build system, dependencies
+- ⚡ **performance** - Performance improvements, optimizations
 
 Importance markers (optional, for stakeholder visibility):
 - 🔴 **High importance** - Major features, critical fixes, architectural milestones
@@ -303,10 +304,10 @@ Importance markers (optional, for stakeholder visibility):
 **Purpose**: Help stakeholders scanning PROGRESS.md quickly identify significant accomplishments
 
 **Examples**:
-- `🐛 Fix color mismatch` - bug fix (no importance marker = low)
+- `🪲 Fix color mismatch` - bug fix (no importance marker = low)
 - `🔴 ✨ Add CSV export` - high-importance new feature
-- `♻️ Split Element.tsx` - refactoring (no marker = low)
-- `🟡 📝 Document API` - medium-importance docs
+- `🔄 Split Element.tsx` - refactoring (no marker = low)
+- `🟡 📖 Document API` - medium-importance docs
 
 ---
 
@@ -364,7 +365,7 @@ Before committing changes to CLAUDE.md:
 5. ✅ Are "Quick Items" truly quick (1-2 lines)?
 6. ✅ Do "Questions" have clear context and decision makers?
 7. ✅ Are "Implementation Notes" never deleted?
-8. ✅ Are items properly tagged (🐛✨📝♻️🧪🔧)?
+8. ✅ Are items properly tagged (🪲✨📖🔄✅⚙️⚡)?
 9. ✅ Are low-importance items in `<details>` tags?
 10. ✅ Is "Tasks from Conversation" section clear or empty?
 
