@@ -213,7 +213,7 @@ The project has 160 tests across 9 test files covering:
 - Panel helpers & styling
 - Component rendering
 
-See [TESTING.md](TESTING.md) for complete documentation on testing philosophy, strategies, and how to write tests.
+See [TESTING.md](docs/TESTING.md) for complete documentation on testing philosophy, strategies, and how to write tests.
 
 ### Contributing
 
