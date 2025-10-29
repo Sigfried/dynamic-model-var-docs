@@ -16,9 +16,6 @@ _(Empty - use [PLAN] prefix to add tasks here before implementing them)_
 
 ## Quick Items
 
-- 📖 Move doc files to docs directory
-  - Make `docs/images/temp/` for files like img.png that illustrate ephemeral issues
-  - Store images that will be used ongoingly (in README mostly) in `docs/images/`
 - 🪲 Clicking class brings up detail box with gray title bar saying "Variable:" and missing the slots section (last worked at ecd4828, though blue color was slightly off from C icon color)
 
 ---
@@ -50,7 +47,7 @@ _(Empty - use [PLAN] prefix to add tasks here before implementing them)_
 **Action**: Update test expectations to match what DetailPanel actually renders. This will establish baseline for catching future regressions (like slots disappearing bug).
 
 **Note**: Other tests are also failing:
-![img.png](img.png)
+![Test failures](docs/images/temp/dark-mode-issue.png)
 
 ---
 
