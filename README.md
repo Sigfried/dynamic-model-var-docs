@@ -1,101 +1,156 @@
-TODO:
-- remove redundancy below
-- mark stuff that should be included in the app
-    - on About screen, or
-    - contextual help
-
-# BDCHM Interactive Documentation App
+# BDCHM Interactive Documentation
 
 Interactive documentation browser for the [BioData Catalyst Harmonized Model (BDCHM)](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM) - a LinkML data model connecting clinical/observational classes to variable specifications.
 
-## Features
-
-### Browse the Model
-- **Dual panel layout** - Show different sections (Classes, Enums, Slots, Variables) side-by-side
-- **Class hierarchy tree** - Explore 47 classes organized by inheritance relationships
-- **Multiple detail dialogs** - Open, drag, and resize multiple entity details simultaneously
-- **Variable mapping** - See which of the 151 variables map to each class
-- **Clickable navigation** - Navigate between related entities (classes, enums, slots)
-- **State persistence** - Shareable URLs preserve panel layout and open dialogs
-- **Responsive tables** - Large tables split into columns for easier viewing
-
-Current features:
-- ✅ **Dual panel layout** with section toggles (Classes, Enums, Slots, Variables)
-- ✅ **Multiple draggable/resizable dialogs** with full state persistence
-- ✅ **Clickable navigation** between classes, enums, and slots
-- ✅ **Shareable URLs** that preserve layout and dialog positions
-- ✅ **Abstract class indicators** in class hierarchy tree
-- ✅ **Element-based architecture** - refactored for maintainability and SVG link preparation
-- ✅ **SVG link visualization**: Draw connections between related elements across panels
-
-Current Architecture
-
-**Panel System**:
-- Dual independent panels (left/right)
-- Each panel can show any combination of: Classes, Enums, Slots, Variables
-- SVG link overlay visualizes relationships with gradients
-- State persists to URL + localStorage
-
-**Detail Display**:
-- Wide screens: Stacked panels on right side
-- Narrow screens: Draggable/resizable dialogs
-- Multiple simultaneous detail views
-- 
-### What You Can Explore
-- Inheritance chains (e.g., `MeasurementObservation is_a Observation`)
-- Which variables map to which classes
-- Class attributes and their value ranges (enums, other classes, primitives)
-- Specimen lineage, activity workflows, observation structures
-
-## Architecture Philosophy: Shneiderman's Mantra
-
-**"Overview First, Zoom and Filter, Details on Demand"** - describes desired UX flow, not implementation order
-
-### 1. Overview First
-Show the model topology with all relationship types visible:
-- Class inheritance tree ✓
-- Class→Enum usage patterns ✓
-- Class→Class associations ✓
-- Slot definitions shared across classes ✓
-- Visual density indicators (which classes have most variables/connections) - future
-
-### 2. Zoom and Filter
-- **Search**: Full-text across classes, variables, enums, slots - future
-- **Filter**: Faceted filtering (class type, variable count, relationship type) - future
-- **Zoom**: Show k-hop neighborhood around focal element - future
-- **View toggles**: Classes only, classes+enums, etc. ✓
-
-### 3. Details on Demand
-- Show class definitions and descriptions ✓
-- List variables mapped to each class ✓
-- Display variable specs (data type, units, CURIE) ✓
-- Show class attributes with their ranges ✓
-- Sortable/filterable variable tables - future
-- Display slot definitions ✓
-- Bidirectional navigation between related elements ✓
-- Show inheritance chain with attribute overrides ✓
-- Display all incoming references to a class/enum ✓
+**Live Demo**: https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/
 
 ---
 
+## For Users
 
-## Developer Notes
+### What is BDCHM?
+
+The BioData Catalyst Harmonized Model (BDCHM) is a LinkML schema that defines:
+- **47 classes** organized by inheritance (e.g., `MeasurementObservation is_a Observation`)
+- **40 enums** (constrained value sets like condition types, specimen types)
+- **7 slots** (reusable attribute definitions shared across classes)
+- **151 variables** (specific measurements/observations mapped to classes)
+
+### What You Can Explore
+
+**Browse relationships**:
+- Inheritance chains (which classes extend which)
+- Class→Enum usage (which classes use which value sets)
+- Class→Class associations (participant relationships, specimen lineage, activity workflows)
+- Slot definitions shared across multiple classes
+
+**Investigate specific elements**:
+- Which variables map to which classes (e.g., 103 variables map to MeasurementObservation)
+- Class attributes and their value ranges (primitives, enums, or other classes)
+- Full variable specifications (data type, units, CURIE identifiers)
+- Inheritance chains with attribute overrides
+
+### Features
+
+**Dual Panel Layout**:
+- Show different sections (Classes, Enums, Slots, Variables) side-by-side
+- Each panel independently configurable
+- SVG links visualize relationships between elements across panels
+- Multiple preset layouts for common exploration tasks
+
+**Interactive Navigation**:
+- Click any class, enum, or slot to open its detail view
+- Multiple detail dialogs can be open simultaneously
+- Drag and resize dialogs for custom layouts
+- Bidirectional "used by" lists (e.g., which classes use this enum?)
+
+**State Persistence**:
+- Shareable URLs preserve panel layout, open dialogs, and expansion state
+- Browser localStorage saves your last session
+- Copy URL to share exact view with collaborators
+
+**Responsive Design**:
+- Wide screens: Stacked detail panels on right side
+- Narrow screens: Draggable/resizable dialogs
+- Responsive tables split into columns for easier viewing
+
+---
+
+## For Developers
+
+### Architecture Philosophy: Shneiderman's Mantra
+
+**"Overview First, Zoom and Filter, Details on Demand"**
+
+This principle guides the UX design:
+
+**1. Overview First** - Show the model topology with all relationship types visible:
+- Class inheritance tree (hierarchical view)
+- Class→Enum usage patterns (which classes use which value sets)
+- Class→Class associations (domain relationships)
+- Slot definitions shared across classes
+- Visual density indicators (future: show which classes have most variables/connections)
+
+**2. Zoom and Filter** (future enhancements):
+- Full-text search across classes, variables, enums, slots
+- Faceted filtering (class type, variable count, relationship type)
+- k-hop neighborhood view (show only elements within N steps of focal element)
+- Relationship type filters (show only `is_a` vs show associations)
+
+**3. Details on Demand** - Progressive disclosure of information:
+- Click to open detailed views
+- Show class definitions, descriptions, attributes, slots
+- Display variable specifications with data types and units
+- Show inheritance chains with attribute overrides
+- Bidirectional navigation between related elements
+- Future: Sortable/filterable variable tables
+
+### Core Insight: This is a Typed Graph, Not Just a Hierarchy
+
+BDCHM has multiple relationship types forming a rich graph structure:
+1. **Inheritance** (`is_a`) - class hierarchy tree
+2. **Class→Enum** - which classes use which constrained value sets
+3. **Class→Class associations** - domain relationships (participant, research study, specimen lineage)
+4. **Containment** (`part_of`, `contained_in`, `parent_specimen`)
+5. **Activities/Processes** - temporal relationships (creation, processing, storage)
+6. **Measurements** - observation and quantity relationships
+
+**Architecture implication**: We need UI patterns for exploring a typed graph, not just a tree.
+
+### Tech Stack
+
+- **Frontend**: React 18 + TypeScript + Vite
+- **Styling**: Tailwind CSS
+- **Testing**: Vitest + React Testing Library (160 tests)
+- **Data**: LinkML schema (YAML) + TSV variable specifications
+- **Visualization**: Native SVG with gradient definitions
+- **State Management**: React Hooks + URL parameters + localStorage
+
+### Data Flow
+
+```
+bdchm.yaml (LinkML schema)
+    ↓ Python script
+bdchm.metadata.json
+    ↓ dataLoader.ts
+ClassTree + Reverse Indices + Slot Usage
+    ↓
+Element classes (ClassElement, EnumElement, etc.)
+    ↓
+UI Components + SVG Links
+```
+
+### Key Architecture Patterns
+
+**Element-Based Architecture**:
+- Base `Element` class with subclasses: `ClassElement`, `EnumElement`, `SlotElement`, `VariableElement`
+- Each element knows its name, type, and relationships
+- ElementRegistry centralizes type metadata (colors, labels, icons)
+
+**Collection Pattern**:
+- Each element type has a corresponding collection class
+- Collections stored in `Map<ElementTypeId, ElementCollection>`
+- Generic interfaces enable type-safe iteration
+
+**Generic Tree Types**:
+- `Tree<T>` and `TreeNode<T>` for hierarchical data
+- Reusable for class hierarchies and variable groupings
+- Generic operations: flatten(), find(), getLevel(), map()
+
+**RenderableItem Interface**:
+- Separates data structure from presentation
+- Collections provide `getRenderableItems()` returning structure metadata
+- UI components render generically without type-specific logic
 
 ### Data Sources
-The application uses two primary data sources:
+
 - **Model Schema**: [bdchm.yaml](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/blob/main/src/bdchm/schema/bdchm.yaml) → processed into `bdchm.metadata.json`
 - **Variable Specs**: [Table S1 (Google Sheet)](https://docs.google.com/spreadsheets/d/1PDaX266_H0haa0aabMYQ6UNtEKT5-ClMarP0FvNntN8/edit?gid=0#gid=0) → `variable-specs-S1.tsv`
 
-**To update data**: Run `npm run download-data`
+**To update data**: `npm run download-data`
 
-## Getting Started
+### Getting Started
 
-### Prerequisites
-- Node.js (recent version with ES modules support)
-- npm or pnpm
-- Python 3.9+ and poetry (for data download script)
-
-### Installation & Development
 ```bash
 # Install dependencies
 npm install
@@ -106,6 +161,12 @@ npm run download-data
 # Run development server
 npm run dev
 
+# Run tests
+npm test
+
+# Type checking
+npm run typecheck
+
 # Build for production
 npm run build
 
@@ -113,38 +174,48 @@ npm run build
 npm run deploy
 ```
 
-### Tech Stack
-- **React + TypeScript**: Type safety, component reuse
-- **Vite**: Fast dev server, HMR
-- **Tailwind CSS**: Rapid styling
-- **D3.js (minimal)**: Only for specific graph algorithms or layouts that React can't handle
-  **[Not using D3 so far. SVG link path generated directly, but consider using it]**
-
-
 ### Testing
-The project has comprehensive test coverage (134 tests) for core logic and utilities.
 
-```bash
-# Run tests in watch mode
-npm test
+The project has 160 tests across 9 test files covering:
+- Data loading & processing
+- Element relationships & SVG links
+- Adaptive layout logic
+- Duplicate detection
+- Panel helpers & styling
+- Component rendering
 
-# Run all tests once
-npm test -- --run
-```
+See [TESTING.md](TESTING.md) for complete documentation on testing philosophy, strategies, and how to write tests.
 
-See [TESTING.md](TESTING.md) for complete testing documentation, including:
-- Testing philosophy and strategy
-- Detailed test file documentation
-- How to write new tests
-- Examples and troubleshooting
-
-## Contributing
+### Contributing
 
 When adding new features:
-- Extract testable logic into utility functions
-- Write tests for data transformations and calculations
-- Run the full test suite before committing: `npm test -- --run`
+1. Extract testable logic into utility functions
+2. Write tests for data transformations and calculations
+3. Run full test suite before committing: `npm test -- --run`
+4. Run type checking: `npm run typecheck`
 
-**Documentation:**
-- [CLAUDE.md](CLAUDE.md) - Development context, architecture decisions, implementation notes
-- [TESTING.md](TESTING.md) - Testing strategy, test file documentation, how to write tests
+**Documentation**:
+- **README.md** (this file) - User guide, developer overview, architecture philosophy
+- **CLAUDE.md** - Upcoming tasks and implementation notes for AI-assisted development
+- **PROGRESS.md** - Completed work for reporting to managers/stakeholders
+- **TESTING.md** - Testing strategy and test documentation
+
+### LinkML-Specific Notes
+
+**Understanding Slots, Attributes, and Slot Usage**:
+
+From LinkML documentation: "Attributes are really just a convenient shorthand for being able to declare slots 'inline'."
+
+- **Slots** (top-level): Reusable property definitions in schema's `slots:` section
+- **Attributes** (inline): Class-specific slot definitions in `attributes:` section (syntactic sugar for inline slots)
+- **Slot Usage** (refinements): Class-specific customizations in `slot_usage:` section (add constraints, change range, make required)
+
+The UI displays all three together in a unified "Attributes & Slots" table since they're semantically equivalent.
+
+**Metadata Structure**: LinkML uses `range` (not `type`) for type information, `multivalued` for arrays, `required` for mandatory fields.
+
+---
+
+## Credits
+
+Developed by Scott Gold with AI assistance from Claude (Anthropic).

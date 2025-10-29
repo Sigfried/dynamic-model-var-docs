@@ -1,266 +1,281 @@
-the distinction between temp.md and CLAUDE.md has more or less fallen apart. here's my idea for a new documentation structure
-> **📝 Purpose**: 
-> - Document upcoming tasks and discussions needed to specify them
->
-> **See also**:
-> - README.md:
->   - User-facing documentation
->     - material that can go in app help or about screen
->     - philosophy, current architecture, etc.
->     - features
->   - developer documentation
-> - **PROGRESS.md** - Completed work (for reporting)
-> - **TESTING.md** - Testing philosophy and practices
+# CLAUDE.md - Development Tasks & Context
 
-TODO:
-- move everything out of temp.md
-    - if it's an upcoming task, put it here
-    - if it's completed, put it in PROGRESS.md
-    - if it should be seen by users or developers, put it in README.md
-- maybe treat specific tasks and overall goals or features differently
-  - but don't redundantly list the same thing in features and in tasks
-  - if it's existing features, README
-  - if it's upcoming features, here
-- tasks related to specific features should be listed with those features
-- try to keep tasks in planned implementation order
-- for tasks/features dependent on upcoming discussions or open questions, list
-  them with the discussion/question descriptions
-- when questions are resolved, tasks can be separated from them and listed
-  with other tasks
-- try to remove redundancy
-- once documentation is refactored, it should be clearer to me where
-  i should put new tasks... now i forget the tasks i wanted to add that
-  prompted me to want documentation refactoring in the first place
+> **Purpose**: Document upcoming tasks and discussions needed to specify them
+>
+> **IMPORTANT**: Review [README.md](README.md) for architecture philosophy, design patterns, and technical context before starting work
 
 ---
 
-## Future Features
+## Current Work
 
-[moved from README.md]
-- **Search & filter**: Full-text search, faceted filters, quick navigation
-- **Custom presets**: Save frequently-used panel configurations
-- **Neighborhood exploration**: Show k-hop neighbors, relationship type filters
-- **Advanced views**: Network graphs, enum-class matrix, comparison views
+### Fix DetailPanel Tests (10 failing)
 
+**Status**: Tests created, need to update expectations to match actual rendering
 
+**What's failing**: 10/26 tests in DetailPanel.test.tsx
+- Test expectations don't match actual rendered text
+- Example: Expected "Class" label, actual shows "extends ParentClass"
+- Example: Expected "Inherits from:", actual shows "extends"
 
-### Architecture: Generalize Hierarchical Structure
+**Action**: Update test expectations to match what DetailPanel actually renders. This will establish baseline for catching future regressions (like slots disappearing bug).
 
-**Current limitation**: `ClassNode` has `children: ClassNode[]` - hierarchy is type-specific.
+---
 
-**Problem**:
-- Only classes can be hierarchical
-- Can't reorganize views (e.g., show enums with classes nested under them)
-- Variables are grouped by class but not using a general hierarchy abstraction
-- Difficult to support alternate view modes
+## Upcoming Tasks (In Implementation Order)
 
-**Proposed solution**: Generic tree/hierarchy types
+### 1. Complete getRenderableItems() Implementation
+
+**Goal**: Finish converting collections from renderItems() to getRenderableItems() pattern
+
+**Status**:
+- ✅ EnumCollection done
+- ✅ SlotCollection done
+- ⏳ ClassCollection pending
+- ⏳ VariableCollection pending
+
+**ClassCollection challenges**:
+- Currently stores ClassNode[] tree structure
+- Need to flatten tree with level tracking
+- Maintain expansion state handling
+- Return RenderableItem[] with proper isClickable flags
+
+**VariableCollection challenges**:
+- Currently groups variables by class in renderItems()
+- Need to pre-group during data load (move logic to dataLoader.ts)
+- Variable group headers use actual ClassElement instances (decision made)
+- Group headers: isClickable=false (expand/collapse only)
+- Variables: isClickable=true (open dialog)
+
+**Files to modify**:
+- `src/models/Element.tsx` - ClassCollection and VariableCollection implementations
+- `src/utils/dataLoader.ts` - Move variable grouping logic here
+
+### 2. Update Section.tsx to Render RenderableItems
+
+**Goal**: Remove type-specific rendering logic from Section.tsx, use generic RenderableItem rendering
+
+**Current state**: Section.tsx calls `collection.renderItems()` which returns JSX
+**Target state**: Section.tsx calls `collection.getRenderableItems()` which returns data, Section renders it
+
+**Implementation**:
 ```typescript
-// Generic tree node
-interface TreeNode<T> {
-  data: T;
-  children: TreeNode<T>[];
-  parent?: TreeNode<T>;
-}
+function Section() {
+  const items = collection.getRenderableItems(expandedItems);
 
-// Heterogeneous trees (ClassElement with EnumElement children)
-interface HierarchyNode {
-  element: Element;
-  children: HierarchyNode[];
-}
-
-// Tree utilities
-class Hierarchy<T> {
-  roots: TreeNode<T>[];
-  flatten(): T[]
-  findByName(name: string): TreeNode<T> | null
+  return items.map(item => (
+    <ItemDisplay
+      item={item}
+      onClick={item.isClickable ? () => onSelect(item.element) :
+               item.hasChildren ? () => toggleExpansion(item.id) :
+               undefined}
+    />
+  ));
 }
 ```
 
 **Benefits**:
-- Any element type can be hierarchical
-- Flexible view reorganization (classes under enums, enums under classes, etc.)
-- Reusable tree operations (flatten, search, traverse)
-- Could support DAGs later if needed (e.g., multiple inheritance)
+- Section doesn't need type-specific conditionals
+- Collections define structure as data, not React rendering
+- Easy to add new element types
 
-**Implications**:
-- Would replace `ClassNode.children` with more general structure
-- Collections could support multiple hierarchy views
-- Panel sections could render any hierarchy type
-- Tests would need updating (currently assume ClassNode hierarchy)
+**Files to modify**:
+- `src/components/Section.tsx`
+- Create new component: `src/components/ItemDisplay.tsx` (or inline in Section)
+
+### 3. Remove renderItems() Method
+
+**Goal**: Delete obsolete renderItems() after Section uses getRenderableItems()
+
+**Files to modify**:
+- `src/models/Element.tsx` - Remove renderItems() from all 4 collection classes
+
+### 4. Complete Collections Store Elements Refactor (Task 3.6)
+
+**Goal**: Eliminate redundant wrapping - collections should store Element instances, not raw data
+
+**Remaining conversions**:
+1. **SlotCollection** - Convert to store SlotElement instances
+2. **VariableCollection** - Convert to store VariableElement instances
+3. **ClassCollection** - Convert to store ClassElement instances (tricky: currently stores ClassNode[] tree)
+
+**Then cleanup**:
+4. Pre-compute relationships - Move getRelationships() into Element constructors, store as readonly property
+5. Remove createElement() factory - No longer needed once collections store Elements
+6. Remove getElementName() helper - Use element.name directly (already works via polymorphism)
+7. Replace categorizeRange() duck typing - Use elementLookup map instead of checking if name ends with "Enum"
+8. Remove ElementData type - Once collections store Elements, this union type becomes obsolete
+
+**Files to modify**:
+- `src/models/Element.tsx`
+- `src/utils/dataLoader.ts`
+- `src/types.ts` (remove ElementData)
+
+### 5. Split Element.tsx into Separate Files
+
+**Current state**: Element.tsx is 919 lines with 4 element classes + 4 collection classes
+
+**Target structure** (keep element class with its collection class in same file):
+- `models/Element.ts` (base Element and ElementCollection classes)
+- `models/ClassElement.ts` (ClassElement + ClassCollection)
+- `models/EnumElement.ts` (EnumElement + EnumCollection)
+- `models/SlotElement.ts` (SlotElement + SlotCollection)
+- `models/VariableElement.ts` (VariableElement + VariableCollection)
+- `models/index.ts` (barrel export)
+
+**Benefits**:
+- Each element/collection pair stays together (easier to maintain)
+- Smaller, more focused files
+- Easier to understand each element type in isolation
+
+### 6. Refactor App.tsx
+
+**Current state**: App.tsx is 600+ lines, too long
+
+**Extract logic into hooks**:
+- `hooks/useModelData.ts` - Data loading
+- `hooks/useDialogState.ts` - Dialog management
+- `hooks/useLayoutState.ts` - Panel layout + expansion state (consolidate useExpansionState)
+- Keep App.tsx focused on composition
+
+**Additional cleanup**:
+- Consolidate expansion state: Move from useExpansionState hook into statePersistence.ts
+- Remove dead code: Delete evc/ecn params from statePersistence.ts (replaced by lve/rve/lce/rce)
+
+**Files to create**:
+- `src/hooks/useModelData.ts`
+- `src/hooks/useDialogState.ts`
+- `src/hooks/useLayoutState.ts`
+
+**Files to modify**:
+- `src/App.tsx`
+- `src/utils/statePersistence.ts`
+
+---
+
+## Future Features (Phase 4+)
 
 ### Phase 4: Search and Filter
+
+**Search functionality**:
 - Search bar with full-text search across all elements
-- Filter controls (checkboxes for class families, variable count slider)
 - Highlight search results in tree/sections
 - Quick navigation: search results open in new dialogs
 
+**Filter controls**:
+- Checkboxes for class families
+- Variable count slider
+- Relationship type toggles
+
 ### Phase 5: Neighborhood Zoom
-- "Focus mode" showing only k-hop neighborhood around selected element
+
+**Focus mode**:
+- Show only k-hop neighborhood around selected element
 - Relationship type filters ("show only `is_a` relationships" vs "show associations")
 - Breadcrumb trail showing navigation path
 - "Reset to full view" button
 
 ### Enhanced Element Metadata Display
-Show additional relationship counts for classes in tree view:
-- **Current**: Only variable count shown (e.g., "Condition (20)")
-- **Desired**: Show counts for associated enums, slots, and classes
-- **Example**: "Condition (20 vars, 5 enums, 2 classes, 1 slot)"
+
+Show additional relationship counts in tree view:
+- **Current**: Only variable count (e.g., "Condition (20)")
+- **Desired**: "Condition (20 vars, 5 enums, 2 classes, 1 slot)"
 
 ### Custom Preset Management
+
 User-managed presets replacing hard-coded ones:
-- Save Preset button
-- Prompts user for preset name
+- Save Preset button → prompts for name
 - Saves current panel configuration (sections + dialogs) to localStorage
-- Display saved presets in header
-- Remove icon for each preset
+- Display saved presets in header with remove icons
 
 ### Advanced Overview
+
 Multiple view modes and analytics:
-- Tree view (current), Network view, Matrix view (class-enum usage)
-- Mini-map showing current focus area in context of full model
-- Statistics dashboard (relationship counts, distribution charts)
+- Tree view (current)
+- Network view (force-directed graph for associations)
+- Matrix view (class-enum usage heatmap)
+- Mini-map showing current focus area
+- Statistics dashboard
 
 ---
 
-## Technical Notes
+## Lower Priority Issues
 
-### Data Loading
-- Schema source: `bdchm.yaml` → `bdchm.metadata.json` (generated by Python/LinkML tools)
-- Variables: `variable-specs-S1.tsv` (downloaded from Google Sheets)
-- Update command: `npm run download-data`
+### Terminology Consistency
 
-### MeasurementObservation Challenge
-103 variables map to a single class (68% of all variables). Requires:
-- Pagination or virtualization (future)
-- Grouping/filtering within class (✓ implemented - collapsible by class)
-- Consider sub-categorization by measurement type
+**Problem**: Still using "Property" to denote attributes and slots
 
-### Why Not Force-Directed Graphs?
-- **Class inheritance** is a tree → use tree layout ✓
-- **Variables→Classes** is bipartite → use bipartite layout or tables ✓
-- **Full relationship graph** would be chaotic → filter by relationship type first
+**Action needed**:
+- Use "Attribute" and "Slot" consistently
+- Document terminology guidelines below to prevent regression
 
-Force-directed layouts are useful for:
-- Exploring k-hop neighborhoods (after filtering)
-- Visualizing class associations (not inheritance)
-- Showing clusters of related enums/classes
+**Terminology guidelines**:
+- ✅ **Attribute** or **Slot** - NOT "Property"
+- ✅ **Element** - NOT "Entity" (entity was old term)
+- ✅ **Class**, **Enum**, **Slot**, **Variable** - Capitalize when referring to element types
 
-But default view should be structured (tree/table), not force-directed chaos.
+### External Link Integration
 
-### Performance Optimizations (Future)
+**Goal**: Link prefixed IDs to external sites (OMOP, DUO, etc.)
+
+**Implementation**:
+- Use prefix data from bdchm.yaml
+- Make CURIEs clickable in variable details
+- Add tooltip showing full URL before clicking
+
+### Feature Parity with Official Docs
+
+Reference: https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/
+
+Missing features:
+1. **Types** - Import and display linkml:types
+2. **Dynamic enums** - Show which enums are dynamic
+3. **LinkML Source** - Collapsible raw LinkML view
+4. **Direct and Induced** - Show direct vs inherited slots
+5. **Partial ERDs** - Visual relationship diagrams
+
+### GitHub Issue Management
+
+Issue: https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/issues/126
+- Make issue more concise
+- Add subissues for specific features (ASK FIRST)
+
+---
+
+## Performance Optimizations (Future)
+
 When working with larger models or slower devices:
 - **Virtualize long lists**: MeasurementObservation has 103 variables; consider react-window or react-virtual
 - **Viewport culling for links**: Only render SVG links for visible elements
 - **Animation library**: Consider react-spring for smoother transitions (current CSS transitions work fine)
 
 ---
-## Architectural Decision Points
 
-### DECISION: Move renderItems to Section.tsx with Generic Tree Types
+## Open Architectural Questions
 
-**Status**: ✅ Decided, implementation in progress (see Phase 3h in PROGRESS.md)
-
-**Problem**: renderItems() puts view code in model classes. Collections know their structure (tree vs flat vs grouped), but rendering should be in Section.tsx.
-
-**Solution**:
-1. ✅ Create generic Tree<T> types to replace ClassNode-specific hierarchy
-2. 🔄 Collections implement getRenderableItems() returning RenderableItem[]
-   - ✅ EnumCollection and SlotCollection done
-   - ⏳ ClassCollection and VariableCollection pending
-3. ⏳ RenderableItem has structure info (level, hasChildren, isExpanded) plus isClickable flag
-4. ⏳ Section.tsx renders RenderableItems generically
-5. ⏳ Variable group headers use actual ClassElement (not null or special type)
-
-**Benefits**:
-- Collections define structure as data, not React rendering
-- Section doesn't need type-specific conditionals
-- Easy to add new element types
-- Generic tree operations (flatten, search, traverse)
-
-See temp.md "CURRENT WORK" section for detailed implementation status.
-
-### OPEN QUESTION: Where Should Element Type Metadata Live?
+### Where Should Element Type Metadata Live?
 
 **Status**: Deferred - keeping ElementRegistry.ts for now (working well)
 
-**Current approach:**
+**Current approach**:
 - Separate `ElementRegistry.ts` file with:
   - `ELEMENT_TYPES` map: colors, labels, icons, pluralLabel per type
   - `RELATIONSHIP_TYPES` map: relationship metadata
   - Helper functions: `getAllElementTypeIds()`, `isValidElementType()`
 - Element classes import from registry: `ELEMENT_TYPES[this.type]`
 
-**Alternative approach:**
-Put metadata directly in element classes as static properties:
-```typescript
-class ClassElement extends Element {
-  static readonly typeId = 'class' as const;
-  static readonly metadata = {
-    icon: 'C',
-    label: 'Class',
-    pluralLabel: 'Classes',
-    color: { name: 'blue', selectionBg: '...', ... }
-  };
+**Alternative approach**: Put metadata directly in element classes as static properties
 
-  readonly type = ClassElement.typeId;
-  // ...
-}
-```
+**Tradeoffs**:
+- **Current (separate registry)**: All metadata in one place, easy overview, clear separation
+- **Alternative (in classes)**: Better cohesion, less indirection, but scattered across files
 
-**Tradeoffs:**
-
-**Option A: Keep separate registry (current)**
-- ✅ All metadata in one place, easy to see full type system
-  - sg note: there are also types and interfaces in types.tx; should they move?
-- ✅ Can add new element types without touching existing files
-- ✅ Registry can have utility functions operating on all types
-- ✅ Clear separation: models focus on data, registry on metadata
-- ❌ Extra indirection: `ELEMENT_TYPES[this.type]` instead of `this.metadata`
-- ❌ Two places to update when adding element types
-
-**Option B: Metadata in element classes**
-- ✅ Metadata lives with the class it describes (better cohesion)
-- ✅ Less indirection: `ClassElement.metadata` is direct
-- ✅ TypeScript can enforce metadata completeness per class
-- ❌ Metadata scattered across multiple files
-- ❌ Harder to see full type system at a glance
-- ❌ Registry functions would need to iterate all classes
-
-**Hybrid option C: Classes define metadata, registry aggregates**
-```typescript
-// ClassElement.ts
-class ClassElement extends Element {
-  static readonly metadata = { ... };
-}
-
-// ElementRegistry.ts (generated/aggregated)
-export const ELEMENT_TYPES = {
-  class: ClassElement.metadata,
-  enum: EnumElement.metadata,
-  slot: SlotElement.metadata,
-  variable: VariableElement.metadata
-} as const;
-```
-- ✅ Metadata defined with classes (cohesion)
-- ✅ Registry provides convenient lookup
-- ❌ More complex, potential for sync issues
-
-**User's question:** "Is there any reason not to combine stuff from ElementRegistry into model classes? I'm not sure where to put it"
-
-**Considerations:**
-- If we move renderItems out of model classes (see selectedElement question), models become more data-focused → suggests keeping metadata separate
-- If element classes handle their own rendering, having metadata there makes sense
-- Current registry is only ~200 lines and provides nice overview of type system
-- Would split registry into 4+ files (one per element type) if moved into classes
-
-**Recommendation TBD** - Depends on outcome of renderItems/selectedElement discussion. If models stay focused on data (no view code), keep registry separate. If models handle their own display, move metadata into classes.
+**Decision**: Keep current approach until there's a compelling reason to change
 
 ---
 
 ## Implementation Notes & Lessons Learned
 
-### LinkML Metadata Structure Gotchas
+### LinkML Metadata Structure
 
 **Bug fix reference**: DetailView.tsx originally looked for `propDef.type` (JSON Schema convention) but LinkML metadata uses `propDef.range` for type information.
 
