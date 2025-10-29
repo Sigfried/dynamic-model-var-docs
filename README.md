@@ -63,6 +63,42 @@ The BioData Catalyst Harmonized Model (BDCHM) is a LinkML schema that defines:
 
 ## For Developers
 
+### 🚨 CRITICAL: Separation of Model and View Concerns
+
+**Components MUST use abstract `Element` and `ElementCollection` classes ONLY.**
+
+The view layer must NOT import or reference model-specific types (`ClassNode`, `EnumDefinition`, `SlotDefinition`, `VariableSpec`). Extract UI-focused attributes through polymorphic methods whenever conditional logic is needed.
+
+**❌ WRONG** - Component knows about model types:
+```typescript
+import type { ClassNode, EnumDefinition } from '../types';
+
+function MyComponent({ element }: { element: ClassNode | EnumDefinition }) {
+  if ('children' in element) { /* ClassNode logic */ }
+  if ('permissible_values' in element) { /* EnumDefinition logic */ }
+}
+```
+
+**✅ CORRECT** - Component uses abstract Element:
+```typescript
+import type { Element } from '../models/Element';
+
+function MyComponent({ element }: { element: Element }) {
+  const info = element.getDisplayInfo(); // Polymorphism handles type differences
+  return <div>{info.title}</div>;
+}
+```
+
+**Rationale**: This architecture enables:
+- Type-safe polymorphism instead of duck typing
+- Model changes don't cascade to view layer
+- New element types added without touching components
+- Clear separation between data structure and presentation
+
+See `src/models/Element.tsx` for the abstract base classes that all components must use.
+
+---
+
 ### Architecture Philosophy: Shneiderman's Mantra
 
 **"Overview First, Zoom and Filter, Details on Demand"**

@@ -8,6 +8,36 @@
 
 ---
 
+## 🚨 CRITICAL ARCHITECTURAL PRINCIPLE 🚨
+
+**SEPARATION OF MODEL AND VIEW CONCERNS**
+
+Components must ONLY use abstract `Element` and `ElementCollection` classes. Extract UI-focused attributes through polymorphic methods whenever conditional logic is needed. **The view layer MUST NOT know about model-specific types** like `ClassNode`, `EnumDefinition`, `SlotDefinition`, or `VariableSpec`.
+
+**❌ WRONG** - Component knows about model types:
+```typescript
+// DetailPanel.tsx
+function DetailPanel({ element }: { element: ClassNode | EnumDefinition | SlotDefinition }) {
+  if ('children' in element) { /* handle ClassNode */ }
+  if ('permissible_values' in element) { /* handle EnumDefinition */ }
+}
+```
+
+**✅ CORRECT** - Component uses abstract Element:
+```typescript
+// DetailPanel.tsx
+function DetailPanel({ element }: { element: Element }) {
+  const displayInfo = element.getDisplayInfo(); // Polymorphic method
+  return <div>{displayInfo.title}</div>;
+}
+```
+
+**Why this matters**: We spent days refactoring because view/model concerns were mixed. Components were doing type checks on raw model data instead of using polymorphism. This violates separation of concerns and makes code brittle.
+
+**Before making ANY changes to components**: Ask "Does this component need to know about specific model types?" If yes, the architecture is wrong - put the logic in the Element classes instead.
+
+---
+
 ## Tasks from Conversation
 
 _(Empty - use [PLAN] prefix to add tasks here before implementing them)_
@@ -16,7 +46,11 @@ _(Empty - use [PLAN] prefix to add tasks here before implementing them)_
 
 ## Quick Items
 
-- 🪲 Clicking class brings up detail box with gray title bar saying "Variable:" and missing the slots section (last worked at ecd4828, though blue color was slightly off from C icon color)
+- 🪲 Clicking class brings up detail box with gray title bar saying "Variable:" and missing the slots section
+  - **Root cause**: DetailPanel uses duck typing on raw model types (`'children' in element`) instead of polymorphic Element methods
+  - **Proper fix**: Complete "Collections Store Elements" refactor first, then DetailPanel works with abstract Element interface
+  - **Why not quick fix**: Passing `ClassNode`, `EnumDefinition`, `SlotDefinition` Maps to DetailPanel violates separation of concerns (see architectural principle above)
+  - **Status**: Blocked until "Collections Store Elements" refactor complete
 
 ---
 
