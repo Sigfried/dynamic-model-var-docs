@@ -67,35 +67,103 @@ _(Empty - use [PLAN] prefix to add tasks here before implementing them)_
 
 ---
 
-## Current Phase: 🔄 Unify Class and Variable Data Structures
+## Current Phase: 🔄 Refactor Types to Separate DTOs from Domain Models
 
-**Goal**: Make both ClassCollection and VariableCollection use the Tree data model consistently
+**Goal**: Fix confusion between interfaces (data shape) and classes (domain models with behavior)
 
 **Why this is current phase**:
-- Pre-requisite for "Collections Store Elements" refactor
-- Currently ClassCollection uses Tree (`ClassNode[]`) but VariableCollection uses flat array with manual grouping
-- Both need same structure before we can create unified Element wrappers
-- Variables are already conceptually grouped by class, just need proper tree structure
+- Current code mixes DTO shapes with model logic (e.g., `ClassNode` has tree structure)
+- Element classes just wrap interfaces instead of being the model
+- Components import raw types instead of using abstract Element
+- Must fix this before unifying tree structures
 
-**Current inconsistency**:
-- **ClassCollection**: Stores `ClassNode[]` tree, parent/child relationships explicit
-- **VariableCollection**: Stores flat `VariableSpec[]`, groups in constructor, manual expand/collapse logic
+**Current problems**:
+1. **types.ts** has both DTOs AND model logic (ClassNode has children[], variables[])
+2. **Element classes** just wrap interfaces (`private data: ClassNode`) without adding value
+3. **Collections** store raw interface types, not Element instances
+4. **Components** import ClassNode, EnumDefinition directly from types.ts
 
-**Target state**:
-- Both use Tree model with ClassNode structure
-- Variable tree uses ClassNode for group headers (ClassElement instances, `isClickable=false`)
-- Individual variables are children of class nodes (`isClickable=true`)
-- Grouping logic moves from VariableCollection constructor to dataLoader
-- Expansion/collapse handled uniformly across both collections
+**Target architecture**:
 
-**Key decision** (already made): Variable group headers use actual ClassElement instances, not a separate type. The `isClickable` flag distinguishes behavior: class headers are expand/collapse only, variables open dialogs.
+```typescript
+// types.ts - ONLY DTOs (raw data from files/APIs)
+interface ClassMetadata {  // From bdchm.metadata.json
+  name: string;
+  description?: string;
+  is_a?: string;  // parent class name
+  attributes?: Record<string, any>;
+  slots?: string[];
+}
+
+interface VariableSpecRow {  // From TSV file
+  bdchmElement: string;
+  variableLabel: string;
+  // ... other columns
+}
+
+// Generic tree structure (start as interface, promote to class if we need methods)
+interface TreeNode<T> {
+  element: T;
+  children: TreeNode<T>[];
+}
+
+interface ModelData {
+  collections: Map<ElementTypeId, ElementCollection>;
+  elementLookup: Map<string, Element>;
+}
+```
+
+```typescript
+// models/Element.tsx - Classes ARE the domain model
+class ClassElement extends Element {
+  readonly type = 'class' as const;
+  readonly name: string;
+  readonly description?: string;
+  readonly parent?: string;
+  private properties: Map<string, Property>;
+  // ... all fields that were in ClassNode, now owned by class
+
+  constructor(metadata: ClassMetadata, variables: VariableSpecRow[]) {
+    super();
+    this.name = metadata.name;
+    // ... initialize from DTO
+  }
+
+  // Domain methods
+  getInheritanceChain(): ClassElement[] { /* ... */ }
+  getRelationships(): Relationship[] { /* ... */ }
+}
+
+// Collections store TreeNode<Element>
+class ClassCollection {
+  private tree: TreeNode<ClassElement>[];
+
+  constructor(elements: ClassElement[]) {
+    this.tree = this.buildTree(elements);
+  }
+}
+```
+
+**Implementation steps**:
+1. Add DTO interfaces to types.ts (ClassMetadata, VariableSpecRow, etc.) - keep existing interfaces temporarily
+2. Update Element classes to contain fields directly (not wrap interfaces)
+3. Add TreeNode<T> generic interface to types.ts
+4. Update dataLoader to construct Element instances from DTOs
+5. Update collections to store TreeNode<Element>
+6. Remove old interfaces (ClassNode, EnumDefinition, etc.) from types.ts
+7. Update components to never import model-specific types
 
 **Files to modify**:
-- `src/utils/dataLoader.ts` - Build variable tree: ClassNode[] where each node contains variables as children
-- `src/models/Element.tsx` - Update VariableCollection to accept ClassNode[] tree structure
-- `src/types.ts` - May need to adjust ClassNode to support variables as children (or keep variables in separate field)
+- `src/types.ts` - Add DTOs, add TreeNode<T>, eventually remove old interfaces
+- `src/models/Element.tsx` - Element classes own their fields, take DTOs in constructor
+- `src/utils/dataLoader.ts` - Construct Element instances from DTOs, build TreeNode structures
+- `src/components/*.tsx` - Remove imports of ClassNode, EnumDefinition, etc.
 
-**After this completes**: Can proceed with "Collections Store Elements" refactor
+**After this completes**:
+- Element classes ARE the model (not wrappers)
+- Collections use TreeNode<Element> structure consistently
+- Components only know about abstract Element
+- Can proceed with view/model separation completion
 
 ---
 
@@ -134,10 +202,6 @@ Listed in intended implementation order (top = next):
 - `src/types.ts` (remove ElementData)
 
 ---
-
-## Upcoming Work
-
-Listed in intended implementation order (top = next):
 
 ### 🔄 Move renderItems to Section.tsx
 
