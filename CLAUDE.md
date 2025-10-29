@@ -67,37 +67,42 @@ _(Empty - use [PLAN] prefix to add tasks here before implementing them)_
 
 ---
 
-## Current Phase: ✅ 🪲 Fix DetailPanel Tests & Bug
+## Current Phase: 🔄 Collections Store Elements (Not Raw Data)
 
-### Fix DetailPanel Tests (10 failing)
+**Goal**: Complete model/view separation by making collections store Element instances instead of raw data types
 
-**Status**: Tests created, need to update expectations to match actual rendering
+**Why this is current phase**:
+- Blocks DetailPanel bug fix (components need to use abstract Element, not raw model types)
+- Critical architectural foundation - must be complete before other refactoring
+- Enables proper polymorphism throughout the codebase
 
-**What's failing**: 10/26 tests in DetailPanel.test.tsx
-- Test expectations don't match actual rendered text
-- Example: Expected "Class" label, actual shows "extends ParentClass"
-- Example: Expected "Inherits from:", actual shows "extends"
+**Remaining conversions**:
+1. **SlotCollection** - Convert to store SlotElement instances
+2. **VariableCollection** - Convert to store VariableElement instances
+3. **ClassCollection** - Convert to store ClassElement instances (tricky: currently stores ClassNode[] tree)
 
-**Action**: Update test expectations to match what DetailPanel actually renders. This will establish baseline for catching future regressions (like slots disappearing bug).
+**Then cleanup**:
+4. Pre-compute relationships - Move getRelationships() into Element constructors, store as readonly property
+5. Remove createElement() factory - No longer needed once collections store Elements
+6. Remove getElementName() helper - Use element.name directly (already works via polymorphism)
+7. Replace categorizeRange() duck typing - Use elementLookup map instead of checking if name ends with "Enum"
+8. Remove ElementData type - Once collections store Elements, this union type becomes obsolete
 
-**Note**: Other tests are also failing:
-![Test failures](docs/images/temp/dark-mode-issue.png)
+**After this phase completes**:
+- DetailPanel can be refactored to use abstract Element interface
+- Components will never need to import model-specific types
+- New element types can be added without touching view layer
+
+**Files to modify**:
+- `src/models/Element.tsx`
+- `src/utils/dataLoader.ts`
+- `src/types.ts` (remove ElementData)
 
 ---
 
 ## Upcoming Work
 
 Listed in intended implementation order (top = next):
-
-### ✨ Give Right-Side Stacked Detail Panels Same Features as Floating Dialogs
-
-**Goal**: Feature parity between stacked panels (wide screens) and floating dialogs (narrow screens)
-**Importance**: Low - minor UX polish, not a major feature
-
-**Missing features in stacked panels**:
-- TBD: Need to compare and document differences
-
----
 
 ### 🔄 Move renderItems to Section.tsx
 
@@ -169,26 +174,31 @@ function Section() {
 
 ---
 
-### 🔄 Collections Store Elements (Not Raw Data)
+### ✅ 🪲 Fix DetailPanel Tests & Bug
 
-**Goal**: Eliminate redundant wrapping - collections should store Element instances, not raw data
+**Status**: Blocked until "Collections Store Elements" refactor completes (currently in progress)
 
-**Remaining conversions**:
-1. **SlotCollection** - Convert to store SlotElement instances
-2. **VariableCollection** - Convert to store VariableElement instances
-3. **ClassCollection** - Convert to store ClassElement instances (tricky: currently stores ClassNode[] tree)
+**What's failing**: 10/26 tests in DetailPanel.test.tsx
+- Test expectations don't match actual rendered text
+- Example: Expected "Class" label, actual shows "extends ParentClass"
+- Example: Expected "Inherits from:", actual shows "extends"
 
-**Then cleanup**:
-4. Pre-compute relationships - Move getRelationships() into Element constructors, store as readonly property
-5. Remove createElement() factory - No longer needed once collections store Elements
-6. Remove getElementName() helper - Use element.name directly (already works via polymorphism)
-7. Replace categorizeRange() duck typing - Use elementLookup map instead of checking if name ends with "Enum"
-8. Remove ElementData type - Once collections store Elements, this union type becomes obsolete
+**Action after refactor completes**:
+1. Refactor DetailPanel to use abstract Element interface
+2. Update test expectations to match new implementation
+3. Tests will catch future regressions (like slots disappearing bug)
 
-**Files to modify**:
-- `src/models/Element.tsx`
-- `src/utils/dataLoader.ts`
-- `src/types.ts` (remove ElementData)
+**Note**: Other tests are also failing - see image at docs/images/temp/dark-mode-issue.png
+
+---
+
+### ✨ Give Right-Side Stacked Detail Panels Same Features as Floating Dialogs
+
+**Goal**: Feature parity between stacked panels (wide screens) and floating dialogs (narrow screens)
+**Importance**: Low - minor UX polish, not a major feature
+
+**Missing features in stacked panels**:
+- TBD: Need to compare and document differences
 
 ---
 
