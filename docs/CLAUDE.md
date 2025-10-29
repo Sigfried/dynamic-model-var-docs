@@ -199,188 +199,47 @@ This means:
 
 **Implementation Plan**:
 
-1. **Add `Tree.toRenderableItems()` method** (models/Tree.ts)
-   ```typescript
-   class Tree<T extends Element> {
-     /**
-      * Convert tree to flat list of RenderableItems for display
-      * Respects expansion state to hide/show children
-      */
-     toRenderableItems(
-       expandedItems: Set<string>,
-       getIsClickable?: (node: TreeNode<T>, level: number) => boolean
-     ): RenderableItem[] {
-       const items: RenderableItem[] = [];
+1. ✅ **Add `Tree.toRenderableItems()` method** (models/Tree.ts) - COMPLETE
+   - Converts tree structure to flat RenderableItem[] list
+   - Respects expansion state to show/hide children
+   - Supports optional getIsClickable callback for controlling clickability by level
+   - Uses Element.getBadge() for badge display
 
-       const traverse = (node: TreeNode<T>, level: number) => {
-         const hasChildren = node.children.length > 0;
-         const isExpanded = expandedItems.has(node.data.name);
-         const isClickable = getIsClickable ? getIsClickable(node, level) : true;
+2. ✅ **Add simple `getBadge()` method to Element base class** (models/Element.tsx) - COMPLETE
+   - Base class returns undefined (no badge)
+   - ClassElement: returns variableCount (if > 0)
+   - EnumElement: returns permissibleValues.length
+   - SlotElement: returns usedByClasses.length (if > 0)
+   - VariableElement: no override (returns undefined)
+   - NOTE: Temporary simple implementation, badges will be overhauled later
 
-         items.push({
-           id: `${node.data.type}-${node.data.name}`,
-           element: node.data,
-           level,
-           hasChildren,
-           isExpanded,
-           isClickable,
-           badge: node.data.getBadge() // Element provides badge value
-         });
+3. ✅ **Update Collection.fromData() to build trees** (models/Element.tsx) - COMPLETE (3 of 4)
+   - ✅ EnumCollection: Flat tree, all roots, alphabetically sorted
+   - ✅ SlotCollection: Flat tree, all roots, alphabetically sorted
+   - ✅ ClassCollection: Hierarchical tree preserving parent-child relationships
+   - ⏳ VariableCollection: Pending (needs classCollection parameter)
 
-         // Only traverse children if expanded
-         if (isExpanded) {
-           node.children.forEach(child => traverse(child, level + 1));
-         }
-       };
+4. ⏳ **Update dataLoader to pass classCollection to VariableCollection** (utils/dataLoader.ts) - PENDING
 
-       this.roots.forEach(root => traverse(root, 0));
-       return items;
-     }
-   }
-   ```
+5. ⏳ **Remove `children` from ClassElement** (models/Element.tsx) - PENDING
+   - Currently empty array [], will be fully removed after VariableCollection conversion
 
-2. **Add simple `getBadge()` method to Element base class** (models/Element.tsx)
-   ```typescript
-   abstract class Element {
-     // ... existing properties ...
+6. ⏳ **Implement `getRenderableItems()` in all collections** (models/Element.tsx) - PENDING
 
-     /**
-      * Badge value to display (e.g., count). Return undefined for no badge.
-      * NOTE: This is a temporary simple implementation. Badges will be overhauled
-      * in future to show multiple counts and clarify what they mean.
-      */
-     getBadge(): number | undefined {
-       return undefined; // Default: no badge
-     }
-   }
+7. ⏳ **Update Section.tsx to render RenderableItems** - PENDING
 
-   // Override in specific classes (keep simple - will be replaced):
-   class ClassElement extends Element {
-     getBadge() {
-       return this.variableCount > 0 ? this.variableCount : undefined;
-     }
-   }
+8. ⏳ **Remove `renderItems()` methods from all collections** - PENDING
 
-   class EnumElement extends Element {
-     getBadge() {
-       return this.permissibleValues.length;
-     }
-   }
+**Latest Status**:
+- ✅ Steps 1-2 complete and tested
+- ✅ Step 3: EnumCollection, SlotCollection, ClassCollection converted to Tree<Element>
+- ✅ All 156 regression tests passing
+- ⏳ Step 3: VariableCollection conversion in progress
+- ⏳ Steps 4-8 pending
 
-   class SlotElement extends Element {
-     getBadge() {
-       return this.usedByClasses.length > 0 ? this.usedByClasses.length : undefined;
-     }
-   }
-
-   // VariableElement: no badge override (returns undefined)
-   ```
-
-3. **Update Collection.fromData() to build trees** (models/Element.tsx)
-   ```typescript
-   // ClassCollection.fromData - Build hierarchical tree
-   static fromData(rootNodes: ClassNode[], slotElements: Map<string, SlotElement>): ClassCollection {
-     // Convert ClassNode tree (with children[]) to TreeNode<ClassElement>
-     const convertToTreeNode = (node: ClassNode): TreeNode<ClassElement> => {
-       const element = new ClassElement(node, slotElements);
-       const treeNode: TreeNode<ClassElement> = {
-         data: element,
-         children: node.children.map(convertToTreeNode),
-         parent: undefined
-       };
-       // Link parent references
-       treeNode.children.forEach(child => child.parent = treeNode);
-       return treeNode;
-     };
-     const roots = rootNodes.map(convertToTreeNode);
-     return new ClassCollection(new Tree(roots));
-   }
-
-   // EnumCollection.fromData - Build flat tree
-   static fromData(enumData: Map<string, EnumDefinition>): EnumCollection {
-     const roots = Array.from(enumData.values()).map(def => ({
-       data: new EnumElement(def),
-       children: [],
-       parent: undefined
-     }));
-     return new EnumCollection(new Tree(roots));
-   }
-
-   // SlotCollection.fromData - Build flat tree
-   static fromData(slotData: Map<string, SlotDefinition>): SlotCollection {
-     const roots = Array.from(slotData.values()).map(def => ({
-       data: new SlotElement(def),
-       children: [],
-       parent: undefined
-     }));
-     return new SlotCollection(new Tree(roots));
-   }
-
-   // VariableCollection.fromData - Build grouped tree
-   static fromData(variableData: VariableSpec[], classCollection: ClassCollection): VariableCollection {
-     // Group variables by class name
-     const grouped = new Map<string, VariableElement[]>();
-     variableData.forEach(spec => {
-       const element = new VariableElement(spec);
-       if (!grouped.has(element.bdchmElement)) {
-         grouped.set(element.bdchmElement, []);
-       }
-       grouped.get(element.bdchmElement)!.push(element);
-     });
-
-     // Create tree with ClassElement headers as parents
-     const roots: TreeNode<Element>[] = [];
-     grouped.forEach((variables, className) => {
-       const classElement = classCollection.getElement(className);
-       if (classElement) {
-         const headerNode: TreeNode<Element> = {
-           data: classElement,
-           children: variables.map(v => ({
-             data: v,
-             children: [],
-             parent: undefined
-           })),
-           parent: undefined
-         };
-         headerNode.children.forEach(child => child.parent = headerNode);
-         roots.push(headerNode);
-       }
-     });
-
-     return new VariableCollection(new Tree(roots));
-   }
-   ```
-
-4. **Update dataLoader to pass classCollection to VariableCollection** (utils/dataLoader.ts)
-   ```typescript
-   const classCollection = ClassCollection.fromData(classHierarchy, slotElements);
-   const enumCollection = EnumCollection.fromData(enums);
-   const slotCollection = SlotCollection.fromData(slots);
-   // Pass classCollection so variables can reuse ClassElement instances
-   const variableCollection = VariableCollection.fromData(variables, classCollection);
-   ```
-
-5. **Remove `children` from ClassElement** (models/Element.tsx)
-   - ClassElement currently has `children: ClassElement[]`
-   - This is now stored in TreeNode<ClassElement>, so remove from ClassElement
-   - Update any code that accesses `element.children` to work with Tree instead
-
-6. **Implement `getRenderableItems()` in all collections** (models/Element.tsx)
-   - ClassCollection: `return this.tree.toRenderableItems(expandedItems)`
-   - EnumCollection: `return this.tree.toRenderableItems(expandedItems)`
-   - SlotCollection: `return this.tree.toRenderableItems(expandedItems)`
-   - VariableCollection: `return this.tree.toRenderableItems(expandedItems, (node, level) => level > 0)`
-     - The callback makes level 0 (class headers) non-clickable, level 1+ (variables) clickable
-
-7. **Update Section.tsx to render RenderableItems**
-   - Change from `collection.renderItems()` → `collection.getRenderableItems()`
-   - Add rendering logic for RenderableItems (currently in each collection's renderItems)
-   - Render badges using ElementRegistry colors
-   - Handle expansion toggle clicks vs element selection clicks based on isClickable
-
-8. **Remove `renderItems()` methods from all collections**
-   - Once Section.tsx uses getRenderableItems(), delete the old renderItems() methods
-   - This completes the separation of data structure from rendering
+**Remaining work** (steps 4-8):
+- See detailed implementation in commit history and src/models/Element.tsx
+- VariableCollection needs special handling: ClassElement headers at level 0 (non-clickable), variables at level 1
 
 **Benefits after Step 5**:
 - All collections implement `getRenderableItems()` by calling `this.tree.toRenderableItems()`
