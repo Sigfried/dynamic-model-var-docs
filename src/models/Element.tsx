@@ -137,7 +137,8 @@ export class ClassElement extends Element {
     this.name = data.name;
     this.description = data.description;
     this.parent = data.parent;
-    this.children = data.children.map(child => new ClassElement(child, slotElements));
+    // Note: children field removed - now stored in TreeNode structure
+    this.children = []; // Temporary empty array for compatibility during refactor
     this.variableCount = data.variableCount;
     this.variables = data.variables;
     this.properties = data.properties as Record<string, PropertyDefinition> | undefined;
@@ -793,23 +794,35 @@ export class SlotCollection extends ElementCollection {
 // ClassCollection - hierarchical tree of classes
 export class ClassCollection extends ElementCollection {
   readonly type = 'class' as const;
-  private rootElements: ClassElement[];
+  private tree: Tree<ClassElement>;
 
-  constructor(rootElements: ClassElement[]) {
+  constructor(tree: Tree<ClassElement>) {
     super();
-    this.rootElements = rootElements;
+    this.tree = tree;
   }
 
   /** Factory: Create from raw data (called by dataLoader) */
   static fromData(rootNodes: ClassNode[], slotElements: Map<string, SlotElement>): ClassCollection {
-    // Convert ClassNode tree to ClassElement tree
-    const elements = rootNodes.map(node => new ClassElement(node, slotElements));
-    return new ClassCollection(elements);
+    // Convert ClassNode tree (with children[]) to TreeNode<ClassElement>
+    const convertToTreeNode = (classNode: ClassNode): TreeNode<ClassElement> => {
+      const element = new ClassElement(classNode, slotElements);
+      const treeNode: TreeNode<ClassElement> = {
+        data: element,
+        children: classNode.children.map(convertToTreeNode),
+        parent: undefined
+      };
+      // Link parent references
+      treeNode.children.forEach(child => child.parent = treeNode);
+      return treeNode;
+    };
+
+    const roots = rootNodes.map(convertToTreeNode);
+    return new ClassCollection(new Tree(roots));
   }
 
   getLabel(): string {
     const metadata = ELEMENT_TYPES[this.type];
-    return `${metadata.pluralLabel} (${this.countTotalNodes()})`;
+    return `${metadata.pluralLabel} (${this.tree.flatten().length})`;
   }
 
   getSectionIcon(): string {
@@ -817,19 +830,17 @@ export class ClassCollection extends ElementCollection {
   }
 
   getDefaultExpansion(): Set<string> {
-    // Auto-expand first 2 levels (but only classes that have children)
+    // Auto-expand first 2 levels (but only nodes that have children)
     const expanded = new Set<string>();
-    const collectUpToLevel = (elements: ClassElement[], level: number) => {
+    const collectUpToLevel = (node: TreeNode<ClassElement>, level: number) => {
       if (level >= 2) return;
-      elements.forEach(element => {
-        // Only track expansion state for classes that have children
-        if (element.children.length > 0) {
-          expanded.add(element.name);
-        }
-        collectUpToLevel(element.children, level + 1);
-      });
+      // Only track expansion state for nodes that have children
+      if (node.children.length > 0) {
+        expanded.add(node.data.name);
+      }
+      node.children.forEach(child => collectUpToLevel(child, level + 1));
     };
-    collectUpToLevel(this.rootElements, 0);
+    this.tree.roots.forEach(root => collectUpToLevel(root, 0));
     return expanded;
   }
 
@@ -838,36 +849,21 @@ export class ClassCollection extends ElementCollection {
   }
 
   getElement(name: string): Element | null {
-    // Recursively search tree for class by name
-    const searchRecursive = (elements: ClassElement[]): ClassElement | null => {
-      for (const element of elements) {
-        if (element.name === name) return element;
-        const found = searchRecursive(element.children);
-        if (found) return found;
-      }
-      return null;
-    };
-    return searchRecursive(this.rootElements);
+    const node = this.tree.find(element => element.name === name);
+    return node ? node.data : null;
   }
 
   getAllElements(): Element[] {
-    // Flatten tree to array
-    const flattenRecursive = (elements: ClassElement[]): ClassElement[] => {
-      return elements.flatMap(element => [element, ...flattenRecursive(element.children)]);
-    };
-    return flattenRecursive(this.rootElements);
+    return this.tree.flatten();
   }
 
   /** Get root nodes of class hierarchy (needed for tests and tree rendering) */
   getRootElements(): ClassElement[] {
-    return this.rootElements;
+    return this.tree.roots.map(node => node.data);
   }
 
-  private countTotalNodes(): number {
-    const countRecursive = (elements: ClassElement[]): number => {
-      return elements.reduce((sum, element) => sum + 1 + countRecursive(element.children), 0);
-    };
-    return countRecursive(this.rootElements);
+  getRenderableItems(expandedItems?: Set<string>): RenderableItem[] {
+    return this.tree.toRenderableItems(expandedItems || new Set());
   }
 
   renderItems(
@@ -876,20 +872,21 @@ export class ClassCollection extends ElementCollection {
     expandedItems?: Set<string>,
     toggleExpansion?: (item: string) => void
   ): React.ReactElement[] {
-    return this.rootElements.map(element =>
-      this.renderClassTreeNode(element, 0, callbacks, position, expandedItems, toggleExpansion)
+    return this.tree.roots.map(node =>
+      this.renderClassTreeNode(node, 0, callbacks, position, expandedItems, toggleExpansion)
     );
   }
 
   private renderClassTreeNode(
-    element: ClassElement,
+    node: TreeNode<ClassElement>,
     level: number,
     callbacks: ElementCollectionCallbacks,
     position: 'left' | 'right',
     expandedItems?: Set<string>,
     toggleExpansion?: (item: string) => void
   ): React.ReactElement {
-    const hasChildren = element.children.length > 0;
+    const element = node.data;
+    const hasChildren = node.children.length > 0;
     const isExpanded = expandedItems?.has(element.name) ?? false;
     const hoverHandlers = getElementHoverHandlers({
       type: 'class',
@@ -938,8 +935,8 @@ export class ClassCollection extends ElementCollection {
         </div>
         {hasChildren && isExpanded && (
           <div>
-            {element.children.map(child =>
-              this.renderClassTreeNode(child, level + 1, callbacks, position, expandedItems, toggleExpansion)
+            {node.children.map(childNode =>
+              this.renderClassTreeNode(childNode, level + 1, callbacks, position, expandedItems, toggleExpansion)
             )}
           </div>
         )}
