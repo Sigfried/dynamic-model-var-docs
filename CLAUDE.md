@@ -2,9 +2,10 @@
 
 > **Purpose**: Document upcoming tasks and discussions needed to specify them
 >
-> **IMPORTANT**: Review [README.md](README.md) for architecture philosophy, design patterns, and technical context before starting work
->
-> **Structure**: See [DOC_CONVENTIONS.md](DOC_CONVENTIONS.md) for documentation organization conventions
+> **IMPORTANT**: Before starting work, review:
+> - [README.md](README.md) - Architecture philosophy, design patterns, technical context
+> - [ARCHITECTURE.md](ARCHITECTURE.md) - Key files reference to prevent duplication
+> - [DOC_CONVENTIONS.md](DOC_CONVENTIONS.md) - Documentation organization conventions
 
 ---
 
@@ -40,7 +41,8 @@ function DetailPanel({ element }: { element: Element }) {
 
 ## Tasks from Conversation
 
-_(Empty - use [PLAN] prefix to add tasks here before implementing them)_
+- 📖 Move documentation files to docs/ directory → Add to Quick Items
+- 📖 Update DOC_CONVENTIONS.md to reference all documentation files → Add to Quick Items
 
 ---
 

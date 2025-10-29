@@ -1,13 +1,31 @@
 # Documentation Conventions
 
-> **Purpose**: Define structure and organization for CLAUDE.md and PROGRESS.md to prevent numbering chaos and enable flexible task ordering
+> **Purpose**: Define structure and organization for project documentation to prevent numbering chaos and enable flexible task ordering
 
 ---
 
-## File Purposes
+## Documentation Files Overview
+
+### README.md
+**Audience**: Users and new developers
+**Purpose**: Project overview, features, architecture philosophy (Shneiderman's Mantra), getting started
+
+**Key sections**:
+- For Users: What is BDCHM, features, usage
+- For Developers: Architecture philosophy, separation of concerns principle, data flow
+
+### ARCHITECTURE.md
+**Audience**: Developers (especially AI assistants)
+**Purpose**: Quick reference for key files and architectural patterns to prevent duplication
+
+**Key sections**:
+- Key Files & What They Contain (Tree.ts, types.ts, Element.tsx, etc.)
+- Architectural Patterns (separation of concerns, DTOs vs models)
+- [PLAN] sections for future expansion
 
 ### CLAUDE.md
-**Forward-looking**: Documents tasks to be done, questions to resolve, and architectural decisions to make.
+**Audience**: AI assistant (Claude)
+**Purpose**: Forward-looking task management and context
 
 **Structure**:
 1. Tasks from Conversation (new tasks given directly in chat)
@@ -20,14 +38,34 @@
 8. Implementation Notes & Lessons Learned
 
 ### PROGRESS.md
-**Backward-looking**: Records completed work for reporting to managers, funders, and stakeholders.
+**Audience**: Managers, funders, stakeholders
+**Purpose**: Backward-looking record of completed work
 
 **Structure**:
 - Reverse chronological order (newest first)
 - Date-stamped entries
 - Completed phases with git commit references
-- Completed quick items
 - Resolved questions with decisions made
+
+### TESTING.md
+**Audience**: Developers
+**Purpose**: Testing strategy, test documentation, patterns
+
+**Key sections**:
+- Testing philosophy
+- Test organization
+- Running tests
+- Writing new tests
+
+### DOC_CONVENTIONS.md (this file)
+**Audience**: Developers and AI assistants
+**Purpose**: Documentation structure conventions and guidelines
+
+**Key sections**:
+- Documentation files overview (this section)
+- CLAUDE.md structure details
+- PROGRESS.md structure details
+- Tag system and importance markers
 
 ---
 
