@@ -82,14 +82,18 @@ _(Empty - use [PLAN] prefix to add tasks here before implementing them)_
 - **VariableCollection**: Stores flat `VariableSpec[]`, groups in constructor, manual expand/collapse logic
 
 **Target state**:
-- Both use Tree model (likely shared type like `Tree<ClassNode>` and `Tree<VariableGroup>`)
+- Both use Tree model with ClassNode structure
+- Variable tree uses ClassNode for group headers (ClassElement instances, `isClickable=false`)
+- Individual variables are children of class nodes (`isClickable=true`)
 - Grouping logic moves from VariableCollection constructor to dataLoader
 - Expansion/collapse handled uniformly across both collections
 
+**Key decision** (already made): Variable group headers use actual ClassElement instances, not a separate type. The `isClickable` flag distinguishes behavior: class headers are expand/collapse only, variables open dialogs.
+
 **Files to modify**:
-- `src/utils/dataLoader.ts` - Build variable tree structure (grouped by class)
-- `src/models/Element.tsx` - Update VariableCollection to accept tree structure
-- Consider: Create shared `Tree<T>` type for both collections
+- `src/utils/dataLoader.ts` - Build variable tree: ClassNode[] where each node contains variables as children
+- `src/models/Element.tsx` - Update VariableCollection to accept ClassNode[] tree structure
+- `src/types.ts` - May need to adjust ClassNode to support variables as children (or keep variables in separate field)
 
 **After this completes**: Can proceed with "Collections Store Elements" refactor
 
