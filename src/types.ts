@@ -86,24 +86,11 @@ export interface EnumValue {
 }
 
 // ============================================================================
-// Generic Tree Structure
-// ============================================================================
-
-/**
- * Generic tree node structure for hierarchical data
- * Used by ClassCollection and VariableCollection
- *
- * Start as interface - promote to class if we need tree traversal methods
- */
-export interface TreeNode<T> {
-  element: T;
-  children: TreeNode<T>[];
-}
-
-// ============================================================================
 // DEPRECATED - Old interfaces (will be removed after refactor)
 // These mix DTO shape with model logic - being replaced by Element classes
 // ============================================================================
+//
+// NOTE: Generic tree structure (TreeNode<T>, Tree<T>) is in models/Tree.ts
 
 export interface ClassNode {
   name: string;

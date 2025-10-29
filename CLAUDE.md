@@ -101,16 +101,12 @@ interface VariableSpecRow {  // From TSV file
   // ... other columns
 }
 
-// Generic tree structure (start as interface, promote to class if we need methods)
-interface TreeNode<T> {
-  element: T;
-  children: TreeNode<T>[];
-}
-
 interface ModelData {
   collections: Map<ElementTypeId, ElementCollection>;
   elementLookup: Map<string, Element>;
 }
+
+// Note: TreeNode<T> and Tree<T> already exist in models/Tree.ts with utility methods
 ```
 
 ```typescript
@@ -134,19 +130,19 @@ class ClassElement extends Element {
   getRelationships(): Relationship[] { /* ... */ }
 }
 
-// Collections store TreeNode<Element>
+// Collections use Tree<Element> from models/Tree.ts
 class ClassCollection {
-  private tree: TreeNode<ClassElement>[];
+  private tree: Tree<ClassElement>;  // Tree class from Tree.ts
 
   constructor(elements: ClassElement[]) {
-    this.tree = this.buildTree(elements);
+    this.tree = buildTree(elements, e => e.name, e => e.parent);
   }
 }
 ```
 
 **Implementation steps**:
 1. ✅ Add DTO interfaces to types.ts (SchemaMetadata, ClassMetadata, etc.) - keep existing temporarily
-2. ✅ Add TreeNode<T> generic interface to types.ts
+2. ✅ ~~Add TreeNode<T> generic interface to types.ts~~ - Already exists in models/Tree.ts
 3. ⏳ Update Element classes to contain fields directly (not wrap interfaces) - **IN PROGRESS**
 4. Update dataLoader to construct Element instances from DTOs
 5. Update collections to store TreeNode<Element>
