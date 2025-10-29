@@ -3,10 +3,22 @@
  * Used for hierarchical elements (classes, grouped variables, etc.)
  */
 
+import type { RenderableItem } from './RenderableItem';
+
 export interface TreeNode<T> {
   data: T;
   children: TreeNode<T>[];
   parent?: TreeNode<T>;
+}
+
+/**
+ * Element interface constraint for toRenderableItems()
+ * Requires minimal properties that Element base class provides
+ */
+interface ElementLike {
+  type: string;
+  name: string;
+  getBadge?(): number | undefined;
 }
 
 export class Tree<T> {
@@ -94,6 +106,49 @@ export class Tree<T> {
     };
 
     return new Tree(this.roots.map(root => mapNode(root, 0)));
+  }
+
+  /**
+   * Convert tree to flat list of RenderableItems for display
+   * Respects expansion state to hide/show children
+   *
+   * @param expandedItems Set of item names that are expanded
+   * @param getIsClickable Optional callback to determine if item is clickable (default: all true)
+   * @returns Flat list of RenderableItems with level and expansion info
+   */
+  toRenderableItems(
+    expandedItems: Set<string>,
+    getIsClickable?: (node: TreeNode<T>, level: number) => boolean
+  ): RenderableItem[] {
+    // Type constraint: T must be ElementLike
+    if (!this.roots.length) return [];
+
+    const items: RenderableItem[] = [];
+
+    const traverse = (node: TreeNode<T>, level: number) => {
+      const element = node.data as unknown as ElementLike;
+      const hasChildren = node.children.length > 0;
+      const isExpanded = expandedItems.has(element.name);
+      const isClickable = getIsClickable ? getIsClickable(node, level) : true;
+
+      items.push({
+        id: `${element.type}-${element.name}`,
+        element: node.data,
+        level,
+        hasChildren,
+        isExpanded,
+        isClickable,
+        badge: element.getBadge?.()
+      });
+
+      // Only traverse children if expanded
+      if (isExpanded) {
+        node.children.forEach(child => traverse(child, level + 1));
+      }
+    };
+
+    this.roots.forEach(root => traverse(root, 0));
+    return items;
   }
 }
 

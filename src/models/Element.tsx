@@ -60,6 +60,17 @@ export abstract class Element {
   protected renderName() {
     return <span className="font-semibold">{this.name}</span>;
   }
+
+  /**
+   * Badge value to display in panel sections (e.g., count).
+   * Return undefined for no badge.
+   *
+   * NOTE: This is a temporary simple implementation. Badges will be overhauled
+   * in future to show multiple counts and clarify what they mean.
+   */
+  getBadge(): number | undefined {
+    return undefined; // Default: no badge
+  }
 }
 
 // Name → Type lookup for accurate categorization (avoids duck typing)
@@ -235,6 +246,10 @@ export class ClassElement extends Element {
 
     return rels;
   }
+
+  getBadge(): number | undefined {
+    return this.variableCount > 0 ? this.variableCount : undefined;
+  }
 }
 
 // EnumElement - represents an enumeration
@@ -294,6 +309,10 @@ export class EnumElement extends Element {
     // Enums don't have outgoing relationships in current model
     // Could add reverse relationships: enum → classes that use it
     return [];
+  }
+
+  getBadge(): number | undefined {
+    return this.permissibleValues.length;
   }
 }
 
@@ -419,6 +438,10 @@ export class SlotElement extends Element {
     }
 
     return rels;
+  }
+
+  getBadge(): number | undefined {
+    return this.usedByClasses.length > 0 ? this.usedByClasses.length : undefined;
   }
 }
 
