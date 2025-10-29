@@ -58,9 +58,10 @@ _(Empty - use [PLAN] prefix to add tasks here before implementing them)_
 
 Listed in intended implementation order (top = next):
 
-### 🔴 ✨ Give Right-Side Stacked Detail Panels Same Features as Floating Dialogs
+### ✨ Give Right-Side Stacked Detail Panels Same Features as Floating Dialogs
 
 **Goal**: Feature parity between stacked panels (wide screens) and floating dialogs (narrow screens)
+**Importance**: Low - minor UX polish, not a major feature
 
 **Missing features in stacked panels**:
 - TBD: Need to compare and document differences
@@ -206,7 +207,9 @@ function Section() {
 
 ## Future Ideas (Unprioritized)
 
-### ✨ Search and Filter
+### 🔴 ✨ Search and Filter
+
+**Potential importance**: High - major usability feature for exploring large schemas
 
 **Search functionality**:
 - Search bar with full-text search across all elements
@@ -220,7 +223,9 @@ function Section() {
 
 ---
 
-### ✨ Neighborhood Zoom
+### 🟡 ✨ Neighborhood Zoom
+
+**Potential importance**: Medium - useful for focused exploration
 
 **Focus mode**:
 - Show only k-hop neighborhood around selected element

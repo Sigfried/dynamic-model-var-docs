@@ -70,6 +70,10 @@
 - Delete when done (NOT moved to PROGRESS.md - quick items don't go there)
 - Can mark subtasks as complete with ✅ (only whole phases go to PROGRESS.md)
 - Tag with type: 🐛 bug, ✨ feature, 📝 docs, ♻️ refactor, 🧪 test, 🔧 config
+- Optional importance markers (for stakeholder visibility):
+  - 🔴 High importance - Major impact on project goals
+  - 🟡 Medium importance - Useful but not critical
+  - (no marker) - Low importance - Internal improvements
 
 **Example**:
 ```markdown
@@ -117,6 +121,10 @@
 - Can mark subtasks as complete with ✅ (only whole completed phase moves to PROGRESS.md)
 - Move entire phase to PROGRESS.md when all work complete
 - Tag with type: 🐛 bug, ✨ feature, 📝 docs, ♻️ refactor, 🧪 test
+- Tag with importance (for PROGRESS.md stakeholder visibility):
+  - 🔴 High importance - Major features, critical fixes, architectural milestones
+  - 🟡 Medium importance - Nice enhancements, quality improvements
+  - (no marker) - Low importance - Internal refactoring, minor tweaks
 
 **Example**:
 ```markdown
@@ -140,14 +148,14 @@
 - NO phase numbers yet - just descriptions
 - Reorder freely as priorities change
 - Tag with type: 🐛 bug, ✨ feature, 📝 docs, ♻️ refactor, 🧪 test
-- Optional urgency markers (NOT importance):
-  - 🔴 Urgent - needs to be done soon (but might not be important)
-  - 🟡 Time-sensitive - should be done reasonably soon
-  - (no marker) - normal timeline
+- Tag with importance (helps stakeholders understand value when moved to PROGRESS.md):
+  - 🔴 High importance - Major features, critical fixes, architectural milestones
+  - 🟡 Medium importance - Nice enhancements, quality improvements
+  - (no marker) - Low importance - Internal refactoring, minor tweaks
 - When work starts, promote to "Current Phase"
-- Use `<details>` tags for low-priority items to start collapsed
+- Use `<details>` tags for low-importance items to start collapsed
 
-**Note**: Urgency ≠ Implementation Order. Order in list determines sequence. Urgency markers just flag time-sensitive items.
+**Note**: Importance ≠ Implementation Order. Order in list determines sequence. Importance markers help stakeholders understand project value.
 
 **Example**:
 ```markdown
@@ -157,7 +165,7 @@ Listed in intended implementation order (top = next):
 
 ### 🔴 ✨ Give Right-Side Stacked Detail Panels Same Features as Floating Dialogs
 
-**Goal**: Feature parity between modes (urgent but not particularly important)
+**Goal**: Feature parity between modes (high importance for user experience)
 
 **Missing features**:
 - [list]
@@ -166,7 +174,7 @@ Listed in intended implementation order (top = next):
 
 ### ♻️ Move renderItems to Section.tsx
 
-**Goal**: Remove type-specific rendering
+**Goal**: Remove type-specific rendering (low importance - internal refactoring)
 
 **Status**:
 - ✅ EnumCollection done
@@ -175,7 +183,7 @@ Listed in intended implementation order (top = next):
 ---
 
 <details>
-<summary>🧪 Add Comprehensive Integration Tests (low priority, expand to view)</summary>
+<summary>🟡 🧪 Add Comprehensive Integration Tests (medium importance, expand to view)</summary>
 
 **Goal**: End-to-end testing
 
@@ -186,9 +194,9 @@ Listed in intended implementation order (top = next):
 
 **Key insight**:
 - Order in list = implementation order
-- Urgency markers (🔴🟡) flag time-sensitive items but don't change sequence
-- You can have 🔴 urgent work listed AFTER normal work if that's the right implementation order
-- Use `<details>` for low-priority items to keep doc scannable
+- Importance markers (🔴🟡) help stakeholders understand project value in PROGRESS.md
+- You can have 🔴 high-importance work listed AFTER low-importance work if that's the right technical sequence
+- Use `<details>` for low-importance items to keep doc scannable
 
 ---
 
@@ -197,11 +205,11 @@ Listed in intended implementation order (top = next):
 **Purpose**: Backlog of features with no commitment to sequence or implementation
 
 **Guidelines**:
-- No urgency markers needed
+- No importance markers needed (not yet prioritized)
 - No ordering required
 - Can be aspirational
 - Tag with type: 🐛 bug, ✨ feature, 📝 docs, ♻️ refactor, 🧪 test
-- Move to "Upcoming Work" when prioritized
+- Move to "Upcoming Work" when prioritized (add importance marker then)
 - Use `<details>` to collapse long sections
 
 **Example**:
@@ -287,15 +295,18 @@ Use consistent emoji tags across all sections for type classification:
 - 🧪 **test** - Test additions or modifications
 - 🔧 **config** - Configuration, build system, dependencies
 
-Urgency markers (optional, use sparingly):
-- 🔴 **Urgent** - Time-sensitive (NOT the same as important!)
-- 🟡 **Time-sensitive** - Should be done reasonably soon
+Importance markers (optional, for stakeholder visibility):
+- 🔴 **High importance** - Major features, critical fixes, architectural milestones
+- 🟡 **Medium importance** - Nice enhancements, quality improvements
+- (no marker) **Low importance** - Internal refactoring, minor tweaks
+
+**Purpose**: Help stakeholders scanning PROGRESS.md quickly identify significant accomplishments
 
 **Examples**:
-- `🐛 Fix color mismatch` - bug fix
-- `🔴 ✨ Add CSV export` - urgent new feature
-- `♻️ Split Element.tsx` - refactoring
-- `📝 🧪 Document test conventions` - docs about testing
+- `🐛 Fix color mismatch` - bug fix (no importance marker = low)
+- `🔴 ✨ Add CSV export` - high-importance new feature
+- `♻️ Split Element.tsx` - refactoring (no marker = low)
+- `🟡 📝 Document API` - medium-importance docs
 
 ---
 
@@ -347,14 +358,14 @@ Urgency markers (optional, use sparingly):
 Before committing changes to CLAUDE.md:
 
 1. ✅ Is there exactly ONE "Current Phase"?
-2. ✅ Are "Upcoming Work" items in implementation order (not by urgency)?
-3. ✅ Do urgency markers (🔴🟡) only appear where truly time-sensitive?
+2. ✅ Are "Upcoming Work" items in implementation order (not by importance)?
+3. ✅ Do importance markers (🔴🟡) reflect stakeholder value, not urgency?
 4. ✅ Are only completed PHASES moved to PROGRESS.md (not quick items or subtasks)?
 5. ✅ Are "Quick Items" truly quick (1-2 lines)?
 6. ✅ Do "Questions" have clear context and decision makers?
 7. ✅ Are "Implementation Notes" never deleted?
 8. ✅ Are items properly tagged (🐛✨📝♻️🧪🔧)?
-9. ✅ Are low-priority sections in `<details>` tags?
+9. ✅ Are low-importance items in `<details>` tags?
 10. ✅ Is "Tasks from Conversation" section clear or empty?
 
 ### Future: Automated Checks
@@ -379,16 +390,16 @@ Consider adding:
 - Assign numbers only when work becomes "Current Phase"
 - Numbers become historical markers in PROGRESS.md
 
-### Problem: Urgency vs Importance confusion
-- Marking urgent items as "critical" suggests they're important
-- Important work might not be urgent
-- Leads to urgency bias (doing urgent-but-unimportant work first)
+### Problem: Stakeholders can't identify important work
+- All completed work looks equally significant in PROGRESS.md
+- Hard to distinguish major features from internal refactoring
+- Stakeholders waste time reading about low-value changes
 
-### Solution: Separate urgency from order
-- Implementation order determined by list position
-- Urgency markers (🔴🟡) just flag time-sensitive items
-- Can have urgent work AFTER normal work if that's the right sequence
-- Example: "Add CSV export" might be urgent (boss wants demo) but listed after refactoring if refactoring needs to happen first
+### Solution: Importance markers for stakeholder scanning
+- Implementation order determined by list position in CLAUDE.md
+- Importance markers (🔴🟡 or none) help stakeholders identify significant work in PROGRESS.md
+- Can have high-importance work listed AFTER low-importance if that's the right technical sequence
+- Example: "Add CSV export" (🔴 high importance) might be listed after "Refactor Element.tsx" (no marker = low) if refactoring must happen first
 
 ### Problem: Losing context
 - Quick wins get done and forgotten

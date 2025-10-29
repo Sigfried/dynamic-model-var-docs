@@ -79,9 +79,10 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 
 ---
 
-## Phase 3b: Multiple Detail Dialogs
+## Phase 3b: 🔴 Multiple Detail Dialogs
 
 **Completed**: January 2025
+**Importance**: High - enables simultaneous element comparison, key UX innovation
 
 ### Key Features
 - **Non-Modal Draggable Dialogs**: Replaced fixed center panel with floating dialogs
@@ -123,9 +124,10 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 
 ---
 
-## Phase 3d: SVG Link Visualization
+## Phase 3d: 🔴 SVG Link Visualization
 
 **Completed**: January 2025
+**Importance**: High - visual relationship display is core value proposition
 
 ### Key Features
 - **Visual Relationship Links**: SVG curves connecting related elements across panels
@@ -151,9 +153,10 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 
 ---
 
-## Phase 3e: Adaptive Detail Display
+## Phase 3e: 🔴 Adaptive Detail Display
 
 **Completed**: January 2025
+**Importance**: High - major UX improvement enabling responsive layouts
 
 ### Key Features
 - **Responsive Modes**: Automatic switching between stacked panels and floating dialogs
@@ -180,9 +183,10 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 
 ---
 
-## Phase 3f: Element Collection Architecture & LinkML Slot Inheritance
+## Phase 3f: 🟡 Element Collection Architecture & LinkML Slot Inheritance
 
 **Completed**: January 2025
+**Importance**: Medium - improved architecture and correctly displays LinkML inheritance
 
 ### Key Features
 - **ElementCollection Classes**: Generic architecture with ClassCollection, EnumCollection, SlotCollection, VariableCollection
@@ -241,6 +245,7 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 ## Phase 3g: Element Type Centralization & Generic Collections
 
 **Completed**: January 2025
+**Importance**: Low - internal architecture improvement
 
 ### Key Features
 - **ElementRegistry**: Centralized metadata for all element types (classes, enums, slots, variables)
