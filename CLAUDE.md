@@ -3,10 +3,40 @@
 > **Purpose**: Document upcoming tasks and discussions needed to specify them
 >
 > **IMPORTANT**: Review [README.md](README.md) for architecture philosophy, design patterns, and technical context before starting work
+>
+> **Structure**: See [DOC_CONVENTIONS.md](DOC_CONVENTIONS.md) for documentation organization conventions
 
 ---
 
-## Phase 4: Fix DetailPanel Tests (Current Work)
+## Tasks from Conversation
+
+_(Empty - use [PLAN] prefix to add tasks here before implementing them)_
+
+---
+
+## Quick Items
+
+- 📝 Move doc files to docs directory
+  - Make `docs/images/temp/` for files like img.png that illustrate ephemeral issues
+  - Store images that will be used ongoingly (in README mostly) in `docs/images/`
+- 🐛 Clicking class brings up detail box with gray title bar saying "Variable:" and missing the slots section (last worked at ecd4828, though blue color was slightly off from C icon color)
+
+---
+
+## Questions & Decisions Needed
+
+### Boss Question: Variable Treatment for Condition Class
+
+**Context**: My boss said that "variables" for Condition should be treated differently.
+
+**Her explanation**:
+> I think I made a mistake by calling "asthma" and "angina" variables. BMI is a variable that is a Measurement observation. We can think of BMI as a column in a spreadsheet. We wouldn't have a column for "asthma" - we would have a column for conditions with a list of mondo codes for the conditions present. This becomes more important when we are talking about the "heart failure" and "heart disease" columns. Where does one draw lines? The division of conditions into variables/columns might be ok if all we're looking at is asthma and angina, but quickly gets too hard to draw lines.
+
+**My question**: I still don't understand. Do you? Can you try to explain?
+
+---
+
+## Current Phase: 🧪 🐛 Fix DetailPanel Tests & Bug
 
 ### Fix DetailPanel Tests (10 failing)
 
@@ -19,11 +49,27 @@
 
 **Action**: Update test expectations to match what DetailPanel actually renders. This will establish baseline for catching future regressions (like slots disappearing bug).
 
+**Note**: Other tests are also failing:
+![img.png](img.png)
+
 ---
 
-## Phase 5: Move renderItems to Section.tsx (Upcoming)
+## Upcoming Work
 
-### 5a. Complete getRenderableItems() Implementation
+Listed in intended implementation order (top = next):
+
+### 🔴 ✨ Give Right-Side Stacked Detail Panels Same Features as Floating Dialogs
+
+**Goal**: Feature parity between stacked panels (wide screens) and floating dialogs (narrow screens)
+
+**Missing features in stacked panels**:
+- TBD: Need to compare and document differences
+
+---
+
+### ♻️ Move renderItems to Section.tsx
+
+#### a. Complete getRenderableItems() Implementation
 
 **Goal**: Finish converting collections from renderItems() to getRenderableItems() pattern
 
@@ -50,7 +96,7 @@
 - `src/models/Element.tsx` - ClassCollection and VariableCollection implementations
 - `src/utils/dataLoader.ts` - Move variable grouping logic here
 
-### 5b. Update Section.tsx to Render RenderableItems
+#### b. Update Section.tsx to Render RenderableItems
 
 **Goal**: Remove type-specific rendering logic from Section.tsx, use generic RenderableItem rendering
 
@@ -82,7 +128,7 @@ function Section() {
 - `src/components/Section.tsx`
 - Create new component: `src/components/ItemDisplay.tsx` (or inline in Section)
 
-### 5c. Remove renderItems() Method
+#### c. Remove renderItems() Method
 
 **Goal**: Delete obsolete renderItems() after Section uses getRenderableItems()
 
@@ -91,9 +137,7 @@ function Section() {
 
 ---
 
-## Phase 6: Collections Store Elements (Not Raw Data)
-
-### Complete Collections Store Elements Refactor
+### ♻️ Collections Store Elements (Not Raw Data)
 
 **Goal**: Eliminate redundant wrapping - collections should store Element instances, not raw data
 
@@ -116,7 +160,7 @@ function Section() {
 
 ---
 
-## Phase 7: Split Element.tsx into Separate Files
+### ♻️ Split Element.tsx into Separate Files
 
 **Current state**: Element.tsx is 919 lines with 4 element classes + 4 collection classes
 
@@ -135,7 +179,7 @@ function Section() {
 
 ---
 
-## Phase 8: Refactor App.tsx
+### ♻️ Refactor App.tsx
 
 **Current state**: App.tsx is 600+ lines, too long
 
@@ -160,9 +204,9 @@ function Section() {
 
 ---
 
-## Future Features (Phase 9+)
+## Future Ideas (Unprioritized)
 
-### Phase 9: Search and Filter
+### ✨ Search and Filter
 
 **Search functionality**:
 - Search bar with full-text search across all elements
@@ -174,7 +218,9 @@ function Section() {
 - Variable count slider
 - Relationship type toggles
 
-### Phase 10: Neighborhood Zoom
+---
+
+### ✨ Neighborhood Zoom
 
 **Focus mode**:
 - Show only k-hop neighborhood around selected element
@@ -182,20 +228,26 @@ function Section() {
 - Breadcrumb trail showing navigation path
 - "Reset to full view" button
 
-### Enhanced Element Metadata Display
+---
+
+### ✨ Enhanced Element Metadata Display
 
 Show additional relationship counts in tree view:
 - **Current**: Only variable count (e.g., "Condition (20)")
 - **Desired**: "Condition (20 vars, 5 enums, 2 classes, 1 slot)"
 
-### Custom Preset Management
+---
+
+### ✨ Custom Preset Management
 
 User-managed presets replacing hard-coded ones:
 - Save Preset button → prompts for name
 - Saves current panel configuration (sections + dialogs) to localStorage
 - Display saved presets in header with remove icons
 
-### Advanced Overview
+---
+
+### ✨ Advanced Overview
 
 Multiple view modes and analytics:
 - Tree view (current)
@@ -206,9 +258,7 @@ Multiple view modes and analytics:
 
 ---
 
-## Lower Priority Issues
-
-### Terminology Consistency
+### 📝 Terminology Consistency
 
 **Problem**: Still using "Property" to denote attributes and slots
 
@@ -221,7 +271,13 @@ Multiple view modes and analytics:
 - ✅ **Element** - NOT "Entity" (entity was old term)
 - ✅ **Class**, **Enum**, **Slot**, **Variable** - Capitalize when referring to element types
 
-### External Link Integration
+**Terminology configuration**:
+- It might be better for some people to see "<current class> is_a <base class>" and other people to see "<current class> inherits from <base class>". Allow that to be a (probably) user-configurable option.
+- I don't know how software with internationalization capabilities handle this, or with configurable display themes, but we could try similar approaches.
+
+---
+
+### ✨ External Link Integration
 
 **Goal**: Link prefixed IDs to external sites (OMOP, DUO, etc.)
 
@@ -230,7 +286,9 @@ Multiple view modes and analytics:
 - Make CURIEs clickable in variable details
 - Add tooltip showing full URL before clicking
 
-### Feature Parity with Official Docs
+---
+
+### ✨ Feature Parity with Official Docs
 
 Reference: https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/
 
@@ -241,7 +299,9 @@ Missing features:
 4. **Direct and Induced** - Show direct vs inherited slots
 5. **Partial ERDs** - Visual relationship diagrams
 
-### GitHub Issue Management
+---
+
+### 📝 GitHub Issue Management
 
 Issue: https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/issues/126
 - Make issue more concise
@@ -249,7 +309,7 @@ Issue: https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/issues/126
 
 ---
 
-## Performance Optimizations (Future)
+### ⚡ Performance Optimizations
 
 When working with larger models or slower devices:
 - **Virtualize long lists**: MeasurementObservation has 103 variables; consider react-window or react-virtual
@@ -311,6 +371,8 @@ Key fields:
 - `required`: Boolean for required attributes
 - `description`: Free text
 
+---
+
 ### Structural vs Semantic Categorization
 
 **Current approach** (structural - safe from schema changes):
@@ -321,6 +383,8 @@ Key fields:
 - Filter/toggle by entity type: class, enum, slot, variable
 
 **DO NOT hard-code semantic categories** like "containment" vs "association" vs "activity" - these could break with schema updates.
+
+---
 
 ### REMINDER: Semantic Insights for Future Use
 

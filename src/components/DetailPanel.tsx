@@ -514,7 +514,8 @@ export default function DetailPanel({ element, onNavigate, onClose, enums, slots
               <h1 className="text-2xl font-bold text-left">{selectedClass.name}</h1>
               {selectedClass.parent && (
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 text-left">
-                  extends {selectedClass.parent}
+                  {/* Note: "is_a" might be another good term here */}
+                  inherits from {selectedClass.parent}
                 </p>
               )}
             </div>
@@ -662,7 +663,7 @@ export default function DetailPanel({ element, onNavigate, onClose, enums, slots
                             {slotInfo.definition.multivalued && '>'}
                           </td>
                           <td className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-xs">
-                            {slotInfo.source === 'inline' && 'Inline'}
+                            {slotInfo.source === 'inline' && 'Inline (attribute)'}
                             {slotInfo.source === 'slot' && slotInfo.sourceDetail && (
                               <button
                                 onClick={() => handleRangeClick(slotInfo.sourceDetail!)}

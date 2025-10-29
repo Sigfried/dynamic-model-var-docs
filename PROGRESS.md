@@ -208,6 +208,14 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 
 ---
 
+## October 29, 2025
+
+### Documentation Structure
+- Established new documentation conventions for CLAUDE.md and PROGRESS.md
+- Created DOC_CONVENTIONS.md to document structure and compliance checking
+
+---
+
 ## Recent Enhancements (January 2025)
 
 ### Variable Section Improvements
