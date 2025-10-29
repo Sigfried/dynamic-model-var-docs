@@ -6,56 +6,15 @@ import type {
   EnumDefinition,
   EnumValue,
   SlotDefinition,
-  ModelData
+  ModelData,
+  // DTOs from external sources
+  SchemaMetadata,
+  ClassMetadata,
+  SlotMetadata,
+  EnumMetadata,
+  AttributeDefinition
 } from '../types';
 import { EnumCollection, SlotCollection, ClassCollection, VariableCollection, initializeElementNameMap } from '../models/Element';
-
-// Raw attribute definition from metadata JSON
-interface AttributeDefinition {
-  range: string;
-  description?: string;
-  required?: boolean;
-  multivalued?: boolean;
-  [key: string]: unknown; // Allow other LinkML fields
-}
-
-// Raw slot definition from metadata JSON
-interface SlotMetadata {
-  range?: string;
-  description?: string;
-  slot_uri?: string;
-  identifier?: boolean;
-  required?: boolean;
-  multivalued?: boolean;
-  [key: string]: unknown; // Allow other LinkML fields
-}
-
-// Raw enum definition from metadata JSON
-interface EnumMetadata {
-  description?: string;
-  permissible_values?: Record<string, {
-    description?: string;
-    meaning?: string;
-    [key: string]: unknown;
-  }>;
-  [key: string]: unknown; // Allow other LinkML fields
-}
-
-interface ClassMetadata {
-  name: string;
-  description: string;
-  parent?: string;
-  abstract: boolean;
-  attributes: Record<string, AttributeDefinition>;
-  slots?: string | string[]; // Can be string or array in raw metadata, normalized to array
-  slot_usage?: Record<string, AttributeDefinition>; // Refinements/constraints on slots
-}
-
-interface SchemaMetadata {
-  classes: Record<string, ClassMetadata>;
-  slots: Record<string, SlotMetadata>;
-  enums: Record<string, EnumMetadata>;
-}
 
 async function loadSchemaMetadata(): Promise<SchemaMetadata> {
   const response = await fetch(`${import.meta.env.BASE_URL}source_data/HM/bdchm.metadata.json`);
