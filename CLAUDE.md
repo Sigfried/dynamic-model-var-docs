@@ -10,7 +10,7 @@
 
 ## Tasks from Conversation
 
-- 🔴 🪲 Fix dark mode display issues - app looks terrible in dark mode (see screenshot) → Add to Upcoming Work after "Terminology Consistency"
+_(Empty - use [PLAN] prefix to add tasks here before implementing them)_
 
 ---
 
@@ -263,7 +263,26 @@ Multiple view modes and analytics:
 
 ---
 
+### 🔴 🪲 Fix Dark Mode Display Issues
+
+**Goal**: Fix readability issues in dark mode
+**Importance**: High - app currently unusable in dark mode
+**Timeline**: Complete by end of week
+
+**Issues from screenshot**:
+- Poor contrast/readability throughout
+- Need to audit all color combinations
+
+**Files likely affected**:
+- `src/index.css` - Tailwind dark mode classes
+- All component files using colors
+
+---
+
 ### 📖 Terminology Consistency
+
+**Goal**: Use consistent terminology throughout app
+**Importance**: Low - internal consistency improvement
 
 **Problem**: Still using "Property" to denote attributes and slots
 
