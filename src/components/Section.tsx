@@ -28,6 +28,18 @@ function ItemRenderer({ item, callbacks, position, toggleExpansion }: ItemRender
     onElementLeave: callbacks.onElementLeave
   });
 
+  // For non-clickable items with children (e.g., variable group headers), the whole row should toggle expansion
+  const handleClick = () => {
+    if (isClickable) {
+      callbacks.onSelect(element);
+    } else if (hasChildren && toggleExpansion) {
+      toggleExpansion(item.id);
+    }
+  };
+
+  const showToggleButton = hasChildren && toggleExpansion;
+  const isCursorPointer = isClickable || (hasChildren && toggleExpansion);
+
   return (
     <div key={element.name} className="select-none">
       <div
@@ -36,14 +48,14 @@ function ItemRenderer({ item, callbacks, position, toggleExpansion }: ItemRender
         data-element-name={element.name}
         data-panel-position={position}
         className={`flex items-center gap-2 px-2 py-1 rounded ${
-          isClickable ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700' : ''
+          isCursorPointer ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700' : ''
         }`}
         style={{ paddingLeft: `${level * 16 + 8}px` }}
-        onClick={() => isClickable && callbacks.onSelect(element)}
+        onClick={handleClick}
         {...hoverHandlers}
       >
         {/* Expansion toggle for items with children */}
-        {hasChildren && toggleExpansion && (
+        {showToggleButton ? (
           <button
             className="w-4 h-4 flex items-center justify-center text-gray-500 hover:text-gray-700"
             onClick={(e) => {
@@ -53,8 +65,9 @@ function ItemRenderer({ item, callbacks, position, toggleExpansion }: ItemRender
           >
             {isExpanded ? '▼' : '▶'}
           </button>
+        ) : (
+          <span className="w-4" />
         )}
-        {!hasChildren && <span className="w-4" />}
 
         {/* Element name */}
         <span className="flex-1 text-sm font-medium">{element.name}</span>
