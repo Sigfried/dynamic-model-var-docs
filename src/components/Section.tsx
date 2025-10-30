@@ -33,7 +33,7 @@ function ItemRenderer({ item, callbacks, position, toggleExpansion }: ItemRender
     if (isClickable) {
       callbacks.onSelect(element);
     } else if (hasChildren && toggleExpansion) {
-      toggleExpansion(item.id);
+      toggleExpansion(element.name);
     }
   };
 
@@ -60,7 +60,7 @@ function ItemRenderer({ item, callbacks, position, toggleExpansion }: ItemRender
             className="w-4 h-4 flex items-center justify-center text-gray-500 hover:text-gray-700"
             onClick={(e) => {
               e.stopPropagation();
-              toggleExpansion(item.id);
+              toggleExpansion(element.name);
             }}
           >
             {isExpanded ? '▼' : '▶'}
