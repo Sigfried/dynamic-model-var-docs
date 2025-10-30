@@ -120,7 +120,6 @@ export class ClassElement extends Element {
   readonly name: string;
   readonly description: string | undefined;
   readonly parent: string | undefined;
-  readonly children: ClassElement[];
   readonly variableCount: number;
   readonly variables: VariableSpec[];
   readonly properties: Record<string, PropertyDefinition> | undefined;
@@ -137,8 +136,6 @@ export class ClassElement extends Element {
     this.name = data.name;
     this.description = data.description;
     this.parent = data.parent;
-    // Note: children field removed - now stored in TreeNode structure
-    this.children = []; // Temporary empty array for compatibility during refactor
     this.variableCount = data.variableCount;
     this.variables = data.variables;
     this.properties = data.properties as Record<string, PropertyDefinition> | undefined;
@@ -149,43 +146,6 @@ export class ClassElement extends Element {
     this.slot_usage = data.slot_usage as Record<string, PropertyDefinition> | undefined;
     this.abstract = data.abstract;
     this.slotElements = slotElements;
-  }
-
-  renderPanelSection(
-    depth: number,
-    onSelect: (element: ElementData, elementType: string) => void
-  ) {
-    const indent = depth * 16;
-
-    return (
-      <div key={this.name}>
-        <div
-          id={`class-${this.name}`}
-          data-element-type="class"
-          data-element-name={this.name}
-          style={{ paddingLeft: `${indent}px` }}
-          className="cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 px-2 py-1"
-          onClick={() => onSelect(this as unknown as ElementData, 'class')}
-        >
-          <span>{this.name}</span>
-          {this.variableCount > 0 && (
-            <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-              ({this.variableCount})
-            </span>
-          )}
-          {this.abstract && (
-            <span className="text-xs text-purple-600 dark:text-purple-400 ml-2 italic">
-              abstract
-            </span>
-          )}
-        </div>
-
-        {/* Recursively render children */}
-        {this.children.map(child =>
-          child.renderPanelSection(depth + 1, onSelect)
-        )}
-      </div>
-    );
   }
 
   renderDetails(_onNavigate: (target: string, targetType: string) => void) {
@@ -945,37 +905,68 @@ export class ClassCollection extends ElementCollection {
   }
 }
 
-// VariableCollection - variables grouped by class
+// VariableCollection - tree with ClassElement headers and VariableElement children
 export class VariableCollection extends ElementCollection {
   readonly type = 'variable' as const;
+  private tree: Tree<Element>;
   private variables: VariableElement[];
-  private groupedVariables: Map<string, VariableElement[]>;
 
-  constructor(variables: VariableElement[]) {
+  constructor(tree: Tree<Element>, variables: VariableElement[]) {
     super();
+    this.tree = tree;
     this.variables = variables;
-
-    // Group variables by class
-    this.groupedVariables = new Map();
-    variables.forEach(variable => {
-      const className = variable.bdchmElement;
-      if (!this.groupedVariables.has(className)) {
-        this.groupedVariables.set(className, []);
-      }
-      this.groupedVariables.get(className)!.push(variable);
-    });
-
-    // Sort variables within each group
-    this.groupedVariables.forEach(vars => {
-      vars.sort((a, b) => a.name.localeCompare(b.name));
-    });
   }
 
   /** Factory: Create from raw data (called by dataLoader) */
-  static fromData(variableData: VariableSpec[]): VariableCollection {
+  static fromData(variableData: VariableSpec[], classCollection: ClassCollection): VariableCollection {
     // Convert VariableSpec DTOs to VariableElement instances
-    const elements = variableData.map(spec => new VariableElement(spec));
-    return new VariableCollection(elements);
+    const variableElements = variableData.map(spec => new VariableElement(spec));
+
+    // Group variables by class name
+    const groupedByClass = new Map<string, VariableElement[]>();
+    variableElements.forEach(variable => {
+      const className = variable.bdchmElement;
+      if (!groupedByClass.has(className)) {
+        groupedByClass.set(className, []);
+      }
+      groupedByClass.get(className)!.push(variable);
+    });
+
+    // Sort variables within each group
+    groupedByClass.forEach(vars => {
+      vars.sort((a, b) => a.name.localeCompare(b.name));
+    });
+
+    // Build tree with ClassElement headers (level 0) and VariableElement children (level 1)
+    const roots: TreeNode<Element>[] = [];
+    const sortedClassNames = Array.from(groupedByClass.keys()).sort((a, b) => a.localeCompare(b));
+
+    for (const className of sortedClassNames) {
+      const classElement = classCollection.getElement(className);
+      if (!classElement) {
+        console.warn(`VariableCollection: Class "${className}" not found in classCollection`);
+        continue;
+      }
+
+      const variables = groupedByClass.get(className)!;
+      const children: TreeNode<Element>[] = variables.map(variable => ({
+        data: variable,
+        children: [],
+        parent: undefined // will be set below
+      }));
+
+      const rootNode: TreeNode<Element> = {
+        data: classElement,
+        children,
+        parent: undefined
+      };
+
+      // Link parent references
+      children.forEach(child => child.parent = rootNode);
+      roots.push(rootNode);
+    }
+
+    return new VariableCollection(new Tree(roots), variableElements);
   }
 
   getLabel(): string {
@@ -1004,18 +995,26 @@ export class VariableCollection extends ElementCollection {
     return this.variables;
   }
 
+  getRenderableItems(expandedItems?: Set<string>): RenderableItem[] {
+    // Use toRenderableItems with callback to mark level 0 (ClassElement headers) as non-clickable
+    return this.tree.toRenderableItems(
+      expandedItems || new Set(),
+      (element, level) => level > 0 // Only variables (level 1) are clickable
+    );
+  }
+
   renderItems(
     callbacks: ElementCollectionCallbacks,
     position: 'left' | 'right',
     expandedItems?: Set<string>,
     toggleExpansion?: (item: string) => void
   ): React.ReactElement[] {
-    // Sort class names
-    const sortedClasses = Array.from(this.groupedVariables.keys()).sort((a, b) => a.localeCompare(b));
     const { color } = ELEMENT_TYPES[this.type];
 
-    return sortedClasses.map(className => {
-      const classVariables = this.groupedVariables.get(className)!;
+    // Render from tree structure
+    return this.tree.roots.map(rootNode => {
+      const classElement = rootNode.data as ClassElement;
+      const className = classElement.name;
       const isExpanded = expandedItems?.has(className) ?? false;
 
       return (
@@ -1032,14 +1031,15 @@ export class VariableCollection extends ElementCollection {
               {className}
             </span>
             <span className="text-xs text-gray-500 dark:text-gray-400">
-              ({classVariables.length})
+              ({rootNode.children.length})
             </span>
           </div>
 
           {/* Variables list - only show when expanded */}
           {isExpanded && (
             <div className="ml-4 mt-1">
-              {classVariables.map((variable, idx) => {
+              {rootNode.children.map((childNode, idx) => {
+                const variable = childNode.data as VariableElement;
                 const hoverHandlers = getElementHoverHandlers({
                   type: 'variable',
                   name: variable.name,

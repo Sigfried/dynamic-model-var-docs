@@ -256,7 +256,8 @@ export async function loadModelData(): Promise<ModelData> {
   // ClassCollection needs SlotElement map, not SlotDefinition map
   const slotElements = slotCollection.getSlots();
   const classCollection = ClassCollection.fromData(classHierarchy, slotElements);
-  const variableCollection = VariableCollection.fromData(variables);
+  // VariableCollection needs classCollection to build tree with ClassElement headers
+  const variableCollection = VariableCollection.fromData(variables, classCollection);
 
   const collections = new Map();
   collections.set('class', classCollection);
