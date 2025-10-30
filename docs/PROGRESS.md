@@ -8,13 +8,32 @@
 
 Interactive visualization and documentation system for the BDCHM (BioData Catalyst Harmonized Model) schema, enabling exploration of 47 classes, 40 enums, 7 slots, and 151 variables through an intuitive dual-panel interface with visual relationship links.
 
-**Live Demo**: https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/
+**Live Demo**: https://sigfried.github.io/dynamic-model-var-docs
 
 ---
 
+## Table of Contents
+
+- [Phase 1: Foundation (Basic Layout & Navigation)](#phase-1-foundation)
+- [Phase 2: Rich Details & Interactive Navigation](#phase-2-rich-details)
+- [Phase 3a: Flexible Dual-Panel System](#phase-3a-dual-panel)
+- [Phase 3b: 🔴 Multiple Detail Dialogs](#phase-3b-dialogs)
+- [Phase 3c: Element Architecture Refactoring](#phase-3c-element-arch)
+- [Phase 3d: 🔴 SVG Link Visualization](#phase-3d-svg-links)
+- [Phase 3e: 🔴 Adaptive Detail Display](#phase-3e-adaptive)
+- [Phase 3f: 🟡 Element Collection Architecture & LinkML Slot Inheritance](#phase-3f-collections)
+- [Phase 3g: Element Type Centralization & Generic Collections](#phase-3g-registry)
+- [Phase 3h: selectedElement Simplification & Generic Tree Types](#phase-3h-tree)
+- [Phase 4: Documentation Structure](#phase-4-docs)
+- [Phase 5: Collections Store Elements & Data-Driven Rendering](#phase-5-elements)
+- [Recent Enhancements (October 2025)](#recent-enhancements)
+
+---
+
+<a id="phase-1-foundation"></a>
 ## Phase 1: Foundation (Basic Layout & Navigation)
 
-**Completed**: January 2025
+**Completed**: October 2025
 
 ### Key Features
 - Class hierarchy display with `is_a` inheritance tree visualization
@@ -29,9 +48,10 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 
 ---
 
+<a id="phase-2-rich-details"></a>
 ## Phase 2: Rich Details & Interactive Navigation
 
-**Completed**: January 2025
+**Completed**: October 2025
 
 ### Key Features
 - **Comprehensive Class Details**: Full attribute tables with type information and constraints
@@ -54,9 +74,10 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 
 ---
 
+<a id="phase-3a-dual-panel"></a>
 ## Phase 3a: Flexible Dual-Panel System
 
-**Completed**: January 2025
+**Completed**: October 2025
 
 ### Key Features
 - **Reusable Panel Component**: ElementsPanel with section toggles (C/E/S/V icons)
@@ -79,9 +100,10 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 
 ---
 
+<a id="phase-3b-dialogs"></a>
 ## Phase 3b: 🔴 Multiple Detail Dialogs
 
-**Completed**: January 2025
+**Completed**: October 2025
 **Importance**: High - enables simultaneous element comparison, key UX innovation
 
 ### Key Features
@@ -103,9 +125,10 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 
 ---
 
+<a id="phase-3c-element-arch"></a>
 ## Phase 3c: Element Architecture Refactoring
 
-**Completed**: January 2025
+**Completed**: October 2025
 
 ### Key Features
 - **Type-Safe Element Classes**: Base Element class with ClassElement, EnumElement, SlotElement, VariableElement subclasses
@@ -124,9 +147,10 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 
 ---
 
+<a id="phase-3d-svg-links"></a>
 ## Phase 3d: 🔴 SVG Link Visualization
 
-**Completed**: January 2025
+**Completed**: October 2025
 **Importance**: High - visual relationship display is core value proposition
 
 ### Key Features
@@ -153,9 +177,10 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 
 ---
 
+<a id="phase-3e-adaptive"></a>
 ## Phase 3e: 🔴 Adaptive Detail Display
 
-**Completed**: January 2025
+**Completed**: October 2025
 **Importance**: High - major UX improvement enabling responsive layouts
 
 ### Key Features
@@ -183,9 +208,10 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 
 ---
 
+<a id="phase-3f-collections"></a>
 ## Phase 3f: 🟡 Element Collection Architecture & LinkML Slot Inheritance
 
-**Completed**: January 2025
+**Completed**: October 2025
 **Importance**: Medium - improved architecture and correctly displays LinkML inheritance
 
 ### Key Features
@@ -212,15 +238,116 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 
 ---
 
-## October 29, 2025
+<a id="phase-4-docs"></a>
+## Phase 4: Documentation Structure
 
-### Documentation Structure
+**Completed**: October 29, 2025
+
+### What was accomplished
 - Established new documentation conventions for CLAUDE.md and PROGRESS.md
 - Created DOC_CONVENTIONS.md to document structure and compliance checking
+- Defined clear separation: CLAUDE.md (forward-looking), PROGRESS.md (historical)
+- Established phase numbering conventions and importance markers
 
 ---
 
-## Recent Enhancements (January 2025)
+<a id="phase-5-elements"></a>
+## Phase 5: Collections Store Elements & Data-Driven Rendering
+
+**Completed**: October 30, 2025
+**Importance**: Low - internal architecture improvements
+
+### What was accomplished
+
+**Collections Store Element Instances** (not raw data):
+- All 4 collections (Class, Enum, Slot, Variable) now store Element instances in Tree<Element> structure
+- Element classes own their fields directly (no wrapping of DTOs)
+- ClassCollection: Tree<ClassElement> preserving parent-child hierarchy
+- VariableCollection: Tree<Element> with ClassElement headers (level 0) and VariableElement children (level 1)
+- EnumCollection/SlotCollection: Flat trees (all roots, alphabetically sorted)
+
+**Data-Driven Rendering Architecture**:
+- Eliminated renderItems() methods from all collections (~225 lines of duplicate JSX removed)
+- Implemented getRenderableItems() in all collections - returns data, not JSX
+- Created Tree.toRenderableItems() utility for converting tree to flat RenderableItem[] list
+- Section.tsx uses generic ItemRenderer component for all element types
+- Complete separation: Collections provide data only, view layer does all rendering
+
+**Element Badge System**:
+- Added getBadge() polymorphic method to Element base class
+- ClassElement: returns variableCount (if > 0)
+- EnumElement: returns permissibleValues.length
+- SlotElement: returns usedByClasses.length (if > 0)
+- VariableElement: no badge (returns undefined)
+
+**Architectural Discussion: Enforcement Mechanisms Resolved**
+
+**Question**: Why does Claude Code keep violating architectural principles despite clear documentation?
+
+**Root cause identified** (from conversation with Claude Web):
+> "The old deprecated types are still sitting there in types.ts, making it trivially easy for Claude Code to import them. As long as those concrete types exist and are importable, they'll keep getting used. It's like putting a bowl of candy on your desk and asking yourself not to eat it. **Delete the escape hatches.**"
+
+**Key insight**: The path of least resistance was wrong - TypeScript autocomplete suggests deprecated types, making violations easier than compliance.
+
+**Decisions made**:
+1. ✅ Keep DTOs in types.ts but add ESLint ban (not move to dataLoader.ts)
+2. ✅ Add ESLint rules banning DTO imports in components/**
+3. ✅ Add ESLint rules banning concrete Element subclass imports in components/**
+4. ✅ Add file header comments to all components
+5. ✅ Use getDetailData() approach (data-focused, not renderDetails() JSX)
+6. ⏳ Make element.type private (deferred - needs more research)
+7. ⏳ ESLint pattern detection for element.type checks (deferred)
+8. ⏳ Branded types for element.type (deferred - needs explanation)
+
+**Implementation plan**: Phase 6 enforcement (ESLint rules) must come before DetailPanel refactor to prevent violations during implementation.
+
+### Technical details
+
+**Key architectural decisions**:
+- Tree construction logic in Collection.fromData() - dataLoader calls fromData() with DTOs, collections build trees
+- Tree.toRenderableItems() handles expansion state and level tracking
+- Section.tsx renders RenderableItem[] generically with no type-specific conditionals
+- ClassElement instances reused in Variable groups (same instance, just mark isClickable=false)
+
+**Implementation steps completed**:
+1. ✅ Add Tree.toRenderableItems() method (models/Tree.ts)
+2. ✅ Add getBadge() method to Element base class
+3. ✅ Update Collection.fromData() to build trees (all 4 collections)
+4. ✅ Update dataLoader to pass classCollection to VariableCollection
+5. ✅ Remove children from ClassElement (now in TreeNode<ClassElement>)
+6. ✅ Implement getRenderableItems() in all collections
+7. ✅ Update Section.tsx to render RenderableItems
+8. ✅ Remove renderItems() methods from all collections
+
+**Files modified**:
+- src/models/Element.tsx - Element classes, Collection classes, getRenderableItems()
+- src/models/Tree.ts - toRenderableItems() method
+- src/components/Section.tsx - Generic ItemRenderer component
+- src/utils/dataLoader.ts - Pass classCollection to VariableCollection
+
+**Test results**:
+- All 156 regression tests passing
+- TypeScript typecheck passes with no errors
+
+### Benefits achieved
+
+- Collections don't know about React/JSX - provide data only
+- Components never need to import model-specific types
+- Consistent rendering across all element types
+- Easy to add new element types without touching view layer
+- ~225 lines of duplicate JSX rendering code eliminated
+
+### Known issues (deferred)
+
+- DetailPanel broken for all element types - uses duck typing on old property names
+- Element classes use camelCase (permissibleValues) vs raw types use snake_case (permissible_values)
+- Will be fixed when DetailPanel is refactored to use Element.getDetailData() method
+- NOT blocking - DetailPanel fix is separate upcoming task (Phase 7+)
+
+---
+
+<a id="recent-enhancements"></a>
+## Recent Enhancements (October 2025)
 
 ### Variable Section Improvements
 - **Grouped Variables by Class**: Collapsible sections "MeasurementObservation (103)", etc.
@@ -242,9 +369,10 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 
 ---
 
+<a id="phase-3g-registry"></a>
 ## Phase 3g: Element Type Centralization & Generic Collections
 
-**Completed**: January 2025
+**Completed**: October 2025
 **Importance**: Low - internal architecture improvement
 
 ### Key Features
@@ -290,9 +418,10 @@ No longer need to update:
 
 ---
 
+<a id="phase-3h-tree"></a>
 ## Phase 3h: selectedElement Simplification & Generic Tree Types
 
-**Completed**: January 2025
+**Completed**: October 2025
 
 ### Key Features
 - **selectedElement Removal**: Eliminated confusing selectedElement prop from panel highlighting

@@ -47,12 +47,6 @@ _(Empty - use [PLAN] prefix to add tasks here before implementing them)_
 
 ## Quick Items
 
-- 🪲 Clicking class brings up detail box with gray title bar saying "Variable:" and missing the slots section
-  - **Root cause**: DetailPanel uses duck typing on raw model types (`'children' in element`) instead of polymorphic Element methods
-  - **Proper fix**: Complete "Collections Store Elements" refactor first, then DetailPanel works with abstract Element interface
-  - **Why not quick fix**: Passing `ClassNode`, `EnumDefinition`, `SlotDefinition` Maps to DetailPanel violates separation of concerns (see architectural principle above)
-  - **Status**: Blocked until "Collections Store Elements" refactor complete
-
 ---
 
 ## Questions & Decisions Needed
@@ -68,184 +62,71 @@ _(Empty - use [PLAN] prefix to add tasks here before implementing them)_
 
 ---
 
-## Current Phase: 🔄 Refactor Types to Separate DTOs from Domain Models
+## Current Task (Phase 6): 🔒 Architectural Enforcement & Cleanup
 
-**Goal**: Fix confusion between interfaces (data shape) and classes (domain models with behavior)
+**Goal**: Complete the DTO/Model separation by removing deprecated types and adding build-time enforcement to prevent architectural violations
 
 **Why this is current phase**:
-- Current code mixes DTO shapes with model logic (e.g., `ClassNode` has tree structure)
-- Element classes just wrap interfaces instead of being the model
-- Components import raw types instead of using abstract Element
-- Must fix this before unifying tree structures
-
-**Current problems**:
-1. **types.ts** has both DTOs AND model logic (ClassNode has children[], variables[])
-2. **Element classes** just wrap interfaces (`private data: ClassNode`) without adding value
-3. **Collections** store raw interface types, not Element instances
-4. **Components** import ClassNode, EnumDefinition directly from types.ts
-
-**Target architecture**:
-
-```typescript
-// types.ts - ONLY DTOs (raw data from files/APIs)
-interface ClassMetadata {  // From bdchm.metadata.json
-  name: string;
-  description?: string;
-  is_a?: string;  // parent class name
-  attributes?: Record<string, any>;
-  slots?: string[];
-}
-
-interface VariableSpecRow {  // From TSV file
-  bdchmElement: string;
-  variableLabel: string;
-  // ... other columns
-}
-
-interface ModelData {
-  collections: Map<ElementTypeId, ElementCollection>;
-  elementLookup: Map<string, Element>;
-}
-
-// Note: TreeNode<T> and Tree<T> already exist in models/Tree.ts with utility methods
-```
-
-```typescript
-// models/Element.tsx - Classes ARE the domain model
-class ClassElement extends Element {
-  readonly type = 'class' as const;
-  readonly name: string;
-  readonly description?: string;
-  readonly parent?: string;
-  private properties: Map<string, Property>;
-  // ... all fields that were in ClassNode, now owned by class
-
-  constructor(metadata: ClassMetadata, variables: VariableSpecRow[]) {
-    super();
-    this.name = metadata.name;
-    // ... initialize from DTO
-  }
-
-  // Domain methods
-  getInheritanceChain(): ClassElement[] { /* ... */ }
-  getRelationships(): Relationship[] { /* ... */ }
-}
-
-// Collections use Tree<Element> from models/Tree.ts
-class ClassCollection {
-  private tree: Tree<ClassElement>;  // Tree class from Tree.ts
-
-  constructor(elements: ClassElement[]) {
-    this.tree = buildTree(elements, e => e.name, e => e.parent);
-  }
-}
-```
+- [Phase 5](../docs/PROGRESS.md#phase-5-elements) complete (collections store Elements, data-driven rendering works)
+- Steps 6-7 pending: Remove old types and add enforcement
+- Must prevent importing DTOs/concrete Element subclasses in components
+- "Delete the escape hatches" - make violations structurally impossible ([see discussion](../docs/PROGRESS.md#phase-5-elements))
 
 **Implementation steps**:
-1. ✅ Add DTO interfaces to types.ts (SchemaMetadata, ClassMetadata, etc.) - keep existing temporarily
-2. ✅ ~~Add TreeNode<T> generic interface to types.ts~~ - Already exists in models/Tree.ts
-3. ✅ Update Element classes to contain fields directly (not wrap interfaces)
-4. ✅ Update dataLoader to construct Element instances from DTOs
-5. ✅ Update collections to store Tree<Element> - see Step 5 substeps below
-6. ⏳ Remove old interfaces (ClassNode, EnumDefinition, etc.) from types.ts - PENDING
-7. ⏳ Update components to never import model-specific types - PENDING
 
-**Status (latest)**:
-- ✅ **Steps 1-5 COMPLETE**
-- DTOs added to types.ts with clear sections
-- TreeNode<T> interface already exists in models/Tree.ts
-- Old interfaces marked @deprecated
-- All Element classes (ClassElement, EnumElement, SlotElement, VariableElement) own their fields directly
-- All Collection classes store Element instances in Tree<Element> structure
-- All `fromData()` factory methods convert DTOs to Element instances and build trees
-- dataLoader constructs Element instances and passes them to collections
-- Section.tsx uses generic data-driven rendering via getRenderableItems()
-- Complete separation of data (collections) and presentation (Section.tsx)
-- ~225 lines of duplicate JSX rendering code eliminated
-- All 156 regression tests passing
-- TypeScript typecheck passes with no errors
+**Step 6**: ⏳ **Remove old interfaces from types.ts** - PENDING
+- Mark as @deprecated but keep for now (models/ and tests/ still use them)
+- Will fully remove after DetailPanel is refactored (Task 3)
 
----
+**Step 7**: ⏳ **Add ESLint enforcement rules** - PENDING
 
-### Step 5: Update Collections to Store Tree<Element>
+1. **Add ESLint rule banning DTO imports in components/**
+   - Ban: ClassNode, EnumDefinition, SlotDefinition from types.ts
+   - Scope: components/** only (models/ and tests/ can still use)
+   - Message: "Do not import DTOs. Use Element classes from models/Element instead."
 
-**Goal**: Unify all collections to use `Tree<Element>` from models/Tree.ts
-- ClassCollection: `Tree<ClassElement>` (convert from ClassElement[] with children)
-- VariableCollection: `Tree<Element>` (group headers become non-clickable parent TreeNodes)
-- EnumCollection/SlotCollection: `Tree<Element>` with single-level trees (all roots, no children)
+2. **Add ESLint rule banning concrete Element subclass imports in components/**
+   - Ban: ClassElement, EnumElement, SlotElement, VariableElement from models/Element
+   - Scope: components/** only
+   - Message: "Components must only import abstract Element class, not concrete subclasses."
 
-**Why this step is necessary**:
-Currently, collections have different internal structures:
-- ClassCollection: stores `ClassElement[]` with each ClassElement having `children: ClassElement[]`
-- VariableCollection: stores `groupedVariables: Map<string, VariableElement[]>`
+3. **Add file header comments to all components**
+   - Comment: `// Must only import Element from models/, never concrete subclasses or DTOs`
 
-This means:
-- ClassCollection and VariableCollection do NOT have `getRenderableItems()` implemented
-- Section.tsx must use type-specific `renderItems()` which returns JSX
-- The view layer still needs to know about structural differences (tree vs grouped)
+4. **Update CLAUDE.md ENFORCEMENT section**
+   - Document the new ESLint rules
+   - Add "Before ANY component change: grep for imports" checklist
 
-**Key Architectural Decisions**:
-1. **Tree construction logic in Collection.fromData()** - dataLoader calls fromData() with DTOs, collections build their trees
-2. **Tree provides data extraction** - `Tree.toRenderableItems()` converts tree to flat list with level info
-3. **Section.tsx does the rendering** - All JSX rendering moves to Section.tsx, collections return data only
-4. **ClassElement instances can be reused** - Variable groups use same ClassElement, just mark isClickable=false in RenderableItem
+**ESLint configuration** (.eslintrc.js or .eslintrc.cjs):
+```javascript
+rules: {
+  'no-restricted-imports': ['error', {
+    patterns: [
+      {
+        group: ['**/types'],
+        importNames: ['ClassNode', 'EnumDefinition', 'SlotDefinition'],
+        message: 'Do not import DTOs. Use Element classes from models/Element instead.',
+      },
+      {
+        group: ['**/models/Element'],
+        importNames: ['ClassElement', 'EnumElement', 'SlotElement', 'VariableElement'],
+        message: 'Components must only import abstract Element class, not concrete subclasses.',
+      }
+    ]
+  }]
+}
+```
 
-**Step 5 Substeps**:
+**Files to modify**:
+- `.eslintrc.js` or `.eslintrc.cjs` (or create if doesn't exist)
+- `docs/CLAUDE.md` - Update ENFORCEMENT section
+- `src/types.ts` - Keep @deprecated markers on old interfaces
+- All files in `src/components/**` - Add header comments
 
-**5.1** ✅ **Add `Tree.toRenderableItems()` method** (models/Tree.ts) - COMPLETE
-   - Converts tree structure to flat RenderableItem[] list
-   - Respects expansion state to show/hide children
-   - Supports optional getIsClickable callback for controlling clickability by level
-   - Uses Element.getBadge() for badge display
-
-**5.2** ✅ **Add simple `getBadge()` method to Element base class** (models/Element.tsx) - COMPLETE
-   - Base class returns undefined (no badge)
-   - ClassElement: returns variableCount (if > 0)
-   - EnumElement: returns permissibleValues.length
-   - SlotElement: returns usedByClasses.length (if > 0)
-   - VariableElement: no override (returns undefined)
-   - NOTE: Temporary simple implementation, badges will be overhauled later
-
-**5.3** ✅ **Update Collection.fromData() to build trees** (models/Element.tsx) - COMPLETE (4 of 4)
-   - ✅ EnumCollection: Flat tree, all roots, alphabetically sorted
-   - ✅ SlotCollection: Flat tree, all roots, alphabetically sorted
-   - ✅ ClassCollection: Hierarchical tree preserving parent-child relationships
-   - ✅ VariableCollection: Tree with ClassElement headers (level 0) and VariableElement children (level 1)
-
-**5.4** ✅ **Update dataLoader to pass classCollection to VariableCollection** (utils/dataLoader.ts) - COMPLETE
-
-**5.5** ✅ **Remove `children` from ClassElement** (models/Element.tsx) - COMPLETE
-   - Children now stored in TreeNode<ClassElement> structure
-
-**5.6** ✅ **Implement `getRenderableItems()` in all collections** (models/Element.tsx) - COMPLETE
-   - All 4 collections now have getRenderableItems() that call Tree.toRenderableItems()
-
-**5.7** ✅ **Update Section.tsx to render RenderableItems** - COMPLETE
-   - Created ItemRenderer component that consumes RenderableItem[]
-   - Moved all JSX rendering from Collection.renderItems() into Section.tsx
-   - Section.tsx now calls getRenderableItems() instead of renderItems()
-
-**5.8** ✅ **Remove `renderItems()` methods from all collections** - COMPLETE
-   - Removed abstract renderItems() declaration from ElementCollection
-   - Deleted renderItems() from all 4 collections (~225 lines of duplicate JSX)
-   - Collections now provide data only via getRenderableItems()
-
-**Step 5 Status - COMPLETE**:
-- ✅ All substeps 5.1-5.8 complete and tested
-- ✅ All 4 collections converted to Tree<Element> structure
-- ✅ All collections implement getRenderableItems()
-- ✅ Section.tsx uses generic data-driven rendering
-- ✅ Complete separation of data (collections) and presentation (Section.tsx)
-- ✅ All 156 regression tests passing
-- ✅ TypeScript typecheck passes
-
-**Next action**: Continue with Step 6 - Remove old interfaces from types.ts
-
-**Known Issues** (will be fixed in future steps):
-- DetailPanel broken for all element types - duck typing expects old property names
-  - Element classes use camelCase (permissibleValues) vs raw types use snake_case (permissible_values)
-  - Will be fixed when DetailPanel is refactored to use Element.renderDetails() method
-  - NOT blocking Step 5 - DetailPanel fix happens in Step 7
+**Future phases** (deferred):
+- Phase 2: Make element.type private, add getType() for debugging
+- Phase 3: ESLint pattern detection for `element.type ===` checks
+- Phase 4: Consider branded types if pattern persists
 
 ---
 
@@ -253,123 +134,176 @@ This means:
 
 Listed in intended implementation order (top = next):
 
-### 🔄 Collections Store Elements (Not Raw Data)
+### 🔄 Fix LinkOverlay - Use Elements Directly
 
-**Goal**: Complete model/view separation by making collections store Element instances instead of raw data types
+**Goal**: Remove broken `createElement()` function that tries to construct Elements from Elements
 
-**Why this matters**:
-- Blocks DetailPanel bug fix (components need to use abstract Element, not raw model types)
-- Critical architectural foundation - enables proper polymorphism throughout codebase
+**Problem** (src/components/LinkOverlay.tsx:115-138):
+```typescript
+// BROKEN - createElement constructs Elements from Elements
+const createElement = (elementData: ClassNode | EnumDefinition | SlotDefinition | VariableSpec, type: ElementTypeId) => {
+  switch (type) {
+    case 'class':
+      return new ClassElement(elementData as ClassNode, allSlots);
+    // ...
+  }
+};
 
-**Remaining conversions**:
-1. **SlotCollection** - Convert to store SlotElement instances
-2. **VariableCollection** - Convert to store VariableElement instances
-3. **ClassCollection** - Convert to store ClassElement instances (tricky: currently stores ClassNode[] tree)
+// But getAllElements() already returns Elements, not raw data!
+collection.getAllElements().forEach(elementData => {
+  const element = createElement(elementData, typeId); // Creates duplicate Element
+  const relationships = element.getRelationships();
+});
+```
 
-**Then cleanup**:
-4. Pre-compute relationships - Move getRelationships() into Element constructors, store as readonly property
-5. Remove createElement() factory - No longer needed once collections store Elements
-6. Remove getElementName() helper - Use element.name directly (already works via polymorphism)
-7. Replace categorizeRange() duck typing - Use elementLookup map instead of checking if name ends with "Enum"
-8. Remove ElementData type - Once collections store Elements, this union type becomes obsolete
-
-**After this phase completes**:
-- DetailPanel can be refactored to use abstract Element interface
-- Components will never need to import model-specific types
-- New element types can be added without touching view layer
+**Fix**: Delete `createElement()`, use Elements directly:
+```typescript
+collection.getAllElements().forEach(element => {
+  const relationships = element.getRelationships();
+  // Use element directly - it's already an Element instance!
+});
+```
 
 **Files to modify**:
-- `src/models/Element.tsx`
-- `src/utils/dataLoader.ts`
-- `src/types.ts` (remove ElementData)
+- `src/components/LinkOverlay.tsx` - Delete createElement(), update getAllElements() usage
 
 ---
 
-### 🔄 Move renderItems to Section.tsx
+### 🔄 Add getDetailData() Method to Element Classes
 
-#### a. Complete getRenderableItems() Implementation
+**Goal**: Implement data-focused approach where Element classes provide structured detail data, not JSX
 
-**Goal**: Finish converting collections from renderItems() to getRenderableItems() pattern
-
-**Status**:
-- ✅ EnumCollection done
-- ✅ SlotCollection done
-- ⏳ ClassCollection pending
-- ⏳ VariableCollection pending
-
-**ClassCollection challenges**:
-- Currently stores ClassNode[] tree structure
-- Need to flatten tree with level tracking
-- Maintain expansion state handling
-- Return RenderableItem[] with proper isClickable flags
-
-**VariableCollection challenges**:
-- Currently groups variables by class in renderItems()
-- Need to pre-group during data load (move logic to dataLoader.ts)
-- Variable group headers use actual ClassElement instances (decision made)
-- Group headers: isClickable=false (expand/collapse only)
-- Variables: isClickable=true (open dialog)
-
-**Files to modify**:
-- `src/models/Element.tsx` - ClassCollection and VariableCollection implementations
-- `src/utils/dataLoader.ts` - Move variable grouping logic here
-
-#### b. Update Section.tsx to Render RenderableItems
-
-**Goal**: Remove type-specific rendering logic from Section.tsx, use generic RenderableItem rendering
-
-**Current state**: Section.tsx calls `collection.renderItems()` which returns JSX
-**Target state**: Section.tsx calls `collection.getRenderableItems()` which returns data, Section renders it
+**Architectural principle** (from sg's decision, lines 263-277):
+> DetailPanel (and other ui components) accepts ui-focused params or objects
+> that can provide them (e.g., detailObj.title or detailObj.subtitle) with
+> properties like titlebarTitle, title, subtitle, titleColor, description,
+> sections: name, text, tableHeadings, tableContent
 
 **Implementation**:
-```typescript
-function Section() {
-  const items = collection.getRenderableItems(expandedItems);
 
-  return items.map(item => (
-    <ItemDisplay
-      item={item}
-      onClick={item.isClickable ? () => onSelect(item.element) :
-               item.hasChildren ? () => toggleExpansion(item.id) :
-               undefined}
-    />
-  ));
+1. **Add DetailData interface** (src/types.ts or src/models/Element.tsx):
+```typescript
+interface DetailSection {
+  name: string;
+  text?: string;
+  tableHeadings?: string[];
+  tableContent?: any[][];
+}
+
+interface DetailData {
+  titlebarTitle: string;    // "Class: Specimen"
+  title: string;            // "Specimen"
+  subtitle?: string;        // "extends Entity"
+  titleColor: string;       // From ELEMENT_TYPES[type].color
+  description?: string;
+  sections: DetailSection[];
+}
+```
+
+2. **Add abstract method to Element base class**:
+```typescript
+abstract class Element {
+  abstract getDetailData(): DetailData;
+}
+```
+
+3. **Implement in each Element subclass**:
+- ClassElement.getDetailData() - returns class details with attributes, slots, inheritance
+- EnumElement.getDetailData() - returns enum details with permissible values
+- SlotElement.getDetailData() - returns slot details with range, usage
+- VariableElement.getDetailData() - returns variable details with label, type, CURIE
+
+**Why this approach** (not renderDetails()):
+- DetailPanel doesn't know about element types - just renders data structures
+- Element classes own their data structure, not JSX rendering
+- Easy to add new element types without touching DetailPanel
+- Clear separation: Model provides data, View renders it
+
+**Files to modify**:
+- `src/models/Element.tsx` - Add abstract getDetailData(), implement in all 4 subclasses
+- `src/types.ts` (optional) - Add DetailData interfaces if not in Element.tsx
+
+---
+
+### 🔄 Update DetailPanel to Use element.getDetailData()
+
+**[sg] integrate the following that i pulled down from quick items**
+- 🪲 Clicking class brings up detail box with gray title bar saying "Variable:" and missing the slots section
+    - **Root cause**: DetailPanel uses duck typing on raw model types (`'children' in element`) instead of polymorphic Element methods
+    - **Proper fix**: Complete "Collections Store Elements" refactor first, then DetailPanel works with abstract Element interface
+    - **Why not quick fix**: Passing `ClassNode`, `EnumDefinition`, `SlotDefinition` Maps to DetailPanel violates separation of concerns (see architectural principle above)
+    - **Status**: Blocked until "Collections Store Elements" refactor complete
+---
+
+**Goal**: Refactor DetailPanel to use abstract Element interface via getDetailData() method
+
+**Current problems** (src/components/DetailPanel.tsx):
+- 819 lines of complex type-specific rendering logic
+- Imports old DTOs: `EnumDefinition, SlotDefinition, VariableSpec, SelectedElement`
+- Uses duck typing: `isEnumDefinition()`, `isSlotDefinition()`, `isVariableSpec()`
+- DetailPanel broken for all element types (lines 480-484)
+  - Duck typing expects old property names
+  - Element classes use camelCase vs raw types use snake_case
+
+**Current failing behavior**:
+- Clicking class brings up detail box with gray title bar saying "Variable:" and missing slots section
+- 10/26 tests failing in DetailPanel.test.tsx
+  - Expected "Class" label, actual shows "extends ParentClass"
+  - Expected "Inherits from:", actual shows "extends"
+
+**Target implementation**:
+```typescript
+// DetailPanel.tsx - renders DetailData structure
+function DetailPanel({ element }: { element: Element }) {
+  const data = element.getDetailData();
+
+  return (
+    <div>
+      <header className={data.titleColor}>
+        {data.titlebarTitle}
+      </header>
+      <h2>{data.title}</h2>
+      {data.subtitle && <p className="text-sm">{data.subtitle}</p>}
+      {data.description && <p>{data.description}</p>}
+
+      {data.sections.map(section => (
+        <section key={section.name}>
+          <h3>{section.name}</h3>
+          {section.text && <p>{section.text}</p>}
+          {section.tableHeadings && (
+            <table>
+              <thead>
+                <tr>
+                  {section.tableHeadings.map(h => <th key={h}>{h}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {section.tableContent?.map((row, i) => (
+                  <tr key={i}>
+                    {row.map((cell, j) => <td key={j}>{cell}</td>)}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+      ))}
+    </div>
+  );
 }
 ```
 
 **Benefits**:
-- Section doesn't need type-specific conditionals
-- Collections define structure as data, not React rendering
+- DetailPanel doesn't import or know about ClassElement, EnumElement, etc.
+- No duck typing or type checks
+- All element-specific logic in Element classes where it belongs
 - Easy to add new element types
 
 **Files to modify**:
-- `src/components/Section.tsx`
-- Create new component: `src/components/ItemDisplay.tsx` (or inline in Section)
+- `src/components/DetailPanel.tsx` - Complete rewrite to render DetailData
+- `src/test/DetailPanel.test.tsx` - Update test expectations
 
-#### c. Remove renderItems() Method
-
-**Goal**: Delete obsolete renderItems() after Section uses getRenderableItems()
-
-**Files to modify**:
-- `src/models/Element.tsx` - Remove renderItems() from all 4 collection classes
-
----
-
-### ✅ 🪲 Fix DetailPanel Tests & Bug
-
-**Status**: Blocked until "Collections Store Elements" refactor completes (currently in progress)
-
-**What's failing**: 10/26 tests in DetailPanel.test.tsx
-- Test expectations don't match actual rendered text
-- Example: Expected "Class" label, actual shows "extends ParentClass"
-- Example: Expected "Inherits from:", actual shows "extends"
-
-**Action after refactor completes**:
-1. Refactor DetailPanel to use abstract Element interface
-2. Update test expectations to match new implementation
-3. Tests will catch future regressions (like slots disappearing bug)
-
-**Note**: Other tests are also failing - see image at docs/images/temp/dark-mode-issue.png
+**Note**: This task depends on Task 2 (getDetailData() implementation) being complete
 
 ---
 
@@ -426,10 +360,6 @@ function Section() {
 - `src/utils/statePersistence.ts`
 
 ---
-
-## Upcoming Work
-
-Listed in intended implementation order (top = next):
 
 ### 🔄 Overhaul Badge Display System
 
@@ -589,29 +519,6 @@ When working with larger models or slower devices:
 - **Virtualize long lists**: MeasurementObservation has 103 variables; consider react-window or react-virtual
 - **Viewport culling for links**: Only render SVG links for visible elements
 - **Animation library**: Consider react-spring for smoother transitions (current CSS transitions work fine)
-
----
-
-## Open Architectural Questions
-
-### Where Should Element Type Metadata Live?
-
-**Status**: Deferred - keeping ElementRegistry.ts for now (working well)
-
-**Current approach**:
-- Separate `ElementRegistry.ts` file with:
-  - `ELEMENT_TYPES` map: colors, labels, icons, pluralLabel per type
-  - `RELATIONSHIP_TYPES` map: relationship metadata
-  - Helper functions: `getAllElementTypeIds()`, `isValidElementType()`
-- Element classes import from registry: `ELEMENT_TYPES[this.type]`
-
-**Alternative approach**: Put metadata directly in element classes as static properties
-
-**Tradeoffs**:
-- **Current (separate registry)**: All metadata in one place, easy overview, clear separation
-- **Alternative (in classes)**: Better cohesion, less indirection, but scattered across files
-
-**Decision**: Keep current approach until there's a compelling reason to change
 
 ---
 

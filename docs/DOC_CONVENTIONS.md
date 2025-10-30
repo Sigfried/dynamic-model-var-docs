@@ -42,10 +42,24 @@
 **Purpose**: Backward-looking record of completed work
 
 **Structure**:
-- Reverse chronological order (newest first)
-- Date-stamped entries
-- Completed phases with git commit references
+- Chronological order (oldest first) with Table of Contents at top
+- Phase numbering continues sequentially (Phase 1, 2, 3a-3h, 4, 5, 6...)
+- Each phase has anchor link: `<a name="phase-X-short-name"></a>`
+- Table of Contents links to all phases for easy navigation
+- Completed phases with technical details and benefits
 - Resolved questions with decisions made
+
+**Example anchor format**:
+```markdown
+<a id="phase-5-elements"></a>
+## Phase 5: Collections Store Elements & Data-Driven Rendering
+```
+
+**Linking from CLAUDE.md**:
+```markdown
+- [Phase 5](../docs/PROGRESS.md#phase-5-elements) complete
+- See [architectural discussion](../docs/PROGRESS.md#phase-5-elements)
+```
 
 ### TESTING.md
 **Audience**: Developers
@@ -509,4 +523,5 @@ Consider adding:
 
 ## Changelog
 
+- 2025-10-30: Added anchor link system for PROGRESS.md phases, changed to chronological order with TOC
 - 2025-10-29: Initial documentation of conventions
