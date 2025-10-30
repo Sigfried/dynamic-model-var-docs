@@ -1,3 +1,4 @@
+// Must only import Element from models/, never concrete subclasses or DTOs
 import DetailPanel from './DetailPanel';
 import { getHeaderColor, getPanelTitle } from '../utils/panelHelpers';
 import type { Element } from '../models/Element';

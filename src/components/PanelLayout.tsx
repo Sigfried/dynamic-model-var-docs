@@ -1,3 +1,4 @@
+// Must only import Element from models/, never concrete subclasses or DTOs
 import { type ReactNode } from 'react';
 
 interface PanelLayoutProps {

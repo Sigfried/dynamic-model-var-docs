@@ -1,3 +1,4 @@
+// Must only import Element from models/, never concrete subclasses or DTOs
 import React from 'react';
 import type { EnumDefinition, SlotDefinition, VariableSpec, SelectedElement } from '../types';
 

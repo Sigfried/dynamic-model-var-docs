@@ -1,3 +1,4 @@
+// Must only import Element from models/, never concrete subclasses or DTOs
 import { useState, useRef, useEffect } from 'react';
 import DetailPanel from './DetailPanel';
 import type { Element } from '../models/Element';

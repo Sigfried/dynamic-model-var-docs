@@ -1,3 +1,5 @@
+// Must only import Element from models/, never concrete subclasses or DTOs
+//
 // Generic table component for element details
 // Supports responsive split layout, custom renderers, and clickable cells
 

@@ -26,6 +26,7 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 - [Phase 3h: selectedElement Simplification & Generic Tree Types](#phase-3h-tree)
 - [Phase 4: Documentation Structure](#phase-4-docs)
 - [Phase 5: Collections Store Elements & Data-Driven Rendering](#phase-5-elements)
+- [Phase 6: 🔒 Architectural Enforcement](#phase-6-enforcement)
 - [Recent Enhancements (October 2025)](#recent-enhancements)
 
 ---
@@ -343,6 +344,103 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 - Element classes use camelCase (permissibleValues) vs raw types use snake_case (permissible_values)
 - Will be fixed when DetailPanel is refactored to use Element.getDetailData() method
 - NOT blocking - DetailPanel fix is separate upcoming task (Phase 7+)
+
+---
+
+<a id="phase-6-enforcement"></a>
+## Phase 6: 🔒 Architectural Enforcement
+
+**Completed**: October 30, 2025
+**Importance**: Medium - prevents future violations, enforces separation of concerns
+
+### What was accomplished
+
+**ESLint Enforcement Rules**: Build-time prevention of architectural violations in components
+
+**Rule 1: Ban DTO imports in components/**
+- Banned imports: `ClassNode`, `EnumDefinition`, `SlotDefinition`, `SelectedElement` from types.ts
+- Scope: `src/components/**/*.{ts,tsx}` only (models/ and tests/ can still use)
+- Error message directs developers to use Element classes and read architectural docs
+- Caught existing violations: DetailPanel.tsx (3 errors), LinkOverlay.tsx (3 errors)
+
+**Rule 2: Ban concrete Element subclass imports in components/**
+- Banned imports: `ClassElement`, `EnumElement`, `SlotElement`, `VariableElement` from models/Element
+- Scope: `src/components/**/*.{ts,tsx}` only
+- Forces use of abstract Element class with polymorphic methods
+- Caught existing violations: LinkOverlay.tsx (4 errors)
+
+**File Header Comments**: Added to all 8 component files
+- Header: "Must only import Element from models/, never concrete subclasses or DTOs"
+- Serves as constant reminder and quick reference for developers
+
+**Documentation**: Created ENFORCEMENT section in CLAUDE.md
+- Documented both ESLint rules with examples
+- Pre-change checklist for component modifications
+- Wrong vs correct patterns with code examples
+- Guidance on adding new element behavior via polymorphism
+
+### Why this matters
+
+**Problem**: Even with clear architectural documentation, violations kept occurring because:
+- TypeScript autocomplete suggests deprecated types
+- Path of least resistance was architecturally wrong
+- No build-time enforcement mechanism
+
+**Solution**: "Delete the escape hatches" - make violations structurally impossible
+- ESLint rules make violations fail CI/CD
+- Clear error messages guide developers to correct approach
+- File headers provide immediate context
+
+**Impact**:
+- Future component changes must follow architecture (enforced by tooling)
+- Developers get immediate feedback before committing code
+- Reduces code review burden (automated enforcement)
+- Makes correct approach easier than wrong approach
+
+### Technical details
+
+**ESLint configuration** (eslint.config.js):
+```javascript
+{
+  files: ['src/components/**/*.{ts,tsx}'],
+  rules: {
+    'no-restricted-imports': ['error', {
+      patterns: [
+        {
+          group: ['**/types', '../types', '../../types'],
+          importNames: ['ClassNode', 'EnumDefinition', 'SlotDefinition', 'SelectedElement'],
+          message: 'Components must not import DTOs. Use Element classes from models/Element instead.',
+        },
+        {
+          group: ['**/models/Element', '../models/Element', '../../models/Element'],
+          importNames: ['ClassElement', 'EnumElement', 'SlotElement', 'VariableElement'],
+          message: 'Components must only import abstract Element class, not concrete subclasses.',
+        },
+      ],
+    }],
+  },
+}
+```
+
+**Files modified**:
+- `eslint.config.js` - Added no-restricted-imports rules
+- All 8 files in `src/components/` - Added header comments
+- `docs/CLAUDE.md` - Added ENFORCEMENT section with checklist
+
+**Test results**:
+- ESLint correctly catches 10 violations in DetailPanel.tsx and LinkOverlay.tsx
+- TypeScript typecheck passes with no errors
+- Existing violations are expected (will be fixed in future refactoring)
+
+### Next steps
+
+**Step 6** (optional): Mark old interfaces as @deprecated in types.ts
+- Currently deferred - models/ and tests/ still use them
+- Will be completed after DetailPanel refactor
+
+**Future phases**: DetailPanel refactor to use Element.getDetailData()
+- Will fix all existing violations caught by ESLint
+- Once complete, all components will comply with architecture
 
 ---
 

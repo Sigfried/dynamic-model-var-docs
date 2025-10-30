@@ -1,3 +1,4 @@
+// Must only import Element from models/, never concrete subclasses or DTOs
 import type { ElementCollection, ElementCollectionCallbacks } from '../models/Element';
 import type { RenderableItem } from '../models/RenderableItem';
 import { useExpansionState } from '../hooks/useExpansionState';

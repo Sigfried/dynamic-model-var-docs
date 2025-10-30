@@ -20,4 +20,24 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  // Architectural enforcement: Components must only use abstract Element class
+  {
+    files: ['src/components/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [
+          {
+            group: ['**/types', '../types', '../../types'],
+            importNames: ['ClassNode', 'EnumDefinition', 'SlotDefinition', 'SelectedElement'],
+            message: 'Components must not import DTOs. Use Element classes from models/Element instead. See docs/CLAUDE.md for architectural principles.',
+          },
+          {
+            group: ['**/models/Element', '../models/Element', '../../models/Element'],
+            importNames: ['ClassElement', 'EnumElement', 'SlotElement', 'VariableElement'],
+            message: 'Components must only import abstract Element class, not concrete subclasses. Use polymorphic methods instead. See docs/CLAUDE.md for architectural principles.',
+          },
+        ],
+      }],
+    },
+  },
 ])

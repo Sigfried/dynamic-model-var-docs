@@ -39,6 +39,62 @@ function DetailPanel({ element }: { element: Element }) {
 
 ---
 
+## 🔒 ARCHITECTURAL ENFORCEMENT
+
+**ESLint Rules Enforcing Separation of Concerns**
+
+The project includes ESLint rules that prevent architectural violations in components:
+
+**Rule 1: Ban DTO imports in components/**
+- **Banned imports**: `ClassNode`, `EnumDefinition`, `SlotDefinition`, `SelectedElement` from `types.ts`
+- **Scope**: `src/components/**/*.{ts,tsx}` only
+- **Why**: Components must use Element classes, not raw DTOs
+- **Error message**: "Components must not import DTOs. Use Element classes from models/Element instead."
+
+**Rule 2: Ban concrete Element subclass imports in components/**
+- **Banned imports**: `ClassElement`, `EnumElement`, `SlotElement`, `VariableElement` from `models/Element`
+- **Scope**: `src/components/**/*.{ts,tsx}` only
+- **Why**: Components must only use abstract `Element` class with polymorphic methods
+- **Error message**: "Components must only import abstract Element class, not concrete subclasses."
+
+**Pre-Change Checklist for Component Modifications**
+
+Before modifying any component file:
+
+1. ✅ Read the file header comment: "Must only import Element from models/, never concrete subclasses or DTOs"
+2. ✅ Check imports: `grep -n "from.*types" src/components/YourComponent.tsx`
+3. ✅ Check for banned imports: `grep -n "ClassElement\|EnumElement\|SlotElement\|VariableElement" src/components/YourComponent.tsx`
+4. ✅ If you need type-specific behavior, add a polymorphic method to Element base class instead
+5. ✅ Run ESLint after changes: `npm run lint`
+
+**How to Add New Element Behavior**
+
+❌ **WRONG** - Adding type check in component:
+```typescript
+// Component file
+if (element.type === 'class') {
+  // class-specific rendering
+}
+```
+
+✅ **CORRECT** - Adding polymorphic method:
+```typescript
+// models/Element.tsx - Add to Element base class
+abstract getDisplayInfo(): { title: string; color: string };
+
+// Implement in each subclass
+class ClassElement extends Element {
+  getDisplayInfo() {
+    return { title: this.name, color: 'blue' };
+  }
+}
+
+// Component uses polymorphism
+const info = element.getDisplayInfo();
+```
+
+---
+
 ## Tasks from Conversation
 
 _(Empty - use [PLAN] prefix to add tasks here before implementing them)_
@@ -78,24 +134,18 @@ _(Empty - use [PLAN] prefix to add tasks here before implementing them)_
 - Mark as @deprecated but keep for now (models/ and tests/ still use them)
 - Will fully remove after DetailPanel is refactored (Task 3)
 
-**Step 7**: ⏳ **Add ESLint enforcement rules** - PENDING
+**Step 7**: ✅ **Add ESLint enforcement rules** - COMPLETE
 
-1. **Add ESLint rule banning DTO imports in components/**
-   - Ban: ClassNode, EnumDefinition, SlotDefinition from types.ts
-   - Scope: components/** only (models/ and tests/ can still use)
-   - Message: "Do not import DTOs. Use Element classes from models/Element instead."
+ESLint rules now enforce architectural separation:
+1. ✅ Ban DTO imports (`ClassNode`, `EnumDefinition`, `SlotDefinition`, `SelectedElement`) in components/**
+2. ✅ Ban concrete Element subclass imports (`ClassElement`, `EnumElement`, `SlotElement`, `VariableElement`) in components/**
+3. ✅ Added header comments to all 8 component files
+4. ✅ Created ENFORCEMENT section in CLAUDE.md with checklist and examples
 
-2. **Add ESLint rule banning concrete Element subclass imports in components/**
-   - Ban: ClassElement, EnumElement, SlotElement, VariableElement from models/Element
-   - Scope: components/** only
-   - Message: "Components must only import abstract Element class, not concrete subclasses."
-
-3. **Add file header comments to all components**
-   - Comment: `// Must only import Element from models/, never concrete subclasses or DTOs`
-
-4. **Update CLAUDE.md ENFORCEMENT section**
-   - Document the new ESLint rules
-   - Add "Before ANY component change: grep for imports" checklist
+**Files modified**:
+- `eslint.config.js` - Added `no-restricted-imports` rules for components/**
+- All 8 files in `src/components/` - Added header comment
+- `docs/CLAUDE.md` - Added ENFORCEMENT section
 
 **ESLint configuration** (.eslintrc.js or .eslintrc.cjs):
 ```javascript

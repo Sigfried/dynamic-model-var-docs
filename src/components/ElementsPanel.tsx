@@ -1,3 +1,4 @@
+// Must only import Element from models/, never concrete subclasses or DTOs
 import Section from './Section';
 import type { ElementCollection, Element } from '../models/Element';
 import type { ElementTypeId } from '../models/ElementRegistry';

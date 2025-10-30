@@ -1,3 +1,4 @@
+// Must only import Element from models/, never concrete subclasses or DTOs
 /**
  * LinkOverlay - SVG layer for rendering links between elements
  *
