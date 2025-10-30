@@ -1,10 +1,80 @@
 import type { ElementCollection, ElementCollectionCallbacks } from '../models/Element';
+import type { RenderableItem } from '../models/RenderableItem';
 import { useExpansionState } from '../hooks/useExpansionState';
+import { ELEMENT_TYPES } from '../models/ElementRegistry';
+import { getElementHoverHandlers } from '../hooks/useElementHover';
 
 interface SectionProps {
   collection: ElementCollection;
   callbacks: ElementCollectionCallbacks;
   position: 'left' | 'right';
+}
+
+interface ItemRendererProps {
+  item: RenderableItem;
+  callbacks: ElementCollectionCallbacks;
+  position: 'left' | 'right';
+  toggleExpansion?: (itemId: string) => void;
+}
+
+function ItemRenderer({ item, callbacks, position, toggleExpansion }: ItemRendererProps) {
+  const { element, level, hasChildren, isExpanded, isClickable, badge } = item;
+  const { color } = ELEMENT_TYPES[element.type];
+
+  const hoverHandlers = getElementHoverHandlers({
+    type: element.type,
+    name: element.name,
+    onElementHover: callbacks.onElementHover,
+    onElementLeave: callbacks.onElementLeave
+  });
+
+  return (
+    <div key={element.name} className="select-none">
+      <div
+        id={`${element.type}-${element.name}`}
+        data-element-type={element.type}
+        data-element-name={element.name}
+        data-panel-position={position}
+        className={`flex items-center gap-2 px-2 py-1 rounded ${
+          isClickable ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700' : ''
+        }`}
+        style={{ paddingLeft: `${level * 16 + 8}px` }}
+        onClick={() => isClickable && callbacks.onSelect(element)}
+        {...hoverHandlers}
+      >
+        {/* Expansion toggle for items with children */}
+        {hasChildren && toggleExpansion && (
+          <button
+            className="w-4 h-4 flex items-center justify-center text-gray-500 hover:text-gray-700"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleExpansion(item.id);
+            }}
+          >
+            {isExpanded ? '▼' : '▶'}
+          </button>
+        )}
+        {!hasChildren && <span className="w-4" />}
+
+        {/* Element name */}
+        <span className="flex-1 text-sm font-medium">{element.name}</span>
+
+        {/* Type-specific badges and indicators */}
+        {element.type === 'class' && element.abstract && (
+          <span className="text-xs text-purple-600 dark:text-purple-400 italic mr-2">
+            abstract
+          </span>
+        )}
+
+        {/* Badge (count display) */}
+        {badge !== undefined && badge !== null && (
+          <span className={`text-xs px-2 py-0.5 rounded ${color.badgeBg} ${color.badgeText}`}>
+            {badge}
+          </span>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function Section({ collection, callbacks, position }: SectionProps) {
@@ -17,13 +87,24 @@ export default function Section({ collection, callbacks, position }: SectionProp
     ? useExpansionState(expansionKey, defaultExpansion)
     : [undefined, undefined];
 
+  // Get renderable items from collection
+  const items = collection.getRenderableItems(expandedItems);
+
   return (
     <div className="bg-white dark:bg-slate-800 text-left">
       <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-4 py-3 z-10">
         <h2 className="text-lg font-semibold text-left">{collection.getLabel()}</h2>
       </div>
       <div className="p-2">
-        {collection.renderItems(callbacks, position, expandedItems, toggleExpansion)}
+        {items.map(item => (
+          <ItemRenderer
+            key={item.id}
+            item={item}
+            callbacks={callbacks}
+            position={position}
+            toggleExpansion={toggleExpansion}
+          />
+        ))}
       </div>
     </div>
   );

@@ -541,14 +541,6 @@ export abstract class ElementCollection {
    * Returns items with structure/nesting info, ready for generic rendering
    */
   abstract getRenderableItems(expandedItems?: Set<string>): RenderableItem[];
-
-  /** Render items for the panel section */
-  abstract renderItems(
-    callbacks: ElementCollectionCallbacks,
-    position: 'left' | 'right',
-    expandedItems?: Set<string>,
-    toggleExpansion?: (item: string) => void
-  ): React.ReactElement[];
 }
 
 // EnumCollection - flat list of enumerations
@@ -603,45 +595,6 @@ export class EnumCollection extends ElementCollection {
 
   getRenderableItems(expandedItems?: Set<string>): RenderableItem[] {
     return this.tree.toRenderableItems(expandedItems || new Set());
-  }
-
-  renderItems(
-    callbacks: ElementCollectionCallbacks,
-    position: 'left' | 'right',
-    _expandedItems?: Set<string>,
-    _toggleExpansion?: (item: string) => void
-  ): React.ReactElement[] {
-    // Get enums from tree (already sorted in fromData)
-    const enumList = this.tree.flatten();
-
-    const { color } = ELEMENT_TYPES[this.type];
-
-    return enumList.map((enumElement) => {
-      const hoverHandlers = getElementHoverHandlers({
-        type: 'enum',
-        name: enumElement.name,
-        onElementHover: callbacks.onElementHover,
-        onElementLeave: callbacks.onElementLeave
-      });
-
-      return (
-        <div
-          key={enumElement.name}
-          id={`enum-${enumElement.name}`}
-          data-element-type="enum"
-          data-element-name={enumElement.name}
-          data-panel-position={position}
-          className="flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700"
-          onClick={() => callbacks.onSelect(enumElement)}
-          {...hoverHandlers}
-        >
-          <span className="flex-1 text-sm font-medium">{enumElement.name}</span>
-          <span className={`text-xs px-2 py-0.5 rounded ${color.badgeBg} ${color.badgeText}`}>
-            {(enumElement as EnumElement).permissibleValues.length}
-          </span>
-        </div>
-      );
-    });
   }
 }
 
@@ -707,47 +660,6 @@ export class SlotCollection extends ElementCollection {
       map.set(slot.name, slot);
     });
     return map;
-  }
-
-  renderItems(
-    callbacks: ElementCollectionCallbacks,
-    position: 'left' | 'right',
-    _expandedItems?: Set<string>,
-    _toggleExpansion?: (item: string) => void
-  ): React.ReactElement[] {
-    // Get slots from tree (already sorted in fromData)
-    const slotList = this.tree.flatten();
-
-    const { color } = ELEMENT_TYPES[this.type];
-
-    return slotList.map((slotElement) => {
-      const hoverHandlers = getElementHoverHandlers({
-        type: 'slot',
-        name: slotElement.name,
-        onElementHover: callbacks.onElementHover,
-        onElementLeave: callbacks.onElementLeave
-      });
-
-      return (
-        <div
-          key={slotElement.name}
-          id={`slot-${slotElement.name}`}
-          data-element-type="slot"
-          data-element-name={slotElement.name}
-          data-panel-position={position}
-          className="flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700"
-          onClick={() => callbacks.onSelect(slotElement)}
-          {...hoverHandlers}
-        >
-          <span className="flex-1 text-sm font-medium">{slotElement.name}</span>
-          {slotElement.usedByClasses.length > 0 && (
-            <span className={`text-xs px-2 py-0.5 rounded ${color.badgeBg} ${color.badgeText}`}>
-              {slotElement.usedByClasses.length}
-            </span>
-          )}
-        </div>
-      );
-    });
   }
 }
 
@@ -824,84 +736,6 @@ export class ClassCollection extends ElementCollection {
 
   getRenderableItems(expandedItems?: Set<string>): RenderableItem[] {
     return this.tree.toRenderableItems(expandedItems || new Set());
-  }
-
-  renderItems(
-    callbacks: ElementCollectionCallbacks,
-    position: 'left' | 'right',
-    expandedItems?: Set<string>,
-    toggleExpansion?: (item: string) => void
-  ): React.ReactElement[] {
-    return this.tree.roots.map(node =>
-      this.renderClassTreeNode(node, 0, callbacks, position, expandedItems, toggleExpansion)
-    );
-  }
-
-  private renderClassTreeNode(
-    node: TreeNode<ClassElement>,
-    level: number,
-    callbacks: ElementCollectionCallbacks,
-    position: 'left' | 'right',
-    expandedItems?: Set<string>,
-    toggleExpansion?: (item: string) => void
-  ): React.ReactElement {
-    const element = node.data;
-    const hasChildren = node.children.length > 0;
-    const isExpanded = expandedItems?.has(element.name) ?? false;
-    const hoverHandlers = getElementHoverHandlers({
-      type: 'class',
-      name: element.name,
-      onElementHover: callbacks.onElementHover,
-      onElementLeave: callbacks.onElementLeave
-    });
-
-    const { color } = ELEMENT_TYPES[this.type];
-
-    return (
-      <div key={element.name} className="select-none">
-        <div
-          id={`class-${element.name}`}
-          data-element-type="class"
-          data-element-name={element.name}
-          data-panel-position={position}
-          className="flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700"
-          style={{ paddingLeft: `${level * 16 + 8}px` }}
-          onClick={() => callbacks.onSelect(element)}
-          {...hoverHandlers}
-        >
-          {hasChildren && (
-            <button
-              className="w-4 h-4 flex items-center justify-center text-gray-500 hover:text-gray-700"
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleExpansion?.(element.name);
-              }}
-            >
-              {isExpanded ? '▼' : '▶'}
-            </button>
-          )}
-          {!hasChildren && <span className="w-4" />}
-          <span className="flex-1 text-sm font-medium">{element.name}</span>
-          {element.abstract && (
-            <span className="text-xs text-purple-600 dark:text-purple-400 italic mr-2">
-              abstract
-            </span>
-          )}
-          {element.variableCount > 0 && (
-            <span className={`text-xs px-2 py-0.5 rounded ${color.badgeBg} ${color.badgeText}`}>
-              {element.variableCount}
-            </span>
-          )}
-        </div>
-        {hasChildren && isExpanded && (
-          <div>
-            {node.children.map(childNode =>
-              this.renderClassTreeNode(childNode, level + 1, callbacks, position, expandedItems, toggleExpansion)
-            )}
-          </div>
-        )}
-      </div>
-    );
   }
 }
 
@@ -1001,77 +835,6 @@ export class VariableCollection extends ElementCollection {
       expandedItems || new Set(),
       (element, level) => level > 0 // Only variables (level 1) are clickable
     );
-  }
-
-  renderItems(
-    callbacks: ElementCollectionCallbacks,
-    position: 'left' | 'right',
-    expandedItems?: Set<string>,
-    toggleExpansion?: (item: string) => void
-  ): React.ReactElement[] {
-    const { color } = ELEMENT_TYPES[this.type];
-
-    // Render from tree structure
-    return this.tree.roots.map(rootNode => {
-      const classElement = rootNode.data as ClassElement;
-      const className = classElement.name;
-      const isExpanded = expandedItems?.has(className) ?? false;
-
-      return (
-        <div key={className} className="mb-2">
-          {/* Class header - collapsible */}
-          <div
-            className="flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700"
-            onClick={() => toggleExpansion?.(className)}
-          >
-            <span className="text-gray-500 dark:text-gray-400 select-none">
-              {isExpanded ? '▼' : '▶'}
-            </span>
-            <span className="font-medium text-sm text-gray-700 dark:text-gray-300">
-              {className}
-            </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              ({rootNode.children.length})
-            </span>
-          </div>
-
-          {/* Variables list - only show when expanded */}
-          {isExpanded && (
-            <div className="ml-4 mt-1">
-              {rootNode.children.map((childNode, idx) => {
-                const variable = childNode.data as VariableElement;
-                const hoverHandlers = getElementHoverHandlers({
-                  type: 'variable',
-                  name: variable.name,
-                  onElementHover: callbacks.onElementHover,
-                  onElementLeave: callbacks.onElementLeave
-                });
-
-                return (
-                  <div
-                    key={`${variable.bdchmElement}-${variable.name}-${idx}`}
-                    id={`variable-${variable.name}`}
-                    data-element-type="variable"
-                    data-element-name={variable.name}
-                    data-panel-position={position}
-                    className="px-2 py-1 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-slate-700"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      callbacks.onSelect(variable);
-                    }}
-                    {...hoverHandlers}
-                  >
-                    <span className="text-sm truncate block">
-                      {variable.name}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      );
-    });
   }
 }
 
