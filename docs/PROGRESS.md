@@ -432,15 +432,21 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 - TypeScript typecheck passes with no errors
 - Existing violations are expected (will be fixed in future refactoring)
 
-### Next steps
+**Follow-up (October 30, 2025)**: Fixed LinkOverlay violations
+- Removed broken `createElement()` function that was creating duplicate Element instances
+- Removed all DTO imports (ClassNode, EnumDefinition, SlotDefinition, VariableSpec)
+- Removed all concrete Element class imports (ClassElement, EnumElement, etc.)
+- LinkOverlay now uses abstract Element interface directly from collections
+- ESLint violations reduced from 10 to 3 (only DetailPanel.tsx remains)
 
-**Step 6** (optional): Mark old interfaces as @deprecated in types.ts
-- Currently deferred - models/ and tests/ still use them
-- Will be completed after DetailPanel refactor
+### Phase completion
 
-**Future phases**: DetailPanel refactor to use Element.getDetailData()
-- Will fix all existing violations caught by ESLint
-- Once complete, all components will comply with architecture
+Phase 6 is **complete**. ESLint enforcement is in place and most violations are fixed.
+
+**Remaining work** (to be done after DetailPanel refactor):
+- DetailPanel.tsx still has 3 ESLint violations (expected - will be fixed during refactor)
+- Consider making `element.type` private with public `getType()` method
+- Skip @deprecated marks and branded types (decided against)
 
 ---
 

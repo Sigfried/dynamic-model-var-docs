@@ -13,41 +13,6 @@
 
 ---
 
-## Current Task (Phase 6): 🔒 Architectural Enforcement & Cleanup
-
-**Goal**: Complete the DTO/Model separation by adding build-time enforcement to prevent architectural violations
-
-**Why this is current phase**:
-- [Phase 5](PROGRESS.md#phase-5-elements) complete (collections store Elements, data-driven rendering works)
-- Step 6 (optional) and Step 7 (complete) were the final steps
-- "Delete the escape hatches" - make violations structurally impossible ([see discussion](PROGRESS.md#phase-5-elements))
-
-**Implementation steps**:
-
-**Step 6**: ⏳ **Mark old interfaces as @deprecated in types.ts** - OPTIONAL/DEFERRED
-- Mark as @deprecated but keep for now (models/ and tests/ still use them)
-- Will fully remove after DetailPanel is refactored (next major task)
-
-**Step 7**: ✅ **Add ESLint enforcement rules** - COMPLETE
-
-ESLint rules now enforce architectural separation:
-1. ✅ Ban DTO imports (`ClassNode`, `EnumDefinition`, `SlotDefinition`, `SelectedElement`) in components/**
-2. ✅ Ban concrete Element subclass imports (`ClassElement`, `EnumElement`, `SlotElement`, `VariableElement`) in components/**
-3. ✅ Added header comments to all 8 component files
-4. ✅ Created ENFORCEMENT section in CLAUDE.md with checklist and examples
-
-**Files modified**:
-- `eslint.config.js` - Added `no-restricted-imports` rules for components/**
-- All 8 files in `src/components/` - Added header comment
-- `docs/CLAUDE.md` - Added ENFORCEMENT section
-
-**Future phases** (deferred - may not be needed):
-- Make element.type private, add getType() for debugging
-- ESLint pattern detection for `element.type ===` checks
-- Consider branded types if pattern persists
-
----
-
 ## Upcoming Work
 
 Listed in intended implementation order (top = next):
@@ -204,6 +169,26 @@ function DetailPanel({ element }: { element: Element }) {
 **Files likely affected**:
 - `src/index.css` - Tailwind dark mode classes
 - All component files using colors
+
+---
+
+### 🔒 Make element.type Private
+
+**Goal**: Encapsulate element.type property to enforce architectural patterns
+
+**Why**: Currently `element.type` is public, allowing direct access. This can lead to type-checking anti-patterns in view code. Making it private forces use of polymorphic methods.
+
+**Implementation**:
+1. Change `element.type` from public to private in Element base class
+2. Add public `getType(): ElementTypeId` method for debugging/logging
+3. Fix any broken code (if substantial breakage, reassess approach)
+
+**Expected impact**:
+- May break code that currently does `if (element.type === 'class')` checks
+- Forces developers to use polymorphic methods instead
+- Caught violations should be refactored to proper polymorphism
+
+**When to do this**: After DetailPanel refactor is complete and working
 
 ---
 
