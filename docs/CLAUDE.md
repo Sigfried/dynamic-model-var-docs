@@ -146,9 +146,9 @@ class ClassCollection {
 2. ✅ ~~Add TreeNode<T> generic interface to types.ts~~ - Already exists in models/Tree.ts
 3. ✅ Update Element classes to contain fields directly (not wrap interfaces)
 4. ✅ Update dataLoader to construct Element instances from DTOs
-5. Update collections to store TreeNode<Element>
-6. Remove old interfaces (ClassNode, EnumDefinition, etc.) from types.ts
-7. Update components to never import model-specific types
+5. ✅ Update collections to store Tree<Element> - see Step 5 substeps below
+6. ⏳ Remove old interfaces (ClassNode, EnumDefinition, etc.) from types.ts - PENDING
+7. ⏳ Update components to never import model-specific types - PENDING
 
 **Status (latest)**:
 - ✅ Steps 1-4 complete
@@ -161,9 +161,16 @@ class ClassCollection {
 - dataLoader constructs Element instances and passes them to collections
 - TypeScript typecheck passes with no errors
 
-**Next action**: Step 5 is REQUIRED - Must convert to Tree<Element> structure
+---
 
-**Why Step 5 is necessary**:
+### Step 5: Update Collections to Store Tree<Element>
+
+**Goal**: Unify all collections to use `Tree<Element>` from models/Tree.ts
+- ClassCollection: `Tree<ClassElement>` (convert from ClassElement[] with children)
+- VariableCollection: `Tree<Element>` (group headers become non-clickable parent TreeNodes)
+- EnumCollection/SlotCollection: `Tree<Element>` with single-level trees (all roots, no children)
+
+**Why this step is necessary**:
 Currently, collections have different internal structures:
 - ClassCollection: stores `ClassElement[]` with each ClassElement having `children: ClassElement[]`
 - VariableCollection: stores `groupedVariables: Map<string, VariableElement[]>`
@@ -173,39 +180,21 @@ This means:
 - Section.tsx must use type-specific `renderItems()` which returns JSX
 - The view layer still needs to know about structural differences (tree vs grouped)
 
-**Goal of Step 5**: Unify all collections to use `Tree<Element>` from models/Tree.ts
-- ClassCollection: `Tree<ClassElement>` (convert from ClassElement[] with children)
-- VariableCollection: `Tree<Element>` (group headers become non-clickable parent TreeNodes)
-- EnumCollection/SlotCollection: `Tree<Element>` with single-level trees (all roots, no children)
-
 **Key Architectural Decisions**:
 1. **Tree construction logic in Collection.fromData()** - dataLoader calls fromData() with DTOs, collections build their trees
 2. **Tree provides data extraction** - `Tree.toRenderableItems()` converts tree to flat list with level info
 3. **Section.tsx does the rendering** - All JSX rendering moves to Section.tsx, collections return data only
 4. **ClassElement instances can be reused** - Variable groups use same ClassElement, just mark isClickable=false in RenderableItem
 
-**Answers to key questions**:
-- **Q: Where should tree construction logic live?**
-  A: In Collection.fromData() methods. Each collection knows how to structure its own tree (hierarchical for classes, flat for enums/slots, grouped for variables). dataLoader just calls fromData() with DTOs.
+**Step 5 Substeps**:
 
-- **Q: Does rendering logic go in Tree or Section?**
-  A: Tree provides data (`toRenderableItems()`), Section.tsx does all JSX rendering.
-
-- **Q: Where are badges used?**
-  A: In panel sections, rendered by `collection.renderItems()`. Currently NOT used by Section.tsx (it calls renderItems, not getRenderableItems). Badges show counts but it's unclear what they mean to users.
-
-- **Q: Do we need two copies of ClassElement for variables?**
-  A: No! Reuse the same ClassElement instance. Use `getIsClickable` callback in `toRenderableItems()` to mark level 0 as non-clickable for variable groups.
-
-**Implementation Plan**:
-
-1. ✅ **Add `Tree.toRenderableItems()` method** (models/Tree.ts) - COMPLETE
+**5.1** ✅ **Add `Tree.toRenderableItems()` method** (models/Tree.ts) - COMPLETE
    - Converts tree structure to flat RenderableItem[] list
    - Respects expansion state to show/hide children
    - Supports optional getIsClickable callback for controlling clickability by level
    - Uses Element.getBadge() for badge display
 
-2. ✅ **Add simple `getBadge()` method to Element base class** (models/Element.tsx) - COMPLETE
+**5.2** ✅ **Add simple `getBadge()` method to Element base class** (models/Element.tsx) - COMPLETE
    - Base class returns undefined (no badge)
    - ClassElement: returns variableCount (if > 0)
    - EnumElement: returns permissibleValues.length
@@ -213,59 +202,42 @@ This means:
    - VariableElement: no override (returns undefined)
    - NOTE: Temporary simple implementation, badges will be overhauled later
 
-3. ✅ **Update Collection.fromData() to build trees** (models/Element.tsx) - COMPLETE (3 of 4)
+**5.3** ✅ **Update Collection.fromData() to build trees** (models/Element.tsx) - COMPLETE (4 of 4)
    - ✅ EnumCollection: Flat tree, all roots, alphabetically sorted
    - ✅ SlotCollection: Flat tree, all roots, alphabetically sorted
    - ✅ ClassCollection: Hierarchical tree preserving parent-child relationships
-   - ⏳ VariableCollection: Pending (needs classCollection parameter)
+   - ✅ VariableCollection: Tree with ClassElement headers (level 0) and VariableElement children (level 1)
 
-4. ⏳ **Update dataLoader to pass classCollection to VariableCollection** (utils/dataLoader.ts) - PENDING
+**5.4** ✅ **Update dataLoader to pass classCollection to VariableCollection** (utils/dataLoader.ts) - COMPLETE
 
-5. ⏳ **Remove `children` from ClassElement** (models/Element.tsx) - PENDING
-   - Currently empty array [], will be fully removed after VariableCollection conversion
+**5.5** ✅ **Remove `children` from ClassElement** (models/Element.tsx) - COMPLETE
+   - Children now stored in TreeNode<ClassElement> structure
 
-6. ⏳ **Implement `getRenderableItems()` in all collections** (models/Element.tsx) - PENDING
+**5.6** ✅ **Implement `getRenderableItems()` in all collections** (models/Element.tsx) - COMPLETE
+   - All 4 collections now have getRenderableItems() that call Tree.toRenderableItems()
 
-7. ⏳ **Update Section.tsx to render RenderableItems** - PENDING
+**5.7** ⏳ **Update Section.tsx to render RenderableItems** - PENDING
+   - Create generic item renderer that consumes RenderableItem[]
+   - Move all JSX rendering from Collection.renderItems() into Section.tsx
 
-8. ⏳ **Remove `renderItems()` methods from all collections** - PENDING
+**5.8** ⏳ **Remove `renderItems()` methods from all collections** - PENDING
+   - Once Section.tsx uses getRenderableItems(), delete obsolete renderItems() methods
 
-**Latest Status**:
-- ✅ Steps 1-4 complete and tested
+**Step 5 Status**:
+- ✅ Substeps 5.1-5.6 complete and tested
 - ✅ All 4 collections (Enum, Slot, Class, Variable) converted to Tree<Element>
 - ✅ All 4 collections implement getRenderableItems()
 - ✅ All 156 regression tests passing
 - ✅ TypeScript typecheck passes
-- ⏳ Steps 6-8 pending (Section.tsx refactor and renderItems() removal)
+- ⏳ Substeps 5.7-5.8 pending (Section.tsx refactor and renderItems() removal)
 
-**Known Issues** (will be fixed later):
+**Next action**: Continue with Step 5.7 - Update Section.tsx to render RenderableItems
+
+**Known Issues** (will be fixed in future steps):
 - DetailPanel broken for all element types - duck typing expects old property names
   - Element classes use camelCase (permissibleValues) vs raw types use snake_case (permissible_values)
   - Will be fixed when DetailPanel is refactored to use Element.renderDetails() method
-  - NOT blocking current refactor - DetailPanel fix is separate future task
-
-**Remaining work** (steps 4-8):
-- See detailed implementation in commit history and src/models/Element.tsx
-- VariableCollection needs special handling: ClassElement headers at level 0 (non-clickable), variables at level 1
-
-**Benefits after Step 5**:
-- All collections implement `getRenderableItems()` by calling `this.tree.toRenderableItems()`
-- Section.tsx can call `getRenderableItems()` generically, no type-specific logic needed
-- "Move renderItems to Section.tsx" phase becomes possible (currently blocked)
-- View layer truly separated from model structure
-- Tree handles all structural complexity (nesting, expansion, flattening)
-
-**Files to modify**:
-- `src/types.ts` - Add DTOs, add TreeNode<T>, eventually remove old interfaces
-- `src/models/Element.tsx` - Element classes own their fields, take DTOs in constructor
-- `src/utils/dataLoader.ts` - Construct Element instances from DTOs, build TreeNode structures
-- `src/components/*.tsx` - Remove imports of ClassNode, EnumDefinition, etc.
-
-**After this completes**:
-- Element classes ARE the model (not wrappers)
-- Collections use TreeNode<Element> structure consistently
-- Components only know about abstract Element
-- Can proceed with view/model separation completion
+  - NOT blocking Step 5 - DetailPanel fix happens in Step 7
 
 ---
 
