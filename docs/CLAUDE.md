@@ -151,14 +151,17 @@ class ClassCollection {
 7. ⏳ Update components to never import model-specific types - PENDING
 
 **Status (latest)**:
-- ✅ Steps 1-4 complete
+- ✅ Steps 1-5 complete
 - DTOs added to types.ts with clear sections
 - TreeNode<T> interface already exists in models/Tree.ts
 - Old interfaces marked @deprecated
-- All Element classes (ClassElement, EnumElement, SlotElement, VariableElement) now own their fields directly
-- All Collection classes (EnumCollection, SlotCollection, ClassCollection, VariableCollection) now store Element instances
-- All `fromData()` factory methods convert DTOs to Element instances
+- All Element classes (ClassElement, EnumElement, SlotElement, VariableElement) own their fields directly
+- All Collection classes store Element instances in Tree<Element> structure
+- All `fromData()` factory methods convert DTOs to Element instances and build trees
 - dataLoader constructs Element instances and passes them to collections
+- Section.tsx uses generic data-driven rendering via getRenderableItems()
+- Complete separation of data (collections) and presentation (Section.tsx)
+- All 156 regression tests passing
 - TypeScript typecheck passes with no errors
 
 ---
@@ -216,22 +219,26 @@ This means:
 **5.6** ✅ **Implement `getRenderableItems()` in all collections** (models/Element.tsx) - COMPLETE
    - All 4 collections now have getRenderableItems() that call Tree.toRenderableItems()
 
-**5.7** ⏳ **Update Section.tsx to render RenderableItems** - PENDING
-   - Create generic item renderer that consumes RenderableItem[]
-   - Move all JSX rendering from Collection.renderItems() into Section.tsx
+**5.7** ✅ **Update Section.tsx to render RenderableItems** - COMPLETE
+   - Created ItemRenderer component that consumes RenderableItem[]
+   - Moved all JSX rendering from Collection.renderItems() into Section.tsx
+   - Section.tsx now calls getRenderableItems() instead of renderItems()
 
-**5.8** ⏳ **Remove `renderItems()` methods from all collections** - PENDING
-   - Once Section.tsx uses getRenderableItems(), delete obsolete renderItems() methods
+**5.8** ✅ **Remove `renderItems()` methods from all collections** - COMPLETE
+   - Removed abstract renderItems() declaration from ElementCollection
+   - Deleted renderItems() from all 4 collections (~225 lines of duplicate JSX)
+   - Collections now provide data only via getRenderableItems()
 
-**Step 5 Status**:
-- ✅ Substeps 5.1-5.6 complete and tested
-- ✅ All 4 collections (Enum, Slot, Class, Variable) converted to Tree<Element>
-- ✅ All 4 collections implement getRenderableItems()
+**Step 5 Status - COMPLETE**:
+- ✅ All substeps 5.1-5.8 complete and tested
+- ✅ All 4 collections converted to Tree<Element> structure
+- ✅ All collections implement getRenderableItems()
+- ✅ Section.tsx uses generic data-driven rendering
+- ✅ Complete separation of data (collections) and presentation (Section.tsx)
 - ✅ All 156 regression tests passing
 - ✅ TypeScript typecheck passes
-- ⏳ Substeps 5.7-5.8 pending (Section.tsx refactor and renderItems() removal)
 
-**Next action**: Continue with Step 5.7 - Update Section.tsx to render RenderableItems
+**Next action**: Continue with Step 6 - Remove old interfaces from types.ts
 
 **Known Issues** (will be fixed in future steps):
 - DetailPanel broken for all element types - duck typing expects old property names
