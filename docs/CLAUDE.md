@@ -151,7 +151,7 @@ class ClassCollection {
 7. ⏳ Update components to never import model-specific types - PENDING
 
 **Status (latest)**:
-- ✅ Steps 1-5 complete
+- ✅ **Steps 1-5 COMPLETE**
 - DTOs added to types.ts with clear sections
 - TreeNode<T> interface already exists in models/Tree.ts
 - Old interfaces marked @deprecated
@@ -161,6 +161,7 @@ class ClassCollection {
 - dataLoader constructs Element instances and passes them to collections
 - Section.tsx uses generic data-driven rendering via getRenderableItems()
 - Complete separation of data (collections) and presentation (Section.tsx)
+- ~225 lines of duplicate JSX rendering code eliminated
 - All 156 regression tests passing
 - TypeScript typecheck passes with no errors
 
