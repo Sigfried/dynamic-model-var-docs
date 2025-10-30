@@ -52,41 +52,6 @@ ESLint rules now enforce architectural separation:
 
 Listed in intended implementation order (top = next):
 
-### 🔄 Fix LinkOverlay - Use Elements Directly
-
-**Goal**: Remove broken `createElement()` function that tries to construct Elements from Elements
-
-**Problem** (src/components/LinkOverlay.tsx:115-138):
-```typescript
-// BROKEN - createElement constructs Elements from Elements
-const createElement = (elementData: ClassNode | EnumDefinition | SlotDefinition | VariableSpec, type: ElementTypeId) => {
-  switch (type) {
-    case 'class':
-      return new ClassElement(elementData as ClassNode, allSlots);
-    // ...
-  }
-};
-
-// But getAllElements() already returns Elements, not raw data!
-collection.getAllElements().forEach(elementData => {
-  const element = createElement(elementData, typeId); // Creates duplicate Element
-  const relationships = element.getRelationships();
-});
-```
-
-**Fix**: Delete `createElement()`, use Elements directly:
-```typescript
-collection.getAllElements().forEach(element => {
-  const relationships = element.getRelationships();
-  // Use element directly - it's already an Element instance!
-});
-```
-
-**Files to modify**:
-- `src/components/LinkOverlay.tsx` - Delete createElement(), update getAllElements() usage
-
----
-
 ### 🔄 Add getDetailData() Method to Element Classes
 
 **Goal**: Implement data-focused approach where Element classes provide structured detail data, not JSX
@@ -227,6 +192,46 @@ function DetailPanel({ element }: { element: Element }) {
 
 ---
 
+### 🔴 🪲 Fix Dark Mode Display Issues
+
+**Goal**: Fix readability issues in dark mode
+**Importance**: High - app currently unusable in dark mode
+
+**Issues from screenshot**:
+- Poor contrast/readability throughout
+- Need to audit all color combinations
+
+**Files likely affected**:
+- `src/index.css` - Tailwind dark mode classes
+- All component files using colors
+
+---
+
+### ✨ Enhanced Link Hover Information
+
+**Goal**: Display richer information when hovering over links between elements
+
+**Current state**: Links show basic info in console.log on hover (source → target with relationship)
+
+**Desired features**:
+- Tooltip or overlay showing:
+  - Relationship type (is_a, property, etc.)
+  - Slot name (for property relationships)
+  - Source element (name + type)
+  - Target element (name + type)
+  - Additional metadata as appropriate
+
+**Implementation approach**:
+- Add tooltip component that follows cursor or attaches to link
+- Extract relationship details from Link object
+- Style appropriately to be readable but not intrusive
+
+**Files likely affected**:
+- `src/components/LinkOverlay.tsx` - Add tooltip rendering
+- `src/utils/linkHelpers.ts` - May need additional metadata extraction
+
+---
+
 ### 🔄 Split Element.tsx into Separate Files
 
 **Current state**: Element.tsx is 919 lines with 4 element classes + 4 collection classes
@@ -350,21 +355,6 @@ Multiple view modes and analytics:
 - Matrix view (class-enum usage heatmap)
 - Mini-map showing current focus area
 - Statistics dashboard
-
----
-
-### 🔴 🪲 Fix Dark Mode Display Issues
-
-**Goal**: Fix readability issues in dark mode
-**Importance**: High - app currently unusable in dark mode
-
-**Issues from screenshot**:
-- Poor contrast/readability throughout
-- Need to audit all color combinations
-
-**Files likely affected**:
-- `src/index.css` - Tailwind dark mode classes
-- All component files using colors
 
 ---
 

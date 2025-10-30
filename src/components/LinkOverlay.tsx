@@ -4,13 +4,12 @@
  *
  * This component:
  * - Queries DOM for visible element positions via data attributes
- * - Builds Element instances and extracts relationships
+ * - Extracts relationships from Element instances
  * - Uses linkHelpers to filter and render SVG paths
  */
 
 import { useMemo, useRef, useState, useEffect } from 'react';
-import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
-import { ClassElement, EnumElement, SlotElement, VariableElement, type ElementCollection } from '../models/Element';
+import type { Element, ElementCollection } from '../models/Element';
 import { getAllElementTypeIds, type ElementTypeId } from '../models/ElementRegistry';
 import {
   buildLinks,
@@ -32,16 +31,13 @@ export interface LinkOverlayProps {
   filterOptions?: LinkFilterOptions;
   /** Currently hovered element for link highlighting */
   hoveredElement?: { type: ElementTypeId; name: string } | null;
-  /** All slots from model (needed for ClassElement constructor) */
-  allSlots?: Map<string, SlotDefinition>;
 }
 
 export default function LinkOverlay({
   leftPanel,
   rightPanel,
   filterOptions = {},
-  hoveredElement,
-  allSlots = new Map()
+  hoveredElement
 }: LinkOverlayProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [, setScrollTick] = useState(0);
@@ -84,47 +80,25 @@ export default function LinkOverlay({
 
   // Build links from visible elements - use useMemo to prevent infinite loop
   const { leftPanelLinks, rightPanelLinks } = useMemo(() => {
-    // Helper to get element name (handles variable's variableLabel)
-    const getElementName = (element: ClassNode | EnumDefinition | SlotDefinition | VariableSpec, type: ElementTypeId): string => {
-      if (type === 'variable') {
-        return (element as VariableSpec).variableLabel;
-      }
-      return (element as ClassNode | EnumDefinition | SlotDefinition).name;
-    };
-
     // Build set of element names in each panel for cross-panel filtering
     const leftElements = new Set<string>();
     const rightElements = new Set<string>();
 
     // Generic iteration over collections
-    leftPanel.forEach((collection, typeId) => {
+    leftPanel.forEach((collection) => {
       collection.getAllElements().forEach(element => {
-        leftElements.add(getElementName(element, typeId));
+        leftElements.add(element.name);
       });
     });
 
-    rightPanel.forEach((collection, typeId) => {
+    rightPanel.forEach((collection) => {
       collection.getAllElements().forEach(element => {
-        rightElements.add(getElementName(element, typeId));
+        rightElements.add(element.name);
       });
     });
 
     const leftLinks: Link[] = [];
     const rightLinks: Link[] = [];
-
-    // Helper to create Element instance based on type
-    const createElement = (elementData: ClassNode | EnumDefinition | SlotDefinition | VariableSpec, type: ElementTypeId) => {
-      switch (type) {
-        case 'class':
-          return new ClassElement(elementData as ClassNode, allSlots);
-        case 'enum':
-          return new EnumElement(elementData as EnumDefinition);
-        case 'slot':
-          return new SlotElement(elementData as SlotDefinition);
-        case 'variable':
-          return new VariableElement(elementData as VariableSpec);
-      }
-    };
 
     // Helper to process elements from a panel (generic over collections)
     const processElements = (
@@ -134,12 +108,10 @@ export default function LinkOverlay({
       options: typeof filterOptions = filterOptions
     ) => {
       collections.forEach((collection, typeId) => {
-        collection.getAllElements().forEach(elementData => {
-          const element = createElement(elementData, typeId);
+        collection.getAllElements().forEach(element => {
           const relationships = element.getRelationships();
-          const elementName = getElementName(elementData, typeId);
 
-          const links = buildLinks(typeId, elementName, relationships, {
+          const links = buildLinks(typeId, element.name, relationships, {
             ...options,
             ...(typeId === 'class' ? { showInheritance: false } : {}) // Disable inheritance for classes
           });
@@ -160,12 +132,10 @@ export default function LinkOverlay({
     // Class→class is bidirectional in the schema, so we only draw left→right
     // All other relationship types (class→enum, class→slot, variable→class, slot→enum) are one-way
     rightPanel.forEach((collection, typeId) => {
-      collection.getAllElements().forEach(elementData => {
-        const element = createElement(elementData, typeId);
+      collection.getAllElements().forEach(element => {
         const relationships = element.getRelationships();
-        const elementName = getElementName(elementData, typeId);
 
-        const links = buildLinks(typeId, elementName, relationships, {
+        const links = buildLinks(typeId, element.name, relationships, {
           ...filterOptions,
           ...(typeId === 'class' ? { showInheritance: false } : {})
         });
@@ -188,7 +158,7 @@ export default function LinkOverlay({
     });
 
     return { leftPanelLinks: leftLinks, rightPanelLinks: rightLinks };
-  }, [leftPanel, rightPanel, filterOptions, allSlots]);
+  }, [leftPanel, rightPanel, filterOptions]);
 
   // Helper to find element in DOM with panel position
   const findElement = (type: string, name: string, panelPosition: 'left' | 'right'): HTMLElement | null => {
