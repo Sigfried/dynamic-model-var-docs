@@ -225,7 +225,8 @@ When adding new features:
 
 **Documentation**:
 - **README.md** (this file) - User guide, developer overview, architecture philosophy
-- **CLAUDE.md** - Upcoming tasks and implementation notes for AI-assisted development
+- **CLAUDE.md** - Critical architectural principles and development guidelines
+- **TASKS.md** - Current task, upcoming work, and future ideas
 - **PROGRESS.md** - Completed work for reporting to managers/stakeholders
 - **TESTING.md** - Testing strategy and test documentation
 
