@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import DetailPanel from './DetailPanel';
-import type { SelectedElement } from '../types';
+import type { Element } from '../models/Element';
+import type { ElementTypeId } from '../models/ElementRegistry';
 
 interface DetailDialogProps {
-  element: SelectedElement;
-  onNavigate?: (elementName: string, elementType: 'class' | 'enum' | 'slot') => void;
+  element: Element;
+  onNavigate?: (elementName: string, elementType: ElementTypeId) => void;
   onClose: () => void;
   onChange?: (position: { x: number; y: number }, size: { width: number; height: number }) => void;
   dialogIndex?: number;

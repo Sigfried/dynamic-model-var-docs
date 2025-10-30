@@ -86,12 +86,25 @@ export interface EnumValue {
 }
 
 // ============================================================================
-// DEPRECATED - Old interfaces (will be removed after refactor)
-// These mix DTO shape with model logic - being replaced by Element classes
+// DEPRECATED - Old interfaces (only used internally in dataLoader and legacy components)
 // ============================================================================
+//
+// ClassNode, EnumDefinition, SlotDefinition: Still used internally in dataLoader.ts
+// as intermediate structures when loading from JSON/TSV files. These are immediately
+// converted to Element instances via Collection.fromData().
+//
+// NOTE: These interfaces are only used in:
+// - utils/dataLoader.ts (internal data loading logic)
+// - components/DetailPanel.tsx (broken, needs refactor to use Element.renderDetails())
+// - components/LinkOverlay.tsx (constructs Element instances from old types)
+//
+// DO NOT use these types in new code. Use Element and its subclasses instead.
 //
 // NOTE: Generic tree structure (TreeNode<T>, Tree<T>) is in models/Tree.ts
 
+/**
+ * @deprecated Internal use only in dataLoader.ts
+ */
 export interface ClassNode {
   name: string;
   description?: string;
@@ -109,7 +122,7 @@ export interface ClassNode {
 }
 
 /**
- * @deprecated Use Element classes instead
+ * @deprecated Internal use only in dataLoader.ts
  */
 export interface EnumDefinition {
   name: string;
@@ -119,7 +132,7 @@ export interface EnumDefinition {
 }
 
 /**
- * @deprecated Use Element classes instead
+ * @deprecated Internal use only in dataLoader.ts
  */
 export interface SlotDefinition {
   name: string;
@@ -133,10 +146,12 @@ export interface SlotDefinition {
 }
 
 /**
- * Union type representing any selectable element in the UI
- * Used for element selection, navigation, and detail display
+ * Type alias for selected elements in the UI
+ * Now just an alias to Element - all element instances are Element subclasses
+ *
+ * @deprecated Use Element directly from models/Element.tsx
  */
-export type SelectedElement = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
+export type SelectedElement = Element;
 
 /**
  * Model data structure - all element data is accessed via collections

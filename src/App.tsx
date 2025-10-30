@@ -8,13 +8,13 @@ import { loadModelData } from './utils/dataLoader';
 import { getInitialState, saveStateToURL, saveStateToLocalStorage, generatePresetURL, elementTypeToCode, type DialogState } from './utils/statePersistence';
 import { calculateDisplayMode } from './utils/layoutHelpers';
 import { getElementName, findDuplicateIndex } from './utils/duplicateDetection';
-import type { ModelData, SelectedElement } from './types';
+import type { ModelData } from './types';
 import type { ElementTypeId } from './models/ElementRegistry';
-import type { ElementCollection } from './models/Element';
+import type { ElementCollection, Element } from './models/Element';
 
 interface OpenDialog {
   id: string;
-  element: SelectedElement;
+  element: Element;
   elementType: ElementTypeId;
   x: number;
   y: number;
@@ -228,7 +228,7 @@ function App() {
   };
 
   // Dialog management
-  const handleOpenDialog = (element: SelectedElement, elementType: ElementTypeId, position?: { x: number; y: number }, size?: { width: number; height: number }) => {
+  const handleOpenDialog = (element: Element, elementType: ElementTypeId, position?: { x: number; y: number }, size?: { width: number; height: number }) => {
 
     // Check if this element is already open using utility function
     const existingIndex = findDuplicateIndex(

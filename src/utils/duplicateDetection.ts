@@ -2,24 +2,19 @@
  * Utilities for detecting duplicate elements in dialog/panel lists
  */
 
-import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec, SelectedElement } from '../types';
-
-// Re-export SelectedElement for backward compatibility
-export type { SelectedElement };
+import type { Element } from '../models/Element';
+import type { ElementTypeId } from '../models/ElementRegistry';
 
 export interface ElementDescriptor {
-  element: SelectedElement;
-  elementType: 'class' | 'enum' | 'slot' | 'variable';
+  element: Element;
+  elementType: ElementTypeId;
 }
 
 /**
- * Get the unique identifier for an element (name or variableLabel)
+ * Get the unique identifier for an element (just returns element.name)
  */
-export function getElementName(element: SelectedElement, elementType: 'class' | 'enum' | 'slot' | 'variable'): string {
-  if (elementType === 'variable') {
-    return (element as VariableSpec).variableLabel;
-  }
-  return (element as ClassNode | EnumDefinition | SlotDefinition).name;
+export function getElementName(element: Element, elementType: ElementTypeId): string {
+  return element.name;
 }
 
 /**
@@ -28,8 +23,8 @@ export function getElementName(element: SelectedElement, elementType: 'class' | 
  */
 export function findDuplicateIndex(
   elements: ElementDescriptor[],
-  targetElement: SelectedElement,
-  targetElementType: 'class' | 'enum' | 'slot' | 'variable'
+  targetElement: Element,
+  targetElementType: ElementTypeId
 ): number {
   const targetName = getElementName(targetElement, targetElementType);
 
@@ -44,8 +39,8 @@ export function findDuplicateIndex(
  */
 export function isDuplicate(
   elements: ElementDescriptor[],
-  targetElement: SelectedElement,
-  targetElementType: 'class' | 'enum' | 'slot' | 'variable'
+  targetElement: Element,
+  targetElementType: ElementTypeId
 ): boolean {
   return findDuplicateIndex(elements, targetElement, targetElementType) !== -1;
 }

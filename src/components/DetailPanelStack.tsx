@@ -1,16 +1,17 @@
 import DetailPanel from './DetailPanel';
 import { getHeaderColor, getPanelTitle } from '../utils/panelHelpers';
-import type { SelectedElement } from '../types';
+import type { Element } from '../models/Element';
+import type { ElementTypeId } from '../models/ElementRegistry';
 
 interface StackedPanel {
   id: string;
-  element: SelectedElement;
-  elementType: 'class' | 'enum' | 'slot' | 'variable';
+  element: Element;
+  elementType: ElementTypeId;
 }
 
 interface DetailPanelStackProps {
   panels: StackedPanel[];
-  onNavigate?: (elementName: string, elementType: 'class' | 'enum' | 'slot') => void;
+  onNavigate?: (elementName: string, elementType: ElementTypeId) => void;
   onClose: (id: string) => void;
 }
 

@@ -3,11 +3,8 @@
  */
 
 import { type ReactElement } from 'react';
-import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec, SelectedElement } from '../types';
+import type { Element, ClassElement } from '../models/Element';
 import { ELEMENT_TYPES, type ElementTypeId } from '../models/ElementRegistry';
-
-// Re-export SelectedElement for backward compatibility
-export type { SelectedElement };
 
 /**
  * Get header color classes based on element type
@@ -30,27 +27,26 @@ export function getHeaderColor(elementType: ElementTypeId): string {
  * Generate descriptive title JSX for panel header
  * Returns styled ReactElement with bold titles and inheritance info
  */
-export function getPanelTitle(element: SelectedElement, elementType: ElementTypeId): ReactElement {
+export function getPanelTitle(element: Element, elementType: ElementTypeId): ReactElement {
+  const metadata = ELEMENT_TYPES[elementType];
+
   if (elementType === 'class') {
-    // ClassNode
-    const classNode = element as ClassNode;
+    const classElement = element as ClassElement;
     return (
       <span className="text-base">
-        <span className="font-bold">Class:</span> <span className="font-bold">{classNode.name}</span>
-        {classNode.parent && <span className="ml-1 text-sm">extends {classNode.parent}</span>}
+        <span className="font-bold">Class:</span> <span className="font-bold">{element.name}</span>
+        {classElement.parent && <span className="ml-1 text-sm">extends {classElement.parent}</span>}
       </span>
     );
   } else if (elementType === 'enum') {
-    // EnumDefinition - don't show "Enum:" prefix since name ends with "Enum"
-    const enumDef = element as EnumDefinition;
-    return <span className="text-base font-bold">{enumDef.name}</span>;
-  } else if (elementType === 'slot') {
-    // SlotDefinition
-    const slotDef = element as SlotDefinition;
-    return <span className="text-base"><span className="font-bold">Slot:</span> <span className="font-bold">{slotDef.name}</span></span>;
+    // Don't show "Enum:" prefix since name ends with "Enum"
+    return <span className="text-base font-bold">{element.name}</span>;
   } else {
-    // VariableSpec
-    const varSpec = element as VariableSpec;
-    return <span className="text-base"><span className="font-bold">Variable:</span> <span className="font-bold">{varSpec.variableLabel}</span></span>;
+    // For slot and variable, show type prefix
+    return (
+      <span className="text-base">
+        <span className="font-bold">{metadata.label}:</span> <span className="font-bold">{element.name}</span>
+      </span>
+    );
   }
 }

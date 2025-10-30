@@ -1,6 +1,5 @@
 import Section from './Section';
-import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec, SelectedElement } from '../types';
-import type { ElementCollection } from '../models/Element';
+import type { ElementCollection, Element } from '../models/Element';
 import type { ElementTypeId } from '../models/ElementRegistry';
 import { ELEMENT_TYPES, getAllElementTypeIds } from '../models/ElementRegistry';
 
@@ -9,7 +8,7 @@ interface ElementsPanelProps {
   sections: ElementTypeId[];
   onSectionsChange: (sections: ElementTypeId[]) => void;
   collections: Map<ElementTypeId, ElementCollection>;
-  onSelectElement: (element: SelectedElement, elementType: ElementTypeId) => void;
+  onSelectElement: (element: Element, elementType: ElementTypeId) => void;
   onElementHover?: (element: { type: ElementTypeId; name: string }) => void;
   onElementLeave?: () => void;
 }
@@ -95,10 +94,7 @@ export default function ElementsPanel({
                 collection={collection}
                 callbacks={{
                   onSelect: (element) => {
-                    // Adapter: Convert Element back to raw data for legacy code
-                    // TODO: Eventually update App.tsx to accept Element directly
-                    const rawData = (element as any).rawData || element;
-                    onSelectElement(rawData, element.type);
+                    onSelectElement(element, element.type);
                   },
                   onElementHover,
                   onElementLeave

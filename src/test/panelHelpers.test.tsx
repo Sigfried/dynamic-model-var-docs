@@ -5,51 +5,51 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import { getHeaderColor, getPanelTitle } from '../utils/panelHelpers';
-import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
+import { ClassElement, EnumElement, SlotElement, VariableElement } from '../models/Element';
 
 // Mock entities
-const mockClassWithParent: ClassNode = {
+const mockClassWithParent = new ClassElement({
   name: 'Specimen',
   description: 'A sample class',
-  attributes: {},
-  children: [],
-  slots: [],
-  slot_usage: {},
+  parent: 'Entity',
   abstract: false,
-  parent: 'Entity'
-};
+  attributes: {},
+  slots: [],
+  slot_usage: {}
+}, new Map());
 
-const mockClassWithoutParent: ClassNode = {
+const mockClassWithoutParent = new ClassElement({
   name: 'Entity',
   description: 'Base class',
+  parent: undefined,
+  abstract: false,
   attributes: {},
-  children: [],
   slots: [],
-  slot_usage: {},
-  abstract: false
-};
+  slot_usage: {}
+}, new Map());
 
-const mockEnum: EnumDefinition = {
+const mockEnum = new EnumElement({
   name: 'SpecimenTypeEnum',
   description: 'Specimen types',
-  permissible_values: {}
-};
+  permissible_values: []
+});
 
-const mockSlot: SlotDefinition = {
+const mockSlot = new SlotElement({
   name: 'identifier',
   description: 'A unique identifier',
   range: 'string',
-  slot_uri: 'http://example.org/identifier'
-};
+  slot_uri: 'http://example.org/identifier',
+  usedByClasses: []
+});
 
-const mockVariable: VariableSpec = {
+const mockVariable = new VariableElement({
+  bdchmElement: 'Specimen',
   variableLabel: 'specimen_type',
-  variableDescription: 'The type of specimen',
-  columnDataType: 'string',
-  columnUnits: null,
-  columnCURIE: null,
-  classMappedTo: 'Specimen'
-};
+  dataType: 'string',
+  ucumUnit: '',
+  curie: '',
+  variableDescription: 'The type of specimen'
+});
 
 describe('getHeaderColor', () => {
   it('returns blue color for class type', () => {
