@@ -231,11 +231,18 @@ This means:
 8. ⏳ **Remove `renderItems()` methods from all collections** - PENDING
 
 **Latest Status**:
-- ✅ Steps 1-2 complete and tested
-- ✅ Step 3: EnumCollection, SlotCollection, ClassCollection converted to Tree<Element>
+- ✅ Steps 1-4 complete and tested
+- ✅ All 4 collections (Enum, Slot, Class, Variable) converted to Tree<Element>
+- ✅ All 4 collections implement getRenderableItems()
 - ✅ All 156 regression tests passing
-- ⏳ Step 3: VariableCollection conversion in progress
-- ⏳ Steps 4-8 pending
+- ✅ TypeScript typecheck passes
+- ⏳ Steps 6-8 pending (Section.tsx refactor and renderItems() removal)
+
+**Known Issues** (will be fixed later):
+- DetailPanel broken for all element types - duck typing expects old property names
+  - Element classes use camelCase (permissibleValues) vs raw types use snake_case (permissible_values)
+  - Will be fixed when DetailPanel is refactored to use Element.renderDetails() method
+  - NOT blocking current refactor - DetailPanel fix is separate future task
 
 **Remaining work** (steps 4-8):
 - See detailed implementation in commit history and src/models/Element.tsx
