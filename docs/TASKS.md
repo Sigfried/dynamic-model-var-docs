@@ -17,23 +17,190 @@
 
 Listed in intended implementation order (top = next):
 
+### 🔒 Phase 6.5: Complete View/Model Separation
+
+**Status**: ⏳ IN PROGRESS
+
+**Goal**: Truly separate view from model. Components define their own data contracts, Element adapts to provide that data. Components never know about element types, ElementRegistry, or model structure.
+
+**Problem**: Phase 9 attempted to make `element.type` protected and add `getType()` method, but this doesn't achieve true separation - components still need `ElementTypeId` knowledge. `getType()` is just `type` with extra steps.
+
+**Core Principle**: Each component defines what data it needs with property names that make sense for that component. Element implements methods to provide that data. Components are completely ignorant of the model structure.
+
+**The Pattern**:
+```typescript
+// In component file - component defines its contract
+interface CollectionItemData {
+  id: string;                // from element.getId(panelContext)
+  displayName: string;       // "Specimen"
+  badgeColor?: string;
+  badgeText?: string;
+  indicators?: Array<{ text: string; color: string }>;
+}
+
+// In Element.tsx - Element adapts to component's needs
+import type { CollectionItemData } from '../components/CollectionSection';
+getCollectionItemData(context: PanelContext): CollectionItemData { ... }
+```
+
+**Naming Changes**:
+- `Section` → `CollectionSection` (displays items from one collection)
+- `ElementsPanel` → `CollectionsPanel` (displays multiple CollectionSections)
+- Avoid "Element" in component names to reduce confusion with model Elements
+
+**ID System**:
+```typescript
+// Element base class
+type IdContext = 'leftPanel' | 'rightPanel' | 'detailBox' | undefined;
+
+getId(context?: IdContext): string {
+  const prefix = context === 'leftPanel' ? 'lp-'
+    : context === 'rightPanel' ? 'rp-'
+    : context === 'detailBox' ? 'db-'
+    : '';
+  return prefix + this.name;
+}
+```
+
+**Collection Identity**:
+Collections have their own `id` property (currently matches ElementTypeId string value, but no type coupling):
+```typescript
+abstract class ElementCollection {
+  abstract readonly id: string;      // "class", "enum", "slot", "variable"
+  abstract getLabel(): string;        // "Classes", "Enums", "Slots", "Variables"
+  abstract getIcon(): string;         // "C", "E", "S", "V"
+  // ...
+}
+```
+
+**Component Data Contracts**:
+
+1. **CollectionSection** (renamed from Section):
+```typescript
+interface CollectionItemData {
+  id: string;                // from element.getId(panelContext)
+  displayName: string;       // "Specimen"
+  badgeColor?: string;       // tailwind classes
+  badgeText?: string;        // "103"
+  indicators?: Array<{       // replaces isAbstractClass() check
+    text: string;            // "abstract"
+    color: string;           // tailwind classes
+  }>;
+  level: number;             // nesting depth
+  hasChildren?: boolean;
+  isExpanded?: boolean;
+  isClickable: boolean;
+}
+```
+
+2. **DetailBox** (currently DetailPanel):
+```typescript
+// Already good - uses getDetailData()
+interface DetailData {
+  titlebarTitle: string;
+  title: string;
+  subtitle?: string;
+  titleColor: string;
+  description?: string;
+  sections: DetailSection[];
+}
+```
+
+3. **LinkOverlay**:
+```typescript
+// Will need refactoring - defer link ID pattern for now
+interface LinkData {
+  startId: string;           // TBD during LinkOverlay refactor
+  endId: string;
+  startColor: string;
+  endColor: string;
+  hoverData?: {
+    label?: string;
+    relationshipType: string;
+  };
+}
+```
+
+**Implementation Steps**:
+
+1. **Revert Phase 9 changes**:
+   - Remove `getType()`, `getParentName()`, `isAbstractClass()` methods
+   - Change `type` back from `protected` to `abstract readonly`
+
+2. **Add ID system**:
+   - Add `getId(context?: IdContext)` to Element base class
+   - Add `id: string` property to ElementCollection classes
+
+3. **Rename components**:
+   - `Section.tsx` → `CollectionSection.tsx`
+   - `ElementsPanel.tsx` → `CollectionsPanel.tsx`
+   - Update all imports
+
+4. **Define component data interfaces**:
+   - Move interfaces to component files
+   - Components import these, Element imports from components
+
+5. **Update Element methods**:
+   - Add: `getCollectionItemData(context: PanelContext): CollectionItemData`
+   - Rename: `getRelationships()` → `getLinkData()` (defer details for LinkOverlay refactor)
+   - Keep: `getDetailData()` (already correct)
+   - Remove: `renderPanelSection()`, `renderDetails()` (obsolete)
+
+6. **Update Collections**:
+   - Rename: `getRenderableItems()` → `getCollectionItemData()`
+   - Add: `id` property to each collection class
+
+7. **Remove type coupling from components**:
+   - CollectionsPanel: Change `sections: ElementTypeId[]` → `sections: string[]`
+   - App.tsx: Change `leftSections: ElementTypeId[]` → `leftSections: string[]`
+   - Remove all `ElementTypeId` imports from components
+   - Remove all `ELEMENT_TYPES` imports from components
+   - Remove all `ElementRegistry` imports from components
+
+8. **Simplify element lookup**:
+   - Simplify `elementLookup` - remove type awareness:
+     ```typescript
+     const allElements = Array.from(collections.values())
+       .flatMap(c => c.getAllElements());
+     elementLookup = new Map(allElements.map(e => [e.name, e]));
+     ```
+   - Remove `initializeElementNameMap()` (not needed with elementLookup)
+
+9. **Cleanup**:
+   - Remove unused `Tree.buildTree()` function
+   - Update tests to use new method names
+
+10. **Verify architectural compliance**:
+    - Run grep to verify no component imports ElementTypeId
+    - Run grep to verify no component imports ELEMENT_TYPES
+    - Run grep to verify no component imports ElementRegistry
+    - All tests pass
+    - Type checking passes
+
+**Files to modify**:
+- `src/models/Element.tsx`
+- `src/models/Tree.ts`
+- `src/components/Section.tsx` → `src/components/CollectionSection.tsx`
+- `src/components/ElementsPanel.tsx` → `src/components/CollectionsPanel.tsx`
+- `src/components/DetailPanel.tsx` → `src/components/DetailBox.tsx`
+- `src/utils/panelHelpers.tsx`
+- `src/App.tsx`
+- `src/utils/dataLoader.ts`
+- All test files that reference renamed components
+
+**Future work** (defer to separate phase):
+- LinkOverlay refactoring to use new patterns
+- Component files define their own hover handler contracts
+
+---
+
 ### 🔒 Phase 9: Make element.type Private
 
-**Goal**: Encapsulate element.type property to enforce architectural patterns
+**Status**: ⚠️ ATTEMPTED BUT FLAWED - Reverted in Phase 6.5
 
-**Why**: Currently `element.type` is public, allowing direct access. This can lead to type-checking anti-patterns in view code. Making it private forces use of polymorphic methods.
+**Problem**: This phase made `element.type` protected and added `getType()` method, but this doesn't achieve true separation. Components calling `getType()` still know about `ElementTypeId`. This is just `type` with extra steps.
 
-**Implementation**:
-1. Change `element.type` from public to private in Element base class
-2. Add public `getType(): ElementTypeId` method for debugging/logging
-3. Fix any broken code (if substantial breakage, reassess approach)
-
-**Expected impact**:
-- May break code that currently does `if (element.type === 'class')` checks
-- Forces developers to use polymorphic methods instead
-- Caught violations should be refactored to proper polymorphism
-
-> check if model/subclass specifics are referenced anywhere other than App.tsx.
+**Committed as WIP** (commit cdb2f03) to preserve the work, but will be reverted in Phase 6.5.
 
 ---
 
@@ -42,6 +209,8 @@ Listed in intended implementation order (top = next):
 
 ### Phase 10b: ✅ Refactor DetailPanel
 **Status**: ✅ COMPLETED (see Phase 8 in progress.md)
+
+**[sg]**: noticed that DetailPanel calls element.getDetailData() repeatedly. call it once?
 
 ### Phase 10c: Unified Detail Box System
 **Goal**: Extract dialog management from App.tsx, merge DetailDialog/DetailPanelStack into unified system
