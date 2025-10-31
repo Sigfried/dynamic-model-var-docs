@@ -170,15 +170,18 @@ export default function DetailDialog({
 
       {/* Draggable header */}
       <div
-        className="flex items-center justify-between px-4 py-2 bg-gray-100 dark:bg-slate-700 border-b border-gray-300 dark:border-slate-600 cursor-move rounded-t-lg"
+        className={`flex items-center justify-between px-4 py-2 ${element.getDetailData().titleColor} text-white border-b cursor-move rounded-t-lg`}
         onMouseDown={handleDragStart}
       >
-        <div className="font-semibold text-gray-700 dark:text-gray-200">
-          {element.getDetailData().titlebarTitle}
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold truncate">{element.getDetailData().title}</div>
+          {element.getDetailData().subtitle && (
+            <div className="text-sm opacity-90">{element.getDetailData().subtitle}</div>
+          )}
         </div>
         <button
           onClick={onClose}
-          className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xl font-bold w-8 h-8 flex items-center justify-center rounded hover:bg-gray-200 dark:hover:bg-slate-600"
+          className="ml-2 flex-shrink-0 hover:opacity-70 transition-opacity text-xl font-bold w-8 h-8 flex items-center justify-center rounded hover:bg-black hover:bg-opacity-20"
         >
           ×
         </button>
@@ -190,6 +193,7 @@ export default function DetailDialog({
           element={element}
           onNavigate={onNavigate}
           onClose={onClose}
+          hideHeader={true}
         />
       </div>
     </div>
