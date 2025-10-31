@@ -57,7 +57,6 @@ export default function DetailPanelStack({
               element={panel.element}
               onNavigate={onNavigate}
               onClose={() => onClose(panel.id)}
-              dialogWidth={600}
               hideHeader={true}
               hideCloseButton={true}
             />

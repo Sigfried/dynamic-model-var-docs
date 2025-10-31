@@ -174,9 +174,7 @@ export default function DetailDialog({
         onMouseDown={handleDragStart}
       >
         <div className="font-semibold text-gray-700 dark:text-gray-200">
-          {'children' in element ? 'Class' :
-           'permissible_values' in element ? 'Enum' :
-           'slot_uri' in element ? 'Slot' : 'Variable'} Details
+          {element.getDetailData().titlebarTitle}
         </div>
         <button
           onClick={onClose}
@@ -192,7 +190,6 @@ export default function DetailDialog({
           element={element}
           onNavigate={onNavigate}
           onClose={onClose}
-          dialogWidth={size.width}
         />
       </div>
     </div>
