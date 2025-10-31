@@ -17,7 +17,7 @@ export interface TreeNode<T> {
  * Requires minimal properties that Element base class provides
  */
 interface ElementLike {
-  getType(): string;
+  type: string;
   name: string;
   getBadge?(): number | undefined;
 }
@@ -133,7 +133,7 @@ export class Tree<T> {
       const isClickable = getIsClickable ? getIsClickable(node, level) : true;
 
       items.push({
-        id: `${element.getType()}-${element.name}`,
+        id: `${element.type}-${element.name}`,
         element: node.data as unknown as Element,
         level,
         hasChildren,

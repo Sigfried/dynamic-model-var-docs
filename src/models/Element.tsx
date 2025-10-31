@@ -95,27 +95,19 @@ export abstract class Element {
   }
 
   /**
-   * Get element type (for debugging/logging and internal use).
-   * Prefer polymorphic methods over type checking.
+   * Get contextualized ID for this element.
+   * Context prefixes:
+   * - 'leftPanel' → 'lp-' (e.g., 'lp-Specimen')
+   * - 'rightPanel' → 'rp-' (e.g., 'rp-Specimen')
+   * - 'detailBox' → 'db-' (e.g., 'db-Specimen')
+   * - undefined → no prefix (e.g., 'Specimen')
    */
-  getType(): ElementTypeId {
-    return this.type;
-  }
-
-  /**
-   * Get parent element name (only for ClassElement with inheritance).
-   * Returns undefined for other element types.
-   */
-  getParentName(): string | undefined {
-    return undefined; // Default: no parent
-  }
-
-  /**
-   * Check if element is an abstract class.
-   * Returns true only for ClassElement with abstract flag.
-   */
-  isAbstractClass(): boolean {
-    return false; // Default: not abstract
+  getId(context?: 'leftPanel' | 'rightPanel' | 'detailBox'): string {
+    const prefix = context === 'leftPanel' ? 'lp-'
+      : context === 'rightPanel' ? 'rp-'
+      : context === 'detailBox' ? 'db-'
+      : '';
+    return prefix + this.name;
   }
 }
 
@@ -343,14 +335,6 @@ export class ClassElement extends Element {
 
   getBadge(): number | undefined {
     return this.variableCount > 0 ? this.variableCount : undefined;
-  }
-
-  getParentName(): string | undefined {
-    return this.parent;
-  }
-
-  isAbstractClass(): boolean {
-    return this.abstract === true;
   }
 }
 
@@ -778,6 +762,7 @@ export interface ElementCollectionCallbacks {
 
 export abstract class ElementCollection {
   abstract readonly type: ElementTypeId;
+  abstract readonly id: string;  // Collection identifier (matches type string value, no type coupling)
 
   /** Get human-readable label with count (e.g., "Enumerations (40)") */
   abstract getLabel(): string;
@@ -807,6 +792,7 @@ export abstract class ElementCollection {
 // EnumCollection - flat list of enumerations
 export class EnumCollection extends ElementCollection {
   readonly type = 'enum' as const;
+  readonly id = 'enum';
   private tree: Tree<EnumElement>;
 
   constructor(tree: Tree<EnumElement>) {
@@ -862,6 +848,7 @@ export class EnumCollection extends ElementCollection {
 // SlotCollection - flat list of slot definitions
 export class SlotCollection extends ElementCollection {
   readonly type = 'slot' as const;
+  readonly id = 'slot';
   private tree: Tree<SlotElement>;
 
   constructor(tree: Tree<SlotElement>) {
@@ -927,6 +914,7 @@ export class SlotCollection extends ElementCollection {
 // ClassCollection - hierarchical tree of classes
 export class ClassCollection extends ElementCollection {
   readonly type = 'class' as const;
+  readonly id = 'class';
   private tree: Tree<ClassElement>;
 
   constructor(tree: Tree<ClassElement>) {
@@ -1003,6 +991,7 @@ export class ClassCollection extends ElementCollection {
 // VariableCollection - tree with ClassElement headers and VariableElement children
 export class VariableCollection extends ElementCollection {
   readonly type = 'variable' as const;
+  readonly id = 'variable';
   private tree: Tree<Element>;
   private variables: VariableElement[];
 
