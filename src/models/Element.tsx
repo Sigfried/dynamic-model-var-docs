@@ -220,7 +220,7 @@ export class ClassElement extends Element {
         name: 'Attributes',
         tableHeadings: ['Name', 'Range', 'Required', 'Multivalued', 'Description'],
         tableContent: attributes,
-        tableHeadingColor: 'bg-green-700 dark:bg-green-700'
+        tableHeadingColor: ELEMENT_TYPES['slot'].color.headerBg
       });
     }
 
@@ -238,7 +238,7 @@ export class ClassElement extends Element {
         name: 'Slot Usage',
         tableHeadings: ['Name', 'Range', 'Required', 'Multivalued', 'Description'],
         tableContent: slotUsages,
-        tableHeadingColor: 'bg-green-700 dark:bg-green-700'
+        tableHeadingColor: ELEMENT_TYPES['slot'].color.headerBg
       });
     }
 
@@ -249,7 +249,7 @@ export class ClassElement extends Element {
         name: 'Referenced Slots',
         tableHeadings: ['Slot Name'],
         tableContent: slotList,
-        tableHeadingColor: 'bg-green-700 dark:bg-green-700'
+        tableHeadingColor: ELEMENT_TYPES['slot'].color.headerBg
       });
     }
 
@@ -267,7 +267,7 @@ export class ClassElement extends Element {
         name: `Variables (${this.variableCount})`,
         tableHeadings: ['Label', 'Data Type', 'Unit', 'CURIE', 'Description'],
         tableContent: variableList,
-        tableHeadingColor: 'bg-orange-600 dark:bg-orange-600'
+        tableHeadingColor: ELEMENT_TYPES['variable'].color.headerBg
       });
     }
 
