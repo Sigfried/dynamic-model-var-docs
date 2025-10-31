@@ -17,32 +17,7 @@
 
 Listed in intended implementation order (top = next):
 
-### Phase 9: ✨ Give Right-Side Stacked Detail Panels Same Features as Floating Dialogs
-
-**Goal**: Feature parity between stacked panels (wide screens) and floating dialogs (narrow screens)
-**Importance**: Low - minor UX polish, not a major feature
-
-**Missing features in stacked panels**:
-- TBD: Need to compare and document differences
-
----
-
-### 🔴 🪲 Fix Dark Mode Display Issues
-
-**Goal**: Fix readability issues in dark mode
-**Importance**: High - app currently unusable in dark mode
-
-**Issues from screenshot**:
-- Poor contrast/readability throughout
-- Need to audit all color combinations
-
-**Files likely affected**:
-- `src/index.css` - Tailwind dark mode classes
-- All component files using colors
-
----
-
-### 🔒 Make element.type Private
+### 🔒 Phase 9: Make element.type Private
 
 **Goal**: Encapsulate element.type property to enforce architectural patterns
 
@@ -58,7 +33,120 @@ Listed in intended implementation order (top = next):
 - Forces developers to use polymorphic methods instead
 - Caught violations should be refactored to proper polymorphism
 
-**When to do this**: After DetailPanel refactor is complete and working
+> check if model/subclass specifics are referenced anywhere other than App.tsx.
+
+---
+
+### Phase 10a: ✅ Add getDetailData() to Element Classes
+**Status**: ✅ COMPLETED (see Phase 7 in progress.md)
+
+### Phase 10b: ✅ Refactor DetailPanel
+**Status**: ✅ COMPLETED (see Phase 8 in progress.md)
+
+### Phase 10c: Unified Detail Box System
+**Goal**: Extract dialog management from App.tsx, merge DetailDialog/DetailPanelStack into unified system
+
+**Current state**:
+- DetailPanel: 130-line content renderer using getDetailData() ✅
+- DetailDialog: Floating draggable/resizable wrapper
+- DetailPanelStack: Stacked non-draggable wrapper
+- App.tsx: Manages openDialogs array and mode switching
+
+**New file structure**:
+```
+src/components/
+  DetailPanel.tsx           (keep - content renderer, 130 lines, uses getDetailData())
+  DetailBoxManager.tsx      (new - manages array + rendering)
+    - DetailBox component   (draggable/resizable wrapper)
+    - Array management (FIFO stack)
+    - Mode-aware positioning
+```
+
+**DetailBox component** (single component, works in both modes):
+- All boxes identical: draggable, resizable, colored headers
+- Mode only affects initial position (not capabilities)
+- Uses element.getDetailData() for header (no ElementTypeId prop needed)
+- Click/drag/resize anywhere in box → bring to front (move to end of array)
+- ESC closes first/oldest box (index 0)
+
+**Mode behavior** (intelligent repositioning):
+- **Floating mode** (narrow screen): New boxes cascade from bottom-left
+- **Stacked mode** (wide screen): New boxes open in stack area
+- **Mode switch to stacked**: All boxes move to stack positions
+- **Mode switch to floating**:
+  - User-repositioned boxes → restore custom position from URL state
+  - Default boxes → cascade from bottom-left
+
+**URL state tracking**:
+- Track which boxes have custom positions (user dragged/resized)
+- On mode switch, respect user customizations
+- Default positions don't persist
+
+**Implementation steps**:
+
+1. **Create DetailBoxManager.tsx**
+   - Extract openDialogs array management from App.tsx
+   - Single DetailBox component (merge DetailDialog drag/resize logic)
+   - Mode-aware initial positioning
+   - Click/drag/resize → bring to front (move to end of array)
+   - ESC closes first box (oldest)
+   - Z-index based on array position
+
+2. **Update App.tsx**
+   - Remove openDialogs management
+   - Import and use DetailBoxManager
+   - Pass display mode and callbacks
+
+3. **Delete old components**
+   - Delete DetailDialog.tsx
+   - Delete DetailPanelStack.tsx
+
+4. **Update tests**
+   - Test drag/resize
+   - Test click-to-front
+   - Test ESC behavior
+   - Test mode switching with custom positions
+
+---
+
+### 🔄 Phase 11: Refactor App.tsx
+
+**Current state**: App.tsx is 600+ lines, too long
+
+**Extract logic into hooks**:
+- `hooks/useModelData.ts` - Data loading
+- `hooks/useLayoutState.ts` - Panel layout + expansion state (consolidate useExpansionState)
+- Keep App.tsx focused on composition
+
+**Note**: Dialog management extracted to DetailBoxManager in Phase 10c
+
+**Additional cleanup**:
+- Consolidate expansion state: Move from useExpansionState hook into statePersistence.ts
+- Remove dead code: Delete evc/ecn params from statePersistence.ts (replaced by lve/rve/lce/rce)
+
+**Files to create**:
+- `src/hooks/useModelData.ts`
+- `src/hooks/useDialogState.ts`
+- `src/hooks/useLayoutState.ts`
+
+**Files to modify**:
+- `src/App.tsx`
+- `src/utils/statePersistence.ts`
+
+---
+
+### 🔴 🪲 Phase 12: Fix Dark Mode Display Issues
+
+**Goal**: Fix readability issues in dark mode
+**Importance**: High - app currently unusable in dark mode
+
+**Issues from screenshot**:
+- Poor contrast/readability throughout
+- Need to audit all color combinations
+
+**Files likely affected**:
+- `src/index.css` - Tailwind dark mode classes
+- All component files using colors
 
 ---
 
@@ -103,31 +191,6 @@ Listed in intended implementation order (top = next):
 - Each element/collection pair stays together (easier to maintain)
 - Smaller, more focused files
 - Easier to understand each element type in isolation
-
----
-
-### 🔄 Refactor App.tsx
-
-**Current state**: App.tsx is 600+ lines, too long
-
-**Extract logic into hooks**:
-- `hooks/useModelData.ts` - Data loading
-- `hooks/useDialogState.ts` - Dialog management
-- `hooks/useLayoutState.ts` - Panel layout + expansion state (consolidate useExpansionState)
-- Keep App.tsx focused on composition
-
-**Additional cleanup**:
-- Consolidate expansion state: Move from useExpansionState hook into statePersistence.ts
-- Remove dead code: Delete evc/ecn params from statePersistence.ts (replaced by lve/rve/lce/rce)
-
-**Files to create**:
-- `src/hooks/useModelData.ts`
-- `src/hooks/useDialogState.ts`
-- `src/hooks/useLayoutState.ts`
-
-**Files to modify**:
-- `src/App.tsx`
-- `src/utils/statePersistence.ts`
 
 ---
 
