@@ -26,10 +26,10 @@ export default function DetailPanel({
   return (
     <div className="h-full overflow-y-auto bg-white dark:bg-slate-800 text-left">
       {!hideHeader && (
-        <div className={`sticky top-0 ${data.titleColor} ${data.titleColor.includes('text-white') ? 'text-white' : ''} border-b px-4 py-3`}>
+        <div className={`sticky top-0 ${data.titleColor} text-white border-b px-4 py-3`}>
           <div className="flex justify-between items-start">
             <div className="min-w-0 flex-1">
-              <h1 className="text-lg font-bold text-left truncate">{data.titlebarTitle}</h1>
+              <h1 className="text-lg font-bold text-left truncate">{data.title}</h1>
               {data.subtitle && (
                 <p className="text-sm mt-0.5 opacity-90">{data.subtitle}</p>
               )}

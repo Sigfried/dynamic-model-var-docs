@@ -61,7 +61,8 @@ describe('DetailPanel - ClassElement', () => {
   test('should render class titlebar with name', () => {
     render(<DetailPanel element={classElement} />);
 
-    expect(screen.getByText('Class: TestClass')).toBeInTheDocument();
+    expect(screen.getByText('TestClass')).toBeInTheDocument();
+    expect(screen.getByText('extends ParentClass')).toBeInTheDocument();
   });
 
   test('should render description', () => {
@@ -143,7 +144,7 @@ describe('DetailPanel - EnumElement', () => {
   test('should render enum titlebar with name', () => {
     render(<DetailPanel element={enumElement} />);
 
-    expect(screen.getByText('Enumeration: TestEnum')).toBeInTheDocument();
+    expect(screen.getByText('TestEnum')).toBeInTheDocument();
   });
 
   test('should render description', () => {
@@ -180,7 +181,7 @@ describe('DetailPanel - EnumElement', () => {
 
     render(<DetailPanel element={noDescElement} />);
 
-    expect(screen.getByText('Enumeration: TestEnum')).toBeInTheDocument();
+    expect(screen.getByText('TestEnum')).toBeInTheDocument();
     expect(screen.queryByText('A test enumeration')).not.toBeInTheDocument();
   });
 });
@@ -202,7 +203,7 @@ describe('DetailPanel - SlotElement', () => {
   test('should render slot titlebar with name', () => {
     render(<DetailPanel element={slotElement} />);
 
-    expect(screen.getByText('Slot: testSlot')).toBeInTheDocument();
+    expect(screen.getByText('testSlot')).toBeInTheDocument();
   });
 
   test('should render description', () => {
@@ -248,7 +249,7 @@ describe('DetailPanel - SlotElement', () => {
 
     render(<DetailPanel element={minimalSlot} />);
 
-    expect(screen.getByText('Slot: minimalSlot')).toBeInTheDocument();
+    expect(screen.getByText('minimalSlot')).toBeInTheDocument();
     // Should not crash with missing properties
   });
 });
@@ -268,7 +269,7 @@ describe('DetailPanel - VariableElement', () => {
   test('should render variable titlebar with name', () => {
     render(<DetailPanel element={variableElement} />);
 
-    expect(screen.getByText('Variable: body_mass_index')).toBeInTheDocument();
+    expect(screen.getByText('body_mass_index')).toBeInTheDocument();
   });
 
   test('should render description', () => {
@@ -304,7 +305,7 @@ describe('DetailPanel - VariableElement', () => {
 
     render(<DetailPanel element={minimalVar} />);
 
-    expect(screen.getByText('Variable: test_var')).toBeInTheDocument();
+    expect(screen.getByText('test_var')).toBeInTheDocument();
     expect(screen.getByText('Mapped to')).toBeInTheDocument();
     expect(screen.getByText('TestClass')).toBeInTheDocument();
   });
@@ -322,8 +323,8 @@ describe('DetailPanel - Header visibility', () => {
   test('should show header by default', () => {
     render(<DetailPanel element={enumElement} />);
 
-    // Header contains titlebarTitle
-    expect(screen.getByText('Enumeration: TestEnum')).toBeInTheDocument();
+    // Header contains title
+    expect(screen.getByText('TestEnum')).toBeInTheDocument();
   });
 
   test('should hide header when hideHeader is true', () => {
