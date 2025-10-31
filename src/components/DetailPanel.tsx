@@ -50,16 +50,6 @@ export default function DetailPanel({
       )}
 
       <div className="p-4 space-y-3 text-left">
-        {/* Title (when header is hidden) */}
-        {hideHeader && (
-          <div>
-            <h1 className="text-2xl font-bold">{data.title}</h1>
-            {data.subtitle && (
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{data.subtitle}</p>
-            )}
-          </div>
-        )}
-
         {/* Description */}
         {data.description && (
           <div>

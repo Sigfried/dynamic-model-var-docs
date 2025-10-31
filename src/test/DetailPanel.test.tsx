@@ -330,7 +330,9 @@ describe('DetailPanel - Header visibility', () => {
   test('should hide header when hideHeader is true', () => {
     render(<DetailPanel element={enumElement} hideHeader={true} />);
 
-    // When header is hidden, title appears in content area instead
-    expect(screen.getByText('TestEnum')).toBeInTheDocument();
+    // When header is hidden, title should NOT appear anywhere (it's in the outer header)
+    expect(screen.queryByText('TestEnum')).not.toBeInTheDocument();
+    // But description should still render
+    expect(screen.getByText('Test')).toBeInTheDocument();
   });
 });
