@@ -30,6 +30,23 @@ export interface Relationship {
   isSelfRef?: boolean;      // True if target === this.name
 }
 
+// Detail panel data structures (for getDetailData())
+export interface DetailSection {
+  name: string;
+  text?: string;
+  tableHeadings?: string[];
+  tableContent?: unknown[][];
+}
+
+export interface DetailData {
+  titlebarTitle: string;    // "Class: Specimen"
+  title: string;            // "Specimen"
+  subtitle?: string;        // "extends Entity"
+  titleColor: string;       // From ELEMENT_TYPES[type].color
+  description?: string;
+  sections: DetailSection[];
+}
+
 // Base abstract class for all element types
 export abstract class Element {
   abstract readonly type: ElementTypeId;
@@ -46,6 +63,9 @@ export abstract class Element {
   abstract renderDetails(
     onNavigate: (target: string, targetType: string) => void
   ): React.ReactElement;
+
+  // Detail data extraction (data-focused approach for DetailPanel)
+  abstract getDetailData(): DetailData;
 
   // Relationship extraction for SVG links
   abstract getRelationships(): Relationship[];
@@ -173,6 +193,89 @@ export class ClassElement extends Element {
     );
   }
 
+  getDetailData(): DetailData {
+    const metadata = ELEMENT_TYPES[this.type];
+    const sections: DetailSection[] = [];
+
+    // Inheritance section
+    if (this.parent) {
+      sections.push({
+        name: 'Inheritance',
+        text: `Inherits from: ${this.parent}`
+      });
+    }
+
+    // Attributes section (from properties)
+    if (this.properties && Object.keys(this.properties).length > 0) {
+      const attributes = Object.entries(this.properties).map(([name, def]) => [
+        name,
+        def.range || '',
+        def.required ? 'Yes' : 'No',
+        def.multivalued ? 'Yes' : 'No',
+        def.description || ''
+      ]);
+
+      sections.push({
+        name: 'Attributes',
+        tableHeadings: ['Name', 'Range', 'Required', 'Multivalued', 'Description'],
+        tableContent: attributes
+      });
+    }
+
+    // Slots section (from slot_usage)
+    if (this.slot_usage && Object.keys(this.slot_usage).length > 0) {
+      const slotUsages = Object.entries(this.slot_usage).map(([name, def]) => [
+        name,
+        def.range || '',
+        def.required ? 'Yes' : 'No',
+        def.multivalued ? 'Yes' : 'No',
+        def.description || ''
+      ]);
+
+      sections.push({
+        name: 'Slot Usage',
+        tableHeadings: ['Name', 'Range', 'Required', 'Multivalued', 'Description'],
+        tableContent: slotUsages
+      });
+    }
+
+    // Referenced slots section
+    if (this.slots && this.slots.length > 0) {
+      const slotList = this.slots.map(slotName => [slotName]);
+      sections.push({
+        name: 'Referenced Slots',
+        tableHeadings: ['Slot Name'],
+        tableContent: slotList
+      });
+    }
+
+    // Variables section
+    if (this.variables && this.variables.length > 0) {
+      const variableList = this.variables.map(v => [
+        v.variableLabel,
+        v.dataType,
+        v.ucumUnit,
+        v.curie,
+        v.variableDescription
+      ]);
+
+      sections.push({
+        name: `Variables (${this.variableCount})`,
+        tableHeadings: ['Label', 'Data Type', 'Unit', 'CURIE', 'Description'],
+        tableContent: variableList
+      });
+    }
+
+    return {
+      titlebarTitle: `${metadata.label}: ${this.name}`,
+      title: this.name,
+      subtitle: this.parent ? `extends ${this.parent}` : undefined,
+      titleColor: metadata.color.headerBg,
+      description: this.description,
+      sections
+    };
+  }
+
   getRelationships(): Relationship[] {
     const rels: Relationship[] = [];
 
@@ -265,6 +368,44 @@ export class EnumElement extends Element {
         <p className="text-gray-500">Detail rendering to be implemented with DetailTable component</p>
       </div>
     );
+  }
+
+  getDetailData(): DetailData {
+    const metadata = ELEMENT_TYPES[this.type];
+    const sections: DetailSection[] = [];
+
+    // Permissible Values section
+    if (this.permissibleValues.length > 0) {
+      const values = this.permissibleValues.map(v => [
+        v.key,
+        v.description || ''
+      ]);
+
+      sections.push({
+        name: 'Permissible Values',
+        tableHeadings: ['Value', 'Description'],
+        tableContent: values
+      });
+    }
+
+    // Used By Classes section
+    if (this.usedByClasses.length > 0) {
+      const classList = this.usedByClasses.map(className => [className]);
+      sections.push({
+        name: `Used By Classes (${this.usedByClasses.length})`,
+        tableHeadings: ['Class Name'],
+        tableContent: classList
+      });
+    }
+
+    return {
+      titlebarTitle: `${metadata.label}: ${this.name}`,
+      title: this.name,
+      subtitle: undefined,
+      titleColor: metadata.color.headerBg,
+      description: this.description,
+      sections
+    };
   }
 
   getRelationships(): Relationship[] {
@@ -381,6 +522,56 @@ export class SlotElement extends Element {
     );
   }
 
+  getDetailData(): DetailData {
+    const metadata = ELEMENT_TYPES[this.type];
+    const sections: DetailSection[] = [];
+
+    // Slot Properties section
+    const properties: [string, string][] = [];
+    if (this.range) {
+      properties.push(['Range', this.range]);
+    }
+    if (this.required !== undefined) {
+      properties.push(['Required', this.required ? 'Yes' : 'No']);
+    }
+    if (this.multivalued !== undefined) {
+      properties.push(['Multivalued', this.multivalued ? 'Yes' : 'No']);
+    }
+    if (this.identifier !== undefined) {
+      properties.push(['Identifier', this.identifier ? 'Yes' : 'No']);
+    }
+    if (this.slot_uri) {
+      properties.push(['Slot URI', this.slot_uri]);
+    }
+
+    if (properties.length > 0) {
+      sections.push({
+        name: 'Properties',
+        tableHeadings: ['Property', 'Value'],
+        tableContent: properties
+      });
+    }
+
+    // Used By Classes section
+    if (this.usedByClasses.length > 0) {
+      const classList = this.usedByClasses.map(className => [className]);
+      sections.push({
+        name: `Used By Classes (${this.usedByClasses.length})`,
+        tableHeadings: ['Class Name'],
+        tableContent: classList
+      });
+    }
+
+    return {
+      titlebarTitle: `${metadata.label}: ${this.name}`,
+      title: this.name,
+      subtitle: undefined,
+      titleColor: metadata.color.headerBg,
+      description: this.description,
+      sections
+    };
+  }
+
   getRelationships(): Relationship[] {
     const rels: Relationship[] = [];
 
@@ -492,6 +683,39 @@ export class VariableElement extends Element {
         </div>
       </div>
     );
+  }
+
+  getDetailData(): DetailData {
+    const metadata = ELEMENT_TYPES[this.type];
+    const sections: DetailSection[] = [];
+
+    // Variable Properties section
+    const properties: [string, string][] = [];
+    properties.push(['Mapped to', this.bdchmElement]);
+    if (this.dataType) {
+      properties.push(['Data Type', this.dataType]);
+    }
+    if (this.ucumUnit) {
+      properties.push(['Unit', this.ucumUnit]);
+    }
+    if (this.curie) {
+      properties.push(['CURIE', this.curie]);
+    }
+
+    sections.push({
+      name: 'Properties',
+      tableHeadings: ['Property', 'Value'],
+      tableContent: properties
+    });
+
+    return {
+      titlebarTitle: `${metadata.label}: ${this.name}`,
+      title: this.name,
+      subtitle: undefined,
+      titleColor: metadata.color.headerBg,
+      description: this.description,
+      sections
+    };
   }
 
   getRelationships(): Relationship[] {
