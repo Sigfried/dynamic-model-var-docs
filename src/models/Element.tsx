@@ -50,7 +50,7 @@ export interface DetailData {
 
 // Base abstract class for all element types
 export abstract class Element {
-  abstract readonly type: ElementTypeId;
+  protected abstract readonly type: ElementTypeId;
   abstract readonly name: string;
   abstract readonly description: string | undefined;
 
@@ -92,6 +92,30 @@ export abstract class Element {
    */
   getBadge(): number | undefined {
     return undefined; // Default: no badge
+  }
+
+  /**
+   * Get element type (for debugging/logging and internal use).
+   * Prefer polymorphic methods over type checking.
+   */
+  getType(): ElementTypeId {
+    return this.type;
+  }
+
+  /**
+   * Get parent element name (only for ClassElement with inheritance).
+   * Returns undefined for other element types.
+   */
+  getParentName(): string | undefined {
+    return undefined; // Default: no parent
+  }
+
+  /**
+   * Check if element is an abstract class.
+   * Returns true only for ClassElement with abstract flag.
+   */
+  isAbstractClass(): boolean {
+    return false; // Default: not abstract
   }
 }
 
@@ -137,7 +161,7 @@ function categorizeRange(range: string): 'class' | 'enum' | 'primitive' {
 
 // ClassElement - represents a class in the schema
 export class ClassElement extends Element {
-  readonly type = 'class' as const;
+  protected readonly type = 'class' as const;
   readonly name: string;
   readonly description: string | undefined;
   readonly parent: string | undefined;
@@ -320,11 +344,19 @@ export class ClassElement extends Element {
   getBadge(): number | undefined {
     return this.variableCount > 0 ? this.variableCount : undefined;
   }
+
+  getParentName(): string | undefined {
+    return this.parent;
+  }
+
+  isAbstractClass(): boolean {
+    return this.abstract === true;
+  }
 }
 
 // EnumElement - represents an enumeration
 export class EnumElement extends Element {
-  readonly type = 'enum' as const;
+  protected readonly type = 'enum' as const;
   readonly name: string;
   readonly description: string | undefined;
   readonly permissibleValues: EnumValue[];
@@ -426,7 +458,7 @@ export class EnumElement extends Element {
 
 // SlotElement - represents a top-level slot definition
 export class SlotElement extends Element {
-  readonly type = 'slot' as const;
+  protected readonly type = 'slot' as const;
   readonly name: string;
   readonly description: string | undefined;
   readonly range: string | undefined;
@@ -605,7 +637,7 @@ export class SlotElement extends Element {
 
 // VariableElement - represents a variable specification
 export class VariableElement extends Element {
-  readonly type = 'variable' as const;
+  protected readonly type = 'variable' as const;
   readonly bdchmElement: string;
   readonly name: string;  // variableLabel
   readonly description: string;  // variableDescription

@@ -3,7 +3,7 @@
  */
 
 import { type ReactElement } from 'react';
-import type { Element, ClassElement } from '../models/Element';
+import type { Element } from '../models/Element';
 import { ELEMENT_TYPES, type ElementTypeId } from '../models/ElementRegistry';
 
 /**
@@ -29,13 +29,13 @@ export function getHeaderColor(elementType: ElementTypeId): string {
  */
 export function getPanelTitle(element: Element, elementType: ElementTypeId): ReactElement {
   const metadata = ELEMENT_TYPES[elementType];
+  const parentName = element.getParentName();
 
   if (elementType === 'class') {
-    const classElement = element as ClassElement;
     return (
       <span className="text-base">
         <span className="font-bold">Class:</span> <span className="font-bold">{element.name}</span>
-        {classElement.parent && <span className="ml-1 text-sm">extends {classElement.parent}</span>}
+        {parentName && <span className="ml-1 text-sm">extends {parentName}</span>}
       </span>
     );
   } else if (elementType === 'enum') {

@@ -3,6 +3,7 @@
  * Used for hierarchical elements (classes, grouped variables, etc.)
  */
 
+import type { Element } from './Element';
 import type { RenderableItem } from './RenderableItem';
 
 export interface TreeNode<T> {
@@ -16,7 +17,7 @@ export interface TreeNode<T> {
  * Requires minimal properties that Element base class provides
  */
 interface ElementLike {
-  type: string;
+  getType(): string;
   name: string;
   getBadge?(): number | undefined;
 }
@@ -132,8 +133,8 @@ export class Tree<T> {
       const isClickable = getIsClickable ? getIsClickable(node, level) : true;
 
       items.push({
-        id: `${element.type}-${element.name}`,
-        element: node.data,
+        id: `${element.getType()}-${element.name}`,
+        element: node.data as unknown as Element,
         level,
         hasChildren,
         isExpanded,

@@ -95,7 +95,7 @@ export default function ElementsPanel({
                 collection={collection}
                 callbacks={{
                   onSelect: (element) => {
-                    onSelectElement(element, element.type);
+                    onSelectElement(element, element.getType());
                   },
                   onElementHover,
                   onElementLeave

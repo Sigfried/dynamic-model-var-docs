@@ -20,10 +20,10 @@ interface ItemRendererProps {
 
 function ItemRenderer({ item, callbacks, position, toggleExpansion }: ItemRendererProps) {
   const { element, level, hasChildren, isExpanded, isClickable, badge } = item;
-  const { color } = ELEMENT_TYPES[element.type];
+  const { color } = ELEMENT_TYPES[element.getType()];
 
   const hoverHandlers = getElementHoverHandlers({
-    type: element.type,
+    type: element.getType(),
     name: element.name,
     onElementHover: callbacks.onElementHover,
     onElementLeave: callbacks.onElementLeave
@@ -44,8 +44,8 @@ function ItemRenderer({ item, callbacks, position, toggleExpansion }: ItemRender
   return (
     <div key={element.name} className="select-none">
       <div
-        id={`${element.type}-${element.name}`}
-        data-element-type={element.type}
+        id={`${element.getType()}-${element.name}`}
+        data-element-type={element.getType()}
         data-element-name={element.name}
         data-panel-position={position}
         className={`flex items-center gap-2 px-2 py-1 rounded ${
@@ -74,7 +74,7 @@ function ItemRenderer({ item, callbacks, position, toggleExpansion }: ItemRender
         <span className="flex-1 text-sm font-medium">{element.name}</span>
 
         {/* Type-specific badges and indicators */}
-        {element.type === 'class' && element.abstract && (
+        {element.isAbstractClass() && (
           <span className="text-xs text-purple-600 dark:text-purple-400 italic mr-2">
             abstract
           </span>
