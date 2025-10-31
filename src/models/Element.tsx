@@ -36,6 +36,7 @@ export interface DetailSection {
   text?: string;
   tableHeadings?: string[];
   tableContent?: unknown[][];
+  tableHeadingColor?: string; // Tailwind classes for heading background
 }
 
 export interface DetailData {
@@ -218,7 +219,8 @@ export class ClassElement extends Element {
       sections.push({
         name: 'Attributes',
         tableHeadings: ['Name', 'Range', 'Required', 'Multivalued', 'Description'],
-        tableContent: attributes
+        tableContent: attributes,
+        tableHeadingColor: 'bg-green-700 dark:bg-green-700'
       });
     }
 
@@ -235,7 +237,8 @@ export class ClassElement extends Element {
       sections.push({
         name: 'Slot Usage',
         tableHeadings: ['Name', 'Range', 'Required', 'Multivalued', 'Description'],
-        tableContent: slotUsages
+        tableContent: slotUsages,
+        tableHeadingColor: 'bg-green-700 dark:bg-green-700'
       });
     }
 
@@ -245,7 +248,8 @@ export class ClassElement extends Element {
       sections.push({
         name: 'Referenced Slots',
         tableHeadings: ['Slot Name'],
-        tableContent: slotList
+        tableContent: slotList,
+        tableHeadingColor: 'bg-green-700 dark:bg-green-700'
       });
     }
 
@@ -262,7 +266,8 @@ export class ClassElement extends Element {
       sections.push({
         name: `Variables (${this.variableCount})`,
         tableHeadings: ['Label', 'Data Type', 'Unit', 'CURIE', 'Description'],
-        tableContent: variableList
+        tableContent: variableList,
+        tableHeadingColor: 'bg-orange-600 dark:bg-orange-600'
       });
     }
 

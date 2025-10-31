@@ -72,11 +72,11 @@ export default function DetailPanel({
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
-                    <tr className="bg-gray-100 dark:bg-slate-700">
+                    <tr className={section.tableHeadingColor || 'bg-gray-100 dark:bg-slate-700'}>
                       {section.tableHeadings.map((heading, headingIdx) => (
                         <th
                           key={headingIdx}
-                          className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-left font-semibold text-sm"
+                          className={`border border-gray-300 dark:border-slate-600 px-4 py-2 text-left font-semibold text-sm ${section.tableHeadingColor ? 'text-white' : ''}`}
                         >
                           {heading}
                         </th>
