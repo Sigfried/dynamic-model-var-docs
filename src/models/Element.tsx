@@ -2,12 +2,20 @@
 // See CLAUDE.md and ARCHITECTURE.md for architecture details
 
 import * as React from 'react';
-import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
+import type {
+  ClassMetadata,
+  ClassNode,
+  EnumDefinition,
+  ModelData,
+  SlotDefinition,
+  SlotMetadata,
+  VariableSpec
+} from '../types';
 import { getElementHoverHandlers } from '../hooks/useElementHover';
 import type { ElementTypeId, RelationshipTypeId } from './ElementRegistry';
 import { ELEMENT_TYPES } from './ElementRegistry';
 import type { RenderableItem } from './RenderableItem';
-import { Tree, type TreeNode } from './Tree';
+import { Tree, TreeNode, buildTree } from './Tree';
 
 // Union type for all element data types
 export type ElementData = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
@@ -154,35 +162,58 @@ function categorizeRange(range: string): 'class' | 'enum' | 'primitive' {
 // ClassElement - represents a class in the schema
 export class ClassElement extends Element {
   protected readonly type = 'class' as const;
+  protected readonly dataModel: ModelData
   readonly name: string;
   readonly description: string | undefined;
   readonly parent: string | undefined;
   readonly variableCount: number;
   readonly variables: VariableSpec[];
-  readonly properties: Record<string, PropertyDefinition> | undefined;
+  // readonly properties: Record<string, PropertyDefinition> | undefined;
+  // [sg] want to start using properties as a list of all slots: ClassSlot[]
+  // i don't know if ClassSlot should be a type or a class, but its shape
+  // should be { slot: SlotElement, type: 'inherited' | 'attribute' | 'slot' }
+  readonly properties: Record<string, ClassSlot> | undefined;
   readonly isEnum: boolean;
   readonly enumReferences: string[] | undefined;
   readonly requiredProperties: string[] | undefined;
   readonly slots: string[] | undefined;
   readonly slot_usage: Record<string, PropertyDefinition> | undefined;
   readonly abstract: boolean | undefined;
-  private slotElements: Map<string, SlotElement>;
+  // [sg] somehow an Element needs access to the TreeNode version of itself
+  readonly treeNode: TreeNode
+  // private slotElements: Map<string, SlotElement>;
 
-  constructor(data: ClassNode, slotElements: Map<string, SlotElement>) {
+  constructor(data: ClassMetadata, dataModel: ModelData) {
+    // [sg] changing this to receive dataModel instead of just slotElements
     super();
+    this.dataModel = dataModel;
     this.name = data.name;
     this.description = data.description;
     this.parent = data.parent;
     this.variableCount = data.variableCount;
     this.variables = data.variables;
-    this.properties = data.properties as Record<string, PropertyDefinition> | undefined;
+    // this.properties = data.properties as Record<string, PropertyDefinition> | undefined;
+    this.properties = this.collectAllSlots()
     this.isEnum = data.isEnum;
     this.enumReferences = data.enumReferences;
     this.requiredProperties = data.requiredProperties;
     this.slots = data.slots;
     this.slot_usage = data.slot_usage as Record<string, PropertyDefinition> | undefined;
     this.abstract = data.abstract;
-    this.slotElements = slotElements;
+    // this.slotElements = slotElements;
+    this.collectAllSlots()
+  }
+  collectAllSlots(): SlotElement[] {
+    const ancestorSlots = this.treeNode.ancestorList().map(n => n.node.properties) // this should be a flat map (of name:SlotElement) i think
+    const attributes = [] // get all the attributes as SlotElements
+    this.slot_usage.forEach( // or whatever
+      (name: string, slot_usage: PropertyDefinition /* ???? */) => {
+        if (!ancestorSlots.has(name)) throw new Error(`slot_usage only applies to inherited slots`)
+        ancestorSlots.set(name, new ClassSlot(ancestorSlots.get(name), slot_usage));
+      }
+    )
+    const slots = this.slots.map(s => ({key: s.name, val: new SlotElement(s)}))
+    return [...ancestorSlots, ...ancestorSlots, ...slots]
   }
 
   renderDetails(_onNavigate: (target: string, targetType: string) => void) {
@@ -452,7 +483,7 @@ export class SlotElement extends Element {
   readonly multivalued: boolean | undefined;
   readonly usedByClasses: string[];
 
-  constructor(data: SlotDefinition) {
+  constructor(data: SlotMetadata) {
     super();
     this.name = data.name;
     this.description = data.description;
@@ -915,11 +946,18 @@ export class SlotCollection extends ElementCollection {
 export class ClassCollection extends ElementCollection {
   readonly type = 'class' as const;
   readonly id = 'class';
-  private tree: Tree<ClassElement>;
+  private tree: Tree;
 
-  constructor(tree: Tree<ClassElement>) {
+  constructor(tree: Tree) {
+    // [sg] after dataLoader is refactored in 6.4, replace this with something like newConstructor below
     super();
     this.tree = tree;
+  }
+  newConstructor(data: ClassMetadata[], dataModel: ModelData): ClassCollection {
+    const list: ClassElement[] = data.map(c => new ClassElement(c, dataModel));
+    this.tree = buildTree(list)
+
+    return this // because not a real constructor yet
   }
 
   /** Factory: Create from raw data (called by dataLoader) */
@@ -1085,23 +1123,5 @@ export class VariableCollection extends ElementCollection {
       expandedItems || new Set(),
       (element, level) => level > 0 // Only variables (level 1) are clickable
     );
-  }
-}
-
-// Factory function to create Element instances
-export function createElement(
-  data: ElementData,
-  source: ElementTypeId,
-  context?: { slotDefinitions?: Map<string, SlotDefinition> }
-): Element {
-  switch (source) {
-    case 'class':
-      return new ClassElement(data as ClassNode, context?.slotDefinitions || new Map());
-    case 'enum':
-      return new EnumElement(data as EnumDefinition);
-    case 'slot':
-      return new SlotElement(data as SlotDefinition);
-    case 'variable':
-      return new VariableElement(data as VariableSpec);
   }
 }

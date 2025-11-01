@@ -3,13 +3,38 @@
  * Used for hierarchical elements (classes, grouped variables, etc.)
  */
 
+// [sg] i'm trying to sketch out what i want done here, but i'm
+//      leaving a mess that needs to be cleaned up. TreeNode is
+//      a class now and i halfway got rid of generic types
+//      and 6.5 is supposed to make new way of doing buildTree
+//      but don't know what that is yet
+
 import type { Element } from './Element';
 import type { RenderableItem } from './RenderableItem';
 
-export interface TreeNode<T> {
-  data: T;
-  children: TreeNode<T>[];
-  parent?: TreeNode<T>;
+// [sg] have started turning this into a class, please finish
+export class TreeNode {
+  readonly node: Element;
+  readonly children: TreeNode[];
+  parent?: TreeNode;
+
+  constructor(node: Element, parent?: TreeNode, children: TreeNode[] = []) {
+    this.node = node;
+    this.parent = parent;
+    this.children = children;
+  }
+
+  ancestorList(list: TreeNode[] = []): TreeNode[] {
+    if (this.parent) {
+      list.unshift(this.parent)
+      return list[0].ancestorList(list)
+    } else {
+      return list;
+    }
+  }
+
+  // [sg] should probably be a traverse method here, and the traverse functions
+  //      below can use it along with whatever special logic they need
 }
 
 /**
@@ -22,10 +47,10 @@ interface ElementLike {
   getBadge?(): number | undefined;
 }
 
-export class Tree<T> {
-  readonly roots: TreeNode<T>[];
+export class Tree {
+  readonly roots: TreeNode[];
 
-  constructor(roots: TreeNode<T>[]) {
+  constructor(roots: TreeNode[]) {
     this.roots = roots;
   }
 
@@ -35,8 +60,8 @@ export class Tree<T> {
   flatten(): T[] {
     const result: T[] = [];
 
-    const traverse = (node: TreeNode<T>) => {
-      result.push(node.data);
+    const traverse = (node: TreeNode) => {
+      result.push(node.data); // [sg] fix!
       node.children.forEach(traverse);
     };
 
@@ -69,6 +94,7 @@ export class Tree<T> {
 
   /**
    * Get all nodes at a specific level (0 = roots)
+   * [sg] worth keeping?
    */
   getLevel(level: number): TreeNode<T>[] {
     if (level === 0) return this.roots;
@@ -88,6 +114,7 @@ export class Tree<T> {
 
   /**
    * Map over all nodes in the tree
+   * [sg] where is this being used:?
    */
   map<U>(fn: (data: T, level: number) => U): Tree<U> {
     const mapNode = (node: TreeNode<T>, level: number): TreeNode<U> => {
@@ -126,6 +153,7 @@ export class Tree<T> {
 
     const items: RenderableItem[] = [];
 
+    // [sg] shouldn't traverse be a method of TreeNode? (turn TreeNode into class first)
     const traverse = (node: TreeNode<T>, level: number) => {
       const element = node.data as unknown as ElementLike;
       const hasChildren = node.children.length > 0;
@@ -156,13 +184,13 @@ export class Tree<T> {
 /**
  * Build a tree from flat data with parent references
  */
-export function buildTree<T>(
-  items: T[],
-  getId: (item: T) => string,
-  getParentId: (item: T) => string | undefined
-): Tree<T> {
-  const nodeMap = new Map<string, TreeNode<T>>();
-  const roots: TreeNode<T>[] = [];
+export function buildTree (
+  items: Element[],
+  // getId: (item: Element) => string,
+  // getParentId: (item: Element) => string | undefined
+): Tree {
+  const nodeMap = new Map<string, TreeNode>();
+  const roots: TreeNode[] = [];
 
   // First pass: create all nodes
   items.forEach(item => {

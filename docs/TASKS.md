@@ -17,6 +17,95 @@
 
 Listed in intended implementation order (top = next):
 
+### 🔒 Phase 6.4: Simplify Data Loading Architecture
+
+**Status**: ⏸️ BLOCKED - Must complete before Phase 6.5
+
+**Goal**: Eliminate unnecessary DTO layer and transformation complexity. DataLoader should only load and type-check; Collections should handle transformations.
+
+**Current problems**:
+1. DTOs (ClassNode, EnumDefinition, SlotDefinition) add ceremony without clear benefit
+2. dataLoader builds trees → Element.fromData converts back to flat → wasteful
+3. Pre-computed fields (variableCount) when Element could compute on-demand
+4. buildReverseIndices exists but never called → usedByClasses always empty
+5. `[key: string]: unknown` in Metadata interfaces never used
+
+**Proposed architecture**:
+```
+Raw JSON → Type-checked Properties → Collection.fromData() → Elements
+                                     (internal transformations)
+```
+>**[sg]** maybe not quite...
+
+**Changes**:
+
+1. **Rename Metadata → Properties interfaces**:
+   - `ClassMetadata` → `ClassProperties`
+   - `EnumMetadata` → `EnumProperties`
+   - `SlotMetadata` → `SlotProperties`
+   - Keep `VariableSpec` (already used directly)
+
+2. **Simplify dataLoader.ts**:
+   - Remove: `buildClassHierarchy()` (tree building)
+   - Remove: `buildReverseIndices()` (never called)
+   - Remove: DTOs (ClassNode, EnumDefinition, SlotDefinition)
+   - Return: Raw type-checked Property interfaces
+   - Let Collections handle transformations
+
+3. **Move transformations to Collections**:
+   - `ClassCollection.fromData()`: Build tree from flat ClassProperties
+   - `VariableCollection.fromData()`: Build tree on bdchmElement groups [added by sg]
+   - `EnumCollection.fromData()`: Transform permissible_values structure
+   - `SlotCollection.fromData()`: Handle any slot-specific logic
+
+> **[sg]** not quite. need more of a refactoring plan for this:
+>   - review current fromData methods, they are very similar. see if you
+>     can DRY the shared stuff up into a single Element method
+>   - review all the tree building code you can find (dataLoader, fromData,
+>     elsewhere) and particularly look at the currently unused Tree:buildTree
+>     function. let's discuss where any tree building happens and how to
+>     DRY and simplify. the classes should be able to simply prep the data
+>     for a new build tree method/function
+
+4. **Remove unused DTO types**:
+   - Delete: ClassNode, EnumDefinition, SlotDefinition from types.ts
+   - Keep deprecation comments explaining what was removed and why
+     > **[sg]** don't keep
+
+5. **On-demand computed fields**:
+   - `ClassElement`: Compute variableCount in constructor or getter
+   - `EnumElement`: Add `getUsedByClasses()` → calls `classCollection.getClassesUsing(enumName)`
+   - `SlotElement`: Add `getUsedByClasses()` → calls `classCollection.getClassesUsing(slotName)`
+   - Collections provide: `getClassesUsing(name: string)` helper
+   > [sg] make DRYer. perhaps something like:
+   > ```typescript
+   > Element.findInboundRefs(fromCollection: ElementCollection, refPropName: string) {
+   >   return fromCollection.map(e => e[refPropName])
+   > }
+   > // variable element example:
+   > this.usedByClasses = this.findInboundRef(modelData.collections.classCollection, 'bdchmElement')
+   > ```
+   > for enums and classes i think it'll be harder
+
+
+6. **Clean up Metadata/Property interfaces**:
+   - Remove: `[key: string]: unknown` (never used)
+   - Fail fast: If JSON has unexpected fields, TypeScript will catch it
+
+**Benefits**:
+- Simpler: One set of interfaces (Properties), not two (Metadata + DTOs)
+- Faster: No redundant tree building/flattening
+- Clearer: Transformations happen where they're used (Collections)
+- Type-safe: Fail fast on schema changes
+
+**Files to modify**:
+- `src/types.ts` - Rename interfaces, remove DTOs, remove index signatures
+- `src/utils/dataLoader.ts` - Drastically simplify
+- `src/models/Element.tsx` - Collections handle transformations, add getUsedByClasses()
+- All files importing ClassNode/EnumDefinition/SlotDefinition
+
+---
+
 ### 🔒 Phase 6.5: Complete View/Model Separation
 
 **Status**: ⏳ IN PROGRESS
