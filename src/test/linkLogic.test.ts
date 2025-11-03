@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import { ClassElement, EnumElement, SlotElement, VariableElement, type Relationship } from '../models/Element';
-import type { ClassDTO, EnumDTO, SlotDTO, VariableSpec } from '../types';
+import type { ClassMetadata, EnumMetadata, SlotMetadata, VariableSpec, ModelData } from '../types';
 
 /**
  * Link Logic Tests
@@ -9,22 +9,24 @@ import type { ClassDTO, EnumDTO, SlotDTO, VariableSpec } from '../types';
  * and how those links should be filtered/displayed.
  */
 
+// Helper to create minimal ModelData for testing
+const createMockModelData = (): ModelData => ({
+  collections: new Map(),
+  elementLookup: new Map(),
+});
+
 describe('Element Relationship Detection', () => {
   describe('ClassElement relationships', () => {
     test('should detect inheritance relationship', () => {
-      const childClass: ClassDTO = {
+      const childClass: ClassMetadata = {
         name: 'Participant',
         parent: 'Entity',
         description: 'A participant in a study',
-        children: [],
-        variableCount: 0,
-        variables: [],
-        properties: {},
-        isEnum: false,
         abstract: false,
+        attributes: {},
       };
 
-      const element = new ClassElement(childClass, new Map());
+      const element = new ClassElement(childClass, createMockModelData());
       const rels = element.getRelationships();
 
       const inheritRel = rels.find(r => r.type === 'inherits');
@@ -35,19 +37,15 @@ describe('Element Relationship Detection', () => {
     });
 
     test('should not have inheritance relationship for root classes', () => {
-      const rootClass: ClassDTO = {
+      const rootClass: ClassMetadata = {
         name: 'Entity',
         parent: undefined,
         description: 'Root entity',
-        children: [],
-        variableCount: 0,
-        variables: [],
-        properties: {},
-        isEnum: false,
         abstract: true,
+        attributes: {},
       };
 
-      const element = new ClassElement(rootClass, new Map());
+      const element = new ClassElement(rootClass, createMockModelData());
       const rels = element.getRelationships();
 
       const inheritRel = rels.find(r => r.type === 'inherits');
@@ -55,24 +53,20 @@ describe('Element Relationship Detection', () => {
     });
 
     test('should detect enum property relationships', () => {
-      const classWithEnum: ClassDTO = {
+      const classWithEnum: ClassMetadata = {
         name: 'Specimen',
         parent: 'Entity',
         description: 'A specimen',
-        children: [],
-        variableCount: 0,
-        variables: [],
-        properties: {
+        abstract: false,
+        attributes: {
           specimen_type: {
             range: 'SpecimenTypeEnum',
             description: 'The type of specimen',
           },
         },
-        isEnum: false,
-        abstract: false,
       };
 
-      const element = new ClassElement(classWithEnum, new Map());
+      const element = new ClassElement(classWithEnum, createMockModelData());
       const rels = element.getRelationships();
 
       const enumRel = rels.find(r => r.target === 'SpecimenTypeEnum');
@@ -84,24 +78,20 @@ describe('Element Relationship Detection', () => {
     });
 
     test('should detect class property relationships', () => {
-      const classWithClassRef: ClassDTO = {
+      const classWithClassRef: ClassMetadata = {
         name: 'Condition',
         parent: 'Entity',
         description: 'A condition',
-        children: [],
-        variableCount: 0,
-        variables: [],
-        properties: {
+        abstract: false,
+        attributes: {
           associated_participant: {
             range: 'Participant',
             description: 'Associated participant',
           },
         },
-        isEnum: false,
-        abstract: false,
       };
 
-      const element = new ClassElement(classWithClassRef, new Map());
+      const element = new ClassElement(classWithClassRef, createMockModelData());
       const rels = element.getRelationships();
 
       const classRel = rels.find(r => r.target === 'Participant');
@@ -112,23 +102,19 @@ describe('Element Relationship Detection', () => {
     });
 
     test('should ignore primitive property types', () => {
-      const classWithPrimitives: ClassDTO = {
+      const classWithPrimitives: ClassMetadata = {
         name: 'Person',
         parent: 'Entity',
         description: 'A person',
-        children: [],
-        variableCount: 0,
-        variables: [],
-        properties: {
+        abstract: false,
+        attributes: {
           name: { range: 'string', description: 'Name' },
           age: { range: 'integer', description: 'Age' },
           active: { range: 'boolean', description: 'Active status' },
         },
-        isEnum: false,
-        abstract: false,
       };
 
-      const element = new ClassElement(classWithPrimitives, new Map());
+      const element = new ClassElement(classWithPrimitives, createMockModelData());
       const rels = element.getRelationships();
 
       // Should only have inheritance, no property relationships
@@ -136,24 +122,20 @@ describe('Element Relationship Detection', () => {
     });
 
     test('should detect self-referential relationships', () => {
-      const selfRefClass: ClassDTO = {
+      const selfRefClass: ClassMetadata = {
         name: 'Specimen',
         parent: 'Entity',
         description: 'A specimen',
-        children: [],
-        variableCount: 0,
-        variables: [],
-        properties: {
+        abstract: false,
+        attributes: {
           parent_specimen: {
             range: 'Specimen',
             description: 'Parent specimen',
           },
         },
-        isEnum: false,
-        abstract: false,
       };
 
-      const element = new ClassElement(selfRefClass, new Map());
+      const element = new ClassElement(selfRefClass, createMockModelData());
       const rels = element.getRelationships();
 
       const selfRel = rels.find(r => r.target === 'Specimen');
@@ -162,23 +144,19 @@ describe('Element Relationship Detection', () => {
     });
 
     test('should handle multiple relationships', () => {
-      const complexClass: ClassDTO = {
+      const complexClass: ClassMetadata = {
         name: 'MeasurementObservation',
         parent: 'Observation',
         description: 'A measurement observation',
-        children: [],
-        variableCount: 0,
-        variables: [],
-        properties: {
+        abstract: false,
+        attributes: {
           observation_type: { range: 'MeasurementObservationTypeEnum' },
           value_quantity: { range: 'Quantity' },
           focus_of: { range: 'Participant' },
         },
-        isEnum: false,
-        abstract: false,
       };
 
-      const element = new ClassElement(complexClass, new Map());
+      const element = new ClassElement(complexClass, createMockModelData());
       const rels = element.getRelationships();
 
       // Should have 1 inheritance + 3 property relationships
@@ -190,13 +168,12 @@ describe('Element Relationship Detection', () => {
 
   describe('SlotElement relationships', () => {
     test('should detect slot range relationships for enum', () => {
-      const slotWithEnum: SlotDTO = {
-        name: 'species',
+      const slotWithEnum: SlotMetadata = {
         description: 'Species',
         range: 'CellularOrganismSpeciesEnum',
       };
 
-      const element = new SlotElement(slotWithEnum);
+      const element = new SlotElement('species', slotWithEnum);
       const rels = element.getRelationships();
 
       expect(rels.length).toBe(1);
@@ -205,13 +182,12 @@ describe('Element Relationship Detection', () => {
     });
 
     test('should detect slot range relationships for class', () => {
-      const slotWithClass: SlotDTO = {
-        name: 'associated_participant',
+      const slotWithClass: SlotMetadata = {
         description: 'Associated participant',
         range: 'Participant',
       };
 
-      const element = new SlotElement(slotWithClass);
+      const element = new SlotElement('associated_participant', slotWithClass);
       const rels = element.getRelationships();
 
       expect(rels.length).toBe(1);
@@ -220,25 +196,23 @@ describe('Element Relationship Detection', () => {
     });
 
     test('should not create relationships for primitive ranges', () => {
-      const slotWithPrimitive: SlotDTO = {
-        name: 'id',
+      const slotWithPrimitive: SlotMetadata = {
         description: 'Identifier',
         range: 'string',
       };
 
-      const element = new SlotElement(slotWithPrimitive);
+      const element = new SlotElement('id', slotWithPrimitive);
       const rels = element.getRelationships();
 
       expect(rels.length).toBe(0);
     });
 
     test('should handle slots without range', () => {
-      const slotNoRange: SlotDTO = {
-        name: 'description',
+      const slotNoRange: SlotMetadata = {
         description: 'Description field',
       };
 
-      const element = new SlotElement(slotNoRange);
+      const element = new SlotElement('description', slotNoRange);
       const rels = element.getRelationships();
 
       expect(rels.length).toBe(0);
@@ -269,16 +243,15 @@ describe('Element Relationship Detection', () => {
 
   describe('EnumElement relationships', () => {
     test('should have no outgoing relationships', () => {
-      const enumDef: EnumDTO = {
-        name: 'SexEnum',
+      const enumDef: EnumMetadata = {
         description: 'Sex values',
-        permissible_values: [
-          { value: 'male', description: 'Male' },
-          { value: 'female', description: 'Female' },
-        ],
+        permissible_values: {
+          male: { description: 'Male' },
+          female: { description: 'Female' },
+        },
       };
 
-      const element = new EnumElement(enumDef);
+      const element = new EnumElement('SexEnum', enumDef);
       const rels = element.getRelationships();
 
       expect(rels.length).toBe(0);

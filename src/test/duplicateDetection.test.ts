@@ -10,6 +10,13 @@ import {
   type ElementDescriptor
 } from '../utils/duplicateDetection';
 import { ClassElement, EnumElement, SlotElement, VariableElement } from '../models/Element';
+import type { ModelData } from '../types';
+
+// Helper to create minimal ModelData for testing
+const createMockModelData = (): ModelData => ({
+  collections: new Map(),
+  elementLookup: new Map(),
+});
 
 // Mock elements for testing
 const mockClass = new ClassElement({
@@ -17,23 +24,18 @@ const mockClass = new ClassElement({
   description: 'A sample class',
   parent: undefined,
   abstract: false,
-  attributes: {},
-  slots: [],
-  slot_usage: {}
-}, new Map());
+  attributes: {}
+}, createMockModelData());
 
-const mockEnum = new EnumElement({
-  name: 'SpecimenTypeEnum',
+const mockEnum = new EnumElement('SpecimenTypeEnum', {
   description: 'Specimen types',
-  permissible_values: []
+  permissible_values: {}
 });
 
-const mockSlot = new SlotElement({
-  name: 'identifier',
+const mockSlot = new SlotElement('identifier', {
   description: 'A unique identifier',
   range: 'string',
-  slot_uri: 'http://example.org/identifier',
-  usedByClasses: []
+  slot_uri: 'http://example.org/identifier'
 });
 
 const mockVariable = new VariableElement({
@@ -81,31 +83,26 @@ describe('findDuplicateIndex', () => {
       description: 'Different description',
       parent: undefined,
       abstract: false,
-      attributes: {},
-      slots: [],
-      slot_usage: {}
-    }, new Map());
+      attributes: {}
+    }, createMockModelData());
     const index = findDuplicateIndex(entities, duplicateClass, 'class');
     expect(index).toBe(0);
   });
 
   it('finds duplicate enum by name', () => {
-    const duplicateEnum = new EnumElement({
-      name: 'SpecimenTypeEnum',
+    const duplicateEnum = new EnumElement('SpecimenTypeEnum', {
       description: 'Different description',
-      permissible_values: []
+      permissible_values: {}
     });
     const index = findDuplicateIndex(entities, duplicateEnum, 'enum');
     expect(index).toBe(1);
   });
 
   it('finds duplicate slot by name', () => {
-    const duplicateSlot = new SlotElement({
-      name: 'identifier',
+    const duplicateSlot = new SlotElement('identifier', {
       description: 'Different description',
       range: 'string',
-      slot_uri: 'http://example.org/identifier',
-      usedByClasses: []
+      slot_uri: 'http://example.org/identifier'
     });
     const index = findDuplicateIndex(entities, duplicateSlot, 'slot');
     expect(index).toBe(2);
@@ -130,31 +127,26 @@ describe('findDuplicateIndex', () => {
       description: 'A sample class',
       parent: undefined,
       abstract: false,
-      attributes: {},
-      slots: [],
-      slot_usage: {}
-    }, new Map());
+      attributes: {}
+    }, createMockModelData());
     const index = findDuplicateIndex(entities, newClass, 'class');
     expect(index).toBe(-1);
   });
 
   it('returns -1 for non-duplicate enum', () => {
-    const newEnum = new EnumElement({
-      name: 'ConditionTypeEnum',
+    const newEnum = new EnumElement('ConditionTypeEnum', {
       description: 'Condition types',
-      permissible_values: []
+      permissible_values: {}
     });
     const index = findDuplicateIndex(entities, newEnum, 'enum');
     expect(index).toBe(-1);
   });
 
   it('returns -1 for non-duplicate slot', () => {
-    const newSlot = new SlotElement({
-      name: 'description',
+    const newSlot = new SlotElement('description', {
       description: 'A description',
       range: 'string',
-      slot_uri: 'http://example.org/description',
-      usedByClasses: []
+      slot_uri: 'http://example.org/description'
     });
     const index = findDuplicateIndex(entities, newSlot, 'slot');
     expect(index).toBe(-1);
@@ -180,14 +172,11 @@ describe('findDuplicateIndex', () => {
       description: 'A sample class',
       parent: undefined,
       abstract: false,
-      attributes: {},
-      slots: [],
-      slot_usage: {}
-    }, new Map());
-    const sameNameEnum = new EnumElement({
-      name: 'SameName',
+      attributes: {}
+    }, createMockModelData());
+    const sameNameEnum = new EnumElement('SameName', {
       description: 'An enum',
-      permissible_values: []
+      permissible_values: {}
     });
 
     const entitiesWithSameName: ElementDescriptor[] = [
@@ -251,29 +240,24 @@ describe('isDuplicate', () => {
       description: 'A sample class',
       parent: undefined,
       abstract: false,
-      attributes: {},
-      slots: [],
-      slot_usage: {}
-    }, new Map());
+      attributes: {}
+    }, createMockModelData());
     expect(isDuplicate(entities, newClass, 'class')).toBe(false);
   });
 
   it('returns false for non-duplicate enum', () => {
-    const newEnum = new EnumElement({
-      name: 'ConditionTypeEnum',
+    const newEnum = new EnumElement('ConditionTypeEnum', {
       description: 'Condition types',
-      permissible_values: []
+      permissible_values: {}
     });
     expect(isDuplicate(entities, newEnum, 'enum')).toBe(false);
   });
 
   it('returns false for non-duplicate slot', () => {
-    const newSlot = new SlotElement({
-      name: 'description',
+    const newSlot = new SlotElement('description', {
       description: 'A description',
       range: 'string',
-      slot_uri: 'http://example.org/description',
-      usedByClasses: []
+      slot_uri: 'http://example.org/description'
     });
     expect(isDuplicate(entities, newSlot, 'slot')).toBe(false);
   });

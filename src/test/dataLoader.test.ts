@@ -33,7 +33,7 @@ describe('dataLoader', () => {
       // Find a class with known parent (e.g., Participant is_a Entity)
       const participant = allClasses.find(c => c.name === 'Participant');
       expect(participant).toBeDefined();
-      expect(participant?.parent).toBe('Entity');
+      expect(participant?.parent?.name).toBe('Entity');
 
       // Check that root classes have no parent
       const rootClasses = rootElements.filter(c => c.parent === null || c.parent === undefined);
@@ -98,9 +98,9 @@ describe('dataLoader', () => {
       const sampleEnum = enums[0];
 
       expect(sampleEnum).toBeDefined();
-      if (sampleEnum.values && sampleEnum.values.length > 0) {
-        const firstValue = sampleEnum.values[0];
-        expect(firstValue).toHaveProperty('value');
+      if (sampleEnum.permissibleValues && sampleEnum.permissibleValues.length > 0) {
+        const firstValue = sampleEnum.permissibleValues[0];
+        expect(firstValue).toHaveProperty('key');
       }
     });
 
@@ -130,9 +130,9 @@ describe('dataLoader', () => {
       // Total properties across all classes should be greater than 0
       let totalProperties = 0;
       for (const cls of allClasses) {
-        // ClassElement uses `properties` field
-        if (cls.properties) {
-          totalProperties += Object.keys(cls.properties).length;
+        // ClassElement uses `attributes` field
+        if (cls.attributes) {
+          totalProperties += Object.keys(cls.attributes).length;
         }
       }
 

@@ -84,47 +84,15 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 
 ---
 
-## 🎯 Key Decisions
-
-### Decision 1: TreeNode Generics - ✅ IMPLEMENTED
-**Decision**: Remove generics - TreeNode/Tree always holds Element
-**Status**: Tree still generic but Element tree capabilities implemented
-
-### Decision 2: Attributes → SlotElements - ✅ DECIDED, ❌ NOT IMPLEMENTED
-**Decision**: ClassElement constructor creates SlotElements for attributes
-**Implementation**:
-1. ClassElement.attributes becomes SlotElement[]
-2. SlotCollection creates 2-level tree:
-   - Root 0: "Reusable Slots" (from schema slots section, expanded by default)
-   - Root 1+: Per-class roots (with attribute SlotElements, collapsed by default)
-
-**Status**: Decided but not implemented - blocked on ClassSlot design
-
-### Decision 3: Element Has Tree Capabilities - ✅ IMPLEMENTED
-**Decision**: Element base class has parent/children properties
-**Implementation**: Element has parent?, children[], ancestorList(), traverse()
-**Status**: Implemented - Collections still use Tree internally (Step 6 will remove)
-
-### Insight 2: ClassSlot Class Design - ⏸️ NEEDS DESIGN
-**Decision**: Use class (not interface) - allows methods like getEffectiveRange()
-**Status**: Needs fleshing out before Step 3 can proceed
-**Dependency order**: ClassElements created before SlotCollection ✅ (answered yes)
-
----
-
 ## 📋 What's Next
 
 ### High Priority - Blocking Other Work
 
-1. **Fix test failures from Step 4**
-   - Tests use old DTO-based constructors: `new EnumElement(dto)`
-   - Constructors now expect Metadata: `new EnumElement(name, metadata)`
-   - Affected: linkLogic.test.ts (9 failures), dataLoader.test.ts (2 failures), DetailPanel.test.tsx, duplicateDetection.test.ts, panelHelpers.test.tsx
-   - Options: (a) Update test mock objects to use Metadata types, or (b) Use Collection.fromData() factories in tests
+None currently - all blockers resolved!
 
 ### Can Proceed Without Blockers
 
-3. **Complete Step 4**
+1. **Complete Step 4**
    - 4.4: Wire variables array in VariableCollection
 
 4. **Step 5: Implement getUsedByClasses() methods (custom logic for each type)**
@@ -135,6 +103,8 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 
 5. **Step 6: Delete Tree.ts and use Element tree directly**
    - Move toRenderableItems() from Tree to Element base class
+        > [sg] this task also appears in TASKS 🔄 Move toRenderableItems() to Element Base Class.
+        > check if there's anything useful in that description, use it here, and delete it in TASKS
    - Remove TreeNode wrappers
    - Update all Collection classes to use Element.children directly
    - Delete src/models/Tree.ts
@@ -143,7 +113,15 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 
 ### Completed
 
-6. ✅ **Rename DTOs** (ClassNode → ClassDTO, EnumDefinition → EnumDTO, SlotDefinition → SlotDTO)
+1. ✅ **Fix test failures from Step 4** (2025-11-03)
+   - Updated all test files to use new Metadata-based constructors
+   - Fixed property access patterns (parent→parentName, properties→attributes)
+   - Fixed panelHelpers.tsx to use parentName instead of parent
+   - Skipped 2 tests awaiting Phase 5 getUsedByClasses() implementation
+   - Result: 152 tests passing, 0 failing (was 11 failing)
+   - Details logged in PROGRESS.md
+
+2. ✅ **Rename DTOs** (ClassNode → ClassDTO, EnumDefinition → EnumDTO, SlotDefinition → SlotDTO)
 
 ---
 
