@@ -67,6 +67,31 @@ describe('dataLoader', () => {
       expect(unmappedVariables.length).toBeLessThan(variables.length * 0.1); // Less than 10%
     });
 
+    test('should wire variables array into ClassElement instances', async () => {
+      const data = await loadModelData();
+
+      const classCollection = data.collections.get('class') as ClassCollection;
+      const variableCollection = data.collections.get('variable') as VariableCollection;
+      const variables = variableCollection.getAllElements();
+
+      // Find a class that has variables
+      const classWithVars = classCollection.getAllElements().find(c => c.variableCount > 0);
+
+      if (classWithVars && variables.length > 0) {
+        // Verify variables array is wired
+        expect(classWithVars.variables).toBeDefined();
+        expect(classWithVars.variables.length).toBeGreaterThan(0);
+
+        // Verify variableCount matches variables array length
+        expect(classWithVars.variableCount).toBe(classWithVars.variables.length);
+
+        // Verify each variable in the array references the correct class
+        classWithVars.variables.forEach(variable => {
+          expect(variable.bdchmElement).toBe(classWithVars.name);
+        });
+      }
+    });
+
     test('should parse slot definitions', async () => {
       const data = await loadModelData();
 

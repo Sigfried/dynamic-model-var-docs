@@ -434,29 +434,6 @@ src/components/
 
 ---
 
-### 🔄 Move toRenderableItems() to Element Base Class
-
-**Goal**: Move `toRenderableItems()` method from Tree class to Element base class as part of Tree.ts elimination
-
-**Context**:
-- Part of Phase 6 cleanup to eliminate Tree.ts entirely
-- Decision on full list grouping strategy deferred for later
-- Element.traverse() already exists (Phase 2.1) ✅
-
-**Implementation**:
-- Reference current Tree.ts implementation
-- Add `toRenderableItems()` method to Element base class
-- Update Collections to call `element.toRenderableItems()` instead of `tree.toRenderableItems()`
-- Method should support hierarchical rendering (for classes) and flat rendering (for enums/slots)
-
-**Files affected**:
-- `src/models/Element.tsx` - Add toRenderableItems() to Element base class
-- `src/models/Tree.ts` - Reference for current implementation (will be deleted in Phase 6)
-- Collection classes - Update to use new Element method
-
-**Future work**: Full redesign of grouping/list display strategy can happen after Tree.ts cleanup
-
----
 
 ### 🔄 Split Element.tsx into Separate Files
 

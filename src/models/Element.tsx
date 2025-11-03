@@ -16,7 +16,6 @@ import type {
 import type { ElementTypeId, RelationshipTypeId } from './ElementRegistry';
 import { ELEMENT_TYPES } from './ElementRegistry';
 import type { RenderableItem } from './RenderableItem';
-import { Tree, TreeNode, buildTree } from './Tree';
 
 // Union type for all element data types
 export type ElementData = ClassDTO | EnumDTO | SlotDTO | VariableSpec;
@@ -152,6 +151,46 @@ export abstract class Element {
   }
 
   /**
+   * Convert tree to flat list of RenderableItems for display.
+   * Respects expansion state to hide/show children.
+   *
+   * @param expandedItems Set of item names that are expanded
+   * @param getIsClickable Optional callback to determine if item is clickable (default: all true)
+   * @param level Current nesting level (used internally for recursion, defaults to 0)
+   * @returns Flat list of RenderableItems with level and expansion info
+   */
+  toRenderableItems(
+    expandedItems: Set<string>,
+    getIsClickable?: (element: Element, level: number) => boolean,
+    level: number = 0
+  ): RenderableItem[] {
+    const items: RenderableItem[] = [];
+
+    const hasChildren = this.children.length > 0;
+    const isExpanded = expandedItems.has(this.name);
+    const isClickable = getIsClickable ? getIsClickable(this, level) : true;
+
+    items.push({
+      id: `${this.type}-${this.name}`,
+      element: this,
+      level,
+      hasChildren,
+      isExpanded,
+      isClickable,
+      badge: this.getBadge()
+    });
+
+    // Only traverse children if expanded
+    if (isExpanded) {
+      this.children.forEach(child => {
+        items.push(...child.toRenderableItems(expandedItems, getIsClickable, level + 1));
+      });
+    }
+
+    return items;
+  }
+
+  /**
    * Check if this element is abstract (only applicable to ClassElement).
    * Default implementation returns false; ClassElement overrides.
    */
@@ -176,6 +215,17 @@ export function initializeElementNameMap(
   classNames.forEach(name => nameToTypeMap!.set(name, 'class'));
   enumNames.forEach(name => nameToTypeMap!.set(name, 'enum'));
   slotNames.forEach(name => nameToTypeMap!.set(name, 'slot'));
+}
+
+// ClassCollection reference for on-demand getUsedByClasses() computation
+let globalClassCollection: ClassCollection | null = null;
+
+/**
+ * Initialize global ClassCollection reference. Call this once after creating ClassCollection.
+ * Used by EnumElement and SlotElement to compute getUsedByClasses() on-demand.
+ */
+export function initializeClassCollection(collection: ClassCollection): void {
+  globalClassCollection = collection;
 }
 
 // Helper to categorize range types
@@ -537,11 +587,30 @@ export class EnumElement extends Element {
 
   /**
    * Get classes that use this enum (computed on-demand).
-   * TODO Phase 5: Implement by scanning classCollection properties for range === this.name
+   * Scans all class attributes for range === this.name
    */
   getUsedByClasses(): string[] {
-    // Placeholder - will be implemented in Phase 5
-    return [];
+    if (!globalClassCollection) {
+      console.warn('EnumElement.getUsedByClasses(): globalClassCollection not initialized');
+      return [];
+    }
+
+    const usedBy: string[] = [];
+    const allClasses = globalClassCollection.getAllElements() as ClassElement[];
+
+    for (const cls of allClasses) {
+      // Check if any attribute has range === this enum name
+      if (cls.attributes) {
+        for (const [_attrName, attrDef] of Object.entries(cls.attributes)) {
+          if (attrDef.range === this.name) {
+            usedBy.push(cls.name);
+            break; // Found one match, no need to check other attributes
+          }
+        }
+      }
+    }
+
+    return usedBy.sort();
   }
 }
 
@@ -728,11 +797,31 @@ export class SlotElement extends Element {
 
   /**
    * Get classes that use this slot (computed on-demand).
-   * TODO Phase 5: Implement by scanning classCollection for classes with this slot in their slots array
+   * Scans all classes for this slot in their slots array or slot_usage
    */
   getUsedByClasses(): string[] {
-    // Placeholder - will be implemented in Phase 5
-    return [];
+    if (!globalClassCollection) {
+      console.warn('SlotElement.getUsedByClasses(): globalClassCollection not initialized');
+      return [];
+    }
+
+    const usedBy: string[] = [];
+    const allClasses = globalClassCollection.getAllElements() as ClassElement[];
+
+    for (const cls of allClasses) {
+      // Check if this slot is in the class's slots array
+      if (cls.slots && cls.slots.includes(this.name)) {
+        usedBy.push(cls.name);
+        continue;
+      }
+
+      // Check if this slot is in slot_usage (refined/overridden slots)
+      if (cls.slot_usage && this.name in cls.slot_usage) {
+        usedBy.push(cls.name);
+      }
+    }
+
+    return usedBy.sort();
   }
 }
 
@@ -910,30 +999,26 @@ export abstract class ElementCollection {
 export class EnumCollection extends ElementCollection {
   readonly type = 'enum' as const;
   readonly id = 'enum';
-  private tree: Tree<EnumElement>;
+  private roots: EnumElement[];
 
-  constructor(tree: Tree<EnumElement>) {
+  constructor(roots: EnumElement[]) {
     super();
-    this.tree = tree;
+    this.roots = roots;
   }
 
   /** Factory: Create from raw data (called by dataLoader) */
   static fromData(enumData: Map<string, EnumMetadata>): EnumCollection {
-    // Convert EnumMetadata to flat tree (all roots, no children)
-    const roots: TreeNode<EnumElement>[] = Array.from(enumData.entries())
-      .map(([name, metadata]) => ({
-        data: new EnumElement(name, metadata),
-        children: [],
-        parent: undefined
-      }))
-      .sort((a, b) => a.data.name.localeCompare(b.data.name));
+    // Convert EnumMetadata to flat list of EnumElements (no hierarchy)
+    const roots = Array.from(enumData.entries())
+      .map(([name, metadata]) => new EnumElement(name, metadata))
+      .sort((a, b) => a.name.localeCompare(b.name));
 
-    return new EnumCollection(new Tree(roots));
+    return new EnumCollection(roots);
   }
 
   getLabel(): string {
     const metadata = ELEMENT_TYPES[this.type];
-    return `${metadata.pluralLabel} (${this.tree.roots.length})`;
+    return `${metadata.pluralLabel} (${this.roots.length})`;
   }
 
   getSectionIcon(): string {
@@ -949,16 +1034,19 @@ export class EnumCollection extends ElementCollection {
   }
 
   getElement(name: string): Element | null {
-    const node = this.tree.find(element => element.name === name);
-    return node ? node.data : null;
+    return this.roots.find(element => element.name === name) || null;
   }
 
   getAllElements(): Element[] {
-    return this.tree.flatten();
+    return this.roots;
   }
 
   getRenderableItems(expandedItems?: Set<string>): RenderableItem[] {
-    return this.tree.toRenderableItems(expandedItems || new Set());
+    const items: RenderableItem[] = [];
+    this.roots.forEach(root => {
+      items.push(...root.toRenderableItems(expandedItems || new Set()));
+    });
+    return items;
   }
 }
 
@@ -966,30 +1054,26 @@ export class EnumCollection extends ElementCollection {
 export class SlotCollection extends ElementCollection {
   readonly type = 'slot' as const;
   readonly id = 'slot';
-  private tree: Tree<SlotElement>;
+  private roots: SlotElement[];
 
-  constructor(tree: Tree<SlotElement>) {
+  constructor(roots: SlotElement[]) {
     super();
-    this.tree = tree;
+    this.roots = roots;
   }
 
   /** Factory: Create from raw data (called by dataLoader) */
   static fromData(slotData: Map<string, SlotMetadata>): SlotCollection {
-    // Convert SlotMetadata to flat tree (all roots, no children)
-    const roots: TreeNode<SlotElement>[] = Array.from(slotData.entries())
-      .map(([name, metadata]) => ({
-        data: new SlotElement(name, metadata),
-        children: [],
-        parent: undefined
-      }))
-      .sort((a, b) => a.data.name.localeCompare(b.data.name));
+    // Convert SlotMetadata to flat list of SlotElements (no hierarchy)
+    const roots = Array.from(slotData.entries())
+      .map(([name, metadata]) => new SlotElement(name, metadata))
+      .sort((a, b) => a.name.localeCompare(b.name));
 
-    return new SlotCollection(new Tree(roots));
+    return new SlotCollection(roots);
   }
 
   getLabel(): string {
     const metadata = ELEMENT_TYPES[this.type];
-    return `${metadata.pluralLabel} (${this.tree.roots.length})`;
+    return `${metadata.pluralLabel} (${this.roots.length})`;
   }
 
   getSectionIcon(): string {
@@ -1005,23 +1089,26 @@ export class SlotCollection extends ElementCollection {
   }
 
   getElement(name: string): Element | null {
-    const node = this.tree.find(element => element.name === name);
-    return node ? node.data : null;
+    return this.roots.find(element => element.name === name) || null;
   }
 
   getAllElements(): Element[] {
-    return this.tree.flatten();
+    return this.roots;
   }
 
   getRenderableItems(expandedItems?: Set<string>): RenderableItem[] {
-    return this.tree.toRenderableItems(expandedItems || new Set());
+    const items: RenderableItem[] = [];
+    this.roots.forEach(root => {
+      items.push(...root.toRenderableItems(expandedItems || new Set()));
+    });
+    return items;
   }
 
   /** Get underlying slots Map (needed for ClassElement constructor) */
   getSlots(): Map<string, SlotElement> {
-    // Convert tree to Map for ClassElement constructor
+    // Convert roots array to Map for ClassElement constructor
     const map = new Map<string, SlotElement>();
-    this.tree.flatten().forEach(slot => {
+    this.roots.forEach(slot => {
       map.set(slot.name, slot);
     });
     return map;
@@ -1032,18 +1119,11 @@ export class SlotCollection extends ElementCollection {
 export class ClassCollection extends ElementCollection {
   readonly type = 'class' as const;
   readonly id = 'class';
-  private tree: Tree;
+  private roots: ClassElement[];
 
-  constructor(tree: Tree) {
-    // [sg] after dataLoader is refactored in 6.4, replace this with something like newConstructor below
+  constructor(roots: ClassElement[]) {
     super();
-    this.tree = tree;
-  }
-  newConstructor(data: ClassMetadata[], dataModel: ModelData): ClassCollection {
-    const list: ClassElement[] = data.map(c => new ClassElement(c, dataModel));
-    this.tree = buildTree(list)
-
-    return this // because not a real constructor yet
+    this.roots = roots;
   }
 
   /** Factory: Create from raw data (called by dataLoader) */
@@ -1086,33 +1166,12 @@ export class ClassCollection extends ElementCollection {
     };
     roots.forEach(sortChildren);
 
-    // 3. Create TreeNode wrappers for compatibility with existing Tree class
-    // TODO Phase 6: Remove Tree class entirely and use Element.children directly
-    const createTreeNode = (element: ClassElement): TreeNode<ClassElement> => {
-      return {
-        data: element,
-        children: element.children.map(child => createTreeNode(child as ClassElement)),
-        parent: undefined  // Set in next step
-      };
-    };
-
-    const treeRoots = roots.map(createTreeNode);
-
-    // Link TreeNode parent references
-    const linkTreeNodeParents = (node: TreeNode<ClassElement>) => {
-      node.children.forEach(child => {
-        child.parent = node;
-        linkTreeNodeParents(child);
-      });
-    };
-    treeRoots.forEach(linkTreeNodeParents);
-
-    return new ClassCollection(new Tree(treeRoots));
+    return new ClassCollection(roots);
   }
 
   getLabel(): string {
     const metadata = ELEMENT_TYPES[this.type];
-    return `${metadata.pluralLabel} (${this.tree.flatten().length})`;
+    return `${metadata.pluralLabel} (${this.getAllElements().length})`;
   }
 
   getSectionIcon(): string {
@@ -1122,15 +1181,15 @@ export class ClassCollection extends ElementCollection {
   getDefaultExpansion(): Set<string> {
     // Auto-expand first 2 levels (but only nodes that have children)
     const expanded = new Set<string>();
-    const collectUpToLevel = (node: TreeNode<ClassElement>, level: number) => {
+    const collectUpToLevel = (element: Element, level: number) => {
       if (level >= 2) return;
       // Only track expansion state for nodes that have children
-      if (node.children.length > 0) {
-        expanded.add(node.data.name);
+      if (element.children.length > 0) {
+        expanded.add(element.name);
       }
-      node.children.forEach(child => collectUpToLevel(child, level + 1));
+      element.children.forEach(child => collectUpToLevel(child, level + 1));
     };
-    this.tree.roots.forEach(root => collectUpToLevel(root, 0));
+    this.roots.forEach(root => collectUpToLevel(root, 0));
     return expanded;
   }
 
@@ -1139,21 +1198,39 @@ export class ClassCollection extends ElementCollection {
   }
 
   getElement(name: string): Element | null {
-    const node = this.tree.find(element => element.name === name);
-    return node ? node.data : null;
+    // Search through the tree for element with matching name
+    let found: Element | null = null;
+    const search = (element: Element) => {
+      if (element.name === name) {
+        found = element;
+        return;
+      }
+      element.children.forEach(search);
+    };
+    this.roots.forEach(search);
+    return found;
   }
 
   getAllElements(): Element[] {
-    return this.tree.flatten();
+    // Flatten the tree into an array
+    const elements: Element[] = [];
+    this.roots.forEach(root => {
+      root.traverse(element => elements.push(element));
+    });
+    return elements;
   }
 
   /** Get root nodes of class hierarchy (needed for tests and tree rendering) */
   getRootElements(): ClassElement[] {
-    return this.tree.roots.map(node => node.data);
+    return this.roots;
   }
 
   getRenderableItems(expandedItems?: Set<string>): RenderableItem[] {
-    return this.tree.toRenderableItems(expandedItems || new Set());
+    const items: RenderableItem[] = [];
+    this.roots.forEach(root => {
+      items.push(...root.toRenderableItems(expandedItems || new Set()));
+    });
+    return items;
   }
 }
 
@@ -1161,12 +1238,14 @@ export class ClassCollection extends ElementCollection {
 export class VariableCollection extends ElementCollection {
   readonly type = 'variable' as const;
   readonly id = 'variable';
-  private tree: Tree<Element>;
+  private roots: ClassElement[];
+  private groupedByClass: Map<string, VariableElement[]>;
   private variables: VariableElement[];
 
-  constructor(tree: Tree<Element>, variables: VariableElement[]) {
+  constructor(roots: ClassElement[], groupedByClass: Map<string, VariableElement[]>, variables: VariableElement[]) {
     super();
-    this.tree = tree;
+    this.roots = roots;
+    this.groupedByClass = groupedByClass;
     this.variables = variables;
   }
 
@@ -1190,36 +1269,28 @@ export class VariableCollection extends ElementCollection {
       vars.sort((a, b) => a.name.localeCompare(b.name));
     });
 
-    // Build tree with ClassElement headers (level 0) and VariableElement children (level 1)
-    const roots: TreeNode<Element>[] = [];
+    // Wire variables array into ClassElement instances
+    groupedByClass.forEach((variables, className) => {
+      const classElement = classCollection.getElement(className) as ClassElement | null;
+      if (classElement) {
+        classElement.variables = variables;
+      }
+    });
+
+    // Build roots array (ClassElement headers sorted by name)
+    const roots: ClassElement[] = [];
     const sortedClassNames = Array.from(groupedByClass.keys()).sort((a, b) => a.localeCompare(b));
 
     for (const className of sortedClassNames) {
-      const classElement = classCollection.getElement(className);
+      const classElement = classCollection.getElement(className) as ClassElement;
       if (!classElement) {
         console.warn(`VariableCollection: Class "${className}" not found in classCollection`);
         continue;
       }
-
-      const variables = groupedByClass.get(className)!;
-      const children: TreeNode<Element>[] = variables.map(variable => ({
-        data: variable,
-        children: [],
-        parent: undefined // will be set below
-      }));
-
-      const rootNode: TreeNode<Element> = {
-        data: classElement,
-        children,
-        parent: undefined
-      };
-
-      // Link parent references
-      children.forEach(child => child.parent = rootNode);
-      roots.push(rootNode);
+      roots.push(classElement);
     }
 
-    return new VariableCollection(new Tree(roots), variableElements);
+    return new VariableCollection(roots, groupedByClass, variableElements);
   }
 
   getLabel(): string {
@@ -1249,10 +1320,41 @@ export class VariableCollection extends ElementCollection {
   }
 
   getRenderableItems(expandedItems?: Set<string>): RenderableItem[] {
-    // Use toRenderableItems with callback to mark level 0 (ClassElement headers) as non-clickable
-    return this.tree.toRenderableItems(
-      expandedItems || new Set(),
-      (element, level) => level > 0 // Only variables (level 1) are clickable
-    );
+    // Build 2-level tree: ClassElement headers (level 0) with VariableElement children (level 1)
+    const items: RenderableItem[] = [];
+
+    this.roots.forEach(classElement => {
+      const variables = this.groupedByClass.get(classElement.name) || [];
+      const hasChildren = variables.length > 0;
+      const isExpanded = expandedItems.has(classElement.name);
+
+      // Add ClassElement header (level 0, non-clickable)
+      items.push({
+        id: `${classElement.type}-${classElement.name}`,
+        element: classElement,
+        level: 0,
+        hasChildren,
+        isExpanded,
+        isClickable: false, // Headers are not clickable
+        badge: classElement.getBadge()
+      });
+
+      // Add VariableElements if expanded (level 1, clickable)
+      if (isExpanded) {
+        variables.forEach(variable => {
+          items.push({
+            id: `${variable.type}-${variable.name}`,
+            element: variable,
+            level: 1,
+            hasChildren: false,
+            isExpanded: false,
+            isClickable: true,
+            badge: variable.getBadge()
+          });
+        });
+      }
+    });
+
+    return items;
   }
 }

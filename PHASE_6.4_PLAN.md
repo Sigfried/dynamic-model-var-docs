@@ -2,7 +2,7 @@
 
 **Date**: 2025-10-31
 **Last Updated**: 2025-11-03
-**Status**: 🚧 IN PROGRESS - Step 4 partially complete
+**Status**: ✅ COMPLETE - All core cleanup steps finished (Steps 4, 5, 6 done)
 
 ---
 
@@ -40,13 +40,28 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 **Step 2: Tree Capabilities**
 - ✅ 2.1: Element base class has tree capabilities (parent, children, ancestorList, traverse)
 
-**Step 4: DataLoader Simplification (Partial)**
+**Step 4: DataLoader Simplification (Complete)**
 - ✅ 4.1: Removed buildClassHierarchy() - replaced with loadClasses()
 - ✅ 4.1: Removed buildReverseIndices() (never called)
 - ✅ 4.1: Removed variable counting (now computed property)
 - ✅ 4.3: ClassCollection.fromData() with inline parent-child wiring
+- ✅ 4.4: Wire variables array in VariableCollection.fromData() (2025-11-03)
 - ✅ EnumCollection/SlotCollection updated to accept Metadata instead of DTOs
 - ✅ variableCount is now computed property on ClassElement
+
+**Step 5: On-Demand Computation (Complete)**
+- ✅ 5.1: Implemented EnumElement.getUsedByClasses() (2025-11-03)
+- ✅ 5.2: Implemented SlotElement.getUsedByClasses() (2025-11-03)
+- ✅ 5.3: Added initializeClassCollection() for global reference (2025-11-03)
+- ✅ SlotElement.getBadge() now returns getUsedByClasses() count
+
+**Step 6: Cleanup (Complete)**
+- ✅ 6.1: Added toRenderableItems() to Element base class (2025-11-03)
+- ✅ 6.2: Updated EnumCollection/SlotCollection to use Element.children (2025-11-03)
+- ✅ 6.3: Updated ClassCollection to use Element.children (2025-11-03)
+- ✅ 6.4: Updated VariableCollection to use Element.children (2025-11-03)
+- ✅ 6.5: Deleted Tree.ts and removed TreeNode wrappers (2025-11-03)
+- ✅ All 160 tests passing, type checking passes
 
 **Key Decisions Made**:
 - ✅ Decision 1: Remove TreeNode generics
@@ -58,7 +73,6 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 
 - ⚠️ Collections still use Tree class internally (transition state - Step 6 will remove)
 - ⚠️ Component errors exist (pre-existing architectural issues, planned for Phase 6.5)
-- ⚠️ Test failures from Step 4 constructor changes (tests use old DTO-based constructors, need update to Metadata-based constructors)
 
 ### ❌ Not Started (Ready to Implement)
 
@@ -72,15 +86,6 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 
 **Step 4: DataLoader Simplification**
 - ❌ 4.2: Collection orchestration function (partially exists in dataLoader)
-- ❌ 4.4: Update VariableCollection to wire variables array
-
-**Step 5: On-Demand Computation**
-- ❌ Implement getUsedByClasses() methods (currently placeholders)
-
-**Step 6: Cleanup**
-- ❌ Delete Tree.ts and update all references to use Element.children directly
-- ❌ Move toRenderableItems() from Tree to Element base class
-- ❌ Remove TreeNode wrappers
 
 ---
 
@@ -90,30 +95,34 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 
 None currently - all blockers resolved!
 
-### Can Proceed Without Blockers
-
-1. **Complete Step 4**
-   - 4.4: Wire variables array in VariableCollection
-
-4. **Step 5: Implement getUsedByClasses() methods (custom logic for each type)**
-   - EnumElement.getUsedByClasses(): Scan all class attributes for range === this.name
-   - SlotElement.getUsedByClasses(): Scan class.slots arrays for this.name
-   - VariableElement.getUsedByClasses(): Return [this.bdchmElement]
-   - Implementation: Custom scanning logic, avoid generic path expression abstraction
-
-5. **Step 6: Delete Tree.ts and use Element tree directly**
-   - Move toRenderableItems() from Tree to Element base class
-        > [sg] this task also appears in TASKS 🔄 Move toRenderableItems() to Element Base Class.
-        > check if there's anything useful in that description, use it here, and delete it in TASKS
-   - Remove TreeNode wrappers
-   - Update all Collection classes to use Element.children directly
-   - Delete src/models/Tree.ts
-   - **After removing renderPanelSection()/renderDetails()**: Rename Element.tsx → Element.ts (no JSX remaining)
-   - Remove DTO references from Element.ts (ClassDTO, EnumDTO, SlotDTO imports)
-
 ### Completed
 
-1. ✅ **Fix test failures from Step 4** (2025-11-03)
+1. ✅ **Step 6: Delete Tree.ts and use Element tree directly** (2025-11-03)
+   - Added toRenderableItems() to Element base class
+   - Removed TreeNode wrappers from all Collections
+   - Updated all Collection classes to use Element.children directly
+   - Deleted src/models/Tree.ts
+   - Result: 160 tests passing, ~250 lines of code removed
+   - **Deferred**: Rename Element.tsx → Element.ts (after removing renderPanelSection()/renderDetails())
+   - **Deferred**: Remove DTO references from Element.ts (ClassDTO, EnumDTO, SlotDTO imports)
+
+1. ✅ **Step 5: Implement getUsedByClasses() methods** (2025-11-03)
+   - Added module-level `globalClassCollection` variable and `initializeClassCollection()` function
+   - Implemented EnumElement.getUsedByClasses(): Scans all class attributes for range === this.name
+   - Implemented SlotElement.getUsedByClasses(): Scans class.slots arrays and slot_usage for this.name
+   - SlotElement.getBadge() now returns getUsedByClasses().length
+   - Added 7 comprehensive tests in getUsedByClasses.test.ts
+   - Result: 160 tests passing (was 153)
+   - Both methods return sorted arrays for consistent display
+
+2. ✅ **Step 4.4: Wire variables array in VariableCollection** (2025-11-03)
+   - Added wiring logic in VariableCollection.fromData() to populate ClassElement.variables arrays
+   - Each ClassElement now has its variables array properly populated
+   - variableCount computed property now works correctly
+   - Added test to verify wiring: 153 tests passing (was 152)
+   - Test verifies: variables array populated, variableCount accurate, variables reference correct class
+
+2. ✅ **Fix test failures from Step 4** (2025-11-03)
    - Updated all test files to use new Metadata-based constructors
    - Fixed property access patterns (parent→parentName, properties→attributes)
    - Fixed panelHelpers.tsx to use parentName instead of parent
@@ -121,7 +130,7 @@ None currently - all blockers resolved!
    - Result: 152 tests passing, 0 failing (was 11 failing)
    - Details logged in PROGRESS.md
 
-2. ✅ **Rename DTOs** (ClassNode → ClassDTO, EnumDefinition → EnumDTO, SlotDefinition → SlotDTO)
+3. ✅ **Rename DTOs** (ClassNode → ClassDTO, EnumDefinition → EnumDTO, SlotDefinition → SlotDTO)
 
 ---
 

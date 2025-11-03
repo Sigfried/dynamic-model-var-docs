@@ -8,7 +8,7 @@ import type {
   SlotMetadata,
   EnumMetadata
 } from '../types';
-import { EnumCollection, SlotCollection, ClassCollection, VariableCollection, initializeElementNameMap } from '../models/Element';
+import { EnumCollection, SlotCollection, ClassCollection, VariableCollection, initializeElementNameMap, initializeClassCollection } from '../models/Element';
 
 async function loadSchemaMetadata(): Promise<SchemaMetadata> {
   const response = await fetch(`${import.meta.env.BASE_URL}source_data/HM/bdchm.metadata.json`);
@@ -92,6 +92,9 @@ export async function loadModelData(): Promise<ModelData> {
   const slotCollection = SlotCollection.fromData(slotMetadata);
   const classCollection = ClassCollection.fromData(classMetadata, slotCollection);
   const variableCollection = VariableCollection.fromData(variables, classCollection);
+
+  // Initialize global references for on-demand computation
+  initializeClassCollection(classCollection);
 
   const collections = new Map();
   collections.set('class', classCollection);
