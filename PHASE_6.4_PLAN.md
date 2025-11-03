@@ -11,11 +11,11 @@
 **Goal**: Eliminate unnecessary DTO layer and transformation complexity. DataLoader should only load and type-check; Collections should handle transformations.
 
 **Key Problems Being Solved**:
-1. DTOs (ClassNode, EnumDefinition, SlotDefinition) add ceremony without clear benefit
-2. dataLoader builds trees → Element.fromData converts back to flat → wasteful double tree-building
-3. Pre-computed fields (variableCount) when Element could compute on-demand
-4. buildReverseIndices exists but never called → usedByClasses always empty
-5. `[key: string]: unknown` in Metadata interfaces never used
+1. ✅ DTOs (ClassDTO, EnumDTO, SlotDTO) add ceremony without clear benefit - RENAMED for clarity
+2. ✅ dataLoader builds trees → Element.fromData converts back to flat → wasteful double tree-building - FIXED
+3. ✅ Pre-computed fields (variableCount) when Element could compute on-demand - NOW COMPUTED
+4. ✅ buildReverseIndices exists but never called → usedByClasses always empty - REMOVED
+5. ✅ `[key: string]: unknown` in Metadata interfaces never used - REMOVED
 6. **SlotCollection incomplete** - missing attributes (attributes ARE slots, defined inline)
 7. **Slot inheritance/override system not properly modeled**
 8. Property naming carries over awkward DTO names (bdchmElement, slot_usage)
@@ -34,6 +34,7 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 
 **Phase 1: Foundation**
 - ✅ 1.1: Removed `[key: string]: unknown` from PropertyDefinition
+- ✅ 1.2: Renamed DTOs for clarity (ClassNode→ClassDTO, EnumDefinition→EnumDTO, SlotDefinition→SlotDTO)
 - ✅ 1.3: ESLint rule restricting DTOs to dataLoader (already existed)
 
 **Phase 2: Tree Capabilities**
@@ -57,11 +58,11 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 
 - ⚠️ Collections still use Tree class internally (transition state - Phase 6 will remove)
 - ⚠️ Component errors exist (pre-existing architectural issues, planned for Phase 6.5)
+- ⚠️ Test failures from Phase 4 constructor changes (tests use old DTO-based constructors, need update to Metadata-based constructors)
 
 ### ❌ Not Started / Blocked
 
 **Phase 1: Foundation**
-- ❌ 1.2: Rename DTOs (ClassNode → ClassDTO, etc.) - optional
 - ❌ 1.4: Define ClassSlot class - **BLOCKED** on design
 
 **Phase 3: Slot System Expansion**
@@ -121,11 +122,11 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
    - Consider: Extending SlotElement vs composition
    - Needed for: collectAllSlots() implementation
 
-2. **Fix component errors to get build working**
-   - Make element.type public temporarily (was made protected, breaks components)
-   - Comment out broken collectAllSlots() method
-   - Fix VariableElement property references (variableLabel → name)
-   - Add isAbstract() method to Element
+2. **Fix test failures from Phase 4**
+   - Tests use old DTO-based constructors: `new EnumElement(dto)`
+   - Constructors now expect Metadata: `new EnumElement(name, metadata)`
+   - Affected: linkLogic.test.ts (9 failures), dataLoader.test.ts (2 failures), DetailPanel.test.tsx, duplicateDetection.test.ts, panelHelpers.test.tsx
+   - Options: (a) Update test mock objects to use Metadata types, or (b) Use Collection.fromData() factories in tests
 
 ### Can Proceed Without Blockers
 
@@ -142,11 +143,12 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
    - Remove TreeNode wrappers
    - Update all Collection classes to use Element.children directly
    - Delete src/models/Tree.ts
+   - **After removing renderPanelSection()/renderDetails()**: Rename Element.tsx → Element.ts (no JSX remaining)
+   - Remove DTO references from Element.ts (ClassDTO, EnumDTO, SlotDTO imports)
 
-### Lower Priority
+### Completed
 
-6. **Optional: Rename DTOs** (ClassNode → ClassDTO, etc.)
-7. **Optional: Rename Element.tsx → Element.ts** (doesn't use JSX)
+6. ✅ **Rename DTOs** (ClassNode → ClassDTO, EnumDefinition → EnumDTO, SlotDefinition → SlotDTO)
 
 ---
 
@@ -185,15 +187,7 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 
 ### Medium Priority
 
-**Q4: DTO renaming (ClassNode → ClassDTO)**
-- Makes restriction clearer but adds churn
-- User decision needed
-
-[sg] make them all <type>DTO
-
-**Q5: Element.tsx → Element.ts renaming**
-- File doesn't use JSX
-- Is the import churn worth it?
+[None currently]
 
 ### Resolved / Answered
 
@@ -205,14 +199,16 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 - ✅ ClassSlot: Class preferred over interface
 - ✅ Tree structure approach: Element has parent/children built-in
 - ✅ Attribute name collisions: 2-level tree design naturally separates by class
+- ✅ Q4 DTO renaming: COMPLETED - Use *DTO suffix (ClassDTO, EnumDTO, SlotDTO)
+- ✅ Q5 Element.tsx → Element.ts: Will be done in Phase 6 after removing JSX methods
 
 ---
 
 ## 📁 Files to Modify
 
 ### Core Architecture
-- `src/types.ts` - Optionally rename DTOs (→DTO suffix)
-- ~~`.eslintrc.js`~~ - ✅ ESLint rule already exists
+- ~~`src/types.ts`~~ - ✅ DTOs renamed to *DTO suffix
+- ~~`.eslintrc.js`~~ - ✅ ESLint rules updated with new DTO names
 - **`src/models/Tree.ts`** - DELETE entire file (Phase 6)
 - `src/models/Element.tsx` - Ongoing changes:
   - ✅ Tree properties (parent, children, ancestorList, traverse)
