@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { ClassElement, EnumElement, SlotElement, VariableElement, type Relationship } from '../models/Element';
+import { ClassElement, EnumElement, SlotElement, VariableElement, SlotCollection, type Relationship } from '../models/Element';
 import type { ClassMetadata, EnumMetadata, SlotMetadata, VariableSpec, ModelData } from '../types';
 
 /**
@@ -15,6 +15,11 @@ const createMockModelData = (): ModelData => ({
   elementLookup: new Map(),
 });
 
+// Helper to create empty SlotCollection for testing
+const createMockSlotCollection = (): SlotCollection => {
+  return SlotCollection.fromData(new Map());
+};
+
 describe('Element Relationship Detection', () => {
   describe('ClassElement relationships', () => {
     test('should detect inheritance relationship', () => {
@@ -26,7 +31,7 @@ describe('Element Relationship Detection', () => {
         attributes: {},
       };
 
-      const element = new ClassElement(childClass, createMockModelData());
+      const element = new ClassElement(childClass, createMockModelData(), createMockSlotCollection());
       const rels = element.getRelationships();
 
       const inheritRel = rels.find(r => r.type === 'inherits');
@@ -45,7 +50,7 @@ describe('Element Relationship Detection', () => {
         attributes: {},
       };
 
-      const element = new ClassElement(rootClass, createMockModelData());
+      const element = new ClassElement(rootClass, createMockModelData(), createMockSlotCollection());
       const rels = element.getRelationships();
 
       const inheritRel = rels.find(r => r.type === 'inherits');
@@ -66,7 +71,7 @@ describe('Element Relationship Detection', () => {
         },
       };
 
-      const element = new ClassElement(classWithEnum, createMockModelData());
+      const element = new ClassElement(classWithEnum, createMockModelData(), createMockSlotCollection());
       const rels = element.getRelationships();
 
       const enumRel = rels.find(r => r.target === 'SpecimenTypeEnum');
@@ -91,7 +96,7 @@ describe('Element Relationship Detection', () => {
         },
       };
 
-      const element = new ClassElement(classWithClassRef, createMockModelData());
+      const element = new ClassElement(classWithClassRef, createMockModelData(), createMockSlotCollection());
       const rels = element.getRelationships();
 
       const classRel = rels.find(r => r.target === 'Participant');
@@ -114,7 +119,7 @@ describe('Element Relationship Detection', () => {
         },
       };
 
-      const element = new ClassElement(classWithPrimitives, createMockModelData());
+      const element = new ClassElement(classWithPrimitives, createMockModelData(), createMockSlotCollection());
       const rels = element.getRelationships();
 
       // Should only have inheritance, no property relationships
@@ -135,7 +140,7 @@ describe('Element Relationship Detection', () => {
         },
       };
 
-      const element = new ClassElement(selfRefClass, createMockModelData());
+      const element = new ClassElement(selfRefClass, createMockModelData(), createMockSlotCollection());
       const rels = element.getRelationships();
 
       const selfRel = rels.find(r => r.target === 'Specimen');
@@ -156,7 +161,7 @@ describe('Element Relationship Detection', () => {
         },
       };
 
-      const element = new ClassElement(complexClass, createMockModelData());
+      const element = new ClassElement(complexClass, createMockModelData(), createMockSlotCollection());
       const rels = element.getRelationships();
 
       // Should have 1 inheritance + 3 property relationships

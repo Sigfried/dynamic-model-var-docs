@@ -250,6 +250,88 @@ function categorizeRange(range: string): 'class' | 'enum' | 'primitive' {
   return 'class';
 }
 
+/**
+ * ClassSlot - represents a slot as used within a specific class.
+ * Wraps a SlotElement with class-specific overrides from slot_usage or inline attribute definitions.
+ *
+ * Design principle: Use direct properties (e.g., `range`, `required`) not `*Override` suffix.
+ * Original values remain accessible via `baseSlot` reference.
+ */
+export class ClassSlot {
+  readonly name: string;
+  readonly baseSlot: SlotElement;  // Reference to the slot (or synthetic SlotElement for attributes)
+  readonly source: 'attribute' | 'slot_usage' | 'slot_reference';
+
+  // Override values (undefined means "use base slot value")
+  readonly range?: string;
+  readonly required?: boolean;
+  readonly multivalued?: boolean;
+  readonly description?: string;
+
+  constructor(
+    name: string,
+    baseSlot: SlotElement,
+    source: 'attribute' | 'slot_usage' | 'slot_reference',
+    overrides?: {
+      range?: string;
+      required?: boolean;
+      multivalued?: boolean;
+      description?: string;
+    }
+  ) {
+    this.name = name;
+    this.baseSlot = baseSlot;
+    this.source = source;
+    this.range = overrides?.range;
+    this.required = overrides?.required;
+    this.multivalued = overrides?.multivalued;
+    this.description = overrides?.description;
+  }
+
+  /**
+   * Get effective range with fallback to base slot.
+   * Returns 'string' as final fallback if neither override nor base has a value.
+   */
+  getEffectiveRange(): string {
+    return this.range ?? this.baseSlot.range ?? 'string';
+  }
+
+  /**
+   * Get effective required flag with fallback to base slot.
+   * Returns false as final fallback if neither override nor base has a value.
+   */
+  getEffectiveRequired(): boolean {
+    return this.required ?? this.baseSlot.required ?? false;
+  }
+
+  /**
+   * Get effective multivalued flag with fallback to base slot.
+   * Returns false as final fallback if neither override nor base has a value.
+   */
+  getEffectiveMultivalued(): boolean {
+    return this.multivalued ?? this.baseSlot.multivalued ?? false;
+  }
+
+  /**
+   * Get effective description with fallback to base slot.
+   * Returns undefined if neither override nor base has a description.
+   */
+  getEffectiveDescription(): string | undefined {
+    return this.description ?? this.baseSlot.description;
+  }
+
+  /**
+   * Check if any properties are overridden in this class.
+   * Returns true if at least one override is set.
+   */
+  isOverridden(): boolean {
+    return this.range !== undefined ||
+           this.required !== undefined ||
+           this.multivalued !== undefined ||
+           this.description !== undefined;
+  }
+}
+
 // ClassElement - represents a class in the schema
 export class ClassElement extends Element {
   readonly type = 'class' as const;
@@ -263,25 +345,55 @@ export class ClassElement extends Element {
   // - variables: VariableElements for this class (separate array, wired in orchestration)
   variables: VariableElement[] = [];  // Wired later in orchestration
 
-  // Properties from metadata (attributes stored as Record for now, Phase 3 will convert to ClassSlot[])
-  readonly attributes: Record<string, PropertyDefinition>;
-  readonly slots: string[];  // Normalized to array
-  readonly slot_usage: Record<string, PropertyDefinition> | undefined;
+  // Properties from metadata
+  readonly attributes: Record<string, PropertyDefinition>;  // Kept for backward compatibility
+  readonly slots: string[];  // Kept for backward compatibility
+  readonly slot_usage: Record<string, PropertyDefinition> | undefined;  // Kept for backward compatibility
   readonly abstract: boolean;
+
+  // ClassSlot instances (Phase 6.4 Step 3) - represents all slots used by this class
+  readonly classSlots: ClassSlot[];
 
   /** Computed property - returns variable count on-demand */
   get variableCount(): number {
     return this.variables.length;
   }
 
-  constructor(data: ClassMetadata, dataModel: ModelData) {
+  /**
+   * Collect all slots for this class, including inherited slots.
+   * Child class slots override parent class slots with the same name.
+   *
+   * @returns Record mapping slot name to ClassSlot instance
+   */
+  collectAllSlots(): Record<string, ClassSlot> {
+    const slots = new Map<string, ClassSlot>();
+
+    // Add slots from this class
+    this.classSlots.forEach(slot => {
+      slots.set(slot.name, slot);
+    });
+
+    // Inherit from parent (parent slots are added only if not already present)
+    if (this.parent) {
+      const parentSlots = (this.parent as ClassElement).collectAllSlots();
+      Object.entries(parentSlots).forEach(([name, parentSlot]) => {
+        if (!slots.has(name)) {
+          slots.set(name, parentSlot);
+        }
+      });
+    }
+
+    return Object.fromEntries(slots);
+  }
+
+  constructor(data: ClassMetadata, dataModel: ModelData, slotCollection: SlotCollection) {
     super();
     this.dataModel = dataModel;
     this.name = data.name;
     this.description = data.description;
     this.parentName = data.parent;  // Store parent name (Element.parent set later in fromData())
 
-    // Transform attributes from AttributeDefinition to PropertyDefinition
+    // Keep existing properties for backward compatibility during transition
     this.attributes = data.attributes || {};
 
     // Normalize slots to array
@@ -294,8 +406,66 @@ export class ClassElement extends Element {
     this.slot_usage = data.slot_usage;
     this.abstract = data.abstract;
 
-    // TODO Phase 3: collectAllSlots() - blocked on ClassSlot design
-    // Deleted broken WIP implementation (see git history if needed)
+    // Create ClassSlot instances (Phase 6.4 Step 3)
+    const classSlots: ClassSlot[] = [];
+
+    // 1. Create ClassSlots for attributes (inline slots)
+    Object.entries(this.attributes).forEach(([attrName, attrDef]) => {
+      // Create synthetic SlotElement for this attribute
+      const syntheticSlot = new SlotElement(attrName, {
+        range: attrDef.range,
+        description: attrDef.description,
+        required: attrDef.required,
+        multivalued: attrDef.multivalued
+      });
+
+      // Create ClassSlot wrapping the synthetic slot
+      classSlots.push(new ClassSlot(
+        attrName,
+        syntheticSlot,
+        'attribute'
+      ));
+    });
+
+    // 2. Create ClassSlots for slot_usage (overridden slots)
+    if (this.slot_usage) {
+      Object.entries(this.slot_usage).forEach(([slotName, overrides]) => {
+        // Look up global SlotElement
+        const baseSlot = slotCollection.getElement(slotName) as SlotElement | null;
+        if (baseSlot) {
+          classSlots.push(new ClassSlot(
+            slotName,
+            baseSlot,
+            'slot_usage',
+            overrides
+          ));
+        } else {
+          console.warn(`ClassElement "${this.name}": slot_usage references unknown slot "${slotName}"`);
+        }
+      });
+    }
+
+    // 3. Create ClassSlots for referenced slots (no overrides)
+    this.slots.forEach(slotName => {
+      // Skip if already in slot_usage (slot_usage takes precedence)
+      if (this.slot_usage && slotName in this.slot_usage) {
+        return;
+      }
+
+      // Look up global SlotElement
+      const baseSlot = slotCollection.getElement(slotName) as SlotElement | null;
+      if (baseSlot) {
+        classSlots.push(new ClassSlot(
+          slotName,
+          baseSlot,
+          'slot_reference'
+        ));
+      } else {
+        console.warn(`ClassElement "${this.name}": slots array references unknown slot "${slotName}"`);
+      }
+    });
+
+    this.classSlots = classSlots;
   }
 
   renderPanelSection(
@@ -1138,7 +1308,7 @@ export class ClassCollection extends ElementCollection {
     // 1. Create all ClassElements
     const elementMap = new Map<string, ClassElement>();
     classData.forEach(metadata => {
-      const element = new ClassElement(metadata, tempModelData);
+      const element = new ClassElement(metadata, tempModelData, slotCollection);
       elementMap.set(element.name, element);
     });
 

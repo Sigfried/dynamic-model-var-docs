@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import { getHeaderColor, getPanelTitle } from '../utils/panelHelpers';
-import { ClassElement, EnumElement, SlotElement, VariableElement } from '../models/Element';
+import { ClassElement, EnumElement, SlotElement, VariableElement, SlotCollection } from '../models/Element';
 import type { ModelData } from '../types';
 
 // Helper to create minimal ModelData for testing
@@ -14,6 +14,11 @@ const createMockModelData = (): ModelData => ({
   elementLookup: new Map(),
 });
 
+// Helper to create empty SlotCollection for testing
+const createMockSlotCollection = (): SlotCollection => {
+  return SlotCollection.fromData(new Map());
+};
+
 // Mock entities
 const mockClassWithParent = new ClassElement({
   name: 'Specimen',
@@ -21,7 +26,7 @@ const mockClassWithParent = new ClassElement({
   parent: 'Entity',
   abstract: false,
   attributes: {}
-}, createMockModelData());
+}, createMockModelData(), createMockSlotCollection());
 
 const mockClassWithoutParent = new ClassElement({
   name: 'Entity',
@@ -29,7 +34,7 @@ const mockClassWithoutParent = new ClassElement({
   parent: undefined,
   abstract: false,
   attributes: {}
-}, createMockModelData());
+}, createMockModelData(), createMockSlotCollection());
 
 const mockEnum = new EnumElement('SpecimenTypeEnum', {
   description: 'Specimen types',

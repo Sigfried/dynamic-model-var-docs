@@ -9,7 +9,7 @@ import {
   isDuplicate,
   type ElementDescriptor
 } from '../utils/duplicateDetection';
-import { ClassElement, EnumElement, SlotElement, VariableElement } from '../models/Element';
+import { ClassElement, EnumElement, SlotElement, VariableElement, SlotCollection } from '../models/Element';
 import type { ModelData } from '../types';
 
 // Helper to create minimal ModelData for testing
@@ -18,6 +18,11 @@ const createMockModelData = (): ModelData => ({
   elementLookup: new Map(),
 });
 
+// Helper to create empty SlotCollection for testing
+const createMockSlotCollection = (): SlotCollection => {
+  return SlotCollection.fromData(new Map());
+};
+
 // Mock elements for testing
 const mockClass = new ClassElement({
   name: 'Specimen',
@@ -25,7 +30,7 @@ const mockClass = new ClassElement({
   parent: undefined,
   abstract: false,
   attributes: {}
-}, createMockModelData());
+}, createMockModelData(), createMockSlotCollection());
 
 const mockEnum = new EnumElement('SpecimenTypeEnum', {
   description: 'Specimen types',
@@ -84,7 +89,7 @@ describe('findDuplicateIndex', () => {
       parent: undefined,
       abstract: false,
       attributes: {}
-    }, createMockModelData());
+    }, createMockModelData(), createMockSlotCollection());
     const index = findDuplicateIndex(entities, duplicateClass, 'class');
     expect(index).toBe(0);
   });
@@ -128,7 +133,7 @@ describe('findDuplicateIndex', () => {
       parent: undefined,
       abstract: false,
       attributes: {}
-    }, createMockModelData());
+    }, createMockModelData(), createMockSlotCollection());
     const index = findDuplicateIndex(entities, newClass, 'class');
     expect(index).toBe(-1);
   });
@@ -173,7 +178,7 @@ describe('findDuplicateIndex', () => {
       parent: undefined,
       abstract: false,
       attributes: {}
-    }, createMockModelData());
+    }, createMockModelData(), createMockSlotCollection());
     const sameNameEnum = new EnumElement('SameName', {
       description: 'An enum',
       permissible_values: {}
@@ -241,7 +246,7 @@ describe('isDuplicate', () => {
       parent: undefined,
       abstract: false,
       attributes: {}
-    }, createMockModelData());
+    }, createMockModelData(), createMockSlotCollection());
     expect(isDuplicate(entities, newClass, 'class')).toBe(false);
   });
 

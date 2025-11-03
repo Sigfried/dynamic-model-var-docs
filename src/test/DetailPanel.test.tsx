@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import DetailPanel from '../components/DetailPanel';
-import { ClassElement, EnumElement, SlotElement, VariableElement } from '../models/Element';
+import { ClassElement, EnumElement, SlotElement, VariableElement, SlotCollection } from '../models/Element';
 import type { ClassMetadata, EnumMetadata, SlotMetadata, VariableSpec, ModelData } from '../types';
 
 /**
@@ -16,6 +16,11 @@ const createMockModelData = (): ModelData => ({
   collections: new Map(),
   elementLookup: new Map(),
 });
+
+// Helper to create empty SlotCollection for testing
+const createMockSlotCollection = (): SlotCollection => {
+  return SlotCollection.fromData(new Map());
+};
 
 describe('DetailPanel - ClassElement', () => {
   const mockClassData: ClassMetadata = {
@@ -41,7 +46,7 @@ describe('DetailPanel - ClassElement', () => {
     }
   };
 
-  const classElement = new ClassElement(mockClassData, createMockModelData());
+  const classElement = new ClassElement(mockClassData, createMockModelData(), createMockSlotCollection());
   // Manually add variables for testing
   classElement.variables = [
     new VariableElement({
@@ -122,7 +127,7 @@ describe('DetailPanel - ClassElement', () => {
       ...mockClassData,
       parent: undefined
     };
-    const rootClass = new ClassElement(rootClassData, createMockModelData());
+    const rootClass = new ClassElement(rootClassData, createMockModelData(), createMockSlotCollection());
 
     render(<DetailPanel element={rootClass} />);
 
