@@ -17,9 +17,22 @@ const createMockModelData = (): ModelData => ({
   elementLookup: new Map(),
 });
 
-// Helper to create empty SlotCollection for testing
+// Helper to create SlotCollection with test slots
 const createMockSlotCollection = (): SlotCollection => {
-  return SlotCollection.fromData(new Map());
+  const slotData = new Map<string, SlotMetadata>();
+
+  // Add slots referenced by test classes
+  slotData.set('testSlot', {
+    description: 'A test slot',
+    range: 'string'
+  });
+
+  slotData.set('usedSlot', {
+    description: 'A slot used with overrides',
+    range: 'string'
+  });
+
+  return SlotCollection.fromData(slotData);
 };
 
 describe('DetailPanel - ClassElement', () => {
@@ -87,29 +100,22 @@ describe('DetailPanel - ClassElement', () => {
     expect(screen.getByText(/Inherits from: ParentClass/)).toBeInTheDocument();
   });
 
-  test('should render attributes section', () => {
+  test('should render slots section with all slots (attributes, slot_usage, slots)', () => {
     render(<DetailPanel element={classElement} />);
 
-    expect(screen.getByText('Attributes')).toBeInTheDocument();
-    expect(screen.getByText('testProperty')).toBeInTheDocument();
+    // New unified section name
+    expect(screen.getByText('Slots (includes inherited)')).toBeInTheDocument();
+
+    // Verify all three types of slots are present
+    expect(screen.getByText('testProperty')).toBeInTheDocument(); // from attributes
+    expect(screen.getByText('usedSlot')).toBeInTheDocument(); // from slot_usage
+    expect(screen.getByText('testSlot')).toBeInTheDocument(); // from slots array
+
+    // Verify slot details
     expect(screen.getAllByText('string').length).toBeGreaterThan(0);
     expect(screen.getByText('Test property')).toBeInTheDocument();
-  });
-
-  test('should render slot usage section', () => {
-    render(<DetailPanel element={classElement} />);
-
-    expect(screen.getByText('Slot Usage')).toBeInTheDocument();
-    expect(screen.getByText('usedSlot')).toBeInTheDocument();
     expect(screen.getByText('TestEnum')).toBeInTheDocument();
     expect(screen.getByText('A used slot')).toBeInTheDocument();
-  });
-
-  test('should render referenced slots section', () => {
-    render(<DetailPanel element={classElement} />);
-
-    expect(screen.getByText('Referenced Slots')).toBeInTheDocument();
-    expect(screen.getByText('testSlot')).toBeInTheDocument();
   });
 
   test('should render variables section with count', () => {

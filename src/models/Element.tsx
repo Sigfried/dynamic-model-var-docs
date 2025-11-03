@@ -525,49 +525,21 @@ export class ClassElement extends Element {
       });
     }
 
-    // Attributes section
-    if (this.attributes && Object.keys(this.attributes).length > 0) {
-      const attributesList = Object.entries(this.attributes).map(([name, def]) => [
+    // Slots section (includes inherited slots via collectAllSlots())
+    const allSlots = this.collectAllSlots();
+    if (Object.keys(allSlots).length > 0) {
+      const slotsList = Object.entries(allSlots).map(([name, classSlot]) => [
         name,
-        def.range || '',
-        def.required ? 'Yes' : 'No',
-        def.multivalued ? 'Yes' : 'No',
-        def.description || ''
+        classSlot.getEffectiveRange(),
+        classSlot.getEffectiveRequired() ? 'Yes' : 'No',
+        classSlot.getEffectiveMultivalued() ? 'Yes' : 'No',
+        classSlot.getEffectiveDescription() || ''
       ]);
 
       sections.push({
-        name: 'Attributes',
+        name: 'Slots (includes inherited)',
         tableHeadings: ['Name', 'Range', 'Required', 'Multivalued', 'Description'],
-        tableContent: attributesList,
-        tableHeadingColor: ELEMENT_TYPES['slot'].color.headerBg
-      });
-    }
-
-    // Slots section (from slot_usage)
-    if (this.slot_usage && Object.keys(this.slot_usage).length > 0) {
-      const slotUsages = Object.entries(this.slot_usage).map(([name, def]) => [
-        name,
-        def.range || '',
-        def.required ? 'Yes' : 'No',
-        def.multivalued ? 'Yes' : 'No',
-        def.description || ''
-      ]);
-
-      sections.push({
-        name: 'Slot Usage',
-        tableHeadings: ['Name', 'Range', 'Required', 'Multivalued', 'Description'],
-        tableContent: slotUsages,
-        tableHeadingColor: ELEMENT_TYPES['slot'].color.headerBg
-      });
-    }
-
-    // Referenced slots section
-    if (this.slots && this.slots.length > 0) {
-      const slotList = this.slots.map(slotName => [slotName]);
-      sections.push({
-        name: 'Referenced Slots',
-        tableHeadings: ['Slot Name'],
-        tableContent: slotList,
+        tableContent: slotsList,
         tableHeadingColor: ELEMENT_TYPES['slot'].color.headerBg
       });
     }
