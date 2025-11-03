@@ -60,15 +60,15 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 - ⚠️ Component errors exist (pre-existing architectural issues, planned for Phase 6.5)
 - ⚠️ Test failures from Phase 4 constructor changes (tests use old DTO-based constructors, need update to Metadata-based constructors)
 
-### ❌ Not Started / Blocked
+### ❌ Not Started (Ready to Implement)
 
 **Phase 1: Foundation**
-- ❌ 1.4: Define ClassSlot class - **BLOCKED** on design
+- ✅ 1.4: ClassSlot design finalized (see implementation section) - **READY TO IMPLEMENT**
 
-**Phase 3: Slot System Expansion**
-- ❌ 3.1: Create SlotElements in ClassElement constructor - **BLOCKED** on ClassSlot design
-- ❌ 3.2: Convert SlotCollection to 2-level tree - **BLOCKED** on 3.1
-- ❌ 3.3: Implement collectAllSlots() - **BLOCKED** on ClassSlot design
+**Phase 3: Slot System Expansion** (unblocked - ClassSlot design complete)
+- ❌ 3.1: Create SlotElements in ClassElement constructor
+- ❌ 3.2: Convert SlotCollection to 2-level tree (depends on 3.1)
+- ❌ 3.3: Implement collectAllSlots()
 
 **Phase 4: DataLoader Simplification**
 - ❌ 4.2: Collection orchestration function (partially exists in dataLoader)
@@ -116,13 +116,7 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 
 ### High Priority - Blocking Other Work
 
-1. **Design ClassSlot class** (blocks Phase 3)
-   - Properties: slot, source, rangeOverride, requiredOverride, multivaluedOverride, descriptionOverride
-   - Methods: getEffectiveRange(), isOverridden(), ???
-   - Consider: Extending SlotElement vs composition
-   - Needed for: collectAllSlots() implementation
-
-2. **Fix test failures from Phase 4**
+1. **Fix test failures from Phase 4**
    - Tests use old DTO-based constructors: `new EnumElement(dto)`
    - Constructors now expect Metadata: `new EnumElement(name, metadata)`
    - Affected: linkLogic.test.ts (9 failures), dataLoader.test.ts (2 failures), DetailPanel.test.tsx, duplicateDetection.test.ts, panelHelpers.test.tsx
@@ -157,47 +151,12 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 
 ### High Priority
 
-**Q1: ClassSlot class design - full specification**
-- Confirmed: Class (not interface)
-- **Design simplified**: Use direct properties (range, required, etc.) not *Override suffix
-- **Rationale**: Original values still available in baseSlot reference, cleaner API
-
-**Proposed design**:
-```typescript
-class ClassSlot {
-  readonly baseSlot: SlotElement;  // Reference to the reusable slot
-  readonly source: 'attribute' | 'slot_usage';  // Where this slot came from
-
-  // Override values (undefined means "use base slot value")
-  readonly range?: string;
-  readonly required?: boolean;
-  readonly multivalued?: boolean;
-  readonly description?: string;
-
-  // Computed methods for effective values with fallback
-  getEffectiveRange(): string {
-    return this.range ?? this.baseSlot.range ?? 'string';
-  }
-
-  getEffectiveRequired(): boolean {
-    return this.required ?? this.baseSlot.required ?? false;
-  }
-
-  isOverridden(): boolean {
-    return this.range !== undefined ||
-           this.required !== undefined ||
-           this.multivalued !== undefined;
-  }
-}
-```
-
-- **Blocking**: Phase 3 implementation
+[None currently - Q1 moved to implementation section below]
 
 **Q2: How to group lists for readability?**
-- **Decision deferred**: Not deciding on grouping strategy right now
-- **Immediate fix**: Move toRenderableItems() from Tree to Element base class
-- Current implementation in Tree.ts can serve as reference
-- Element.traverse() already exists (Phase 2.1) ✅
+- **Decision deferred**: Not deciding on full grouping strategy right now
+- **Immediate fix**: Move toRenderableItems() from Tree to Element base class (see TASKS.md)
+- Task added to TASKS.md after "Enhanced Link Hover Information"
 - Full grouping strategy redesign can wait until after Phase 6 cleanup
 
 ### Medium Priority
@@ -214,6 +173,7 @@ class ClassSlot {
 - ✅ ClassSlot: Class preferred over interface
 - ✅ Tree structure approach: Element has parent/children built-in
 - ✅ Attribute name collisions: 2-level tree design naturally separates by class
+- ✅ Q1 ClassSlot design: FINALIZED - Use direct properties not *Override suffix (see implementation section)
 - ✅ Q3 findInboundRefs: Use custom logic for each case (avoid premature abstraction)
 - ✅ Q4 DTO renaming: COMPLETED - Use *DTO suffix (ClassDTO, EnumDTO, SlotDTO)
 - ✅ Q5 Element.tsx → Element.ts: Will be done in Phase 6 after removing JSX methods
@@ -362,3 +322,86 @@ class EnumElement {
 ```
 
 Benefits: No need to maintain reverse indices, always accurate, computed when needed.
+
+### ClassSlot Design (Phase 3)
+
+**Purpose**: Model slot overrides from `slot_usage` and inline attributes within classes.
+
+**Design principle**: Use direct properties (e.g., `range`, `required`) not `*Override` suffix. Original values remain accessible via `baseSlot` reference.
+
+**Class definition**:
+```typescript
+class ClassSlot {
+  readonly baseSlot: SlotElement;  // Reference to the reusable slot
+  readonly source: 'attribute' | 'slot_usage';  // Where this slot came from
+
+  // Override values (undefined means "use base slot value")
+  readonly range?: string;
+  readonly required?: boolean;
+  readonly multivalued?: boolean;
+  readonly description?: string;
+
+  // Computed methods for effective values with fallback
+  getEffectiveRange(): string {
+    return this.range ?? this.baseSlot.range ?? 'string';
+  }
+
+  getEffectiveRequired(): boolean {
+    return this.required ?? this.baseSlot.required ?? false;
+  }
+
+  getEffectiveMultivalued(): boolean {
+    return this.multivalued ?? this.baseSlot.multivalued ?? false;
+  }
+
+  getEffectiveDescription(): string | undefined {
+    return this.description ?? this.baseSlot.description;
+  }
+
+  isOverridden(): boolean {
+    return this.range !== undefined ||
+           this.required !== undefined ||
+           this.multivalued !== undefined ||
+           this.description !== undefined;
+  }
+}
+```
+
+**Usage in ClassElement**:
+```typescript
+class ClassElement {
+  // Replace this:
+  readonly attributes: Record<string, AttributeDefinition>;
+
+  // With this:
+  readonly slots: ClassSlot[];  // Both attributes and slot_usage become ClassSlots
+
+  // Implementation in collectAllSlots()
+  collectAllSlots(): Record<string, ClassSlot> {
+    const slots = new Map<string, ClassSlot>();
+
+    // Add slots from this class
+    this.slots.forEach(slot => {
+      slots.set(slot.baseSlot.name, slot);
+    });
+
+    // Inherit from parent, overrides take precedence
+    if (this.parent) {
+      const parentSlots = this.parent.collectAllSlots();
+      Object.entries(parentSlots).forEach(([name, parentSlot]) => {
+        if (!slots.has(name)) {
+          slots.set(name, parentSlot);
+        }
+      });
+    }
+
+    return Object.fromEntries(slots);
+  }
+}
+```
+
+**Benefits**:
+- Clean API: `slot.getEffectiveRange()` instead of `slot.rangeOverride ?? slot.slot.range`
+- Type-safe: TypeScript enforces optional override properties
+- Flexible: Easy to add more override properties later
+- Inheritance-aware: `collectAllSlots()` properly handles slot inheritance and overrides
