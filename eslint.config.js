@@ -28,7 +28,7 @@ export default defineConfig([
         patterns: [
           {
             group: ['**/types', '../types', '../../types'],
-            importNames: ['ClassNode', 'EnumDefinition', 'SlotDefinition', 'SelectedElement'],
+            importNames: ['ClassDTO', 'EnumDTO', 'SlotDTO', 'SelectedElement'],
             message: 'Components must not import DTOs. Use Element classes from models/Element instead. See docs/CLAUDE.md for architectural principles.',
           },
           {
@@ -49,8 +49,8 @@ export default defineConfig([
         patterns: [
           {
             group: ['**/types', '../types', '../../types', './types'],
-            importNames: ['ClassNode', 'EnumDefinition', 'SlotDefinition'],
-            message: 'DTOs (ClassNode, EnumDefinition, SlotDefinition) can only be used in dataLoader.ts. Use Element classes instead. See PHASE_6.4_PLAN.md for details.',
+            importNames: ['ClassDTO', 'EnumDTO', 'SlotDTO'],
+            message: 'DTOs (ClassDTO, EnumDTO, SlotDTO) can only be used in dataLoader.ts. Use Element classes instead. See PHASE_6.4_PLAN.md for details.',
           },
         ],
       }],

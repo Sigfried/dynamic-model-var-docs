@@ -2,7 +2,7 @@ import { describe, test, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import DetailPanel from '../components/DetailPanel';
 import { ClassElement, EnumElement, SlotElement, VariableElement } from '../models/Element';
-import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
+import type { ClassDTO, EnumDTO, SlotDTO, VariableSpec } from '../types';
 
 /**
  * DetailPanel Tests
@@ -12,7 +12,7 @@ import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '..
  */
 
 describe('DetailPanel - ClassElement', () => {
-  const mockClassData: ClassNode = {
+  const mockClassData: ClassDTO = {
     name: 'TestClass',
     description: 'A test class',
     parent: 'ParentClass',
@@ -114,7 +114,7 @@ describe('DetailPanel - ClassElement', () => {
   });
 
   test('should handle class without parent', () => {
-    const rootClassData: ClassNode = {
+    const rootClassData: ClassDTO = {
       ...mockClassData,
       parent: undefined
     };
@@ -128,7 +128,7 @@ describe('DetailPanel - ClassElement', () => {
 });
 
 describe('DetailPanel - EnumElement', () => {
-  const mockEnumData: EnumDefinition = {
+  const mockEnumData: EnumDTO = {
     name: 'TestEnum',
     description: 'A test enumeration',
     permissible_values: [
@@ -173,7 +173,7 @@ describe('DetailPanel - EnumElement', () => {
   });
 
   test('should handle enum without description', () => {
-    const noDescEnum: EnumDefinition = {
+    const noDescEnum: EnumDTO = {
       ...mockEnumData,
       description: undefined
     };
@@ -187,7 +187,7 @@ describe('DetailPanel - EnumElement', () => {
 });
 
 describe('DetailPanel - SlotElement', () => {
-  const mockSlotData: SlotDefinition = {
+  const mockSlotData: SlotDTO = {
     name: 'testSlot',
     description: 'A test slot',
     range: 'string',
@@ -235,7 +235,7 @@ describe('DetailPanel - SlotElement', () => {
   });
 
   test('should handle minimal slot definition', () => {
-    const minimalSlotData: SlotDefinition = {
+    const minimalSlotData: SlotDTO = {
       name: 'minimalSlot',
       description: undefined,
       range: undefined,
@@ -312,7 +312,7 @@ describe('DetailPanel - VariableElement', () => {
 });
 
 describe('DetailPanel - Header visibility', () => {
-  const mockEnumData: EnumDefinition = {
+  const mockEnumData: EnumDTO = {
     name: 'TestEnum',
     description: 'Test',
     permissible_values: [],

@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import { ClassElement, EnumElement, SlotElement, VariableElement, type Relationship } from '../models/Element';
-import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '../types';
+import type { ClassDTO, EnumDTO, SlotDTO, VariableSpec } from '../types';
 
 /**
  * Link Logic Tests
@@ -12,7 +12,7 @@ import type { ClassNode, EnumDefinition, SlotDefinition, VariableSpec } from '..
 describe('Element Relationship Detection', () => {
   describe('ClassElement relationships', () => {
     test('should detect inheritance relationship', () => {
-      const childClass: ClassNode = {
+      const childClass: ClassDTO = {
         name: 'Participant',
         parent: 'Entity',
         description: 'A participant in a study',
@@ -35,7 +35,7 @@ describe('Element Relationship Detection', () => {
     });
 
     test('should not have inheritance relationship for root classes', () => {
-      const rootClass: ClassNode = {
+      const rootClass: ClassDTO = {
         name: 'Entity',
         parent: undefined,
         description: 'Root entity',
@@ -55,7 +55,7 @@ describe('Element Relationship Detection', () => {
     });
 
     test('should detect enum property relationships', () => {
-      const classWithEnum: ClassNode = {
+      const classWithEnum: ClassDTO = {
         name: 'Specimen',
         parent: 'Entity',
         description: 'A specimen',
@@ -84,7 +84,7 @@ describe('Element Relationship Detection', () => {
     });
 
     test('should detect class property relationships', () => {
-      const classWithClassRef: ClassNode = {
+      const classWithClassRef: ClassDTO = {
         name: 'Condition',
         parent: 'Entity',
         description: 'A condition',
@@ -112,7 +112,7 @@ describe('Element Relationship Detection', () => {
     });
 
     test('should ignore primitive property types', () => {
-      const classWithPrimitives: ClassNode = {
+      const classWithPrimitives: ClassDTO = {
         name: 'Person',
         parent: 'Entity',
         description: 'A person',
@@ -136,7 +136,7 @@ describe('Element Relationship Detection', () => {
     });
 
     test('should detect self-referential relationships', () => {
-      const selfRefClass: ClassNode = {
+      const selfRefClass: ClassDTO = {
         name: 'Specimen',
         parent: 'Entity',
         description: 'A specimen',
@@ -162,7 +162,7 @@ describe('Element Relationship Detection', () => {
     });
 
     test('should handle multiple relationships', () => {
-      const complexClass: ClassNode = {
+      const complexClass: ClassDTO = {
         name: 'MeasurementObservation',
         parent: 'Observation',
         description: 'A measurement observation',
@@ -190,7 +190,7 @@ describe('Element Relationship Detection', () => {
 
   describe('SlotElement relationships', () => {
     test('should detect slot range relationships for enum', () => {
-      const slotWithEnum: SlotDefinition = {
+      const slotWithEnum: SlotDTO = {
         name: 'species',
         description: 'Species',
         range: 'CellularOrganismSpeciesEnum',
@@ -205,7 +205,7 @@ describe('Element Relationship Detection', () => {
     });
 
     test('should detect slot range relationships for class', () => {
-      const slotWithClass: SlotDefinition = {
+      const slotWithClass: SlotDTO = {
         name: 'associated_participant',
         description: 'Associated participant',
         range: 'Participant',
@@ -220,7 +220,7 @@ describe('Element Relationship Detection', () => {
     });
 
     test('should not create relationships for primitive ranges', () => {
-      const slotWithPrimitive: SlotDefinition = {
+      const slotWithPrimitive: SlotDTO = {
         name: 'id',
         description: 'Identifier',
         range: 'string',
@@ -233,7 +233,7 @@ describe('Element Relationship Detection', () => {
     });
 
     test('should handle slots without range', () => {
-      const slotNoRange: SlotDefinition = {
+      const slotNoRange: SlotDTO = {
         name: 'description',
         description: 'Description field',
       };
@@ -269,7 +269,7 @@ describe('Element Relationship Detection', () => {
 
   describe('EnumElement relationships', () => {
     test('should have no outgoing relationships', () => {
-      const enumDef: EnumDefinition = {
+      const enumDef: EnumDTO = {
         name: 'SexEnum',
         description: 'Sex values',
         permissible_values: [

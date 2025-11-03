@@ -4,11 +4,11 @@
 import * as React from 'react';
 import type {
   ClassMetadata,
-  ClassNode,
-  EnumDefinition,
+  ClassDTO,
+  EnumDTO,
   EnumMetadata,
   ModelData,
-  SlotDefinition,
+  SlotDTO,
   SlotMetadata,
   VariableSpec,
   EnumValue
@@ -19,7 +19,7 @@ import type { RenderableItem } from './RenderableItem';
 import { Tree, TreeNode, buildTree } from './Tree';
 
 // Union type for all element data types
-export type ElementData = ClassNode | EnumDefinition | SlotDefinition | VariableSpec;
+export type ElementData = ClassDTO | EnumDTO | SlotDTO | VariableSpec;
 
 // Property definition from class attributes
 interface PropertyDefinition {

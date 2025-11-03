@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { load as parseYaml } from 'js-yaml';
 import { loadModelData } from '../utils/dataLoader';
 import { ClassCollection, EnumCollection, SlotCollection, VariableCollection } from '../models/Element';
-import type { ClassNode } from '../types';
+import type { ClassDTO } from '../types';
 
 /**
  * Data Completeness Test
@@ -95,7 +95,7 @@ describe('Data Completeness', () => {
 
     // 2. Check Metadata → ModelData
     const metadataClassNames = Object.keys(metadataJson.classes || {});
-    const collectClassNames = (classes: ClassNode[]): Set<string> => {
+    const collectClassNames = (classes: ClassDTO[]): Set<string> => {
       const names = new Set<string>();
       for (const cls of classes) {
         names.add(cls.name);

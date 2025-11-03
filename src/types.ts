@@ -82,17 +82,15 @@ export interface EnumValue {
 }
 
 // ============================================================================
-// DEPRECATED - Old interfaces (only used internally in dataLoader and legacy components)
+// DEPRECATED - Old DTOs (only used internally in dataLoader and legacy components)
 // ============================================================================
 //
-// ClassNode, EnumDefinition, SlotDefinition: Still used internally in dataLoader.ts
+// ClassDTO, EnumDTO, SlotDTO: Still used internally in dataLoader.ts
 // as intermediate structures when loading from JSON/TSV files. These are immediately
 // converted to Element instances via Collection.fromData().
 //
-// NOTE: These interfaces are only used in:
-// - utils/dataLoader.ts (internal data loading logic)
-// - components/DetailPanel.tsx (broken, needs refactor to use Element.renderDetails())
-// - components/LinkOverlay.tsx (constructs Element instances from old types)
+// NOTE: These DTOs are restricted to dataLoader.ts by ESLint rule.
+// Legacy usage in components should be migrated to use Element classes.
 //
 // DO NOT use these types in new code. Use Element and its subclasses instead.
 //
@@ -101,11 +99,11 @@ export interface EnumValue {
 /**
  * @deprecated Internal use only in dataLoader.ts
  */
-export interface ClassNode {
+export interface ClassDTO {
   name: string;
   description?: string;
   parent?: string;
-  children: ClassNode[];
+  children: ClassDTO[];
   variableCount: number;
   variables: VariableSpec[];
   properties?: Record<string, any>;
@@ -120,7 +118,7 @@ export interface ClassNode {
 /**
  * @deprecated Internal use only in dataLoader.ts
  */
-export interface EnumDefinition {
+export interface EnumDTO {
   name: string;
   description?: string;
   permissible_values: EnumValue[];
@@ -130,7 +128,7 @@ export interface EnumDefinition {
 /**
  * @deprecated Internal use only in dataLoader.ts
  */
-export interface SlotDefinition {
+export interface SlotDTO {
   name: string;
   description?: string;
   range?: string;
