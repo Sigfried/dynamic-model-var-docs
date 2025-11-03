@@ -40,4 +40,20 @@ export default defineConfig([
       }],
     },
   },
+  // Architectural enforcement: DTOs can only be used in dataLoader
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/utils/dataLoader.ts'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [
+          {
+            group: ['**/types', '../types', '../../types', './types'],
+            importNames: ['ClassNode', 'EnumDefinition', 'SlotDefinition'],
+            message: 'DTOs (ClassNode, EnumDefinition, SlotDefinition) can only be used in dataLoader.ts. Use Element classes instead. See PHASE_6.4_PLAN.md for details.',
+          },
+        ],
+      }],
+    },
+  },
 ])
