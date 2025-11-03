@@ -74,7 +74,7 @@ function ItemRenderer({ item, callbacks, position, toggleExpansion }: ItemRender
         <span className="flex-1 text-sm font-medium">{element.name}</span>
 
         {/* Type-specific badges and indicators */}
-        {element.type === 'class' && element.abstract && (
+        {element.type === 'class' && element.isAbstract() && (
           <span className="text-xs text-purple-600 dark:text-purple-400 italic mr-2">
             abstract
           </span>

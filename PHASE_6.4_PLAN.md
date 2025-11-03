@@ -161,10 +161,18 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 - Methods: getEffectiveRange(), isOverridden(), ???
 - **Blocking**: Phase 3 implementation
 
+[sg] do we need rangeOverride, etc.? why not just range, etc.?
+     the original values are still there in the slot, right?
+
 **Q2: How to group lists for readability?**
 - Current: Tree.toRenderableItems() creates collapsible trees
 - Question: Should we reconsider grouping strategy across all collections?
+
+[sg] let's evaluate ... altnernatives? pros/cons?
+
 - Related: Should Tree have traverse() method for depth-first flattening?
+
+[sg] Tree is being deleted, but it could go in Element
 
 **Q3: findInboundRefs - generic vs custom logic?**
 - For enums: Need to search through class properties (no enumReferences field exists)
@@ -173,11 +181,15 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
   - Custom logic for each case
 - Recommendation: Custom logic for now (avoid premature abstraction)
 
+[sg] ok. add this to implementation and it can be deleted here
+
 ### Medium Priority
 
 **Q4: DTO renaming (ClassNode → ClassDTO)**
 - Makes restriction clearer but adds churn
 - User decision needed
+
+[sg] make them all <type>DTO
 
 **Q5: Element.tsx → Element.ts renaming**
 - File doesn't use JSX

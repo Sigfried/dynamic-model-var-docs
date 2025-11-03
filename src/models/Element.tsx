@@ -13,7 +13,6 @@ import type {
   VariableSpec,
   EnumValue
 } from '../types';
-import { getElementHoverHandlers } from '../hooks/useElementHover';
 import type { ElementTypeId, RelationshipTypeId } from './ElementRegistry';
 import { ELEMENT_TYPES } from './ElementRegistry';
 import type { RenderableItem } from './RenderableItem';
@@ -59,7 +58,8 @@ export interface DetailData {
 
 // Base abstract class for all element types
 export abstract class Element {
-  protected abstract readonly type: ElementTypeId;
+  // TODO Phase 6.5: Make protected again once components use polymorphic methods
+  abstract readonly type: ElementTypeId;  // Temporarily public to fix build errors
   abstract readonly name: string;
   abstract readonly description: string | undefined;
 
@@ -150,6 +150,14 @@ export abstract class Element {
     fn(this);
     this.children.forEach(child => child.traverse(fn));
   }
+
+  /**
+   * Check if this element is abstract (only applicable to ClassElement).
+   * Default implementation returns false; ClassElement overrides.
+   */
+  isAbstract(): boolean {
+    return false;
+  }
 }
 
 // Name → Type lookup for accurate categorization (avoids duck typing)
@@ -194,7 +202,7 @@ function categorizeRange(range: string): 'class' | 'enum' | 'primitive' {
 
 // ClassElement - represents a class in the schema
 export class ClassElement extends Element {
-  protected readonly type = 'class' as const;
+  readonly type = 'class' as const;
   protected readonly dataModel: ModelData
   readonly name: string;
   readonly description: string | undefined;
@@ -237,24 +245,27 @@ export class ClassElement extends Element {
     this.abstract = data.abstract;
 
     // TODO Phase 3: collectAllSlots() - blocked on ClassSlot design
+    // Deleted broken WIP implementation (see git history if needed)
   }
-  collectAllSlots(): SlotElement[] {
-    // TODO: Implement using this.ancestorList() instead of this.treeNode.ancestorList()
-    // Blocked on ClassSlot design (Phase 3)
-    if ( !('treeNode' in this)) {
-      console.error("can't run collectAllSlots till tree is created")
-      return
-    }
-    const ancestorSlots = this.treeNode.ancestorList().map(n => n.node.properties) // this should be a flat map (of name:SlotElement) i think
-    const attributes = [] // get all the attributes as SlotElements
-    this.slot_usage.forEach( // or whatever
-      (name: string, slot_usage: PropertyDefinition /* ???? */) => {
-        if (!ancestorSlots.has(name)) throw new Error(`slot_usage only applies to inherited slots`)
-        ancestorSlots.set(name, new ClassSlot(ancestorSlots.get(name), slot_usage));
-      }
-    )
-    const slots = this.slots.map(s => ({key: s.name, val: new SlotElement(s)}))
-    return [...ancestorSlots, ...ancestorSlots, ...slots]
+
+  renderPanelSection(
+    _depth: number,
+    onSelect: (element: ElementData, elementType: string) => void
+  ) {
+    // ClassElement is rendered via tree structure in Section component
+    // This method is required by Element base class but not used for classes
+    return (
+      <div
+        key={this.name}
+        id={`class-${this.name}`}
+        data-element-type="class"
+        data-element-name={this.name}
+        className="cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 px-2 py-1"
+        onClick={() => onSelect(this as unknown as ElementData, 'class')}
+      >
+        {this.name}
+      </div>
+    );
   }
 
   renderDetails(_onNavigate: (target: string, targetType: string) => void) {
@@ -344,11 +355,11 @@ export class ClassElement extends Element {
     // Variables section
     if (this.variables && this.variables.length > 0) {
       const variableList = this.variables.map(v => [
-        v.variableLabel,
+        v.name,
         v.dataType,
         v.ucumUnit,
         v.curie,
-        v.variableDescription
+        v.description
       ]);
 
       sections.push({
@@ -408,11 +419,15 @@ export class ClassElement extends Element {
   getBadge(): number | undefined {
     return this.variableCount > 0 ? this.variableCount : undefined;
   }
+
+  isAbstract(): boolean {
+    return this.abstract;
+  }
 }
 
 // EnumElement - represents an enumeration
 export class EnumElement extends Element {
-  protected readonly type = 'enum' as const;
+  readonly type = 'enum' as const;
   readonly name: string;
   readonly description: string | undefined;
   readonly permissibleValues: EnumValue[];
@@ -532,7 +547,7 @@ export class EnumElement extends Element {
 
 // SlotElement - represents a top-level slot definition
 export class SlotElement extends Element {
-  protected readonly type = 'slot' as const;
+  readonly type = 'slot' as const;
   readonly name: string;
   readonly description: string | undefined;
   readonly range: string | undefined;
@@ -723,7 +738,7 @@ export class SlotElement extends Element {
 
 // VariableElement - represents a variable specification
 export class VariableElement extends Element {
-  protected readonly type = 'variable' as const;
+  readonly type = 'variable' as const;
   readonly bdchmElement: string;
   readonly name: string;  // variableLabel
   readonly description: string;  // variableDescription
