@@ -2,7 +2,7 @@
 
 **Date**: 2025-10-31
 **Last Updated**: 2025-11-03
-**Status**: 🚧 IN PROGRESS - Phase 4 partially complete
+**Status**: 🚧 IN PROGRESS - Step 4 partially complete
 
 ---
 
@@ -32,15 +32,15 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 
 ### ✅ Completed
 
-**Phase 1: Foundation**
+**Step 1: Foundation**
 - ✅ 1.1: Removed `[key: string]: unknown` from PropertyDefinition
 - ✅ 1.2: Renamed DTOs for clarity (ClassNode→ClassDTO, EnumDefinition→EnumDTO, SlotDefinition→SlotDTO)
 - ✅ 1.3: ESLint rule restricting DTOs to dataLoader (already existed)
 
-**Phase 2: Tree Capabilities**
+**Step 2: Tree Capabilities**
 - ✅ 2.1: Element base class has tree capabilities (parent, children, ancestorList, traverse)
 
-**Phase 4: DataLoader Simplification (Partial)**
+**Step 4: DataLoader Simplification (Partial)**
 - ✅ 4.1: Removed buildClassHierarchy() - replaced with loadClasses()
 - ✅ 4.1: Removed buildReverseIndices() (never called)
 - ✅ 4.1: Removed variable counting (now computed property)
@@ -56,28 +56,28 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 
 ### 🚧 In Progress / Partially Done
 
-- ⚠️ Collections still use Tree class internally (transition state - Phase 6 will remove)
+- ⚠️ Collections still use Tree class internally (transition state - Step 6 will remove)
 - ⚠️ Component errors exist (pre-existing architectural issues, planned for Phase 6.5)
-- ⚠️ Test failures from Phase 4 constructor changes (tests use old DTO-based constructors, need update to Metadata-based constructors)
+- ⚠️ Test failures from Step 4 constructor changes (tests use old DTO-based constructors, need update to Metadata-based constructors)
 
 ### ❌ Not Started (Ready to Implement)
 
-**Phase 1: Foundation**
+**Step 1: Foundation**
 - ✅ 1.4: ClassSlot design finalized (see implementation section) - **READY TO IMPLEMENT**
 
-**Phase 3: Slot System Expansion** (unblocked - ClassSlot design complete)
+**Step 3: Slot System Expansion** (unblocked - ClassSlot design complete)
 - ❌ 3.1: Create SlotElements in ClassElement constructor
 - ❌ 3.2: Convert SlotCollection to 2-level tree (depends on 3.1)
 - ❌ 3.3: Implement collectAllSlots()
 
-**Phase 4: DataLoader Simplification**
+**Step 4: DataLoader Simplification**
 - ❌ 4.2: Collection orchestration function (partially exists in dataLoader)
 - ❌ 4.4: Update VariableCollection to wire variables array
 
-**Phase 5: On-Demand Computation**
+**Step 5: On-Demand Computation**
 - ❌ Implement getUsedByClasses() methods (currently placeholders)
 
-**Phase 6: Cleanup**
+**Step 6: Cleanup**
 - ❌ Delete Tree.ts and update all references to use Element.children directly
 - ❌ Move toRenderableItems() from Tree to Element base class
 - ❌ Remove TreeNode wrappers
@@ -103,11 +103,11 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 ### Decision 3: Element Has Tree Capabilities - ✅ IMPLEMENTED
 **Decision**: Element base class has parent/children properties
 **Implementation**: Element has parent?, children[], ancestorList(), traverse()
-**Status**: Implemented - Collections still use Tree internally (Phase 6 will remove)
+**Status**: Implemented - Collections still use Tree internally (Step 6 will remove)
 
 ### Insight 2: ClassSlot Class Design - ⏸️ NEEDS DESIGN
 **Decision**: Use class (not interface) - allows methods like getEffectiveRange()
-**Status**: Needs fleshing out before Phase 3 can proceed
+**Status**: Needs fleshing out before Step 3 can proceed
 **Dependency order**: ClassElements created before SlotCollection ✅ (answered yes)
 
 ---
@@ -116,7 +116,7 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 
 ### High Priority - Blocking Other Work
 
-1. **Fix test failures from Phase 4**
+1. **Fix test failures from Step 4**
    - Tests use old DTO-based constructors: `new EnumElement(dto)`
    - Constructors now expect Metadata: `new EnumElement(name, metadata)`
    - Affected: linkLogic.test.ts (9 failures), dataLoader.test.ts (2 failures), DetailPanel.test.tsx, duplicateDetection.test.ts, panelHelpers.test.tsx
@@ -124,16 +124,16 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 
 ### Can Proceed Without Blockers
 
-3. **Complete Phase 4**
+3. **Complete Step 4**
    - 4.4: Wire variables array in VariableCollection
 
-4. **Phase 5: Implement getUsedByClasses() methods (custom logic for each type)**
+4. **Step 5: Implement getUsedByClasses() methods (custom logic for each type)**
    - EnumElement.getUsedByClasses(): Scan all class attributes for range === this.name
    - SlotElement.getUsedByClasses(): Scan class.slots arrays for this.name
    - VariableElement.getUsedByClasses(): Return [this.bdchmElement]
    - Implementation: Custom scanning logic, avoid generic path expression abstraction
 
-5. **Phase 6: Delete Tree.ts and use Element tree directly**
+5. **Step 6: Delete Tree.ts and use Element tree directly**
    - Move toRenderableItems() from Tree to Element base class
    - Remove TreeNode wrappers
    - Update all Collection classes to use Element.children directly
@@ -157,7 +157,7 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 - **Decision deferred**: Not deciding on full grouping strategy right now
 - **Immediate fix**: Move toRenderableItems() from Tree to Element base class (see TASKS.md)
 - Task added to TASKS.md after "Enhanced Link Hover Information"
-- Full grouping strategy redesign can wait until after Phase 6 cleanup
+- Full grouping strategy redesign can wait until after Step 6 cleanup
 
 ### Medium Priority
 
@@ -176,7 +176,7 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 - ✅ Q1 ClassSlot design: FINALIZED - Use direct properties not *Override suffix (see implementation section)
 - ✅ Q3 findInboundRefs: Use custom logic for each case (avoid premature abstraction)
 - ✅ Q4 DTO renaming: COMPLETED - Use *DTO suffix (ClassDTO, EnumDTO, SlotDTO)
-- ✅ Q5 Element.tsx → Element.ts: Will be done in Phase 6 after removing JSX methods
+- ✅ Q5 Element.tsx → Element.ts: Will be done in Step 6 after removing JSX methods
 
 ---
 
@@ -185,7 +185,7 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 ### Core Architecture
 - ~~`src/types.ts`~~ - ✅ DTOs renamed to *DTO suffix
 - ~~`.eslintrc.js`~~ - ✅ ESLint rules updated with new DTO names
-- **`src/models/Tree.ts`** - DELETE entire file (Phase 6)
+- **`src/models/Tree.ts`** - DELETE entire file (Step 6)
 - `src/models/Element.tsx` - Ongoing changes:
   - ✅ Tree properties (parent, children, ancestorList, traverse)
   - ❌ Define ClassSlot class
@@ -193,15 +193,15 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
   - ❌ Convert ClassElement.attributes to SlotElement[]
   - ❌ Restructure SlotCollection as 2-level tree
   - ❌ Implement getUsedByClasses() methods
-- ~~`src/utils/dataLoader.ts`~~ - ✅ Simplified (Phase 4.1 complete)
+- ~~`src/utils/dataLoader.ts`~~ - ✅ Simplified (Step 4.1 complete)
 
-### Components (Phase 6)
+### Components (Step 6)
 - Replace `tree.roots` → `collection.roots`
 - Replace `treeNode.node` → `element`
 - Update traversal to use `element.children` or `element.traverse()`
 
 ### Tests
-- Remove tests for TreeNode/Tree classes (Phase 6)
+- Remove tests for TreeNode/Tree classes (Step 6)
 - Add tests for Element.ancestorList(), Element.traverse()
 - Add tests for new getUsedByClasses() implementations
 
@@ -222,8 +222,8 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 ## ⚠️ Risks and Mitigation
 
 ### Risk 1: ClassSlot design incomplete
-**Impact**: Blocks Phase 3 implementation
-**Mitigation**: Prioritize design discussion with user before proceeding
+**Impact**: Blocks Step 3 implementation
+**Mitigation**: Prioritize design discussion with user before proceeding ✅ RESOLVED
 
 ### Risk 2: Attribute name collisions in SlotCollection
 **Impact**: Multiple classes have "id" attribute → namespace collision
@@ -231,11 +231,11 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 
 ### Risk 3: Collection creation order dependencies
 **Impact**: ClassElements before SlotCollection, VariableCollection needs ClassCollection
-**Mitigation**: Orchestration function manages order (Phase 4.2)
+**Mitigation**: Orchestration function manages order (Step 4.2)
 
 ### Risk 4: Breaking changes to existing code
 **Impact**: Tree.ts deletion affects all collection usage
-**Mitigation**: Phased approach - keep Tree.ts until Phase 6, test incrementally
+**Mitigation**: Phased approach - keep Tree.ts until Step 6, test incrementally
 
 ### Risk 5: Component architectural issues
 **Impact**: Components access element.type (protected), element.abstract (doesn't exist)
@@ -246,15 +246,15 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 ## 📝 Next Immediate Actions
 
 1. **Fix component errors** to get build working (see "High Priority" section above)
-2. **Design ClassSlot class** with user input (blocking Phase 3)
-3. **Complete Phase 4** (wire variables array)
-4. **Decide**: Continue with Phase 5 (on-demand computation) or Phase 6 (delete Tree.ts)?
+2. **Design ClassSlot class** with user input (blocking Step 3) ✅ RESOLVED
+3. **Complete Step 4** (wire variables array)
+4. **Decide**: Continue with Step 5 (on-demand computation) or Step 6 (delete Tree.ts)?
 
 ---
 
 ## 📚 Detailed Implementation Notes
 
-### DataLoader Role (Implemented in Phase 4.1)
+### DataLoader Role (Implemented in Step 4.1)
 
 DataLoader is now confined to:
 - Loading raw JSON data
@@ -272,13 +272,13 @@ Current order in dataLoader.ts:
 3. ClassCollection (needs slot names for validation)
 4. VariableCollection (needs classCollection)
 
-Future order after Phase 3:
+Future order after Step 3:
 1. EnumCollection (no dependencies)
 2. ClassCollection (creates attribute SlotElements)
 3. SlotCollection (needs ClassElements for 2-level tree)
 4. VariableCollection (needs classCollection)
 
-### Tree Mixin Pattern (Implemented in Phase 2.1)
+### Tree Mixin Pattern (Implemented in Step 2.1)
 
 Element base class has tree capabilities built-in:
 ```typescript
@@ -298,9 +298,9 @@ abstract class Element {
 }
 ```
 
-Collections still use Tree class internally (transition state). Phase 6 will eliminate Tree.ts entirely.
+Collections still use Tree class internally (transition state). Step 6 will eliminate Tree.ts entirely.
 
-### On-Demand Computation Pattern (Phase 5)
+### On-Demand Computation Pattern (Step 5)
 
 Instead of pre-computing and storing:
 ```typescript
@@ -323,7 +323,7 @@ class EnumElement {
 
 Benefits: No need to maintain reverse indices, always accurate, computed when needed.
 
-### ClassSlot Design (Phase 3)
+### ClassSlot Design (Step 3)
 
 **Purpose**: Model slot overrides from `slot_usage` and inline attributes within classes.
 
