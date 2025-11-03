@@ -6,10 +6,12 @@ import type {
   ClassMetadata,
   ClassNode,
   EnumDefinition,
+  EnumMetadata,
   ModelData,
   SlotDefinition,
   SlotMetadata,
-  VariableSpec
+  VariableSpec,
+  EnumValue
 } from '../types';
 import { getElementHoverHandlers } from '../hooks/useElementHover';
 import type { ElementTypeId, RelationshipTypeId } from './ElementRegistry';
@@ -26,7 +28,6 @@ interface PropertyDefinition {
   description?: string;
   required?: boolean;
   multivalued?: boolean;
-  [key: string]: unknown;
 }
 
 // Relationship types for SVG link visualization
@@ -197,47 +198,45 @@ export class ClassElement extends Element {
   protected readonly dataModel: ModelData
   readonly name: string;
   readonly description: string | undefined;
-  readonly parent: string | undefined;
+  readonly parentName: string | undefined;  // Store parent name, not Element reference (set in Element.parent)
 
   // Tree structure notes:
   // - parent/children (from Element base): Class hierarchy (subclasses)
   // - variables: VariableElements for this class (separate array, wired in orchestration)
-  readonly variableCount: number;
-  readonly variables: VariableSpec[];
-  // readonly properties: Record<string, PropertyDefinition> | undefined;
-  // [sg] want to start using properties as a list of all slots: ClassSlot[]
-  // i don't know if ClassSlot should be a type or a class, but its shape
-  // should be { slot: SlotElement, type: 'inherited' | 'attribute' | 'slot' }
-  readonly properties: Record<string, ClassSlot> | undefined;
-  readonly isEnum: boolean;
-  readonly enumReferences: string[] | undefined;
-  readonly requiredProperties: string[] | undefined;
-  readonly slots: string[] | undefined;
+  variables: VariableElement[] = [];  // Wired later in orchestration
+
+  // Properties from metadata (attributes stored as Record for now, Phase 3 will convert to ClassSlot[])
+  readonly attributes: Record<string, PropertyDefinition>;
+  readonly slots: string[];  // Normalized to array
   readonly slot_usage: Record<string, PropertyDefinition> | undefined;
-  readonly abstract: boolean | undefined;
-  // [sg] Element now has tree capabilities built-in (parent/children) - no separate TreeNode
-  // private slotElements: Map<string, SlotElement>;
+  readonly abstract: boolean;
+
+  /** Computed property - returns variable count on-demand */
+  get variableCount(): number {
+    return this.variables.length;
+  }
 
   constructor(data: ClassMetadata, dataModel: ModelData) {
-    // [sg] changing this to receive dataModel instead of just slotElements
     super();
     this.dataModel = dataModel;
     this.name = data.name;
     this.description = data.description;
-    this.parent = data.parent;
-    this.variableCount = data.variableCount;
-    this.variables = data.variables;
-    // TODO Phase 3: Use collectAllSlots() when ClassSlot is designed
-    this.properties = data.properties as Record<string, PropertyDefinition> | undefined;
-    this.isEnum = data.isEnum;
-    this.enumReferences = data.enumReferences;
-    this.requiredProperties = data.requiredProperties;
-    this.slots = data.slots;
-    this.slot_usage = data.slot_usage as Record<string, PropertyDefinition> | undefined;
+    this.parentName = data.parent;  // Store parent name (Element.parent set later in fromData())
+
+    // Transform attributes from AttributeDefinition to PropertyDefinition
+    this.attributes = data.attributes || {};
+
+    // Normalize slots to array
+    if (data.slots) {
+      this.slots = Array.isArray(data.slots) ? data.slots : [data.slots];
+    } else {
+      this.slots = [];
+    }
+
+    this.slot_usage = data.slot_usage;
     this.abstract = data.abstract;
-    // this.slotElements = slotElements;
-    // TODO: collectAllSlots() - blocked on ClassSlot design (Phase 3)
-    // this.collectAllSlots()
+
+    // TODO Phase 3: collectAllSlots() - blocked on ClassSlot design
   }
   collectAllSlots(): SlotElement[] {
     // TODO: Implement using this.ancestorList() instead of this.treeNode.ancestorList()
@@ -288,16 +287,16 @@ export class ClassElement extends Element {
     const sections: DetailSection[] = [];
 
     // Inheritance section
-    if (this.parent) {
+    if (this.parentName) {
       sections.push({
         name: 'Inheritance',
-        text: `Inherits from: ${this.parent}`
+        text: `Inherits from: ${this.parentName}`
       });
     }
 
-    // Attributes section (from properties)
-    if (this.properties && Object.keys(this.properties).length > 0) {
-      const attributes = Object.entries(this.properties).map(([name, def]) => [
+    // Attributes section
+    if (this.attributes && Object.keys(this.attributes).length > 0) {
+      const attributesList = Object.entries(this.attributes).map(([name, def]) => [
         name,
         def.range || '',
         def.required ? 'Yes' : 'No',
@@ -308,7 +307,7 @@ export class ClassElement extends Element {
       sections.push({
         name: 'Attributes',
         tableHeadings: ['Name', 'Range', 'Required', 'Multivalued', 'Description'],
-        tableContent: attributes,
+        tableContent: attributesList,
         tableHeadingColor: ELEMENT_TYPES['slot'].color.headerBg
       });
     }
@@ -363,7 +362,7 @@ export class ClassElement extends Element {
     return {
       titlebarTitle: `${metadata.label}: ${this.name}`,
       title: this.name,
-      subtitle: this.parent ? `extends ${this.parent}` : undefined,
+      subtitle: this.parentName ? `extends ${this.parentName}` : undefined,
       titleColor: metadata.color.headerBg,
       description: this.description,
       sections
@@ -374,18 +373,18 @@ export class ClassElement extends Element {
     const rels: Relationship[] = [];
 
     // Inheritance relationship
-    if (this.parent) {
+    if (this.parentName) {
       rels.push({
         type: 'inherits',
-        target: this.parent,
+        target: this.parentName,
         targetType: 'class',
         isSelfRef: false
       });
     }
 
-    // Properties with non-primitive ranges
-    if (this.properties) {
-      Object.entries(this.properties).forEach(([propName, propDef]) => {
+    // Attributes with non-primitive ranges
+    if (this.attributes) {
+      Object.entries(this.attributes).forEach(([propName, propDef]) => {
         const typedPropDef = propDef as PropertyDefinition;
         const range = typedPropDef.range;
         if (!range) return;
@@ -417,14 +416,22 @@ export class EnumElement extends Element {
   readonly name: string;
   readonly description: string | undefined;
   readonly permissibleValues: EnumValue[];
-  readonly usedByClasses: string[];
 
-  constructor(data: EnumDefinition) {
+  constructor(name: string, metadata: EnumMetadata) {
     super();
-    this.name = data.name;
-    this.description = data.description;
-    this.permissibleValues = data.permissible_values;
-    this.usedByClasses = data.usedByClasses;
+    this.name = name;
+    this.description = metadata.description;
+
+    // Transform permissible_values from Record to EnumValue[]
+    this.permissibleValues = [];
+    if (metadata.permissible_values) {
+      Object.entries(metadata.permissible_values).forEach(([key, valueDef]) => {
+        this.permissibleValues.push({
+          key,
+          description: valueDef?.description
+        });
+      });
+    }
   }
 
   renderPanelSection(
@@ -483,10 +490,11 @@ export class EnumElement extends Element {
     }
 
     // Used By Classes section
-    if (this.usedByClasses.length > 0) {
-      const classList = this.usedByClasses.map(className => [className]);
+    const usedByClasses = this.getUsedByClasses();
+    if (usedByClasses.length > 0) {
+      const classList = usedByClasses.map(className => [className]);
       sections.push({
-        name: `Used By Classes (${this.usedByClasses.length})`,
+        name: `Used By Classes (${usedByClasses.length})`,
         tableHeadings: ['Class Name'],
         tableContent: classList
       });
@@ -511,6 +519,15 @@ export class EnumElement extends Element {
   getBadge(): number | undefined {
     return this.permissibleValues.length;
   }
+
+  /**
+   * Get classes that use this enum (computed on-demand).
+   * TODO Phase 5: Implement by scanning classCollection properties for range === this.name
+   */
+  getUsedByClasses(): string[] {
+    // Placeholder - will be implemented in Phase 5
+    return [];
+  }
 }
 
 // SlotElement - represents a top-level slot definition
@@ -523,18 +540,16 @@ export class SlotElement extends Element {
   readonly identifier: boolean | undefined;
   readonly required: boolean | undefined;
   readonly multivalued: boolean | undefined;
-  readonly usedByClasses: string[];
 
-  constructor(data: SlotMetadata) {
+  constructor(name: string, metadata: SlotMetadata) {
     super();
-    this.name = data.name;
-    this.description = data.description;
-    this.range = data.range;
-    this.slot_uri = data.slot_uri;
-    this.identifier = data.identifier;
-    this.required = data.required;
-    this.multivalued = data.multivalued;
-    this.usedByClasses = data.usedByClasses;
+    this.name = name;
+    this.description = metadata.description;
+    this.range = metadata.range;
+    this.slot_uri = metadata.slot_uri;
+    this.identifier = metadata.identifier;
+    this.required = metadata.required;
+    this.multivalued = metadata.multivalued;
   }
 
   renderPanelSection(
@@ -593,25 +608,28 @@ export class SlotElement extends Element {
         </div>
 
         {/* Used by classes */}
-        {this.usedByClasses && this.usedByClasses.length > 0 && (
-          <div>
-            <h2 className="text-lg font-semibold mb-2">
-              Used By Classes ({this.usedByClasses.length})
-            </h2>
-            <ul className="list-disc list-inside space-y-1">
-              {this.usedByClasses.map(className => (
-                <li key={className}>
-                  <button
-                    className="text-blue-600 dark:text-blue-400 hover:underline"
-                    onClick={() => onNavigate(className, 'class')}
-                  >
-                    {className}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        {(() => {
+          const usedByClasses = this.getUsedByClasses();
+          return usedByClasses.length > 0 && (
+            <div>
+              <h2 className="text-lg font-semibold mb-2">
+                Used By Classes ({usedByClasses.length})
+              </h2>
+              <ul className="list-disc list-inside space-y-1">
+                {usedByClasses.map(className => (
+                  <li key={className}>
+                    <button
+                      className="text-blue-600 dark:text-blue-400 hover:underline"
+                      onClick={() => onNavigate(className, 'class')}
+                    >
+                      {className}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })()}
       </div>
     );
   }
@@ -647,10 +665,11 @@ export class SlotElement extends Element {
     }
 
     // Used By Classes section
-    if (this.usedByClasses.length > 0) {
-      const classList = this.usedByClasses.map(className => [className]);
+    const usedByClasses = this.getUsedByClasses();
+    if (usedByClasses.length > 0) {
+      const classList = usedByClasses.map(className => [className]);
       sections.push({
-        name: `Used By Classes (${this.usedByClasses.length})`,
+        name: `Used By Classes (${usedByClasses.length})`,
         tableHeadings: ['Class Name'],
         tableContent: classList
       });
@@ -688,7 +707,17 @@ export class SlotElement extends Element {
   }
 
   getBadge(): number | undefined {
-    return this.usedByClasses.length > 0 ? this.usedByClasses.length : undefined;
+    const usedByClasses = this.getUsedByClasses();
+    return usedByClasses.length > 0 ? usedByClasses.length : undefined;
+  }
+
+  /**
+   * Get classes that use this slot (computed on-demand).
+   * TODO Phase 5: Implement by scanning classCollection for classes with this slot in their slots array
+   */
+  getUsedByClasses(): string[] {
+    // Placeholder - will be implemented in Phase 5
+    return [];
   }
 }
 
@@ -874,11 +903,11 @@ export class EnumCollection extends ElementCollection {
   }
 
   /** Factory: Create from raw data (called by dataLoader) */
-  static fromData(enumData: Map<string, EnumDefinition>): EnumCollection {
-    // Convert EnumDefinitions to flat tree (all roots, no children)
-    const roots: TreeNode<EnumElement>[] = Array.from(enumData.values())
-      .map(def => ({
-        data: new EnumElement(def),
+  static fromData(enumData: Map<string, EnumMetadata>): EnumCollection {
+    // Convert EnumMetadata to flat tree (all roots, no children)
+    const roots: TreeNode<EnumElement>[] = Array.from(enumData.entries())
+      .map(([name, metadata]) => ({
+        data: new EnumElement(name, metadata),
         children: [],
         parent: undefined
       }))
@@ -930,11 +959,11 @@ export class SlotCollection extends ElementCollection {
   }
 
   /** Factory: Create from raw data (called by dataLoader) */
-  static fromData(slotData: Map<string, SlotDefinition>): SlotCollection {
-    // Convert SlotDefinitions to flat tree (all roots, no children)
-    const roots: TreeNode<SlotElement>[] = Array.from(slotData.values())
-      .map(def => ({
-        data: new SlotElement(def),
+  static fromData(slotData: Map<string, SlotMetadata>): SlotCollection {
+    // Convert SlotMetadata to flat tree (all roots, no children)
+    const roots: TreeNode<SlotElement>[] = Array.from(slotData.entries())
+      .map(([name, metadata]) => ({
+        data: new SlotElement(name, metadata),
         children: [],
         parent: undefined
       }))
@@ -1003,22 +1032,67 @@ export class ClassCollection extends ElementCollection {
   }
 
   /** Factory: Create from raw data (called by dataLoader) */
-  static fromData(rootNodes: ClassNode[], slotElements: Map<string, SlotElement>): ClassCollection {
-    // Convert ClassNode tree (with children[]) to TreeNode<ClassElement>
-    const convertToTreeNode = (classNode: ClassNode): TreeNode<ClassElement> => {
-      const element = new ClassElement(classNode, slotElements);
-      const treeNode: TreeNode<ClassElement> = {
+  static fromData(classData: ClassMetadata[], slotCollection: SlotCollection): ClassCollection {
+    // Create a temporary ModelData stub for ClassElement constructors
+    // (Full ModelData will be set later via setModelData())
+    const tempModelData = {
+      collections: new Map(),
+      elementLookup: new Map()
+    } as ModelData;
+
+    // 1. Create all ClassElements
+    const elementMap = new Map<string, ClassElement>();
+    classData.forEach(metadata => {
+      const element = new ClassElement(metadata, tempModelData);
+      elementMap.set(element.name, element);
+    });
+
+    // 2. Wire up parent-child relationships using Element.parent and Element.children
+    const roots: ClassElement[] = [];
+    elementMap.forEach(element => {
+      if (element.parentName) {
+        const parentElement = elementMap.get(element.parentName);
+        if (parentElement) {
+          element.parent = parentElement;  // Set Element.parent reference
+          parentElement.children.push(element);  // Add to parent's children array
+        } else {
+          console.warn(`ClassElement "${element.name}" has parent "${element.parentName}" that doesn't exist`);
+          roots.push(element);  // Treat as root if parent not found
+        }
+      } else {
+        roots.push(element);  // No parent = root element
+      }
+    });
+
+    // Sort children by name at each level
+    const sortChildren = (element: Element) => {
+      element.children.sort((a, b) => a.name.localeCompare(b.name));
+      element.children.forEach(sortChildren);
+    };
+    roots.forEach(sortChildren);
+
+    // 3. Create TreeNode wrappers for compatibility with existing Tree class
+    // TODO Phase 6: Remove Tree class entirely and use Element.children directly
+    const createTreeNode = (element: ClassElement): TreeNode<ClassElement> => {
+      return {
         data: element,
-        children: classNode.children.map(convertToTreeNode),
-        parent: undefined
+        children: element.children.map(child => createTreeNode(child as ClassElement)),
+        parent: undefined  // Set in next step
       };
-      // Link parent references
-      treeNode.children.forEach(child => child.parent = treeNode);
-      return treeNode;
     };
 
-    const roots = rootNodes.map(convertToTreeNode);
-    return new ClassCollection(new Tree(roots));
+    const treeRoots = roots.map(createTreeNode);
+
+    // Link TreeNode parent references
+    const linkTreeNodeParents = (node: TreeNode<ClassElement>) => {
+      node.children.forEach(child => {
+        child.parent = node;
+        linkTreeNodeParents(child);
+      });
+    };
+    treeRoots.forEach(linkTreeNodeParents);
+
+    return new ClassCollection(new Tree(treeRoots));
   }
 
   getLabel(): string {

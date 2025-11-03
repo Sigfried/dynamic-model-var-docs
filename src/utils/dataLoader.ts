@@ -2,17 +2,11 @@
 
 import type {
   VariableSpec,
-  ClassNode,
-  EnumDefinition,
-  EnumValue,
-  SlotDefinition,
   ModelData,
-  // DTOs from external sources
   SchemaMetadata,
   ClassMetadata,
   SlotMetadata,
-  EnumMetadata,
-  AttributeDefinition
+  EnumMetadata
 } from '../types';
 import { EnumCollection, SlotCollection, ClassCollection, VariableCollection, initializeElementNameMap } from '../models/Element';
 
@@ -46,112 +40,35 @@ export async function loadVariableSpecs(): Promise<VariableSpec[]> {
   });
 }
 
-export function buildClassHierarchy(
-  schema: Map<string, ClassMetadata>,
-  variables: VariableSpec[]
-): ClassNode[] {
-  // Group variables by class
-  const variablesByClass = new Map<string, VariableSpec[]>();
-  variables.forEach(variable => {
-    const className = variable.bdchmElement;
-    if (!variablesByClass.has(className)) {
-      variablesByClass.set(className, []);
-    }
-    variablesByClass.get(className)!.push(variable);
-  });
-
-  // Build flat list of all classes
-  const classMap = new Map<string, ClassNode>();
-
-  schema.forEach((classMetadata) => {
-    const vars = variablesByClass.get(classMetadata.name) || [];
-
-    // Normalize slots to array if present
-    const normalizedSlots = classMetadata.slots
-      ? (Array.isArray(classMetadata.slots) ? classMetadata.slots : [classMetadata.slots])
-      : undefined;
-
-    classMap.set(classMetadata.name, {
-      name: classMetadata.name,
-      description: classMetadata.description,
-      parent: classMetadata.parent,
-      children: [],
-      variableCount: vars.length,
-      variables: vars,
-      properties: classMetadata.attributes,
-      isEnum: false,
-      enumReferences: undefined, // Could extract from attributes if needed
-      requiredProperties: undefined,
-      slots: normalizedSlots,
-      slot_usage: classMetadata.slot_usage,
-      abstract: classMetadata.abstract
-    });
-  });
-
-  // Build tree structure by linking parents and children
-  const roots: ClassNode[] = [];
-
-  classMap.forEach((node) => {
-    if (node.parent && classMap.has(node.parent)) {
-      const parent = classMap.get(node.parent)!;
-      parent.children.push(node);
-    } else {
-      roots.push(node);
-    }
-  });
-
-  // Sort children by name
-  const sortChildren = (node: ClassNode) => {
-    node.children.sort((a, b) => a.name.localeCompare(b.name));
-    node.children.forEach(sortChildren);
-  };
-  roots.forEach(sortChildren);
-
-  return roots;
+/**
+ * Load and normalize class metadata from schema.
+ * Returns flat array - tree building happens in ClassCollection.fromData()
+ */
+function loadClasses(metadata: SchemaMetadata): ClassMetadata[] {
+  return Object.values(metadata.classes);
 }
 
-function loadEnums(metadata: SchemaMetadata): Map<string, EnumDefinition> {
-  const enums = new Map<string, EnumDefinition>();
-
+/**
+ * Load enum metadata from schema.
+ * Returns Map for easy lookup - EnumCollection handles transformation.
+ */
+function loadEnums(metadata: SchemaMetadata): Map<string, EnumMetadata> {
+  const enums = new Map<string, EnumMetadata>();
   Object.entries(metadata.enums || {}).forEach(([name, enumDef]) => {
-    const permissible_values: EnumValue[] = [];
-
-    if (enumDef.permissible_values) {
-      Object.entries(enumDef.permissible_values).forEach(([key, valueDef]) => {
-        permissible_values.push({
-          key,
-          description: valueDef?.description
-        });
-      });
-    }
-
-    enums.set(name, {
-      name,
-      description: enumDef.description,
-      permissible_values,
-      usedByClasses: [] // Will be populated by reverse index
-    });
+    enums.set(name, enumDef);
   });
-
   return enums;
 }
 
-function loadSlots(metadata: SchemaMetadata): Map<string, SlotDefinition> {
-  const slots = new Map<string, SlotDefinition>();
-
+/**
+ * Load slot metadata from schema.
+ * Returns Map for easy lookup - SlotCollection handles transformation.
+ */
+function loadSlots(metadata: SchemaMetadata): Map<string, SlotMetadata> {
+  const slots = new Map<string, SlotMetadata>();
   Object.entries(metadata.slots || {}).forEach(([name, slotDef]) => {
-    slots.set(name, {
-      name,
-      description: slotDef.description,
-      range: slotDef.range,
-      slot_uri: slotDef.slot_uri,
-      identifier: slotDef.identifier,
-      required: slotDef.required,
-      multivalued: slotDef.multivalued,
-      usedByClasses: [] // Will be populated by reverse index
-    });
+    slots.set(name, slotDef);
   });
-
   return slots;
 }
 
@@ -159,26 +76,21 @@ export async function loadModelData(): Promise<ModelData> {
   const metadata = await loadSchemaMetadata();
   const variables = await loadVariableSpecs();
 
-  const schema = new Map<string, ClassMetadata>();
-  Object.entries(metadata.classes).forEach(([name, classDef]) => {
-    // Normalize slots: convert string to array
-    if (classDef.slots && typeof classDef.slots === 'string') {
-      classDef.slots = [classDef.slots];
-    }
-    schema.set(name, classDef);
-  });
+  // Load metadata (no tree building - just type-checking and simple transformations)
+  const classMetadata = loadClasses(metadata);
+  const enumMetadata = loadEnums(metadata);
+  const slotMetadata = loadSlots(metadata);
 
-  const enums = loadEnums(metadata);
-  const slots = loadSlots(metadata);
-  const classHierarchy = buildClassHierarchy(schema, variables);
+  // Create collections in proper order (see Phase 4.2 - orchestration)
+  // Order matters due to dependencies:
+  // 1. EnumCollection (no dependencies)
+  // 2. SlotCollection (no dependencies)
+  // 3. ClassCollection (needs slot names for validation)
+  // 4. VariableCollection (needs classCollection)
 
-  // Create element collections as a Map for generic iteration
-  const enumCollection = EnumCollection.fromData(enums);
-  const slotCollection = SlotCollection.fromData(slots);
-  // ClassCollection needs SlotElement map, not SlotDefinition map
-  const slotElements = slotCollection.getSlots();
-  const classCollection = ClassCollection.fromData(classHierarchy, slotElements);
-  // VariableCollection needs classCollection to build tree with ClassElement headers
+  const enumCollection = EnumCollection.fromData(enumMetadata);
+  const slotCollection = SlotCollection.fromData(slotMetadata);
+  const classCollection = ClassCollection.fromData(classMetadata, slotCollection);
   const variableCollection = VariableCollection.fromData(variables, classCollection);
 
   const collections = new Map();
@@ -194,15 +106,15 @@ export async function loadModelData(): Promise<ModelData> {
       elementLookup.set(element.name, element);
     });
   });
+
   // Initialize element name lookup map for accurate type categorization
   const classNames = classCollection.getAllElements().map(c => c.name);
-  const enumNames = Array.from(enums.keys());
-  const slotNames = Array.from(slots.keys());
+  const enumNames = Array.from(enumMetadata.keys());
+  const slotNames = Array.from(slotMetadata.keys());
   initializeElementNameMap(classNames, enumNames, slotNames);
 
   return {
     collections,
-    elementLookup,
-    metadata, // temporary for debugging purposes
+    elementLookup
   };
 }
