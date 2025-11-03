@@ -155,84 +155,6 @@ function loadSlots(metadata: SchemaMetadata): Map<string, SlotDefinition> {
   return slots;
 }
 
-// todo: check that nothing in this function is needed and then delete it
-function buildReverseIndices(
-  schema: Map<string, ClassMetadata>,
-  enums: Map<string, EnumDefinition>,
-  slots: Map<string, SlotDefinition>
-): ReverseIndices {
-  const enumToClasses = new Map<string, Set<string>>();
-  const slotToClasses = new Map<string, Set<string>>();
-  const classToClasses = new Map<string, Set<string>>();
-
-  // Initialize sets for all enums and slots
-  enums.forEach((_, enumName) => {
-    enumToClasses.set(enumName, new Set());
-  });
-
-  slots.forEach((_, slotName) => {
-    slotToClasses.set(slotName, new Set());
-  });
-
-  // Scan through all class attributes to build indices
-  schema.forEach((classDef, className) => {
-    // Check attributes for enum and class references
-    if (classDef.attributes) {
-      Object.entries(classDef.attributes).forEach(([, attrDef]) => {
-        const range = attrDef.range;
-
-        if (range) {
-          // Check if it's an enum
-          if (enums.has(range)) {
-            if (!enumToClasses.has(range)) {
-              enumToClasses.set(range, new Set());
-            }
-            enumToClasses.get(range)!.add(className);
-          }
-          // Check if it's a class (but not a primitive type)
-          else if (schema.has(range)) {
-            if (!classToClasses.has(range)) {
-              classToClasses.set(range, new Set());
-            }
-            classToClasses.get(range)!.add(className);
-          }
-        }
-      });
-    }
-
-    // Check slots usage
-    if (classDef.slots && Array.isArray(classDef.slots)) {
-      classDef.slots.forEach((slotName: string) => {
-        if (!slotToClasses.has(slotName)) {
-          slotToClasses.set(slotName, new Set());
-        }
-        slotToClasses.get(slotName)!.add(className);
-      });
-    }
-  });
-
-  // Update enum and slot definitions with their usage
-  enumToClasses.forEach((classes, enumName) => {
-    const enumDef = enums.get(enumName);
-    if (enumDef) {
-      enumDef.usedByClasses = Array.from(classes).sort();
-    }
-  });
-
-  slotToClasses.forEach((classes, slotName) => {
-    const slotDef = slots.get(slotName);
-    if (slotDef) {
-      slotDef.usedByClasses = Array.from(classes).sort();
-    }
-  });
-
-  return {
-    enumToClasses,
-    slotToClasses,
-    classToClasses
-  };
-}
-
 export async function loadModelData(): Promise<ModelData> {
   const metadata = await loadSchemaMetadata();
   const variables = await loadVariableSpecs();
@@ -281,5 +203,6 @@ export async function loadModelData(): Promise<ModelData> {
   return {
     collections,
     elementLookup,
+    metadata, // temporary for debugging purposes
   };
 }
