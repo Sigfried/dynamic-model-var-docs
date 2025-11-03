@@ -117,6 +117,38 @@ export abstract class Element {
       : '';
     return prefix + this.name;
   }
+
+  // ============================================================================
+  // Tree capabilities - Element can participate in hierarchical structures
+  // ============================================================================
+
+  /**
+   * Parent element in tree structure (undefined for root elements)
+   */
+  parent?: Element;
+
+  /**
+   * Child elements in tree structure
+   */
+  children: Element[] = [];
+
+  /**
+   * Get list of all ancestors (parent, grandparent, etc.) walking up the tree.
+   * Returns empty array if this is a root element.
+   */
+  ancestorList(): Element[] {
+    if (!this.parent) return [];
+    return [this.parent, ...this.parent.ancestorList()];
+  }
+
+  /**
+   * Depth-first traversal of tree starting from this element.
+   * Calls fn on this element, then recursively on all children.
+   */
+  traverse(fn: (element: Element) => void): void {
+    fn(this);
+    this.children.forEach(child => child.traverse(fn));
+  }
 }
 
 // Name → Type lookup for accurate categorization (avoids duck typing)
@@ -166,6 +198,10 @@ export class ClassElement extends Element {
   readonly name: string;
   readonly description: string | undefined;
   readonly parent: string | undefined;
+
+  // Tree structure notes:
+  // - parent/children (from Element base): Class hierarchy (subclasses)
+  // - variables: VariableElements for this class (separate array, wired in orchestration)
   readonly variableCount: number;
   readonly variables: VariableSpec[];
   // readonly properties: Record<string, PropertyDefinition> | undefined;
@@ -193,6 +229,7 @@ export class ClassElement extends Element {
     this.variableCount = data.variableCount;
     this.variables = data.variables;
     // this.properties = data.properties as Record<string, PropertyDefinition> | undefined;
+    //  [sg] collectAllSlots not working yet
     this.properties = this.collectAllSlots()
     this.isEnum = data.isEnum;
     this.enumReferences = data.enumReferences;
@@ -204,6 +241,10 @@ export class ClassElement extends Element {
     this.collectAllSlots()
   }
   collectAllSlots(): SlotElement[] {
+    if ( !('treeNode' in this)) {
+      console.error("can't run collectAllSlots till tree is created")
+      return
+    }
     const ancestorSlots = this.treeNode.ancestorList().map(n => n.node.properties) // this should be a flat map (of name:SlotElement) i think
     const attributes = [] // get all the attributes as SlotElements
     this.slot_usage.forEach( // or whatever

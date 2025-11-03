@@ -14,7 +14,6 @@ export interface AttributeDefinition {
   description?: string;
   required?: boolean;
   multivalued?: boolean;
-  [key: string]: unknown; // Allow other LinkML fields
 }
 
 /**
@@ -27,7 +26,6 @@ export interface SlotMetadata {
   identifier?: boolean;
   required?: boolean;
   multivalued?: boolean;
-  [key: string]: unknown; // Allow other LinkML fields
 }
 
 /**
@@ -38,9 +36,7 @@ export interface EnumMetadata {
   permissible_values?: Record<string, {
     description?: string;
     meaning?: string;
-    [key: string]: unknown;
   }>;
-  [key: string]: unknown; // Allow other LinkML fields
 }
 
 /**
