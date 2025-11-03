@@ -79,7 +79,7 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 
 **Phase 6: Cleanup**
 - ❌ Delete Tree.ts and update all references to use Element.children directly
-- ❌ Move toRenderableItems() from Tree to Collections
+- ❌ Move toRenderableItems() from Tree to Element base class
 - ❌ Remove TreeNode wrappers
 
 ---
@@ -133,13 +133,14 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 3. **Complete Phase 4**
    - 4.4: Wire variables array in VariableCollection
 
-4. **Phase 5: Implement getUsedByClasses() methods**
-   - EnumElement: Scan class properties for range === this.name
-   - SlotElement: Scan class slots arrays
-   - VariableElement: Return [this.bdchmElement]
+4. **Phase 5: Implement getUsedByClasses() methods (custom logic for each type)**
+   - EnumElement.getUsedByClasses(): Scan all class attributes for range === this.name
+   - SlotElement.getUsedByClasses(): Scan class.slots arrays for this.name
+   - VariableElement.getUsedByClasses(): Return [this.bdchmElement]
+   - Implementation: Custom scanning logic, avoid generic path expression abstraction
 
 5. **Phase 6: Delete Tree.ts and use Element tree directly**
-   - Move toRenderableItems() from Tree to Collections
+   - Move toRenderableItems() from Tree to Element base class
    - Remove TreeNode wrappers
    - Update all Collection classes to use Element.children directly
    - Delete src/models/Tree.ts
@@ -158,32 +159,46 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 
 **Q1: ClassSlot class design - full specification**
 - Confirmed: Class (not interface)
-- Needs: Complete property list and method signatures
-- Properties so far: slot, source, rangeOverride, requiredOverride, multivaluedOverride, descriptionOverride
-- Methods: getEffectiveRange(), isOverridden(), ???
+- **Design simplified**: Use direct properties (range, required, etc.) not *Override suffix
+- **Rationale**: Original values still available in baseSlot reference, cleaner API
+
+**Proposed design**:
+```typescript
+class ClassSlot {
+  readonly baseSlot: SlotElement;  // Reference to the reusable slot
+  readonly source: 'attribute' | 'slot_usage';  // Where this slot came from
+
+  // Override values (undefined means "use base slot value")
+  readonly range?: string;
+  readonly required?: boolean;
+  readonly multivalued?: boolean;
+  readonly description?: string;
+
+  // Computed methods for effective values with fallback
+  getEffectiveRange(): string {
+    return this.range ?? this.baseSlot.range ?? 'string';
+  }
+
+  getEffectiveRequired(): boolean {
+    return this.required ?? this.baseSlot.required ?? false;
+  }
+
+  isOverridden(): boolean {
+    return this.range !== undefined ||
+           this.required !== undefined ||
+           this.multivalued !== undefined;
+  }
+}
+```
+
 - **Blocking**: Phase 3 implementation
 
-[sg] do we need rangeOverride, etc.? why not just range, etc.?
-     the original values are still there in the slot, right?
-
 **Q2: How to group lists for readability?**
-- Current: Tree.toRenderableItems() creates collapsible trees
-- Question: Should we reconsider grouping strategy across all collections?
-
-[sg] let's evaluate ... altnernatives? pros/cons?
-
-- Related: Should Tree have traverse() method for depth-first flattening?
-
-[sg] Tree is being deleted, but it could go in Element
-
-**Q3: findInboundRefs - generic vs custom logic?**
-- For enums: Need to search through class properties (no enumReferences field exists)
-- Options:
-  - Generic helper with path expressions: `findInboundRefs(collection, 'properties.*.range')`
-  - Custom logic for each case
-- Recommendation: Custom logic for now (avoid premature abstraction)
-
-[sg] ok. add this to implementation and it can be deleted here
+- **Decision deferred**: Not deciding on grouping strategy right now
+- **Immediate fix**: Move toRenderableItems() from Tree to Element base class
+- Current implementation in Tree.ts can serve as reference
+- Element.traverse() already exists (Phase 2.1) ✅
+- Full grouping strategy redesign can wait until after Phase 6 cleanup
 
 ### Medium Priority
 
@@ -199,6 +214,7 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 - ✅ ClassSlot: Class preferred over interface
 - ✅ Tree structure approach: Element has parent/children built-in
 - ✅ Attribute name collisions: 2-level tree design naturally separates by class
+- ✅ Q3 findInboundRefs: Use custom logic for each case (avoid premature abstraction)
 - ✅ Q4 DTO renaming: COMPLETED - Use *DTO suffix (ClassDTO, EnumDTO, SlotDTO)
 - ✅ Q5 Element.tsx → Element.ts: Will be done in Phase 6 after removing JSX methods
 
