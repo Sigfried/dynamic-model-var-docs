@@ -215,8 +215,7 @@ export class ClassElement extends Element {
   readonly slots: string[] | undefined;
   readonly slot_usage: Record<string, PropertyDefinition> | undefined;
   readonly abstract: boolean | undefined;
-  // [sg] somehow an Element needs access to the TreeNode version of itself
-  readonly treeNode: TreeNode
+  // [sg] Element now has tree capabilities built-in (parent/children) - no separate TreeNode
   // private slotElements: Map<string, SlotElement>;
 
   constructor(data: ClassMetadata, dataModel: ModelData) {
@@ -228,9 +227,8 @@ export class ClassElement extends Element {
     this.parent = data.parent;
     this.variableCount = data.variableCount;
     this.variables = data.variables;
-    // this.properties = data.properties as Record<string, PropertyDefinition> | undefined;
-    //  [sg] collectAllSlots not working yet
-    this.properties = this.collectAllSlots()
+    // TODO Phase 3: Use collectAllSlots() when ClassSlot is designed
+    this.properties = data.properties as Record<string, PropertyDefinition> | undefined;
     this.isEnum = data.isEnum;
     this.enumReferences = data.enumReferences;
     this.requiredProperties = data.requiredProperties;
@@ -238,9 +236,12 @@ export class ClassElement extends Element {
     this.slot_usage = data.slot_usage as Record<string, PropertyDefinition> | undefined;
     this.abstract = data.abstract;
     // this.slotElements = slotElements;
-    this.collectAllSlots()
+    // TODO: collectAllSlots() - blocked on ClassSlot design (Phase 3)
+    // this.collectAllSlots()
   }
   collectAllSlots(): SlotElement[] {
+    // TODO: Implement using this.ancestorList() instead of this.treeNode.ancestorList()
+    // Blocked on ClassSlot design (Phase 3)
     if ( !('treeNode' in this)) {
       console.error("can't run collectAllSlots till tree is created")
       return
