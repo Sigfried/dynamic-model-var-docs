@@ -102,15 +102,16 @@ const info = element.getDisplayInfo();
 - **Pattern**: `ClassMetadata` (DTO) → `ClassElement` (domain model)
 - **Rule**: DTOs flow through dataLoader → collections construct domain models → components use domain models
 
-### Use Tree.ts for Hierarchical Data
+### Hierarchical Data
 
-Always use `Tree.ts` for hierarchical data structures. Don't create custom tree implementations.
+Element classes have built-in tree support via `parent` and `children` properties. Use these directly:
 
 ```typescript
-import { Tree, TreeNode, buildTree } from '../models/Tree';
-
-const tree = buildTree(items, getId, getParentId);
-const flatList = tree.flatten();
+// Element base class provides tree operations
+element.parent         // Parent element (or null for roots)
+element.children       // Child elements array
+element.ancestorList   // Array of ancestors from root to this element
+element.traverse()     // Depth-first traversal with callback
 ```
 
 ### Structural Not Semantic Categorization
