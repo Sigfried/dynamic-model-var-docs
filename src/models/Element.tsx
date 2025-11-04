@@ -360,6 +360,31 @@ export class ClassElement extends Element {
   }
 
   /**
+   * Get the name of the class from which a slot was inherited.
+   * Returns empty string if slot is not inherited (defined in this class).
+   *
+   * @param slotName Name of the slot to check
+   * @returns Parent class name, or empty string if not inherited
+   */
+  getInheritedFrom(slotName: string): string {
+    // Check if this slot is defined directly in this class
+    if (this.classSlots.some(s => s.name === slotName)) {
+      return '';
+    }
+
+    // Check parent
+    if (this.parent) {
+      const parentSlots = (this.parent as ClassElement).collectAllSlots();
+      if (slotName in parentSlots) {
+        // Find the original class that defined this slot
+        return (this.parent as ClassElement).getInheritedFrom(slotName) || (this.parent as ClassElement).name;
+      }
+    }
+
+    return '';
+  }
+
+  /**
    * Collect all slots for this class, including inherited slots.
    * Child class slots override parent class slots with the same name.
    *
@@ -528,17 +553,26 @@ export class ClassElement extends Element {
     // Slots section (includes inherited slots via collectAllSlots())
     const allSlots = this.collectAllSlots();
     if (Object.keys(allSlots).length > 0) {
-      const slotsList = Object.entries(allSlots).map(([name, classSlot]) => [
-        name,
-        classSlot.getEffectiveRange(),
-        classSlot.getEffectiveRequired() ? 'Yes' : 'No',
-        classSlot.getEffectiveMultivalued() ? 'Yes' : 'No',
-        classSlot.getEffectiveDescription() || ''
-      ]);
+      // Track which slots are direct vs inherited
+      const directSlotNames = new Set(this.classSlots.map(s => s.name));
+
+      const slotsList = Object.entries(allSlots).map(([name, classSlot]) => {
+        const isInherited = !directSlotNames.has(name);
+        const inheritedFrom = isInherited ? this.getInheritedFrom(name) : '';
+
+        return [
+          name,
+          classSlot.getEffectiveRange(),
+          classSlot.getEffectiveRequired() ? 'Yes' : 'No',
+          classSlot.getEffectiveMultivalued() ? 'Yes' : 'No',
+          classSlot.getEffectiveDescription() || '',
+          inheritedFrom
+        ];
+      });
 
       sections.push({
         name: 'Slots (includes inherited)',
-        tableHeadings: ['Name', 'Range', 'Required', 'Multivalued', 'Description'],
+        tableHeadings: ['Name', 'Range', 'Required', 'Multivalued', 'Description', 'Inherited From'],
         tableContent: slotsList,
         tableHeadingColor: ELEMENT_TYPES['slot'].color.headerBg
       });
