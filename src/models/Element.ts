@@ -16,7 +16,6 @@ import type {
 import type { ElementTypeId, RelationshipTypeId } from './ElementRegistry';
 import { ELEMENT_TYPES } from './ElementRegistry';
 import type { RenderableItem } from './RenderableItem';
-import type { RelationshipData } from '../components/RelationshipSidebar';
 
 // Union type for all element data types
 export type ElementData = ClassDTO | EnumDTO | SlotDTO | VariableSpec;
@@ -56,13 +55,37 @@ export interface DetailData {
   sections: DetailSection[];
 }
 
+// Inline type for relationship data to avoid circular dependency
+// Component RelationshipSidebar defines the external interface
+type IncomingRelationships = {
+  subclasses: string[];
+  usedByAttributes: Array<{
+    className: string;
+    attributeName: string;
+    sourceType: ElementTypeId;
+  }>;
+  variables: number;
+};
+
+type OutgoingRelationships = {
+  inheritance?: {
+    target: string;
+    targetType: ElementTypeId;
+  };
+  properties: Array<{
+    attributeName: string;
+    target: string;
+    targetType: ElementTypeId;
+    isSelfRef: boolean;
+  }>;
+};
+
 /**
  * Compute incoming relationships for an element (generic helper)
  * Scans globalClassCollection to find reverse relationships.
- * Component defines RelationshipData interface; this helper adapts to it.
  */
-function computeIncomingRelationships(element: Element): RelationshipData['incoming'] {
-  const incoming: RelationshipData['incoming'] = {
+function computeIncomingRelationships(element: Element): IncomingRelationships {
+  const incoming: IncomingRelationships = {
     subclasses: [],
     usedByAttributes: [],
     variables: 0
@@ -138,14 +161,15 @@ export abstract class Element {
   abstract getRelationships(): Relationship[];
 
   /**
-   * Get relationship data for sidebar display (adapts to RelationshipData contract)
+   * Get relationship data for sidebar display
    * Uses existing getRelationships() for outgoing + computeIncomingRelationships() helper
+   * Returns data matching RelationshipData interface from RelationshipSidebar component
    */
-  getRelationshipData(): RelationshipData {
+  getRelationshipData() {
     const relationships = this.getRelationships();
 
     // Build outgoing relationships from existing getRelationships()
-    const outgoing: RelationshipData['outgoing'] = {
+    const outgoing: OutgoingRelationships = {
       properties: []
     };
 
