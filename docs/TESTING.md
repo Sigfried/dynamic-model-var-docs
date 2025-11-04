@@ -1,6 +1,9 @@
 # Testing Documentation
 
 > **Comprehensive guide to the test suite for BDCHM Interactive Documentation**
+>
+> **⚠️ NOTE**: A diverged version exists at `TESTING.root-snapshot-2025-11-03.md` (4.6k, newer, Phase 6.4+ focused).
+> This file (17k) is older but more comprehensive. They need to be merged - see TASKS.md.
 
 ## Quick Start
 

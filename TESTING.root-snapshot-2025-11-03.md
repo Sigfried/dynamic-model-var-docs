@@ -1,5 +1,17 @@
 # Testing Guide
 
+> **⚠️ SNAPSHOT FILE - DO NOT EDIT**
+>
+> This file is a snapshot of TESTING.md from root (created Nov 3, 2025).
+> It diverged from docs/TESTING.md and needs to be merged.
+>
+> - **This version (4.6k)**: Newer, condensed, focuses on Phase 6.4+ testing patterns
+> - **docs/TESTING.md (17k)**: Older, comprehensive testing documentation
+>
+> **TODO**: Merge these files - see TASKS.md "Merge TESTING.md files" task
+
+---
+
 ## Test Structure
 
 The project uses Vitest for unit and component testing. Tests are organized by functionality in `src/test/`.

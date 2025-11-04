@@ -13,434 +13,84 @@
 
 ---
 
-## Upcoming Work
+## Next Up (Ordered)
 
-Listed in intended implementation order (top = next):
+### App.tsx Refactoring
 
+**Current state**: App.tsx is 583 lines with complex state management
 
----
+**Goal**: Extract logic into testable hooks, reduce to ~200 lines of composition
 
-### 🔒 Phase 6.5: Complete View/Model Separation
+**Extract into hooks**:
+- `hooks/useModelData.ts` - Data loading (currently useEffect + loadModelData)
+- `hooks/useLayoutState.ts` - Panel layout + expansion state (consolidate useExpansionState)
+- `hooks/useDialogState.ts` - Dialog management (100+ lines of restore logic)
 
-**Status**: ✅ COMPLETE
+**Additional cleanup**:
+- Consolidate expansion state: Move from useExpansionState hook into statePersistence.ts
+- Remove dead code: Delete evc/ecn params from statePersistence.ts (replaced by lve/rve/lce/rce)
 
-**Goal**: Truly separate view from model. Components define their own data contracts, Element adapts to provide that data. Components never know about element types, ElementRegistry, or model structure.
+**Why this matters**:
+- Makes each concern testable in isolation
+- Reduces App.tsx complexity significantly
+- Clarifies state management flow
+- This is valuable refactoring, not cosmetic
 
-**Problem**: Phase 9 attempted to make `element.type` protected and add `getType()` method, but this doesn't achieve true separation - components still need `ElementTypeId` knowledge. `getType()` is just `type` with extra steps.
-
-**Core Principle**: Each component defines what data it needs with property names that make sense for that component. Element implements methods to provide that data. Components are completely ignorant of the model structure.
-
-**The Pattern**:
-
-```typescript
-// In component file - component defines its contract
-interface CollectionItemData {
-  id: string;                // from element.getId(panelContext)
-  displayName: string;       // "Specimen"
-  badgeColor?: string;
-  badgeText?: string;
-  indicators?: Array<{ text: string; color: string }>;
-}
-
-// In Element.tsx - Element adapts to component's needs
-import type { CollectionItemData } from '../components/CollectionSection';
-getCollectionItemData(context: PanelContext): CollectionItemData { ... }
-```
-
-**Naming Changes**:
-- `Section` → `CollectionSection` (displays items from one collection)
-- `ElementsPanel` → `CollectionsPanel` (displays multiple CollectionSections)
-- Avoid "Element" in component names to reduce confusion with model Elements
-
-**ID System**:
-```typescript
-// Element base class
-type IdContext = 'leftPanel' | 'rightPanel' | 'detailBox' | undefined;
-
-getId(context?: IdContext): string {
-  const prefix = context === 'leftPanel' ? 'lp-'
-    : context === 'rightPanel' ? 'rp-'
-    : context === 'detailBox' ? 'db-'
-    : '';
-  return prefix + this.name;
-}
-```
-
-**Collection Identity**:
-Collections have their own `id` property (currently matches ElementTypeId string value, but no type coupling):
-```typescript
-abstract class ElementCollection {
-  abstract readonly id: string;      // "class", "enum", "slot", "variable"
-  abstract getLabel(): string;        // "Classes", "Enums", "Slots", "Variables"
-  abstract getIcon(): string;         // "C", "E", "S", "V"
-  // ...
-}
-```
-
-**Component Data Contracts**:
-
-1. **CollectionSection** (renamed from Section):
-```typescript
-interface CollectionItemData {
-  id: string;                // from element.getId(panelContext)
-  displayName: string;       // "Specimen"
-  badgeColor?: string;       // tailwind classes
-  badgeText?: string;        // "103"
-  indicators?: Array<{       // replaces isAbstractClass() check
-    text: string;            // "abstract"
-    color: string;           // tailwind classes
-  }>;
-  level: number;             // nesting depth
-  hasChildren?: boolean;
-  isExpanded?: boolean;
-  isClickable: boolean;
-}
-```
-
-2. **DetailBox** (currently DetailPanel):
-```typescript
-// Already good - uses getDetailData()
-interface DetailData {
-  titlebarTitle: string;
-  title: string;
-  subtitle?: string;
-  titleColor: string;
-  description?: string;
-  sections: DetailSection[];
-}
-```
-
-3. **LinkOverlay**:
-```typescript
-// Will need refactoring - defer link ID pattern for now
-interface LinkData {
-  startId: string;           // TBD during LinkOverlay refactor
-  endId: string;
-  startColor: string;
-  endColor: string;
-  hoverData?: {
-    label?: string;
-    relationshipType: string;
-  };
-}
-```
-
-**Progress** (commit 0653a6c):
-
-✅ **Step 1: Revert Phase 9 & Add ID System**
-   - ✅ Removed `getType()`, `getParentName()`, `isAbstractClass()` methods
-   - ✅ Made `type` protected (NOT public - components blocked from accessing)
-   - ✅ Added `getId(context?: IdContext)` to Element base class
-   - ✅ Added `id: string` property to all ElementCollection classes
-   - **Result**: Build errors in Section.tsx (5 errors) and ElementsPanel.tsx (1 error) - expected and good!
-
-**Remaining Steps**:
-
-✅ **Step 2: Move field name changes to declarative mapping spec** (COMPLETE)
-   - ✅ Created FIELD_MAPPINGS in types.ts with FieldMapping interface
-   - ✅ Created generic transformWithMapping() function in dataLoader.ts
-   - ✅ Updated all transform functions to use mapping specs
-   - **Result**: Transformations now declarative and maintainable
-   - **Tests**: 158 passing, type checking passes
-
-3. **Rename components**: ❌ SKIPPED
-   - Keep current names: Section.tsx, ElementsPanel.tsx
-   - Add clear documentation at top of each file explaining purpose
-
-4. **Define component data interfaces and refactor component data access**:
-
-   **Investigation findings**:
-
-   1. ✅ `toRenderableItems()` - Still needed, used by Collections
-   2. ❌ `renderPanelSection()` and `renderDetails()` - DEAD CODE, not called anywhere
-   3. ✅ `getDetailData()` - Already correct pattern in DetailPanel.tsx
-
-   **Component model access audit**:
-
-   **Section.tsx** accesses:
-   - `item.element.type` (lines 23, 47, 48, 49) - Used for: color lookup, DOM IDs, hover handlers
-   - `item.element.name` (lines 27, 37, 45, 49, 74) - Used for: hover handlers, display, toggle state
-   - `element.isAbstract()` (line 77) - Used for: "abstract" indicator
-   - `ELEMENT_TYPES[element.type]` (line 23) - Used for: color lookup
-   - `item.level`, `item.hasChildren`, `item.isExpanded`, `item.isClickable`, `item.badge` from RenderableItem
-
-   **ElementsPanel.tsx** accesses:
-   - `ElementTypeId` type (lines 3, 8, 10, 11, 17) - Strongly coupled to model types
-   - `ELEMENT_TYPES` registry (line 4, 23) - For icons, colors, labels
-   - `element.type` (line 97) - Passed to onSelectElement callback
-
-   **DetailPanel.tsx**:
-   - ✅ Only uses `element.getDetailData()` - already correct!
-
-   **Refactoring approach**:
-
-   Components define their own data interfaces with UI-focused property names:
-
-   ```typescript
-   // Section.tsx - Component defines what it needs for one item
-   interface SectionItemData {
-     // Identity (used for both DOM id and React key)
-     id: string;                     // "lp-Specimen" (from element.getId(context))
-
-     // Display
-     displayName: string;            // "Specimen"
-     level: number;                  // Indentation depth
-
-     // Visual styling
-     badgeColor?: string;            // Tailwind: "bg-blue-100 text-blue-800"
-     badgeText?: string;             // "103"
-     indicators?: Array<{            // Replaces isAbstract() check
-       text: string;                 // "abstract"
-       color: string;                // Tailwind: "text-purple-600"
-     }>;
-
-     // Interaction
-     hasChildren?: boolean;
-     isExpanded?: boolean;
-     isClickable: boolean;
-
-     // Event data (opaque to component, passed through to callbacks)
-     hoverData: {
-       type: string;                 // "class" (component treats as opaque)
-       name: string;                 // "Specimen"
-     };
-   }
-
-   // Section.tsx - Component defines what data it needs for the whole section
-   interface SectionData {
-     id: string;                     // "class"
-     label: string;                  // "Classes"
-     items: SectionItemData[];       // The tree/list items
-     expansionKey?: string;          // For state persistence ("lp-class")
-     defaultExpansion?: Set<string>; // Default expanded items
-   }
-   ```
-
-   Element adapts to provide this data:
-
-   ```typescript
-   // Element.tsx
-   import type { SectionItemData } from '../components/Section';
-
-   abstract class Element {
-     // Expose id as getter that calls getId() with appropriate context
-     get id(): string {
-       return this.getId();
-     }
-
-     // Context-aware ID generation (already exists, just not used yet)
-     getId(context?: 'leftPanel' | 'rightPanel' | 'detailBox'): string {
-       const prefix = context === 'leftPanel' ? 'lp-'
-         : context === 'rightPanel' ? 'rp-'
-         : context === 'detailBox' ? 'db-'
-         : '';
-       return prefix + this.name;
-     }
-
-     getSectionItemData(context: 'leftPanel' | 'rightPanel'): SectionItemData {
-       const typeInfo = ELEMENT_TYPES[this.type];
-       return {
-         id: this.getId(context),
-         displayName: this.name,
-         level: 0, // Set by tree traversal
-         badgeColor: `${typeInfo.color.badgeBg} ${typeInfo.color.badgeText}`,
-         badgeText: this.getBadge()?.toString(),
-         indicators: this.getIndicators(),
-         hasChildren: this.children.length > 0,
-         isExpanded: false, // Set by tree traversal
-         isClickable: true,
-         hoverData: {
-           type: this.type,
-           name: this.name
-         }
-       };
-     }
-
-     // New polymorphic method - replaces isAbstract() check in component
-     getIndicators(): Array<{ text: string; color: string }> {
-       return []; // Override in subclasses
-     }
-   }
-
-   class ClassElement extends Element {
-     getIndicators(): Array<{ text: string; color: string }> {
-       if (this.isAbstract()) {
-         return [{ text: 'abstract', color: 'text-purple-600 dark:text-purple-400' }];
-       }
-       return [];
-     }
-   }
-   ```
-
-   **ElementsPanel.tsx refactoring**:
-
-   ```typescript
-   // ElementsPanel.tsx - Component defines what it needs for toggle buttons
-   interface ToggleButtonData {
-     id: string;                     // "class" (not ElementTypeId!)
-     icon: string;                   // "C"
-     label: string;                  // "Classes"
-     activeColor: string;            // Tailwind: "bg-blue-500"
-     inactiveColor: string;          // Tailwind: "bg-gray-300"
-   }
-
-   interface ElementsPanelProps {
-     position: 'left' | 'right';
-     visibleSections: string[];                   // IDs of visible sections (order matters)
-     onVisibleSectionsChange: (sections: string[]) => void;
-     sectionData: Map<string, SectionData>;       // Data for each section
-     toggleButtons: ToggleButtonData[];           // Metadata for toggle buttons (from App)
-     onSelectElement: (element: Element, elementType: string) => void;
-     onElementHover?: (element: { type: string; name: string }) => void;
-     onElementLeave?: () => void;
-   }
-   ```
-
-   **Implementation steps**:
-
-   a. **Delete dead JSX methods from Element.tsx**:
-      - Remove abstract methods: `renderPanelSection()`, `renderDetails()`
-      - Remove implementations in ClassElement, EnumElement, SlotElement, VariableElement
-      - Rename Element.tsx → Element.ts (no more JSX)
-
-   b. **Add indicators system and id getter**:
-      - Add `get id()` getter that calls `getId()` (expose existing method)
-      - Add `getIndicators()` method to Element base class
-      - Implement in ClassElement for "abstract" indicator
-      - Keep `isAbstract()` protected (used internally by getIndicators)
-
-   c. **Refactor Section.tsx**:
-      - Define `SectionItemData` interface in Section.tsx (item display data)
-      - Define `SectionData` interface in Section.tsx (full section data)
-      - Update component to accept `SectionData` instead of `ElementCollection`
-      - Update ItemRenderer to only use SectionItemData properties
-      - Remove direct access to element.type, element.isAbstract(), ELEMENT_TYPES
-      - Element.tsx imports: `import type { SectionItemData } from '../components/Section'`
-      - Add `Element.getSectionItemData(context)` method
-      - Update Collections to build SectionData (with getSectionItemData() for items)
-
-   d. **Refactor ElementsPanel.tsx**:
-      - Define `ToggleButtonData` interface (toggle button metadata)
-      - Change all `ElementTypeId` → `string`
-      - Change `collections: Map<ElementTypeId, ElementCollection>` → `sectionData: Map<string, SectionData>`
-      - Accept `toggleButtons: ToggleButtonData[]` from App.tsx
-      - Remove all imports of ElementTypeId, ELEMENT_TYPES, ElementRegistry
-      - Component becomes fully type-agnostic
-
-   e. **Update App.tsx**:
-      - Build `ToggleButtonData[]` from ELEMENT_TYPES registry (one-time coupling at app level)
-      - Convert Collections to `Map<string, SectionData>` before passing to ElementsPanel
-      - Update all ElementTypeId types to string
-
-   f. **Consider RenderableItem.ts**:
-      - Evaluate if this is redundant with SectionItemData
-      - If kept, clarify it's an internal Collection structure, not a component interface
-      - If removed, Collections build SectionItemData directly
-
-   **Files to modify**:
-   - `src/models/Element.tsx` → `Element.ts` (delete JSX, add getSectionItemData, getIndicators, id getter)
-   - `src/components/Section.tsx` (define SectionItemData/SectionData, use them)
-   - `src/components/ElementsPanel.tsx` (remove ElementTypeId coupling, use ToggleButtonData)
-   - `src/App.tsx` (build toggle button data, convert collections to SectionData)
-   - All Collection classes in Element.tsx (build SectionData)
-   - `src/models/RenderableItem.ts` (possibly delete or clarify purpose)
-
-✅ **Step 5: Update Element methods** (COMPLETE)
-   - ✅ Added: `getSectionItemData(context, level, isExpanded, isClickable, hasChildren?)`
-   - ✅ Added: `toSectionItems()` for tree traversal with expansion state
-   - ✅ Added: `get id()` getter for convenient ID access
-   - ✅ Added: `getIndicators()` method returning badges array
-   - ✅ Removed: `renderPanelSection()`, `renderDetails()`, `renderName()` (obsolete JSX)
-   - Keep: `getDetailData()` (already correct)
-   - Keep: `getRelationships()` (defer LinkOverlay refactor to later phase)
-
-✅ **Step 6: Update Collections** (COMPLETE)
-   - ✅ Added: `getSectionData(position)` returns SectionData with getItems() function
-   - ✅ Keep: `getRenderableItems()` (still used internally, marked in RenderableItem.ts as internal)
-   - ✅ Keep: `id` property on each collection class (added in Step 1)
-
-✅ **Step 7: Remove type coupling from components** (COMPLETE)
-   - ✅ ElementsPanel: Changed `sections: ElementTypeId[]` → `sections: string[]`
-   - ✅ App.tsx: Changed `leftSections/rightSections: ElementTypeId[]` → `string[]`
-   - ✅ Removed all `ElementTypeId` imports from Section.tsx and ElementsPanel.tsx
-   - ✅ Removed all `ELEMENT_TYPES` imports from Section.tsx and ElementsPanel.tsx
-   - ✅ App.tsx builds ToggleButtonData and SectionData from ELEMENT_TYPES (one-time coupling)
-
-✅ **Step 8: Cleanup** (COMPLETE)
-   - ✅ Removed obsolete JSX methods: `renderPanelSection()`, `renderDetails()`, `renderName()`
-   - ✅ Renamed Element.tsx → Element.ts (no more JSX in model layer)
-   - ✅ Removed React import from Element.ts
-   - ✅ Marked RenderableItem.ts as deprecated/internal
-   - ✅ Fixed JSDoc comment reference (Element.tsx → Element.ts)
-   - ✅ Added toggleActive/toggleInactive to ElementRegistry for Tailwind JIT compiler
-   - ✅ Tree.ts already deleted in Phase 6.4
-
-✅ **Step 9: Verify architectural compliance** (COMPLETE)
-   - ✅ No component imports ElementTypeId (verified)
-   - ✅ No component imports ELEMENT_TYPES from components (App.tsx uses it to build data)
-   - ✅ No component imports ElementRegistry from components
-   - ✅ All 158 tests passing
-   - ✅ Type checking passes
-   - ✅ Components use SectionItemData/SectionData/ToggleButtonData interfaces
-   - ✅ True view/model separation achieved
-
-✅ **Step 10: Make element.type protected** (COMPLETE)
-   - ✅ Changed `type` from public to `protected` in Element.ts
-   - ✅ Removed TODO comment about making type protected
-   - ✅ Verified no components access `element.type` directly
-   - ✅ Type checking passes (no errors)
-   - ✅ All 158 tests passing
-   - **Result**: Complete architectural separation - view layer cannot access model type information
-
-✅ **Step 11: Optimize DetailDialog getDetailData() calls** (COMPLETE)
-   - ✅ Fixed DetailDialog to call `element.getDetailData()` once instead of 3 times
-   - ✅ Cached result in `detailData` variable at component top
-   - ✅ Type checking passes
-   - **Result**: More efficient rendering, reduced method calls
+**Files to create**:
+- `src/hooks/useModelData.ts`
+- `src/hooks/useDialogState.ts`
+- `src/hooks/useLayoutState.ts`
 
 **Files to modify**:
-- `src/models/Element.tsx`
-- ~~`src/models/Tree.ts`~~ (deleted in Phase 6.4)
-- `src/components/Section.tsx` → `src/components/CollectionSection.tsx`
-- `src/components/ElementsPanel.tsx` → `src/components/CollectionsPanel.tsx`
-- `src/components/DetailPanel.tsx` → `src/components/DetailBox.tsx`
-- `src/utils/panelHelpers.tsx`
 - `src/App.tsx`
-- `src/utils/dataLoader.ts`
-- All test files that reference renamed components
-
-**Future work** (defer to separate phase):
-- LinkOverlay refactoring to use new patterns
-- Component files define their own hover handler contracts
-- **Step 3.2 from Phase 6.4**: Convert SlotCollection to 2-level tree
-  - Deferred - current flat SlotCollection is sufficient
-  - Would show global slots + inline attributes from all classes
-  - Each class becomes a root node with its attributes as children
-- DetailBox Slots table should put inherited slots at the top and
-  (already the case?) referenced slots at the bottom
+- `src/utils/statePersistence.ts`
 
 ---
 
-### 🔒 Phase 9: Make element.type Private
+### Link System Enhancement
 
-**Status**: ⚠️ ATTEMPTED BUT FLAWED - Reverted in Phase 6.5
+**Goal**: Refactor LinkOverlay to follow view/model separation + add hover tooltips
 
-**Problem**: This phase made `element.type` protected and added `getType()` method, but this doesn't achieve true separation. Components calling `getType()` still know about `ElementTypeId`. This is just `type` with extra steps.
+**Components**:
 
-**Committed as WIP** (commit cdb2f03) to preserve the work, but will be reverted in Phase 6.5.
+1. **LinkOverlay Refactoring** (architecture)
+   - Define `LinkData` interface in LinkOverlay.tsx (component defines contract)
+   - Properties: startId, endId, startColor, endColor, hoverData
+   - Element provides data via new method (adapts to component's needs)
+   - Remove direct element access from LinkOverlay component
+
+2. **Enhanced Link Hover Information** (feature)
+   - Tooltip or overlay showing:
+     - Relationship type (is_a, property, etc.)
+     - Slot name (for property relationships)
+     - Source element (name + type)
+     - Target element (name + type)
+     - Additional metadata as appropriate
+   - Add tooltip component that follows cursor or attaches to link
+   - Extract relationship details from Link object
+   - Style to be readable but not intrusive
+
+3. **Hover Handler Contracts** (architecture)
+   - Components define their own hover data interfaces (like SectionItemData)
+   - Example: `interface ElementHoverData { type: string; name: string; }` in component
+   - Element provides data that fits component's contract
+   - Remove opaque `{ type: string; name: string }` pattern
+
+**Current state**:
+- Links show basic info in console.log on hover
+- Components pass around hover data as opaque objects
+- LinkOverlay still accesses element properties directly
+
+**Files affected**:
+- `src/components/LinkOverlay.tsx` - Add tooltip, define LinkData interface
+- `src/utils/linkHelpers.ts` - Additional metadata extraction
+- `src/models/Element.ts` - Keep getRelationships(), possibly add getLinkData()
+- Various components - Define hover data interfaces
 
 ---
 
-### Phase 10a: ✅ Add getDetailData() to Element Classes
-**Status**: ✅ COMPLETED (see Phase 7 in progress.md)
+### Unified Detail Box System
 
-### Phase 10b: ✅ Refactor DetailPanel
-**Status**: ✅ COMPLETED (see Phase 8 in progress.md)
-
-~~**[sg]**: noticed that DetailPanel calls element.getDetailData() repeatedly. call it once?~~
-**RESOLVED**: DetailPanel already called it once (correct). DetailDialog was calling it 3 times - fixed in Phase 6.5 Step 11.
-
-### Phase 10c: Unified Detail Box System
 **Goal**: Extract dialog management from App.tsx, merge DetailDialog/DetailPanelStack into unified system
 
 **Current state**:
@@ -469,9 +119,8 @@ src/components/
 **Mode behavior** (intelligent repositioning):
 - **Floating mode** (narrow screen): New boxes cascade from bottom-left
 - **Stacked mode** (wide screen): New boxes open in stack area
-  - [sg] consider changing layout to newest on bottom. then new boxes
-         can overlap so only header of previous shows. with step 1:click
-         bring to front, this should be ok.
+  - Consider changing layout to newest on bottom, then new boxes can overlap so only header of previous shows
+  - With click-to-front, this should work well
 - **Mode switch to stacked**: All boxes move to stack positions
 - **Mode switch to floating**:
   - User-repositioned boxes → restore custom position from URL state
@@ -482,6 +131,11 @@ src/components/
 - On mode switch, respect user customizations
 - Default positions don't persist
 
+**Important**:
+- Make sure new boxes are always fully visible:
+  - In stacked layout by scrolling
+  - In floating, by resetting vertical cascade position when necessary
+
 **Implementation steps**:
 
 1. **Create DetailBoxManager.tsx**
@@ -491,9 +145,6 @@ src/components/
    - Click/drag/resize → bring to front (move to end of array)
    - ESC closes first box (oldest)
    - Z-index based on array position
-   - [sg] make sure new boxes are always fully visible:
-     - in stacked layout by scrolling
-     - in floating, by resetting vertical cascade position when necessary
 
 2. **Update App.tsx**
    - Remove openDialogs management
@@ -510,53 +161,9 @@ src/components/
    - Test ESC behavior
    - Test mode switching with custom positions
 
-### [sg] Phase 10d: fix details for enums to use all the data
-   - enums tend to have either permissible values or instructions for
-     getting values from elsewhere, like:
-     ```yaml
-     CellularOrganismSpeciesEnum:
-       description: >-
-         A constrained set of enumerative values containing the NCBITaxon values for cellular organisms.
-       reachable_from:
-         source_ontology: obo:ncbitaxon
-         source_nodes:
-           - ncbitaxon:131567 ## Cellular Organisms
-         include_self: false
-         relationship_types:
-           - rdfs:subClassOf
-     ```
-   - will need to load prefixes in order to link these
-   - also look for other data in bdchm.yaml that isn't currently being captured
-
 ---
 
-### 🔄 Phase 11: Refactor App.tsx
-
-**Current state**: App.tsx is 600+ lines, too long
-
-**Extract logic into hooks**:
-- `hooks/useModelData.ts` - Data loading
-- `hooks/useLayoutState.ts` - Panel layout + expansion state (consolidate useExpansionState)
-- Keep App.tsx focused on composition
-
-**Note**: Dialog management extracted to DetailBoxManager in Phase 10c
-
-**Additional cleanup**:
-- Consolidate expansion state: Move from useExpansionState hook into statePersistence.ts
-- Remove dead code: Delete evc/ecn params from statePersistence.ts (replaced by lve/rve/lce/rce)
-
-**Files to create**:
-- `src/hooks/useModelData.ts`
-- `src/hooks/useDialogState.ts`
-- `src/hooks/useLayoutState.ts`
-
-**Files to modify**:
-- `src/App.tsx`
-- `src/utils/statePersistence.ts`
-
----
-
-### 🔴 🪲 Phase 12: Fix Dark Mode Display Issues
+### Fix Dark Mode Display Issues (HIGH PRIORITY)
 
 **Goal**: Fix readability issues in dark mode
 **Importance**: High - app currently unusable in dark mode
@@ -571,35 +178,54 @@ src/components/
 
 ---
 
-### ✨ Enhanced Link Hover Information
+## Future Work
 
-**Goal**: Display richer information when hovering over links between elements
+### Merge TESTING.md Files
 
-**Current state**: Links show basic info in console.log on hover (source → target with relationship)
+**Background**: TESTING.md was copied to root and diverged from docs/TESTING.md
 
-**Desired features**:
-- Tooltip or overlay showing:
-  - Relationship type (is_a, property, etc.)
-  - Slot name (for property relationships)
-  - Source element (name + type)
-  - Target element (name + type)
-  - Additional metadata as appropriate
+**Files**:
+- `TESTING.root-snapshot-2025-11-03.md` (4.6k) - Newer, condensed, Phase 6.4+ testing patterns
+- `docs/TESTING.md` (17k) - Older, comprehensive testing documentation
 
-**Implementation approach**:
-- Add tooltip component that follows cursor or attaches to link
-- Extract relationship details from Link object
-- Style appropriately to be readable but not intrusive
-
-**Files likely affected**:
-- `src/components/LinkOverlay.tsx` - Add tooltip rendering
-- `src/utils/linkHelpers.ts` - May need additional metadata extraction
+**Task**: Merge the newer Phase 6.4+ content into the comprehensive docs/TESTING.md, then delete snapshot
 
 ---
 
+### Detail Panel Enhancements
 
-### 🔄 Split Element.tsx into Separate Files
+**Enum Detail Improvements**:
+- Enums have either permissible values OR instructions for getting values from elsewhere
+- Example:
+  ```yaml
+  CellularOrganismSpeciesEnum:
+    description: >-
+      A constrained set of enumerative values containing the NCBITaxon values for cellular organisms.
+    reachable_from:
+      source_ontology: obo:ncbitaxon
+      source_nodes:
+        - ncbitaxon:131567 ## Cellular Organisms
+      include_self: false
+      relationship_types:
+        - rdfs:subClassOf
+  ```
+- Will need to load prefixes in order to link these
+- Also look for other data in bdchm.yaml that isn't currently being captured
 
-**Current state**: Element.tsx is 919 lines with 4 element classes + 4 collection classes
+**Slots Table Optimization**:
+- Verify: "DetailBox Slots table should put inherited slots at the top and referenced slots at the bottom"
+- Check if this is already the case or needs implementation
+
+**SlotCollection 2-Level Tree** (from Phase 6.4 Step 3.2):
+- Deferred - current flat SlotCollection is sufficient
+- Would show global slots + inline attributes from all classes
+- Each class becomes a root node with its attributes as children
+
+---
+
+### Split Element.ts into Separate Files
+
+**Current state**: Element.ts is 919 lines with 4 element classes + 4 collection classes
 
 **Target structure** (keep element class with its collection class in same file):
 - `models/Element.ts` (base Element and ElementCollection classes)
@@ -616,7 +242,7 @@ src/components/
 
 ---
 
-### 🔄 Overhaul Badge Display System
+### Overhaul Badge Display System
 
 **Goal**: Make badges more informative and clear about what counts they represent
 
@@ -634,15 +260,13 @@ src/components/
 **Implementation approach TBD** - Need to design before implementing
 
 **Files likely affected**:
-- `src/models/Element.tsx` - Replace simple `getBadge(): number` with richer badge info
+- `src/models/Element.ts` - Replace simple `getBadge(): number` with richer badge info
 - `src/components/Section.tsx` - Render multiple badges or labeled badges
 - `src/models/RenderableItem.ts` - Update badge field to support richer info
 
 ---
 
-## Future Ideas (Unprioritized)
-
-### 🔴 ✨ Search and Filter
+### Search and Filter
 
 **Potential importance**: High - major usability feature for exploring large schemas
 
@@ -658,7 +282,7 @@ src/components/
 
 ---
 
-### 🟡 ✨ Neighborhood Zoom
+### Neighborhood Zoom
 
 **Potential importance**: Medium - useful for focused exploration
 
@@ -670,7 +294,7 @@ src/components/
 
 ---
 
-### ✨ Enhanced Element Metadata Display
+### Enhanced Element Metadata Display
 
 Show additional relationship counts in tree view:
 - **Current**: Only variable count (e.g., "Condition (20)")
@@ -678,7 +302,7 @@ Show additional relationship counts in tree view:
 
 ---
 
-### ✨ Custom Preset Management
+### Custom Preset Management
 
 User-managed presets replacing hard-coded ones:
 - Save Preset button → prompts for name
@@ -687,7 +311,7 @@ User-managed presets replacing hard-coded ones:
 
 ---
 
-### ✨ Advanced Overview
+### Advanced Overview
 
 Multiple view modes and analytics:
 - Tree view (current)
@@ -698,7 +322,7 @@ Multiple view modes and analytics:
 
 ---
 
-### 📖 Terminology Consistency
+### Terminology Consistency
 
 **Goal**: Use consistent terminology throughout app
 **Importance**: Low - internal consistency improvement
@@ -720,7 +344,7 @@ Multiple view modes and analytics:
 
 ---
 
-### ✨ External Link Integration
+### External Link Integration
 
 **Goal**: Link prefixed IDs to external sites (OMOP, DUO, etc.)
 
@@ -731,7 +355,7 @@ Multiple view modes and analytics:
 
 ---
 
-### ✨ Feature Parity with Official Docs
+### Feature Parity with Official Docs
 
 Reference: https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/
 
@@ -744,7 +368,7 @@ Missing features:
 
 ---
 
-### 📖 GitHub Issue Management
+### GitHub Issue Management
 
 Issue: https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/issues/126
 - Make issue more concise
@@ -752,7 +376,7 @@ Issue: https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/issues/126
 
 ---
 
-### ⚡ Performance Optimizations
+### Performance Optimizations
 
 When working with larger models or slower devices:
 - **Virtualize long lists**: MeasurementObservation has 103 variables; consider react-window or react-virtual
@@ -761,14 +385,14 @@ When working with larger models or slower devices:
 
 ---
 
-### 📖 Review DOC_CONVENTIONS.md
+### Review DOC_CONVENTIONS.md
 
 **Goal**: Review DOC_CONVENTIONS.md and decide if there are parts worth keeping or integrating elsewhere
 **Importance**: Low - documentation maintenance
 
 ---
 
-### ✨ Semantic Relationship Features
+### Semantic Relationship Features
 
 **Context**: Semantic relationship patterns identified during analysis could be valuable for user-facing features
 
