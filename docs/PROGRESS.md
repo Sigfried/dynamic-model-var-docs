@@ -32,6 +32,7 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 - [Phase 6.5: Complete View/Model Separation](#phase-65-view-model-separation)
 - [Phase 7: Element.getDetailData() Implementation](#phase-7-getdetaildata)
 - [Phase 8: DetailPanel Refactoring](#phase-8-detailpanel)
+- [Phase 9: App.tsx Refactoring - Testable Hooks](#phase-9-app-refactoring)
 
 ---
 
@@ -1332,6 +1333,52 @@ function DetailPanel({ element }: { element: Element }) {
 
 ---
 
+## Phase 9: App.tsx Refactoring - Testable Hooks
+
+**Completed**: November 2025
+
+### Goal
+Extract complex state management logic from App.tsx into testable hooks, reducing component complexity and improving maintainability.
+
+### Changes
+
+**Extracted hooks**:
+- **`hooks/useModelData.ts`** - Data loading, loading/error states, debugging setup
+- **`hooks/useDialogState.ts`** - Dialog management, URL restoration (100+ lines), duplicate detection, CRUD operations
+- **`hooks/useLayoutState.ts`** - Panel layout, display mode calculation, localStorage persistence, save/reset/restore actions
+
+**File modifications**:
+- **`src/App.tsx`** - Reduced from 583 to 336 lines (42% reduction)
+  - Now focuses on hook composition and JSX rendering
+  - All complex logic extracted to dedicated hooks
+- **`src/utils/statePersistence.ts`** - Removed dead code (evc/ecn params replaced by lve/rve/lce/rce)
+
+### Benefits
+
+✅ **Testability** - Each concern can be tested in isolation
+✅ **Clarity** - Clearer separation of responsibilities
+✅ **Maintainability** - Easier to understand and modify
+✅ **Composition** - App.tsx focuses on what it should: composing UI from reusable pieces
+
+### Technical Details
+
+**Hook responsibilities**:
+- `useModelData`: Encapsulates async data loading with proper error handling
+- `useDialogState`: Manages dialog array lifecycle including complex URL restoration logic
+- `useLayoutState`: Coordinates panel sections, display mode, and persistence layers
+
+**Implementation notes**:
+- Each hook returns focused interface with only needed operations
+- Hooks properly coordinate via dependencies (e.g., layout state waits for URL restoration)
+- Type safety maintained throughout refactoring
+
+**Test results**:
+- TypeScript typecheck: ✅ Passes
+- Dev server: ✅ Runs clean
+- All functionality preserved
+
+---
+
 ## Testing
 
 **Current Coverage**: 160 tests across 9 test files (150 passing, 10 failing ⚠️)
@@ -1382,7 +1429,10 @@ src/
 │   ├── duplicateDetection.ts # Duplicate prevention
 │   └── panelHelpers.tsx       # Panel UI utilities
 ├── hooks/
-│   └── useExpansionState.ts   # Shared expansion state
+│   ├── useExpansionState.ts   # Shared expansion state
+│   ├── useModelData.ts        # Data loading logic
+│   ├── useDialogState.ts      # Dialog management
+│   └── useLayoutState.ts      # Panel layout & persistence
 └── test/                      # Comprehensive test suite
 ```
 
