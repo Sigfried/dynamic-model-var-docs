@@ -252,6 +252,9 @@ src/components/
 **Mode behavior** (intelligent repositioning):
 - **Floating mode** (narrow screen): New boxes cascade from bottom-left
 - **Stacked mode** (wide screen): New boxes open in stack area
+  - [sg] consider changing layout to newest on bottom. then new boxes
+         can overlap so only header of previous shows. with step 1:click
+         bring to front, this should be ok.
 - **Mode switch to stacked**: All boxes move to stack positions
 - **Mode switch to floating**:
   - User-repositioned boxes → restore custom position from URL state
@@ -271,6 +274,9 @@ src/components/
    - Click/drag/resize → bring to front (move to end of array)
    - ESC closes first box (oldest)
    - Z-index based on array position
+   - [sg] make sure new boxes are always fully visible:
+     - in stacked layout by scrolling
+     - in floating, by resetting vertical cascade position when necessary
 
 2. **Update App.tsx**
    - Remove openDialogs management
