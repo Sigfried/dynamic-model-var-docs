@@ -1,4 +1,13 @@
-// Must only import Element from models/, never concrete subclasses or DTOs
+/**
+ * Section Component
+ *
+ * Displays a single collection of elements in a tree/list view.
+ * Shows elements with badges, indicators (e.g., "abstract"), expansion controls,
+ * and hover interactions. Used by ElementsPanel to render Classes, Enums, Slots, or Variables.
+ *
+ * Architectural note: Must only import Element from models/, never concrete subclasses or DTOs.
+ * See CLAUDE.md for separation of concerns principles.
+ */
 import type { ElementCollection, ElementCollectionCallbacks } from '../models/Element';
 import type { RenderableItem } from '../models/RenderableItem';
 import { useExpansionState } from '../hooks/useExpansionState';

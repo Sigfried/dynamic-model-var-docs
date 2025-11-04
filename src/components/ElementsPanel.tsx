@@ -1,4 +1,13 @@
-// Must only import Element from models/, never concrete subclasses or DTOs
+/**
+ * ElementsPanel Component
+ *
+ * Manages multiple Section components (Classes, Enums, Slots, Variables) with toggle buttons.
+ * Displays sections in most-recently-selected order. Used for both left and right panels.
+ *
+ * Architectural note: Currently coupled to ElementTypeId and ELEMENT_TYPES registry.
+ * Phase 6.5 Step 4 will remove this coupling by accepting plain string IDs and metadata from App.tsx.
+ * See TASKS.md Phase 6.5 for refactoring plan.
+ */
 import Section from './Section';
 import type { ElementCollection, Element } from '../models/Element';
 import type { ElementTypeId } from '../models/ElementRegistry';

@@ -143,14 +143,207 @@ interface LinkData {
    - **Result**: Transformations now declarative and maintainable
    - **Tests**: 158 passing, type checking passes
 
-3. **Rename components**:
-   - `Section.tsx` → `CollectionSection.tsx`
-   - `ElementsPanel.tsx` → `CollectionsPanel.tsx`
-   - Update all imports
+3. **Rename components**: ❌ SKIPPED
+   - Keep current names: Section.tsx, ElementsPanel.tsx
+   - Add clear documentation at top of each file explaining purpose
 
-4. **Define component data interfaces**:
-   - Move interfaces to component files
-   - Components import these, Element imports from components
+4. **Define component data interfaces and refactor component data access**:
+
+   **Investigation findings**:
+
+   1. ✅ `toRenderableItems()` - Still needed, used by Collections
+   2. ❌ `renderPanelSection()` and `renderDetails()` - DEAD CODE, not called anywhere
+   3. ✅ `getDetailData()` - Already correct pattern in DetailPanel.tsx
+
+   **Component model access audit**:
+
+   **Section.tsx** accesses:
+   - `item.element.type` (lines 23, 47, 48, 49) - Used for: color lookup, DOM IDs, hover handlers
+   - `item.element.name` (lines 27, 37, 45, 49, 74) - Used for: hover handlers, display, toggle state
+   - `element.isAbstract()` (line 77) - Used for: "abstract" indicator
+   - `ELEMENT_TYPES[element.type]` (line 23) - Used for: color lookup
+   - `item.level`, `item.hasChildren`, `item.isExpanded`, `item.isClickable`, `item.badge` from RenderableItem
+
+   **ElementsPanel.tsx** accesses:
+   - `ElementTypeId` type (lines 3, 8, 10, 11, 17) - Strongly coupled to model types
+   - `ELEMENT_TYPES` registry (line 4, 23) - For icons, colors, labels
+   - `element.type` (line 97) - Passed to onSelectElement callback
+
+   **DetailPanel.tsx**:
+   - ✅ Only uses `element.getDetailData()` - already correct!
+
+   **Refactoring approach**:
+
+   Components define their own data interfaces with UI-focused property names:
+
+   ```typescript
+   // Section.tsx - Component defines what it needs for one item
+   interface SectionItemData {
+     // Identity (used for both DOM id and React key)
+     id: string;                     // "lp-Specimen" (from element.getId(context))
+
+     // Display
+     displayName: string;            // "Specimen"
+     level: number;                  // Indentation depth
+
+     // Visual styling
+     badgeColor?: string;            // Tailwind: "bg-blue-100 text-blue-800"
+     badgeText?: string;             // "103"
+     indicators?: Array<{            // Replaces isAbstract() check
+       text: string;                 // "abstract"
+       color: string;                // Tailwind: "text-purple-600"
+     }>;
+
+     // Interaction
+     hasChildren?: boolean;
+     isExpanded?: boolean;
+     isClickable: boolean;
+
+     // Event data (opaque to component, passed through to callbacks)
+     hoverData: {
+       type: string;                 // "class" (component treats as opaque)
+       name: string;                 // "Specimen"
+     };
+   }
+
+   // Section.tsx - Component defines what data it needs for the whole section
+   interface SectionData {
+     id: string;                     // "class"
+     label: string;                  // "Classes"
+     items: SectionItemData[];       // The tree/list items
+     expansionKey?: string;          // For state persistence ("lp-class")
+     defaultExpansion?: Set<string>; // Default expanded items
+   }
+   ```
+
+   Element adapts to provide this data:
+
+   ```typescript
+   // Element.tsx
+   import type { SectionItemData } from '../components/Section';
+
+   abstract class Element {
+     // Expose id as getter that calls getId() with appropriate context
+     get id(): string {
+       return this.getId();
+     }
+
+     // Context-aware ID generation (already exists, just not used yet)
+     getId(context?: 'leftPanel' | 'rightPanel' | 'detailBox'): string {
+       const prefix = context === 'leftPanel' ? 'lp-'
+         : context === 'rightPanel' ? 'rp-'
+         : context === 'detailBox' ? 'db-'
+         : '';
+       return prefix + this.name;
+     }
+
+     getSectionItemData(context: 'leftPanel' | 'rightPanel'): SectionItemData {
+       const typeInfo = ELEMENT_TYPES[this.type];
+       return {
+         id: this.getId(context),
+         displayName: this.name,
+         level: 0, // Set by tree traversal
+         badgeColor: `${typeInfo.color.badgeBg} ${typeInfo.color.badgeText}`,
+         badgeText: this.getBadge()?.toString(),
+         indicators: this.getIndicators(),
+         hasChildren: this.children.length > 0,
+         isExpanded: false, // Set by tree traversal
+         isClickable: true,
+         hoverData: {
+           type: this.type,
+           name: this.name
+         }
+       };
+     }
+
+     // New polymorphic method - replaces isAbstract() check in component
+     getIndicators(): Array<{ text: string; color: string }> {
+       return []; // Override in subclasses
+     }
+   }
+
+   class ClassElement extends Element {
+     getIndicators(): Array<{ text: string; color: string }> {
+       if (this.isAbstract()) {
+         return [{ text: 'abstract', color: 'text-purple-600 dark:text-purple-400' }];
+       }
+       return [];
+     }
+   }
+   ```
+
+   **ElementsPanel.tsx refactoring**:
+
+   ```typescript
+   // ElementsPanel.tsx - Component defines what it needs for toggle buttons
+   interface ToggleButtonData {
+     id: string;                     // "class" (not ElementTypeId!)
+     icon: string;                   // "C"
+     label: string;                  // "Classes"
+     activeColor: string;            // Tailwind: "bg-blue-500"
+     inactiveColor: string;          // Tailwind: "bg-gray-300"
+   }
+
+   interface ElementsPanelProps {
+     position: 'left' | 'right';
+     visibleSections: string[];                   // IDs of visible sections (order matters)
+     onVisibleSectionsChange: (sections: string[]) => void;
+     sectionData: Map<string, SectionData>;       // Data for each section
+     toggleButtons: ToggleButtonData[];           // Metadata for toggle buttons (from App)
+     onSelectElement: (element: Element, elementType: string) => void;
+     onElementHover?: (element: { type: string; name: string }) => void;
+     onElementLeave?: () => void;
+   }
+   ```
+
+   **Implementation steps**:
+
+   a. **Delete dead JSX methods from Element.tsx**:
+      - Remove abstract methods: `renderPanelSection()`, `renderDetails()`
+      - Remove implementations in ClassElement, EnumElement, SlotElement, VariableElement
+      - Rename Element.tsx → Element.ts (no more JSX)
+
+   b. **Add indicators system and id getter**:
+      - Add `get id()` getter that calls `getId()` (expose existing method)
+      - Add `getIndicators()` method to Element base class
+      - Implement in ClassElement for "abstract" indicator
+      - Keep `isAbstract()` protected (used internally by getIndicators)
+
+   c. **Refactor Section.tsx**:
+      - Define `SectionItemData` interface in Section.tsx (item display data)
+      - Define `SectionData` interface in Section.tsx (full section data)
+      - Update component to accept `SectionData` instead of `ElementCollection`
+      - Update ItemRenderer to only use SectionItemData properties
+      - Remove direct access to element.type, element.isAbstract(), ELEMENT_TYPES
+      - Element.tsx imports: `import type { SectionItemData } from '../components/Section'`
+      - Add `Element.getSectionItemData(context)` method
+      - Update Collections to build SectionData (with getSectionItemData() for items)
+
+   d. **Refactor ElementsPanel.tsx**:
+      - Define `ToggleButtonData` interface (toggle button metadata)
+      - Change all `ElementTypeId` → `string`
+      - Change `collections: Map<ElementTypeId, ElementCollection>` → `sectionData: Map<string, SectionData>`
+      - Accept `toggleButtons: ToggleButtonData[]` from App.tsx
+      - Remove all imports of ElementTypeId, ELEMENT_TYPES, ElementRegistry
+      - Component becomes fully type-agnostic
+
+   e. **Update App.tsx**:
+      - Build `ToggleButtonData[]` from ELEMENT_TYPES registry (one-time coupling at app level)
+      - Convert Collections to `Map<string, SectionData>` before passing to ElementsPanel
+      - Update all ElementTypeId types to string
+
+   f. **Consider RenderableItem.ts**:
+      - Evaluate if this is redundant with SectionItemData
+      - If kept, clarify it's an internal Collection structure, not a component interface
+      - If removed, Collections build SectionItemData directly
+
+   **Files to modify**:
+   - `src/models/Element.tsx` → `Element.ts` (delete JSX, add getSectionItemData, getIndicators, id getter)
+   - `src/components/Section.tsx` (define SectionItemData/SectionData, use them)
+   - `src/components/ElementsPanel.tsx` (remove ElementTypeId coupling, use ToggleButtonData)
+   - `src/App.tsx` (build toggle button data, convert collections to SectionData)
+   - All Collection classes in Element.tsx (build SectionData)
+   - `src/models/RenderableItem.ts` (possibly delete or clarify purpose)
 
 5. **Update Element methods**:
    - Add: `getCollectionItemData(context: PanelContext): CollectionItemData`

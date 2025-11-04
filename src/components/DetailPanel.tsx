@@ -1,4 +1,14 @@
-// Must only import Element from models/, never concrete subclasses or DTOs
+/**
+ * DetailPanel Component
+ *
+ * Renders detailed information about a selected element (Class, Enum, Slot, or Variable).
+ * Displays title, description, and sections with tables (e.g., slots, permissible values).
+ * Used within DetailDialog (floating) and DetailPanelStack (stacked) wrappers.
+ *
+ * Architectural note: Uses element.getDetailData() polymorphic method - correct pattern!
+ * This component is fully decoupled from model types and uses pure data-driven rendering.
+ * Must only import Element from models/, never concrete subclasses or DTOs.
+ */
 import React from 'react';
 import type { Element } from '../models/Element';
 
