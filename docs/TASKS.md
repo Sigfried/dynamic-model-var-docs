@@ -395,6 +395,8 @@ interface LinkData {
   - Deferred - current flat SlotCollection is sufficient
   - Would show global slots + inline attributes from all classes
   - Each class becomes a root node with its attributes as children
+- DetailBox Slots table should put inherited slots at the top and
+  (already the case?) referenced slots at the bottom
 
 ---
 
@@ -485,6 +487,24 @@ src/components/
    - Test click-to-front
    - Test ESC behavior
    - Test mode switching with custom positions
+
+### [sg] Phase 10d: fix details for enums to use all the data
+   - enums tend to have either permissible values or instructions for
+     getting values from elsewhere, like:
+     ```yaml
+     CellularOrganismSpeciesEnum:
+       description: >-
+         A constrained set of enumerative values containing the NCBITaxon values for cellular organisms.
+       reachable_from:
+         source_ontology: obo:ncbitaxon
+         source_nodes:
+           - ncbitaxon:131567 ## Cellular Organisms
+         include_self: false
+         relationship_types:
+           - rdfs:subClassOf
+     ```
+   - will need to load prefixes in order to link these
+   - also look for other data in bdchm.yaml that isn't currently being captured
 
 ---
 
