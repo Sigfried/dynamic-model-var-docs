@@ -57,8 +57,7 @@ export interface DetailData {
 
 // Base abstract class for all element types
 export abstract class Element {
-  // TODO Phase 6.5: Make protected again once components use polymorphic methods
-  abstract readonly type: ElementTypeId;  // Temporarily public to fix build errors
+  protected abstract readonly type: ElementTypeId;
   abstract readonly name: string;
   abstract readonly description: string | undefined;
 

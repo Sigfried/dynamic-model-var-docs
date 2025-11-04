@@ -383,7 +383,20 @@ interface LinkData {
    - ✅ Type checking passes
    - ✅ Components use SectionItemData/SectionData/ToggleButtonData interfaces
    - ✅ True view/model separation achieved
-    - Type checking passes
+
+✅ **Step 10: Make element.type protected** (COMPLETE)
+   - ✅ Changed `type` from public to `protected` in Element.ts
+   - ✅ Removed TODO comment about making type protected
+   - ✅ Verified no components access `element.type` directly
+   - ✅ Type checking passes (no errors)
+   - ✅ All 158 tests passing
+   - **Result**: Complete architectural separation - view layer cannot access model type information
+
+✅ **Step 11: Optimize DetailDialog getDetailData() calls** (COMPLETE)
+   - ✅ Fixed DetailDialog to call `element.getDetailData()` once instead of 3 times
+   - ✅ Cached result in `detailData` variable at component top
+   - ✅ Type checking passes
+   - **Result**: More efficient rendering, reduced method calls
 
 **Files to modify**:
 - `src/models/Element.tsx`
@@ -424,7 +437,8 @@ interface LinkData {
 ### Phase 10b: ✅ Refactor DetailPanel
 **Status**: ✅ COMPLETED (see Phase 8 in progress.md)
 
-**[sg]**: noticed that DetailPanel calls element.getDetailData() repeatedly. call it once?
+~~**[sg]**: noticed that DetailPanel calls element.getDetailData() repeatedly. call it once?~~
+**RESOLVED**: DetailPanel already called it once (correct). DetailDialog was calling it 3 times - fixed in Phase 6.5 Step 11.
 
 ### Phase 10c: Unified Detail Box System
 **Goal**: Extract dialog management from App.tsx, merge DetailDialog/DetailPanelStack into unified system

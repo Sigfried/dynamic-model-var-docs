@@ -145,6 +145,9 @@ export default function DetailDialog({
     }
   }, [isDragging, isResizing, dragOffset, resizeStart, position, size]);
 
+  // Get detail data once (not in render multiple times)
+  const detailData = element.getDetailData();
+
   return (
     <div
       ref={dialogRef}
@@ -170,13 +173,13 @@ export default function DetailDialog({
 
       {/* Draggable header */}
       <div
-        className={`flex items-center justify-between px-4 py-2 ${element.getDetailData().titleColor} text-white border-b cursor-move rounded-t-lg`}
+        className={`flex items-center justify-between px-4 py-2 ${detailData.titleColor} text-white border-b cursor-move rounded-t-lg`}
         onMouseDown={handleDragStart}
       >
         <div className="min-w-0 flex-1">
-          <div className="font-semibold truncate">{element.getDetailData().title}</div>
-          {element.getDetailData().subtitle && (
-            <div className="text-sm opacity-90">{element.getDetailData().subtitle}</div>
+          <div className="font-semibold truncate">{detailData.title}</div>
+          {detailData.subtitle && (
+            <div className="text-sm opacity-90">{detailData.subtitle}</div>
           )}
         </div>
         <button
