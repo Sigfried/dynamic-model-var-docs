@@ -28,655 +28,13 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 - [Phase 4: Documentation Structure](#phase-4-docs)
 - [Phase 5: Collections Store Elements & Data-Driven Rendering](#phase-5-elements)
 - [Phase 6: 🔒 Architectural Enforcement](#phase-6-enforcement)
+- [Phase 6.4: DTO/Data Architecture Cleanup](#phase-64-dto-cleanup)
+- [Phase 6.5: Complete View/Model Separation](#phase-65-view-model-separation)
 - [Phase 7: Element.getDetailData() Implementation](#phase-7-getdetaildata)
 - [Phase 8: DetailPanel Refactoring](#phase-8-detailpanel)
 
 ---
 
-
----
-
-## Recent Development Log (Phase 6.4+)
-
-## 2025-11-04: Phase 6.5 COMPLETE - Complete View/Model Separation
-
-**Goal**: Truly separate view from model. Components define their own data contracts, Element adapts to provide that data. Components never know about element types, ElementRegistry, or model structure.
-
-**Core Principle**: Each component defines what data it needs with property names that make sense for that component. Element implements methods to provide that data. Components are completely ignorant of the model structure.
-
-**All Steps Completed**:
-
-1. ✅ **Step 1: Revert Phase 9 & Add ID System**
-   - Removed failed `getType()`, `getParentName()`, `isAbstractClass()` methods
-   - Made `type` protected (temporarily public during refactor)
-   - Added `getId(context?: IdContext)` to Element base class
-   - Added `id: string` property to all ElementCollection classes
-
-2. ✅ **Step 2: Move field name changes to declarative mapping spec**
-   - Created FIELD_MAPPINGS in types.ts with FieldMapping interface
-   - Created generic transformWithMapping() function in dataLoader.ts
-   - Updated all transform functions to use mapping specs
-   - Result: Transformations now declarative and maintainable
-
-3. ⏭️ **Step 3: Rename components** (SKIPPED)
-   - Kept current names: Section.tsx, ElementsPanel.tsx
-   - Added clear documentation at top of each file
-
-4. ✅ **Step 4: Define component data interfaces and refactor component data access**
-   - Removed dead JSX methods: `renderPanelSection()`, `renderDetails()` (not called anywhere)
-   - Kept `getDetailData()` - already correct pattern in DetailPanel.tsx
-   - Component model access audit confirmed Section.tsx and ElementsPanel.tsx need refactoring
-
-5. ✅ **Step 5: Update Element methods**
-   - Added: `getSectionItemData(context, level, isExpanded, isClickable, hasChildren?)`
-   - Added: `toSectionItems()` for tree traversal with expansion state
-   - Added: `get id()` getter for convenient ID access
-   - Added: `getIndicators()` method returning badges array (implemented in ClassElement for "abstract")
-   - Removed: `renderPanelSection()`, `renderDetails()`, `renderName()` (obsolete JSX)
-
-6. ✅ **Step 6: Update Collections**
-   - Added: `getSectionData(position)` returns SectionData with getItems() function
-   - Kept: `getRenderableItems()` (still used internally, marked in RenderableItem.ts as internal)
-   - Kept: `id` property on each collection class (added in Step 1)
-
-7. ✅ **Step 7: Remove type coupling from components**
-   - ElementsPanel: Changed `sections: ElementTypeId[]` → `sections: string[]`
-   - App.tsx: Changed `leftSections/rightSections: ElementTypeId[]` → `string[]`
-   - Removed all `ElementTypeId` imports from Section.tsx and ElementsPanel.tsx
-   - Removed all `ELEMENT_TYPES` imports from Section.tsx and ElementsPanel.tsx
-   - App.tsx builds ToggleButtonData and SectionData from ELEMENT_TYPES (one-time coupling)
-
-8. ✅ **Step 8: Cleanup**
-   - Removed obsolete JSX methods from all Element subclasses
-   - Renamed Element.tsx → Element.ts (no more JSX in model layer)
-   - Removed React import from Element.ts
-   - Marked RenderableItem.ts as deprecated/internal
-   - Fixed JSDoc comment reference (Element.tsx → Element.ts)
-   - Added toggleActive/toggleInactive to ElementRegistry for Tailwind JIT compiler
-
-9. ✅ **Step 9: Verify architectural compliance**
-   - No component imports ElementTypeId (verified)
-   - No component imports ELEMENT_TYPES from components (App.tsx uses it to build data)
-   - No component imports ElementRegistry from components
-   - All 158 tests passing
-   - Type checking passes
-   - Components use SectionItemData/SectionData/ToggleButtonData interfaces
-
-10. ✅ **Step 10: Make element.type protected**
-    - Changed `type` from public to `protected` in Element.ts
-    - Removed TODO comment about making type protected
-    - Verified no components access `element.type` directly
-    - Type checking passes (no errors)
-    - All 158 tests passing
-    - **Result**: Complete architectural separation - view layer cannot access model type information
-
-11. ✅ **Step 11: Optimize DetailDialog getDetailData() calls**
-    - Fixed DetailDialog to call `element.getDetailData()` once instead of 3 times
-    - Cached result in `detailData` variable at component top
-    - Type checking passes
-    - **Result**: More efficient rendering, reduced method calls
-
-**Final Architecture**:
-```typescript
-// Component defines its contract
-interface SectionItemData {
-  id: string;                // from element.getId(context)
-  displayName: string;
-  badgeColor?: string;
-  indicators?: Array<{ text: string; color: string }>;
-  // ... all UI-focused properties
-}
-
-// Element adapts to component's needs
-import type { SectionItemData } from '../components/Section';
-getSectionItemData(context: 'leftPanel' | 'rightPanel'): SectionItemData { ... }
-```
-
-**Results**:
-- ✅ **158 tests passing** (2 skipped)
-- ✅ **Type checking passes**
-- ✅ **True view/model separation achieved** - components cannot access `element.type`
-- ✅ **Components only use data interfaces** - no Element method calls during render
-- ✅ **Polymorphic adaptation** - Element provides data in component-specific formats
-
-**Files Modified**:
-- `src/models/Element.tsx` → `Element.ts` (no JSX, added data adapters)
-- `src/components/Section.tsx` (uses SectionItemData)
-- `src/components/ElementsPanel.tsx` (uses ToggleButtonData, SectionData)
-- `src/components/DetailDialog.tsx` (optimized getDetailData calls)
-- `src/App.tsx` (builds toggle button data, converts collections)
-- `src/utils/dataLoader.ts` (declarative field mappings)
-- `src/types.ts` (added FIELD_MAPPINGS)
-
-**Deferred Work**:
-- LinkOverlay refactoring to use new patterns
-- Component files define their own hover handler contracts
-- Step 3.2 from Phase 6.4: Convert SlotCollection to 2-level tree
-- DetailBox Slots table optimization
-
-**Impact**: This phase completes the architectural vision from CLAUDE.md. The view layer is now truly separated from the model layer, with TypeScript enforcing that components cannot know about model-specific types.
-
----
-
-## 2025-11-04: Phase 6.4 COMPLETE - DTO/Data Architecture Cleanup
-
-**Goal**: Eliminate unnecessary DTO layer complexity and establish clean data transformation pipeline.
-
-**All Steps Completed**:
-1. ✅ **Step 1: Foundation** - Removed `[key: string]: unknown`, renamed DTOs for clarity
-2. ✅ **Step 2: Tree Capabilities** - Element base class has built-in tree support (parent, children, ancestorList, traverse)
-3. ✅ **Step 3: Slot System Expansion** - ClassSlot class with inheritance (collectAllSlots, getInheritedFrom)
-4. ✅ **Step 4: DataLoader Simplification** - DTO→Data transformation pipeline, initializeModelData() orchestration
-5. ✅ **Step 5: On-Demand Computation** - getUsedByClasses() for EnumElement and SlotElement
-6. ✅ **Step 6: Cleanup** - Deleted Tree.ts, use Element tree directly
-
-**Final Architecture**:
-```
-Raw JSON (snake_case) → DTOs (*DTO interfaces)
-  → [dataLoader: transforms] → Data (*Data interfaces, camelCase)
-  → [initializeModelData: orchestrates] → Collections (Element instances)
-```
-
-**Key Transformations**:
-- `bdchmElement` → `classId`
-- `slot_usage` → `slotUsage`
-- `slot_uri` → `slotUri`
-- `permissible_values` → `permissibleValues`
-- `*Metadata` types → `*Data` types
-
-**Results**:
-- ✅ **158 tests passing** (2 skipped)
-- ✅ **Type checking passes**
-- ✅ ~250 lines removed (Tree.ts deleted)
-- ✅ Clear data flow: Raw JSON → DTO → Data → Elements
-- ✅ On-demand computation eliminates pre-computed fields
-- ✅ Slot inheritance fully modeled with ClassSlot system
-
-**Deferred to Phase 6.5** (tracked in TASKS.md):
-- Remove deprecated DTO imports from Element.tsx
-- Fix `*Metadata` references in docs
-- Remove JSX methods (renderPanelSection, renderDetails)
-- Rename Element.tsx → Element.ts
-- Step 3.2: Convert SlotCollection to 2-level tree
-
-**Archived**: PHASE_6.4_PLAN.md → archive/PHASE_6.4_PLAN.md
-
----
-
-## 2025-11-04: Phase 6.4 Step 3 - ClassSlot Implementation and Slot Inheritance
-
-**Task**: Implement ClassSlot wrapper class and show inherited slots in UI
-
-**Problem**:
-1. Need to model slot overrides from slot_usage and inline attributes as unified ClassSlot system
-2. Class detail panels didn't show inherited slots from parent classes
-3. No visual distinction between attributes, slot_usage, and slot references
-
-**Solution**:
-1. Created ClassSlot class wrapping SlotElement with class-specific overrides
-2. Implemented collectAllSlots() for recursive slot inheritance
-3. Added getInheritedFrom() to track original defining class
-4. Updated UI to show all slots with source type and inheritance info
-
-**Changes Made**:
-
-### 1. ClassSlot Class (Element.tsx:253-333)
-
-New class with:
-- `baseSlot: SlotElement` - Reference to global slot or synthetic slot for attributes
-- `source: 'attribute' | 'slot_usage' | 'slot_reference'` - Where slot came from
-- Override properties: `range?`, `required?`, `multivalued?`, `description?`
-- `getEffective*()` methods with fallback chain: override → baseSlot → default
-- `isOverridden()` checks if any overrides are set
-
-### 2. ClassElement Updates
-
-**Constructor changes (Element.tsx:389-471)**:
-- Now accepts `slotCollection` parameter
-- Creates ClassSlots for three sources:
-  1. Attributes: Creates synthetic SlotElement, source='attribute'
-  2. slot_usage: References global SlotElement with overrides, source='slot_usage'
-  3. slots array: References global SlotElement, source='slot_reference'
-- Stores all in `classSlots: ClassSlot[]` property
-
-**collectAllSlots() method (Element.tsx:393-412)**:
-- Recursively merges slots from this class and all parent classes
-- Child slots override parent slots with same name (correct precedence)
-- Returns `Record<string, ClassSlot>` with all effective slots
-
-**getInheritedFrom() method (Element.tsx:369-385)**:
-- Recursively finds the original class that defined a slot
-- Returns empty string if slot is direct (not inherited)
-- Used for UI display of inheritance chain
-
-### 3. UI Changes (Element.tsx:553-592)
-
-**Unified slot display in getDetailData()**:
-- Replaced 3 separate sections (Attributes, Slot Usage, Referenced Slots)
-- Single "Slots (includes inherited)" section showing all slots
-- Table columns: Name | Source | Range | Required | Multivalued | Description
-
-**Source column shows**:
-- "Attribute" - inline attribute definition
-- "Slot Override" - from slot_usage
-- "Slot Reference" - from slots array
-- Inheritance suffix: "(from Entity)" for inherited slots
-
-Example: Participant class shows `id` slot as "Slot Reference (from Entity)"
-
-### 4. Test Updates
-
-**DetailPanel test (src/test/DetailPanel.test.tsx)**:
-- Updated createMockSlotCollection() to provide testSlot and usedSlot
-- Consolidated 3 separate slot section tests into single unified test
-- Verifies all slot types appear in unified table
-
-**Other test files**:
-- Updated 4 test files to pass SlotCollection to ClassElement constructor
-- All tests pass with new constructor signature
-
-**Results**:
-- ✅ **158 tests passing** (2 skipped)
-- ✅ **Type checking passes**
-- ✅ Inherited slots visible in UI with clear source indication
-- ✅ Slot override system properly modeled
-
-**Design Decisions**:
-
-1. **ClassSlot uses direct properties**: `range`, `required` not `rangeOverride`, `requiredOverride`
-   - Cleaner API: `slot.getEffectiveRange()` vs `slot.rangeOverride ?? slot.baseSlot.range`
-   - Original values accessible via `baseSlot` reference
-
-2. **Source tracking**: Three distinct sources clearly labeled in UI
-   - Users can distinguish inline attributes from global slot references
-   - Overrides clearly marked as "Slot Override"
-
-3. **Inheritance display**: Combined into Source column for compact layout
-   - Before: separate "Inherited From" column
-   - After: "Slot Reference (from Entity)" in Source column
-
-4. **No synthetic slots for production**: Tests provide proper SlotCollection
-   - Inheritance works through parent's ClassSlots, not synthetic creation
-   - collectAllSlots() recursively pulls from parent classes
-
-**Impact**: Completes Phase 6.4 Step 3.1 and 3.3. Step 3.2 (2-level SlotCollection) deferred.
-
-**Next Steps**:
-- Phase 6.4 Step 4.2: Collection orchestration function (minor cleanup)
-- Phase 6.5: Complete View/Model Separation
-- Or further slot system work if needed
-
----
-
-## 2025-11-03: Phase 6.4 Step 6 - Delete Tree.ts and Use Element Tree Directly
-
-**Task**: Eliminate Tree/TreeNode wrapper classes and use Element.children directly
-
-**Problem**: Collections were building TreeNode wrappers around Elements, then passing them to Tree class, which duplicated the tree structure already present in Element.parent/Element.children. This added complexity and memory overhead for no benefit.
-
-**Solution**:
-1. Added `toRenderableItems()` method to Element base class (moved from Tree class)
-2. Updated all Collection classes to store Element[] roots instead of Tree instances
-3. Collections now call element.toRenderableItems() directly
-4. Deleted src/models/Tree.ts entirely
-
-**Changes Made**:
-
-### 1. Element.toRenderableItems() Method
-
-**File**: `src/models/Element.tsx:154-192`
-
-Added method to Element base class:
-```typescript
-toRenderableItems(
-  expandedItems: Set<string>,
-  getIsClickable?: (element: Element, level: number) => boolean,
-  level: number = 0
-): RenderableItem[] {
-  const items: RenderableItem[] = [];
-  const hasChildren = this.children.length > 0;
-  const isExpanded = expandedItems.has(this.name);
-  const isClickable = getIsClickable ? getIsClickable(this, level) : true;
-
-  items.push({
-    id: `${this.type}-${this.name}`,
-    element: this,
-    level,
-    hasChildren,
-    isExpanded,
-    isClickable,
-    badge: this.getBadge()
-  });
-
-  // Only traverse children if expanded
-  if (isExpanded) {
-    this.children.forEach(child => {
-      items.push(...child.toRenderableItems(expandedItems, getIsClickable, level + 1));
-    });
-  }
-
-  return items;
-}
-```
-
-**Logic**:
-- Recursively builds flat RenderableItem[] from tree structure
-- Respects expansion state (collapsed nodes don't show children)
-- Supports optional getIsClickable callback for custom clickability logic
-- Uses Element.children for traversal
-
-### 2. EnumCollection & SlotCollection Updates
-
-**Files**:
-- `src/models/Element.tsx:999-1052` (EnumCollection)
-- `src/models/Element.tsx:1054-1117` (SlotCollection)
-
-**Changes**:
-- `private tree: Tree<EnumElement>` → `private roots: EnumElement[]`
-- `constructor(tree: Tree<EnumElement>)` → `constructor(roots: EnumElement[])`
-- `fromData()`: Removed TreeNode wrapper creation, directly created Element array
-- `getElement()`: Changed from `tree.find()` to `roots.find()`
-- `getAllElements()`: Changed from `tree.flatten()` to `return this.roots`
-- `getRenderableItems()`: Loop over roots calling `root.toRenderableItems()`
-- `getLabel()`: Changed from `tree.roots.length` to `this.roots.length`
-
-### 3. ClassCollection Updates
-
-**File**: `src/models/Element.tsx:1119-1236`
-
-**Changes**:
-- `private tree: Tree` → `private roots: ClassElement[]`
-- `constructor(tree: Tree)` → `constructor(roots: ClassElement[])`
-- Removed newConstructor() stub (obsolete)
-- `fromData()`: Deleted TreeNode wrapper creation (lines 1177-1198 removed)
-- `getElement()`: Implemented tree search using Element.children recursion
-- `getAllElements()`: Uses `root.traverse()` to flatten tree
-- `getRootElements()`: Simply returns `this.roots`
-- `getDefaultExpansion()`: Works with Element instead of TreeNode
-- `getRenderableItems()`: Loop over roots calling `root.toRenderableItems()`
-
-**fromData() simplification**: After wiring Element.parent/Element.children and sorting (lines 1146-1168), directly returns `new ClassCollection(roots)` - no more TreeNode wrapper creation.
-
-### 4. VariableCollection Updates
-
-**File**: `src/models/Element.tsx:1238-1361`
-
-**Changes**:
-- `private tree: Tree<Element>` → `private roots: ClassElement[]` + `private groupedByClass: Map<string, VariableElement[]>`
-- Constructor signature changed to accept roots, groupedByClass, and variables arrays
-- `fromData()`: Removed TreeNode wrapper creation (lines 1280-1306 removed)
-- `getRenderableItems()`: Manually builds 2-level items array
-  - ClassElement headers at level 0 (non-clickable)
-  - VariableElements at level 1 (clickable, shown if parent expanded)
-
-**Design decision**: VariableCollection doesn't modify ClassElement.children (which contain class hierarchy). Instead, it stores groupedByClass Map and builds RenderableItems on-demand in getRenderableItems().
-
-### 5. Deleted Tree.ts
-
-**File**: `src/models/Tree.ts` (deleted)
-
-Removed entire file:
-- TreeNode class
-- Tree class (with find, flatten, toRenderableItems, map, getLevel methods)
-- buildTree() function
-
-**File**: `src/models/Element.tsx:19`
-- Removed import: `import { Tree, TreeNode, buildTree } from './Tree';`
-
-**Results**:
-- ✅ **160 tests passing** (same as before)
-- ✅ **Type checking passes**
-- ✅ Tree.ts completely eliminated
-- ✅ All Collections use Element.children directly
-
-**Code Reduction**:
-- Deleted ~225 lines (Tree.ts)
-- Simplified Collection classes (removed TreeNode wrapper creation)
-- Net reduction: ~250 lines of code
-
-**Benefits**:
-- Single tree representation (Element.parent/children) instead of two (Element tree + TreeNode tree)
-- Reduced memory overhead (no TreeNode wrapper objects)
-- Simpler mental model for developers
-- Cleaner API: `root.toRenderableItems()` vs `tree.toRenderableItems()`
-- Element tree capabilities available everywhere, not just in Collections
-
-**Impact**: Completes Step 6 of Phase 6.4. Tree.ts elimination is complete.
-
-**Next Steps**: Step 3 (Slot System Expansion) or Phase 6.5 (Complete View/Model Separation)
-
----
-
-## 2025-11-03: Phase 6.4 Step 5 - Implement getUsedByClasses()
-
-**Task**: Implement on-demand computation of "used by classes" for EnumElement and SlotElement
-
-**Problem**: EnumElement and SlotElement detail panels should show which classes use them, but this was returning empty arrays (placeholder implementation). Phase 4 removed pre-computed reverse indices (buildReverseIndices() was never called), so this needed proper on-demand computation.
-
-**Solution**: Implemented custom scanning logic for each element type following the plan's guidance to "avoid generic path expression abstraction".
-
-**Changes Made**:
-
-### 1. Global ClassCollection Reference
-
-**File**: `src/models/Element.tsx:181-190`
-
-Added module-level pattern (similar to existing `nameToTypeMap`):
-```typescript
-let globalClassCollection: ClassCollection | null = null;
-
-export function initializeClassCollection(collection: ClassCollection): void {
-  globalClassCollection = collection;
-}
-```
-
-**File**: `src/utils/dataLoader.ts:11,97`
-- Import `initializeClassCollection`
-- Call it after creating `classCollection` to initialize global reference
-
-### 2. EnumElement.getUsedByClasses()
-
-**File**: `src/models/Element.tsx:549-575`
-
-**Algorithm**:
-1. Guard against uninitialized globalClassCollection
-2. Iterate through all classes
-3. For each class, check all attributes for `range === this.name`
-4. Add class name to results (only once per class, using break)
-5. Return sorted array
-
-**Example**: EnumElement "SpecimenTypeEnum" scans all classes, finds Specimen class has attribute `specimen_type: { range: "SpecimenTypeEnum" }`, returns `["Specimen"]`
-
-### 3. SlotElement.getUsedByClasses()
-
-**File**: `src/models/Element.tsx:759-786`
-
-**Algorithm**:
-1. Guard against uninitialized globalClassCollection
-2. Iterate through all classes
-3. Check two locations:
-   - `cls.slots` array: Does it include this slot name?
-   - `cls.slot_usage` object: Is this slot name a key?
-4. Add class name if found in either location
-5. Return sorted array
-
-**Example**: SlotElement "id" scans all classes, finds Entity has `slots: ["id", ...]`, returns `["Entity"]`
-
-### 4. SlotElement.getBadge()
-
-**File**: `src/models/Element.tsx:754-757`
-
-Changed from returning undefined to returning getUsedByClasses().length:
-```typescript
-getBadge(): number | undefined {
-  const usedByClasses = this.getUsedByClasses();
-  return usedByClasses.length > 0 ? usedByClasses.length : undefined;
-}
-```
-
-Now slot items in left panel show badge with count of classes using that slot.
-
-### 5. Comprehensive Test Coverage
-
-**File**: `src/test/getUsedByClasses.test.ts` (new file, 7 tests)
-
-Tests cover:
-- **EnumElement tests** (4 tests):
-  - Finding classes that use enums in attributes
-  - Returning empty array for unused enums
-  - No duplicate class names when enum used multiple times
-
-- **SlotElement tests** (3 tests):
-  - Finding classes that reference slots in slots array
-  - Returning empty array for unused slots
-  - Finding classes that use slots in slot_usage
-
-- **Integration test**:
-  - SlotElement.getBadge() matches getUsedByClasses().length
-
-**Test approach**: Uses real data from loadModelData() to verify actual usage relationships
-
-**Results**:
-- ✅ **160 tests passing** (was 153, +7 new tests)
-- ✅ **Type checking passes**
-- ✅ getUsedByClasses() sections now display in detail panels
-- ✅ Slot badges show accurate counts
-
-**Design Decisions**:
-
-1. **Global reference pattern**: Follows existing `nameToTypeMap` pattern rather than passing ModelData through constructors
-2. **Custom scanning logic**: Each element type has tailored implementation instead of generic abstraction
-3. **Sorted results**: Both methods return sorted arrays for consistent display
-4. **Break optimization**: EnumElement breaks after first match since we only need class name once
-5. **Fallback behavior**: Returns empty array with warning if globalClassCollection not initialized (happens in unit tests)
-
-**Impact**:
-- Detail panels for enums and slots now show "Used By Classes" section with actual data
-- Slot items in left panel now show badges indicating usage count
-- Completes on-demand computation pattern (no pre-computed reverse indices needed)
-- Completes Step 5 of Phase 6.4
-
-**Next Steps**: Step 6 - Delete Tree.ts and use Element tree directly
-
----
-
-## 2025-11-03: Phase 6.4 Step 4.4 - Wire Variables Array
-
-**Task**: Wire VariableElement arrays into ClassElement.variables property
-
-**Problem**: ClassElement has a `variables` property initialized to empty array with comment "// Wired later in orchestration", but the wiring was never implemented. This meant:
-- `ClassElement.variables` always empty
-- `variableCount` computed property always returned 0
-- No way to access variables for a given class from the ClassElement instance
-
-**Solution**: Added wiring logic in `VariableCollection.fromData()` to populate ClassElement.variables arrays after grouping variables by class.
-
-**Changes Made**:
-
-### 1. VariableCollection.fromData() Enhancement
-
-**File**: `src/models/Element.tsx:1193-1199`
-
-Added wiring block after sorting variables:
-```typescript
-// Wire variables array into ClassElement instances
-groupedByClass.forEach((variables, className) => {
-  const classElement = classCollection.getElement(className) as ClassElement | null;
-  if (classElement) {
-    classElement.variables = variables;
-  }
-});
-```
-
-**Logic**:
-1. After grouping and sorting variables by class name
-2. Iterate through grouped variables Map
-3. Look up corresponding ClassElement in classCollection
-4. Assign variables array to classElement.variables
-
-### 2. Test Coverage
-
-**File**: `src/test/dataLoader.test.ts:70-93`
-
-Added comprehensive test "should wire variables array into ClassElement instances":
-- Verifies variables array is defined on ClassElement
-- Verifies variables array length > 0 for classes with variables
-- Verifies variableCount matches variables.length
-- Verifies each variable references the correct class
-
-**Results**:
-- ✅ **153 tests passing** (was 152 passing)
-- ✅ **Type checking passes**
-- ✅ New test validates wiring behavior
-- ✅ variableCount computed property now returns correct values
-
-**Impact**:
-- ClassElement.variables properly populated during data loading
-- Can now access all variables for a class: `classElement.variables`
-- variableCount badge on class items now accurate
-- Completes Step 4 of Phase 6.4
-
-**Next Steps**: Step 5 - Implement getUsedByClasses() methods
-
----
-
-## 2025-11-03: Phase 6.4 Step 4 - Fix Test Failures
-
-**Task**: Fix test failures caused by Step 4 constructor signature changes
-
-**Problem**: Step 4 changed Element constructors from accepting DTO objects to accepting Metadata interfaces with separate name parameters. This broke 11 tests across 5 test files.
-
-**Changes Made**:
-
-### 1. Test Constructor Updates
-
-Updated all test files to use new constructor signatures:
-- `ClassElement(metadata: ClassMetadata, modelData: ModelData)`
-- `EnumElement(name: string, metadata: EnumMetadata)`
-- `SlotElement(name: string, metadata: SlotMetadata)`
-- `VariableElement(spec: VariableSpec)` - unchanged
-
-**Files Updated**:
-- `src/test/linkLogic.test.ts` - Fixed 9 test failures
-- `src/test/dataLoader.test.ts` - Fixed 2 test failures
-- `src/test/DetailPanel.test.tsx` - Fixed constructor calls, skipped 2 tests awaiting Phase 5
-- `src/test/duplicateDetection.test.ts` - Fixed all constructor calls
-- `src/test/panelHelpers.test.tsx` - Fixed all constructor calls
-
-### 2. Property Access Updates
-
-Fixed tests accessing properties that changed:
-- `participant?.parent?.name` instead of `participant?.parent` (parent is now Element reference)
-- `cls.attributes` instead of `cls.properties` (renamed in ClassElement)
-- `enum.permissibleValues` instead of `enum.values` (renamed in EnumElement)
-
-### 3. Source Code Fix
-
-**File**: `src/utils/panelHelpers.tsx:38`
-- Changed `classElement.parent` → `classElement.parentName`
-- **Reason**: `parent` is now an Element reference, `parentName` stores the parent class name as string
-
-### 4. Test Skipping
-
-Skipped 2 tests in DetailPanel.test.tsx that depend on unimplemented functionality:
-- "should render used by classes section" for EnumElement
-- "should render used by classes section" for SlotElement
-- **Note**: Will be re-enabled after implementing `getUsedByClasses()` in Phase 5
-
-**Results**:
-- ✅ **152 tests passing** (was 141 passing)
-- ⏭️ **2 tests skipped** (awaiting Phase 5 implementation)
-- ❌ **0 tests failing** (was 11 failing)
-
-**Impact**: All test failures from Step 4 constructor changes are now resolved. Tests now correctly use Metadata interfaces instead of deprecated DTO types.
-
-**Next Steps**: Continue with remaining Phase 6.4 tasks as outlined in PHASE_6.4_PLAN.md
-
----
-
-## Historical Progress Report (Phases 1-8)
-
-<a id="phase-1-foundation"></a>
 ## Phase 1: Foundation (Basic Layout & Navigation)
 
 **Completed**: October 2025
@@ -1218,7 +576,596 @@ Phase 6 is **complete**. ESLint enforcement is in place and most violations are 
 
 ---
 
-<a id="phase-7-getdetaildata"></a>
+
+<a id="phase-64-dto-cleanup"></a>
+## Phase 6.4: DTO/Data Architecture Cleanup
+
+**Completed**: November 4, 2025
+
+**Goal**: Eliminate unnecessary DTO layer complexity and establish clean data transformation pipeline.
+
+**All Steps Completed**:
+1. ✅ **Step 1: Foundation** - Removed `[key: string]: unknown`, renamed DTOs for clarity
+2. ✅ **Step 2: Tree Capabilities** - Element base class has built-in tree support (parent, children, ancestorList, traverse)
+3. ✅ **Step 3: Slot System Expansion** - ClassSlot class with inheritance (collectAllSlots, getInheritedFrom)
+4. ✅ **Step 4: DataLoader Simplification** - DTO→Data transformation pipeline, initializeModelData() orchestration
+5. ✅ **Step 5: On-Demand Computation** - getUsedByClasses() for EnumElement and SlotElement
+6. ✅ **Step 6: Cleanup** - Deleted Tree.ts, use Element tree directly
+
+**Final Architecture**:
+```
+Raw JSON (snake_case) → DTOs (*DTO interfaces)
+  → [dataLoader: transforms] → Data (*Data interfaces, camelCase)
+  → [initializeModelData: orchestrates] → Collections (Element instances)
+```
+
+**Key Transformations**:
+- `bdchmElement` → `classId`
+- `slot_usage` → `slotUsage`
+- `slot_uri` → `slotUri`
+- `permissible_values` → `permissibleValues`
+- `*Metadata` types → `*Data` types
+
+**Results**:
+- ✅ **158 tests passing** (2 skipped)
+- ✅ **Type checking passes**
+- ✅ ~250 lines removed (Tree.ts deleted)
+- ✅ Clear data flow: Raw JSON → DTO → Data → Elements
+- ✅ On-demand computation eliminates pre-computed fields
+- ✅ Slot inheritance fully modeled with ClassSlot system
+
+**Deferred to Phase 6.5** (tracked in TASKS.md):
+- Remove deprecated DTO imports from Element.tsx
+- Fix `*Metadata` references in docs
+- Remove JSX methods (renderPanelSection, renderDetails)
+- Rename Element.tsx → Element.ts
+- Step 3.2: Convert SlotCollection to 2-level tree
+
+**Archived**: PHASE_6.4_PLAN.md → archive/PHASE_6.4_PLAN.md
+
+---
+
+## 2025-11-04: Phase 6.4 Step 3 - ClassSlot Implementation and Slot Inheritance
+
+**Task**: Implement ClassSlot wrapper class and show inherited slots in UI
+
+**Problem**:
+1. Need to model slot overrides from slot_usage and inline attributes as unified ClassSlot system
+2. Class detail panels didn't show inherited slots from parent classes
+3. No visual distinction between attributes, slot_usage, and slot references
+
+**Solution**:
+1. Created ClassSlot class wrapping SlotElement with class-specific overrides
+2. Implemented collectAllSlots() for recursive slot inheritance
+3. Added getInheritedFrom() to track original defining class
+4. Updated UI to show all slots with source type and inheritance info
+
+**Changes Made**:
+
+### 1. ClassSlot Class (Element.tsx:253-333)
+
+New class with:
+- `baseSlot: SlotElement` - Reference to global slot or synthetic slot for attributes
+- `source: 'attribute' | 'slot_usage' | 'slot_reference'` - Where slot came from
+- Override properties: `range?`, `required?`, `multivalued?`, `description?`
+- `getEffective*()` methods with fallback chain: override → baseSlot → default
+- `isOverridden()` checks if any overrides are set
+
+### 2. ClassElement Updates
+
+**Constructor changes (Element.tsx:389-471)**:
+- Now accepts `slotCollection` parameter
+- Creates ClassSlots for three sources:
+  1. Attributes: Creates synthetic SlotElement, source='attribute'
+  2. slot_usage: References global SlotElement with overrides, source='slot_usage'
+  3. slots array: References global SlotElement, source='slot_reference'
+- Stores all in `classSlots: ClassSlot[]` property
+
+**collectAllSlots() method (Element.tsx:393-412)**:
+- Recursively merges slots from this class and all parent classes
+- Child slots override parent slots with same name (correct precedence)
+- Returns `Record<string, ClassSlot>` with all effective slots
+
+**getInheritedFrom() method (Element.tsx:369-385)**:
+- Recursively finds the original class that defined a slot
+- Returns empty string if slot is direct (not inherited)
+- Used for UI display of inheritance chain
+
+### 3. UI Changes (Element.tsx:553-592)
+
+**Unified slot display in getDetailData()**:
+- Replaced 3 separate sections (Attributes, Slot Usage, Referenced Slots)
+- Single "Slots (includes inherited)" section showing all slots
+- Table columns: Name | Source | Range | Required | Multivalued | Description
+
+**Source column shows**:
+- "Attribute" - inline attribute definition
+- "Slot Override" - from slot_usage
+- "Slot Reference" - from slots array
+- Inheritance suffix: "(from Entity)" for inherited slots
+
+Example: Participant class shows `id` slot as "Slot Reference (from Entity)"
+
+### 4. Test Updates
+
+**DetailPanel test (src/test/DetailPanel.test.tsx)**:
+- Updated createMockSlotCollection() to provide testSlot and usedSlot
+- Consolidated 3 separate slot section tests into single unified test
+- Verifies all slot types appear in unified table
+
+**Other test files**:
+- Updated 4 test files to pass SlotCollection to ClassElement constructor
+- All tests pass with new constructor signature
+
+**Results**:
+- ✅ **158 tests passing** (2 skipped)
+- ✅ **Type checking passes**
+- ✅ Inherited slots visible in UI with clear source indication
+- ✅ Slot override system properly modeled
+
+**Design Decisions**:
+
+1. **ClassSlot uses direct properties**: `range`, `required` not `rangeOverride`, `requiredOverride`
+   - Cleaner API: `slot.getEffectiveRange()` vs `slot.rangeOverride ?? slot.baseSlot.range`
+   - Original values accessible via `baseSlot` reference
+
+2. **Source tracking**: Three distinct sources clearly labeled in UI
+   - Users can distinguish inline attributes from global slot references
+   - Overrides clearly marked as "Slot Override"
+
+3. **Inheritance display**: Combined into Source column for compact layout
+   - Before: separate "Inherited From" column
+   - After: "Slot Reference (from Entity)" in Source column
+
+4. **No synthetic slots for production**: Tests provide proper SlotCollection
+   - Inheritance works through parent's ClassSlots, not synthetic creation
+   - collectAllSlots() recursively pulls from parent classes
+
+**Impact**: Completes Phase 6.4 Step 3.1 and 3.3. Step 3.2 (2-level SlotCollection) deferred.
+
+**Next Steps**:
+- Phase 6.4 Step 4.2: Collection orchestration function (minor cleanup)
+- Phase 6.5: Complete View/Model Separation
+- Or further slot system work if needed
+
+---
+
+## 2025-11-03: Phase 6.4 Step 6 - Delete Tree.ts and Use Element Tree Directly
+
+**Task**: Eliminate Tree/TreeNode wrapper classes and use Element.children directly
+
+**Problem**: Collections were building TreeNode wrappers around Elements, then passing them to Tree class, which duplicated the tree structure already present in Element.parent/Element.children. This added complexity and memory overhead for no benefit.
+
+**Solution**:
+1. Added `toRenderableItems()` method to Element base class (moved from Tree class)
+2. Updated all Collection classes to store Element[] roots instead of Tree instances
+3. Collections now call element.toRenderableItems() directly
+4. Deleted src/models/Tree.ts entirely
+
+**Changes Made**:
+
+### 1. Element.toRenderableItems() Method
+
+**File**: `src/models/Element.tsx:154-192`
+
+Added method to Element base class:
+```typescript
+toRenderableItems(
+  expandedItems: Set<string>,
+  getIsClickable?: (element: Element, level: number) => boolean,
+  level: number = 0
+): RenderableItem[] {
+  const items: RenderableItem[] = [];
+  const hasChildren = this.children.length > 0;
+  const isExpanded = expandedItems.has(this.name);
+  const isClickable = getIsClickable ? getIsClickable(this, level) : true;
+
+  items.push({
+    id: `${this.type}-${this.name}`,
+    element: this,
+    level,
+    hasChildren,
+    isExpanded,
+    isClickable,
+    badge: this.getBadge()
+  });
+
+  // Only traverse children if expanded
+  if (isExpanded) {
+    this.children.forEach(child => {
+      items.push(...child.toRenderableItems(expandedItems, getIsClickable, level + 1));
+    });
+  }
+
+  return items;
+}
+```
+
+**Logic**:
+- Recursively builds flat RenderableItem[] from tree structure
+- Respects expansion state (collapsed nodes don't show children)
+- Supports optional getIsClickable callback for custom clickability logic
+- Uses Element.children for traversal
+
+### 2. EnumCollection & SlotCollection Updates
+
+**Files**:
+- `src/models/Element.tsx:999-1052` (EnumCollection)
+- `src/models/Element.tsx:1054-1117` (SlotCollection)
+
+**Changes**:
+- `private tree: Tree<EnumElement>` → `private roots: EnumElement[]`
+- `constructor(tree: Tree<EnumElement>)` → `constructor(roots: EnumElement[])`
+- `fromData()`: Removed TreeNode wrapper creation, directly created Element array
+- `getElement()`: Changed from `tree.find()` to `roots.find()`
+- `getAllElements()`: Changed from `tree.flatten()` to `return this.roots`
+- `getRenderableItems()`: Loop over roots calling `root.toRenderableItems()`
+- `getLabel()`: Changed from `tree.roots.length` to `this.roots.length`
+
+### 3. ClassCollection Updates
+
+**File**: `src/models/Element.tsx:1119-1236`
+
+**Changes**:
+- `private tree: Tree` → `private roots: ClassElement[]`
+- `constructor(tree: Tree)` → `constructor(roots: ClassElement[])`
+- Removed newConstructor() stub (obsolete)
+- `fromData()`: Deleted TreeNode wrapper creation (lines 1177-1198 removed)
+- `getElement()`: Implemented tree search using Element.children recursion
+- `getAllElements()`: Uses `root.traverse()` to flatten tree
+- `getRootElements()`: Simply returns `this.roots`
+- `getDefaultExpansion()`: Works with Element instead of TreeNode
+- `getRenderableItems()`: Loop over roots calling `root.toRenderableItems()`
+
+**fromData() simplification**: After wiring Element.parent/Element.children and sorting (lines 1146-1168), directly returns `new ClassCollection(roots)` - no more TreeNode wrapper creation.
+
+### 4. VariableCollection Updates
+
+**File**: `src/models/Element.tsx:1238-1361`
+
+**Changes**:
+- `private tree: Tree<Element>` → `private roots: ClassElement[]` + `private groupedByClass: Map<string, VariableElement[]>`
+- Constructor signature changed to accept roots, groupedByClass, and variables arrays
+- `fromData()`: Removed TreeNode wrapper creation (lines 1280-1306 removed)
+- `getRenderableItems()`: Manually builds 2-level items array
+  - ClassElement headers at level 0 (non-clickable)
+  - VariableElements at level 1 (clickable, shown if parent expanded)
+
+**Design decision**: VariableCollection doesn't modify ClassElement.children (which contain class hierarchy). Instead, it stores groupedByClass Map and builds RenderableItems on-demand in getRenderableItems().
+
+### 5. Deleted Tree.ts
+
+**File**: `src/models/Tree.ts` (deleted)
+
+Removed entire file:
+- TreeNode class
+- Tree class (with find, flatten, toRenderableItems, map, getLevel methods)
+- buildTree() function
+
+**File**: `src/models/Element.tsx:19`
+- Removed import: `import { Tree, TreeNode, buildTree } from './Tree';`
+
+**Results**:
+- ✅ **160 tests passing** (same as before)
+- ✅ **Type checking passes**
+- ✅ Tree.ts completely eliminated
+- ✅ All Collections use Element.children directly
+
+**Code Reduction**:
+- Deleted ~225 lines (Tree.ts)
+- Simplified Collection classes (removed TreeNode wrapper creation)
+- Net reduction: ~250 lines of code
+
+**Benefits**:
+- Single tree representation (Element.parent/children) instead of two (Element tree + TreeNode tree)
+- Reduced memory overhead (no TreeNode wrapper objects)
+- Simpler mental model for developers
+- Cleaner API: `root.toRenderableItems()` vs `tree.toRenderableItems()`
+- Element tree capabilities available everywhere, not just in Collections
+
+**Impact**: Completes Step 6 of Phase 6.4. Tree.ts elimination is complete.
+
+**Next Steps**: Step 3 (Slot System Expansion) or Phase 6.5 (Complete View/Model Separation)
+
+---
+
+## 2025-11-03: Phase 6.4 Step 5 - Implement getUsedByClasses()
+
+**Task**: Implement on-demand computation of "used by classes" for EnumElement and SlotElement
+
+**Problem**: EnumElement and SlotElement detail panels should show which classes use them, but this was returning empty arrays (placeholder implementation). Phase 4 removed pre-computed reverse indices (buildReverseIndices() was never called), so this needed proper on-demand computation.
+
+**Solution**: Implemented custom scanning logic for each element type following the plan's guidance to "avoid generic path expression abstraction".
+
+**Changes Made**:
+
+### 1. Global ClassCollection Reference
+
+**File**: `src/models/Element.tsx:181-190`
+
+Added module-level pattern (similar to existing `nameToTypeMap`):
+```typescript
+let globalClassCollection: ClassCollection | null = null;
+
+export function initializeClassCollection(collection: ClassCollection): void {
+  globalClassCollection = collection;
+}
+```
+
+**File**: `src/utils/dataLoader.ts:11,97`
+- Import `initializeClassCollection`
+- Call it after creating `classCollection` to initialize global reference
+
+### 2. EnumElement.getUsedByClasses()
+
+**File**: `src/models/Element.tsx:549-575`
+
+**Algorithm**:
+1. Guard against uninitialized globalClassCollection
+2. Iterate through all classes
+3. For each class, check all attributes for `range === this.name`
+4. Add class name to results (only once per class, using break)
+5. Return sorted array
+
+**Example**: EnumElement "SpecimenTypeEnum" scans all classes, finds Specimen class has attribute `specimen_type: { range: "SpecimenTypeEnum" }`, returns `["Specimen"]`
+
+### 3. SlotElement.getUsedByClasses()
+
+**File**: `src/models/Element.tsx:759-786`
+
+**Algorithm**:
+1. Guard against uninitialized globalClassCollection
+2. Iterate through all classes
+3. Check two locations:
+   - `cls.slots` array: Does it include this slot name?
+   - `cls.slot_usage` object: Is this slot name a key?
+4. Add class name if found in either location
+5. Return sorted array
+
+**Example**: SlotElement "id" scans all classes, finds Entity has `slots: ["id", ...]`, returns `["Entity"]`
+
+### 4. SlotElement.getBadge()
+
+**File**: `src/models/Element.tsx:754-757`
+
+Changed from returning undefined to returning getUsedByClasses().length:
+```typescript
+getBadge(): number | undefined {
+  const usedByClasses = this.getUsedByClasses();
+  return usedByClasses.length > 0 ? usedByClasses.length : undefined;
+}
+```
+
+Now slot items in left panel show badge with count of classes using that slot.
+
+### 5. Comprehensive Test Coverage
+
+**File**: `src/test/getUsedByClasses.test.ts` (new file, 7 tests)
+
+Tests cover:
+- **EnumElement tests** (4 tests):
+  - Finding classes that use enums in attributes
+  - Returning empty array for unused enums
+  - No duplicate class names when enum used multiple times
+
+- **SlotElement tests** (3 tests):
+  - Finding classes that reference slots in slots array
+  - Returning empty array for unused slots
+  - Finding classes that use slots in slot_usage
+
+- **Integration test**:
+  - SlotElement.getBadge() matches getUsedByClasses().length
+
+**Test approach**: Uses real data from loadModelData() to verify actual usage relationships
+
+**Results**:
+- ✅ **160 tests passing** (was 153, +7 new tests)
+- ✅ **Type checking passes**
+- ✅ getUsedByClasses() sections now display in detail panels
+- ✅ Slot badges show accurate counts
+
+**Design Decisions**:
+
+1. **Global reference pattern**: Follows existing `nameToTypeMap` pattern rather than passing ModelData through constructors
+2. **Custom scanning logic**: Each element type has tailored implementation instead of generic abstraction
+3. **Sorted results**: Both methods return sorted arrays for consistent display
+4. **Break optimization**: EnumElement breaks after first match since we only need class name once
+5. **Fallback behavior**: Returns empty array with warning if globalClassCollection not initialized (happens in unit tests)
+
+**Impact**:
+- Detail panels for enums and slots now show "Used By Classes" section with actual data
+- Slot items in left panel now show badges indicating usage count
+- Completes on-demand computation pattern (no pre-computed reverse indices needed)
+- Completes Step 5 of Phase 6.4
+
+**Next Steps**: Step 6 - Delete Tree.ts and use Element tree directly
+
+---
+
+## 2025-11-03: Phase 6.4 Step 4.4 - Wire Variables Array
+
+**Task**: Wire VariableElement arrays into ClassElement.variables property
+
+**Problem**: ClassElement has a `variables` property initialized to empty array with comment "// Wired later in orchestration", but the wiring was never implemented. This meant:
+- `ClassElement.variables` always empty
+- `variableCount` computed property always returned 0
+- No way to access variables for a given class from the ClassElement instance
+
+**Solution**: Added wiring logic in `VariableCollection.fromData()` to populate ClassElement.variables arrays after grouping variables by class.
+
+**Changes Made**:
+
+### 1. VariableCollection.fromData() Enhancement
+
+**File**: `src/models/Element.tsx:1193-1199`
+
+Added wiring block after sorting variables:
+```typescript
+// Wire variables array into ClassElement instances
+groupedByClass.forEach((variables, className) => {
+  const classElement = classCollection.getElement(className) as ClassElement | null;
+  if (classElement) {
+    classElement.variables = variables;
+  }
+});
+```
+
+**Logic**:
+1. After grouping and sorting variables by class name
+2. Iterate through grouped variables Map
+3. Look up corresponding ClassElement in classCollection
+4. Assign variables array to classElement.variables
+
+### 2. Test Coverage
+
+**File**: `src/test/dataLoader.test.ts:70-93`
+
+Added comprehensive test "should wire variables array into ClassElement instances":
+- Verifies variables array is defined on ClassElement
+- Verifies variables array length > 0 for classes with variables
+- Verifies variableCount matches variables.length
+- Verifies each variable references the correct class
+
+**Results**:
+- ✅ **153 tests passing** (was 152 passing)
+- ✅ **Type checking passes**
+- ✅ New test validates wiring behavior
+- ✅ variableCount computed property now returns correct values
+
+**Impact**:
+- ClassElement.variables properly populated during data loading
+- Can now access all variables for a class: `classElement.variables`
+- variableCount badge on class items now accurate
+- Completes Step 4 of Phase 6.4
+
+**Next Steps**: Step 5 - Implement getUsedByClasses() methods
+
+---
+
+
+<a id="phase-65-view-model-separation"></a>
+## Phase 6.5: Complete View/Model Separation
+
+**Completed**: November 4, 2025
+
+**Goal**: Truly separate view from model. Components define their own data contracts, Element adapts to provide that data. Components never know about element types, ElementRegistry, or model structure.
+
+**Core Principle**: Each component defines what data it needs with property names that make sense for that component. Element implements methods to provide that data. Components are completely ignorant of the model structure.
+
+**All Steps Completed**:
+
+1. ✅ **Step 1: Revert Phase 9 & Add ID System**
+   - Removed failed `getType()`, `getParentName()`, `isAbstractClass()` methods
+   - Made `type` protected (temporarily public during refactor)
+   - Added `getId(context?: IdContext)` to Element base class
+   - Added `id: string` property to all ElementCollection classes
+
+2. ✅ **Step 2: Move field name changes to declarative mapping spec**
+   - Created FIELD_MAPPINGS in types.ts with FieldMapping interface
+   - Created generic transformWithMapping() function in dataLoader.ts
+   - Updated all transform functions to use mapping specs
+   - Result: Transformations now declarative and maintainable
+
+3. ⏭️ **Step 3: Rename components** (SKIPPED)
+   - Kept current names: Section.tsx, ElementsPanel.tsx
+   - Added clear documentation at top of each file
+
+4. ✅ **Step 4: Define component data interfaces and refactor component data access**
+   - Removed dead JSX methods: `renderPanelSection()`, `renderDetails()` (not called anywhere)
+   - Kept `getDetailData()` - already correct pattern in DetailPanel.tsx
+   - Component model access audit confirmed Section.tsx and ElementsPanel.tsx need refactoring
+
+5. ✅ **Step 5: Update Element methods**
+   - Added: `getSectionItemData(context, level, isExpanded, isClickable, hasChildren?)`
+   - Added: `toSectionItems()` for tree traversal with expansion state
+   - Added: `get id()` getter for convenient ID access
+   - Added: `getIndicators()` method returning badges array (implemented in ClassElement for "abstract")
+   - Removed: `renderPanelSection()`, `renderDetails()`, `renderName()` (obsolete JSX)
+
+6. ✅ **Step 6: Update Collections**
+   - Added: `getSectionData(position)` returns SectionData with getItems() function
+   - Kept: `getRenderableItems()` (still used internally, marked in RenderableItem.ts as internal)
+   - Kept: `id` property on each collection class (added in Step 1)
+
+7. ✅ **Step 7: Remove type coupling from components**
+   - ElementsPanel: Changed `sections: ElementTypeId[]` → `sections: string[]`
+   - App.tsx: Changed `leftSections/rightSections: ElementTypeId[]` → `string[]`
+   - Removed all `ElementTypeId` imports from Section.tsx and ElementsPanel.tsx
+   - Removed all `ELEMENT_TYPES` imports from Section.tsx and ElementsPanel.tsx
+   - App.tsx builds ToggleButtonData and SectionData from ELEMENT_TYPES (one-time coupling)
+
+8. ✅ **Step 8: Cleanup**
+   - Removed obsolete JSX methods from all Element subclasses
+   - Renamed Element.tsx → Element.ts (no more JSX in model layer)
+   - Removed React import from Element.ts
+   - Marked RenderableItem.ts as deprecated/internal
+   - Fixed JSDoc comment reference (Element.tsx → Element.ts)
+   - Added toggleActive/toggleInactive to ElementRegistry for Tailwind JIT compiler
+
+9. ✅ **Step 9: Verify architectural compliance**
+   - No component imports ElementTypeId (verified)
+   - No component imports ELEMENT_TYPES from components (App.tsx uses it to build data)
+   - No component imports ElementRegistry from components
+   - All 158 tests passing
+   - Type checking passes
+   - Components use SectionItemData/SectionData/ToggleButtonData interfaces
+
+10. ✅ **Step 10: Make element.type protected**
+    - Changed `type` from public to `protected` in Element.ts
+    - Removed TODO comment about making type protected
+    - Verified no components access `element.type` directly
+    - Type checking passes (no errors)
+    - All 158 tests passing
+    - **Result**: Complete architectural separation - view layer cannot access model type information
+
+11. ✅ **Step 11: Optimize DetailDialog getDetailData() calls**
+    - Fixed DetailDialog to call `element.getDetailData()` once instead of 3 times
+    - Cached result in `detailData` variable at component top
+    - Type checking passes
+    - **Result**: More efficient rendering, reduced method calls
+
+**Final Architecture**:
+```typescript
+// Component defines its contract
+interface SectionItemData {
+  id: string;                // from element.getId(context)
+  displayName: string;
+  badgeColor?: string;
+  indicators?: Array<{ text: string; color: string }>;
+  // ... all UI-focused properties
+}
+
+// Element adapts to component's needs
+import type { SectionItemData } from '../components/Section';
+getSectionItemData(context: 'leftPanel' | 'rightPanel'): SectionItemData { ... }
+```
+
+**Results**:
+- ✅ **158 tests passing** (2 skipped)
+- ✅ **Type checking passes**
+- ✅ **True view/model separation achieved** - components cannot access `element.type`
+- ✅ **Components only use data interfaces** - no Element method calls during render
+- ✅ **Polymorphic adaptation** - Element provides data in component-specific formats
+
+**Files Modified**:
+- `src/models/Element.tsx` → `Element.ts` (no JSX, added data adapters)
+- `src/components/Section.tsx` (uses SectionItemData)
+- `src/components/ElementsPanel.tsx` (uses ToggleButtonData, SectionData)
+- `src/components/DetailDialog.tsx` (optimized getDetailData calls)
+- `src/App.tsx` (builds toggle button data, converts collections)
+- `src/utils/dataLoader.ts` (declarative field mappings)
+- `src/types.ts` (added FIELD_MAPPINGS)
+
+**Deferred Work**:
+- LinkOverlay refactoring to use new patterns
+- Component files define their own hover handler contracts
+- Step 3.2 from Phase 6.4: Convert SlotCollection to 2-level tree
+- DetailBox Slots table optimization
+
+**Impact**: This phase completes the architectural vision from CLAUDE.md. The view layer is now truly separated from the model layer, with TypeScript enforcing that components cannot know about model-specific types.
+
+---
+
 ## Phase 7: Element.getDetailData() Implementation
 
 **Completed**: October 31, 2025
