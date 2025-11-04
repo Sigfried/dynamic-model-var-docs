@@ -74,15 +74,28 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 - ⚠️ Collections still use Tree class internally (transition state - Step 6 will remove)
 - ⚠️ Component errors exist (pre-existing architectural issues, planned for Phase 6.5)
 
-### ❌ Not Started (Ready to Implement)
+### ✅ Step 3: Slot System Expansion (Complete - 2025-11-04)
 
-**Step 1: Foundation**
-- ✅ 1.4: ClassSlot design finalized (see implementation section) - **READY TO IMPLEMENT**
+**Step 3.1: Create ClassSlots in ClassElement constructor** ✅
+- ClassSlot class implemented with source tracking ('attribute' | 'slot_usage' | 'slot_reference')
+- Constructor creates ClassSlots for attributes, slot_usage, and slots array
+- Override properties and getEffective*() methods working correctly
 
-**Step 3: Slot System Expansion** (unblocked - ClassSlot design complete)
-- ❌ 3.1: Create SlotElements in ClassElement constructor
-- ❌ 3.2: Convert SlotCollection to 2-level tree (depends on 3.1)
-- ❌ 3.3: Implement collectAllSlots()
+**Step 3.3: Implement collectAllSlots()** ✅
+- Recursive slot collection with inheritance
+- Child slots override parent slots with same name (correct precedence)
+- getInheritedFrom() tracks original defining class
+
+**UI Enhancements** ✅
+- Unified "Slots (includes inherited)" section in detail panels
+- Source column shows slot type and inheritance: "Slot Reference (from Entity)"
+- All tests passing (158 passing)
+
+### ❌ Not Started (Deferred)
+
+**Step 3.2: Convert SlotCollection to 2-level tree**
+- Deferred - current flat SlotCollection sufficient for now
+- Would show global slots + inline attributes from all classes
 
 **Step 4: DataLoader Simplification**
 - ❌ 4.2: Collection orchestration function (partially exists in dataLoader)

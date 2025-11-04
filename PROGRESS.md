@@ -1,5 +1,110 @@
 # Progress Log
 
+## 2025-11-04: Phase 6.4 Step 3 - ClassSlot Implementation and Slot Inheritance
+
+**Task**: Implement ClassSlot wrapper class and show inherited slots in UI
+
+**Problem**:
+1. Need to model slot overrides from slot_usage and inline attributes as unified ClassSlot system
+2. Class detail panels didn't show inherited slots from parent classes
+3. No visual distinction between attributes, slot_usage, and slot references
+
+**Solution**:
+1. Created ClassSlot class wrapping SlotElement with class-specific overrides
+2. Implemented collectAllSlots() for recursive slot inheritance
+3. Added getInheritedFrom() to track original defining class
+4. Updated UI to show all slots with source type and inheritance info
+
+**Changes Made**:
+
+### 1. ClassSlot Class (Element.tsx:253-333)
+
+New class with:
+- `baseSlot: SlotElement` - Reference to global slot or synthetic slot for attributes
+- `source: 'attribute' | 'slot_usage' | 'slot_reference'` - Where slot came from
+- Override properties: `range?`, `required?`, `multivalued?`, `description?`
+- `getEffective*()` methods with fallback chain: override → baseSlot → default
+- `isOverridden()` checks if any overrides are set
+
+### 2. ClassElement Updates
+
+**Constructor changes (Element.tsx:389-471)**:
+- Now accepts `slotCollection` parameter
+- Creates ClassSlots for three sources:
+  1. Attributes: Creates synthetic SlotElement, source='attribute'
+  2. slot_usage: References global SlotElement with overrides, source='slot_usage'
+  3. slots array: References global SlotElement, source='slot_reference'
+- Stores all in `classSlots: ClassSlot[]` property
+
+**collectAllSlots() method (Element.tsx:393-412)**:
+- Recursively merges slots from this class and all parent classes
+- Child slots override parent slots with same name (correct precedence)
+- Returns `Record<string, ClassSlot>` with all effective slots
+
+**getInheritedFrom() method (Element.tsx:369-385)**:
+- Recursively finds the original class that defined a slot
+- Returns empty string if slot is direct (not inherited)
+- Used for UI display of inheritance chain
+
+### 3. UI Changes (Element.tsx:553-592)
+
+**Unified slot display in getDetailData()**:
+- Replaced 3 separate sections (Attributes, Slot Usage, Referenced Slots)
+- Single "Slots (includes inherited)" section showing all slots
+- Table columns: Name | Source | Range | Required | Multivalued | Description
+
+**Source column shows**:
+- "Attribute" - inline attribute definition
+- "Slot Override" - from slot_usage
+- "Slot Reference" - from slots array
+- Inheritance suffix: "(from Entity)" for inherited slots
+
+Example: Participant class shows `id` slot as "Slot Reference (from Entity)"
+
+### 4. Test Updates
+
+**DetailPanel test (src/test/DetailPanel.test.tsx)**:
+- Updated createMockSlotCollection() to provide testSlot and usedSlot
+- Consolidated 3 separate slot section tests into single unified test
+- Verifies all slot types appear in unified table
+
+**Other test files**:
+- Updated 4 test files to pass SlotCollection to ClassElement constructor
+- All tests pass with new constructor signature
+
+**Results**:
+- ✅ **158 tests passing** (2 skipped)
+- ✅ **Type checking passes**
+- ✅ Inherited slots visible in UI with clear source indication
+- ✅ Slot override system properly modeled
+
+**Design Decisions**:
+
+1. **ClassSlot uses direct properties**: `range`, `required` not `rangeOverride`, `requiredOverride`
+   - Cleaner API: `slot.getEffectiveRange()` vs `slot.rangeOverride ?? slot.baseSlot.range`
+   - Original values accessible via `baseSlot` reference
+
+2. **Source tracking**: Three distinct sources clearly labeled in UI
+   - Users can distinguish inline attributes from global slot references
+   - Overrides clearly marked as "Slot Override"
+
+3. **Inheritance display**: Combined into Source column for compact layout
+   - Before: separate "Inherited From" column
+   - After: "Slot Reference (from Entity)" in Source column
+
+4. **No synthetic slots for production**: Tests provide proper SlotCollection
+   - Inheritance works through parent's ClassSlots, not synthetic creation
+   - collectAllSlots() recursively pulls from parent classes
+
+**Impact**: Completes Phase 6.4 Step 3.1 and 3.3. Step 3.2 (2-level SlotCollection) deferred.
+
+**Next Steps**:
+- Phase 6.4 Step 4.2: Collection orchestration function (minor cleanup)
+- Phase 6.5: Complete View/Model Separation
+- Or further slot system work if needed
+
+---
+
 ## 2025-11-03: Phase 6.4 Step 6 - Delete Tree.ts and Use Element Tree Directly
 
 **Task**: Eliminate Tree/TreeNode wrapper classes and use Element.children directly
