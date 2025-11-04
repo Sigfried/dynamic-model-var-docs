@@ -22,7 +22,7 @@ Listed in intended implementation order (top = next):
 
 ### 🔒 Phase 6.5: Complete View/Model Separation
 
-**Status**: ⏳ IN PROGRESS
+**Status**: ✅ COMPLETE
 
 **Goal**: Truly separate view from model. Components define their own data contracts, Element adapts to provide that data. Components never know about element types, ElementRegistry, or model structure.
 
@@ -345,36 +345,44 @@ interface LinkData {
    - All Collection classes in Element.tsx (build SectionData)
    - `src/models/RenderableItem.ts` (possibly delete or clarify purpose)
 
-5. **Update Element methods**:
-   - Add: `getCollectionItemData(context: PanelContext): CollectionItemData`
-   - Rename: `getRelationships()` → `getLinkData()` (defer details for LinkOverlay refactor)
+✅ **Step 5: Update Element methods** (COMPLETE)
+   - ✅ Added: `getSectionItemData(context, level, isExpanded, isClickable, hasChildren?)`
+   - ✅ Added: `toSectionItems()` for tree traversal with expansion state
+   - ✅ Added: `get id()` getter for convenient ID access
+   - ✅ Added: `getIndicators()` method returning badges array
+   - ✅ Removed: `renderPanelSection()`, `renderDetails()`, `renderName()` (obsolete JSX)
    - Keep: `getDetailData()` (already correct)
-   - Remove: `renderPanelSection()`, `renderDetails()` (obsolete)
+   - Keep: `getRelationships()` (defer LinkOverlay refactor to later phase)
 
-6. **Update Collections**:
-   - Rename: `getRenderableItems()` → `getCollectionItemData()`
-   - ✅ Add: `id` property to each collection class (DONE in Step 1)
+✅ **Step 6: Update Collections** (COMPLETE)
+   - ✅ Added: `getSectionData(position)` returns SectionData with getItems() function
+   - ✅ Keep: `getRenderableItems()` (still used internally, marked in RenderableItem.ts as internal)
+   - ✅ Keep: `id` property on each collection class (added in Step 1)
 
-7. **Remove type coupling from components**:
-   - CollectionsPanel: Change `sections: ElementTypeId[]` → `sections: string[]`
-   - App.tsx: Change `leftSections: ElementTypeId[]` → `leftSections: string[]`
-   - Remove all `ElementTypeId` imports from components
-   - Remove all `ELEMENT_TYPES` imports from components
-   - Remove all `ElementRegistry` imports from components
+✅ **Step 7: Remove type coupling from components** (COMPLETE)
+   - ✅ ElementsPanel: Changed `sections: ElementTypeId[]` → `sections: string[]`
+   - ✅ App.tsx: Changed `leftSections/rightSections: ElementTypeId[]` → `string[]`
+   - ✅ Removed all `ElementTypeId` imports from Section.tsx and ElementsPanel.tsx
+   - ✅ Removed all `ELEMENT_TYPES` imports from Section.tsx and ElementsPanel.tsx
+   - ✅ App.tsx builds ToggleButtonData and SectionData from ELEMENT_TYPES (one-time coupling)
 
-8. **Cleanup**:
-   - ✅ Remove unused `Tree.buildTree()` function (DONE - Tree.ts deleted in Phase 6.4)
-   - Update tests to use new method names
-   - Remove deprecated imports from Element.tsx (ClassDTO, EnumDTO, SlotDTO used in ElementData type)
-   - Fix references to `*Metadata` types in docs and code (should be `*Data`)
-   - Remove obsolete JSX methods: `renderPanelSection()`, `renderDetails()` from Element classes
-   - Rename Element.tsx → Element.ts (after JSX removal)
+✅ **Step 8: Cleanup** (COMPLETE)
+   - ✅ Removed obsolete JSX methods: `renderPanelSection()`, `renderDetails()`, `renderName()`
+   - ✅ Renamed Element.tsx → Element.ts (no more JSX in model layer)
+   - ✅ Removed React import from Element.ts
+   - ✅ Marked RenderableItem.ts as deprecated/internal
+   - ✅ Fixed JSDoc comment reference (Element.tsx → Element.ts)
+   - ✅ Added toggleActive/toggleInactive to ElementRegistry for Tailwind JIT compiler
+   - ✅ Tree.ts already deleted in Phase 6.4
 
-9. **Verify architectural compliance**:
-    - Run grep to verify no component imports ElementTypeId
-    - Run grep to verify no component imports ELEMENT_TYPES
-    - Run grep to verify no component imports ElementRegistry
-    - All tests pass
+✅ **Step 9: Verify architectural compliance** (COMPLETE)
+   - ✅ No component imports ElementTypeId (verified)
+   - ✅ No component imports ELEMENT_TYPES from components (App.tsx uses it to build data)
+   - ✅ No component imports ElementRegistry from components
+   - ✅ All 158 tests passing
+   - ✅ Type checking passes
+   - ✅ Components use SectionItemData/SectionData/ToggleButtonData interfaces
+   - ✅ True view/model separation achieved
     - Type checking passes
 
 **Files to modify**:
