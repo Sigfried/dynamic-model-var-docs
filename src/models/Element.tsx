@@ -566,7 +566,12 @@ export class ClassElement extends Element {
           'slot_usage': 'Slot Override',
           'slot_reference': 'Slot Reference'
         };
-        const source = sourceLabels[classSlot.source];
+        let source = sourceLabels[classSlot.source];
+
+        // Add inheritance info to source column
+        if (inheritedFrom) {
+          source += ` (from ${inheritedFrom})`;
+        }
 
         return [
           name,
@@ -574,14 +579,13 @@ export class ClassElement extends Element {
           classSlot.getEffectiveRange(),
           classSlot.getEffectiveRequired() ? 'Yes' : 'No',
           classSlot.getEffectiveMultivalued() ? 'Yes' : 'No',
-          classSlot.getEffectiveDescription() || '',
-          inheritedFrom
+          classSlot.getEffectiveDescription() || ''
         ];
       });
 
       sections.push({
         name: 'Slots (includes inherited)',
-        tableHeadings: ['Name', 'Source', 'Range', 'Required', 'Multivalued', 'Description', 'Inherited From'],
+        tableHeadings: ['Name', 'Source', 'Range', 'Required', 'Multivalued', 'Description'],
         tableContent: slotsList,
         tableHeadingColor: ELEMENT_TYPES['slot'].color.headerBg
       });
