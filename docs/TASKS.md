@@ -18,38 +18,6 @@ Will return to this when i have her next response.
 
 ## Next Up (Ordered)
 
-### App.tsx Refactoring
-
-**Current state**: App.tsx is 583 lines with complex state management
-
-**Goal**: Extract logic into testable hooks, reduce to ~200 lines of composition
-
-**Extract into hooks**:
-- `hooks/useModelData.ts` - Data loading (currently useEffect + loadModelData)
-- `hooks/useLayoutState.ts` - Panel layout + expansion state (consolidate useExpansionState)
-- `hooks/useDialogState.ts` - Dialog management (100+ lines of restore logic)
-
-**Additional cleanup**:
-- Consolidate expansion state: Move from useExpansionState hook into statePersistence.ts
-- Remove dead code: Delete evc/ecn params from statePersistence.ts (replaced by lve/rve/lce/rce)
-
-**Why this matters**:
-- Makes each concern testable in isolation
-- Reduces App.tsx complexity significantly
-- Clarifies state management flow
-- This is valuable refactoring, not cosmetic
-
-**Files to create**:
-- `src/hooks/useModelData.ts`
-- `src/hooks/useDialogState.ts`
-- `src/hooks/useLayoutState.ts`
-
-**Files to modify**:
-- `src/App.tsx`
-- `src/utils/statePersistence.ts`
-
----
-
 ### Link System Enhancement
 
 **Goal**: Refactor LinkOverlay to follow view/model separation + add hover tooltips
