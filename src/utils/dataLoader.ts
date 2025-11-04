@@ -2,15 +2,20 @@
 
 import type {
   VariableSpec,
+  VariableSpecDTO,
   ModelData,
-  SchemaMetadata,
-  ClassMetadata,
-  SlotMetadata,
-  EnumMetadata
+  SchemaDTO,
+  SchemaData,
+  ClassDTO,
+  ClassData,
+  SlotDTO,
+  SlotData,
+  EnumDTO,
+  EnumData
 } from '../types';
-import { EnumCollection, SlotCollection, ClassCollection, VariableCollection, initializeElementNameMap, initializeClassCollection } from '../models/Element';
+import { initializeModelData } from '../models/Element';
 
-async function loadSchemaMetadata(): Promise<SchemaMetadata> {
+async function loadSchemaDTO(): Promise<SchemaDTO> {
   const response = await fetch(`${import.meta.env.BASE_URL}source_data/HM/bdchm.metadata.json`);
   if (!response.ok) {
     throw new Error(`Failed to load schema metadata: ${response.statusText}`);
@@ -18,7 +23,7 @@ async function loadSchemaMetadata(): Promise<SchemaMetadata> {
   return await response.json();
 }
 
-export async function loadVariableSpecs(): Promise<VariableSpec[]> {
+async function loadVariableSpecDTOs(): Promise<VariableSpecDTO[]> {
   const response = await fetch(`${import.meta.env.BASE_URL}source_data/HV/variable-specs-S1.tsv`);
   if (!response.ok) {
     throw new Error(`Failed to load variable specs: ${response.statusText}`);
@@ -41,83 +46,89 @@ export async function loadVariableSpecs(): Promise<VariableSpec[]> {
 }
 
 /**
- * Load and normalize class metadata from schema.
- * Returns flat array - tree building happens in ClassCollection.fromData()
+ * Transform SlotDTO (snake_case from JSON) to SlotData (camelCase for constructors)
  */
-function loadClasses(metadata: SchemaMetadata): ClassMetadata[] {
-  return Object.values(metadata.classes);
-}
-
-/**
- * Load enum metadata from schema.
- * Returns Map for easy lookup - EnumCollection handles transformation.
- */
-function loadEnums(metadata: SchemaMetadata): Map<string, EnumMetadata> {
-  const enums = new Map<string, EnumMetadata>();
-  Object.entries(metadata.enums || {}).forEach(([name, enumDef]) => {
-    enums.set(name, enumDef);
-  });
-  return enums;
-}
-
-/**
- * Load slot metadata from schema.
- * Returns Map for easy lookup - SlotCollection handles transformation.
- */
-function loadSlots(metadata: SchemaMetadata): Map<string, SlotMetadata> {
-  const slots = new Map<string, SlotMetadata>();
-  Object.entries(metadata.slots || {}).forEach(([name, slotDef]) => {
-    slots.set(name, slotDef);
-  });
-  return slots;
-}
-
-export async function loadModelData(): Promise<ModelData> {
-  const metadata = await loadSchemaMetadata();
-  const variables = await loadVariableSpecs();
-
-  // Load metadata (no tree building - just type-checking and simple transformations)
-  const classMetadata = loadClasses(metadata);
-  const enumMetadata = loadEnums(metadata);
-  const slotMetadata = loadSlots(metadata);
-
-  // Create collections in proper order (see Phase 4.2 - orchestration)
-  // Order matters due to dependencies:
-  // 1. EnumCollection (no dependencies)
-  // 2. SlotCollection (no dependencies)
-  // 3. ClassCollection (needs slot names for validation)
-  // 4. VariableCollection (needs classCollection)
-
-  const enumCollection = EnumCollection.fromData(enumMetadata);
-  const slotCollection = SlotCollection.fromData(slotMetadata);
-  const classCollection = ClassCollection.fromData(classMetadata, slotCollection);
-  const variableCollection = VariableCollection.fromData(variables, classCollection);
-
-  // Initialize global references for on-demand computation
-  initializeClassCollection(classCollection);
-
-  const collections = new Map();
-  collections.set('class', classCollection);
-  collections.set('enum', enumCollection);
-  collections.set('slot', slotCollection);
-  collections.set('variable', variableCollection);
-
-  // Flatten all elements into name→element lookup map
-  const elementLookup = new Map<string, Element>();
-  collections.forEach(collection => {
-    collection.getAllElements().forEach(element => {
-      elementLookup.set(element.name, element);
-    });
-  });
-
-  // Initialize element name lookup map for accurate type categorization
-  const classNames = classCollection.getAllElements().map(c => c.name);
-  const enumNames = Array.from(enumMetadata.keys());
-  const slotNames = Array.from(slotMetadata.keys());
-  initializeElementNameMap(classNames, enumNames, slotNames);
-
+function transformSlotDTO(dto: SlotDTO): SlotData {
   return {
-    collections,
-    elementLookup
+    range: dto.range,
+    description: dto.description,
+    slotUri: dto.slot_uri,  // snake_case → camelCase
+    identifier: dto.identifier,
+    required: dto.required,
+    multivalued: dto.multivalued
   };
+}
+
+/**
+ * Transform EnumDTO to EnumData
+ */
+function transformEnumDTO(dto: EnumDTO): EnumData {
+  return {
+    description: dto.description,
+    permissibleValues: dto.permissible_values  // snake_case → camelCase
+  };
+}
+
+/**
+ * Transform ClassDTO to ClassData
+ */
+function transformClassDTO(dto: ClassDTO): ClassData {
+  return {
+    name: dto.name,
+    description: dto.description,
+    parent: dto.parent,
+    abstract: dto.abstract,
+    attributes: dto.attributes,
+    slots: dto.slots,
+    slotUsage: dto.slot_usage  // snake_case → camelCase
+  };
+}
+
+/**
+ * Transform VariableSpecDTO to VariableSpec
+ */
+function transformVariableSpecDTO(dto: VariableSpecDTO): VariableSpec {
+  return {
+    classId: dto.bdchmElement,  // bdchmElement → classId
+    variableLabel: dto.variableLabel,
+    dataType: dto.dataType,
+    ucumUnit: dto.ucumUnit,
+    curie: dto.curie,
+    variableDescription: dto.variableDescription
+  };
+}
+
+/**
+ * Load and transform raw data from files
+ * Returns DTOs transformed to Data types with proper field naming
+ */
+export async function loadRawData(): Promise<SchemaData> {
+  const schemaDTO = await loadSchemaDTO();
+  const variableSpecDTOs = await loadVariableSpecDTOs();
+
+  // Transform DTOs to Data types (snake_case → camelCase, field renames)
+  const classes: ClassData[] = Object.values(schemaDTO.classes).map(transformClassDTO);
+
+  const enums = new Map<string, EnumData>();
+  Object.entries(schemaDTO.enums || {}).forEach(([name, dto]) => {
+    enums.set(name, transformEnumDTO(dto));
+  });
+
+  const slots = new Map<string, SlotData>();
+  Object.entries(schemaDTO.slots || {}).forEach(([name, dto]) => {
+    slots.set(name, transformSlotDTO(dto));
+  });
+
+  const variables: VariableSpec[] = variableSpecDTOs.map(transformVariableSpecDTO);
+
+  return { classes, enums, slots, variables };
+}
+
+/**
+ * Load and initialize complete ModelData.
+ * Orchestrates loading raw data, transforming it, and creating Element collections.
+ */
+export async function loadModelData(): Promise<ModelData> {
+  const schemaData = await loadRawData();
+  return initializeModelData(schemaData);
 }

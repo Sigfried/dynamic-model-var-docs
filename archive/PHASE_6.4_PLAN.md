@@ -1,8 +1,8 @@
 # Phase 6.4: Detailed Planning Document
 
 **Date**: 2025-10-31
-**Last Updated**: 2025-11-03
-**Status**: ✅ COMPLETE - All core cleanup steps finished (Steps 4, 5, 6 done)
+**Last Updated**: 2025-11-04
+**Status**: ✅ COMPLETE - All steps finished (Steps 1-6 done)
 
 ---
 
@@ -16,14 +16,15 @@
 3. ✅ Pre-computed fields (variableCount) when Element could compute on-demand - NOW COMPUTED
 4. ✅ buildReverseIndices exists but never called → usedByClasses always empty - REMOVED
 5. ✅ `[key: string]: unknown` in Metadata interfaces never used - REMOVED
-6. **SlotCollection incomplete** - missing attributes (attributes ARE slots, defined inline)
-7. **Slot inheritance/override system not properly modeled**
-8. Property naming carries over awkward DTO names (bdchmElement, slot_usage)
+6. ✅ SlotCollection incomplete - ClassSlot system now models attributes as slots
+7. ✅ Slot inheritance/override system not properly modeled - ClassSlot + collectAllSlots() implemented
+8. ✅ Property naming carries over awkward DTO names - FIXED (bdchmElement→classId, slot_usage→slotUsage, etc.)
 
-**Proposed Architecture**:
+**Implemented Architecture**:
 ```
-Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
-  → [Collection.fromData: enrich & transform] → Domain models (Elements)
+Raw JSON (snake_case) → DTOs (*DTO interfaces)
+  → [dataLoader: transforms] → Data (*Data interfaces, camelCase)
+  → [initializeModelData: orchestrates] → Collections (Element instances)
 ```
 
 ---
@@ -40,13 +41,17 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 **Step 2: Tree Capabilities**
 - ✅ 2.1: Element base class has tree capabilities (parent, children, ancestorList, traverse)
 
-**Step 4: DataLoader Simplification (Complete)**
+**Step 4: DataLoader Simplification (Complete - 2025-11-04)**
 - ✅ 4.1: Removed buildClassHierarchy() - replaced with loadClasses()
 - ✅ 4.1: Removed buildReverseIndices() (never called)
 - ✅ 4.1: Removed variable counting (now computed property)
+- ✅ 4.2: Created initializeModelData() orchestration function in Element.tsx (2025-11-04)
+- ✅ 4.2: Renamed *Metadata → *Data for constructor inputs (2025-11-04)
+- ✅ 4.2: Created DTO → Data transformation functions (2025-11-04)
+- ✅ 4.2: Fixed field naming: bdchmElement→classId, slot_usage→slotUsage, slot_uri→slotUri, permissible_values→permissibleValues (2025-11-04)
 - ✅ 4.3: ClassCollection.fromData() with inline parent-child wiring
 - ✅ 4.4: Wire variables array in VariableCollection.fromData() (2025-11-03)
-- ✅ EnumCollection/SlotCollection updated to accept Metadata instead of DTOs
+- ✅ EnumCollection/SlotCollection updated to accept Data instead of DTOs
 - ✅ variableCount is now computed property on ClassElement
 
 **Step 5: On-Demand Computation (Complete)**
@@ -69,10 +74,14 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 - ✅ Decision 3: Element has tree capabilities built-in (parent/children properties)
 - ✅ Insight 2 dependency: ClassElements can be created before SlotCollection
 
-### 🚧 In Progress / Partially Done
+### ✅ All Steps Complete - Minor Cleanup Deferred
 
-- ⚠️ Collections still use Tree class internally (transition state - Step 6 will remove)
-- ⚠️ Component errors exist (pre-existing architectural issues, planned for Phase 6.5)
+Phase 6.4 is complete. The following items have been properly deferred to Phase 6.5 (see TASKS.md):
+- Remove deprecated DTO imports from Element.tsx (ClassDTO, EnumDTO, SlotDTO used in ElementData type)
+- Fix references to `*Metadata` types in docs and code (should be `*Data`)
+- Remove obsolete JSX methods (renderPanelSection, renderDetails)
+- Rename Element.tsx → Element.ts
+- **Step 3.2**: Convert SlotCollection to 2-level tree (deferred to future phase)
 
 ### ✅ Step 3: Slot System Expansion (Complete - 2025-11-04)
 
@@ -97,9 +106,6 @@ Raw JSON → [dataLoader: load & type-check] → Metadata interfaces
 - Deferred - current flat SlotCollection sufficient for now
 - Would show global slots + inline attributes from all classes
 
-**Step 4: DataLoader Simplification**
-- ❌ 4.2: Collection orchestration function (partially exists in dataLoader)
-
 ---
 
 ## 📋 What's Next
@@ -110,7 +116,18 @@ None currently - all blockers resolved!
 
 ### Completed
 
-1. ✅ **Step 6: Delete Tree.ts and use Element tree directly** (2025-11-03)
+1. ✅ **Step 4.2: Collection orchestration and DTO→Data transformation** (2025-11-04)
+   - Created `initializeModelData()` standalone function in Element.tsx
+   - Renamed all `*Metadata` types to `*Data` (ClassData, EnumData, SlotData)
+   - Created transformation functions: transformSlotDTO(), transformEnumDTO(), transformClassDTO(), transformVariableSpecDTO()
+   - Fixed field naming: `bdchmElement` → `classId`, `slot_usage` → `slotUsage`, `slot_uri` → `slotUri`, `permissible_values` → `permissibleValues`
+   - Updated all Element constructors to accept `*Data` types
+   - Updated all Collection.fromData() methods
+   - Updated all test files to use new types and field names
+   - Result: 158 tests passing, type checking passes
+   - Architecture now: Raw JSON (snake_case) → DTOs → [transform] → Data (camelCase) → Elements
+
+2. ✅ **Step 6: Delete Tree.ts and use Element tree directly** (2025-11-03)
    - Added toRenderableItems() to Element base class
    - Removed TreeNode wrappers from all Collections
    - Updated all Collection classes to use Element.children directly

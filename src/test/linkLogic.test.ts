@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import { ClassElement, EnumElement, SlotElement, VariableElement, SlotCollection, type Relationship } from '../models/Element';
-import type { ClassMetadata, EnumMetadata, SlotMetadata, VariableSpec, ModelData } from '../types';
+import type { ClassData, EnumData, SlotData, VariableSpec, ModelData } from '../types';
 
 /**
  * Link Logic Tests
@@ -23,7 +23,7 @@ const createMockSlotCollection = (): SlotCollection => {
 describe('Element Relationship Detection', () => {
   describe('ClassElement relationships', () => {
     test('should detect inheritance relationship', () => {
-      const childClass: ClassMetadata = {
+      const childClass: ClassData = {
         name: 'Participant',
         parent: 'Entity',
         description: 'A participant in a study',
@@ -42,7 +42,7 @@ describe('Element Relationship Detection', () => {
     });
 
     test('should not have inheritance relationship for root classes', () => {
-      const rootClass: ClassMetadata = {
+      const rootClass: ClassData = {
         name: 'Entity',
         parent: undefined,
         description: 'Root entity',
@@ -58,7 +58,7 @@ describe('Element Relationship Detection', () => {
     });
 
     test('should detect enum property relationships', () => {
-      const classWithEnum: ClassMetadata = {
+      const classWithEnum: ClassData = {
         name: 'Specimen',
         parent: 'Entity',
         description: 'A specimen',
@@ -83,7 +83,7 @@ describe('Element Relationship Detection', () => {
     });
 
     test('should detect class property relationships', () => {
-      const classWithClassRef: ClassMetadata = {
+      const classWithClassRef: ClassData = {
         name: 'Condition',
         parent: 'Entity',
         description: 'A condition',
@@ -107,7 +107,7 @@ describe('Element Relationship Detection', () => {
     });
 
     test('should ignore primitive property types', () => {
-      const classWithPrimitives: ClassMetadata = {
+      const classWithPrimitives: ClassData = {
         name: 'Person',
         parent: 'Entity',
         description: 'A person',
@@ -127,7 +127,7 @@ describe('Element Relationship Detection', () => {
     });
 
     test('should detect self-referential relationships', () => {
-      const selfRefClass: ClassMetadata = {
+      const selfRefClass: ClassData = {
         name: 'Specimen',
         parent: 'Entity',
         description: 'A specimen',
@@ -149,7 +149,7 @@ describe('Element Relationship Detection', () => {
     });
 
     test('should handle multiple relationships', () => {
-      const complexClass: ClassMetadata = {
+      const complexClass: ClassData = {
         name: 'MeasurementObservation',
         parent: 'Observation',
         description: 'A measurement observation',
@@ -173,7 +173,7 @@ describe('Element Relationship Detection', () => {
 
   describe('SlotElement relationships', () => {
     test('should detect slot range relationships for enum', () => {
-      const slotWithEnum: SlotMetadata = {
+      const slotWithEnum: SlotData = {
         description: 'Species',
         range: 'CellularOrganismSpeciesEnum',
       };
@@ -187,7 +187,7 @@ describe('Element Relationship Detection', () => {
     });
 
     test('should detect slot range relationships for class', () => {
-      const slotWithClass: SlotMetadata = {
+      const slotWithClass: SlotData = {
         description: 'Associated participant',
         range: 'Participant',
       };
@@ -201,7 +201,7 @@ describe('Element Relationship Detection', () => {
     });
 
     test('should not create relationships for primitive ranges', () => {
-      const slotWithPrimitive: SlotMetadata = {
+      const slotWithPrimitive: SlotData = {
         description: 'Identifier',
         range: 'string',
       };
@@ -213,7 +213,7 @@ describe('Element Relationship Detection', () => {
     });
 
     test('should handle slots without range', () => {
-      const slotNoRange: SlotMetadata = {
+      const slotNoRange: SlotData = {
         description: 'Description field',
       };
 
@@ -227,7 +227,7 @@ describe('Element Relationship Detection', () => {
   describe('VariableElement relationships', () => {
     test('should link to mapped class', () => {
       const variable: VariableSpec = {
-        bdchmElement: 'MeasurementObservation',
+        classId: 'MeasurementObservation',
         variableLabel: 'height',
         dataType: 'float',
         ucumUnit: 'cm',
@@ -248,9 +248,9 @@ describe('Element Relationship Detection', () => {
 
   describe('EnumElement relationships', () => {
     test('should have no outgoing relationships', () => {
-      const enumDef: EnumMetadata = {
+      const enumDef: EnumData = {
         description: 'Sex values',
-        permissible_values: {
+        permissibleValues: {
           male: { description: 'Male' },
           female: { description: 'Female' },
         },

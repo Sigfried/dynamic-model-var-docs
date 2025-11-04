@@ -3,15 +3,16 @@
 
 import * as React from 'react';
 import type {
-  ClassMetadata,
   ClassDTO,
+  ClassData,
   EnumDTO,
-  EnumMetadata,
+  EnumData,
   ModelData,
   SlotDTO,
-  SlotMetadata,
+  SlotData,
   VariableSpec,
-  EnumValue
+  EnumValue,
+  SchemaData
 } from '../types';
 import type { ElementTypeId, RelationshipTypeId } from './ElementRegistry';
 import { ELEMENT_TYPES } from './ElementRegistry';
@@ -228,6 +229,52 @@ export function initializeClassCollection(collection: ClassCollection): void {
   globalClassCollection = collection;
 }
 
+/**
+ * Initialize ModelData from transformed SchemaData.
+ * Creates all collections in proper dependency order and initializes global references.
+ *
+ * Collection creation order (dependencies):
+ * 1. EnumCollection (no dependencies)
+ * 2. SlotCollection (no dependencies)
+ * 3. ClassCollection (needs slotCollection for validation)
+ * 4. VariableCollection (needs classCollection)
+ */
+export function initializeModelData(schemaData: SchemaData): ModelData {
+  // Create collections in proper order
+  const enumCollection = EnumCollection.fromData(schemaData.enums);
+  const slotCollection = SlotCollection.fromData(schemaData.slots);
+  const classCollection = ClassCollection.fromData(schemaData.classes, slotCollection);
+  const variableCollection = VariableCollection.fromData(schemaData.variables, classCollection);
+
+  // Initialize global references for on-demand computation
+  initializeClassCollection(classCollection);
+
+  const collections = new Map();
+  collections.set('class', classCollection);
+  collections.set('enum', enumCollection);
+  collections.set('slot', slotCollection);
+  collections.set('variable', variableCollection);
+
+  // Flatten all elements into name→element lookup map
+  const elementLookup = new Map<string, Element>();
+  collections.forEach(collection => {
+    collection.getAllElements().forEach(element => {
+      elementLookup.set(element.name, element);
+    });
+  });
+
+  // Initialize element name lookup map for accurate type categorization
+  const classNames = classCollection.getAllElements().map(c => c.name);
+  const enumNames = Array.from(schemaData.enums.keys());
+  const slotNames = Array.from(schemaData.slots.keys());
+  initializeElementNameMap(classNames, enumNames, slotNames);
+
+  return {
+    collections,
+    elementLookup
+  };
+}
+
 // Helper to categorize range types
 function categorizeRange(range: string): 'class' | 'enum' | 'primitive' {
   const primitives = ['string', 'integer', 'float', 'double', 'decimal', 'boolean', 'date', 'datetime', 'time', 'uri', 'uriorcurie'];
@@ -411,7 +458,7 @@ export class ClassElement extends Element {
     return Object.fromEntries(slots);
   }
 
-  constructor(data: ClassMetadata, dataModel: ModelData, slotCollection: SlotCollection) {
+  constructor(data: ClassData, dataModel: ModelData, slotCollection: SlotCollection) {
     super();
     this.dataModel = dataModel;
     this.name = data.name;
@@ -428,7 +475,7 @@ export class ClassElement extends Element {
       this.slots = [];
     }
 
-    this.slot_usage = data.slot_usage;
+    this.slot_usage = data.slotUsage;
     this.abstract = data.abstract;
 
     // Create ClassSlot instances (Phase 6.4 Step 3)
@@ -671,15 +718,15 @@ export class EnumElement extends Element {
   readonly description: string | undefined;
   readonly permissibleValues: EnumValue[];
 
-  constructor(name: string, metadata: EnumMetadata) {
+  constructor(name: string, data: EnumData) {
     super();
     this.name = name;
-    this.description = metadata.description;
+    this.description = data.description;
 
-    // Transform permissible_values from Record to EnumValue[]
+    // Transform permissibleValues from Record to EnumValue[]
     this.permissibleValues = [];
-    if (metadata.permissible_values) {
-      Object.entries(metadata.permissible_values).forEach(([key, valueDef]) => {
+    if (data.permissibleValues) {
+      Object.entries(data.permissibleValues).forEach(([key, valueDef]) => {
         this.permissibleValues.push({
           key,
           description: valueDef?.description
@@ -814,15 +861,15 @@ export class SlotElement extends Element {
   readonly required: boolean | undefined;
   readonly multivalued: boolean | undefined;
 
-  constructor(name: string, metadata: SlotMetadata) {
+  constructor(name: string, data: SlotData) {
     super();
     this.name = name;
-    this.description = metadata.description;
-    this.range = metadata.range;
-    this.slot_uri = metadata.slot_uri;
-    this.identifier = metadata.identifier;
-    this.required = metadata.required;
-    this.multivalued = metadata.multivalued;
+    this.description = data.description;
+    this.range = data.range;
+    this.slot_uri = data.slotUri;
+    this.identifier = data.identifier;
+    this.required = data.required;
+    this.multivalued = data.multivalued;
   }
 
   renderPanelSection(
@@ -1017,7 +1064,7 @@ export class SlotElement extends Element {
 // VariableElement - represents a variable specification
 export class VariableElement extends Element {
   readonly type = 'variable' as const;
-  readonly bdchmElement: string;
+  readonly classId: string;  // Mapped class (formerly bdchmElement)
   readonly name: string;  // variableLabel
   readonly description: string;  // variableDescription
   readonly dataType: string;
@@ -1026,7 +1073,7 @@ export class VariableElement extends Element {
 
   constructor(data: VariableSpec) {
     super();
-    this.bdchmElement = data.bdchmElement;
+    this.classId = data.classId;
     this.name = data.variableLabel;
     this.description = data.variableDescription;
     this.dataType = data.dataType;
@@ -1073,9 +1120,9 @@ export class VariableElement extends Element {
             <span className="font-semibold">Mapped to: </span>
             <button
               className="text-blue-600 dark:text-blue-400 hover:underline"
-              onClick={() => onNavigate(this.bdchmElement, 'class')}
+              onClick={() => onNavigate(this.classId, 'class')}
             >
-              {this.bdchmElement}
+              {this.classId}
             </button>
           </div>
           {this.dataType && (
@@ -1107,7 +1154,7 @@ export class VariableElement extends Element {
 
     // Variable Properties section
     const properties: [string, string][] = [];
-    properties.push(['Mapped to', this.bdchmElement]);
+    properties.push(['Mapped to', this.classId]);
     if (this.dataType) {
       properties.push(['Data Type', this.dataType]);
     }
@@ -1138,7 +1185,7 @@ export class VariableElement extends Element {
     // Variable → Class relationship
     return [{
       type: 'property',
-      target: this.bdchmElement,
+      target: this.classId,
       targetType: 'class',
       isSelfRef: false
     }];
@@ -1196,10 +1243,10 @@ export class EnumCollection extends ElementCollection {
   }
 
   /** Factory: Create from raw data (called by dataLoader) */
-  static fromData(enumData: Map<string, EnumMetadata>): EnumCollection {
-    // Convert EnumMetadata to flat list of EnumElements (no hierarchy)
+  static fromData(enumData: Map<string, EnumData>): EnumCollection {
+    // Convert EnumData to flat list of EnumElements (no hierarchy)
     const roots = Array.from(enumData.entries())
-      .map(([name, metadata]) => new EnumElement(name, metadata))
+      .map(([name, data]) => new EnumElement(name, data))
       .sort((a, b) => a.name.localeCompare(b.name));
 
     return new EnumCollection(roots);
@@ -1251,10 +1298,10 @@ export class SlotCollection extends ElementCollection {
   }
 
   /** Factory: Create from raw data (called by dataLoader) */
-  static fromData(slotData: Map<string, SlotMetadata>): SlotCollection {
-    // Convert SlotMetadata to flat list of SlotElements (no hierarchy)
+  static fromData(slotData: Map<string, SlotData>): SlotCollection {
+    // Convert SlotData to flat list of SlotElements (no hierarchy)
     const roots = Array.from(slotData.entries())
-      .map(([name, metadata]) => new SlotElement(name, metadata))
+      .map(([name, data]) => new SlotElement(name, data))
       .sort((a, b) => a.name.localeCompare(b.name));
 
     return new SlotCollection(roots);
@@ -1316,7 +1363,7 @@ export class ClassCollection extends ElementCollection {
   }
 
   /** Factory: Create from raw data (called by dataLoader) */
-  static fromData(classData: ClassMetadata[], slotCollection: SlotCollection): ClassCollection {
+  static fromData(classData: ClassData[], slotCollection: SlotCollection): ClassCollection {
     // Create a temporary ModelData stub for ClassElement constructors
     // (Full ModelData will be set later via setModelData())
     const tempModelData = {
@@ -1446,7 +1493,7 @@ export class VariableCollection extends ElementCollection {
     // Group variables by class name
     const groupedByClass = new Map<string, VariableElement[]>();
     variableElements.forEach(variable => {
-      const className = variable.bdchmElement;
+      const className = variable.classId;
       if (!groupedByClass.has(className)) {
         groupedByClass.set(className, []);
       }

@@ -3,7 +3,7 @@
 import type { Element } from './models/Element';
 
 // ============================================================================
-// DTOs - Raw data shapes from external sources (files, APIs)
+// DTOs - Raw data shapes from external sources (snake_case from JSON/files)
 // ============================================================================
 
 /**
@@ -18,8 +18,9 @@ export interface AttributeDefinition {
 
 /**
  * Raw slot definition from metadata JSON (LinkML schema)
+ * snake_case fields from JSON
  */
-export interface SlotMetadata {
+export interface SlotDTO {
   range?: string;
   description?: string;
   slot_uri?: string;
@@ -30,8 +31,9 @@ export interface SlotMetadata {
 
 /**
  * Raw enum definition from metadata JSON (LinkML schema)
+ * snake_case fields from JSON
  */
-export interface EnumMetadata {
+export interface EnumDTO {
   description?: string;
   permissible_values?: Record<string, {
     description?: string;
@@ -41,8 +43,9 @@ export interface EnumMetadata {
 
 /**
  * Raw class definition from metadata JSON (LinkML schema)
+ * snake_case fields from JSON
  */
-export interface ClassMetadata {
+export interface ClassDTO {
   name: string;
   description: string;
   parent?: string;
@@ -53,24 +56,89 @@ export interface ClassMetadata {
 }
 
 /**
- * Complete schema metadata from bdchm.metadata.json
+ * Complete schema from bdchm.metadata.json
  */
-export interface SchemaMetadata {
-  classes: Record<string, ClassMetadata>;
-  slots: Record<string, SlotMetadata>;
-  enums: Record<string, EnumMetadata>;
+export interface SchemaDTO {
+  classes: Record<string, ClassDTO>;
+  slots: Record<string, SlotDTO>;
+  enums: Record<string, EnumDTO>;
+}
+
+// ============================================================================
+// Data - Parsed/validated data for Element constructors (camelCase, transformed)
+// ============================================================================
+
+/**
+ * Slot data for SlotElement constructor
+ * Transformed from SlotDTO with camelCase
+ */
+export interface SlotData {
+  range?: string;
+  description?: string;
+  slotUri?: string;  // transformed from slot_uri
+  identifier?: boolean;
+  required?: boolean;
+  multivalued?: boolean;
 }
 
 /**
- * Variable specification row from TSV file
+ * Enum data for EnumElement constructor
+ * Transformed from EnumDTO
  */
-export interface VariableSpec {
-  bdchmElement: string;
+export interface EnumData {
+  description?: string;
+  permissibleValues?: Record<string, {  // transformed from permissible_values
+    description?: string;
+    meaning?: string;
+  }>;
+}
+
+/**
+ * Class data for ClassElement constructor
+ * Transformed from ClassDTO with camelCase
+ */
+export interface ClassData {
+  name: string;
+  description: string;
+  parent?: string;
+  abstract: boolean;
+  attributes: Record<string, AttributeDefinition>;
+  slots?: string | string[];
+  slotUsage?: Record<string, AttributeDefinition>;  // transformed from slot_usage
+}
+
+/**
+ * Variable specification row from TSV file (raw DTO)
+ */
+export interface VariableSpecDTO {
+  bdchmElement: string;  // snake_case from TSV
   variableLabel: string;
   dataType: string;
   ucumUnit: string;
   curie: string;
   variableDescription: string;
+}
+
+/**
+ * Variable specification data for VariableElement constructor (transformed)
+ */
+export interface VariableSpec {
+  classId: string;  // transformed from bdchmElement
+  variableLabel: string;
+  dataType: string;
+  ucumUnit: string;
+  curie: string;
+  variableDescription: string;
+}
+
+/**
+ * Complete transformed schema data ready for Element constructors
+ */
+export interface SchemaData {
+  classes: ClassData[];
+  enums: Map<string, EnumData>;
+  slots: Map<string, SlotData>;
+  variables: VariableSpec[];
 }
 
 /**

@@ -50,7 +50,7 @@ describe('dataLoader', () => {
 
       // Each variable should have required fields from VariableElement
       const sampleVar = variables[0];
-      expect(sampleVar).toHaveProperty('bdchmElement');
+      expect(sampleVar).toHaveProperty('classId');
       expect(sampleVar).toHaveProperty('name');  // maps from variableLabel
       expect(sampleVar).toHaveProperty('dataType');
 
@@ -61,7 +61,7 @@ describe('dataLoader', () => {
       const classNames = new Set(allClasses.map(c => c.name));
 
       const unmappedVariables = variables.filter(
-        v => !classNames.has(v.bdchmElement)
+        v => !classNames.has(v.classId)
       );
       // Allow some unmapped variables (data evolution), but most should map
       expect(unmappedVariables.length).toBeLessThan(variables.length * 0.1); // Less than 10%
@@ -87,7 +87,7 @@ describe('dataLoader', () => {
 
         // Verify each variable in the array references the correct class
         classWithVars.variables.forEach(variable => {
-          expect(variable.bdchmElement).toBe(classWithVars.name);
+          expect(variable.classId).toBe(classWithVars.name);
         });
       }
     });

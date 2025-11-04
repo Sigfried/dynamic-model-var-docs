@@ -2,7 +2,7 @@ import { describe, test, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import DetailPanel from '../components/DetailPanel';
 import { ClassElement, EnumElement, SlotElement, VariableElement, SlotCollection } from '../models/Element';
-import type { ClassMetadata, EnumMetadata, SlotMetadata, VariableSpec, ModelData } from '../types';
+import type { ClassData, EnumData, SlotData, VariableSpec, ModelData } from '../types';
 
 /**
  * DetailPanel Tests
@@ -19,7 +19,7 @@ const createMockModelData = (): ModelData => ({
 
 // Helper to create SlotCollection with test slots
 const createMockSlotCollection = (): SlotCollection => {
-  const slotData = new Map<string, SlotMetadata>();
+  const slotData = new Map<string, SlotData>();
 
   // Add slots referenced by test classes
   slotData.set('testSlot', {
@@ -36,7 +36,7 @@ const createMockSlotCollection = (): SlotCollection => {
 };
 
 describe('DetailPanel - ClassElement', () => {
-  const mockClassData: ClassMetadata = {
+  const mockClassData: ClassData = {
     name: 'TestClass',
     description: 'A test class',
     parent: 'ParentClass',
@@ -50,7 +50,7 @@ describe('DetailPanel - ClassElement', () => {
       }
     },
     slots: ['testSlot'],
-    slot_usage: {
+    slotUsage: {
       usedSlot: {
         range: 'TestEnum',
         required: true,
@@ -63,7 +63,7 @@ describe('DetailPanel - ClassElement', () => {
   // Manually add variables for testing
   classElement.variables = [
     new VariableElement({
-      bdchmElement: 'TestClass',
+      classId: 'TestClass',
       variableLabel: 'test_var',
       dataType: 'string',
       ucumUnit: 'kg',
@@ -71,7 +71,7 @@ describe('DetailPanel - ClassElement', () => {
       variableDescription: 'Test variable'
     }),
     new VariableElement({
-      bdchmElement: 'TestClass',
+      classId: 'TestClass',
       variableLabel: 'test_var2',
       dataType: 'integer',
       ucumUnit: '',
@@ -129,7 +129,7 @@ describe('DetailPanel - ClassElement', () => {
   });
 
   test('should handle class without parent', () => {
-    const rootClassData: ClassMetadata = {
+    const rootClassData: ClassData = {
       ...mockClassData,
       parent: undefined
     };
@@ -143,9 +143,9 @@ describe('DetailPanel - ClassElement', () => {
 });
 
 describe('DetailPanel - EnumElement', () => {
-  const mockEnumData: EnumMetadata = {
+  const mockEnumData: EnumData = {
     description: 'A test enumeration',
-    permissible_values: {
+    permissibleValues: {
       VALUE1: { description: 'First value' },
       VALUE2: { description: 'Second value' },
       VALUE3: { description: undefined }
@@ -187,7 +187,7 @@ describe('DetailPanel - EnumElement', () => {
   });
 
   test('should handle enum without description', () => {
-    const noDescEnum: EnumMetadata = {
+    const noDescEnum: EnumData = {
       ...mockEnumData,
       description: undefined
     };
@@ -201,10 +201,10 @@ describe('DetailPanel - EnumElement', () => {
 });
 
 describe('DetailPanel - SlotElement', () => {
-  const mockSlotData: SlotMetadata = {
+  const mockSlotData: SlotData = {
     description: 'A test slot',
     range: 'string',
-    slot_uri: 'https://example.com/slot/test',
+    slotUri: 'https://example.com/slot/test',
     identifier: true,
     required: true,
     multivalued: false
@@ -248,10 +248,10 @@ describe('DetailPanel - SlotElement', () => {
   });
 
   test('should handle minimal slot definition', () => {
-    const minimalSlotData: SlotMetadata = {
+    const minimalSlotData: SlotData = {
       description: undefined,
       range: undefined,
-      slot_uri: undefined,
+      slotUri: undefined,
       identifier: undefined,
       required: undefined,
       multivalued: undefined
@@ -267,7 +267,7 @@ describe('DetailPanel - SlotElement', () => {
 
 describe('DetailPanel - VariableElement', () => {
   const mockVariableData: VariableSpec = {
-    bdchmElement: 'MeasurementObservation',
+    classId: 'MeasurementObservation',
     variableLabel: 'body_mass_index',
     dataType: 'decimal',
     ucumUnit: 'kg/m2',
@@ -305,7 +305,7 @@ describe('DetailPanel - VariableElement', () => {
 
   test('should handle variable with minimal data', () => {
     const minimalVarData: VariableSpec = {
-      bdchmElement: 'TestClass',
+      classId: 'TestClass',
       variableLabel: 'test_var',
       dataType: '',
       ucumUnit: '',
@@ -323,9 +323,9 @@ describe('DetailPanel - VariableElement', () => {
 });
 
 describe('DetailPanel - Header visibility', () => {
-  const mockEnumData: EnumMetadata = {
+  const mockEnumData: EnumData = {
     description: 'Test',
-    permissible_values: {}
+    permissibleValues: {}
   };
   const enumElement = new EnumElement('TestEnum', mockEnumData);
 
