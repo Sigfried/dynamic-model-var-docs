@@ -8,16 +8,19 @@
  *
  * Appears when user hovers over an element in the tree/panels.
  * Fixed position in top-right corner.
+ *
+ * Architecture: Component defines RelationshipData interface specifying what it needs.
+ * Element provides data via getRelationshipData() that adapts to this contract.
  */
 
 import type { Element } from '../models/Element';
 import type { ElementTypeId } from '../models/ElementRegistry';
 
 /**
- * RelationshipDetail - Data contract for relationship sidebar
- * Component defines this interface; Element provides data via getRelationshipDetails()
+ * RelationshipData - Data contract for relationship sidebar
+ * Component defines this interface; Element provides data via getRelationshipData()
  */
-export interface RelationshipDetail {
+export interface RelationshipData {
   elementName: string;
   elementType: ElementTypeId;
 
@@ -54,8 +57,8 @@ interface RelationshipSidebarProps {
 export default function RelationshipSidebar({ element }: RelationshipSidebarProps) {
   if (!element) return null;
 
-  // Get relationship details from element
-  const details = element.getRelationshipDetails();
+  // Get relationship data from element (adapts to component's contract)
+  const details = element.getRelationshipData();
 
   const hasOutgoing = details.outgoing.inheritance || details.outgoing.properties.length > 0;
   const hasIncoming =
