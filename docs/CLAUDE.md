@@ -121,6 +121,124 @@ element.traverse()     // Depth-first traversal with callback
 - **Why**: Schema changes would break semantic categorizations
 - **Safe filtering**: By element type (class, enum, slot, variable)
 
+### Config-Based Abstraction Pattern
+
+When you have similar code repeated across multiple types, consider using **config objects** instead of imperative code.
+
+**Example: Relationship computation (decided NOT to implement, but kept as pattern example)**
+
+Instead of:
+```typescript
+// Imperative approach - lots of similar code
+if (element.type === 'class' && cls.parentName === element.name) {
+  incoming.subclasses.push(cls.name);
+}
+if (element.type === 'enum' || element.type === 'slot') {
+  if (cls.attributes) {
+    for (const [attrName, attrDef] of Object.entries(cls.attributes)) {
+      if (attrDef.range === element.name) {
+        incoming.usedByAttributes.push({ ... });
+      }
+    }
+  }
+}
+```
+
+Could use config:
+```typescript
+// Declarative approach - config object
+const RELATIONSHIP_CONFIG = [
+  {
+    thisType: 'Class',
+    thisProp: 'id',
+    direction: 'incoming',
+    otherType: 'Class',
+    otherProp: 'parentId',
+    label: 'has subclass',
+    cardinality: 'many-1'
+  },
+  {
+    thisType: 'Enum',
+    thisProp: 'id',
+    direction: 'incoming',
+    otherType: 'Class',
+    otherProp: (cls) => cls.classSlots.map(slot => slot.range),
+    label: 'usedBy',
+    cardinality: 'many-many'
+  }
+];
+
+// Generic processor uses config
+function computeRelationships(element, config) { ... }
+```
+
+**When to use config:**
+- Many similar cases (10+) with slight variations
+- Pattern is truly declarative (not hiding complex logic)
+- Config would be significantly shorter than imperative code
+- Need to generate documentation from relationships
+
+**When NOT to use:**
+- Only 4-5 types (current code is fine)
+- Logic has complex conditionals (config becomes unreadable)
+- Type safety would be lost
+
+### Element Identity: .name vs getId()
+
+**TL;DR:** `getId()` without context returns the same value as `.name`. Use `.name` for display, `getId()` for identity/comparisons.
+
+**getId() signature:**
+```typescript
+getId(context?: 'leftPanel' | 'rightPanel' | 'detailBox'): string
+```
+
+**Behavior:**
+- With context: Returns prefixed ID (e.g., `'lp-Specimen'`, `'rp-Specimen'`, `'db-Specimen'`)
+- Without context: Returns `this.name` (e.g., `'Specimen'`)
+
+**When to use .name:**
+- ✅ Display purposes (titles, labels)
+  ```typescript
+  title: this.name
+  displayName: this.name
+  ```
+- ✅ Sorting by display name
+  ```typescript
+  elements.sort((a, b) => a.name.localeCompare(b.name))
+  ```
+
+**When to use getId():**
+- ✅ Identity comparisons and relationships
+  ```typescript
+  if (classSlot.range === thisElement.getId()) { ... }
+  if (otherClass.parentName === thisElement.getId()) { ... }
+  ```
+- ✅ Building data structures for relationships
+  ```typescript
+  incoming.subclasses.push(otherClass.getId());
+  className: otherClass.getId()
+  ```
+
+**When to use getId(context):**
+- ✅ DOM IDs that need panel-specific uniqueness
+  ```typescript
+  // Currently not used - DOM IDs use ${type}-${name} pattern instead
+  // Could use getId(context) if we need to distinguish same element across panels
+  ```
+
+**Special cases:**
+- **parentName field**: Currently named `parentName` but stores an identifier. Could be renamed to `parentId` for clarity, but functionally equivalent since it's compared to `getId()` which returns `name`.
+- **UI state keys** (expanded items, selections): Use `.name` since they're keying off display identity
+  ```typescript
+  expandedItems.has(this.name)
+  expanded.add(element.name)
+  ```
+
+**Current pattern (post-refactoring):**
+- computeIncomingRelationships: Uses `getId()` for all identity comparisons ✅
+- ClassSlot.range: Now a getter that returns effective range, compared using `getId()` ✅
+- RelationshipData: All type fields use `string` instead of `ElementTypeId` ✅
+
 ---
 
 ## 📋 Current Task

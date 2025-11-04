@@ -84,7 +84,7 @@ type OutgoingRelationships = {
  * Compute incoming relationships for an element (generic helper)
  * Scans globalClassCollection to find reverse relationships.
  */
-function computeIncomingRelationships(element: Element): IncomingRelationships {
+function computeIncomingRelationships(thisElement: Element): IncomingRelationships {
   const incoming: IncomingRelationships = {
     subclasses: [],
     usedByAttributes: [],
@@ -97,41 +97,23 @@ function computeIncomingRelationships(element: Element): IncomingRelationships {
 
   const allClasses = globalClassCollection.getAllElements() as ClassElement[];
 
-  for (const cls of allClasses) {
+  for (const otherClass of allClasses) {
     // Find subclasses (classes that inherit from this element)
-    if (element.type === 'class' && cls.parentName === element.name) {
-      incoming.subclasses.push(cls.name);
+    if (thisElement.type === 'class' && otherClass.parentName === thisElement.getId()) {
+      incoming.subclasses.push(otherClass.getId());
     }
 
-    // Find attributes that reference this element (for enums and slots)
-    if (element.type === 'enum' || element.type === 'slot') {
-      if (cls.attributes) {
-        for (const [attrName, attrDef] of Object.entries(cls.attributes)) {
-          if (attrDef.range === element.name) {
-            incoming.usedByAttributes.push({
-              className: cls.name,
-              attributeName: attrName,
-              sourceType: 'class'
-            });
-          }
+    // Find class slots that reference this element (for enums and slots)
+    // Uses classSlots which includes attributes, slot_usage, and slot_reference
+    if (thisElement.type === 'enum' || thisElement.type === 'slot') {
+      for (const classSlot of otherClass.classSlots) {
+        if (classSlot.range === thisElement.getId()) {
+          incoming.usedByAttributes.push({
+            className: otherClass.getId(),
+            attributeName: classSlot.name,
+            sourceType: 'class'
+          });
         }
-      }
-    }
-
-    // Find slot references (for slots)
-    if (element.type === 'slot') {
-      if (cls.slots && cls.slots.includes(element.name)) {
-        incoming.usedByAttributes.push({
-          className: cls.name,
-          attributeName: element.name,
-          sourceType: 'class'
-        });
-      } else if (cls.slot_usage && element.name in cls.slot_usage) {
-        incoming.usedByAttributes.push({
-          className: cls.name,
-          attributeName: element.name,
-          sourceType: 'class'
-        });
       }
     }
   }
@@ -518,11 +500,11 @@ export class ClassSlot {
   readonly baseSlot: SlotElement;  // Reference to the slot (or synthetic SlotElement for attributes)
   readonly source: 'attribute' | 'slot_usage' | 'slot_reference';
 
-  // Override values (undefined means "use base slot value")
-  readonly range?: string;
-  readonly required?: boolean;
-  readonly multivalued?: boolean;
-  readonly description?: string;
+  // Internal override values (undefined means "use base slot value")
+  private readonly _range?: string;
+  private readonly _required?: boolean;
+  private readonly _multivalued?: boolean;
+  private readonly _description?: string;
 
   constructor(
     name: string,
@@ -538,10 +520,27 @@ export class ClassSlot {
     this.name = name;
     this.baseSlot = baseSlot;
     this.source = source;
-    this.range = overrides?.range;
-    this.required = overrides?.required;
-    this.multivalued = overrides?.multivalued;
-    this.description = overrides?.description;
+    this._range = overrides?.range;
+    this._required = overrides?.required;
+    this._multivalued = overrides?.multivalued;
+    this._description = overrides?.description;
+  }
+
+  // Property getters - work like SlotElement properties
+  get range(): string {
+    return this.getEffectiveRange();
+  }
+
+  get required(): boolean {
+    return this.getEffectiveRequired();
+  }
+
+  get multivalued(): boolean {
+    return this.getEffectiveMultivalued();
+  }
+
+  get description(): string | undefined {
+    return this.getEffectiveDescription();
   }
 
   /**
@@ -549,7 +548,7 @@ export class ClassSlot {
    * Returns 'string' as final fallback if neither override nor base has a value.
    */
   getEffectiveRange(): string {
-    return this.range ?? this.baseSlot.range ?? 'string';
+    return this._range ?? this.baseSlot.range ?? 'string';
   }
 
   /**
@@ -557,7 +556,7 @@ export class ClassSlot {
    * Returns false as final fallback if neither override nor base has a value.
    */
   getEffectiveRequired(): boolean {
-    return this.required ?? this.baseSlot.required ?? false;
+    return this._required ?? this.baseSlot.required ?? false;
   }
 
   /**
@@ -565,7 +564,7 @@ export class ClassSlot {
    * Returns false as final fallback if neither override nor base has a value.
    */
   getEffectiveMultivalued(): boolean {
-    return this.multivalued ?? this.baseSlot.multivalued ?? false;
+    return this._multivalued ?? this.baseSlot.multivalued ?? false;
   }
 
   /**
@@ -573,7 +572,7 @@ export class ClassSlot {
    * Returns undefined if neither override nor base has a description.
    */
   getEffectiveDescription(): string | undefined {
-    return this.description ?? this.baseSlot.description;
+    return this._description ?? this.baseSlot.description;
   }
 
   /**
@@ -673,6 +672,7 @@ export class ClassElement extends Element {
     this.name = data.name;
     this.description = data.description;
     this.parentName = data.parent;  // Store parent name (Element.parent set later in fromData())
+    // [sg] parentName should probably be parentId
 
     // Keep existing properties for backward compatibility during transition
     this.attributes = data.attributes || {};

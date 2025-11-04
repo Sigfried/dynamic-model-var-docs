@@ -14,7 +14,6 @@
  */
 
 import type { Element } from '../models/Element';
-import type { ElementTypeId } from '../models/ElementRegistry';
 
 /**
  * RelationshipData - Data contract for relationship sidebar
@@ -22,18 +21,18 @@ import type { ElementTypeId } from '../models/ElementRegistry';
  */
 export interface RelationshipData {
   elementName: string;
-  elementType: ElementTypeId;
+  elementType: string;
 
   // Outgoing relationships (from this element)
   outgoing: {
     inheritance?: {
       target: string;
-      targetType: ElementTypeId;
+      targetType: string;
     };
     properties: Array<{
       attributeName: string;   // "specimen_type", "parent_specimen"
       target: string;          // "SpecimenTypeEnum", "Specimen"
-      targetType: ElementTypeId;
+      targetType: string;
       isSelfRef: boolean;
     }>;
   };
@@ -44,7 +43,7 @@ export interface RelationshipData {
     usedByAttributes: Array<{
       className: string;       // "Specimen"
       attributeName: string;   // "specimen_type"
-      sourceType: ElementTypeId;
+      sourceType: string;
     }>;
     variables: number;         // Count of variables mapped to this class
   };
