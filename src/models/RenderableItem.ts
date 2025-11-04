@@ -1,8 +1,14 @@
 /**
- * RenderableItem - Common interface for all items displayed in Section panels
+ * RenderableItem - Internal data structure for element collection items
  *
- * This interface separates data structure (tree/flat/grouped) from presentation.
- * Collections provide RenderableItems, Section.tsx renders them generically.
+ * **DEPRECATED**: This is an internal structure used by the old getRenderableItems() method.
+ * Components should use SectionItemData (from components/Section.tsx) instead.
+ *
+ * This interface is kept for backward compatibility with getRenderableItems().
+ * New code should use getSectionData() which returns SectionData with SectionItemData items.
+ *
+ * @see components/Section.tsx SectionItemData for the component-facing interface
+ * @see Element.getSectionData() for the new approach
  */
 
 import type { Element } from './Element';

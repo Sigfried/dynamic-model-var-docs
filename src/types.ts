@@ -250,7 +250,7 @@ export interface SlotDTO {
  * Type alias for selected elements in the UI
  * Now just an alias to Element - all element instances are Element subclasses
  *
- * @deprecated Use Element directly from models/Element.tsx
+ * @deprecated Use Element directly from models/Element
  */
 export type SelectedElement = Element;
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import ElementsPanel from './components/ElementsPanel';
+import ElementsPanel, { type ToggleButtonData } from './components/ElementsPanel';
+import type { SectionData } from './components/Section';
 import DetailDialog from './components/DetailDialog';
 import DetailPanelStack from './components/DetailPanelStack';
 import PanelLayout from './components/PanelLayout';
@@ -9,13 +10,13 @@ import { getInitialState, saveStateToURL, saveStateToLocalStorage, generatePrese
 import { calculateDisplayMode } from './utils/layoutHelpers';
 import { getElementName, findDuplicateIndex } from './utils/duplicateDetection';
 import type { ModelData } from './types';
-import type { ElementTypeId } from './models/ElementRegistry';
-import type { ElementCollection, Element } from './models/Element';
+import { ELEMENT_TYPES, getAllElementTypeIds } from './models/ElementRegistry';
+import type { Element } from './models/Element';
 
 interface OpenDialog {
   id: string;
   element: Element;
-  elementType: ElementTypeId;
+  elementType: string;  // Changed from ElementTypeId to string
   x: number;
   y: number;
   width: number;
@@ -33,12 +34,12 @@ function App() {
   const [hasRestoredFromURL, setHasRestoredFromURL] = useState(false);
   const [nextDialogId, setNextDialogId] = useState(0);
   const [displayMode, setDisplayMode] = useState<'stacked' | 'dialog'>('dialog');
-  const [hoveredElement, setHoveredElement] = useState<{ type: ElementTypeId; name: string } | null>(null);
+  const [hoveredElement, setHoveredElement] = useState<{ type: string; name: string } | null>(null);
 
   // Load initial state from URL or localStorage
   const initialState = getInitialState();
-  const [leftSections, setLeftSections] = useState<ElementTypeId[]>(initialState.leftSections);
-  const [rightSections, setRightSections] = useState<ElementTypeId[]>(initialState.rightSections);
+  const [leftSections, setLeftSections] = useState<string[]>(initialState.leftSections);
+  const [rightSections, setRightSections] = useState<string[]>(initialState.rightSections);
 
   // Check if localStorage has saved state
   useEffect(() => {
@@ -228,7 +229,17 @@ function App() {
   };
 
   // Dialog management
-  const handleOpenDialog = (element: Element, elementType: ElementTypeId, position?: { x: number; y: number }, size?: { width: number; height: number }) => {
+  const handleOpenDialog = (hoverData: { type: string; name: string }, position?: { x: number; y: number }, size?: { width: number; height: number }) => {
+    // Look up the element from modelData
+    if (!modelData) return;
+
+    const element = modelData.elementLookup.get(hoverData.name);
+    if (!element) {
+      console.warn(`Element "${hoverData.name}" not found in elementLookup`);
+      return;
+    }
+
+    const elementType = hoverData.type;
 
     // Check if this element is already open using utility function
     const existingIndex = findDuplicateIndex(
@@ -312,6 +323,39 @@ function App() {
     });
     return filtered;
   }, [rightSections, modelData]);
+
+  // Build toggle button data from ELEMENT_TYPES registry (must be before early returns)
+  const toggleButtons = useMemo<ToggleButtonData[]>(() => {
+    return getAllElementTypeIds().map(typeId => {
+      const metadata = ELEMENT_TYPES[typeId];
+      return {
+        id: typeId,
+        icon: metadata.icon,
+        label: metadata.pluralLabel,
+        activeColor: metadata.color.toggleActive,
+        inactiveColor: metadata.color.toggleInactive
+      };
+    });
+  }, []);
+
+  // Build section data maps for left and right panels (must be before early returns)
+  const leftSectionData = useMemo<Map<string, SectionData>>(() => {
+    if (!modelData) return new Map();
+    const map = new Map<string, SectionData>();
+    modelData.collections.forEach((collection, typeId) => {
+      map.set(typeId, collection.getSectionData('left'));
+    });
+    return map;
+  }, [modelData]);
+
+  const rightSectionData = useMemo<Map<string, SectionData>>(() => {
+    if (!modelData) return new Map();
+    const map = new Map<string, SectionData>();
+    modelData.collections.forEach((collection, typeId) => {
+      map.set(typeId, collection.getSectionData('right'));
+    });
+    return map;
+  }, [modelData]);
 
   if (loading) {
     return (
@@ -470,7 +514,8 @@ function App() {
               position="left"
               sections={leftSections}
               onSectionsChange={setLeftSections}
-              collections={modelData?.collections || new Map()}
+              sectionData={leftSectionData}
+              toggleButtons={toggleButtons}
               onSelectElement={handleOpenDialog}
               onElementHover={setHoveredElement}
               onElementLeave={() => setHoveredElement(null)}
@@ -482,7 +527,8 @@ function App() {
               position="right"
               sections={rightSections}
               onSectionsChange={setRightSections}
-              collections={modelData?.collections || new Map()}
+              sectionData={rightSectionData}
+              toggleButtons={toggleButtons}
               onSelectElement={handleOpenDialog}
               onElementHover={setHoveredElement}
               onElementLeave={() => setHoveredElement(null)}

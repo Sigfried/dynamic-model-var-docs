@@ -1,7 +1,6 @@
 // Element-based architecture for generic rendering and relationship tracking
 // See CLAUDE.md and ARCHITECTURE.md for architecture details
 
-import * as React from 'react';
 import type {
   ClassDTO,
   ClassData,
@@ -63,17 +62,6 @@ export abstract class Element {
   abstract readonly name: string;
   abstract readonly description: string | undefined;
 
-  // Panel rendering (with depth for tree structures)
-  abstract renderPanelSection(
-    depth: number,
-    onSelect: (element: ElementData, elementType: string) => void
-  ): React.ReactElement;
-
-  // Detail view rendering
-  abstract renderDetails(
-    onNavigate: (target: string, targetType: string) => void
-  ): React.ReactElement;
-
   // Detail data extraction (data-focused approach for DetailPanel)
   abstract getDetailData(): DetailData;
 
@@ -85,11 +73,6 @@ export abstract class Element {
   getBoundingBox(): DOMRect | null {
     const el = document.getElementById(`${this.type}-${this.name}`);
     return el ? el.getBoundingClientRect() : null;
-  }
-
-  // Shared utility: render element name
-  protected renderName() {
-    return <span className="font-semibold">{this.name}</span>;
   }
 
   /**
@@ -117,6 +100,62 @@ export abstract class Element {
       : context === 'detailBox' ? 'db-'
       : '';
     return prefix + this.name;
+  }
+
+  /**
+   * Expose id as getter that calls getId() with no context.
+   * Provides convenient property access for default ID.
+   */
+  get id(): string {
+    return this.getId();
+  }
+
+  /**
+   * Get indicator badges for this element (e.g., "abstract" for classes).
+   * Default implementation returns empty array; subclasses override as needed.
+   *
+   * @returns Array of indicator objects with text and color (Tailwind classes)
+   */
+  getIndicators(): Array<{ text: string; color: string }> {
+    return [];
+  }
+
+  /**
+   * Get section item data for display in Section component.
+   * Adapts Element data to SectionItemData format that components expect.
+   *
+   * @param context Panel context for ID generation ('leftPanel' or 'rightPanel')
+   * @param level Nesting level in tree (0 for root items)
+   * @param isExpanded Whether this item is currently expanded
+   * @param isClickable Whether this item can be clicked to open details
+   * @param hasChildren Optional override for hasChildren (used by VariableCollection)
+   * @returns SectionItemData object for component rendering
+   */
+  getSectionItemData(
+    context: 'leftPanel' | 'rightPanel',
+    level: number = 0,
+    isExpanded: boolean = false,
+    isClickable: boolean = true,
+    hasChildren?: boolean
+  ): import('../components/Section').SectionItemData {
+    const typeInfo = ELEMENT_TYPES[this.type];
+    const badge = this.getBadge();
+
+    return {
+      id: this.getId(context),
+      displayName: this.name,
+      level,
+      badgeColor: badge !== undefined ? `${typeInfo.color.badgeBg} ${typeInfo.color.badgeText}` : undefined,
+      badgeText: badge !== undefined ? badge.toString() : undefined,
+      indicators: this.getIndicators(),
+      hasChildren: hasChildren !== undefined ? hasChildren : this.children.length > 0,
+      isExpanded,
+      isClickable,
+      hoverData: {
+        type: this.type,
+        name: this.name
+      }
+    };
   }
 
   // ============================================================================
@@ -185,6 +224,39 @@ export abstract class Element {
     if (isExpanded) {
       this.children.forEach(child => {
         items.push(...child.toRenderableItems(expandedItems, getIsClickable, level + 1));
+      });
+    }
+
+    return items;
+  }
+
+  /**
+   * Convert tree to flat list of SectionItemData for display.
+   * Respects expansion state to hide/show children.
+   *
+   * @param context Panel context for ID generation ('leftPanel' or 'rightPanel')
+   * @param expandedItems Set of item names that are expanded
+   * @param getIsClickable Optional callback to determine if item is clickable (default: all true)
+   * @param level Current nesting level (used internally for recursion, defaults to 0)
+   * @returns Flat list of SectionItemData with level and expansion info
+   */
+  toSectionItems(
+    context: 'leftPanel' | 'rightPanel',
+    expandedItems: Set<string>,
+    getIsClickable?: (element: Element, level: number) => boolean,
+    level: number = 0
+  ): import('../components/Section').SectionItemData[] {
+    const items: import('../components/Section').SectionItemData[] = [];
+
+    const isExpanded = expandedItems.has(this.name);
+    const isClickable = getIsClickable ? getIsClickable(this, level) : true;
+
+    items.push(this.getSectionItemData(context, level, isExpanded, isClickable));
+
+    // Only traverse children if expanded
+    if (isExpanded) {
+      this.children.forEach(child => {
+        items.push(...child.toSectionItems(context, expandedItems, getIsClickable, level + 1));
       });
     }
 
@@ -540,51 +612,6 @@ export class ClassElement extends Element {
     this.classSlots = classSlots;
   }
 
-  renderPanelSection(
-    _depth: number,
-    onSelect: (element: ElementData, elementType: string) => void
-  ) {
-    // ClassElement is rendered via tree structure in Section component
-    // This method is required by Element base class but not used for classes
-    return (
-      <div
-        key={this.name}
-        id={`class-${this.name}`}
-        data-element-type="class"
-        data-element-name={this.name}
-        className="cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 px-2 py-1"
-        onClick={() => onSelect(this as unknown as ElementData, 'class')}
-      >
-        {this.name}
-      </div>
-    );
-  }
-
-  renderDetails(_onNavigate: (target: string, targetType: string) => void) {
-    // This will be implemented once DetailTable is created
-    // For now, return a placeholder
-    return (
-      <div className="space-y-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">{this.name}</h1>
-            {this.abstract && (
-              <span className="px-2 py-1 text-xs bg-gray-200 dark:bg-slate-700 rounded">
-                Abstract
-              </span>
-            )}
-          </div>
-          {this.description && (
-            <p className="text-gray-600 dark:text-gray-300 mt-2">{this.description}</p>
-          )}
-        </div>
-
-        {/* TODO: Implement slots table, variables table */}
-        <p className="text-gray-500">Detail rendering to be implemented with DetailTable component</p>
-      </div>
-    );
-  }
-
   getDetailData(): DetailData {
     const metadata = ELEMENT_TYPES[this.type];
     const sections: DetailSection[] = [];
@@ -706,6 +733,13 @@ export class ClassElement extends Element {
     return this.variableCount > 0 ? this.variableCount : undefined;
   }
 
+  getIndicators(): Array<{ text: string; color: string }> {
+    if (this.isAbstract()) {
+      return [{ text: 'abstract', color: 'text-purple-600 dark:text-purple-400' }];
+    }
+    return [];
+  }
+
   isAbstract(): boolean {
     return this.abstract;
   }
@@ -733,43 +767,6 @@ export class EnumElement extends Element {
         });
       });
     }
-  }
-
-  renderPanelSection(
-    _depth: number,
-    onSelect: (element: ElementData, elementType: string) => void
-  ) {
-    return (
-      <div
-        key={this.name}
-        id={`enum-${this.name}`}
-        data-element-type="enum"
-        data-element-name={this.name}
-        className="cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 px-2 py-1"
-        onClick={() => onSelect(this as unknown as ElementData, 'enum')}
-      >
-        {this.name}
-        <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-          ({this.permissibleValues.length})
-        </span>
-      </div>
-    );
-  }
-
-  renderDetails(_onNavigate: (target: string, targetType: string) => void) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">{this.name}</h1>
-          {this.description && (
-            <p className="text-gray-600 dark:text-gray-300 mt-2">{this.description}</p>
-          )}
-        </div>
-
-        {/* TODO: Implement with DetailTable */}
-        <p className="text-gray-500">Detail rendering to be implemented with DetailTable component</p>
-      </div>
-    );
   }
 
   getDetailData(): DetailData {
@@ -870,88 +867,6 @@ export class SlotElement extends Element {
     this.identifier = data.identifier;
     this.required = data.required;
     this.multivalued = data.multivalued;
-  }
-
-  renderPanelSection(
-    _depth: number,
-    onSelect: (element: ElementData, elementType: string) => void
-  ) {
-    return (
-      <div
-        key={this.name}
-        id={`slot-${this.name}`}
-        data-element-type="slot"
-        data-element-name={this.name}
-        className="cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 px-2 py-1"
-        onClick={() => onSelect(this as unknown as ElementData, 'slot')}
-      >
-        {this.name}
-        {this.range && (
-          <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-            : {this.range}
-          </span>
-        )}
-      </div>
-    );
-  }
-
-  renderDetails(onNavigate: (target: string, targetType: string) => void) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">{this.name}</h1>
-          {this.description && (
-            <p className="text-gray-600 dark:text-gray-300 mt-2">{this.description}</p>
-          )}
-        </div>
-
-        {/* Slot metadata */}
-        <div className="space-y-2">
-          {this.range && (
-            <div>
-              <span className="font-semibold">Range: </span>
-              <span>{this.range}</span>
-            </div>
-          )}
-          {this.required !== undefined && (
-            <div>
-              <span className="font-semibold">Required: </span>
-              <span>{this.required ? 'Yes' : 'No'}</span>
-            </div>
-          )}
-          {this.multivalued !== undefined && (
-            <div>
-              <span className="font-semibold">Multivalued: </span>
-              <span>{this.multivalued ? 'Yes' : 'No'}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Used by classes */}
-        {(() => {
-          const usedByClasses = this.getUsedByClasses();
-          return usedByClasses.length > 0 && (
-            <div>
-              <h2 className="text-lg font-semibold mb-2">
-                Used By Classes ({usedByClasses.length})
-              </h2>
-              <ul className="list-disc list-inside space-y-1">
-                {usedByClasses.map(className => (
-                  <li key={className}>
-                    <button
-                      className="text-blue-600 dark:text-blue-400 hover:underline"
-                      onClick={() => onNavigate(className, 'class')}
-                    >
-                      {className}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          );
-        })()}
-      </div>
-    );
   }
 
   getDetailData(): DetailData {
@@ -1081,73 +996,6 @@ export class VariableElement extends Element {
     this.curie = data.curie;
   }
 
-  renderPanelSection(
-    _depth: number,
-    onSelect: (element: ElementData, elementType: string) => void
-  ) {
-    return (
-      <div
-        key={this.name}
-        id={`variable-${this.name}`}
-        data-element-type="variable"
-        data-element-name={this.name}
-        className="cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 px-2 py-1 text-sm"
-        onClick={() => onSelect(this as unknown as ElementData, 'variable')}
-      >
-        <span>{this.name}</span>
-        {this.dataType && (
-          <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-            ({this.dataType})
-          </span>
-        )}
-      </div>
-    );
-  }
-
-  renderDetails(onNavigate: (target: string, targetType: string) => void) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">{this.name}</h1>
-          {this.description && (
-            <p className="text-gray-600 dark:text-gray-300 mt-2">{this.description}</p>
-          )}
-        </div>
-
-        {/* Variable metadata */}
-        <div className="space-y-2">
-          <div>
-            <span className="font-semibold">Mapped to: </span>
-            <button
-              className="text-blue-600 dark:text-blue-400 hover:underline"
-              onClick={() => onNavigate(this.classId, 'class')}
-            >
-              {this.classId}
-            </button>
-          </div>
-          {this.dataType && (
-            <div>
-              <span className="font-semibold">Data Type: </span>
-              <span>{this.dataType}</span>
-            </div>
-          )}
-          {this.ucumUnit && (
-            <div>
-              <span className="font-semibold">Unit: </span>
-              <span>{this.ucumUnit}</span>
-            </div>
-          )}
-          {this.curie && (
-            <div>
-              <span className="font-semibold">CURIE: </span>
-              <span className="font-mono text-sm">{this.curie}</span>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   getDetailData(): DetailData {
     const metadata = ELEMENT_TYPES[this.type];
     const sections: DetailSection[] = [];
@@ -1229,6 +1077,12 @@ export abstract class ElementCollection {
    * Returns items with structure/nesting info, ready for generic rendering
    */
   abstract getRenderableItems(expandedItems?: Set<string>): RenderableItem[];
+
+  /**
+   * Get section data for display in Section component.
+   * Returns SectionData with getItems function that generates items based on expansion state.
+   */
+  abstract getSectionData(position: 'left' | 'right'): import('../components/Section').SectionData;
 }
 
 // EnumCollection - flat list of enumerations
@@ -1284,6 +1138,22 @@ export class EnumCollection extends ElementCollection {
     });
     return items;
   }
+
+  getSectionData(position: 'left' | 'right'): import('../components/Section').SectionData {
+    return {
+      id: this.id,
+      label: this.getLabel(),
+      getItems: (expandedItems?: Set<string>) => {
+        const items: import('../components/Section').SectionItemData[] = [];
+        this.roots.forEach(root => {
+          items.push(...root.toSectionItems(position === 'left' ? 'leftPanel' : 'rightPanel', expandedItems || new Set()));
+        });
+        return items;
+      },
+      expansionKey: this.getExpansionKey(position) || undefined,
+      defaultExpansion: this.getDefaultExpansion()
+    };
+  }
 }
 
 // SlotCollection - flat list of slot definitions
@@ -1338,6 +1208,22 @@ export class SlotCollection extends ElementCollection {
       items.push(...root.toRenderableItems(expandedItems || new Set()));
     });
     return items;
+  }
+
+  getSectionData(position: 'left' | 'right'): import('../components/Section').SectionData {
+    return {
+      id: this.id,
+      label: this.getLabel(),
+      getItems: (expandedItems?: Set<string>) => {
+        const items: import('../components/Section').SectionItemData[] = [];
+        this.roots.forEach(root => {
+          items.push(...root.toSectionItems(position === 'left' ? 'leftPanel' : 'rightPanel', expandedItems || new Set()));
+        });
+        return items;
+      },
+      expansionKey: this.getExpansionKey(position) || undefined,
+      defaultExpansion: this.getDefaultExpansion()
+    };
   }
 
   /** Get underlying slots Map (needed for ClassElement constructor) */
@@ -1468,6 +1354,22 @@ export class ClassCollection extends ElementCollection {
     });
     return items;
   }
+
+  getSectionData(position: 'left' | 'right'): import('../components/Section').SectionData {
+    return {
+      id: this.id,
+      label: this.getLabel(),
+      getItems: (expandedItems?: Set<string>) => {
+        const items: import('../components/Section').SectionItemData[] = [];
+        this.roots.forEach(root => {
+          items.push(...root.toSectionItems(position === 'left' ? 'leftPanel' : 'rightPanel', expandedItems || new Set()));
+        });
+        return items;
+      },
+      expansionKey: this.getExpansionKey(position) || undefined,
+      defaultExpansion: this.getDefaultExpansion()
+    };
+  }
 }
 
 // VariableCollection - tree with ClassElement headers and VariableElement children
@@ -1592,5 +1494,39 @@ export class VariableCollection extends ElementCollection {
     });
 
     return items;
+  }
+
+  getSectionData(position: 'left' | 'right'): import('../components/Section').SectionData {
+    return {
+      id: this.id,
+      label: this.getLabel(),
+      getItems: (expandedItems?: Set<string>) => {
+        // Build 2-level tree: ClassElement headers (level 0) with VariableElement children (level 1)
+        const items: import('../components/Section').SectionItemData[] = [];
+        const expanded = expandedItems || new Set();
+        const context = position === 'left' ? 'leftPanel' : 'rightPanel';
+
+        this.roots.forEach(classElement => {
+          const variables = this.groupedByClass.get(classElement.name) || [];
+          const hasChildren = variables.length > 0;
+          const isExpanded = expanded.has(classElement.name);
+
+          // Add ClassElement header (level 0, non-clickable)
+          // Pass hasChildren explicitly since VariableCollection doesn't use Element tree structure
+          items.push(classElement.getSectionItemData(context, 0, isExpanded, false, hasChildren));
+
+          // Add VariableElements if expanded (level 1, clickable)
+          if (isExpanded) {
+            variables.forEach(variable => {
+              items.push(variable.getSectionItemData(context, 1, false, true, false));
+            });
+          }
+        });
+
+        return items;
+      },
+      expansionKey: this.getExpansionKey(position) || undefined,
+      defaultExpansion: this.getDefaultExpansion()
+    };
   }
 }
