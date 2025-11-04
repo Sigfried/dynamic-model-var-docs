@@ -55,6 +55,37 @@ export interface DetailData {
   sections: DetailSection[];
 }
 
+// Relationship details for sidebar display
+export interface RelationshipDetail {
+  elementName: string;
+  elementType: ElementTypeId;
+
+  // Outgoing relationships (from this element)
+  outgoing: {
+    inheritance?: {
+      target: string;
+      targetType: ElementTypeId;
+    };
+    properties: Array<{
+      attributeName: string;
+      target: string;
+      targetType: ElementTypeId;
+      isSelfRef: boolean;
+    }>;
+  };
+
+  // Incoming relationships (to this element)
+  incoming: {
+    subclasses: string[];
+    usedByAttributes: Array<{
+      className: string;
+      attributeName: string;
+      sourceType: ElementTypeId;
+    }>;
+    variables: number;
+  };
+}
+
 // Base abstract class for all element types
 export abstract class Element {
   protected abstract readonly type: ElementTypeId;
@@ -66,6 +97,9 @@ export abstract class Element {
 
   // Relationship extraction for SVG links
   abstract getRelationships(): Relationship[];
+
+  // Relationship details for sidebar display (includes attribute names and reverse relationships)
+  abstract getRelationshipDetails(): RelationshipDetail;
 
   // DOM helpers for SVG positioning
   // Looks for elements with id={type}-{name} (e.g., "class-Specimen")
@@ -742,6 +776,66 @@ export class ClassElement extends Element {
   isAbstract(): boolean {
     return this.abstract;
   }
+
+  getRelationshipDetails(): RelationshipDetail {
+    const outgoing: RelationshipDetail['outgoing'] = {
+      properties: []
+    };
+
+    // Inheritance
+    if (this.parentName) {
+      outgoing.inheritance = {
+        target: this.parentName,
+        targetType: 'class'
+      };
+    }
+
+    // Properties (attributes with non-primitive ranges)
+    if (this.attributes) {
+      Object.entries(this.attributes).forEach(([propName, propDef]) => {
+        const typedPropDef = propDef as PropertyDefinition;
+        const range = typedPropDef.range;
+        if (!range) return;
+
+        const rangeCategory = categorizeRange(range);
+        if (rangeCategory !== 'primitive') {
+          outgoing.properties.push({
+            attributeName: propName,
+            target: range,
+            targetType: rangeCategory,
+            isSelfRef: range === this.name
+          });
+        }
+      });
+    }
+
+    const incoming: RelationshipDetail['incoming'] = {
+      subclasses: [],
+      usedByAttributes: [],
+      variables: this.variableCount
+    };
+
+    // Find subclasses (classes that inherit from this)
+    if (globalClassCollection) {
+      const allClasses = globalClassCollection.getAllElements() as ClassElement[];
+      for (const cls of allClasses) {
+        if (cls.parentName === this.name) {
+          incoming.subclasses.push(cls.name);
+        }
+      }
+      incoming.subclasses.sort();
+    }
+
+    // Classes don't get referenced by attributes (only enums and slots do)
+    // But variables reference classes, which we already have in this.variableCount
+
+    return {
+      elementName: this.name,
+      elementType: this.type,
+      outgoing,
+      incoming
+    };
+  }
 }
 
 // EnumElement - represents an enumeration
@@ -843,6 +937,52 @@ export class EnumElement extends Element {
     }
 
     return usedBy.sort();
+  }
+
+  getRelationshipDetails(): RelationshipDetail {
+    const outgoing: RelationshipDetail['outgoing'] = {
+      properties: []
+    };
+
+    // Enums have no outgoing relationships
+
+    const incoming: RelationshipDetail['incoming'] = {
+      subclasses: [],
+      usedByAttributes: [],
+      variables: 0
+    };
+
+    // Find attributes that use this enum
+    if (globalClassCollection) {
+      const allClasses = globalClassCollection.getAllElements() as ClassElement[];
+      for (const cls of allClasses) {
+        if (cls.attributes) {
+          for (const [attrName, attrDef] of Object.entries(cls.attributes)) {
+            if (attrDef.range === this.name) {
+              incoming.usedByAttributes.push({
+                className: cls.name,
+                attributeName: attrName,
+                sourceType: 'class'
+              });
+            }
+          }
+        }
+      }
+      // Sort by class name, then attribute name
+      incoming.usedByAttributes.sort((a, b) => {
+        if (a.className !== b.className) {
+          return a.className.localeCompare(b.className);
+        }
+        return a.attributeName.localeCompare(b.attributeName);
+      });
+    }
+
+    return {
+      elementName: this.name,
+      elementType: this.type,
+      outgoing,
+      incoming
+    };
   }
 }
 
@@ -973,6 +1113,62 @@ export class SlotElement extends Element {
 
     return usedBy.sort();
   }
+
+  getRelationshipDetails(): RelationshipDetail {
+    const outgoing: RelationshipDetail['outgoing'] = {
+      properties: []
+    };
+
+    // Slot range relationship (if non-primitive)
+    if (this.range) {
+      const rangeCategory = categorizeRange(this.range);
+      if (rangeCategory !== 'primitive') {
+        outgoing.properties.push({
+          attributeName: 'range',
+          target: this.range,
+          targetType: rangeCategory,
+          isSelfRef: false
+        });
+      }
+    }
+
+    const incoming: RelationshipDetail['incoming'] = {
+      subclasses: [],
+      usedByAttributes: [],
+      variables: 0
+    };
+
+    // Find classes that reference this slot
+    if (globalClassCollection) {
+      const allClasses = globalClassCollection.getAllElements() as ClassElement[];
+      for (const cls of allClasses) {
+        // Check slots array
+        if (cls.slots && cls.slots.includes(this.name)) {
+          incoming.usedByAttributes.push({
+            className: cls.name,
+            attributeName: this.name,
+            sourceType: 'class'
+          });
+        }
+        // Check slot_usage
+        else if (cls.slot_usage && this.name in cls.slot_usage) {
+          incoming.usedByAttributes.push({
+            className: cls.name,
+            attributeName: this.name,
+            sourceType: 'class'
+          });
+        }
+      }
+      incoming.usedByAttributes.sort((a, b) => a.className.localeCompare(b.className));
+    }
+
+    return {
+      elementName: this.name,
+      elementType: this.type,
+      outgoing,
+      incoming
+    };
+  }
 }
 
 // VariableElement - represents a variable specification
@@ -1036,6 +1232,32 @@ export class VariableElement extends Element {
       targetType: 'class',
       isSelfRef: false
     }];
+  }
+
+  getRelationshipDetails(): RelationshipDetail {
+    const outgoing: RelationshipDetail['outgoing'] = {
+      properties: [{
+        attributeName: 'mapped_to',
+        target: this.classId,
+        targetType: 'class',
+        isSelfRef: false
+      }]
+    };
+
+    const incoming: RelationshipDetail['incoming'] = {
+      subclasses: [],
+      usedByAttributes: [],
+      variables: 0
+    };
+
+    // Variables have no incoming relationships
+
+    return {
+      elementName: this.name,
+      elementType: this.type,
+      outgoing,
+      incoming
+    };
   }
 }
 

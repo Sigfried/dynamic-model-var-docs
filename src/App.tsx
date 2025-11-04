@@ -5,6 +5,7 @@ import DetailDialog from './components/DetailDialog';
 import DetailPanelStack from './components/DetailPanelStack';
 import PanelLayout from './components/PanelLayout';
 import LinkOverlay from './components/LinkOverlay';
+import RelationshipSidebar from './components/RelationshipSidebar';
 import { generatePresetURL } from './utils/statePersistence';
 import { ELEMENT_TYPES, getAllElementTypeIds, type ElementTypeId } from './models/ElementRegistry';
 import type { ElementCollection } from './models/Element';
@@ -109,6 +110,14 @@ function App() {
     });
     return map;
   }, [modelData]);
+
+  // Get Element instance for hovered element (for RelationshipSidebar)
+  const hoveredElementInstance = useMemo(() => {
+    if (!hoveredElement || !modelData) return null;
+    const collection = modelData.collections.get(hoveredElement.type as ElementTypeId);
+    if (!collection) return null;
+    return collection.getElement(hoveredElement.name);
+  }, [hoveredElement, modelData]);
 
   if (loading) {
     return (
@@ -314,6 +323,9 @@ function App() {
             hoveredElement={hoveredElement}
           />
         )}
+
+        {/* Relationship Sidebar */}
+        <RelationshipSidebar element={hoveredElementInstance} />
       </div>
 
       {/* Detail dialogs - only render when in dialog mode */}
