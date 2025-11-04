@@ -560,8 +560,17 @@ export class ClassElement extends Element {
         const isInherited = !directSlotNames.has(name);
         const inheritedFrom = isInherited ? this.getInheritedFrom(name) : '';
 
+        // Map source to readable labels
+        const sourceLabels = {
+          'attribute': 'Attribute',
+          'slot_usage': 'Slot Override',
+          'slot_reference': 'Slot Reference'
+        };
+        const source = sourceLabels[classSlot.source];
+
         return [
           name,
+          source,
           classSlot.getEffectiveRange(),
           classSlot.getEffectiveRequired() ? 'Yes' : 'No',
           classSlot.getEffectiveMultivalued() ? 'Yes' : 'No',
@@ -572,7 +581,7 @@ export class ClassElement extends Element {
 
       sections.push({
         name: 'Slots (includes inherited)',
-        tableHeadings: ['Name', 'Range', 'Required', 'Multivalued', 'Description', 'Inherited From'],
+        tableHeadings: ['Name', 'Source', 'Range', 'Required', 'Multivalued', 'Description', 'Inherited From'],
         tableContent: slotsList,
         tableHeadingColor: ELEMENT_TYPES['slot'].color.headerBg
       });
