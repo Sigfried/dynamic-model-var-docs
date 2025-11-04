@@ -11,8 +11,10 @@ import type {
   SlotDTO,
   SlotData,
   EnumDTO,
-  EnumData
+  EnumData,
+  FieldMapping
 } from '../types';
+import { FIELD_MAPPINGS } from '../types';
 import { initializeModelData } from '../models/Element';
 
 async function loadSchemaDTO(): Promise<SchemaDTO> {
@@ -46,56 +48,51 @@ async function loadVariableSpecDTOs(): Promise<VariableSpecDTO[]> {
 }
 
 /**
+ * Generic transformation function that applies field mappings.
+ * Maps DTO fields to Data fields using the provided mapping spec.
+ * Fields not in mapping are copied as-is.
+ */
+function transformWithMapping<T extends Record<string, unknown>>(
+  dto: Record<string, unknown>,
+  mapping: FieldMapping
+): T {
+  const result: Record<string, unknown> = {};
+
+  // Process all DTO fields
+  for (const [dtoField, value] of Object.entries(dto)) {
+    const dataField = mapping[dtoField] ?? dtoField;  // Use mapped name or original
+    result[dataField] = value;
+  }
+
+  return result as T;
+}
+
+/**
  * Transform SlotDTO (snake_case from JSON) to SlotData (camelCase for constructors)
  */
 function transformSlotDTO(dto: SlotDTO): SlotData {
-  return {
-    range: dto.range,
-    description: dto.description,
-    slotUri: dto.slot_uri,  // snake_case → camelCase
-    identifier: dto.identifier,
-    required: dto.required,
-    multivalued: dto.multivalued
-  };
+  return transformWithMapping<SlotData>(dto, FIELD_MAPPINGS.slot);
 }
 
 /**
  * Transform EnumDTO to EnumData
  */
 function transformEnumDTO(dto: EnumDTO): EnumData {
-  return {
-    description: dto.description,
-    permissibleValues: dto.permissible_values  // snake_case → camelCase
-  };
+  return transformWithMapping<EnumData>(dto, FIELD_MAPPINGS.enum);
 }
 
 /**
  * Transform ClassDTO to ClassData
  */
 function transformClassDTO(dto: ClassDTO): ClassData {
-  return {
-    name: dto.name,
-    description: dto.description,
-    parent: dto.parent,
-    abstract: dto.abstract,
-    attributes: dto.attributes,
-    slots: dto.slots,
-    slotUsage: dto.slot_usage  // snake_case → camelCase
-  };
+  return transformWithMapping<ClassData>(dto, FIELD_MAPPINGS.class);
 }
 
 /**
  * Transform VariableSpecDTO to VariableSpec
  */
 function transformVariableSpecDTO(dto: VariableSpecDTO): VariableSpec {
-  return {
-    classId: dto.bdchmElement,  // bdchmElement → classId
-    variableLabel: dto.variableLabel,
-    dataType: dto.dataType,
-    ucumUnit: dto.ucumUnit,
-    curie: dto.curie,
-    variableDescription: dto.variableDescription
-  };
+  return transformWithMapping<VariableSpec>(dto, FIELD_MAPPINGS.variable);
 }
 
 /**

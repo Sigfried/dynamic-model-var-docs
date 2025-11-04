@@ -136,8 +136,12 @@ interface LinkData {
 
 **Remaining Steps**:
 
-2. **Move field name changes in dataLoader.ts from hard-coded to mapping spec in types.ts**
-
+✅ **Step 2: Move field name changes to declarative mapping spec** (COMPLETE)
+   - ✅ Created FIELD_MAPPINGS in types.ts with FieldMapping interface
+   - ✅ Created generic transformWithMapping() function in dataLoader.ts
+   - ✅ Updated all transform functions to use mapping specs
+   - **Result**: Transformations now declarative and maintainable
+   - **Tests**: 158 passing, type checking passes
 
 3. **Rename components**:
    - `Section.tsx` → `CollectionSection.tsx`
@@ -156,7 +160,7 @@ interface LinkData {
 
 6. **Update Collections**:
    - Rename: `getRenderableItems()` → `getCollectionItemData()`
-   - Add: `id` property to each collection class
+   - ✅ Add: `id` property to each collection class (DONE in Step 1)
 
 7. **Remove type coupling from components**:
    - CollectionsPanel: Change `sections: ElementTypeId[]` → `sections: string[]`
@@ -165,24 +169,15 @@ interface LinkData {
    - Remove all `ELEMENT_TYPES` imports from components
    - Remove all `ElementRegistry` imports from components
 
-8. **Simplify element lookup**:
-   - Simplify `elementLookup` - remove type awareness:
-     ```typescript
-     const allElements = Array.from(collections.values())
-       .flatMap(c => c.getAllElements());
-     elementLookup = new Map(allElements.map(e => [e.name, e]));
-     ```
-   - Remove `initializeElementNameMap()` (not needed with elementLookup)
-
-9. **Cleanup**:
-   - Remove unused `Tree.buildTree()` function
+8. **Cleanup**:
+   - ✅ Remove unused `Tree.buildTree()` function (DONE - Tree.ts deleted in Phase 6.4)
    - Update tests to use new method names
    - Remove deprecated imports from Element.tsx (ClassDTO, EnumDTO, SlotDTO used in ElementData type)
    - Fix references to `*Metadata` types in docs and code (should be `*Data`)
    - Remove obsolete JSX methods: `renderPanelSection()`, `renderDetails()` from Element classes
    - Rename Element.tsx → Element.ts (after JSX removal)
 
-10. **Verify architectural compliance**:
+9. **Verify architectural compliance**:
     - Run grep to verify no component imports ElementTypeId
     - Run grep to verify no component imports ELEMENT_TYPES
     - Run grep to verify no component imports ElementRegistry
@@ -191,7 +186,7 @@ interface LinkData {
 
 **Files to modify**:
 - `src/models/Element.tsx`
-- `src/models/Tree.ts`
+- ~~`src/models/Tree.ts`~~ (deleted in Phase 6.4)
 - `src/components/Section.tsx` → `src/components/CollectionSection.tsx`
 - `src/components/ElementsPanel.tsx` → `src/components/CollectionsPanel.tsx`
 - `src/components/DetailPanel.tsx` → `src/components/DetailBox.tsx`

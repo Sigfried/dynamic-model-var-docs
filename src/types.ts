@@ -141,6 +141,45 @@ export interface SchemaData {
   variables: VariableSpec[];
 }
 
+// ============================================================================
+// Field Mapping Specifications - DTO → Data transformations
+// ============================================================================
+
+/**
+ * Field mapping specification for transforming DTOs to Data types.
+ * Maps DTO field names (keys) to Data field names (values).
+ * If value is undefined, the field is copied as-is.
+ */
+export interface FieldMapping {
+  [dtoField: string]: string | undefined;
+}
+
+/**
+ * Field mappings for each type transformation.
+ * Used by dataLoader to transform DTOs to Data types.
+ */
+export const FIELD_MAPPINGS = {
+  slot: {
+    slot_uri: 'slotUri',
+    // All other fields (range, description, identifier, required, multivalued) copy as-is
+  } as FieldMapping,
+
+  enum: {
+    permissible_values: 'permissibleValues',
+    // description copies as-is
+  } as FieldMapping,
+
+  class: {
+    slot_usage: 'slotUsage',
+    // name, description, parent, abstract, attributes, slots copy as-is
+  } as FieldMapping,
+
+  variable: {
+    bdchmElement: 'classId',
+    // variableLabel, dataType, ucumUnit, curie, variableDescription copy as-is
+  } as FieldMapping,
+} as const;
+
 /**
  * Enum value (used in processing enum metadata)
  */
