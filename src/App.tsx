@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import ElementsPanel, { type ToggleButtonData } from './components/ElementsPanel';
-import type { SectionData } from './components/Section';
+import type { SectionData, ElementHoverData } from './components/Section';
 import DetailDialog from './components/DetailDialog';
 import DetailPanelStack from './components/DetailPanelStack';
 import PanelLayout from './components/PanelLayout';
@@ -13,7 +13,7 @@ import { useDialogState } from './hooks/useDialogState';
 import { useLayoutState } from './hooks/useLayoutState';
 
 function App() {
-  const [hoveredElement, setHoveredElement] = useState<{ type: string; name: string } | null>(null);
+  const [hoveredElement, setHoveredElement] = useState<ElementHoverData | null>(null);
 
   // Load model data
   const { modelData, loading, error } = useModelData();

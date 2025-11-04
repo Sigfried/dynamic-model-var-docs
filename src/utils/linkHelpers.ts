@@ -316,3 +316,50 @@ export function getLinkStrokeWidth(relationship: Relationship): number {
       return 1;
   }
 }
+
+/**
+ * Format relationship type for display
+ *
+ * @param relationship - Relationship object
+ * @returns Human-readable relationship description
+ */
+export function formatRelationshipType(relationship: Relationship): string {
+  switch (relationship.type) {
+    case 'inherits':
+      return 'inherits from';
+    case 'property':
+      return relationship.label ? `property: ${relationship.label}` : 'property';
+    default:
+      return relationship.type;
+  }
+}
+
+/**
+ * Get detailed relationship metadata for tooltips
+ *
+ * @param relationship - Relationship object
+ * @param sourceName - Name of source element
+ * @param sourceType - Type of source element
+ * @returns Object with formatted relationship details
+ */
+export function getRelationshipMetadata(
+  relationship: Relationship,
+  sourceName: string,
+  sourceType: string
+): {
+  description: string;
+  sourceName: string;
+  sourceType: string;
+  targetName: string;
+  targetType: string;
+  label?: string;
+} {
+  return {
+    description: formatRelationshipType(relationship),
+    sourceName,
+    sourceType,
+    targetName: relationship.target,
+    targetType: relationship.targetType,
+    label: relationship.label
+  };
+}

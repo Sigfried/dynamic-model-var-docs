@@ -9,7 +9,7 @@
  */
 
 import { useMemo, useRef, useState, useEffect } from 'react';
-import type { Element, ElementCollection } from '../models/Element';
+import type { Element, ElementCollection, Relationship } from '../models/Element';
 import { getAllElementTypeIds, type ElementTypeId } from '../models/ElementRegistry';
 import {
   buildLinks,
@@ -21,6 +21,69 @@ import {
   type Link,
   type LinkFilterOptions
 } from '../utils/linkHelpers';
+import type { ElementHoverData } from './Section';
+
+/**
+ * LinkData - Data contract for link rendering
+ * Components define this interface to specify what data they need from Element.
+ */
+export interface LinkData {
+  startId: string;
+  endId: string;
+  startColor: string;
+  endColor: string;
+  tooltipData: LinkTooltipData;
+}
+
+/**
+ * LinkTooltipData - Data for link hover tooltips
+ */
+export interface LinkTooltipData {
+  relationshipType: string;       // "is_a", "property", etc.
+  relationshipLabel?: string;      // Property name (for property relationships)
+  sourceName: string;
+  sourceType: string;              // "class", "enum", etc.
+  targetName: string;
+  targetType: string;
+}
+
+/**
+ * LinkTooltip - Displays relationship information on link hover
+ */
+function LinkTooltip({ data, x, y }: { data: LinkTooltipData; x: number; y: number }) {
+  const formatRelationshipType = (type: string): string => {
+    switch (type) {
+      case 'inherits':
+        return 'inherits from';
+      case 'property':
+        return data.relationshipLabel ? `property: ${data.relationshipLabel}` : 'property';
+      default:
+        return type;
+    }
+  };
+
+  return (
+    <div
+      className="absolute bg-gray-900 text-white text-sm px-3 py-2 rounded shadow-lg pointer-events-none z-50"
+      style={{
+        left: x + 10,
+        top: y + 10,
+        maxWidth: '300px'
+      }}
+    >
+      <div className="font-semibold mb-1">{formatRelationshipType(data.relationshipType)}</div>
+      <div className="text-gray-300">
+        <span className="text-blue-300">{data.sourceName}</span>
+        <span className="text-gray-400"> ({data.sourceType})</span>
+      </div>
+      <div className="text-gray-400 text-xs my-1">↓</div>
+      <div className="text-gray-300">
+        <span className="text-blue-300">{data.targetName}</span>
+        <span className="text-gray-400"> ({data.targetType})</span>
+      </div>
+    </div>
+  );
+}
 
 export interface LinkOverlayProps {
   /** Elements visible in left panel (filtered collections) */
@@ -30,7 +93,7 @@ export interface LinkOverlayProps {
   /** Filter options for controlling which links to show */
   filterOptions?: LinkFilterOptions;
   /** Currently hovered element for link highlighting */
-  hoveredElement?: { type: ElementTypeId; name: string } | null;
+  hoveredElement?: ElementHoverData | null;
 }
 
 export default function LinkOverlay({
@@ -42,6 +105,7 @@ export default function LinkOverlay({
   const svgRef = useRef<SVGSVGElement>(null);
   const [, setScrollTick] = useState(0);
   const [hoveredLinkKey, setHoveredLinkKey] = useState<string | null>(null);
+  const [tooltipData, setTooltipData] = useState<{ data: LinkTooltipData; x: number; y: number } | null>(null);
   const hoverTimeoutRef = useRef<number | null>(null);
 
   // Add scroll listener to update link positions
@@ -325,18 +389,30 @@ export default function LinkOverlay({
             strokeWidth={isHovered ? 3 : strokeWidth}
             className="transition-all cursor-pointer"
             style={{ pointerEvents: 'stroke' }}
-            onMouseEnter={() => {
+            onMouseEnter={(e: React.MouseEvent) => {
               setHoveredLinkKey(linkKey);
-              // Debounce console.log
+              // Show tooltip after brief delay
               if (hoverTimeoutRef.current) {
                 clearTimeout(hoverTimeoutRef.current);
               }
               hoverTimeoutRef.current = window.setTimeout(() => {
-                console.log(`Link: ${link.source.name} (${link.source.type}) → ${link.target.name} (${link.target.type})`, link.relationship);
+                setTooltipData({
+                  data: {
+                    relationshipType: link.relationship.type,
+                    relationshipLabel: link.relationship.label,
+                    sourceName: link.source.name,
+                    sourceType: link.source.type,
+                    targetName: link.target.name,
+                    targetType: link.target.type
+                  },
+                  x: e.clientX,
+                  y: e.clientY
+                });
               }, 300);
             }}
             onMouseLeave={() => {
               setHoveredLinkKey(null);
+              setTooltipData(null);
               // Clear timeout when mouse leaves
               if (hoverTimeoutRef.current) {
                 clearTimeout(hoverTimeoutRef.current);
@@ -355,17 +431,18 @@ export default function LinkOverlay({
   };
 
   return (
-    <svg
-      ref={svgRef}
-      className="absolute inset-0 pointer-events-none"
-      style={{
-        width: '100%',
-        height: '100%',
-        zIndex: 1
-      }}
-    >
-      {/* Gradient and marker definitions */}
-      <defs>
+    <>
+      <svg
+        ref={svgRef}
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          width: '100%',
+          height: '100%',
+          zIndex: 1
+        }}
+      >
+        {/* Gradient and marker definitions */}
+        <defs>
         {/* Gradients for all source→target combinations */}
         {/* Create both left-to-right and right-to-left versions */}
         {(() => {
@@ -434,5 +511,7 @@ export default function LinkOverlay({
       </defs>
       {renderLinks()}
     </svg>
+      {tooltipData && <LinkTooltip data={tooltipData.data} x={tooltipData.x} y={tooltipData.y} />}
+    </>
   );
 }

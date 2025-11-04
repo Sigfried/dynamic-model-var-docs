@@ -12,6 +12,15 @@ import { useExpansionState } from '../hooks/useExpansionState';
 import { getElementHoverHandlers } from '../hooks/useElementHover';
 
 /**
+ * ElementHoverData - Hover event data for element interactions
+ * Component defines this interface to specify what data it needs for hover events.
+ */
+export interface ElementHoverData {
+  type: string;     // Element type: "class", "enum", "slot", "variable"
+  name: string;     // Element name: "Specimen", "SpecimenTypeEnum", etc.
+}
+
+/**
  * Data interface for a single item in the section.
  * Component defines what it needs; Element provides this data via getSectionItemData().
  */
@@ -37,10 +46,7 @@ export interface SectionItemData {
   isClickable: boolean;
 
   // Event data (opaque to component, passed through to callbacks)
-  hoverData: {
-    type: string;                 // "class" (component treats as opaque)
-    name: string;                 // "Specimen"
-  };
+  hoverData: ElementHoverData;
 }
 
 /**
@@ -57,16 +63,16 @@ export interface SectionData {
 
 interface SectionProps {
   sectionData: SectionData;
-  onSelectElement: (hoverData: { type: string; name: string }) => void;
-  onElementHover?: (hoverData: { type: string; name: string }) => void;
+  onSelectElement: (hoverData: ElementHoverData) => void;
+  onElementHover?: (hoverData: ElementHoverData) => void;
   onElementLeave?: () => void;
   position: 'left' | 'right';
 }
 
 interface ItemRendererProps {
   item: SectionItemData;
-  onSelectElement: (hoverData: { type: string; name: string }) => void;
-  onElementHover?: (hoverData: { type: string; name: string }) => void;
+  onSelectElement: (hoverData: ElementHoverData) => void;
+  onElementHover?: (hoverData: ElementHoverData) => void;
   onElementLeave?: () => void;
   position: 'left' | 'right';
   toggleExpansion?: (itemName: string) => void;

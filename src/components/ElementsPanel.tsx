@@ -9,7 +9,7 @@
  * See CLAUDE.md for separation of concerns principles.
  */
 import Section from './Section';
-import type { SectionData } from './Section';
+import type { SectionData, ElementHoverData } from './Section';
 
 /**
  * Toggle button metadata (provided by App.tsx from ELEMENT_TYPES registry).
@@ -29,8 +29,8 @@ interface ElementsPanelProps {
   onSectionsChange: (sections: string[]) => void;
   sectionData: Map<string, SectionData>;                   // Section data by ID
   toggleButtons: ToggleButtonData[];                        // Toggle button metadata
-  onSelectElement: (hoverData: { type: string; name: string }) => void;
-  onElementHover?: (hoverData: { type: string; name: string }) => void;
+  onSelectElement: (hoverData: ElementHoverData) => void;
+  onElementHover?: (hoverData: ElementHoverData) => void;
   onElementLeave?: () => void;
 }
 
