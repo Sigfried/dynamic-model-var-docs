@@ -1,299 +1,52 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import ElementsPanel, { type ToggleButtonData } from './components/ElementsPanel';
 import type { SectionData } from './components/Section';
 import DetailDialog from './components/DetailDialog';
 import DetailPanelStack from './components/DetailPanelStack';
 import PanelLayout from './components/PanelLayout';
 import LinkOverlay from './components/LinkOverlay';
-import { loadModelData } from './utils/dataLoader';
-import { getInitialState, saveStateToURL, saveStateToLocalStorage, generatePresetURL, elementTypeToCode, type DialogState } from './utils/statePersistence';
-import { calculateDisplayMode } from './utils/layoutHelpers';
-import { getElementName, findDuplicateIndex } from './utils/duplicateDetection';
-import type { ModelData } from './types';
-import { ELEMENT_TYPES, getAllElementTypeIds } from './models/ElementRegistry';
-import type { Element } from './models/Element';
-
-interface OpenDialog {
-  id: string;
-  element: Element;
-  elementType: string;  // Changed from ElementTypeId to string
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+import { generatePresetURL } from './utils/statePersistence';
+import { ELEMENT_TYPES, getAllElementTypeIds, type ElementTypeId } from './models/ElementRegistry';
+import type { ElementCollection } from './models/Element';
+import { useModelData } from './hooks/useModelData';
+import { useDialogState } from './hooks/useDialogState';
+import { useLayoutState } from './hooks/useLayoutState';
 
 function App() {
-  const [modelData, setModelData] = useState<ModelData>();
-  const [openDialogs, setOpenDialogs] = useState<OpenDialog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>();
-  const [showUrlHelp, setShowUrlHelp] = useState(false);
-  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
-  const [hasLocalStorage, setHasLocalStorage] = useState(false);
-  const [hasRestoredFromURL, setHasRestoredFromURL] = useState(false);
-  const [nextDialogId, setNextDialogId] = useState(0);
-  const [displayMode, setDisplayMode] = useState<'stacked' | 'dialog'>('dialog');
   const [hoveredElement, setHoveredElement] = useState<{ type: string; name: string } | null>(null);
 
-  // Load initial state from URL or localStorage
-  const initialState = getInitialState();
-  const [leftSections, setLeftSections] = useState<string[]>(initialState.leftSections);
-  const [rightSections, setRightSections] = useState<string[]>(initialState.rightSections);
+  // Load model data
+  const { modelData, loading, error } = useModelData();
 
-  // Check if localStorage has saved state
-  useEffect(() => {
-    const checkLocalStorage = () => {
-      try {
-        const stored = localStorage.getItem('bdchm-app-state');
-        setHasLocalStorage(!!stored);
-      } catch {
-        setHasLocalStorage(false);
-      }
-    };
-    checkLocalStorage();
-  }, []);
+  // Manage dialog state
+  const {
+    openDialogs,
+    hasRestoredFromURL,
+    handleOpenDialog,
+    handleCloseDialog,
+    handleDialogChange,
+    getDialogStates
+  } = useDialogState({ modelData });
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        setLoading(true);
-        const data = await loadModelData();
-        setModelData(data);
+  // Manage layout state
+  const {
+    leftSections,
+    rightSections,
+    setLeftSections,
+    setRightSections,
+    displayMode,
+    showUrlHelp,
+    setShowUrlHelp,
+    showSaveConfirm,
+    hasLocalStorage,
+    handleSaveLayout,
+    handleResetLayout,
+    handleResetApp
+  } = useLayoutState({ hasRestoredFromURL, getDialogStates });
 
-        // Make modelData accessible in console for debugging
-        (window as any).modelData = data;
-        console.log('ModelData loaded and available as window.modelData:', data);
-        console.log('Collections:', Array.from(data.collections.keys()));
-        console.log('Total elements:', data.elementLookup.size);
-
-        setLoading(false);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load data');
-        setLoading(false);
-      }
-    }
-
-    loadData();
-  }, []);
-
-  // Restore dialogs from URL after data loads (runs once)
-  useEffect(() => {
-    // Only run once after data loads
-    if (hasRestoredFromURL) return;
-    if (!modelData) return;
-
-    // Mark as restored
-    setHasRestoredFromURL(true);
-
-    const urlState = getInitialState();
-
-    // Restore dialogs from new format
-    if (urlState.dialogs && urlState.dialogs.length > 0) {
-      const restoredDialogs: OpenDialog[] = [];
-      let dialogIdCounter = 0;
-
-      urlState.dialogs.forEach(dialogState => {
-        // Look up element using generic collection interface
-        const collection = modelData.collections.get(dialogState.elementType);
-        const element = collection?.getElement(dialogState.elementName) || null;
-
-        if (element) {
-          restoredDialogs.push({
-            id: `dialog-${dialogIdCounter}`,
-            element,
-            elementType: dialogState.elementType,
-            x: dialogState.x,
-            y: dialogState.y,
-            width: dialogState.width,
-            height: dialogState.height
-          });
-          dialogIdCounter++;
-        }
-      });
-
-      // Set all dialogs at once
-      if (restoredDialogs.length > 0) {
-        setOpenDialogs(restoredDialogs);
-        setNextDialogId(dialogIdCounter);
-      }
-    }
-  }, [modelData, hasRestoredFromURL]);
-
-  // Measure available space and set display mode
-  useEffect(() => {
-    const measureSpace = () => {
-      const windowWidth = window.innerWidth;
-      const { mode } = calculateDisplayMode(windowWidth, leftSections.length, rightSections.length);
-      setDisplayMode(mode);
-    };
-
-    measureSpace();
-    window.addEventListener('resize', measureSpace);
-    return () => window.removeEventListener('resize', measureSpace);
-  }, [leftSections, rightSections]);
-
-  // Convert OpenDialog to DialogState
-  const getDialogStates = (): DialogState[] => {
-    return openDialogs.map(dialog => {
-      const elementName = getElementName(dialog.element, dialog.elementType);
-
-      return {
-        elementName,
-        elementType: dialog.elementType,
-        x: dialog.x,
-        y: dialog.y,
-        width: dialog.width,
-        height: dialog.height
-      };
-    });
-  };
-
-  // Save state when it changes (but only after initial restoration)
-  useEffect(() => {
-    if (!hasRestoredFromURL) return; // Don't save until we've restored from URL
-
-    const state = {
-      leftSections,
-      rightSections,
-      dialogs: getDialogStates()
-    };
-    saveStateToURL(state);
-  }, [leftSections, rightSections, openDialogs, hasRestoredFromURL]);
-
-  // Save current layout to localStorage
-  const handleSaveLayout = () => {
-    const state = {
-      leftSections,
-      rightSections,
-      dialogs: getDialogStates()
-    };
-    saveStateToLocalStorage(state);
-    setHasLocalStorage(true);
-    setShowSaveConfirm(true);
-    setTimeout(() => setShowSaveConfirm(false), 2000);
-  };
-
-  // Reset layout (clear localStorage)
-  const handleResetLayout = () => {
-    try {
-      localStorage.removeItem('bdchm-app-state');
-      setHasLocalStorage(false);
-      setShowSaveConfirm(true);
-      setTimeout(() => setShowSaveConfirm(false), 2000);
-    } catch (err) {
-      console.error('Failed to clear localStorage:', err);
-    }
-  };
-
-  // Reset application to saved layout or default
-  const handleResetApp = () => {
-    const stored = localStorage.getItem('bdchm-app-state');
-    if (stored) {
-      // Reset to saved layout (including dialogs if present)
-      try {
-        const state = JSON.parse(stored);
-
-        // Build clean URL with only saved state params (no expansion params)
-        const params = new URLSearchParams();
-
-        if (state.leftSections && state.leftSections.length > 0) {
-          const sectionCodes = state.leftSections.map((s: ElementTypeId) => elementTypeToCode[s]).join(',');
-          params.set('l', sectionCodes);
-        }
-
-        if (state.rightSections && state.rightSections.length > 0) {
-          const sectionCodes = state.rightSections.map((s: ElementTypeId) => elementTypeToCode[s]).join(',');
-          params.set('r', sectionCodes);
-        }
-
-        if (state.dialogs && state.dialogs.length > 0) {
-          const dialogsStr = state.dialogs.map((d: DialogState) =>
-            `${d.elementType}:${d.elementName}:${Math.round(d.x)},${Math.round(d.y)},${Math.round(d.width)},${Math.round(d.height)}`
-          ).join(';');
-          params.set('dialogs', dialogsStr);
-        }
-
-        // Navigate to clean URL (clears expansion params and triggers reload)
-        const newURL = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
-        window.location.href = newURL;
-      } catch (err) {
-        console.error('Failed to parse stored state:', err);
-      }
-    } else {
-      // Reset to default (classes only preset)
-      // Navigate to clean default URL (clears all params and triggers reload)
-      const newURL = `${window.location.pathname}?l=c`;
-      window.location.href = newURL;
-    }
-  };
-
-  // Dialog management
-  const handleOpenDialog = (hoverData: { type: string; name: string }, position?: { x: number; y: number }, size?: { width: number; height: number }) => {
-    // Look up the element from modelData
-    if (!modelData) return;
-
-    const element = modelData.elementLookup.get(hoverData.name);
-    if (!element) {
-      console.warn(`Element "${hoverData.name}" not found in elementLookup`);
-      return;
-    }
-
-    const elementType = hoverData.type;
-
-    // Check if this element is already open using utility function
-    const existingIndex = findDuplicateIndex(
-      openDialogs.map(d => ({ element: d.element, elementType: d.elementType })),
-      element,
-      elementType
-    );
-
-    // If already open, bring to top (move to end of array, which renders last = on top)
-    if (existingIndex !== -1) {
-      setOpenDialogs(prev => {
-        const updated = [...prev];
-        const [existing] = updated.splice(existingIndex, 1);
-        return [...updated, existing];
-      });
-      return;
-    }
-
-    // Otherwise, create new dialog
-    const CASCADE_OFFSET = 40;
-    const defaultPosition = {
-      x: 100 + (openDialogs.length * CASCADE_OFFSET),
-      y: window.innerHeight - 400 + (openDialogs.length * CASCADE_OFFSET)
-    };
-    const defaultSize = { width: 900, height: 350 };
-
-    const newDialog: OpenDialog = {
-      id: `dialog-${nextDialogId}`,
-      element,
-      elementType,
-      x: position?.x ?? defaultPosition.x,
-      y: position?.y ?? defaultPosition.y,
-      width: size?.width ?? defaultSize.width,
-      height: size?.height ?? defaultSize.height
-    };
-    setOpenDialogs(prev => [...prev, newDialog]);
-    setNextDialogId(prev => prev + 1);
-  };
-
-  const handleCloseDialog = (id: string) => {
-    setOpenDialogs(prev => prev.filter(d => d.id !== id));
-  };
-
-  const handleDialogChange = (id: string, position: { x: number; y: number }, size: { width: number; height: number }) => {
-    setOpenDialogs(prev => prev.map(d =>
-      d.id === id ? { ...d, x: position.x, y: position.y, width: size.width, height: size.height } : d
-    ));
-  };
-
-  // Navigation handler - now opens a new dialog
+  // Navigation handler - opens a new dialog
   const handleNavigate = (elementName: string, elementType: 'class' | 'enum' | 'slot') => {
-    const collection = modelData?.collections.get(elementType);
-    const element = collection?.getElement(elementName);
-    if (element) handleOpenDialog(element, elementType);
+    handleOpenDialog({ type: elementType, name: elementName });
   };
 
   // Memoize panel data to prevent infinite re-renders in LinkOverlay

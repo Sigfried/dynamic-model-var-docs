@@ -14,8 +14,6 @@ interface AppState {
   leftSections: ElementTypeId[];
   rightSections: ElementTypeId[];
   dialogs?: DialogState[];
-  expandedVariableClasses?: string[]; // Variable classes that are expanded
-  expandedClassNodes?: string[]; // Class tree nodes that are expanded
 }
 
 const STORAGE_KEY = 'bdchm-app-state';
@@ -81,18 +79,6 @@ export function parseStateFromURL(): Partial<AppState> | null {
     }
   }
 
-  // Parse expanded variable classes
-  const expandedVarClassesParam = params.get('evc');
-  if (expandedVarClassesParam) {
-    state.expandedVariableClasses = expandedVarClassesParam.split(',').filter(Boolean);
-  }
-
-  // Parse expanded class nodes
-  const expandedClassNodesParam = params.get('ecn');
-  if (expandedClassNodesParam) {
-    state.expandedClassNodes = expandedClassNodesParam.split(',').filter(Boolean);
-  }
-
   return Object.keys(state).length > 0 ? state : null;
 }
 
@@ -128,20 +114,6 @@ export function saveStateToURL(state: AppState): void {
     params.set('dialogs', dialogsStr);
   } else {
     params.delete('dialogs');
-  }
-
-  // Update expanded variable classes
-  if (state.expandedVariableClasses && state.expandedVariableClasses.length > 0) {
-    params.set('evc', state.expandedVariableClasses.join(','));
-  } else {
-    params.delete('evc');
-  }
-
-  // Update expanded class nodes
-  if (state.expandedClassNodes && state.expandedClassNodes.length > 0) {
-    params.set('ecn', state.expandedClassNodes.join(','));
-  } else {
-    params.delete('ecn');
   }
 
   // Update URL without page reload
@@ -195,18 +167,6 @@ export function getInitialState(): AppState {
   const dialogs = urlState?.dialogs ?? localState?.dialogs;
   if (dialogs && dialogs.length > 0) {
     state.dialogs = dialogs;
-  }
-
-  // Include expanded variable classes if present
-  const expandedVariableClasses = urlState?.expandedVariableClasses ?? localState?.expandedVariableClasses;
-  if (expandedVariableClasses && expandedVariableClasses.length > 0) {
-    state.expandedVariableClasses = expandedVariableClasses;
-  }
-
-  // Include expanded class nodes if present
-  const expandedClassNodes = urlState?.expandedClassNodes ?? localState?.expandedClassNodes;
-  if (expandedClassNodes && expandedClassNodes.length > 0) {
-    state.expandedClassNodes = expandedClassNodes;
   }
 
   return state;
