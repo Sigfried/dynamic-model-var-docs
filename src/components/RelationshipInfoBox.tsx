@@ -132,7 +132,9 @@ export default function RelationshipInfoBox({ element }: RelationshipInfoBoxProp
                   <div key={idx} className="text-sm text-gray-900 dark:text-gray-100">
                     <span className="text-green-600 dark:text-green-400">{prop.attributeName}</span>
                     {' → '}
-                    <span className="text-blue-600 dark:text-blue-400">{prop.target}</span>
+                    <span className={prop.isSelfRef ? "text-orange-600 dark:text-orange-400" : "text-blue-600 dark:text-blue-400"}>
+                      {prop.target}
+                    </span>
                     <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">
                       ({prop.targetType}{prop.isSelfRef ? ', self-ref' : ''})
                     </span>
@@ -155,7 +157,9 @@ export default function RelationshipInfoBox({ element }: RelationshipInfoBoxProp
                       <div key={slotIdx} className="text-sm text-gray-900 dark:text-gray-100">
                         <span className="text-green-600 dark:text-green-400">{slot.attributeName}</span>
                         {' → '}
-                        <span className="text-blue-600 dark:text-blue-400">{slot.target}</span>
+                        <span className={slot.isSelfRef ? "text-orange-600 dark:text-orange-400" : "text-blue-600 dark:text-blue-400"}>
+                          {slot.target}
+                        </span>
                         <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">
                           ({slot.targetType}{slot.isSelfRef ? ', self-ref' : ''})
                         </span>
@@ -213,8 +217,9 @@ export default function RelationshipInfoBox({ element }: RelationshipInfoBoxProp
           {details.incoming.variables > 0 && (
             <div>
               <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Variables:</div>
-              <div className="ml-3 text-sm text-gray-900 dark:text-gray-100">
-                {details.incoming.variables} variable{details.incoming.variables > 1 ? 's' : ''} mapped to this class
+              <div className="ml-3 text-sm">
+                <span className="text-purple-600 dark:text-purple-400 font-medium">{details.incoming.variables}</span>
+                <span className="text-gray-900 dark:text-gray-100"> variable{details.incoming.variables > 1 ? 's' : ''} mapped to this class</span>
               </div>
             </div>
           )}
