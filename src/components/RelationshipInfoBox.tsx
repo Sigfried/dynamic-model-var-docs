@@ -101,8 +101,9 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
           });
         }
       }, 300);
-    } else if (displayedElement) {
+    } else if (displayedElement && !isDraggable) {
       // Element unhovered but we have a displayed element - linger for 2.5s
+      // BUT: only if not draggable (once draggable, stays open until explicitly closed)
       lingerTimerRef.current = setTimeout(() => {
         setDisplayedElement(null);
       }, 2500);
@@ -112,7 +113,7 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
       if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
       if (lingerTimerRef.current) clearTimeout(lingerTimerRef.current);
     };
-  }, [element, displayedElement, cursorPosition]);
+  }, [element, displayedElement, cursorPosition, isDraggable]);
 
   // ESC key handler - closes info box before detail dialogs
   useEffect(() => {
@@ -159,6 +160,12 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
 
   // Handlers for upgrading to draggable mode
   const handleBoxMouseEnter = () => {
+    // Cancel linger timer when hovering over the box
+    if (lingerTimerRef.current) {
+      clearTimeout(lingerTimerRef.current);
+      lingerTimerRef.current = null;
+    }
+
     upgradeTimerRef.current = setTimeout(() => {
       setIsDraggable(true);
     }, 1500); // 1.5s hover to upgrade
@@ -168,6 +175,13 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
     if (upgradeTimerRef.current) {
       clearTimeout(upgradeTimerRef.current);
       upgradeTimerRef.current = null;
+    }
+
+    // If not draggable, start linger timer when leaving the box
+    if (!isDraggable) {
+      lingerTimerRef.current = setTimeout(() => {
+        setDisplayedElement(null);
+      }, 2500);
     }
   };
 
