@@ -197,6 +197,74 @@ Hover behavior depends on where cursor is positioned:
 
 **Implementation steps**:
 
+0. **Create DataService abstraction layer** (TODO - HIGH PRIORITY)
+    - **Goal**: Complete view/model separation - UI components should never see Element instances or know about element types
+    - **Problem**: Currently UI code receives Element instances and calls methods directly, violating separation of concerns
+    - **Solution**: Create DataService class that UI calls with item IDs (strings)
+
+    **Architecture**:
+    ```typescript
+    // src/services/DataService.ts
+    class DataService {
+      constructor(private modelData: ModelData) {}
+
+      // UI calls by ID, service handles Element lookup internally
+      getDetailContent(itemId: string): DetailData | null
+      getFloatingBoxMetadata(itemId: string): FloatingBoxMetadata | null
+      getRelationships(itemId: string): RelationshipData | null
+      // ... other data access methods
+    }
+
+    // App.tsx creates service
+    const dataService = useMemo(() =>
+      modelData ? new DataService(modelData) : null,
+      [modelData]
+    );
+
+    // UI components only work with IDs and DataService
+    <DetailContent itemId="Specimen" dataService={dataService} />
+    <FloatingBoxManager boxes={boxes} dataService={dataService} ... />
+
+    // DetailContent.tsx - no Element instances
+    function DetailContent({ itemId, dataService }: Props) {
+      const detailData = dataService.getDetailContent(itemId);
+      if (!detailData) return <div>Item not found</div>;
+      // Render using plain detailData object
+    }
+    ```
+
+    **Benefits**:
+    - UI never sees Element instances or element types
+    - Clean boundary between model and view
+    - Easy to mock DataService for testing
+    - Terminology: Use "item" in UI code, "element" stays in model layer
+
+    **Enforcement via automated checking**:
+    - Create `scripts/check-architecture.sh` to grep for violations:
+      ```bash
+      #!/bin/bash
+      # Check for "Element" or "elementType" in UI components (but not in tests)
+      echo "Checking for Element references in UI code..."
+      rg -t tsx -t ts "Element" src/components/ src/hooks/ --glob '!*.test.*' --glob '!*.spec.*'
+      # Add more checks as needed
+      ```
+    - Add to workflow: **After every chunk of work, run `npm run check-arch` and report violations**
+    - Add npm script: `"check-arch": "bash scripts/check-architecture.sh"`
+    - Over time, enhance script to check other architectural principles from CLAUDE.md
+
+    **Implementation sub-steps**:
+    - Create DataService class with initial methods
+    - Refactor App.tsx to use DataService
+    - Refactor FloatingBoxManager to accept dataService + item IDs
+    - Refactor DetailContent to accept itemId + dataService
+    - Refactor RelationshipInfoBox to accept itemId + dataService
+    - Update all tests to use DataService pattern
+    - Create check-architecture.sh script
+    - Add npm script and update workflow documentation
+    - Run check-arch and fix any violations
+
+    **After this step**: Every component in src/components/ should have zero references to Element types
+
 1. **✅ Create FloatingBoxManager.tsx** (COMPLETED)
     - ✅ Extract openDialogs array management from App.tsx
     - ✅ Single FloatingBox component (merge DetailDialog drag/resize logic)
@@ -219,16 +287,41 @@ Hover behavior depends on where cursor is positioned:
     - ✅ Removed close button and drag cursor styling
     - ✅ Content now simpler: just relationships display, no window chrome
 
-3. **Update App.tsx**
-    - Remove openDialogs management
-    - Import and use FloatingBoxManager
-    - Pass display mode and callbacks
-    - **Upgrade callback flow**:
-      - FloatingBoxManager provides `onUpgradeBox` callback to transitory boxes
-      - When RelationshipInfoBox detects upgrade trigger (1.5s hover or click)
-      - It calls `onUpgradeBox()` which FloatingBoxManager handles
-      - FloatingBoxManager converts transitory box to persistent box in its array
-      - No direct App.tsx involvement needed
+3. **✅ Update App.tsx** (COMPLETED)
+    - ✅ Replaced useDialogState hook with local floatingBoxes state management
+    - ✅ Removed openDialogs management
+    - ✅ Imported and integrated FloatingBoxManager
+    - ✅ Added handleOpenFloatingBox to create persistent boxes (with duplicate detection and bring-to-front)
+    - ✅ Added handleUpgradeRelationshipBox for RelationshipInfoBox → persistent upgrade flow
+    - ✅ Connected RelationshipInfoBox.onUpgrade to handleUpgradeRelationshipBox
+    - ✅ Replaced DetailDialog and DetailPanelStack rendering with FloatingBoxManager
+    - ✅ Updated ElementsPanel.onSelectElement to use handleOpenFloatingBox
+    - ✅ Added URL restoration logic (useEffect) for persistent boxes
+    - ✅ Kept getDialogStates for URL state persistence
+    - ✅ TypeScript type checking passes
+    - ✅ Fixed initialization order bugs (handleNavigate, hoveredElementInstance)
+
+    **Testing checklist** (please add feedback below each item):
+    1. Click element name in either panel → should open persistent floating box
+       - [sg] feedback:
+    2. Click same element again → should bring existing box to front (no duplicate)
+       - [sg] feedback:
+    3. Hover over element → RelationshipInfoBox should appear
+       - [sg] feedback:
+    4. Hover over RelationshipInfoBox for 1.5s → should upgrade to persistent floating box
+       - [sg] feedback:
+    5. Click on RelationshipInfoBox → should upgrade immediately
+       - [sg] feedback:
+    6. Open multiple boxes → should cascade with offsets
+       - [sg] feedback:
+    7. Switch between dialog and stacked modes → boxes should reposition appropriately
+       - [sg] feedback:
+    8. Drag, resize, close buttons → should work as before
+       - [sg] feedback:
+    9. ESC key → should close boxes (oldest first)
+       - [sg] feedback:
+    10. URL restoration → open some boxes, copy URL, open in new tab → boxes should restore
+       - [sg] feedback:
 
 4. **Delete old components**
     - Delete DetailDialog.tsx

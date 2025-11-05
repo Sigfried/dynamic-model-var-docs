@@ -1,33 +1,41 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import ElementsPanel, { type ToggleButtonData } from './components/ElementsPanel';
 import type { SectionData, ElementHoverData } from './components/Section';
-import DetailDialog from './components/DetailDialog';
-import DetailPanelStack from './components/DetailPanelStack';
+import FloatingBoxManager, { type FloatingBoxData } from './components/FloatingBoxManager';
+import DetailContent from './components/DetailContent';
 import PanelLayout from './components/PanelLayout';
 import LinkOverlay from './components/LinkOverlay';
 import RelationshipInfoBox from './components/RelationshipInfoBox';
-import { generatePresetURL } from './utils/statePersistence';
+import { generatePresetURL, getInitialState, type DialogState } from './utils/statePersistence';
 import { ELEMENT_TYPES, getAllElementTypeIds, type ElementTypeId } from './models/ElementRegistry';
 import type { ElementCollection } from './models/Element';
 import { useModelData } from './hooks/useModelData';
-import { useDialogState } from './hooks/useDialogState';
 import { useLayoutState } from './hooks/useLayoutState';
+import { getElementName, findDuplicateIndex } from './utils/duplicateDetection';
 
 function App() {
   const [hoveredElement, setHoveredElement] = useState<ElementHoverData | null>(null);
+  const [floatingBoxes, setFloatingBoxes] = useState<FloatingBoxData[]>([]);
+  const [nextBoxId, setNextBoxId] = useState(0);
+  const [hasRestoredFromURL, setHasRestoredFromURL] = useState(false);
 
   // Load model data
   const { modelData, loading, error } = useModelData();
 
-  // Manage dialog state
-  const {
-    openDialogs,
-    hasRestoredFromURL,
-    handleOpenDialog,
-    handleCloseDialog,
-    handleDialogChange,
-    getDialogStates
-  } = useDialogState({ modelData });
+  // Convert floating boxes to dialog states for persistence
+  const getDialogStates = useCallback((): DialogState[] => {
+    return floatingBoxes.map(box => {
+      const elementName = getElementName(box.element, box.element.type);
+      return {
+        elementName,
+        elementType: box.element.type,
+        x: box.position?.x ?? 100,
+        y: box.position?.y ?? 100,
+        width: box.size?.width ?? 900,
+        height: box.size?.height ?? 350
+      };
+    });
+  }, [floatingBoxes]);
 
   // Manage layout state
   const {
@@ -45,10 +53,167 @@ function App() {
     handleResetApp
   } = useLayoutState({ hasRestoredFromURL, getDialogStates });
 
-  // Navigation handler - opens a new dialog
-  const handleNavigate = (elementName: string, elementType: 'class' | 'enum' | 'slot') => {
-    handleOpenDialog({ type: elementType, name: elementName });
-  };
+  // Open a new floating box (or bring existing one to front)
+  const handleOpenFloatingBox = useCallback((hoverData: { type: string; name: string }, position?: { x: number; y: number }, size?: { width: number; height: number }) => {
+    if (!modelData) return;
+
+    const element = modelData.elementLookup.get(hoverData.name);
+    if (!element) {
+      console.warn(`Element "${hoverData.name}" not found in elementLookup`);
+      return;
+    }
+
+    // Check if this element is already open
+    const existingIndex = findDuplicateIndex(
+      floatingBoxes.map(b => ({ element: b.element, elementType: b.element.type })),
+      element,
+      element.type
+    );
+
+    // If already open, bring to top (move to end of array)
+    if (existingIndex !== -1) {
+      setFloatingBoxes(prev => {
+        const updated = [...prev];
+        const [existing] = updated.splice(existingIndex, 1);
+        return [...updated, existing];
+      });
+      return;
+    }
+
+    // Otherwise, create new persistent box
+    const CASCADE_OFFSET = 40;
+    const defaultPosition = {
+      x: 100 + (floatingBoxes.length * CASCADE_OFFSET),
+      y: window.innerHeight - 400 + (floatingBoxes.length * CASCADE_OFFSET)
+    };
+    const defaultSize = { width: 900, height: 350 };
+
+    const metadata = element.getFloatingBoxMetadata();
+    const newBox: FloatingBoxData = {
+      id: `box-${nextBoxId}`,
+      mode: 'persistent',
+      metadata,
+      content: <DetailContent element={element} hideHeader={displayMode === 'stacked'} />,
+      element,
+      position: position ?? defaultPosition,
+      size: size ?? defaultSize
+    };
+
+    setFloatingBoxes(prev => [...prev, newBox]);
+    setNextBoxId(prev => prev + 1);
+  }, [modelData, floatingBoxes, nextBoxId, displayMode]);
+
+  // Get Element instance for hovered element (for RelationshipInfoBox)
+  const hoveredElementInstance = useMemo(() => {
+    if (!hoveredElement || !modelData) return null;
+    const collection = modelData.collections.get(hoveredElement.type as ElementTypeId);
+    if (!collection) return null;
+    return collection.getElement(hoveredElement.name);
+  }, [hoveredElement, modelData]);
+
+  // Navigation handler - opens a new floating box
+  const handleNavigate = useCallback((elementName: string, elementType: 'class' | 'enum' | 'slot' | 'variable') => {
+    handleOpenFloatingBox({ type: elementType, name: elementName });
+  }, [handleOpenFloatingBox]);
+
+  // Handle RelationshipInfoBox upgrade to persistent floating box
+  const handleUpgradeRelationshipBox = useCallback(() => {
+    if (!hoveredElement || !hoveredElementInstance) return;
+
+    // Use cursor position for the new persistent box
+    const position = {
+      x: hoveredElement.cursorX,
+      y: hoveredElement.cursorY
+    };
+
+    // Check if already open
+    const existingIndex = findDuplicateIndex(
+      floatingBoxes.map(b => ({ element: b.element, elementType: b.element.type })),
+      hoveredElementInstance,
+      hoveredElementInstance.type
+    );
+
+    // If already open, just bring to front
+    if (existingIndex !== -1) {
+      setFloatingBoxes(prev => {
+        const updated = [...prev];
+        const [existing] = updated.splice(existingIndex, 1);
+        return [...updated, existing];
+      });
+      return;
+    }
+
+    // Create new persistent box with relationship content
+    const metadata = hoveredElementInstance.getFloatingBoxMetadata();
+    const newBox: FloatingBoxData = {
+      id: `box-${nextBoxId}`,
+      mode: 'persistent',
+      metadata,
+      content: <DetailContent element={hoveredElementInstance} hideHeader={displayMode === 'stacked'} />,
+      element: hoveredElementInstance,
+      position,
+      size: { width: 700, height: 400 }
+    };
+
+    setFloatingBoxes(prev => [...prev, newBox]);
+    setNextBoxId(prev => prev + 1);
+  }, [hoveredElement, hoveredElementInstance, floatingBoxes, nextBoxId, displayMode]);
+
+  // Close a floating box
+  const handleCloseFloatingBox = useCallback((id: string) => {
+    setFloatingBoxes(prev => prev.filter(b => b.id !== id));
+  }, []);
+
+  // Update floating box position/size
+  const handleFloatingBoxChange = useCallback((id: string, position: { x: number; y: number }, size: { width: number; height: number }) => {
+    setFloatingBoxes(prev => prev.map(b =>
+      b.id === id ? { ...b, position, size } : b
+    ));
+  }, []);
+
+  // Restore floating boxes from URL after data loads (runs once)
+  useEffect(() => {
+    // Only run once after data loads
+    if (hasRestoredFromURL) return;
+    if (!modelData) return;
+
+    // Mark as restored
+    setHasRestoredFromURL(true);
+
+    const urlState = getInitialState();
+
+    // Restore floating boxes from URL dialog state
+    if (urlState.dialogs && urlState.dialogs.length > 0) {
+      const restoredBoxes: FloatingBoxData[] = [];
+      let boxIdCounter = 0;
+
+      urlState.dialogs.forEach(dialogState => {
+        // Look up element using generic collection interface
+        const collection = modelData.collections.get(dialogState.elementType);
+        const element = collection?.getElement(dialogState.elementName) || null;
+
+        if (element) {
+          const metadata = element.getFloatingBoxMetadata();
+          restoredBoxes.push({
+            id: `box-${boxIdCounter}`,
+            mode: 'persistent',
+            metadata,
+            content: <DetailContent element={element} hideHeader={displayMode === 'stacked'} />,
+            element,
+            position: { x: dialogState.x, y: dialogState.y },
+            size: { width: dialogState.width, height: dialogState.height }
+          });
+          boxIdCounter++;
+        }
+      });
+
+      // Set all boxes at once
+      if (restoredBoxes.length > 0) {
+        setFloatingBoxes(restoredBoxes);
+        setNextBoxId(boxIdCounter);
+      }
+    }
+  }, [modelData, hasRestoredFromURL, displayMode]);
 
   // Memoize panel data to prevent infinite re-renders in LinkOverlay
   // Filter collections to only visible sections
@@ -110,14 +275,6 @@ function App() {
     });
     return map;
   }, [modelData]);
-
-  // Get Element instance for hovered element (for RelationshipSidebar)
-  const hoveredElementInstance = useMemo(() => {
-    if (!hoveredElement || !modelData) return null;
-    const collection = modelData.collections.get(hoveredElement.type as ElementTypeId);
-    if (!collection) return null;
-    return collection.getElement(hoveredElement.name);
-  }, [hoveredElement, modelData]);
 
   if (loading) {
     return (
@@ -278,7 +435,7 @@ function App() {
               onSectionsChange={setLeftSections}
               sectionData={leftSectionData}
               toggleButtons={toggleButtons}
-              onSelectElement={handleOpenDialog}
+              onSelectElement={handleOpenFloatingBox}
               onElementHover={setHoveredElement}
               onElementLeave={() => setHoveredElement(null)}
             />
@@ -291,7 +448,7 @@ function App() {
               onSectionsChange={setRightSections}
               sectionData={rightSectionData}
               toggleButtons={toggleButtons}
-              onSelectElement={handleOpenDialog}
+              onSelectElement={handleOpenFloatingBox}
               onElementHover={setHoveredElement}
               onElementLeave={() => setHoveredElement(null)}
             />
@@ -299,21 +456,6 @@ function App() {
           rightPanelEmpty={rightSections.length === 0}
           showSpacer={displayMode === 'dialog'}
         />
-
-        {/* Stacked detail panels (when enough space) */}
-        {displayMode === 'stacked' && openDialogs.length > 0 && (
-          <div className="flex-1 border-l border-gray-200 dark:border-slate-700">
-            <DetailPanelStack
-              panels={openDialogs.map(d => ({
-                id: d.id,
-                element: d.element,
-                elementType: d.elementType
-              }))}
-              onNavigate={handleNavigate}
-              onClose={handleCloseDialog}
-            />
-          </div>
-        )}
 
         {/* SVG Link Overlay */}
         {modelData && (
@@ -324,27 +466,23 @@ function App() {
           />
         )}
 
-        {/* Relationship Info Box */}
+        {/* Floating Box Manager - handles both stacked and dialog modes */}
+        <FloatingBoxManager
+          boxes={floatingBoxes}
+          displayMode={displayMode}
+          onNavigate={handleNavigate}
+          onClose={handleCloseFloatingBox}
+          onChange={handleFloatingBoxChange}
+        />
+
+        {/* Relationship Info Box (transitory, follows cursor) */}
         <RelationshipInfoBox
           element={hoveredElementInstance}
           cursorPosition={hoveredElement ? { x: hoveredElement.cursorX, y: hoveredElement.cursorY } : null}
           onNavigate={handleNavigate}
+          onUpgrade={handleUpgradeRelationshipBox}
         />
       </div>
-
-      {/* Detail dialogs - only render when in dialog mode */}
-      {displayMode === 'dialog' && openDialogs.map((dialog, index) => (
-        <DetailDialog
-          key={dialog.id}
-          element={dialog.element}
-          onNavigate={handleNavigate}
-          onClose={() => handleCloseDialog(dialog.id)}
-          onChange={(position, size) => handleDialogChange(dialog.id, position, size)}
-          dialogIndex={index}
-          initialPosition={{ x: dialog.x, y: dialog.y }}
-          initialSize={{ width: dialog.width, height: dialog.height }}
-        />
-      ))}
     </div>
   );
 }
