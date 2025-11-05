@@ -72,6 +72,19 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
   const [boxPosition, setBoxPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDraggable, setIsDraggable] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<{
+    subclasses: boolean;
+    usedBy: boolean;
+    variables: boolean;
+    slots: boolean;
+    inheritedSlots: Record<string, boolean>; // Track each ancestor separately
+  }>({
+    subclasses: false,
+    usedBy: false,
+    variables: false,
+    slots: false,
+    inheritedSlots: {}
+  });
   const hoverTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lingerTimerRef = useRef<NodeJS.Timeout | null>(null);
   const upgradeTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -93,13 +106,35 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
       // Element hovered - show after short delay (ignore quick pass-overs)
       hoverTimerRef.current = setTimeout(() => {
         setDisplayedElement(element);
-        // Position box near cursor, with offset to avoid covering the element
+        // Position box in leftmost available white space
         if (cursorPosition) {
-          const offsetX = 20; // Offset to right of cursor
-          const offsetY = 20; // Offset below cursor
+          const boxWidth = 500;
+          const maxBoxHeight = window.innerHeight * 0.8; // max-h-[80vh]
+
+          // Position at left edge of white space (after left panel)
+          // Left panel is typically ~350px, add some margin
+          const xPosition = 370;
+
+          // Calculate available space below and above cursor
+          const spaceBelow = window.innerHeight - cursorPosition.y;
+          const spaceAbove = cursorPosition.y;
+
+          // Decide whether to position above or below cursor
+          let yPosition: number;
+          if (spaceBelow < maxBoxHeight + 20 && spaceAbove > spaceBelow) {
+            // Not enough space below but more space above - position above cursor
+            yPosition = Math.max(10, cursorPosition.y - maxBoxHeight - 20);
+          } else {
+            // Position near cursor Y, clamped to viewport
+            yPosition = Math.min(
+              Math.max(10, cursorPosition.y - 100), // Offset slightly above cursor
+              window.innerHeight - maxBoxHeight - 10 // 10px margin from bottom
+            );
+          }
+
           setBoxPosition({
-            x: Math.min(cursorPosition.x + offsetX, window.innerWidth - 520), // Keep within viewport (500px width + margin)
-            y: Math.min(cursorPosition.y + offsetY, window.innerHeight - 400) // Keep within viewport
+            x: xPosition,
+            y: Math.max(10, yPosition) // Ensure at least 10px from top
           });
         }
       }, 300);
@@ -238,6 +273,94 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
     );
   };
 
+  // Helper to render collapsible list with "... N more" button for large lists
+  const renderCollapsibleList = <T,>(
+    items: T[],
+    sectionKey: 'subclasses' | 'usedBy' | 'variables' | 'slots',
+    renderItem: (item: T, idx: number) => React.ReactNode,
+    threshold: number = 20
+  ) => {
+    const isExpanded = expandedSections[sectionKey];
+    const shouldCollapse = items.length > threshold;
+    const visibleItems = shouldCollapse && !isExpanded ? items.slice(0, 10) : items;
+    const remainingCount = items.length - 10;
+
+    return (
+      <>
+        {visibleItems.map(renderItem)}
+        {shouldCollapse && !isExpanded && (
+          <button
+            onClick={() => setExpandedSections(prev => ({ ...prev, [sectionKey]: true }))}
+            className="text-sm text-blue-600 dark:text-blue-400 hover:underline cursor-pointer mt-1"
+          >
+            ... {remainingCount} more (click to expand)
+          </button>
+        )}
+        {shouldCollapse && isExpanded && (
+          <button
+            onClick={() => setExpandedSections(prev => ({ ...prev, [sectionKey]: false }))}
+            className="text-sm text-gray-600 dark:text-gray-400 hover:underline cursor-pointer mt-1"
+          >
+            (collapse)
+          </button>
+        )}
+      </>
+    );
+  };
+
+  // Helper to render collapsible inherited slots for a specific ancestor
+  const renderCollapsibleInheritedSlots = (
+    ancestorName: string,
+    slots: SlotInfo[],
+    threshold: number = 20
+  ) => {
+    const isExpanded = expandedSections.inheritedSlots[ancestorName] || false;
+    const shouldCollapse = slots.length > threshold;
+    const visibleSlots = shouldCollapse && !isExpanded ? slots.slice(0, 10) : slots;
+    const remainingCount = slots.length - 10;
+
+    return (
+      <>
+        {visibleSlots.map((slot, slotIdx) => (
+          <div key={slotIdx} className="text-sm text-gray-900 dark:text-gray-100">
+            <span className="text-green-600 dark:text-green-400">{slot.attributeName}</span>
+            {' → '}
+            {makeClickable(
+              slot.target,
+              slot.targetType as 'class' | 'enum' | 'slot',
+              slot.isSelfRef ? "text-orange-600 dark:text-orange-400" : "text-blue-600 dark:text-blue-400"
+            )}
+            <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">
+              ({slot.targetType}{slot.isSelfRef ? ', self-ref' : ''})
+            </span>
+          </div>
+        ))}
+        {shouldCollapse && !isExpanded && (
+          <button
+            onClick={() => setExpandedSections(prev => ({
+              ...prev,
+              inheritedSlots: { ...prev.inheritedSlots, [ancestorName]: true }
+            }))}
+            className="text-sm text-blue-600 dark:text-blue-400 hover:underline cursor-pointer mt-1"
+          >
+            ... {remainingCount} more (click to expand)
+          </button>
+        )}
+        {shouldCollapse && isExpanded && (
+          <button
+            onClick={() => setExpandedSections(prev => ({
+              ...prev,
+              inheritedSlots: { ...prev.inheritedSlots, [ancestorName]: false }
+            }))}
+            className="text-sm text-gray-600 dark:text-gray-400 hover:underline cursor-pointer mt-1"
+          >
+            (collapse)
+          </button>
+        )}
+      </>
+    );
+  };
+
   const hasOutgoing = details.outgoing.inheritance || details.outgoing.slots.length > 0;
   const hasIncoming =
     details.incoming.subclasses.length > 0 ||
@@ -329,20 +452,24 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
             <div>
               <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Slots:</div>
               <div className="ml-3 space-y-1">
-                {details.outgoing.slots.map((prop, idx) => (
-                  <div key={idx} className="text-sm text-gray-900 dark:text-gray-100">
-                    <span className="text-green-600 dark:text-green-400">{prop.attributeName}</span>
-                    {' → '}
-                    {makeClickable(
-                      prop.target,
-                      prop.targetType as 'class' | 'enum' | 'slot',
-                      prop.isSelfRef ? "text-orange-600 dark:text-orange-400" : "text-blue-600 dark:text-blue-400"
-                    )}
-                    <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">
-                      ({prop.targetType}{prop.isSelfRef ? ', self-ref' : ''})
-                    </span>
-                  </div>
-                ))}
+                {renderCollapsibleList(
+                  details.outgoing.slots,
+                  'slots',
+                  (prop, idx) => (
+                    <div key={idx} className="text-sm text-gray-900 dark:text-gray-100">
+                      <span className="text-green-600 dark:text-green-400">{prop.attributeName}</span>
+                      {' → '}
+                      {makeClickable(
+                        prop.target,
+                        prop.targetType as 'class' | 'enum' | 'slot',
+                        prop.isSelfRef ? "text-orange-600 dark:text-orange-400" : "text-blue-600 dark:text-blue-400"
+                      )}
+                      <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">
+                        ({prop.targetType}{prop.isSelfRef ? ', self-ref' : ''})
+                      </span>
+                    </div>
+                  )
+                )}
               </div>
             </div>
           )}
@@ -356,20 +483,7 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
                     Inherited from {ancestorGroup.ancestorName}:
                   </div>
                   <div className="ml-3 space-y-1">
-                    {ancestorGroup.slots.map((slot, slotIdx) => (
-                      <div key={slotIdx} className="text-sm text-gray-900 dark:text-gray-100">
-                        <span className="text-green-600 dark:text-green-400">{slot.attributeName}</span>
-                        {' → '}
-                        {makeClickable(
-                          slot.target,
-                          slot.targetType as 'class' | 'enum' | 'slot',
-                          slot.isSelfRef ? "text-orange-600 dark:text-orange-400" : "text-blue-600 dark:text-blue-400"
-                        )}
-                        <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">
-                          ({slot.targetType}{slot.isSelfRef ? ', self-ref' : ''})
-                        </span>
-                      </div>
-                    ))}
+                    {renderCollapsibleInheritedSlots(ancestorGroup.ancestorName, ancestorGroup.slots)}
                   </div>
                 </div>
               ))}
@@ -390,11 +504,15 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
                 Subclasses ({details.incoming.subclasses.length}):
               </div>
               <div className="ml-3 space-y-0.5">
-                {details.incoming.subclasses.map((subclass, idx) => (
-                  <div key={idx} className="text-sm text-gray-900 dark:text-gray-100">
-                    • {makeClickable(subclass, 'class', "text-blue-600 dark:text-blue-400")}
-                  </div>
-                ))}
+                {renderCollapsibleList(
+                  details.incoming.subclasses,
+                  'subclasses',
+                  (subclass, idx) => (
+                    <div key={idx} className="text-sm text-gray-900 dark:text-gray-100">
+                      • {makeClickable(subclass, 'class', "text-blue-600 dark:text-blue-400")}
+                    </div>
+                  )
+                )}
               </div>
             </div>
           )}
@@ -406,14 +524,18 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
                 Used By ({details.incoming.usedByAttributes.length}):
               </div>
               <div className="ml-3 space-y-0.5">
-                {details.incoming.usedByAttributes.map((usage, idx) => (
-                  <div key={idx} className="text-sm text-gray-900 dark:text-gray-100">
-                    {makeClickable(usage.className, 'class', "text-blue-600 dark:text-blue-400")}
-                    <span className="text-gray-500 dark:text-gray-400">.</span>
-                    <span className="text-green-600 dark:text-green-400">{usage.attributeName}</span>
-                    <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">({usage.sourceType})</span>
-                  </div>
-                ))}
+                {renderCollapsibleList(
+                  details.incoming.usedByAttributes,
+                  'usedBy',
+                  (usage, idx) => (
+                    <div key={idx} className="text-sm text-gray-900 dark:text-gray-100">
+                      {makeClickable(usage.className, 'class', "text-blue-600 dark:text-blue-400")}
+                      <span className="text-gray-500 dark:text-gray-400">.</span>
+                      <span className="text-green-600 dark:text-green-400">{usage.attributeName}</span>
+                      <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">({usage.sourceType})</span>
+                    </div>
+                  )
+                )}
               </div>
             </div>
           )}
@@ -425,11 +547,15 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
                 Variables ({details.incoming.variables.length}):
               </div>
               <div className="ml-3 space-y-0.5">
-                {details.incoming.variables.map((variable, idx) => (
-                  <div key={idx} className="text-sm text-gray-900 dark:text-gray-100">
-                    • {makeClickable(variable.name, 'variable', "text-purple-600 dark:text-purple-400")}
-                  </div>
-                ))}
+                {renderCollapsibleList(
+                  details.incoming.variables,
+                  'variables',
+                  (variable, idx) => (
+                    <div key={idx} className="text-sm text-gray-900 dark:text-gray-100">
+                      • {makeClickable(variable.name, 'variable', "text-purple-600 dark:text-purple-400")}
+                    </div>
+                  )
+                )}
               </div>
             </div>
           )}

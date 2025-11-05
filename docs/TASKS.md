@@ -129,8 +129,10 @@ Will return to this when i have her next response.
 ```
 src/components/
   DetailPanel.tsx           (keep - content renderer, 130 lines, uses getDetailData())
+  [sg] make it DetailContent instead of panel
   RelationshipInfoBox.tsx   (keep - relationship content renderer)
   DetailBoxManager.tsx      (new - manages array + rendering)
+    [sg] unlink component name from details... FloatingBox?
     - DetailBox component   (draggable/resizable wrapper)
     - Array management (FIFO stack)
     - Mode-aware positioning
@@ -160,6 +162,7 @@ src/components/
    - Hover element → info box appears near cursor after 300ms
    - Shows relationships only, no close button
    - Lingers 2.5s after unhover (unless interacted with)
+     [sg] that's seeming too long
 
 2. **Upgrade trigger** (one of):
    - Hover over info box for 1.5s
@@ -286,10 +289,19 @@ src/components/
 **Files likely affected**:
 - `src/index.css` - Tailwind dark mode classes
 - All component files using colors
+---
 
+### [sg] Add user help
+- could open in a FloatingBox
+- for whole help, it could be a big box with TOC
+- contextual help could just open the relevant section, or open
+  the whole thing but scrolled to relevant section
 ---
 
 ## Future Work
+
+### [sg] integrate TopMED variables
+
 
 ### Merge TESTING.md Files
 
