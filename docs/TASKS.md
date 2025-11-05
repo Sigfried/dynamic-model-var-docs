@@ -210,12 +210,14 @@ Hover behavior depends on where cursor is positioned:
     - ✅ Added getFloatingBoxMetadata() to Element base class
     - ✅ Renamed DetailPanel → DetailContent (updated all references and tests)
 
-2. **Refactor RelationshipInfoBox.tsx** (IN PROGRESS)
-    - **Remove** drag/resize/close logic (handled by FloatingBox wrapper)
-    - Keep preview mode (hover, linger, positioning)
-    - Keep upgrade trigger logic (1.5s hover or click)
-    - **On upgrade**: call callback to add to FloatingBoxManager instead of local state
-    - Content becomes simpler: just relationships display, no window chrome
+2. **✅ Refactor RelationshipInfoBox.tsx** (COMPLETED)
+    - ✅ **Removed** drag/resize/close logic (will be handled by FloatingBox wrapper)
+    - ✅ Removed ESC key handler (FloatingBoxManager will handle)
+    - ✅ Keep preview mode (hover, linger, positioning)
+    - ✅ Keep upgrade trigger logic (1.5s hover or click)
+    - ✅ **Added onUpgrade callback**: calls callback instead of local state
+    - ✅ Removed close button and drag cursor styling
+    - ✅ Content now simpler: just relationships display, no window chrome
 
 3. **Update App.tsx**
     - Remove openDialogs management
