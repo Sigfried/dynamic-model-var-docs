@@ -59,13 +59,33 @@ export interface RelationshipData {
 
 interface RelationshipInfoBoxProps {
   element: Element | null;
+  onNavigate?: (elementName: string, elementType: 'class' | 'enum' | 'slot' | 'variable') => void;
 }
 
-export default function RelationshipInfoBox({ element }: RelationshipInfoBoxProps) {
+export default function RelationshipInfoBox({ element, onNavigate }: RelationshipInfoBoxProps) {
   if (!element) return null;
 
   // Get relationship data from element (adapts to component's contract)
   const details = element.getRelationshipData();
+
+  // Helper to make element names clickable
+  const makeClickable = (
+    name: string,
+    type: 'class' | 'enum' | 'slot' | 'variable',
+    className: string
+  ) => {
+    if (!onNavigate) {
+      return <span className={className}>{name}</span>;
+    }
+    return (
+      <button
+        onClick={() => onNavigate(name, type)}
+        className={`${className} hover:underline cursor-pointer`}
+      >
+        {name}
+      </button>
+    );
+  };
 
   const hasOutgoing = details.outgoing.inheritance || details.outgoing.slots.length > 0;
   const hasIncoming =
@@ -117,7 +137,7 @@ export default function RelationshipInfoBox({ element }: RelationshipInfoBoxProp
             <div className="mb-3">
               <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Inheritance:</div>
               <div className="ml-3 text-sm text-gray-900 dark:text-gray-100">
-                → <span className="text-blue-600 dark:text-blue-400">{details.outgoing.inheritance.target}</span>
+                → {makeClickable(details.outgoing.inheritance.target, 'class', "text-blue-600 dark:text-blue-400")}
                 <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">({details.outgoing.inheritance.targetType})</span>
               </div>
             </div>
@@ -132,9 +152,11 @@ export default function RelationshipInfoBox({ element }: RelationshipInfoBoxProp
                   <div key={idx} className="text-sm text-gray-900 dark:text-gray-100">
                     <span className="text-green-600 dark:text-green-400">{prop.attributeName}</span>
                     {' → '}
-                    <span className={prop.isSelfRef ? "text-orange-600 dark:text-orange-400" : "text-blue-600 dark:text-blue-400"}>
-                      {prop.target}
-                    </span>
+                    {makeClickable(
+                      prop.target,
+                      prop.targetType as 'class' | 'enum' | 'slot',
+                      prop.isSelfRef ? "text-orange-600 dark:text-orange-400" : "text-blue-600 dark:text-blue-400"
+                    )}
                     <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">
                       ({prop.targetType}{prop.isSelfRef ? ', self-ref' : ''})
                     </span>
@@ -157,9 +179,11 @@ export default function RelationshipInfoBox({ element }: RelationshipInfoBoxProp
                       <div key={slotIdx} className="text-sm text-gray-900 dark:text-gray-100">
                         <span className="text-green-600 dark:text-green-400">{slot.attributeName}</span>
                         {' → '}
-                        <span className={slot.isSelfRef ? "text-orange-600 dark:text-orange-400" : "text-blue-600 dark:text-blue-400"}>
-                          {slot.target}
-                        </span>
+                        {makeClickable(
+                          slot.target,
+                          slot.targetType as 'class' | 'enum' | 'slot',
+                          slot.isSelfRef ? "text-orange-600 dark:text-orange-400" : "text-blue-600 dark:text-blue-400"
+                        )}
                         <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">
                           ({slot.targetType}{slot.isSelfRef ? ', self-ref' : ''})
                         </span>
@@ -187,7 +211,7 @@ export default function RelationshipInfoBox({ element }: RelationshipInfoBoxProp
               <div className="ml-3 space-y-0.5">
                 {details.incoming.subclasses.map((subclass, idx) => (
                   <div key={idx} className="text-sm text-gray-900 dark:text-gray-100">
-                    • <span className="text-blue-600 dark:text-blue-400">{subclass}</span>
+                    • {makeClickable(subclass, 'class', "text-blue-600 dark:text-blue-400")}
                   </div>
                 ))}
               </div>
@@ -203,7 +227,7 @@ export default function RelationshipInfoBox({ element }: RelationshipInfoBoxProp
               <div className="ml-3 space-y-0.5">
                 {details.incoming.usedByAttributes.map((usage, idx) => (
                   <div key={idx} className="text-sm text-gray-900 dark:text-gray-100">
-                    <span className="text-blue-600 dark:text-blue-400">{usage.className}</span>
+                    {makeClickable(usage.className, 'class', "text-blue-600 dark:text-blue-400")}
                     <span className="text-gray-500 dark:text-gray-400">.</span>
                     <span className="text-green-600 dark:text-green-400">{usage.attributeName}</span>
                     <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">({usage.sourceType})</span>

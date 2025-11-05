@@ -325,7 +325,10 @@ function App() {
         )}
 
         {/* Relationship Info Box */}
-        <RelationshipInfoBox element={hoveredElementInstance} />
+        <RelationshipInfoBox
+          element={hoveredElementInstance}
+          onNavigate={handleNavigate}
+        />
       </div>
 
       {/* Detail dialogs - only render when in dialog mode */}
