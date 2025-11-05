@@ -177,6 +177,44 @@ src/components/
    - Clicking element name in RelationshipInfoBox → opens DetailPanel (full details) in DetailBox
    - Both boxes can coexist: relationship view + detail view of linked element
 
+5. **Preview mode content choice** (TO BE DECIDED):
+   When hovering over an element, should the preview show relationships (RelationshipInfoBox) or full details (DetailPanel)?
+
+   **Options**:
+   - **User preference toggle**: Settings/header button to choose default preview mode
+     - Pros: Clear, explicit control
+     - Cons: Adds UI complexity, users must remember to toggle
+
+   - **Position-based heuristic**: Hover behavior depends on where cursor is
+     - Hover element name → show detail preview
+     - Hover panel edge/between elements → show relationship preview
+     - Pros: Contextual, no UI needed
+     - Cons: May be unpredictable, harder to discover
+
+   - **Keyboard modifier**: Hold Shift while hovering to show alternate preview
+     - Default: Relationship preview
+     - Shift+hover: Detail preview (or vice versa)
+     - Pros: Discoverable through tooltips, no permanent UI
+     - Cons: Requires keyboard, may not be obvious
+
+   - **Time-based cascade**: Show relationships first (quick), then details after longer hover
+     - 300ms → relationship preview appears
+     - 1.5s → detail preview replaces relationship preview
+     - Pros: Progressive disclosure, shows both automatically
+     - Cons: May be confusing, delay could feel laggy
+
+   - **Combination approach**: User toggle for default + keyboard modifier for override
+     - Toggle sets default preview type (relationships OR details)
+     - Shift+hover shows the other type
+     - Pros: Best of both worlds, flexible
+     - Cons: Slightly more complex
+
+   **Recommendation**: Combination approach (user toggle + keyboard modifier)
+   - Most flexible without being overwhelming
+   - Users can set their preferred workflow
+   - Power users can override on-demand
+   - Implementation fits cleanly with existing hover system
+
 **Mode behavior** (intelligent repositioning):
 - **Floating mode** (narrow screen): New boxes cascade from bottom-left
 - **Stacked mode** (wide screen): New boxes open in stack area
