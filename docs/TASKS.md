@@ -18,63 +18,184 @@ Will return to this when i have her next response.
 
 ## Next Up (Ordered)
 
-### Enhanced Interactive Relationship Info Box (Phase 10)
+### Unified Detail Box System (Phase 11) ⭐ NEXT
 
-**Goal**: Transform RelationshipSidebar into an interactive, feature-rich info box
+**Goal**: Extract dialog management from App.tsx, merge DetailDialog/DetailPanelStack into unified system, enable relationship info boxes to upgrade to persistent floating boxes
 
-**Components**:
+**Current state**:
+- DetailPanel: 130-line content renderer using getDetailData() ✅
+- RelationshipInfoBox: Hover preview with relationships, has its own drag/close logic
+- DetailDialog: Floating draggable/resizable wrapper
+- DetailPanelStack: Stacked non-draggable wrapper
+- App.tsx: Manages openDialogs array and mode switching
 
-1. **Hover behavior & positioning**
-   - Debounced hover (2-3s linger, ignore quick pass-overs)
-   - Initial positioning near cursor (but stays put once placed)
-   - Upgrade to draggable dialog on user interaction (long hover or click in it)
-   - ESC key closes info box before detail boxes
+**New file structure**:
+```
+src/components/
+  DetailPanel.tsx           (keep - content renderer, 130 lines, uses getDetailData())
+  [sg] make it DetailContent instead of panel
+  RelationshipInfoBox.tsx   (keep - relationship content renderer)
+  DetailBoxManager.tsx      (new - manages array + rendering)
+    [sg] unlink component name from details... FloatingBox?
+    - DetailBox component   (draggable/resizable wrapper)
+    - Array management (FIFO stack)
+    - Mode-aware positioning
+```
 
-2. **Layout & styling**
-   - Rename "sidebar" → "info box" (component name, comments, etc.)
-   - Make it wider to fit relationships on one line
-   - Use hanging indent for long items
-   - Move title to colored header box (using element's type color)
-   - Change header text: "Relationships: Specimen" → "Specimen relationships"
+**Key insight**: Both DetailPanel and RelationshipInfoBox content can be wrapped in DetailBox chrome
 
-3. **Enhanced data display**
-   - Rename "Properties" → "Slots" throughout
-   - Show inherited slots from all ancestors with visual hierarchy (most general first):
-     ```
-     Outgoing Slots:
-       Inherited from NamedThing:
-         name → string
+**DetailBox component** (single component, works in both modes):
+- All boxes identical: draggable, resizable, colored headers
+- Mode only affects initial position (not capabilities)
+- **Content agnostic**: Renders `<DetailPanel element={...}/>` OR `<RelationshipInfoBox element={...}/>`
+- Uses element type for header color (not content-dependent)
+- Click/drag/resize anywhere in box → bring to front (move to end of array)
+- ESC closes first/oldest box (index 0)
 
-       Inherited from Entity:
-         id → string
-         type → EntityTypeEnum
+**Content types**:
+1. **Detail content**: Full element details (slots table, variables, description, etc.)
+2. **Relationship content**: Focused relationship view (inheritance, slots, incoming/outgoing)
 
-       specimen_type → SpecimenTypeEnum
-     ```
-   - Add relationship counts in header (e.g., "[↗ 5 outgoing] [↙ 15 incoming]")
-   - Color-code relationship types (inheritance blue, slots green, self-refs orange, variables purple)
-   - Group/collapse large lists (20+ items show "... N more (click to expand)")
+**User can have multiple boxes open simultaneously**:
+- Multiple detail boxes (compare elements side-by-side)
+- Multiple relationship boxes (compare relationships)
+- Mix of both types
 
-4. **Navigation & interactivity**
-   - Make all items clickable to open detail boxes
-   - Bi-directional preview: hovering over names in info box highlights them in tree panels
-   - Close button when in draggable mode
+**Positioning issues to fix** (deferred from Phase 10):
+- **Vertical positioning**: Current logic can position boxes oddly (see Phase 10 screenshot)
+- **Right edge overflow**: Box can extend past right edge of window
+- Fix both when implementing FloatingBox positioning logic
+- Ensure boxes stay fully within viewport bounds [sg] unless the user drags them
 
-**Deferred to future:**
-- "Explore relationship" action to open both elements side-by-side
-- Keyboard navigation (arrows, enter, tab)
-- Quick filter toggles
+**RelationshipInfoBox upgrade flow**:
+1. **Preview mode** (current Phase 10 implementation):
+    - Hover element → info box appears near cursor after 300ms
+    - Shows relationships only, no close button
+    - Lingers 2.5s after unhover (unless interacted with)
+      [sg] that's seeming too long
 
-**Files affected**:
-- `src/components/RelationshipSidebar.tsx` → rename to `RelationshipInfoBox.tsx`
-- `src/models/Element.ts` - Update getRelationshipData() for inherited slots
-- `src/App.tsx` - Update imports and references
+2. **Upgrade trigger** (one of):
+    - Hover over info box for 1.5s
+    - Click anywhere in info box
+
+3. **Persistent box mode** (NEW with this refactor):
+    - Info box content gets wrapped in DetailBox
+    - Becomes draggable/resizable with close button
+    - Added to DetailBoxManager's array
+    - Stays open until explicitly closed (ESC or close button)
+    - Can open multiple relationship boxes this way
+
+4. **Integration with clicking element names**:
+    - Clicking element name in tree → opens DetailPanel (full details) in DetailBox
+    - Clicking element name in RelationshipInfoBox → opens DetailPanel (full details) in DetailBox
+    - Both boxes can coexist: relationship view + detail view of linked element
+
+5. **Preview mode content choice** (TO BE DECIDED):
+   When hovering over an element, should the preview show relationships (RelationshipInfoBox) or full details (DetailPanel)?
+
+   **Options**:
+    - **User preference toggle**: Settings/header button to choose default preview mode
+        - Pros: Clear, explicit control
+        - Cons: Adds UI complexity, users must remember to toggle
+
+    - **Position-based heuristic**: Hover behavior depends on where cursor is
+        - Hover element name → show detail preview
+        - Hover panel edge/between elements → show relationship preview
+        - Pros: Contextual, no UI needed
+        - Cons: May be unpredictable, harder to discover
+
+    - **Keyboard modifier**: Hold Shift while hovering to show alternate preview
+        - Default: Relationship preview
+        - Shift+hover: Detail preview (or vice versa)
+        - Pros: Discoverable through tooltips, no permanent UI
+        - Cons: Requires keyboard, may not be obvious
+
+    - **Time-based cascade**: Show relationships first (quick), then details after longer hover
+        - 300ms → relationship preview appears
+        - 1.5s → detail preview replaces relationship preview
+        - Pros: Progressive disclosure, shows both automatically
+        - Cons: May be confusing, delay could feel laggy
+
+    - **Combination approach**: User toggle for default + keyboard modifier for override
+        - Toggle sets default preview type (relationships OR details)
+        - Shift+hover shows the other type
+        - Pros: Best of both worlds, flexible
+        - Cons: Slightly more complex
+
+   **Recommendation**: Combination approach (user toggle + keyboard modifier)
+    - Most flexible without being overwhelming
+    - Users can set their preferred workflow
+    - Power users can override on-demand
+    - Implementation fits cleanly with existing hover system
+
+**Mode behavior** (intelligent repositioning):
+- **Floating mode** (narrow screen): New boxes cascade from bottom-left
+- **Stacked mode** (wide screen): New boxes open in stack area
+    - Consider changing layout to newest on bottom, then new boxes can overlap so only header of previous shows
+    - With click-to-front, this should work well
+- **Mode switch to stacked**: All boxes move to stack positions
+- **Mode switch to floating**:
+    - User-repositioned boxes → restore custom position from URL state
+    - Default boxes → cascade from bottom-left
+
+**URL state tracking**:
+- Track which boxes have custom positions (user dragged/resized)
+- On mode switch, respect user customizations
+- Default positions don't persist
+
+**Important**:
+- Make sure new boxes are always fully visible:
+    - In stacked layout by scrolling
+    - In floating, by resetting vertical cascade position when necessary
+
+**Implementation steps**:
+
+1. **Create DetailBoxManager.tsx**
+    - Extract openDialogs array management from App.tsx
+    - Single DetailBox component (merge DetailDialog drag/resize logic)
+    - **Support both content types**: DetailPanel OR RelationshipInfoBox
+    - Mode-aware initial positioning
+    - Click/drag/resize → bring to front (move to end of array)
+    - ESC closes first box (oldest)
+    - Z-index based on array position
+
+2. **Refactor RelationshipInfoBox.tsx**
+    - **Remove** drag/resize/close logic (handled by DetailBox wrapper)
+    - Keep preview mode (hover, linger, positioning)
+    - Keep upgrade trigger logic (1.5s hover or click)
+    - **On upgrade**: call callback to add to DetailBoxManager instead of local state
+    - Content becomes simpler: just relationships display, no window chrome
+
+3. **Update App.tsx**
+    - Remove openDialogs management
+    - Import and use DetailBoxManager
+    - Pass display mode and callbacks
+    - Handle RelationshipInfoBox upgrade callback
+
+4. **Delete old components**
+    - Delete DetailDialog.tsx
+    - Delete DetailPanelStack.tsx
+
+5. **Update tests**
+    - Test drag/resize
+    - Test click-to-front
+    - Test ESC behavior
+    - Test mode switching with custom positions
+    - **Test relationship box upgrade flow**
+    - **Test multiple relationship boxes**
+    - **Test mixed content types** (relationship + detail boxes)
 
 ---
 
 ### Abstract Tree Rendering System
 
 **IMPORTANT**: Before starting this refactor, give a tour of how tree rendering currently works (Element tree structure, expansion state, rendering in components).
+
+[sg] converting DetailContent (currently DetailPanel) and other components to use the 
+new system might mean some significant simplification. but before we implement the system,
+fully specify its interface (meaning how it is used, not that it's a typescript interface).
+then we go into the components that use it and write the code that would use it and
+add comments to show the code that will be replaced.
 
 **Goal**: Extract tree rendering and expansion logic from Element into reusable abstractions that can be shared between Elements panel and info boxes (and future tree-like displays).
 
@@ -171,169 +292,6 @@ Will return to this when i have her next response.
 
 ---
 
-### Unified Detail Box System
-
-**Goal**: Extract dialog management from App.tsx, merge DetailDialog/DetailPanelStack into unified system, enable relationship info boxes to upgrade to persistent floating boxes
-
-**Current state**:
-- DetailPanel: 130-line content renderer using getDetailData() ✅
-- RelationshipInfoBox: Hover preview with relationships, has its own drag/close logic
-- DetailDialog: Floating draggable/resizable wrapper
-- DetailPanelStack: Stacked non-draggable wrapper
-- App.tsx: Manages openDialogs array and mode switching
-
-**New file structure**:
-```
-src/components/
-  DetailPanel.tsx           (keep - content renderer, 130 lines, uses getDetailData())
-  [sg] make it DetailContent instead of panel
-  RelationshipInfoBox.tsx   (keep - relationship content renderer)
-  DetailBoxManager.tsx      (new - manages array + rendering)
-    [sg] unlink component name from details... FloatingBox?
-    - DetailBox component   (draggable/resizable wrapper)
-    - Array management (FIFO stack)
-    - Mode-aware positioning
-```
-
-**Key insight**: Both DetailPanel and RelationshipInfoBox content can be wrapped in DetailBox chrome
-
-**DetailBox component** (single component, works in both modes):
-- All boxes identical: draggable, resizable, colored headers
-- Mode only affects initial position (not capabilities)
-- **Content agnostic**: Renders `<DetailPanel element={...}/>` OR `<RelationshipInfoBox element={...}/>`
-- Uses element type for header color (not content-dependent)
-- Click/drag/resize anywhere in box → bring to front (move to end of array)
-- ESC closes first/oldest box (index 0)
-
-**Content types**:
-1. **Detail content**: Full element details (slots table, variables, description, etc.)
-2. **Relationship content**: Focused relationship view (inheritance, slots, incoming/outgoing)
-
-**User can have multiple boxes open simultaneously**:
-- Multiple detail boxes (compare elements side-by-side)
-- Multiple relationship boxes (compare relationships)
-- Mix of both types
-
-**RelationshipInfoBox upgrade flow**:
-1. **Preview mode** (current Phase 10 implementation):
-   - Hover element → info box appears near cursor after 300ms
-   - Shows relationships only, no close button
-   - Lingers 2.5s after unhover (unless interacted with)
-     [sg] that's seeming too long
-
-2. **Upgrade trigger** (one of):
-   - Hover over info box for 1.5s
-   - Click anywhere in info box
-
-3. **Persistent box mode** (NEW with this refactor):
-   - Info box content gets wrapped in DetailBox
-   - Becomes draggable/resizable with close button
-   - Added to DetailBoxManager's array
-   - Stays open until explicitly closed (ESC or close button)
-   - Can open multiple relationship boxes this way
-
-4. **Integration with clicking element names**:
-   - Clicking element name in tree → opens DetailPanel (full details) in DetailBox
-   - Clicking element name in RelationshipInfoBox → opens DetailPanel (full details) in DetailBox
-   - Both boxes can coexist: relationship view + detail view of linked element
-
-5. **Preview mode content choice** (TO BE DECIDED):
-   When hovering over an element, should the preview show relationships (RelationshipInfoBox) or full details (DetailPanel)?
-
-   **Options**:
-   - **User preference toggle**: Settings/header button to choose default preview mode
-     - Pros: Clear, explicit control
-     - Cons: Adds UI complexity, users must remember to toggle
-
-   - **Position-based heuristic**: Hover behavior depends on where cursor is
-     - Hover element name → show detail preview
-     - Hover panel edge/between elements → show relationship preview
-     - Pros: Contextual, no UI needed
-     - Cons: May be unpredictable, harder to discover
-
-   - **Keyboard modifier**: Hold Shift while hovering to show alternate preview
-     - Default: Relationship preview
-     - Shift+hover: Detail preview (or vice versa)
-     - Pros: Discoverable through tooltips, no permanent UI
-     - Cons: Requires keyboard, may not be obvious
-
-   - **Time-based cascade**: Show relationships first (quick), then details after longer hover
-     - 300ms → relationship preview appears
-     - 1.5s → detail preview replaces relationship preview
-     - Pros: Progressive disclosure, shows both automatically
-     - Cons: May be confusing, delay could feel laggy
-
-   - **Combination approach**: User toggle for default + keyboard modifier for override
-     - Toggle sets default preview type (relationships OR details)
-     - Shift+hover shows the other type
-     - Pros: Best of both worlds, flexible
-     - Cons: Slightly more complex
-
-   **Recommendation**: Combination approach (user toggle + keyboard modifier)
-   - Most flexible without being overwhelming
-   - Users can set their preferred workflow
-   - Power users can override on-demand
-   - Implementation fits cleanly with existing hover system
-
-**Mode behavior** (intelligent repositioning):
-- **Floating mode** (narrow screen): New boxes cascade from bottom-left
-- **Stacked mode** (wide screen): New boxes open in stack area
-  - Consider changing layout to newest on bottom, then new boxes can overlap so only header of previous shows
-  - With click-to-front, this should work well
-- **Mode switch to stacked**: All boxes move to stack positions
-- **Mode switch to floating**:
-  - User-repositioned boxes → restore custom position from URL state
-  - Default boxes → cascade from bottom-left
-
-**URL state tracking**:
-- Track which boxes have custom positions (user dragged/resized)
-- On mode switch, respect user customizations
-- Default positions don't persist
-
-**Important**:
-- Make sure new boxes are always fully visible:
-  - In stacked layout by scrolling
-  - In floating, by resetting vertical cascade position when necessary
-
-**Implementation steps**:
-
-1. **Create DetailBoxManager.tsx**
-   - Extract openDialogs array management from App.tsx
-   - Single DetailBox component (merge DetailDialog drag/resize logic)
-   - **Support both content types**: DetailPanel OR RelationshipInfoBox
-   - Mode-aware initial positioning
-   - Click/drag/resize → bring to front (move to end of array)
-   - ESC closes first box (oldest)
-   - Z-index based on array position
-
-2. **Refactor RelationshipInfoBox.tsx**
-   - **Remove** drag/resize/close logic (handled by DetailBox wrapper)
-   - Keep preview mode (hover, linger, positioning)
-   - Keep upgrade trigger logic (1.5s hover or click)
-   - **On upgrade**: call callback to add to DetailBoxManager instead of local state
-   - Content becomes simpler: just relationships display, no window chrome
-
-3. **Update App.tsx**
-   - Remove openDialogs management
-   - Import and use DetailBoxManager
-   - Pass display mode and callbacks
-   - Handle RelationshipInfoBox upgrade callback
-
-4. **Delete old components**
-   - Delete DetailDialog.tsx
-   - Delete DetailPanelStack.tsx
-
-5. **Update tests**
-   - Test drag/resize
-   - Test click-to-front
-   - Test ESC behavior
-   - Test mode switching with custom positions
-   - **Test relationship box upgrade flow**
-   - **Test multiple relationship boxes**
-   - **Test mixed content types** (relationship + detail boxes)
-
----
-
 ### Detail Panel Enhancements
 
 **Enum Detail Improvements**:
@@ -399,6 +357,15 @@ src/components/
 ---
 
 ## Future Work
+
+### Relationship Info Box Enhancements (deferred from Phase 10)
+
+- **Bi-directional preview**: Hovering over element names in info box highlights them in tree panels
+- **"Explore relationship" action**: Open both elements side-by-side for comparison
+- **Keyboard navigation**: Arrow keys, Enter, Tab for navigating within info box
+- **Quick filter toggles**: Filter relationships by type (show/hide inheritance, slots, variables, etc.)
+
+---
 
 ### [sg] integrate TopMED variables
 

@@ -33,6 +33,7 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 - [Phase 7: Element.getDetailData() Implementation](#phase-7-getdetaildata)
 - [Phase 8: DetailPanel Refactoring](#phase-8-detailpanel)
 - [Phase 9: App.tsx Refactoring - Testable Hooks](#phase-9-app-refactoring)
+- [Phase 10: Enhanced Interactive Relationship Info Box](#phase-10-info-box)
 
 ---
 
@@ -1376,6 +1377,101 @@ Extract complex state management logic from App.tsx into testable hooks, reducin
 - TypeScript typecheck: ✅ Passes
 - Dev server: ✅ Runs clean
 - All functionality preserved
+
+---
+
+## Phase 10: Enhanced Interactive Relationship Info Box
+
+**Completed**: November 2025
+
+### Goal
+Transform RelationshipSidebar into an interactive, feature-rich info box that provides comprehensive relationship information on hover with progressive enhancement to draggable mode.
+
+### Key Features
+
+**1. Hover behavior & positioning**
+- ✅ Debounced hover (300ms delay, ignores quick pass-overs)
+- ✅ Linger behavior (2.5s after unhover unless interacted with)
+- ✅ Dynamic positioning in white space to right of panels
+- ✅ Viewport-aware positioning (respects 80vh max height)
+- ✅ Upgrade to draggable mode on interaction (1.5s hover or click)
+- ✅ ESC key closes info box (capture phase, before detail dialogs)
+
+**2. Layout & styling**
+- ✅ Renamed RelationshipSidebar → RelationshipInfoBox
+- ✅ Wider box (500px) to fit relationships on one line
+- ✅ Colored header using element's type color
+- ✅ Header format: "[Element] relationships" with relationship counts "[↗ N outgoing] [↙ N incoming]"
+- ✅ Close button in draggable mode
+
+**3. Enhanced data display**
+- ✅ Renamed "Properties" → "Slots" throughout
+- ✅ Inherited slots from all ancestors with visual hierarchy (most general first)
+- ✅ Relationship counts in header
+- ✅ Color-coded relationship types:
+  - Inheritance: blue
+  - Slots: green
+  - Self-refs: orange
+  - Variables: purple
+- ✅ Collapsible large lists (>20 items show first 10 + "... N more")
+- ✅ Variables displayed as clickable list (not just count)
+
+**4. Navigation & interactivity**
+- ✅ All element names clickable to open detail boxes
+- ✅ Expand/collapse controls for long lists
+- ✅ Draggable mode with close button
+- ⏳ Bi-directional preview (deferred)
+- ⏳ "Explore relationship" actions (deferred)
+- ⏳ Keyboard navigation (deferred)
+
+### Technical Changes
+
+**Files modified**:
+- `src/components/RelationshipSidebar.tsx` → `RelationshipInfoBox.tsx` (renamed, significantly enhanced)
+- `src/models/Element.ts` - Enhanced `getRelationshipData()` for inherited slots and variable lists
+- `src/App.tsx` - Updated imports and cursor position passing
+- `src/hooks/useElementHover.ts` - Capture cursor position on hover
+- `src/components/Section.tsx` - Added cursorX/Y to ElementHoverData
+
+**New features**:
+- `renderCollapsibleList()` - Generic helper for collapsible sections
+- `renderCollapsibleInheritedSlots()` - Per-ancestor collapse tracking
+- Expansion state management for multiple section types
+- Dynamic panel edge detection for smart positioning
+
+### Implementation Details
+
+**Inherited slots computation**:
+```typescript
+const ancestors = classElement.ancestorList().reverse(); // Most general first
+for (const ancestor of ancestors) {
+  // Extract slots defined at each level
+  // Group by ancestor for clear visual hierarchy
+}
+```
+
+**Collapsible lists**:
+- Threshold: 20 items
+- Shows first 10 when collapsed
+- Blue "... N more (click to expand)" button
+- Gray "(collapse)" button after expansion
+- Per-section state tracking (subclasses, usedBy, variables, slots)
+- Per-ancestor tracking for inherited slots
+
+**Positioning logic**:
+- Finds rightmost panel edge via `getBoundingClientRect()`
+- Positions 20px to the right in white space
+- Respects viewport bounds (80vh max height)
+- Chooses above/below cursor based on available space
+
+### What's Deferred
+
+The following features were deferred to future work:
+- Bi-directional preview: Hovering over names in info box highlights them in tree panels
+- "Explore relationship" action to open both elements side-by-side
+- Keyboard navigation (arrows, enter, tab)
+- Quick filter toggles
+- Positioning refinements (vertical positioning, right edge overflow) - to be addressed in Unified Detail Box System
 
 ---
 
