@@ -1,22 +1,24 @@
 // Must only import Element from models/, never concrete subclasses or DTOs
 /**
- * RelationshipSidebar - Displays relationship information when hovering over elements
+ * RelationshipInfoBox - Displays relationship information when hovering over elements
  *
  * Shows:
- * - Outgoing relationships (inheritance, properties with attribute names)
+ * - Outgoing relationships (inheritance, slots with attribute names)
  * - Incoming relationships (subclasses, used by attributes, variables)
  *
  * Appears when user hovers over an element in the tree/panels.
- * Fixed position in top-right corner.
+ * Initially positioned near cursor, becomes draggable on interaction.
  *
  * Architecture: Component defines RelationshipData interface specifying what it needs.
  * Element provides data via getRelationshipData() that adapts to this contract.
  */
 
 import type { Element } from '../models/Element';
+import { getHeaderColor } from '../utils/panelHelpers';
+import type { ElementTypeId } from '../models/ElementRegistry';
 
 /**
- * RelationshipData - Data contract for relationship sidebar
+ * RelationshipData - Data contract for relationship info box
  * Component defines this interface; Element provides data via getRelationshipData()
  */
 export interface RelationshipData {
@@ -49,11 +51,11 @@ export interface RelationshipData {
   };
 }
 
-interface RelationshipSidebarProps {
+interface RelationshipInfoBoxProps {
   element: Element | null;
 }
 
-export default function RelationshipSidebar({ element }: RelationshipSidebarProps) {
+export default function RelationshipInfoBox({ element }: RelationshipInfoBoxProps) {
   if (!element) return null;
 
   // Get relationship data from element (adapts to component's contract)
@@ -66,23 +68,33 @@ export default function RelationshipSidebar({ element }: RelationshipSidebarProp
     details.incoming.variables > 0;
 
   if (!hasOutgoing && !hasIncoming) {
+    const headerColor = getHeaderColor(element.type as ElementTypeId);
     return (
-      <div className="fixed top-4 right-4 w-80 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg p-4 z-50">
-        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
-          Relationships: {details.elementName}
-        </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400">No relationships found</p>
+      <div className="fixed top-4 right-4 w-[500px] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50">
+        <div className={`${headerColor} px-4 py-2 rounded-t-lg border-b`}>
+          <h3 className="font-semibold text-white">
+            {details.elementName} relationships
+          </h3>
+        </div>
+        <div className="p-4">
+          <p className="text-sm text-gray-500 dark:text-gray-400">No relationships found</p>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="fixed top-4 right-4 w-80 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg p-4 z-50 max-h-[80vh] overflow-y-auto">
-      <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
-        Relationships: <span className="text-blue-600 dark:text-blue-400">{details.elementName}</span>
-      </h3>
+  const headerColor = getHeaderColor(element.type as ElementTypeId);
 
-      {/* Outgoing Relationships */}
+  return (
+    <div className="fixed top-4 right-4 w-[500px] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50 max-h-[80vh] flex flex-col">
+      <div className={`${headerColor} px-4 py-2 rounded-t-lg border-b`}>
+        <h3 className="font-semibold text-white">
+          {details.elementName} relationships
+        </h3>
+      </div>
+      <div className="p-4 overflow-y-auto">
+
+        {/* Outgoing Relationships */}
       {hasOutgoing && (
         <div className="mb-4">
           <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Outgoing:</h4>
@@ -170,6 +182,7 @@ export default function RelationshipSidebar({ element }: RelationshipSidebarProp
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }

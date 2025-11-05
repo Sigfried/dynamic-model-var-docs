@@ -5,7 +5,7 @@ import DetailDialog from './components/DetailDialog';
 import DetailPanelStack from './components/DetailPanelStack';
 import PanelLayout from './components/PanelLayout';
 import LinkOverlay from './components/LinkOverlay';
-import RelationshipSidebar from './components/RelationshipSidebar';
+import RelationshipInfoBox from './components/RelationshipInfoBox';
 import { generatePresetURL } from './utils/statePersistence';
 import { ELEMENT_TYPES, getAllElementTypeIds, type ElementTypeId } from './models/ElementRegistry';
 import type { ElementCollection } from './models/Element';
@@ -324,8 +324,8 @@ function App() {
           />
         )}
 
-        {/* Relationship Sidebar */}
-        <RelationshipSidebar element={hoveredElementInstance} />
+        {/* Relationship Info Box */}
+        <RelationshipInfoBox element={hoveredElementInstance} />
       </div>
 
       {/* Detail dialogs - only render when in dialog mode */}

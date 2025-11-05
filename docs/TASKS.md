@@ -18,6 +18,60 @@ Will return to this when i have her next response.
 
 ## Next Up (Ordered)
 
+### Enhanced Interactive Relationship Info Box (Phase 10)
+
+**Goal**: Transform RelationshipSidebar into an interactive, feature-rich info box
+
+**Components**:
+
+1. **Hover behavior & positioning**
+   - Debounced hover (2-3s linger, ignore quick pass-overs)
+   - Initial positioning near cursor (but stays put once placed)
+   - Upgrade to draggable dialog on user interaction (long hover or click in it)
+   - ESC key closes info box before detail boxes
+
+2. **Layout & styling**
+   - Rename "sidebar" → "info box" (component name, comments, etc.)
+   - Make it wider to fit relationships on one line
+   - Use hanging indent for long items
+   - Move title to colored header box (using element's type color)
+   - Change header text: "Relationships: Specimen" → "Specimen relationships"
+
+3. **Enhanced data display**
+   - Rename "Properties" → "Slots" throughout
+   - Show inherited slots from all ancestors with visual hierarchy (most general first):
+     ```
+     Outgoing Slots:
+       Inherited from NamedThing:
+         name → string
+
+       Inherited from Entity:
+         id → string
+         type → EntityTypeEnum
+
+       specimen_type → SpecimenTypeEnum
+     ```
+   - Add relationship counts in header (e.g., "[↗ 5 outgoing] [↙ 15 incoming]")
+   - Color-code relationship types (inheritance blue, slots green, self-refs orange, variables purple)
+   - Group/collapse large lists (20+ items show "... N more (click to expand)")
+
+4. **Navigation & interactivity**
+   - Make all items clickable to open detail boxes
+   - Bi-directional preview: hovering over names in info box highlights them in tree panels
+   - Close button when in draggable mode
+
+**Deferred to future:**
+- "Explore relationship" action to open both elements side-by-side
+- Keyboard navigation (arrows, enter, tab)
+- Quick filter toggles
+
+**Files affected**:
+- `src/components/RelationshipSidebar.tsx` → rename to `RelationshipInfoBox.tsx`
+- `src/models/Element.ts` - Update getRelationshipData() for inherited slots
+- `src/App.tsx` - Update imports and references
+
+---
+
 ### Link System Enhancement
 
 **Goal**: Refactor LinkOverlay to follow view/model separation + add hover tooltips
