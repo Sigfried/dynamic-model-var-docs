@@ -67,16 +67,22 @@ type IncomingRelationships = {
   variables: number;
 };
 
+type SlotInfo = {
+  attributeName: string;
+  target: string;
+  targetType: ElementTypeId;
+  isSelfRef: boolean;
+};
+
 type OutgoingRelationships = {
   inheritance?: {
     target: string;
     targetType: ElementTypeId;
   };
-  slots: Array<{
-    attributeName: string;
-    target: string;
-    targetType: ElementTypeId;
-    isSelfRef: boolean;
+  slots: SlotInfo[];
+  inheritedSlots: Array<{
+    ancestorName: string;
+    slots: SlotInfo[];
   }>;
 };
 
@@ -152,7 +158,8 @@ export abstract class Element {
 
     // Build outgoing relationships from existing getRelationships()
     const outgoing: OutgoingRelationships = {
-      slots: []
+      slots: [],
+      inheritedSlots: []
     };
 
     for (const rel of relationships) {
@@ -168,6 +175,41 @@ export abstract class Element {
           targetType: rel.targetType,
           isSelfRef: rel.isSelfRef || false
         });
+      }
+    }
+
+    // Compute inherited slots for classes
+    if (this.type === 'class') {
+      const classElement = this as ClassElement;
+      const ancestors = classElement.ancestorList().reverse(); // Most general first
+
+      for (const ancestor of ancestors) {
+        if (ancestor.type === 'class') {
+          const ancestorClass = ancestor as ClassElement;
+          const ancestorSlots: SlotInfo[] = [];
+
+          // Get slots defined in this ancestor (not inherited from its parent)
+          for (const classSlot of ancestorClass.classSlots) {
+            const rel = ancestorClass.getRelationships().find(
+              r => r.type === 'property' && r.label === classSlot.name
+            );
+            if (rel) {
+              ancestorSlots.push({
+                attributeName: classSlot.name,
+                target: rel.target,
+                targetType: rel.targetType,
+                isSelfRef: rel.isSelfRef || false
+              });
+            }
+          }
+
+          if (ancestorSlots.length > 0) {
+            outgoing.inheritedSlots.push({
+              ancestorName: ancestorClass.name,
+              slots: ancestorSlots
+            });
+          }
+        }
       }
     }
 

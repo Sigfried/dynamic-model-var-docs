@@ -21,6 +21,13 @@ import type { ElementTypeId } from '../models/ElementRegistry';
  * RelationshipData - Data contract for relationship info box
  * Component defines this interface; Element provides data via getRelationshipData()
  */
+interface SlotInfo {
+  attributeName: string;   // "specimen_type", "parent_specimen"
+  target: string;          // "SpecimenTypeEnum", "Specimen"
+  targetType: string;
+  isSelfRef: boolean;
+}
+
 export interface RelationshipData {
   elementName: string;
   elementType: string;
@@ -31,11 +38,10 @@ export interface RelationshipData {
       target: string;
       targetType: string;
     };
-    slots: Array<{
-      attributeName: string;   // "specimen_type", "parent_specimen"
-      target: string;          // "SpecimenTypeEnum", "Specimen"
-      targetType: string;
-      isSelfRef: boolean;
+    slots: SlotInfo[];
+    inheritedSlots: Array<{
+      ancestorName: string;
+      slots: SlotInfo[];
     }>;
   };
 
@@ -133,6 +139,31 @@ export default function RelationshipInfoBox({ element }: RelationshipInfoBoxProp
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Inherited Slots */}
+          {details.outgoing.inheritedSlots.length > 0 && (
+            <div className="mt-3">
+              {details.outgoing.inheritedSlots.map((ancestorGroup, groupIdx) => (
+                <div key={groupIdx} className="mb-2">
+                  <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                    Inherited from {ancestorGroup.ancestorName}:
+                  </div>
+                  <div className="ml-3 space-y-1">
+                    {ancestorGroup.slots.map((slot, slotIdx) => (
+                      <div key={slotIdx} className="text-sm text-gray-900 dark:text-gray-100">
+                        <span className="text-green-600 dark:text-green-400">{slot.attributeName}</span>
+                        {' → '}
+                        <span className="text-blue-600 dark:text-blue-400">{slot.target}</span>
+                        <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">
+                          ({slot.targetType}{slot.isSelfRef ? ', self-ref' : ''})
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
