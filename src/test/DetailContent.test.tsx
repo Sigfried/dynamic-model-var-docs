@@ -1,13 +1,13 @@
 import { describe, test, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import DetailPanel from '../components/DetailPanel';
+import DetailContent from '../components/DetailContent';
 import { ClassElement, EnumElement, SlotElement, VariableElement, SlotCollection } from '../models/Element';
 import type { ClassData, EnumData, SlotData, VariableSpec, ModelData } from '../types';
 
 /**
- * DetailPanel Tests
+ * DetailContent Tests (renamed from DetailPanel)
  *
- * Verifies that DetailPanel correctly renders detail data from Element.getDetailData()
+ * Verifies that DetailContent correctly renders detail data from Element.getDetailData()
  * Tests are organized by element type: Class, Enum, Slot, Variable
  */
 
@@ -35,7 +35,7 @@ const createMockSlotCollection = (): SlotCollection => {
   return SlotCollection.fromData(slotData);
 };
 
-describe('DetailPanel - ClassElement', () => {
+describe('DetailContent - ClassElement', () => {
   const mockClassData: ClassData = {
     name: 'TestClass',
     description: 'A test class',
@@ -81,27 +81,27 @@ describe('DetailPanel - ClassElement', () => {
   ];
 
   test('should render class titlebar with name', () => {
-    render(<DetailPanel element={classElement} />);
+    render(<DetailContent element={classElement} />);
 
     expect(screen.getByText('TestClass')).toBeInTheDocument();
     expect(screen.getByText('extends ParentClass')).toBeInTheDocument();
   });
 
   test('should render description', () => {
-    render(<DetailPanel element={classElement} />);
+    render(<DetailContent element={classElement} />);
 
     expect(screen.getByText('A test class')).toBeInTheDocument();
   });
 
   test('should render inheritance section', () => {
-    render(<DetailPanel element={classElement} />);
+    render(<DetailContent element={classElement} />);
 
     expect(screen.getByText('Inheritance')).toBeInTheDocument();
     expect(screen.getByText(/Inherits from: ParentClass/)).toBeInTheDocument();
   });
 
   test('should render slots section with all slots (attributes, slot_usage, slots)', () => {
-    render(<DetailPanel element={classElement} />);
+    render(<DetailContent element={classElement} />);
 
     // New unified section name
     expect(screen.getByText('Slots (includes inherited)')).toBeInTheDocument();
@@ -119,7 +119,7 @@ describe('DetailPanel - ClassElement', () => {
   });
 
   test('should render variables section with count', () => {
-    render(<DetailPanel element={classElement} />);
+    render(<DetailContent element={classElement} />);
 
     expect(screen.getByText('Variables (2)')).toBeInTheDocument();
     expect(screen.getByText('test_var')).toBeInTheDocument();
@@ -135,14 +135,14 @@ describe('DetailPanel - ClassElement', () => {
     };
     const rootClass = new ClassElement(rootClassData, createMockModelData(), createMockSlotCollection());
 
-    render(<DetailPanel element={rootClass} />);
+    render(<DetailContent element={rootClass} />);
 
     // Inheritance section should not appear
     expect(screen.queryByText('Inheritance')).not.toBeInTheDocument();
   });
 });
 
-describe('DetailPanel - EnumElement', () => {
+describe('DetailContent -EnumElement', () => {
   const mockEnumData: EnumData = {
     description: 'A test enumeration',
     permissibleValues: {
@@ -155,19 +155,19 @@ describe('DetailPanel - EnumElement', () => {
   const enumElement = new EnumElement('TestEnum', mockEnumData);
 
   test('should render enum titlebar with name', () => {
-    render(<DetailPanel element={enumElement} />);
+    render(<DetailContent element={enumElement} />);
 
     expect(screen.getByText('TestEnum')).toBeInTheDocument();
   });
 
   test('should render description', () => {
-    render(<DetailPanel element={enumElement} />);
+    render(<DetailContent element={enumElement} />);
 
     expect(screen.getByText('A test enumeration')).toBeInTheDocument();
   });
 
   test('should render permissible values section', () => {
-    render(<DetailPanel element={enumElement} />);
+    render(<DetailContent element={enumElement} />);
 
     expect(screen.getByText('Permissible Values')).toBeInTheDocument();
     expect(screen.getByText('VALUE1')).toBeInTheDocument();
@@ -179,7 +179,7 @@ describe('DetailPanel - EnumElement', () => {
 
   test.skip('should render used by classes section', () => {
     // TODO: Re-enable after implementing getUsedByClasses() in Phase 5
-    render(<DetailPanel element={enumElement} />);
+    render(<DetailContent element={enumElement} />);
 
     expect(screen.getByText(/Used By Classes \(2\)/)).toBeInTheDocument();
     expect(screen.getByText('TestClass')).toBeInTheDocument();
@@ -193,14 +193,14 @@ describe('DetailPanel - EnumElement', () => {
     };
     const noDescElement = new EnumElement('TestEnum', noDescEnum);
 
-    render(<DetailPanel element={noDescElement} />);
+    render(<DetailContent element={noDescElement} />);
 
     expect(screen.getByText('TestEnum')).toBeInTheDocument();
     expect(screen.queryByText('A test enumeration')).not.toBeInTheDocument();
   });
 });
 
-describe('DetailPanel - SlotElement', () => {
+describe('DetailContent -SlotElement', () => {
   const mockSlotData: SlotData = {
     description: 'A test slot',
     range: 'string',
@@ -213,19 +213,19 @@ describe('DetailPanel - SlotElement', () => {
   const slotElement = new SlotElement('testSlot', mockSlotData);
 
   test('should render slot titlebar with name', () => {
-    render(<DetailPanel element={slotElement} />);
+    render(<DetailContent element={slotElement} />);
 
     expect(screen.getByText('testSlot')).toBeInTheDocument();
   });
 
   test('should render description', () => {
-    render(<DetailPanel element={slotElement} />);
+    render(<DetailContent element={slotElement} />);
 
     expect(screen.getByText('A test slot')).toBeInTheDocument();
   });
 
   test('should render properties section', () => {
-    render(<DetailPanel element={slotElement} />);
+    render(<DetailContent element={slotElement} />);
 
     expect(screen.getByText('Properties')).toBeInTheDocument();
     expect(screen.getByText('Range')).toBeInTheDocument();
@@ -239,7 +239,7 @@ describe('DetailPanel - SlotElement', () => {
 
   test.skip('should render used by classes section', () => {
     // TODO: Re-enable after implementing getUsedByClasses() in Phase 5
-    render(<DetailPanel element={slotElement} />);
+    render(<DetailContent element={slotElement} />);
 
     expect(screen.getByText(/Used By Classes \(3\)/)).toBeInTheDocument();
     expect(screen.getByText('ClassA')).toBeInTheDocument();
@@ -258,14 +258,14 @@ describe('DetailPanel - SlotElement', () => {
     };
     const minimalSlot = new SlotElement('minimalSlot', minimalSlotData);
 
-    render(<DetailPanel element={minimalSlot} />);
+    render(<DetailContent element={minimalSlot} />);
 
     expect(screen.getByText('minimalSlot')).toBeInTheDocument();
     // Should not crash with missing properties
   });
 });
 
-describe('DetailPanel - VariableElement', () => {
+describe('DetailContent -VariableElement', () => {
   const mockVariableData: VariableSpec = {
     classId: 'MeasurementObservation',
     variableLabel: 'body_mass_index',
@@ -278,19 +278,19 @@ describe('DetailPanel - VariableElement', () => {
   const variableElement = new VariableElement(mockVariableData);
 
   test('should render variable titlebar with name', () => {
-    render(<DetailPanel element={variableElement} />);
+    render(<DetailContent element={variableElement} />);
 
     expect(screen.getByText('body_mass_index')).toBeInTheDocument();
   });
 
   test('should render description', () => {
-    render(<DetailPanel element={variableElement} />);
+    render(<DetailContent element={variableElement} />);
 
     expect(screen.getByText('Body Mass Index measurement')).toBeInTheDocument();
   });
 
   test('should render properties section', () => {
-    render(<DetailPanel element={variableElement} />);
+    render(<DetailContent element={variableElement} />);
 
     expect(screen.getByText('Properties')).toBeInTheDocument();
     expect(screen.getByText('Mapped to')).toBeInTheDocument();
@@ -314,7 +314,7 @@ describe('DetailPanel - VariableElement', () => {
     };
     const minimalVar = new VariableElement(minimalVarData);
 
-    render(<DetailPanel element={minimalVar} />);
+    render(<DetailContent element={minimalVar} />);
 
     expect(screen.getByText('test_var')).toBeInTheDocument();
     expect(screen.getByText('Mapped to')).toBeInTheDocument();
@@ -322,7 +322,7 @@ describe('DetailPanel - VariableElement', () => {
   });
 });
 
-describe('DetailPanel - Header visibility', () => {
+describe('DetailContent -Header visibility', () => {
   const mockEnumData: EnumData = {
     description: 'Test',
     permissibleValues: {}
@@ -330,14 +330,14 @@ describe('DetailPanel - Header visibility', () => {
   const enumElement = new EnumElement('TestEnum', mockEnumData);
 
   test('should show header by default', () => {
-    render(<DetailPanel element={enumElement} />);
+    render(<DetailContent element={enumElement} />);
 
     // Header contains title
     expect(screen.getByText('TestEnum')).toBeInTheDocument();
   });
 
   test('should hide header when hideHeader is true', () => {
-    render(<DetailPanel element={enumElement} hideHeader={true} />);
+    render(<DetailContent element={enumElement} hideHeader={true} />);
 
     // When header is hidden, title should NOT appear anywhere (it's in the outer header)
     expect(screen.queryByText('TestEnum')).not.toBeInTheDocument();

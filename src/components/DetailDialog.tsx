@@ -1,6 +1,6 @@
 // Must only import Element from models/, never concrete subclasses or DTOs
 import { useState, useRef, useEffect } from 'react';
-import DetailPanel from './DetailPanel';
+import DetailContent from './DetailContent';
 import type { Element } from '../models/Element';
 import type { ElementTypeId } from '../models/ElementRegistry';
 
@@ -192,7 +192,7 @@ export default function DetailDialog({
 
       {/* Content */}
       <div className="flex-1 overflow-hidden">
-        <DetailPanel
+        <DetailContent
           element={element}
           onNavigate={onNavigate}
           onClose={onClose}

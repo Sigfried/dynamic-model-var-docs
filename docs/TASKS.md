@@ -197,18 +197,20 @@ Hover behavior depends on where cursor is positioned:
 
 **Implementation steps**:
 
-1. **Create FloatingBoxManager.tsx**
-    - Extract openDialogs array management from App.tsx
-    - Single FloatingBox component (merge DetailDialog drag/resize logic)
-    - **Content agnostic**: Supports any React component (DetailContent, RelationshipInfoBox, future help content, etc.)
-    - Mode-aware initial positioning
-    - Click/drag/resize → bring to front (move to end of array)
-    - **ESC behavior**: Closes first box in this order:
+1. **✅ Create FloatingBoxManager.tsx** (COMPLETED)
+    - ✅ Extract openDialogs array management from App.tsx
+    - ✅ Single FloatingBox component (merge DetailDialog drag/resize logic)
+    - ✅ **Content agnostic**: Supports any React component (DetailContent, RelationshipInfoBox, future help content, etc.)
+    - ✅ Mode-aware initial positioning
+    - ✅ Click/drag/resize → bring to front (move to end of array)
+    - ✅ **ESC behavior**: Closes first box in this order:
       1. Close any transitory boxes first
       2. Then close persistent boxes (oldest first, FIFO)
-    - Z-index based on array position
+    - ✅ Z-index based on array position
+    - ✅ Added getFloatingBoxMetadata() to Element base class
+    - ✅ Renamed DetailPanel → DetailContent (updated all references and tests)
 
-2. **Refactor RelationshipInfoBox.tsx**
+2. **Refactor RelationshipInfoBox.tsx** (IN PROGRESS)
     - **Remove** drag/resize/close logic (handled by FloatingBox wrapper)
     - Keep preview mode (hover, linger, positioning)
     - Keep upgrade trigger logic (1.5s hover or click)

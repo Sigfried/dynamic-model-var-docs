@@ -1,9 +1,9 @@
 /**
- * DetailPanel Component
+ * DetailContent Component (renamed from DetailPanel)
  *
  * Renders detailed information about a selected element (Class, Enum, Slot, or Variable).
  * Displays title, description, and sections with tables (e.g., slots, permissible values).
- * Used within DetailDialog (floating) and DetailPanelStack (stacked) wrappers.
+ * Used within FloatingBox wrappers in both transitory and persistent modes.
  *
  * Architectural note: Uses element.getDetailData() polymorphic method - correct pattern!
  * This component is fully decoupled from model types and uses pure data-driven rendering.
@@ -12,21 +12,21 @@
 import React from 'react';
 import type { Element } from '../models/Element';
 
-interface DetailPanelProps {
+interface DetailContentProps {
   element?: Element;
   onNavigate?: (elementName: string, elementType: string) => void;
   onClose?: () => void;
-  hideHeader?: boolean;  // Hide the element name header (when shown in dialog/panel header)
-  hideCloseButton?: boolean;  // Hide the internal close button (when handled externally)
+  hideHeader?: boolean;  // Hide the element name header (when shown in FloatingBox header)
+  hideCloseButton?: boolean;  // Hide the internal close button (when handled by FloatingBox)
 }
 
-export default function DetailPanel({
+export default function DetailContent({
   element,
   onNavigate,
   onClose,
   hideHeader = false,
   hideCloseButton = false
-}: DetailPanelProps) {
+}: DetailContentProps) {
   if (!element) {
     return null; // Hide panel when nothing is selected
   }

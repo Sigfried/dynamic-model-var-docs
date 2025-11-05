@@ -231,6 +231,20 @@ export abstract class Element {
     };
   }
 
+  /**
+   * Get metadata for FloatingBox display (maintains view/model separation)
+   * Returns plain data for title and color styling - no element type exposed to UI
+   */
+  getFloatingBoxMetadata(): { title: string; color: string } {
+    const metadata = ELEMENT_TYPES[this.type];
+    const detailData = this.getDetailData();
+
+    return {
+      title: detailData.titlebarTitle, // e.g., "Class: Specimen" or "Specimen"
+      color: `${metadata.color.headerBg} ${metadata.color.headerBorder}` // Tailwind classes
+    };
+  }
+
   // DOM helpers for SVG positioning
   // Looks for elements with id={type}-{name} (e.g., "class-Specimen")
   getBoundingBox(): DOMRect | null {

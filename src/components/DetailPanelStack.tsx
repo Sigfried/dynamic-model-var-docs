@@ -1,5 +1,5 @@
 // Must only import Element from models/, never concrete subclasses or DTOs
-import DetailPanel from './DetailPanel';
+import DetailContent from './DetailContent';
 import { getHeaderColor, getPanelTitle } from '../utils/panelHelpers';
 import type { Element } from '../models/Element';
 import type { ElementTypeId } from '../models/ElementRegistry';
@@ -53,7 +53,7 @@ export default function DetailPanelStack({
 
           {/* Content */}
           <div className="flex-1 overflow-hidden">
-            <DetailPanel
+            <DetailContent
               element={panel.element}
               onNavigate={onNavigate}
               onClose={() => onClose(panel.id)}
