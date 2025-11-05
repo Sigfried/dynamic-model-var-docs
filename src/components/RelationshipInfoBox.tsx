@@ -60,12 +60,14 @@ export interface RelationshipData {
 
 interface RelationshipInfoBoxProps {
   element: Element | null;
+  cursorPosition?: { x: number; y: number } | null;
   onNavigate?: (elementName: string, elementType: 'class' | 'enum' | 'slot' | 'variable') => void;
 }
 
-export default function RelationshipInfoBox({ element, onNavigate }: RelationshipInfoBoxProps) {
+export default function RelationshipInfoBox({ element, cursorPosition, onNavigate }: RelationshipInfoBoxProps) {
   // State for debounced/lingering element display
   const [displayedElement, setDisplayedElement] = useState<Element | null>(null);
+  const [boxPosition, setBoxPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const hoverTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lingerTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -85,6 +87,15 @@ export default function RelationshipInfoBox({ element, onNavigate }: Relationshi
       // Element hovered - show after short delay (ignore quick pass-overs)
       hoverTimerRef.current = setTimeout(() => {
         setDisplayedElement(element);
+        // Position box near cursor, with offset to avoid covering the element
+        if (cursorPosition) {
+          const offsetX = 20; // Offset to right of cursor
+          const offsetY = 20; // Offset below cursor
+          setBoxPosition({
+            x: Math.min(cursorPosition.x + offsetX, window.innerWidth - 520), // Keep within viewport (500px width + margin)
+            y: Math.min(cursorPosition.y + offsetY, window.innerHeight - 400) // Keep within viewport
+          });
+        }
       }, 300);
     } else if (displayedElement) {
       // Element unhovered but we have a displayed element - linger for 2.5s
@@ -97,7 +108,7 @@ export default function RelationshipInfoBox({ element, onNavigate }: Relationshi
       if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
       if (lingerTimerRef.current) clearTimeout(lingerTimerRef.current);
     };
-  }, [element, displayedElement]);
+  }, [element, displayedElement, cursorPosition]);
 
   if (!displayedElement) return null;
 
@@ -132,7 +143,10 @@ export default function RelationshipInfoBox({ element, onNavigate }: Relationshi
   if (!hasOutgoing && !hasIncoming) {
     const headerColor = getHeaderColor(displayedElement.type as ElementTypeId);
     return (
-      <div className="fixed top-4 right-4 w-[500px] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50">
+      <div
+        className="fixed w-[500px] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50"
+        style={{ left: `${boxPosition.x}px`, top: `${boxPosition.y}px` }}
+      >
         <div className={`${headerColor} px-4 py-2 rounded-t-lg border-b`}>
           <h3 className="font-semibold text-white">
             {details.elementName} relationships
@@ -152,7 +166,10 @@ export default function RelationshipInfoBox({ element, onNavigate }: Relationshi
   const incomingCount = details.incoming.subclasses.length + details.incoming.usedByAttributes.length + (details.incoming.variables > 0 ? 1 : 0);
 
   return (
-    <div className="fixed top-4 right-4 w-[500px] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50 max-h-[80vh] flex flex-col">
+    <div
+      className="fixed w-[500px] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50 max-h-[80vh] flex flex-col"
+      style={{ left: `${boxPosition.x}px`, top: `${boxPosition.y}px` }}
+    >
       <div className={`${headerColor} px-4 py-2 rounded-t-lg border-b`}>
         <h3 className="font-semibold text-white flex items-center gap-2">
           <span>{details.elementName} relationships</span>

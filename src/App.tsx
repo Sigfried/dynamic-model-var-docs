@@ -327,6 +327,7 @@ function App() {
         {/* Relationship Info Box */}
         <RelationshipInfoBox
           element={hoveredElementInstance}
+          cursorPosition={hoveredElement ? { x: hoveredElement.cursorX, y: hoveredElement.cursorY } : null}
           onNavigate={handleNavigate}
         />
       </div>

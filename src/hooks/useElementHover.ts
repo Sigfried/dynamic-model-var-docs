@@ -13,7 +13,7 @@ type ElementType = 'class' | 'enum' | 'slot' | 'variable';
 interface ElementHoverHandlersProps {
   type: ElementType;
   name: string;
-  onElementHover?: (element: { type: ElementType; name: string }) => void;
+  onElementHover?: (element: { type: ElementType; name: string; cursorX: number; cursorY: number }) => void;
   onElementLeave?: () => void;
 }
 
@@ -24,7 +24,7 @@ export function getElementHoverHandlers({
   onElementLeave
 }: ElementHoverHandlersProps) {
   return {
-    onMouseEnter: () => onElementHover?.({ type, name }),
+    onMouseEnter: (e: React.MouseEvent) => onElementHover?.({ type, name, cursorX: e.clientX, cursorY: e.clientY }),
     onMouseLeave: () => onElementLeave?.()
   };
 }

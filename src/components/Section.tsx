@@ -18,6 +18,8 @@ import { getElementHoverHandlers } from '../hooks/useElementHover';
 export interface ElementHoverData {
   type: string;     // Element type: "class", "enum", "slot", "variable"
   name: string;     // Element name: "Specimen", "SpecimenTypeEnum", etc.
+  cursorX: number;  // Mouse X position when hover started
+  cursorY: number;  // Mouse Y position when hover started
 }
 
 /**
