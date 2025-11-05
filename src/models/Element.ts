@@ -64,7 +64,9 @@ type IncomingRelationships = {
     attributeName: string;
     sourceType: ElementTypeId;
   }>;
-  variables: number;
+  variables: Array<{
+    name: string;
+  }>;
 };
 
 type SlotInfo = {
@@ -94,7 +96,7 @@ function computeIncomingRelationships(thisElement: Element): IncomingRelationshi
   const incoming: IncomingRelationships = {
     subclasses: [],
     usedByAttributes: [],
-    variables: 0
+    variables: []
   };
 
   if (!globalClassCollection) {
@@ -216,9 +218,9 @@ export abstract class Element {
     // Compute incoming relationships using generic helper
     const incoming = computeIncomingRelationships(this);
 
-    // Add variable count for classes
+    // Add variable list for classes
     if (this.type === 'class') {
-      incoming.variables = (this as ClassElement).variableCount;
+      incoming.variables = (this as ClassElement).variables.map(v => ({ name: v.name }));
     }
 
     return {

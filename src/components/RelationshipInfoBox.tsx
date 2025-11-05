@@ -54,7 +54,9 @@ export interface RelationshipData {
       attributeName: string;   // "specimen_type"
       sourceType: string;
     }>;
-    variables: number;         // Count of variables mapped to this class
+    variables: Array<{         // Variables mapped to this class
+      name: string;
+    }>;
   };
 }
 
@@ -240,7 +242,7 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
   const hasIncoming =
     details.incoming.subclasses.length > 0 ||
     details.incoming.usedByAttributes.length > 0 ||
-    details.incoming.variables > 0;
+    details.incoming.variables.length > 0;
 
   if (!hasOutgoing && !hasIncoming) {
     const headerColor = getHeaderColor(displayedElement.type as ElementTypeId);
@@ -277,7 +279,7 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
 
   // Count relationships
   const outgoingCount = (details.outgoing.inheritance ? 1 : 0) + details.outgoing.slots.length;
-  const incomingCount = details.incoming.subclasses.length + details.incoming.usedByAttributes.length + (details.incoming.variables > 0 ? 1 : 0);
+  const incomingCount = details.incoming.subclasses.length + details.incoming.usedByAttributes.length + details.incoming.variables.length;
 
   return (
     <div
@@ -417,12 +419,17 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
           )}
 
           {/* Variables */}
-          {details.incoming.variables > 0 && (
+          {details.incoming.variables.length > 0 && (
             <div>
-              <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Variables:</div>
-              <div className="ml-3 text-sm">
-                <span className="text-purple-600 dark:text-purple-400 font-medium">{details.incoming.variables}</span>
-                <span className="text-gray-900 dark:text-gray-100"> variable{details.incoming.variables > 1 ? 's' : ''} mapped to this class</span>
+              <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                Variables ({details.incoming.variables.length}):
+              </div>
+              <div className="ml-3 space-y-0.5">
+                {details.incoming.variables.map((variable, idx) => (
+                  <div key={idx} className="text-sm text-gray-900 dark:text-gray-100">
+                    • {makeClickable(variable.name, 'variable', "text-purple-600 dark:text-purple-400")}
+                  </div>
+                ))}
               </div>
             </div>
           )}
