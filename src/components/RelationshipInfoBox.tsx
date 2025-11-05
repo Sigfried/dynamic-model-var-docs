@@ -106,14 +106,25 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
       // Element hovered - show after short delay (ignore quick pass-overs)
       hoverTimerRef.current = setTimeout(() => {
         setDisplayedElement(element);
-        // Position box in leftmost available white space
+        // Position box in white space to the right of all visible panels
         if (cursorPosition) {
           const boxWidth = 500;
           const maxBoxHeight = window.innerHeight * 0.8; // max-h-[80vh]
 
-          // Position at left edge of white space (after left panel)
-          // Left panel is typically ~350px, add some margin
-          const xPosition = 370;
+          // Find the rightmost edge of visible panels
+          // Check for elements with data-panel-position to determine panel width
+          const leftPanel = document.querySelector('[data-panel-position="left"]')?.parentElement?.parentElement;
+          const rightPanel = document.querySelector('[data-panel-position="right"]')?.parentElement?.parentElement;
+
+          let rightmostEdge = 0;
+          if (rightPanel) {
+            rightmostEdge = rightPanel.getBoundingClientRect().right;
+          } else if (leftPanel) {
+            rightmostEdge = leftPanel.getBoundingClientRect().right;
+          }
+
+          // Position in white space with small margin
+          const xPosition = Math.max(370, rightmostEdge + 20);
 
           // Calculate available space below and above cursor
           const spaceBelow = window.innerHeight - cursorPosition.y;

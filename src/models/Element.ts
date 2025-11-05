@@ -664,7 +664,10 @@ export class ClassElement extends Element {
    *
    * @param slotName Name of the slot to check
    * @returns Parent class name, or empty string if not inherited
-   */
+   *
+   * [sg] do we need both getInheritedFrom and collectAllSlots to be recursive?
+   *      i need an explanation of this logic
+   **/
   getInheritedFrom(slotName: string): string {
     // Check if this slot is defined directly in this class
     if (this.classSlots.some(s => s.name === slotName)) {

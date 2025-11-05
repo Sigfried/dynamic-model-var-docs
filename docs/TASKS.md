@@ -72,6 +72,63 @@ Will return to this when i have her next response.
 
 ---
 
+### Abstract Tree Rendering System
+
+**IMPORTANT**: Before starting this refactor, give a tour of how tree rendering currently works (Element tree structure, expansion state, rendering in components).
+
+**Goal**: Extract tree rendering and expansion logic from Element into reusable abstractions that can be shared between Elements panel and info boxes (and future tree-like displays).
+
+**Current state**:
+- Element class has tree capabilities (parent, children, traverse, ancestorList)
+- Expansion state managed by useExpansionState hook
+- Tree rendering handled in each component (Section.tsx, DetailPanel, etc.)
+- Info box data could be hierarchical but isn't structured that way yet
+
+**Proposed abstraction**:
+- Create parent class or mixin with tree capabilities
+  - Node relationships (parent, children, siblings)
+  - Tree traversal (depth-first, breadth-first)
+  - Expansion state management
+  - **Layout logic** (not just expansion - how trees are rendered)
+- Element becomes a child of this abstraction
+- Info box data structures as tree nodes
+- Shared rendering components/hooks
+
+**Benefits**:
+- Consistent tree UX across Elements panel and info boxes
+- Could switch between tree layouts (simple indented tree, tabular tree with sections)
+- Easier to add new tree-based displays
+- Centralizes expansion logic
+
+**Tree layout options** (switch in code, not necessarily in UI):
+- **Simple tree**: Current indented style with expand/collapse arrows
+- **Tabular tree**: Hierarchical table with columns (see Slots Table Optimization example)
+  - Indented rows show hierarchy
+  - Expandable sections
+  - Can show properties in columns
+- **Sectioned tree**: Groups with headers, nested content
+
+**Related**: Slots Table Optimization task (Detail Panel Enhancements) shows hierarchical table example from another app - tree structure with indented rows, expandable sections, multiple columns. Info box inherited slots could use this pattern.
+
+**Implementation approach**:
+1. Give tour of current tree rendering system
+2. Design tree abstraction (class? mixin? hooks?)
+3. Extract expansion state management
+4. Extract layout logic
+5. Refactor Element to use abstraction
+6. Apply to info box data structures
+7. Consider tabular tree layout for slots tables
+
+**Files likely affected**:
+- `src/models/Element.ts` - Extract tree logic
+- `src/models/TreeNode.ts` or `TreeBase.ts` (new) - Tree abstraction
+- `src/hooks/useExpansionState.ts` - Possibly generalize
+- `src/components/Section.tsx` - Use abstraction
+- `src/components/RelationshipInfoBox.tsx` - Structure data as tree
+- `src/components/DetailPanel.tsx` - Use abstraction for slots table
+
+---
+
 ### Link System Enhancement
 
 **Goal**: Refactor LinkOverlay to follow view/model separation + add hover tooltips
@@ -277,44 +334,6 @@ src/components/
 
 ---
 
-### Fix Dark Mode Display Issues (HIGH PRIORITY)
-
-**Goal**: Fix readability issues in dark mode
-**Importance**: High - app currently unusable in dark mode
-
-**Issues from screenshot**:
-- Poor contrast/readability throughout
-- Need to audit all color combinations
-
-**Files likely affected**:
-- `src/index.css` - Tailwind dark mode classes
-- All component files using colors
----
-
-### [sg] Add user help
-- could open in a FloatingBox
-- for whole help, it could be a big box with TOC
-- contextual help could just open the relevant section, or open
-  the whole thing but scrolled to relevant section
----
-
-## Future Work
-
-### [sg] integrate TopMED variables
-
-
-### Merge TESTING.md Files
-
-**Background**: TESTING.md was copied to root and diverged from docs/TESTING.md
-
-**Files**:
-- `TESTING.root-snapshot-2025-11-03.md` (4.6k) - Newer, condensed, Phase 6.4+ testing patterns
-- `docs/TESTING.md` (17k) - Older, comprehensive testing documentation
-
-**Task**: Merge the newer Phase 6.4+ content into the comprehensive docs/TESTING.md, then delete snapshot
-
----
-
 ### Detail Panel Enhancements
 
 **Enum Detail Improvements**:
@@ -338,11 +357,61 @@ src/components/
 **Slots Table Optimization**:
 - Verify: "DetailBox Slots table should put inherited slots at the top and referenced slots at the bottom"
 - Check if this is already the case or needs implementation
+- [sg] consider making it a tree or splitting the table into sections
+       possibly indenting slots under their section heading. make the sections
+       collapsible. maybe start with inherited slots collapsed
+- [sg] Example: I made a hierarchical table display for another app (see screenshot in conversation)
+       Tree structure with:
+       - Indented rows showing hierarchy (with expand/collapse controls)
+       - Multiple columns (Concept name, Levels below, Child/descendant concepts, Patients, Records, etc.)
+       - Expandable sections that reveal child rows
+       - Clear visual hierarchy through indentation
+       This pattern could work well for slots tables: inherited slots grouped by ancestor,
+       direct slots in their own group, each group collapsible, indented to show hierarchy
 
 **SlotCollection 2-Level Tree** (from Phase 6.4 Step 3.2):
 - Deferred - current flat SlotCollection is sufficient
 - Would show global slots + inline attributes from all classes
 - Each class becomes a root node with its attributes as children
+
+---
+
+### Fix Dark Mode Display Issues (HIGH PRIORITY)
+
+**Goal**: Fix readability issues in dark mode
+**Importance**: High - app currently unusable in dark mode
+
+**Issues from screenshot**:
+- Poor contrast/readability throughout
+- Need to audit all color combinations
+
+**Files likely affected**:
+- `src/index.css` - Tailwind dark mode classes
+- All component files using colors
+---
+
+### [sg] Add user help
+- could open in a FloatingBox
+- for whole help, it could be a big box with TOC
+- contextual help could just open the relevant section, or open
+  the whole thing but scrolled to relevant section
+- review PROGRESS.md for stuff that could be good to include
+---
+
+## Future Work
+
+### [sg] integrate TopMED variables
+
+
+### Merge TESTING.md Files
+
+**Background**: TESTING.md was copied to root and diverged from docs/TESTING.md
+
+**Files**:
+- `TESTING.root-snapshot-2025-11-03.md` (4.6k) - Newer, condensed, Phase 6.4+ testing patterns
+- `docs/TESTING.md` (17k) - Older, comprehensive testing documentation
+
+**Task**: Merge the newer Phase 6.4+ content into the comprehensive docs/TESTING.md, then delete snapshot
 
 ---
 
