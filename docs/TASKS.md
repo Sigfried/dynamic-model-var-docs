@@ -116,10 +116,11 @@ Will return to this when i have her next response.
 
 ### Unified Detail Box System
 
-**Goal**: Extract dialog management from App.tsx, merge DetailDialog/DetailPanelStack into unified system
+**Goal**: Extract dialog management from App.tsx, merge DetailDialog/DetailPanelStack into unified system, enable relationship info boxes to upgrade to persistent floating boxes
 
 **Current state**:
 - DetailPanel: 130-line content renderer using getDetailData() ✅
+- RelationshipInfoBox: Hover preview with relationships, has its own drag/close logic
 - DetailDialog: Floating draggable/resizable wrapper
 - DetailPanelStack: Stacked non-draggable wrapper
 - App.tsx: Manages openDialogs array and mode switching
@@ -128,18 +129,53 @@ Will return to this when i have her next response.
 ```
 src/components/
   DetailPanel.tsx           (keep - content renderer, 130 lines, uses getDetailData())
+  RelationshipInfoBox.tsx   (keep - relationship content renderer)
   DetailBoxManager.tsx      (new - manages array + rendering)
     - DetailBox component   (draggable/resizable wrapper)
     - Array management (FIFO stack)
     - Mode-aware positioning
 ```
 
+**Key insight**: Both DetailPanel and RelationshipInfoBox content can be wrapped in DetailBox chrome
+
 **DetailBox component** (single component, works in both modes):
 - All boxes identical: draggable, resizable, colored headers
 - Mode only affects initial position (not capabilities)
-- Uses element.getDetailData() for header (no ElementTypeId prop needed)
+- **Content agnostic**: Renders `<DetailPanel element={...}/>` OR `<RelationshipInfoBox element={...}/>`
+- Uses element type for header color (not content-dependent)
 - Click/drag/resize anywhere in box → bring to front (move to end of array)
 - ESC closes first/oldest box (index 0)
+
+**Content types**:
+1. **Detail content**: Full element details (slots table, variables, description, etc.)
+2. **Relationship content**: Focused relationship view (inheritance, slots, incoming/outgoing)
+
+**User can have multiple boxes open simultaneously**:
+- Multiple detail boxes (compare elements side-by-side)
+- Multiple relationship boxes (compare relationships)
+- Mix of both types
+
+**RelationshipInfoBox upgrade flow**:
+1. **Preview mode** (current Phase 10 implementation):
+   - Hover element → info box appears near cursor after 300ms
+   - Shows relationships only, no close button
+   - Lingers 2.5s after unhover (unless interacted with)
+
+2. **Upgrade trigger** (one of):
+   - Hover over info box for 1.5s
+   - Click anywhere in info box
+
+3. **Persistent box mode** (NEW with this refactor):
+   - Info box content gets wrapped in DetailBox
+   - Becomes draggable/resizable with close button
+   - Added to DetailBoxManager's array
+   - Stays open until explicitly closed (ESC or close button)
+   - Can open multiple relationship boxes this way
+
+4. **Integration with clicking element names**:
+   - Clicking element name in tree → opens DetailPanel (full details) in DetailBox
+   - Clicking element name in RelationshipInfoBox → opens DetailPanel (full details) in DetailBox
+   - Both boxes can coexist: relationship view + detail view of linked element
 
 **Mode behavior** (intelligent repositioning):
 - **Floating mode** (narrow screen): New boxes cascade from bottom-left
@@ -166,25 +202,37 @@ src/components/
 1. **Create DetailBoxManager.tsx**
    - Extract openDialogs array management from App.tsx
    - Single DetailBox component (merge DetailDialog drag/resize logic)
+   - **Support both content types**: DetailPanel OR RelationshipInfoBox
    - Mode-aware initial positioning
    - Click/drag/resize → bring to front (move to end of array)
    - ESC closes first box (oldest)
    - Z-index based on array position
 
-2. **Update App.tsx**
+2. **Refactor RelationshipInfoBox.tsx**
+   - **Remove** drag/resize/close logic (handled by DetailBox wrapper)
+   - Keep preview mode (hover, linger, positioning)
+   - Keep upgrade trigger logic (1.5s hover or click)
+   - **On upgrade**: call callback to add to DetailBoxManager instead of local state
+   - Content becomes simpler: just relationships display, no window chrome
+
+3. **Update App.tsx**
    - Remove openDialogs management
    - Import and use DetailBoxManager
    - Pass display mode and callbacks
+   - Handle RelationshipInfoBox upgrade callback
 
-3. **Delete old components**
+4. **Delete old components**
    - Delete DetailDialog.tsx
    - Delete DetailPanelStack.tsx
 
-4. **Update tests**
+5. **Update tests**
    - Test drag/resize
    - Test click-to-front
    - Test ESC behavior
    - Test mode switching with custom positions
+   - **Test relationship box upgrade flow**
+   - **Test multiple relationship boxes**
+   - **Test mixed content types** (relationship + detail boxes)
 
 ---
 
