@@ -68,8 +68,12 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
   // State for debounced/lingering element display
   const [displayedElement, setDisplayedElement] = useState<Element | null>(null);
   const [boxPosition, setBoxPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isDraggable, setIsDraggable] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const hoverTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lingerTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const upgradeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const dragOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // Debounced hover effect
   useEffect(() => {
@@ -117,7 +121,9 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
         // Clear all timers and close immediately
         if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
         if (lingerTimerRef.current) clearTimeout(lingerTimerRef.current);
+        if (upgradeTimerRef.current) clearTimeout(upgradeTimerRef.current);
         setDisplayedElement(null);
+        setIsDraggable(false);
         // Prevent propagation so detail dialogs don't also close
         event.stopPropagation();
       }
@@ -126,6 +132,71 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
     window.addEventListener('keydown', handleEsc, { capture: true });
     return () => window.removeEventListener('keydown', handleEsc, { capture: true });
   }, [displayedElement]);
+
+  // Drag handling
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      setBoxPosition({
+        x: e.clientX - dragOffsetRef.current.x,
+        y: e.clientY - dragOffsetRef.current.y
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
+
+  // Handlers for upgrading to draggable mode
+  const handleBoxMouseEnter = () => {
+    upgradeTimerRef.current = setTimeout(() => {
+      setIsDraggable(true);
+    }, 1500); // 1.5s hover to upgrade
+  };
+
+  const handleBoxMouseLeave = () => {
+    if (upgradeTimerRef.current) {
+      clearTimeout(upgradeTimerRef.current);
+      upgradeTimerRef.current = null;
+    }
+  };
+
+  const handleBoxClick = () => {
+    setIsDraggable(true);
+    if (upgradeTimerRef.current) {
+      clearTimeout(upgradeTimerRef.current);
+      upgradeTimerRef.current = null;
+    }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!isDraggable) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    dragOffsetRef.current = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
+    setIsDragging(true);
+  };
+
+  const handleClose = () => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    if (lingerTimerRef.current) clearTimeout(lingerTimerRef.current);
+    if (upgradeTimerRef.current) clearTimeout(upgradeTimerRef.current);
+    setDisplayedElement(null);
+    setIsDraggable(false);
+  };
 
   if (!displayedElement) return null;
 
@@ -162,12 +233,24 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
     return (
       <div
         className="fixed w-[500px] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50"
-        style={{ left: `${boxPosition.x}px`, top: `${boxPosition.y}px` }}
+        style={{ left: `${boxPosition.x}px`, top: `${boxPosition.y}px`, cursor: isDraggable ? 'move' : 'default' }}
+        onMouseEnter={handleBoxMouseEnter}
+        onMouseLeave={handleBoxMouseLeave}
+        onClick={handleBoxClick}
+        onMouseDown={handleMouseDown}
       >
-        <div className={`${headerColor} px-4 py-2 rounded-t-lg border-b`}>
+        <div className={`${headerColor} px-4 py-2 rounded-t-lg border-b flex items-center justify-between`}>
           <h3 className="font-semibold text-white">
             {details.elementName} relationships
           </h3>
+          {isDraggable && (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleClose(); }}
+              className="text-white hover:text-gray-200 text-xl font-bold w-8 h-8 flex items-center justify-center rounded hover:bg-black hover:bg-opacity-20"
+            >
+              ×
+            </button>
+          )}
         </div>
         <div className="p-4">
           <p className="text-sm text-gray-500 dark:text-gray-400">No relationships found</p>
@@ -185,15 +268,27 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
   return (
     <div
       className="fixed w-[500px] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50 max-h-[80vh] flex flex-col"
-      style={{ left: `${boxPosition.x}px`, top: `${boxPosition.y}px` }}
+      style={{ left: `${boxPosition.x}px`, top: `${boxPosition.y}px`, cursor: isDraggable ? 'move' : 'default' }}
+      onMouseEnter={handleBoxMouseEnter}
+      onMouseLeave={handleBoxMouseLeave}
+      onClick={handleBoxClick}
+      onMouseDown={handleMouseDown}
     >
-      <div className={`${headerColor} px-4 py-2 rounded-t-lg border-b`}>
+      <div className={`${headerColor} px-4 py-2 rounded-t-lg border-b flex items-center justify-between`}>
         <h3 className="font-semibold text-white flex items-center gap-2">
           <span>{details.elementName} relationships</span>
           <span className="text-sm font-normal opacity-90">
             [↗ {outgoingCount} outgoing] [↙ {incomingCount} incoming]
           </span>
         </h3>
+        {isDraggable && (
+          <button
+            onClick={(e) => { e.stopPropagation(); handleClose(); }}
+            className="text-white hover:text-gray-200 text-xl font-bold w-8 h-8 flex items-center justify-center rounded hover:bg-black hover:bg-opacity-20 flex-shrink-0"
+          >
+            ×
+          </button>
+        )}
       </div>
       <div className="p-4 overflow-y-auto">
 
