@@ -1,37 +1,47 @@
 /**
  * DetailContent Component (renamed from DetailPanel)
  *
- * Renders detailed information about a selected element (Class, Enum, Slot, or Variable).
+ * Renders detailed information about a selected item (Class, Enum, Slot, or Variable).
  * Displays title, description, and sections with tables (e.g., slots, permissible values).
  * Used within FloatingBox wrappers in both transitory and persistent modes.
  *
- * Architectural note: Uses element.getDetailData() polymorphic method - correct pattern!
- * This component is fully decoupled from model types and uses pure data-driven rendering.
- * Must only import Element from models/, never concrete subclasses or DTOs.
+ * Architectural note: Uses DataService to fetch data by item ID - maintains view/model separation!
+ * This component never sees Element instances, only plain data objects.
+ * UI layer terminology: "item" (model layer uses "element")
  */
 import React from 'react';
-import type { Element } from '../models/Element';
+import type { DataService } from '../services/DataService';
 
 interface DetailContentProps {
-  element?: Element;
-  onNavigate?: (elementName: string, elementType: string) => void;
+  itemId?: string;
+  dataService?: DataService;
+  onNavigate?: (itemName: string, itemType: string) => void;
   onClose?: () => void;
-  hideHeader?: boolean;  // Hide the element name header (when shown in FloatingBox header)
+  hideHeader?: boolean;  // Hide the item name header (when shown in FloatingBox header)
   hideCloseButton?: boolean;  // Hide the internal close button (when handled by FloatingBox)
 }
 
 export default function DetailContent({
-  element,
+  itemId,
+  dataService,
   onNavigate,
   onClose,
   hideHeader = false,
   hideCloseButton = false
 }: DetailContentProps) {
-  if (!element) {
+  if (!itemId || !dataService) {
     return null; // Hide panel when nothing is selected
   }
 
-  const data = element.getDetailData();
+  const data = dataService.getDetailContent(itemId);
+
+  if (!data) {
+    return (
+      <div className="h-full flex items-center justify-center text-gray-500">
+        Item not found
+      </div>
+    );
+  }
 
   return (
     <div className="h-full overflow-y-auto bg-white dark:bg-slate-800 text-left">

@@ -11,7 +11,7 @@ import { ELEMENT_TYPES, getAllElementTypeIds, type ElementTypeId } from './model
 import type { ElementCollection } from './models/Element';
 import { useModelData } from './hooks/useModelData';
 import { useLayoutState } from './hooks/useLayoutState';
-import { getElementName, findDuplicateIndex } from './utils/duplicateDetection';
+import { DataService } from './services/DataService';
 
 function App() {
   const [hoveredElement, setHoveredElement] = useState<ElementHoverData | null>(null);
@@ -22,20 +22,28 @@ function App() {
   // Load model data
   const { modelData, loading, error } = useModelData();
 
+  // Create DataService for view/model separation
+  const dataService = useMemo(() =>
+    modelData ? new DataService(modelData) : null,
+    [modelData]
+  );
+
   // Convert floating boxes to dialog states for persistence
   const getDialogStates = useCallback((): DialogState[] => {
+    if (!dataService) return [];
+
     return floatingBoxes.map(box => {
-      const elementName = getElementName(box.element, box.element.type);
+      const itemType = dataService.getItemType(box.itemId);
       return {
-        elementName,
-        elementType: box.element.type,
+        elementName: box.itemId,
+        elementType: itemType ?? 'class', // fallback to 'class'
         x: box.position?.x ?? 100,
         y: box.position?.y ?? 100,
         width: box.size?.width ?? 900,
         height: box.size?.height ?? 350
       };
     });
-  }, [floatingBoxes]);
+  }, [floatingBoxes, dataService]);
 
   // Manage layout state
   const {
@@ -55,20 +63,18 @@ function App() {
 
   // Open a new floating box (or bring existing one to front)
   const handleOpenFloatingBox = useCallback((hoverData: { type: string; name: string }, position?: { x: number; y: number }, size?: { width: number; height: number }) => {
-    if (!modelData) return;
+    if (!dataService) return;
 
-    const element = modelData.elementLookup.get(hoverData.name);
-    if (!element) {
-      console.warn(`Element "${hoverData.name}" not found in elementLookup`);
+    const itemId = hoverData.name;
+
+    // Verify item exists
+    if (!dataService.itemExists(itemId)) {
+      console.warn(`Item "${itemId}" not found`);
       return;
     }
 
-    // Check if this element is already open
-    const existingIndex = findDuplicateIndex(
-      floatingBoxes.map(b => ({ element: b.element, elementType: b.element.type })),
-      element,
-      element.type
-    );
+    // Check if this item is already open
+    const existingIndex = floatingBoxes.findIndex(b => b.itemId === itemId);
 
     // If already open, bring to top (move to end of array)
     if (existingIndex !== -1) {
@@ -88,28 +94,30 @@ function App() {
     };
     const defaultSize = { width: 900, height: 350 };
 
-    const metadata = element.getFloatingBoxMetadata();
+    const metadata = dataService.getFloatingBoxMetadata(itemId);
+    if (!metadata) {
+      console.warn(`Could not get metadata for item "${itemId}"`);
+      return;
+    }
+
     const newBox: FloatingBoxData = {
       id: `box-${nextBoxId}`,
       mode: 'persistent',
       metadata,
-      content: <DetailContent element={element} hideHeader={displayMode === 'stacked'} />,
-      element,
+      content: <DetailContent itemId={itemId} dataService={dataService} hideHeader={displayMode === 'stacked'} />,
+      itemId,
       position: position ?? defaultPosition,
       size: size ?? defaultSize
     };
 
     setFloatingBoxes(prev => [...prev, newBox]);
     setNextBoxId(prev => prev + 1);
-  }, [modelData, floatingBoxes, nextBoxId, displayMode]);
+  }, [dataService, floatingBoxes, nextBoxId, displayMode]);
 
-  // Get Element instance for hovered element (for RelationshipInfoBox)
-  const hoveredElementInstance = useMemo(() => {
-    if (!hoveredElement || !modelData) return null;
-    const collection = modelData.collections.get(hoveredElement.type as ElementTypeId);
-    if (!collection) return null;
-    return collection.getElement(hoveredElement.name);
-  }, [hoveredElement, modelData]);
+  // Get item ID for hovered item (for RelationshipInfoBox)
+  const hoveredItemId = useMemo(() => {
+    return hoveredElement?.name ?? null;
+  }, [hoveredElement]);
 
   // Navigation handler - opens a new floating box
   const handleNavigate = useCallback((elementName: string, elementType: 'class' | 'enum' | 'slot' | 'variable') => {
@@ -118,7 +126,7 @@ function App() {
 
   // Handle RelationshipInfoBox upgrade to persistent floating box
   const handleUpgradeRelationshipBox = useCallback(() => {
-    if (!hoveredElement || !hoveredElementInstance) return;
+    if (!hoveredElement || !hoveredItemId || !dataService) return;
 
     // Use cursor position for the new persistent box
     const position = {
@@ -127,11 +135,7 @@ function App() {
     };
 
     // Check if already open
-    const existingIndex = findDuplicateIndex(
-      floatingBoxes.map(b => ({ element: b.element, elementType: b.element.type })),
-      hoveredElementInstance,
-      hoveredElementInstance.type
-    );
+    const existingIndex = floatingBoxes.findIndex(b => b.itemId === hoveredItemId);
 
     // If already open, just bring to front
     if (existingIndex !== -1) {
@@ -143,21 +147,26 @@ function App() {
       return;
     }
 
-    // Create new persistent box with relationship content
-    const metadata = hoveredElementInstance.getFloatingBoxMetadata();
+    // Create new persistent box with detail content
+    const metadata = dataService.getFloatingBoxMetadata(hoveredItemId);
+    if (!metadata) {
+      console.warn(`Could not get metadata for item "${hoveredItemId}"`);
+      return;
+    }
+
     const newBox: FloatingBoxData = {
       id: `box-${nextBoxId}`,
       mode: 'persistent',
       metadata,
-      content: <DetailContent element={hoveredElementInstance} hideHeader={displayMode === 'stacked'} />,
-      element: hoveredElementInstance,
+      content: <DetailContent itemId={hoveredItemId} dataService={dataService} hideHeader={displayMode === 'stacked'} />,
+      itemId: hoveredItemId,
       position,
       size: { width: 700, height: 400 }
     };
 
     setFloatingBoxes(prev => [...prev, newBox]);
     setNextBoxId(prev => prev + 1);
-  }, [hoveredElement, hoveredElementInstance, floatingBoxes, nextBoxId, displayMode]);
+  }, [hoveredElement, hoveredItemId, dataService, floatingBoxes, nextBoxId, displayMode]);
 
   // Close a floating box
   const handleCloseFloatingBox = useCallback((id: string) => {
@@ -175,7 +184,7 @@ function App() {
   useEffect(() => {
     // Only run once after data loads
     if (hasRestoredFromURL) return;
-    if (!modelData) return;
+    if (!dataService) return;
 
     // Mark as restored
     setHasRestoredFromURL(true);
@@ -188,22 +197,23 @@ function App() {
       let boxIdCounter = 0;
 
       urlState.dialogs.forEach(dialogState => {
-        // Look up element using generic collection interface
-        const collection = modelData.collections.get(dialogState.elementType);
-        const element = collection?.getElement(dialogState.elementName) || null;
+        const itemId = dialogState.elementName;
 
-        if (element) {
-          const metadata = element.getFloatingBoxMetadata();
-          restoredBoxes.push({
-            id: `box-${boxIdCounter}`,
-            mode: 'persistent',
-            metadata,
-            content: <DetailContent element={element} hideHeader={displayMode === 'stacked'} />,
-            element,
-            position: { x: dialogState.x, y: dialogState.y },
-            size: { width: dialogState.width, height: dialogState.height }
-          });
-          boxIdCounter++;
+        // Verify item exists
+        if (dataService.itemExists(itemId)) {
+          const metadata = dataService.getFloatingBoxMetadata(itemId);
+          if (metadata) {
+            restoredBoxes.push({
+              id: `box-${boxIdCounter}`,
+              mode: 'persistent',
+              metadata,
+              content: <DetailContent itemId={itemId} dataService={dataService} hideHeader={displayMode === 'stacked'} />,
+              itemId,
+              position: { x: dialogState.x, y: dialogState.y },
+              size: { width: dialogState.width, height: dialogState.height }
+            });
+            boxIdCounter++;
+          }
         }
       });
 
@@ -213,7 +223,7 @@ function App() {
         setNextBoxId(boxIdCounter);
       }
     }
-  }, [modelData, hasRestoredFromURL, displayMode]);
+  }, [dataService, hasRestoredFromURL, displayMode]);
 
   // Memoize panel data to prevent infinite re-renders in LinkOverlay
   // Filter collections to only visible sections
@@ -477,7 +487,8 @@ function App() {
 
         {/* Relationship Info Box (transitory, follows cursor) */}
         <RelationshipInfoBox
-          element={hoveredElementInstance}
+          itemId={hoveredItemId}
+          dataService={dataService}
           cursorPosition={hoveredElement ? { x: hoveredElement.cursorX, y: hoveredElement.cursorY } : null}
           onNavigate={handleNavigate}
           onUpgrade={handleUpgradeRelationshipBox}

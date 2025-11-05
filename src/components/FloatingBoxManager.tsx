@@ -1,4 +1,3 @@
-// Must only import Element from models/, never concrete subclasses or DTOs
 /**
  * FloatingBoxManager - Manages floating boxes in both transitory and persistent modes
  *
@@ -9,10 +8,12 @@
  * - ESC closes boxes (transitory first, then oldest persistent)
  * - Mode-aware positioning (stacked vs floating layout)
  * - Content agnostic - works with any React component
+ *
+ * Architecture: Maintains view/model separation - uses item IDs instead of Element instances
+ * UI layer terminology: "item" (model layer uses "element")
  */
 
 import { useState, useRef, useEffect, type ReactNode } from 'react';
-import type { Element } from '../models/Element';
 
 // Metadata for FloatingBox display (view/model separation)
 export interface FloatingBoxMetadata {
@@ -26,7 +27,7 @@ export interface FloatingBoxData {
   mode: 'transitory' | 'persistent';
   metadata: FloatingBoxMetadata;
   content: ReactNode;
-  element: Element;  // For callbacks, not for type checking
+  itemId: string;  // Item identifier for callbacks and state management
   position?: { x: number; y: number };
   size?: { width: number; height: number };
 }

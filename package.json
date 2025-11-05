@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
+    "check-arch": "bash scripts/check-architecture.sh",
     "preview": "vite preview",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",

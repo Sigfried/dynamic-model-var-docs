@@ -1,75 +1,34 @@
-// Must only import Element from models/, never concrete subclasses or DTOs
 /**
- * RelationshipInfoBox - Displays relationship information when hovering over elements
+ * RelationshipInfoBox - Displays relationship information when hovering over items
  *
  * Shows:
  * - Outgoing relationships (inheritance, slots with attribute names)
  * - Incoming relationships (subclasses, used by attributes, variables)
  *
- * Appears when user hovers over an element in the tree/panels.
- * Initially positioned near cursor, becomes draggable on interaction.
+ * Appears when user hovers over an item in the tree/panels.
+ * Initially positioned near cursor, can upgrade to persistent mode on interaction.
  *
- * Architecture: Component defines RelationshipData interface specifying what it needs.
- * Element provides data via getRelationshipData() that adapts to this contract.
+ * Architecture: Uses DataService to fetch relationship data by item ID - maintains view/model separation!
+ * This component never sees Element instances, only plain data objects.
+ * UI layer terminology: "item" (model layer uses "element")
  */
 
 import { useState, useEffect, useRef } from 'react';
-import type { Element } from '../models/Element';
+import type { DataService, RelationshipData } from '../services/DataService';
 import { getHeaderColor } from '../utils/panelHelpers';
 import type { ElementTypeId } from '../models/ElementRegistry';
 
-/**
- * RelationshipData - Data contract for relationship info box
- * Component defines this interface; Element provides data via getRelationshipData()
- */
-interface SlotInfo {
-  attributeName: string;   // "specimen_type", "parent_specimen"
-  target: string;          // "SpecimenTypeEnum", "Specimen"
-  targetType: string;
-  isSelfRef: boolean;
-}
-
-export interface RelationshipData {
-  elementName: string;
-  elementType: string;
-
-  // Outgoing relationships (from this element)
-  outgoing: {
-    inheritance?: {
-      target: string;
-      targetType: string;
-    };
-    slots: SlotInfo[];
-    inheritedSlots: Array<{
-      ancestorName: string;
-      slots: SlotInfo[];
-    }>;
-  };
-
-  // Incoming relationships (to this element)
-  incoming: {
-    subclasses: string[];      // Classes that inherit from this
-    usedByAttributes: Array<{
-      className: string;       // "Specimen"
-      attributeName: string;   // "specimen_type"
-      sourceType: string;
-    }>;
-    variables: Array<{         // Variables mapped to this class
-      name: string;
-    }>;
-  };
-}
-
 interface RelationshipInfoBoxProps {
-  element: Element | null;
+  itemId: string | null;
+  dataService: DataService | null;
   cursorPosition?: { x: number; y: number } | null;
-  onNavigate?: (elementName: string, elementType: 'class' | 'enum' | 'slot' | 'variable') => void;
+  onNavigate?: (itemName: string, itemType: 'class' | 'enum' | 'slot' | 'variable') => void;
   onUpgrade?: () => void;  // Callback when box should upgrade to persistent mode
 }
 
-export default function RelationshipInfoBox({ element, cursorPosition, onNavigate, onUpgrade }: RelationshipInfoBoxProps) {
-  // State for debounced/lingering element display
-  const [displayedElement, setDisplayedElement] = useState<Element | null>(null);
+export default function RelationshipInfoBox({ itemId, dataService, cursorPosition, onNavigate, onUpgrade }: RelationshipInfoBoxProps) {
+  // State for debounced/lingering item display
+  const [displayedItemId, setDisplayedItemId] = useState<string | null>(null);
   const [boxPosition, setBoxPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [expandedSections, setExpandedSections] = useState<{
     subclasses: boolean;
@@ -100,10 +59,10 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
       lingerTimerRef.current = null;
     }
 
-    if (element) {
-      // Element hovered - show after short delay (ignore quick pass-overs)
+    if (itemId) {
+      // Item hovered - show after short delay (ignore quick pass-overs)
       hoverTimerRef.current = setTimeout(() => {
-        setDisplayedElement(element);
+        setDisplayedItemId(itemId);
         // Position box in white space to the right of all visible panels
         if (cursorPosition) {
           const boxWidth = 500;
@@ -147,10 +106,10 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
           });
         }
       }, 300);
-    } else if (displayedElement) {
-      // Element unhovered but we have a displayed element - linger for 1.5s
+    } else if (displayedItemId) {
+      // Item unhovered but we have a displayed item - linger for 1.5s
       lingerTimerRef.current = setTimeout(() => {
-        setDisplayedElement(null);
+        setDisplayedItemId(null);
       }, 1500);
     }
 
@@ -158,7 +117,7 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
       if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
       if (lingerTimerRef.current) clearTimeout(lingerTimerRef.current);
     };
-  }, [element, displayedElement, cursorPosition]);
+  }, [itemId, displayedItemId, cursorPosition]);
 
   // Handlers for upgrading to persistent mode
   const handleBoxMouseEnter = () => {
@@ -200,10 +159,12 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
     }
   };
 
-  if (!displayedElement) return null;
+  if (!displayedItemId || !dataService) return null;
 
-  // Get relationship data from displayed element
-  const details = displayedElement.getRelationshipData();
+  // Get relationship data from data service
+  const details = dataService.getRelationships(displayedItemId);
+
+  if (!details) return null;
 
   // Helper to make element names clickable
   const makeClickable = (
@@ -319,7 +280,7 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
     details.incoming.variables.length > 0;
 
   if (!hasOutgoing && !hasIncoming) {
-    const headerColor = getHeaderColor(displayedElement.type as ElementTypeId);
+    const headerColor = getHeaderColor(details.elementType as ElementTypeId);
     return (
       <div
         className="fixed w-[500px] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50"
@@ -340,7 +301,7 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
     );
   }
 
-  const headerColor = getHeaderColor(displayedElement.type as ElementTypeId);
+  const headerColor = getHeaderColor(details.elementType as ElementTypeId);
 
   // Count relationships
   const outgoingCount = (details.outgoing.inheritance ? 1 : 0) + details.outgoing.slots.length;

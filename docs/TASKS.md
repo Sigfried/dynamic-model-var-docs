@@ -303,25 +303,30 @@ Hover behavior depends on where cursor is positioned:
 
     **Testing checklist** (please add feedback below each item):
     1. Click element name in either panel → should open persistent floating box
-       - [sg] feedback:
+       - [sg] feedback: i clicked on a couple items and the detail
+                 box headers are messed up: ![img_1.png](img_1.png)
     2. Click same element again → should bring existing box to front (no duplicate)
-       - [sg] feedback:
+       - [sg] feedback: works fine
     3. Hover over element → RelationshipInfoBox should appear
-       - [sg] feedback:
+       - [sg] feedback: fine
     4. Hover over RelationshipInfoBox for 1.5s → should upgrade to persistent floating box
-       - [sg] feedback:
+       - [sg] feedback: not working, it disappears. but sometimes (see image below)
+              it gets stuck and will only go away when hovering on another item.
+              ESC didn't work and it didn't get a close icon. i don't know how
+              to replicate
     5. Click on RelationshipInfoBox → should upgrade immediately
-       - [sg] feedback:
+       - [sg] feedback: disappears
     6. Open multiple boxes → should cascade with offsets
-       - [sg] feedback:
+       - [sg] feedback: cascades but boxes overflow out bottom of viewport
     7. Switch between dialog and stacked modes → boxes should reposition appropriately
-       - [sg] feedback:
+       - [sg] feedback: this is weird now. ![img_2.png](img_2.png)
+              detail boxes take whole width and relationship info isn't going away
     8. Drag, resize, close buttons → should work as before
-       - [sg] feedback:
+       - [sg] feedback: yes for floating. still not for stacked
     9. ESC key → should close boxes (oldest first)
-       - [sg] feedback:
+       - [sg] feedback: yes
     10. URL restoration → open some boxes, copy URL, open in new tab → boxes should restore
-       - [sg] feedback:
+       - [sg] feedback: works
 
 4. **Delete old components**
     - Delete DetailDialog.tsx
