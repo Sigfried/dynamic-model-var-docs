@@ -197,7 +197,7 @@ Hover behavior depends on where cursor is positioned:
 
 **Implementation steps**:
 
-0. **Create DataService abstraction layer** (TODO - HIGH PRIORITY)
+0. **✅ Create DataService abstraction layer** (COMPLETED)
     - **Goal**: Complete view/model separation - UI components should never see Element instances or know about element types
     - **Problem**: Currently UI code receives Element instances and calls methods directly, violating separation of concerns
     - **Solution**: Create DataService class that UI calls with item IDs (strings)
@@ -253,17 +253,43 @@ Hover behavior depends on where cursor is positioned:
     - Over time, enhance script to check other architectural principles from CLAUDE.md
 
     **Implementation sub-steps**:
-    - Create DataService class with initial methods
-    - Refactor App.tsx to use DataService
-    - Refactor FloatingBoxManager to accept dataService + item IDs
-    - Refactor DetailContent to accept itemId + dataService
-    - Refactor RelationshipInfoBox to accept itemId + dataService
-    - Update all tests to use DataService pattern
-    - Create check-architecture.sh script
-    - Add npm script and update workflow documentation
-    - Run check-arch and fix any violations
+    - ✅ Create DataService class with initial methods
+    - ✅ Refactor App.tsx to use DataService
+    - ✅ Refactor FloatingBoxManager to accept dataService + item IDs
+    - ✅ Refactor DetailContent to accept itemId + dataService
+    - ✅ Refactor RelationshipInfoBox to accept itemId + dataService
+    - ✅ Deleted old components (DetailDialog, DetailPanelStack, useDialogState)
+    - ✅ Create check-architecture.sh script
+    - ✅ Add npm script `"check-arch": "bash scripts/check-architecture.sh"`
+    - ⚠️  Architecture violations: 3 remaining (see Step 0a below)
+    - ⏭️  Update tests to use DataService pattern (deferred)
 
-    **After this step**: Every component in src/components/ should have zero references to Element types
+    **Status**: Main refactoring complete! Minor violations remain (see Step 0a)
+
+0a. **Fix remaining architecture violations** (TODO - NEXT)
+    - **Current violations** (from `npm run check-arch`):
+      ```
+      ❌ 3 VIOLATION(S):
+      1. 'element' variable/parameter references (mostly comments, some real)
+      2. 'elementType' references in 4 files
+      3. Element class imports in LinkOverlay.tsx
+      ```
+
+    **Quick fixes** (5 min):
+    - DetailContent.tsx: `elementType` parameter → `itemType` in renderCell()
+    - useElementHover.ts: `element` in callback type → `item`
+    - Comments: Update terminology in DetailTable, Section, hooks (just documentation)
+
+    **LinkOverlay.tsx refactoring** (major task - 30+ min):
+    - Currently uses Element instances directly: `collection.getAllElements().forEach(element => ...)`
+    - Uses Element methods: `element.getRelationships()`
+    - Needs DataService refactoring similar to other components
+    - Also affects Section.tsx DOM attributes (`data-element-type`, `data-element-name`)
+
+    **Dependencies**: LinkOverlay needs the DOM attributes to work, so:
+    - Fix quick parameter renames first
+    - LinkOverlay + Section.tsx DOM attributes together as one task
+    - After: Run `npm run check-arch` to verify zero violations
 
 1. **✅ Create FloatingBoxManager.tsx** (COMPLETED)
     - ✅ Extract openDialogs array management from App.tsx
