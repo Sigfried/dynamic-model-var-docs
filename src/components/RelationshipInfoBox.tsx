@@ -13,6 +13,7 @@
  * Element provides data via getRelationshipData() that adapts to this contract.
  */
 
+import { useState, useEffect, useRef } from 'react';
 import type { Element } from '../models/Element';
 import { getHeaderColor } from '../utils/panelHelpers';
 import type { ElementTypeId } from '../models/ElementRegistry';
@@ -63,10 +64,45 @@ interface RelationshipInfoBoxProps {
 }
 
 export default function RelationshipInfoBox({ element, onNavigate }: RelationshipInfoBoxProps) {
-  if (!element) return null;
+  // State for debounced/lingering element display
+  const [displayedElement, setDisplayedElement] = useState<Element | null>(null);
+  const hoverTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lingerTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Get relationship data from element (adapts to component's contract)
-  const details = element.getRelationshipData();
+  // Debounced hover effect
+  useEffect(() => {
+    // Clear any existing timers
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    if (lingerTimerRef.current) {
+      clearTimeout(lingerTimerRef.current);
+      lingerTimerRef.current = null;
+    }
+
+    if (element) {
+      // Element hovered - show after short delay (ignore quick pass-overs)
+      hoverTimerRef.current = setTimeout(() => {
+        setDisplayedElement(element);
+      }, 300);
+    } else if (displayedElement) {
+      // Element unhovered but we have a displayed element - linger for 2.5s
+      lingerTimerRef.current = setTimeout(() => {
+        setDisplayedElement(null);
+      }, 2500);
+    }
+
+    return () => {
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+      if (lingerTimerRef.current) clearTimeout(lingerTimerRef.current);
+    };
+  }, [element, displayedElement]);
+
+  if (!displayedElement) return null;
+
+  // Get relationship data from displayed element
+  const details = displayedElement.getRelationshipData();
 
   // Helper to make element names clickable
   const makeClickable = (
@@ -94,7 +130,7 @@ export default function RelationshipInfoBox({ element, onNavigate }: Relationshi
     details.incoming.variables > 0;
 
   if (!hasOutgoing && !hasIncoming) {
-    const headerColor = getHeaderColor(element.type as ElementTypeId);
+    const headerColor = getHeaderColor(displayedElement.type as ElementTypeId);
     return (
       <div className="fixed top-4 right-4 w-[500px] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50">
         <div className={`${headerColor} px-4 py-2 rounded-t-lg border-b`}>
@@ -109,7 +145,7 @@ export default function RelationshipInfoBox({ element, onNavigate }: Relationshi
     );
   }
 
-  const headerColor = getHeaderColor(element.type as ElementTypeId);
+  const headerColor = getHeaderColor(displayedElement.type as ElementTypeId);
 
   // Count relationships
   const outgoingCount = (details.outgoing.inheritance ? 1 : 0) + details.outgoing.slots.length;
