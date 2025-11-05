@@ -110,6 +110,23 @@ export default function RelationshipInfoBox({ element, cursorPosition, onNavigat
     };
   }, [element, displayedElement, cursorPosition]);
 
+  // ESC key handler - closes info box before detail dialogs
+  useEffect(() => {
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && displayedElement) {
+        // Clear all timers and close immediately
+        if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+        if (lingerTimerRef.current) clearTimeout(lingerTimerRef.current);
+        setDisplayedElement(null);
+        // Prevent propagation so detail dialogs don't also close
+        event.stopPropagation();
+      }
+    };
+
+    window.addEventListener('keydown', handleEsc, { capture: true });
+    return () => window.removeEventListener('keydown', handleEsc, { capture: true });
+  }, [displayedElement]);
+
   if (!displayedElement) return null;
 
   // Get relationship data from displayed element
