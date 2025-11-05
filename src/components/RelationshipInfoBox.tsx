@@ -31,7 +31,7 @@ export interface RelationshipData {
       target: string;
       targetType: string;
     };
-    properties: Array<{
+    slots: Array<{
       attributeName: string;   // "specimen_type", "parent_specimen"
       target: string;          // "SpecimenTypeEnum", "Specimen"
       targetType: string;
@@ -61,7 +61,7 @@ export default function RelationshipInfoBox({ element }: RelationshipInfoBoxProp
   // Get relationship data from element (adapts to component's contract)
   const details = element.getRelationshipData();
 
-  const hasOutgoing = details.outgoing.inheritance || details.outgoing.properties.length > 0;
+  const hasOutgoing = details.outgoing.inheritance || details.outgoing.slots.length > 0;
   const hasIncoming =
     details.incoming.subclasses.length > 0 ||
     details.incoming.usedByAttributes.length > 0 ||
@@ -86,7 +86,7 @@ export default function RelationshipInfoBox({ element }: RelationshipInfoBoxProp
   const headerColor = getHeaderColor(element.type as ElementTypeId);
 
   // Count relationships
-  const outgoingCount = (details.outgoing.inheritance ? 1 : 0) + details.outgoing.properties.length;
+  const outgoingCount = (details.outgoing.inheritance ? 1 : 0) + details.outgoing.slots.length;
   const incomingCount = details.incoming.subclasses.length + details.incoming.usedByAttributes.length + (details.incoming.variables > 0 ? 1 : 0);
 
   return (
@@ -117,12 +117,12 @@ export default function RelationshipInfoBox({ element }: RelationshipInfoBoxProp
             </div>
           )}
 
-          {/* Properties */}
-          {details.outgoing.properties.length > 0 && (
+          {/* Slots */}
+          {details.outgoing.slots.length > 0 && (
             <div>
-              <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Properties:</div>
+              <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Slots:</div>
               <div className="ml-3 space-y-1">
-                {details.outgoing.properties.map((prop, idx) => (
+                {details.outgoing.slots.map((prop, idx) => (
                   <div key={idx} className="text-sm text-gray-900 dark:text-gray-100">
                     <span className="text-green-600 dark:text-green-400">{prop.attributeName}</span>
                     {' → '}

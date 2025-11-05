@@ -72,7 +72,7 @@ type OutgoingRelationships = {
     target: string;
     targetType: ElementTypeId;
   };
-  properties: Array<{
+  slots: Array<{
     attributeName: string;
     target: string;
     targetType: ElementTypeId;
@@ -143,16 +143,16 @@ export abstract class Element {
   abstract getRelationships(): Relationship[];
 
   /**
-   * Get relationship data for sidebar display
+   * Get relationship data for info box display
    * Uses existing getRelationships() for outgoing + computeIncomingRelationships() helper
-   * Returns data matching RelationshipData interface from RelationshipSidebar component
+   * Returns data matching RelationshipData interface from RelationshipInfoBox component
    */
   getRelationshipData() {
     const relationships = this.getRelationships();
 
     // Build outgoing relationships from existing getRelationships()
     const outgoing: OutgoingRelationships = {
-      properties: []
+      slots: []
     };
 
     for (const rel of relationships) {
@@ -162,7 +162,7 @@ export abstract class Element {
           targetType: rel.targetType
         };
       } else if (rel.type === 'property') {
-        outgoing.properties.push({
+        outgoing.slots.push({
           attributeName: rel.label || 'range', // 'range' for slots without label
           target: rel.target,
           targetType: rel.targetType,
