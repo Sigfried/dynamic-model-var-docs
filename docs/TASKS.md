@@ -2,17 +2,29 @@
 
 ## Questions & Decisions Needed
 
-### Boss Question: Variable Treatment for Condition Class
+### Different Variable Treatment for Condition and Drug Exposure Classes 
 
-**Context**: My boss said that "variables" for Condition should be treated differently.
+> **Anne**: I think I made a mistake by calling "asthma" and "angina" variables. BMI is a variable that is a Measurement observation. We can think of BMI as a column in a spreadsheet. We wouldn't have a column for "asthma" - we would have a column for conditions with a list of mondo codes for the conditions present. This becomes more important when we are talking about the "heart failure" and "heart disease" columns. Where does one draw lines? The division of conditions into variables/columns might be ok if all we're looking at is asthma and angina, but quickly gets too hard to draw lines.
 
-**Her explanation**:
-> I think I made a mistake by calling "asthma" and "angina" variables. BMI is a variable that is a Measurement observation. We can think of BMI as a column in a spreadsheet. We wouldn't have a column for "asthma" - we would have a column for conditions with a list of mondo codes for the conditions present. This becomes more important when we are talking about the "heart failure" and "heart disease" columns. Where does one draw lines? The division of conditions into variables/columns might be ok if all we're looking at is asthma and angina, but quickly gets too hard to draw lines.
+> **Siggie**: So, should those variables appear in the variable specs at all? If so, how should we represent them? And are there other variables in the specs that need special treatment or don't belong?
 
-**My follow-up**:
-> So, should those variables appear in the variable specs at all? If so, how should we represent them? And are there other variables in the specs that need special treatment or don't belong?
+> **Anne**: I think they should appear, just differently. Perhaps as a list? maybe a layered donut? I think DrugExposures will need to be depicted in the same way
 
-Will return to this when i have her next response.
+> **Siggie**:
+    what should i call these things if not variables?
+    layered donut? sounds tasty, but i'm not sure how it would work.
+    do we have additional documentation for any of these that we would want to include? like we could set up Angina to link to angina_prior_1 if that would be appropriate
+
+> **Anne**:
+    You can call them Conditions and Drug Exposures for now
+    I think for angina, we would want a link to the URI
+
+> **Siggie**:
+    where would i get the URI?
+
+> **Anne**:  
+
+> **Siggie**:  
 
 ---
 
@@ -20,7 +32,7 @@ Will return to this when i have her next response.
 
 ### Unified Detail Box System (Phase 11) ⭐ NEXT
 
-**Goal**: Extract dialog management from App.tsx, merge DetailDialog/DetailPanelStack into unified system, enable relationship info boxes to upgrade to persistent floating boxes
+**Goal**: Extract dialog management from App.tsx, merge DetailDialog/DetailPanelStack into unified system, and implement transitory mode for FloatingBox - allowing any content to appear temporarily (auto-disappearing) and upgrade to persistent mode on user interaction.
 
 **Current state**:
 - DetailPanel: 130-line content renderer using getDetailData() ✅
@@ -32,25 +44,56 @@ Will return to this when i have her next response.
 **New file structure**:
 ```
 src/components/
-  DetailPanel.tsx           (keep - content renderer, 130 lines, uses getDetailData())
-  [sg] make it DetailContent instead of panel
+  DetailContent.tsx         (rename from DetailPanel.tsx - content renderer, uses getDetailData())
   RelationshipInfoBox.tsx   (keep - relationship content renderer)
-  DetailBoxManager.tsx      (new - manages array + rendering)
-    [sg] unlink component name from details... FloatingBox?
-    - DetailBox component   (draggable/resizable wrapper)
+  FloatingBoxManager.tsx    (new - manages array + rendering)
+    - FloatingBox component (draggable/resizable wrapper)
     - Array management (FIFO stack)
     - Mode-aware positioning
 ```
 
-**Key insight**: Both DetailPanel and RelationshipInfoBox content can be wrapped in DetailBox chrome
+**Key insight**: FloatingBox is a general-purpose wrapper that supports two display modes (transitory and persistent) for any content type
 
-**DetailBox component** (single component, works in both modes):
-- All boxes identical: draggable, resizable, colored headers
-- Mode only affects initial position (not capabilities)
-- **Content agnostic**: Renders `<DetailPanel element={...}/>` OR `<RelationshipInfoBox element={...}/>`
-- Uses element type for header color (not content-dependent)
-- Click/drag/resize anywhere in box → bring to front (move to end of array)
-- ESC closes first/oldest box (index 0)
+**FloatingBox Modes**:
+
+1. **Transitory mode** (temporary, auto-disappearing):
+   - Appears on trigger (hover, click, etc.)
+   - Auto-disappears after timeout or when user moves away
+   - Minimal chrome (no close button, simpler appearance)
+   - Can be "upgraded" to persistent mode via user interaction
+   - Example: RelationshipInfoBox on hover
+
+2. **Persistent mode** (permanent until closed):
+   - Stays open until explicitly closed (ESC or close button)
+   - Full chrome (draggable, resizable, close button)
+   - Added to FloatingBoxManager's array
+   - Managed via URL state for restoration
+   - Example: Clicking element name to view details
+
+**FloatingBox component** (single component, supports both modes):
+- **Content agnostic**: Renders any React component passed as content
+- **Display metadata pattern** (maintains view/model separation):
+  ```typescript
+  interface FloatingBoxProps {
+    mode: 'transitory' | 'persistent';
+    metadata: {
+      title: string;        // e.g., "Specimen" or "Relationships: Specimen"
+      color: string;        // e.g., "blue" (from app config)
+    };
+    content: React.ReactNode;  // <DetailContent element={...}/> or <RelationshipInfoBox element={...}/>
+    onClose?: () => void;
+    onUpgrade?: () => void;  // Transitory → persistent upgrade
+  }
+  ```
+- **Data flow** (no element types in FloatingBox):
+  1. Caller (App/FloatingBoxManager) has Element reference
+  2. Caller calls `element.getFloatingBoxMetadata()` → returns `{ title, color }`
+  3. Caller passes metadata + content component to FloatingBox
+  4. FloatingBox only sees plain data, never Element type
+- Mode determines chrome and behavior:
+  - Transitory: Minimal styling, no close button, auto-dismiss timers
+  - Persistent: Full controls, draggable, resizable, click-to-front
+- ESC closes first/oldest persistent box (index 0)
 
 **Content types**:
 1. **Detail content**: Full element details (slots table, variables, description, etc.)
@@ -65,68 +108,72 @@ src/components/
 - **Vertical positioning**: Current logic can position boxes oddly (see Phase 10 screenshot)
 - **Right edge overflow**: Box can extend past right edge of window
 - Fix both when implementing FloatingBox positioning logic
-- Ensure boxes stay fully within viewport bounds [sg] unless the user drags them
+- Ensure boxes stay fully within viewport bounds (auto-positioning only; allow user to drag outside)
 
-**RelationshipInfoBox upgrade flow**:
-1. **Preview mode** (current Phase 10 implementation):
-    - Hover element → info box appears near cursor after 300ms
-    - Shows relationships only, no close button
-    - Lingers 2.5s after unhover (unless interacted with)
-      [sg] that's seeming too long
+**Transitory → Persistent Mode Upgrade Flow**:
 
-2. **Upgrade trigger** (one of):
-    - Hover over info box for 1.5s
-    - Click anywhere in info box
+**Example: Hover-triggered RelationshipInfoBox** (current Phase 10 implementation):
 
-3. **Persistent box mode** (NEW with this refactor):
-    - Info box content gets wrapped in DetailBox
-    - Becomes draggable/resizable with close button
-    - Added to DetailBoxManager's array
+1. **Transitory mode trigger**:
+    - Hover element → FloatingBox appears in transitory mode after 300ms
+    - Content: RelationshipInfoBox (shows relationships)
+    - No close button, minimal styling
+    - Lingers 1.5s after unhover (unless interacted with)
+    - **TODO**: Move timing constants to app config file (see "App Configuration File" task)
+
+2. **Upgrade to persistent mode** (one of):
+    - Hover over box for 1.5s
+    - Click anywhere in box
+    - Press hotkey (TBD)
+
+3. **Persistent mode result**:
+    - Same content, now in persistent FloatingBox
+    - Gains full chrome (draggable, resizable, close button)
+    - Added to FloatingBoxManager's array
     - Stays open until explicitly closed (ESC or close button)
-    - Can open multiple relationship boxes this way
+    - Can open multiple boxes this way (compare relationships side-by-side)
 
-4. **Integration with clicking element names**:
-    - Clicking element name in tree → opens DetailPanel (full details) in DetailBox
-    - Clicking element name in RelationshipInfoBox → opens DetailPanel (full details) in DetailBox
-    - Both boxes can coexist: relationship view + detail view of linked element
+**Other ways to open persistent FloatingBox**:
 
-5. **Preview mode content choice** (TO BE DECIDED):
-   When hovering over an element, should the preview show relationships (RelationshipInfoBox) or full details (DetailPanel)?
+- **Click element name** (anywhere in UI):
+  - Tree panel → opens DetailContent in persistent FloatingBox
+  - RelationshipInfoBox → opens DetailContent in persistent FloatingBox
+  - Opens directly in persistent mode (no transitory phase)
+  - Multiple boxes can coexist: relationship view + detail view of linked element
 
-   **Options**:
-    - **User preference toggle**: Settings/header button to choose default preview mode
-        - Pros: Clear, explicit control
-        - Cons: Adds UI complexity, users must remember to toggle
+**Transitory mode content choice**:
 
-    - **Position-based heuristic**: Hover behavior depends on where cursor is
-        - Hover element name → show detail preview
-        - Hover panel edge/between elements → show relationship preview
-        - Pros: Contextual, no UI needed
-        - Cons: May be unpredictable, harder to discover
+When hovering over an element, what content should appear in the transitory FloatingBox?
+- Option A: RelationshipInfoBox (focused view of relationships)
+- Option B: DetailContent (full element details)
+- Option C: Help content (when implemented - context-sensitive help based on what's being hovered)
 
-    - **Keyboard modifier**: Hold Shift while hovering to show alternate preview
-        - Default: Relationship preview
-        - Shift+hover: Detail preview (or vice versa)
-        - Pros: Discoverable through tooltips, no permanent UI
-        - Cons: Requires keyboard, may not be obvious
+**Preferred approach: Position-based heuristic**
 
-    - **Time-based cascade**: Show relationships first (quick), then details after longer hover
-        - 300ms → relationship preview appears
-        - 1.5s → detail preview replaces relationship preview
-        - Pros: Progressive disclosure, shows both automatically
-        - Cons: May be confusing, delay could feel laggy
+Hover behavior depends on where cursor is positioned:
+- **Hover element name** → show DetailContent (full details preview)
+- **Hover panel edge/between elements** → show RelationshipInfoBox (relationship preview)
+- **Hover SVG link line** → show RelationshipInfoBox (relationship preview for that specific link)
 
-    - **Combination approach**: User toggle for default + keyboard modifier for override
-        - Toggle sets default preview type (relationships OR details)
-        - Shift+hover shows the other type
-        - Pros: Best of both worlds, flexible
-        - Cons: Slightly more complex
+**Rationale**:
+- Contextual and intuitive - cursor position indicates intent
+- No additional UI complexity
+- No keyboard requirement
+- Can be refined based on user feedback after implementation
 
-   **Recommendation**: Combination approach (user toggle + keyboard modifier)
-    - Most flexible without being overwhelming
-    - Users can set their preferred workflow
-    - Power users can override on-demand
-    - Implementation fits cleanly with existing hover system
+**Implementation notes**:
+- **Spacing between hover areas**: Ensure clear separation between name hover area and edge hover area
+  - May need to make the inside end of element names non-hoverable
+  - This helps users understand which hover target they're activating
+- May need to tune hover target areas for discoverability
+- Could add subtle visual cues (e.g., cursor changes, highlight areas)
+- Keep simpler options as fallback if heuristic proves confusing
+
+**Alternative approaches considered** (for reference):
+- User preference toggle: Clear but adds UI complexity
+- Keyboard modifier: Flexible but requires keyboard
+- Time-based cascade: Progressive but potentially confusing
+- Combination: Most flexible but overly complex for initial implementation
 
 **Mode behavior** (intelligent repositioning):
 - **Floating mode** (narrow screen): New boxes cascade from bottom-left
@@ -150,27 +197,34 @@ src/components/
 
 **Implementation steps**:
 
-1. **Create DetailBoxManager.tsx**
+1. **Create FloatingBoxManager.tsx**
     - Extract openDialogs array management from App.tsx
-    - Single DetailBox component (merge DetailDialog drag/resize logic)
-    - **Support both content types**: DetailPanel OR RelationshipInfoBox
+    - Single FloatingBox component (merge DetailDialog drag/resize logic)
+    - **Content agnostic**: Supports any React component (DetailContent, RelationshipInfoBox, future help content, etc.)
     - Mode-aware initial positioning
     - Click/drag/resize → bring to front (move to end of array)
-    - ESC closes first box (oldest)
+    - **ESC behavior**: Closes first box in this order:
+      1. Close any transitory boxes first
+      2. Then close persistent boxes (oldest first, FIFO)
     - Z-index based on array position
 
 2. **Refactor RelationshipInfoBox.tsx**
-    - **Remove** drag/resize/close logic (handled by DetailBox wrapper)
+    - **Remove** drag/resize/close logic (handled by FloatingBox wrapper)
     - Keep preview mode (hover, linger, positioning)
     - Keep upgrade trigger logic (1.5s hover or click)
-    - **On upgrade**: call callback to add to DetailBoxManager instead of local state
+    - **On upgrade**: call callback to add to FloatingBoxManager instead of local state
     - Content becomes simpler: just relationships display, no window chrome
 
 3. **Update App.tsx**
     - Remove openDialogs management
-    - Import and use DetailBoxManager
+    - Import and use FloatingBoxManager
     - Pass display mode and callbacks
-    - Handle RelationshipInfoBox upgrade callback
+    - **Upgrade callback flow**:
+      - FloatingBoxManager provides `onUpgradeBox` callback to transitory boxes
+      - When RelationshipInfoBox detects upgrade trigger (1.5s hover or click)
+      - It calls `onUpgradeBox()` which FloatingBoxManager handles
+      - FloatingBoxManager converts transitory box to persistent box in its array
+      - No direct App.tsx involvement needed
 
 4. **Delete old components**
     - Delete DetailDialog.tsx
@@ -187,17 +241,76 @@ src/components/
 
 ---
 
+### App Configuration File
+
+**Goal**: Centralize hard-coded constants into a single configuration file for easier maintenance and tuning
+
+**Current state**: Constants scattered throughout components
+- RelationshipInfoBox.tsx: hover debounce (300ms), linger duration (1.5s), upgrade time (1.5s)
+- Various components: type-related colors (blue/purple/green/orange)
+- Other hard-coded values: spacing, sizes, thresholds
+
+**Design consideration**: Allow values to be expressed as functions or constants
+- Simple constants for fixed values (e.g., `hoverDebounce: 300`)
+- Functions for calculated values (e.g., `getMaxHeight: () => window.innerHeight * 0.8`)
+- Helps developers find both constant and calculated values in one place
+
+**Create**: `src/config/appConfig.ts`
+
+**Constants to centralize**:
+```typescript
+export const APP_CONFIG = {
+  // Timing constants (milliseconds)
+  timing: {
+    hoverDebounce: 300,      // Delay before showing preview on hover
+    lingerDuration: 1500,    // How long preview stays after unhover
+    upgradeHoverTime: 1500,  // Hover duration to upgrade preview to persistent box
+  },
+
+  // Element type colors
+  colors: {
+    class: 'blue',
+    enum: 'purple',
+    slot: 'green',
+    variable: 'orange',
+  },
+
+  // UI thresholds
+  thresholds: {
+    collapsibleListSize: 20,  // Show "...N more" for lists over this size
+    collapsedPreviewCount: 10, // How many items to show when collapsed
+  },
+
+  // Add other constants as discovered
+};
+```
+
+**Files to update**:
+- `src/components/RelationshipInfoBox.tsx` - Import timing constants
+- `src/components/DetailContent.tsx` - Import color constants
+- `src/components/Section.tsx` - Import color constants
+- Other component files using hard-coded colors/values
+
+**Benefits**:
+- Single source of truth for tuning behavior
+- Easier to experiment with different timing values
+- Prepares for future user preferences/settings
+- Documents significant constants in one place
+
+---
+
 ### Abstract Tree Rendering System
 
-**IMPORTANT**: Before starting this refactor, give a tour of how tree rendering currently works (Element tree structure, expansion state, rendering in components).
-
-[sg] converting DetailContent (currently DetailPanel) and other components to use the 
-new system might mean some significant simplification. but before we implement the system,
-fully specify its interface (meaning how it is used, not that it's a typescript interface).
-then we go into the components that use it and write the code that would use it and
-add comments to show the code that will be replaced.
+**IMPORTANT**: Before starting this refactor:
+1. Give a tour of how tree rendering currently works (Element tree structure, expansion state, rendering in components)
+2. Fully specify the interface (how it's used in practice, not just TypeScript definitions)
+3. Write actual production code directly in component files to verify the design
+4. Wrap this code in closures or make it inactive until ready to replace existing code
+5. Once abstraction is complete, remove old code and activate new code
 
 **Goal**: Extract tree rendering and expansion logic from Element into reusable abstractions that can be shared between Elements panel and info boxes (and future tree-like displays).
+
+**Why this matters**: Converting DetailContent and other components to use this system should result in significant simplification.
 
 **Current state**:
 - Element class has tree capabilities (parent, children, traverse, ancestorList)
@@ -231,6 +344,8 @@ add comments to show the code that will be replaced.
 
 **Related**: Slots Table Optimization task (Detail Panel Enhancements) shows hierarchical table example from another app - tree structure with indented rows, expandable sections, multiple columns. Info box inherited slots could use this pattern.
 
+**Note**: If helpful during implementation, the hierarchical table screenshot can be copied to `docs/images/` for reference.
+
 **Implementation approach**:
 1. Give tour of current tree rendering system
 2. Design tree abstraction (class? mixin? hooks?)
@@ -252,43 +367,17 @@ add comments to show the code that will be replaced.
 
 ### Link System Enhancement
 
-**Goal**: Refactor LinkOverlay to follow view/model separation + add hover tooltips
+**Current state** (mostly complete ✅):
+- ✅ `LinkData` interface defined in LinkOverlay.tsx
+- ✅ `LinkTooltipData` interface for hover information
+- ✅ Tooltip component showing relationship type, slot name, source/target
+- ✅ ElementHoverData interface for component hover contracts
+- ✅ Link highlighting on element hover
 
-**Components**:
-
-1. **LinkOverlay Refactoring** (architecture)
-   - Define `LinkData` interface in LinkOverlay.tsx (component defines contract)
-   - Properties: startId, endId, startColor, endColor, hoverData
-   - Element provides data via new method (adapts to component's needs)
-   - Remove direct element access from LinkOverlay component
-
-2. **Enhanced Link Hover Information** (feature)
-   - Tooltip or overlay showing:
-     - Relationship type (is_a, property, etc.)
-     - Slot name (for property relationships)
-     - Source element (name + type)
-     - Target element (name + type)
-     - Additional metadata as appropriate
-   - Add tooltip component that follows cursor or attaches to link
-   - Extract relationship details from Link object
-   - Style to be readable but not intrusive
-
-3. **Hover Handler Contracts** (architecture)
-   - Components define their own hover data interfaces (like SectionItemData)
-   - Example: `interface ElementHoverData { type: string; name: string; }` in component
-   - Element provides data that fits component's contract
-   - Remove opaque `{ type: string; name: string }` pattern
-
-**Current state**:
-- Links show basic info in console.log on hover
-- Components pass around hover data as opaque objects
-- LinkOverlay still accesses element properties directly
-
-**Files affected**:
-- `src/components/LinkOverlay.tsx` - Add tooltip, define LinkData interface
-- `src/utils/linkHelpers.ts` - Additional metadata extraction
-- `src/models/Element.ts` - Keep getRelationships(), possibly add getLinkData()
-- Various components - Define hover data interfaces
+**Remaining work**:
+- Review if LinkOverlay still directly accesses Element properties (should use Element methods)
+- Consider if additional metadata would be useful in tooltips
+- Verify all components using hover data have proper interface definitions
 
 ---
 
@@ -313,19 +402,15 @@ add comments to show the code that will be replaced.
 - Also look for other data in bdchm.yaml that isn't currently being captured
 
 **Slots Table Optimization**:
-- Verify: "DetailBox Slots table should put inherited slots at the top and referenced slots at the bottom"
-- Check if this is already the case or needs implementation
-- [sg] consider making it a tree or splitting the table into sections
-       possibly indenting slots under their section heading. make the sections
-       collapsible. maybe start with inherited slots collapsed
-- [sg] Example: I made a hierarchical table display for another app (see screenshot in conversation)
-       Tree structure with:
-       - Indented rows showing hierarchy (with expand/collapse controls)
-       - Multiple columns (Concept name, Levels below, Child/descendant concepts, Patients, Records, etc.)
-       - Expandable sections that reveal child rows
-       - Clear visual hierarchy through indentation
-       This pattern could work well for slots tables: inherited slots grouped by ancestor,
-       direct slots in their own group, each group collapsible, indented to show hierarchy
+- Slot order in class details is not currently correct - inherited slots should be at top, referenced slots at bottom
+- **Use Abstract Tree Rendering System** (once implemented):
+  - Add grouping layer to slots data structure:
+    - Group by ancestor (for inherited slots)
+    - Group for direct slots
+  - Each group becomes a tree node (collapsible)
+  - Start with inherited slots collapsed
+  - Abstract tree renderer handles display (indentation, expand/collapse, hierarchy)
+- No special display code needed - just restructure the data to fit tree abstraction
 
 **SlotCollection 2-Level Tree** (from Phase 6.4 Step 3.2):
 - Deferred - current flat SlotCollection is sufficient
@@ -348,12 +433,21 @@ add comments to show the code that will be replaced.
 - All component files using colors
 ---
 
-### [sg] Add user help
-- could open in a FloatingBox
-- for whole help, it could be a big box with TOC
-- contextual help could just open the relevant section, or open
-  the whole thing but scrolled to relevant section
-- review PROGRESS.md for stuff that could be good to include
+### User Help Documentation
+
+**Goal**: Create comprehensive user help system
+
+**Approach**:
+1. Start composing help content in a markdown file (before adding to app UI)
+2. Begin with content from README.md "For Users" section (after TOC)
+3. Focus on features that might not be obvious or could be confusing
+4. Review PROGRESS.md for additional material to include
+
+**UI Integration** (after content is ready):
+- Opens in FloatingBox
+- Full help: Large box with table of contents
+- Contextual help: Opens to relevant section (scrolled into view)
+- Can open entire help with section highlighted
 ---
 
 ## Future Work
@@ -366,9 +460,6 @@ add comments to show the code that will be replaced.
 - **Quick filter toggles**: Filter relationships by type (show/hide inheritance, slots, variables, etc.)
 
 ---
-
-### [sg] integrate TopMED variables
-
 
 ### Merge TESTING.md Files
 
