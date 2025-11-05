@@ -85,11 +85,18 @@ export default function RelationshipInfoBox({ element }: RelationshipInfoBoxProp
 
   const headerColor = getHeaderColor(element.type as ElementTypeId);
 
+  // Count relationships
+  const outgoingCount = (details.outgoing.inheritance ? 1 : 0) + details.outgoing.properties.length;
+  const incomingCount = details.incoming.subclasses.length + details.incoming.usedByAttributes.length + (details.incoming.variables > 0 ? 1 : 0);
+
   return (
     <div className="fixed top-4 right-4 w-[500px] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50 max-h-[80vh] flex flex-col">
       <div className={`${headerColor} px-4 py-2 rounded-t-lg border-b`}>
-        <h3 className="font-semibold text-white">
-          {details.elementName} relationships
+        <h3 className="font-semibold text-white flex items-center gap-2">
+          <span>{details.elementName} relationships</span>
+          <span className="text-sm font-normal opacity-90">
+            [↗ {outgoingCount} outgoing] [↙ {incomingCount} incoming]
+          </span>
         </h3>
       </div>
       <div className="p-4 overflow-y-auto">
