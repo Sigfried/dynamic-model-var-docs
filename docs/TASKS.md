@@ -30,88 +30,7 @@
 
 ## Next Up (Ordered)
 
-### Restore Data Interface Contracts (Phase 11) ✅ COMPLETED
-
-**Goal**: Fix architectural violations in App.tsx - restore proper contract-based separation where components define data needs, DataService provides data, and model layer adapts.
-
-**Problem**: App.tsx is directly accessing `modelData.collections` and importing from models layer, violating the contract pattern established in Phase 6.5.
-
-**Current violations**:
-1. Imports `ELEMENT_TYPES`, `getAllElementTypeIds`, `ElementTypeId` from models/ElementRegistry
-2. Directly calls `collection.getSectionData()` instead of using DataService
-3. Exposes model structure to view layer
-
-**Expected pattern** (from Phase 6.5):
-- Component defines data contract (e.g., `SectionData` interface in Section.tsx)
-- DataService provides method returning that data (e.g., `getAllSectionsData(position)`)
-- DataService internally accesses model layer (collections, Element instances)
-- App.tsx never imports from models/ or accesses collections directly
-
-**Implementation steps**:
-
-0. **Audit and revert violations** ✅ COMPLETED
-   - ✅ Checked commits from Phase 6.5 through current
-   - ✅ Verified Phase 6.5 contract pattern was correct (components define, collections provide)
-   - ✅ Identified that Phase 11 Step 0 (DataService) was incomplete, not wrong
-
-   **Audit findings**:
-   - Phase 6.5 correctly established contracts (SectionData, SectionItemData, ToggleButtonData)
-   - Phase 11 Step 0 created DataService for components (DetailContent, RelationshipInfoBox) ✅
-   - BUT left App.tsx with direct model access (incomplete work, not architectural violation)
-   - **No reversion needed** - just need to complete the DataService abstraction
-
-   **Current violations in App.tsx**:
-   - Line 10: Imports from models/ElementRegistry
-   - Lines 244-260: Calls `collection.getSectionData()` directly
-   - Lines 55-75: Accesses `ELEMENT_TYPES` directly for toggle buttons
-
-   **Conclusion**: Architecture is sound, just finish what Step 0 started
-
-1. **Add DataService methods for section data** ✅ COMPLETED
-   - ✅ Added `getAllSectionsData(position: 'left' | 'right'): Map<string, SectionData>`
-   - ✅ Returns Map<string, SectionData> where key is section ID ('class', 'enum', etc.)
-   - ✅ Internally calls `collection.getSectionData(position)` for each collection
-
-2. **Add DataService methods for toggle buttons** ✅ COMPLETED
-   - ✅ Added `getToggleButtonsData(): ToggleButtonData[]`
-   - ✅ Returns array of toggle button metadata
-   - ✅ Internally accesses ELEMENT_TYPES registry
-
-3. **Add DataService helper methods** ✅ COMPLETED
-   - ✅ `getAvailableItemTypes()` already exists (equivalent to getAllItemTypeIds)
-   - ✅ All necessary metadata methods now available
-
-4. **Update App.tsx** ✅ COMPLETED
-   - ✅ Removed imports from models/ElementRegistry
-   - ✅ Replaced `modelData.collections.forEach(...)` with `dataService.getAllSectionsData()`
-   - ✅ Using DataService for all model access
-   - ✅ No direct collection access remains
-
-5. **Update check-architecture.sh** ✅ COMPLETED
-   - ✅ Added check for App.tsx in Check 3 (model layer imports)
-   - ✅ App.tsx now included in architecture validation
-
-6. **Verify contracts end-to-end** ✅ COMPLETED
-   - ✅ Component defines interface (SectionData, ToggleButtonData)
-   - ✅ DataService provides data matching interface
-   - ✅ Model layer adapts via methods
-   - ✅ No component (including App.tsx) imports from models/
-
-**Files modified**:
-- ✅ src/services/DataService.ts - Added getAllSectionsData(), getToggleButtonsData()
-- ✅ src/App.tsx - Removed model imports, now uses DataService
-- ✅ scripts/check-architecture.sh - Extended checks to App.tsx
-
-**Success criteria** (all met):
-- ✅ App.tsx has zero imports from models/
-- ✅ App.tsx never accesses modelData.collections directly
-- ✅ npm run check-arch passes
-- ✅ npm run typecheck passes
-- ✅ All contracts flow: Component → DataService → Model
-
----
-
-### Unified Detail Box System (Phase 12)
+### Unified Detail Box System (Phase 12) ⭐ NEXT
 
 **Goal**: Extract dialog management from App.tsx, merge DetailDialog/DetailPanelStack into unified system, and implement transitory mode for FloatingBox - allowing any content to appear temporarily (auto-disappearing) and upgrade to persistent mode on user interaction.
 
@@ -390,29 +309,33 @@ Hover behavior depends on where cursor is positioned:
     **Testing checklist** (please add feedback below each item):
     1. Click element name in either panel → should open persistent floating box
        - [sg] feedback: i clicked on a couple items and the detail
-                 box headers are messed up: ![img_1.png](img_1.png)
+                 box headers are messed up: ![img_1.png](../img_1.png)
     2. Click same element again → should bring existing box to front (no duplicate)
        - [sg] feedback: works fine
     3. Hover over element → RelationshipInfoBox should appear
        - [sg] feedback: fine
+       - [sg] as of d13f8d5, these boxes all have gray headers now
     4. Hover over RelationshipInfoBox for 1.5s → should upgrade to persistent floating box
        - [sg] feedback: not working, it disappears. but sometimes (see image below)
               it gets stuck and will only go away when hovering on another item.
               ESC didn't work and it didn't get a close icon. i don't know how
               to replicate
+       - [sg] as of d13f8d5, still don't know how to replicate, but may be
+              associated with console error: Uncaught ReferenceError: setDisplayedItem is not defined
+                at RelationshipInfoBox.tsx:145:7
     5. Click on RelationshipInfoBox → should upgrade immediately
        - [sg] feedback: disappears
     6. Open multiple boxes → should cascade with offsets
        - [sg] feedback: cascades but boxes overflow out bottom of viewport
     7. Switch between dialog and stacked modes → boxes should reposition appropriately
-       - [sg] feedback: this is weird now. ![img_2.png](img_2.png)
+       - [sg] feedback: this is weird now. ![img_2.png](../img_2.png)
               detail boxes take whole width and relationship info isn't going away
     8. Drag, resize, close buttons → should work as before
        - [sg] feedback: yes for floating. still not for stacked
     9. ESC key → should close boxes (oldest first)
        - [sg] feedback: yes
     10. URL restoration → open some boxes, copy URL, open in new tab → boxes should restore
-       - [sg] feedback: works
+        - [sg] feedback: works
 
 4. **Delete old components**
     - Delete DetailDialog.tsx

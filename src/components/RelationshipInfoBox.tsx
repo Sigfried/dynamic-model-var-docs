@@ -142,7 +142,7 @@ export default function RelationshipInfoBox({ itemId, dataService, cursorPositio
 
     // Start linger timer when leaving the box
     lingerTimerRef.current = setTimeout(() => {
-      setDisplayedItem(null);
+      setDisplayedItemId(null);
     }, 1500);
   };
 
