@@ -147,11 +147,14 @@ function FloatingBox({
   const MIN_HEIGHT = 200;
 
   // Default position for floating boxes (cascade by index)
+  const defaultSize = { width: 900, height: 350 };
+  const cascadeY = window.innerHeight - 400 + (index * CASCADE_OFFSET);
+  // Ensure box doesn't go off bottom of viewport (leave 20px margin)
+  const maxY = window.innerHeight - defaultSize.height - 20;
   const defaultPosition = {
     x: 100 + (index * CASCADE_OFFSET),
-    y: window.innerHeight - 400 + (index * CASCADE_OFFSET)
+    y: Math.min(cascadeY, maxY)
   };
-  const defaultSize = { width: 900, height: 350 };
 
   const [position, setPosition] = useState(box.position ?? defaultPosition);
   const [size, setSize] = useState(box.size ?? defaultSize);

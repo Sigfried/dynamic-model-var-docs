@@ -377,10 +377,11 @@ Hover behavior depends on where cursor is positioned:
        - Architecture note: Color is correctly part of RelationshipData contract, not accessed by UI directly
        - Changed Element.getRelationshipData() in models/Element.ts
 
-    f. **Boxes overflow viewport bottom** (test #6)
-       - Cascade positioning causes boxes to go off-screen
-       - Need viewport bounds checking
-       - Affects: FloatingBoxManager initial positioning
+    f. **Boxes overflow viewport bottom** (test #6) ✅ FIXED
+       - Cascade positioning caused boxes to go off-screen when many boxes opened
+       - Root cause: Y position = windowHeight - 400 + (index * 40) with no bounds checking
+       - Fix: Added Math.min() to cap Y position at maxY = windowHeight - boxHeight - 20px margin
+       - Changed FloatingBoxManager.tsx defaultPosition calculation
 
     **Working correctly**:
     - ✅ Test #2: Duplicate detection and bring-to-front
