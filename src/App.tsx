@@ -103,7 +103,7 @@ function App() {
       id: `box-${nextBoxId}`,
       mode: 'persistent',
       metadata,
-      content: <DetailContent itemId={itemId} dataService={dataService} hideHeader={displayMode === 'stacked'} />,
+      content: <DetailContent itemId={itemId} dataService={dataService} hideHeader={true} />,
       itemId,
       position: position ?? defaultPosition,
       size: size ?? defaultSize
@@ -157,7 +157,7 @@ function App() {
       id: `box-${nextBoxId}`,
       mode: 'persistent',
       metadata,
-      content: <DetailContent itemId={hoveredItemId} dataService={dataService} hideHeader={displayMode === 'stacked'} />,
+      content: <DetailContent itemId={hoveredItemId} dataService={dataService} hideHeader={true} />,
       itemId: hoveredItemId,
       position,
       size: { width: 700, height: 400 }
@@ -206,7 +206,7 @@ function App() {
               id: `box-${boxIdCounter}`,
               mode: 'persistent',
               metadata,
-              content: <DetailContent itemId={itemId} dataService={dataService} hideHeader={displayMode === 'stacked'} />,
+              content: <DetailContent itemId={itemId} dataService={dataService} hideHeader={true} />,
               itemId,
               position: { x: dialogState.x, y: dialogState.y },
               size: { width: dialogState.width, height: dialogState.height }

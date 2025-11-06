@@ -341,10 +341,11 @@ Hover behavior depends on where cursor is positioned:
 
     **High Priority** (broken functionality):
 
-    a. **Detail box headers duplicated/split** (test #1)
+    a. **Detail box headers duplicated/split** (test #1) ✅ FIXED
        - Screenshot: img_1.png shows "Class: Condition" in header with "Condition" repeated below
-       - Should show just element name with type indicated by color
-       - Affects: DetailContent component in FloatingBox
+       - Root cause: DetailContent showing its own header while FloatingBox also shows header
+       - Fix: Always pass hideHeader={true} to DetailContent when in FloatingBox
+       - Changed 3 instances in App.tsx where DetailContent is created
 
     b. **RelationshipInfoBox upgrade not working** (tests #4, #5)
        - Hovering for 1.5s: box disappears instead of upgrading to persistent
@@ -369,6 +370,9 @@ Hover behavior depends on where cursor is positioned:
     e. **RelationshipInfoBox headers gray instead of colored** (test #3)
        - All hover-triggered RelationshipInfoBox headers now gray
        - Should use element type color (blue/purple/green/orange)
+          - [sg] element type color? that sounds like a violation.
+               the color should be part of the data contract interface
+               and be called boxColor or something
        - Regression after Phase 11
        - Affects: RelationshipInfoBox or DataService metadata
 
