@@ -419,7 +419,7 @@ function App() {
             />
           }
           rightPanelEmpty={rightSections.length === 0}
-          showSpacer={displayMode === 'dialog'}
+          showSpacer={displayMode === 'cascade'}
         />
 
         {/* SVG Link Overlay */}
@@ -430,7 +430,7 @@ function App() {
           hoveredItem={hoveredItem}
         />
 
-        {/* Floating Box Manager - handles both stacked and dialog modes */}
+        {/* Floating Box Manager - handles both stacked and cascade modes */}
         <FloatingBoxManager
           boxes={floatingBoxes}
           displayMode={displayMode}
@@ -440,7 +440,7 @@ function App() {
         />
 
         {/* Relationship Info Box (transitory, uses item position) - only in cascade mode */}
-        {displayMode === 'dialog' && (
+        {displayMode === 'cascade' && (
           <RelationshipInfoBox
             itemId={hoveredItemId}
             itemDomId={hoveredItemDomId}

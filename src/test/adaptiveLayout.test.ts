@@ -80,24 +80,24 @@ describe('determineDisplayMode', () => {
     expect(mode).toBe('stacked');
   });
 
-  it('returns "dialog" when remaining space is below threshold', () => {
+  it('returns "cascade" when remaining space is below threshold', () => {
     const mode = determineDisplayMode(SPACE_THRESHOLD - 1);
-    expect(mode).toBe('dialog');
+    expect(mode).toBe('cascade');
   });
 
-  it('returns "dialog" when remaining space is 0', () => {
+  it('returns "cascade" when remaining space is 0', () => {
     const mode = determineDisplayMode(0);
-    expect(mode).toBe('dialog');
+    expect(mode).toBe('cascade');
   });
 
-  it('returns "dialog" when remaining space is negative', () => {
+  it('returns "cascade" when remaining space is negative', () => {
     const mode = determineDisplayMode(-100);
-    expect(mode).toBe('dialog');
+    expect(mode).toBe('cascade');
   });
 
   it('accepts custom threshold', () => {
     const customThreshold = 800;
-    expect(determineDisplayMode(799, customThreshold)).toBe('dialog');
+    expect(determineDisplayMode(799, customThreshold)).toBe('cascade');
     expect(determineDisplayMode(800, customThreshold)).toBe('stacked');
     expect(determineDisplayMode(801, customThreshold)).toBe('stacked');
   });
@@ -114,7 +114,7 @@ describe('calculateDisplayMode', () => {
   it('returns "dialog" mode for narrow window with both panels', () => {
     // 1200px window - 450 - 450 - 160 = 140px remaining (< 600 threshold)
     const result = calculateDisplayMode(1200, 1, 1);
-    expect(result.mode).toBe('dialog');
+    expect(result.mode).toBe('cascade');
     expect(result.spaceInfo.remainingSpace).toBeLessThan(SPACE_THRESHOLD);
   });
 
@@ -153,7 +153,7 @@ describe('calculateDisplayMode', () => {
 
     // 1800 - 1060 = 740, which is < 800
     const result2 = calculateDisplayMode(1800, 1, 1, customThreshold);
-    expect(result2.mode).toBe('dialog');
+    expect(result2.mode).toBe('cascade');
   });
 });
 
@@ -163,9 +163,9 @@ describe('Real-world scenarios', () => {
     expect(result.mode).toBe('stacked');
   });
 
-  it('laptop screen (1366x768) with both panels should use dialog mode', () => {
+  it('laptop screen (1366x768) with both panels should use cascade mode', () => {
     const result = calculateDisplayMode(1366, 1, 1);
-    expect(result.mode).toBe('dialog');
+    expect(result.mode).toBe('cascade');
   });
 
   it('ultrawide monitor (2560x1440) with both panels should use stacked mode', () => {
@@ -173,9 +173,9 @@ describe('Real-world scenarios', () => {
     expect(result.mode).toBe('stacked');
   });
 
-  it('tablet landscape (1024x768) with both panels should use dialog mode', () => {
+  it('tablet landscape (1024x768) with both panels should use cascade mode', () => {
     const result = calculateDisplayMode(1024, 1, 1);
-    expect(result.mode).toBe('dialog');
+    expect(result.mode).toBe('cascade');
   });
 
   it('4K monitor (3840x2160) with both panels should use stacked mode', () => {

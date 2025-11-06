@@ -34,7 +34,7 @@ export interface FloatingBoxData {
 
 interface FloatingBoxManagerProps {
   boxes: FloatingBoxData[];
-  displayMode: 'dialog' | 'stacked';
+  displayMode: 'cascade' | 'stacked';
   onClose: (id: string) => void;
   onChange?: (id: string, position: { x: number; y: number }, size: { width: number; height: number }) => void;
   onBringToFront?: (id: string) => void;
@@ -98,7 +98,7 @@ export default function FloatingBoxManager({
     );
   }
 
-  // Dialog mode - floating draggable boxes
+  // Cascade mode - floating draggable boxes with multi-stack cascade positioning
   return (
     <>
       {boxes.map((box, index) => (
@@ -171,7 +171,7 @@ function FloatingBox({
   // Aim for bottom 1/3 to 1/4 of screen, ensuring at least minBoxesInStack fit
   const spaceNeededForMinBoxes = defaultSize.height + (minBoxesInStack * cascadeIncrement.y) + bottomMargin;
   const preferredBottomPortion = window.innerHeight / 3.5;
-  const cascadeStartY = window.innerHeight - Math.min(spaceNeededForMinBoxes, preferredBottomPortion);
+  const cascadeStartY = window.innerHeight - Math.max(spaceNeededForMinBoxes, preferredBottomPortion);
 
   const cascadeStart = {x: 100, y: cascadeStartY};
 
@@ -355,7 +355,7 @@ function FloatingBox({
     );
   }
 
-  // Dialog mode rendering (draggable, floating)
+  // Cascade mode rendering (draggable, floating, cascading positions)
   return (
     <div
       ref={boxRef}

@@ -12,7 +12,7 @@ interface UseLayoutStateResult {
   rightSections: string[];
   setLeftSections: (sections: string[]) => void;
   setRightSections: (sections: string[]) => void;
-  displayMode: 'stacked' | 'dialog';
+  displayMode: 'stacked' | 'cascade';
   showUrlHelp: boolean;
   setShowUrlHelp: (show: boolean) => void;
   showSaveConfirm: boolean;
@@ -25,7 +25,7 @@ interface UseLayoutStateResult {
 /**
  * Hook to manage panel layout state including:
  * - Left/right section configuration
- * - Display mode calculation (stacked vs dialog)
+ * - Display mode calculation (stacked vs cascade)
  * - Layout persistence (URL and localStorage)
  * - Save/reset/restore layout actions
  */
@@ -34,7 +34,7 @@ export function useLayoutState({ hasRestoredFromURL, getDialogStates }: UseLayou
   const initialState = getInitialState();
   const [leftSections, setLeftSections] = useState<string[]>(initialState.leftSections);
   const [rightSections, setRightSections] = useState<string[]>(initialState.rightSections);
-  const [displayMode, setDisplayMode] = useState<'stacked' | 'dialog'>('dialog');
+  const [displayMode, setDisplayMode] = useState<'stacked' | 'cascade'>('cascade');
   const [showUrlHelp, setShowUrlHelp] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [hasLocalStorage, setHasLocalStorage] = useState(false);

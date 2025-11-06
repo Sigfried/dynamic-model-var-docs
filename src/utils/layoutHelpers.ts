@@ -7,7 +7,7 @@ export const EMPTY_PANEL_WIDTH = 180;
 export const GUTTER_WIDTH = 160;
 export const SPACE_THRESHOLD = 600;
 
-export type DisplayMode = 'stacked' | 'dialog';
+export type DisplayMode = 'stacked' | 'cascade';
 
 export interface SpaceCalculation {
   windowWidth: number;
@@ -52,7 +52,7 @@ export function determineDisplayMode(
   remainingSpace: number,
   threshold: number = SPACE_THRESHOLD
 ): DisplayMode {
-  return remainingSpace >= threshold ? 'stacked' : 'dialog';
+  return remainingSpace >= threshold ? 'stacked' : 'cascade';
 }
 
 /**
