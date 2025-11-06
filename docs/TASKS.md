@@ -242,7 +242,655 @@ Question: Should `onSelectItem` be renamed to `onClickItem` since it describes t
 
 ## Next Up (Ordered)
 
-### Unified Detail Box System (Phase 12) ⭐ NEXT
+### Architecture Refactoring Implementation Plan ⭐ CURRENT WORK
+
+**Status**: Implementation plan for architectural improvements from decisions above
+
+**Token Budget**: ~62k/200k used, 138k remaining ✅
+
+---
+
+#### Summary of Architectural Decisions
+
+Based on Architecture & Refactoring Decisions section above:
+
+**1. ItemId Architecture**
+- Eliminate `getId(context)` - always return `this.name`
+- Create separate utility functions: `contextualizeId()`, `contextualizeLinkId()`
+- Collections treated as items (no special collectionId)
+- Component data abstraction layer: Item class hierarchy for nesting, contextualization, tree rendering
+
+**2. Link System Refactoring**
+- Simplify to `dataService.getAllPairs()` using existing relationship data
+- Link interface: `{ sourceItemId, targetItemId, sourceSide, targetSide }`
+- Eliminate type from Link interface
+- Split link rendering from link data management
+- Remove tooltips (hover highlighting sufficient, info boxes provide details)
+
+**3. Quick Wins**
+- Delete obsolete cursor position code (App.tsx:131)
+- Rename `parentName` → `parentId` throughout
+- Rename `onSelectItem` → `onClickItem`
+- URL state: use sectionIds with `~` delimiter (e.g., `sections=lc~re~rv`)
+
+**4. Slot Inheritance Simplification**
+- Add `slotPath` to SlotElement (full ancestry: "Parent.Child.GrandChild")
+- `collectAllSlots()` sorts by slotPath
+- `inheritedFrom` = last component of slotPath (if not current class)
+- Eliminates both recursive methods!
+
+**5. Relationship Grouping**
+- Apply grouping logic to all element types with tree structures (enum, variable)
+- Currently only class has grouping in `getRelationshipData()`
+
+---
+
+#### Implementation Order & Dependencies
+
+```
+Phase 1: Quick Wins (no dependencies)
+  ├─ 1a. Delete obsolete code
+  ├─ 1b. Rename parentName → parentId
+  └─ 1c. Rename onSelectItem → onClickItem
+
+Phase 2: Component Data Abstraction (foundation for everything)
+  ├─ 2a. Create Item base class
+  ├─ 2b. Create contextualization utilities
+  └─ 2c. Update DataService to return Item instances
+
+Phase 3: getId() Simplification (requires Phase 2)
+  ├─ 3a. Update components to use contextualization utilities
+  └─ 3b. Remove context parameter from getId()
+
+Phase 4: URL State Refactor (requires Phase 3)
+  └─ 4a. Switch to sectionIds with ~ delimiter
+
+Phase 5: Slot Inheritance (independent, can do anytime)
+  ├─ 5a. Add slotPath to SlotElement
+  ├─ 5b. Refactor collectAllSlots() to use slotPath
+  └─ 5c. Remove getInheritedFrom() method
+
+Phase 6: Relationship Grouping (independent)
+  └─ 6a. Apply to EnumElement and VariableElement
+
+Phase 7: LinkOverlay Refactor (big one, requires Phase 3)
+  ├─ 7a. Add getAllPairs() to DataService
+  ├─ 7b. Create new Link interface with sourceSide/targetSide
+  ├─ 7c. Create buildLink() function
+  ├─ 7d. Refactor LinkOverlay to use getAllPairs()
+  ├─ 7e. Remove tooltips
+  └─ 7f. Clean up linkHelpers.ts
+```
+
+---
+
+#### Phase 1: Quick Wins
+
+**1a. Delete obsolete cursor position code**
+
+Files: `src/App.tsx:131-134`
+
+```typescript
+// DELETE THESE LINES:
+const position = {  // [sg] obsolete code, right?
+  x: hoveredItem.cursorX,
+  y: hoveredItem.cursorY
+};
+```
+
+**1b. Rename parentName → parentId**
+
+Files to update:
+- `src/models/Element.ts:742` - ClassElement constructor
+- All references to `element.parentName` throughout codebase
+- Update to `element.parentId`
+
+Search command:
+```bash
+rg "parentName" src/ -t ts -t tsx
+```
+
+**1c. Rename onSelectItem → onClickItem**
+
+Files to update:
+- Component props interfaces
+- Component implementations
+- Callback handlers
+
+Search command:
+```bash
+rg "onSelectItem|onSelect" src/ -t ts -t tsx
+```
+
+**Testing**: Run `npm run typecheck` after each rename
+
+---
+
+#### Phase 2: Component Data Abstraction
+
+**Goal**: Create Item base class hierarchy for component data contracts
+
+**2a. Create Item base class**
+
+New file: `src/models/Item.ts`
+
+```typescript
+/**
+ * Item - Base class for component data contracts
+ *
+ * Provides:
+ * - ID contextualization
+ * - Nesting/containment
+ * - Common display properties
+ * - Tree rendering capabilities (future)
+ */
+export abstract class Item {
+  abstract itemId: string;
+  abstract displayName: string;
+
+  // Display properties from DataService
+  headerColor?: string;
+  sourceColor?: string;
+  badge?: number;
+
+  // Nesting support
+  children?: Item[];
+  parent?: Item;
+
+  // Contextualization - implemented by subclasses if needed
+  getContextualizedId(context?: string): string {
+    return contextualizeId({ id: this.itemId, context });
+  }
+}
+
+/**
+ * Specific Item subclasses
+ */
+export class ElementItem extends Item {
+  constructor(
+    public itemId: string,
+    public displayName: string,
+    public description?: string
+  ) {
+    super();
+  }
+}
+
+export class CollectionItem extends Item {
+  constructor(
+    public itemId: string,
+    public displayName: string,
+    public items: Item[]
+  ) {
+    super();
+  }
+}
+
+export class SectionItem extends Item {
+  constructor(
+    public itemId: string,
+    public displayName: string,
+    public items: Item[]
+  ) {
+    super();
+  }
+}
+```
+
+**2b. Create contextualization utilities**
+
+New file: `src/utils/idContextualization.ts`
+
+```typescript
+/**
+ * Contextualizes an item ID for DOM/component use
+ *
+ * Examples:
+ * - contextualizeId({ id: "Specimen", context: "left-panel" }) → "lp-Specimen"
+ * - contextualizeId({ id: "Condition", context: "right-panel" }) → "rp-Condition"
+ */
+export function contextualizeId({
+  id,
+  context
+}: {
+  id: string;
+  context?: string;
+}): string {
+  if (!context) return id;
+
+  // Map context to prefix
+  const prefixMap: Record<string, string> = {
+    'left-panel': 'lp',
+    'right-panel': 'rp',
+    'detail-box': 'db'
+  };
+
+  const prefix = prefixMap[context] || context;
+  return `${prefix}-${id}`;
+}
+
+/**
+ * Contextualizes a link ID from source and target item IDs
+ *
+ * Example:
+ * contextualizeLinkId({
+ *   sourceItemId: "Specimen",
+ *   targetItemId: "Container",
+ *   sourceSide: "left",
+ *   targetSide: "right"
+ * }) → "link-Specimen_Container-lr"
+ */
+export function contextualizeLinkId({
+  sourceItemId,
+  targetItemId,
+  sourceSide,
+  targetSide
+}: {
+  sourceItemId: string;
+  targetItemId: string;
+  sourceSide: 'left' | 'right';
+  targetSide: 'left' | 'right';
+}): string {
+  const direction = sourceSide === 'left' && targetSide === 'right' ? 'lr' : 'rl';
+  return `link-${sourceItemId}_${targetItemId}-${direction}`;
+}
+
+/**
+ * Extracts raw ID from contextualized ID
+ *
+ * Example: decontextualizeId("lp-Specimen") → "Specimen"
+ */
+export function decontextualizeId(contextualizedId: string): string {
+  const parts = contextualizedId.split('-');
+  if (parts.length > 1) {
+    // Remove prefix, return everything after first dash
+    return parts.slice(1).join('-');
+  }
+  return contextualizedId;
+}
+```
+
+**2c. Update DataService to return Item instances**
+
+Not implementing full Item conversion yet - keep current DataService contracts.
+We'll add Item conversion incrementally as we refactor components.
+
+**Testing**:
+- Unit tests for contextualization utilities
+- Verify Item classes instantiate correctly
+
+---
+
+#### Phase 3: getId() Simplification
+
+**3a. Update components to use contextualization utilities**
+
+Files to update:
+- Any component using DOM IDs based on element identity
+- Update to use `contextualizeId()` instead of `element.getId(context)`
+
+**3b. Remove context parameter from getId()**
+
+File: `src/models/Element.ts`
+
+```typescript
+// BEFORE:
+getId(context?: 'leftPanel' | 'rightPanel' | 'detailBox'): string {
+  const prefix = context === 'leftPanel' ? 'lp-' :
+                 context === 'rightPanel' ? 'rp-' :
+                 context === 'detailBox' ? 'db-' : '';
+  return prefix + this.name;
+}
+
+// AFTER:
+getId(): string {
+  return this.name;
+}
+```
+
+**Testing**:
+- `npm run typecheck` - ensure no context param usage remains
+- `npm run check-arch` - verify no violations
+- Manual UI testing - verify DOM IDs still work
+
+---
+
+#### Phase 4: URL State Refactor
+
+**4a. Switch to sectionIds with ~ delimiter**
+
+Current format: `l=c&r=e,v`
+New format: `sections=lc~re~rv`
+
+Files to update:
+- `src/hooks/useLayoutState.ts` - URL parsing/serialization
+- Update delimiter from `,` to `~`
+- Change from `l=...&r=...` to `sections=...`
+
+**Section ID format**: `{side}{type}`
+- `l` = left, `r` = right, `c` = center (future)
+- `c` = class, `e` = enum, `s` = slot, `v` = variable
+
+Examples:
+- `sections=lc` → left panel shows classes
+- `sections=lc~rv` → left panel classes, right panel variables
+- `sections=lc~re~rv` → left panel classes, right panel enums and variables
+
+**Testing**:
+- Verify URL updates on panel changes
+- Verify URL restore on page load
+- Check that `~` doesn't get URL-encoded
+
+---
+
+#### Phase 5: Slot Inheritance Simplification
+
+**5a. Add slotPath to SlotElement**
+
+File: `src/models/Element.ts` - ClassSlot interface/class
+
+```typescript
+interface ClassSlot {
+  name: string;
+  range: string;
+  // ... existing fields
+  slotPath?: string;  // NEW: "Parent.Child.GrandChild"
+}
+```
+
+**5b. Refactor collectAllSlots() to use slotPath**
+
+File: `src/models/Element.ts` - ClassElement.collectAllSlots()
+
+```typescript
+collectAllSlots(): Record<string, ClassSlot> {
+  const allSlots: Record<string, ClassSlot> = {};
+
+  // Get ancestor path for this class
+  const ancestorPath = this.getAncestorPath(); // "Parent.Child.GrandChild"
+
+  // Start with parent slots (if any)
+  if (this.parent) {
+    const parentSlots = (this.parent as ClassElement).collectAllSlots();
+    Object.assign(allSlots, parentSlots);
+  }
+
+  // Add this class's slots (override parent if same name)
+  for (const slot of this.classSlots) {
+    allSlots[slot.name] = {
+      ...slot,
+      slotPath: ancestorPath  // Set path to this class's ancestry
+    };
+  }
+
+  return allSlots;
+}
+
+// Helper method
+private getAncestorPath(): string {
+  const ancestors: string[] = [];
+  let current: Element | null = this;
+
+  while (current) {
+    ancestors.unshift(current.name);
+    current = current.parent;
+  }
+
+  return ancestors.join('.');
+}
+
+// Compute inheritedFrom from slotPath
+getInheritedFrom(slot: ClassSlot): string {
+  if (!slot.slotPath) return '';
+
+  const pathComponents = slot.slotPath.split('.');
+  const definingClass = pathComponents[pathComponents.length - 1];
+
+  // If defining class is this class, not inherited
+  if (definingClass === this.name) return '';
+
+  return definingClass;
+}
+```
+
+**5c. Remove old getInheritedFrom() method**
+
+Delete the recursive version from ClassElement.
+
+**Testing**:
+- Verify slot inheritance displays correctly in UI
+- Check that inherited slots show correct "from" annotation
+- Verify sorting by slotPath groups slots by ancestry
+
+---
+
+#### Phase 6: Relationship Grouping
+
+**6a. Apply grouping to EnumElement and VariableElement**
+
+File: `src/models/Element.ts`
+
+Currently only ClassElement has grouping in `getRelationshipData()`.
+Apply same pattern to EnumElement and VariableElement.
+
+**EnumElement grouping**:
+- Group incoming usages by relationship type
+- Group by source element type
+
+**VariableElement grouping**:
+- Group by variable category (if applicable)
+- Group by relationship type
+
+Review ClassElement.getRelationshipData() implementation and apply pattern.
+
+**Testing**:
+- Verify enum detail boxes show grouped relationships
+- Verify variable detail boxes show grouped relationships
+
+---
+
+#### Phase 7: LinkOverlay Refactor
+
+**7a. Add getAllPairs() to DataService**
+
+File: `src/services/DataService.ts`
+
+```typescript
+interface LinkPair {
+  sourceItemId: string;
+  targetItemId: string;
+  sourceSide: 'left' | 'right';
+  targetSide: 'left' | 'right';
+}
+
+class DataService {
+  /**
+   * Get all relationship pairs between items in source and target sets
+   *
+   * Uses existing incoming/outgoing relationships on elements.
+   * Much simpler than nested loops through types and names.
+   */
+  getAllPairs({
+    sourceFilter,
+    targetFilter,
+    sourceSide,
+    targetSide
+  }: {
+    sourceFilter: string[];  // itemIds
+    targetFilter: string[];  // itemIds
+    sourceSide: 'left' | 'right';
+    targetSide: 'left' | 'right';
+  }): LinkPair[] {
+    const pairs: LinkPair[] = [];
+    const targetSet = new Set(targetFilter);
+
+    for (const sourceItemId of sourceFilter) {
+      const element = this.modelData.allElements.get(sourceItemId);
+      if (!element) continue;
+
+      // Check outgoing relationships
+      const relationships = element.computeOutgoingRelationships();
+
+      for (const rel of relationships) {
+        const targetItemId = rel.target;
+
+        // Only include if target is in target filter
+        if (targetSet.has(targetItemId)) {
+          pairs.push({
+            sourceItemId,
+            targetItemId,
+            sourceSide,
+            targetSide
+          });
+        }
+      }
+    }
+
+    return pairs;
+  }
+}
+```
+
+**7b. Create new Link interface**
+
+File: `src/utils/linkHelpers.ts` (or new file)
+
+```typescript
+export interface Link {
+  id: string;  // From contextualizeLinkId()
+  sourceItemId: string;
+  targetItemId: string;
+  sourceSide: 'left' | 'right';
+  targetSide: 'left' | 'right';
+
+  // Rendering properties (calculated from DOM positions)
+  sourceRect?: DOMRect;
+  targetRect?: DOMRect;
+
+  // Display properties
+  highlighted?: boolean;
+}
+```
+
+**7c. Create buildLink() function**
+
+```typescript
+function buildLink(
+  pair: LinkPair,
+  dataService: DataService
+): Link {
+  const link: Link = {
+    id: contextualizeLinkId({
+      sourceItemId: pair.sourceItemId,
+      targetItemId: pair.targetItemId,
+      sourceSide: pair.sourceSide,
+      targetSide: pair.targetSide
+    }),
+    sourceItemId: pair.sourceItemId,
+    targetItemId: pair.targetItemId,
+    sourceSide: pair.sourceSide,
+    targetSide: pair.targetSide
+  };
+
+  // Get DOM rects for rendering
+  const sourceElement = document.getElementById(
+    contextualizeId({ id: pair.sourceItemId, context: `${pair.sourceSide}-panel` })
+  );
+  const targetElement = document.getElementById(
+    contextualizeId({ id: pair.targetItemId, context: `${pair.targetSide}-panel` })
+  );
+
+  if (sourceElement) link.sourceRect = sourceElement.getBoundingClientRect();
+  if (targetElement) link.targetRect = targetElement.getBoundingClientRect();
+
+  return link;
+}
+```
+
+**7d. Refactor LinkOverlay to use getAllPairs()**
+
+File: `src/components/LinkOverlay.tsx`
+
+Simplify from nested type/name loops to:
+
+```typescript
+function LinkOverlay({ dataService, leftSections, rightSections }: Props) {
+  const leftItemIds = leftSections.map(s => s.itemId);
+  const rightItemIds = rightSections.map(s => s.itemId);
+
+  // Get all pairs in both directions
+  const lrPairs = dataService.getAllPairs({
+    sourceFilter: leftItemIds,
+    targetFilter: rightItemIds,
+    sourceSide: 'left',
+    targetSide: 'right'
+  });
+
+  const rlPairs = dataService.getAllPairs({
+    sourceFilter: rightItemIds,
+    targetFilter: leftItemIds,
+    sourceSide: 'right',
+    targetSide: 'left'
+  });
+
+  // Build links
+  const links = [
+    ...lrPairs.map(p => buildLink(p, dataService)),
+    ...rlPairs.map(p => buildLink(p, dataService))
+  ];
+
+  // Render SVG paths
+  return (
+    <svg className="link-overlay">
+      {links.map(link => (
+        <LinkPath key={link.id} link={link} />
+      ))}
+    </svg>
+  );
+}
+```
+
+**7e. Remove tooltips**
+
+Delete tooltip rendering code from LinkOverlay.
+Keep hover highlighting (use `hoveredLinks` state).
+
+**7f. Clean up linkHelpers.ts**
+
+Remove import of `Relationship` from models/Element.
+Update to use DataService contracts only.
+
+**Testing**:
+- Verify all links render correctly
+- Check hover highlighting works
+- Verify no tooltips appear
+- Check performance (should be faster!)
+- Run `npm run check-arch` - no violations
+
+---
+
+#### Testing Checkpoints
+
+**After each phase**:
+1. `npm run typecheck` - no TypeScript errors
+2. `npm run check-arch` - no architecture violations
+3. `npm run test` - all tests pass (update tests as needed)
+4. Manual UI testing - verify functionality works
+5. Check console for errors/warnings
+
+**Rollback points**:
+- Each phase is a separate commit
+- Can revert individual phases if issues found
+
+**Final testing** (after all phases):
+- Full smoke test checklist (from TASKS.md template)
+- Performance testing (link rendering, panel switching)
+- Cross-browser testing
+- URL state persistence testing
+
+---
+
+### Unified Detail Box System (Phase 12) ✅ COMPLETED
 
 **Goal**: Extract dialog management from App.tsx, merge DetailDialog/DetailPanelStack into unified system, and implement transitory mode for FloatingBox - allowing any content to appear temporarily (auto-disappearing) and upgrade to persistent mode on user interaction.
 
