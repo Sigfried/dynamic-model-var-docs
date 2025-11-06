@@ -48,11 +48,13 @@ export default function RelationshipInfoBox({ itemId, dataService, cursorPositio
 
   // Keep cursor position ref updated
   useEffect(() => {
+    console.log('[RelationshipInfoBox] cursorPosition updated:', cursorPosition);
     cursorPositionRef.current = cursorPosition;
   }, [cursorPosition]);
 
   // Debounced hover effect
   useEffect(() => {
+    console.log('[RelationshipInfoBox] Effect triggered - itemId:', itemId, 'displayedItemId:', displayedItemId);
     // Clear any existing timers
     if (hoverTimerRef.current) {
       clearTimeout(hoverTimerRef.current);
@@ -65,11 +67,14 @@ export default function RelationshipInfoBox({ itemId, dataService, cursorPositio
 
     if (itemId) {
       // Item hovered - show after short delay (ignore quick pass-overs)
+      console.log('[RelationshipInfoBox] Starting hover timer for:', itemId);
       hoverTimerRef.current = setTimeout(() => {
+        console.log('[RelationshipInfoBox] Hover timer fired - itemId:', itemId, 'cursorPositionRef.current:', cursorPositionRef.current);
         setDisplayedItemId(itemId);
         // Position box in white space to the right of all visible panels
         const currentCursorPosition = cursorPositionRef.current;
         if (currentCursorPosition) {
+          console.log('[RelationshipInfoBox] Positioning box at:', currentCursorPosition);
           const boxWidth = 500;
           const maxBoxHeight = window.innerHeight * 0.8; // max-h-[80vh]
 
@@ -105,10 +110,14 @@ export default function RelationshipInfoBox({ itemId, dataService, cursorPositio
             );
           }
 
-          setBoxPosition({
+          const finalPosition = {
             x: xPosition,
             y: Math.max(10, yPosition) // Ensure at least 10px from top
-          });
+          };
+          console.log('[RelationshipInfoBox] Setting box position:', finalPosition);
+          setBoxPosition(finalPosition);
+        } else {
+          console.warn('[RelationshipInfoBox] No cursor position available! Cannot position box.');
         }
       }, 300);
     } else if (displayedItemId) {
@@ -166,7 +175,14 @@ export default function RelationshipInfoBox({ itemId, dataService, cursorPositio
     }
   };
 
-  if (!displayedItemId || !dataService) return null;
+  if (!displayedItemId || !dataService) {
+    if (itemId && !displayedItemId) {
+      console.log('[RelationshipInfoBox] Not rendering: itemId exists but displayedItemId is null (timer not fired yet)');
+    }
+    return null;
+  }
+
+  console.log('[RelationshipInfoBox] RENDERING for itemId:', displayedItemId, 'at position:', boxPosition);
 
   // Get relationship data from data service
   const details = dataService.getRelationships(displayedItemId);
