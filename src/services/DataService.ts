@@ -14,7 +14,9 @@
 import type { ModelData } from '../types';
 import type { DetailData, Relationship } from '../models/Element';
 import type { ElementTypeId } from '../models/ElementRegistry';
-import { ELEMENT_TYPES } from '../models/ElementRegistry';
+import { ELEMENT_TYPES, getAllElementTypeIds } from '../models/ElementRegistry';
+import type { ToggleButtonData } from '../components/ItemsPanel';
+import type { SectionData } from '../components/Section';
 
 export interface FloatingBoxMetadata {
   title: string;
@@ -139,5 +141,35 @@ export class DataService {
   getColorForItemType(typeId: string): string {
     const metadata = ELEMENT_TYPES[typeId as ElementTypeId];
     return metadata?.color.hex ?? '#6b7280'; // gray-500 fallback
+  }
+
+  /**
+   * Get toggle button data for all item types
+   * Returns array of toggle button metadata
+   */
+  getToggleButtonsData(): ToggleButtonData[] {
+    return getAllElementTypeIds().map(typeId => {
+      const metadata = ELEMENT_TYPES[typeId];
+      return {
+        id: typeId,
+        icon: metadata.icon,
+        label: metadata.pluralLabel,
+        activeColor: metadata.color.toggleActive,
+        inactiveColor: metadata.color.toggleInactive
+      };
+    });
+  }
+
+  /**
+   * Get section data for all collections
+   * @param position - 'left' or 'right' panel position
+   * Returns Map where key is section ID (type ID) and value is SectionData
+   */
+  getAllSectionsData(position: 'left' | 'right'): Map<string, SectionData> {
+    const map = new Map<string, SectionData>();
+    this.modelData.collections.forEach((collection, typeId) => {
+      map.set(typeId, collection.getSectionData(position));
+    });
+    return map;
   }
 }

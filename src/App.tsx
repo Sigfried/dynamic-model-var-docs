@@ -7,7 +7,6 @@ import PanelLayout from './components/PanelLayout';
 import LinkOverlay from './components/LinkOverlay';
 import RelationshipInfoBox from './components/RelationshipInfoBox';
 import { generatePresetURL, getInitialState, type DialogState } from './utils/statePersistence';
-import { ELEMENT_TYPES, getAllElementTypeIds, type ElementTypeId } from './models/ElementRegistry';
 import { useModelData } from './hooks/useModelData';
 import { useLayoutState } from './hooks/useLayoutState';
 import { DataService } from './services/DataService';
@@ -226,38 +225,19 @@ function App() {
   }, [dataService, hasRestoredFromURL, displayMode]);
 
 
-  // Build toggle button data from ELEMENT_TYPES registry (must be before early returns)
+  // Build toggle button data from DataService (must be before early returns)
   const toggleButtons = useMemo<ToggleButtonData[]>(() => {
-    return getAllElementTypeIds().map(typeId => {
-      const metadata = ELEMENT_TYPES[typeId];
-      return {
-        id: typeId,
-        icon: metadata.icon,
-        label: metadata.pluralLabel,
-        activeColor: metadata.color.toggleActive,
-        inactiveColor: metadata.color.toggleInactive
-      };
-    });
-  }, []);
+    return dataService?.getToggleButtonsData() ?? [];
+  }, [dataService]);
 
   // Build section data maps for left and right panels (must be before early returns)
   const leftSectionData = useMemo<Map<string, SectionData>>(() => {
-    if (!modelData) return new Map();
-    const map = new Map<string, SectionData>();
-    modelData.collections.forEach((collection, typeId) => {
-      map.set(typeId, collection.getSectionData('left'));
-    });
-    return map;
-  }, [modelData]);
+    return dataService?.getAllSectionsData('left') ?? new Map();
+  }, [dataService]);
 
   const rightSectionData = useMemo<Map<string, SectionData>>(() => {
-    if (!modelData) return new Map();
-    const map = new Map<string, SectionData>();
-    modelData.collections.forEach((collection, typeId) => {
-      map.set(typeId, collection.getSectionData('right'));
-    });
-    return map;
-  }, [modelData]);
+    return dataService?.getAllSectionsData('right') ?? new Map();
+  }, [dataService]);
 
   if (loading) {
     return (

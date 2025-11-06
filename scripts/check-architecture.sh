@@ -45,18 +45,18 @@ else
 fi
 
 # Check 3: Model layer imports in components (should not import from models/ at all)
-echo "📋 Check 3: Model layer imports in src/components/"
-element_imports=$(rg "from ['\"].*models/" src/components/ --glob '*.tsx' --glob '*.ts' --glob '!*.test.*' --glob '!*.spec.*' 2>/dev/null || true)
+echo "📋 Check 3: Model layer imports in src/components/ and src/App.tsx"
+element_imports=$(rg "from ['\"].*models/" src/components/ src/App.tsx --glob '*.tsx' --glob '*.ts' --glob '!*.test.*' --glob '!*.spec.*' 2>/dev/null || true)
 
 if [ -n "$element_imports" ]; then
-  echo "❌ VIOLATION: Found imports from models/ in components:"
+  echo "❌ VIOLATION: Found imports from models/ in UI code:"
   echo "$element_imports"
   echo ""
   echo "💡 TIP: UI should only import from DataService, never from models/ (not even types)"
   echo ""
   violations_found=$((violations_found + 1))
 else
-  echo "✅ PASS: No model layer imports in components"
+  echo "✅ PASS: No model layer imports in UI components or App.tsx"
   echo ""
 fi
 

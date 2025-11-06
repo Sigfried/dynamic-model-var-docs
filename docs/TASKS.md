@@ -30,7 +30,7 @@
 
 ## Next Up (Ordered)
 
-### Restore Data Interface Contracts (Phase 11) ⭐ NEXT
+### Restore Data Interface Contracts (Phase 11) ✅ COMPLETED
 
 **Goal**: Fix architectural violations in App.tsx - restore proper contract-based separation where components define data needs, DataService provides data, and model layer adapts.
 
@@ -49,48 +49,60 @@
 
 **Implementation steps**:
 
-0. **Audit and revert violations** ⭐ START HERE
-   - Check this commit and last few commits for changes that violate contract principles
-   - Look back to Phase 6.5 implementation to see if contracts were done correctly
-   - Revert code that strayed from contract pattern without losing actual progress
-   - Document what was reverted and why
+0. **Audit and revert violations** ✅ COMPLETED
+   - ✅ Checked commits from Phase 6.5 through current
+   - ✅ Verified Phase 6.5 contract pattern was correct (components define, collections provide)
+   - ✅ Identified that Phase 11 Step 0 (DataService) was incomplete, not wrong
 
-1. **Add DataService methods for section data**
-   - Add `getAllSectionsData(position: 'left' | 'right'): Map<string, SectionData>`
-   - Returns Map<string, SectionData> where key is section ID ('class', 'enum', etc.)
-   - Internally calls `collection.getSectionData(position)` for each collection
+   **Audit findings**:
+   - Phase 6.5 correctly established contracts (SectionData, SectionItemData, ToggleButtonData)
+   - Phase 11 Step 0 created DataService for components (DetailContent, RelationshipInfoBox) ✅
+   - BUT left App.tsx with direct model access (incomplete work, not architectural violation)
+   - **No reversion needed** - just need to complete the DataService abstraction
 
-2. **Add DataService methods for toggle buttons**
-   - Add `getToggleButtonsData(): ToggleButtonData[]`
-   - Returns array of toggle button metadata
-   - Internally accesses ELEMENT_TYPES registry
+   **Current violations in App.tsx**:
+   - Line 10: Imports from models/ElementRegistry
+   - Lines 244-260: Calls `collection.getSectionData()` directly
+   - Lines 55-75: Accesses `ELEMENT_TYPES` directly for toggle buttons
 
-3. **Add DataService helper methods**
-   - Add `getAllItemTypeIds(): string[]` (already exists as getAvailableItemTypes)
-   - Any other metadata UI needs without knowing about model structure
+   **Conclusion**: Architecture is sound, just finish what Step 0 started
 
-4. **Update App.tsx**
-   - Remove imports from models/ElementRegistry
-   - Replace `modelData.collections.forEach(...)` with `dataService.getAllSectionsData()`
-   - Use DataService for all model access
-   - Verify no direct collection access remains
+1. **Add DataService methods for section data** ✅ COMPLETED
+   - ✅ Added `getAllSectionsData(position: 'left' | 'right'): Map<string, SectionData>`
+   - ✅ Returns Map<string, SectionData> where key is section ID ('class', 'enum', etc.)
+   - ✅ Internally calls `collection.getSectionData(position)` for each collection
 
-5. **Update check-architecture.sh**
-   - Add check for App.tsx specifically (it's allowed to import DataService but not models/)
-   - Or add App.tsx to the components/ check scope
+2. **Add DataService methods for toggle buttons** ✅ COMPLETED
+   - ✅ Added `getToggleButtonsData(): ToggleButtonData[]`
+   - ✅ Returns array of toggle button metadata
+   - ✅ Internally accesses ELEMENT_TYPES registry
 
-6. **Verify contracts end-to-end**
-   - Component defines interface
-   - DataService provides data matching interface
-   - Model layer adapts via methods
-   - No component (including App.tsx) imports from models/
+3. **Add DataService helper methods** ✅ COMPLETED
+   - ✅ `getAvailableItemTypes()` already exists (equivalent to getAllItemTypeIds)
+   - ✅ All necessary metadata methods now available
 
-**Files to modify**:
-- src/services/DataService.ts - Add getAllSectionsData(), getToggleButtonsData()
-- src/App.tsx - Remove model imports, use DataService
-- scripts/check-architecture.sh - Extend checks to App.tsx
+4. **Update App.tsx** ✅ COMPLETED
+   - ✅ Removed imports from models/ElementRegistry
+   - ✅ Replaced `modelData.collections.forEach(...)` with `dataService.getAllSectionsData()`
+   - ✅ Using DataService for all model access
+   - ✅ No direct collection access remains
 
-**Success criteria**:
+5. **Update check-architecture.sh** ✅ COMPLETED
+   - ✅ Added check for App.tsx in Check 3 (model layer imports)
+   - ✅ App.tsx now included in architecture validation
+
+6. **Verify contracts end-to-end** ✅ COMPLETED
+   - ✅ Component defines interface (SectionData, ToggleButtonData)
+   - ✅ DataService provides data matching interface
+   - ✅ Model layer adapts via methods
+   - ✅ No component (including App.tsx) imports from models/
+
+**Files modified**:
+- ✅ src/services/DataService.ts - Added getAllSectionsData(), getToggleButtonsData()
+- ✅ src/App.tsx - Removed model imports, now uses DataService
+- ✅ scripts/check-architecture.sh - Extended checks to App.tsx
+
+**Success criteria** (all met):
 - ✅ App.tsx has zero imports from models/
 - ✅ App.tsx never accesses modelData.collections directly
 - ✅ npm run check-arch passes
@@ -330,35 +342,14 @@ Hover behavior depends on where cursor is positioned:
     - ✅ Deleted old components (DetailDialog, DetailPanelStack, useDialogState)
     - ✅ Create check-architecture.sh script
     - ✅ Add npm script `"check-arch": "bash scripts/check-architecture.sh"`
-    - ⚠️  Architecture violations: 3 remaining (see Step 0a below)
+    - ✅ All architecture violations fixed
     - ⏭️  Update tests to use DataService pattern (deferred)
 
-    **Status**: Main refactoring complete! Minor violations remain (see Step 0a)
+    **Status**: Main refactoring complete! All architecture checks passing.
 
-0a. **Fix remaining architecture violations** (TODO - NEXT)
-    - **Current violations** (from `npm run check-arch`):
-      ```
-      ❌ 3 VIOLATION(S):
-      1. 'element' variable/parameter references (mostly comments, some real)
-      2. 'elementType' references in 4 files
-      3. Element class imports in LinkOverlay.tsx
-      ```
-
-    **Quick fixes** (5 min):
-    - DetailContent.tsx: `elementType` parameter → `itemType` in renderCell()
-    - useElementHover.ts: `element` in callback type → `item`
-    - Comments: Update terminology in DetailTable, Section, hooks (just documentation)
-
-    **LinkOverlay.tsx refactoring** (major task - 30+ min):
-    - Currently uses Element instances directly: `collection.getAllElements().forEach(element => ...)`
-    - Uses Element methods: `element.getRelationships()`
-    - Needs DataService refactoring similar to other components
-    - Also affects Section.tsx DOM attributes (`data-element-type`, `data-element-name`)
-
-    **Dependencies**: LinkOverlay needs the DOM attributes to work, so:
-    - Fix quick parameter renames first
-    - LinkOverlay + Section.tsx DOM attributes together as one task
-    - After: Run `npm run check-arch` to verify zero violations
+0a. **Fix remaining architecture violations** ✅ COMPLETED
+    - All architecture checks now pass (`npm run check-arch`)
+    - No violations found in components, hooks, or App.tsx
 
 1. **✅ Create FloatingBoxManager.tsx** (COMPLETED)
     - ✅ Extract openDialogs array management from App.tsx
