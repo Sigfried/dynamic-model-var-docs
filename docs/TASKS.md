@@ -306,42 +306,38 @@ Hover behavior depends on where cursor is positioned:
     - ✅ TypeScript type checking passes
     - ✅ Fixed initialization order bugs (handleNavigate, hoveredElementInstance)
 
-    **Testing checklist** (please add feedback below each item):
-    1. Click element name in either panel → should open persistent floating box
-       - [sg] feedback: i clicked on a couple items and the detail
-                 box headers are messed up: ![img_1.png](../img_1.png)
-    2. Click same element again → should bring existing box to front (no duplicate)
-       - [sg] feedback: works fine
-    3. Hover over element → RelationshipInfoBox should appear
-       - [sg] feedback: fine
-       - [sg] as of d13f8d5, these boxes all have gray headers now
-    4. Hover over RelationshipInfoBox for 1.5s → should upgrade to persistent floating box
-       - [sg] feedback: not working, it disappears. but sometimes (see image below)
-              it gets stuck and will only go away when hovering on another item.
-              ESC didn't work and it didn't get a close icon. i don't know how
-              to replicate
-       - [sg] as of d13f8d5, still don't know how to replicate, but may be
-              associated with console error: Uncaught ReferenceError: setDisplayedItem is not defined
-                at RelationshipInfoBox.tsx:145:7
-    5. Click on RelationshipInfoBox → should upgrade immediately
-       - [sg] feedback: disappears
-    6. Open multiple boxes → should cascade with offsets
-       - [sg] feedback: cascades but boxes overflow out bottom of viewport
-    7. Switch between dialog and stacked modes → boxes should reposition appropriately
-       - [sg] feedback: this is weird now. ![img_2.png](../img_2.png)
-              detail boxes take whole width and relationship info isn't going away
-    8. Drag, resize, close buttons → should work as before
-       - [sg] feedback: yes for floating. still not for stacked
-    9. ESC key → should close boxes (oldest first)
-       - [sg] feedback: yes
-    10. URL restoration → open some boxes, copy URL, open in new tab → boxes should restore
-        - [sg] feedback: works
+    <details>
+    <summary><b>Initial Testing Checklist (Phase 12 implementation)</b></summary>
+
+    1. ✅ Click element name → Opens persistent floating box
+       - ❌ Bug found: Headers duplicated (img_1.png) → Fixed in 4a
+    2. ✅ Click same element again → Brings existing box to front (no duplicate)
+    3. ⚠️ Hover over element → RelationshipInfoBox appears
+       - ❌ Bug found (d13f8d5): Gray headers instead of colored → Fixed in 4e
+    4. ❌ Hover over RelationshipInfoBox 1.5s → Should upgrade to persistent
+       - Bug: Disappears instead of upgrading → Fixed in 4b
+       - Bug: Sometimes gets stuck, no close button, ESC doesn't work
+       - Associated with: `setDisplayedItem is not defined` error at RelationshipInfoBox.tsx:145:7
+    5. ❌ Click on RelationshipInfoBox → Should upgrade immediately
+       - Bug: Disappears instead of upgrading → Fixed in 4b
+    6. ⚠️ Open multiple boxes → Cascade with offsets
+       - ❌ Bug: Boxes overflow bottom of viewport → Fixed in 4f
+    7. ❌ Switch between modes → Boxes reposition appropriately
+       - Bug: Stacked mode shows RelationshipInfoBox (img_2.png) → Fixed in 4c
+       - Bug: Detail boxes take full width
+    8. ⚠️ Drag, resize, close buttons
+       - ✅ Working for floating mode
+       - ❌ Not working for stacked mode → Noted in 4d
+    9. ✅ ESC key → Closes boxes (oldest first)
+    10. ✅ URL restoration → Boxes restore correctly
+
+    </details>
 
 4. **Fix bugs found in testing**
 
     **High Priority** (broken functionality):
 
-    a. **Detail box headers duplicated/split** (test #1) ✅ FIXED
+    1. **Detail box headers duplicated/split** (test #1) ✅ FIXED
        - Screenshot: img_1.png shows "Class: Condition" in header with "Condition" repeated below
        - Root cause: DetailContent showing its own header while FloatingBox also shows header
        - Fix: Always pass hideHeader={true} to DetailContent when in FloatingBox
@@ -349,7 +345,7 @@ Hover behavior depends on where cursor is positioned:
 
     **Phase 12 Hover Fixes** ✅ COMPLETED
 
-    f. **Hover not working deterministically** (from extended testing)
+    2. **Hover not working deterministically** (from extended testing)
        - Root cause: Cursor position tracking causing non-deterministic behavior
        - Fix: Complete rewrite to use item DOM position instead of cursor tracking
        - Changes:
@@ -360,42 +356,68 @@ Hover behavior depends on where cursor is positioned:
          - Box now centers vertically on hovered item with viewport clamping
        - Result: Hover works deterministically - same item always shows box in same position
 
-    g. **Architecture violations fixed** ✅ COMPLETED
+    3. **Architecture violations fixed** ✅ COMPLETED
        - Fixed: `elementDomId` → `itemDomId` (violated "element" terminology check)
        - Fixed: All "element" references changed to "item" or "DOM node" in UI layer
        - All architecture checks now pass
 
-    h. **Cascade stacks not working** ✅ FIXED
+    5. **Cascade stacks not working** ✅ FIXED
        - Root cause: `handleOpenFloatingBox` was calculating position itself instead of letting FloatingBoxManager's cascade algorithm handle it
        - Fix: Removed default position calculation in App.tsx (lines 88-106)
        - Now boxes created with `position: undefined, size: undefined` (unless restoring from URL)
        - FloatingBoxManager's multi-stack cascade algorithm (lines 148-190) now handles all positioning
        - **⚠️ KNOWN ISSUE**: Cascade boxes are moving upwards (Y increment should be negative?)
 
+    <details>
+    <summary><b>UI Test Results (c893c43)</b></summary>
+
+    **Test Date**: 2025-11-06
+
+    1. ✅ **Architecture checks**: All passing
+    2. ✅ **Click item → opens detail box**: Working in cascade mode
+    3. ✅ **Click same item → brings to front**: Working, no duplicates
+    4. ✅ **ESC closes boxes**: Working in both cascade and stacked modes
+    5. ⚠️ **Hover positioning**: Working but NOT centered on item
+       - Box appears near top of item, not vertically centered
+       - Minor positioning difference, functional but not ideal
+    6. ❌ **Cascade direction**: Still cascading UPWARD (should go downward)
+       - TODO: Request screenshot when fixing this
+    7. ❌ **No hover in stacked mode**: RelationshipInfoBox not appearing
+       - Expected: Should not show in stacked mode (by design)
+       - Status: Correct behavior
+    8. ❌ **Stacked mode not draggable**: Boxes fixed in stacked mode
+       - Expected: All boxes should be draggable per architecture docs
+       - Status: Bug, needs fix (task #5)
+
+    </details>
+
     **Next Steps (Priority Order)**:
 
     1. **Fix cascade direction** ⭐ NEXT
-       - Boxes cascading upward instead of downward
+       - Status: ❌ Still cascading upward (confirmed in testing)
        - Issue: Y increment should probably be negative (browser coordinates origin is top-left)
        - Check FloatingBoxManager.tsx lines 148-190 cascade algorithm
+       - TODO: Request screenshot when implementing fix
 
-    2. **Add architecture check for 'type' field**
+    2. **Fix hover positioning**
+       - Status: ⚠️ Working but not centered on item (appears near top)
+       - Current: Box positioned near top of item
+       - Expected: Box should center vertically on hovered item
+       - Check RelationshipInfoBox.tsx positioning logic (lines 90-97)
+
+    3. **Add architecture check for 'type' field**
        - `type` in ItemHoverData violates view/model separation
        - Currently used by LinkOverlay for highlighting
        - Options: Extract from DOM, rename to `itemCollectionId`, or keep but document exception
        - Add check to `scripts/check-architecture.sh`
 
-    3. **Rename displayMode 'dialog' to 'cascade'**
+    4. **Rename displayMode 'dialog' to 'cascade'**
        - Should be 'cascade' and 'stacked' (not 'dialog' and 'stacked')
        - Update throughout: App.tsx, FloatingBoxManager.tsx, useLayoutState.ts, etc.
        - Update comments and documentation
 
-    4. **Fix transitory/persistent box upgrade architecture** (deferred)
-       - Current: Creates new box on upgrade, causing position jump
-       - Should: Modify existing RelationshipInfoBox mode from transitory → persistent
-       - Lower priority: Clicking items opens persistent boxes directly (working correctly)
-
     5. **Remove unnecessary isStacked logic** (deferred)
+       - Status: ❌ Boxes not draggable in stacked mode (confirmed in testing)
        - All boxes should be draggable regardless of display mode
        - displayMode only affects initial positioning, not capabilities
        - Simplify FloatingBox component
@@ -408,7 +430,12 @@ Hover behavior depends on where cursor is positioned:
        - App.tsx currently handles: array management, duplicate detection, bring-to-front
        - Should move to FloatingBoxManager for better encapsulation
 
-    b. **RelationshipInfoBox upgrade not working** (tests #4, #5) ✅ FIXED ⚠️ NEW BUG FOUND
+    8. **Fix transitory/persistent box upgrade architecture** (deferred)
+       - Current: Creates new box on upgrade, causing position jump
+       - Should: Modify existing RelationshipInfoBox mode from transitory → persistent
+       - Lower priority: Clicking items opens persistent boxes directly (working correctly)
+
+    9. **RelationshipInfoBox upgrade not working** (tests #4, #5) ✅ FIXED ⚠️ NEW BUG FOUND
        - Hovering for 1.5s: box disappeared instead of upgrading to persistent
        - Clicking: box disappeared instead of upgrading to persistent
        - Root cause: After creating persistent box, RelationshipInfoBox remained displayed and linger timer would hide it
@@ -430,13 +457,13 @@ Hover behavior depends on where cursor is positioned:
          3. Hover state is set but something else is broken?
          4. Console errors when hovering?
 
-    c. **Stacked mode layout issues** (test #7) ✅ FIXED
+   10. **Stacked mode layout issues** (test #7) ✅ FIXED
        - Screenshot: img_2.png showed RelationshipInfoBox appearing in stack
        - Root cause: RelationshipInfoBox rendered unconditionally regardless of displayMode
        - Fix: Only render RelationshipInfoBox when displayMode === 'dialog'
        - Changed App.tsx to conditionally render RelationshipInfoBox
 
-    d. **Stacked mode missing controls** (test #8) ⚠️ NEEDS RETESTING
+   11. **Stacked mode missing controls** (test #8) ⚠️ NEEDS RETESTING
        - Original feedback: "yes for floating. still not for stacked"
        - Code inspection: Close button IS present in stacked mode (lines 292-302 of FloatingBoxManager.tsx)
        - Close button rendered when box.mode === 'persistent'
@@ -446,14 +473,14 @@ Hover behavior depends on where cursor is positioned:
 
     **Medium Priority** (UX issues):
 
-    e. **RelationshipInfoBox headers gray instead of colored** (test #3) ✅ FIXED
+   12. **RelationshipInfoBox headers gray instead of colored** (test #3) ✅ FIXED
        - All hover-triggered RelationshipInfoBox headers were gray instead of colored
        - Root cause: getRelationshipData() referenced non-existent `colorClass` property, falling back to gray
        - Fix: Changed to use `metadata.color.headerBg` (proper property from ElementRegistry)
        - Architecture note: Color is correctly part of RelationshipData contract, not accessed by UI directly
        - Changed Element.getRelationshipData() in models/Element.ts
 
-    f. **Boxes overflow viewport bottom** (test #6) ✅ FIXED
+   13. **Boxes overflow viewport bottom** (test #6) ✅ FIXED
        - Cascade positioning caused boxes to go off-screen when many boxes opened
        - Root cause: Y position = windowHeight - 400 + (index * 40) with no bounds checking
        - Fix: Added Math.min() to cap Y position at maxY = windowHeight - boxHeight - 20px margin
@@ -906,3 +933,80 @@ When working with larger models or slower devices:
 - Keep structural navigation as primary interface
 
 **Note**: This is a future enhancement - current structural approach (categorize by range: primitive/enum/class) is stable and schema-change-safe.
+
+---
+
+## UI Test Checklist Template
+
+Use this template after significant work. Copy, fill out, and add to a `<details>` section in the relevant task.
+
+### Standard Smoke Tests
+
+**Commit**: `[commit-hash]`
+**Test Date**: `[YYYY-MM-DD]`
+**Tester**: `[initials]`
+
+#### Architecture & Build
+- [ ] `./scripts/check-architecture.sh` - All checks passing
+- [ ] `npm run typecheck` - No TypeScript errors
+- [ ] `npm run build` - Build succeeds
+- [ ] Console errors - None in normal operation
+
+#### Basic Functionality (Cascade Mode)
+- [ ] Click item name → Opens detail box
+- [ ] Click same item again → Brings existing box to front (no duplicate)
+- [ ] Open multiple boxes → Cascade positioning works correctly
+- [ ] Drag box → Smooth dragging, stays where placed
+- [ ] Resize box → Smooth resizing, respects min size
+- [ ] Click box → Brings to front (z-index updates)
+- [ ] Close button → Closes box
+- [ ] ESC key → Closes boxes in order (oldest first)
+
+#### Hover Functionality (Cascade Mode)
+- [ ] Hover item → RelationshipInfoBox appears after delay
+- [ ] Box positioning → Positioned relative to item (check alignment)
+- [ ] Mouse leave item → Box lingers briefly then disappears
+- [ ] Hover over box → Cancels linger timer
+- [ ] Hover box 1.5s → Upgrades to persistent (if applicable)
+- [ ] Click box → Upgrades to persistent immediately (if applicable)
+
+#### Stacked Mode
+- [ ] Switch to stacked mode → Boxes appear in right panel
+- [ ] Boxes in vertical stack → Newest at top
+- [ ] Close button → Works in stacked mode
+- [ ] ESC key → Works in stacked mode
+- [ ] Drag boxes → Should work (per architecture) or note if not implemented
+- [ ] Hover functionality → Should NOT show RelationshipInfoBox in stacked mode
+
+#### Link Visualization
+- [ ] Hover item → Links highlight
+- [ ] Links render correctly → No visual glitches
+- [ ] Self-references → Curved arrows appear correctly
+
+#### URL State Persistence
+- [ ] Open boxes → URL updates with state
+- [ ] Copy URL, open in new tab → State restores correctly
+- [ ] Preset links → Work as expected
+
+### Focused Test Checklist (For Specific Features)
+
+Use this when testing a specific feature fix. List only the tests relevant to the feature.
+
+**Feature**: `[Brief description]`
+**Commit**: `[commit-hash]`
+**Related Issue**: `[If applicable]`
+
+- [ ] **Test 1**: [Description]
+  - Expected: [What should happen]
+  - Result: [What actually happened]
+  - Screenshot: [If applicable]
+
+- [ ] **Test 2**: [Description]
+  - Expected: [What should happen]
+  - Result: [What actually happened]
+
+[Add more as needed]
+
+**Overall Status**: ✅ All passing | ⚠️ Issues found | ❌ Blocking issues
+
+**Notes**: [Any observations, edge cases, or follow-up items]
