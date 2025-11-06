@@ -34,6 +34,7 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 - [Phase 8: DetailPanel Refactoring](#phase-8-detailpanel)
 - [Phase 9: App.tsx Refactoring - Testable Hooks](#phase-9-app-refactoring)
 - [Phase 10: Enhanced Interactive Relationship Info Box](#phase-10-info-box)
+- [Phase 11: Complete DataService Abstraction for App.tsx](#phase-11-dataservice)
 
 ---
 
@@ -1472,6 +1473,161 @@ The following features were deferred to future work:
 - Keyboard navigation (arrows, enter, tab)
 - Quick filter toggles
 - Positioning refinements (vertical positioning, right edge overflow) - to be addressed in Unified Detail Box System
+
+---
+
+<a id="phase-11-dataservice"></a>
+## Phase 11: Complete DataService Abstraction for App.tsx
+
+**Completed**: November 5, 2025
+
+### Goal
+Complete the contract-based separation between UI and model layers by removing all model layer imports from App.tsx. Restore proper architectural pattern where components define data needs, DataService provides data, and the model layer is accessed only through DataService.
+
+### Problem
+App.tsx was directly accessing `modelData.collections` and importing from the models layer (ElementRegistry), violating the architectural pattern established in Phase 6.5. While Phase 6.4 Step 0 created DataService for some components (DetailContent, RelationshipInfoBox), it left App.tsx with direct model access.
+
+### Solution
+Extended DataService with methods for toggle buttons and section data, allowing App.tsx to eliminate all model layer dependencies.
+
+### Implementation Steps
+
+**1. DataService Enhancements** (src/services/DataService.ts)
+- ✅ Added `getToggleButtonsData(): ToggleButtonData[]`
+  - Returns array of toggle button metadata for all element types
+  - Internally accesses ELEMENT_TYPES registry and calls getAllElementTypeIds()
+  - Maps to component-defined ToggleButtonData interface
+- ✅ Added `getAllSectionsData(position: 'left' | 'right'): Map<string, SectionData>`
+  - Returns Map of section data for left or right panel position
+  - Key is section ID (type ID), value is SectionData
+  - Internally calls `collection.getSectionData(position)` for each collection
+- ✅ Imported component interfaces: ToggleButtonData, SectionData
+
+**2. App.tsx Refactoring**
+- ✅ Removed imports from models/ElementRegistry
+  - Deleted: `ELEMENT_TYPES`, `getAllElementTypeIds`, `ElementTypeId`
+- ✅ Replaced direct collection access with DataService
+  - Before: `modelData.collections.forEach((collection, typeId) => ...)`
+  - After: `dataService.getAllSectionsData('left')` and `dataService.getAllSectionsData('right')`
+- ✅ Simplified toggle button construction
+  - Before: 9 lines of manual mapping from ELEMENT_TYPES
+  - After: 1 line calling `dataService.getToggleButtonsData()`
+- ✅ Changed memoization dependencies
+  - Toggle buttons: Now depends on `dataService` instead of empty array
+  - Section data: Now depends on `dataService` instead of `modelData`
+
+**3. Architecture Enforcement** (scripts/check-architecture.sh)
+- ✅ Extended Check 3 to include `src/App.tsx`
+  - Previously checked only `src/components/`
+  - Now validates both components and App.tsx for model layer imports
+- ✅ Updated check messages
+  - "Model layer imports in src/components/" → "Model layer imports in src/components/ and src/App.tsx"
+  - "No model layer imports in components" → "No model layer imports in UI components or App.tsx"
+
+**4. Documentation** (docs/TASKS.md)
+- ✅ Marked Phase 11 as completed
+- ✅ Marked all 6 implementation steps (0a, 1-6) as completed
+- ✅ Updated success criteria with checkmarks
+
+### Architecture Verification
+
+**Before Phase 11**:
+```typescript
+// App.tsx - Direct model layer access ❌
+import { ELEMENT_TYPES, getAllElementTypeIds } from './models/ElementRegistry';
+
+const toggleButtons = getAllElementTypeIds().map(typeId => {
+  const metadata = ELEMENT_TYPES[typeId];
+  return { id: typeId, icon: metadata.icon, ... };
+});
+
+modelData.collections.forEach((collection, typeId) => {
+  map.set(typeId, collection.getSectionData('left'));
+});
+```
+
+**After Phase 11**:
+```typescript
+// App.tsx - Clean DataService abstraction ✅
+import { DataService } from './services/DataService';
+
+const toggleButtons = dataService?.getToggleButtonsData() ?? [];
+const leftSectionData = dataService?.getAllSectionsData('left') ?? new Map();
+```
+
+### Contract Pattern (Fully Enforced)
+
+**1. Component defines interface**:
+```typescript
+// src/components/ItemsPanel.tsx
+export interface ToggleButtonData {
+  id: string;
+  icon: string;
+  label: string;
+  activeColor: string;
+  inactiveColor: string;
+}
+```
+
+**2. DataService implements contract**:
+```typescript
+// src/services/DataService.ts
+import type { ToggleButtonData } from '../components/ItemsPanel';
+
+getToggleButtonsData(): ToggleButtonData[] {
+  return getAllElementTypeIds().map(typeId => {
+    const metadata = ELEMENT_TYPES[typeId];
+    return {
+      id: typeId,
+      icon: metadata.icon,
+      label: metadata.pluralLabel,
+      activeColor: metadata.color.toggleActive,
+      inactiveColor: metadata.color.toggleInactive
+    };
+  });
+}
+```
+
+**3. App.tsx consumes contract**:
+```typescript
+// src/App.tsx - NO model layer imports
+const toggleButtons = useMemo(() =>
+  dataService?.getToggleButtonsData() ?? [],
+  [dataService]
+);
+```
+
+### Results
+
+**Code Quality**:
+- ✅ App.tsx: Zero model layer imports
+- ✅ App.tsx: Zero direct collection access
+- ✅ Reduced code: 34 lines → 8 lines for toggle buttons + section data
+- ✅ Type safety maintained throughout
+
+**Architectural Compliance**:
+- ✅ All 5 architecture checks pass
+- ✅ TypeScript compilation successful (no errors)
+- ✅ Contract pattern fully enforced: Component → DataService → Model
+- ✅ App.tsx now validated alongside components
+
+**Separation of Concerns**:
+- UI layer (App.tsx, components): Only knows about data interfaces
+- Service layer (DataService): Translates between UI needs and model capabilities
+- Model layer (Element, ElementRegistry): Encapsulates domain logic
+
+### Files Modified
+- `src/services/DataService.ts` - Added 2 methods, imported 2 component interfaces
+- `src/App.tsx` - Removed model imports, simplified data access (34 lines → 8 lines)
+- `scripts/check-architecture.sh` - Extended validation to App.tsx
+- `docs/TASKS.md` - Marked Phase 11 complete
+
+### Impact
+This completes the architectural separation started in Phase 6.5. The entire UI layer (components + App.tsx) now depends solely on DataService, with zero knowledge of the model layer structure. This makes the codebase:
+- **More maintainable**: Model changes don't require UI updates
+- **More testable**: DataService can be easily mocked for testing
+- **More understandable**: Clear boundaries between layers
+- **More enforceable**: Automated checks prevent architectural violations
 
 ---
 
