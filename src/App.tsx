@@ -136,13 +136,14 @@ function App() {
     // Check if already open
     const existingIndex = floatingBoxes.findIndex(b => b.itemId === hoveredItemId);
 
-    // If already open, just bring to front
+    // If already open, just bring to front and hide RelationshipInfoBox
     if (existingIndex !== -1) {
       setFloatingBoxes(prev => {
         const updated = [...prev];
         const [existing] = updated.splice(existingIndex, 1);
         return [...updated, existing];
       });
+      setHoveredItem(null); // Hide RelationshipInfoBox after upgrade
       return;
     }
 
@@ -165,6 +166,7 @@ function App() {
 
     setFloatingBoxes(prev => [...prev, newBox]);
     setNextBoxId(prev => prev + 1);
+    setHoveredItem(null); // Hide RelationshipInfoBox after upgrade
   }, [hoveredItem, hoveredItemId, dataService, floatingBoxes, nextBoxId, displayMode]);
 
   // Close a floating box

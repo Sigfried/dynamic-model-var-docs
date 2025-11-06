@@ -347,11 +347,12 @@ Hover behavior depends on where cursor is positioned:
        - Fix: Always pass hideHeader={true} to DetailContent when in FloatingBox
        - Changed 3 instances in App.tsx where DetailContent is created
 
-    b. **RelationshipInfoBox upgrade not working** (tests #4, #5)
-       - Hovering for 1.5s: box disappears instead of upgrading to persistent
-       - Clicking: box disappears instead of upgrading to persistent
-       - Fixed setDisplayedItem bug (00f9373) but upgrade still broken
-       - Affects: RelationshipInfoBox upgrade logic + App.tsx handleUpgradeRelationshipBox
+    b. **RelationshipInfoBox upgrade not working** (tests #4, #5) ✅ FIXED
+       - Hovering for 1.5s: box disappeared instead of upgrading to persistent
+       - Clicking: box disappeared instead of upgrading to persistent
+       - Root cause: After creating persistent box, RelationshipInfoBox remained displayed and linger timer would hide it
+       - Fix: Call setHoveredItem(null) after upgrade to immediately hide RelationshipInfoBox
+       - Changed handleUpgradeRelationshipBox in App.tsx (2 places)
 
     c. **Stacked mode layout issues** (test #7)
        - Screenshot: img_2.png shows stacked boxes taking full width (correct)
