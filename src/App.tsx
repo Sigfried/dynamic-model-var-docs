@@ -439,14 +439,16 @@ function App() {
           onChange={handleFloatingBoxChange}
         />
 
-        {/* Relationship Info Box (transitory, follows cursor) */}
-        <RelationshipInfoBox
-          itemId={hoveredItemId}
-          dataService={dataService}
-          cursorPosition={hoveredItem ? { x: hoveredItem.cursorX, y: hoveredItem.cursorY } : null}
-          onNavigate={handleNavigate}
-          onUpgrade={handleUpgradeRelationshipBox}
-        />
+        {/* Relationship Info Box (transitory, follows cursor) - only in dialog mode */}
+        {displayMode === 'dialog' && (
+          <RelationshipInfoBox
+            itemId={hoveredItemId}
+            dataService={dataService}
+            cursorPosition={hoveredItem ? { x: hoveredItem.cursorX, y: hoveredItem.cursorY } : null}
+            onNavigate={handleNavigate}
+            onUpgrade={handleUpgradeRelationshipBox}
+          />
+        )}
       </div>
     </div>
   );

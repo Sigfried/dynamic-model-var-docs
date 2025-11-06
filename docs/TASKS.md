@@ -354,11 +354,11 @@ Hover behavior depends on where cursor is positioned:
        - Fix: Call setHoveredItem(null) after upgrade to immediately hide RelationshipInfoBox
        - Changed handleUpgradeRelationshipBox in App.tsx (2 places)
 
-    c. **Stacked mode layout issues** (test #7)
-       - Screenshot: img_2.png shows stacked boxes taking full width (correct)
-       - BUT RelationshipInfoBox appearing in stack when it should disappear
-       - Issue: Hover-triggered boxes should hide when switching to stacked mode
-       - Affects: FloatingBoxManager mode switching logic
+    c. **Stacked mode layout issues** (test #7) ✅ FIXED
+       - Screenshot: img_2.png showed RelationshipInfoBox appearing in stack
+       - Root cause: RelationshipInfoBox rendered unconditionally regardless of displayMode
+       - Fix: Only render RelationshipInfoBox when displayMode === 'dialog'
+       - Changed App.tsx to conditionally render RelationshipInfoBox
 
     d. **Stacked mode missing controls** (test #8)
        - No drag/resize/close buttons in stacked mode
