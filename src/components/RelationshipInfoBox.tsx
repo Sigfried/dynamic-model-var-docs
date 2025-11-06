@@ -71,7 +71,8 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
 
         const itemRect = itemNode.getBoundingClientRect();
         const boxWidth = 500;
-        const maxBoxHeight = window.innerHeight * 0.8; // max-h-[80vh]
+        const estimatedBoxHeight = 400; // Typical box height for centering
+        const maxBoxHeight = window.innerHeight * 0.8; // max-h-[80vh] for viewport constraints
 
         // Find the rightmost edge of visible panels
         const leftPanel = document.querySelector('[data-panel-position="left"]')?.parentElement?.parentElement;
@@ -87,11 +88,11 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
         // Position to the right of panels, 20px margin
         const xPosition = Math.max(370, rightmostEdge + 20);
 
-        // Try to vertically center box relative to item, with viewport constraints
+        // Vertically center box relative to item, using estimated height for better centering
         const itemCenterY = itemRect.top + (itemRect.height / 2);
-        const idealY = itemCenterY - (maxBoxHeight / 2);
+        const idealY = itemCenterY - (estimatedBoxHeight / 2);
 
-        // Clamp to viewport with margins
+        // Clamp to viewport with margins (use maxBoxHeight for worst-case bounds)
         const minY = 10;
         const maxY = window.innerHeight - maxBoxHeight - 10;
         const yPosition = Math.max(minY, Math.min(idealY, maxY));

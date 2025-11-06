@@ -176,7 +176,8 @@ function FloatingBox({
   const boxesBeforeYOverflow = Math.floor(yCascadeStartSpace / cascadeIncrement.y);
 
   // Position within current stack (wraps when stack is full)
-  const cascadeY = cascadeStart.y + ((index % boxesBeforeYOverflow) * cascadeIncrement.y);
+  // Subtract increment to cascade downward (lower Y from bottom = lower on screen)
+  const cascadeY = cascadeStart.y - ((index % boxesBeforeYOverflow) * cascadeIncrement.y);
 
   // Calculate X offset for each new stack (leaves 1/3 of previous box visible)
   const amountOfBoxWidthVisibleUnderNextCascadeStack = 1/3;
