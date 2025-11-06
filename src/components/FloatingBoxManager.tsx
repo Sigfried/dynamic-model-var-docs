@@ -149,27 +149,36 @@ function FloatingBox({
    * Multi-stack cascade positioning algorithm
    *
    * Creates cascading stacks of floating boxes that automatically wrap to a new stack
-   * when the vertical space is exhausted. Each stack offsets to the right, leaving
-   * 1/3 of the previous box visible.
+   * when the vertical space is exhausted. Boxes cascade with small Y offset to show
+   * title bars peeking through. Starts low on screen to maximize visible content above.
    *
    * Algorithm (using browser coordinates - origin at top-left):
-   * 1. Calculate how many boxes fit vertically before needing a new stack
-   * 2. Determine which stack this box belongs to (stackNumber = index / boxesPerStack)
-   * 3. Position within stack (stackPosition = index % boxesPerStack)
-   * 4. Calculate X: start + (stackNumber * stackOffset) + (stackPosition * xIncrement)
-   * 5. Calculate Y: start + (stackPosition * yIncrement)
+   * 1. Calculate starting Y position - low on screen but room for min boxes
+   * 2. Calculate how many boxes fit vertically before needing a new stack
+   * 3. Determine which stack this box belongs to (stackNumber = index / boxesPerStack)
+   * 4. Position within stack (stackPosition = index % boxesPerStack)
+   * 5. Calculate X: start + (stackNumber * stackOffset) + (stackPosition * xIncrement)
+   * 6. Calculate Y: start + (stackPosition * yIncrement) - just title bar peek
    *
    * TODO: Move these values to appConfig when implemented
    */
-  const cascadeStart = {x: 100, y: 100}; // Start position (browser coordinates - top-left)
-  const cascadeIncrement = {x: 40, y: 40}; // Offset for each successive box in a stack
+  const cascadeIncrement = {x: 40, y: 40}; // Offset for each successive box in a stack (title bar peek)
   const defaultSize = { width: 900, height: 350 };
   const bottomMargin = 20;
+  const minBoxesInStack = 3; // Minimum boxes we want to fit in cascade
+
+  // Calculate starting Y - low on screen but with room for minimum boxes
+  // Aim for bottom 1/3 to 1/4 of screen, ensuring at least minBoxesInStack fit
+  const spaceNeededForMinBoxes = defaultSize.height + (minBoxesInStack * cascadeIncrement.y) + bottomMargin;
+  const preferredBottomPortion = window.innerHeight / 3.5;
+  const cascadeStartY = window.innerHeight - Math.min(spaceNeededForMinBoxes, preferredBottomPortion);
+
+  const cascadeStart = {x: 100, y: cascadeStartY};
 
   // Calculate how many boxes fit vertically in one stack
   const availableHeight = window.innerHeight - cascadeStart.y - bottomMargin;
-  const heightNeededPerBox = defaultSize.height + cascadeIncrement.y;
-  const boxesPerStack = Math.max(1, Math.floor(availableHeight / heightNeededPerBox));
+  const yOffsetPerBox = cascadeIncrement.y; // Just title bar peek, not full box
+  const boxesPerStack = Math.max(1, Math.floor((availableHeight - defaultSize.height) / yOffsetPerBox) + 1);
 
   // Determine which stack and position within stack
   const currentStackNumber = Math.floor(index / boxesPerStack);
@@ -181,8 +190,8 @@ function FloatingBox({
   const stackOffsetX = defaultSize.width * amountOfBoxWidthVisibleUnderNextStack;
   const cascadeX = cascadeStart.x + (currentStackNumber * stackOffsetX) + (positionInStack * cascadeIncrement.x);
 
-  // Calculate Y position (downward cascade)
-  const cascadeY = cascadeStart.y + (positionInStack * cascadeIncrement.y);
+  // Calculate Y position (downward cascade - offset by full box height + peek)
+  const cascadeY = cascadeStart.y + (positionInStack * yOffsetPerBox);
 
   const defaultPosition = {
     x: cascadeX,
