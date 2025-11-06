@@ -360,22 +360,22 @@ Hover behavior depends on where cursor is positioned:
        - Fix: Only render RelationshipInfoBox when displayMode === 'dialog'
        - Changed App.tsx to conditionally render RelationshipInfoBox
 
-    d. **Stacked mode missing controls** (test #8)
-       - No drag/resize/close buttons in stacked mode
-       - Should have close button at minimum
-       - Resize not needed in stacked mode (constrained by stack)
-       - Affects: FloatingBox component hideCloseButton logic
+    d. **Stacked mode missing controls** (test #8) ⚠️ NEEDS RETESTING
+       - Original feedback: "yes for floating. still not for stacked"
+       - Code inspection: Close button IS present in stacked mode (lines 292-302 of FloatingBoxManager.tsx)
+       - Close button rendered when box.mode === 'persistent'
+       - Has proper stopPropagation on click handler
+       - Possible issue: Was this tested before bug 4a fix? (hideHeader change might have affected it)
+       - **Action needed**: Retest to verify close button works in stacked mode
 
     **Medium Priority** (UX issues):
 
-    e. **RelationshipInfoBox headers gray instead of colored** (test #3)
-       - All hover-triggered RelationshipInfoBox headers now gray
-       - Should use element type color (blue/purple/green/orange)
-          - [sg] element type color? that sounds like a violation.
-               the color should be part of the data contract interface
-               and be called boxColor or something
-       - Regression after Phase 11
-       - Affects: RelationshipInfoBox or DataService metadata
+    e. **RelationshipInfoBox headers gray instead of colored** (test #3) ✅ FIXED
+       - All hover-triggered RelationshipInfoBox headers were gray instead of colored
+       - Root cause: getRelationshipData() referenced non-existent `colorClass` property, falling back to gray
+       - Fix: Changed to use `metadata.color.headerBg` (proper property from ElementRegistry)
+       - Architecture note: Color is correctly part of RelationshipData contract, not accessed by UI directly
+       - Changed Element.getRelationshipData() in models/Element.ts
 
     f. **Boxes overflow viewport bottom** (test #6)
        - Cascade positioning causes boxes to go off-screen

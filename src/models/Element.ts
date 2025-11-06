@@ -223,9 +223,9 @@ export abstract class Element {
       incoming.variables = (this as ClassElement).variables.map(v => ({ name: v.name }));
     }
 
-    // Get color for this item type
+    // Get header background color for this item type
     const metadata = ELEMENT_TYPES[this.type];
-    const color = metadata?.colorClass || 'bg-gray-500';
+    const color = metadata?.color.headerBg || 'bg-gray-500';
 
     return {
       itemName: this.name,
