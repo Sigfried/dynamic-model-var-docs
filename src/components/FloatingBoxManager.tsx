@@ -181,7 +181,7 @@ function FloatingBox({
 
   // Calculate X offset for each new stack (leaves 1/3 of previous box visible)
   const amountOfBoxWidthVisibleUnderNextCascadeStack = 1/3;
-  const xDistanceToNextStack = (window.innerWidth - cascadeIncrement.x) / (defaultSize.width * amountOfBoxWidthVisibleUnderNextCascadeStack);
+  const xDistanceToNextStack = defaultSize.width * (1 - amountOfBoxWidthVisibleUnderNextCascadeStack);
   const currentStackNumber = Math.floor(index / boxesBeforeYOverflow);
   const cascadeX = cascadeStart.x + (currentStackNumber * xDistanceToNextStack) + ((index % boxesBeforeYOverflow) * cascadeIncrement.x);
 
