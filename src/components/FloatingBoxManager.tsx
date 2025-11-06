@@ -80,7 +80,7 @@ export default function FloatingBoxManager({
     const reversedBoxes = [...boxes].reverse();
 
     return (
-      <div className="h-full overflow-y-auto flex flex-col gap-4 p-4 bg-gray-50 dark:bg-slate-900">
+      <div className="h-full overflow-y-auto flex flex-col gap-4 p-4 bg-gray-50 dark:bg-slate-900 w-[600px] flex-shrink-0">
         {reversedBoxes.map((box, index) => (
           <FloatingBox
             key={box.id}
@@ -148,11 +148,13 @@ function FloatingBox({
 
   // Default position for floating boxes (cascade by index)
   const defaultSize = { width: 900, height: 350 };
+  const cascadeX = 100 + (index * CASCADE_OFFSET);
   const cascadeY = window.innerHeight - 400 + (index * CASCADE_OFFSET);
-  // Ensure box doesn't go off bottom of viewport (leave 20px margin)
+  // Ensure box doesn't go off viewport edges (leave 20px margin)
+  const maxX = window.innerWidth - defaultSize.width - 20;
   const maxY = window.innerHeight - defaultSize.height - 20;
   const defaultPosition = {
-    x: 100 + (index * CASCADE_OFFSET),
+    x: Math.min(cascadeX, maxX),
     y: Math.min(cascadeY, maxY)
   };
 

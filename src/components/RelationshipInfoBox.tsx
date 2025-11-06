@@ -44,6 +44,12 @@ export default function RelationshipInfoBox({ itemId, dataService, cursorPositio
   const hoverTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lingerTimerRef = useRef<NodeJS.Timeout | null>(null);
   const upgradeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const cursorPositionRef = useRef(cursorPosition);
+
+  // Keep cursor position ref updated
+  useEffect(() => {
+    cursorPositionRef.current = cursorPosition;
+  }, [cursorPosition]);
 
   // Debounced hover effect
   useEffect(() => {
@@ -62,7 +68,8 @@ export default function RelationshipInfoBox({ itemId, dataService, cursorPositio
       hoverTimerRef.current = setTimeout(() => {
         setDisplayedItemId(itemId);
         // Position box in white space to the right of all visible panels
-        if (cursorPosition) {
+        const currentCursorPosition = cursorPositionRef.current;
+        if (currentCursorPosition) {
           const boxWidth = 500;
           const maxBoxHeight = window.innerHeight * 0.8; // max-h-[80vh]
 
@@ -82,18 +89,18 @@ export default function RelationshipInfoBox({ itemId, dataService, cursorPositio
           const xPosition = Math.max(370, rightmostEdge + 20);
 
           // Calculate available space below and above cursor
-          const spaceBelow = window.innerHeight - cursorPosition.y;
-          const spaceAbove = cursorPosition.y;
+          const spaceBelow = window.innerHeight - currentCursorPosition.y;
+          const spaceAbove = currentCursorPosition.y;
 
           // Decide whether to position above or below cursor
           let yPosition: number;
           if (spaceBelow < maxBoxHeight + 20 && spaceAbove > spaceBelow) {
             // Not enough space below but more space above - position above cursor
-            yPosition = Math.max(10, cursorPosition.y - maxBoxHeight - 20);
+            yPosition = Math.max(10, currentCursorPosition.y - maxBoxHeight - 20);
           } else {
             // Position near cursor Y, clamped to viewport
             yPosition = Math.min(
-              Math.max(10, cursorPosition.y - 100), // Offset slightly above cursor
+              Math.max(10, currentCursorPosition.y - 100), // Offset slightly above cursor
               window.innerHeight - maxBoxHeight - 10 // 10px margin from bottom
             );
           }
@@ -115,7 +122,7 @@ export default function RelationshipInfoBox({ itemId, dataService, cursorPositio
       if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
       if (lingerTimerRef.current) clearTimeout(lingerTimerRef.current);
     };
-  }, [itemId, displayedItemId, cursorPosition]);
+  }, [itemId, displayedItemId]); // Removed cursorPosition - use latest value in timer callback
 
   // Handlers for upgrading to persistent mode
   const handleBoxMouseEnter = () => {
@@ -129,6 +136,7 @@ export default function RelationshipInfoBox({ itemId, dataService, cursorPositio
     upgradeTimerRef.current = setTimeout(() => {
       if (onUpgrade) {
         onUpgrade();
+        setDisplayedItemId(null); // Hide box immediately after upgrade
       }
     }, 1500);
   };
@@ -150,6 +158,7 @@ export default function RelationshipInfoBox({ itemId, dataService, cursorPositio
     // Clicking immediately triggers upgrade
     if (onUpgrade) {
       onUpgrade();
+      setDisplayedItemId(null); // Hide box immediately after upgrade
     }
     if (upgradeTimerRef.current) {
       clearTimeout(upgradeTimerRef.current);
