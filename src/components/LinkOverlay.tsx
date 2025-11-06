@@ -162,7 +162,8 @@ export default function LinkOverlay({
       linksArray: Link[],
       options: typeof filterOptions = filterOptions
     ) => {
-      types.forEach(typeId => {
+      types.forEach(typeId => {   // [sg] either we refactor this to not need this loop at all
+                                  // or we use something like sections.forEach(section => { section.id...}
         const itemNames = dataService.getItemNamesForType(typeId);
         itemNames.forEach(itemName => {
           const relationships = dataService.getRelationshipsForLinking(itemName);

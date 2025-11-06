@@ -5,6 +5,7 @@
  */
 
 import type { Relationship } from '../models/Element';
+// [sg] violates model/view separation
 
 /**
  * Represents a link between two elements for SVG rendering

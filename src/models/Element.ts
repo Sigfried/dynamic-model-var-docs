@@ -29,6 +29,7 @@ interface PropertyDefinition {
 }
 
 // Relationship types for SVG link visualization
+// [sg] this is weird
 export interface Relationship {
   type: RelationshipTypeId;
   label?: string;           // Property name (for property relationships)

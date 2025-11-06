@@ -128,7 +128,7 @@ function App() {
     if (!hoveredItem || !hoveredItemId || !dataService) return;
 
     // Use cursor position for the new persistent box
-    const position = {
+    const position = {  // [sg] obsolete code, right?
       x: hoveredItem.cursorX,
       y: hoveredItem.cursorY
     };
