@@ -142,20 +142,51 @@ function FloatingBox({
   onUpgradeToPersistent,
   isStacked
 }: FloatingBoxProps) {
-  const CASCADE_OFFSET = 40;
   const MIN_WIDTH = 400;
   const MIN_HEIGHT = 200;
 
-  // Default position for floating boxes (cascade by index)
+  /**
+   * Multi-stack cascade positioning algorithm
+   *
+   * Creates cascading stacks of floating boxes that automatically wrap to a new stack
+   * when the vertical space is exhausted. Each stack offsets slightly from the previous,
+   * leaving 1/3 of the previous box visible underneath.
+   *
+   * Coordinate system: Uses cartesian coordinates (origin at bottom) internally,
+   * then converts to browser coordinates (origin at top) for rendering.
+   *
+   * Algorithm:
+   * 1. Calculate how many boxes fit vertically before needing a new stack
+   * 2. Determine which stack this box belongs to (stackNumber = index / boxesPerStack)
+   * 3. Position within stack (stackPosition = index % boxesPerStack)
+   * 4. Calculate X position: start + (stackNumber * stackOffset) + (stackPosition * increment)
+   * 5. Calculate Y position: start + (stackPosition * increment)
+   *
+   * TODO: Move these values to appConfig when implemented
+   */
+  const cascadeStart = {x: 100, y: 600}; // Start position (y: 600px from bottom)
+  const yCalc = (y: number) => window.innerHeight - y; // Cartesian → browser coordinates
+  const cascadeIncrement = {x: 40, y: 40}; // Offset for each successive box in a stack
   const defaultSize = { width: 900, height: 350 };
-  const cascadeX = 100 + (index * CASCADE_OFFSET);
-  const cascadeY = window.innerHeight - 400 + (index * CASCADE_OFFSET);
-  // Ensure box doesn't go off viewport edges (leave 20px margin)
-  const maxX = window.innerWidth - defaultSize.width - 20;
-  const maxY = window.innerHeight - defaultSize.height - 20;
+  const bottomMargin = 20;
+
+  // Calculate vertical space available for cascading
+  const lowestCascadeStart = window.innerHeight - bottomMargin - defaultSize.height;
+  const yCascadeStartSpace = cascadeStart.y - lowestCascadeStart;
+  const boxesBeforeYOverflow = Math.floor(yCascadeStartSpace / cascadeIncrement.y);
+
+  // Position within current stack (wraps when stack is full)
+  const cascadeY = cascadeStart.y + ((index % boxesBeforeYOverflow) * cascadeIncrement.y);
+
+  // Calculate X offset for each new stack (leaves 1/3 of previous box visible)
+  const amountOfBoxWidthVisibleUnderNextCascadeStack = 1/3;
+  const xDistanceToNextStack = (window.innerWidth - cascadeIncrement.x) / (defaultSize.width * amountOfBoxWidthVisibleUnderNextCascadeStack);
+  const currentStackNumber = Math.floor(index / boxesBeforeYOverflow);
+  const cascadeX = cascadeStart.x + (currentStackNumber * xDistanceToNextStack) + ((index % boxesBeforeYOverflow) * cascadeIncrement.x);
+
   const defaultPosition = {
-    x: Math.min(cascadeX, maxX),
-    y: Math.min(cascadeY, maxY)
+    x: cascadeX,
+    y: yCalc(cascadeY)
   };
 
   const [position, setPosition] = useState(box.position ?? defaultPosition);

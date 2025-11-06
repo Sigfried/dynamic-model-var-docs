@@ -154,45 +154,57 @@ Effect runs (deps: [itemId, displayedItemId])
 displayedItemId = "Specimen" → box renders
 ```
 
-## Problem Analysis
+## Architectural Corrections
 
-### Issue 1: Hover not working initially
+### Terminology
 
-**Hypothesis**: cursorPositionRef initialization
+- **displayMode**: Should be `'cascade'` (not 'dialog') and `'stacked'`
+  - 'cascade': Floating boxes with cascading initial position
+  - 'stacked': Boxes in vertical column (fixed width panel)
+  - Affects: Initial position, repositioning on mode change
 
-```typescript
-const cursorPositionRef = useRef(cursorPosition);  // Line 47
-```
+### Box Modes (NOT display modes)
 
-On first render:
-- `cursorPosition` prop is `null` (no hover yet)
-- `cursorPositionRef.current` is initialized to `null`
-- Effect on line 50-52 updates ref when cursorPosition changes
-- BUT: If user hovers before ref updates, timer callback sees null
+- **Transitory boxes**: Hover-triggered, auto-hide, can upgrade to persistent
+  - Example: RelationshipInfoBox
+  - ARE floating boxes (have FloatingBox wrapper)
+  - Upgrade = change mode to persistent + move to end of persistent array
+  - Should NOT create new box on upgrade
 
-**Test**: Does cursorPositionRef.current have a value when timer fires?
+- **Persistent boxes**: User-opened, stay until explicitly closed
+  - Have full chrome (drag, resize, close button)
+  - Close with ESC (oldest first, after transitory boxes)
 
-### Issue 2: Viewport bounds not working
+### Issue 1: Hover positioning (CORRECTED)
 
-**Current code** (lines 151-159):
-```typescript
-const cascadeX = 100 + (index * CASCADE_OFFSET);
-const cascadeY = window.innerHeight - 400 + (index * CASCADE_OFFSET);
-const maxX = window.innerWidth - defaultSize.width - 20;
-const maxY = window.innerHeight - defaultSize.height - 20;
-const defaultPosition = {
-  x: Math.min(cascadeX, maxX),
-  y: Math.min(cascadeY, maxY)
-};
-```
+**Wrong approach**: Use cursor position for transitory box placement
+- Cursor position constantly updates on mouse move
+- Unnecessary dependency in effect
+- Causes non-deterministic behavior
 
-**Problem**: This only constrains the INITIAL position. Once `box.position` is set (e.g., from URL restoration or after dragging), line 161 uses that:
+**Correct approach**: Use DOM position of hovered item
+- Get bounding rect of item element
+- Position box relative to item (e.g., to the right)
+- Stable, deterministic positioning
+- No need to track cursor at all for initial display
 
-```typescript
-const [position, setPosition] = useState(box.position ?? defaultPosition);
-```
+### Issue 2: Viewport bounds (CORRECTED)
 
-If `box.position` exists, bounds checking is bypassed!
+**Original understanding was WRONG**
+
+**Correct behavior**:
+- Initial position: Apply bounds checking (don't let NEW boxes overflow)
+- User-positioned: Allow overflow (user dragged it there, respect their choice)
+- After drag/resize: Keep user's position (even if off-screen)
+
+**Current implementation** (lines 148-190):
+- Multi-stack cascade algorithm
+- Automatically wraps to new stack when vertical space exhausted
+- Each stack offset leaves 1/3 of previous box visible
+- Uses cartesian coordinates (origin at bottom) for calculations
+- Converts to browser coordinates for rendering
+
+**No need to clamp user-positioned boxes** - that was the wrong fix
 
 ### Issue 3: Stacked width too rigid
 
@@ -200,35 +212,71 @@ If `box.position` exists, bounds checking is bypassed!
 
 **Should be**: Calculate based on available space after panels
 
-## Fixes Needed
+## Major Architecture Refactoring Needed
 
-### Fix 1: Hover - Ensure cursorPosition is available
+### 1. Fix transitory/persistent box architecture
 
-Option A: Always use latest cursorPosition in callback (keep ref approach)
-Option B: Revert to including cursorPosition in deps but prevent timer reset
-Option C: Store cursor position separately, don't tie to hover state
+**Current (WRONG)**:
+- handleUpgradeRelationshipBox creates NEW box
+- Uses cursor position for new box position
+- Two separate boxes (transitory disappears, new one appears)
 
-### Fix 2: Viewport bounds - Apply to all positions
+**Correct**:
+- Upgrade should change existing box mode from 'transitory' to 'persistent'
+- Box stays in same position (no jump)
+- Move box from transitory array to end of persistent array (for ESC ordering)
+- OR: Keep single array, ESC logic checks mode
 
-Need to clamp position on:
-1. Initial render (✓ done)
-2. After drag ends
-3. After resize
-4. After mode switch
+### 2. Remove isStacked property from FloatingBox
 
-### Fix 3: Stacked width - Dynamic calculation
+**Current**: `isStacked` prop determines rendering
+**Problem**: Comment says "non-draggable, fixed in panel" but ALL persistent boxes should be draggable
 
-Calculate: `window.innerWidth - leftPanelWidth - rightPanelWidth - margins`
+**Correct**:
+- `displayMode` determines initial position and repositioning on mode change
+- All boxes have same features: drag, resize, close with ESC
+- Remove `isStacked` prop entirely
 
-## Recommended Approach
+### 3. Fix hover to use item position, not cursor
 
-1. **Add debug logging** to understand actual state flow
-2. **Test hypothesis** about cursorPositionRef timing
-3. **Fix hover** based on findings
-4. **Add position clamping** utility function used everywhere
-5. **Make stacked width** responsive to panel sizes
+**Current**: Tracks cursor position, passes to RelationshipInfoBox
+**Problems**:
+- Effect re-runs on cursor move (or tries to avoid this with refs)
+- Non-deterministic behavior
+- Unnecessary complexity
 
-Would you like me to:
-A) Add debug logging first to verify hypothesis?
-B) Try the fixes based on current understanding?
-C) Create an interactive walkthrough with console.log statements?
+**Correct**:
+- Pass item DOM element ID or ref
+- RelationshipInfoBox queries DOM for bounding rect
+- Position box relative to item (e.g., `itemRect.right + 20px`)
+- Stable, deterministic
+
+### 4. Move box management to FloatingBoxManager
+
+**Current**: App.tsx handles:
+- Box array management
+- Duplicate detection
+- Bring-to-front logic
+- Upgrade logic
+
+**Should be**: FloatingBoxManager handles all box lifecycle
+- App.tsx: Minimal state, just pass data
+- FloatingBoxManager: All array manipulation
+- Cleaner separation of concerns
+
+### 5. Fix stacked width calculation
+
+**Current**: Fixed 600px
+**Correct**: `calc(100vw - leftPanelWidth - rightPanelWidth - margins)`
+
+## Implementation Priority
+
+1. **Fix hover (critical)** - Use item position, remove cursor tracking
+2. **Fix upgrade (critical)** - Modify existing box, don't create new
+3. **Remove isStacked** - Simplify rendering logic
+4. **Fix stacked width** - Make responsive
+5. **Refactor to FloatingBoxManager** - Bigger refactor, do last
+
+## Next Steps
+
+Remove debug logging and implement fixes in priority order?
