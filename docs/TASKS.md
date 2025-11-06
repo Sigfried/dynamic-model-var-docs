@@ -347,12 +347,27 @@ Hover behavior depends on where cursor is positioned:
        - Fix: Always pass hideHeader={true} to DetailContent when in FloatingBox
        - Changed 3 instances in App.tsx where DetailContent is created
 
-    b. **RelationshipInfoBox upgrade not working** (tests #4, #5) ✅ FIXED
+    b. **RelationshipInfoBox upgrade not working** (tests #4, #5) ✅ FIXED ⚠️ NEW BUG FOUND
        - Hovering for 1.5s: box disappeared instead of upgrading to persistent
        - Clicking: box disappeared instead of upgrading to persistent
        - Root cause: After creating persistent box, RelationshipInfoBox remained displayed and linger timer would hide it
        - Fix: Call setHoveredItem(null) after upgrade to immediately hide RelationshipInfoBox
        - Changed handleUpgradeRelationshipBox in App.tsx (2 places)
+
+       **New bug discovered during testing**:
+       - When app first starts with empty right panel, hover doesn't work on left panel items
+       - After hovering over something in right panel (once it has content), left panel hovering starts working
+       - Investigation notes:
+         - Both panels receive onItemHover/onItemLeave callbacks correctly (App.tsx:404-405, 417-418)
+         - getItemHoverHandlers uses optional chaining, should work even without callbacks
+         - RelationshipInfoBox positioning uses querySelector('[data-panel-position]') to find panels
+         - If no items in panel, no elements with data-panel-position attribute exist
+         - BUT positioning fallback should still work (xPosition = Math.max(370, 0 + 20) = 370px)
+       - **Need clarification**: Does "hover doesn't work" mean:
+         1. RelationshipInfoBox doesn't appear at all?
+         2. RelationshipInfoBox appears but in wrong position?
+         3. Hover state is set but something else is broken?
+         4. Console errors when hovering?
 
     c. **Stacked mode layout issues** (test #7) ✅ FIXED
        - Screenshot: img_2.png showed RelationshipInfoBox appearing in stack
