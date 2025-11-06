@@ -86,12 +86,8 @@ function App() {
     }
 
     // Otherwise, create new persistent box
-    const CASCADE_OFFSET = 40;
-    const defaultPosition = {
-      x: 100 + (floatingBoxes.length * CASCADE_OFFSET),
-      y: window.innerHeight - 400 + (floatingBoxes.length * CASCADE_OFFSET)
-    };
-    const defaultSize = { width: 900, height: 350 };
+    // Note: Don't set position/size - let FloatingBoxManager's cascade algorithm handle it
+    // Only pass position/size when restoring from URL or when explicitly requested
 
     const metadata = dataService.getFloatingBoxMetadata(itemId);
     if (!metadata) {
@@ -105,17 +101,21 @@ function App() {
       metadata,
       content: <DetailContent itemId={itemId} dataService={dataService} hideHeader={true} />,
       itemId,
-      position: position ?? defaultPosition,
-      size: size ?? defaultSize
+      position,  // undefined unless explicitly provided (e.g., from URL restore)
+      size       // undefined unless explicitly provided
     };
 
     setFloatingBoxes(prev => [...prev, newBox]);
     setNextBoxId(prev => prev + 1);
   }, [dataService, floatingBoxes, nextBoxId, displayMode]);
 
-  // Get item ID for hovered item (for RelationshipInfoBox)
+  // Get item ID and DOM ID for hovered item (for RelationshipInfoBox)
   const hoveredItemId = useMemo(() => {
     return hoveredItem?.name ?? null;
+  }, [hoveredItem]);
+
+  const hoveredItemDomId = useMemo(() => {
+    return hoveredItem?.id ?? null;
   }, [hoveredItem]);
 
   // Navigation handler - opens a new floating box
@@ -439,12 +439,12 @@ function App() {
           onChange={handleFloatingBoxChange}
         />
 
-        {/* Relationship Info Box (transitory, follows cursor) - only in dialog mode */}
+        {/* Relationship Info Box (transitory, uses item position) - only in cascade mode */}
         {displayMode === 'dialog' && (
           <RelationshipInfoBox
             itemId={hoveredItemId}
+            itemDomId={hoveredItemDomId}
             dataService={dataService}
-            cursorPosition={hoveredItem ? { x: hoveredItem.cursorX, y: hoveredItem.cursorY } : null}
             onNavigate={handleNavigate}
             onUpgrade={handleUpgradeRelationshipBox}
           />

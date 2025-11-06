@@ -6,7 +6,7 @@
  * - Incoming relationships (subclasses, used by attributes, variables)
  *
  * Appears when user hovers over an item in the tree/panels.
- * Initially positioned near cursor, can upgrade to persistent mode on interaction.
+ * Positioned relative to the hovered item's DOM node, can upgrade to persistent mode on interaction.
  *
  * Architecture: Uses DataService to fetch relationship data by item ID - maintains view/model separation!
  * Uses DataService - never accesses model layer directly.
@@ -18,13 +18,13 @@ import type { DataService, RelationshipData } from '../services/DataService';
 
 interface RelationshipInfoBoxProps {
   itemId: string | null;
+  itemDomId: string | null;  // DOM node ID for positioning
   dataService: DataService | null;
-  cursorPosition?: { x: number; y: number } | null;
   onNavigate?: (itemName: string, itemType: 'class' | 'enum' | 'slot' | 'variable') => void;
   onUpgrade?: () => void;  // Callback when box should upgrade to persistent mode
 }
 
-export default function RelationshipInfoBox({ itemId, dataService, cursorPosition, onNavigate, onUpgrade }: RelationshipInfoBoxProps) {
+export default function RelationshipInfoBox({ itemId, itemDomId, dataService, onNavigate, onUpgrade }: RelationshipInfoBoxProps) {
   // State for debounced/lingering item display
   const [displayedItemId, setDisplayedItemId] = useState<string | null>(null);
   const [boxPosition, setBoxPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -44,17 +44,9 @@ export default function RelationshipInfoBox({ itemId, dataService, cursorPositio
   const hoverTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lingerTimerRef = useRef<NodeJS.Timeout | null>(null);
   const upgradeTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const cursorPositionRef = useRef(cursorPosition);
 
-  // Keep cursor position ref updated
+  // Debounced hover effect - position based on item DOM node
   useEffect(() => {
-    console.log('[RelationshipInfoBox] cursorPosition updated:', cursorPosition);
-    cursorPositionRef.current = cursorPosition;
-  }, [cursorPosition]);
-
-  // Debounced hover effect
-  useEffect(() => {
-    console.log('[RelationshipInfoBox] Effect triggered - itemId:', itemId, 'displayedItemId:', displayedItemId);
     // Clear any existing timers
     if (hoverTimerRef.current) {
       clearTimeout(hoverTimerRef.current);
@@ -65,60 +57,49 @@ export default function RelationshipInfoBox({ itemId, dataService, cursorPositio
       lingerTimerRef.current = null;
     }
 
-    if (itemId) {
+    if (itemId && itemDomId) {
       // Item hovered - show after short delay (ignore quick pass-overs)
-      console.log('[RelationshipInfoBox] Starting hover timer for:', itemId);
       hoverTimerRef.current = setTimeout(() => {
-        console.log('[RelationshipInfoBox] Hover timer fired - itemId:', itemId, 'cursorPositionRef.current:', cursorPositionRef.current);
         setDisplayedItemId(itemId);
-        // Position box in white space to the right of all visible panels
-        const currentCursorPosition = cursorPositionRef.current;
-        if (currentCursorPosition) {
-          console.log('[RelationshipInfoBox] Positioning box at:', currentCursorPosition);
-          const boxWidth = 500;
-          const maxBoxHeight = window.innerHeight * 0.8; // max-h-[80vh]
 
-          // Find the rightmost edge of visible panels
-          // Check for DOM nodes with data-panel-position to determine panel width
-          const leftPanel = document.querySelector('[data-panel-position="left"]')?.parentElement?.parentElement;
-          const rightPanel = document.querySelector('[data-panel-position="right"]')?.parentElement?.parentElement;
-
-          let rightmostEdge = 0;
-          if (rightPanel) {
-            rightmostEdge = rightPanel.getBoundingClientRect().right;
-          } else if (leftPanel) {
-            rightmostEdge = leftPanel.getBoundingClientRect().right;
-          }
-
-          // Position in white space with small margin
-          const xPosition = Math.max(370, rightmostEdge + 20);
-
-          // Calculate available space below and above cursor
-          const spaceBelow = window.innerHeight - currentCursorPosition.y;
-          const spaceAbove = currentCursorPosition.y;
-
-          // Decide whether to position above or below cursor
-          let yPosition: number;
-          if (spaceBelow < maxBoxHeight + 20 && spaceAbove > spaceBelow) {
-            // Not enough space below but more space above - position above cursor
-            yPosition = Math.max(10, currentCursorPosition.y - maxBoxHeight - 20);
-          } else {
-            // Position near cursor Y, clamped to viewport
-            yPosition = Math.min(
-              Math.max(10, currentCursorPosition.y - 100), // Offset slightly above cursor
-              window.innerHeight - maxBoxHeight - 10 // 10px margin from bottom
-            );
-          }
-
-          const finalPosition = {
-            x: xPosition,
-            y: Math.max(10, yPosition) // Ensure at least 10px from top
-          };
-          console.log('[RelationshipInfoBox] Setting box position:', finalPosition);
-          setBoxPosition(finalPosition);
-        } else {
-          console.warn('[RelationshipInfoBox] No cursor position available! Cannot position box.');
+        // Position box relative to the hovered item's DOM node
+        const itemNode = document.getElementById(itemDomId);
+        if (!itemNode) {
+          console.warn(`[RelationshipInfoBox] Could not find DOM node with id "${itemDomId}"`);
+          return;
         }
+
+        const itemRect = itemNode.getBoundingClientRect();
+        const boxWidth = 500;
+        const maxBoxHeight = window.innerHeight * 0.8; // max-h-[80vh]
+
+        // Find the rightmost edge of visible panels
+        const leftPanel = document.querySelector('[data-panel-position="left"]')?.parentElement?.parentElement;
+        const rightPanel = document.querySelector('[data-panel-position="right"]')?.parentElement?.parentElement;
+
+        let rightmostEdge = 0;
+        if (rightPanel) {
+          rightmostEdge = rightPanel.getBoundingClientRect().right;
+        } else if (leftPanel) {
+          rightmostEdge = leftPanel.getBoundingClientRect().right;
+        }
+
+        // Position to the right of panels, 20px margin
+        const xPosition = Math.max(370, rightmostEdge + 20);
+
+        // Try to vertically center box relative to item, with viewport constraints
+        const itemCenterY = itemRect.top + (itemRect.height / 2);
+        const idealY = itemCenterY - (maxBoxHeight / 2);
+
+        // Clamp to viewport with margins
+        const minY = 10;
+        const maxY = window.innerHeight - maxBoxHeight - 10;
+        const yPosition = Math.max(minY, Math.min(idealY, maxY));
+
+        setBoxPosition({
+          x: xPosition,
+          y: yPosition
+        });
       }, 300);
     } else if (displayedItemId) {
       // Item unhovered but we have a displayed item - linger for 1.5s
@@ -131,7 +112,7 @@ export default function RelationshipInfoBox({ itemId, dataService, cursorPositio
       if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
       if (lingerTimerRef.current) clearTimeout(lingerTimerRef.current);
     };
-  }, [itemId, displayedItemId]); // Removed cursorPosition - use latest value in timer callback
+  }, [itemId, itemDomId, displayedItemId]);
 
   // Handlers for upgrading to persistent mode
   const handleBoxMouseEnter = () => {
@@ -143,10 +124,7 @@ export default function RelationshipInfoBox({ itemId, dataService, cursorPositio
 
     // After 1.5s hover, trigger upgrade callback
     upgradeTimerRef.current = setTimeout(() => {
-      if (onUpgrade) {
-        onUpgrade();
-        setDisplayedItemId(null); // Hide box immediately after upgrade
-      }
+      onUpgrade?.();
     }, 1500);
   };
 
@@ -165,10 +143,7 @@ export default function RelationshipInfoBox({ itemId, dataService, cursorPositio
 
   const handleBoxClick = () => {
     // Clicking immediately triggers upgrade
-    if (onUpgrade) {
-      onUpgrade();
-      setDisplayedItemId(null); // Hide box immediately after upgrade
-    }
+    onUpgrade?.();
     if (upgradeTimerRef.current) {
       clearTimeout(upgradeTimerRef.current);
       upgradeTimerRef.current = null;
@@ -176,13 +151,8 @@ export default function RelationshipInfoBox({ itemId, dataService, cursorPositio
   };
 
   if (!displayedItemId || !dataService) {
-    if (itemId && !displayedItemId) {
-      console.log('[RelationshipInfoBox] Not rendering: itemId exists but displayedItemId is null (timer not fired yet)');
-    }
     return null;
   }
-
-  console.log('[RelationshipInfoBox] RENDERING for itemId:', displayedItemId, 'at position:', boxPosition);
 
   // Get relationship data from data service
   const details = dataService.getRelationships(displayedItemId);

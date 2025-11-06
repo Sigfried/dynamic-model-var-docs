@@ -18,10 +18,9 @@ import { getItemHoverHandlers } from '../hooks/useItemHover';
  * Component defines this interface to specify what data it needs for hover events.
  */
 export interface ItemHoverData {
+  id: string;       // DOM node ID for positioning (e.g., "lp-Specimen")
   type: string;     // Item type: "class", "enum", "slot", "variable"
   name: string;     // Item name: "Specimen", "SpecimenTypeEnum", etc.
-  cursorX: number;  // Mouse X position when hover started
-  cursorY: number;  // Mouse Y position when hover started
 }
 
 /**
@@ -86,6 +85,7 @@ function ItemRenderer({ item, onSelectItem, onItemHover, onItemLeave, position, 
   const { id, displayName, level, hasChildren, isExpanded, isClickable, badgeColor, badgeText, indicators, hoverData } = item;
 
   const hoverHandlers = getItemHoverHandlers({
+    id: id,  // DOM node ID for positioning
     type: hoverData.type,
     name: hoverData.name,
     onItemHover,

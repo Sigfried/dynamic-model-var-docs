@@ -337,7 +337,7 @@ Hover behavior depends on where cursor is positioned:
     10. URL restoration → open some boxes, copy URL, open in new tab → boxes should restore
         - [sg] feedback: works
 
-4. **Fix bugs found in testing** ⭐ CURRENT
+4. **Fix bugs found in testing**
 
     **High Priority** (broken functionality):
 
@@ -346,6 +346,67 @@ Hover behavior depends on where cursor is positioned:
        - Root cause: DetailContent showing its own header while FloatingBox also shows header
        - Fix: Always pass hideHeader={true} to DetailContent when in FloatingBox
        - Changed 3 instances in App.tsx where DetailContent is created
+
+    **Phase 12 Hover Fixes** ✅ COMPLETED
+
+    f. **Hover not working deterministically** (from extended testing)
+       - Root cause: Cursor position tracking causing non-deterministic behavior
+       - Fix: Complete rewrite to use item DOM position instead of cursor tracking
+       - Changes:
+         - `useItemHover.ts`: Removed cursor position from hover handlers, now passes `{ id, type, name }`
+         - `Section.tsx`: Updated `ItemHoverData` to use `id` (DOM node ID) instead of `cursorX/cursorY`
+         - `App.tsx`: Pass `itemDomId` to RelationshipInfoBox instead of cursor position
+         - `RelationshipInfoBox.tsx`: Use `document.getElementById(itemDomId).getBoundingClientRect()` for positioning
+         - Box now centers vertically on hovered item with viewport clamping
+       - Result: Hover works deterministically - same item always shows box in same position
+
+    g. **Architecture violations fixed** ✅ COMPLETED
+       - Fixed: `elementDomId` → `itemDomId` (violated "element" terminology check)
+       - Fixed: All "element" references changed to "item" or "DOM node" in UI layer
+       - All architecture checks now pass
+
+    h. **Cascade stacks not working** ✅ FIXED
+       - Root cause: `handleOpenFloatingBox` was calculating position itself instead of letting FloatingBoxManager's cascade algorithm handle it
+       - Fix: Removed default position calculation in App.tsx (lines 88-106)
+       - Now boxes created with `position: undefined, size: undefined` (unless restoring from URL)
+       - FloatingBoxManager's multi-stack cascade algorithm (lines 148-190) now handles all positioning
+       - **⚠️ KNOWN ISSUE**: Cascade boxes are moving upwards (Y increment should be negative?)
+
+    **Next Steps (Priority Order)**:
+
+    1. **Fix cascade direction** ⭐ NEXT
+       - Boxes cascading upward instead of downward
+       - Issue: Y increment should probably be negative (browser coordinates origin is top-left)
+       - Check FloatingBoxManager.tsx lines 148-190 cascade algorithm
+
+    2. **Add architecture check for 'type' field**
+       - `type` in ItemHoverData violates view/model separation
+       - Currently used by LinkOverlay for highlighting
+       - Options: Extract from DOM, rename to `itemCollectionId`, or keep but document exception
+       - Add check to `scripts/check-architecture.sh`
+
+    3. **Rename displayMode 'dialog' to 'cascade'**
+       - Should be 'cascade' and 'stacked' (not 'dialog' and 'stacked')
+       - Update throughout: App.tsx, FloatingBoxManager.tsx, useLayoutState.ts, etc.
+       - Update comments and documentation
+
+    4. **Fix transitory/persistent box upgrade architecture** (deferred)
+       - Current: Creates new box on upgrade, causing position jump
+       - Should: Modify existing RelationshipInfoBox mode from transitory → persistent
+       - Lower priority: Clicking items opens persistent boxes directly (working correctly)
+
+    5. **Remove unnecessary isStacked logic** (deferred)
+       - All boxes should be draggable regardless of display mode
+       - displayMode only affects initial positioning, not capabilities
+       - Simplify FloatingBox component
+
+    6. **Make stacked width responsive** (deferred)
+       - Currently fixed at 600px
+       - Should calculate: `calc(100vw - leftPanelWidth - rightPanelWidth - margins)`
+
+    7. **Move box management logic to FloatingBoxManager** (deferred)
+       - App.tsx currently handles: array management, duplicate detection, bring-to-front
+       - Should move to FloatingBoxManager for better encapsulation
 
     b. **RelationshipInfoBox upgrade not working** (tests #4, #5) ✅ FIXED ⚠️ NEW BUG FOUND
        - Hovering for 1.5s: box disappeared instead of upgrading to persistent
