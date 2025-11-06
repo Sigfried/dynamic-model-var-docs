@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import ElementsPanel, { type ToggleButtonData } from './components/ElementsPanel';
-import type { SectionData, ElementHoverData } from './components/Section';
+import ItemsPanel, { type ToggleButtonData } from './components/ItemsPanel';
+import type { SectionData, ItemHoverData } from './components/Section';
 import FloatingBoxManager, { type FloatingBoxData } from './components/FloatingBoxManager';
 import DetailContent from './components/DetailContent';
 import PanelLayout from './components/PanelLayout';
@@ -8,13 +8,12 @@ import LinkOverlay from './components/LinkOverlay';
 import RelationshipInfoBox from './components/RelationshipInfoBox';
 import { generatePresetURL, getInitialState, type DialogState } from './utils/statePersistence';
 import { ELEMENT_TYPES, getAllElementTypeIds, type ElementTypeId } from './models/ElementRegistry';
-import type { ElementCollection } from './models/Element';
 import { useModelData } from './hooks/useModelData';
 import { useLayoutState } from './hooks/useLayoutState';
 import { DataService } from './services/DataService';
 
 function App() {
-  const [hoveredElement, setHoveredElement] = useState<ElementHoverData | null>(null);
+  const [hoveredItem, setHoveredItem] = useState<ItemHoverData | null>(null);
   const [floatingBoxes, setFloatingBoxes] = useState<FloatingBoxData[]>([]);
   const [nextBoxId, setNextBoxId] = useState(0);
   const [hasRestoredFromURL, setHasRestoredFromURL] = useState(false);
@@ -33,10 +32,11 @@ function App() {
     if (!dataService) return [];
 
     return floatingBoxes.map(box => {
+      // [sg] this seems to violate architectural principles. why does it need item type?
       const itemType = dataService.getItemType(box.itemId);
       return {
-        elementName: box.itemId,
-        elementType: itemType ?? 'class', // fallback to 'class'
+        itemName: box.itemId,
+        itemType: itemType ?? 'class', // fallback to 'class'
         x: box.position?.x ?? 100,
         y: box.position?.y ?? 100,
         width: box.size?.width ?? 900,
@@ -116,22 +116,22 @@ function App() {
 
   // Get item ID for hovered item (for RelationshipInfoBox)
   const hoveredItemId = useMemo(() => {
-    return hoveredElement?.name ?? null;
-  }, [hoveredElement]);
+    return hoveredItem?.name ?? null;
+  }, [hoveredItem]);
 
   // Navigation handler - opens a new floating box
-  const handleNavigate = useCallback((elementName: string, elementType: 'class' | 'enum' | 'slot' | 'variable') => {
-    handleOpenFloatingBox({ type: elementType, name: elementName });
+  const handleNavigate = useCallback((itemName: string, itemType: 'class' | 'enum' | 'slot' | 'variable') => {
+    handleOpenFloatingBox({ type: itemType, name: itemName });
   }, [handleOpenFloatingBox]);
 
   // Handle RelationshipInfoBox upgrade to persistent floating box
   const handleUpgradeRelationshipBox = useCallback(() => {
-    if (!hoveredElement || !hoveredItemId || !dataService) return;
+    if (!hoveredItem || !hoveredItemId || !dataService) return;
 
     // Use cursor position for the new persistent box
     const position = {
-      x: hoveredElement.cursorX,
-      y: hoveredElement.cursorY
+      x: hoveredItem.cursorX,
+      y: hoveredItem.cursorY
     };
 
     // Check if already open
@@ -166,7 +166,7 @@ function App() {
 
     setFloatingBoxes(prev => [...prev, newBox]);
     setNextBoxId(prev => prev + 1);
-  }, [hoveredElement, hoveredItemId, dataService, floatingBoxes, nextBoxId, displayMode]);
+  }, [hoveredItem, hoveredItemId, dataService, floatingBoxes, nextBoxId, displayMode]);
 
   // Close a floating box
   const handleCloseFloatingBox = useCallback((id: string) => {
@@ -197,7 +197,7 @@ function App() {
       let boxIdCounter = 0;
 
       urlState.dialogs.forEach(dialogState => {
-        const itemId = dialogState.elementName;
+        const itemId = dialogState.itemName;
 
         // Verify item exists
         if (dataService.itemExists(itemId)) {
@@ -225,33 +225,6 @@ function App() {
     }
   }, [dataService, hasRestoredFromURL, displayMode]);
 
-  // Memoize panel data to prevent infinite re-renders in LinkOverlay
-  // Filter collections to only visible sections
-  const leftPanelData = useMemo(() => {
-    if (!modelData) return new Map<ElementTypeId, ElementCollection>();
-
-    const filtered = new Map<ElementTypeId, ElementCollection>();
-    leftSections.forEach(sectionId => {
-      const collection = modelData.collections.get(sectionId);
-      if (collection) {
-        filtered.set(sectionId, collection);
-      }
-    });
-    return filtered;
-  }, [leftSections, modelData]);
-
-  const rightPanelData = useMemo(() => {
-    if (!modelData) return new Map<ElementTypeId, ElementCollection>();
-
-    const filtered = new Map<ElementTypeId, ElementCollection>();
-    rightSections.forEach(sectionId => {
-      const collection = modelData.collections.get(sectionId);
-      if (collection) {
-        filtered.set(sectionId, collection);
-      }
-    });
-    return filtered;
-  }, [rightSections, modelData]);
 
   // Build toggle button data from ELEMENT_TYPES registry (must be before early returns)
   const toggleButtons = useMemo<ToggleButtonData[]>(() => {
@@ -439,28 +412,28 @@ function App() {
       <div className="flex relative overflow-hidden">
         <PanelLayout
           leftPanel={
-            <ElementsPanel
+            <ItemsPanel
               position="left"
               sections={leftSections}
               onSectionsChange={setLeftSections}
               sectionData={leftSectionData}
               toggleButtons={toggleButtons}
-              onSelectElement={handleOpenFloatingBox}
-              onElementHover={setHoveredElement}
-              onElementLeave={() => setHoveredElement(null)}
+              onSelectItem={handleOpenFloatingBox}
+              onItemHover={setHoveredItem}
+              onItemLeave={() => setHoveredItem(null)}
             />
           }
           leftPanelEmpty={leftSections.length === 0}
           rightPanel={
-            <ElementsPanel
+            <ItemsPanel
               position="right"
               sections={rightSections}
               onSectionsChange={setRightSections}
               sectionData={rightSectionData}
               toggleButtons={toggleButtons}
-              onSelectElement={handleOpenFloatingBox}
-              onElementHover={setHoveredElement}
-              onElementLeave={() => setHoveredElement(null)}
+              onSelectItem={handleOpenFloatingBox}
+              onItemHover={setHoveredItem}
+              onItemLeave={() => setHoveredItem(null)}
             />
           }
           rightPanelEmpty={rightSections.length === 0}
@@ -468,13 +441,12 @@ function App() {
         />
 
         {/* SVG Link Overlay */}
-        {modelData && (
-          <LinkOverlay
-            leftPanel={leftPanelData}
-            rightPanel={rightPanelData}
-            hoveredElement={hoveredElement}
-          />
-        )}
+        <LinkOverlay
+          leftPanelTypes={leftSections}
+          rightPanelTypes={rightSections}
+          dataService={dataService}
+          hoveredItem={hoveredItem}
+        />
 
         {/* Floating Box Manager - handles both stacked and dialog modes */}
         <FloatingBoxManager
@@ -489,7 +461,7 @@ function App() {
         <RelationshipInfoBox
           itemId={hoveredItemId}
           dataService={dataService}
-          cursorPosition={hoveredElement ? { x: hoveredElement.cursorX, y: hoveredElement.cursorY } : null}
+          cursorPosition={hoveredItem ? { x: hoveredItem.cursorX, y: hoveredItem.cursorY } : null}
           onNavigate={handleNavigate}
           onUpgrade={handleUpgradeRelationshipBox}
         />

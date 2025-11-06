@@ -2,8 +2,8 @@ import type { ElementTypeId } from '../models/ElementRegistry';
 import { isValidElementType } from '../models/ElementRegistry';
 
 export interface DialogState {
-  elementName: string;
-  elementType: ElementTypeId;
+  itemName: string;
+  itemType: ElementTypeId;
   x: number;
   y: number;
   width: number;
@@ -18,15 +18,15 @@ interface AppState {
 
 const STORAGE_KEY = 'bdchm-app-state';
 
-// Element type mappings for URL (single character codes)
-export const elementTypeToCode: Record<ElementTypeId, string> = {
+// Item type mappings for URL (single character codes)
+export const itemTypeToCode: Record<ElementTypeId, string> = {
   class: 'c',
   enum: 'e',
   slot: 's',
   variable: 'v'
 };
 
-const codeToElementType: Record<string, ElementTypeId> = {
+const codeToItemType: Record<string, ElementTypeId> = {
   c: 'class',
   e: 'enum',
   s: 'slot',
@@ -44,7 +44,7 @@ export function parseStateFromURL(): Partial<AppState> | null {
   const leftParam = params.get('l');
   if (leftParam) {
     state.leftSections = leftParam.split(',')
-      .map(code => codeToElementType[code])
+      .map(code => codeToItemType[code])
       .filter(Boolean) as ElementTypeId[];
   }
 
@@ -52,7 +52,7 @@ export function parseStateFromURL(): Partial<AppState> | null {
   const rightParam = params.get('r');
   if (rightParam) {
     state.rightSections = rightParam.split(',')
-      .map(code => codeToElementType[code])
+      .map(code => codeToItemType[code])
       .filter(Boolean) as ElementTypeId[];
   }
 
@@ -65,14 +65,14 @@ export function parseStateFromURL(): Partial<AppState> | null {
         const parts = dialogStr.split(':');
         if (parts.length !== 3) return null;
 
-        const elementType = parts[0];
-        const elementName = parts[1];
+        const itemType = parts[0];
+        const itemName = parts[1];
         const [x, y, width, height] = parts[2].split(',').map(Number);
 
-        if (!isValidElementType(elementType)) return null;
+        if (!isValidElementType(itemType)) return null;
         if (isNaN(x) || isNaN(y) || isNaN(width) || isNaN(height)) return null;
 
-        return { elementType, elementName, x, y, width, height };
+        return { itemType, itemName, x, y, width, height };
       }).filter((d): d is DialogState => d !== null);
     } catch (e) {
       console.warn('Failed to parse dialogs from URL:', e);
@@ -93,14 +93,14 @@ export function saveStateToURL(state: AppState): void {
 
   // Update left panel sections
   if (state.leftSections.length > 0) {
-    params.set('l', state.leftSections.map(s => elementTypeToCode[s]).join(','));
+    params.set('l', state.leftSections.map(s => itemTypeToCode[s]).join(','));
   } else {
     params.delete('l');
   }
 
   // Update right panel sections
   if (state.rightSections.length > 0) {
-    params.set('r', state.rightSections.map(s => elementTypeToCode[s]).join(','));
+    params.set('r', state.rightSections.map(s => itemTypeToCode[s]).join(','));
   } else {
     params.delete('r');
   }
@@ -109,7 +109,7 @@ export function saveStateToURL(state: AppState): void {
   if (state.dialogs && state.dialogs.length > 0) {
     // Format: type:name:x,y,w,h;type:name:x,y,w,h
     const dialogsStr = state.dialogs.map(d =>
-      `${d.elementType}:${d.elementName}:${Math.round(d.x)},${Math.round(d.y)},${Math.round(d.width)},${Math.round(d.height)}`
+      `${d.itemType}:${d.itemName}:${Math.round(d.x)},${Math.round(d.y)},${Math.round(d.width)},${Math.round(d.height)}`
     ).join(';');
     params.set('dialogs', dialogsStr);
   } else {
@@ -202,11 +202,11 @@ export function generatePresetURL(presetKey: keyof typeof PRESETS): string {
   const params = new URLSearchParams();
 
   if (preset.leftSections.length > 0) {
-    params.set('l', preset.leftSections.map(s => elementTypeToCode[s]).join(','));
+    params.set('l', preset.leftSections.map(s => itemTypeToCode[s]).join(','));
   }
 
   if (preset.rightSections.length > 0) {
-    params.set('r', preset.rightSections.map(s => elementTypeToCode[s]).join(','));
+    params.set('r', preset.rightSections.map(s => itemTypeToCode[s]).join(','));
   }
 
   return `${window.location.pathname}?${params.toString()}`;

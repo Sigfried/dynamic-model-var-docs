@@ -9,8 +9,8 @@
  * - Mode-aware positioning (stacked vs floating layout)
  * - Content agnostic - works with any React component
  *
- * Architecture: Maintains view/model separation - uses item IDs instead of Element instances
- * UI layer terminology: "item" (model layer uses "element")
+ * Architecture: Maintains view/model separation - uses item IDs, never model-layer instances
+ * UI layer uses "item" terminology
  */
 
 import { useState, useRef, useEffect, type ReactNode } from 'react';

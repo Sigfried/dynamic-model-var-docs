@@ -1,39 +1,27 @@
-// Must only import Element from models/, never concrete subclasses or DTOs
 /**
- * LinkOverlay - SVG layer for rendering links between elements
+ * LinkOverlay - SVG layer for rendering links between items
  *
  * This component:
- * - Queries DOM for visible element positions via data attributes
- * - Extracts relationships from Element instances
+ * - Queries DOM for visible item positions via data attributes
+ * - Gets relationships from DataService
  * - Uses linkHelpers to filter and render SVG paths
+ *
+ * Architecture: Uses DataService - maintains view/model separation!
+ * UI layer uses "item" terminology
  */
 
 import { useMemo, useRef, useState, useEffect } from 'react';
-import type { Element, ElementCollection, Relationship } from '../models/Element';
-import { getAllElementTypeIds, type ElementTypeId } from '../models/ElementRegistry';
+import type { DataService } from '../services/DataService';
 import {
   buildLinks,
   generateSelfRefPath,
   getLinkColor,
   getLinkStrokeWidth,
-  getElementTypeColor,
   getLinkGradientId,
   type Link,
   type LinkFilterOptions
 } from '../utils/linkHelpers';
-import type { ElementHoverData } from './Section';
-
-/**
- * LinkData - Data contract for link rendering
- * Components define this interface to specify what data they need from Element.
- */
-export interface LinkData {
-  startId: string;
-  endId: string;
-  startColor: string;
-  endColor: string;
-  tooltipData: LinkTooltipData;
-}
+import type { ItemHoverData } from './Section';
 
 /**
  * LinkTooltipData - Data for link hover tooltips
@@ -86,21 +74,24 @@ function LinkTooltip({ data, x, y }: { data: LinkTooltipData; x: number; y: numb
 }
 
 export interface LinkOverlayProps {
-  /** Elements visible in left panel (filtered collections) */
-  leftPanel: Map<ElementTypeId, ElementCollection>;
-  /** Elements visible in right panel (filtered collections) */
-  rightPanel: Map<ElementTypeId, ElementCollection>;
+  /** Item types visible in left panel */
+  leftPanelTypes: string[];
+  /** Item types visible in right panel */
+  rightPanelTypes: string[];
+  /** Data service for fetching item relationships */
+  dataService: DataService | null;
   /** Filter options for controlling which links to show */
   filterOptions?: LinkFilterOptions;
-  /** Currently hovered element for link highlighting */
-  hoveredElement?: ElementHoverData | null;
+  /** Currently hovered item for link highlighting */
+  hoveredItem?: ItemHoverData | null;
 }
 
 export default function LinkOverlay({
-  leftPanel,
-  rightPanel,
+  leftPanelTypes,
+  rightPanelTypes,
+  dataService,
   filterOptions = {},
-  hoveredElement
+  hoveredItem
 }: LinkOverlayProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [, setScrollTick] = useState(0);
@@ -140,42 +131,44 @@ export default function LinkOverlay({
     });
 
     return () => cancelAnimationFrame(frameId);
-  }, [leftPanel, rightPanel]);
+  }, [leftPanelTypes, rightPanelTypes, dataService]);
 
-  // Build links from visible elements - use useMemo to prevent infinite loop
+  // Build links from visible items - use useMemo to prevent infinite loop
   const { leftPanelLinks, rightPanelLinks } = useMemo(() => {
-    // Build set of element names in each panel for cross-panel filtering
-    const leftElements = new Set<string>();
-    const rightElements = new Set<string>();
+    if (!dataService) return { leftPanelLinks: [], rightPanelLinks: [] };
 
-    // Generic iteration over collections
-    leftPanel.forEach((collection) => {
-      collection.getAllElements().forEach(element => {
-        leftElements.add(element.name);
-      });
+    // Build set of item names in each panel for cross-panel filtering
+    const leftItems = new Set<string>();
+    const rightItems = new Set<string>();
+
+    // Get all item names for each panel type
+    leftPanelTypes.forEach(typeId => {
+      const itemNames = dataService.getItemNamesForType(typeId);
+      itemNames.forEach(name => leftItems.add(name));
     });
 
-    rightPanel.forEach((collection) => {
-      collection.getAllElements().forEach(element => {
-        rightElements.add(element.name);
-      });
+    rightPanelTypes.forEach(typeId => {
+      const itemNames = dataService.getItemNamesForType(typeId);
+      itemNames.forEach(name => rightItems.add(name));
     });
 
     const leftLinks: Link[] = [];
     const rightLinks: Link[] = [];
 
-    // Helper to process elements from a panel (generic over collections)
-    const processElements = (
-      collections: Map<ElementTypeId, ElementCollection>,
+    // Helper to process items from a panel
+    const processItems = (
+      types: string[],
       targetPanel: Set<string>,
       linksArray: Link[],
       options: typeof filterOptions = filterOptions
     ) => {
-      collections.forEach((collection, typeId) => {
-        collection.getAllElements().forEach(element => {
-          const relationships = element.getRelationships();
+      types.forEach(typeId => {
+        const itemNames = dataService.getItemNamesForType(typeId);
+        itemNames.forEach(itemName => {
+          const relationships = dataService.getRelationshipsForLinking(itemName);
+          if (!relationships) return;
 
-          const links = buildLinks(typeId, element.name, relationships, {
+          const links = buildLinks(typeId, itemName, relationships, {
             ...options,
             ...(typeId === 'class' ? { showInheritance: false } : {}) // Disable inheritance for classes
           });
@@ -190,16 +183,18 @@ export default function LinkOverlay({
     };
 
     // Process left panel (all cross-panel relationships)
-    processElements(leftPanel, rightElements, leftLinks);
+    processItems(leftPanelTypes, rightItems, leftLinks);
 
     // Process right panel (all relationships EXCEPT class→class cross-panel)
     // Class→class is bidirectional in the schema, so we only draw left→right
     // All other relationship types (class→enum, class→slot, variable→class, slot→enum) are one-way
-    rightPanel.forEach((collection, typeId) => {
-      collection.getAllElements().forEach(element => {
-        const relationships = element.getRelationships();
+    rightPanelTypes.forEach(typeId => {
+      const itemNames = dataService.getItemNamesForType(typeId);
+      itemNames.forEach(itemName => {
+        const relationships = dataService.getRelationshipsForLinking(itemName);
+        if (!relationships) return;
 
-        const links = buildLinks(typeId, element.name, relationships, {
+        const links = buildLinks(typeId, itemName, relationships, {
           ...filterOptions,
           ...(typeId === 'class' ? { showInheritance: false } : {})
         });
@@ -207,7 +202,7 @@ export default function LinkOverlay({
         // Special handling for class→class to avoid bidirectional duplicates
         const filteredLinks = links.filter(link => {
           if (link.relationship.isSelfRef) return true; // Always keep self-refs
-          if (!leftElements.has(link.target.name)) return false; // Not cross-panel
+          if (!leftItems.has(link.target.name)) return false; // Not cross-panel
 
           // For class→class links, filter out to avoid bidirectional duplicates
           if (typeId === 'class' && link.target.type === 'class') {
@@ -222,11 +217,11 @@ export default function LinkOverlay({
     });
 
     return { leftPanelLinks: leftLinks, rightPanelLinks: rightLinks };
-  }, [leftPanel, rightPanel, filterOptions]);
+  }, [leftPanelTypes, rightPanelTypes, dataService, filterOptions]);
 
-  // Helper to find element in DOM with panel position
-  const findElement = (type: string, name: string, panelPosition: 'left' | 'right'): HTMLElement | null => {
-    return document.querySelector(`[data-element-type="${type}"][data-element-name="${name}"][data-panel-position="${panelPosition}"]`);
+  // Helper to find item in DOM with panel position
+  const findItem = (type: string, name: string, panelPosition: 'left' | 'right'): HTMLElement | null => {
+    return document.querySelector(`[data-item-type="${type}"][data-item-name="${name}"][data-panel-position="${panelPosition}"]`);
   };
 
   // Calculate anchor points for cross-panel links (simplified for left-right layout)
@@ -282,7 +277,7 @@ export default function LinkOverlay({
     }
   };
 
-  // Helper to get marker ID based on target element type and hover state
+  // Helper to get marker ID based on target item type and hover state
   const getMarkerIdForTargetType = (targetType: string, isHovered: boolean = false): string => {
     const suffix = isHovered ? '-hover' : '';
     switch (targetType) {
@@ -316,16 +311,16 @@ export default function LinkOverlay({
         const sourcePanelPos = sourcePanel;
         const targetPanelPos = link.relationship.isSelfRef ? sourcePanel : targetPanel;
 
-        const sourceEl = findElement(link.source.type, link.source.name, sourcePanelPos);
-        const targetEl = findElement(link.target.type, link.target.name, targetPanelPos);
+        const sourceItem = findItem(link.source.type, link.source.name, sourcePanelPos);
+        const targetItem = findItem(link.target.type, link.target.name, targetPanelPos);
 
-        // Skip if either element not found in DOM
-        if (!sourceEl || !targetEl) {
+        // Skip if either item not found in DOM
+        if (!sourceItem || !targetItem) {
           return null;
         }
 
-        const sourceRect = sourceEl.getBoundingClientRect();
-        const targetRect = targetEl.getBoundingClientRect();
+        const sourceRect = sourceItem.getBoundingClientRect();
+        const targetRect = targetItem.getBoundingClientRect();
 
         // Determine link direction for gradient selection
         const isLeftToRight = sourceRect.left < targetRect.left;
@@ -366,12 +361,12 @@ export default function LinkOverlay({
         // Generate unique key for this link
         const linkKey = `${sourcePanel}-${link.source.type}-${link.source.name}-${link.target.type}-${link.target.name}-${index}`;
 
-        // Check if link should be highlighted (either direct hover or element hover match)
-        const matchesHoveredElement = !!hoveredElement && (
-          (link.source.type === hoveredElement.type && link.source.name === hoveredElement.name) ||
-          (link.target.type === hoveredElement.type && link.target.name === hoveredElement.name)
+        // Check if link should be highlighted (either direct hover or item hover match)
+        const matchesHoveredItem = !!hoveredItem && (
+          (link.source.type === hoveredItem.type && link.source.name === hoveredItem.name) ||
+          (link.target.type === hoveredItem.type && link.target.name === hoveredItem.name)
         );
-        const isHovered = hoveredLinkKey === linkKey || matchesHoveredElement;
+        const isHovered = hoveredLinkKey === linkKey || matchesHoveredItem;
 
         const markerId = getMarkerIdForTargetType(link.target.type, isHovered);
 
@@ -446,7 +441,7 @@ export default function LinkOverlay({
         {/* Gradients for all source→target combinations */}
         {/* Create both left-to-right and right-to-left versions */}
         {(() => {
-          const createGradient = (sourceType: ElementTypeId, targetType: ElementTypeId, reverse = false) => {
+          const createGradient = (sourceType: string, targetType: string, reverse = false) => {
             const id = reverse ? `${getLinkGradientId(sourceType, targetType)}-reverse` : getLinkGradientId(sourceType, targetType);
             const [x1, x2] = reverse ? ["100%", "0%"] : ["0%", "100%"];
 
@@ -456,22 +451,23 @@ export default function LinkOverlay({
                 id={id}
                 x1={x1} y1="0%" x2={x2} y2="0%"
               >
-                <stop offset="0%" stopColor={getElementTypeColor(sourceType)} stopOpacity="0.5" />
-                <stop offset="100%" stopColor={getElementTypeColor(targetType)} stopOpacity="0.5" />
+                <stop offset="0%" stopColor={dataService!.getColorForItemType(sourceType)} stopOpacity="0.5" />
+                <stop offset="100%" stopColor={dataService!.getColorForItemType(targetType)} stopOpacity="0.5" />
               </linearGradient>
             );
           };
 
-          const elementTypeIds = getAllElementTypeIds();
-          return elementTypeIds.flatMap(sourceType =>
-            elementTypeIds.flatMap(targetType => [
+          // Get all available item types from DataService
+          const allTypes = dataService?.getAvailableItemTypes() || [];
+          return allTypes.flatMap(sourceType =>
+            allTypes.flatMap(targetType => [
               createGradient(sourceType, targetType, false),
               createGradient(sourceType, targetType, true)
             ])
           );
         })()}
 
-        {/* Arrow markers - one for each target element type */}
+        {/* Arrow markers - one for each target item type */}
         {(() => {
           const markerConfigs = [
             { id: 'blue', color: '#3b82f6' },

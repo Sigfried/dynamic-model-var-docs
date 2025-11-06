@@ -223,9 +223,14 @@ export abstract class Element {
       incoming.variables = (this as ClassElement).variables.map(v => ({ name: v.name }));
     }
 
+    // Get color for this item type
+    const metadata = ELEMENT_TYPES[this.type];
+    const color = metadata?.colorClass || 'bg-gray-500';
+
     return {
-      elementName: this.name,
-      elementType: this.type,
+      itemName: this.name,
+      itemType: this.type,
+      color,
       outgoing,
       incoming
     };

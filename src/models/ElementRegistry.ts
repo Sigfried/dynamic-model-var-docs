@@ -22,6 +22,7 @@ export interface ElementTypeMetadata {
   readonly color: {
     // Tailwind color names (for bg, text, border classes)
     name: string;               // e.g., 'blue', 'purple', 'green', 'orange'
+    hex: string;                // Hex color for SVG (e.g., '#3b82f6')
     // Toggle button colors
     toggleActive: string;      // e.g., 'bg-blue-500' (full class name for Tailwind JIT)
     toggleInactive: string;    // e.g., 'bg-gray-300 dark:bg-gray-600'
@@ -66,6 +67,7 @@ export const ELEMENT_TYPES: Record<ElementTypeId, ElementTypeMetadata> = {
     icon: 'C',
     color: {
       name: 'blue',
+      hex: '#3b82f6',  // blue-500
       toggleActive: 'bg-blue-500',
       toggleInactive: 'bg-gray-300 dark:bg-gray-600',
       // Header colors (for detail panels)
@@ -86,6 +88,7 @@ export const ELEMENT_TYPES: Record<ElementTypeId, ElementTypeMetadata> = {
     icon: 'E',
     color: {
       name: 'purple',
+      hex: '#a855f7',  // purple-500
       toggleActive: 'bg-purple-500',
       toggleInactive: 'bg-gray-300 dark:bg-gray-600',
       headerBg: 'bg-purple-700 dark:bg-purple-700',
@@ -103,6 +106,7 @@ export const ELEMENT_TYPES: Record<ElementTypeId, ElementTypeMetadata> = {
     icon: 'S',
     color: {
       name: 'green',
+      hex: '#10b981',  // green-500
       toggleActive: 'bg-green-500',
       toggleInactive: 'bg-gray-300 dark:bg-gray-600',
       headerBg: 'bg-green-700 dark:bg-green-700',
@@ -120,6 +124,7 @@ export const ELEMENT_TYPES: Record<ElementTypeId, ElementTypeMetadata> = {
     icon: 'V',
     color: {
       name: 'orange',
+      hex: '#f97316',  // orange-500
       toggleActive: 'bg-orange-500',
       toggleInactive: 'bg-gray-300 dark:bg-gray-600',
       headerBg: 'bg-orange-600 dark:bg-orange-600',

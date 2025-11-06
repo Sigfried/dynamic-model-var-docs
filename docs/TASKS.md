@@ -30,7 +30,76 @@
 
 ## Next Up (Ordered)
 
-### Unified Detail Box System (Phase 11) ⭐ NEXT
+### Restore Data Interface Contracts (Phase 11) ⭐ NEXT
+
+**Goal**: Fix architectural violations in App.tsx - restore proper contract-based separation where components define data needs, DataService provides data, and model layer adapts.
+
+**Problem**: App.tsx is directly accessing `modelData.collections` and importing from models layer, violating the contract pattern established in Phase 6.5.
+
+**Current violations**:
+1. Imports `ELEMENT_TYPES`, `getAllElementTypeIds`, `ElementTypeId` from models/ElementRegistry
+2. Directly calls `collection.getSectionData()` instead of using DataService
+3. Exposes model structure to view layer
+
+**Expected pattern** (from Phase 6.5):
+- Component defines data contract (e.g., `SectionData` interface in Section.tsx)
+- DataService provides method returning that data (e.g., `getAllSectionsData(position)`)
+- DataService internally accesses model layer (collections, Element instances)
+- App.tsx never imports from models/ or accesses collections directly
+
+**Implementation steps**:
+
+0. **Audit and revert violations** ⭐ START HERE
+   - Check this commit and last few commits for changes that violate contract principles
+   - Look back to Phase 6.5 implementation to see if contracts were done correctly
+   - Revert code that strayed from contract pattern without losing actual progress
+   - Document what was reverted and why
+
+1. **Add DataService methods for section data**
+   - Add `getAllSectionsData(position: 'left' | 'right'): Map<string, SectionData>`
+   - Returns Map<string, SectionData> where key is section ID ('class', 'enum', etc.)
+   - Internally calls `collection.getSectionData(position)` for each collection
+
+2. **Add DataService methods for toggle buttons**
+   - Add `getToggleButtonsData(): ToggleButtonData[]`
+   - Returns array of toggle button metadata
+   - Internally accesses ELEMENT_TYPES registry
+
+3. **Add DataService helper methods**
+   - Add `getAllItemTypeIds(): string[]` (already exists as getAvailableItemTypes)
+   - Any other metadata UI needs without knowing about model structure
+
+4. **Update App.tsx**
+   - Remove imports from models/ElementRegistry
+   - Replace `modelData.collections.forEach(...)` with `dataService.getAllSectionsData()`
+   - Use DataService for all model access
+   - Verify no direct collection access remains
+
+5. **Update check-architecture.sh**
+   - Add check for App.tsx specifically (it's allowed to import DataService but not models/)
+   - Or add App.tsx to the components/ check scope
+
+6. **Verify contracts end-to-end**
+   - Component defines interface
+   - DataService provides data matching interface
+   - Model layer adapts via methods
+   - No component (including App.tsx) imports from models/
+
+**Files to modify**:
+- src/services/DataService.ts - Add getAllSectionsData(), getToggleButtonsData()
+- src/App.tsx - Remove model imports, use DataService
+- scripts/check-architecture.sh - Extend checks to App.tsx
+
+**Success criteria**:
+- ✅ App.tsx has zero imports from models/
+- ✅ App.tsx never accesses modelData.collections directly
+- ✅ npm run check-arch passes
+- ✅ npm run typecheck passes
+- ✅ All contracts flow: Component → DataService → Model
+
+---
+
+### Unified Detail Box System (Phase 12)
 
 **Goal**: Extract dialog management from App.tsx, merge DetailDialog/DetailPanelStack into unified system, and implement transitory mode for FloatingBox - allowing any content to appear temporarily (auto-disappearing) and upgrade to persistent mode on user interaction.
 

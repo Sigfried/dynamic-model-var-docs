@@ -9,14 +9,12 @@
  * Initially positioned near cursor, can upgrade to persistent mode on interaction.
  *
  * Architecture: Uses DataService to fetch relationship data by item ID - maintains view/model separation!
- * This component never sees Element instances, only plain data objects.
- * UI layer terminology: "item" (model layer uses "element")
+ * Uses DataService - never accesses model layer directly.
+ * UI layer uses "item" terminology
  */
 
 import { useState, useEffect, useRef } from 'react';
 import type { DataService, RelationshipData } from '../services/DataService';
-import { getHeaderColor } from '../utils/panelHelpers';
-import type { ElementTypeId } from '../models/ElementRegistry';
 
 interface RelationshipInfoBoxProps {
   itemId: string | null;
@@ -69,7 +67,7 @@ export default function RelationshipInfoBox({ itemId, dataService, cursorPositio
           const maxBoxHeight = window.innerHeight * 0.8; // max-h-[80vh]
 
           // Find the rightmost edge of visible panels
-          // Check for elements with data-panel-position to determine panel width
+          // Check for DOM nodes with data-panel-position to determine panel width
           const leftPanel = document.querySelector('[data-panel-position="left"]')?.parentElement?.parentElement;
           const rightPanel = document.querySelector('[data-panel-position="right"]')?.parentElement?.parentElement;
 
@@ -144,7 +142,7 @@ export default function RelationshipInfoBox({ itemId, dataService, cursorPositio
 
     // Start linger timer when leaving the box
     lingerTimerRef.current = setTimeout(() => {
-      setDisplayedElement(null);
+      setDisplayedItem(null);
     }, 1500);
   };
 
@@ -166,7 +164,7 @@ export default function RelationshipInfoBox({ itemId, dataService, cursorPositio
 
   if (!details) return null;
 
-  // Helper to make element names clickable
+  // Helper to make item names clickable
   const makeClickable = (
     name: string,
     type: 'class' | 'enum' | 'slot' | 'variable',
@@ -280,7 +278,6 @@ export default function RelationshipInfoBox({ itemId, dataService, cursorPositio
     details.incoming.variables.length > 0;
 
   if (!hasOutgoing && !hasIncoming) {
-    const headerColor = getHeaderColor(details.elementType as ElementTypeId);
     return (
       <div
         className="fixed w-[500px] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50"
@@ -289,9 +286,9 @@ export default function RelationshipInfoBox({ itemId, dataService, cursorPositio
         onMouseLeave={handleBoxMouseLeave}
         onClick={handleBoxClick}
       >
-        <div className={`${headerColor} px-4 py-2 rounded-t-lg border-b`}>
+        <div className={`${details.color} px-4 py-2 rounded-t-lg border-b`}>
           <h3 className="font-semibold text-white">
-            {details.elementName} relationships
+            {details.itemName} relationships
           </h3>
         </div>
         <div className="p-4">
@@ -300,8 +297,6 @@ export default function RelationshipInfoBox({ itemId, dataService, cursorPositio
       </div>
     );
   }
-
-  const headerColor = getHeaderColor(details.elementType as ElementTypeId);
 
   // Count relationships
   const outgoingCount = (details.outgoing.inheritance ? 1 : 0) + details.outgoing.slots.length;
@@ -315,9 +310,9 @@ export default function RelationshipInfoBox({ itemId, dataService, cursorPositio
       onMouseLeave={handleBoxMouseLeave}
       onClick={handleBoxClick}
     >
-      <div className={`${headerColor} px-4 py-2 rounded-t-lg border-b`}>
+      <div className={`${details.color} px-4 py-2 rounded-t-lg border-b`}>
         <h3 className="font-semibold text-white flex items-center gap-2">
-          <span>{details.elementName} relationships</span>
+          <span>{details.itemName} relationships</span>
           <span className="text-sm font-normal opacity-90">
             [↗ {outgoingCount} outgoing] [↙ {incomingCount} incoming]
           </span>

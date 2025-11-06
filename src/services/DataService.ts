@@ -12,7 +12,9 @@
  */
 
 import type { ModelData } from '../types';
-import type { DetailData } from '../models/Element';
+import type { DetailData, Relationship } from '../models/Element';
+import type { ElementTypeId } from '../models/ElementRegistry';
+import { ELEMENT_TYPES } from '../models/ElementRegistry';
 
 export interface FloatingBoxMetadata {
   title: string;
@@ -28,8 +30,9 @@ export interface SlotInfo {
 }
 
 export interface RelationshipData {
-  elementName: string;
-  elementType: string;
+  itemName: string;
+  itemType: string;
+  color: string;  // Header color for this item type
   outgoing: {
     inheritance?: {
       target: string;
@@ -100,5 +103,41 @@ export class DataService {
   getItemType(itemId: string): string | null {
     const element = this.modelData.elementLookup.get(itemId);
     return element?.type ?? null;
+  }
+
+  /**
+   * Get all item names for a specific type (used by LinkOverlay)
+   * Returns empty array if type not found
+   */
+  getItemNamesForType(typeId: ElementTypeId): string[] {
+    const collection = this.modelData.collections.get(typeId);
+    return collection ? collection.getAllElements().map(e => e.name) : [];
+  }
+
+  /**
+   * Get relationships for linking visualization (used by LinkOverlay)
+   * Returns null if item not found
+   */
+  getRelationshipsForLinking(itemId: string): Relationship[] | null {
+    const element = this.modelData.elementLookup.get(itemId);
+    return element?.getRelationships() ?? null;
+  }
+
+  /**
+   * Get all available item type IDs
+   * Returns array of type IDs that can be used for sections/filtering
+   */
+  getAvailableItemTypes(): string[] {
+    return Array.from(this.modelData.collections.keys());
+  }
+
+  /**
+   * Get hex color for an item type (for SVG rendering)
+   * Returns hex color string like '#3b82f6'
+   * Returns gray color if type not found
+   */
+  getColorForItemType(typeId: string): string {
+    const metadata = ELEMENT_TYPES[typeId as ElementTypeId];
+    return metadata?.color.hex ?? '#6b7280'; // gray-500 fallback
   }
 }

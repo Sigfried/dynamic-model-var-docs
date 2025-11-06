@@ -6,8 +6,8 @@
  * Used within FloatingBox wrappers in both transitory and persistent modes.
  *
  * Architectural note: Uses DataService to fetch data by item ID - maintains view/model separation!
- * This component never sees Element instances, only plain data objects.
- * UI layer terminology: "item" (model layer uses "element")
+ * Uses DataService - never accesses model layer directly.
+ * UI layer uses "item" terminology
  */
 import React from 'react';
 import type { DataService } from '../services/DataService';
@@ -128,7 +128,7 @@ export default function DetailContent({
 }
 
 // Helper function to render table cells (handles clickable links in the future)
-function renderCell(cell: unknown, onNavigate?: (elementName: string, elementType: string) => void): React.ReactNode {
+function renderCell(cell: unknown, onNavigate?: (itemName: string, itemType: string) => void): React.ReactNode {
   if (cell === null || cell === undefined) {
     return '';
   }

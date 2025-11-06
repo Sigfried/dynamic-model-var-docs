@@ -1,37 +1,37 @@
 /**
- * ElementsPanel Component
+ * ItemsPanel Component
  *
  * Manages multiple Section components (Classes, Enums, Slots, Variables) with toggle buttons.
  * Displays sections in most-recently-selected order. Used for both left and right panels.
  *
- * Architectural note: Must only import Element from models/, never concrete subclasses or DTOs.
- * Component is now fully type-agnostic - receives all metadata from App.tsx.
+ * Architecture: Receives pre-computed SectionData from App.tsx (which uses DataService).
+ * Component is fully type-agnostic - receives all metadata from parent.
  * See CLAUDE.md for separation of concerns principles.
  */
 import Section from './Section';
-import type { SectionData, ElementHoverData } from './Section';
+import type { SectionData, ItemHoverData } from './Section';
 
 /**
- * Toggle button metadata (provided by App.tsx from ELEMENT_TYPES registry).
+ * Toggle button metadata (provided by App.tsx from model registry).
  * Component defines what it needs; App provides this data.
  */
 export interface ToggleButtonData {
-  id: string;                     // "class" (not ElementTypeId!)
+  id: string;                     // "class", "enum", "slot", "variable"
   icon: string;                   // "C"
   label: string;                  // "Classes"
   activeColor: string;            // Tailwind: "bg-blue-500"
   inactiveColor: string;          // Tailwind: "bg-gray-300 dark:bg-gray-600"
 }
 
-interface ElementsPanelProps {
+interface ItemsPanelProps {
   position: 'left' | 'right';
   sections: string[];                                       // IDs of visible sections (order matters)
   onSectionsChange: (sections: string[]) => void;
   sectionData: Map<string, SectionData>;                   // Section data by ID
   toggleButtons: ToggleButtonData[];                        // Toggle button metadata
-  onSelectElement: (hoverData: ElementHoverData) => void;
-  onElementHover?: (hoverData: ElementHoverData) => void;
-  onElementLeave?: () => void;
+  onSelectItem: (hoverData: ItemHoverData) => void;
+  onItemHover?: (hoverData: ItemHoverData) => void;
+  onItemLeave?: () => void;
 }
 
 interface SectionToggleButtonProps {
@@ -56,16 +56,16 @@ function SectionToggleButton({ button, active, onClick }: SectionToggleButtonPro
   );
 }
 
-export default function ElementsPanel({
+export default function ItemsPanel({
   position,
   sections,
   onSectionsChange,
   sectionData,
   toggleButtons,
-  onSelectElement,
-  onElementHover,
-  onElementLeave
-}: ElementsPanelProps) {
+  onSelectItem,
+  onItemHover,
+  onItemLeave
+}: ItemsPanelProps) {
   const activeSections = new Set(sections);
 
   const toggleSection = (sectionId: string) => {
@@ -110,9 +110,9 @@ export default function ElementsPanel({
               <Section
                 key={sectionId}
                 sectionData={section}
-                onSelectElement={onSelectElement}
-                onElementHover={onElementHover}
-                onElementLeave={onElementLeave}
+                onSelectItem={onSelectItem}
+                onItemHover={onItemHover}
+                onItemLeave={onItemLeave}
                 position={position}
               />
             );

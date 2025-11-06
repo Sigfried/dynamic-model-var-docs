@@ -40,7 +40,7 @@ export function useExpansionState(
       }
 
       // Dispatch custom event to trigger link redraw
-      // This allows LinkOverlay to know when DOM elements appear/disappear
+      // Notify LinkOverlay when DOM nodes appear/disappear
       window.dispatchEvent(new CustomEvent('expansionStateChanged'));
 
       return newSet;

@@ -95,12 +95,26 @@ const info = element.getDisplayInfo();
 
 ## ⚠️ Additional Principles
 
-### DTOs vs Domain Models
+### DTOs vs Domain Models vs DataService
 
 - **DTOs** (in `types.ts`): Raw data shapes from external sources (JSON files, APIs)
 - **Domain Models** (in `models/`): Classes with behavior and encapsulation
-- **Pattern**: `ClassMetadata` (DTO) → `ClassElement` (domain model)
-- **Rule**: DTOs flow through dataLoader → collections construct domain models → components use domain models
+- **DataService** (in `services/`): Abstraction layer between UI and models
+- **Pattern**: DTOs → Domain Models → DataService → UI Components
+- **Flow**: DTOs flow through dataLoader → collections construct domain models → DataService provides API → UI components consume
+
+**Critical Rule**: UI components (in `src/components/` and `src/hooks/`) must:
+- ✅ Import from `services/DataService` (functions, types, interfaces)
+- ✅ Import from other UI components (e.g., `Section.tsx`)
+- ✅ Import from `utils/` (helper functions)
+- ❌ **NEVER** import from `models/` (not even types - DataService re-exports needed types)
+- ❌ **NEVER** import DTOs from `types.ts`
+
+**Why this matters**:
+- Complete separation of UI and model layers
+- UI depends only on DataService contract
+- Model layer can be refactored without touching UI
+- Easy to mock DataService for testing
 
 ### Hierarchical Data
 

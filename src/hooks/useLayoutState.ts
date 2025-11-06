@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getInitialState, saveStateToURL, saveStateToLocalStorage, elementTypeToCode, type DialogState } from '../utils/statePersistence';
+import { getInitialState, saveStateToURL, saveStateToLocalStorage, itemTypeToCode, type DialogState } from '../utils/statePersistence';
 import { calculateDisplayMode } from '../utils/layoutHelpers';
 
 interface UseLayoutStateOptions {
@@ -114,18 +114,18 @@ export function useLayoutState({ hasRestoredFromURL, getDialogStates }: UseLayou
         const params = new URLSearchParams();
 
         if (state.leftSections && state.leftSections.length > 0) {
-          const sectionCodes = state.leftSections.map((s: string) => elementTypeToCode[s]).join(',');
+          const sectionCodes = state.leftSections.map((s: string) => itemTypeToCode[s]).join(',');
           params.set('l', sectionCodes);
         }
 
         if (state.rightSections && state.rightSections.length > 0) {
-          const sectionCodes = state.rightSections.map((s: string) => elementTypeToCode[s]).join(',');
+          const sectionCodes = state.rightSections.map((s: string) => itemTypeToCode[s]).join(',');
           params.set('r', sectionCodes);
         }
 
         if (state.dialogs && state.dialogs.length > 0) {
           const dialogsStr = state.dialogs.map((d: DialogState) =>
-            `${d.elementType}:${d.elementName}:${Math.round(d.x)},${Math.round(d.y)},${Math.round(d.width)},${Math.round(d.height)}`
+            `${d.itemType}:${d.itemName}:${Math.round(d.x)},${Math.round(d.y)},${Math.round(d.width)},${Math.round(d.height)}`
           ).join(';');
           params.set('dialogs', dialogsStr);
         }

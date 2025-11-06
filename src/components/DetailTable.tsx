@@ -1,6 +1,5 @@
-// Must only import Element from models/, never concrete subclasses or DTOs
 //
-// Generic table component for element details
+// Generic table component for item details
 // Supports responsive split layout, custom renderers, and clickable cells
 
 import * as React from 'react';

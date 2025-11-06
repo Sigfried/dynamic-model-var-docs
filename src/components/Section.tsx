@@ -1,34 +1,36 @@
 /**
  * Section Component
  *
- * Displays a single collection of elements in a tree/list view.
- * Shows elements with badges, indicators (e.g., "abstract"), expansion controls,
- * and hover interactions. Used by ElementsPanel to render Classes, Enums, Slots, or Variables.
+ * Displays a single collection of items in a tree/list view.
+ * Shows items with badges, indicators (e.g., "abstract"), expansion controls,
+ * and hover interactions. Used by ItemsPanel to render Classes, Enums, Slots, or Variables.
  *
- * Architectural note: Must only import Element from models/, never concrete subclasses or DTOs.
+ * Architecture: Receives pre-computed SectionData from ItemsPanel (which gets it from App.tsx).
+ * App.tsx uses DataService to generate this data - maintains view/model separation.
+ * UI layer uses "item" terminology.
  * See CLAUDE.md for separation of concerns principles.
  */
 import { useExpansionState } from '../hooks/useExpansionState';
-import { getElementHoverHandlers } from '../hooks/useElementHover';
+import { getItemHoverHandlers } from '../hooks/useItemHover';
 
 /**
- * ElementHoverData - Hover event data for element interactions
+ * ItemHoverData - Hover event data for item interactions
  * Component defines this interface to specify what data it needs for hover events.
  */
-export interface ElementHoverData {
-  type: string;     // Element type: "class", "enum", "slot", "variable"
-  name: string;     // Element name: "Specimen", "SpecimenTypeEnum", etc.
+export interface ItemHoverData {
+  type: string;     // Item type: "class", "enum", "slot", "variable"
+  name: string;     // Item name: "Specimen", "SpecimenTypeEnum", etc.
   cursorX: number;  // Mouse X position when hover started
   cursorY: number;  // Mouse Y position when hover started
 }
 
 /**
  * Data interface for a single item in the section.
- * Component defines what it needs; Element provides this data via getSectionItemData().
+ * Component defines interface; model layer provides this data via getSectionItemData().
  */
 export interface SectionItemData {
   // Identity (used for both DOM id and React key)
-  id: string;                     // "lp-Specimen" (from element.getId(context))
+  id: string;                     // "lp-Specimen" (unique ID from model layer)
 
   // Display
   displayName: string;            // "Specimen"
@@ -48,7 +50,7 @@ export interface SectionItemData {
   isClickable: boolean;
 
   // Event data (opaque to component, passed through to callbacks)
-  hoverData: ElementHoverData;
+  hoverData: ItemHoverData;
 }
 
 /**
@@ -65,35 +67,35 @@ export interface SectionData {
 
 interface SectionProps {
   sectionData: SectionData;
-  onSelectElement: (hoverData: ElementHoverData) => void;
-  onElementHover?: (hoverData: ElementHoverData) => void;
-  onElementLeave?: () => void;
+  onSelectItem: (hoverData: ItemHoverData) => void;
+  onItemHover?: (hoverData: ItemHoverData) => void;
+  onItemLeave?: () => void;
   position: 'left' | 'right';
 }
 
 interface ItemRendererProps {
   item: SectionItemData;
-  onSelectElement: (hoverData: ElementHoverData) => void;
-  onElementHover?: (hoverData: ElementHoverData) => void;
-  onElementLeave?: () => void;
+  onSelectItem: (hoverData: ItemHoverData) => void;
+  onItemHover?: (hoverData: ItemHoverData) => void;
+  onItemLeave?: () => void;
   position: 'left' | 'right';
   toggleExpansion?: (itemName: string) => void;
 }
 
-function ItemRenderer({ item, onSelectElement, onElementHover, onElementLeave, position, toggleExpansion }: ItemRendererProps) {
+function ItemRenderer({ item, onSelectItem, onItemHover, onItemLeave, position, toggleExpansion }: ItemRendererProps) {
   const { id, displayName, level, hasChildren, isExpanded, isClickable, badgeColor, badgeText, indicators, hoverData } = item;
 
-  const hoverHandlers = getElementHoverHandlers({
+  const hoverHandlers = getItemHoverHandlers({
     type: hoverData.type,
     name: hoverData.name,
-    onElementHover,
-    onElementLeave
+    onItemHover,
+    onItemLeave
   });
 
   // For non-clickable items with children (e.g., variable group headers), the whole row should toggle expansion
   const handleClick = () => {
     if (isClickable) {
-      onSelectElement(hoverData);
+      onSelectItem(hoverData);
     } else if (hasChildren && toggleExpansion) {
       toggleExpansion(hoverData.name);
     }
@@ -106,8 +108,8 @@ function ItemRenderer({ item, onSelectElement, onElementHover, onElementLeave, p
     <div key={id} className="select-none">
       <div
         id={id}
-        data-element-type={hoverData.type}
-        data-element-name={hoverData.name}
+        data-item-type={hoverData.type}
+        data-item-name={hoverData.name}
         data-panel-position={position}
         className={`flex items-center gap-2 px-2 py-1 rounded ${
           isCursorPointer ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700' : ''
@@ -131,7 +133,7 @@ function ItemRenderer({ item, onSelectElement, onElementHover, onElementLeave, p
           <span className="w-4" />
         )}
 
-        {/* Element name */}
+        {/* Item name */}
         <span className="flex-1 text-sm font-medium">{displayName}</span>
 
         {/* Indicators (e.g., "abstract" for classes) */}
@@ -152,7 +154,7 @@ function ItemRenderer({ item, onSelectElement, onElementHover, onElementLeave, p
   );
 }
 
-export default function Section({ sectionData, onSelectElement, onElementHover, onElementLeave, position }: SectionProps) {
+export default function Section({ sectionData, onSelectItem, onItemHover, onItemLeave, position }: SectionProps) {
   const { label, getItems, expansionKey, defaultExpansion } = sectionData;
 
   // Use expansion state hook only if needed
@@ -173,9 +175,9 @@ export default function Section({ sectionData, onSelectElement, onElementHover, 
           <ItemRenderer
             key={item.id}
             item={item}
-            onSelectElement={onSelectElement}
-            onElementHover={onElementHover}
-            onElementLeave={onElementLeave}
+            onSelectItem={onSelectItem}
+            onItemHover={onItemHover}
+            onItemLeave={onItemLeave}
             position={position}
             toggleExpansion={toggleExpansion}
           />

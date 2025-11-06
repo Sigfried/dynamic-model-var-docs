@@ -28,7 +28,7 @@ export function useModelData(): UseModelDataResult {
         (window as any).modelData = data;
         console.log('ModelData loaded and available as window.modelData:', data);
         console.log('Collections:', Array.from(data.collections.keys()));
-        console.log('Total elements:', data.elementLookup.size);
+        console.log('Total items loaded:', data.elementLookup.size);
 
         setLoading(false);
       } catch (err) {

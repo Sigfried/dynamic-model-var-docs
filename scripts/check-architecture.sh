@@ -9,11 +9,12 @@ echo ""
 
 violations_found=0
 
-# Check 1: "element" references in UI components (but not in tests)
-# Allow: HTML element, ...elements spread, getElementById, querySelector
-# Block: element as variable/parameter name, element.something, getElement, etc.
-echo "📋 Check 1: 'element' variable/parameter references in src/components/ and src/hooks/"
-element_refs=$(rg "\\belement\\b" src/components/ src/hooks/ --glob '*.tsx' --glob '*.ts' --glob '!*.test.*' --glob '!*.spec.*' 2>/dev/null | grep -v "HTML element" | grep -v "\.\.\.element" | grep -v "getElementById" | grep -v "querySelector" || true)
+# Check 1: "element" references in UI components (case-insensitive, no word boundaries)
+# Allow: DOM/React types (HTMLElement, SVGElement, React.ReactElement, etc.), getElementById, querySelector, ElementTypeId
+# Allow: Model data structure names (elementLookup - used by data loading hook)
+# Block: Everything else containing "element"
+echo "📋 Check 1: 'element' references (case-insensitive) in src/components/ and src/hooks/"
+element_refs=$(rg -i "element" src/components/ src/hooks/ --glob '*.tsx' --glob '*.ts' --glob '!*.test.*' --glob '!*.spec.*' 2>/dev/null | grep -v "getElementById" | grep -v "querySelector" | grep -v "React\." | grep -v "HTML" | grep -v "SVG" | grep -v "ElementTypeId" | grep -v "elementLookup" || true)
 
 if [ -n "$element_refs" ]; then
   echo "❌ VIOLATION: Found 'element' variable/parameter references in UI code:"
@@ -43,19 +44,19 @@ else
   echo ""
 fi
 
-# Check 3: Direct Element class imports in components
-echo "📋 Check 3: Element class imports in src/components/"
-element_imports=$(rg "from ['\"].*models/Element['\"]" src/components/ --glob '*.tsx' --glob '*.ts' --glob '!*.test.*' --glob '!*.spec.*' 2>/dev/null || true)
+# Check 3: Model layer imports in components (should not import from models/ at all)
+echo "📋 Check 3: Model layer imports in src/components/"
+element_imports=$(rg "from ['\"].*models/" src/components/ --glob '*.tsx' --glob '*.ts' --glob '!*.test.*' --glob '!*.spec.*' 2>/dev/null || true)
 
 if [ -n "$element_imports" ]; then
-  echo "❌ VIOLATION: Found Element imports in components:"
+  echo "❌ VIOLATION: Found imports from models/ in components:"
   echo "$element_imports"
   echo ""
-  echo "💡 TIP: Use DataService instead of importing Element classes"
+  echo "💡 TIP: UI should only import from DataService, never from models/ (not even types)"
   echo ""
   violations_found=$((violations_found + 1))
 else
-  echo "✅ PASS: No Element imports in components"
+  echo "✅ PASS: No model layer imports in components"
   echo ""
 fi
 
