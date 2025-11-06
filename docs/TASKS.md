@@ -337,11 +337,56 @@ Hover behavior depends on where cursor is positioned:
     10. URL restoration → open some boxes, copy URL, open in new tab → boxes should restore
         - [sg] feedback: works
 
-4. **Delete old components**
+4. **Fix bugs found in testing** ⭐ CURRENT
+
+    **High Priority** (broken functionality):
+
+    a. **Detail box headers duplicated/split** (test #1)
+       - Screenshot: img_1.png shows "Class: Condition" in header with "Condition" repeated below
+       - Should show just element name with type indicated by color
+       - Affects: DetailContent component in FloatingBox
+
+    b. **RelationshipInfoBox upgrade not working** (tests #4, #5)
+       - Hovering for 1.5s: box disappears instead of upgrading to persistent
+       - Clicking: box disappears instead of upgrading to persistent
+       - Fixed setDisplayedItem bug (00f9373) but upgrade still broken
+       - Affects: RelationshipInfoBox upgrade logic + App.tsx handleUpgradeRelationshipBox
+
+    c. **Stacked mode layout issues** (test #7)
+       - Screenshot: img_2.png shows stacked boxes taking full width (correct)
+       - BUT RelationshipInfoBox appearing in stack when it should disappear
+       - Issue: Hover-triggered boxes should hide when switching to stacked mode
+       - Affects: FloatingBoxManager mode switching logic
+
+    d. **Stacked mode missing controls** (test #8)
+       - No drag/resize/close buttons in stacked mode
+       - Should have close button at minimum
+       - Resize not needed in stacked mode (constrained by stack)
+       - Affects: FloatingBox component hideCloseButton logic
+
+    **Medium Priority** (UX issues):
+
+    e. **RelationshipInfoBox headers gray instead of colored** (test #3)
+       - All hover-triggered RelationshipInfoBox headers now gray
+       - Should use element type color (blue/purple/green/orange)
+       - Regression after Phase 11
+       - Affects: RelationshipInfoBox or DataService metadata
+
+    f. **Boxes overflow viewport bottom** (test #6)
+       - Cascade positioning causes boxes to go off-screen
+       - Need viewport bounds checking
+       - Affects: FloatingBoxManager initial positioning
+
+    **Working correctly**:
+    - ✅ Test #2: Duplicate detection and bring-to-front
+    - ✅ Test #9: ESC key closes boxes
+    - ✅ Test #10: URL restoration
+
+5. **Delete old components**
     - Delete DetailDialog.tsx
     - Delete DetailPanelStack.tsx
 
-5. **Update tests**
+6. **Update tests**
     - Test drag/resize
     - Test click-to-front
     - Test ESC behavior
