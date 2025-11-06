@@ -2,6 +2,218 @@
 
 ## Questions & Decisions Needed
 
+---
+
+## Architecture & Refactoring Decisions
+
+### 1. ItemId Architecture & getId() Simplification
+
+**Context**: UI/model layers should only connect through `itemId` from `element.getId()`. The current `getId(context)` parameter may be unnecessary complexity.
+
+**Proposal**:
+- Eliminate `getId(context)` - always return just the element name
+- Handle contextual IDs (panel-specific, link-specific) purely in UI layer via utility functions
+- UI receives only "contract props" (displayName, headerColor, sourceColor, etc.)
+- Collections are treated as items (no special collectionId)
+
+**Utility function signature idea**:
+```typescript
+// Flexible - accepts one id or multiple
+contextualizeId({
+  id?: string,
+  ids?: string[],
+  template: string,
+  params: Record<string, string>
+})
+
+// Usage for panel sections
+sectionId = contextualizeId({
+  id,
+  template: `panel-${pos}-${id}`,
+  params: {id, pos: itemsPanel.position}
+})
+
+// Usage for links (after link refactoring)
+linkId = contextualizeId({
+  ids: [sourceItemId, targetItemId],
+  template: `link-${sourceItemId}_${targetItemId}`,
+  params: {ids}
+})
+```
+
+**Questions**:
+1. Should we eliminate `getId(context)` entirely? Should getId() always just return `this.name`?
+
+   > **[sg]**: yes. eliminate id (carefully). yes, _for now_, getId() can return this.name. if we
+               ever use this app with data where names aren't universally unique, we'll
+               need to change it -- happily in only one place.
+
+2. For utility functions - one flexible `contextualizeId()` or separate functions like `contextualizeId()` and `contextualizeLinkId()`?
+
+   > **[sg]**: separate is fine. we'll have to see if the components need anything else
+
+3. Should collections have collectionId or just be treated as items?
+
+   > **[sg]**: treat them like items. but this is why i'm thinking about
+               a component data abstraction thing, probably class hierarchy,
+               so a UI collection can be an item and it can contain a list
+               of items
+
+4. How should nested items work (collection.items[], item.someContainedItem)?
+
+   > **[sg]**: it's nice to have component data contracts in typescript interface
+               form; but it would also be nice to share code amongst them, which
+               could be facilitated by a class hierarchy based on Item. it could
+               handle nesting, id ccntextualization, it could be where the
+               Abstract Tree Rendering System goes.
+
+5. Future: Should we create an abstraction layer specifically for component data contracts to handle recursive nesting?
+
+   > **[sg]**: see above. yeah, that's my inclination
+
+---
+
+### 2. LinkOverlay & Link System Refactoring
+
+**Problems identified**:
+- LinkOverlay is "totally crazy" (your words!)
+- Nested loops: `types.forEach -> itemNames.forEach` (LinkOverlay.tsx:165)
+- Link data structure has view/model separation violations
+- linkHelpers.ts imports `Relationship` type from models/Element (violates separation)
+- Current Link interface: `{ source: { type, name }, target: { type, name }, relationship }`
+
+**Questions**:
+1. What specific problems are you seeing in LinkOverlay that make it "totally crazy"?
+
+   > **[sg]**:
+   >    - the way it handles left and right items and links seems convoluted. i get
+   >      lost trying to follow it
+   >    - LinkOverlay gets all the links by going through a huge number of steps;
+   >      couldn't it do something like:
+   >     ```typescript
+   >           interface LinkPair = {sourceItemId: string, targetItemId: string }
+   >           const lrPairs: LinkPair = dataService.getAllPairs({
+   >                    sourceFilter: leftPanel.displayedSections.map(s => s.itemId))
+   >                    targetFilter: rightPanel.displayedSections.map(s => s.itemId))
+   >           const rlPairs = dataService.getAllPairs({
+   >                    sourceFilter: rightPanel.displayedSections.map(s => s.itemId))
+   >                    targetFilter: leftPanel.displayedSections.map(s => s.itemId))
+   >           const lpLinks = lrPairs.map(p => buildLink(p))
+   >           const rpLinks = rlPairs.map(p => buildLink(p))
+   >           
+   >           function buildLink(linkPair: LinkPair, direction: 'lr' | 'rl') {
+   >             const link: Link = {}  // link interface will be different
+   >             link.id = contextualizeLinkId(...)
+   >             // find bounding rects by contextualizing the itemIds
+   >             // etc.
+   >           }
+   >           // this could probably be simplified and DRYed up even further, like 
+   >           interface LinkPair = {sourceItemId: string, targetItemId: string,
+   >                                 sourceSide: 'left' | 'right',
+   >                                 targetSide: 'left' | 'left' }
+   >           // so you only need one set of pairs and one set of links
+   >     ```
+   >    - just noticed that Element.getRelationshipData() has conditional logic for
+   >      class elements but not the others with tree structures (for grouping),
+   >      enum and variable. maybe some refactoring is in order
+
+2. Should link identity be `sourceItemId + targetItemId` (eliminating type from Link interface)?
+
+   > **[sg]**: yes
+
+3. How should we refactor the nested loops? Should it iterate over sections instead of types?
+
+   > **[sg]**: see above. all the elements already have incoming and outgoing relationships.
+               use those to implement dataService.getAllPairs
+
+4. Should link rendering be split from link data management?
+
+   > **[sg]**:  of course, right?
+
+5. How should linkHelpers.ts work without importing from models/? Should DataService provide relationship data in a UI-friendly format?
+
+   > **[sg]**: do the above suggestions basically answer this?
+
+6. For link tooltips/hover states - do they fit into the FloatingBox system or stay separate?
+
+   > **[sg]**:  get rid of tooltips.
+   >   -  hover state can just be like this somewhere
+   >     ```typescript
+   >     // hovering over a single link:
+   >     setHoverLinks([linkId])
+   >     // hovering over an item:
+   >     setHoverLinks(allLinks.filter(link => getLinksAttachedTo(link)))
+   >     ```
+
+> [sg] now you can tell me i'm crazy if you want
+---
+
+### 3. Code File [sg] Notes - Quick Decisions
+
+**3a. App.tsx:34 - URL state needs itemType**
+```typescript
+const getDialogStates = () => {
+  return floatingBoxes.map(box => {
+    const itemType = dataService.getItemType(box.itemId);  // [sg] violates principles?
+    return { itemName: box.itemId, itemType, x, y, width, height };
+  });
+};
+```
+
+Question: URL restoration needs to know itemType to restore boxes. Is this an acceptable place to use itemType, or should URL state work differently?
+
+> **[sg]**: it can use sectionIds. sectionIds could be like 'lc' for left panel class.
+>           so, instead of `l=c&r=e,v` it could be `sections=lc,re,rv`
+
+**3b. App.tsx:131 - Obsolete cursor position code**
+```typescript
+const position = {  // [sg] obsolete code, right?
+  x: hoveredItem.cursorX,
+  y: hoveredItem.cursorY
+};
+```
+
+Question: This code is unused (cascade positioning handles it). Should we just delete it?
+
+> **[sg]**: as far as i know, yes
+
+**3c. Element.ts:688 - Slot inheritance recursion logic**
+```typescript
+// [sg] do we need both getInheritedFrom and collectAllSlots to be recursive?
+//      i need an explanation of this logic
+getInheritedFrom(slotName: string): string {
+  if (this.classSlots.some(s => s.name === slotName)) return '';
+  if (this.parent) {
+    const parentSlots = (this.parent as ClassElement).collectAllSlots();
+    if (slotName in parentSlots) {
+      return (this.parent as ClassElement).getInheritedFrom(slotName) || this.parent.name;
+    }
+  }
+  return '';
+}
+```
+
+Question: Do you need an explanation of why both methods are recursive, or do you see a way to simplify this?
+
+> **[sg]**: i'm guessing there's a way to simplify, but i would need to understand it first
+
+**3d. Element.ts:742 - Rename parentName to parentId**
+```typescript
+this.parentName = data.parent;  // [sg] parentName should probably be parentId
+```
+
+Question: Simple rename for consistency with itemId terminology?
+
+> **[sg]**: i think so, unless you have a better idea
+
+**3e. Rename onSelectItem to onClickItem** (TASKS.md:609)
+
+Question: Should `onSelectItem` be renamed to `onClickItem` since it describes the action (clicking) rather than selection state?
+
+> **[sg]**: yes
+
+---
+
 ### Different Variable Treatment for Condition and Drug Exposure Classes 
 
 > **Anne**: I think I made a mistake by calling "asthma" and "angina" variables. BMI is a variable that is a Measurement observation. We can think of BMI as a column in a spreadsheet. We wouldn't have a column for "asthma" - we would have a column for conditions with a list of mondo codes for the conditions present. This becomes more important when we are talking about the "heart failure" and "heart disease" columns. Where does one draw lines? The division of conditions into variables/columns might be ok if all we're looking at is asthma and angina, but quickly gets too hard to draw lines.
@@ -420,38 +632,7 @@ Hover behavior depends on where cursor is positioned:
          - Remove all type comparisons in UI layer
          - UI uses itemId for identity, gets display info from DataService
        - Architecture principle: UI never uses type/itemType - only itemId and display names
-       - **[sg] changes and new ideas**
-         - the only way UI items and model elements should ever be connected is through itemId generated by
-           element.getId() and passed (like everything else) through abstraction layer. have to decide if
-           collections use collectionId or are just considered items. probably the latter.
-         - other than itemId, it can only receive UI contract props like displayName, headerColor, sourceColor, etc.
-         - as i think about it, maybe passing context information to getId is needless complication. the UI layer could
-           have a utility function for adding and stripping contextual information to the itemId as necessary. -- which
-           makes me think that eventually (Future Work) we could make an abstraction layer specifically for the component
-           data contracts. this might also be where recursively nested items (collection.items[], item.someContainedItem,
-           etc.) could be handled
-
-         - utility function ideas
-             ```typescript
-             // function signature, can accept one id (usually) or more (two for links)
-             contextualizeIId({ id: string, ids: string[], template: string, params: Record<string, string}> })
-             // maybe require that raw id(s) are always after the last - so decontextualizing just strips the prefixes
-             
-             // how it would be used by an itemsPanel section
-             const id = itemsPanel.sections[0].itemId
-             sectionId = contextualizeId({ id, 
-                                           template: `panel-${pos}-${id}`,
-                                           params: {id, pos: itemsPanel.position} })
-             
-             // how it could work for making link ids -- except links are crazy (see note on Link System Enhancement)
-             // need to refactor for view/model separation but mainly so the code make sense
-             // but if we rafactored buildLinks to accept only a sourceItemId and targetItemId, the raturned
-             // link id could be something like this
-             const ids = [sourceItemId, targetItemId]
-             link.id = contextualizeId({ ids,
-                                         template: `link-${sourceItemId}_${targetItemId}`
-                                         params: {ids}})
-             ```
+       - See "Architecture & Refactoring Decisions" section at top of this file for detailed discussion
 
     4. **Rename displayMode 'dialog' to 'cascade'** ✅ COMPLETED
        - Renamed 'dialog' → 'cascade' throughout codebase
@@ -606,10 +787,6 @@ export const APP_CONFIG = {
 - Documents significant constants in one place
 
 ---
-### [sg] refactor onSelectItem
-shouldn't this be onClickItem?
-
----
 
 ### Abstract Tree Rendering System
 
@@ -679,8 +856,9 @@ shouldn't this be onClickItem?
 
 ### Link System Enhancement
 
+**Status**: Needs complete refactoring. See "Architecture & Refactoring Decisions" → "LinkOverlay & Link System Refactoring" section at top of this file for detailed discussion and planning.
+
 **Current state** (mostly complete ✅):
-[sg] LinkOverlay is totally crazy and needs to be completely refactored. discuss and plan
 - ✅ `LinkData` interface defined in LinkOverlay.tsx
 - ✅ `LinkTooltipData` interface for hover information
 - ✅ Tooltip component showing relationship type, slot name, source/target
