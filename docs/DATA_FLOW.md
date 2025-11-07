@@ -8,7 +8,7 @@
 - [TASKS.md](../TASKS.md) - Current work and refactoring plans
 
 **Recent refactoring** (commits `b1dbb6d` through `e57e888`):
-- Step 5: Slot inheritance simplification using `slotPath` ([commit b1dbb6d](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/commit/b1dbb6d))
+- Step 5: Slot inheritance simplification using `slotPath` ([commit b1dbb6d](https://github.com/sigfried/dynamic-model-var-docs/commit/b1dbb6d))
 - Steps 1-4: getId() simplification, URL state refactor ([TASKS.md:328-638](../TASKS.md#L328-L638))
 
 ---
@@ -76,15 +76,24 @@ with classes and shared code elsewhere
 maybe stuff is where it belongs but is confusing because of
 similar naming all over the place
 
+i'm not seeing obvious ways to simplify yet, but probably
+will once we get to fromData methods
+
+i'm not finding this layout easy to follow. trying to map it
+out a bit more like a code graph
+
+but let's review my proposal at the bottom before getting
+deeper into this
+
 ```
 App
    ==> hooks/useModelData()
       ==> utils/dataLoader.loadModelData()
-         ==> utils/dataLoader.loadRawData()
+         ==> schemaData = utils/dataLoader.loadRawData()
             ==> utils/dataLoader.loadSchemaDTO()
-              - loads `source_data/HM/bdchm.metadata.json`
+                - loads `source_data/HM/bdchm.metadata.json`
             ==> utils/dataLoader/loadVariableSpecDTOs()
-              - loads `source_data/HV/variable-specs-S1.tsv`
+                - loads `source_data/HV/variable-specs-S1.tsv`
          ==> Elements.initializeModelData(schemaData)
          ...
 ```
@@ -452,7 +461,7 @@ constructor(data: ClassData, dataModel: ModelData, slotCollection: SlotCollectio
 }
 ```
 
-**🔗 Related commit**: Step 1b renamed `parentName` → `parentId` ([commit bf611bc](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/commit/bf611bc))
+**🔗 Related commit**: Step 1b renamed `parentName` → `parentId` ([commit bf611bc](https://github.com/sigfried/dynamic-model-var-docs/commit/bf611bc))
 
 ---
 
@@ -908,7 +917,7 @@ Indented tree display with expand/collapse
 
 ### Step 5 (Current) - Slot Inheritance Simplification
 
-**Status**: ✅ Completed ([commit b1dbb6d](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/commit/b1dbb6d))
+**Status**: ✅ Completed ([commit b1dbb6d](https://github.com/sigfried/dynamic-model-var-docs/commit/b1dbb6d))
 
 **Changes made**:
 - Added `slotPath` to ClassSlot
@@ -1008,9 +1017,9 @@ Indented tree display with expand/collapse
 - Component flow: [docs/COMPONENT_FLOW.md](../COMPONENT_FLOW.md)
 
 ### Git Commits (Recent)
-- b1dbb6d: [Implement Step 5: Slot Inheritance Simplification](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/commit/b1dbb6d)
-- 884c6ea: [Implement Step 3: Simplify getId()](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/commit/884c6ea)
-- bf611bc: [Rename parentName to parentId](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/commit/bf611bc)
+- b1dbb6d: [Implement Step 5: Slot Inheritance Simplification](https://github.com/sigfried/dynamic-model-var-docs/commit/b1dbb6d)
+- 884c6ea: [Implement Step 3: Simplify getId()](https://github.com/sigfried/dynamic-model-var-docs/commit/884c6ea)
+- bf611bc: [Rename parentName to parentId](https://github.com/sigfried/dynamic-model-var-docs/commit/bf611bc)
 
 ---
 
@@ -1037,3 +1046,53 @@ Based on this analysis, here are questions for refactoring Step 5:
    - Might reveal other issues to address
 
 Let me know which aspects you'd like to dig into further!
+
+## [sg] New proposal
+
+- just set up parentIds in fromData, don't set nodePath
+  - for variables, variable.parentId = variable.classId
+    (or forget classId and just transform bdchmElement
+     directly to parentId)
+  - Class.fromData might not be needed at all, classElement
+    already has parentId
+  - generate incoming relationships and node.children lists
+    just from the parentId on the nodes
+- what if we stored the whole model as a DAG?
+  - could make an artificial root node (maybe Element becomes
+    a concrete class?). so:
+    - root
+      - enums
+        - AnalyteTypeEnum
+        - ...
+      - variables
+        - ...
+      - ...
+  - in a diagram with the root at top, parent relationships
+    would point up
+  - for child relationships we transpose the graph
+  - are incoming relationships the same as child relationships?
+    i'm a bit confused about that
+  - with the graph (or its transposition), it will be 
+    simple to generate paths from root
+    - as arrays of element ids
+    - or as arrays of element instances
+    - or use graphology to get these on the fly?
+  - i've used graphology (https://graphology.github.io/)
+    in the past and really like it
+  - not sure if this approach makes it easy to keep the graph
+    features as part of Element or if it would exist beside
+    the Element/ElementCollection classes
+    - the collection classes could probably be hugely simplified
+  - getting relationships would probably be just getting edge lists
+    and transforming them for component contract needs
+  - __collectAllSlots and root.slots__
+    - the whole slot hierarchy might live under root.slots
+    - ClassSlots could be children of SlotElements? not sure if
+      that helps with anything
+    - classes would have ClassSlot children which would each
+      have a SlotElement parent
+- Abstract Tree Rendering System
+  - this will serve UI components, but they could also make
+    use of graphology
+
+this would be a huge refactor. would it be worth it?

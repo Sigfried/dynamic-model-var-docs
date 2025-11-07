@@ -362,10 +362,16 @@ export abstract class Element {
   /**
    * Get list of all ancestors (parent, grandparent, etc.) walking up the tree.
    * Returns empty array if this is a root element.
+   * Non-recursive implementation for better performance.
    */
   ancestorList(): Element[] {
-    if (!this.parent) return [];
-    return [this.parent, ...this.parent.ancestorList()];
+    const ancestors: Element[] = [];
+    let current = this.parent;
+    while (current) {
+      ancestors.push(current);
+      current = current.parent;
+    }
+    return ancestors;
   }
 
   /**

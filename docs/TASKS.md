@@ -637,22 +637,93 @@ Changed from `l=c&r=e,v` to `sections=lc~re~rv`
 
 ---
 
-#### Step 5: Slot Inheritance Simplification
+#### Step 5: Slot Inheritance Simplification ✅ PARTIALLY COMPLETED
 
-**5a. Add slotPath to SlotElement**
+**Status**: Initial implementation done (commit b1dbb6d), but further simplification needed
 
-File: `src/models/Element.ts` - ClassSlot interface/class
+**Completed**:
+- ✅ Added `slotPath` to ClassSlot
+- ✅ `getInheritedFrom()` simplified (no longer double-recursive)
+- ✅ `nodePath` added to all elements
+
+**Remaining work** (Step 5b - Further Simplification):
+
+**5b.1. Rename nodePath → pathFromRoot and change to array**
+
+Current:
+```typescript
+nodePath: string = "Entity.Specimen.Material"
+```
+
+New:
+```typescript
+pathFromRoot: string[] = ["Entity", "Specimen", "Material"]
+```
+
+**Benefits**:
+- Direct access to any level: `pathFromRoot[0]` is root
+- Can get parent: `pathFromRoot[pathFromRoot.length - 2]`
+- Can iterate without splitting
+- Can join for display: `pathFromRoot.join(".")`
+
+**5b.2. Eliminate slotPath - compute inheritance on-demand**
+
+Instead of storing slotPath on ClassSlot, compute in getInheritedFrom():
 
 ```typescript
-interface ClassSlot {
-  name: string;
-  range: string;
-  // ... existing fields
-  slotPath?: string;  // NEW: "Parent.Child.GrandChild"
+getInheritedFrom(slotName: string): string {
+  // Check if defined in THIS class
+  if (this.classSlots.some(s => s.name === slotName)) {
+    return '';  // Not inherited
+  }
+
+  // Walk up ancestors until we find who defined it
+  const ancestors = this.ancestorList();  // [parent, grandparent, ...]
+  for (const ancestor of ancestors) {
+    if (ancestor instanceof ClassElement) {
+      if (ancestor.classSlots.some(s => s.name === slotName)) {
+        return ancestor.name;  // Found it!
+      }
+    }
+  }
+
+  return '';  // Not found
 }
 ```
 
-**5b. Refactor collectAllSlots() to use slotPath**
+**Benefits**:
+- Simpler data model (no slotPath storage)
+- Always accurate (can't get stale)
+- O(tree depth) lookup, but tree depth is small (2-4 levels typically)
+
+**5b.3. Simplify collectAllSlots()**
+
+Remove slotPath assignment since we're not storing it:
+
+```typescript
+collectAllSlots(): Record<string, ClassSlot> {
+  const slots = new Map<string, ClassSlot>();
+
+  // Add slots from this class (no slotPath setting needed)
+  this.classSlots.forEach(slot => {
+    slots.set(slot.name, slot);
+  });
+
+  // Inherit from parent
+  if (this.parent) {
+    const parentSlots = (this.parent as ClassElement).collectAllSlots();
+    Object.entries(parentSlots).forEach(([name, parentSlot]) => {
+      if (!slots.has(name)) {
+        slots.set(name, parentSlot);
+      }
+    });
+  }
+
+  return Object.fromEntries(slots);
+}
+```
+
+**Original 5b (replaced by above)**
 
 File: `src/models/Element.ts` - ClassElement.collectAllSlots()
 
@@ -707,14 +778,70 @@ getInheritedFrom(slot: ClassSlot): string {
 }
 ```
 
-**5c. Remove old getInheritedFrom() method**
-
-Delete the recursive version from ClassElement.
+**Files to update**:
+- `src/models/Element.ts`:
+  - Change `nodePath: string` → `pathFromRoot: string[]` in base Element class
+  - Update all places that set nodePath (in fromData methods)
+  - Update all places that read nodePath (joins, comparisons, etc.)
+  - Remove `slotPath: string` from ClassSlot
+  - Rewrite `getInheritedFrom()` to compute on-demand
+  - Simplify `collectAllSlots()` (remove slotPath assignment)
 
 **Testing**:
-- Verify slot inheritance displays correctly in UI
-- Check that inherited slots show correct "from" annotation
-- Verify sorting by slotPath groups slots by ancestry
+- ✅ Run typecheck
+- ✅ Verify slot inheritance displays correctly in UI
+- ✅ Check that inherited slots show correct "from" annotation
+- ✅ Verify tree sorting still works (may need to join pathFromRoot for sorting)
+
+[sg] sorting is not working
+
+**5b.4. Future: SlotCollection design question**
+
+Should SlotCollection include ALL slots (global SlotElements + all ClassSlots from all classes)?
+
+**Current**: SlotCollection only has global slots from schema. ClassSlots live on ClassElements.
+
+**Proposed**: SlotCollection as unified slot registry with potential tree structure showing slot usage/inheritance.
+
+**Decision**: Defer to later - bigger design question.
+
+---
+
+#### Future: Graph-based Model Architecture (Major Refactor)
+
+**Status**: Design idea only - not implementing yet
+
+**Proposal** (from [DATA_FLOW.md discussion](../docs/DATA_FLOW.md#L1017-L1065)):
+
+Use graphology library to represent model as directed acyclic graph (DAG):
+- Store model as graph with artificial root node
+- Parent relationships = edges in graph
+- Child relationships = transpose of graph
+- Paths computed on-demand via graph traversal (not stored)
+- Collections simplified to graph queries
+- Relationships = edge lists
+
+**Benefits**:
+- Eliminates manual tree construction code
+- Powerful graph algorithms available
+- Unified relationship model
+- Easier to query and visualize
+
+**Concerns**:
+- Huge refactor touching most files
+- New dependency and learning curve
+- Unknown performance implications
+- Possibly over-engineering
+
+**Decision**: Implement incremental improvements first (pathFromRoot array, eliminate slotPath, centralize tree construction). Re-evaluate graph approach only if complexity remains high after these improvements.
+
+---
+[sg]
+#### Step 5.5 (could be 6 if those below incremented)
+
+simplify data flow. see docs/DATA_FLOW.md, maybe have this
+conversation there. and probably means moving
+Abstract Tree Rendering System into this step.
 
 ---
 
@@ -945,6 +1072,8 @@ Update to use DataService contracts only.
 ---
 
 ### Unified Detail Box System (Phase 12) ✅ COMPLETED
+
+[sg] still has bugs. maybe documented somewhere
 
 **Goal**: Extract dialog management from App.tsx, merge DetailDialog/DetailPanelStack into unified system, and implement transitory mode for FloatingBox - allowing any content to appear temporarily (auto-disappearing) and upgrade to persistent mode on user interaction.
 
