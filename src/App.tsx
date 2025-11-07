@@ -127,12 +127,6 @@ function App() {
   const handleUpgradeRelationshipBox = useCallback(() => {
     if (!hoveredItem || !hoveredItemId || !dataService) return;
 
-    // Use cursor position for the new persistent box
-    const position = {  // [sg] obsolete code, right?
-      x: hoveredItem.cursorX,
-      y: hoveredItem.cursorY
-    };
-
     // Check if already open
     const existingIndex = floatingBoxes.findIndex(b => b.itemId === hoveredItemId);
 
@@ -160,7 +154,7 @@ function App() {
       metadata,
       content: <DetailContent itemId={hoveredItemId} dataService={dataService} hideHeader={true} />,
       itemId: hoveredItemId,
-      position,
+      // position handled by cascade positioning in FloatingBoxManager
       size: { width: 700, height: 400 }
     };
 
