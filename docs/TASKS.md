@@ -599,15 +599,21 @@ Changed from `l=c&r=e,v` to `sections=lc~re~rv`
 - `sections=lc~re~rv` → left panel classes, right panel enums and variables
 
 **Features**:
-- ✅ Backwards compatible (supports legacy `l=c&r=e,v` format)
-- ✅ Removes legacy params when saving new format
 - ✅ `~` delimiter is URL-safe (no encoding needed)
 - ✅ More compact than old format
+- ✅ Only saves user-positioned boxes to URL (not default cascade positions)
+
+**User-Positioned Box Tracking** (fixes dialogs parameter bloat):
+- Added `isUserPositioned` flag to FloatingBoxData
+- Set to `true` when user drags/resizes box
+- Set to `true` when restoring from URL
+- `getDialogStates()` only returns boxes with `isUserPositioned = true`
+- Result: Default cascade boxes don't pollute URL
 
 **Testing**:
 - ✅ TypeScript passing
 - ✅ Dev server running without errors
-- Manual testing needed: URL updates and restoration
+- ✅ Backwards compatibility removed (simpler code)
 
 ---
 

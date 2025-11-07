@@ -30,18 +30,20 @@ function App() {
   const getDialogStates = useCallback((): DialogState[] => {
     if (!dataService) return [];
 
-    return floatingBoxes.map(box => {
-      // [sg] this seems to violate architectural principles. why does it need item type?
-      const itemType = dataService.getItemType(box.itemId);
-      return {
-        itemName: box.itemId,
-        itemType: itemType ?? 'class', // fallback to 'class'
-        x: box.position?.x ?? 100,
-        y: box.position?.y ?? 100,
-        width: box.size?.width ?? 900,
-        height: box.size?.height ?? 350
-      };
-    });
+    // Only save boxes that user has explicitly positioned
+    return floatingBoxes
+      .filter(box => box.isUserPositioned)
+      .map(box => {
+        const itemType = dataService.getItemType(box.itemId);
+        return {
+          itemName: box.itemId,
+          itemType: itemType ?? 'class', // fallback to 'class'
+          x: box.position?.x ?? 100,
+          y: box.position?.y ?? 100,
+          width: box.size?.width ?? 900,
+          height: box.size?.height ?? 350
+        };
+      });
   }, [floatingBoxes, dataService]);
 
   // Manage layout state
@@ -168,10 +170,10 @@ function App() {
     setFloatingBoxes(prev => prev.filter(b => b.id !== id));
   }, []);
 
-  // Update floating box position/size
+  // Update floating box position/size (marks box as user-positioned)
   const handleFloatingBoxChange = useCallback((id: string, position: { x: number; y: number }, size: { width: number; height: number }) => {
     setFloatingBoxes(prev => prev.map(b =>
-      b.id === id ? { ...b, position, size } : b
+      b.id === id ? { ...b, position, size, isUserPositioned: true } : b
     ));
   }, []);
 
@@ -205,7 +207,8 @@ function App() {
               content: <DetailContent itemId={itemId} dataService={dataService} hideHeader={true} />,
               itemId,
               position: { x: dialogState.x, y: dialogState.y },
-              size: { width: dialogState.width, height: dialogState.height }
+              size: { width: dialogState.width, height: dialogState.height },
+              isUserPositioned: true  // Restored from URL means user explicitly positioned
             });
             boxIdCounter++;
           }

@@ -30,6 +30,7 @@ export interface FloatingBoxData {
   itemId: string;  // Item identifier for callbacks and state management
   position?: { x: number; y: number };
   size?: { width: number; height: number };
+  isUserPositioned?: boolean;  // True if user has moved/resized this box
 }
 
 interface FloatingBoxManagerProps {

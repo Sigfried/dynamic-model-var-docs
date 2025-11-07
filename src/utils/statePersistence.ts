@@ -36,13 +36,12 @@ const codeToItemType: Record<string, ElementTypeId> = {
 /**
  * Parse state from URL query string
  * Format: sections=lc~re~rv (left-class~right-enum~right-variable)
- * Also supports legacy format: l=c&r=e,v for backwards compatibility
  */
 export function parseStateFromURL(): Partial<AppState> | null {
   const params = new URLSearchParams(window.location.search);
   const state: Partial<AppState> = {};
 
-  // Try new format first: sections=lc~re~rv
+  // Parse sections parameter: sections=lc~re~rv
   const sectionsParam = params.get('sections');
   if (sectionsParam) {
     const leftSections: ElementTypeId[] = [];
@@ -68,21 +67,6 @@ export function parseStateFromURL(): Partial<AppState> | null {
 
     if (leftSections.length > 0) state.leftSections = leftSections;
     if (rightSections.length > 0) state.rightSections = rightSections;
-  } else {
-    // Fallback to legacy format: l=c&r=e,v
-    const leftParam = params.get('l');
-    if (leftParam) {
-      state.leftSections = leftParam.split(',')
-        .map(code => codeToItemType[code])
-        .filter(Boolean) as ElementTypeId[];
-    }
-
-    const rightParam = params.get('r');
-    if (rightParam) {
-      state.rightSections = rightParam.split(',')
-        .map(code => codeToItemType[code])
-        .filter(Boolean) as ElementTypeId[];
-    }
   }
 
   // Parse dialogs (new format)
