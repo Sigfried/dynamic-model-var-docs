@@ -601,19 +601,39 @@ Changed from `l=c&r=e,v` to `sections=lc~re~rv`
 **Features**:
 - ✅ `~` delimiter is URL-safe (no encoding needed)
 - ✅ More compact than old format
-- ✅ Only saves user-positioned boxes to URL (not default cascade positions)
+- ✅ All persistent boxes saved to URL (no lost boxes on refresh)
+- ✅ Position info only included when user has moved/resized box
 
-**User-Positioned Box Tracking** (fixes dialogs parameter bloat):
+**Dialog URL Format** (fixed in follow-up commits):
+- ✅ Removed type from format (itemId is sufficient)
+- Format: `name` or `name:x,y,w,h` (position optional)
+- Examples:
+  - `dialogs=Specimen;TypeEnum` (default cascade positions)
+  - `dialogs=Specimen:250,150,900,400;TypeEnum` (Specimen user-positioned)
+- All boxes persist, but only user-moved boxes include coordinates
+
+**User-Positioned Box Tracking**:
 - Added `isUserPositioned` flag to FloatingBoxData
 - Set to `true` when user drags/resizes box
-- Set to `true` when restoring from URL
-- `getDialogStates()` only returns boxes with `isUserPositioned = true`
-- Result: Default cascade boxes don't pollute URL
+- Set to `true` when restoring with position from URL
+- `getDialogStates()` saves all persistent boxes, position conditional on flag
+- Result: Clean URLs without repeated default positions
+
+**Box Restoration Order**:
+- Sort on restore: default-positioned first, then user-positioned
+- Prevents gaps in cascade (default boxes cascade at 0,1,2... not 0,2,3...)
+- User-positioned boxes appear at saved positions
+
+**Bring-to-Front Fix**:
+- Added `handleBringToFront` callback in App.tsx
+- Moves box to end of array (higher z-index)
+- Works on click, drag, resize
 
 **Testing**:
 - ✅ TypeScript passing
 - ✅ Dev server running without errors
 - ✅ Backwards compatibility removed (simpler code)
+- ✅ Cleaner URLs (no type prefix, no bloated positions)
 
 ---
 
