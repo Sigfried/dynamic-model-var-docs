@@ -12,6 +12,7 @@
  */
 import { useExpansionState } from '../hooks/useExpansionState';
 import { getItemHoverHandlers } from '../hooks/useItemHover';
+import { contextualizeId } from '../utils/idContextualization';
 
 /**
  * ItemHoverData - Hover event data for item interactions
@@ -28,8 +29,8 @@ export interface ItemHoverData {
  * Component defines interface; model layer provides this data via getSectionItemData().
  */
 export interface SectionItemData {
-  // Identity (used for both DOM id and React key)
-  id: string;                     // "lp-Specimen" (unique ID from model layer)
+  // Identity (raw name from model layer, contextualized by UI layer)
+  id: string;                     // "Specimen" (raw name, UI adds context prefix)
 
   // Display
   displayName: string;            // "Specimen"
@@ -163,7 +164,14 @@ export default function Section({ sectionData, onClickItem, onItemHover, onItemL
     : [undefined, undefined];
 
   // Get items based on current expansion state
-  const items = getItems(expandedItems, position);
+  const rawItems = getItems(expandedItems, position);
+
+  // Contextualize IDs for DOM uniqueness (model layer returns raw names, UI layer adds context)
+  const contextSuffix = position === 'left' ? 'left-panel' : position === 'right' ? 'right-panel' : undefined;
+  const items = rawItems.map(item => ({
+    ...item,
+    id: contextualizeId({ id: item.id, context: contextSuffix })
+  }));
 
   return (
     <div className="bg-white dark:bg-slate-800 text-left">

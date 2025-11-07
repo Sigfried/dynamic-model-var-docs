@@ -539,15 +539,16 @@ We'll add Item conversion incrementally as we refactor components in later steps
 
 ---
 
-#### Step 3: getId() Simplification
+#### Step 3: getId() Simplification ✅ COMPLETED
 
-**3a. Update components to use contextualization utilities**
+**3a. Update components to use contextualization utilities** ✅ COMPLETED
 
-Files to update:
-- Any component using DOM IDs based on element identity
-- Update to use `contextualizeId()` instead of `element.getId(context)`
+Updated `getSectionItemData()` in `src/models/Element.ts`:
+- Added import of `contextualizeId` utility
+- Changed line 329 to use `contextualizeId({ id: this.getId(), context: ... })`
+- Maps 'leftPanel'/'rightPanel' to 'left-panel'/'right-panel' for utility
 
-**3b. Remove context parameter from getId()**
+**3b. Remove context parameter from getId()** ✅ COMPLETED
 
 File: `src/models/Element.ts`
 
@@ -566,10 +567,11 @@ getId(): string {
 }
 ```
 
-**Testing**:
-- `npm run typecheck` - ensure no context param usage remains
-- `npm run check-arch` - verify no violations
-- Manual UI testing - verify DOM IDs still work
+**Testing Results**:
+- ✅ `npm run typecheck` - All checks passing
+- ✅ `npm run check-arch` - All architecture checks passing
+- ✅ Dev server running - No runtime errors
+- ✅ Tests - 159 passing (19 DetailContent failures are pre-existing, see line 531)
 
 ---
 
@@ -1355,11 +1357,35 @@ Hover behavior depends on where cursor is positioned:
 
    11. **Stacked mode missing controls** (test #8) ⚠️ NEEDS RETESTING
        - Original feedback: "yes for floating. still not for stacked"
-       - Code inspection: Close button IS present in stacked mode (lines 292-302 of FloatingBoxManager.tsx)
-       - Close button rendered when box.mode === 'persistent'
-       - Has proper stopPropagation on click handler
-       - Possible issue: Was this tested before bug 4a fix? (hideHeader change might have affected it)
-       - **Action needed**: Retest to verify close button works in stacked mode
+
+   12. **Hover/upgrade behavior broken** (found during Step 3 testing) ❌ CRITICAL
+       - **Root cause**: App.tsx:155 creates DetailContent instead of RelationshipInfoBox on upgrade
+       - **Expected**: When hovering and upgrading (click or 1.5s hover), RelationshipInfoBox should become persistent with same content
+       - **Actual**: Right panel - transitory box disappears, DetailContent appears in cascade stack
+       - **Actual**: Left panel - unpredictable behavior, sometimes disappears, sometimes shows up later as DetailContent
+       - **Architectural issue**: RelationshipInfoBox uses `fixed` positioning (line 303-304) which conflicts with FloatingBox wrapper
+       - **Fix needed**: Refactor RelationshipInfoBox to support both transitory and persistent modes
+         - Transitory mode: Uses fixed positioning, calculates position from itemDomId
+         - Persistent mode: No positioning (rendered inside FloatingBox), no need for itemDomId
+       - **Related**: See "Fix transitory/persistent box upgrade architecture" (task #8 above)
+
+   13. **Cascade positioning - boxes stacking incorrectly** (found during Step 3 testing) ❌
+       - **Symptom**: Non-user-positioned boxes appear on top of each other in wrong place
+       - **Note**: URL restoration positioning IS working correctly (user-positioned boxes restore)
+       - **Issue**: Default cascade positioning not working as expected
+       - **Need to investigate**: What specific positioning behavior is broken?
+       - **Code location**: FloatingBoxManager.tsx:148-194 (cascade positioning algorithm)
+
+   14. **Architecture violation: contextualizeId in model layer** (introduced in Step 3) ✅ FIXED
+       - **Location**: src/models/Element.ts:19, 329
+       - **Problem**: Model layer calling UI utility function
+       - **Root cause**: getSectionItemData() does contextualization, but it's in model layer
+       - **Fix**: ✅ Moved contextualization to UI layer (Section.tsx:169-174)
+         - Removed contextualizeId import from Element.ts
+         - getSectionItemData() now returns raw name as id
+         - Section.tsx contextualizes IDs after calling getItems()
+       - **Principle**: Model layer should never call UI utilities, even in bridge methods
+       - **Testing**: ✅ TypeScript passing, ✅ architecture checks passing
 
     **Medium Priority** (UX issues):
 

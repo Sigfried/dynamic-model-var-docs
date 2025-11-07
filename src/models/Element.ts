@@ -270,24 +270,21 @@ export abstract class Element {
   }
 
   /**
-   * Get contextualized ID for this element.
-   * Context prefixes:
-   * - 'leftPanel' → 'lp-' (e.g., 'lp-Specimen')
-   * - 'rightPanel' → 'rp-' (e.g., 'rp-Specimen')
-   * - 'detailBox' → 'db-' (e.g., 'db-Specimen')
-   * - undefined → no prefix (e.g., 'Specimen')
+   * Get the unique identifier for this element.
+   * Returns the element name, which serves as its identity.
+   *
+   * Architecture principle: getId() always returns just the element name.
+   * UI layer handles contextualization via contextualizeId() utility.
+   *
+   * @returns The element name (e.g., 'Specimen')
    */
-  getId(context?: 'leftPanel' | 'rightPanel' | 'detailBox'): string {
-    const prefix = context === 'leftPanel' ? 'lp-'
-      : context === 'rightPanel' ? 'rp-'
-      : context === 'detailBox' ? 'db-'
-      : '';
-    return prefix + this.name;
+  getId(): string {
+    return this.name;
   }
 
   /**
-   * Expose id as getter that calls getId() with no context.
-   * Provides convenient property access for default ID.
+   * Expose id as getter that calls getId().
+   * Provides convenient property access for element ID.
    */
   get id(): string {
     return this.getId();
@@ -325,7 +322,7 @@ export abstract class Element {
     const badge = this.getBadge();
 
     return {
-      id: this.getId(context),
+      id: this.getId(),
       displayName: this.name,
       level,
       badgeColor: badge !== undefined ? `${typeInfo.color.badgeBg} ${typeInfo.color.badgeText}` : undefined,
