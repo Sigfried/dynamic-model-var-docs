@@ -108,7 +108,7 @@ function computeIncomingRelationships(thisElement: Element): IncomingRelationshi
 
   for (const otherClass of allClasses) {
     // Find subclasses (classes that inherit from this element)
-    if (thisElement.type === 'class' && otherClass.parentName === thisElement.getId()) {
+    if (thisElement.type === 'class' && otherClass.parentId === thisElement.getId()) {
       incoming.subclasses.push(otherClass.getId());
     }
 
@@ -657,7 +657,7 @@ export class ClassElement extends Element {
   protected readonly dataModel: ModelData
   readonly name: string;
   readonly description: string | undefined;
-  readonly parentName: string | undefined;  // Store parent name, not Element reference (set in Element.parent)
+  readonly parentId: string | undefined;  // Store parent ID, not Element reference (set in Element.parent)
 
   // Tree structure notes:
   // - parent/children (from Element base): Class hierarchy (subclasses)
@@ -738,8 +738,8 @@ export class ClassElement extends Element {
     this.dataModel = dataModel;
     this.name = data.name;
     this.description = data.description;
-    this.parentName = data.parent;  // Store parent name (Element.parent set later in fromData())
-    // [sg] parentName should probably be parentId
+    this.parentId = data.parent;  // Store parent name (Element.parent set later in fromData())
+    // [sg] parentId should probably be parentId
 
     // Keep existing properties for backward compatibility during transition
     this.attributes = data.attributes || {};
@@ -821,10 +821,10 @@ export class ClassElement extends Element {
     const sections: DetailSection[] = [];
 
     // Inheritance section
-    if (this.parentName) {
+    if (this.parentId) {
       sections.push({
         name: 'Inheritance',
-        text: `Inherits from: ${this.parentName}`
+        text: `Inherits from: ${this.parentId}`
       });
     }
 
@@ -890,7 +890,7 @@ export class ClassElement extends Element {
     return {
       titlebarTitle: `${metadata.label}: ${this.name}`,
       title: this.name,
-      subtitle: this.parentName ? `extends ${this.parentName}` : undefined,
+      subtitle: this.parentId ? `extends ${this.parentId}` : undefined,
       titleColor: metadata.color.headerBg,
       description: this.description,
       sections
@@ -901,10 +901,10 @@ export class ClassElement extends Element {
     const rels: Relationship[] = [];
 
     // Inheritance relationship
-    if (this.parentName) {
+    if (this.parentId) {
       rels.push({
         type: 'inherits',
-        target: this.parentName,
+        target: this.parentId,
         targetType: 'class',
         isSelfRef: false
       });
@@ -1472,13 +1472,13 @@ export class ClassCollection extends ElementCollection {
     // 2. Wire up parent-child relationships using Element.parent and Element.children
     const roots: ClassElement[] = [];
     elementMap.forEach(element => {
-      if (element.parentName) {
-        const parentElement = elementMap.get(element.parentName);
+      if (element.parentId) {
+        const parentElement = elementMap.get(element.parentId);
         if (parentElement) {
           element.parent = parentElement;  // Set Element.parent reference
           parentElement.children.push(element);  // Add to parent's children array
         } else {
-          console.warn(`ClassElement "${element.name}" has parent "${element.parentName}" that doesn't exist`);
+          console.warn(`ClassElement "${element.name}" has parent "${element.parentId}" that doesn't exist`);
           roots.push(element);  // Treat as root if parent not found
         }
       } else {

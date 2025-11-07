@@ -35,7 +35,7 @@ export function getPanelTitle(element: Element, elementType: ElementTypeId): Rea
     return (
       <span className="text-base">
         <span className="font-bold">Class:</span> <span className="font-bold">{element.name}</span>
-        {classElement.parentName && <span className="ml-1 text-sm">extends {classElement.parentName}</span>}
+        {classElement.parentId && <span className="ml-1 text-sm">extends {classElement.parentId}</span>}
       </span>
     );
   } else if (elementType === 'enum') {

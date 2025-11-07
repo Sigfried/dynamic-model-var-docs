@@ -288,32 +288,32 @@ Based on Architecture & Refactoring Decisions section above:
 #### Implementation Order & Dependencies
 
 ```
-Phase 1: Quick Wins (no dependencies)
+Step 1: Quick Wins (no dependencies)
   ├─ 1a. Delete obsolete code
   ├─ 1b. Rename parentName → parentId
   └─ 1c. Rename onSelectItem → onClickItem
 
-Phase 2: Component Data Abstraction (foundation for everything)
+Step 2: Component Data Abstraction (foundation for everything)
   ├─ 2a. Create Item base class
   ├─ 2b. Create contextualization utilities
   └─ 2c. Update DataService to return Item instances
 
-Phase 3: getId() Simplification (requires Phase 2)
+Step 3: getId() Simplification (requires Step 2)
   ├─ 3a. Update components to use contextualization utilities
   └─ 3b. Remove context parameter from getId()
 
-Phase 4: URL State Refactor (requires Phase 3)
+Step 4: URL State Refactor (requires Step 3)
   └─ 4a. Switch to sectionIds with ~ delimiter
 
-Phase 5: Slot Inheritance (independent, can do anytime)
+Step 5: Slot Inheritance (independent, can do anytime)
   ├─ 5a. Add slotPath to SlotElement
   ├─ 5b. Refactor collectAllSlots() to use slotPath
   └─ 5c. Remove getInheritedFrom() method
 
-Phase 6: Relationship Grouping (independent)
+Step 6: Relationship Grouping (independent)
   └─ 6a. Apply to EnumElement and VariableElement
 
-Phase 7: LinkOverlay Refactor (big one, requires Phase 3)
+Step 7: LinkOverlay Refactor (big one, requires Step 3)
   ├─ 7a. Add getAllPairs() to DataService
   ├─ 7b. Create new Link interface with sourceSide/targetSide
   ├─ 7c. Create buildLink() function
@@ -324,7 +324,7 @@ Phase 7: LinkOverlay Refactor (big one, requires Phase 3)
 
 ---
 
-#### Phase 1: Quick Wins
+#### Step 1: Quick Wins
 
 **1a. Delete obsolete cursor position code**
 
@@ -366,7 +366,7 @@ rg "onSelectItem|onSelect" src/ -t ts -t tsx
 
 ---
 
-#### Phase 2: Component Data Abstraction
+#### Step 2: Component Data Abstraction
 
 **Goal**: Create Item base class hierarchy for component data contracts
 
@@ -521,7 +521,7 @@ We'll add Item conversion incrementally as we refactor components.
 
 ---
 
-#### Phase 3: getId() Simplification
+#### Step 3: getId() Simplification
 
 **3a. Update components to use contextualization utilities**
 
@@ -555,7 +555,7 @@ getId(): string {
 
 ---
 
-#### Phase 4: URL State Refactor
+#### Step 4: URL State Refactor
 
 **4a. Switch to sectionIds with ~ delimiter**
 
@@ -583,7 +583,7 @@ Examples:
 
 ---
 
-#### Phase 5: Slot Inheritance Simplification
+#### Step 5: Slot Inheritance Simplification
 
 **5a. Add slotPath to SlotElement**
 
@@ -664,7 +664,7 @@ Delete the recursive version from ClassElement.
 
 ---
 
-#### Phase 6: Relationship Grouping
+#### Step 6: Relationship Grouping
 
 **6a. Apply grouping to EnumElement and VariableElement**
 
@@ -689,7 +689,7 @@ Review ClassElement.getRelationshipData() implementation and apply pattern.
 
 ---
 
-#### Phase 7: LinkOverlay Refactor
+#### Step 7: LinkOverlay Refactor
 
 **7a. Add getAllPairs() to DataService**
 
