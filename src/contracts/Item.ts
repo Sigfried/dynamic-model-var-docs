@@ -7,18 +7,22 @@
  * - Common display properties
  * - Tree rendering capabilities (future)
  *
- * Architecture principle: UI components work with Item instances, not Element instances.
- * This maintains separation between model layer (Element) and view layer (Item).
+ * Architecture principle: UI components work with Item instances from this contracts layer.
+ * This maintains separation between the model layer and view layer.
  */
 
 import { contextualizeId } from '../utils/idContextualization';
 
 /**
- * Abstract base class for all component data
+ * Base class for all component data
+ *
+ * Can be used directly for simple items, or extended for specialized items
+ * like CollectionItem or SectionItem.
  */
-export abstract class Item {
-  abstract itemId: string;
-  abstract displayName: string;
+export class Item {
+  itemId: string;
+  displayName: string;
+  description?: string;
 
   // Display properties from DataService
   headerColor?: string;
@@ -28,6 +32,16 @@ export abstract class Item {
   // Nesting support
   children?: Item[];
   parent?: Item;
+
+  constructor(
+    itemId: string,
+    displayName: string,
+    description?: string
+  ) {
+    this.itemId = itemId;
+    this.displayName = displayName;
+    this.description = description;
+  }
 
   /**
    * Get contextualized ID for use in DOM/component
@@ -41,27 +55,7 @@ export abstract class Item {
 }
 
 /**
- * Item representing a single element (class, enum, slot, variable)
- */
-export class ElementItem extends Item {
-  itemId: string;
-  displayName: string;
-  description?: string;
-
-  constructor(
-    itemId: string,
-    displayName: string,
-    description?: string
-  ) {
-    super();
-    this.itemId = itemId;
-    this.displayName = displayName;
-    this.description = description;
-  }
-}
-
-/**
- * Item representing a collection of elements
+ * Item representing a collection of items
  */
 export class CollectionItem extends Item {
   itemId: string;
