@@ -30,19 +30,25 @@ function App() {
   const getDialogStates = useCallback((): DialogState[] => {
     if (!dataService) return [];
 
-    // Only save boxes that user has explicitly positioned
+    // Save all persistent boxes, but only include position if user positioned it
     return floatingBoxes
-      .filter(box => box.isUserPositioned)
+      .filter(box => box.mode === 'persistent')
       .map(box => {
         const itemType = dataService.getItemType(box.itemId);
-        return {
+        const state: DialogState = {
           itemName: box.itemId,
           itemType: itemType ?? 'class', // fallback to 'class'
-          x: box.position?.x ?? 100,
-          y: box.position?.y ?? 100,
-          width: box.size?.width ?? 900,
-          height: box.size?.height ?? 350
         };
+
+        // Only include position if user has explicitly positioned this box
+        if (box.isUserPositioned && box.position && box.size) {
+          state.x = box.position.x;
+          state.y = box.position.y;
+          state.width = box.size.width;
+          state.height = box.size.height;
+        }
+
+        return state;
       });
   }, [floatingBoxes, dataService]);
 
@@ -200,16 +206,24 @@ function App() {
         if (dataService.itemExists(itemId)) {
           const metadata = dataService.getFloatingBoxMetadata(itemId);
           if (metadata) {
-            restoredBoxes.push({
+            const box: FloatingBoxData = {
               id: `box-${boxIdCounter}`,
               mode: 'persistent',
               metadata,
               content: <DetailContent itemId={itemId} dataService={dataService} hideHeader={true} />,
-              itemId,
-              position: { x: dialogState.x, y: dialogState.y },
-              size: { width: dialogState.width, height: dialogState.height },
-              isUserPositioned: true  // Restored from URL means user explicitly positioned
-            });
+              itemId
+            };
+
+            // If dialog has position info, use it and mark as user-positioned
+            if (dialogState.x !== undefined && dialogState.y !== undefined &&
+                dialogState.width !== undefined && dialogState.height !== undefined) {
+              box.position = { x: dialogState.x, y: dialogState.y };
+              box.size = { width: dialogState.width, height: dialogState.height };
+              box.isUserPositioned = true;
+            }
+            // Otherwise, let cascade positioning handle it (no position property)
+
+            restoredBoxes.push(box);
             boxIdCounter++;
           }
         }
