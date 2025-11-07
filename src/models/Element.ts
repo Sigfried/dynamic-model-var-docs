@@ -353,6 +353,13 @@ export abstract class Element {
   children: Element[] = [];
 
   /**
+   * Full path from root to this node (e.g., "Entity.Specimen.Material")
+   * Set during tree construction in collection fromData() methods
+   * Available for all tree-structured elements (classes, enums, variables, slots)
+   */
+  nodePath: string = '';
+
+  /**
    * Get list of all ancestors (parent, grandparent, etc.) walking up the tree.
    * Returns empty array if this is a root element.
    */
@@ -560,6 +567,7 @@ export class ClassSlot {
   readonly name: string;
   readonly baseSlot: SlotElement;  // Reference to the slot (or synthetic SlotElement for attributes)
   readonly source: 'attribute' | 'slot_usage' | 'slot_reference';
+  slotPath: string = '';  // Full ancestry path where slot was defined (e.g., "Entity.Specimen.Material")
 
   // Internal override values (undefined means "use base slot value")
   private readonly _range?: string;
@@ -679,45 +687,52 @@ export class ClassElement extends Element {
    * Get the name of the class from which a slot was inherited.
    * Returns empty string if slot is not inherited (defined in this class).
    *
-   * @param slotName Name of the slot to check
-   * @returns Parent class name, or empty string if not inherited
+   * Uses slotPath (set during collectAllSlots()) to determine inheritance.
+   * No recursion needed - slotPath contains the full ancestry information.
    *
-   * [sg] do we need both getInheritedFrom and collectAllSlots to be recursive?
-   *      i need an explanation of this logic
+   * @param slotName Name of the slot to check
+   * @returns Class name where slot was defined, or empty string if defined in this class
    **/
   getInheritedFrom(slotName: string): string {
-    // Check if this slot is defined directly in this class
-    if (this.classSlots.some(s => s.name === slotName)) {
+    // Find the slot in this class's collected slots
+    const allSlots = this.collectAllSlots();
+    const slot = allSlots[slotName];
+
+    if (!slot || !slot.slotPath) {
       return '';
     }
 
-    // Check parent
-    if (this.parent) {
-      const parentSlots = (this.parent as ClassElement).collectAllSlots();
-      if (slotName in parentSlots) {
-        // Find the original class that defined this slot
-        return (this.parent as ClassElement).getInheritedFrom(slotName) || (this.parent as ClassElement).name;
-      }
+    // Extract class name from slotPath (last component)
+    // e.g., "Entity.Specimen" → "Specimen"
+    const pathComponents = slot.slotPath.split('.');
+    const definingClass = pathComponents[pathComponents.length - 1];
+
+    // If defining class is this class, not inherited
+    if (definingClass === this.name) {
+      return '';
     }
 
-    return '';
+    return definingClass;
   }
 
   /**
    * Collect all slots for this class, including inherited slots.
    * Child class slots override parent class slots with the same name.
+   * Sets slotPath on each slot to indicate where it was defined.
    *
    * @returns Record mapping slot name to ClassSlot instance
    */
   collectAllSlots(): Record<string, ClassSlot> {
     const slots = new Map<string, ClassSlot>();
 
-    // Add slots from this class
+    // Add slots from this class and set slotPath
     this.classSlots.forEach(slot => {
+      slot.slotPath = this.nodePath;  // Set path to where this slot is defined
       slots.set(slot.name, slot);
     });
 
     // Inherit from parent (parent slots are added only if not already present)
+    // Parent slots already have their slotPath set
     if (this.parent) {
       const parentSlots = (this.parent as ClassElement).collectAllSlots();
       Object.entries(parentSlots).forEach(([name, parentSlot]) => {
@@ -1302,7 +1317,11 @@ export class EnumCollection extends ElementCollection {
   static fromData(enumData: Map<string, EnumData>): EnumCollection {
     // Convert EnumData to flat list of EnumElements (no hierarchy)
     const roots = Array.from(enumData.entries())
-      .map(([name, data]) => new EnumElement(name, data))
+      .map(([name, data]) => {
+        const element = new EnumElement(name, data);
+        element.nodePath = element.name;  // Flat list: nodePath = name
+        return element;
+      })
       .sort((a, b) => a.name.localeCompare(b.name));
 
     return new EnumCollection(roots);
@@ -1373,7 +1392,11 @@ export class SlotCollection extends ElementCollection {
   static fromData(slotData: Map<string, SlotData>): SlotCollection {
     // Convert SlotData to flat list of SlotElements (no hierarchy)
     const roots = Array.from(slotData.entries())
-      .map(([name, data]) => new SlotElement(name, data))
+      .map(([name, data]) => {
+        const element = new SlotElement(name, data);
+        element.nodePath = element.name;  // Flat list: nodePath = name
+        return element;
+      })
       .sort((a, b) => a.name.localeCompare(b.name));
 
     return new SlotCollection(roots);
@@ -1483,12 +1506,16 @@ export class ClassCollection extends ElementCollection {
       }
     });
 
-    // Sort children by name at each level
-    const sortChildren = (element: Element) => {
+    // Sort children by name at each level and compute nodePath
+    const sortAndComputePath = (element: Element, parentPath: string = '') => {
+      // Compute nodePath: parentPath + this element's name
+      element.nodePath = parentPath ? `${parentPath}.${element.name}` : element.name;
+
+      // Sort children and recurse
       element.children.sort((a, b) => a.name.localeCompare(b.name));
-      element.children.forEach(sortChildren);
+      element.children.forEach(child => sortAndComputePath(child, element.nodePath));
     };
-    roots.forEach(sortChildren);
+    roots.forEach(root => sortAndComputePath(root));
 
     return new ClassCollection(roots);
   }
@@ -1609,11 +1636,15 @@ export class VariableCollection extends ElementCollection {
       vars.sort((a, b) => a.name.localeCompare(b.name));
     });
 
-    // Wire variables array into ClassElement instances
+    // Wire variables array into ClassElement instances and compute nodePath
     groupedByClass.forEach((variables, className) => {
       const classElement = classCollection.getElement(className) as ClassElement | null;
       if (classElement) {
         classElement.variables = variables;
+        // Set nodePath for each variable: className.variableName
+        variables.forEach(variable => {
+          variable.nodePath = `${classElement.nodePath}.${variable.name}`;
+        });
       }
     });
 
