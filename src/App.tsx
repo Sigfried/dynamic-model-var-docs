@@ -239,9 +239,16 @@ function App() {
         }
       });
 
-      // Set all boxes at once
+      // Sort boxes: default-positioned first (for clean cascade), then user-positioned
+      // This prevents gaps in the cascade when some boxes have explicit positions
       if (restoredBoxes.length > 0) {
-        setFloatingBoxes(restoredBoxes);
+        const sortedBoxes = restoredBoxes.sort((a, b) => {
+          const aPositioned = a.isUserPositioned ? 1 : 0;
+          const bPositioned = b.isUserPositioned ? 1 : 0;
+          return aPositioned - bPositioned; // false (0) before true (1)
+        });
+
+        setFloatingBoxes(sortedBoxes);
         setNextBoxId(boxIdCounter);
       }
     }
