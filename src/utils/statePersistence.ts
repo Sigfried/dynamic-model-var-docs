@@ -35,25 +35,54 @@ const codeToItemType: Record<string, ElementTypeId> = {
 
 /**
  * Parse state from URL query string
+ * Format: sections=lc~re~rv (left-class~right-enum~right-variable)
+ * Also supports legacy format: l=c&r=e,v for backwards compatibility
  */
 export function parseStateFromURL(): Partial<AppState> | null {
   const params = new URLSearchParams(window.location.search);
   const state: Partial<AppState> = {};
 
-  // Parse left panel sections
-  const leftParam = params.get('l');
-  if (leftParam) {
-    state.leftSections = leftParam.split(',')
-      .map(code => codeToItemType[code])
-      .filter(Boolean) as ElementTypeId[];
-  }
+  // Try new format first: sections=lc~re~rv
+  const sectionsParam = params.get('sections');
+  if (sectionsParam) {
+    const leftSections: ElementTypeId[] = [];
+    const rightSections: ElementTypeId[] = [];
 
-  // Parse right panel sections
-  const rightParam = params.get('r');
-  if (rightParam) {
-    state.rightSections = rightParam.split(',')
-      .map(code => codeToItemType[code])
-      .filter(Boolean) as ElementTypeId[];
+    // Split by ~ delimiter
+    const sectionIds = sectionsParam.split('~');
+    for (const sectionId of sectionIds) {
+      if (sectionId.length !== 2) continue; // Must be 2 characters: side + type
+
+      const side = sectionId[0]; // 'l' or 'r'
+      const typeCode = sectionId[1]; // 'c', 'e', 's', 'v'
+      const itemType = codeToItemType[typeCode];
+
+      if (!itemType) continue; // Invalid type code
+
+      if (side === 'l') {
+        leftSections.push(itemType);
+      } else if (side === 'r') {
+        rightSections.push(itemType);
+      }
+    }
+
+    if (leftSections.length > 0) state.leftSections = leftSections;
+    if (rightSections.length > 0) state.rightSections = rightSections;
+  } else {
+    // Fallback to legacy format: l=c&r=e,v
+    const leftParam = params.get('l');
+    if (leftParam) {
+      state.leftSections = leftParam.split(',')
+        .map(code => codeToItemType[code])
+        .filter(Boolean) as ElementTypeId[];
+    }
+
+    const rightParam = params.get('r');
+    if (rightParam) {
+      state.rightSections = rightParam.split(',')
+        .map(code => codeToItemType[code])
+        .filter(Boolean) as ElementTypeId[];
+    }
   }
 
   // Parse dialogs (new format)
@@ -83,7 +112,7 @@ export function parseStateFromURL(): Partial<AppState> | null {
 }
 
 /**
- * Save state to URL query string
+ * Save state to URL query string using new format: sections=lc~re~rv
  * Preserves existing URL parameters that are not managed by this function
  */
 export function saveStateToURL(state: AppState): void {
@@ -91,18 +120,26 @@ export function saveStateToURL(state: AppState): void {
   // (e.g., lve, rve, lce, rce from useExpansionState hook)
   const params = new URLSearchParams(window.location.search);
 
-  // Update left panel sections
-  if (state.leftSections.length > 0) {
-    params.set('l', state.leftSections.map(s => itemTypeToCode[s]).join(','));
-  } else {
-    params.delete('l');
+  // Remove legacy format params if present
+  params.delete('l');
+  params.delete('r');
+
+  // Build section IDs array: lc, re, rv, etc.
+  const sectionIds: string[] = [];
+
+  for (const section of state.leftSections) {
+    sectionIds.push(`l${itemTypeToCode[section]}`);
   }
 
-  // Update right panel sections
-  if (state.rightSections.length > 0) {
-    params.set('r', state.rightSections.map(s => itemTypeToCode[s]).join(','));
+  for (const section of state.rightSections) {
+    sectionIds.push(`r${itemTypeToCode[section]}`);
+  }
+
+  // Update sections parameter with ~ delimiter
+  if (sectionIds.length > 0) {
+    params.set('sections', sectionIds.join('~'));
   } else {
-    params.delete('r');
+    params.delete('sections');
   }
 
   // Update dialogs
@@ -195,18 +232,25 @@ export const PRESETS = {
 };
 
 /**
- * Generate URL for a preset configuration
+ * Generate URL for a preset configuration using new format
  */
 export function generatePresetURL(presetKey: keyof typeof PRESETS): string {
   const preset = PRESETS[presetKey];
   const params = new URLSearchParams();
 
-  if (preset.leftSections.length > 0) {
-    params.set('l', preset.leftSections.map(s => itemTypeToCode[s]).join(','));
+  // Build section IDs array
+  const sectionIds: string[] = [];
+
+  for (const section of preset.leftSections) {
+    sectionIds.push(`l${itemTypeToCode[section]}`);
   }
 
-  if (preset.rightSections.length > 0) {
-    params.set('r', preset.rightSections.map(s => itemTypeToCode[s]).join(','));
+  for (const section of preset.rightSections) {
+    sectionIds.push(`r${itemTypeToCode[section]}`);
+  }
+
+  if (sectionIds.length > 0) {
+    params.set('sections', sectionIds.join('~'));
   }
 
   return `${window.location.pathname}?${params.toString()}`;

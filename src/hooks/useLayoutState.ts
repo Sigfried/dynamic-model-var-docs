@@ -113,14 +113,23 @@ export function useLayoutState({ hasRestoredFromURL, getDialogStates }: UseLayou
         // Build clean URL with only saved state params (no expansion params)
         const params = new URLSearchParams();
 
+        // Build section IDs array using new format
+        const sectionIds: string[] = [];
+
         if (state.leftSections && state.leftSections.length > 0) {
-          const sectionCodes = state.leftSections.map((s: string) => itemTypeToCode[s]).join(',');
-          params.set('l', sectionCodes);
+          for (const section of state.leftSections) {
+            sectionIds.push(`l${itemTypeToCode[section]}`);
+          }
         }
 
         if (state.rightSections && state.rightSections.length > 0) {
-          const sectionCodes = state.rightSections.map((s: string) => itemTypeToCode[s]).join(',');
-          params.set('r', sectionCodes);
+          for (const section of state.rightSections) {
+            sectionIds.push(`r${itemTypeToCode[section]}`);
+          }
+        }
+
+        if (sectionIds.length > 0) {
+          params.set('sections', sectionIds.join('~'));
         }
 
         if (state.dialogs && state.dialogs.length > 0) {
@@ -139,7 +148,7 @@ export function useLayoutState({ hasRestoredFromURL, getDialogStates }: UseLayou
     } else {
       // Reset to default (classes only preset)
       // Navigate to clean default URL (clears all params and triggers reload)
-      const newURL = `${window.location.pathname}?l=c`;
+      const newURL = `${window.location.pathname}?sections=lc`;
       window.location.href = newURL;
     }
   };

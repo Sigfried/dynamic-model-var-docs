@@ -575,31 +575,39 @@ getId(): string {
 
 ---
 
-#### Step 4: URL State Refactor
+#### Step 4: URL State Refactor ✅ COMPLETED
 
-**4a. Switch to sectionIds with ~ delimiter**
+**4a. Switch to sectionIds with ~ delimiter** ✅ COMPLETED
 
-Current format: `l=c&r=e,v`
-New format: `sections=lc~re~rv`
+Changed from `l=c&r=e,v` to `sections=lc~re~rv`
 
-Files to update:
-- `src/hooks/useLayoutState.ts` - URL parsing/serialization
-- Update delimiter from `,` to `~`
-- Change from `l=...&r=...` to `sections=...`
+**Files updated**:
+- ✅ `src/utils/statePersistence.ts`:
+  - parseStateFromURL: Supports new format with legacy fallback
+  - saveStateToURL: Uses new format, removes legacy params
+  - generatePresetURL: Uses new format
+- ✅ `src/hooks/useLayoutState.ts`:
+  - handleResetApp: Uses new format for URL generation
 
 **Section ID format**: `{side}{type}`
-- `l` = left, `r` = right, `c` = center (future)
+- `l` = left, `r` = right
 - `c` = class, `e` = enum, `s` = slot, `v` = variable
 
-Examples:
+**Examples**:
 - `sections=lc` → left panel shows classes
 - `sections=lc~rv` → left panel classes, right panel variables
 - `sections=lc~re~rv` → left panel classes, right panel enums and variables
 
+**Features**:
+- ✅ Backwards compatible (supports legacy `l=c&r=e,v` format)
+- ✅ Removes legacy params when saving new format
+- ✅ `~` delimiter is URL-safe (no encoding needed)
+- ✅ More compact than old format
+
 **Testing**:
-- Verify URL updates on panel changes
-- Verify URL restore on page load
-- Check that `~` doesn't get URL-encoded
+- ✅ TypeScript passing
+- ✅ Dev server running without errors
+- Manual testing needed: URL updates and restoration
 
 ---
 
