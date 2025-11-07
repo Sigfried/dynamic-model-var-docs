@@ -3,7 +3,7 @@ import { isValidElementType } from '../models/ElementRegistry';
 
 export interface DialogState {
   itemName: string;
-  itemType: ElementTypeId;
+  itemType?: ElementTypeId;  // Optional - only needed for localStorage compatibility
   x?: number;      // Optional - if missing, use default cascade position
   y?: number;      // Optional - if missing, use default cascade position
   width?: number;  // Optional - if missing, use default size
@@ -70,29 +70,26 @@ export function parseStateFromURL(): Partial<AppState> | null {
   }
 
   // Parse dialogs
-  // Format: type:name or type:name:x,y,w,h (position optional)
+  // Format: name or name:x,y,w,h (position optional)
   const dialogsParam = params.get('dialogs');
   if (dialogsParam) {
     try {
       state.dialogs = dialogsParam.split(';').map(dialogStr => {
         const parts = dialogStr.split(':');
-        if (parts.length < 2) return null;
+        if (parts.length < 1) return null;
 
-        const itemType = parts[0];
-        const itemName = parts[1];
+        const itemName = parts[0];
 
-        if (!isValidElementType(itemType)) return null;
-
-        // Position is optional (parts[2])
-        if (parts.length >= 3 && parts[2]) {
-          const [x, y, width, height] = parts[2].split(',').map(Number);
+        // Position is optional (parts[1])
+        if (parts.length >= 2 && parts[1]) {
+          const [x, y, width, height] = parts[1].split(',').map(Number);
           if (!isNaN(x) && !isNaN(y) && !isNaN(width) && !isNaN(height)) {
-            return { itemType, itemName, x, y, width, height };
+            return { itemName, x, y, width, height };
           }
         }
 
         // No position info - use defaults
-        return { itemType, itemName };
+        return { itemName };
       }).filter((d): d is DialogState => d !== null);
     } catch (e) {
       console.warn('Failed to parse dialogs from URL:', e);
@@ -134,15 +131,15 @@ export function saveStateToURL(state: AppState): void {
   }
 
   // Update dialogs
-  // Format: type:name or type:name:x,y,w,h (position optional)
+  // Format: name or name:x,y,w,h (position optional)
   if (state.dialogs && state.dialogs.length > 0) {
     const dialogsStr = state.dialogs.map(d => {
       // If box has explicit position, include it
       if (d.x !== undefined && d.y !== undefined && d.width !== undefined && d.height !== undefined) {
-        return `${d.itemType}:${d.itemName}:${Math.round(d.x)},${Math.round(d.y)},${Math.round(d.width)},${Math.round(d.height)}`;
+        return `${d.itemName}:${Math.round(d.x)},${Math.round(d.y)},${Math.round(d.width)},${Math.round(d.height)}`;
       }
       // Otherwise just save item identity
-      return `${d.itemType}:${d.itemName}`;
+      return d.itemName;
     }).join(';');
     params.set('dialogs', dialogsStr);
   } else {

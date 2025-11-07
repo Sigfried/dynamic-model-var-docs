@@ -34,10 +34,8 @@ function App() {
     return floatingBoxes
       .filter(box => box.mode === 'persistent')
       .map(box => {
-        const itemType = dataService.getItemType(box.itemId);
         const state: DialogState = {
-          itemName: box.itemId,
-          itemType: itemType ?? 'class', // fallback to 'class'
+          itemName: box.itemId
         };
 
         // Only include position if user has explicitly positioned this box
@@ -181,6 +179,18 @@ function App() {
     setFloatingBoxes(prev => prev.map(b =>
       b.id === id ? { ...b, position, size, isUserPositioned: true } : b
     ));
+  }, []);
+
+  // Bring floating box to front (move to end of array for higher z-index)
+  const handleBringToFront = useCallback((id: string) => {
+    setFloatingBoxes(prev => {
+      const index = prev.findIndex(b => b.id === id);
+      if (index === -1 || index === prev.length - 1) return prev; // Already at front or not found
+
+      const updated = [...prev];
+      const [box] = updated.splice(index, 1);
+      return [...updated, box];
+    });
   }, []);
 
   // Restore floating boxes from URL after data loads (runs once)
@@ -448,6 +458,7 @@ function App() {
           onNavigate={handleNavigate}
           onClose={handleCloseFloatingBox}
           onChange={handleFloatingBoxChange}
+          onBringToFront={handleBringToFront}
         />
 
         {/* Relationship Info Box (transitory, uses item position) - only in cascade mode */}
