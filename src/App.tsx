@@ -394,7 +394,7 @@ function App() {
               onSectionsChange={setLeftSections}
               sectionData={leftSectionData}
               toggleButtons={toggleButtons}
-              onSelectItem={handleOpenFloatingBox}
+              onClickItem={handleOpenFloatingBox}
               onItemHover={setHoveredItem}
               onItemLeave={() => setHoveredItem(null)}
             />
@@ -407,7 +407,7 @@ function App() {
               onSectionsChange={setRightSections}
               sectionData={rightSectionData}
               toggleButtons={toggleButtons}
-              onSelectItem={handleOpenFloatingBox}
+              onClickItem={handleOpenFloatingBox}
               onItemHover={setHoveredItem}
               onItemLeave={() => setHoveredItem(null)}
             />

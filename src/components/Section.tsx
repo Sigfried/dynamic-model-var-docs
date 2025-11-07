@@ -66,7 +66,7 @@ export interface SectionData {
 
 interface SectionProps {
   sectionData: SectionData;
-  onSelectItem: (hoverData: ItemHoverData) => void;
+  onClickItem: (hoverData: ItemHoverData) => void;
   onItemHover?: (hoverData: ItemHoverData) => void;
   onItemLeave?: () => void;
   position: 'left' | 'right';
@@ -74,14 +74,14 @@ interface SectionProps {
 
 interface ItemRendererProps {
   item: SectionItemData;
-  onSelectItem: (hoverData: ItemHoverData) => void;
+  onClickItem: (hoverData: ItemHoverData) => void;
   onItemHover?: (hoverData: ItemHoverData) => void;
   onItemLeave?: () => void;
   position: 'left' | 'right';
   toggleExpansion?: (itemName: string) => void;
 }
 
-function ItemRenderer({ item, onSelectItem, onItemHover, onItemLeave, position, toggleExpansion }: ItemRendererProps) {
+function ItemRenderer({ item, onClickItem, onItemHover, onItemLeave, position, toggleExpansion }: ItemRendererProps) {
   const { id, displayName, level, hasChildren, isExpanded, isClickable, badgeColor, badgeText, indicators, hoverData } = item;
 
   const hoverHandlers = getItemHoverHandlers({
@@ -95,7 +95,7 @@ function ItemRenderer({ item, onSelectItem, onItemHover, onItemLeave, position, 
   // For non-clickable items with children (e.g., variable group headers), the whole row should toggle expansion
   const handleClick = () => {
     if (isClickable) {
-      onSelectItem(hoverData);
+      onClickItem(hoverData);
     } else if (hasChildren && toggleExpansion) {
       toggleExpansion(hoverData.name);
     }
@@ -154,7 +154,7 @@ function ItemRenderer({ item, onSelectItem, onItemHover, onItemLeave, position, 
   );
 }
 
-export default function Section({ sectionData, onSelectItem, onItemHover, onItemLeave, position }: SectionProps) {
+export default function Section({ sectionData, onClickItem, onItemHover, onItemLeave, position }: SectionProps) {
   const { label, getItems, expansionKey, defaultExpansion } = sectionData;
 
   // Use expansion state hook only if needed
@@ -175,7 +175,7 @@ export default function Section({ sectionData, onSelectItem, onItemHover, onItem
           <ItemRenderer
             key={item.id}
             item={item}
-            onSelectItem={onSelectItem}
+            onClickItem={onClickItem}
             onItemHover={onItemHover}
             onItemLeave={onItemLeave}
             position={position}

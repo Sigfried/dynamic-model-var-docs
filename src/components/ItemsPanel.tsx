@@ -29,7 +29,7 @@ interface ItemsPanelProps {
   onSectionsChange: (sections: string[]) => void;
   sectionData: Map<string, SectionData>;                   // Section data by ID
   toggleButtons: ToggleButtonData[];                        // Toggle button metadata
-  onSelectItem: (hoverData: ItemHoverData) => void;
+  onClickItem: (hoverData: ItemHoverData) => void;
   onItemHover?: (hoverData: ItemHoverData) => void;
   onItemLeave?: () => void;
 }
@@ -62,7 +62,7 @@ export default function ItemsPanel({
   onSectionsChange,
   sectionData,
   toggleButtons,
-  onSelectItem,
+  onClickItem,
   onItemHover,
   onItemLeave
 }: ItemsPanelProps) {
@@ -110,7 +110,7 @@ export default function ItemsPanel({
               <Section
                 key={sectionId}
                 sectionData={section}
-                onSelectItem={onSelectItem}
+                onClickItem={onClickItem}
                 onItemHover={onItemHover}
                 onItemLeave={onItemLeave}
                 position={position}
