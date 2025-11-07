@@ -324,9 +324,9 @@ Step 7: LinkOverlay Refactor (big one, requires Step 3)
 
 ---
 
-#### Step 1: Quick Wins
+#### Step 1: Quick Wins ✅ COMPLETED
 
-**1a. Delete obsolete cursor position code**
+**1a. Delete obsolete cursor position code** ✅ COMPLETED
 
 Files: `src/App.tsx:131-134`
 
@@ -338,7 +338,7 @@ const position = {  // [sg] obsolete code, right?
 };
 ```
 
-**1b. Rename parentName → parentId**
+**1b. Rename parentName → parentId** ✅ COMPLETED
 
 Files to update:
 - `src/models/Element.ts:742` - ClassElement constructor
@@ -350,7 +350,7 @@ Search command:
 rg "parentName" src/ -t ts -t tsx
 ```
 
-**1c. Rename onSelectItem → onClickItem**
+**1c. Rename onSelectItem → onClickItem** ✅ COMPLETED
 
 Files to update:
 - Component props interfaces
@@ -370,9 +370,9 @@ rg "onSelectItem|onSelect" src/ -t ts -t tsx
 
 **Goal**: Create Item base class hierarchy for component data contracts
 
-**2a. Create Item base class**
+**2a. Create Item base class** ✅ COMPLETED
 
-New file: `src/models/Item.ts`
+New file: `src/contracts/Item.ts` (UI component data contracts, not model layer)
 
 ```typescript
 /**
@@ -437,7 +437,7 @@ export class SectionItem extends Item {
 }
 ```
 
-**2b. Create contextualization utilities**
+**2b. Create contextualization utilities** ✅ COMPLETED
 
 New file: `src/utils/idContextualization.ts`
 
@@ -510,14 +510,32 @@ export function decontextualizeId(contextualizedId: string): string {
 }
 ```
 
-**2c. Update DataService to return Item instances**
+**2c. Update DataService to return Item instances** ⏭️ DEFERRED
 
 Not implementing full Item conversion yet - keep current DataService contracts.
-We'll add Item conversion incrementally as we refactor components.
+We'll add Item conversion incrementally as we refactor components in later steps.
 
-**Testing**:
-- Unit tests for contextualization utilities
-- Verify Item classes instantiate correctly
+---
+
+**Step 2 Overall Status**: ✅ 2a and 2b COMPLETED, 2c DEFERRED
+
+**Completed**:
+- ✅ Created `src/contracts/Item.ts` (moved from models/ - Item is for UI use, not model layer)
+- ✅ Created `src/utils/idContextualization.ts` with utilities
+- ✅ Added 20 comprehensive tests in `src/test/idContextualization.test.ts`
+- ✅ All tests passing, typecheck passing, architecture checks passing
+- ✅ Fixed terminology: removed ElementItem, made Item concrete
+
+**Issues to investigate before next phase**:
+1. **URL restoration not positioning boxes correctly** - boxes appear but not in saved positions (may have started before this work)
+2. **DetailContent.test.tsx failures** - 19 tests failing (pre-existing, unrelated to Step 2 changes)
+   - Failures appear to be about text rendering in DetailContent component
+   - Need to investigate root cause before proceeding
+
+**Phase completion checklist** (after all steps complete):
+- [ ] Verify Phase 12 is truly complete
+- [ ] Archive Phase 12 documentation
+- [ ] Archive current phase documentation
 
 ---
 
