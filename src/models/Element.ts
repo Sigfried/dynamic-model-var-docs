@@ -353,11 +353,11 @@ export abstract class Element {
   children: Element[] = [];
 
   /**
-   * Full path from root to this node (e.g., "Entity.Specimen.Material")
+   * Full path from root to this node as an array (e.g., ["Entity", "Specimen", "Material"])
    * Set during tree construction in collection fromData() methods
    * Available for all tree-structured elements (classes, enums, variables, slots)
    */
-  nodePath: string = '';
+  pathFromRoot: string[] = [];
 
   /**
    * Get list of all ancestors (parent, grandparent, etc.) walking up the tree.
@@ -693,38 +693,22 @@ export class ClassElement extends Element {
    * Get the name of the class from which a slot was inherited.
    * Returns empty string if slot is not inherited (defined in this class).
    *
-   * Uses slotPath (set during collectAllSlots()) to determine inheritance.
-   * No recursion needed - slotPath contains the full ancestry information.
-   *
    * @param slotName Name of the slot to check
    * @returns Class name where slot was defined, or empty string if defined in this class
    **/
   getInheritedFrom(slotName: string): string {
-    // Find the slot in this class's collected slots
     const allSlots = this.collectAllSlots();
     const slot = allSlots[slotName];
+    if (!slot?.slotPath) return '';
 
-    if (!slot || !slot.slotPath) {
-      return '';
-    }
-
-    // Extract class name from slotPath (last component)
-    // e.g., "Entity.Specimen" → "Specimen"
     const pathComponents = slot.slotPath.split('.');
     const definingClass = pathComponents[pathComponents.length - 1];
-
-    // If defining class is this class, not inherited
-    if (definingClass === this.name) {
-      return '';
-    }
-
-    return definingClass;
+    return definingClass === this.name ? '' : definingClass;
   }
 
   /**
    * Collect all slots for this class, including inherited slots.
    * Child class slots override parent class slots with the same name.
-   * Sets slotPath on each slot to indicate where it was defined.
    *
    * @returns Record mapping slot name to ClassSlot instance
    */
@@ -733,12 +717,11 @@ export class ClassElement extends Element {
 
     // Add slots from this class and set slotPath
     this.classSlots.forEach(slot => {
-      slot.slotPath = this.nodePath;  // Set path to where this slot is defined
+      slot.slotPath = this.pathFromRoot.join('.');
       slots.set(slot.name, slot);
     });
 
-    // Inherit from parent (parent slots are added only if not already present)
-    // Parent slots already have their slotPath set
+    // Inherit from parent (parent slots already have their slotPath set)
     if (this.parent) {
       const parentSlots = (this.parent as ClassElement).collectAllSlots();
       Object.entries(parentSlots).forEach(([name, parentSlot]) => {
@@ -852,32 +835,34 @@ export class ClassElement extends Element {
       // Track which slots are direct vs inherited
       const directSlotNames = new Set(this.classSlots.map(s => s.name));
 
-      const slotsList = Object.entries(allSlots).map(([name, classSlot]) => {
-        const isInherited = !directSlotNames.has(name);
-        const inheritedFrom = isInherited ? this.getInheritedFrom(name) : '';
+      const slotsList = Object.entries(allSlots)
+        .sort(([, a], [, b]) => a.slotPath.localeCompare(b.slotPath))
+        .map(([name, classSlot]) => {
+          const isInherited = !directSlotNames.has(name);
+          const inheritedFrom = isInherited ? this.getInheritedFrom(name) : '';
 
-        // Map source to readable labels
-        const sourceLabels = {
-          'attribute': 'Attribute',
-          'slot_usage': 'Slot Override',
-          'slot_reference': 'Slot Reference'
-        };
-        let source = sourceLabels[classSlot.source];
+          // Map source to readable labels
+          const sourceLabels = {
+            'attribute': 'Attribute',
+            'slot_usage': 'Slot Override',
+            'slot_reference': 'Slot Reference'
+          };
+          let source = sourceLabels[classSlot.source];
 
-        // Add inheritance info to source column
-        if (inheritedFrom) {
-          source += ` (from ${inheritedFrom})`;
-        }
+          // Add inheritance info to source column
+          if (inheritedFrom) {
+            source += ` (from ${inheritedFrom})`;
+          }
 
-        return [
-          name,
-          source,
-          classSlot.getEffectiveRange(),
-          classSlot.getEffectiveRequired() ? 'Yes' : 'No',
-          classSlot.getEffectiveMultivalued() ? 'Yes' : 'No',
-          classSlot.getEffectiveDescription() || ''
-        ];
-      });
+          return [
+            name,
+            source,
+            classSlot.getEffectiveRange(),
+            classSlot.getEffectiveRequired() ? 'Yes' : 'No',
+            classSlot.getEffectiveMultivalued() ? 'Yes' : 'No',
+            classSlot.getEffectiveDescription() || ''
+          ];
+        });
 
       sections.push({
         name: 'Slots (includes inherited)',
@@ -1325,7 +1310,7 @@ export class EnumCollection extends ElementCollection {
     const roots = Array.from(enumData.entries())
       .map(([name, data]) => {
         const element = new EnumElement(name, data);
-        element.nodePath = element.name;  // Flat list: nodePath = name
+        element.pathFromRoot = [element.name];  // Flat list: pathFromRoot = [name]
         return element;
       })
       .sort((a, b) => a.name.localeCompare(b.name));
@@ -1400,7 +1385,7 @@ export class SlotCollection extends ElementCollection {
     const roots = Array.from(slotData.entries())
       .map(([name, data]) => {
         const element = new SlotElement(name, data);
-        element.nodePath = element.name;  // Flat list: nodePath = name
+        element.pathFromRoot = [element.name];  // Flat list: pathFromRoot = [name]
         return element;
       })
       .sort((a, b) => a.name.localeCompare(b.name));
@@ -1512,14 +1497,14 @@ export class ClassCollection extends ElementCollection {
       }
     });
 
-    // Sort children by name at each level and compute nodePath
-    const sortAndComputePath = (element: Element, parentPath: string = '') => {
-      // Compute nodePath: parentPath + this element's name
-      element.nodePath = parentPath ? `${parentPath}.${element.name}` : element.name;
+    // Sort children by name at each level and compute pathFromRoot
+    const sortAndComputePath = (element: Element, parentPath: string[] = []) => {
+      // Compute pathFromRoot: parentPath + this element's name
+      element.pathFromRoot = [...parentPath, element.name];
 
       // Sort children and recurse
       element.children.sort((a, b) => a.name.localeCompare(b.name));
-      element.children.forEach(child => sortAndComputePath(child, element.nodePath));
+      element.children.forEach(child => sortAndComputePath(child, element.pathFromRoot));
     };
     roots.forEach(root => sortAndComputePath(root));
 
@@ -1642,14 +1627,14 @@ export class VariableCollection extends ElementCollection {
       vars.sort((a, b) => a.name.localeCompare(b.name));
     });
 
-    // Wire variables array into ClassElement instances and compute nodePath
+    // Wire variables array into ClassElement instances and compute pathFromRoot
     groupedByClass.forEach((variables, className) => {
       const classElement = classCollection.getElement(className) as ClassElement | null;
       if (classElement) {
         classElement.variables = variables;
-        // Set nodePath for each variable: className.variableName
+        // Set pathFromRoot for each variable: [...classPath, variableName]
         variables.forEach(variable => {
-          variable.nodePath = `${classElement.nodePath}.${variable.name}`;
+          variable.pathFromRoot = [...classElement.pathFromRoot, variable.name];
         });
       }
     });
