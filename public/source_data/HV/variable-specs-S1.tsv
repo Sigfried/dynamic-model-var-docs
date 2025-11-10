@@ -42,14 +42,14 @@ Person	Death	VitalStatusEnum
 Condition	Diabetes	Uriorcurie			
 MeasurementObservation	Diastolic blood pressure	decimal	mm[Hg]	OMOP:4154790	Measurement of pressure in your arteries when your heart is at rest between beats, the bottom number in a blood pressure reading
 MeasurementObservation	E-selectin in blood	decimal	ng/mL	OBA:2052778	Concentration of E-selectin in blood, typically measured in serum or plasma
-SDoHObservation	Education level	EducationalAttainmentObservationTypeEnum		OMOP:4022643	Highest level of education that an individual has completed
+SdohObservation	Education level	EducationalAttainmentObservationTypeEnum		OMOP:4022643	Highest level of education that an individual has completed
 MeasurementObservation	EGFR	decimal	mL/min/{1.73_m2}	OMOP:37208635	Stands for estimated glomerular filtration rate - calculated from creatinine concentration, age, sex, and body size.
 MeasurementObservation	Eosinophils count	decimal	10*3/uL	OBA:VT0002602	Concentration of eosinophil cells in whole blood
 Demography	Ethnicity	EthnicityEnum		OMOP:44803968	A person's cultural heritage or ancestry
 MeasurementObservation	Factor VII	decimal	%{Normal}	OBA:2041535	Concentration of Factor VII in blood, typically measured in plasma. Also known as FVII and proconvertin
 MeasurementObservation	Factor VIII	decimal	[IU]/mL	OBA:2041536	Measure of the amount of FVIII activity in a volume of plasma
 Condition	Family history of stroke	Uriorcurie			
-SDoHObservation	Family income		USD		The sum of the income of all family members 15 years and older living in the household over 12 months, before taxes
+SdohObservation	Family income		USD		The sum of the income of all family members 15 years and older living in the household over 12 months, before taxes
 MeasurementObservation	Fasting blood glucose	decimal	mg/dL	OMOP:4156660	Concentration of glucose in blood after not eating or drinking (except water) for a set period, typically 8-12 hours
 MeasurementObservation	Fasting lipids	decimal	mg/dL	OMOP:4150326	Concentration of lipids in blood after not eating or drinking (except water) for a set period, typically 8-12 hours
 MeasurementObservation	Ferritin	decimal	ng/mL	OBA:VT0010513	Concentration of ferritin in blood, typically measured in serum or plasma
