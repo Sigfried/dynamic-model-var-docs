@@ -1092,17 +1092,19 @@ Let me know which aspects you'd like to dig into further!
         - classes would have ClassSlot children which would each
           have a SlotElement parent
 
+### [sg] Graph structures for all relationships
 
-  - i've used graphology (https://graphology.github.io/)
-    in the past and really like it
-  - not sure if this approach makes it easy to keep the graph
-    features as part of Element or if it would exist beside
-    the Element/ElementCollection classes
-    - the collection classes could probably be hugely simplified
-  - getting relationships would probably be just getting edge lists
-    and transforming them for component contract needs
-- Abstract Tree Rendering System
-  - this will serve UI components, but they could also make
-    use of graphology
+this would be a typed digraph -- nodes and edges have specific types. it doesn't matter if they all have a shared root
+or if we keep root nodes as they are now. the
+point is to get rid of as much element-class-specific code as possible. so, yes, variables will have class ids as
+parentId (coming from bdchmElement), but the link type should be 'uses' (or uses class, or instantiates); classes have '
+inherits from' (is-a) but also have slots (link type 'has' maybe?) with --- let's think this
+through -- can we encode all the relationships we have using link type? or maybe a compound link type -- like for an
+enum slot:
+- Person 'has slot' species 'constrained by' CellularOrganismSpeciesEnum.
+- Person 'has slot' year_of_birth 'constrained by' integer.
+- Person 'has slot' cause_of_death 'uses' (or 'instantiated by') CauseOfDeath.
 
-this would be a huge refactor. would it be worth it?
+sorry, this is a little involved and will be some work to sort out, but i think it's worth it.
+
+start making a table here of all the relationships along with how we will represent them in the graph and in the UI.

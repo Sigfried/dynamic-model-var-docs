@@ -144,6 +144,11 @@ linkId = contextualizeId({
    >     // hovering over an item:
    >     setHoverLinks(allLinks.filter(link => getLinksAttachedTo(link)))
    >     ```
+   >     actually, don't get rid of tooltip-- but simplify, just have the tooltip show the relationship
+   >     type, like from a variable to a class: 'mapped to'; from
+   >     class to enum: `has slot ${slot_name} constrained by`.
+   >     so hovering on a link shows a relationship info box for
+   >     that one link and also shows the simplified tooltip.
 
 > [sg] now you can tell me i'm crazy if you want
 ---
@@ -931,7 +936,7 @@ Update to use DataService contracts only.
 
 ### Unified Detail Box System (Phase 12) ✅ COMPLETED
 
-[sg] still has bugs. maybe documented somewhere
+[sg] still has bugs. maybe documented somewhere, but this is not complete yet
 
 **Goal**: Extract dialog management from App.tsx, merge DetailDialog/DetailPanelStack into unified system, and implement transitory mode for FloatingBox - allowing any content to appear temporarily (auto-disappearing) and upgrade to persistent mode on user interaction.
 
@@ -1850,6 +1855,9 @@ Use graphology library to represent model as directed acyclic graph (DAG):
   features as part of Element or if it would exist beside
   the Element/ElementCollection classes
     - the collection classes could probably be hugely simplified
+- [sg] Abstract Tree Rendering System
+    - this will serve UI components, but they could also make
+      use of graphology
 
 **Benefits**:
 - Eliminates manual tree construction code
