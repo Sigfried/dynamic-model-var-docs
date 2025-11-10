@@ -694,48 +694,18 @@ Should SlotCollection include ALL slots (global SlotElements + all ClassSlots fr
 **Decision**: Defer to later - bigger design question.
 
 ---
-
-#### Future: Graph-based Model Architecture (Major Refactor)
-
-**Status**: Design idea only - not implementing yet
-
-**Proposal** (from [DATA_FLOW.md discussion](../docs/DATA_FLOW.md#L1017-L1065)):
-
-Use graphology library to represent model as directed acyclic graph (DAG):
-- Store model as graph with artificial root node
-- Parent relationships = edges in graph
-- Child relationships = transpose of graph
-- Paths computed on-demand via graph traversal (not stored)
-- Collections simplified to graph queries
-- Relationships = edge lists
-
-**Benefits**:
-- Eliminates manual tree construction code
-- Powerful graph algorithms available
-- Unified relationship model
-- Easier to query and visualize
-
-**Concerns**:
-- Huge refactor touching most files
-- New dependency and learning curve
-- Unknown performance implications
-- Possibly over-engineering
-
-**Decision**: Implement incremental improvements first (pathFromRoot array, eliminate slotPath, centralize tree construction). Re-evaluate graph approach only if complexity remains high after these improvements.
-
----
 [sg]
 #### Step 5.5 (could be 6 if those below incremented)
 
 simplify data flow. see docs/DATA_FLOW.md, maybe have this
-conversation there. and probably means moving
-Abstract Tree Rendering System into this step.
+conversation there.
 
 ---
-
 #### Step 6: Relationship Grouping
 
 **6a. Apply grouping to EnumElement and VariableElement**
+- [sg] this needs further discussion. i'm not sure what the plan is
+       or what will end up being grouped and how
 
 File: `src/models/Element.ts`
 
@@ -1862,6 +1832,40 @@ Issue: https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/issues/126
 
 ---
 
+#### Future: Graph-based Model Architecture (Major Refactor)
+
+**Status**: Design idea only - not implementing yet
+
+**Proposal** (from [DATA_FLOW.md discussion](../docs/DATA_FLOW.md#L1017-L1065)):
+
+Use graphology library to represent model as directed acyclic graph (DAG):
+- Store model as graph with artificial root node
+- Parent relationships = edges in graph
+- Child relationships = transpose of graph
+- Paths computed on-demand via graph traversal (not stored)
+  [sg] not a goal in itself, but graphology makes it easy
+- Collections simplified to graph queries
+- Relationships = edge lists
+- [sg] not sure if this approach makes it easy to keep the graph
+  features as part of Element or if it would exist beside
+  the Element/ElementCollection classes
+    - the collection classes could probably be hugely simplified
+
+**Benefits**:
+- Eliminates manual tree construction code
+- Powerful graph algorithms available
+- Unified relationship model
+- Easier to query and visualize
+
+**Concerns**:
+- Huge refactor touching most files
+- New dependency and learning curve
+- Unknown performance implications
+- Possibly over-engineering
+
+**Decision**: Implement incremental improvements first (pathFromRoot array, eliminate slotPath, centralize tree construction). Re-evaluate graph approach only if complexity remains high after these improvements.
+
+---
 ### Performance Optimizations
 
 When working with larger models or slower devices:

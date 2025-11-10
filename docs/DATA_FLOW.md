@@ -1049,7 +1049,9 @@ Let me know which aspects you'd like to dig into further!
 
 ## [sg] New proposal
 
-- just set up parentIds in fromData, don't set nodePath
+- just set up parentIds in fromData, don't set paths till later;
+  should be able to do it with shared code once the tree structures
+  are defined by parentIds.
   - for variables, variable.parentId = variable.classId
     (or forget classId and just transform bdchmElement
      directly to parentId)
@@ -1076,7 +1078,21 @@ Let me know which aspects you'd like to dig into further!
     simple to generate paths from root
     - as arrays of element ids
     - or as arrays of element instances
-    - or use graphology to get these on the fly?
+    - ~~or use graphology to get these on the fly?~~
+
+**[sg] we decided to defer graphology because it would be
+     too big a refactor. but we still want to simplify
+     data flow and some of these ideas can help**
+
+  -
+    - __collectAllSlots and root.slots__
+        - the whole slot hierarchy might live under root.slots
+        - ClassSlots could be children of SlotElements? not sure if
+          that helps with anything
+        - classes would have ClassSlot children which would each
+          have a SlotElement parent
+
+
   - i've used graphology (https://graphology.github.io/)
     in the past and really like it
   - not sure if this approach makes it easy to keep the graph
@@ -1085,12 +1101,6 @@ Let me know which aspects you'd like to dig into further!
     - the collection classes could probably be hugely simplified
   - getting relationships would probably be just getting edge lists
     and transforming them for component contract needs
-  - __collectAllSlots and root.slots__
-    - the whole slot hierarchy might live under root.slots
-    - ClassSlots could be children of SlotElements? not sure if
-      that helps with anything
-    - classes would have ClassSlot children which would each
-      have a SlotElement parent
 - Abstract Tree Rendering System
   - this will serve UI components, but they could also make
     use of graphology
