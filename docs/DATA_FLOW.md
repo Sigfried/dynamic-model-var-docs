@@ -1049,6 +1049,8 @@ Let me know which aspects you'd like to dig into further!
 
 ## [sg] New proposal
 
+**📌 [EXTRACTED TO REFACTOR_PLAN.md Section 3] - Data flow simplification consolidated**
+
 - just set up parentIds in fromData, don't set paths till later;
   should be able to do it with shared code once the tree structures
   are defined by parentIds.
@@ -1091,6 +1093,8 @@ Let me know which aspects you'd like to dig into further!
           have a SlotElement parent
 
 ### [sg] Graph structures for all relationships
+
+**📌 [EXTRACTED TO REFACTOR_PLAN.md Sections 1 & 2] - Graph architecture and relationship types consolidated**
 
 this would be a typed digraph -- nodes and edges have specific types. it doesn't matter if they all have a shared root
 or if we keep root nodes as they are now. the

@@ -31,6 +31,9 @@
 
 ## Architecture & Refactoring Decisions
 
+**📌 [EXTRACTED TO REFACTOR_PLAN.md] - This section has been consolidated into the unified refactoring plan**
+**See docs/REFACTOR_PLAN.md for the current architecture plan**
+
 ### 1. ItemId Architecture & getId() Simplification
 
 **Context**: UI/model layers should only connect through `itemId` from `element.getId()`. The current `getId(context)` parameter may be unnecessary complexity.
@@ -295,6 +298,10 @@ Question: Should `onSelectItem` be renamed to `onClickItem` since it describes t
 ---
 
 ### Architecture Refactoring Implementation Plan ⭐ CURRENT WORK
+
+**📌 [EXTRACTED TO REFACTOR_PLAN.md] - Implementation steps consolidated**
+**See docs/REFACTOR_PLAN.md sections 1-4 for unified architecture plan**
+**This section remains for historical reference and tracking what's been completed**
 
 **Status**: Implementation plan for architectural improvements from decisions above
 
