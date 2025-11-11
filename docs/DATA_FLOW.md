@@ -1072,8 +1072,6 @@ Let me know which aspects you'd like to dig into further!
   - in a diagram with the root at top, parent relationships
     would point up
   - for child relationships we transpose the graph
-  - are incoming relationships the same as child relationships?
-    i'm a bit confused about that
   - with the graph (or its transposition), it will be 
     simple to generate paths from root
     - as arrays of element ids
@@ -1108,3 +1106,147 @@ enum slot:
 sorry, this is a little involved and will be some work to sort out, but i think it's worth it.
 
 start making a table here of all the relationships along with how we will represent them in the graph and in the UI.
+
+---
+
+## Relationship Type Analysis
+
+### Current Implementation (Element.ts)
+
+**Current relationship types in code:**
+1. `'inherits'` - Class → Parent Class
+2. `'property'` - Used for multiple semantic relationships:
+   - Class attribute → range (Class/Enum/Slot)
+   - Slot → range (Class/Enum)
+   - Variable → Class (with label='mapped_to')
+
+**Current code structure:**
+- Each Element subclass implements `getRelationships()` returning `Relationship[]`
+- `Relationship` interface: `{ type, label?, target, targetType, isSelfRef? }`
+- `computeIncomingRelationships()` scans all classes to find reverse relationships
+
+---
+
+### Proposed Graph-Based Relationship Types
+
+This table maps semantic relationships to graph edges with typed links:
+
+| **From** | **To** | **Current Type** | **Proposed Edge Type** | **Edge Label (UI)** | **Notes** |
+|----------|--------|------------------|------------------------|---------------------|-----------|
+| Class | Parent Class | `inherits` | `inherits` | "inherits from" / "is_a" | Tree structure (parent/child) |
+| Class | Subclass | *(computed incoming)* | `has_subclass` | "has subclass" | Reverse of inherits |
+| Class | Enum (via attribute) | `property` | `has_attribute` + `constrained_by` | "has attribute {name} constrained by {enum}" | Compound: Class→Attribute→Enum |
+| Class | Class (via attribute) | `property` | `has_attribute` + `references` | "has attribute {name} referencing {class}" | Compound: Class→Attribute→Class |
+| Class | Slot (via slot reference) | *(implicit in slots[])* | `uses_slot` | "uses slot" | Class references global slot |
+| Class | Slot (via slot_usage override) | *(implicit in slot_usage{})* | `overrides_slot` | "overrides slot" | Class overrides global slot |
+| Slot | Class/Enum (via range) | `property` | `constrained_by` | "constrained by" | Slot's range restriction |
+| Enum | Class (via usage) | *(computed incoming)* | `constrains_attribute` | "constrains attribute {name} in {class}" | Reverse: Enum→Class that uses it |
+| Variable | Class | `property` (label='mapped_to') | `instantiates` / `maps_to` | "instantiates" / "maps to" | Variable is instance of Class |
+| Class | Variables | *(via VariableCollection grouping)* | `has_instances` | "has instances" | Reverse: Class→Variables |
+
+### Semantic Relationship Patterns
+
+**Tree relationships (parent/child in graph):**
+- Class inheritance: `Entity ← Specimen ← Material`
+- Variable grouping: `Condition ← angina_prior_1, asthma_ever_1, ...`
+- Collection hierarchy (if using artificial root): `root ← classes, enums, slots, variables`
+
+**Cross-reference relationships (edges, not parent/child):**
+- Attribute self-reference: `Specimen.parent_specimen → Specimen`
+- Attribute cross-class: `Specimen.source_participant → Participant`
+- Attribute enum constraint: `Specimen.specimen_type → SpecimenTypeEnum`
+- Slot range constraint: `SlotElement.range → Entity` (e.g., global slots referencing classes)
+
+**Compound relationships (need decomposition):**
+
+Your example: `Person 'has slot' species 'constrained by' CellularOrganismSpeciesEnum`
+
+Could be represented as:
+1. **Simple approach** - Single edge with metadata:
+   ```
+   Edge: Specimen → SpecimenTypeEnum
+   Type: has_constrained_attribute
+   Metadata: { attributeName: 'specimen_type', slotSource: 'inline' }
+   ```
+
+2. **Explicit approach** - Three nodes + two edges:
+   ```
+   Specimen → [Attribute: specimen_type] → SpecimenTypeEnum
+   Edge1: has_attribute
+   Edge2: constrained_by
+   ```
+
+3. **Hybrid approach** - Edge attributes:
+   ```
+   Edge: Specimen → SpecimenTypeEnum
+   Type: has_attribute
+   Attributes: { name: 'specimen_type', constraint_type: 'enum' }
+   ```
+
+**Question for you:** Which compound relationship approach do you prefer?
+- Simple: Easier to implement, less graph complexity
+- Explicit: Attributes become first-class nodes (can be queried, have properties)
+- Hybrid: Balance between simplicity and expressiveness
+
+---
+
+### Implementation Questions
+
+1. **Edge directionality:**
+   - Should all edges be stored in one direction with reverse computed?  [sg] Yes
+   - Or store bidirectional edges explicitly?
+   - Example: `Class inherits Parent` vs. both `Class→Parent` and `Parent→Class`
+
+2. **Attribute representation:**
+   - Should inline attributes (like `parent_specimen`, `source_participant`) become nodes?
+   - Or remain as edge metadata?
+   - Impact: If nodes, can have their own relationships; if metadata, simpler graph
+   - [sg] actually we already have a plan to make them nodes: they are slots and
+          will be combined with the reusable slots in SlotCollection (or whatever
+          we end up doing with collections)
+   - [sg] actually slots always represent relationships. they have a lot of complexity
+     (inheritance, global, inline, usage overrides). so we should discuss whether
+     they should exist as relationships with their own metadata/attributes/properties
+     or as nodes with two edges: class --> slot --> range (enum/class/type [types are either
+     primitives or custom-defined refined primitives]). anyway, a slot defines the
+     relationship between a class and a range. (i wish i had realized this earlier before
+     establishing them as being Elements in the same way as classes, enums, and variables.)
+   - so -- i think it would be weird to do classElement --> slotElement --> (rangeElement),
+     so it would be better to have slots as complex edges. does that seem feasible?
+   - this also makes me think there should be an abstract RangeElement class as a parent
+     for classes, enums, and types
+   - crap, i'm realizing that we should be importing linkml:types and treating those as
+     elements
+
+3. **Slot system:**
+   - ClassSlot instances: Should they be graph nodes?
+     - [sg] they can continue using the same class in our OOP model;
+            but, actually, making them edges might simplify things slightly.
+            
+   - Relationship to SlotElement: Parent/child or just reference?
+     - I don't understand the question
+   - Current collectAllSlots() logic: How to represent in graph?
+       - [sg] well, with the direction i'm suggesting, there
+              would be an edge between a class and each of its
+              slots. maybe we don't even need relationships between
+              classes and SlotElements but only between classes and
+              ClassSlots.
+
+4. **Variable-Class relationship:**
+   - Current: Variable→Class via `classId`/`bdchmElement`
+   - Is this `instantiates`, `maps_to`, `belongs_to`, or something else?
+     - 'mapped to' is probably good. 
+     - based on conversation with Anne, variable is not the right label
+       for condition and drug exposure variables. they should be called
+       conditions and drug exposures. don't implement this before discussion
+       and planning. for naming things in different contexts we may want
+       a config table, sort of like the table above
+   - Should this be a parent/child edge (tree structure) or cross-reference?
+     - [sg] a directed edge is a directed edge, whether representing a 
+            parent-child or cross-reference relationships. either way,
+            edges arrange nodes/vertices into tree-like (dag, etc.) structures.
+
+5. **Collection nodes:**
+   - Should ClassCollection, EnumCollection, etc. be graph nodes?
+   - Or just convenience wrappers around graph queries?
+   - [sg] don't know. not ready to think about that yet

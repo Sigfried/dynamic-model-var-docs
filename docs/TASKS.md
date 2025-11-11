@@ -1,5 +1,30 @@
 # Tasks
 
+## Table of Contents
+
+### Active Work
+- [Questions & Decisions Needed](#questions--decisions-needed)
+  - [Architecture & Refactoring Decisions](#architecture--refactoring-decisions)
+  - [Different Variable Treatment](#different-variable-treatment-for-condition-and-drug-exposure-classes)
+- [Next Up (Ordered)](#next-up-ordered)
+  - [🐛 Fix: Incoming Relationships Not Showing](#fix-incoming-relationships-not-showing-in-hover-box--high-priority)
+  - [⭐ Architecture Refactoring Implementation Plan](#architecture-refactoring-implementation-plan--current-work)
+  - [Phase 12: Unified Detail Box System](#unified-detail-box-system-phase-12--completed)
+
+### Upcoming Features
+- [App Configuration File](#app-configuration-file)
+- [Abstract Tree Rendering System](#abstract-tree-rendering-system)
+- [Link System Enhancement](#link-system-enhancement)
+- [Detail Panel Enhancements](#detail-panel-enhancements)
+- [Fix Dark Mode Display Issues](#fix-dark-mode-display-issues-high-priority)
+- [User Help Documentation](#user-help-documentation)
+
+### Future Work
+- [Future Work Section](#future-work) - Deferred features and major refactors
+- [UI Test Checklist Template](#ui-test-checklist-template)
+
+---
+
 ## Questions & Decisions Needed
 
 ---
@@ -247,11 +272,47 @@ Question: Should `onSelectItem` be renamed to `onClickItem` since it describes t
 
 ## Next Up (Ordered)
 
+### Fix: Incoming Relationships Not Showing in Hover Box 🐛 HIGH PRIORITY
+
+**Bug**: DimensionalObservationSet shows "0 incoming" in hover box but has incoming link from Specimen.dimensional_measures visible in LinkOverlay
+
+**Reproduce**:
+- Screenshot shows DimensionalObservationSet with visible incoming link
+- Hover box displays "⟲ 1 outgoing | ⟲ 0 incoming relationships"
+- Should show at least 1 incoming
+
+**Root cause investigation needed**:
+- Check `computeIncomingRelationships()` in Element.ts
+- Verify it scans all attribute types (inline attributes, slot_usage, slots)
+- May only be checking classSlots, missing raw attributes?
+
+**Files to check**:
+- `src/models/Element.ts:96-140` - computeIncomingRelationships()
+- Verify against actual Specimen.dimensional_measures attribute
+
+**Priority**: Fix after graph refactor planning discussion
+
+---
+
 ### Architecture Refactoring Implementation Plan ⭐ CURRENT WORK
 
 **Status**: Implementation plan for architectural improvements from decisions above
 
 **Token Budget**: ~62k/200k used, 138k remaining ✅
+
+**Quick Navigation:**
+- [Summary of Decisions](#summary-of-architectural-decisions)
+- [Implementation Order](#implementation-order--dependencies)
+- Steps:
+  - [Step 1: Quick Wins ✅](#step-1-quick-wins--completed)
+  - [Step 2: Component Data Abstraction](#step-2-component-data-abstraction)
+  - [Step 3: getId() Simplification ✅](#step-3-getid-simplification--completed)
+  - [Step 4: URL State Refactor ✅](#step-4-url-state-refactor--completed)
+  - [Step 5: Slot Inheritance Simplification ✅](#step-5-slot-inheritance-simplification--partially-completed)
+  - [Step 5.5: Simplify Data Flow](#step-55-could-be-6-if-those-below-incremented)
+  - [Step 6: Relationship Grouping](#step-6-relationship-grouping)
+  - [Step 7: LinkOverlay Refactor](#step-7-linkoverlay-refactor)
+- [Testing Checkpoints](#testing-checkpoints)
 
 ---
 
@@ -688,6 +749,11 @@ Changed from `l=c&r=e,v` to `sections=lc~re~rv`
 - ✅ Slot inheritance displays correctly
 - ✅ Slots now sorted by inheritance path
 
+[sg] this may be helpful for how to represent slots, it's
+     from the LinkML-generated documentation for BDCHM:
+     https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/observations/
+     ![img.png](img.png)
+
 **5b.4. Future: SlotCollection design question**
 
 Should SlotCollection include ALL slots (global SlotElements + all ClassSlots from all classes)?
@@ -939,6 +1005,12 @@ Update to use DataService contracts only.
 [sg] still has bugs. maybe documented somewhere, but this is not complete yet
 
 **Goal**: Extract dialog management from App.tsx, merge DetailDialog/DetailPanelStack into unified system, and implement transitory mode for FloatingBox - allowing any content to appear temporarily (auto-disappearing) and upgrade to persistent mode on user interaction.
+
+**Phase 12 Quick Navigation:**
+- [FloatingBox Modes (transitory/persistent)](#unified-detail-box-system-phase-12--completed)
+- [Implementation Steps 0-3 ✅](#unified-detail-box-system-phase-12--completed)
+- [Bug Fixes (Step 4)](#unified-detail-box-system-phase-12--completed)
+- [Known Issues & Next Steps](#unified-detail-box-system-phase-12--completed)
 
 **Current state**:
 - DetailPanel: 130-line content renderer using getDetailData() ✅
