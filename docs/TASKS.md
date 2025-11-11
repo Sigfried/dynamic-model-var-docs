@@ -31,8 +31,10 @@
 
 ## Architecture & Refactoring Decisions
 
-**📌 [EXTRACTED TO REFACTOR_PLAN.md] - This section has been consolidated into the unified refactoring plan**
-**See docs/REFACTOR_PLAN.md for the current architecture plan**
+**📌 [PARTIALLY EXTRACTED TO REFACTOR_PLAN.md]**
+- Core architecture concepts extracted (graph model, slots as edges, data flow)
+- Implementation Q&A remains here as context for Steps 1-7 below
+- See REFACTOR_PLAN.md for consolidated graph architecture plan
 
 ### 1. ItemId Architecture & getId() Simplification
 
@@ -299,9 +301,10 @@ Question: Should `onSelectItem` be renamed to `onClickItem` since it describes t
 
 ### Architecture Refactoring Implementation Plan ⭐ CURRENT WORK
 
-**📌 [EXTRACTED TO REFACTOR_PLAN.md] - Implementation steps consolidated**
-**See docs/REFACTOR_PLAN.md sections 1-4 for unified architecture plan**
-**This section remains for historical reference and tracking what's been completed**
+**📌 [NOT EXTRACTED - Still active implementation tracking]**
+**REFACTOR_PLAN.md contains high-level architecture decisions**
+**This section tracks actual implementation steps and completion status**
+**Both documents should be consulted together**
 
 **Status**: Implementation plan for architectural improvements from decisions above
 

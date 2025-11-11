@@ -3,6 +3,38 @@
 **Date**: 2025-01-11
 **Status**: Planning phase - consolidating ideas before implementation
 
+## Table of Contents
+
+### Session Context
+- [Current Situation](#current-situation)
+- [Key Insights from Recent Discussion](#key-insights-from-recent-discussion)
+- [Next Steps (This Session)](#next-steps-this-session)
+- [Open Questions to Address](#open-questions-to-address)
+- [Related Documents](#related-documents)
+- [Session Goals](#session-goals)
+
+### Consolidated Architecture Plan
+1. [Graph-Based Model Architecture](#1-graph-based-model-architecture)
+   - [Core Concept: Typed Directed Graph](#core-concept-typed-directed-graph)
+   - [Node Types (Elements)](#node-types-elements)
+   - [Edge Types (Relationships)](#edge-types-relationships)
+   - [Compound Relationships](#compound-relationships-class-attributes)
+2. [Slots as Complex Edges](#2-slots-as-complex-edges-critical-insight)
+   - [Problem with Current Architecture](#problem-with-current-architecture)
+   - [Proposed: Slots as Complex Edges](#proposed-slots-as-complex-edges)
+3. [Data Flow Simplification](#3-data-flow-simplification)
+   - [Current Approach](#current-approach-complex)
+   - [Proposed Approach](#proposed-approach-phased)
+4. [Implementation Strategy](#4-implementation-strategy)
+   - [Option A: Incremental](#option-a-incremental-recommended)
+   - [Option B: Big Refactor](#option-b-big-refactor-deferred)
+   - [Testing Checklist](#testing-after-each-step)
+5. [LinkML Study Plan](#5-linkml-study-plan-next-phase)
+   - [Goals](#goals)
+   - [Study Targets](#study-targets)
+6. [Open Questions Summary](#6-open-questions-summary)
+7. [Files Likely to Change](#7-files-likely-to-change)
+
 ---
 
 ## Current Situation
