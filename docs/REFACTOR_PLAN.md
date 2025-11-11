@@ -143,18 +143,43 @@ All elements in the model become graph nodes:
 
 ### Edge Types (Relationships)
 
-Replace overloaded `'property'` type with specific semantic types:
+**Current implementation** (from Element.ts):
+- `'inherits'` - Class → Parent Class
+- `'property'` - Overloaded for multiple semantic relationships:
+  - Class attribute → range (Class/Enum/Slot)
+  - Slot → range (Class/Enum)
+  - Variable → Class (with label='mapped_to')
 
-| **Edge Type** | **From → To** | **Current** | **Description** |
-|---------------|---------------|-------------|-----------------|
-| `inherits` | Class → Parent Class | `inherits` | Class inheritance (tree structure) |
-| `has_subclass` | Parent Class → Subclass | *(computed)* | Reverse of inherits |
-| `has_attribute` | Class → Range (via attribute) | `property` | Class has inline attribute |
-| `uses_slot` | Class → Slot | *(implicit)* | Class references global slot |
-| `overrides_slot` | Class → Slot | *(implicit)* | Class overrides global slot properties |
-| `constrained_by` | Slot → Range | `property` | Slot's range restriction |
-| `instantiates` / `maps_to` | Variable → Class | `property` | Variable is instance of class |
-| `has_instances` | Class → Variables | *(computed)* | Reverse: class has variable instances |
+**Current code structure**:
+- Each Element subclass implements `getRelationships()` returning `Relationship[]`
+- `Relationship` interface: `{ type, label?, target, targetType, isSelfRef? }`
+- `computeIncomingRelationships()` scans all classes to find reverse relationships
+
+**Proposed: Replace overloaded `'property'` with specific semantic types:**
+
+| **From** | **To** | **Current Type** | **Proposed Edge Type** | **Edge Label (UI)** | **Notes** |
+|----------|--------|------------------|------------------------|---------------------|-----------|
+| Class | Parent Class | `inherits` | `inherits` | "inherits from" / "is_a" | Tree structure (parent/child) |
+| Class | Subclass | *(computed incoming)* | `has_subclass` | "has subclass" | Reverse of inherits |
+| Class | Enum (via attribute) | `property` | `has_attribute` + `constrained_by` | "has attribute {name} constrained by {enum}" | Compound: Class→Attribute→Enum |
+| Class | Class (via attribute) | `property` | `has_attribute` + `references` | "has attribute {name} referencing {class}" | Compound: Class→Attribute→Class |
+| Class | Slot (via slot reference) | *(implicit in slots[])* | `uses_slot` | "uses slot" | Class references global slot |
+| Class | Slot (via slot_usage override) | *(implicit in slot_usage{})* | `overrides_slot` | "overrides slot" | Class overrides global slot |
+| Slot | Class/Enum (via range) | `property` | `constrained_by` | "constrained by" | Slot's range restriction |
+| Enum | Class (via usage) | *(computed incoming)* | `constrains_attribute` | "constrains attribute {name} in {class}" | Reverse: Enum→Class that uses it |
+| Variable | Class | `property` (label='mapped_to') | `instantiates` / `maps_to` | "instantiates" / "maps to" | Variable is instance of Class |
+| Class | Variables | *(via VariableCollection grouping)* | `has_instances` | "has instances" | Reverse: Class→Variables |
+
+**Tree relationships** (parent/child in graph):
+- Class inheritance: `Entity ← Specimen ← Material`
+- Variable grouping: `Condition ← angina_prior_1, asthma_ever_1, ...`
+- Collection hierarchy (if using artificial root): `root ← classes, enums, slots, variables`
+
+**Cross-reference relationships** (edges, not parent/child):
+- Attribute self-reference: `Specimen.parent_specimen → Specimen`
+- Attribute cross-class: `Specimen.source_participant → Participant`
+- Attribute enum constraint: `Specimen.specimen_type → SpecimenTypeEnum`
+- Slot range constraint: `SlotElement.range → Entity` (e.g., global slots referencing classes)
 
 **Open Question**: Variable→Class relationship semantics
 - Is it `instantiates`, `maps_to`, `belongs_to`?

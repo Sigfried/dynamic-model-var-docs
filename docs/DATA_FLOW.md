@@ -1115,6 +1115,8 @@ start making a table here of all the relationships along with how we will repres
 
 ## Relationship Type Analysis
 
+**📌 [EXTRACTED TO REFACTOR_PLAN.md Section 1] - Relationship type table and implementation questions consolidated**
+
 ### Current Implementation (Element.ts)
 
 **Current relationship types in code:**
