@@ -1,3 +1,26 @@
+instructions for next session:
+
+Instructions for Resuming Architecture Refactor Work
+
+  Read docs/SESSION_CHECKPOINT.md and docs/REFACTOR_PLAN.md to resume architecture refactoring work.
+
+  We finished consolidating planning docs and are ready for Step 4: Learn from LinkML.
+
+  Next phase:
+  1. Review BDCHM generated docs (https://rtiinternational.github.io/NHLBI-BDC-DMC-HM)
+     - Study: Observations, Specimen, Condition, Person/Participant
+     - Extract: terminology, relationship types, slot system, type handling, UI patterns
+  2. Study LinkML source code for schema representation
+  3. Document learnings in REFACTOR_PLAN.md
+  4. Resume planning with new insights
+
+  Key context:
+  - Graph-based architecture (typed directed graph, no graphology yet)
+  - Slots as complex edges (not nodes) - critical insight
+  - Data flow simplification (phased: parentIds → tree → paths)
+  - Open questions need answering before implementation
+
+
 # Session Checkpoint - 2025-01-11
 
 ## What We Accomplished

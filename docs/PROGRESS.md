@@ -35,6 +35,7 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 - [Phase 9: App.tsx Refactoring - Testable Hooks](#phase-9-app-refactoring)
 - [Phase 10: Enhanced Interactive Relationship Info Box](#phase-10-info-box)
 - [Phase 11: Complete DataService Abstraction for App.tsx](#phase-11-dataservice)
+- [Bug Fix: Incoming Relationships & Inherited Slots](#bugfix-relationships-slots)
 
 ---
 
@@ -1699,6 +1700,69 @@ src/
 5. **Type Safety**: Comprehensive TypeScript types with zero `any` casts
 6. **Test Coverage**: 134 tests ensuring reliability and enabling confident refactoring
 7. **Clean Code**: DRY principles applied throughout, extracting testable utilities
+
+---
+
+<a id="bugfix-relationships-slots"></a>
+## Bug Fix: Incoming Relationships & Inherited Slots
+
+**Completed**: November 11, 2025
+
+### Problem
+Two related bugs affecting relationship visualization accuracy in hover boxes:
+
+1. **Class incoming relationships not computed**: Classes referenced by other class attributes (e.g., `DimensionalObservationSet` referenced by `Specimen.dimensional_measures`) showed "0 incoming relationships"
+2. **Inherited slots incomplete**: Hover boxes only showed inherited slots from attributes, missing slots from `slot_usage` and `slot_reference`, and excluding primitive-range slots
+
+### Root Causes
+
+**Bug #1**: `computeIncomingRelationships()` function only checked for enum and slot references:
+```typescript
+// Before - missing classes
+if (thisElement.type === 'enum' || thisElement.type === 'slot') {
+  // check for incoming references...
+}
+```
+
+**Bug #2**: `getRelationshipData()` tried to match `classSlots` against `getRelationships()` results, but `getRelationships()` only returns relationships for attributes (not `slot_usage` or `slot_reference`), and filtered out primitive-range slots.
+
+### Solution
+
+**Fix #1 - Include Classes** (src/models/Element.ts:117):
+```typescript
+// After - includes all referenceable types
+if (thisElement.type === 'class' || thisElement.type === 'enum' || thisElement.type === 'slot') {
+  // check for incoming references...
+}
+```
+
+**Fix #2 - Use classSlots Directly** (src/models/Element.ts:194-206):
+- Iterate through `ancestorClass.classSlots` directly instead of filtering through `getRelationships()`
+- Include ALL slot types (attributes, slot_usage, slot_reference)
+- Include ALL ranges (primitive and non-primitive) using `categorizeRange()`
+- Process entire ancestor chain (e.g., Entity → ObservationSet → DimensionalObservationSet)
+
+### Results
+
+**DimensionalObservationSet now correctly shows**:
+- **Incoming**: 1 relationship (from Specimen.dimensional_measures)
+- **Inherited from Entity**: 1 slot (`id`)
+- **Inherited from ObservationSet**: 7 slots (`category`, `focus`, `method_type`, `performed_by`, `observations`, `associated_visit`, `associated_participant`)
+- **Total inherited**: 8 slots (previously showed only 2)
+
+### Testing
+
+Created comprehensive test suite in `src/test/incoming-relationships.test.ts`:
+- ✅ Verifies DimensionalObservationSet shows incoming relationship from Specimen
+- ✅ Verifies all ancestor slots are included (Entity + ObservationSet)
+- ✅ Verifies both primitive and non-primitive slots are included
+- ✅ Tests pass: 163 total (up from 159), only 19 pre-existing DetailContent failures remain
+
+### Technical Impact
+
+- **Accuracy**: Hover boxes now match detail boxes in completeness
+- **Consistency**: All element types (class, enum, slot) now compute incoming relationships uniformly
+- **Completeness**: Full inheritance chain visualization (not just immediate parent)
 
 ---
 

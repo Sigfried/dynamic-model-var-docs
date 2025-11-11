@@ -277,25 +277,31 @@ Question: Should `onSelectItem` be renamed to `onClickItem` since it describes t
 
 ## Next Up (Ordered)
 
-### Fix: Incoming Relationships Not Showing in Hover Box 🐛 HIGH PRIORITY
+### Fix: Enum and Slot Inheritance Not Loading 🐛 HIGH PRIORITY
 
-**Bug**: DimensionalObservationSet shows "0 incoming" in hover box but has incoming link from Specimen.dimensional_measures visible in LinkOverlay
+**Bug**: Enum inheritance relationships (via `inherits` field) are not being loaded or displayed
 
-**Reproduce**:
-- Screenshot shows DimensionalObservationSet with visible incoming link
-- Hover box displays "⟲ 1 outgoing | ⟲ 0 incoming relationships"
-- Should show at least 1 incoming
+**Example**:
+- `BaseObservationTypeEnum` has `inherits: [EducationalAttainmentObservationTypeEnum, SmokingStatusObservationTypeEnum]` in the YAML/JSON
+- `EducationalAttainmentObservationTypeEnum` shows "No relationships found" in hover box
+- Should show incoming relationship from `BaseObservationTypeEnum`
 
-**Root cause investigation needed**:
-- Check `computeIncomingRelationships()` in Element.ts
-- Verify it scans all attribute types (inline attributes, slot_usage, slots)
-- May only be checking classSlots, missing raw attributes?
+**Root cause**:
+- `EnumData` interface in `src/types.ts` doesn't include `inherits` field
+- `EnumElement` class doesn't have parent/child tree structure like `ClassElement`
+- Enum inheritance is in the source data but not being loaded into the model
 
-**Files to check**:
-- `src/models/Element.ts:96-140` - computeIncomingRelationships()
-- Verify against actual Specimen.dimensional_measures attribute
+**Related fields not loaded** (mentioned by user):
+- Other schema properties may also be missing from EnumData/SlotData
+- Need to audit what's in the source data vs what's loaded
 
-**Priority**: Fix after graph refactor planning discussion
+**Files to update**:
+- `src/types.ts` - Add `inherits` field to EnumData and possibly SlotData
+- `src/models/Element.ts` - Add parent/children support to EnumElement (and possibly SlotElement)
+- `src/utils/dataLoader.ts` - Load inheritance relationships and build tree structure
+- `src/models/Element.ts:96-140` - Update `computeIncomingRelationships()` to check enum inheritance
+
+**Priority**: High - affects completeness of relationship visualization
 
 ---
 

@@ -112,9 +112,9 @@ function computeIncomingRelationships(thisElement: Element): IncomingRelationshi
       incoming.subclasses.push(otherClass.getId());
     }
 
-    // Find class slots that reference this element (for enums and slots)
+    // Find class slots that reference this element (for classes, enums, and slots)
     // Uses classSlots which includes attributes, slot_usage, and slot_reference
-    if (thisElement.type === 'enum' || thisElement.type === 'slot') {
+    if (thisElement.type === 'class' || thisElement.type === 'enum' || thisElement.type === 'slot') {
       for (const classSlot of otherClass.classSlots) {
         if (classSlot.range === thisElement.getId()) {
           incoming.usedByAttributes.push({
@@ -191,19 +191,18 @@ export abstract class Element {
           const ancestorClass = ancestor as ClassElement;
           const ancestorSlots: SlotInfo[] = [];
 
-          // Get slots defined in this ancestor (not inherited from its parent)
+          // Get all slots defined in this ancestor (includes attributes, slot_usage, and slot_reference)
           for (const classSlot of ancestorClass.classSlots) {
-            const rel = ancestorClass.getRelationships().find(
-              r => r.type === 'property' && r.label === classSlot.name
-            );
-            if (rel) {
-              ancestorSlots.push({
-                attributeName: classSlot.name,
-                target: rel.target,
-                targetType: rel.targetType,
-                isSelfRef: rel.isSelfRef || false
-              });
-            }
+            const range = classSlot.range;
+            if (!range) continue;
+
+            const rangeCategory = categorizeRange(range);
+            ancestorSlots.push({
+              attributeName: classSlot.name,
+              target: range,
+              targetType: rangeCategory,
+              isSelfRef: range === ancestorClass.name
+            });
           }
 
           if (ancestorSlots.length > 0) {
