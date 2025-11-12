@@ -305,6 +305,48 @@ These are from our recent bug fixes - we're accessing `element.type` outside of 
 
 **Fix needed**: Create a public method like `getType()` or `isType(typeId)` on Element base class.
 
+[sg] no -- this is the opposite of what we want to do. The reason i've been trying to
+keep type completely out of the UI is because it kept leading to tangled and repetitive
+logic, conditional branching on type or using different code depending on type. The goal
+was to have the UI completely unaware of model properties and to receive only UI-oriented
+data through the dataService. For anything the UI needs about an element(model)/item(UI),
+it should receive colors, display strings, and the like. Where part of the model might have
+a tree structure, the UI should not be navigating it or looking at it. The UI can receive
+tree structures, but only those needed for specific component display.
+
+My approach may be overkill; but we have never (despite your frequent claims) gotten close
+to implementing this separation fully.
+
+Of course, the UI does need ids so things in the UI can communicate with each other and,
+through the dataService, with the model. I think we have that mostly working (e.g., the
+UI should never use an element (or item) name as an id). For type, however, it's still
+used in many places, not just the places flagged by the errors.
+
+- dataService -- ds.getItemNamesForType() should not exist. trying to understand why it's
+  needed. a few problems here:
+  - nothing needs to be named type or *type in LinkOverlay. LinkOverlay receives types
+    from App:
+    ```typescript
+    <LinkOverlay
+      leftPanelTypes={leftSections}
+      rightPanelTypes={rightSections}
+      dataService={dataService}
+      hoveredItem={hoveredItem}
+    />
+    ```
+    the properties should have been changed to leftPanelSections, rightPanelSections
+  - LinkOverlay shouldn't be going back to the model to get item names for sections
+    - it should get exactly the data it needs in order to render links
+    - there should be no need to loop through types or sections to do this
+    - instead of calling ds.getRelationshipsForLinking(itemName) for each panel, section, 
+      and name, it should collect a flat list of all currently displayed itemIds for each
+      panel and call something like ds.getLinkData(leftItemIds, rightItemIds)
+  - i think what i've just described is fairly consistent with the upcoming architecture
+    step 7 link overlay refactor. move and incorporate these comments to that task.
+    for now we should probably make a temporary exception to allow these checks to pass,
+    but we MUST have notes in appropriate places to remove the exception as soon as we're
+    able.
+      
 ---
 
 #### **2. Type Mismatches: string vs ElementTypeId (9 errors)**
@@ -314,6 +356,9 @@ These are from our recent bug fixes - we're accessing `element.type` outside of 
 - Line 151:57 - `contextualizeId(secondElementType, ...)` - secondElementType is string
 - Line 167:59 - `contextualizeId(item.sourceType, ...)` - item.sourceType is string
 - Line 193:57 - `contextualizeId(item.targetType, ...)` - item.targetType is string
+
+[sg] these errors basically need to be fixed in the same way as i described just above.
+     and similarly for the next two groups
 
 **Section.tsx** (1 location):
 - Line 90:5 - Type 'string' not assignable to 'ItemType'
@@ -326,6 +371,8 @@ These are from our recent bug fixes - we're accessing `element.type` outside of 
 - Line 203:15 - `categorizeRange()` returns `'class' | 'enum' | 'primitive'` but expects `ElementTypeId`
 - Line 333:7 - Missing `id` property in object (type mismatch related)
 
+[sg] let's come back to this one. i'll look at it later (when reminded)
+
 ---
 
 #### **3. Type Assertion Issues: Element vs ClassElement (3 errors)**
@@ -337,8 +384,11 @@ These are from our recent bug fixes - we're accessing `element.type` outside of 
 
 **Fix needed**: Use type guards or rework logic to avoid unsafe casts.
 
----
+[sg] again, when we do the step 7 link overlay refactor, we will probably be
+     getting rid of Element.getRelationshipData(), so make temporary exception
+     again
 
+---
 #### **4. types.ts Declaration Conflicts (10 errors)**
 
 **All in src/types.ts**:
@@ -346,6 +396,9 @@ These are from our recent bug fixes - we're accessing `element.type` outside of 
 - Modifier mismatches on properties (readonly conflicts)
 - Type conflicts between interface declarations
 - Suggests duplicate or conflicting interface/type definitions
+
+[sg] yes, we do apparently have duplicate, conflicting definitions. fix these
+     but ask if it isn't completely clear which to choose or how to merge them
 
 **Specific issues**:
 - `permissible_values` - modifier and type mismatches
