@@ -279,34 +279,117 @@ Question: Should `onSelectItem` be renamed to `onClickItem` since it describes t
 
 ### Fix: Build Failing Due to TypeScript Strict Mode Errors 🐛 BLOCKING
 
-**Problem**: `npm run build` fails with 56 TypeScript errors, blocking deployment
+**Progress**: 56 errors → 46 errors remaining (10 fixed)
 
-**Context**:
-- `npm run typecheck` (uses `tsc --noEmit`) passes ✅
-- `npm run build` (uses `tsc -b && vite build`) fails ❌
-- Build uses stricter settings from `tsconfig.app.json`
-- Errors are pre-existing (existed before recent bug fixes)
+**Fixed** (committed):
+- ✅ 7 unused parameters/variables removed
+- ✅ 3 missing types fixed (NodeJS.Timeout → number, added SlotInfo import)
+- ✅ Updated `npm run typecheck` to use `tsc -b --noEmit` (now catches all build errors)
 
-**Strategy**:
-1. **First**: Review the 56 errors in strict mode - many may be easy fixes:
-   - Unused variables (`noUnusedLocals`, `noUnusedParameters`)
-   - Type safety issues (`strict` mode)
-   - Syntax issues (`erasableSyntaxOnly`)
-2. **If needed**: Consider relaxing TypeScript rules only as last resort
+---
 
-**Error categories** (from build output):
-- Unused parameters/variables (easy fixes - remove or prefix with `_`)
-  - [sg] remove these
-- Type mismatches (string vs ElementTypeId)
-  - [sg] tell me where these are before attempting to fix
-- Missing types (NodeJS namespace, SlotInfo)
-  - [sg] probably no danger in fixing these, right?
-- Property access issues (protected 'type' property)
-    - [sg] tell me where these are before attempting to fix
-- Type assertion issues (Element vs ClassElement)
-    - [sg] probably no danger in fixing these, right?
+**Remaining Errors: 46** (categorized by file)
+
+#### **1. Protected 'type' Property Access (5 errors)** ⚠️ ARCHITECTURAL VIOLATION
+
+These are from our recent bug fixes - we're accessing `element.type` outside of Element subclasses.
+
+**src/models/Element.ts** (4 locations):
+- Line 111:21 - `if (thisElement.type === 'class' && ...)`
+- Line 117:21 - `if (thisElement.type === 'class' || ...)`
+- Line 117:53 - `thisElement.type === 'enum'`
+- Line 117:84 - `thisElement.type === 'slot'`
+
+**src/services/DataService.ts** (1 location):
+- Line 107:21 - `element.type` access
+
+**Fix needed**: Create a public method like `getType()` or `isType(typeId)` on Element base class.
+
+---
+
+#### **2. Type Mismatches: string vs ElementTypeId (9 errors)**
+
+**LinkOverlay.tsx** (4 locations):
+- Line 146:57 - `contextualizeId(firstElementType, ...)` - firstElementType is string
+- Line 151:57 - `contextualizeId(secondElementType, ...)` - secondElementType is string
+- Line 167:59 - `contextualizeId(item.sourceType, ...)` - item.sourceType is string
+- Line 193:57 - `contextualizeId(item.targetType, ...)` - item.targetType is string
+
+**Section.tsx** (1 location):
+- Line 90:5 - Type 'string' not assignable to 'ItemType'
+
+**useLayoutState.ts** (2 locations):
+- Line 77:20 - `leftSections: string[]` should be `ElementTypeId[]`
+- Line 87:29 - `rightSections: string[]` should be `ElementTypeId[]`
+
+**Element.ts** (2 locations):
+- Line 203:15 - `categorizeRange()` returns `'class' | 'enum' | 'primitive'` but expects `ElementTypeId`
+- Line 333:7 - Missing `id` property in object (type mismatch related)
+
+---
+
+#### **3. Type Assertion Issues: Element vs ClassElement (3 errors)**
+
+**Element.ts**:
+- Line 186:28 - `this as ClassElement` conversion may be a mistake
+- Line 223:29 - `this as ClassElement` conversion may be a mistake
+- Line 525:41 - Parameter 'element' implicitly has 'any' type
+
+**Fix needed**: Use type guards or rework logic to avoid unsafe casts.
+
+---
+
+#### **4. types.ts Declaration Conflicts (10 errors)**
+
+**All in src/types.ts**:
+- Lines 38, 50, 52, 211, 220-222, 231
+- Modifier mismatches on properties (readonly conflicts)
+- Type conflicts between interface declarations
+- Suggests duplicate or conflicting interface/type definitions
+
+**Specific issues**:
+- `permissible_values` - modifier and type mismatches
+- `description` - type mismatch (string vs string | undefined)
+- `slots` - type mismatch
+- `slot_usage` - type mismatch
+- `abstract` - modifier and type mismatches
+
+---
+
+#### **5. Other Errors (19 errors)**
+
+**App.tsx**:
+- Line 465:11 - `onNavigate` property doesn't exist on FloatingBoxManagerProps
+
+**DetailContent.tsx**:
+- Line 114:47 - Expected 1 argument, but got 2 (renderCell function signature changed)
+
+**contracts/Item.ts**:
+- Line 70:5 - Expected 2-3 arguments, but got 0
+- Line 90:5 - Expected 2-3 arguments, but got 0
+
+**useLayoutState.ts**:
+- Lines 121:33, 127:33 - Implicit 'any' type indexing Record<ElementTypeId, string>
+- Lines 137:55, 137:74, 137:93, 137:116 - number | undefined not assignable to number (4 errors)
+
+**Element.ts**:
+- Line 1690:26 - 'expandedItems' possibly undefined
+
+**DataService.ts**:
+- Line 63:15 - Constructor parameter properties not allowed with `erasableSyntaxOnly`
+
+**dataLoader.ts** (4 errors):
+- Lines 74, 81, 88, 95 - Types don't satisfy `Record<string, unknown>` constraint
+
+**statePersistence.ts** (2 errors):
+- Line 76:7 - Type with null not assignable to DialogState[]
+- Line 92:27 - Type predicate type mismatch
+
+---
 
 **Priority**: BLOCKING - must fix to deploy
+
+**Instructions**: Add fix instructions below for each category
 
 ---
 
