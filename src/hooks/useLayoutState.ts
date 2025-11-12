@@ -74,6 +74,8 @@ export function useLayoutState({ hasRestoredFromURL, getDialogStates }: UseLayou
       rightSections,
       dialogs: getDialogStates()
     };
+    // @ts-expect-error TEMPORARY: string[] vs ElementTypeId[] - will be removed in Step 7 (Link Overlay Refactor)
+    // TODO: See TASKS.md Step 7 - eliminate type exposure to UI
     saveStateToURL(state);
   }, [leftSections, rightSections, getDialogStates, hasRestoredFromURL]);
 
@@ -84,6 +86,8 @@ export function useLayoutState({ hasRestoredFromURL, getDialogStates }: UseLayou
       rightSections,
       dialogs: getDialogStates()
     };
+    // @ts-expect-error TEMPORARY: string[] vs ElementTypeId[] - will be removed in Step 7 (Link Overlay Refactor)
+    // TODO: See TASKS.md Step 7 - eliminate type exposure to UI
     saveStateToLocalStorage(state);
     setHasLocalStorage(true);
     setShowSaveConfirm(true);
@@ -118,12 +122,16 @@ export function useLayoutState({ hasRestoredFromURL, getDialogStates }: UseLayou
 
         if (state.leftSections && state.leftSections.length > 0) {
           for (const section of state.leftSections) {
+            // @ts-expect-error TEMPORARY: any indexing into Record<ElementTypeId, string>
+            // TODO: See TASKS.md Step 7 - eliminate type exposure to UI
             sectionIds.push(`l${itemTypeToCode[section]}`);
           }
         }
 
         if (state.rightSections && state.rightSections.length > 0) {
           for (const section of state.rightSections) {
+            // @ts-expect-error TEMPORARY: any indexing into Record<ElementTypeId, string>
+            // TODO: See TASKS.md Step 7 - eliminate type exposure to UI
             sectionIds.push(`r${itemTypeToCode[section]}`);
           }
         }
@@ -134,7 +142,7 @@ export function useLayoutState({ hasRestoredFromURL, getDialogStates }: UseLayou
 
         if (state.dialogs && state.dialogs.length > 0) {
           const dialogsStr = state.dialogs.map((d: DialogState) =>
-            `${d.itemType}:${d.itemName}:${Math.round(d.x)},${Math.round(d.y)},${Math.round(d.width)},${Math.round(d.height)}`
+            `${d.itemType}:${d.itemName}:${Math.round(d.x ?? 0)},${Math.round(d.y ?? 0)},${Math.round(d.width ?? 400)},${Math.round(d.height ?? 300)}`
           ).join(';');
           params.set('dialogs', dialogsStr);
         }

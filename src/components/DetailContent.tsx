@@ -24,7 +24,7 @@ interface DetailContentProps {
 export default function DetailContent({
   itemId,
   dataService,
-  onNavigate,
+  onNavigate: _onNavigate,
   onClose,
   hideHeader = false,
   hideCloseButton = false
@@ -111,7 +111,7 @@ export default function DetailContent({
                             key={cellIdx}
                             className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm"
                           >
-                            {renderCell(cell, onNavigate)}
+                            {renderCell(cell)}
                           </td>
                         ))}
                       </tr>

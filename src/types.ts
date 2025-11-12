@@ -189,62 +189,14 @@ export interface EnumValue {
 }
 
 // ============================================================================
-// DEPRECATED - Old DTOs (only used internally in dataLoader and legacy components)
+// DEPRECATED - Old DTOs (removed - were duplicate definitions causing type conflicts)
 // ============================================================================
 //
-// ClassDTO, EnumDTO, SlotDTO: Still used internally in dataLoader.ts
-// as intermediate structures when loading from JSON/TSV files. These are immediately
-// converted to Element instances via Collection.fromData().
-//
-// NOTE: These DTOs are restricted to dataLoader.ts by ESLint rule.
-// Legacy usage in components should be migrated to use Element classes.
-//
-// DO NOT use these types in new code. Use Element and its subclasses instead.
+// The deprecated ClassDTO, EnumDTO, SlotDTO definitions have been removed.
+// They were duplicate definitions with incompatible types that caused 10 TypeScript errors.
+// dataLoader.ts uses the current DTOs defined at the top of this file (lines 23-56).
 //
 // NOTE: Generic tree structure (TreeNode<T>, Tree<T>) is in models/Tree.ts
-
-/**
- * @deprecated Internal use only in dataLoader.ts
- */
-export interface ClassDTO {
-  name: string;
-  description?: string;
-  parent?: string;
-  children: ClassDTO[];
-  variableCount: number;
-  variables: VariableSpec[];
-  properties?: Record<string, any>;
-  isEnum: boolean;
-  enumReferences?: string[]; // List of enum names this class references
-  requiredProperties?: string[]; // List of required property names
-  slots?: string[]; // Top-level slots referenced by this class
-  slot_usage?: Record<string, any>; // Refinements/constraints on inherited or referenced slots
-  abstract?: boolean; // Whether this class is abstract
-}
-
-/**
- * @deprecated Internal use only in dataLoader.ts
- */
-export interface EnumDTO {
-  name: string;
-  description?: string;
-  permissible_values: EnumValue[];
-  usedByClasses: string[]; // Classes that reference this enum
-}
-
-/**
- * @deprecated Internal use only in dataLoader.ts
- */
-export interface SlotDTO {
-  name: string;
-  description?: string;
-  range?: string;
-  slot_uri?: string;
-  identifier?: boolean;
-  required?: boolean;
-  multivalued?: boolean;
-  usedByClasses: string[]; // Classes that use this slot
-}
 
 /**
  * Type alias for selected elements in the UI

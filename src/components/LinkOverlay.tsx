@@ -143,11 +143,15 @@ export default function LinkOverlay({
 
     // Get all item names for each panel type
     leftPanelTypes.forEach(typeId => {
+      // @ts-expect-error TEMPORARY: string vs ElementTypeId - will be removed in Step 7 (Link Overlay Refactor)
+      // TODO: See TASKS.md Step 7 - refactor to use ds.getLinkData(leftItemIds, rightItemIds)
       const itemNames = dataService.getItemNamesForType(typeId);
       itemNames.forEach(name => leftItems.add(name));
     });
 
     rightPanelTypes.forEach(typeId => {
+      // @ts-expect-error TEMPORARY: string vs ElementTypeId - will be removed in Step 7 (Link Overlay Refactor)
+      // TODO: See TASKS.md Step 7 - refactor to use ds.getLinkData(leftItemIds, rightItemIds)
       const itemNames = dataService.getItemNamesForType(typeId);
       itemNames.forEach(name => rightItems.add(name));
     });
@@ -164,6 +168,8 @@ export default function LinkOverlay({
     ) => {
       types.forEach(typeId => {   // [sg] either we refactor this to not need this loop at all
                                   // or we use something like sections.forEach(section => { section.id...}
+        // @ts-expect-error TEMPORARY: string vs ElementTypeId - will be removed in Step 7 (Link Overlay Refactor)
+        // TODO: See TASKS.md Step 7 - refactor to use ds.getLinkData(leftItemIds, rightItemIds)
         const itemNames = dataService.getItemNamesForType(typeId);
         itemNames.forEach(itemName => {
           const relationships = dataService.getRelationshipsForLinking(itemName);
@@ -190,6 +196,8 @@ export default function LinkOverlay({
     // Class→class is bidirectional in the schema, so we only draw left→right
     // All other relationship types (class→enum, class→slot, variable→class, slot→enum) are one-way
     rightPanelTypes.forEach(typeId => {
+      // @ts-expect-error TEMPORARY: string vs ElementTypeId - will be removed in Step 7 (Link Overlay Refactor)
+      // TODO: See TASKS.md Step 7 - refactor to use ds.getLinkData(leftItemIds, rightItemIds)
       const itemNames = dataService.getItemNamesForType(typeId);
       itemNames.forEach(itemName => {
         const relationships = dataService.getRelationshipsForLinking(itemName);

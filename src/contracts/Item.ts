@@ -58,8 +58,6 @@ export class Item {
  * Item representing a collection of items
  */
 export class CollectionItem extends Item {
-  itemId: string;
-  displayName: string;
   items: Item[];
 
   constructor(
@@ -67,9 +65,7 @@ export class CollectionItem extends Item {
     displayName: string,
     items: Item[]
   ) {
-    super();
-    this.itemId = itemId;
-    this.displayName = displayName;
+    super(itemId, displayName);
     this.items = items;
   }
 }
@@ -78,8 +74,6 @@ export class CollectionItem extends Item {
  * Item representing a panel section (e.g., "Classes", "Enums")
  */
 export class SectionItem extends Item {
-  itemId: string;
-  displayName: string;
   items: Item[];
 
   constructor(
@@ -87,9 +81,7 @@ export class SectionItem extends Item {
     displayName: string,
     items: Item[]
   ) {
-    super();
-    this.itemId = itemId;
-    this.displayName = displayName;
+    super(itemId, displayName);
     this.items = items;
   }
 }

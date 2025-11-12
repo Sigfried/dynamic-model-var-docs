@@ -462,13 +462,13 @@ function App() {
         <FloatingBoxManager
           boxes={floatingBoxes}
           displayMode={displayMode}
-          onNavigate={handleNavigate}
           onClose={handleCloseFloatingBox}
           onChange={handleFloatingBoxChange}
           onBringToFront={handleBringToFront}
         />
 
         {/* Relationship Info Box (transitory, uses item position) - only in cascade mode */}
+        {/* [sg] why no RelationshipInfoBox in stacked mode? mode shouldn't matter */}
         {displayMode === 'cascade' && (
           <RelationshipInfoBox
             itemId={hoveredItemId}

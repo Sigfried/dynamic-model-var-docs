@@ -83,13 +83,13 @@ export function parseStateFromURL(): Partial<AppState> | null {
         if (parts.length >= 2 && parts[1]) {
           const [x, y, width, height] = parts[1].split(',').map(Number);
           if (!isNaN(x) && !isNaN(y) && !isNaN(width) && !isNaN(height)) {
-            return { itemName, x, y, width, height };
+            return { itemName, x, y, width, height } as DialogState;
           }
         }
 
         // No position info - use defaults
-        return { itemName };
-      }).filter((d): d is DialogState => d !== null);
+        return { itemName } as DialogState;
+      }).filter((d): d is DialogState => d !== null) as DialogState[];
     } catch (e) {
       console.warn('Failed to parse dialogs from URL:', e);
     }

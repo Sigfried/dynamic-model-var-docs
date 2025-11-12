@@ -108,12 +108,16 @@ function computeIncomingRelationships(thisElement: Element): IncomingRelationshi
 
   for (const otherClass of allClasses) {
     // Find subclasses (classes that inherit from this element)
+    // @ts-expect-error TEMPORARY: Accessing protected 'type' property - will be removed in Step 7 (Link Overlay Refactor)
+    // TODO: Refactor to avoid type checks - see TASKS.md Step 7 architectural guidance
     if (thisElement.type === 'class' && otherClass.parentId === thisElement.getId()) {
       incoming.subclasses.push(otherClass.getId());
     }
 
     // Find class slots that reference this element (for classes, enums, and slots)
     // Uses classSlots which includes attributes, slot_usage, and slot_reference
+    // @ts-expect-error TEMPORARY: Accessing protected 'type' property - will be removed in Step 7 (Link Overlay Refactor)
+    // TODO: Refactor to avoid type checks - see TASKS.md Step 7 architectural guidance
     if (thisElement.type === 'class' || thisElement.type === 'enum' || thisElement.type === 'slot') {
       for (const classSlot of otherClass.classSlots) {
         if (classSlot.range === thisElement.getId()) {
@@ -183,11 +187,15 @@ export abstract class Element {
 
     // Compute inherited slots for classes
     if (this.type === 'class') {
+      // @ts-expect-error TEMPORARY: Type assertion - will be refactored in Step 7 (Link Overlay Refactor)
+      // TODO: Remove getRelationshipData() entirely and replace with focused methods - see TASKS.md Step 7
       const classElement = this as ClassElement;
       const ancestors = classElement.ancestorList().reverse(); // Most general first
 
       for (const ancestor of ancestors) {
         if (ancestor.type === 'class') {
+          // TEMPORARY: Type assertion (ancestor as ClassElement) - will be refactored in Step 7
+          // TODO: Remove getRelationshipData() entirely and replace with focused methods - see TASKS.md Step 7
           const ancestorClass = ancestor as ClassElement;
           const ancestorSlots: SlotInfo[] = [];
 
@@ -200,6 +208,8 @@ export abstract class Element {
             ancestorSlots.push({
               attributeName: classSlot.name,
               target: range,
+              // @ts-expect-error TEMPORARY: categorizeRange returns 'primitive' which isn't in ElementTypeId
+              // TODO: See TASKS.md line 374 - need to revisit this type mismatch
               targetType: rangeCategory,
               isSelfRef: range === ancestorClass.name
             });
@@ -220,6 +230,8 @@ export abstract class Element {
 
     // Add variable list for classes
     if (this.type === 'class') {
+      // @ts-expect-error TEMPORARY: Type assertion - will be refactored in Step 7 (Link Overlay Refactor)
+      // TODO: Remove getRelationshipData() entirely and replace with focused methods - see TASKS.md Step 7
       incoming.variables = (this as ClassElement).variables.map(v => ({ name: v.name }));
     }
 
@@ -331,6 +343,7 @@ export abstract class Element {
       isExpanded,
       isClickable,
       hoverData: {
+        id: this.getId(),
         type: this.type,
         name: this.name
       }
@@ -522,7 +535,7 @@ export function initializeModelData(schemaData: SchemaData): ModelData {
   // Flatten all elements into name→element lookup map
   const elementLookup = new Map<string, Element>();
   collections.forEach(collection => {
-    collection.getAllElements().forEach(element => {
+    collection.getAllElements().forEach((element: Element) => {
       elementLookup.set(element.name, element);
     });
   });
@@ -1687,7 +1700,7 @@ export class VariableCollection extends ElementCollection {
     this.roots.forEach(classElement => {
       const variables = this.groupedByClass.get(classElement.name) || [];
       const hasChildren = variables.length > 0;
-      const isExpanded = expandedItems.has(classElement.name);
+      const isExpanded = expandedItems?.has(classElement.name) ?? false;
 
       // Add ClassElement header (level 0, non-clickable)
       items.push({

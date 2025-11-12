@@ -446,6 +446,69 @@ used in many places, not just the places flagged by the errors.
 
 ---
 
+### Improve Schema Data Loading and Validation 🔧 ARCHITECTURAL
+
+**Goal**: Capture complete schema data and add runtime validation for type safety.
+
+**Current Issues**:
+1. **Inconsistent field filtering**: Classes explicitly select fields in Python, but slots/enums pass through all YAML fields
+2. **No runtime validation**: TypeScript interfaces don't validate incoming JSON - unexpected fields are silently included
+3. **Missing schema metadata**: Model metadata (id, name, title, prefixes) not captured
+4. **Schema imports not resolved**: YAML imports not processed before conversion to JSON
+
+**Changes Needed**:
+
+**1. download_source_data.py**:
+- Remove class field filtering (lines 128-136) - pass through entire class definitions like slots/enums
+- Capture entire schema document including:
+  - Top-level metadata: `id`, `name`, `title`, `description`, `license`, `version`
+  - `prefixes` (needed for generating links to URIs - see future task)
+  - `imports` (resolve/inline before JSON conversion)
+  - `types` (will be added as elements like classes/enums - see future work)
+- Keep the validation at line 120 (attributes must be dict, not array)
+
+**2. dataLoader.ts**:
+- Add runtime validation function:
+  ```typescript
+  function validateDTO<T>(
+    dto: object,
+    expectedKeys: (keyof T)[],
+    typeName: string
+  ): void {
+    const actualKeys = Object.keys(dto);
+    const expectedSet = new Set(expectedKeys.map(String));
+    const unexpected = actualKeys.filter(k => !expectedSet.has(k));
+
+    if (unexpected.length > 0) {
+      console.warn(
+        `Unexpected fields in ${typeName}:`,
+        unexpected.join(', '),
+        '\nThis may indicate schema changes or data issues.'
+      );
+    }
+  }
+  ```
+- Call validation in transform functions before transformWithMapping()
+- Define expected keys for each DTO type (based on current interfaces)
+
+**Benefits**:
+- Catch schema changes at runtime (console warnings)
+  - [sg] should also catch before runtime -- like in a test that runs
+         before committing or something
+- Capture full schema for future features (prefixes, types, metadata display)
+- Consistent handling across all entity types
+- Easier debugging when schema evolves
+
+**Future Use Cases**:
+- Display model metadata (id, name, title) in app UI
+- Generate URI links using prefixes
+- Add `types` as new element category
+- Support schema imports/composition
+
+**Priority**: Medium - not blocking, but improves data integrity
+
+---
+
 ### Fix: Enum and Slot Inheritance Not Loading 🐛 HIGH PRIORITY
 
 **Bug**: Enum inheritance relationships (via `inherits` field) are not being loaded or displayed
@@ -985,6 +1048,31 @@ Review ClassElement.getRelationshipData() implementation and apply pattern.
 ---
 
 #### Step 7: LinkOverlay Refactor
+
+**Architectural Goals** (moved from build error fix notes):
+
+The goal is to completely eliminate type awareness from the UI layer:
+
+1. **Remove getItemNamesForType() from DataService** - Nothing in the UI should be named "type" or "*Type"
+   - LinkOverlay currently receives `leftPanelTypes` and `rightPanelTypes` from App - these should be renamed to `leftPanelSections` and `rightPanelSections`
+
+2. **Stop LinkOverlay from querying model for item names by section**
+   - Currently: LinkOverlay loops through types/sections calling `ds.getRelationshipsForLinking(itemName)` for each panel, section, and name
+   - Goal: LinkOverlay should receive exactly the data it needs to render links
+   - New approach: Collect flat list of all currently displayed `itemIds` for each panel, call something like `ds.getLinkData(leftItemIds, rightItemIds)`
+   - This eliminates type/section loops entirely
+
+3. **Eliminate type checks throughout the UI**
+   - UI should only receive UI-oriented data: colors, display strings, layout structures
+   - Where model has tree structures, UI shouldn't navigate them - receive pre-computed UI-specific tree structures instead
+   - For identities/communication: Use itemIds (not element names, not types)
+
+4. **Remove getRelationshipData() and type assertions**
+   - Current temporary exceptions at Element.ts lines 190, 199 (type assertions)
+   - These exist because getRelationshipData() tries to handle all element types generically
+   - Replace with focused, type-specific methods that don't require casting
+
+**Implementation Steps**:
 
 **7a. Add getAllPairs() to DataService**
 

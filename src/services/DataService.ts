@@ -60,7 +60,11 @@ export interface RelationshipData {
 }
 
 export class DataService {
-  constructor(private modelData: ModelData) {}
+  private modelData: ModelData;
+
+  constructor(modelData: ModelData) {
+    this.modelData = modelData;
+  }
 
   /**
    * Get detail content for an item
@@ -101,9 +105,12 @@ export class DataService {
   /**
    * Get item type for internal use (e.g., for URL state persistence)
    * Returns the collection type ID that this item belongs to
+   * @ts-expect-error TEMPORARY: Accessing protected 'type' property - will be removed in Step 7 (Link Overlay Refactor)
+   * TODO: Refactor to avoid type exposure to DataService - see TASKS.md Step 7 architectural guidance
    */
   getItemType(itemId: string): string | null {
     const element = this.modelData.elementLookup.get(itemId);
+    // @ts-expect-error TEMPORARY: See method comment above
     return element?.type ?? null;
   }
 

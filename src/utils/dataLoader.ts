@@ -48,12 +48,34 @@ async function loadVariableSpecDTOs(): Promise<VariableSpecDTO[]> {
 }
 
 /**
+ * Validates that a DTO only contains expected fields.
+ * Logs warnings for any unexpected fields that might indicate schema changes.
+ */
+function validateDTO(
+  dto: object,
+  expectedKeys: string[],
+  typeName: string
+): void {
+  const actualKeys = Object.keys(dto);
+  const expectedSet = new Set(expectedKeys);
+  const unexpected = actualKeys.filter(k => !expectedSet.has(k));
+
+  if (unexpected.length > 0) {
+    console.warn(
+      `Unexpected fields in ${typeName}: ${unexpected.join(', ')}`,
+      '\nThis may indicate schema changes or data issues.',
+      '\nDTO:', dto
+    );
+  }
+}
+
+/**
  * Generic transformation function that applies field mappings.
  * Maps DTO fields to Data fields using the provided mapping spec.
  * Fields not in mapping are copied as-is.
  */
-function transformWithMapping<T extends Record<string, unknown>>(
-  dto: Record<string, unknown>,
+function transformWithMapping<T>(
+  dto: object,
   mapping: FieldMapping
 ): T {
   const result: Record<string, unknown> = {};
@@ -67,10 +89,17 @@ function transformWithMapping<T extends Record<string, unknown>>(
   return result as T;
 }
 
+// Expected fields for each DTO type (for validation)
+const EXPECTED_SLOT_FIELDS = ['range', 'description', 'slot_uri', 'identifier', 'required', 'multivalued'];
+const EXPECTED_ENUM_FIELDS = ['description', 'permissible_values'];
+const EXPECTED_CLASS_FIELDS = ['name', 'description', 'parent', 'abstract', 'attributes', 'slots', 'slot_usage'];
+const EXPECTED_VARIABLE_FIELDS = ['bdchmElement', 'variableLabel', 'dataType', 'ucumUnit', 'curie', 'variableDescription'];
+
 /**
  * Transform SlotDTO (snake_case from JSON) to SlotData (camelCase for constructors)
  */
 function transformSlotDTO(dto: SlotDTO): SlotData {
+  validateDTO(dto, EXPECTED_SLOT_FIELDS, 'SlotDTO');
   return transformWithMapping<SlotData>(dto, FIELD_MAPPINGS.slot);
 }
 
@@ -78,6 +107,7 @@ function transformSlotDTO(dto: SlotDTO): SlotData {
  * Transform EnumDTO to EnumData
  */
 function transformEnumDTO(dto: EnumDTO): EnumData {
+  validateDTO(dto, EXPECTED_ENUM_FIELDS, 'EnumDTO');
   return transformWithMapping<EnumData>(dto, FIELD_MAPPINGS.enum);
 }
 
@@ -85,6 +115,7 @@ function transformEnumDTO(dto: EnumDTO): EnumData {
  * Transform ClassDTO to ClassData
  */
 function transformClassDTO(dto: ClassDTO): ClassData {
+  validateDTO(dto, EXPECTED_CLASS_FIELDS, 'ClassDTO');
   return transformWithMapping<ClassData>(dto, FIELD_MAPPINGS.class);
 }
 
@@ -92,6 +123,7 @@ function transformClassDTO(dto: ClassDTO): ClassData {
  * Transform VariableSpecDTO to VariableSpec
  */
 function transformVariableSpecDTO(dto: VariableSpecDTO): VariableSpec {
+  validateDTO(dto, EXPECTED_VARIABLE_FIELDS, 'VariableSpecDTO');
   return transformWithMapping<VariableSpec>(dto, FIELD_MAPPINGS.variable);
 }
 
