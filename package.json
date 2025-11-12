@@ -9,6 +9,7 @@
     "typecheck": "tsc -b --noEmit",
     "lint": "eslint .",
     "check-arch": "bash scripts/check-architecture.sh",
+    "validate-schema": "npx tsx scripts/validate-schema.ts",
     "preview": "vite preview",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",

@@ -9,7 +9,7 @@
 - [Next Up (Ordered)](#next-up-ordered)
   - [🐛 Fix: Incoming Relationships Not Showing](#fix-incoming-relationships-not-showing-in-hover-box--high-priority)
   - [⭐ Architecture Refactoring Implementation Plan](#architecture-refactoring-implementation-plan--current-work)
-  - [Phase 12: Unified Detail Box System](#unified-detail-box-system-phase-12--completed)
+  - [Unified Detail Box System](#unified-detail-box-system-phase-12--completed)
 
 ### Upcoming Features
 - [App Configuration File](#app-configuration-file)
@@ -750,8 +750,8 @@ We'll add Item conversion incrementally as we refactor components in later steps
    - Need to investigate root cause before proceeding
 
 **Phase completion checklist** (after all steps complete):
-- [ ] Verify Phase 12 is truly complete
-- [ ] Archive Phase 12 documentation
+- [ ] Verify Unified Detail Box System is truly complete
+- [ ] Archive Unified Detail Box System documentation
 - [ ] Archive current phase documentation
 
 ---
@@ -1176,13 +1176,13 @@ Update to use DataService contracts only.
 
 ---
 
-### Unified Detail Box System (Phase 12) ✅ COMPLETED
+### Unified Detail Box System ✅ COMPLETED
 
 [sg] still has bugs. maybe documented somewhere, but this is not complete yet
 
 **Goal**: Extract dialog management from App.tsx, merge DetailDialog/DetailPanelStack into unified system, and implement transitory mode for FloatingBox - allowing any content to appear temporarily (auto-disappearing) and upgrade to persistent mode on user interaction.
 
-**Phase 12 Quick Navigation:**
+**Unified Detail Box System Quick Navigation:**
 - [FloatingBox Modes (transitory/persistent)](#unified-detail-box-system-phase-12--completed)
 - [Implementation Steps 0-3 ✅](#unified-detail-box-system-phase-12--completed)
 - [Bug Fixes (Step 4)](#unified-detail-box-system-phase-12--completed)
@@ -1461,7 +1461,7 @@ Hover behavior depends on where cursor is positioned:
     - ✅ Fixed initialization order bugs (handleNavigate, hoveredElementInstance)
 
     <details>
-    <summary><b>Initial Testing Checklist (Phase 12 implementation)</b></summary>
+    <summary><b>Initial Testing Checklist (Unified Detail Box System implementation)</b></summary>
 
     1. ✅ Click element name → Opens persistent floating box
        - ❌ Bug found: Headers duplicated (img_1.png) → Fixed in 4a
@@ -1497,7 +1497,7 @@ Hover behavior depends on where cursor is positioned:
        - Fix: Always pass hideHeader={true} to DetailContent when in FloatingBox
        - Changed 3 instances in App.tsx where DetailContent is created
 
-    **Phase 12 Hover Fixes** ✅ COMPLETED
+    **Unified Detail Box System Hover Fixes** ✅ COMPLETED
 
     2. **Hover not working deterministically** (from extended testing)
        - Root cause: Cursor position tracking causing non-deterministic behavior
