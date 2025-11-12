@@ -491,10 +491,16 @@ used in many places, not just the places flagged by the errors.
 - Call validation in transform functions before transformWithMapping()
 - Define expected keys for each DTO type (based on current interfaces)
 
+**Testing**:
+- Created `scripts/validate-schema.ts` to analyze unexpected fields before commits
+- Run with: `npx tsx scripts/validate-schema.ts`
+- Generates report with field counts and examples
+- Exits with error code 1 if unexpected fields found (for CI/pre-commit hooks)
+- Add to package.json: `"validate-schema": "tsx scripts/validate-schema.ts"`
+
 **Benefits**:
 - Catch schema changes at runtime (console warnings)
-  - [sg] should also catch before runtime -- like in a test that runs
-         before committing or something
+- Catch schema changes at build time (validation script)
 - Capture full schema for future features (prefixes, types, metadata display)
 - Consistent handling across all entity types
 - Easier debugging when schema evolves
@@ -506,6 +512,72 @@ used in many places, not just the places flagged by the errors.
 - Support schema imports/composition
 
 **Priority**: Medium - not blocking, but improves data integrity
+
+---
+
+### Handle Unexpected Enum Fields Found by Validation 🔧
+
+**Context**: Schema validation script (`scripts/validate-schema.ts`) found 6 unexpected fields in enum definitions.
+
+**Note on Entity Names**: Entity keys (e.g., `"SpecimenTypeEnum"`) ARE the canonical names/IDs. Some entities have redundant `name` fields that match their keys - these are now filtered out as harmless by the validation script. Only name/key mismatches are reported as errors.
+
+**Findings** (from validation report):
+
+1. **`reachable_from`** - 9 occurrences
+   - Examples: CellularOrganismSpeciesEnum, VertebrateBreedEnum, MondoHumanDiseaseEnum, HpoPhenotypicAbnormalityEnum, ProcedureConceptEnum
+   - **Status**: Investigate - likely LinkML schema metadata
+
+2. **`inherits`** - 3 occurrences
+   - Examples: ConditionConceptEnum, HistoricalStatusEnum, BaseObservationTypeEnum
+   - **Status**: **CRITICAL** - Already documented bug (see "Fix: Enum and Slot Inheritance Not Loading")
+
+3. **`comments`** - 3 occurrences
+   - Examples: DrugExposureProvenanceEnum, DrugRouteEnum, DeviceExposureProvenanceEnum
+   - **Status**: Should be added - useful documentation metadata
+
+4. **`see_also`** - 2 occurrences
+   - Examples: DrugExposureConceptEnum, DeviceExposureConceptEnum
+   - **Status**: Should be added - useful for cross-references
+
+5. **`is_a`** - 1 occurrence
+   - Examples: HistoricalStatusEnum
+   - **Status**: Should be added - inheritance relationship (like classes)
+
+6. **`include`** - 1 occurrence
+   - Examples: HistoricalStatusEnum
+   - **Status**: Investigate - possibly LinkML mixin/composition feature
+
+**Actions Needed**:
+
+1. **Add to EnumDTO interface** (src/types.ts):
+   ```typescript
+   export interface EnumDTO {
+     description?: string;
+     permissible_values?: Record<...>;
+     inherits?: string[];              // NEW: Enum inheritance (addresses existing bug)
+     is_a?: string;                    // NEW: Parent enum
+     comments?: string[];              // NEW: Additional documentation
+     see_also?: string[];              // NEW: Related enums/concepts
+     reachable_from?: Record<...>;     // NEW: Investigate format first
+     include?: string[];               // NEW: Investigate purpose first
+   }
+   ```
+   Note: `name` field not needed - entity keys ARE the canonical names
+
+2. **Add to EnumData interface** with camelCase transforms
+
+3. **Update EnumElement class** to expose these fields via getters/methods
+
+4. **Update EXPECTED_ENUM_FIELDS** in:
+   - `src/utils/dataLoader.ts` (runtime validation)
+   - `scripts/validate-schema.ts` (build-time validation)
+
+5. **Test after changes**:
+   - Run `npx tsx scripts/validate-schema.ts` - should pass
+   - Check browser console - should have no enum validation warnings
+   - Verify `inherits` field loads properly (fixes existing bug)
+
+**Priority**: High - includes fix for existing enum inheritance bug
 
 ---
 
