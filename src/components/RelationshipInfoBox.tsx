@@ -14,7 +14,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import type { DataService, RelationshipData } from '../services/DataService';
+import type { DataService, SlotInfo } from '../services/DataService';
 
 interface RelationshipInfoBoxProps {
   itemId: string | null;
@@ -41,9 +41,9 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
     slots: false,
     inheritedSlots: {}
   });
-  const hoverTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const lingerTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const upgradeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const hoverTimerRef = useRef<number | null>(null);
+  const lingerTimerRef = useRef<number | null>(null);
+  const upgradeTimerRef = useRef<number | null>(null);
 
   // Debounced hover effect - position based on item DOM node
   useEffect(() => {
@@ -70,7 +70,6 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
         }
 
         const itemRect = itemNode.getBoundingClientRect();
-        const boxWidth = 500;
         const estimatedBoxHeight = 400; // Typical box height for centering
         const maxBoxHeight = window.innerHeight * 0.8; // max-h-[80vh] for viewport constraints
 

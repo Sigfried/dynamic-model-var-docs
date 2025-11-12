@@ -1,5 +1,4 @@
 import type { ElementTypeId } from '../models/ElementRegistry';
-import { isValidElementType } from '../models/ElementRegistry';
 
 export interface DialogState {
   itemName: string;

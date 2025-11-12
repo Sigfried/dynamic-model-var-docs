@@ -128,7 +128,7 @@ export default function DetailContent({
 }
 
 // Helper function to render table cells (handles clickable links in the future)
-function renderCell(cell: unknown, onNavigate?: (itemName: string, itemType: string) => void): React.ReactNode {
+function renderCell(cell: unknown): React.ReactNode {
   if (cell === null || cell === undefined) {
     return '';
   }

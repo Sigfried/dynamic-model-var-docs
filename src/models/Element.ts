@@ -311,7 +311,7 @@ export abstract class Element {
    * @returns SectionItemData object for component rendering
    */
   getSectionItemData(
-    context: 'leftPanel' | 'rightPanel',
+    _context: 'leftPanel' | 'rightPanel',
     level: number = 0,
     isExpanded: boolean = false,
     isClickable: boolean = true,

@@ -13,7 +13,7 @@ export interface ElementDescriptor {
 /**
  * Get the unique identifier for an element (just returns element.name)
  */
-export function getElementName(element: Element, elementType: ElementTypeId): string {
+export function getElementName(element: Element, _elementType: ElementTypeId): string {
   return element.name;
 }
 

@@ -136,7 +136,6 @@ interface FloatingBoxProps {
 function FloatingBox({
   box,
   index,
-  totalBoxes,
   onClose,
   onChange,
   onBringToFront,
