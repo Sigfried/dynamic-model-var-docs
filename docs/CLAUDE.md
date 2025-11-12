@@ -255,6 +255,19 @@ getId(context?: 'leftPanel' | 'rightPanel' | 'detailBox'): string
 
 ---
 
+## 🔧 TypeScript Build Configuration
+
+**CRITICAL**: Always use `npm run typecheck` before committing!
+
+- `npm run typecheck` now uses `tsc -b --noEmit` (same as build)
+- This catches **all** errors that would break deployment
+- **Do NOT** rely on `tsc --noEmit` alone - it's less strict
+- The project uses TypeScript 5.9.3 (local) with strict mode enabled
+
+**Why this matters**: We had 46 hidden errors that only showed in `tsc -b` (build) but not in `tsc --noEmit` (old typecheck). This caused build failures in deployment that passed local typechecking.
+
+---
+
 ## 📋 Current Task
 
 See **[TASKS.md](TASKS.md)** for:
