@@ -277,6 +277,39 @@ Question: Should `onSelectItem` be renamed to `onClickItem` since it describes t
 
 ## Next Up (Ordered)
 
+### Fix: Build Failing Due to TypeScript Strict Mode Errors 🐛 BLOCKING
+
+**Problem**: `npm run build` fails with 56 TypeScript errors, blocking deployment
+
+**Context**:
+- `npm run typecheck` (uses `tsc --noEmit`) passes ✅
+- `npm run build` (uses `tsc -b && vite build`) fails ❌
+- Build uses stricter settings from `tsconfig.app.json`
+- Errors are pre-existing (existed before recent bug fixes)
+
+**Strategy**:
+1. **First**: Review the 56 errors in strict mode - many may be easy fixes:
+   - Unused variables (`noUnusedLocals`, `noUnusedParameters`)
+   - Type safety issues (`strict` mode)
+   - Syntax issues (`erasableSyntaxOnly`)
+2. **If needed**: Consider relaxing TypeScript rules only as last resort
+
+**Error categories** (from build output):
+- Unused parameters/variables (easy fixes - remove or prefix with `_`)
+  - [sg] remove these
+- Type mismatches (string vs ElementTypeId)
+  - [sg] tell me where these are before attempting to fix
+- Missing types (NodeJS namespace, SlotInfo)
+  - [sg] probably no danger in fixing these, right?
+- Property access issues (protected 'type' property)
+    - [sg] tell me where these are before attempting to fix
+- Type assertion issues (Element vs ClassElement)
+    - [sg] probably no danger in fixing these, right?
+
+**Priority**: BLOCKING - must fix to deploy
+
+---
+
 ### Fix: Enum and Slot Inheritance Not Loading 🐛 HIGH PRIORITY
 
 **Bug**: Enum inheritance relationships (via `inherits` field) are not being loaded or displayed
