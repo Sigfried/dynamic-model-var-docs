@@ -7,14 +7,12 @@
   - [Architecture & Refactoring Decisions](#architecture--refactoring-decisions)
   - [Different Variable Treatment](#different-variable-treatment-for-condition-and-drug-exposure-classes)
 - [Next Up (Ordered)](#next-up-ordered)
-  - [🐛 Fix: Incoming Relationships Not Showing](#fix-incoming-relationships-not-showing-in-hover-box--high-priority)
-  - [⭐ Architecture Refactoring Implementation Plan](#architecture-refactoring-implementation-plan--current-work)
   - [Unified Detail Box System](#unified-detail-box-system--completed)
 
 ### Upcoming Features
+- [LinkOverlay Refactor](#linkoverlay-refactor--needs-revision-for-option-d) ⚠️
 - [App Configuration File](#app-configuration-file)
 - [Abstract Tree Rendering System](#abstract-tree-rendering-system)
-- [Link System Enhancement](#link-system-enhancement)
 - [Detail Panel Enhancements](#detail-panel-enhancements)
 - [Fix Dark Mode Display Issues](#fix-dark-mode-display-issues-high-priority)
 - [User Help Documentation](#user-help-documentation)
