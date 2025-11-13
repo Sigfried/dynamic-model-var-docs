@@ -38,6 +38,7 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 - [Phase 12: TypeScript Strict Mode & Schema Validation](#phase-12-typescript-strict-mode--schema-validation)
 - [Bug Fix: Incoming Relationships & Inherited Slots](#bugfix-relationships-slots)
 - [Phase 13: Architecture Refactoring Quick Wins (Steps 1-5)](#phase-13-arch-refactor-steps)
+- [Phase 14: LinkML Study & Architecture Decision](#phase-14-linkml-study)
 
 ---
 
@@ -1992,6 +1993,128 @@ All steps tested with:
 
 **Step 6** (Relationship Grouping): **Deleted** - unclear requirements, deferred to future
 **Step 7** (LinkOverlay Refactor): **Active task** - needs revision for Option D architecture
+
+---
+
+<a id="phase-14-linkml-study"></a>
+## Phase 14: LinkML Study & Architecture Decision
+
+**Completed**: January 2025
+
+**Status**: Study complete, Slots-as-Edges architecture chosen
+
+### Goals Achieved
+
+1. Understood how LinkML represents schemas internally
+2. Learned how LinkML-generated docs structure relationships
+3. Extracted lessons to inform our architecture
+4. Evaluated hypergraph vs slots-as-edges approaches
+5. Decided on Slots-as-Edges architecture
+
+### BDCHM Documentation Learnings
+
+**Terminology & Concepts**:
+- **"Direct slots"** vs **"Induced slots"**: Direct = defined on class, Induced = complete flattened list including inherited
+- Classes can be **concrete parents** with their own implementation + specialized children
+- "Slots" and "attributes" used interchangeably in UI
+
+**Inheritance Patterns**:
+- Linear inheritance chains visualized with Mermaid diagrams
+- Documentation separates inherited vs direct attributes
+- Clickable navigation between related classes
+
+**Relationship Modeling Patterns**:
+- **Self-referential**: Specimen → parent_specimen (0..*, pooling/derivation)
+- **Cross-class**: Typed slots with range constraints (Specimen → source_participant: Participant)
+- **Activity relationships**: Multiple typed edges (creation_activity, processing_activity, storage_activity, transport_activity)
+- **Mutual exclusivity**: Documented in comments (one of: value_string, value_boolean, value_quantity, value_enum)
+
+**Slot Constraints & Cardinality**:
+- Notation: "0..1" (optional), "1" (required), "*" or "0..*" (multivalued)
+- Required/multivalued flags explicit in YAML schema
+- Range constraints: slots typed to enums, primitives, or other classes
+
+**Enumeration Strategy**:
+- Pre-mapped controlled vocabularies (not direct ontology URIs)
+- Assumes upstream mapping from source systems (EHR codes → enum values)
+
+**Identifier Patterns**:
+- Two-tier system: `identity` (external/global) vs `id` (internal/system-specific)
+
+**Temporal Representation**:
+- Ages in **days** (UCUM: `d`) for precision
+- Participant-centric (relative ages) vs absolute dates
+
+### Chris Mungall (LinkML Developer) Guidance
+
+**Discussion**: Three rounds on Slack about LPG representation for schema visualization
+
+**Round 1 - LPG Projections**:
+- Chris pointed to UML as closest match for our needs
+- Suggested SchemaLink tool for visualization
+- Noted standard LinkML→UML mapping exists
+
+**Round 2 - Slots as Edges vs Nodes**:
+- **Chris's recommendation**: "Assuming an LPG, the most natural representation is slot definitions as nodes, slot usages as edges (Class → Class/Type) decorated with cardinality"
+- This is called a **hypergraph** pattern
+- Challenge: Neo4J and similar LPGs don't represent hypergraphs well as first-class
+
+**Round 3 - Visualization vs Formalism**:
+- Discussed trade-off between formalism accuracy and UI simplicity
+- Question: Show direct class→range links OR separate class→slot→range navigation?
+- Chris's response: "makes sense!" (ambiguous - may have worn out patience)
+
+### Architecture Options Evaluated
+
+**Option A (Hypergraph - Chris's recommendation)**:
+- Slot definitions as nodes, usages as edges
+- Show Class → Slot and Slot → Range as separate steps
+- PRO: Matches LinkML community patterns, accurate
+- CON: More UI space, more navigation steps
+
+**Option B (Current mish-mash)**:
+- Slots as both nodes AND hidden edges
+- Class→range relationships hide intermediate slot
+- PRO: Compact display
+- CON: Conceptually confusing, user can't tell direct vs mediated relationships
+
+**Option C (Hybrid)**:
+- Internal hypergraph, but UI can collapse slot mediation
+- PRO: Accurate model + flexible display
+- CON: More complex implementation
+
+**Slots-as-Edges (CHOSEN)**:
+- Slots are complex edges (not nodes), except SlotElement definitions browsable in optional middle panel
+- Edges connect Class → Range with metadata (slot name, required, multivalued, inherited_from)
+- PRO: See class→range associations at a glance, slots still explorable
+- CON: Diverges from hypergraph formalism
+
+### Key Decision Rationale
+
+**Why Slots-as-Edges over Hypergraph**:
+1. **User comprehension**: Direct class→range visibility helps users understand schema quickly
+2. **Limited screen space**: Avoid requiring 3-step navigation (Class → Slot → Range)
+3. **Slot definitions still accessible**: Optional middle panel for browsing all slots
+4. **Edge metadata captures slot properties**: inherited_from, overrides, cardinality
+5. **Internal model flexibility**: Can still represent full slot inheritance accurately
+
+**Trade-off accepted**: Diverges from LinkML community hypergraph pattern, but prioritizes UI/UX for schema exploration over formalism purity
+
+### Current Reality (Before Refactor)
+
+The app treats all elements (classes, enums, slots, variables) as nodes with inconsistent relationship handling:
+- Classes ARE directly related to Slots (via `slots` arrays)
+- Classes are NOT directly related to other Classes/Enums (slot-mediated)
+- UI **hides slot mediation**, showing `Specimen → SpecimenTypeEnum` as direct link
+- Result: Confusing mish-mash where users can't distinguish direct vs mediated relationships
+
+### Next Steps
+
+See REFACTOR_PLAN.md for:
+- Slots-as-Edges architecture details
+- Implementation prerequisites
+- Three-panel UI layout specification
+- Open questions and decisions
 
 ---
 
