@@ -9,7 +9,7 @@
 - [Next Up (Ordered)](#next-up-ordered)
   - [🐛 Fix: Incoming Relationships Not Showing](#fix-incoming-relationships-not-showing-in-hover-box--high-priority)
   - [⭐ Architecture Refactoring Implementation Plan](#architecture-refactoring-implementation-plan--current-work)
-  - [Unified Detail Box System](#unified-detail-box-system-phase-12--completed)
+  - [Unified Detail Box System](#unified-detail-box-system--completed)
 
 ### Upcoming Features
 - [App Configuration File](#app-configuration-file)
@@ -1183,8 +1183,9 @@ Update to use DataService contracts only.
 **Goal**: Extract dialog management from App.tsx, merge DetailDialog/DetailPanelStack into unified system, and implement transitory mode for FloatingBox - allowing any content to appear temporarily (auto-disappearing) and upgrade to persistent mode on user interaction.
 
 **Unified Detail Box System Quick Navigation:**
-- [FloatingBox Modes (transitory/persistent)](#unified-detail-box-system-phase-12--completed)
-- [Implementation Steps 0-3 ✅](#unified-detail-box-system-phase-12--completed)
+[sg] where should these links point?
+- [FloatingBox Modes (transitory/persistent)](#unified-detail-box-system--completed)
+- [Implementation Steps 0-3 ✅](#unified-detail-box-system--completed)
 - [Bug Fixes (Step 4)](#unified-detail-box-system-phase-12--completed)
 - [Known Issues & Next Steps](#unified-detail-box-system-phase-12--completed)
 

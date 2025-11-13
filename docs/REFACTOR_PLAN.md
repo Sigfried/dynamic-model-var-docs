@@ -548,6 +548,30 @@ Discussion with Chris Mungall (LinkML core developer) about LPG representation
 >
 > Anyway -- now that I'm describing this as a visualization issue rather than as a graph formalism issue, what do you think?
 
+**Current Reality (How the App Actually Works):**
+
+The app currently treats ALL element types (classes, enums, slots, variables) as **nodes** and shows relationships between them via links and hover interactions. This creates a **mish-mash** because:
+
+1. **Direct node-to-node relationships shown in UI:**
+   - Class → Class (inheritance via `parentId`)
+   - Class → Class (via attribute with class range) - **slot-mediated, but shown as direct**
+   - Class → Enum (via attribute with enum range) - **slot-mediated, but shown as direct**
+   - Class → Slot (via `slots` array or `slot_usage`)
+   - Slot → Class/Enum (via slot's `range`)
+   - Variable → Class (via `classId`)
+
+2. **The inconsistency:**
+   - Classes ARE directly related to Slots (classes reference global slots by name)
+   - BUT Classes are NOT directly related to other Classes/Enums—those relationships are **mediated by slots** (either inline attributes or global slot references)
+   - The UI **hides the slot mediation** for class→class and class→enum relationships, making them appear as direct links
+   - This means class→range relationships are actually **hypergraph (multi-hop) links disguised as direct links**
+
+3. **Implementation details** (from `getRelationships()` methods):
+   - All slot-mediated relationships return `type: 'property'` (overloaded type)
+   - ClassElement.getRelationships(): Returns `type: 'property'` for attributes with non-primitive ranges
+   - SlotElement.getRelationships(): Returns `type: 'property'` for slot's range (if non-primitive)
+   - The intermediate slot is present in the data model but invisible in the relationship representation
+
 **Key Takeaways:**
 
 1. **Hypergraph representation** (Chris's recommendation):
@@ -557,54 +581,161 @@ Discussion with Chris Mungall (LinkML core developer) about LPG representation
    - **Dotted line** = visual connection between usage edge and slot definition node
    - **Challenge**: Neo4J and similar LPGs don't represent this well as first-class
 
-2. **Our current approach** (slots as edges, not nodes):
-   - Simplifies visualization: avoids having both class→slot and slot→range edges
-   - Shows class→range relationships directly
-   - May diverge from LinkML community patterns
-   - **Question remains**: Is visualization simplicity worth diverging from standard formalism?
+2. **Our current UI approach** (inconsistent hybrid):
+   - Slots ARE nodes (can be selected, have detail panels)
+   - Slots ARE ALSO edges (class→range relationships hide the intermediate slot)
+   - This creates confusion: class→slot links appear equivalent to class→range links, but they're fundamentally different
+   - **Problem**: User can't tell which relationships are direct vs mediated
 
 3. **Alternatives to consider**:
-   - **Option A**: Follow Chris's hypergraph pattern (slots as nodes, usages as edges)
-   - **Option B**: Keep current approach (slots as edges) for UI, but acknowledge divergence from LinkML norms
-   - **Option C**: Hybrid - internal graph uses hypergraph, but UI presents simplified class→range view
+   - **Option A (Formalism-correct)**: Follow Chris's hypergraph pattern
+     - Slots as nodes, usages as edges
+     - Show Class → Slot and Slot → Range as separate navigable steps
+     - PRO: Matches LinkML community patterns, accurate representation
+     - CON: May require more UI space, more navigation steps
+
+   - **Option B (Current approach)**: Slots as both nodes AND hidden edges
+     - Keep current mish-mash
+     - PRO: Compact display of class→range associations
+     - CON: Conceptually confusing, diverges from LinkML norms
+
+   - **Option C (Hybrid)**: Internal hypergraph, simplified UI view
+     - Data model: Full hypergraph (slots as nodes, usages as edges)
+     - UI rendering: Option to collapse slot mediation, show direct class→range
+     - PRO: Best of both worlds - accurate model, flexible display
+     - CON: More complex implementation
+
+   - **Option D (Slots as edges)**: Internal LPG (not hypergraph), slots-as-edges with optional slot browser
+       - **Data model:**
+         - **Nodes**: Classes, Enums, Variables, Types (need to import linkml:types first)
+         - **Edges**: Slots are complex edges connecting Class → Range (where Range = Class | Enum | Type)
+         - **Edge properties**: slot name, required, multivalued, description, inherited_from, etc.
+         - **Edge instances vs definitions**:
+           - SlotElement definitions still exist (includes all slots, even unused ones)
+           - Slot edges REFERENCE SlotElement definitions (not just same name)
+           - Multiple slot edges can reference the same SlotElement (e.g., inherited slots with overrides)
+           - Slot edges replace ClassSlot instances (more edges than definitions)
+         - **Class hierarchy**: Range should be abstract superclass for Class, Enum, Type
+
+       - **UI rendering - Three panel layout:**
+         - **Left panel** (always): Classes only (tree hierarchy)
+           - Classes are NOT ranges in this panel - they're the schema structure
+         - **Right panel**: Variables and Ranges (Classes, Enums, Types as range targets)
+           - Shows elements that can be referenced as slot ranges
+         - **Middle panel** (optional/toggleable): Slot browser
+           - Shows all SlotElement definitions (including unused slots)
+           - Functions as navigable nodes for exploration
+           - Clicking a slot shows which classes use it, what its range is
+         - **Detail boxes**: Slots appear as properties with clickable/hoverable ranges
+           - Range values are clearly shown as connected nodes
+
+       - **Key insight**: Slots exist in TWO forms:
+         1. **SlotElement definitions** (browsable in optional middle panel)
+         2. **Slot edges** (connecting specific Class → Range pairs with context-specific properties)
+
+       - **PRO**:
+         - See class→range associations at a glance
+         - Slots still explorable via optional slot browser
+         - Accurate representation of slot inheritance/overrides (different edges)
+       - **CON**:
+         - More complex than current implementation
+         - Diverges from hypergraph formalism
+
+4. **Open question for LinkML developer (Harold):**
+   - Does seeing direct class→range relationships (without intermediate slot navigation) significantly aid user comprehension?
+   - Or should we embrace the hypergraph pattern and show slots as first-class navigable entities?
 
 ---
 
-## 6. Open Questions Summary
+## 6. Option D Implementation Prerequisites
+
+If we choose Option D (slots as edges with optional slot browser):
+
+**Required changes:**
+
+1. **Import and model Types** (HIGH PRIORITY)
+   - Download linkml:types during data fetch (scripts/download_source_data.py)
+   - Parse types in dataLoader.ts
+   - Create TypeElement class extending Range base class
+   - Add TypeCollection
+
+2. **Create Range abstraction** (HIGH PRIORITY)
+   - Abstract Range class (or interface)
+   - Class, Enum, Type all extend/implement Range
+   - Allows uniform handling of slot range targets
+
+3. **Refactor slot representation** (MAJOR CHANGE)
+   - SlotElement: Keep for definitions (browsable in middle panel)
+   - SlotEdge: New class/interface for edges
+     - References SlotElement definition
+     - Connects Class → Range with context-specific properties
+     - Replaces ClassSlot instances
+   - Edge properties: name, slotDef (ref to SlotElement), required, multivalued, inherited_from, overrides, etc.
+
+4. **UI layout changes** (MAJOR CHANGE)
+   - Left panel: Classes only (remove "ranges" concept from class panel)
+   - Right panel: Variables + Ranges section (Classes, Enums, Types as range targets)
+   - Middle panel (optional): Slot browser
+   - Update panel state management for 3-panel layout
+
+5. **Relationship computation**
+   - getRelationships() returns slot edges instead of direct property links
+   - Hover/link logic needs to traverse Class → SlotEdge → Range
+   - Detail boxes show slots with clickable ranges
+
+**Open questions:**
+
+- Should middle panel (slot browser) be collapsible or toggle-able?
+- How to visualize the difference between unused slot definitions and active slot edges?
+- Should right panel show "Ranges" as a single section or separate Class/Enum/Type sections?
+
+---
+
+## 7. Open Questions Summary
 
 **High Priority** (must answer before implementing):
-1. Compound relationships: Simple/Explicit/Hybrid approach?
-2. Slots as edges: How to represent global slot definitions?
+1. **Architecture decision**: Option A (hypergraph), B (current mish-mash), C (hybrid), or D (slots as edges)?
+2. Compound relationships: Simple/Explicit/Hybrid approach?
 3. Variable→Class: What's the semantic relationship type?
-4. ClassSlot: Keep as OOP class or full edge representation?
 
 **Medium Priority** (can decide during implementation):
-5. Collection nodes: Are they graph nodes or just query wrappers?
-6. Types import: How to integrate linkml:types as elements?
-7. fromData elimination: Can we remove it entirely?
+4. Collection nodes: Are they graph nodes or just query wrappers?
+5. fromData elimination: Can we remove it entirely?
+6. Middle panel UX: Collapsible? Toggleable? Default state?
 
 **Low Priority** (defer to later):
-8. Graphology adoption: Worth the refactor eventually?
-9. Artificial root node: Needed without graphology?
+7. Graphology adoption: Worth the refactor eventually?
+8. Artificial root node: Needed without graphology?
 
 ---
 
-## 7. Files Likely to Change
+## 8. Files Likely to Change
+
+**For Option D specifically:**
 
 **Model Layer** (major changes):
-- `src/models/Element.ts` - Edge types, RangeElement, slot representation
+- `src/models/Element.ts` - Add Range base class, SlotEdge interface/class
 - `src/models/TypeElement.ts` (NEW) - Import and represent linkml:types
-- `src/models/ElementCollection.ts` - Simplified with graph queries?
+- `src/models/ElementCollection.ts` - Add TypeCollection, refactor slot handling
+- Remove/refactor ClassSlot → replace with SlotEdge
+
+**Data Layer** (major changes):
+- `scripts/download_source_data.py` - Download linkml:types
+- `src/utils/dataLoader.ts` - Parse types, create SlotEdge instances instead of ClassSlot
+- `src/types.ts` - Add Type DTO, SlotEdge interface
 
 **Service Layer** (moderate changes):
-- `src/services/DataService.ts` - Add graph query methods (getAllPairs, getEdges, etc.)
-- `src/services/dataLoader.ts` - Import types, refactor DTO transforms
+- `src/services/DataService.ts` - Add type collection, update relationship APIs
+- Update getRelationships() to return slot edges
 
-**UI Layer** (minimal changes - maintained abstraction):
-- Components should be largely unaffected thanks to DataService abstraction
-- May need updates for new relationship display (more specific edge types)
+**UI Layer** (major changes for Option D):
+- `src/App.tsx` - Implement 3-panel layout (left: classes, middle: slots, right: variables+ranges)
+- `src/components/Panel.tsx` - Support middle panel toggle/collapse
+- `src/components/Section.tsx` - Separate "Ranges" rendering (Classes/Enums/Types)
+- `src/components/DetailPanel.tsx` - Render slots with clickable ranges
+- `src/components/LinkOverlay.tsx` - Traverse Class → SlotEdge → Range for hover
 
 **Documentation**:
-- CLAUDE.md - Update with graph architecture principles
-- DATA_FLOW.md - Update with final architecture (after consolidation)
+- CLAUDE.md - Update with chosen architecture (Range abstraction, slot edge pattern)
+- DATA_FLOW.md - Update with final architecture (after Option D implementation)
 - TASKS.md - Archive completed decisions section
