@@ -1821,21 +1821,128 @@ export const APP_CONFIG = {
 
 ---
 
-### Link System Enhancement
+### LinkOverlay Refactor ⚠️ NEEDS REVISION FOR OPTION D
 
-**Status**: Needs complete refactoring. See "Architecture & Refactoring Decisions" → "LinkOverlay & Link System Refactoring" section at top of this file for detailed discussion and planning.
+**Status**: Implementation plan needs updating for Option D (Slots-as-Edges) architecture
 
-**Current state** (mostly complete ✅):
-- ✅ `LinkData` interface defined in LinkOverlay.tsx
-- ✅ `LinkTooltipData` interface for hover information
-- ✅ Tooltip component showing relationship type, slot name, source/target
-- ✅ ElementHoverData interface for component hover contracts
-- ✅ Link highlighting on element hover
+**Background**: LinkOverlay currently has nested loops through types/sections/names to build links. This violates view/model separation and is difficult to follow.
 
-**Remaining work**:
-- Review if LinkOverlay still directly accesses Element properties (should use Element methods)
-- Consider if additional metadata would be useful in tooltips
-- Verify all components using hover data have proper interface definitions
+**Architectural Goals**:
+
+1. **Eliminate type awareness from UI layer**
+   - Rename `leftPanelTypes`/`rightPanelTypes` → `leftPanelSections`/`rightPanelSections`
+   - UI should receive pre-computed data, not query model by type
+
+2. **Simplify link data collection**
+   - Current: Loop through types/sections, call `getRelationshipsForLinking()` for each item
+   - Proposed: `dataService.getAllPairs(leftItemIds, rightItemIds)` using existing relationships
+   - Eliminates nested loops entirely
+
+3. **Remove getRelationshipData() type assertions**
+   - Current: Temporary `@ts-expect-error` at Element.ts lines 190, 199
+   - Goal: Replace with focused, type-specific methods
+
+**Implementation Steps**:
+
+**Step 1: Add getAllPairs() to DataService**
+
+```typescript
+interface LinkPair {
+  sourceItemId: string;
+  targetItemId: string;
+  sourceSide: 'left' | 'right';
+  targetSide: 'left' | 'right';
+}
+
+// DataService method
+getAllPairs({
+  sourceFilter,  // itemIds
+  targetFilter,  // itemIds
+  sourceSide,
+  targetSide
+}): LinkPair[] {
+  // Use existing element.getRelationships() for outgoing edges
+  // Filter to only targets in targetFilter set
+}
+```
+
+**Step 2: Create new Link interface**
+
+```typescript
+export interface Link {
+  id: string;  // From contextualizeLinkId()
+  sourceItemId: string;
+  targetItemId: string;
+  sourceSide: 'left' | 'right';
+  targetSide: 'left' | 'right';
+  sourceRect?: DOMRect;  // Calculated from DOM
+  targetRect?: DOMRect;
+  highlighted?: boolean;
+}
+```
+
+**Step 3: Create buildLink() function**
+
+```typescript
+function buildLink(pair: LinkPair, dataService: DataService): Link {
+  // Generate link ID
+  // Get DOM rects for rendering positions
+  // Return Link with all rendering data
+}
+```
+
+**Step 4: Simplify LinkOverlay component**
+
+```typescript
+function LinkOverlay({ dataService, leftSections, rightSections }) {
+  const leftItemIds = leftSections.map(s => s.itemId);
+  const rightItemIds = rightSections.map(s => s.itemId);
+
+  const lrPairs = dataService.getAllPairs({
+    sourceFilter: leftItemIds,
+    targetFilter: rightItemIds,
+    sourceSide: 'left',
+    targetSide: 'right'
+  });
+
+  const rlPairs = dataService.getAllPairs({
+    sourceFilter: rightItemIds,
+    targetFilter: leftItemIds,
+    sourceSide: 'right',
+    targetSide: 'left'
+  });
+
+  const links = [
+    ...lrPairs.map(p => buildLink(p, dataService)),
+    ...rlPairs.map(p => buildLink(p, dataService))
+  ];
+
+  return <svg>{links.map(link => <LinkPath link={link} />)}</svg>;
+}
+```
+
+**Step 5: Remove tooltips** (keep simplified hover info showing relationship type)
+
+**Step 6: Clean up linkHelpers.ts** (remove imports from models/)
+
+**⚠️ OPTION D IMPACT**:
+
+With Option D (slots as edges), relationship traversal changes:
+- Current: Class → Class direct (hiding slot mediation)
+- Option D: Class → SlotEdge → Range (explicit slot edges)
+- `getAllPairs()` will need to traverse slot edges differently
+- May need `getSlotEdgesForClass()` method
+- Link tooltips should show slot name from SlotEdge metadata
+
+**Testing**:
+- ✅ All links render correctly
+- ✅ Hover highlighting works
+- ✅ Performance improves (eliminate nested loops)
+- ✅ `npm run check-arch` passes (no model imports in UI)
+
+**Deferred decisions**:
+- Exact Option D slot edge traversal implementation
+- Relationship metadata format for slot-based links
 
 ---
 

@@ -37,6 +37,7 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 - [Phase 11: Complete DataService Abstraction for App.tsx](#phase-11-dataservice)
 - [Phase 12: TypeScript Strict Mode & Schema Validation](#phase-12-typescript-strict-mode--schema-validation)
 - [Bug Fix: Incoming Relationships & Inherited Slots](#bugfix-relationships-slots)
+- [Phase 13: Architecture Refactoring Quick Wins (Steps 1-5)](#phase-13-arch-refactor-steps)
 
 ---
 
@@ -1898,6 +1899,99 @@ Created comprehensive test suite in `src/test/incoming-relationships.test.ts`:
 - **Accuracy**: Hover boxes now match detail boxes in completeness
 - **Consistency**: All element types (class, enum, slot) now compute incoming relationships uniformly
 - **Completeness**: Full inheritance chain visualization (not just immediate parent)
+
+---
+
+<a id="phase-13-arch-refactor-steps"></a>
+## Phase 13: Architecture Refactoring Quick Wins (Steps 1-5)
+
+**Completed**: January 2025
+
+**Status**: Archived - superseded by Option D (Slots-as-Edges) architecture in REFACTOR_PLAN.md
+
+### Completed Steps
+
+**Step 1: Quick Wins ✅**
+- Deleted obsolete cursor position code from App.tsx
+- Renamed `parentName` → `parentId` throughout codebase
+- Renamed `onSelectItem` → `onClickItem` for clarity
+
+**Step 2: Component Data Abstraction** ⏭️ **Deferred**
+- Goal was to create Item base class hierarchy for component data contracts
+- Decision: Deferred pending Option D architecture decisions
+
+**Step 3: getId() Simplification ✅**
+- Removed context parameter from `getId()` - now always returns `this.name`
+- Created `contextualizeId()` utility for panel-specific ID generation
+- Separated UI concerns from model identity
+
+**Step 4: URL State Refactor ✅**
+- Changed from `l=c&r=e,v` to `sections=lc~re~rv` format
+- More compact, URL-safe delimiter (`~`)
+- Dialog format simplified to `name` or `name:x,y,w,h`
+- Only user-positioned boxes include coordinates
+- Added `isUserPositioned` flag to prevent bloated URLs
+
+**Step 5: Slot Inheritance Simplification ✅**
+- Added `slotPath` to ClassSlot (e.g., "Entity.Specimen.Material")
+- Changed `nodePath: string` → `pathFromRoot: string[]`
+- Simplified `getInheritedFrom()` method (no longer recursive)
+- Added slot sorting by inheritance path in detail displays
+
+### Key Decisions Made
+
+**ItemId Architecture**:
+- `getId()` always returns element name
+- Contextualization handled by utility functions
+- Collections treated as items (no special handling)
+
+**Slot Representation**:
+- Stored `slotPath` on ClassSlot instances
+- Path-based inheritance tracking
+- Eliminated recursive slot collection methods
+
+### Archived Materials
+
+**LinkOverlay Questions & Proposals** (from TASKS.md Architecture & Refactoring Decisions):
+
+**Problems Identified**:
+- Nested loops: `types.forEach -> itemNames.forEach`
+- Link data structure has view/model separation violations
+- linkHelpers.ts imports from models/ (violates separation)
+
+**Proposed Solutions** (incorporated into Step 7 LinkOverlay Refactor task):
+```typescript
+interface LinkPair = {
+  sourceItemId: string,
+  targetItemId: string,
+  sourceSide: 'left' | 'right',
+  targetSide: 'left' | 'right'
+}
+const pairs = dataService.getAllPairs({
+  sourceFilter: leftPanel.displayedSections.map(s => s.itemId),
+  targetFilter: rightPanel.displayedSections.map(s => s.itemId)
+})
+const links = pairs.map(p => buildLink(p))
+```
+
+**Decisions**:
+- Link identity = `sourceItemId + targetItemId` (eliminate type from Link interface)
+- Split link rendering from link data management
+- Remove link tooltips (keep simplified version showing relationship type)
+- Use existing incoming/outgoing relationships to implement `getAllPairs()`
+
+### Testing Results
+
+All steps tested with:
+- ✅ `npm run typecheck` - All checks passing
+- ✅ `npm run check-arch` - All architecture checks passing
+- ✅ Dev server - No runtime errors
+- ✅ Tests - 159+ passing (DetailContent failures pre-existing)
+
+### Future Work
+
+**Step 6** (Relationship Grouping): **Deleted** - unclear requirements, deferred to future
+**Step 7** (LinkOverlay Refactor): **Active task** - needs revision for Option D architecture
 
 ---
 
