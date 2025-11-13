@@ -446,14 +446,127 @@ Find and review:
 - Documentation generator logic
 - How slots/attributes are distinguished
 
-**C. Extract Lessons**
+**C. Learnings from BDCHM Documentation** ✅ COMPLETED
 
-Document in this file:
-- Terminology: What LinkML calls things
-- Relationship types: How LinkML categorizes edges
-- Slot system: How inheritance/usage/override works
-- Types: How LinkML handles type system
-- UI patterns: What works well in generated docs
+Reviewed: Observation, Specimen, Condition, Person/Participant classes
+
+**1. Terminology & Concepts**:
+- **"Direct slots"** vs **"Induced slots"**
+  - Direct = slots defined directly on a class
+  - Induced = complete flattened attribute list including all inherited slots
+  - UI shows both views in LinkML source tabs
+- Classes can be **concrete parents** (Observation has its own implementation + specialized children)
+- Both "slots" and "attributes" terms used interchangeably in UI
+
+**2. Inheritance Patterns**:
+- Linear inheritance chains visualized with Mermaid class diagrams
+- Entity → Observation → [6 specialized observation types]
+- Documentation clearly separates inherited vs direct attributes
+- Clickable navigation between related classes
+
+**3. Relationship Modeling Patterns**:
+- **Self-referential**: Specimen → parent_specimen (0..*, allows pooling/derivation)
+- **Cross-class**: Typed slots with range constraints (Specimen → source_participant: Participant)
+- **Bidirectional hints**: Comments note when fields "useful when object should stand alone"
+- **Activity relationships**: Multiple typed edges (creation_activity, processing_activity, storage_activity, transport_activity)
+- **Mutual exclusivity**: Documented in comments (one of: value_string, value_boolean, value_quantity, value_enum)
+
+**4. Slot Constraints & Cardinality**:
+- **Cardinality notation**: "0..1" (optional), "1" (required), "*" or "0..*" (multivalued)
+- **Required/multivalued flags**: Explicit in YAML schema
+- **Range constraints**: Slots typed to enums, primitives, or other classes
+
+**5. Enumeration Strategy**:
+- **Pre-mapped controlled vocabularies** (not direct ontology URIs)
+- Examples: SpecimenTypeEnum, ConditionConceptEnum, ProvenanceEnum, AnalyteTypeEnum
+- Assumes upstream mapping from source systems (EHR codes → enum values)
+- Enum values have descriptions and sometimes meaning (ontology mapping)
+
+**6. Identifier Patterns**:
+- **Two-tier system**:
+  - `identity` = external business identifiers (globally unique, created outside system)
+  - `id` = internal logical identifiers (system-specific, marked `identifier: true`)
+
+**7. Temporal Representation**:
+- Ages recorded in **days** (UCUM: `d`) for precision
+- Examples: age_at_observation, age_at_condition_start, age_at_condition_end
+- Participant-centric (relative ages) vs absolute dates
+
+**8. Provenance Tracking**:
+- Enumerated provenance fields (single slot approach)
+- Activity chains capture modification history
+- Parent-child relationships establish lineage
+
+**D. LinkML Developer Guidance** ✅
+
+Discussion with Chris Mungall (LinkML core developer) about LPG representation
+
+**Round 1: Initial guidance on LPG projections**
+
+> The app looks great!
+>
+> The graph question is a very interesting one. There are already many projections of a linkml schema to different kinds of graphs.
+>
+> 1. rdfgen and jsonldgen creates a simple RDF graph
+> 2.  owlgen creates OWL which can be rendered as a different RDF graph
+> 3. The OWL from 2 can also be projected onto a different kind of graph using alternative projections (see https://incatools.github.io/ontology-access-kit/guide/relationships-and-graphs.html)
+> 4. there is a standard mapping from LinkML to UML, using serializations like mermaid. And UML is clearly a graphical conceptually with intuitive mappings to a LPG. But surprisingly there seems to be no standard ways to represent UML as a LPG.
+> 5. There is also a LinkML to ER mapping, and ER diagrams are also graphs
+>
+> I think 4 is closest to what you want. What you describe is essentially UML (implicitly I am understanding your requirements to also be an LPG formalism). 1-3 will give you something that is mis-aligned, either introducing blank nodes or other "structural" nodes, or otherwise misaligned.
+>
+> actually it strikes me the simpler answer to your question is to point you at https://schemalink.anacleto.di.unimi.it/test. https://anacletolab.github.io/schemalink-docs/
+> https://drive.google.com/drive/folders/1UZvmcDNeZHGSojfhZDyq7__geo7Al3-6
+
+**Round 2: SchemaLink evaluation and slots as edges question**
+
+[sg] asked about SchemaLink's JSON export and whether slots should be edges:
+> The json export appears to represent only inheritance as relationships. Slots are represented as node properties, which is what I was trying to get away from. I'm sure I'm missing a lot here.
+>
+> Do you have an opinion as to whether it makes sense to store slots as edges rather than as nodes?
+>
+> My current data representations are a sloppy-ish combination of OOP classes: Element (abstract base class) → ClassElement, EnumElement, SlotElement (with ClassSlot for handling slot usage overrides), VariableElement
+>
+> I've been struggling mightily trying to get claude code to respect model/view separation and not produce spaghetti code, which is my impetus to be spending a ton of time refactoring and considering a simplified graph (LPG) representation
+
+**Chris Mungall's key insight:**
+> Yes, I was thinking of more aligning on formalisms and patterns
+>
+> **On slots as edges vs nodes:**
+> Many! But succinctly, **assuming an LPG IMO the most natural and useful representation is to have the slot definitions as nodes, but the slot usages as edges between a class and class/type, decorated with cardinality etc.** Visually a dotted line between the usage edge and the slot node, some people like to call this a **hypergraph**, some LPGs formalisms like the implicit one in Neo4J don't do a great job of representing this as first class...
+
+**Round 3: Visualization vs formalism question**
+
+[sg]'s concern:
+> The goal of my app is to show as much of a schema as possible in a comprehensible way with limited screen space so users can get a quickish sense of what's there and explore and navigate the model's topography and details without getting lost.
+>
+> I don't know how important it will actually be to user comprehension or insight, but my app lets you see an overview of class-class and class-enum associations without having to drill down to specific classes or enums. Those relationships, of course, are formed through class-->slot-->range connections. **It's a little confusing maybe to have class-slot links be the same sort of thing as class-range links.**
+>
+> The app doesn't present a conventional graph visualization (because node-link diagrams and adjacency matrices get hard to read at even very modest sizes) and the graph formalism doesn't need to match the UI. But for this issue, the idea was to present slots as links rather than as nodes so as to avoid confusion about how class-slot links are different from class-range links.
+>
+> **I haven't thought this through yet, but do you think i should avoid that kind of confusion by getting rid of direct class-range links in the app in favor of class-slot, slot-range links? That would probably get unwieldy.**
+>
+> Anyway -- now that I'm describing this as a visualization issue rather than as a graph formalism issue, what do you think?
+
+**Key Takeaways:**
+
+1. **Hypergraph representation** (Chris's recommendation):
+   - **Slot definitions** = nodes
+   - **Slot usages** = edges (Class → Class/Type)
+   - **Decorated edges** = cardinality, required, multivalued, etc.
+   - **Dotted line** = visual connection between usage edge and slot definition node
+   - **Challenge**: Neo4J and similar LPGs don't represent this well as first-class
+
+2. **Our current approach** (slots as edges, not nodes):
+   - Simplifies visualization: avoids having both class→slot and slot→range edges
+   - Shows class→range relationships directly
+   - May diverge from LinkML community patterns
+   - **Question remains**: Is visualization simplicity worth diverging from standard formalism?
+
+3. **Alternatives to consider**:
+   - **Option A**: Follow Chris's hypergraph pattern (slots as nodes, usages as edges)
+   - **Option B**: Keep current approach (slots as edges) for UI, but acknowledge divergence from LinkML norms
+   - **Option C**: Hybrid - internal graph uses hypergraph, but UI presents simplified class→range view
 
 ---
 
