@@ -1,0 +1,2404 @@
+{
+  "nodes": [
+    {
+      "id": "n0",
+      "caption": "Entity",
+      "properties": {},
+      "entityType": "node",
+      "ontologies": [],
+      "description": "Any resource that has its own identifier",
+      "examples": [],
+      "position": {
+        "x": 324.885795236922,
+        "y": 174.71634952495634
+      },
+      "style": {}
+    },
+    {
+      "id": "n1",
+      "caption": "Person",
+      "properties": {
+        "species": {
+          "description": "The scientific binomial name for the species of the Person (e.g. Homo sapiens, Mus musculus, etc.). Values should be derived from the NCBI organismal taxonomy (http://purl.obolibrary.org/obo/ncbitaxon.owl).",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "breed": {
+          "description": "A label given to a group of animals homogeneous in appearance and other characteristics that distinguish it from other animals of the same species. Values should be derived from the Vertebrate Breed Ontology (http://purl.obolibrary.org/obo/vbo.owl).",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "year_of_birth": {
+          "description": "Numeric value to represent the calendar year in which an individual was born.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "vital_status": {
+          "description": "Coded value indicating the state or condition of being living or deceased; also includes the case where the vital status is unknown.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "age_at_death": {
+          "description": "The age of an individual at the time of death, expressed in days since birth",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "year_of_death": {
+          "description": "Numeric value to represent the calendar year in which an individual died.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "cause_of_death": {
+          "description": "Coded value indicating the circumstance or condition that results in the death of the individual.",
+          "requiredType": "optional",
+          "range": "CauseOfDeath",
+          "collectionType": "list"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "Administrative information about an individual or animal receiving care or other health-related services.",
+      "examples": [],
+      "position": {
+        "x": 164.42440880110607,
+        "y": 294.5808149517447
+      },
+      "style": {}
+    },
+    {
+      "id": "n2",
+      "caption": "Demography",
+      "properties": {
+        "sex": {
+          "description": "The biologic character or quality that distinguishes male and female from one another as expressed by analysis of the person's gonadal, morphologic (internal and external), chromosomal, and hormonal characteristics.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "ethnicity": {
+          "description": "An individual's self-described social and cultural grouping, specifically whether an individual describes themselves as Hispanic or Latino. The provided values are based on the categories defined by the U.S. Office of Management and Business and used by the U.S. Census Bureau",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "race": {
+          "description": "An arbitrary classification of a taxonomic group that is a division of a species. It usually arises as a consequence of geographical isolation within a species and is characterized by shared heredity, physical attributes and behavior, and in the case of humans, by common history, nationality, or geographic distribution. The provided values are based on the categories defined by the U.S. Office of Management and Business and used by the U.S. Census Bureau.",
+          "requiredType": "optional",
+          "range": "string"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "Demographics about an individual or animal receiving care or other health-related services.",
+      "examples": [],
+      "position": {
+        "x": 95.00595408412629,
+        "y": 106.70738747020697
+      },
+      "style": {}
+    },
+    {
+      "id": "n3",
+      "caption": "Participant",
+      "properties": {
+        "description": {
+          "description": "A free text field to capture additional info/explanation about the research subject.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "member_of_research_study": {
+          "description": "A reference to the Study(s) of which this Participant is a member",
+          "requiredType": "optional",
+          "range": "ResearchStudy"
+        },
+        "age_at_index": {
+          "description": "The age in days of the Participant at the index_timepoint",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "index_timepoint": {
+          "description": "The text term used to describe the reference or anchor date used for date obfuscation, where a single date is obscured by creating one or more date ranges in relation to this date.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "originating_site": {
+          "description": "The Organization through which a subject was enrolled on a ResearchStudy.",
+          "requiredType": "optional",
+          "range": "Organization"
+        },
+        "study_arm": {
+          "description": "The arm(s) of the study on which the Participant is enrolled",
+          "requiredType": "optional",
+          "range": "string",
+          "collectionType": "list"
+        },
+        "consents": {
+          "description": "Data Use Restrictions that are used to indicate permissions/restrictions for datasets and/or materials, and relates to the purposes for which datasets and/or material might be removed, stored or used. Based on the Data Use Ontology : see http://www.obofoundry.org/ontology/duo.html",
+          "requiredType": "optional",
+          "range": "Consent",
+          "collectionType": "list"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "A Participant is the entity of interest in a research study, typically a human being or an animal, but can also be a device, group of humans or animals, or a tissue sample. Human research subjects are usually not traceable to a particular person to protect the subject’s privacy.",
+      "examples": [],
+      "position": {
+        "x": 294.85413489587836,
+        "y": 93.43895745052339
+      },
+      "style": {}
+    },
+    {
+      "id": "n4",
+      "caption": "ResearchStudy",
+      "properties": {
+        "name": {
+          "description": "An unabridged name of a research program, project, or study.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "name_shortened": {
+          "description": "An abbreviated name of a research program, project, or study.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "description": {
+          "description": "An unabridged description of a research program, project, or study.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "description_shortened": {
+          "description": "An abbreviated description of a research program, project, or study.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "sponsor": {
+          "description": "An entity that is responsible for the initiation, management, and/or financing of a research project.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "date_started": {
+          "description": "The date when the research project began.",
+          "requiredType": "optional",
+          "range": "TimePoint"
+        },
+        "date_ended": {
+          "description": "The date when the research project ended.",
+          "requiredType": "optional",
+          "range": "TimePoint"
+        },
+        "accession_number": {
+          "description": "The accession number of the research study with the accession authority",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "accession_authority": {
+          "description": "The accession authority for the research study.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "version": {
+          "description": "The version number of the ResearchStudy",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "url": {
+          "description": "A URL address for a resource that provides information about a research program, project, or study.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "part_of": {
+          "description": "A reference to a parent ResearchStudy (e.g. a link to the overarching CPTAC ResearchStudy from a substudy of CPTAC)",
+          "requiredType": "optional",
+          "range": "ResearchStudy"
+        },
+        "research_project_type": {
+          "description": "The 'type' of ResearchStudy represented (e.g. a broad-based Program like 'CPTAC' or a more focused Project like 'CPTAC PDAC Discovery Study')",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "associated_timepoint": {
+          "description": "A collection of timepoint observations that are relevant to research projects (e.g. date of IACUC approval, date of IRB approval, date of embargo end, etc.)",
+          "requiredType": "optional",
+          "range": "TimePoint",
+          "collectionType": "list"
+        },
+        "principal_investigator": {
+          "description": "The investigator or investigators leading a project.",
+          "requiredType": "optional",
+          "range": "string",
+          "collectionType": "list"
+        },
+        "consents": {
+          "description": "Data Use Restrictions that are used to indicate permissions/restrictions for datasets and/or materials, and relates to the purposes for which datasets and/or material might be removed, stored or used. Based on the Data Use Ontology : see http://www.obofoundry.org/ontology/duo.html",
+          "requiredType": "optional",
+          "range": "Consent",
+          "collectionType": "list"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "A process where a researcher or organization plans and then executes a series of steps intended to increase the field of healthcare-related knowledge. This includes studies of safety, efficacy, comparative effectiveness and other information about medications, devices, therapies and other interventional and investigative techniques. A ResearchStudy involves the gathering of information about human or animal subjects.",
+      "examples": [],
+      "position": {
+        "x": 250.8822925206925,
+        "y": 288.8406557212544
+      },
+      "style": {}
+    },
+    {
+      "id": "n5",
+      "caption": "Consent",
+      "properties": {
+        "consent_code": {
+          "description": "Data Use Restrictions that are used to indicate permissions/restrictions for datasets and/or materials, and relates to the purposes for which datasets and/or material might be removed, stored or used. Based on the Data Use Ontology : see http://www.obofoundry.org/ontology/duo.html",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "valid_from": {
+          "description": "The point in time from which the consent record is valid.",
+          "requiredType": "optional",
+          "range": "TimePoint"
+        },
+        "valid_to": {
+          "description": "The point in time after which the consent record is invalid.",
+          "requiredType": "optional",
+          "range": "TimePoint"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "An entity that can be used to capture consent code and other relevant data about consent for a study.",
+      "examples": [],
+      "position": {
+        "x": 75.98295162512045,
+        "y": 191.24164361944844
+      },
+      "style": {}
+    },
+    {
+      "id": "n6",
+      "caption": "Visit",
+      "properties": {
+        "visit_category": {
+          "description": "A value representing the kind (or category) of visit, like inpatient or outpatient.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "age_at_visit_start": {
+          "description": "The age of the Participant (in days) at the start of the Visit.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "age_at_visit_end": {
+          "description": "The age of the Participant (in days) at the end of the Visit.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "visit_provenance": {
+          "description": "A value representing the provenance of the visit record, or where the record comes from.",
+          "requiredType": "optional",
+          "range": "string"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "Events where Persons engage with the healthcare system for a duration of time. They are often also called “Encounters”. Visits are defined by a configuration of circumstances under which they occur, such as (i) whether the patient comes to a healthcare institution, the other way around, or the interaction is remote, (ii) whether and what kind of trained medical staff is delivering the service during the Visit, and (iii) whether the Visit is transient or for a longer period involving a stay in bed. (OMOP)",
+      "examples": [],
+      "position": {
+        "x": 219.1895638381844,
+        "y": 51.21588589105369
+      },
+      "style": {}
+    },
+    {
+      "id": "n7",
+      "caption": "Organization",
+      "properties": {
+        "name": {
+          "description": "The full legal name by which the organization is known (e.g. 'National Cancer Institute')",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "alias": {
+          "description": "A secondary name for the organization such as a short name or abbreviation (e.g. 'NCI')",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "organization_type": {
+          "description": "The type of the organization (e.g. 'Cancer Genome Characterization Center')",
+          "requiredType": "optional",
+          "range": "string"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "A grouping of people or organizations with a common purpose such as a data coordinating center, an university, or an institute within a university.",
+      "examples": [],
+      "position": {
+        "x": 312.8360244801325,
+        "y": 228.26301808525233
+      },
+      "style": {}
+    },
+    {
+      "id": "n8",
+      "caption": "TimePoint",
+      "properties": {
+        "date_time": {
+          "description": "An explicitly specified timepoint described in terms of a date and optionally a time on that date.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "index_time_point": {
+          "description": "Another TimePoint from which this point is offset.",
+          "requiredType": "optional",
+          "range": "TimePoint"
+        },
+        "offset_from_index": {
+          "description": "A quantity of time that, together with the index date or event, can be used to derive a specific timepoint.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "event_type": {
+          "description": "An event that occurred at the point in time specified by this TimePoint.",
+          "requiredType": "optional",
+          "range": "string"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+      "examples": [],
+      "position": {
+        "x": 116.49607900033979,
+        "y": 267.83538746018365
+      },
+      "style": {}
+    },
+    {
+      "id": "n9",
+      "caption": "TimePeriod",
+      "properties": {
+        "period_start": {
+          "description": "When a period of time started.",
+          "requiredType": "optional",
+          "range": "TimePoint"
+        },
+        "period_end": {
+          "description": "When a period of time ended.",
+          "requiredType": "optional",
+          "range": "TimePoint"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "A period of time between a start and end time point.",
+      "examples": [],
+      "position": {
+        "x": 134.24940522952704,
+        "y": 68.33559794462043
+      },
+      "style": {}
+    },
+    {
+      "id": "n10",
+      "caption": "ResearchStudyCollection",
+      "properties": {
+        "entries": {
+          "description": "",
+          "requiredType": "optional",
+          "range": "ResearchStudy",
+          "collectionType": "list"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "A holder for ResearchStudy objects",
+      "examples": [],
+      "position": {
+        "x": 320.51642971837066,
+        "y": 141.95585464769428
+      },
+      "style": {}
+    },
+    {
+      "id": "n11",
+      "caption": "Questionnaire",
+      "properties": {
+        "name": {
+          "description": "Name for this Questionnaire (computer friendly)",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "title": {
+          "description": "Name for this Questionnaire (human friendly)",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "description": {
+          "description": "Natural language description of the Questionnaire",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "url": {
+          "description": "Canonical identifier for this Questionnaire, represented as an absolute URI (globally unique)",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "version": {
+          "description": "The identifier that is used to identify this version of the questionnaire when it is referenced in a specification, model, design or instance. This is an arbitrary value managed by the questionnaire author and is not expected to be globally unique. For example, it might be a timestamp (e.g. yyyymmdd) if a managed version is not available. There is also no expectation that versions can be placed in a lexicographical sequence.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "publisher": {
+          "description": "Name of the publisher/steward (organization or individual) of this Questionnaire",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "copyright": {
+          "description": "Textual description of any use and/or publishing restrictions",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "copyright_label": {
+          "description": "Copyright holder and year(s)",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "language": {
+          "description": "The language(s) in which questions are presented.",
+          "requiredType": "optional",
+          "range": "string",
+          "collectionType": "list"
+        },
+        "items": {
+          "description": "A collection of QuestionnaireItem objects which encapsulate the question being asked.",
+          "requiredType": "required",
+          "range": "QuestionnaireItem",
+          "collectionType": "list"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "A Questionnaire is an organized collection of questions intended to solicit information from patients, providers or other individuals involved in the healthcare domain. They may be simple flat lists of questions or can be hierarchically organized in groups and sub-groups, each containing questions. The Questionnaire defines the questions to be asked, how they are ordered and grouped, any intervening instructional text and what the constraints are on the allowed answers. The results of a Questionnaire can be communicated using the QuestionnaireResponse. (FHIR)",
+      "examples": [],
+      "position": {
+        "x": 197.0785125188079,
+        "y": 299.6848222040308
+      },
+      "style": {}
+    },
+    {
+      "id": "n12",
+      "caption": "QuestionnaireItem",
+      "properties": {
+        "text": {
+          "description": "Name for group or question text",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "code": {
+          "description": "Corresponding concept for this item in a terminology",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "part_of": {
+          "description": "A reference to a parent QuestionnaireItem.",
+          "requiredType": "optional",
+          "range": "QuestionnaireItem"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "QuestionnaireItem defines a question or section within the Questionnaire",
+      "examples": [],
+      "position": {
+        "x": 80.84796295229934,
+        "y": 136.57195957075663
+      },
+      "style": {}
+    },
+    {
+      "id": "n13",
+      "caption": "QuestionnaireResponse",
+      "properties": {
+        "age_at_response": {
+          "description": "The age (in days) of the Participant when the QuestionnaireResponse was captured.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "items": {
+          "description": "A collection of QuestionnaireResponseItem objects which encapsulate the question being asked and the response.",
+          "requiredType": "required",
+          "range": "QuestionnaireResponseItem",
+          "collectionType": "list"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "QuestionnaireResponse provides a complete or partial list of answers to a set of questions filled when responding to a questionnaire. (FHIR)",
+      "examples": [],
+      "position": {
+        "x": 270.2330230930656,
+        "y": 71.39032408627119
+      },
+      "style": {}
+    },
+    {
+      "id": "n14",
+      "caption": "QuestionnaireResponseItem",
+      "properties": {
+        "has_questionnaire_item": {
+          "description": "A reference to the QuestionnaireItem that this QuestionnaireResponseItem responds to.",
+          "requiredType": "optional",
+          "range": "QuestionnaireItem"
+        },
+        "text": {
+          "description": "Name for group or question text",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "response_value": {
+          "description": "",
+          "requiredType": "required",
+          "range": "QuestionnaireResponseValue"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "QuestionnaireResponseItem provides a complete or partial list of answers to a set of questions filled when responding to a questionnaire. (FHIR)",
+      "examples": [],
+      "position": {
+        "x": 279.00986381442294,
+        "y": 271.48608535048663
+      },
+      "style": {}
+    },
+    {
+      "id": "n15",
+      "caption": "QuestionnaireResponseValue",
+      "properties": {
+        "type": {
+          "description": "",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "name": {
+          "description": "",
+          "requiredType": "optional",
+          "range": "string"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "Single-valued answer to the question. (FHIR)",
+      "examples": [],
+      "position": {
+        "x": 84.64498062556616,
+        "y": 223.1369510052263
+      },
+      "style": {}
+    },
+    {
+      "id": "n16",
+      "caption": "QuestionnaireResponseValueDecimal",
+      "properties": {},
+      "entityType": "node",
+      "ontologies": [],
+      "description": "Single-valued decimal answer to the question",
+      "examples": [],
+      "position": {
+        "x": 186.14731162120515,
+        "y": 50.473627130682175
+      },
+      "style": {}
+    },
+    {
+      "id": "n17",
+      "caption": "QuestionnaireResponseValueBoolean",
+      "properties": {},
+      "entityType": "node",
+      "ontologies": [],
+      "description": "Single-valued boolean answer to the question",
+      "examples": [],
+      "position": {
+        "x": 322.92158067290273,
+        "y": 196.78885509526492
+      },
+      "style": {}
+    },
+    {
+      "id": "n18",
+      "caption": "QuestionnaireResponseValueInteger",
+      "properties": {},
+      "entityType": "node",
+      "ontologies": [],
+      "description": "Single-valued integer answer to the question",
+      "examples": [],
+      "position": {
+        "x": 143.8159663281677,
+        "y": 286.43552552506395
+      },
+      "style": {}
+    },
+    {
+      "id": "n19",
+      "caption": "QuestionnaireResponseValueTimePoint",
+      "properties": {},
+      "entityType": "node",
+      "ontologies": [],
+      "description": "Single-valued TimePoint answer to the question",
+      "examples": [],
+      "position": {
+        "x": 108.66303172611592,
+        "y": 89.25637399575585
+      },
+      "style": {}
+    },
+    {
+      "id": "n20",
+      "caption": "QuestionnaireResponseValueString",
+      "properties": {},
+      "entityType": "node",
+      "ontologies": [],
+      "description": "Single-valued string answer to the question",
+      "examples": [],
+      "position": {
+        "x": 307.7137948432721,
+        "y": 111.48564099743037
+      },
+      "style": {}
+    },
+    {
+      "id": "n21",
+      "caption": "Condition",
+      "properties": {
+        "condition_concept": {
+          "description": "The coded value for the presence of a disease or medical condition stated as a diagnosis, a sign or a symptom, coded to the Human Phenotype Ontology or MONDO.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "age_at_condition_start": {
+          "description": "The Participant's age (expressed in days) when the condition was first recorded.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "age_at_condition_end": {
+          "description": "The Participant's age (expressed in days) when the condition was recorded as having been resolved.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "condition_provenance": {
+          "description": "A value representing the provenance of the Condition record",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "condition_status": {
+          "description": "A value indicating whether the medical condition described in this record is present, absent, historically present, or unknown for this individual patient.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "condition_severity": {
+          "description": "A subjective assessment of the severity of the condition",
+          "requiredType": "optional",
+          "range": "ConditionDiagnosisSeverityType"
+        },
+        "relationship_to_participant": {
+          "description": "A value indicating the relationship between the Participant to which the Condition is attributed and the individual who had the reported Condition.  If the Condition is affecting the participant themselves, then 'Self' is the appropriate relationship.  If the Condition is affecting a family member (e.g. a parent of the Participant) then an appropriate relationship should be provided (e.g. 'Parent')",
+          "requiredType": "optional",
+          "range": "string"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "Conditions are records of a Person suggesting the presence of a disease or medical condition stated as a diagnosis, a sign or a symptom, which is either observed by a Provider or reported by the patient. Conditions are recorded in different sources and levels of standardization. ",
+      "examples": [],
+      "position": {
+        "x": 229.9288729454594,
+        "y": 296.0523024894375
+      },
+      "style": {}
+    },
+    {
+      "id": "n22",
+      "caption": "Procedure",
+      "properties": {
+        "procedure_concept": {
+          "description": "The coded value that describes the procedure, derived from OMOP codes.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "age_at_procedure": {
+          "description": "The Participant's age (expressed in days) when the procedure was performed.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "procedure_provenance": {
+          "description": "A value representing the provenance of the Procedure record",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "procedure_status": {
+          "description": "A value indicating whether the medical procedure described in this record is present, absent, or unknown for this individual patient.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "quantity": {
+          "description": "The quantity of procedures ordered or administered.",
+          "requiredType": "optional",
+          "range": "Quantity"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "Procedure contains records of activities or processes ordered by, or carried out by, a healthcare provider on the patient to have a diagnostic or therapeutic purpose. Procedures are present in various data sources in different forms with varying levels of standardization. [Derived from OMOP]",
+      "examples": [],
+      "position": {
+        "x": 75.01188861707273,
+        "y": 169.10320018637915
+      },
+      "style": {}
+    },
+    {
+      "id": "n23",
+      "caption": "ImagingStudy",
+      "properties": {
+        "age_at_imaging_study": {
+          "description": "The Participant's age (expressed in days) when the ImagingStudy was performed.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "number_of_series": {
+          "description": "Number of Series in the Study.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "number_of_instances": {
+          "description": "Number of SOP Instances in Study.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "study_description": {
+          "description": "(0008, 1030) Study Description. The Digital Imaging and Communications in Medicine (DICOM) standard is the international standard to transmit, store, retrieve, print, process, and display medical imaging information.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "study_modality": {
+          "description": "The modalities of the imaging study; derived from (0008, 0060) Modality. The Digital Imaging and Communications in Medicine (DICOM) standard is the international standard to transmit, store, retrieve, print, process, and display medical imaging information.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "study_uid": {
+          "description": "(0020, 000d) Study Instance UID. The Digital Imaging and Communications in Medicine (DICOM) standard is the international standard to transmit, store, retrieve, print, process, and display medical imaging information.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "body_part_examined": {
+          "description": "(0018, 0015) Body Part Examined. The Digital Imaging and Communications in Medicine (DICOM) standard is the international standard to transmit, store, retrieve, print, process, and display medical imaging information.",
+          "requiredType": "optional",
+          "range": "BodySite"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "An ImagingStudy is a set of images produced in a single study (one or more series of references images).  It may include images from different modalities (e.g. CT, MR, Ultrasound) and from different instances in time.  The ImagingStudy may be linked to other information such as the clinical context in which the images were acquired.",
+      "examples": [],
+      "position": {
+        "x": 240.693947262728,
+        "y": 56.5651974855509
+      },
+      "style": {}
+    },
+    {
+      "id": "n24",
+      "caption": "Exposure",
+      "properties": {
+        "age_at_exposure_start": {
+          "description": "The Participant's age (expressed in days) at the exposure start date.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "age_at_exposure_end": {
+          "description": "The Participant's age (expressed in days) at the exposure end date, if available. Otherwise equal to age_at_exposure_start.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "exposure_status": {
+          "description": "A value indicating whether the exposure described in this record is present, absent, historically present, or unknown for this individual patient.",
+          "requiredType": "optional",
+          "range": "string"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "Exposures are records of a Person suggesting exposure to a medication, device, environmental material.",
+      "examples": [],
+      "position": {
+        "x": 301.6058834772731,
+        "y": 247.3663574284327
+      },
+      "style": {}
+    },
+    {
+      "id": "n25",
+      "caption": "DrugExposure",
+      "properties": {
+        "drug_concept": {
+          "description": "The coded value for a drug. From RxNorm. The syntax for the enum may need work.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "exposure_provenance": {
+          "description": "A value representing the provenance of the DrugExposure record. From OMOP Drug Types.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "refills": {
+          "description": "Intended refills at time of the prescription.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "quantity": {
+          "description": "To find the dose form of a drug the RELATIONSHIP table can be used where the relationship_id is ‘Has dose form’. If liquid, quantity stands for the total amount dispensed or ordered of ingredient in the units given by the drug_strength table. If the unit from the source data does not align with the unit in the DRUG_STRENGTH table the quantity should be converted to the correct unit given in DRUG_STRENGTH. For clinical drugs with fixed dose forms (tablets etc.) the quantity is the number of units/tablets/capsules prescribed or dispensed (can be partial, but then only 1/2 or 1/3, not 0.01). Clinical drugs with divisible dose forms (injections) the quantity is the amount of ingredient the patient got. For example, if the injection is 2mg/mL but the patient got 80mL then quantity is reported as 160. Quantified clinical drugs with divisible dose forms (prefilled syringes), the quantity is the amount of ingredient similar to clinical drugs. Please see [how to calculate drug dose](https://ohdsi.github.io/CommonDataModel/drug_dose.html) for more information.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "days_supply": {
+          "description": "The number of days of supply of the medication as recorded in the original prescription or dispensing record. Days supply can differ from actual drug duration (i.e. prescribed days supply vs actual exposure).",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "sig": {
+          "description": "This is the verbatim instruction for the drug as written by the provider.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "route_concept": {
+          "description": "Route of drug administration.",
+          "requiredType": "optional",
+          "range": "string"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "DrugExposures are records of a Person suggesting exposure to a medication. The source could be prescription, dispensing, medication administration records (MARs), or patient medication list.",
+      "examples": [],
+      "position": {
+        "x": 101.36347749309377,
+        "y": 251.64718148707772
+      },
+      "style": {}
+    },
+    {
+      "id": "n26",
+      "caption": "DeviceExposure",
+      "properties": {
+        "device_concept": {
+          "description": "The coded value for a device. Primarily SNOMED. The syntax for the enum may need work.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "exposure_provenance": {
+          "description": "A value representing the provenance of the DeviceExposure record. From OMOP Device Types.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "quantity": {
+          "description": "Amount of device used. If not present in source, default to 1.",
+          "requiredType": "optional",
+          "range": "string"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "DeviceExposures are records of a Person suggesting exposure to a foreign object. The source is typically physical objects used in procedures, measurements, or observations.",
+      "examples": [],
+      "position": {
+        "x": 154.06551470962899,
+        "y": 58.41715824487835
+      },
+      "style": {}
+    },
+    {
+      "id": "n27",
+      "caption": "File",
+      "properties": {
+        "file_name": {
+          "description": "The name (or part of a name) of a file (of any type).",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "file_size": {
+          "description": "The size of the data file (object) in bytes.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "file_location": {
+          "description": "A unique identifier or url for identifying or locating the file.",
+          "requiredType": "optional",
+          "range": "string",
+          "collectionType": "list"
+        },
+        "md5sum": {
+          "description": "The 128-bit hash value expressed as a 32 digit hexadecimal number used as a file's digital fingerprint.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "data_type": {
+          "description": "The nature or genre of the resource. Recommended best practice is to use a controlled vocabulary such as the DCMI Type Vocabulary [DCMI-TYPE](https://www.dublincore.org/specifications/dublin-core/dcmi-terms/#section-7). To describe the file format, physical medium, or dimensions of the resource, use the Format element.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "data_category": {
+          "description": "A broad categorization of the contents of the data file.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "format": {
+          "description": "The file format, physical medium, or dimensions of the resource. Examples of dimensions include size and duration. Recommended best practice is to use a controlled vocabulary such as the list of Internet Media Types [MIME] (http://www.iana.org/assignments/media-types/).",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "description": {
+          "description": "An account of the resource. Description may include but is not limited to an abstract, a table of contents, a graphical representation, or a free-text account of the resource.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "derived_from": {
+          "description": "A File from which this File is derived.  A derivation is a transformation of an entity into another, an update of an entity resulting in a new one, or the construction of a new entity based on a pre-existing entity.",
+          "requiredType": "optional",
+          "range": "File"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "Abstract class for various kinds of files. Subclasses may be defined for specific file types.",
+      "examples": [],
+      "position": {
+        "x": 324.4057237707634,
+        "y": 163.7716065893265
+      },
+      "style": {}
+    },
+    {
+      "id": "n28",
+      "caption": "ImagingFile",
+      "properties": {
+        "imaging_modality": {
+          "description": "The modality of the imaging data contained in the file (e.g. CT, MRI, etc.)",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "anatomical_site": {
+          "description": "The anatomical site from which the imaging data was acquired (e.g. Chest, Abdomen, etc.)",
+          "requiredType": "optional",
+          "range": "BodySite"
+        },
+        "series_number": {
+          "description": "The Series Instance Number for the imaging data contained in the file, if applicable.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "series_uid": {
+          "description": "(0020, 000e) Series Instance UID. The Digital Imaging and Communications in Medicine (DICOM) standard is the international standard to transmit, store, retrieve, print, process, and display medical imaging information.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "series_description": {
+          "description": "(0008, 103e) Series Description. The Digital Imaging and Communications in Medicine (DICOM) standard is the international standard to transmit, store, retrieve, print, process, and display medical imaging information.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "related_imaging_study": {
+          "description": "The ImagingStudy with which this ImagingFile is associated.",
+          "requiredType": "optional",
+          "range": "ImagingStudy"
+        },
+        "manufacturer": {
+          "description": "(0008, 0070) Manufacturer. The Digital Imaging and Communications in Medicine (DICOM) standard is the international standard to transmit, store, retrieve, print, process, and display medical imaging information.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "manufacturer_model": {
+          "description": "(0008, 1090) Manufacturer's Model Name. The Digital Imaging and Communications in Medicine (DICOM) standard is the international standard to transmit, store, retrieve, print, process, and display medical imaging information.",
+          "requiredType": "optional",
+          "range": "string"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "A file that contains diagnostic imaging data, such as a DICOM file, or a JPEG or PNG image.",
+      "examples": [],
+      "position": {
+        "x": 175.05568688903526,
+        "y": 297.22539294393096
+      },
+      "style": {}
+    },
+    {
+      "id": "n29",
+      "caption": "Document",
+      "properties": {
+        "document_type": {
+          "description": "The high-level type of the document (e.g.  'publication', 'pathology report')",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "description": {
+          "description": "A free text description or summary of the report.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "focus": {
+          "description": "The entity that the report is primarily about",
+          "requiredType": "optional",
+          "range": "Entity"
+        },
+        "url": {
+          "description": "A URL/web address where the document can be accessed.",
+          "requiredType": "optional",
+          "range": "string",
+          "collectionType": "list"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "A collection of information intented to be understood together as a whole, and codified in human-readable form.",
+      "examples": [],
+      "position": {
+        "x": 89.45402778096198,
+        "y": 116.15164397158767
+      },
+      "style": {}
+    },
+    {
+      "id": "n30",
+      "caption": "Specimen",
+      "properties": {
+        "description": {
+          "description": "A free text field to capture additional information or explanation about the specimen.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "specimen_type": {
+          "description": "The high-level type of the specimen, based on its derivation provenance (i.e. how far removed it is from the original sample extracted from a source).",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "analyte_type": {
+          "description": "For specimens of type 'analyte' (or an 'aliquot' derived from an analyte), this is the category of chemcial the analyte of interest represents (e.g. DNA, RNA)",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "source_material_type": {
+          "description": "The general kind of material from which the specimen was derived.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "parent_specimen": {
+          "description": "An existing specimen from which the specimen of interest was directly derived (i.e its immediate parent specimen).",
+          "requiredType": "optional",
+          "range": "Specimen",
+          "collectionType": "list"
+        },
+        "source_participant": {
+          "description": "A specific Subject from which the specimen was directly or indirectly derived.",
+          "requiredType": "optional",
+          "range": "Participant"
+        },
+        "creation_activity": {
+          "description": "The activity through which a specimen was created, by removing material from an biological subject, or deriving material from an existing specimen.",
+          "requiredType": "optional",
+          "range": "SpecimenCreationActivity"
+        },
+        "processing_activity": {
+          "description": "An activity that modifies the physical structure, composition, or state of a specimen.",
+          "requiredType": "optional",
+          "range": "SpecimenProcessingActivity",
+          "collectionType": "list"
+        },
+        "storage_activity": {
+          "description": "An activity that results in the storage or maintenance of a specimen in a particular location, container, or state.",
+          "requiredType": "optional",
+          "range": "SpecimenStorageActivity",
+          "collectionType": "list"
+        },
+        "transport_activity": {
+          "description": "An activity through which the specimen is transported between locations.",
+          "requiredType": "optional",
+          "range": "SpecimenTransportActivity",
+          "collectionType": "list"
+        },
+        "contained_in": {
+          "description": "A physical container in which a specimen is presently held or attached -  as storage for future use,  a substrate for growth (e.g. a cell culture dish), or a vessel to enable analysis (e.g. a microscope slide or 96-well plate)",
+          "requiredType": "optional",
+          "range": "SpecimenContainer"
+        },
+        "dimensional_measures": {
+          "description": "Observations about the current physical dimensions of an object (e.g. length, width, area).",
+          "requiredType": "optional",
+          "range": "DimensionalObservationSet"
+        },
+        "quantity_measure": {
+          "description": "An observation related to the present quantity of a specimen - e.g. its weight, volume, or analyte concentration.",
+          "requiredType": "optional",
+          "range": "SpecimenQuantityObservation",
+          "collectionType": "list"
+        },
+        "quality_measure": {
+          "description": "An observation about characteristics of a specimen that are indicative of its quality or suitability for use.",
+          "requiredType": "optional",
+          "range": "SpecimenQualityObservation",
+          "collectionType": "list"
+        },
+        "cellular_composition_type": {
+          "description": "A term describing the type of cell or cellular material comprising a specimen.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "related_document": {
+          "description": "A reference to an external document that is about or related to the specimen (e.g. a publication related to the study it is a part of, pathology report containing additional details about it, protocol describing how it was collected)",
+          "requiredType": "optional",
+          "range": "Document",
+          "collectionType": "list"
+        },
+        "section_location": {
+          "description": "The location in a parent specimen from which a section/portion was excised (e.g. top, middle, bottom)",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "derived_product": {
+          "description": "A 'living' biologically active product that was derived from the specimen (e.g. a cell culture, tissue culture, or organoid)",
+          "requiredType": "optional",
+          "range": "BiologicProduct",
+          "collectionType": "list"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "Any material taken as a sample from a biological entity (living or dead), or from a physical object or the environment. Specimens are usually collected as an example of their kind, often for use in some investigation.",
+      "examples": [],
+      "position": {
+        "x": 287.372920873544,
+        "y": 85.43587658802626
+      },
+      "style": {}
+    },
+    {
+      "id": "n31",
+      "caption": "SpecimenContainer",
+      "properties": {
+        "container_type": {
+          "description": "The kind of the container.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "container_number": {
+          "description": "Informal number by which the container is referenced  or identified (e.g. a slide number, or a well number in a plate)",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "additive": {
+          "description": "A material substance added to the container (typically to support the primary contained object - e.g. culture media to support cell growth)",
+          "requiredType": "optional",
+          "range": "Substance",
+          "collectionType": "list"
+        },
+        "parent_container": {
+          "description": "A larger container of which this container is a part (e.g. the complete 96-well plate of which a single well is a part)",
+          "requiredType": "optional",
+          "range": "SpecimenContainer"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "A vessel in which a specimen is held or to which it is attached - for storage or as a substrate for growth (e.g. a cell culture dish) or analysis (e.g. a microscope slide or 96-well plate)",
+      "examples": [],
+      "position": {
+        "x": 260.6789263671375,
+        "y": 283.93720471014717
+      },
+      "style": {}
+    },
+    {
+      "id": "n32",
+      "caption": "SpecimenCreationActivity",
+      "properties": {
+        "activity_type": {
+          "description": "The high-level type of creation activity.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "date_started": {
+          "description": "The date when the activity began (in this case, a specimen creation event).",
+          "requiredType": "optional",
+          "range": "TimePoint"
+        },
+        "date_ended": {
+          "description": "The date when the activity ended (in this case, a specimen creation event).",
+          "requiredType": "optional",
+          "range": "TimePoint"
+        },
+        "performed_by": {
+          "description": "The organization or group that performed the activity.",
+          "requiredType": "optional",
+          "range": "Organization"
+        },
+        "collection_method_type": {
+          "description": "The type of method applied in collecting a sample from its original source.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "derivation_method_type": {
+          "description": "The type of method applied to derive a new specimen from an existing one.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "additive": {
+          "description": "A type of material or reagent used applied as input when creating a specimen.",
+          "requiredType": "optional",
+          "range": "Substance",
+          "collectionType": "list"
+        },
+        "collection_site": {
+          "description": "The anatomic site from which a specimen was collected.",
+          "requiredType": "optional",
+          "range": "BodySite"
+        },
+        "quantity_collected": {
+          "description": "The quantity of material in the specimen as originally collected from its original source material (prior to downstream portioning or processing)",
+          "requiredType": "optional",
+          "range": "Quantity"
+        },
+        "specimen_order": {
+          "description": "A numeric value that represents the sequential order of this creation activity relative to those producing other specimens from the same source material or parent specimen.",
+          "requiredType": "optional",
+          "range": "string"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "The process of creating a specimen. This may occur through observing and/or collecting material from an biological source or natural setting, or through derivation from an existing specimen (e.g. via portioning or aliquoting).",
+      "examples": [],
+      "position": {
+        "x": 77.9057301498711,
+        "y": 202.026855220729
+      },
+      "style": {}
+    },
+    {
+      "id": "n33",
+      "caption": "SpecimenProcessingActivity",
+      "properties": {
+        "activity_type": {
+          "description": "The high-level type of processing activity",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "date_started": {
+          "description": "The date when the activity began (in this case, a specimen processing event).",
+          "requiredType": "optional",
+          "range": "TimePoint"
+        },
+        "date_ended": {
+          "description": "The date when the activity began (in this case, a specimen processing event).",
+          "requiredType": "optional",
+          "range": "TimePoint"
+        },
+        "duration": {
+          "description": "The length of time over which the activity was performed.",
+          "requiredType": "optional",
+          "range": "Quantity",
+          "collectionType": "list"
+        },
+        "method_type": {
+          "description": "A specific type of method or procedure performed to process the specimen",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "additive": {
+          "description": "A type of material or reagent used as input when processing the specimen",
+          "requiredType": "optional",
+          "range": "Substance",
+          "collectionType": "list"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "An activity that modifies the physical structure, composition, or state of a specimen. Unlike SpecimenCreation, SpecimenProcessing activities do not result in the generation of new entities - they take a single specimen as input, and output that same specimen.",
+      "examples": [],
+      "position": {
+        "x": 208.3019797149927,
+        "y": 50
+      },
+      "style": {}
+    },
+    {
+      "id": "n34",
+      "caption": "SpecimenStorageActivity",
+      "properties": {
+        "date_started": {
+          "description": "The date when the activity began (in this case, a storage event).",
+          "requiredType": "optional",
+          "range": "TimePoint"
+        },
+        "date_ended": {
+          "description": "The date when the activity ended (in this case, a storage event).",
+          "requiredType": "optional",
+          "range": "TimePoint"
+        },
+        "duration": {
+          "description": "The length of time over which the activity was performed.",
+          "requiredType": "optional",
+          "range": "Quantity"
+        },
+        "method_type": {
+          "description": "A specific type of method or procedure performed to store the specimen",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "container": {
+          "description": "A container in which the specimen is held or affixed during its storage.",
+          "requiredType": "optional",
+          "range": "SpecimenContainer",
+          "collectionType": "list"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "An activity in which a specimen is stored or maintained in a particular location, container, or state. Unlike 'processing' activities, storage does not alter the \\nintrinsic physical nature of a specimen.",
+      "examples": [],
+      "position": {
+        "x": 317.09066720250115,
+        "y": 218.16767847508393
+      },
+      "style": {}
+    },
+    {
+      "id": "n35",
+      "caption": "SpecimenTransportActivity",
+      "properties": {
+        "date_started": {
+          "description": "The date when the activity began (in this case, a transport event).",
+          "requiredType": "optional",
+          "range": "TimePoint"
+        },
+        "date_ended": {
+          "description": "The date when the activity ended (in this case, a transport event).",
+          "requiredType": "optional",
+          "range": "TimePoint"
+        },
+        "duration": {
+          "description": "The length of time over which the activity was performed.",
+          "requiredType": "optional",
+          "range": "string",
+          "collectionType": "list"
+        },
+        "transport_origin": {
+          "description": "An organization (facility, site, lab, etc) from which the specimen was transported as a result of the activity.",
+          "requiredType": "optional",
+          "range": "Organization"
+        },
+        "transport_destination": {
+          "description": "An organization (facility, site, lab, etc) to which the specimen is delivered as a result of the activity.",
+          "requiredType": "optional",
+          "range": "Organization"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "An activity through which a specimen is transported between locations or organizations.",
+      "examples": [],
+      "position": {
+        "x": 124.96965464794357,
+        "y": 274.77918917710906
+      },
+      "style": {}
+    },
+    {
+      "id": "n36",
+      "caption": "BiologicProduct",
+      "properties": {
+        "description": {
+          "description": "A free text field to capture additional info/explanation about the model system",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "product_type": {
+          "description": "The high level type of model system (e.g. cell line, cell culture, tissue culture, organoid)",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "passage_number": {
+          "description": "When the specimen an actively growing model system, such as a cell or tissue culture, this property captures its passage number.",
+          "requiredType": "optional",
+          "range": "string",
+          "collectionType": "list"
+        },
+        "growth_rate": {
+          "description": "When the specimen an actively growing model system, such as a cell or tissue culture, this property captures its rate of growth.",
+          "requiredType": "optional",
+          "range": "string",
+          "collectionType": "list"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "A living organism, or a metabolically active biological system such as a cell culture, tissue culture, or organoid that is maintained or propagated in vitro.",
+      "examples": [],
+      "position": {
+        "x": 125.18700665863366,
+        "y": 74.49114817850767
+      },
+      "style": {}
+    },
+    {
+      "id": "n37",
+      "caption": "Substance",
+      "properties": {
+        "substance_type": {
+          "description": "The specific type of the substance - at as granular a level as possible. May be a specific chemical compound, or the name of a formulation/preparation made up of many compounds.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "role": {
+          "description": "A role played by the substance in a particular application (e.g. the role of a lysis buffer when applied in a specimen creation activity, or the role of fixative when applied in specimen processing)",
+          "requiredType": "optional",
+          "range": "string",
+          "collectionType": "list"
+        },
+        "substance_quantity": {
+          "description": "The quantity of substance this instance stands for.",
+          "requiredType": "optional",
+          "range": "Quantity"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "A type of material substance, or instance thereof, as used in a particular application. May include information about the role the substance played in a particular application.",
+      "examples": [],
+      "position": {
+        "x": 317.1846975548923,
+        "y": 131.51950340166567
+      },
+      "style": {}
+    },
+    {
+      "id": "n38",
+      "caption": "Quantity",
+      "properties": {
+        "value_decimal": {
+          "description": "A decimal amount, in the given units (if specified)",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "value_integer": {
+          "description": "An integer amount, in the given units (if specified)",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "value_concept": {
+          "description": "A coded value representing a quantity (e.g. \"Adjacent (< or = 2cm)\")",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "unit": {
+          "description": "A coded or free text (in the .text field) representation of the unit.",
+          "requiredType": "optional",
+          "range": "string"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+      "examples": [],
+      "position": {
+        "x": 208.0312765576972,
+        "y": 299.45067172238885
+      },
+      "style": {}
+    },
+    {
+      "id": "n39",
+      "caption": "BodySite",
+      "properties": {
+        "site": {
+          "description": "A term describing any site in the body.",
+          "requiredType": "required",
+          "range": "string"
+        },
+        "qualifier": {
+          "description": "A qualifier that further refines or specifies the location of the body site - e.g. to indicate laterality, upper v. lower, containment in some other anatomical structure (e.g. 'blood' contained in the 'hepatic vein')",
+          "requiredType": "optional",
+          "range": "string",
+          "collectionType": "list"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "A site in the body of an organism, typically described in terms of an anatomical concept and optional qualifiers (e.g. left/right, upper/lower). But body sites as defined here may include non-canonical sites, such as an implanted medical device.",
+      "examples": [],
+      "position": {
+        "x": 77.96529194580395,
+        "y": 147.14116362820346
+      },
+      "style": {}
+    },
+    {
+      "id": "n40",
+      "caption": "ObservationSet",
+      "properties": {
+        "category": {
+          "description": "The general category of observation set described",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "focus": {
+          "description": "The entity or entities directly observed/measured in generating an observation result.",
+          "requiredType": "optional",
+          "range": "Entity",
+          "collectionType": "list"
+        },
+        "method_type": {
+          "description": "The type of method used in generating the ObservationSet",
+          "requiredType": "optional",
+          "range": "string",
+          "collectionType": "list"
+        },
+        "performed_by": {
+          "description": "The organization or group that performed the observation activity.",
+          "requiredType": "optional",
+          "range": "Organization"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "A structured object to hold related Observations in a set.",
+      "examples": [],
+      "position": {
+        "x": 260.91583522263477,
+        "y": 65.62769649751132
+      },
+      "style": {}
+    },
+    {
+      "id": "n41",
+      "caption": "Observation",
+      "properties": {
+        "age_at_observation": {
+          "description": "The Participant's age (expressed in days) when the Observation was made.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "category": {
+          "description": "The general category of observation described",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "observation_type": {
+          "description": "The type of Observation being represented (e.g. 'diastolic blood pressure')",
+          "requiredType": "required",
+          "range": "string"
+        },
+        "method_type": {
+          "description": "A type of method used in generating the Observation result.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "focus": {
+          "description": "The entity or entities directly observed/measured in generating an observation result.",
+          "requiredType": "optional",
+          "range": "Entity"
+        },
+        "performed_by": {
+          "description": "The organization or group that performed the observation activity.",
+          "requiredType": "optional",
+          "range": "Organization"
+        },
+        "value_string": {
+          "description": "A slot to hold a string value for an Observation.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "value_boolean": {
+          "description": "A slot to hold a boolean value for an Observation.",
+          "requiredType": "optional",
+          "range": "string"
+        },
+        "value_quantity": {
+          "description": "A slot to hold a Quantity value for an Observation.",
+          "requiredType": "optional",
+          "range": "Quantity"
+        },
+        "value_enum": {
+          "description": "A slot to hold an enumerated value for an Observation.",
+          "requiredType": "optional",
+          "range": "string"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "A data structure with key (observation_type) and value (value) attributes that represents a single observation, such as the hematocrit component of a complete blood count panel.",
+      "examples": [],
+      "position": {
+        "x": 287.17894121401343,
+        "y": 264.1864935140112
+      },
+      "style": {}
+    },
+    {
+      "id": "n42",
+      "caption": "MeasurementObservationSet",
+      "properties": {},
+      "entityType": "node",
+      "ontologies": [],
+      "description": "A structured object to hold related Observations in a set.",
+      "examples": [],
+      "position": {
+        "x": 89.32717952814147,
+        "y": 233.04123694497795
+      },
+      "style": {}
+    },
+    {
+      "id": "n43",
+      "caption": "MeasurementObservation",
+      "properties": {
+        "range_low": {
+          "description": "If reference ranges for upper and lower limit of normal as provided (typically by a laboratory) these are stored in the range_high and range_low fields. This should be set to NULL if not provided.",
+          "requiredType": "optional",
+          "range": "Quantity"
+        },
+        "range_high": {
+          "description": "If reference ranges for upper and lower limit of normal as provided (typically by a laboratory) these are stored in the range_high and range_low fields. This should be set to NULL if not provided.",
+          "requiredType": "optional",
+          "range": "Quantity"
+        },
+        "observation_type": {
+          "description": "The type of Observation being represented (e.g. 'diastolic blood pressure')",
+          "requiredType": "optional",
+          "range": "string"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "A data structure with key (observation_type) and value (value) attributes that represents a single observation, such as the hematocrit component of a complete blood count panel.",
+      "examples": [],
+      "position": {
+        "x": 175.32163798715743,
+        "y": 52.15370358987204
+      },
+      "style": {}
+    },
+    {
+      "id": "n44",
+      "caption": "SdohObservationSet",
+      "properties": {},
+      "entityType": "node",
+      "ontologies": [],
+      "description": "A structured object to hold related Observations in a set.",
+      "examples": [],
+      "position": {
+        "x": 324.38167610896727,
+        "y": 185.9313237065365
+      },
+      "style": {}
+    },
+    {
+      "id": "n45",
+      "caption": "SdohObservation",
+      "properties": {
+        "related_questionnaire_item": {
+          "description": "An optional attribute that captures the QuestionnaireItem to which this SdohObservation refers.",
+          "requiredType": "optional",
+          "range": "QuestionnaireItem"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "A data structure with key (observation_type) and value (value) attributes that represents a single observation, such as the hematocrit component of a complete blood count panel.",
+      "examples": [],
+      "position": {
+        "x": 153.81320782635208,
+        "y": 290.9158189269093
+      },
+      "style": {}
+    },
+    {
+      "id": "n46",
+      "caption": "CauseOfDeath",
+      "properties": {
+        "cause": {
+          "description": "The value for the cause of death (e.g., myocardial infarction, chronic obstructive pulmonary disorder).",
+          "requiredType": "required",
+          "range": "string"
+        },
+        "order": {
+          "description": "The ordinality of a given cause of death record recorded in integers.  Primary cause of death should have order equal to 1 and additional causes should be recorded starting from 2 and iterating up from there.",
+          "requiredType": "required",
+          "range": "string"
+        }
+      },
+      "entityType": "node",
+      "ontologies": [],
+      "description": "A class / complex datatype for handling both values and ordinality for causes of death.",
+      "examples": [],
+      "position": {
+        "x": 101.5306795851027,
+        "y": 97.57186673378551
+      },
+      "style": {}
+    },
+    {
+      "id": "n47",
+      "caption": "DimensionalObservation",
+      "properties": {},
+      "entityType": "node",
+      "ontologies": [],
+      "description": "A structured object that describes a single data item about the physical dimensions of an entity (e.g. length width, area), as generated through a point-in-time observation or measurement.",
+      "examples": [],
+      "position": {
+        "x": 301.76332287258833,
+        "y": 102.2872851733852
+      },
+      "style": {}
+    },
+    {
+      "id": "n48",
+      "caption": "DimensionalObservationSet",
+      "properties": {},
+      "entityType": "node",
+      "ontologies": [],
+      "description": "A set of one or more discrete observations about the physical dimensions of an object (e.g. length, width, area).",
+      "examples": [],
+      "position": {
+        "x": 240.43741686291918,
+        "y": 292.9557929586175
+      },
+      "style": {}
+    },
+    {
+      "id": "n49",
+      "caption": "SpecimenQualityObservation",
+      "properties": {},
+      "entityType": "node",
+      "ontologies": [],
+      "description": "A structured object that describes a characteristic of a specimen indicative of its quality or suitability for use, as generated through a point-in-time observation or measurement.",
+      "examples": [],
+      "position": {
+        "x": 75,
+        "y": 180.05846034761785
+      },
+      "style": {}
+    },
+    {
+      "id": "n50",
+      "caption": "SpecimenQuantityObservation",
+      "properties": {},
+      "entityType": "node",
+      "ontologies": [],
+      "description": "A structured object that describes a single data item about the quantity of a Specimen, as generated through a point-in-time observation or measurement.",
+      "examples": [],
+      "position": {
+        "x": 230.1921487347755,
+        "y": 53.44588759104954
+      },
+      "style": {}
+    }
+  ],
+  "relationships": [
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n1",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n0",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n2",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n1",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n3",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n2",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n4",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n3",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n5",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n4",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n6",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n5",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n7",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n6",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n8",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n7",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n9",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n8",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n11",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n9",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n12",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n10",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n13",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n11",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n14",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n12",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n15",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n13",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n16",
+      "toId": "n15",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n14",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n17",
+      "toId": "n15",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n15",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n18",
+      "toId": "n15",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n16",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n19",
+      "toId": "n15",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n17",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n20",
+      "toId": "n15",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n18",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n21",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n19",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n22",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n20",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n23",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n21",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n24",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n22",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n25",
+      "toId": "n24",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n23",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n26",
+      "toId": "n24",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n24",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n27",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n25",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n28",
+      "toId": "n27",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n26",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n29",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n27",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n30",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n28",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n31",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n29",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n32",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n30",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n33",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n31",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n34",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n32",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n35",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n33",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n36",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n34",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n37",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n35",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n38",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n36",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n39",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n37",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n40",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n38",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n41",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n39",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n42",
+      "toId": "n40",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n40",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n43",
+      "toId": "n41",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n41",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n44",
+      "toId": "n40",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n42",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n45",
+      "toId": "n41",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n43",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n46",
+      "toId": "n0",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n44",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n47",
+      "toId": "n41",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n45",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n48",
+      "toId": "n40",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n46",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n49",
+      "toId": "n41",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n47",
+      "description": "",
+      "style": {}
+    },
+    {
+      "relationshipType": "INHERITANCE",
+      "fromId": "n50",
+      "toId": "n41",
+      "properties": {},
+      "entityType": "relationship",
+      "type": "",
+      "id": "n48",
+      "description": "",
+      "style": {}
+    }
+  ],
+  "style": {
+    "font-family": "sans-serif",
+    "background-color": "#ffffff",
+    "background-image": "",
+    "background-size": "100%",
+    "class-color": "#ffffff",
+    "border-width": 4,
+    "border-color": "#000000",
+    "radius": 50,
+    "class-padding": 5,
+    "class-margin": 2,
+    "outside-position": "auto",
+    "class-icon-image": "",
+    "class-background-image": "",
+    "icon-position": "inside",
+    "icon-size": 64,
+    "class-name-position": "inside",
+    "class-name-max-width": 200,
+    "class-name-color": "#000000",
+    "class-name-font-size": 50,
+    "class-name-font-weight": "normal",
+    "label-position": "inside",
+    "label-display": "pill",
+    "label-color": "#000000",
+    "label-background-color": "#ffffff",
+    "label-border-color": "#000000",
+    "label-border-width": 4,
+    "label-font-size": 40,
+    "label-padding": 5,
+    "label-margin": 4,
+    "detail-position": "inline",
+    "detail-orientation": "parallel",
+    "arrow-width": 5,
+    "arrow-color": "#000000",
+    "margin-start": 5,
+    "margin-end": 5,
+    "margin-peer": 20,
+    "attachment-start": "normal",
+    "attachment-end": "normal",
+    "relationship-icon-image": "",
+    "type-color": "#000000",
+    "type-background-color": "#ffffff",
+    "type-border-color": "#000000",
+    "type-border-width": 0,
+    "type-font-size": 16,
+    "type-padding": 5,
+    "attribute-position": "outside",
+    "ontology-position": "outside",
+    "attribute-alignment": "colon",
+    "attribute-color": "#000000",
+    "attribute-font-size": 16,
+    "attribute-font-weight": "normal"
+  },
+  "description": "This is the harmonized data model for use in the BioData Catalyst project.\nThis line is junk just to test json generation on push. Will delete it after \n.github/workflows/deploy_bdchm_docs.yml is working."
+}

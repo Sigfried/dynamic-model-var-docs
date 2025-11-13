@@ -469,7 +469,7 @@ function App() {
 
         {/* Relationship Info Box (transitory, uses item position) - only in cascade mode */}
         {/* [sg] why no RelationshipInfoBox in stacked mode? mode shouldn't matter */}
-        {displayMode === 'cascade' && (
+        {/*{displayMode === 'cascade' && (    don't restrict to cascade mode */}
           <RelationshipInfoBox
             itemId={hoveredItemId}
             itemDomId={hoveredItemDomId}
@@ -477,7 +477,7 @@ function App() {
             onNavigate={handleNavigate}
             onUpgrade={handleUpgradeRelationshipBox}
           />
-        )}
+        {/*)}*/}
       </div>
     </div>
   );

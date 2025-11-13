@@ -81,7 +81,7 @@ export default function FloatingBoxManager({
     const reversedBoxes = [...boxes].reverse();
 
     return (
-      <div className="h-full overflow-y-auto flex flex-col gap-4 p-4 bg-gray-50 dark:bg-slate-900 w-[600px] flex-shrink-0">
+      <div className="absolute right-0 top-0 h-full overflow-y-auto flex flex-col gap-4 p-4 bg-gray-50 dark:bg-slate-900 w-[600px] z-40">
         {reversedBoxes.map((box, index) => (
           <FloatingBox
             key={box.id}
