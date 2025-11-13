@@ -605,7 +605,7 @@ The app currently treats ALL element types (classes, enums, slots, variables) as
      - PRO: Best of both worlds - accurate model, flexible display
      - CON: More complex implementation
 
-   - **Option D (Slots as edges)**: Internal LPG (not hypergraph), slots-as-edges with optional slot browser
+   - **Slots-as-Edges Architecture**: Internal LPG (not hypergraph), slots-as-edges with optional slot browser
        - **Data model:**
          - **Nodes**: Classes, Enums, Variables, Types (need to import linkml:types first)
          - **Edges**: Slots are complex edges connecting Class → Range (where Range = Class | Enum | Type)
@@ -647,9 +647,11 @@ The app currently treats ALL element types (classes, enums, slots, variables) as
 
 ---
 
-## 6. Option D Implementation Prerequisites
+## 6. Slots-as-Edges Implementation Prerequisites
 
-If we choose Option D (slots as edges with optional slot browser):
+**Decision**: This is the chosen architecture direction (over Options A-C).
+
+Implementation prerequisites:
 
 **Required changes:**
 
@@ -694,7 +696,7 @@ If we choose Option D (slots as edges with optional slot browser):
 ## 7. Open Questions Summary
 
 **High Priority** (must answer before implementing):
-1. **Architecture decision**: Option A (hypergraph), B (current mish-mash), C (hybrid), or D (slots as edges)?
+1. ✅ **Architecture decision**: Slots-as-Edges chosen (slots as complex edges, not nodes)
 2. Compound relationships: Simple/Explicit/Hybrid approach?
 3. Variable→Class: What's the semantic relationship type?
 
@@ -711,7 +713,7 @@ If we choose Option D (slots as edges with optional slot browser):
 
 ## 8. Files Likely to Change
 
-**For Option D specifically:**
+**For Slots-as-Edges specifically:**
 
 **Model Layer** (major changes):
 - `src/models/Element.ts` - Add Range base class, SlotEdge interface/class
@@ -728,7 +730,7 @@ If we choose Option D (slots as edges with optional slot browser):
 - `src/services/DataService.ts` - Add type collection, update relationship APIs
 - Update getRelationships() to return slot edges
 
-**UI Layer** (major changes for Option D):
+**UI Layer** (major changes for Slots-as-Edges):
 - `src/App.tsx` - Implement 3-panel layout (left: classes, middle: slots, right: variables+ranges)
 - `src/components/Panel.tsx` - Support middle panel toggle/collapse
 - `src/components/Section.tsx` - Separate "Ranges" rendering (Classes/Enums/Types)
@@ -737,5 +739,5 @@ If we choose Option D (slots as edges with optional slot browser):
 
 **Documentation**:
 - CLAUDE.md - Update with chosen architecture (Range abstraction, slot edge pattern)
-- DATA_FLOW.md - Update with final architecture (after Option D implementation)
+- DATA_FLOW.md - Update with final architecture (after Slots-as-Edges implementation)
 - TASKS.md - Archive completed decisions section
