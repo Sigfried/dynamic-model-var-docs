@@ -34,7 +34,7 @@ export interface Relationship {
   type: RelationshipTypeId;
   label?: string;           // Property name (for property relationships)
   target: string;           // Target element name
-  targetType: ElementTypeId;
+  targetSection: ElementTypeId;
   isSelfRef?: boolean;      // True if target === this.name
 }
 
@@ -63,7 +63,7 @@ type IncomingRelationships = {
   usedByAttributes: Array<{
     className: string;
     attributeName: string;
-    sourceType: ElementTypeId;
+    sourceSection: ElementTypeId;
   }>;
   variables: Array<{
     name: string;
@@ -73,14 +73,14 @@ type IncomingRelationships = {
 type SlotInfo = {
   attributeName: string;
   target: string;
-  targetType: ElementTypeId;
+  targetSection: ElementTypeId;
   isSelfRef: boolean;
 };
 
 type OutgoingRelationships = {
   inheritance?: {
     target: string;
-    targetType: ElementTypeId;
+    targetSection: ElementTypeId;
   };
   slots: SlotInfo[];
   inheritedSlots: Array<{
@@ -124,7 +124,7 @@ function computeIncomingRelationships(thisElement: Element): IncomingRelationshi
           incoming.usedByAttributes.push({
             className: otherClass.getId(),
             attributeName: classSlot.name,
-            sourceType: 'class'
+            sourceSection: 'class'
           });
         }
       }
@@ -173,13 +173,13 @@ export abstract class Element {
       if (rel.type === 'inherits') {
         outgoing.inheritance = {
           target: rel.target,
-          targetType: rel.targetType
+          targetSection: rel.targetSection
         };
       } else if (rel.type === 'property') {
         outgoing.slots.push({
           attributeName: rel.label || 'range', // 'range' for slots without label
           target: rel.target,
-          targetType: rel.targetType,
+          targetSection: rel.targetSection,
           isSelfRef: rel.isSelfRef || false
         });
       }
@@ -210,7 +210,7 @@ export abstract class Element {
               target: range,
               // @ts-expect-error TEMPORARY: categorizeRange returns 'primitive' which isn't in ElementTypeId
               // TODO: See TASKS.md line 374 - need to revisit this type mismatch
-              targetType: rangeCategory,
+              targetSection: rangeCategory,
               isSelfRef: range === ancestorClass.name
             });
           }
@@ -241,7 +241,7 @@ export abstract class Element {
 
     return {
       itemName: this.name,
-      itemType: this.type,
+      itemSection: this.type,
       color,
       outgoing,
       incoming
@@ -920,7 +920,7 @@ export class ClassElement extends Element {
       rels.push({
         type: 'inherits',
         target: this.parentId,
-        targetType: 'class',
+        targetSection: 'class',
         isSelfRef: false
       });
     }
@@ -938,7 +938,7 @@ export class ClassElement extends Element {
             type: 'property',
             label: propName,
             target: range,
-            targetType: rangeCategory,
+            targetSection: rangeCategory,
             isSelfRef: range === this.name
           });
         }
@@ -1151,7 +1151,7 @@ export class SlotElement extends Element {
         rels.push({
           type: 'property',
           target: this.range,
-          targetType: rangeCategory,
+          targetSection: rangeCategory,
           isSelfRef: false
         });
       }
@@ -1254,7 +1254,7 @@ export class VariableElement extends Element {
       type: 'property',
       label: 'mapped_to', // Add label so getRelationshipData() can use it
       target: this.classId,
-      targetType: 'class',
+      targetSection: 'class',
       isSelfRef: false
     }];
   }

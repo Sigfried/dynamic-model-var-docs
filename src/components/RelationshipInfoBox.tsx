@@ -232,11 +232,11 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
             {' → '}
             {makeClickable(
               slot.target,
-              slot.targetType as 'class' | 'enum' | 'slot',
+              slot.targetSection as 'class' | 'enum' | 'slot',
               slot.isSelfRef ? "text-orange-600 dark:text-orange-400" : "text-blue-600 dark:text-blue-400"
             )}
             <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">
-              ({slot.targetType}{slot.isSelfRef ? ', self-ref' : ''})
+              ({slot.targetSection}{slot.isSelfRef ? ', self-ref' : ''})
             </span>
           </div>
         ))}
@@ -326,7 +326,7 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
               <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Inheritance:</div>
               <div className="ml-3 text-sm text-gray-900 dark:text-gray-100">
                 → {makeClickable(details.outgoing.inheritance.target, 'class', "text-blue-600 dark:text-blue-400")}
-                <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">({details.outgoing.inheritance.targetType})</span>
+                <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">({details.outgoing.inheritance.targetSection})</span>
               </div>
             </div>
           )}
@@ -345,11 +345,11 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
                       {' → '}
                       {makeClickable(
                         prop.target,
-                        prop.targetType as 'class' | 'enum' | 'slot',
+                        prop.targetSection as 'class' | 'enum' | 'slot',
                         prop.isSelfRef ? "text-orange-600 dark:text-orange-400" : "text-blue-600 dark:text-blue-400"
                       )}
                       <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">
-                        ({prop.targetType}{prop.isSelfRef ? ', self-ref' : ''})
+                        ({prop.targetSection}{prop.isSelfRef ? ', self-ref' : ''})
                       </span>
                     </div>
                   )
@@ -416,7 +416,7 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
                       {makeClickable(usage.className, 'class', "text-blue-600 dark:text-blue-400")}
                       <span className="text-gray-500 dark:text-gray-400">.</span>
                       <span className="text-green-600 dark:text-green-400">{usage.attributeName}</span>
-                      <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">({usage.sourceType})</span>
+                      <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">({usage.sourceSection})</span>
                     </div>
                   )
                 )}

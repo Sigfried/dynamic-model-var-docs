@@ -64,12 +64,12 @@ export function filterRelationships(
     filtered = filtered.filter(r => r.type !== 'property');
   }
 
-  // Filter by target type
+  // Filter by target section
   if (onlyEnums) {
-    filtered = filtered.filter(r => r.targetType === 'enum');
+    filtered = filtered.filter(r => r.targetSection === 'enum');
   }
   if (onlyClasses) {
-    filtered = filtered.filter(r => r.targetType === 'class');
+    filtered = filtered.filter(r => r.targetSection === 'class');
   }
 
   // Filter self-referential
@@ -106,7 +106,7 @@ export function buildLinks(
 
   return filtered.map(rel => ({
     source: { type: sourceType, name: sourceName },
-    target: { type: rel.targetType, name: rel.target },
+    target: { type: rel.targetSection, name: rel.target },
     relationship: rel,
   }));
 }
@@ -283,8 +283,8 @@ export function getLinkGradientId(sourceType: string, targetType: string): strin
  */
 export function getLinkColor(relationship: Relationship, sourceType?: string): string {
   // If sourceType provided, use gradient
-  if (sourceType && relationship.targetType) {
-    return `url(#${getLinkGradientId(sourceType, relationship.targetType)})`;
+  if (sourceType && relationship.targetSection) {
+    return `url(#${getLinkGradientId(sourceType, relationship.targetSection)})`;
   }
 
   // Fallback to solid colors for legacy support
@@ -292,7 +292,7 @@ export function getLinkColor(relationship: Relationship, sourceType?: string): s
     case 'inherits':
       return '#3b82f6'; // Blue for inheritance
     case 'property':
-      if (relationship.targetType === 'enum') {
+      if (relationship.targetSection === 'enum') {
         return '#a855f7'; // Purple for enums
       }
       return '#10b981'; // Green for class references
@@ -360,7 +360,7 @@ export function getRelationshipMetadata(
     sourceName,
     sourceType,
     targetName: relationship.target,
-    targetType: relationship.targetType,
+    targetType: relationship.targetSection,
     label: relationship.label
   };
 }

@@ -27,18 +27,18 @@ export interface FloatingBoxMetadata {
 export interface SlotInfo {
   attributeName: string;
   target: string;
-  targetType: string;
+  targetSection: string;
   isSelfRef: boolean;
 }
 
 export interface RelationshipData {
   itemName: string;
-  itemType: string;
-  color: string;  // Header color for this item type
+  itemSection: string;
+  color: string;  // Header color for this item section
   outgoing: {
     inheritance?: {
       target: string;
-      targetType: string;
+      targetSection: string;
     };
     slots: SlotInfo[];
     inheritedSlots: Array<{
@@ -51,7 +51,7 @@ export interface RelationshipData {
     usedByAttributes: Array<{
       className: string;
       attributeName: string;
-      sourceType: string;
+      sourceSection: string;
     }>;
     variables: Array<{
       name: string;

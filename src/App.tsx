@@ -488,8 +488,8 @@ function App() {
 
         {/* SVG Link Overlay */}
         <LinkOverlay
-          leftPanelTypes={leftSections}
-          rightPanelTypes={rightSections}
+          leftSections={leftSections}
+          rightSections={rightSections}
           dataService={dataService}
           hoveredItem={hoveredItem}
         />

@@ -74,10 +74,10 @@ function LinkTooltip({ data, x, y }: { data: LinkTooltipData; x: number; y: numb
 }
 
 export interface LinkOverlayProps {
-  /** Item types visible in left panel */
-  leftPanelTypes: string[];
-  /** Item types visible in right panel */
-  rightPanelTypes: string[];
+  /** Section IDs visible in left panel */
+  leftSections: string[];
+  /** Section IDs visible in right panel */
+  rightSections: string[];
   /** Data service for fetching item relationships */
   dataService: DataService | null;
   /** Filter options for controlling which links to show */
@@ -87,8 +87,8 @@ export interface LinkOverlayProps {
 }
 
 export default function LinkOverlay({
-  leftPanelTypes,
-  rightPanelTypes,
+  leftSections,
+  rightSections,
   dataService,
   filterOptions = {},
   hoveredItem
@@ -131,7 +131,7 @@ export default function LinkOverlay({
     });
 
     return () => cancelAnimationFrame(frameId);
-  }, [leftPanelTypes, rightPanelTypes, dataService]);
+  }, [leftSections, rightSections, dataService]);
 
   // Build links from visible items - use useMemo to prevent infinite loop
   const { leftPanelLinks, rightPanelLinks } = useMemo(() => {
@@ -141,18 +141,18 @@ export default function LinkOverlay({
     const leftItems = new Set<string>();
     const rightItems = new Set<string>();
 
-    // Get all item names for each panel type
-    leftPanelTypes.forEach(typeId => {
+    // Get all item names for each panel section
+    leftSections.forEach(sectionId => {
       // @ts-expect-error TEMPORARY: string vs ElementTypeId - will be removed in Step 7 (Link Overlay Refactor)
       // TODO: See TASKS.md Step 7 - refactor to use ds.getLinkData(leftItemIds, rightItemIds)
-      const itemNames = dataService.getItemNamesForType(typeId);
+      const itemNames = dataService.getItemNamesForType(sectionId);
       itemNames.forEach(name => leftItems.add(name));
     });
 
-    rightPanelTypes.forEach(typeId => {
+    rightSections.forEach(sectionId => {
       // @ts-expect-error TEMPORARY: string vs ElementTypeId - will be removed in Step 7 (Link Overlay Refactor)
       // TODO: See TASKS.md Step 7 - refactor to use ds.getLinkData(leftItemIds, rightItemIds)
-      const itemNames = dataService.getItemNamesForType(typeId);
+      const itemNames = dataService.getItemNamesForType(sectionId);
       itemNames.forEach(name => rightItems.add(name));
     });
 
@@ -161,23 +161,22 @@ export default function LinkOverlay({
 
     // Helper to process items from a panel
     const processItems = (
-      types: string[],
+      sections: string[],
       targetPanel: Set<string>,
       linksArray: Link[],
       options: typeof filterOptions = filterOptions
     ) => {
-      types.forEach(typeId => {   // [sg] either we refactor this to not need this loop at all
-                                  // or we use something like sections.forEach(section => { section.id...}
+      sections.forEach(sectionId => {
         // @ts-expect-error TEMPORARY: string vs ElementTypeId - will be removed in Step 7 (Link Overlay Refactor)
         // TODO: See TASKS.md Step 7 - refactor to use ds.getLinkData(leftItemIds, rightItemIds)
-        const itemNames = dataService.getItemNamesForType(typeId);
+        const itemNames = dataService.getItemNamesForType(sectionId);
         itemNames.forEach(itemName => {
           const relationships = dataService.getRelationshipsForLinking(itemName);
           if (!relationships) return;
 
-          const links = buildLinks(typeId, itemName, relationships, {
+          const links = buildLinks(sectionId, itemName, relationships, {
             ...options,
-            ...(typeId === 'class' ? { showInheritance: false } : {}) // Disable inheritance for classes
+            ...(sectionId === 'class' ? { showInheritance: false } : {}) // Disable inheritance for classes
           });
 
           // Only keep cross-panel links (or self-refs)
@@ -190,22 +189,22 @@ export default function LinkOverlay({
     };
 
     // Process left panel (all cross-panel relationships)
-    processItems(leftPanelTypes, rightItems, leftLinks);
+    processItems(leftSections, rightItems, leftLinks);
 
     // Process right panel (all relationships EXCEPT class→class cross-panel)
     // Class→class is bidirectional in the schema, so we only draw left→right
     // All other relationship types (class→enum, class→slot, variable→class, slot→enum) are one-way
-    rightPanelTypes.forEach(typeId => {
+    rightSections.forEach(sectionId => {
       // @ts-expect-error TEMPORARY: string vs ElementTypeId - will be removed in Step 7 (Link Overlay Refactor)
       // TODO: See TASKS.md Step 7 - refactor to use ds.getLinkData(leftItemIds, rightItemIds)
-      const itemNames = dataService.getItemNamesForType(typeId);
+      const itemNames = dataService.getItemNamesForType(sectionId);
       itemNames.forEach(itemName => {
         const relationships = dataService.getRelationshipsForLinking(itemName);
         if (!relationships) return;
 
-        const links = buildLinks(typeId, itemName, relationships, {
+        const links = buildLinks(sectionId, itemName, relationships, {
           ...filterOptions,
-          ...(typeId === 'class' ? { showInheritance: false } : {})
+          ...(sectionId === 'class' ? { showInheritance: false } : {})
         });
 
         // Special handling for class→class to avoid bidirectional duplicates
@@ -214,7 +213,7 @@ export default function LinkOverlay({
           if (!leftItems.has(link.target.name)) return false; // Not cross-panel
 
           // For class→class links, filter out to avoid bidirectional duplicates
-          if (typeId === 'class' && link.target.type === 'class') {
+          if (sectionId === 'class' && link.target.type === 'class') {
             return false;
           }
 
@@ -226,7 +225,7 @@ export default function LinkOverlay({
     });
 
     return { leftPanelLinks: leftLinks, rightPanelLinks: rightLinks };
-  }, [leftPanelTypes, rightPanelTypes, dataService, filterOptions]);
+  }, [leftSections, rightSections, dataService, filterOptions]);
 
   // Helper to find item in DOM with panel position
   const findItem = (type: string, name: string, panelPosition: 'left' | 'right'): HTMLElement | null => {
