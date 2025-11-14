@@ -29,10 +29,10 @@
 
 ## Architecture & Refactoring Decisions
 
-**📌 [ARCHIVED TO PROGRESS.md - Phase 13]**
-- Implementation Steps 1-7 archived (completed or superseded by Option D)
-- Core architecture now in REFACTOR_PLAN.md (Option D: Slots-as-Edges)
-- Q&A sections below retained for historical context
+**📌 [MOVED TO REFACTOR_PLAN.md]**
+- Core architecture now documented in REFACTOR_PLAN.md (Slots-as-Edges with graph model)
+- Implementation plan integrated with prerequisite: "Improve Schema Data Loading and Validation" below
+- Historical Q&A sections retained below for reference
 
 ### 1. ItemId Architecture & getId() Simplification ✅ COMPLETED
 
@@ -260,7 +260,13 @@ Question: Should `onSelectItem` be renamed to `onClickItem` since it describes t
 - Add `types` as new element category
 - Support schema imports/composition
 
-**Priority**: Medium - not blocking, but improves data integrity
+**Relationship to Refactor**:
+This task is a **prerequisite** for the architecture refactor documented in REFACTOR_PLAN.md. Completing this first ensures:
+- UI layer doesn't depend on model-specific types (fixes remaining violations)
+- Model refactor can happen without needing UI changes
+- Data loading is robust and validates inputs
+
+**Priority**: High - prerequisite for model refactor
 
 ---
 
