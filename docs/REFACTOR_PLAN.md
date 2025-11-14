@@ -56,17 +56,19 @@ The app treats all element types (classes, enums, slots, variables) as **nodes**
 - **Variables**: No longer appear as panel sections, only in detail boxes and relationship hovers
 
 **Edges**:
-- **SlotEdge**: Complex edge connecting Class → Range
+- **InheritanceEdge**: is-a/inherits-from edges for class inheritance
+- **MapsToEdge**: Variable → Class associations
+- **ClassToSlot**: Class → Slot (rather than storing slots as class properties)
+- **SlotToRange**: Slot → Range
+- **ClassToRange**: Direct edges formed from slots
   - Properties: slot name, required, multivalued, description, inherited_from, overrides
   - References SlotElement definition (can look up from name)
   - Multiple edges can reference same SlotElement (e.g., inherited with overrides)
   - **Replaces**: ClassSlot instances (more edges than slot definitions)
-- **InheritanceEdge**: Simple is-a edges for class inheritance
-- **MapsToEdge**: Variable → Class associations
 
 **Slot Edge Details**:
-
-Slots (slot nodes) are referenced in edges between classes and ranges. There are more edges than slots:
+- Slots exist as nodes with simple edges: class → slot, slot → range
+- Slots (slot nodes) are referenced in edges between classes and ranges. There are more edges than slots.
 - An edge between a class and, say, an enum for an inherited slot:
   - Goes from the subclass to the enum
   - Holds a reference to (and can display properties of) the slot node it inherited
