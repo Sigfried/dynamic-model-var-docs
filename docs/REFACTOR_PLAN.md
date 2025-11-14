@@ -75,6 +75,12 @@ Slots (slot nodes) are referenced in edges between classes and ranges. There are
 
 This approach accurately conveys usage relationships without needing hypergraph (multi-step) links.
 
+**Edge Representation** (Simple approach):
+- Slots exist as nodes with simple edges: class → slot, slot → range
+- Slots also appear in complex class-range edges with metadata: slotName, required, multivalued, inherited_from, overrides
+- Single edge with metadata properties (not slot properties as separate nodes)
+- This is the "Simple" approach from the compound relationships options
+
 **Range Abstraction**:
 - **Range** (abstract base class or interface)
   - ClassElement extends Range
@@ -109,12 +115,7 @@ This approach accurately conveys usage relationships without needing hypergraph 
 
 **High Priority** (must answer before implementing):
 
-1. ✅ **Compound relationships**: Simple approach chosen
-   - Slots exist as nodes with simple edges (class → slot, slot → range)
-   - Slots also appear in complex class-range edges with metadata (slotName, required, multivalued, inherited_from, etc.)
-   - **Decision confirmed**: This is the "Simple" approach - single edge with metadata
-
-2. **Graphology + OOP Architecture**: How to combine graphology graph with OOP classes?
+1. **Graphology + OOP Architecture**: How to combine graphology graph with OOP classes?
 
    **Context**: Graphology stores properties as primitives (strings, numbers), not JS/TS objects
 
@@ -142,7 +143,7 @@ This approach accurately conveys usage relationships without needing hypergraph 
 
 **Medium Priority** (decide during implementation):
 
-3. **LinkML documentation features**: What to include from generated docs?
+2. **LinkML documentation features**: What to include from generated docs?
 
    **From BDCHM Study** (see PROGRESS.md Phase 14):
    - **Terminology**: "Direct slots" vs "Induced slots" (direct = defined on class, induced = flattened including inherited)
@@ -154,7 +155,7 @@ This approach accurately conveys usage relationships without needing hypergraph 
    - **Raw YAML display**: Optional toggle to show raw schema definitions
    - **Clickable navigation**: Between related classes, enums, slots
 
-4. **Unused slot visualization**: How to distinguish unused SlotElement definitions from active SlotEdge instances?
+3. **Unused slot visualization**: How to distinguish unused SlotElement definitions from active SlotEdge instances?
    - Suggestion: Lower opacity for unused slots (we might not have unused slots in bdchm)
 
 ### Related Documents
