@@ -75,14 +75,6 @@ The app treats all element types (classes, enums, slots, variables) as **nodes**
   - Also knows/displays the ancestor it inherited from
 - If the subclass specifies a slot_usage, the edge shows properties of the slot_usage rather than of the referenced slot node
 
-This approach accurately conveys usage relationships without needing hypergraph (multi-step) links.
-
-**Edge Representation** (Simple approach):
-- Slots exist as nodes with simple edges: class → slot, slot → range
-- Slots also appear in complex class-range edges with metadata: slotName, required, multivalued, inherited_from, overrides
-- Single edge with metadata properties (not slot properties as separate nodes)
-- This is the "Simple" approach from the compound relationships options
-
 **Range Abstraction**:
 - **Range** (abstract base class or interface)
   - ClassElement extends Range
@@ -178,11 +170,20 @@ This approach accurately conveys usage relationships without needing hypergraph 
 
 ### Prerequisites
 
-Before starting the refactor, complete these preparatory tasks to ensure clean separation of model/view layers:
+Before starting the refactor, complete UI/model separation from Phase 12:
 
-1. **Fix remaining model/view violations** (from TASKS.md)
-   - Handle Unexpected Enum Fields Found by Validation 🔧
-   - Ensures UI layer doesn't need changes during model refactor
+1. ✅ **Rename type-based identifiers to section-based terminology**
+   - ✅ `leftPanelTypes`/`rightPanelTypes` → `leftSections`/`rightSections`
+   - ✅ `LinkTooltipData.sourceType`/`targetType` → `sourceSection`/`targetSection`
+   - ✅ `RelationshipData.itemType` → `itemSection`
+   - ✅ All relationship fields use "section" terminology
+
+2. ✅ **Replace type union literals with string in UI layer**
+   - ✅ Remove `'class' | 'enum' | 'slot' | 'variable'` hardcoded unions
+   - ✅ Use generic `string` type in UI components and hooks
+   - ✅ UI layer no longer has hardcoded knowledge of model types
+
+**Result**: UI layer depends only on DataService contract. Model layer can now be refactored without touching UI.
 
 ### Stage 1: Prepare for Model Replacement
 
