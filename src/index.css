@@ -1,1 +1,23 @@
 @import "tailwindcss";
+
+/*
+    the app is currently unreadable in dark mode, this was supposed to help fix it but doesn't
+    
+/* Override dark mode at the root level * /
+:root {
+  color-scheme: light only;
+}
+
+/* Force all dark mode classes to be ignored * /
+@media (prefers-color-scheme: dark) {
+  * {
+    color-scheme: light only !important;
+  }
+
+  body,
+  #root {
+    background-color: white !important;
+    color: black !important;
+  }
+}
+*/

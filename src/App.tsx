@@ -17,6 +17,7 @@ function App() {
   const [nextBoxId, setNextBoxId] = useState(0);
   const [hasRestoredFromURL, setHasRestoredFromURL] = useState(false);
 
+
   // Load model data
   const { modelData, loading, error } = useModelData();
 
@@ -269,6 +270,40 @@ function App() {
     return dataService?.getAllSectionsData('right') ?? new Map();
   }, [dataService]);
 
+  // TEMPORARY HACK BECAUSE DARK MODE IS UNREADABLE
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    setIsDarkMode(mediaQuery.matches);
+
+    const handler = (e: MediaQueryListEvent) => setIsDarkMode(e.matches);
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
+
+  let darkModeWarning = null;
+  if (isDarkMode) {
+    darkModeWarning = (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: '#fff3cd',
+          color: '#856404',
+          padding: '16px',
+          textAlign: 'center',
+          zIndex: 9999,
+          borderBottom: '2px solid #ffc107',
+          fontSize: '14px',
+        }}>
+          ⚠️ <strong>Dark mode is not yet supported.</strong> This app may look broken.
+          Please switch your browser/system to light mode for the best experience.
+        </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -293,6 +328,7 @@ function App() {
 
   return (
     <div className="flex flex-col h-screen">
+      {darkModeWarning}
       {/* Header */}
       <header className="bg-blue-600 text-white px-6 py-4 border-b border-blue-700">
         <div className="flex items-center justify-between">
