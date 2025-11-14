@@ -67,73 +67,96 @@ if (element.type === 'slot') {
 interface LinkPair {
   sourceId: string;
   targetId: string;
-  edgeType: 'inheritance' | 'property' | 'variable_mapping';
-  label?: string;  // e.g., attribute name for property edges
+  sourceColor: string;  // For line gradient/styling
+  targetColor: string;
+  label?: string;  // slot/attribute name for property edges
 }
 ```
+
+**Design Note:** LinkOverlay only renders **property edges** (class→enum/class attribute relationships). Inheritance and variable_mapping edges are displayed in RelationshipInfoBox and DetailContent, not as visual links between panels.
 
 **New DataService Method:**
 ```typescript
 class DataService {
   /**
-   * Get all linkable pairs in the model.
-   * Returns flat array of source→target relationships.
+   * Get all linkable pairs for property edges (used by LinkOverlay).
+   * Returns only property edges (class→enum/class relationships via attributes/slots).
+   * Does NOT include inheritance or variable_mapping edges (those appear in detail views).
    *
-   * This becomes trivial once all associations are edges:
-   * - Class inheritance → inheritance edges
-   * - Class attributes → property edges
-   * - Slot ranges → property edges
-   * - Variables → variable_mapping edges
+   * DataService provides minimal edge data - LinkOverlay enhances with panel positions.
    */
   getAllPairs(): LinkPair[] {
-    // Implementation: iterate all elements, map their edges to LinkPairs
     const pairs: LinkPair[] = [];
     this.modelData.elementLookup.forEach(element => {
-      element.getEdges().forEach(edge => {
-        pairs.push({
-          sourceId: element.id,
-          targetId: edge.targetId,
-          edgeType: edge.type,
-          label: edge.label
+      // Only get property edges (filter out inheritance, variable_mapping)
+      element.getEdges()
+        .filter(edge => edge.type === 'property')
+        .forEach(edge => {
+          pairs.push({
+            sourceId: element.id,
+            targetId: edge.targetId,
+            sourceColor: this.getColorForItemType(element.type),
+            targetColor: this.getColorForItemType(edge.targetType),
+            label: edge.label
+          });
         });
-      });
     });
     return pairs;
-  }
-
-  /**
-   * Get pairs filtered by element types
-   * Useful for "show only class-to-class" links
-   */
-  getPairsForTypes(sourceTypes: string[], targetTypes: string[]): LinkPair[] {
-    return this.getAllPairs().filter(pair => {
-      const sourceType = this.getItemType(pair.sourceId);
-      const targetType = this.getItemType(pair.targetId);
-      return sourceTypes.includes(sourceType) && targetTypes.includes(targetType);
-    });
   }
 }
 ```
 
 **LinkOverlay Component:**
 ```typescript
-// Post-refactor: Simple, declarative
-function LinkOverlay() {
-  const allPairs = dataService.getAllPairs();
-  const visiblePairs = allPairs.filter(pair =>
-    visibleTypes.has(sourceTypeOf(pair.sourceId)) &&
-    visibleTypes.has(targetTypeOf(pair.targetId))
+// Post-refactor: DataService provides pairs, LinkOverlay handles panel orientation
+function LinkOverlay({ leftSections, rightSections }: Props) {
+  const pairs = dataService.getAllPairs();
+
+  // Enhance pairs with panel positions for orientation
+  const orientedPairs = pairs.map(pair => {
+    const sourcePanel = findPanel(pair.sourceId, leftSections, rightSections);
+    const targetPanel = findPanel(pair.targetId, leftSections, rightSections);
+
+    return {
+      ...pair,
+      sourcePanel,
+      targetPanel,
+      orientation: sourcePanel === 'left' && targetPanel === 'right' ? 'ltr' : 'rtl'
+    };
+  });
+
+  // Filter to only cross-panel links (both items visible, in different panels)
+  const visiblePairs = orientedPairs.filter(p =>
+    p.sourcePanel && p.targetPanel && p.sourcePanel !== p.targetPanel
   );
 
   return visiblePairs.map(pair =>
-    <LinkLine from={pair.sourceId} to={pair.targetId} />
+    <LinkLine {...pair} />
   );
+}
+
+// Helper: determine which panel an item is in
+function findPanel(
+  itemId: string,
+  leftSections: Set<string>,
+  rightSections: Set<string>
+): 'left' | 'right' | null {
+  const itemType = dataService.getItemType(itemId);
+  if (!itemType) return null;
+  if (leftSections.has(itemType)) return 'left';
+  if (rightSections.has(itemType)) return 'right';
+  return null;
 }
 ```
 
+**Separation of Concerns:**
+- **DataService:** Provides edge data (model concern) - doesn't know about panels
+- **LinkOverlay:** Handles panel layout and orientation (UI concern)
+- **Future-proof:** Works with three-panel layout (each LinkOverlay connects two panels)
+
 **Benefits:**
-- No type-specific logic
-- Easy to implement filters (by type, by edge type)
+- No type-specific edge logic in LinkOverlay
+- Easy to implement filters (by type, by panel visibility)
 - Easy to add features (show label on hover, highlight path)
 - Performance: can cache `getAllPairs()` result
 
@@ -187,23 +210,31 @@ interface SlotInfo {
 **New Data Shape:**
 ```typescript
 interface RelationshipData {
-  itemId: string;
-  itemType: string;  // renamed from itemSection for clarity
-
+  thisItem: ItemInfo;
   outgoing: EdgeInfo[];
   incoming: EdgeInfo[];
 }
 
+interface ItemInfo {
+  id: string;
+  displayName: string;
+  typeDisplayName: string;  // "Class", "Enum", "Slot", "Variable"
+  color: string;  // Tailwind color classes for styling
+}
+
 interface EdgeInfo {
   edgeType: 'inheritance' | 'property' | 'variable_mapping';
-  targetId: string;
-  targetType: string;
-  label?: string;        // e.g., attribute name
-  inherited?: {          // Only for inherited edges
-    fromAncestor: string;
-  };
+  otherItem: ItemInfo;  // The connected item (target for outgoing, source for incoming)
+  label?: string;       // For property: slot/attribute name; for variable_mapping: "mapped_to"
+  inheritedFrom?: string; // For property edges only: ancestor name that defined this slot
 }
 ```
+
+**Key Design Decisions:**
+
+1. **`otherItem` naming:** Works for both directions (target for outgoing, source for incoming)
+2. **`inheritedFrom` only for properties:** Only property edges can be inherited (not inheritance or variable_mapping)
+3. **No ternary PropertyEdgeInfo:** While property edges are conceptually ternary (class→slot→range), treating the slot as a label keeps the interface simple. The slot IS the label.
 
 **Component Rendering:**
 ```typescript
@@ -211,27 +242,51 @@ interface EdgeInfo {
 function RelationshipInfoBox({ itemId }: { itemId: string }) {
   const data = dataService.getRelationships(itemId);
 
-  // Group by edge type
+  // Group outgoing by edge type
   const outgoingByType = groupBy(data.outgoing, edge => edge.edgeType);
-  const incomingByType = groupBy(data.incoming, edge => edge.edgeType);
+
+  // For property edges, separate direct vs inherited
+  const directProps = outgoingByType.property?.filter(e => !e.inheritedFrom) || [];
+  const inheritedProps = outgoingByType.property?.filter(e => e.inheritedFrom) || [];
+  const inheritedByAncestor = groupBy(inheritedProps, e => e.inheritedFrom!);
 
   return (
     <>
       <Section title="Outgoing">
+        {/* Inheritance edge (max 1) */}
         {outgoingByType.inheritance?.map(edge =>
           <EdgeRow edge={edge} label="inherits from" />
         )}
-        {outgoingByType.property?.map(edge =>
+
+        {/* Direct property edges */}
+        {directProps.map(edge =>
           <EdgeRow edge={edge} label={edge.label} />
         )}
+
+        {/* Inherited property edges grouped by ancestor */}
+        {Object.entries(inheritedByAncestor).map(([ancestor, edges]) => (
+          <InheritedGroup ancestor={ancestor}>
+            {edges.map(edge =>
+              <EdgeRow edge={edge} label={edge.label} />
+            )}
+          </InheritedGroup>
+        ))}
       </Section>
 
       <Section title="Incoming">
+        {/* Subclasses (inheritance edges) */}
         {incomingByType.inheritance?.map(edge =>
           <EdgeRow edge={edge} label="subclass" />
         )}
+
+        {/* Classes using this via property edges */}
         {incomingByType.property?.map(edge =>
           <EdgeRow edge={edge} label={`used by ${edge.label}`} />
+        )}
+
+        {/* Variables mapping to this class */}
+        {incomingByType.variable_mapping?.map(edge =>
+          <EdgeRow edge={edge} label="variable" />
         )}
       </Section>
     </>
@@ -241,9 +296,9 @@ function RelationshipInfoBox({ itemId }: { itemId: string }) {
 
 **Benefits:**
 - Unified EdgeInfo type for all relationship types
-- No type-specific rendering logic
-- Easy to add new edge types
-- Inherited edges clearly marked with ancestor info
+- No element-type-specific rendering logic (no checks for "is this a class?")
+- Inherited properties clearly separated and grouped by ancestor
+- Easy to add new edge types (just add to the switch/grouping)
 
 ---
 
@@ -520,19 +575,18 @@ type EdgeType =
 ```typescript
 interface EdgeInfo {
   edgeType: EdgeType;
-  targetId: string;
-  targetType: string;
+  otherItem: ItemInfo;
   label?: string;
-  inherited?: {
-    fromAncestor: string;  // Which ancestor defined this edge
-  };
+  inheritedFrom?: string;  // For property edges only: ancestor name
 }
 ```
 
 **Rationale:**
-- Inherited edges are just regular edges with metadata
-- No need for separate `inheritedSlots` array
-- Easier to filter/group in UI
+- Only property edges can be inherited (not inheritance or variable_mapping edges)
+- `inheritedFrom` is optional - only present for inherited property edges
+- No need for separate `inheritedSlots` array structure
+- Easier to filter/group in UI (just check presence of `inheritedFrom`)
+- Component can group by `inheritedFrom` to show "From Entity", "From Specimen", etc.
 
 ### 3. Relationship Direction
 - Elements expose `getEdges()` for outgoing edges
@@ -549,15 +603,18 @@ interface EdgeInfo {
 interface LinkPair {
   sourceId: string;
   targetId: string;
-  edgeType: EdgeType;
+  sourceColor: string;
+  targetColor: string;
   label?: string;
 }
 ```
 
 **Rationale:**
-- Minimal structure for rendering links
-- No color/style info (computed from types)
-- Label optional (only for property edges)
+- Minimal structure for rendering links between panels
+- Only includes property edges (inheritance/variable_mapping shown in detail views)
+- Colors included for gradient/styling
+- Label is the slot/attribute name
+- No edgeType needed (LinkOverlay only shows property edges)
 
 ---
 
