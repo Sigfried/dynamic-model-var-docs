@@ -1,6 +1,6 @@
 # Slots-as-Edges Architecture Refactor Plan
 
-**Status**: Planning phase - architecture chosen, implementation details being elaborated
+**Status**: Planning stage - architecture chosen, implementation details being elaborated
 **Date**: January 2025
 **Decision**: Slots-as-Edges architecture (after evaluating hypergraph and hybrid alternatives)
 
@@ -138,7 +138,7 @@ This approach accurately conveys usage relationships without needing hypergraph 
    - Replace methods like getUsedByClasses with graphology queries
    - May not need artificial root node
 
-   **Decision timing**: Experiment during Phase 2 (Step 0: Define DataService/model interfaces) to see what works best for our query patterns
+   **Decision timing**: Experiment during Stage 2 (Step 0: Define DataService/model interfaces) to see what works best for our query patterns
 
 **Medium Priority** (decide during implementation):
 
@@ -181,7 +181,7 @@ Before starting the refactor, complete these preparatory tasks to ensure clean s
    - Handle Unexpected Enum Fields Found by Validation 🔧
    - Ensures UI layer doesn't need changes during model refactor
 
-### Phase 1: Prepare for Model Replacement
+### Stage 1: Prepare for Model Replacement
 
 **Goal**: Set up infrastructure to replace model layer without touching UI
 
@@ -196,7 +196,7 @@ Before starting the refactor, complete these preparatory tasks to ensure clean s
 - `src/models/Element.ts` (new wrapper file)
 - `src/models/ElementPreRefactor.ts` (renamed)
 
-### Phase 2: Import and Model Types
+### Stage 2: Import and Model Types
 
 **Goal**: Add TypeElement and Range abstraction
 
@@ -222,7 +222,7 @@ Before starting the refactor, complete these preparatory tasks to ensure clean s
 - `src/models/Element.ts` - Add Range abstract base class, TypeElement class
 - `src/models/ElementCollection.ts` - Add TypeCollection, simplify with graphology
 
-### Phase 3: Refactor to Graph Model with SlotEdges
+### Stage 3: Refactor to Graph Model with SlotEdges
 
 **Goal**: Replace current Element-based model with graph-based model using graphology
 
@@ -251,7 +251,7 @@ Before starting the refactor, complete these preparatory tasks to ensure clean s
 - `src/models/ElementCollection.ts` - Simplify with graphology queries
 - `src/services/DataService.ts` - Add type collection, update relationship APIs, add getSlotEdgesForClass()
 
-### Phase 4: UI Layout Changes
+### Stage 4: UI Layout Changes
 
 **Goal**: Implement three-panel layout with middle slot panel
 
@@ -280,7 +280,7 @@ Before starting the refactor, complete these preparatory tasks to ensure clean s
 - `src/utils/statePersistence.ts` - URL state for middle panel
 - `src/components/LinkOverlay.tsx` - Slot edge traversal
 
-### Phase 5: Detail Box Updates
+### Stage 5: Detail Box Updates
 
 **Goal**: Render slots with clickable ranges in detail boxes
 
@@ -294,7 +294,7 @@ Before starting the refactor, complete these preparatory tasks to ensure clean s
 - `src/components/DetailPanel.tsx` - Render slot edges with clickable ranges
 - `src/components/RelationshipInfoBox.tsx` - Display slot edge properties
 
-### Phase 6: Variable Field Rename
+### Stage 6: Variable Field Rename
 
 **Goal**: Rename bdchmElement → maps_to
 
@@ -305,7 +305,7 @@ Before starting the refactor, complete these preparatory tasks to ensure clean s
 - `src/utils/dataLoader.ts` - Field transformation
 - Anywhere else bdchmElement is referenced
 
-### Phase 7: Documentation Updates
+### Stage 7: Documentation Updates
 
 **Goal**: Update documentation to reflect new architecture
 

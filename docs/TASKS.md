@@ -169,6 +169,9 @@ Question: Should `onSelectItem` be renamed to `onClickItem` since it describes t
 
 ### Different Variable Treatment for Condition and Drug Exposure Classes 
 
+<details>
+<summary><b>conversation about this</b></summary>
+
 > **Anne**: I think I made a mistake by calling "asthma" and "angina" variables. BMI is a variable that is a Measurement observation. We can think of BMI as a column in a spreadsheet. We wouldn't have a column for "asthma" - we would have a column for conditions with a list of mondo codes for the conditions present. This becomes more important when we are talking about the "heart failure" and "heart disease" columns. Where does one draw lines? The division of conditions into variables/columns might be ok if all we're looking at is asthma and angina, but quickly gets too hard to draw lines.
 
 > **Siggie**: So, should those variables appear in the variable specs at all? If so, how should we represent them? And are there other variables in the specs that need special treatment or don't belong?
@@ -187,9 +190,31 @@ Question: Should `onSelectItem` be renamed to `onClickItem` since it describes t
 > **Siggie**:
     where would i get the URI?
 
-> **Anne**:  
+> **Anne**:
+  I would recommend harvesting all the mondo and hpo curies out of the transform files
 
-> **Siggie**:  
+> **Siggie**:
+> you're talking about [these yaml files](https://github.com/RTIInternational/NHLBI-BDC-DMC-HV/tree/main/priority_variables_transform)?
+> 
+> so for Atrial fibrillation:
+>   - manually map it to what it's called in the yaml file names, afib
+>   - find all the mondo URIs in those files, maybe just one unique one: MONDO:0004981
+>   - there don't seem to be any hpo URIs
+>   - generate a link to it (which I thought I knew how to do using the prefix from bdchm.yaml:
+>     MONDO: http://purl.obolibrary.org/obo/MONDO_, but I don't, though I'm sure it's not hard)
+>
+>  did i get that right?
+</details>
+
+Also see [Slack DMs with Corey](https://dmc-cmm6947.slack.com/archives/C0917F5RFL1/p1763071597354059)
+
+#### [sg] resolution:
+when displaying these or maybe other groups of variables (e.g., Procedure), show
+a message like:
+
+> These <Condition|DrugExposure|etc.> variables were used in the pilot. There are potentially thousands of <
+> Condition|etc.>s that can appear in actual data. They won't be handled as specific variables but as <...> records in the
+> harmonized data
 
 ---
 
