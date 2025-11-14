@@ -1,35 +1,182 @@
 /**
  * DataService - Abstraction layer between UI and model
  *
- * REFACTOR STATUS (Stage 2: Infrastructure Setup)
- * This file currently re-exports from DataServicePreRefactor.ts.
- * Each export below represents an interface/class that needs to be refactored for Slots-as-Edges.
+ * Maintains view/model separation by:
+ * - UI components call DataService methods with item IDs (strings)
+ * - DataService internally looks up Element instances and calls their methods
+ * - UI never sees Element instances or element types
  *
- * REFACTOR CHECKLIST:
- * As you refactor each item, move it from DataServicePreRefactor to this file:
- * [ ] FloatingBoxMetadata interface
- * [ ] SlotInfo interface (may become EdgeInfo)
- * [ ] RelationshipData interface (update for edges)
- * [ ] DataService class (update methods for new model)
- *
- * Key changes needed:
- * - SlotInfo → EdgeInfo (rename to match Slots-as-Edges)
- * - RelationshipData.outgoing.slots → outgoing.edges
- * - Update DataService methods that deal with slots/relationships
+ * Terminology:
+ * - "item" in UI layer = "element" in model layer
+ * - itemId = element name (unique identifier)
  */
 
-// ============================================================================
-// Data Transfer Interfaces (TODO: Update for Slots-as-Edges)
-// ============================================================================
-export type {
-  FloatingBoxMetadata,
-  SlotInfo,          // TODO: Rename to EdgeInfo
-  RelationshipData   // TODO: Update outgoing.slots → outgoing.edges
-} from './DataServicePreRefactor';
+import type { ModelData } from '../types';
+import type { DetailData, Relationship } from '../models/Element';
+import type { ElementTypeId } from '../models/ElementRegistry';
+import { ELEMENT_TYPES, getAllElementTypeIds } from '../models/ElementRegistry';
+import type { ToggleButtonData } from '../components/ItemsPanel';
+import type { SectionData } from '../components/Section';
 
-// ============================================================================
-// DataService Class (TODO: Update for new Element structure)
-// ============================================================================
-export {
-  DataService
-} from './DataServicePreRefactor';
+export interface FloatingBoxMetadata {
+  title: string;
+  color: string;
+}
+
+// Relationship data structures (matches Element.getRelationshipData() output)
+export interface SlotInfo {
+  attributeName: string;
+  target: string;
+  targetSection: string;
+  isSelfRef: boolean;
+}
+
+export interface RelationshipData {
+  itemName: string;
+  itemSection: string;
+  color: string;  // Header color for this item section
+  outgoing: {
+    inheritance?: {
+      target: string;
+      targetSection: string;
+    };
+    slots: SlotInfo[];
+    inheritedSlots: Array<{
+      ancestorName: string;
+      slots: SlotInfo[];
+    }>;
+  };
+  incoming: {
+    subclasses: string[];
+    usedByAttributes: Array<{
+      className: string;
+      attributeName: string;
+      sourceSection: string;
+    }>;
+    variables: Array<{
+      name: string;
+    }>;
+  };
+}
+
+export class DataService {
+  private modelData: ModelData;
+
+  constructor(modelData: ModelData) {
+    this.modelData = modelData;
+  }
+
+  /**
+   * Get detail content for an item
+   * Returns null if item not found
+   */
+  getDetailContent(itemId: string): DetailData | null {
+    const element = this.modelData.elementLookup.get(itemId);
+    return element?.getDetailData() ?? null;
+  }
+
+  /**
+   * Get floating box metadata (title and color) for an item
+   * Returns null if item not found
+   */
+  getFloatingBoxMetadata(itemId: string): FloatingBoxMetadata | null {
+    const element = this.modelData.elementLookup.get(itemId);
+    return element?.getFloatingBoxMetadata() ?? null;
+  }
+
+  /**
+   * Get relationship data for an item
+   * Returns null if item not found
+   */
+  getRelationships(itemId: string): RelationshipData | null {
+    const element = this.modelData.elementLookup.get(itemId);
+    if (!element) return null;
+
+    return element.getRelationshipData();
+  }
+
+  /**
+   * Check if an item exists
+   */
+  itemExists(itemId: string): boolean {
+    return this.modelData.elementLookup.has(itemId);
+  }
+
+  /**
+   * Get item type for internal use (e.g., for URL state persistence)
+   * Returns the collection type ID that this item belongs to
+   * @ts-expect-error TEMPORARY: Accessing protected 'type' property - will be removed in Step 7 (Link Overlay Refactor)
+   * TODO: Refactor to avoid type exposure to DataService - see TASKS.md Step 7 architectural guidance
+   */
+  getItemType(itemId: string): string | null {
+    const element = this.modelData.elementLookup.get(itemId);
+    // @ts-expect-error TEMPORARY: See method comment above
+    return element?.type ?? null;
+  }
+
+  /**
+   * Get all item names for a specific type (used by LinkOverlay)
+   * Returns empty array if type not found
+   */
+  getItemNamesForType(typeId: ElementTypeId): string[] {
+    const collection = this.modelData.collections.get(typeId);
+    return collection ? collection.getAllElements().map(e => e.name) : [];
+  }
+
+  /**
+   * Get relationships for linking visualization (used by LinkOverlay)
+   * Returns null if item not found
+   */
+  getRelationshipsForLinking(itemId: string): Relationship[] | null {
+    const element = this.modelData.elementLookup.get(itemId);
+    return element?.getRelationships() ?? null;
+  }
+
+  /**
+   * Get all available item type IDs
+   * Returns array of type IDs that can be used for sections/filtering
+   */
+  getAvailableItemTypes(): string[] {
+    return Array.from(this.modelData.collections.keys());
+  }
+
+  /**
+   * Get hex color for an item type (for SVG rendering)
+   * Returns hex color string like '#3b82f6'
+   * Returns gray color if type not found
+   */
+  getColorForItemType(typeId: string): string {
+    const metadata = ELEMENT_TYPES[typeId as ElementTypeId];
+    return metadata?.color.hex ?? '#6b7280'; // gray-500 fallback
+  }
+
+  /**
+   * Get toggle button data for all item types
+   * Returns array of toggle button metadata
+   */
+  getToggleButtonsData(): ToggleButtonData[] {
+    return getAllElementTypeIds().map(typeId => {
+      const metadata = ELEMENT_TYPES[typeId];
+      return {
+        id: typeId,
+        icon: metadata.icon,
+        label: metadata.pluralLabel,
+        activeColor: metadata.color.toggleActive,
+        inactiveColor: metadata.color.toggleInactive
+      };
+    });
+  }
+
+  /**
+   * Get section data for all collections
+   * @param position - 'left' or 'right' panel position
+   * Returns Map where key is section ID (type ID) and value is SectionData
+   */
+  getAllSectionsData(position: 'left' | 'right'): Map<string, SectionData> {
+    const map = new Map<string, SectionData>();
+    this.modelData.collections.forEach((collection, typeId) => {
+      map.set(typeId, collection.getSectionData(position));
+    });
+    return map;
+  }
+}
