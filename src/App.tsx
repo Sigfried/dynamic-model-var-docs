@@ -126,8 +126,8 @@ function App() {
   }, [hoveredItem]);
 
   // Navigation handler - opens a new floating box
-  const handleNavigate = useCallback((itemName: string, itemType: 'class' | 'enum' | 'slot' | 'variable') => {
-    handleOpenFloatingBox({ type: itemType, name: itemName });
+  const handleNavigate = useCallback((itemName: string, itemSection: string) => {
+    handleOpenFloatingBox({ type: itemSection, name: itemName });
   }, [handleOpenFloatingBox]);
 
   // Handle RelationshipInfoBox upgrade to persistent floating box

@@ -2,20 +2,18 @@
  * Helper function for creating item hover event handlers
  *
  * Returns standardized onMouseEnter/onMouseLeave handlers that
- * call the provided callbacks with the item ID and type.
+ * call the provided callbacks with the item ID and section.
  *
  * Note: This is a regular function, not a React hook, so it can
  * be called inside loops and callbacks without violating Rules of Hooks.
  * Helper for creating item hover event handlers in UI layer.
  */
 
-type ItemType = 'class' | 'enum' | 'slot' | 'variable';
-
 interface ItemHoverHandlersProps {
   id: string;  // DOM node ID for positioning
-  type: ItemType;  // Item collection type
+  type: string;  // Item section ID
   name: string;
-  onItemHover?: (item: { id: string; type: ItemType; name: string }) => void;
+  onItemHover?: (item: { id: string; type: string; name: string }) => void;
   onItemLeave?: () => void;
 }
 

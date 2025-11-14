@@ -20,7 +20,7 @@ interface RelationshipInfoBoxProps {
   itemId: string | null;
   itemDomId: string | null;  // DOM node ID for positioning
   dataService: DataService | null;
-  onNavigate?: (itemName: string, itemType: 'class' | 'enum' | 'slot' | 'variable') => void;
+  onNavigate?: (itemName: string, itemSection: string) => void;
   onUpgrade?: () => void;  // Callback when box should upgrade to persistent mode
 }
 
@@ -162,7 +162,7 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
   // Helper to make item names clickable
   const makeClickable = (
     name: string,
-    type: 'class' | 'enum' | 'slot' | 'variable',
+    section: string,
     className: string
   ) => {
     if (!onNavigate) {
@@ -170,7 +170,7 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
     }
     return (
       <button
-        onClick={() => onNavigate(name, type)}
+        onClick={() => onNavigate(name, section)}
         className={`${className} hover:underline cursor-pointer`}
       >
         {name}
@@ -232,7 +232,7 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
             {' → '}
             {makeClickable(
               slot.target,
-              slot.targetSection as 'class' | 'enum' | 'slot',
+              slot.targetSection,
               slot.isSelfRef ? "text-orange-600 dark:text-orange-400" : "text-blue-600 dark:text-blue-400"
             )}
             <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">
@@ -345,7 +345,7 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
                       {' → '}
                       {makeClickable(
                         prop.target,
-                        prop.targetSection as 'class' | 'enum' | 'slot',
+                        prop.targetSection,
                         prop.isSelfRef ? "text-orange-600 dark:text-orange-400" : "text-blue-600 dark:text-blue-400"
                       )}
                       <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">

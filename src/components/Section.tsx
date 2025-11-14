@@ -87,8 +87,6 @@ function ItemRenderer({ item, onClickItem, onItemHover, onItemLeave, position, t
 
   const hoverHandlers = getItemHoverHandlers({
     id: id,  // DOM node ID for positioning
-    // @ts-expect-error TEMPORARY: string vs ItemType - will be removed in Step 7 (Link Overlay Refactor)
-    // TODO: See TASKS.md Step 7 - eliminate type exposure to UI
     type: hoverData.type,
     name: hoverData.name,
     onItemHover,
