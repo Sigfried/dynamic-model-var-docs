@@ -2049,6 +2049,8 @@ All steps tested with:
 
 **Discussion**: Three rounds on Slack about LPG representation for schema visualization
 
+https://obo-communitygroup.slack.com/archives/C06SMUB1NK1/p1762970421225129
+
 **Round 1 - LPG Projections**:
 - Chris pointed to UML as closest match for our needs
 - Suggested SchemaLink tool for visualization
