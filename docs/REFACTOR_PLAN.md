@@ -109,27 +109,53 @@ This approach accurately conveys usage relationships without needing hypergraph 
 
 **High Priority** (must answer before implementing):
 
-1. **Compound relationships**: Simple/Explicit/Hybrid approach?
-   - Simple: Single edge with metadata (slotName, required, multivalued, etc.)
-   - Explicit: Slot properties as first-class nodes (hypergraph-like)
-   - Hybrid: Edge with nested structure
-   - **Current thinking**: Simple based on slot edge description above
+1. ✅ **Compound relationships**: Simple approach chosen
+   - Slots exist as nodes with simple edges (class → slot, slot → range)
+   - Slots also appear in complex class-range edges with metadata (slotName, required, multivalued, inherited_from, etc.)
+   - **Decision confirmed**: This is the "Simple" approach - single edge with metadata
 
-2. **Graphology adoption**: Since we're moving to true graph model, bring in graphology library right away?
-   - Collections could simplify to just getLabel, getDefaultExpansion
-   - Methods like getUsedByClasses replaced by graphology queries
+2. **Graphology + OOP Architecture**: How to combine graphology graph with OOP classes?
+
+   **Context**: Graphology stores properties as primitives (strings, numbers), not JS/TS objects
+
+   **Option A - Graph stores IDs only**:
+   - Graphology nodes/edges contain only IDs
+   - OOP instances (ClassElement, SlotEdge, etc.) stored separately
+   - Query flow: graphology query → get IDs → lookup instances → generate UI data
+   - Challenge: Can't filter by properties in graph queries
+
+   **Option B - Graph stores all properties**:
+   - All properties duplicated as graphology node/edge attributes
+   - Query using properties as criteria
+   - Optional: Keep OOP instances for methods, or eliminate them entirely
+
+   **Option C - Hybrid**:
+   - Some properties in graph (for queries), some in OOP instances
+   - Awkward but workable
+
+   **Benefits of graphology adoption**:
+   - Collections simplify to getLabel, getDefaultExpansion
+   - Replace methods like getUsedByClasses with graphology queries
    - May not need artificial root node
+
+   **Decision timing**: Experiment during Phase 2 (Step 0: Define DataService/model interfaces) to see what works best for our query patterns
 
 **Medium Priority** (decide during implementation):
 
 3. **LinkML documentation features**: What to include from generated docs?
-   - **Terminology**: "Direct slots" vs "Induced slots"
-   - **Inheritance**: Linear chains, inherited vs direct attributes
-   - **Cardinality**: "0..1", "1", "*" notation
-   - **Raw YAML**: Optional display of raw definitions
+
+   **From BDCHM Study** (see PROGRESS.md Phase 14):
+   - **Terminology**: "Direct slots" vs "Induced slots" (direct = defined on class, induced = flattened including inherited)
+   - **Inheritance visualization**: Local neighborhood Mermaid diagrams showing class relationships
+   - **Attribute grouping**: Separate display of inherited vs direct attributes
+   - **Cardinality notation**: "0..1" (optional), "1" (required), "*" or "0..*" (multivalued)
+   - **Slot constraints**: Range constraints, required/multivalued flags
+   - **Relationship patterns**: Self-referential, cross-class, activity relationships, mutual exclusivity
+   - **Raw YAML display**: Optional toggle to show raw schema definitions
+   - **Clickable navigation**: Between related classes, enums, slots
 
 4. **Unused slot visualization**: How to distinguish unused SlotElement definitions from active SlotEdge instances?
-   - Suggestion: Lower opacity for unused slots
+   - Suggestion: Lower opacity for unused slots (we might not have unused slots in bdchm)
 
 ### Related Documents
 
@@ -175,12 +201,17 @@ Before starting the refactor, complete these preparatory tasks to ensure clean s
 **Goal**: Add TypeElement and Range abstraction
 
 **Steps**:
-1. Download linkml:types during data fetch
-2. Parse types in dataLoader.ts
-3. Create TypeElement class extending Range base class
-4. Create Range abstract base class/interface
-5. Make ClassElement, EnumElement extend Range
-6. Add TypeCollection (rethink collections approach with graphology)
+1. **Define DataService and model interfaces** (addresses graphology+OOP question above)
+   - Sketch what queries DataService needs to make
+   - Determine if we need property-based filtering in graph queries
+   - Decide: Graph stores IDs only (Option A), all properties (Option B), or hybrid (Option C)
+   - Document interface contracts before implementation
+2. Download linkml:types during data fetch
+3. Parse types in dataLoader.ts
+4. Create TypeElement class extending Range base class
+5. Create Range abstract base class/interface
+6. Make ClassElement, EnumElement extend Range
+7. Add TypeCollection (rethink collections approach with graphology)
 
 **Open question**: Do we need collections at all with graph model, or just for getLabel/getDefaultExpansion?
 
