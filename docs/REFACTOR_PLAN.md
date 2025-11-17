@@ -189,7 +189,7 @@ Before starting the refactor, complete UI/model separation from Phase 12:
 
 **Goal**: Set up infrastructure to replace model layer and define new edge-based interfaces without touching UI
 
-**Status**: ✅ Infrastructure complete, 🔄 Interface definition in progress
+**Status**: ✅ **COMPLETE** - All 4 steps done (see PROGRESS.md Phase 16)
 
 **Steps**:
 
@@ -198,7 +198,7 @@ Before starting the refactor, complete UI/model separation from Phase 12:
    - Create new `src/models/Element.ts` with explicit re-exports as refactor roadmap
    - Verify no UI changes needed, all tests pass
 
-2. 🔄 **Define new edge-based interfaces** (based on [UI_REFACTOR.md](UI_REFACTOR.md))
+2. ✅ **Define new edge-based interfaces** (based on [UI_REFACTOR.md](UI_REFACTOR.md))
    - Add to `src/models/Element.ts`:
      ```typescript
      // New interfaces for Slots-as-Edges
@@ -231,38 +231,30 @@ Before starting the refactor, complete UI/model separation from Phase 12:
      }
      ```
 
-3. **Add stub DataService methods**
-   - Add to `src/services/DataService.ts`:
-     ```typescript
-     getAllPairs(): LinkPair[] {
-       // Stub: return empty array
-       // Real implementation in Stage 3
-       return [];
-     }
+3. ✅ **Add stub DataService methods**
+   - Added to `src/services/DataService.ts`:
+     - `getAllPairs(): LinkPair[]` - Returns empty array (stub)
+     - `getRelationshipsNew(itemId): RelationshipData | null` - Returns null (stub)
+   - Kept old methods for backward compatibility (marked deprecated)
 
-     getRelationships(itemId: string): RelationshipData | null {
-       // Stub: return null or minimal data
-       // Real implementation in Stage 3
-       return null;
-     }
-     ```
-   - Keep old methods for backward compatibility (mark deprecated)
+4. ✅ **Variable field rename** (small cleanup bundled with Stage 1)
+   - Renamed `bdchmElement` → `maps_to` in VariableSpec DTO
+   - Updated dataLoader field mapping
+   - Updated all references in Element classes and tests
 
-4. **Variable field rename** (small cleanup bundled with Stage 1)
-   - Rename `bdchmElement` → `maps_to` in VariableSpec DTO
-   - Update dataLoader field mapping
-   - Update any references in Element classes
+**Results**:
+- ✅ TypeScript typecheck passes
+- ✅ All dataLoader tests pass (9/9)
+- ✅ Variable relationship tests pass
+- ✅ No UI changes required (backward compatible)
+- ✅ Infrastructure ready for Stage 2
 
-**Why**:
-- Allows incremental migration while keeping old model working
-- Defines interface contracts before implementation
-- UI can start using new interfaces with stubs while model is refactored
+**Commits**:
+- `9c27b0b` - Stage 1 Step 2: Define edge-based interfaces for Slots-as-Edges
+- `ff9d2a5` - Stage 1 Step 3: Add stub DataService methods for edge-based model
+- `d2f4a0d` - Stage 1 Step 4: Rename variable field bdchmElement → maps_to
 
-**Files**:
-- `src/models/Element.ts` (infrastructure + new interfaces)
-- `src/models/ElementPreRefactor.ts` (renamed original)
-- `src/services/DataService.ts` (stub methods)
-- `src/types.ts` (VariableSpec DTO rename)
+**Detailed documentation**: See PROGRESS.md Phase 16
 
 ### Stage 2: Import and Model Types
 

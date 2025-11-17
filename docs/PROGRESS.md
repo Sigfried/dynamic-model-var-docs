@@ -40,6 +40,7 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 - [Phase 13: Architecture Refactoring Quick Wins (Steps 1-5)](#phase-13-arch-refactor-steps)
 - [Phase 14: LinkML Study & Architecture Decision](#phase-14-linkml-study)
 - [Phase 15: Unified Detail Box System](#phase-15-unified-detail-box-system)
+- [Phase 16: Slots-as-Edges Refactor - Stage 1 (Infrastructure Setup)](#phase-16-slots-as-edges-stage-1)
 
 ---
 
@@ -2451,6 +2452,177 @@ Step 4 partially complete. Remaining bugs and enhancements tracked in **TASKS.md
 - **Data**: LinkML schema (YAML) + TSV variable specifications
 - **Visualization**: Native SVG with gradient definitions
 - **State Management**: React Hooks + URL parameters + localStorage
+
+---
+
+<a id="phase-16-slots-as-edges-stage-1"></a>
+## Phase 16: Slots-as-Edges Refactor - Stage 1 (Infrastructure Setup)
+
+**Completed**: January 2025
+
+**Goal**: Set up infrastructure and define edge-based interfaces for the Slots-as-Edges refactor without touching UI layer, enabling incremental migration while keeping old model working.
+
+### Context
+
+Following the architecture decision in Phase 14 to use Slots-as-Edges (see REFACTOR_PLAN.md), Stage 1 prepares the codebase for a major model layer refactor. The goal is to replace the current type-dependent relationship model with a unified edge-based model where:
+- All relationships (inheritance, property, variable_mapping) are represented as edges
+- Slots become edges connecting Class → Range (with metadata: slot name, required, multivalued, inherited_from)
+- SlotElement definitions remain browsable in an optional middle panel
+- UI components continue working unchanged during the migration
+
+### Prerequisites Completed
+
+**Phase 12 (View/Model Separation)**:
+- ✅ Renamed type-based identifiers to section-based terminology
+  - `leftPanelTypes`/`rightPanelTypes` → `leftSections`/`rightSections`
+  - `LinkTooltipData.sourceType`/`targetType` → `sourceSection`/`targetSection`
+  - `RelationshipData.itemType` → `itemSection`
+- ✅ Replaced type union literals with string in UI layer
+  - Removed `'class' | 'enum' | 'slot' | 'variable'` hardcoded unions
+  - Use generic `string` type in UI components and hooks
+- ✅ UI layer now depends only on DataService contract
+- ✅ Model layer can be refactored without touching UI
+
+### Implementation
+
+**Step 1: Create Element.ts infrastructure** ✅
+- Renamed `src/models/Element.ts` → `src/models/ElementPreRefactor.ts`
+- Created new `src/models/Element.ts` with explicit re-exports as refactor roadmap
+- Added refactor checklist documentation in file header
+- Verified no UI changes needed, all tests pass
+
+**Step 2: Define new edge-based interfaces** ✅
+
+Added four new interfaces to `src/models/Element.ts`:
+
+```typescript
+// ItemInfo - Minimal item metadata for relationship display
+export interface ItemInfo {
+  id: string;
+  displayName: string;
+  typeDisplayName: string;  // "Class", "Enum", "Slot", "Variable"
+  color: string;  // Tailwind color classes for styling
+}
+
+// EdgeInfo - Unified edge representation for all relationship types
+export interface EdgeInfo {
+  edgeType: 'inheritance' | 'property' | 'variable_mapping';
+  otherItem: ItemInfo;  // Target for outgoing, source for incoming
+  label?: string;  // slot/attribute name or "mapped_to"
+  inheritedFrom?: string;  // Property edges only: ancestor that defined this slot
+}
+
+// LinkPair - Minimal edge data for LinkOverlay rendering
+export interface LinkPair {
+  sourceId: string;
+  targetId: string;
+  sourceColor: string;  // For line gradient/styling
+  targetColor: string;
+  label?: string;  // slot/attribute name for property edges
+}
+
+// RelationshipData - Unified relationship structure using edges
+export interface RelationshipData {
+  thisItem: ItemInfo;
+  outgoing: EdgeInfo[];
+  incoming: EdgeInfo[];
+}
+```
+
+**Design decisions**:
+- `otherItem` naming works for both directions (target for outgoing, source for incoming)
+- `inheritedFrom` only for property edges (not inheritance or variable_mapping)
+- No ternary PropertyEdgeInfo - slot is the label, keeps interface simple
+- LinkPair only includes property edges (inheritance/variable_mapping shown in detail views)
+
+**Step 3: Add stub DataService methods** ✅
+
+Added to `src/services/DataService.ts`:
+
+```typescript
+// NEW: Get all linkable pairs for property edges (used by LinkOverlay)
+getAllPairs(): LinkPair[] {
+  // STUB: Returns empty array until Stage 3 implementation
+  return [];
+}
+
+// NEW: Get relationship data (new edge-based structure)
+getRelationshipsNew(_itemId: string): RelationshipDataNew | null {
+  // STUB: Returns null until Stage 3 implementation
+  return null;
+}
+```
+
+Marked old methods as deprecated:
+- `@deprecated` comment on `getRelationships()` method
+- `@deprecated` JSDoc on old `RelationshipData` interface
+- Old methods preserved for backward compatibility during migration
+
+**Step 4: Variable field rename** ✅
+
+Renamed `bdchmElement` → `maps_to` throughout codebase for clarity:
+
+**DTOs updated**:
+- `VariableSpecDTO.bdchmElement` → `maps_to` (raw TSV field)
+- `VariableSpec.classId` → `maps_to` (no transformation needed)
+
+**Files updated**:
+- `src/types.ts`: Field definitions and mappings
+- `src/utils/dataLoader.ts`: TSV parsing, expected fields list
+- `src/models/ElementPreRefactor.ts`: VariableElement class, VariableCollection
+- `src/test/dataLoader.test.ts`: Test assertions (3 occurrences)
+- `src/test/linkLogic.test.ts`: Test data and assertions
+
+**Rationale**: "maps_to" is clearer than "bdchmElement" or "classId" and better represents the semantic relationship (variable → class mapping).
+
+### Results
+
+**Code Quality**:
+- ✅ TypeScript typecheck passes (`npm run typecheck`)
+- ✅ All dataLoader tests pass (9/9)
+- ✅ Variable relationship tests pass
+- ✅ No UI changes required (backward compatible)
+- ✅ Infrastructure ready for Stage 2 (Types and Range abstraction)
+
+**Architectural Compliance**:
+- ✅ UI layer unaffected - all changes in model/service layer
+- ✅ DataService abstraction preserved
+- ✅ Clean separation between old and new interfaces
+- ✅ Element.ts acts as refactor roadmap with explicit TODOs
+
+**Migration Strategy**:
+- Stub methods allow UI to start using new interfaces immediately
+- Old methods remain functional during migration
+- Incremental approach reduces risk and allows testing at each step
+
+### Files Modified
+
+**New files**:
+- `src/models/ElementPreRefactor.ts` - Renamed original Element.ts
+
+**Modified files**:
+- `src/models/Element.ts` - 54 lines added (interfaces + re-exports)
+- `src/services/DataService.ts` - 51 lines added (stubs + deprecation marks)
+- `src/types.ts` - 6 lines changed (bdchmElement → maps_to)
+- `src/utils/dataLoader.ts` - 2 lines changed (TSV parsing, expected fields)
+- `src/test/dataLoader.test.ts` - 3 lines changed (test assertions)
+- `src/test/linkLogic.test.ts` - 2 lines changed (test data)
+
+**Commits**:
+- `9c27b0b` - Stage 1 Step 2: Define edge-based interfaces for Slots-as-Edges
+- `ff9d2a5` - Stage 1 Step 3: Add stub DataService methods for edge-based model
+- `d2f4a0d` - Stage 1 Step 4: Rename variable field bdchmElement → maps_to
+
+### Next Stage
+
+**Stage 2: Import and Model Types**
+- Download linkml:types during data fetch
+- Create TypeElement class extending Range base class
+- Add Range abstraction (ClassElement, EnumElement, TypeElement all extend Range)
+- Add TypeCollection
+- Begin defining DataService/model interfaces for graph queries
+
+See REFACTOR_PLAN.md for complete implementation roadmap.
 
 ---
 
