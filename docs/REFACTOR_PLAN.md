@@ -271,9 +271,17 @@ Before starting the refactor, complete UI/model separation from Phase 12:
 4. ✅ Create TypeElement class extending Range base class
 5. ✅ Create Range abstract base class/interface
 6. ✅ Make ClassElement, EnumElement extend Range
-7. Add TypeCollection (rethink collections approach with graphology)
+7. ✅ Add TypeCollection (rethink collections approach with graphology)
+
+**Status**: ✅ **Stage 2 Complete!** All steps (1-7) finished.
+
+**Implementation Notes**:
+- categorizeRange() treats types as 'primitive' (leaf nodes like string/integer)
+- Types don't create relationship links (getRelationships returns empty array)
+- DataService automatically handles types through generic collection interface
 
 **Open question**: Do we need collections at all with graph model, or just for getLabel/getDefaultExpansion?
+- Answer deferred to Stage 3 - will evaluate during graphology integration
 
 **Files**:
 - `scripts/download_source_data.py` - Download linkml:types
