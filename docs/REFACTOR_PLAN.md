@@ -185,20 +185,84 @@ Before starting the refactor, complete UI/model separation from Phase 12:
 
 **Result**: UI layer depends only on DataService contract. Model layer can now be refactored without touching UI.
 
-### Stage 1: Prepare for Model Replacement
+### Stage 1: Infrastructure Setup & Interface Definition
 
-**Goal**: Set up infrastructure to replace model layer without touching UI
+**Goal**: Set up infrastructure to replace model layer and define new edge-based interfaces without touching UI
+
+**Status**: ✅ Infrastructure complete, 🔄 Interface definition in progress
 
 **Steps**:
-1. Rename `src/models/Element.ts` → `src/models/ElementPreRefactor.ts`
-2. Create new `src/models/Element.ts` that imports and re-exports from ElementPreRefactor
-3. Verify no UI changes needed, all tests pass
 
-**Why**: Allows incremental migration while keeping old model working
+1. ✅ **Create Element.ts infrastructure**
+   - Rename `src/models/Element.ts` → `src/models/ElementPreRefactor.ts`
+   - Create new `src/models/Element.ts` with explicit re-exports as refactor roadmap
+   - Verify no UI changes needed, all tests pass
+
+2. 🔄 **Define new edge-based interfaces** (based on [UI_REFACTOR.md](UI_REFACTOR.md))
+   - Add to `src/models/Element.ts`:
+     ```typescript
+     // New interfaces for Slots-as-Edges
+     export interface ItemInfo {
+       id: string;
+       displayName: string;
+       typeDisplayName: string;  // "Class", "Enum", "Slot", "Variable"
+       color: string;
+     }
+
+     export interface EdgeInfo {
+       edgeType: 'inheritance' | 'property' | 'variable_mapping';
+       otherItem: ItemInfo;
+       label?: string;
+       inheritedFrom?: string;  // Property edges only
+     }
+
+     export interface LinkPair {
+       sourceId: string;
+       targetId: string;
+       sourceColor: string;
+       targetColor: string;
+       label?: string;
+     }
+
+     export interface RelationshipData {
+       thisItem: ItemInfo;
+       outgoing: EdgeInfo[];
+       incoming: EdgeInfo[];
+     }
+     ```
+
+3. **Add stub DataService methods**
+   - Add to `src/services/DataService.ts`:
+     ```typescript
+     getAllPairs(): LinkPair[] {
+       // Stub: return empty array
+       // Real implementation in Stage 3
+       return [];
+     }
+
+     getRelationships(itemId: string): RelationshipData | null {
+       // Stub: return null or minimal data
+       // Real implementation in Stage 3
+       return null;
+     }
+     ```
+   - Keep old methods for backward compatibility (mark deprecated)
+
+4. **Variable field rename** (small cleanup bundled with Stage 1)
+   - Rename `bdchmElement` → `maps_to` in VariableSpec DTO
+   - Update dataLoader field mapping
+   - Update any references in Element classes
+
+**Why**:
+- Allows incremental migration while keeping old model working
+- Defines interface contracts before implementation
+- UI can start using new interfaces with stubs while model is refactored
 
 **Files**:
-- `src/models/Element.ts` (new wrapper file)
-- `src/models/ElementPreRefactor.ts` (renamed)
+- `src/models/Element.ts` (infrastructure + new interfaces)
+- `src/models/ElementPreRefactor.ts` (renamed original)
+- `src/services/DataService.ts` (stub methods)
+- `src/types.ts` (VariableSpec DTO rename)
 
 ### Stage 2: Import and Model Types
 
@@ -298,18 +362,7 @@ Before starting the refactor, complete UI/model separation from Phase 12:
 - `src/components/DetailPanel.tsx` - Render slot edges with clickable ranges
 - `src/components/RelationshipInfoBox.tsx` - Display slot edge properties
 
-### Stage 6: Variable Field Rename
-
-**Goal**: Rename bdchmElement → maps_to
-
-**Context**: Variables no longer in panel sections, just edges to classes. Field name should reflect semantic relationship type.
-
-**Files**:
-- `src/types.ts` - VariableDTO interface
-- `src/utils/dataLoader.ts` - Field transformation
-- Anywhere else bdchmElement is referenced
-
-### Stage 7: Documentation Updates
+### Stage 6: Documentation Updates
 
 **Goal**: Update documentation to reflect new architecture
 
@@ -319,8 +372,12 @@ Before starting the refactor, complete UI/model separation from Phase 12:
 - `docs/TASKS.md` - Update active tasks, remove obsolete items
 - `docs/PROGRESS.md` - Archive this refactor as Phase 15
 
-### Future: Define DataService & Model Interfaces
+---
 
-Not now, but soon we'll want to start defining what the interfaces for DataService and model will look like. When we get there, it might be interleaved in architecture or be a new section before implementation.
+## Implementation Tracking
+
+For detailed implementation steps and current status, see:
+- **[TASKS.md](TASKS.md)** - "Next Up" section contains detailed stage breakdown and current task
+- **[UI_REFACTOR.md](UI_REFACTOR.md)** - Component data shapes and UI layer refactoring plan
 
 ---
