@@ -6,7 +6,8 @@
  */
 
 // Element type IDs (lowercase for technical use)
-export type ElementTypeId = 'class' | 'enum' | 'slot' | 'variable';
+// Stage 2 Step 4: Added 'type' for TypeElement (LinkML types)
+export type ElementTypeId = 'class' | 'enum' | 'slot' | 'type' | 'variable';
 
 // Relationship type IDs
 export type RelationshipTypeId = 'inherits' | 'property' | 'uses_enum' | 'references_class';
@@ -115,6 +116,24 @@ export const ELEMENT_TYPES: Record<ElementTypeId, ElementTypeMetadata> = {
       selectionBg: 'bg-green-100 dark:bg-green-900',
       badgeBg: 'bg-green-200 dark:bg-green-800',
       badgeText: 'text-green-700 dark:text-green-300'
+    }
+  },
+  type: {
+    id: 'type',
+    label: 'Type',
+    pluralLabel: 'Types',
+    icon: 'T',
+    color: {
+      name: 'cyan',
+      hex: '#06b6d4',  // cyan-500
+      toggleActive: 'bg-cyan-500',
+      toggleInactive: 'bg-gray-300 dark:bg-gray-600',
+      headerBg: 'bg-cyan-700 dark:bg-cyan-700',
+      headerText: 'text-white',
+      headerBorder: 'border-cyan-800 dark:border-cyan-600',
+      selectionBg: 'bg-cyan-100 dark:bg-cyan-900',
+      badgeBg: 'bg-cyan-200 dark:bg-cyan-800',
+      badgeText: 'text-cyan-700 dark:text-cyan-300'
     }
   },
   variable: {

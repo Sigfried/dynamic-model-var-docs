@@ -261,16 +261,16 @@ Before starting the refactor, complete UI/model separation from Phase 12:
 **Goal**: Add TypeElement and Range abstraction
 
 **Steps**:
-1. **Define DataService and model interfaces** (addresses graphology+OOP question above)
+1. ✅ **Define DataService and model interfaces** (addresses graphology+OOP question above)
    - Sketch what queries DataService needs to make
    - Determine if we need property-based filtering in graph queries
    - Decide: Graph stores IDs only (Option A), all properties (Option B), or hybrid (Option C)
    - Document interface contracts before implementation
-2. Download linkml:types during data fetch
-3. Parse types in dataLoader.ts
-4. Create TypeElement class extending Range base class
-5. Create Range abstract base class/interface
-6. Make ClassElement, EnumElement extend Range
+2. ✅ Download linkml:types during data fetch
+3. ✅ Parse types in dataLoader.ts
+4. ✅ Create TypeElement class extending Range base class
+5. ✅ Create Range abstract base class/interface
+6. ✅ Make ClassElement, EnumElement extend Range
 7. Add TypeCollection (rethink collections approach with graphology)
 
 **Open question**: Do we need collections at all with graph model, or just for getLabel/getDefaultExpansion?

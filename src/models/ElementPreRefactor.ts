@@ -477,6 +477,34 @@ export abstract class Element {
   }
 }
 
+/**
+ * Range - Abstract base class for elements that can serve as slot ranges
+ *
+ * Range extends Element to represent types that can be used as the range of a slot.
+ * In LinkML schemas, slots can have ranges that are:
+ * - Classes (e.g., Specimen, Entity)
+ * - Enums (e.g., SpecimenTypeEnum, AnalyteTypeEnum)
+ * - Types (e.g., string, integer, datetime)
+ *
+ * This abstraction allows uniform handling of slot range targets throughout the codebase.
+ *
+ * Inheritance hierarchy:
+ * - Element (base for all model elements)
+ *   - Range (base for slot range targets)
+ *     - ClassElement (classes as ranges)
+ *     - EnumElement (enums as ranges)
+ *     - TypeElement (LinkML types as ranges)
+ *   - SlotElement (slot definitions, not ranges themselves)
+ *   - VariableElement (variables, not ranges)
+ *
+ * Stage 2 Step 4: Create Range abstract base class/interface
+ */
+export abstract class Range extends Element {
+  // Range inherits all Element methods and properties
+  // No additional methods needed for now - this is primarily a marker class
+  // for type safety and semantic clarity
+}
+
 // Name → Type lookup for accurate categorization (avoids duck typing)
 let nameToTypeMap: Map<string, 'class' | 'enum' | 'slot'> | null = null;
 
@@ -675,7 +703,8 @@ export class ClassSlot {
 }
 
 // ClassElement - represents a class in the schema
-export class ClassElement extends Element {
+// Stage 2 Step 4: Now extends Range instead of Element
+export class ClassElement extends Range {
   readonly type = 'class' as const;
   protected readonly dataModel: ModelData
   readonly name: string;
@@ -965,7 +994,8 @@ export class ClassElement extends Element {
 }
 
 // EnumElement - represents an enumeration
-export class EnumElement extends Element {
+// Stage 2 Step 4: Now extends Range instead of Element
+export class EnumElement extends Range {
   readonly type = 'enum' as const;
   readonly name: string;
   readonly description: string | undefined;
@@ -1052,6 +1082,132 @@ export class EnumElement extends Element {
 
     for (const cls of allClasses) {
       // Check if any attribute has range === this enum name
+      if (cls.attributes) {
+        for (const [_attrName, attrDef] of Object.entries(cls.attributes)) {
+          if (attrDef.range === this.name) {
+            usedBy.push(cls.name);
+            break; // Found one match, no need to check other attributes
+          }
+        }
+      }
+    }
+
+    return usedBy.sort();
+  }
+}
+
+// TypeElement - represents a LinkML type (from linkml:types)
+// Stage 2 Step 4: Create TypeElement class extending Range
+export class TypeElement extends Range {
+  readonly type = 'type' as const;
+  readonly name: string;
+  readonly description: string | undefined;
+  readonly uri: string;
+  readonly base: string;
+  readonly repr: string | undefined;
+  readonly notes: string | undefined;
+  readonly exactMappings: string[] | undefined;
+  readonly closeMappings: string[] | undefined;
+  readonly broadMappings: string[] | undefined;
+  readonly conformsTo: string | undefined;
+
+  constructor(name: string, data: import('../types').TypeData) {
+    super();
+    this.name = name;
+    this.description = data.description;
+    this.uri = data.uri;
+    this.base = data.base;
+    this.repr = data.repr;
+    this.notes = data.notes;
+    this.exactMappings = data.exactMappings;
+    this.closeMappings = data.closeMappings;
+    this.broadMappings = data.broadMappings;
+    this.conformsTo = data.conformsTo;
+  }
+
+  getDetailData(): DetailData {
+    const metadata = ELEMENT_TYPES[this.type];
+    const sections: DetailSection[] = [];
+
+    // Type Properties section
+    const typeProps: unknown[][] = [];
+    typeProps.push(['URI', this.uri]);
+    typeProps.push(['Base', this.base]);
+    if (this.repr) {
+      typeProps.push(['Representation', this.repr]);
+    }
+    if (this.conformsTo) {
+      typeProps.push(['Conforms To', this.conformsTo]);
+    }
+
+    sections.push({
+      name: 'Properties',
+      tableHeadings: ['Property', 'Value'],
+      tableContent: typeProps,
+      tableHeadingColor: metadata.color.headerBg
+    });
+
+    // Mappings section (if any exist)
+    if (this.exactMappings || this.closeMappings || this.broadMappings) {
+      const mappings: unknown[][] = [];
+      if (this.exactMappings && this.exactMappings.length > 0) {
+        mappings.push(['Exact', this.exactMappings.join(', ')]);
+      }
+      if (this.closeMappings && this.closeMappings.length > 0) {
+        mappings.push(['Close', this.closeMappings.join(', ')]);
+      }
+      if (this.broadMappings && this.broadMappings.length > 0) {
+        mappings.push(['Broad', this.broadMappings.join(', ')]);
+      }
+
+      if (mappings.length > 0) {
+        sections.push({
+          name: 'Mappings',
+          tableHeadings: ['Type', 'Values'],
+          tableContent: mappings,
+          tableHeadingColor: metadata.color.headerBg
+        });
+      }
+    }
+
+    // Notes section (if exists)
+    if (this.notes) {
+      sections.push({
+        name: 'Notes',
+        text: this.notes
+      });
+    }
+
+    return {
+      titlebarTitle: `Type: ${this.name}`,
+      title: this.name,
+      titleColor: metadata.color.headerBg,
+      description: this.description,
+      sections
+    };
+  }
+
+  getRelationships(): Relationship[] {
+    // Types don't have relationships in the current model
+    // They serve as leaf nodes (range targets)
+    return [];
+  }
+
+  /**
+   * Get classes that use this type as a range (computed on-demand).
+   * Scans all class attributes for range === this.name
+   */
+  getUsedByClasses(): string[] {
+    if (!globalClassCollection) {
+      console.warn('TypeElement.getUsedByClasses(): globalClassCollection not initialized');
+      return [];
+    }
+
+    const usedBy: string[] = [];
+    const allClasses = globalClassCollection.getAllElements() as ClassElement[];
+
+    for (const cls of allClasses) {
+      // Check if any attribute has range === this type name
       if (cls.attributes) {
         for (const [_attrName, attrDef] of Object.entries(cls.attributes)) {
           if (attrDef.range === this.name) {

@@ -18,10 +18,12 @@ interface AppState {
 const STORAGE_KEY = 'bdchm-app-state';
 
 // Item type mappings for URL (single character codes)
+// Stage 2 Step 4: Added 'type' mapping
 export const itemTypeToCode: Record<ElementTypeId, string> = {
   class: 'c',
   enum: 'e',
   slot: 's',
+  type: 't',
   variable: 'v'
 };
 
@@ -29,6 +31,7 @@ const codeToItemType: Record<string, ElementTypeId> = {
   c: 'class',
   e: 'enum',
   s: 'slot',
+  t: 'type',
   v: 'variable'
 };
 

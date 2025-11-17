@@ -106,6 +106,13 @@ export {
 } from './ElementPreRefactor';
 
 // ============================================================================
+// Range Base Class (NEW: Stage 2 Step 4)
+// ============================================================================
+export {
+  Range
+} from './ElementPreRefactor';
+
+// ============================================================================
 // Helper Classes (TODO: ClassSlot will be removed/transformed)
 // ============================================================================
 export {
@@ -118,6 +125,7 @@ export {
 export {
   ClassElement,    // TODO: Remove classSlots, use edges instead
   EnumElement,     // TODO: Minimal changes
+  TypeElement,     // NEW: Stage 2 Step 4 - LinkML types from linkml:types
   SlotElement,     // TODO: Becomes EdgeElement
   VariableElement  // TODO: Minimal changes
 } from './ElementPreRefactor';
