@@ -7,17 +7,21 @@
   - [Architecture & Refactoring Decisions](#architecture--refactoring-decisions)
   - [Different Variable Treatment](#different-variable-treatment-for-condition-and-drug-exposure-classes)
 - [Next Up (Ordered)](#next-up-ordered)
-  - [Unified Detail Box System](#unified-detail-box-system--completed)
+  - [Stage 1: Infrastructure Setup & Interface Definition](#stage-1-infrastructure-setup--interface-definition--in-progress)
+  - [Stage 2: Import Types and Schema Validation](#stage-2-import-types-and-schema-validation--architectural)
+  - [Stage 3: Refactor to Graph Model with SlotEdges](#stage-3-refactor-to-graph-model-with-slotedges--major)
+  - [Stage 4: UI Layout Changes (Three-Panel)](#stage-4-ui-layout-changes-three-panel)
+  - [Stage 5: Detail Box Updates](#stage-5-detail-box-updates)
+  - [Stage 6: Documentation Updates](#stage-6-documentation-updates)
+  - [Unified Detail Box System - Remaining Work](#unified-detail-box-system---remaining-work)
 
 ### Upcoming Features
-- [LinkOverlay Refactor](#linkoverlay-refactor--needs-revision-for-option-d) ⚠️
 - [App Configuration File](#app-configuration-file)
-- [Abstract Tree Rendering System](#abstract-tree-rendering-system)
-- [Detail Panel Enhancements](#detail-panel-enhancements)
 - [Fix Dark Mode Display Issues](#fix-dark-mode-display-issues-high-priority)
 - [User Help Documentation](#user-help-documentation)
 
 ### Future Work
+- [Future UI Improvements](#future-ui-improvements) - LinkOverlay refactor, Abstract Tree Rendering, Detail Panel enhancements
 - [Future Work Section](#future-work) - Deferred features and major refactors
 - [UI Test Checklist Template](#ui-test-checklist-template)
 
@@ -89,696 +93,358 @@ a message like:
 
 ## Next Up (Ordered)
 
-### Improve Schema Data Loading and Validation 🔧 ARCHITECTURAL
+### Stage 1: Infrastructure Setup & Interface Definition ✨ IN PROGRESS
 
-**Goal**: Capture complete schema data and add runtime validation for type safety.
+**Goal**: Set up infrastructure to replace model layer and define new edge-based interfaces without touching UI
 
-**Current Issues**:
-1. **Inconsistent field filtering**: Classes explicitly select fields in Python, but slots/enums pass through all YAML fields
-2. **No runtime validation**: TypeScript interfaces don't validate incoming JSON - unexpected fields are silently included
-3. **Missing schema metadata**: Model metadata (id, name, title, prefixes) not captured
-4. **Schema imports not resolved**: YAML imports not processed before conversion to JSON
+**Status**: ✅ Infrastructure complete, 🔄 Interface definition in progress
 
-**Changes Needed**:
+**Steps**:
 
-**1. download_source_data.py**:
-- Remove class field filtering (lines 128-136) - pass through entire class definitions like slots/enums
-- Capture entire schema document including:
-  - Top-level metadata: `id`, `name`, `title`, `description`, `license`, `version`
-  - `prefixes` (needed for generating links to URIs - see future task)
-  - `imports` (resolve/inline before JSON conversion)
-  - `types` (will be added as elements like classes/enums - see future work)
-- Keep the validation at line 120 (attributes must be dict, not array)
+1. ✅ **Create Element.ts infrastructure**
+   - Renamed `src/models/Element.ts` → `src/models/ElementPreRefactor.ts`
+   - Created new `src/models/Element.ts` with explicit re-exports as refactor roadmap
+   - Verified no UI changes needed, all tests pass
 
-**2. dataLoader.ts**:
-- Add runtime validation function:
-  ```typescript
-  function validateDTO<T>(
-    dto: object,
-    expectedKeys: (keyof T)[],
-    typeName: string
-  ): void {
-    const actualKeys = Object.keys(dto);
-    const expectedSet = new Set(expectedKeys.map(String));
-    const unexpected = actualKeys.filter(k => !expectedSet.has(k));
+2. 🔄 **Define new edge-based interfaces** (based on [UI_REFACTOR.md](UI_REFACTOR.md))
+   - Add to `src/models/Element.ts`:
+     ```typescript
+     // New interfaces for Slots-as-Edges
+     export interface ItemInfo {
+       id: string;
+       displayName: string;
+       typeDisplayName: string;  // "Class", "Enum", "Slot", "Variable"
+       color: string;
+     }
 
-    if (unexpected.length > 0) {
-      console.warn(
-        `Unexpected fields in ${typeName}:`,
-        unexpected.join(', '),
-        '\nThis may indicate schema changes or data issues.'
-      );
-    }
-  }
-  ```
-- Call validation in transform functions before transformWithMapping()
-- Define expected keys for each DTO type (based on current interfaces)
+     export interface EdgeInfo {
+       edgeType: 'inheritance' | 'property' | 'variable_mapping';
+       otherItem: ItemInfo;
+       label?: string;
+       inheritedFrom?: string;  // Property edges only
+     }
 
-**Testing**:
-- Created `scripts/validate-schema.ts` to analyze unexpected fields before commits
-- Run with: `npx tsx scripts/validate-schema.ts`
-- Generates report with field counts and examples
-- Exits with error code 1 if unexpected fields found (for CI/pre-commit hooks)
-- Add to package.json: `"validate-schema": "tsx scripts/validate-schema.ts"`
+     export interface LinkPair {
+       sourceId: string;
+       targetId: string;
+       sourceColor: string;
+       targetColor: string;
+       label?: string;
+     }
 
-**Benefits**:
-- Catch schema changes at runtime (console warnings)
-- Catch schema changes at build time (validation script)
-- Capture full schema for future features (prefixes, types, metadata display)
-- Consistent handling across all entity types
-- Easier debugging when schema evolves
+     export interface RelationshipData {
+       thisItem: ItemInfo;
+       outgoing: EdgeInfo[];
+       incoming: EdgeInfo[];
+     }
+     ```
 
-**Future Use Cases**:
-- Display model metadata (id, name, title) in app UI
-- Generate URI links using prefixes
-- Add `types` as new element category
-- Support schema imports/composition
+3. **Add stub DataService methods**
+   - Add to `src/services/DataService.ts`:
+     ```typescript
+     getAllPairs(): LinkPair[] {
+       // Stub: return empty array
+       // Real implementation in Stage 3
+       return [];
+     }
 
-**Relationship to Refactor**:
-This task is a **prerequisite** for the architecture refactor documented in REFACTOR_PLAN.md. Completing this first ensures:
-- UI layer doesn't depend on model-specific types (fixes remaining violations)
-- Model refactor can happen without needing UI changes
-- Data loading is robust and validates inputs
+     getRelationships(itemId: string): RelationshipData | null {
+       // Stub: return null or minimal data
+       // Real implementation in Stage 3
+       return null;
+     }
+     ```
+   - Keep old methods for backward compatibility (mark deprecated)
+
+4. **Variable field rename** (small cleanup bundled with Stage 1)
+   - Rename `bdchmElement` → `maps_to` in VariableSpec DTO
+   - Update dataLoader field mapping
+   - Update any references in Element classes
+
+**Why**:
+- Allows incremental migration while keeping old model working
+- Defines interface contracts before implementation
+- UI can start using new interfaces with stubs while model is refactored
+
+**Files**:
+- `src/models/Element.ts` (infrastructure + new interfaces)
+- `src/models/ElementPreRefactor.ts` (renamed original)
+- `src/services/DataService.ts` (stub methods)
+- `src/types.ts` (VariableSpec DTO rename)
+
+---
+
+### Stage 2: Import Types and Schema Validation 🔧 ARCHITECTURAL
+
+**Goal**: Add TypeElement, Range abstraction, improve schema data loading, and add runtime validation
 
 **Priority**: High - prerequisite for model refactor
 
----
+**Steps**:
 
-### Handle Unexpected Enum Fields Found by Validation 🔧
+1. **Define DataService and model interfaces** (addresses graphology+OOP question in REFACTOR_PLAN)
+   - Sketch what queries DataService needs to make
+   - Determine if we need property-based filtering in graph queries
+   - Decide: Graph stores IDs only (Option A), all properties (Option B), or hybrid (Option C)
+   - Document interface contracts before implementation
 
-**Context**: Schema validation script (`scripts/validate-schema.ts`) found 6 unexpected fields in enum definitions.
+2. **Improve Schema Data Loading and Validation**
 
-**Note on Entity Names**: Entity keys (e.g., `"SpecimenTypeEnum"`) ARE the canonical names/IDs. Some entities have redundant `name` fields that match their keys - these are now filtered out as harmless by the validation script. Only name/key mismatches are reported as errors.
+   **Current Issues**:
+   - Inconsistent field filtering: Classes explicitly select fields in Python, but slots/enums pass through all YAML fields
+   - No runtime validation: TypeScript interfaces don't validate incoming JSON - unexpected fields are silently included
+   - Missing schema metadata: Model metadata (id, name, title, prefixes) not captured
+   - Schema imports not resolved: YAML imports not processed before conversion to JSON
 
-**Findings** (from validation report):
+   **Changes Needed**:
 
-1. **`reachable_from`** - 9 occurrences
-   - Examples: CellularOrganismSpeciesEnum, VertebrateBreedEnum, MondoHumanDiseaseEnum, HpoPhenotypicAbnormalityEnum, ProcedureConceptEnum
-   - **Status**: Investigate - likely LinkML schema metadata
+   **download_source_data.py**:
+   - Remove class field filtering (lines 128-136) - pass through entire class definitions like slots/enums
+   - Capture entire schema document including:
+     - Top-level metadata: `id`, `name`, `title`, `description`, `license`, `version`
+     - `prefixes` (needed for generating links to URIs - see future task)
+     - `imports` (resolve/inline before JSON conversion)
+     - `types` (will be added as elements like classes/enums)
+   - Keep the validation at line 120 (attributes must be dict, not array)
 
-2. **`inherits`** - 3 occurrences
-   - Examples: ConditionConceptEnum, HistoricalStatusEnum, BaseObservationTypeEnum
-   - **Status**: **CRITICAL** - Already documented bug (see "Fix: Enum and Slot Inheritance Not Loading")
+   **dataLoader.ts**:
+   - Add runtime validation function
+   - Call validation in transform functions before transformWithMapping()
+   - Define expected keys for each DTO type (based on current interfaces)
 
-3. **`comments`** - 3 occurrences
-   - Examples: DrugExposureProvenanceEnum, DrugRouteEnum, DeviceExposureProvenanceEnum
-   - **Status**: Should be added - useful documentation metadata
+   **Testing**:
+   - Created `scripts/validate-schema.ts` to analyze unexpected fields before commits
+   - Run with: `npx tsx scripts/validate-schema.ts`
+   - Generates report with field counts and examples
+   - Exits with error code 1 if unexpected fields found (for CI/pre-commit hooks)
+   - Add to package.json: `"validate-schema": "tsx scripts/validate-schema.ts"`
 
-4. **`see_also`** - 2 occurrences
-   - Examples: DrugExposureConceptEnum, DeviceExposureConceptEnum
-   - **Status**: Should be added - useful for cross-references
+3. **Handle Unexpected Enum Fields** (includes fix for Enum Inheritance bug)
 
-5. **`is_a`** - 1 occurrence
-   - Examples: HistoricalStatusEnum
-   - **Status**: Should be added - inheritance relationship (like classes)
+   **Findings**: Schema validation found 6 unexpected fields: `inherits`, `is_a`, `comments`, `see_also`, `reachable_from`, `include`
 
-6. **`include`** - 1 occurrence
-   - Examples: HistoricalStatusEnum
-   - **Status**: Investigate - possibly LinkML mixin/composition feature
+   **Actions**:
+   - Add to EnumDTO interface (src/types.ts): `inherits`, `is_a`, `comments`, `see_also`, `reachable_from`, `include`
+   - Add to EnumData interface with camelCase transforms
+   - Update EnumElement class to expose these fields via getters/methods
+   - Update EXPECTED_ENUM_FIELDS in dataLoader.ts and validate-schema.ts
+   - **Fixes existing bug**: Enum inheritance relationships (via `inherits` field) not being loaded or displayed
 
-**Actions Needed**:
+4. **Import and Add Types**
+   - Download linkml:types during data fetch
+   - Parse types in dataLoader.ts
+   - Create TypeElement class extending Range base class
+   - Create Range abstract base class/interface
+   - Make ClassElement, EnumElement extend Range
+   - Add TypeCollection (rethink collections approach with graphology)
 
-1. **Add to EnumDTO interface** (src/types.ts):
-   ```typescript
-   export interface EnumDTO {
-     description?: string;
-     permissible_values?: Record<...>;
-     inherits?: string[];              // NEW: Enum inheritance (addresses existing bug)
-     is_a?: string;                    // NEW: Parent enum
-     comments?: string[];              // NEW: Additional documentation
-     see_also?: string[];              // NEW: Related enums/concepts
-     reachable_from?: Record<...>;     // NEW: Investigate format first
-     include?: string[];               // NEW: Investigate purpose first
-   }
-   ```
-   Note: `name` field not needed - entity keys ARE the canonical names
+**Open question**: Do we need collections at all with graph model, or just for getLabel/getDefaultExpansion?
 
-2. **Add to EnumData interface** with camelCase transforms
-
-3. **Update EnumElement class** to expose these fields via getters/methods
-
-4. **Update EXPECTED_ENUM_FIELDS** in:
-   - `src/utils/dataLoader.ts` (runtime validation)
-   - `scripts/validate-schema.ts` (build-time validation)
-
-5. **Test after changes**:
-   - Run `npx tsx scripts/validate-schema.ts` - should pass
-   - Check browser console - should have no enum validation warnings
-   - Verify `inherits` field loads properly (fixes existing bug)
-
-**Priority**: High - includes fix for existing enum inheritance bug
-
----
-
-### Fix: Enum and Slot Inheritance Not Loading 🐛 HIGH PRIORITY
-
-**Bug**: Enum inheritance relationships (via `inherits` field) are not being loaded or displayed
-
-**Example**:
-- `BaseObservationTypeEnum` has `inherits: [EducationalAttainmentObservationTypeEnum, SmokingStatusObservationTypeEnum]` in the YAML/JSON
-- `EducationalAttainmentObservationTypeEnum` shows "No relationships found" in hover box
-- Should show incoming relationship from `BaseObservationTypeEnum`
-
-**Root cause**:
-- `EnumData` interface in `src/types.ts` doesn't include `inherits` field
-- `EnumElement` class doesn't have parent/child tree structure like `ClassElement`
-- Enum inheritance is in the source data but not being loaded into the model
-
-**Related fields not loaded** (mentioned by user):
-- Other schema properties may also be missing from EnumData/SlotData
-- Need to audit what's in the source data vs what's loaded
-
-**Files to update**:
-- `src/types.ts` - Add `inherits` field to EnumData and possibly SlotData
-- `src/models/Element.ts` - Add parent/children support to EnumElement (and possibly SlotElement)
-- `src/utils/dataLoader.ts` - Load inheritance relationships and build tree structure
-- `src/models/Element.ts:96-140` - Update `computeIncomingRelationships()` to check enum inheritance
-
-**Priority**: High - affects completeness of relationship visualization
+**Files**:
+- `scripts/download_source_data.py` - Download linkml:types, capture metadata
+- `src/utils/dataLoader.ts` - Parse types, add validation, create SlotEdge instances instead of ClassSlot
+- `src/types.ts` - Add Type DTO, SlotEdge interface, update EnumDTO
+- `src/models/Element.ts` - Add Range abstract base class, TypeElement class
+- `src/models/ElementCollection.ts` - Add TypeCollection, simplify with graphology
+- `scripts/validate-schema.ts` - Update expected fields
 
 ---
 
-
-### Unified Detail Box System ✅ COMPLETED
-
-[sg] still has bugs. maybe documented somewhere, but this is not complete yet
-
-**Goal**: Extract dialog management from App.tsx, merge DetailDialog/DetailPanelStack into unified system, and implement transitory mode for FloatingBox - allowing any content to appear temporarily (auto-disappearing) and upgrade to persistent mode on user interaction.
-
-**Unified Detail Box System Quick Navigation:**
-[sg] where should these links point?
-- [FloatingBox Modes (transitory/persistent)](#unified-detail-box-system--completed)
-- [Implementation Steps 0-3 ✅](#unified-detail-box-system--completed)
-- [Bug Fixes (Step 4)](#unified-detail-box-system-phase-12--completed)
-- [Known Issues & Next Steps](#unified-detail-box-system-phase-12--completed)
-
-**Current state**:
-- DetailPanel: 130-line content renderer using getDetailData() ✅
-- RelationshipInfoBox: Hover preview with relationships, has its own drag/close logic
-- DetailDialog: Floating draggable/resizable wrapper
-- DetailPanelStack: Stacked non-draggable wrapper
-- App.tsx: Manages openDialogs array and mode switching
-
-**New file structure**:
-```
-src/components/
-  DetailContent.tsx         (rename from DetailPanel.tsx - content renderer, uses getDetailData())
-  RelationshipInfoBox.tsx   (keep - relationship content renderer)
-  FloatingBoxManager.tsx    (new - manages array + rendering)
-    - FloatingBox component (draggable/resizable wrapper)
-    - Array management (FIFO stack)
-    - Mode-aware positioning
-```
-
-**Key insight**: FloatingBox is a general-purpose wrapper that supports two display modes (transitory and persistent) for any content type
-
-**FloatingBox Modes**:
-
-1. **Transitory mode** (temporary, auto-disappearing):
-   - Appears on trigger (hover, click, etc.)
-   - Auto-disappears after timeout or when user moves away
-   - Minimal chrome (no close button, simpler appearance)
-   - Can be "upgraded" to persistent mode via user interaction
-   - Example: RelationshipInfoBox on hover
-
-2. **Persistent mode** (permanent until closed):
-   - Stays open until explicitly closed (ESC or close button)
-   - Full chrome (draggable, resizable, close button)
-   - Added to FloatingBoxManager's array
-   - Managed via URL state for restoration
-   - Example: Clicking element name to view details
-
-**FloatingBox component** (single component, supports both modes):
-- **Content agnostic**: Renders any React component passed as content
-- **Display metadata pattern** (maintains view/model separation):
-  ```typescript
-  interface FloatingBoxProps {
-    mode: 'transitory' | 'persistent';
-    metadata: {
-      title: string;        // e.g., "Specimen" or "Relationships: Specimen"
-      color: string;        // e.g., "blue" (from app config)
-    };
-    content: React.ReactNode;  // <DetailContent element={...}/> or <RelationshipInfoBox element={...}/>
-    onClose?: () => void;
-    onUpgrade?: () => void;  // Transitory → persistent upgrade
-  }
-  ```
-- **Data flow** (no element types in FloatingBox):
-  1. Caller (App/FloatingBoxManager) has Element reference
-  2. Caller calls `element.getFloatingBoxMetadata()` → returns `{ title, color }`
-  3. Caller passes metadata + content component to FloatingBox
-  4. FloatingBox only sees plain data, never Element type
-- Mode determines chrome and behavior:
-  - Transitory: Minimal styling, no close button, auto-dismiss timers
-  - Persistent: Full controls, draggable, resizable, click-to-front
-- ESC closes first/oldest persistent box (index 0)
-
-**Content types**:
-1. **Detail content**: Full element details (slots table, variables, description, etc.)
-2. **Relationship content**: Focused relationship view (inheritance, slots, incoming/outgoing)
-
-**User can have multiple boxes open simultaneously**:
-- Multiple detail boxes (compare elements side-by-side)
-- Multiple relationship boxes (compare relationships)
-- Mix of both types
-
-**Positioning issues to fix** (deferred from Phase 10):
-- **Vertical positioning**: Current logic can position boxes oddly (see Phase 10 screenshot)
-- **Right edge overflow**: Box can extend past right edge of window
-- Fix both when implementing FloatingBox positioning logic
-- Ensure boxes stay fully within viewport bounds (auto-positioning only; allow user to drag outside)
-
-**Transitory → Persistent Mode Upgrade Flow**:
-
-**Example: Hover-triggered RelationshipInfoBox** (current Phase 10 implementation):
-
-1. **Transitory mode trigger**:
-    - Hover element → FloatingBox appears in transitory mode after 300ms
-    - Content: RelationshipInfoBox (shows relationships)
-    - No close button, minimal styling
-    - Lingers 1.5s after unhover (unless interacted with)
-    - **TODO**: Move timing constants to app config file (see "App Configuration File" task)
-
-2. **Upgrade to persistent mode** (one of):
-    - Hover over box for 1.5s
-    - Click anywhere in box
-    - Press hotkey (TBD)
-
-3. **Persistent mode result**:
-    - Same content, now in persistent FloatingBox
-    - Gains full chrome (draggable, resizable, close button)
-    - Added to FloatingBoxManager's array
-    - Stays open until explicitly closed (ESC or close button)
-    - Can open multiple boxes this way (compare relationships side-by-side)
-
-**Other ways to open persistent FloatingBox**:
-
-- **Click element name** (anywhere in UI):
-  - Tree panel → opens DetailContent in persistent FloatingBox
-  - RelationshipInfoBox → opens DetailContent in persistent FloatingBox
-  - Opens directly in persistent mode (no transitory phase)
-  - Multiple boxes can coexist: relationship view + detail view of linked element
-
-**Transitory mode content choice**:
-
-When hovering over an element, what content should appear in the transitory FloatingBox?
-- Option A: RelationshipInfoBox (focused view of relationships)
-- Option B: DetailContent (full element details)
-- Option C: Help content (when implemented - context-sensitive help based on what's being hovered)
-
-**Preferred approach: Position-based heuristic**
-
-Hover behavior depends on where cursor is positioned:
-- **Hover element name** → show DetailContent (full details preview)
-- **Hover panel edge/between elements** → show RelationshipInfoBox (relationship preview)
-- **Hover SVG link line** → show RelationshipInfoBox (relationship preview for that specific link)
-
-**Rationale**:
-- Contextual and intuitive - cursor position indicates intent
-- No additional UI complexity
-- No keyboard requirement
-- Can be refined based on user feedback after implementation
-
-**Implementation notes**:
-- **Spacing between hover areas**: Ensure clear separation between name hover area and edge hover area
-  - May need to make the inside end of element names non-hoverable
-  - This helps users understand which hover target they're activating
-- May need to tune hover target areas for discoverability
-- Could add subtle visual cues (e.g., cursor changes, highlight areas)
-- Keep simpler options as fallback if heuristic proves confusing
-
-**Alternative approaches considered** (for reference):
-- User preference toggle: Clear but adds UI complexity
-- Keyboard modifier: Flexible but requires keyboard
-- Time-based cascade: Progressive but potentially confusing
-- Combination: Most flexible but overly complex for initial implementation
-
-**Mode behavior** (intelligent repositioning):
-- **Floating mode** (narrow screen): New boxes cascade from bottom-left
-- **Stacked mode** (wide screen): New boxes open in stack area
-    - Consider changing layout to newest on bottom, then new boxes can overlap so only header of previous shows
-    - With click-to-front, this should work well
-- **Mode switch to stacked**: All boxes move to stack positions
-- **Mode switch to floating**:
-    - User-repositioned boxes → restore custom position from URL state
-    - Default boxes → cascade from bottom-left
-
-**URL state tracking**:
-- Track which boxes have custom positions (user dragged/resized)
-- On mode switch, respect user customizations
-- Default positions don't persist
-
-**Important**:
-- Make sure new boxes are always fully visible:
-    - In stacked layout by scrolling
-    - In floating, by resetting vertical cascade position when necessary
-
-**Implementation steps**:
-
-0. **✅ Create DataService abstraction layer** (COMPLETED)
-    - **Goal**: Complete view/model separation - UI components should never see Element instances or know about element types
-    - **Problem**: Currently UI code receives Element instances and calls methods directly, violating separation of concerns
-    - **Solution**: Create DataService class that UI calls with item IDs (strings)
-
-    **Architecture**:
-    ```typescript
-    // src/services/DataService.ts
-    class DataService {
-      constructor(private modelData: ModelData) {}
-
-      // UI calls by ID, service handles Element lookup internally
-      getDetailContent(itemId: string): DetailData | null
-      getFloatingBoxMetadata(itemId: string): FloatingBoxMetadata | null
-      getRelationships(itemId: string): RelationshipData | null
-      // ... other data access methods
-    }
-
-    // App.tsx creates service
-    const dataService = useMemo(() =>
-      modelData ? new DataService(modelData) : null,
-      [modelData]
-    );
-
-    // UI components only work with IDs and DataService
-    <DetailContent itemId="Specimen" dataService={dataService} />
-    <FloatingBoxManager boxes={boxes} dataService={dataService} ... />
-
-    // DetailContent.tsx - no Element instances
-    function DetailContent({ itemId, dataService }: Props) {
-      const detailData = dataService.getDetailContent(itemId);
-      if (!detailData) return <div>Item not found</div>;
-      // Render using plain detailData object
-    }
-    ```
-
-    **Benefits**:
-    - UI never sees Element instances or element types
-    - Clean boundary between model and view
-    - Easy to mock DataService for testing
-    - Terminology: Use "item" in UI code, "element" stays in model layer
-
-    **Enforcement via automated checking**:
-    - Create `scripts/check-architecture.sh` to grep for violations:
-      ```bash
-      #!/bin/bash
-      # Check for "Element" or "elementType" in UI components (but not in tests)
-      echo "Checking for Element references in UI code..."
-      rg -t tsx -t ts "Element" src/components/ src/hooks/ --glob '!*.test.*' --glob '!*.spec.*'
-      # Add more checks as needed
-      ```
-    - Add to workflow: **After every chunk of work, run `npm run check-arch` and report violations**
-    - Add npm script: `"check-arch": "bash scripts/check-architecture.sh"`
-    - Over time, enhance script to check other architectural principles from CLAUDE.md
-
-    **Implementation sub-steps**:
-    - ✅ Create DataService class with initial methods
-    - ✅ Refactor App.tsx to use DataService
-    - ✅ Refactor FloatingBoxManager to accept dataService + item IDs
-    - ✅ Refactor DetailContent to accept itemId + dataService
-    - ✅ Refactor RelationshipInfoBox to accept itemId + dataService
-    - ✅ Deleted old components (DetailDialog, DetailPanelStack, useDialogState)
-    - ✅ Create check-architecture.sh script
-    - ✅ Add npm script `"check-arch": "bash scripts/check-architecture.sh"`
-    - ✅ All architecture violations fixed
-    - ⏭️  Update tests to use DataService pattern (deferred)
-
-    **Status**: Main refactoring complete! All architecture checks passing.
-
-0a. **Fix remaining architecture violations** ✅ COMPLETED
-    - All architecture checks now pass (`npm run check-arch`)
-    - No violations found in components, hooks, or App.tsx
-
-1. **✅ Create FloatingBoxManager.tsx** (COMPLETED)
-    - ✅ Extract openDialogs array management from App.tsx
-    - ✅ Single FloatingBox component (merge DetailDialog drag/resize logic)
-    - ✅ **Content agnostic**: Supports any React component (DetailContent, RelationshipInfoBox, future help content, etc.)
-    - ✅ Mode-aware initial positioning
-    - ✅ Click/drag/resize → bring to front (move to end of array)
-    - ✅ **ESC behavior**: Closes first box in this order:
-      1. Close any transitory boxes first
-      2. Then close persistent boxes (oldest first, FIFO)
-    - ✅ Z-index based on array position
-    - ✅ Added getFloatingBoxMetadata() to Element base class
-    - ✅ Renamed DetailPanel → DetailContent (updated all references and tests)
-
-2. **✅ Refactor RelationshipInfoBox.tsx** (COMPLETED)
-    - ✅ **Removed** drag/resize/close logic (will be handled by FloatingBox wrapper)
-    - ✅ Removed ESC key handler (FloatingBoxManager will handle)
-    - ✅ Keep preview mode (hover, linger, positioning)
-    - ✅ Keep upgrade trigger logic (1.5s hover or click)
-    - ✅ **Added onUpgrade callback**: calls callback instead of local state
-    - ✅ Removed close button and drag cursor styling
-    - ✅ Content now simpler: just relationships display, no window chrome
-
-3. **✅ Update App.tsx** (COMPLETED)
-    - ✅ Replaced useDialogState hook with local floatingBoxes state management
-    - ✅ Removed openDialogs management
-    - ✅ Imported and integrated FloatingBoxManager
-    - ✅ Added handleOpenFloatingBox to create persistent boxes (with duplicate detection and bring-to-front)
-    - ✅ Added handleUpgradeRelationshipBox for RelationshipInfoBox → persistent upgrade flow
-    - ✅ Connected RelationshipInfoBox.onUpgrade to handleUpgradeRelationshipBox
-    - ✅ Replaced DetailDialog and DetailPanelStack rendering with FloatingBoxManager
-    - ✅ Updated ElementsPanel.onSelectElement to use handleOpenFloatingBox
-    - ✅ Added URL restoration logic (useEffect) for persistent boxes
-    - ✅ Kept getDialogStates for URL state persistence
-    - ✅ TypeScript type checking passes
-    - ✅ Fixed initialization order bugs (handleNavigate, hoveredElementInstance)
-
-    <details>
-    <summary><b>Initial Testing Checklist (Unified Detail Box System implementation)</b></summary>
-
-    1. ✅ Click element name → Opens persistent floating box
-       - ❌ Bug found: Headers duplicated (img_1.png) → Fixed in 4a
-    2. ✅ Click same element again → Brings existing box to front (no duplicate)
-    3. ⚠️ Hover over element → RelationshipInfoBox appears
-       - ❌ Bug found (d13f8d5): Gray headers instead of colored → Fixed in 4e
-    4. ❌ Hover over RelationshipInfoBox 1.5s → Should upgrade to persistent
-       - Bug: Disappears instead of upgrading → Fixed in 4b
-       - Bug: Sometimes gets stuck, no close button, ESC doesn't work
-       - Associated with: `setDisplayedItem is not defined` error at RelationshipInfoBox.tsx:145:7
-    5. ❌ Click on RelationshipInfoBox → Should upgrade immediately
-       - Bug: Disappears instead of upgrading → Fixed in 4b
-    6. ⚠️ Open multiple boxes → Cascade with offsets
-       - ❌ Bug: Boxes overflow bottom of viewport → Fixed in 4f
-    7. ❌ Switch between modes → Boxes reposition appropriately
-       - Bug: Stacked mode shows RelationshipInfoBox (img_2.png) → Fixed in 4c
-       - Bug: Detail boxes take full width
-    8. ⚠️ Drag, resize, close buttons
-       - ✅ Working for floating mode
-       - ❌ Not working for stacked mode → Noted in 4d
-    9. ✅ ESC key → Closes boxes (oldest first)
-    10. ✅ URL restoration → Boxes restore correctly
-
-    </details>
-
-4. **Fix bugs found in testing**
-
-    **High Priority** (broken functionality):
-
-    1. **Detail box headers duplicated/split** (test #1) ✅ FIXED
-       - Screenshot: img_1.png shows "Class: Condition" in header with "Condition" repeated below
-       - Root cause: DetailContent showing its own header while FloatingBox also shows header
-       - Fix: Always pass hideHeader={true} to DetailContent when in FloatingBox
-       - Changed 3 instances in App.tsx where DetailContent is created
-
-    **Unified Detail Box System Hover Fixes** ✅ COMPLETED
-
-    2. **Hover not working deterministically** (from extended testing)
-       - Root cause: Cursor position tracking causing non-deterministic behavior
-       - Fix: Complete rewrite to use item DOM position instead of cursor tracking
-       - Changes:
-         - `useItemHover.ts`: Removed cursor position from hover handlers, now passes `{ id, type, name }`
-         - `Section.tsx`: Updated `ItemHoverData` to use `id` (DOM node ID) instead of `cursorX/cursorY`
-         - `App.tsx`: Pass `itemDomId` to RelationshipInfoBox instead of cursor position
-         - `RelationshipInfoBox.tsx`: Use `document.getElementById(itemDomId).getBoundingClientRect()` for positioning
-         - Box now centers vertically on hovered item with viewport clamping
-       - Result: Hover works deterministically - same item always shows box in same position
-
-    3. **Architecture violations fixed** ✅ COMPLETED
-       - Fixed: `elementDomId` → `itemDomId` (violated "element" terminology check)
-       - Fixed: All "element" references changed to "item" or "DOM node" in UI layer
-       - All architecture checks now pass
-
-    5. **Cascade stacks not working** ✅ FIXED
-       - Root cause: `handleOpenFloatingBox` was calculating position itself instead of letting FloatingBoxManager's cascade algorithm handle it
-       - Fix: Removed default position calculation in App.tsx (lines 88-106)
-       - Now boxes created with `position: undefined, size: undefined` (unless restoring from URL)
-       - FloatingBoxManager's multi-stack cascade algorithm (lines 148-190) now handles all positioning
-       - **⚠️ KNOWN ISSUE**: Cascade boxes are moving upwards (Y increment should be negative?)
-
-    <details>
-    <summary><b>UI Test Results (c893c43)</b></summary>
-
-    **Test Date**: 2025-11-06
-
-    1. ✅ **Architecture checks**: All passing
-    2. ✅ **Click item → opens detail box**: Working in cascade mode
-    3. ✅ **Click same item → brings to front**: Working, no duplicates
-    4. ✅ **ESC closes boxes**: Working in both cascade and stacked modes
-    5. ⚠️ **Hover positioning**: Working but NOT centered on item
-       - Box appears near top of item, not vertically centered
-       - Minor positioning difference, functional but not ideal
-    6. ❌ **Cascade direction**: Still cascading UPWARD (should go downward)
-       - TODO: Request screenshot when fixing this
-    7. ❌ **No hover in stacked mode**: RelationshipInfoBox not appearing
-       - Expected: Should not show in stacked mode (by design)
-       - Status: Correct behavior
-    8. ❌ **Stacked mode not draggable**: Boxes fixed in stacked mode
-       - Expected: All boxes should be draggable per architecture docs
-       - Status: Bug, needs fix (task #5)
-
-    </details>
-
-    **Next Steps (Priority Order)**:
-
-    1. **Fix cascade direction** ✅ COMPLETED
-       - Fixed cascading direction (was upward, now downward)
-       - Fixed multi-stack X positioning (300px offset per stack)
-       - Fixed Y positioning (40px title peek increments)
-       - Fixed starting position (dynamically calculated to start low on screen)
-       - Fixed boxesPerStack calculation (Math.max instead of Math.min)
-       - Committed in: d2c98e7 (with user's fix to line 174)
-
-    2. **Fix hover positioning** (DEFERRED to bottom of list)
-       - Status: ⚠️ Working but not centered on item (appears near top)
-       - Current: Box positioned near top of item
-       - Expected: Box should center vertically on hovered item
-       - Check RelationshipInfoBox.tsx positioning logic (lines 90-97)
-
-    3. **Refactor UI to use itemId instead of type** ⭐ NEXT
-       - Problem: UI layer using `type` field violates view/model separation
-       - Root cause: UI should only use itemId (from getId()) for identity, not type strings
-       - Current violations:
-         - ItemHoverData has `type` field (Section.tsx:22)
-         - LinkOverlay compares `link.source.type === hoveredItem.type` (LinkOverlay.tsx:366-367)
-         - Should be: `link.source.itemId === hoveredItem.itemId`
-       - Solution:
-         - Change ItemHoverData to use `itemId` instead of `type` and `name`
-         - Update Link data structure to use `itemId` instead of `type` and `name`
-         - Remove all type comparisons in UI layer
-         - UI uses itemId for identity, gets display info from DataService
-       - Architecture principle: UI never uses type/itemType - only itemId and display names
-       - See "Architecture & Refactoring Decisions" section at top of this file for detailed discussion
-
-    4. **Rename displayMode 'dialog' to 'cascade'** ✅ COMPLETED
-       - Renamed 'dialog' → 'cascade' throughout codebase
-       - Updated: App.tsx, FloatingBoxManager.tsx, useLayoutState.ts, layoutHelpers.ts
-       - Updated test expectations in adaptiveLayout.test.ts
-       - Committed in: 6a7fb11
-
-    5. **Remove unnecessary isStacked logic** (deferred)
-       - Status: ❌ Boxes not draggable in stacked mode (confirmed in testing)
-       - All boxes should be draggable regardless of display mode
-       - displayMode only affects initial positioning, not capabilities
-       - Simplify FloatingBox component
-
-    6. **Make stacked width responsive** (deferred)
-       - Currently fixed at 600px
-       - Should calculate: `calc(100vw - leftPanelWidth - rightPanelWidth - margins)`
-
-    7. **Move box management logic to FloatingBoxManager** (deferred)
-       - App.tsx currently handles: array management, duplicate detection, bring-to-front
-       - Should move to FloatingBoxManager for better encapsulation
-
-    8. **Fix transitory/persistent box upgrade architecture** (deferred)
-       - Current: Creates new box on upgrade, causing position jump
-       - Should: Modify existing RelationshipInfoBox mode from transitory → persistent
-       - Lower priority: Clicking items opens persistent boxes directly (working correctly)
-
-    9. **RelationshipInfoBox upgrade not working** (tests #4, #5) ✅ FIXED ⚠️ NEW BUG FOUND
-       - Hovering for 1.5s: box disappeared instead of upgrading to persistent
-       - Clicking: box disappeared instead of upgrading to persistent
-       - Root cause: After creating persistent box, RelationshipInfoBox remained displayed and linger timer would hide it
-       - Fix: Call setHoveredItem(null) after upgrade to immediately hide RelationshipInfoBox
-       - Changed handleUpgradeRelationshipBox in App.tsx (2 places)
-
-       **New bug discovered during testing**:
-       - When app first starts with empty right panel, hover doesn't work on left panel items
-       - After hovering over something in right panel (once it has content), left panel hovering starts working
-       - Investigation notes:
-         - Both panels receive onItemHover/onItemLeave callbacks correctly (App.tsx:404-405, 417-418)
-         - getItemHoverHandlers uses optional chaining, should work even without callbacks
-         - RelationshipInfoBox positioning uses querySelector('[data-panel-position]') to find panels
-         - If no items in panel, no elements with data-panel-position attribute exist
-         - BUT positioning fallback should still work (xPosition = Math.max(370, 0 + 20) = 370px)
-       - **Need clarification**: Does "hover doesn't work" mean:
-         1. RelationshipInfoBox doesn't appear at all?
-         2. RelationshipInfoBox appears but in wrong position?
-         3. Hover state is set but something else is broken?
-         4. Console errors when hovering?
-
-   10. **Stacked mode layout issues** (test #7) ✅ FIXED
-       - Screenshot: img_2.png showed RelationshipInfoBox appearing in stack
-       - Root cause: RelationshipInfoBox rendered unconditionally regardless of displayMode
-       - Fix: Only render RelationshipInfoBox when displayMode === 'dialog'
-       - Changed App.tsx to conditionally render RelationshipInfoBox
-
-   11. **Stacked mode missing controls** (test #8) ⚠️ NEEDS RETESTING
-       - Original feedback: "yes for floating. still not for stacked"
-
-   12. **Hover/upgrade behavior broken** (found during Step 3 testing) ❌ CRITICAL
-       - **Root cause**: App.tsx:155 creates DetailContent instead of RelationshipInfoBox on upgrade
-       - **Expected**: When hovering and upgrading (click or 1.5s hover), RelationshipInfoBox should become persistent with same content
-       - **Actual**: Right panel - transitory box disappears, DetailContent appears in cascade stack
-       - **Actual**: Left panel - unpredictable behavior, sometimes disappears, sometimes shows up later as DetailContent
-       - **Architectural issue**: RelationshipInfoBox uses `fixed` positioning (line 303-304) which conflicts with FloatingBox wrapper
-       - **Fix needed**: Refactor RelationshipInfoBox to support both transitory and persistent modes
-         - Transitory mode: Uses fixed positioning, calculates position from itemDomId
-         - Persistent mode: No positioning (rendered inside FloatingBox), no need for itemDomId
-       - **Related**: See "Fix transitory/persistent box upgrade architecture" (task #8 above)
-
-   13. **Cascade positioning - boxes stacking incorrectly** (found during Step 3 testing) ❌
-       - **Symptom**: Non-user-positioned boxes appear on top of each other in wrong place
-       - **Note**: URL restoration positioning IS working correctly (user-positioned boxes restore)
-       - **Issue**: Default cascade positioning not working as expected
-       - **Need to investigate**: What specific positioning behavior is broken?
-       - **Code location**: FloatingBoxManager.tsx:148-194 (cascade positioning algorithm)
-
-   14. **Architecture violation: contextualizeId in model layer** (introduced in Step 3) ✅ FIXED
-       - **Location**: src/models/Element.ts:19, 329
-       - **Problem**: Model layer calling UI utility function
-       - **Root cause**: getSectionItemData() does contextualization, but it's in model layer
-       - **Fix**: ✅ Moved contextualization to UI layer (Section.tsx:169-174)
-         - Removed contextualizeId import from Element.ts
-         - getSectionItemData() now returns raw name as id
-         - Section.tsx contextualizes IDs after calling getItems()
-       - **Principle**: Model layer should never call UI utilities, even in bridge methods
-       - **Testing**: ✅ TypeScript passing, ✅ architecture checks passing
-
-    **Medium Priority** (UX issues):
-
-   12. **RelationshipInfoBox headers gray instead of colored** (test #3) ✅ FIXED
-       - All hover-triggered RelationshipInfoBox headers were gray instead of colored
-       - Root cause: getRelationshipData() referenced non-existent `colorClass` property, falling back to gray
-       - Fix: Changed to use `metadata.color.headerBg` (proper property from ElementRegistry)
-       - Architecture note: Color is correctly part of RelationshipData contract, not accessed by UI directly
-       - Changed Element.getRelationshipData() in models/Element.ts
-
-   13. **Boxes overflow viewport bottom** (test #6) ✅ FIXED
-       - Cascade positioning caused boxes to go off-screen when many boxes opened
-       - Root cause: Y position = windowHeight - 400 + (index * 40) with no bounds checking
-       - Fix: Added Math.min() to cap Y position at maxY = windowHeight - boxHeight - 20px margin
-       - Changed FloatingBoxManager.tsx defaultPosition calculation
-
-    **Working correctly**:
-    - ✅ Test #2: Duplicate detection and bring-to-front
-    - ✅ Test #9: ESC key closes boxes
-    - ✅ Test #10: URL restoration
-
-5. **Delete old components**
-    - Delete DetailDialog.tsx
-    - Delete DetailPanelStack.tsx
-
-6. **Update tests**
-    - Test drag/resize
-    - Test click-to-front
-    - Test ESC behavior
-    - Test mode switching with custom positions
-    - **Test relationship box upgrade flow**
-    - **Test multiple relationship boxes**
-    - **Test mixed content types** (relationship + detail boxes)
+### Stage 3: Refactor to Graph Model with SlotEdges 🔥 MAJOR
+
+**Goal**: Replace current Element-based model with graph-based model using graphology
+
+**Key insight**: A vast amount of what happens in current Element.ts can be handled by graphology queries
+
+**Steps**:
+1. Install and configure graphology
+2. Define graph structure:
+   - Node types: Class, Enum, Slot, Type, Variable
+   - Edge types: SlotEdge, InheritanceEdge, MapsToEdge
+3. Create SlotEdge class/interface:
+   - Properties: name, slotRef, required, multivalued, inherited_from, overrides
+   - Connects Class → Range with context-specific properties
+4. Refactor ClassElement to use SlotEdges instead of ClassSlots
+5. Update getRelationships() implementations:
+   - Current: Returns direct property links (hiding slots), includes inheritance as 'inherits' type
+   - New: Returns slot edges
+   - Should make hover/link logic simpler
+6. Remove/refactor ClassSlot class
+7. Simplify collections:
+   - Keep for getLabel, getDefaultExpansion
+   - Replace methods like getUsedByClasses with graphology queries
+
+**Files**:
+- `src/models/Element.ts` - SlotEdge class, refactor ClassElement, Range abstraction
+- `src/models/ElementCollection.ts` - Simplify with graphology queries
+- `src/services/DataService.ts` - Add type collection, update relationship APIs, add getSlotEdgesForClass()
 
 ---
+
+### Stage 4: UI Layout Changes (Three-Panel)
+
+**Goal**: Implement three-panel layout with middle slot panel
+
+**Strategy**: Refactor LinkOverlay while keeping middle panel closed. Once in good shape, enable middle panel. May become two link overlays: left-middle, middle-right.
+
+**Steps**:
+1. Add middle panel to App.tsx:
+   - Panel state management (visible/hidden)
+   - URL state format (add middle panel to sections)
+2. Update Panel.tsx for middle panel toggle support
+3. Update statePersistence.ts for middle panel URL state
+4. Refactor Section.tsx:
+   - Ranges section rendering (Classes/Enums/Types)
+   - Separate sections with "Ranges: [C] [E] [T]" heading
+5. Update SectionItem.tsx if needed for range items
+6. Refactor LinkOverlay.tsx:
+   - Traverse Class → SlotEdge → Range
+   - See TASKS.md "LinkOverlay Refactor" task
+   - When middle panel visible: render two-step links (class→slot, slot→range)
+
+**Files**:
+- `src/App.tsx` - 3-panel layout, middle panel state management
+- `src/components/Panel.tsx` - Middle panel toggle support
+- `src/components/Section.tsx` - Ranges section rendering
+- `src/components/SectionItem.tsx` - Range item updates if needed
+- `src/utils/statePersistence.ts` - URL state for middle panel
+- `src/components/LinkOverlay.tsx` - Slot edge traversal
+
+---
+
+### Stage 5: Detail Box Updates
+
+**Goal**: Render slots with clickable ranges in detail boxes
+
+**Steps**:
+1. Update DetailPanel to render slot edges:
+   - Show slots with clickable/hoverable ranges
+   - Display slot metadata (required, multivalued, inherited_from)
+2. Update RelationshipInfoBox to display slot edge properties
+
+**Files**:
+- `src/components/DetailPanel.tsx` - Render slot edges with clickable ranges
+- `src/components/RelationshipInfoBox.tsx` - Display slot edge properties
+
+---
+
+### Stage 6: Documentation Updates
+
+**Goal**: Update documentation to reflect new architecture
+
+**Files**:
+- `docs/CLAUDE.md` - Add Range abstraction, SlotEdge pattern, graph model approach
+- `docs/DATA_FLOW.md` - Update with Slots-as-Edges architecture and graphology usage
+- `docs/TASKS.md` - Update active tasks, remove obsolete items
+- `docs/PROGRESS.md` - Archive this refactor as Phase 15
+
+---
+
+
+### Unified Detail Box System - Remaining Work
+
+**Context**: Steps 0-3 completed, Step 4 partially complete. Core functionality working but some bugs and enhancements remain.
+
+**Completed**: FloatingBoxManager component, DataService abstraction, hover positioning, cascade algorithm, architecture violations fixed
+
+**Remaining issues** (from Step 4):
+
+1. **Hover positioning** (⚠️ minor)
+   - Working but not centered on item (appears near top)
+   - Expected: Box should center vertically on hovered item
+   - Check RelationshipInfoBox.tsx positioning logic
+
+2. **Refactor UI to use itemId instead of type** (⭐ priority)
+   - Problem: UI layer using `type` field violates view/model separation
+   - ItemHoverData has `type` field (Section.tsx:22)
+   - LinkOverlay compares `link.source.type === hoveredItem.type`
+   - Solution: Change to use `itemId` for identity throughout UI layer
+
+3. **Remove unnecessary isStacked logic** (enhancement)
+   - All boxes should be draggable regardless of display mode
+   - displayMode only affects initial positioning, not capabilities
+
+4. **Make stacked width responsive** (enhancement)
+   - Currently fixed at 600px
+   - Should calculate based on available space after panels
+
+5. **Move box management logic to FloatingBoxManager** (refactor)
+   - App.tsx currently handles array management, duplicate detection, bring-to-front
+   - Should move to FloatingBoxManager for better encapsulation
+
+6. **Fix transitory/persistent box upgrade architecture** (enhancement)
+   - Current: Creates new box on upgrade, causing position jump
+   - Should: Modify existing RelationshipInfoBox mode from transitory → persistent
+
+7. **Hover/upgrade behavior broken** (❌ critical)
+   - App.tsx:155 creates DetailContent instead of RelationshipInfoBox on upgrade
+   - RelationshipInfoBox uses fixed positioning which conflicts with FloatingBox wrapper
+   - Fix: Refactor RelationshipInfoBox to support both transitory and persistent modes
+
+8. **Cascade positioning - boxes stacking incorrectly** (❌ bug)
+   - Non-user-positioned boxes appear on top of each other in wrong place
+   - Note: URL restoration positioning IS working correctly
+   - Code location: FloatingBoxManager.tsx:148-194
+
+9. **Delete old components** (cleanup)
+   - Delete DetailDialog.tsx
+   - Delete DetailPanelStack.tsx
+
+10. **Update tests** (testing)
+    - Test relationship box upgrade flow
+    - Test multiple relationship boxes
+    - Test mixed content types (relationship + detail boxes)
+
+**For detailed implementation history**, see full "Unified Detail Box System" section in git history (search for "Unified Detail Box System Quick Navigation" comment).
+
+---
+
+## Future UI Improvements
+
+Tasks moved here during Slots-as-Edges refactor documentation consolidation. These will be revisited after Stage 6 completes.
+
+### LinkOverlay Refactor ⚠️ NEEDS REVISION FOR SLOTS-AS-EDGES
+
+**Status**: Implementation plan needs updating for Slots-as-Edges architecture
+
+**Original goal**: Eliminate nested loops and type awareness from LinkOverlay. Will need revision once slots become edges.
+
+See REFACTOR_PLAN.md Stage 4 for how this fits into three-panel layout with slot edge traversal.
+
+---
+
+### Abstract Tree Rendering System
+
+**IMPORTANT**: Before starting, give tour of current tree rendering, fully specify interface, write production code inline first before extracting.
+
+**Goal**: Extract tree rendering and expansion logic from Element into reusable abstractions
+
+**Benefits**:
+- Consistent tree UX across Elements panel and info boxes
+- Easier to add new tree-based displays
+- Centralizes expansion logic
+- Could support multiple tree layouts (simple indented, tabular with sections)
+
+See full task description in Future Work section for implementation approach.
+
+---
+
+### Detail Panel Enhancements
+
+**Enum Detail Improvements**:
+- Enums have either permissible values OR instructions for getting values from elsewhere (`reachable_from` field)
+- Will need to load prefixes to link to external ontologies
+
+**Slots Table Optimization**:
+- Slot order not currently correct - inherited slots should be at top
+- Use Abstract Tree Rendering System (once implemented) to group slots by ancestor
+- Each group becomes a collapsible tree node
+
+See full task description in Future Work section for details.
+
+---
+
+## Upcoming Features
 
 ### App Configuration File
 
@@ -835,235 +501,6 @@ export const APP_CONFIG = {
 - Easier to experiment with different timing values
 - Prepares for future user preferences/settings
 - Documents significant constants in one place
-
----
-
-### Abstract Tree Rendering System
-
-**IMPORTANT**: Before starting this refactor:
-1. Give a tour of how tree rendering currently works (Element tree structure, expansion state, rendering in components)
-2. Fully specify the interface (how it's used in practice, not just TypeScript definitions)
-3. Write actual production code directly in component files to verify the design
-4. Wrap this code in closures or make it inactive until ready to replace existing code
-5. Once abstraction is complete, remove old code and activate new code
-
-**Goal**: Extract tree rendering and expansion logic from Element into reusable abstractions that can be shared between Elements panel and info boxes (and future tree-like displays).
-
-**Why this matters**: Converting DetailContent and other components to use this system should result in significant simplification.
-
-**Current state**:
-- Element class has tree capabilities (parent, children, traverse, ancestorList)
-- Expansion state managed by useExpansionState hook
-- Tree rendering handled in each component (Section.tsx, DetailPanel, etc.)
-- Info box data could be hierarchical but isn't structured that way yet
-
-**Proposed abstraction**:
-- Create parent class or mixin with tree capabilities
-  - Node relationships (parent, children, siblings)
-  - Tree traversal (depth-first, breadth-first)
-  - Expansion state management
-  - **Layout logic** (not just expansion - how trees are rendered)
-- Element becomes a child of this abstraction
-- Info box data structures as tree nodes
-- Shared rendering components/hooks
-
-**Benefits**:
-- Consistent tree UX across Elements panel and info boxes
-- Could switch between tree layouts (simple indented tree, tabular tree with sections)
-- Easier to add new tree-based displays
-- Centralizes expansion logic
-
-**Tree layout options** (switch in code, not necessarily in UI):
-- **Simple tree**: Current indented style with expand/collapse arrows
-- **Tabular tree**: Hierarchical table with columns (see Slots Table Optimization example)
-  - Indented rows show hierarchy
-  - Expandable sections
-  - Can show properties in columns
-- **Sectioned tree**: Groups with headers, nested content
-
-**Related**: Slots Table Optimization task (Detail Panel Enhancements) shows hierarchical table example from another app - tree structure with indented rows, expandable sections, multiple columns. Info box inherited slots could use this pattern.
-
-**Note**: If helpful during implementation, the hierarchical table screenshot can be copied to `docs/images/` for reference.
-
-**Implementation approach**:
-1. Give tour of current tree rendering system
-2. Design tree abstraction (class? mixin? hooks?)
-3. Extract expansion state management
-4. Extract layout logic
-5. Refactor Element to use abstraction
-6. Apply to info box data structures
-7. Consider tabular tree layout for slots tables
-
-**Files likely affected**:
-- `src/models/Element.ts` - Extract tree logic
-- `src/models/TreeNode.ts` or `TreeBase.ts` (new) - Tree abstraction
-- `src/hooks/useExpansionState.ts` - Possibly generalize
-- `src/components/Section.tsx` - Use abstraction
-- `src/components/RelationshipInfoBox.tsx` - Structure data as tree
-- `src/components/DetailPanel.tsx` - Use abstraction for slots table
-
----
-
-### LinkOverlay Refactor ⚠️ NEEDS REVISION FOR OPTION D
-
-**Status**: Implementation plan needs updating for Option D (Slots-as-Edges) architecture
-
-**Background**: LinkOverlay currently has nested loops through types/sections/names to build links. This violates view/model separation and is difficult to follow.
-
-**Architectural Goals**:
-
-1. **Eliminate type awareness from UI layer**
-   - Rename `leftPanelTypes`/`rightPanelTypes` → `leftPanelSections`/`rightPanelSections`
-   - UI should receive pre-computed data, not query model by type
-
-2. **Simplify link data collection**
-   - Current: Loop through types/sections, call `getRelationshipsForLinking()` for each item
-   - Proposed: `dataService.getAllPairs(leftItemIds, rightItemIds)` using existing relationships
-   - Eliminates nested loops entirely
-
-3. **Remove getRelationshipData() type assertions**
-   - Current: Temporary `@ts-expect-error` at Element.ts lines 190, 199
-   - Goal: Replace with focused, type-specific methods
-
-**Implementation Steps**:
-
-**Step 1: Add getAllPairs() to DataService**
-
-```typescript
-interface LinkPair {
-  sourceItemId: string;
-  targetItemId: string;
-  sourceSide: 'left' | 'right';
-  targetSide: 'left' | 'right';
-}
-
-// DataService method
-getAllPairs({
-  sourceFilter,  // itemIds
-  targetFilter,  // itemIds
-  sourceSide,
-  targetSide
-}): LinkPair[] {
-  // Use existing element.getRelationships() for outgoing edges
-  // Filter to only targets in targetFilter set
-}
-```
-
-**Step 2: Create new Link interface**
-
-```typescript
-export interface Link {
-  id: string;  // From contextualizeLinkId()
-  sourceItemId: string;
-  targetItemId: string;
-  sourceSide: 'left' | 'right';
-  targetSide: 'left' | 'right';
-  sourceRect?: DOMRect;  // Calculated from DOM
-  targetRect?: DOMRect;
-  highlighted?: boolean;
-}
-```
-
-**Step 3: Create buildLink() function**
-
-```typescript
-function buildLink(pair: LinkPair, dataService: DataService): Link {
-  // Generate link ID
-  // Get DOM rects for rendering positions
-  // Return Link with all rendering data
-}
-```
-
-**Step 4: Simplify LinkOverlay component**
-
-```typescript
-function LinkOverlay({ dataService, leftSections, rightSections }) {
-  const leftItemIds = leftSections.map(s => s.itemId);
-  const rightItemIds = rightSections.map(s => s.itemId);
-
-  const lrPairs = dataService.getAllPairs({
-    sourceFilter: leftItemIds,
-    targetFilter: rightItemIds,
-    sourceSide: 'left',
-    targetSide: 'right'
-  });
-
-  const rlPairs = dataService.getAllPairs({
-    sourceFilter: rightItemIds,
-    targetFilter: leftItemIds,
-    sourceSide: 'right',
-    targetSide: 'left'
-  });
-
-  const links = [
-    ...lrPairs.map(p => buildLink(p, dataService)),
-    ...rlPairs.map(p => buildLink(p, dataService))
-  ];
-
-  return <svg>{links.map(link => <LinkPath link={link} />)}</svg>;
-}
-```
-
-**Step 5: Remove tooltips** (keep simplified hover info showing relationship type)
-
-**Step 6: Clean up linkHelpers.ts** (remove imports from models/)
-
-**⚠️ OPTION D IMPACT**:
-
-With Option D (slots as edges), relationship traversal changes:
-- Current: Class → Class direct (hiding slot mediation)
-- Option D: Class → SlotEdge → Range (explicit slot edges)
-- `getAllPairs()` will need to traverse slot edges differently
-- May need `getSlotEdgesForClass()` method
-- Link tooltips should show slot name from SlotEdge metadata
-
-**Testing**:
-- ✅ All links render correctly
-- ✅ Hover highlighting works
-- ✅ Performance improves (eliminate nested loops)
-- ✅ `npm run check-arch` passes (no model imports in UI)
-
-**Deferred decisions**:
-- Exact Option D slot edge traversal implementation
-- Relationship metadata format for slot-based links
-
----
-
-### Detail Panel Enhancements
-
-**Enum Detail Improvements**:
-- Enums have either permissible values OR instructions for getting values from elsewhere
-- Example:
-  ```yaml
-  CellularOrganismSpeciesEnum:
-    description: >-
-      A constrained set of enumerative values containing the NCBITaxon values for cellular organisms.
-    reachable_from:
-      source_ontology: obo:ncbitaxon
-      source_nodes:
-        - ncbitaxon:131567 ## Cellular Organisms
-      include_self: false
-      relationship_types:
-        - rdfs:subClassOf
-  ```
-- Will need to load prefixes in order to link these
-- Also look for other data in bdchm.yaml that isn't currently being captured
-
-**Slots Table Optimization**:
-- Slot order in class details is not currently correct - inherited slots should be at top, referenced slots at bottom
-- **Use Abstract Tree Rendering System** (once implemented):
-  - Add grouping layer to slots data structure:
-    - Group by ancestor (for inherited slots)
-    - Group for direct slots
-  - Each group becomes a tree node (collapsible)
-  - Start with inherited slots collapsed
-  - Abstract tree renderer handles display (indentation, expand/collapse, hierarchy)
-- No special display code needed - just restructure the data to fit tree abstraction
-
-**SlotCollection 2-Level Tree** (from Phase 6.4 Step 3.2):
-- Deferred - current flat SlotCollection is sufficient
-- Would show global slots + inline attributes from all classes
-- Each class becomes a root node with its attributes as children
 
 ---
 
