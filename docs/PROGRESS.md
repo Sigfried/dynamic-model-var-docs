@@ -39,6 +39,7 @@ Interactive visualization and documentation system for the BDCHM (BioData Cataly
 - [Bug Fix: Incoming Relationships & Inherited Slots](#bugfix-relationships-slots)
 - [Phase 13: Architecture Refactoring Quick Wins (Steps 1-5)](#phase-13-arch-refactor-steps)
 - [Phase 14: LinkML Study & Architecture Decision](#phase-14-linkml-study)
+- [Phase 15: Unified Detail Box System](#phase-15-unified-detail-box-system)
 
 ---
 
@@ -2117,6 +2118,328 @@ See REFACTOR_PLAN.md for:
 - Implementation prerequisites
 - Three-panel UI layout specification
 - Open questions and decisions
+
+---
+
+## Phase 15: Unified Detail Box System
+
+**Date**: January 2025
+**Goal**: Extract dialog management from App.tsx, merge DetailDialog/DetailPanelStack into unified system, and implement transitory mode for FloatingBox - allowing any content to appear temporarily (auto-disappearing) and upgrade to persistent mode on user interaction.
+
+**Status**: Steps 0-3 completed. Step 4 partially complete (core functionality working, remaining bugs tracked in TASKS.md).
+
+### Unified Detail Box System ✅ COMPLETED (Steps 0-3)
+
+[sg] still has bugs. maybe documented somewhere, but this is not complete yet
+
+**Goal**: Extract dialog management from App.tsx, merge DetailDialog/DetailPanelStack into unified system, and implement transitory mode for FloatingBox - allowing any content to appear temporarily (auto-disappearing) and upgrade to persistent mode on user interaction.
+
+**Unified Detail Box System Quick Navigation:**
+[sg] where should these links point?
+- [FloatingBox Modes (transitory/persistent)](#phase-15-unified-detail-box-system)
+- [Implementation Steps 0-3 ✅](#phase-15-unified-detail-box-system)
+- [Bug Fixes (Step 4)](#phase-15-unified-detail-box-system)
+- [Known Issues & Next Steps](#phase-15-unified-detail-box-system)
+
+**Current state**:
+- DetailPanel: 130-line content renderer using getDetailData() ✅
+- RelationshipInfoBox: Hover preview with relationships, has its own drag/close logic
+- DetailDialog: Floating draggable/resizable wrapper
+- DetailPanelStack: Stacked non-draggable wrapper
+- App.tsx: Manages openDialogs array and mode switching
+
+**New file structure**:
+```
+src/components/
+  DetailContent.tsx         (rename from DetailPanel.tsx - content renderer, uses getDetailData())
+  RelationshipInfoBox.tsx   (keep - relationship content renderer)
+  FloatingBoxManager.tsx    (new - manages array + rendering)
+    - FloatingBox component (draggable/resizable wrapper)
+    - Array management (FIFO stack)
+    - Mode-aware positioning
+```
+
+**Key insight**: FloatingBox is a general-purpose wrapper that supports two display modes (transitory and persistent) for any content type
+
+**FloatingBox Modes**:
+
+1. **Transitory mode** (temporary, auto-disappearing):
+   - Appears on trigger (hover, click, etc.)
+   - Auto-disappears after timeout or when user moves away
+   - Minimal chrome (no close button, simpler appearance)
+   - Can be "upgraded" to persistent mode via user interaction
+   - Example: RelationshipInfoBox on hover
+
+2. **Persistent mode** (permanent until closed):
+   - Stays open until explicitly closed (ESC or close button)
+   - Full chrome (draggable, resizable, close button)
+   - Added to FloatingBoxManager's array
+   - Managed via URL state for restoration
+   - Example: Clicking element name to view details
+
+**FloatingBox component** (single component, supports both modes):
+- **Content agnostic**: Renders any React component passed as content
+- **Display metadata pattern** (maintains view/model separation):
+  ```typescript
+  interface FloatingBoxProps {
+    mode: 'transitory' | 'persistent';
+    metadata: {
+      title: string;        // e.g., "Specimen" or "Relationships: Specimen"
+      color: string;        // e.g., "blue" (from app config)
+    };
+    content: React.ReactNode;  // <DetailContent element={...}/> or <RelationshipInfoBox element={...}/>
+    onClose?: () => void;
+    onUpgrade?: () => void;  // Transitory → persistent upgrade
+  }
+  ```
+- **Data flow** (no element types in FloatingBox):
+  1. Caller (App/FloatingBoxManager) has Element reference
+  2. Caller calls `element.getFloatingBoxMetadata()` → returns `{ title, color }`
+  3. Caller passes metadata + content component to FloatingBox
+  4. FloatingBox only sees plain data, never Element type
+- Mode determines chrome and behavior:
+  - Transitory: Minimal styling, no close button, auto-dismiss timers
+  - Persistent: Full controls, draggable, resizable, click-to-front
+- ESC closes first/oldest persistent box (index 0)
+
+**Content types**:
+1. **Detail content**: Full element details (slots table, variables, description, etc.)
+2. **Relationship content**: Focused relationship view (inheritance, slots, incoming/outgoing)
+
+**User can have multiple boxes open simultaneously**:
+- Multiple detail boxes (compare elements side-by-side)
+- Multiple relationship boxes (compare relationships)
+- Mix of both types
+
+**Positioning issues to fix** (deferred from Phase 10):
+- **Vertical positioning**: Current logic can position boxes oddly (see Phase 10 screenshot)
+- **Right edge overflow**: Box can extend past right edge of window
+- Fix both when implementing FloatingBox positioning logic
+- Ensure boxes stay fully within viewport bounds (auto-positioning only; allow user to drag outside)
+
+**Transitory → Persistent Mode Upgrade Flow**:
+
+**Example: Hover-triggered RelationshipInfoBox** (current Phase 10 implementation):
+
+1. **Transitory mode trigger**:
+    - Hover element → FloatingBox appears in transitory mode after 300ms
+    - Content: RelationshipInfoBox (shows relationships)
+    - No close button, minimal styling
+    - Lingers 1.5s after unhover (unless interacted with)
+    - **TODO**: Move timing constants to app config file (see "App Configuration File" task)
+
+2. **Upgrade to persistent mode** (one of):
+    - Hover over box for 1.5s
+    - Click anywhere in box
+    - Press hotkey (TBD)
+
+3. **Persistent mode result**:
+    - Same content, now in persistent FloatingBox
+    - Gains full chrome (draggable, resizable, close button)
+    - Added to FloatingBoxManager's array
+    - Stays open until explicitly closed (ESC or close button)
+    - Can open multiple boxes this way (compare relationships side-by-side)
+
+**Other ways to open persistent FloatingBox**:
+
+- **Click element name** (anywhere in UI):
+  - Tree panel → opens DetailContent in persistent FloatingBox
+  - RelationshipInfoBox → opens DetailContent in persistent FloatingBox
+  - Opens directly in persistent mode (no transitory phase)
+  - Multiple boxes can coexist: relationship view + detail view of linked element
+
+**Transitory mode content choice**:
+
+When hovering over an element, what content should appear in the transitory FloatingBox?
+- Option A: RelationshipInfoBox (focused view of relationships)
+- Option B: DetailContent (full element details)
+- Option C: Help content (when implemented - context-sensitive help based on what's being hovered)
+
+**Preferred approach: Position-based heuristic**
+
+Hover behavior depends on where cursor is positioned:
+- **Hover element name** → show DetailContent (full details preview)
+- **Hover panel edge/between elements** → show RelationshipInfoBox (relationship preview)
+- **Hover SVG link line** → show RelationshipInfoBox (relationship preview for that specific link)
+
+**Rationale**:
+- Contextual and intuitive - cursor position indicates intent
+- No additional UI complexity
+- No keyboard requirement
+- Can be refined based on user feedback after implementation
+
+**Implementation notes**:
+- **Spacing between hover areas**: Ensure clear separation between name hover area and edge hover area
+  - May need to make the inside end of element names non-hoverable
+  - This helps users understand which hover target they're activating
+- May need to tune hover target areas for discoverability
+- Could add subtle visual cues (e.g., cursor changes, highlight areas)
+- Keep simpler options as fallback if heuristic proves confusing
+
+**Alternative approaches considered** (for reference):
+- User preference toggle: Clear but adds UI complexity
+- Keyboard modifier: Flexible but requires keyboard
+- Time-based cascade: Progressive but potentially confusing
+- Combination: Most flexible but overly complex for initial implementation
+
+**Mode behavior** (intelligent repositioning):
+- **Floating mode** (narrow screen): New boxes cascade from bottom-left
+- **Stacked mode** (wide screen): New boxes open in stack area
+    - Consider changing layout to newest on bottom, then new boxes can overlap so only header of previous shows
+    - With click-to-front, this should work well
+- **Mode switch to stacked**: All boxes move to stack positions
+- **Mode switch to floating**:
+    - User-repositioned boxes → restore custom position from URL state
+    - Default boxes → cascade from bottom-left
+
+**URL state tracking**:
+- Track which boxes have custom positions (user dragged/resized)
+- On mode switch, respect user customizations
+- Default positions don't persist
+
+**Important**:
+- Make sure new boxes are always fully visible:
+    - In stacked layout by scrolling
+    - In floating, by resetting vertical cascade position when necessary
+
+**Implementation steps**:
+
+0. **✅ Create DataService abstraction layer** (COMPLETED)
+    - **Goal**: Complete view/model separation - UI components should never see Element instances or know about element types
+    - **Problem**: Currently UI code receives Element instances and calls methods directly, violating separation of concerns
+    - **Solution**: Create DataService class that UI calls with item IDs (strings)
+
+    **Architecture**:
+    ```typescript
+    // src/services/DataService.ts
+    class DataService {
+      constructor(private modelData: ModelData) {}
+
+      // UI calls by ID, service handles Element lookup internally
+      getDetailContent(itemId: string): DetailData | null
+      getFloatingBoxMetadata(itemId: string): FloatingBoxMetadata | null
+      getRelationships(itemId: string): RelationshipData | null
+      // ... other data access methods
+    }
+
+    // App.tsx creates service
+    const dataService = useMemo(() =>
+      modelData ? new DataService(modelData) : null,
+      [modelData]
+    );
+
+    // UI components only work with IDs and DataService
+    <DetailContent itemId="Specimen" dataService={dataService} />
+    <FloatingBoxManager boxes={boxes} dataService={dataService} ... />
+
+    // DetailContent.tsx - no Element instances
+    function DetailContent({ itemId, dataService }: Props) {
+      const detailData = dataService.getDetailContent(itemId);
+      if (!detailData) return <div>Item not found</div>;
+      // Render using plain detailData object
+    }
+    ```
+
+    **Benefits**:
+    - UI never sees Element instances or element types
+    - Clean boundary between model and view
+    - Easy to mock DataService for testing
+    - Terminology: Use "item" in UI code, "element" stays in model layer
+
+    **Enforcement via automated checking**:
+    - Create `scripts/check-architecture.sh` to grep for violations:
+      ```bash
+      #!/bin/bash
+      # Check for "Element" or "elementType" in UI components (but not in tests)
+      echo "Checking for Element references in UI code..."
+      rg -t tsx -t ts "Element" src/components/ src/hooks/ --glob '!*.test.*' --glob '!*.spec.*'
+      # Add more checks as needed
+      ```
+    - Add to workflow: **After every chunk of work, run `npm run check-arch` and report violations**
+    - Add npm script: `"check-arch": "bash scripts/check-architecture.sh"`
+    - Over time, enhance script to check other architectural principles from CLAUDE.md
+
+    **Implementation sub-steps**:
+    - ✅ Create DataService class with initial methods
+    - ✅ Refactor App.tsx to use DataService
+    - ✅ Refactor FloatingBoxManager to accept dataService + item IDs
+    - ✅ Refactor DetailContent to accept itemId + dataService
+    - ✅ Refactor RelationshipInfoBox to accept itemId + dataService
+    - ✅ Deleted old components (DetailDialog, DetailPanelStack, useDialogState)
+    - ✅ Create check-architecture.sh script
+    - ✅ Add npm script `"check-arch": "bash scripts/check-architecture.sh"`
+    - ✅ All architecture violations fixed
+    - ⏭️  Update tests to use DataService pattern (deferred)
+
+    **Status**: Main refactoring complete! All architecture checks passing.
+
+0a. **Fix remaining architecture violations** ✅ COMPLETED
+    - All architecture checks now pass (`npm run check-arch`)
+    - No violations found in components, hooks, or App.tsx
+
+1. **✅ Create FloatingBoxManager.tsx** (COMPLETED)
+    - ✅ Extract openDialogs array management from App.tsx
+    - ✅ Single FloatingBox component (merge DetailDialog drag/resize logic)
+    - ✅ **Content agnostic**: Supports any React component (DetailContent, RelationshipInfoBox, future help content, etc.)
+    - ✅ Mode-aware initial positioning
+    - ✅ Click/drag/resize → bring to front (move to end of array)
+    - ✅ **ESC behavior**: Closes first box in this order:
+      1. Close any transitory boxes first
+      2. Then close persistent boxes (oldest first, FIFO)
+    - ✅ Z-index based on array position
+    - ✅ Added getFloatingBoxMetadata() to Element base class
+    - ✅ Renamed DetailPanel → DetailContent (updated all references and tests)
+
+2. **✅ Refactor RelationshipInfoBox.tsx** (COMPLETED)
+    - ✅ **Removed** drag/resize/close logic (will be handled by FloatingBox wrapper)
+    - ✅ Removed ESC key handler (FloatingBoxManager will handle)
+    - ✅ Keep preview mode (hover, linger, positioning)
+    - ✅ Keep upgrade trigger logic (1.5s hover or click)
+    - ✅ **Added onUpgrade callback**: calls callback instead of local state
+    - ✅ Removed close button and drag cursor styling
+    - ✅ Content now simpler: just relationships display, no window chrome
+
+3. **✅ Update App.tsx** (COMPLETED)
+    - ✅ Replaced useDialogState hook with local floatingBoxes state management
+    - ✅ Removed openDialogs management
+    - ✅ Imported and integrated FloatingBoxManager
+    - ✅ Added handleOpenFloatingBox to create persistent boxes (with duplicate detection and bring-to-front)
+    - ✅ Added handleUpgradeRelationshipBox for RelationshipInfoBox → persistent upgrade flow
+    - ✅ Connected RelationshipInfoBox.onUpgrade to handleUpgradeRelationshipBox
+    - ✅ Replaced DetailDialog and DetailPanelStack rendering with FloatingBoxManager
+    - ✅ Updated ElementsPanel.onSelectElement to use handleOpenFloatingBox
+    - ✅ Added URL restoration logic (useEffect) for persistent boxes
+    - ✅ Kept getDialogStates for URL state persistence
+    - ✅ TypeScript type checking passes
+    - ✅ Fixed initialization order bugs (handleNavigate, hoveredElementInstance)
+
+### Remaining Work (Step 4)
+
+Step 4 partially complete. Remaining bugs and enhancements tracked in **TASKS.md** under "Unified Detail Box System - Remaining Work".
+
+**Completed Step 4 fixes**:
+- Detail box headers duplicated/split ✅
+- Hover positioning (using DOM position instead of cursor) ✅
+- Architecture violations (itemDomId terminology) ✅
+- Cascade direction (now downward) ✅
+- Rename displayMode 'dialog' to 'cascade' ✅
+- RelationshipInfoBox upgrade flow ✅
+- Stacked mode layout issues ✅
+- RelationshipInfoBox headers colored correctly ✅
+- Boxes viewport overflow fixed ✅
+- Architecture violation (contextualizeId in model layer) ✅
+
+**Remaining issues** (see TASKS.md for details):
+1. Hover positioning (minor - not centered on item)
+2. Refactor UI to use itemId instead of type (priority)
+3. Remove unnecessary isStacked logic
+4. Make stacked width responsive
+5. Move box management logic to FloatingBoxManager
+6. Fix transitory/persistent box upgrade architecture
+7. Hover/upgrade behavior broken (critical)
+8. Cascade positioning - boxes stacking incorrectly
+9. Delete old components (cleanup)
+10. Update tests
 
 ---
 
