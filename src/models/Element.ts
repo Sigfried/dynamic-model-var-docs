@@ -1,31 +1,38 @@
 /**
  * Element.ts - Model layer abstraction for UI components
  *
- * REFACTOR STATUS (Stage 1: Infrastructure Setup)
+ * REFACTOR STATUS (Stage 1: Infrastructure Setup + Interface Definition)
  * This file currently re-exports from ElementPreRefactor.ts.
  * Each export below represents a class/type that needs to be refactored for Slots-as-Edges.
  *
  * REFACTOR CHECKLIST:
- * As you refactor each item, move it from ElementPreRefactor to this file:
+ * Stage 1: Infrastructure and Interface Definition
+ * [ ] Define new interfaces based on UI_REFACTOR.md (ItemInfo, EdgeInfo, LinkPair)
+ * [ ] Update existing interfaces for edge-based model
+ *
+ * Stage 2: Migrate Element Classes
  * [ ] Types and Interfaces (ElementData, Relationship, DetailSection, DetailData)
- * [ ] Element base class
- * [ ] ClassSlot helper class
+ * [ ] Element base class (add getEdges() method)
+ * [ ] ClassSlot helper class (may be removed/transformed)
  * [ ] ClassElement (main refactor - slots become edges)
  * [ ] EnumElement
  * [ ] SlotElement (becomes EdgeElement)
  * [ ] VariableElement
+ *
+ * Stage 3: Migrate Collections
  * [ ] ElementCollection base class
  * [ ] EnumCollection
  * [ ] SlotCollection (becomes EdgeCollection)
  * [ ] ClassCollection
  * [ ] VariableCollection
+ *
+ * Stage 4: Helper Functions
  * [ ] Helper functions (initializeElementNameMap, initializeClassCollection, initializeModelData)
  *
  * ARCHITECTURAL RULE:
- * - UI components (in src/components/) must ONLY import from this file
- * - Never import concrete subclasses (ClassElement, EnumElement, etc.) in components
-             [sg] that's wrong. UI components must ONLY import from DataService.ts,
-                  DataService imports from here
+ * - UI components (in src/components/) must ONLY import from DataService.ts
+ * - DataService imports from this file (Element.ts)
+ * - Never import Element classes directly in components
  * - Use polymorphic methods on Element base class instead of type checks
  */
 
