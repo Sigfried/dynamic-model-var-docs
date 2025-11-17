@@ -227,7 +227,7 @@ describe('Element Relationship Detection', () => {
   describe('VariableElement relationships', () => {
     test('should link to mapped class', () => {
       const variable: VariableSpec = {
-        classId: 'MeasurementObservation',
+        maps_to: 'MeasurementObservation',
         variableLabel: 'height',
         dataType: 'float',
         ucumUnit: 'cm',
@@ -241,7 +241,7 @@ describe('Element Relationship Detection', () => {
       expect(rels.length).toBe(1);
       expect(rels[0].type).toBe('property');
       expect(rels[0].target).toBe('MeasurementObservation');
-      expect(rels[0].targetType).toBe('class');
+      expect(rels[0].targetSection).toBe('class');
       expect(rels[0].isSelfRef).toBe(false);
     });
   });

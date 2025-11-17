@@ -111,7 +111,7 @@ export interface ClassData {
  * Variable specification row from TSV file (raw DTO)
  */
 export interface VariableSpecDTO {
-  bdchmElement: string;  // snake_case from TSV
+  maps_to: string;  // Class ID that this variable maps to (renamed from bdchmElement for clarity)
   variableLabel: string;
   dataType: string;
   ucumUnit: string;
@@ -123,7 +123,7 @@ export interface VariableSpecDTO {
  * Variable specification data for VariableElement constructor (transformed)
  */
 export interface VariableSpec {
-  classId: string;  // transformed from bdchmElement
+  maps_to: string;  // Class ID that this variable maps to (no transformation needed - same as DTO)
   variableLabel: string;
   dataType: string;
   ucumUnit: string;
@@ -175,8 +175,8 @@ export const FIELD_MAPPINGS = {
   } as FieldMapping,
 
   variable: {
-    bdchmElement: 'classId',
-    // variableLabel, dataType, ucumUnit, curie, variableDescription copy as-is
+    // All fields copy as-is (maps_to, variableLabel, dataType, ucumUnit, curie, variableDescription)
+    // No transformation needed - maps_to is clearer than the old bdchmElement
   } as FieldMapping,
 } as const;
 

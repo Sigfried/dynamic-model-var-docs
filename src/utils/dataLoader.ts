@@ -37,7 +37,7 @@ async function loadVariableSpecDTOs(): Promise<VariableSpecDTO[]> {
   return lines.slice(1).map(line => {
     const values = line.split('\t');
     return {
-      bdchmElement: values[0] || '',
+      maps_to: values[0] || '',  // Renamed from bdchmElement for clarity
       variableLabel: values[1] || '',
       dataType: values[2] || '',
       ucumUnit: values[3] || '',
@@ -93,7 +93,7 @@ function transformWithMapping<T>(
 const EXPECTED_SLOT_FIELDS = ['range', 'description', 'slot_uri', 'identifier', 'required', 'multivalued'];
 const EXPECTED_ENUM_FIELDS = ['description', 'permissible_values'];
 const EXPECTED_CLASS_FIELDS = ['name', 'description', 'parent', 'abstract', 'attributes', 'slots', 'slot_usage'];
-const EXPECTED_VARIABLE_FIELDS = ['bdchmElement', 'variableLabel', 'dataType', 'ucumUnit', 'curie', 'variableDescription'];
+const EXPECTED_VARIABLE_FIELDS = ['maps_to', 'variableLabel', 'dataType', 'ucumUnit', 'curie', 'variableDescription'];
 
 /**
  * Transform SlotDTO (snake_case from JSON) to SlotData (camelCase for constructors)

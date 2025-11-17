@@ -1198,7 +1198,7 @@ export class SlotElement extends Element {
 // VariableElement - represents a variable specification
 export class VariableElement extends Element {
   readonly type = 'variable' as const;
-  readonly classId: string;  // Mapped class (formerly bdchmElement)
+  readonly maps_to: string;  // Class ID that this variable maps to (renamed from classId)
   readonly name: string;  // variableLabel
   readonly description: string;  // variableDescription
   readonly dataType: string;
@@ -1207,7 +1207,7 @@ export class VariableElement extends Element {
 
   constructor(data: VariableSpec) {
     super();
-    this.classId = data.classId;
+    this.maps_to = data.maps_to;
     this.name = data.variableLabel;
     this.description = data.variableDescription;
     this.dataType = data.dataType;
@@ -1221,7 +1221,7 @@ export class VariableElement extends Element {
 
     // Variable Properties section
     const properties: [string, string][] = [];
-    properties.push(['Mapped to', this.classId]);
+    properties.push(['Mapped to', this.maps_to]);
     if (this.dataType) {
       properties.push(['Data Type', this.dataType]);
     }
@@ -1253,7 +1253,7 @@ export class VariableElement extends Element {
     return [{
       type: 'property',
       label: 'mapped_to', // Add label so getRelationshipData() can use it
-      target: this.classId,
+      target: this.maps_to,
       targetSection: 'class',
       isSelfRef: false
     }];
@@ -1627,7 +1627,7 @@ export class VariableCollection extends ElementCollection {
     // Group variables by class name
     const groupedByClass = new Map<string, VariableElement[]>();
     variableElements.forEach(variable => {
-      const className = variable.classId;
+      const className = variable.maps_to;
       if (!groupedByClass.has(className)) {
         groupedByClass.set(className, []);
       }
