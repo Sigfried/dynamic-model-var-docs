@@ -1,5 +1,9 @@
 # Component Flow Documentation
 
+> **⚠️ NOTE:** This document describes the **pre-Slots-as-Edges** architecture.
+> After the Slots-as-Edges refactor completes, this will be moved to `docs/archive/` for historical reference.
+> See [UI_REFACTOR.md](./UI_REFACTOR.md) for post-refactor component designs.
+
 ## RelationshipInfoBox & FloatingBoxManager Interaction
 
 This document explains how hover interactions work and how boxes are managed.

@@ -1,11 +1,17 @@
 # Data Flow Architecture
 
+> **⚠️ NOTE:** This document describes the **pre-Slots-as-Edges** architecture.
+> After the Slots-as-Edges refactor completes, this will be moved to `docs/archive/` for historical reference.
+> See [REFACTOR_PLAN.md](./REFACTOR_PLAN.md) and [UI_REFACTOR.md](./UI_REFACTOR.md) for the new architecture.
+
 **Purpose**: Document the complete data flow from app loading through tree construction, slot/path handling, and link rendering.
 
 **Related documents**:
-- [COMPONENT_FLOW.md](./COMPONENT_FLOW.md) - UI component interaction flow
+- [COMPONENT_FLOW.md](./COMPONENT_FLOW.md) - UI component interaction flow (also pre-refactor)
 - [CLAUDE.md](../CLAUDE.md) - Architectural principles
 - [TASKS.md](../TASKS.md) - Current work and refactoring plans
+- [REFACTOR_PLAN.md](./REFACTOR_PLAN.md) - Slots-as-Edges refactor plan
+- [UI_REFACTOR.md](./UI_REFACTOR.md) - Post-refactor UI component designs
 
 **Recent refactoring** (commits `b1dbb6d` through `e57e888`):
 - Step 5: Slot inheritance simplification using `slotPath` ([commit b1dbb6d](https://github.com/sigfried/dynamic-model-var-docs/commit/b1dbb6d))
