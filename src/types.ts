@@ -42,6 +42,22 @@ export interface EnumDTO {
 }
 
 /**
+ * Raw type definition from types.yaml (LinkML types)
+ * snake_case fields from YAML
+ */
+export interface TypeDTO {
+  uri: string;  // RDF datatype (e.g., xsd:string)
+  base: string;  // Python base type (e.g., str, int)
+  repr?: string;  // Representational form if different from base
+  description?: string;
+  notes?: string | string[];  // Can be string or array
+  exact_mappings?: string[];
+  close_mappings?: string[];
+  broad_mappings?: string[];
+  conforms_to?: string;  // URL to specification
+}
+
+/**
  * Raw class definition from metadata JSON (LinkML schema)
  * snake_case fields from JSON
  */
@@ -62,6 +78,13 @@ export interface SchemaDTO {
   classes: Record<string, ClassDTO>;
   slots: Record<string, SlotDTO>;
   enums: Record<string, EnumDTO>;
+}
+
+/**
+ * Types schema from types.yaml (LinkML)
+ */
+export interface TypesSchemaDTO {
+  types: Record<string, TypeDTO>;
 }
 
 // ============================================================================
@@ -91,6 +114,22 @@ export interface EnumData {
     description?: string;
     meaning?: string;
   }>;
+}
+
+/**
+ * Type data for TypeElement constructor
+ * Transformed from TypeDTO with camelCase
+ */
+export interface TypeData {
+  uri: string;
+  base: string;
+  repr?: string;
+  description?: string;
+  notes?: string;  // Normalized to string (join array if needed)
+  exactMappings?: string[];  // transformed from exact_mappings
+  closeMappings?: string[];  // transformed from close_mappings
+  broadMappings?: string[];  // transformed from broad_mappings
+  conformsTo?: string;  // transformed from conforms_to
 }
 
 /**
@@ -138,6 +177,7 @@ export interface SchemaData {
   classes: ClassData[];
   enums: Map<string, EnumData>;
   slots: Map<string, SlotData>;
+  types: Map<string, TypeData>;  // NEW: LinkML types from types.yaml
   variables: VariableSpec[];
 }
 
@@ -167,6 +207,14 @@ export const FIELD_MAPPINGS = {
   enum: {
     permissible_values: 'permissibleValues',
     // description copies as-is
+  } as FieldMapping,
+
+  type: {
+    exact_mappings: 'exactMappings',
+    close_mappings: 'closeMappings',
+    broad_mappings: 'broadMappings',
+    conforms_to: 'conformsTo',
+    // uri, base, repr, description, notes copy as-is
   } as FieldMapping,
 
   class: {

@@ -84,6 +84,54 @@ def download_file(url: str, output_path: Path, normalize_line_endings: bool = Fa
         return False
 
 
+def generate_expanded_schema(yaml_path: Path, output_path: Path) -> bool:
+    """
+    Generate expanded schema using gen-linkml.
+    Resolves imports (like linkml:types) and expands inherited slots.
+
+    Args:
+        yaml_path: Path to bdchm.yaml
+        output_path: Path to save bdchm.expanded.yaml
+
+    Returns:
+        True if successful, False otherwise
+    """
+    import subprocess
+    try:
+        print(f"Generating expanded schema from {yaml_path.name}...")
+
+        # Run gen-linkml to expand imports (merges imports like linkml:types)
+        result = subprocess.run(
+            [
+                'gen-linkml',
+                str(yaml_path),
+                '--output', str(output_path)
+            ],
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode != 0:
+            print(f"  ✗ gen-linkml error: {result.stderr}", file=sys.stderr)
+            return False
+
+        if not output_path.exists():
+            print(f"  ✗ gen-linkml did not create output file", file=sys.stderr)
+            return False
+
+        file_size = output_path.stat().st_size
+        print(f"  ✓ Generated expanded schema ({file_size:,} bytes)")
+        print(f"  ✓ Saved to {output_path}")
+        return True
+
+    except FileNotFoundError:
+        print(f"  ✗ gen-linkml not found. Install with: pip install linkml", file=sys.stderr)
+        return False
+    except Exception as e:
+        print(f"  ✗ Error generating expanded schema: {e}", file=sys.stderr)
+        return False
+
+
 def generate_metadata(yaml_path: Path, output_path: Path) -> bool:
     """
     Parse bdchm.yaml and generate metadata JSON for the app.
@@ -233,8 +281,16 @@ Examples:
                     print(f"  ✗ Invalid Google Sheets URL format: {sheet_url}", file=sys.stderr)
                     fail_count += 1
 
-    # Generate metadata from YAML if available
+    # Generate expanded schema and metadata from YAML if available
     if yaml_path and yaml_path.exists():
+        # Generate expanded schema with imports resolved (includes linkml:types)
+        expanded_path = yaml_path.parent / "bdchm.expanded.yaml"
+        if generate_expanded_schema(yaml_path, expanded_path):
+            success_count += 1
+        else:
+            fail_count += 1
+
+        # Generate metadata JSON (legacy format for backward compatibility)
         metadata_path = yaml_path.parent / "bdchm.metadata.json"
         if generate_metadata(yaml_path, metadata_path):
             success_count += 1
@@ -243,7 +299,7 @@ Examples:
 
     # Summary
     print("\n" + "="*60)
-    print(f"Downloaded: {success_count} file(s)")
+    print(f"Downloaded/Generated: {success_count} file(s)")
     if fail_count > 0:
         print(f"Failed: {fail_count} file(s)")
         print("="*60)

@@ -12,17 +12,33 @@ import type {
   SlotData,
   EnumDTO,
   EnumData,
+  TypeDTO,
+  TypeData,
+  TypesSchemaDTO,
   FieldMapping
 } from '../types';
 import { FIELD_MAPPINGS } from '../types';
 import { initializeModelData } from '../models/Element';
 
-async function loadSchemaDTO(): Promise<SchemaDTO> {
-  const response = await fetch(`${import.meta.env.BASE_URL}source_data/HM/bdchm.metadata.json`);
+// Load yaml parse library
+import yaml from 'js-yaml';
+
+/**
+ * Load bdchm.expanded.yaml which includes:
+ * - All classes, enums, slots from bdchm.yaml
+ * - All types from linkml:types (resolved via gen-linkml --expand-imports)
+ * - Inherited slots filled in
+ *
+ * To regenerate: cd public/source_data/HM && gen-linkml --output bdchm.expanded.yaml --format yaml --expand-imports bdchm.yaml
+ */
+async function loadExpandedSchemaDTO(): Promise<SchemaDTO & TypesSchemaDTO> {
+  const response = await fetch(`${import.meta.env.BASE_URL}source_data/HM/bdchm.expanded.yaml`);
   if (!response.ok) {
-    throw new Error(`Failed to load schema metadata: ${response.statusText}`);
+    throw new Error(`Failed to load expanded schema: ${response.statusText}`);
   }
-  return await response.json();
+  const text = await response.text();
+  const parsed = yaml.load(text) as SchemaDTO & TypesSchemaDTO;
+  return parsed;
 }
 
 async function loadVariableSpecDTOs(): Promise<VariableSpecDTO[]> {
@@ -92,6 +108,7 @@ function transformWithMapping<T>(
 // Expected fields for each DTO type (for validation)
 const EXPECTED_SLOT_FIELDS = ['range', 'description', 'slot_uri', 'identifier', 'required', 'multivalued'];
 const EXPECTED_ENUM_FIELDS = ['description', 'permissible_values'];
+const EXPECTED_TYPE_FIELDS = ['uri', 'base', 'repr', 'description', 'notes', 'exact_mappings', 'close_mappings', 'broad_mappings', 'conforms_to', 'comments'];
 const EXPECTED_CLASS_FIELDS = ['name', 'description', 'parent', 'abstract', 'attributes', 'slots', 'slot_usage'];
 const EXPECTED_VARIABLE_FIELDS = ['maps_to', 'variableLabel', 'dataType', 'ucumUnit', 'curie', 'variableDescription'];
 
@@ -109,6 +126,22 @@ function transformSlotDTO(dto: SlotDTO): SlotData {
 function transformEnumDTO(dto: EnumDTO): EnumData {
   validateDTO(dto, EXPECTED_ENUM_FIELDS, 'EnumDTO');
   return transformWithMapping<EnumData>(dto, FIELD_MAPPINGS.enum);
+}
+
+/**
+ * Transform TypeDTO to TypeData
+ * Normalizes notes field (array → string) and applies field mappings
+ */
+function transformTypeDTO(dto: TypeDTO): TypeData {
+  validateDTO(dto, EXPECTED_TYPE_FIELDS, 'TypeDTO');
+  const transformed = transformWithMapping<TypeData>(dto, FIELD_MAPPINGS.type);
+
+  // Normalize notes: if array, join with newlines; if string, keep as-is
+  if (transformed.notes && Array.isArray(transformed.notes)) {
+    transformed.notes = (transformed.notes as string[]).join('\n');
+  }
+
+  return transformed;
 }
 
 /**
@@ -130,27 +163,40 @@ function transformVariableSpecDTO(dto: VariableSpecDTO): VariableSpec {
 /**
  * Load and transform raw data from files
  * Returns DTOs transformed to Data types with proper field naming
+ *
+ * NOTE: We load bdchm.expanded.yaml which includes:
+ * - All classes, enums, slots from bdchm.yaml
+ * - All types from linkml:types (resolved via gen-linkml import expansion)
+ * - Inherited slots filled in (via gen-linkml)
+ * This eliminates the need to fetch types.yaml separately or implement inheritance logic.
  */
 export async function loadRawData(): Promise<SchemaData> {
-  const schemaDTO = await loadSchemaDTO();
+  // Load expanded schema (includes types from linkml:types via imports)
+  const expandedSchemaDTO = await loadExpandedSchemaDTO();
   const variableSpecDTOs = await loadVariableSpecDTOs();
 
   // Transform DTOs to Data types (snake_case → camelCase, field renames)
-  const classes: ClassData[] = Object.values(schemaDTO.classes).map(transformClassDTO);
+  const classes: ClassData[] = Object.values(expandedSchemaDTO.classes).map(transformClassDTO);
 
   const enums = new Map<string, EnumData>();
-  Object.entries(schemaDTO.enums || {}).forEach(([name, dto]) => {
+  Object.entries(expandedSchemaDTO.enums || {}).forEach(([name, dto]) => {
     enums.set(name, transformEnumDTO(dto));
   });
 
   const slots = new Map<string, SlotData>();
-  Object.entries(schemaDTO.slots || {}).forEach(([name, dto]) => {
+  Object.entries(expandedSchemaDTO.slots || {}).forEach(([name, dto]) => {
     slots.set(name, transformSlotDTO(dto));
+  });
+
+  // Types from linkml:types (included via import expansion in bdchm.expanded.yaml)
+  const types = new Map<string, TypeData>();
+  Object.entries(expandedSchemaDTO.types || {}).forEach(([name, dto]) => {
+    types.set(name, transformTypeDTO(dto));
   });
 
   const variables: VariableSpec[] = variableSpecDTOs.map(transformVariableSpecDTO);
 
-  return { classes, enums, slots, variables };
+  return { classes, enums, slots, types, variables };
 }
 
 /**
