@@ -1070,6 +1070,8 @@ export class EnumElement extends Range {
   /**
    * Get classes that use this enum (computed on-demand).
    * Scans all class attributes for range === this.name
+   *
+   * TODO: Remove in Stage 3 - Will be replaced by graphology queries on slot edges
    */
   getUsedByClasses(): string[] {
     if (!globalClassCollection) {
@@ -1196,6 +1198,8 @@ export class TypeElement extends Range {
   /**
    * Get classes that use this type as a range (computed on-demand).
    * Scans all class attributes for range === this.name
+   *
+   * TODO: Remove in Stage 3 - Will be replaced by graphology queries on slot edges
    */
   getUsedByClasses(): string[] {
     if (!globalClassCollection) {
@@ -1324,6 +1328,8 @@ export class SlotElement extends Element {
   /**
    * Get classes that use this slot (computed on-demand).
    * Scans all classes for this slot in their slots array or slot_usage
+   *
+   * TODO: Remove in Stage 3 - Will be replaced by graphology queries on slot edges
    */
   getUsedByClasses(): string[] {
     if (!globalClassCollection) {
