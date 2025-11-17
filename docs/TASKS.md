@@ -95,248 +95,104 @@ a message like:
 
 ### Stage 1: Infrastructure Setup & Interface Definition ✨ IN PROGRESS
 
-**Goal**: Set up infrastructure to replace model layer and define new edge-based interfaces without touching UI
-
 **Status**: ✅ Infrastructure complete, 🔄 Interface definition in progress
 
-**Steps**:
+**Current step**: Define new edge-based interfaces (ItemInfo, EdgeInfo, LinkPair, RelationshipData)
 
-1. ✅ **Create Element.ts infrastructure**
-   - Renamed `src/models/Element.ts` → `src/models/ElementPreRefactor.ts`
-   - Created new `src/models/Element.ts` with explicit re-exports as refactor roadmap
-   - Verified no UI changes needed, all tests pass
+**Goal**: Set up infrastructure to replace model layer and define new edge-based interfaces without touching UI. Allows incremental migration while keeping old model working.
 
-2. 🔄 **Define new edge-based interfaces** (based on [UI_REFACTOR.md](UI_REFACTOR.md))
-   - Add to `src/models/Element.ts`:
-     ```typescript
-     // New interfaces for Slots-as-Edges
-     export interface ItemInfo {
-       id: string;
-       displayName: string;
-       typeDisplayName: string;  // "Class", "Enum", "Slot", "Variable"
-       color: string;
-     }
+**See [REFACTOR_PLAN Stage 1](REFACTOR_PLAN.md#stage-1-infrastructure-setup--interface-definition) for detailed steps and rationale.**
 
-     export interface EdgeInfo {
-       edgeType: 'inheritance' | 'property' | 'variable_mapping';
-       otherItem: ItemInfo;
-       label?: string;
-       inheritedFrom?: string;  // Property edges only
-     }
-
-     export interface LinkPair {
-       sourceId: string;
-       targetId: string;
-       sourceColor: string;
-       targetColor: string;
-       label?: string;
-     }
-
-     export interface RelationshipData {
-       thisItem: ItemInfo;
-       outgoing: EdgeInfo[];
-       incoming: EdgeInfo[];
-     }
-     ```
-
-3. **Add stub DataService methods**
-   - Add to `src/services/DataService.ts`:
-     ```typescript
-     getAllPairs(): LinkPair[] {
-       // Stub: return empty array
-       // Real implementation in Stage 3
-       return [];
-     }
-
-     getRelationships(itemId: string): RelationshipData | null {
-       // Stub: return null or minimal data
-       // Real implementation in Stage 3
-       return null;
-     }
-     ```
-   - Keep old methods for backward compatibility (mark deprecated)
-
-4. **Variable field rename** (small cleanup bundled with Stage 1)
-   - Rename `bdchmElement` → `maps_to` in VariableSpec DTO
-   - Update dataLoader field mapping
-   - Update any references in Element classes
-
-**Why**:
-- Allows incremental migration while keeping old model working
-- Defines interface contracts before implementation
-- UI can start using new interfaces with stubs while model is refactored
-
-**Files**:
-- `src/models/Element.ts` (infrastructure + new interfaces)
-- `src/models/ElementPreRefactor.ts` (renamed original)
-- `src/services/DataService.ts` (stub methods)
-- `src/types.ts` (VariableSpec DTO rename)
+**Quick summary**:
+1. ✅ Element.ts infrastructure (renamed original, created roadmap with re-exports)
+2. 🔄 Define edge-based interfaces (ItemInfo, EdgeInfo, LinkPair, RelationshipData)
+3. ⏭️ Add stub DataService methods (getAllPairs, getRelationships)
+4. ⏭️ Variable field rename (bdchmElement → maps_to)
 
 ---
 
 ### Stage 2: Import Types and Schema Validation 🔧 ARCHITECTURAL
 
-**Goal**: Add TypeElement, Range abstraction, improve schema data loading, and add runtime validation
+**Status**: Not started
 
-**Priority**: High - prerequisite for model refactor
+**Goal**: Add TypeElement and Range abstraction, improve schema data loading with runtime validation, handle unexpected enum fields (including enum inheritance bug fix).
 
-**Steps**:
+**See [REFACTOR_PLAN Stage 2](REFACTOR_PLAN.md#stage-2-import-and-model-types) for detailed steps.**
 
-1. **Define DataService and model interfaces** (addresses graphology+OOP question in REFACTOR_PLAN)
-   - Sketch what queries DataService needs to make
-   - Determine if we need property-based filtering in graph queries
-   - Decide: Graph stores IDs only (Option A), all properties (Option B), or hybrid (Option C)
-   - Document interface contracts before implementation
+**Quick summary**:
+1. Define DataService and model interfaces (decide graphology+OOP approach)
+2. Improve schema data loading (remove filtering, capture metadata, resolve imports)
+3. Add runtime validation (validate-schema.ts script, DTO validation)
+4. Handle unexpected enum fields (fixes enum inheritance bug)
+5. Import linkml:types and create TypeElement/Range abstraction
 
-2. **Improve Schema Data Loading and Validation**
-
-   **Current Issues**:
-   - Inconsistent field filtering: Classes explicitly select fields in Python, but slots/enums pass through all YAML fields
-   - No runtime validation: TypeScript interfaces don't validate incoming JSON - unexpected fields are silently included
-   - Missing schema metadata: Model metadata (id, name, title, prefixes) not captured
-   - Schema imports not resolved: YAML imports not processed before conversion to JSON
-
-   **Changes Needed**:
-
-   **download_source_data.py**:
-   - Remove class field filtering (lines 128-136) - pass through entire class definitions like slots/enums
-   - Capture entire schema document including:
-     - Top-level metadata: `id`, `name`, `title`, `description`, `license`, `version`
-     - `prefixes` (needed for generating links to URIs - see future task)
-     - `imports` (resolve/inline before JSON conversion)
-     - `types` (will be added as elements like classes/enums)
-   - Keep the validation at line 120 (attributes must be dict, not array)
-
-   **dataLoader.ts**:
-   - Add runtime validation function
-   - Call validation in transform functions before transformWithMapping()
-   - Define expected keys for each DTO type (based on current interfaces)
-
-   **Testing**:
-   - Created `scripts/validate-schema.ts` to analyze unexpected fields before commits
-   - Run with: `npx tsx scripts/validate-schema.ts`
-   - Generates report with field counts and examples
-   - Exits with error code 1 if unexpected fields found (for CI/pre-commit hooks)
-   - Add to package.json: `"validate-schema": "tsx scripts/validate-schema.ts"`
-
-3. **Handle Unexpected Enum Fields** (includes fix for Enum Inheritance bug)
-
-   **Findings**: Schema validation found 6 unexpected fields: `inherits`, `is_a`, `comments`, `see_also`, `reachable_from`, `include`
-
-   **Actions**:
-   - Add to EnumDTO interface (src/types.ts): `inherits`, `is_a`, `comments`, `see_also`, `reachable_from`, `include`
-   - Add to EnumData interface with camelCase transforms
-   - Update EnumElement class to expose these fields via getters/methods
-   - Update EXPECTED_ENUM_FIELDS in dataLoader.ts and validate-schema.ts
-   - **Fixes existing bug**: Enum inheritance relationships (via `inherits` field) not being loaded or displayed
-
-4. **Import and Add Types**
-   - Download linkml:types during data fetch
-   - Parse types in dataLoader.ts
-   - Create TypeElement class extending Range base class
-   - Create Range abstract base class/interface
-   - Make ClassElement, EnumElement extend Range
-   - Add TypeCollection (rethink collections approach with graphology)
-
-**Open question**: Do we need collections at all with graph model, or just for getLabel/getDefaultExpansion?
-
-**Files**:
-- `scripts/download_source_data.py` - Download linkml:types, capture metadata
-- `src/utils/dataLoader.ts` - Parse types, add validation, create SlotEdge instances instead of ClassSlot
-- `src/types.ts` - Add Type DTO, SlotEdge interface, update EnumDTO
-- `src/models/Element.ts` - Add Range abstract base class, TypeElement class
-- `src/models/ElementCollection.ts` - Add TypeCollection, simplify with graphology
-- `scripts/validate-schema.ts` - Update expected fields
+**Key decision needed**: Graph stores IDs only (Option A), all properties (Option B), or hybrid (Option C)?
 
 ---
 
 ### Stage 3: Refactor to Graph Model with SlotEdges 🔥 MAJOR
 
-**Goal**: Replace current Element-based model with graph-based model using graphology
+**Status**: Not started
 
-**Key insight**: A vast amount of what happens in current Element.ts can be handled by graphology queries
+**Goal**: Replace current Element-based model with graph-based model using graphology. Many current Element.ts operations can be replaced with graphology queries.
 
-**Steps**:
+**See [REFACTOR_PLAN Stage 3](REFACTOR_PLAN.md#stage-3-refactor-to-graph-model-with-slotedges) for detailed steps.**
+
+**Quick summary**:
 1. Install and configure graphology
-2. Define graph structure:
-   - Node types: Class, Enum, Slot, Type, Variable
-   - Edge types: SlotEdge, InheritanceEdge, MapsToEdge
-3. Create SlotEdge class/interface:
-   - Properties: name, slotRef, required, multivalued, inherited_from, overrides
-   - Connects Class → Range with context-specific properties
+2. Define graph structure (node types: Class/Enum/Slot/Type/Variable, edge types: SlotEdge/InheritanceEdge/MapsToEdge)
+3. Create SlotEdge class (connects Class → Range with slot metadata)
 4. Refactor ClassElement to use SlotEdges instead of ClassSlots
-5. Update getRelationships() implementations:
-   - Current: Returns direct property links (hiding slots), includes inheritance as 'inherits' type
-   - New: Returns slot edges
-   - Should make hover/link logic simpler
-6. Remove/refactor ClassSlot class
-7. Simplify collections:
-   - Keep for getLabel, getDefaultExpansion
-   - Replace methods like getUsedByClasses with graphology queries
-
-**Files**:
-- `src/models/Element.ts` - SlotEdge class, refactor ClassElement, Range abstraction
-- `src/models/ElementCollection.ts` - Simplify with graphology queries
-- `src/services/DataService.ts` - Add type collection, update relationship APIs, add getSlotEdgesForClass()
+5. Update getRelationships() to return slot edges (simplifies hover/link logic)
+6. Simplify collections (keep for getLabel/getDefaultExpansion, replace methods with graphology queries)
 
 ---
 
 ### Stage 4: UI Layout Changes (Three-Panel)
 
-**Goal**: Implement three-panel layout with middle slot panel
+**Status**: Not started
 
-**Strategy**: Refactor LinkOverlay while keeping middle panel closed. Once in good shape, enable middle panel. May become two link overlays: left-middle, middle-right.
+**Goal**: Implement three-panel layout with toggleable middle slot panel.
 
-**Steps**:
-1. Add middle panel to App.tsx:
-   - Panel state management (visible/hidden)
-   - URL state format (add middle panel to sections)
-2. Update Panel.tsx for middle panel toggle support
-3. Update statePersistence.ts for middle panel URL state
-4. Refactor Section.tsx:
-   - Ranges section rendering (Classes/Enums/Types)
-   - Separate sections with "Ranges: [C] [E] [T]" heading
-5. Update SectionItem.tsx if needed for range items
-6. Refactor LinkOverlay.tsx:
-   - Traverse Class → SlotEdge → Range
-   - See TASKS.md "LinkOverlay Refactor" task
-   - When middle panel visible: render two-step links (class→slot, slot→range)
+**See [REFACTOR_PLAN Stage 4](REFACTOR_PLAN.md#stage-4-ui-layout-changes) for detailed steps.**
 
-**Files**:
-- `src/App.tsx` - 3-panel layout, middle panel state management
-- `src/components/Panel.tsx` - Middle panel toggle support
-- `src/components/Section.tsx` - Ranges section rendering
-- `src/components/SectionItem.tsx` - Range item updates if needed
-- `src/utils/statePersistence.ts` - URL state for middle panel
-- `src/components/LinkOverlay.tsx` - Slot edge traversal
+**Strategy**: Refactor LinkOverlay while keeping middle panel closed. Once working, enable middle panel (may become two separate link overlays).
+
+**Quick summary**:
+1. Add middle panel to App.tsx (state management, URL state)
+2. Update Panel.tsx for toggle support, statePersistence.ts for URL state
+3. Refactor Section.tsx for ranges rendering (Classes/Enums/Types with separate sections)
+4. Refactor LinkOverlay.tsx for slot edge traversal (two-step links when middle panel visible)
 
 ---
 
 ### Stage 5: Detail Box Updates
 
-**Goal**: Render slots with clickable ranges in detail boxes
+**Status**: Not started
 
-**Steps**:
-1. Update DetailPanel to render slot edges:
-   - Show slots with clickable/hoverable ranges
-   - Display slot metadata (required, multivalued, inherited_from)
+**Goal**: Render slots with clickable ranges in detail boxes, display slot edge properties.
+
+**See [REFACTOR_PLAN Stage 5](REFACTOR_PLAN.md#stage-5-detail-box-updates) for detailed steps.**
+
+**Quick summary**:
+1. Update DetailPanel to render slot edges (clickable/hoverable ranges, slot metadata)
 2. Update RelationshipInfoBox to display slot edge properties
-
-**Files**:
-- `src/components/DetailPanel.tsx` - Render slot edges with clickable ranges
-- `src/components/RelationshipInfoBox.tsx` - Display slot edge properties
 
 ---
 
 ### Stage 6: Documentation Updates
 
-**Goal**: Update documentation to reflect new architecture
+**Status**: Not started
 
-**Files**:
-- `docs/CLAUDE.md` - Add Range abstraction, SlotEdge pattern, graph model approach
-- `docs/DATA_FLOW.md` - Update with Slots-as-Edges architecture and graphology usage
-- `docs/TASKS.md` - Update active tasks, remove obsolete items
-- `docs/PROGRESS.md` - Archive this refactor as Phase 15
+**Goal**: Update documentation to reflect Slots-as-Edges architecture.
+
+**See [REFACTOR_PLAN Stage 6](REFACTOR_PLAN.md#stage-6-documentation-updates) for files to update.**
+
+**Updates needed**:
+- CLAUDE.md (Range abstraction, SlotEdge pattern, graph model)
+- DATA_FLOW.md (Slots-as-Edges architecture, graphology)
+- TASKS.md (remove obsolete items)
+- PROGRESS.md (archive as Phase 16)
 
 ---
 
