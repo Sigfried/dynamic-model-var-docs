@@ -506,7 +506,8 @@ export abstract class Range extends Element {
 }
 
 // Name → Type lookup for accurate categorization (avoids duck typing)
-let nameToTypeMap: Map<string, 'class' | 'enum' | 'slot'> | null = null;
+// Stage 2 Step 7: Added 'type' to support LinkML types
+let nameToTypeMap: Map<string, 'class' | 'enum' | 'slot' | 'type'> | null = null;
 
 /**
  * Initialize element name lookup map. Call this once after loading ModelData.
@@ -515,11 +516,13 @@ let nameToTypeMap: Map<string, 'class' | 'enum' | 'slot'> | null = null;
 export function initializeElementNameMap(
   classNames: string[],
   enumNames: string[],
+  typeNames: string[],
   slotNames: string[]
 ): void {
   nameToTypeMap = new Map();
   classNames.forEach(name => nameToTypeMap!.set(name, 'class'));
   enumNames.forEach(name => nameToTypeMap!.set(name, 'enum'));
+  typeNames.forEach(name => nameToTypeMap!.set(name, 'type'));
   slotNames.forEach(name => nameToTypeMap!.set(name, 'slot'));
 }
 
@@ -540,13 +543,15 @@ export function initializeClassCollection(collection: ClassCollection): void {
  *
  * Collection creation order (dependencies):
  * 1. EnumCollection (no dependencies)
- * 2. SlotCollection (no dependencies)
- * 3. ClassCollection (needs slotCollection for validation)
- * 4. VariableCollection (needs classCollection)
+ * 2. TypeCollection (no dependencies) - NEW: Stage 2 Step 7
+ * 3. SlotCollection (no dependencies)
+ * 4. ClassCollection (needs slotCollection for validation)
+ * 5. VariableCollection (needs classCollection)
  */
 export function initializeModelData(schemaData: SchemaData): ModelData {
   // Create collections in proper order
   const enumCollection = EnumCollection.fromData(schemaData.enums);
+  const typeCollection = TypeCollection.fromData(schemaData.types);
   const slotCollection = SlotCollection.fromData(schemaData.slots);
   const classCollection = ClassCollection.fromData(schemaData.classes, slotCollection);
   const variableCollection = VariableCollection.fromData(schemaData.variables, classCollection);
@@ -557,6 +562,7 @@ export function initializeModelData(schemaData: SchemaData): ModelData {
   const collections = new Map();
   collections.set('class', classCollection);
   collections.set('enum', enumCollection);
+  collections.set('type', typeCollection);
   collections.set('slot', slotCollection);
   collections.set('variable', variableCollection);
 
@@ -571,8 +577,9 @@ export function initializeModelData(schemaData: SchemaData): ModelData {
   // Initialize element name lookup map for accurate type categorization
   const classNames = classCollection.getAllElements().map(c => c.name);
   const enumNames = Array.from(schemaData.enums.keys());
+  const typeNames = Array.from(schemaData.types.keys());
   const slotNames = Array.from(schemaData.slots.keys());
-  initializeElementNameMap(classNames, enumNames, slotNames);
+  initializeElementNameMap(classNames, enumNames, typeNames, slotNames);
 
   return {
     collections,
@@ -591,7 +598,11 @@ function categorizeRange(range: string): 'class' | 'enum' | 'primitive' {
   // Use lookup map if available (avoids duck typing)
   if (nameToTypeMap?.has(range)) {
     const type = nameToTypeMap.get(range)!;
-    return type === 'slot' ? 'class' : type; // Treat slot refs as class relationships
+    // Treat slot refs as class relationships
+    // Treat type refs as primitives (they're leaf nodes like primitives)
+    if (type === 'slot') return 'class';
+    if (type === 'type') return 'primitive';
+    return type;
   }
 
   // Fallback to duck typing if map not initialized (shouldn't happen in normal use)
@@ -1490,6 +1501,82 @@ export class EnumCollection extends ElementCollection {
       .sort((a, b) => a.name.localeCompare(b.name));
 
     return new EnumCollection(roots);
+  }
+
+  getLabel(): string {
+    const metadata = ELEMENT_TYPES[this.type];
+    return `${metadata.pluralLabel} (${this.roots.length})`;
+  }
+
+  getSectionIcon(): string {
+    return ELEMENT_TYPES[this.type].icon;
+  }
+
+  getDefaultExpansion(): Set<string> {
+    return new Set(); // No expansion for flat list
+  }
+
+  getExpansionKey(_position: 'left' | 'right'): string | null {
+    return null; // No expansion state needed
+  }
+
+  getElement(name: string): Element | null {
+    return this.roots.find(element => element.name === name) || null;
+  }
+
+  getAllElements(): Element[] {
+    return this.roots;
+  }
+
+  getRenderableItems(expandedItems?: Set<string>): RenderableItem[] {
+    const items: RenderableItem[] = [];
+    this.roots.forEach(root => {
+      items.push(...root.toRenderableItems(expandedItems || new Set()));
+    });
+    return items;
+  }
+
+  getSectionData(position: 'left' | 'right'): import('../components/Section').SectionData {
+    return {
+      id: this.id,
+      label: this.getLabel(),
+      getItems: (expandedItems?: Set<string>) => {
+        const items: import('../components/Section').SectionItemData[] = [];
+        this.roots.forEach(root => {
+          items.push(...root.toSectionItems(position === 'left' ? 'leftPanel' : 'rightPanel', expandedItems || new Set()));
+        });
+        return items;
+      },
+      expansionKey: this.getExpansionKey(position) || undefined,
+      defaultExpansion: this.getDefaultExpansion()
+    };
+  }
+}
+
+// TypeCollection - flat list of LinkML types
+// Stage 2 Step 7: Add TypeCollection for types from linkml:types
+export class TypeCollection extends ElementCollection {
+  readonly type = 'type' as const;
+  readonly id = 'type';
+  private roots: TypeElement[];
+
+  constructor(roots: TypeElement[]) {
+    super();
+    this.roots = roots;
+  }
+
+  /** Factory: Create from raw data (called by dataLoader) */
+  static fromData(typeData: Map<string, import('../types').TypeData>): TypeCollection {
+    // Convert TypeData to flat list of TypeElements (no hierarchy)
+    const roots = Array.from(typeData.entries())
+      .map(([name, data]) => {
+        const element = new TypeElement(name, data);
+        element.pathFromRoot = [element.name];  // Flat list: pathFromRoot = [name]
+        return element;
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    return new TypeCollection(roots);
   }
 
   getLabel(): string {

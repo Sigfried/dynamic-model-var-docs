@@ -143,6 +143,7 @@ export type {
 
 export {
   EnumCollection,      // TODO: Minimal changes
+  TypeCollection,      // NEW: Stage 2 Step 7 - LinkML types collection
   SlotCollection,      // TODO: Becomes EdgeCollection
   ClassCollection,     // TODO: Update to use edges
   VariableCollection   // TODO: Minimal changes
