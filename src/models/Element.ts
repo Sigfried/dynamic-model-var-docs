@@ -7,8 +7,8 @@
  *
  * REFACTOR CHECKLIST:
  * Stage 1: Infrastructure and Interface Definition
- * [ ] Define new interfaces based on UI_REFACTOR.md (ItemInfo, EdgeInfo, LinkPair)
- * [ ] Update existing interfaces for edge-based model
+ * [x] Define new interfaces based on UI_REFACTOR.md (ItemInfo, EdgeInfo, LinkPair, RelationshipData)
+ * [ ] Update existing interfaces for edge-based model (deferred to later stages)
  *
  * Stage 2: Migrate Element Classes
  * [ ] Types and Interfaces (ElementData, Relationship, DetailSection, DetailData)
@@ -38,6 +38,58 @@
 
 // ============================================================================
 // Types and Interfaces (TODO: Refactor for Slots-as-Edges)
+// ============================================================================
+
+// ============================================================================
+// NEW: Edge-based interfaces for Slots-as-Edges refactor
+// ============================================================================
+
+/**
+ * ItemInfo - Minimal item metadata for relationship display
+ * Used in EdgeInfo to represent connected items
+ */
+export interface ItemInfo {
+  id: string;
+  displayName: string;
+  typeDisplayName: string;  // "Class", "Enum", "Slot", "Variable"
+  color: string;  // Tailwind color classes for styling
+}
+
+/**
+ * EdgeInfo - Unified edge representation for all relationship types
+ * Used in RelationshipData for both outgoing and incoming edges
+ */
+export interface EdgeInfo {
+  edgeType: 'inheritance' | 'property' | 'variable_mapping';
+  otherItem: ItemInfo;  // The connected item (target for outgoing, source for incoming)
+  label?: string;       // For property: slot/attribute name; for variable_mapping: "mapped_to"
+  inheritedFrom?: string; // For property edges only: ancestor name that defined this slot
+}
+
+/**
+ * LinkPair - Minimal edge data for LinkOverlay rendering
+ * Only includes property edges (inheritance/variable_mapping shown in detail views)
+ */
+export interface LinkPair {
+  sourceId: string;
+  targetId: string;
+  sourceColor: string;  // For line gradient/styling
+  targetColor: string;
+  label?: string;  // slot/attribute name for property edges
+}
+
+/**
+ * RelationshipData - Unified relationship structure using edges
+ * Replaces old type-dependent relationship structure with generic edge-based model
+ */
+export interface RelationshipData {
+  thisItem: ItemInfo;
+  outgoing: EdgeInfo[];
+  incoming: EdgeInfo[];
+}
+
+// ============================================================================
+// EXISTING: Pre-refactor interfaces (will be updated/removed in later stages)
 // ============================================================================
 export type {
   ElementData,
