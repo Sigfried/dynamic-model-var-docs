@@ -18,12 +18,23 @@ import { ELEMENT_TYPES, getAllElementTypeIds } from '../models/ElementRegistry';
 import type { ToggleButtonData } from '../components/ItemsPanel';
 import type { SectionData } from '../components/Section';
 
+// NEW: Import edge-based interfaces for Slots-as-Edges refactor
+import type {
+  LinkPair,
+  RelationshipData as RelationshipDataNew
+} from '../models/Element';
+
 export interface FloatingBoxMetadata {
   title: string;
   color: string;
 }
 
-// Relationship data structures (matches Element.getRelationshipData() output)
+// ============================================================================
+// DEPRECATED: Old relationship data structures (will be removed in Stage 3+)
+// ============================================================================
+// These interfaces match Element.getRelationshipData() output from pre-refactor model
+// Use RelationshipDataNew (from Element.ts) for new code
+
 export interface SlotInfo {
   attributeName: string;
   target: string;
@@ -31,6 +42,10 @@ export interface SlotInfo {
   isSelfRef: boolean;
 }
 
+/**
+ * @deprecated Use RelationshipDataNew from models/Element instead
+ * This will be removed after Slots-as-Edges refactor is complete
+ */
 export interface RelationshipData {
   itemName: string;
   itemSection: string;
@@ -85,7 +100,8 @@ export class DataService {
   }
 
   /**
-   * Get relationship data for an item
+   * Get relationship data for an item (old type-dependent structure)
+   * @deprecated Use getRelationshipsNew() instead
    * Returns null if item not found
    */
   getRelationships(itemId: string): RelationshipData | null {
@@ -93,6 +109,39 @@ export class DataService {
     if (!element) return null;
 
     return element.getRelationshipData();
+  }
+
+  // ============================================================================
+  // NEW: Edge-based methods for Slots-as-Edges refactor (Stage 1 Step 3)
+  // ============================================================================
+
+  /**
+   * Get all linkable pairs for property edges (used by LinkOverlay).
+   * Returns only property edges (class→enum/class relationships via attributes/slots).
+   * Does NOT include inheritance or variable_mapping edges (those appear in detail views).
+   *
+   * STUB: Returns empty array until Stage 3 implementation
+   * Real implementation will query all elements for property edges
+   */
+  getAllPairs(): LinkPair[] {
+    // TODO Stage 3: Implement using element.getEdges() filtered to property edges
+    return [];
+  }
+
+  /**
+   * Get relationship data for an item (new edge-based structure).
+   * Returns unified edge-based relationships instead of type-dependent structure.
+   *
+   * STUB: Returns null until Stage 3 implementation
+   * Real implementation will use element.getEdges() for outgoing,
+   * and scan all elements for incoming edges
+   */
+  getRelationshipsNew(_itemId: string): RelationshipDataNew | null {
+    // TODO Stage 3: Implement using new edge-based model
+    // const element = this.modelData.elementLookup.get(_itemId);
+    // if (!element) return null;
+    // return element.getRelationshipDataNew();
+    return null;
   }
 
   /**
