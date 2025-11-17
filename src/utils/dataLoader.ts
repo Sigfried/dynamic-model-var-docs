@@ -106,10 +106,10 @@ function transformWithMapping<T>(
 }
 
 // Expected fields for each DTO type (for validation)
-const EXPECTED_SLOT_FIELDS = ['range', 'description', 'slot_uri', 'identifier', 'required', 'multivalued'];
-const EXPECTED_ENUM_FIELDS = ['description', 'permissible_values'];
-const EXPECTED_TYPE_FIELDS = ['uri', 'base', 'repr', 'description', 'notes', 'exact_mappings', 'close_mappings', 'broad_mappings', 'conforms_to', 'comments'];
-const EXPECTED_CLASS_FIELDS = ['name', 'description', 'parent', 'abstract', 'attributes', 'slots', 'slot_usage'];
+const EXPECTED_SLOT_FIELDS = ['range', 'description', 'slot_uri', 'identifier', 'required', 'multivalued', 'from_schema'];
+const EXPECTED_ENUM_FIELDS = ['description', 'permissible_values', 'from_schema'];
+const EXPECTED_TYPE_FIELDS = ['uri', 'base', 'repr', 'description', 'notes', 'exact_mappings', 'close_mappings', 'broad_mappings', 'conforms_to', 'comments', 'name', 'from_schema'];
+const EXPECTED_CLASS_FIELDS = ['name', 'description', 'is_a', 'abstract', 'attributes', 'slots', 'slot_usage', 'from_schema'];
 const EXPECTED_VARIABLE_FIELDS = ['maps_to', 'variableLabel', 'dataType', 'ucumUnit', 'curie', 'variableDescription'];
 
 /**
@@ -146,10 +146,22 @@ function transformTypeDTO(dto: TypeDTO): TypeData {
 
 /**
  * Transform ClassDTO to ClassData
+ * Normalizes is_a (LinkML native field name) to parent
  */
 function transformClassDTO(dto: ClassDTO): ClassData {
   validateDTO(dto, EXPECTED_CLASS_FIELDS, 'ClassDTO');
-  return transformWithMapping<ClassData>(dto, FIELD_MAPPINGS.class);
+  const transformed = transformWithMapping<ClassData>(dto, FIELD_MAPPINGS.class);
+
+  // Normalize is_a → parent
+  if (dto.is_a) {
+    transformed.parent = dto.is_a;
+  }
+
+  // Set defaults for optional fields
+  transformed.abstract = transformed.abstract ?? false;
+  transformed.attributes = transformed.attributes ?? {};
+
+  return transformed;
 }
 
 /**

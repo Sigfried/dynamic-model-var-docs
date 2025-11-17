@@ -58,17 +58,18 @@ export interface TypeDTO {
 }
 
 /**
- * Raw class definition from metadata JSON (LinkML schema)
- * snake_case fields from JSON
+ * Raw class definition from LinkML expanded schema (gen-linkml output)
+ * snake_case fields from YAML
  */
 export interface ClassDTO {
   name: string;
   description: string;
-  parent?: string;
-  abstract: boolean;
-  attributes: Record<string, AttributeDefinition>;
-  slots?: string | string[]; // Can be string or array in raw metadata
-  slot_usage?: Record<string, AttributeDefinition>; // Refinements/constraints on slots
+  is_a?: string;  // Parent class (LinkML field name)
+  abstract?: boolean;
+  attributes?: Record<string, AttributeDefinition>;
+  slots?: string | string[];
+  slot_usage?: Record<string, AttributeDefinition>;
+  from_schema?: string;  // Added by gen-linkml
 }
 
 /**
@@ -139,7 +140,7 @@ export interface TypeData {
 export interface ClassData {
   name: string;
   description: string;
-  parent?: string;
+  parent?: string;  // Normalized from is_a (expanded YAML) or parent (metadata.json)
   abstract: boolean;
   attributes: Record<string, AttributeDefinition>;
   slots?: string | string[];
