@@ -20,24 +20,20 @@ import type {
 import { FIELD_MAPPINGS } from '../types';
 import { initializeModelData } from '../models/Element';
 
-// Load yaml parse library
-import yaml from 'js-yaml';
-
 /**
- * Load bdchm.expanded.yaml which includes:
+ * Load bdchm.expanded.json which includes:
  * - All classes, enums, slots from bdchm.yaml
- * - All types from linkml:types (resolved via gen-linkml --expand-imports)
+ * - All types from linkml:types (resolved via gen-linkml)
  * - Inherited slots filled in
  *
- * To regenerate: cd public/source_data/HM && gen-linkml --output bdchm.expanded.yaml --format yaml --expand-imports bdchm.yaml
+ * To regenerate: python3 scripts/download_source_data.py --metadata-only
  */
 async function loadExpandedSchemaDTO(): Promise<SchemaDTO & TypesSchemaDTO> {
-  const response = await fetch(`${import.meta.env.BASE_URL}source_data/HM/bdchm.expanded.yaml`);
+  const response = await fetch(`${import.meta.env.BASE_URL}source_data/HM/bdchm.expanded.json`);
   if (!response.ok) {
     throw new Error(`Failed to load expanded schema: ${response.statusText}`);
   }
-  const text = await response.text();
-  const parsed = yaml.load(text) as SchemaDTO & TypesSchemaDTO;
+  const parsed = await response.json() as SchemaDTO & TypesSchemaDTO;
   return parsed;
 }
 

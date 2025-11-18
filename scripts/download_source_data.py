@@ -7,11 +7,12 @@ Saves to {local_source_dir}/{dependency_name}/{file_name}
 Handles errors if files don't exist
 Prints what it's fetching
 
-After downloading bdchm.yaml, generates bdchm.metadata.json with class hierarchy information.
+After downloading bdchm.yaml, generates bdchm.expanded.json using gen-linkml.
+This includes all types from linkml:types and expands inherited slots.
 
 Usage:
-  python download_source_data.py              # Download all files and generate metadata
-  python download_source_data.py --metadata-only   # Skip downloads, just regenerate metadata from existing bdchm.yaml
+  python download_source_data.py              # Download all files and generate expanded schema
+  python download_source_data.py --metadata-only   # Skip downloads, just regenerate expanded schema from existing bdchm.yaml
 """
 
 import sys
@@ -88,10 +89,11 @@ def generate_expanded_schema(yaml_path: Path, output_path: Path) -> bool:
     """
     Generate expanded schema using gen-linkml.
     Resolves imports (like linkml:types) and expands inherited slots.
+    Outputs JSON format (gen-linkml default) which includes inherited_from metadata.
 
     Args:
         yaml_path: Path to bdchm.yaml
-        output_path: Path to save bdchm.expanded.yaml
+        output_path: Path to save bdchm.expanded.json
 
     Returns:
         True if successful, False otherwise
@@ -101,6 +103,7 @@ def generate_expanded_schema(yaml_path: Path, output_path: Path) -> bool:
         print(f"Generating expanded schema from {yaml_path.name}...")
 
         # Run gen-linkml to expand imports (merges imports like linkml:types)
+        # Default output format is JSON, which includes inherited_from in attributes
         result = subprocess.run(
             [
                 'gen-linkml',
@@ -132,90 +135,21 @@ def generate_expanded_schema(yaml_path: Path, output_path: Path) -> bool:
         return False
 
 
-def generate_metadata(yaml_path: Path, output_path: Path) -> bool:
-    """
-    Parse bdchm.yaml and generate metadata JSON for the app.
-
-    Extracts:
-    - Classes with names, descriptions, and parent (is_a) relationships
-    - Attributes and slots for each class
-    - Enums (for future use)
-    - Top-level slots (shared across classes)
-
-    Args:
-        yaml_path: Path to bdchm.yaml
-        output_path: Path to save bdchm.metadata.json
-
-    Returns:
-        True if successful, False otherwise
-    """
-    try:
-        print(f"Generating metadata from {yaml_path.name}...")
-
-        with open(yaml_path, 'r') as f:
-            schema = yaml.safe_load(f)
-
-        metadata = {
-            "classes": {},
-            "slots": schema.get("slots", {}),
-            "enums": schema.get("enums", {})
-        }
-
-        # Extract class information
-        for class_name, class_def in schema.get("classes", {}).items():
-            attributes = class_def.get("attributes", {})
-
-            # Validate: attributes must be a dict (object), not a list (array)
-            if isinstance(attributes, list):
-                raise ValueError(
-                    f"Class '{class_name}' has array-based attributes. "
-                    f"This is a known issue in the source schema. "
-                    f"Please fix the schema at the source (bdchm.yaml) before proceeding."
-                )
-
-            metadata["classes"][class_name] = {
-                "name": class_name,
-                "description": class_def.get("description", ""),
-                "parent": class_def.get("is_a"),  # null if no parent
-                "abstract": class_def.get("abstract", False),
-                "attributes": attributes,
-                "slots": class_def.get("slots", []),
-                "slot_usage": class_def.get("slot_usage", {})
-            }
-
-        # Write metadata JSON
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(output_path, 'w') as f:
-            json.dump(metadata, f, indent=2)
-
-        class_count = len(metadata["classes"])
-        slot_count = len(metadata["slots"])
-        enum_count = len(metadata["enums"])
-
-        print(f"  ✓ Generated metadata: {class_count} classes, {slot_count} slots, {enum_count} enums")
-        print(f"  ✓ Saved to {output_path}")
-        return True
-
-    except Exception as e:
-        print(f"  ✗ Error generating metadata: {e}", file=sys.stderr)
-        return False
-
-
 def main():
     """Download all configured source files."""
     parser = argparse.ArgumentParser(
-        description="Download source data and generate metadata",
+        description="Download source data and generate expanded schema",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python download_source_data.py              # Download all files and generate metadata
-  python download_source_data.py --metadata-only   # Skip downloads, regenerate metadata only
+  python download_source_data.py              # Download all files and generate expanded schema
+  python download_source_data.py --metadata-only   # Skip downloads, regenerate expanded schema only
         """
     )
     parser.add_argument(
         '--metadata-only',
         action='store_true',
-        help='Skip downloads and only regenerate bdchm.metadata.json from existing bdchm.yaml'
+        help='Skip downloads and only regenerate bdchm.expanded.json from existing bdchm.yaml'
     )
     args = parser.parse_args()
 
@@ -281,18 +215,12 @@ Examples:
                     print(f"  ✗ Invalid Google Sheets URL format: {sheet_url}", file=sys.stderr)
                     fail_count += 1
 
-    # Generate expanded schema and metadata from YAML if available
+    # Generate expanded schema from YAML if available
     if yaml_path and yaml_path.exists():
         # Generate expanded schema with imports resolved (includes linkml:types)
-        expanded_path = yaml_path.parent / "bdchm.expanded.yaml"
+        # Using JSON format (gen-linkml default)
+        expanded_path = yaml_path.parent / "bdchm.expanded.json"
         if generate_expanded_schema(yaml_path, expanded_path):
-            success_count += 1
-        else:
-            fail_count += 1
-
-        # Generate metadata JSON (legacy format for backward compatibility)
-        metadata_path = yaml_path.parent / "bdchm.metadata.json"
-        if generate_metadata(yaml_path, metadata_path):
             success_count += 1
         else:
             fail_count += 1
