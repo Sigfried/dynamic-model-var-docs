@@ -15,10 +15,10 @@ import type { Relationship } from '../models/Element';
 describe('linkHelpers', () => {
   describe('filterRelationships', () => {
     const mockRelationships: Relationship[] = [
-      { type: 'inherits', target: 'Entity', targetType: 'class', isSelfRef: false },
-      { type: 'property', label: 'species', target: 'SpeciesEnum', targetType: 'enum', isSelfRef: false },
-      { type: 'property', label: 'participant', target: 'Participant', targetType: 'class', isSelfRef: false },
-      { type: 'property', label: 'parent', target: 'Specimen', targetType: 'class', isSelfRef: true },
+      { type: 'inherits', target: 'Entity', targetSection: 'class', isSelfRef: false },
+      { type: 'property', label: 'species', target: 'SpeciesEnum', targetSection: 'enum', isSelfRef: false },
+      { type: 'property', label: 'participant', target: 'Participant', targetSection: 'class', isSelfRef: false },
+      { type: 'property', label: 'parent', target: 'Specimen', targetSection: 'class', isSelfRef: true },
     ];
 
     test('should return all relationships by default (excluding self-refs)', () => {
@@ -47,7 +47,7 @@ describe('linkHelpers', () => {
     test('should show only classes when onlyClasses=true', () => {
       const filtered = filterRelationships(mockRelationships, { onlyClasses: true });
       expect(filtered.length).toBe(2); // 3 class relationships - 1 self-ref = 2
-      expect(filtered.every(r => r.targetType === 'class')).toBe(true);
+      expect(filtered.every(r => r.targetSection === 'class')).toBe(true);
     });
 
     test('should exclude self-refs by default', () => {
@@ -76,14 +76,14 @@ describe('linkHelpers', () => {
         visibleElements,
       });
       expect(filtered.length).toBe(3);
-      expect(filtered.every(r => r.targetType === 'class')).toBe(true);
+      expect(filtered.every(r => r.targetSection === 'class')).toBe(true);
     });
   });
 
   describe('buildLinks', () => {
     const mockRelationships: Relationship[] = [
-      { type: 'inherits', target: 'Entity', targetType: 'class', isSelfRef: false },
-      { type: 'property', label: 'species', target: 'SpeciesEnum', targetType: 'enum', isSelfRef: false },
+      { type: 'inherits', target: 'Entity', targetSection: 'class', isSelfRef: false },
+      { type: 'property', label: 'species', target: 'SpeciesEnum', targetSection: 'enum', isSelfRef: false },
     ];
 
     test('should create link objects from relationships', () => {
@@ -241,7 +241,7 @@ describe('linkHelpers', () => {
       const rel: Relationship = {
         type: 'inherits',
         target: 'Entity',
-        targetType: 'class',
+        targetSection: 'class',
         isSelfRef: false,
       };
 
@@ -253,7 +253,7 @@ describe('linkHelpers', () => {
         type: 'property',
         label: 'species',
         target: 'SpeciesEnum',
-        targetType: 'enum',
+        targetSection: 'enum',
         isSelfRef: false,
       };
 
@@ -265,7 +265,7 @@ describe('linkHelpers', () => {
         type: 'property',
         label: 'participant',
         target: 'Participant',
-        targetType: 'class',
+        targetSection: 'class',
         isSelfRef: false,
       };
 
