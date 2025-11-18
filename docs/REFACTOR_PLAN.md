@@ -450,58 +450,93 @@ Before starting the refactor, complete UI/model separation from Phase 12:
 
 ### Stage 4.5: Slot Panel Fixes & Edge Verification
 
-**Status**: ⏸️ **READY TO START** - Needs implementation before Stage 5
+**Status**: 🔄 **IN PROGRESS** - Part 1 complete, Part 2 in progress
 
-**Goal**: Fix slot panel to show all slots and verify class-range edges work
+**Goal**: Fix slot panel to show all slots, properly handle slot_usage overrides, and verify class-range edges work
+
+**Background**:
+
+With expanded schema (gen-linkml output):
+- Inherited slots are already merged into `classDTO.attributes`
+- `classDTO.slots` contains slot references (not duplicated in attributes)
+- `classDTO.slot_usage` contains overrides for inherited slots
+- No duplicates should occur between attributes and slots
 
 **Issues**:
 
-1. **Slot panel incomplete**
-   - Currently shows only 7 slots (from `slots:` section of bdchm.yaml)
-   - Should show all ~170 slots (global slots + class attribute slots)
-   - DataLoader only collects from `expandedSchemaDTO.slots`
-   - Need to also collect slot definitions from `classDTO.attributes`
+1. **Slot panel incomplete** ✅ FIXED in Part 1
+   - Was showing only 7 slots (from `slots:` section of bdchm.yaml)
+   - Now shows all ~170 slots (global slots + class attribute slots)
 
-2. **Class-range edges verification**
-   - Verify SlotEdge instances work correctly
-   - Test that LinkOverlay can traverse and render edges
+2. **Need to switch from YAML to JSON** ⏭️ Part 2
+   - Currently using `bdchm.expanded.yaml`
+   - Should use `gen-linkml` default output (JSON format)
+   - JSON includes `inherited_from` field in attributes
+   - Will eliminate need for bdchm.metadata.json
+
+3. **Slot_usage overrides need proper handling** ⏭️ Part 2
+   - Each slot_usage creates a new slot instance with merged properties
+   - Slot IDs: base slot `'category'`, override `'category-SdohObservation'`
+   - Slot names: always the base name (for UI display)
+   - SlotEdge points to override slot when slot_usage exists
+
+4. **Remove duplicate-check workaround** ⏭️ Part 2
+   - Current code checks `if (graph.hasEdge(edgeKey))` before adding
+   - Proper slot_usage handling will prevent duplicates
+   - Let it fail if duplicate IDs occur (indicates data issue)
 
 **Implementation**:
 
-**Part 1: Fix slot panel**
-- Update `dataLoader.ts` to collect ALL slot definitions:
-  ```typescript
-  const slots = new Map<string, SlotData>();
+**Part 1: Collect all slots** ✅ COMPLETE
+- ✅ Added `transformAttributeToSlotData()` function
+- ✅ Updated `loadRawData()` to collect from both global slots and class attributes
+- ✅ Added duplicate-check workaround in `addSlotEdge()` (temporary)
+- ✅ Added test verifying 170 slots collected
+- ✅ All tests passing (10/10)
 
-  // Add global slots
-  Object.entries(expandedSchemaDTO.slots || {}).forEach(...)
+**Part 2: Switch to JSON and handle slot_usage** ⏭️ NEXT
+- Update `scripts/download_source_data.py`:
+  - Change gen-linkml command to use default JSON output
+  - Remove explicit `--format yaml` flag
+  - Output file: `bdchm.expanded.json` instead of `bdchm.expanded.yaml`
+- Update `dataLoader.ts`:
+  - Load JSON instead of YAML (remove yaml parser dependency)
+  - For each class with `slot_usage`:
+    - Create new slot: `id = slotName-ClassName`, `name = slotName`
+    - Merge base slot properties with slot_usage overrides
+    - Add to slots map
+  - Extract `inherited_from` from attribute metadata (provided by JSON)
+  - Pass `inherited_from` to `addSlotEdge()` calls
+- Update `Graph.ts`:
+  - Remove duplicate-check in `addSlotEdge()`
+  - For slot_usage edges, use override slot ID instead of base slot ID
+- Update types:
+  - Add `inherited_from?: string` to AttributeDefinition
+- Remove `bdchm.metadata.json` (no longer needed)
 
-  // Add class attribute slots
-  classes.forEach(classDTO => {
-    Object.entries(classDTO.attributes || {}).forEach(([attrName, attrDef]) => {
-      if (!slots.has(attrName)) {
-        slots.set(attrName, transformAttributeToSlotData(attrDef));
-      }
-    });
-  });
-  ```
-- Verify SlotCollection shows all ~170 slots
-- Test slot panel renders correctly
-
-**Part 2: Verify edges**
+**Part 3: Verify edges**
 - Test: Query graph for edges from a known class
-- Verify SlotEdge methods work
-- Test LinkOverlay can traverse edges
+- Verify SlotEdge instances work correctly
+- Test that LinkOverlay can traverse and render edges
+- Verify slot_usage overrides appear as separate slots in middle panel
 
 **Success Criteria**:
-- ✅ Slot panel shows all ~170 slots (not just 7)
-- ✅ Class-range edges work correctly
-- ✅ TypeScript typecheck passes
-- ✅ All tests pass
+- ✅ Slot panel shows all ~170 slots (Part 1 complete)
+- ⏭️ JSON schema loads correctly with inherited_from metadata
+- ⏭️ Slot_usage creates separate slot instances with correct IDs
+- ⏭️ SlotEdges point to override slots when slot_usage exists
+- ⏭️ No duplicate edge errors
+- ⏭️ Class-range edges work correctly
+- ⏭️ TypeScript typecheck passes
+- ⏭️ All tests pass
 
 **Files to modify**:
-- `src/utils/dataLoader.ts` - Collect all slot definitions
-- `src/test/` - Add edge verification tests
+- ✅ `src/utils/dataLoader.ts` - Collect all slot definitions (Part 1)
+- ⏭️ `scripts/download_source_data.py` - Switch to JSON output
+- ⏭️ `src/utils/dataLoader.ts` - Handle slot_usage, extract inherited_from
+- ⏭️ `src/models/Graph.ts` - Remove duplicate-check, use override slot IDs
+- ⏭️ `src/types.ts` - Add inherited_from field
+- ⏭️ `src/test/` - Add edge verification tests
 
 ### Stage 5: Fix Model/View Separation
 
