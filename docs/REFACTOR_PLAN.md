@@ -294,14 +294,16 @@ Before starting the refactor, complete UI/model separation from Phase 12:
 
 **Goal**: Replace current Element-based model with graph-based model using graphology
 
+**Status**: 🔄 **In Progress** - Steps 1-2 complete (graph infrastructure built)
+
 **Key insight**: A vast amount of what happens in current Element.ts can be handled by graphology queries
 
 **Steps**:
-1. Install and configure graphology
-2. Define graph structure:
+1. ✅ Install and configure graphology
+2. ✅ Define graph structure:
    - Node types: Class, Enum, Slot, Type, Variable
    - Edge types: SlotEdge, InheritanceEdge, MapsToEdge
-3. Create SlotEdge class/interface:
+3. ✅ Create SlotEdge class/interface:
    - Properties: name, slotRef, required, multivalued, inherited_from, overrides
    - Connects Class → Range with context-specific properties
 4. Refactor ClassElement to use SlotEdges instead of ClassSlots
@@ -314,7 +316,17 @@ Before starting the refactor, complete UI/model separation from Phase 12:
    - Keep for getLabel, getDefaultExpansion
    - Replace methods like getUsedByClasses with graphology queries
 
+**Implementation Notes (Steps 1-3)**:
+- Created `src/models/Graph.ts` with complete graph infrastructure
+- Architecture: Option A (Graph stores IDs only, Element instances in collections)
+- Graph built in initializeModelData via buildGraphFromSchemaData()
+- SlotEdge class wraps graph edges, provides OOP interface
+- Graph added to ModelData interface
+
 **Files**:
+- ✅ `src/models/Graph.ts` - NEW: Complete graph structure, SlotEdge class, helper functions
+- ✅ `src/types.ts` - Added graph field to ModelData
+- ✅ `src/models/ElementPreRefactor.ts` - Minimal integration (call buildGraphFromSchemaData)
 - `src/models/Element.ts` - SlotEdge class, refactor ClassElement, Range abstraction
 - `src/models/ElementCollection.ts` - Simplify with graphology queries
 - `src/services/DataService.ts` - Add type collection, update relationship APIs, add getSlotEdgesForClass()
