@@ -110,6 +110,19 @@ describe('dataLoader', () => {
       }
     });
 
+    test('should collect all slots from both global slots and class attributes', async () => {
+      const data = await loadModelData();
+
+      const slotCollection = data.collections.get('slot') as SlotCollection;
+      const slots = slotCollection.getSlots();
+
+      // After Stage 4.5, should show ~170 slots (not just 7)
+      // Previously only collected from expandedSchemaDTO.slots
+      // Now also collects from class attributes
+      console.log(`Total slots collected: ${slots.size}`);
+      expect(slots.size).toBeGreaterThan(100); // Should be around ~170
+    });
+
     test('should parse enum definitions with values', async () => {
       const data = await loadModelData();
 

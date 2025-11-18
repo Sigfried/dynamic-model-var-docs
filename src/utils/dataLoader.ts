@@ -173,6 +173,20 @@ function transformVariableSpecDTO(dto: VariableSpecDTO): VariableSpec {
 }
 
 /**
+ * Transform AttributeDefinition (from class attributes) to SlotData
+ * AttributeDefinition is a subset of SlotDTO fields, so we can convert directly
+ */
+function transformAttributeToSlotData(attr: { range: string; description?: string; required?: boolean; multivalued?: boolean }): SlotData {
+  return {
+    range: attr.range,
+    description: attr.description,
+    required: attr.required,
+    multivalued: attr.multivalued
+    // Note: slotUri and identifier are not present in AttributeDefinition
+  };
+}
+
+/**
  * Load and transform raw data from files
  * Returns DTOs transformed to Data types with proper field naming
  *
@@ -195,9 +209,22 @@ export async function loadRawData(): Promise<SchemaData> {
     enums.set(name, transformEnumDTO(dto));
   });
 
+  // Collect all slot definitions from both global slots and class attributes
   const slots = new Map<string, SlotData>();
+
+  // Add global slots from schema
   Object.entries(expandedSchemaDTO.slots || {}).forEach(([name, dto]) => {
     slots.set(name, transformSlotDTO(dto));
+  });
+
+  // Add slot definitions from class attributes
+  // These are attribute-specific slot definitions that may not appear in global slots
+  classes.forEach(classData => {
+    Object.entries(classData.attributes || {}).forEach(([attrName, attrDef]) => {
+      if (!slots.has(attrName)) {
+        slots.set(attrName, transformAttributeToSlotData(attrDef));
+      }
+    });
   });
 
   // Types from linkml:types (included via import expansion in bdchm.expanded.yaml)

@@ -263,7 +263,15 @@ export function addSlotEdge(
   multivalued: boolean,
   inheritedFrom?: string
 ): void {
-  graph.addEdgeWithKey(`${classId}->${rangeId}`, classId, rangeId, {
+  // Edge key must be unique: include slot name since same class can have multiple slots with same range
+  const edgeKey = `${classId}-[${slotName}]->${rangeId}`;
+
+  // Skip if edge already exists (can happen when slot appears in both attributes and slots)
+  if (graph.hasEdge(edgeKey)) {
+    return;
+  }
+
+  graph.addEdgeWithKey(edgeKey, classId, rangeId, {
     type: 'slot',
     slotName,
     slotDefId,
