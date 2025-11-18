@@ -244,7 +244,7 @@ export function addInheritanceEdge(
   sourceId: string,
   targetId: string
 ): void {
-  graph.addDirectedEdge(sourceId, targetId, {
+  graph.addEdgeWithKey(`${sourceId}->${targetId}`, sourceId, targetId, {
     type: 'inheritance',
   });
 }
@@ -263,7 +263,7 @@ export function addSlotEdge(
   multivalued: boolean,
   inheritedFrom?: string
 ): void {
-  graph.addDirectedEdge(classId, rangeId, {
+  graph.addEdgeWithKey(`${classId}->${rangeId}`, classId, rangeId, {
     type: 'slot',
     slotName,
     slotDefId,
@@ -282,7 +282,7 @@ export function addMapsToEdge(
   variableId: string,
   classId: string
 ): void {
-  graph.addDirectedEdge(variableId, classId, {
+  graph.addEdgeWithKey(`${variableId}->${classId}`, variableId, classId, {
     type: 'maps_to',
   });
 }
