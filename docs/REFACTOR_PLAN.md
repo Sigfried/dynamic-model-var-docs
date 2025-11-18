@@ -521,19 +521,17 @@ With expanded schema (gen-linkml JSON output):
 - ✅ Deleted bdchm.metadata.json file
 - ✅ Commit: c54d822
 
-**Part 2b: Data transformation strategy** ⏭️ NEEDS DECISION
+**Part 2b: Data transformation with transform_schema.py** ⏭️ NEXT
+
+**Decision**: Pursue Option B - Transform JSON to optimized format
 
 **Problem**: gen-linkml JSON has redundancy and lacks inheritance info we need
+- Complex inheritance computation would be needed in dataLoader
+- Parse 548KB of redundant data every page load
+- Redundant metadata repeated for every attribute
+- No `inherited_from` field
 
-**Option A: Process JSON directly in dataLoader** (current approach)
-- Pros: Single source of truth (gen-linkml output)
-- Cons:
-  - Complex inheritance computation in dataLoader
-  - Parse 548KB of redundant data every page load
-  - Redundant metadata repeated for every attribute
-
-**Option B: Transform JSON to optimized format** (proposed)
-- Create Python script: `scripts/transform_schema.py`
+**Solution**: Create `scripts/transform_schema.py`
 - Input: `bdchm.expanded.json` (from gen-linkml)
 - Output: `bdchm.processed.json` (optimized for our app)
 - Run as part of `download_source_data.py` pipeline
@@ -543,44 +541,82 @@ With expanded schema (gen-linkml JSON output):
   - Add computed fields we need (inherited_from, slot instance IDs)
   - Validate data at build time (catch issues early)
 
-**Optimized JSON structure** (Option B):
+**Optimized JSON structure**:
+
+Example using real classes from schema (Specimen → DimensionalObservationSet):
+
 ```typescript
 {
   "classes": {
-    "Participant": {
-      "name": "Participant",
-      "description": "...",
-      "parent": "Entity",
+    "ObservationSet": {
+      "id": "ObservationSet",
+      "name": "ObservationSet",
+      "description": "A set of one or more observations",
+      "parent": null,
       "abstract": false,
       "attributes": {
-        "id": {
-          "slotId": "id",  // References global slot OR override slot
-          "inherited_from": "Entity",  // Computed from hierarchy
-          "required": true,
-          "multivalued": false
-        },
-        "species": {
-          "slotId": "species-Participant",  // Override slot ID
-          "inherited_from": "Entity",
-          "required": false  // Overridden from base
+        "observations": {
+          "slotId": "observations",  // References base slot
+          "range": "Observation",
+          "multivalued": true
+          // No inherited_from (defined on this class)
         }
-      },
-      "slots": ["id", "species"]  // Just names for reference
+      }
+    },
+    "DimensionalObservationSet": {
+      "id": "DimensionalObservationSet",
+      "name": "DimensionalObservationSet",
+      "description": "...",
+      "parent": "ObservationSet",
+      "abstract": false,
+      "attributes": {
+        "observations": {
+          "slotId": "observations-DimensionalObservationSet",  // Override slot ID
+          "range": "DimensionalObservation",  // Overridden from Observation
+          "multivalued": true,
+          "required": true,  // Added via slot_usage
+          "inherited_from": "ObservationSet"  // Computed from hierarchy
+        }
+      }
+    },
+    "Specimen": {
+      "id": "Specimen",
+      "name": "Specimen",
+      "description": "...",
+      "parent": "Material",
+      "abstract": false,
+      "attributes": {
+        "dimensional_measures": {
+          "slotId": "dimensional_measures",  // Direct attribute
+          "range": "DimensionalObservationSet",
+          "multivalued": false
+          // No inherited_from (defined on this class)
+        }
+      }
     }
   },
   "slots": {
-    "id": {  // Base slot
-      "name": "id",
-      "description": "...",
-      "range": "uriorcurie",
-      "required": true
+    "observations": {  // Base slot
+      "id": "observations",
+      "name": "observations",
+      "description": "A set of one or more observations.",
+      "range": "Observation",
+      "multivalued": true
     },
-    "species-Participant": {  // Override slot instance
-      "name": "species",  // Display name (same as base)
-      "description": "...",  // From base
-      "range": "SpeciesEnum",  // From slot_usage override
-      "required": false,  // From slot_usage override
-      "overrides": "species"  // Reference to base slot
+    "observations-DimensionalObservationSet": {  // Override slot instance
+      "id": "observations-DimensionalObservationSet",
+      "name": "observations",  // Display name (same as base)
+      "description": "A set of one or more observations.",  // From base
+      "range": "DimensionalObservation",  // From slot_usage override
+      "multivalued": true,  // From base
+      "required": true,  // From slot_usage override
+      "overrides": "observations"  // Reference to base slot
+    },
+    "dimensional_measures": {  // Direct slot (not an override)
+      "id": "dimensional_measures",
+      "name": "dimensional_measures",
+      "description": "...",
+      "range": "DimensionalObservationSet"
     }
   },
   "enums": {...},
@@ -589,9 +625,46 @@ With expanded schema (gen-linkml JSON output):
 }
 ```
 
-**Decision needed**: Which option to pursue?
+**Design decisions**:
+- ✅ All elements have `id` field (same as `name` except for slot_usage slots)
+- ✅ Removed separate `class.slots` array (redundant with `class.attributes` keys)
+- ✅ Attributes directly contain all needed info (slot ID, range, flags, inherited_from)
+- ✅ Slot instances created for each slot_usage override
+- ✅ Computed `inherited_from` for all inherited attributes
 
-**Part 3: Verify edges**
+**Implementation steps for Part 2b**:
+1. Create `scripts/transform_schema.py`:
+   - Load `bdchm.expanded.json`
+   - Build class hierarchy map (parent → children)
+   - For each class:
+     - Compute `inherited_from` for each attribute (walk up hierarchy)
+     - For attributes with slot_usage, create slot instance with ID `{slotName}-{ClassName}`
+     - Output streamlined class definition with just needed fields
+   - For slots:
+     - Keep base slot definitions
+     - Add slot instance for each slot_usage override
+     - Include `overrides` field pointing to base slot
+   - Output enums, types, variables as-is (minimal processing)
+   - Write `bdchm.processed.json`
+2. Update `download_source_data.py`:
+   - After generating `bdchm.expanded.json`, call `transform_schema.py`
+   - Report file size reduction
+3. Update `dataLoader.ts`:
+   - Change fetch URL to `bdchm.processed.json`
+   - Update DTOs to match new structure (remove redundant fields)
+   - Simplify transformation logic (less processing needed)
+4. Update `Graph.ts`:
+   - Use `slotId` from attributes instead of computing
+   - Use `inherited_from` from attributes
+   - Remove duplicate-check workaround
+
+**Part 2c: Update graph building** ⏭️ AFTER Part 2b
+- Update `buildGraphFromSchemaData()` to use `slotId` from attributes
+- Pass `inherited_from` to `addSlotEdge()` calls
+- Remove duplicate-check workaround (let it fail if real duplicates exist)
+- Verify slot instance IDs work correctly
+
+**Part 3: Verify edges** ⏭️ AFTER Part 2c
 - Test: Query graph for edges from a known class
 - Verify SlotEdge instances work correctly
 - Test that LinkOverlay can traverse and render edges
@@ -599,21 +672,27 @@ With expanded schema (gen-linkml JSON output):
 
 **Success Criteria**:
 - ✅ Slot panel shows all ~170 slots (Part 1 complete)
-- ⏭️ JSON schema loads correctly with inherited_from metadata
-- ⏭️ Slot_usage creates separate slot instances with correct IDs
-- ⏭️ SlotEdges point to override slots when slot_usage exists
-- ⏭️ No duplicate edge errors
-- ⏭️ Class-range edges work correctly
-- ⏭️ TypeScript typecheck passes
-- ⏭️ All tests pass
+- ⏭️ `transform_schema.py` successfully generates `bdchm.processed.json` (Part 2b)
+- ⏭️ Processed JSON is smaller than expanded JSON (Part 2b)
+- ⏭️ All classes have computed `inherited_from` for inherited attributes (Part 2b)
+- ⏭️ Slot_usage creates separate slot instances with correct IDs (Part 2b)
+- ⏭️ dataLoader successfully loads processed JSON (Part 2b)
+- ⏭️ SlotEdges use slot instance IDs from processed JSON (Part 2c)
+- ⏭️ No duplicate edge errors (Part 2c)
+- ⏭️ Class-range edges work correctly (Part 3)
+- ⏭️ TypeScript typecheck passes (all parts)
+- ⏭️ All tests pass (all parts)
 
 **Files to modify**:
 - ✅ `src/utils/dataLoader.ts` - Collect all slot definitions (Part 1)
-- ⏭️ `scripts/download_source_data.py` - Switch to JSON output
-- ⏭️ `src/utils/dataLoader.ts` - Handle slot_usage, extract inherited_from
-- ⏭️ `src/models/Graph.ts` - Remove duplicate-check, use override slot IDs
-- ⏭️ `src/types.ts` - Add inherited_from field
-- ⏭️ `src/test/` - Add edge verification tests
+- ✅ `scripts/download_source_data.py` - Switch to JSON output (Part 2a)
+- ⏭️ `scripts/transform_schema.py` - NEW: Transform expanded JSON to optimized format (Part 2b)
+- ⏭️ `scripts/download_source_data.py` - Call transform_schema.py in pipeline (Part 2b)
+- ⏭️ `src/utils/dataLoader.ts` - Load bdchm.processed.json instead of expanded (Part 2b)
+- ⏭️ `src/types.ts` - Update DTOs to match processed format (Part 2b)
+- ⏭️ `src/models/Graph.ts` - Use slot instance IDs from processed JSON (Part 2c)
+- ⏭️ `src/models/Graph.ts` - Remove duplicate-check workaround (Part 2c)
+- ⏭️ `src/test/` - Add edge verification tests (Part 3)
 
 ### Stage 5: Fix Model/View Separation
 
