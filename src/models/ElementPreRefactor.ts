@@ -16,6 +16,7 @@ import type {
 import type { ElementTypeId, RelationshipTypeId } from './ElementRegistry';
 import { ELEMENT_TYPES } from './ElementRegistry';
 import type { RenderableItem } from './RenderableItem';
+import { buildGraphFromSchemaData } from './Graph';
 
 // Union type for all element data types
 export type ElementData = ClassDTO | EnumDTO | SlotDTO | VariableSpec;
@@ -581,9 +582,13 @@ export function initializeModelData(schemaData: SchemaData): ModelData {
   const slotNames = Array.from(schemaData.slots.keys());
   initializeElementNameMap(classNames, enumNames, typeNames, slotNames);
 
+  // Build graph structure (Stage 3)
+  const graph = buildGraphFromSchemaData(schemaData);
+
   return {
     collections,
-    elementLookup
+    elementLookup,
+    graph
   };
 }
 

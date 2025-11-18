@@ -20,6 +20,8 @@
     "test:coverage": "vitest --coverage"
   },
   "dependencies": {
+    "graphology": "^0.26.0",
+    "graphology-types": "^0.24.8",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
