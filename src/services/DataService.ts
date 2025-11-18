@@ -212,11 +212,11 @@ export class DataService {
    * Returns only property edges (class→enum/class relationships via attributes/slots).
    * Does NOT include inheritance or variable_mapping edges (those appear in detail views).
    *
-   * STUB: Returns empty array until Stage 3 implementation
-   * Real implementation will query all elements for property edges
+   * STUB: Returns empty array - will be implemented in Stage 4 (LinkOverlay refactor)
+   * Current LinkOverlay uses getRelationshipsForLinking() instead
    */
   getAllPairs(): LinkPair[] {
-    // TODO Stage 3: Implement using element.getEdges() filtered to property edges
+    // TODO Stage 4: Implement using graph queries when refactoring LinkOverlay
     return [];
   }
 
