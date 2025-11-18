@@ -447,53 +447,117 @@ Before starting the refactor, complete UI/model separation from Phase 12:
 
 ### Stage 5: Fix Model/View Separation
 
-**Goal**: Remove panel/section knowledge from Element classes, restore proper separation of concerns
+**Status**: ⏸️ **READY FOR REVIEW** - Plan updated based on [sg] notes
 
-**Problem**: Element classes (in ElementPreRefactor.ts) currently know about:
-- Panel positions ('left', 'middle', 'right')
-- Panel contexts ('leftPanel', 'middlePanel', 'rightPanel')
-- Section rendering (toSectionItems, getSectionData)
-- URL state (getExpansionKey)
+**Goal**: Ensure panel/section logic added during Stage 3a is properly handled in refactored code
 
-This violates CLAUDE.md architectural principles - model layer should NOT know about view concerns.
+**Context**:
+- ElementPreRefactor.ts will be deleted eventually (don't invest much effort here)
+- During Stage 3a, added middle panel support to ElementPreRefactor.ts:
+  - `positionToContext()` helper function
+  - Updated method signatures: `getSectionItemData()`, `toSectionItems()`, `getSectionData()`, `getExpansionKey()`
+  - Changed position types from `'left' | 'right'` to `'left' | 'middle' | 'right'`
+- Need to ensure this logic exists in appropriate places for refactored code
 
-**Solution**: Move panel/section logic OUT of Element classes
+**Current Architecture Violation**:
+ElementPreRefactor classes know about view concerns (panel positions, contexts, section rendering).
+This violates CLAUDE.md separation of concerns principle.
 
-**Where should it go?**
-- NOT DataService - DataService gets data, doesn't decide layout
-- LayoutManager or a new adapter layer decides what goes where
-- Element classes return pure data structures
-- LayoutManager/adapters transform for UI consumption
+**Solution Strategy**:
 
-**Legacy code strategy**:
-- ElementPreRefactor doesn't need to handle middle panel at all
-- OK if slots panel/section only works with refactored code
-- Gradual migration: keep old code working for 2-panel layout
-- New code handles 3-panel layout
+**Phase 1: Build Component Data Contracts Layer** (use existing `contracts/Item.ts` pattern)
+- Current state: `contracts/Item.ts` exists but is unused
+- [sg] "this adapter logic belongs with the component data contracts"
+- Contracts layer should provide the adapter logic between model and view
+- This is where panel-specific transformations should live
+- Components consume contract types, not model types directly
 
-**What to change**:
-1. Remove 'middle' position from ElementPreRefactor.ts (revert those changes)
-    - [sg] reverting is dangerous. if you think it's the best way to go, just
-           make sure nothing else gets reverted or lost. and some of that
-           may belong in Element or LayoutManager...
-2. Keep ElementPreRefactor working for 2-panel layout (left/right only)
-3. Move toSectionItems, getSectionData logic to adapter layer
-4. Move getExpansionKey to URL state management utilities
-5. Element classes return plain data, not UI-specific structures
+**Phase 2: Move Logic to Appropriate Homes**
 
-**Steps**:
-1. Create SectionDataAdapter or similar to transform Element data for UI
-2. Move toSectionItems logic to adapter
-3. Move getSectionData logic to adapter
-4. Move getExpansionKey to statePersistence utilities
-5. Remove 'middle' position from ElementPreRefactor (revert Stage 4 changes)
-6. New refactored Element classes (when created) never know about panels
+1. **Panel position/context mapping** → Component contracts or LayoutManager
+   - `positionToContext()` helper should live with UI layout code
+   - [sg] "may belong in Element or LayoutManager..."
+   - Not in model layer
 
-**Files**:
-- Revert middle panel changes in `src/models/ElementPreRefactor.ts`
-- Create new adapter layer (e.g., `src/adapters/SectionDataAdapter.ts`)
-- Update `src/utils/statePersistence.ts` to handle expansion keys
-- Update `src/components/LayoutManager.tsx` to use adapters
+2. **Section data generation** → Component contracts
+   - `toSectionItems()` logic → contracts layer adapter
+   - `getSectionData()` logic → contracts layer adapter
+   - These transform model data into component-ready SectionItemData
+
+3. **URL expansion state** → State persistence utilities
+   - `getExpansionKey()` → move to `src/utils/statePersistence.ts`
+   - Model shouldn't know about URL concerns
+
+4. **DataService updates**
+   - DataService can call contracts layer to get transformed data
+   - OR LayoutManager can do the transformation
+   - DataService stays focused on accessing model data
+
+**Implementation Approaches**:
+
+**Option A: Revive contracts/Item.ts pattern** (more proper architecture)
+- Build out contracts layer with adapter functions
+- Create `contracts/SectionData.ts` with transformation logic
+- Components import from contracts, not models
+- Clean separation: DTOs → Models → Contracts → Components
+
+**Option B: Keep logic in LayoutManager/DataService** (simpler, faster)
+- LayoutManager owns section data building
+- DataService provides raw model data
+- No separate contracts layer needed yet
+- Defer contracts layer until we need it
+
+**Recommendation**: **Need user input** - Which approach?
+
+**Steps** (assuming Option B for now):
+
+1. **Audit what was added to ElementPreRefactor**:
+   - Document all middle panel changes from Stage 3a commit (7634988)
+   - List what needs new homes
+
+2. **Move positionToContext() helper**:
+   - Could go in LayoutManager (only place that needs it)
+   - OR in a new `src/utils/panelHelpers.ts` utility
+   - [sg] "may belong in Element or LayoutManager..."
+
+3. **Move getExpansionKey() to statePersistence**:
+   - Add `getExpansionKeyForSection(sectionType: string, position: string): string | null`
+   - Remove from Element classes
+
+4. **Handle toSectionItems/getSectionData**:
+   - For now: **Leave in ElementPreRefactor** (will be deleted with old code)
+   - [sg] "I don't care that much what's in ElementPreRefactor.ts. I hope the whole thing will be gone fairly soon."
+   - When building new Element classes: Put similar logic in contracts layer or DataService
+   - Future refactor: Move to contracts layer
+
+5. **Verify middle panel still works**:
+   - All middle panel functionality should work through LayoutManager + DataService
+   - [sg] "we have to make sure the stuff you put in it is handled in the appropriate places in the refactored code"
+
+**What NOT to do**:
+- ❌ Don't try to "revert" Stage 3a changes (dangerous, might lose things)
+  - [sg] "reverting is dangerous. if you think it's the best way to go, just make sure nothing else gets reverted or lost"
+- ❌ Don't worry too much about ElementPreRefactor.ts (it's going away)
+- ❌ Don't create big new abstraction layers unless needed
+
+**What TO do**:
+- ✅ Ensure middle panel logic has proper home in refactored architecture
+- ✅ Document where panel/section logic should live going forward
+- ✅ Set up contracts layer OR keep logic in LayoutManager/DataService (choose one)
+- ✅ Plan for future: new Element classes never know about panels
+
+**Files** (tentative, pending approach decision):
+- `src/utils/statePersistence.ts` - Add expansion key logic
+- `src/utils/panelHelpers.ts` - NEW (maybe) - Panel position helpers
+- `src/contracts/SectionData.ts` - NEW (if going with contracts approach)
+- `src/components/LayoutManager.tsx` - May gain section data building logic
+- `src/models/ElementPreRefactor.ts` - **Leave as-is** (temporary, will be deleted)
+
+**Questions for review**:
+1. **Option A (contracts layer) or Option B (LayoutManager/DataService)?**
+2. Is positionToContext() needed at all, or can we avoid the helper entirely?
+3. Should we do this stage now, or defer until we're building new Element classes?
+4. Is the middle panel actually working currently, or does something need immediate attention?
 
 ### Stage 6: Detail Box Updates
 
