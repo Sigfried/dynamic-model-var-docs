@@ -29,16 +29,18 @@
  * PROPOSED APPROACH (Incremental Migration):
  * -------------------------------------------
  *
- * Step 4: Implement getRelationshipsFromGraph() in Element base class
+ * Step 4: Implement getRelationshipsFromGraph() in Element base class ✅
  *   - Query graph for all edges (inheritance, slot, maps_to)
  *   - Return NEW RelationshipData format (EdgeInfo[] arrays)
  *   - Keep existing getRelationships() method unchanged
  *   - Both methods coexist (old and new side-by-side)
+ *   DONE: Added to ElementPreRefactor.ts, uses globalGraph and globalElementLookup
  *
- * Step 5: Update DataService to support both formats
+ * Step 5: Update DataService to support both formats ✅
  *   - Add getRelationshipsNew(itemId): RelationshipData (calls getRelationshipsFromGraph)
  *   - Keep getRelationships(itemId) returning old format
  *   - DataService exposes both, UI can migrate incrementally
+ *   DONE: Updated getRelationshipsNew() in DataService.ts to call getRelationshipsFromGraph()
  *
  * Step 6: Migrate UI components to use new format
  *   - Update RelationshipInfoBox to work with EdgeInfo[] arrays
@@ -159,11 +161,148 @@ export type {
 } from './ElementPreRefactor';
 
 // ============================================================================
-// Element Base Class (TODO: Refactor relationship methods)
+// Element Base Class - Augmented with graph-based methods
 // ============================================================================
-export {
-  Element
-} from './ElementPreRefactor';
+
+import { Element as ElementBase } from './ElementPreRefactor';
+import { ELEMENT_TYPES } from './ElementRegistry';
+import type { SchemaGraph, SlotEdgeAttributes } from './Graph';
+
+// Global references for graph-based queries
+let globalGraph: SchemaGraph | null = null;
+let globalElementLookup: Map<string, ElementBase> | null = null;
+
+/**
+ * Initialize global graph and element lookup references.
+ * Called during model initialization to enable getRelationshipsFromGraph().
+ */
+export function initializeGraphReferences(
+  graph: SchemaGraph,
+  elementLookup: Map<string, ElementBase>
+): void {
+  globalGraph = graph;
+  globalElementLookup = elementLookup;
+}
+
+/**
+ * Augment Element prototype with getRelationshipsFromGraph() method.
+ * This adds the new graph-based method to the existing Element class without modifying ElementPreRefactor.ts.
+ */
+(ElementBase.prototype as typeof ElementBase.prototype & { getRelationshipsFromGraph: () => RelationshipData | null }).getRelationshipsFromGraph = function(): RelationshipData | null {
+  if (!globalGraph || !globalElementLookup) {
+    return null;
+  }
+
+  const graph = globalGraph;
+  const elementLookup = globalElementLookup;
+
+  // Build thisItem info
+  // @ts-expect-error TEMPORARY: Accessing protected 'type' property - will be refactored
+  const metadata = ELEMENT_TYPES[this.type];
+  const thisItem: ItemInfo = {
+    id: this.getId(),
+    displayName: this.name,
+    typeDisplayName: metadata.label,
+    color: metadata.color.headerBg
+  };
+
+  const outgoing: EdgeInfo[] = [];
+  const incoming: EdgeInfo[] = [];
+
+  // Process outgoing edges from this element
+  graph.forEachOutboundEdge(this.name, (_edgeId, attributes, _source, target) => {
+    const targetElement = elementLookup.get(target);
+    if (!targetElement) {
+      console.error(`getRelationshipsFromGraph: Target element not found: ${target} (outgoing edge from ${this.name})`);
+      return;
+    }
+
+    // @ts-expect-error TEMPORARY: Accessing protected 'type' property
+    const targetMetadata = ELEMENT_TYPES[targetElement.type];
+    const otherItem: ItemInfo = {
+      id: target,
+      displayName: target,
+      typeDisplayName: targetMetadata.label,
+      color: targetMetadata.color.headerBg
+    };
+
+    if (attributes.type === 'inheritance') {
+      outgoing.push({
+        edgeType: 'inheritance',
+        otherItem
+      });
+    } else if (attributes.type === 'slot') {
+      const slotAttrs = attributes as SlotEdgeAttributes;
+      outgoing.push({
+        edgeType: 'property',
+        otherItem,
+        label: slotAttrs.slotName,
+        inheritedFrom: slotAttrs.inheritedFrom
+      });
+    } else if (attributes.type === 'maps_to') {
+      outgoing.push({
+        edgeType: 'variable_mapping',
+        otherItem,
+        label: 'mapped_to'
+      });
+    }
+  });
+
+  // Process incoming edges to this element
+  graph.forEachInboundEdge(this.name, (_edgeId, attributes, source, _target) => {
+    const sourceElement = elementLookup.get(source);
+    if (!sourceElement) {
+      console.error(`getRelationshipsFromGraph: Source element not found: ${source} (incoming edge to ${this.name})`);
+      return;
+    }
+
+    // @ts-expect-error TEMPORARY: Accessing protected 'type' property
+    const sourceMetadata = ELEMENT_TYPES[sourceElement.type];
+    const otherItem: ItemInfo = {
+      id: source,
+      displayName: source,
+      typeDisplayName: sourceMetadata.label,
+      color: sourceMetadata.color.headerBg
+    };
+
+    if (attributes.type === 'inheritance') {
+      incoming.push({
+        edgeType: 'inheritance',
+        otherItem
+      });
+    } else if (attributes.type === 'slot') {
+      const slotAttrs = attributes as SlotEdgeAttributes;
+      incoming.push({
+        edgeType: 'property',
+        otherItem,
+        label: slotAttrs.slotName,
+        inheritedFrom: slotAttrs.inheritedFrom
+      });
+    } else if (attributes.type === 'maps_to') {
+      incoming.push({
+        edgeType: 'variable_mapping',
+        otherItem,
+        label: 'mapped_to'
+      });
+    }
+  });
+
+  return {
+    thisItem,
+    outgoing,
+    incoming
+  };
+};
+
+// Re-export Element with augmented prototype
+export { Element } from './ElementPreRefactor';
+
+// Declare the augmented method on Element interface
+declare module './ElementPreRefactor' {
+  interface Element {
+    getRelationshipsFromGraph(): RelationshipData | null;
+  }
+}
 
 // ============================================================================
 // Range Base Class (NEW: Stage 2 Step 4)
@@ -214,6 +353,20 @@ export {
 // ============================================================================
 export {
   initializeElementNameMap,
-  initializeClassCollection,
-  initializeModelData
+  initializeClassCollection
 } from './ElementPreRefactor';
+
+import { initializeModelData as initializeModelDataPreRefactor } from './ElementPreRefactor';
+import type { SchemaData, ModelData } from '../types';
+
+/**
+ * Initialize ModelData - extended version that also initializes graph references
+ */
+export function initializeModelData(schemaData: SchemaData): ModelData {
+  const modelData = initializeModelDataPreRefactor(schemaData);
+
+  // Initialize graph references for getRelationshipsFromGraph()
+  initializeGraphReferences(modelData.graph, modelData.elementLookup);
+
+  return modelData;
+}

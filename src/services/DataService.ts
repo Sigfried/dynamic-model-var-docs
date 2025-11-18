@@ -132,16 +132,14 @@ export class DataService {
    * Get relationship data for an item (new edge-based structure).
    * Returns unified edge-based relationships instead of type-dependent structure.
    *
-   * STUB: Returns null until Stage 3 implementation
-   * Real implementation will use element.getEdges() for outgoing,
-   * and scan all elements for incoming edges
+   * Stage 3 Step 5: Implemented using getRelationshipsFromGraph()
+   * Uses graph-based approach for querying relationships
    */
-  getRelationshipsNew(_itemId: string): RelationshipDataNew | null {
-    // TODO Stage 3: Implement using new edge-based model
-    // const element = this.modelData.elementLookup.get(_itemId);
-    // if (!element) return null;
-    // return element.getRelationshipDataNew();
-    return null;
+  getRelationshipsNew(itemId: string): RelationshipDataNew | null {
+    const element = this.modelData.elementLookup.get(itemId);
+    if (!element) return null;
+
+    return element.getRelationshipsFromGraph();
   }
 
   /**
