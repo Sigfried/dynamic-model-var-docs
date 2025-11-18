@@ -9,8 +9,10 @@ interface UseLayoutStateOptions {
 
 interface UseLayoutStateResult {
   leftSections: string[];
+  middleSections: string[];
   rightSections: string[];
   setLeftSections: (sections: string[]) => void;
+  setMiddleSections: (sections: string[]) => void;
   setRightSections: (sections: string[]) => void;
   displayMode: 'stacked' | 'cascade';
   showUrlHelp: boolean;
@@ -24,7 +26,7 @@ interface UseLayoutStateResult {
 
 /**
  * Hook to manage panel layout state including:
- * - Left/right section configuration
+ * - Left/middle/right section configuration
  * - Display mode calculation (stacked vs cascade)
  * - Layout persistence (URL and localStorage)
  * - Save/reset/restore layout actions
@@ -33,6 +35,7 @@ export function useLayoutState({ hasRestoredFromURL, getDialogStates }: UseLayou
   // Load initial state from URL or localStorage
   const initialState = getInitialState();
   const [leftSections, setLeftSections] = useState<string[]>(initialState.leftSections);
+  const [middleSections, setMiddleSections] = useState<string[]>(initialState.middleSections);
   const [rightSections, setRightSections] = useState<string[]>(initialState.rightSections);
   const [displayMode, setDisplayMode] = useState<'stacked' | 'cascade'>('cascade');
   const [showUrlHelp, setShowUrlHelp] = useState(false);
@@ -71,18 +74,20 @@ export function useLayoutState({ hasRestoredFromURL, getDialogStates }: UseLayou
 
     const state = {
       leftSections,
+      middleSections,
       rightSections,
       dialogs: getDialogStates()
     };
     // @ts-expect-error TEMPORARY: string[] vs ElementTypeId[] - will be removed in Step 7 (Link Overlay Refactor)
     // TODO: See TASKS.md Step 7 - eliminate type exposure to UI
     saveStateToURL(state);
-  }, [leftSections, rightSections, getDialogStates, hasRestoredFromURL]);
+  }, [leftSections, middleSections, rightSections, getDialogStates, hasRestoredFromURL]);
 
   // Save current layout to localStorage
   const handleSaveLayout = () => {
     const state = {
       leftSections,
+      middleSections,
       rightSections,
       dialogs: getDialogStates()
     };
@@ -128,6 +133,14 @@ export function useLayoutState({ hasRestoredFromURL, getDialogStates }: UseLayou
           }
         }
 
+        if (state.middleSections && state.middleSections.length > 0) {
+          for (const section of state.middleSections) {
+            // @ts-expect-error TEMPORARY: any indexing into Record<ElementTypeId, string>
+            // TODO: See TASKS.md Step 7 - eliminate type exposure to UI
+            sectionIds.push(`m${itemTypeToCode[section]}`);
+          }
+        }
+
         if (state.rightSections && state.rightSections.length > 0) {
           for (const section of state.rightSections) {
             // @ts-expect-error TEMPORARY: any indexing into Record<ElementTypeId, string>
@@ -163,8 +176,10 @@ export function useLayoutState({ hasRestoredFromURL, getDialogStates }: UseLayou
 
   return {
     leftSections,
+    middleSections,
     rightSections,
     setLeftSections,
+    setMiddleSections,
     setRightSections,
     displayMode,
     showUrlHelp,

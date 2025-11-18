@@ -11,6 +11,7 @@ export interface DialogState {
 
 interface AppState {
   leftSections: ElementTypeId[];
+  middleSections: ElementTypeId[];  // Middle panel (slots)
   rightSections: ElementTypeId[];
   dialogs?: DialogState[];
 }
@@ -37,16 +38,17 @@ const codeToItemType: Record<string, ElementTypeId> = {
 
 /**
  * Parse state from URL query string
- * Format: sections=lc~re~rv (left-class~right-enum~right-variable)
+ * Format: sections=lc~ms~re~rv (left-class~middle-slot~right-enum~right-variable)
  */
 export function parseStateFromURL(): Partial<AppState> | null {
   const params = new URLSearchParams(window.location.search);
   const state: Partial<AppState> = {};
 
-  // Parse sections parameter: sections=lc~re~rv
+  // Parse sections parameter: sections=lc~ms~re~rv
   const sectionsParam = params.get('sections');
   if (sectionsParam) {
     const leftSections: ElementTypeId[] = [];
+    const middleSections: ElementTypeId[] = [];
     const rightSections: ElementTypeId[] = [];
 
     // Split by ~ delimiter
@@ -54,20 +56,23 @@ export function parseStateFromURL(): Partial<AppState> | null {
     for (const sectionId of sectionIds) {
       if (sectionId.length !== 2) continue; // Must be 2 characters: side + type
 
-      const side = sectionId[0]; // 'l' or 'r'
-      const typeCode = sectionId[1]; // 'c', 'e', 's', 'v'
+      const side = sectionId[0]; // 'l', 'm', or 'r'
+      const typeCode = sectionId[1]; // 'c', 'e', 's', 't', 'v'
       const itemType = codeToItemType[typeCode];
 
       if (!itemType) continue; // Invalid type code
 
       if (side === 'l') {
         leftSections.push(itemType);
+      } else if (side === 'm') {
+        middleSections.push(itemType);
       } else if (side === 'r') {
         rightSections.push(itemType);
       }
     }
 
     if (leftSections.length > 0) state.leftSections = leftSections;
+    if (middleSections.length > 0) state.middleSections = middleSections;
     if (rightSections.length > 0) state.rightSections = rightSections;
   }
 
@@ -102,7 +107,7 @@ export function parseStateFromURL(): Partial<AppState> | null {
 }
 
 /**
- * Save state to URL query string using new format: sections=lc~re~rv
+ * Save state to URL query string using new format: sections=lc~ms~re~rv
  * Preserves existing URL parameters that are not managed by this function
  */
 export function saveStateToURL(state: AppState): void {
@@ -114,11 +119,15 @@ export function saveStateToURL(state: AppState): void {
   params.delete('l');
   params.delete('r');
 
-  // Build section IDs array: lc, re, rv, etc.
+  // Build section IDs array: lc, ms, re, rv, etc.
   const sectionIds: string[] = [];
 
   for (const section of state.leftSections) {
     sectionIds.push(`l${itemTypeToCode[section]}`);
+  }
+
+  for (const section of state.middleSections) {
+    sectionIds.push(`m${itemTypeToCode[section]}`);
   }
 
   for (const section of state.rightSections) {
@@ -187,11 +196,13 @@ export function getInitialState(): AppState {
 
   const defaultState: AppState = {
     leftSections: ['class'],
+    middleSections: [],  // Middle panel hidden by default
     rightSections: []
   };
 
   const state: AppState = {
     leftSections: urlState?.leftSections ?? localState?.leftSections ?? defaultState.leftSections,
+    middleSections: urlState?.middleSections ?? localState?.middleSections ?? defaultState.middleSections,
     rightSections: urlState?.rightSections ?? localState?.rightSections ?? defaultState.rightSections
   };
 
@@ -206,23 +217,30 @@ export function getInitialState(): AppState {
 
 /**
  * Preset configurations for example links
+ * Note: Left panel is always classes only (no options)
+ *       Middle panel is slots only (toggleable)
+ *       Right panel is ranges only (classes, enums, types - toggleable)
  */
 export const PRESETS = {
   classesOnly: {
     leftSections: ['class'] as ElementTypeId[],
+    middleSections: [] as ElementTypeId[],
     rightSections: [] as ElementTypeId[]
   },
   classesAndEnums: {
     leftSections: ['class'] as ElementTypeId[],
-    rightSections: ['enum'] as ElementTypeId[]
+    middleSections: [] as ElementTypeId[],
+    rightSections: ['class', 'enum'] as ElementTypeId[]
   },
   allSections: {
-    leftSections: ['class', 'enum'] as ElementTypeId[],
-    rightSections: ['slot', 'variable'] as ElementTypeId[]
+    leftSections: ['class'] as ElementTypeId[],
+    middleSections: ['slot'] as ElementTypeId[],
+    rightSections: ['class', 'enum', 'type'] as ElementTypeId[]
   },
-  variableExplorer: {
-    leftSections: ['variable'] as ElementTypeId[],
-    rightSections: ['class'] as ElementTypeId[]
+  classesAndTypes: {
+    leftSections: ['class'] as ElementTypeId[],
+    middleSections: [] as ElementTypeId[],
+    rightSections: ['class', 'type'] as ElementTypeId[]
   }
 };
 
@@ -238,6 +256,10 @@ export function generatePresetURL(presetKey: keyof typeof PRESETS): string {
 
   for (const section of preset.leftSections) {
     sectionIds.push(`l${itemTypeToCode[section]}`);
+  }
+
+  for (const section of preset.middleSections) {
+    sectionIds.push(`m${itemTypeToCode[section]}`);
   }
 
   for (const section of preset.rightSections) {

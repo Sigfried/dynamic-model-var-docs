@@ -21,6 +21,13 @@ import { buildGraphFromSchemaData } from './Graph';
 // Union type for all element data types
 export type ElementData = ClassDTO | EnumDTO | SlotDTO | VariableSpec;
 
+// Helper function to map panel position to context string
+function positionToContext(position: 'left' | 'middle' | 'right'): 'leftPanel' | 'middlePanel' | 'rightPanel' {
+  if (position === 'left') return 'leftPanel';
+  if (position === 'middle') return 'middlePanel';
+  return 'rightPanel';
+}
+
 // Property definition from class attributes
 interface PropertyDefinition {
   range: string;
@@ -324,7 +331,7 @@ export abstract class Element {
    * @returns SectionItemData object for component rendering
    */
   getSectionItemData(
-    _context: 'leftPanel' | 'rightPanel',
+    _context: 'leftPanel' | 'middlePanel' | 'rightPanel',
     level: number = 0,
     isExpanded: boolean = false,
     isClickable: boolean = true,
@@ -447,7 +454,7 @@ export abstract class Element {
    * @returns Flat list of SectionItemData with level and expansion info
    */
   toSectionItems(
-    context: 'leftPanel' | 'rightPanel',
+    context: 'leftPanel' | 'middlePanel' | 'rightPanel',
     expandedItems: Set<string>,
     getIsClickable?: (element: Element, level: number) => boolean,
     level: number = 0
@@ -1462,7 +1469,7 @@ export abstract class ElementCollection {
   abstract getDefaultExpansion(): Set<string>;
 
   /** Get expansion state key for URL persistence (null if no expansion needed) */
-  abstract getExpansionKey(position: 'left' | 'right'): string | null;
+  abstract getExpansionKey(position: 'left' | 'middle' | 'right'): string | null;
 
   /** Get a single element by name/identifier */
   abstract getElement(name: string): Element | null;
@@ -1480,7 +1487,7 @@ export abstract class ElementCollection {
    * Get section data for display in Section component.
    * Returns SectionData with getItems function that generates items based on expansion state.
    */
-  abstract getSectionData(position: 'left' | 'right'): import('../components/Section').SectionData;
+  abstract getSectionData(position: 'left' | 'middle' | 'right'): import('../components/Section').SectionData;
 }
 
 // EnumCollection - flat list of enumerations
@@ -1521,7 +1528,7 @@ export class EnumCollection extends ElementCollection {
     return new Set(); // No expansion for flat list
   }
 
-  getExpansionKey(_position: 'left' | 'right'): string | null {
+  getExpansionKey(_position: 'left' | 'middle' | 'right'): string | null {
     return null; // No expansion state needed
   }
 
@@ -1541,14 +1548,14 @@ export class EnumCollection extends ElementCollection {
     return items;
   }
 
-  getSectionData(position: 'left' | 'right'): import('../components/Section').SectionData {
+  getSectionData(position: 'left' | 'middle' | 'right'): import('../components/Section').SectionData {
     return {
       id: this.id,
       label: this.getLabel(),
       getItems: (expandedItems?: Set<string>) => {
         const items: import('../components/Section').SectionItemData[] = [];
         this.roots.forEach(root => {
-          items.push(...root.toSectionItems(position === 'left' ? 'leftPanel' : 'rightPanel', expandedItems || new Set()));
+          items.push(...root.toSectionItems(positionToContext(position), expandedItems || new Set()));
         });
         return items;
       },
@@ -1597,7 +1604,7 @@ export class TypeCollection extends ElementCollection {
     return new Set(); // No expansion for flat list
   }
 
-  getExpansionKey(_position: 'left' | 'right'): string | null {
+  getExpansionKey(_position: 'left' | 'middle' | 'right'): string | null {
     return null; // No expansion state needed
   }
 
@@ -1617,14 +1624,14 @@ export class TypeCollection extends ElementCollection {
     return items;
   }
 
-  getSectionData(position: 'left' | 'right'): import('../components/Section').SectionData {
+  getSectionData(position: 'left' | 'middle' | 'right'): import('../components/Section').SectionData {
     return {
       id: this.id,
       label: this.getLabel(),
       getItems: (expandedItems?: Set<string>) => {
         const items: import('../components/Section').SectionItemData[] = [];
         this.roots.forEach(root => {
-          items.push(...root.toSectionItems(position === 'left' ? 'leftPanel' : 'rightPanel', expandedItems || new Set()));
+          items.push(...root.toSectionItems(positionToContext(position), expandedItems || new Set()));
         });
         return items;
       },
@@ -1672,7 +1679,7 @@ export class SlotCollection extends ElementCollection {
     return new Set(); // No expansion for flat list
   }
 
-  getExpansionKey(_position: 'left' | 'right'): string | null {
+  getExpansionKey(_position: 'left' | 'middle' | 'right'): string | null {
     return null; // No expansion state needed
   }
 
@@ -1692,14 +1699,14 @@ export class SlotCollection extends ElementCollection {
     return items;
   }
 
-  getSectionData(position: 'left' | 'right'): import('../components/Section').SectionData {
+  getSectionData(position: 'left' | 'middle' | 'right'): import('../components/Section').SectionData {
     return {
       id: this.id,
       label: this.getLabel(),
       getItems: (expandedItems?: Set<string>) => {
         const items: import('../components/Section').SectionItemData[] = [];
         this.roots.forEach(root => {
-          items.push(...root.toSectionItems(position === 'left' ? 'leftPanel' : 'rightPanel', expandedItems || new Set()));
+          items.push(...root.toSectionItems(positionToContext(position), expandedItems || new Set()));
         });
         return items;
       },
@@ -1801,8 +1808,10 @@ export class ClassCollection extends ElementCollection {
     return expanded;
   }
 
-  getExpansionKey(position: 'left' | 'right'): string | null {
-    return position === 'left' ? 'lce' : 'rce'; // left/right class expansion
+  getExpansionKey(position: 'left' | 'middle' | 'right'): string | null {
+    if (position === 'left') return 'lce';
+    if (position === 'middle') return 'mce';
+    return 'rce'; // left/middle/right class expansion
   }
 
   getElement(name: string): Element | null {
@@ -1841,14 +1850,14 @@ export class ClassCollection extends ElementCollection {
     return items;
   }
 
-  getSectionData(position: 'left' | 'right'): import('../components/Section').SectionData {
+  getSectionData(position: 'left' | 'middle' | 'right'): import('../components/Section').SectionData {
     return {
       id: this.id,
       label: this.getLabel(),
       getItems: (expandedItems?: Set<string>) => {
         const items: import('../components/Section').SectionItemData[] = [];
         this.roots.forEach(root => {
-          items.push(...root.toSectionItems(position === 'left' ? 'leftPanel' : 'rightPanel', expandedItems || new Set()));
+          items.push(...root.toSectionItems(positionToContext(position), expandedItems || new Set()));
         });
         return items;
       },
@@ -1934,7 +1943,7 @@ export class VariableCollection extends ElementCollection {
     return new Set(); // Start with all groups collapsed
   }
 
-  getExpansionKey(position: 'left' | 'right'): string | null {
+  getExpansionKey(position: 'left' | 'middle' | 'right'): string | null {
     return position === 'left' ? 'lve' : 'rve'; // left/right variable expansion
   }
 
@@ -1986,7 +1995,7 @@ export class VariableCollection extends ElementCollection {
     return items;
   }
 
-  getSectionData(position: 'left' | 'right'): import('../components/Section').SectionData {
+  getSectionData(position: 'left' | 'middle' | 'right'): import('../components/Section').SectionData {
     return {
       id: this.id,
       label: this.getLabel(),
@@ -1994,7 +2003,7 @@ export class VariableCollection extends ElementCollection {
         // Build 2-level tree: ClassElement headers (level 0) with VariableElement children (level 1)
         const items: import('../components/Section').SectionItemData[] = [];
         const expanded = expandedItems || new Set();
-        const context = position === 'left' ? 'leftPanel' : 'rightPanel';
+        const context = positionToContext(position);
 
         this.roots.forEach(classElement => {
           const variables = this.groupedByClass.get(classElement.name) || [];

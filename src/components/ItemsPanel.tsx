@@ -24,7 +24,7 @@ export interface ToggleButtonData {
 }
 
 interface ItemsPanelProps {
-  position: 'left' | 'right';
+  position: 'left' | 'middle' | 'right';
   sections: string[];                                       // IDs of visible sections (order matters)
   onSectionsChange: (sections: string[]) => void;
   sectionData: Map<string, SectionData>;                   // Section data by ID
@@ -32,6 +32,7 @@ interface ItemsPanelProps {
   onClickItem: (hoverData: ItemHoverData) => void;
   onItemHover?: (hoverData: ItemHoverData) => void;
   onItemLeave?: () => void;
+  title?: string;                                           // Custom panel title (e.g., "Classes", "Slots", "Ranges:")
 }
 
 interface SectionToggleButtonProps {
@@ -64,7 +65,8 @@ export default function ItemsPanel({
   toggleButtons,
   onClickItem,
   onItemHover,
-  onItemLeave
+  onItemLeave,
+  title
 }: ItemsPanelProps) {
   const activeSections = new Set(sections);
 
@@ -83,8 +85,13 @@ export default function ItemsPanel({
 
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-slate-900">
-      {/* Section toggles - always in C E S V order */}
-      <div className="flex flex-row gap-2 p-2 border-b border-gray-200 dark:border-slate-700">
+      {/* Panel header - title and/or toggles */}
+      <div className="flex flex-row items-center gap-2 p-2 border-b border-gray-200 dark:border-slate-700">
+        {title && (
+          <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            {title}
+          </div>
+        )}
         {toggleButtons.map(button => (
           <SectionToggleButton
             key={button.id}

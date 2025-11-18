@@ -6,7 +6,7 @@ import DetailContent from './components/DetailContent';
 import PanelLayout from './components/PanelLayout';
 import LinkOverlay from './components/LinkOverlay';
 import RelationshipInfoBox from './components/RelationshipInfoBox';
-import { generatePresetURL, getInitialState, type DialogState } from './utils/statePersistence';
+import { getInitialState, type DialogState } from './utils/statePersistence';
 import { useModelData } from './hooks/useModelData';
 import { useLayoutState } from './hooks/useLayoutState';
 import { DataService } from './services/DataService';
@@ -53,9 +53,11 @@ function App() {
 
   // Manage layout state
   const {
-    leftSections,
+    leftSections: _leftSections,  // Unused - left panel always shows classes
+    middleSections,
     rightSections,
-    setLeftSections,
+    setLeftSections: _setLeftSections,  // Unused
+    setMiddleSections: _setMiddleSections,  // TODO: Use for middle panel show/hide toggle
     setRightSections,
     displayMode,
     showUrlHelp,
@@ -66,6 +68,12 @@ function App() {
     handleResetLayout,
     handleResetApp
   } = useLayoutState({ hasRestoredFromURL, getDialogStates });
+
+  // Stage 4: Panel specialization
+  // Left panel: Always classes (no toggles)
+  // Middle panel: Always slots when visible (no toggles)
+  // Right panel: Only ranges (classes, enums, types) with toggles
+  const leftSections = ['class'];  // Fixed - left panel always shows classes
 
   // Open a new floating box (or bring existing one to front)
   const handleOpenFloatingBox = useCallback((hoverData: { type: string; name: string }, position?: { x: number; y: number }, size?: { width: number; height: number }) => {
@@ -257,13 +265,24 @@ function App() {
 
 
   // Build toggle button data from DataService (must be before early returns)
-  const toggleButtons = useMemo<ToggleButtonData[]>(() => {
+  const allToggleButtons = useMemo<ToggleButtonData[]>(() => {
     return dataService?.getToggleButtonsData() ?? [];
   }, [dataService]);
 
-  // Build section data maps for left and right panels (must be before early returns)
+  // Filter toggle buttons for right panel - only ranges (class, enum, type)
+  const rightPanelToggleButtons = useMemo<ToggleButtonData[]>(() => {
+    return allToggleButtons.filter(btn =>
+      btn.id === 'class' || btn.id === 'enum' || btn.id === 'type'
+    );
+  }, [allToggleButtons]);
+
+  // Build section data maps for left, middle, and right panels (must be before early returns)
   const leftSectionData = useMemo<Map<string, SectionData>>(() => {
     return dataService?.getAllSectionsData('left') ?? new Map();
+  }, [dataService]);
+
+  const middleSectionData = useMemo<Map<string, SectionData>>(() => {
+    return dataService?.getAllSectionsData('middle') ?? new Map();
   }, [dataService]);
 
   const rightSectionData = useMemo<Map<string, SectionData>>(() => {
@@ -343,35 +362,12 @@ function App() {
             <p className="text-sm text-blue-100">BioData Catalyst Harmonized Model Explorer</p>
           </div>
           <div className="flex items-center gap-4 text-sm">
-            <span className="font-semibold">Presets:</span>
-            <a
-              href={generatePresetURL('classesOnly')}
-              className="px-3 py-1 bg-blue-700 hover:bg-blue-800 rounded transition-colors"
-              title="Show only classes"
-            >
-              Classes
-            </a>
-            <a
-              href={generatePresetURL('classesAndEnums')}
-              className="px-3 py-1 bg-blue-700 hover:bg-blue-800 rounded transition-colors"
-              title="Classes on left, enums on right"
-            >
-              Classes + Enums
-            </a>
-            <a
-              href={generatePresetURL('allSections')}
-              className="px-3 py-1 bg-blue-700 hover:bg-blue-800 rounded transition-colors"
-              title="Show all sections"
-            >
-              All
-            </a>
-            <a
-              href={generatePresetURL('variableExplorer')}
-              className="px-3 py-1 bg-blue-700 hover:bg-blue-800 rounded transition-colors"
-              title="Variables on left, classes on right"
-            >
-              Variables
-            </a>
+            {/* TODO: Restore presets after Stage 4 layout changes complete */}
+            {/* <span className="font-semibold">Presets:</span>
+            <a href={generatePresetURL('classesOnly')} className="px-3 py-1 bg-blue-700 hover:bg-blue-800 rounded transition-colors" title="Show only classes">Classes</a>
+            <a href={generatePresetURL('classesAndEnums')} className="px-3 py-1 bg-blue-700 hover:bg-blue-800 rounded transition-colors" title="Classes on left, enums on right">Classes + Enums</a>
+            <a href={generatePresetURL('allSections')} className="px-3 py-1 bg-blue-700 hover:bg-blue-800 rounded transition-colors" title="Show all sections (with slots)">All</a>
+            <a href={generatePresetURL('classesAndTypes')} className="px-3 py-1 bg-blue-700 hover:bg-blue-800 rounded transition-colors" title="Classes and types">+ Types</a> */}
             <div className="relative">
               {hasLocalStorage ? (
                 <button
@@ -460,39 +456,74 @@ function App() {
           leftPanel={
             <ItemsPanel
               position="left"
-              sections={leftSections}
-              onSectionsChange={setLeftSections}
+              sections={leftSections}  // Always ['class']
+              onSectionsChange={() => {}}  // No-op - left panel fixed
               sectionData={leftSectionData}
-              toggleButtons={toggleButtons}
+              toggleButtons={[]}  // No toggles for left panel
               onClickItem={handleOpenFloatingBox}
               onItemHover={setHoveredItem}
               onItemLeave={() => setHoveredItem(null)}
+              title="Classes"
             />
           }
-          leftPanelEmpty={leftSections.length === 0}
+          leftPanelEmpty={false}  // Never empty - always shows classes
+          middlePanel={
+            <ItemsPanel
+              position="middle"
+              sections={middleSections.length > 0 ? ['slot'] : []}  // Always 'slot' when visible
+              onSectionsChange={() => {}}  // No-op - middle panel fixed
+              sectionData={middleSectionData}
+              toggleButtons={[]}  // No toggles for middle panel
+              onClickItem={handleOpenFloatingBox}
+              onItemHover={setHoveredItem}
+              onItemLeave={() => setHoveredItem(null)}
+              title="Slots"
+            />
+          }
+          middlePanelEmpty={middleSections.length === 0}
           rightPanel={
             <ItemsPanel
               position="right"
               sections={rightSections}
               onSectionsChange={setRightSections}
               sectionData={rightSectionData}
-              toggleButtons={toggleButtons}
+              toggleButtons={rightPanelToggleButtons}  // Only C, E, T
               onClickItem={handleOpenFloatingBox}
               onItemHover={setHoveredItem}
               onItemLeave={() => setHoveredItem(null)}
+              title="Ranges:"
             />
           }
           rightPanelEmpty={rightSections.length === 0}
           showSpacer={displayMode === 'cascade'}
         />
 
-        {/* SVG Link Overlay */}
-        <LinkOverlay
-          leftSections={leftSections}
-          rightSections={rightSections}
-          dataService={dataService}
-          hoveredItem={hoveredItem}
-        />
+        {/* SVG Link Overlay - conditional based on middle panel visibility */}
+        {middleSections.length === 0 ? (
+          // Middle panel hidden: Single overlay using SlotEdges (class → range direct)
+          <LinkOverlay
+            leftSections={leftSections}
+            rightSections={rightSections}
+            dataService={dataService}
+            hoveredItem={hoveredItem}
+          />
+        ) : (
+          // Middle panel visible: Two overlays (class → slot, slot → range)
+          <>
+            <LinkOverlay
+              leftSections={leftSections}
+              rightSections={middleSections}
+              dataService={dataService}
+              hoveredItem={hoveredItem}
+            />
+            <LinkOverlay
+              leftSections={middleSections}
+              rightSections={rightSections}
+              dataService={dataService}
+              hoveredItem={hoveredItem}
+            />
+          </>
+        )}
 
         {/* Floating Box Manager - handles both stacked and cascade modes */}
         <FloatingBoxManager

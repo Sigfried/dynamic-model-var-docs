@@ -86,19 +86,21 @@ The app treats all element types (classes, enums, slots, variables) as **nodes**
 
 **Left Panel** (always visible):
 - Classes only (tree hierarchy)
-- NOT shown as ranges—represents schema structure
+- No toggle options - always shows classes
+- Represents schema structure (class hierarchy)
 
-**Middle Panel** (toggleable by clicking heading):
+**Middle Panel** (toggleable):
 - **Default**: Hidden
-- **Toggle**: Panel title "Show Slots" / "Hide Slots"
-- **Content**: Slot browser showing all SlotElement definitions
+- **Toggle**: Show/hide slots panel
+- **Content**: Slots only (all SlotElement definitions)
 - **Purpose**: Navigable nodes for exploration - clicking a slot shows which classes use it, what its range is
 - **Link rendering**: When visible, show links from class → slot → range (two-step)
 
 **Right Panel**:
-- **Ranges** section: Classes, Enums, Types as range targets
-- **Panel title**: "Ranges: [C] [E] [T]" (separate sections for each type)
-- **Classes in both panels**: Classes appear in left panel (structure) and right panel (as ranges)
+- **Ranges only**: Classes, Enums, Types as range targets
+- No Variables, no Slots
+- **Toggle buttons**: Same interface as current for toggling the three range sections [C] [E] [T]
+- **Classes in both panels**: Classes appear in left panel (structure) AND right panel (as ranges)
 
 **Detail Boxes**:
 - Slots appear as properties with clickable/hoverable ranges
@@ -345,33 +347,70 @@ Before starting the refactor, complete UI/model separation from Phase 12:
 
 ### Stage 4: UI Layout Changes
 
-**Goal**: Implement three-panel layout with middle slot panel
+**Goal**: Implement three-panel layout with specialized panel roles
 
-**Strategy**: Refactor LinkOverlay while keeping middle panel closed. Once in good shape, enable middle panel. May become two link overlays: left-middle, middle-right.
+**New Layout**:
+- **Left Panel**: Classes only (no toggles - always just classes showing hierarchy)
+- **Middle Panel**: Slots only (toggleable hide/show entire panel)
+- **Right Panel**: Ranges only - Classes, Enums, Types (toggle buttons for each section, NO Variables/Slots)
+
+**Strategy**: Refactor LinkOverlay while keeping middle panel closed. Once working, enable middle panel. May become two link overlays: left-middle, middle-right.
 
 **Steps**:
-1. Add middle panel to App.tsx:
-   - Panel state management (visible/hidden)
-   - URL state format (add middle panel to sections)
-2. Update Panel.tsx for middle panel toggle support
-3. Update statePersistence.ts for middle panel URL state
-4. Refactor Section.tsx:
-   - Ranges section rendering (Classes/Enums/Types)
-   - Separate sections with "Ranges: [C] [E] [T]" heading
-5. Update SectionItem.tsx if needed for range items
-6. Refactor LinkOverlay.tsx:
+1. ✅ Update statePersistence.ts for middle panel URL state (lc~ms~re format)
+2. ✅ Update useLayoutState for middle panel state management
+3. Update PanelLayout.tsx to support three panels
+4. Update App.tsx:
+   - Add middle panel to layout
+   - Left panel: Classes only (no toggles)
+   - Middle panel: Slots only (toggleable)
+   - Right panel: Ranges only (Classes/Enums/Types toggles, no Variables/Slots)
+5. Update ItemsPanel.tsx (or create specialized panel components):
+   - Left: No toggles, classes only
+   - Middle: No toggles needed (entire panel toggleable)
+   - Right: Toggle buttons for three range sections
+6. Refactor Section.tsx:
+   - Support "Ranges" section group heading for right panel
+   - Render Classes/Enums/Types as range targets
+7. Update SectionItem.tsx if needed for range items
+8. Refactor LinkOverlay.tsx:
    - Traverse Class → SlotEdge → Range
-   - See TASKS.md "LinkOverlay Refactor" task
    - When middle panel visible: render two-step links (class→slot, slot→range)
    - **Migrate to new RelationshipData format (Stage 3 Step 6)** - since we're rewriting anyway
 
 **Files**:
-- `src/App.tsx` - 3-panel layout, middle panel state management
-- `src/components/Panel.tsx` - Middle panel toggle support
+- ✅ `src/utils/statePersistence.ts` - URL state for middle panel
+- ✅ `src/hooks/useLayoutState.ts` - Middle panel state management
+- `src/components/PanelLayout.tsx` - Three-panel layout
+- `src/App.tsx` - Panel specialization, middle panel toggle
+- `src/components/ItemsPanel.tsx` - Panel-specific toggle configurations
 - `src/components/Section.tsx` - Ranges section rendering
 - `src/components/SectionItem.tsx` - Range item updates if needed
-- `src/utils/statePersistence.ts` - URL state for middle panel
 - `src/components/LinkOverlay.tsx` - Slot edge traversal
+
+### Stage 4.5: LayoutManager Refactor (Optional Enhancement)
+
+**Goal**: Consolidate layout logic into a LayoutManager component
+
+**Rationale**: PanelLayout should become LayoutManager with expanded responsibilities to better manage the overall layout coordination.
+
+**New responsibilities**:
+- Determine display mode (cascade vs stacked) based on available space
+- Calculate panel positions for LinkOverlay endpoints
+- Tell FloatingBoxManager where it has space and positioning constraints
+- Conditionally render 1 or 2 LinkOverlays based on middle panel visibility
+- Manage panel widths and responsive behavior
+
+**Current state**: PanelLayout is a simple layout component. App.tsx handles display mode calculation and LinkOverlay conditional rendering.
+
+**Decision**: Defer this refactor until after Stage 5 completes. Current architecture works, but could be cleaner with centralized layout management.
+
+**Files that would be affected**:
+- Rename `src/components/PanelLayout.tsx` → `src/components/LayoutManager.tsx`
+- Move display mode logic from App.tsx to LayoutManager
+- Move LinkOverlay conditional rendering from App.tsx to LayoutManager
+- Update FloatingBoxManager to receive positioning info from LayoutManager
+- Update LinkOverlay to receive panel positions from LayoutManager
 
 ### Stage 5: Detail Box Updates
 

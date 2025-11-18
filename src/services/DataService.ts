@@ -308,10 +308,10 @@ export class DataService {
 
   /**
    * Get section data for all collections
-   * @param position - 'left' or 'right' panel position
+   * @param position - 'left', 'middle', or 'right' panel position
    * Returns Map where key is section ID (type ID) and value is SectionData
    */
-  getAllSectionsData(position: 'left' | 'right'): Map<string, SectionData> {
+  getAllSectionsData(position: 'left' | 'middle' | 'right'): Map<string, SectionData> {
     const map = new Map<string, SectionData>();
     this.modelData.collections.forEach((collection, typeId) => {
       map.set(typeId, collection.getSectionData(position));

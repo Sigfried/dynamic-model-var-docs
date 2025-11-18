@@ -60,7 +60,7 @@ export interface SectionItemData {
 export interface SectionData {
   id: string;                     // "class"
   label: string;                  // "Classes (42)"
-  getItems: (expandedItems?: Set<string>, position?: 'left' | 'right') => SectionItemData[]; // Function to get items based on expansion
+  getItems: (expandedItems?: Set<string>, position?: 'left' | 'middle' | 'right') => SectionItemData[]; // Function to get items based on expansion
   expansionKey?: string;          // For state persistence ("lp-class")
   defaultExpansion?: Set<string>; // Default expanded items
 }
@@ -70,7 +70,7 @@ interface SectionProps {
   onClickItem: (hoverData: ItemHoverData) => void;
   onItemHover?: (hoverData: ItemHoverData) => void;
   onItemLeave?: () => void;
-  position: 'left' | 'right';
+  position: 'left' | 'middle' | 'right';
 }
 
 interface ItemRendererProps {
@@ -78,7 +78,7 @@ interface ItemRendererProps {
   onClickItem: (hoverData: ItemHoverData) => void;
   onItemHover?: (hoverData: ItemHoverData) => void;
   onItemLeave?: () => void;
-  position: 'left' | 'right';
+  position: 'left' | 'middle' | 'right';
   toggleExpansion?: (itemName: string) => void;
 }
 

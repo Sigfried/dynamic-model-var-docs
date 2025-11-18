@@ -2,16 +2,20 @@ import { type ReactNode } from 'react';
 
 interface PanelLayoutProps {
   leftPanel: ReactNode;
+  middlePanel?: ReactNode;  // Optional middle panel
   rightPanel: ReactNode;
   leftPanelEmpty?: boolean;
+  middlePanelEmpty?: boolean;
   rightPanelEmpty?: boolean;
   showSpacer?: boolean;
 }
 
 export default function PanelLayout({
   leftPanel,
+  middlePanel,
   rightPanel,
   leftPanelEmpty = false,
+  middlePanelEmpty = true,  // Middle panel hidden by default
   rightPanelEmpty = false,
   showSpacer = true
 }: PanelLayoutProps) {
@@ -20,7 +24,7 @@ export default function PanelLayout({
 
   return (
     <div className="flex-1 flex overflow-hidden">
-      {/* Left Panel */}
+      {/* Left Panel - Classes only */}
       <div
         className="h-full overflow-hidden border-r border-gray-200 dark:border-slate-700 flex-shrink-0"
         style={{
@@ -32,12 +36,25 @@ export default function PanelLayout({
         {leftPanel}
       </div>
 
-      {/* Center gutter - only show when both panels have content */}
-      {!leftPanelEmpty && !rightPanelEmpty && (
+      {/* Middle Panel - Slots (toggleable) */}
+      {!middlePanelEmpty && middlePanel && (
+        <div
+          className="h-full overflow-hidden border-r border-gray-200 dark:border-slate-700 flex-shrink-0"
+          style={{
+            maxWidth: `${MAX_PANEL_WIDTH}px`,
+            minWidth: '300px'
+          }}
+        >
+          {middlePanel}
+        </div>
+      )}
+
+      {/* Center gutter - show when appropriate */}
+      {!leftPanelEmpty && !rightPanelEmpty && middlePanelEmpty && (
         <div className="w-40 bg-gray-100 dark:bg-slate-800 border-x border-gray-200 dark:border-slate-700 flex-shrink-0" />
       )}
 
-      {/* Right Panel */}
+      {/* Right Panel - Ranges only */}
       <div
         className="h-full overflow-hidden border-l border-gray-200 dark:border-slate-700 flex-shrink-0"
         style={{
