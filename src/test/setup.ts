@@ -13,10 +13,8 @@ global.fetch = vi.fn((url: string | URL) => {
 
   // Extract file path from URL
   let filePath: string;
-  if (urlStr.includes('bdchm.metadata.json')) {
-    filePath = 'public/source_data/HM/bdchm.metadata.json';
-  } else if (urlStr.includes('bdchm.expanded.yaml')) {
-    filePath = 'public/source_data/HM/bdchm.expanded.yaml';
+  if (urlStr.includes('bdchm.processed.json')) {
+    filePath = 'public/source_data/HM/bdchm.processed.json';
   } else if (urlStr.includes('variable-specs-S1.tsv')) {
     filePath = 'public/source_data/HV/variable-specs-S1.tsv';
   } else {

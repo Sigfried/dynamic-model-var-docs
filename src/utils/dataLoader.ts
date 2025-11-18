@@ -21,17 +21,18 @@ import { FIELD_MAPPINGS } from '../types';
 import { initializeModelData } from '../models/Element';
 
 /**
- * Load bdchm.expanded.json which includes:
- * - All classes, enums, slots from bdchm.yaml
- * - All types from linkml:types (resolved via gen-linkml)
- * - Inherited slots filled in
+ * Load bdchm.processed.json which includes:
+ * - All classes, enums, slots, types from bdchm.yaml (via gen-linkml + transform_schema.py)
+ * - Computed inherited_from fields for all inherited attributes
+ * - Slot instances for slot_usage overrides (e.g., "category-SdohObservation")
+ * - Streamlined structure optimized for our app
  *
  * To regenerate: python3 scripts/download_source_data.py --metadata-only
  */
-async function loadExpandedSchemaDTO(): Promise<SchemaDTO & TypesSchemaDTO> {
-  const response = await fetch(`${import.meta.env.BASE_URL}source_data/HM/bdchm.expanded.json`);
+async function loadProcessedSchemaDTO(): Promise<SchemaDTO & TypesSchemaDTO> {
+  const response = await fetch(`${import.meta.env.BASE_URL}source_data/HM/bdchm.processed.json`);
   if (!response.ok) {
-    throw new Error(`Failed to load expanded schema: ${response.statusText}`);
+    throw new Error(`Failed to load processed schema: ${response.statusText}`);
   }
   const parsed = await response.json() as SchemaDTO & TypesSchemaDTO;
   return parsed;
@@ -169,63 +170,38 @@ function transformVariableSpecDTO(dto: VariableSpecDTO): VariableSpec {
 }
 
 /**
- * Transform AttributeDefinition (from class attributes) to SlotData
- * AttributeDefinition is a subset of SlotDTO fields, so we can convert directly
- */
-function transformAttributeToSlotData(attr: { range: string; description?: string; required?: boolean; multivalued?: boolean }): SlotData {
-  return {
-    range: attr.range,
-    description: attr.description,
-    required: attr.required,
-    multivalued: attr.multivalued
-    // Note: slotUri and identifier are not present in AttributeDefinition
-  };
-}
-
-/**
  * Load and transform raw data from files
  * Returns DTOs transformed to Data types with proper field naming
  *
- * NOTE: We load bdchm.expanded.yaml which includes:
- * - All classes, enums, slots from bdchm.yaml
- * - All types from linkml:types (resolved via gen-linkml import expansion)
- * - Inherited slots filled in (via gen-linkml)
- * This eliminates the need to fetch types.yaml separately or implement inheritance logic.
+ * NOTE: We load bdchm.processed.json which includes:
+ * - All classes, enums, slots, types (from gen-linkml + transform_schema.py)
+ * - Computed inherited_from fields for inherited attributes
+ * - Slot instances for slot_usage overrides
+ * - Streamlined structure optimized for our app
+ * This eliminates the need to compute inheritance or handle slot_usage at runtime.
  */
 export async function loadRawData(): Promise<SchemaData> {
-  // Load expanded schema (includes types from linkml:types via imports)
-  const expandedSchemaDTO = await loadExpandedSchemaDTO();
+  // Load processed schema (includes computed metadata)
+  const processedSchemaDTO = await loadProcessedSchemaDTO();
   const variableSpecDTOs = await loadVariableSpecDTOs();
 
   // Transform DTOs to Data types (snake_case → camelCase, field renames)
-  const classes: ClassData[] = Object.values(expandedSchemaDTO.classes).map(transformClassDTO);
+  const classes: ClassData[] = Object.values(processedSchemaDTO.classes).map(transformClassDTO);
 
   const enums = new Map<string, EnumData>();
-  Object.entries(expandedSchemaDTO.enums || {}).forEach(([name, dto]) => {
+  Object.entries(processedSchemaDTO.enums || {}).forEach(([name, dto]) => {
     enums.set(name, transformEnumDTO(dto));
   });
 
-  // Collect all slot definitions from both global slots and class attributes
+  // Collect all slot definitions (includes base slots + override instances from transform_schema.py)
   const slots = new Map<string, SlotData>();
-
-  // Add global slots from schema
-  Object.entries(expandedSchemaDTO.slots || {}).forEach(([name, dto]) => {
+  Object.entries(processedSchemaDTO.slots || {}).forEach(([name, dto]) => {
     slots.set(name, transformSlotDTO(dto));
   });
 
-  // Add slot definitions from class attributes
-  // These are attribute-specific slot definitions that may not appear in global slots
-  classes.forEach(classData => {
-    Object.entries(classData.attributes || {}).forEach(([attrName, attrDef]) => {
-      if (!slots.has(attrName)) {
-        slots.set(attrName, transformAttributeToSlotData(attrDef));
-      }
-    });
-  });
-
-  // Types from linkml:types (included via import expansion in bdchm.expanded.yaml)
+  // Types from linkml:types (included via gen-linkml + transform_schema.py pipeline)
   const types = new Map<string, TypeData>();
-  Object.entries(expandedSchemaDTO.types || {}).forEach(([name, dto]) => {
+  Object.entries(processedSchemaDTO.types || {}).forEach(([name, dto]) => {
     types.set(name, transformTypeDTO(dto));
   });
 

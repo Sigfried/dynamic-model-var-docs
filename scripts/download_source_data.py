@@ -7,12 +7,13 @@ Saves to {local_source_dir}/{dependency_name}/{file_name}
 Handles errors if files don't exist
 Prints what it's fetching
 
-After downloading bdchm.yaml, generates bdchm.expanded.json using gen-linkml.
-This includes all types from linkml:types and expands inherited slots.
+After downloading bdchm.yaml, runs data pipeline:
+1. gen-linkml: Generates bdchm.expanded.json (includes all types from linkml:types, expands inherited slots)
+2. transform_schema.py: Transforms to bdchm.processed.json (computes inherited_from, creates slot instances)
 
 Usage:
-  python download_source_data.py              # Download all files and generate expanded schema
-  python download_source_data.py --metadata-only   # Skip downloads, just regenerate expanded schema from existing bdchm.yaml
+  python download_source_data.py              # Download all files and run full pipeline
+  python download_source_data.py --metadata-only   # Skip downloads, just regenerate schemas from existing bdchm.yaml
 """
 
 import sys
@@ -135,21 +136,73 @@ def generate_expanded_schema(yaml_path: Path, output_path: Path) -> bool:
         return False
 
 
+def transform_schema(expanded_path: Path, processed_path: Path) -> bool:
+    """
+    Transform bdchm.expanded.json to optimized bdchm.processed.json.
+    Computes inherited_from fields and creates slot instances for slot_usage overrides.
+
+    Args:
+        expanded_path: Path to bdchm.expanded.json
+        processed_path: Path to save bdchm.processed.json
+
+    Returns:
+        True if successful, False otherwise
+    """
+    import subprocess
+    try:
+        print(f"Transforming schema to optimized format...")
+
+        # Call transform_schema.py
+        script_path = Path(__file__).parent / "transform_schema.py"
+        result = subprocess.run(
+            [
+                'python3',
+                str(script_path),
+                '--input', str(expanded_path),
+                '--output', str(processed_path)
+            ],
+            capture_output=True,
+            text=True
+        )
+
+        # Print output (includes progress and summary)
+        if result.stdout:
+            print(result.stdout, end='')
+
+        if result.returncode != 0:
+            if result.stderr:
+                print(result.stderr, file=sys.stderr)
+            return False
+
+        if not processed_path.exists():
+            print(f"  ✗ transform_schema.py did not create output file", file=sys.stderr)
+            return False
+
+        return True
+
+    except FileNotFoundError as e:
+        print(f"  ✗ Script not found: {e}", file=sys.stderr)
+        return False
+    except Exception as e:
+        print(f"  ✗ Error transforming schema: {e}", file=sys.stderr)
+        return False
+
+
 def main():
     """Download all configured source files."""
     parser = argparse.ArgumentParser(
-        description="Download source data and generate expanded schema",
+        description="Download source data and run schema processing pipeline",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python download_source_data.py              # Download all files and generate expanded schema
-  python download_source_data.py --metadata-only   # Skip downloads, regenerate expanded schema only
+  python download_source_data.py              # Download all files and run full pipeline
+  python download_source_data.py --metadata-only   # Skip downloads, regenerate schemas only
         """
     )
     parser.add_argument(
         '--metadata-only',
         action='store_true',
-        help='Skip downloads and only regenerate bdchm.expanded.json from existing bdchm.yaml'
+        help='Skip downloads and only regenerate schemas (bdchm.expanded.json → bdchm.processed.json) from existing bdchm.yaml'
     )
     args = parser.parse_args()
 
@@ -222,6 +275,13 @@ Examples:
         expanded_path = yaml_path.parent / "bdchm.expanded.json"
         if generate_expanded_schema(yaml_path, expanded_path):
             success_count += 1
+
+            # Transform expanded schema to optimized format
+            processed_path = yaml_path.parent / "bdchm.processed.json"
+            if transform_schema(expanded_path, processed_path):
+                success_count += 1
+            else:
+                fail_count += 1
         else:
             fail_count += 1
 

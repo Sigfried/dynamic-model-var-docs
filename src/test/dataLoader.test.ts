@@ -116,11 +116,11 @@ describe('dataLoader', () => {
       const slotCollection = data.collections.get('slot') as SlotCollection;
       const slots = slotCollection.getSlots();
 
-      // After Stage 4.5, should show ~170 slots (not just 7)
-      // Previously only collected from expandedSchemaDTO.slots
-      // Now also collects from class attributes
+      // After Stage 4.5 Part 2b, loads from bdchm.processed.json
+      // Contains base slots (7) + override instances (11) = 18 total
+      // This is streamlined compared to expanded JSON which had ~170 attribute definitions
       console.log(`Total slots collected: ${slots.size}`);
-      expect(slots.size).toBeGreaterThan(100); // Should be around ~170
+      expect(slots.size).toBeGreaterThanOrEqual(15); // Should be around 18
     });
 
     test('should parse enum definitions with values', async () => {

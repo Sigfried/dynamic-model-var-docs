@@ -58,8 +58,8 @@ describe('Data Completeness', () => {
     const yamlContent = readFileSync('public/source_data/HM/bdchm.yaml', 'utf-8');
     const yamlData = parseYaml(yamlContent) as Record<string, unknown>;
 
-    const metadataContent = readFileSync('public/source_data/HM/bdchm.metadata.json', 'utf-8');
-    const metadataJson = JSON.parse(metadataContent) as {
+    const processedContent = readFileSync('public/source_data/HM/bdchm.processed.json', 'utf-8');
+    const processedJson = JSON.parse(processedContent) as {
       classes: Record<string, unknown>;
       enums: Record<string, unknown>;
       slots: Record<string, unknown>;
@@ -82,19 +82,19 @@ describe('Data Completeness', () => {
     const slots = new Map(slotCollection.getSlots());
     const variables = variableCollection.getAllElements();
 
-    // 1. Check YAML → Metadata
+    // 1. Check YAML → Processed JSON
     const yamlTopLevelFields = ['id', 'name', 'title', 'description', 'license',
                                  'see_also', 'prefixes', 'imports', 'default_prefix',
                                  'default_range'];
     const missingTopLevelFields = yamlTopLevelFields.filter(
-      field => field in yamlData && !(field in metadataJson)
+      field => field in yamlData && !(field in processedJson)
     );
     report.yamlToMetadata.topLevelFields = missingTopLevelFields;
-    report.yamlToMetadata.prefixes = 'prefixes' in yamlData && !('prefixes' in metadataJson);
-    report.yamlToMetadata.imports = 'imports' in yamlData && !('imports' in metadataJson);
+    report.yamlToMetadata.prefixes = 'prefixes' in yamlData && !('prefixes' in processedJson);
+    report.yamlToMetadata.imports = 'imports' in yamlData && !('imports' in processedJson);
 
-    // 2. Check Metadata → ModelData
-    const metadataClassNames = Object.keys(metadataJson.classes || {});
+    // 2. Check Processed JSON → ModelData
+    const metadataClassNames = Object.keys(processedJson.classes || {});
     const collectClassNames = (classes: ClassDTO[]): Set<string> => {
       const names = new Set<string>();
       for (const cls of classes) {
@@ -113,13 +113,13 @@ describe('Data Completeness', () => {
       name => !modelDataClassNames.has(name)
     );
 
-    const metadataEnumNames = Object.keys(metadataJson.enums || {});
+    const metadataEnumNames = Object.keys(processedJson.enums || {});
     const modelDataEnumNames = new Set(enums.map(e => e.name));
     report.metadataToModelData.missingEnums = metadataEnumNames.filter(
       name => !modelDataEnumNames.has(name)
     );
 
-    const metadataSlotNames = Object.keys(metadataJson.slots || {});
+    const metadataSlotNames = Object.keys(processedJson.slots || {});
     const modelDataSlotNames = new Set(slots.keys());
     report.metadataToModelData.missingSlots = metadataSlotNames.filter(
       name => !modelDataSlotNames.has(name)
