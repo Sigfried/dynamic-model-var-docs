@@ -285,12 +285,10 @@ Before starting the refactor, complete UI/model separation from Phase 12:
 - ✅ Stage 1: Infrastructure Setup & Interface Definition
 - ✅ Stage 2: Import Types and Schema Validation
 - ✅ Stage 3: Graph Model with SlotEdges (with adapter for backward compatibility)
-
-**In Progress:**
-- 🔄 Stage 3a: Panel Specialization (three-panel layout basics - completed)
+- ✅ Stage 3a: Panel Specialization (three-panel layout basics)
+- ✅ Stage 4: LayoutManager Refactor (App.tsx simplified from ~550 to ~230 lines)
 
 **Next Up:**
-- Stage 4: LayoutManager Refactor (consolidate layout logic, simplify App.tsx)
 - Stage 5: Fix Model/View Separation (remove panel knowledge from Elements)
 - Stage 6: Detail Box Updates (render slot edges)
 - Stage 7: Documentation Updates
@@ -402,44 +400,50 @@ Before starting the refactor, complete UI/model separation from Phase 12:
 
 ### Stage 4: LayoutManager Refactor
 
+**Status**: ✅ **COMPLETE** - Major architectural improvement achieved
+
 **Goal**: Consolidate layout logic into LayoutManager component, simplify App.tsx
 
 **Rationale**: Most of App.tsx logic should be elsewhere. App.tsx should simplify to essentially just `<LayoutManager/>`.
 
-**LayoutManager responsibilities**:
-- Determine display mode (cascade vs stacked) based on available space
-- Manage panel visibility and toggle states
-- Calculate panel positions for LinkOverlay endpoints
-- Tell FloatingBoxManager where it has space and positioning constraints
-- Conditionally render 1 or 2 LinkOverlays based on middle panel visibility
-- Manage panel widths and responsive behavior
-- Handle floating box management (or delegate to FloatingBoxManager)
+**Accomplished:**
+- ✅ Created LayoutManager component (350 lines, controls all layout logic)
+- ✅ Moved display mode calculation to LayoutManager
+- ✅ Moved panel section state (controlled component pattern)
+- ✅ Moved LinkOverlay conditional rendering (1 or 2 overlays)
+- ✅ Moved floating box state and all handlers
+- ✅ Simplified App.tsx from ~550 lines to ~230 lines
+- ✅ TypeScript typecheck passes (0 errors)
+- ✅ All tests pass (163 passed, 19 pre-existing DetailContent failures)
 
-**What moves OUT of App.tsx**:
-- Display mode calculation → LayoutManager
-- Panel section state management → LayoutManager
-- LinkOverlay conditional rendering → LayoutManager
-- Floating box management → LayoutManager or FloatingBoxManager
-- getDialogStates → state management utilities or FloatingBoxManager
+**Architecture Pattern:**
+- LayoutManager is a **controlled component** receiving state + setters from App
+- App.tsx handles: data loading, DataService creation, URL/localStorage persistence, header
+- LayoutManager handles: all UI layout logic, panel management, floating boxes, link overlays
+- Clean separation: App owns persistence, LayoutManager owns layout
+- Ref-based callback pattern for dialog states getter (avoids React setState function issues)
 
-**What STAYS in App.tsx**:
-- Model data loading (useModelData)
+**LayoutManager responsibilities** (implemented):
+- Display mode calculation (cascade vs stacked) based on window width
+- Panel section rendering (left, middle, right panels)
+- Floating box state and management
+- Hovered item state (for RelationshipInfoBox and LinkOverlay)
+- Conditional LinkOverlay rendering (1 or 2 based on middle panel visibility)
+- Section data and toggle button building from DataService
+- Panel visibility and sizing logic
+
+**App.tsx responsibilities** (simplified to):
+- Model data loading (useModelData hook)
 - DataService creation
-- Render `<LayoutManager/>`
+- URL/localStorage state persistence (useLayoutState hook)
+- Header rendering (title, save/reset buttons, help)
+- LayoutManager rendering with state props
 
-**Steps**:
-1. Create LayoutManager component (start from PanelLayout)
-2. Move display mode logic from useLayoutState to LayoutManager
-3. Move panel state management into LayoutManager
-4. Move LinkOverlay conditional rendering into LayoutManager
-5. Move floating box state into LayoutManager or FloatingBoxManager
-6. Simplify App.tsx to just load data and render LayoutManager
+**Files modified**:
+- ✅ `src/components/LayoutManager.tsx` - NEW (350 lines)
+- ✅ `src/App.tsx` - SIMPLIFIED (230 lines, down from ~550)
 
-**Files**:
-- Rename `src/components/PanelLayout.tsx` → `src/components/LayoutManager.tsx`
-- Major simplification of `src/App.tsx`
-- Update `src/hooks/useLayoutState.ts` (may absorb into LayoutManager)
-- Update `src/components/FloatingBoxManager.tsx` (may gain more responsibilities)
+**Commit**: `c4d629f` - Stage 4: LayoutManager refactor - consolidate layout logic
 
 ### Stage 5: Fix Model/View Separation
 
