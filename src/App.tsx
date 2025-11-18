@@ -463,7 +463,6 @@ function App() {
               onClickItem={handleOpenFloatingBox}
               onItemHover={setHoveredItem}
               onItemLeave={() => setHoveredItem(null)}
-              title="Classes"
             />
           }
           leftPanelEmpty={false}  // Never empty - always shows classes

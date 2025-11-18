@@ -275,6 +275,28 @@ Before starting the refactor, complete UI/model separation from Phase 12:
 6. ✅ Make ClassElement, EnumElement extend Range
 7. ✅ Add TypeCollection (rethink collections approach with graphology)
 
+**Status**: ✅ **Stage 3 Complete!** All steps (1-5) finished, adapter working.
+
+---
+
+## Stage Summary (Updated 2025-01-18)
+
+**Completed:**
+- ✅ Stage 1: Infrastructure Setup & Interface Definition
+- ✅ Stage 2: Import Types and Schema Validation
+- ✅ Stage 3: Graph Model with SlotEdges (with adapter for backward compatibility)
+
+**In Progress:**
+- 🔄 Stage 3a: Panel Specialization (three-panel layout basics - completed)
+
+**Next Up:**
+- Stage 4: LayoutManager Refactor (consolidate layout logic, simplify App.tsx)
+- Stage 5: Fix Model/View Separation (remove panel knowledge from Elements)
+- Stage 6: Detail Box Updates (render slot edges)
+- Stage 7: Documentation Updates
+
+---
+
 **Status**: ✅ **Stage 2 Complete!** All steps (1-7) finished.
 
 **Implementation Notes**:
@@ -345,76 +367,130 @@ Before starting the refactor, complete UI/model separation from Phase 12:
 - `src/models/ElementCollection.ts` - Simplify with graphology queries
 - `src/services/DataService.ts` - Add type collection, update relationship APIs, add getSlotEdgesForClass()
 
-### Stage 4: UI Layout Changes
+### Stage 3a: Panel Specialization (Three-Panel Layout Basics)
 
-**Goal**: Implement three-panel layout with specialized panel roles
+**Status**: ✅ **MOSTLY COMPLETE** - Basic three-panel layout implemented
 
-**New Layout**:
-- **Left Panel**: Classes only (no toggles - always just classes showing hierarchy)
-- **Middle Panel**: Slots only (toggleable hide/show entire panel)
-- **Right Panel**: Ranges only - Classes, Enums, Types (toggle buttons for each section, NO Variables/Slots)
+**Goal**: Implement basic three-panel layout with specialized panel roles
 
-**Strategy**: Refactor LinkOverlay while keeping middle panel closed. Once working, enable middle panel. May become two link overlays: left-middle, middle-right.
+**Completed:**
+- ✅ Three-panel layout with specialized roles (Classes, Slots, Ranges)
+- ✅ URL state persistence with middle panel support
+- ✅ Panel-specific toggle buttons (none for left/middle, only C/E/T for right)
+- ✅ Smart LinkOverlay rendering (1 overlay when middle hidden, 2 when shown)
+- ✅ Panel titles ("Classes", "Slots", "Ranges:")
+- ✅ Type system updated for 'middle' position
 
-**Steps**:
-1. ✅ Update statePersistence.ts for middle panel URL state (lc~ms~re format)
-2. ✅ Update useLayoutState for middle panel state management
-3. Update PanelLayout.tsx to support three panels
-4. Update App.tsx:
-   - Add middle panel to layout
-   - Left panel: Classes only (no toggles)
-   - Middle panel: Slots only (toggleable)
-   - Right panel: Ranges only (Classes/Enums/Types toggles, no Variables/Slots)
-5. Update ItemsPanel.tsx (or create specialized panel components):
-   - Left: No toggles, classes only
-   - Middle: No toggles needed (entire panel toggleable)
-   - Right: Toggle buttons for three range sections
-6. Refactor Section.tsx:
-   - Support "Ranges" section group heading for right panel
-   - Render Classes/Enums/Types as range targets
-7. Update SectionItem.tsx if needed for range items
-8. Refactor LinkOverlay.tsx:
-   - Traverse Class → SlotEdge → Range
-   - When middle panel visible: render two-step links (class→slot, slot→range)
-   - **Migrate to new RelationshipData format (Stage 3 Step 6)** - since we're rewriting anyway
+**Known Issues:**
+- ⚠️ ElementPreRefactor.ts now has middle panel knowledge (violates separation of concerns)
+- ⚠️ App.tsx too complex, should be simplified
+- ⚠️ Need middle panel show/hide toggle button
 
-**Files**:
-- ✅ `src/utils/statePersistence.ts` - URL state for middle panel
+**What's left:**
+- Add UI toggle button to show/hide middle panel
+- Fix architectural issues (defer to Stage 5)
+- Simplify App.tsx (defer to Stage 4: LayoutManager)
+
+**Files modified**:
+- ✅ `src/utils/statePersistence.ts` - Middle panel URL state
 - ✅ `src/hooks/useLayoutState.ts` - Middle panel state management
-- `src/components/PanelLayout.tsx` - Three-panel layout
-- `src/App.tsx` - Panel specialization, middle panel toggle
-- `src/components/ItemsPanel.tsx` - Panel-specific toggle configurations
-- `src/components/Section.tsx` - Ranges section rendering
-- `src/components/SectionItem.tsx` - Range item updates if needed
-- `src/components/LinkOverlay.tsx` - Slot edge traversal
+- ✅ `src/components/PanelLayout.tsx` - Three-panel layout support
+- ✅ `src/App.tsx` - Panel specialization, conditional LinkOverlays
+- ✅ `src/components/ItemsPanel.tsx` - Title prop, panel-specific toggles
+- ✅ `src/components/Section.tsx` - Middle position support
+- ⚠️ `src/models/ElementPreRefactor.ts` - Middle panel context (TO BE REVERTED in Stage 5)
 
-### Stage 4.5: LayoutManager Refactor (Optional Enhancement)
+### Stage 4: LayoutManager Refactor
 
-**Goal**: Consolidate layout logic into a LayoutManager component
+**Goal**: Consolidate layout logic into LayoutManager component, simplify App.tsx
 
-**Rationale**: PanelLayout should become LayoutManager with expanded responsibilities to better manage the overall layout coordination.
+**Rationale**: Most of App.tsx logic should be elsewhere. App.tsx should simplify to essentially just `<LayoutManager/>`.
 
-**New responsibilities**:
+**LayoutManager responsibilities**:
 - Determine display mode (cascade vs stacked) based on available space
+- Manage panel visibility and toggle states
 - Calculate panel positions for LinkOverlay endpoints
 - Tell FloatingBoxManager where it has space and positioning constraints
 - Conditionally render 1 or 2 LinkOverlays based on middle panel visibility
 - Manage panel widths and responsive behavior
+- Handle floating box management (or delegate to FloatingBoxManager)
 
-**Current state**: PanelLayout is a simple layout component. App.tsx handles display mode calculation and LinkOverlay conditional rendering.
+**What moves OUT of App.tsx**:
+- Display mode calculation → LayoutManager
+- Panel section state management → LayoutManager
+- LinkOverlay conditional rendering → LayoutManager
+- Floating box management → LayoutManager or FloatingBoxManager
+- getDialogStates → state management utilities or FloatingBoxManager
 
-**Decision**: Defer this refactor until after Stage 5 completes. Current architecture works, but could be cleaner with centralized layout management.
+**What STAYS in App.tsx**:
+- Model data loading (useModelData)
+- DataService creation
+- Render `<LayoutManager/>`
 
-**Files that would be affected**:
+**Steps**:
+1. Create LayoutManager component (start from PanelLayout)
+2. Move display mode logic from useLayoutState to LayoutManager
+3. Move panel state management into LayoutManager
+4. Move LinkOverlay conditional rendering into LayoutManager
+5. Move floating box state into LayoutManager or FloatingBoxManager
+6. Simplify App.tsx to just load data and render LayoutManager
+
+**Files**:
 - Rename `src/components/PanelLayout.tsx` → `src/components/LayoutManager.tsx`
-- Move display mode logic from App.tsx to LayoutManager
-- Move LinkOverlay conditional rendering from App.tsx to LayoutManager
-- Update FloatingBoxManager to receive positioning info from LayoutManager
-- Update LinkOverlay to receive panel positions from LayoutManager
+- Major simplification of `src/App.tsx`
+- Update `src/hooks/useLayoutState.ts` (may absorb into LayoutManager)
+- Update `src/components/FloatingBoxManager.tsx` (may gain more responsibilities)
 
-### Stage 5: Detail Box Updates
+### Stage 5: Fix Model/View Separation
 
-**Goal**: Render slots with clickable ranges in detail boxes
+**Goal**: Remove panel/section knowledge from Element classes, restore proper separation of concerns
+
+**Problem**: Element classes (in ElementPreRefactor.ts) currently know about:
+- Panel positions ('left', 'middle', 'right')
+- Panel contexts ('leftPanel', 'middlePanel', 'rightPanel')
+- Section rendering (toSectionItems, getSectionData)
+- URL state (getExpansionKey)
+
+This violates CLAUDE.md architectural principles - model layer should NOT know about view concerns.
+
+**Solution**: Move panel/section logic OUT of Element classes
+
+**Where should it go?**
+- NOT DataService - DataService gets data, doesn't decide layout
+- LayoutManager or a new adapter layer decides what goes where
+- Element classes return pure data structures
+- LayoutManager/adapters transform for UI consumption
+
+**Legacy code strategy**:
+- ElementPreRefactor doesn't need to handle middle panel at all
+- OK if slots panel/section only works with refactored code
+- Gradual migration: keep old code working for 2-panel layout
+- New code handles 3-panel layout
+
+**What to change**:
+1. Remove 'middle' position from ElementPreRefactor.ts (revert those changes)
+2. Keep ElementPreRefactor working for 2-panel layout (left/right only)
+3. Move toSectionItems, getSectionData logic to adapter layer
+4. Move getExpansionKey to URL state management utilities
+5. Element classes return plain data, not UI-specific structures
+
+**Steps**:
+1. Create SectionDataAdapter or similar to transform Element data for UI
+2. Move toSectionItems logic to adapter
+3. Move getSectionData logic to adapter
+4. Move getExpansionKey to statePersistence utilities
+5. Remove 'middle' position from ElementPreRefactor (revert Stage 4 changes)
+6. New refactored Element classes (when created) never know about panels
+
+**Files**:
+- Revert middle panel changes in `src/models/ElementPreRefactor.ts`
+- Create new adapter layer (e.g., `src/adapters/SectionDataAdapter.ts`)
+- Update `src/utils/statePersistence.ts` to handle expansion keys
+- Update `src/components/LayoutManager.tsx` to use adapters
+
+### Stage 6: Detail Box Updates
+
+**Goal**: Render slots with clickable ranges in detail boxes (was Stage 5)
 
 **Steps**:
 1. Update DetailPanel to render slot edges:
@@ -427,15 +503,15 @@ Before starting the refactor, complete UI/model separation from Phase 12:
 - `src/components/DetailPanel.tsx` - Render slot edges with clickable ranges
 - `src/components/RelationshipInfoBox.tsx` - Display slot edge properties
 
-### Stage 6: Documentation Updates
+### Stage 7: Documentation Updates
 
-**Goal**: Update documentation to reflect new architecture
+**Goal**: Update documentation to reflect new architecture (was Stage 6)
 
 **Files**:
-- `docs/CLAUDE.md` - Add Range abstraction, SlotEdge pattern, graph model approach
+- `docs/CLAUDE.md` - Add Range abstraction, SlotEdge pattern, graph model approach, LayoutManager
 - `docs/DATA_FLOW.md` - Update with Slots-as-Edges architecture and graphology usage
 - `docs/TASKS.md` - Update active tasks, remove obsolete items
-- `docs/PROGRESS.md` - Archive this refactor as Phase 15
+- `docs/PROGRESS.md` - Archive this refactor as Phase 17 (was 15)
 
 ---
 
