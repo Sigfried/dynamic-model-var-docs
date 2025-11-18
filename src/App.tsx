@@ -1,22 +1,12 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
-import ItemsPanel, { type ToggleButtonData } from './components/ItemsPanel';
-import type { SectionData, ItemHoverData } from './components/Section';
-import FloatingBoxManager, { type FloatingBoxData } from './components/FloatingBoxManager';
-import DetailContent from './components/DetailContent';
-import PanelLayout from './components/PanelLayout';
-import LinkOverlay from './components/LinkOverlay';
-import RelationshipInfoBox from './components/RelationshipInfoBox';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import LayoutManager from './components/LayoutManager';
 import { getInitialState, type DialogState } from './utils/statePersistence';
 import { useModelData } from './hooks/useModelData';
 import { useLayoutState } from './hooks/useLayoutState';
 import { DataService } from './services/DataService';
 
 function App() {
-  const [hoveredItem, setHoveredItem] = useState<ItemHoverData | null>(null);
-  const [floatingBoxes, setFloatingBoxes] = useState<FloatingBoxData[]>([]);
-  const [nextBoxId, setNextBoxId] = useState(0);
   const [hasRestoredFromURL, setHasRestoredFromURL] = useState(false);
-
 
   // Load model data
   const { modelData, loading, error } = useModelData();
@@ -27,39 +17,20 @@ function App() {
     [modelData]
   );
 
-  // Convert floating boxes to dialog states for persistence
-  const getDialogStates = useCallback((): DialogState[] => {
-    if (!dataService) return [];
+  // Dialog states getter - will be set by LayoutManager
+  const getDialogStatesRef = useRef<() => DialogState[]>(() => []);
 
-    // Save all persistent boxes, but only include position if user positioned it
-    return floatingBoxes
-      .filter(box => box.mode === 'persistent')
-      .map(box => {
-        const state: DialogState = {
-          itemName: box.itemId
-        };
+  // Callback for LayoutManager to provide its dialog states getter
+  const setDialogStatesGetter = useCallback((getter: () => DialogState[]) => {
+    getDialogStatesRef.current = getter;
+  }, []);
 
-        // Only include position if user has explicitly positioned this box
-        if (box.isUserPositioned && box.position && box.size) {
-          state.x = box.position.x;
-          state.y = box.position.y;
-          state.width = box.size.width;
-          state.height = box.size.height;
-        }
-
-        return state;
-      });
-  }, [floatingBoxes, dataService]);
-
-  // Manage layout state
+  // Manage layout state (URL and localStorage persistence)
   const {
-    leftSections: _leftSections,  // Unused - left panel always shows classes
+    leftSections,
     middleSections,
     rightSections,
-    setLeftSections: _setLeftSections,  // Unused
-    setMiddleSections: _setMiddleSections,  // TODO: Use for middle panel show/hide toggle
     setRightSections,
-    displayMode,
     showUrlHelp,
     setShowUrlHelp,
     showSaveConfirm,
@@ -67,227 +38,23 @@ function App() {
     handleSaveLayout,
     handleResetLayout,
     handleResetApp
-  } = useLayoutState({ hasRestoredFromURL, getDialogStates });
+  } = useLayoutState({
+    hasRestoredFromURL,
+    getDialogStates: getDialogStatesRef.current
+  });
 
-  // Stage 4: Panel specialization
-  // Left panel: Always classes (no toggles)
-  // Middle panel: Always slots when visible (no toggles)
-  // Right panel: Only ranges (classes, enums, types) with toggles
-  const leftSections = ['class'];  // Fixed - left panel always shows classes
-
-  // Open a new floating box (or bring existing one to front)
-  const handleOpenFloatingBox = useCallback((hoverData: { type: string; name: string }, position?: { x: number; y: number }, size?: { width: number; height: number }) => {
-    if (!dataService) return;
-
-    const itemId = hoverData.name;
-
-    // Verify item exists
-    if (!dataService.itemExists(itemId)) {
-      console.warn(`Item "${itemId}" not found`);
-      return;
-    }
-
-    // Check if this item is already open
-    const existingIndex = floatingBoxes.findIndex(b => b.itemId === itemId);
-
-    // If already open, bring to top (move to end of array)
-    if (existingIndex !== -1) {
-      setFloatingBoxes(prev => {
-        const updated = [...prev];
-        const [existing] = updated.splice(existingIndex, 1);
-        return [...updated, existing];
-      });
-      return;
-    }
-
-    // Otherwise, create new persistent box
-    // Note: Don't set position/size - let FloatingBoxManager's cascade algorithm handle it
-    // Only pass position/size when restoring from URL or when explicitly requested
-
-    const metadata = dataService.getFloatingBoxMetadata(itemId);
-    if (!metadata) {
-      console.warn(`Could not get metadata for item "${itemId}"`);
-      return;
-    }
-
-    const newBox: FloatingBoxData = {
-      id: `box-${nextBoxId}`,
-      mode: 'persistent',
-      metadata,
-      content: <DetailContent itemId={itemId} dataService={dataService} hideHeader={true} />,
-      itemId,
-      position,  // undefined unless explicitly provided (e.g., from URL restore)
-      size       // undefined unless explicitly provided
-    };
-
-    setFloatingBoxes(prev => [...prev, newBox]);
-    setNextBoxId(prev => prev + 1);
-  }, [dataService, floatingBoxes, nextBoxId, displayMode]);
-
-  // Get item ID and DOM ID for hovered item (for RelationshipInfoBox)
-  const hoveredItemId = useMemo(() => {
-    return hoveredItem?.name ?? null;
-  }, [hoveredItem]);
-
-  const hoveredItemDomId = useMemo(() => {
-    return hoveredItem?.id ?? null;
-  }, [hoveredItem]);
-
-  // Navigation handler - opens a new floating box
-  const handleNavigate = useCallback((itemName: string, itemSection: string) => {
-    handleOpenFloatingBox({ type: itemSection, name: itemName });
-  }, [handleOpenFloatingBox]);
-
-  // Handle RelationshipInfoBox upgrade to persistent floating box
-  const handleUpgradeRelationshipBox = useCallback(() => {
-    if (!hoveredItem || !hoveredItemId || !dataService) return;
-
-    // Check if already open
-    const existingIndex = floatingBoxes.findIndex(b => b.itemId === hoveredItemId);
-
-    // If already open, just bring to front and hide RelationshipInfoBox
-    if (existingIndex !== -1) {
-      setFloatingBoxes(prev => {
-        const updated = [...prev];
-        const [existing] = updated.splice(existingIndex, 1);
-        return [...updated, existing];
-      });
-      setHoveredItem(null); // Hide RelationshipInfoBox after upgrade
-      return;
-    }
-
-    // Create new persistent box with detail content
-    const metadata = dataService.getFloatingBoxMetadata(hoveredItemId);
-    if (!metadata) {
-      console.warn(`Could not get metadata for item "${hoveredItemId}"`);
-      return;
-    }
-
-    const newBox: FloatingBoxData = {
-      id: `box-${nextBoxId}`,
-      mode: 'persistent',
-      metadata,
-      content: <DetailContent itemId={hoveredItemId} dataService={dataService} hideHeader={true} />,
-      itemId: hoveredItemId,
-      // position handled by cascade positioning in FloatingBoxManager
-      size: { width: 700, height: 400 }
-    };
-
-    setFloatingBoxes(prev => [...prev, newBox]);
-    setNextBoxId(prev => prev + 1);
-    setHoveredItem(null); // Hide RelationshipInfoBox after upgrade
-  }, [hoveredItem, hoveredItemId, dataService, floatingBoxes, nextBoxId, displayMode]);
-
-  // Close a floating box
-  const handleCloseFloatingBox = useCallback((id: string) => {
-    setFloatingBoxes(prev => prev.filter(b => b.id !== id));
-  }, []);
-
-  // Update floating box position/size (marks box as user-positioned)
-  const handleFloatingBoxChange = useCallback((id: string, position: { x: number; y: number }, size: { width: number; height: number }) => {
-    setFloatingBoxes(prev => prev.map(b =>
-      b.id === id ? { ...b, position, size, isUserPositioned: true } : b
-    ));
-  }, []);
-
-  // Bring floating box to front (move to end of array for higher z-index)
-  const handleBringToFront = useCallback((id: string) => {
-    setFloatingBoxes(prev => {
-      const index = prev.findIndex(b => b.id === id);
-      if (index === -1 || index === prev.length - 1) return prev; // Already at front or not found
-
-      const updated = [...prev];
-      const [box] = updated.splice(index, 1);
-      return [...updated, box];
-    });
-  }, []);
-
-  // Restore floating boxes from URL after data loads (runs once)
+  // Mark as restored after data loads (coordination with LayoutManager)
   useEffect(() => {
-    // Only run once after data loads
-    if (hasRestoredFromURL) return;
-    if (!dataService) return;
-
-    // Mark as restored
-    setHasRestoredFromURL(true);
-
-    const urlState = getInitialState();
-
-    // Restore floating boxes from URL dialog state
-    if (urlState.dialogs && urlState.dialogs.length > 0) {
-      const restoredBoxes: FloatingBoxData[] = [];
-      let boxIdCounter = 0;
-
-      urlState.dialogs.forEach(dialogState => {
-        const itemId = dialogState.itemName;
-
-        // Verify item exists
-        if (dataService.itemExists(itemId)) {
-          const metadata = dataService.getFloatingBoxMetadata(itemId);
-          if (metadata) {
-            const box: FloatingBoxData = {
-              id: `box-${boxIdCounter}`,
-              mode: 'persistent',
-              metadata,
-              content: <DetailContent itemId={itemId} dataService={dataService} hideHeader={true} />,
-              itemId
-            };
-
-            // If dialog has position info, use it and mark as user-positioned
-            if (dialogState.x !== undefined && dialogState.y !== undefined &&
-                dialogState.width !== undefined && dialogState.height !== undefined) {
-              box.position = { x: dialogState.x, y: dialogState.y };
-              box.size = { width: dialogState.width, height: dialogState.height };
-              box.isUserPositioned = true;
-            }
-            // Otherwise, let cascade positioning handle it (no position property)
-
-            restoredBoxes.push(box);
-            boxIdCounter++;
-          }
-        }
-      });
-
-      // Sort boxes: default-positioned first (for clean cascade), then user-positioned
-      // This prevents gaps in the cascade when some boxes have explicit positions
-      if (restoredBoxes.length > 0) {
-        const sortedBoxes = restoredBoxes.sort((a, b) => {
-          const aPositioned = a.isUserPositioned ? 1 : 0;
-          const bPositioned = b.isUserPositioned ? 1 : 0;
-          return aPositioned - bPositioned; // false (0) before true (1)
-        });
-
-        setFloatingBoxes(sortedBoxes);
-        setNextBoxId(boxIdCounter);
-      }
+    if (!hasRestoredFromURL && dataService) {
+      setHasRestoredFromURL(true);
     }
-  }, [dataService, hasRestoredFromURL, displayMode]);
+  }, [dataService, hasRestoredFromURL]);
 
-
-  // Build toggle button data from DataService (must be before early returns)
-  const allToggleButtons = useMemo<ToggleButtonData[]>(() => {
-    return dataService?.getToggleButtonsData() ?? [];
-  }, [dataService]);
-
-  // Filter toggle buttons for right panel - only ranges (class, enum, type)
-  const rightPanelToggleButtons = useMemo<ToggleButtonData[]>(() => {
-    return allToggleButtons.filter(btn =>
-      btn.id === 'class' || btn.id === 'enum' || btn.id === 'type'
-    );
-  }, [allToggleButtons]);
-
-  // Build section data maps for left, middle, and right panels (must be before early returns)
-  const leftSectionData = useMemo<Map<string, SectionData>>(() => {
-    return dataService?.getAllSectionsData('left') ?? new Map();
-  }, [dataService]);
-
-  const middleSectionData = useMemo<Map<string, SectionData>>(() => {
-    return dataService?.getAllSectionsData('middle') ?? new Map();
-  }, [dataService]);
-
-  const rightSectionData = useMemo<Map<string, SectionData>>(() => {
-    return dataService?.getAllSectionsData('right') ?? new Map();
-  }, [dataService]);
+  // Get initial dialogs from URL
+  const initialDialogs = useMemo(() => {
+    const urlState = getInitialState();
+    return urlState.dialogs ?? [];
+  }, []);
 
   // TEMPORARY HACK BECAUSE DARK MODE IS UNREADABLE
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -345,6 +112,10 @@ function App() {
     );
   }
 
+  if (!dataService) {
+    return null;
+  }
+
   return (
     <div className="flex flex-col h-screen">
       {darkModeWarning}
@@ -363,11 +134,6 @@ function App() {
           </div>
           <div className="flex items-center gap-4 text-sm">
             {/* TODO: Restore presets after Stage 4 layout changes complete */}
-            {/* <span className="font-semibold">Presets:</span>
-            <a href={generatePresetURL('classesOnly')} className="px-3 py-1 bg-blue-700 hover:bg-blue-800 rounded transition-colors" title="Show only classes">Classes</a>
-            <a href={generatePresetURL('classesAndEnums')} className="px-3 py-1 bg-blue-700 hover:bg-blue-800 rounded transition-colors" title="Classes on left, enums on right">Classes + Enums</a>
-            <a href={generatePresetURL('allSections')} className="px-3 py-1 bg-blue-700 hover:bg-blue-800 rounded transition-colors" title="Show all sections (with slots)">All</a>
-            <a href={generatePresetURL('classesAndTypes')} className="px-3 py-1 bg-blue-700 hover:bg-blue-800 rounded transition-colors" title="Classes and types">+ Types</a> */}
             <div className="relative">
               {hasLocalStorage ? (
                 <button
@@ -450,101 +216,16 @@ function App() {
         </div>
       </header>
 
-      {/* Main content: Panel layout with link overlay */}
-      <div className="flex relative overflow-hidden">
-        <PanelLayout
-          leftPanel={
-            <ItemsPanel
-              position="left"
-              sections={leftSections}  // Always ['class']
-              onSectionsChange={() => {}}  // No-op - left panel fixed
-              sectionData={leftSectionData}
-              toggleButtons={[]}  // No toggles for left panel
-              onClickItem={handleOpenFloatingBox}
-              onItemHover={setHoveredItem}
-              onItemLeave={() => setHoveredItem(null)}
-            />
-          }
-          leftPanelEmpty={false}  // Never empty - always shows classes
-          middlePanel={
-            <ItemsPanel
-              position="middle"
-              sections={middleSections.length > 0 ? ['slot'] : []}  // Always 'slot' when visible
-              onSectionsChange={() => {}}  // No-op - middle panel fixed
-              sectionData={middleSectionData}
-              toggleButtons={[]}  // No toggles for middle panel
-              onClickItem={handleOpenFloatingBox}
-              onItemHover={setHoveredItem}
-              onItemLeave={() => setHoveredItem(null)}
-              title="Slots"
-            />
-          }
-          middlePanelEmpty={middleSections.length === 0}
-          rightPanel={
-            <ItemsPanel
-              position="right"
-              sections={rightSections}
-              onSectionsChange={setRightSections}
-              sectionData={rightSectionData}
-              toggleButtons={rightPanelToggleButtons}  // Only C, E, T
-              onClickItem={handleOpenFloatingBox}
-              onItemHover={setHoveredItem}
-              onItemLeave={() => setHoveredItem(null)}
-              title="Ranges:"
-            />
-          }
-          rightPanelEmpty={rightSections.length === 0}
-          showSpacer={displayMode === 'cascade'}
-        />
-
-        {/* SVG Link Overlay - conditional based on middle panel visibility */}
-        {middleSections.length === 0 ? (
-          // Middle panel hidden: Single overlay using SlotEdges (class → range direct)
-          <LinkOverlay
-            leftSections={leftSections}
-            rightSections={rightSections}
-            dataService={dataService}
-            hoveredItem={hoveredItem}
-          />
-        ) : (
-          // Middle panel visible: Two overlays (class → slot, slot → range)
-          <>
-            <LinkOverlay
-              leftSections={leftSections}
-              rightSections={middleSections}
-              dataService={dataService}
-              hoveredItem={hoveredItem}
-            />
-            <LinkOverlay
-              leftSections={middleSections}
-              rightSections={rightSections}
-              dataService={dataService}
-              hoveredItem={hoveredItem}
-            />
-          </>
-        )}
-
-        {/* Floating Box Manager - handles both stacked and cascade modes */}
-        <FloatingBoxManager
-          boxes={floatingBoxes}
-          displayMode={displayMode}
-          onClose={handleCloseFloatingBox}
-          onChange={handleFloatingBoxChange}
-          onBringToFront={handleBringToFront}
-        />
-
-        {/* Relationship Info Box (transitory, uses item position) - only in cascade mode */}
-        {/* [sg] why no RelationshipInfoBox in stacked mode? mode shouldn't matter */}
-        {/*{displayMode === 'cascade' && (    don't restrict to cascade mode */}
-          <RelationshipInfoBox
-            itemId={hoveredItemId}
-            itemDomId={hoveredItemDomId}
-            dataService={dataService}
-            onNavigate={handleNavigate}
-            onUpgrade={handleUpgradeRelationshipBox}
-          />
-        {/*)}*/}
-      </div>
+      {/* Main content: LayoutManager handles everything */}
+      <LayoutManager
+        dataService={dataService}
+        leftSections={leftSections}
+        middleSections={middleSections}
+        rightSections={rightSections}
+        setRightSections={setRightSections}
+        initialDialogs={initialDialogs}
+        setDialogStatesGetter={setDialogStatesGetter}
+      />
     </div>
   );
 }

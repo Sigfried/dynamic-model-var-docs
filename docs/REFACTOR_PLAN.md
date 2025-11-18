@@ -469,6 +469,9 @@ This violates CLAUDE.md architectural principles - model layer should NOT know a
 
 **What to change**:
 1. Remove 'middle' position from ElementPreRefactor.ts (revert those changes)
+    - [sg] reverting is dangerous. if you think it's the best way to go, just
+           make sure nothing else gets reverted or lost. and some of that
+           may belong in Element or LayoutManager...
 2. Keep ElementPreRefactor working for 2-panel layout (left/right only)
 3. Move toSectionItems, getSectionData logic to adapter layer
 4. Move getExpansionKey to URL state management utilities

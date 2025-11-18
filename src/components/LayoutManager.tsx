@@ -1,0 +1,423 @@
+/**
+ * LayoutManager Component
+ *
+ * Consolidates all layout logic for the three-panel interface:
+ * - Panel section state management (left, middle, right)
+ * - Display mode calculation (stacked vs cascade)
+ * - Floating box management
+ * - LinkOverlay conditional rendering
+ * - Panel visibility and sizing
+ *
+ * Responsibilities moved from App.tsx:
+ * - Section state (leftSections, middleSections, rightSections)
+ * - Floating box state and handlers
+ * - Hovered item state
+ * - Building section data maps
+ * - Building toggle button data
+ * - Conditional LinkOverlay rendering (1 or 2 based on middle panel)
+ *
+ * App.tsx simplified to: load data, create DataService, render LayoutManager
+ */
+
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import ItemsPanel, { type ToggleButtonData } from './ItemsPanel';
+import type { SectionData, ItemHoverData } from './Section';
+import FloatingBoxManager, { type FloatingBoxData } from './FloatingBoxManager';
+import DetailContent from './DetailContent';
+import LinkOverlay from './LinkOverlay';
+import RelationshipInfoBox from './RelationshipInfoBox';
+import { type DialogState } from '../utils/statePersistence';
+import { calculateDisplayMode } from '../utils/layoutHelpers';
+import { type DataService } from '../services/DataService';
+
+interface LayoutManagerProps {
+  dataService: DataService;
+  leftSections: string[];
+  middleSections: string[];
+  rightSections: string[];
+  setRightSections: (sections: string[]) => void;
+  initialDialogs?: DialogState[];
+  setDialogStatesGetter: (getter: () => DialogState[]) => void;
+}
+
+export default function LayoutManager({
+  dataService,
+  leftSections,
+  middleSections,
+  rightSections,
+  setRightSections,
+  initialDialogs = [],
+  setDialogStatesGetter
+}: LayoutManagerProps) {
+  // LayoutManager is now a controlled component - receives state from parent
+  // Note: setMiddleSections not yet needed - will be added when middle panel toggle is implemented
+
+  // Floating box state
+  const [hoveredItem, setHoveredItem] = useState<ItemHoverData | null>(null);
+  const [floatingBoxes, setFloatingBoxes] = useState<FloatingBoxData[]>([]);
+  const [nextBoxId, setNextBoxId] = useState(0);
+  const [hasRestoredDialogs, setHasRestoredDialogs] = useState(false);
+
+  // Display mode calculation
+  const [displayMode, setDisplayMode] = useState<'stacked' | 'cascade'>('cascade');
+
+  // Measure available space and set display mode
+  useEffect(() => {
+    const measureSpace = () => {
+      const windowWidth = window.innerWidth;
+      const { mode } = calculateDisplayMode(windowWidth, leftSections.length, rightSections.length);
+      setDisplayMode(mode);
+    };
+
+    measureSpace();
+    window.addEventListener('resize', measureSpace);
+    return () => window.removeEventListener('resize', measureSpace);
+  }, [leftSections, rightSections]);
+
+  // Convert floating boxes to dialog states for persistence
+  const getDialogStatesFromBoxes = useCallback((): DialogState[] => {
+    return floatingBoxes
+      .filter(box => box.mode === 'persistent')
+      .map(box => {
+        const state: DialogState = {
+          itemName: box.itemId
+        };
+
+        if (box.isUserPositioned && box.position && box.size) {
+          state.x = box.position.x;
+          state.y = box.position.y;
+          state.width = box.size.width;
+          state.height = box.size.height;
+        }
+
+        return state;
+      });
+  }, [floatingBoxes]);
+
+  // Provide dialog states getter to parent (for URL/localStorage persistence)
+  useEffect(() => {
+    setDialogStatesGetter(getDialogStatesFromBoxes);
+  }, [getDialogStatesFromBoxes, setDialogStatesGetter]);
+
+  // Restore floating boxes from initial dialogs (runs once after data loads)
+  useEffect(() => {
+    if (hasRestoredDialogs) return;
+    if (initialDialogs.length === 0) return;
+
+    setHasRestoredDialogs(true);
+
+    const restoredBoxes: FloatingBoxData[] = [];
+    let boxIdCounter = 0;
+
+    initialDialogs.forEach(dialogState => {
+      const itemId = dialogState.itemName;
+
+      if (dataService.itemExists(itemId)) {
+        const metadata = dataService.getFloatingBoxMetadata(itemId);
+        if (metadata) {
+          const box: FloatingBoxData = {
+            id: `box-${boxIdCounter}`,
+            mode: 'persistent',
+            metadata,
+            content: <DetailContent itemId={itemId} dataService={dataService} hideHeader={true} />,
+            itemId
+          };
+
+          if (dialogState.x !== undefined && dialogState.y !== undefined &&
+              dialogState.width !== undefined && dialogState.height !== undefined) {
+            box.position = { x: dialogState.x, y: dialogState.y };
+            box.size = { width: dialogState.width, height: dialogState.height };
+            box.isUserPositioned = true;
+          }
+
+          restoredBoxes.push(box);
+          boxIdCounter++;
+        }
+      }
+    });
+
+    if (restoredBoxes.length > 0) {
+      const sortedBoxes = restoredBoxes.sort((a, b) => {
+        const aPositioned = a.isUserPositioned ? 1 : 0;
+        const bPositioned = b.isUserPositioned ? 1 : 0;
+        return aPositioned - bPositioned;
+      });
+
+      setFloatingBoxes(sortedBoxes);
+      setNextBoxId(boxIdCounter);
+    }
+  }, [dataService, initialDialogs, hasRestoredDialogs]);
+
+  // Build toggle button data
+  const allToggleButtons = useMemo<ToggleButtonData[]>(() => {
+    return dataService.getToggleButtonsData();
+  }, [dataService]);
+
+  const rightPanelToggleButtons = useMemo<ToggleButtonData[]>(() => {
+    return allToggleButtons.filter(btn =>
+      btn.id === 'class' || btn.id === 'enum' || btn.id === 'type'
+    );
+  }, [allToggleButtons]);
+
+  // Build section data maps
+  const leftSectionData = useMemo<Map<string, SectionData>>(() => {
+    return dataService.getAllSectionsData('left');
+  }, [dataService]);
+
+  const middleSectionData = useMemo<Map<string, SectionData>>(() => {
+    return dataService.getAllSectionsData('middle');
+  }, [dataService]);
+
+  const rightSectionData = useMemo<Map<string, SectionData>>(() => {
+    return dataService.getAllSectionsData('right');
+  }, [dataService]);
+
+  // Open a new floating box (or bring existing one to front)
+  const handleOpenFloatingBox = useCallback((hoverData: { type: string; name: string }, position?: { x: number; y: number }, size?: { width: number; height: number }) => {
+    const itemId = hoverData.name;
+
+    if (!dataService.itemExists(itemId)) {
+      console.warn(`Item "${itemId}" not found`);
+      return;
+    }
+
+    const existingIndex = floatingBoxes.findIndex(b => b.itemId === itemId);
+
+    if (existingIndex !== -1) {
+      setFloatingBoxes(prev => {
+        const updated = [...prev];
+        const [existing] = updated.splice(existingIndex, 1);
+        return [...updated, existing];
+      });
+      return;
+    }
+
+    const metadata = dataService.getFloatingBoxMetadata(itemId);
+    if (!metadata) {
+      console.warn(`Could not get metadata for item "${itemId}"`);
+      return;
+    }
+
+    const newBox: FloatingBoxData = {
+      id: `box-${nextBoxId}`,
+      mode: 'persistent',
+      metadata,
+      content: <DetailContent itemId={itemId} dataService={dataService} hideHeader={true} />,
+      itemId,
+      position,
+      size
+    };
+
+    setFloatingBoxes(prev => [...prev, newBox]);
+    setNextBoxId(prev => prev + 1);
+  }, [dataService, floatingBoxes, nextBoxId]);
+
+  // Get item ID and DOM ID for hovered item (for RelationshipInfoBox)
+  const hoveredItemId = useMemo(() => {
+    return hoveredItem?.name ?? null;
+  }, [hoveredItem]);
+
+  const hoveredItemDomId = useMemo(() => {
+    return hoveredItem?.id ?? null;
+  }, [hoveredItem]);
+
+  // Navigation handler - opens a new floating box
+  const handleNavigate = useCallback((itemName: string, itemSection: string) => {
+    handleOpenFloatingBox({ type: itemSection, name: itemName });
+  }, [handleOpenFloatingBox]);
+
+  // Handle RelationshipInfoBox upgrade to persistent floating box
+  const handleUpgradeRelationshipBox = useCallback(() => {
+    if (!hoveredItem || !hoveredItemId) return;
+
+    const existingIndex = floatingBoxes.findIndex(b => b.itemId === hoveredItemId);
+
+    if (existingIndex !== -1) {
+      setFloatingBoxes(prev => {
+        const updated = [...prev];
+        const [existing] = updated.splice(existingIndex, 1);
+        return [...updated, existing];
+      });
+      setHoveredItem(null);
+      return;
+    }
+
+    const metadata = dataService.getFloatingBoxMetadata(hoveredItemId);
+    if (!metadata) {
+      console.warn(`Could not get metadata for item "${hoveredItemId}"`);
+      return;
+    }
+
+    const newBox: FloatingBoxData = {
+      id: `box-${nextBoxId}`,
+      mode: 'persistent',
+      metadata,
+      content: <DetailContent itemId={hoveredItemId} dataService={dataService} hideHeader={true} />,
+      itemId: hoveredItemId,
+      size: { width: 700, height: 400 }
+    };
+
+    setFloatingBoxes(prev => [...prev, newBox]);
+    setNextBoxId(prev => prev + 1);
+    setHoveredItem(null);
+  }, [hoveredItem, hoveredItemId, dataService, floatingBoxes, nextBoxId]);
+
+  // Close a floating box
+  const handleCloseFloatingBox = useCallback((id: string) => {
+    setFloatingBoxes(prev => prev.filter(b => b.id !== id));
+  }, []);
+
+  // Update floating box position/size (marks box as user-positioned)
+  const handleFloatingBoxChange = useCallback((id: string, position: { x: number; y: number }, size: { width: number; height: number }) => {
+    setFloatingBoxes(prev => prev.map(b =>
+      b.id === id ? { ...b, position, size, isUserPositioned: true } : b
+    ));
+  }, []);
+
+  // Bring floating box to front (move to end of array for higher z-index)
+  const handleBringToFront = useCallback((id: string) => {
+    setFloatingBoxes(prev => {
+      const index = prev.findIndex(b => b.id === id);
+      if (index === -1 || index === prev.length - 1) return prev;
+
+      const updated = [...prev];
+      const [box] = updated.splice(index, 1);
+      return [...updated, box];
+    });
+  }, []);
+
+  // Panel dimensions
+  const EMPTY_PANEL_WIDTH = 180;
+  const MAX_PANEL_WIDTH = 450;
+
+  // Panel visibility
+  const leftPanelEmpty = leftSections.length === 0;
+  const middlePanelEmpty = middleSections.length === 0;
+  const rightPanelEmpty = rightSections.length === 0;
+
+  return (
+    <div className="flex-1 flex relative overflow-hidden">
+      {/* Three-panel layout */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Panel - Classes only */}
+        <div
+          className="h-full overflow-hidden border-r border-gray-200 dark:border-slate-700 flex-shrink-0"
+          style={{
+            width: leftPanelEmpty ? `${EMPTY_PANEL_WIDTH}px` : undefined,
+            maxWidth: leftPanelEmpty ? undefined : `${MAX_PANEL_WIDTH}px`,
+            minWidth: leftPanelEmpty ? undefined : '300px'
+          }}
+        >
+          <ItemsPanel
+            position="left"
+            sections={leftSections}
+            onSectionsChange={() => {}} // No-op - left panel fixed
+            sectionData={leftSectionData}
+            toggleButtons={[]} // No toggles for left panel
+            onClickItem={handleOpenFloatingBox}
+            onItemHover={setHoveredItem}
+            onItemLeave={() => setHoveredItem(null)}
+          />
+        </div>
+
+        {/* Middle Panel - Slots (toggleable) */}
+        {!middlePanelEmpty && (
+          <div
+            className="h-full overflow-hidden border-r border-gray-200 dark:border-slate-700 flex-shrink-0"
+            style={{
+              maxWidth: `${MAX_PANEL_WIDTH}px`,
+              minWidth: '300px'
+            }}
+          >
+            <ItemsPanel
+              position="middle"
+              sections={['slot']} // Always 'slot' when visible
+              onSectionsChange={() => {}} // No-op - middle panel fixed
+              sectionData={middleSectionData}
+              toggleButtons={[]} // No toggles for middle panel
+              onClickItem={handleOpenFloatingBox}
+              onItemHover={setHoveredItem}
+              onItemLeave={() => setHoveredItem(null)}
+              title="Slots"
+            />
+          </div>
+        )}
+
+        {/* Center gutter - show when middle panel hidden */}
+        {!leftPanelEmpty && !rightPanelEmpty && middlePanelEmpty && (
+          <div className="w-40 bg-gray-100 dark:bg-slate-800 border-x border-gray-200 dark:border-slate-700 flex-shrink-0" />
+        )}
+
+        {/* Right Panel - Ranges only */}
+        <div
+          className="h-full overflow-hidden border-l border-gray-200 dark:border-slate-700 flex-shrink-0"
+          style={{
+            width: rightPanelEmpty ? `${EMPTY_PANEL_WIDTH}px` : undefined,
+            maxWidth: rightPanelEmpty ? undefined : `${MAX_PANEL_WIDTH}px`,
+            minWidth: rightPanelEmpty ? undefined : '300px'
+          }}
+        >
+          <ItemsPanel
+            position="right"
+            sections={rightSections}
+            onSectionsChange={setRightSections}
+            sectionData={rightSectionData}
+            toggleButtons={rightPanelToggleButtons} // Only C, E, T
+            onClickItem={handleOpenFloatingBox}
+            onItemHover={setHoveredItem}
+            onItemLeave={() => setHoveredItem(null)}
+            title="Ranges:"
+          />
+        </div>
+
+        {/* Spacer to push remaining space to the right - only in cascade mode */}
+        {displayMode === 'cascade' && <div className="flex-1" />}
+      </div>
+
+      {/* SVG Link Overlay - conditional based on middle panel visibility */}
+      {middlePanelEmpty ? (
+        // Middle panel hidden: Single overlay using SlotEdges (class → range direct)
+        <LinkOverlay
+          leftSections={leftSections}
+          rightSections={rightSections}
+          dataService={dataService}
+          hoveredItem={hoveredItem}
+        />
+      ) : (
+        // Middle panel visible: Two overlays (class → slot, slot → range)
+        <>
+          <LinkOverlay
+            leftSections={leftSections}
+            rightSections={middleSections}
+            dataService={dataService}
+            hoveredItem={hoveredItem}
+          />
+          <LinkOverlay
+            leftSections={middleSections}
+            rightSections={rightSections}
+            dataService={dataService}
+            hoveredItem={hoveredItem}
+          />
+        </>
+      )}
+
+      {/* Floating Box Manager */}
+      <FloatingBoxManager
+        boxes={floatingBoxes}
+        displayMode={displayMode}
+        onClose={handleCloseFloatingBox}
+        onChange={handleFloatingBoxChange}
+        onBringToFront={handleBringToFront}
+      />
+
+      {/* Relationship Info Box (transitory, uses item position) */}
+      <RelationshipInfoBox
+        itemId={hoveredItemId}
+        itemDomId={hoveredItemDomId}
+        dataService={dataService}
+        onNavigate={handleNavigate}
+        onUpgrade={handleUpgradeRelationshipBox}
+      />
+    </div>
+  );
+}
