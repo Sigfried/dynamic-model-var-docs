@@ -29,6 +29,23 @@
 
 ## Questions & Decisions Needed
 
+### DetailContent.test.tsx Failures (19 tests)
+
+**Status**: Pre-existing issue (broken since mid-November 2025)
+
+**Investigation results** (2025-01-18):
+- Last passing: Commit `4d32ec5` (Phase 11: Create FloatingBoxManager and rename DetailPanel)
+- First failing: Commit `3021513` (Revert "refactor: Set up DataService infrastructure for Slots-as-Edges (Stage 2)")
+- Root cause: DataService refactor was reverted, breaking test setup
+- **Not related to Stage 3 (Slots-as-Edges) work**
+
+**Current test status**:
+- ✅ 163 tests passing (up from 143 before fixes)
+- ❌ 19 tests failing in DetailContent.test.tsx only
+- All other test failures fixed (targetType→targetSection terminology changes)
+
+**Action needed**: Fix DetailContent test setup to work with current DataService structure. Low priority - doesn't block current refactor work.
+
 ---
 
 ## Architecture & Refactoring Decisions
