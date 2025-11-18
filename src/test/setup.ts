@@ -15,6 +15,8 @@ global.fetch = vi.fn((url: string | URL) => {
   let filePath: string;
   if (urlStr.includes('bdchm.metadata.json')) {
     filePath = 'public/source_data/HM/bdchm.metadata.json';
+  } else if (urlStr.includes('bdchm.expanded.yaml')) {
+    filePath = 'public/source_data/HM/bdchm.expanded.yaml';
   } else if (urlStr.includes('variable-specs-S1.tsv')) {
     filePath = 'public/source_data/HV/variable-specs-S1.tsv';
   } else {
