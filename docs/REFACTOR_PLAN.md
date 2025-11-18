@@ -294,7 +294,7 @@ Before starting the refactor, complete UI/model separation from Phase 12:
 
 **Goal**: Replace current Element-based model with graph-based model using graphology
 
-**Status**: 🔄 **In Progress** - Steps 1-5 complete (graph-based relationship queries working)
+**Status**: ✅ **Complete** - Graph infrastructure built, adapter layer working
 
 **Key insight**: A vast amount of what happens in current Element.ts can be handled by graphology queries
 
@@ -314,11 +314,12 @@ Before starting the refactor, complete UI/model separation from Phase 12:
    - getRelationships() now uses graph data with adapter to old format
    - getRelationshipsNew() provides new format directly
    - Adapter enables gradual UI migration
-6. 🔄 **IN PROGRESS**: Migrate UI components to new RelationshipData format
-7. Remove/refactor ClassSlot class (after UI migration)
-8. Simplify collections:
-   - Keep for getLabel, getDefaultExpansion
-   - Replace methods like getUsedByClasses with graphology queries
+6. ⏭️ **DEFERRED to Stage 4/5**: Migrate UI components to new RelationshipData format
+   - Will be done during LinkOverlay refactor (Stage 4 Step 6)
+   - And during RelationshipInfoBox updates (Stage 5 Step 2)
+   - Reason: Those components will be rewritten anyway, avoid duplicate work
+7. ⏭️ **DEFERRED to Stage 6+**: Remove/refactor ClassSlot class (after UI migration)
+8. ⏭️ **DEFERRED to Stage 6+**: Simplify collections (after UI migration)
 
 **Implementation Notes (Steps 1-5)**:
 - Steps 1-3: Created `src/models/Graph.ts` with complete graph infrastructure
@@ -331,7 +332,8 @@ Before starting the refactor, complete UI/model separation from Phase 12:
   - New RelationshipData format: EdgeInfo[] arrays (unified, type-agnostic)
   - DataService adapter converts new format to old format for existing UI
   - Console error logging for missing element references in graph
-- Step 6 (in progress): Migrating UI components to use new format
+  - Adapter layer allows UI to continue using old format while graph data flows through
+- Steps 6-8: Deferred to later stages to avoid duplicate refactoring work
 
 **Files**:
 - ✅ `src/models/Graph.ts` - NEW: Complete graph structure, SlotEdge class, helper functions
@@ -361,6 +363,7 @@ Before starting the refactor, complete UI/model separation from Phase 12:
    - Traverse Class → SlotEdge → Range
    - See TASKS.md "LinkOverlay Refactor" task
    - When middle panel visible: render two-step links (class→slot, slot→range)
+   - **Migrate to new RelationshipData format (Stage 3 Step 6)** - since we're rewriting anyway
 
 **Files**:
 - `src/App.tsx` - 3-panel layout, middle panel state management
@@ -379,6 +382,7 @@ Before starting the refactor, complete UI/model separation from Phase 12:
    - Show slots with clickable/hoverable ranges
    - Display slot metadata (required, multivalued, inherited_from)
 2. Update RelationshipInfoBox to display slot edge properties
+   - **Migrate to new RelationshipData format (Stage 3 Step 6)** - since we're rewriting anyway
 
 **Files**:
 - `src/components/DetailPanel.tsx` - Render slot edges with clickable ranges

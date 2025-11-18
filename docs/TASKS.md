@@ -149,19 +149,23 @@ a message like:
 
 ### Stage 3: Refactor to Graph Model with SlotEdges 🔥 MAJOR
 
-**Status**: Not started
+**Status**: ✅ **Complete** - Graph infrastructure built, adapter layer working
 
 **Goal**: Replace current Element-based model with graph-based model using graphology. Many current Element.ts operations can be replaced with graphology queries.
 
 **See [REFACTOR_PLAN Stage 3](REFACTOR_PLAN.md#stage-3-refactor-to-graph-model-with-slotedges) for detailed steps.**
 
-**Quick summary**:
-1. Install and configure graphology
-2. Define graph structure (node types: Class/Enum/Slot/Type/Variable, edge types: SlotEdge/InheritanceEdge/MapsToEdge)
-3. Create SlotEdge class (connects Class → Range with slot metadata)
-4. Refactor ClassElement to use SlotEdges instead of ClassSlots
-5. Update getRelationships() to return slot edges (simplifies hover/link logic)
-6. Simplify collections (keep for getLabel/getDefaultExpansion, replace methods with graphology queries)
+**Completed**:
+1. ✅ Installed and configured graphology
+2. ✅ Defined graph structure (node types: Class/Enum/Slot/Type/Variable, edge types: SlotEdge/InheritanceEdge/MapsToEdge)
+3. ✅ Created SlotEdge class (connects Class → Range with slot metadata)
+4. ✅ Implemented graph-based relationship querying (getRelationshipsFromGraph())
+5. ✅ Updated DataService with adapter layer (old UI format ← new graph data)
+
+**Deferred to Stage 4/5**:
+- UI component migration (will happen during LinkOverlay/RelationshipInfoBox refactors)
+- ClassSlot removal (after UI migration)
+- Collection simplification (after UI migration)
 
 ---
 
