@@ -294,7 +294,7 @@ Before starting the refactor, complete UI/model separation from Phase 12:
 
 **Goal**: Replace current Element-based model with graph-based model using graphology
 
-**Status**: 🔄 **In Progress** - Steps 1-2 complete (graph infrastructure built)
+**Status**: 🔄 **In Progress** - Steps 1-5 complete (graph-based relationship queries working)
 
 **Key insight**: A vast amount of what happens in current Element.ts can be handled by graphology queries
 
@@ -306,22 +306,32 @@ Before starting the refactor, complete UI/model separation from Phase 12:
 3. ✅ Create SlotEdge class/interface:
    - Properties: name, slotRef, required, multivalued, inherited_from, overrides
    - Connects Class → Range with context-specific properties
-4. Refactor ClassElement to use SlotEdges instead of ClassSlots
-5. Update getRelationships() implementations:
-   - Current: Returns direct property links (hiding slots), includes inheritance as 'inherits' type
-   - New: Returns slot edges
-   - Should make hover/link logic simpler
-6. Remove/refactor ClassSlot class
-7. Simplify collections:
+4. ✅ Implement graph-based relationship querying:
+   - Added getRelationshipsFromGraph() method to Element base class
+   - Returns unified EdgeInfo[] arrays (new RelationshipData format)
+   - Uses graph.forEachOutboundEdge() and graph.forEachInboundEdge()
+5. ✅ Update DataService to support both old and new formats:
+   - getRelationships() now uses graph data with adapter to old format
+   - getRelationshipsNew() provides new format directly
+   - Adapter enables gradual UI migration
+6. 🔄 **IN PROGRESS**: Migrate UI components to new RelationshipData format
+7. Remove/refactor ClassSlot class (after UI migration)
+8. Simplify collections:
    - Keep for getLabel, getDefaultExpansion
    - Replace methods like getUsedByClasses with graphology queries
 
-**Implementation Notes (Steps 1-3)**:
-- Created `src/models/Graph.ts` with complete graph infrastructure
-- Architecture: Option A (Graph stores IDs only, Element instances in collections)
-- Graph built in initializeModelData via buildGraphFromSchemaData()
-- SlotEdge class wraps graph edges, provides OOP interface
-- Graph added to ModelData interface
+**Implementation Notes (Steps 1-5)**:
+- Steps 1-3: Created `src/models/Graph.ts` with complete graph infrastructure
+  - Architecture: Option A (Graph stores IDs only, Element instances in collections)
+  - Graph built in initializeModelData via buildGraphFromSchemaData()
+  - SlotEdge class wraps graph edges, provides OOP interface
+  - Graph added to ModelData interface
+- Steps 4-5: Implemented graph-based relationship querying
+  - Added getRelationshipsFromGraph() to Element base class (via prototype augmentation)
+  - New RelationshipData format: EdgeInfo[] arrays (unified, type-agnostic)
+  - DataService adapter converts new format to old format for existing UI
+  - Console error logging for missing element references in graph
+- Step 6 (in progress): Migrating UI components to use new format
 
 **Files**:
 - ✅ `src/models/Graph.ts` - NEW: Complete graph structure, SlotEdge class, helper functions
