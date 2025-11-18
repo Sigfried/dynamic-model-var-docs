@@ -24,25 +24,51 @@ import json
 import argparse
 from pathlib import Path
 from typing import Dict, Any, Optional, Set
+from urllib import request
+from urllib.error import URLError, HTTPError
 
 
 # Track invalid prefixes encountered during URI expansion
 invalid_prefixes: Set[str] = set()
+# Track which prefixes have been validated
+validated_prefixes: Dict[str, bool] = {}  # prefix -> is_valid
 
 
-def expand_uri(uri: str, prefixes: Dict[str, Any]) -> Optional[str]:
+def validate_url(url: str, timeout: int = 3) -> bool:
+    """
+    Test if a URL is accessible via HTTP HEAD request.
+
+    Args:
+        url: URL to validate
+        timeout: Request timeout in seconds
+
+    Returns:
+        True if URL is accessible (status 200-399), False otherwise
+    """
+    try:
+        req = request.Request(url, method='HEAD')
+        req.add_header('User-Agent', 'LinkML-Schema-Validator/1.0')
+        with request.urlopen(req, timeout=timeout) as response:
+            return 200 <= response.status < 400
+    except (URLError, HTTPError, TimeoutError, Exception):
+        return False
+
+
+def expand_uri(uri: str, prefixes: Dict[str, Any], validate: bool = False) -> Optional[str]:
     """
     Expand a prefixed URI (e.g., 'schema:Text') to full URL using prefixes.
 
     Args:
         uri: Prefixed URI string (e.g., 'schema:Text', 'DUO:0000042')
         prefixes: Prefix mapping from schema
+        validate: If True, validate the URL resolves (first time for each prefix)
 
     Returns:
         Full URL if prefix is valid, None otherwise
 
     Side effects:
         Adds invalid prefixes to global invalid_prefixes set
+        Caches validation results in global validated_prefixes dict
     """
     if not uri or ':' not in uri:
         return None
@@ -61,7 +87,16 @@ def expand_uri(uri: str, prefixes: Dict[str, Any]) -> Optional[str]:
             return None
 
         base_url = prefix_def['prefix_reference']
-        return base_url + code
+        expanded_url = base_url + code
+
+        # Validate URL if requested and not already validated
+        if validate and prefix not in validated_prefixes:
+            is_valid = validate_url(expanded_url)
+            validated_prefixes[prefix] = is_valid
+            if not is_valid:
+                print(f"  ⚠ Prefix '{prefix}' URL validation failed: {expanded_url}", file=sys.stderr)
+
+        return expanded_url
 
     except Exception:
         return None
@@ -196,7 +231,7 @@ def transform_classes(
 
         # Expand class_uri if present
         if class_def.get('class_uri'):
-            expanded_url = expand_uri(class_def['class_uri'], prefixes)
+            expanded_url = expand_uri(class_def['class_uri'], prefixes, validate=True)
             if expanded_url:
                 processed_class['class_url'] = expanded_url
 
@@ -235,7 +270,7 @@ def transform_slots(
 
         # Expand slot_uri if present
         if slot_def.get('slot_uri'):
-            expanded_url = expand_uri(slot_def['slot_uri'], prefixes)
+            expanded_url = expand_uri(slot_def['slot_uri'], prefixes, validate=True)
             if expanded_url:
                 processed_slot['slot_url'] = expanded_url
 
@@ -324,7 +359,7 @@ def transform_slots(
 
 
 def transform_enums(expanded_enums: Dict[str, Any], prefixes: Dict[str, Any]) -> Dict[str, Any]:
-    """Transform enums - keep minimal structure and expand URIs in permissible_values."""
+    """Transform enums - keep structure and expand URIs in permissible_values and reachable_from."""
     processed = {}
 
     for enum_name, enum_def in expanded_enums.items():
@@ -336,6 +371,18 @@ def transform_enums(expanded_enums: Dict[str, Any], prefixes: Dict[str, Any]) ->
         # Add optional fields
         if enum_def.get('description'):
             processed_enum['description'] = enum_def['description']
+        if enum_def.get('comments'):
+            processed_enum['comments'] = enum_def['comments']
+        if enum_def.get('see_also'):
+            processed_enum['see_also'] = enum_def['see_also']
+
+        # Enum inheritance
+        if enum_def.get('is_a'):
+            processed_enum['parent'] = enum_def['is_a']
+        if enum_def.get('inherits'):
+            processed_enum['inherits'] = enum_def['inherits']
+        if enum_def.get('include'):
+            processed_enum['include'] = enum_def['include']
 
         # Transform permissible_values to expand meaning URIs
         if enum_def.get('permissible_values'):
@@ -345,7 +392,7 @@ def transform_enums(expanded_enums: Dict[str, Any], prefixes: Dict[str, Any]) ->
 
                 # Expand meaning URI if present
                 if pv_value.get('meaning'):
-                    expanded_url = expand_uri(pv_value['meaning'], prefixes)
+                    expanded_url = expand_uri(pv_value['meaning'], prefixes, validate=True)
                     if expanded_url:
                         processed_pv_value['meaning_url'] = expanded_url
 
@@ -353,11 +400,40 @@ def transform_enums(expanded_enums: Dict[str, Any], prefixes: Dict[str, Any]) ->
 
             processed_enum['permissible_values'] = processed_pv
 
-        # Expand reachable_from URI if present
+        # Transform reachable_from - it's an object with source_nodes and relationship_types
         if enum_def.get('reachable_from'):
-            expanded_url = expand_uri(enum_def['reachable_from'], prefixes)
-            if expanded_url:
-                processed_enum['reachable_from_url'] = expanded_url
+            reachable = dict(enum_def['reachable_from'])
+            processed_reachable = {}
+
+            # Copy simple fields
+            if reachable.get('source_ontology'):
+                processed_reachable['source_ontology'] = reachable['source_ontology']
+            if reachable.get('include_self') is not None:
+                processed_reachable['include_self'] = reachable['include_self']
+
+            # Expand source_nodes URIs
+            if reachable.get('source_nodes'):
+                processed_reachable['source_nodes'] = reachable['source_nodes']
+                expanded_nodes = []
+                for node_uri in reachable['source_nodes']:
+                    expanded_url = expand_uri(node_uri, prefixes, validate=True)
+                    if expanded_url:
+                        expanded_nodes.append(expanded_url)
+                if expanded_nodes:
+                    processed_reachable['source_nodes_urls'] = expanded_nodes
+
+            # Expand relationship_types URIs
+            if reachable.get('relationship_types'):
+                processed_reachable['relationship_types'] = reachable['relationship_types']
+                expanded_rels = []
+                for rel_uri in reachable['relationship_types']:
+                    expanded_url = expand_uri(rel_uri, prefixes, validate=True)
+                    if expanded_url:
+                        expanded_rels.append(expanded_url)
+                if expanded_rels:
+                    processed_reachable['relationship_types_urls'] = expanded_rels
+
+            processed_enum['reachable_from'] = processed_reachable
 
         processed[enum_name] = processed_enum
 
@@ -383,7 +459,7 @@ def transform_types(expanded_types: Dict[str, Any], prefixes: Dict[str, Any]) ->
         # Expand type URI if present
         if type_def.get('uri'):
             processed_type['uri'] = type_def['uri']  # Keep original
-            expanded_url = expand_uri(type_def['uri'], prefixes)
+            expanded_url = expand_uri(type_def['uri'], prefixes, validate=True)
             if expanded_url:
                 processed_type['uri_url'] = expanded_url
 
@@ -392,7 +468,7 @@ def transform_types(expanded_types: Dict[str, Any], prefixes: Dict[str, Any]) ->
             processed_type['exact_mappings'] = type_def['exact_mappings']  # Keep originals
             expanded_mappings = []
             for mapping in type_def['exact_mappings']:
-                expanded_url = expand_uri(mapping, prefixes)
+                expanded_url = expand_uri(mapping, prefixes, validate=True)
                 if expanded_url:
                     expanded_mappings.append(expanded_url)
             if expanded_mappings:
@@ -411,9 +487,10 @@ def transform_schema(expanded_path: Path, output_path: Path) -> bool:
         True if successful, False otherwise
     """
     try:
-        # Reset invalid prefixes tracker
-        global invalid_prefixes
+        # Reset trackers
+        global invalid_prefixes, validated_prefixes
         invalid_prefixes = set()
+        validated_prefixes = {}
 
         print(f"Loading {expanded_path.name}...")
         with open(expanded_path, 'r') as f:
@@ -475,6 +552,22 @@ def transform_schema(expanded_path: Path, output_path: Path) -> bool:
         reduction = ((expanded_size - processed_size) / expanded_size) * 100
         print(f"  ✓ Written ({processed_size:,} bytes)")
         print(f"  ✓ Size reduction: {reduction:.1f}%")
+
+        # Report prefix validation results
+        print(f"\nPrefix URL Validation Results:")
+        if validated_prefixes:
+            valid_prefixes = [p for p, v in validated_prefixes.items() if v]
+            failed_prefixes = [p for p, v in validated_prefixes.items() if not v]
+
+            print(f"  ✓ {len(valid_prefixes)} prefix(es) validated successfully")
+            if failed_prefixes:
+                print(f"  ✗ {len(failed_prefixes)} prefix(es) failed validation:")
+                for prefix in sorted(failed_prefixes):
+                    prefix_def = prefixes.get(prefix, {})
+                    base_url = prefix_def.get('prefix_reference', 'unknown')
+                    print(f"    - {prefix}: {base_url}")
+        else:
+            print("  (No URIs found to validate)")
 
         # Report invalid prefixes encountered
         if invalid_prefixes:

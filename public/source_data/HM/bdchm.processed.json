@@ -2967,7 +2967,20 @@
     "CellularOrganismSpeciesEnum": {
       "id": "CellularOrganismSpeciesEnum",
       "name": "CellularOrganismSpeciesEnum",
-      "description": "A constrained set of enumerative values containing the NCBITaxon values for cellular organisms."
+      "description": "A constrained set of enumerative values containing the NCBITaxon values for cellular organisms.",
+      "reachable_from": {
+        "source_ontology": "obo:ncbitaxon",
+        "include_self": false,
+        "source_nodes": [
+          "ncbitaxon:131567"
+        ],
+        "source_nodes_urls": [
+          "http://purl.obolibrary.org/obo/NCBITaxon_131567"
+        ],
+        "relationship_types": [
+          "rdfs:subClassOf"
+        ]
+      }
     },
     "VitalStatusEnum": {
       "id": "VitalStatusEnum",
@@ -2991,7 +3004,20 @@
     "VertebrateBreedEnum": {
       "id": "VertebrateBreedEnum",
       "name": "VertebrateBreedEnum",
-      "description": "A constrained set of enumerative values containing the VBO values for vertebrate breeds."
+      "description": "A constrained set of enumerative values containing the VBO values for vertebrate breeds.",
+      "reachable_from": {
+        "source_ontology": "obo:vbo",
+        "include_self": false,
+        "source_nodes": [
+          "VBO:0400000"
+        ],
+        "source_nodes_urls": [
+          "http://purl.obolibrary.org/obo/VBO_0400000"
+        ],
+        "relationship_types": [
+          "rdfs:subClassOf"
+        ]
+      }
     },
     "VisitCategoryEnum": {
       "id": "VisitCategoryEnum",
@@ -3556,17 +3582,47 @@
     "MondoHumanDiseaseEnum": {
       "id": "MondoHumanDiseaseEnum",
       "name": "MondoHumanDiseaseEnum",
-      "description": "A constrained set of enumerative values containing the MONDO values for human diseases."
+      "description": "A constrained set of enumerative values containing the MONDO values for human diseases.",
+      "reachable_from": {
+        "source_ontology": "obo:mondo",
+        "include_self": false,
+        "source_nodes": [
+          "MONDO:0700096"
+        ],
+        "source_nodes_urls": [
+          "http://purl.obolibrary.org/obo/MONDO_0700096"
+        ],
+        "relationship_types": [
+          "rdfs:subClassOf"
+        ]
+      }
     },
     "HpoPhenotypicAbnormalityEnum": {
       "id": "HpoPhenotypicAbnormalityEnum",
       "name": "HpoPhenotypicAbnormalityEnum",
-      "description": "A constrained set of enumerative values containing the HPO values for phenotypic abnormalities."
+      "description": "A constrained set of enumerative values containing the HPO values for phenotypic abnormalities.",
+      "reachable_from": {
+        "source_ontology": "obo:hp",
+        "include_self": false,
+        "source_nodes": [
+          "HP:0000118"
+        ],
+        "source_nodes_urls": [
+          "http://purl.obolibrary.org/obo/HP_0000118"
+        ],
+        "relationship_types": [
+          "rdfs:subClassOf"
+        ]
+      }
     },
     "ConditionConceptEnum": {
       "id": "ConditionConceptEnum",
       "name": "ConditionConceptEnum",
-      "description": "A constrained set of enumerative values containing both the MONDO values for human diseases and the HPO values for phenotypic abnormalities."
+      "description": "A constrained set of enumerative values containing both the MONDO values for human diseases and the HPO values for phenotypic abnormalities.",
+      "inherits": [
+        "MondoHumanDiseaseEnum",
+        "HpoPhenotypicAbnormalityEnum"
+      ]
     },
     "ProvenanceEnum": {
       "id": "ProvenanceEnum",
@@ -3672,22 +3728,51 @@
     "HistoricalStatusEnum": {
       "id": "HistoricalStatusEnum",
       "name": "HistoricalStatusEnum",
-      "description": "A constrained set of enumerative values indicating whether something is present, absent, historical, or its status is unknown."
+      "description": "A constrained set of enumerative values indicating whether something is present, absent, historical, or its status is unknown.",
+      "parent": "StatusEnum",
+      "inherits": [
+        "StatusEnum"
+      ],
+      "include": [
+        {
+          "permissible_values": {
+            "HISTORICAL": {
+              "text": "HISTORICAL",
+              "description": "was present in the patient historically."
+            }
+          }
+        }
+      ]
     },
     "ProcedureConceptEnum": {
       "id": "ProcedureConceptEnum",
       "name": "ProcedureConceptEnum",
-      "description": "Procedure codes from OMOP."
+      "description": "Procedure codes from OMOP.",
+      "reachable_from": {
+        "source_ontology": "OMOP"
+      }
     },
     "DrugExposureConceptEnum": {
       "id": "DrugExposureConceptEnum",
       "name": "DrugExposureConceptEnum",
-      "description": "Drug codes from RxNorm."
+      "description": "Drug codes from RxNorm.",
+      "see_also": [
+        "https://bioregistry.io/registry/rxnorm",
+        "https://terminology.hl7.org/3.1.0/CodeSystem-v3-rxNorm.html",
+        "http://www.nlm.nih.gov/research/umls/rxnorm",
+        "urn:oid:2.16.840.1.113883.6.88"
+      ],
+      "reachable_from": {
+        "source_ontology": "bioregistry:rxnorm"
+      }
     },
     "DrugExposureProvenanceEnum": {
       "id": "DrugExposureProvenanceEnum",
       "name": "DrugExposureProvenanceEnum",
       "description": "Source of drug exposure record",
+      "comments": [
+        "Taken from OMOP Drug Type values; \"select * from concept where vocabulary_id = 'Drug Type';\" Do we need descriptions beyond the name?"
+      ],
       "permissible_values": {
         "RANDOMIZED DRUG": {
           "text": "RANDOMIZED DRUG",
@@ -3791,6 +3876,9 @@
       "id": "DrugRouteEnum",
       "name": "DrugRouteEnum",
       "description": "Routes of drug administration.",
+      "comments": [
+        "OMOP contains 165 standard values; `select * from concept where domain_id = 'Route' and invalid_reason is null and standard_concept is not null;` from SNOMED. Do we need descriptions beyond the name?"
+      ],
       "permissible_values": {
         "ARTERIOVENOUS FISTULA": {
           "text": "ARTERIOVENOUS FISTULA",
@@ -4787,12 +4875,24 @@
     "DeviceExposureConceptEnum": {
       "id": "DeviceExposureConceptEnum",
       "name": "DeviceExposureConceptEnum",
-      "description": "Device codes from SNOMED."
+      "description": "Device codes from SNOMED.",
+      "see_also": [
+        "https://bioregistry.io/registry/snomedct",
+        "https://terminology.hl7.org/3.1.0/CodeSystem-v3-snomed-CT.html",
+        "https://www.nlm.nih.gov/healthit/snomedct/index.html",
+        "urn:oid:2.16.840.1.113883.6.96"
+      ],
+      "reachable_from": {
+        "source_ontology": "bioregistry:snomedct"
+      }
     },
     "DeviceExposureProvenanceEnum": {
       "id": "DeviceExposureProvenanceEnum",
       "name": "DeviceExposureProvenanceEnum",
       "description": "Source of device exposure record",
+      "comments": [
+        "Taken from OMOP Type Concept Domain"
+      ],
       "permissible_values": {
         "CASE REPORT FORM": {
           "text": "CASE REPORT FORM",
@@ -5935,7 +6035,10 @@
     "UnitOfMeasurementEnum": {
       "id": "UnitOfMeasurementEnum",
       "name": "UnitOfMeasurementEnum",
-      "description": "Standard units of measurement from the [Units of Measurement (UOM) ontology](https://units-of-measurement.org/). Units-of-measurement (UOM) provides URLs for Unified Code for Units of Measure (UCUM) codes, and mappings to a number of units ontologies and systems, in human- and machine-readable linked data formats."
+      "description": "Standard units of measurement from the [Units of Measurement (UOM) ontology](https://units-of-measurement.org/). Units-of-measurement (UOM) provides URLs for Unified Code for Units of Measure (UCUM) codes, and mappings to a number of units ontologies and systems, in human- and machine-readable linked data formats.",
+      "reachable_from": {
+        "source_ontology": "UOM"
+      }
     },
     "GravityDomainEnum": {
       "id": "GravityDomainEnum",
@@ -6709,12 +6812,19 @@
     "CauseOfDeathEnum": {
       "id": "CauseOfDeathEnum",
       "name": "CauseOfDeathEnum",
-      "description": "A constrained set of enumerative values containing the ICD-10 diagnoses."
+      "description": "A constrained set of enumerative values containing the ICD-10 diagnoses.",
+      "reachable_from": {
+        "source_ontology": "bioregistry:icd10cm"
+      }
     },
     "BaseObservationTypeEnum": {
       "id": "BaseObservationTypeEnum",
       "name": "BaseObservationTypeEnum",
-      "description": "Values describing the types of an Observation."
+      "description": "Values describing the types of an Observation.",
+      "inherits": [
+        "EducationalAttainmentObservationTypeEnum",
+        "SmokingStatusObservationTypeEnum"
+      ]
     }
   },
   "types": {
