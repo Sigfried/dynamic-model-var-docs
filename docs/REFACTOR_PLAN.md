@@ -450,17 +450,25 @@ Before starting the refactor, complete UI/model separation from Phase 12:
 
 ### Stage 4.5: Slot Panel Fixes & Edge Verification
 
-**Status**: 🔄 **IN PROGRESS** - Part 1 complete, Part 2 in progress
+**Status**: 🔄 **IN PROGRESS** - Part 1 complete, Part 2a complete, evaluating Part 2b
 
 **Goal**: Fix slot panel to show all slots, properly handle slot_usage overrides, and verify class-range edges work
 
 **Background**:
 
-With expanded schema (gen-linkml output):
+With expanded schema (gen-linkml JSON output):
 - Inherited slots are already merged into `classDTO.attributes`
 - `classDTO.slots` contains slot references (not duplicated in attributes)
-- `classDTO.slot_usage` contains overrides for inherited slots
+- `classDTO.slot_usage` contains overrides for inherited slots (partial attributes)
+- Attributes have merged values (base + slot_usage overrides applied)
 - No duplicates should occur between attributes and slots
+
+**Findings from JSON investigation**:
+- ❌ No `inherited_from` field in gen-linkml JSON output
+- ✅ Has `owner` field (which class owns this attribute after overrides)
+- ✅ Has `domain_of` array (all classes using this slot)
+- ⚠️ Huge redundancy in JSON (548KB with repeated metadata)
+- ⚠️ Missing explicit inheritance information we need for SlotEdges
 
 **Issues**:
 
@@ -468,19 +476,26 @@ With expanded schema (gen-linkml output):
    - Was showing only 7 slots (from `slots:` section of bdchm.yaml)
    - Now shows all ~170 slots (global slots + class attribute slots)
 
-2. **Need to switch from YAML to JSON** ⏭️ Part 2
-   - Currently using `bdchm.expanded.yaml`
-   - Should use `gen-linkml` default output (JSON format)
-   - JSON includes `inherited_from` field in attributes
-   - Will eliminate need for bdchm.metadata.json
+2. **Need to switch from YAML to JSON** ✅ FIXED in Part 2a
+   - ✅ Now using `bdchm.expanded.json` (gen-linkml default output)
+   - ✅ Removed js-yaml dependency from dataLoader
+   - ✅ Removed legacy bdchm.metadata.json generation
+   - ❌ JSON lacks `inherited_from` field (not provided by gen-linkml)
 
-3. **Slot_usage overrides need proper handling** ⏭️ Part 2
+3. **JSON redundancy and missing inheritance info** ⏭️ Part 2b (NEEDS DECISION)
+   - gen-linkml JSON has huge redundancy (548KB)
+   - Missing explicit `inherited_from` for SlotEdges
+   - Options:
+     - **Option A**: Process JSON directly in dataLoader (complex, redundant parsing)
+     - **Option B**: Transform JSON to simpler format first (separate build step)
+
+4. **Slot_usage overrides need proper handling** ⏭️ Part 2c
    - Each slot_usage creates a new slot instance with merged properties
    - Slot IDs: base slot `'category'`, override `'category-SdohObservation'`
    - Slot names: always the base name (for UI display)
    - SlotEdge points to override slot when slot_usage exists
 
-4. **Remove duplicate-check workaround** ⏭️ Part 2
+5. **Remove duplicate-check workaround** ⏭️ Part 2c
    - Current code checks `if (graph.hasEdge(edgeKey))` before adding
    - Proper slot_usage handling will prevent duplicates
    - Let it fail if duplicate IDs occur (indicates data issue)
@@ -493,26 +508,88 @@ With expanded schema (gen-linkml output):
 - ✅ Added duplicate-check workaround in `addSlotEdge()` (temporary)
 - ✅ Added test verifying 170 slots collected
 - ✅ All tests passing (10/10)
+- ✅ Commit: 1a9637d
 
-**Part 2: Switch to JSON and handle slot_usage** ⏭️ NEXT
-- Update `scripts/download_source_data.py`:
-  - Change gen-linkml command to use default JSON output
-  - Remove explicit `--format yaml` flag
-  - Output file: `bdchm.expanded.json` instead of `bdchm.expanded.yaml`
-- Update `dataLoader.ts`:
-  - Load JSON instead of YAML (remove yaml parser dependency)
-  - For each class with `slot_usage`:
-    - Create new slot: `id = slotName-ClassName`, `name = slotName`
-    - Merge base slot properties with slot_usage overrides
-    - Add to slots map
-  - Extract `inherited_from` from attribute metadata (provided by JSON)
-  - Pass `inherited_from` to `addSlotEdge()` calls
-- Update `Graph.ts`:
-  - Remove duplicate-check in `addSlotEdge()`
-  - For slot_usage edges, use override slot ID instead of base slot ID
-- Update types:
-  - Add `inherited_from?: string` to AttributeDefinition
-- Remove `bdchm.metadata.json` (no longer needed)
+**Part 2a: Switch to JSON** ✅ COMPLETE
+- ✅ Updated `scripts/download_source_data.py`:
+  - Changed to gen-linkml default JSON output
+  - Removed bdchm.metadata.json generation (legacy, not used)
+  - Updated documentation
+- ✅ Updated `dataLoader.ts`:
+  - Load JSON instead of YAML
+  - Removed js-yaml dependency
+- ✅ Deleted bdchm.metadata.json file
+- ✅ Commit: c54d822
+
+**Part 2b: Data transformation strategy** ⏭️ NEEDS DECISION
+
+**Problem**: gen-linkml JSON has redundancy and lacks inheritance info we need
+
+**Option A: Process JSON directly in dataLoader** (current approach)
+- Pros: Single source of truth (gen-linkml output)
+- Cons:
+  - Complex inheritance computation in dataLoader
+  - Parse 548KB of redundant data every page load
+  - Redundant metadata repeated for every attribute
+
+**Option B: Transform JSON to optimized format** (proposed)
+- Create Python script: `scripts/transform_schema.py`
+- Input: `bdchm.expanded.json` (from gen-linkml)
+- Output: `bdchm.processed.json` (optimized for our app)
+- Run as part of `download_source_data.py` pipeline
+- Benefits:
+  - Simpler dataLoader (just parse clean JSON)
+  - Smaller file size (remove redundancy)
+  - Add computed fields we need (inherited_from, slot instance IDs)
+  - Validate data at build time (catch issues early)
+
+**Optimized JSON structure** (Option B):
+```typescript
+{
+  "classes": {
+    "Participant": {
+      "name": "Participant",
+      "description": "...",
+      "parent": "Entity",
+      "abstract": false,
+      "attributes": {
+        "id": {
+          "slotId": "id",  // References global slot OR override slot
+          "inherited_from": "Entity",  // Computed from hierarchy
+          "required": true,
+          "multivalued": false
+        },
+        "species": {
+          "slotId": "species-Participant",  // Override slot ID
+          "inherited_from": "Entity",
+          "required": false  // Overridden from base
+        }
+      },
+      "slots": ["id", "species"]  // Just names for reference
+    }
+  },
+  "slots": {
+    "id": {  // Base slot
+      "name": "id",
+      "description": "...",
+      "range": "uriorcurie",
+      "required": true
+    },
+    "species-Participant": {  // Override slot instance
+      "name": "species",  // Display name (same as base)
+      "description": "...",  // From base
+      "range": "SpeciesEnum",  // From slot_usage override
+      "required": false,  // From slot_usage override
+      "overrides": "species"  // Reference to base slot
+    }
+  },
+  "enums": {...},
+  "types": {...},
+  "variables": [...]
+}
+```
+
+**Decision needed**: Which option to pursue?
 
 **Part 3: Verify edges**
 - Test: Query graph for edges from a known class
