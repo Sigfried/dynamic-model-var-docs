@@ -543,80 +543,111 @@ With expanded schema (gen-linkml JSON output):
 
 **Optimized JSON structure**:
 
-Example using real classes from schema (Specimen → DimensionalObservationSet):
+Example using Entity → Observation → SdohObservation (shows all combinations):
 
 ```typescript
 {
   "classes": {
-    "ObservationSet": {
-      "id": "ObservationSet",
-      "name": "ObservationSet",
-      "description": "A set of one or more observations",
+    "Entity": {
+      "id": "Entity",
+      "name": "Entity",
+      "description": "Any resource that has its own identifier",
       "parent": null,
-      "abstract": false,
+      "abstract": true,
       "attributes": {
-        "observations": {
-          "slotId": "observations",  // References base slot
-          "range": "Observation",
-          "multivalued": true
-          // No inherited_from (defined on this class)
+        "id": {
+          "slotId": "id",  // Direct attribute (not inherited)
+          "range": "uriorcurie",
+          "required": true
+          // No inherited_from - defined on this class
         }
       }
     },
-    "DimensionalObservationSet": {
-      "id": "DimensionalObservationSet",
-      "name": "DimensionalObservationSet",
-      "description": "...",
-      "parent": "ObservationSet",
+    "Observation": {
+      "id": "Observation",
+      "name": "Observation",
+      "description": "A data structure with key (observation_type) and value (value) attributes...",
+      "parent": "Entity",
       "abstract": false,
       "attributes": {
-        "observations": {
-          "slotId": "observations-DimensionalObservationSet",  // Override slot ID
-          "range": "DimensionalObservation",  // Overridden from Observation
-          "multivalued": true,
-          "required": true,  // Added via slot_usage
-          "inherited_from": "ObservationSet"  // Computed from hierarchy
-        }
-      }
-    },
-    "Specimen": {
-      "id": "Specimen",
-      "name": "Specimen",
-      "description": "...",
-      "parent": "Material",
-      "abstract": false,
-      "attributes": {
-        "dimensional_measures": {
-          "slotId": "dimensional_measures",  // Direct attribute
-          "range": "DimensionalObservationSet",
+        "id": {
+          "slotId": "id",  // Inherited attribute
+          "range": "uriorcurie",
+          "required": true,
+          "inherited_from": "Entity"  // Computed from hierarchy
+        },
+        "category": {
+          "slotId": "category",  // Direct attribute
+          "range": "string",
+          "required": false,
           "multivalued": false
-          // No inherited_from (defined on this class)
+          // No inherited_from - defined on this class
+        },
+        "associated_visit": {
+          "slotId": "associated_visit",  // Slot reference (from global slot)
+          "range": "Visit"
+          // No inherited_from - defined on this class (via slots field)
+        }
+      }
+    },
+    "SdohObservation": {
+      "id": "SdohObservation",
+      "name": "SdohObservation",
+      "description": "A data structure with key (observation_type) and value (value) attributes...",
+      "parent": "Observation",
+      "abstract": false,
+      "attributes": {
+        "id": {
+          "slotId": "id",  // Inherited from Entity (through Observation)
+          "range": "uriorcurie",
+          "required": true,
+          "inherited_from": "Entity"  // Points to original definer
+        },
+        "category": {
+          "slotId": "category-SdohObservation",  // Override slot instance!
+          "range": "GravityDomainEnum",  // Overridden from string
+          "required": false,  // From base
+          "multivalued": false,  // From base
+          "inherited_from": "Observation"  // Inherited but overridden
+        },
+        "associated_visit": {
+          "slotId": "associated_visit",  // Inherited slot reference
+          "range": "Visit",
+          "inherited_from": "Observation"  // Computed from hierarchy
         }
       }
     }
   },
   "slots": {
-    "observations": {  // Base slot
-      "id": "observations",
-      "name": "observations",
-      "description": "A set of one or more observations.",
-      "range": "Observation",
-      "multivalued": true
+    "id": {  // Base slot (used by many classes)
+      "id": "id",
+      "name": "id",
+      "description": "The 'logical' identifier of the entity...",
+      "range": "uriorcurie",
+      "required": true
     },
-    "observations-DimensionalObservationSet": {  // Override slot instance
-      "id": "observations-DimensionalObservationSet",
-      "name": "observations",  // Display name (same as base)
-      "description": "A set of one or more observations.",  // From base
-      "range": "DimensionalObservation",  // From slot_usage override
-      "multivalued": true,  // From base
-      "required": true,  // From slot_usage override
-      "overrides": "observations"  // Reference to base slot
+    "category": {  // Base slot for category
+      "id": "category",
+      "name": "category",
+      "description": "The general category of observation described",
+      "range": "string",
+      "required": false,
+      "multivalued": false
     },
-    "dimensional_measures": {  // Direct slot (not an override)
-      "id": "dimensional_measures",
-      "name": "dimensional_measures",
-      "description": "...",
-      "range": "DimensionalObservationSet"
+    "category-SdohObservation": {  // Override slot instance
+      "id": "category-SdohObservation",
+      "name": "category",  // Display name (same as base)
+      "description": "The general category of observation described",  // From base
+      "range": "GravityDomainEnum",  // From slot_usage override
+      "required": false,  // From base
+      "multivalued": false,  // From base
+      "overrides": "category"  // Reference to base slot
+    },
+    "associated_visit": {  // Global slot (referenced by Observation.slots)
+      "id": "associated_visit",
+      "name": "associated_visit",
+      "description": "A reference to the Visit that is associated with this record.",
+      "range": "Visit"
     }
   },
   "enums": {...},
