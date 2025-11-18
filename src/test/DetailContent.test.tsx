@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import DetailContent from '../components/DetailContent';
 import { ClassElement, EnumElement, SlotElement, VariableElement, SlotCollection } from '../models/Element';
 import type { ClassData, EnumData, SlotData, VariableSpec, ModelData } from '../types';
+import { createSchemaGraph } from '../models/Graph';
 
 /**
  * DetailContent Tests (renamed from DetailPanel)
@@ -15,6 +16,7 @@ import type { ClassData, EnumData, SlotData, VariableSpec, ModelData } from '../
 const createMockModelData = (): ModelData => ({
   collections: new Map(),
   elementLookup: new Map(),
+  graph: createSchemaGraph(),
 });
 
 // Helper to create SlotCollection with test slots

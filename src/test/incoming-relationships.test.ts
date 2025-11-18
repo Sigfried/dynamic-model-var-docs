@@ -53,7 +53,7 @@ describe('Incoming Relationships', () => {
     expect(fromSpecimen).toBeDefined();
     expect(fromSpecimen?.className).toBe('Specimen');
     expect(fromSpecimen?.attributeName).toBe('dimensional_measures');
-    expect(fromSpecimen?.sourceType).toBe('class');
+    expect(fromSpecimen?.sourceSection).toBe('class');
   });
 
   test('computeIncomingRelationships should find all incoming class attribute references', () => {

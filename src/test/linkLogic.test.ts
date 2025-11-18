@@ -37,7 +37,7 @@ describe('Element Relationship Detection', () => {
       const inheritRel = rels.find(r => r.type === 'inherits');
       expect(inheritRel).toBeDefined();
       expect(inheritRel?.target).toBe('Entity');
-      expect(inheritRel?.targetType).toBe('class');
+      expect(inheritRel?.targetSection).toBe('class');
       expect(inheritRel?.isSelfRef).toBe(false);
     });
 
@@ -78,7 +78,7 @@ describe('Element Relationship Detection', () => {
       expect(enumRel).toBeDefined();
       expect(enumRel?.type).toBe('property');
       expect(enumRel?.label).toBe('specimen_type');
-      expect(enumRel?.targetType).toBe('enum');
+      expect(enumRel?.targetSection).toBe('enum');
       expect(enumRel?.isSelfRef).toBe(false);
     });
 
@@ -103,7 +103,7 @@ describe('Element Relationship Detection', () => {
       expect(classRel).toBeDefined();
       expect(classRel?.type).toBe('property');
       expect(classRel?.label).toBe('associated_participant');
-      expect(classRel?.targetType).toBe('class');
+      expect(classRel?.targetSection).toBe('class');
     });
 
     test('should ignore primitive property types', () => {
@@ -183,7 +183,7 @@ describe('Element Relationship Detection', () => {
 
       expect(rels.length).toBe(1);
       expect(rels[0].target).toBe('CellularOrganismSpeciesEnum');
-      expect(rels[0].targetType).toBe('enum');
+      expect(rels[0].targetSection).toBe('enum');
     });
 
     test('should detect slot range relationships for class', () => {
@@ -197,7 +197,7 @@ describe('Element Relationship Detection', () => {
 
       expect(rels.length).toBe(1);
       expect(rels[0].target).toBe('Participant');
-      expect(rels[0].targetType).toBe('class');
+      expect(rels[0].targetSection).toBe('class');
     });
 
     test('should not create relationships for primitive ranges', () => {
@@ -267,10 +267,10 @@ describe('Element Relationship Detection', () => {
 describe('Link Filtering Logic', () => {
   // Helper function to create mock relationships
   const createMockRelationships = (): Relationship[] => [
-    { type: 'inherits', target: 'Entity', targetType: 'class', isSelfRef: false },
-    { type: 'property', label: 'species', target: 'SpeciesEnum', targetType: 'enum', isSelfRef: false },
-    { type: 'property', label: 'participant', target: 'Participant', targetType: 'class', isSelfRef: false },
-    { type: 'property', label: 'parent', target: 'Specimen', targetType: 'class', isSelfRef: true },
+    { type: 'inherits', target: 'Entity', targetSection: 'class', isSelfRef: false },
+    { type: 'property', label: 'species', target: 'SpeciesEnum', targetSection: 'enum', isSelfRef: false },
+    { type: 'property', label: 'participant', target: 'Participant', targetSection: 'class', isSelfRef: false },
+    { type: 'property', label: 'parent', target: 'Specimen', targetSection: 'class', isSelfRef: true },
   ];
 
   describe('filterRelationshipsByType', () => {
@@ -291,7 +291,7 @@ describe('Link Filtering Logic', () => {
 
     test('should filter to only enum relationships', () => {
       const rels = createMockRelationships();
-      const filtered = rels.filter(r => r.targetType === 'enum');
+      const filtered = rels.filter(r => r.targetSection === 'enum');
 
       expect(filtered.length).toBe(1);
       expect(filtered[0].target).toBe('SpeciesEnum');
@@ -299,7 +299,7 @@ describe('Link Filtering Logic', () => {
 
     test('should filter to only class relationships', () => {
       const rels = createMockRelationships();
-      const filtered = rels.filter(r => r.targetType === 'class');
+      const filtered = rels.filter(r => r.targetSection === 'class');
 
       expect(filtered.length).toBe(3);
     });
@@ -359,7 +359,7 @@ describe('Link Filtering Logic', () => {
       const visibleElements = new Set(['Entity', 'Participant']);
 
       const filtered = rels
-        .filter(r => r.targetType === 'class') // Only class relationships
+        .filter(r => r.targetSection === 'class') // Only class relationships
         .filter(r => visibleElements.has(r.target)); // Only visible
 
       expect(filtered.length).toBe(2);
@@ -395,7 +395,7 @@ describe('Link Data Structures', () => {
         relationship: {
           type: 'inherits',
           target: 'Entity',
-          targetType: 'class',
+          targetSection: 'class',
           isSelfRef: false,
         },
       };
@@ -415,14 +415,14 @@ describe('Link Data Structures', () => {
       };
 
       const relationships: Relationship[] = [
-        { type: 'inherits', target: 'Entity', targetType: 'class', isSelfRef: false },
-        { type: 'property', label: 'species', target: 'SpeciesEnum', targetType: 'enum', isSelfRef: false },
+        { type: 'inherits', target: 'Entity', targetSection: 'class', isSelfRef: false },
+        { type: 'property', label: 'species', target: 'SpeciesEnum', targetSection: 'enum', isSelfRef: false },
       ];
 
       // Build links
       const links = relationships.map(rel => ({
         source: { type: sourceElement.type, name: sourceElement.name },
-        target: { type: rel.targetType, name: rel.target },
+        target: { type: rel.targetSection, name: rel.target },
         relationship: rel,
       }));
 
