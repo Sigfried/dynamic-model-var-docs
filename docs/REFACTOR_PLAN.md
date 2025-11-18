@@ -521,7 +521,7 @@ With expanded schema (gen-linkml JSON output):
 - ✅ Deleted bdchm.metadata.json file
 - ✅ Commit: c54d822
 
-**Part 2b: Data transformation with transform_schema.py** ⏭️ NEXT
+**Part 2b: Data transformation with transform_schema.py** 🔄 **IN PROGRESS**
 
 **Decision**: Pursue Option B - Transform JSON to optimized format
 
@@ -664,30 +664,40 @@ Example using Entity → Observation → SdohObservation (shows all combinations
 - ✅ Computed `inherited_from` for all inherited attributes
 
 **Implementation steps for Part 2b**:
-1. Create `scripts/transform_schema.py`:
-   - Load `bdchm.expanded.json`
-   - Build class hierarchy map (parent → children)
-   - For each class:
-     - Compute `inherited_from` for each attribute (walk up hierarchy)
-     - For attributes with slot_usage, create slot instance with ID `{slotName}-{ClassName}`
-     - Output streamlined class definition with just needed fields
-   - For slots:
-     - Keep base slot definitions
-     - Add slot instance for each slot_usage override
-     - Include `overrides` field pointing to base slot
-   - Output enums, types, variables as-is (minimal processing)
-   - Write `bdchm.processed.json`
-2. Update `download_source_data.py`:
-   - After generating `bdchm.expanded.json`, call `transform_schema.py`
-   - Report file size reduction
-3. Update `dataLoader.ts`:
-   - Change fetch URL to `bdchm.processed.json`
-   - Update DTOs to match new structure (remove redundant fields)
-   - Simplify transformation logic (less processing needed)
-4. Update `Graph.ts`:
-   - Use `slotId` from attributes instead of computing
-   - Use `inherited_from` from attributes
-   - Remove duplicate-check workaround
+1. ✅ Create `scripts/transform_schema.py`:
+   - ✅ Load `bdchm.expanded.json`
+   - ✅ Extract prefixes from schema
+   - ✅ Build class hierarchy map (parent → children)
+   - ✅ For each class:
+     - ✅ Compute `inherited_from` for each attribute (walk up hierarchy)
+     - ✅ For attributes with slot_usage, create slot instance with ID `{slotName}-{ClassName}`
+     - ✅ Expand `class_uri` to `class_url` using prefixes
+     - ✅ Output streamlined class definition with just needed fields
+   - ✅ For slots:
+     - ✅ Keep base slot definitions
+     - ✅ Add slot instance for each slot_usage override
+     - ✅ Include `overrides` field pointing to base slot
+     - ✅ Expand `slot_uri` to `slot_url` using prefixes
+   - ✅ For enums:
+     - ✅ Expand `permissible_values[].meaning` to `meaning_url` using prefixes
+     - ✅ Expand `reachable_from` to `reachable_from_url` using prefixes
+   - ✅ For types:
+     - ✅ Expand `uri` to `uri_url` using prefixes
+     - ✅ Expand `exact_mappings[]` to `exact_mappings_urls[]` using prefixes
+   - ✅ Include `prefixes` in output
+   - ✅ Report invalid prefixes encountered (none found!)
+   - ✅ Write `bdchm.processed.json`
+2. ✅ Update `download_source_data.py`:
+   - ✅ After generating `bdchm.expanded.json`, call `transform_schema.py`
+   - ✅ Report file size reduction (55.2%)
+3. ⏭️ Update `dataLoader.ts`:
+   - ✅ Change fetch URL to `bdchm.processed.json` (done)
+   - ⏭️ Update types if needed for new URL fields
+   - ✅ Simplified transformation logic (removed transformAttributeToSlotData)
+4. ⏭️ Update `Graph.ts`:
+   - ⏭️ Use `slotId` from attributes instead of computing
+   - ⏭️ Use `inherited_from` from attributes
+   - ⏭️ Remove duplicate-check workaround
 
 **Part 2c: Update graph building** ⏭️ AFTER Part 2b
 - Update `buildGraphFromSchemaData()` to use `slotId` from attributes

@@ -26,6 +26,47 @@ from pathlib import Path
 from typing import Dict, Any, Optional, Set
 
 
+# Track invalid prefixes encountered during URI expansion
+invalid_prefixes: Set[str] = set()
+
+
+def expand_uri(uri: str, prefixes: Dict[str, Any]) -> Optional[str]:
+    """
+    Expand a prefixed URI (e.g., 'schema:Text') to full URL using prefixes.
+
+    Args:
+        uri: Prefixed URI string (e.g., 'schema:Text', 'DUO:0000042')
+        prefixes: Prefix mapping from schema
+
+    Returns:
+        Full URL if prefix is valid, None otherwise
+
+    Side effects:
+        Adds invalid prefixes to global invalid_prefixes set
+    """
+    if not uri or ':' not in uri:
+        return None
+
+    try:
+        prefix, code = uri.split(':', 1)
+
+        if prefix not in prefixes:
+            invalid_prefixes.add(prefix)
+            return None
+
+        # Get prefix_reference from the prefix definition
+        prefix_def = prefixes.get(prefix)
+        if not prefix_def or 'prefix_reference' not in prefix_def:
+            invalid_prefixes.add(prefix)
+            return None
+
+        base_url = prefix_def['prefix_reference']
+        return base_url + code
+
+    except Exception:
+        return None
+
+
 def build_class_hierarchy(classes: Dict[str, Any]) -> Dict[str, Optional[str]]:
     """Build map of class_name -> parent_name."""
     hierarchy = {}
@@ -98,7 +139,8 @@ def find_slot_usage(class_name: str, attr_name: str, classes: Dict[str, Any]) ->
 
 def transform_classes(
     expanded_classes: Dict[str, Any],
-    hierarchy: Dict[str, Optional[str]]
+    hierarchy: Dict[str, Optional[str]],
+    prefixes: Dict[str, Any]
 ) -> Dict[str, Any]:
     """Transform classes to streamlined format with computed inherited_from."""
     processed = {}
@@ -152,6 +194,12 @@ def transform_classes(
         if class_def.get('description'):
             processed_class['description'] = class_def['description']
 
+        # Expand class_uri if present
+        if class_def.get('class_uri'):
+            expanded_url = expand_uri(class_def['class_uri'], prefixes)
+            if expanded_url:
+                processed_class['class_url'] = expanded_url
+
         processed[class_name] = processed_class
 
     return processed
@@ -159,7 +207,8 @@ def transform_classes(
 
 def transform_slots(
     expanded_slots: Dict[str, Any],
-    expanded_classes: Dict[str, Any]
+    expanded_classes: Dict[str, Any],
+    prefixes: Dict[str, Any]
 ) -> Dict[str, Any]:
     """
     Transform slots to include base definitions and override instances.
@@ -183,6 +232,12 @@ def transform_slots(
             processed_slot['required'] = slot_def['required']
         if slot_def.get('multivalued') is not None:
             processed_slot['multivalued'] = slot_def['multivalued']
+
+        # Expand slot_uri if present
+        if slot_def.get('slot_uri'):
+            expanded_url = expand_uri(slot_def['slot_uri'], prefixes)
+            if expanded_url:
+                processed_slot['slot_url'] = expanded_url
 
         processed[slot_name] = processed_slot
 
@@ -268,8 +323,8 @@ def transform_slots(
     return processed
 
 
-def transform_enums(expanded_enums: Dict[str, Any]) -> Dict[str, Any]:
-    """Transform enums - keep minimal structure."""
+def transform_enums(expanded_enums: Dict[str, Any], prefixes: Dict[str, Any]) -> Dict[str, Any]:
+    """Transform enums - keep minimal structure and expand URIs in permissible_values."""
     processed = {}
 
     for enum_name, enum_def in expanded_enums.items():
@@ -281,16 +336,36 @@ def transform_enums(expanded_enums: Dict[str, Any]) -> Dict[str, Any]:
         # Add optional fields
         if enum_def.get('description'):
             processed_enum['description'] = enum_def['description']
+
+        # Transform permissible_values to expand meaning URIs
         if enum_def.get('permissible_values'):
-            processed_enum['permissible_values'] = enum_def['permissible_values']
+            processed_pv = {}
+            for pv_key, pv_value in enum_def['permissible_values'].items():
+                processed_pv_value = dict(pv_value)  # Copy value
+
+                # Expand meaning URI if present
+                if pv_value.get('meaning'):
+                    expanded_url = expand_uri(pv_value['meaning'], prefixes)
+                    if expanded_url:
+                        processed_pv_value['meaning_url'] = expanded_url
+
+                processed_pv[pv_key] = processed_pv_value
+
+            processed_enum['permissible_values'] = processed_pv
+
+        # Expand reachable_from URI if present
+        if enum_def.get('reachable_from'):
+            expanded_url = expand_uri(enum_def['reachable_from'], prefixes)
+            if expanded_url:
+                processed_enum['reachable_from_url'] = expanded_url
 
         processed[enum_name] = processed_enum
 
     return processed
 
 
-def transform_types(expanded_types: Dict[str, Any]) -> Dict[str, Any]:
-    """Transform types - keep minimal structure."""
+def transform_types(expanded_types: Dict[str, Any], prefixes: Dict[str, Any]) -> Dict[str, Any]:
+    """Transform types - keep minimal structure and expand URIs."""
     processed = {}
 
     for type_name, type_def in expanded_types.items():
@@ -302,10 +377,26 @@ def transform_types(expanded_types: Dict[str, Any]) -> Dict[str, Any]:
         # Add optional fields
         if type_def.get('description'):
             processed_type['description'] = type_def['description']
-        if type_def.get('uri'):
-            processed_type['uri'] = type_def['uri']
         if type_def.get('base'):
             processed_type['base'] = type_def['base']
+
+        # Expand type URI if present
+        if type_def.get('uri'):
+            processed_type['uri'] = type_def['uri']  # Keep original
+            expanded_url = expand_uri(type_def['uri'], prefixes)
+            if expanded_url:
+                processed_type['uri_url'] = expanded_url
+
+        # Expand exact_mappings if present
+        if type_def.get('exact_mappings'):
+            processed_type['exact_mappings'] = type_def['exact_mappings']  # Keep originals
+            expanded_mappings = []
+            for mapping in type_def['exact_mappings']:
+                expanded_url = expand_uri(mapping, prefixes)
+                if expanded_url:
+                    expanded_mappings.append(expanded_url)
+            if expanded_mappings:
+                processed_type['exact_mappings_urls'] = expanded_mappings
 
         processed[type_name] = processed_type
 
@@ -320,6 +411,10 @@ def transform_schema(expanded_path: Path, output_path: Path) -> bool:
         True if successful, False otherwise
     """
     try:
+        # Reset invalid prefixes tracker
+        global invalid_prefixes
+        invalid_prefixes = set()
+
         print(f"Loading {expanded_path.name}...")
         with open(expanded_path, 'r') as f:
             expanded = json.load(f)
@@ -327,34 +422,39 @@ def transform_schema(expanded_path: Path, output_path: Path) -> bool:
         expanded_size = expanded_path.stat().st_size
         print(f"  ✓ Loaded ({expanded_size:,} bytes)")
 
+        # Extract prefixes
+        prefixes = expanded.get('prefixes', {})
+        print(f"  ✓ {len(prefixes)} prefixes loaded")
+
         # Build class hierarchy
         print("Building class hierarchy...")
         classes = expanded.get('classes', {})
         hierarchy = build_class_hierarchy(classes)
         print(f"  ✓ {len(hierarchy)} classes")
 
-        # Transform each section
+        # Transform each section (passing prefixes for URI expansion)
         print("Transforming classes...")
-        processed_classes = transform_classes(classes, hierarchy)
+        processed_classes = transform_classes(classes, hierarchy, prefixes)
         print(f"  ✓ {len(processed_classes)} classes processed")
 
         print("Transforming slots...")
         expanded_slots = expanded.get('slots', {})
-        processed_slots = transform_slots(expanded_slots, classes)
+        processed_slots = transform_slots(expanded_slots, classes, prefixes)
         print(f"  ✓ {len(processed_slots)} slots processed ({len(expanded_slots)} base + {len(processed_slots) - len(expanded_slots)} overrides)")
 
         print("Transforming enums...")
         expanded_enums = expanded.get('enums', {})
-        processed_enums = transform_enums(expanded_enums)
+        processed_enums = transform_enums(expanded_enums, prefixes)
         print(f"  ✓ {len(processed_enums)} enums processed")
 
         print("Transforming types...")
         expanded_types = expanded.get('types', {})
-        processed_types = transform_types(expanded_types)
+        processed_types = transform_types(expanded_types, prefixes)
         print(f"  ✓ {len(processed_types)} types processed")
 
         # Build processed schema
         processed = {
+            'prefixes': prefixes,  # Include prefixes in output
             'classes': processed_classes,
             'slots': processed_slots,
             'enums': processed_enums,
@@ -375,6 +475,13 @@ def transform_schema(expanded_path: Path, output_path: Path) -> bool:
         reduction = ((expanded_size - processed_size) / expanded_size) * 100
         print(f"  ✓ Written ({processed_size:,} bytes)")
         print(f"  ✓ Size reduction: {reduction:.1f}%")
+
+        # Report invalid prefixes encountered
+        if invalid_prefixes:
+            print(f"\n⚠ Warning: {len(invalid_prefixes)} invalid prefix(es) encountered during URI expansion:")
+            for prefix in sorted(invalid_prefixes):
+                print(f"  - {prefix}")
+            print("These prefixes are not defined in the schema prefixes section.")
 
         return True
 

@@ -1,4 +1,66 @@
 {
+  "prefixes": {
+    "bdchm": {
+      "prefix_prefix": "bdchm",
+      "prefix_reference": "https://w3id.org/bdchm/"
+    },
+    "linkml": {
+      "prefix_prefix": "linkml",
+      "prefix_reference": "https://w3id.org/linkml/"
+    },
+    "schema": {
+      "prefix_prefix": "schema",
+      "prefix_reference": "http://schema.org/"
+    },
+    "OMOP": {
+      "prefix_prefix": "OMOP",
+      "prefix_reference": "https://athena.ohdsi.org/search-terms/terms/"
+    },
+    "DUO": {
+      "prefix_prefix": "DUO",
+      "prefix_reference": "http://purl.obolibrary.org/obo/DUO_"
+    },
+    "VBO": {
+      "prefix_prefix": "VBO",
+      "prefix_reference": "http://purl.obolibrary.org/obo/VBO_"
+    },
+    "ncbitaxon": {
+      "prefix_prefix": "ncbitaxon",
+      "prefix_reference": "http://purl.obolibrary.org/obo/NCBITaxon_"
+    },
+    "MONDO": {
+      "prefix_prefix": "MONDO",
+      "prefix_reference": "http://purl.obolibrary.org/obo/MONDO_"
+    },
+    "HP": {
+      "prefix_prefix": "HP",
+      "prefix_reference": "http://purl.obolibrary.org/obo/HP_"
+    },
+    "rxnorm": {
+      "prefix_prefix": "rxnorm",
+      "prefix_reference": "https://bioregistry.io/rxnorm:/"
+    },
+    "UOM": {
+      "prefix_prefix": "UOM",
+      "prefix_reference": "https://units-of-measurement.org/"
+    },
+    "OBA": {
+      "prefix_prefix": "OBA",
+      "prefix_reference": "http://purl.obolibrary.org/obo/OBA_"
+    },
+    "ICD10CM": {
+      "prefix_prefix": "ICD10CM",
+      "prefix_reference": "http://purl.bioontology.org/ontology/ICD10CM/"
+    },
+    "xsd": {
+      "prefix_prefix": "xsd",
+      "prefix_reference": "http://www.w3.org/2001/XMLSchema#"
+    },
+    "shex": {
+      "prefix_prefix": "shex",
+      "prefix_reference": "http://www.w3.org/ns/shex#"
+    }
+  },
   "classes": {
     "Entity": {
       "id": "Entity",
@@ -12,7 +74,8 @@
           "required": true
         }
       },
-      "description": "Any resource that has its own identifier"
+      "description": "Any resource that has its own identifier",
+      "class_url": "http://schema.org/Thing"
     },
     "Person": {
       "id": "Person",
@@ -2629,14 +2692,16 @@
       "name": "id",
       "range": "uriorcurie",
       "description": "The 'logical' identifier of the entity within the system of record.  The simple value of this attribute stands for an identifier of this data object within the system, it can be used as a reference from other objects within the same system (i.e. primary and foreign keys), and it should be unique per type of object. The same data object copied to a different system will likely have a different \"id\" in the new system since \"id\" values are system specific and do not represent persistent business identifiers. Business identifiers are assigned outside the information system and are captured in the \"identifier\" field. The \"id\" field is more likely to be a serially or randomly generated value that is assigned to the data object as it is created in a system.",
-      "required": true
+      "required": true,
+      "slot_url": "http://schema.org/identifier"
     },
     "identity": {
       "id": "identity",
       "name": "identity",
       "range": "uriorcurie",
       "description": "A 'business' identifier or accession number for the entity, typically as provided by an external system or authority, that are globally unique and persist across implementing systems. Also, since these identifiers are created outside the information system through a specific business process, the Identifier type has additional attributes to capture this additional metadata so the actual identifier values are qualified by the context that created those values. This additional context allows \"identifier\" instances to be transmitted as business data across systems while still being able to trace them back to the system of origin.",
-      "multivalued": true
+      "multivalued": true,
+      "slot_url": "http://schema.org/identifier"
     },
     "associated_person": {
       "id": "associated_person",
@@ -2777,27 +2842,32 @@
         "GRU": {
           "text": "GRU",
           "description": "This data use permission indicates that use is allowed for general research use for any research purpose. This includes but is not limited to: health/medical/biomedical purposes, fundamental biology research, the study of population origins or ancestry, statistical methods and algorithms development, and social-sciences research.",
-          "meaning": "DUO:0000042"
+          "meaning": "DUO:0000042",
+          "meaning_url": "http://purl.obolibrary.org/obo/DUO_0000042"
         },
         "HMB": {
           "text": "HMB",
           "description": "This data use permission indicates that use is allowed for health/medical/biomedical purposes; does not include the study of population origins or ancestry.",
-          "meaning": "DUO:0000006"
+          "meaning": "DUO:0000006",
+          "meaning_url": "http://purl.obolibrary.org/obo/DUO_0000006"
         },
         "DS": {
           "text": "DS",
           "description": "This data use permission indicates that use is allowed provided it is related to the specified disease. This term should be coupled with a term describing a disease from an ontology to specify the disease the restriction applies to. DUO recommends MONDO be used, to provide the basis for automated evaluation. For more information see https://github.com/EBISPOT/DUO/blob/master/MONDO_Overview.md Other resources, such as the Disease Ontology, HPO, SNOMED-CT or others, can also be used. When those other resources are being used, this may require an extra mapping step to leverage automated matching algorithms.",
-          "meaning": "DUO:0000007"
+          "meaning": "DUO:0000007",
+          "meaning_url": "http://purl.obolibrary.org/obo/DUO_0000007"
         },
         "NPUNCU": {
           "text": "NPUNCU",
           "description": "This data use modifier indicates that use of the data is limited to not-for-profit organizations and not-for-profit use, non-commercial use.",
-          "meaning": "DUO:0000018"
+          "meaning": "DUO:0000018",
+          "meaning_url": "http://purl.obolibrary.org/obo/DUO_0000018"
         },
         "IRB": {
           "text": "IRB",
           "description": "This data use modifier indicates that the requestor must provide documentation of local IRB/ERB approval.",
-          "meaning": "DUO:0000021"
+          "meaning": "DUO:0000021",
+          "meaning_url": "http://purl.obolibrary.org/obo/DUO_0000021"
         }
       }
     },
@@ -2809,12 +2879,14 @@
         "HISPANIC_OR_LATINO": {
           "text": "HISPANIC_OR_LATINO",
           "description": "A person of Cuban, Mexican, Puerto Rican, South or Central American, or other Spanish culture or origin, regardless of race. The term, \"Spanish origin\" can be used in addition to \"Hispanic or Latino\". (OMB)",
-          "meaning": "OMOP:38003563"
+          "meaning": "OMOP:38003563",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/38003563"
         },
         "NOT_HISPANIC_OR_LATINO": {
           "text": "NOT_HISPANIC_OR_LATINO",
           "description": "A person not of Cuban, Mexican, Puerto Rican, South or Central American, or other Spanish culture or origin, regardless of race.",
-          "meaning": "OMOP:38003564"
+          "meaning": "OMOP:38003564",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/38003564"
         }
       }
     },
@@ -2826,37 +2898,44 @@
         "AMERICAN_INDIAN_OR_ALASKA_NATIVE": {
           "text": "AMERICAN_INDIAN_OR_ALASKA_NATIVE",
           "description": "A person having origins in any of the original peoples of North and South America (including Central America) and who maintains tribal affiliation or community attachment. (OMB)",
-          "meaning": "OMOP:8657"
+          "meaning": "OMOP:8657",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/8657"
         },
         "ASIAN": {
           "text": "ASIAN",
           "description": "A person having origins in any of the original peoples of the Far East, Southeast Asia, or the Indian subcontinent, including for example, Cambodia, China, India, Japan, Korea, Malaysia, Pakistan, the Philippine Islands, Thailand, and Vietnam. (OMB)",
-          "meaning": "OMOP:8515"
+          "meaning": "OMOP:8515",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/8515"
         },
         "BLACK_OR_AFRICAN_AMERICAN": {
           "text": "BLACK_OR_AFRICAN_AMERICAN",
           "description": "A person having origins in any of the Black racial groups of Africa. Terms such as \"Haitian\" or \"Negro\" can be used in addition to \"Black or African American\". (OMB)",
-          "meaning": "OMOP:8516"
+          "meaning": "OMOP:8516",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/8516"
         },
         "NATIVE_HAWAIIAN_OR_OTHER_PACIFIC_ISLANDER": {
           "text": "NATIVE_HAWAIIAN_OR_OTHER_PACIFIC_ISLANDER",
           "description": "Denotes a person having origins in any of the original peoples of Hawaii, Guam, Samoa, or other Pacific Islands. The term covers particularly people who identify themselves as part-Hawaiian, Native Hawaiian, Guamanian or Chamorro, Carolinian, Samoan, Chuukese (Trukese), Fijian, Kosraean, Melanesian, Micronesian, Northern Mariana Islander, Palauan, Papua New Guinean, Pohnpeian, Polynesian, Solomon Islander, Tahitian, Tokelauan, Tongan, Yapese, or Pacific Islander, not specified.",
-          "meaning": "OMOP:8557"
+          "meaning": "OMOP:8557",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/8557"
         },
         "UNKNOWN": {
           "text": "UNKNOWN",
           "description": "Not known, not observed, not recorded, or refused.",
-          "meaning": "OMOP:8552"
+          "meaning": "OMOP:8552",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/8552"
         },
         "WHITE": {
           "text": "WHITE",
           "description": "Denotes person with European, Middle Eastern, or North African ancestral origin who identifies, or is identified, as White.",
-          "meaning": "OMOP:8527"
+          "meaning": "OMOP:8527",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/8527"
         },
         "MORE_THAN_ONE_RACE": {
           "text": "MORE_THAN_ONE_RACE",
           "description": "A person having more than one race.",
-          "meaning": "OMOP:45880900"
+          "meaning": "OMOP:45880900",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/45880900"
         }
       }
     },
@@ -2868,17 +2947,20 @@
         "MALE": {
           "text": "MALE",
           "description": "A person who belongs to the sex that normally produces sperm.",
-          "meaning": "OMOP:8507"
+          "meaning": "OMOP:8507",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/8507"
         },
         "FEMALE": {
           "text": "FEMALE",
           "description": "A person who belongs to the sex that normally produces ova.",
-          "meaning": "OMOP:8532"
+          "meaning": "OMOP:8532",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/8532"
         },
         "UNKNOWN": {
           "text": "UNKNOWN",
           "description": "Not known, not observed, not recorded, or refused.",
-          "meaning": "OMOP:8552"
+          "meaning": "OMOP:8552",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/8552"
         }
       }
     },
@@ -2895,12 +2977,14 @@
         "ALIVE": {
           "text": "ALIVE",
           "description": "Showing characteristics of life; displaying signs of life. (NCIt)",
-          "meaning": "OMOP:4230556"
+          "meaning": "OMOP:4230556",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4230556"
         },
         "DEAD": {
           "text": "DEAD",
           "description": "The cessation of life. (NCIt)",
-          "meaning": "OMOP:434489"
+          "meaning": "OMOP:434489",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/434489"
         }
       }
     },
@@ -2917,57 +3001,68 @@
         "INPATIENT": {
           "text": "INPATIENT",
           "description": "Person visiting hospital, at a care stie, in bed, for duration of more than one day, with physicians and other Providers permanently available to deliver service around the clock",
-          "meaning": "OMOP:9201"
+          "meaning": "OMOP:9201",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/9201"
         },
         "EMERGENCY_ROOM": {
           "text": "EMERGENCY_ROOM",
           "description": "Person visiting dedicated healthcare institution for treating emergencies, at a Care Site, within one day, with physicians and Providers permanently available to deliver service around the clock",
-          "meaning": "OMOP:9203"
+          "meaning": "OMOP:9203",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/9203"
         },
         "EMERGENCY_ROOM_AND_INPATIENT": {
           "text": "EMERGENCY_ROOM_AND_INPATIENT",
           "description": "Person visiting ER followed by a subsequent Inpatient Visit, where Emergency department is part of hospital, and transition from the ER to other hospital departments is undefined",
-          "meaning": "OMOP:262"
+          "meaning": "OMOP:262",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/262"
         },
         "NON_HOSPITAL_INSTITUTION": {
           "text": "NON_HOSPITAL_INSTITUTION",
           "description": "Person visiting dedicated institution for reasons of poor health, at a Care Site, long-term or permanently, with no physician but possibly other Providers permanently available to deliver service around the clock",
-          "meaning": "OMOP:42898160"
+          "meaning": "OMOP:42898160",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/42898160"
         },
         "OUTPATIENT": {
           "text": "OUTPATIENT",
           "description": "Person visiting dedicated ambulatory healthcare institution, at a Care Site, within one day, without bed, with physicians or medical Providers delivering service during Visit",
-          "meaning": "OMOP:9202"
+          "meaning": "OMOP:9202",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/9202"
         },
         "HOME": {
           "text": "HOME",
           "description": "Provider visiting Person, without a Care Site, within one day, delivering service",
-          "meaning": "OMOP:581476"
+          "meaning": "OMOP:581476",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/581476"
         },
         "TELEHEALTH": {
           "text": "TELEHEALTH",
           "description": "Patient engages with Provider through communication media",
-          "meaning": "OMOP:5083"
+          "meaning": "OMOP:5083",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/5083"
         },
         "PHARMACY": {
           "text": "PHARMACY",
           "description": "Person visiting pharmacy for dispensing of Drug, at a Care Site, within one day",
-          "meaning": "OMOP:581458"
+          "meaning": "OMOP:581458",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/581458"
         },
         "LABORATORY": {
           "text": "LABORATORY",
           "description": "Patient visiting dedicated institution, at a Care Site, within one day, for the purpose of a Measurement.",
-          "meaning": "OMOP:32036"
+          "meaning": "OMOP:32036",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32036"
         },
         "AMBULANCE": {
           "text": "AMBULANCE",
           "description": "Person using transportation service for the purpose of initiating one of the other Visits, without a Care Site, within one day, potentially with Providers accompanying the Visit and delivering service",
-          "meaning": "OMOP:581478"
+          "meaning": "OMOP:581478",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/581478"
         },
         "CASE_MANAGEMENT": {
           "text": "CASE_MANAGEMENT",
           "description": "Person interacting with healthcare system, without a Care Site, within a day, with no Providers involved, for administrative purposes",
-          "meaning": "OMOP:38004193"
+          "meaning": "OMOP:38004193",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/38004193"
         }
       }
     },
@@ -2979,402 +3074,482 @@
         "CASE_REPORT_FORM": {
           "text": "CASE_REPORT_FORM",
           "description": "Case Report Form",
-          "meaning": "OMOP:32809"
+          "meaning": "OMOP:32809",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32809"
         },
         "CLAIM": {
           "text": "CLAIM",
           "description": "Claim",
-          "meaning": "OMOP:32810"
+          "meaning": "OMOP:32810",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32810"
         },
         "CLAIM_AUTHORIZATION": {
           "text": "CLAIM_AUTHORIZATION",
           "description": "Claim authorization",
-          "meaning": "OMOP:32811"
+          "meaning": "OMOP:32811",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32811"
         },
         "CLAIM_DISCHARGE_RECORD": {
           "text": "CLAIM_DISCHARGE_RECORD",
           "description": "Claim discharge record",
-          "meaning": "OMOP:32812"
+          "meaning": "OMOP:32812",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32812"
         },
         "CLAIM_ENROLMENT_RECORD": {
           "text": "CLAIM_ENROLMENT_RECORD",
           "description": "Claim enrolment record",
-          "meaning": "OMOP:32813"
+          "meaning": "OMOP:32813",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32813"
         },
         "COST_RECORD": {
           "text": "COST_RECORD",
           "description": "Cost record",
-          "meaning": "OMOP:32814"
+          "meaning": "OMOP:32814",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32814"
         },
         "DEATH_CERTIFICATE": {
           "text": "DEATH_CERTIFICATE",
           "description": "Death Certificate",
-          "meaning": "OMOP:32815"
+          "meaning": "OMOP:32815",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32815"
         },
         "DENTAL_CLAIM": {
           "text": "DENTAL_CLAIM",
           "description": "Dental claim",
-          "meaning": "OMOP:32816"
+          "meaning": "OMOP:32816",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32816"
         },
         "EHR": {
           "text": "EHR",
           "description": "EHR",
-          "meaning": "OMOP:32817"
+          "meaning": "OMOP:32817",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32817"
         },
         "EHR_PATHOLOGY_REPORT": {
           "text": "EHR_PATHOLOGY_REPORT",
           "description": "EHR Pathology report",
-          "meaning": "OMOP:32835"
+          "meaning": "OMOP:32835",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32835"
         },
         "EHR_ADMINISTRATION_RECORD": {
           "text": "EHR_ADMINISTRATION_RECORD",
           "description": "EHR administration record",
-          "meaning": "OMOP:32818"
+          "meaning": "OMOP:32818",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32818"
         },
         "EHR_ADMISSION_NOTE": {
           "text": "EHR_ADMISSION_NOTE",
           "description": "EHR admission note",
-          "meaning": "OMOP:32819"
+          "meaning": "OMOP:32819",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32819"
         },
         "EHR_ANCILLARY_REPORT": {
           "text": "EHR_ANCILLARY_REPORT",
           "description": "EHR ancillary report",
-          "meaning": "OMOP:32820"
+          "meaning": "OMOP:32820",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32820"
         },
         "EHR_BILLING_RECORD": {
           "text": "EHR_BILLING_RECORD",
           "description": "EHR billing record",
-          "meaning": "OMOP:32821"
+          "meaning": "OMOP:32821",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32821"
         },
         "EHR_CHIEF_COMPLAINT": {
           "text": "EHR_CHIEF_COMPLAINT",
           "description": "EHR chief complaint",
-          "meaning": "OMOP:32822"
+          "meaning": "OMOP:32822",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32822"
         },
         "EHR_DISCHARGE_RECORD": {
           "text": "EHR_DISCHARGE_RECORD",
           "description": "EHR discharge record",
-          "meaning": "OMOP:32823"
+          "meaning": "OMOP:32823",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32823"
         },
         "EHR_DISCHARGE_SUMMARY": {
           "text": "EHR_DISCHARGE_SUMMARY",
           "description": "EHR discharge summary",
-          "meaning": "OMOP:32824"
+          "meaning": "OMOP:32824",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32824"
         },
         "EHR_DISPENSING_RECORD": {
           "text": "EHR_DISPENSING_RECORD",
           "description": "EHR dispensing record",
-          "meaning": "OMOP:32825"
+          "meaning": "OMOP:32825",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32825"
         },
         "EHR_EMERGENCY_ROOM_NOTE": {
           "text": "EHR_EMERGENCY_ROOM_NOTE",
           "description": "EHR emergency room note",
-          "meaning": "OMOP:32826"
+          "meaning": "OMOP:32826",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32826"
         },
         "EHR_ENCOUNTER_RECORD": {
           "text": "EHR_ENCOUNTER_RECORD",
           "description": "EHR encounter record",
-          "meaning": "OMOP:32827"
+          "meaning": "OMOP:32827",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32827"
         },
         "EHR_EPISODE_RECORD": {
           "text": "EHR_EPISODE_RECORD",
           "description": "EHR episode record",
-          "meaning": "OMOP:32828"
+          "meaning": "OMOP:32828",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32828"
         },
         "EHR_INPATIENT_NOTE": {
           "text": "EHR_INPATIENT_NOTE",
           "description": "EHR inpatient note",
-          "meaning": "OMOP:32829"
+          "meaning": "OMOP:32829",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32829"
         },
         "EHR_MEDICATION_LIST": {
           "text": "EHR_MEDICATION_LIST",
           "description": "EHR medication list",
-          "meaning": "OMOP:32830"
+          "meaning": "OMOP:32830",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32830"
         },
         "EHR_NOTE": {
           "text": "EHR_NOTE",
           "description": "EHR note",
-          "meaning": "OMOP:32831"
+          "meaning": "OMOP:32831",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32831"
         },
         "EHR_NURSING_REPORT": {
           "text": "EHR_NURSING_REPORT",
           "description": "EHR nursing report",
-          "meaning": "OMOP:32832"
+          "meaning": "OMOP:32832",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32832"
         },
         "EHR_ORDER": {
           "text": "EHR_ORDER",
           "description": "EHR order",
-          "meaning": "OMOP:32833"
+          "meaning": "OMOP:32833",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32833"
         },
         "EHR_OUTPATIENT_NOTE": {
           "text": "EHR_OUTPATIENT_NOTE",
           "description": "EHR outpatient note",
-          "meaning": "OMOP:32834"
+          "meaning": "OMOP:32834",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32834"
         },
         "EHR_PHYSICAL_EXAMINATION": {
           "text": "EHR_PHYSICAL_EXAMINATION",
           "description": "EHR physical examination",
-          "meaning": "OMOP:32836"
+          "meaning": "OMOP:32836",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32836"
         },
         "EHR_PLANNED_DISPENSING_RECORD": {
           "text": "EHR_PLANNED_DISPENSING_RECORD",
           "description": "EHR planned dispensing record",
-          "meaning": "OMOP:32837"
+          "meaning": "OMOP:32837",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32837"
         },
         "EHR_PRESCRIPTION": {
           "text": "EHR_PRESCRIPTION",
           "description": "EHR prescription",
-          "meaning": "OMOP:32838"
+          "meaning": "OMOP:32838",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32838"
         },
         "EHR_PRESCRIPTION_ISSUE_RECORD": {
           "text": "EHR_PRESCRIPTION_ISSUE_RECORD",
           "description": "EHR prescription issue record",
-          "meaning": "OMOP:32839"
+          "meaning": "OMOP:32839",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32839"
         },
         "EHR_PROBLEM_LIST": {
           "text": "EHR_PROBLEM_LIST",
           "description": "EHR problem list",
-          "meaning": "OMOP:32840"
+          "meaning": "OMOP:32840",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32840"
         },
         "EHR_RADIOLOGY_REPORT": {
           "text": "EHR_RADIOLOGY_REPORT",
           "description": "EHR radiology report",
-          "meaning": "OMOP:32841"
+          "meaning": "OMOP:32841",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32841"
         },
         "EHR_REFERRAL_RECORD": {
           "text": "EHR_REFERRAL_RECORD",
           "description": "EHR referral record",
-          "meaning": "OMOP:32842"
+          "meaning": "OMOP:32842",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32842"
         },
         "EXTERNAL_CDM_INSTANCE": {
           "text": "EXTERNAL_CDM_INSTANCE",
           "description": "External CDM instance",
-          "meaning": "OMOP:32843"
+          "meaning": "OMOP:32843",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32843"
         },
         "FACILITY_CLAIM": {
           "text": "FACILITY_CLAIM",
           "description": "Facility claim",
-          "meaning": "OMOP:32844"
+          "meaning": "OMOP:32844",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32844"
         },
         "FACILITY_CLAIM_DETAIL": {
           "text": "FACILITY_CLAIM_DETAIL",
           "description": "Facility claim detail",
-          "meaning": "OMOP:32845"
+          "meaning": "OMOP:32845",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32845"
         },
         "FACILITY_CLAIM_HEADER": {
           "text": "FACILITY_CLAIM_HEADER",
           "description": "Facility claim header",
-          "meaning": "OMOP:32846"
+          "meaning": "OMOP:32846",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32846"
         },
         "GEOGRAPHIC_ISOLATION_RECORD": {
           "text": "GEOGRAPHIC_ISOLATION_RECORD",
           "description": "Geographic isolation record",
-          "meaning": "OMOP:32847"
+          "meaning": "OMOP:32847",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32847"
         },
         "GOVERNMENT_REPORT": {
           "text": "GOVERNMENT_REPORT",
           "description": "Government report",
-          "meaning": "OMOP:32848"
+          "meaning": "OMOP:32848",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32848"
         },
         "HEALTH_INFORMATION_EXCHANGE_RECORD": {
           "text": "HEALTH_INFORMATION_EXCHANGE_RECORD",
           "description": "Health Information Exchange record",
-          "meaning": "OMOP:32849"
+          "meaning": "OMOP:32849",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32849"
         },
         "HEALTH_RISK_ASSESSMENT": {
           "text": "HEALTH_RISK_ASSESSMENT",
           "description": "Health Risk Assessment",
-          "meaning": "OMOP:32850"
+          "meaning": "OMOP:32850",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32850"
         },
         "HEALTHCARE_PROFESSIONAL_FILLED_SURVEY": {
           "text": "HEALTHCARE_PROFESSIONAL_FILLED_SURVEY",
           "description": "Healthcare professional filled survey",
-          "meaning": "OMOP:32851"
+          "meaning": "OMOP:32851",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32851"
         },
         "HOSPITAL_COST": {
           "text": "HOSPITAL_COST",
           "description": "Hospital cost",
-          "meaning": "OMOP:32852"
+          "meaning": "OMOP:32852",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32852"
         },
         "INPATIENT_CLAIM": {
           "text": "INPATIENT_CLAIM",
           "description": "Inpatient claim",
-          "meaning": "OMOP:32853"
+          "meaning": "OMOP:32853",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32853"
         },
         "INPATIENT_CLAIM_DETAIL": {
           "text": "INPATIENT_CLAIM_DETAIL",
           "description": "Inpatient claim detail",
-          "meaning": "OMOP:32854"
+          "meaning": "OMOP:32854",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32854"
         },
         "INPATIENT_CLAIM_HEADER": {
           "text": "INPATIENT_CLAIM_HEADER",
           "description": "Inpatient claim header",
-          "meaning": "OMOP:32855"
+          "meaning": "OMOP:32855",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32855"
         },
         "LAB": {
           "text": "LAB",
           "description": "Lab",
-          "meaning": "OMOP:32856"
+          "meaning": "OMOP:32856",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32856"
         },
         "MAIL_ORDER_RECORD": {
           "text": "MAIL_ORDER_RECORD",
           "description": "Mail order record",
-          "meaning": "OMOP:32857"
+          "meaning": "OMOP:32857",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32857"
         },
         "NLP": {
           "text": "NLP",
           "description": "NLP",
-          "meaning": "OMOP:32858"
+          "meaning": "OMOP:32858",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32858"
         },
         "OUTPATIENT_CLAIM": {
           "text": "OUTPATIENT_CLAIM",
           "description": "Outpatient claim",
-          "meaning": "OMOP:32859"
+          "meaning": "OMOP:32859",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32859"
         },
         "OUTPATIENT_CLAIM_DETAIL": {
           "text": "OUTPATIENT_CLAIM_DETAIL",
           "description": "Outpatient claim detail",
-          "meaning": "OMOP:32860"
+          "meaning": "OMOP:32860",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32860"
         },
         "OUTPATIENT_CLAIM_HEADER": {
           "text": "OUTPATIENT_CLAIM_HEADER",
           "description": "Outpatient claim header",
-          "meaning": "OMOP:32861"
+          "meaning": "OMOP:32861",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32861"
         },
         "PATIENT_FILLED_SURVEY": {
           "text": "PATIENT_FILLED_SURVEY",
           "description": "Patient filled survey",
-          "meaning": "OMOP:32862"
+          "meaning": "OMOP:32862",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32862"
         },
         "PATIENT_OR_PAYER_PAID_RECORD": {
           "text": "PATIENT_OR_PAYER_PAID_RECORD",
           "description": "Patient or payer paid record",
-          "meaning": "OMOP:32863"
+          "meaning": "OMOP:32863",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32863"
         },
         "PATIENT_REPORTED_COST": {
           "text": "PATIENT_REPORTED_COST",
           "description": "Patient reported cost",
-          "meaning": "OMOP:32864"
+          "meaning": "OMOP:32864",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32864"
         },
         "PATIENT_SELF-REPORT": {
           "text": "PATIENT_SELF-REPORT",
           "description": "Patient self-report",
-          "meaning": "OMOP:32865"
+          "meaning": "OMOP:32865",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32865"
         },
         "PATIENT_SELF-TESTED": {
           "text": "PATIENT_SELF-TESTED",
           "description": "Patient self-tested",
-          "meaning": "OMOP:705183"
+          "meaning": "OMOP:705183",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/705183"
         },
         "PAYER_SYSTEM_RECORD_(PAID_PREMIUM)": {
           "text": "PAYER_SYSTEM_RECORD_(PAID_PREMIUM)",
           "description": "Payer system record (paid premium)",
-          "meaning": "OMOP:32866"
+          "meaning": "OMOP:32866",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32866"
         },
         "PAYER_SYSTEM_RECORD_(PRIMARY_PAYER)": {
           "text": "PAYER_SYSTEM_RECORD_(PRIMARY_PAYER)",
           "description": "Payer system record (primary payer)",
-          "meaning": "OMOP:32867"
+          "meaning": "OMOP:32867",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32867"
         },
         "PAYER_SYSTEM_RECORD_(SECONDARY_PAYER)": {
           "text": "PAYER_SYSTEM_RECORD_(SECONDARY_PAYER)",
           "description": "Payer system record (secondary payer)",
-          "meaning": "OMOP:32868"
+          "meaning": "OMOP:32868",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32868"
         },
         "PHARMACY_CLAIM": {
           "text": "PHARMACY_CLAIM",
           "description": "Pharmacy claim",
-          "meaning": "OMOP:32869"
+          "meaning": "OMOP:32869",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32869"
         },
         "POINT_OF_CARE/EXPRESS_LAB": {
           "text": "POINT_OF_CARE/EXPRESS_LAB",
           "description": "Point of care/express lab",
-          "meaning": "OMOP:703249"
+          "meaning": "OMOP:703249",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/703249"
         },
         "PRE-QUALIFICATION_TIME_PERIOD": {
           "text": "PRE-QUALIFICATION_TIME_PERIOD",
           "description": "Pre-qualification time period",
-          "meaning": "OMOP:32870"
+          "meaning": "OMOP:32870",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32870"
         },
         "PROFESSIONAL_CLAIM": {
           "text": "PROFESSIONAL_CLAIM",
           "description": "Professional claim",
-          "meaning": "OMOP:32871"
+          "meaning": "OMOP:32871",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32871"
         },
         "PROFESSIONAL_CLAIM_DETAIL": {
           "text": "PROFESSIONAL_CLAIM_DETAIL",
           "description": "Professional claim detail",
-          "meaning": "OMOP:32872"
+          "meaning": "OMOP:32872",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32872"
         },
         "PROFESSIONAL_CLAIM_HEADER": {
           "text": "PROFESSIONAL_CLAIM_HEADER",
           "description": "Professional claim header",
-          "meaning": "OMOP:32873"
+          "meaning": "OMOP:32873",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32873"
         },
         "PROVIDER_CHARGE_LIST_PRICE": {
           "text": "PROVIDER_CHARGE_LIST_PRICE",
           "description": "Provider charge list price",
-          "meaning": "OMOP:32874"
+          "meaning": "OMOP:32874",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32874"
         },
         "PROVIDER_FINANCIAL_SYSTEM": {
           "text": "PROVIDER_FINANCIAL_SYSTEM",
           "description": "Provider financial system",
-          "meaning": "OMOP:32875"
+          "meaning": "OMOP:32875",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32875"
         },
         "PROVIDER_INCURRED_COST_RECORD": {
           "text": "PROVIDER_INCURRED_COST_RECORD",
           "description": "Provider incurred cost record",
-          "meaning": "OMOP:32876"
+          "meaning": "OMOP:32876",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32876"
         },
         "RANDOMIZATION_RECORD": {
           "text": "RANDOMIZATION_RECORD",
           "description": "Randomization record",
-          "meaning": "OMOP:32877"
+          "meaning": "OMOP:32877",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32877"
         },
         "REFERENCE_LAB": {
           "text": "REFERENCE_LAB",
           "description": "Reference lab",
-          "meaning": "OMOP:32878"
+          "meaning": "OMOP:32878",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32878"
         },
         "REGISTRY": {
           "text": "REGISTRY",
           "description": "Registry",
-          "meaning": "OMOP:32879"
+          "meaning": "OMOP:32879",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32879"
         },
         "STANDARD_ALGORITHM": {
           "text": "STANDARD_ALGORITHM",
           "description": "Standard algorithm",
-          "meaning": "OMOP:32880"
+          "meaning": "OMOP:32880",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32880"
         },
         "STANDARD_ALGORITHM_FROM_EHR": {
           "text": "STANDARD_ALGORITHM_FROM_EHR",
           "description": "Standard algorithm from EHR",
-          "meaning": "OMOP:32882"
+          "meaning": "OMOP:32882",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32882"
         },
         "STANDARD_ALGORITHM_FROM_CLAIMS": {
           "text": "STANDARD_ALGORITHM_FROM_CLAIMS",
           "description": "Standard algorithm from claims",
-          "meaning": "OMOP:32881"
+          "meaning": "OMOP:32881",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32881"
         },
         "SURVEY": {
           "text": "SURVEY",
           "description": "Survey",
-          "meaning": "OMOP:32883"
+          "meaning": "OMOP:32883",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32883"
         },
         "US_SOCIAL_SECURITY_DEATH_MASTER_FILE": {
           "text": "US_SOCIAL_SECURITY_DEATH_MASTER_FILE",
           "description": "US Social Security Death Master File",
-          "meaning": "OMOP:32885"
+          "meaning": "OMOP:32885",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32885"
         },
         "URGENT_LAB": {
           "text": "URGENT_LAB",
           "description": "Urgent lab",
-          "meaning": "OMOP:32884"
+          "meaning": "OMOP:32884",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32884"
         },
         "VISION_CLAIM": {
           "text": "VISION_CLAIM",
           "description": "Vision claim",
-          "meaning": "OMOP:32886"
+          "meaning": "OMOP:32886",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32886"
         }
       }
     },
@@ -3400,63 +3575,78 @@
       "permissible_values": {
         "EHR_BILLING_DIAGNOSIS": {
           "text": "EHR_BILLING_DIAGNOSIS",
-          "meaning": "OMOP:4822159"
+          "meaning": "OMOP:4822159",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4822159"
         },
         "EHR_CHIEF_COMPLAINT": {
           "text": "EHR_CHIEF_COMPLAINT",
-          "meaning": "OMOP:4822124"
+          "meaning": "OMOP:4822124",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4822124"
         },
         "EHR_ENCOUNTER_DIAGNOSIS": {
           "text": "EHR_ENCOUNTER_DIAGNOSIS",
-          "meaning": "OMOP:4822160"
+          "meaning": "OMOP:4822160",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4822160"
         },
         "EHR_EPISODE_ENTRY": {
           "text": "EHR_EPISODE_ENTRY",
-          "meaning": "OMOP:4822135"
+          "meaning": "OMOP:4822135",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4822135"
         },
         "EHR_PROBLEM_LIST_ENTRY": {
           "text": "EHR_PROBLEM_LIST_ENTRY",
-          "meaning": "OMOP:4822121"
+          "meaning": "OMOP:4822121",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4822121"
         },
         "FIRST_POSITION_CONDITION": {
           "text": "FIRST_POSITION_CONDITION",
-          "meaning": "OMOP:4822128"
+          "meaning": "OMOP:4822128",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4822128"
         },
         "NLP_DERIVED": {
           "text": "NLP_DERIVED",
-          "meaning": "OMOP:4822058"
+          "meaning": "OMOP:4822058",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4822058"
         },
         "OBSERVATION_RECORDED_FROM_EHR": {
           "text": "OBSERVATION_RECORDED_FROM_EHR",
-          "meaning": "OMOP:4822126"
+          "meaning": "OMOP:4822126",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4822126"
         },
         "PATIENT_SELF-REPORTED_CONDITION": {
           "text": "PATIENT_SELF-REPORTED_CONDITION",
-          "meaning": "OMOP:4822157"
+          "meaning": "OMOP:4822157",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4822157"
         },
         "PRIMARY_CONDITION": {
           "text": "PRIMARY_CONDITION",
-          "meaning": "OMOP:4822127"
+          "meaning": "OMOP:4822127",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4822127"
         },
         "REFERRAL_RECORD": {
           "text": "REFERRAL_RECORD",
-          "meaning": "OMOP:4822125"
+          "meaning": "OMOP:4822125",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4822125"
         },
         "SECONDARY_CONDITION": {
           "text": "SECONDARY_CONDITION",
-          "meaning": "OMOP:4822129"
+          "meaning": "OMOP:4822129",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4822129"
         },
         "TUMOR_REGISTRY": {
           "text": "TUMOR_REGISTRY",
-          "meaning": "OMOP:4822266"
+          "meaning": "OMOP:4822266",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4822266"
         },
         "WORKING_DIAGNOSIS": {
           "text": "WORKING_DIAGNOSIS",
-          "meaning": "OMOP:4208085"
+          "meaning": "OMOP:4208085",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4208085"
         },
         "CLINICAL_DIAGNOSIS": {
           "text": "CLINICAL_DIAGNOSIS",
-          "meaning": "OMOP:4309119"
+          "meaning": "OMOP:4309119",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4309119"
         }
       }
     },
@@ -3502,82 +3692,98 @@
         "RANDOMIZED DRUG": {
           "text": "RANDOMIZED DRUG",
           "description": "Randomized Drug",
-          "meaning": "OMOP:44777970"
+          "meaning": "OMOP:44777970",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/44777970"
         },
         "PATIENT SELF-REPORTED MEDICATION": {
           "text": "PATIENT SELF-REPORTED MEDICATION",
           "description": "Patient Self-Reported Medication",
-          "meaning": "OMOP:44787730"
+          "meaning": "OMOP:44787730",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/44787730"
         },
         "NLP DERIVED": {
           "text": "NLP DERIVED",
           "description": "NLP derived",
-          "meaning": "OMOP:32426"
+          "meaning": "OMOP:32426",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32426"
         },
         "PRESCRIPTION DISPENSED IN PHARMACY": {
           "text": "PRESCRIPTION DISPENSED IN PHARMACY",
           "description": "Prescription dispensed in pharmacy",
-          "meaning": "OMOP:38000175"
+          "meaning": "OMOP:38000175",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/38000175"
         },
         "PHYSICIAN ADMINISTERED DRUG (IDENTIFIED FROM EHR ORDER)": {
           "text": "PHYSICIAN ADMINISTERED DRUG (IDENTIFIED FROM EHR ORDER)",
           "description": "Physician administered drug (identified from EHR order)",
-          "meaning": "OMOP:581373"
+          "meaning": "OMOP:581373",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/581373"
         },
         "DISPENSED IN OUTPATIENT OFFICE": {
           "text": "DISPENSED IN OUTPATIENT OFFICE",
           "description": "Dispensed in Outpatient office",
-          "meaning": "OMOP:581452"
+          "meaning": "OMOP:581452",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/581452"
         },
         "PRESCRIPTION DISPENSED THROUGH MAIL ORDER": {
           "text": "PRESCRIPTION DISPENSED THROUGH MAIL ORDER",
           "description": "Prescription dispensed through mail order",
-          "meaning": "OMOP:38000176"
+          "meaning": "OMOP:38000176",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/38000176"
         },
         "PRESCRIPTION WRITTEN": {
           "text": "PRESCRIPTION WRITTEN",
           "description": "Prescription written",
-          "meaning": "OMOP:38000177"
+          "meaning": "OMOP:38000177",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/38000177"
         },
         "MEDICATION LIST ENTRY": {
           "text": "MEDICATION LIST ENTRY",
           "description": "Medication list entry",
-          "meaning": "OMOP:38000178"
+          "meaning": "OMOP:38000178",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/38000178"
         },
         "PHYSICIAN ADMINISTERED DRUG (IDENTIFIED AS PROCEDURE)": {
           "text": "PHYSICIAN ADMINISTERED DRUG (IDENTIFIED AS PROCEDURE)",
           "description": "Physician administered drug (identified as procedure)",
-          "meaning": "OMOP:38000179"
+          "meaning": "OMOP:38000179",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/38000179"
         },
         "INPATIENT ADMINISTRATION": {
           "text": "INPATIENT ADMINISTRATION",
           "description": "Inpatient administration",
-          "meaning": "OMOP:38000180"
+          "meaning": "OMOP:38000180",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/38000180"
         },
         "DRUG ERA - 0 DAYS PERSISTENCE WINDOW": {
           "text": "DRUG ERA - 0 DAYS PERSISTENCE WINDOW",
           "description": "Drug era - 0 days persistence window",
-          "meaning": "OMOP:38000181"
+          "meaning": "OMOP:38000181",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/38000181"
         },
         "DRUG ERA - 30 DAYS PERSISTENCE WINDOW": {
           "text": "DRUG ERA - 30 DAYS PERSISTENCE WINDOW",
           "description": "Drug era - 30 days persistence window",
-          "meaning": "OMOP:38000182"
+          "meaning": "OMOP:38000182",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/38000182"
         },
         "PHYSICIAN ADMINISTERED DRUG (IDENTIFIED FROM EHR PROBLEM LIST)": {
           "text": "PHYSICIAN ADMINISTERED DRUG (IDENTIFIED FROM EHR PROBLEM LIST)",
           "description": "Physician administered drug (identified from EHR problem list)",
-          "meaning": "OMOP:43542356"
+          "meaning": "OMOP:43542356",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/43542356"
         },
         "PHYSICIAN ADMINISTERED DRUG (IDENTIFIED FROM REFERRAL RECORD)": {
           "text": "PHYSICIAN ADMINISTERED DRUG (IDENTIFIED FROM REFERRAL RECORD)",
           "description": "Physician administered drug (identified from referral record)",
-          "meaning": "OMOP:43542357"
+          "meaning": "OMOP:43542357",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/43542357"
         },
         "PHYSICIAN ADMINISTERED DRUG (IDENTIFIED FROM EHR OBSERVATION)": {
           "text": "PHYSICIAN ADMINISTERED DRUG (IDENTIFIED FROM EHR OBSERVATION)",
           "description": "Physician administered drug (identified from EHR observation)",
-          "meaning": "OMOP:43542358"
+          "meaning": "OMOP:43542358",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/43542358"
         }
       }
     },
@@ -3589,827 +3795,992 @@
         "ARTERIOVENOUS FISTULA": {
           "text": "ARTERIOVENOUS FISTULA",
           "description": "Arteriovenous fistula",
-          "meaning": "OMOP:44783786"
+          "meaning": "OMOP:44783786",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/44783786"
         },
         "HAEMODIAFILTRATION": {
           "text": "HAEMODIAFILTRATION",
           "description": "Haemodiafiltration",
-          "meaning": "OMOP:44801748"
+          "meaning": "OMOP:44801748",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/44801748"
         },
         "SUBLESIONAL": {
           "text": "SUBLESIONAL",
           "description": "Sublesional",
-          "meaning": "OMOP:46270168"
+          "meaning": "OMOP:46270168",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/46270168"
         },
         "INTRANEURAL": {
           "text": "INTRANEURAL",
           "description": "Intraneural",
-          "meaning": "OMOP:46272911"
+          "meaning": "OMOP:46272911",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/46272911"
         },
         "INTRAMURAL": {
           "text": "INTRAMURAL",
           "description": "Intramural",
-          "meaning": "OMOP:46272926"
+          "meaning": "OMOP:46272926",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/46272926"
         },
         "INTRACATHETER INSTILLATION": {
           "text": "INTRACATHETER INSTILLATION",
           "description": "Intracatheter instillation",
-          "meaning": "OMOP:605428"
+          "meaning": "OMOP:605428",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/605428"
         },
         "SUBLABIAL": {
           "text": "SUBLABIAL",
           "description": "Sublabial",
-          "meaning": "OMOP:600817"
+          "meaning": "OMOP:600817",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/600817"
         },
         "INTRA-ARTICULAR": {
           "text": "INTRA-ARTICULAR",
           "description": "Intra-articular",
-          "meaning": "OMOP:4006860"
+          "meaning": "OMOP:4006860",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4006860"
         },
         "INTRADIALYTIC": {
           "text": "INTRADIALYTIC",
           "description": "Intradialytic",
-          "meaning": "OMOP:618805"
+          "meaning": "OMOP:618805",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/618805"
         },
         "ARTERIOVENOUS GRAFT": {
           "text": "ARTERIOVENOUS GRAFT",
           "description": "Arteriovenous graft",
-          "meaning": "OMOP:762840"
+          "meaning": "OMOP:762840",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/762840"
         },
         "OTIC": {
           "text": "OTIC",
           "description": "Otic",
-          "meaning": "OMOP:4023156"
+          "meaning": "OMOP:4023156",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4023156"
         },
         "ORAL": {
           "text": "ORAL",
           "description": "Oral",
-          "meaning": "OMOP:4132161"
+          "meaning": "OMOP:4132161",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4132161"
         },
         "VAGINAL": {
           "text": "VAGINAL",
           "description": "Vaginal",
-          "meaning": "OMOP:4057765"
+          "meaning": "OMOP:4057765",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4057765"
         },
         "ROUTE OF ADMINISTRATION VALUE": {
           "text": "ROUTE OF ADMINISTRATION VALUE",
           "description": "Route of administration value",
-          "meaning": "OMOP:4106215"
+          "meaning": "OMOP:4106215",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4106215"
         },
         "GASTROSTOMY": {
           "text": "GASTROSTOMY",
           "description": "Gastrostomy",
-          "meaning": "OMOP:4132254"
+          "meaning": "OMOP:4132254",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4132254"
         },
         "NASOGASTRIC": {
           "text": "NASOGASTRIC",
           "description": "Nasogastric",
-          "meaning": "OMOP:4132711"
+          "meaning": "OMOP:4132711",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4132711"
         },
         "JEJUNOSTOMY": {
           "text": "JEJUNOSTOMY",
           "description": "Jejunostomy",
-          "meaning": "OMOP:4133177"
+          "meaning": "OMOP:4133177",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4133177"
         },
         "SUBCUTANEOUS": {
           "text": "SUBCUTANEOUS",
           "description": "Subcutaneous",
-          "meaning": "OMOP:4142048"
+          "meaning": "OMOP:4142048",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4142048"
         },
         "GINGIVAL": {
           "text": "GINGIVAL",
           "description": "Gingival",
-          "meaning": "OMOP:4156704"
+          "meaning": "OMOP:4156704",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4156704"
         },
         "INTRACARDIAC": {
           "text": "INTRACARDIAC",
           "description": "Intracardiac",
-          "meaning": "OMOP:4156705"
+          "meaning": "OMOP:4156705",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4156705"
         },
         "INTRADERMAL": {
           "text": "INTRADERMAL",
           "description": "Intradermal",
-          "meaning": "OMOP:4156706"
+          "meaning": "OMOP:4156706",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4156706"
         },
         "INTRAPLEURAL": {
           "text": "INTRAPLEURAL",
           "description": "Intrapleural",
-          "meaning": "OMOP:4156707"
+          "meaning": "OMOP:4156707",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4156707"
         },
         "PERIARTICULAR": {
           "text": "PERIARTICULAR",
           "description": "Periarticular",
-          "meaning": "OMOP:4156708"
+          "meaning": "OMOP:4156708",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4156708"
         },
         "ENDOSINUSIAL": {
           "text": "ENDOSINUSIAL",
           "description": "Endosinusial",
-          "meaning": "OMOP:4157756"
+          "meaning": "OMOP:4157756",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4157756"
         },
         "INTRACAVERNOUS": {
           "text": "INTRACAVERNOUS",
           "description": "Intracavernous",
-          "meaning": "OMOP:4157757"
+          "meaning": "OMOP:4157757",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4157757"
         },
         "INTRALESIONAL": {
           "text": "INTRALESIONAL",
           "description": "Intralesional",
-          "meaning": "OMOP:4157758"
+          "meaning": "OMOP:4157758",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4157758"
         },
         "INTRALYMPHATIC": {
           "text": "INTRALYMPHATIC",
           "description": "Intralymphatic",
-          "meaning": "OMOP:4157759"
+          "meaning": "OMOP:4157759",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4157759"
         },
         "INTRAOCULAR": {
           "text": "INTRAOCULAR",
           "description": "Intraocular",
-          "meaning": "OMOP:4157760"
+          "meaning": "OMOP:4157760",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4157760"
         },
         "PERINEURAL": {
           "text": "PERINEURAL",
           "description": "Perineural",
-          "meaning": "OMOP:4157761"
+          "meaning": "OMOP:4157761",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4157761"
         },
         "INTRACRANIAL": {
           "text": "INTRACRANIAL",
           "description": "Intracranial",
-          "meaning": "OMOP:4171079"
+          "meaning": "OMOP:4171079",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4171079"
         },
         "DENTAL": {
           "text": "DENTAL",
           "description": "Dental",
-          "meaning": "OMOP:4163765"
+          "meaning": "OMOP:4163765",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4163765"
         },
         "INTRAAMNIOTIC": {
           "text": "INTRAAMNIOTIC",
           "description": "Intraamniotic",
-          "meaning": "OMOP:4163767"
+          "meaning": "OMOP:4163767",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4163767"
         },
         "INTRABURSAL": {
           "text": "INTRABURSAL",
           "description": "Intrabursal",
-          "meaning": "OMOP:4163768"
+          "meaning": "OMOP:4163768",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4163768"
         },
         "INTRADISCAL": {
           "text": "INTRADISCAL",
           "description": "Intradiscal",
-          "meaning": "OMOP:4163769"
+          "meaning": "OMOP:4163769",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4163769"
         },
         "SUBCONJUNCTIVAL": {
           "text": "SUBCONJUNCTIVAL",
           "description": "Subconjunctival",
-          "meaning": "OMOP:4163770"
+          "meaning": "OMOP:4163770",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4163770"
         },
         "MUCOUS FISTULA": {
           "text": "MUCOUS FISTULA",
           "description": "Mucous fistula",
-          "meaning": "OMOP:4171243"
+          "meaning": "OMOP:4171243",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4171243"
         },
         "INTRAPROSTATIC": {
           "text": "INTRAPROSTATIC",
           "description": "Intraprostatic",
-          "meaning": "OMOP:4171725"
+          "meaning": "OMOP:4171725",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4171725"
         },
         "INTRAVENOUS PERIPHERAL": {
           "text": "INTRAVENOUS PERIPHERAL",
           "description": "Intravenous peripheral",
-          "meaning": "OMOP:4171884"
+          "meaning": "OMOP:4171884",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4171884"
         },
         "PERIOSTEAL": {
           "text": "PERIOSTEAL",
           "description": "Periosteal",
-          "meaning": "OMOP:4171893"
+          "meaning": "OMOP:4171893",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4171893"
         },
         "ESOPHAGOSTOMY": {
           "text": "ESOPHAGOSTOMY",
           "description": "Esophagostomy",
-          "meaning": "OMOP:4172191"
+          "meaning": "OMOP:4172191",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4172191"
         },
         "NASODUODENAL": {
           "text": "NASODUODENAL",
           "description": "Nasoduodenal",
-          "meaning": "OMOP:4172316"
+          "meaning": "OMOP:4172316",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4172316"
         },
         "PERCUTANEOUS": {
           "text": "PERCUTANEOUS",
           "description": "Percutaneous",
-          "meaning": "OMOP:4177987"
+          "meaning": "OMOP:4177987",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4177987"
         },
         "SUBORBITAL": {
           "text": "SUBORBITAL",
           "description": "Suborbital",
-          "meaning": "OMOP:4166865"
+          "meaning": "OMOP:4166865",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4166865"
         },
         "INTRATHORACIC": {
           "text": "INTRATHORACIC",
           "description": "Intrathoracic",
-          "meaning": "OMOP:4167393"
+          "meaning": "OMOP:4167393",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4167393"
         },
         "ENTERAL": {
           "text": "ENTERAL",
           "description": "Enteral",
-          "meaning": "OMOP:4167540"
+          "meaning": "OMOP:4167540",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4167540"
         },
         "INTRAMYOMETRIAL": {
           "text": "INTRAMYOMETRIAL",
           "description": "Intramyometrial",
-          "meaning": "OMOP:4168038"
+          "meaning": "OMOP:4168038",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4168038"
         },
         "COLOSTOMY": {
           "text": "COLOSTOMY",
           "description": "Colostomy",
-          "meaning": "OMOP:4168047"
+          "meaning": "OMOP:4168047",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4168047"
         },
         "INTRATYMPANIC": {
           "text": "INTRATYMPANIC",
           "description": "Intratympanic",
-          "meaning": "OMOP:4168656"
+          "meaning": "OMOP:4168656",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4168656"
         },
         "GASTRO-INTESTINAL STOMA": {
           "text": "GASTRO-INTESTINAL STOMA",
           "description": "Gastro-intestinal stoma",
-          "meaning": "OMOP:4168665"
+          "meaning": "OMOP:4168665",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4168665"
         },
         "INTRAPULMONARY": {
           "text": "INTRAPULMONARY",
           "description": "Intrapulmonary",
-          "meaning": "OMOP:4169270"
+          "meaning": "OMOP:4169270",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4169270"
         },
         "INTRASINAL": {
           "text": "INTRASINAL",
           "description": "Intrasinal",
-          "meaning": "OMOP:4169440"
+          "meaning": "OMOP:4169440",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4169440"
         },
         "TUMOR CAVITY": {
           "text": "TUMOR CAVITY",
           "description": "Tumor cavity",
-          "meaning": "OMOP:4169472"
+          "meaning": "OMOP:4169472",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4169472"
         },
         "SUBMUCOSAL": {
           "text": "SUBMUCOSAL",
           "description": "Submucosal",
-          "meaning": "OMOP:4169634"
+          "meaning": "OMOP:4169634",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4169634"
         },
         "INTRADUCTAL": {
           "text": "INTRADUCTAL",
           "description": "Intraductal",
-          "meaning": "OMOP:4170083"
+          "meaning": "OMOP:4170083",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4170083"
         },
         "INTRAVENOUS CENTRAL": {
           "text": "INTRAVENOUS CENTRAL",
           "description": "Intravenous central",
-          "meaning": "OMOP:4170113"
+          "meaning": "OMOP:4170113",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4170113"
         },
         "PARAVERTEBRAL": {
           "text": "PARAVERTEBRAL",
           "description": "Paravertebral",
-          "meaning": "OMOP:4170267"
+          "meaning": "OMOP:4170267",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4170267"
         },
         "UROSTOMY": {
           "text": "UROSTOMY",
           "description": "Urostomy",
-          "meaning": "OMOP:4170435"
+          "meaning": "OMOP:4170435",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4170435"
         },
         "LARYNGEAL": {
           "text": "LARYNGEAL",
           "description": "Laryngeal",
-          "meaning": "OMOP:4170440"
+          "meaning": "OMOP:4170440",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4170440"
         },
         "SURGICAL CAVITY": {
           "text": "SURGICAL CAVITY",
           "description": "Surgical cavity",
-          "meaning": "OMOP:4170771"
+          "meaning": "OMOP:4170771",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4170771"
         },
         "INTRAVENOUS": {
           "text": "INTRAVENOUS",
           "description": "Intravenous",
-          "meaning": "OMOP:4171047"
+          "meaning": "OMOP:4171047",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4171047"
         },
         "INTRATESTICULAR": {
           "text": "INTRATESTICULAR",
           "description": "Intratesticular",
-          "meaning": "OMOP:4171067"
+          "meaning": "OMOP:4171067",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4171067"
         },
         "ENDOCERVICAL": {
           "text": "ENDOCERVICAL",
           "description": "Endocervical",
-          "meaning": "OMOP:4186831"
+          "meaning": "OMOP:4186831",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4186831"
         },
         "ENDOTRACHEOPULMONARY": {
           "text": "ENDOTRACHEOPULMONARY",
           "description": "Endotracheopulmonary",
-          "meaning": "OMOP:4186832"
+          "meaning": "OMOP:4186832",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4186832"
         },
         "EXTRA-AMNIOTIC": {
           "text": "EXTRA-AMNIOTIC",
           "description": "Extra-amniotic",
-          "meaning": "OMOP:4186833"
+          "meaning": "OMOP:4186833",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4186833"
         },
         "GASTROENTERAL": {
           "text": "GASTROENTERAL",
           "description": "Gastroenteral",
-          "meaning": "OMOP:4186834"
+          "meaning": "OMOP:4186834",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4186834"
         },
         "INTRACERVICAL": {
           "text": "INTRACERVICAL",
           "description": "Intracervical",
-          "meaning": "OMOP:4186835"
+          "meaning": "OMOP:4186835",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4186835"
         },
         "INTRACORONARY": {
           "text": "INTRACORONARY",
           "description": "Intracoronary",
-          "meaning": "OMOP:4186836"
+          "meaning": "OMOP:4186836",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4186836"
         },
         "INTRASTERNAL": {
           "text": "INTRASTERNAL",
           "description": "Intrasternal",
-          "meaning": "OMOP:4186837"
+          "meaning": "OMOP:4186837",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4186837"
         },
         "INTRAVESICAL": {
           "text": "INTRAVESICAL",
           "description": "Intravesical",
-          "meaning": "OMOP:4186838"
+          "meaning": "OMOP:4186838",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4186838"
         },
         "OROMUCOSAL": {
           "text": "OROMUCOSAL",
           "description": "Oromucosal",
-          "meaning": "OMOP:4186839"
+          "meaning": "OMOP:4186839",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4186839"
         },
         "CAUDAL": {
           "text": "CAUDAL",
           "description": "Caudal",
-          "meaning": "OMOP:4220455"
+          "meaning": "OMOP:4220455",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4220455"
         },
         "BUCCAL": {
           "text": "BUCCAL",
           "description": "Buccal",
-          "meaning": "OMOP:4181897"
+          "meaning": "OMOP:4181897",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4181897"
         },
         "OPHTHALMIC": {
           "text": "OPHTHALMIC",
           "description": "Ophthalmic",
-          "meaning": "OMOP:4184451"
+          "meaning": "OMOP:4184451",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4184451"
         },
         "BODY CAVITY": {
           "text": "BODY CAVITY",
           "description": "Body cavity",
-          "meaning": "OMOP:4222254"
+          "meaning": "OMOP:4222254",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4222254"
         },
         "INTRAOSSEOUS": {
           "text": "INTRAOSSEOUS",
           "description": "Intraosseous",
-          "meaning": "OMOP:4213522"
+          "meaning": "OMOP:4213522",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4213522"
         },
         "INTRAVENTRICULAR ROUTE - CARDIAC": {
           "text": "INTRAVENTRICULAR ROUTE - CARDIAC",
           "description": "Intraventricular route - cardiac",
-          "meaning": "OMOP:4222259"
+          "meaning": "OMOP:4222259",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4222259"
         },
         "INTRABILIARY": {
           "text": "INTRABILIARY",
           "description": "Intrabiliary",
-          "meaning": "OMOP:4223965"
+          "meaning": "OMOP:4223965",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4223965"
         },
         "INTRACEREBROVENTRICULAR": {
           "text": "INTRACEREBROVENTRICULAR",
           "description": "Intracerebroventricular",
-          "meaning": "OMOP:4224886"
+          "meaning": "OMOP:4224886",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4224886"
         },
         "INTRATHECAL": {
           "text": "INTRATHECAL",
           "description": "Intrathecal",
-          "meaning": "OMOP:4217202"
+          "meaning": "OMOP:4217202",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4217202"
         },
         "EPIDURAL": {
           "text": "EPIDURAL",
           "description": "Epidural",
-          "meaning": "OMOP:4225555"
+          "meaning": "OMOP:4225555",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4225555"
         },
         "INTRATRACHEAL": {
           "text": "INTRATRACHEAL",
           "description": "Intratracheal",
-          "meaning": "OMOP:4229543"
+          "meaning": "OMOP:4229543",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4229543"
         },
         "URETHRAL": {
           "text": "URETHRAL",
           "description": "Urethral",
-          "meaning": "OMOP:4233974"
+          "meaning": "OMOP:4233974",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4233974"
         },
         "TRANSMUCOSAL": {
           "text": "TRANSMUCOSAL",
           "description": "Transmucosal",
-          "meaning": "OMOP:4232601"
+          "meaning": "OMOP:4232601",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4232601"
         },
         "TRANSDERMAL": {
           "text": "TRANSDERMAL",
           "description": "Transdermal",
-          "meaning": "OMOP:4262099"
+          "meaning": "OMOP:4262099",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4262099"
         },
         "INTRA-ARTERIAL": {
           "text": "INTRA-ARTERIAL",
           "description": "Intra-arterial",
-          "meaning": "OMOP:4240824"
+          "meaning": "OMOP:4240824",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4240824"
         },
         "INTRAPERITONEAL": {
           "text": "INTRAPERITONEAL",
           "description": "Intraperitoneal",
-          "meaning": "OMOP:4243022"
+          "meaning": "OMOP:4243022",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4243022"
         },
         "INTRAMEDULLARY": {
           "text": "INTRAMEDULLARY",
           "description": "Intramedullary",
-          "meaning": "OMOP:4246511"
+          "meaning": "OMOP:4246511",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4246511"
         },
         "INTRAUTERINE": {
           "text": "INTRAUTERINE",
           "description": "Intrauterine",
-          "meaning": "OMOP:4269621"
+          "meaning": "OMOP:4269621",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4269621"
         },
         "NASAL": {
           "text": "NASAL",
           "description": "Nasal",
-          "meaning": "OMOP:4262914"
+          "meaning": "OMOP:4262914",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4262914"
         },
         "TOPICAL": {
           "text": "TOPICAL",
           "description": "Topical",
-          "meaning": "OMOP:4263689"
+          "meaning": "OMOP:4263689",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4263689"
         },
         "RECTAL": {
           "text": "RECTAL",
           "description": "Rectal",
-          "meaning": "OMOP:4290759"
+          "meaning": "OMOP:4290759",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4290759"
         },
         "SUBLINGUAL": {
           "text": "SUBLINGUAL",
           "description": "Sublingual",
-          "meaning": "OMOP:4292110"
+          "meaning": "OMOP:4292110",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4292110"
         },
         "INTRALUMINAL": {
           "text": "INTRALUMINAL",
           "description": "Intraluminal",
-          "meaning": "OMOP:4292410"
+          "meaning": "OMOP:4292410",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4292410"
         },
         "TRANSCERVICAL": {
           "text": "TRANSCERVICAL",
           "description": "Transcervical",
-          "meaning": "OMOP:4304730"
+          "meaning": "OMOP:4304730",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4304730"
         },
         "INTRAABDOMINAL": {
           "text": "INTRAABDOMINAL",
           "description": "Intraabdominal",
-          "meaning": "OMOP:4304882"
+          "meaning": "OMOP:4304882",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4304882"
         },
         "TRANSURETHRAL": {
           "text": "TRANSURETHRAL",
           "description": "Transurethral",
-          "meaning": "OMOP:4305382"
+          "meaning": "OMOP:4305382",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4305382"
         },
         "PERITENDINOUS": {
           "text": "PERITENDINOUS",
           "description": "Peritendinous",
-          "meaning": "OMOP:4305564"
+          "meaning": "OMOP:4305564",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4305564"
         },
         "ILEOSTOMY": {
           "text": "ILEOSTOMY",
           "description": "Ileostomy",
-          "meaning": "OMOP:4305679"
+          "meaning": "OMOP:4305679",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4305679"
         },
         "INTRACORNEAL": {
           "text": "INTRACORNEAL",
           "description": "Intracorneal",
-          "meaning": "OMOP:4305690"
+          "meaning": "OMOP:4305690",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4305690"
         },
         "NASOJEJUNAL": {
           "text": "NASOJEJUNAL",
           "description": "Nasojejunal",
-          "meaning": "OMOP:4305834"
+          "meaning": "OMOP:4305834",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4305834"
         },
         "INTRACISTERNAL": {
           "text": "INTRACISTERNAL",
           "description": "Intracisternal",
-          "meaning": "OMOP:4305993"
+          "meaning": "OMOP:4305993",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4305993"
         },
         "SUBGINGIVAL": {
           "text": "SUBGINGIVAL",
           "description": "Subgingival",
-          "meaning": "OMOP:4306649"
+          "meaning": "OMOP:4306649",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4306649"
         },
         "INTRAOVARIAN": {
           "text": "INTRAOVARIAN",
           "description": "Intraovarian",
-          "meaning": "OMOP:4306657"
+          "meaning": "OMOP:4306657",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4306657"
         },
         "INTERSTITIAL": {
           "text": "INTERSTITIAL",
           "description": "Interstitial",
-          "meaning": "OMOP:4327128"
+          "meaning": "OMOP:4327128",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4327128"
         },
         "INTRASYNOVIAL": {
           "text": "INTRASYNOVIAL",
           "description": "Intrasynovial",
-          "meaning": "OMOP:4302352"
+          "meaning": "OMOP:4302352",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4302352"
         },
         "INTRADUODENAL": {
           "text": "INTRADUODENAL",
           "description": "Intraduodenal",
-          "meaning": "OMOP:4302354"
+          "meaning": "OMOP:4302354",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4302354"
         },
         "SUBTENDINOUS": {
           "text": "SUBTENDINOUS",
           "description": "Subtendinous",
-          "meaning": "OMOP:4302493"
+          "meaning": "OMOP:4302493",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4302493"
         },
         "INTRAMUSCULAR": {
           "text": "INTRAMUSCULAR",
           "description": "Intramuscular",
-          "meaning": "OMOP:4302612"
+          "meaning": "OMOP:4302612",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4302612"
         },
         "INTRAVITREAL": {
           "text": "INTRAVITREAL",
           "description": "Intravitreal",
-          "meaning": "OMOP:4302785"
+          "meaning": "OMOP:4302785",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4302785"
         },
         "INTRASPINAL": {
           "text": "INTRASPINAL",
           "description": "Intraspinal",
-          "meaning": "OMOP:4302788"
+          "meaning": "OMOP:4302788",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4302788"
         },
         "INTRABRONCHIAL": {
           "text": "INTRABRONCHIAL",
           "description": "Intrabronchial",
-          "meaning": "OMOP:4303263"
+          "meaning": "OMOP:4303263",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4303263"
         },
         "OROPHARYNGEAL": {
           "text": "OROPHARYNGEAL",
           "description": "Oropharyngeal",
-          "meaning": "OMOP:4303277"
+          "meaning": "OMOP:4303277",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4303277"
         },
         "INTRACAMERAL": {
           "text": "INTRACAMERAL",
           "description": "Intracameral",
-          "meaning": "OMOP:4303409"
+          "meaning": "OMOP:4303409",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4303409"
         },
         "PARACERVICAL": {
           "text": "PARACERVICAL",
           "description": "Paracervical",
-          "meaning": "OMOP:4303515"
+          "meaning": "OMOP:4303515",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4303515"
         },
         "PERIURETHRAL": {
           "text": "PERIURETHRAL",
           "description": "Periurethral",
-          "meaning": "OMOP:4303646"
+          "meaning": "OMOP:4303646",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4303646"
         },
         "INTRACORONAL": {
           "text": "INTRACORONAL",
           "description": "Intracoronal",
-          "meaning": "OMOP:4303667"
+          "meaning": "OMOP:4303667",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4303667"
         },
         "RETROBULBAR": {
           "text": "RETROBULBAR",
           "description": "Retrobulbar",
-          "meaning": "OMOP:4303673"
+          "meaning": "OMOP:4303673",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4303673"
         },
         "INTRACARTILAGINOUS": {
           "text": "INTRACARTILAGINOUS",
           "description": "Intracartilaginous",
-          "meaning": "OMOP:4303676"
+          "meaning": "OMOP:4303676",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4303676"
         },
         "OROGASTRIC": {
           "text": "OROGASTRIC",
           "description": "Orogastric",
-          "meaning": "OMOP:4303795"
+          "meaning": "OMOP:4303795",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4303795"
         },
         "INTRATENDINOUS": {
           "text": "INTRATENDINOUS",
           "description": "Intratendinous",
-          "meaning": "OMOP:4303939"
+          "meaning": "OMOP:4303939",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4303939"
         },
         "PERIBULBAR": {
           "text": "PERIBULBAR",
           "description": "Peribulbar",
-          "meaning": "OMOP:4304274"
+          "meaning": "OMOP:4304274",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4304274"
         },
         "FISTULA": {
           "text": "FISTULA",
           "description": "Fistula",
-          "meaning": "OMOP:4304277"
+          "meaning": "OMOP:4304277",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4304277"
         },
         "SURGICAL DRAIN": {
           "text": "SURGICAL DRAIN",
           "description": "Surgical drain",
-          "meaning": "OMOP:4304412"
+          "meaning": "OMOP:4304412",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4304412"
         },
         "URETERAL": {
           "text": "URETERAL",
           "description": "Ureteral",
-          "meaning": "OMOP:4304571"
+          "meaning": "OMOP:4304571",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4304571"
         },
         "EPILESIONAL": {
           "text": "EPILESIONAL",
           "description": "Epilesional",
-          "meaning": "OMOP:35608078"
+          "meaning": "OMOP:35608078",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/35608078"
         },
         "EXTRACORPOREAL HEMODIALYSIS": {
           "text": "EXTRACORPOREAL HEMODIALYSIS",
           "description": "Extracorporeal hemodialysis",
-          "meaning": "OMOP:35624178"
+          "meaning": "OMOP:35624178",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/35624178"
         },
         "SUPRACHOROIDAL": {
           "text": "SUPRACHOROIDAL",
           "description": "Suprachoroidal",
-          "meaning": "OMOP:37174548"
+          "meaning": "OMOP:37174548",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/37174548"
         },
         "EXTRACORPOREAL": {
           "text": "EXTRACORPOREAL",
           "description": "Extracorporeal",
-          "meaning": "OMOP:37018288"
+          "meaning": "OMOP:37018288",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/37018288"
         },
         "INTRACORPORUS CAVERNOSUM": {
           "text": "INTRACORPORUS CAVERNOSUM",
           "description": "Intracorporus cavernosum",
-          "meaning": "OMOP:37174549"
+          "meaning": "OMOP:37174549",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/37174549"
         },
         "INTRAGLANDULAR": {
           "text": "INTRAGLANDULAR",
           "description": "Intraglandular",
-          "meaning": "OMOP:37207460"
+          "meaning": "OMOP:37207460",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/37207460"
         },
         "INTRACHOLANGIOPANCREATIC": {
           "text": "INTRACHOLANGIOPANCREATIC",
           "description": "Intracholangiopancreatic",
-          "meaning": "OMOP:37207461"
+          "meaning": "OMOP:37207461",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/37207461"
         },
         "INTRAPORTAL": {
           "text": "INTRAPORTAL",
           "description": "Intraportal",
-          "meaning": "OMOP:37207462"
+          "meaning": "OMOP:37207462",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/37207462"
         },
         "PERITUMORAL": {
           "text": "PERITUMORAL",
           "description": "Peritumoral",
-          "meaning": "OMOP:37207463"
+          "meaning": "OMOP:37207463",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/37207463"
         },
         "POSTERIOR JUXTASCLERAL": {
           "text": "POSTERIOR JUXTASCLERAL",
           "description": "Posterior juxtascleral",
-          "meaning": "OMOP:37207464"
+          "meaning": "OMOP:37207464",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/37207464"
         },
         "SUBRETINAL": {
           "text": "SUBRETINAL",
           "description": "Subretinal",
-          "meaning": "OMOP:37207465"
+          "meaning": "OMOP:37207465",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/37207465"
         },
         "INFILTRATION": {
           "text": "INFILTRATION",
           "description": "Infiltration",
-          "meaning": "OMOP:37397638"
+          "meaning": "OMOP:37397638",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/37397638"
         },
         "TRANSENDOCARDIAL": {
           "text": "TRANSENDOCARDIAL",
           "description": "Transendocardial",
-          "meaning": "OMOP:40487850"
+          "meaning": "OMOP:40487850",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40487850"
         },
         "TRANSPLACENTAL": {
           "text": "TRANSPLACENTAL",
           "description": "Transplacental",
-          "meaning": "OMOP:40487858"
+          "meaning": "OMOP:40487858",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40487858"
         },
         "INTRAEPIDERMAL": {
           "text": "INTRAEPIDERMAL",
           "description": "Intraepidermal",
-          "meaning": "OMOP:40487983"
+          "meaning": "OMOP:40487983",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40487983"
         },
         "INTRACEREBRAL": {
           "text": "INTRACEREBRAL",
           "description": "Intracerebral",
-          "meaning": "OMOP:40488317"
+          "meaning": "OMOP:40488317",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40488317"
         },
         "INTRAJEJUNAL": {
           "text": "INTRAJEJUNAL",
           "description": "Intrajejunal",
-          "meaning": "OMOP:40489989"
+          "meaning": "OMOP:40489989",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40489989"
         },
         "INTRACOLONIC": {
           "text": "INTRACOLONIC",
           "description": "Intracolonic",
-          "meaning": "OMOP:40489990"
+          "meaning": "OMOP:40489990",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40489990"
         },
         "CUTANEOUS": {
           "text": "CUTANEOUS",
           "description": "Cutaneous",
-          "meaning": "OMOP:40490507"
+          "meaning": "OMOP:40490507",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40490507"
         },
         "INTRAILEAL": {
           "text": "INTRAILEAL",
           "description": "Intraileal",
-          "meaning": "OMOP:40490837"
+          "meaning": "OMOP:40490837",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40490837"
         },
         "PERIODONTAL": {
           "text": "PERIODONTAL",
           "description": "Periodontal",
-          "meaning": "OMOP:40490866"
+          "meaning": "OMOP:40490866",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40490866"
         },
         "PERIDURAL": {
           "text": "PERIDURAL",
           "description": "Peridural",
-          "meaning": "OMOP:40490896"
+          "meaning": "OMOP:40490896",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40490896"
         },
         "LOWER RESPIRATORY TRACT": {
           "text": "LOWER RESPIRATORY TRACT",
           "description": "Lower respiratory tract",
-          "meaning": "OMOP:40490898"
+          "meaning": "OMOP:40490898",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40490898"
         },
         "INTRAMAMMARY": {
           "text": "INTRAMAMMARY",
           "description": "Intramammary",
-          "meaning": "OMOP:40491321"
+          "meaning": "OMOP:40491321",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40491321"
         },
         "INTRATUMOR": {
           "text": "INTRATUMOR",
           "description": "Intratumor",
-          "meaning": "OMOP:40491322"
+          "meaning": "OMOP:40491322",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40491322"
         },
         "TRANSTYMPANIC": {
           "text": "TRANSTYMPANIC",
           "description": "Transtympanic",
-          "meaning": "OMOP:40491830"
+          "meaning": "OMOP:40491830",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40491830"
         },
         "TRANSTRACHEAL": {
           "text": "TRANSTRACHEAL",
           "description": "Transtracheal",
-          "meaning": "OMOP:40491832"
+          "meaning": "OMOP:40491832",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40491832"
         },
         "INTRAESOPHAGEAL": {
           "text": "INTRAESOPHAGEAL",
           "description": "Intraesophageal",
-          "meaning": "OMOP:40492284"
+          "meaning": "OMOP:40492284",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40492284"
         },
         "INTRAGINGIVAL": {
           "text": "INTRAGINGIVAL",
           "description": "Intragingival",
-          "meaning": "OMOP:40492286"
+          "meaning": "OMOP:40492286",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40492286"
         },
         "INTRAVASCULAR": {
           "text": "INTRAVASCULAR",
           "description": "Intravascular",
-          "meaning": "OMOP:40492287"
+          "meaning": "OMOP:40492287",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40492287"
         },
         "INTRADURAL": {
           "text": "INTRADURAL",
           "description": "Intradural",
-          "meaning": "OMOP:40492288"
+          "meaning": "OMOP:40492288",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40492288"
         },
         "INTRAMENINGEAL": {
           "text": "INTRAMENINGEAL",
           "description": "Intrameningeal",
-          "meaning": "OMOP:40492300"
+          "meaning": "OMOP:40492300",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40492300"
         },
         "INTRAGASTRIC": {
           "text": "INTRAGASTRIC",
           "description": "Intragastric",
-          "meaning": "OMOP:40492301"
+          "meaning": "OMOP:40492301",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40492301"
         },
         "INTRAPERICARDIAL": {
           "text": "INTRAPERICARDIAL",
           "description": "Intrapericardial",
-          "meaning": "OMOP:40492305"
+          "meaning": "OMOP:40492305",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40492305"
         },
         "INTRALINGUAL": {
           "text": "INTRALINGUAL",
           "description": "Intralingual",
-          "meaning": "OMOP:40493227"
+          "meaning": "OMOP:40493227",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40493227"
         },
         "RESPIRATORY TRACT": {
           "text": "RESPIRATORY TRACT",
           "description": "Respiratory tract",
-          "meaning": "OMOP:40486069"
+          "meaning": "OMOP:40486069",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40486069"
         },
         "INTRAHEPATIC": {
           "text": "INTRAHEPATIC",
           "description": "Intrahepatic",
-          "meaning": "OMOP:40493258"
+          "meaning": "OMOP:40493258",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40493258"
         },
         "CONJUNCTIVAL": {
           "text": "CONJUNCTIVAL",
           "description": "Conjunctival",
-          "meaning": "OMOP:40486444"
+          "meaning": "OMOP:40486444",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40486444"
         },
         "INTRAEPICARDIAL": {
           "text": "INTRAEPICARDIAL",
           "description": "Intraepicardial",
-          "meaning": "OMOP:40487473"
+          "meaning": "OMOP:40487473",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40487473"
         },
         "DIGESTIVE TRACT": {
           "text": "DIGESTIVE TRACT",
           "description": "Digestive tract",
-          "meaning": "OMOP:40487501"
+          "meaning": "OMOP:40487501",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40487501"
         },
         "OCULAR": {
           "text": "OCULAR",
           "description": "Ocular",
-          "meaning": "OMOP:40549429"
+          "meaning": "OMOP:40549429",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40549429"
         }
       }
     },
@@ -4426,402 +4797,482 @@
         "CASE REPORT FORM": {
           "text": "CASE REPORT FORM",
           "description": "Case Report Form",
-          "meaning": "OMOP:32809"
+          "meaning": "OMOP:32809",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32809"
         },
         "CLAIM": {
           "text": "CLAIM",
           "description": "Claim",
-          "meaning": "OMOP:32810"
+          "meaning": "OMOP:32810",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32810"
         },
         "CLAIM AUTHORIZATION": {
           "text": "CLAIM AUTHORIZATION",
           "description": "Claim authorization",
-          "meaning": "OMOP:32811"
+          "meaning": "OMOP:32811",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32811"
         },
         "CLAIM DISCHARGE RECORD": {
           "text": "CLAIM DISCHARGE RECORD",
           "description": "Claim discharge record",
-          "meaning": "OMOP:32812"
+          "meaning": "OMOP:32812",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32812"
         },
         "CLAIM ENROLMENT RECORD": {
           "text": "CLAIM ENROLMENT RECORD",
           "description": "Claim enrolment record",
-          "meaning": "OMOP:32813"
+          "meaning": "OMOP:32813",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32813"
         },
         "COST RECORD": {
           "text": "COST RECORD",
           "description": "Cost record",
-          "meaning": "OMOP:32814"
+          "meaning": "OMOP:32814",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32814"
         },
         "DEATH CERTIFICATE": {
           "text": "DEATH CERTIFICATE",
           "description": "Death Certificate",
-          "meaning": "OMOP:32815"
+          "meaning": "OMOP:32815",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32815"
         },
         "DENTAL CLAIM": {
           "text": "DENTAL CLAIM",
           "description": "Dental claim",
-          "meaning": "OMOP:32816"
+          "meaning": "OMOP:32816",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32816"
         },
         "EHR": {
           "text": "EHR",
           "description": "EHR",
-          "meaning": "OMOP:32817"
+          "meaning": "OMOP:32817",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32817"
         },
         "EHR ADMINISTRATION RECORD": {
           "text": "EHR ADMINISTRATION RECORD",
           "description": "EHR administration record",
-          "meaning": "OMOP:32818"
+          "meaning": "OMOP:32818",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32818"
         },
         "EHR ADMISSION NOTE": {
           "text": "EHR ADMISSION NOTE",
           "description": "EHR admission note",
-          "meaning": "OMOP:32819"
+          "meaning": "OMOP:32819",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32819"
         },
         "EHR ANCILLARY REPORT": {
           "text": "EHR ANCILLARY REPORT",
           "description": "EHR ancillary report",
-          "meaning": "OMOP:32820"
+          "meaning": "OMOP:32820",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32820"
         },
         "EHR BILLING RECORD": {
           "text": "EHR BILLING RECORD",
           "description": "EHR billing record",
-          "meaning": "OMOP:32821"
+          "meaning": "OMOP:32821",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32821"
         },
         "EHR CHIEF COMPLAINT": {
           "text": "EHR CHIEF COMPLAINT",
           "description": "EHR chief complaint",
-          "meaning": "OMOP:32822"
+          "meaning": "OMOP:32822",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32822"
         },
         "EHR DISCHARGE RECORD": {
           "text": "EHR DISCHARGE RECORD",
           "description": "EHR discharge record",
-          "meaning": "OMOP:32823"
+          "meaning": "OMOP:32823",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32823"
         },
         "EHR DISCHARGE SUMMARY": {
           "text": "EHR DISCHARGE SUMMARY",
           "description": "EHR discharge summary",
-          "meaning": "OMOP:32824"
+          "meaning": "OMOP:32824",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32824"
         },
         "EHR DISPENSING RECORD": {
           "text": "EHR DISPENSING RECORD",
           "description": "EHR dispensing record",
-          "meaning": "OMOP:32825"
+          "meaning": "OMOP:32825",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32825"
         },
         "EHR EMERGENCY ROOM NOTE": {
           "text": "EHR EMERGENCY ROOM NOTE",
           "description": "EHR emergency room note",
-          "meaning": "OMOP:32826"
+          "meaning": "OMOP:32826",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32826"
         },
         "EHR ENCOUNTER RECORD": {
           "text": "EHR ENCOUNTER RECORD",
           "description": "EHR encounter record",
-          "meaning": "OMOP:32827"
+          "meaning": "OMOP:32827",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32827"
         },
         "EHR EPISODE RECORD": {
           "text": "EHR EPISODE RECORD",
           "description": "EHR episode record",
-          "meaning": "OMOP:32828"
+          "meaning": "OMOP:32828",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32828"
         },
         "EHR INPATIENT NOTE": {
           "text": "EHR INPATIENT NOTE",
           "description": "EHR inpatient note",
-          "meaning": "OMOP:32829"
+          "meaning": "OMOP:32829",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32829"
         },
         "EHR MEDICATION LIST": {
           "text": "EHR MEDICATION LIST",
           "description": "EHR medication list",
-          "meaning": "OMOP:32830"
+          "meaning": "OMOP:32830",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32830"
         },
         "EHR NOTE": {
           "text": "EHR NOTE",
           "description": "EHR note",
-          "meaning": "OMOP:32831"
+          "meaning": "OMOP:32831",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32831"
         },
         "EHR NURSING REPORT": {
           "text": "EHR NURSING REPORT",
           "description": "EHR nursing report",
-          "meaning": "OMOP:32832"
+          "meaning": "OMOP:32832",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32832"
         },
         "EHR ORDER": {
           "text": "EHR ORDER",
           "description": "EHR order",
-          "meaning": "OMOP:32833"
+          "meaning": "OMOP:32833",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32833"
         },
         "EHR OUTPATIENT NOTE": {
           "text": "EHR OUTPATIENT NOTE",
           "description": "EHR outpatient note",
-          "meaning": "OMOP:32834"
+          "meaning": "OMOP:32834",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32834"
         },
         "EHR PATHOLOGY REPORT": {
           "text": "EHR PATHOLOGY REPORT",
           "description": "EHR Pathology report",
-          "meaning": "OMOP:32835"
+          "meaning": "OMOP:32835",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32835"
         },
         "EHR PHYSICAL EXAMINATION": {
           "text": "EHR PHYSICAL EXAMINATION",
           "description": "EHR physical examination",
-          "meaning": "OMOP:32836"
+          "meaning": "OMOP:32836",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32836"
         },
         "EHR PLANNED DISPENSING RECORD": {
           "text": "EHR PLANNED DISPENSING RECORD",
           "description": "EHR planned dispensing record",
-          "meaning": "OMOP:32837"
+          "meaning": "OMOP:32837",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32837"
         },
         "EHR PERSCRIPTION": {
           "text": "EHR PERSCRIPTION",
           "description": "EHR prescription",
-          "meaning": "OMOP:32838"
+          "meaning": "OMOP:32838",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32838"
         },
         "EHR PERSCRIPTION ISSUE RECORD": {
           "text": "EHR PERSCRIPTION ISSUE RECORD",
           "description": "EHR prescription issue record",
-          "meaning": "OMOP:32839"
+          "meaning": "OMOP:32839",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32839"
         },
         "EHR PROBLEM LIST": {
           "text": "EHR PROBLEM LIST",
           "description": "EHR problem list",
-          "meaning": "OMOP:32840"
+          "meaning": "OMOP:32840",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32840"
         },
         "EHR RADIOLOGY REPORT": {
           "text": "EHR RADIOLOGY REPORT",
           "description": "EHR radiology report",
-          "meaning": "OMOP:32841"
+          "meaning": "OMOP:32841",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32841"
         },
         "EHR REFERRAL RECORD": {
           "text": "EHR REFERRAL RECORD",
           "description": "EHR referral record",
-          "meaning": "OMOP:32842"
+          "meaning": "OMOP:32842",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32842"
         },
         "EXTERNAL CDM INSTANCE": {
           "text": "EXTERNAL CDM INSTANCE",
           "description": "External CDM instance",
-          "meaning": "OMOP:32843"
+          "meaning": "OMOP:32843",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32843"
         },
         "FACILITY CLAIM": {
           "text": "FACILITY CLAIM",
           "description": "Facility claim",
-          "meaning": "OMOP:32844"
+          "meaning": "OMOP:32844",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32844"
         },
         "FACILITY CLAIM DETAIL": {
           "text": "FACILITY CLAIM DETAIL",
           "description": "Facility claim detail",
-          "meaning": "OMOP:32845"
+          "meaning": "OMOP:32845",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32845"
         },
         "FACILITY CLAIM HEADER": {
           "text": "FACILITY CLAIM HEADER",
           "description": "Facility claim header",
-          "meaning": "OMOP:32846"
+          "meaning": "OMOP:32846",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32846"
         },
         "GEOGRAPHIC ISOLATION RECORD": {
           "text": "GEOGRAPHIC ISOLATION RECORD",
           "description": "Geographic isolation record",
-          "meaning": "OMOP:32847"
+          "meaning": "OMOP:32847",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32847"
         },
         "GOVERNMENT REPORT": {
           "text": "GOVERNMENT REPORT",
           "description": "Government report",
-          "meaning": "OMOP:32848"
+          "meaning": "OMOP:32848",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32848"
         },
         "HEALTH INFORMATION EXCHANGE RECORD": {
           "text": "HEALTH INFORMATION EXCHANGE RECORD",
           "description": "Health Information Exchange record",
-          "meaning": "OMOP:32849"
+          "meaning": "OMOP:32849",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32849"
         },
         "HEALTH RISK ASSESSMENT": {
           "text": "HEALTH RISK ASSESSMENT",
           "description": "Health Risk Assessment",
-          "meaning": "OMOP:32850"
+          "meaning": "OMOP:32850",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32850"
         },
         "HEALTHCARE PROFESSIONAL FILLED SURVEY": {
           "text": "HEALTHCARE PROFESSIONAL FILLED SURVEY",
           "description": "Healthcare professional filled survey",
-          "meaning": "OMOP:32851"
+          "meaning": "OMOP:32851",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32851"
         },
         "HOSPITAL COST": {
           "text": "HOSPITAL COST",
           "description": "Hospital cost",
-          "meaning": "OMOP:32852"
+          "meaning": "OMOP:32852",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32852"
         },
         "INPATIENT CLAIM": {
           "text": "INPATIENT CLAIM",
           "description": "Inpatient claim",
-          "meaning": "OMOP:32853"
+          "meaning": "OMOP:32853",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32853"
         },
         "INPATIENT CLAIM DETAIL": {
           "text": "INPATIENT CLAIM DETAIL",
           "description": "Inpatient claim detail",
-          "meaning": "OMOP:32854"
+          "meaning": "OMOP:32854",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32854"
         },
         "INPATIENT CLAIM HEADER": {
           "text": "INPATIENT CLAIM HEADER",
           "description": "Inpatient claim header",
-          "meaning": "OMOP:32855"
+          "meaning": "OMOP:32855",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32855"
         },
         "LAB": {
           "text": "LAB",
           "description": "Lab",
-          "meaning": "OMOP:32856"
+          "meaning": "OMOP:32856",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32856"
         },
         "MAIL ORDER RECORD": {
           "text": "MAIL ORDER RECORD",
           "description": "Mail order record",
-          "meaning": "OMOP:32857"
+          "meaning": "OMOP:32857",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32857"
         },
         "NLP": {
           "text": "NLP",
           "description": "NLP",
-          "meaning": "OMOP:32858"
+          "meaning": "OMOP:32858",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32858"
         },
         "OUTPATIENT CLAIM": {
           "text": "OUTPATIENT CLAIM",
           "description": "Outpatient claim",
-          "meaning": "OMOP:32859"
+          "meaning": "OMOP:32859",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32859"
         },
         "OUTPATIENT CLAIM DETAIL": {
           "text": "OUTPATIENT CLAIM DETAIL",
           "description": "Outpatient claim detail",
-          "meaning": "OMOP:32860"
+          "meaning": "OMOP:32860",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32860"
         },
         "OUTPATIENT CLAIM HEADER": {
           "text": "OUTPATIENT CLAIM HEADER",
           "description": "Outpatient claim header",
-          "meaning": "OMOP:32861"
+          "meaning": "OMOP:32861",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32861"
         },
         "PATIENT FILLED SURVEY": {
           "text": "PATIENT FILLED SURVEY",
           "description": "Patient filled survey",
-          "meaning": "OMOP:32862"
+          "meaning": "OMOP:32862",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32862"
         },
         "PATIENT OR PAYER PAID RECORD": {
           "text": "PATIENT OR PAYER PAID RECORD",
           "description": "Patient or payer paid record",
-          "meaning": "OMOP:32863"
+          "meaning": "OMOP:32863",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32863"
         },
         "PATIENT REPORTED COST": {
           "text": "PATIENT REPORTED COST",
           "description": "Patient reported cost",
-          "meaning": "OMOP:32864"
+          "meaning": "OMOP:32864",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32864"
         },
         "PATIENT SELF-REPORT": {
           "text": "PATIENT SELF-REPORT",
           "description": "Patient self-report",
-          "meaning": "OMOP:32865"
+          "meaning": "OMOP:32865",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32865"
         },
         "PATIENT SELF-TESTED": {
           "text": "PATIENT SELF-TESTED",
           "description": "Patient self-tested",
-          "meaning": "OMOP:705183"
+          "meaning": "OMOP:705183",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/705183"
         },
         "PAYER SYSTEM RECORD (PAID PREMIUM)": {
           "text": "PAYER SYSTEM RECORD (PAID PREMIUM)",
           "description": "Payer system record (paid premium)",
-          "meaning": "OMOP:32866"
+          "meaning": "OMOP:32866",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32866"
         },
         "PAYER SYSTEM RECORD (PRIMARY PAYER)": {
           "text": "PAYER SYSTEM RECORD (PRIMARY PAYER)",
           "description": "Payer system record (primary payer)",
-          "meaning": "OMOP:32867"
+          "meaning": "OMOP:32867",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32867"
         },
         "PAYER SYSTEM RECORD (SECONDARY PAYER)": {
           "text": "PAYER SYSTEM RECORD (SECONDARY PAYER)",
           "description": "Payer system record (secondary payer)",
-          "meaning": "OMOP:32868"
+          "meaning": "OMOP:32868",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32868"
         },
         "PHARMACY CLAIM": {
           "text": "PHARMACY CLAIM",
           "description": "Pharmacy claim",
-          "meaning": "OMOP:32869"
+          "meaning": "OMOP:32869",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32869"
         },
         "POINT OF CARE/EXPRESS LAB": {
           "text": "POINT OF CARE/EXPRESS LAB",
           "description": "Point of care/express lab",
-          "meaning": "OMOP:703249"
+          "meaning": "OMOP:703249",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/703249"
         },
         "PRE-QUALIFICATION TIME PERIOD": {
           "text": "PRE-QUALIFICATION TIME PERIOD",
           "description": "Pre-qualification time period",
-          "meaning": "OMOP:32870"
+          "meaning": "OMOP:32870",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32870"
         },
         "PROFESSIONAL CLAIM": {
           "text": "PROFESSIONAL CLAIM",
           "description": "Professional claim",
-          "meaning": "OMOP:32871"
+          "meaning": "OMOP:32871",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32871"
         },
         "PROFESSIONAL CLAIM DETAIL": {
           "text": "PROFESSIONAL CLAIM DETAIL",
           "description": "Professional claim detail",
-          "meaning": "OMOP:32872"
+          "meaning": "OMOP:32872",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32872"
         },
         "PROFESSIONAL CLAIM HEADER": {
           "text": "PROFESSIONAL CLAIM HEADER",
           "description": "Professional claim header",
-          "meaning": "OMOP:32873"
+          "meaning": "OMOP:32873",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32873"
         },
         "PROVIDER CHARGE LIST PRICE": {
           "text": "PROVIDER CHARGE LIST PRICE",
           "description": "Provider charge list price",
-          "meaning": "OMOP:32874"
+          "meaning": "OMOP:32874",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32874"
         },
         "PROVIDER FINANCIAL SYSTEM": {
           "text": "PROVIDER FINANCIAL SYSTEM",
           "description": "Provider financial system",
-          "meaning": "OMOP:32875"
+          "meaning": "OMOP:32875",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32875"
         },
         "PROVIDER INCURRED COST RECORD": {
           "text": "PROVIDER INCURRED COST RECORD",
           "description": "Provider incurred cost record",
-          "meaning": "OMOP:32876"
+          "meaning": "OMOP:32876",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32876"
         },
         "RANDOMIZATION RECORD": {
           "text": "RANDOMIZATION RECORD",
           "description": "Randomization record",
-          "meaning": "OMOP:32877"
+          "meaning": "OMOP:32877",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32877"
         },
         "REFERENCE LAB": {
           "text": "REFERENCE LAB",
           "description": "Reference lab",
-          "meaning": "OMOP:32878"
+          "meaning": "OMOP:32878",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32878"
         },
         "REGISTRY": {
           "text": "REGISTRY",
           "description": "Registry",
-          "meaning": "OMOP:32879"
+          "meaning": "OMOP:32879",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32879"
         },
         "STANDARD ALGORITHM": {
           "text": "STANDARD ALGORITHM",
           "description": "Standard algorithm",
-          "meaning": "OMOP:32880"
+          "meaning": "OMOP:32880",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32880"
         },
         "STANDARD ALGORITHM FROM CLAIMS": {
           "text": "STANDARD ALGORITHM FROM CLAIMS",
           "description": "Standard algorithm from claims",
-          "meaning": "OMOP:32881"
+          "meaning": "OMOP:32881",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32881"
         },
         "STANDARD ALGORITHM FROM EHR": {
           "text": "STANDARD ALGORITHM FROM EHR",
           "description": "Standard algorithm from EHR",
-          "meaning": "OMOP:32882"
+          "meaning": "OMOP:32882",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32882"
         },
         "SURVEY": {
           "text": "SURVEY",
           "description": "Survey",
-          "meaning": "OMOP:32883"
+          "meaning": "OMOP:32883",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32883"
         },
         "URGENT LAB": {
           "text": "URGENT LAB",
           "description": "Urgent lab",
-          "meaning": "OMOP:32884"
+          "meaning": "OMOP:32884",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32884"
         },
         "US SOCIAL SECURITY DEATH MASTER FILE": {
           "text": "US SOCIAL SECURITY DEATH MASTER FILE",
           "description": "US Social Security Death Master File",
-          "meaning": "OMOP:32885"
+          "meaning": "OMOP:32885",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32885"
         },
         "VISION CLAIM": {
           "text": "VISION CLAIM",
           "description": "Vision claim",
-          "meaning": "OMOP:32886"
+          "meaning": "OMOP:32886",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32886"
         }
       }
     },
@@ -5560,15 +6011,18 @@
       "permissible_values": {
         "MILD": {
           "text": "MILD",
-          "meaning": "OMOP:4116992"
+          "meaning": "OMOP:4116992",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4116992"
         },
         "MODERATE": {
           "text": "MODERATE",
-          "meaning": "OMOP:3272197"
+          "meaning": "OMOP:3272197",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/3272197"
         },
         "SEVERE": {
           "text": "SEVERE",
-          "meaning": "OMOP:4087703"
+          "meaning": "OMOP:4087703",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4087703"
         }
       }
     },
@@ -5584,42 +6038,50 @@
         "NATURAL_PARENT": {
           "text": "NATURAL_PARENT",
           "description": "A relation to a natural parent (mother or father) when otherwise not specified.",
-          "meaning": "OMOP:4029630"
+          "meaning": "OMOP:4029630",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4029630"
         },
         "NATURAL_FATHER": {
           "text": "NATURAL_FATHER",
           "description": "A relation to a natural father.",
-          "meaning": "OMOP:4321888"
+          "meaning": "OMOP:4321888",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4321888"
         },
         "NATURAL_MOTHER": {
           "text": "NATURAL_MOTHER",
           "description": "A relation to a natural mother.",
-          "meaning": "OMOP:4277283"
+          "meaning": "OMOP:4277283",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4277283"
         },
         "NATURAL_SIBLING": {
           "text": "NATURAL_SIBLING",
           "description": "A relation to a natural sibling (sister or brother) when otherwise not specified.",
-          "meaning": "OMOP:4218412"
+          "meaning": "OMOP:4218412",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4218412"
         },
         "NATURAL_BROTHER": {
           "text": "NATURAL_BROTHER",
           "description": "A relation to a natural brother.",
-          "meaning": "OMOP:4263682"
+          "meaning": "OMOP:4263682",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4263682"
         },
         "NATURAL_SISTER": {
           "text": "NATURAL_SISTER",
           "description": "A relation to a natural sister.",
-          "meaning": "OMOP:4251326"
+          "meaning": "OMOP:4251326",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4251326"
         },
         "NATURAL_CHILD": {
           "text": "NATURAL_CHILD",
           "description": "A relation to a natural child.",
-          "meaning": "OMOP:4326600"
+          "meaning": "OMOP:4326600",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4326600"
         },
         "BLOOD_RELATIVE": {
           "text": "BLOOD_RELATIVE",
           "description": "A generic blood relation.",
-          "meaning": "OMOP:4053608"
+          "meaning": "OMOP:4053608",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4053608"
         }
       }
     },
@@ -5630,443 +6092,553 @@
       "permissible_values": {
         "ALBUMIN_IN_BLOOD": {
           "text": "ALBUMIN_IN_BLOOD",
-          "meaning": "OBA:2050068"
+          "meaning": "OBA:2050068",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2050068"
         },
         "ALT_SGPT": {
           "text": "ALT_SGPT",
-          "meaning": "OBA:2050062"
+          "meaning": "OBA:2050062",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2050062"
         },
         "BASOPHILS_COUNT": {
           "text": "BASOPHILS_COUNT",
-          "meaning": "OBA:VT0002607"
+          "meaning": "OBA:VT0002607",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_VT0002607"
         },
         "BILIRUBIN_UNCONJUGATED_INDIRECT": {
           "text": "BILIRUBIN_UNCONJUGATED_INDIRECT",
-          "meaning": "OBA:VT0001569"
+          "meaning": "OBA:VT0001569",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_VT0001569"
         },
         "BMI": {
           "text": "BMI",
-          "meaning": "OBA:2045455"
+          "meaning": "OBA:2045455",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2045455"
         },
         "BNP": {
           "text": "BNP",
-          "meaning": "OBA:2045303"
+          "meaning": "OBA:2045303",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2045303"
         },
         "BODY_WEIGHT": {
           "text": "BODY_WEIGHT",
-          "meaning": "OBA:VT0001259"
+          "meaning": "OBA:VT0001259",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_VT0001259"
         },
         "BUN": {
           "text": "BUN",
-          "meaning": "OBA:VT0005265"
+          "meaning": "OBA:VT0005265",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_VT0005265"
         },
         "CD40_IN_BLOOD": {
           "text": "CD40_IN_BLOOD",
-          "meaning": "OBA:2052305"
+          "meaning": "OBA:2052305",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2052305"
         },
         "CHLORIDE_IN_BLOOD": {
           "text": "CHLORIDE_IN_BLOOD",
-          "meaning": "OBA:VT0003018"
+          "meaning": "OBA:VT0003018",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_VT0003018"
         },
         "CREATININE_IN_BLOOD": {
           "text": "CREATININE_IN_BLOOD",
-          "meaning": "OBA:2050096"
+          "meaning": "OBA:2050096",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2050096"
         },
         "CREATININE_IN_URINE": {
           "text": "CREATININE_IN_URINE",
-          "meaning": "OBA:VT0010540"
+          "meaning": "OBA:VT0010540",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_VT0010540"
         },
         "CYSTATIN_C_IN_BLOOD": {
           "text": "CYSTATIN_C_IN_BLOOD",
-          "meaning": "OBA:2052375"
+          "meaning": "OBA:2052375",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2052375"
         },
         "E-SELECTIN_IN_BLOOD": {
           "text": "E-SELECTIN_IN_BLOOD",
-          "meaning": "OBA:2052778"
+          "meaning": "OBA:2052778",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2052778"
         },
         "EOSINOPHILS_COUNT": {
           "text": "EOSINOPHILS_COUNT",
-          "meaning": "OBA:VT0002602"
+          "meaning": "OBA:VT0002602",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_VT0002602"
         },
         "ERYTHROCYTE_SED_RATE": {
           "text": "ERYTHROCYTE_SED_RATE",
-          "meaning": "OBA:2045235"
+          "meaning": "OBA:2045235",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2045235"
         },
         "FACTOR_VII": {
           "text": "FACTOR_VII",
-          "meaning": "OBA:2041535"
+          "meaning": "OBA:2041535",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2041535"
         },
         "FERRITIN": {
           "text": "FERRITIN",
-          "meaning": "OBA:VT0010513"
+          "meaning": "OBA:VT0010513",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_VT0010513"
         },
         "FIBRINOGEN": {
           "text": "FIBRINOGEN",
-          "meaning": "OBA:0000061"
+          "meaning": "OBA:0000061",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_0000061"
         },
         "GFR": {
           "text": "GFR",
-          "meaning": "OBA:0003747"
+          "meaning": "OBA:0003747",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_0003747"
         },
         "GLUCOSE_IN_BLOOD": {
           "text": "GLUCOSE_IN_BLOOD",
-          "meaning": "OBA:VT0000188"
+          "meaning": "OBA:VT0000188",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_VT0000188"
         },
         "HDL": {
           "text": "HDL",
-          "meaning": "OBA:VT0000184"
+          "meaning": "OBA:VT0000184",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_VT0000184"
         },
         "HEART_RATE": {
           "text": "HEART_RATE",
-          "meaning": "OBA:1001087"
+          "meaning": "OBA:1001087",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_1001087"
         },
         "HEIGHT": {
           "text": "HEIGHT",
-          "meaning": "OBA:VT0001253"
+          "meaning": "OBA:VT0001253",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_VT0001253"
         },
         "HEMATOCRIT": {
           "text": "HEMATOCRIT",
-          "meaning": "OBA:2045381"
+          "meaning": "OBA:2045381",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2045381"
         },
         "HEMOGLOBIN": {
           "text": "HEMOGLOBIN",
-          "meaning": "OBA:2060175"
+          "meaning": "OBA:2060175",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2060175"
         },
         "HIP_CIRCUMFERENCE": {
           "text": "HIP_CIRCUMFERENCE",
-          "meaning": "OBA:1000032"
+          "meaning": "OBA:1000032",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_1000032"
         },
         "INSULIN_IN_BLOOD": {
           "text": "INSULIN_IN_BLOOD",
-          "meaning": "OBA:2060174"
+          "meaning": "OBA:2060174",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2060174"
         },
         "INTERLEUKIN_6_IN_BLOOD": {
           "text": "INTERLEUKIN_6_IN_BLOOD",
-          "meaning": "OBA:2052890"
+          "meaning": "OBA:2052890",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2052890"
         },
         "LACTATE_DEHYDROGENASE_LDH": {
           "text": "LACTATE_DEHYDROGENASE_LDH",
-          "meaning": "OBA:VT0010477"
+          "meaning": "OBA:VT0010477",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_VT0010477"
         },
         "LACTATE_IN_BLOOD": {
           "text": "LACTATE_IN_BLOOD",
-          "meaning": "OBA:VT0010616"
+          "meaning": "OBA:VT0010616",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_VT0010616"
         },
         "LDL": {
           "text": "LDL",
-          "meaning": "OBA:VT0000181"
+          "meaning": "OBA:VT0000181",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_VT0000181"
         },
         "LYMPHOCYTES_COUNT": {
           "text": "LYMPHOCYTES_COUNT",
-          "meaning": "OBA:VT0000217"
+          "meaning": "OBA:VT0000217",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_VT0000217"
         },
         "MCP1_IN_BLOOD": {
           "text": "MCP1_IN_BLOOD",
-          "meaning": "OBA:2052436"
+          "meaning": "OBA:2052436",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2052436"
         },
         "MEAN_ARTERIAL_PRESSURE": {
           "text": "MEAN_ARTERIAL_PRESSURE",
-          "meaning": "OBA:VT2000000"
+          "meaning": "OBA:VT2000000",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_VT2000000"
         },
         "MEAN_CORPUSCULAR_HEMOGLOBIN": {
           "text": "MEAN_CORPUSCULAR_HEMOGLOBIN",
-          "meaning": "OBA:2045301"
+          "meaning": "OBA:2045301",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2045301"
         },
         "MEAN_CORPUSCULAR_VOLUME": {
           "text": "MEAN_CORPUSCULAR_VOLUME",
-          "meaning": "OBA:0003460"
+          "meaning": "OBA:0003460",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_0003460"
         },
         "MEAN_PLATELET_VOLUME": {
           "text": "MEAN_PLATELET_VOLUME",
-          "meaning": "OBA:0003277"
+          "meaning": "OBA:0003277",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_0003277"
         },
         "MMP9_IN_BLOOD": {
           "text": "MMP9_IN_BLOOD",
-          "meaning": "OBA:2052397"
+          "meaning": "OBA:2052397",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2052397"
         },
         "MYELOPEROXIDASE_IN_BLOOD": {
           "text": "MYELOPEROXIDASE_IN_BLOOD",
-          "meaning": "OBA:2052389"
+          "meaning": "OBA:2052389",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2052389"
         },
         "NEUTROPHILS_COUNT": {
           "text": "NEUTROPHILS_COUNT",
-          "meaning": "OBA:VT0000222"
+          "meaning": "OBA:VT0000222",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_VT0000222"
         },
         "NT_PRO_BNP": {
           "text": "NT_PRO_BNP",
-          "meaning": "OBA:2045303"
+          "meaning": "OBA:2045303",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2045303"
         },
         "P-SELECTIN_IN_BLOOD": {
           "text": "P-SELECTIN_IN_BLOOD",
-          "meaning": "OBA:2052701"
+          "meaning": "OBA:2052701",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2052701"
         },
         "PH_OF_BLOOD": {
           "text": "PH_OF_BLOOD",
-          "meaning": "OBA:2045409"
+          "meaning": "OBA:2045409",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2045409"
         },
         "POTASSIUM_IN_BLOOD": {
           "text": "POTASSIUM_IN_BLOOD",
-          "meaning": "OBA:VT0002668"
+          "meaning": "OBA:VT0002668",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_VT0002668"
         },
         "QRS_INTERVAL": {
           "text": "QRS_INTERVAL",
-          "meaning": "OBA:1001086"
+          "meaning": "OBA:1001086",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_1001086"
         },
         "RED_BLOOD_CELL_COUNT": {
           "text": "RED_BLOOD_CELL_COUNT",
-          "meaning": "OBA:VT0001586"
+          "meaning": "OBA:VT0001586",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_VT0001586"
         },
         "SLEEP_HOURS": {
           "text": "SLEEP_HOURS",
-          "meaning": "OBA:2040171"
+          "meaning": "OBA:2040171",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2040171"
         },
         "SODIUM_IN_BLOOD": {
           "text": "SODIUM_IN_BLOOD",
-          "meaning": "OBA:VT0001776"
+          "meaning": "OBA:VT0001776",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_VT0001776"
         },
         "SPO2": {
           "text": "SPO2",
-          "meaning": "OBA:2045443"
+          "meaning": "OBA:2045443",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2045443"
         },
         "TEMPERATURE": {
           "text": "TEMPERATURE",
-          "meaning": "OBA:VT0005535"
+          "meaning": "OBA:VT0005535",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_VT0005535"
         },
         "TNFA_IN_BLOOD": {
           "text": "TNFA_IN_BLOOD",
-          "meaning": "OBA:2051979"
+          "meaning": "OBA:2051979",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2051979"
         },
         "TNFA-R1_IN_BLOOD": {
           "text": "TNFA-R1_IN_BLOOD",
-          "meaning": "OBA:2051975"
+          "meaning": "OBA:2051975",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2051975"
         },
         "TOTAL_CHOLESTEROL_IN_BLOOD": {
           "text": "TOTAL_CHOLESTEROL_IN_BLOOD",
-          "meaning": "OBA:VT0000180"
+          "meaning": "OBA:VT0000180",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_VT0000180"
         },
         "TRIGLYCERIDES_IN_BLOOD": {
           "text": "TRIGLYCERIDES_IN_BLOOD",
-          "meaning": "OBA:VT0002644"
+          "meaning": "OBA:VT0002644",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_VT0002644"
         },
         "VON_WILLEBRAND_FACTOR": {
           "text": "VON_WILLEBRAND_FACTOR",
-          "meaning": "OBA:2052741"
+          "meaning": "OBA:2052741",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2052741"
         },
         "WAIST_CIRCUMFERENCE": {
           "text": "WAIST_CIRCUMFERENCE",
-          "meaning": "OBA:1001085"
+          "meaning": "OBA:1001085",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_1001085"
         },
         "WHITE_BLOOD_CELL_COUNT": {
           "text": "WHITE_BLOOD_CELL_COUNT",
-          "meaning": "OBA:VT0000217"
+          "meaning": "OBA:VT0000217",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_VT0000217"
         },
         "ALBUMIN_IN_URINE": {
           "text": "ALBUMIN_IN_URINE",
-          "meaning": "OBA:VT0002871"
+          "meaning": "OBA:VT0002871",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_VT0002871"
         },
         "FACTOR_VIII": {
           "text": "FACTOR_VIII",
-          "meaning": "OBA:2041536"
+          "meaning": "OBA:2041536",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_2041536"
         },
         "MONOCYTES_COUNT": {
           "text": "MONOCYTES_COUNT",
-          "meaning": "OBA:VT0000223"
+          "meaning": "OBA:VT0000223",
+          "meaning_url": "http://purl.obolibrary.org/obo/OBA_VT0000223"
         },
         "ISOPROSTANE_8_EPI_PGF2A": {
           "text": "ISOPROSTANE_8_EPI_PGF2A",
-          "meaning": "OMOP:3011888"
+          "meaning": "OMOP:3011888",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/3011888"
         },
         "LPPLA2_ACT": {
           "text": "LPPLA2_ACT",
-          "meaning": "OMOP:36305170"
+          "meaning": "OMOP:36305170",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/36305170"
         },
         "APNEA_HYPOP_INDEX": {
           "text": "APNEA_HYPOP_INDEX",
-          "meaning": "OMOP:37396400"
+          "meaning": "OMOP:37396400",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/37396400"
         },
         "ALBUMIN_CREATININE": {
           "text": "ALBUMIN_CREATININE",
-          "meaning": "OMOP:4154347"
+          "meaning": "OMOP:4154347",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4154347"
         },
         "ALCOHOL_SERVINGS": {
           "text": "ALCOHOL_SERVINGS",
-          "meaning": "OMOP:35609491"
+          "meaning": "OMOP:35609491",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/35609491"
         },
         "AST_SGOT": {
           "text": "AST_SGOT",
-          "meaning": "OMOP:4263457"
+          "meaning": "OMOP:4263457",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4263457"
         },
         "BILIRUBIN_CON": {
           "text": "BILIRUBIN_CON",
-          "meaning": "OMOP:44805650"
+          "meaning": "OMOP:44805650",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/44805650"
         },
         "BILIRUBIN_TOT": {
           "text": "BILIRUBIN_TOT",
-          "meaning": "OMOP:4230543"
+          "meaning": "OMOP:4230543",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4230543"
         },
         "BUN_CREATININE": {
           "text": "BUN_CREATININE",
-          "meaning": "OMOP:4112223"
+          "meaning": "OMOP:4112223",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4112223"
         },
         "CRP": {
           "text": "CRP",
-          "meaning": "OMOP:4208414"
+          "meaning": "OMOP:4208414",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4208414"
         },
         "CAC_SCORE": {
           "text": "CAC_SCORE",
-          "meaning": "OMOP:42872742"
+          "meaning": "OMOP:42872742",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/42872742"
         },
         "CAROTID_IMT": {
           "text": "CAROTID_IMT",
-          "meaning": "OMOP:4138462"
+          "meaning": "OMOP:4138462",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4138462"
         },
         "SMOKING": {
           "text": "SMOKING",
-          "meaning": "OMOP:43054909"
+          "meaning": "OMOP:43054909",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/43054909"
         },
         "D_DIMER": {
           "text": "D_DIMER",
-          "meaning": "OMOP:37393605"
+          "meaning": "OMOP:37393605",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/37393605"
         },
         "BP_DIASTOLIC": {
           "text": "BP_DIASTOLIC",
-          "meaning": "OMOP:4154790"
+          "meaning": "OMOP:4154790",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4154790"
         },
         "EGFR": {
           "text": "EGFR",
-          "meaning": "OMOP:37208635"
+          "meaning": "OMOP:37208635",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/37208635"
         },
         "FAST_GLUC_BLD": {
           "text": "FAST_GLUC_BLD",
-          "meaning": "OMOP:4156660"
+          "meaning": "OMOP:4156660",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4156660"
         },
         "FEV1": {
           "text": "FEV1",
-          "meaning": "OMOP:4241837"
+          "meaning": "OMOP:4241837",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4241837"
         },
         "FEV1_FVC": {
           "text": "FEV1_FVC",
-          "meaning": "OMOP:3011505"
+          "meaning": "OMOP:3011505",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/3011505"
         },
         "FRUIT_SERVING": {
           "text": "FRUIT_SERVING",
-          "meaning": "OMOP:21493059"
+          "meaning": "OMOP:21493059",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/21493059"
         },
         "FVC": {
           "text": "FVC",
-          "meaning": "OMOP:4176265"
+          "meaning": "OMOP:4176265",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4176265"
         },
         "HEMO_A1C": {
           "text": "HEMO_A1C",
-          "meaning": "OMOP:4184637"
+          "meaning": "OMOP:4184637",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4184637"
         },
         "ICAM": {
           "text": "ICAM",
-          "meaning": "OMOP:4284103"
+          "meaning": "OMOP:4284103",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4284103"
         },
         "IL1_BETA": {
           "text": "IL1_BETA",
-          "meaning": "OMOP:3001804"
+          "meaning": "OMOP:3001804",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/3001804"
         },
         "IL10": {
           "text": "IL10",
-          "meaning": "OMOP:3004578"
+          "meaning": "OMOP:3004578",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/3004578"
         },
         "IL18": {
           "text": "IL18",
-          "meaning": "OMOP:3043144"
+          "meaning": "OMOP:3043144",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/3043144"
         },
         "LYMPHO_PCT": {
           "text": "LYMPHO_PCT",
-          "meaning": "OMOP:37208690"
+          "meaning": "OMOP:37208690",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/37208690"
         },
         "LPPLA2_MASS": {
           "text": "LPPLA2_MASS",
-          "meaning": "OMOP:3041450"
+          "meaning": "OMOP:3041450",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/3041450"
         },
         "MCHC": {
           "text": "MCHC",
-          "meaning": "OMOP:37393850"
+          "meaning": "OMOP:37393850",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/37393850"
         },
         "NEUTRO_PCT": {
           "text": "NEUTRO_PCT",
-          "meaning": "OMOP:37208698"
+          "meaning": "OMOP:37208698",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/37208698"
         },
         "OPG": {
           "text": "OPG",
-          "meaning": "OMOP:1552124"
+          "meaning": "OMOP:1552124",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/1552124"
         },
         "PLATELET_CT": {
           "text": "PLATELET_CT",
-          "meaning": "OMOP:4267147"
+          "meaning": "OMOP:4267147",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4267147"
         },
         "PR_EKG": {
           "text": "PR_EKG",
-          "meaning": "OMOP:4274406"
+          "meaning": "OMOP:4274406",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4274406"
         },
         "PROCAL": {
           "text": "PROCAL",
-          "meaning": "OMOP:44791466"
+          "meaning": "OMOP:44791466",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/44791466"
         },
         "QT_EKG": {
           "text": "QT_EKG",
-          "meaning": "OMOP:4273023"
+          "meaning": "OMOP:4273023",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4273023"
         },
         "RDW": {
           "text": "RDW",
-          "meaning": "OMOP:37397924"
+          "meaning": "OMOP:37397924",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/37397924"
         },
         "RESP_RT": {
           "text": "RESP_RT",
-          "meaning": "OMOP:4313591"
+          "meaning": "OMOP:4313591",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4313591"
         },
         "SODIUM_INTAK": {
           "text": "SODIUM_INTAK",
-          "meaning": "OMOP:606729"
+          "meaning": "OMOP:606729",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/606729"
         },
         "TNFR2": {
           "text": "TNFR2",
-          "meaning": "OMOP:37543055"
+          "meaning": "OMOP:37543055",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/37543055"
         },
         "TROPONIN": {
           "text": "TROPONIN",
-          "meaning": "OMOP:4021291"
+          "meaning": "OMOP:4021291",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4021291"
         },
         "VEGE_SERVING": {
           "text": "VEGE_SERVING",
-          "meaning": "OMOP:4042886"
+          "meaning": "OMOP:4042886",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4042886"
         },
         "WAIST_HIP": {
           "text": "WAIST_HIP",
-          "meaning": "OMOP:4087501"
+          "meaning": "OMOP:4087501",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4087501"
         },
         "CESD_SCORE": {
           "text": "CESD_SCORE",
-          "meaning": "OMOP:36303297"
+          "meaning": "OMOP:36303297",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/36303297"
         },
         "FAST_LIPIDS": {
           "text": "FAST_LIPIDS",
-          "meaning": "OMOP:4150326"
+          "meaning": "OMOP:4150326",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4150326"
         },
         "MED_ADHER": {
           "text": "MED_ADHER",
-          "meaning": "OMOP:4056965"
+          "meaning": "OMOP:4056965",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4056965"
         },
         "MED_USE": {
           "text": "MED_USE",
-          "meaning": "OMOP:3021806"
+          "meaning": "OMOP:3021806",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/3021806"
         },
         "PACEM_STAT": {
           "text": "PACEM_STAT",
-          "meaning": "OMOP:45772840"
+          "meaning": "OMOP:45772840",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/45772840"
         },
         "SLP_AP_STAT": {
           "text": "SLP_AP_STAT",
-          "meaning": "OMOP:313459"
+          "meaning": "OMOP:313459",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/313459"
         },
         "BP_SYSTOLIC": {
           "text": "BP_SYSTOLIC",
-          "meaning": "OMOP:4152194"
+          "meaning": "OMOP:4152194",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4152194"
         }
       }
     },
@@ -6077,27 +6649,33 @@
       "permissible_values": {
         "8TH_GRADE_OR_LESS": {
           "text": "8TH_GRADE_OR_LESS",
-          "meaning": "OMOP:1990362"
+          "meaning": "OMOP:1990362",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/1990362"
         },
         "HIGH_SCHOOL_NO_DIPLOMA": {
           "text": "HIGH_SCHOOL_NO_DIPLOMA",
-          "meaning": "OMOP:1990281"
+          "meaning": "OMOP:1990281",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/1990281"
         },
         "HIGH_SCHOOL_GRADUATE_GED": {
           "text": "HIGH_SCHOOL_GRADUATE_GED",
-          "meaning": "OMOP:37079292"
+          "meaning": "OMOP:37079292",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/37079292"
         },
         "SOME_COLLEGE_OR_TECH_NO_DEGREE": {
           "text": "SOME_COLLEGE_OR_TECH_NO_DEGREE",
-          "meaning": "OMOP:45882538"
+          "meaning": "OMOP:45882538",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/45882538"
         },
         "COLLEGE_OR_TECH_WITH_DEGREE": {
           "text": "COLLEGE_OR_TECH_WITH_DEGREE",
-          "meaning": "OMOP:45884846"
+          "meaning": "OMOP:45884846",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/45884846"
         },
         "MASTERS_OR_DOCTORAL_DEGREE": {
           "text": "MASTERS_OR_DOCTORAL_DEGREE",
-          "meaning": "OMOP:45880652"
+          "meaning": "OMOP:45880652",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/45880652"
         }
       }
     },
@@ -6108,19 +6686,23 @@
       "permissible_values": {
         "CURRENT_SMOKER": {
           "text": "CURRENT_SMOKER",
-          "meaning": "OMOP:40766945"
+          "meaning": "OMOP:40766945",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40766945"
         },
         "FORMER_SOMKER": {
           "text": "FORMER_SOMKER",
-          "meaning": "OMOP:45883458"
+          "meaning": "OMOP:45883458",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/45883458"
         },
         "NEVER_SMOKED": {
           "text": "NEVER_SMOKED",
-          "meaning": "OMOP:45883537"
+          "meaning": "OMOP:45883537",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/45883537"
         },
         "UNKNOWN_IF_EVER_SMOKED": {
           "text": "UNKNOWN_IF_EVER_SMOKED",
-          "meaning": "OMOP:45885135"
+          "meaning": "OMOP:45885135",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/45885135"
         }
       }
     },
@@ -6140,134 +6722,195 @@
       "id": "string",
       "name": "string",
       "description": "A character string",
+      "base": "str",
       "uri": "xsd:string",
-      "base": "str"
+      "uri_url": "http://www.w3.org/2001/XMLSchema#string",
+      "exact_mappings": [
+        "schema:Text"
+      ],
+      "exact_mappings_urls": [
+        "http://schema.org/Text"
+      ]
     },
     "integer": {
       "id": "integer",
       "name": "integer",
       "description": "An integer",
+      "base": "int",
       "uri": "xsd:integer",
-      "base": "int"
+      "uri_url": "http://www.w3.org/2001/XMLSchema#integer",
+      "exact_mappings": [
+        "schema:Integer"
+      ],
+      "exact_mappings_urls": [
+        "http://schema.org/Integer"
+      ]
     },
     "boolean": {
       "id": "boolean",
       "name": "boolean",
       "description": "A binary (true or false) value",
+      "base": "Bool",
       "uri": "xsd:boolean",
-      "base": "Bool"
+      "uri_url": "http://www.w3.org/2001/XMLSchema#boolean",
+      "exact_mappings": [
+        "schema:Boolean"
+      ],
+      "exact_mappings_urls": [
+        "http://schema.org/Boolean"
+      ]
     },
     "float": {
       "id": "float",
       "name": "float",
       "description": "A real number that conforms to the xsd:float specification",
+      "base": "float",
       "uri": "xsd:float",
-      "base": "float"
+      "uri_url": "http://www.w3.org/2001/XMLSchema#float",
+      "exact_mappings": [
+        "schema:Float"
+      ],
+      "exact_mappings_urls": [
+        "http://schema.org/Float"
+      ]
     },
     "double": {
       "id": "double",
       "name": "double",
       "description": "A real number that conforms to the xsd:double specification",
+      "base": "float",
       "uri": "xsd:double",
-      "base": "float"
+      "uri_url": "http://www.w3.org/2001/XMLSchema#double"
     },
     "decimal": {
       "id": "decimal",
       "name": "decimal",
       "description": "A real number with arbitrary precision that conforms to the xsd:decimal specification",
+      "base": "Decimal",
       "uri": "xsd:decimal",
-      "base": "Decimal"
+      "uri_url": "http://www.w3.org/2001/XMLSchema#decimal"
     },
     "time": {
       "id": "time",
       "name": "time",
       "description": "A time object represents a (local) time of day, independent of any particular day",
+      "base": "XSDTime",
       "uri": "xsd:time",
-      "base": "XSDTime"
+      "uri_url": "http://www.w3.org/2001/XMLSchema#time",
+      "exact_mappings": [
+        "schema:Time"
+      ],
+      "exact_mappings_urls": [
+        "http://schema.org/Time"
+      ]
     },
     "date": {
       "id": "date",
       "name": "date",
       "description": "a date (year, month and day) in an idealized calendar",
+      "base": "XSDDate",
       "uri": "xsd:date",
-      "base": "XSDDate"
+      "uri_url": "http://www.w3.org/2001/XMLSchema#date",
+      "exact_mappings": [
+        "schema:Date"
+      ],
+      "exact_mappings_urls": [
+        "http://schema.org/Date"
+      ]
     },
     "datetime": {
       "id": "datetime",
       "name": "datetime",
       "description": "The combination of a date and time",
+      "base": "XSDDateTime",
       "uri": "xsd:dateTime",
-      "base": "XSDDateTime"
+      "uri_url": "http://www.w3.org/2001/XMLSchema#dateTime",
+      "exact_mappings": [
+        "schema:DateTime"
+      ],
+      "exact_mappings_urls": [
+        "http://schema.org/DateTime"
+      ]
     },
     "date_or_datetime": {
       "id": "date_or_datetime",
       "name": "date_or_datetime",
       "description": "Either a date or a datetime",
+      "base": "str",
       "uri": "linkml:DateOrDatetime",
-      "base": "str"
+      "uri_url": "https://w3id.org/linkml/DateOrDatetime"
     },
     "uriorcurie": {
       "id": "uriorcurie",
       "name": "uriorcurie",
       "description": "a URI or a CURIE",
+      "base": "URIorCURIE",
       "uri": "xsd:anyURI",
-      "base": "URIorCURIE"
+      "uri_url": "http://www.w3.org/2001/XMLSchema#anyURI"
     },
     "curie": {
       "id": "curie",
       "name": "curie",
       "description": "a compact URI",
+      "base": "Curie",
       "uri": "xsd:string",
-      "base": "Curie"
+      "uri_url": "http://www.w3.org/2001/XMLSchema#string"
     },
     "uri": {
       "id": "uri",
       "name": "uri",
       "description": "a complete URI",
+      "base": "URI",
       "uri": "xsd:anyURI",
-      "base": "URI"
+      "uri_url": "http://www.w3.org/2001/XMLSchema#anyURI"
     },
     "ncname": {
       "id": "ncname",
       "name": "ncname",
       "description": "Prefix part of CURIE",
+      "base": "NCName",
       "uri": "xsd:string",
-      "base": "NCName"
+      "uri_url": "http://www.w3.org/2001/XMLSchema#string"
     },
     "objectidentifier": {
       "id": "objectidentifier",
       "name": "objectidentifier",
       "description": "A URI or CURIE that represents an object in the model.",
+      "base": "ElementIdentifier",
       "uri": "shex:iri",
-      "base": "ElementIdentifier"
+      "uri_url": "http://www.w3.org/ns/shex#iri"
     },
     "nodeidentifier": {
       "id": "nodeidentifier",
       "name": "nodeidentifier",
       "description": "A URI, CURIE or BNODE that represents a node in a model.",
+      "base": "NodeIdentifier",
       "uri": "shex:nonLiteral",
-      "base": "NodeIdentifier"
+      "uri_url": "http://www.w3.org/ns/shex#nonLiteral"
     },
     "jsonpointer": {
       "id": "jsonpointer",
       "name": "jsonpointer",
       "description": "A string encoding a JSON Pointer. The value of the string MUST conform to JSON Point syntax and SHOULD dereference to a valid object within the current instance document when encoded in tree form.",
+      "base": "str",
       "uri": "xsd:string",
-      "base": "str"
+      "uri_url": "http://www.w3.org/2001/XMLSchema#string"
     },
     "jsonpath": {
       "id": "jsonpath",
       "name": "jsonpath",
       "description": "A string encoding a JSON Path. The value of the string MUST conform to JSON Point syntax and SHOULD dereference to zero or more valid objects within the current instance document when encoded in tree form.",
+      "base": "str",
       "uri": "xsd:string",
-      "base": "str"
+      "uri_url": "http://www.w3.org/2001/XMLSchema#string"
     },
     "sparqlpath": {
       "id": "sparqlpath",
       "name": "sparqlpath",
       "description": "A string encoding a SPARQL Property Path. The value of the string MUST conform to SPARQL syntax and SHOULD dereference to zero or more valid objects within the current instance document when encoded as RDF.",
+      "base": "str",
       "uri": "xsd:string",
-      "base": "str"
+      "uri_url": "http://www.w3.org/2001/XMLSchema#string"
     }
   }
 }
