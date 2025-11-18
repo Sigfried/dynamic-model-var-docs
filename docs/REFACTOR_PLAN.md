@@ -289,7 +289,11 @@ Before starting the refactor, complete UI/model separation from Phase 12:
 - ✅ Stage 4: LayoutManager Refactor (App.tsx simplified from ~550 to ~230 lines)
 
 **Next Up:**
-- Stage 5: Fix Model/View Separation (remove panel knowledge from Elements)
+- **Stage 4.5: Graph Architecture Review & Slot Panel Fixes** ⚠️ BLOCKING - Must do before Stage 5
+  - Verify graph structure (IDs only vs mixed Element instances)
+  - Fix slot panel to show all ~170 slots (not just 7)
+  - Verify class-range edges working correctly
+- Stage 5: Fix Model/View Separation (contracts layer + middle panel fixes)
 - Stage 6: Detail Box Updates (render slot edges)
 - Stage 7: Documentation Updates
 
@@ -445,9 +449,111 @@ Before starting the refactor, complete UI/model separation from Phase 12:
 
 **Commit**: `c4d629f` - Stage 4: LayoutManager refactor - consolidate layout logic
 
+### Stage 4.5: Graph Architecture Review & Slot Panel Fixes
+
+**Status**: ⏸️ **NEW STAGE** - Needs implementation before Stage 5
+
+**Goal**: Verify graph structure integrity and fix slot panel to show all slots
+
+**Context & Issues**:
+
+**Issue 1: Graph structure concerns** ([sg] screenshot from console)
+- Console shows `modelData.graph._edges` containing what appears to be Element instances mixed with edge data
+- Screenshot shows `MixedNodeData` objects with `type: 'class'`, `name: 'Person'` etc.
+- **Architecture decision was**: Graph stores IDs only (Option A), Element instances in collections
+- Need to verify: Are we violating this? Or is `MixedNodeData` just graphology's internal format?
+
+**Issue 2: Slot panel incomplete**
+- Currently shows only 7 slots (from `slots:` section of bdchm.yaml)
+- Should show all ~170 slots (includes global slots + class attribute slots)
+- DataLoader currently only loads from `expandedSchemaDTO.slots`
+- Need to collect ALL slot definitions (attributes from all classes)
+
+**Issue 3: Class-range edges verification**
+- Need to verify SlotEdge instances are working correctly
+- Ensure class→range connections are properly represented in graph
+- Test that LinkOverlay can query and render these edges
+
+**Investigation Steps**:
+
+1. **Review graph structure** (understand the screenshot)
+   - Check what graphology actually stores internally (documentation)
+   - Verify our code only adds IDs and minimal attributes to nodes/edges
+   - Understand if `MixedNodeData` is graphology internals or our mistake
+   - Document findings: Is current architecture correct or broken?
+
+2. **Audit slot loading**
+   - Count slots in `expandedSchemaDTO.slots` (should be 7)
+   - Find where class attribute slots are defined (~163 more)
+   - Determine how to collect all slot definitions
+   - Plan: Should we collect during dataLoader or during graph building?
+
+3. **Test class-range edges**
+   - Query graph for slot edges from a sample class
+   - Verify SlotEdge class wraps edges correctly
+   - Check that LinkOverlay can traverse and render edges
+   - Ensure adapter (getRelationships) works with graph data
+
+**Implementation Plan**:
+
+**Part 1: Graph architecture verification** (investigation only)
+- Read graphology documentation on internal structure
+- Inspect `Graph.ts` to confirm we're following Option A
+- Write small test to verify graph contains only IDs
+- Document findings in PROGRESS.md or commit message
+- **Decision**: Fix if broken, document if correct
+
+**Part 2: Fix slot panel**
+- Identify where all slot definitions exist in BDCHM schema
+  - Global slots: `expandedSchemaDTO.slots` (~7)
+  - Class attributes: `classDTO.attributes` for each class (~163)
+- Update dataLoader to collect ALL slot definitions:
+  ```typescript
+  // Pseudo-code
+  const slots = new Map<string, SlotData>();
+
+  // Add global slots
+  Object.entries(expandedSchemaDTO.slots || {}).forEach(...)
+
+  // Add class attribute slots
+  classes.forEach(classDTO => {
+    Object.entries(classDTO.attributes || {}).forEach(([attrName, attrDef]) => {
+      if (!slots.has(attrName)) {  // Don't duplicate
+        slots.set(attrName, transformAttributeToSlotData(attrDef));
+      }
+    });
+  });
+  ```
+- Verify SlotCollection shows all ~170 slots
+- Test that slot panel renders correctly
+
+**Part 3: Verify class-range edges**
+- Write test: Get edges for a known class (e.g., "Specimen")
+- Verify edge count matches expected (based on class attributes)
+- Test SlotEdge class methods work correctly
+- Verify graph queries return correct data
+- Test LinkOverlay can traverse edges
+
+**Success Criteria**:
+- ✅ Graph architecture verified (either fixed or confirmed correct)
+- ✅ Slot panel shows all ~170 slots (not just 7)
+- ✅ SlotEdge instances work correctly
+- ✅ Class-range edges queryable from graph
+- ✅ LinkOverlay can render edges (basic test)
+- ✅ TypeScript typecheck passes
+- ✅ All tests pass
+
+**Files to modify**:
+- `src/utils/dataLoader.ts` - Collect all slot definitions
+- `src/models/Graph.ts` - Verify/fix if needed
+- `src/test/` - Add tests for graph structure and slot loading
+- `docs/PROGRESS.md` - Document graph architecture findings
+
+**Estimated effort**: Medium (investigation + slot loading fix)
+
 ### Stage 5: Fix Model/View Separation
 
-**Status**: ⏸️ **REVISED PLAN** - Ready for second review
+**Status**: ⏸️ **REVISED PLAN** - Pending Stage 4.5 completion
 
 **Goal**: Ensure panel/section logic added during Stage 3a is properly handled in refactored code
 
