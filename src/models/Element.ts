@@ -19,52 +19,50 @@
  * We need to keep ElementPreRefactor.ts unchanged (it's the working implementation).
  * The UI currently depends on ClassElement.classSlots (ClassSlot[]) and getRelationships().
  *
- * PROPOSED APPROACH FOR REMAINING STEPS:
+ * KEY INSIGHT: We already defined the new RelationshipData interface!
+ * It's simpler and edge-based (see lines 147-151):
+ *   - OLD: { outgoing: { inheritance?, slots[], inheritedSlots[] }, incoming: {...} }
+ *   - NEW: { thisItem: ItemInfo, outgoing: EdgeInfo[], incoming: EdgeInfo[] }
  *
- * Option A: "Incremental Adapter Pattern" (RECOMMENDED)
- * --------------------------------------------------------
- * Keep ElementPreRefactor working, add graph queries alongside existing code:
+ * All relationship types (inheritance, slots, variables) become unified EdgeInfo objects.
  *
- * 1. Step 4: Add graph-based methods to ClassElement WITHOUT removing classSlots
- *    - Add getSlotEdges(): SlotEdge[] that queries the graph
- *    - Keep classSlots array for backward compatibility
- *    - Both exist side-by-side (redundant but safe)
+ * PROPOSED APPROACH (Incremental Migration):
+ * -------------------------------------------
  *
- * 2. Step 5: Add getRelationshipsFromGraph() method
- *    - Returns RelationshipData using graph queries
- *    - Keep existing getRelationships() unchanged
- *    - DataService can call either method
+ * Step 4: Implement getRelationshipsFromGraph() in Element base class
+ *   - Query graph for all edges (inheritance, slot, maps_to)
+ *   - Return NEW RelationshipData format (EdgeInfo[] arrays)
+ *   - Keep existing getRelationships() method unchanged
+ *   - Both methods coexist (old and new side-by-side)
  *
- * 3. Step 6: Update DataService to use new methods
- *    - Switch DataService to call getSlotEdges() and getRelationshipsFromGraph()
- *    - UI continues working (same interfaces)
- *    - Test thoroughly
+ * Step 5: Update DataService to support both formats
+ *   - Add getRelationshipsNew(itemId): RelationshipData (calls getRelationshipsFromGraph)
+ *   - Keep getRelationships(itemId) returning old format
+ *   - DataService exposes both, UI can migrate incrementally
  *
- * 4. Step 7: Clean up after migration
- *    - Remove classSlots array from ClassElement
- *    - Remove old getRelationships() method
- *    - Remove ClassSlot class
- *    - Simplify collections using graph queries
+ * Step 6: Migrate UI components to use new format
+ *   - Update RelationshipInfoBox to work with EdgeInfo[] arrays
+ *   - Update LinkOverlay to use new LinkPair format
+ *   - Test each component thoroughly before moving to next
+ *   - Old methods still available for rollback
+ *
+ * Step 7: Clean up after migration
+ *   - Remove old getRelationships() method from Elements
+ *   - Remove old RelationshipData type from DataService
+ *   - Remove ClassSlot class (no longer needed - graph has slot edges)
+ *   - Simplify collections using graph queries
  *
  * Benefits:
- * - Can test graph queries without breaking existing UI
- * - Incremental migration with rollback capability
- * - Clear separation between old and new implementations
+ * - Safe: Both old and new implementations coexist during migration
+ * - Testable: Can verify graph queries return correct data before UI changes
+ * - Rollback: Can revert to old implementation if issues found
+ * - Incremental: UI components migrate one at a time
  *
- * Option B: "Big Bang Refactor"
- * ------------------------------
- * Create entirely new Element classes in separate files:
- * - Create src/models/ElementGraphBased.ts with new implementations
- * - Update Element.ts to export from ElementGraphBased instead of ElementPreRefactor
- * - All changes at once, high risk of breaking things
- *
- * Drawbacks:
- * - High risk of breaking UI
- * - Harder to debug if something goes wrong
- * - No incremental testing
- *
- * DECISION NEEDED:
- * Which approach should we take? Option A is safer and more incremental.
+ * THE BIG PICTURE:
+ * - Graph replaces ClassSlot array (slots become edges in graph)
+ * - Graph replaces relationship computation (query edges instead of traversing objects)
+ * - New RelationshipData unifies all edge types (simpler UI code)
+ * - Element classes become thin wrappers around graph queries
  *
  * ============================================================================
  * REFACTOR CHECKLIST:
