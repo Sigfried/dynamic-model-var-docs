@@ -170,7 +170,28 @@ The app treats all element types (classes, enums, slots, variables) as **nodes**
 
 ## 3. Implementation Plan
 
-### Prerequisites
+### Overview
+
+**Completed Stages:**
+- ✅ Prerequisites: UI/model separation
+- ✅ Stage 1: Infrastructure Setup & Interface Definition
+- ✅ Stage 2: Import Types and Schema Validation
+- ✅ Stage 3: Graph Model with SlotEdges
+- ✅ Stage 3a: Panel Specialization (three-panel layout)
+- ✅ Stage 4: LayoutManager Refactor
+
+**Current Stage:**
+- **Stage 4.5: Slot Panel Fixes & Terminology** (Parts 1, 2a, 2b, 2c complete; Part 3 next)
+
+**Upcoming Stages:**
+- Stage 5: Fix Model/View Separation (contracts + middle panel improvements)
+- Stage 6: Detail Box Updates (render slot edges)
+- Stage 7: Documentation Updates
+
+---
+
+<details>
+<summary><b>Prerequisites</b> (✅ COMPLETE - click to expand)</summary>
 
 Before starting the refactor, complete UI/model separation from Phase 12:
 
@@ -187,551 +208,143 @@ Before starting the refactor, complete UI/model separation from Phase 12:
 
 **Result**: UI layer depends only on DataService contract. Model layer can now be refactored without touching UI.
 
-### Stage 1: Infrastructure Setup & Interface Definition
+</details>
+
+<details>
+<summary><b>Stage 1: Infrastructure Setup & Interface Definition</b> (✅ COMPLETE - click to expand)</summary>
 
 **Goal**: Set up infrastructure to replace model layer and define new edge-based interfaces without touching UI
 
-**Status**: ✅ **COMPLETE** - All 4 steps done (see PROGRESS.md Phase 16)
-
 **Steps**:
+1. ✅ Create Element.ts infrastructure (rename to ElementPreRefactor.ts)
+2. ✅ Define new edge-based interfaces (ItemInfo, EdgeInfo, LinkPair, RelationshipData)
+3. ✅ Add stub DataService methods (getAllPairs, getRelationshipsNew)
+4. ✅ Variable field rename (bdchmElement → maps_to)
 
-1. ✅ **Create Element.ts infrastructure**
-   - Rename `src/models/Element.ts` → `src/models/ElementPreRefactor.ts`
-   - Create new `src/models/Element.ts` with explicit re-exports as refactor roadmap
-   - Verify no UI changes needed, all tests pass
-
-2. ✅ **Define new edge-based interfaces** (based on [UI_REFACTOR.md](UI_REFACTOR.md))
-   - Add to `src/models/Element.ts`:
-     ```typescript
-     // New interfaces for Slots-as-Edges
-     export interface ItemInfo {
-       id: string;
-       displayName: string;
-       typeDisplayName: string;  // "Class", "Enum", "Slot", "Variable"
-       color: string;
-     }
-
-     export interface EdgeInfo {
-       edgeType: 'inheritance' | 'property' | 'variable_mapping';
-       otherItem: ItemInfo;
-       label?: string;
-       inheritedFrom?: string;  // Property edges only
-     }
-
-     export interface LinkPair {
-       sourceId: string;
-       targetId: string;
-       sourceColor: string;
-       targetColor: string;
-       label?: string;
-     }
-
-     export interface RelationshipData {
-       thisItem: ItemInfo;
-       outgoing: EdgeInfo[];
-       incoming: EdgeInfo[];
-     }
-     ```
-
-3. ✅ **Add stub DataService methods**
-   - Added to `src/services/DataService.ts`:
-     - `getAllPairs(): LinkPair[]` - Returns empty array (stub)
-     - `getRelationshipsNew(itemId): RelationshipData | null` - Returns null (stub)
-   - Kept old methods for backward compatibility (marked deprecated)
-
-4. ✅ **Variable field rename** (small cleanup bundled with Stage 1)
-   - Renamed `bdchmElement` → `maps_to` in VariableSpec DTO
-   - Updated dataLoader field mapping
-   - Updated all references in Element classes and tests
-
-**Results**:
-- ✅ TypeScript typecheck passes
-- ✅ All dataLoader tests pass (9/9)
-- ✅ Variable relationship tests pass
-- ✅ No UI changes required (backward compatible)
-- ✅ Infrastructure ready for Stage 2
-
-**Commits**:
-- `9c27b0b` - Stage 1 Step 2: Define edge-based interfaces for Slots-as-Edges
-- `ff9d2a5` - Stage 1 Step 3: Add stub DataService methods for edge-based model
-- `d2f4a0d` - Stage 1 Step 4: Rename variable field bdchmElement → maps_to
+**Results**: TypeScript typecheck passes, all tests pass, backward compatible
 
 **Detailed documentation**: See PROGRESS.md Phase 16
 
-### Stage 2: Import and Model Types
+</details>
+
+<details>
+<summary><b>Stage 2: Import Types and Range Abstraction</b> (✅ COMPLETE - click to expand)</summary>
 
 **Goal**: Add TypeElement and Range abstraction
 
 **Steps**:
-1. ✅ **Define DataService and model interfaces** (addresses graphology+OOP question above)
-   - Sketch what queries DataService needs to make
-   - Determine if we need property-based filtering in graph queries
-   - Decide: Graph stores IDs only (Option A), all properties (Option B), or hybrid (Option C)
-   - Document interface contracts before implementation
+1. ✅ Define DataService and model interfaces (Option A: Graph stores IDs only)
 2. ✅ Download linkml:types during data fetch
 3. ✅ Parse types in dataLoader.ts
 4. ✅ Create TypeElement class extending Range base class
 5. ✅ Create Range abstract base class/interface
 6. ✅ Make ClassElement, EnumElement extend Range
-7. ✅ Add TypeCollection (rethink collections approach with graphology)
+7. ✅ Add TypeCollection
 
-**Status**: ✅ **Stage 3 Complete!** All steps (1-5) finished, adapter working.
+**Key decisions**:
+- categorizeRange() treats types as 'primitive' (leaf nodes)
+- Types don't create relationship links
+- Deferred: Do we need collections at all with graph model?
 
----
+</details>
 
-## Stage Summary (Updated 2025-01-18)
-
-**Completed:**
-- ✅ Stage 1: Infrastructure Setup & Interface Definition
-- ✅ Stage 2: Import Types and Schema Validation
-- ✅ Stage 3: Graph Model with SlotEdges (with adapter for backward compatibility)
-- ✅ Stage 3a: Panel Specialization (three-panel layout basics)
-- ✅ Stage 4: LayoutManager Refactor (App.tsx simplified from ~550 to ~230 lines)
-
-**Next Up:**
-- **Stage 4.5: Slot Panel Fixes & Edge Verification** ⚠️ BLOCKING
-  - Fix slot panel to show all ~170 slots (not just 7)
-  - Verify class-range edges work correctly
-- Stage 5: Fix Model/View Separation (contracts layer + middle panel fixes)
-- Stage 6: Detail Box Updates (render slot edges)
-- Stage 7: Documentation Updates
-
----
-
-**Status**: ✅ **Stage 2 Complete!** All steps (1-7) finished.
-
-**Implementation Notes**:
-- categorizeRange() treats types as 'primitive' (leaf nodes like string/integer)
-- Types don't create relationship links (getRelationships returns empty array)
-- DataService automatically handles types through generic collection interface
-
-**Open question**: Do we need collections at all with graph model, or just for getLabel/getDefaultExpansion?
-- Answer deferred to Stage 3 - will evaluate during graphology integration
-
-**Files**:
-- `scripts/download_source_data.py` - Download linkml:types
-- `src/utils/dataLoader.ts` - Parse types, create SlotEdge instances instead of ClassSlot
-- `src/types.ts` - Add Type DTO, SlotEdge interface
-- `src/models/Element.ts` - Add Range abstract base class, TypeElement class
-- `src/models/ElementCollection.ts` - Add TypeCollection, simplify with graphology
-
-### Stage 3: Refactor to Graph Model with SlotEdges
+<details>
+<summary><b>Stage 3: Graph Model with SlotEdges</b> (✅ COMPLETE - click to expand)</summary>
 
 **Goal**: Replace current Element-based model with graph-based model using graphology
 
-**Status**: ✅ **Complete** - Graph infrastructure built, adapter layer working
-
-**Key insight**: A vast amount of what happens in current Element.ts can be handled by graphology queries
+**Key insight**: Graph queries can replace most Element.ts logic
 
 **Steps**:
 1. ✅ Install and configure graphology
-2. ✅ Define graph structure:
-   - Node types: Class, Enum, Slot, Type, Variable
-   - Edge types: SlotEdge, InheritanceEdge, MapsToEdge
-3. ✅ Create SlotEdge class/interface:
-   - Properties: name, slotRef, required, multivalued, inherited_from, overrides
-   - Connects Class → Range with context-specific properties
-4. ✅ Implement graph-based relationship querying:
-   - Added getRelationshipsFromGraph() method to Element base class
-   - Returns unified EdgeInfo[] arrays (new RelationshipData format)
-   - Uses graph.forEachOutboundEdge() and graph.forEachInboundEdge()
-5. ✅ Update DataService to support both old and new formats:
-   - getRelationships() now uses graph data with adapter to old format
-   - getRelationshipsNew() provides new format directly
-   - Adapter enables gradual UI migration
-6. ⏭️ **DEFERRED to Stage 4/5**: Migrate UI components to new RelationshipData format
-   - Will be done during LinkOverlay refactor (Stage 4 Step 6)
-   - And during RelationshipInfoBox updates (Stage 5 Step 2)
-   - Reason: Those components will be rewritten anyway, avoid duplicate work
-7. ⏭️ **DEFERRED to Stage 6+**: Remove/refactor ClassSlot class (after UI migration)
-8. ⏭️ **DEFERRED to Stage 6+**: Simplify collections (after UI migration)
+2. ✅ Define graph structure (nodes: Class/Enum/Slot/Type/Variable, edges: SlotEdge/InheritanceEdge/MapsToEdge)
+3. ✅ Create SlotEdge class/interface
+4. ✅ Implement graph-based relationship querying (getRelationshipsFromGraph)
+5. ✅ Update DataService with adapter for backward compatibility
+6. ⏭️ DEFERRED: Migrate UI components to new RelationshipData format (Stage 6)
+7. ⏭️ DEFERRED: Remove/refactor ClassSlot class (Stage 6+)
+8. ⏭️ DEFERRED: Simplify collections (Stage 6+)
 
-**Implementation Notes (Steps 1-5)**:
-- Steps 1-3: Created `src/models/Graph.ts` with complete graph infrastructure
-  - Architecture: Option A (Graph stores IDs only, Element instances in collections)
-  - Graph built in initializeModelData via buildGraphFromSchemaData()
-  - SlotEdge class wraps graph edges, provides OOP interface
-  - Graph added to ModelData interface
-- Steps 4-5: Implemented graph-based relationship querying
-  - Added getRelationshipsFromGraph() to Element base class (via prototype augmentation)
-  - New RelationshipData format: EdgeInfo[] arrays (unified, type-agnostic)
-  - DataService adapter converts new format to old format for existing UI
-  - Console error logging for missing element references in graph
-  - Adapter layer allows UI to continue using old format while graph data flows through
-- Steps 6-8: Deferred to later stages to avoid duplicate refactoring work
+**Key file**: `src/models/Graph.ts` - Complete graph infrastructure
 
-**Files**:
-- ✅ `src/models/Graph.ts` - NEW: Complete graph structure, SlotEdge class, helper functions
-- ✅ `src/types.ts` - Added graph field to ModelData
-- ✅ `src/models/ElementPreRefactor.ts` - Minimal integration (call buildGraphFromSchemaData)
-- `src/models/Element.ts` - SlotEdge class, refactor ClassElement, Range abstraction
-- `src/models/ElementCollection.ts` - Simplify with graphology queries
-- `src/services/DataService.ts` - Add type collection, update relationship APIs, add getSlotEdgesForClass()
+</details>
 
-### Stage 3a: Panel Specialization (Three-Panel Layout Basics)
-
-**Status**: ✅ **MOSTLY COMPLETE** - Basic three-panel layout implemented
+<details>
+<summary><b>Stage 3a: Panel Specialization (Three-Panel Layout)</b> (✅ MOSTLY COMPLETE - click to expand)</summary>
 
 **Goal**: Implement basic three-panel layout with specialized panel roles
 
 **Completed:**
-- ✅ Three-panel layout with specialized roles (Classes, Slots, Ranges)
+- ✅ Three-panel layout (Classes, Slots, Ranges)
 - ✅ URL state persistence with middle panel support
-- ✅ Panel-specific toggle buttons (none for left/middle, only C/E/T for right)
-- ✅ Smart LinkOverlay rendering (1 overlay when middle hidden, 2 when shown)
-- ✅ Panel titles ("Classes", "Slots", "Ranges:")
+- ✅ Panel-specific toggle buttons (only C/E/T for right panel)
+- ✅ Smart LinkOverlay rendering (1 or 2 overlays based on middle panel visibility)
 - ✅ Type system updated for 'middle' position
 
-**Known Issues:**
-- ⚠️ ElementPreRefactor.ts now has middle panel knowledge (violates separation of concerns)
-- ⚠️ App.tsx too complex, should be simplified
+**Known issues** (deferred to Stage 5):
+- ⚠️ ElementPreRefactor.ts has middle panel knowledge (violates separation)
 - ⚠️ Need middle panel show/hide toggle button
 
-**What's left:**
-- Add UI toggle button to show/hide middle panel
-- Fix architectural issues (defer to Stage 5)
-- Simplify App.tsx (defer to Stage 4: LayoutManager)
+</details>
 
-**Files modified**:
-- ✅ `src/utils/statePersistence.ts` - Middle panel URL state
-- ✅ `src/hooks/useLayoutState.ts` - Middle panel state management
-- ✅ `src/components/PanelLayout.tsx` - Three-panel layout support
-- ✅ `src/App.tsx` - Panel specialization, conditional LinkOverlays
-- ✅ `src/components/ItemsPanel.tsx` - Title prop, panel-specific toggles
-- ✅ `src/components/Section.tsx` - Middle position support
-- ⚠️ `src/models/ElementPreRefactor.ts` - Middle panel context (TO BE REVERTED in Stage 5)
-
-### Stage 4: LayoutManager Refactor
-
-**Status**: ✅ **COMPLETE** - Major architectural improvement achieved
+<details>
+<summary><b>Stage 4: LayoutManager Refactor</b> (✅ COMPLETE - click to expand)</summary>
 
 **Goal**: Consolidate layout logic into LayoutManager component, simplify App.tsx
 
-**Rationale**: Most of App.tsx logic should be elsewhere. App.tsx should simplify to essentially just `<LayoutManager/>`.
-
 **Accomplished:**
-- ✅ Created LayoutManager component (350 lines, controls all layout logic)
-- ✅ Moved display mode calculation to LayoutManager
-- ✅ Moved panel section state (controlled component pattern)
-- ✅ Moved LinkOverlay conditional rendering (1 or 2 overlays)
-- ✅ Moved floating box state and all handlers
-- ✅ Simplified App.tsx from ~550 lines to ~230 lines
-- ✅ TypeScript typecheck passes (0 errors)
-- ✅ All tests pass (163 passed, 19 pre-existing DetailContent failures)
+- ✅ Created LayoutManager component (350 lines)
+- ✅ Simplified App.tsx from ~550 to ~230 lines
+- ✅ Clean separation: App owns persistence, LayoutManager owns layout
+- ✅ Controlled component pattern with ref-based callbacks
+- ✅ All tests pass
 
-**Architecture Pattern:**
-- LayoutManager is a **controlled component** receiving state + setters from App
-- App.tsx handles: data loading, DataService creation, URL/localStorage persistence, header
-- LayoutManager handles: all UI layout logic, panel management, floating boxes, link overlays
-- Clean separation: App owns persistence, LayoutManager owns layout
-- Ref-based callback pattern for dialog states getter (avoids React setState function issues)
+**Pattern**: LayoutManager handles all UI layout logic (panels, floating boxes, link overlays); App handles data loading and state persistence
 
-**LayoutManager responsibilities** (implemented):
-- Display mode calculation (cascade vs stacked) based on window width
-- Panel section rendering (left, middle, right panels)
-- Floating box state and management
-- Hovered item state (for RelationshipInfoBox and LinkOverlay)
-- Conditional LinkOverlay rendering (1 or 2 based on middle panel visibility)
-- Section data and toggle button building from DataService
-- Panel visibility and sizing logic
+</details>
 
-**App.tsx responsibilities** (simplified to):
-- Model data loading (useModelData hook)
-- DataService creation
-- URL/localStorage state persistence (useLayoutState hook)
-- Header rendering (title, save/reset buttons, help)
-- LayoutManager rendering with state props
+### Stage 4.5: Slot Panel Fixes & Terminology
 
-**Files modified**:
-- ✅ `src/components/LayoutManager.tsx` - NEW (350 lines)
-- ✅ `src/App.tsx` - SIMPLIFIED (230 lines, down from ~550)
+**Status**: Parts 1, 2a, 2b, 2c ✅ complete; **Part 3 ⏭️ next**
 
-**Commit**: `c4d629f` - Stage 4: LayoutManager refactor - consolidate layout logic
+**Goal**: Fix slot panel data collection, implement data transformation pipeline, unify terminology
 
-### Stage 4.5: Slot Panel Fixes & Edge Verification
+<details>
+<summary><b>Background & Completed Parts</b> (1, 2a, 2b, 2c - click to expand)</summary>
 
-**Status**: ✅ **COMPLETE** - All parts finished (1, 2a, 2b, 2c)
+**Background**: With gen-linkml JSON output, inherited slots are pre-merged into `classDTO.attributes`, but missing `inherited_from` field and has redundancy (548KB).
 
-**Goal**: Fix slot panel to show all slots, properly handle slot_usage overrides, and verify class-range edges work
+**Part 1: Collect all slots** ✅
+- Added `transformAttributeToSlotData()` function
+- Updated `loadRawData()` to collect from global slots + class attributes
+- Added test verifying 170 slots collected
+- Commit: 1a9637d
 
-**Background**:
+**Part 2a: Switch to JSON** ✅
+- Updated `download_source_data.py` for gen-linkml JSON output
+- Updated `dataLoader.ts` to load JSON, removed js-yaml
+- Deleted legacy bdchm.metadata.json
+- Commit: c54d822
 
-With expanded schema (gen-linkml JSON output):
-- Inherited slots are already merged into `classDTO.attributes`
-- `classDTO.slots` contains slot references (not duplicated in attributes)
-- `classDTO.slot_usage` contains overrides for inherited slots (partial attributes)
-- Attributes have merged values (base + slot_usage overrides applied)
-- No duplicates should occur between attributes and slots
+**Part 2b: Data transformation pipeline** ✅
+Created `scripts/transform_schema.py` to transform `bdchm.expanded.json` → `bdchm.processed.json`
+- Computes `inherited_from` for all attributes
+- Creates slot instances for slot_usage overrides (ID: `{slotName}-{ClassName}`)
+- Expands URIs to URLs using prefixes
+- Reduces file size 54.6% (548KB → 249KB)
 
-**Findings from JSON investigation**:
-- ❌ No `inherited_from` field in gen-linkml JSON output
-- ✅ Has `owner` field (which class owns this attribute after overrides)
-- ✅ Has `domain_of` array (all classes using this slot)
-- ⚠️ Huge redundancy in JSON (548KB with repeated metadata)
-- ⚠️ Missing explicit inheritance information we need for SlotEdges
+**Part 2c: Update graph building** ✅
+Updated Graph.ts and dataLoader to use processed JSON
+- Uses `slotId` and `inherited_from` from attributes
+- Removed duplicate-check workaround
+- Updated ClassElement constructor
+- 11/12 test files pass (165 tests), DetailContent.test.tsx needs updates (not blocking)
 
-**Issues**:
+</details>
 
-1. **Slot panel incomplete** ✅ FIXED in Part 1
-   - Was showing only 7 slots (from `slots:` section of bdchm.yaml)
-   - Now shows all ~170 slots (global slots + class attribute slots)
+---
 
-2. **Need to switch from YAML to JSON** ✅ FIXED in Part 2a
-   - ✅ Now using `bdchm.expanded.json` (gen-linkml default output)
-   - ✅ Removed js-yaml dependency from dataLoader
-   - ✅ Removed legacy bdchm.metadata.json generation
-   - ❌ JSON lacks `inherited_from` field (not provided by gen-linkml)
-
-3. **JSON redundancy and missing inheritance info** ⏭️ Part 2b (NEEDS DECISION)
-   - gen-linkml JSON has huge redundancy (548KB)
-   - Missing explicit `inherited_from` for SlotEdges
-   - Options:
-     - **Option A**: Process JSON directly in dataLoader (complex, redundant parsing)
-     - **Option B**: Transform JSON to simpler format first (separate build step)
-
-4. **Slot_usage overrides need proper handling** ⏭️ Part 2c
-   - Each slot_usage creates a new slot instance with merged properties
-   - Slot IDs: base slot `'category'`, override `'category-SdohObservation'`
-   - Slot names: always the base name (for UI display)
-   - SlotEdge points to override slot when slot_usage exists
-
-5. **Remove duplicate-check workaround** ⏭️ Part 2c
-   - Current code checks `if (graph.hasEdge(edgeKey))` before adding
-   - Proper slot_usage handling will prevent duplicates
-   - Let it fail if duplicate IDs occur (indicates data issue)
-
-**Implementation**:
-
-**Part 1: Collect all slots** ✅ COMPLETE
-- ✅ Added `transformAttributeToSlotData()` function
-- ✅ Updated `loadRawData()` to collect from both global slots and class attributes
-- ✅ Added duplicate-check workaround in `addSlotEdge()` (temporary)
-- ✅ Added test verifying 170 slots collected
-- ✅ All tests passing (10/10)
-- ✅ Commit: 1a9637d
-
-**Part 2a: Switch to JSON** ✅ COMPLETE
-- ✅ Updated `scripts/download_source_data.py`:
-  - Changed to gen-linkml default JSON output
-  - Removed bdchm.metadata.json generation (legacy, not used)
-  - Updated documentation
-- ✅ Updated `dataLoader.ts`:
-  - Load JSON instead of YAML
-  - Removed js-yaml dependency
-- ✅ Deleted bdchm.metadata.json file
-- ✅ Commit: c54d822
-
-**Part 2b: Data transformation with transform_schema.py** ✅ **COMPLETE**
-
-**Decision**: Pursue Option B - Transform JSON to optimized format
-
-**Problem**: gen-linkml JSON has redundancy and lacks inheritance info we need
-- Complex inheritance computation would be needed in dataLoader
-- Parse 548KB of redundant data every page load
-- Redundant metadata repeated for every attribute
-- No `inherited_from` field
-
-**Solution**: Create `scripts/transform_schema.py`
-- Input: `bdchm.expanded.json` (from gen-linkml)
-- Output: `bdchm.processed.json` (optimized for our app)
-- Run as part of `download_source_data.py` pipeline
-- Benefits:
-  - Simpler dataLoader (just parse clean JSON)
-  - Smaller file size (remove redundancy)
-  - Add computed fields we need (inherited_from, slot instance IDs)
-  - Validate data at build time (catch issues early)
-
-**Optimized JSON structure**:
-
-Example using Entity → Observation → SdohObservation (shows all combinations):
-
-```typescript
-{
-  "classes": {
-    "Entity": {
-      "id": "Entity",
-      "name": "Entity",
-      "description": "Any resource that has its own identifier",
-      "parent": null,
-      "abstract": true,
-      "attributes": {
-        "id": {
-          "slotId": "id",  // Direct attribute (not inherited)
-          "range": "uriorcurie",
-          "required": true
-          // No inherited_from - defined on this class
-        }
-      }
-    },
-    "Observation": {
-      "id": "Observation",
-      "name": "Observation",
-      "description": "A data structure with key (observation_type) and value (value) attributes...",
-      "parent": "Entity",
-      "abstract": false,
-      "attributes": {
-        "id": {
-          "slotId": "id",  // Inherited attribute
-          "range": "uriorcurie",
-          "required": true,
-          "inherited_from": "Entity"  // Computed from hierarchy
-        },
-        "category": {
-          "slotId": "category",  // Direct attribute
-          "range": "string",
-          "required": false,
-          "multivalued": false
-          // No inherited_from - defined on this class
-        },
-        "associated_visit": {
-          "slotId": "associated_visit",  // Slot reference (from global slot)
-          "range": "Visit"
-          // No inherited_from - defined on this class (via slots field)
-        }
-      }
-    },
-    "SdohObservation": {
-      "id": "SdohObservation",
-      "name": "SdohObservation",
-      "description": "A data structure with key (observation_type) and value (value) attributes...",
-      "parent": "Observation",
-      "abstract": false,
-      "attributes": {
-        "id": {
-          "slotId": "id",  // Inherited from Entity (through Observation)
-          "range": "uriorcurie",
-          "required": true,
-          "inherited_from": "Entity"  // Points to original definer
-        },
-        "category": {
-          "slotId": "category-SdohObservation",  // Override slot instance!
-          "range": "GravityDomainEnum",  // Overridden from string
-          "required": false,  // From base
-          "multivalued": false,  // From base
-          "inherited_from": "Observation"  // Inherited but overridden
-        },
-        "associated_visit": {
-          "slotId": "associated_visit",  // Inherited slot reference
-          "range": "Visit",
-          "inherited_from": "Observation"  // Computed from hierarchy
-        }
-      }
-    }
-  },
-  "slots": {
-    "id": {  // Base slot (used by many classes)
-      "id": "id",
-      "name": "id",
-      "description": "The 'logical' identifier of the entity...",
-      "range": "uriorcurie",
-      "required": true
-    },
-    "category": {  // Base slot for category
-      "id": "category",
-      "name": "category",
-      "description": "The general category of observation described",
-      "range": "string",
-      "required": false,
-      "multivalued": false
-    },
-    "category-SdohObservation": {  // Override slot instance
-      "id": "category-SdohObservation",
-      "name": "category",  // Display name (same as base)
-      "description": "The general category of observation described",  // From base
-      "range": "GravityDomainEnum",  // From slot_usage override
-      "required": false,  // From base
-      "multivalued": false,  // From base
-      "overrides": "category"  // Reference to base slot
-    },
-    "associated_visit": {  // Global slot (referenced by Observation.slots)
-      "id": "associated_visit",
-      "name": "associated_visit",
-      "description": "A reference to the Visit that is associated with this record.",
-      "range": "Visit"
-    }
-  },
-  "enums": {...},
-  "types": {...},
-  "variables": [...]
-}
-```
-
-**Design decisions**:
-- ✅ All elements have `id` field (same as `name` except for slot_usage slots)
-- ✅ Removed separate `class.slots` array (redundant with `class.attributes` keys)
-- ✅ Attributes directly contain all needed info (slot ID, range, flags, inherited_from)
-- ✅ Slot instances created for each slot_usage override
-- ✅ Computed `inherited_from` for all inherited attributes
-
-**Implementation steps for Part 2b**:
-1. ✅ Create `scripts/transform_schema.py`:
-   - ✅ Load `bdchm.expanded.json`
-   - ✅ Extract prefixes from schema
-   - ✅ Build class hierarchy map (parent → children)
-   - ✅ For each class:
-     - ✅ Compute `inherited_from` for each attribute (walk up hierarchy)
-     - ✅ For attributes with slot_usage, create slot instance with ID `{slotName}-{ClassName}`
-     - ✅ Expand `class_uri` to `class_url` using prefixes
-     - ✅ Output streamlined class definition with just needed fields
-   - ✅ For slots:
-     - ✅ Keep base slot definitions
-     - ✅ Add slot instance for each slot_usage override
-     - ✅ Include `overrides` field pointing to base slot
-     - ✅ Expand `slot_uri` to `slot_url` using prefixes
-   - ✅ For enums:
-     - ✅ Expand `permissible_values[].meaning` to `meaning_url` using prefixes
-     - ✅ Expand `reachable_from` to `reachable_from_url` using prefixes
-   - ✅ For types:
-     - ✅ Expand `uri` to `uri_url` using prefixes
-     - ✅ Expand `exact_mappings[]` to `exact_mappings_urls[]` using prefixes
-   - ✅ Include `prefixes` in output
-   - ✅ Report invalid prefixes encountered (none found!)
-   - ✅ Write `bdchm.processed.json`
-2. ✅ Update `download_source_data.py`:
-   - ✅ After generating `bdchm.expanded.json`, call `transform_schema.py`
-   - ✅ Report file size reduction (55.2%)
-3. ⏭️ Update `dataLoader.ts`:
-   - ✅ Change fetch URL to `bdchm.processed.json` (done)
-   - ⏭️ Update types if needed for new URL fields
-   - ✅ Simplified transformation logic (removed transformAttributeToSlotData)
-4. ⏭️ Update `Graph.ts`:
-   - ⏭️ Use `slotId` from attributes instead of computing
-   - ⏭️ Use `inherited_from` from attributes
-   - ⏭️ Remove duplicate-check workaround
-
-**Prefix Validation Results**:
-- ✅ Comprehensive validation report created at `/private/tmp/bdchm_prefix_issues.md`
-- **1 missing prefix** (rdfs) - used in CellularOrganismSpeciesEnum but not defined in schema
-- **2 "failed" validations** (HP, linkml) - actually valid but use HTTP redirects (normal for persistent identifiers)
-- Report includes detailed examples and recommended YAML fixes for schema authors
-
-**Part 2c: Update graph building** ✅ **COMPLETE**
-
-**Changes made:**
-1. ✅ Updated `AttributeDefinition` type to include `slotId` and `inherited_from` fields
-2. ✅ Updated `ClassData` type to remove `slots` and `slotUsage` fields
-3. ✅ Updated `PropertyDefinition` interface to match `AttributeDefinition`
-4. ✅ Simplified `buildGraphFromSchemaData()` in Graph.ts:
-   - Now uses `slotId` from attributes instead of computing it
-   - Passes `inherited_from` to `addSlotEdge()` calls
-   - Removed separate handling of `slotUsage` and `slots` (all merged into `attributes`)
-5. ✅ Removed duplicate-check workaround in `addSlotEdge()` - now fails on real duplicates
-6. ✅ Updated ClassElement constructor to use simplified structure:
-   - Creates ClassSlots from attributes only (all slots pre-merged)
-   - Uses `slotId` to lookup slot definitions
-   - Determines source type based on `inherited_from` field
-7. ✅ Updated `SlotElement.getUsedByClasses()` to check attributes instead of slots/slot_usage
-8. ✅ Fixed test files:
-   - Updated getUsedByClasses tests to check attributes
-   - Updated DetailContent mock data (partial - 1/12 test files still failing UI tests)
-
-**Test Results:**
-- ✅ TypeScript compilation passes
-- ✅ 11/12 test files pass (165 tests)
-- ⚠️ DetailContent.test.tsx needs further UI test updates (19 failing tests) - not blocking
-
-**Part 3: Terminology & Architecture Decisions** ⏭️ NEXT
-
+### Part 3: Terminology & Architecture Decisions ⏭️ NEXT
 **Summary:**
 1. Unify terminology: Everything is a "slot" (add `inline` flag to distinguish types)
 2. Fix Part 1: Collect ~150 missing inline slot definitions from class attributes
