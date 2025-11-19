@@ -7,6 +7,25 @@
 
 ---
 
+## 🚨 CRITICAL: NEVER DESTROY UNCOMMITTED WORK 🚨
+
+**NEVER run commands that could lose uncommitted changes:**
+- ❌ `git restore <file>` - NEVER run this
+- ❌ `git checkout <file>` - NEVER run this
+- ❌ `git reset --hard` - NEVER run this
+- ❌ `git clean -fd` - NEVER run this
+- ❌ Any command that reverts/discards local changes
+
+**Instead:**
+1. Run `git status` and `git diff` to see what would be lost
+2. Tell the user what you found
+3. Suggest commands for them to run (e.g., "You could run `git restore <file>` to discard these changes")
+4. Let the user decide and run the commands themselves
+
+**Why this matters**: The user may have uncommitted work that isn't backed up elsewhere. Even if you think changes are "broken" or "not worth keeping," that's not your decision to make. Always preserve the user's work and let them decide what to discard.
+
+---
+
 ## 🚨 CRITICAL ARCHITECTURAL PRINCIPLE 🚨
 
 **SEPARATION OF MODEL AND VIEW CONCERNS**
