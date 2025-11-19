@@ -45,15 +45,19 @@ describe('DetailContent - ClassElement', () => {
     abstract: false,
     attributes: {
       testProperty: {
+        slotId: 'testProperty',  // Inline attribute - slotId same as attribute name
         range: 'string',
         description: 'Test property',
         required: true,
         multivalued: false
-      }
-    },
-    slots: ['testSlot'],
-    slotUsage: {
+      },
+      testSlot: {
+        slotId: 'testSlot',  // Referenced slot
+        range: 'string',
+        description: 'A test slot'
+      },
       usedSlot: {
+        slotId: 'usedSlot',  // Slot with overrides (was in slot_usage)
         range: 'TestEnum',
         required: true,
         description: 'A used slot'
@@ -65,7 +69,7 @@ describe('DetailContent - ClassElement', () => {
   // Manually add variables for testing
   classElement.variables = [
     new VariableElement({
-      classId: 'TestClass',
+      maps_to: 'TestClass',
       variableLabel: 'test_var',
       dataType: 'string',
       ucumUnit: 'kg',
@@ -73,7 +77,7 @@ describe('DetailContent - ClassElement', () => {
       variableDescription: 'Test variable'
     }),
     new VariableElement({
-      classId: 'TestClass',
+      maps_to: 'TestClass',
       variableLabel: 'test_var2',
       dataType: 'integer',
       ucumUnit: '',
@@ -269,7 +273,7 @@ describe('DetailContent -SlotElement', () => {
 
 describe('DetailContent -VariableElement', () => {
   const mockVariableData: VariableSpec = {
-    classId: 'MeasurementObservation',
+    maps_to: 'MeasurementObservation',
     variableLabel: 'body_mass_index',
     dataType: 'decimal',
     ucumUnit: 'kg/m2',
@@ -307,7 +311,7 @@ describe('DetailContent -VariableElement', () => {
 
   test('should handle variable with minimal data', () => {
     const minimalVarData: VariableSpec = {
-      classId: 'TestClass',
+      maps_to: 'TestClass',
       variableLabel: 'test_var',
       dataType: '',
       ucumUnit: '',

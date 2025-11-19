@@ -29,11 +29,14 @@ function positionToContext(position: 'left' | 'middle' | 'right'): 'leftPanel' |
 }
 
 // Property definition from class attributes
+// Matches AttributeDefinition from types.ts (enhanced by transform_schema.py)
 interface PropertyDefinition {
+  slotId: string;           // ID of the slot definition (computed by transform_schema.py)
   range: string;
   description?: string;
   required?: boolean;
   multivalued?: boolean;
+  inherited_from?: string;  // Which ancestor class defined this slot (computed by transform_schema.py)
 }
 
 // Relationship types for SVG link visualization
@@ -739,10 +742,8 @@ export class ClassElement extends Range {
   // - variables: VariableElements for this class (separate array, wired in orchestration)
   variables: VariableElement[] = [];  // Wired later in orchestration
 
-  // Properties from metadata
-  readonly attributes: Record<string, PropertyDefinition>;  // Kept for backward compatibility
-  readonly slots: string[];  // Kept for backward compatibility
-  readonly slot_usage: Record<string, PropertyDefinition> | undefined;  // Kept for backward compatibility
+  // Properties from processed JSON
+  readonly attributes: Record<string, PropertyDefinition>;  // Pre-computed with slotId and inherited_from
   readonly abstract: boolean;
 
   // ClassSlot instances (Phase 6.4 Step 3) - represents all slots used by this class
@@ -808,73 +809,43 @@ export class ClassElement extends Range {
 
     // Keep existing properties for backward compatibility during transition
     this.attributes = data.attributes || {};
-
-    // Normalize slots to array
-    if (data.slots) {
-      this.slots = Array.isArray(data.slots) ? data.slots : [data.slots];
-    } else {
-      this.slots = [];
-    }
-
-    this.slot_usage = data.slotUsage;
     this.abstract = data.abstract;
 
-    // Create ClassSlot instances (Phase 6.4 Step 3)
+    // Create ClassSlot instances from attributes
+    // The processed JSON has all slots (inline, slot_usage, referenced) merged into attributes
     const classSlots: ClassSlot[] = [];
 
-    // 1. Create ClassSlots for attributes (inline slots)
     Object.entries(this.attributes).forEach(([attrName, attrDef]) => {
-      // Create synthetic SlotElement for this attribute
-      const syntheticSlot = new SlotElement(attrName, {
-        range: attrDef.range,
-        description: attrDef.description,
-        required: attrDef.required,
-        multivalued: attrDef.multivalued
-      });
+      // Look up the slot definition using slotId from processed JSON
+      const slotId = attrDef.slotId;
+      const baseSlot = slotCollection.getElement(slotId) as SlotElement | null;
 
-      // Create ClassSlot wrapping the synthetic slot
-      classSlots.push(new ClassSlot(
-        attrName,
-        syntheticSlot,
-        'attribute'
-      ));
-    });
-
-    // 2. Create ClassSlots for slot_usage (overridden slots)
-    if (this.slot_usage) {
-      Object.entries(this.slot_usage).forEach(([slotName, overrides]) => {
-        // Look up global SlotElement
-        const baseSlot = slotCollection.getElement(slotName) as SlotElement | null;
-        if (baseSlot) {
-          classSlots.push(new ClassSlot(
-            slotName,
-            baseSlot,
-            'slot_usage',
-            overrides
-          ));
-        } else {
-          console.warn(`ClassElement "${this.name}": slot_usage references unknown slot "${slotName}"`);
-        }
-      });
-    }
-
-    // 3. Create ClassSlots for referenced slots (no overrides)
-    this.slots.forEach(slotName => {
-      // Skip if already in slot_usage (slot_usage takes precedence)
-      if (this.slot_usage && slotName in this.slot_usage) {
-        return;
-      }
-
-      // Look up global SlotElement
-      const baseSlot = slotCollection.getElement(slotName) as SlotElement | null;
       if (baseSlot) {
+        // Create ClassSlot wrapping the base slot, with any overrides from attrDef
         classSlots.push(new ClassSlot(
-          slotName,
+          attrName,
           baseSlot,
-          'slot_reference'
+          attrDef.inherited_from ? 'slot_reference' : 'attribute',
+          {
+            range: attrDef.range,
+            required: attrDef.required,
+            multivalued: attrDef.multivalued,
+            description: attrDef.description
+          }
         ));
       } else {
-        console.warn(`ClassElement "${this.name}": slots array references unknown slot "${slotName}"`);
+        // Create synthetic SlotElement if base slot not found (for inline attributes)
+        const syntheticSlot = new SlotElement(slotId, {
+          range: attrDef.range,
+          description: attrDef.description,
+          required: attrDef.required,
+          multivalued: attrDef.multivalued
+        });
+        classSlots.push(new ClassSlot(
+          attrName,
+          syntheticSlot,
+          'attribute'
+        ));
       }
     });
 
@@ -1364,15 +1335,14 @@ export class SlotElement extends Element {
     const allClasses = globalClassCollection.getAllElements() as ClassElement[];
 
     for (const cls of allClasses) {
-      // Check if this slot is in the class's slots array
-      if (cls.slots && cls.slots.includes(this.name)) {
-        usedBy.push(cls.name);
-        continue;
-      }
-
-      // Check if this slot is in slot_usage (refined/overridden slots)
-      if (cls.slot_usage && this.name in cls.slot_usage) {
-        usedBy.push(cls.name);
+      // Check if any attribute references this slot via slotId
+      if (cls.attributes) {
+        for (const [_attrName, attrDef] of Object.entries(cls.attributes)) {
+          if (attrDef.slotId === this.name) {
+            usedBy.push(cls.name);
+            break;  // Found a match, no need to check other attributes
+          }
+        }
       }
     }
 

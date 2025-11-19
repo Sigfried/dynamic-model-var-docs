@@ -266,11 +266,7 @@ export function addSlotEdge(
   // Edge key must be unique: include slot name since same class can have multiple slots with same range
   const edgeKey = `${classId}-[${slotName}]->${rangeId}`;
 
-  // Skip if edge already exists (can happen when slot appears in both attributes and slots)
-  if (graph.hasEdge(edgeKey)) {
-    return;
-  }
-
+  // Let it fail if edge already exists - indicates data problem
   graph.addEdgeWithKey(edgeKey, classId, rangeId, {
     type: 'slot',
     slotName,
@@ -572,9 +568,8 @@ export function buildGraphFromSchemaData(
   });
 
   // 2. Slot edges (class → range)
-  // We need to traverse the class hierarchy to handle inheritance
+  // The processed JSON has all attributes pre-computed with slotId and inherited_from
   schemaData.classes.forEach((classData) => {
-    // Direct attributes
     if (classData.attributes) {
       Object.entries(classData.attributes).forEach(([attrName, attrDef]) => {
         const range = attrDef.range || 'string';
@@ -583,47 +578,11 @@ export function buildGraphFromSchemaData(
           classData.name,
           range,
           attrName,
-          attrName,  // slotDefId is the attribute name for inline attributes
+          attrDef.slotId,  // Use pre-computed slotId from transform_schema.py
           attrDef.required ?? false,
-          attrDef.multivalued ?? false
+          attrDef.multivalued ?? false,
+          attrDef.inherited_from  // Pass inherited_from from processed JSON
         );
-      });
-    }
-
-    // Slot usages (overrides)
-    if (classData.slotUsage) {
-      Object.entries(classData.slotUsage).forEach(([slotName, slotUsage]) => {
-        const range = slotUsage.range || slotName;  // Fallback to slot def if no override
-        addSlotEdge(
-          graph,
-          classData.name,
-          range,
-          slotName,
-          slotName,  // slotDefId
-          slotUsage.required ?? false,
-          slotUsage.multivalued ?? false
-        );
-      });
-    }
-
-    // Direct slot references
-    if (classData.slots) {
-      const slotsArray = Array.isArray(classData.slots) ? classData.slots : [classData.slots];
-      slotsArray.forEach((slotName: string) => {
-        // Look up the slot definition to get its range
-        const slotDef = schemaData.slots.get(slotName);
-        if (slotDef) {
-          const range = slotDef.range || 'string';
-          addSlotEdge(
-            graph,
-            classData.name,
-            range,
-            slotName,
-            slotName,  // slotDefId
-            slotDef.required ?? false,
-            slotDef.multivalued ?? false
-          );
-        }
       });
     }
   });

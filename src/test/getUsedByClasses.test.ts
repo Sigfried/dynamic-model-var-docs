@@ -122,9 +122,10 @@ describe('getUsedByClasses()', () => {
           const cls = allClasses.find(c => c.name === className);
           expect(cls).toBeDefined();
 
-          // Check that this class has the slot in slots array or slot_usage
-          const hasSlot = (cls!.slots && cls!.slots.includes(testSlot!.name)) ||
-                         (cls!.slot_usage && testSlot!.name in cls!.slot_usage);
+          // Check that this class has an attribute that references this slot
+          const hasSlot = cls!.attributes && Object.values(cls!.attributes).some(
+            attrDef => attrDef.slotId === testSlot!.name
+          );
           expect(hasSlot).toBe(true);
         });
 
@@ -147,22 +148,22 @@ describe('getUsedByClasses()', () => {
       }
     });
 
-    test('should find classes that use slot in slot_usage', async () => {
+    test('should find classes that use slot in attributes', async () => {
       const data = await loadModelData();
       const classCollection = data.collections.get('class') as ClassCollection;
       const slotCollection = data.collections.get('slot') as SlotCollection;
       const allClasses = classCollection.getAllElements();
 
-      // Find a class that has slot_usage
-      const classWithSlotUsage = allClasses.find(c => c.slot_usage && Object.keys(c.slot_usage).length > 0);
+      // Find a class that has attributes (all classes should have attributes)
+      const classWithAttrs = allClasses.find(c => c.attributes && Object.keys(c.attributes).length > 0);
 
-      if (classWithSlotUsage && classWithSlotUsage.slot_usage) {
-        const slotName = Object.keys(classWithSlotUsage.slot_usage)[0];
-        const slotElement = slotCollection.getElement(slotName);
+      if (classWithAttrs && classWithAttrs.attributes) {
+        const attrDef = Object.values(classWithAttrs.attributes)[0];
+        const slotElement = slotCollection.getElement(attrDef.slotId);
 
         if (slotElement) {
           const usedBy = slotElement.getUsedByClasses();
-          expect(usedBy).toContain(classWithSlotUsage.name);
+          expect(usedBy).toContain(classWithAttrs.name);
         }
       }
     });
