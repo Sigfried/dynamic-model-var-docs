@@ -85,7 +85,12 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
         }
 
         // Position to the right of panels, 20px margin
-        const xPosition = Math.max(370, rightmostEdge + 20);
+        const idealX = Math.max(370, rightmostEdge + 20);
+
+        // Clamp X to viewport (box width ~400px, leave 10px margin on right)
+        const boxWidth = 400;
+        const maxX = window.innerWidth - boxWidth - 10;
+        const xPosition = Math.min(idealX, maxX);
 
         // Vertically center box relative to item, using estimated height for better centering
         const itemCenterY = itemRect.top + (itemRect.height / 2);
@@ -275,7 +280,7 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
   if (!hasOutgoing && !hasIncoming) {
     return (
       <div
-        className="fixed w-[500px] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50"
+        className="fixed w-[500px] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-[60]"
         style={{ left: `${boxPosition.x}px`, top: `${boxPosition.y}px` }}
         onMouseEnter={handleBoxMouseEnter}
         onMouseLeave={handleBoxMouseLeave}
@@ -299,7 +304,7 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
 
   return (
     <div
-      className="fixed w-[500px] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50 max-h-[80vh] flex flex-col"
+      className="fixed w-[500px] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-[60] max-h-[80vh] flex flex-col"
       style={{ left: `${boxPosition.x}px`, top: `${boxPosition.y}px` }}
       onMouseEnter={handleBoxMouseEnter}
       onMouseLeave={handleBoxMouseLeave}

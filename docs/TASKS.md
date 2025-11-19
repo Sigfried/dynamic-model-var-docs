@@ -1,5 +1,65 @@
 # Tasks
 
+## 🚨 URGENT - Demo Fixes (4 hours)
+
+### ✅ Completed Quick Fixes (Round 1)
+
+1. **✅ FIXED: Right panel cut off in 3-panel mode**
+   - **Issue**: Stacked mode threshold didn't account for middle panel width + 2 gutters
+   - **Fix**: Updated `calculateRemainingSpace()` to include `middlePanelVisible` parameter
+   - **Files**: `utils/layoutHelpers.ts`, `components/LayoutManager.tsx`
+
+2. **✅ FIXED: Hover boxes spilling over right edge of viewport**
+   - **Issue**: X position calculated but not clamped to viewport width
+   - **Fix**: Added `Math.min(idealX, maxX)` to prevent overflow
+   - **Files**: `components/RelationshipInfoBox.tsx:88-93`
+
+3. **✅ FIXED: No links to types (Round 2 - proper fix)**
+   - **Issue 1**: Types weren't included in `computeIncomingRelationships()` check ✅
+   - **Issue 2**: `categorizeRange()` was treating types as primitives, preventing link creation
+   - **Fix**: Changed return type to include `'type'` and removed special case treating types as primitives
+   - **Files**: `models/ElementPreRefactor.ts:621,132`
+
+4. **✅ FIXED: Class→class links going left→left instead of left→right**
+   - **Issue**: LinkOverlay was checking `leftItems.has(link.target.name)` instead of `rightItems`
+   - **Fix**: Changed to `rightItems.has(link.target.name)` for correct cross-panel filtering
+   - **Files**: `components/LinkOverlay.tsx:213`
+
+5. **✅ FIXED: Hover box z-index lower than detail boxes**
+   - **Issue**: RelationshipInfoBox had `z-50`, FloatingBoxManager had `z-40`
+   - **Fix**: Increased hover box to `z-[60]` so it appears above detail boxes
+   - **Files**: `components/RelationshipInfoBox.tsx:283,307`
+
+### ⏭️ Deferred (Not Blocking Demo)
+
+4. **⏭️ Slot hover "No relationships found"** - Actually working per console test
+   - `ds.getRelationships('associated_visit')` shows correct data
+   - May be hover box display issue, not data issue
+   - Can investigate after demo if still appears broken
+
+5. **⏭️ Slot→range links** - User reported "suddenly appearing", likely fixed by middle panel changes
+
+### After Demo: Documentation & Structure Cleanup
+
+#### Relevant Documentation Files (prioritized)
+1. **TASKS.md** (this file) - Keep, update with post-demo work
+2. **UI_REFACTOR.md** - Keep, primary UI work tracking
+3. **REFACTOR_PLAN.md** - Keep, completed architecture documentation
+4. **PROGRESS.md** - Keep, historical record
+5. **CLAUDE.md** - Keep, development principles
+6. **TWO_GRAPH_ANALYSIS.md** - Review after demo, may inform future work
+7. **LINKOVERLAY_REFACTOR_PLAN_v2.md** - Keep for LinkOverlay work
+
+#### Obsolete Files to Delete
+- [ ] ELEMENT_MERGE_ANALYSIS.md (obsoleted by two-graph decision)
+- [ ] ELEMENTPREREFACTOR_RETIREMENT_PLAN.md (obsoleted by two-graph decision)
+- [ ] COMPONENT_FLOW.md (if exists, check first)
+- [ ] DATA_FLOW.md (check if obsolete)
+- [ ] Item.ts (check if exists)
+- [ ] Any other pre-refactor analysis files
+
+---
+
 ## Table of Contents
 
 ### Active Work

@@ -66,7 +66,7 @@ export default function LayoutManager({
   useEffect(() => {
     const measureSpace = () => {
       const windowWidth = window.innerWidth;
-      const { mode } = calculateDisplayMode(windowWidth, leftSections.length, rightSections.length);
+      const { mode } = calculateDisplayMode(windowWidth, leftSections.length, rightSections.length, !middlePanelEmpty);
       setDisplayMode(mode);
     };
 
@@ -391,7 +391,7 @@ export default function LayoutManager({
 
         {/* Right Panel - Ranges only */}
         <div
-          className="h-full overflow-hidden border-l border-gray-200 dark:border-slate-700 flex-shrink-0"
+          className="h-full overflow-hidden border-l border-gray-200 dark:border-slate-700 flex-1"
           style={{
             width: rightPanelEmpty ? `${EMPTY_PANEL_WIDTH}px` : undefined,
             maxWidth: rightPanelEmpty ? undefined : `${MAX_PANEL_WIDTH}px`,

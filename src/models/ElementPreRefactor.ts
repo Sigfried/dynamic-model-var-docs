@@ -129,8 +129,8 @@ function computeIncomingRelationships(thisElement: Element): IncomingRelationshi
     // Find class slots that reference this element
     // @ts-expect-error TEMPORARY: Accessing protected 'type' property - will be removed in Step 7 (Link Overlay Refactor)
     // TODO: Refactor to avoid type checks - see TASKS.md Step 7 architectural guidance
-    if (thisElement.type === 'class' || thisElement.type === 'enum') {
-      // For classes and enums, check if they are used as the range of a slot
+    if (thisElement.type === 'class' || thisElement.type === 'enum' || thisElement.type === 'type') {
+      // For classes, enums, and types, check if they are used as the range of a slot
       for (const classSlot of otherClass.classSlots) {
         if (classSlot.range === thisElement.getId()) {
           incoming.usedByAttributes.push({
@@ -618,7 +618,7 @@ export function initializeModelData(schemaData: SchemaData): ModelData {
 }
 
 // Helper to categorize range types
-function categorizeRange(range: string): 'class' | 'enum' | 'primitive' {
+function categorizeRange(range: string): 'class' | 'enum' | 'type' | 'primitive' {
   const primitives = ['string', 'integer', 'float', 'double', 'decimal', 'boolean', 'date', 'datetime', 'time', 'uri', 'uriorcurie'];
 
   if (primitives.includes(range.toLowerCase())) {
@@ -629,9 +629,8 @@ function categorizeRange(range: string): 'class' | 'enum' | 'primitive' {
   if (nameToTypeMap?.has(range)) {
     const type = nameToTypeMap.get(range)!;
     // Treat slot refs as class relationships
-    // Treat type refs as primitives (they're leaf nodes like primitives)
     if (type === 'slot') return 'class';
-    if (type === 'type') return 'primitive';
+    // Types are their own category (like enums) - they show as link targets
     return type;
   }
 
@@ -1199,8 +1198,8 @@ export class TypeElement extends Range {
   }
 
   getRelationships(): Relationship[] {
-    // Types don't have relationships in the current model
-    // They serve as leaf nodes (range targets)
+    // Types serve as range targets (like enums and primitives)
+    // No outgoing relationships
     return [];
   }
 

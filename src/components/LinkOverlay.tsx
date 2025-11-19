@@ -210,7 +210,7 @@ export default function LinkOverlay({
         // Special handling for class→class to avoid bidirectional duplicates
         const filteredLinks = links.filter(link => {
           if (link.relationship.isSelfRef) return true; // Always keep self-refs
-          if (!leftItems.has(link.target.name)) return false; // Not cross-panel
+          if (!leftItems.has(link.target.name)) return false; // Not cross-panel (target must be in LEFT panel)
 
           // For class→class links, filter out to avoid bidirectional duplicates
           if (sectionId === 'class' && link.target.type === 'class') {
