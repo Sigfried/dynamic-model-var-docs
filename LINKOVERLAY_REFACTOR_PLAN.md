@@ -211,6 +211,8 @@ function LinkOverlay({ edges, hoveredItem }: LinkOverlayProps) {
 
   // Helper: find DOM element by type, name, and panel ID
   const findItem = (type: string, name: string, panelId: string) => {
+    // [sg] why does this need type? it should use id, not name
+     //     id + panelId should uniquely identify the dom node
     return document.querySelector(
       `[data-item-type="${type}"][data-item-name="${name}"][data-panel-position="${panelId}"]`
     );
@@ -228,6 +230,7 @@ function LinkOverlay({ edges, hoveredItem }: LinkOverlayProps) {
         const targetEl = findItem(edge.targetType, edge.targetName, edge.targetPanelId);
 
         if (!sourceEl || !targetEl) return null;
+        // [sg] this shouldn't happen. at least log a console error
 
         const sourceRect = sourceEl.getBoundingClientRect();
         const targetRect = targetEl.getBoundingClientRect();

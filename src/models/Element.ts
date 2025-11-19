@@ -106,6 +106,7 @@
 // NEW: Edge-based interfaces for Slots-as-Edges refactor
 // ============================================================================
 
+// [sg] should all these interfaces move to ComponentData.ts?
 /**
  * ItemInfo - Minimal item metadata for relationship display
  * Used in EdgeInfo to represent connected items
@@ -127,6 +128,32 @@ export interface EdgeInfo {
   label?: string;       // For property: slot/attribute name; for variable_mapping: "mapped_to"
   inheritedFrom?: string; // For property edges only: ancestor name that defined this slot
 }
+
+// [sg] trying to generalize EdgeInfo to be used by LinkOverlay, so getting rid of its single-item focus
+export interface EdgeInfoProposal {
+  edgeType: 'inheritance' | 'property' | 'variable_mapping';
+  sourceItem: ItemInfoProposal;
+  targetItem: ItemInfoProposal;
+  label?: string;       // For property: slot/attribute name; for variable_mapping: "mapped_to"
+  inheritedFrom?: string; // For property edges only: ancestor name that defined this slot
+}
+export interface ItemInfoProposal {
+  id: string;
+  displayName: string;
+  typeDisplayName: string;  // "Class", "Enum", "Slot", "Variable"
+  color: string;  // Tailwind color classes for styling
+  panelPosition: 'left' | 'right';
+  panelId: 'left' | 'middle' | 'right'; // these should be dom ids on the panels
+}
+/*  proposed LinkOverlay revision
+        <LinkOverlay
+          edges={/* EdgeInfoProposal instances for all currently displayed items * /}
+          leftPanelId={'left'}
+          rightPanelId={'middle'}
+          // dataService={dataService} should LinkOverlay need this?
+          hoveredItem={hoveredItem} // hover state (panel items and individual links) seems tangled
+        />
+ */
 
 /**
  * LinkPair - Minimal edge data for LinkOverlay rendering
