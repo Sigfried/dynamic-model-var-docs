@@ -1908,7 +1908,7 @@ Created comprehensive test suite in `src/test/incoming-relationships.test.ts`:
 <a id="phase-13-arch-refactor-steps"></a>
 ## Phase 13: Architecture Refactoring Quick Wins (Steps 1-5)
 
-**Completed**: January 2025
+**Completed**: November 2025
 
 **Status**: Archived - superseded by Option D (Slots-as-Edges) architecture in REFACTOR_PLAN.md
 
@@ -2001,7 +2001,7 @@ All steps tested with:
 <a id="phase-14-linkml-study"></a>
 ## Phase 14: LinkML Study & Architecture Decision
 
-**Completed**: January 2025
+**Completed**: November 2025
 
 **Status**: Study complete, Slots-as-Edges architecture chosen
 
@@ -2124,7 +2124,7 @@ See REFACTOR_PLAN.md for:
 
 ## Phase 15: Unified Detail Box System
 
-**Date**: January 2025
+**Date**: November 2025
 **Goal**: Extract dialog management from App.tsx, merge DetailDialog/DetailPanelStack into unified system, and implement transitory mode for FloatingBox - allowing any content to appear temporarily (auto-disappearing) and upgrade to persistent mode on user interaction.
 
 **Status**: Steps 0-3 completed. Step 4 partially complete (core functionality working, remaining bugs tracked in TASKS.md).
@@ -2458,7 +2458,7 @@ Step 4 partially complete. Remaining bugs and enhancements tracked in **TASKS.md
 <a id="phase-16-slots-as-edges-stage-1"></a>
 ## Phase 16: Slots-as-Edges Refactor - Stage 1 (Infrastructure Setup)
 
-**Completed**: January 2025
+**Completed**: November 2025
 
 **Goal**: Set up infrastructure and define edge-based interfaces for the Slots-as-Edges refactor without touching UI layer, enabling incremental migration while keeping old model working.
 
@@ -2628,13 +2628,13 @@ See REFACTOR_PLAN.md for complete implementation roadmap.
 
 ## Phase 17: Slots-as-Edges Refactor - Stages 2-5 (Graph Model & Three-Panel Layout)
 
-**Completed**: January 2025
+**Completed**: November 2025
 
 **Goal**: Complete the Slots-as-Edges refactor by implementing the graph-based model, importing types, adding slot edges, implementing three-panel layout, and adding middle panel controls.
 
 ### Stage 2: Import Types and Range Abstraction
 
-**Completed**: January 2025
+**Completed**: November 2025
 
 **Steps Completed**:
 1. ✅ Downloaded linkml:types schema during data fetch (added to `download_source_data.py`)
@@ -2652,7 +2652,7 @@ See REFACTOR_PLAN.md for complete implementation roadmap.
 
 ### Stage 3: Graph Model with SlotEdges
 
-**Completed**: January 2025
+**Completed**: November 2025
 
 **Goal**: Replace Element-based model with graphology graph-based model.
 
@@ -2674,7 +2674,7 @@ See REFACTOR_PLAN.md for complete implementation roadmap.
 
 ### Stage 3a: Panel Specialization (Three-Panel Layout)
 
-**Completed**: January 2025
+**Completed**: November 2025
 
 **Goal**: Implement basic three-panel layout with specialized panel roles.
 
@@ -2691,7 +2691,7 @@ See REFACTOR_PLAN.md for complete implementation roadmap.
 
 ### Stage 4: LayoutManager Refactor
 
-**Completed**: January 2025
+**Completed**: November 2025
 
 **Goal**: Consolidate layout logic into LayoutManager component.
 
@@ -2706,7 +2706,7 @@ See REFACTOR_PLAN.md for complete implementation roadmap.
 
 ### Stage 4.5: Slot Panel Fixes & Terminology
 
-**Completed**: January 2025
+**Completed**: November 2025
 
 **Goal**: Fix slot panel data collection, implement data transformation pipeline, unify terminology.
 
