@@ -1,18 +1,56 @@
 # UI_REFACTOR.md - Component Refactoring Plan
 
-> **Purpose:** Define how UI components will be simplified after the Slots-as-Edges refactor.
-> This document maps current component data shapes to their post-refactor equivalents.
+> **Purpose:** Active UI component work following the completed Slots-as-Edges model/architecture refactor.
+> This document tracks current UI issues and defines refactoring priorities.
+
+---
+
+## 📋 Current Status
+
+**Model/Architecture**: ✅ **COMPLETE** (See [REFACTOR_PLAN.md](REFACTOR_PLAN.md) for details)
+- ✅ Graph-based model with graphology
+- ✅ SlotEdges connecting Class → Range
+- ✅ Three-panel layout (Classes | Slots | Ranges)
+- ✅ DataService adapter layer (graph data → old UI format)
+- ✅ Component contracts centralized
+- ✅ Middle panel toggle and spacing
+
+**UI Components**: ⚠️ **NEEDS WORK**
+- Many components still using old patterns
+- LinkOverlay not working correctly for 3-panel display
+- Hover boxes broken for slots and possibly types
+- Detail boxes not rendering slot edges properly
+- Floating box manager has positioning bugs
+- Slot grouping not implemented
+
+---
+
+## Active Issues
+
+**High Priority** (blocking demo):
+1. **LinkOverlay 3-panel display** - Links not rendering correctly when middle panel visible
+2. **Hover box fixes** - RelationshipInfoBox broken for slots, possibly types
+3. **Transform schema optimization** - Exclude unused types to reduce bundle size
+
+**Medium Priority**:
+4. **Detail box slot edges** - Not rendering clickable slot edges
+5. **Floating box manager** - Cascade positioning bugs
+6. **Grouped slots panel** - Design complete, needs implementation
+
+**Lower Priority**:
+7. **LayoutManager enhancements** - Misc improvements
+8. **Type filtering** - Only show types actually used in schema
 
 ---
 
 ## Overview
 
-The Slots-as-Edges refactor enables major UI simplifications:
+The Slots-as-Edges refactor enabled major UI simplifications:
 
 1. **Unified edge representation** - All relationships (inheritance, slots, variables) become edges
-2. **Type-agnostic components** - Less conditional logic based on element type
+2. **Graph queries replace Element logic** - DataService uses graph queries instead of Element methods
 3. **Simpler data shapes** - Flatter structures, fewer special cases
-4. **Better LinkOverlay** - `getAllPairs()` becomes trivial when all associations are edges
+4. **Three-panel layout** - Classes | Slots (optional) | Ranges
 
 ---
 
@@ -615,6 +653,114 @@ interface LinkPair {
 - Colors included for gradient/styling
 - Label is the slot/attribute name
 - No edgeType needed (LinkOverlay only shows property edges)
+
+---
+
+## 7. FloatingBoxManager Issues
+
+### Current Problems
+
+**Cascade positioning bugs**:
+- Non-user-positioned boxes appear on top of each other in wrong place
+- Note: URL restoration positioning IS working correctly
+- Code location: FloatingBoxManager.tsx:148-194
+
+**Hover/upgrade behavior broken**:
+- RelationshipInfoBox uses fixed positioning which conflicts with FloatingBox wrapper
+- Fix: Refactor RelationshipInfoBox to support both transitory and persistent modes
+
+**Architecture improvements needed**:
+- Move box management logic from App.tsx to FloatingBoxManager
+- Fix transitory/persistent box upgrade (currently creates new box, should modify existing)
+
+See [TASKS.md - Unified Detail Box System](TASKS.md#unified-detail-box-system---remaining-work) for detailed issue list.
+
+---
+
+## 8. LayoutManager Enhancements
+
+### Potential Improvements
+
+**Responsive panel widths**:
+- Currently fixed widths (MAX_PANEL_WIDTH = 450px, EMPTY_PANEL_WIDTH = 180px)
+- Could be more responsive based on window size and content
+
+**Panel collapse/expand animations**:
+- Middle panel toggle could be smoother
+- Consider CSS transitions for panel width changes
+
+**Better gutter visualization**:
+- Gutters are plain gray - could show hints about what they're for
+- Consider adding visual cues when links would appear
+
+**Status**: Low priority - current implementation works well enough for demo
+
+---
+
+## 9. Grouped Slots Panel
+
+### Design (from REFACTOR_PLAN Stage 5)
+
+**Goal**: Show slots organized by source (Global + per-class sections)
+
+**Structure**:
+```
+Global Slots (8)
+  - associated_participant
+  - category
+  - id
+  - ...
+
+Entity (3 slots)
+  - id (defined here)
+  - identity (defined here)
+  - category (defined here)
+
+Observation (5 slots)
+  - id (inherited from Entity)
+  - category (inherited from Entity)
+  - associated_visit (global reference)
+  - value (defined here)
+
+SdohObservation (5 slots)
+  - id (inherited from Entity)
+  - category (inherited from Observation) ⚠️ overridden
+  - value (inherited from Observation)
+  - ...
+```
+
+**Behavior**:
+- Inherited slots appear under each class that uses them (repetition is OK)
+- Always show base slot name (never "category-SdohObservation")
+- Click/hover navigates to that class's version (with overrides if any)
+- Visual indicator (⚠️ or different color) for overridden slots
+
+**Implementation**:
+- DataService: Provide grouped slot data
+- Section.tsx: Support nested grouping (class headers with slot items)
+- Already done: Filter out slot_usage instances (Stage 4.5 Part 3)
+
+**Priority**: Medium - nice to have for demo, not blocking
+
+---
+
+## 10. Quick Wins
+
+### Exclude Unused Types
+
+**Issue**: transform_schema.py includes all linkml:types, but only ~10 are used in BDCHM
+
+**Fix**:
+- Track which types are actually referenced in slot ranges
+- Only include those types in bdchm.processed.json
+- Reduces bundle size and UI clutter
+
+**Implementation**:
+- Update `scripts/transform_schema.py`
+- Add type usage tracking during slot processing
+- Filter types list before writing output
+
+**Priority**: High - easy win, reduces bundle size for demo
 
 ---
 

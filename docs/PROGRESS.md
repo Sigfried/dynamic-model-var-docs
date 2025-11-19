@@ -2626,6 +2626,205 @@ See REFACTOR_PLAN.md for complete implementation roadmap.
 
 ---
 
+## Phase 17: Slots-as-Edges Refactor - Stages 2-5 (Graph Model & Three-Panel Layout)
+
+**Completed**: January 2025
+
+**Goal**: Complete the Slots-as-Edges refactor by implementing the graph-based model, importing types, adding slot edges, implementing three-panel layout, and adding middle panel controls.
+
+### Stage 2: Import Types and Range Abstraction
+
+**Completed**: January 2025
+
+**Steps Completed**:
+1. ✅ Downloaded linkml:types schema during data fetch (added to `download_source_data.py`)
+2. ✅ Parsed types in `dataLoader.ts` (extract TypeDefinition DTOs)
+3. ✅ Created TypeElement class extending new Range base class
+4. ✅ Created Range abstract base class
+5. ✅ Made ClassElement and EnumElement extend Range
+6. ✅ Added TypeCollection
+7. ✅ Decided on graph architecture: Option A (Graph stores IDs only, OOP instances stored separately)
+
+**Key Decisions**:
+- `categorizeRange()` treats types as 'primitive' (leaf nodes)
+- Types don't create relationship links (shown in detail boxes only)
+- Collections remain for now (simplification deferred to later stage)
+
+### Stage 3: Graph Model with SlotEdges
+
+**Completed**: January 2025
+
+**Goal**: Replace Element-based model with graphology graph-based model.
+
+**Steps Completed**:
+1. ✅ Installed and configured graphology (`npm install graphology`)
+2. ✅ Defined graph structure:
+   - **Nodes**: Class, Enum, Slot, Type, Variable
+   - **Edges**: SlotEdge (property), InheritanceEdge, MapsToEdge (variable_mapping)
+3. ✅ Created `src/models/Graph.ts` with complete graph infrastructure
+4. ✅ Implemented graph-based relationship querying (`getRelationshipsFromGraph()`)
+5. ✅ Updated DataService with adapter layer (converts graph data → old UI format)
+
+**Deferred** (to later stages):
+- UI component migration to new RelationshipData format
+- ClassSlot class removal
+- Collection simplification
+
+**Key File**: `src/models/Graph.ts` - 400+ lines, complete graph infrastructure
+
+### Stage 3a: Panel Specialization (Three-Panel Layout)
+
+**Completed**: January 2025
+
+**Goal**: Implement basic three-panel layout with specialized panel roles.
+
+**Completed**:
+- ✅ Three-panel layout (Classes, Slots, Ranges)
+- ✅ URL state persistence with middle panel support (new 'sections' param format)
+- ✅ Panel-specific toggle buttons (only C/E/T for right panel)
+- ✅ Smart LinkOverlay rendering (1 or 2 overlays based on middle panel visibility)
+- ✅ Type system updated for 'middle' position
+
+**Known Issues** (deferred to Stage 5):
+- Middle panel toggle button not yet implemented
+- Need proper spacing/gutters for link rendering
+
+### Stage 4: LayoutManager Refactor
+
+**Completed**: January 2025
+
+**Goal**: Consolidate layout logic into LayoutManager component.
+
+**Accomplished**:
+- ✅ Created LayoutManager component (350 lines)
+- ✅ Simplified App.tsx from ~550 to ~230 lines
+- ✅ Clean separation: App owns persistence, LayoutManager owns layout
+- ✅ Controlled component pattern with ref-based callbacks
+- ✅ All tests pass
+
+**Pattern**: LayoutManager handles all UI layout logic (panels, floating boxes, link overlays); App handles data loading and state persistence.
+
+### Stage 4.5: Slot Panel Fixes & Terminology
+
+**Completed**: January 2025
+
+**Goal**: Fix slot panel data collection, implement data transformation pipeline, unify terminology.
+
+**Parts Completed**:
+
+**Part 1: Collect all slots** ✅
+- Added `transformAttributeToSlotData()` function
+- Updated `loadRawData()` to collect from global slots + class attributes
+- Collected 170 slots total (8 global + 162 inline)
+
+**Part 2a: Switch to JSON** ✅
+- Updated `download_source_data.py` for gen-linkml JSON output
+- Updated `dataLoader.ts` to load JSON, removed js-yaml dependency
+- Deleted legacy bdchm.metadata.json
+
+**Part 2b: Data transformation pipeline** ✅
+- Created `scripts/transform_schema.py` to transform `bdchm.expanded.json` → `bdchm.processed.json`
+- Computes `inherited_from` for all attributes
+- Creates slot instances for slot_usage overrides (ID format: `{slotName}-{ClassName}`)
+- Expands URIs to URLs using prefixes
+- Reduces file size 54.6% (548KB → 249KB)
+
+**Part 2c: Update graph building** ✅
+- Updated Graph.ts and dataLoader to use processed JSON
+- Uses `slotId` and `inherited_from` from attributes
+- Removed duplicate-check workaround
+- 11/12 test files pass (165 tests), DetailContent.test.tsx needs updates (not blocking)
+
+**Part 3: Terminology & Architecture** ✅
+- Unified terminology: Everything is a "slot" (added `inline: boolean` flag)
+- Renamed `AttributeDefinition` → `SlotDefinition`
+- Fixed Part 1: Collected ~170 base slots (8 global + 163 inline, filtering out slot_usage instances)
+- Documented middle panel grouping design (deferred implementation to Stage 5)
+- Deferred ElementPreRefactor bug fixes to Stage 6 (will be deleted anyway)
+
+**Success Criteria Met**:
+- ✅ `transform_schema.py` generates optimized JSON (54.6% size reduction)
+- ✅ All classes have computed `inherited_from` for inherited attributes
+- ✅ Slot_usage creates separate slot instances (used internally in graph)
+- ✅ dataLoader successfully loads processed JSON
+- ✅ SlotEdges use slot instance IDs
+- ✅ No duplicate edge errors
+- ✅ TypeScript typecheck passes
+
+### Stage 5: Fix Model/View Separation
+
+**Status**: Phase A ✅ Complete, Phase B deferred
+
+**Goal**: Ensure panel/section logic is properly handled, centralize contracts, add middle panel controls.
+
+**Phase A: Quick Wins** ✅
+
+**Step 1: Centralize contracts** ✅ (Commit 4b502e7)
+- Created `src/contracts/ComponentData.ts`
+- Moved interfaces from components:
+  - `SectionData`, `SectionItemData`, `ItemHoverData` (from Section.tsx)
+  - `ToggleButtonData` (from ItemsPanel.tsx)
+  - `FloatingBoxMetadata`, `FloatingBoxData` (from FloatingBoxManager.tsx)
+- Components export for backward compatibility
+- Single source of truth for component contracts
+
+**Step 2-4: Middle panel controls** ✅ (Commit f8380b3)
+- Added middle panel toggle button (show/hide slots panel)
+- Center gutter becomes clickable "Show Slots" button when panel hidden
+- Hide button (✕) in top-right of middle panel when visible
+- Added gutters on both sides of middle panel for link rendering
+- Updated LayoutManager to accept `setMiddleSections` prop
+- Updated App.tsx to expose `setMiddleSections` from useLayoutState
+- TypeScript typecheck passes
+
+**Step 5: Grouped slots panel** ⏭️ **DEFERRED**
+- Design documented in REFACTOR_PLAN Stage 5
+- Implementation deferred to UI refactor phase
+- Will show Global section + per-class sections with inheritance indicators
+
+**Phase B: Move Logic** ⏭️ **DEFERRED**
+- positionToContext() elimination
+- getExpansionKey() to statePersistence
+- toSectionItems/getSectionData (will be deleted with ElementPreRefactor)
+
+### Results
+
+**Code Quality**:
+- ✅ TypeScript typecheck passes
+- ✅ 165/184 tests passing (DetailContent tests need updates, not blocking)
+- ✅ Build succeeds
+- ✅ No console errors in normal operation
+
+**Architectural Improvements**:
+- ✅ Graph-based model provides unified relationship querying
+- ✅ Three-panel layout supports slots-as-edges visualization
+- ✅ DataService adapter layer preserves UI compatibility
+- ✅ Component contracts centralized
+- ✅ Data transformation pipeline optimizes schema size
+
+**Files Modified** (Summary):
+- New: `src/models/Graph.ts`, `src/contracts/ComponentData.ts`, `scripts/transform_schema.py`
+- Major: `src/models/Element.ts`, `src/services/DataService.ts`, `src/utils/dataLoader.ts`
+- Layout: `src/App.tsx`, `src/components/LayoutManager.tsx`, `src/hooks/useLayoutState.ts`
+- Types: `src/types.ts` (SlotDefinition, inline flag)
+- Tests: Multiple test files updated for new structure
+
+### Remaining Work
+
+**Moved to UI_REFACTOR.md**:
+- Stage 6: Detail Box Updates (render slot edges with clickable ranges)
+- Slot grouping implementation (from Stage 5 deferred)
+- LinkOverlay fixes for 3-panel display
+- RelationshipInfoBox fixes for slots/types
+- FloatingBoxManager improvements
+
+**Documentation**:
+- Stage 7: Update CLAUDE.md, DATA_FLOW.md, TASKS.md, archive to PROGRESS.md
+
+See UI_REFACTOR.md for active UI refactoring work.
+
+---
+
 ## Credits
 
 Developed by Scott Gold with AI assistance from Claude (Anthropic).

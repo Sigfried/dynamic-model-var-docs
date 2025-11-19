@@ -110,110 +110,42 @@ a message like:
 
 ## Next Up (Ordered)
 
-### Stage 1: Infrastructure Setup & Interface Definition ✨ IN PROGRESS
+### UI Component Refactoring 🎨 ACTIVE
 
-**Status**: ✅ Infrastructure complete, 🔄 Interface definition in progress
+**Status**: ⚠️ **IN PROGRESS** - Model/architecture refactor complete, UI needs updates
 
-**Current step**: Define new edge-based interfaces (ItemInfo, EdgeInfo, LinkPair, RelationshipData)
+**Goal**: Update UI components to work correctly with graph-based model and three-panel layout
 
-**Goal**: Set up infrastructure to replace model layer and define new edge-based interfaces without touching UI. Allows incremental migration while keeping old model working.
+**See [UI_REFACTOR.md](UI_REFACTOR.md) for detailed component-by-component breakdown.**
 
-**See [REFACTOR_PLAN Stage 1](REFACTOR_PLAN.md#stage-1-infrastructure-setup--interface-definition) for detailed steps and rationale.**
+**High Priority** (blocking demo):
+1. **LinkOverlay 3-panel display** - Links not rendering correctly when middle panel visible
+2. **Hover box fixes** - RelationshipInfoBox broken for slots, possibly types
+3. **Transform schema optimization** - Exclude unused types to reduce bundle size
 
-**Quick summary**:
-1. ✅ Element.ts infrastructure (renamed original, created roadmap with re-exports)
-2. 🔄 Define edge-based interfaces (ItemInfo, EdgeInfo, LinkPair, RelationshipData)
-3. ⏭️ Add stub DataService methods (getAllPairs, getRelationships)
-4. ⏭️ Variable field rename (bdchmElement → maps_to)
+**Medium Priority**:
+4. **Detail box slot edges** - Not rendering clickable slot edges
+5. **Floating box manager** - Cascade positioning bugs
+6. **Grouped slots panel** - Design complete, needs implementation
 
----
-
-### Stage 2: Import Types and Schema Validation 🔧 ARCHITECTURAL
-
-**Status**: Not started
-
-**Goal**: Add TypeElement and Range abstraction, improve schema data loading with runtime validation, handle unexpected enum fields (including enum inheritance bug fix).
-
-**See [REFACTOR_PLAN Stage 2](REFACTOR_PLAN.md#stage-2-import-and-model-types) for detailed steps.**
-
-**Quick summary**:
-1. Define DataService and model interfaces (decide graphology+OOP approach)
-2. Improve schema data loading (remove filtering, capture metadata, resolve imports)
-3. Add runtime validation (validate-schema.ts script, DTO validation)
-4. Handle unexpected enum fields (fixes enum inheritance bug)
-5. Import linkml:types and create TypeElement/Range abstraction
-
-**Key decision needed**: Graph stores IDs only (Option A), all properties (Option B), or hybrid (Option C)?
+**Lower Priority**:
+7. **LayoutManager enhancements** - Misc improvements
+8. **Type filtering** - Only show types actually used in schema
 
 ---
 
-### Stage 3: Refactor to Graph Model with SlotEdges 🔥 MAJOR
+### Documentation Cleanup 📚 TODO
 
-**Status**: ✅ **Complete** - Graph infrastructure built, adapter layer working
+**Status**: TODO - Archive refactor work and update docs
 
-**Goal**: Replace current Element-based model with graph-based model using graphology. Many current Element.ts operations can be replaced with graphology queries.
-
-**See [REFACTOR_PLAN Stage 3](REFACTOR_PLAN.md#stage-3-refactor-to-graph-model-with-slotedges) for detailed steps.**
-
-**Completed**:
-1. ✅ Installed and configured graphology
-2. ✅ Defined graph structure (node types: Class/Enum/Slot/Type/Variable, edge types: SlotEdge/InheritanceEdge/MapsToEdge)
-3. ✅ Created SlotEdge class (connects Class → Range with slot metadata)
-4. ✅ Implemented graph-based relationship querying (getRelationshipsFromGraph())
-5. ✅ Updated DataService with adapter layer (old UI format ← new graph data)
-
-**Deferred to Stage 4/5**:
-- UI component migration (will happen during LinkOverlay/RelationshipInfoBox refactors)
-- ClassSlot removal (after UI migration)
-- Collection simplification (after UI migration)
-
----
-
-### Stage 4: UI Layout Changes (Three-Panel)
-
-**Status**: Not started
-
-**Goal**: Implement three-panel layout with toggleable middle slot panel.
-
-**See [REFACTOR_PLAN Stage 4](REFACTOR_PLAN.md#stage-4-ui-layout-changes) for detailed steps.**
-
-**Strategy**: Refactor LinkOverlay while keeping middle panel closed. Once working, enable middle panel (may become two separate link overlays).
-
-**Quick summary**:
-1. Add middle panel to App.tsx (state management, URL state)
-2. Update Panel.tsx for toggle support, statePersistence.ts for URL state
-3. Refactor Section.tsx for ranges rendering (Classes/Enums/Types with separate sections)
-4. Refactor LinkOverlay.tsx for slot edge traversal (two-step links when middle panel visible)
-
----
-
-### Stage 5: Detail Box Updates
-
-**Status**: Not started
-
-**Goal**: Render slots with clickable ranges in detail boxes, display slot edge properties.
-
-**See [REFACTOR_PLAN Stage 5](REFACTOR_PLAN.md#stage-5-detail-box-updates) for detailed steps.**
-
-**Quick summary**:
-1. Update DetailPanel to render slot edges (clickable/hoverable ranges, slot metadata)
-2. Update RelationshipInfoBox to display slot edge properties
-
----
-
-### Stage 6: Documentation Updates
-
-**Status**: Not started
-
-**Goal**: Update documentation to reflect Slots-as-Edges architecture.
-
-**See [REFACTOR_PLAN Stage 6](REFACTOR_PLAN.md#stage-6-documentation-updates) for files to update.**
+**Goal**: Update documentation to reflect completed Slots-as-Edges architecture.
 
 **Updates needed**:
-- CLAUDE.md (Range abstraction, SlotEdge pattern, graph model)
-- DATA_FLOW.md (Slots-as-Edges architecture, graphology)
-- TASKS.md (remove obsolete items)
-- PROGRESS.md (archive as Phase 16)
+- ✅ REFACTOR_PLAN.md - Marked complete, points to UI_REFACTOR (done)
+- ✅ PROGRESS.md - Archived Stages 1-5 as Phase 17 (done)
+- ⏭️ CLAUDE.md - Add graph model patterns, SlotEdge architecture
+- ⏭️ DATA_FLOW.md - Update for Slots-as-Edges and graphology
+- ⏭️ TASKS.md - Remove obsolete items (this file)
 
 ---
 

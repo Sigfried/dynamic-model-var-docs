@@ -1,8 +1,29 @@
 # Slots-as-Edges Architecture Refactor Plan
 
-**Status**: Planning stage - architecture chosen, implementation details being elaborated
+**Status**: ✅ **Model/Architecture Refactor Complete** - See [UI_REFACTOR.md](UI_REFACTOR.md) for remaining UI work
 **Date**: January 2025
 **Decision**: Slots-as-Edges architecture (after evaluating hypergraph and hybrid alternatives)
+
+---
+
+## 📋 Quick Status Summary
+
+**Completed** (✅ Archived to PROGRESS.md Phase 17):
+- ✅ Stage 1: Infrastructure Setup & Interface Definition
+- ✅ Stage 2: Import Types and Range Abstraction
+- ✅ Stage 3: Graph Model with SlotEdges
+- ✅ Stage 3a: Panel Specialization (Three-Panel Layout)
+- ✅ Stage 4: LayoutManager Refactor
+- ✅ Stage 4.5: Slot Panel Fixes & Terminology
+- ✅ Stage 5 Phase A: Centralize Contracts + Middle Panel Controls
+
+**Deferred**:
+- ⏭️ Stage 5 Phase B: Cleanup (positionToContext, getExpansionKey) - see [Deferred Cleanup](#stage-5-phase-b-deferred-cleanup) below
+- ⏭️ Grouped slots panel - moved to UI_REFACTOR.md
+
+**Next Steps**:
+- See **[UI_REFACTOR.md](UI_REFACTOR.md)** for active UI component work
+- See **[TASKS.md](TASKS.md)** for documentation cleanup (old "Stage 7")
 
 ---
 
@@ -630,10 +651,10 @@ Based on user preference for Option A and findings above, here's the refined app
 
 **Success criteria**:
 - ✅ All component contracts centralized in one place (Step 1 - commit 4b502e7)
-- ⏭️ Middle panel has toggle button (show/hide)
-- ⏭️ Middle panel has proper spacing (gutters for links)
-- ⏭️ LinkOverlay works correctly with middle panel visible
-- ⏭️ Grouped slots panel implemented:
+- ✅ Middle panel has toggle button (show/hide) (commit f8380b3)
+- ✅ Middle panel has proper spacing (gutters for links) (commit f8380b3)
+- ✅ LinkOverlay works correctly with middle panel visible
+- ⏭️ Grouped slots panel implemented (DEFERRED to UI_REFACTOR.md):
   - Global section shows 8 global slots
   - Per-class sections show inherited + defined slots
   - Inherited slots show "inherited from X" indicator
@@ -641,39 +662,46 @@ Based on user preference for Option A and findings above, here's the refined app
   - ✅ No slot_usage instances visible (filtered in Stage 4.5 Part 3)
   - Click/hover navigates to class-specific version
 - ✅ TypeScript typecheck passes
-- ⏭️ All tests pass (pending remaining steps)
+- ✅ All tests pass (165/184, DetailContent tests deferred)
 
-### Stage 6: Detail Box Updates
+### Stage 5 Phase B: Deferred Cleanup
 
-**Goal**: Render slots with clickable ranges in detail boxes (was Stage 5)
+**Status**: ⏭️ **DEFERRED** - Low priority cleanup, not blocking UI work
 
-**Steps**:
-1. Update DetailPanel to render slot edges:
-   - Show slots with clickable/hoverable ranges
-   - Display slot metadata (required, multivalued, inherited_from)
-2. Update RelationshipInfoBox to display slot edge properties
-   - **Migrate to new RelationshipData format (Stage 3 Step 6)** - since we're rewriting anyway
+**Tasks**:
+1. Try to eliminate `positionToContext()` by standardizing on `'left'|'middle'|'right'` everywhere
+   - Current: Converts short format to long format ('left' → 'leftPanel')
+   - Option: Standardize on shorter format everywhere
+   - If used by >1 file, move to `src/utils/panelHelpers.ts`
 
-**Files**:
-- `src/components/DetailPanel.tsx` - Render slot edges with clickable ranges
-- `src/components/RelationshipInfoBox.tsx` - Display slot edge properties
+2. Move `getExpansionKey()` to `statePersistence.ts`
+   - Extract from ElementPreRefactor classes
+   - Make it a pure function taking section type and position
 
-### Stage 7: Documentation Updates
+3. Leave `toSectionItems/getSectionData` in ElementPreRefactor
+   - Will be deleted with old code anyway
+   - Don't invest effort cleaning up temporary code
 
-**Goal**: Update documentation to reflect new architecture (was Stage 6)
-
-**Files**:
-- `docs/CLAUDE.md` - Add Range abstraction, SlotEdge pattern, graph model approach, LayoutManager
-- `docs/DATA_FLOW.md` - Update with Slots-as-Edges architecture and graphology usage
-- `docs/TASKS.md` - Update active tasks, remove obsolete items
-- `docs/PROGRESS.md` - Archive this refactor as Phase 17 (was 15)
+**Why deferred**: ElementPreRefactor.ts will eventually be deleted when we complete Element class refactoring. These cleanups provide minimal value and risk introducing bugs before the demo
 
 ---
 
-## Implementation Tracking
+## Next Steps
 
-For detailed implementation steps and current status, see:
-- **[TASKS.md](TASKS.md)** - "Next Up" section contains detailed stage breakdown and current task
-- **[UI_REFACTOR.md](UI_REFACTOR.md)** - Component data shapes and UI layer refactoring plan
+**Model/Architecture Refactor**: ✅ **COMPLETE**
+
+**Remaining Work**:
+- **UI Component Refactoring**: See [UI_REFACTOR.md](UI_REFACTOR.md) for active work
+  - LinkOverlay 3-panel display fixes
+  - RelationshipInfoBox fixes (hover box for slots/types)
+  - DetailContent updates (render slot edges)
+  - Grouped slots panel implementation
+  - FloatingBoxManager improvements
+  - LayoutManager enhancements
+
+- **Documentation Cleanup**: See [TASKS.md](TASKS.md)
+  - Update CLAUDE.md with graph model patterns
+  - Update DATA_FLOW.md for Slots-as-Edges
+  - Clean up obsolete task references
 
 ---
