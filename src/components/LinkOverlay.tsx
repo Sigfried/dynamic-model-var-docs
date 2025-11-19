@@ -74,9 +74,9 @@ function LinkTooltip({ data, x, y }: { data: LinkTooltipData; x: number; y: numb
 }
 
 export interface LinkOverlayProps {
-  /** Section IDs visible in left panel */
+  /** Section IDs visible in left panel (from LinkOverlay's perspective) */
   leftSections: string[];
-  /** Section IDs visible in right panel */
+  /** Section IDs visible in right panel (from LinkOverlay's perspective) */
   rightSections: string[];
   /** Data service for fetching item relationships */
   dataService: DataService | null;
@@ -227,25 +227,27 @@ export default function LinkOverlay({
     return { leftPanelLinks: leftLinks, rightPanelLinks: rightLinks };
   }, [leftSections, rightSections, dataService, filterOptions]);
 
-  // Helper to find item in DOM with panel position
-  const findItem = (type: string, name: string, panelPosition: 'left' | 'right'): HTMLElement | null => {
-    return document.querySelector(`[data-item-type="${type}"][data-item-name="${name}"][data-panel-position="${panelPosition}"]`);
+  // Helper to find item in DOM (without panel position - item may be in any physical panel)
+  const findItem = (type: string, name: string): HTMLElement | null => {
+    return document.querySelector(`[data-item-type="${type}"][data-item-name="${name}"]`);
   };
 
-  // Calculate anchor points for cross-panel links (simplified for left-right layout)
+  // Calculate anchor points for cross-panel links based on actual positions
   const calculateCrossPanelAnchors = (
     sourceRect: DOMRect,
-    targetRect: DOMRect,
-    sourcePanel: 'left' | 'right'
+    targetRect: DOMRect
   ): { source: { x: number; y: number }; target: { x: number; y: number } } => {
-    // For left panel: connect from right edge, vertically centered
-    // For right panel: connect from left edge, vertically centered
-    if (sourcePanel === 'left') {
+    // Determine direction based on actual DOM positions
+    const sourceIsLeft = sourceRect.left < targetRect.left;
+
+    if (sourceIsLeft) {
+      // Source is to the left of target: connect from right edge to left edge
       return {
         source: { x: sourceRect.right, y: sourceRect.top + sourceRect.height / 2 },
         target: { x: targetRect.left, y: targetRect.top + targetRect.height / 2 }
       };
     } else {
+      // Source is to the right of target: connect from left edge to right edge
       return {
         source: { x: sourceRect.left, y: sourceRect.top + sourceRect.height / 2 },
         target: { x: targetRect.right, y: targetRect.top + targetRect.height / 2 }
@@ -310,17 +312,12 @@ export default function LinkOverlay({
     const svgRect = svgRef.current?.getBoundingClientRect();
     if (!svgRect) return allRenderedLinks;
 
-    // Helper to render links from a specific panel
-    const renderLinksFromPanel = (links: Link[], sourcePanel: 'left' | 'right') => {
-      const targetPanel = sourcePanel === 'left' ? 'right' : 'left';
-
+    // Helper to render links from a specific logical panel (left or right from LinkOverlay's perspective)
+    const renderLinksFromPanel = (links: Link[], logicalSourcePanel: 'left' | 'right') => {
       return links.map((link, index) => {
-        // For self-refs, both source and target are in the same panel
-        const sourcePanelPos = sourcePanel;
-        const targetPanelPos = link.relationship.isSelfRef ? sourcePanel : targetPanel;
-
-        const sourceItem = findItem(link.source.type, link.source.name, sourcePanelPos);
-        const targetItem = findItem(link.target.type, link.target.name, targetPanelPos);
+        // Find items in DOM by type and name (regardless of physical panel position)
+        const sourceItem = findItem(link.source.type, link.source.name);
+        const targetItem = findItem(link.target.type, link.target.name);
 
         // Skip if either item not found in DOM
         if (!sourceItem || !targetItem) {
@@ -348,8 +345,8 @@ export default function LinkOverlay({
           } as DOMRect;
           pathData = generateSelfRefPath(adjustedRect);
         } else {
-          // Use simplified cross-panel anchor calculation for cleaner horizontal links
-          const { source, target } = calculateCrossPanelAnchors(sourceRect, targetRect, sourcePanel);
+          // Use cross-panel anchor calculation based on actual DOM positions
+          const { source, target } = calculateCrossPanelAnchors(sourceRect, targetRect);
 
           // Adjust coordinates to be relative to SVG origin
           const adjustedSource = { x: source.x - svgRect.left, y: source.y - svgRect.top };
@@ -367,7 +364,7 @@ export default function LinkOverlay({
         const strokeWidth = getLinkStrokeWidth(link.relationship);
 
         // Generate unique key for this link
-        const linkKey = `${sourcePanel}-${link.source.type}-${link.source.name}-${link.target.type}-${link.target.name}-${index}`;
+        const linkKey = `${logicalSourcePanel}-${link.source.type}-${link.source.name}-${link.target.type}-${link.target.name}-${index}`;
 
         // Check if link should be highlighted (either direct hover or item hover match)
         const matchesHoveredItem = !!hoveredItem && (

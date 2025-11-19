@@ -418,6 +418,7 @@ export default function LayoutManager({
       {/* SVG Link Overlay - conditional based on middle panel visibility */}
       {middlePanelEmpty ? (
         // Middle panel hidden: Single overlay using SlotEdges (class → range direct)
+        // LinkOverlay sees: left=classes, right=ranges
         <LinkOverlay
           leftSections={leftSections}
           rightSections={rightSections}
@@ -425,7 +426,9 @@ export default function LayoutManager({
           hoveredItem={hoveredItem}
         />
       ) : (
-        // Middle panel visible: Two overlays (class → slot, slot → range)
+        // Middle panel visible: Two overlays connecting adjacent panels
+        // First overlay sees: left=classes, right=slots (slots are in middle panel physically)
+        // Second overlay sees: left=slots, right=ranges (slots are in middle panel physically)
         <>
           <LinkOverlay
             leftSections={leftSections}
