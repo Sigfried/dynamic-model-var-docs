@@ -730,52 +730,149 @@ Example using Entity → Observation → SdohObservation (shows all combinations
 - ✅ 11/12 test files pass (165 tests)
 - ⚠️ DetailContent.test.tsx needs further UI test updates (19 failing tests) - not blocking
 
-**Part 3: Bug Fixes & Cleanup** ⏭️ NEXT
+**Part 3: Terminology & Architecture Decisions** ⏭️ NEXT
 
-**Bugs to fix:**
-1. ❌ **Slot hover boxes show "No relationships found"**
-   - Issue: `computeIncomingRelationships()` checks slot usage incorrectly
-   - Current logic: Checks `classSlot.baseSlot.name === slotId`
-   - Problem: Doesn't account for slot instances (e.g., "category-SdohObservation")
-   - Fix needed: Check both direct usage AND overrides field
-   - Location: `src/models/ElementPreRefactor.ts:145-156`
+**Summary:**
+1. Unify terminology: Everything is a "slot" (add `inline` flag to distinguish types)
+2. Fix Part 1: Collect ~150 missing inline slot definitions from class attributes
+3. Filter slot_usage instances from middle panel (they're internal, shown in detail boxes)
+4. Document middle panel grouping design (defer implementation to Stage 5)
+5. Defer ElementPreRefactor bug fixes to Stage 6 (will be deleted anyway)
 
-2. ⚠️ **Only 18 slots showing in middle panel**
-   - Expected: ~170 slots (base slots + slot instances from slot_usage)
-   - Actual: 18 base slots only
-   - Root cause: `transform_schema.py` only outputs base slots, not instances
-   - Decision needed: Should middle panel show slot instances separately?
-   - Alternative: Keep 18 base slots, use hover to show all usage (including overrides)
+**Terminology Unification** (based on [sg] guidance):
 
-**Terminology questions to resolve:**
-1. **PropertyDefinition vs AttributeDefinition**
-   - Both interfaces are now identical after Part 2c changes
-   - PropertyDefinition: Local interface in ElementPreRefactor.ts
-   - AttributeDefinition: DTO interface in types.ts
-   - **Question**: Why keep both? Should consolidate to just AttributeDefinition
+**Decision**: Everything is a **slot** - distinguish inline vs referenced with metadata
 
-2. **Attributes vs Slots vs Properties terminology**
-   - Current usage is inconsistent:
-     - "attributes" = class attributes (from class.attributes in JSON)
-     - "slots" = slot definitions (global reusable schemas)
-     - "properties" = synonym for attributes (old term)
-   - After processed JSON: All attributes reference slots via `slotId`
-   - **Question**: Should unify to just "attributes" and "slots"? Remove "properties"?
-   - **Proposed**:
-     - Class **attributes** = class-specific usage/configuration of slots
-     - **Slot definitions** = shared schemas that attributes reference
-     - Remove "properties" terminology entirely
+**Current inconsistency:**
+- "attributes" = inline class-specific slots (from class.attributes)
+- "slots" = referenced global reusable slots (from class.slots / slot definitions)
+- "properties" = synonym for attributes (old term)
 
-**Success Criteria**:
-- ✅ Slot panel shows 18 base slots (Part 1 complete - but see bug #2 above)
+**New unified terminology:**
+- **Slot** = any property/field definition (inline or referenced)
+- **Inline slot** = defined directly on a class (flag: `inline: true`)
+  - Example: Entity.id, Observation.category
+  - May override inherited slot via slot_usage
+- **Referenced slot** = references a global slot definition (flag: `inline: false`)
+  - Example: Observation.associated_visit (references global slot)
+- **Base slot** = original slot definition (e.g., "category")
+- **Slot instance** = slot with overrides (e.g., "category-SdohObservation")
+  - Has `overrides` field pointing to base slot
+  - Created when slot_usage applies to inherited slot
+  - [sg] see Bugs #2 below. there are not that many cases of slot_usage
+         overrides. so if this is the distinction between base and instance,
+         it doesn't make sense that there would only be 18 base slots
+
+**What is the distinction between base slots and instances?**
+- **Base slot**: Original definition (e.g., "category" with range: string)
+- **Slot instance**: Derived from base with overrides (e.g., "category-SdohObservation" with range: GravityDomainEnum)
+- **Why separate?**: Different classes can override same base slot differently
+- **Example**:
+  - Base: `category` (range: string)
+  - Instance 1: `category-SdohObservation` (range: GravityDomainEnum)
+  - Instance 2: `category-LabTest` (range: LabCategoryEnum) [hypothetical]
+
+**Implementation plan:**
+1. Add `inline: boolean` field to slot DTOs in types.ts
+2. Update transform_schema.py to set inline flag:
+   - `inline: true` for attributes defined directly on class
+   - `inline: false` for attributes referencing global slots
+3. Rename interfaces:
+   - `PropertyDefinition` → delete (consolidate to AttributeDefinition)
+   - `AttributeDefinition` → rename to `SlotDefinition`
+4. Update all code to use "slot" terminology consistently
+
+**Bugs and fixes:**
+
+1. ❌ **Part 1 incomplete: Missing ~150 inline slots**
+   - Current: Only showing 18 items (7 global + 11 slot_usage instances)
+   - Expected: ~157 total slots (7 global + ~150 inline class-specific)
+   - **Root cause**: Part 1 only collected global slots, didn't collect inline slot definitions from class attributes
+   - **Fix needed in Part 1**:
+     - Collect inline slot definitions from each class's attributes
+     - These are base slot definitions, just class-specific rather than global
+     - Examples: `Specimen.specimen_type`, `Material.material_type`, `Subject.race`
+   - **How to identify inline slots**:
+     - Inline slots: Attributes where `slotId` has NO hyphen (base definitions)
+     - Slot_usage instances: Attributes where `slotId` has hyphen like "category-SdohObservation" (skip these)
+     - Build unique set by `slotId` across all class attributes
+     - Union with global slots from top-level `slots:` section
+
+2. ❌ **Slot_usage instances shouldn't appear in middle panel**
+   - Current: Showing 11 slot_usage instances with weird IDs (category-SdohObservation, etc.)
+   - Expected: Hide these implementation details from middle panel
+   - **Design decision**:
+     - Middle panel shows slots grouped by source (see #4 below)
+     - Slot_usage instances exist in graph as edges, not as panel items
+     - Overrides revealed through:
+       - Detail boxes: Show effective overridden values with "inherited from X, overridden" indicator
+       - Visual indicator in middle panel for overridden slots
+
+3. ❌ **Middle panel grouping design** ⏭️ **Defer to Stage 5**
+   - **Goal**: Group slots by source (Global, then by class)
+   - **Structure**:
+     ```
+     Global Slots (7)
+       - associated_participant
+       - category
+       - id
+       - ...
+
+     Entity (3 slots)
+       - id (defined here)
+       - identity (defined here)
+       - category (defined here)
+
+     Observation (5 slots)
+       - id (inherited from Entity)
+       - category (inherited from Entity)
+       - associated_visit (global reference)
+       - value (defined here)
+
+     SdohObservation (5 slots)
+       - id (inherited from Entity)
+       - category (inherited from Observation) ⚠️ overridden
+       - value (inherited from Observation)
+       - ...
+     ```
+   - **Behavior**:
+     - Inherited slots appear under each class that uses them (repetition is OK)
+     - Always show base slot name (e.g., "category", never "category-SdohObservation")
+     - Click/hover on slot → navigate to that class's version (with overrides if any)
+     - Visual indicator (⚠️ or different color) for overridden slots
+   - **Implementation timing**: Defer to Stage 5 (middle panel improvements)
+     - Part 3 focuses on data model and terminology
+     - Stage 5 focuses on UI/presentation improvements
+
+4. ❌ **Slot hover boxes show "No relationships found"**
+   - Issue: `computeIncomingRelationships()` doesn't account for slot instances
+   - Location: ElementPreRefactor.ts (will be deleted)
+   - **Defer to Stage 6**: Fix when implementing new Element classes with graph queries
+   - New Element.getRelationshipsFromGraph() will handle this correctly
+
+**Files to update:**
+- `src/types.ts` - Add `inline` field, rename AttributeDefinition → SlotDefinition
+- `scripts/transform_schema.py` - Set inline flag based on slot source
+- `src/models/ElementPreRefactor.ts` - Delete PropertyDefinition interface
+- All files using "attribute" or "property" terminology - switch to "slot"
+
+**Success Criteria for Part 3**:
+- ⏭️ Terminology unification: Add `inline` flag, rename AttributeDefinition → SlotDefinition
+- ⏭️ Fix Part 1 data collection: Collect ~157 base slots (7 global + ~150 inline)
+  - Filter out slot_usage instances (hyphened IDs)
+  - Build unique set by `slotId` from class attributes
+- ⏭️ Filter slot_usage instances from middle panel display
+- ⏭️ Document grouping design for Stage 5 implementation
+- ⏭️ Slot hover boxes (deferred to Stage 6 - don't fix ElementPreRefactor)
+
+**Success Criteria for Stage 4.5 overall**:
 - ✅ `transform_schema.py` successfully generates `bdchm.processed.json` (Part 2b)
 - ✅ Processed JSON is smaller than expanded JSON (Part 2b: 548KB → 249KB, 54.6% reduction)
 - ✅ All classes have computed `inherited_from` for inherited attributes (Part 2b)
-- ⚠️ Slot_usage creates separate slot instances with correct IDs (Part 2b - but not showing in UI)
+- ✅ Slot_usage creates separate slot instances with correct IDs (Part 2b - used internally in graph)
 - ✅ dataLoader successfully loads processed JSON (Part 2b/2c)
 - ✅ SlotEdges use slot instance IDs from processed JSON (Part 2c)
 - ✅ No duplicate edge errors (Part 2c - removed workaround, no errors)
-- ⏭️ Slot hover boxes show relationships (Part 3 - bug #1)
 - ✅ TypeScript typecheck passes (all parts)
 - ⚠️ Tests: 11/12 files pass, DetailContent.test.tsx needs updates (not blocking)
 
@@ -900,18 +997,26 @@ Based on user preference for Option A and findings above, here's the refined app
 2. Add middle panel toggle button in header or panel
 3. Fix LayoutManager spacing for middle panel (gutters on both sides)
 4. Verify LinkOverlay rendering with middle panel
+5. **Implement grouped slots panel** (from Stage 4.5 Part 3 design):
+   - DataService: Provide grouped slot data (Global section + per-class sections)
+   - Section.tsx: Support nested grouping (class headers with slot items)
+   - Filter out slot_usage instances (hyphened IDs)
+   - Show inherited slots under each class (with visual indicator for overrides)
+   - Click/hover navigates to class-specific slot version
 
 **Phase B: Move logic (defer or do lightly)**
-5. Try to eliminate positionToContext() by standardizing on 'left'|'middle'|'right'
-6. Move getExpansionKey() to statePersistence utils (if easy)
-7. Leave toSectionItems/getSectionData in ElementPreRefactor (delete later)
+6. Try to eliminate positionToContext() by standardizing on 'left'|'middle'|'right'
+7. Move getExpansionKey() to statePersistence utils (if easy)
+8. Leave toSectionItems/getSectionData in ElementPreRefactor (delete later)
 
 **Files to modify**:
 - `src/contracts/ComponentData.ts` - NEW (centralized contracts)
-- `src/components/Section.tsx` - Remove contract exports, import from contracts
+- `src/components/Section.tsx` - Remove contract exports, import from contracts, support nested grouping
 - `src/components/ItemsPanel.tsx` - Remove contract exports, import from contracts
 - `src/components/FloatingBoxManager.tsx` - Remove contract exports, import from contracts
 - `src/components/LayoutManager.tsx` - Add toggle button, fix spacing
+- `src/services/DataService.ts` - Provide grouped slot data (global + per-class sections)
+- `src/utils/dataLoader.ts` - Filter slot_usage instances from middle panel collection
 - `src/utils/statePersistence.ts` - Add getExpansionKey function (optional)
 - `src/models/ElementPreRefactor.ts` - Try to eliminate positionToContext (optional)
 
@@ -920,6 +1025,13 @@ Based on user preference for Option A and findings above, here's the refined app
 - ✅ Middle panel has toggle button (show/hide)
 - ✅ Middle panel has proper spacing (gutters for links)
 - ✅ LinkOverlay works correctly with middle panel visible
+- ✅ Grouped slots panel implemented:
+  - Global section shows 7 global slots
+  - Per-class sections show inherited + defined slots
+  - Inherited slots show "inherited from X" indicator
+  - Overridden slots have visual indicator (⚠️ or color)
+  - No slot_usage instances visible (filtered out)
+  - Click/hover navigates to class-specific version
 - ✅ TypeScript typecheck passes
 - ✅ All tests pass
 
