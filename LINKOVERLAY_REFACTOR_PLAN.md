@@ -1,435 +1,572 @@
-# LinkOverlay Refactor Plan - DRAFT FOR REVIEW
+# LinkOverlay Refactor Plan v2 - USING YOUR PROPOSAL
 
 **Status:** Awaiting approval before implementation
-**Related:** UI_REFACTOR.md Section 1, Element.ts lines 132-156
+**Related:** Element.ts lines 132-156 (EdgeInfoProposal), UI_REFACTOR.md Section 1, Section 9 (Grouped Slots Panel)
+
+---
+
+## PREREQUISITE: Add Class→Slot and Slot→Range Edges to Graph
+
+**Problem:** Current graph only has Class→Range edges (with slot metadata). For 3-panel layout, we need separate Class→Slot and Slot→Range edges.
+
+**Current:**
+```
+MeasurementObservation --[slotName: range_high]--> Quantity
+(Single edge of type 'slot')
+```
+
+**What we're adding:**
+```
+1. MeasurementObservation --> range_high  (NEW: Class→Slot edge)
+2. range_high --> Quantity                (NEW: Slot→Range edge)
+3. MeasurementObservation --[range_high]--> Quantity  (KEEP: existing edge)
+```
+
+**Implementation:**
+
+1. **Modify Graph.ts edge types:**
+   ```typescript
+   export type EdgeType = 'inheritance' | 'slot' | 'maps_to' | 'class_to_slot' | 'slot_to_range';
+
+   export interface ClassToSlotEdgeAttributes extends BaseEdgeAttributes {
+     type: 'class_to_slot';
+     slotName: string;
+     slotDefId: string;
+     required: boolean;
+     multivalued: boolean;
+     inheritedFrom?: string;
+   }
+
+   export interface SlotToRangeEdgeAttributes extends BaseEdgeAttributes {
+     type: 'slot_to_range';
+     slotName: string;  // For reference
+   }
+   ```
+
+2. **Add helper functions in Graph.ts:**
+   ```typescript
+   export function addClassToSlotEdge(
+     graph: SchemaGraph,
+     classId: string,
+     slotDefId: string,
+     slotName: string,
+     required: boolean,
+     multivalued: boolean,
+     inheritedFrom?: string
+   ): void {
+     const edgeKey = `${classId}-->${slotDefId}`;
+     graph.addEdgeWithKey(edgeKey, classId, slotDefId, {
+       type: 'class_to_slot',
+       slotName,
+       slotDefId,
+       required,
+       multivalued,
+       inheritedFrom
+     });
+   }
+
+   export function addSlotToRangeEdge(
+     graph: SchemaGraph,
+     slotDefId: string,
+     rangeId: string,
+     slotName: string
+   ): void {
+     const edgeKey = `${slotDefId}-->${rangeId}`;
+     // Use { multi: false } to prevent duplicates (same slot→range from multiple classes)
+     if (!graph.hasEdge(slotDefId, rangeId)) {
+       graph.addEdgeWithKey(edgeKey, slotDefId, rangeId, {
+         type: 'slot_to_range',
+         slotName
+       });
+     }
+   }
+   ```
+
+3. **Modify buildGraphFromSchemaData() in Graph.ts:**
+   ```typescript
+   // 2. Slot edges - THREE edges per class attribute:
+   // - Class → Range (existing, keep for backward compat)
+   // - Class → Slot (NEW)
+   // - Slot → Range (NEW, deduplicated)
+
+   // Track which Slot→Range edges we've already added
+   const addedSlotToRange = new Set<string>();
+
+   schemaData.classes.forEach((classData) => {
+     if (classData.attributes) {
+       Object.entries(classData.attributes).forEach(([attrName, attrDef]) => {
+         const range = attrDef.range || 'string';
+         const slotDefId = attrDef.slotId;
+
+         // Existing Class→Range edge (KEEP)
+         addSlotEdge(
+           graph,
+           classData.name,
+           range,
+           attrName,
+           slotDefId,
+           attrDef.required ?? false,
+           attrDef.multivalued ?? false,
+           attrDef.inherited_from
+         );
+
+         // NEW: Class→Slot edge
+         addClassToSlotEdge(
+           graph,
+           classData.name,
+           slotDefId,
+           attrName,
+           attrDef.required ?? false,
+           attrDef.multivalued ?? false,
+           attrDef.inherited_from
+         );
+
+         // NEW: Slot→Range edge (deduplicated)
+         const slotRangeKey = `${slotDefId}-->${range}`;
+         if (!addedSlotToRange.has(slotRangeKey)) {
+           addSlotToRangeEdge(graph, slotDefId, range, attrName);
+           addedSlotToRange.add(slotRangeKey);
+         }
+       });
+     }
+   });
+   ```
+
+4. **Current Workaround ("fudge"):**
+   - Multiple classes using `range_high` all point to same slot definition node
+   - Example:
+     ```
+     MeasurementObservation --> range_high
+     SdohObservation --> range_high
+     (Both point to same range_high node)
+     ```
+
+5. **Future (Grouped Slots - later):**
+   - Create per-class slot nodes (e.g., `range_high#MeasurementObservation`)
+     - [sg] i think we are currently using - or _ as the special slot/class id delimiters.
+            i don't care, as long as it stays consistent
+   - Each class gets its own slot instance
+   - No more convergence on shared nodes
+
+**Testing:**
+- Verify Class→Slot edges exist for all attributes
+- Verify Slot→Range edges deduplicated (one per unique slot/range pair)
+- Verify existing Class→Range edges still present
+- Verify graph edge counts correct
 
 ---
 
 ## Current Problems
 
-1. **Architecture issues:**
-   - LinkOverlay has too many responsibilities (querying data, filtering, finding items, positioning)
-   - Tight coupling to sections and panel concepts
-   - Complex logic in useMemo for building links
-   - Uses old relationship format instead of graph-based edges
-
-2. **Rendering bugs:**
-   - No links from slots → ranges in 3-panel mode
-   - Vertical endpoints misaligned (range_high connects to wrong class)
-   - Duplicate slot usage not shown (associated_visit used by 18 classes, only 1 link shown)
-   - Class→class links going left→left instead of left→right in 2-panel mode
-   - Self-referential links not implemented (should be circular arrows)
-
-3. **Forgotten work from Stage 3:**
-   - Steps 4-5 completed (getRelationshipsFromGraph, getRelationshipsNew in DataService)
-   - **Step 6 NOT done:** Migrate UI components to use new format
-   - **Step 7 NOT done:** Clean up after migration
-   - getAllPairs() stubbed but not implemented
+Same as v1, but now properly addressing them with your EdgeInfoProposal design.
 
 ---
 
-## Proposed Architecture
-
-### Separation of Concerns
-
-**LayoutManager (parent):**
-- Knows which items are in which physical panels
-- Computes edge data with panel information
-- Passes ready-to-render edge list to LinkOverlay
-- Responsible for: data fetching, filtering, panel logic
-
-**LinkOverlay (child):**
-- Receives pre-computed edge data with all necessary info
-- Only responsible for: SVG rendering, hit detection, hover state
-- No knowledge of: sections, types, relationships, DataService
-- Pure rendering component
-
----
-
-## New Interface Design
-
-Based on Element.ts proposal (lines 132-156) with refinements:
+## Your Proposal (Element.ts lines 132-156)
 
 ```typescript
-/**
- * EdgeForRendering - Complete edge data for LinkOverlay rendering
- * Computed by LayoutManager, consumed by LinkOverlay
- */
-export interface EdgeForRendering {
-  // Identity
-  key: string;  // Unique key for React (e.g., "slot-associated_visit-MeasurementObservation")
-
-  // Source item
-  sourceId: string;
-  sourceName: string;
-  sourceType: string;
-  sourceColor: string;
-  sourcePanelId: string;  // DOM panel ID where source item lives
-
-  // Target item
-  targetId: string;
-  targetName: string;
-  targetType: string;
-  targetColor: string;
-  targetPanelId: string;  // DOM panel ID where target item lives
-
-  // Edge metadata
+// Generalized EdgeInfo without single-item focus
+export interface EdgeInfoProposal { // [sg] i only put 'Proposal' in the names in order not to break stuff in Elements.ts
+                                    //      no need to keep it here
   edgeType: 'inheritance' | 'property' | 'variable_mapping';
-  label?: string;  // Slot/attribute name for property edges
-  isSelfRef: boolean;  // true if source === target (render as circular arrow)
+  sourceItem: ItemInfoProposal;
+  targetItem: ItemInfoProposal;
+  label?: string;
+  inheritedFrom?: string;
 }
 
-/**
- * LinkOverlay - Pure SVG rendering component
- */
-interface LinkOverlayProps {
-  edges: EdgeForRendering[];
-  hoveredItem?: ItemHoverData | null;
+export interface ItemInfoProposal {
+  id: string;
+  displayName: string;
+  typeDisplayName: string;  // "Class", "Enum", "Slot", "Variable"
+  color: string;
+  panelPosition: 'left' | 'right';  // Logical: which side of this link
+  panelId: 'left' | 'middle' | 'right'; // Physical: DOM panel location
 }
+
+// Proposed LinkOverlay usage:
+<LinkOverlay
+  edges={/* EdgeInfoProposal instances for all currently displayed items */}
+  leftPanelId={'left'}
+  rightPanelId={'middle'}
+  hoveredItem={hoveredItem}
+/>
 ```
+
+**Key design insights:**
+1. **Logical/Physical separation**: panelPosition (left/right of edge) vs panelId (physical DOM location)
+2. **Reusable edges**: Same edge data works for multiple LinkOverlay instances
+3. **LinkOverlay filters**: Each instance only renders edges connecting its two panels
+4. **No DataService**: LinkOverlay is pure rendering, no data queries
+
+---
+
+## Architecture
+
+### LayoutManager Responsibilities
+- Query DataService for all edges
+- Fill in panelId based on which items are in which physical panels
+- Pass complete edge list to LinkOverlay(s)
+- **Does NOT** pre-filter edges - LinkOverlay filters itself
+
+### LinkOverlay Responsibilities
+- Filter to only edges connecting its leftPanelId and rightPanelId
+- Find DOM elements (using id + panelId, no type needed per your note)
+- Render SVG paths
+- Handle hover state
+- Log errors if DOM elements not found (per your note)
 
 ---
 
 ## Implementation Steps
 
-### Phase 1: Implement getAllPairs() in DataService
+### Phase 1: Implement `getAllEdgesForLinking()` in DataService
 
-**Goal:** Get all edges from graph with basic metadata (no panel info yet)
+**Goal:** Return EdgeInfoProposal[] with panelPosition set, panelId empty
 
 ```typescript
+import {itemTypeToCode} from "./statePersistence";
+
 class DataService {
-  /**
-   * Get all property edges for rendering as links
-   * Returns edges with item IDs and colors, but no panel positions
-   */
-  getAllPairs(): EdgeForRendering[] {
-    const edges: EdgeForRendering[] = [];
+   // [sg] is there a reason to query for all edges?
+   //      also, my EdgeInfo proposal is supposed to be generic and work
+   //      for detail and hover boxes (_maybe_ for hierarchical sections as well)
+   //      i'll put some alternative ideas below
 
-    // Query graph for all property edges
-    this.modelData.graph.forEachEdge((edge, attrs, source, target) => {
-      if (attrs.edgeType !== 'property') return; // Skip inheritance, variable_mapping
+   getAllEdgesForLinking(): EdgeInfoProposal[] {
+      const edges: EdgeInfoProposal[] = [];
 
-      const sourceElement = this.modelData.elementLookup.get(source);
-      const targetElement = this.modelData.elementLookup.get(target);
-      if (!sourceElement || !targetElement) return;
+      // Query graph for all property edges
+      this.modelData.graph.forEachEdge((edgeKey, attrs, sourceId, targetId) => {
+         if (attrs.edgeType !== 'property') return;
 
-      edges.push({
-        key: `${attrs.label || 'prop'}-${source}-${target}`,
-        sourceId: source,
-        sourceName: sourceElement.name,
-        sourceType: sourceElement.type,
-        sourceColor: this.getColorForItemType(sourceElement.type),
-        sourcePanelId: '', // Filled in by LayoutManager
-        targetId: target,
-        targetName: targetElement.name,
-        targetType: targetElement.type,
-        targetColor: this.getColorForItemType(targetElement.type),
-        targetPanelId: '', // Filled in by LayoutManager
-        edgeType: 'property',
-        label: attrs.label,
-        isSelfRef: source === target
+         const sourceEl = this.modelData.elementLookup.get(sourceId);
+         const targetEl = this.modelData.elementLookup.get(targetId);
+         if (!sourceEl || !targetEl) return;
+
+         edges.push({
+            edgeType: 'property',
+            sourceItem: {
+               id: sourceId,
+               displayName: sourceEl.name,
+               typeDisplayName: this.getTypeDisplayName(sourceEl.type),
+               color: this.getColorForItemType(sourceEl.type),
+               panelPosition: 'left',  // Source always on left of edge
+               panelId: ''  // Filled by LayoutManager
+            },
+            targetItem: {
+               id: targetId,
+               displayName: targetEl.name,
+               typeDisplayName: this.getTypeDisplayName(targetEl.type),
+               color: this.getColorForItemType(targetEl.type),
+               panelPosition: 'right',  // Target always on right of edge
+               panelId: ''  // Filled by LayoutManager
+            },
+            label: attrs.label,
+            inheritedFrom: attrs.inheritedFrom
+         });
       });
-    });
 
-    return edges;
-  }
+      return edges;
+   }
+   // [sg] stuff below is meant to replace getAllEdgesForLinking; check for problems
+   //      but with this, we don't even have to go to Element at this point
+
+   // maintain a list of all currently displayed items
+   // can be populated in Section maybe?
+   currentlyDisplayedItems = new Map<string, ItemInfo> // send to Section for populating?
+   currentEdgeIds = new Set<string>
+   currentEdges = new Map<string, EdgeInfo>
+   getEdgesForDisplayedItems(items: ItemInfo[]): EdgeInfo[] {
+       this.currentlyDisplayedItems.values().forEach((item: ItemInfo) => {
+           const eids: string[] = graph.edges(item.id)
+           eids.forEach(edgeId => this.currentEdgeIds.add(edgeId))
+       })
+       const edges: EdgeInfo[] = Array.from(this.currentEdgeIds.values().map((edgeId) => {
+           const sourceId = graph.source(edgeId)
+           const targetId = graph.target(edgeId)
+           if (!(this.currentlyDisplayedItems.has(sourceId) && this.currentlyDisplayedItems.has(targetId))) {
+               return
+           }
+           const sourceItem = this.currentlyDisplayedItems.get(sourceId)
+           const targetItem = this.currentlyDisplayedItems.get(targetId)
+           const edge: EdgeInfo = {
+               edgeType: graph.getEdgeAttributes(edgeId),
+               sourceItem,
+               targetItem,
+               label: notSure, // edgeId? something else?
+               id: edgeId, // EdgeInfo ought to have an id field, right?
+               inheritedFrom: notSure
+           }
+           return edge
+       })).filter(e => e) // get rid of nulls from returning nothing
+       return edges
+   }
 }
 ```
 
 **Testing:**
 - Verify all property edges returned
-- Verify each class→slot→range becomes TWO edges (class→slot, slot→range)
-- Verify duplicate slots create multiple edges (associated_visit → 18 edges)
-- Verify self-refs detected correctly
+- Verify class→slot and slot→range both present (two edges per attribute)
+- Verify associated_visit → 18 edges (one per class using it)
+- Verify self-refs work (sourceId === targetId)
 
 ---
 
-### Phase 2: Enhance edges with panel info in LayoutManager
+### Phase 2: Fill panelId in LayoutManager
 
-**Goal:** LayoutManager knows panel layout, adds panel IDs to edges
+**Goal:** Map items to physical panels, fill in panelId fields
 
 ```typescript
 // In LayoutManager
-const enhanceEdgesWithPanelInfo = (
-  edges: EdgeForRendering[],
+const fillPanelIds = (
+  edges: EdgeInfoProposal[],
   leftSections: string[],
   middleSections: string[],
   rightSections: string[]
-): EdgeForRendering[] => {
-  // Build lookup: itemType → panelId
-  const typeToPanelId = new Map<string, string>();
-  leftSections.forEach(type => typeToPanelId.set(type, 'left'));
-  middleSections.forEach(type => typeToPanelId.set(type, 'middle'));
-  rightSections.forEach(type => typeToPanelId.set(type, 'right'));
+): EdgeInfoProposal[] => {
+  // Build map: itemId → physical panelId
+  const itemIdToPanelId = new Map<string, 'left' | 'middle' | 'right'>();
 
-  return edges.map(edge => ({
-    ...edge,
-    sourcePanelId: typeToPanelId.get(edge.sourceType) || '',
-    targetPanelId: typeToPanelId.get(edge.targetType) || ''
-  }))
-  .filter(edge =>
-    // Only keep edges where both items are visible in panels
-    edge.sourcePanelId && edge.targetPanelId
-  );
+  // Get all items in each physical panel
+  [
+    { sections: leftSections, panelId: 'left' as const },
+    { sections: middleSections, panelId: 'middle' as const },
+    { sections: rightSections, panelId: 'right' as const }
+  ].forEach(({ sections, panelId }) => {
+    sections.forEach(typeId => {
+      const itemNames = dataService.getItemNamesForType(typeId);
+      itemNames.forEach(itemName => {
+        itemIdToPanelId.set(itemName, panelId);
+      });
+    });
+  });
+
+  // Fill in panelId for each edge
+  return edges
+    .map(edge => ({
+      ...edge,
+      sourceItem: {
+        ...edge.sourceItem,
+        panelId: itemIdToPanelId.get(edge.sourceItem.id) || ''
+      },
+      targetItem: {
+        ...edge.targetItem,
+        panelId: itemIdToPanelId.get(edge.targetItem.id) || ''
+      }
+    }))
+    .filter(edge =>
+      // Only keep edges where both items are visible
+      edge.sourceItem.panelId && edge.targetItem.panelId
+    );
 };
 
-// Usage when middle panel hidden (2-panel mode)
-const allEdges = dataService.getAllPairs();
-const visibleEdges = enhanceEdgesWithPanelInfo(
-  allEdges,
-  leftSections,
-  [],  // middle empty
-  rightSections
-);
-
-// Usage when middle panel visible (3-panel mode)
-const allEdges = dataService.getAllPairs();
-const visibleEdges = enhanceEdgesWithPanelInfo(
+// Usage in LayoutManager render
+const allEdges = dataService.getAllEdgesForLinking();
+const edgesWithPanelIds = fillPanelIds(
   allEdges,
   leftSections,
   middleSections,
   rightSections
 );
-```
 
-**Testing:**
-- Verify panel IDs assigned correctly
-- Verify edges filtered when items not visible
-- Verify works in both 2-panel and 3-panel modes
+// Pass to LinkOverlay(s)
+{middlePanelEmpty ? (
+  <LinkOverlay
+    edges={edgesWithPanelIds}
+    leftPanelId="left"
+    rightPanelId="right"
+    hoveredItem={hoveredItem}
+  />
+) : (
+  <>
+    <LinkOverlay
+      edges={edgesWithPanelIds}
+      leftPanelId="left"
+      rightPanelId="middle"
+      hoveredItem={hoveredItem}
+    />
+    <LinkOverlay
+      edges={edgesWithPanelIds}
+      leftPanelId="middle"
+      rightPanelId="right"
+      hoveredItem={hoveredItem}
+    />
+  </>
+)}
+```
 
 ---
 
-### Phase 3: Simplify LinkOverlay to pure rendering
+### Phase 3: Simplify LinkOverlay
 
-**Goal:** LinkOverlay only renders lines, no data logic
+**Goal:** Pure rendering component, filters edges, finds DOM nodes, renders SVG
 
 ```typescript
-function LinkOverlay({ edges, hoveredItem }: LinkOverlayProps) {
+interface LinkOverlayProps {
+  edges: EdgeInfoProposal[];
+  leftPanelId: 'left' | 'middle' | 'right';
+  rightPanelId: 'left' | 'middle' | 'right';
+  hoveredItem?: ItemHoverData | null;
+}
+
+function LinkOverlay({ edges, leftPanelId, rightPanelId, hoveredItem }: LinkOverlayProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoveredLinkKey, setHoveredLinkKey] = useState<string | null>(null);
-  const [tooltipData, setTooltipData] = useState<TooltipData | null>(null);
 
-  // Helper: find DOM element by type, name, and panel ID
-  const findItem = (type: string, name: string, panelId: string) => {
-    // [sg] why does this need type? it should use id, not name
-     //     id + panelId should uniquely identify the dom node
+  // Filter to only edges connecting OUR two panels
+  const myEdges = edges.filter(edge => {
+    // Check if this edge connects our panels
+    const connectsMyPanels =
+      (edge.sourceItem.panelPosition === 'left' && edge.sourceItem.panelId === leftPanelId &&
+       edge.targetItem.panelPosition === 'right' && edge.targetItem.panelId === rightPanelId);
+
+    // Also include self-refs if in one of our panels
+    const isSelfRefInMyPanel =
+      edge.sourceItem.id === edge.targetItem.id &&
+      (edge.sourceItem.panelId === leftPanelId || edge.sourceItem.panelId === rightPanelId);
+
+    return connectsMyPanels || isSelfRefInMyPanel;
+  });
+
+  // Helper: Find DOM element (using id + panelId per your note - no type needed)
+  const findItem = (itemId: string, panelId: string): HTMLElement | null => {
     return document.querySelector(
-      `[data-item-type="${type}"][data-item-name="${name}"][data-panel-position="${panelId}"]`
+      `[data-item-name="${itemId}"][data-panel-position="${panelId}"]`
     );
   };
 
-  // Render each edge
   return (
     <svg ref={svgRef} className="absolute inset-0 pointer-events-none" ...>
       <defs>
-        {/* Gradients and arrow markers */}
+        {/* Gradients and markers */}
       </defs>
 
-      {edges.map(edge => {
-        const sourceEl = findItem(edge.sourceType, edge.sourceName, edge.sourcePanelId);
-        const targetEl = findItem(edge.targetType, edge.targetName, edge.targetPanelId);
+      {myEdges.map(edge => {
+        const isSelfRef = edge.sourceItem.id === edge.targetItem.id;
 
-        if (!sourceEl || !targetEl) return null;
-        // [sg] this shouldn't happen. at least log a console error
+        const sourceEl = findItem(edge.sourceItem.id, edge.sourceItem.panelId);
+        const targetEl = findItem(edge.targetItem.id, edge.targetItem.panelId);
+
+        if (!sourceEl || !targetEl) {
+          // Per your note: log error instead of silent return
+          console.error('LinkOverlay: DOM element not found', {
+            sourceId: edge.sourceItem.id,
+            sourcePanelId: edge.sourceItem.panelId,
+            targetId: edge.targetItem.id,
+            targetPanelId: edge.targetItem.panelId,
+            label: edge.label
+          });
+          return null;
+        }
 
         const sourceRect = sourceEl.getBoundingClientRect();
         const targetRect = targetEl.getBoundingClientRect();
+        const svgRect = svgRef.current!.getBoundingClientRect();
 
-        // Generate path (self-ref gets circular arrow)
-        const path = edge.isSelfRef
-          ? generateSelfRefPath(sourceRect)
-          : generateBezierPath(sourceRect, targetRect);
+        // Generate path
+        const path = isSelfRef
+          ? generateSelfRefPath(sourceRect, svgRect)
+          : generateBezierPath(sourceRect, targetRect, svgRect);
 
-        const isHovered = hoveredLinkKey === edge.key ||
+        const linkKey = `${edge.sourceItem.id}-${edge.targetItem.id}-${edge.label || ''}`;
+        const isHovered = hoveredLinkKey === linkKey ||
           matchesHoveredItem(edge, hoveredItem);
 
         return (
           <path
-            key={edge.key}
+            key={linkKey}
             d={path}
-            stroke={getGradientId(edge.sourceColor, edge.targetColor)}
+            stroke={getGradient(edge.sourceItem.color, edge.targetItem.color)}
             opacity={isHovered ? 1.0 : 0.2}
             strokeWidth={isHovered ? 3 : 2}
-            markerEnd={edge.isSelfRef ? undefined : getArrowMarkerId(edge.targetColor, isHovered)}
-            onMouseEnter={() => setHoveredLinkKey(edge.key)}
+            markerEnd={isSelfRef ? undefined : getArrow(edge.targetItem.color, isHovered)}
+            onMouseEnter={() => setHoveredLinkKey(linkKey)}
             onMouseLeave={() => setHoveredLinkKey(null)}
           />
         );
       })}
-
-      {tooltipData && <LinkTooltip {...tooltipData} />}
     </svg>
   );
 }
 ```
 
-**Key simplifications:**
-- No useMemo with complex link building logic
-- No section filtering or cross-panel logic
-- No relationship queries to DataService
-- Just: receive edges, find DOM elements, draw lines
-
-**Testing:**
-- Verify all edges render in 2-panel mode
-- Verify all edges render in 3-panel mode (classes→slots, slots→ranges)
-- Verify self-refs render as circular arrows
-- Verify vertical positioning correct (endpoints on correct classes)
-- Verify hover highlights work
-- Verify tooltips show correct info
+**Key points:**
+- ✅ Uses id + panelId to find elements (no type needed)
+- ✅ Logs console.error when elements not found
+- ✅ Filters to only edges connecting its panels
+- ✅ No DataService dependency
+- ✅ No section/type logic
+- ✅ ~150 lines vs current ~500
 
 ---
 
-### Phase 4: Implement self-referential links
+### Phase 4: Self-referential links
 
-**Goal:** Classes that reference themselves get circular arrow
+**Goal:** Circular arrows for items that reference themselves
 
 ```typescript
-// New helper function in LinkOverlay
-function generateSelfRefPath(itemRect: DOMRect): string {
-  // Circular arrow from right edge, curving out and back
-  const cx = itemRect.right;
-  const cy = itemRect.top + itemRect.height / 2;
+function generateSelfRefPath(itemRect: DOMRect, svgRect: DOMRect): string {
+  // Adjust rect to SVG coordinates
+  const x = itemRect.right - svgRect.left;
+  const y = itemRect.top + itemRect.height / 2 - svgRect.top;
   const radius = 20;
 
-  // SVG arc: start at right edge, curve out, arc around, come back to right edge below
+  // Circular arrow looping from right edge
   return `
-    M ${cx} ${cy}
-    L ${cx + radius} ${cy}
-    A ${radius} ${radius} 0 1 1 ${cx + radius} ${cy + radius * 2}
-    L ${cx} ${cy + radius}
+    M ${x} ${y}
+    C ${x + radius} ${y}, ${x + radius} ${y - radius}, ${x} ${y - radius}
+    A ${radius} ${radius} 0 1 1 ${x} ${y + radius}
+    C ${x + radius} ${y + radius}, ${x + radius} ${y}, ${x} ${y}
   `;
 }
 ```
-
-**Testing:**
-- Find classes with self-refs (e.g., parent: Specimen)
-- Verify circular arrow renders from item to itself
-- Verify arrow doesn't occlude item text
-- Verify hover works on circular arrows
-
----
-
-## Migration Strategy
-
-1. **Create new implementations alongside old:**
-   - Add getAllPairs() to DataService (don't remove getRelationshipsForLinking yet)
-   - Create new simplified LinkOverlay as LinkOverlayNew.tsx
-   - Keep old LinkOverlay.tsx working
-
-2. **Test in parallel:**
-   - Render both overlays simultaneously with `display: none` on new one
-   - Console.log to compare edge counts
-   - Visually inspect both (toggle display)
-
-3. **Switch over:**
-   - Once new version working, switch LayoutManager to use it
-   - Remove old LinkOverlay.tsx
-   - Remove getRelationshipsForLinking from DataService
-
-4. **Clean up:**
-   - Remove unused link building helpers (buildLinks, etc.)
-   - Remove old relationship format support
 
 ---
 
 ## Benefits
 
-1. **Fixes all current bugs:**
+1. **Uses your proposal directly** - No "simplifications" that lose the design
+2. **Logical/physical separation** - Clean abstraction
+3. **Fixes all bugs:**
    - ✅ Slots→ranges render (graph has all edges)
-   - ✅ Vertical positioning correct (edges point to actual users, not first alphabetically)
-   - ✅ Duplicate edges shown (graph has one edge per usage)
-   - ✅ Class→class correct direction (graph edges have explicit direction)
-   - ✅ Self-refs implemented (detected by sourceId === targetId)
-
-2. **Simpler architecture:**
-   - LinkOverlay becomes ~200 lines instead of ~500
-   - No complex filtering logic
-   - No section/panel logic in rendering layer
-   - Clear separation of concerns
-
-3. **Performance:**
-   - getAllPairs() computed once, cached
-   - No per-panel loops in useMemo
-   - Graph queries are O(1) lookups
-
-4. **Maintainability:**
-   - Easy to add new edge types (just add to graph)
-   - Easy to filter edges (filter EdgeForRendering[] in LayoutManager)
-   - Easy to style edges (all metadata in EdgeForRendering)
-   - Easy to debug (can console.log edges array)
+   - ✅ Vertical positioning correct (finds actual DOM elements)
+   - ✅ Duplicate edges shown (18 edges for associated_visit)
+   - ✅ Class→class correct direction (filtered properly)
+   - ✅ Self-refs implemented
+4. **Simpler code** - ~150 line LinkOverlay vs ~500 current
+5. **Better errors** - Console logs when elements not found
 
 ---
 
-## Open Questions
+## Open Questions for You
 
-1. **Should EdgeForRendering live in Element.ts or ComponentData.ts?**
-   - Pro Element.ts: Related to EdgeInfo
-   - Pro ComponentData.ts: UI-specific interface
-   - **Recommendation:** ComponentData.ts (it's for UI rendering, not model data)
+1. **Edge retrieval**: You mentioned "i haven't totally thought through how edge data should be retrieved" - does the `getAllEdgesForLinking()` approach look reasonable? Any concerns with querying the graph directly?
 
-2. **Should getAllPairs() return all edge types or just property?**
-   - Current plan: Only property (inheritance/variable_mapping shown in detail views)
-   - Alternative: Return all, let LayoutManager filter
-   - **Recommendation:** Just property (follows UI_REFACTOR.md design note line 114)
+2. **ItemInfoProposal.panelId type**: Should this be actual DOM IDs (need to add `id` attributes to panels) or keep using data-panel-position attribute?
 
-3. **How to handle hover state coupling?**
-   - Problem: hoveredItem needs to match against edge source/target
-   - Current: Pass ItemHoverData, LinkOverlay matches
-   - Better?: Pass hoveredItemId, simpler matching
-   - **Recommendation:** Keep ItemHoverData for now, revisit after this refactor
+3. **Should we include inheritance/variable_mapping edges** or only property edges (current plan)?
 
-4. **Should we rename panels to have DOM IDs?**
-   - Current: data-panel-position="left|middle|right"
-   - Proposal: Add id="panel-left" to panel divs
-   - Benefit: More explicit querying
-   - **Recommendation:** Not necessary, data-panel-position works fine
-
----
-
-## Timeline Estimate
-
-- **Phase 1 (getAllPairs):** 1-2 hours
-  - Implement in DataService
-  - Write tests
-  - Verify edge counts
-
-- **Phase 2 (enhance edges):** 1 hour
-  - Add helper in LayoutManager
-  - Test 2-panel and 3-panel modes
-
-- **Phase 3 (new LinkOverlay):** 2-3 hours
-  - Write new component
-  - Test all rendering cases
-  - Fix any positioning issues
-
-- **Phase 4 (self-refs):** 1 hour
-  - Implement circular arrow path
-  - Test and adjust styling
-
-- **Migration/cleanup:** 1 hour
-  - Switch over
-  - Remove old code
-  - Update docs
-
-**Total: 6-8 hours**
+4. **EdgeInfoProposal location**: Keep in Element.ts or move to ComponentData.ts?
 
 ---
 
 ## Next Steps
 
-1. **Review this plan** - Get approval on architecture
-2. **Implement Phase 1** - getAllPairs() with tests
-3. **Implement Phase 2** - Panel enhancement logic
-4. **Implement Phase 3** - New LinkOverlay component
-5. **Implement Phase 4** - Self-referential links
-6. **Migrate and clean up** - Remove old code
+1. **Review this plan** - Confirm it uses your proposal correctly
+2. **Answer open questions**
+3. **Implement Phase 1** - getAllEdgesForLinking()
+4. **Implement Phase 2** - fillPanelIds in LayoutManager
+5. **Implement Phase 3** - New LinkOverlay
+6. **Implement Phase 4** - Self-refs
+7. **Test and migrate** - Replace old LinkOverlay
 
 ---
 
-## Related Files
+## Files to Modify
 
-- `src/models/Element.ts` - EdgeInfo interfaces, proposal at lines 132-156
-- `src/services/DataService.ts` - getAllPairs() stubbed at line 218
-- `src/components/LinkOverlay.tsx` - Current implementation (to be replaced)
-- `src/components/LayoutManager.tsx` - Will call new APIs
-- `UI_REFACTOR.md` - Section 1 (LinkOverlay Refactor)
+- `src/models/Element.ts` - Already has EdgeInfoProposal/ItemInfoProposal
+- `src/services/DataService.ts` - Add getAllEdgesForLinking()
+- `src/components/LayoutManager.tsx` - Add fillPanelIds(), update LinkOverlay calls
+- `src/components/LinkOverlay.tsx` - Complete rewrite using new props
+- `src/contracts/ComponentData.ts` - Export EdgeInfoProposal/ItemInfoProposal?
