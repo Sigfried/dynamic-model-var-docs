@@ -175,9 +175,10 @@ def find_slot_usage(class_name: str, attr_name: str, classes: Dict[str, Any]) ->
 def transform_classes(
     expanded_classes: Dict[str, Any],
     hierarchy: Dict[str, Optional[str]],
-    prefixes: Dict[str, Any]
+    prefixes: Dict[str, Any],
+    global_slots: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Transform classes to streamlined format with computed inherited_from."""
+    """Transform classes to streamlined format with computed inherited_from and inline flag."""
     processed = {}
 
     for class_name, class_def in expanded_classes.items():
@@ -200,10 +201,15 @@ def transform_classes(
                 # No override - use base slot name
                 slot_id = attr_name
 
+            # Determine if inline (not in global slots) or referenced (in global slots)
+            # Note: base slot name (before any override) is what we check
+            inline = attr_name not in global_slots
+
             # Build processed attribute
             processed_attr = {
                 'slotId': slot_id,
                 'range': attr_def.get('range'),
+                'inline': inline
             }
 
             # Add optional fields
@@ -509,13 +515,15 @@ def transform_schema(expanded_path: Path, output_path: Path) -> bool:
         hierarchy = build_class_hierarchy(classes)
         print(f"  ✓ {len(hierarchy)} classes")
 
+        # Get global slots for inline flag computation
+        expanded_slots = expanded.get('slots', {})
+
         # Transform each section (passing prefixes for URI expansion)
         print("Transforming classes...")
-        processed_classes = transform_classes(classes, hierarchy, prefixes)
+        processed_classes = transform_classes(classes, hierarchy, prefixes, expanded_slots)
         print(f"  ✓ {len(processed_classes)} classes processed")
 
         print("Transforming slots...")
-        expanded_slots = expanded.get('slots', {})
         processed_slots = transform_slots(expanded_slots, classes, prefixes)
         print(f"  ✓ {len(processed_slots)} slots processed ({len(expanded_slots)} base + {len(processed_slots) - len(expanded_slots)} overrides)")
 

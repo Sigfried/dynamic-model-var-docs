@@ -71,6 +71,7 @@
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true
         }
       },
@@ -85,41 +86,50 @@
       "attributes": {
         "species": {
           "slotId": "species",
-          "range": "CellularOrganismSpeciesEnum"
+          "range": "CellularOrganismSpeciesEnum",
+          "inline": true
         },
         "breed": {
           "slotId": "breed",
-          "range": "VertebrateBreedEnum"
+          "range": "VertebrateBreedEnum",
+          "inline": true
         },
         "year_of_birth": {
           "slotId": "year_of_birth",
-          "range": "integer"
+          "range": "integer",
+          "inline": true
         },
         "vital_status": {
           "slotId": "vital_status",
-          "range": "VitalStatusEnum"
+          "range": "VitalStatusEnum",
+          "inline": true
         },
         "age_at_death": {
           "slotId": "age_at_death",
-          "range": "integer"
+          "range": "integer",
+          "inline": true
         },
         "year_of_death": {
           "slotId": "year_of_death",
-          "range": "integer"
+          "range": "integer",
+          "inline": true
         },
         "cause_of_death": {
           "slotId": "cause_of_death",
           "range": "CauseOfDeath",
+          "inline": true,
           "multivalued": true
         },
         "identity": {
           "slotId": "identity",
           "range": "uriorcurie",
+          "inline": false,
           "multivalued": true
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "inherited_from": "Entity"
         }
       },
@@ -133,32 +143,39 @@
       "attributes": {
         "sex": {
           "slotId": "sex",
-          "range": "SexEnum"
+          "range": "SexEnum",
+          "inline": true
         },
         "ethnicity": {
           "slotId": "ethnicity",
-          "range": "EthnicityEnum"
+          "range": "EthnicityEnum",
+          "inline": true
         },
         "race": {
           "slotId": "race",
-          "range": "RaceEnum"
+          "range": "RaceEnum",
+          "inline": true
         },
         "identity": {
           "slotId": "identity",
           "range": "uriorcurie",
+          "inline": false,
           "multivalued": true
         },
         "associated_participant": {
           "slotId": "associated_participant",
-          "range": "Participant"
+          "range": "Participant",
+          "inline": false
         },
         "associated_visit": {
           "slotId": "associated_visit",
-          "range": "Visit"
+          "range": "Visit",
+          "inline": false
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -173,46 +190,56 @@
       "attributes": {
         "description": {
           "slotId": "description",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "member_of_research_study": {
           "slotId": "member_of_research_study",
-          "range": "ResearchStudy"
+          "range": "ResearchStudy",
+          "inline": true
         },
         "age_at_index": {
           "slotId": "age_at_index",
-          "range": "integer"
+          "range": "integer",
+          "inline": true
         },
         "index_timepoint": {
           "slotId": "index_timepoint",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "originating_site": {
           "slotId": "originating_site",
-          "range": "Organization"
+          "range": "Organization",
+          "inline": true
         },
         "study_arm": {
           "slotId": "study_arm",
           "range": "string",
+          "inline": true,
           "multivalued": true
         },
         "consents": {
           "slotId": "consents",
           "range": "Consent",
+          "inline": true,
           "multivalued": true
         },
         "associated_person": {
           "slotId": "associated_person",
-          "range": "Person"
+          "range": "Person",
+          "inline": false
         },
         "identity": {
           "slotId": "identity",
           "range": "uriorcurie",
+          "inline": false,
           "multivalued": true
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -227,79 +254,97 @@
       "attributes": {
         "name": {
           "slotId": "name",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "name_shortened": {
           "slotId": "name_shortened",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "description": {
           "slotId": "description",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "description_shortened": {
           "slotId": "description_shortened",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "sponsor": {
           "slotId": "sponsor",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "date_started": {
           "slotId": "date_started",
-          "range": "TimePoint"
+          "range": "TimePoint",
+          "inline": true
         },
         "date_ended": {
           "slotId": "date_ended",
-          "range": "TimePoint"
+          "range": "TimePoint",
+          "inline": true
         },
         "accession_number": {
           "slotId": "accession_number",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "accession_authority": {
           "slotId": "accession_authority",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "version": {
           "slotId": "version",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "url": {
           "slotId": "url",
-          "range": "uriorcurie"
+          "range": "uriorcurie",
+          "inline": true
         },
         "part_of": {
           "slotId": "part_of",
-          "range": "ResearchStudy"
+          "range": "ResearchStudy",
+          "inline": true
         },
         "research_project_type": {
           "slotId": "research_project_type",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "associated_timepoint": {
           "slotId": "associated_timepoint",
           "range": "TimePoint",
+          "inline": true,
           "multivalued": true
         },
         "principal_investigator": {
           "slotId": "principal_investigator",
           "range": "string",
+          "inline": true,
           "multivalued": true
         },
         "consents": {
           "slotId": "consents",
           "range": "Consent",
+          "inline": true,
           "multivalued": true
         },
         "identity": {
           "slotId": "identity",
           "range": "uriorcurie",
+          "inline": false,
           "multivalued": true
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -315,19 +360,23 @@
         "consent_code": {
           "slotId": "consent_code",
           "range": "DataUseEnum",
+          "inline": true,
           "multivalued": false
         },
         "valid_from": {
           "slotId": "valid_from",
-          "range": "TimePoint"
+          "range": "TimePoint",
+          "inline": true
         },
         "valid_to": {
           "slotId": "valid_to",
-          "range": "TimePoint"
+          "range": "TimePoint",
+          "inline": true
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -342,27 +391,33 @@
       "attributes": {
         "visit_category": {
           "slotId": "visit_category",
-          "range": "VisitCategoryEnum"
+          "range": "VisitCategoryEnum",
+          "inline": true
         },
         "age_at_visit_start": {
           "slotId": "age_at_visit_start",
-          "range": "integer"
+          "range": "integer",
+          "inline": true
         },
         "age_at_visit_end": {
           "slotId": "age_at_visit_end",
-          "range": "integer"
+          "range": "integer",
+          "inline": true
         },
         "visit_provenance": {
           "slotId": "visit_provenance",
-          "range": "VisitProvenanceEnum"
+          "range": "VisitProvenanceEnum",
+          "inline": true
         },
         "associated_participant": {
           "slotId": "associated_participant",
-          "range": "Participant"
+          "range": "Participant",
+          "inline": false
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -377,24 +432,29 @@
       "attributes": {
         "name": {
           "slotId": "name",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "alias": {
           "slotId": "alias",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "organization_type": {
           "slotId": "organization_type",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "identity": {
           "slotId": "identity",
           "range": "uriorcurie",
+          "inline": false,
           "multivalued": true
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -409,23 +469,28 @@
       "attributes": {
         "date_time": {
           "slotId": "date_time",
-          "range": "datetime"
+          "range": "datetime",
+          "inline": true
         },
         "index_time_point": {
           "slotId": "index_time_point",
-          "range": "TimePoint"
+          "range": "TimePoint",
+          "inline": true
         },
         "offset_from_index": {
           "slotId": "offset_from_index",
-          "range": "integer"
+          "range": "integer",
+          "inline": true
         },
         "event_type": {
           "slotId": "event_type",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -440,15 +505,18 @@
       "attributes": {
         "period_start": {
           "slotId": "period_start",
-          "range": "TimePoint"
+          "range": "TimePoint",
+          "inline": true
         },
         "period_end": {
           "slotId": "period_end",
-          "range": "TimePoint"
+          "range": "TimePoint",
+          "inline": true
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -464,6 +532,7 @@
         "entries": {
           "slotId": "entries",
           "range": "ResearchStudy",
+          "inline": true,
           "multivalued": true
         }
       },
@@ -477,55 +546,67 @@
       "attributes": {
         "name": {
           "slotId": "name",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "title": {
           "slotId": "title",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "description": {
           "slotId": "description",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "url": {
           "slotId": "url",
-          "range": "uriorcurie"
+          "range": "uriorcurie",
+          "inline": true
         },
         "version": {
           "slotId": "version",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "publisher": {
           "slotId": "publisher",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "copyright": {
           "slotId": "copyright",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "copyright_label": {
           "slotId": "copyright_label",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "language": {
           "slotId": "language",
           "range": "string",
+          "inline": true,
           "multivalued": true
         },
         "items": {
           "slotId": "items",
           "range": "QuestionnaireItem",
+          "inline": true,
           "required": true,
           "multivalued": true
         },
         "identity": {
           "slotId": "identity",
           "range": "uriorcurie",
+          "inline": false,
           "multivalued": true
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -540,24 +621,29 @@
       "attributes": {
         "text": {
           "slotId": "text",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "code": {
           "slotId": "code",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "part_of": {
           "slotId": "part_of",
-          "range": "QuestionnaireItem"
+          "range": "QuestionnaireItem",
+          "inline": true
         },
         "identity": {
           "slotId": "identity",
           "range": "uriorcurie",
+          "inline": false,
           "multivalued": true
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -572,21 +658,25 @@
       "attributes": {
         "age_at_response": {
           "slotId": "age_at_response",
-          "range": "integer"
+          "range": "integer",
+          "inline": true
         },
         "items": {
           "slotId": "items",
           "range": "QuestionnaireResponseItem",
+          "inline": true,
           "required": true,
           "multivalued": true
         },
         "associated_visit": {
           "slotId": "associated_visit",
-          "range": "Visit"
+          "range": "Visit",
+          "inline": false
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -601,20 +691,24 @@
       "attributes": {
         "has_questionnaire_item": {
           "slotId": "has_questionnaire_item",
-          "range": "QuestionnaireItem"
+          "range": "QuestionnaireItem",
+          "inline": true
         },
         "text": {
           "slotId": "text",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "response_value": {
           "slotId": "response_value",
           "range": "QuestionnaireResponseValue",
+          "inline": true,
           "required": true
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -629,19 +723,23 @@
       "attributes": {
         "type": {
           "slotId": "type",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "name": {
           "slotId": "name",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "value": {
           "slotId": "value",
-          "range": "string"
+          "range": "string",
+          "inline": false
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -657,22 +755,26 @@
         "value": {
           "slotId": "value-QuestionnaireResponseValueDecimal",
           "range": "decimal",
+          "inline": false,
           "required": true,
           "inherited_from": "QuestionnaireResponseValue"
         },
         "type": {
           "slotId": "type",
           "range": "string",
+          "inline": true,
           "inherited_from": "QuestionnaireResponseValue"
         },
         "name": {
           "slotId": "name",
           "range": "string",
+          "inline": true,
           "inherited_from": "QuestionnaireResponseValue"
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -688,22 +790,26 @@
         "value": {
           "slotId": "value-QuestionnaireResponseValueBoolean",
           "range": "boolean",
+          "inline": false,
           "required": true,
           "inherited_from": "QuestionnaireResponseValue"
         },
         "type": {
           "slotId": "type",
           "range": "string",
+          "inline": true,
           "inherited_from": "QuestionnaireResponseValue"
         },
         "name": {
           "slotId": "name",
           "range": "string",
+          "inline": true,
           "inherited_from": "QuestionnaireResponseValue"
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -719,22 +825,26 @@
         "value": {
           "slotId": "value-QuestionnaireResponseValueInteger",
           "range": "integer",
+          "inline": false,
           "required": true,
           "inherited_from": "QuestionnaireResponseValue"
         },
         "type": {
           "slotId": "type",
           "range": "string",
+          "inline": true,
           "inherited_from": "QuestionnaireResponseValue"
         },
         "name": {
           "slotId": "name",
           "range": "string",
+          "inline": true,
           "inherited_from": "QuestionnaireResponseValue"
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -750,22 +860,26 @@
         "value": {
           "slotId": "value-QuestionnaireResponseValueTimePoint",
           "range": "TimePoint",
+          "inline": false,
           "required": true,
           "inherited_from": "QuestionnaireResponseValue"
         },
         "type": {
           "slotId": "type",
           "range": "string",
+          "inline": true,
           "inherited_from": "QuestionnaireResponseValue"
         },
         "name": {
           "slotId": "name",
           "range": "string",
+          "inline": true,
           "inherited_from": "QuestionnaireResponseValue"
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -781,22 +895,26 @@
         "value": {
           "slotId": "value-QuestionnaireResponseValueString",
           "range": "string",
+          "inline": false,
           "required": true,
           "inherited_from": "QuestionnaireResponseValue"
         },
         "type": {
           "slotId": "type",
           "range": "string",
+          "inline": true,
           "inherited_from": "QuestionnaireResponseValue"
         },
         "name": {
           "slotId": "name",
           "range": "string",
+          "inline": true,
           "inherited_from": "QuestionnaireResponseValue"
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -811,48 +929,59 @@
       "attributes": {
         "condition_concept": {
           "slotId": "condition_concept",
-          "range": "ConditionConceptEnum"
+          "range": "ConditionConceptEnum",
+          "inline": true
         },
         "age_at_condition_start": {
           "slotId": "age_at_condition_start",
-          "range": "integer"
+          "range": "integer",
+          "inline": true
         },
         "age_at_condition_end": {
           "slotId": "age_at_condition_end",
-          "range": "integer"
+          "range": "integer",
+          "inline": true
         },
         "condition_provenance": {
           "slotId": "condition_provenance",
-          "range": "ProvenanceEnum"
+          "range": "ProvenanceEnum",
+          "inline": true
         },
         "condition_status": {
           "slotId": "condition_status",
-          "range": "HistoricalStatusEnum"
+          "range": "HistoricalStatusEnum",
+          "inline": true
         },
         "condition_severity": {
           "slotId": "condition_severity",
-          "range": "ConditionSeverityEnum"
+          "range": "ConditionSeverityEnum",
+          "inline": true
         },
         "relationship_to_participant": {
           "slotId": "relationship_to_participant",
-          "range": "FamilyRelationshipEnum"
+          "range": "FamilyRelationshipEnum",
+          "inline": true
         },
         "identity": {
           "slotId": "identity",
           "range": "uriorcurie",
+          "inline": false,
           "multivalued": true
         },
         "associated_visit": {
           "slotId": "associated_visit",
-          "range": "Visit"
+          "range": "Visit",
+          "inline": false
         },
         "associated_participant": {
           "slotId": "associated_participant",
-          "range": "Participant"
+          "range": "Participant",
+          "inline": false
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -867,40 +996,49 @@
       "attributes": {
         "procedure_concept": {
           "slotId": "procedure_concept",
-          "range": "ProcedureConceptEnum"
+          "range": "ProcedureConceptEnum",
+          "inline": true
         },
         "age_at_procedure": {
           "slotId": "age_at_procedure",
-          "range": "integer"
+          "range": "integer",
+          "inline": true
         },
         "procedure_provenance": {
           "slotId": "procedure_provenance",
-          "range": "ProvenanceEnum"
+          "range": "ProvenanceEnum",
+          "inline": true
         },
         "procedure_status": {
           "slotId": "procedure_status",
-          "range": "StatusEnum"
+          "range": "StatusEnum",
+          "inline": true
         },
         "quantity": {
           "slotId": "quantity",
-          "range": "Quantity"
+          "range": "Quantity",
+          "inline": true
         },
         "identity": {
           "slotId": "identity",
           "range": "uriorcurie",
+          "inline": false,
           "multivalued": true
         },
         "associated_visit": {
           "slotId": "associated_visit",
-          "range": "Visit"
+          "range": "Visit",
+          "inline": false
         },
         "associated_participant": {
           "slotId": "associated_participant",
-          "range": "Participant"
+          "range": "Participant",
+          "inline": false
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -915,43 +1053,53 @@
       "attributes": {
         "age_at_imaging_study": {
           "slotId": "age_at_imaging_study",
-          "range": "integer"
+          "range": "integer",
+          "inline": true
         },
         "number_of_series": {
           "slotId": "number_of_series",
-          "range": "integer"
+          "range": "integer",
+          "inline": true
         },
         "number_of_instances": {
           "slotId": "number_of_instances",
-          "range": "integer"
+          "range": "integer",
+          "inline": true
         },
         "study_description": {
           "slotId": "study_description",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "study_modality": {
           "slotId": "study_modality",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "study_uid": {
           "slotId": "study_uid",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "body_part_examined": {
           "slotId": "body_part_examined",
-          "range": "BodySite"
+          "range": "BodySite",
+          "inline": true
         },
         "associated_visit": {
           "slotId": "associated_visit",
-          "range": "Visit"
+          "range": "Visit",
+          "inline": false
         },
         "associated_participant": {
           "slotId": "associated_participant",
-          "range": "Participant"
+          "range": "Participant",
+          "inline": false
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -966,32 +1114,39 @@
       "attributes": {
         "age_at_exposure_start": {
           "slotId": "age_at_exposure_start",
-          "range": "integer"
+          "range": "integer",
+          "inline": true
         },
         "age_at_exposure_end": {
           "slotId": "age_at_exposure_end",
-          "range": "integer"
+          "range": "integer",
+          "inline": true
         },
         "exposure_status": {
           "slotId": "exposure_status",
-          "range": "HistoricalStatusEnum"
+          "range": "HistoricalStatusEnum",
+          "inline": true
         },
         "identity": {
           "slotId": "identity",
           "range": "uriorcurie",
+          "inline": false,
           "multivalued": true
         },
         "associated_visit": {
           "slotId": "associated_visit",
-          "range": "Visit"
+          "range": "Visit",
+          "inline": false
         },
         "associated_participant": {
           "slotId": "associated_participant",
-          "range": "Participant"
+          "range": "Participant",
+          "inline": false
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -1006,70 +1161,84 @@
       "attributes": {
         "drug_concept": {
           "slotId": "drug_concept",
-          "range": "DrugExposureConceptEnum"
+          "range": "DrugExposureConceptEnum",
+          "inline": true
         },
         "exposure_provenance": {
           "slotId": "exposure_provenance",
-          "range": "DrugExposureProvenanceEnum"
+          "range": "DrugExposureProvenanceEnum",
+          "inline": true
         },
         "refills": {
           "slotId": "refills",
           "range": "integer",
+          "inline": true,
           "required": false
         },
         "quantity": {
           "slotId": "quantity",
           "range": "float",
+          "inline": true,
           "required": false
         },
         "days_supply": {
           "slotId": "days_supply",
           "range": "integer",
+          "inline": true,
           "required": false
         },
         "sig": {
           "slotId": "sig",
           "range": "string",
+          "inline": true,
           "required": false
         },
         "route_concept": {
           "slotId": "route_concept",
-          "range": "DrugRouteEnum"
+          "range": "DrugRouteEnum",
+          "inline": true
         },
         "identity": {
           "slotId": "identity",
           "range": "uriorcurie",
+          "inline": false,
           "multivalued": true,
           "inherited_from": "Exposure"
         },
         "associated_visit": {
           "slotId": "associated_visit",
           "range": "Visit",
+          "inline": false,
           "inherited_from": "Exposure"
         },
         "associated_participant": {
           "slotId": "associated_participant",
           "range": "Participant",
+          "inline": false,
           "inherited_from": "Exposure"
         },
         "age_at_exposure_start": {
           "slotId": "age_at_exposure_start",
           "range": "integer",
+          "inline": true,
           "inherited_from": "Exposure"
         },
         "age_at_exposure_end": {
           "slotId": "age_at_exposure_end",
           "range": "integer",
+          "inline": true,
           "inherited_from": "Exposure"
         },
         "exposure_status": {
           "slotId": "exposure_status",
           "range": "HistoricalStatusEnum",
+          "inline": true,
           "inherited_from": "Exposure"
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -1084,51 +1253,61 @@
       "attributes": {
         "device_concept": {
           "slotId": "device_concept",
-          "range": "DeviceExposureConceptEnum"
+          "range": "DeviceExposureConceptEnum",
+          "inline": true
         },
         "exposure_provenance": {
           "slotId": "exposure_provenance",
-          "range": "DeviceExposureProvenanceEnum"
+          "range": "DeviceExposureProvenanceEnum",
+          "inline": true
         },
         "quantity": {
           "slotId": "quantity",
           "range": "float",
+          "inline": true,
           "required": false
         },
         "identity": {
           "slotId": "identity",
           "range": "uriorcurie",
+          "inline": false,
           "multivalued": true,
           "inherited_from": "Exposure"
         },
         "associated_visit": {
           "slotId": "associated_visit",
           "range": "Visit",
+          "inline": false,
           "inherited_from": "Exposure"
         },
         "associated_participant": {
           "slotId": "associated_participant",
           "range": "Participant",
+          "inline": false,
           "inherited_from": "Exposure"
         },
         "age_at_exposure_start": {
           "slotId": "age_at_exposure_start",
           "range": "integer",
+          "inline": true,
           "inherited_from": "Exposure"
         },
         "age_at_exposure_end": {
           "slotId": "age_at_exposure_end",
           "range": "integer",
+          "inline": true,
           "inherited_from": "Exposure"
         },
         "exposure_status": {
           "slotId": "exposure_status",
           "range": "HistoricalStatusEnum",
+          "inline": true,
           "inherited_from": "Exposure"
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -1144,21 +1323,25 @@
         "associated_visit": {
           "slotId": "associated_visit",
           "range": "Visit",
+          "inline": false,
           "inherited_from": "Observation"
         },
         "associated_participant": {
           "slotId": "associated_participant",
           "range": "Participant",
+          "inline": false,
           "inherited_from": "Observation"
         },
         "age_at_observation": {
           "slotId": "age_at_observation",
           "range": "integer",
+          "inline": true,
           "inherited_from": "Observation"
         },
         "category": {
           "slotId": "category",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1166,6 +1349,7 @@
         "observation_type": {
           "slotId": "observation_type",
           "range": "BaseObservationTypeEnum",
+          "inline": true,
           "required": true,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1173,6 +1357,7 @@
         "method_type": {
           "slotId": "method_type",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1180,6 +1365,7 @@
         "focus": {
           "slotId": "focus",
           "range": "Entity",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1187,6 +1373,7 @@
         "performed_by": {
           "slotId": "performed_by",
           "range": "Organization",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1194,6 +1381,7 @@
         "value_string": {
           "slotId": "value_string",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1201,6 +1389,7 @@
         "value_boolean": {
           "slotId": "value_boolean",
           "range": "boolean",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1208,6 +1397,7 @@
         "value_quantity": {
           "slotId": "value_quantity",
           "range": "Quantity",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1215,6 +1405,7 @@
         "value_enum": {
           "slotId": "value_enum",
           "range": "BaseEnum",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1222,6 +1413,7 @@
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -1237,6 +1429,7 @@
         "observations": {
           "slotId": "observations-DimensionalObservationSet",
           "range": "DimensionalObservation",
+          "inline": false,
           "required": true,
           "multivalued": true,
           "inherited_from": "ObservationSet"
@@ -1244,16 +1437,19 @@
         "associated_visit": {
           "slotId": "associated_visit",
           "range": "Visit",
+          "inline": false,
           "inherited_from": "ObservationSet"
         },
         "associated_participant": {
           "slotId": "associated_participant",
           "range": "Participant",
+          "inline": false,
           "inherited_from": "ObservationSet"
         },
         "category": {
           "slotId": "category",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "ObservationSet"
@@ -1261,6 +1457,7 @@
         "focus": {
           "slotId": "focus",
           "range": "Entity",
+          "inline": true,
           "required": false,
           "multivalued": true,
           "inherited_from": "ObservationSet"
@@ -1268,6 +1465,7 @@
         "method_type": {
           "slotId": "method_type",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": true,
           "inherited_from": "ObservationSet"
@@ -1275,6 +1473,7 @@
         "performed_by": {
           "slotId": "performed_by",
           "range": "Organization",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "ObservationSet"
@@ -1282,6 +1481,7 @@
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -1296,53 +1496,65 @@
       "attributes": {
         "file_name": {
           "slotId": "file_name",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "file_size": {
           "slotId": "file_size",
-          "range": "integer"
+          "range": "integer",
+          "inline": true
         },
         "file_location": {
           "slotId": "file_location",
           "range": "uriorcurie",
+          "inline": true,
           "multivalued": true
         },
         "md5sum": {
           "slotId": "md5sum",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "data_type": {
           "slotId": "data_type",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "data_category": {
           "slotId": "data_category",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "format": {
           "slotId": "format",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "description": {
           "slotId": "description",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "derived_from": {
           "slotId": "derived_from",
-          "range": "File"
+          "range": "File",
+          "inline": true
         },
         "identity": {
           "slotId": "identity",
           "range": "uriorcurie",
+          "inline": false,
           "multivalued": true
         },
         "associated_participant": {
           "slotId": "associated_participant",
-          "range": "Participant"
+          "range": "Participant",
+          "inline": false
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -1357,96 +1569,116 @@
       "attributes": {
         "imaging_modality": {
           "slotId": "imaging_modality",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "anatomical_site": {
           "slotId": "anatomical_site",
-          "range": "BodySite"
+          "range": "BodySite",
+          "inline": true
         },
         "series_number": {
           "slotId": "series_number",
-          "range": "integer"
+          "range": "integer",
+          "inline": true
         },
         "series_uid": {
           "slotId": "series_uid",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "series_description": {
           "slotId": "series_description",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "related_imaging_study": {
           "slotId": "related_imaging_study",
-          "range": "ImagingStudy"
+          "range": "ImagingStudy",
+          "inline": true
         },
         "manufacturer": {
           "slotId": "manufacturer",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "manufacturer_model": {
           "slotId": "manufacturer_model",
-          "range": "string"
+          "range": "string",
+          "inline": true
         },
         "identity": {
           "slotId": "identity",
           "range": "uriorcurie",
+          "inline": false,
           "multivalued": true,
           "inherited_from": "File"
         },
         "associated_participant": {
           "slotId": "associated_participant",
           "range": "Participant",
+          "inline": false,
           "inherited_from": "File"
         },
         "file_name": {
           "slotId": "file_name",
           "range": "string",
+          "inline": true,
           "inherited_from": "File"
         },
         "file_size": {
           "slotId": "file_size",
           "range": "integer",
+          "inline": true,
           "inherited_from": "File"
         },
         "file_location": {
           "slotId": "file_location",
           "range": "uriorcurie",
+          "inline": true,
           "multivalued": true,
           "inherited_from": "File"
         },
         "md5sum": {
           "slotId": "md5sum",
           "range": "string",
+          "inline": true,
           "inherited_from": "File"
         },
         "data_type": {
           "slotId": "data_type",
           "range": "string",
+          "inline": true,
           "inherited_from": "File"
         },
         "data_category": {
           "slotId": "data_category",
           "range": "string",
+          "inline": true,
           "inherited_from": "File"
         },
         "format": {
           "slotId": "format",
           "range": "string",
+          "inline": true,
           "inherited_from": "File"
         },
         "description": {
           "slotId": "description",
           "range": "string",
+          "inline": true,
           "inherited_from": "File"
         },
         "derived_from": {
           "slotId": "derived_from",
           "range": "File",
+          "inline": true,
           "inherited_from": "File"
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -1462,35 +1694,41 @@
         "document_type": {
           "slotId": "document_type",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "description": {
           "slotId": "description",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "focus": {
           "slotId": "focus",
           "range": "Entity",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "url": {
           "slotId": "url",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": true
         },
         "identity": {
           "slotId": "identity",
           "range": "uriorcurie",
+          "inline": false,
           "multivalued": true
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -1506,119 +1744,139 @@
         "description": {
           "slotId": "description",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "specimen_type": {
           "slotId": "specimen_type",
           "range": "SpecimenTypeEnum",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "analyte_type": {
           "slotId": "analyte_type",
           "range": "AnalyteTypeEnum",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "source_material_type": {
           "slotId": "source_material_type",
           "range": "SourceMaterialTypeEnum",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "parent_specimen": {
           "slotId": "parent_specimen",
           "range": "Specimen",
+          "inline": true,
           "required": false,
           "multivalued": true
         },
         "source_participant": {
           "slotId": "source_participant",
           "range": "Participant",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "creation_activity": {
           "slotId": "creation_activity",
           "range": "SpecimenCreationActivity",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "processing_activity": {
           "slotId": "processing_activity",
           "range": "SpecimenProcessingActivity",
+          "inline": true,
           "required": false,
           "multivalued": true
         },
         "storage_activity": {
           "slotId": "storage_activity",
           "range": "SpecimenStorageActivity",
+          "inline": true,
           "required": false,
           "multivalued": true
         },
         "transport_activity": {
           "slotId": "transport_activity",
           "range": "SpecimenTransportActivity",
+          "inline": true,
           "required": false,
           "multivalued": true
         },
         "contained_in": {
           "slotId": "contained_in",
           "range": "SpecimenContainer",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "dimensional_measures": {
           "slotId": "dimensional_measures",
           "range": "DimensionalObservationSet",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "quantity_measure": {
           "slotId": "quantity_measure",
           "range": "SpecimenQuantityObservation",
+          "inline": true,
           "required": false,
           "multivalued": true
         },
         "quality_measure": {
           "slotId": "quality_measure",
           "range": "SpecimenQualityObservation",
+          "inline": true,
           "required": false,
           "multivalued": true
         },
         "cellular_composition_type": {
           "slotId": "cellular_composition_type",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "related_document": {
           "slotId": "related_document",
           "range": "Document",
+          "inline": true,
           "required": false,
           "multivalued": true
         },
         "section_location": {
           "slotId": "section_location",
           "range": "SectionLocationEnum",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "derived_product": {
           "slotId": "derived_product",
           "range": "BiologicProduct",
+          "inline": true,
           "required": false,
           "multivalued": true
         },
         "identity": {
           "slotId": "identity",
           "range": "uriorcurie",
+          "inline": false,
           "multivalued": true
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -1634,30 +1892,35 @@
         "container_type": {
           "slotId": "container_type",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "container_number": {
           "slotId": "container_number",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "additive": {
           "slotId": "additive",
           "range": "Substance",
+          "inline": true,
           "required": false,
           "multivalued": true
         },
         "parent_container": {
           "slotId": "parent_container",
           "range": "SpecimenContainer",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -1673,66 +1936,77 @@
         "activity_type": {
           "slotId": "activity_type",
           "range": "SpecimenCreationActivityTypeEnum",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "date_started": {
           "slotId": "date_started",
           "range": "TimePoint",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "date_ended": {
           "slotId": "date_ended",
           "range": "TimePoint",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "performed_by": {
           "slotId": "performed_by",
           "range": "Organization",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "collection_method_type": {
           "slotId": "collection_method_type",
           "range": "SpecimenCollectionMethodType",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "derivation_method_type": {
           "slotId": "derivation_method_type",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "additive": {
           "slotId": "additive",
           "range": "Substance",
+          "inline": true,
           "required": false,
           "multivalued": true
         },
         "collection_site": {
           "slotId": "collection_site",
           "range": "BodySite",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "quantity_collected": {
           "slotId": "quantity_collected",
           "range": "Quantity",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "specimen_order": {
           "slotId": "specimen_order",
           "range": "integer",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -1748,21 +2022,25 @@
         "associated_visit": {
           "slotId": "associated_visit",
           "range": "Visit",
+          "inline": false,
           "inherited_from": "Observation"
         },
         "associated_participant": {
           "slotId": "associated_participant",
           "range": "Participant",
+          "inline": false,
           "inherited_from": "Observation"
         },
         "age_at_observation": {
           "slotId": "age_at_observation",
           "range": "integer",
+          "inline": true,
           "inherited_from": "Observation"
         },
         "category": {
           "slotId": "category",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1770,6 +2048,7 @@
         "observation_type": {
           "slotId": "observation_type",
           "range": "BaseObservationTypeEnum",
+          "inline": true,
           "required": true,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1777,6 +2056,7 @@
         "method_type": {
           "slotId": "method_type",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1784,6 +2064,7 @@
         "focus": {
           "slotId": "focus",
           "range": "Entity",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1791,6 +2072,7 @@
         "performed_by": {
           "slotId": "performed_by",
           "range": "Organization",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1798,6 +2080,7 @@
         "value_string": {
           "slotId": "value_string",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1805,6 +2088,7 @@
         "value_boolean": {
           "slotId": "value_boolean",
           "range": "boolean",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1812,6 +2096,7 @@
         "value_quantity": {
           "slotId": "value_quantity",
           "range": "Quantity",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1819,6 +2104,7 @@
         "value_enum": {
           "slotId": "value_enum",
           "range": "BaseEnum",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1826,6 +2112,7 @@
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -1841,21 +2128,25 @@
         "associated_visit": {
           "slotId": "associated_visit",
           "range": "Visit",
+          "inline": false,
           "inherited_from": "Observation"
         },
         "associated_participant": {
           "slotId": "associated_participant",
           "range": "Participant",
+          "inline": false,
           "inherited_from": "Observation"
         },
         "age_at_observation": {
           "slotId": "age_at_observation",
           "range": "integer",
+          "inline": true,
           "inherited_from": "Observation"
         },
         "category": {
           "slotId": "category",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1863,6 +2154,7 @@
         "observation_type": {
           "slotId": "observation_type",
           "range": "BaseObservationTypeEnum",
+          "inline": true,
           "required": true,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1870,6 +2162,7 @@
         "method_type": {
           "slotId": "method_type",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1877,6 +2170,7 @@
         "focus": {
           "slotId": "focus",
           "range": "Entity",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1884,6 +2178,7 @@
         "performed_by": {
           "slotId": "performed_by",
           "range": "Organization",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1891,6 +2186,7 @@
         "value_string": {
           "slotId": "value_string",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1898,6 +2194,7 @@
         "value_boolean": {
           "slotId": "value_boolean",
           "range": "boolean",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1905,6 +2202,7 @@
         "value_quantity": {
           "slotId": "value_quantity",
           "range": "Quantity",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1912,6 +2210,7 @@
         "value_enum": {
           "slotId": "value_enum",
           "range": "BaseEnum",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -1919,6 +2218,7 @@
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -1934,42 +2234,49 @@
         "activity_type": {
           "slotId": "activity_type",
           "range": "SpecimenProcessingActivityTypeEnum",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "date_started": {
           "slotId": "date_started",
           "range": "TimePoint",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "date_ended": {
           "slotId": "date_ended",
           "range": "TimePoint",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "duration": {
           "slotId": "duration",
           "range": "Quantity",
+          "inline": true,
           "required": false,
           "multivalued": true
         },
         "method_type": {
           "slotId": "method_type",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "additive": {
           "slotId": "additive",
           "range": "Substance",
+          "inline": true,
           "required": false,
           "multivalued": true
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -1985,36 +2292,42 @@
         "date_started": {
           "slotId": "date_started",
           "range": "TimePoint",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "date_ended": {
           "slotId": "date_ended",
           "range": "TimePoint",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "duration": {
           "slotId": "duration",
           "range": "Quantity",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "method_type": {
           "slotId": "method_type",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "container": {
           "slotId": "container",
           "range": "SpecimenContainer",
+          "inline": true,
           "required": false,
           "multivalued": true
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -2030,36 +2343,42 @@
         "date_started": {
           "slotId": "date_started",
           "range": "TimePoint",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "date_ended": {
           "slotId": "date_ended",
           "range": "TimePoint",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "duration": {
           "slotId": "duration",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": true
         },
         "transport_origin": {
           "slotId": "transport_origin",
           "range": "Organization",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "transport_destination": {
           "slotId": "transport_destination",
           "range": "Organization",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -2075,35 +2394,41 @@
         "description": {
           "slotId": "description",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "product_type": {
           "slotId": "product_type",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "passage_number": {
           "slotId": "passage_number",
           "range": "integer",
+          "inline": true,
           "required": false,
           "multivalued": true
         },
         "growth_rate": {
           "slotId": "growth_rate",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": true
         },
         "identity": {
           "slotId": "identity",
           "range": "uriorcurie",
+          "inline": false,
           "multivalued": true
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -2119,24 +2444,28 @@
         "substance_type": {
           "slotId": "substance_type",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "role": {
           "slotId": "role",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": true
         },
         "substance_quantity": {
           "slotId": "substance_quantity",
           "range": "Quantity",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -2152,30 +2481,35 @@
         "value_decimal": {
           "slotId": "value_decimal",
           "range": "decimal",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "value_integer": {
           "slotId": "value_integer",
           "range": "integer",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "value_concept": {
           "slotId": "value_concept",
           "range": "BaseEnum",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "unit": {
           "slotId": "unit",
           "range": "UnitOfMeasurementEnum",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -2191,18 +2525,21 @@
         "site": {
           "slotId": "site",
           "range": "string",
+          "inline": true,
           "required": true,
           "multivalued": false
         },
         "qualifier": {
           "slotId": "qualifier",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": true
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -2218,43 +2555,51 @@
         "category": {
           "slotId": "category",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "focus": {
           "slotId": "focus",
           "range": "Entity",
+          "inline": true,
           "required": false,
           "multivalued": true
         },
         "method_type": {
           "slotId": "method_type",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": true
         },
         "performed_by": {
           "slotId": "performed_by",
           "range": "Organization",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "observations": {
           "slotId": "observations",
           "range": "Observation",
+          "inline": false,
           "multivalued": true
         },
         "associated_visit": {
           "slotId": "associated_visit",
-          "range": "Visit"
+          "range": "Visit",
+          "inline": false
         },
         "associated_participant": {
           "slotId": "associated_participant",
-          "range": "Participant"
+          "range": "Participant",
+          "inline": false
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -2269,73 +2614,86 @@
       "attributes": {
         "age_at_observation": {
           "slotId": "age_at_observation",
-          "range": "integer"
+          "range": "integer",
+          "inline": true
         },
         "category": {
           "slotId": "category",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "observation_type": {
           "slotId": "observation_type",
           "range": "BaseObservationTypeEnum",
+          "inline": true,
           "required": true,
           "multivalued": false
         },
         "method_type": {
           "slotId": "method_type",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "focus": {
           "slotId": "focus",
           "range": "Entity",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "performed_by": {
           "slotId": "performed_by",
           "range": "Organization",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "value_string": {
           "slotId": "value_string",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "value_boolean": {
           "slotId": "value_boolean",
           "range": "boolean",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "value_quantity": {
           "slotId": "value_quantity",
           "range": "Quantity",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "value_enum": {
           "slotId": "value_enum",
           "range": "BaseEnum",
+          "inline": true,
           "required": false,
           "multivalued": false
         },
         "associated_visit": {
           "slotId": "associated_visit",
-          "range": "Visit"
+          "range": "Visit",
+          "inline": false
         },
         "associated_participant": {
           "slotId": "associated_participant",
-          "range": "Participant"
+          "range": "Participant",
+          "inline": false
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -2351,6 +2709,7 @@
         "observations": {
           "slotId": "observations-MeasurementObservationSet",
           "range": "MeasurementObservation",
+          "inline": false,
           "required": true,
           "multivalued": true,
           "inherited_from": "ObservationSet"
@@ -2358,16 +2717,19 @@
         "associated_visit": {
           "slotId": "associated_visit",
           "range": "Visit",
+          "inline": false,
           "inherited_from": "ObservationSet"
         },
         "associated_participant": {
           "slotId": "associated_participant",
           "range": "Participant",
+          "inline": false,
           "inherited_from": "ObservationSet"
         },
         "category": {
           "slotId": "category",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "ObservationSet"
@@ -2375,6 +2737,7 @@
         "focus": {
           "slotId": "focus",
           "range": "Entity",
+          "inline": true,
           "required": false,
           "multivalued": true,
           "inherited_from": "ObservationSet"
@@ -2382,6 +2745,7 @@
         "method_type": {
           "slotId": "method_type",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": true,
           "inherited_from": "ObservationSet"
@@ -2389,6 +2753,7 @@
         "performed_by": {
           "slotId": "performed_by",
           "range": "Organization",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "ObservationSet"
@@ -2396,6 +2761,7 @@
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -2410,35 +2776,42 @@
       "attributes": {
         "range_low": {
           "slotId": "range_low",
-          "range": "Quantity"
+          "range": "Quantity",
+          "inline": true
         },
         "range_high": {
           "slotId": "range_high",
-          "range": "Quantity"
+          "range": "Quantity",
+          "inline": true
         },
         "observation_type": {
           "slotId": "observation_type",
           "range": "MeasurementObservationTypeEnum",
+          "inline": true,
           "inherited_from": "Observation"
         },
         "associated_visit": {
           "slotId": "associated_visit",
           "range": "Visit",
+          "inline": false,
           "inherited_from": "Observation"
         },
         "associated_participant": {
           "slotId": "associated_participant",
           "range": "Participant",
+          "inline": false,
           "inherited_from": "Observation"
         },
         "age_at_observation": {
           "slotId": "age_at_observation",
           "range": "integer",
+          "inline": true,
           "inherited_from": "Observation"
         },
         "category": {
           "slotId": "category",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -2446,6 +2819,7 @@
         "method_type": {
           "slotId": "method_type",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -2453,6 +2827,7 @@
         "focus": {
           "slotId": "focus",
           "range": "Entity",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -2460,6 +2835,7 @@
         "performed_by": {
           "slotId": "performed_by",
           "range": "Organization",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -2467,6 +2843,7 @@
         "value_string": {
           "slotId": "value_string",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -2474,6 +2851,7 @@
         "value_boolean": {
           "slotId": "value_boolean",
           "range": "boolean",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -2481,6 +2859,7 @@
         "value_quantity": {
           "slotId": "value_quantity",
           "range": "Quantity",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -2488,6 +2867,7 @@
         "value_enum": {
           "slotId": "value_enum",
           "range": "BaseEnum",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -2495,6 +2875,7 @@
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -2510,6 +2891,7 @@
         "observations": {
           "slotId": "observations-SdohObservationSet",
           "range": "SdohObservation",
+          "inline": false,
           "required": true,
           "multivalued": true,
           "inherited_from": "ObservationSet"
@@ -2517,16 +2899,19 @@
         "associated_visit": {
           "slotId": "associated_visit",
           "range": "Visit",
+          "inline": false,
           "inherited_from": "ObservationSet"
         },
         "associated_participant": {
           "slotId": "associated_participant",
           "range": "Participant",
+          "inline": false,
           "inherited_from": "ObservationSet"
         },
         "category": {
           "slotId": "category-SdohObservationSet",
           "range": "GravityDomainEnum",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "ObservationSet"
@@ -2534,6 +2919,7 @@
         "focus": {
           "slotId": "focus",
           "range": "Entity",
+          "inline": true,
           "required": false,
           "multivalued": true,
           "inherited_from": "ObservationSet"
@@ -2541,6 +2927,7 @@
         "method_type": {
           "slotId": "method_type",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": true,
           "inherited_from": "ObservationSet"
@@ -2548,6 +2935,7 @@
         "performed_by": {
           "slotId": "performed_by",
           "range": "Organization",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "ObservationSet"
@@ -2555,6 +2943,7 @@
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -2569,26 +2958,31 @@
       "attributes": {
         "related_questionnaire_item": {
           "slotId": "related_questionnaire_item",
-          "range": "QuestionnaireItem"
+          "range": "QuestionnaireItem",
+          "inline": true
         },
         "associated_visit": {
           "slotId": "associated_visit",
           "range": "Visit",
+          "inline": false,
           "inherited_from": "Observation"
         },
         "associated_participant": {
           "slotId": "associated_participant",
           "range": "Participant",
+          "inline": false,
           "inherited_from": "Observation"
         },
         "age_at_observation": {
           "slotId": "age_at_observation",
           "range": "integer",
+          "inline": true,
           "inherited_from": "Observation"
         },
         "category": {
           "slotId": "category-SdohObservation",
           "range": "GravityDomainEnum",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -2596,6 +2990,7 @@
         "observation_type": {
           "slotId": "observation_type",
           "range": "BaseObservationTypeEnum",
+          "inline": true,
           "required": true,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -2603,6 +2998,7 @@
         "method_type": {
           "slotId": "method_type",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -2610,6 +3006,7 @@
         "focus": {
           "slotId": "focus",
           "range": "Entity",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -2617,6 +3014,7 @@
         "performed_by": {
           "slotId": "performed_by",
           "range": "Organization",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -2624,6 +3022,7 @@
         "value_string": {
           "slotId": "value_string",
           "range": "string",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -2631,6 +3030,7 @@
         "value_boolean": {
           "slotId": "value_boolean",
           "range": "boolean",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -2638,6 +3038,7 @@
         "value_quantity": {
           "slotId": "value_quantity",
           "range": "Quantity",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -2645,6 +3046,7 @@
         "value_enum": {
           "slotId": "value_enum",
           "range": "BaseEnum",
+          "inline": true,
           "required": false,
           "multivalued": false,
           "inherited_from": "Observation"
@@ -2652,6 +3054,7 @@
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }
@@ -2667,18 +3070,21 @@
         "cause": {
           "slotId": "cause",
           "range": "CauseOfDeathEnum",
+          "inline": true,
           "required": true,
           "multivalued": false
         },
         "order": {
           "slotId": "order",
           "range": "integer",
+          "inline": true,
           "required": true,
           "multivalued": false
         },
         "id": {
           "slotId": "id",
           "range": "uriorcurie",
+          "inline": false,
           "required": true,
           "inherited_from": "Entity"
         }

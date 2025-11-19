@@ -7,16 +7,21 @@ import type { Element } from './models/Element';
 // ============================================================================
 
 /**
- * Raw attribute definition from metadata JSON (LinkML schema)
+ * Raw slot definition from metadata JSON (LinkML schema)
  * Enhanced by transform_schema.py with computed fields
+ *
+ * Note: All class properties are slots. The distinction is:
+ * - inline slots: defined directly on a class (inline: true)
+ * - referenced slots: reference a global slot definition (inline: false)
  */
-export interface AttributeDefinition {
+export interface SlotDefinition {
   slotId: string;           // ID of the slot definition (computed by transform_schema.py)
   range: string;
   description?: string;
   required?: boolean;
   multivalued?: boolean;
   inherited_from?: string;  // Which ancestor class defined this slot (computed by transform_schema.py)
+  inline: boolean;          // true = defined inline on class, false = references global slot (computed by transform_schema.py)
 }
 
 /**
@@ -69,9 +74,9 @@ export interface ClassDTO {
   description: string;
   is_a?: string;  // Parent class (LinkML field name)
   abstract?: boolean;
-  attributes?: Record<string, AttributeDefinition>;
+  attributes?: Record<string, SlotDefinition>;
   slots?: string | string[];
-  slot_usage?: Record<string, AttributeDefinition>;
+  slot_usage?: Record<string, SlotDefinition>;
   from_schema?: string;  // Added by gen-linkml
 }
 
@@ -146,7 +151,7 @@ export interface ClassData {
   description: string;
   parent?: string;  // Normalized from is_a
   abstract: boolean;
-  attributes: Record<string, AttributeDefinition>;  // Pre-computed with slotId and inherited_from
+  attributes: Record<string, SlotDefinition>;  // Pre-computed with slotId and inherited_from
   class_url?: string;  // Expanded from class_uri using prefixes
 }
 

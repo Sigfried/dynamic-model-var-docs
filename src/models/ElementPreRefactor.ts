@@ -29,7 +29,8 @@ function positionToContext(position: 'left' | 'middle' | 'right'): 'leftPanel' |
 }
 
 // Property definition from class attributes
-// Matches AttributeDefinition from types.ts (enhanced by transform_schema.py)
+// Matches SlotDefinition from types.ts (enhanced by transform_schema.py)
+// TODO: Remove PropertyDefinition - use SlotDefinition directly when refactoring Element classes
 interface PropertyDefinition {
   slotId: string;           // ID of the slot definition (computed by transform_schema.py)
   range: string;

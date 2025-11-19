@@ -193,10 +193,36 @@ export async function loadRawData(): Promise<SchemaData> {
     enums.set(name, transformEnumDTO(dto));
   });
 
-  // Collect all slot definitions (includes base slots + override instances from transform_schema.py)
+  // Collect all slot definitions
+  // Part 1: Global slots from top-level slots section
   const slots = new Map<string, SlotData>();
   Object.entries(processedSchemaDTO.slots || {}).forEach(([name, dto]) => {
-    slots.set(name, transformSlotDTO(dto));
+    // Only include base slots, not slot_usage override instances (those have hyphens)
+    if (!name.includes('-')) {
+      slots.set(name, transformSlotDTO(dto));
+    }
+  });
+
+  // Part 2: Inline slot definitions from class attributes
+  // Collect unique inline slots defined across all classes
+  Object.values(processedSchemaDTO.classes).forEach((classDTO) => {
+    Object.entries(classDTO.attributes || {}).forEach(([_attrName, attrDef]) => {
+      const slotId = attrDef.slotId;
+      // Skip if already collected or if it's a slot_usage instance (has hyphen)
+      if (!slots.has(slotId) && !slotId.includes('-')) {
+        // Only collect inline slots (not referenced global slots)
+        if (attrDef.inline) {
+          // Transform attribute to SlotData
+          const slotData: SlotData = {
+            range: attrDef.range,
+            description: attrDef.description,
+            required: attrDef.required,
+            multivalued: attrDef.multivalued
+          };
+          slots.set(slotId, slotData);
+        }
+      }
+    });
   });
 
   // Types from linkml:types (included via gen-linkml + transform_schema.py pipeline)

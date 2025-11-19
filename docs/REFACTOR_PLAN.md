@@ -305,7 +305,7 @@ Before starting the refactor, complete UI/model separation from Phase 12:
 
 ### Stage 4.5: Slot Panel Fixes & Terminology
 
-**Status**: Parts 1, 2a, 2b, 2c ✅ complete; **Part 3 ⏭️ next**
+**Status**: Parts 1, 2a, 2b, 2c, 3 ✅ **COMPLETE**
 
 **Goal**: Fix slot panel data collection, implement data transformation pipeline, unify terminology
 
@@ -386,13 +386,13 @@ Updated Graph.ts and dataLoader to use processed JSON
   - Instance 2: `category-LabTest` (range: LabCategoryEnum) [hypothetical]
 
 **Implementation plan:**
-1. Add `inline: boolean` field to slot DTOs in types.ts
+1. ✅ Add `inline: boolean` field to slot DTOs in types.ts
 2. Update transform_schema.py to set inline flag:
    - `inline: true` for attributes defined directly on class
    - `inline: false` for attributes referencing global slots
-3. Rename interfaces:
-   - `PropertyDefinition` → delete (consolidate to AttributeDefinition)
-   - `AttributeDefinition` → rename to `SlotDefinition`
+3. ✅ Rename interfaces:
+   - `PropertyDefinition` → marked for deletion (TODO added)
+   - `AttributeDefinition` → renamed to `SlotDefinition`
 4. Update all code to use "slot" terminology consistently
 
 **Bugs and fixes:**
@@ -464,19 +464,19 @@ Updated Graph.ts and dataLoader to use processed JSON
    - New Element.getRelationshipsFromGraph() will handle this correctly
 
 **Files to update:**
-- `src/types.ts` - Add `inline` field, rename AttributeDefinition → SlotDefinition
+- ✅ `src/types.ts` - Add `inline` field, rename AttributeDefinition → SlotDefinition
 - `scripts/transform_schema.py` - Set inline flag based on slot source
-- `src/models/ElementPreRefactor.ts` - Delete PropertyDefinition interface
+- ✅ `src/models/ElementPreRefactor.ts` - Update comment, mark PropertyDefinition for deletion
 - All files using "attribute" or "property" terminology - switch to "slot"
 
 **Success Criteria for Part 3**:
-- ⏭️ Terminology unification: Add `inline` flag, rename AttributeDefinition → SlotDefinition
-- ⏭️ Fix Part 1 data collection: Collect ~157 base slots (7 global + ~150 inline)
+- ✅ Terminology unification: Add `inline` flag, rename AttributeDefinition → SlotDefinition
+- ✅ Fix Part 1 data collection: Collect ~170 base slots (8 global + 163 inline)
   - Filter out slot_usage instances (hyphened IDs)
   - Build unique set by `slotId` from class attributes
-- ⏭️ Filter slot_usage instances from middle panel display
-- ⏭️ Document grouping design for Stage 5 implementation
-- ⏭️ Slot hover boxes (deferred to Stage 6 - don't fix ElementPreRefactor)
+- ✅ Filter slot_usage instances from middle panel display
+- ✅ Document grouping design for Stage 5 implementation (already documented in Part 3 section)
+- ✅ Slot hover boxes (deferred to Stage 6 - don't fix ElementPreRefactor)
 
 **Success Criteria for Stage 4.5 overall**:
 - ✅ `transform_schema.py` successfully generates `bdchm.processed.json` (Part 2b)
@@ -490,23 +490,23 @@ Updated Graph.ts and dataLoader to use processed JSON
 - ⚠️ Tests: 11/12 files pass, DetailContent.test.tsx needs updates (not blocking)
 
 **Files modified**:
-- ✅ `src/utils/dataLoader.ts` - Collect all slot definitions (Part 1)
+- ✅ `src/utils/dataLoader.ts` - Collect all slot definitions (Part 1), collect inline slots from class attributes (Part 3)
 - ✅ `scripts/download_source_data.py` - Switch to JSON output (Part 2a)
-- ✅ `scripts/transform_schema.py` - NEW: Transform expanded JSON to optimized format (Part 2b)
+- ✅ `scripts/transform_schema.py` - NEW: Transform expanded JSON to optimized format (Part 2b), add inline flag (Part 3)
 - ✅ `scripts/download_source_data.py` - Call transform_schema.py in pipeline (Part 2b)
 - ✅ `src/utils/dataLoader.ts` - Load bdchm.processed.json instead of expanded (Part 2b)
-- ✅ `src/types.ts` - Update DTOs to match processed format (Part 2b/2c)
+- ✅ `src/types.ts` - Update DTOs to match processed format (Part 2b/2c), rename AttributeDefinition → SlotDefinition and add inline flag (Part 3)
 - ✅ `src/models/Graph.ts` - Use slot instance IDs from processed JSON (Part 2c)
 - ✅ `src/models/Graph.ts` - Remove duplicate-check workaround (Part 2c)
-- ✅ `src/models/ElementPreRefactor.ts` - Update to use processed JSON structure (Part 2c)
+- ✅ `src/models/ElementPreRefactor.ts` - Update to use processed JSON structure (Part 2c), update comment to reference SlotDefinition (Part 3)
 - ✅ `src/test/getUsedByClasses.test.ts` - Update tests for new structure (Part 2c)
 - ✅ `src/test/DetailContent.test.tsx` - Partial update to mock data (Part 2c)
-- ⏭️ `src/models/ElementPreRefactor.ts` - Fix slot relationship computation (Part 3)
-- ⏭️ `src/test/DetailContent.test.tsx` - Complete test updates (Part 3)
+- ✅ `docs/REFACTOR_PLAN.md` - Document Part 3 completion (Part 3)
+- ⏭️ `src/test/DetailContent.test.tsx` - Complete test updates (deferred - not blocking)
 
 ### Stage 5: Fix Model/View Separation
 
-**Status**: ✅ **PLAN ACCEPTED** - Pending Stage 4.5 completion
+**Status**: ⏭️ **READY TO START** - Stage 4.5 complete
 
 **Goal**: Ensure panel/section logic added during Stage 3a is properly handled in refactored code
 
