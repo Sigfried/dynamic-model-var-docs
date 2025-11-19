@@ -125,13 +125,27 @@ function computeIncomingRelationships(thisElement: Element): IncomingRelationshi
       incoming.subclasses.push(otherClass.getId());
     }
 
-    // Find class slots that reference this element (for classes, enums, and slots)
-    // Uses classSlots which includes attributes, slot_usage, and slot_reference
+    // Find class slots that reference this element
     // @ts-expect-error TEMPORARY: Accessing protected 'type' property - will be removed in Step 7 (Link Overlay Refactor)
     // TODO: Refactor to avoid type checks - see TASKS.md Step 7 architectural guidance
-    if (thisElement.type === 'class' || thisElement.type === 'enum' || thisElement.type === 'slot') {
+    if (thisElement.type === 'class' || thisElement.type === 'enum') {
+      // For classes and enums, check if they are used as the range of a slot
       for (const classSlot of otherClass.classSlots) {
         if (classSlot.range === thisElement.getId()) {
+          incoming.usedByAttributes.push({
+            className: otherClass.getId(),
+            attributeName: classSlot.name,
+            sourceSection: 'class'
+          });
+        }
+      }
+    }
+    // @ts-expect-error TEMPORARY: Accessing protected 'type' property - will be removed in Step 7 (Link Overlay Refactor)
+    // TODO: Refactor to avoid type checks - see TASKS.md Step 7 architectural guidance
+    else if (thisElement.type === 'slot') {
+      // For slots, check if they are referenced by their slot definition
+      for (const classSlot of otherClass.classSlots) {
+        if (classSlot.baseSlot.name === thisElement.getId()) {
           incoming.usedByAttributes.push({
             className: otherClass.getId(),
             attributeName: classSlot.name,

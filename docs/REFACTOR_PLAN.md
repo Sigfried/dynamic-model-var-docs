@@ -730,35 +730,69 @@ Example using Entity → Observation → SdohObservation (shows all combinations
 - ✅ 11/12 test files pass (165 tests)
 - ⚠️ DetailContent.test.tsx needs further UI test updates (19 failing tests) - not blocking
 
-**Part 3: Verify edges** ⏭️ AFTER Part 2c
-- Test: Query graph for edges from a known class
-- Verify SlotEdge instances work correctly
-- Test that LinkOverlay can traverse and render edges
-- Verify slot_usage overrides appear as separate slots in middle panel
+**Part 3: Bug Fixes & Cleanup** ⏭️ NEXT
+
+**Bugs to fix:**
+1. ❌ **Slot hover boxes show "No relationships found"**
+   - Issue: `computeIncomingRelationships()` checks slot usage incorrectly
+   - Current logic: Checks `classSlot.baseSlot.name === slotId`
+   - Problem: Doesn't account for slot instances (e.g., "category-SdohObservation")
+   - Fix needed: Check both direct usage AND overrides field
+   - Location: `src/models/ElementPreRefactor.ts:145-156`
+
+2. ⚠️ **Only 18 slots showing in middle panel**
+   - Expected: ~170 slots (base slots + slot instances from slot_usage)
+   - Actual: 18 base slots only
+   - Root cause: `transform_schema.py` only outputs base slots, not instances
+   - Decision needed: Should middle panel show slot instances separately?
+   - Alternative: Keep 18 base slots, use hover to show all usage (including overrides)
+
+**Terminology questions to resolve:**
+1. **PropertyDefinition vs AttributeDefinition**
+   - Both interfaces are now identical after Part 2c changes
+   - PropertyDefinition: Local interface in ElementPreRefactor.ts
+   - AttributeDefinition: DTO interface in types.ts
+   - **Question**: Why keep both? Should consolidate to just AttributeDefinition
+
+2. **Attributes vs Slots vs Properties terminology**
+   - Current usage is inconsistent:
+     - "attributes" = class attributes (from class.attributes in JSON)
+     - "slots" = slot definitions (global reusable schemas)
+     - "properties" = synonym for attributes (old term)
+   - After processed JSON: All attributes reference slots via `slotId`
+   - **Question**: Should unify to just "attributes" and "slots"? Remove "properties"?
+   - **Proposed**:
+     - Class **attributes** = class-specific usage/configuration of slots
+     - **Slot definitions** = shared schemas that attributes reference
+     - Remove "properties" terminology entirely
 
 **Success Criteria**:
-- ✅ Slot panel shows all ~170 slots (Part 1 complete)
-- ⏭️ `transform_schema.py` successfully generates `bdchm.processed.json` (Part 2b)
-- ⏭️ Processed JSON is smaller than expanded JSON (Part 2b)
-- ⏭️ All classes have computed `inherited_from` for inherited attributes (Part 2b)
-- ⏭️ Slot_usage creates separate slot instances with correct IDs (Part 2b)
-- ⏭️ dataLoader successfully loads processed JSON (Part 2b)
-- ⏭️ SlotEdges use slot instance IDs from processed JSON (Part 2c)
-- ⏭️ No duplicate edge errors (Part 2c)
-- ⏭️ Class-range edges work correctly (Part 3)
-- ⏭️ TypeScript typecheck passes (all parts)
-- ⏭️ All tests pass (all parts)
+- ✅ Slot panel shows 18 base slots (Part 1 complete - but see bug #2 above)
+- ✅ `transform_schema.py` successfully generates `bdchm.processed.json` (Part 2b)
+- ✅ Processed JSON is smaller than expanded JSON (Part 2b: 548KB → 249KB, 54.6% reduction)
+- ✅ All classes have computed `inherited_from` for inherited attributes (Part 2b)
+- ⚠️ Slot_usage creates separate slot instances with correct IDs (Part 2b - but not showing in UI)
+- ✅ dataLoader successfully loads processed JSON (Part 2b/2c)
+- ✅ SlotEdges use slot instance IDs from processed JSON (Part 2c)
+- ✅ No duplicate edge errors (Part 2c - removed workaround, no errors)
+- ⏭️ Slot hover boxes show relationships (Part 3 - bug #1)
+- ✅ TypeScript typecheck passes (all parts)
+- ⚠️ Tests: 11/12 files pass, DetailContent.test.tsx needs updates (not blocking)
 
-**Files to modify**:
+**Files modified**:
 - ✅ `src/utils/dataLoader.ts` - Collect all slot definitions (Part 1)
 - ✅ `scripts/download_source_data.py` - Switch to JSON output (Part 2a)
-- ⏭️ `scripts/transform_schema.py` - NEW: Transform expanded JSON to optimized format (Part 2b)
-- ⏭️ `scripts/download_source_data.py` - Call transform_schema.py in pipeline (Part 2b)
-- ⏭️ `src/utils/dataLoader.ts` - Load bdchm.processed.json instead of expanded (Part 2b)
-- ⏭️ `src/types.ts` - Update DTOs to match processed format (Part 2b)
-- ⏭️ `src/models/Graph.ts` - Use slot instance IDs from processed JSON (Part 2c)
-- ⏭️ `src/models/Graph.ts` - Remove duplicate-check workaround (Part 2c)
-- ⏭️ `src/test/` - Add edge verification tests (Part 3)
+- ✅ `scripts/transform_schema.py` - NEW: Transform expanded JSON to optimized format (Part 2b)
+- ✅ `scripts/download_source_data.py` - Call transform_schema.py in pipeline (Part 2b)
+- ✅ `src/utils/dataLoader.ts` - Load bdchm.processed.json instead of expanded (Part 2b)
+- ✅ `src/types.ts` - Update DTOs to match processed format (Part 2b/2c)
+- ✅ `src/models/Graph.ts` - Use slot instance IDs from processed JSON (Part 2c)
+- ✅ `src/models/Graph.ts` - Remove duplicate-check workaround (Part 2c)
+- ✅ `src/models/ElementPreRefactor.ts` - Update to use processed JSON structure (Part 2c)
+- ✅ `src/test/getUsedByClasses.test.ts` - Update tests for new structure (Part 2c)
+- ✅ `src/test/DetailContent.test.tsx` - Partial update to mock data (Part 2c)
+- ⏭️ `src/models/ElementPreRefactor.ts` - Fix slot relationship computation (Part 3)
+- ⏭️ `src/test/DetailContent.test.tsx` - Complete test updates (Part 3)
 
 ### Stage 5: Fix Model/View Separation
 
