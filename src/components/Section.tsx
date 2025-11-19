@@ -13,57 +13,10 @@
 import { useExpansionState } from '../hooks/useExpansionState';
 import { getItemHoverHandlers } from '../hooks/useItemHover';
 import { contextualizeId } from '../utils/idContextualization';
+import type { ItemHoverData, SectionItemData, SectionData } from '../contracts/ComponentData';
 
-/**
- * ItemHoverData - Hover event data for item interactions
- * Component defines this interface to specify what data it needs for hover events.
- */
-export interface ItemHoverData {
-  id: string;       // DOM node ID for positioning (e.g., "lp-Specimen")
-  type: string;     // Item type: "class", "enum", "slot", "variable"
-  name: string;     // Item name: "Specimen", "SpecimenTypeEnum", etc.
-}
-
-/**
- * Data interface for a single item in the section.
- * Component defines interface; model layer provides this data via getSectionItemData().
- */
-export interface SectionItemData {
-  // Identity (raw name from model layer, contextualized by UI layer)
-  id: string;                     // "Specimen" (raw name, UI adds context prefix)
-
-  // Display
-  displayName: string;            // "Specimen"
-  level: number;                  // Indentation depth
-
-  // Visual styling
-  badgeColor?: string;            // Tailwind: "bg-blue-100 text-blue-800"
-  badgeText?: string;             // "103"
-  indicators?: Array<{            // Replaces isAbstract() check
-    text: string;                 // "abstract"
-    color: string;                // Tailwind: "text-purple-600"
-  }>;
-
-  // Interaction
-  hasChildren?: boolean;
-  isExpanded?: boolean;
-  isClickable: boolean;
-
-  // Event data (opaque to component, passed through to callbacks)
-  hoverData: ItemHoverData;
-}
-
-/**
- * Data interface for the entire section.
- * Component defines what it needs for the whole section.
- */
-export interface SectionData {
-  id: string;                     // "class"
-  label: string;                  // "Classes (42)"
-  getItems: (expandedItems?: Set<string>, position?: 'left' | 'middle' | 'right') => SectionItemData[]; // Function to get items based on expansion
-  expansionKey?: string;          // For state persistence ("lp-class")
-  defaultExpansion?: Set<string>; // Default expanded items
-}
+// Re-export for backward compatibility with existing imports
+export type { ItemHoverData, SectionItemData, SectionData };
 
 interface SectionProps {
   sectionData: SectionData;

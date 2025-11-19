@@ -9,19 +9,10 @@
  * See CLAUDE.md for separation of concerns principles.
  */
 import Section from './Section';
-import type { SectionData, ItemHoverData } from './Section';
+import type { SectionData, ItemHoverData, ToggleButtonData } from '../contracts/ComponentData';
 
-/**
- * Toggle button metadata (provided by App.tsx from model registry).
- * Component defines what it needs; App provides this data.
- */
-export interface ToggleButtonData {
-  id: string;                     // "class", "enum", "slot", "variable"
-  icon: string;                   // "C"
-  label: string;                  // "Classes"
-  activeColor: string;            // Tailwind: "bg-blue-500"
-  inactiveColor: string;          // Tailwind: "bg-gray-300 dark:bg-gray-600"
-}
+// Re-export for backward compatibility
+export type { ToggleButtonData };
 
 interface ItemsPanelProps {
   position: 'left' | 'middle' | 'right';

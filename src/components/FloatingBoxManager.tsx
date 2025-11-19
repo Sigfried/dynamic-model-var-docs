@@ -13,25 +13,11 @@
  * UI layer uses "item" terminology
  */
 
-import { useState, useRef, useEffect, type ReactNode } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import type { FloatingBoxMetadata, FloatingBoxData } from '../contracts/ComponentData';
 
-// Metadata for FloatingBox display (view/model separation)
-export interface FloatingBoxMetadata {
-  title: string;        // e.g., "Class: Specimen" or "Relationships: Specimen"
-  color: string;        // Tailwind classes for header (e.g., "bg-blue-700 border-blue-800")
-}
-
-// FloatingBox data structure
-export interface FloatingBoxData {
-  id: string;
-  mode: 'transitory' | 'persistent';
-  metadata: FloatingBoxMetadata;
-  content: ReactNode;
-  itemId: string;  // Item identifier for callbacks and state management
-  position?: { x: number; y: number };
-  size?: { width: number; height: number };
-  isUserPositioned?: boolean;  // True if user has moved/resized this box
-}
+// Re-export for backward compatibility
+export type { FloatingBoxMetadata, FloatingBoxData };
 
 interface FloatingBoxManagerProps {
   boxes: FloatingBoxData[];
