@@ -30,6 +30,7 @@ function App() {
     leftSections,
     middleSections,
     rightSections,
+    setMiddleSections,
     setRightSections,
     showUrlHelp,
     setShowUrlHelp,
@@ -222,6 +223,7 @@ function App() {
         leftSections={leftSections}
         middleSections={middleSections}
         rightSections={rightSections}
+        setMiddleSections={setMiddleSections}
         setRightSections={setRightSections}
         initialDialogs={initialDialogs}
         setDialogStatesGetter={setDialogStatesGetter}

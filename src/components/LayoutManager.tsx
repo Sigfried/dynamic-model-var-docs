@@ -35,6 +35,7 @@ interface LayoutManagerProps {
   leftSections: string[];
   middleSections: string[];
   rightSections: string[];
+  setMiddleSections: (sections: string[]) => void;
   setRightSections: (sections: string[]) => void;
   initialDialogs?: DialogState[];
   setDialogStatesGetter: (getter: () => DialogState[]) => void;
@@ -45,12 +46,12 @@ export default function LayoutManager({
   leftSections,
   middleSections,
   rightSections,
+  setMiddleSections,
   setRightSections,
   initialDialogs = [],
   setDialogStatesGetter
 }: LayoutManagerProps) {
   // LayoutManager is now a controlled component - receives state from parent
-  // Note: setMiddleSections not yet needed - will be added when middle panel toggle is implemented
 
   // Floating box state
   const [hoveredItem, setHoveredItem] = useState<ItemHoverData | null>(null);
@@ -295,6 +296,15 @@ export default function LayoutManager({
   const middlePanelEmpty = middleSections.length === 0;
   const rightPanelEmpty = rightSections.length === 0;
 
+  // Toggle middle panel (show/hide slots)
+  const handleToggleMiddlePanel = useCallback(() => {
+    if (middlePanelEmpty) {
+      setMiddleSections(['slot']);
+    } else {
+      setMiddleSections([]);
+    }
+  }, [middlePanelEmpty, setMiddleSections]);
+
   return (
     <div className="flex-1 flex relative overflow-hidden">
       {/* Three-panel layout */}
@@ -320,10 +330,15 @@ export default function LayoutManager({
           />
         </div>
 
+        {/* Left-Middle gutter - show when middle panel visible */}
+        {!middlePanelEmpty && (
+          <div className="w-40 bg-gray-100 dark:bg-slate-800 flex-shrink-0" />
+        )}
+
         {/* Middle Panel - Slots (toggleable) */}
         {!middlePanelEmpty && (
           <div
-            className="h-full overflow-hidden border-r border-gray-200 dark:border-slate-700 flex-shrink-0"
+            className="h-full overflow-hidden border-x border-gray-200 dark:border-slate-700 flex-shrink-0 relative"
             style={{
               maxWidth: `${MAX_PANEL_WIDTH}px`,
               minWidth: '300px'
@@ -340,12 +355,38 @@ export default function LayoutManager({
               onItemLeave={() => setHoveredItem(null)}
               title="Slots"
             />
+            {/* Hide button */}
+            <button
+              onClick={handleToggleMiddlePanel}
+              className="absolute top-2 right-2 w-6 h-6 rounded bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-600 dark:text-gray-300 flex items-center justify-center text-xs transition-colors z-10"
+              title="Hide Slots panel"
+            >
+              ✕
+            </button>
           </div>
         )}
 
-        {/* Center gutter - show when middle panel hidden */}
+        {/* Middle-Right gutter - show when middle panel visible */}
+        {!middlePanelEmpty && (
+          <div className="w-40 bg-gray-100 dark:bg-slate-800 flex-shrink-0" />
+        )}
+
+        {/* Center gutter / toggle button - show when middle panel hidden */}
         {!leftPanelEmpty && !rightPanelEmpty && middlePanelEmpty && (
-          <div className="w-40 bg-gray-100 dark:bg-slate-800 border-x border-gray-200 dark:border-slate-700 flex-shrink-0" />
+          <button
+            onClick={handleToggleMiddlePanel}
+            className="w-40 bg-gray-100 dark:bg-slate-800 border-x border-gray-200 dark:border-slate-700 flex-shrink-0 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors flex items-center justify-center group"
+            title="Click to show Slots panel"
+          >
+            <div className="text-center">
+              <div className="text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 text-sm font-medium">
+                Show Slots
+              </div>
+              <div className="text-gray-400 dark:text-gray-500 text-xs mt-1">
+                ▶
+              </div>
+            </div>
+          </button>
         )}
 
         {/* Right Panel - Ranges only */}
