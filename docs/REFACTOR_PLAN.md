@@ -506,7 +506,7 @@ Updated Graph.ts and dataLoader to use processed JSON
 
 ### Stage 5: Fix Model/View Separation
 
-**Status**: ⏭️ **READY TO START** - Stage 4.5 complete
+**Status**: 🚧 **IN PROGRESS** - Phase A Step 1 complete (contract centralization)
 
 **Goal**: Ensure panel/section logic added during Stage 3a is properly handled in refactored code
 
@@ -606,11 +606,11 @@ Based on user preference for Option A and findings above, here's the refined app
 **Implementation Plan**:
 
 **Phase A: Quick wins (do now)**
-1. Centralize contracts to `src/contracts/ComponentData.ts`
-2. Add middle panel toggle button in header or panel
-3. Fix LayoutManager spacing for middle panel (gutters on both sides)
-4. Verify LinkOverlay rendering with middle panel
-5. **Implement grouped slots panel** (from Stage 4.5 Part 3 design):
+1. ✅ Centralize contracts to `src/contracts/ComponentData.ts`
+2. ⏭️ Add middle panel toggle button in header or panel
+3. ⏭️ Fix LayoutManager spacing for middle panel (gutters on both sides)
+4. ⏭️ Verify LinkOverlay rendering with middle panel
+5. ⏭️ **Implement grouped slots panel** (from Stage 4.5 Part 3 design):
    - DataService: Provide grouped slot data (Global section + per-class sections)
    - Section.tsx: Support nested grouping (class headers with slot items)
    - Filter out slot_usage instances (hyphened IDs)
@@ -623,30 +623,31 @@ Based on user preference for Option A and findings above, here's the refined app
 8. Leave toSectionItems/getSectionData in ElementPreRefactor (delete later)
 
 **Files to modify**:
-- `src/contracts/ComponentData.ts` - NEW (centralized contracts)
-- `src/components/Section.tsx` - Remove contract exports, import from contracts, support nested grouping
-- `src/components/ItemsPanel.tsx` - Remove contract exports, import from contracts
-- `src/components/FloatingBoxManager.tsx` - Remove contract exports, import from contracts
-- `src/components/LayoutManager.tsx` - Add toggle button, fix spacing
-- `src/services/DataService.ts` - Provide grouped slot data (global + per-class sections)
-- `src/utils/dataLoader.ts` - Filter slot_usage instances from middle panel collection
-- `src/utils/statePersistence.ts` - Add getExpansionKey function (optional)
-- `src/models/ElementPreRefactor.ts` - Try to eliminate positionToContext (optional)
+- ✅ `src/contracts/ComponentData.ts` - NEW (centralized contracts) - Step 1 complete
+- ✅ `src/components/Section.tsx` - Import from contracts with backward-compatible re-exports - Step 1 complete
+- ✅ `src/components/ItemsPanel.tsx` - Import from contracts with backward-compatible re-exports - Step 1 complete
+- ✅ `src/components/FloatingBoxManager.tsx` - Import from contracts with backward-compatible re-exports - Step 1 complete
+- ⏭️ `src/components/Section.tsx` - Support nested grouping (Step 5)
+- ⏭️ `src/components/LayoutManager.tsx` - Add toggle button, fix spacing (Steps 2-3)
+- ⏭️ `src/services/DataService.ts` - Provide grouped slot data (Step 5)
+- ⏭️ `src/utils/dataLoader.ts` - Already filters slot_usage instances (done in Stage 4.5 Part 3)
+- ⏭️ `src/utils/statePersistence.ts` - Add getExpansionKey function (Phase B, optional)
+- ⏭️ `src/models/ElementPreRefactor.ts` - Try to eliminate positionToContext (Phase B, optional)
 
 **Success criteria**:
-- ✅ All component contracts centralized in one place
-- ✅ Middle panel has toggle button (show/hide)
-- ✅ Middle panel has proper spacing (gutters for links)
-- ✅ LinkOverlay works correctly with middle panel visible
-- ✅ Grouped slots panel implemented:
-  - Global section shows 7 global slots
+- ✅ All component contracts centralized in one place (Step 1 - commit 4b502e7)
+- ⏭️ Middle panel has toggle button (show/hide)
+- ⏭️ Middle panel has proper spacing (gutters for links)
+- ⏭️ LinkOverlay works correctly with middle panel visible
+- ⏭️ Grouped slots panel implemented:
+  - Global section shows 8 global slots
   - Per-class sections show inherited + defined slots
   - Inherited slots show "inherited from X" indicator
   - Overridden slots have visual indicator (⚠️ or color)
-  - No slot_usage instances visible (filtered out)
+  - ✅ No slot_usage instances visible (filtered in Stage 4.5 Part 3)
   - Click/hover navigates to class-specific version
 - ✅ TypeScript typecheck passes
-- ✅ All tests pass
+- ⏭️ All tests pass (pending remaining steps)
 
 ### Stage 6: Detail Box Updates
 
