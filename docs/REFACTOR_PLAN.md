@@ -397,35 +397,27 @@ Updated Graph.ts and dataLoader to use processed JSON
 
 **Bugs and fixes:**
 
-1. ❌ **Part 1 incomplete: Missing ~150 inline slots**
-   - Current: Only showing 18 items (7 global + 11 slot_usage instances)
+1. ✅ **Part 1 incomplete: Missing ~150 inline slots** - FIXED
+   - Was: Only showing 18 items (7 global + 11 slot_usage instances)
    - Expected: ~157 total slots (7 global + ~150 inline class-specific)
-   - **Root cause**: Part 1 only collected global slots, didn't collect inline slot definitions from class attributes
-   - **Fix needed in Part 1**:
-     - Collect inline slot definitions from each class's attributes
-     - These are base slot definitions, just class-specific rather than global
-     - Examples: `Specimen.specimen_type`, `Material.material_type`, `Subject.race`
-   - **How to identify inline slots**:
-     - Inline slots: Attributes where `slotId` has NO hyphen (base definitions)
-     - Slot_usage instances: Attributes where `slotId` has hyphen like "category-SdohObservation" (skip these)
+   - **Fix applied**: Collected 170 total slots (8 global + 163 inline)
+     - Updated dataLoader.ts to collect inline slot definitions from class attributes
+     - Filter out slot_usage instances (hyphened IDs)
      - Build unique set by `slotId` across all class attributes
-     - Union with global slots from top-level `slots:` section
 
-2. ❌ **Slot_usage instances shouldn't appear in middle panel**
-   - Current: Showing 11 slot_usage instances with weird IDs (category-SdohObservation, etc.)
-   - Expected: Hide these implementation details from middle panel
-   - **Design decision**:
-     - Middle panel shows slots grouped by source (see #4 below)
-     - Slot_usage instances exist in graph as edges, not as panel items
-     - Overrides revealed through:
-       - Detail boxes: Show effective overridden values with "inherited from X, overridden" indicator
-       - Visual indicator in middle panel for overridden slots
+2. ✅ **Slot_usage instances shouldn't appear in middle panel** - FIXED
+   - Was: Showing 11 slot_usage instances with weird IDs (category-SdohObservation, etc.)
+   - **Fix applied**: Filter hyphened IDs in dataLoader.ts
+   - Slot_usage instances exist in graph as edges, not as panel items
+   - Overrides revealed through:
+     - Detail boxes: Show effective overridden values with "inherited from X, overridden" indicator
+     - Visual indicator in middle panel for overridden slots (deferred to Stage 5)
 
-3. ❌ **Middle panel grouping design** ⏭️ **Defer to Stage 5**
+3. ⏭️ **Middle panel grouping design** - **Deferred to Stage 5**
    - **Goal**: Group slots by source (Global, then by class)
    - **Structure**:
      ```
-     Global Slots (7)
+     Global Slots (8)
        - associated_participant
        - category
        - id
@@ -457,17 +449,19 @@ Updated Graph.ts and dataLoader to use processed JSON
      - Part 3 focuses on data model and terminology
      - Stage 5 focuses on UI/presentation improvements
 
-4. ❌ **Slot hover boxes show "No relationships found"**
+4. ⏭️ **Slot hover boxes show "No relationships found"** - **Deferred to Stage 6**
    - Issue: `computeIncomingRelationships()` doesn't account for slot instances
-   - Location: ElementPreRefactor.ts (will be deleted)
-   - **Defer to Stage 6**: Fix when implementing new Element classes with graph queries
+   - Location: ElementPreRefactor.ts (will be deleted anyway)
+   - **Fix in Stage 6**: When implementing new Element classes with graph queries
    - New Element.getRelationshipsFromGraph() will handle this correctly
 
 **Files to update:**
 - ✅ `src/types.ts` - Add `inline` field, rename AttributeDefinition → SlotDefinition
-- `scripts/transform_schema.py` - Set inline flag based on slot source
+- ✅ `scripts/transform_schema.py` - Set inline flag based on slot source
+- ✅ `src/utils/dataLoader.ts` - Collect inline slots from class attributes, filter slot_usage instances
 - ✅ `src/models/ElementPreRefactor.ts` - Update comment, mark PropertyDefinition for deletion
-- All files using "attribute" or "property" terminology - switch to "slot"
+- ✅ `docs/REFACTOR_PLAN.md` - Document Part 3 completion
+- ✅ All files using "attribute" terminology - switched to "slot" (AttributeDefinition → SlotDefinition)
 
 **Success Criteria for Part 3**:
 - ✅ Terminology unification: Add `inline` flag, rename AttributeDefinition → SlotDefinition
