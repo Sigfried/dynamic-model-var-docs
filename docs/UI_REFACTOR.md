@@ -705,35 +705,36 @@ See [TASKS.md - Unified Detail Box System](TASKS.md#unified-detail-box-system---
 
 **Structure**:
 ```
-Global Slots (8)
-  - associated_participant
-  - category
+Global Slots (7)
   - id
+  - associated_participant
+  - observations
   - ...
 
-Entity (3 slots)
-  - id (defined here)
-  - identity (defined here)
-  - category (defined here)
+Entity (1 slot)
+  - id (global reference)
 
-Observation (5 slots)
+Observation (12 slots)
   - id (inherited from Entity)
-  - category (inherited from Entity)
+  - category (defined here)
   - associated_visit (global reference)
-  - value (defined here)
+  - value_string (defined here)
+  - ...
 
-SdohObservation (5 slots)
+SdohObservation (13 slots)
   - id (inherited from Entity)
   - category (inherited from Observation) ⚠️ overridden
-  - value (inherited from Observation)
+  - value_string (inherited from Observation)
+  - related_questionnaire_item (defined here)
   - ...
 ```
 
 **Behavior**:
-- Inherited slots appear under each class that uses them (repetition is OK)
+- Inherited slots appear under each class that uses them (repetition across classes is OK)
 - Always show base slot name (never "category-SdohObservation")
 - Click/hover navigates to that class's version (with overrides if any)
-- Visual indicator (⚠️ or different color) for overridden slots
+- Visual indicators for
+  - defined here vs gobal ref vs inherited vs inherited overridden
 
 **Implementation**:
 - DataService: Provide grouped slot data
