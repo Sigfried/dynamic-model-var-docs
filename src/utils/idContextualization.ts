@@ -21,6 +21,9 @@
  * contextualizeId({ id: "Condition", context: "right-panel" }) → "rp-Condition"
  * contextualizeId({ id: "Specimen" }) → "Specimen"
  */
+
+// [sg] with new ItemInfo and EdgeInfo interfaces, i don't think we need any of this anymore
+
 export function contextualizeId({
   id,
   context

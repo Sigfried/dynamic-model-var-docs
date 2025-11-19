@@ -32,6 +32,8 @@ export interface ItemHoverData {
  * Component-defined interface; DataService provides this data.
  */
 export interface SectionItemData {
+  // [sg] get this to work with ItemInfo interface; they are partly redundant now
+
   // Identity (raw name from model layer, contextualized by UI layer)
   id: string;                     // "Specimen" (raw name, UI adds context prefix)
 
