@@ -366,9 +366,11 @@ export default function LinkOverlay({
         const linkKey = `${logicalSourcePanel}-${link.source.type}-${link.source.id}-${link.target.type}-${link.target.id}-${index}`;
 
         // Check if link should be highlighted (either direct hover or item hover match)
+        // Note: link.source/target.id is the item ID (e.g., "Specimen")
+        //       hoveredItem.name is also the item name, hoveredItem.id is the DOM ID (e.g., "lp-Specimen")
         const matchesHoveredItem = !!hoveredItem && (
-          (link.source.type === hoveredItem.type && link.source.id === hoveredItem.id) ||
-          (link.target.type === hoveredItem.type && link.target.id === hoveredItem.id)
+          (link.source.type === hoveredItem.type && link.source.id === hoveredItem.name) ||
+          (link.target.type === hoveredItem.type && link.target.id === hoveredItem.name)
         );
         const isHovered = hoveredLinkKey === linkKey || matchesHoveredItem;
 
