@@ -619,12 +619,6 @@ export function initializeModelData(schemaData: SchemaData): ModelData {
 
 // Helper to categorize range types
 function categorizeRange(range: string): 'class' | 'enum' | 'type' | 'primitive' {
-  const primitives = ['string', 'integer', 'float', 'double', 'decimal', 'boolean', 'date', 'datetime', 'time', 'uri', 'uriorcurie'];
-
-  if (primitives.includes(range.toLowerCase())) {
-    return 'primitive';
-  }
-
   // Use lookup map if available (avoids duck typing)
   if (nameToTypeMap?.has(range)) {
     const type = nameToTypeMap.get(range)!;
@@ -632,6 +626,12 @@ function categorizeRange(range: string): 'class' | 'enum' | 'type' | 'primitive'
     if (type === 'slot') return 'class';
     // Types are their own category (like enums) - they show as link targets
     return type;
+  }
+
+  // If not in map, check if it's a primitive type name
+  const primitives = ['string', 'integer', 'float', 'double', 'decimal', 'boolean', 'date', 'datetime', 'time', 'uri', 'uriorcurie'];
+  if (primitives.includes(range.toLowerCase())) {
+    return 'primitive';
   }
 
   // Fallback to duck typing if map not initialized (shouldn't happen in normal use)
