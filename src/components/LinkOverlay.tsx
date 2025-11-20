@@ -249,6 +249,15 @@ export default function LinkOverlay({
             return; // Skip same-panel non-self-ref links
           }
 
+          // In 3-panel mode, only draw links between adjacent panels
+          // Skip left→right links (they should go through middle)
+          if (sourcePanel === 'left' && targetPanel === 'right') {
+            return; // Skip non-adjacent panel links
+          }
+          if (sourcePanel === 'right' && targetPanel === 'left') {
+            return; // Skip non-adjacent panel links
+          }
+
           // Store pair: [sourceContextualizedId, targetContextualizedId]
           const pairKey = `${contextualizedId}→${targetElement.id}`;
           pairs.set(pairKey, [contextualizedId, targetElement.id]);
