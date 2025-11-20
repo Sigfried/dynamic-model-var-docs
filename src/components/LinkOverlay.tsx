@@ -85,6 +85,10 @@ export interface LinkOverlayProps {
   filterOptions?: LinkFilterOptions;
   /** Currently hovered item for link highlighting */
   hoveredItem?: ItemHoverData | null;
+  /** Physical panel position for left sections (default: 'left') */
+  leftPhysicalPanel?: 'left' | 'middle' | 'right';
+  /** Physical panel position for right sections (default: 'right') */
+  rightPhysicalPanel?: 'left' | 'middle' | 'right';
 }
 
 export default function LinkOverlay({
@@ -92,7 +96,9 @@ export default function LinkOverlay({
   rightSections,
   dataService,
   filterOptions = {},
-  hoveredItem
+  hoveredItem,
+  leftPhysicalPanel = 'left',
+  rightPhysicalPanel = 'right'
 }: LinkOverlayProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [, setScrollTick] = useState(0);
@@ -142,19 +148,24 @@ export default function LinkOverlay({
     const leftItems = new Set<string>();
     const rightItems = new Set<string>();
 
-    // Get all item IDs for each panel section and contextualize them
+    // Map physical panel to context string
+    const panelToContext = (panel: 'left' | 'middle' | 'right') => `${panel}-panel`;
+    const leftContext = panelToContext(leftPhysicalPanel);
+    const rightContext = panelToContext(rightPhysicalPanel);
+
+    // Get all item IDs for each panel section and contextualize them with their PHYSICAL panel
     leftSections.forEach(sectionId => {
       // @ts-expect-error TEMPORARY: string vs ElementTypeId - will be removed in Step 7 (Link Overlay Refactor)
       // TODO: See TASKS.md Step 7 - refactor to use ds.getLinkData(leftItemIds, rightItemIds)
       const itemIds = dataService.getItemNamesForType(sectionId); // Returns IDs (name === id currently)
-      itemIds.forEach(id => leftItems.add(contextualizeId({ id, context: 'left-panel' })));
+      itemIds.forEach(id => leftItems.add(contextualizeId({ id, context: leftContext })));
     });
 
     rightSections.forEach(sectionId => {
       // @ts-expect-error TEMPORARY: string vs ElementTypeId - will be removed in Step 7 (Link Overlay Refactor)
       // TODO: See TASKS.md Step 7 - refactor to use ds.getLinkData(leftItemIds, rightItemIds)
       const itemIds = dataService.getItemNamesForType(sectionId); // Returns IDs (name === id currently)
-      itemIds.forEach(id => rightItems.add(contextualizeId({ id, context: 'right-panel' })));
+      itemIds.forEach(id => rightItems.add(contextualizeId({ id, context: rightContext })));
     });
 
     const leftLinks: Link[] = [];
@@ -194,7 +205,7 @@ export default function LinkOverlay({
     };
 
     // Process left panel (all cross-panel relationships going to right panel)
-    processItems(leftSections, rightItems, 'right-panel', leftLinks);
+    processItems(leftSections, rightItems, rightContext, leftLinks);
 
     // Process right panel (all relationships EXCEPT class→class cross-panel going to left panel)
     // Class→class is bidirectional in the schema, so we only draw left→right
@@ -216,8 +227,8 @@ export default function LinkOverlay({
         const filteredLinks = links.filter(link => {
           if (link.relationship.isSelfRef) return true; // Always keep self-refs
 
-          // Contextualize target ID for left panel before checking
-          const contextualizedTargetId = contextualizeId({ id: link.target.id, context: 'left-panel' });
+          // Contextualize target ID for left physical panel before checking
+          const contextualizedTargetId = contextualizeId({ id: link.target.id, context: leftContext });
           if (!leftItems.has(contextualizedTargetId)) return false; // Not cross-panel (target must be in LEFT panel)
 
           // For class→class links, filter out to avoid bidirectional duplicates
@@ -233,7 +244,7 @@ export default function LinkOverlay({
     });
 
     return { leftPanelLinks: leftLinks, rightPanelLinks: rightLinks };
-  }, [leftSections, rightSections, dataService, filterOptions]);
+  }, [leftSections, rightSections, dataService, filterOptions, leftPhysicalPanel, rightPhysicalPanel]);
 
   // Calculate anchor points for cross-panel links based on actual positions
   const calculateCrossPanelAnchors = (
@@ -318,9 +329,12 @@ export default function LinkOverlay({
     // Helper to render links from a specific logical panel (left or right from LinkOverlay's perspective)
     const renderLinksFromPanel = (links: Link[], logicalSourcePanel: 'left' | 'right') => {
       return links.map((link, index) => {
-        // Determine contexts: leftPanelLinks have source in left, target in right (and vice versa)
-        const sourceContext = logicalSourcePanel === 'left' ? 'left-panel' : 'right-panel';
-        const targetContext = logicalSourcePanel === 'left' ? 'right-panel' : 'left-panel';
+        // Map physical panel to context string
+        const panelToContext = (panel: 'left' | 'middle' | 'right') => `${panel}-panel`;
+
+        // Determine contexts based on physical panel positions
+        const sourceContext = logicalSourcePanel === 'left' ? panelToContext(leftPhysicalPanel) : panelToContext(rightPhysicalPanel);
+        const targetContext = logicalSourcePanel === 'left' ? panelToContext(rightPhysicalPanel) : panelToContext(leftPhysicalPanel);
 
         // Build contextualized DOM IDs
         const sourceDomId = contextualizeId({ id: link.source.id, context: sourceContext });

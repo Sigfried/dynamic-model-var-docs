@@ -424,23 +424,29 @@ export default function LayoutManager({
           rightSections={rightSections}
           dataService={dataService}
           hoveredItem={hoveredItem}
+          leftPhysicalPanel="left"
+          rightPhysicalPanel="right"
         />
       ) : (
         // Middle panel visible: Two overlays connecting adjacent panels
-        // First overlay sees: left=classes, right=slots (slots are in middle panel physically)
-        // Second overlay sees: left=slots, right=ranges (slots are in middle panel physically)
+        // First overlay sees: left=classes (physical left), right=slots (physical middle)
+        // Second overlay sees: left=slots (physical middle), right=ranges (physical right)
         <>
           <LinkOverlay
             leftSections={leftSections}
             rightSections={middleSections}
             dataService={dataService}
             hoveredItem={hoveredItem}
+            leftPhysicalPanel="left"
+            rightPhysicalPanel="middle"
           />
           <LinkOverlay
             leftSections={middleSections}
             rightSections={rightSections}
             dataService={dataService}
             hoveredItem={hoveredItem}
+            leftPhysicalPanel="middle"
+            rightPhysicalPanel="right"
           />
         </>
       )}
