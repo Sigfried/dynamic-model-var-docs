@@ -20,24 +20,16 @@
    - **Fix**: Changed return type to include `'type'` and removed special case treating types as primitives
    - **Files**: `models/ElementPreRefactor.ts:621,132`
 
-4. **✅ FIXED: Class→class links going left→left instead of left→right**
-   - **Issue**: LinkOverlay was checking `leftItems.has(link.target.name)` instead of `rightItems`
-   - **Fix**: Changed to `rightItems.has(link.target.name)` for correct cross-panel filtering
-   - **Files**: `components/LinkOverlay.tsx:213`
-   - [sg] NOT fixed
-       - i want to get rid of contetualized ids, but that needs to wait for more refactoring. for now we should still be using them. left panel classes should have dom ids of
-         lp-<classId>; right panel classes should have rp-<classId>. that is the case.
-       - i don't know why these dom nodes also have data-item-type,
-         data-item-name, and data-panel-position. we should probably get rid of those so
-         they don't cause confusion
-       - the link overlays are apparently not using these contextualized ids. i don't
-         know why. can that be fixed?
+4. **✅ FIXED: Hover box z-index lower than detail boxes**
+    - **Issue**: RelationshipInfoBox had `z-50`, FloatingBoxManager had `z-40`
+    - **Fix**: Increased hover box to `z-[60]` so it appears above detail boxes
+    - **Files**: `components/RelationshipInfoBox.tsx:283,307`
 
-5. **✅ FIXED: Hover box z-index lower than detail boxes**
-   - **Issue**: RelationshipInfoBox had `z-50`, FloatingBoxManager had `z-40`
-   - **Fix**: Increased hover box to `z-[60]` so it appears above detail boxes
-   - **Files**: `components/RelationshipInfoBox.tsx:283,307`
-6. **⏭️ Slot hover "No relationships found"**
+5. **Class→class links going left→left instead of left→right in 2-panel mode**
+6. **class-->slot links pointing wrong direction**
+7. **no slot-->class (right panel) links**
+8. **no link highlight on item hover**
+9. **⏭️ Slot hover "No relationships found"**
 
 ### After Demo: Documentation & Structure Cleanup
 

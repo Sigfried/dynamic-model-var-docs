@@ -36,6 +36,7 @@ export function contextualizeId({
   // Map context to prefix
   const prefixMap: Record<string, string> = {
     'left-panel': 'lp',
+    'middle-panel': 'mp',
     'right-panel': 'rp',
     'detail-box': 'db'
   };

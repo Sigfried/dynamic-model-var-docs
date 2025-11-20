@@ -62,8 +62,6 @@ function ItemRenderer({ item, onClickItem, onItemHover, onItemLeave, position, t
     <div key={id} className="select-none">
       <div
         id={id}
-        data-item-type={hoverData.type}
-        data-item-name={hoverData.name}
         data-panel-position={position}
         className={`flex items-center gap-2 px-2 py-1 rounded ${
           isCursorPointer ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700' : ''
@@ -120,7 +118,7 @@ export default function Section({ sectionData, onClickItem, onItemHover, onItemL
   const rawItems = getItems(expandedItems, position);
 
   // Contextualize IDs for DOM uniqueness (model layer returns raw names, UI layer adds context)
-  const contextSuffix = position === 'left' ? 'left-panel' : position === 'right' ? 'right-panel' : undefined;
+  const contextSuffix = position === 'left' ? 'left-panel' : position === 'middle' ? 'middle-panel' : position === 'right' ? 'right-panel' : undefined;
   const items = rawItems.map(item => ({
     ...item,
     id: contextualizeId({ id: item.id, context: contextSuffix })

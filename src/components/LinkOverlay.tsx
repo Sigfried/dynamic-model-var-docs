@@ -22,6 +22,7 @@ import {
   type LinkFilterOptions
 } from '../utils/linkHelpers';
 import type { ItemHoverData } from './Section';
+import { contextualizeId } from '../utils/idContextualization';
 
 /**
  * LinkTooltipData - Data for link hover tooltips
@@ -227,9 +228,18 @@ export default function LinkOverlay({
     return { leftPanelLinks: leftLinks, rightPanelLinks: rightLinks };
   }, [leftSections, rightSections, dataService, filterOptions]);
 
-  // Helper to find item in DOM (without panel position - item may be in any physical panel)
-  const findItem = (type: string, name: string): HTMLElement | null => {
-    return document.querySelector(`[data-item-type="${type}"][data-item-name="${name}"]`);
+  // Helper to find item in DOM using contextualized ID
+  // Try all possible panel positions since items may be in left, middle, or right panels physically
+  const findItem = (itemName: string): HTMLElement | null => {
+    const contexts = ['left-panel', 'middle-panel', 'right-panel'];
+
+    for (const context of contexts) {
+      const domId = contextualizeId({ id: itemName, context });
+      const element = document.getElementById(domId);
+      if (element) return element;
+    }
+
+    return null;
   };
 
   // Calculate anchor points for cross-panel links based on actual positions
@@ -315,9 +325,9 @@ export default function LinkOverlay({
     // Helper to render links from a specific logical panel (left or right from LinkOverlay's perspective)
     const renderLinksFromPanel = (links: Link[], logicalSourcePanel: 'left' | 'right') => {
       return links.map((link, index) => {
-        // Find items in DOM by type and name (regardless of physical panel position)
-        const sourceItem = findItem(link.source.type, link.source.id);
-        const targetItem = findItem(link.target.type, link.target.id);
+        // Find items in DOM using contextualized IDs
+        const sourceItem = findItem(link.source.id);
+        const targetItem = findItem(link.target.id);
 
         // Skip if either item not found in DOM
         if (!sourceItem || !targetItem) {
