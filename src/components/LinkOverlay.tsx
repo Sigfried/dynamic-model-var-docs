@@ -137,23 +137,22 @@ export default function LinkOverlay({
   const { leftPanelLinks, rightPanelLinks } = useMemo(() => {
     if (!dataService) return { leftPanelLinks: [], rightPanelLinks: [] };
 
-    // Build set of item names in each panel for cross-panel filtering
+    // Build set of item IDs actually rendered in each panel by querying DOM
+    // This handles cases where the same type appears in multiple panels (e.g., classes in both left and right)
     const leftItems = new Set<string>();
     const rightItems = new Set<string>();
 
-    // Get all item IDs for each panel section
-    leftSections.forEach(sectionId => {
-      // @ts-expect-error TEMPORARY: string vs ElementTypeId - will be removed in Step 7 (Link Overlay Refactor)
-      // TODO: See TASKS.md Step 7 - refactor to use ds.getLinkData(leftItemIds, rightItemIds)
-      const itemIds = dataService.getItemNamesForType(sectionId); // Returns IDs (name === id currently)
-      itemIds.forEach(id => leftItems.add(id));
+    // Query DOM for actual rendered items in each panel
+    const leftPanelElements = document.querySelectorAll('[data-panel-position="left"] [data-item-name]');
+    leftPanelElements.forEach(el => {
+      const itemName = el.getAttribute('data-item-name');
+      if (itemName) leftItems.add(itemName);
     });
 
-    rightSections.forEach(sectionId => {
-      // @ts-expect-error TEMPORARY: string vs ElementTypeId - will be removed in Step 7 (Link Overlay Refactor)
-      // TODO: See TASKS.md Step 7 - refactor to use ds.getLinkData(leftItemIds, rightItemIds)
-      const itemIds = dataService.getItemNamesForType(sectionId); // Returns IDs (name === id currently)
-      itemIds.forEach(id => rightItems.add(id));
+    const rightPanelElements = document.querySelectorAll('[data-panel-position="right"] [data-item-name]');
+    rightPanelElements.forEach(el => {
+      const itemName = el.getAttribute('data-item-name');
+      if (itemName) rightItems.add(itemName);
     });
 
     const leftLinks: Link[] = [];
