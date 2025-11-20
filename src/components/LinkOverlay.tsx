@@ -137,22 +137,23 @@ export default function LinkOverlay({
   const { leftPanelLinks, rightPanelLinks } = useMemo(() => {
     if (!dataService) return { leftPanelLinks: [], rightPanelLinks: [] };
 
-    // Build set of item IDs in each panel (just the base IDs, not contextualized)
-    // For cross-panel filtering, we only care about the item name, not which panel it's in
+    // Build set of item names in each panel for cross-panel filtering
     const leftItems = new Set<string>();
     const rightItems = new Set<string>();
 
-    // Query DOM for actual rendered items in each panel
-    const leftPanelElements = document.querySelectorAll('[data-panel-position="left"] [data-item-name]');
-    leftPanelElements.forEach(el => {
-      const itemName = el.getAttribute('data-item-name');
-      if (itemName) leftItems.add(itemName);
+    // Get all item IDs for each panel section
+    leftSections.forEach(sectionId => {
+      // @ts-expect-error TEMPORARY: string vs ElementTypeId - will be removed in Step 7 (Link Overlay Refactor)
+      // TODO: See TASKS.md Step 7 - refactor to use ds.getLinkData(leftItemIds, rightItemIds)
+      const itemIds = dataService.getItemNamesForType(sectionId); // Returns IDs (name === id currently)
+      itemIds.forEach(id => leftItems.add(id));
     });
 
-    const rightPanelElements = document.querySelectorAll('[data-panel-position="right"] [data-item-name]');
-    rightPanelElements.forEach(el => {
-      const itemName = el.getAttribute('data-item-name');
-      if (itemName) rightItems.add(itemName);
+    rightSections.forEach(sectionId => {
+      // @ts-expect-error TEMPORARY: string vs ElementTypeId - will be removed in Step 7 (Link Overlay Refactor)
+      // TODO: See TASKS.md Step 7 - refactor to use ds.getLinkData(leftItemIds, rightItemIds)
+      const itemIds = dataService.getItemNamesForType(sectionId); // Returns IDs (name === id currently)
+      itemIds.forEach(id => rightItems.add(id));
     });
 
     const leftLinks: Link[] = [];
@@ -366,11 +367,9 @@ export default function LinkOverlay({
         const linkKey = `${logicalSourcePanel}-${link.source.type}-${link.source.id}-${link.target.type}-${link.target.id}-${index}`;
 
         // Check if link should be highlighted (either direct hover or item hover match)
-        // Note: link.source/target.id is the item ID (e.g., "Specimen")
-        //       hoveredItem.name is also the item name, hoveredItem.id is the DOM ID (e.g., "lp-Specimen")
         const matchesHoveredItem = !!hoveredItem && (
-          (link.source.type === hoveredItem.type && link.source.id === hoveredItem.name) ||
-          (link.target.type === hoveredItem.type && link.target.id === hoveredItem.name)
+          (link.source.type === hoveredItem.type && link.source.id === hoveredItem.id) ||
+          (link.target.type === hoveredItem.type && link.target.id === hoveredItem.id)
         );
         const isHovered = hoveredLinkKey === linkKey || matchesHoveredItem;
 
