@@ -263,6 +263,9 @@ export default function LinkOverlay({
     const leftLinks: Link[] = [];
     const rightLinks: Link[] = [];
 
+    // Debug: Log what's in the itemToPhysicalPanel map
+    console.log('[LinkOverlay] itemToPhysicalPanel map:', Object.fromEntries(itemToPhysicalPanel));
+
     // Helper to process items from a panel
     const processItems = (
       sections: string[],
@@ -423,12 +426,14 @@ export default function LinkOverlay({
 
     // Helper to render links from a specific logical panel (left or right from LinkOverlay's perspective)
     const renderLinksFromPanel = (links: Link[], logicalSourcePanel: 'left' | 'right') => {
+      console.log(`[LinkOverlay] Rendering links from ${logicalSourcePanel} panel:`, links.length, 'links');
       return links.map((link, index) => {
         // Create unique ID for this edge (source→target)
         const linkId = `${link.source.id}→${link.target.id}`;
 
         // Skip if we've already rendered this link
         if (renderedLinkIds.has(linkId)) {
+          console.log(`[LinkOverlay] Skipping duplicate link: ${linkId}`);
           return null;
         }
         renderedLinkIds.add(linkId);
@@ -439,6 +444,14 @@ export default function LinkOverlay({
 
         // Skip if we can't find physical panel for either endpoint
         if (!sourcePhysicalPanel || !targetPhysicalPanel) {
+          console.warn(`LinkOverlay: Skipping link ${link.source.id}→${link.target.id} - missing physical panel info`, {
+            sourceId: link.source.id,
+            targetId: link.target.id,
+            sourcePhysicalPanel,
+            targetPhysicalPanel,
+            hasSourceInMap: itemToPhysicalPanel.has(link.source.id),
+            hasTargetInMap: itemToPhysicalPanel.has(link.target.id)
+          });
           return null;
         }
 
