@@ -25,11 +25,14 @@
     - **Fix**: Increased hover box to `z-[60]` so it appears above detail boxes
     - **Files**: `components/RelationshipInfoBox.tsx:283,307`
 
-5. **Class→class links going left→left instead of left→right in 2-panel mode**
-6. **class-->slot links pointing wrong direction**
-7. **no slot-->class (right panel) links**
-8. **no link highlight on item hover**
-9. **⏭️ Slot hover "No relationships found"**
+5. two-panel bugs
+   1. **Class→class links going left→left instead of left→right
+6. three-panel bugs
+   1. **class-->slot links pointing wrong direction**
+   2. **no slot-->class (right panel) links**
+7. both modes bugs
+   1. **no link highlight on item hover**
+   2. **Slot hover "No relationships found"**
 
 ### After Demo: Documentation & Structure Cleanup
 

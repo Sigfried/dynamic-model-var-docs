@@ -163,6 +163,7 @@ export default function LinkOverlay({
     // Helper to process items from a panel
     const processItems = (
       sections: string[],
+      sourcePanel: Set<string>,
       targetPanel: Set<string>,
       linksArray: Link[],
       options: typeof filterOptions = filterOptions
@@ -180,9 +181,10 @@ export default function LinkOverlay({
             ...(sectionId === 'class' ? { showInheritance: false } : {}) // Disable inheritance for classes
           });
 
-          // Only keep cross-panel links (or self-refs)
+          // Only keep cross-panel links (target in target panel AND not in source panel) or self-refs
           const crossPanelLinks = links.filter(link =>
-            link.relationship.isSelfRef || targetPanel.has(link.target.id)
+            link.relationship.isSelfRef ||
+            (targetPanel.has(link.target.id) && !sourcePanel.has(link.target.id))
           );
           linksArray.push(...crossPanelLinks);
         });
@@ -190,7 +192,7 @@ export default function LinkOverlay({
     };
 
     // Process left panel (all cross-panel relationships)
-    processItems(leftSections, rightItems, leftLinks);
+    processItems(leftSections, leftItems, rightItems, leftLinks);
 
     // Process right panel (all relationships EXCEPT class→class cross-panel)
     // Class→class is bidirectional in the schema, so we only draw left→right
@@ -211,7 +213,9 @@ export default function LinkOverlay({
         // Special handling for class→class to avoid bidirectional duplicates
         const filteredLinks = links.filter(link => {
           if (link.relationship.isSelfRef) return true; // Always keep self-refs
-          if (!leftItems.has(link.target.id)) return false; // Not cross-panel (target must be in LEFT panel)
+
+          // Must be cross-panel: target in left panel AND not in right panel
+          if (!leftItems.has(link.target.id) || rightItems.has(link.target.id)) return false;
 
           // For class→class links, filter out to avoid bidirectional duplicates
           if (sectionId === 'class' && link.target.type === 'class') {
