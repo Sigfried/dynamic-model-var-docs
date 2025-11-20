@@ -135,37 +135,26 @@ export default function LinkOverlay({
   }, [leftSections, rightSections, dataService]);
 
   // Build links from visible items - use useMemo to prevent infinite loop
-  const { leftPanelLinks, rightPanelLinks, itemToPanel } = useMemo(() => {
-    if (!dataService) return { leftPanelLinks: [], rightPanelLinks: [], itemToPanel: new Map<string, 'left' | 'middle' | 'right'>() };
+  const { leftPanelLinks, rightPanelLinks } = useMemo(() => {
+    if (!dataService) return { leftPanelLinks: [], rightPanelLinks: [] };
 
-    // Build set of item names in each panel for cross-panel filtering
-    // AND map each item to its panel position for DOM ID lookup
+    // Build set of CONTEXTUALIZED item IDs in each panel for cross-panel filtering and DOM lookup
     const leftItems = new Set<string>();
     const rightItems = new Set<string>();
-    const itemToPanel = new Map<string, 'left' | 'middle' | 'right'>();
 
-    // Get all item IDs for each panel section
+    // Get all item IDs for each panel section and contextualize them
     leftSections.forEach(sectionId => {
       // @ts-expect-error TEMPORARY: string vs ElementTypeId - will be removed in Step 7 (Link Overlay Refactor)
       // TODO: See TASKS.md Step 7 - refactor to use ds.getLinkData(leftItemIds, rightItemIds)
       const itemIds = dataService.getItemNamesForType(sectionId); // Returns IDs (name === id currently)
-      itemIds.forEach(id => {
-        leftItems.add(id);
-        itemToPanel.set(id, 'left');
-      });
+      itemIds.forEach(id => leftItems.add(contextualizeId({ id, context: 'left-panel' })));
     });
 
     rightSections.forEach(sectionId => {
       // @ts-expect-error TEMPORARY: string vs ElementTypeId - will be removed in Step 7 (Link Overlay Refactor)
       // TODO: See TASKS.md Step 7 - refactor to use ds.getLinkData(leftItemIds, rightItemIds)
       const itemIds = dataService.getItemNamesForType(sectionId); // Returns IDs (name === id currently)
-      itemIds.forEach(id => {
-        rightItems.add(id);
-        // Only map to right if not already in left (left takes precedence for duplicates)
-        if (!itemToPanel.has(id)) {
-          itemToPanel.set(id, 'right');
-        }
-      });
+      itemIds.forEach(id => rightItems.add(contextualizeId({ id, context: 'right-panel' })));
     });
 
     const leftLinks: Link[] = [];
@@ -174,8 +163,8 @@ export default function LinkOverlay({
     // Helper to process items from a panel
     const processItems = (
       sections: string[],
-      sourcePanel: Set<string>,
       targetPanel: Set<string>,
+      targetContext: string,
       linksArray: Link[],
       options: typeof filterOptions = filterOptions
     ) => {
@@ -192,20 +181,22 @@ export default function LinkOverlay({
             ...(sectionId === 'class' ? { showInheritance: false } : {}) // Disable inheritance for classes
           });
 
-          // Only keep cross-panel links (target in target panel AND not in source panel) or self-refs
-          const crossPanelLinks = links.filter(link =>
-            link.relationship.isSelfRef ||
-            (targetPanel.has(link.target.id) && !sourcePanel.has(link.target.id))
-          );
+          // Only keep cross-panel links (or self-refs)
+          // Contextualize the target ID before checking if it's in the target panel
+          const crossPanelLinks = links.filter(link => {
+            if (link.relationship.isSelfRef) return true;
+            const contextualizedTargetId = contextualizeId({ id: link.target.id, context: targetContext });
+            return targetPanel.has(contextualizedTargetId);
+          });
           linksArray.push(...crossPanelLinks);
         });
       });
     };
 
-    // Process left panel (all cross-panel relationships)
-    processItems(leftSections, leftItems, rightItems, leftLinks);
+    // Process left panel (all cross-panel relationships going to right panel)
+    processItems(leftSections, rightItems, 'right-panel', leftLinks);
 
-    // Process right panel (all relationships EXCEPT class→class cross-panel)
+    // Process right panel (all relationships EXCEPT class→class cross-panel going to left panel)
     // Class→class is bidirectional in the schema, so we only draw left→right
     // All other relationship types (class→enum, class→slot, variable→class, slot→enum) are one-way
     rightSections.forEach(sectionId => {
@@ -225,8 +216,9 @@ export default function LinkOverlay({
         const filteredLinks = links.filter(link => {
           if (link.relationship.isSelfRef) return true; // Always keep self-refs
 
-          // Must be cross-panel: target in left panel AND not in right panel
-          if (!leftItems.has(link.target.id) || rightItems.has(link.target.id)) return false;
+          // Contextualize target ID for left panel before checking
+          const contextualizedTargetId = contextualizeId({ id: link.target.id, context: 'left-panel' });
+          if (!leftItems.has(contextualizedTargetId)) return false; // Not cross-panel (target must be in LEFT panel)
 
           // For class→class links, filter out to avoid bidirectional duplicates
           if (sectionId === 'class' && link.target.type === 'class') {
@@ -240,20 +232,8 @@ export default function LinkOverlay({
       });
     });
 
-    return { leftPanelLinks: leftLinks, rightPanelLinks: rightLinks, itemToPanel };
+    return { leftPanelLinks: leftLinks, rightPanelLinks: rightLinks };
   }, [leftSections, rightSections, dataService, filterOptions]);
-
-  // Helper to find item in DOM using contextualized ID based on which panel it's in
-  const findItem = (itemName: string): HTMLElement | null => {
-    const panel = itemToPanel.get(itemName);
-    if (!panel) return null;
-
-    const contextMap = { 'left': 'left-panel', 'middle': 'middle-panel', 'right': 'right-panel' } as const;
-    const context = contextMap[panel];
-    const domId = contextualizeId({ id: itemName, context });
-
-    return document.getElementById(domId);
-  };
 
   // Calculate anchor points for cross-panel links based on actual positions
   const calculateCrossPanelAnchors = (
@@ -338,19 +318,15 @@ export default function LinkOverlay({
     // Helper to render links from a specific logical panel (left or right from LinkOverlay's perspective)
     const renderLinksFromPanel = (links: Link[], logicalSourcePanel: 'left' | 'right') => {
       return links.map((link, index) => {
-        // Determine which panel each endpoint is in based on link direction
-        // leftPanelLinks: source in left, target in right
-        // rightPanelLinks: source in right, target in left
-        const sourcePanel = logicalSourcePanel;
-        const targetPanel = logicalSourcePanel === 'left' ? 'right' : 'left';
+        // Determine contexts: leftPanelLinks have source in left, target in right (and vice versa)
+        const sourceContext = logicalSourcePanel === 'left' ? 'left-panel' : 'right-panel';
+        const targetContext = logicalSourcePanel === 'left' ? 'right-panel' : 'left-panel';
 
-        // Find items in DOM using their specific panel contexts
-        const sourceContext = sourcePanel === 'left' ? 'left-panel' : sourcePanel === 'right' ? 'right-panel' : 'middle-panel';
-        const targetContext = targetPanel === 'left' ? 'left-panel' : targetPanel === 'right' ? 'right-panel' : 'middle-panel';
-
+        // Build contextualized DOM IDs
         const sourceDomId = contextualizeId({ id: link.source.id, context: sourceContext });
         const targetDomId = contextualizeId({ id: link.target.id, context: targetContext });
 
+        // Find items in DOM using contextualized IDs
         const sourceItem = document.getElementById(sourceDomId);
         const targetItem = document.getElementById(targetDomId);
 
