@@ -7290,14 +7290,6 @@
         "http://schema.org/Float"
       ]
     },
-    "double": {
-      "id": "double",
-      "name": "double",
-      "description": "A real number that conforms to the xsd:double specification",
-      "base": "float",
-      "uri": "xsd:double",
-      "uri_url": "http://www.w3.org/2001/XMLSchema#double"
-    },
     "decimal": {
       "id": "decimal",
       "name": "decimal",
@@ -7305,34 +7297,6 @@
       "base": "Decimal",
       "uri": "xsd:decimal",
       "uri_url": "http://www.w3.org/2001/XMLSchema#decimal"
-    },
-    "time": {
-      "id": "time",
-      "name": "time",
-      "description": "A time object represents a (local) time of day, independent of any particular day",
-      "base": "XSDTime",
-      "uri": "xsd:time",
-      "uri_url": "http://www.w3.org/2001/XMLSchema#time",
-      "exact_mappings": [
-        "schema:Time"
-      ],
-      "exact_mappings_urls": [
-        "http://schema.org/Time"
-      ]
-    },
-    "date": {
-      "id": "date",
-      "name": "date",
-      "description": "a date (year, month and day) in an idealized calendar",
-      "base": "XSDDate",
-      "uri": "xsd:date",
-      "uri_url": "http://www.w3.org/2001/XMLSchema#date",
-      "exact_mappings": [
-        "schema:Date"
-      ],
-      "exact_mappings_urls": [
-        "http://schema.org/Date"
-      ]
     },
     "datetime": {
       "id": "datetime",
@@ -7348,14 +7312,6 @@
         "http://schema.org/DateTime"
       ]
     },
-    "date_or_datetime": {
-      "id": "date_or_datetime",
-      "name": "date_or_datetime",
-      "description": "Either a date or a datetime",
-      "base": "str",
-      "uri": "linkml:DateOrDatetime",
-      "uri_url": "https://w3id.org/linkml/DateOrDatetime"
-    },
     "uriorcurie": {
       "id": "uriorcurie",
       "name": "uriorcurie",
@@ -7363,70 +7319,6 @@
       "base": "URIorCURIE",
       "uri": "xsd:anyURI",
       "uri_url": "http://www.w3.org/2001/XMLSchema#anyURI"
-    },
-    "curie": {
-      "id": "curie",
-      "name": "curie",
-      "description": "a compact URI",
-      "base": "Curie",
-      "uri": "xsd:string",
-      "uri_url": "http://www.w3.org/2001/XMLSchema#string"
-    },
-    "uri": {
-      "id": "uri",
-      "name": "uri",
-      "description": "a complete URI",
-      "base": "URI",
-      "uri": "xsd:anyURI",
-      "uri_url": "http://www.w3.org/2001/XMLSchema#anyURI"
-    },
-    "ncname": {
-      "id": "ncname",
-      "name": "ncname",
-      "description": "Prefix part of CURIE",
-      "base": "NCName",
-      "uri": "xsd:string",
-      "uri_url": "http://www.w3.org/2001/XMLSchema#string"
-    },
-    "objectidentifier": {
-      "id": "objectidentifier",
-      "name": "objectidentifier",
-      "description": "A URI or CURIE that represents an object in the model.",
-      "base": "ElementIdentifier",
-      "uri": "shex:iri",
-      "uri_url": "http://www.w3.org/ns/shex#iri"
-    },
-    "nodeidentifier": {
-      "id": "nodeidentifier",
-      "name": "nodeidentifier",
-      "description": "A URI, CURIE or BNODE that represents a node in a model.",
-      "base": "NodeIdentifier",
-      "uri": "shex:nonLiteral",
-      "uri_url": "http://www.w3.org/ns/shex#nonLiteral"
-    },
-    "jsonpointer": {
-      "id": "jsonpointer",
-      "name": "jsonpointer",
-      "description": "A string encoding a JSON Pointer. The value of the string MUST conform to JSON Point syntax and SHOULD dereference to a valid object within the current instance document when encoded in tree form.",
-      "base": "str",
-      "uri": "xsd:string",
-      "uri_url": "http://www.w3.org/2001/XMLSchema#string"
-    },
-    "jsonpath": {
-      "id": "jsonpath",
-      "name": "jsonpath",
-      "description": "A string encoding a JSON Path. The value of the string MUST conform to JSON Point syntax and SHOULD dereference to zero or more valid objects within the current instance document when encoded in tree form.",
-      "base": "str",
-      "uri": "xsd:string",
-      "uri_url": "http://www.w3.org/2001/XMLSchema#string"
-    },
-    "sparqlpath": {
-      "id": "sparqlpath",
-      "name": "sparqlpath",
-      "description": "A string encoding a SPARQL Property Path. The value of the string MUST conform to SPARQL syntax and SHOULD dereference to zero or more valid objects within the current instance document when encoded as RDF.",
-      "base": "str",
-      "uri": "xsd:string",
-      "uri_url": "http://www.w3.org/2001/XMLSchema#string"
     }
   }
 }

@@ -446,11 +446,41 @@ def transform_enums(expanded_enums: Dict[str, Any], prefixes: Dict[str, Any]) ->
     return processed
 
 
-def transform_types(expanded_types: Dict[str, Any], prefixes: Dict[str, Any]) -> Dict[str, Any]:
-    """Transform types - keep minimal structure and expand URIs."""
+def collect_used_types(classes: Dict[str, Any], slots: Dict[str, Any], expanded_types: Dict[str, Any]) -> Set[str]:
+    """
+    Collect all type names that are actually used as ranges in classes or slots.
+
+    Returns:
+        Set of type names that are referenced
+    """
+    used = set()
+
+    # Collect from class attributes
+    for class_def in classes.values():
+        attributes = class_def.get('attributes', {})
+        for attr_def in attributes.values():
+            range_val = attr_def.get('range')
+            if range_val and range_val in expanded_types:
+                used.add(range_val)
+
+    # Collect from global slots
+    for slot_def in slots.values():
+        range_val = slot_def.get('range')
+        if range_val and range_val in expanded_types:
+            used.add(range_val)
+
+    return used
+
+
+def transform_types(expanded_types: Dict[str, Any], prefixes: Dict[str, Any], used_types: Set[str]) -> Dict[str, Any]:
+    """Transform types - keep minimal structure and expand URIs. Only include types that are actually used."""
     processed = {}
 
     for type_name, type_def in expanded_types.items():
+        # Skip types that are never used as ranges
+        if type_name not in used_types:
+            continue
+
         processed_type = {
             'id': type_name,
             'name': type_name
@@ -532,10 +562,14 @@ def transform_schema(expanded_path: Path, output_path: Path) -> bool:
         processed_enums = transform_enums(expanded_enums, prefixes)
         print(f"  ✓ {len(processed_enums)} enums processed")
 
-        print("Transforming types...")
+        print("Collecting used types...")
         expanded_types = expanded.get('types', {})
-        processed_types = transform_types(expanded_types, prefixes)
-        print(f"  ✓ {len(processed_types)} types processed")
+        used_types = collect_used_types(classes, expanded_slots, expanded_types)
+        print(f"  ✓ {len(used_types)} of {len(expanded_types)} types are used")
+
+        print("Transforming types...")
+        processed_types = transform_types(expanded_types, prefixes, used_types)
+        print(f"  ✓ {len(processed_types)} types processed (filtered from {len(expanded_types)})")
 
         # Build processed schema
         processed = {
