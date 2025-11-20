@@ -63,7 +63,7 @@ function ItemRenderer({ item, onClickItem, onItemHover, onItemLeave, position, t
       <div
         id={id}
         data-panel-position={position}
-        className={`flex items-center gap-2 px-2 py-1 rounded ${
+        className={`item flex items-center gap-2 px-2 py-1 rounded ${
           isCursorPointer ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700' : ''
         }`}
         style={{ paddingLeft: `${level * 16 + 8}px` }}
