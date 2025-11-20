@@ -141,19 +141,19 @@ export default function LinkOverlay({
     const leftItems = new Set<string>();
     const rightItems = new Set<string>();
 
-    // Get all item names for each panel section
+    // Get all item IDs for each panel section
     leftSections.forEach(sectionId => {
       // @ts-expect-error TEMPORARY: string vs ElementTypeId - will be removed in Step 7 (Link Overlay Refactor)
       // TODO: See TASKS.md Step 7 - refactor to use ds.getLinkData(leftItemIds, rightItemIds)
-      const itemNames = dataService.getItemNamesForType(sectionId);
-      itemNames.forEach(name => leftItems.add(name));
+      const itemIds = dataService.getItemNamesForType(sectionId); // Returns IDs (name === id currently)
+      itemIds.forEach(id => leftItems.add(id));
     });
 
     rightSections.forEach(sectionId => {
       // @ts-expect-error TEMPORARY: string vs ElementTypeId - will be removed in Step 7 (Link Overlay Refactor)
       // TODO: See TASKS.md Step 7 - refactor to use ds.getLinkData(leftItemIds, rightItemIds)
-      const itemNames = dataService.getItemNamesForType(sectionId);
-      itemNames.forEach(name => rightItems.add(name));
+      const itemIds = dataService.getItemNamesForType(sectionId); // Returns IDs (name === id currently)
+      itemIds.forEach(id => rightItems.add(id));
     });
 
     const leftLinks: Link[] = [];
@@ -169,19 +169,19 @@ export default function LinkOverlay({
       sections.forEach(sectionId => {
         // @ts-expect-error TEMPORARY: string vs ElementTypeId - will be removed in Step 7 (Link Overlay Refactor)
         // TODO: See TASKS.md Step 7 - refactor to use ds.getLinkData(leftItemIds, rightItemIds)
-        const itemNames = dataService.getItemNamesForType(sectionId);
-        itemNames.forEach(itemName => {
-          const relationships = dataService.getRelationshipsForLinking(itemName);
+        const itemIds = dataService.getItemNamesForType(sectionId); // Returns IDs (name === id currently)
+        itemIds.forEach(itemId => {
+          const relationships = dataService.getRelationshipsForLinking(itemId);
           if (!relationships) return;
 
-          const links = buildLinks(sectionId, itemName, relationships, {
+          const links = buildLinks(sectionId, itemId, relationships, {
             ...options,
             ...(sectionId === 'class' ? { showInheritance: false } : {}) // Disable inheritance for classes
           });
 
           // Only keep cross-panel links (or self-refs)
           const crossPanelLinks = links.filter(link =>
-            link.relationship.isSelfRef || targetPanel.has(link.target.name)
+            link.relationship.isSelfRef || targetPanel.has(link.target.id)
           );
           linksArray.push(...crossPanelLinks);
         });
@@ -197,12 +197,12 @@ export default function LinkOverlay({
     rightSections.forEach(sectionId => {
       // @ts-expect-error TEMPORARY: string vs ElementTypeId - will be removed in Step 7 (Link Overlay Refactor)
       // TODO: See TASKS.md Step 7 - refactor to use ds.getLinkData(leftItemIds, rightItemIds)
-      const itemNames = dataService.getItemNamesForType(sectionId);
-      itemNames.forEach(itemName => {
-        const relationships = dataService.getRelationshipsForLinking(itemName);
+      const itemIds = dataService.getItemNamesForType(sectionId); // Returns IDs (name === id currently)
+      itemIds.forEach(itemId => {
+        const relationships = dataService.getRelationshipsForLinking(itemId);
         if (!relationships) return;
 
-        const links = buildLinks(sectionId, itemName, relationships, {
+        const links = buildLinks(sectionId, itemId, relationships, {
           ...filterOptions,
           ...(sectionId === 'class' ? { showInheritance: false } : {})
         });
@@ -210,7 +210,7 @@ export default function LinkOverlay({
         // Special handling for class→class to avoid bidirectional duplicates
         const filteredLinks = links.filter(link => {
           if (link.relationship.isSelfRef) return true; // Always keep self-refs
-          if (!leftItems.has(link.target.name)) return false; // Not cross-panel (target must be in LEFT panel)
+          if (!leftItems.has(link.target.id)) return false; // Not cross-panel (target must be in LEFT panel)
 
           // For class→class links, filter out to avoid bidirectional duplicates
           if (sectionId === 'class' && link.target.type === 'class') {
@@ -316,8 +316,8 @@ export default function LinkOverlay({
     const renderLinksFromPanel = (links: Link[], logicalSourcePanel: 'left' | 'right') => {
       return links.map((link, index) => {
         // Find items in DOM by type and name (regardless of physical panel position)
-        const sourceItem = findItem(link.source.type, link.source.name);
-        const targetItem = findItem(link.target.type, link.target.name);
+        const sourceItem = findItem(link.source.type, link.source.id);
+        const targetItem = findItem(link.target.type, link.target.id);
 
         // Skip if either item not found in DOM
         if (!sourceItem || !targetItem) {
@@ -364,12 +364,12 @@ export default function LinkOverlay({
         const strokeWidth = getLinkStrokeWidth(link.relationship);
 
         // Generate unique key for this link
-        const linkKey = `${logicalSourcePanel}-${link.source.type}-${link.source.name}-${link.target.type}-${link.target.name}-${index}`;
+        const linkKey = `${logicalSourcePanel}-${link.source.type}-${link.source.id}-${link.target.type}-${link.target.id}-${index}`;
 
         // Check if link should be highlighted (either direct hover or item hover match)
         const matchesHoveredItem = !!hoveredItem && (
-          (link.source.type === hoveredItem.type && link.source.name === hoveredItem.name) ||
-          (link.target.type === hoveredItem.type && link.target.name === hoveredItem.name)
+          (link.source.type === hoveredItem.type && link.source.id === hoveredItem.id) ||
+          (link.target.type === hoveredItem.type && link.target.id === hoveredItem.id)
         );
         const isHovered = hoveredLinkKey === linkKey || matchesHoveredItem;
 
@@ -400,9 +400,9 @@ export default function LinkOverlay({
                   data: {
                     relationshipType: link.relationship.type,
                     relationshipLabel: link.relationship.label,
-                    sourceName: link.source.name,
+                    sourceName: link.source.id, // ID used as display name (id === name currently)
                     sourceType: link.source.type,
-                    targetName: link.target.name,
+                    targetName: link.target.id, // ID used as display name (id === name currently)
                     targetType: link.target.type
                   },
                   x: e.clientX,

@@ -11,8 +11,8 @@ import type { Relationship } from '../models/Element';
  * Represents a link between two elements for SVG rendering
  */
 export interface Link {
-  source: { type: string; name: string };
-  target: { type: string; name: string };
+  source: { type: string; id: string };
+  target: { type: string; id: string };
   relationship: Relationship;
 }
 
@@ -96,7 +96,7 @@ export function filterRelationships(
  */
 export function buildLinks(
   sourceType: string,
-  sourceName: string,
+  sourceId: string,
   relationships: Relationship[],
   filterOptions?: LinkFilterOptions
 ): Link[] {
@@ -105,8 +105,8 @@ export function buildLinks(
     : relationships;
 
   return filtered.map(rel => ({
-    source: { type: sourceType, name: sourceName },
-    target: { type: rel.targetSection, name: rel.target },
+    source: { type: sourceType, id: sourceId },
+    target: { type: rel.targetSection, id: rel.target },
     relationship: rel,
   }));
 }
