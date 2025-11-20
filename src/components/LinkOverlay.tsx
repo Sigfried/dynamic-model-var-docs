@@ -91,16 +91,48 @@ export interface LinkOverlayProps {
   rightPhysicalPanel?: 'left' | 'middle' | 'right';
 }
 /*
+ * ============================================================================
+ * FUTURE REFACTOR: Simpler DOM-based link generation (post-demo)
+ * ============================================================================
+ *
+ * PROBLEM WITH CURRENT APPROACH:
+ * - Complex logic tracking which sections are in which physical panels
+ * - Need to pass leftPhysicalPanel/rightPhysicalPanel props
+ * - Error-prone when panel configurations change
+ *
+ * PROPOSED SIMPLER APPROACH:
+ * Query DOM directly for visible items, get their relationships, find targets in DOM.
+ * The DOM becomes the source of truth for what's visible and where.
+ *
+ * BENEFITS:
+ * - Much simpler! No panel tracking needed
+ * - Automatically works with any panel configuration
+ * - Directly uses contextualized IDs from DOM
+ *
+ * REQUIREMENTS FOR THIS APPROACH:
+ * 1. Add 'item' class to all displayed items in Section.tsx:
+ *    <div id="mp-associated_participant" class="item flex items-center ..." ...>
+ *
+ * 2. Use DataService.getRelationshipsNew() (already implemented, works great!)
+ *    - Returns EdgeInfo with proper target IDs
+ *    - Issue: Uses *Proposal types (EdgeInfoProposal, etc.)
+ *    - Blocked by: Want to rename Proposal types to main types, but that
+ *      requires merging Element/ElementPreRefactor which is too risky for demo
+ *
+ * 3. Fix querySelectorAll selector:
+ *    - Current: `[id$="${id}"]` matches any ID ending with target
+ *    - Problem: "participant" matches "associated_participant"
+ *    - Better: `[id="lp-${id}"], [id="mp-${id}"], [id="rp-${id}"]`
+ *
+ * IMPLEMENTATION SKETCH (incomplete, needs work):
+ */
+/*
 import type { Relationship } from '../models/Element';
-
 import type {
   LinkPair,
   RelationshipData as RelationshipDataNew
 } from '../models/Element';
 
- */
-// add 'item' class to all displayed items, like
-// <div id="mp-associated_participant" data-panel-position="middle" class="item flex items-center ..." style="padding-left: 8px;">...</div>
 interface getIdPairsForLinksProps {
   dataService?: DataService | null;
 }
@@ -108,22 +140,38 @@ function getIdPairsForLinks({dataService}: getIdPairsForLinksProps): [string, st
   if (!dataService) return []
   const idPairs = new Map<string, [string, string]>();
   const items = document.getElementsByClassName('item')
+
   for (const item of items) {
-    const dcItemId = decontextualizeId(item.id)
-    // const relationships: Relationship[] = dataService.getRelationshipsForLinking(dcItemId) || [];
-    const linkedItemDcIds = relationships.map((relationship) => relationship.label) // should be called id, not label
-    for (const id of linkedItemDcIds) {
-      const linkedItems = document.querySelectorAll(`[id$="${id}"]`)
+    const dcItemId = decontextualizeId(item.id)  // lp-Specimen → Specimen
+
+    // TODO: Use getRelationshipsNew() once types are renamed
+    // const relationships = dataService.getRelationshipsNew(dcItemId) || [];
+    const linkedItemDcIds = relationships.map((rel) => rel.targetId) // Get target IDs
+
+    for (const targetId of linkedItemDcIds) {
+      // Find target in DOM (check all possible contexts)
+      const selector = `[id="lp-${targetId}"], [id="mp-${targetId}"], [id="rp-${targetId}"]`;
+      const linkedItems = document.querySelectorAll(selector)
+
       for (const linkedItem of linkedItems) {
-        idPairs.set(linkedItem.id, [item.id, linkedItem.id]);
+        // Store pair: [sourceContextualizedId, targetContextualizedId]
+        idPairs.set(`${item.id}→${linkedItem.id}`, [item.id, linkedItem.id]);
       }
     }
   }
-  return []
-}
-function LinkOverlayProposal({idPairs}) {
 
+  return Array.from(idPairs.values());
 }
+
+function LinkOverlayProposal({idPairs}: {idPairs: [string, string][]}) {
+  // Render SVG links using the contextualized ID pairs
+  // Much simpler than current approach!
+}
+*/
+/*
+ * END FUTURE REFACTOR
+ * ============================================================================
+ */
 
 export default function LinkOverlay({
   leftSections,
