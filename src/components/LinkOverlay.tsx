@@ -141,12 +141,15 @@ export default function LinkOverlay({
   }, [leftSections, rightSections, dataService]);
 
   // Build links from visible items - use useMemo to prevent infinite loop
-  const { leftPanelLinks, rightPanelLinks } = useMemo(() => {
-    if (!dataService) return { leftPanelLinks: [], rightPanelLinks: [] };
+  const { leftPanelLinks, rightPanelLinks, itemToPhysicalPanel } = useMemo(() => {
+    if (!dataService) return { leftPanelLinks: [], rightPanelLinks: [], itemToPhysicalPanel: new Map<string, 'left' | 'middle' | 'right'>() };
 
     // Build set of CONTEXTUALIZED item IDs in each panel for cross-panel filtering and DOM lookup
     const leftItems = new Set<string>();
     const rightItems = new Set<string>();
+
+    // Map each item name to its physical panel position (for rendering)
+    const itemToPhysicalPanel = new Map<string, 'left' | 'middle' | 'right'>();
 
     // Map physical panel to context string
     const panelToContext = (panel: 'left' | 'middle' | 'right') => `${panel}-panel`;
@@ -158,14 +161,20 @@ export default function LinkOverlay({
       // @ts-expect-error TEMPORARY: string vs ElementTypeId - will be removed in Step 7 (Link Overlay Refactor)
       // TODO: See TASKS.md Step 7 - refactor to use ds.getLinkData(leftItemIds, rightItemIds)
       const itemIds = dataService.getItemNamesForType(sectionId); // Returns IDs (name === id currently)
-      itemIds.forEach(id => leftItems.add(contextualizeId({ id, context: leftContext })));
+      itemIds.forEach(id => {
+        leftItems.add(contextualizeId({ id, context: leftContext }));
+        itemToPhysicalPanel.set(id, leftPhysicalPanel);
+      });
     });
 
     rightSections.forEach(sectionId => {
       // @ts-expect-error TEMPORARY: string vs ElementTypeId - will be removed in Step 7 (Link Overlay Refactor)
       // TODO: See TASKS.md Step 7 - refactor to use ds.getLinkData(leftItemIds, rightItemIds)
       const itemIds = dataService.getItemNamesForType(sectionId); // Returns IDs (name === id currently)
-      itemIds.forEach(id => rightItems.add(contextualizeId({ id, context: rightContext })));
+      itemIds.forEach(id => {
+        rightItems.add(contextualizeId({ id, context: rightContext }));
+        itemToPhysicalPanel.set(id, rightPhysicalPanel);
+      });
     });
 
     const leftLinks: Link[] = [];
@@ -243,7 +252,7 @@ export default function LinkOverlay({
       });
     });
 
-    return { leftPanelLinks: leftLinks, rightPanelLinks: rightLinks };
+    return { leftPanelLinks: leftLinks, rightPanelLinks: rightLinks, itemToPhysicalPanel };
   }, [leftSections, rightSections, dataService, filterOptions, leftPhysicalPanel, rightPhysicalPanel]);
 
   // Calculate anchor points for cross-panel links based on actual positions
@@ -326,15 +335,34 @@ export default function LinkOverlay({
     const svgRect = svgRef.current?.getBoundingClientRect();
     if (!svgRect) return allRenderedLinks;
 
+    // Deduplicate links: track rendered link IDs to avoid rendering the same edge twice
+    const renderedLinkIds = new Set<string>();
+
     // Helper to render links from a specific logical panel (left or right from LinkOverlay's perspective)
     const renderLinksFromPanel = (links: Link[], logicalSourcePanel: 'left' | 'right') => {
       return links.map((link, index) => {
+        // Create unique ID for this edge (source→target)
+        const linkId = `${link.source.id}→${link.target.id}`;
+
+        // Skip if we've already rendered this link
+        if (renderedLinkIds.has(linkId)) {
+          return null;
+        }
+        renderedLinkIds.add(linkId);
+
+        // Look up which physical panel each item is actually in
+        const sourcePhysicalPanel = itemToPhysicalPanel.get(link.source.id);
+        const targetPhysicalPanel = itemToPhysicalPanel.get(link.target.id);
+
+        // Skip if we can't find physical panel for either endpoint
+        if (!sourcePhysicalPanel || !targetPhysicalPanel) {
+          return null;
+        }
+
         // Map physical panel to context string
         const panelToContext = (panel: 'left' | 'middle' | 'right') => `${panel}-panel`;
-
-        // Determine contexts based on physical panel positions
-        const sourceContext = logicalSourcePanel === 'left' ? panelToContext(leftPhysicalPanel) : panelToContext(rightPhysicalPanel);
-        const targetContext = logicalSourcePanel === 'left' ? panelToContext(rightPhysicalPanel) : panelToContext(leftPhysicalPanel);
+        const sourceContext = panelToContext(sourcePhysicalPanel);
+        const targetContext = panelToContext(targetPhysicalPanel);
 
         // Build contextualized DOM IDs
         const sourceDomId = contextualizeId({ id: link.source.id, context: sourceContext });
