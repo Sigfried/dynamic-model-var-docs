@@ -225,6 +225,9 @@ export default function LinkOverlay({
       const contextualizedId = item.id; // e.g., "lp-Specimen"
       const elementName = decontextualizeId(contextualizedId); // e.g., "Specimen"
 
+      // Get the panel this item is in
+      const sourcePanel = item.getAttribute('data-panel-position');
+
       // Get relationships for this item
       const relationships = dataService.getRelationshipsForLinking(elementName);
       if (!relationships) return;
@@ -238,6 +241,14 @@ export default function LinkOverlay({
         const targetElement = document.querySelector(targetSelector);
 
         if (targetElement) {
+          const targetPanel = targetElement.getAttribute('data-panel-position');
+
+          // Only draw cross-panel links (not same-panel links)
+          // Exception: allow self-referential links
+          if (sourcePanel === targetPanel && contextualizedId !== targetElement.id) {
+            return; // Skip same-panel non-self-ref links
+          }
+
           // Store pair: [sourceContextualizedId, targetContextualizedId]
           const pairKey = `${contextualizedId}→${targetElement.id}`;
           pairs.set(pairKey, [contextualizedId, targetElement.id]);
