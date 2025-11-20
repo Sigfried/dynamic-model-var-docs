@@ -221,6 +221,9 @@ export default function LinkOverlay({
     const items = document.querySelectorAll('.item');
     const pairs = new Map<string, [string, string]>();
 
+    // Check if middle panel is visible (has any items)
+    const middlePanelVisible = document.querySelector('[data-panel-position="middle"]') !== null;
+
     items.forEach(item => {
       const contextualizedId = item.id; // e.g., "lp-Specimen"
       const elementName = decontextualizeId(contextualizedId); // e.g., "Specimen"
@@ -251,11 +254,13 @@ export default function LinkOverlay({
 
           // In 3-panel mode, only draw links between adjacent panels
           // Skip left→right links (they should go through middle)
-          if (sourcePanel === 'left' && targetPanel === 'right') {
-            return; // Skip non-adjacent panel links
-          }
-          if (sourcePanel === 'right' && targetPanel === 'left') {
-            return; // Skip non-adjacent panel links
+          if (middlePanelVisible) {
+            if (sourcePanel === 'left' && targetPanel === 'right') {
+              return; // Skip non-adjacent panel links
+            }
+            if (sourcePanel === 'right' && targetPanel === 'left') {
+              return; // Skip non-adjacent panel links
+            }
           }
 
           // Store pair: [sourceContextualizedId, targetContextualizedId]
