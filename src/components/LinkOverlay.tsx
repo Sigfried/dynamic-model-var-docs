@@ -137,8 +137,8 @@ export default function LinkOverlay({
   const { leftPanelLinks, rightPanelLinks } = useMemo(() => {
     if (!dataService) return { leftPanelLinks: [], rightPanelLinks: [] };
 
-    // Build set of item IDs actually rendered in each panel by querying DOM
-    // This handles cases where the same type appears in multiple panels (e.g., classes in both left and right)
+    // Build set of item IDs in each panel (just the base IDs, not contextualized)
+    // For cross-panel filtering, we only care about the item name, not which panel it's in
     const leftItems = new Set<string>();
     const rightItems = new Set<string>();
 
