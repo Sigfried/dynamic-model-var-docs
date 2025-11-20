@@ -22,7 +22,7 @@ import {
   type LinkFilterOptions
 } from '../utils/linkHelpers';
 import type { ItemHoverData } from './Section';
-import {contextualizeId, decontextualizeId} from '../utils/idContextualization';
+import {contextualizeId} from '../utils/idContextualization';
 
 /**
  * LinkTooltipData - Data for link hover tooltips
@@ -132,6 +132,7 @@ import type {
   LinkPair,
   RelationshipData as RelationshipDataNew
 } from '../models/Element';
+import { decontextualizeId } from '../utils/idContextualization';
 
 interface getIdPairsForLinksProps {
   dataService?: DataService | null;
