@@ -30,6 +30,19 @@
 6. three-panel bugs
    1. **class-->slot links pointing wrong direction**
    2. **no slot-->class (right panel) links** [sg] fixed
+   - [sg] pseudocode for generating links: -- actually, trying to write this in LinkOverlay.tsx
+
+      ```typescript
+      for (panel of displayedPanels) {
+        panelId: 'left-panel' | 'middle-panel' | 'right_panel' = panel.id
+        for (section of panel.sections) {
+          for (item of section) {
+            
+          }
+        }
+      }
+      ```
+   
    3. [sg] Specimen-->analyte_type link missing ![img_1.png](img_1.png)
 7. both modes bugs
    1. **no link highlight on item hover**

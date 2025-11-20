@@ -22,7 +22,7 @@ import {
   type LinkFilterOptions
 } from '../utils/linkHelpers';
 import type { ItemHoverData } from './Section';
-import { contextualizeId } from '../utils/idContextualization';
+import {contextualizeId, decontextualizeId} from '../utils/idContextualization';
 
 /**
  * LinkTooltipData - Data for link hover tooltips
@@ -89,6 +89,40 @@ export interface LinkOverlayProps {
   leftPhysicalPanel?: 'left' | 'middle' | 'right';
   /** Physical panel position for right sections (default: 'right') */
   rightPhysicalPanel?: 'left' | 'middle' | 'right';
+}
+/*
+import type { Relationship } from '../models/Element';
+
+import type {
+  LinkPair,
+  RelationshipData as RelationshipDataNew
+} from '../models/Element';
+
+ */
+// add 'item' class to all displayed items, like
+// <div id="mp-associated_participant" data-panel-position="middle" class="item flex items-center ..." style="padding-left: 8px;">...</div>
+interface getIdPairsForLinksProps {
+  dataService?: DataService | null;
+}
+function getIdPairsForLinks({dataService}: getIdPairsForLinksProps): [string, string][] {
+  if (!dataService) return []
+  const idPairs = new Map<string, [string, string]>();
+  const items = document.getElementsByClassName('item')
+  for (const item of items) {
+    const dcItemId = decontextualizeId(item.id)
+    // const relationships: Relationship[] = dataService.getRelationshipsForLinking(dcItemId) || [];
+    const linkedItemDcIds = relationships.map((relationship) => relationship.label) // should be called id, not label
+    for (const id of linkedItemDcIds) {
+      const linkedItems = document.querySelectorAll(`[id$="${id}"]`)
+      for (const linkedItem of linkedItems) {
+        idPairs.set(linkedItem.id, [item.id, linkedItem.id]);
+      }
+    }
+  }
+  return []
+}
+function LinkOverlayProposal({idPairs}) {
+
 }
 
 export default function LinkOverlay({
