@@ -213,8 +213,8 @@ export default function LinkOverlay({
     return () => cancelAnimationFrame(frameId);
   }, [leftSections, rightSections, dataService]);
 
-  // Build links from visible items in DOM - use useMemo to prevent infinite loop
-  const linkPairs = useMemo(() => {
+  // Build link pairs from visible items in DOM
+  const buildLinkPairs = (): [string, string][] => {
     if (!dataService) return [];
 
     // Query DOM for all visible items with class 'item'
@@ -271,7 +271,7 @@ export default function LinkOverlay({
     });
 
     return Array.from(pairs.values());
-  }, [dataService, leftSections, rightSections]);
+  };
 
   // Calculate anchor points for cross-panel links based on actual positions
   const calculateCrossPanelAnchors = (
@@ -355,6 +355,9 @@ export default function LinkOverlay({
 
     // Skip if no dataService
     if (!dataService) return allRenderedLinks;
+
+    // Build link pairs fresh from current DOM state
+    const linkPairs = buildLinkPairs();
 
     // Render each link pair
     linkPairs.forEach(([sourceId, targetId], index) => {
