@@ -264,8 +264,51 @@
 
 ---
 
+### Group C: Supporting docs
+
+#### docs/DOC_CONVENTIONS.md (Q23)
+**Decision:** Skip for now, review at the very end of docs refactor
+
+#### docs/COMPONENT_FLOW.md (Q24)
+**Decision:** Obsolete
+
+#### docs/GRAPHOLOGY_DESIGN.md (Q25)
+**Decision:** Most if not all is decided, implemented, or obsolete
+
+#### docs/TESTING.md (Q26)
+**Decision:**
+- Low priority
+- If super easy and quick, can get it out of the way whenever
+- Task: Merge with TESTING.root-snapshot-2025-11-03.md
+
+#### docs/DATA_FLOW.md (Q27)
+**Decision:**
+- Haven't looked at in a long time
+- Some probably obsolete, lots overlaps with plans elsewhere
+- Needs careful review and merging anything important into other docs
+
+---
+
+### Group D: Other
+
+#### scripts/README.md (Q28)
+**Decision:** Don't need it (uv created it) - delete
+
+#### archive/PHASE_6.4_PLAN.md (Q29)
+**Decision:** Keep as-is (already archived)
+
+---
+
+## ✅ SYSTEMATIC REVIEW COMPLETE!
+
+All documentation files reviewed. Ready to implement decisions.
+
+---
+
 ## Next Steps
-- Continue with Group C (Supporting docs) and Group D (Other)
-- Create consolidated active task list
-- Archive historical content
-- Identify and document current bugs
+
+1. **Create implementation plan** - What order to tackle changes
+2. **Start with quick wins** - Delete obsolete files, move things to archive
+3. **Restructure active docs** - Apply decisions to TASKS.md, CLAUDE.md, etc.
+4. **Create consolidated task lists** - Active bugs, upcoming work, future ideas
+5. **Commit and clear context** - Save progress, prepare for fresh start on actual work
