@@ -13,16 +13,14 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 import type { DataService } from '../services/DataService';
 import {
-  buildLinks,
   generateSelfRefPath,
   getLinkColor,
   getLinkStrokeWidth,
   getLinkGradientId,
-  type Link,
   type LinkFilterOptions
 } from '../utils/linkHelpers';
 import type { ItemHoverData } from './Section';
-import {contextualizeId} from '../utils/idContextualization';
+import {decontextualizeId} from '../utils/idContextualization';
 
 /**
  * LinkTooltipData - Data for link hover tooltips
@@ -75,9 +73,8 @@ function LinkTooltip({ data, x, y }: { data: LinkTooltipData; x: number; y: numb
 }
 
 export interface LinkOverlayProps {
-  /** Section IDs visible in left panel (from LinkOverlay's perspective) */
+  /** Section IDs visible - used to trigger re-computation when panels change */
   leftSections: string[];
-  /** Section IDs visible in right panel (from LinkOverlay's perspective) */
   rightSections: string[];
   /** Data service for fetching item relationships */
   dataService: DataService | null;
@@ -85,10 +82,6 @@ export interface LinkOverlayProps {
   filterOptions?: LinkFilterOptions;
   /** Currently hovered item for link highlighting */
   hoveredItem?: ItemHoverData | null;
-  /** Physical panel position for left sections (default: 'left') */
-  leftPhysicalPanel?: 'left' | 'middle' | 'right';
-  /** Physical panel position for right sections (default: 'right') */
-  rightPhysicalPanel?: 'left' | 'middle' | 'right';
 }
 /*
  * ============================================================================
@@ -178,10 +171,7 @@ export default function LinkOverlay({
   leftSections,
   rightSections,
   dataService,
-  filterOptions = {},
-  hoveredItem,
-  leftPhysicalPanel = 'left',
-  rightPhysicalPanel = 'right'
+  hoveredItem
 }: LinkOverlayProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [, setScrollTick] = useState(0);
@@ -223,123 +213,65 @@ export default function LinkOverlay({
     return () => cancelAnimationFrame(frameId);
   }, [leftSections, rightSections, dataService]);
 
-  // Build links from visible items - use useMemo to prevent infinite loop
-  const { leftPanelLinks, rightPanelLinks, itemToPhysicalPanel } = useMemo(() => {
-    if (!dataService) return { leftPanelLinks: [], rightPanelLinks: [], itemToPhysicalPanel: new Map<string, 'left' | 'middle' | 'right'>() };
+  // Build link pairs from visible items in DOM
+  const buildLinkPairs = (): [string, string][] => {
+    if (!dataService) return [];
 
-    // Build set of CONTEXTUALIZED item IDs in each panel for cross-panel filtering and DOM lookup
-    const leftItems = new Set<string>();
-    const rightItems = new Set<string>();
+    // Query DOM for all visible items with class 'item'
+    const items = document.querySelectorAll('.item');
+    const pairs = new Map<string, [string, string]>();
 
-    // Map each item name to its physical panel position (for rendering)
-    const itemToPhysicalPanel = new Map<string, 'left' | 'middle' | 'right'>();
+    // Check if middle panel is visible (has any items)
+    const middlePanelVisible = document.querySelector('[data-panel-position="middle"]') !== null;
 
-    // Map physical panel to context string
-    const panelToContext = (panel: 'left' | 'middle' | 'right') => `${panel}-panel`;
-    const leftContext = panelToContext(leftPhysicalPanel);
-    const rightContext = panelToContext(rightPhysicalPanel);
+    items.forEach(item => {
+      const contextualizedId = item.id; // e.g., "lp-Specimen"
+      const elementName = decontextualizeId(contextualizedId); // e.g., "Specimen"
 
-    // Get all item IDs for each panel section and contextualize them with their PHYSICAL panel
-    leftSections.forEach(sectionId => {
-      // @ts-expect-error TEMPORARY: string vs ElementTypeId - will be removed in Step 7 (Link Overlay Refactor)
-      // TODO: See TASKS.md Step 7 - refactor to use ds.getLinkData(leftItemIds, rightItemIds)
-      const itemIds = dataService.getItemNamesForType(sectionId); // Returns IDs (name === id currently)
-      itemIds.forEach(id => {
-        leftItems.add(contextualizeId({ id, context: leftContext }));
-        itemToPhysicalPanel.set(id, leftPhysicalPanel);
-      });
-    });
+      // Get the panel this item is in
+      const sourcePanel = item.getAttribute('data-panel-position');
 
-    rightSections.forEach(sectionId => {
-      // @ts-expect-error TEMPORARY: string vs ElementTypeId - will be removed in Step 7 (Link Overlay Refactor)
-      // TODO: See TASKS.md Step 7 - refactor to use ds.getLinkData(leftItemIds, rightItemIds)
-      const itemIds = dataService.getItemNamesForType(sectionId); // Returns IDs (name === id currently)
-      itemIds.forEach(id => {
-        rightItems.add(contextualizeId({ id, context: rightContext }));
-        itemToPhysicalPanel.set(id, rightPhysicalPanel);
-      });
-    });
+      // Get relationships for this item
+      const relationships = dataService.getRelationshipsForLinking(elementName);
+      if (!relationships) return;
 
-    const leftLinks: Link[] = [];
-    const rightLinks: Link[] = [];
+      // For each relationship target, find it in the DOM
+      relationships.forEach(rel => {
+        const targetName = rel.target;
 
-    // Debug: Log what's in the itemToPhysicalPanel map
-    console.log('[LinkOverlay] itemToPhysicalPanel map:', Object.fromEntries(itemToPhysicalPanel));
+        // Try to find target in DOM with any context prefix
+        const targetSelector = `[id="lp-${targetName}"], [id="mp-${targetName}"], [id="rp-${targetName}"]`;
+        const targetElement = document.querySelector(targetSelector);
 
-    // Helper to process items from a panel
-    const processItems = (
-      sections: string[],
-      targetPanel: Set<string>,
-      targetContext: string,
-      linksArray: Link[],
-      options: typeof filterOptions = filterOptions
-    ) => {
-      sections.forEach(sectionId => {
-        // @ts-expect-error TEMPORARY: string vs ElementTypeId - will be removed in Step 7 (Link Overlay Refactor)
-        // TODO: See TASKS.md Step 7 - refactor to use ds.getLinkData(leftItemIds, rightItemIds)
-        const itemIds = dataService.getItemNamesForType(sectionId); // Returns IDs (name === id currently)
-        itemIds.forEach(itemId => {
-          const relationships = dataService.getRelationshipsForLinking(itemId);
-          if (!relationships) return;
+        if (targetElement) {
+          const targetPanel = targetElement.getAttribute('data-panel-position');
 
-          const links = buildLinks(sectionId, itemId, relationships, {
-            ...options,
-            ...(sectionId === 'class' ? { showInheritance: false } : {}) // Disable inheritance for classes
-          });
-
-          // Only keep cross-panel links (or self-refs)
-          // Contextualize the target ID before checking if it's in the target panel
-          const crossPanelLinks = links.filter(link => {
-            if (link.relationship.isSelfRef) return true;
-            const contextualizedTargetId = contextualizeId({ id: link.target.id, context: targetContext });
-            return targetPanel.has(contextualizedTargetId);
-          });
-          linksArray.push(...crossPanelLinks);
-        });
-      });
-    };
-
-    // Process left panel (all cross-panel relationships going to right panel)
-    processItems(leftSections, rightItems, rightContext, leftLinks);
-
-    // Process right panel (all relationships EXCEPT class→class cross-panel going to left panel)
-    // Class→class is bidirectional in the schema, so we only draw left→right
-    // All other relationship types (class→enum, class→slot, variable→class, slot→enum) are one-way
-    rightSections.forEach(sectionId => {
-      // @ts-expect-error TEMPORARY: string vs ElementTypeId - will be removed in Step 7 (Link Overlay Refactor)
-      // TODO: See TASKS.md Step 7 - refactor to use ds.getLinkData(leftItemIds, rightItemIds)
-      const itemIds = dataService.getItemNamesForType(sectionId); // Returns IDs (name === id currently)
-      itemIds.forEach(itemId => {
-        const relationships = dataService.getRelationshipsForLinking(itemId);
-        if (!relationships) return;
-
-        const links = buildLinks(sectionId, itemId, relationships, {
-          ...filterOptions,
-          ...(sectionId === 'class' ? { showInheritance: false } : {})
-        });
-
-        // Special handling for class→class to avoid bidirectional duplicates
-        const filteredLinks = links.filter(link => {
-          if (link.relationship.isSelfRef) return true; // Always keep self-refs
-
-          // Contextualize target ID for left physical panel before checking
-          const contextualizedTargetId = contextualizeId({ id: link.target.id, context: leftContext });
-          if (!leftItems.has(contextualizedTargetId)) return false; // Not cross-panel (target must be in LEFT panel)
-
-          // For class→class links, filter out to avoid bidirectional duplicates
-          if (sectionId === 'class' && link.target.type === 'class') {
-            return false;
+          // Only draw cross-panel links (not same-panel links)
+          // Exception: allow self-referential links
+          if (sourcePanel === targetPanel && contextualizedId !== targetElement.id) {
+            return; // Skip same-panel non-self-ref links
           }
 
-          return true; // Keep all other cross-panel links
-        });
+          // In 3-panel mode, only draw links between adjacent panels
+          // Skip left→right links (they should go through middle)
+          if (middlePanelVisible) {
+            if (sourcePanel === 'left' && targetPanel === 'right') {
+              return; // Skip non-adjacent panel links
+            }
+            if (sourcePanel === 'right' && targetPanel === 'left') {
+              return; // Skip non-adjacent panel links
+            }
+          }
 
-        rightLinks.push(...filteredLinks);
+          // Store pair: [sourceContextualizedId, targetContextualizedId]
+          const pairKey = `${contextualizedId}→${targetElement.id}`;
+          pairs.set(pairKey, [contextualizedId, targetElement.id]);
+        }
       });
     });
 
-    return { leftPanelLinks: leftLinks, rightPanelLinks: rightLinks, itemToPhysicalPanel };
-  }, [leftSections, rightSections, dataService, filterOptions, leftPhysicalPanel, rightPhysicalPanel]);
+    return Array.from(pairs.values());
+  };
 
   // Calculate anchor points for cross-panel links based on actual positions
   const calculateCrossPanelAnchors = (
@@ -421,160 +353,141 @@ export default function LinkOverlay({
     const svgRect = svgRef.current?.getBoundingClientRect();
     if (!svgRect) return allRenderedLinks;
 
-    // Deduplicate links: track rendered link IDs to avoid rendering the same edge twice
-    const renderedLinkIds = new Set<string>();
+    // Skip if no dataService
+    if (!dataService) return allRenderedLinks;
 
-    // Helper to render links from a specific logical panel (left or right from LinkOverlay's perspective)
-    const renderLinksFromPanel = (links: Link[], logicalSourcePanel: 'left' | 'right') => {
-      console.log(`[LinkOverlay] Rendering links from ${logicalSourcePanel} panel:`, links.length, 'links');
-      return links.map((link, index) => {
-        // Create unique ID for this edge (source→target)
-        const linkId = `${link.source.id}→${link.target.id}`;
+    // Build link pairs fresh from current DOM state
+    const linkPairs = buildLinkPairs();
 
-        // Skip if we've already rendered this link
-        if (renderedLinkIds.has(linkId)) {
-          console.log(`[LinkOverlay] Skipping duplicate link: ${linkId}`);
-          return null;
-        }
-        renderedLinkIds.add(linkId);
+    // Render each link pair
+    linkPairs.forEach(([sourceId, targetId], index) => {
+      // Find items in DOM using contextualized IDs (already have the correct prefixes)
+      const sourceItem = document.getElementById(sourceId);
+      const targetItem = document.getElementById(targetId);
 
-        // Look up which physical panel each item is actually in
-        const sourcePhysicalPanel = itemToPhysicalPanel.get(link.source.id);
-        const targetPhysicalPanel = itemToPhysicalPanel.get(link.target.id);
+      // Skip if either item not found in DOM
+      if (!sourceItem || !targetItem) {
+        return;
+      }
 
-        // Skip if we can't find physical panel for either endpoint
-        if (!sourcePhysicalPanel || !targetPhysicalPanel) {
-          console.warn(`LinkOverlay: Skipping link ${link.source.id}→${link.target.id} - missing physical panel info`, {
-            sourceId: link.source.id,
-            targetId: link.target.id,
-            sourcePhysicalPanel,
-            targetPhysicalPanel,
-            hasSourceInMap: itemToPhysicalPanel.has(link.source.id),
-            hasTargetInMap: itemToPhysicalPanel.has(link.target.id)
-          });
-          return null;
-        }
+      // Get element names for relationship lookup
+      const sourceName = decontextualizeId(sourceId);
+      const targetName = decontextualizeId(targetId);
 
-        // Map physical panel to context string
-        const panelToContext = (panel: 'left' | 'middle' | 'right') => `${panel}-panel`;
-        const sourceContext = panelToContext(sourcePhysicalPanel);
-        const targetContext = panelToContext(targetPhysicalPanel);
+      // Get relationship info for this pair
+      const relationships = dataService.getRelationshipsForLinking(sourceName);
+      if (!relationships || relationships.length === 0) return;
 
-        // Build contextualized DOM IDs
-        const sourceDomId = contextualizeId({ id: link.source.id, context: sourceContext });
-        const targetDomId = contextualizeId({ id: link.target.id, context: targetContext });
+      const relationship = relationships.find(r => r.target === targetName);
+      if (!relationship) return;
 
-        // Find items in DOM using contextualized IDs
-        const sourceItem = document.getElementById(sourceDomId);
-        const targetItem = document.getElementById(targetDomId);
+      const sourceRect = sourceItem.getBoundingClientRect();
+      const targetRect = targetItem.getBoundingClientRect();
 
-        // Skip if either item not found in DOM
-        if (!sourceItem || !targetItem) {
-          return null;
-        }
+      // Determine link direction for gradient selection
+      const isLeftToRight = sourceRect.left < targetRect.left;
 
-        const sourceRect = sourceItem.getBoundingClientRect();
-        const targetRect = targetItem.getBoundingClientRect();
+      // Determine source type from panel position or relationship type
+      // In middle panel = slot, otherwise determine from relationship
+      const sourceType = sourceItem.getAttribute('data-panel-position') === 'middle' ? 'slot' :
+        relationship.type.includes('slot') || relationship.label?.includes('slot') ? 'class' : 'class';
+      const targetType = relationship.targetSection;
 
-        // Determine link direction for gradient selection
-        const isLeftToRight = sourceRect.left < targetRect.left;
+      // Check if self-referential (source and target are same element)
+      const isSelfRef = sourceId === targetId;
 
-        // Generate path - adjust coordinates to be relative to SVG origin
-        let pathData: string;
-        if (link.relationship.isSelfRef) {
-          // Create adjusted DOMRect for self-ref path
-          const adjustedRect = {
-            ...sourceRect,
-            left: sourceRect.left - svgRect.left,
-            right: sourceRect.right - svgRect.left,
-            top: sourceRect.top - svgRect.top,
-            bottom: sourceRect.bottom - svgRect.top,
-            x: sourceRect.x - svgRect.left,
-            y: sourceRect.y - svgRect.top
-          } as DOMRect;
-          pathData = generateSelfRefPath(adjustedRect);
-        } else {
-          // Use cross-panel anchor calculation based on actual DOM positions
-          const { source, target } = calculateCrossPanelAnchors(sourceRect, targetRect);
+      // Generate path - adjust coordinates to be relative to SVG origin
+      let pathData: string;
+      if (isSelfRef) {
+        // Create adjusted DOMRect for self-ref path
+        const adjustedRect = {
+          ...sourceRect,
+          left: sourceRect.left - svgRect.left,
+          right: sourceRect.right - svgRect.left,
+          top: sourceRect.top - svgRect.top,
+          bottom: sourceRect.bottom - svgRect.top,
+          x: sourceRect.x - svgRect.left,
+          y: sourceRect.y - svgRect.top
+        } as DOMRect;
+        pathData = generateSelfRefPath(adjustedRect);
+      } else {
+        // Use cross-panel anchor calculation based on actual DOM positions
+        const { source, target } = calculateCrossPanelAnchors(sourceRect, targetRect);
 
-          // Adjust coordinates to be relative to SVG origin
-          const adjustedSource = { x: source.x - svgRect.left, y: source.y - svgRect.top };
-          const adjustedTarget = { x: target.x - svgRect.left, y: target.y - svgRect.top };
+        // Adjust coordinates to be relative to SVG origin
+        const adjustedSource = { x: source.x - svgRect.left, y: source.y - svgRect.top };
+        const adjustedTarget = { x: target.x - svgRect.left, y: target.y - svgRect.top };
 
-          pathData = generateDirectionalBezierPath(adjustedSource, adjustedTarget);
-        }
+        pathData = generateDirectionalBezierPath(adjustedSource, adjustedTarget);
+      }
 
-        // Get gradient with correct direction
-        let color = getLinkColor(link.relationship, link.source.type);
-        // If gradient and going right-to-left, use reverse gradient
-        if (color.startsWith('url(#') && !isLeftToRight) {
-          color = color.replace(')', '-reverse)');
-        }
-        const strokeWidth = getLinkStrokeWidth(link.relationship);
+      // Get gradient with correct direction
+      let color = getLinkColor(relationship, sourceType);
+      // If gradient and going right-to-left, use reverse gradient
+      if (color.startsWith('url(#') && !isLeftToRight) {
+        color = color.replace(')', '-reverse)');
+      }
+      const strokeWidth = getLinkStrokeWidth(relationship);
 
-        // Generate unique key for this link
-        const linkKey = `${logicalSourcePanel}-${link.source.type}-${link.source.id}-${link.target.type}-${link.target.id}-${index}`;
+      // Generate unique key for this link
+      const linkKey = `${sourceId}-${targetId}-${index}`;
 
-        // Check if link should be highlighted (either direct hover or item hover match)
-        const matchesHoveredItem = !!hoveredItem && (
-          (link.source.type === hoveredItem.type && link.source.id === hoveredItem.id) ||
-          (link.target.type === hoveredItem.type && link.target.id === hoveredItem.id)
-        );
-        const isHovered = hoveredLinkKey === linkKey || matchesHoveredItem;
+      // Check if link should be highlighted (either direct hover or item hover match)
+      const matchesHoveredItem = !!hoveredItem && (
+        (sourceId === hoveredItem.id) ||
+        (targetId === hoveredItem.id)
+      );
+      const isHovered = hoveredLinkKey === linkKey || matchesHoveredItem;
 
-        const markerId = getMarkerIdForTargetType(link.target.type, isHovered);
+      const markerId = getMarkerIdForTargetType(targetType, isHovered);
 
-        // Don't add arrows to self-referential links (they look weird on loops)
-        const markerEnd = link.relationship.isSelfRef ? undefined : `url(#${markerId})`;
+      // Don't add arrows to self-referential links (they look weird on loops)
+      const markerEnd = isSelfRef ? undefined : `url(#${markerId})`;
 
-        return (
-          <path
-            key={linkKey}
-            d={pathData}
-            fill="none"
-            stroke={color}
-            markerEnd={markerEnd}
-            opacity={isHovered ? 1.0 : 0.2}
-            strokeWidth={isHovered ? 3 : strokeWidth}
-            className="transition-all cursor-pointer"
-            style={{ pointerEvents: 'stroke' }}
-            onMouseEnter={(e: React.MouseEvent) => {
-              setHoveredLinkKey(linkKey);
-              // Show tooltip after brief delay
-              if (hoverTimeoutRef.current) {
-                clearTimeout(hoverTimeoutRef.current);
-              }
-              hoverTimeoutRef.current = window.setTimeout(() => {
-                setTooltipData({
-                  data: {
-                    relationshipType: link.relationship.type,
-                    relationshipLabel: link.relationship.label,
-                    sourceName: link.source.id, // ID used as display name (id === name currently)
-                    sourceType: link.source.type,
-                    targetName: link.target.id, // ID used as display name (id === name currently)
-                    targetType: link.target.type
-                  },
-                  x: e.clientX,
-                  y: e.clientY
-                });
-              }, 300);
-            }}
-            onMouseLeave={() => {
-              setHoveredLinkKey(null);
-              setTooltipData(null);
-              // Clear timeout when mouse leaves
-              if (hoverTimeoutRef.current) {
-                clearTimeout(hoverTimeoutRef.current);
-                hoverTimeoutRef.current = null;
-              }
-            }}
-          />
-        );
-      });
-    };
-
-    allRenderedLinks.push(...renderLinksFromPanel(leftPanelLinks, 'left'));
-    allRenderedLinks.push(...renderLinksFromPanel(rightPanelLinks, 'right'));
+      allRenderedLinks.push(
+        <path
+          key={linkKey}
+          d={pathData}
+          fill="none"
+          stroke={color}
+          markerEnd={markerEnd}
+          opacity={isHovered ? 1.0 : 0.2}
+          strokeWidth={isHovered ? 3 : strokeWidth}
+          className="transition-all cursor-pointer"
+          style={{ pointerEvents: 'stroke' }}
+          onMouseEnter={(e: React.MouseEvent) => {
+            setHoveredLinkKey(linkKey);
+            // Show tooltip after brief delay
+            if (hoverTimeoutRef.current) {
+              clearTimeout(hoverTimeoutRef.current);
+            }
+            hoverTimeoutRef.current = window.setTimeout(() => {
+              setTooltipData({
+                data: {
+                  relationshipType: relationship.type,
+                  relationshipLabel: relationship.label,
+                  sourceName: sourceName,
+                  sourceType: sourceType,
+                  targetName: targetName,
+                  targetType: targetType
+                },
+                x: e.clientX,
+                y: e.clientY
+              });
+            }, 300);
+          }}
+          onMouseLeave={() => {
+            setHoveredLinkKey(null);
+            setTooltipData(null);
+            // Clear timeout when mouse leaves
+            if (hoverTimeoutRef.current) {
+              clearTimeout(hoverTimeoutRef.current);
+              hoverTimeoutRef.current = null;
+            }
+          }}
+        />
+      );
+    });
 
     return allRenderedLinks;
   };
