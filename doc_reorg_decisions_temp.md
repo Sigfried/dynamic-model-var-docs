@@ -147,9 +147,125 @@
 
 ---
 
+---
+
+## Other Documentation Files Review
+
+### Group A: Root-level unique files
+
+#### ELEMENT_MERGE_ANALYSIS.md (Q15)
+**Decision:** Pretty recent, will help with merging/reorganizing - KEEP
+
+#### ELEMENTPREREFACTOR_RETIREMENT_PLAN.md (Q16)
+**Decision:**
+- Phases 2 and Phase 3.2 still relevant
+- Put those somewhere sensible (nonredundant)
+- Delete the rest
+
+#### TWO_GRAPH_ANALYSIS.md (Q17)
+**Decision:**
+- Use "upcoming work details file" with brief descriptions + links in TASKS.md
+- Not sure yet where it will end up in code refactoring order
+
+#### LINKOVERLAY_REFACTOR_PLAN.md (Q18)
+**Detailed section-by-section:**
+
+**Design (from REFACTOR_PLAN Stage 5):**
+- Redundant with description of grouping slots elsewhere
+- More detail here though - merge them
+
+**Add Class→Slot and Slot→Range Edges to Graph:**
+- Think this is done
+- Probably all code samples have been used
+- Maybe worth checking if there's anything useful, but doubtful
+
+**Your Proposal:**
+- Not finished
+- Think everything here has been put in other places
+
+**Architecture LayoutManager Responsibilities:**
+- Not sure if anything useful but check
+- Lots of remaining work on LayoutManager
+
+**Implementation Steps:**
+- Phase 1: Think obsoleted by dom-based-link-overlay but check
+- Phase 2: Ditto
+- Phase 3: Ditto
+- Phase 4: Combine with this task elsewhere, might help there
+
+**Open Questions for You:**
+- Questions 1-3: Obsolete
+- Question 4: Open question but think is handled elsewhere
+
+---
+
+### Group B: Core docs/ files
+
+#### docs/CLAUDE.md (Q19)
+**Detailed section-by-section:**
+
+**🚨 CRITICAL: NEVER DESTROY UNCOMMITTED WORK:**
+- Make more succinct but MUST follow it
+
+**🚨 CRITICAL ARCHITECTURAL PRINCIPLE:**
+- I seldom pay attention but it would be nice
+
+**Code elegance/DRY:**
+- Add something about writing well-structured, DRY code?
+- Only if it might actually change my behavior
+- User wants: "code that can be appreciated by a good, clever programmer who loves elegance and concision"
+- User notes: "you were trained on a lot more bad code than good"
+- Make this more concise if keeping it
+- Maybe put in ~/.claude/CLAUDE.md if I ever read that
+
+**🔒 ARCHITECTURAL ENFORCEMENT:**
+- Enforcement is in place, check and maybe expand
+- Expand enforcement (in code), not this section
+- Just enough to encourage continued enforcement of principles
+
+**⚠️ Additional Principles:**
+- Decent stuff, combine concisely with above
+
+**Hierarchical Data:**
+- Obsolete
+
+**Structural Not Semantic Categorization:**
+- Don't need this anymore
+
+**Config-Based Abstraction Pattern:**
+- Combine with App Configuration File elsewhere
+
+**Element Identity: .name vs getId():**
+- Baked into code now (at least in branch)
+- Save whatever will help but keep concise
+
+**🔧 TypeScript Build Configuration:**
+- Make this part of workflow protocol
+- User asks: "btw, i can find that long thing i wrote to launch this whole interactive thing. do you know where it is?"
+  - Answer: TASKS.md Section 1 (lines 3-64 originally) - already decided to delete/archive when done
+
+#### docs/REFACTOR_PLAN.md (Q20)
+**Decision:**
+- Obsolete
+- Could archive but probably don't need it
+
+#### docs/UI_REFACTOR.md (Q21)
+**Decision:**
+- Q21.1: Was the working doc until demo rush a couple days ago, then switched to urgent list at top of TASKS
+- Q21.2: No duplication/conflict! TASKS.md Section 8 just has brief summary pointing to UI_REFACTOR.md for details
+  - This is good pattern: short summary with link to detailed doc
+  - Fits with "upcoming work details file" approach
+
+#### docs/PROGRESS.md (Q22)
+**Decision:**
+- Don't drop it; archive it
+- Won't continue to maintain
+- If major milestones needed for reports, extract from archived stuff
+
+---
+
 ## Next Steps
-- Continue systematic review of remaining TASKS.md sections
-- Then review other doc files
+- Continue with Group C (Supporting docs) and Group D (Other)
 - Create consolidated active task list
 - Archive historical content
 - Identify and document current bugs
