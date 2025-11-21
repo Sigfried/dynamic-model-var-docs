@@ -2,6 +2,67 @@
 
 ## 🚨 URGENT - Demo Fixes (4 hours)
 
+[sg]
+- amazingly we got the dom-based-link-overlay branch working well enough -- two minutes before
+  the call!! -- that i was able to use it for most of the demo. it still has lots of bugs and
+  i have no idea how much of a mess was made in the last few days as we were scrambling to get
+  ready for the demo.
+- now we should try to work systematically on
+  1. organizing and streamlining the planning docs
+  2. refactoring model and UI the way i want it
+  3. fixing bugs
+  4. adding features
+- let's now have what i expect to be a long and maybe frustrating interactive work session
+  on 1 -- in which we will figure out what to do with 2-4
+  - maybe we should begin by writing you instructions for how we want the doc/planning 
+    process and output to work and how we should conduct the interactive work session
+  - some initial inputs
+    - there are already so many instructions in so many places that you often seem to ignore
+      a lot of them. a goal is to pare those down into something you can really digest and 
+      stick to in every claude code session and how to handle more task-related instructions
+      and new global instructions
+    - the order of upcoming tasks is prone to change a lot as we hit various blocks or have
+      new realizations. so let's try to do plan documentation with that in mind
+      - numbering of tasks and architecture points (etc) has been a pain. i'm not sure
+        how to make that flow better
+    - we should work on having a planning/documentation/implementation process that you can
+      really stick to, which we have not been able to do previously
+      - i like that so much of our work has been captured in progress.md, and once in a while
+        we consult that doc to understand what's been done or not. but for the most part i
+        doubt anyone will ever read it. and it has really cost a lot of time reminding you
+        to archive stuff there and remove it from active planning documents.maybe we should
+        drop it
+      - a process you can stick to might be something like:
+        - plan first, implement after solidifying and approving plans
+        - commit after basically everything
+        - i want you to be fresh and alert, so we should have a plan for clearing/compacting context
+          - warn me when there's less than 60% context remaining
+          - tell me when there's good reason to continue without clearing, but don't argue for
+            continuing just because you think you have plenty of room
+          - prepare for each clear by making sure that docs have the information you need to
+            continue after clearing and give me a brief instruction to give back to you telling
+            you when to start back up. make sure everything is committed before i clear
+          - take frequent pauses to re-streamline planning docs
+          - maybe have an archive directory so we can purge planning info frequently without
+            worrying about losing it, but purging anything we don't need (in docs and code)
+            is super important to prevent confusion for both of us
+            - perhaps: have an archive version of each active doc and every time something is
+              complete or no longer relevant, delete it and move it to the end of that file.
+              i don't know if this will be much easier than what we've been doing (or failing
+              to do) with progress.md
+        - could we possibly keep the docs short enough that we don't need TOCs? if not, do a better
+          job of maintaining them
+    - for the interactive doc/planning session you should
+      - walk as systematically as possible through all the current plans and ideas scattered
+        amongst doc files and code comments and ask me if they are still relevant and what
+        to do with them
+- upcoming tasks that are at the top of my mind right now (besides what i just described)
+  - deciding whether to merge dom-based-link-overlay into main right away or not
+  - merging the two Element files
+  - documenting current bugs
+  - switching to the new EdgeInfo type
+  - deleting unused code and better organizing code that remains
+
 ### ✅ Completed Quick Fixes (Round 1)
 
 1. **✅ FIXED: Right panel cut off in 3-panel mode**
@@ -61,7 +122,11 @@
 
 #### Obsolete Files to Delete
 - [ ] ELEMENT_MERGE_ANALYSIS.md (obsoleted by two-graph decision)
+  - [sg] we talked about a two-graph idea, but i don't think we decided. it needs more discussion
 - [ ] ELEMENTPREREFACTOR_RETIREMENT_PLAN.md (obsoleted by two-graph decision)
+  - no, it's obsoleted by our decision to merge Element.ts back into ElementPreRefactor.ts and rename it 
+    back to Element.ts, and then fix the many problems in place. i think there are instructions for that
+    somewhere
 - [ ] COMPONENT_FLOW.md (if exists, check first)
 - [ ] DATA_FLOW.md (check if obsolete)
 - [ ] Item.ts (check if exists)
@@ -131,6 +196,8 @@
 <details>
 <summary><b>conversation about this</b></summary>
 
+from [Slack model-plus-variable-documentation](https://dmc-cmm6947.slack.com/archives/C09KGAWNQDD/p1762286966749659)
+
 > **Anne**: I think I made a mistake by calling "asthma" and "angina" variables. BMI is a variable that is a Measurement observation. We can think of BMI as a column in a spreadsheet. We wouldn't have a column for "asthma" - we would have a column for conditions with a list of mondo codes for the conditions present. This becomes more important when we are talking about the "heart failure" and "heart disease" columns. Where does one draw lines? The division of conditions into variables/columns might be ok if all we're looking at is asthma and angina, but quickly gets too hard to draw lines.
 
 > **Siggie**: So, should those variables appear in the variable specs at all? If so, how should we represent them? And are there other variables in the specs that need special treatment or don't belong?
@@ -163,6 +230,15 @@
 >     MONDO: http://purl.obolibrary.org/obo/MONDO_, but I don't, though I'm sure it's not hard)
 >
 >  did i get that right?
+
+> **Anne**:
+> yes, but you won't really see much difference until you look at something more generic, like heart disease.
+i think hypertension uses an HPO CURIE
+
+> **Siggie**:
+> i think we decided i can focus on the model for now and then when that's stable, can move to a richer
+  interface for variables. ok if i just give myself a reminder to come back to this discussion then?
+
 </details>
 
 Also see [Slack DMs with Corey](https://dmc-cmm6947.slack.com/archives/C0917F5RFL1/p1763071597354059)
