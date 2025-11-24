@@ -30,6 +30,27 @@
 
 ### High Priority
 
+**LinkOverlay fixes**
+- Currently active work fixing 3-panel display issues
+- See current bugs above
+- Refactoring plans:
+  - [UI_REFACTOR.md § LinkOverlay](UI_REFACTOR.md#1-linkoverlay-refactor)
+  - [LINKOVERLAY_REFACTOR_PLAN.md](../LINKOVERLAY_REFACTOR_PLAN.md) (some content may still be relevant)
+
+**Complete Graph Refactor (Steps 6-7)**
+- **Step 1**: Merge Element.ts and ElementPreRefactor.ts into single file
+  - Currently split with prototype augmentation workaround
+  - Should be unified after graph refactor complete
+- **Step 2**: Migrate LinkOverlay to use graph-based relationships
+  - Update to use `getRelationshipsNew()` instead of old `getRelationships()`
+  - Uses graph edges instead of subclass-specific `this.attributes`
+- **Step 3**: Remove old subclass-specific `getRelationships()` methods
+  - Delete from ClassElement, EnumElement, SlotElement, VariableElement
+  - Only keep graph-based `getRelationshipsFromGraph()`
+  - Remove ClassSlot class (replaced by graph slot edges)
+- See Element.ts:1-68 for full migration plan
+- Eliminates subclass-specific code, completes Slots-as-Edges refactor
+
 **URLs as clickable links**
 - Display URIs as clickable links in detail panels
 - Already set up infrastructure for this
@@ -39,13 +60,6 @@
 - Display self-referential links as loops instead of crossing panels
 - Implementation: `generateSelfRefPath()` in [src/utils/linkHelpers.ts:235](../src/utils/linkHelpers.ts#L235)
 - May have done some of this on branch (check)
-
-**LinkOverlay fixes**
-- Currently active work fixing 3-panel display issues
-- See current bugs above
-- Refactoring plans:
-  - [UI_REFACTOR.md § LinkOverlay](UI_REFACTOR.md#1-linkoverlay-refactor)
-  - [LINKOVERLAY_REFACTOR_PLAN.md](../LINKOVERLAY_REFACTOR_PLAN.md) (some content may still be relevant)
 
 ### Medium Priority
 
@@ -82,19 +96,6 @@
 ### Low Priority
 
 **Relationship Info Box - Keyboard navigation**
-
-**Element.ts Merge & Graph Refactor Completion**
-- **Step 1**: Merge Element.ts and ElementPreRefactor.ts into single file
-  - Currently split with prototype augmentation workaround
-  - Should be unified after graph refactor complete
-- **Step 2**: Migrate LinkOverlay to use graph-based relationships
-  - Update to use `getRelationshipsNew()` instead of old `getRelationships()`
-  - Uses graph edges instead of subclass-specific `this.attributes`
-- **Step 3**: Remove old subclass-specific `getRelationships()` methods
-  - Delete from ClassElement, EnumElement, SlotElement, VariableElement
-  - Only keep graph-based `getRelationshipsFromGraph()`
-  - Remove ClassSlot class (replaced by graph slot edges)
-- See Element.ts:1-68 for full migration plan (Steps 4-7)
 
 **Custom Preset Management**
 
