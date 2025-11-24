@@ -12,7 +12,8 @@
  */
 
 import type { ModelData } from '../types';
-import type { DetailData, Relationship } from '../models/Element';
+import type { Relationship } from '../models/Element';
+import type { DetailData, FloatingBoxMetadata } from '../contracts/ComponentData';
 import type { ElementTypeId } from '../models/ElementRegistry';
 import { ELEMENT_TYPES, getAllElementTypeIds } from '../models/ElementRegistry';
 import type { ToggleButtonData } from '../components/ItemsPanel';
@@ -28,11 +29,6 @@ import type {
 
 // Re-export new types for UI components
 export type { EdgeInfo, ItemInfo, RelationshipDataNew };
-
-export interface FloatingBoxMetadata {
-  title: string;
-  color: string;
-}
 
 // ============================================================================
 // DEPRECATED: Old relationship data structures (will be removed in Stage 3+)
@@ -51,7 +47,7 @@ export interface SlotInfo {
  * @deprecated Use RelationshipDataNew from models/Element instead
  * This will be removed after Slots-as-Edges refactor is complete
  */
-export interface RelationshipData {
+export interface RelationshipDataOld {
   itemName: string;
   itemSection: string;
   color: string;  // Header color for this item section
@@ -111,7 +107,7 @@ export class DataService {
    *
    * Stage 3 Step 6: Now uses graph-based data with adapter to old format
    */
-  getRelationships(itemId: string): RelationshipData | null {
+  getRelationships(itemId: string): RelationshipDataOld | null {
     const element = this.modelData.elementLookup.get(itemId);
     if (!element) return null;
 
@@ -134,7 +130,7 @@ export class DataService {
   private adaptRelationshipDataToOldFormat(
     newData: RelationshipDataNew,
     elementType: string
-  ): RelationshipData {
+  ): RelationshipDataOld {
     const metadata = ELEMENT_TYPES[elementType as ElementTypeId];
     const color = metadata?.color.headerBg ?? 'bg-gray-600';
 

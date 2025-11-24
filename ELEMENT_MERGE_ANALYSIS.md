@@ -102,19 +102,20 @@ SchemaGraph (type alias)
 ## Interface Cleanup Proposal
 
 ### types.ts (Source Data Layer)
-**Keep**: All DTOs and SchemaData - these are the data shapes from JSON
-**Move out**: `SelectedElement` → ComponentData.ts (UI concern)
+- rename to import_types.ts
+- **Keep**: All DTOs and SchemaData - these are the data shapes from JSON
+- **Move out**: `SelectedElement` → ComponentData.ts (UI concern)
 
 ### ComponentData.ts (UI Contracts)
-**Keep**: All current interfaces - these are component contracts
-**Add**: `SelectedElement` from types.ts
-**Add**: `DetailSection`, `DetailData` from ElementPreRefactor (detail panel is UI)
-**Remove**: Nothing (all good)
+- **Keep**: All current interfaces - these are component contracts
+- **Add**: `SelectedElement` from types.ts
+- **Add**: `DetailSection`, `DetailData` from ElementPreRefactor (detail panel is UI)
+- **Remove**: Nothing (all good)
 
 ### DataService.ts (Service Layer)
-**Remove**: `FloatingBoxMetadata` (duplicate of ComponentData.ts)
-**Remove**: Old `SlotInfo`, `RelationshipData` (deprecated, will be deleted with refactor)
-**Keep**: Service should import from ComponentData.ts and Element.ts, not define its own
+- **Remove**: `FloatingBoxMetadata` (duplicate of ComponentData.ts)
+- **Remove**: Old `SlotInfo`, `RelationshipData` (deprecated, will be deleted with refactor)
+- **Keep**: Service should import from ComponentData.ts and Element.ts, not define its own
 
 ### Element.ts (Model Layer - Edge-based)
 **Add from ElementPreRefactor**:

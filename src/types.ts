@@ -1,7 +1,5 @@
 // Core type definitions for the LinkML model and variable specs
 
-import type { Element } from './models/Element';
-
 // ============================================================================
 // DTOs - Raw data shapes from external sources (snake_case from JSON/files)
 // ============================================================================
@@ -255,13 +253,7 @@ export interface EnumValue {
 //
 // NOTE: Generic tree structure (TreeNode<T>, Tree<T>) is in models/Tree.ts
 
-/**
- * Type alias for selected elements in the UI
- * Now just an alias to Element - all element instances are Element subclasses
- *
- * @deprecated Use Element directly from models/Element
- */
-export type SelectedElement = Element;
+// SelectedElement moved to contracts/ComponentData.ts
 
 /**
  * Model data structure - all element data is accessed via collections

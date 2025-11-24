@@ -13,6 +13,18 @@
  * See CLAUDE.md for separation of concerns principles.
  */
 
+import type { Element } from '../models/Element';
+
+// ============================================================================
+// Element Selection (DEPRECATED)
+// ============================================================================
+
+/**
+ * @deprecated Use Element directly from models/Element via DataService
+ * This alias exists for backward compatibility only.
+ */
+export type SelectedElement = Element;
+
 // ============================================================================
 // Section Component Contracts
 // ============================================================================
@@ -112,4 +124,33 @@ export interface FloatingBoxData {
   position?: { x: number; y: number };
   size?: { width: number; height: number };
   isUserPositioned?: boolean;  // True if user has moved/resized this box
+}
+
+// ============================================================================
+// DetailPanel Component Contracts
+// ============================================================================
+
+/**
+ * DetailSection - Section data for detail panel display
+ * Used by DetailContent component to render information sections.
+ */
+export interface DetailSection {
+  name: string;
+  text?: string;
+  tableHeadings?: string[];
+  tableContent?: unknown[][];
+  tableHeadingColor?: string; // Tailwind classes for heading background
+}
+
+/**
+ * DetailData - Complete data for detail panel rendering
+ * Provided by DataService; component defines what it needs for display.
+ */
+export interface DetailData {
+  titlebarTitle: string;    // "Class: Specimen"
+  title: string;            // "Specimen"
+  subtitle?: string;        // "extends Entity"
+  titleColor: string;       // From ELEMENT_TYPES[type].color
+  description?: string;
+  sections: DetailSection[];
 }
