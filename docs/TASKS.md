@@ -14,19 +14,7 @@
 3. **Specimen→analyte_type link missing** (see screenshot in old TASKS.md:107)
 4. **SVG path NaN errors** - Console shows `<path> attribute d: Expected number, "M NaN NaN C NaN Na..."`
    - **Location**: LinkOverlay.tsx:448 (path element at line 450: `d={pathData}`)
-   - **Root cause**: Invalid coordinates from `getBoundingClientRect()` passed to path generation
-   - **Flow**: `getBoundingClientRect()` → `calculateCrossPanelAnchors()` → `generateDirectionalBezierPath()` → path string with NaN
-   - **Why**: Elements exist in relationship data but either:
-     - Not rendered in DOM yet / have invalid dimensions
-     - In weird layout state during initial render
-     - Missing defensive checks for invalid rect dimensions
-   - **Investigation**: LinkOverlay.tsx:384-421 (coordinate calculation flow)
-   - **Suggested fix**: Add validation before using DOMRect values:
-     ```typescript
-     if (!sourceRect.width || !sourceRect.height || !targetRect.width || !targetRect.height) {
-       return; // Skip invalid rects
-     }
-     ```
+   - something is wrong with the self-ref code on lines 403-412
 
 ### Hover/Detail Box Issues
 5. **Slot hover shows "No relationships found"** - RelationshipInfoBox broken for slots

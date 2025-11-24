@@ -970,7 +970,7 @@ export class ClassElement extends Range {
         if (!range) return;
 
         const rangeCategory = categorizeRange(range);
-        if (rangeCategory !== 'primitive') {
+        if (rangeCategory !== 'primitive') {  // [sg] does this still make sense?
           rels.push({
             type: 'property',
             label: propName,
