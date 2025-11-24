@@ -10,7 +10,7 @@
  * UI layer uses "item" terminology
  */
 
-import { useMemo, useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import type { DataService } from '../services/DataService';
 import {
   generateSelfRefPath,

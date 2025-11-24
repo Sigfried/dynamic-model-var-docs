@@ -10,19 +10,13 @@
 ## 🚨 CRITICAL: NEVER DESTROY UNCOMMITTED WORK 🚨
 
 **NEVER run commands that could lose uncommitted changes:**
-- ❌ `git restore <file>` - NEVER run this
-- ❌ `git checkout <file>` - NEVER run this
-- ❌ `git reset --hard` - NEVER run this
-- ❌ `git clean -fd` - NEVER run this
-- ❌ Any command that reverts/discards local changes
+- ❌ `git restore <file>`, `git checkout <file>`, `git reset --hard`, `git clean -fd`
 
 **Instead:**
 1. Run `git status` and `git diff` to see what would be lost
 2. Tell the user what you found
-3. Suggest commands for them to run (e.g., "You could run `git restore <file>` to discard these changes")
+3. Suggest commands for them to run
 4. Let the user decide and run the commands themselves
-
-**Why this matters**: The user may have uncommitted work that isn't backed up elsewhere. Even if you think changes are "broken" or "not worth keeping," that's not your decision to make. Always preserve the user's work and let them decide what to discard.
 
 ---
 
@@ -135,146 +129,25 @@ const info = element.getDisplayInfo();
 - Model layer can be refactored without touching UI
 - Easy to mock DataService for testing
 
-### Hierarchical Data
-
-Element classes have built-in tree support via `parent` and `children` properties. Use these directly:
-
-```typescript
-// Element base class provides tree operations
-element.parent         // Parent element (or null for roots)
-element.children       // Child elements array
-element.ancestorList   // Array of ancestors from root to this element
-element.traverse()     // Depth-first traversal with callback
-```
-
-### Structural Not Semantic Categorization
-
-- **✅ Safe approach**: Categorize by structural properties (range value: primitive/enum/class)
-- **❌ Brittle approach**: Hard-code semantic categories like "containment" vs "association" vs "activity"
-- **Why**: Schema changes would break semantic categorizations
-- **Safe filtering**: By element type (class, enum, slot, variable)
-
-### Config-Based Abstraction Pattern
-
-When you have similar code repeated across multiple types, consider using **config objects** instead of imperative code.
-
-**Example: Relationship computation (decided NOT to implement, but kept as pattern example)**
-
-Instead of:
-```typescript
-// Imperative approach - lots of similar code
-if (element.type === 'class' && cls.parentName === element.name) {
-  incoming.subclasses.push(cls.name);
-}
-if (element.type === 'enum' || element.type === 'slot') {
-  if (cls.attributes) {
-    for (const [attrName, attrDef] of Object.entries(cls.attributes)) {
-      if (attrDef.range === element.name) {
-        incoming.usedByAttributes.push({ ... });
-      }
-    }
-  }
-}
-```
-
-Could use config:
-```typescript
-// Declarative approach - config object
-const RELATIONSHIP_CONFIG = [
-  {
-    thisType: 'Class',
-    thisProp: 'id',
-    direction: 'incoming',
-    otherType: 'Class',
-    otherProp: 'parentId',
-    label: 'has subclass',
-    cardinality: 'many-1'
-  },
-  {
-    thisType: 'Enum',
-    thisProp: 'id',
-    direction: 'incoming',
-    otherType: 'Class',
-    otherProp: (cls) => cls.classSlots.map(slot => slot.range),
-    label: 'usedBy',
-    cardinality: 'many-many'
-  }
-];
-
-// Generic processor uses config
-function computeRelationships(element, config) { ... }
-```
-
-**When to use config:**
-- Many similar cases (10+) with slight variations
-- Pattern is truly declarative (not hiding complex logic)
-- Config would be significantly shorter than imperative code
-- Need to generate documentation from relationships
-
-**When NOT to use:**
-- Only 4-5 types (current code is fine)
-- Logic has complex conditionals (config becomes unreadable)
-- Type safety would be lost
-
 ### Element Identity: .name vs getId()
 
-**TL;DR:** `getId()` without context returns the same value as `.name`. Use `.name` for display, `getId()` for identity/comparisons.
-
-**getId() signature:**
-```typescript
-getId(context?: 'leftPanel' | 'rightPanel' | 'detailBox'): string
-```
-
-**Behavior:**
-- With context: Returns prefixed ID (e.g., `'lp-Specimen'`, `'rp-Specimen'`, `'db-Specimen'`)
-- Without context: Returns `this.name` (e.g., `'Specimen'`)
+**TL;DR:** Use `.name` for display, `getId()` for identity/comparisons.
 
 **When to use .name:**
-- ✅ Display purposes (titles, labels)
-  ```typescript
-  title: this.name
-  displayName: this.name
-  ```
-- ✅ Sorting by display name
-  ```typescript
-  elements.sort((a, b) => a.name.localeCompare(b.name))
-  ```
+- ✅ Display purposes (titles, labels, sorting)
 
 **When to use getId():**
 - ✅ Identity comparisons and relationships
-  ```typescript
-  if (classSlot.range === thisElement.getId()) { ... }
-  if (otherClass.parentName === thisElement.getId()) { ... }
-  ```
 - ✅ Building data structures for relationships
-  ```typescript
-  incoming.subclasses.push(otherClass.getId());
-  className: otherClass.getId()
-  ```
 
 **When to use getId(context):**
 - ✅ DOM IDs that need panel-specific uniqueness
-  ```typescript
-  // Currently not used - DOM IDs use ${type}-${name} pattern instead
-  // Could use getId(context) if we need to distinguish same element across panels
-  ```
-
-**Special cases:**
-- **parentName field**: Currently named `parentName` but stores an identifier. Could be renamed to `parentId` for clarity, but functionally equivalent since it's compared to `getId()` which returns `name`.
-- **UI state keys** (expanded items, selections): Use `.name` since they're keying off display identity
-  ```typescript
-  expandedItems.has(this.name)
-  expanded.add(element.name)
-  ```
-
-**Current pattern (post-refactoring):**
-- computeIncomingRelationships: Uses `getId()` for all identity comparisons ✅
-- ClassSlot.range: Now a getter that returns effective range, compared using `getId()` ✅
-- RelationshipData: All type fields use `string` instead of `ElementTypeId` ✅
 
 ---
 
-## 🔧 TypeScript Build Configuration
+## 🔧 WORKFLOW
+
+### TypeScript Build Configuration
 
 **CRITICAL**: Always use `npm run typecheck` before committing!
 
@@ -287,10 +160,10 @@ getId(context?: 'leftPanel' | 'rightPanel' | 'detailBox'): string
 
 ---
 
-## 📋 Current Task
+## 📋 CURRENT TASK
 
 See **[TASKS.md](TASKS.md)** for:
-- Questions & Decisions Needed
-- Current Task (what to work on now)
+- Current Bugs
 - Upcoming Work (ordered list)
 - Future Ideas (unprioritized)
+- Pending Decisions
