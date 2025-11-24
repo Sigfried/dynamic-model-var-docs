@@ -12,12 +12,27 @@
 1. **Class→slot links pointing wrong direction** (3-panel mode)
 2. **No link highlight on item hover**
 3. **Specimen→analyte_type link missing** (see screenshot in old TASKS.md:107)
+4. **SVG path NaN errors** - Console shows `<path> attribute d: Expected number, "M NaN NaN C NaN Na..."`
+   - **Location**: LinkOverlay.tsx:448 (path element at line 450: `d={pathData}`)
+   - **Root cause**: Invalid coordinates from `getBoundingClientRect()` passed to path generation
+   - **Flow**: `getBoundingClientRect()` → `calculateCrossPanelAnchors()` → `generateDirectionalBezierPath()` → path string with NaN
+   - **Why**: Elements exist in relationship data but either:
+     - Not rendered in DOM yet / have invalid dimensions
+     - In weird layout state during initial render
+     - Missing defensive checks for invalid rect dimensions
+   - **Investigation**: LinkOverlay.tsx:384-421 (coordinate calculation flow)
+   - **Suggested fix**: Add validation before using DOMRect values:
+     ```typescript
+     if (!sourceRect.width || !sourceRect.height || !targetRect.width || !targetRect.height) {
+       return; // Skip invalid rects
+     }
+     ```
 
 ### Hover/Detail Box Issues
-4. **Slot hover shows "No relationships found"** - RelationshipInfoBox broken for slots
+5. **Slot hover shows "No relationships found"** - RelationshipInfoBox broken for slots
 
 ### Positioning Issues
-5. **Detail box positioning bugs** - Multiple issues from Unified Detail Box work:
+6. **Detail box positioning bugs** - Multiple issues from Unified Detail Box work:
    - Remove unnecessary isStacked logic (#3)
    - Make stacked width responsive (#4)
    - Fix transitory/persistent box upgrade (#6)
@@ -29,13 +44,6 @@
 ## 📋 Upcoming Work (Ordered by Priority)
 
 ### High Priority
-
-**LinkOverlay fixes**
-- Currently active work fixing 3-panel display issues
-- See current bugs above
-- Refactoring plans:
-  - [UI_REFACTOR.md § LinkOverlay](UI_REFACTOR.md#1-linkoverlay-refactor)
-  - [LINKOVERLAY_REFACTOR_PLAN.md](../LINKOVERLAY_REFACTOR_PLAN.md) (some content may still be relevant)
 
 **Complete Graph Refactor (Steps 6-7)**
 - **Step 1**: Merge Element.ts and ElementPreRefactor.ts into single file
@@ -50,6 +58,13 @@
   - Remove ClassSlot class (replaced by graph slot edges)
 - See Element.ts:1-68 for full migration plan
 - Eliminates subclass-specific code, completes Slots-as-Edges refactor
+
+**LinkOverlay fixes**
+- Currently active work fixing 3-panel display issues
+- See current bugs above
+- Refactoring plans:
+    - [UI_REFACTOR.md § LinkOverlay](UI_REFACTOR.md#1-linkoverlay-refactor)
+    - [LINKOVERLAY_REFACTOR_PLAN.md](../LINKOVERLAY_REFACTOR_PLAN.md) (some content may still be relevant)
 
 **URLs as clickable links**
 - Display URIs as clickable links in detail panels

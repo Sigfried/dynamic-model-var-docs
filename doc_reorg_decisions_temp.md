@@ -411,3 +411,64 @@ Remaining medium-priority tasks:
 Low-priority tasks:
 - Merge TESTING.md with TESTING.root-snapshot file (if super easy)
 - Review DOC_CONVENTIONS.md at end of refactor
+
+---
+
+## 🎉 UPDATE - REFACTOR_PLAN Content Extraction Complete!
+
+**Date:** 2025-01-24
+**Commit:** 15c2cf4
+
+### What Was Done
+✅ **REFACTOR_PLAN content extracted** to active documentation
+
+**Task 1: Added Proposed Architecture to README.md**
+- Added "Graph-Based Architecture (Slots-as-Edges)" section
+- Documents graph structure (nodes, edges, three-panel layout)
+- Explains slot dual-role as nodes and edges
+- Located after "Key Architecture Patterns" section
+
+**Task 2: Added Detail Box Requirements to UI_REFACTOR.md**
+- Extracted from REFACTOR_PLAN Stage 4
+- Slot display requirements (clickable/hoverable ranges, metadata)
+- Located in middle of file (lines 422-431)
+
+**Task 3: Expanded LinkML Features in TASKS.md**
+- Added 8 specific features from LinkML documentation to consider
+- Terminology (direct vs induced slots), inheritance visualization, cardinality notation
+- Located in "Neighborhood Zoom + Feature Parity with Official Docs" section
+
+**Result:** REFACTOR_PLAN.md can now be archived
+
+---
+
+## 🎉 UPDATE - Graph Refactor Task Clarified and Prioritized!
+
+**Date:** 2025-01-24
+**Commits:** fcef68f, a81d511
+
+### What Was Done
+✅ **"Complete Graph Refactor" task clarified** with 3 specific steps
+✅ **Task moved to High Priority** (completes core Slots-as-Edges refactor)
+
+**Clarification:**
+- Found vague "Element.ts organization" task in Low Priority
+- Expanded into detailed 3-step plan:
+  - Step 1: Merge Element.ts and ElementPreRefactor.ts into single file
+  - Step 2: Migrate LinkOverlay to use `getRelationshipsNew()` (graph-based)
+  - Step 3: Remove old subclass-specific `getRelationships()` methods
+- Linked to full migration plan in Element.ts:1-68
+
+**Priority Correction:**
+- User feedback: "this is a primary part of the graph refactor, not low priority"
+- Moved from Low Priority to High Priority section in TASKS.md
+- Correctly positioned as completing the Slots-as-Edges architecture
+
+### What's Next
+**Documentation cleanup phase COMPLETE!**
+
+Next work from TASKS.md High Priority:
+1. LinkOverlay fixes (current bugs - class→slot direction, hover highlights, missing links)
+2. Complete Graph Refactor (Steps 6-7 - just clarified above)
+3. URLs as clickable links
+4. selfRefs (loop links)
