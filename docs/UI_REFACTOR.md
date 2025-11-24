@@ -732,6 +732,30 @@ See [TASKS.md - Unified Detail Box System](TASKS.md#unified-detail-box-system---
 
 ---
 
+## Appendix: Relationship Type Analysis
+
+> **Source:** Extracted from DATA_FLOW.md before archiving (2025-01-24)
+> This reference table documents the semantic meaning of relationships in the model.
+
+### Relationship Type Table
+
+This table maps semantic relationships to current and proposed implementations:
+
+| **From** | **To** | **Current Type** | **Proposed Edge Type** | **Edge Label (UI)** | **Notes** |
+|----------|--------|------------------|------------------------|---------------------|-----------|
+| Class | Parent Class | `inherits` | `inherits` | "inherits from" / "is_a" | Tree structure (parent/child) |
+| Class | Subclass | *(computed incoming)* | `has_subclass` | "has subclass" | Reverse of inherits |
+| Class | Enum (via attribute) | `property` | `has_attribute` + `constrained_by` | "has attribute {name} constrained by {enum}" | Compound: Class→Attribute→Enum |
+| Class | Class (via attribute) | `property` | `has_attribute` + `references` | "has attribute {name} referencing {class}" | Compound: Class→Attribute→Class |
+| Class | Slot (via slot reference) | *(implicit in slots[])* | `uses_slot` | "uses slot" | Class references global slot |
+| Class | Slot (via slot_usage override) | *(implicit in slot_usage{})* | `overrides_slot` | "overrides slot" | Class overrides global slot |
+| Slot | Class/Enum (via range) | `property` | `constrained_by` | "constrained by" | Slot's range restriction |
+| Enum | Class (via usage) | *(computed incoming)* | `constrains_attribute` | "constrains attribute {name} in {class}" | Reverse: Enum→Class that uses it |
+| Variable | Class | `property` (label='mapped_to') | `instantiates` / `maps_to` | "instantiates" / "maps to" | Variable is instance of Class |
+| Class | Variables | *(via VariableCollection grouping)* | `has_instances` | "has instances" | Reverse: Class→Variables |
+
+---
+
 ## Success Metrics
 
 Post-refactor, we should see:

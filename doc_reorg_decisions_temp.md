@@ -337,3 +337,77 @@ Continue with Option 3: Consolidate CLAUDE.md based on the decisions
 in doc_reorg_decisions_temp.md (see "docs/CLAUDE.md (Q19)" section).
 Goal: Make it more succinct while keeping critical principles.
 ```
+
+---
+
+## 🎉 UPDATE - CLAUDE.md Consolidation Complete!
+
+**Date:** 2025-01-24
+**Commit:** 62cee49
+
+### What Was Done
+✅ **CLAUDE.md consolidated** - Down from 297 to 169 lines (43% reduction)
+
+**Removed/Simplified:**
+- Made "NEVER DESTROY UNCOMMITTED WORK" more succinct (removed redundant bullets)
+- Deleted "Hierarchical Data" section (obsolete)
+- Deleted "Structural Not Semantic Categorization" (obsolete)
+- Deleted "Config-Based Abstraction Pattern" (58 lines for unimplemented pattern)
+- Simplified "Element Identity" to essentials (details baked into code)
+- Reorganized TypeScript config under new "WORKFLOW" section
+- Updated "CURRENT TASK" to match new TASKS.md structure
+
+**Kept Important Principles:**
+- Critical architectural principle (separation of model/view concerns)
+- Architectural enforcement (ESLint rules)
+- DTOs vs Domain Models vs DataService
+- Element Identity guidance
+
+**Bonus:** Fixed unused useMemo import in LinkOverlay.tsx
+
+### What's Next
+**Next task: Review and consolidate DATA_FLOW.md**
+
+From decisions at line 284-289:
+- Haven't looked at in a long time
+- Some probably obsolete, lots overlaps with plans elsewhere
+- Needs careful review and merging anything important into other docs
+
+---
+
+## 🎉 UPDATE - DATA_FLOW.md Archived!
+
+**Date:** 2025-01-24
+**Commits:** (pending)
+
+### What Was Done
+✅ **DATA_FLOW.md archived** - 1,264 lines of pre-refactor architecture documentation moved to archive/
+
+**Assessment:**
+- File explicitly marked as "pre-Slots-as-Edges architecture"
+- Last updated Nov 17, 2025 (2 months ago)
+- Most content describes old architecture that has been refactored
+- Planning sections reference REFACTOR_PLAN.md (now archived)
+- LinkOverlay refactor partially done (dom-based-link-overlay merged)
+
+**Extracted to UI_REFACTOR.md:**
+- Relationship Type Analysis table (10 relationship types documented)
+- Semantic Relationship Patterns (tree/cross-reference/compound)
+- Implementation approaches for compound relationships
+
+**Archived:**
+- Detailed pre-refactor data flow (1200+ lines)
+- Old collection creation details
+- Slot system complexity analysis
+- Redundancy analysis (resolved)
+- Planning docs already extracted elsewhere
+
+### What's Next
+**Documentation cleanup is nearly complete!**
+
+Remaining medium-priority tasks:
+- Add graph model patterns, SlotEdge architecture docs (from archived REFACTOR_PLAN)
+
+Low-priority tasks:
+- Merge TESTING.md with TESTING.root-snapshot file (if super easy)
+- Review DOC_CONVENTIONS.md at end of refactor

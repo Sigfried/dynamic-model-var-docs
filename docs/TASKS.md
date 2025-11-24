@@ -125,15 +125,12 @@ See separate document for these (TBD - for now, see old TASKS.md lines 449-815):
 
 **✅ Completed:**
 - Deleted obsolete files (COMPONENT_FLOW.md, GRAPHOLOGY_DESIGN.md, scripts/README.md)
-- Archived completed docs (PROGRESS.md, REFACTOR_PLAN.md)
+- Archived completed docs (PROGRESS.md, REFACTOR_PLAN.md, DATA_FLOW.md)
 - TASKS.md: Restructured and streamlined (this file!)
-
-**In Progress:**
-- Systematic doc review captured in doc_reorg_decisions_temp.md
+- CLAUDE.md: Consolidated and simplified (297 → 169 lines, 43% reduction)
+- DATA_FLOW.md: Extracted relationship table to UI_REFACTOR.md, archived (1264 lines of pre-refactor content)
 
 **Medium Priority:**
-- CLAUDE.md: Consolidate and simplify sections
-- DATA_FLOW.md: Review carefully, merge important bits to other docs
 - Add graph model patterns, SlotEdge architecture docs (from completed REFACTOR_PLAN)
 
 **Low Priority:**
