@@ -21,8 +21,13 @@ import type { SectionData } from '../components/Section';
 // NEW: Import edge-based interfaces for Slots-as-Edges refactor
 import type {
   LinkPair,
-  RelationshipData as RelationshipDataNew
+  RelationshipData as RelationshipDataNew,
+  EdgeInfo,
+  ItemInfo
 } from '../models/Element';
+
+// Re-export new types for UI components
+export type { EdgeInfo, ItemInfo, RelationshipDataNew };
 
 export interface FloatingBoxMetadata {
   title: string;

@@ -14,7 +14,8 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import type { DataService, SlotInfo } from '../services/DataService';
+import type { DataService } from '../services/DataService';
+import type { EdgeInfo } from '../models/Element';
 
 interface RelationshipInfoBoxProps {
   itemId: string | null;
@@ -159,26 +160,51 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
     return null;
   }
 
-  // Get relationship data from data service
-  const details = dataService.getRelationships(displayedItemId);
+  // Get relationship data from data service (new graph-based format)
+  const relationshipData = dataService.getRelationshipsNew(displayedItemId);
 
-  if (!details) return null;
+  if (!relationshipData) return null;
+
+  // Transform EdgeInfo[] arrays into display structure
+  const { thisItem, outgoing, incoming } = relationshipData;
+
+  // Group outgoing edges by type
+  const inheritanceEdge = outgoing.find(e => e.edgeType === 'inheritance');
+  const directSlots = outgoing.filter(e => e.edgeType === 'property' && !e.inheritedFrom);
+
+  // Group inherited slots by ancestor
+  const inheritedSlotsMap = new Map<string, EdgeInfo[]>();
+  outgoing
+    .filter(e => e.edgeType === 'property' && e.inheritedFrom)
+    .forEach(edge => {
+      const ancestor = edge.inheritedFrom!;
+      if (!inheritedSlotsMap.has(ancestor)) {
+        inheritedSlotsMap.set(ancestor, []);
+      }
+      inheritedSlotsMap.get(ancestor)!.push(edge);
+    });
+
+  // Group incoming edges by type
+  const incomingInheritance = incoming.filter(e => e.edgeType === 'inheritance');
+  const incomingProperties = incoming.filter(e => e.edgeType === 'property');
+  const incomingVariables = incoming.filter(e => e.edgeType === 'variable_mapping');
 
   // Helper to make item names clickable
   const makeClickable = (
-    name: string,
+    itemId: string,
+    displayName: string,
     section: string,
     className: string
   ) => {
     if (!onNavigate) {
-      return <span className={className}>{name}</span>;
+      return <span className={className}>{displayName}</span>;
     }
     return (
       <button
-        onClick={() => onNavigate(name, section)}
+        onClick={() => onNavigate(itemId, section)}
         className={`${className} hover:underline cursor-pointer`}
       >
-        {name}
+        {displayName}
       </button>
     );
   };
@@ -221,30 +247,34 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
   // Helper to render collapsible inherited slots for a specific ancestor
   const renderCollapsibleInheritedSlots = (
     ancestorName: string,
-    slots: SlotInfo[],
+    edges: EdgeInfo[],
     threshold: number = 20
   ) => {
     const isExpanded = expandedSections.inheritedSlots[ancestorName] || false;
-    const shouldCollapse = slots.length > threshold;
-    const visibleSlots = shouldCollapse && !isExpanded ? slots.slice(0, 10) : slots;
-    const remainingCount = slots.length - 10;
+    const shouldCollapse = edges.length > threshold;
+    const visibleEdges = shouldCollapse && !isExpanded ? edges.slice(0, 10) : edges;
+    const remainingCount = edges.length - 10;
 
     return (
       <>
-        {visibleSlots.map((slot, slotIdx) => (
-          <div key={slotIdx} className="text-sm text-gray-900 dark:text-gray-100">
-            <span className="text-green-600 dark:text-green-400">{slot.attributeName}</span>
-            {' → '}
-            {makeClickable(
-              slot.target,
-              slot.targetSection,
-              slot.isSelfRef ? "text-orange-600 dark:text-orange-400" : "text-blue-600 dark:text-blue-400"
-            )}
-            <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">
-              ({slot.targetSection}{slot.isSelfRef ? ', self-ref' : ''})
-            </span>
-          </div>
-        ))}
+        {visibleEdges.map((edge, edgeIdx) => {
+          const isSelfRef = edge.otherItem.id === thisItem.id;
+          return (
+            <div key={edgeIdx} className="text-sm text-gray-900 dark:text-gray-100">
+              <span className="text-green-600 dark:text-green-400">{edge.label || 'unknown'}</span>
+              {' → '}
+              {makeClickable(
+                edge.otherItem.id,
+                edge.otherItem.displayName,
+                edge.otherItem.typeDisplayName.toLowerCase(),
+                isSelfRef ? "text-orange-600 dark:text-orange-400" : "text-blue-600 dark:text-blue-400"
+              )}
+              <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">
+                ({edge.otherItem.typeDisplayName}{isSelfRef ? ', self-ref' : ''})
+              </span>
+            </div>
+          );
+        })}
         {shouldCollapse && !isExpanded && (
           <button
             onClick={() => setExpandedSections(prev => ({
@@ -271,11 +301,8 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
     );
   };
 
-  const hasOutgoing = details.outgoing.inheritance || details.outgoing.slots.length > 0;
-  const hasIncoming =
-    details.incoming.subclasses.length > 0 ||
-    details.incoming.usedByAttributes.length > 0 ||
-    details.incoming.variables.length > 0;
+  const hasOutgoing = inheritanceEdge || directSlots.length > 0 || inheritedSlotsMap.size > 0;
+  const hasIncoming = incomingInheritance.length > 0 || incomingProperties.length > 0 || incomingVariables.length > 0;
 
   if (!hasOutgoing && !hasIncoming) {
     return (
@@ -286,9 +313,9 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
         onMouseLeave={handleBoxMouseLeave}
         onClick={handleBoxClick}
       >
-        <div className={`${details.color} px-4 py-2 rounded-t-lg border-b`}>
+        <div className={`${thisItem.color} px-4 py-2 rounded-t-lg border-b`}>
           <h3 className="font-semibold text-white">
-            {details.itemName} relationships
+            {thisItem.displayName} relationships
           </h3>
         </div>
         <div className="p-4">
@@ -299,8 +326,8 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
   }
 
   // Count relationships
-  const outgoingCount = (details.outgoing.inheritance ? 1 : 0) + details.outgoing.slots.length;
-  const incomingCount = details.incoming.subclasses.length + details.incoming.usedByAttributes.length + details.incoming.variables.length;
+  const outgoingCount = (inheritanceEdge ? 1 : 0) + directSlots.length;
+  const incomingCount = incomingInheritance.length + incomingProperties.length + incomingVariables.length;
 
   return (
     <div
@@ -310,9 +337,9 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
       onMouseLeave={handleBoxMouseLeave}
       onClick={handleBoxClick}
     >
-      <div className={`${details.color} px-4 py-2 rounded-t-lg border-b`}>
+      <div className={`${thisItem.color} px-4 py-2 rounded-t-lg border-b`}>
         <h3 className="font-semibold text-white flex items-center gap-2">
-          <span>{details.itemName} relationships</span>
+          <span>{thisItem.displayName} relationships</span>
           <span className="text-sm font-normal opacity-90">
             [↗ {outgoingCount} outgoing] [↙ {incomingCount} incoming]
           </span>
@@ -326,53 +353,64 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
           <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Outgoing:</h4>
 
           {/* Inheritance */}
-          {details.outgoing.inheritance && (
+          {inheritanceEdge && (
             <div className="mb-3">
               <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Inheritance:</div>
               <div className="ml-3 text-sm text-gray-900 dark:text-gray-100">
-                → {makeClickable(details.outgoing.inheritance.target, 'class', "text-blue-600 dark:text-blue-400")}
-                <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">({details.outgoing.inheritance.targetSection})</span>
+                → {makeClickable(
+                  inheritanceEdge.otherItem.id,
+                  inheritanceEdge.otherItem.displayName,
+                  inheritanceEdge.otherItem.typeDisplayName.toLowerCase(),
+                  "text-blue-600 dark:text-blue-400"
+                )}
+                <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">
+                  ({inheritanceEdge.otherItem.typeDisplayName})
+                </span>
               </div>
             </div>
           )}
 
           {/* Slots */}
-          {details.outgoing.slots.length > 0 && (
+          {directSlots.length > 0 && (
             <div>
               <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Slots:</div>
               <div className="ml-3 space-y-1">
                 {renderCollapsibleList(
-                  details.outgoing.slots,
+                  directSlots,
                   'slots',
-                  (prop, idx) => (
-                    <div key={idx} className="text-sm text-gray-900 dark:text-gray-100">
-                      <span className="text-green-600 dark:text-green-400">{prop.attributeName}</span>
-                      {' → '}
-                      {makeClickable(
-                        prop.target,
-                        prop.targetSection,
-                        prop.isSelfRef ? "text-orange-600 dark:text-orange-400" : "text-blue-600 dark:text-blue-400"
-                      )}
-                      <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">
-                        ({prop.targetSection}{prop.isSelfRef ? ', self-ref' : ''})
-                      </span>
-                    </div>
-                  )
+                  (edge, idx) => {
+                    const isSelfRef = edge.otherItem.id === thisItem.id;
+                    return (
+                      <div key={idx} className="text-sm text-gray-900 dark:text-gray-100">
+                        <span className="text-green-600 dark:text-green-400">{edge.label || 'unknown'}</span>
+                        {' → '}
+                        {makeClickable(
+                          edge.otherItem.id,
+                          edge.otherItem.displayName,
+                          edge.otherItem.typeDisplayName.toLowerCase(),
+                          isSelfRef ? "text-orange-600 dark:text-orange-400" : "text-blue-600 dark:text-blue-400"
+                        )}
+                        <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">
+                          ({edge.otherItem.typeDisplayName}{isSelfRef ? ', self-ref' : ''})
+                        </span>
+                      </div>
+                    );
+                  }
                 )}
               </div>
             </div>
           )}
 
           {/* Inherited Slots */}
-          {details.outgoing.inheritedSlots.length > 0 && (
+          {inheritedSlotsMap.size > 0 && (
             <div className="mt-3">
-              {details.outgoing.inheritedSlots.map((ancestorGroup, groupIdx) => (
+              {Array.from(inheritedSlotsMap.entries()).map(([ancestorName, ancestorEdges], groupIdx) => (
                 <div key={groupIdx} className="mb-2">
                   <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                    Inherited from {ancestorGroup.ancestorName}:
+                    Inherited from {ancestorName}:
                   </div>
                   <div className="ml-3 space-y-1">
-                    {renderCollapsibleInheritedSlots(ancestorGroup.ancestorName, ancestorGroup.slots)}
+                    {renderCollapsibleInheritedSlots(ancestorName, ancestorEdges)}
                   </div>
                 </div>
               ))}
@@ -387,18 +425,23 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
           <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Incoming:</h4>
 
           {/* Subclasses */}
-          {details.incoming.subclasses.length > 0 && (
+          {incomingInheritance.length > 0 && (
             <div className="mb-3">
               <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                Subclasses ({details.incoming.subclasses.length}):
+                Subclasses ({incomingInheritance.length}):
               </div>
               <div className="ml-3 space-y-0.5">
                 {renderCollapsibleList(
-                  details.incoming.subclasses,
+                  incomingInheritance,
                   'subclasses',
-                  (subclass, idx) => (
+                  (edge, idx) => (
                     <div key={idx} className="text-sm text-gray-900 dark:text-gray-100">
-                      • {makeClickable(subclass, 'class', "text-blue-600 dark:text-blue-400")}
+                      • {makeClickable(
+                        edge.otherItem.id,
+                        edge.otherItem.displayName,
+                        edge.otherItem.typeDisplayName.toLowerCase(),
+                        "text-blue-600 dark:text-blue-400"
+                      )}
                     </div>
                   )
                 )}
@@ -407,21 +450,28 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
           )}
 
           {/* Used By Attributes */}
-          {details.incoming.usedByAttributes.length > 0 && (
+          {incomingProperties.length > 0 && (
             <div className="mb-3">
               <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                Used By ({details.incoming.usedByAttributes.length}):
+                Used By ({incomingProperties.length}):
               </div>
               <div className="ml-3 space-y-0.5">
                 {renderCollapsibleList(
-                  details.incoming.usedByAttributes,
+                  incomingProperties,
                   'usedBy',
-                  (usage, idx) => (
+                  (edge, idx) => (
                     <div key={idx} className="text-sm text-gray-900 dark:text-gray-100">
-                      {makeClickable(usage.className, 'class', "text-blue-600 dark:text-blue-400")}
+                      {makeClickable(
+                        edge.otherItem.id,
+                        edge.otherItem.displayName,
+                        edge.otherItem.typeDisplayName.toLowerCase(),
+                        "text-blue-600 dark:text-blue-400"
+                      )}
                       <span className="text-gray-500 dark:text-gray-400">.</span>
-                      <span className="text-green-600 dark:text-green-400">{usage.attributeName}</span>
-                      <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">({usage.sourceSection})</span>
+                      <span className="text-green-600 dark:text-green-400">{edge.label || 'unknown'}</span>
+                      <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">
+                        ({edge.otherItem.typeDisplayName})
+                      </span>
                     </div>
                   )
                 )}
@@ -430,18 +480,23 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
           )}
 
           {/* Variables */}
-          {details.incoming.variables.length > 0 && (
+          {incomingVariables.length > 0 && (
             <div>
               <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                Variables ({details.incoming.variables.length}):
+                Variables ({incomingVariables.length}):
               </div>
               <div className="ml-3 space-y-0.5">
                 {renderCollapsibleList(
-                  details.incoming.variables,
+                  incomingVariables,
                   'variables',
-                  (variable, idx) => (
+                  (edge, idx) => (
                     <div key={idx} className="text-sm text-gray-900 dark:text-gray-100">
-                      • {makeClickable(variable.name, 'variable', "text-purple-600 dark:text-purple-400")}
+                      • {makeClickable(
+                        edge.otherItem.id,
+                        edge.otherItem.displayName,
+                        edge.otherItem.typeDisplayName.toLowerCase(),
+                        "text-purple-600 dark:text-purple-400"
+                      )}
                     </div>
                   )
                 )}
