@@ -33,48 +33,70 @@
 
 ### High Priority
 
-**Complete Graph Refactor (Steps 6-7)**
-- ✅ **Step 1**: Merge Element.ts and ElementPreRefactor.ts into single file
+**Complete Graph Refactor and Element Architecture Refactor**
+
+Ordered by implementation dependencies. See [archive/ELEMENT_MERGE_ANALYSIS.md](docs/archive/ELEMENT_MERGE_ANALYSIS.md) for merge history.
+
+### Phase 1: UI Layer Cleanup (Low Risk)
+
+**Step 1: Move UI types out of Element.ts** 🔲
+- Move `ItemInfo`, `EdgeInfo`, `RelationshipData` to ComponentData.ts
+- Element.ts should contain only model-layer types
+- **Why first**: Clarifies model/UI separation before other refactors
+- **Dependencies**: None
+
+**Step 2: Rename types.ts → import_types.ts** 🔲
+- Clarifies these are DTOs for raw data transformation
+- Used ONLY by dataLoader
+- **Why second**: Independent, clarifies DTO purpose for later work
+- **Dependencies**: None
+
+### Phase 2: LinkOverlay Migration (Medium Risk)
+
+**Step 3: Migrate LinkOverlay to graph-based relationships** 🔲
+- Update to use `getAllPropertyEdges()` instead of old `getRelationships()`
+- Uses graph edges instead of subclass-specific `this.attributes`
+- Fix 3-panel display bugs while migrating
+- **Why third**: Needs UI types moved first (Phase 1), enables Phase 3
+- **Dependencies**: ItemInfo/EdgeInfo in ComponentData.ts
+
+**Step 4: Remove old getRelationships() methods** 🔲
+- Delete from ClassElement, EnumElement, SlotElement, VariableElement
+- Only keep graph-based `getRelationshipsFromGraph()`
+- Remove ClassSlot class (replaced by graph slot edges)
+- **Why fourth**: Can only do after LinkOverlay migration complete
+- **Dependencies**: Nothing using old methods
+
+### Phase 3: Data Flow Refactor (High Risk)
+
+**Step 5: Refactor data flow** 🔲
+```
+Current: DTOs → Element constructors → Domain Models
+Planned: DTOs → dataLoader transform → graph build → Element instances (reduced role)
+```
+- **Why fifth**: Major architectural change, needs working UI first
+- **Dependencies**: All UI using graph-based queries
+
+**Step 6: Remove DTO imports from Element.ts** 🔲
+- Element constructors should NOT take raw DTOs (ClassDTO, EnumDTO, etc.)
+- Only dataLoader should use DTOs
+- Element constructors take transformed data instead
+- **Why sixth**: Depends on data flow refactor
+- **Dependencies**: New data flow working
+
+**Step 7: Reduce Element subclass code** 🔲
+- Most behavior should move to graph queries or other layers
+- Element classes become thinner wrappers around graph data
+- Many methods can be replaced with graph queries
+- **Why last**: Final cleanup after everything else works
+- **Dependencies**: Graph as primary data source
+
+### Completed
+
+- ✅ **Merge Element.ts and ElementPreRefactor.ts**
   - Merged via git mv to preserve history
   - Renamed ItemInfoProposal → ItemInfo, EdgeInfoProposal → EdgeInfo
   - Old types renamed to *Deprecated for backward compatibility
-- **Step 2**: Migrate LinkOverlay to use graph-based relationships (TODO)
-  - Update to use `getRelationshipsNew()` instead of old `getRelationships()`
-  - Uses graph edges instead of subclass-specific `this.attributes`
-- **Step 3**: Remove old subclass-specific `getRelationships()` methods (TODO)
-  - Delete from ClassElement, EnumElement, SlotElement, VariableElement
-  - Only keep graph-based `getRelationshipsFromGraph()`
-  - Remove ClassSlot class (replaced by graph slot edges)
-- **Step 4**: Refactor Element class architecture (TODO - see below)
-- See [archive/ELEMENT_MERGE_ANALYSIS.md](docs/archive/ELEMENT_MERGE_ANALYSIS.md) for merge history
-- Eliminates subclass-specific code, completes Slots-as-Edges refactor
-
-**Element Architecture Refactor**
-Reduce Element subclass code and improve data flow separation:
-
-1. **Rename types.ts → import_types.ts** (or raw_to_cooked_data_types.ts)
-   - Clarifies these are DTOs for raw data transformation
-   - Used ONLY by dataLoader
-
-2. **Remove DTO imports from Element.ts**
-   - Element constructors should NOT take raw DTOs (ClassDTO, EnumDTO, etc.)
-   - Only dataLoader should use DTOs
-   - Element constructors take transformed data instead
-
-3. **Move UI types out of Element.ts**
-   - `ItemInfo`, `EdgeInfo` are UI types → move to ComponentData.ts or new UI types file
-   - Element.ts should contain only model-layer types
-
-4. **Refactor data flow**:
-   ```
-   Current: DTOs → Element constructors → Domain Models
-   Planned: DTOs → dataLoader transform → graph build → Element instances (reduced role)
-   ```
-
-5. **Reduce Element subclass code**
-   - Most behavior should move to graph queries or other layers
-   - Element classes become thinner wrappers around graph data
-   - Many methods can be replaced with graph queries
 
 **LinkOverlay fixes**
 - Currently active work fixing 3-panel display issues
