@@ -27,13 +27,13 @@ import Graph from 'graphology';
 /**
  * Node types in the schema graph
  */
-export type NodeType = 'class' | 'enum' | 'slot' | 'type' | 'variable';
+type NodeType = 'class' | 'enum' | 'slot' | 'type' | 'variable';
 
 /**
  * Base attributes stored on all nodes
  * These are stored directly in graphology for efficient queries
  */
-export interface BaseNodeAttributes {
+interface BaseNodeAttributes {
   type: NodeType;
   name: string;  // Display name (same as node ID for most nodes)
 }
@@ -79,7 +79,7 @@ export interface VariableNodeAttributes extends BaseNodeAttributes {
 /**
  * Union of all node attributes
  */
-export type NodeAttributes =
+type NodeAttributes =
   | ClassNodeAttributes
   | EnumNodeAttributes
   | SlotNodeAttributes
@@ -93,12 +93,12 @@ export type NodeAttributes =
 /**
  * Edge types in the schema graph
  */
-export type EdgeType = 'inheritance' | 'slot' | 'maps_to';
+type EdgeType = 'inheritance' | 'slot' | 'maps_to';
 
 /**
  * Base attributes stored on all edges
  */
-export interface BaseEdgeAttributes {
+interface BaseEdgeAttributes {
   type: EdgeType;
 }
 

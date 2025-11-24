@@ -110,11 +110,37 @@ const info = element.getDisplayInfo();
 
 ### DTOs vs Domain Models vs DataService
 
+**Current Architecture** (being refactored):
 - **DTOs** (in `types.ts`): Raw data shapes from external sources (JSON files, APIs)
 - **Domain Models** (in `models/`): Classes with behavior and encapsulation
 - **DataService** (in `services/`): Abstraction layer between UI and models
 - **Pattern**: DTOs → Domain Models → DataService → UI Components
 - **Flow**: DTOs flow through dataLoader → collections construct domain models → DataService provides API → UI components consume
+
+**Planned Architecture Improvements** (see TASKS.md and [archive/ELEMENT_MERGE_ANALYSIS.md](docs/archive/ELEMENT_MERGE_ANALYSIS.md)):
+
+1. **types.ts → import_types.ts or raw_to_cooked_data_types.ts**
+   - Rename to clarify these are DTOs for raw data transformation
+   - Used ONLY by dataLoader, not by Element classes
+
+2. **Improved Data Flow**:
+   ```
+   JSON/YAML files
+     → dataLoader transforms raw DTOs → app-friendly data structures
+     → dataLoader builds graph from transformed data
+     → Element instances created from graph (reduced role)
+   ```
+
+3. **Element Architecture Changes**:
+   - Reduce Element subclass code (most should retire)
+   - Element constructors should NOT take raw DTOs
+   - Move behavior to graph queries and other layers
+   - Element classes become thinner wrappers around graph data
+
+4. **UI Type Separation**:
+   - `ItemInfo`, `EdgeInfo` are UI types → should move to ComponentData.ts
+   - Element.ts should not contain UI-specific interfaces
+   - Only model-layer types in Element.ts
 
 **Critical Rule**: UI components (in `src/components/` and `src/hooks/`) must:
 - ✅ Import from `services/DataService` (functions, types, interfaces)

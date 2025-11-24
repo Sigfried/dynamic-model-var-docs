@@ -100,14 +100,14 @@ if (element.type === 'slot') {
 
 ### Post-Refactor State (Simple)
 
-**New Data Structure:**
+**Data Structure:** Use existing `EdgeInfo` interface (from Element.ts)
 ```typescript
-interface LinkPair {
-  sourceId: string;
-  targetId: string;
-  sourceColor: string;  // For line gradient/styling
-  targetColor: string;
-  label?: string;  // slot/attribute name for property edges
+interface EdgeInfo {
+  edgeType: 'inheritance' | 'property' | 'variable_mapping';
+  sourceItem: ItemInfo;  // { id, displayName, typeDisplayName, color, panelPosition, panelId }
+  targetItem: ItemInfo;
+  label?: string;
+  inheritedFrom?: string;
 }
 ```
 
@@ -117,59 +117,59 @@ interface LinkPair {
 ```typescript
 class DataService {
   /**
-   * Get all linkable pairs for property edges (used by LinkOverlay).
+   * Get all property edges for LinkOverlay rendering.
    * Returns only property edges (class→enum/class relationships via attributes/slots).
    * Does NOT include inheritance or variable_mapping edges (those appear in detail views).
-   *
-   * DataService provides minimal edge data - LinkOverlay enhances with panel positions.
    */
-  getAllPairs(): LinkPair[] {
-    const pairs: LinkPair[] = [];
-    this.modelData.elementLookup.forEach(element => {
-      // Only get property edges (filter out inheritance, variable_mapping)
-      element.getEdges()
-        .filter(edge => edge.type === 'property')
-        .forEach(edge => {
-          pairs.push({
-            sourceId: element.id,
-            targetId: edge.targetId,
-            sourceColor: this.getColorForItemType(element.type),
-            targetColor: this.getColorForItemType(edge.targetType),
-            label: edge.label
-          });
+  getAllPropertyEdges(): EdgeInfo[] {
+    const edges: EdgeInfo[] = [];
+
+    // Query graph for all property edges
+    this.modelData.graph.forEachEdge((edgeId, attributes, source, target) => {
+      if (attributes.type === 'property') {
+        edges.push({
+          edgeType: 'property',
+          sourceItem: this.buildItemInfo(source),
+          targetItem: this.buildItemInfo(target),
+          label: attributes.label,
+          inheritedFrom: attributes.inheritedFrom
         });
+      }
     });
-    return pairs;
+
+    return edges;
   }
 }
 ```
 
 **LinkOverlay Component:**
 ```typescript
-// Post-refactor: DataService provides pairs, LinkOverlay handles panel orientation
+// Post-refactor: DataService provides EdgeInfo[], LinkOverlay filters by visibility
 function LinkOverlay({ leftSections, rightSections }: Props) {
-  const pairs = dataService.getAllPairs();
+  const allEdges = dataService.getAllPropertyEdges();
 
-  // Enhance pairs with panel positions for orientation
-  const orientedPairs = pairs.map(pair => {
-    const sourcePanel = findPanel(pair.sourceId, leftSections, rightSections);
-    const targetPanel = findPanel(pair.targetId, leftSections, rightSections);
+  // Filter to only visible cross-panel links
+  const visibleEdges = allEdges.filter(edge => {
+    const sourceInLeft = leftSections.has(edge.sourceItem.id);
+    const sourceInRight = rightSections.has(edge.sourceItem.id);
+    const targetInLeft = leftSections.has(edge.targetItem.id);
+    const targetInRight = rightSections.has(edge.targetItem.id);
 
-    return {
-      ...pair,
-      sourcePanel,
-      targetPanel,
-      orientation: sourcePanel === 'left' && targetPanel === 'right' ? 'ltr' : 'rtl'
-    };
+    const sourceVisible = sourceInLeft || sourceInRight;
+    const targetVisible = targetInLeft || targetInRight;
+    const crossPanel = (sourceInLeft && targetInRight) || (sourceInRight && targetInLeft);
+
+    return sourceVisible && targetVisible && crossPanel;
   });
 
-  // Filter to only cross-panel links (both items visible, in different panels)
-  const visiblePairs = orientedPairs.filter(p =>
-    p.sourcePanel && p.targetPanel && p.sourcePanel !== p.targetPanel
-  );
-
-  return visiblePairs.map(pair =>
-    <LinkLine {...pair} />
+  return visibleEdges.map(edge =>
+    <LinkLine
+      sourceId={edge.sourceItem.id}
+      targetId={edge.targetItem.id}
+      sourceColor={edge.sourceItem.color}
+      targetColor={edge.targetItem.color}
+      label={edge.label}
+    />
   );
 }
 
@@ -543,14 +543,14 @@ class DataService {
   // ============================================================================
 
   /**
-   * Get all linkable pairs (replaces complex type-specific logic)
+   * Get all property edges for LinkOverlay (replaces complex type-specific logic)
    */
-  getAllPairs(): LinkPair[];
+  getAllPropertyEdges(): EdgeInfo[];
 
   /**
-   * Get pairs filtered by source/target types
+   * Get property edges filtered by source/target types (optional future enhancement)
    */
-  getPairsForTypes(sourceTypes: string[], targetTypes: string[]): LinkPair[];
+  getPropertyEdgesForTypes(sourceTypes: string[], targetTypes: string[]): EdgeInfo[];
 
   /**
    * Get relationship data for an item (UPDATED: uses EdgeInfo)
@@ -647,23 +647,25 @@ interface EdgeInfo {
 - Incoming edges are expensive to maintain (would require reverse index)
 - Current on-demand computation is fine for UI responsiveness
 
-### 4. LinkPair Structure
+### 4. EdgeInfo for Link Rendering
+
+**Use existing EdgeInfo structure** (no new interface needed):
 ```typescript
-interface LinkPair {
-  sourceId: string;
-  targetId: string;
-  sourceColor: string;
-  targetColor: string;
+interface EdgeInfo {
+  edgeType: 'inheritance' | 'property' | 'variable_mapping';
+  sourceItem: ItemInfo;  // includes id, color, panelPosition
+  targetItem: ItemInfo;
   label?: string;
+  inheritedFrom?: string;
 }
 ```
 
 **Rationale:**
-- Minimal structure for rendering links between panels
-- Only includes property edges (inheritance/variable_mapping shown in detail views)
-- Colors included for gradient/styling
-- Label is the slot/attribute name
-- No edgeType needed (LinkOverlay only shows property edges)
+- Reuses existing graph-based interface (no duplication)
+- LinkOverlay filters to `edgeType === 'property'` only
+- ItemInfo provides all needed rendering data (id, color, panel position)
+- More information than needed, but better than maintaining duplicate interface
+- Can extend with additional metadata without breaking LinkOverlay
 
 ---
 

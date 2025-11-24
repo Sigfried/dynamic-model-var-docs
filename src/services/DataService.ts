@@ -21,7 +21,6 @@ import type { SectionData } from '../components/Section';
 
 // NEW: Import edge-based interfaces for Slots-as-Edges refactor
 import type {
-  LinkPair,
   RelationshipData as RelationshipDataNew,
   EdgeInfo,
   ItemInfo,
@@ -214,15 +213,17 @@ export class DataService {
   // ============================================================================
 
   /**
-   * Get all linkable pairs for property edges (used by LinkOverlay).
+   * Get all property edges for LinkOverlay rendering.
    * Returns only property edges (class→enum/class relationships via attributes/slots).
    * Does NOT include inheritance or variable_mapping edges (those appear in detail views).
    *
    * STUB: Returns empty array - will be implemented in Stage 4 (LinkOverlay refactor)
    * Current LinkOverlay uses getRelationshipsForLinking() instead
+   * When implemented, will return EdgeInfo[] filtered to property edges only
    */
-  getAllPairs(): LinkPair[] {
+  getAllPropertyEdges(): EdgeInfo[] {
     // TODO Stage 4: Implement using graph queries when refactoring LinkOverlay
+    // Query graph for all property edges, return as EdgeInfo[]
     return [];
   }
 

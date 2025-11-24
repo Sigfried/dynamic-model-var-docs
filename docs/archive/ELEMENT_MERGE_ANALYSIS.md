@@ -51,9 +51,6 @@ SlotInfo, RelationshipData  // Should be removed after refactor
 ```typescript
 // Edge-based refactor interfaces
 ItemInfo, EdgeInfo, RelationshipData  // NEW format, conflicts with old!
-
-// LinkOverlay proposal
-EdgeInfoProposal, ItemInfoProposal, LinkPair
 ```
 
 #### 5. **ElementPreRefactor.ts** - Model layer + UI VIOLATIONS
@@ -102,38 +99,47 @@ SchemaGraph (type alias)
 ## Interface Cleanup Proposal
 
 ### types.ts (Source Data Layer)
-- rename to import_types.ts
+- **TODO**: Rename to `import_types.ts` or `raw_to_cooked_data_types.ts`
+- **Purpose**: DTOs for raw data transformation (used ONLY by dataLoader)
 - **Keep**: All DTOs and SchemaData - these are the data shapes from JSON
-- **Move out**: `SelectedElement` → ComponentData.ts (UI concern)
+- **Move out**: `SelectedElement` → ComponentData.ts (UI concern) ✅ COMPLETED
 
 ### ComponentData.ts (UI Contracts)
 - **Keep**: All current interfaces - these are component contracts
-- **Add**: `SelectedElement` from types.ts
-- **Add**: `DetailSection`, `DetailData` from ElementPreRefactor (detail panel is UI)
-- **Remove**: Nothing (all good)
+- **Add**: `SelectedElement` from types.ts ✅ COMPLETED
+- **Add**: `DetailSection`, `DetailData` from ElementPreRefactor (detail panel is UI) ✅ COMPLETED
+- **TODO**: `ItemInfo`, `EdgeInfo` should move here from Element.ts (they're UI types)
 
 ### DataService.ts (Service Layer)
-- **Remove**: `FloatingBoxMetadata` (duplicate of ComponentData.ts)
-- **Remove**: Old `SlotInfo`, `RelationshipData` (deprecated, will be deleted with refactor)
-- **Keep**: Service should import from ComponentData.ts and Element.ts, not define its own
+- **Remove**: `FloatingBoxMetadata` (duplicate of ComponentData.ts) ✅ COMPLETED
+- **Rename**: Old `RelationshipData` → `RelationshipDataOld` (deprecated) ✅ COMPLETED
+- **TODO**: Remove old `SlotInfo`, `RelationshipDataOld` after refactor complete
+- **Keep**: Service should import from ComponentData.ts, not define its own
 
-### Element.ts (Model Layer - Edge-based)
-**Add from ElementPreRefactor**:
+### Element.ts (Model Layer - Edge-based) ✅ MERGE COMPLETED
+
+**Added from old Element.ts**:
 - `ElementData` union type
-- `Relationship` (will be removed later, but keep during migration)
-- `DetailSection`, `DetailData` → **NO, move to ComponentData.ts!**
+- `Relationship` (will be removed later, but kept during migration)
 - `ElementCollectionCallbacks`
+- Graph-based relationship methods
 
-**Keep from current Element.ts**:
-- `ItemInfo`, `EdgeInfo`, `RelationshipData` (NEW format)
-- `EdgeInfoProposal`, `ItemInfoProposal`, `LinkPair`
+**Current state**:
+- `ItemInfo`, `EdgeInfo`, `RelationshipDataNew` (edge-based format)
+- `ItemInfoDeprecated`, `EdgeInfoDeprecated`, `RelationshipDataDeprecated` (old format)
 
-**Rename conflicts**:
-- OLD `RelationshipData` in DataService → `RelationshipDataOld` (deprecated)
-- NEW `RelationshipData` in Element.ts → keep name
+**TODO - Remove DTO imports**:
+- Element.ts currently imports DTOs (ClassDTO, EnumDTO, etc.) from types.ts
+- Only dataLoader should use DTOs
+- Element constructors should take transformed data, not raw DTOs
+
+**TODO - Move UI types out**:
+- `ItemInfo`, `EdgeInfo` are UI types → should move to ComponentData.ts or UI layer
 
 ### Graph.ts (Model Layer - Graph structures)
 **Keep**: Everything - this is clean, no UI concerns
+
+**Note**: Some type definitions have had `export` removed to prevent confusion (types that don't need to be exported outside Graph.ts)
 
 ---
 
@@ -246,39 +252,11 @@ SchemaGraph (type alias)
 
 ---
 
-## Two-Graph Architecture Evaluation
-
-### Your Proposal:
-> "have two graphs, one for the model, maybe just used while initializing everything, and one for Items, UI edges, and stuff that gets more complicated than the imported model"
-
-### Analysis:
-
-#### Model Graph (what we have now in Graph.ts):
-- **Nodes**: Class, Enum, Slot, Type, Variable definitions from schema
-- **Edges**: inheritance, slot (property), maps_to
-- **Purpose**: Represents the LinkML schema structure
-- **Built**: Once during initialization from SchemaData
-- **Queried**: By Element classes and DataService
-
-#### UI Graph (proposed new graph):
-- **Nodes**: Displayed items (may be per-panel instances of same model element?)
-- **Edges**: Visual connections for LinkOverlay rendering
-- **Purpose**: Represents what's currently visible and how it's connected in UI
-- **Built**: Dynamically as panels change and items expand/collapse
-- **Queried**: By LayoutManager and LinkOverlay
-
-### Problems with Two Graphs:
-
-1. **Duplication**: Model graph already has all the relationship data
-2. **Sync complexity**: UI graph would need to stay in sync with model graph
-3. **When to build UI graph?**: Every render? On panel changes? Performance concern
-4. **What problem does it solve?**:
-   - Filtering visible edges? Can filter model graph edges by item presence
-   - Per-panel instances? Can add `panelId` metadata without separate graph
+## Graph Architecture Proposal
 
 ### Alternative: Augment Model Graph
 
-Instead of two graphs, enhance the single model graph:
+Instead of creating a second UI graph, enhance the single model graph with a query layer:
 
 1. **Keep model graph as source of truth**
 2. **Add "display graph" query layer**:
@@ -296,59 +274,45 @@ Instead of two graphs, enhance the single model graph:
      }
    }
    ```
-3. **Track displayed items** (what you already proposed in v2!):
+3. **Track displayed items**:
    ```typescript
-   // In DataService
+   // In DataService or UI state
    currentlyDisplayedItems = new Map<string, ItemInfo>();
    ```
 
-### Recommendation:
-
-**NO - Don't create second graph.** Instead:
-
-1. **Use your `currentlyDisplayedItems` approach from v2**
-2. **Query model graph** for edges between displayed items
-3. **Cache edge query results** if performance becomes an issue
-4. **Keep single source of truth** in model graph
-
-The model graph already has all relationship data. Adding a second graph creates sync problems without solving a real need.
+**Benefits**:
+- Single source of truth in model graph
+- No sync complexity
+- Query on demand instead of maintaining duplicate structure
+- Can cache edge query results if needed for performance
 
 ---
 
 ## Merge Plan (Revised)
 
-### Step 1: Clean up interfaces FIRST
+### Step 1: Clean up interfaces FIRST ✅ COMPLETED
 
-1. **Move `DetailSection`, `DetailData`** from ElementPreRefactor → ComponentData.ts
-2. **Remove `FloatingBoxMetadata` duplicate** from DataService.ts
-3. **Rename old `RelationshipData`** in DataService → `RelationshipDataOld` (mark deprecated)
-4. **Move `SelectedElement`** from types.ts → ComponentData.ts
-5. **Delete unused `positionToContext()`** helper
+1. ✅ **Move `DetailSection`, `DetailData`** from ElementPreRefactor → ComponentData.ts
+2. ✅ **Remove `FloatingBoxMetadata` duplicate** from DataService.ts
+3. ✅ **Rename old `RelationshipData`** in DataService → `RelationshipDataOld` (mark deprecated)
+4. ✅ **Move `SelectedElement`** from types.ts → ComponentData.ts
+5. ❌ **Delete unused `positionToContext()`** helper - Analysis was wrong, this IS used
 
-### Step 2: Merge Element.ts into ElementPreRefactor.ts
+### Step 2: Merge Element files ✅ COMPLETED
 
-1. **Copy new interfaces** from Element.ts:
-   - `ItemInfo`, `EdgeInfo`, `RelationshipData` (NEW format)
-   - `EdgeInfoProposal`, `ItemInfoProposal`, `LinkPair`
+1. ✅ **Merged interfaces** from old Element.ts into ElementPreRefactor.ts
+2. ✅ **Merged graph-based methods** (getRelationshipsFromGraph, etc.)
+3. ✅ **Renamed types**: ItemInfoProposal → ItemInfo, EdgeInfoProposal → EdgeInfo
+4. ✅ **Old types renamed** to *Deprecated for backward compatibility
+5. ✅ **Deleted old Element.ts** wrapper
+6. ✅ **Renamed** ElementPreRefactor.ts → Element.ts (via git mv)
 
-2. **Copy new functions**:
-   - `initializeGraphReferences()`
-   - `Element.prototype.getRelationshipsFromGraph`
-   - `initializeModelData()` wrapper
+### Step 3: Fix UI violations (TODO - part of upcoming refactor)
 
-3. **Delete Element.ts**
-
-4. **Rename** ElementPreRefactor.ts → Element.ts
-
-### Step 3: Fix UI violations (can defer to later)
-
-1. **Move `getBoundingBox()`** to LinkOverlay or delete during refactor
+1. **Move `getBoundingBox()`** to LinkOverlay or delete during LinkOverlay refactor
 2. **Review `getSectionItemData()`** - maybe move to DataService adapter
 3. **Review `toRenderableItems()`** - consider making it return pure model data
-
-### Step 4: Add slot grouping support
-
-Now you have one file to work with for adding specialized slot nodes!
+4. **Reduce Element subclass code** - Most behavior should move to graph queries or other layers
 
 ---
 
@@ -369,9 +333,28 @@ src/
 
 ## Summary
 
-1. **Interface mess**: Yes, lots of duplication (FloatingBoxMetadata, RelationshipData conflict)
-2. **UI violations**: More than I initially counted (6 severe, 3 moderate)
-3. **Two graphs**: NOT recommended - use single model graph with display query layer
-4. **Merge strategy**: Clean interfaces FIRST, then merge, then fix violations
+### Completed Work ✅
 
-**Ready to proceed?** I can execute Step 1 (interface cleanup) first.
+1. **Interface cleanup**:
+   - ✅ Moved DetailSection, DetailData to ComponentData.ts
+   - ✅ Removed FloatingBoxMetadata duplicate from DataService
+   - ✅ Renamed old RelationshipData → RelationshipDataOld
+   - ✅ Moved SelectedElement to ComponentData.ts
+
+2. **Element file merge**:
+   - ✅ Merged Element.ts and ElementPreRefactor.ts via git mv
+   - ✅ Renamed ItemInfoProposal → ItemInfo, EdgeInfoProposal → EdgeInfo
+   - ✅ Old types renamed to *Deprecated for backward compatibility
+   - ✅ Single Element.ts file with graph-based methods
+
+3. **Graph architecture**:
+   - ✅ Decided on single model graph (not two graphs)
+   - ✅ Plan to use display query layer pattern
+
+### Next Steps
+
+The Element file merge is complete. For ongoing refactor work, see:
+- **TASKS.md** - "Element Architecture Refactor" and "Complete Graph Refactor (Steps 6-7)"
+- **CLAUDE.md** - "Planned Architecture Improvements" section
+
+This document served its purpose as a merge analysis and execution guide.

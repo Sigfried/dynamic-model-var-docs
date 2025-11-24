@@ -73,18 +73,6 @@ export interface EdgeInfo {
 }
 
 /**
- * LinkPair - Minimal edge data for LinkOverlay rendering
- * Only includes property edges (inheritance/variable_mapping shown in detail views)
- */
-export interface LinkPair {
-  sourceId: string;
-  targetId: string;
-  sourceColor: string;  // For line gradient/styling
-  targetColor: string;
-  label?: string;  // slot/attribute name for property edges
-}
-
-/**
  * @deprecated Use RelationshipData instead after component migration
  * Old relationship data format without panel positioning
  */

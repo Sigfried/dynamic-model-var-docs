@@ -122,7 +122,7 @@ export interface LinkOverlayProps {
 /*
 import type { Relationship } from '../models/Element';
 import type {
-  LinkPair,
+  EdgeInfo,
   RelationshipData as RelationshipDataNew
 } from '../models/Element';
 import { decontextualizeId } from '../utils/idContextualization';
