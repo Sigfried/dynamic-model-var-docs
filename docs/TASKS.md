@@ -83,9 +83,18 @@
 
 **Relationship Info Box - Keyboard navigation**
 
-**Element.ts organization**
-- Code organization and cleanup
-- Hopefully Element.ts will be smaller after refactor, may not need separate files
+**Element.ts Merge & Graph Refactor Completion**
+- **Step 1**: Merge Element.ts and ElementPreRefactor.ts into single file
+  - Currently split with prototype augmentation workaround
+  - Should be unified after graph refactor complete
+- **Step 2**: Migrate LinkOverlay to use graph-based relationships
+  - Update to use `getRelationshipsNew()` instead of old `getRelationships()`
+  - Uses graph edges instead of subclass-specific `this.attributes`
+- **Step 3**: Remove old subclass-specific `getRelationships()` methods
+  - Delete from ClassElement, EnumElement, SlotElement, VariableElement
+  - Only keep graph-based `getRelationshipsFromGraph()`
+  - Remove ClassSlot class (replaced by graph slot edges)
+- See Element.ts:1-68 for full migration plan (Steps 4-7)
 
 **Custom Preset Management**
 
