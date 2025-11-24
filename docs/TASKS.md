@@ -90,8 +90,18 @@
 **Custom Preset Management**
 
 **Neighborhood Zoom + Feature Parity with Official Docs**
-- ERDs and other stuff from linkml generated docs
-- Example: https://vladistan.github.io/linkml-qudt/datadict/#angleunit
+
+Features from LinkML-generated documentation to consider (see archived REFACTOR_PLAN for full details):
+- **Terminology**: "Direct slots" vs "Induced slots" (direct = defined on class, induced = flattened including inherited)
+- **Inheritance visualization**: Local neighborhood Mermaid diagrams showing class relationships
+- **Attribute grouping**: Separate display of inherited vs direct attributes
+- **Cardinality notation**: "0..1" (optional), "1" (required), "*" or "0..*" (multivalued)
+- **Slot constraints**: Range constraints, required/multivalued flags (partially implemented)
+- **Relationship patterns**: Self-referential, cross-class, activity relationships, mutual exclusivity
+- **Raw YAML display**: Optional toggle to show raw schema definitions
+- **Clickable navigation**: Between related classes, enums, slots (implemented)
+
+Example: https://vladistan.github.io/linkml-qudt/datadict/#angleunit
 
 ---
 

@@ -171,6 +171,36 @@ UI Components + SVG Links
 - Collections provide `getRenderableItems()` returning structure metadata
 - UI components render generically without type-specific logic
 
+### Graph-Based Architecture (Slots-as-Edges)
+
+**Core Concept:**
+- Graph model using graphology library with slots serving dual roles
+- **Slots as nodes**: SlotElement definitions browsable in optional middle panel
+- **Slots as edges**: Slot edges connecting Class → Range, referencing slot definitions
+
+**Graph Structure:**
+
+**Nodes:**
+- **Classes**: Entity, Specimen, Material, etc.
+- **Enums**: SpecimenTypeEnum, AnalyteTypeEnum, etc.
+- **Slots**: All slot definitions (~170 in BDCHM), browsable in middle panel only
+- **Types**: Primitives (string, integer) and custom types from linkml:types
+- **Variables**: No longer appear as panel sections, only in detail boxes and relationship hovers
+
+**Edges:**
+- **Inheritance**: Class → Parent Class (is-a/inherits-from)
+- **Slot**: Class → Range (Class | Enum | Type) through a slot
+  - Properties: slotName, slotDefId, required, multivalued, inheritedFrom
+  - Multiple edges can reference same SlotElement (e.g., inherited with overrides)
+- **MapsTo**: Variable → Class associations
+
+**Three-Panel Layout:**
+- **Left Panel**: Classes only (always visible tree hierarchy)
+- **Middle Panel**: Slots only (toggleable, shows all SlotElement definitions)
+- **Right Panel**: Ranges only (Classes, Enums, Types as range targets)
+
+When middle panel visible, Class→Range slot edges decompose into two visual links: Class→Slot→Range
+
 ### Data Sources
 
 - **Model Schema**: [bdchm.yaml](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/blob/main/src/bdchm/schema/bdchm.yaml) → processed into `bdchm.metadata.json`

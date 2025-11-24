@@ -419,6 +419,17 @@ interface TextData {
 - Clear section types for rendering
 - Can optimize edge computations in model layer
 
+### Detail Box Requirements (from REFACTOR_PLAN)
+
+**Slot Display:**
+- Slots appear as properties with clickable/hoverable ranges
+- Range values clearly shown as connected nodes
+- Slot metadata visible: required, multivalued, inherited_from
+
+**Current Issues:**
+- Some detail boxes not rendering slot edges properly (see TASKS.md bug #4)
+- Slot metadata may not be fully displayed
+
 ---
 
 ## 4. Section Component Refactor
