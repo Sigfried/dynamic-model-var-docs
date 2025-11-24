@@ -262,7 +262,7 @@ export interface ModelData {
   // Generic collections - keyed by ElementTypeId
   // Use collection.getElement(name) and collection.getAllElements() for lookups
   collections: Map<import('./models/ElementRegistry').ElementTypeId, import('./models/Element').ElementCollection>;
-  elementLookup: Map<string, Element>;
+  elementLookup: Map<string, import('./models/Element').Element>;
   // Graph structure for Slots-as-Edges architecture (Stage 3)
   graph: import('./models/Graph').SchemaGraph;
 }
