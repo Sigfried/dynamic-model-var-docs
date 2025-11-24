@@ -15,7 +15,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import type { DataService } from '../services/DataService';
-import type { EdgeInfo } from '../models/Element';
+import type { EdgeInfoDeprecated as EdgeInfo } from '../services/DataService';
 
 interface RelationshipInfoBoxProps {
   itemId: string | null;

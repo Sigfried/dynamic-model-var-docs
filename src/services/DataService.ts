@@ -24,11 +24,16 @@ import type {
   LinkPair,
   RelationshipData as RelationshipDataNew,
   EdgeInfo,
-  ItemInfo
+  ItemInfo,
+  EdgeInfoDeprecated,
+  ItemInfoDeprecated,
+  RelationshipDataDeprecated
 } from '../models/Element';
 
 // Re-export new types for UI components
 export type { EdgeInfo, ItemInfo, RelationshipDataNew };
+// Re-export deprecated types (to be removed after component migration)
+export type { EdgeInfoDeprecated, ItemInfoDeprecated, RelationshipDataDeprecated };
 
 // ============================================================================
 // DEPRECATED: Old relationship data structures (will be removed in Stage 3+)
@@ -124,11 +129,11 @@ export class DataService {
   }
 
   /**
-   * Adapter: Converts new RelationshipData format to old format
+   * Adapter: Converts deprecated RelationshipData format to old format
    * Used during migration to keep existing UI components working
    */
   private adaptRelationshipDataToOldFormat(
-    newData: RelationshipDataNew,
+    newData: RelationshipDataDeprecated,
     elementType: string
   ): RelationshipDataOld {
     const metadata = ELEMENT_TYPES[elementType as ElementTypeId];
@@ -227,8 +232,10 @@ export class DataService {
    *
    * Stage 3 Step 5: Implemented using getRelationshipsFromGraph()
    * Uses graph-based approach for querying relationships
+   *
+   * @deprecated Returns deprecated format. Will be updated after component migration.
    */
-  getRelationshipsNew(itemId: string): RelationshipDataNew | null {
+  getRelationshipsNew(itemId: string): RelationshipDataDeprecated | null {
     const element = this.modelData.elementLookup.get(itemId);
     if (!element) return null;
 

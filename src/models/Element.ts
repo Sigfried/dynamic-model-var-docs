@@ -26,46 +26,50 @@ export type ElementData = ClassDTO | EnumDTO | SlotDTO | VariableSpec;
 // ============================================================================
 
 /**
- * ItemInfo - Minimal item metadata for relationship display
- * Used in EdgeInfo to represent connected items
+ * @deprecated Use ItemInfo instead (renamed from ItemInfoProposal)
+ * Minimal item metadata without panel positioning
+ */
+export interface ItemInfoDeprecated {
+  id: string;
+  displayName: string;
+  typeDisplayName: string;  // "Class", "Enum", "Slot", "Variable"
+  color: string;  // Tailwind color classes for styling
+}
+
+/**
+ * @deprecated Use EdgeInfo instead (renamed from EdgeInfoProposal)
+ * Single-item focused edge representation
+ */
+export interface EdgeInfoDeprecated {
+  edgeType: 'inheritance' | 'property' | 'variable_mapping';
+  otherItem: ItemInfoDeprecated;  // The connected item (target for outgoing, source for incoming)
+  label?: string;       // For property: slot/attribute name; for variable_mapping: "mapped_to"
+  inheritedFrom?: string; // For property edges only: ancestor name that defined this slot
+}
+
+/**
+ * ItemInfo - Complete item metadata including panel positioning
+ * Used for rendering items in UI with proper context
  */
 export interface ItemInfo {
   id: string;
   displayName: string;
   typeDisplayName: string;  // "Class", "Enum", "Slot", "Variable"
   color: string;  // Tailwind color classes for styling
+  panelPosition: 'left' | 'right';
+  panelId: 'left' | 'middle' | 'right'; // these should be dom ids on the panels
 }
 
 /**
- * EdgeInfo - Unified edge representation for all relationship types
- * Used in RelationshipData for both outgoing and incoming edges
+ * EdgeInfo - Complete edge representation with both source and target
+ * Used for rendering relationships between items
  */
 export interface EdgeInfo {
   edgeType: 'inheritance' | 'property' | 'variable_mapping';
-  otherItem: ItemInfo;  // The connected item (target for outgoing, source for incoming)
+  sourceItem: ItemInfo;
+  targetItem: ItemInfo;
   label?: string;       // For property: slot/attribute name; for variable_mapping: "mapped_to"
   inheritedFrom?: string; // For property edges only: ancestor name that defined this slot
-}
-
-/**
- * EdgeInfoProposal - Generalized edge representation for LinkOverlay
- * Removes single-item focus, includes both source and target
- */
-export interface EdgeInfoProposal {
-  edgeType: 'inheritance' | 'property' | 'variable_mapping';
-  sourceItem: ItemInfoProposal;
-  targetItem: ItemInfoProposal;
-  label?: string;       // For property: slot/attribute name; for variable_mapping: "mapped_to"
-  inheritedFrom?: string; // For property edges only: ancestor name that defined this slot
-}
-
-export interface ItemInfoProposal {
-  id: string;
-  displayName: string;
-  typeDisplayName: string;  // "Class", "Enum", "Slot", "Variable"
-  color: string;  // Tailwind color classes for styling
-  panelPosition: 'left' | 'right';
-  panelId: 'left' | 'middle' | 'right'; // these should be dom ids on the panels
 }
 
 /**
@@ -78,6 +82,16 @@ export interface LinkPair {
   sourceColor: string;  // For line gradient/styling
   targetColor: string;
   label?: string;  // slot/attribute name for property edges
+}
+
+/**
+ * @deprecated Use RelationshipData instead after component migration
+ * Old relationship data format without panel positioning
+ */
+export interface RelationshipDataDeprecated {
+  thisItem: ItemInfoDeprecated;
+  outgoing: EdgeInfoDeprecated[];
+  incoming: EdgeInfoDeprecated[];
 }
 
 /**
@@ -598,7 +612,7 @@ export abstract class Element {
    *
    * This is the new graph-based method that will replace getRelationships().
    */
-  getRelationshipsFromGraph(): RelationshipData | null {
+  getRelationshipsFromGraph(): RelationshipDataDeprecated | null {
     if (!globalGraph || !globalElementLookup) {
       return null;
     }
@@ -608,15 +622,15 @@ export abstract class Element {
 
     // Build thisItem info
     const metadata = ELEMENT_TYPES[this.type];
-    const thisItem: ItemInfo = {
+    const thisItem: ItemInfoDeprecated = {
       id: this.getId(),
       displayName: this.name,
       typeDisplayName: metadata.label,
       color: metadata.color.headerBg
     };
 
-    const outgoing: EdgeInfo[] = [];
-    const incoming: EdgeInfo[] = [];
+    const outgoing: EdgeInfoDeprecated[] = [];
+    const incoming: EdgeInfoDeprecated[] = [];
 
     // Process outgoing edges from this element
     graph.forEachOutboundEdge(this.name, (_edgeId, attributes, _source, target) => {
@@ -627,7 +641,7 @@ export abstract class Element {
       }
 
       const targetMetadata = ELEMENT_TYPES[targetElement.type];
-      const otherItem: ItemInfo = {
+      const otherItem: ItemInfoDeprecated = {
         id: target,
         displayName: target,
         typeDisplayName: targetMetadata.label,
@@ -665,7 +679,7 @@ export abstract class Element {
       }
 
       const sourceMetadata = ELEMENT_TYPES[sourceElement.type];
-      const otherItem: ItemInfo = {
+      const otherItem: ItemInfoDeprecated = {
         id: source,
         displayName: source,
         typeDisplayName: sourceMetadata.label,
