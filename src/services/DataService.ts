@@ -11,7 +11,6 @@
  * - itemId = element name (unique identifier)
  */
 
-import type { NodeEntry, EdgeEntry} from "graphology-types";
 import type { ModelData } from '../models/ModelData';
 import type { Relationship } from '../models/Element';
 import type {
@@ -110,97 +109,95 @@ export class DataService {
   // NEW: Edge-based methods for Slots-as-Edges refactor (Stage 1 Step 3)
   // ============================================================================
 
+  /**
+   * Get ItemInfo for a single node from the graph
+   */
   getItemInfo(nodeId: string): ItemInfo | null {
-    const node: NodeEntry = this.modelData.graph.node(nodeId);
-    // ...
-  }
-  getEdgeInfo(graphEdge: EdgeEntry): EdgeInfo | null {
-    const sourceItem: ItemInfo = this.getItemInfo(this.modelData.graph.source(graphEdge));
-    const targetItem: ItemInfo = this.getItemInfo(this.modelData.graph.target(graphEdge));
-    // ...
-  }
-  getEdgesForItem(itemId: string): EdgeInfo[] | null {
-    const graphEdges = this.modelData.graph.edges(itemId);
-    return graphEdges.map(e => this.getEdgeInfo(e)).filter(e => e);
+    // Get node attributes from graph
+    const nodeAttrs = this.modelData.graph.getNodeAttributes(nodeId);
+
+    // Get element for display name
+    const element = this.modelData.elementLookup.get(nodeId);
+    if (!element) {
+      console.warn(`getItemInfo: Element not found for node ${nodeId}`);
+      return null;
+    }
+
+    // Get type metadata for colors and labels
+    const typeMetadata = ELEMENT_TYPES[nodeAttrs.type as ElementTypeId];
+    if (!typeMetadata) {
+      console.warn(`getItemInfo: Type metadata not found for ${nodeAttrs.type}`);
+      return null;
+    }
+
+    return {
+      id: nodeId,
+      displayName: element.name,
+      type: nodeAttrs.type,
+      typeDisplayName: typeMetadata.label,
+      color: typeMetadata.color.name
+    };
   }
 
   /**
-   * Get all property edges for LinkOverlay rendering.
-   * Returns only property edges (class→enum/class relationships via attributes/slots).
-   * Does NOT include inheritance or variable_mapping edges (those appear in detail views).
-   *
-   * Queries the graph for all 'slot' type edges and converts them to EdgeInfo format.
-   * panelId is set to 'left' initially - LayoutManager should update based on actual panel positions.
+   * Get EdgeInfo for a single edge from the graph
    */
-  getAllPropertyEdges(): EdgeInfo[] {
-    const edges: EdgeInfo[] = [];
+  getEdgeInfo(edgeKey: string): EdgeInfo | null {
+    const sourceNodeId = this.modelData.graph.source(edgeKey);
+    const targetNodeId = this.modelData.graph.target(edgeKey);
 
-    // Query graph for all edges
-    this.modelData.graph.forEachEdge((edgeKey, attrs, sourceId, targetId) => {
-      // Only include slot edges (property relationships)
-      if (attrs.type !== 'slot') return;
+    const sourceItem = this.getItemInfo(sourceNodeId);
+    const targetItem = this.getItemInfo(targetNodeId);
 
-      // Get source and target elements
-      const sourceElement = this.modelData.elementLookup.get(sourceId);
-      const targetElement = this.modelData.elementLookup.get(targetId);
-
-      if (!sourceElement || !targetElement) {
-        console.warn(`getAllPropertyEdges: Missing element for edge ${edgeKey}`, {
-          sourceId,
-          targetId,
-          foundSource: !!sourceElement,
-          foundTarget: !!targetElement
-        });
-        return;
-      }
-
-      // Get element types from graph nodes (type property is protected on Element)
-      const sourceNode = this.modelData.graph.getNodeAttributes(sourceId);
-      const targetNode = this.modelData.graph.getNodeAttributes(targetId);
-
-      // Get element type metadata for colors and display names
-      const sourceTypeMetadata = ELEMENT_TYPES[sourceNode.type as ElementTypeId];
-      const targetTypeMetadata = ELEMENT_TYPES[targetNode.type as ElementTypeId];
-
-      if (!sourceTypeMetadata || !targetTypeMetadata) {
-        console.warn(`getAllPropertyEdges: Missing type metadata for edge ${edgeKey}`, {
-          sourceType: sourceNode.type,
-          targetType: targetNode.type
-        });
-        return;
-      }
-
-      // Cast attrs to SlotEdgeAttributes to access slot-specific properties
-      const slotAttrs = attrs as import('../models/Graph').SlotEdgeAttributes;
-
-      // Build EdgeInfo
-      edges.push({
-        edgeType: 'property',
-        sourceItem: {
-          id: sourceId,
-          displayName: sourceElement.name,
-          type: sourceNode.type,
-          typeDisplayName: sourceTypeMetadata.label,
-          color: sourceTypeMetadata.color.name,
-          panelPosition: 'left',  // Source is logically on left of edge
-          panelId: 'left'  // TODO: Placeholder - LayoutManager should fill this based on actual panel
-        },
-        targetItem: {
-          id: targetId,
-          displayName: targetElement.name,
-          type: targetNode.type,
-          typeDisplayName: targetTypeMetadata.label,
-          color: targetTypeMetadata.color.name,
-          panelPosition: 'right',  // Target is logically on right of edge
-          panelId: 'left'  // TODO: Placeholder - LayoutManager should fill this based on actual panel
-        },
-        label: slotAttrs.slotName,
-        inheritedFrom: slotAttrs.inheritedFrom
+    if (!sourceItem || !targetItem) {
+      console.warn(`getEdgeInfo: Missing source or target item`, {
+        edgeKey,
+        sourceNodeId,
+        targetNodeId
       });
-    });
+      return null;
+    }
 
+    // Get edge attributes
+    const edgeAttrs = this.modelData.graph.getEdgeAttributes(edgeKey);
+
+    // Map graph edge type to EdgeInfo edge type
+    let edgeType: 'inheritance' | 'property' | 'variable_mapping';
+    const graphEdgeType = edgeAttrs.type;
+
+    if (graphEdgeType === 'inheritance') {
+      edgeType = 'inheritance';
+    } else if (graphEdgeType === 'slot') {
+      edgeType = 'property';
+    } else if (graphEdgeType === 'maps_to') {
+      edgeType = 'variable_mapping';
+    } else {
+      console.warn(`getEdgeInfo: Unknown edge type ${graphEdgeType}`);
+      return null;
+    }
+
+    // Get label and inheritedFrom for slot edges
+    const slotAttrs = edgeAttrs.type === 'slot' ? edgeAttrs as import('../models/Graph').SlotEdgeAttributes : null;
+
+    return {
+      edgeType,
+      sourceItem,
+      targetItem,
+      label: slotAttrs?.slotName,
+      inheritedFrom: slotAttrs?.inheritedFrom
+    };
+  }
+
+  /**
+   * Get all edges for a specific item from the graph
+   * Used by LinkOverlay for DOM-based link rendering
+   */
+  getEdgesForItem(itemId: string): EdgeInfo[] {
+    const edgeKeys = this.modelData.graph.edges(itemId);
+    const edges = edgeKeys.map(edgeKey => this.getEdgeInfo(edgeKey)).filter(e => e !== null) as EdgeInfo[];
     return edges;
   }
+
 
   /**
    * Get relationship data for an item (new edge-based structure).
