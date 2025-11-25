@@ -529,7 +529,7 @@ export function getVariablesMappingToClass(
  * This is called during model initialization to build the graph from DTOs.
  */
 export function buildGraphFromSchemaData(
-  schemaData: import('../import_types').SchemaData
+  schemaData: import('./SchemaTypes').SchemaData
 ): SchemaGraph {
   const graph = createSchemaGraph();
 

@@ -1,18 +1,19 @@
 // Element-based architecture for generic rendering and relationship tracking
 // See CLAUDE.md and ARCHITECTURE.md for architecture details
 
+// Transformed types from SchemaTypes
 import type {
-  ClassDTO,
   ClassData,
-  EnumDTO,
   EnumData,
-  ModelData,
-  SlotDTO,
   SlotData,
+  TypeData,
   VariableSpec,
   EnumValue,
-  SchemaData
-} from '../import_types';
+  SchemaData,
+} from './SchemaTypes';
+
+// Core application data structure
+import type { ModelData } from './ModelData';
 import type { ElementTypeId, RelationshipTypeId } from './ElementRegistry';
 import { ELEMENT_TYPES } from './ElementRegistry';
 import type { RenderableItem } from './RenderableItem';
@@ -24,9 +25,6 @@ import type {
   EdgeInfoDeprecated,
   RelationshipDataDeprecated
 } from '../contracts/ComponentData';
-
-// Union type for all element data types
-export type ElementData = ClassDTO | EnumDTO | SlotDTO | VariableSpec;
 
 // Helper function to map panel position to context string
 function positionToContext(position: 'left' | 'middle' | 'right'): 'leftPanel' | 'middlePanel' | 'rightPanel' {
@@ -1243,7 +1241,7 @@ export class TypeElement extends Range {
   readonly broadMappings: string[] | undefined;
   readonly conformsTo: string | undefined;
 
-  constructor(name: string, data: import('../import_types').TypeData) {
+  constructor(name: string, data: TypeData) {
     super();
     this.name = name;
     this.description = data.description;
@@ -1684,7 +1682,7 @@ export class TypeCollection extends ElementCollection {
   }
 
   /** Factory: Create from raw data (called by dataLoader) */
-  static fromData(typeData: Map<string, import('../import_types').TypeData>): TypeCollection {
+  static fromData(typeData: Map<string, import('./SchemaTypes').TypeData>): TypeCollection {
     // Convert TypeData to flat list of TypeElements (no hierarchy)
     const roots = Array.from(typeData.entries())
       .map(([name, data]) => {

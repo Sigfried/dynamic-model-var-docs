@@ -1,6 +1,7 @@
 import { describe, test, expect } from 'vitest';
 import { ClassElement, EnumElement, SlotElement, VariableElement, SlotCollection, type Relationship } from '../models/Element';
-import type { ClassData, EnumData, SlotData, VariableSpec, ModelData } from '../import_types';
+import type { ClassData, EnumData, SlotData, VariableSpec } from '../models/SchemaTypes';
+import type { ModelData } from '../models/ModelData';
 
 /**
  * Link Logic Tests

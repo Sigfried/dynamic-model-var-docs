@@ -51,34 +51,25 @@ Ordered by implementation dependencies. See [archive/ELEMENT_MERGE_ANALYSIS.md](
 - **Why second**: Independent, clarifies DTO purpose for later work
 - **Dependencies**: None
 
-### Phase 1.5: Complete Type Organization (Critical architectural fix)
+### Phase 1.5: Complete Type Organization ✅
 
-**Problem:** import_types.ts should ONLY be imported by dataLoader, but currently 7+ files import ModelData from it.
+**Problem:** import_types.ts should ONLY be imported by dataLoader, but 7+ files were importing ModelData from it.
 
 **Root Cause:** ModelData is not a DTO - it's the core application data structure. It belongs in its own file, not in import_types.ts.
 
-**Step 2.5: Extract all non-DTO types from import_types.ts** 🔲
-- **What**: Move ModelData + transformed types out of import_types.ts
+**Step 2.5: Extract all non-DTO types from import_types.ts** ✅
+- **What**: Moved ModelData + transformed types out of import_types.ts
 - **Why**: import_types.ts should contain ONLY DTOs (raw data from JSON/YAML)
-- **Types to move**:
+- **Types moved**:
   - ModelData → `models/ModelData.ts` (core app data structure)
   - Transformed types (ClassData, EnumData, SlotData, TypeData, VariableSpec, SchemaData, EnumValue, FieldMapping) → `models/SchemaTypes.ts`
+  - SlotDefinition stays in import_types.ts (part of DTO structure, used in ClassDTO) but re-exported from SchemaTypes
 - **What stays in import_types.ts** (DTOs only):
-  - SlotDTO, EnumDTO, TypeDTO, ClassDTO, SchemaDTO, TypesSchemaDTO, VariableSpecDTO
-  - SlotDefinition, FIELD_MAPPINGS
-- **Files affected**: 7 files currently import ModelData + Element.ts imports transformed types
-- **Architecture rule**: Only dataLoader should import from import_types.ts
-- **Dependencies**: None (can be done immediately)
-
-**Implementation Plan:**
-1. Create `src/models/SchemaTypes.ts` with all transformed types (ClassData, EnumData, etc.)
-2. Create `src/models/ModelData.ts` with ModelData interface (imports from SchemaTypes)
-3. Update import_types.ts to re-export from new files (backward compatibility)
-4. Update Element.ts to import from SchemaTypes instead of import_types
-5. Update 7 files to import ModelData from models/ModelData
-6. Remove re-exports from import_types.ts
-7. Verify: `grep -r "from.*import_types" src/` should only show dataLoader.ts
-8. Run typecheck
+  - SlotDefinition, SlotDTO, EnumDTO, TypeDTO, ClassDTO, SchemaDTO, TypesSchemaDTO, VariableSpecDTO
+  - FIELD_MAPPINGS
+- **Files updated**: 7 files + Element.ts + Graph.ts + dataLoader.ts
+- **Architecture achieved**: Only dataLoader, Element (DTOs), SchemaTypes (re-export), and tests import from import_types.ts
+- **All typechecks pass** ✅
 
 **Other Type Organization Tasks:**
 - ElementRegistry.ts cleanup (unused code commented out)

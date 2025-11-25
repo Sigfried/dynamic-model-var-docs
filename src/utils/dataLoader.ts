@@ -1,23 +1,30 @@
 // Utilities for loading and parsing schema and variable specs
 
+// DTOs from import_types
 import type {
-  VariableSpec,
   VariableSpecDTO,
-  ModelData,
   SchemaDTO,
-  SchemaData,
   ClassDTO,
-  ClassData,
   SlotDTO,
-  SlotData,
   EnumDTO,
-  EnumData,
   TypeDTO,
-  TypeData,
   TypesSchemaDTO,
-  FieldMapping
 } from '../import_types';
 import { FIELD_MAPPINGS } from '../import_types';
+
+// Transformed types from SchemaTypes
+import type {
+  VariableSpec,
+  SchemaData,
+  ClassData,
+  SlotData,
+  EnumData,
+  TypeData,
+  FieldMapping,
+} from '../models/SchemaTypes';
+
+// Core application data structure
+import type { ModelData } from '../models/ModelData';
 import { initializeModelData } from '../models/Element';
 
 /**

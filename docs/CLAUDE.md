@@ -122,8 +122,8 @@ const info = element.getDisplayInfo();
 1. **types.ts → import_types.ts** ✅ COMPLETED (Phase 1, Step 2)
    - Renamed to clarify these are DTOs for raw data transformation
    - **CRITICAL**: Should be imported ONLY by dataLoader
-   - **TODO (Phase 1.5)**: ModelData currently in import_types.ts → move to models/ModelData.ts
-   - Once fixed, only dataLoader should import from import_types.ts
+   - **Phase 1.5** ✅ COMPLETED: ModelData → models/ModelData.ts, transformed types → models/SchemaTypes.ts
+   - import_types.ts now contains ONLY DTOs and is imported only by dataLoader, Element (for DTOs), SchemaTypes (re-export), and tests
 
 2. **Improved Data Flow**:
    ```
