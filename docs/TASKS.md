@@ -73,51 +73,106 @@ Ordered by implementation dependencies. See [archive/ELEMENT_MERGE_ANALYSIS.md](
 
 **Other Type Organization Tasks:**
 - ✅ ElementRegistry.ts cleanup (removed 83 lines of commented-out code)
-- 🔲 App Configuration File - Centralize hard-coded constants (see plan below)
-- 🔲 Determine if ElementRegistry.ts is still needed after configuration extraction
+- 🔲 App Configuration File - Consolidate config into single source (see plan below)
+- ✅ Decision: ElementRegistry.ts → appConfig.ts (it's just config data, not a registry)
 
-### App Configuration File - Detailed Plan
+### App Configuration File - Implementation Plan
 
-**Goal**: Centralize scattered hard-coded constants for easier maintenance and tuning
+**Goal**: Single source of truth for all application configuration
 
-**Current state** - Constants scattered across codebase:
+**Key Decisions:**
+1. **Consolidate ElementRegistry.ts → appConfig.ts**
+   - ElementRegistry is just configuration data, not an actual registry
+   - No registration logic, just metadata
+   - Better to have all config in one place
 
-1. **Element Type Metadata** ✅ ALREADY CENTRALIZED
-   - Location: `src/models/ElementRegistry.ts` (ELEMENT_TYPES registry)
-   - Colors, labels, icons, Tailwind classes for class/enum/slot/type/variable
-   - Keep in ElementRegistry - it's well organized
+2. **Link colors derived from element colors**
+   - Don't configure link colors separately
+   - Links use source/target element type colors
+   - Example: Link to enum uses enum's purple color
+   - Implement via helper: `getElementLinkColor(elementType)`
 
-2. **Timing Constants** 🔲 TO CENTRALIZE
-   - `RelationshipInfoBox.tsx:114` - Linger duration: 1500ms
-   - `RelationshipInfoBox.tsx:134` - Upgrade hover time: 1500ms
-   - Hover debounce delay (need to verify location)
-   - **Target**: `src/config/timing.ts` or `src/config/appConfig.ts`
+**Implementation Steps:**
 
-3. **Link/Relationship Colors** 🔲 TO CENTRALIZE
-   - `RelationshipInfoBox.tsx` - Hard-coded blue/green/orange/purple link colors (10+ instances)
-   - `LinkOverlay.tsx:63,68` - Hard-coded blue-300 for source/target names
-   - **Target**: `src/config/colors.ts` or integrate into ElementRegistry
+**1. Create `src/config/appConfig.ts`:**
+```typescript
+export const APP_CONFIG = {
+  // Element type metadata (from ElementRegistry.ts)
+  elementTypes: {
+    class: {
+      id: 'class',
+      label: 'Class',
+      pluralLabel: 'Classes',
+      icon: 'C',
+      color: {
+        name: 'blue',
+        hex: '#3b82f6',
+        link: 'text-blue-600 dark:text-blue-400',  // For clickable links
+        toggleActive: 'bg-blue-500',
+        // ... all other color classes
+      }
+    },
+    enum: { ... },
+    slot: { ... },
+    type: { ... },
+    variable: { ... }
+  },
 
-4. **UI Layout Constants** 🔲 TO SEARCH FOR
-   - `RelationshipInfoBox.tsx:74` - estimatedBoxHeight: 400px
-   - Collapsible list size threshold (mentioned in archives: 20 items)
-   - Collapsed preview count (mentioned in archives: 10 items)
-   - Panel widths, spacing values
-   - **Target**: `src/config/layout.ts` or `src/config/appConfig.ts`
+  // Timing constants (from RelationshipInfoBox.tsx)
+  timing: {
+    hoverDebounce: 300,        // Delay before showing preview
+    lingerDuration: 1500,      // How long preview stays after unhover
+    upgradeHoverTime: 1500,    // Hover duration to upgrade to persistent
+  },
 
-5. **Terminology** ✅ PARTIALLY CENTRALIZED
-   - Labels: "Class" vs "Classes", "Slot" vs "Slots" - in ElementRegistry ✅
-   - "Slot" vs "Attribute" terminology - scattered in comments/docs 🔲
-   - **Action**: Update comments to use "slot" consistently
+  // UI layout constants
+  layout: {
+    estimatedBoxHeight: 400,   // For positioning calculations
+    collapsibleListSize: 20,   // Show "...N more" threshold
+    collapsedPreviewCount: 10, // Items to show when collapsed
+  },
+};
 
-**Recommended approach:**
-1. Create `src/config/appConfig.ts` with sections for timing, layout, terminology
-2. Keep ElementRegistry.ts for element type metadata (colors, labels, icons)
-3. Extract link/relationship colors - decide if they belong in ElementRegistry or appConfig
-4. Search for and document other hard-coded thresholds/constants
-5. Update consuming components to import from config
+// Types (from ElementRegistry.ts)
+export type ElementTypeId = 'class' | 'enum' | 'slot' | 'type' | 'variable';
+export type RelationshipTypeId = 'inherits' | 'property' | 'uses_enum' | 'references_class';
 
-**Priority**: Medium-Low (nice to have, not blocking other work)
+// Helper functions (not config data)
+export function getElementLinkColor(type: ElementTypeId): string {
+  return APP_CONFIG.elementTypes[type].color.link;
+}
+
+export function getAllElementTypeIds(): ElementTypeId[] {
+  return Object.keys(APP_CONFIG.elementTypes) as ElementTypeId[];
+}
+```
+
+**2. Update imports across codebase:**
+- `src/models/Element.ts` - ElementTypeId, RelationshipTypeId, ELEMENT_TYPES
+- Components using ELEMENT_TYPES for colors/labels
+- `src/utils/panelHelpers.tsx` - Uses ELEMENT_TYPES for colors
+- `src/utils/duplicateDetection.ts` - Uses ElementTypeId
+- ~15-20 files estimated (use grep to find all)
+
+**3. Replace hard-coded values:**
+- `RelationshipInfoBox.tsx:270` - Replace `text-blue-600` → `getElementLinkColor(targetType)`
+- `RelationshipInfoBox.tsx:114,134` - Replace 1500 → `APP_CONFIG.timing.*`
+- `RelationshipInfoBox.tsx:74` - Replace 400 → `APP_CONFIG.layout.estimatedBoxHeight`
+- `LinkOverlay.tsx:63,68` - Replace `text-blue-300` → element type colors
+
+**4. Delete `src/models/ElementRegistry.ts`**
+
+**5. Verify:**
+- `npm run typecheck`
+- Test app functionality
+- Verify colors display correctly for all element types
+
+**Files to Update** (grep for: `from.*ElementRegistry`):
+```bash
+grep -r "from.*ElementRegistry" src/ --include="*.ts" --include="*.tsx"
+```
+
+**Priority**: Medium (good cleanup, completes Phase 1.5)
 
 ### Phase 2: LinkOverlay Migration (Medium Risk)
 
