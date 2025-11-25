@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { load as parseYaml } from 'js-yaml';
 import { loadModelData } from '../utils/dataLoader';
 import { ClassCollection, EnumCollection, SlotCollection, VariableCollection } from '../models/Element';
-import type { ClassDTO } from '../types';
+import type { ClassDTO } from '../import_types';
 
 /**
  * Data Completeness Test

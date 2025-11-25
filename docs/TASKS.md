@@ -45,7 +45,7 @@ Ordered by implementation dependencies. See [archive/ELEMENT_MERGE_ANALYSIS.md](
 - **Why first**: Clarifies model/UI separation before other refactors
 - **Dependencies**: None
 
-**Step 2: Rename types.ts → import_types.ts** 🔲
+**Step 2: Rename types.ts → import_types.ts** ✅
 - Clarifies these are DTOs for raw data transformation
 - Used ONLY by dataLoader
 - **Why second**: Independent, clarifies DTO purpose for later work

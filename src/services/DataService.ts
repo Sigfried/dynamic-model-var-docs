@@ -11,7 +11,7 @@
  * - itemId = element name (unique identifier)
  */
 
-import type { ModelData } from '../types';
+import type { ModelData } from '../import_types';
 import type { Relationship } from '../models/Element';
 import type {
   DetailData,

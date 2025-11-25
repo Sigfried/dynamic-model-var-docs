@@ -12,7 +12,7 @@ import type {
   VariableSpec,
   EnumValue,
   SchemaData
-} from '../types';
+} from '../import_types';
 import type { ElementTypeId, RelationshipTypeId } from './ElementRegistry';
 import { ELEMENT_TYPES } from './ElementRegistry';
 import type { RenderableItem } from './RenderableItem';
@@ -1243,7 +1243,7 @@ export class TypeElement extends Range {
   readonly broadMappings: string[] | undefined;
   readonly conformsTo: string | undefined;
 
-  constructor(name: string, data: import('../types').TypeData) {
+  constructor(name: string, data: import('../import_types').TypeData) {
     super();
     this.name = name;
     this.description = data.description;
@@ -1684,7 +1684,7 @@ export class TypeCollection extends ElementCollection {
   }
 
   /** Factory: Create from raw data (called by dataLoader) */
-  static fromData(typeData: Map<string, import('../types').TypeData>): TypeCollection {
+  static fromData(typeData: Map<string, import('../import_types').TypeData>): TypeCollection {
     // Convert TypeData to flat list of TypeElements (no hierarchy)
     const roots = Array.from(typeData.entries())
       .map(([name, data]) => {

@@ -16,8 +16,8 @@ import type {
   TypeData,
   TypesSchemaDTO,
   FieldMapping
-} from '../types';
-import { FIELD_MAPPINGS } from '../types';
+} from '../import_types';
+import { FIELD_MAPPINGS } from '../import_types';
 import { initializeModelData } from '../models/Element';
 
 /**

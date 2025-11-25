@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { loadModelData } from '../utils/dataLoader';
-import type { ModelData } from '../types';
+import type { ModelData } from '../import_types';
 
 interface UseModelDataResult {
   modelData: ModelData | undefined;

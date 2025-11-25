@@ -2,7 +2,7 @@ import { describe, test, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import DetailContent from '../components/DetailContent';
 import { ClassElement, EnumElement, SlotElement, VariableElement, SlotCollection } from '../models/Element';
-import type { ClassData, EnumData, SlotData, VariableSpec, ModelData } from '../types';
+import type { ClassData, EnumData, SlotData, VariableSpec, ModelData } from '../import_types';
 import { createSchemaGraph } from '../models/Graph';
 
 /**

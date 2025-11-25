@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeAll } from 'vitest';
 import { loadModelData } from '../utils/dataLoader';
 import { ClassCollection, ClassElement } from '../models/Element';
-import type { ModelData } from '../types';
+import type { ModelData } from '../import_types';
 
 /**
  * Test for incoming relationships bug

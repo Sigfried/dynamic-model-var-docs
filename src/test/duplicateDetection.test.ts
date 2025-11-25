@@ -10,7 +10,7 @@ import {
   type ElementDescriptor
 } from '../utils/duplicateDetection';
 import { ClassElement, EnumElement, SlotElement, VariableElement, SlotCollection } from '../models/Element';
-import type { ModelData } from '../types';
+import type { ModelData } from '../import_types';
 
 // Helper to create minimal ModelData for testing
 const createMockModelData = (): ModelData => ({
