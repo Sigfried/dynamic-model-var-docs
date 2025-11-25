@@ -51,18 +51,39 @@ Ordered by implementation dependencies. See [archive/ELEMENT_MERGE_ANALYSIS.md](
 - **Why second**: Independent, clarifies DTO purpose for later work
 - **Dependencies**: None
 
-### [sg] finish reorganizing types
-- ElementRegistry.ts had a lot of unused stuff in it. i just commented it all out
-- what remains is mostly about configuration of colors and words
-- App Configuration File
-    - somewhere along the line, it disappeared from tasks or wherever
-      it was. there's a reference to it below and then in three archive files
-    - reassemble it from those files and put it here
-    - the color stuff in Element.ts belongs there
-- after that, will there be anything left in ElementRegistry? 
-- you just "completed" Phase 1, Step 2 above but import_types is being imported
-  in lots of places
-  - figure out why and make a plan for correcting
+### Phase 1.5: Complete Type Organization (Critical architectural fix)
+
+**Problem:** import_types.ts should ONLY be imported by dataLoader, but currently 7+ files import ModelData from it.
+
+**Root Cause:** ModelData is not a DTO - it's the core application data structure. It belongs in its own file, not in import_types.ts.
+
+**Step 2.5: Extract ModelData from import_types.ts** 🔲
+- **What**: Move ModelData interface to new file `src/models/ModelData.ts`
+- **Why**: import_types.ts should contain ONLY DTOs for raw data transformation
+    - [sg] import_types also currently includes exports of all the types
+      that dataLoader converts things into. we should review (during
+      component refactor tasks) whether they need changes, but for
+      now we can move them to ComponentData.ts. import_types can
+      import them from there and reexport them for dataLoader
+- **Files affected**: 7 files currently import ModelData:
+  - src/services/DataService.ts
+  - src/hooks/useModelData.ts
+  - src/test/*.test.tsx (5 test files)
+- **Architecture rule**: Only dataLoader should import from import_types.ts
+- **Dependencies**: None (can be done immediately)
+
+**Implementation Plan:**
+1. Create new file `src/models/ModelData.ts` with ModelData interface
+2. Update import_types.ts to re-export ModelData from models/ModelData.ts (for backward compatibility)
+3. Update all 7 files to import ModelData from 'models/ModelData' instead of 'import_types'
+4. Remove re-export from import_types.ts
+5. Verify: `grep -r "from.*import_types" src/` should only show dataLoader.ts
+6. Run typecheck
+
+**Other Type Organization Tasks:**
+- ElementRegistry.ts cleanup (unused code commented out)
+- App Configuration File (colors, terminology) - needs reassembly from archive files
+- Determine if ElementRegistry.ts is still needed after configuration extraction
 
 ### Phase 2: LinkOverlay Migration (Medium Risk)
 
