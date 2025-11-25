@@ -72,9 +72,52 @@ Ordered by implementation dependencies. See [archive/ELEMENT_MERGE_ANALYSIS.md](
 - **All typechecks pass** ✅
 
 **Other Type Organization Tasks:**
-- ElementRegistry.ts cleanup (unused code commented out)
-- App Configuration File (colors, terminology) - needs reassembly from archive files
-- Determine if ElementRegistry.ts is still needed after configuration extraction
+- ✅ ElementRegistry.ts cleanup (removed 83 lines of commented-out code)
+- 🔲 App Configuration File - Centralize hard-coded constants (see plan below)
+- 🔲 Determine if ElementRegistry.ts is still needed after configuration extraction
+
+### App Configuration File - Detailed Plan
+
+**Goal**: Centralize scattered hard-coded constants for easier maintenance and tuning
+
+**Current state** - Constants scattered across codebase:
+
+1. **Element Type Metadata** ✅ ALREADY CENTRALIZED
+   - Location: `src/models/ElementRegistry.ts` (ELEMENT_TYPES registry)
+   - Colors, labels, icons, Tailwind classes for class/enum/slot/type/variable
+   - Keep in ElementRegistry - it's well organized
+
+2. **Timing Constants** 🔲 TO CENTRALIZE
+   - `RelationshipInfoBox.tsx:114` - Linger duration: 1500ms
+   - `RelationshipInfoBox.tsx:134` - Upgrade hover time: 1500ms
+   - Hover debounce delay (need to verify location)
+   - **Target**: `src/config/timing.ts` or `src/config/appConfig.ts`
+
+3. **Link/Relationship Colors** 🔲 TO CENTRALIZE
+   - `RelationshipInfoBox.tsx` - Hard-coded blue/green/orange/purple link colors (10+ instances)
+   - `LinkOverlay.tsx:63,68` - Hard-coded blue-300 for source/target names
+   - **Target**: `src/config/colors.ts` or integrate into ElementRegistry
+
+4. **UI Layout Constants** 🔲 TO SEARCH FOR
+   - `RelationshipInfoBox.tsx:74` - estimatedBoxHeight: 400px
+   - Collapsible list size threshold (mentioned in archives: 20 items)
+   - Collapsed preview count (mentioned in archives: 10 items)
+   - Panel widths, spacing values
+   - **Target**: `src/config/layout.ts` or `src/config/appConfig.ts`
+
+5. **Terminology** ✅ PARTIALLY CENTRALIZED
+   - Labels: "Class" vs "Classes", "Slot" vs "Slots" - in ElementRegistry ✅
+   - "Slot" vs "Attribute" terminology - scattered in comments/docs 🔲
+   - **Action**: Update comments to use "slot" consistently
+
+**Recommended approach:**
+1. Create `src/config/appConfig.ts` with sections for timing, layout, terminology
+2. Keep ElementRegistry.ts for element type metadata (colors, labels, icons)
+3. Extract link/relationship colors - decide if they belong in ElementRegistry or appConfig
+4. Search for and document other hard-coded thresholds/constants
+5. Update consuming components to import from config
+
+**Priority**: Medium-Low (nice to have, not blocking other work)
 
 ### Phase 2: LinkOverlay Migration (Medium Risk)
 
