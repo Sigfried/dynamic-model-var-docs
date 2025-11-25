@@ -39,7 +39,7 @@ Ordered by implementation dependencies. See [archive/ELEMENT_MERGE_ANALYSIS.md](
 
 ### Phase 1: UI Layer Cleanup (Low Risk)
 
-**Step 1: Move UI types out of Element.ts** 🔲
+**Step 1: Move UI types out of Element.ts** ✅
 - Move `ItemInfo`, `EdgeInfo`, `RelationshipData` to ComponentData.ts
 - Element.ts should contain only model-layer types
 - **Why first**: Clarifies model/UI separation before other refactors

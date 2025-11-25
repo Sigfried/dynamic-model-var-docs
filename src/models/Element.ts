@@ -17,80 +17,16 @@ import type { ElementTypeId, RelationshipTypeId } from './ElementRegistry';
 import { ELEMENT_TYPES } from './ElementRegistry';
 import type { RenderableItem } from './RenderableItem';
 import { buildGraphFromSchemaData, type SchemaGraph, type SlotEdgeAttributes } from './Graph';
+import type {
+  DetailSection,
+  DetailData,
+  ItemInfoDeprecated,
+  EdgeInfoDeprecated,
+  RelationshipDataDeprecated
+} from '../contracts/ComponentData';
 
 // Union type for all element data types
 export type ElementData = ClassDTO | EnumDTO | SlotDTO | VariableSpec;
-
-// ============================================================================
-// NEW: Edge-based interfaces for Slots-as-Edges refactor
-// ============================================================================
-
-/**
- * @deprecated Use ItemInfo instead (renamed from ItemInfoProposal)
- * Minimal item metadata without panel positioning
- */
-export interface ItemInfoDeprecated {
-  id: string;
-  displayName: string;
-  typeDisplayName: string;  // "Class", "Enum", "Slot", "Variable"
-  color: string;  // Tailwind color classes for styling
-}
-
-/**
- * @deprecated Use EdgeInfo instead (renamed from EdgeInfoProposal)
- * Single-item focused edge representation
- */
-export interface EdgeInfoDeprecated {
-  edgeType: 'inheritance' | 'property' | 'variable_mapping';
-  otherItem: ItemInfoDeprecated;  // The connected item (target for outgoing, source for incoming)
-  label?: string;       // For property: slot/attribute name; for variable_mapping: "mapped_to"
-  inheritedFrom?: string; // For property edges only: ancestor name that defined this slot
-}
-
-/**
- * ItemInfo - Complete item metadata including panel positioning
- * Used for rendering items in UI with proper context
- */
-export interface ItemInfo {
-  id: string;
-  displayName: string;
-  typeDisplayName: string;  // "Class", "Enum", "Slot", "Variable"
-  color: string;  // Tailwind color classes for styling
-  panelPosition: 'left' | 'right';
-  panelId: 'left' | 'middle' | 'right'; // these should be dom ids on the panels
-}
-
-/**
- * EdgeInfo - Complete edge representation with both source and target
- * Used for rendering relationships between items
- */
-export interface EdgeInfo {
-  edgeType: 'inheritance' | 'property' | 'variable_mapping';
-  sourceItem: ItemInfo;
-  targetItem: ItemInfo;
-  label?: string;       // For property: slot/attribute name; for variable_mapping: "mapped_to"
-  inheritedFrom?: string; // For property edges only: ancestor name that defined this slot
-}
-
-/**
- * @deprecated Use RelationshipData instead after component migration
- * Old relationship data format without panel positioning
- */
-export interface RelationshipDataDeprecated {
-  thisItem: ItemInfoDeprecated;
-  outgoing: EdgeInfoDeprecated[];
-  incoming: EdgeInfoDeprecated[];
-}
-
-/**
- * RelationshipData - Unified relationship structure using edges
- * Replaces old type-dependent relationship structure with generic edge-based model
- */
-export interface RelationshipData {
-  thisItem: ItemInfo;
-  outgoing: EdgeInfo[];
-  incoming: EdgeInfo[];
-}
 
 // Helper function to map panel position to context string
 function positionToContext(position: 'left' | 'middle' | 'right'): 'leftPanel' | 'middlePanel' | 'rightPanel' {
@@ -119,24 +55,6 @@ export interface Relationship {
   target: string;           // Target element name
   targetSection: ElementTypeId;
   isSelfRef?: boolean;      // True if target === this.name
-}
-
-// Detail panel data structures (for getDetailData())
-export interface DetailSection {
-  name: string;
-  text?: string;
-  tableHeadings?: string[];
-  tableContent?: unknown[][];
-  tableHeadingColor?: string; // Tailwind classes for heading background
-}
-
-export interface DetailData {
-  titlebarTitle: string;    // "Class: Specimen"
-  title: string;            // "Specimen"
-  subtitle?: string;        // "extends Entity"
-  titleColor: string;       // From ELEMENT_TYPES[type].color
-  description?: string;
-  sections: DetailSection[];
 }
 
 // Inline type for relationship data to avoid circular dependency

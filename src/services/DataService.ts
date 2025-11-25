@@ -13,23 +13,22 @@
 
 import type { ModelData } from '../types';
 import type { Relationship } from '../models/Element';
-import type { DetailData, FloatingBoxMetadata } from '../contracts/ComponentData';
-import type { ElementTypeId } from '../models/ElementRegistry';
-import { ELEMENT_TYPES, getAllElementTypeIds } from '../models/ElementRegistry';
-import type { ToggleButtonData } from '../components/ItemsPanel';
-import type { SectionData } from '../components/Section';
-
-// NEW: Import edge-based interfaces for Slots-as-Edges refactor
 import type {
+  DetailData,
+  FloatingBoxMetadata,
   RelationshipData as RelationshipDataNew,
   EdgeInfo,
   ItemInfo,
   EdgeInfoDeprecated,
   ItemInfoDeprecated,
   RelationshipDataDeprecated
-} from '../models/Element';
+} from '../contracts/ComponentData';
+import type { ElementTypeId } from '../models/ElementRegistry';
+import { ELEMENT_TYPES, getAllElementTypeIds } from '../models/ElementRegistry';
+import type { ToggleButtonData } from '../components/ItemsPanel';
+import type { SectionData } from '../components/Section';
 
-// Re-export new types for UI components
+// Re-export UI types for UI components
 export type { EdgeInfo, ItemInfo, RelationshipDataNew };
 // Re-export deprecated types (to be removed after component migration)
 export type { EdgeInfoDeprecated, ItemInfoDeprecated, RelationshipDataDeprecated };
