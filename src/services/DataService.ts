@@ -23,8 +23,8 @@ import type {
   ItemInfoDeprecated,
   RelationshipDataDeprecated
 } from '../contracts/ComponentData';
-import type { ElementTypeId } from '../models/ElementRegistry';
-import { ELEMENT_TYPES, getAllElementTypeIds } from '../models/ElementRegistry';
+import type { ElementTypeId } from '../config/appConfig';
+import { ELEMENT_TYPES, getAllElementTypeIds } from '../config/appConfig';
 import type { ToggleButtonData } from '../components/ItemsPanel';
 import type { SectionData } from '../components/Section';
 

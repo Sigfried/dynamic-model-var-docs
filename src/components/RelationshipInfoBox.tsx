@@ -16,6 +16,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { DataService } from '../services/DataService';
 import type { EdgeInfoDeprecated as EdgeInfo } from '../services/DataService';
+import { APP_CONFIG, getElementLinkColor, type ElementTypeId } from '../config/appConfig';
 
 interface RelationshipInfoBoxProps {
   itemId: string | null;
@@ -71,7 +72,7 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
         }
 
         const itemRect = itemNode.getBoundingClientRect();
-        const estimatedBoxHeight = 400; // Typical box height for centering
+        const estimatedBoxHeight = APP_CONFIG.layout.estimatedBoxHeight;
         const maxBoxHeight = window.innerHeight * 0.8; // max-h-[80vh] for viewport constraints
 
         // Find the rightmost edge of visible panels
@@ -106,12 +107,12 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
           x: xPosition,
           y: yPosition
         });
-      }, 300);
+      }, APP_CONFIG.timing.hoverDebounce);
     } else if (displayedItemId) {
-      // Item unhovered but we have a displayed item - linger for 1.5s
+      // Item unhovered but we have a displayed item - linger
       lingerTimerRef.current = setTimeout(() => {
         setDisplayedItemId(null);
-      }, 1500);
+      }, APP_CONFIG.timing.lingerDuration);
     }
 
     return () => {
@@ -128,10 +129,10 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
       lingerTimerRef.current = null;
     }
 
-    // After 1.5s hover, trigger upgrade callback
+    // After configured hover time, trigger upgrade callback
     upgradeTimerRef.current = setTimeout(() => {
       onUpgrade?.();
-    }, 1500);
+    }, APP_CONFIG.timing.upgradeHoverTime);
   };
 
   const handleBoxMouseLeave = () => {
@@ -144,7 +145,7 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
     // Start linger timer when leaving the box
     lingerTimerRef.current = setTimeout(() => {
       setDisplayedItemId(null);
-    }, 1500);
+    }, APP_CONFIG.timing.lingerDuration);
   };
 
   const handleBoxClick = () => {
@@ -193,15 +194,20 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
   const makeClickable = (
     itemId: string,
     displayName: string,
-    section: string,
-    className: string
+    elementType: ElementTypeId,
+    isSelfRef: boolean = false
   ) => {
+    // Get color based on element type, or use orange for self-references
+    const className = isSelfRef
+      ? 'text-orange-600 dark:text-orange-400'  // Orange for self-refs (distinct visual indicator)
+      : getElementLinkColor(elementType);
+
     if (!onNavigate) {
       return <span className={className}>{displayName}</span>;
     }
     return (
       <button
-        onClick={() => onNavigate(itemId, section)}
+        onClick={() => onNavigate(itemId, elementType)}
         className={`${className} hover:underline cursor-pointer`}
       >
         {displayName}
@@ -214,12 +220,12 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
     items: T[],
     sectionKey: 'subclasses' | 'usedBy' | 'variables' | 'slots',
     renderItem: (item: T, idx: number) => React.ReactNode,
-    threshold: number = 20
+    threshold: number = APP_CONFIG.layout.collapsibleListSize
   ) => {
     const isExpanded = expandedSections[sectionKey];
     const shouldCollapse = items.length > threshold;
-    const visibleItems = shouldCollapse && !isExpanded ? items.slice(0, 10) : items;
-    const remainingCount = items.length - 10;
+    const visibleItems = shouldCollapse && !isExpanded ? items.slice(0, APP_CONFIG.layout.collapsedPreviewCount) : items;
+    const remainingCount = items.length - APP_CONFIG.layout.collapsedPreviewCount;
 
     return (
       <>
@@ -248,12 +254,12 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
   const renderCollapsibleInheritedSlots = (
     ancestorName: string,
     edges: EdgeInfo[],
-    threshold: number = 20
+    threshold: number = APP_CONFIG.layout.collapsibleListSize
   ) => {
     const isExpanded = expandedSections.inheritedSlots[ancestorName] || false;
     const shouldCollapse = edges.length > threshold;
-    const visibleEdges = shouldCollapse && !isExpanded ? edges.slice(0, 10) : edges;
-    const remainingCount = edges.length - 10;
+    const visibleEdges = shouldCollapse && !isExpanded ? edges.slice(0, APP_CONFIG.layout.collapsedPreviewCount) : edges;
+    const remainingCount = edges.length - APP_CONFIG.layout.collapsedPreviewCount;
 
     return (
       <>
@@ -261,13 +267,13 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
           const isSelfRef = edge.otherItem.id === thisItem.id;
           return (
             <div key={edgeIdx} className="text-sm text-gray-900 dark:text-gray-100">
-              <span className="text-green-600 dark:text-green-400">{edge.label || 'unknown'}</span>
+              <span className={getElementLinkColor('slot')}>{edge.label || 'unknown'}</span>
               {' → '}
               {makeClickable(
                 edge.otherItem.id,
                 edge.otherItem.displayName,
-                edge.otherItem.typeDisplayName.toLowerCase(),
-                isSelfRef ? "text-orange-600 dark:text-orange-400" : "text-blue-600 dark:text-blue-400"
+                edge.otherItem.type as ElementTypeId,
+                isSelfRef
               )}
               <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">
                 ({edge.otherItem.typeDisplayName}{isSelfRef ? ', self-ref' : ''})
@@ -360,8 +366,7 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
                 → {makeClickable(
                   inheritanceEdge.otherItem.id,
                   inheritanceEdge.otherItem.displayName,
-                  inheritanceEdge.otherItem.typeDisplayName.toLowerCase(),
-                  "text-blue-600 dark:text-blue-400"
+                  inheritanceEdge.otherItem.type as ElementTypeId
                 )}
                 <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">
                   ({inheritanceEdge.otherItem.typeDisplayName})
@@ -382,13 +387,13 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
                     const isSelfRef = edge.otherItem.id === thisItem.id;
                     return (
                       <div key={idx} className="text-sm text-gray-900 dark:text-gray-100">
-                        <span className="text-green-600 dark:text-green-400">{edge.label || 'unknown'}</span>
+                        <span className={getElementLinkColor('slot')}>{edge.label || 'unknown'}</span>
                         {' → '}
                         {makeClickable(
                           edge.otherItem.id,
                           edge.otherItem.displayName,
-                          edge.otherItem.typeDisplayName.toLowerCase(),
-                          isSelfRef ? "text-orange-600 dark:text-orange-400" : "text-blue-600 dark:text-blue-400"
+                          edge.otherItem.type as ElementTypeId,
+                          isSelfRef
                         )}
                         <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">
                           ({edge.otherItem.typeDisplayName}{isSelfRef ? ', self-ref' : ''})
@@ -439,8 +444,7 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
                       • {makeClickable(
                         edge.otherItem.id,
                         edge.otherItem.displayName,
-                        edge.otherItem.typeDisplayName.toLowerCase(),
-                        "text-blue-600 dark:text-blue-400"
+                        edge.otherItem.type as ElementTypeId
                       )}
                     </div>
                   )
@@ -464,11 +468,10 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
                       {makeClickable(
                         edge.otherItem.id,
                         edge.otherItem.displayName,
-                        edge.otherItem.typeDisplayName.toLowerCase(),
-                        "text-blue-600 dark:text-blue-400"
+                        edge.otherItem.type as ElementTypeId
                       )}
                       <span className="text-gray-500 dark:text-gray-400">.</span>
-                      <span className="text-green-600 dark:text-green-400">{edge.label || 'unknown'}</span>
+                      <span className={getElementLinkColor('slot')}>{edge.label || 'unknown'}</span>
                       <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">
                         ({edge.otherItem.typeDisplayName})
                       </span>
@@ -494,8 +497,7 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
                       • {makeClickable(
                         edge.otherItem.id,
                         edge.otherItem.displayName,
-                        edge.otherItem.typeDisplayName.toLowerCase(),
-                        "text-purple-600 dark:text-purple-400"
+                        edge.otherItem.type as ElementTypeId
                       )}
                     </div>
                   )

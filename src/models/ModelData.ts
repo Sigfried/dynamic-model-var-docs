@@ -1,7 +1,7 @@
 // Core application data structure
 // This is the main data container for the entire application
 
-import type { ElementTypeId } from './ElementRegistry';
+import type { ElementTypeId } from '../config/appConfig';
 import type { Element, ElementCollection } from './Element';
 import type { SchemaGraph } from './Graph';
 

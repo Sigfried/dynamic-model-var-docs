@@ -4,7 +4,7 @@
 
 import { type ReactElement } from 'react';
 import type { Element, ClassElement } from '../models/Element';
-import { ELEMENT_TYPES, type ElementTypeId } from '../models/ElementRegistry';
+import { ELEMENT_TYPES, type ElementTypeId } from '../config/appConfig';
 
 /**
  * Get header color classes based on element type

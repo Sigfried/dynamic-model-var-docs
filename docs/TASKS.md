@@ -37,142 +37,19 @@
 
 Ordered by implementation dependencies. See [archive/ELEMENT_MERGE_ANALYSIS.md](docs/archive/ELEMENT_MERGE_ANALYSIS.md) for merge history.
 
-### Phase 1: UI Layer Cleanup (Low Risk)
+### ✅ Phase 1 & 1.5: Completed
 
-**Step 1: Move UI types out of Element.ts** ✅
-- Move `ItemInfo`, `EdgeInfo`, `RelationshipData` to ComponentData.ts
-- Element.ts should contain only model-layer types
-- **Why first**: Clarifies model/UI separation before other refactors
-- **Dependencies**: None
+**Phase 1: UI Layer Cleanup** and **Phase 1.5: Complete Type Organization** are both complete.
 
-**Step 2: Rename types.ts → import_types.ts** ✅
-- Clarifies these are DTOs for raw data transformation
-- Used ONLY by dataLoader
-- **Why second**: Independent, clarifies DTO purpose for later work
-- **Dependencies**: None
+**Key accomplishments:**
+- Separated UI types from model types (ComponentData.ts)
+- Renamed types.ts → import_types.ts (DTOs only)
+- Extracted ModelData and SchemaTypes from import_types.ts
+- Created single source of truth for config (appConfig.ts)
+- Eliminated all hard-coded values in components
+- Added consistent element type IDs (no more parsing display names)
 
-### Phase 1.5: Complete Type Organization ✅
-
-**Problem:** import_types.ts should ONLY be imported by dataLoader, but 7+ files were importing ModelData from it.
-
-**Root Cause:** ModelData is not a DTO - it's the core application data structure. It belongs in its own file, not in import_types.ts.
-
-**Step 2.5: Extract all non-DTO types from import_types.ts** ✅
-- **What**: Moved ModelData + transformed types out of import_types.ts
-- **Why**: import_types.ts should contain ONLY DTOs (raw data from JSON/YAML)
-- **Types moved**:
-  - ModelData → `models/ModelData.ts` (core app data structure)
-  - Transformed types (ClassData, EnumData, SlotData, TypeData, VariableSpec, SchemaData, EnumValue, FieldMapping) → `models/SchemaTypes.ts`
-  - SlotDefinition stays in import_types.ts (part of DTO structure, used in ClassDTO) but re-exported from SchemaTypes
-- **What stays in import_types.ts** (DTOs only):
-  - SlotDefinition, SlotDTO, EnumDTO, TypeDTO, ClassDTO, SchemaDTO, TypesSchemaDTO, VariableSpecDTO
-  - FIELD_MAPPINGS
-- **Files updated**: 7 files + Element.ts + Graph.ts + dataLoader.ts
-- **Architecture achieved**: Only dataLoader, Element (DTOs), SchemaTypes (re-export), and tests import from import_types.ts
-- **All typechecks pass** ✅
-
-**Other Type Organization Tasks:**
-- ✅ ElementRegistry.ts cleanup (removed 83 lines of commented-out code)
-- 🔲 App Configuration File - Consolidate config into single source (see plan below)
-- ✅ Decision: ElementRegistry.ts → appConfig.ts (it's just config data, not a registry)
-
-### App Configuration File - Implementation Plan
-
-**Goal**: Single source of truth for all application configuration
-
-**Key Decisions:**
-1. **Consolidate ElementRegistry.ts → appConfig.ts**
-   - ElementRegistry is just configuration data, not an actual registry
-   - No registration logic, just metadata
-   - Better to have all config in one place
-
-2. **Link colors derived from element colors**
-   - Don't configure link colors separately
-   - Links use source/target element type colors
-   - Example: Link to enum uses enum's purple color
-   - Implement via helper: `getElementLinkColor(elementType)`
-
-**Implementation Steps:**
-
-**1. Create `src/config/appConfig.ts`:**
-```typescript
-export const APP_CONFIG = {
-  // Element type metadata (from ElementRegistry.ts)
-  elementTypes: {
-    class: {
-      id: 'class',
-      label: 'Class',
-      pluralLabel: 'Classes',
-      icon: 'C',
-      color: {
-        name: 'blue',
-        hex: '#3b82f6',
-        link: 'text-blue-600 dark:text-blue-400',  // For clickable links
-        toggleActive: 'bg-blue-500',
-        // ... all other color classes
-      }
-    },
-    enum: { ... },
-    slot: { ... },
-    type: { ... },
-    variable: { ... }
-  },
-
-  // Timing constants (from RelationshipInfoBox.tsx)
-  timing: {
-    hoverDebounce: 300,        // Delay before showing preview
-    lingerDuration: 1500,      // How long preview stays after unhover
-    upgradeHoverTime: 1500,    // Hover duration to upgrade to persistent
-  },
-
-  // UI layout constants
-  layout: {
-    estimatedBoxHeight: 400,   // For positioning calculations
-    collapsibleListSize: 20,   // Show "...N more" threshold
-    collapsedPreviewCount: 10, // Items to show when collapsed
-  },
-};
-
-// Types (from ElementRegistry.ts)
-export type ElementTypeId = 'class' | 'enum' | 'slot' | 'type' | 'variable';
-export type RelationshipTypeId = 'inherits' | 'property' | 'uses_enum' | 'references_class';
-
-// Helper functions (not config data)
-export function getElementLinkColor(type: ElementTypeId): string {
-  return APP_CONFIG.elementTypes[type].color.link;
-}
-
-export function getAllElementTypeIds(): ElementTypeId[] {
-  return Object.keys(APP_CONFIG.elementTypes) as ElementTypeId[];
-}
-```
-
-**2. Update imports across codebase:**
-- `src/models/Element.ts` - ElementTypeId, RelationshipTypeId, ELEMENT_TYPES
-- Components using ELEMENT_TYPES for colors/labels
-- `src/utils/panelHelpers.tsx` - Uses ELEMENT_TYPES for colors
-- `src/utils/duplicateDetection.ts` - Uses ElementTypeId
-- ~15-20 files estimated (use grep to find all)
-
-**3. Replace hard-coded values:**
-- `RelationshipInfoBox.tsx:270` - Replace `text-blue-600` → `getElementLinkColor(targetType)`
-- `RelationshipInfoBox.tsx:114,134` - Replace 1500 → `APP_CONFIG.timing.*`
-- `RelationshipInfoBox.tsx:74` - Replace 400 → `APP_CONFIG.layout.estimatedBoxHeight`
-- `LinkOverlay.tsx:63,68` - Replace `text-blue-300` → element type colors
-
-**4. Delete `src/models/ElementRegistry.ts`**
-
-**5. Verify:**
-- `npm run typecheck`
-- Test app functionality
-- Verify colors display correctly for all element types
-
-**Files to Update** (grep for: `from.*ElementRegistry`):
-```bash
-grep -r "from.*ElementRegistry" src/ --include="*.ts" --include="*.tsx"
-```
-
-**Priority**: Medium (good cleanup, completes Phase 1.5)
+**See [archive/tasks.md](archive/tasks.md) for detailed implementation notes.**
 
 ### Phase 2: LinkOverlay Migration (Medium Risk)
 

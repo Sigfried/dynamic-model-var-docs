@@ -3,7 +3,7 @@
  */
 
 import type { Element } from '../models/Element';
-import type { ElementTypeId } from '../models/ElementRegistry';
+import type { ElementTypeId } from '../config/appConfig';
 
 export interface ElementDescriptor {
   element: Element;

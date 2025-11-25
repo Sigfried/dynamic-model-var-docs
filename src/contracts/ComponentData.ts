@@ -166,7 +166,8 @@ export interface DetailData {
 export interface ItemInfoDeprecated {
   id: string;
   displayName: string;
-  typeDisplayName: string;  // "Class", "Enum", "Slot", "Variable"
+  type: string;  // Element type ID: 'class', 'enum', 'slot', 'type', 'variable'
+  typeDisplayName: string;  // User-facing label: "Class", "Enumeration", "Slot", "Type", "Variable"
   color: string;  // Tailwind color classes for styling
 }
 
@@ -188,7 +189,8 @@ export interface EdgeInfoDeprecated {
 export interface ItemInfo {
   id: string;
   displayName: string;
-  typeDisplayName: string;  // "Class", "Enum", "Slot", "Variable"
+  type: string;  // Element type ID: 'class', 'enum', 'slot', 'type', 'variable'
+  typeDisplayName: string;  // User-facing label: "Class", "Enumeration", "Slot", "Type", "Variable"
   color: string;  // Tailwind color classes for styling
   panelPosition: 'left' | 'right';
   panelId: 'left' | 'middle' | 'right'; // these should be dom ids on the panels

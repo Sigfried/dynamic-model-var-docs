@@ -14,8 +14,8 @@ import type {
 
 // Core application data structure
 import type { ModelData } from './ModelData';
-import type { ElementTypeId, RelationshipTypeId } from './ElementRegistry';
-import { ELEMENT_TYPES } from './ElementRegistry';
+import type { ElementTypeId, RelationshipTypeId } from '../config/appConfig';
+import { ELEMENT_TYPES } from '../config/appConfig';
 import type { RenderableItem } from './RenderableItem';
 import { buildGraphFromSchemaData, type SchemaGraph, type SlotEdgeAttributes } from './Graph';
 import type {
@@ -529,7 +529,8 @@ export abstract class Element {
     const thisItem: ItemInfoDeprecated = {
       id: this.getId(),
       displayName: this.name,
-      typeDisplayName: metadata.label,
+      type: this.type,  // Element type ID ('class', 'enum', etc.)
+      typeDisplayName: metadata.label,  // User-facing label ('Class', 'Enumeration', etc.)
       color: metadata.color.headerBg
     };
 
@@ -548,7 +549,8 @@ export abstract class Element {
       const otherItem: ItemInfoDeprecated = {
         id: target,
         displayName: target,
-        typeDisplayName: targetMetadata.label,
+        type: targetElement.type,  // Element type ID ('class', 'enum', etc.)
+        typeDisplayName: targetMetadata.label,  // User-facing label ('Class', 'Enumeration', etc.)
         color: targetMetadata.color.headerBg
       };
 
@@ -586,7 +588,8 @@ export abstract class Element {
       const otherItem: ItemInfoDeprecated = {
         id: source,
         displayName: source,
-        typeDisplayName: sourceMetadata.label,
+        type: sourceElement.type,  // Element type ID ('class', 'enum', etc.)
+        typeDisplayName: sourceMetadata.label,  // User-facing label ('Class', 'Enumeration', etc.)
         color: sourceMetadata.color.headerBg
       };
 

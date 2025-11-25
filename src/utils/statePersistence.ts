@@ -1,4 +1,4 @@
-import type { ElementTypeId } from '../models/ElementRegistry';
+import type { ElementTypeId } from '../config/appConfig';
 
 export interface DialogState {
   itemName: string;

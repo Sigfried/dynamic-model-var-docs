@@ -21,6 +21,7 @@ import {
 } from '../utils/linkHelpers';
 import type { ItemHoverData } from './Section';
 import {decontextualizeId} from '../utils/idContextualization';
+import { getElementLinkTooltipColor, type ElementTypeId } from '../config/appConfig';
 
 /**
  * LinkTooltipData - Data for link hover tooltips
@@ -49,6 +50,10 @@ function LinkTooltip({ data, x, y }: { data: LinkTooltipData; x: number; y: numb
     }
   };
 
+  // Get element-type-specific colors
+  const sourceColor = getElementLinkTooltipColor(data.sourceType as ElementTypeId);
+  const targetColor = getElementLinkTooltipColor(data.targetType as ElementTypeId);
+
   return (
     <div
       className="absolute bg-gray-900 text-white text-sm px-3 py-2 rounded shadow-lg pointer-events-none z-50"
@@ -60,12 +65,12 @@ function LinkTooltip({ data, x, y }: { data: LinkTooltipData; x: number; y: numb
     >
       <div className="font-semibold mb-1">{formatRelationshipType(data.relationshipType)}</div>
       <div className="text-gray-300">
-        <span className="text-blue-300">{data.sourceName}</span>
+        <span className={sourceColor}>{data.sourceName}</span>
         <span className="text-gray-400"> ({data.sourceType})</span>
       </div>
       <div className="text-gray-400 text-xs my-1">↓</div>
       <div className="text-gray-300">
-        <span className="text-blue-300">{data.targetName}</span>
+        <span className={targetColor}>{data.targetName}</span>
         <span className="text-gray-400"> ({data.targetType})</span>
       </div>
     </div>
