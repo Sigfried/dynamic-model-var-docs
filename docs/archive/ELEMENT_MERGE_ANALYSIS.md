@@ -108,7 +108,7 @@ SchemaGraph (type alias)
 - **Keep**: All current interfaces - these are component contracts
 - **Add**: `SelectedElement` from types.ts ✅ COMPLETED
 - **Add**: `DetailSection`, `DetailData` from ElementPreRefactor (detail panel is UI) ✅ COMPLETED
-- **TODO**: `ItemInfo`, `EdgeInfo` should move here from Element.ts (they're UI types)
+- **Add**: `ItemInfo`, `EdgeInfo`, `RelationshipData` from Element.ts (UI types) ✅ COMPLETED
 
 ### DataService.ts (Service Layer)
 - **Remove**: `FloatingBoxMetadata` (duplicate of ComponentData.ts) ✅ COMPLETED
@@ -133,8 +133,8 @@ SchemaGraph (type alias)
 - Only dataLoader should use DTOs
 - Element constructors should take transformed data, not raw DTOs
 
-**TODO - Move UI types out**:
-- `ItemInfo`, `EdgeInfo` are UI types → should move to ComponentData.ts or UI layer
+**UI types moved out**: ✅ COMPLETED (Phase 1, Step 1)
+- `ItemInfo`, `EdgeInfo`, `RelationshipData` (+ deprecated versions) → moved to ComponentData.ts
 
 ### Graph.ts (Model Layer - Graph structures)
 **Keep**: Everything - this is clean, no UI concerns

@@ -137,10 +137,10 @@ const info = element.getDisplayInfo();
    - Move behavior to graph queries and other layers
    - Element classes become thinner wrappers around graph data
 
-4. **UI Type Separation**:
-   - `ItemInfo`, `EdgeInfo` are UI types → should move to ComponentData.ts
-   - Element.ts should not contain UI-specific interfaces
-   - Only model-layer types in Element.ts
+4. **UI Type Separation**: ✅ COMPLETED (Phase 1, Step 1)
+   - `ItemInfo`, `EdgeInfo` are UI types → moved to ComponentData.ts
+   - Element.ts contains only model-layer types
+   - DetailSection, DetailData also moved (eliminated duplicates)
 
 **Critical Rule**: UI components (in `src/components/` and `src/hooks/`) must:
 - ✅ Import from `services/DataService` (functions, types, interfaces)
