@@ -1988,7 +1988,7 @@ export class VariableCollection extends ElementCollection {
 
   /** Factory: Create from raw data (called by dataLoader) */
   static fromData(variableData: VariableSpec[], classCollection: ClassCollection): VariableCollection {
-    // Convert VariableSpec DTOs to VariableElement instances
+    // Convert transformed VariableSpec data to VariableElement instances
     const variableElements = variableData.map(spec => new VariableElement(spec));
 
     // Group variables by class name
