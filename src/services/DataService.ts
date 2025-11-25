@@ -11,6 +11,7 @@
  * - itemId = element name (unique identifier)
  */
 
+import type { NodeEntry, EdgeEntry} from "graphology-types";
 import type { ModelData } from '../models/ModelData';
 import type { Relationship } from '../models/Element';
 import type {
@@ -103,113 +104,25 @@ export class DataService {
     return element?.getFloatingBoxMetadata() ?? null;
   }
 
-  /**
-   * Get relationship data for an item (old type-dependent structure)
-   * @deprecated Use getRelationshipsNew() instead
-   * Returns null if item not found
-   *
-   * Stage 3 Step 6: Now uses graph-based data with adapter to old format
-   */
-  getRelationships(itemId: string): RelationshipDataOld | null {
-    const element = this.modelData.elementLookup.get(itemId);
-    if (!element) return null;
-
-    // Try new graph-based method first, fall back to old method
-    const newData = element.getRelationshipsFromGraph();
-    if (newData) {
-      const elementType = this.getItemType(itemId);
-      if (!elementType) return null;
-      return this.adaptRelationshipDataToOldFormat(newData, elementType);
-    }
-
-    // Fallback for elements without graph data
-    return element.getRelationshipData();
-  }
-
-  /**
-   * Adapter: Converts deprecated RelationshipData format to old format
-   * Used during migration to keep existing UI components working
-   */
-  private adaptRelationshipDataToOldFormat(
-    newData: RelationshipDataDeprecated,
-    elementType: string
-  ): RelationshipDataOld {
-    const metadata = ELEMENT_TYPES[elementType as ElementTypeId];
-    const color = metadata?.color.headerBg ?? 'bg-gray-600';
-
-    // Split outgoing edges by type
-    const inheritance = newData.outgoing.find(e => e.edgeType === 'inheritance');
-    const slots = newData.outgoing.filter(e => e.edgeType === 'property' && !e.inheritedFrom);
-    const inheritedSlotsMap = new Map<string, SlotInfo[]>();
-
-    // Group inherited property edges by ancestor
-    newData.outgoing
-      .filter(e => e.edgeType === 'property' && e.inheritedFrom)
-      .forEach(edge => {
-        const ancestorName = edge.inheritedFrom!;
-        if (!inheritedSlotsMap.has(ancestorName)) {
-          inheritedSlotsMap.set(ancestorName, []);
-        }
-        inheritedSlotsMap.get(ancestorName)!.push({
-          attributeName: edge.label || 'unknown',
-          target: edge.otherItem.id,
-          targetSection: this.getItemType(edge.otherItem.id) || 'unknown',
-          isSelfRef: edge.otherItem.id === newData.thisItem.id
-        });
-      });
-
-    // Split incoming edges by type
-    const subclasses: string[] = [];
-    const usedByAttributes: Array<{ className: string; attributeName: string; sourceSection: string }> = [];
-    const variables: Array<{ name: string }> = [];
-
-    newData.incoming.forEach(edge => {
-      if (edge.edgeType === 'inheritance') {
-        subclasses.push(edge.otherItem.id);
-      } else if (edge.edgeType === 'property') {
-        usedByAttributes.push({
-          className: edge.otherItem.id,
-          attributeName: edge.label || 'unknown',
-          sourceSection: this.getItemType(edge.otherItem.id) || 'unknown'
-        });
-      } else if (edge.edgeType === 'variable_mapping') {
-        variables.push({
-          name: edge.otherItem.id
-        });
-      }
-    });
-
-    return {
-      itemName: newData.thisItem.displayName,
-      itemSection: this.getItemType(newData.thisItem.id) || 'unknown',
-      color,
-      outgoing: {
-        inheritance: inheritance ? {
-          target: inheritance.otherItem.id,
-          targetSection: this.getItemType(inheritance.otherItem.id) || 'unknown'
-        } : undefined,
-        slots: slots.map(edge => ({
-          attributeName: edge.label || 'unknown',
-          target: edge.otherItem.id,
-          targetSection: this.getItemType(edge.otherItem.id) || 'unknown',
-          isSelfRef: edge.otherItem.id === newData.thisItem.id
-        })),
-        inheritedSlots: Array.from(inheritedSlotsMap.entries()).map(([ancestorName, slotsList]) => ({
-          ancestorName,
-          slots: slotsList
-        }))
-      },
-      incoming: {
-        subclasses,
-        usedByAttributes,
-        variables
-      }
-    };
-  }
+  // [sg] deleted getRelationships and adaptRelationshipDataToOldFormat; weren't being used
 
   // ============================================================================
   // NEW: Edge-based methods for Slots-as-Edges refactor (Stage 1 Step 3)
   // ============================================================================
+
+  getItemInfo(nodeId: string): ItemInfo | null {
+    const node: NodeEntry = this.modelData.graph.node(nodeId);
+    // ...
+  }
+  getEdgeInfo(graphEdge: EdgeEntry): EdgeInfo | null {
+    const sourceItem: ItemInfo = this.getItemInfo(this.modelData.graph.source(graphEdge));
+    const targetItem: ItemInfo = this.getItemInfo(this.modelData.graph.target(graphEdge));
+    // ...
+  }
+  getEdgesForItem(itemId: string): EdgeInfo[] | null {
+    const graphEdges = this.modelData.graph.edges(itemId);
+    return graphEdges.map(e => this.getEdgeInfo(e)).filter(e => e);
+  }
 
   /**
    * Get all property edges for LinkOverlay rendering.

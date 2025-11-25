@@ -192,8 +192,8 @@ export interface ItemInfo {
   type: string;  // Element type ID: 'class', 'enum', 'slot', 'type', 'variable'
   typeDisplayName: string;  // User-facing label: "Class", "Enumeration", "Slot", "Type", "Variable"
   color: string;  // Tailwind color classes for styling
-  panelPosition: 'left' | 'right';
-  panelId: 'left' | 'middle' | 'right'; // these should be dom ids on the panels
+  // panelPosition: 'left' | 'right';
+  // panelId: 'left' | 'middle' | 'right'; // these should be dom ids on the panels
 }
 
 /**
