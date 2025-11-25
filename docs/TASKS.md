@@ -10,17 +10,16 @@
 
 ### Link Rendering Issues
 1. **Class→slot links pointing wrong direction** (3-panel mode)
-2. **No link highlight on item hover**
-3. **Specimen→analyte_type link missing** (see screenshot in old TASKS.md:107)
-4. **SVG path NaN errors** - Console shows `<path> attribute d: Expected number, "M NaN NaN C NaN Na..."`
+2. **Specimen→analyte_type link missing** (see screenshot in old TASKS.md:107)
+3. **SVG path NaN errors** - Console shows `<path> attribute d: Expected number, "M NaN NaN C NaN Na..."`
    - **Location**: LinkOverlay.tsx:448 (path element at line 450: `d={pathData}`)
    - something is wrong with the self-ref code on lines 403-412
 
 ### Hover/Detail Box Issues
-5. **Slot hover shows "No relationships found"** - RelationshipInfoBox broken for slots
+4. **Slot hover shows "No relationships found"** - RelationshipInfoBox broken for slots
 
 ### Positioning Issues
-6. **Detail box positioning bugs** - Multiple issues from Unified Detail Box work:
+5. **Detail box positioning bugs** - Multiple issues from Unified Detail Box work:
    - Remove unnecessary isStacked logic (#3)
    - Make stacked width responsive (#4)
    - Fix transitory/persistent box upgrade (#6)
