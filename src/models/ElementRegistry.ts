@@ -40,8 +40,8 @@ export interface ElementTypeMetadata {
 }
 
 /**
+ * [sg] commenting out, not used
  * Valid source/target pair for a relationship type
- */
 export interface RelationshipPair {
   source: ElementTypeId;
   target: ElementTypeId;
@@ -49,13 +49,13 @@ export interface RelationshipPair {
 
 /**
  * Relationship type metadata
- */
 export interface RelationshipTypeMetadata {
   readonly id: RelationshipTypeId;
   readonly label: string;
   readonly color: string;  // Gradient color for SVG links
   readonly validPairs: readonly RelationshipPair[];  // Valid source→target combinations
 }
+ */
 
 /**
  * Central registry of element types
@@ -158,7 +158,7 @@ export const ELEMENT_TYPES: Record<ElementTypeId, ElementTypeMetadata> = {
 
 /**
  * Central registry of relationship types
- */
+ * [sg] commenting out, not used
 export const RELATIONSHIP_TYPES: Record<RelationshipTypeId, RelationshipTypeMetadata> = {
   inherits: {
     id: 'inherits',
@@ -197,27 +197,29 @@ export const RELATIONSHIP_TYPES: Record<RelationshipTypeId, RelationshipTypeMeta
     ]
   }
 } as const;
+ */
 
 /**
  * Helper: Get element type metadata
- */
+ * [sg] commenting out unused functions
 export function getElementType(id: ElementTypeId): ElementTypeMetadata {
   return ELEMENT_TYPES[id];
 }
 
 /**
  * Helper: Get relationship type metadata
- */
+ * /
 export function getRelationshipType(id: RelationshipTypeId): RelationshipTypeMetadata {
   return RELATIONSHIP_TYPES[id];
 }
 
 /**
  * Helper: Check if a string is a valid ElementTypeId
- */
+ * /
 export function isValidElementType(value: string): value is ElementTypeId {
   return value in ELEMENT_TYPES;
 }
+*/
 
 /**
  * Helper: Get all element type IDs

@@ -51,6 +51,19 @@ Ordered by implementation dependencies. See [archive/ELEMENT_MERGE_ANALYSIS.md](
 - **Why second**: Independent, clarifies DTO purpose for later work
 - **Dependencies**: None
 
+### [sg] finish reorganizing types
+- ElementRegistry.ts had a lot of unused stuff in it. i just commented it all out
+- what remains is mostly about configuration of colors and words
+- App Configuration File
+    - somewhere along the line, it disappeared from tasks or wherever
+      it was. there's a reference to it below and then in three archive files
+    - reassemble it from those files and put it here
+    - the color stuff in Element.ts belongs there
+- after that, will there be anything left in ElementRegistry? 
+- you just "completed" Phase 1, Step 2 above but import_types is being imported
+  in lots of places
+  - figure out why and make a plan for correcting
+
 ### Phase 2: LinkOverlay Migration (Medium Risk)
 
 **Step 3: Migrate LinkOverlay to graph-based relationships** 🔲
@@ -184,14 +197,6 @@ See separate document for these (TBD - for now, see old TASKS.md lines 449-815):
 - Show message that these are handled as records, not specific variables
 - Background: [See conversation with Anne](archive/tasks_pre_reorg.md#different-variable-treatment-for-condition-and-drug-exposure-classes)
 - Message to display: "These [Condition|DrugExposure|etc.] variables were used in the pilot. There are potentially thousands of such items that can appear in actual data. They won't be handled as specific variables but as records in the harmonized data."
-
----
-
-## 📝 Pending Decisions
-
-**Two-Graph Analysis**
-- Use "upcoming work details file" pattern
-- Not sure yet where in refactoring order
 
 ---
 
