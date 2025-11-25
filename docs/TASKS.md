@@ -50,38 +50,20 @@ Ordered by implementation dependencies. See [archive/ELEMENT_MERGE_ANALYSIS.md](
 
 **See [archive/tasks.md](archive/tasks.md) for detailed implementation notes.**
 
-### Phase 2: LinkOverlay Migration (Medium Risk)
+### Phase 3: Data Flow Refactor (High Risk) - DO THIS FIRST
 
-**Step 3: Migrate LinkOverlay to graph-based relationships** 🔲
-- Update to use `getAllPropertyEdges()` instead of old `getRelationships()`
-- Uses graph edges instead of subclass-specific `this.attributes`
-- Fix 3-panel display bugs while migrating
-- **Why third**: Needs UI types moved first (Phase 1), enables Phase 3
-- **Dependencies**: ItemInfo/EdgeInfo in ComponentData.ts
-
-**Step 4: Remove old getRelationships() methods** 🔲
-- Delete from ClassElement, EnumElement, SlotElement, VariableElement
-- Only keep graph-based `getRelationshipsFromGraph()`
-- Remove ClassSlot class (replaced by graph slot edges)
-- **Why fourth**: Can only do after LinkOverlay migration complete
-- **Dependencies**: Nothing using old methods
-
-### Phase 3: Data Flow Refactor (High Risk)
-
-**Step 5: Refactor data flow** 🔲
+**Step 5: Refactor data flow** 🔲 **← NEXT PRIORITY**
 ```
 Current: DTOs → Element constructors → Domain Models
 Planned: DTOs → dataLoader transform → graph build → Element instances (reduced role)
 ```
-- **Why fifth**: Major architectural change, needs working UI first
-- **Dependencies**: All UI using graph-based queries
+- **Why first**: Graph structure changes will affect LinkOverlay, so stabilize this before migrating LinkOverlay
+- **Dependencies**: Phase 3 Step 6 (complete)
 
-**Step 6: Remove DTO imports from Element.ts** 🔲
-- Element constructors should NOT take raw DTOs (ClassDTO, EnumDTO, etc.)
-- Only dataLoader should use DTOs
-- Element constructors take transformed data instead
-- **Why sixth**: Depends on data flow refactor
-- **Dependencies**: New data flow working
+**Step 6: Remove DTO imports from Element.ts** ✅ **COMPLETE**
+- Element.ts has no DTO imports
+- Only dataLoader uses DTOs (correct!)
+- SchemaTypes just re-exports SlotDefinition
 
 **Step 7: Reduce Element subclass code** 🔲
 - Most behavior should move to graph queries or other layers
@@ -90,7 +72,40 @@ Planned: DTOs → dataLoader transform → graph build → Element instances (re
 - **Why last**: Final cleanup after everything else works
 - **Dependencies**: Graph as primary data source
 
-### Completed
+### Phase 2: LinkOverlay Migration (Medium Risk) - AFTER PHASE 3 STEP 5
+
+**Planning Task: Review LINKOVERLAY_REFACTOR_PLAN.md and Phase 2 tasks** 🔲
+- Align plan with current architecture decisions
+- Finalize approach after Phase 3 Step 5 complete
+- See [LINKOVERLAY_REFACTOR_PLAN.md](../LINKOVERLAY_REFACTOR_PLAN.md)
+
+**Step 3: Migrate LinkOverlay to graph-based relationships** 🔲
+- Update to use `getAllPropertyEdges()` instead of old `getRelationships()`
+- Uses graph edges instead of subclass-specific `this.attributes`
+- Fix 3-panel display bugs while migrating
+- **Partial progress**: `getAllPropertyEdges()` implemented in DataService
+- **Dependencies**: Phase 3 Step 5 (stable graph structure), planning review
+
+**Step 4: Remove old getRelationships() methods** 🔲
+- Delete from ClassElement, EnumElement, SlotElement, VariableElement
+- Only keep graph-based `getRelationshipsFromGraph()`
+- Remove ClassSlot class (replaced by graph slot edges)
+- **Dependencies**: LinkOverlay migration complete (Step 3)
+
+**Step 7: Reduce Element subclass code** 🔲
+- Most behavior should move to graph queries or other layers
+- Element classes become thinner wrappers around graph data
+- Many methods can be replaced with graph queries
+- **Why last**: Final cleanup after everything else works
+- **Dependencies**: Graph as primary data source
+
+**Step 8: Retire *Deprecated types** 🔲
+- Migrate RelationshipInfoBox to use EdgeInfo/ItemInfo instead of *Deprecated types
+- Remove EdgeInfoDeprecated, ItemInfoDeprecated, RelationshipDataDeprecated
+- Remove getRelationshipsNew() method
+- **Dependencies**: Phase 2 Steps 3-4 complete
+
+### More Upcoming
 
 - ✅ **Merge Element.ts and ElementPreRefactor.ts**
   - Merged via git mv to preserve history
@@ -115,6 +130,13 @@ Planned: DTOs → dataLoader transform → graph build → Element instances (re
 - May have done some of this on branch (check)
 
 ### Medium Priority
+
+**Grouped Slots Panel - Show slots organized by source**
+- Display slots grouped by Global + per-class sections
+- Show inheritance (inherited vs defined here vs overridden)
+- Visual indicators for slot origin
+- See [LINKOVERLAY_REFACTOR_PLAN.md](../LINKOVERLAY_REFACTOR_PLAN.md) lines 10-53 for detailed design
+- **Dependencies**: Graph-based queries working (Phase 3 Step 5)
 
 **Overhaul Badge Display System**
 - Show multiple counts per element (e.g., "103 vars, 5 enums, 2 slots")
