@@ -216,14 +216,77 @@ export class DataService {
    * Returns only property edges (class→enum/class relationships via attributes/slots).
    * Does NOT include inheritance or variable_mapping edges (those appear in detail views).
    *
-   * STUB: Returns empty array - will be implemented in Stage 4 (LinkOverlay refactor)
-   * Current LinkOverlay uses getRelationshipsForLinking() instead
-   * When implemented, will return EdgeInfo[] filtered to property edges only
+   * Queries the graph for all 'slot' type edges and converts them to EdgeInfo format.
+   * panelId is set to 'left' initially - LayoutManager should update based on actual panel positions.
    */
   getAllPropertyEdges(): EdgeInfo[] {
-    // TODO Stage 4: Implement using graph queries when refactoring LinkOverlay
-    // Query graph for all property edges, return as EdgeInfo[]
-    return [];
+    const edges: EdgeInfo[] = [];
+
+    // Query graph for all edges
+    this.modelData.graph.forEachEdge((edgeKey, attrs, sourceId, targetId) => {
+      // Only include slot edges (property relationships)
+      if (attrs.type !== 'slot') return;
+
+      // Get source and target elements
+      const sourceElement = this.modelData.elementLookup.get(sourceId);
+      const targetElement = this.modelData.elementLookup.get(targetId);
+
+      if (!sourceElement || !targetElement) {
+        console.warn(`getAllPropertyEdges: Missing element for edge ${edgeKey}`, {
+          sourceId,
+          targetId,
+          foundSource: !!sourceElement,
+          foundTarget: !!targetElement
+        });
+        return;
+      }
+
+      // Get element types from graph nodes (type property is protected on Element)
+      const sourceNode = this.modelData.graph.getNodeAttributes(sourceId);
+      const targetNode = this.modelData.graph.getNodeAttributes(targetId);
+
+      // Get element type metadata for colors and display names
+      const sourceTypeMetadata = ELEMENT_TYPES[sourceNode.type as ElementTypeId];
+      const targetTypeMetadata = ELEMENT_TYPES[targetNode.type as ElementTypeId];
+
+      if (!sourceTypeMetadata || !targetTypeMetadata) {
+        console.warn(`getAllPropertyEdges: Missing type metadata for edge ${edgeKey}`, {
+          sourceType: sourceNode.type,
+          targetType: targetNode.type
+        });
+        return;
+      }
+
+      // Cast attrs to SlotEdgeAttributes to access slot-specific properties
+      const slotAttrs = attrs as import('../models/Graph').SlotEdgeAttributes;
+
+      // Build EdgeInfo
+      edges.push({
+        edgeType: 'property',
+        sourceItem: {
+          id: sourceId,
+          displayName: sourceElement.name,
+          type: sourceNode.type,
+          typeDisplayName: sourceTypeMetadata.label,
+          color: sourceTypeMetadata.color.name,
+          panelPosition: 'left',  // Source is logically on left of edge
+          panelId: 'left'  // TODO: Placeholder - LayoutManager should fill this based on actual panel
+        },
+        targetItem: {
+          id: targetId,
+          displayName: targetElement.name,
+          type: targetNode.type,
+          typeDisplayName: targetTypeMetadata.label,
+          color: targetTypeMetadata.color.name,
+          panelPosition: 'right',  // Target is logically on right of edge
+          panelId: 'left'  // TODO: Placeholder - LayoutManager should fill this based on actual panel
+        },
+        label: slotAttrs.slotName,
+        inheritedFrom: slotAttrs.inheritedFrom
+      });
+    });
+
+    return edges;
   }
 
   /**

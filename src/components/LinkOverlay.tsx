@@ -405,14 +405,16 @@ export default function LinkOverlay({
       let pathData: string;
       if (isSelfRef) {
         // Create adjusted DOMRect for self-ref path
+        // Explicitly include width/height since DOMRect getters don't spread properly
         const adjustedRect = {
-          ...sourceRect,
           left: sourceRect.left - svgRect.left,
           right: sourceRect.right - svgRect.left,
           top: sourceRect.top - svgRect.top,
           bottom: sourceRect.bottom - svgRect.top,
           x: sourceRect.x - svgRect.left,
-          y: sourceRect.y - svgRect.top
+          y: sourceRect.y - svgRect.top,
+          width: sourceRect.width,
+          height: sourceRect.height
         } as DOMRect;
         pathData = generateSelfRefPath(adjustedRect);
       } else {
