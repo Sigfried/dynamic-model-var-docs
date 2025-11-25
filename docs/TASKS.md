@@ -57,28 +57,28 @@ Ordered by implementation dependencies. See [archive/ELEMENT_MERGE_ANALYSIS.md](
 
 **Root Cause:** ModelData is not a DTO - it's the core application data structure. It belongs in its own file, not in import_types.ts.
 
-**Step 2.5: Extract ModelData from import_types.ts** 🔲
-- **What**: Move ModelData interface to new file `src/models/ModelData.ts`
-- **Why**: import_types.ts should contain ONLY DTOs for raw data transformation
-    - [sg] import_types also currently includes exports of all the types
-      that dataLoader converts things into. we should review (during
-      component refactor tasks) whether they need changes, but for
-      now we can move them to ComponentData.ts. import_types can
-      import them from there and reexport them for dataLoader
-- **Files affected**: 7 files currently import ModelData:
-  - src/services/DataService.ts
-  - src/hooks/useModelData.ts
-  - src/test/*.test.tsx (5 test files)
+**Step 2.5: Extract all non-DTO types from import_types.ts** 🔲
+- **What**: Move ModelData + transformed types out of import_types.ts
+- **Why**: import_types.ts should contain ONLY DTOs (raw data from JSON/YAML)
+- **Types to move**:
+  - ModelData → `models/ModelData.ts` (core app data structure)
+  - Transformed types (ClassData, EnumData, SlotData, TypeData, VariableSpec, SchemaData, EnumValue, FieldMapping) → `models/SchemaTypes.ts`
+- **What stays in import_types.ts** (DTOs only):
+  - SlotDTO, EnumDTO, TypeDTO, ClassDTO, SchemaDTO, TypesSchemaDTO, VariableSpecDTO
+  - SlotDefinition, FIELD_MAPPINGS
+- **Files affected**: 7 files currently import ModelData + Element.ts imports transformed types
 - **Architecture rule**: Only dataLoader should import from import_types.ts
 - **Dependencies**: None (can be done immediately)
 
 **Implementation Plan:**
-1. Create new file `src/models/ModelData.ts` with ModelData interface
-2. Update import_types.ts to re-export ModelData from models/ModelData.ts (for backward compatibility)
-3. Update all 7 files to import ModelData from 'models/ModelData' instead of 'import_types'
-4. Remove re-export from import_types.ts
-5. Verify: `grep -r "from.*import_types" src/` should only show dataLoader.ts
-6. Run typecheck
+1. Create `src/models/SchemaTypes.ts` with all transformed types (ClassData, EnumData, etc.)
+2. Create `src/models/ModelData.ts` with ModelData interface (imports from SchemaTypes)
+3. Update import_types.ts to re-export from new files (backward compatibility)
+4. Update Element.ts to import from SchemaTypes instead of import_types
+5. Update 7 files to import ModelData from models/ModelData
+6. Remove re-exports from import_types.ts
+7. Verify: `grep -r "from.*import_types" src/` should only show dataLoader.ts
+8. Run typecheck
 
 **Other Type Organization Tasks:**
 - ElementRegistry.ts cleanup (unused code commented out)
