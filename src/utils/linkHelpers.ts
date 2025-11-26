@@ -37,6 +37,9 @@ export interface LinkFilterOptions {
 /**
  * Filter relationships based on options
  *
+ * @deprecated Only used in tests. Production code should use DataService.getEdgesForItem() with EdgeInfo[].
+ * Will be removed after test migration.
+ *
  * @param relationships - Array of relationships to filter
  * @param options - Filter criteria
  * @returns Filtered relationships
@@ -87,6 +90,9 @@ export function filterRelationships(
 
 /**
  * Build Link objects from an element's relationships
+ *
+ * @deprecated Only used in tests. Production code should use DataService.getEdgesForItem() with EdgeInfo[].
+ * Will be removed after test migration.
  *
  * @param sourceType - Type of the source element
  * @param sourceName - Name of the source element
@@ -320,6 +326,9 @@ export function getLinkStrokeWidth(relationship: Relationship): number {
 
 /**
  * Format relationship type for display
+ *
+ * @deprecated Only used in tests. Production code should format EdgeInfo types directly.
+ * Will be removed after test migration.
  *
  * @param relationship - Relationship object
  * @returns Human-readable relationship description

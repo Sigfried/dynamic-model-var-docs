@@ -232,6 +232,9 @@ export class DataService {
   /**
    * Get relationships for linking visualization (used by LinkOverlay)
    * Returns null if item not found
+   *
+   * @deprecated Use getEdgesForItem() instead (returns EdgeInfo[] with explicit source/target).
+   * Will be removed after LinkOverlay migration (Phase 2 Step 3).
    */
   getRelationshipsForLinking(itemId: string): Relationship[] | null {
     const element = this.modelData.elementLookup.get(itemId);

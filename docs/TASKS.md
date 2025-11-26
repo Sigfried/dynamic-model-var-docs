@@ -15,6 +15,7 @@
     - **SVG path NaN errors** - Console shows `<path> attribute d: Expected number, "M NaN NaN C NaN Na..."`
       - **Location**: LinkOverlay.tsx:448 (path element at line 450: `d={pathData}`)
       - something is wrong with the self-ref code on lines 403-412
+4. when showing/hiding middle panel, links don't update until some kind of interaction
 
 ### Hover/Detail Box Issues
 4. **Slot hover shows "No relationships found"** - RelationshipInfoBox broken for slots
@@ -74,14 +75,16 @@ Ordered by implementation dependencies. See [archive/ELEMENT_MERGE_ANALYSIS.md](
 - Removed EdgeInfoDeprecated and RelationshipDataDeprecated from all files
 - **Result**: Cleaner edge representation with explicit source/target, deprecated types removed
 
-**Step 3: Replace Relationship with EdgeInfo** 🔲 **← NEXT PRIORITY**
-- Remove getRelationshipsForLinking() from DataService (replaced by getEdgesForItem())
-- Update linkHelpers.ts to use EdgeInfo instead of Relationship:
-  - Deprecate or remove: filterRelationships(), buildLinks(), formatRelationshipType()
-  - These are only used in tests, not production code
-- Update tests to use EdgeInfo
-- Remove unused Relationship imports
-- **Dependencies**: EdgeInfoDeprecated retirement (Step 2)
+**Step 3: Deprecate Relationship-based functions** ✅ **COMPLETE**
+- Marked getRelationshipsForLinking() as @deprecated in DataService
+  - Still used by LinkOverlay (will be removed in Phase 2 Step 3)
+  - Points to getEdgesForItem() as replacement
+- Marked test-only linkHelpers functions as @deprecated:
+  - filterRelationships(), buildLinks(), formatRelationshipType()
+  - Only used in tests, not production code
+  - Will be removed after test migration
+- **Result**: Old Relationship-based API marked deprecated, new EdgeInfo API ready for adoption
+- **Note**: Actual removal deferred to Phase 2 Step 3 (LinkOverlay migration)
 
 ### Phase 3: Data Flow Refactor (High Risk) - AFTER TYPE CLEANUP
 
