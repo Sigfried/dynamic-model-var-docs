@@ -17,7 +17,7 @@ import type { ModelData } from './ModelData';
 import type { ElementTypeId, RelationshipTypeId } from '../config/appConfig';
 import type { RenderableItem } from './RenderableItem';
 import { buildGraphFromSchemaData, } from './Graph';
-import { type SchemaGraph, type SlotEdgeAttributes } from './SchemaTypes';
+import { type SchemaGraph, type SlotEdgeAttributes, EDGE_TYPES } from './SchemaTypes';
 import type {
   DetailSection,
   DetailData,
@@ -549,22 +549,22 @@ export abstract class Element {
         color: targetMetadata.color.headerBg
       };
 
-      if (attributes.type === 'inheritance') {
+      if (attributes.type === EDGE_TYPES.INHERITANCE) {
         outgoing.push({
-          edgeType: 'inheritance',
+          edgeType: EDGE_TYPES.INHERITANCE,
           otherItem
         });
-      } else if (attributes.type === 'slot') {
+      } else if (attributes.type === EDGE_TYPES.SLOT) {
         const slotAttrs = attributes as SlotEdgeAttributes;
         outgoing.push({
-          edgeType: 'property',
+          edgeType: EDGE_TYPES.SLOT,
           otherItem,
           label: slotAttrs.slotName,
           inheritedFrom: slotAttrs.inheritedFrom
         });
-      } else if (attributes.type === 'maps_to') {
+      } else if (attributes.type === EDGE_TYPES.MAPS_TO) {
         outgoing.push({
-          edgeType: 'variable_mapping',
+          edgeType: EDGE_TYPES.MAPS_TO,
           otherItem,
           label: 'mapped_to'
         });
@@ -588,22 +588,22 @@ export abstract class Element {
         color: sourceMetadata.color.headerBg
       };
 
-      if (attributes.type === 'inheritance') {
+      if (attributes.type === EDGE_TYPES.INHERITANCE) {
         incoming.push({
-          edgeType: 'inheritance',
+          edgeType: EDGE_TYPES.INHERITANCE,
           otherItem
         });
-      } else if (attributes.type === 'slot') {
+      } else if (attributes.type === EDGE_TYPES.SLOT) {
         const slotAttrs = attributes as SlotEdgeAttributes;
         incoming.push({
-          edgeType: 'property',
+          edgeType: EDGE_TYPES.SLOT,
           otherItem,
           label: slotAttrs.slotName,
           inheritedFrom: slotAttrs.inheritedFrom
         });
-      } else if (attributes.type === 'maps_to') {
+      } else if (attributes.type === EDGE_TYPES.MAPS_TO) {
         incoming.push({
-          edgeType: 'variable_mapping',
+          edgeType: EDGE_TYPES.MAPS_TO,
           otherItem,
           label: 'mapped_to'
         });

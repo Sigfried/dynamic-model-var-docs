@@ -11,9 +11,10 @@
 ### Link Rendering Issues
 1. **Class→slot links pointing wrong direction** (3-panel mode)
 2. **Specimen→analyte_type link missing** (see screenshot in old TASKS.md:107)
-3. **SVG path NaN errors** - Console shows `<path> attribute d: Expected number, "M NaN NaN C NaN Na..."`
-   - **Location**: LinkOverlay.tsx:448 (path element at line 450: `d={pathData}`)
-   - something is wrong with the self-ref code on lines 403-412
+3.  ✅ Complete
+    - **SVG path NaN errors** - Console shows `<path> attribute d: Expected number, "M NaN NaN C NaN Na..."`
+      - **Location**: LinkOverlay.tsx:448 (path element at line 450: `d={pathData}`)
+      - something is wrong with the self-ref code on lines 403-412
 
 ### Hover/Detail Box Issues
 4. **Slot hover shows "No relationships found"** - RelationshipInfoBox broken for slots
@@ -52,27 +53,19 @@ Ordered by implementation dependencies. See [archive/ELEMENT_MERGE_ANALYSIS.md](
 
 ### Current Work: Type System Cleanup (Before Phase 3 Step 5)
 
-**Step 1: EdgeType Simplification** 🔲 **← NEXT PRIORITY**
-- Add EDGE_TYPES constants enum in SchemaTypes.ts:
-  ```typescript
-  export const EDGE_TYPES = {
-    INHERITANCE: 'inheritance',
-    SLOT: 'slot',
-    MAPS_TO: 'maps_to',
-  } as const;
-  export type EdgeType = typeof EDGE_TYPES[keyof typeof EDGE_TYPES];
-  ```
-- Update EdgeInfo to use `edgeType: EdgeType` instead of union type
-- Remove UI edge type mapping in DataService.getEdgeInfo():
-  - 'slot' → 'property' (remove this translation)
-  - 'maps_to' → 'variable_mapping' (remove this translation)
-- Replace string literals with EDGE_TYPES constants throughout:
-  - DataService.ts, LinkOverlay.tsx, RelationshipInfoBox.tsx
-  - All switch statements checking edge types
-  - Tests and mock data
-- **Why first**: Simplifies type system before other migrations
+**Step 1: EdgeType Simplification** ✅ **COMPLETE**
+- Added EDGE_TYPES constants enum in SchemaTypes.ts
+- Updated EdgeInfo and EdgeInfoDeprecated to use `edgeType: EdgeType` from SchemaTypes
+- Removed UI edge type mapping in DataService.getEdgeInfo()
+  - Now uses graph edge types directly: 'inheritance', 'slot', 'maps_to'
+  - Eliminated translation: 'slot' → 'property', 'maps_to' → 'variable_mapping'
+- Replaced string literals with EDGE_TYPES constants:
+  - DataService.ts, LinkOverlay.tsx, RelationshipInfoBox.tsx, Element.ts
+  - Updated all switch statements checking edge types
+- Fixed related TypeScript errors (type guards, imports)
+- **Result**: Single source of truth for edge types, simplified type system
 
-**Step 2: Retire EdgeInfoDeprecated** 🔲
+**Step 2: Retire EdgeInfoDeprecated** 🔲 **← NEXT PRIORITY**
 - Migrate RelationshipInfoBox to use EdgeInfo instead of EdgeInfoDeprecated
   - Key change: `edge.otherItem` → `edge.sourceItem` or `edge.targetItem` (context-dependent)
 - Update Element.ts `getRelationshipsFromGraph()` to return new format

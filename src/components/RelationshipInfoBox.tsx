@@ -15,8 +15,9 @@
 
 import { useState, useEffect, useRef } from 'react';
 import type { DataService } from '../services/DataService';
-import type { EdgeInfoDeprecated, EdgeInfo } from '../services/DataService';
+import type { EdgeInfoDeprecated } from '../services/DataService';
 import { APP_CONFIG, getElementLinkColor, type ElementTypeId } from '../config/appConfig';
+import { EDGE_TYPES } from '../models/SchemaTypes';
 
 interface RelationshipInfoBoxProps {
   itemId: string | null;
@@ -170,13 +171,13 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
   const { thisItem, outgoing, incoming } = relationshipData;
 
   // Group outgoing edges by type
-  const inheritanceEdge = outgoing.find(e => e.edgeType === 'inheritance');
-  const directSlots = outgoing.filter(e => e.edgeType === 'property' && !e.inheritedFrom);
+  const inheritanceEdge = outgoing.find(e => e.edgeType === EDGE_TYPES.INHERITANCE);
+  const directSlots = outgoing.filter(e => e.edgeType === EDGE_TYPES.SLOT && !e.inheritedFrom);
 
   // Group inherited slots by ancestor
   const inheritedSlotsMap = new Map<string, EdgeInfoDeprecated[]>();
   outgoing
-    .filter(e => e.edgeType === 'property' && e.inheritedFrom)
+    .filter(e => e.edgeType === EDGE_TYPES.SLOT && e.inheritedFrom)
     .forEach(edge => {
       const ancestor = edge.inheritedFrom!;
       if (!inheritedSlotsMap.has(ancestor)) {
@@ -186,9 +187,9 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
     });
 
   // Group incoming edges by type
-  const incomingInheritance = incoming.filter(e => e.edgeType === 'inheritance');
-  const incomingProperties = incoming.filter(e => e.edgeType === 'property');
-  const incomingVariables = incoming.filter(e => e.edgeType === 'variable_mapping');
+  const incomingInheritance = incoming.filter(e => e.edgeType === EDGE_TYPES.INHERITANCE);
+  const incomingProperties = incoming.filter(e => e.edgeType === EDGE_TYPES.SLOT);
+  const incomingVariables = incoming.filter(e => e.edgeType === EDGE_TYPES.MAPS_TO);
 
   // Helper to make item names clickable
   const makeClickable = (

@@ -23,7 +23,8 @@ import type {
   RelationshipDataDeprecated
 } from '../contracts/ComponentData';
 import type { ElementTypeId } from '../config/appConfig';
-import type {EdgeAttributes, EdgeType, SlotEdgeAttributes,} from "../models/SchemaTypes.ts";
+import type {EdgeAttributes, EdgeType, SlotEdgeAttributes} from "../models/SchemaTypes";
+import { EDGE_TYPES } from "../models/SchemaTypes";
 import type { ToggleButtonData } from '../components/ItemsPanel';
 import type { SectionData } from '../components/Section';
 import { APP_CONFIG, getAllElementTypeIds, } from '../config/appConfig';
@@ -162,23 +163,11 @@ export class DataService {
     // Get edge attributes
     const edgeAttrs = this.modelData.graph.getEdgeAttributes(edgeKey);
 
-    // Map graph edge type to EdgeInfo edge type
-    let edgeType: 'inheritance' | 'property' | 'variable_mapping';
-    const graphEdgeType = edgeAttrs.type;
-
-    if (graphEdgeType === 'inheritance') {
-      edgeType = 'inheritance';
-    } else if (graphEdgeType === 'slot') {
-      edgeType = 'property';
-    } else if (graphEdgeType === 'maps_to') {
-      edgeType = 'variable_mapping';
-    } else {
-      console.warn(`getEdgeInfo: Unknown edge type ${graphEdgeType}`);
-      return null;
-    }
+    // Use graph edge type directly (no UI translation)
+    const edgeType = edgeAttrs.type;
 
     // Get label and inheritedFrom for slot edges
-    const slotAttrs = edgeAttrs.type === 'slot' ? edgeAttrs as SlotEdgeAttributes : null;
+    const slotAttrs = edgeType === EDGE_TYPES.SLOT ? edgeAttrs as SlotEdgeAttributes : null;
 
     return {
       edgeType,
@@ -198,7 +187,7 @@ export class DataService {
       return types.includes(attributes.type)
     });
     edgeKeys = Array.from(new Set(edgeKeys))
-    const edges = edgeKeys.map((edgeKey: string) => this.getEdgeInfo(edgeKey)).filter((e: EdgeInfo) => e !== null) as EdgeInfo[];
+    const edges = edgeKeys.map((edgeKey: string) => this.getEdgeInfo(edgeKey)).filter((e): e is EdgeInfo => e !== null);
     return edges;
   }
 

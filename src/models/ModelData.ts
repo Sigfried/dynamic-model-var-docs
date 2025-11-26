@@ -3,7 +3,7 @@
 
 import type { ElementTypeId } from '../config/appConfig';
 import type { Element, ElementCollection } from './Element';
-import type { SchemaGraph } from './Graph';
+import type { SchemaGraph } from './SchemaTypes';
 
 /**
  * Model data structure - all element data is accessed via collections

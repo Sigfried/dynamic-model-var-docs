@@ -14,6 +14,7 @@
  */
 
 import type { Element } from '../models/Element';
+import type { EdgeType } from '../models/SchemaTypes';
 
 // ============================================================================
 // Element Selection (DEPRECATED)
@@ -165,10 +166,10 @@ export interface DetailData {
  * Single-item focused edge representation
  */
 export interface EdgeInfoDeprecated {
-  edgeType: 'inheritance' | 'property' | 'variable_mapping';
+  edgeType: EdgeType;
   otherItem: ItemInfo;  // The connected item (target for outgoing, source for incoming)
-  label?: string;       // For property: slot/attribute name; for variable_mapping: "mapped_to"
-  inheritedFrom?: string; // For property edges only: ancestor name that defined this slot
+  label?: string;       // For slot edges: slot/attribute name; for maps_to: "mapped_to"
+  inheritedFrom?: string; // For slot edges only: ancestor name that defined this slot
 }
 
 /**
@@ -190,12 +191,11 @@ export interface ItemInfo {
  * Used for rendering relationships between items
  */
 export interface EdgeInfo {
-  edgeType: 'inheritance' | 'property' | 'variable_mapping';
-  // [use SchemaType.EdgeType instead of those three -- will have to change in many places
+  edgeType: EdgeType;
   sourceItem: ItemInfo;
   targetItem: ItemInfo;
-  label?: string;       // For property: slot/attribute name; for variable_mapping: "mapped_to"
-  inheritedFrom?: string; // For property edges only: ancestor name that defined this slot
+  label?: string;       // For slot edges: slot/attribute name; for maps_to: "mapped_to"
+  inheritedFrom?: string; // For slot edges only: ancestor name that defined this slot
 }
 
 /**

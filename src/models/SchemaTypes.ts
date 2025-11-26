@@ -179,9 +179,18 @@ export type NodeAttributes =
 // ============================================================================
 
 /**
+ * Edge type constants - Use these instead of string literals
+ */
+export const EDGE_TYPES = {
+  INHERITANCE: 'inheritance',
+  SLOT: 'slot',
+  MAPS_TO: 'maps_to',
+} as const;
+
+/**
  * Edge types in the schema graph
  */
-export type EdgeType = 'inheritance' | 'slot' | 'maps_to';
+export type EdgeType = typeof EDGE_TYPES[keyof typeof EDGE_TYPES];
 
 /**
  * Base attributes stored on all edges

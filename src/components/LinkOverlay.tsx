@@ -11,7 +11,8 @@
  */
 
 import { useRef, useState, useEffect } from 'react';
-import type { EdgeInfo, } from '../contracts/ComponentData'
+// TODO: Uncomment when migrating to EdgeInfo (see TASKS.md Phase 2 Step 3)
+// import type { EdgeInfo } from '../contracts/ComponentData';
 import type { DataService } from '../services/DataService';
 import {
   generateSelfRefPath,
@@ -23,13 +24,14 @@ import {
 import type { ItemHoverData } from './Section';
 import {decontextualizeId} from '../utils/idContextualization';
 import { getElementLinkTooltipColor, type ElementTypeId } from '../config/appConfig';
+import { EDGE_TYPES } from '../models/SchemaTypes';
 
 /**
  * LinkTooltipData - Data for link hover tooltips
  */
 export interface LinkTooltipData {
-  relationshipType: string;       // "is_a", "property", etc.
-  relationshipLabel?: string;      // Property name (for property relationships)
+  relationshipType: string;       // "inheritance", "slot", "maps_to", etc.
+  relationshipLabel?: string;      // Slot name (for slot relationships)
   sourceName: string;
   sourceType: string;              // "class", "enum", etc.
   targetName: string;
@@ -44,8 +46,12 @@ function LinkTooltip({ data, x, y }: { data: LinkTooltipData; x: number; y: numb
     switch (type) {
       case 'inherits':
         return 'inherits from';
-      case 'property':
-        return data.relationshipLabel ? `property: ${data.relationshipLabel}` : 'property';
+      case EDGE_TYPES.INHERITANCE:
+        return 'inherits from';
+      case EDGE_TYPES.SLOT:
+        return data.relationshipLabel ? `slot: ${data.relationshipLabel}` : 'slot';
+      case EDGE_TYPES.MAPS_TO:
+        return 'maps to';
       default:
         return type;
     }
@@ -239,7 +245,8 @@ export default function LinkOverlay({
 
       // Get relationships for this item
       const relationships = dataService.getRelationshipsForLinking(itemId);
-      const edges: EdgeInfo[] = dataService.getEdgesForItem(itemId, ['slot', 'maps_to']);
+      // TODO: Replace getRelationshipsForLinking with getEdgesForItem (see TASKS.md Phase 2 Step 3)
+      // const edges: EdgeInfo[] = dataService.getEdgesForItem(itemId, [EDGE_TYPES.SLOT, EDGE_TYPES.MAPS_TO]);
       if (!relationships) return;
 
       // For each relationship target, find it in the DOM
