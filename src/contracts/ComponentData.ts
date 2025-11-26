@@ -158,18 +158,7 @@ export interface DetailData {
 // ============================================================================
 // Graph/Relationship Component Contracts
 // ============================================================================
-
-/**
- * @deprecated Use ItemInfo instead (renamed from ItemInfoProposal)
- * Minimal item metadata without panel positioning
- */
-export interface ItemInfoDeprecated {
-  id: string;
-  displayName: string;
-  type: string;  // Element type ID: 'class', 'enum', 'slot', 'type', 'variable'
-  typeDisplayName: string;  // User-facing label: "Class", "Enumeration", "Slot", "Type", "Variable"
-  color: string;  // Tailwind color classes for styling
-}
+// [sg] these are used by model as well as components; should probably be moved to SchemaTypes.ts
 
 /**
  * @deprecated Use EdgeInfo instead (renamed from EdgeInfoProposal)
@@ -177,7 +166,7 @@ export interface ItemInfoDeprecated {
  */
 export interface EdgeInfoDeprecated {
   edgeType: 'inheritance' | 'property' | 'variable_mapping';
-  otherItem: ItemInfoDeprecated;  // The connected item (target for outgoing, source for incoming)
+  otherItem: ItemInfo;  // The connected item (target for outgoing, source for incoming)
   label?: string;       // For property: slot/attribute name; for variable_mapping: "mapped_to"
   inheritedFrom?: string; // For property edges only: ancestor name that defined this slot
 }
@@ -202,6 +191,7 @@ export interface ItemInfo {
  */
 export interface EdgeInfo {
   edgeType: 'inheritance' | 'property' | 'variable_mapping';
+  // [use SchemaType.EdgeType instead of those three -- will have to change in many places
   sourceItem: ItemInfo;
   targetItem: ItemInfo;
   label?: string;       // For property: slot/attribute name; for variable_mapping: "mapped_to"
@@ -213,7 +203,7 @@ export interface EdgeInfo {
  * Old relationship data format without panel positioning
  */
 export interface RelationshipDataDeprecated {
-  thisItem: ItemInfoDeprecated;
+  thisItem: ItemInfo;
   outgoing: EdgeInfoDeprecated[];
   incoming: EdgeInfoDeprecated[];
 }

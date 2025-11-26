@@ -15,7 +15,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import type { DataService } from '../services/DataService';
-import type { EdgeInfoDeprecated as EdgeInfo } from '../services/DataService';
+import type { EdgeInfoDeprecated, EdgeInfo } from '../services/DataService';
 import { APP_CONFIG, getElementLinkColor, type ElementTypeId } from '../config/appConfig';
 
 interface RelationshipInfoBoxProps {
@@ -174,7 +174,7 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
   const directSlots = outgoing.filter(e => e.edgeType === 'property' && !e.inheritedFrom);
 
   // Group inherited slots by ancestor
-  const inheritedSlotsMap = new Map<string, EdgeInfo[]>();
+  const inheritedSlotsMap = new Map<string, EdgeInfoDeprecated[]>();
   outgoing
     .filter(e => e.edgeType === 'property' && e.inheritedFrom)
     .forEach(edge => {
@@ -253,7 +253,7 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
   // Helper to render collapsible inherited slots for a specific ancestor
   const renderCollapsibleInheritedSlots = (
     ancestorName: string,
-    edges: EdgeInfo[],
+    edges: EdgeInfoDeprecated[],
     threshold: number = APP_CONFIG.layout.collapsibleListSize
   ) => {
     const isExpanded = expandedSections.inheritedSlots[ancestorName] || false;
