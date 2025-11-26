@@ -65,15 +65,16 @@ Ordered by implementation dependencies. See [archive/ELEMENT_MERGE_ANALYSIS.md](
 - Fixed related TypeScript errors (type guards, imports)
 - **Result**: Single source of truth for edge types, simplified type system
 
-**Step 2: Retire EdgeInfoDeprecated** 🔲 **← NEXT PRIORITY**
-- Migrate RelationshipInfoBox to use EdgeInfo instead of EdgeInfoDeprecated
-  - Key change: `edge.otherItem` → `edge.sourceItem` or `edge.targetItem` (context-dependent)
-- Update Element.ts `getRelationshipsFromGraph()` to return new format
-- Remove EdgeInfoDeprecated and RelationshipDataDeprecated from ComponentData.ts
-- **Dependencies**: EdgeType simplification (Step 1)
-- **Affected files**: RelationshipInfoBox.tsx (~230 lines), Element.ts (~60 lines)
+**Step 2: Retire EdgeInfoDeprecated** ✅ **COMPLETE**
+- Migrated RelationshipInfoBox to use EdgeInfo with sourceItem/targetItem
+  - Outgoing edges: `edge.otherItem` → `edge.targetItem`
+  - Incoming edges: `edge.otherItem` → `edge.sourceItem`
+- Updated Element.ts `getRelationshipsFromGraph()` to return RelationshipData (not deprecated)
+- Updated DataService.getRelationshipsNew() return type to RelationshipData
+- Removed EdgeInfoDeprecated and RelationshipDataDeprecated from all files
+- **Result**: Cleaner edge representation with explicit source/target, deprecated types removed
 
-**Step 3: Replace Relationship with EdgeInfo** 🔲
+**Step 3: Replace Relationship with EdgeInfo** 🔲 **← NEXT PRIORITY**
 - Remove getRelationshipsForLinking() from DataService (replaced by getEdgesForItem())
 - Update linkHelpers.ts to use EdgeInfo instead of Relationship:
   - Deprecate or remove: filterRelationships(), buildLinks(), formatRelationshipType()

@@ -22,8 +22,8 @@ import type {
   DetailSection,
   DetailData,
   ItemInfo,
-  EdgeInfoDeprecated,
-  RelationshipDataDeprecated
+  EdgeInfo,
+  RelationshipData
 } from '../contracts/ComponentData';
 import { APP_CONFIG } from '../config/appConfig';
 const {elementTypes, } = APP_CONFIG;
@@ -511,7 +511,7 @@ export abstract class Element {
    *
    * This is the new graph-based method that will replace getRelationships().
    */
-  getRelationshipsFromGraph(): RelationshipDataDeprecated | null {
+  getRelationshipsFromGraph(): RelationshipData | null {
     if (!globalGraph || !globalElementLookup) {
       return null;
     }
@@ -529,8 +529,8 @@ export abstract class Element {
       color: metadata.color.headerBg
     };
 
-    const outgoing: EdgeInfoDeprecated[] = [];
-    const incoming: EdgeInfoDeprecated[] = [];
+    const outgoing: EdgeInfo[] = [];
+    const incoming: EdgeInfo[] = [];
 
     // Process outgoing edges from this element
     graph.forEachOutboundEdge(this.name, (_edgeId, attributes, _source, target) => {
@@ -541,7 +541,7 @@ export abstract class Element {
       }
 
       const targetMetadata = elementTypes[targetElement.type];
-      const otherItem: ItemInfo = {
+      const targetItem: ItemInfo = {
         id: target,
         displayName: target,
         type: targetElement.type,  // Element type ID ('class', 'enum', etc.)
@@ -552,20 +552,23 @@ export abstract class Element {
       if (attributes.type === EDGE_TYPES.INHERITANCE) {
         outgoing.push({
           edgeType: EDGE_TYPES.INHERITANCE,
-          otherItem
+          sourceItem: thisItem,
+          targetItem
         });
       } else if (attributes.type === EDGE_TYPES.SLOT) {
         const slotAttrs = attributes as SlotEdgeAttributes;
         outgoing.push({
           edgeType: EDGE_TYPES.SLOT,
-          otherItem,
+          sourceItem: thisItem,
+          targetItem,
           label: slotAttrs.slotName,
           inheritedFrom: slotAttrs.inheritedFrom
         });
       } else if (attributes.type === EDGE_TYPES.MAPS_TO) {
         outgoing.push({
           edgeType: EDGE_TYPES.MAPS_TO,
-          otherItem,
+          sourceItem: thisItem,
+          targetItem,
           label: 'mapped_to'
         });
       }
@@ -580,7 +583,7 @@ export abstract class Element {
       }
 
       const sourceMetadata = elementTypes[sourceElement.type];
-      const otherItem: ItemInfo = {
+      const sourceItem: ItemInfo = {
         id: source,
         displayName: source,
         type: sourceElement.type,  // Element type ID ('class', 'enum', etc.)
@@ -591,20 +594,23 @@ export abstract class Element {
       if (attributes.type === EDGE_TYPES.INHERITANCE) {
         incoming.push({
           edgeType: EDGE_TYPES.INHERITANCE,
-          otherItem
+          sourceItem,
+          targetItem: thisItem
         });
       } else if (attributes.type === EDGE_TYPES.SLOT) {
         const slotAttrs = attributes as SlotEdgeAttributes;
         incoming.push({
           edgeType: EDGE_TYPES.SLOT,
-          otherItem,
+          sourceItem,
+          targetItem: thisItem,
           label: slotAttrs.slotName,
           inheritedFrom: slotAttrs.inheritedFrom
         });
       } else if (attributes.type === EDGE_TYPES.MAPS_TO) {
         incoming.push({
           edgeType: EDGE_TYPES.MAPS_TO,
-          otherItem,
+          sourceItem,
+          targetItem: thisItem,
           label: 'mapped_to'
         });
       }

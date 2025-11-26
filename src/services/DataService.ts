@@ -16,11 +16,9 @@ import type { Relationship } from '../models/Element';
 import type {
   DetailData,
   FloatingBoxMetadata,
-  RelationshipData as RelationshipDataNew,
+  RelationshipData,
   EdgeInfo,
-  ItemInfo,
-  EdgeInfoDeprecated,
-  RelationshipDataDeprecated
+  ItemInfo
 } from '../contracts/ComponentData';
 import type { ElementTypeId } from '../config/appConfig';
 import type {EdgeAttributes, EdgeType, SlotEdgeAttributes} from "../models/SchemaTypes";
@@ -31,9 +29,7 @@ import { APP_CONFIG, getAllElementTypeIds, } from '../config/appConfig';
 const {elementTypes, } = APP_CONFIG;
 
 // Re-export UI types for UI components
-export type { EdgeInfo, ItemInfo, RelationshipDataNew };
-// Re-export deprecated types (to be removed after component migration)
-export type { EdgeInfoDeprecated, RelationshipDataDeprecated };
+export type { EdgeInfo, ItemInfo, RelationshipData };
 
 // ============================================================================
 // DEPRECATED: Old relationship data structures (will be removed in Stage 3+)
@@ -194,14 +190,11 @@ export class DataService {
 
   /**
    * Get relationship data for an item (new edge-based structure).
-   * Returns unified edge-based relationships instead of type-dependent structure.
+   * Returns unified edge-based relationships with sourceItem/targetItem.
    *
-   * Stage 3 Step 5: Implemented using getRelationshipsFromGraph()
-   * Uses graph-based approach for querying relationships
-   *
-   * @deprecated Returns deprecated format. Will be updated after component migration.
+   * Uses graph-based approach for querying relationships via getRelationshipsFromGraph().
    */
-  getRelationshipsNew(itemId: string): RelationshipDataDeprecated | null {
+  getRelationshipsNew(itemId: string): RelationshipData | null {
     const element = this.modelData.elementLookup.get(itemId);
     if (!element) return null;
 

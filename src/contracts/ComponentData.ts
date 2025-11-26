@@ -162,17 +162,6 @@ export interface DetailData {
 // [sg] these are used by model as well as components; should probably be moved to SchemaTypes.ts
 
 /**
- * @deprecated Use EdgeInfo instead (renamed from EdgeInfoProposal)
- * Single-item focused edge representation
- */
-export interface EdgeInfoDeprecated {
-  edgeType: EdgeType;
-  otherItem: ItemInfo;  // The connected item (target for outgoing, source for incoming)
-  label?: string;       // For slot edges: slot/attribute name; for maps_to: "mapped_to"
-  inheritedFrom?: string; // For slot edges only: ancestor name that defined this slot
-}
-
-/**
  * ItemInfo - Complete item metadata including panel positioning
  * Used for rendering items in UI with proper context
  */
@@ -196,16 +185,6 @@ export interface EdgeInfo {
   targetItem: ItemInfo;
   label?: string;       // For slot edges: slot/attribute name; for maps_to: "mapped_to"
   inheritedFrom?: string; // For slot edges only: ancestor name that defined this slot
-}
-
-/**
- * @deprecated Use RelationshipData instead after component migration
- * Old relationship data format without panel positioning
- */
-export interface RelationshipDataDeprecated {
-  thisItem: ItemInfo;
-  outgoing: EdgeInfoDeprecated[];
-  incoming: EdgeInfoDeprecated[];
 }
 
 /**
