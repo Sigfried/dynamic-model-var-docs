@@ -50,9 +50,48 @@ Ordered by implementation dependencies. See [archive/ELEMENT_MERGE_ANALYSIS.md](
 
 **See [archive/tasks.md](archive/tasks.md) for detailed implementation notes.**
 
-### Phase 3: Data Flow Refactor (High Risk) - DO THIS FIRST
+### Current Work: Type System Cleanup (Before Phase 3 Step 5)
 
-**Step 5: Refactor data flow** 🔲 **← NEXT PRIORITY**
+**Step 1: EdgeType Simplification** 🔲 **← NEXT PRIORITY**
+- Add EDGE_TYPES constants enum in SchemaTypes.ts:
+  ```typescript
+  export const EDGE_TYPES = {
+    INHERITANCE: 'inheritance',
+    SLOT: 'slot',
+    MAPS_TO: 'maps_to',
+  } as const;
+  export type EdgeType = typeof EDGE_TYPES[keyof typeof EDGE_TYPES];
+  ```
+- Update EdgeInfo to use `edgeType: EdgeType` instead of union type
+- Remove UI edge type mapping in DataService.getEdgeInfo():
+  - 'slot' → 'property' (remove this translation)
+  - 'maps_to' → 'variable_mapping' (remove this translation)
+- Replace string literals with EDGE_TYPES constants throughout:
+  - DataService.ts, LinkOverlay.tsx, RelationshipInfoBox.tsx
+  - All switch statements checking edge types
+  - Tests and mock data
+- **Why first**: Simplifies type system before other migrations
+
+**Step 2: Retire EdgeInfoDeprecated** 🔲
+- Migrate RelationshipInfoBox to use EdgeInfo instead of EdgeInfoDeprecated
+  - Key change: `edge.otherItem` → `edge.sourceItem` or `edge.targetItem` (context-dependent)
+- Update Element.ts `getRelationshipsFromGraph()` to return new format
+- Remove EdgeInfoDeprecated and RelationshipDataDeprecated from ComponentData.ts
+- **Dependencies**: EdgeType simplification (Step 1)
+- **Affected files**: RelationshipInfoBox.tsx (~230 lines), Element.ts (~60 lines)
+
+**Step 3: Replace Relationship with EdgeInfo** 🔲
+- Remove getRelationshipsForLinking() from DataService (replaced by getEdgesForItem())
+- Update linkHelpers.ts to use EdgeInfo instead of Relationship:
+  - Deprecate or remove: filterRelationships(), buildLinks(), formatRelationshipType()
+  - These are only used in tests, not production code
+- Update tests to use EdgeInfo
+- Remove unused Relationship imports
+- **Dependencies**: EdgeInfoDeprecated retirement (Step 2)
+
+### Phase 3: Data Flow Refactor (High Risk) - AFTER TYPE CLEANUP
+
+**Step 5: Refactor data flow** 🔲
 ```
 Current: DTOs → Element constructors → Domain Models
 Planned: DTOs → dataLoader transform → graph build → Element instances (reduced role)
@@ -80,15 +119,15 @@ Planned: DTOs → dataLoader transform → graph build → Element instances (re
 - See [LINKOVERLAY_REFACTOR_PLAN.md](../LINKOVERLAY_REFACTOR_PLAN.md)
 
 **Step 3: Migrate LinkOverlay to graph-based relationships** 🔲
-- Update to use `getAllPropertyEdges()` instead of old `getRelationships()`
-- Uses graph edges instead of subclass-specific `this.attributes`
+- Update to use `getEdgesForItem()` instead of `getRelationshipsForLinking()`
+- Uses graph edges instead of Element.getRelationships()
 - Fix 3-panel display bugs while migrating
-- **Partial progress**: `getAllPropertyEdges()` implemented in DataService
-- **Dependencies**: Phase 3 Step 5 (stable graph structure), planning review
+- **Prep complete**: getEdgesForItem() implemented, EdgeInfo/Relationship cleanup done
+- **Dependencies**: Phase 3 Step 5 (stable graph structure), Type System Cleanup complete
 
 **Step 4: Remove old getRelationships() methods** 🔲
 - Delete from ClassElement, EnumElement, SlotElement, VariableElement
-- Only keep graph-based `getRelationshipsFromGraph()`
+- Only keep graph-based `getRelationshipsFromGraph()` for RelationshipInfoBox (until it migrates)
 - Remove ClassSlot class (replaced by graph slot edges)
 - **Dependencies**: LinkOverlay migration complete (Step 3)
 
@@ -97,13 +136,7 @@ Planned: DTOs → dataLoader transform → graph build → Element instances (re
 - Element classes become thinner wrappers around graph data
 - Many methods can be replaced with graph queries
 - **Why last**: Final cleanup after everything else works
-- **Dependencies**: Graph as primary data source
-
-**Step 8: Retire *Deprecated types** 🔲
-- Migrate RelationshipInfoBox to use EdgeInfo/ItemInfo instead of *Deprecated types
-- Remove EdgeInfoDeprecated, ItemInfoDeprecated, RelationshipDataDeprecated
-- Remove getRelationshipsNew() method
-- **Dependencies**: Phase 2 Steps 3-4 complete
+- **Dependencies**: Graph as primary data source, Steps 3-4 complete
 
 ### More Upcoming
 

@@ -1,6 +1,7 @@
 // Schema type definitions - Transformed types for Element constructors and data structures
 // These are NOT DTOs - they are camelCase transformed data ready for use in the app
 
+import Graph from 'graphology';
 // Import and re-export SlotDefinition from import_types (it's part of the DTO structure but used everywhere)
 import type { SlotDefinition } from '../import_types';
 export type { SlotDefinition };
@@ -103,3 +104,142 @@ export interface EnumValue {
 export interface FieldMapping {
   [dtoField: string]: string | undefined;
 }
+
+
+
+
+// ============================================================================
+// Node Types
+// ============================================================================
+
+/**
+ * Node types in the schema graph
+ */
+type NodeType = 'class' | 'enum' | 'slot' | 'type' | 'variable';
+
+/**
+ * Base attributes stored on all nodes
+ * These are stored directly in graphology for efficient queries
+ */
+interface BaseNodeAttributes {
+  type: NodeType;
+  name: string;  // Display name (same as node ID for most nodes)
+}
+
+/**
+ * Class node attributes
+ * Minimal data - ClassElement instance has full details
+ */
+export interface ClassNodeAttributes extends BaseNodeAttributes {
+  type: 'class';
+  // Future: Add queryable properties if needed (e.g., isAbstract: boolean)
+}
+
+/**
+ * Enum node attributes
+ */
+export interface EnumNodeAttributes extends BaseNodeAttributes {
+  type: 'enum';
+}
+
+/**
+ * Slot node attributes
+ * Slots exist as definitions that can be referenced by multiple SlotEdges
+ */
+export interface SlotNodeAttributes extends BaseNodeAttributes {
+  type: 'slot';
+}
+
+/**
+ * Type node attributes
+ */
+export interface TypeNodeAttributes extends BaseNodeAttributes {
+  type: 'type';
+}
+
+/**
+ * Variable node attributes
+ */
+export interface VariableNodeAttributes extends BaseNodeAttributes {
+  type: 'variable';
+}
+
+/**
+ * Union of all node attributes
+ */
+export type NodeAttributes =
+    | ClassNodeAttributes
+    | EnumNodeAttributes
+    | SlotNodeAttributes
+    | TypeNodeAttributes
+    | VariableNodeAttributes;
+
+// ============================================================================
+// Edge Types
+// ============================================================================
+
+/**
+ * Edge types in the schema graph
+ */
+export type EdgeType = 'inheritance' | 'slot' | 'maps_to';
+
+/**
+ * Base attributes stored on all edges
+ */
+interface BaseEdgeAttributes {
+  type: EdgeType;
+}
+
+/**
+ * Inheritance edge: Class → Parent Class
+ * Represents is_a/inherits_from relationships
+ */
+export interface InheritanceEdgeAttributes extends BaseEdgeAttributes {
+  type: 'inheritance';
+}
+
+/**
+ * Slot edge: Class → Range (Class | Enum | Type)
+ * Represents class attributes/slots with their ranges
+ *
+ * KEY INSIGHT: There are MORE slot edges than slot definitions.
+ * - Same slot definition can be used by multiple classes
+ * - Each class-range pair gets its own edge
+ * - Edge references the slot definition and may have overrides
+ */
+export interface SlotEdgeAttributes extends BaseEdgeAttributes {
+  type: 'slot';
+  slotName: string;           // Name of the slot (e.g., "specimen_type")
+  slotDefId: string;          // ID of the SlotElement definition node
+  required: boolean;          // Is this slot required?
+  multivalued: boolean;       // Is this slot multivalued?
+  inheritedFrom?: string;     // If inherited, which ancestor defined it?
+  // Future: Add more slot_usage override properties as needed
+}
+
+/**
+ * MapsTo edge: Variable → Class
+ * Represents variable mappings to schema classes
+ */
+export interface MapsToEdgeAttributes extends BaseEdgeAttributes {
+  type: 'maps_to';
+}
+
+/**
+ * Union of all edge attributes
+ */
+export type EdgeAttributes =
+    | InheritanceEdgeAttributes
+    | SlotEdgeAttributes
+    | MapsToEdgeAttributes;
+
+// ============================================================================
+// Graph Type
+// ============================================================================
+
+/**
+ * Typed graphology graph for the schema
+ * This provides type safety for node/edge attributes
+ */
+export type SchemaGraph = Graph<NodeAttributes, EdgeAttributes>;
+

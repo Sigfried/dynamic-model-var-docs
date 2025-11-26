@@ -11,6 +11,7 @@
  */
 
 import { useRef, useState, useEffect } from 'react';
+import type { EdgeInfo, } from '../contracts/ComponentData'
 import type { DataService } from '../services/DataService';
 import {
   generateSelfRefPath,
@@ -231,13 +232,14 @@ export default function LinkOverlay({
 
     items.forEach(item => {
       const contextualizedId = item.id; // e.g., "lp-Specimen"
-      const elementName = decontextualizeId(contextualizedId); // e.g., "Specimen"
+      const itemId = decontextualizeId(contextualizedId); // e.g., "Specimen"
 
       // Get the panel this item is in
       const sourcePanel = item.getAttribute('data-panel-position');
 
       // Get relationships for this item
-      const relationships = dataService.getRelationshipsForLinking(elementName);
+      const relationships = dataService.getRelationshipsForLinking(itemId);
+      const edges: EdgeInfo[] = dataService.getEdgesForItem(itemId, ['slot', 'maps_to']);
       if (!relationships) return;
 
       // For each relationship target, find it in the DOM

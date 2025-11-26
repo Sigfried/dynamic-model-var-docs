@@ -15,16 +15,18 @@ import type {
 // Core application data structure
 import type { ModelData } from './ModelData';
 import type { ElementTypeId, RelationshipTypeId } from '../config/appConfig';
-import { ELEMENT_TYPES } from '../config/appConfig';
 import type { RenderableItem } from './RenderableItem';
-import { buildGraphFromSchemaData, type SchemaGraph, type SlotEdgeAttributes } from './Graph';
+import { buildGraphFromSchemaData, } from './Graph';
+import { type SchemaGraph, type SlotEdgeAttributes } from './SchemaTypes';
 import type {
   DetailSection,
   DetailData,
-  ItemInfoDeprecated,
+  ItemInfo,
   EdgeInfoDeprecated,
   RelationshipDataDeprecated
 } from '../contracts/ComponentData';
+import { APP_CONFIG } from '../config/appConfig';
+const {elementTypes, } = APP_CONFIG;
 
 // Helper function to map panel position to context string
 function positionToContext(position: 'left' | 'middle' | 'right'): 'leftPanel' | 'middlePanel' | 'rightPanel' {
@@ -269,7 +271,7 @@ export abstract class Element {
     }
 
     // Get header background color for this item type
-    const metadata = ELEMENT_TYPES[this.type];
+    const metadata = elementTypes[this.type];
     const color = metadata?.color.headerBg || 'bg-gray-500';
 
     return {
@@ -286,20 +288,13 @@ export abstract class Element {
    * Returns plain data for title and color styling - no element type exposed to UI
    */
   getFloatingBoxMetadata(): { title: string; color: string } {
-    const metadata = ELEMENT_TYPES[this.type];
+    const metadata = elementTypes[this.type];
     const detailData = this.getDetailData();
 
     return {
       title: detailData.titlebarTitle, // e.g., "Class: Specimen" or "Specimen"
       color: `${metadata.color.headerBg} ${metadata.color.headerBorder}` // Tailwind classes
     };
-  }
-
-  // DOM helpers for SVG positioning
-  // Looks for elements with id={type}-{name} (e.g., "class-Specimen")
-  getBoundingBox(): DOMRect | null {
-    const el = document.getElementById(`${this.type}-${this.name}`);
-    return el ? el.getBoundingClientRect() : null;
   }
 
   /**
@@ -348,7 +343,7 @@ export abstract class Element {
    * Get section item data for display in Section component.
    * Adapts Element data to SectionItemData format that components expect.
    *
-   * @param context Panel context for ID generation ('leftPanel' or 'rightPanel')
+   * @param _context Panel context for ID generation ('leftPanel' or 'rightPanel')
    * @param level Nesting level in tree (0 for root items)
    * @param isExpanded Whether this item is currently expanded
    * @param isClickable Whether this item can be clicked to open details
@@ -362,7 +357,7 @@ export abstract class Element {
     isClickable: boolean = true,
     hasChildren?: boolean
   ): import('../components/Section').SectionItemData {
-    const typeInfo = ELEMENT_TYPES[this.type];
+    const typeInfo = elementTypes[this.type];
     const badge = this.getBadge();
 
     return {
@@ -525,8 +520,8 @@ export abstract class Element {
     const elementLookup = globalElementLookup;
 
     // Build thisItem info
-    const metadata = ELEMENT_TYPES[this.type];
-    const thisItem: ItemInfoDeprecated = {
+    const metadata = elementTypes[this.type];
+    const thisItem: ItemInfo = {
       id: this.getId(),
       displayName: this.name,
       type: this.type,  // Element type ID ('class', 'enum', etc.)
@@ -545,8 +540,8 @@ export abstract class Element {
         return;
       }
 
-      const targetMetadata = ELEMENT_TYPES[targetElement.type];
-      const otherItem: ItemInfoDeprecated = {
+      const targetMetadata = elementTypes[targetElement.type];
+      const otherItem: ItemInfo = {
         id: target,
         displayName: target,
         type: targetElement.type,  // Element type ID ('class', 'enum', etc.)
@@ -584,8 +579,8 @@ export abstract class Element {
         return;
       }
 
-      const sourceMetadata = ELEMENT_TYPES[sourceElement.type];
-      const otherItem: ItemInfoDeprecated = {
+      const sourceMetadata = elementTypes[sourceElement.type];
+      const otherItem: ItemInfo = {
         id: source,
         displayName: source,
         type: sourceElement.type,  // Element type ID ('class', 'enum', etc.)
@@ -852,17 +847,6 @@ export class ClassSlot {
   getEffectiveDescription(): string | undefined {
     return this._description ?? this.baseSlot.description;
   }
-
-  /**
-   * Check if any properties are overridden in this class.
-   * Returns true if at least one override is set.
-   */
-  isOverridden(): boolean {
-    return this.range !== undefined ||
-           this.required !== undefined ||
-           this.multivalued !== undefined ||
-           this.description !== undefined;
-  }
 }
 
 // ClassElement - represents a class in the schema
@@ -990,7 +974,7 @@ export class ClassElement extends Range {
   }
 
   getDetailData(): DetailData {
-    const metadata = ELEMENT_TYPES[this.type];
+    const metadata = elementTypes[this.type];
     const sections: DetailSection[] = [];
 
     // Inheritance section
@@ -1040,7 +1024,7 @@ export class ClassElement extends Range {
         name: 'Slots (includes inherited)',
         tableHeadings: ['Name', 'Source', 'Range', 'Required', 'Multivalued', 'Description'],
         tableContent: slotsList,
-        tableHeadingColor: ELEMENT_TYPES['slot'].color.headerBg
+        tableHeadingColor: elementTypes['slot'].color.headerBg
       });
     }
 
@@ -1058,7 +1042,7 @@ export class ClassElement extends Range {
         name: `Variables (${this.variableCount})`,
         tableHeadings: ['Label', 'Data Type', 'Unit', 'CURIE', 'Description'],
         tableContent: variableList,
-        tableHeadingColor: ELEMENT_TYPES['variable'].color.headerBg
+        tableHeadingColor: elementTypes['variable'].color.headerBg
       });
     }
 
@@ -1150,7 +1134,7 @@ export class EnumElement extends Range {
   }
 
   getDetailData(): DetailData {
-    const metadata = ELEMENT_TYPES[this.type];
+    const metadata = elementTypes[this.type];
     const sections: DetailSection[] = [];
 
     // Permissible Values section
@@ -1216,7 +1200,7 @@ export class EnumElement extends Range {
     for (const cls of allClasses) {
       // Check if any attribute has range === this enum name
       if (cls.attributes) {
-        for (const [_attrName, attrDef] of Object.entries(cls.attributes)) {
+        for (const [, attrDef] of Object.entries(cls.attributes)) {
           if (attrDef.range === this.name) {
             usedBy.push(cls.name);
             break; // Found one match, no need to check other attributes
@@ -1259,7 +1243,7 @@ export class TypeElement extends Range {
   }
 
   getDetailData(): DetailData {
-    const metadata = ELEMENT_TYPES[this.type];
+    const metadata = elementTypes[this.type];
     const sections: DetailSection[] = [];
 
     // Type Properties section
@@ -1325,36 +1309,6 @@ export class TypeElement extends Range {
     // No outgoing relationships
     return [];
   }
-
-  /**
-   * Get classes that use this type as a range (computed on-demand).
-   * Scans all class attributes for range === this.name
-   *
-   * TODO: Remove in Stage 3 - Will be replaced by graphology queries on slot edges
-   */
-  getUsedByClasses(): string[] {
-    if (!globalClassCollection) {
-      console.warn('TypeElement.getUsedByClasses(): globalClassCollection not initialized');
-      return [];
-    }
-
-    const usedBy: string[] = [];
-    const allClasses = globalClassCollection.getAllElements() as ClassElement[];
-
-    for (const cls of allClasses) {
-      // Check if any attribute has range === this type name
-      if (cls.attributes) {
-        for (const [_attrName, attrDef] of Object.entries(cls.attributes)) {
-          if (attrDef.range === this.name) {
-            usedBy.push(cls.name);
-            break; // Found one match, no need to check other attributes
-          }
-        }
-      }
-    }
-
-    return usedBy.sort();
-  }
 }
 
 // SlotElement - represents a top-level slot definition
@@ -1380,7 +1334,7 @@ export class SlotElement extends Element {
   }
 
   getDetailData(): DetailData {
-    const metadata = ELEMENT_TYPES[this.type];
+    const metadata = elementTypes[this.type];
     const sections: DetailSection[] = [];
 
     // Slot Properties section
@@ -1474,7 +1428,7 @@ export class SlotElement extends Element {
     for (const cls of allClasses) {
       // Check if any attribute references this slot via slotId
       if (cls.attributes) {
-        for (const [_attrName, attrDef] of Object.entries(cls.attributes)) {
+        for (const [, attrDef] of Object.entries(cls.attributes)) {
           if (attrDef.slotId === this.name) {
             usedBy.push(cls.name);
             break;  // Found a match, no need to check other attributes
@@ -1508,7 +1462,7 @@ export class VariableElement extends Element {
   }
 
   getDetailData(): DetailData {
-    const metadata = ELEMENT_TYPES[this.type];
+    const metadata = elementTypes[this.type];
     const sections: DetailSection[] = [];
 
     // Variable Properties section
@@ -1556,21 +1510,12 @@ export class VariableElement extends Element {
 // ElementCollection - Manages groups of elements for panel rendering
 // ============================================================================
 
-export interface ElementCollectionCallbacks {
-  onSelect: (element: Element) => void;
-  onElementHover?: (element: { type: ElementTypeId; name: string }) => void;
-  onElementLeave?: () => void;
-}
-
 export abstract class ElementCollection {
   abstract readonly type: ElementTypeId;
   abstract readonly id: string;  // Collection identifier (matches type string value, no type coupling)
 
   /** Get human-readable label with count (e.g., "Enumerations (40)") */
   abstract getLabel(): string;
-
-  /** Get section icon for toggle (C, E, S, or V) */
-  abstract getSectionIcon(): string;
 
   /** Get default expansion state (set of expanded item names) */
   abstract getDefaultExpansion(): Set<string>;
@@ -1584,24 +1529,34 @@ export abstract class ElementCollection {
   /** Get all elements in this collection as a flat array */
   abstract getAllElements(): Element[];
 
-  /**
-   * Get renderable items for display in Section
-   * Returns items with structure/nesting info, ready for generic rendering
-   */
-  abstract getRenderableItems(expandedItems?: Set<string>): RenderableItem[];
-
+  abstract roots: Element[]
   /**
    * Get section data for display in Section component.
    * Returns SectionData with getItems function that generates items based on expansion state.
    */
-  abstract getSectionData(position: 'left' | 'middle' | 'right'): import('../components/Section').SectionData;
+  getSectionData(position: 'left' | 'middle' | 'right'): import('../components/Section').SectionData {
+    return {
+      id: this.id,
+      label: this.getLabel(),
+      getItems: (expandedItems?: Set<string>) => {
+        const items: import('../components/Section').SectionItemData[] = [];
+        this.roots.forEach(root => {
+          items.push(...root.toSectionItems(positionToContext(position), expandedItems || new Set()));
+        });
+        return items;
+      },
+      expansionKey: this.getExpansionKey(position) || undefined,
+      defaultExpansion: this.getDefaultExpansion()
+    };
+  }
+
 }
 
 // EnumCollection - flat list of enumerations
 export class EnumCollection extends ElementCollection {
   readonly type = 'enum' as const;
   readonly id = 'enum';
-  private roots: EnumElement[];
+  readonly roots: EnumElement[];
 
   constructor(roots: EnumElement[]) {
     super();
@@ -1623,12 +1578,8 @@ export class EnumCollection extends ElementCollection {
   }
 
   getLabel(): string {
-    const metadata = ELEMENT_TYPES[this.type];
+    const metadata = elementTypes[this.type];
     return `${metadata.pluralLabel} (${this.roots.length})`;
-  }
-
-  getSectionIcon(): string {
-    return ELEMENT_TYPES[this.type].icon;
   }
 
   getDefaultExpansion(): Set<string> {
@@ -1646,30 +1597,6 @@ export class EnumCollection extends ElementCollection {
   getAllElements(): Element[] {
     return this.roots;
   }
-
-  getRenderableItems(expandedItems?: Set<string>): RenderableItem[] {
-    const items: RenderableItem[] = [];
-    this.roots.forEach(root => {
-      items.push(...root.toRenderableItems(expandedItems || new Set()));
-    });
-    return items;
-  }
-
-  getSectionData(position: 'left' | 'middle' | 'right'): import('../components/Section').SectionData {
-    return {
-      id: this.id,
-      label: this.getLabel(),
-      getItems: (expandedItems?: Set<string>) => {
-        const items: import('../components/Section').SectionItemData[] = [];
-        this.roots.forEach(root => {
-          items.push(...root.toSectionItems(positionToContext(position), expandedItems || new Set()));
-        });
-        return items;
-      },
-      expansionKey: this.getExpansionKey(position) || undefined,
-      defaultExpansion: this.getDefaultExpansion()
-    };
-  }
 }
 
 // TypeCollection - flat list of LinkML types
@@ -1677,7 +1604,7 @@ export class EnumCollection extends ElementCollection {
 export class TypeCollection extends ElementCollection {
   readonly type = 'type' as const;
   readonly id = 'type';
-  private roots: TypeElement[];
+  readonly roots: TypeElement[];
 
   constructor(roots: TypeElement[]) {
     super();
@@ -1699,12 +1626,8 @@ export class TypeCollection extends ElementCollection {
   }
 
   getLabel(): string {
-    const metadata = ELEMENT_TYPES[this.type];
+    const metadata = elementTypes[this.type];
     return `${metadata.pluralLabel} (${this.roots.length})`;
-  }
-
-  getSectionIcon(): string {
-    return ELEMENT_TYPES[this.type].icon;
   }
 
   getDefaultExpansion(): Set<string> {
@@ -1722,37 +1645,13 @@ export class TypeCollection extends ElementCollection {
   getAllElements(): Element[] {
     return this.roots;
   }
-
-  getRenderableItems(expandedItems?: Set<string>): RenderableItem[] {
-    const items: RenderableItem[] = [];
-    this.roots.forEach(root => {
-      items.push(...root.toRenderableItems(expandedItems || new Set()));
-    });
-    return items;
-  }
-
-  getSectionData(position: 'left' | 'middle' | 'right'): import('../components/Section').SectionData {
-    return {
-      id: this.id,
-      label: this.getLabel(),
-      getItems: (expandedItems?: Set<string>) => {
-        const items: import('../components/Section').SectionItemData[] = [];
-        this.roots.forEach(root => {
-          items.push(...root.toSectionItems(positionToContext(position), expandedItems || new Set()));
-        });
-        return items;
-      },
-      expansionKey: this.getExpansionKey(position) || undefined,
-      defaultExpansion: this.getDefaultExpansion()
-    };
-  }
 }
 
 // SlotCollection - flat list of slot definitions
 export class SlotCollection extends ElementCollection {
   readonly type = 'slot' as const;
   readonly id = 'slot';
-  private roots: SlotElement[];
+  readonly roots: SlotElement[];
 
   constructor(roots: SlotElement[]) {
     super();
@@ -1774,12 +1673,8 @@ export class SlotCollection extends ElementCollection {
   }
 
   getLabel(): string {
-    const metadata = ELEMENT_TYPES[this.type];
+    const metadata = elementTypes[this.type];
     return `${metadata.pluralLabel} (${this.roots.length})`;
-  }
-
-  getSectionIcon(): string {
-    return ELEMENT_TYPES[this.type].icon;
   }
 
   getDefaultExpansion(): Set<string> {
@@ -1798,30 +1693,6 @@ export class SlotCollection extends ElementCollection {
     return this.roots;
   }
 
-  getRenderableItems(expandedItems?: Set<string>): RenderableItem[] {
-    const items: RenderableItem[] = [];
-    this.roots.forEach(root => {
-      items.push(...root.toRenderableItems(expandedItems || new Set()));
-    });
-    return items;
-  }
-
-  getSectionData(position: 'left' | 'middle' | 'right'): import('../components/Section').SectionData {
-    return {
-      id: this.id,
-      label: this.getLabel(),
-      getItems: (expandedItems?: Set<string>) => {
-        const items: import('../components/Section').SectionItemData[] = [];
-        this.roots.forEach(root => {
-          items.push(...root.toSectionItems(positionToContext(position), expandedItems || new Set()));
-        });
-        return items;
-      },
-      expansionKey: this.getExpansionKey(position) || undefined,
-      defaultExpansion: this.getDefaultExpansion()
-    };
-  }
-
   /** Get underlying slots Map (needed for ClassElement constructor) */
   getSlots(): Map<string, SlotElement> {
     // Convert roots array to Map for ClassElement constructor
@@ -1837,7 +1708,7 @@ export class SlotCollection extends ElementCollection {
 export class ClassCollection extends ElementCollection {
   readonly type = 'class' as const;
   readonly id = 'class';
-  private roots: ClassElement[];
+  readonly roots: ClassElement[];
 
   constructor(roots: ClassElement[]) {
     super();
@@ -1892,12 +1763,8 @@ export class ClassCollection extends ElementCollection {
   }
 
   getLabel(): string {
-    const metadata = ELEMENT_TYPES[this.type];
+    const metadata = elementTypes[this.type];
     return `${metadata.pluralLabel} (${this.getAllElements().length})`;
-  }
-
-  getSectionIcon(): string {
-    return ELEMENT_TYPES[this.type].icon;
   }
 
   getDefaultExpansion(): Set<string> {
@@ -1948,37 +1815,13 @@ export class ClassCollection extends ElementCollection {
   getRootElements(): ClassElement[] {
     return this.roots;
   }
-
-  getRenderableItems(expandedItems?: Set<string>): RenderableItem[] {
-    const items: RenderableItem[] = [];
-    this.roots.forEach(root => {
-      items.push(...root.toRenderableItems(expandedItems || new Set()));
-    });
-    return items;
-  }
-
-  getSectionData(position: 'left' | 'middle' | 'right'): import('../components/Section').SectionData {
-    return {
-      id: this.id,
-      label: this.getLabel(),
-      getItems: (expandedItems?: Set<string>) => {
-        const items: import('../components/Section').SectionItemData[] = [];
-        this.roots.forEach(root => {
-          items.push(...root.toSectionItems(positionToContext(position), expandedItems || new Set()));
-        });
-        return items;
-      },
-      expansionKey: this.getExpansionKey(position) || undefined,
-      defaultExpansion: this.getDefaultExpansion()
-    };
-  }
 }
 
 // VariableCollection - tree with ClassElement headers and VariableElement children
 export class VariableCollection extends ElementCollection {
   readonly type = 'variable' as const;
   readonly id = 'variable';
-  private roots: ClassElement[];
+  readonly roots: ClassElement[];
   private groupedByClass: Map<string, VariableElement[]>;
   private variables: VariableElement[];
 
@@ -2038,12 +1881,8 @@ export class VariableCollection extends ElementCollection {
   }
 
   getLabel(): string {
-    const metadata = ELEMENT_TYPES[this.type];
+    const metadata = elementTypes[this.type];
     return `${metadata.pluralLabel} (${this.variables.length})`;
-  }
-
-  getSectionIcon(): string {
-    return ELEMENT_TYPES[this.type].icon;
   }
 
   getDefaultExpansion(): Set<string> {
@@ -2063,45 +1902,9 @@ export class VariableCollection extends ElementCollection {
     return this.variables;
   }
 
-  getRenderableItems(expandedItems?: Set<string>): RenderableItem[] {
-    // Build 2-level tree: ClassElement headers (level 0) with VariableElement children (level 1)
-    const items: RenderableItem[] = [];
-
-    this.roots.forEach(classElement => {
-      const variables = this.groupedByClass.get(classElement.name) || [];
-      const hasChildren = variables.length > 0;
-      const isExpanded = expandedItems?.has(classElement.name) ?? false;
-
-      // Add ClassElement header (level 0, non-clickable)
-      items.push({
-        id: `${classElement.type}-${classElement.name}`,
-        element: classElement,
-        level: 0,
-        hasChildren,
-        isExpanded,
-        isClickable: false, // Headers are not clickable
-        badge: classElement.getBadge()
-      });
-
-      // Add VariableElements if expanded (level 1, clickable)
-      if (isExpanded) {
-        variables.forEach(variable => {
-          items.push({
-            id: `${variable.type}-${variable.name}`,
-            element: variable,
-            level: 1,
-            hasChildren: false,
-            isExpanded: false,
-            isClickable: true,
-            badge: variable.getBadge()
-          });
-        });
-      }
-    });
-
-    return items;
-  }
-
+  /**
+   * @deprecated handle the grouping elsewhere -- other things need grouping also
+   */
   getSectionData(position: 'left' | 'middle' | 'right'): import('../components/Section').SectionData {
     return {
       id: this.id,

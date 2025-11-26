@@ -20,18 +20,19 @@ import type {
   EdgeInfo,
   ItemInfo,
   EdgeInfoDeprecated,
-  ItemInfoDeprecated,
   RelationshipDataDeprecated
 } from '../contracts/ComponentData';
 import type { ElementTypeId } from '../config/appConfig';
-import { ELEMENT_TYPES, getAllElementTypeIds } from '../config/appConfig';
+import type {EdgeAttributes, EdgeType, SlotEdgeAttributes,} from "../models/SchemaTypes.ts";
 import type { ToggleButtonData } from '../components/ItemsPanel';
 import type { SectionData } from '../components/Section';
+import { APP_CONFIG, getAllElementTypeIds, } from '../config/appConfig';
+const {elementTypes, } = APP_CONFIG;
 
 // Re-export UI types for UI components
 export type { EdgeInfo, ItemInfo, RelationshipDataNew };
 // Re-export deprecated types (to be removed after component migration)
-export type { EdgeInfoDeprecated, ItemInfoDeprecated, RelationshipDataDeprecated };
+export type { EdgeInfoDeprecated, RelationshipDataDeprecated };
 
 // ============================================================================
 // DEPRECATED: Old relationship data structures (will be removed in Stage 3+)
@@ -124,7 +125,7 @@ export class DataService {
     }
 
     // Get type metadata for colors and labels
-    const typeMetadata = ELEMENT_TYPES[nodeAttrs.type as ElementTypeId];
+    const typeMetadata = elementTypes[nodeAttrs.type as ElementTypeId];
     if (!typeMetadata) {
       console.warn(`getItemInfo: Type metadata not found for ${nodeAttrs.type}`);
       return null;
@@ -177,7 +178,7 @@ export class DataService {
     }
 
     // Get label and inheritedFrom for slot edges
-    const slotAttrs = edgeAttrs.type === 'slot' ? edgeAttrs as import('../models/Graph').SlotEdgeAttributes : null;
+    const slotAttrs = edgeAttrs.type === 'slot' ? edgeAttrs as SlotEdgeAttributes : null;
 
     return {
       edgeType,
@@ -192,9 +193,12 @@ export class DataService {
    * Get all edges for a specific item from the graph
    * Used by LinkOverlay for DOM-based link rendering
    */
-  getEdgesForItem(itemId: string): EdgeInfo[] {
-    const edgeKeys = this.modelData.graph.edges(itemId);
-    const edges = edgeKeys.map(edgeKey => this.getEdgeInfo(edgeKey)).filter(e => e !== null) as EdgeInfo[];
+  getEdgesForItem(itemId: string, types: EdgeType[]): EdgeInfo[] {
+    let edgeKeys = this.modelData.graph.filterEdges(itemId, (_edge: string, attributes: EdgeAttributes, _source: string, _target: string) => {
+      return types.includes(attributes.type)
+    });
+    edgeKeys = Array.from(new Set(edgeKeys))
+    const edges = edgeKeys.map((edgeKey: string) => this.getEdgeInfo(edgeKey)).filter((e: EdgeInfo) => e !== null) as EdgeInfo[];
     return edges;
   }
 
@@ -266,7 +270,7 @@ export class DataService {
    * Returns gray color if type not found
    */
   getColorForItemType(typeId: string): string {
-    const metadata = ELEMENT_TYPES[typeId as ElementTypeId];
+    const metadata = elementTypes[typeId as ElementTypeId];
     return metadata?.color.hex ?? '#6b7280'; // gray-500 fallback
   }
 
@@ -276,7 +280,7 @@ export class DataService {
    */
   getToggleButtonsData(): ToggleButtonData[] {
     return getAllElementTypeIds().map(typeId => {
-      const metadata = ELEMENT_TYPES[typeId];
+      const metadata = elementTypes[typeId];
       return {
         id: typeId,
         icon: metadata.icon,
