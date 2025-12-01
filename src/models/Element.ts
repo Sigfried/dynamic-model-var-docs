@@ -1190,7 +1190,7 @@ export class EnumElement extends Range {
   }
 
   /**
-   * Get classes that use this enum (computed on-demand).
+   * Get classes that use this enum as a slot range (computed on-demand).
    * Queries graph for incoming SLOT edges.
    *
    * Performance: O(1) graph query vs O(n) class scan
@@ -1300,6 +1300,26 @@ export class TypeElement extends Range {
     // Types serve as range targets (like enums and primitives)
     // No outgoing relationships
     return [];
+  }
+
+  /**
+   * Get classes that use this type as a slot range (computed on-demand).
+   * Queries graph for incoming SLOT edges.
+   *
+   * Performance: O(1) graph query
+   */
+  getUsedByClasses(): string[] {
+    if (!globalGraph) {
+      console.warn('TypeElement.getUsedByClasses(): globalGraph not initialized');
+      return [];
+    }
+
+    return getClassesUsingRange(globalGraph, this.name);
+  }
+
+  getBadge(): number | undefined {
+    const usedByClasses = this.getUsedByClasses();
+    return usedByClasses.length > 0 ? usedByClasses.length : undefined;
   }
 }
 

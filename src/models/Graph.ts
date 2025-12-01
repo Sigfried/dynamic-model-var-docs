@@ -283,12 +283,13 @@ export function getSlotEdgesForClass(
 }
 
 /**
- * Get classes that use this enum or type as a range
- * Queries incoming SLOT edges to find which classes reference this node
+ * Get classes that use this node as a slot range
+ * Queries incoming SLOT edges to find which classes reference this node.
+ * Works for any range type: classes, enums, or types.
  *
  * @param graph - The schema graph
- * @param nodeId - The enum or type node ID
- * @returns Array of class names that use this enum/type, sorted
+ * @param nodeId - The node ID (class, enum, or type)
+ * @returns Array of class names that use this node as a range, sorted
  */
 export function getClassesUsingRange(graph: SchemaGraph, nodeId: string): string[] {
   if (!graph.hasNode(nodeId)) {
