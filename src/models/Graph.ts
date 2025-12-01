@@ -283,7 +283,39 @@ export function getSlotEdgesForClass(
 }
 
 /**
+ * Get classes that use this enum or type as a range
+ * Queries incoming SLOT edges to find which classes reference this node
+ *
+ * @param graph - The schema graph
+ * @param nodeId - The enum or type node ID
+ * @returns Array of class names that use this enum/type, sorted
+ */
+export function getClassesUsingRange(graph: SchemaGraph, nodeId: string): string[] {
+  if (!graph.hasNode(nodeId)) {
+    console.warn(`getClassesUsingRange: node "${nodeId}" not found in graph`);
+    return [];
+  }
+
+  const classes = new Set<string>();
+
+  // Get all incoming edges to this node
+  graph.forEachInEdge(nodeId, (_edgeKey, attributes, sourceId) => {
+    // Only count SLOT edges (not other edge types)
+    if (attributes.type === 'slot') {
+      classes.add(sourceId);
+    }
+  });
+
+  return Array.from(classes).sort();
+}
+
+/**
  * Get all classes that use a specific slot definition
+ * Queries all SLOT edges to find which have this slotDefId
+ *
+ * @param graph - The schema graph
+ * @param slotDefId - The slot definition ID
+ * @returns Array of class names that use this slot, sorted
  */
 export function getClassesUsingSlot(
   graph: SchemaGraph,
@@ -302,7 +334,7 @@ export function getClassesUsingSlot(
     }
   });
 
-  return Array.from(classes);
+  return Array.from(classes).sort();
 }
 
 /**

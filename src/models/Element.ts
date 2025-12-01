@@ -16,7 +16,7 @@ import type {
 import type { ModelData } from './ModelData';
 import type { ElementTypeId, RelationshipTypeId } from '../config/appConfig';
 import type { RenderableItem } from './RenderableItem';
-import { buildGraphFromSchemaData, } from './Graph';
+import { buildGraphFromSchemaData, getClassesUsingRange, getClassesUsingSlot } from './Graph';
 import { type SchemaGraph, type SlotEdgeAttributes, EDGE_TYPES } from './SchemaTypes';
 import type {
   DetailSection,
@@ -1191,32 +1191,17 @@ export class EnumElement extends Range {
 
   /**
    * Get classes that use this enum (computed on-demand).
-   * Scans all class attributes for range === this.name
+   * Queries graph for incoming SLOT edges.
    *
-   * TODO: Remove in Stage 3 - Will be replaced by graphology queries on slot edges
+   * Performance: O(1) graph query vs O(n) class scan
    */
   getUsedByClasses(): string[] {
-    if (!globalClassCollection) {
-      console.warn('EnumElement.getUsedByClasses(): globalClassCollection not initialized');
+    if (!globalGraph) {
+      console.warn('EnumElement.getUsedByClasses(): globalGraph not initialized');
       return [];
     }
 
-    const usedBy: string[] = [];
-    const allClasses = globalClassCollection.getAllElements() as ClassElement[];
-
-    for (const cls of allClasses) {
-      // Check if any attribute has range === this enum name
-      if (cls.attributes) {
-        for (const [, attrDef] of Object.entries(cls.attributes)) {
-          if (attrDef.range === this.name) {
-            usedBy.push(cls.name);
-            break; // Found one match, no need to check other attributes
-          }
-        }
-      }
-    }
-
-    return usedBy.sort();
+    return getClassesUsingRange(globalGraph, this.name);
   }
 }
 
@@ -1419,32 +1404,17 @@ export class SlotElement extends Element {
 
   /**
    * Get classes that use this slot (computed on-demand).
-   * Scans all classes for this slot in their slots array or slot_usage
+   * Queries graph for SLOT edges with matching slotDefId.
    *
-   * TODO: Remove in Stage 3 - Will be replaced by graphology queries on slot edges
+   * Performance: O(edges) graph iteration vs O(classes × attributes) nested loop
    */
   getUsedByClasses(): string[] {
-    if (!globalClassCollection) {
-      console.warn('SlotElement.getUsedByClasses(): globalClassCollection not initialized');
+    if (!globalGraph) {
+      console.warn('SlotElement.getUsedByClasses(): globalGraph not initialized');
       return [];
     }
 
-    const usedBy: string[] = [];
-    const allClasses = globalClassCollection.getAllElements() as ClassElement[];
-
-    for (const cls of allClasses) {
-      // Check if any attribute references this slot via slotId
-      if (cls.attributes) {
-        for (const [, attrDef] of Object.entries(cls.attributes)) {
-          if (attrDef.slotId === this.name) {
-            usedBy.push(cls.name);
-            break;  // Found a match, no need to check other attributes
-          }
-        }
-      }
-    }
-
-    return usedBy.sort();
+    return getClassesUsingSlot(globalGraph, this.name);
   }
 }
 
