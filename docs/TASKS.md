@@ -32,12 +32,87 @@
 
 ## 📋 Upcoming Work (Ordered by Priority)
 
-### High Priority
-
-**Complete Graph Refactor and Element Architecture Refactor**
-
-Ordered by implementation dependencies. See [archive/ELEMENT_MERGE_ANALYSIS.md](docs/archive/ELEMENT_MERGE_ANALYSIS.md) for merge history.
-
+[sg] new items -- trying to fix weird stuff
+- slot problems in bdchm.processed.json:
+  ```json
+    "classes": {
+      "DimensionalObservationSet": {
+        "attributes": {
+          "observations": {
+            "slotId": "observations-DimensionalObservationSet",
+            "range": "DimensionalObservation",
+            "inline": false,
+            "required": true,
+            "multivalued": true,
+            "inherited_from": "ObservationSet"
+          },
+          ...
+        }
+      },
+    },
+    "slots": {
+      "observations-DimensionalObservationSet": {
+        "id": "observations-DimensionalObservationSet",
+        "name": "observations",
+        "range": "DimensionalObservation",
+        "overrides": "observations",
+        "description": "A set of one or more observations.",
+        "required": true,
+        "multivalued": true
+      },
+    }
+  ```
+- consolidate slots:
+    - move/merge all class attributes to the slots section
+    - under each class, replace "attributes" with "slots"
+    - only retain a list of slot ids
+- except for prefixes (which we might not even need since we're already
+  generating URLs in the processed output), add a nodeType
+  ('class'|'slot'|'enum'|'type') to everything and put it all into a big
+  array
+- turn all the sections into arrays instead of maps, 
+  - so, DimensionalObservationSet's definition and observations slot will be:
+    ```json
+        [
+            {
+                "nodeType": "class",
+                "id": "DimensionalObservationSet",
+                "name": "DimensionalObservationSet",
+                "parent": "ObservationSet",
+                "abstract": false,
+                "slots": [
+                    "observations-DimensionalObservationSet",
+                    "associated_visit",
+                    "associated_participant",
+                    "category",
+                    "focus",
+                    "method_type",
+                    "performed_by",
+                    "id"
+                ],
+                "description": "A set of one or more discrete observations about the physical dimensions of an object (e.g. length, width, area)."
+            },
+            {
+                "nodeType": "slot",
+                "id": "observations-DimensionalObservationSet",
+                "name": "observations",
+                "range": "DimensionalObservation",
+                "inline": false,
+                "inherited_from": "ObservationSet"
+                "overrides": "observations",
+                "description": "A set of one or more observations.",
+                "required": true,
+                "multivalued": true
+            },
+        ]
+    ```
+- when the graph is being created, check if middle panel is visible, and recreate
+  the graph on middle panel toggle
+  - with middle panel hidden create edges from class to range; slots remain available
+    as nodes, but with no edges connected to them
+  - with middle panel shown, create edges from class to slot and slot to range, but
+    no direct edges from class to range
+- 
 ### ✅ Phase 1 & 1.5: Completed
 
 **Phase 1: UI Layer Cleanup** and **Phase 1.5: Complete Type Organization** are both complete.

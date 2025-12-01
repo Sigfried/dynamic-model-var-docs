@@ -3,7 +3,8 @@
 
 import Graph from 'graphology';
 // Import and re-export SlotDefinition from import_types (it's part of the DTO structure but used everywhere)
-import type { SlotDefinition } from '../import_types';
+import type {SlotDefinition} from '../import_types';
+
 export type { SlotDefinition };
 
 // ============================================================================
@@ -183,9 +184,19 @@ export type NodeAttributes =
  */
 export const EDGE_TYPES = {
   INHERITANCE: 'inheritance',
-  SLOT: 'slot',
+  CLASS_RANGE: 'class_to_range', // was SLOT: 'slot',
+  CLASS_SLOT: 'class_to_slot',
+  SLOT_RANGE: 'slot_to_range',
   MAPS_TO: 'maps_to',
 } as const;
+
+export function getEdgeTypesForLinks(middlePanelShown: boolean) {
+  if (middlePanelShown) {
+    return [EDGE_TYPES.CLASS_SLOT, EDGE_TYPES.SLOT_RANGE, EDGE_TYPES.MAPS_TO];
+  } else {
+    return [EDGE_TYPES.CLASS_RANGE, EDGE_TYPES.MAPS_TO];
+  }
+}
 
 /**
  * Edge types in the schema graph
@@ -252,3 +263,38 @@ export type EdgeAttributes =
  */
 export type SchemaGraph = Graph<NodeAttributes, EdgeAttributes>;
 
+/**
+ * ItemInfo - Complete item metadata including panel positioning
+ * Used for rendering items in UI with proper context
+ */
+export interface ItemInfo {
+  id: string;
+  displayName: string;
+  type: string;  // Element type ID: 'class', 'enum', 'slot', 'type', 'variable'
+  typeDisplayName: string;  // User-facing label: "Class", "Enumeration", "Slot", "Type", "Variable"
+  color: string;  // Tailwind color classes for styling
+  // panelPosition: 'left' | 'right';
+  // panelId: 'left' | 'middle' | 'right'; // these should be dom ids on the panels
+}
+
+/**
+ * EdgeInfo - Complete edge representation with both source and target
+ * Used for rendering relationships between items
+ */
+export interface EdgeInfo {
+  edgeType: EdgeType;
+  sourceItem: ItemInfo;
+  targetItem: ItemInfo;
+  label?: string;       // For slot edges: slot/attribute name; for maps_to: "mapped_to"
+  inheritedFrom?: string; // For slot edges only: ancestor name that defined this slot
+}
+
+/**
+ * RelationshipData - Unified relationship structure using edges
+ * Replaces old type-dependent relationship structure with generic edge-based model
+ */
+export interface RelationshipData {
+  thisItem: ItemInfo;
+  outgoing: EdgeInfo[];
+  incoming: EdgeInfo[];
+}

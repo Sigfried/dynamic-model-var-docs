@@ -13,7 +13,7 @@
 import { useRef, useState, useEffect } from 'react';
 // TODO: Uncomment when migrating to EdgeInfo (see TASKS.md Phase 2 Step 3)
 // import type { EdgeInfo } from '../contracts/ComponentData';
-import type { DataService } from '../services/DataService';
+import type {DataService, ItemInfo} from '../services/DataService';
 import {
   generateSelfRefPath,
   getLinkColor,
@@ -24,7 +24,8 @@ import {
 import type { ItemHoverData } from './Section';
 import {decontextualizeId} from '../utils/idContextualization';
 import { getElementLinkTooltipColor, type ElementTypeId } from '../config/appConfig';
-import { EDGE_TYPES } from '../models/SchemaTypes';
+import { EDGE_TYPES, getEdgeTypesForLinks } from '../models/SchemaTypes';
+import type { EdgeInfo, } from "../services/DataService";
 
 /**
  * LinkTooltipData - Data for link hover tooltips
@@ -43,12 +44,13 @@ export interface LinkTooltipData {
  */
 function LinkTooltip({ data, x, y }: { data: LinkTooltipData; x: number; y: number }) {
   const formatRelationshipType = (type: string): string => {
+    // [sg] move this to SchemaTypes with EDGE_TYPES?
     switch (type) {
       case 'inherits':
         return 'inherits from';
       case EDGE_TYPES.INHERITANCE:
         return 'inherits from';
-      case EDGE_TYPES.SLOT:
+      case EDGE_TYPES.SLOT:  // [sg] FIX THIS!
         return data.relationshipLabel ? `slot: ${data.relationshipLabel}` : 'slot';
       case EDGE_TYPES.MAPS_TO:
         return 'maps to';
@@ -95,89 +97,6 @@ export interface LinkOverlayProps {
   /** Currently hovered item for link highlighting */
   hoveredItem?: ItemHoverData | null;
 }
-/*
- * ============================================================================
- * FUTURE REFACTOR: Simpler DOM-based link generation (post-demo)
- * ============================================================================
- *
- * PROBLEM WITH CURRENT APPROACH:
- * - Complex logic tracking which sections are in which physical panels
- * - Need to pass leftPhysicalPanel/rightPhysicalPanel props
- * - Error-prone when panel configurations change
- *
- * PROPOSED SIMPLER APPROACH:
- * Query DOM directly for visible items, get their relationships, find targets in DOM.
- * The DOM becomes the source of truth for what's visible and where.
- *
- * BENEFITS:
- * - Much simpler! No panel tracking needed
- * - Automatically works with any panel configuration
- * - Directly uses contextualized IDs from DOM
- *
- * REQUIREMENTS FOR THIS APPROACH:
- * 1. Add 'item' class to all displayed items in Section.tsx:
- *    <div id="mp-associated_participant" class="item flex items-center ..." ...>
- *
- * 2. Use DataService.getRelationshipsNew() (already implemented, works great!)
- *    - Returns EdgeInfo with proper target IDs
- *    - Issue: Uses *Proposal types (EdgeInfoProposal, etc.)
- *    - Blocked by: Want to rename Proposal types to main types, but that
- *      requires merging Element/ElementPreRefactor which is too risky for demo
- *
- * 3. Fix querySelectorAll selector:
- *    - Current: `[id$="${id}"]` matches any ID ending with target
- *    - Problem: "participant" matches "associated_participant"
- *    - Better: `[id="lp-${id}"], [id="mp-${id}"], [id="rp-${id}"]`
- *
- * IMPLEMENTATION SKETCH (incomplete, needs work):
- */
-/*
-import type { Relationship } from '../models/Element';
-import type {
-  EdgeInfo,
-  RelationshipData as RelationshipDataNew
-} from '../models/Element';
-import { decontextualizeId } from '../utils/idContextualization';
-
-interface getIdPairsForLinksProps {
-  dataService?: DataService | null;
-}
-function getIdPairsForLinks({dataService}: getIdPairsForLinksProps): [string, string][] {
-  if (!dataService) return []
-  const idPairs = new Map<string, [string, string]>();
-  const items = document.getElementsByClassName('item')
-
-  for (const item of items) {
-    const dcItemId = decontextualizeId(item.id)  // lp-Specimen → Specimen
-
-    // TODO: Use getRelationshipsNew() once types are renamed
-    // const relationships = dataService.getRelationshipsNew(dcItemId) || [];
-    const linkedItemDcIds = relationships.map((rel) => rel.targetId) // Get target IDs
-
-    for (const targetId of linkedItemDcIds) {
-      // Find target in DOM (check all possible contexts)
-      const selector = `[id="lp-${targetId}"], [id="mp-${targetId}"], [id="rp-${targetId}"]`;
-      const linkedItems = document.querySelectorAll(selector)
-
-      for (const linkedItem of linkedItems) {
-        // Store pair: [sourceContextualizedId, targetContextualizedId]
-        idPairs.set(`${item.id}→${linkedItem.id}`, [item.id, linkedItem.id]);
-      }
-    }
-  }
-
-  return Array.from(idPairs.values());
-}
-
-function LinkOverlayProposal({idPairs}: {idPairs: [string, string][]}) {
-  // Render SVG links using the contextualized ID pairs
-  // Much simpler than current approach!
-}
-*/
-/*
- * END FUTURE REFACTOR
- * ============================================================================
- */
 
 export default function LinkOverlay({
   leftSections,
@@ -229,57 +148,49 @@ export default function LinkOverlay({
   const buildLinkPairs = (): [string, string][] => {
     if (!dataService) return [];
 
+    const middlePanelVisible = document.querySelector('[data-panel-position="middle"]') !== null;
+    const edgeTypesToRender = getEdgeTypesForLinks(middlePanelVisible);
+
     // Query DOM for all visible items with class 'item'
-    const items = document.querySelectorAll('.item');
+    const itemEls = document.querySelectorAll('.item');
     const pairs = new Map<string, [string, string]>();
 
-    // Check if middle panel is visible (has any items)
-    const middlePanelVisible = document.querySelector('[data-panel-position="middle"]') !== null;
-
-    items.forEach(item => {
-      const contextualizedId = item.id; // e.g., "lp-Specimen"
+    itemEls.forEach(itemEl => {
+      const contextualizedId = itemEl.id; // e.g., "lp-Specimen"
       const itemId = decontextualizeId(contextualizedId); // e.g., "Specimen"
 
-      // Get the panel this item is in
-      const sourcePanel = item.getAttribute('data-panel-position');
-
-      // Get relationships for this item
-      const relationships = dataService.getRelationshipsForLinking(itemId);
-      // TODO: Replace getRelationshipsForLinking with getEdgesForItem (see TASKS.md Phase 2 Step 3)
-      // const edges: EdgeInfo[] = dataService.getEdgesForItem(itemId, [EDGE_TYPES.SLOT, EDGE_TYPES.MAPS_TO]);
-      if (!relationships) return;
-
-      // For each relationship target, find it in the DOM
-      relationships.forEach(rel => {
-        const targetName = rel.target;
+      const edges: EdgeInfo[] = dataService.getEdgesForItem(itemId, edgeTypesToRender);
+      // For each edge, find other end in DOM if it's being displayed
+      let contextualizedSourceId: string = '';
+      let contextualizedTargetId: string = '';
+      edges.forEach(edge => {
+        let otherItem: ItemInfo | null = null; // graph item with edge to/from current item
+        if (edge.sourceItem.id === itemId) {
+          otherItem = edge.targetItem
+          contextualizedSourceId = contextualizedId;
+        } else if (edge.targetItem.id === itemId) {
+          otherItem = edge.sourceItem
+          contextualizedTargetId = contextualizedId;
+        } else {
+          throw new Error("one end has to be the current item")
+        }
 
         // Try to find target in DOM with any context prefix
-        const targetSelector = `[id="lp-${targetName}"], [id="mp-${targetName}"], [id="rp-${targetName}"]`;
-        const targetElement = document.querySelector(targetSelector);
-
-        if (targetElement) {
-          const targetPanel = targetElement.getAttribute('data-panel-position');
-
+        const otherElements = document.querySelectorAll(`[id$="${otherItem.id}"]`);
+        for (const otherEl of otherElements) {
+          if (otherItem.id !== decontextualizeId(otherEl.id)) {
+            // otherItem.id and decontextualized otherEl.id should be the same
+            console.error(`looking for ${otherItem.id} but found ${otherEl.id}`)
+          }
+          contextualizedSourceId = contextualizedSourceId || otherItem.id
+          contextualizedTargetId = contextualizedTargetId || otherItem.id
+          const selfLink = contextualizedSourceId === contextualizedTargetId
+          const samePanel = itemEl.getAttribute('data-panel-position') === otherEl.getAttribute('data-panel-position')
           // Only draw cross-panel links (not same-panel links)
-          // Exception: allow self-referential links
-          if (sourcePanel === targetPanel && contextualizedId !== targetElement.id) {
-            return; // Skip same-panel non-self-ref links
+          if (selfLink || !samePanel) {
+            const pairKey = `${contextualizedSourceId}→${contextualizedTargetId}`;
+            pairs.set(pairKey, [contextualizedSourceId, contextualizedTargetId]);
           }
-
-          // In 3-panel mode, only draw links between adjacent panels
-          // Skip left→right links (they should go through middle)
-          if (middlePanelVisible) {
-            if (sourcePanel === 'left' && targetPanel === 'right') {
-              return; // Skip non-adjacent panel links
-            }
-            if (sourcePanel === 'right' && targetPanel === 'left') {
-              return; // Skip non-adjacent panel links
-            }
-          }
-
-          // Store pair: [sourceContextualizedId, targetContextualizedId]
-          const pairKey = `${contextualizedId}→${targetElement.id}`;
-          pairs.set(pairKey, [contextualizedId, targetElement.id]);
         }
       });
     });
@@ -381,6 +292,7 @@ export default function LinkOverlay({
 
       // Skip if either item not found in DOM
       if (!sourceItem || !targetItem) {
+        console.error("this should not happen")
         return;
       }
 

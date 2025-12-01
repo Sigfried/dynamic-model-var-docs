@@ -15,13 +15,17 @@ import type { ModelData } from '../models/ModelData';
 import type { Relationship } from '../models/Element';
 import type {
   DetailData,
-  FloatingBoxMetadata,
-  RelationshipData,
-  EdgeInfo,
-  ItemInfo
+  FloatingBoxMetadata
 } from '../contracts/ComponentData';
 import type { ElementTypeId } from '../config/appConfig';
-import type {EdgeAttributes, EdgeType, SlotEdgeAttributes} from "../models/SchemaTypes";
+import type {
+  EdgeAttributes,
+  EdgeInfo,
+  EdgeType,
+  ItemInfo,
+  RelationshipData,
+  SlotEdgeAttributes
+} from "../models/SchemaTypes";
 import { EDGE_TYPES } from "../models/SchemaTypes";
 import type { ToggleButtonData } from '../components/ItemsPanel';
 import type { SectionData } from '../components/Section';
@@ -114,13 +118,6 @@ export class DataService {
     // Get node attributes from graph
     const nodeAttrs = this.modelData.graph.getNodeAttributes(nodeId);
 
-    // Get element for display name
-    const element = this.modelData.elementLookup.get(nodeId);
-    if (!element) {
-      console.warn(`getItemInfo: Element not found for node ${nodeId}`);
-      return null;
-    }
-
     // Get type metadata for colors and labels
     const typeMetadata = elementTypes[nodeAttrs.type as ElementTypeId];
     if (!typeMetadata) {
@@ -130,7 +127,7 @@ export class DataService {
 
     return {
       id: nodeId,
-      displayName: element.name,
+      displayName: nodeAttrs.name,
       type: nodeAttrs.type,
       typeDisplayName: typeMetadata.label,
       color: typeMetadata.color.name
@@ -148,7 +145,7 @@ export class DataService {
     const targetItem = this.getItemInfo(targetNodeId);
 
     if (!sourceItem || !targetItem) {
-      console.warn(`getEdgeInfo: Missing source or target item`, {
+      console.error(`getEdgeInfo: Missing source or target item`, {
         edgeKey,
         sourceNodeId,
         targetNodeId
@@ -197,8 +194,125 @@ export class DataService {
   getRelationshipsNew(itemId: string): RelationshipData | null {
     const element = this.modelData.elementLookup.get(itemId);
     if (!element) return null;
+    const graph = this.modelData.graph;
 
-    return element.getRelationshipsFromGraph();
+    /**
+     * Get relationships from graph (new edge-based format).
+     * Queries the global SchemaGraph for all edges connected to this element.
+     * Returns null if graph is not initialized.
+     *
+     * This is the new graph-based method that will replace getRelationships().
+     */
+    getRelationshipsFromGraph(): RelationshipData | null {
+      if (!globalGraph || !globalElementLookup) {
+        return null;
+      }
+
+      const elementLookup = globalElementLookup;
+
+      // Build thisItem info
+      const metadata = elementTypes[this.type];
+      const thisItem: ItemInfo = {
+        id: this.getId(),
+        displayName: this.name,
+        type: this.type,  // Element type ID ('class', 'enum', etc.)
+        typeDisplayName: metadata.label,  // User-facing label ('Class', 'Enumeration', etc.)
+        color: metadata.color.headerBg
+      };
+
+      const outgoing: EdgeInfo[] = [];
+      const incoming: EdgeInfo[] = [];
+
+      // Process outgoing edges from this element
+      graph.forEachOutboundEdge(this.name, (_edgeId, attributes, _source, target) => {
+        const targetElement = elementLookup.get(target);
+        if (!targetElement) {
+          console.error(`getRelationshipsFromGraph: Target element not found: ${target} (outgoing edge from ${this.name})`);
+          return;
+        }
+
+        const targetMetadata = elementTypes[targetElement.type];
+        const targetItem: ItemInfo = {
+          id: target,
+          displayName: target,
+          type: targetElement.type,  // Element type ID ('class', 'enum', etc.)
+          typeDisplayName: targetMetadata.label,  // User-facing label ('Class', 'Enumeration', etc.)
+          color: targetMetadata.color.headerBg
+        };
+
+        if (attributes.type === EDGE_TYPES.INHERITANCE) {
+          outgoing.push({
+            edgeType: EDGE_TYPES.INHERITANCE,
+            sourceItem: thisItem,
+            targetItem
+          });
+        } else if (attributes.type === EDGE_TYPES.SLOT) {
+          const slotAttrs = attributes as SlotEdgeAttributes;
+          outgoing.push({
+            edgeType: EDGE_TYPES.SLOT,
+            sourceItem: thisItem,
+            targetItem,
+            label: slotAttrs.slotName,
+            inheritedFrom: slotAttrs.inheritedFrom
+          });
+        } else if (attributes.type === EDGE_TYPES.MAPS_TO) {
+          outgoing.push({
+            edgeType: EDGE_TYPES.MAPS_TO,
+            sourceItem: thisItem,
+            targetItem,
+            label: 'mapped_to'
+          });
+        }
+      });
+
+      // Process incoming edges to this element
+      graph.forEachInboundEdge(this.name, (_edgeId, attributes, source, _target) => {
+        const sourceElement = elementLookup.get(source);
+        if (!sourceElement) {
+          console.error(`getRelationshipsFromGraph: Source element not found: ${source} (incoming edge to ${this.name})`);
+          return;
+        }
+
+        const sourceMetadata = elementTypes[sourceElement.type];
+        const sourceItem: ItemInfo = {
+          id: source,
+          displayName: source,
+          type: sourceElement.type,  // Element type ID ('class', 'enum', etc.)
+          typeDisplayName: sourceMetadata.label,  // User-facing label ('Class', 'Enumeration', etc.)
+          color: sourceMetadata.color.headerBg
+        };
+
+        if (attributes.type === EDGE_TYPES.INHERITANCE) {
+          incoming.push({
+            edgeType: EDGE_TYPES.INHERITANCE,
+            sourceItem,
+            targetItem: thisItem
+          });
+        } else if (attributes.type === EDGE_TYPES.SLOT) {
+          const slotAttrs = attributes as SlotEdgeAttributes;
+          incoming.push({
+            edgeType: EDGE_TYPES.SLOT,
+            sourceItem,
+            targetItem: thisItem,
+            label: slotAttrs.slotName,
+            inheritedFrom: slotAttrs.inheritedFrom
+          });
+        } else if (attributes.type === EDGE_TYPES.MAPS_TO) {
+          incoming.push({
+            edgeType: EDGE_TYPES.MAPS_TO,
+            sourceItem,
+            targetItem: thisItem,
+            label: 'mapped_to'
+          });
+        }
+      });
+
+      return {
+        thisItem,
+        outgoing,
+        incoming
+      };
+    }
   }
 
   /**

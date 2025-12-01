@@ -13,8 +13,7 @@
  * See CLAUDE.md for separation of concerns principles.
  */
 
-import type { Element } from '../models/Element';
-import type { EdgeType } from '../models/SchemaTypes';
+import type {Element} from '../models/Element';
 
 // ============================================================================
 // Element Selection (DEPRECATED)
@@ -161,38 +160,3 @@ export interface DetailData {
 // ============================================================================
 // [sg] these are used by model as well as components; should probably be moved to SchemaTypes.ts
 
-/**
- * ItemInfo - Complete item metadata including panel positioning
- * Used for rendering items in UI with proper context
- */
-export interface ItemInfo {
-  id: string;
-  displayName: string;
-  type: string;  // Element type ID: 'class', 'enum', 'slot', 'type', 'variable'
-  typeDisplayName: string;  // User-facing label: "Class", "Enumeration", "Slot", "Type", "Variable"
-  color: string;  // Tailwind color classes for styling
-  // panelPosition: 'left' | 'right';
-  // panelId: 'left' | 'middle' | 'right'; // these should be dom ids on the panels
-}
-
-/**
- * EdgeInfo - Complete edge representation with both source and target
- * Used for rendering relationships between items
- */
-export interface EdgeInfo {
-  edgeType: EdgeType;
-  sourceItem: ItemInfo;
-  targetItem: ItemInfo;
-  label?: string;       // For slot edges: slot/attribute name; for maps_to: "mapped_to"
-  inheritedFrom?: string; // For slot edges only: ancestor name that defined this slot
-}
-
-/**
- * RelationshipData - Unified relationship structure using edges
- * Replaces old type-dependent relationship structure with generic edge-based model
- */
-export interface RelationshipData {
-  thisItem: ItemInfo;
-  outgoing: EdgeInfo[];
-  incoming: EdgeInfo[];
-}

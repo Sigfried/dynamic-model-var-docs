@@ -9,7 +9,7 @@ import type {
   TypeData,
   VariableSpec,
   EnumValue,
-  SchemaData,
+  SchemaData, RelationshipData, EdgeInfo, ItemInfo,
 } from './SchemaTypes';
 
 // Core application data structure
@@ -20,10 +20,7 @@ import { buildGraphFromSchemaData, getClassesUsingRange, getClassesUsingSlot } f
 import { type SchemaGraph, type SlotEdgeAttributes, EDGE_TYPES } from './SchemaTypes';
 import type {
   DetailSection,
-  DetailData,
-  ItemInfo,
-  EdgeInfo,
-  RelationshipData
+  DetailData
 } from '../contracts/ComponentData';
 import { APP_CONFIG } from '../config/appConfig';
 const {elementTypes, } = APP_CONFIG;
@@ -511,7 +508,7 @@ export abstract class Element {
    *
    * This is the new graph-based method that will replace getRelationships().
    */
-  getRelationshipsFromGraph(): RelationshipData | null {
+  getRelationshipsFromGraphOBSOLETE(): RelationshipData | null {
     if (!globalGraph || !globalElementLookup) {
       return null;
     }
