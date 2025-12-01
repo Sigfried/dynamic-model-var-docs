@@ -11,13 +11,10 @@
  */
 
 import { useRef, useState, useEffect } from 'react';
-// TODO: Uncomment when migrating to EdgeInfo (see TASKS.md Phase 2 Step 3)
-// import type { EdgeInfo } from '../contracts/ComponentData';
+import type { EdgeInfo } from '../contracts/ComponentData';
 import type { DataService } from '../services/DataService';
 import {
   generateSelfRefPath,
-  getLinkColor,
-  getLinkStrokeWidth,
   getLinkGradientId,
   type LinkFilterOptions
 } from '../utils/linkHelpers';
@@ -225,13 +222,20 @@ export default function LinkOverlay({
     return () => cancelAnimationFrame(frameId);
   }, [leftSections, rightSections, dataService]);
 
+  // Link edge data with contextualized IDs for DOM lookup
+  type LinkEdgeData = {
+    edge: EdgeInfo;
+    sourceContextId: string;
+    targetContextId: string;
+  };
+
   // Build link pairs from visible items in DOM
-  const buildLinkPairs = (): [string, string][] => {
-    if (!dataService) return [];
+  const buildLinkPairs = (): Map<string, LinkEdgeData> => {
+    if (!dataService) return new Map();
 
     // Query DOM for all visible items with class 'item'
     const items = document.querySelectorAll('.item');
-    const pairs = new Map<string, [string, string]>();
+    const edgeMap = new Map<string, LinkEdgeData>();
 
     // Check if middle panel is visible (has any items)
     const middlePanelVisible = document.querySelector('[data-panel-position="middle"]') !== null;
@@ -243,15 +247,15 @@ export default function LinkOverlay({
       // Get the panel this item is in
       const sourcePanel = item.getAttribute('data-panel-position');
 
-      // Get relationships for this item
-      const relationships = dataService.getRelationshipsForLinking(itemId);
-      // TODO: Replace getRelationshipsForLinking with getEdgesForItem (see TASKS.md Phase 2 Step 3)
-      // const edges: EdgeInfo[] = dataService.getEdgesForItem(itemId, [EDGE_TYPES.SLOT, EDGE_TYPES.MAPS_TO]);
-      if (!relationships) return;
+      // Get edges for this item using new graph-based API
+      const edges = dataService.getEdgesForItem(itemId, [
+        EDGE_TYPES.SLOT,
+        EDGE_TYPES.MAPS_TO
+      ]);
 
-      // For each relationship target, find it in the DOM
-      relationships.forEach(rel => {
-        const targetName = rel.target;
+      // For each edge, find target in DOM
+      edges.forEach(edge => {
+        const targetName = edge.targetItem.id;
 
         // Try to find target in DOM with any context prefix
         const targetSelector = `[id="lp-${targetName}"], [id="mp-${targetName}"], [id="rp-${targetName}"]`;
@@ -277,14 +281,18 @@ export default function LinkOverlay({
             }
           }
 
-          // Store pair: [sourceContextualizedId, targetContextualizedId]
-          const pairKey = `${contextualizedId}→${targetElement.id}`;
-          pairs.set(pairKey, [contextualizedId, targetElement.id]);
+          // Store EdgeInfo with contextualized IDs for DOM lookup
+          const edgeKey = `${contextualizedId}→${targetElement.id}`;
+          edgeMap.set(edgeKey, {
+            edge,
+            sourceContextId: contextualizedId,
+            targetContextId: targetElement.id
+          });
         }
       });
     });
 
-    return Array.from(pairs.values());
+    return edgeMap;
   };
 
   // Calculate anchor points for cross-panel links based on actual positions
@@ -370,30 +378,21 @@ export default function LinkOverlay({
     // Skip if no dataService
     if (!dataService) return allRenderedLinks;
 
-    // Build link pairs fresh from current DOM state
-    const linkPairs = buildLinkPairs();
+    // Build link edges fresh from current DOM state
+    const edgeMap = buildLinkPairs();
 
-    // Render each link pair
-    linkPairs.forEach(([sourceId, targetId], index) => {
-      // Find items in DOM using contextualized IDs (already have the correct prefixes)
-      const sourceItem = document.getElementById(sourceId);
-      const targetItem = document.getElementById(targetId);
+    // Render each link
+    edgeMap.forEach((linkData, edgeKey) => {
+      const { edge, sourceContextId, targetContextId } = linkData;
+
+      // Find items in DOM using contextualized IDs
+      const sourceItem = document.getElementById(sourceContextId);
+      const targetItem = document.getElementById(targetContextId);
 
       // Skip if either item not found in DOM
       if (!sourceItem || !targetItem) {
         return;
       }
-
-      // Get element names for relationship lookup
-      const sourceName = decontextualizeId(sourceId);
-      const targetName = decontextualizeId(targetId);
-
-      // Get relationship info for this pair
-      const relationships = dataService.getRelationshipsForLinking(sourceName);
-      if (!relationships || relationships.length === 0) return;
-
-      const relationship = relationships.find(r => r.target === targetName);
-      if (!relationship) return;
 
       const sourceRect = sourceItem.getBoundingClientRect();
       const targetRect = targetItem.getBoundingClientRect();
@@ -401,14 +400,12 @@ export default function LinkOverlay({
       // Determine link direction for gradient selection
       const isLeftToRight = sourceRect.left < targetRect.left;
 
-      // Determine source type from panel position or relationship type
-      // In middle panel = slot, otherwise determine from relationship
-      const sourceType = sourceItem.getAttribute('data-panel-position') === 'middle' ? 'slot' :
-        relationship.type.includes('slot') || relationship.label?.includes('slot') ? 'class' : 'class';
-      const targetType = relationship.targetSection;
+      // Get source and target types from EdgeInfo
+      const sourceType = edge.sourceItem.typeDisplayName.toLowerCase(); // "Class" → "class"
+      const targetType = edge.targetItem.typeDisplayName.toLowerCase();
 
       // Check if self-referential (source and target are same element)
-      const isSelfRef = sourceId === targetId;
+      const isSelfRef = sourceContextId === targetContextId;
 
       // Generate path - adjust coordinates to be relative to SVG origin
       let pathData: string;
@@ -437,21 +434,24 @@ export default function LinkOverlay({
         pathData = generateDirectionalBezierPath(adjustedSource, adjustedTarget);
       }
 
-      // Get gradient with correct direction
-      let color = getLinkColor(relationship, sourceType);
-      // If gradient and going right-to-left, use reverse gradient
-      if (color.startsWith('url(#') && !isLeftToRight) {
-        color = color.replace(')', '-reverse)');
-      }
-      const strokeWidth = getLinkStrokeWidth(relationship);
+      // Get gradient for link based on source and target types
+      const gradientId = isLeftToRight
+        ? getLinkGradientId(sourceType, targetType)
+        : getLinkGradientId(sourceType, targetType) + '-reverse';
+      let color = `url(#${gradientId})`;
+
+      // Determine stroke width based on edge type
+      const strokeWidth = edge.edgeType === EDGE_TYPES.INHERITANCE ? 2 : 1.5;
 
       // Generate unique key for this link
-      const linkKey = `${sourceId}-${targetId}-${index}`;
+      const linkKey = edgeKey;
 
       // Check if link should be highlighted (either direct hover or item hover match)
+      const decontextualizedSourceId = decontextualizeId(sourceContextId);
+      const decontextualizedTargetId = decontextualizeId(targetContextId);
       const matchesHoveredItem = !!hoveredItem && (
-        (sourceId === hoveredItem.id) ||
-        (targetId === hoveredItem.id)
+        (decontextualizedSourceId === hoveredItem.id) ||
+        (decontextualizedTargetId === hoveredItem.id)
       );
       const isHovered = hoveredLinkKey === linkKey || matchesHoveredItem;
 
@@ -480,11 +480,11 @@ export default function LinkOverlay({
             hoverTimeoutRef.current = window.setTimeout(() => {
               setTooltipData({
                 data: {
-                  relationshipType: relationship.type,
-                  relationshipLabel: relationship.label,
-                  sourceName: sourceName,
+                  relationshipType: edge.edgeType,
+                  relationshipLabel: edge.label,
+                  sourceName: edge.sourceItem.displayName,
                   sourceType: sourceType,
-                  targetName: targetName,
+                  targetName: edge.targetItem.displayName,
                   targetType: targetType
                 },
                 x: e.clientX,

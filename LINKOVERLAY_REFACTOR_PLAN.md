@@ -1,7 +1,256 @@
-# LinkOverlay Refactor Plan v2 - USING YOUR PROPOSAL
+# LinkOverlay Refactor Plan v3 - Updated for Current Architecture
 
-**Status:** Awaiting approval before implementation
-**Related:** Element.ts lines 132-156 (EdgeInfoProposal), UI_REFACTOR.md Section 1, Section 9 (Grouped Slots Panel)
+**Status:** Phase 2 - Ready for implementation
+**Date Updated:** 2025-12-01
+**Related:** TASKS.md Phase 2, ComponentData.ts (EdgeInfo/ItemInfo), DataService.ts (getEdgesForItem)
+
+---
+
+## Current State Analysis (Dec 2025)
+
+### What's Already Done ✅
+
+1. **EdgeInfo/ItemInfo types exist** (ComponentData.ts:182-188)
+   - No longer "Proposal" - these are the real types
+   - EdgeInfo has: edgeType, sourceItem, targetItem, label, inheritedFrom
+   - ItemInfo has: id, displayName, typeDisplayName, color, badge
+
+2. **getEdgesForItem() implemented** (DataService.ts:181-188)
+   - Takes itemId and EdgeType[] filter
+   - Returns EdgeInfo[] from graph
+   - This is the NEW API we need to use
+
+3. **Old API deprecated** (DataService.ts:236-242)
+   - getRelationshipsForLinking() marked @deprecated
+   - Returns old Relationship[] format
+   - Will be removed after LinkOverlay migration
+
+### Current LinkOverlay Issues 🐛
+
+**Current implementation** (LinkOverlay.tsx, 596 lines):
+
+1. **Double queries** - calls getRelationshipsForLinking() twice:
+   - Line 247: In buildLinkPairs() to find targets
+   - Line 392: In renderLinks() to get relationship details
+
+2. **Complex filtering logic**:
+   - Panel adjacency rules (lines 269-278)
+   - Same-panel filtering (lines 263-267)
+   - DOM queries for finding targets (lines 257-258)
+
+3. **Uses deprecated API** throughout
+
+**Known bugs** (from TASKS.md):
+- Class→slot links pointing wrong direction (3-panel mode)
+- Specimen→analyte_type link missing
+- Links don't update when showing/hiding middle panel
+
+### Updated Refactor Strategy
+
+**Key insight from current architecture:**
+- We DON'T need getAllEdgesForLinking()
+- We already have getEdgesForItem() which works per-item
+- Current DOM-based approach is correct - just needs to use new API
+
+**Simple migration path:**
+1. Replace getRelationshipsForLinking() with getEdgesForItem()
+2. Use EdgeInfo.sourceItem/targetItem instead of Relationship.target
+3. Remove double queries - get edge info once per pair
+4. Fix filtering logic to handle all edge types correctly
+
+---
+
+## Implementation Plan - Phase 2 Step 3
+
+### Step 1: Update buildLinkPairs() to use EdgeInfo
+
+**Current approach** (simplified):
+```typescript
+// buildLinkPairs() - current (lines 229-288)
+items.forEach(item => {
+  const itemId = decontextualizeId(item.id);
+  const relationships = dataService.getRelationshipsForLinking(itemId); // ❌ OLD API
+
+  relationships.forEach(rel => {
+    const targetName = rel.target; // ❌ Just a string
+    const targetElement = document.querySelector(`[id="lp-${targetName}"], ...`);
+    if (targetElement) {
+      // Filter logic, store pair...
+    }
+  });
+});
+```
+
+**New approach**:
+```typescript
+// buildLinkPairs() - new
+const buildLinkPairs = (): Map<string, EdgeInfo> => {  // Return Map of edgeKey → EdgeInfo
+  if (!dataService) return new Map();
+
+  const items = document.querySelectorAll('.item');
+  const edgeMap = new Map<string, EdgeInfo>();
+  const middlePanelVisible = document.querySelector('[data-panel-position="middle"]') !== null;
+
+  items.forEach(item => {
+    const contextualizedId = item.id;
+    const itemId = decontextualizeId(contextualizedId);
+    const sourcePanel = item.getAttribute('data-panel-position');
+
+    // ✅ NEW API: Get edges with explicit source/target
+    const edges = dataService.getEdgesForItem(itemId, [
+      EDGE_TYPES.SLOT,
+      EDGE_TYPES.MAPS_TO
+    ]);
+
+    edges.forEach(edge => {
+      // Find target in DOM
+      const targetName = edge.targetItem.id;
+      const targetSelector = `[id="lp-${targetName}"], [id="mp-${targetName}"], [id="rp-${targetName}"]`;
+      const targetElement = document.querySelector(targetSelector);
+
+      if (targetElement) {
+        const targetPanel = targetElement.getAttribute('data-panel-position');
+
+        // Same filtering logic as before
+        if (sourcePanel === targetPanel && contextualizedId !== targetElement.id) {
+          return; // Skip same-panel non-self-ref links
+        }
+
+        if (middlePanelVisible) {
+          if (sourcePanel === 'left' && targetPanel === 'right') return;
+          if (sourcePanel === 'right' && targetPanel === 'left') return;
+        }
+
+        // ✅ Store EdgeInfo with contextualized IDs
+        const edgeKey = `${contextualizedId}→${targetElement.id}`;
+        edgeMap.set(edgeKey, {
+          ...edge,
+          // Add contextualized IDs for DOM lookup
+          _sourceContextId: contextualizedId,
+          _targetContextId: targetElement.id
+        });
+      }
+    });
+  });
+
+  return edgeMap;
+};
+```
+
+### Step 2: Update renderLinks() to use EdgeInfo map
+
+**Current approach**:
+```typescript
+// renderLinks() - current (lines 363-500+)
+const linkPairs = buildLinkPairs(); // Returns [sourceId, targetId][]
+
+linkPairs.forEach(([sourceId, targetId]) => {
+  const sourceName = decontextualizeId(sourceId);
+  const targetName = decontextualizeId(targetId);
+
+  // ❌ QUERY AGAIN - wasteful!
+  const relationships = dataService.getRelationshipsForLinking(sourceName);
+  const relationship = relationships.find(r => r.target === targetName);
+
+  // Extract info from relationship...
+  const sourceType = /* complex logic */;
+  const targetType = relationship.targetSection;
+  // ...
+});
+```
+
+**New approach**:
+```typescript
+// renderLinks() - new
+const renderLinks = () => {
+  const allRenderedLinks: (React.JSX.Element | null)[] = [];
+
+  const svgRect = svgRef.current?.getBoundingClientRect();
+  if (!svgRect || !dataService) return allRenderedLinks;
+
+  // ✅ Get EdgeInfo map - contains all we need!
+  const edgeMap = buildLinkPairs();
+
+  edgeMap.forEach((edge, edgeKey) => {
+    // ✅ Use stored contextualized IDs
+    const sourceId = edge._sourceContextId;
+    const targetId = edge._targetContextId;
+
+    const sourceItem = document.getElementById(sourceId);
+    const targetItem = document.getElementById(targetId);
+    if (!sourceItem || !targetItem) return;
+
+    const sourceRect = sourceItem.getBoundingClientRect();
+    const targetRect = targetItem.getBoundingClientRect();
+
+    // ✅ All info available in EdgeInfo!
+    const sourceType = edge.sourceItem.typeDisplayName.toLowerCase(); // "Class", "Enum" → "class", "enum"
+    const targetType = edge.targetItem.typeDisplayName.toLowerCase();
+    const sourceColor = edge.sourceItem.color;
+    const targetColor = edge.targetItem.color;
+    const relationshipType = edge.edgeType; // EDGE_TYPES.SLOT, etc.
+    const relationshipLabel = edge.label;
+
+    // Same path generation logic...
+    const isSelfRef = sourceId === targetId;
+    let pathData: string;
+    if (isSelfRef) {
+      // ... same as before
+    } else {
+      // ... same as before
+    }
+
+    // Render with all edge info available
+    const linkKey = edgeKey;
+    const isHovered = /* hover logic using edge.sourceItem.id, edge.targetItem.id */;
+
+    allRenderedLinks.push(
+      <path
+        key={linkKey}
+        d={pathData}
+        stroke={getLinkGradientId(sourceColor, targetColor, isLeftToRight)}
+        // ... rest same as before but using edge.sourceItem/targetItem
+      />
+    );
+  });
+
+  return allRenderedLinks;
+};
+```
+
+### Step 3: Benefits of This Approach
+
+1. **Single query** - getEdgesForItem() called once per item
+2. **All info in EdgeInfo** - no need to query again for relationship details
+3. **Type safety** - EdgeInfo has sourceItem/targetItem with all properties
+4. **Simpler code** - no more finding relationships in arrays
+5. **Fixes bugs** - EdgeInfo has correct source/target, fixing direction issues
+
+### Step 4: Testing Strategy
+
+1. **Test 2-panel mode** (left + right, no middle)
+   - Verify all links render correctly
+   - Check self-refs work
+
+2. **Test 3-panel mode** (left + middle + right)
+   - Verify adjacency filtering (no left→right links)
+   - Check class→slot→range chains render correctly
+   - Verify problematic links (Specimen→analyte_type, etc.)
+
+3. **Test panel transitions**
+   - Hide middle panel → links should update
+   - Show middle panel → links should update
+   - No stale links should remain
+
+4. **Test hover behavior**
+   - Links highlight correctly
+   - Tooltip shows correct relationship info from EdgeInfo
+
+---
+
+## Original Plan (v2) - ARCHIVED
+
+*Note: The sections below are from the original plan. Some details are outdated (e.g., EdgeInfoProposal → EdgeInfo), but the core design ideas remain valid.*
 
 ---
 ## [sg] think we need to this next
