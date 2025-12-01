@@ -696,7 +696,11 @@ export function initializeClassCollection(collection: ClassCollection): void {
  * 5. VariableCollection (needs classCollection)
  */
 export function initializeModelData(schemaData: SchemaData): ModelData {
+  // Build graph structure FIRST (Phase 3 Step 5: graph becomes primary data structure)
+  const graph = buildGraphFromSchemaData(schemaData);
+
   // Create collections in proper order
+  // TODO (Phase 3 Step 7): Consider removing Element classes entirely and using graph queries directly
   const enumCollection = EnumCollection.fromData(schemaData.enums);
   const typeCollection = TypeCollection.fromData(schemaData.types);
   const slotCollection = SlotCollection.fromData(schemaData.slots);
@@ -727,9 +731,6 @@ export function initializeModelData(schemaData: SchemaData): ModelData {
   const typeNames = Array.from(schemaData.types.keys());
   const slotNames = Array.from(schemaData.slots.keys());
   initializeElementNameMap(classNames, enumNames, typeNames, slotNames);
-
-  // Build graph structure (Stage 3)
-  const graph = buildGraphFromSchemaData(schemaData);
 
   // Initialize graph references for getRelationshipsFromGraph()
   initializeGraphReferences(graph, elementLookup);
