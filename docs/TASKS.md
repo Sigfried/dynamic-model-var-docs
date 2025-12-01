@@ -88,13 +88,14 @@ Ordered by implementation dependencies. See [archive/ELEMENT_MERGE_ANALYSIS.md](
 
 ### Phase 3: Data Flow Refactor (High Risk) - AFTER TYPE CLEANUP
 
-**Step 5: Refactor data flow** 🔲
-```
-Current: DTOs → Element constructors → Domain Models
-Planned: DTOs → dataLoader transform → graph build → Element instances (reduced role)
-```
-- **Why first**: Graph structure changes will affect LinkOverlay, so stabilize this before migrating LinkOverlay
-- **Dependencies**: Phase 3 Step 6 (complete)
+**Step 5: Refactor data flow** ✅ **COMPLETE**
+- Graph now built FIRST in initializeModelData() before creating Elements
+- Element usage inventory created (ELEMENT_INVENTORY.md)
+- Quick wins implemented: getUsedByClasses() methods now use O(1) graph queries
+  - EnumElement.getUsedByClasses(): O(n) → O(1), 73% code reduction
+  - SlotElement.getUsedByClasses(): O(n×m) → O(edges), 75% code reduction
+  - TypeElement.getUsedByClasses(): Added (was missing)
+- See commits: 32ebd1f, 43b2ba6, 0ade234
 
 **Step 6: Remove DTO imports from Element.ts** ✅ **COMPLETE**
 - Element.ts has no DTO imports
