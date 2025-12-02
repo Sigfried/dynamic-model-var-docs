@@ -1,7 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import {
   contextualizeId,
-  contextualizeLinkId,
   decontextualizeId,
 } from '../utils/idContextualization';
 
@@ -35,58 +34,6 @@ describe('idContextualization', () => {
     test('should handle IDs with hyphens', () => {
       const result = contextualizeId({ id: 'Multi-Part-Id', context: 'left-panel' });
       expect(result).toBe('lp-Multi-Part-Id');
-    });
-  });
-
-  describe('contextualizeLinkId', () => {
-    test('should create left-to-right link ID', () => {
-      const result = contextualizeLinkId({
-        sourceItemId: 'Specimen',
-        targetItemId: 'Container',
-        sourceSide: 'left',
-        targetSide: 'right'
-      });
-      expect(result).toBe('link-Specimen_Container-lr');
-    });
-
-    test('should create right-to-left link ID', () => {
-      const result = contextualizeLinkId({
-        sourceItemId: 'Container',
-        targetItemId: 'Specimen',
-        sourceSide: 'right',
-        targetSide: 'left'
-      });
-      expect(result).toBe('link-Container_Specimen-rl');
-    });
-
-    test('should handle same-side links (left-to-left)', () => {
-      const result = contextualizeLinkId({
-        sourceItemId: 'Parent',
-        targetItemId: 'Child',
-        sourceSide: 'left',
-        targetSide: 'left'
-      });
-      expect(result).toBe('link-Parent_Child-rl');
-    });
-
-    test('should handle same-side links (right-to-right)', () => {
-      const result = contextualizeLinkId({
-        sourceItemId: 'Parent',
-        targetItemId: 'Child',
-        sourceSide: 'right',
-        targetSide: 'right'
-      });
-      expect(result).toBe('link-Parent_Child-rl');
-    });
-
-    test('should handle IDs with special characters', () => {
-      const result = contextualizeLinkId({
-        sourceItemId: 'Multi-Part_Id',
-        targetItemId: 'Another_Id',
-        sourceSide: 'left',
-        targetSide: 'right'
-      });
-      expect(result).toBe('link-Multi-Part_Id_Another_Id-lr');
     });
   });
 

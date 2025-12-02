@@ -9,6 +9,8 @@
  * UI layer uses these utilities to add context-specific prefixes when needed.
  */
 
+export const panelPrefixes = ['lp', 'mp', 'rp']
+export type PanelPrefix = 'lp' | 'mp' | 'rp'
 /**
  * Contextualizes an item ID for DOM/component use
  *
@@ -21,9 +23,6 @@
  * contextualizeId({ id: "Condition", context: "right-panel" }) → "rp-Condition"
  * contextualizeId({ id: "Specimen" }) → "Specimen"
  */
-
-// [sg] with new ItemInfo and EdgeInfo interfaces, i don't think we need any of this anymore
-
 export function contextualizeId({
   id,
   context
@@ -46,38 +45,6 @@ export function contextualizeId({
 }
 
 /**
- * Contextualizes a link ID from source and target item IDs
- *
- * @param sourceItemId - The source item ID
- * @param targetItemId - The target item ID
- * @param sourceSide - The side where the source item appears ('left' or 'right')
- * @param targetSide - The side where the target item appears ('left' or 'right')
- * @returns Contextualized link ID string
- *
- * @example
- * contextualizeLinkId({
- *   sourceItemId: "Specimen",
- *   targetItemId: "Container",
- *   sourceSide: "left",
- *   targetSide: "right"
- * }) → "link-Specimen_Container-lr"
- */
-export function contextualizeLinkId({
-  sourceItemId,
-  targetItemId,
-  sourceSide,
-  targetSide
-}: {
-  sourceItemId: string;
-  targetItemId: string;
-  sourceSide: 'left' | 'right';
-  targetSide: 'left' | 'right';
-}): string {
-  const direction = sourceSide === 'left' && targetSide === 'right' ? 'lr' : 'rl';
-  return `link-${sourceItemId}_${targetItemId}-${direction}`;
-}
-
-/**
  * Extracts raw ID from contextualized ID
  *
  * @param contextualizedId - The contextualized ID (e.g., "lp-Specimen")
@@ -94,4 +61,24 @@ export function decontextualizeId(contextualizedId: string): string {
     return parts.slice(1).join('-');
   }
   return contextualizedId;
+}
+/**
+ * Split context and id
+ *
+ * @param contextualizedId - The contextualized ID (e.g., "lp-Specimen")
+ * @returns [prefix, decontextualizedId
+ *
+ * @example
+ * splitId("lp-Specimen") → ["lp", "Specimen"]
+ */
+export function splitId(contextualizedId: string): [PanelPrefix, string] {
+  const parts = contextualizedId.split('-');
+  if (parts.length !== 2) {
+    throw new Error(`don't call splitId without a contextualized id: ${contextualizedId}`);
+  }
+  const prefix = parts[0] as PanelPrefix;
+  if (!panelPrefixes.includes(prefix)) {
+    throw new Error(`invalid prefix in contextualizedId: ${contextualizedId}`);
+  }
+  return [prefix, parts.slice(1).join('-')];
 }

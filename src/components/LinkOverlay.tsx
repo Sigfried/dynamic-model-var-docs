@@ -22,7 +22,7 @@ import {
   type LinkFilterOptions
 } from '../utils/linkHelpers';
 import type { ItemHoverData } from './Section';
-import { decontextualizeId } from '../utils/idContextualization';
+import { decontextualizeId, splitId } from '../utils/idContextualization';
 import { getElementLinkTooltipColor, type ElementTypeId } from '../config/appConfig';
 import { EDGE_TYPES, getEdgeTypesForLinks } from '../models/SchemaTypes';
 
@@ -148,14 +148,21 @@ export default function LinkOverlay({
     if (!dataService) return [];
 
     const middlePanelVisible = document.querySelector('[data-panel-position="middle"]') !== null;
+    const panelOrder = middlePanelVisible ? {lp: 1, mp: 2, rp: 3} : {lp: 1, rp: 2}
     const edgeTypes = getEdgeTypesForLinks(middlePanelVisible);
     const itemEls = document.querySelectorAll('.item');
     const pairs = new Map<string, [string, string]>();
+    const setPair = (sourceId: string, targetId: string) => {
+      const pairKey = `${sourceId}→${targetId}`;
+      pairs.set(pairKey, [sourceId, targetId]);
+    }
 
     itemEls.forEach(itemEl => {
       const contextualizedId = itemEl.id;
-      const itemId = decontextualizeId(contextualizedId);
-      const sourcePanel = itemEl.getAttribute('data-panel-position');
+      let idParts = splitId(contextualizedId);
+      let panelPrefix: ('lp'|'mp'|'rp') = idParts[0]
+      const itemId: string = idParts[1]
+      const itemPanelNum = panelOrder[panelPrefix];
 
       // Get edges filtered by panel mode (CLASS_RANGE for 2-panel, CLASS_SLOT+SLOT_RANGE for 3-panel)
       const edges = dataService.getEdgesForItem(itemId, edgeTypes);
@@ -166,17 +173,26 @@ export default function LinkOverlay({
 
         const targetId = edge.targetItem.id;
         const selector = `[id="lp-${targetId}"], [id="mp-${targetId}"], [id="rp-${targetId}"]`;
-        const targetEl = document.querySelector(selector);
-        if (!targetEl) continue;
+        const targetEls: NodeListOf<Element> = document.querySelectorAll(selector);
+        let targetEl: Element | null = null;
+        let isSelfRef: boolean = false
 
-        const targetPanel = targetEl.getAttribute('data-panel-position');
-        const isSelfRef = contextualizedId === targetEl.id;
-
-        // Skip same-panel links (unless self-ref)
-        if (sourcePanel === targetPanel && !isSelfRef) continue;
-
-        const pairKey = `${contextualizedId}→${targetEl.id}`;
-        pairs.set(pairKey, [contextualizedId, targetEl.id]);
+        for (const _targetEl of targetEls) {
+          if (contextualizedId === _targetEl.id) {
+            isSelfRef = true
+            setPair(contextualizedId, contextualizedId);
+            break
+          } else if (_targetEl.id > contextualizedId) {
+            //  except selfRefs, all links should point to the next panel to the right
+            //  this is all to prevent class-class links within the left panel
+            idParts = splitId(_targetEl.id);
+            panelPrefix = idParts[0]
+            const targetPanelNum = panelOrder[panelPrefix];
+            if (targetPanelNum - itemPanelNum !== 1) continue // fix typescript error
+            targetEl = _targetEl
+            setPair(contextualizedId, targetEl.id);
+          }
+        }
       }
     });
 
