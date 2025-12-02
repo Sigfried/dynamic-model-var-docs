@@ -234,3 +234,81 @@ export function getAllElementTypeIds(): ElementTypeId[] {
 - All hard-coded color class strings
 
 **All changes verified with `npm run typecheck` ✅**
+
+---
+
+<a id="type-system-cleanup"></a>
+## Type System Cleanup ✅ COMPLETED
+
+**Goal**: Simplify edge types and retire deprecated interfaces before Phase 3 Step 5.
+
+### Step 1: EdgeType Simplification ✅
+- Added EDGE_TYPES constants enum in SchemaTypes.ts
+- Updated EdgeInfo to use `edgeType: EdgeType` from SchemaTypes
+- Removed UI edge type mapping in DataService.getEdgeInfo()
+- Replaced string literals with EDGE_TYPES constants throughout codebase
+- **Result**: Single source of truth for edge types
+
+### Step 2: Retire EdgeInfoDeprecated ✅
+- Migrated RelationshipInfoBox to use EdgeInfo with sourceItem/targetItem
+- Updated Element.ts `getRelationshipsFromGraph()` to return RelationshipData
+- Removed EdgeInfoDeprecated and RelationshipDataDeprecated
+- **Result**: Cleaner edge representation with explicit source/target
+
+### Step 3: Deprecate Relationship-based functions ✅
+- Marked getRelationshipsForLinking() as @deprecated in DataService
+- Marked test-only linkHelpers functions as @deprecated
+- **Result**: Old Relationship-based API marked deprecated, new EdgeInfo API ready
+
+---
+
+<a id="phase-3-data-flow"></a>
+## Phase 3: Data Flow Refactor ✅ COMPLETED
+
+### Step 5: Refactor data flow ✅
+- Graph now built FIRST in initializeModelData() before creating Elements
+- Element usage inventory created (ELEMENT_INVENTORY.md)
+- Quick wins: getUsedByClasses() methods now use O(1) graph queries
+  - EnumElement.getUsedByClasses(): O(n) → O(1), 73% code reduction
+  - SlotElement.getUsedByClasses(): O(n×m) → O(edges), 75% code reduction
+  - TypeElement.getUsedByClasses(): Added (was missing)
+- See commits: 32ebd1f, 43b2ba6, 0ade234
+
+### Step 6: Remove DTO imports from Element.ts ✅
+- Element.ts has no DTO imports
+- Only dataLoader uses DTOs (correct!)
+- SchemaTypes just re-exports SlotDefinition
+
+---
+
+<a id="phase-2-linkoverlay-migration"></a>
+## Phase 2: LinkOverlay Migration ✅ COMPLETED
+
+**Goal**: Migrate LinkOverlay and RelationshipInfoBox to graph-based queries.
+
+### Step 3: Migrate LinkOverlay to graph-based relationships ✅
+- LinkOverlay now uses `getEdgesForItem()` with EdgeInfo directly
+- Added three edge types for panel modes:
+  - `CLASS_RANGE`: class→range (2-panel mode, direct links)
+  - `CLASS_SLOT`: class→slot (3-panel mode, first hop)
+  - `SLOT_RANGE`: slot→range (3-panel mode, second hop)
+- `getEdgeTypesForLinks(middlePanelShown)` returns appropriate types per mode
+- `buildLinkPairs()` returns EdgeInfo with each link pair for rendering
+- Removed dependency on `getRelationshipsForLinking()`
+- See commits: 1b42665, 6c41795
+
+### Step 3b: Migrate RelationshipInfoBox to graph-based queries ✅
+- RelationshipInfoBox now uses `getEdgesForItem()` + `getItemInfo()` directly
+- No Element lookup needed - works for all node types including slot overrides
+- Added support for CLASS_SLOT and SLOT_RANGE edge types
+- Fixed "No relationships found" bug for slot hover
+
+### Code Removed
+- `getRelationshipsNew()` from DataService (~12 lines)
+- `getRelationshipsFromGraph()` from Element.ts (~120 lines)
+- `RelationshipData` type from SchemaTypes.ts (~8 lines)
+- Net reduction: ~95 lines
+
+### Bug Fixes
+- ✅ Slot hover shows "No relationships found" - Fixed by adding CLASS_SLOT/SLOT_RANGE edge support
+- ✅ Slot override nodes missing - Graph now creates nodes for all slotDefIds

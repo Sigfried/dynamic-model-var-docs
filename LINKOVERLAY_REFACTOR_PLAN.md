@@ -1,6 +1,19 @@
 # LinkOverlay Refactor Plan v2 - USING YOUR PROPOSAL
 
-**Status:** Awaiting approval before implementation
+**Status:** ✅ MOSTLY COMPLETE (December 2024)
+- LinkOverlay now uses graph-based `getEdgesForItem()` with EdgeInfo
+- Implementation differs from this plan but achieves same goals
+- See TASKS.md Phase 2 Step 3 for actual implementation details
+
+**Key differences from plan:**
+- Used `getEdgesForItem()` per visible item instead of `getAllEdgesForLinking()`
+- No LayoutManager changes - filtering happens in LinkOverlay's `buildLinkPairs()`
+- Three edge types: CLASS_RANGE (2-panel), CLASS_SLOT + SLOT_RANGE (3-panel)
+- `getEdgeTypesForLinks(middlePanelShown)` returns appropriate types per mode
+
+**Remaining from this plan:**
+- Grouped Slots Panel design (lines 10-53) - still relevant for future work
+
 **Related:** Element.ts lines 132-156 (EdgeInfoProposal), UI_REFACTOR.md Section 1, Section 9 (Grouped Slots Panel)
 
 ---

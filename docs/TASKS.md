@@ -1,6 +1,7 @@
 # Tasks
 
-> **Active planning document** - For completed work, see [archive/progress.md](archive/progress.md)
+> **Active planning document** - Completed work archived to [archive/tasks.md](archive/tasks.md)
+> (Historical progress through Nov 2025 in [archive/progress.md](archive/progress.md))
 >
 > **Development principles** - See [CLAUDE.md](CLAUDE.md) for architectural rules and workflow
 
@@ -18,7 +19,7 @@
 4. when showing/hiding middle panel, links don't update until some kind of interaction
 
 ### Hover/Detail Box Issues
-4. **Slot hover shows "No relationships found"** - RelationshipInfoBox broken for slots
+4. ✅ **Slot hover shows "No relationships found"** - Fixed by adding CLASS_SLOT/SLOT_RANGE edge support
 
 ### Positioning Issues
 5. **Detail box positioning bugs** - Multiple issues from Unified Detail Box work:
@@ -127,82 +128,23 @@
 
 **See [archive/tasks.md](archive/tasks.md) for detailed implementation notes.**
 
-### Current Work: Type System Cleanup (Before Phase 3 Step 5)
+### ✅ Type System Cleanup - COMPLETE
 
-**Step 1: EdgeType Simplification** ✅ **COMPLETE**
-- Added EDGE_TYPES constants enum in SchemaTypes.ts
-- Updated EdgeInfo and EdgeInfoDeprecated to use `edgeType: EdgeType` from SchemaTypes
-- Removed UI edge type mapping in DataService.getEdgeInfo()
-  - Now uses graph edge types directly: 'inheritance', 'slot', 'maps_to'
-  - Eliminated translation: 'slot' → 'property', 'maps_to' → 'variable_mapping'
-- Replaced string literals with EDGE_TYPES constants:
-  - DataService.ts, LinkOverlay.tsx, RelationshipInfoBox.tsx, Element.ts
-  - Updated all switch statements checking edge types
-- Fixed related TypeScript errors (type guards, imports)
-- **Result**: Single source of truth for edge types, simplified type system
+Simplified edge types and retired deprecated interfaces. See [archive/tasks.md#type-system-cleanup](archive/tasks.md#type-system-cleanup) for details.
 
-**Step 2: Retire EdgeInfoDeprecated** ✅ **COMPLETE**
-- Migrated RelationshipInfoBox to use EdgeInfo with sourceItem/targetItem
-  - Outgoing edges: `edge.otherItem` → `edge.targetItem`
-  - Incoming edges: `edge.otherItem` → `edge.sourceItem`
-- Updated Element.ts `getRelationshipsFromGraph()` to return RelationshipData (not deprecated)
-- Updated DataService.getRelationshipsNew() return type to RelationshipData
-- Removed EdgeInfoDeprecated and RelationshipDataDeprecated from all files
-- **Result**: Cleaner edge representation with explicit source/target, deprecated types removed
+### ✅ Phase 3: Data Flow Refactor - Steps 5-6 COMPLETE
 
-**Step 3: Deprecate Relationship-based functions** ✅ **COMPLETE**
-- Marked getRelationshipsForLinking() as @deprecated in DataService
-  - Still used by LinkOverlay (will be removed in Phase 2 Step 3)
-  - Points to getEdgesForItem() as replacement
-- Marked test-only linkHelpers functions as @deprecated:
-  - filterRelationships(), buildLinks(), formatRelationshipType()
-  - Only used in tests, not production code
-  - Will be removed after test migration
-- **Result**: Old Relationship-based API marked deprecated, new EdgeInfo API ready for adoption
-- **Note**: Actual removal deferred to Phase 2 Step 3 (LinkOverlay migration)
+Graph-first initialization, O(1) graph queries for getUsedByClasses(). See [archive/tasks.md#phase-3-data-flow](archive/tasks.md#phase-3-data-flow) for details.
 
-### Phase 3: Data Flow Refactor (High Risk) - AFTER TYPE CLEANUP
+### ✅ Phase 2: LinkOverlay Migration - Steps 3 & 3b COMPLETE
 
-**Step 5: Refactor data flow** ✅ **COMPLETE**
-- Graph now built FIRST in initializeModelData() before creating Elements
-- Element usage inventory created (ELEMENT_INVENTORY.md)
-- Quick wins implemented: getUsedByClasses() methods now use O(1) graph queries
-  - EnumElement.getUsedByClasses(): O(n) → O(1), 73% code reduction
-  - SlotElement.getUsedByClasses(): O(n×m) → O(edges), 75% code reduction
-  - TypeElement.getUsedByClasses(): Added (was missing)
-- See commits: 32ebd1f, 43b2ba6, 0ade234
-
-**Step 6: Remove DTO imports from Element.ts** ✅ **COMPLETE**
-- Element.ts has no DTO imports
-- Only dataLoader uses DTOs (correct!)
-- SchemaTypes just re-exports SlotDefinition
-
-**Step 7: Reduce Element subclass code** 🔲
-- Most behavior should move to graph queries or other layers
-- Element classes become thinner wrappers around graph data
-- Many methods can be replaced with graph queries
-- **Why last**: Final cleanup after everything else works
-- **Dependencies**: Graph as primary data source
-
-### Phase 2: LinkOverlay Migration (Medium Risk) - AFTER PHASE 3 STEP 5
-
-**Planning Task: Review LINKOVERLAY_REFACTOR_PLAN.md and Phase 2 tasks** 🔲
-- Align plan with current architecture decisions
-- Finalize approach after Phase 3 Step 5 complete
-- See [LINKOVERLAY_REFACTOR_PLAN.md](../LINKOVERLAY_REFACTOR_PLAN.md)
-
-**Step 3: Migrate LinkOverlay to graph-based relationships** 🔲
-- Update to use `getEdgesForItem()` instead of `getRelationshipsForLinking()`
-- Uses graph edges instead of Element.getRelationships()
-- Fix 3-panel display bugs while migrating
-- **Prep complete**: getEdgesForItem() implemented, EdgeInfo/Relationship cleanup done
-- **Dependencies**: Phase 3 Step 5 (stable graph structure), Type System Cleanup complete
+LinkOverlay and RelationshipInfoBox now use graph-based queries directly. See [archive/tasks.md#phase-2-linkoverlay-migration](archive/tasks.md#phase-2-linkoverlay-migration) for details.
 
 **Step 4: Remove old getRelationships() methods** 🔲
 - Delete from ClassElement, EnumElement, SlotElement, VariableElement
-- Only keep graph-based `getRelationshipsFromGraph()` for RelationshipInfoBox (until it migrates)
 - Remove ClassSlot class (replaced by graph slot edges)
-- **Dependencies**: LinkOverlay migration complete (Step 3)
+- Remove `getRelationshipsForLinking()` from DataService (no longer used by LinkOverlay)
+- **Dependencies**: LinkOverlay migration complete (Step 3) ✅
 
 **Step 7: Reduce Element subclass code** 🔲
 - Most behavior should move to graph queries or other layers
@@ -218,12 +160,12 @@
   - Renamed ItemInfoProposal → ItemInfo, EdgeInfoProposal → EdgeInfo
   - Old types renamed to *Deprecated for backward compatibility
 
-**LinkOverlay fixes**
-- Currently active work fixing 3-panel display issues
-- See current bugs above
-- Refactoring plans:
+**LinkOverlay fixes** ✅ **MOSTLY COMPLETE**
+- Migrated to graph-based edge queries (see Phase 2 Step 3 above)
+- Remaining bugs: see Current Bugs #1, #2, #4 above
+- Refactoring plans (for reference):
     - [UI_REFACTOR.md § LinkOverlay](UI_REFACTOR.md#1-linkoverlay-refactor)
-    - [LINKOVERLAY_REFACTOR_PLAN.md](../LINKOVERLAY_REFACTOR_PLAN.md) (some content may still be relevant)
+    - [LINKOVERLAY_REFACTOR_PLAN.md](../LINKOVERLAY_REFACTOR_PLAN.md)
 
 **URLs as clickable links**
 - Display URIs as clickable links in detail panels
