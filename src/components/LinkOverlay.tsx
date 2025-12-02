@@ -16,15 +16,13 @@ import { useRef, useState, useEffect } from 'react';
 import type { DataService } from '../services/DataService';
 import {
   generateSelfRefPath,
-  getLinkColor,
-  getLinkStrokeWidth,
   getLinkGradientId,
   type LinkFilterOptions
 } from '../utils/linkHelpers';
 import type { ItemHoverData } from './Section';
-import { decontextualizeId, splitId } from '../utils/idContextualization';
+import { splitId } from '../utils/idContextualization';
 import { getElementLinkTooltipColor, type ElementTypeId } from '../config/appConfig';
-import { EDGE_TYPES, getEdgeTypesForLinks } from '../models/SchemaTypes';
+import { EDGE_TYPES, getEdgeTypesForLinks, type EdgeInfo } from '../models/SchemaTypes';
 
 /**
  * LinkTooltipData - Data for link hover tooltips
@@ -143,26 +141,25 @@ export default function LinkOverlay({
     return () => cancelAnimationFrame(frameId);
   }, [leftSections, rightSections, dataService]);
 
+  // Link pair with edge info for rendering
+  type LinkPair = [string, string, EdgeInfo];
+
   // Build link pairs from visible items in DOM
-  const buildLinkPairs = (): [string, string][] => {
+  const buildLinkPairs = (): LinkPair[] => {
     if (!dataService) return [];
 
     const middlePanelVisible = document.querySelector('[data-panel-position="middle"]') !== null;
     const panelOrder = middlePanelVisible ? {lp: 1, mp: 2, rp: 3} : {lp: 1, rp: 2}
     const edgeTypes = getEdgeTypesForLinks(middlePanelVisible);
     const itemEls = document.querySelectorAll('.item');
-    const pairs = new Map<string, [string, string]>();
-    const setPair = (sourceId: string, targetId: string) => {
-      const pairKey = `${sourceId}→${targetId}`;
-      pairs.set(pairKey, [sourceId, targetId]);
-    }
+    const pairs = new Map<string, LinkPair>();
 
     itemEls.forEach(itemEl => {
       const contextualizedId = itemEl.id;
       let idParts = splitId(contextualizedId);
       let panelPrefix: ('lp'|'mp'|'rp') = idParts[0]
       const itemId: string = idParts[1]
-      const itemPanelNum = panelOrder[panelPrefix];
+      const itemPanelNum = panelOrder[panelPrefix]!;
 
       // Get edges filtered by panel mode (CLASS_RANGE for 2-panel, CLASS_SLOT+SLOT_RANGE for 3-panel)
       const edges = dataService.getEdgesForItem(itemId, edgeTypes);
@@ -174,23 +171,21 @@ export default function LinkOverlay({
         const targetId = edge.targetItem.id;
         const selector = `[id="lp-${targetId}"], [id="mp-${targetId}"], [id="rp-${targetId}"]`;
         const targetEls: NodeListOf<Element> = document.querySelectorAll(selector);
-        let targetEl: Element | null = null;
-        let isSelfRef: boolean = false
 
         for (const _targetEl of targetEls) {
           if (contextualizedId === _targetEl.id) {
-            isSelfRef = true
-            setPair(contextualizedId, contextualizedId);
-            break
+            // Self-ref
+            const pairKey = `${contextualizedId}→${contextualizedId}`;
+            pairs.set(pairKey, [contextualizedId, contextualizedId, edge]);
+            break;
           } else if (_targetEl.id > contextualizedId) {
-            //  except selfRefs, all links should point to the next panel to the right
-            //  this is all to prevent class-class links within the left panel
+            // Except selfRefs, all links should point to the next panel to the right
             idParts = splitId(_targetEl.id);
             panelPrefix = idParts[0]
-            const targetPanelNum = panelOrder[panelPrefix];
-            if (targetPanelNum - itemPanelNum !== 1) continue // fix typescript error
-            targetEl = _targetEl
-            setPair(contextualizedId, targetEl.id);
+            const targetPanelNum = panelOrder[panelPrefix]!;
+            if (targetPanelNum - itemPanelNum !== 1) continue;
+            const pairKey = `${contextualizedId}→${_targetEl.id}`;
+            pairs.set(pairKey, [contextualizedId, _targetEl.id, edge]);
           }
         }
       }
@@ -286,7 +281,7 @@ export default function LinkOverlay({
     const linkPairs = buildLinkPairs();
 
     // Render each link pair
-    linkPairs.forEach(([sourceId, targetId], index) => {
+    linkPairs.forEach(([sourceId, targetId, edge], index) => {
       // Find items in DOM using contextualized IDs (already have the correct prefixes)
       const sourceItem = document.getElementById(sourceId);
       const targetItem = document.getElementById(targetId);
@@ -297,28 +292,15 @@ export default function LinkOverlay({
         return;
       }
 
-      // Get element names for relationship lookup
-      const sourceName = decontextualizeId(sourceId);
-      const targetName = decontextualizeId(targetId);
-
-      // Get relationship info for this pair
-      const relationships = dataService.getRelationshipsForLinking(sourceName);
-      if (!relationships || relationships.length === 0) return;
-
-      const relationship = relationships.find(r => r.target === targetName);
-      if (!relationship) return;
-
       const sourceRect = sourceItem.getBoundingClientRect();
       const targetRect = targetItem.getBoundingClientRect();
 
       // Determine link direction for gradient selection
       const isLeftToRight = sourceRect.left < targetRect.left;
 
-      // Determine source type from panel position or relationship type
-      // In middle panel = slot, otherwise determine from relationship
-      const sourceType = sourceItem.getAttribute('data-panel-position') === 'middle' ? 'slot' :
-        relationship.type.includes('slot') || relationship.label?.includes('slot') ? 'class' : 'class';
-      const targetType = relationship.targetSection;
+      // Get types from edge info
+      const sourceType = edge.sourceItem.type;
+      const targetType = edge.targetItem.type;
 
       // Check if self-referential (source and target are same element)
       const isSelfRef = sourceId === targetId;
@@ -351,12 +333,14 @@ export default function LinkOverlay({
       }
 
       // Get gradient with correct direction
-      let color = getLinkColor(relationship, sourceType);
+      const gradientId = getLinkGradientId(sourceType, targetType);
+      let color = `url(#${gradientId})`;
       // If gradient and going right-to-left, use reverse gradient
-      if (color.startsWith('url(#') && !isLeftToRight) {
+      if (!isLeftToRight) {
         color = color.replace(')', '-reverse)');
       }
-      const strokeWidth = getLinkStrokeWidth(relationship);
+      // Stroke width based on edge type
+      const strokeWidth = edge.edgeType === EDGE_TYPES.INHERITANCE ? 2 : 1.5;
 
       // Generate unique key for this link
       const linkKey = `${sourceId}-${targetId}-${index}`;
@@ -393,11 +377,11 @@ export default function LinkOverlay({
             hoverTimeoutRef.current = window.setTimeout(() => {
               setTooltipData({
                 data: {
-                  relationshipType: relationship.type,
-                  relationshipLabel: relationship.label,
-                  sourceName: sourceName,
+                  relationshipType: edge.edgeType,
+                  relationshipLabel: edge.label,
+                  sourceName: edge.sourceItem.displayName,
                   sourceType: sourceType,
-                  targetName: targetName,
+                  targetName: edge.targetItem.displayName,
                   targetType: targetType
                 },
                 x: e.clientX,
