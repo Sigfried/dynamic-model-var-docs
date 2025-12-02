@@ -181,16 +181,24 @@ export type NodeAttributes =
 
 /**
  * Edge type constants - Use these instead of string literals
+ *
+ * Three slot-related edge types support both 2-panel and 3-panel modes:
+ * - CLASS_RANGE: class→range (2-panel mode, direct link)
+ * - CLASS_SLOT: class→slot (3-panel mode, first hop)
+ * - SLOT_RANGE: slot→range (3-panel mode, second hop)
  */
 export const EDGE_TYPES = {
   INHERITANCE: 'inheritance',
-  CLASS_RANGE: 'class_to_range', // was SLOT: 'slot',
-  CLASS_SLOT: 'class_to_slot',
-  SLOT_RANGE: 'slot_to_range',
+  CLASS_RANGE: 'class_to_range',  // class→range (2-panel mode)
+  CLASS_SLOT: 'class_to_slot',    // class→slot (3-panel mode)
+  SLOT_RANGE: 'slot_to_range',    // slot→range (3-panel mode)
   MAPS_TO: 'maps_to',
 } as const;
 
-export function getEdgeTypesForLinks(middlePanelShown: boolean) {
+/**
+ * Get edge types to render based on panel configuration
+ */
+export function getEdgeTypesForLinks(middlePanelShown: boolean): EdgeType[] {
   if (middlePanelShown) {
     return [EDGE_TYPES.CLASS_SLOT, EDGE_TYPES.SLOT_RANGE, EDGE_TYPES.MAPS_TO];
   } else {
@@ -219,22 +227,36 @@ export interface InheritanceEdgeAttributes extends BaseEdgeAttributes {
 }
 
 /**
- * Slot edge: Class → Range (Class | Enum | Type)
- * Represents class attributes/slots with their ranges
- *
- * KEY INSIGHT: There are MORE slot edges than slot definitions.
- * - Same slot definition can be used by multiple classes
- * - Each class-range pair gets its own edge
- * - Edge references the slot definition and may have overrides
+ * CLASS_RANGE edge: Class → Range (Class | Enum | Type)
+ * Direct class-to-range link for 2-panel mode
  */
-export interface SlotEdgeAttributes extends BaseEdgeAttributes {
-  type: 'slot';
+export interface ClassRangeEdgeAttributes extends BaseEdgeAttributes {
+  type: 'class_to_range';
   slotName: string;           // Name of the slot (e.g., "specimen_type")
   slotDefId: string;          // ID of the SlotElement definition node
-  required: boolean;          // Is this slot required?
-  multivalued: boolean;       // Is this slot multivalued?
-  inheritedFrom?: string;     // If inherited, which ancestor defined it?
-  // Future: Add more slot_usage override properties as needed
+  required: boolean;
+  multivalued: boolean;
+  inheritedFrom?: string;
+}
+
+/**
+ * CLASS_SLOT edge: Class → Slot
+ * First hop in 3-panel mode (class to slot in middle panel)
+ */
+export interface ClassSlotEdgeAttributes extends BaseEdgeAttributes {
+  type: 'class_to_slot';
+  slotName: string;
+  required: boolean;
+  multivalued: boolean;
+  inheritedFrom?: string;
+}
+
+/**
+ * SLOT_RANGE edge: Slot → Range (Class | Enum | Type)
+ * Second hop in 3-panel mode (slot to range in right panel)
+ */
+export interface SlotRangeEdgeAttributes extends BaseEdgeAttributes {
+  type: 'slot_to_range';
 }
 
 /**
@@ -250,8 +272,13 @@ export interface MapsToEdgeAttributes extends BaseEdgeAttributes {
  */
 export type EdgeAttributes =
     | InheritanceEdgeAttributes
-    | SlotEdgeAttributes
+    | ClassRangeEdgeAttributes
+    | ClassSlotEdgeAttributes
+    | SlotRangeEdgeAttributes
     | MapsToEdgeAttributes;
+
+/** Alias for backwards compatibility */
+export type SlotEdgeAttributes = ClassRangeEdgeAttributes;
 
 // ============================================================================
 // Graph Type

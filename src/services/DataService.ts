@@ -159,8 +159,9 @@ export class DataService {
     // Use graph edge type directly (no UI translation)
     const edgeType = edgeAttrs.type;
 
-    // Get label and inheritedFrom for slot edges
-    const slotAttrs = edgeType === EDGE_TYPES.SLOT ? edgeAttrs as SlotEdgeAttributes : null;
+    // Get label and inheritedFrom for slot-related edges (CLASS_RANGE and CLASS_SLOT have these)
+    const hasSlotAttrs = edgeType === EDGE_TYPES.CLASS_RANGE || edgeType === EDGE_TYPES.CLASS_SLOT;
+    const slotAttrs = hasSlotAttrs ? edgeAttrs as SlotEdgeAttributes : null;
 
     return {
       edgeType,
@@ -194,125 +195,8 @@ export class DataService {
   getRelationshipsNew(itemId: string): RelationshipData | null {
     const element = this.modelData.elementLookup.get(itemId);
     if (!element) return null;
-    const graph = this.modelData.graph;
 
-    /**
-     * Get relationships from graph (new edge-based format).
-     * Queries the global SchemaGraph for all edges connected to this element.
-     * Returns null if graph is not initialized.
-     *
-     * This is the new graph-based method that will replace getRelationships().
-     */
-    getRelationshipsFromGraph(): RelationshipData | null {
-      if (!globalGraph || !globalElementLookup) {
-        return null;
-      }
-
-      const elementLookup = globalElementLookup;
-
-      // Build thisItem info
-      const metadata = elementTypes[this.type];
-      const thisItem: ItemInfo = {
-        id: this.getId(),
-        displayName: this.name,
-        type: this.type,  // Element type ID ('class', 'enum', etc.)
-        typeDisplayName: metadata.label,  // User-facing label ('Class', 'Enumeration', etc.)
-        color: metadata.color.headerBg
-      };
-
-      const outgoing: EdgeInfo[] = [];
-      const incoming: EdgeInfo[] = [];
-
-      // Process outgoing edges from this element
-      graph.forEachOutboundEdge(this.name, (_edgeId, attributes, _source, target) => {
-        const targetElement = elementLookup.get(target);
-        if (!targetElement) {
-          console.error(`getRelationshipsFromGraph: Target element not found: ${target} (outgoing edge from ${this.name})`);
-          return;
-        }
-
-        const targetMetadata = elementTypes[targetElement.type];
-        const targetItem: ItemInfo = {
-          id: target,
-          displayName: target,
-          type: targetElement.type,  // Element type ID ('class', 'enum', etc.)
-          typeDisplayName: targetMetadata.label,  // User-facing label ('Class', 'Enumeration', etc.)
-          color: targetMetadata.color.headerBg
-        };
-
-        if (attributes.type === EDGE_TYPES.INHERITANCE) {
-          outgoing.push({
-            edgeType: EDGE_TYPES.INHERITANCE,
-            sourceItem: thisItem,
-            targetItem
-          });
-        } else if (attributes.type === EDGE_TYPES.SLOT) {
-          const slotAttrs = attributes as SlotEdgeAttributes;
-          outgoing.push({
-            edgeType: EDGE_TYPES.SLOT,
-            sourceItem: thisItem,
-            targetItem,
-            label: slotAttrs.slotName,
-            inheritedFrom: slotAttrs.inheritedFrom
-          });
-        } else if (attributes.type === EDGE_TYPES.MAPS_TO) {
-          outgoing.push({
-            edgeType: EDGE_TYPES.MAPS_TO,
-            sourceItem: thisItem,
-            targetItem,
-            label: 'mapped_to'
-          });
-        }
-      });
-
-      // Process incoming edges to this element
-      graph.forEachInboundEdge(this.name, (_edgeId, attributes, source, _target) => {
-        const sourceElement = elementLookup.get(source);
-        if (!sourceElement) {
-          console.error(`getRelationshipsFromGraph: Source element not found: ${source} (incoming edge to ${this.name})`);
-          return;
-        }
-
-        const sourceMetadata = elementTypes[sourceElement.type];
-        const sourceItem: ItemInfo = {
-          id: source,
-          displayName: source,
-          type: sourceElement.type,  // Element type ID ('class', 'enum', etc.)
-          typeDisplayName: sourceMetadata.label,  // User-facing label ('Class', 'Enumeration', etc.)
-          color: sourceMetadata.color.headerBg
-        };
-
-        if (attributes.type === EDGE_TYPES.INHERITANCE) {
-          incoming.push({
-            edgeType: EDGE_TYPES.INHERITANCE,
-            sourceItem,
-            targetItem: thisItem
-          });
-        } else if (attributes.type === EDGE_TYPES.SLOT) {
-          const slotAttrs = attributes as SlotEdgeAttributes;
-          incoming.push({
-            edgeType: EDGE_TYPES.SLOT,
-            sourceItem,
-            targetItem: thisItem,
-            label: slotAttrs.slotName,
-            inheritedFrom: slotAttrs.inheritedFrom
-          });
-        } else if (attributes.type === EDGE_TYPES.MAPS_TO) {
-          incoming.push({
-            edgeType: EDGE_TYPES.MAPS_TO,
-            sourceItem,
-            targetItem: thisItem,
-            label: 'mapped_to'
-          });
-        }
-      });
-
-      return {
-        thisItem,
-        outgoing,
-        incoming
-      };
-    }
+    return element.getRelationshipsFromGraph();
   }
 
   /**

@@ -19,11 +19,12 @@
  */
 
 import Graph from 'graphology';
-import type {
-  SchemaGraph,
-  NodeAttributes,
-  EdgeAttributes,
-  SlotEdgeAttributes,
+import {
+  EDGE_TYPES,
+  type SchemaGraph,
+  type NodeAttributes,
+  type EdgeAttributes,
+  type SlotEdgeAttributes,
 } from "./SchemaTypes.ts";
 
 /**
@@ -121,10 +122,13 @@ export function addInheritanceEdge(
 }
 
 /**
- * Add a slot edge to the graph
- * Connects a class to a range (Class | Enum | Type) through a slot
+ * Add slot edges to the graph
+ * Creates THREE edges to support both 2-panel and 3-panel modes:
+ * - CLASS_RANGE: class→range (2-panel mode, direct)
+ * - CLASS_SLOT: class→slot (3-panel mode, first hop)
+ * - SLOT_RANGE: slot→range (3-panel mode, second hop)
  */
-export function addSlotEdge(
+export function addSlotEdges(
   graph: SchemaGraph,
   classId: string,
   rangeId: string,
@@ -134,18 +138,38 @@ export function addSlotEdge(
   multivalued: boolean,
   inheritedFrom?: string
 ): void {
-  // Edge key must be unique: include slot name since same class can have multiple slots with same range
-  const edgeKey = `${classId}-[${slotName}]->${rangeId}`;
-
-  // Let it fail if edge already exists - indicates data problem
-  graph.addEdgeWithKey(edgeKey, classId, rangeId, {
-    type: 'slot',
+  // CLASS_RANGE: direct class→range (2-panel mode)
+  const classRangeKey = `${classId}-[${slotName}]->${rangeId}`;
+  graph.addEdgeWithKey(classRangeKey, classId, rangeId, {
+    type: 'class_to_range',
     slotName,
     slotDefId,
     required,
     multivalued,
     inheritedFrom,
   });
+
+  // CLASS_SLOT: class→slot (3-panel mode, first hop)
+  const classSlotKey = `${classId}->${slotDefId}`;
+  // Only add if edge doesn't exist (multiple classes may share same slot)
+  if (!graph.hasEdge(classSlotKey)) {
+    graph.addEdgeWithKey(classSlotKey, classId, slotDefId, {
+      type: 'class_to_slot',
+      slotName,
+      required,
+      multivalued,
+      inheritedFrom,
+    });
+  }
+
+  // SLOT_RANGE: slot→range (3-panel mode, second hop)
+  const slotRangeKey = `${slotDefId}->${rangeId}`;
+  // Only add if edge doesn't exist (slot may point to same range from multiple classes)
+  if (!graph.hasEdge(slotRangeKey)) {
+    graph.addEdgeWithKey(slotRangeKey, slotDefId, rangeId, {
+      type: 'slot_to_range',
+    });
+  }
 }
 
 /**
@@ -199,8 +223,8 @@ export class SlotEdge {
    */
   private get attributes(): SlotEdgeAttributes {
     const attrs = this.graph.getEdgeAttributes(this.edgeId);
-    if (attrs.type !== 'slot') {
-      throw new Error(`Edge ${this.edgeId} is not a slot edge`);
+    if (attrs.type !== EDGE_TYPES.CLASS_RANGE) {
+      throw new Error(`Edge ${this.edgeId} is not a CLASS_RANGE edge`);
     }
     return attrs as SlotEdgeAttributes;
   }
@@ -274,7 +298,7 @@ export function getSlotEdgesForClass(
   const edges: SlotEdge[] = [];
 
   graph.forEachOutboundEdge(classId, (edge, attributes, _source, target) => {
-    if (attributes.type === 'slot') {
+    if (attributes.type === EDGE_TYPES.CLASS_RANGE) {
       edges.push(new SlotEdge(graph, edge, classId, target));
     }
   });
@@ -302,7 +326,7 @@ export function getClassesUsingRange(graph: SchemaGraph, nodeId: string): string
   // Get all incoming edges to this node
   graph.forEachInEdge(nodeId, (_edgeKey, attributes, sourceId) => {
     // Only count SLOT edges (not other edge types)
-    if (attributes.type === 'slot') {
+    if (attributes.type === EDGE_TYPES.CLASS_RANGE) {
       classes.add(sourceId);
     }
   });
@@ -326,7 +350,7 @@ export function getClassesUsingSlot(
 
   // Find all slot edges that reference this slot definition
   graph.forEachEdge((edge, attributes, _source) => {
-    if (attributes.type === 'slot') {
+    if (attributes.type === EDGE_TYPES.CLASS_RANGE) {
       const slotAttrs = attributes as SlotEdgeAttributes;
       if (slotAttrs.slotDefId === slotDefId) {
         const source = graph.source(edge);
@@ -356,7 +380,7 @@ export function getIncomingSlotEdges(
   }> = [];
 
   graph.forEachInboundEdge(nodeId, (edge, attributes, source, _target) => {
-    if (attributes.type === 'slot') {
+    if (attributes.type === EDGE_TYPES.CLASS_RANGE) {
       edges.push({
         edge,
         source,
@@ -448,9 +472,22 @@ export function buildGraphFromSchemaData(
     addEnumNode(graph, enumName, enumName);
   });
 
-  // 3. Slots
+  // 3. Slots (base definitions)
   schemaData.slots.forEach((_slotData, slotName) => {
     addSlotNode(graph, slotName, slotName);
+  });
+
+  // 3b. Slot overrides (from class attributes where slotId differs from base)
+  schemaData.classes.forEach((classData) => {
+    if (classData.attributes) {
+      Object.entries(classData.attributes).forEach(([attrName, attrDef]) => {
+        const slotId = attrDef.slotId;
+        // Create node for override slots that aren't already in the graph
+        if (slotId && !graph.hasNode(slotId)) {
+          addSlotNode(graph, slotId, attrName);
+        }
+      });
+    }
   });
 
   // 4. Types
@@ -471,13 +508,13 @@ export function buildGraphFromSchemaData(
     }
   });
 
-  // 2. Slot edges (class → range)
+  // 2. Slot edges (class→range, class→slot, slot→range)
   // The processed JSON has all attributes pre-computed with slotId and inherited_from
   schemaData.classes.forEach((classData) => {
     if (classData.attributes) {
       Object.entries(classData.attributes).forEach(([attrName, attrDef]) => {
         const range = attrDef.range || 'string';
-        addSlotEdge(
+        addSlotEdges(
           graph,
           classData.name,
           range,

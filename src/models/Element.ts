@@ -508,7 +508,7 @@ export abstract class Element {
    *
    * This is the new graph-based method that will replace getRelationships().
    */
-  getRelationshipsFromGraphOBSOLETE(): RelationshipData | null {
+  getRelationshipsFromGraph(): RelationshipData | null {
     if (!globalGraph || !globalElementLookup) {
       return null;
     }
@@ -552,10 +552,11 @@ export abstract class Element {
           sourceItem: thisItem,
           targetItem
         });
-      } else if (attributes.type === EDGE_TYPES.SLOT) {
+      } else if (attributes.type === EDGE_TYPES.CLASS_RANGE) {
+        // Use CLASS_RANGE for info box (shows full class→range relationship)
         const slotAttrs = attributes as SlotEdgeAttributes;
         outgoing.push({
-          edgeType: EDGE_TYPES.SLOT,
+          edgeType: EDGE_TYPES.CLASS_RANGE,
           sourceItem: thisItem,
           targetItem,
           label: slotAttrs.slotName,
@@ -569,6 +570,7 @@ export abstract class Element {
           label: 'mapped_to'
         });
       }
+      // Skip CLASS_SLOT and SLOT_RANGE - they're for link rendering, not info box
     });
 
     // Process incoming edges to this element
@@ -594,10 +596,11 @@ export abstract class Element {
           sourceItem,
           targetItem: thisItem
         });
-      } else if (attributes.type === EDGE_TYPES.SLOT) {
+      } else if (attributes.type === EDGE_TYPES.CLASS_RANGE) {
+        // Use CLASS_RANGE for info box (shows full class→range relationship)
         const slotAttrs = attributes as SlotEdgeAttributes;
         incoming.push({
-          edgeType: EDGE_TYPES.SLOT,
+          edgeType: EDGE_TYPES.CLASS_RANGE,
           sourceItem,
           targetItem: thisItem,
           label: slotAttrs.slotName,

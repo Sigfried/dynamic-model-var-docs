@@ -172,12 +172,12 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
 
   // Group outgoing edges by type
   const inheritanceEdge = outgoing.find(e => e.edgeType === EDGE_TYPES.INHERITANCE);
-  const directSlots = outgoing.filter(e => e.edgeType === EDGE_TYPES.SLOT && !e.inheritedFrom);
+  const directSlots = outgoing.filter(e => e.edgeType === EDGE_TYPES.CLASS_RANGE && !e.inheritedFrom);
 
   // Group inherited slots by ancestor
   const inheritedSlotsMap = new Map<string, EdgeInfo[]>();
   outgoing
-    .filter(e => e.edgeType === EDGE_TYPES.SLOT && e.inheritedFrom)
+    .filter(e => e.edgeType === EDGE_TYPES.CLASS_RANGE && e.inheritedFrom)
     .forEach(edge => {
       const ancestor = edge.inheritedFrom!;
       if (!inheritedSlotsMap.has(ancestor)) {
@@ -188,7 +188,7 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
 
   // Group incoming edges by type
   const incomingInheritance = incoming.filter(e => e.edgeType === EDGE_TYPES.INHERITANCE);
-  const incomingProperties = incoming.filter(e => e.edgeType === EDGE_TYPES.SLOT);
+  const incomingProperties = incoming.filter(e => e.edgeType === EDGE_TYPES.CLASS_RANGE);
   const incomingVariables = incoming.filter(e => e.edgeType === EDGE_TYPES.MAPS_TO);
 
   // Helper to make item names clickable

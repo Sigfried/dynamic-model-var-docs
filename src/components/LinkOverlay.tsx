@@ -13,7 +13,7 @@
 import { useRef, useState, useEffect } from 'react';
 // TODO: Uncomment when migrating to EdgeInfo (see TASKS.md Phase 2 Step 3)
 // import type { EdgeInfo } from '../contracts/ComponentData';
-import type {DataService, ItemInfo} from '../services/DataService';
+import type { DataService } from '../services/DataService';
 import {
   generateSelfRefPath,
   getLinkColor,
@@ -22,10 +22,9 @@ import {
   type LinkFilterOptions
 } from '../utils/linkHelpers';
 import type { ItemHoverData } from './Section';
-import {decontextualizeId} from '../utils/idContextualization';
+import { decontextualizeId } from '../utils/idContextualization';
 import { getElementLinkTooltipColor, type ElementTypeId } from '../config/appConfig';
 import { EDGE_TYPES, getEdgeTypesForLinks } from '../models/SchemaTypes';
-import type { EdgeInfo, } from "../services/DataService";
 
 /**
  * LinkTooltipData - Data for link hover tooltips
@@ -44,13 +43,13 @@ export interface LinkTooltipData {
  */
 function LinkTooltip({ data, x, y }: { data: LinkTooltipData; x: number; y: number }) {
   const formatRelationshipType = (type: string): string => {
-    // [sg] move this to SchemaTypes with EDGE_TYPES?
     switch (type) {
       case 'inherits':
-        return 'inherits from';
       case EDGE_TYPES.INHERITANCE:
         return 'inherits from';
-      case EDGE_TYPES.SLOT:  // [sg] FIX THIS!
+      case EDGE_TYPES.CLASS_RANGE:
+      case EDGE_TYPES.CLASS_SLOT:
+      case EDGE_TYPES.SLOT_RANGE:
         return data.relationshipLabel ? `slot: ${data.relationshipLabel}` : 'slot';
       case EDGE_TYPES.MAPS_TO:
         return 'maps to';
@@ -149,50 +148,36 @@ export default function LinkOverlay({
     if (!dataService) return [];
 
     const middlePanelVisible = document.querySelector('[data-panel-position="middle"]') !== null;
-    const edgeTypesToRender = getEdgeTypesForLinks(middlePanelVisible);
-
-    // Query DOM for all visible items with class 'item'
+    const edgeTypes = getEdgeTypesForLinks(middlePanelVisible);
     const itemEls = document.querySelectorAll('.item');
     const pairs = new Map<string, [string, string]>();
 
     itemEls.forEach(itemEl => {
-      const contextualizedId = itemEl.id; // e.g., "lp-Specimen"
-      const itemId = decontextualizeId(contextualizedId); // e.g., "Specimen"
+      const contextualizedId = itemEl.id;
+      const itemId = decontextualizeId(contextualizedId);
+      const sourcePanel = itemEl.getAttribute('data-panel-position');
 
-      const edges: EdgeInfo[] = dataService.getEdgesForItem(itemId, edgeTypesToRender);
-      // For each edge, find other end in DOM if it's being displayed
-      let contextualizedSourceId: string = '';
-      let contextualizedTargetId: string = '';
-      edges.forEach(edge => {
-        let otherItem: ItemInfo | null = null; // graph item with edge to/from current item
-        if (edge.sourceItem.id === itemId) {
-          otherItem = edge.targetItem
-          contextualizedSourceId = contextualizedId;
-        } else if (edge.targetItem.id === itemId) {
-          otherItem = edge.sourceItem
-          contextualizedTargetId = contextualizedId;
-        } else {
-          throw new Error("one end has to be the current item")
-        }
+      // Get edges filtered by panel mode (CLASS_RANGE for 2-panel, CLASS_SLOT+SLOT_RANGE for 3-panel)
+      const edges = dataService.getEdgesForItem(itemId, edgeTypes);
 
-        // Try to find target in DOM with any context prefix
-        const otherElements = document.querySelectorAll(`[id$="${otherItem.id}"]`);
-        for (const otherEl of otherElements) {
-          if (otherItem.id !== decontextualizeId(otherEl.id)) {
-            // otherItem.id and decontextualized otherEl.id should be the same
-            console.error(`looking for ${otherItem.id} but found ${otherEl.id}`)
-          }
-          contextualizedSourceId = contextualizedSourceId || otherItem.id
-          contextualizedTargetId = contextualizedTargetId || otherItem.id
-          const selfLink = contextualizedSourceId === contextualizedTargetId
-          const samePanel = itemEl.getAttribute('data-panel-position') === otherEl.getAttribute('data-panel-position')
-          // Only draw cross-panel links (not same-panel links)
-          if (selfLink || !samePanel) {
-            const pairKey = `${contextualizedSourceId}→${contextualizedTargetId}`;
-            pairs.set(pairKey, [contextualizedSourceId, contextualizedTargetId]);
-          }
-        }
-      });
+      for (const edge of edges) {
+        // Only process edges where this item is the source (edges go left→right)
+        if (edge.sourceItem.id !== itemId) continue;
+
+        const targetId = edge.targetItem.id;
+        const selector = `[id="lp-${targetId}"], [id="mp-${targetId}"], [id="rp-${targetId}"]`;
+        const targetEl = document.querySelector(selector);
+        if (!targetEl) continue;
+
+        const targetPanel = targetEl.getAttribute('data-panel-position');
+        const isSelfRef = contextualizedId === targetEl.id;
+
+        // Skip same-panel links (unless self-ref)
+        if (sourcePanel === targetPanel && !isSelfRef) continue;
+
+        const pairKey = `${contextualizedId}→${targetEl.id}`;
+        pairs.set(pairKey, [contextualizedId, targetEl.id]);
+      }
     });
 
     return Array.from(pairs.values());
