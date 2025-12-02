@@ -23,7 +23,6 @@ import type {
   EdgeInfo,
   EdgeType,
   ItemInfo,
-  RelationshipData,
   SlotEdgeAttributes
 } from "../models/SchemaTypes";
 import { EDGE_TYPES } from "../models/SchemaTypes";
@@ -33,7 +32,7 @@ import { APP_CONFIG, getAllElementTypeIds, } from '../config/appConfig';
 const {elementTypes, } = APP_CONFIG;
 
 // Re-export UI types for UI components
-export type { EdgeInfo, ItemInfo, RelationshipData };
+export type { EdgeInfo, ItemInfo };
 
 // ============================================================================
 // DEPRECATED: Old relationship data structures (will be removed in Stage 3+)
@@ -130,7 +129,7 @@ export class DataService {
       displayName: nodeAttrs.name,
       type: nodeAttrs.type,
       typeDisplayName: typeMetadata.label,
-      color: typeMetadata.color.name
+      color: typeMetadata.color.headerBg
     };
   }
 
@@ -185,19 +184,6 @@ export class DataService {
     return edges;
   }
 
-
-  /**
-   * Get relationship data for an item (new edge-based structure).
-   * Returns unified edge-based relationships with sourceItem/targetItem.
-   *
-   * Uses graph-based approach for querying relationships via getRelationshipsFromGraph().
-   */
-  getRelationshipsNew(itemId: string): RelationshipData | null {
-    const element = this.modelData.elementLookup.get(itemId);
-    if (!element) return null;
-
-    return element.getRelationshipsFromGraph();
-  }
 
   /**
    * Check if an item exists

@@ -15,9 +15,17 @@
 
 import { useState, useEffect, useRef } from 'react';
 import type { DataService } from '../services/DataService';
-import type { EdgeInfo } from '../services/DataService';
 import { APP_CONFIG, getElementLinkColor, type ElementTypeId } from '../config/appConfig';
-import { EDGE_TYPES } from '../models/SchemaTypes';
+import { EDGE_TYPES, type EdgeInfo, type EdgeType } from '../models/SchemaTypes';
+
+// All edge types for querying relationships
+const ALL_EDGE_TYPES: EdgeType[] = [
+  EDGE_TYPES.INHERITANCE,
+  EDGE_TYPES.CLASS_RANGE,
+  EDGE_TYPES.CLASS_SLOT,
+  EDGE_TYPES.SLOT_RANGE,
+  EDGE_TYPES.MAPS_TO,
+];
 
 interface RelationshipInfoBoxProps {
   itemId: string | null;
@@ -162,17 +170,19 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
     return null;
   }
 
-  // Get relationship data from data service (new graph-based format)
-  const relationshipData = dataService.getRelationshipsNew(displayedItemId);
+  // Get item info and edges directly from graph (no Element lookup needed)
+  const thisItem = dataService.getItemInfo(displayedItemId)!;
 
-  if (!relationshipData) return null;
-
-  // Transform EdgeInfo[] arrays into display structure
-  const { thisItem, outgoing, incoming } = relationshipData;
+  // Get all edges for this item and split by direction
+  const allEdges = dataService.getEdgesForItem(displayedItemId, ALL_EDGE_TYPES);
+  const outgoing = allEdges.filter(e => e.sourceItem.id === displayedItemId);
+  const incoming = allEdges.filter(e => e.targetItem.id === displayedItemId);
 
   // Group outgoing edges by type
   const inheritanceEdge = outgoing.find(e => e.edgeType === EDGE_TYPES.INHERITANCE);
   const directSlots = outgoing.filter(e => e.edgeType === EDGE_TYPES.CLASS_RANGE && !e.inheritedFrom);
+  // For slot elements: outgoing SLOT_RANGE edges (slot→range)
+  const slotRangeEdges = outgoing.filter(e => e.edgeType === EDGE_TYPES.SLOT_RANGE);
 
   // Group inherited slots by ancestor
   const inheritedSlotsMap = new Map<string, EdgeInfo[]>();
@@ -189,6 +199,8 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
   // Group incoming edges by type
   const incomingInheritance = incoming.filter(e => e.edgeType === EDGE_TYPES.INHERITANCE);
   const incomingProperties = incoming.filter(e => e.edgeType === EDGE_TYPES.CLASS_RANGE);
+  // For slot elements: incoming CLASS_SLOT edges (class→slot)
+  const incomingClassSlot = incoming.filter(e => e.edgeType === EDGE_TYPES.CLASS_SLOT);
   const incomingVariables = incoming.filter(e => e.edgeType === EDGE_TYPES.MAPS_TO);
 
   // Helper to make item names clickable
@@ -308,8 +320,8 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
     );
   };
 
-  const hasOutgoing = inheritanceEdge || directSlots.length > 0 || inheritedSlotsMap.size > 0;
-  const hasIncoming = incomingInheritance.length > 0 || incomingProperties.length > 0 || incomingVariables.length > 0;
+  const hasOutgoing = inheritanceEdge || directSlots.length > 0 || inheritedSlotsMap.size > 0 || slotRangeEdges.length > 0;
+  const hasIncoming = incomingInheritance.length > 0 || incomingProperties.length > 0 || incomingClassSlot.length > 0 || incomingVariables.length > 0;
 
   if (!hasOutgoing && !hasIncoming) {
     return (
@@ -422,6 +434,27 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
               ))}
             </div>
           )}
+
+          {/* Slot Range (for slot elements) */}
+          {slotRangeEdges.length > 0 && (
+            <div className="mb-3">
+              <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Range:</div>
+              <div className="ml-3 space-y-1">
+                {slotRangeEdges.map((edge, idx) => (
+                  <div key={idx} className="text-sm text-gray-900 dark:text-gray-100">
+                    → {makeClickable(
+                      edge.targetItem.id,
+                      edge.targetItem.displayName,
+                      edge.targetItem.type as ElementTypeId
+                    )}
+                    <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">
+                      ({edge.targetItem.typeDisplayName})
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -479,6 +512,26 @@ export default function RelationshipInfoBox({ itemId, itemDomId, dataService, on
                     </div>
                   )
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Used By Classes (for slot elements) */}
+          {incomingClassSlot.length > 0 && (
+            <div className="mb-3">
+              <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                Used By Classes ({incomingClassSlot.length}):
+              </div>
+              <div className="ml-3 space-y-0.5">
+                {incomingClassSlot.map((edge, idx) => (
+                  <div key={idx} className="text-sm text-gray-900 dark:text-gray-100">
+                    • {makeClickable(
+                      edge.sourceItem.id,
+                      edge.sourceItem.displayName,
+                      edge.sourceItem.type as ElementTypeId
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           )}

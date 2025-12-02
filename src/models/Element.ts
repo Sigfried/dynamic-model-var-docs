@@ -9,7 +9,7 @@ import type {
   TypeData,
   VariableSpec,
   EnumValue,
-  SchemaData, RelationshipData, EdgeInfo, ItemInfo,
+  SchemaData,
 } from './SchemaTypes';
 
 // Core application data structure
@@ -17,7 +17,7 @@ import type { ModelData } from './ModelData';
 import type { ElementTypeId, RelationshipTypeId } from '../config/appConfig';
 import type { RenderableItem } from './RenderableItem';
 import { buildGraphFromSchemaData, getClassesUsingRange, getClassesUsingSlot } from './Graph';
-import { type SchemaGraph, type SlotEdgeAttributes, EDGE_TYPES } from './SchemaTypes';
+import { type SchemaGraph } from './SchemaTypes';
 import type {
   DetailSection,
   DetailData
@@ -91,20 +91,17 @@ type OutgoingRelationships = {
 // Global references for graph-based queries
 // ============================================================================
 
-// Global references for graph-based queries
 let globalGraph: SchemaGraph | null = null;
-let globalElementLookup: Map<string, Element> | null = null;
 
 /**
- * Initialize global graph and element lookup references.
- * Called during model initialization to enable getRelationshipsFromGraph().
+ * Initialize global graph reference.
+ * Called during model initialization to enable graph-based queries.
  */
 export function initializeGraphReferences(
   graph: SchemaGraph,
-  elementLookup: Map<string, Element>
+  _elementLookup: Map<string, Element>  // Kept for API compatibility
 ): void {
   globalGraph = graph;
-  globalElementLookup = elementLookup;
 }
 
 /**
@@ -501,127 +498,6 @@ export abstract class Element {
     return false;
   }
 
-  /**
-   * Get relationships from graph (new edge-based format).
-   * Queries the global SchemaGraph for all edges connected to this element.
-   * Returns null if graph is not initialized.
-   *
-   * This is the new graph-based method that will replace getRelationships().
-   */
-  getRelationshipsFromGraph(): RelationshipData | null {
-    if (!globalGraph || !globalElementLookup) {
-      return null;
-    }
-
-    const graph = globalGraph;
-    const elementLookup = globalElementLookup;
-
-    // Build thisItem info
-    const metadata = elementTypes[this.type];
-    const thisItem: ItemInfo = {
-      id: this.getId(),
-      displayName: this.name,
-      type: this.type,  // Element type ID ('class', 'enum', etc.)
-      typeDisplayName: metadata.label,  // User-facing label ('Class', 'Enumeration', etc.)
-      color: metadata.color.headerBg
-    };
-
-    const outgoing: EdgeInfo[] = [];
-    const incoming: EdgeInfo[] = [];
-
-    // Process outgoing edges from this element
-    graph.forEachOutboundEdge(this.name, (_edgeId, attributes, _source, target) => {
-      const targetElement = elementLookup.get(target);
-      if (!targetElement) {
-        console.error(`getRelationshipsFromGraph: Target element not found: ${target} (outgoing edge from ${this.name})`);
-        return;
-      }
-
-      const targetMetadata = elementTypes[targetElement.type];
-      const targetItem: ItemInfo = {
-        id: target,
-        displayName: target,
-        type: targetElement.type,  // Element type ID ('class', 'enum', etc.)
-        typeDisplayName: targetMetadata.label,  // User-facing label ('Class', 'Enumeration', etc.)
-        color: targetMetadata.color.headerBg
-      };
-
-      if (attributes.type === EDGE_TYPES.INHERITANCE) {
-        outgoing.push({
-          edgeType: EDGE_TYPES.INHERITANCE,
-          sourceItem: thisItem,
-          targetItem
-        });
-      } else if (attributes.type === EDGE_TYPES.CLASS_RANGE) {
-        // Use CLASS_RANGE for info box (shows full class→range relationship)
-        const slotAttrs = attributes as SlotEdgeAttributes;
-        outgoing.push({
-          edgeType: EDGE_TYPES.CLASS_RANGE,
-          sourceItem: thisItem,
-          targetItem,
-          label: slotAttrs.slotName,
-          inheritedFrom: slotAttrs.inheritedFrom
-        });
-      } else if (attributes.type === EDGE_TYPES.MAPS_TO) {
-        outgoing.push({
-          edgeType: EDGE_TYPES.MAPS_TO,
-          sourceItem: thisItem,
-          targetItem,
-          label: 'mapped_to'
-        });
-      }
-      // Skip CLASS_SLOT and SLOT_RANGE - they're for link rendering, not info box
-    });
-
-    // Process incoming edges to this element
-    graph.forEachInboundEdge(this.name, (_edgeId, attributes, source, _target) => {
-      const sourceElement = elementLookup.get(source);
-      if (!sourceElement) {
-        console.error(`getRelationshipsFromGraph: Source element not found: ${source} (incoming edge to ${this.name})`);
-        return;
-      }
-
-      const sourceMetadata = elementTypes[sourceElement.type];
-      const sourceItem: ItemInfo = {
-        id: source,
-        displayName: source,
-        type: sourceElement.type,  // Element type ID ('class', 'enum', etc.)
-        typeDisplayName: sourceMetadata.label,  // User-facing label ('Class', 'Enumeration', etc.)
-        color: sourceMetadata.color.headerBg
-      };
-
-      if (attributes.type === EDGE_TYPES.INHERITANCE) {
-        incoming.push({
-          edgeType: EDGE_TYPES.INHERITANCE,
-          sourceItem,
-          targetItem: thisItem
-        });
-      } else if (attributes.type === EDGE_TYPES.CLASS_RANGE) {
-        // Use CLASS_RANGE for info box (shows full class→range relationship)
-        const slotAttrs = attributes as SlotEdgeAttributes;
-        incoming.push({
-          edgeType: EDGE_TYPES.CLASS_RANGE,
-          sourceItem,
-          targetItem: thisItem,
-          label: slotAttrs.slotName,
-          inheritedFrom: slotAttrs.inheritedFrom
-        });
-      } else if (attributes.type === EDGE_TYPES.MAPS_TO) {
-        incoming.push({
-          edgeType: EDGE_TYPES.MAPS_TO,
-          sourceItem,
-          targetItem: thisItem,
-          label: 'mapped_to'
-        });
-      }
-    });
-
-    return {
-      thisItem,
-      outgoing,
-      incoming
-    };
-  }
 }
 
 /**

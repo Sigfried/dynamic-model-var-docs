@@ -315,13 +315,3 @@ export interface EdgeInfo {
   label?: string;       // For slot edges: slot/attribute name; for maps_to: "mapped_to"
   inheritedFrom?: string; // For slot edges only: ancestor name that defined this slot
 }
-
-/**
- * RelationshipData - Unified relationship structure using edges
- * Replaces old type-dependent relationship structure with generic edge-based model
- */
-export interface RelationshipData {
-  thisItem: ItemInfo;
-  outgoing: EdgeInfo[];
-  incoming: EdgeInfo[];
-}
