@@ -1,16 +1,15 @@
 // Utilities for loading and parsing schema and variable specs
 
-// DTOs from import_types
+// Input types from input_types (processed JSON shapes)
 import type {
-  VariableSpecDTO,
-  SchemaDTO,
-  ClassDTO,
-  SlotDTO,
-  EnumDTO,
-  TypeDTO,
-  TypesSchemaDTO,
-} from '../import_types';
-import { FIELD_MAPPINGS } from '../import_types';
+  VariableSpecInput,
+  ProcessedSchemaInput,
+  ClassInput,
+  SlotInput,
+  EnumInput,
+  TypeInput,
+} from '../input_types';
+import { FIELD_MAPPINGS } from '../input_types';
 
 // Transformed types from SchemaTypes
 import type {
@@ -30,22 +29,22 @@ import { initializeModelData } from '../models/Element';
 /**
  * Load bdchm.processed.json which includes:
  * - All classes, enums, slots, types from bdchm.yaml (via gen-linkml + transform_schema.py)
- * - Computed inherited_from fields for all inherited attributes
- * - Slot instances for slot_usage overrides (e.g., "category-SdohObservation")
- * - Streamlined structure optimized for our app
+ * - Slots consolidated: global, inline, and override slots all in slots section
+ * - Class.slots contains references only (data lives in slots section)
+ * - Computed inherited_from in slot references
  *
  * To regenerate: python3 scripts/download_source_data.py --metadata-only
  */
-async function loadProcessedSchemaDTO(): Promise<SchemaDTO & TypesSchemaDTO> {
+async function loadProcessedSchema(): Promise<ProcessedSchemaInput> {
   const response = await fetch(`${import.meta.env.BASE_URL}source_data/HM/bdchm.processed.json`);
   if (!response.ok) {
     throw new Error(`Failed to load processed schema: ${response.statusText}`);
   }
-  const parsed = await response.json() as SchemaDTO & TypesSchemaDTO;
+  const parsed = await response.json() as ProcessedSchemaInput;
   return parsed;
 }
 
-async function loadVariableSpecDTOs(): Promise<VariableSpecDTO[]> {
+async function loadVariableSpecs(): Promise<VariableSpecInput[]> {
   const response = await fetch(`${import.meta.env.BASE_URL}source_data/HV/variable-specs-S1.tsv`);
   if (!response.ok) {
     throw new Error(`Failed to load variable specs: ${response.statusText}`);
@@ -57,7 +56,7 @@ async function loadVariableSpecDTOs(): Promise<VariableSpecDTO[]> {
   return lines.slice(1).map(line => {
     const values = line.split('\t');
     return {
-      maps_to: values[0] || '',  // Renamed from bdchmElement for clarity
+      maps_to: values[0] || '',
       variableLabel: values[1] || '',
       dataType: values[2] || '',
       ucumUnit: values[3] || '',
@@ -69,7 +68,7 @@ async function loadVariableSpecDTOs(): Promise<VariableSpecDTO[]> {
 
 /**
  * Validates that a DTO only contains expected fields.
- * Logs warnings for any unexpected fields that might indicate schema changes.
+ * Collects unexpected fields to report once at end of loading.
  */
 function validateDTO(
   dto: object,
@@ -80,12 +79,26 @@ function validateDTO(
   const expectedSet = new Set(expectedKeys);
   const unexpected = actualKeys.filter(k => !expectedSet.has(k));
 
-  if (unexpected.length > 0) {
-    console.warn(
-      `Unexpected fields in ${typeName}: ${unexpected.join(', ')}`,
-      '\nThis may indicate schema changes or data issues.',
-      '\nDTO:', dto
-    );
+  // Collect unexpected fields (will be reported once at end)
+  const collector = unexpectedFieldsCollector[typeName];
+  if (collector) {
+    unexpected.forEach(field => collector.add(field));
+  }
+}
+
+/**
+ * Report all collected unexpected fields (call once after loading)
+ */
+function reportUnexpectedFields(): void {
+  let hasWarnings = false;
+  for (const [typeName, fields] of Object.entries(unexpectedFieldsCollector)) {
+    if (fields.size > 0) {
+      if (!hasWarnings) {
+        console.warn('Unexpected fields in processed JSON (not yet used in UI):');
+        hasWarnings = true;
+      }
+      console.warn(`  ${typeName}: ${Array.from(fields).sort().join(', ')}`);
+    }
   }
 }
 
@@ -109,36 +122,59 @@ function transformWithMapping<T>(
   return result as T;
 }
 
-// Expected fields for each DTO type (for validation)
-const EXPECTED_SLOT_FIELDS = ['range', 'description', 'slot_uri', 'identifier', 'required', 'multivalued', 'from_schema'];
-const EXPECTED_ENUM_FIELDS = ['description', 'permissible_values', 'from_schema'];
-const EXPECTED_TYPE_FIELDS = ['uri', 'base', 'repr', 'description', 'notes', 'exact_mappings', 'close_mappings', 'broad_mappings', 'conforms_to', 'comments', 'name', 'from_schema'];
-const EXPECTED_CLASS_FIELDS = ['name', 'description', 'is_a', 'abstract', 'attributes', 'slots', 'slot_usage', 'from_schema'];
+// Expected fields for each type - only fields we actually handle in the UI
+// Unexpected fields trigger warnings until we incorporate them
+const EXPECTED_SLOT_FIELDS = ['id', 'name', 'range', 'description', 'slot_uri', 'identifier', 'required', 'multivalued'];
+const EXPECTED_ENUM_FIELDS = ['id', 'name', 'description', 'permissible_values'];
+const EXPECTED_TYPE_FIELDS = ['id', 'name', 'uri', 'base', 'description', 'exact_mappings', 'close_mappings', 'broad_mappings'];
+const EXPECTED_CLASS_FIELDS = ['id', 'name', 'description', 'parent', 'abstract', 'slots'];
 const EXPECTED_VARIABLE_FIELDS = ['maps_to', 'variableLabel', 'dataType', 'ucumUnit', 'curie', 'variableDescription'];
 
+// Collect unexpected fields during loading, report once at end
+const unexpectedFieldsCollector: Record<string, Set<string>> = {
+  SlotInput: new Set(),
+  EnumInput: new Set(),
+  TypeInput: new Set(),
+  ClassInput: new Set(),
+  VariableSpecInput: new Set(),
+};
+
 /**
- * Transform SlotDTO (snake_case from JSON) to SlotData (camelCase for constructors)
+ * Transform SlotInput to SlotData
+ * All slots (global, inline, override) consolidated in slots section
  */
-function transformSlotDTO(dto: SlotDTO): SlotData {
-  validateDTO(dto, EXPECTED_SLOT_FIELDS, 'SlotDTO');
-  return transformWithMapping<SlotData>(dto, FIELD_MAPPINGS.slot);
+function transformSlot(input: SlotInput): SlotData {
+  validateDTO(input, EXPECTED_SLOT_FIELDS, 'SlotInput');
+
+  return {
+    id: input.id,
+    name: input.name,
+    range: input.range,
+    description: input.description,
+    slotUri: input.slot_uri,
+    identifier: input.identifier,
+    required: input.required,
+    multivalued: input.multivalued,
+    global: input.global,
+    overrides: input.overrides
+  };
 }
 
 /**
- * Transform EnumDTO to EnumData
+ * Transform EnumInput to EnumData
  */
-function transformEnumDTO(dto: EnumDTO): EnumData {
-  validateDTO(dto, EXPECTED_ENUM_FIELDS, 'EnumDTO');
-  return transformWithMapping<EnumData>(dto, FIELD_MAPPINGS.enum);
+function transformEnum(input: EnumInput): EnumData {
+  validateDTO(input, EXPECTED_ENUM_FIELDS, 'EnumInput');
+  return transformWithMapping<EnumData>(input, FIELD_MAPPINGS.enum);
 }
 
 /**
- * Transform TypeDTO to TypeData
+ * Transform TypeInput to TypeData
  * Normalizes notes field (array → string) and applies field mappings
  */
-function transformTypeDTO(dto: TypeDTO): TypeData {
-  validateDTO(dto, EXPECTED_TYPE_FIELDS, 'TypeDTO');
-  const transformed = transformWithMapping<TypeData>(dto, FIELD_MAPPINGS.type);
+function transformType(input: TypeInput): TypeData {
+  validateDTO(input, EXPECTED_TYPE_FIELDS, 'TypeInput');
+  const transformed = transformWithMapping<TypeData>(input, FIELD_MAPPINGS.type);
 
   // Normalize notes: if array, join with newlines; if string, keep as-is
   if (transformed.notes && Array.isArray(transformed.notes)) {
@@ -149,91 +185,61 @@ function transformTypeDTO(dto: TypeDTO): TypeData {
 }
 
 /**
- * Transform ClassDTO to ClassData
- * Normalizes is_a (LinkML native field name) to parent
+ * Transform ClassInput to ClassData
+ * Classes have slots array (references only, data in slots section)
  */
-function transformClassDTO(dto: ClassDTO): ClassData {
-  validateDTO(dto, EXPECTED_CLASS_FIELDS, 'ClassDTO');
-  const transformed = transformWithMapping<ClassData>(dto, FIELD_MAPPINGS.class);
+function transformClass(input: ClassInput): ClassData {
+  validateDTO(input, EXPECTED_CLASS_FIELDS, 'ClassInput');
 
-  // Normalize is_a → parent
-  if (dto.is_a) {
-    transformed.parent = dto.is_a;
-  }
-
-  // Set defaults for optional fields
-  transformed.abstract = transformed.abstract ?? false;
-  transformed.attributes = transformed.attributes ?? {};
-
-  return transformed;
+  return {
+    id: input.id,
+    name: input.name,
+    description: input.description,
+    parent: input.parent,
+    abstract: input.abstract ?? false,
+    slots: input.slots.map(slotRef => ({
+      id: slotRef.id,
+      inheritedFrom: slotRef.inherited_from
+    }))
+  };
 }
 
 /**
- * Transform VariableSpecDTO to VariableSpec
+ * Transform VariableSpecInput to VariableSpec
  */
-function transformVariableSpecDTO(dto: VariableSpecDTO): VariableSpec {
-  validateDTO(dto, EXPECTED_VARIABLE_FIELDS, 'VariableSpecDTO');
-  return transformWithMapping<VariableSpec>(dto, FIELD_MAPPINGS.variable);
+function transformVariable(input: VariableSpecInput): VariableSpec {
+  validateDTO(input, EXPECTED_VARIABLE_FIELDS, 'VariableSpecInput');
+  return transformWithMapping<VariableSpec>(input, FIELD_MAPPINGS.variable);
 }
 
 /**
  * Load and transform raw data from files
- * Returns DTOs transformed to Data types with proper field naming
- *
- * NOTE: We load bdchm.processed.json which includes:
- * - All classes, enums, slots, types (from gen-linkml + transform_schema.py)
- * - Computed inherited_from fields for inherited attributes
- * - Slot instances for slot_usage overrides
- * - Streamlined structure optimized for our app
- * This eliminates the need to compute inheritance or handle slot_usage at runtime.
+ * Returns Input types transformed to Data types
  */
 export async function loadRawData(): Promise<SchemaData> {
-  // Load processed schema (includes computed metadata)
-  const processedSchemaDTO = await loadProcessedSchemaDTO();
-  const variableSpecDTOs = await loadVariableSpecDTOs();
+  const processedSchema = await loadProcessedSchema();
+  const variableInputs = await loadVariableSpecs();
 
-  // Transform DTOs to Data types (snake_case → camelCase, field renames)
-  const classes: ClassData[] = Object.values(processedSchemaDTO.classes).map(transformClassDTO);
+  const classes: ClassData[] = Object.values(processedSchema.classes).map(transformClass);
 
   const enums = new Map<string, EnumData>();
-  Object.entries(processedSchemaDTO.enums || {}).forEach(([name, dto]) => {
-    enums.set(name, transformEnumDTO(dto));
+  Object.entries(processedSchema.enums || {}).forEach(([name, input]) => {
+    enums.set(name, transformEnum(input));
   });
 
-  // Collect all slot definitions
-  // Part 1: Global slots from top-level slots section
   const slots = new Map<string, SlotData>();
-  Object.entries(processedSchemaDTO.slots || {}).forEach(([name, dto]) => {
-      slots.set(name, transformSlotDTO(dto));
+  Object.entries(processedSchema.slots || {}).forEach(([name, input]) => {
+    slots.set(name, transformSlot(input));
   });
 
-  // Part 2: Inline slot definitions from class attributes
-  // Collect unique inline slots defined across all classes
-  // (Override slots like "category-SdohObservation" are already in Part 1)
-  Object.values(processedSchemaDTO.classes).forEach((classDTO) => {
-    Object.entries(classDTO.attributes || {}).forEach(([_attrName, attrDef]) => {
-      const slotId = attrDef.slotId;
-      // Skip if already collected (including override slots from Part 1)
-      if (!slots.has(slotId) && attrDef.inline) {
-        // Transform attribute to SlotData
-        const slotData: SlotData = {
-          range: attrDef.range,
-          description: attrDef.description,
-          required: attrDef.required,
-          multivalued: attrDef.multivalued
-        };
-        slots.set(slotId, slotData);
-      }
-    });
-  });
-
-  // Types from linkml:types (included via gen-linkml + transform_schema.py pipeline)
   const types = new Map<string, TypeData>();
-  Object.entries(processedSchemaDTO.types || {}).forEach(([name, dto]) => {
-    types.set(name, transformTypeDTO(dto));
+  Object.entries(processedSchema.types || {}).forEach(([name, input]) => {
+    types.set(name, transformType(input));
   });
 
-  const variables: VariableSpec[] = variableSpecDTOs.map(transformVariableSpecDTO);
+  const variables: VariableSpec[] = variableInputs.map(transformVariable);
+
+  reportUnexpectedFields();
 
   return { classes, enums, slots, types, variables };
 }

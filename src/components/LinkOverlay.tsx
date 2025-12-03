@@ -17,7 +17,6 @@ import type { DataService } from '../services/DataService';
 import {
   generateSelfRefPath,
   getLinkGradientId,
-  type LinkFilterOptions
 } from '../utils/linkHelpers';
 import type { ItemHoverData } from './Section';
 import { splitId, panelPrefixes, contextualizeId } from '../utils/idContextualization';
@@ -89,8 +88,6 @@ export interface LinkOverlayProps {
   rightSections: string[];
   /** Data service for fetching item relationships */
   dataService: DataService | null;
-  /** Filter options for controlling which links to show */
-  filterOptions?: LinkFilterOptions;
   /** Currently hovered item for link highlighting */
   hoveredItem?: ItemHoverData | null;
 }

@@ -417,6 +417,13 @@ See separate document for these (TBD - for now, see old TASKS.md lines 449-815):
 
 ## 🔧 Low-Level Technical Tasks
 
+**Incorporate Unused Schema Fields into UI**
+- dataLoader validates expected fields and warns about unexpected ones
+- Goal: incorporate all processed JSON fields into UI (or explicitly decide not to)
+- Run the app and check console for "Unexpected fields" warnings
+- For each field: add to UI, add to expected fields list, or document why we're ignoring it
+- Should do soon - new fields may influence architecture decisions
+
 **Fix DetailContent.test.tsx** (19 failing tests)
 - Pre-existing since mid-November 2025
 - Root cause: DataService refactor was reverted, breaking test setup

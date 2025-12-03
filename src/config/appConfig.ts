@@ -18,9 +18,6 @@
 /** Element type IDs (lowercase for technical use) */
 export type ElementTypeId = 'class' | 'enum' | 'slot' | 'type' | 'variable';
 
-/** Relationship type IDs */
-export type RelationshipTypeId = 'inherits' | 'property' | 'uses_enum' | 'references_class';
-
 /** Element type metadata */
 export interface ElementTypeMetadata {
   readonly id: ElementTypeId;
@@ -157,6 +154,14 @@ export const APP_CONFIG = {
       }
     }
   } satisfies Record<ElementTypeId, ElementTypeMetadata>,
+
+  // Slot source labels (for display in detail panels)
+  slotSources: {
+    override: 'Override',      // Slot with slot_usage override
+    global: 'Global',          // Defined in schema's global slots section
+    defined: 'Defined here',   // Defined inline on this class
+    inheritedSuffix: 'from',   // e.g., "Global (from Entity)"
+  },
 
   // Timing constants (from RelationshipInfoBox.tsx)
   timing: {

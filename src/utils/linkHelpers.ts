@@ -1,121 +1,6 @@
 /**
- * Link Helpers - Pure functions for working with element relationships and SVG links
- *
- * These utilities are thoroughly tested in src/test/linkLogic.test.ts
+ * Link Helpers - Pure functions for SVG link geometry calculations
  */
-
-import type { Relationship } from '../models/Element';
-// [sg] violates model/view separation
-
-/**
- * Represents a link between two elements for SVG rendering
- */
-export interface Link {
-  source: { type: string; id: string };
-  target: { type: string; id: string };
-  relationship: Relationship;
-}
-
-/**
- * Filter options for controlling which links are displayed
- */
-export interface LinkFilterOptions {
-  /** Show inheritance relationships (is_a) */
-  showInheritance?: boolean;
-  /** Show property relationships (class attributes/slots) */
-  showProperties?: boolean;
-  /** Show only enum-typed properties */
-  onlyEnums?: boolean;
-  /** Show only class-typed properties */
-  onlyClasses?: boolean;
-  /** Include self-referential links (e.g., Specimen.parent_specimen → Specimen) */
-  includeSelfRefs?: boolean;
-  /** Set of element names that are currently visible (links to hidden elements are excluded) */
-  visibleElements?: Set<string>;
-}
-
-/**
- * Filter relationships based on options
- *
- * @deprecated Only used in tests. Production code should use DataService.getEdgesForItem() with EdgeInfo[].
- * Will be removed after test migration.
- *
- * @param relationships - Array of relationships to filter
- * @param options - Filter criteria
- * @returns Filtered relationships
- */
-export function filterRelationships(
-  relationships: Relationship[],
-  options: LinkFilterOptions = {}
-): Relationship[] {
-  const {
-    showInheritance = true,
-    showProperties = true,
-    onlyEnums = false,
-    onlyClasses = false,
-    includeSelfRefs = false,
-    visibleElements,
-  } = options;
-
-  let filtered = relationships;
-
-  // Filter by relationship type
-  if (!showInheritance) {
-    filtered = filtered.filter(r => r.type !== 'inherits');
-  }
-  if (!showProperties) {
-    filtered = filtered.filter(r => r.type !== 'property');
-  }
-
-  // Filter by target section
-  if (onlyEnums) {
-    filtered = filtered.filter(r => r.targetSection === 'enum');
-  }
-  if (onlyClasses) {
-    filtered = filtered.filter(r => r.targetSection === 'class');
-  }
-
-  // Filter self-referential
-  if (!includeSelfRefs) {
-    filtered = filtered.filter(r => !r.isSelfRef);
-  }
-
-  // Filter by visibility
-  if (visibleElements) {
-    filtered = filtered.filter(r => visibleElements.has(r.target));
-  }
-
-  return filtered;
-}
-
-/**
- * Build Link objects from an element's relationships
- *
- * @deprecated Only used in tests. Production code should use DataService.getEdgesForItem() with EdgeInfo[].
- * Will be removed after test migration.
- *
- * @param sourceType - Type of the source element
- * @param sourceName - Name of the source element
- * @param relationships - Relationships from the source element
- * @param filterOptions - Optional filtering criteria
- * @returns Array of Link objects ready for rendering
- */
-export function buildLinks(
-  sourceType: string,
-  sourceId: string,
-  relationships: Relationship[],
-  filterOptions?: LinkFilterOptions
-): Link[] {
-  const filtered = filterOptions
-    ? filterRelationships(relationships, filterOptions)
-    : relationships;
-
-  return filtered.map(rel => ({
-    source: { type: sourceType, id: sourceId },
-    target: { type: rel.targetSection, id: rel.target },
-    relationship: rel,
-  }));
-}
 
 /**
  * Calculate the center point of a bounding box
@@ -127,42 +12,6 @@ export function getRectCenter(rect: DOMRect): { x: number; y: number } {
   return {
     x: rect.left + rect.width / 2,
     y: rect.top + rect.height / 2,
-  };
-}
-
-/**
- * Calculate anchor points for link connections
- * Returns the best edge point (top, right, bottom, left) based on relative positions
- *
- * @param sourceRect - Source element bounding box
- * @param targetRect - Target element bounding box
- * @returns Source and target anchor points
- */
-export function calculateAnchorPoints(
-  sourceRect: DOMRect,
-  targetRect: DOMRect
-): {
-  source: { x: number; y: number };
-  target: { x: number; y: number };
-} {
-  const sourceCenter = getRectCenter(sourceRect);
-  const targetCenter = getRectCenter(targetRect);
-
-  // Calculate angle between centers
-  const dx = targetCenter.x - sourceCenter.x;
-  const dy = targetCenter.y - sourceCenter.y;
-  const angle = Math.atan2(dy, dx);
-
-  // Determine which edge of source rect to use
-  const sourceEdge = getEdgePoint(sourceRect, angle);
-
-  // Determine which edge of target rect to use (opposite direction)
-  const targetAngle = angle + Math.PI;
-  const targetEdge = getEdgePoint(targetRect, targetAngle);
-
-  return {
-    source: sourceEdge,
-    target: targetEdge,
   };
 }
 
@@ -200,6 +49,42 @@ function getEdgePoint(rect: DOMRect, angle: number): { x: number; y: number } {
     // Top edge
     return { x: center.x, y: center.y - halfHeight };
   }
+}
+
+/**
+ * Calculate anchor points for link connections
+ * Returns the best edge point (top, right, bottom, left) based on relative positions
+ *
+ * @param sourceRect - Source element bounding box
+ * @param targetRect - Target element bounding box
+ * @returns Source and target anchor points
+ */
+export function calculateAnchorPoints(
+  sourceRect: DOMRect,
+  targetRect: DOMRect
+): {
+  source: { x: number; y: number };
+  target: { x: number; y: number };
+} {
+  const sourceCenter = getRectCenter(sourceRect);
+  const targetCenter = getRectCenter(targetRect);
+
+  // Calculate angle between centers
+  const dx = targetCenter.x - sourceCenter.x;
+  const dy = targetCenter.y - sourceCenter.y;
+  const angle = Math.atan2(dy, dx);
+
+  // Determine which edge of source rect to use
+  const sourceEdge = getEdgePoint(sourceRect, angle);
+
+  // Determine which edge of target rect to use (opposite direction)
+  const targetAngle = angle + Math.PI;
+  const targetEdge = getEdgePoint(targetRect, targetAngle);
+
+  return {
+    source: sourceEdge,
+    target: targetEdge,
+  };
 }
 
 /**
@@ -278,98 +163,4 @@ export function getElementTypeColor(type: 'class' | 'enum' | 'slot' | 'variable'
  */
 export function getLinkGradientId(sourceType: string, targetType: string): string {
   return `gradient-${sourceType}-${targetType}`;
-}
-
-/**
- * Get color for link based on relationship type (legacy, now returns gradient URL)
- *
- * @param relationship - Relationship object
- * @param sourceType - Source element type
- * @returns CSS color string or gradient URL
- */
-export function getLinkColor(relationship: Relationship, sourceType?: string): string {
-  // If sourceType provided, use gradient
-  if (sourceType && relationship.targetSection) {
-    return `url(#${getLinkGradientId(sourceType, relationship.targetSection)})`;
-  }
-
-  // Fallback to solid colors for legacy support
-  switch (relationship.type) {
-    case 'inherits':
-      return '#3b82f6'; // Blue for inheritance
-    case 'property':
-      if (relationship.targetSection === 'enum') {
-        return '#a855f7'; // Purple for enums
-      }
-      return '#10b981'; // Green for class references
-    default:
-      return '#6b7280'; // Gray for unknown
-  }
-}
-
-/**
- * Get stroke width for link based on relationship type
- *
- * @param relationship - Relationship object
- * @returns Stroke width in pixels
- */
-export function getLinkStrokeWidth(relationship: Relationship): number {
-  switch (relationship.type) {
-    case 'inherits':
-      return 2; // Thicker for inheritance
-    case 'property':
-      return 1.5;
-    default:
-      return 1;
-  }
-}
-
-/**
- * Format relationship type for display
- *
- * @deprecated Only used in tests. Production code should format EdgeInfo types directly.
- * Will be removed after test migration.
- *
- * @param relationship - Relationship object
- * @returns Human-readable relationship description
- */
-export function formatRelationshipType(relationship: Relationship): string {
-  switch (relationship.type) {
-    case 'inherits':
-      return 'inherits from';
-    case 'property':
-      return relationship.label ? `property: ${relationship.label}` : 'property';
-    default:
-      return relationship.type;
-  }
-}
-
-/**
- * Get detailed relationship metadata for tooltips
- *
- * @param relationship - Relationship object
- * @param sourceName - Name of source element
- * @param sourceType - Type of source element
- * @returns Object with formatted relationship details
- */
-export function getRelationshipMetadata(
-  relationship: Relationship,
-  sourceName: string,
-  sourceType: string
-): {
-  description: string;
-  sourceName: string;
-  sourceType: string;
-  targetName: string;
-  targetType: string;
-  label?: string;
-} {
-  return {
-    description: formatRelationshipType(relationship),
-    sourceName,
-    sourceType,
-    targetName: relationship.target,
-    targetType: relationship.targetSection,
-    label: relationship.label
-  };
 }

@@ -10,11 +10,12 @@ import type {
   VariableSpec,
   EnumValue,
   SchemaData,
+  SlotReference,
 } from './SchemaTypes';
 
 // Core application data structure
 import type { ModelData } from './ModelData';
-import type { ElementTypeId, RelationshipTypeId } from '../config/appConfig';
+import type { ElementTypeId } from '../config/appConfig';
 import type { RenderableItem } from './RenderableItem';
 import { buildGraphFromSchemaData, getClassesUsingRange, getClassesUsingSlot } from './Graph';
 import { type SchemaGraph } from './SchemaTypes';
@@ -31,61 +32,6 @@ function positionToContext(position: 'left' | 'middle' | 'right'): 'leftPanel' |
   if (position === 'middle') return 'middlePanel';
   return 'rightPanel';
 }
-
-// Property definition from class attributes
-// Matches SlotDefinition from types.ts (enhanced by transform_schema.py)
-// TODO: Remove PropertyDefinition - use SlotDefinition directly when refactoring Element classes
-interface PropertyDefinition {
-  slotId: string;           // ID of the slot definition (computed by transform_schema.py)
-  range: string;
-  description?: string;
-  required?: boolean;
-  multivalued?: boolean;
-  inherited_from?: string;  // Which ancestor class defined this slot (computed by transform_schema.py)
-}
-
-// Relationship types for SVG link visualization
-// [sg] this is weird
-export interface Relationship {
-  type: RelationshipTypeId;
-  label?: string;           // Property name (for property relationships)
-  target: string;           // Target element name
-  targetSection: ElementTypeId;
-  isSelfRef?: boolean;      // True if target === this.name
-}
-
-// Inline type for relationship data to avoid circular dependency
-// Component RelationshipSidebar defines the external interface
-type IncomingRelationships = {
-  subclasses: string[];
-  usedByAttributes: Array<{
-    className: string;
-    attributeName: string;
-    sourceSection: ElementTypeId;
-  }>;
-  variables: Array<{
-    name: string;
-  }>;
-};
-
-type SlotInfo = {
-  attributeName: string;
-  target: string;
-  targetSection: ElementTypeId;
-  isSelfRef: boolean;
-};
-
-type OutgoingRelationships = {
-  inheritance?: {
-    target: string;
-    targetSection: ElementTypeId;
-  };
-  slots: SlotInfo[];
-  inheritedSlots: Array<{
-    ancestorName: string;
-    slots: SlotInfo[];
-  }>;
-};
 
 // ============================================================================
 // Global references for graph-based queries
@@ -104,74 +50,6 @@ export function initializeGraphReferences(
   globalGraph = graph;
 }
 
-/**
- * Compute incoming relationships for an element (generic helper)
- * Scans globalClassCollection to find reverse relationships.
- */
-function computeIncomingRelationships(thisElement: Element): IncomingRelationships {
-  const incoming: IncomingRelationships = {
-    subclasses: [],
-    usedByAttributes: [],
-    variables: []
-  };
-
-  if (!globalClassCollection) {
-    return incoming;
-  }
-
-  const allClasses = globalClassCollection.getAllElements() as ClassElement[];
-
-  for (const otherClass of allClasses) {
-    // Find subclasses (classes that inherit from this element)
-    // @ts-expect-error TEMPORARY: Accessing protected 'type' property - will be removed in Step 7 (Link Overlay Refactor)
-    // TODO: Refactor to avoid type checks - see TASKS.md Step 7 architectural guidance
-    if (thisElement.type === 'class' && otherClass.parentId === thisElement.getId()) {
-      incoming.subclasses.push(otherClass.getId());
-    }
-
-    // Find class slots that reference this element
-    // @ts-expect-error TEMPORARY: Accessing protected 'type' property - will be removed in Step 7 (Link Overlay Refactor)
-    // TODO: Refactor to avoid type checks - see TASKS.md Step 7 architectural guidance
-    if (thisElement.type === 'class' || thisElement.type === 'enum' || thisElement.type === 'type') {
-      // For classes, enums, and types, check if they are used as the range of a slot
-      for (const classSlot of otherClass.classSlots) {
-        if (classSlot.range === thisElement.getId()) {
-          incoming.usedByAttributes.push({
-            className: otherClass.getId(),
-            attributeName: classSlot.name,
-            sourceSection: 'class'
-          });
-        }
-      }
-    }
-    // @ts-expect-error TEMPORARY: Accessing protected 'type' property - will be removed in Step 7 (Link Overlay Refactor)
-    // TODO: Refactor to avoid type checks - see TASKS.md Step 7 architectural guidance
-    else if (thisElement.type === 'slot') {
-      // For slots, check if they are referenced by their slot definition
-      for (const classSlot of otherClass.classSlots) {
-        if (classSlot.baseSlot.name === thisElement.getId()) {
-          incoming.usedByAttributes.push({
-            className: otherClass.getId(),
-            attributeName: classSlot.name,
-            sourceSection: 'class'
-          });
-        }
-      }
-    }
-  }
-
-  // Sort results
-  incoming.subclasses.sort();
-  incoming.usedByAttributes.sort((a, b) => {
-    if (a.className !== b.className) {
-      return a.className.localeCompare(b.className);
-    }
-    return a.attributeName.localeCompare(b.attributeName);
-  });
-
-  return incoming;
-}
-
 // Base abstract class for all element types
 export abstract class Element {
   protected abstract readonly type: ElementTypeId;
@@ -180,102 +58,6 @@ export abstract class Element {
 
   // Detail data extraction (data-focused approach for DetailPanel)
   abstract getDetailData(): DetailData;
-
-  // Relationship extraction for SVG links
-  abstract getRelationships(): Relationship[];
-
-  /**
-   * Get relationship data for info box display
-   * Uses existing getRelationships() for outgoing + computeIncomingRelationships() helper
-   * Returns data matching RelationshipData interface from RelationshipInfoBox component
-   */
-  getRelationshipData() {
-    const relationships = this.getRelationships();
-
-    // Build outgoing relationships from existing getRelationships()
-    const outgoing: OutgoingRelationships = {
-      slots: [],
-      inheritedSlots: []
-    };
-
-    for (const rel of relationships) {
-      if (rel.type === 'inherits') {
-        outgoing.inheritance = {
-          target: rel.target,
-          targetSection: rel.targetSection
-        };
-      } else if (rel.type === 'property') {
-        outgoing.slots.push({
-          attributeName: rel.label || 'range', // 'range' for slots without label
-          target: rel.target,
-          targetSection: rel.targetSection,
-          isSelfRef: rel.isSelfRef || false
-        });
-      }
-    }
-
-    // Compute inherited slots for classes
-    if (this.type === 'class') {
-      // @ts-expect-error TEMPORARY: Type assertion - will be refactored in Step 7 (Link Overlay Refactor)
-      // TODO: Remove getRelationshipData() entirely and replace with focused methods - see TASKS.md Step 7
-      const classElement = this as ClassElement;
-      const ancestors = classElement.ancestorList().reverse(); // Most general first
-
-      for (const ancestor of ancestors) {
-        if (ancestor.type === 'class') {
-          // TEMPORARY: Type assertion (ancestor as ClassElement) - will be refactored in Step 7
-          // TODO: Remove getRelationshipData() entirely and replace with focused methods - see TASKS.md Step 7
-          const ancestorClass = ancestor as ClassElement;
-          const ancestorSlots: SlotInfo[] = [];
-
-          // Get all slots defined in this ancestor (includes attributes, slot_usage, and slot_reference)
-          for (const classSlot of ancestorClass.classSlots) {
-            const range = classSlot.range;
-            if (!range) continue;
-
-            const rangeCategory = categorizeRange(range);
-            ancestorSlots.push({
-              attributeName: classSlot.name,
-              target: range,
-              // @ts-expect-error TEMPORARY: categorizeRange returns 'primitive' which isn't in ElementTypeId
-              // TODO: See TASKS.md line 374 - need to revisit this type mismatch
-              targetSection: rangeCategory,
-              isSelfRef: range === ancestorClass.name
-            });
-          }
-
-          if (ancestorSlots.length > 0) {
-            outgoing.inheritedSlots.push({
-              ancestorName: ancestorClass.name,
-              slots: ancestorSlots
-            });
-          }
-        }
-      }
-    }
-
-    // Compute incoming relationships using generic helper
-    const incoming = computeIncomingRelationships(this);
-
-    // Add variable list for classes
-    if (this.type === 'class') {
-      // @ts-expect-error TEMPORARY: Type assertion - will be refactored in Step 7 (Link Overlay Refactor)
-      // TODO: Remove getRelationshipData() entirely and replace with focused methods - see TASKS.md Step 7
-      incoming.variables = (this as ClassElement).variables.map(v => ({ name: v.name }));
-    }
-
-    // Get header background color for this item type
-    const metadata = elementTypes[this.type];
-    const color = metadata?.color.headerBg || 'bg-gray-500';
-
-    return {
-      itemName: this.name,
-      itemSection: this.type,
-      color,
-      outgoing,
-      incoming
-    };
-  }
 
   /**
    * Get metadata for FloatingBox display (maintains view/model separation)
@@ -528,38 +310,6 @@ export abstract class Range extends Element {
   // for type safety and semantic clarity
 }
 
-// Name → Type lookup for accurate categorization (avoids duck typing)
-// Stage 2 Step 7: Added 'type' to support LinkML types
-let nameToTypeMap: Map<string, 'class' | 'enum' | 'slot' | 'type'> | null = null;
-
-/**
- * Initialize element name lookup map. Call this once after loading ModelData.
- * Prevents duck typing (e.g., checking if name ends with "Enum")
- */
-export function initializeElementNameMap(
-  classNames: string[],
-  enumNames: string[],
-  typeNames: string[],
-  slotNames: string[]
-): void {
-  nameToTypeMap = new Map();
-  classNames.forEach(name => nameToTypeMap!.set(name, 'class'));
-  enumNames.forEach(name => nameToTypeMap!.set(name, 'enum'));
-  typeNames.forEach(name => nameToTypeMap!.set(name, 'type'));
-  slotNames.forEach(name => nameToTypeMap!.set(name, 'slot'));
-}
-
-// ClassCollection reference for on-demand getUsedByClasses() computation
-let globalClassCollection: ClassCollection | null = null;
-
-/**
- * Initialize global ClassCollection reference. Call this once after creating ClassCollection.
- * Used by EnumElement and SlotElement to compute getUsedByClasses() on-demand.
- */
-export function initializeClassCollection(collection: ClassCollection): void {
-  globalClassCollection = collection;
-}
-
 /**
  * Initialize ModelData from transformed SchemaData.
  * Creates all collections in proper dependency order and initializes global references.
@@ -583,9 +333,6 @@ export function initializeModelData(schemaData: SchemaData): ModelData {
   const classCollection = ClassCollection.fromData(schemaData.classes, slotCollection);
   const variableCollection = VariableCollection.fromData(schemaData.variables, classCollection);
 
-  // Initialize global references for on-demand computation
-  initializeClassCollection(classCollection);
-
   const collections = new Map();
   collections.set('class', classCollection);
   collections.set('enum', enumCollection);
@@ -601,14 +348,7 @@ export function initializeModelData(schemaData: SchemaData): ModelData {
     });
   });
 
-  // Initialize element name lookup map for accurate type categorization
-  const classNames = classCollection.getAllElements().map(c => c.name);
-  const enumNames = Array.from(schemaData.enums.keys());
-  const typeNames = Array.from(schemaData.types.keys());
-  const slotNames = Array.from(schemaData.slots.keys());
-  initializeElementNameMap(classNames, enumNames, typeNames, slotNames);
-
-  // Initialize graph references for getRelationshipsFromGraph()
+  // Initialize graph references
   initializeGraphReferences(graph, elementLookup);
 
   return {
@@ -618,122 +358,10 @@ export function initializeModelData(schemaData: SchemaData): ModelData {
   };
 }
 
-// Helper to categorize range types
-function categorizeRange(range: string): 'class' | 'enum' | 'type' | 'primitive' {
-  // Use lookup map if available (avoids duck typing)
-  if (nameToTypeMap?.has(range)) {
-    const type = nameToTypeMap.get(range)!;
-    // Treat slot refs as class relationships
-    if (type === 'slot') return 'class';
-    // Types are their own category (like enums) - they show as link targets
-    return type;
-  }
-
-  // If not in map, check if it's a primitive type name
-  const primitives = ['string', 'integer', 'float', 'double', 'decimal', 'boolean', 'date', 'datetime', 'time', 'uri', 'uriorcurie'];
-  if (primitives.includes(range.toLowerCase())) {
-    return 'primitive';
-  }
-
-  // Fallback to duck typing if map not initialized (shouldn't happen in normal use)
-  console.warn(`categorizeRange: nameToTypeMap not initialized, falling back to duck typing for "${range}"`);
-  if (range.endsWith('Enum')) {
-    return 'enum';
-  }
-  return 'class';
-}
-
-/**
- * ClassSlot - represents a slot as used within a specific class.
- * Wraps a SlotElement with class-specific overrides from slot_usage or inline attribute definitions.
- *
- * Design principle: Use direct properties (e.g., `range`, `required`) not `*Override` suffix.
- * Original values remain accessible via `baseSlot` reference.
- */
-export class ClassSlot {
-  readonly name: string;
-  readonly baseSlot: SlotElement;  // Reference to the slot (or synthetic SlotElement for attributes)
-  readonly source: 'attribute' | 'slot_usage' | 'slot_reference';
-  slotPath: string = '';  // Full ancestry path where slot was defined (e.g., "Entity.Specimen.Material")
-
-  // Internal override values (undefined means "use base slot value")
-  private readonly _range?: string;
-  private readonly _required?: boolean;
-  private readonly _multivalued?: boolean;
-  private readonly _description?: string;
-
-  constructor(
-    name: string,
-    baseSlot: SlotElement,
-    source: 'attribute' | 'slot_usage' | 'slot_reference',
-    overrides?: {
-      range?: string;
-      required?: boolean;
-      multivalued?: boolean;
-      description?: string;
-    }
-  ) {
-    this.name = name;
-    this.baseSlot = baseSlot;
-    this.source = source;
-    this._range = overrides?.range;
-    this._required = overrides?.required;
-    this._multivalued = overrides?.multivalued;
-    this._description = overrides?.description;
-  }
-
-  // Property getters - work like SlotElement properties
-  get range(): string {
-    return this.getEffectiveRange();
-  }
-
-  get required(): boolean {
-    return this.getEffectiveRequired();
-  }
-
-  get multivalued(): boolean {
-    return this.getEffectiveMultivalued();
-  }
-
-  get description(): string | undefined {
-    return this.getEffectiveDescription();
-  }
-
-  /**
-   * Get effective range with fallback to base slot.
-   * Returns 'string' as final fallback if neither override nor base has a value.
-   */
-  getEffectiveRange(): string {
-    return this._range ?? this.baseSlot.range ?? 'string';
-  }
-
-  /**
-   * Get effective required flag with fallback to base slot.
-   * Returns false as final fallback if neither override nor base has a value.
-   */
-  getEffectiveRequired(): boolean {
-    return this._required ?? this.baseSlot.required ?? false;
-  }
-
-  /**
-   * Get effective multivalued flag with fallback to base slot.
-   * Returns false as final fallback if neither override nor base has a value.
-   */
-  getEffectiveMultivalued(): boolean {
-    return this._multivalued ?? this.baseSlot.multivalued ?? false;
-  }
-
-  /**
-   * Get effective description with fallback to base slot.
-   * Returns undefined if neither override nor base has a description.
-   */
-  getEffectiveDescription(): string | undefined {
-    return this._description ?? this.baseSlot.description;
-  }
-}
+// ClassSlot removed - slot data now consolidated in SlotElement
+// Use ClassElement.slotRefs + slotCollection.getElement() to access slot data
 
 // ClassElement - represents a class in the schema
-// Stage 2 Step 4: Now extends Range instead of Element
 export class ClassElement extends Range {
   readonly type = 'class' as const;
   protected readonly dataModel: ModelData
@@ -746,12 +374,10 @@ export class ClassElement extends Range {
   // - variables: VariableElements for this class (separate array, wired in orchestration)
   variables: VariableElement[] = [];  // Wired later in orchestration
 
-  // Properties from processed JSON
-  readonly attributes: Record<string, PropertyDefinition>;  // Pre-computed with slotId and inherited_from
   readonly abstract: boolean;
 
-  // ClassSlot instances (Phase 6.4 Step 3) - represents all slots used by this class
-  readonly classSlots: ClassSlot[];
+  // Slot references - look up SlotElement from slotCollection when needed
+  readonly slotRefs: SlotReference[];
 
   /** Computed property - returns variable count on-demand */
   get variableCount(): number {
@@ -759,101 +385,21 @@ export class ClassElement extends Range {
   }
 
   /**
-   * Get the name of the class from which a slot was inherited.
-   * Returns empty string if slot is not inherited (defined in this class).
-   *
-   * @param slotName Name of the slot to check
-   * @returns Class name where slot was defined, or empty string if defined in this class
-   **/
-  getInheritedFrom(slotName: string): string {
-    const allSlots = this.collectAllSlots();
-    const slot = allSlots[slotName];
-    if (!slot?.slotPath) return '';
-
-    const pathComponents = slot.slotPath.split('.');
-    const definingClass = pathComponents[pathComponents.length - 1];
-    return definingClass === this.name ? '' : definingClass;
-  }
-
-  /**
-   * Collect all slots for this class, including inherited slots.
-   * Child class slots override parent class slots with the same name.
-   *
-   * @returns Record mapping slot name to ClassSlot instance
+   * Get SlotElement for a slot reference ID
    */
-  collectAllSlots(): Record<string, ClassSlot> {
-    const slots = new Map<string, ClassSlot>();
-
-    // Add slots from this class and set slotPath
-    this.classSlots.forEach(slot => {
-      slot.slotPath = this.pathFromRoot.join('.');
-      slots.set(slot.name, slot);
-    });
-
-    // Inherit from parent (parent slots already have their slotPath set)
-    if (this.parent) {
-      const parentSlots = (this.parent as ClassElement).collectAllSlots();
-      Object.entries(parentSlots).forEach(([name, parentSlot]) => {
-        if (!slots.has(name)) {
-          slots.set(name, parentSlot);
-        }
-      });
-    }
-
-    return Object.fromEntries(slots);
+  getSlotElement(slotId: string): SlotElement | null {
+    const slotCollection = this.dataModel.collections.get('slot');
+    return (slotCollection?.getElement(slotId) as SlotElement | null) ?? null;
   }
 
-  constructor(data: ClassData, dataModel: ModelData, slotCollection: SlotCollection) {
+  constructor(data: ClassData, dataModel: ModelData, _slotCollection: SlotCollection) {
     super();
     this.dataModel = dataModel;
     this.name = data.name;
     this.description = data.description;
-    this.parentId = data.parent;  // Store parent name (Element.parent set later in fromData())
-    // [sg] parentId should probably be parentId
-
-    // Keep existing properties for backward compatibility during transition
-    this.attributes = data.attributes || {};
+    this.parentId = data.parent;
     this.abstract = data.abstract;
-
-    // Create ClassSlot instances from attributes
-    // The processed JSON has all slots (inline, slot_usage, referenced) merged into attributes
-    const classSlots: ClassSlot[] = [];
-
-    Object.entries(this.attributes).forEach(([attrName, attrDef]) => {
-      // Look up the slot definition using slotId from processed JSON
-      const slotId = attrDef.slotId;
-      const baseSlot = slotCollection.getElement(slotId) as SlotElement | null;
-
-      if (baseSlot) {
-        // Create ClassSlot wrapping the base slot, with any overrides from attrDef
-        classSlots.push(new ClassSlot(
-          attrName,
-          baseSlot,
-          attrDef.inherited_from ? 'slot_reference' : 'attribute',
-          {
-            range: attrDef.range,
-            required: attrDef.required,
-            multivalued: attrDef.multivalued,
-            description: attrDef.description
-          }
-        ));
-      } else {
-        // Create synthetic SlotElement if base slot not found (for inline attributes)
-        const syntheticSlot = new SlotElement(slotId, {
-          range: attrDef.range,
-          description: attrDef.description,
-          required: attrDef.required,
-          multivalued: attrDef.multivalued
-        });
-        classSlots.push(new ClassSlot(
-          attrName,
-          syntheticSlot,
-          'attribute'
-        ));
-      }
-    });
-
-    this.classSlots = classSlots;
+    this.slotRefs = data.slots;
   }
 
   getDetailData(): DetailData {
@@ -868,47 +414,50 @@ export class ClassElement extends Range {
       });
     }
 
-    // Slots section (includes inherited slots via collectAllSlots())
-    const allSlots = this.collectAllSlots();
-    if (Object.keys(allSlots).length > 0) {
-      // Track which slots are direct vs inherited
-      const directSlotNames = new Set(this.classSlots.map(s => s.name));
+    // Slots section
+    if (this.slotRefs.length > 0) {
+      const { slotSources } = APP_CONFIG;
 
-      const slotsList = Object.entries(allSlots)
-        .sort(([, a], [, b]) => a.slotPath.localeCompare(b.slotPath))
-        .map(([name, classSlot]) => {
-          const isInherited = !directSlotNames.has(name);
-          const inheritedFrom = isInherited ? this.getInheritedFrom(name) : '';
+      const slotsList = this.slotRefs
+        .map(slotRef => {
+          const slot = this.getSlotElement(slotRef.id);
+          if (!slot) return null;
 
-          // Map source to readable labels
-          const sourceLabels = {
-            'attribute': 'Attribute',
-            'slot_usage': 'Slot Override',
-            'slot_reference': 'Slot Reference'
-          };
-          let source = sourceLabels[classSlot.source];
+          // Determine source label
+          let source: string;
+          if (slot.overrides) {
+            source = slotSources.override;
+          } else if (slot.global) {
+            source = slotSources.global;
+          } else {
+            source = slotSources.defined;
+          }
 
-          // Add inheritance info to source column
-          if (inheritedFrom) {
-            source += ` (from ${inheritedFrom})`;
+          // Add inheritance info if inherited
+          if (slotRef.inheritedFrom) {
+            source += ` (${slotSources.inheritedSuffix} ${slotRef.inheritedFrom})`;
           }
 
           return [
-            name,
+            slot.name,
             source,
-            classSlot.getEffectiveRange(),
-            classSlot.getEffectiveRequired() ? 'Yes' : 'No',
-            classSlot.getEffectiveMultivalued() ? 'Yes' : 'No',
-            classSlot.getEffectiveDescription() || ''
+            slot.range || '',
+            slot.required ? 'Yes' : 'No',
+            slot.multivalued ? 'Yes' : 'No',
+            slot.description || ''
           ];
-        });
+        })
+        .filter((row): row is string[] => row !== null)
+        .sort((a, b) => a[0].localeCompare(b[0]));
 
-      sections.push({
-        name: 'Slots (includes inherited)',
-        tableHeadings: ['Name', 'Source', 'Range', 'Required', 'Multivalued', 'Description'],
-        tableContent: slotsList,
-        tableHeadingColor: elementTypes['slot'].color.headerBg
-      });
+      if (slotsList.length > 0) {
+        sections.push({
+          name: 'Slots',
+          tableHeadings: ['Name', 'Source', 'Range', 'Required', 'Multivalued', 'Description'],
+          tableContent: slotsList,
+          tableHeadingColor: elementTypes['slot'].color.headerBg
+        });
+      }
     }
 
     // Variables section
@@ -937,42 +486,6 @@ export class ClassElement extends Range {
       description: this.description,
       sections
     };
-  }
-
-  getRelationships(): Relationship[] {
-    const rels: Relationship[] = [];
-
-    // Inheritance relationship
-    if (this.parentId) {
-      rels.push({
-        type: 'inherits',
-        target: this.parentId,
-        targetSection: 'class',
-        isSelfRef: false
-      });
-    }
-
-    // Attributes with non-primitive ranges
-    if (this.attributes) {
-      Object.entries(this.attributes).forEach(([propName, propDef]) => {
-        const typedPropDef = propDef as PropertyDefinition;
-        const range = typedPropDef.range;
-        if (!range) return;
-
-        const rangeCategory = categorizeRange(range);
-        if (rangeCategory !== 'primitive') {  // [sg] does this still make sense?
-          rels.push({
-            type: 'property',
-            label: propName,
-            target: range,
-            targetSection: rangeCategory,
-            isSelfRef: range === this.name
-          });
-        }
-      });
-    }
-
-    return rels;
   }
 
   getBadge(): number | undefined {
@@ -1053,12 +566,6 @@ export class EnumElement extends Range {
       description: this.description,
       sections
     };
-  }
-
-  getRelationships(): Relationship[] {
-    // Enums don't have outgoing relationships in current model
-    // Could add reverse relationships: enum → classes that use it
-    return [];
   }
 
   getBadge(): number | undefined {
@@ -1172,12 +679,6 @@ export class TypeElement extends Range {
     };
   }
 
-  getRelationships(): Relationship[] {
-    // Types serve as range targets (like enums and primitives)
-    // No outgoing relationships
-    return [];
-  }
-
   /**
    * Get classes that use this type as a slot range (computed on-demand).
    * Queries graph for incoming SLOT edges.
@@ -1199,7 +700,7 @@ export class TypeElement extends Range {
   }
 }
 
-// SlotElement - represents a top-level slot definition
+// SlotElement - represents a slot definition (global, inline, or override)
 export class SlotElement extends Element {
   readonly type = 'slot' as const;
   readonly name: string;
@@ -1209,6 +710,8 @@ export class SlotElement extends Element {
   readonly identifier: boolean | undefined;
   readonly required: boolean | undefined;
   readonly multivalued: boolean | undefined;
+  readonly global: boolean | undefined;     // true = defined in schema's global slots section
+  readonly overrides: string | undefined;   // For override slots: ID of base slot being overridden
 
   constructor(name: string, data: SlotData) {
     super();
@@ -1219,6 +722,8 @@ export class SlotElement extends Element {
     this.identifier = data.identifier;
     this.required = data.required;
     this.multivalued = data.multivalued;
+    this.global = data.global;
+    this.overrides = data.overrides;
   }
 
   getDetailData(): DetailData {
@@ -1270,27 +775,6 @@ export class SlotElement extends Element {
       description: this.description,
       sections
     };
-  }
-
-  getRelationships(): Relationship[] {
-    const rels: Relationship[] = [];
-
-    // Slot range relationships
-    // Note: slot→enum is valid in LinkML but doesn't occur in BDCHM data
-    // (all 7 BDCHM slots have primitive or class ranges)
-    if (this.range) {
-      const rangeCategory = categorizeRange(this.range);
-      if (rangeCategory !== 'primitive') {
-        rels.push({
-          type: 'property',
-          target: this.range,
-          targetSection: rangeCategory,
-          isSelfRef: false
-        });
-      }
-    }
-
-    return rels;
   }
 
   getBadge(): number | undefined {
@@ -1367,16 +851,6 @@ export class VariableElement extends Element {
     };
   }
 
-  getRelationships(): Relationship[] {
-    // Variable → Class relationship
-    return [{
-      type: 'property',
-      label: 'mapped_to', // Add label so getRelationshipData() can use it
-      target: this.maps_to,
-      targetSection: 'class',
-      isSelfRef: false
-    }];
-  }
 }
 
 // ============================================================================
@@ -1695,13 +1169,11 @@ export class VariableCollection extends ElementCollection {
   readonly type = 'variable' as const;
   readonly id = 'variable';
   readonly roots: ClassElement[];
-  private groupedByClass: Map<string, VariableElement[]>;
   private variables: VariableElement[];
 
-  constructor(roots: ClassElement[], groupedByClass: Map<string, VariableElement[]>, variables: VariableElement[]) {
+  constructor(roots: ClassElement[], variables: VariableElement[]) {
     super();
     this.roots = roots;
-    this.groupedByClass = groupedByClass;
     this.variables = variables;
   }
 
@@ -1750,7 +1222,7 @@ export class VariableCollection extends ElementCollection {
       roots.push(classElement);
     }
 
-    return new VariableCollection(roots, groupedByClass, variableElements);
+    return new VariableCollection(roots, variableElements);
   }
 
   getLabel(): string {
@@ -1773,42 +1245,5 @@ export class VariableCollection extends ElementCollection {
 
   getAllElements(): Element[] {
     return this.variables;
-  }
-
-  /**
-   * @deprecated handle the grouping elsewhere -- other things need grouping also
-   */
-  getSectionData(position: 'left' | 'middle' | 'right'): import('../components/Section').SectionData {
-    return {
-      id: this.id,
-      label: this.getLabel(),
-      getItems: (expandedItems?: Set<string>) => {
-        // Build 2-level tree: ClassElement headers (level 0) with VariableElement children (level 1)
-        const items: import('../components/Section').SectionItemData[] = [];
-        const expanded = expandedItems || new Set();
-        const context = positionToContext(position);
-
-        this.roots.forEach(classElement => {
-          const variables = this.groupedByClass.get(classElement.name) || [];
-          const hasChildren = variables.length > 0;
-          const isExpanded = expanded.has(classElement.name);
-
-          // Add ClassElement header (level 0, non-clickable)
-          // Pass hasChildren explicitly since VariableCollection doesn't use Element tree structure
-          items.push(classElement.getSectionItemData(context, 0, isExpanded, false, hasChildren));
-
-          // Add VariableElements if expanded (level 1, clickable)
-          if (isExpanded) {
-            variables.forEach(variable => {
-              items.push(variable.getSectionItemData(context, 1, false, true, false));
-            });
-          }
-        });
-
-        return items;
-      },
-      expansionKey: this.getExpansionKey(position) || undefined,
-      defaultExpansion: this.getDefaultExpansion()
-    };
   }
 }

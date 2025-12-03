@@ -165,16 +165,14 @@ describe('dataLoader', () => {
       const classCollection = data.collections.get('class') as ClassCollection;
       const allClasses = classCollection.getAllElements();
 
-      // Total properties across all classes should be greater than 0
-      let totalProperties = 0;
+      // Total slots across all classes should be greater than 0
+      let totalSlots = 0;
       for (const cls of allClasses) {
-        // ClassElement uses `attributes` field
-        if (cls.attributes) {
-          totalProperties += Object.keys(cls.attributes).length;
-        }
+        const classElement = cls as import('../models/Element').ClassElement;
+        totalSlots += classElement.slotRefs.length;
       }
 
-      expect(totalProperties).toBeGreaterThan(0);
+      expect(totalSlots).toBeGreaterThan(0);
     });
 
     test('should have no duplicate class names', async () => {

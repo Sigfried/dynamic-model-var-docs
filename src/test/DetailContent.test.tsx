@@ -1,10 +1,11 @@
 import { describe, test, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import DetailContent from '../components/DetailContent';
-import { ClassElement, EnumElement, SlotElement, VariableElement, SlotCollection } from '../models/Element';
+import { ClassElement, EnumElement, SlotElement, VariableElement, SlotCollection, Element } from '../models/Element';
 import type { ClassData, EnumData, SlotData, VariableSpec } from '../models/SchemaTypes';
 import type { ModelData } from '../models/ModelData';
 import { createSchemaGraph } from '../models/Graph';
+import { DataService } from '../services/DataService';
 
 /**
  * DetailContent Tests (renamed from DetailPanel)
@@ -13,60 +14,75 @@ import { createSchemaGraph } from '../models/Graph';
  * Tests are organized by element type: Class, Enum, Slot, Variable
  */
 
-// Helper to create minimal ModelData for testing
+// Helper to create minimal ModelData for testing with element registered
+const createMockModelDataWithElement = (element: Element): ModelData => {
+  const modelData: ModelData = {
+    collections: new Map(),
+    elementLookup: new Map(),
+    graph: createSchemaGraph(),
+  };
+  modelData.elementLookup.set(element.getId(), element);
+  return modelData;
+};
+
+// Helper to create DataService with a single element registered
+const createMockDataService = (element: Element): DataService => {
+  const modelData = createMockModelDataWithElement(element);
+  return new DataService(modelData);
+};
+
+// Helper to create bare ModelData (for ClassElement construction)
 const createMockModelData = (): ModelData => ({
   collections: new Map(),
   elementLookup: new Map(),
   graph: createSchemaGraph(),
 });
 
-// Helper to create SlotCollection with test slots
-const createMockSlotCollection = (): SlotCollection => {
-  const slotData = new Map<string, SlotData>();
-
-  // Add slots referenced by test classes
-  slotData.set('testSlot', {
-    description: 'A test slot',
-    range: 'string'
-  });
-
-  slotData.set('usedSlot', {
-    description: 'A slot used with overrides',
-    range: 'string'
-  });
-
-  return SlotCollection.fromData(slotData);
-};
-
 describe('DetailContent - ClassElement', () => {
+  // Create mock slot collection with slots that will be referenced
+  const createTestSlotCollection = (): SlotCollection => {
+    const slotData = new Map<string, SlotData>();
+    slotData.set('testProperty', {
+      id: 'testProperty',
+      name: 'testProperty',
+      description: 'Test property',
+      range: 'string',
+      required: true,
+      multivalued: false
+    });
+    slotData.set('testSlot', {
+      id: 'testSlot',
+      name: 'testSlot',
+      description: 'A test slot',
+      range: 'string'
+    });
+    slotData.set('usedSlot', {
+      id: 'usedSlot',
+      name: 'usedSlot',
+      description: 'A used slot',
+      range: 'TestEnum',
+      required: true
+    });
+    return SlotCollection.fromData(slotData);
+  };
+
   const mockClassData: ClassData = {
+    id: 'TestClass',
     name: 'TestClass',
     description: 'A test class',
     parent: 'ParentClass',
     abstract: false,
-    attributes: {
-      testProperty: {
-        slotId: 'testProperty',  // Inline attribute - slotId same as attribute name
-        range: 'string',
-        description: 'Test property',
-        required: true,
-        multivalued: false
-      },
-      testSlot: {
-        slotId: 'testSlot',  // Referenced slot
-        range: 'string',
-        description: 'A test slot'
-      },
-      usedSlot: {
-        slotId: 'usedSlot',  // Slot with overrides (was in slot_usage)
-        range: 'TestEnum',
-        required: true,
-        description: 'A used slot'
-      }
-    }
+    slots: [
+      { id: 'testProperty' },
+      { id: 'testSlot' },
+      { id: 'usedSlot' }
+    ]
   };
 
-  const classElement = new ClassElement(mockClassData, createMockModelData(), createMockSlotCollection());
+  const slotCollection = createTestSlotCollection();
+  const mockModelData = createMockModelData();
+  mockModelData.collections.set('slot', slotCollection);
+  const classElement = new ClassElement(mockClassData, mockModelData, slotCollection);
   // Manually add variables for testing
   classElement.variables = [
     new VariableElement({
@@ -87,36 +103,39 @@ describe('DetailContent - ClassElement', () => {
     })
   ];
 
+  // Create DataService for rendering
+  const dataService = createMockDataService(classElement);
+
   test('should render class titlebar with name', () => {
-    render(<DetailContent element={classElement} />);
+    render(<DetailContent itemId="TestClass" dataService={dataService} />);
 
     expect(screen.getByText('TestClass')).toBeInTheDocument();
     expect(screen.getByText('extends ParentClass')).toBeInTheDocument();
   });
 
   test('should render description', () => {
-    render(<DetailContent element={classElement} />);
+    render(<DetailContent itemId="TestClass" dataService={dataService} />);
 
     expect(screen.getByText('A test class')).toBeInTheDocument();
   });
 
   test('should render inheritance section', () => {
-    render(<DetailContent element={classElement} />);
+    render(<DetailContent itemId="TestClass" dataService={dataService} />);
 
     expect(screen.getByText('Inheritance')).toBeInTheDocument();
     expect(screen.getByText(/Inherits from: ParentClass/)).toBeInTheDocument();
   });
 
-  test('should render slots section with all slots (attributes, slot_usage, slots)', () => {
-    render(<DetailContent element={classElement} />);
+  test('should render slots section with all slots', () => {
+    render(<DetailContent itemId="TestClass" dataService={dataService} />);
 
-    // New unified section name
-    expect(screen.getByText('Slots (includes inherited)')).toBeInTheDocument();
+    // Slots section
+    expect(screen.getByText('Slots')).toBeInTheDocument();
 
-    // Verify all three types of slots are present
-    expect(screen.getByText('testProperty')).toBeInTheDocument(); // from attributes
-    expect(screen.getByText('usedSlot')).toBeInTheDocument(); // from slot_usage
-    expect(screen.getByText('testSlot')).toBeInTheDocument(); // from slots array
+    // Verify all slots are present
+    expect(screen.getByText('testProperty')).toBeInTheDocument();
+    expect(screen.getByText('usedSlot')).toBeInTheDocument();
+    expect(screen.getByText('testSlot')).toBeInTheDocument();
 
     // Verify slot details
     expect(screen.getAllByText('string').length).toBeGreaterThan(0);
@@ -126,7 +145,7 @@ describe('DetailContent - ClassElement', () => {
   });
 
   test('should render variables section with count', () => {
-    render(<DetailContent element={classElement} />);
+    render(<DetailContent itemId="TestClass" dataService={dataService} />);
 
     expect(screen.getByText('Variables (2)')).toBeInTheDocument();
     expect(screen.getByText('test_var')).toBeInTheDocument();
@@ -138,11 +157,16 @@ describe('DetailContent - ClassElement', () => {
   test('should handle class without parent', () => {
     const rootClassData: ClassData = {
       ...mockClassData,
+      id: 'RootClass',
+      name: 'RootClass',
       parent: undefined
     };
-    const rootClass = new ClassElement(rootClassData, createMockModelData(), createMockSlotCollection());
+    const rootModelData = createMockModelData();
+    rootModelData.collections.set('slot', slotCollection);
+    const rootClass = new ClassElement(rootClassData, rootModelData, slotCollection);
+    const rootDataService = createMockDataService(rootClass);
 
-    render(<DetailContent element={rootClass} />);
+    render(<DetailContent itemId="RootClass" dataService={rootDataService} />);
 
     // Inheritance section should not appear
     expect(screen.queryByText('Inheritance')).not.toBeInTheDocument();
@@ -160,21 +184,22 @@ describe('DetailContent -EnumElement', () => {
   };
 
   const enumElement = new EnumElement('TestEnum', mockEnumData);
+  const enumDataService = createMockDataService(enumElement);
 
   test('should render enum titlebar with name', () => {
-    render(<DetailContent element={enumElement} />);
+    render(<DetailContent itemId="TestEnum" dataService={enumDataService} />);
 
     expect(screen.getByText('TestEnum')).toBeInTheDocument();
   });
 
   test('should render description', () => {
-    render(<DetailContent element={enumElement} />);
+    render(<DetailContent itemId="TestEnum" dataService={enumDataService} />);
 
     expect(screen.getByText('A test enumeration')).toBeInTheDocument();
   });
 
   test('should render permissible values section', () => {
-    render(<DetailContent element={enumElement} />);
+    render(<DetailContent itemId="TestEnum" dataService={enumDataService} />);
 
     expect(screen.getByText('Permissible Values')).toBeInTheDocument();
     expect(screen.getByText('VALUE1')).toBeInTheDocument();
@@ -186,7 +211,7 @@ describe('DetailContent -EnumElement', () => {
 
   test.skip('should render used by classes section', () => {
     // TODO: Re-enable after implementing getUsedByClasses() in Phase 5
-    render(<DetailContent element={enumElement} />);
+    render(<DetailContent itemId="TestEnum" dataService={enumDataService} />);
 
     expect(screen.getByText(/Used By Classes \(2\)/)).toBeInTheDocument();
     expect(screen.getByText('TestClass')).toBeInTheDocument();
@@ -198,17 +223,20 @@ describe('DetailContent -EnumElement', () => {
       ...mockEnumData,
       description: undefined
     };
-    const noDescElement = new EnumElement('TestEnum', noDescEnum);
+    const noDescElement = new EnumElement('NoDescEnum', noDescEnum);
+    const noDescDataService = createMockDataService(noDescElement);
 
-    render(<DetailContent element={noDescElement} />);
+    render(<DetailContent itemId="NoDescEnum" dataService={noDescDataService} />);
 
-    expect(screen.getByText('TestEnum')).toBeInTheDocument();
+    expect(screen.getByText('NoDescEnum')).toBeInTheDocument();
     expect(screen.queryByText('A test enumeration')).not.toBeInTheDocument();
   });
 });
 
 describe('DetailContent -SlotElement', () => {
   const mockSlotData: SlotData = {
+    id: 'testSlot',
+    name: 'testSlot',
     description: 'A test slot',
     range: 'string',
     slotUri: 'https://example.com/slot/test',
@@ -218,21 +246,22 @@ describe('DetailContent -SlotElement', () => {
   };
 
   const slotElement = new SlotElement('testSlot', mockSlotData);
+  const slotDataService = createMockDataService(slotElement);
 
   test('should render slot titlebar with name', () => {
-    render(<DetailContent element={slotElement} />);
+    render(<DetailContent itemId="testSlot" dataService={slotDataService} />);
 
     expect(screen.getByText('testSlot')).toBeInTheDocument();
   });
 
   test('should render description', () => {
-    render(<DetailContent element={slotElement} />);
+    render(<DetailContent itemId="testSlot" dataService={slotDataService} />);
 
     expect(screen.getByText('A test slot')).toBeInTheDocument();
   });
 
   test('should render properties section', () => {
-    render(<DetailContent element={slotElement} />);
+    render(<DetailContent itemId="testSlot" dataService={slotDataService} />);
 
     expect(screen.getByText('Properties')).toBeInTheDocument();
     expect(screen.getByText('Range')).toBeInTheDocument();
@@ -246,7 +275,7 @@ describe('DetailContent -SlotElement', () => {
 
   test.skip('should render used by classes section', () => {
     // TODO: Re-enable after implementing getUsedByClasses() in Phase 5
-    render(<DetailContent element={slotElement} />);
+    render(<DetailContent itemId="testSlot" dataService={slotDataService} />);
 
     expect(screen.getByText(/Used By Classes \(3\)/)).toBeInTheDocument();
     expect(screen.getByText('ClassA')).toBeInTheDocument();
@@ -256,6 +285,8 @@ describe('DetailContent -SlotElement', () => {
 
   test('should handle minimal slot definition', () => {
     const minimalSlotData: SlotData = {
+      id: 'minimalSlot',
+      name: 'minimalSlot',
       description: undefined,
       range: undefined,
       slotUri: undefined,
@@ -264,8 +295,9 @@ describe('DetailContent -SlotElement', () => {
       multivalued: undefined
     };
     const minimalSlot = new SlotElement('minimalSlot', minimalSlotData);
+    const minimalSlotDataService = createMockDataService(minimalSlot);
 
-    render(<DetailContent element={minimalSlot} />);
+    render(<DetailContent itemId="minimalSlot" dataService={minimalSlotDataService} />);
 
     expect(screen.getByText('minimalSlot')).toBeInTheDocument();
     // Should not crash with missing properties
@@ -283,21 +315,22 @@ describe('DetailContent -VariableElement', () => {
   };
 
   const variableElement = new VariableElement(mockVariableData);
+  const variableDataService = createMockDataService(variableElement);
 
   test('should render variable titlebar with name', () => {
-    render(<DetailContent element={variableElement} />);
+    render(<DetailContent itemId="body_mass_index" dataService={variableDataService} />);
 
     expect(screen.getByText('body_mass_index')).toBeInTheDocument();
   });
 
   test('should render description', () => {
-    render(<DetailContent element={variableElement} />);
+    render(<DetailContent itemId="body_mass_index" dataService={variableDataService} />);
 
     expect(screen.getByText('Body Mass Index measurement')).toBeInTheDocument();
   });
 
   test('should render properties section', () => {
-    render(<DetailContent element={variableElement} />);
+    render(<DetailContent itemId="body_mass_index" dataService={variableDataService} />);
 
     expect(screen.getByText('Properties')).toBeInTheDocument();
     expect(screen.getByText('Mapped to')).toBeInTheDocument();
@@ -320,8 +353,9 @@ describe('DetailContent -VariableElement', () => {
       variableDescription: ''
     };
     const minimalVar = new VariableElement(minimalVarData);
+    const minimalVarDataService = createMockDataService(minimalVar);
 
-    render(<DetailContent element={minimalVar} />);
+    render(<DetailContent itemId="test_var" dataService={minimalVarDataService} />);
 
     expect(screen.getByText('test_var')).toBeInTheDocument();
     expect(screen.getByText('Mapped to')).toBeInTheDocument();
@@ -334,20 +368,21 @@ describe('DetailContent -Header visibility', () => {
     description: 'Test',
     permissibleValues: {}
   };
-  const enumElement = new EnumElement('TestEnum', mockEnumData);
+  const enumElement = new EnumElement('HeaderTestEnum', mockEnumData);
+  const headerEnumDataService = createMockDataService(enumElement);
 
   test('should show header by default', () => {
-    render(<DetailContent element={enumElement} />);
+    render(<DetailContent itemId="HeaderTestEnum" dataService={headerEnumDataService} />);
 
     // Header contains title
-    expect(screen.getByText('TestEnum')).toBeInTheDocument();
+    expect(screen.getByText('HeaderTestEnum')).toBeInTheDocument();
   });
 
   test('should hide header when hideHeader is true', () => {
-    render(<DetailContent element={enumElement} hideHeader={true} />);
+    render(<DetailContent itemId="HeaderTestEnum" dataService={headerEnumDataService} hideHeader={true} />);
 
     // When header is hidden, title should NOT appear anywhere (it's in the outer header)
-    expect(screen.queryByText('TestEnum')).not.toBeInTheDocument();
+    expect(screen.queryByText('HeaderTestEnum')).not.toBeInTheDocument();
     // But description should still render
     expect(screen.getByText('Test')).toBeInTheDocument();
   });

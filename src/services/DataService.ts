@@ -12,7 +12,6 @@
  */
 
 import type { ModelData } from '../models/ModelData';
-import type { Relationship } from '../models/Element';
 import type {
   DetailData,
   FloatingBoxMetadata
@@ -33,51 +32,6 @@ const {elementTypes, } = APP_CONFIG;
 
 // Re-export UI types for UI components
 export type { EdgeInfo, ItemInfo };
-
-// ============================================================================
-// DEPRECATED: Old relationship data structures (will be removed in Stage 3+)
-// ============================================================================
-// These interfaces match Element.getRelationshipData() output from pre-refactor model
-// Use RelationshipDataNew (from Element.ts) for new code
-
-export interface SlotInfo {
-  attributeName: string;
-  target: string;
-  targetSection: string;
-  isSelfRef: boolean;
-}
-
-/**
- * @deprecated Use RelationshipDataNew from models/Element instead
- * This will be removed after Slots-as-Edges refactor is complete
- */
-export interface RelationshipDataOld {
-  itemName: string;
-  itemSection: string;
-  color: string;  // Header color for this item section
-  outgoing: {
-    inheritance?: {
-      target: string;
-      targetSection: string;
-    };
-    slots: SlotInfo[];
-    inheritedSlots: Array<{
-      ancestorName: string;
-      slots: SlotInfo[];
-    }>;
-  };
-  incoming: {
-    subclasses: string[];
-    usedByAttributes: Array<{
-      className: string;
-      attributeName: string;
-      sourceSection: string;
-    }>;
-    variables: Array<{
-      name: string;
-    }>;
-  };
-}
 
 export class DataService {
   private modelData: ModelData;
@@ -103,12 +57,6 @@ export class DataService {
     const element = this.modelData.elementLookup.get(itemId);
     return element?.getFloatingBoxMetadata() ?? null;
   }
-
-  // [sg] deleted getRelationships and adaptRelationshipDataToOldFormat; weren't being used
-
-  // ============================================================================
-  // NEW: Edge-based methods for Slots-as-Edges refactor (Stage 1 Step 3)
-  // ============================================================================
 
   /**
    * Get ItemInfo for a single node from the graph
@@ -211,18 +159,6 @@ export class DataService {
   getItemNamesForType(typeId: ElementTypeId): string[] {
     const collection = this.modelData.collections.get(typeId);
     return collection ? collection.getAllElements().map(e => e.name) : [];
-  }
-
-  /**
-   * Get relationships for linking visualization (used by LinkOverlay)
-   * Returns null if item not found
-   *
-   * @deprecated Use getEdgesForItem() instead (returns EdgeInfo[] with explicit source/target).
-   * Will be removed after LinkOverlay migration (Phase 2 Step 3).
-   */
-  getRelationshipsForLinking(itemId: string): Relationship[] | null {
-    const element = this.modelData.elementLookup.get(itemId);
-    return element?.getRelationships() ?? null;
   }
 
   /**

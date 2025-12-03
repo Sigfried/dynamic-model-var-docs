@@ -472,22 +472,9 @@ export function buildGraphFromSchemaData(
     addEnumNode(graph, enumName, enumName);
   });
 
-  // 3. Slots (base definitions)
-  schemaData.slots.forEach((_slotData, slotName) => {
-    addSlotNode(graph, slotName, slotName);
-  });
-
-  // 3b. Slot overrides (from class attributes where slotId differs from base)
-  schemaData.classes.forEach((classData) => {
-    if (classData.attributes) {
-      Object.entries(classData.attributes).forEach(([attrName, attrDef]) => {
-        const slotId = attrDef.slotId;
-        // Create node for override slots that aren't already in the graph
-        if (slotId && !graph.hasNode(slotId)) {
-          addSlotNode(graph, slotId, attrName);
-        }
-      });
-    }
+  // 3. Slots (all slots including global, inline, and override)
+  schemaData.slots.forEach((slotData, slotId) => {
+    addSlotNode(graph, slotId, slotData.name);
   });
 
   // 4. Types
@@ -509,22 +496,25 @@ export function buildGraphFromSchemaData(
   });
 
   // 2. Slot edges (class→range, class→slot, slot→range)
-  // The processed JSON has all attributes pre-computed with slotId and inherited_from
+  // Each class has slots array with references; slot data is in schemaData.slots
   schemaData.classes.forEach((classData) => {
-    if (classData.attributes) {
-      Object.entries(classData.attributes).forEach(([attrName, attrDef]) => {
-        const range = attrDef.range || 'string';
-        addSlotEdges(
-          graph,
-          classData.name,
-          range,
-          attrName,
-          attrDef.slotId,  // Use pre-computed slotId from transform_schema.py
-          attrDef.required ?? false,
-          attrDef.multivalued ?? false,
-          attrDef.inherited_from  // Pass inherited_from from processed JSON
-        );
-      });
+    for (const slotRef of classData.slots) {
+      const slotData = schemaData.slots.get(slotRef.id);
+      if (!slotData) {
+        console.warn(`Graph: Slot ${slotRef.id} not found for class ${classData.name}`);
+        continue;
+      }
+      const range = slotData.range || 'string';
+      addSlotEdges(
+        graph,
+        classData.name,
+        range,
+        slotData.name,
+        slotRef.id,
+        slotData.required ?? false,
+        slotData.multivalued ?? false,
+        slotRef.inheritedFrom
+      );
     }
   });
 

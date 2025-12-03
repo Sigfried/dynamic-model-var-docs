@@ -148,11 +148,11 @@ describe('calculateDisplayMode', () => {
     const customThreshold = 800;
 
     // 1920 - 1060 = 860, which is >= 800
-    const result1 = calculateDisplayMode(1920, 1, 1, customThreshold);
+    const result1 = calculateDisplayMode(1920, 1, 1, false, customThreshold);
     expect(result1.mode).toBe('stacked');
 
     // 1800 - 1060 = 740, which is < 800
-    const result2 = calculateDisplayMode(1800, 1, 1, customThreshold);
+    const result2 = calculateDisplayMode(1800, 1, 1, false, customThreshold);
     expect(result2.mode).toBe('cascade');
   });
 });

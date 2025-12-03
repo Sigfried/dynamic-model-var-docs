@@ -31,15 +31,17 @@ describe('getUsedByClasses()', () => {
         expect(usedByClasses.length).toBeGreaterThan(0);
 
         // Verify each class actually uses this enum
+        const slotCollection = data.collections.get('slot') as import('../models/Element').SlotCollection;
         usedByClasses.forEach(className => {
-          const cls = allClasses.find(c => c.name === className);
+          const cls = allClasses.find(c => c.name === className) as import('../models/Element').ClassElement;
           expect(cls).toBeDefined();
 
-          // Check that this class has an attribute with range === enum name
-          const hasEnumAttribute = Object.values(cls!.attributes || {}).some(
-            attr => attr.range === testEnum!.name
-          );
-          expect(hasEnumAttribute).toBe(true);
+          // Check that this class has a slot with range === enum name
+          const hasEnumSlot = cls.slotRefs.some(slotRef => {
+            const slot = slotCollection.getElement(slotRef.id) as import('../models/Element').SlotElement;
+            return slot?.range === testEnum!.name;
+          });
+          expect(hasEnumSlot).toBe(true);
         });
 
         // Verify results are sorted
@@ -65,12 +67,18 @@ describe('getUsedByClasses()', () => {
       const data = await loadModelData();
       const enumCollection = data.collections.get('enum') as EnumCollection;
       const classCollection = data.collections.get('class') as ClassCollection;
+      const slotCollection = data.collections.get('slot') as import('../models/Element').SlotCollection;
       const allClasses = classCollection.getAllElements();
 
-      // Find a class with multiple attributes using the same enum
+      // Find a class with multiple slots using the same enum
       for (const cls of allClasses) {
-        const attrs = Object.values(cls.attributes || {});
-        const enumRanges = attrs.map(a => a.range).filter(r => r && r.includes('Enum'));
+        const classElement = cls as import('../models/Element').ClassElement;
+        const enumRanges = classElement.slotRefs
+          .map(slotRef => {
+            const slot = slotCollection.getElement(slotRef.id) as import('../models/Element').SlotElement;
+            return slot?.range;
+          })
+          .filter(r => r && r.includes('Enum'));
         const uniqueEnums = new Set(enumRanges);
 
         // If a class uses the same enum multiple times
@@ -119,13 +127,14 @@ describe('getUsedByClasses()', () => {
 
         // Verify each class actually uses this slot
         usedByClasses.forEach(className => {
-          const cls = allClasses.find(c => c.name === className);
+          const cls = allClasses.find(c => c.name === className) as import('../models/Element').ClassElement;
           expect(cls).toBeDefined();
 
-          // Check that this class has an attribute that references this slot
-          const hasSlot = cls!.attributes && Object.values(cls!.attributes).some(
-            attrDef => attrDef.slotId === testSlot!.name
-          );
+          // Check that this class has a slotRef that references this slot
+          const hasSlot = cls.slotRefs.some(slotRef => {
+            const slot = slotCollection.getElement(slotRef.id) as import('../models/Element').SlotElement;
+            return slot?.name === testSlot!.name;
+          });
           expect(hasSlot).toBe(true);
         });
 
@@ -148,22 +157,25 @@ describe('getUsedByClasses()', () => {
       }
     });
 
-    test('should find classes that use slot in attributes', async () => {
+    test('should find classes that use slot in slotRefs', async () => {
       const data = await loadModelData();
       const classCollection = data.collections.get('class') as ClassCollection;
       const slotCollection = data.collections.get('slot') as SlotCollection;
       const allClasses = classCollection.getAllElements();
 
-      // Find a class that has attributes (all classes should have attributes)
-      const classWithAttrs = allClasses.find(c => c.attributes && Object.keys(c.attributes).length > 0);
+      // Find a class that has slotRefs
+      const classWithSlots = allClasses.find(c => {
+        const classElement = c as import('../models/Element').ClassElement;
+        return classElement.slotRefs && classElement.slotRefs.length > 0;
+      }) as import('../models/Element').ClassElement | undefined;
 
-      if (classWithAttrs && classWithAttrs.attributes) {
-        const attrDef = Object.values(classWithAttrs.attributes)[0];
-        const slotElement = slotCollection.getElement(attrDef.slotId);
+      if (classWithSlots && classWithSlots.slotRefs.length > 0) {
+        const slotRef = classWithSlots.slotRefs[0];
+        const slotElement = slotCollection.getElement(slotRef.id);
 
         if (slotElement) {
           const usedBy = slotElement.getUsedByClasses();
-          expect(usedBy).toContain(classWithAttrs.name);
+          expect(usedBy).toContain(classWithSlots.name);
         }
       }
     });

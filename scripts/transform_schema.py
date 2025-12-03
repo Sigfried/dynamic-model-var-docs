@@ -28,6 +28,9 @@ from urllib import request
 from urllib.error import URLError, HTTPError
 
 
+# Delimiter for override slot IDs: "{slotName}-{ClassName}" e.g., "category-SdohObservation"
+SLOT_OVERRIDE_DELIMITER = '-'
+
 # Track invalid prefixes encountered during URI expansion
 invalid_prefixes: Set[str] = set()
 # Track which prefixes have been validated
@@ -178,15 +181,15 @@ def transform_classes(
     prefixes: Dict[str, Any],
     global_slots: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Transform classes to streamlined format with computed inherited_from and inline flag."""
+    """Transform classes to streamlined format with slot references (no duplication)."""
     processed = {}
 
     for class_name, class_def in expanded_classes.items():
-        # Build attributes with inherited_from computed
-        attributes = {}
+        # Build slots array with references only (no duplicated slot data)
+        slots = []
         class_attrs = class_def.get('attributes', {})
 
-        for attr_name, attr_def in class_attrs.items():
+        for attr_name in class_attrs.keys():
             # Compute inherited_from
             inherited_from = get_defining_class(class_name, attr_name, expanded_classes, hierarchy)
 
@@ -195,32 +198,18 @@ def transform_classes(
 
             # Determine slot ID
             if slot_usage_override:
-                # Has override - create instance ID
-                slot_id = f"{attr_name}-{class_name}"
+                # Has override - use instance ID
+                slot_id = f"{attr_name}{SLOT_OVERRIDE_DELIMITER}{class_name}"
             else:
                 # No override - use base slot name
                 slot_id = attr_name
 
-            # Determine if inline (not in global slots) or referenced (in global slots)
-            # Note: base slot name (before any override) is what we check
-            inline = attr_name not in global_slots
-
-            # Build processed attribute
-            processed_attr = {
-                'slotId': slot_id,
-                'range': attr_def.get('range'),
-                'inline': inline
-            }
-
-            # Add optional fields
-            if attr_def.get('required') is not None:
-                processed_attr['required'] = attr_def['required']
-            if attr_def.get('multivalued') is not None:
-                processed_attr['multivalued'] = attr_def['multivalued']
+            # Build slot reference (minimal - just id and inherited_from if present)
+            slot_ref: Dict[str, Any] = {'id': slot_id}
             if inherited_from is not None:
-                processed_attr['inherited_from'] = inherited_from
+                slot_ref['inherited_from'] = inherited_from
 
-            attributes[attr_name] = processed_attr
+            slots.append(slot_ref)
 
         # Build processed class
         processed_class = {
@@ -228,7 +217,7 @@ def transform_classes(
             'name': class_name,
             'parent': class_def.get('is_a'),
             'abstract': class_def.get('abstract', False),
-            'attributes': attributes
+            'slots': slots  # Array of slot references
         }
 
         # Add optional fields
@@ -247,43 +236,56 @@ def transform_classes(
 
 
 def transform_slots(
-    expanded_slots: Dict[str, Any],
-    expanded_classes: Dict[str, Any],
+    schema_slots: Dict[str, Any],
+    schema_classes: Dict[str, Any],
     prefixes: Dict[str, Any]
 ) -> Dict[str, Any]:
     """
-    Transform slots to include base definitions and override instances.
+    Transform slots to include all slot definitions in one place.
 
-    Creates slot instances for each slot_usage override with ID {slotName}-{ClassName}.
+    Includes:
+    - Global slots (marked with global: True)
+    - Inline slots (defined on classes, not in global slots)
+    - Override slots (have overrides field pointing to base slot)
     """
     processed = {}
 
-    # Add base slot definitions
-    for slot_name, slot_def in expanded_slots.items():
-        processed_slot = {
-            'id': slot_name,
-            'name': slot_name,
-            'range': slot_def.get('range')
-        }
+    # Part 1: Collect all base slots from class attributes (both inline and global refs)
+    for class_name, class_def in schema_classes.items():
+        class_attrs = class_def.get('attributes', {})
 
-        # Add optional fields
-        if slot_def.get('description'):
-            processed_slot['description'] = slot_def['description']
-        if slot_def.get('required') is not None:
-            processed_slot['required'] = slot_def['required']
-        if slot_def.get('multivalued') is not None:
-            processed_slot['multivalued'] = slot_def['multivalued']
+        for attr_name, attr_def in class_attrs.items():
+            if attr_name in processed:
+                # Check if definitions match (they should for the same slot)
+                existing = processed[attr_name]
+                # Compare relevant fields (exclude 'id', 'name', 'global' which we add)
+                if {k: v for k, v in existing.items() if k not in ('id', 'name', 'global')} != attr_def:
+                    print(f"  ⚠ Warning: slot '{attr_name}' has different definition in class '{class_name}'", file=sys.stderr)
+                continue
 
-        # Expand slot_uri if present
-        if slot_def.get('slot_uri'):
-            expanded_url = expand_uri(slot_def['slot_uri'], prefixes, validate=True)
-            if expanded_url:
-                processed_slot['slot_url'] = expanded_url
+            # Copy all fields from attr_def and add id/name
+            slot_def = {'id': attr_name, 'name': attr_name, **attr_def}
+            processed[attr_name] = slot_def
 
-        processed[slot_name] = processed_slot
+    # Part 2: Mark global slots and add extra fields from schema_slots
+    for slot_name, global_slot_def in schema_slots.items():
+        if slot_name in processed:
+            # Mark as global and add any extra fields
+            processed[slot_name]['global'] = True
 
-    # Create override instances for slot_usage
-    for class_name, class_def in expanded_classes.items():
+            # Add slot_uri if present in global definition
+            if global_slot_def.get('slot_uri'):
+                expanded_url = expand_uri(global_slot_def['slot_uri'], prefixes, validate=True)
+                if expanded_url:
+                    processed[slot_name]['slot_url'] = expanded_url
+        else:
+            # Global slot not used by any class - this is unexpected
+            # Note: If future schemas have intentionally unused global slots that should
+            # appear in the UI, add them here. For now, warn since it's likely an error.
+            print(f"  ⚠ Warning: global slot '{slot_name}' is not used by any class", file=sys.stderr)
+
+    # Part 3: Create override instances for slot_usage
+    for class_name, class_def in schema_classes.items():
         slot_usage = class_def.get('slot_usage', {})
 
         for slot_name, usage_override in slot_usage.items():
@@ -295,71 +297,15 @@ def transform_slots(
                 print(f"  ⚠ Warning: slot_usage for '{slot_name}' in class '{class_name}' not found in attributes", file=sys.stderr)
                 continue
 
-            # Get base slot definition (may be in global slots or only in class attributes)
-            base_slot = expanded_slots.get(slot_name)
-
-            # Create override slot instance
-            instance_id = f"{slot_name}-{class_name}"
+            # Create override slot instance - copy all fields and add override-specific ones
+            instance_id = f"{slot_name}{SLOT_OVERRIDE_DELIMITER}{class_name}"
             override_slot = {
                 'id': instance_id,
                 'name': slot_name,  # Display name (same as base)
-                'range': merged_attr.get('range'),
-                'overrides': slot_name  # Reference to base slot
+                'overrides': slot_name,  # Reference to base slot
+                **merged_attr
             }
-
-            # Copy other fields from merged attribute
-            if merged_attr.get('description'):
-                override_slot['description'] = merged_attr['description']
-            if merged_attr.get('required') is not None:
-                override_slot['required'] = merged_attr['required']
-            if merged_attr.get('multivalued') is not None:
-                override_slot['multivalued'] = merged_attr['multivalued']
-
             processed[instance_id] = override_slot
-
-            # Also ensure base slot exists in processed slots
-            # (may not be in global slots if only defined as class attribute)
-            if slot_name not in processed:
-                # Need to create base slot definition
-                # Walk up hierarchy to find original definition (before this override)
-                parent_name = class_def.get('is_a')
-                base_attr = None
-
-                while parent_name:
-                    parent_class = expanded_classes.get(parent_name)
-                    if not parent_class:
-                        break
-
-                    parent_attrs = parent_class.get('attributes', {})
-                    if slot_name in parent_attrs:
-                        # Found it - use parent's definition as base
-                        base_attr = parent_attrs[slot_name]
-                        # Check if parent also has slot_usage for this slot
-                        parent_slot_usage = parent_class.get('slot_usage', {})
-                        if slot_name in parent_slot_usage:
-                            # Parent also overrides, keep walking up
-                            parent_name = parent_class.get('is_a')
-                            continue
-                        else:
-                            # Parent doesn't override - this is the base definition
-                            break
-
-                    parent_name = parent_class.get('is_a')
-
-                if base_attr:
-                    # Create base slot from found definition
-                    base_slot_def = {
-                        'id': slot_name,
-                        'name': slot_name,
-                        'range': base_attr.get('range')
-                    }
-                    if base_attr.get('description'):
-                        base_slot_def['description'] = base_attr['description']
-                    if base_attr.get('required') is not None:
-                        base_slot_def['required'] = base_attr['required']
-                    if base_attr.get('multivalued') is not None:
-                        base_slot_def['multivalued'] = base_attr['multivalued']
-                    processed[slot_name] = base_slot_def
 
     return processed
 
