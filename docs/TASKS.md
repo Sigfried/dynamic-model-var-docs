@@ -107,13 +107,7 @@
             },
         ]
     ```
-- when the graph is being created, check if middle panel is visible, and recreate
-  the graph on middle panel toggle
-  - with middle panel hidden create edges from class to range; slots remain available
-    as nodes, but with no edges connected to them
-  - with middle panel shown, create edges from class to slot and slot to range, but
-    no direct edges from class to range
-- 
+    
 ### ✅ Phase 1 & 1.5: Completed
 
 **Phase 1: UI Layer Cleanup** and **Phase 1.5: Complete Type Organization** are both complete.

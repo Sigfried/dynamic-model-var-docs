@@ -204,30 +204,25 @@ export async function loadRawData(): Promise<SchemaData> {
   // Part 1: Global slots from top-level slots section
   const slots = new Map<string, SlotData>();
   Object.entries(processedSchemaDTO.slots || {}).forEach(([name, dto]) => {
-    // Only include base slots, not slot_usage override instances (those have hyphens)
-    if (!name.includes('-')) {
       slots.set(name, transformSlotDTO(dto));
-    }
   });
 
   // Part 2: Inline slot definitions from class attributes
   // Collect unique inline slots defined across all classes
+  // (Override slots like "category-SdohObservation" are already in Part 1)
   Object.values(processedSchemaDTO.classes).forEach((classDTO) => {
     Object.entries(classDTO.attributes || {}).forEach(([_attrName, attrDef]) => {
       const slotId = attrDef.slotId;
-      // Skip if already collected or if it's a slot_usage instance (has hyphen)
-      if (!slots.has(slotId) && !slotId.includes('-')) {
-        // Only collect inline slots (not referenced global slots)
-        if (attrDef.inline) {
-          // Transform attribute to SlotData
-          const slotData: SlotData = {
-            range: attrDef.range,
-            description: attrDef.description,
-            required: attrDef.required,
-            multivalued: attrDef.multivalued
-          };
-          slots.set(slotId, slotData);
-        }
+      // Skip if already collected (including override slots from Part 1)
+      if (!slots.has(slotId) && attrDef.inline) {
+        // Transform attribute to SlotData
+        const slotData: SlotData = {
+          range: attrDef.range,
+          description: attrDef.description,
+          required: attrDef.required,
+          multivalued: attrDef.multivalued
+        };
+        slots.set(slotId, slotData);
       }
     });
   });

@@ -20,7 +20,7 @@ import {
   type LinkFilterOptions
 } from '../utils/linkHelpers';
 import type { ItemHoverData } from './Section';
-import { splitId } from '../utils/idContextualization';
+import { splitId, panelPrefixes, contextualizeId } from '../utils/idContextualization';
 import { getElementLinkTooltipColor, type ElementTypeId } from '../config/appConfig';
 import { EDGE_TYPES, getEdgeTypesForLinks, type EdgeInfo } from '../models/SchemaTypes';
 
@@ -169,7 +169,7 @@ export default function LinkOverlay({
         if (edge.sourceItem.id !== itemId) continue;
 
         const targetId = edge.targetItem.id;
-        const selector = `[id="lp-${targetId}"], [id="mp-${targetId}"], [id="rp-${targetId}"]`;
+        const selector = panelPrefixes.map(p => `[id="${contextualizeId({id: targetId, context: p})}"]`).join(', ');
         const targetEls: NodeListOf<Element> = document.querySelectorAll(selector);
 
         for (const _targetEl of targetEls) {

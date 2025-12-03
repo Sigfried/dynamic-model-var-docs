@@ -34,7 +34,7 @@ export type SelectedElement = Element;
  * Used by Section component to emit hover events with necessary context.
  */
 export interface ItemHoverData {
-  id: string;       // DOM node ID for positioning (e.g., "lp-Specimen")
+  id: string;       // DOM node ID for positioning (e.g., "lp::Specimen")
   type: string;     // Item type: "class", "enum", "slot", "variable"
   name: string;     // Item name: "Specimen", "SpecimenTypeEnum", etc.
 }
@@ -78,7 +78,7 @@ export interface SectionData {
   id: string;                     // "class"
   label: string;                  // "Classes (42)"
   getItems: (expandedItems?: Set<string>, position?: 'left' | 'middle' | 'right') => SectionItemData[];
-  expansionKey?: string;          // For state persistence ("lp-class")
+  expansionKey?: string;          // For state persistence ("lp::class")
   defaultExpansion?: Set<string>; // Default expanded items
 }
 
