@@ -20,9 +20,44 @@
 - **Why last**: Final cleanup after everything else works
 - **Dependencies**: Graph as primary data source, Steps 3-4 complete
 
+**Implementation Plan:**
+
+1. **Move `getDetailData()` out of Element subclasses** (~400 lines total)
+   - Create `DetailDataBuilder` or config-driven approach in components layer
+   - Each element type defines its detail schema (sections, fields) declaratively
+   - Builder queries element properties + graph to construct DetailData
+   - Element subclasses become data holders only
+
+2. **Move tree methods to Abstract Tree system** (see [Abstract Tree](#abstract-tree))
+   - `toRenderableItems()`, `toSectionItems()`, `getSectionItemData()` → tree rendering layer
+   - `ancestorList()`, `traverse()` → tree utilities
+   - Element keeps only: `parent`, `children`, `pathFromRoot` (data)
+
+3. **Consolidate flat collections** (Enum, Type, Slot)
+   - Extract common `FlatCollection<T extends Element>` base
+   - `fromData()` pattern is identical - parameterize by element constructor
+   - Reduces ~135 lines of duplicated boilerplate
+
+4. **Simplify Element subclass constructors**
+   - Consider factory functions that map transformed data → Element properties
+   - Or: Elements hold reference to transformed data + graph, compute on demand
+
+5. **Graph as primary for relationship queries** (already partially done)
+   - `getUsedByClasses()` already delegates to graph ✅
+   - `ClassElement.getSlotElement()` → graph query
+   - Remove `globalGraph` module variable - pass graph explicitly
+
+6. **Fix remaining "DTO" terminology in codebase**
+   - Rename references to use `*Input` (raw) or `*Data` (transformed) consistently
+   - Update comments and documentation
+
+**Target state:**
+- Element subclasses: ~30-50 lines each (identity + type + data reference)
+- Presentation logic: components layer or DetailDataBuilder
+- Tree logic: Abstract Tree system
+- Relationship queries: Graph module
+
 **LinkOverlay fixes** ✅ **MOSTLY COMPLETE**
-- Migrated to graph-based edge queries (see Phase 2 Step 3 above)
-- Remaining bugs: see Current Bugs #1, #2, #4 above
 - Edge labels: show on hover; tooltip display needs improvement
 
 **URLs as clickable links**
@@ -30,18 +65,13 @@
 - Already set up infrastructure for this
 - See: External Link Integration in Future Ideas
 
-[sg] **item names as hover/links**
+**item names as hover/links**
 - in detail and hover boxes, make all item references
   act like they do in panels: hover box on hover, detail box
   on click. this is already working for most items in hover
   boxes but not slot names.
 
-**selfRefs (loop links)**   [sg] complete
-- Display self-referential links as loops instead of crossing panels
-- Implementation: `generateSelfRefPath()` in [src/utils/linkHelpers.ts:235](../src/utils/linkHelpers.ts#L235)
-- May have done some of this on branch (check)
-
-### Positioning Issues
+### Floating Box Issues
 1. **Detail box positioning bugs** - Multiple issues from Unified Detail Box work:
     - Remove unnecessary isStacked logic (#3)
     - Make stacked width responsive (#4)
@@ -72,8 +102,6 @@
     - RelationshipInfoBox uses fixed positioning which conflicts with FloatingBox wrapper [sg] still true?
     - creates DetailContent instead of RelationshipInfoBox on upgrade
     - Fix: Refactor RelationshipInfoBox to support both transitory and persistent modes
-
-### Medium Priority
 
 <a id="abstract-tree"></a>
 ### Abstract Tree Rendering System
@@ -152,9 +180,40 @@ full task description (recovered from [old TASKS.md](https://github.com/Sigfried
 - `src/components/RelationshipInfoBox.tsx` - Structure data as tree
 - `src/components/DetailPanel.tsx` - Use abstraction for slots table
 
+**Methods to extract from Element base class:**
+- `toRenderableItems()` (~30 lines) - tree → flat list with expansion
+- `toSectionItems()` (~25 lines) - tree → SectionItemData list
+- `getSectionItemData()` (~20 lines) - single element → SectionItemData
+- `ancestorList()` (~10 lines) - walk up parent chain
+- `traverse()` (~5 lines) - depth-first traversal
+
+**Element keeps (data only):**
+- `parent?: Element` - parent reference
+- `children: Element[]` - child array
+- `pathFromRoot: string[]` - precomputed path
+
+**New tree utilities location options:**
+- `src/utils/treeHelpers.ts` - standalone functions taking Element/tree node
+- `src/models/TreeNode.ts` - interface + utility functions
+- `src/hooks/useTreeRendering.ts` - hook wrapping tree → items conversion
+
 ---
 
-**Grouped Slots Panel - Show slots organized by source**
+### **Enum inheritance and other fields being ignored -- fix it**
+- LinkML enums use `inherits` field (not `is_a` like classes)
+- Semantics: enum includes all permissible values from inherited enums
+- Currently: dataLoader/Element ignores enum `inherits` and other fields
+- Also need to integrate other enum fields not yet surfaced in UI
+- **Plan:**
+  1. Audit EnumInput for all fields (check warnings in console)
+  2. Add `inherits` and other missing fields to expected EnumInput fields
+  3. Add fields to EnumData transformation
+  4. In EnumElement: compute full permissible values (own + inherited)
+  5. Show inheritance info in enum detail panel (which values came from where)
+  6. Surface other enum fields in UI as appropriate
+  7. Consider: graph edges for enum inheritance relationships
+
+### **Grouped Slots Panel - Show slots organized by source**
 - Display slots grouped by Global + per-class sections
 - Show inheritance (inherited vs defined here vs overridden)
 - Visual indicators for slot origin
