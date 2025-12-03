@@ -9,86 +9,16 @@
 
 ## 🐛 Current Bugs
 
-### Link Rendering Issues
-1. **Class→slot links pointing wrong direction** (3-panel mode)
-2. **Specimen→analyte_type link missing** (see screenshot in old TASKS.md:107)
-3.  ✅ Complete
-    - **SVG path NaN errors** - Console shows `<path> attribute d: Expected number, "M NaN NaN C NaN Na..."`
-      - **Location**: LinkOverlay.tsx:448 (path element at line 450: `d={pathData}`)
-      - something is wrong with the self-ref code on lines 403-412
-4. when showing/hiding middle panel, links don't update until some kind of interaction
-
-### Hover/Detail Box Issues
-4. ✅ **Slot hover shows "No relationships found"** - Fixed by adding CLASS_SLOT/SLOT_RANGE edge support
-
-### Positioning Issues
-5. **Detail box positioning bugs** - Multiple issues from Unified Detail Box work:
-   - Remove unnecessary isStacked logic (#3)
-   - Make stacked width responsive (#4)
-   - Fix transitory/persistent box upgrade (#6); currently deletes rel info box and creates new detail box - should simply make rel info box persistent (draggable, etc.)
-   - Fix hover/upgrade behavior (#7); RelationshipInfoBox may use fixed positioning conflicting with FloatingBox wrapper
-   - See [archived details](archive/tasks_pre_reorg.md#unified-detail-box-system) for full list
-
----
+- when showing/hiding middle panel, links don't update until some kind of interaction
+- title of slots info box always shows 0 outgoing, 0 incoming
 
 ## 📋 Upcoming Work (Ordered by Priority)
-
-### ✅ Slot Data Consolidation - COMPLETE (Dec 2024)
-
-Consolidated slot data structure:
-- Classes now have `slots: SlotReference[]` instead of `attributes` dict
-- All slot data lives in slots section with `global` and `overrides` flags
-- SlotReference is minimal: `{ id, inheritedFrom? }`
-- Removed obsolete Relationship code (~2000 lines deleted)
-- All 122 tests passing
-
-**Future enhancement** (not blocking): Convert sections to arrays with nodeType field for simpler data format.
-
-### ✅ Phase 1 & 1.5: Completed
-
-**Phase 1: UI Layer Cleanup** and **Phase 1.5: Complete Type Organization** are both complete.
-
-**Key accomplishments:**
-- Separated UI types from model types (ComponentData.ts)
-- Renamed types.ts → import_types.ts (DTOs only)
-- Extracted ModelData and SchemaTypes from import_types.ts
-- Created single source of truth for config (appConfig.ts)
-- Eliminated all hard-coded values in components
-- Added consistent element type IDs (no more parsing display names)
-
-**See [archive/tasks.md](archive/tasks.md) for detailed implementation notes.**
-
-### ✅ Type System Cleanup - COMPLETE
-
-Simplified edge types and retired deprecated interfaces. See [archive/tasks.md#type-system-cleanup](archive/tasks.md#type-system-cleanup) for details.
-
-### ✅ Phase 3: Data Flow Refactor - Steps 5-6 COMPLETE
-
-Graph-first initialization, O(1) graph queries for getUsedByClasses(). See [archive/tasks.md#phase-3-data-flow](archive/tasks.md#phase-3-data-flow) for details.
-
-### ✅ Phase 2: LinkOverlay Migration - Steps 3 & 3b COMPLETE
-
-LinkOverlay and RelationshipInfoBox now use graph-based queries directly. See [archive/tasks.md#phase-2-linkoverlay-migration](archive/tasks.md#phase-2-linkoverlay-migration) for details.
-
-**Step 4: Remove old getRelationships() methods** ✅ COMPLETE (Dec 2024)
-- Deleted from ClassElement, EnumElement, SlotElement, VariableElement
-- Removed ClassSlot class (replaced by graph slot edges)
-- Removed `getRelationshipsForLinking()` from DataService
-- Removed Relationship interface, categorizeRange(), and related code
-
-**Step 7: Reduce Element subclass code** 🔲
+**Reduce Element subclass code** 🔲
 - Most behavior should move to graph queries or other layers
 - Element classes become thinner wrappers around graph data
 - Many methods can be replaced with graph queries
 - **Why last**: Final cleanup after everything else works
 - **Dependencies**: Graph as primary data source, Steps 3-4 complete
-
-### More Upcoming
-
-- ✅ **Merge Element.ts and ElementPreRefactor.ts**
-  - Merged via git mv to preserve history
-  - Renamed ItemInfoProposal → ItemInfo, EdgeInfoProposal → EdgeInfo
-  - Old types renamed to *Deprecated for backward compatibility
 
 **LinkOverlay fixes** ✅ **MOSTLY COMPLETE**
 - Migrated to graph-based edge queries (see Phase 2 Step 3 above)
@@ -110,6 +40,38 @@ LinkOverlay and RelationshipInfoBox now use graph-based queries directly. See [a
 - Display self-referential links as loops instead of crossing panels
 - Implementation: `generateSelfRefPath()` in [src/utils/linkHelpers.ts:235](../src/utils/linkHelpers.ts#L235)
 - May have done some of this on branch (check)
+
+### Positioning Issues
+1. **Detail box positioning bugs** - Multiple issues from Unified Detail Box work:
+    - Remove unnecessary isStacked logic (#3)
+    - Make stacked width responsive (#4)
+    - Fix transitory/persistent box upgrade (#6); currently deletes rel info box and creates new detail box - should simply make rel info box persistent (draggable, etc.)
+    - Fix hover/upgrade behavior (#7); RelationshipInfoBox may use fixed positioning conflicting with FloatingBox wrapper
+    - See [archived details](archive/tasks_pre_reorg.md#unified-detail-box-system) for full list
+
+1. **Hover positioning** (⚠️ minor)
+    - Working but not centered on item (appears near top)
+    - Expected: Box should center vertically just above or below hovered item and
+      horizontally nearby to the right or left -- all depending on how much space
+      available. maybe at some point try to develop better heuristics to avoid 
+      obscuring info that the user may want to focus on
+
+3. **Remove unnecessary isStacked logic** (enhancement)
+    - All boxes should be draggable regardless of display mode
+    - displayMode only affects initial positioning, not capabilities
+
+4. **Make stacked width responsive** (enhancement)
+    - Currently fixed at 600px
+    - Should calculate based on available space after panels
+
+6. **Fix transitory/persistent box upgrade architecture** (enhancement)
+    - Current: Creates new box on upgrade, causing position jump
+    - Should: Modify existing RelationshipInfoBox mode from transitory → persistent
+
+7. **Hover/upgrade behavior broken** (❌ critical)
+    - RelationshipInfoBox uses fixed positioning which conflicts with FloatingBox wrapper [sg] still true?
+    - creates DetailContent instead of RelationshipInfoBox on upgrade
+    - Fix: Refactor RelationshipInfoBox to support both transitory and persistent modes
 
 ### Medium Priority
 

@@ -312,3 +312,33 @@ export function getAllElementTypeIds(): ElementTypeId[] {
 ### Bug Fixes
 - ✅ Slot hover shows "No relationships found" - Fixed by adding CLASS_SLOT/SLOT_RANGE edge support
 - ✅ Slot override nodes missing - Graph now creates nodes for all slotDefIds
+
+### Link Rendering Issues
+1. **Class→slot links pointing wrong direction** (3-panel mode) [sg] fixed
+2. **Specimen→analyte_type link missing** (see screenshot in old TASKS.md:107) [sg] fixed
+3.  ✅ Complete
+    - **SVG path NaN errors** - Console shows `<path> attribute d: Expected number, "M NaN NaN C NaN Na..."`
+        - **Location**: LinkOverlay.tsx:448 (path element at line 450: `d={pathData}`)
+        - something is wrong with the self-ref code on lines 403-412
+
+### Hover/Detail Box Issues
+4. ✅ **Slot hover shows "No relationships found"** - Fixed by adding CLASS_SLOT/SLOT_RANGE edge support
+
+
+### ✅ Slot Data Consolidation - COMPLETE (Dec 2024)
+
+Consolidated slot data structure:
+- Classes now have `slots: SlotReference[]` instead of `attributes` dict
+- All slot data lives in slots section with `global` and `overrides` flags
+- SlotReference is minimal: `{ id, inheritedFrom? }`
+- Removed obsolete Relationship code (~2000 lines deleted)
+- All 122 tests passing
+
+LinkOverlay and RelationshipInfoBox now use graph-based queries directly. See [archive/tasks.md#phase-2-linkoverlay-migration](archive/tasks.md#phase-2-linkoverlay-migration) for details.
+
+**Step 4: Remove old getRelationships() methods** ✅ COMPLETE (Dec 2024)
+- Deleted from ClassElement, EnumElement, SlotElement, VariableElement
+- Removed ClassSlot class (replaced by graph slot edges)
+- Removed `getRelationshipsForLinking()` from DataService
+- Removed Relationship interface, categorizeRange(), and related code
+
