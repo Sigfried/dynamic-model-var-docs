@@ -172,7 +172,13 @@ LinkOverlay and RelationshipInfoBox now use graph-based queries directly. See [a
 - Already set up infrastructure for this
 - See: External Link Integration in Future Ideas
 
-**selfRefs (loop links)**
+[sg] **item names as hover/links**
+- in detail and hover boxes, make all item references
+  act like they do in panels: hover box on hover, detail box
+  on click. this is already working for most items in hover
+  boxes but not slot names.
+
+**selfRefs (loop links)**   [sg] complete
 - Display self-referential links as loops instead of crossing panels
 - Implementation: `generateSelfRefPath()` in [src/utils/linkHelpers.ts:235](../src/utils/linkHelpers.ts#L235)
 - May have done some of this on branch (check)
@@ -236,6 +242,24 @@ Features from LinkML-generated documentation to consider (see archived REFACTOR_
 
 Example: https://vladistan.github.io/linkml-qudt/datadict/#angleunit
 
+**Relationship Labels**
+
+This table can be put as a typescript object in appConfig.ts to provide labels
+for the different relationships. It's not well-thought-out at this point. Need
+to review actual LinkML terminology.
+
+| **From** | **To**                         | **LinkML Label**                      | **Regular User Label**                    | **Notes**                        |
+|----------|--------------------------------|---------------------------------------|-------------------------------------------|----------------------------------|
+| Class    | Parent Class                   | "is_a"                                | "inherited from"                          | Tree structure (parent/child)    |
+| Class    | Subclass                       | "has subclass"                        | "inherited by"                            | Reverse of inherits              |
+| Class    | Enum (via slot)                | "has slot {name} with enum {enum}" .  | "has property {name} with {enum} values"  | Compound: Class→Slot→Enum        |
+| Class    | Class (via slot)               | "has slot {name} referencing {class}" | "has property {name} referencing {class}" | Compound: Class→Slot→Class       |
+| Class    | Slot (via slot reference)      | "uses slot"                           | "has property"                            | Class references global slot     |
+| Class    | Slot (via slot_usage override) | "overrides slot"                      | "overrides property"                      | Class overrides global slot      |
+| Slot     | Class/Enum (via range)         | "constrained by"                      | "constrained by"                          | Slot's range restriction         |
+| Enum     | Class (via usage)              | "constrains slot {name} in {class}"   | "constrains slot {name} in {class}"       | Reverse: Enum→Class that uses it |
+| Variable | Class                          | "instantiates"                        | "maps to"                                 | Variable is instance of Class    |
+| Class    | Variables                      | "has instances"                       | "mapped from"                             | Reverse: Class→Variables         |
 ---
 
 ## 🔮 Future Ideas (Not Prioritized)
