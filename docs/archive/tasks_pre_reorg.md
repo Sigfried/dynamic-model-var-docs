@@ -295,6 +295,7 @@ a message like:
 ---
 
 
+<a id="detailrefactor"></a>
 ### Unified Detail Box System - Remaining Work
 
 **Context**: Steps 0-3 completed, Step 4 partially complete. Core functionality working but some bugs and enhancements remain.
@@ -367,6 +368,7 @@ See REFACTOR_PLAN.md Stage 4 for how this fits into three-panel layout with slot
 
 ---
 
+<a id="abstract-tree"></a>
 ### Abstract Tree Rendering System
 
 **IMPORTANT**: Before starting, give tour of current tree rendering, fully specify interface, write production code inline first before extracting.
@@ -379,7 +381,69 @@ See REFACTOR_PLAN.md Stage 4 for how this fits into three-panel layout with slot
 - Centralizes expansion logic
 - Could support multiple tree layouts (simple indented, tabular with sections)
 
-See full task description in Future Work section for implementation approach.
+full task description (recovered from [old TASKS.md](https://github.com/Sigfried/dynamic-model-var-docs/blob/df062529ab5268030d10f90a84080d6c1109bbec/docs/TASKS.md#abstract-tree-rendering-system)):
+
+**IMPORTANT**: Before starting this refactor:
+1. Give a tour of how tree rendering currently works (Element tree structure, expansion state, rendering in components)
+2. Fully specify the interface (how it's used in practice, not just TypeScript definitions)
+3. Write actual production code directly in component files to verify the design
+4. Wrap this code in closures or make it inactive until ready to replace existing code
+5. Once abstraction is complete, remove old code and activate new code
+
+**Goal**: Extract tree rendering and expansion logic from Element into reusable abstractions that can be shared between Elements panel and info boxes (and future tree-like displays).
+
+**Why this matters**: Converting DetailContent and other components to use this system should result in significant simplification.
+
+**Current state**:
+- Element class has tree capabilities (parent, children, traverse, ancestorList)
+- Expansion state managed by useExpansionState hook
+- Tree rendering handled in each component (Section.tsx, DetailPanel, etc.)
+- Info box data could be hierarchical but isn't structured that way yet
+
+**Proposed abstraction**:
+- Create parent class or mixin with tree capabilities
+  - Node relationships (parent, children, siblings)
+  - Tree traversal (depth-first, breadth-first)
+  - Expansion state management
+  - **Layout logic** (not just expansion - how trees are rendered)
+- Element becomes a child of this abstraction
+- Info box data structures as tree nodes
+- Shared rendering components/hooks
+
+**Benefits**:
+- Consistent tree UX across Elements panel and info boxes
+- Could switch between tree layouts (simple indented tree, tabular tree with sections)
+- Easier to add new tree-based displays
+- Centralizes expansion logic
+
+**Tree layout options** (switch in code, not necessarily in UI):
+- **Simple tree**: Current indented style with expand/collapse arrows
+- **Tabular tree**: Hierarchical table with columns (see Slots Table Optimization example)
+  - Indented rows show hierarchy
+  - Expandable sections
+  - Can show properties in columns
+- **Sectioned tree**: Groups with headers, nested content
+
+**Related**: Slots Table Optimization task (Detail Panel Enhancements) shows hierarchical table example from another app - tree structure with indented rows, expandable sections, multiple columns. Info box inherited slots could use this pattern.
+
+**Note**: If helpful during implementation, the hierarchical table screenshot can be copied to `docs/images/` for reference.
+
+**Implementation approach**:
+1. Give tour of current tree rendering system
+2. Design tree abstraction (class? mixin? hooks?)
+3. Extract expansion state management
+4. Extract layout logic
+5. Refactor Element to use abstraction
+6. Apply to info box data structures
+7. Consider tabular tree layout for slots tables
+
+**Files likely affected**:
+- `src/models/Element.ts` - Extract tree logic
+- `src/models/TreeNode.ts` or `TreeBase.ts` (new) - Tree abstraction
+- `src/hooks/useExpansionState.ts` - Possibly generalize
+- `src/components/Section.tsx` - Use abstraction
+- `src/components/RelationshipInfoBox.tsx` - Structure data as tree
+- `src/components/DetailPanel.tsx` - Use abstraction for slots table
 
 ---
 

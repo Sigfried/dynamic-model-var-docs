@@ -17,55 +17,53 @@
 **Related:** Element.ts lines 132-156 (EdgeInfoProposal), UI_REFACTOR.md Section 1, Section 9 (Grouped Slots Panel)
 
 ---
-## [sg] think we need to this next
-
-
 ### Design (from REFACTOR_PLAN Stage 5)
 
+<a id="groupslots"></a>
 **Goal**: Show slots organized by source (Global + per-class sections)
 
-**Structure**:
-```
-Global Slots (7)
-  - id
-  - associated_participant
-  - observations
-  - ...
+   **Structure**:
+   ```
+   Global Slots (7)
+      - id
+      - associated_participant
+      - observations
+      - ...
 
-Entity (1 slot)
-  - id (global reference)
+    Entity (1 slot)
+      - id (global reference)
 
-Observation (12 slots)
-  - id (inherited from Entity)
-  - category (defined here)
-  - associated_visit (global reference)
-  - value_string (defined here)
-  - ...
+    Observation (12 slots)
+      - id (inherited from Entity)
+      - category (defined here)
+      - associated_visit (global reference)
+      - value_string (defined here)
+      - ...
 
-SdohObservation (13 slots)
-  - id (inherited from Entity)
-  - category (inherited from Observation) ⚠️ overridden
-  - value_string (inherited from Observation)
-  - related_questionnaire_item (defined here)
-  - ...
-```
+    SdohObservation (13 slots)
+      - id (inherited from Entity)
+      - category (inherited from Observation) ⚠️ overridden
+      - value_string (inherited from Observation)
+      - related_questionnaire_item (defined here)
+      - ...
+   ```
 
 **Behavior**:
 - Inherited slots appear under each class that uses them (repetition across classes is OK)
 - Always show base slot name (never "category-SdohObservation")
 - Click/hover navigates to that class's version (with overrides if any)
 - Visual indicators for
-   - defined here vs gobal ref vs inherited vs inherited overridden
+  - defined here vs gobal ref vs inherited vs inherited overridden
 
 **Implementation**:
 - DataService: Provide grouped slot data
 - Section.tsx: Support nested grouping (class headers with slot items)
 - Already done: Filter out slot_usage instances (Stage 4.5 Part 3)
 
+
 **Priority**: Medium - nice to have for demo, not blocking
 
 ---
-
 ## Your Proposal (Element.ts lines 132-156)
 
 ```typescript
