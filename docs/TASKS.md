@@ -33,81 +33,17 @@
 
 ## 📋 Upcoming Work (Ordered by Priority)
 
-[sg] new items -- trying to fix weird stuff
-- slot problems in bdchm.processed.json:
-  ```json
-    "classes": {
-      "DimensionalObservationSet": {
-        "attributes": {
-          "observations": {
-            "slotId": "observations-DimensionalObservationSet",
-            "range": "DimensionalObservation",
-            "inline": false,
-            "required": true,
-            "multivalued": true,
-            "inherited_from": "ObservationSet"
-          },
-          ...
-        }
-      },
-    },
-    "slots": {
-      "observations-DimensionalObservationSet": {
-        "id": "observations-DimensionalObservationSet",
-        "name": "observations",
-        "range": "DimensionalObservation",
-        "overrides": "observations",
-        "description": "A set of one or more observations.",
-        "required": true,
-        "multivalued": true
-      },
-    }
-  ```
-- consolidate slots:
-    - move/merge all class attributes to the slots section
-    - under each class, replace "attributes" with "slots"
-    - only retain a list of slot ids
-- except for prefixes (which we might not even need since we're already
-  generating URLs in the processed output), add a nodeType
-  ('class'|'slot'|'enum'|'type') to everything and put it all into a big
-  array
-- turn all the sections into arrays instead of maps, 
-  - so, DimensionalObservationSet's definition and observations slot will be:
-    ```json
-        [
-            {
-                "nodeType": "class",
-                "id": "DimensionalObservationSet",
-                "name": "DimensionalObservationSet",
-                "parent": "ObservationSet",
-                "abstract": false,
-                "slots": [
-                    "observations-DimensionalObservationSet",
-                    "associated_visit",
-                    "associated_participant",
-                    "category",
-                    "focus",
-                    "method_type",
-                    "performed_by",
-                    "id"
-                ],
-                "description": "A set of one or more discrete observations about the physical dimensions of an object (e.g. length, width, area)."
-            },
-            {
-                "nodeType": "slot",
-                "id": "observations-DimensionalObservationSet",
-                "name": "observations",
-                "range": "DimensionalObservation",
-                "inline": false,
-                "inherited_from": "ObservationSet"
-                "overrides": "observations",
-                "description": "A set of one or more observations.",
-                "required": true,
-                "multivalued": true
-            },
-        ]
-    ```
-    
+### ✅ Slot Data Consolidation - COMPLETE (Dec 2024)
+
+Consolidated slot data structure:
+- Classes now have `slots: SlotReference[]` instead of `attributes` dict
+- All slot data lives in slots section with `global` and `overrides` flags
+- SlotReference is minimal: `{ id, inheritedFrom? }`
+- Removed obsolete Relationship code (~2000 lines deleted)
+- All 122 tests passing
+
+**Future enhancement** (not blocking): Convert sections to arrays with nodeType field for simpler data format.
+
 ### ✅ Phase 1 & 1.5: Completed
 
 **Phase 1: UI Layer Cleanup** and **Phase 1.5: Complete Type Organization** are both complete.
@@ -134,11 +70,11 @@ Graph-first initialization, O(1) graph queries for getUsedByClasses(). See [arch
 
 LinkOverlay and RelationshipInfoBox now use graph-based queries directly. See [archive/tasks.md#phase-2-linkoverlay-migration](archive/tasks.md#phase-2-linkoverlay-migration) for details.
 
-**Step 4: Remove old getRelationships() methods** 🔲
-- Delete from ClassElement, EnumElement, SlotElement, VariableElement
-- Remove ClassSlot class (replaced by graph slot edges)
-- Remove `getRelationshipsForLinking()` from DataService (no longer used by LinkOverlay)
-- **Dependencies**: LinkOverlay migration complete (Step 3) ✅
+**Step 4: Remove old getRelationships() methods** ✅ COMPLETE (Dec 2024)
+- Deleted from ClassElement, EnumElement, SlotElement, VariableElement
+- Removed ClassSlot class (replaced by graph slot edges)
+- Removed `getRelationshipsForLinking()` from DataService
+- Removed Relationship interface, categorizeRange(), and related code
 
 **Step 7: Reduce Element subclass code** 🔲
 - Most behavior should move to graph queries or other layers
@@ -424,8 +360,6 @@ See separate document for these (TBD - for now, see old TASKS.md lines 449-815):
 - For each field: add to UI, add to expected fields list, or document why we're ignoring it
 - Should do soon - new fields may influence architecture decisions
 
-**Fix DetailContent.test.tsx** (19 failing tests)
-- Pre-existing since mid-November 2025
-- Root cause: DataService refactor was reverted, breaking test setup
-- [See archived details](archive/tasks.md#detailcontent-tests)
-- Low priority - doesn't block current work
+**~~Fix DetailContent.test.tsx~~** ✅ FIXED (Dec 2024)
+- Updated tests to use DataService API (itemId + dataService props)
+- All 20 tests now passing (2 skipped intentionally)
