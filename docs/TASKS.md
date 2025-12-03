@@ -25,8 +25,8 @@
 5. **Detail box positioning bugs** - Multiple issues from Unified Detail Box work:
    - Remove unnecessary isStacked logic (#3)
    - Make stacked width responsive (#4)
-   - Fix transitory/persistent box upgrade (#6)
-   - Fix hover/upgrade behavior (#7)
+   - Fix transitory/persistent box upgrade (#6); currently deletes rel info box and creates new detail box - should simply make rel info box persistent (draggable, etc.)
+   - Fix hover/upgrade behavior (#7); RelationshipInfoBox may use fixed positioning conflicting with FloatingBox wrapper
    - See [archived details](archive/tasks_pre_reorg.md#unified-detail-box-system) for full list
 
 ---
@@ -163,9 +163,7 @@ LinkOverlay and RelationshipInfoBox now use graph-based queries directly. See [a
 **LinkOverlay fixes** ✅ **MOSTLY COMPLETE**
 - Migrated to graph-based edge queries (see Phase 2 Step 3 above)
 - Remaining bugs: see Current Bugs #1, #2, #4 above
-- Refactoring plans (for reference):
-    - [UI_REFACTOR.md § LinkOverlay](UI_REFACTOR.md#1-linkoverlay-refactor)
-    - [LINKOVERLAY_REFACTOR_PLAN.md](archive/LINKOVERLAY_REFACTOR_PLAN.md)
+- Edge labels: show on hover; tooltip display needs improvement
 
 **URLs as clickable links**
 - Display URIs as clickable links in detail panels
@@ -343,6 +341,11 @@ full task description (recovered from [old TASKS.md](https://github.com/Sigfried
 
 ### Low Priority
 
+**LayoutManager Enhancements**
+- Responsive panel widths (currently fixed: MAX_PANEL_WIDTH=450px, EMPTY_PANEL_WIDTH=180px)
+- Panel collapse/expand animations (middle panel toggle could be smoother)
+- Better gutter visualization (hints about what they're for, visual cues when links would appear)
+
 **Relationship Info Box - Keyboard navigation**
 
 **Custom Preset Management**
@@ -406,7 +409,8 @@ See separate document for these (TBD - for now, see old TASKS.md lines 449-815):
 - Archived completed docs (PROGRESS.md, REFACTOR_PLAN.md, DATA_FLOW.md)
 - TASKS.md: Restructured and streamlined (this file!)
 - CLAUDE.md: Consolidated and simplified (297 → 169 lines, 43% reduction)
-- DATA_FLOW.md: Extracted relationship table to UI_REFACTOR.md, archived (1264 lines of pre-refactor content)
+- DATA_FLOW.md: Extracted relationship table, archived (1264 lines of pre-refactor content)
+- UI_REFACTOR.md: Merged remaining items into TASKS.md, deleted
 
 **Medium Priority:**
 - Add graph model patterns, SlotEdge architecture docs (from completed REFACTOR_PLAN)
