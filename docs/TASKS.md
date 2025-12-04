@@ -21,16 +21,24 @@
 - Hover badge → shows relationship info box immediately (no timing)
 - Hover item name → shows detail box immediately (no timing)
 - Click while hovering → upgrades transitory box to persistent with smooth animation
+- Hover on item with existing box → brings box to front with animation
 - Removed all debounce/linger timers from LayoutManager
 - URL persistence now updates when dialogs open/close/move/resize
 - Removed legacy RelationshipInfoBox component (~160 lines dead code)
+
+**Animation fixes (follow-up):**
+- Fixed bring-to-front animation by rendering boxes in stable DOM order (sorted by ID)
+- Fixed infinite loop error by moving state lookups inside setState callbacks
+- Fixed URL persistence by reading ref dynamically: `() => ref.current()`
+- Using CSS transform instead of left/top for smoother animations
 
 **Files changed:**
 - DataService.ts: Added `getRelationshipCounts()` method
 - ComponentData.ts: Added `HoverZone`, `BoxContentType`, `RelationshipBadgeData` types
 - Section.tsx: Split item into name/badge hover zones with relationship badge display
-- LayoutManager.tsx: Removed timing logic, immediate box show based on zone
-- FloatingBoxManager.tsx: Added CSS transitions for animated position/size changes
+- LayoutManager.tsx: Removed timing logic, immediate box show based on zone, stable setState patterns
+- FloatingBoxManager.tsx: CSS transitions, stable DOM order rendering, transform-based positioning
+- App.tsx: Fixed ref access pattern for URL persistence
 - appConfig.ts: Added `boxTransition` timing, removed unused timing settings
 - useLayoutState.ts: Added `triggerURLSave` for dialog change notifications
 - RelationshipInfoBox.tsx: Removed unused legacy component
