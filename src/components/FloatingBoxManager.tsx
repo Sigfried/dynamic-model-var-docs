@@ -15,6 +15,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import type { FloatingBoxMetadata, FloatingBoxData } from '../contracts/ComponentData';
+import { APP_CONFIG } from '../config/appConfig';
 
 // Re-export for backward compatibility
 export type { FloatingBoxMetadata, FloatingBoxData };
@@ -381,6 +382,9 @@ function FloatingBox({
     ? { maxHeight: `${Math.floor(window.innerHeight * 2 / 3)}px` }
     : { height: `${size.height}px`, minHeight: `${MIN_HEIGHT}px` };
 
+  // Animate position/size changes only when not actively dragging/resizing
+  const shouldAnimate = !isDragging && !isResizing;
+
   return (
     <div
       ref={boxRef}
@@ -392,7 +396,8 @@ function FloatingBox({
         top: `${position.y}px`,
         ...widthStyle,
         ...heightStyle,
-        zIndex
+        zIndex,
+        transition: shouldAnimate ? `left ${APP_CONFIG.timing.boxTransition}ms ease-out, top ${APP_CONFIG.timing.boxTransition}ms ease-out, width ${APP_CONFIG.timing.boxTransition}ms ease-out, height ${APP_CONFIG.timing.boxTransition}ms ease-out` : 'none'
       }}
       onClick={handleClick}
     >

@@ -13,39 +13,27 @@
 
 ## 📋 Upcoming Work (Ordered by Priority)
 
-### Badge-Based Hover/Click Interaction (Next Up)
+### Badge-Based Hover/Click Interaction ✅ DONE (Dec 2024)
 **Goal**: Replace complex timing-based hover with explicit badge/name hover areas
 
-**Current issues with timing approach**:
-- Flaky clicking (hover effect interferes)
-- User can't predict what they'll get
-- Complex debounce/linger timers
+**Completed:**
+- Added relationship badge showing `↘N ↗M` (incoming/outgoing counts) to each item
+- Hover badge → shows relationship info box immediately (no timing)
+- Hover item name → shows detail box immediately (no timing)
+- Click while hovering → upgrades transitory box to persistent with smooth animation
+- Removed all debounce/linger timers from LayoutManager
+- URL persistence now updates when dialogs open/close/move/resize
+- Removed legacy RelationshipInfoBox component (~160 lines dead code)
 
-**Badge meaning confusion** (expected behavior, not a bug):
-- Current badges show different things per type: enums show permissible values count, slots show used-by-classes count, etc.
-- Relationship info box shows edge counts (incoming/outgoing relationships)
-- These are fundamentally different concepts - badge shows "what this contains" while relationships show "what connects to this"
-- New badge design should clarify this: relationship badge (new) vs existing count badge (different meanings per type)
-
-**Proposed design**:
-1. Add relationship badge to each item showing incoming/outgoing counts
-   - Icon making clear it's relationship count (maybe `↘•↗` or similar)
-   - Tooltip explaining the badge
-   - Keep existing badges that show type-specific info (permissible values, etc.)
-2. Hover badge → shows relationship info box (no timing - show while hovering)
-3. Hover item name → shows detail box (no timing - show while hovering)
-4. Click while hovering → upgrades that box to persistent
-
-**Benefits**:
-- Explicit intent (badge vs name)
-- No timers - just CSS :hover essentially
-- Predictable clicks
-- Badge provides info at a glance
-
-**Implementation notes**:
-- Modify Section.tsx item rendering to add badge
-- Remove debounce/linger timing from LayoutManager
-- Slots might need two badges (class relationships, range)
+**Files changed:**
+- DataService.ts: Added `getRelationshipCounts()` method
+- ComponentData.ts: Added `HoverZone`, `BoxContentType`, `RelationshipBadgeData` types
+- Section.tsx: Split item into name/badge hover zones with relationship badge display
+- LayoutManager.tsx: Removed timing logic, immediate box show based on zone
+- FloatingBoxManager.tsx: Added CSS transitions for animated position/size changes
+- appConfig.ts: Added `boxTransition` timing, removed unused timing settings
+- useLayoutState.ts: Added `triggerURLSave` for dialog change notifications
+- RelationshipInfoBox.tsx: Removed unused legacy component
 
 ### Floating Box Issues (Mostly Done ✅)
 **Completed Dec 2024:**

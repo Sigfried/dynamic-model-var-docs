@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getInitialState, saveStateToURL, saveStateToLocalStorage, itemTypeToCode, type DialogState } from '../utils/statePersistence';
 import { calculateDisplayMode } from '../utils/layoutHelpers';
 
@@ -22,6 +22,7 @@ interface UseLayoutStateResult {
   handleSaveLayout: () => void;
   handleResetLayout: () => void;
   handleResetApp: () => void;
+  triggerURLSave: () => void;  // Called when dialogs change to update URL
 }
 
 /**
@@ -68,8 +69,8 @@ export function useLayoutState({ hasRestoredFromURL, getDialogStates }: UseLayou
     return () => window.removeEventListener('resize', measureSpace);
   }, [leftSections, rightSections]);
 
-  // Save state when it changes (but only after initial restoration)
-  useEffect(() => {
+  // Function to save current state to URL
+  const triggerURLSave = useCallback(() => {
     if (!hasRestoredFromURL) return; // Don't save until we've restored from URL
 
     const state = {
@@ -82,6 +83,11 @@ export function useLayoutState({ hasRestoredFromURL, getDialogStates }: UseLayou
     // TODO: See TASKS.md Step 7 - eliminate type exposure to UI
     saveStateToURL(state);
   }, [leftSections, middleSections, rightSections, getDialogStates, hasRestoredFromURL]);
+
+  // Save state when sections change (but only after initial restoration)
+  useEffect(() => {
+    triggerURLSave();
+  }, [triggerURLSave]);
 
   // Save current layout to localStorage
   const handleSaveLayout = () => {
@@ -188,6 +194,7 @@ export function useLayoutState({ hasRestoredFromURL, getDialogStates }: UseLayou
     hasLocalStorage,
     handleSaveLayout,
     handleResetLayout,
-    handleResetApp
+    handleResetApp,
+    triggerURLSave
   };
 }

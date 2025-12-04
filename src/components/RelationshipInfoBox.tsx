@@ -1,9 +1,7 @@
 /**
- * RelationshipInfoBox - Displays relationship information when hovering over items
+ * RelationshipInfoContent - Displays relationship information for items
  *
- * Two components exported:
- * 1. RelationshipInfoContent - Pure content component (no positioning), for use inside FloatingBox
- * 2. RelationshipInfoBox (default) - Standalone component with timing/positioning (legacy, being phased out)
+ * Pure content component (no positioning), for use inside FloatingBox.
  *
  * Shows:
  * - Outgoing relationships (inheritance, slots with attribute names)
@@ -12,7 +10,7 @@
  * Architecture: Uses DataService - maintains view/model separation.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import type { DataService } from '../services/DataService';
 import { APP_CONFIG, getElementLinkColor, type ElementTypeId } from '../config/appConfig';
 import { EDGE_TYPES, type EdgeInfo, type EdgeType } from '../models/SchemaTypes';
@@ -401,169 +399,6 @@ export function RelationshipInfoContent({ itemId, dataService, onNavigate }: Rel
           )}
         </div>
       )}
-    </div>
-  );
-}
-
-// ============================================================================
-// RelationshipInfoBox - Legacy standalone component (being phased out)
-// ============================================================================
-
-interface RelationshipInfoBoxProps {
-  itemId: string | null;
-  itemDomId: string | null;  // DOM node ID for positioning
-  dataService: DataService | null;
-  onNavigate?: (itemName: string, itemSection: string) => void;
-  onUpgrade?: () => void;  // Callback when box should upgrade to persistent mode
-}
-
-export default function RelationshipInfoBox({ itemId, itemDomId, dataService, onNavigate, onUpgrade }: RelationshipInfoBoxProps) {
-  // State for debounced/lingering item display
-  const [displayedItemId, setDisplayedItemId] = useState<string | null>(null);
-  const [boxPosition, setBoxPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const hoverTimerRef = useRef<number | null>(null);
-  const lingerTimerRef = useRef<number | null>(null);
-  const upgradeTimerRef = useRef<number | null>(null);
-
-  // Debounced hover effect - position based on item DOM node
-  useEffect(() => {
-    // Clear any existing timers
-    if (hoverTimerRef.current) {
-      clearTimeout(hoverTimerRef.current);
-      hoverTimerRef.current = null;
-    }
-    if (lingerTimerRef.current) {
-      clearTimeout(lingerTimerRef.current);
-      lingerTimerRef.current = null;
-    }
-
-    if (itemId && itemDomId) {
-      // Item hovered - show after short delay (ignore quick pass-overs)
-      hoverTimerRef.current = setTimeout(() => {
-        setDisplayedItemId(itemId);
-
-        // Position box relative to the hovered item's DOM node
-        const itemNode = document.getElementById(itemDomId);
-        if (!itemNode) {
-          console.warn(`[RelationshipInfoBox] Could not find DOM node with id "${itemDomId}"`);
-          return;
-        }
-
-        const itemRect = itemNode.getBoundingClientRect();
-        const estimatedBoxHeight = APP_CONFIG.layout.estimatedBoxHeight;
-        const maxBoxHeight = window.innerHeight * 0.8; // max-h-[80vh] for viewport constraints
-
-        // Find the rightmost edge of visible panels
-        const leftPanel = document.querySelector('[data-panel-position="left"]')?.parentElement?.parentElement;
-        const rightPanel = document.querySelector('[data-panel-position="right"]')?.parentElement?.parentElement;
-
-        let rightmostEdge = 0;
-        if (rightPanel) {
-          rightmostEdge = rightPanel.getBoundingClientRect().right;
-        } else if (leftPanel) {
-          rightmostEdge = leftPanel.getBoundingClientRect().right;
-        }
-
-        // Position to the right of panels, 20px margin
-        const idealX = Math.max(370, rightmostEdge + 20);
-
-        // Clamp X to viewport (box width ~400px, leave 10px margin on right)
-        const boxWidth = 400;
-        const maxX = window.innerWidth - boxWidth - 10;
-        const xPosition = Math.min(idealX, maxX);
-
-        // Vertically center box relative to item, using estimated height for better centering
-        const itemCenterY = itemRect.top + (itemRect.height / 2);
-        const idealY = itemCenterY - (estimatedBoxHeight / 2);
-
-        // Clamp to viewport with margins (use maxBoxHeight for worst-case bounds)
-        const minY = 10;
-        const maxY = window.innerHeight - maxBoxHeight - 10;
-        const yPosition = Math.max(minY, Math.min(idealY, maxY));
-
-        setBoxPosition({
-          x: xPosition,
-          y: yPosition
-        });
-      }, APP_CONFIG.timing.hoverDebounce);
-    } else if (displayedItemId) {
-      // Item unhovered but we have a displayed item - linger
-      lingerTimerRef.current = setTimeout(() => {
-        setDisplayedItemId(null);
-      }, APP_CONFIG.timing.lingerDuration);
-    }
-
-    return () => {
-      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-      if (lingerTimerRef.current) clearTimeout(lingerTimerRef.current);
-    };
-  }, [itemId, itemDomId, displayedItemId]);
-
-  // Handlers for upgrading to persistent mode
-  const handleBoxMouseEnter = () => {
-    // Cancel linger timer when hovering over the box
-    if (lingerTimerRef.current) {
-      clearTimeout(lingerTimerRef.current);
-      lingerTimerRef.current = null;
-    }
-
-    // After configured hover time, trigger upgrade callback
-    upgradeTimerRef.current = setTimeout(() => {
-      onUpgrade?.();
-    }, APP_CONFIG.timing.upgradeHoverTime);
-  };
-
-  const handleBoxMouseLeave = () => {
-    // Cancel upgrade timer when leaving the box
-    if (upgradeTimerRef.current) {
-      clearTimeout(upgradeTimerRef.current);
-      upgradeTimerRef.current = null;
-    }
-
-    // Start linger timer when leaving the box
-    lingerTimerRef.current = setTimeout(() => {
-      setDisplayedItemId(null);
-    }, APP_CONFIG.timing.lingerDuration);
-  };
-
-  const handleBoxClick = () => {
-    // Clicking immediately triggers upgrade
-    onUpgrade?.();
-    if (upgradeTimerRef.current) {
-      clearTimeout(upgradeTimerRef.current);
-      upgradeTimerRef.current = null;
-    }
-  };
-
-  if (!displayedItemId || !dataService) {
-    return null;
-  }
-
-  // Get item info for header
-  const thisItem = dataService.getItemInfo(displayedItemId);
-  if (!thisItem) {
-    return null;
-  }
-
-  // Legacy wrapper: provides positioning and timing, delegates content to RelationshipInfoContent
-  return (
-    <div
-      className="fixed w-[500px] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-[60] max-h-[80vh] flex flex-col"
-      style={{ left: `${boxPosition.x}px`, top: `${boxPosition.y}px` }}
-      onMouseEnter={handleBoxMouseEnter}
-      onMouseLeave={handleBoxMouseLeave}
-      onClick={handleBoxClick}
-    >
-      <div className={`${thisItem.color} px-4 py-2 rounded-t-lg border-b`}>
-        <h3 className="font-semibold text-white">
-          {thisItem.displayName} relationships
-        </h3>
-      </div>
-      <RelationshipInfoContent
-        itemId={displayedItemId}
-        dataService={dataService}
-        onNavigate={onNavigate}
-      />
     </div>
   );
 }

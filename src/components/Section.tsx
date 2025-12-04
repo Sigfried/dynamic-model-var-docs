@@ -8,15 +8,21 @@
  * Architecture: Receives pre-computed SectionData from ItemsPanel (which gets it from App.tsx).
  * App.tsx uses DataService to generate this data - maintains view/model separation.
  * UI layer uses "item" terminology.
+ *
+ * Hover Zones:
+ * - Item name: hover shows detail preview box
+ * - Relationship badge: hover shows relationship info box
+ * - Click on either: persists the current transitory box
+ *
  * See CLAUDE.md for separation of concerns principles.
  */
 import { useExpansionState } from '../hooks/useExpansionState';
 import { getItemHoverHandlers } from '../hooks/useItemHover';
 import { contextualizeId } from '../utils/idContextualization';
-import type { ItemHoverData, SectionItemData, SectionData } from '../contracts/ComponentData';
+import type { ItemHoverData, SectionItemData, SectionData, HoverZone } from '../contracts/ComponentData';
 
 // Re-export for backward compatibility with existing imports
-export type { ItemHoverData, SectionItemData, SectionData };
+export type { ItemHoverData, SectionItemData, SectionData, HoverZone };
 
 interface SectionProps {
   sectionData: SectionData;
@@ -36,20 +42,32 @@ interface ItemRendererProps {
 }
 
 function ItemRenderer({ item, onClickItem, onItemHover, onItemLeave, position, toggleExpansion }: ItemRendererProps) {
-  const { id, displayName, level, hasChildren, isExpanded, isClickable, badgeColor, badgeText, indicators, hoverData } = item;
+  const { id, displayName, level, hasChildren, isExpanded, isClickable, badgeColor, badgeText, relationshipBadge, indicators, hoverData } = item;
 
-  const hoverHandlers = getItemHoverHandlers({
-    id: id,  // DOM node ID for positioning
+  // Create hover handlers for the name zone
+  const nameHoverHandlers = getItemHoverHandlers({
+    id: id,
     type: hoverData.type,
     name: hoverData.name,
+    hoverZone: 'name',
+    onItemHover,
+    onItemLeave
+  });
+
+  // Create hover handlers for the badge zone
+  const badgeHoverHandlers = getItemHoverHandlers({
+    id: id,
+    type: hoverData.type,
+    name: hoverData.name,
+    hoverZone: 'badge',
     onItemHover,
     onItemLeave
   });
 
   // For non-clickable items with children (e.g., variable group headers), the whole row should toggle expansion
-  const handleClick = () => {
+  const handleClick = (hoverZone: HoverZone) => {
     if (isClickable) {
-      onClickItem(hoverData);
+      onClickItem({ ...hoverData, hoverZone });
     } else if (hasChildren && toggleExpansion) {
       toggleExpansion(hoverData.name);
     }
@@ -58,17 +76,16 @@ function ItemRenderer({ item, onClickItem, onItemHover, onItemLeave, position, t
   const showToggleButton = hasChildren && toggleExpansion;
   const isCursorPointer = isClickable || (hasChildren && toggleExpansion);
 
+  // Show relationship badge if there are any relationships
+  const hasRelationships = relationshipBadge && (relationshipBadge.incoming > 0 || relationshipBadge.outgoing > 0);
+
   return (
     <div key={id} className="select-none">
       <div
         id={id}
         data-panel-position={position}
-        className={`item flex items-center gap-2 px-2 py-1 rounded ${
-          isCursorPointer ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700' : ''
-        }`}
+        className={`item flex items-center gap-2 px-2 py-1 rounded`}
         style={{ paddingLeft: `${level * 16 + 8}px` }}
-        onClick={handleClick}
-        {...hoverHandlers}
       >
         {/* Expansion toggle for items with children */}
         {showToggleButton ? (
@@ -85,8 +102,14 @@ function ItemRenderer({ item, onClickItem, onItemHover, onItemLeave, position, t
           <span className="w-4" />
         )}
 
-        {/* Item name */}
-        <span className="flex-1 text-sm font-medium">{displayName}</span>
+        {/* Item name - hover zone for detail preview */}
+        <span
+          className={`flex-1 text-sm font-medium ${isCursorPointer ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 rounded px-1 -mx-1' : ''}`}
+          onClick={() => handleClick('name')}
+          {...nameHoverHandlers}
+        >
+          {displayName}
+        </span>
 
         {/* Indicators (e.g., "abstract" for classes) */}
         {indicators && indicators.length > 0 && indicators.map((indicator, idx) => (
@@ -95,10 +118,22 @@ function ItemRenderer({ item, onClickItem, onItemHover, onItemLeave, position, t
           </span>
         ))}
 
-        {/* Badge (count display) */}
+        {/* Type-specific badge (count display) */}
         {badgeText && badgeColor && (
           <span className={`text-xs px-2 py-0.5 rounded ${badgeColor}`}>
             {badgeText}
+          </span>
+        )}
+
+        {/* Relationship badge - hover zone for relationship info */}
+        {hasRelationships && (
+          <span
+            className="text-xs px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300 cursor-pointer hover:bg-slate-300 dark:hover:bg-slate-500"
+            title="Hover to see relationships"
+            onClick={() => handleClick('badge')}
+            {...badgeHoverHandlers}
+          >
+            ↘{relationshipBadge.incoming} ↗{relationshipBadge.outgoing}
           </span>
         )}
       </div>

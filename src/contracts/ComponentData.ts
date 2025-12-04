@@ -30,6 +30,12 @@ export type SelectedElement = Element;
 // ============================================================================
 
 /**
+ * HoverZone - Which part of an item was hovered
+ * Used to determine what type of transitory box to show
+ */
+export type HoverZone = 'name' | 'badge';
+
+/**
  * ItemHoverData - Hover event data for item interactions
  * Used by Section component to emit hover events with necessary context.
  */
@@ -37,6 +43,16 @@ export interface ItemHoverData {
   id: string;       // DOM node ID for positioning (e.g., "lp::Specimen")
   type: string;     // Item type: "class", "enum", "slot", "variable"
   name: string;     // Item name: "Specimen", "SpecimenTypeEnum", etc.
+  hoverZone: HoverZone;  // Which zone triggered the hover
+}
+
+/**
+ * RelationshipBadgeData - Relationship counts for badge display
+ * Shows incoming/outgoing relationship counts
+ */
+export interface RelationshipBadgeData {
+  incoming: number;
+  outgoing: number;
 }
 
 /**
@@ -55,7 +71,8 @@ export interface SectionItemData {
 
   // Visual styling
   badgeColor?: string;            // Tailwind: "bg-blue-100 text-blue-800"
-  badgeText?: string;             // "103"
+  badgeText?: string;             // "103" (type-specific: variables, permissible values, etc.)
+  relationshipBadge?: RelationshipBadgeData;  // Relationship counts for hover badge
   indicators?: Array<{            // Visual indicators (e.g., "abstract")
     text: string;                 // "abstract"
     color: string;                // Tailwind: "text-purple-600"
@@ -67,7 +84,7 @@ export interface SectionItemData {
   isClickable: boolean;
 
   // Event data (opaque to component, passed through to callbacks)
-  hoverData: ItemHoverData;
+  hoverData: Omit<ItemHoverData, 'hoverZone'>;  // Zone determined by which area is hovered
 }
 
 /**
@@ -113,12 +130,19 @@ export interface FloatingBoxMetadata {
 }
 
 /**
+ * BoxContentType - What kind of content the box displays
+ * Used to distinguish detail boxes from relationship boxes for the same item
+ */
+export type BoxContentType = 'detail' | 'relationship';
+
+/**
  * FloatingBoxData - Complete data structure for a floating box
  * Supports both transitory (auto-dismiss) and persistent (draggable) modes.
  */
 export interface FloatingBoxData {
   id: string;
   mode: 'transitory' | 'persistent';
+  contentType: BoxContentType;  // What kind of content (detail vs relationship)
   metadata: FloatingBoxMetadata;
   content: React.ReactNode;
   itemId: string;  // Item identifier for callbacks and state management

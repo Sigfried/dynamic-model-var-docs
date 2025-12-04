@@ -38,7 +38,8 @@ function App() {
     hasLocalStorage,
     handleSaveLayout,
     handleResetLayout,
-    handleResetApp
+    handleResetApp,
+    triggerURLSave
   } = useLayoutState({
     hasRestoredFromURL,
     getDialogStates: getDialogStatesRef.current
@@ -227,6 +228,7 @@ function App() {
         setRightSections={setRightSections}
         initialDialogs={initialDialogs}
         setDialogStatesGetter={setDialogStatesGetter}
+        onDialogsChange={triggerURLSave}
       />
     </div>
   );

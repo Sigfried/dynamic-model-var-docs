@@ -163,11 +163,9 @@ export const APP_CONFIG = {
     inheritedSuffix: 'from',   // e.g., "Global (from Entity)"
   },
 
-  // Timing constants (from RelationshipInfoBox.tsx)
+  // Timing constants
   timing: {
-    hoverDebounce: 300,        // Delay before showing preview (ms)
-    lingerDuration: 1500,      // How long preview stays after unhover (ms)
-    upgradeHoverTime: 1500,    // Hover duration to upgrade to persistent (ms)
+    boxTransition: 300,        // Animation duration for box position/size changes (ms)
   },
 
   // UI layout constants

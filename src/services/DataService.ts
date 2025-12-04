@@ -62,14 +62,14 @@ export class DataService {
   }
 
   /**
-   * Get metadata for relationship info boxes (with counts subtitle)
+   * Get relationship counts for an item (for badge display)
+   * Returns incoming/outgoing edge counts
    */
-  getRelationshipBoxMetadata(itemId: string): FloatingBoxMetadata | null {
-    const baseMetadata = this.getFloatingBoxMetadata(itemId);
-    if (!baseMetadata) return null;
-
+  getRelationshipCounts(itemId: string): { incoming: number; outgoing: number } | null {
     const itemInfo = this.getItemInfo(itemId);
-    const isSlot = itemInfo?.type === 'slot';
+    if (!itemInfo) return null;
+
+    const isSlot = itemInfo.type === 'slot';
 
     // For slots: SLOT_RANGE (outgoing to range), CLASS_SLOT (incoming from classes)
     // For classes/enums: CLASS_RANGE (slot relationships)
@@ -77,12 +77,25 @@ export class DataService {
       ? [EDGE_TYPES.SLOT_RANGE, EDGE_TYPES.CLASS_SLOT]
       : [EDGE_TYPES.CLASS_RANGE];
     const edges = this.getEdgesForItem(itemId, edgeTypes);
-    const outgoingCount = edges.filter(e => e.sourceItem.id === itemId).length;
-    const incomingCount = edges.filter(e => e.targetItem.id === itemId).length;
+    const outgoing = edges.filter(e => e.sourceItem.id === itemId).length;
+    const incoming = edges.filter(e => e.targetItem.id === itemId).length;
+
+    return { incoming, outgoing };
+  }
+
+  /**
+   * Get metadata for relationship info boxes (with counts subtitle)
+   */
+  getRelationshipBoxMetadata(itemId: string): FloatingBoxMetadata | null {
+    const baseMetadata = this.getFloatingBoxMetadata(itemId);
+    if (!baseMetadata) return null;
+
+    const counts = this.getRelationshipCounts(itemId);
+    if (!counts) return baseMetadata;
 
     return {
       ...baseMetadata,
-      subtitle: `Relationships  ${incomingCount} ↘  •  ↗ ${outgoingCount}`
+      subtitle: `Relationships  ${counts.incoming} ↘  •  ↗ ${counts.outgoing}`
     };
   }
 
@@ -228,11 +241,29 @@ export class DataService {
    * Get section data for all collections
    * @param position - 'left', 'middle', or 'right' panel position
    * Returns Map where key is section ID (type ID) and value is SectionData
+   * Augments items with relationship badge data
    */
   getAllSectionsData(position: 'left' | 'middle' | 'right'): Map<string, SectionData> {
     const map = new Map<string, SectionData>();
     this.modelData.collections.forEach((collection, typeId) => {
-      map.set(typeId, collection.getSectionData(position));
+      const baseSectionData = collection.getSectionData(position);
+
+      // Wrap getItems to add relationship badge data to each item
+      const augmentedSectionData: SectionData = {
+        ...baseSectionData,
+        getItems: (expandedItems, pos) => {
+          const items = baseSectionData.getItems(expandedItems, pos);
+          return items.map(item => {
+            const counts = this.getRelationshipCounts(item.hoverData.name);
+            return {
+              ...item,
+              relationshipBadge: counts ?? undefined
+            };
+          });
+        }
+      };
+
+      map.set(typeId, augmentedSectionData);
     });
     return map;
   }
