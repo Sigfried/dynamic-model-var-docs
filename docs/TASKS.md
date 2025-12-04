@@ -13,64 +13,6 @@
 - title of slots info box always shows 0 outgoing, 0 incoming
 
 ## 📋 Upcoming Work (Ordered by Priority)
-**Reduce Element subclass code** 🔲
-- Most behavior should move to graph queries or other layers
-- Element classes become thinner wrappers around graph data
-- Many methods can be replaced with graph queries
-- **Why last**: Final cleanup after everything else works
-- **Dependencies**: Graph as primary data source, Steps 3-4 complete
-
-**Implementation Plan:**
-
-1. **Move `getDetailData()` out of Element subclasses** (~400 lines total)
-   - Create `DetailDataBuilder` or config-driven approach in components layer
-   - Each element type defines its detail schema (sections, fields) declaratively
-   - Builder queries element properties + graph to construct DetailData
-   - Element subclasses become data holders only
-
-2. **Move tree methods to Abstract Tree system** (see [Abstract Tree](#abstract-tree))
-   - `toRenderableItems()`, `toSectionItems()`, `getSectionItemData()` → tree rendering layer
-   - `ancestorList()`, `traverse()` → tree utilities
-   - Element keeps only: `parent`, `children`, `pathFromRoot` (data)
-
-3. **Consolidate flat collections** (Enum, Type, Slot)
-   - Extract common `FlatCollection<T extends Element>` base
-   - `fromData()` pattern is identical - parameterize by element constructor
-   - Reduces ~135 lines of duplicated boilerplate
-
-4. **Simplify Element subclass constructors**
-   - Consider factory functions that map transformed data → Element properties
-   - Or: Elements hold reference to transformed data + graph, compute on demand
-
-5. **Graph as primary for relationship queries** (already partially done)
-   - `getUsedByClasses()` already delegates to graph ✅
-   - `ClassElement.getSlotElement()` → graph query
-   - Remove `globalGraph` module variable - pass graph explicitly
-
-6. **Fix remaining "DTO" terminology in codebase**
-   - Rename references to use `*Input` (raw) or `*Data` (transformed) consistently
-   - Update comments and documentation
-
-**Target state:**
-- Element subclasses: ~30-50 lines each (identity + type + data reference)
-- Presentation logic: components layer or DetailDataBuilder
-- Tree logic: Abstract Tree system
-- Relationship queries: Graph module
-
-**LinkOverlay fixes** ✅ **MOSTLY COMPLETE**
-- Edge labels: show on hover; tooltip display needs improvement
-
-**URLs as clickable links**
-- Display URIs as clickable links in detail panels
-- Already set up infrastructure for this
-- See: External Link Integration in Future Ideas
-
-**item names as hover/links**
-- in detail and hover boxes, make all item references
-  act like they do in panels: hover box on hover, detail box
-  on click. this is already working for most items in hover
-  boxes but not slot names.
-
 ### Floating Box Issues
 1. **Detail box positioning bugs** - Multiple issues from Unified Detail Box work:
     - Remove unnecessary isStacked logic (#3)
@@ -102,6 +44,65 @@
     - RelationshipInfoBox uses fixed positioning which conflicts with FloatingBox wrapper [sg] still true?
     - creates DetailContent instead of RelationshipInfoBox on upgrade
     - Fix: Refactor RelationshipInfoBox to support both transitory and persistent modes
+
+### LinkOverlay fixes
+- Edge labels: show on hover; tooltip display needs improvement
+
+**URLs as clickable links**
+- Display URIs as clickable links in detail panels
+- Already set up infrastructure for this
+- See: External Link Integration in Future Ideas
+
+**item names as hover/links**
+- in detail and hover boxes, make all item references
+  act like they do in panels: hover box on hover, detail box
+  on click. this is already working for most items in hover
+  boxes but not slot names.
+
+### Reduce Element subclass code 🔲
+- Most behavior should move to graph queries or other layers
+- Element classes become thinner wrappers around graph data
+- Many methods can be replaced with graph queries
+- **Why last**: Final cleanup after everything else works
+- **Dependencies**: Graph as primary data source, Steps 3-4 complete
+
+**Implementation Plan:**
+
+1. **Simplify `getDetailData()` via tree abstraction** (BLOCKED: needs [Abstract Tree](#abstract-tree) first)
+    - ~~Config-driven approach tried and abandoned~~ - just moves type-specific code around
+    - Better approach: Element subclasses return **tree-shaped presentation data**
+    - Services layer converts graph queries → uniform tree structure
+    - Components render trees without knowing element types
+    - **Wait for tree abstraction before tackling this**
+
+2. **Move tree methods to Abstract Tree system** (see [Abstract Tree](#abstract-tree))
+    - `toRenderableItems()`, `toSectionItems()`, `getSectionItemData()` → tree rendering layer
+    - `ancestorList()`, `traverse()` → tree utilities
+    - Element keeps only: `parent`, `children`, `pathFromRoot` (data)
+
+3. **Consolidate flat collections** (Enum, Type, Slot)
+    - Extract common `FlatCollection<T extends Element>` base
+    - `fromData()` pattern is identical - parameterize by element constructor
+    - Reduces ~135 lines of duplicated boilerplate
+
+4. **Simplify Element subclass constructors**
+    - Consider factory functions that map transformed data → Element properties
+    - Or: Elements hold reference to transformed data + graph, compute on demand
+
+5. **Graph as primary for relationship queries** (already partially done)
+    - `getUsedByClasses()` already delegates to graph ✅
+    - `ClassElement.getSlotElement()` → graph query
+    - Remove `globalGraph` module variable - pass graph explicitly
+
+6. **Fix remaining "DTO" terminology in codebase**
+    - Rename references to use `*Input` (raw) or `*Data` (transformed) consistently
+    - Update comments and documentation
+
+**Target state:**
+- Element subclasses: ~30-50 lines each (identity + type + data reference)
+- Presentation logic: components layer or DetailDataBuilder
+- Tree logic: Abstract Tree system
+- Relationship queries: Graph module
 
 <a id="abstract-tree"></a>
 ### Abstract Tree Rendering System
@@ -144,6 +145,33 @@ full task description (recovered from [old TASKS.md](https://github.com/Sigfried
 - Element becomes a child of this abstraction
 - Info box data structures as tree nodes
 - Shared rendering components/hooks
+
+**Key insight: All presentation data should be tree-shaped**
+
+The graph provides the model abstraction (nodes with attributes, edges with attributes).
+The presentation layer should use a **uniform tree data shape**:
+```typescript
+{title: 'Condition relationships', counts: {outgoing: 11, incoming: 20}, children: [
+  {title: 'Outgoing', children: [
+    {title: 'Inheritance', children: [{title: '→ Entity', linkTo: 'Entity', type: 'Class'}]},
+    {title: 'Slots', children: [
+      {title: 'condition_concept → ConditionConceptEnum', type: 'Enumeration'},
+      ...
+    ]},
+  ]},
+  {title: 'Incoming', children: [
+    {title: 'Variables (20)', children: [{title: 'Angina'}, ...]},
+  ]}
+]}
+```
+
+**This simplifies the architecture:**
+- **Graph** (model): nodes + edges with attributes
+- **Services**: query graph → build tree-shaped presentation data
+- **Components**: render trees (one abstraction works for DetailPanel, RelationshipInfoBox, Section panels)
+- **Element subclasses**: become thin graph node wrappers; `getDetailData()` becomes "query graph, return tree"
+
+**Enables Reduce Element Subclass Code task**: Once tree abstraction exists, Element subclasses can return tree-shaped data instead of complex DetailData objects, dramatically simplifying them.
 
 **Benefits**:
 - Consistent tree UX across Elements panel and info boxes
@@ -321,6 +349,14 @@ This table can be put as a typescript object in appConfig.ts to provide labels
 for the different relationships. It's not well-thought-out at this point. Need
 to review actual LinkML terminology.
 
+**Issues to address before implementing:**
+1. **Case inconsistency**: "inherited from" (lowercase) vs typical UI convention "Inherited from"
+2. **Tense inconsistency**: "inherited from" (past) vs "maps to" (present) - pick one convention
+3. **Missing context variants**: Different contexts need different phrasing (e.g., "extends" for subtitles vs "Inherits from" for section text)
+4. **Compound templates not separable**: "has slot {name} with enum {enum}" bundles too much - need atomic parts
+5. **Need theme support**: Structure should allow switching between "LinkML" (technical), "user-friendly", etc.
+6. **Need template support**: Labels like "has slot {name} referencing {class}" need to accept item names as parameters
+
 | **From** | **To**                         | **LinkML Label**                      | **Regular User Label**                    | **Notes**                        |
 |----------|--------------------------------|---------------------------------------|-------------------------------------------|----------------------------------|
 | Class    | Parent Class                   | "is_a"                                | "inherited from"                          | Tree structure (parent/child)    |
@@ -373,6 +409,14 @@ See separate document for these (TBD - for now, see old TASKS.md lines 449-815):
 ---
 
 ## 🔧 Low-Level Technical Tasks
+
+**Implement devError() utility for noisy development errors**
+- Create `src/utils/devError.ts` with error handling utility
+- In development: throws error with full context (stack trace, relevant IDs)
+- In production: logs quietly but captures info for debugging
+- Replace silent `return null` patterns throughout codebase with `devError()` calls
+- See CLAUDE.md "Error Handling: Fail Loudly in Development" section
+- Examples to fix: DataService lookups, graph queries, element resolution
 
 **Incorporate Unused Schema Fields into UI**
 - dataLoader validates expected fields and warns about unexpected ones

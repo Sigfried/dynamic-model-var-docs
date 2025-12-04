@@ -42,11 +42,14 @@ export class DataService {
 
   /**
    * Get detail content for an item
-   * Returns null if item not found
+   * @throws Error if item not found
    */
-  getDetailContent(itemId: string): DetailData | null {
+  getDetailContent(itemId: string): DetailData {
     const element = this.modelData.elementLookup.get(itemId);
-    return element?.getDetailData() ?? null;
+    if (!element) {
+      throw new Error(`Element not found: ${itemId}`);
+    }
+    return element.getDetailData();
   }
 
   /**

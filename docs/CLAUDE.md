@@ -157,6 +157,30 @@ const info = element.getDisplayInfo();
 - Model layer can be refactored without touching UI
 - Easy to mock DataService for testing
 
+### Error Handling: Fail Loudly in Development
+
+**Do NOT silently skip unexpected situations.** During development, errors should be noisy so they get fixed.
+
+**❌ WRONG** - Silent failure:
+```typescript
+const element = lookup.get(id);
+if (!element) return null;  // Silently swallows the problem
+```
+
+**✅ CORRECT** - Throw or use error handler:
+```typescript
+const element = lookup.get(id);
+if (!element) {
+  throw new Error(`Element not found: ${id}`);  // Or use devError() once implemented
+}
+```
+
+**Why this matters**: Silent failures hide bugs. An ID lookup that fails means something is wrong upstream - we need to know about it immediately, not discover it later through mysterious UI behavior.
+
+**Future**: Implement `devError()` utility that throws in development but logs quietly in production.
+
+---
+
 ### Element Identity: .name vs getId()
 
 **TL;DR:** Use `.name` for display, `getId()` for identity/comparisons.
