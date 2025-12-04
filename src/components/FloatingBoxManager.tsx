@@ -22,6 +22,7 @@ export type { FloatingBoxMetadata, FloatingBoxData };
 interface FloatingBoxManagerProps {
   boxes: FloatingBoxData[];
   displayMode: 'cascade' | 'stacked';
+  stackedWidth?: number; // Width for stacked mode (defaults to 600)
   onClose: (id: string) => void;
   onChange?: (id: string, position: { x: number; y: number }, size: { width: number; height: number }) => void;
   onBringToFront?: (id: string) => void;
@@ -33,6 +34,7 @@ type ResizeHandle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw' | null;
 export default function FloatingBoxManager({
   boxes,
   displayMode,
+  stackedWidth = 600,
   onClose,
   onChange,
   onBringToFront,
@@ -67,7 +69,10 @@ export default function FloatingBoxManager({
     const reversedBoxes = [...boxes].reverse();
 
     return (
-      <div className="absolute right-0 top-0 h-full overflow-y-auto flex flex-col gap-4 p-4 bg-gray-50 dark:bg-slate-900 w-[600px] z-40">
+      <div
+        className="absolute right-0 top-0 h-full overflow-y-auto flex flex-col gap-4 p-4 bg-gray-50 dark:bg-slate-900 z-40"
+        style={{ width: `${stackedWidth}px` }}
+      >
         {reversedBoxes.map((box, index) => (
           <FloatingBox
             key={box.id}

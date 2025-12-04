@@ -19,13 +19,14 @@
  * App.tsx simplified to: load data, create DataService, render LayoutManager
  */
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import ItemsPanel, { type ToggleButtonData } from './ItemsPanel';
 import type { SectionData, ItemHoverData } from './Section';
 import FloatingBoxManager, { type FloatingBoxData } from './FloatingBoxManager';
 import DetailContent from './DetailContent';
 import LinkOverlay from './LinkOverlay';
-import RelationshipInfoBox from './RelationshipInfoBox';
+import { RelationshipInfoContent } from './RelationshipInfoBox';
+import { APP_CONFIG } from '../config/appConfig';
 import { type DialogState } from '../utils/statePersistence';
 import { calculateDisplayMode } from '../utils/layoutHelpers';
 import { type DataService } from '../services/DataService';
@@ -61,19 +62,29 @@ export default function LayoutManager({
 
   // Display mode calculation
   const [displayMode, setDisplayMode] = useState<'stacked' | 'cascade'>('cascade');
+  const [stackedWidth, setStackedWidth] = useState(600);
+
+  // Hover timing refs
+  const hoverTimerRef = useRef<number | null>(null);
+  const lingerTimerRef = useRef<number | null>(null);
 
   // Measure available space and set display mode
   useEffect(() => {
     const measureSpace = () => {
       const windowWidth = window.innerWidth;
-      const { mode } = calculateDisplayMode(windowWidth, leftSections.length, rightSections.length, !middlePanelEmpty);
+      const middleVisible = middleSections.length > 0;
+      const { mode, spaceInfo } = calculateDisplayMode(windowWidth, leftSections.length, rightSections.length, middleVisible);
       setDisplayMode(mode);
+      // Use remaining space for stacked width, with minimum of 400px
+      if (mode === 'stacked') {
+        setStackedWidth(Math.max(400, spaceInfo.remainingSpace - 20)); // 20px for padding
+      }
     };
 
     measureSpace();
     window.addEventListener('resize', measureSpace);
     return () => window.removeEventListener('resize', measureSpace);
-  }, [leftSections, rightSections]);
+  }, [leftSections, rightSections, middleSections]);
 
   // Convert floating boxes to dialog states for persistence
   const getDialogStatesFromBoxes = useCallback((): DialogState[] => {
@@ -222,46 +233,116 @@ export default function LayoutManager({
     return hoveredItem?.id ?? null;
   }, [hoveredItem]);
 
-  // Navigation handler - opens a new floating box
+  // Navigation handler - opens a new floating box (defined early for use in hover effect)
   const handleNavigate = useCallback((itemName: string, itemSection: string) => {
     handleOpenFloatingBox({ type: itemSection, name: itemName });
   }, [handleOpenFloatingBox]);
 
-  // Handle RelationshipInfoBox upgrade to persistent floating box
-  const handleUpgradeRelationshipBox = useCallback(() => {
-    if (!hoveredItem || !hoveredItemId) return;
+  // Helper to calculate position for transitory box based on DOM node
+  const calculateTransitoryBoxPosition = useCallback((domId: string): { x: number; y: number } | null => {
+    const itemNode = document.getElementById(domId);
+    if (!itemNode) return null;
 
-    const existingIndex = floatingBoxes.findIndex(b => b.itemId === hoveredItemId);
+    const itemRect = itemNode.getBoundingClientRect();
+    const estimatedBoxHeight = APP_CONFIG.layout.estimatedBoxHeight;
+    const maxBoxHeight = window.innerHeight * 0.8;
 
-    if (existingIndex !== -1) {
-      setFloatingBoxes(prev => {
-        const updated = [...prev];
-        const [existing] = updated.splice(existingIndex, 1);
-        return [...updated, existing];
-      });
-      setHoveredItem(null);
-      return;
+    // Find the rightmost edge of visible panels
+    const leftPanel = document.querySelector('[data-panel-position="left"]')?.parentElement?.parentElement;
+    const rightPanel = document.querySelector('[data-panel-position="right"]')?.parentElement?.parentElement;
+
+    let rightmostEdge = 0;
+    if (rightPanel) {
+      rightmostEdge = rightPanel.getBoundingClientRect().right;
+    } else if (leftPanel) {
+      rightmostEdge = leftPanel.getBoundingClientRect().right;
     }
 
-    const metadata = dataService.getFloatingBoxMetadata(hoveredItemId);
-    if (!metadata) {
-      console.warn(`Could not get metadata for item "${hoveredItemId}"`);
-      return;
+    const idealX = Math.max(370, rightmostEdge + 20);
+    const boxWidth = 500;
+    const maxX = window.innerWidth - boxWidth - 10;
+    const xPosition = Math.min(idealX, maxX);
+
+    const itemCenterY = itemRect.top + (itemRect.height / 2);
+    const idealY = itemCenterY - (estimatedBoxHeight / 2);
+    const minY = 10;
+    const maxY = window.innerHeight - maxBoxHeight - 10;
+    const yPosition = Math.max(minY, Math.min(idealY, maxY));
+
+    return { x: xPosition, y: yPosition };
+  }, []);
+
+  // Effect to create/update transitory floating box on hover
+  useEffect(() => {
+    // Clear any existing timers
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    if (lingerTimerRef.current) {
+      clearTimeout(lingerTimerRef.current);
+      lingerTimerRef.current = null;
     }
 
-    const newBox: FloatingBoxData = {
-      id: `box-${nextBoxId}`,
-      mode: 'persistent',
-      metadata,
-      content: <DetailContent itemId={hoveredItemId} dataService={dataService} hideHeader={true} />,
-      itemId: hoveredItemId,
-      size: { width: 700, height: 400 }
+    if (hoveredItemId && hoveredItemDomId) {
+      // Item hovered - show after short delay
+      hoverTimerRef.current = window.setTimeout(() => {
+        // Check if there's already a persistent box for this item
+        const existingPersistent = floatingBoxes.find(
+          b => b.itemId === hoveredItemId && b.mode === 'persistent'
+        );
+        if (existingPersistent) return; // Don't show transitory if persistent exists
+
+        const position = calculateTransitoryBoxPosition(hoveredItemDomId);
+        if (!position) return;
+
+        const metadata = dataService.getFloatingBoxMetadata(hoveredItemId);
+        if (!metadata) return;
+
+        // Remove any existing transitory box for different item
+        setFloatingBoxes(prev => {
+          const filtered = prev.filter(b => b.mode !== 'transitory');
+          const newBox: FloatingBoxData = {
+            id: `transitory-${hoveredItemId}`,
+            mode: 'transitory',
+            metadata,
+            content: <RelationshipInfoContent itemId={hoveredItemId} dataService={dataService} onNavigate={handleNavigate} />,
+            itemId: hoveredItemId,
+            position,
+            size: { width: 500, height: 400 }
+          };
+          return [...filtered, newBox];
+        });
+      }, APP_CONFIG.timing.hoverDebounce);
+    } else {
+      // Item unhovered - start linger timer then remove transitory box
+      lingerTimerRef.current = window.setTimeout(() => {
+        setFloatingBoxes(prev => prev.filter(b => b.mode !== 'transitory'));
+      }, APP_CONFIG.timing.lingerDuration);
+    }
+
+    return () => {
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+      if (lingerTimerRef.current) clearTimeout(lingerTimerRef.current);
     };
+  }, [hoveredItemId, hoveredItemDomId, dataService, floatingBoxes, calculateTransitoryBoxPosition, handleNavigate]);
 
-    setFloatingBoxes(prev => [...prev, newBox]);
+  // Handle upgrade: change transitory box to persistent (no new box creation)
+  const handleUpgradeToPersistent = useCallback((boxId: string) => {
+    setFloatingBoxes(prev => prev.map(box => {
+      if (box.id === boxId && box.mode === 'transitory') {
+        // Upgrade to persistent - same content, same position, new mode
+        return {
+          ...box,
+          id: `box-${nextBoxId}`, // Give it a proper persistent ID
+          mode: 'persistent' as const
+        };
+      }
+      return box;
+    }));
     setNextBoxId(prev => prev + 1);
     setHoveredItem(null);
-  }, [hoveredItem, hoveredItemId, dataService, floatingBoxes, nextBoxId]);
+  }, [nextBoxId]);
 
   // Close a floating box
   const handleCloseFloatingBox = useCallback((id: string) => {
@@ -427,19 +508,13 @@ export default function LayoutManager({
       <FloatingBoxManager
         boxes={floatingBoxes}
         displayMode={displayMode}
+        stackedWidth={stackedWidth}
         onClose={handleCloseFloatingBox}
         onChange={handleFloatingBoxChange}
         onBringToFront={handleBringToFront}
+        onUpgradeToPersistent={handleUpgradeToPersistent}
       />
 
-      {/* Relationship Info Box (transitory, uses item position) */}
-      <RelationshipInfoBox
-        itemId={hoveredItemId}
-        itemDomId={hoveredItemDomId}
-        dataService={dataService}
-        onNavigate={handleNavigate}
-        onUpgrade={handleUpgradeRelationshipBox}
-      />
     </div>
   );
 }
