@@ -62,6 +62,31 @@ export class DataService {
   }
 
   /**
+   * Get metadata for relationship info boxes (with counts subtitle)
+   */
+  getRelationshipBoxMetadata(itemId: string): FloatingBoxMetadata | null {
+    const baseMetadata = this.getFloatingBoxMetadata(itemId);
+    if (!baseMetadata) return null;
+
+    const itemInfo = this.getItemInfo(itemId);
+    const isSlot = itemInfo?.type === 'slot';
+
+    // For slots: SLOT_RANGE (outgoing to range), CLASS_SLOT (incoming from classes)
+    // For classes/enums: CLASS_RANGE (slot relationships)
+    const edgeTypes = isSlot
+      ? [EDGE_TYPES.SLOT_RANGE, EDGE_TYPES.CLASS_SLOT]
+      : [EDGE_TYPES.CLASS_RANGE];
+    const edges = this.getEdgesForItem(itemId, edgeTypes);
+    const outgoingCount = edges.filter(e => e.sourceItem.id === itemId).length;
+    const incomingCount = edges.filter(e => e.targetItem.id === itemId).length;
+
+    return {
+      ...baseMetadata,
+      subtitle: `Relationships  ${incomingCount} ↘  •  ↗ ${outgoingCount}`
+    };
+  }
+
+  /**
    * Get ItemInfo for a single node from the graph
    */
   getItemInfo(nodeId: string): ItemInfo | null {

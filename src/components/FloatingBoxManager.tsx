@@ -64,29 +64,50 @@ export default function FloatingBoxManager({
   }, [boxes, onClose]);
 
   // Render boxes based on display mode
+  // Transitory boxes always float (never stacked) - they're interactive tooltips
+  const transitoryBoxes = boxes.filter(b => b.mode === 'transitory');
+  const persistentBoxes = boxes.filter(b => b.mode === 'persistent');
+
   if (displayMode === 'stacked') {
-    // Stacked layout - boxes in vertical stack (newest at top)
-    const reversedBoxes = [...boxes].reverse();
+    // Stacked layout - only persistent boxes in vertical stack (newest at top)
+    const reversedPersistent = [...persistentBoxes].reverse();
 
     return (
-      <div
-        className="absolute right-0 top-0 h-full overflow-y-auto flex flex-col gap-4 p-4 bg-gray-50 dark:bg-slate-900 z-40"
-        style={{ width: `${stackedWidth}px` }}
-      >
-        {reversedBoxes.map((box, index) => (
+      <>
+        {/* Stacked persistent boxes */}
+        <div
+          className="absolute right-0 top-0 h-full overflow-y-auto flex flex-col gap-4 p-4 bg-gray-50 dark:bg-slate-900 z-40"
+          style={{ width: `${stackedWidth}px` }}
+        >
+          {reversedPersistent.map((box, index) => (
+            <FloatingBox
+              key={box.id}
+              box={box}
+              index={index}
+              totalBoxes={persistentBoxes.length}
+              onClose={() => onClose(box.id)}
+              onChange={onChange ? (pos, size) => onChange(box.id, pos, size) : undefined}
+              onBringToFront={onBringToFront ? () => onBringToFront(box.id) : undefined}
+              onUpgradeToPersistent={onUpgradeToPersistent ? () => onUpgradeToPersistent(box.id) : undefined}
+              isStacked={true}
+            />
+          ))}
+        </div>
+        {/* Transitory boxes always float */}
+        {transitoryBoxes.map((box, index) => (
           <FloatingBox
             key={box.id}
             box={box}
             index={index}
-            totalBoxes={boxes.length}
+            totalBoxes={transitoryBoxes.length}
             onClose={() => onClose(box.id)}
             onChange={onChange ? (pos, size) => onChange(box.id, pos, size) : undefined}
             onBringToFront={onBringToFront ? () => onBringToFront(box.id) : undefined}
             onUpgradeToPersistent={onUpgradeToPersistent ? () => onUpgradeToPersistent(box.id) : undefined}
-            isStacked={true}
+            isStacked={false}
           />
         ))}
-      </div>
+      </>
     );
   }
 
@@ -323,7 +344,10 @@ function FloatingBox({
         {/* Header */}
         <div className={`flex items-center justify-between px-4 py-2 ${box.metadata.color} text-white border-b rounded-t-lg`}>
           <div className="min-w-0 flex-1">
-            <div className="font-semibold truncate">{box.metadata.title}</div>
+            <div className="font-semibold">{box.metadata.title}</div>
+            {box.metadata.subtitle && (
+              <div className="text-sm opacity-90">{box.metadata.subtitle}</div>
+            )}
           </div>
           {box.mode === 'persistent' && (
             <button
@@ -347,6 +371,11 @@ function FloatingBox({
   }
 
   // Cascade mode rendering (draggable, floating, cascading positions)
+  // Transitory boxes use fit-content width (sizes to header/content)
+  const widthStyle = box.mode === 'transitory'
+    ? { width: 'fit-content' as const, minWidth: '300px', maxWidth: '600px' }
+    : { width: `${size.width}px`, minWidth: `${MIN_WIDTH}px` };
+
   return (
     <div
       ref={boxRef}
@@ -356,9 +385,8 @@ function FloatingBox({
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
-        width: `${size.width}px`,
+        ...widthStyle,
         height: `${size.height}px`,
-        minWidth: `${MIN_WIDTH}px`,
         minHeight: `${MIN_HEIGHT}px`,
         zIndex
       }}
@@ -386,7 +414,10 @@ function FloatingBox({
         onMouseDown={handleDragStart}
       >
         <div className="min-w-0 flex-1">
-          <div className="font-semibold truncate">{box.metadata.title}</div>
+          <div className={`font-semibold ${box.mode === 'persistent' ? 'truncate' : ''}`}>{box.metadata.title}</div>
+          {box.metadata.subtitle && (
+            <div className="text-sm opacity-90">{box.metadata.subtitle}</div>
+          )}
         </div>
         {box.mode === 'persistent' && (
           <button

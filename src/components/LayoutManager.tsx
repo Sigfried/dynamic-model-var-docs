@@ -273,6 +273,7 @@ export default function LayoutManager({
   }, []);
 
   // Effect to create/update transitory floating box on hover
+  // Note: floatingBoxes intentionally NOT in deps - we use functional updates to avoid re-running on every box change
   useEffect(() => {
     // Clear any existing timers
     if (hoverTimerRef.current) {
@@ -287,23 +288,19 @@ export default function LayoutManager({
     if (hoveredItemId && hoveredItemDomId) {
       // Item hovered - show after short delay
       hoverTimerRef.current = window.setTimeout(() => {
-        // Check if there's already a persistent box for this item
-        const existingPersistent = floatingBoxes.find(
-          b => b.itemId === hoveredItemId && b.mode === 'persistent'
-        );
-        if (existingPersistent) return; // Don't show transitory if persistent exists
-
         const position = calculateTransitoryBoxPosition(hoveredItemDomId);
         if (!position) return;
 
-        const metadata = dataService.getFloatingBoxMetadata(hoveredItemId);
+        // Get relationship metadata from DataService (includes counts subtitle)
+        const metadata = dataService.getRelationshipBoxMetadata(hoveredItemId);
         if (!metadata) return;
 
-        // Remove any existing transitory box for different item
+        // Remove any existing transitory box, add new one
+        // Note: relationship boxes use 'rel-' prefix to coexist with detail boxes
         setFloatingBoxes(prev => {
           const filtered = prev.filter(b => b.mode !== 'transitory');
           const newBox: FloatingBoxData = {
-            id: `transitory-${hoveredItemId}`,
+            id: `rel-${hoveredItemId}`,
             mode: 'transitory',
             metadata,
             content: <RelationshipInfoContent itemId={hoveredItemId} dataService={dataService} onNavigate={handleNavigate} />,
@@ -325,7 +322,8 @@ export default function LayoutManager({
       if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
       if (lingerTimerRef.current) clearTimeout(lingerTimerRef.current);
     };
-  }, [hoveredItemId, hoveredItemDomId, dataService, floatingBoxes, calculateTransitoryBoxPosition, handleNavigate]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hoveredItemId, hoveredItemDomId, dataService, calculateTransitoryBoxPosition, handleNavigate]);
 
   // Handle upgrade: change transitory box to persistent (no new box creation)
   const handleUpgradeToPersistent = useCallback((boxId: string) => {

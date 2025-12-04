@@ -107,7 +107,8 @@ export interface ToggleButtonData {
  * Maintains view/model separation - uses display strings, not model instances.
  */
 export interface FloatingBoxMetadata {
-  title: string;        // e.g., "Class: Specimen" or "Relationships: Specimen"
+  title: string;        // e.g., "Class: Specimen"
+  subtitle?: string;    // e.g., "Relationships  0 ↘  •  ↗ 3" (optional second line)
   color: string;        // Tailwind classes for header (e.g., "bg-blue-700 border-blue-800")
 }
 
