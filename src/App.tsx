@@ -42,7 +42,7 @@ function App() {
     triggerURLSave
   } = useLayoutState({
     hasRestoredFromURL,
-    getDialogStates: getDialogStatesRef.current
+    getDialogStates: () => getDialogStatesRef.current()
   });
 
   // Mark as restored after data loads (coordination with LayoutManager)

@@ -59,7 +59,6 @@ export default function LayoutManager({
   // Floating box state
   const [hoveredItem, setHoveredItem] = useState<ItemHoverData | null>(null);
   const [floatingBoxes, setFloatingBoxes] = useState<FloatingBoxData[]>([]);
-  const [nextBoxId, setNextBoxId] = useState(0);
   const [hasRestoredDialogs, setHasRestoredDialogs] = useState(false);
 
   // Display mode calculation
@@ -129,7 +128,11 @@ export default function LayoutManager({
 
   useEffect(() => {
     if (!hasRestoredDialogs && initialDialogs.length > 0) return; // Still restoring
-    onDialogsChange?.();
+    // Delay URL save to allow animation to complete before re-render
+    const timer = setTimeout(() => {
+      onDialogsChange?.();
+    }, APP_CONFIG.timing.boxTransition + 50); // Animation duration + small buffer
+    return () => clearTimeout(timer);
   }, [persistentBoxesStateJson, hasRestoredDialogs, initialDialogs.length, onDialogsChange]);
 
   // Restore floating boxes from initial dialogs (runs once after data loads)
@@ -140,16 +143,15 @@ export default function LayoutManager({
     setHasRestoredDialogs(true);
 
     const restoredBoxes: FloatingBoxData[] = [];
-    let boxIdCounter = 0;
 
-    initialDialogs.forEach(dialogState => {
+    initialDialogs.forEach((dialogState, index) => {
       const itemId = dialogState.itemName;
 
       if (dataService.itemExists(itemId)) {
         const metadata = dataService.getFloatingBoxMetadata(itemId);
         if (metadata) {
           const box: FloatingBoxData = {
-            id: `box-${boxIdCounter}`,
+            id: `restored-${Date.now()}-${index}`,
             mode: 'persistent',
             contentType: 'detail',  // Restored boxes are always detail type
             metadata,
@@ -165,7 +167,6 @@ export default function LayoutManager({
           }
 
           restoredBoxes.push(box);
-          boxIdCounter++;
         }
       }
     });
@@ -178,7 +179,6 @@ export default function LayoutManager({
       });
 
       setFloatingBoxes(sortedBoxes);
-      setNextBoxId(boxIdCounter);
     }
   }, [dataService, initialDialogs, hasRestoredDialogs]);
 
@@ -221,73 +221,67 @@ export default function LayoutManager({
       return;
     }
 
-    // Check for existing transitory box for this item AND content type - upgrade it
-    const transitoryIndex = floatingBoxes.findIndex(b =>
-      b.itemId === itemId && b.mode === 'transitory' && b.contentType === contentType
-    );
-    if (transitoryIndex !== -1) {
-      // Upgrade the transitory box to persistent
-      // Don't preserve position/size - let FloatingBoxManager's cascade logic handle it
-      // CSS transition will animate the move from hover position to cascade position
-      setFloatingBoxes(prev => {
-        const updated = [...prev];
-        const [transitory] = updated.splice(transitoryIndex, 1);
-        const persistent: FloatingBoxData = {
-          id: `box-${nextBoxId}`,
-          mode: 'persistent',
-          contentType: transitory.contentType,
-          metadata: transitory.metadata,
-          content: transitory.content,
-          itemId: transitory.itemId
-          // position and size intentionally omitted - cascade will position
-        };
-        return [...updated, persistent];
-      });
-      setNextBoxId(prev => prev + 1);
-      setHoveredItem(null); // Clear hover state since we upgraded
-      return;
-    }
-
-    // Check for existing persistent box of same content type - bring to front
-    const existingIndex = floatingBoxes.findIndex(b =>
-      b.itemId === itemId && b.mode === 'persistent' && b.contentType === contentType
-    );
-    if (existingIndex !== -1) {
-      setFloatingBoxes(prev => {
-        const updated = [...prev];
-        const [existing] = updated.splice(existingIndex, 1);
-        return [...updated, existing];
-      });
-      return;
-    }
-
-    // No existing box of this type - create a new persistent one
+    // Get metadata upfront (needed for new box creation)
     const isRelationship = contentType === 'relationship';
     const metadata = isRelationship
       ? dataService.getRelationshipBoxMetadata(itemId)
       : dataService.getFloatingBoxMetadata(itemId);
-    if (!metadata) {
-      console.warn(`Could not get metadata for item "${itemId}"`);
-      return;
-    }
 
-    const newBox: FloatingBoxData = {
-      id: `box-${nextBoxId}`,
-      mode: 'persistent',
-      contentType,
-      metadata,
-      content: isRelationship
-        ? <RelationshipInfoContent itemId={itemId} dataService={dataService} onNavigate={handleNavigate} />
-        : <DetailContent itemId={itemId} dataService={dataService} hideHeader={true} />,
-      itemId,
-      position,
-      size: size ?? (isRelationship ? RELATIONSHIP_BOX_SIZE : DETAIL_BOX_SIZE)
-    };
+    setFloatingBoxes(prev => {
+      // Check for existing transitory box - upgrade it
+      const transitoryIndex = prev.findIndex(b =>
+        b.itemId === itemId && b.mode === 'transitory' && b.contentType === contentType
+      );
+      if (transitoryIndex !== -1) {
+        return prev.map((box, i) => {
+          if (i === transitoryIndex) {
+            return {
+              ...box,
+              mode: 'persistent' as const,
+              position: undefined,
+              size: undefined
+            };
+          }
+          return box;
+        });
+      }
 
-    setFloatingBoxes(prev => [...prev, newBox]);
-    setNextBoxId(prev => prev + 1);
+      // Check for existing persistent box - bring to front
+      const existingIndex = prev.findIndex(b =>
+        b.itemId === itemId && b.mode === 'persistent' && b.contentType === contentType
+      );
+      if (existingIndex !== -1) {
+        const updated = [...prev];
+        const [existing] = updated.splice(existingIndex, 1);
+        return [...updated, existing];
+      }
+
+      // No existing box - create new persistent one
+      if (!metadata) {
+        console.warn(`Could not get metadata for item "${itemId}"`);
+        return prev;
+      }
+
+      const newBox: FloatingBoxData = {
+        id: `box-${Date.now()}`, // Use timestamp for unique ID
+        mode: 'persistent',
+        contentType,
+        metadata,
+        content: isRelationship
+          ? <RelationshipInfoContent itemId={itemId} dataService={dataService} onNavigate={handleNavigate} />
+          : <DetailContent itemId={itemId} dataService={dataService} hideHeader={true} />,
+        itemId,
+        position,
+        size: size ?? (isRelationship ? RELATIONSHIP_BOX_SIZE : DETAIL_BOX_SIZE)
+      };
+
+      return [...prev, newBox];
+    });
+
+    // Always clear hover state after click action
+    setHoveredItem(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- handleNavigate excluded to break circular dependency; content uses closure
-  }, [dataService, floatingBoxes, nextBoxId]);
+  }, [dataService]);
 
   // Get item ID and DOM ID for hovered item (for RelationshipInfoBox)
   const hoveredItemId = useMemo(() => {
@@ -357,15 +351,13 @@ export default function LayoutManager({
         if (existingPersistentIdx !== -1) {
           // Bring existing persistent box to front, remove any transitory
           const filtered = prev.filter(b => b.mode !== 'transitory');
-          if (existingPersistentIdx !== filtered.length - 1) {
+          const realIdx = filtered.findIndex(b =>
+            b.itemId === hoveredItemId && b.mode === 'persistent' && b.contentType === contentType
+          );
+          if (realIdx !== -1 && realIdx !== filtered.length - 1) {
             const updated = [...filtered];
-            const realIdx = updated.findIndex(b =>
-              b.itemId === hoveredItemId && b.mode === 'persistent' && b.contentType === contentType
-            );
-            if (realIdx !== -1) {
-              const [existing] = updated.splice(realIdx, 1);
-              return [...updated, existing];
-            }
+            const [existing] = updated.splice(realIdx, 1);
+            return [...updated, existing];
           }
           return filtered;
         }
@@ -432,18 +424,19 @@ export default function LayoutManager({
   const handleUpgradeToPersistent = useCallback((boxId: string) => {
     setFloatingBoxes(prev => prev.map(box => {
       if (box.id === boxId && box.mode === 'transitory') {
-        // Upgrade to persistent - same content, same position, new mode
+        // Upgrade to persistent - clear position/size so cascade positioning takes over
+        // Keep same ID so React doesn't remount - enables smooth animation
         return {
           ...box,
-          id: `box-${nextBoxId}`, // Give it a proper persistent ID
-          mode: 'persistent' as const
+          mode: 'persistent' as const,
+          position: undefined,  // Clear so cascade kicks in (triggers animated move)
+          size: undefined       // Clear so default size is used
         };
       }
       return box;
     }));
-    setNextBoxId(prev => prev + 1);
     setHoveredItem(null);
-  }, [nextBoxId]);
+  }, []);
 
   // Close a floating box
   const handleCloseFloatingBox = useCallback((id: string) => {

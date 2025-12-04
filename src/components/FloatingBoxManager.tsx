@@ -113,21 +113,30 @@ export default function FloatingBoxManager({
   }
 
   // Cascade mode - floating draggable boxes with multi-stack cascade positioning
+  // CRITICAL: Render boxes in stable DOM order (sorted by ID) to prevent React from
+  // reordering DOM elements. DOM reordering breaks CSS transitions because the browser
+  // loses the "old" computed style to transition from. Only styles (position, z-index) change.
+  const boxIndexMap = new Map(boxes.map((box, index) => [box.id, index]));
+  const sortedBoxes = [...boxes].sort((a, b) => a.id.localeCompare(b.id));
+
   return (
     <>
-      {boxes.map((box, index) => (
-        <FloatingBox
-          key={box.id}
-          box={box}
-          index={index}
-          totalBoxes={boxes.length}
-          onClose={() => onClose(box.id)}
-          onChange={onChange ? (pos, size) => onChange(box.id, pos, size) : undefined}
-          onBringToFront={onBringToFront ? () => onBringToFront(box.id) : undefined}
-          onUpgradeToPersistent={onUpgradeToPersistent ? () => onUpgradeToPersistent(box.id) : undefined}
-          isStacked={false}
-        />
-      ))}
+      {sortedBoxes.map((box) => {
+        const originalIndex = boxIndexMap.get(box.id)!;
+        return (
+          <FloatingBox
+            key={box.id}
+            box={box}
+            index={originalIndex}
+            totalBoxes={boxes.length}
+            onClose={() => onClose(box.id)}
+            onChange={onChange ? (pos, size) => onChange(box.id, pos, size) : undefined}
+            onBringToFront={onBringToFront ? () => onBringToFront(box.id) : undefined}
+            onUpgradeToPersistent={onUpgradeToPersistent ? () => onUpgradeToPersistent(box.id) : undefined}
+            isStacked={false}
+          />
+        );
+      })}
     </>
   );
 }
@@ -211,14 +220,36 @@ function FloatingBox({
     y: cascadeY
   };
 
-  const [position, setPosition] = useState(box.position ?? defaultPosition);
-  const [size, setSize] = useState(box.size ?? defaultSize);
+  // Position/size: use box prop if set, otherwise use local state (for dragging) or default
+  // Local state only used when user drags/resizes - otherwise we derive from props
+  const [localPosition, setLocalPosition] = useState<{x: number, y: number} | null>(null);
+  const [localSize, setLocalSize] = useState<{width: number, height: number} | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isResizing, setIsResizing] = useState<ResizeHandle>(null);
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0, posX: 0, posY: 0 });
 
   const boxRef = useRef<HTMLDivElement>(null);
+
+  // Derive actual position: prop > local state > default cascade
+  const position = box.position ?? localPosition ?? defaultPosition;
+  const size = box.size ?? localSize ?? defaultSize;
+
+  // Wrapper setters that update local state
+  const setPosition = (pos: {x: number, y: number} | ((prev: {x: number, y: number}) => {x: number, y: number})) => {
+    if (typeof pos === 'function') {
+      setLocalPosition(prev => pos(prev ?? defaultPosition));
+    } else {
+      setLocalPosition(pos);
+    }
+  };
+  const setSize = (sz: {width: number, height: number} | ((prev: {width: number, height: number}) => {width: number, height: number})) => {
+    if (typeof sz === 'function') {
+      setLocalSize(prev => sz(prev ?? defaultSize));
+    } else {
+      setLocalSize(sz);
+    }
+  };
 
   // Handle dragging start
   const handleDragStart = (e: React.MouseEvent) => {
@@ -392,12 +423,13 @@ function FloatingBox({
         box.mode === 'transitory' ? 'border-gray-400 dark:border-slate-500' : 'border-gray-300 dark:border-slate-600'
       } flex flex-col`}
       style={{
-        left: `${position.x}px`,
-        top: `${position.y}px`,
+        left: 0,
+        top: 0,
+        transform: `translate(${position.x}px, ${position.y}px)`,
         ...widthStyle,
         ...heightStyle,
         zIndex,
-        transition: shouldAnimate ? `left ${APP_CONFIG.timing.boxTransition}ms ease-out, top ${APP_CONFIG.timing.boxTransition}ms ease-out, width ${APP_CONFIG.timing.boxTransition}ms ease-out, height ${APP_CONFIG.timing.boxTransition}ms ease-out` : 'none'
+        transition: shouldAnimate ? `transform ${APP_CONFIG.timing.boxTransition}ms ease-out, width ${APP_CONFIG.timing.boxTransition}ms ease-out, height ${APP_CONFIG.timing.boxTransition}ms ease-out` : 'none'
       }}
       onClick={handleClick}
     >
