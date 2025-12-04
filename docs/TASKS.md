@@ -10,40 +10,50 @@
 ## 🐛 Current Bugs
 
 - when showing/hiding middle panel, links don't update until some kind of interaction
-- title of slots info box always shows 0 outgoing, 0 incoming
 
 ## 📋 Upcoming Work (Ordered by Priority)
-### Floating Box Issues
-1. **Detail box positioning bugs** - Multiple issues from Unified Detail Box work:
-    - Remove unnecessary isStacked logic (#3)
-    - Make stacked width responsive (#4)
-    - Fix transitory/persistent box upgrade (#6); currently deletes rel info box and creates new detail box - should simply make rel info box persistent (draggable, etc.)
-    - Fix hover/upgrade behavior (#7); RelationshipInfoBox may use fixed positioning conflicting with FloatingBox wrapper
-    - See [archived details](archive/tasks_pre_reorg.md#unified-detail-box-system) for full list
 
-1. **Hover positioning** (⚠️ minor)
-    - Working but not centered on item (appears near top)
-    - Expected: Box should center vertically just above or below hovered item and
-      horizontally nearby to the right or left -- all depending on how much space
-      available. maybe at some point try to develop better heuristics to avoid 
-      obscuring info that the user may want to focus on
+### Badge-Based Hover/Click Interaction (Next Up)
+**Goal**: Replace complex timing-based hover with explicit badge/name hover areas
 
-3. **Remove unnecessary isStacked logic** (enhancement)
-    - All boxes should be draggable regardless of display mode
-    - displayMode only affects initial positioning, not capabilities
+**Current issues with timing approach**:
+- Flaky clicking (hover effect interferes)
+- User can't predict what they'll get
+- Complex debounce/linger timers
 
-4. **Make stacked width responsive** (enhancement)
-    - Currently fixed at 600px
-    - Should calculate based on available space after panels
+**Proposed design**:
+1. Add relationship badge to each item showing incoming/outgoing counts
+   - Icon making clear it's relationship count (maybe `↘•↗` or similar)
+   - Tooltip explaining the badge
+2. Hover badge → shows relationship info box (no timing - show while hovering)
+3. Hover item name → shows detail box (no timing - show while hovering)
+4. Click while hovering → upgrades that box to persistent
 
-6. **Fix transitory/persistent box upgrade architecture** (enhancement)
-    - Current: Creates new box on upgrade, causing position jump
-    - Should: Modify existing RelationshipInfoBox mode from transitory → persistent
+**Benefits**:
+- Explicit intent (badge vs name)
+- No timers - just CSS :hover essentially
+- Predictable clicks
+- Badge provides info at a glance
 
-7. **Hover/upgrade behavior broken** (❌ critical)
-    - RelationshipInfoBox uses fixed positioning which conflicts with FloatingBox wrapper [sg] still true?
-    - creates DetailContent instead of RelationshipInfoBox on upgrade
-    - Fix: Refactor RelationshipInfoBox to support both transitory and persistent modes
+**Implementation notes**:
+- Modify Section.tsx item rendering to add badge
+- Remove debounce/linger timing from LayoutManager
+- Slots might need two badges (class relationships, range)
+
+### Floating Box Issues (Mostly Done ✅)
+**Completed Dec 2024:**
+- ✅ Responsive stacked width (calculates from remaining space)
+- ✅ Transitory→persistent upgrade (changes mode, preserves position)
+- ✅ RelationshipInfoContent extracted for FloatingBox use
+- ✅ Transitory boxes managed by FloatingBoxManager
+- ✅ Title/subtitle support with relationship counts
+- ✅ Fit-content width for transitory boxes
+- ✅ Fixed ID collision (rel- vs box- prefixes can coexist)
+- ✅ Relationship metadata moved to DataService
+
+**Remaining**:
+- Hover positioning could be improved (currently appears near item, not always ideally placed)
+- isStacked logic still affects draggability (enhancement: all boxes draggable)
 
 ### LinkOverlay fixes
 - Edge labels: show on hover; tooltip display needs improvement
