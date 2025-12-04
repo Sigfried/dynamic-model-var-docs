@@ -80,9 +80,7 @@ describe('DetailContent - ClassElement', () => {
   };
 
   const slotCollection = createTestSlotCollection();
-  const mockModelData = createMockModelData();
-  mockModelData.collections.set('slot', slotCollection);
-  const classElement = new ClassElement(mockClassData, mockModelData, slotCollection);
+  const classElement = new ClassElement(mockClassData, slotCollection);
   // Manually add variables for testing
   classElement.variables = [
     new VariableElement({
@@ -161,9 +159,7 @@ describe('DetailContent - ClassElement', () => {
       name: 'RootClass',
       parent: undefined
     };
-    const rootModelData = createMockModelData();
-    rootModelData.collections.set('slot', slotCollection);
-    const rootClass = new ClassElement(rootClassData, rootModelData, slotCollection);
+    const rootClass = new ClassElement(rootClassData, slotCollection);
     const rootDataService = createMockDataService(rootClass);
 
     render(<DetailContent itemId="RootClass" dataService={rootDataService} />);

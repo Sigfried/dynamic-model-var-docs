@@ -371,10 +371,15 @@ function FloatingBox({
   }
 
   // Cascade mode rendering (draggable, floating, cascading positions)
-  // Transitory boxes use fit-content width (sizes to header/content)
+  // Transitory boxes use fit-content width (sizes to header/content) and flexible height
   const widthStyle = box.mode === 'transitory'
     ? { width: 'fit-content' as const, minWidth: '300px', maxWidth: '600px' }
     : { width: `${size.width}px`, minWidth: `${MIN_WIDTH}px` };
+
+  // Transitory boxes fit content up to 2/3 viewport height; persistent boxes have fixed height
+  const heightStyle = box.mode === 'transitory'
+    ? { maxHeight: `${Math.floor(window.innerHeight * 2 / 3)}px` }
+    : { height: `${size.height}px`, minHeight: `${MIN_HEIGHT}px` };
 
   return (
     <div
@@ -386,8 +391,7 @@ function FloatingBox({
         left: `${position.x}px`,
         top: `${position.y}px`,
         ...widthStyle,
-        height: `${size.height}px`,
-        minHeight: `${MIN_HEIGHT}px`,
+        ...heightStyle,
         zIndex
       }}
       onClick={handleClick}
@@ -433,7 +437,7 @@ function FloatingBox({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className={`flex-1 ${box.mode === 'transitory' ? 'overflow-y-auto' : 'overflow-hidden'}`}>
         {box.content}
       </div>
     </div>

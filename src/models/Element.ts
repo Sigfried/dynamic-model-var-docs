@@ -364,7 +364,6 @@ export function initializeModelData(schemaData: SchemaData): ModelData {
 // ClassElement - represents a class in the schema
 export class ClassElement extends Range {
   readonly type = 'class' as const;
-  protected readonly dataModel: ModelData
   readonly name: string;
   readonly description: string | undefined;
   readonly parentId: string | undefined;  // Store parent ID, not Element reference (set in Element.parent)
@@ -378,6 +377,7 @@ export class ClassElement extends Range {
 
   // Slot references - look up SlotElement from slotCollection when needed
   readonly slotRefs: SlotReference[];
+  private readonly slotCollection: SlotCollection;
 
   /** Computed property - returns variable count on-demand */
   get variableCount(): number {
@@ -388,13 +388,12 @@ export class ClassElement extends Range {
    * Get SlotElement for a slot reference ID
    */
   getSlotElement(slotId: string): SlotElement | null {
-    const slotCollection = this.dataModel.collections.get('slot');
-    return (slotCollection?.getElement(slotId) as SlotElement | null) ?? null;
+    return (this.slotCollection.getElement(slotId) as SlotElement | null) ?? null;
   }
 
-  constructor(data: ClassData, dataModel: ModelData, _slotCollection: SlotCollection) {
+  constructor(data: ClassData, slotCollection: SlotCollection) {
     super();
-    this.dataModel = dataModel;
+    this.slotCollection = slotCollection;
     this.name = data.name;
     this.description = data.description;
     this.parentId = data.parent;
@@ -1064,17 +1063,10 @@ export class ClassCollection extends ElementCollection {
 
   /** Factory: Create from raw data (called by dataLoader) */
   static fromData(classData: ClassData[], slotCollection: SlotCollection): ClassCollection {
-    // Create a temporary ModelData stub for ClassElement constructors
-    // (Full ModelData will be set later via setModelData())
-    const tempModelData = {
-      collections: new Map(),
-      elementLookup: new Map()
-    } as ModelData;
-
     // 1. Create all ClassElements
     const elementMap = new Map<string, ClassElement>();
     classData.forEach(metadata => {
-      const element = new ClassElement(metadata, tempModelData, slotCollection);
+      const element = new ClassElement(metadata, slotCollection);
       elementMap.set(element.name, element);
     });
 

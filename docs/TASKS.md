@@ -21,10 +21,17 @@
 - User can't predict what they'll get
 - Complex debounce/linger timers
 
+**Badge meaning confusion** (expected behavior, not a bug):
+- Current badges show different things per type: enums show permissible values count, slots show used-by-classes count, etc.
+- Relationship info box shows edge counts (incoming/outgoing relationships)
+- These are fundamentally different concepts - badge shows "what this contains" while relationships show "what connects to this"
+- New badge design should clarify this: relationship badge (new) vs existing count badge (different meanings per type)
+
 **Proposed design**:
 1. Add relationship badge to each item showing incoming/outgoing counts
    - Icon making clear it's relationship count (maybe `↘•↗` or similar)
    - Tooltip explaining the badge
+   - Keep existing badges that show type-specific info (permissible values, etc.)
 2. Hover badge → shows relationship info box (no timing - show while hovering)
 3. Hover item name → shows detail box (no timing - show while hovering)
 4. Click while hovering → upgrades that box to persistent
@@ -50,6 +57,8 @@
 - ✅ Fit-content width for transitory boxes
 - ✅ Fixed ID collision (rel- vs box- prefixes can coexist)
 - ✅ Relationship metadata moved to DataService
+- ✅ Transitory box height: fit-content up to 2/3 viewport (scrollable)
+- ✅ Fixed slots not showing in class details (ClassElement slotCollection lookup bug)
 
 **Remaining**:
 - Hover positioning could be improved (currently appears near item, not always ideally placed)
