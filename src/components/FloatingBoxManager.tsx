@@ -1,12 +1,12 @@
 /**
- * FloatingBoxManager - Manages floating boxes in both transitory and persistent modes
+ * FloatingBoxManager - Manages floating boxes in cascade layout
  *
  * Key features:
  * - Single FloatingBox component supporting transitory (auto-dismiss) and persistent (draggable) modes
  * - FIFO stack management for multiple boxes
  * - Click/drag/resize brings box to front
- * - ESC closes boxes (transitory first, then oldest persistent)
- * - Mode-aware positioning (stacked vs floating layout)
+ * - ESC closes boxes (transitory first, then auto-positioned, then user-positioned)
+ * - All boxes are draggable/resizable (except transitory)
  * - Content agnostic - works with any React component
  *
  * Architecture: Maintains view/model separation - uses item IDs, never model-layer instances
@@ -22,8 +22,6 @@ export type { FloatingBoxMetadata, FloatingBoxData };
 
 interface FloatingBoxManagerProps {
   boxes: FloatingBoxData[];
-  displayMode: 'cascade' | 'stacked';
-  stackedWidth?: number; // Width for stacked mode (defaults to 600)
   onClose: (id: string) => void;
   onChange?: (id: string, position: { x: number; y: number }, size: { width: number; height: number }) => void;
   onBringToFront?: (id: string) => void;
@@ -34,8 +32,6 @@ type ResizeHandle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw' | null;
 
 export default function FloatingBoxManager({
   boxes,
-  displayMode,
-  stackedWidth = 600,
   onClose,
   onChange,
   onBringToFront,
@@ -71,59 +67,10 @@ export default function FloatingBoxManager({
     return () => window.removeEventListener('keydown', handleEscape);
   }, [boxes, onClose]);
 
-  // Render boxes based on display mode
-  // Transitory boxes always float (never stacked) - they're interactive tooltips
-  const transitoryBoxes = boxes.filter(b => b.mode === 'transitory');
-  const persistentBoxes = boxes.filter(b => b.mode === 'persistent');
-
   // Determine if persistent boxes should be dimmed (when transitory box is showing)
-  const hasTransitoryBox = transitoryBoxes.length > 0;
+  const hasTransitoryBox = boxes.some(b => b.mode === 'transitory');
 
-  if (displayMode === 'stacked') {
-    // Stacked layout - only persistent boxes in vertical stack (newest at top)
-    const reversedPersistent = [...persistentBoxes].reverse();
-
-    return (
-      <>
-        {/* Stacked persistent boxes */}
-        <div
-          className="absolute right-0 top-0 h-full overflow-y-auto flex flex-col gap-4 p-4 bg-gray-50 dark:bg-slate-900 z-40"
-          style={{ width: `${stackedWidth}px` }}
-        >
-          {reversedPersistent.map((box, index) => (
-            <FloatingBox
-              key={box.id}
-              box={box}
-              index={index}
-              totalBoxes={persistentBoxes.length}
-              onClose={() => onClose(box.id)}
-              onChange={onChange ? (pos, size) => onChange(box.id, pos, size) : undefined}
-              onBringToFront={onBringToFront ? () => onBringToFront(box.id) : undefined}
-              onUpgradeToPersistent={onUpgradeToPersistent ? () => onUpgradeToPersistent(box.id) : undefined}
-              isStacked={true}
-              isDimmed={hasTransitoryBox}
-            />
-          ))}
-        </div>
-        {/* Transitory boxes always float */}
-        {transitoryBoxes.map((box, index) => (
-          <FloatingBox
-            key={box.id}
-            box={box}
-            index={index}
-            totalBoxes={transitoryBoxes.length}
-            onClose={() => onClose(box.id)}
-            onChange={onChange ? (pos, size) => onChange(box.id, pos, size) : undefined}
-            onBringToFront={onBringToFront ? () => onBringToFront(box.id) : undefined}
-            onUpgradeToPersistent={onUpgradeToPersistent ? () => onUpgradeToPersistent(box.id) : undefined}
-            isStacked={false}
-          />
-        ))}
-      </>
-    );
-  }
-
-  // Cascade mode - floating draggable boxes with multi-stack cascade positioning
+  // Cascade layout - floating draggable boxes with multi-stack cascade positioning
   // CRITICAL: Render boxes in stable DOM order (sorted by ID) to prevent React from
   // reordering DOM elements. DOM reordering breaks CSS transitions because the browser
   // loses the "old" computed style to transition from. Only styles (position, z-index) change.
@@ -155,7 +102,6 @@ export default function FloatingBoxManager({
             onChange={onChange ? (pos, size) => onChange(box.id, pos, size) : undefined}
             onBringToFront={onBringToFront ? () => onBringToFront(box.id) : undefined}
             onUpgradeToPersistent={onUpgradeToPersistent ? () => onUpgradeToPersistent(box.id) : undefined}
-            isStacked={false}
             isDimmed={shouldDim}
             zIndexOverride={zIndex}
           />
@@ -176,7 +122,6 @@ interface FloatingBoxProps {
   onChange?: (position: { x: number; y: number }, size: { width: number; height: number }) => void;
   onBringToFront?: () => void;
   onUpgradeToPersistent?: () => void;
-  isStacked: boolean;
   isDimmed?: boolean;     // Reduce brightness when another box (transitory) is in focus
   zIndexOverride?: number; // Override z-index (for maintaining z-order independent of cascade)
 }
@@ -188,7 +133,6 @@ function FloatingBox({
   onChange,
   onBringToFront,
   onUpgradeToPersistent,
-  isStacked,
   isDimmed = false,
   zIndexOverride
 }: FloatingBoxProps) {
@@ -210,17 +154,17 @@ function FloatingBox({
    * 5. Calculate X: start + (stackNumber * stackOffset) + (stackPosition * xIncrement)
    * 6. Calculate Y: start + (stackPosition * yIncrement) - just title bar peek
    *
-   * TODO: Move these values to appConfig when implemented
+   * With fit-content sizing, boxes vary in size, so cascade uses expected max dimensions
    */
-  const cascadeIncrement = {x: 40, y: 40}; // Offset for each successive box in a stack (title bar peek)
-  const defaultSize = { width: 900, height: 350 };
+  const cascadeIncrement = {x: 30, y: 35}; // Offset for each successive box in a stack (title bar peek)
+  const expectedMaxSize = { width: 700, height: 450 }; // Expected max for fit-content boxes
+  const defaultSize = expectedMaxSize; // Used for resize state initialization
   const bottomMargin = 20;
-  const minBoxesInStack = 3; // Minimum boxes we want to fit in cascade
+  const minBoxesInStack = 4; // Minimum boxes we want to fit in cascade
 
-  // Calculate starting Y - low on screen but with room for minimum boxes
-  // Aim for bottom 1/3 to 1/4 of screen, ensuring at least minBoxesInStack fit
-  const spaceNeededForMinBoxes = defaultSize.height + (minBoxesInStack * cascadeIncrement.y) + bottomMargin;
-  const preferredBottomPortion = window.innerHeight / 3.5;
+  // Calculate starting Y - position for comfortable viewing
+  const spaceNeededForMinBoxes = expectedMaxSize.height + (minBoxesInStack * cascadeIncrement.y) + bottomMargin;
+  const preferredBottomPortion = window.innerHeight / 3;
   const cascadeStartY = window.innerHeight - Math.max(spaceNeededForMinBoxes, preferredBottomPortion);
 
   const cascadeStart = {x: 100, y: cascadeStartY};
@@ -228,19 +172,18 @@ function FloatingBox({
   // Calculate how many boxes fit vertically in one stack
   const availableHeight = window.innerHeight - cascadeStart.y - bottomMargin;
   const yOffsetPerBox = cascadeIncrement.y; // Just title bar peek, not full box
-  const boxesPerStack = Math.max(1, Math.floor((availableHeight - defaultSize.height) / yOffsetPerBox) + 1);
+  const boxesPerStack = Math.max(1, Math.floor((availableHeight - expectedMaxSize.height) / yOffsetPerBox) + 1);
 
   // Determine which stack and position within stack
   const currentStackNumber = Math.floor(index / boxesPerStack);
   const positionInStack = index % boxesPerStack;
 
   // Calculate X position
-  // Each new stack offsets to show 1/3 of previous box (300px for 900px box)
-  const amountOfBoxWidthVisibleUnderNextStack = 1/3;
-  const stackOffsetX = defaultSize.width * amountOfBoxWidthVisibleUnderNextStack;
+  // Each new stack offsets to show portion of previous box
+  const stackOffsetX = expectedMaxSize.width * 0.4; // Show 40% of previous box
   const cascadeX = cascadeStart.x + (currentStackNumber * stackOffsetX) + (positionInStack * cascadeIncrement.x);
 
-  // Calculate Y position (downward cascade - offset by full box height + peek)
+  // Calculate Y position (downward cascade - offset by title bar peek)
   const cascadeY = cascadeStart.y + (positionInStack * yOffsetPerBox);
 
   const defaultPosition = {
@@ -394,53 +337,20 @@ function FloatingBox({
   // Use override if provided (for separating z-order from cascade index)
   const zIndex = 50 + (zIndexOverride ?? index);
 
-  // Stacked mode rendering (non-draggable, fixed in panel)
-  if (isStacked) {
-    return (
-      <div
-        className="bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-300 dark:border-slate-600 flex flex-col"
-        style={{ minHeight: '300px', maxHeight: '500px' }}
-        onClick={handleClick}
-      >
-        {/* Header */}
-        <div className={`flex items-center justify-between px-4 py-2 ${box.metadata.color} text-white border-b rounded-t-lg`}>
-          <div className="min-w-0 flex-1">
-            <div className="font-semibold">{box.metadata.title}</div>
-            {box.metadata.subtitle && (
-              <div className="text-sm opacity-90">{box.metadata.subtitle}</div>
-            )}
-          </div>
-          {box.mode === 'persistent' && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onClose();
-              }}
-              className="ml-2 flex-shrink-0 hover:opacity-70 transition-opacity text-xl font-bold w-8 h-8 flex items-center justify-center rounded hover:bg-black hover:bg-opacity-20"
-            >
-              ×
-            </button>
-          )}
-        </div>
+  // Cascade rendering (draggable, floating, cascading positions)
+  // Boxes use fit-content sizing by default, but user-sized boxes keep explicit dimensions
+  const hasUserSize = box.isUserPositioned && box.size != null;
 
-        {/* Content */}
-        <div className="flex-1 overflow-hidden">
-          {box.content}
-        </div>
-      </div>
-    );
-  }
+  // Width: fit-content unless user explicitly sized
+  const widthStyle = hasUserSize
+    ? { width: `${size.width}px`, minWidth: `${MIN_WIDTH}px` }
+    : { width: 'fit-content' as const, minWidth: '300px', maxWidth: '700px' };
 
-  // Cascade mode rendering (draggable, floating, cascading positions)
-  // Transitory boxes use fit-content width (sizes to header/content) and flexible height
-  const widthStyle = box.mode === 'transitory'
-    ? { width: 'fit-content' as const, minWidth: '300px', maxWidth: '600px' }
-    : { width: `${size.width}px`, minWidth: `${MIN_WIDTH}px` };
-
-  // Transitory boxes fit content up to 2/3 viewport height; persistent boxes have fixed height
-  const heightStyle = box.mode === 'transitory'
-    ? { maxHeight: `${Math.floor(window.innerHeight * 2 / 3)}px` }
-    : { height: `${size.height}px`, minHeight: `${MIN_HEIGHT}px` };
+  // Height: fit-content up to 2/3 viewport, unless user explicitly sized
+  const maxHeight = Math.floor(window.innerHeight * 2 / 3);
+  const heightStyle = hasUserSize
+    ? { height: `${size.height}px`, minHeight: `${MIN_HEIGHT}px` }
+    : { maxHeight: `${maxHeight}px` };
 
   // Animate position/size changes only when not actively dragging/resizing
   const shouldAnimate = !isDragging && !isResizing;
@@ -509,8 +419,8 @@ function FloatingBox({
         )}
       </div>
 
-      {/* Content */}
-      <div className={`flex-1 ${box.mode === 'transitory' ? 'overflow-y-auto' : 'overflow-hidden'}`}>
+      {/* Content - scrollable when content exceeds max height */}
+      <div className="flex-1 overflow-y-auto">
         {box.content}
       </div>
     </div>

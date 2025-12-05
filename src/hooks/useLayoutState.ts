@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getInitialState, saveStateToURL, saveStateToLocalStorage, itemTypeToCode, type DialogState } from '../utils/statePersistence';
-import { calculateDisplayMode } from '../utils/layoutHelpers';
 
 interface UseLayoutStateOptions {
   hasRestoredFromURL: boolean;
@@ -14,7 +13,6 @@ interface UseLayoutStateResult {
   setLeftSections: (sections: string[]) => void;
   setMiddleSections: (sections: string[]) => void;
   setRightSections: (sections: string[]) => void;
-  displayMode: 'stacked' | 'cascade';
   showUrlHelp: boolean;
   setShowUrlHelp: (show: boolean) => void;
   showSaveConfirm: boolean;
@@ -28,7 +26,6 @@ interface UseLayoutStateResult {
 /**
  * Hook to manage panel layout state including:
  * - Left/middle/right section configuration
- * - Display mode calculation (stacked vs cascade)
  * - Layout persistence (URL and localStorage)
  * - Save/reset/restore layout actions
  */
@@ -38,7 +35,6 @@ export function useLayoutState({ hasRestoredFromURL, getDialogStates }: UseLayou
   const [leftSections, setLeftSections] = useState<string[]>(initialState.leftSections);
   const [middleSections, setMiddleSections] = useState<string[]>(initialState.middleSections);
   const [rightSections, setRightSections] = useState<string[]>(initialState.rightSections);
-  const [displayMode, setDisplayMode] = useState<'stacked' | 'cascade'>('cascade');
   const [showUrlHelp, setShowUrlHelp] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [hasLocalStorage, setHasLocalStorage] = useState(false);
@@ -55,19 +51,6 @@ export function useLayoutState({ hasRestoredFromURL, getDialogStates }: UseLayou
     };
     checkLocalStorage();
   }, []);
-
-  // Measure available space and set display mode
-  useEffect(() => {
-    const measureSpace = () => {
-      const windowWidth = window.innerWidth;
-      const { mode } = calculateDisplayMode(windowWidth, leftSections.length, rightSections.length);
-      setDisplayMode(mode);
-    };
-
-    measureSpace();
-    window.addEventListener('resize', measureSpace);
-    return () => window.removeEventListener('resize', measureSpace);
-  }, [leftSections, rightSections]);
 
   // Function to save current state to URL
   const triggerURLSave = useCallback(() => {
@@ -187,7 +170,6 @@ export function useLayoutState({ hasRestoredFromURL, getDialogStates }: UseLayou
     setLeftSections,
     setMiddleSections,
     setRightSections,
-    displayMode,
     showUrlHelp,
     setShowUrlHelp,
     showSaveConfirm,

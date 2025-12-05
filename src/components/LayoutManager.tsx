@@ -3,8 +3,7 @@
  *
  * Consolidates all layout logic for the three-panel interface:
  * - Panel section state management (left, middle, right)
- * - Display mode calculation (stacked vs cascade)
- * - Floating box management
+ * - Floating box management (all boxes use cascade mode)
  * - LinkOverlay conditional rendering
  * - Panel visibility and sizing
  *
@@ -28,7 +27,6 @@ import LinkOverlay from './LinkOverlay';
 import { RelationshipInfoContent } from './RelationshipInfoBox';
 import { APP_CONFIG } from '../config/appConfig';
 import { type DialogState } from '../utils/statePersistence';
-import { calculateDisplayMode } from '../utils/layoutHelpers';
 import { type DataService } from '../services/DataService';
 
 interface LayoutManagerProps {
@@ -60,28 +58,6 @@ export default function LayoutManager({
   const [hoveredItem, setHoveredItem] = useState<ItemHoverData | null>(null);
   const [floatingBoxes, setFloatingBoxes] = useState<FloatingBoxData[]>([]);
   const [hasRestoredDialogs, setHasRestoredDialogs] = useState(false);
-
-  // Display mode calculation
-  const [displayMode, setDisplayMode] = useState<'stacked' | 'cascade'>('cascade');
-  const [stackedWidth, setStackedWidth] = useState(600);
-
-  // Measure available space and set display mode
-  useEffect(() => {
-    const measureSpace = () => {
-      const windowWidth = window.innerWidth;
-      const middleVisible = middleSections.length > 0;
-      const { mode, spaceInfo } = calculateDisplayMode(windowWidth, leftSections.length, rightSections.length, middleVisible);
-      setDisplayMode(mode);
-      // Use remaining space for stacked width, with minimum of 400px
-      if (mode === 'stacked') {
-        setStackedWidth(Math.max(400, spaceInfo.remainingSpace - 20)); // 20px for padding
-      }
-    };
-
-    measureSpace();
-    window.addEventListener('resize', measureSpace);
-    return () => window.removeEventListener('resize', measureSpace);
-  }, [leftSections, rightSections, middleSections]);
 
   // Convert floating boxes to dialog states for persistence
   const getDialogStatesFromBoxes = useCallback((): DialogState[] => {
@@ -586,8 +562,8 @@ export default function LayoutManager({
           />
         </div>
 
-        {/* Spacer to push remaining space to the right - only in cascade mode */}
-        {displayMode === 'cascade' && <div className="flex-1" />}
+        {/* Spacer to push remaining space to the right */}
+        <div className="flex-1" />
       </div>
 
       {/* SVG Link Overlay - single instance queries DOM for all visible items */}
@@ -601,8 +577,6 @@ export default function LayoutManager({
       {/* Floating Box Manager */}
       <FloatingBoxManager
         boxes={floatingBoxes}
-        displayMode={displayMode}
-        stackedWidth={stackedWidth}
         onClose={handleCloseFloatingBox}
         onChange={handleFloatingBoxChange}
         onBringToFront={handleBringToFront}

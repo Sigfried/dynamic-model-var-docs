@@ -19,17 +19,13 @@
 2. ~~the delay before showing these tooltips is too long~~ ✅ Fixed: 200ms delay via portal-based Tooltip component
 3. ~~when showing a box preview, slightly reduce opacity on all other boxes~~ ✅ Fixed: brightness filter dims persistent boxes
 4. ~~the old badges still give no indication of what they represent~~ ✅ Fixed: tooltips show "X variables", "X values", "Used by X classes"
-5. boxes in stacked mode still don't allow dragging. but i'm wondering if we should get
-   rid of stacked mode. when there's enough space for it, there would also be enough space
-   that we could show two tall cascade stacks, one for details and one for rel info maybe.
-   we would probably want to reduce the horizontal offset to almost nothing. the current
-   vertical offset is good.
-6. and if there's, say, half as much room as needed for the current stacked mode, we could
-   show one cascade stack on the right and maybe another like the current cascade along the
-   bottom
-7. the point is to find the least obtrusive place to put these boxes
-8. the cascade may look a little weird if we shrink all the box sizes from the default maxes
-   to the min needed to fit content, but we should try that
+5. ~~boxes in stacked mode still don't allow dragging~~ ✅ Fixed: Removed stacked mode entirely - all boxes now use cascade mode and are draggable
+6. two tall cascade stacks (one for details, one for relationships) - FUTURE: could implement
+   when we want to separate detail vs relationship boxes into distinct cascades
+7. adaptive positioning (find least obtrusive place for boxes) - FUTURE: could implement
+   more sophisticated positioning algorithms based on available space
+8. ~~the cascade may look a little weird if we shrink all the box sizes from the default maxes
+   to the min needed to fit content, but we should try that~~ ✅ Fixed: boxes use fit-content sizing (user-resized boxes keep explicit dimensions)
 9. ~~cascading is weird when some boxes are manually positioned~~ ✅ Fixed: user-positioned boxes excluded from cascade calculation; ESC closes auto-positioned first (FIFO), then user-positioned (FIFO)
 
 
@@ -75,10 +71,11 @@
 - ✅ Relationship metadata moved to DataService
 - ✅ Transitory box height: fit-content up to 2/3 viewport (scrollable)
 - ✅ Fixed slots not showing in class details (ClassElement slotCollection lookup bug)
+- ✅ Removed stacked mode entirely - all boxes now draggable (Dec 2024)
+- ✅ Fit-content sizing for all boxes (user-resized boxes keep explicit dimensions)
 
 **Remaining**:
 - Hover positioning could be improved (currently appears near item, not always ideally placed)
-- isStacked logic still affects draggability (enhancement: all boxes draggable)
 
 ### LinkOverlay fixes
 - Edge labels: show on hover; tooltip display needs improvement
