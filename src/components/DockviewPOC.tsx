@@ -320,9 +320,13 @@ export default function DockviewPOC({
 
   // Section state - can change when toggles are clicked
   const [currentLeftSections, setCurrentLeftSections] = useState(initialLeftSections);
-  // Middle sections state for future use when slots toggle is implemented
-  const [, setCurrentMiddleSections] = useState(initialMiddleSections);
+  // currentMiddleSections used for future LinkOverlay middle panel support
+  const [currentMiddleSections, setCurrentMiddleSections] = useState(initialMiddleSections);
+  void currentMiddleSections; // Suppress unused warning - will be used when LinkOverlay supports middle panel
   const [currentRightSections, setCurrentRightSections] = useState(initialRightSections);
+
+  // Track if middle panel (Slots) is visible
+  const [middlePanelVisible, setMiddlePanelVisible] = useState(initialMiddleSections.length > 0);
 
   // Build section data
   const leftSectionData = dataService.getAllSectionsData('left');
@@ -472,6 +476,49 @@ export default function DockviewPOC({
     }
   }, [dataService, handleNavigate]);
 
+  // Toggle middle panel visibility (show/hide Slots)
+  const handleToggleMiddlePanel = useCallback(() => {
+    const api = apiRef.current;
+    if (!api) return;
+
+    if (middlePanelVisible) {
+      // Hide: remove the panel
+      const panel = api.getPanel('middle-panel');
+      if (panel) {
+        api.removePanel(panel);
+      }
+      setMiddlePanelVisible(false);
+      setCurrentMiddleSections([]);
+    } else {
+      // Show: add the panel back
+      api.addPanel({
+        id: 'middle-panel',
+        component: 'mainPanel',
+        title: 'Slots',
+        params: {
+          dataService,
+          sections: ['slot'],
+          position: 'middle' as const,
+          sectionData: middleSectionData,
+          onClickItem: handleClickItem,
+          onItemHover: handleItemHover,
+          onItemLeave: handleItemLeave,
+          onSectionsChange: handleMiddleSectionsChange,
+          toggleButtons: [],
+          title: 'Slots',
+        },
+        position: { referencePanel: 'left-panel', direction: 'right' },
+      });
+
+      // Lock the new panel to prevent center drops
+      const middlePanel = api.getPanel('middle-panel');
+      if (middlePanel?.group) middlePanel.group.locked = true;
+
+      setMiddlePanelVisible(true);
+      setCurrentMiddleSections(['slot']);
+    }
+  }, [middlePanelVisible, dataService, middleSectionData, handleClickItem, handleItemHover, handleItemLeave, handleMiddleSectionsChange]);
+
   // Setup panels when Dockview is ready
   const onReady = useCallback((event: DockviewReadyEvent) => {
     apiRef.current = event.api;
@@ -581,6 +628,19 @@ export default function DockviewPOC({
           --dv-background-color: #f3f4f6;
         }
       `}</style>
+
+      {/* Slots toggle button - positioned in top-left corner */}
+      <button
+        onClick={handleToggleMiddlePanel}
+        title={middlePanelVisible ? 'Hide Slots panel' : 'Show Slots panel'}
+        className={`absolute top-2 left-2 z-10 px-3 py-1.5 rounded text-white text-sm font-medium transition-all ${
+          middlePanelVisible
+            ? 'bg-green-600 hover:bg-green-700'
+            : 'bg-gray-400 hover:bg-gray-500'
+        }`}
+      >
+        S
+      </button>
 
       {/* Dockview container */}
       <DockviewReact
