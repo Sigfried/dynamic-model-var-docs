@@ -30,7 +30,7 @@
 7. the point is to find the least obtrusive place to put these boxes
 8. the cascade may look a little weird if we shrink all the box sizes from the default maxes
    to the min needed to fit content, but we should try that
-9. cascading is weird when some boxes are manually positioned
+9. ~~cascading is weird when some boxes are manually positioned~~ ✅ Fixed: user-positioned boxes excluded from cascade calculation; ESC closes auto-positioned first (FIFO), then user-positioned (FIFO)
 
 
 ### Badge-Based Hover/Click Interaction ✅ DONE (Dec 2024)

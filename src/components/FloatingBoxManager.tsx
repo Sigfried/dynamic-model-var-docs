@@ -41,21 +41,28 @@ export default function FloatingBoxManager({
   onBringToFront,
   onUpgradeToPersistent
 }: FloatingBoxManagerProps) {
-  // Handle ESC key - close transitory boxes first, then oldest persistent
+  // Handle ESC key - close in order: transitory, then auto-positioned (FIFO), then user-positioned (FIFO)
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && boxes.length > 0) {
-        // Find first transitory box
+        // 1. First close transitory boxes
         const transitoryBox = boxes.find(b => b.mode === 'transitory');
         if (transitoryBox) {
           onClose(transitoryBox.id);
           return;
         }
 
-        // No transitory boxes - close oldest persistent box (index 0)
-        const persistentBoxes = boxes.filter(b => b.mode === 'persistent');
-        if (persistentBoxes.length > 0) {
-          onClose(persistentBoxes[0].id);
+        // 2. Then close auto-positioned persistent boxes (FIFO - oldest first)
+        const autoPositionedBoxes = boxes.filter(b => b.mode === 'persistent' && !b.isUserPositioned);
+        if (autoPositionedBoxes.length > 0) {
+          onClose(autoPositionedBoxes[0].id);
+          return;
+        }
+
+        // 3. Finally close user-positioned persistent boxes (FIFO - oldest first)
+        const userPositionedBoxes = boxes.filter(b => b.mode === 'persistent' && b.isUserPositioned);
+        if (userPositionedBoxes.length > 0) {
+          onClose(userPositionedBoxes[0].id);
         }
       }
     };
@@ -120,27 +127,37 @@ export default function FloatingBoxManager({
   // CRITICAL: Render boxes in stable DOM order (sorted by ID) to prevent React from
   // reordering DOM elements. DOM reordering breaks CSS transitions because the browser
   // loses the "old" computed style to transition from. Only styles (position, z-index) change.
+
+  // For z-index, use position in full array
   const boxIndexMap = new Map(boxes.map((box, index) => [box.id, index]));
+
+  // For cascade positioning, only count auto-positioned boxes (user-positioned boxes float independently)
+  const autoPositionedBoxes = boxes.filter(b => !b.isUserPositioned);
+  const cascadeIndexMap = new Map(autoPositionedBoxes.map((box, index) => [box.id, index]));
+
   const sortedBoxes = [...boxes].sort((a, b) => a.id.localeCompare(b.id));
 
   return (
     <>
       {sortedBoxes.map((box) => {
-        const originalIndex = boxIndexMap.get(box.id)!;
+        const zIndex = boxIndexMap.get(box.id)!;
+        // Cascade index only for auto-positioned boxes; user-positioned boxes use stored position
+        const cascadeIndex = cascadeIndexMap.get(box.id) ?? 0;
         // Dim persistent boxes when a transitory box is showing
         const shouldDim = hasTransitoryBox && box.mode === 'persistent';
         return (
           <FloatingBox
             key={box.id}
             box={box}
-            index={originalIndex}
-            totalBoxes={boxes.length}
+            index={cascadeIndex}
+            totalBoxes={autoPositionedBoxes.length}
             onClose={() => onClose(box.id)}
             onChange={onChange ? (pos, size) => onChange(box.id, pos, size) : undefined}
             onBringToFront={onBringToFront ? () => onBringToFront(box.id) : undefined}
             onUpgradeToPersistent={onUpgradeToPersistent ? () => onUpgradeToPersistent(box.id) : undefined}
             isStacked={false}
             isDimmed={shouldDim}
+            zIndexOverride={zIndex}
           />
         );
       })}
@@ -153,14 +170,15 @@ export default function FloatingBoxManager({
  */
 interface FloatingBoxProps {
   box: FloatingBoxData;
-  index: number;
-  totalBoxes: number;
+  index: number;          // Cascade position index (only counts auto-positioned boxes)
+  totalBoxes: number;     // Total auto-positioned boxes for cascade calculation
   onClose: () => void;
   onChange?: (position: { x: number; y: number }, size: { width: number; height: number }) => void;
   onBringToFront?: () => void;
   onUpgradeToPersistent?: () => void;
   isStacked: boolean;
-  isDimmed?: boolean; // Reduce opacity when another box (transitory) is in focus
+  isDimmed?: boolean;     // Reduce brightness when another box (transitory) is in focus
+  zIndexOverride?: number; // Override z-index (for maintaining z-order independent of cascade)
 }
 
 function FloatingBox({
@@ -171,7 +189,8 @@ function FloatingBox({
   onBringToFront,
   onUpgradeToPersistent,
   isStacked,
-  isDimmed = false
+  isDimmed = false,
+  zIndexOverride
 }: FloatingBoxProps) {
   const MIN_WIDTH = 400;
   const MIN_HEIGHT = 200;
@@ -372,7 +391,8 @@ function FloatingBox({
   };
 
   // Z-index based on position in array (later = higher z-index)
-  const zIndex = 50 + index;
+  // Use override if provided (for separating z-order from cascade index)
+  const zIndex = 50 + (zIndexOverride ?? index);
 
   // Stacked mode rendering (non-draggable, fixed in panel)
   if (isStacked) {
