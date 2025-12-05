@@ -27,13 +27,15 @@
 - LinkOverlay renders SVG links across Dockview panels
 - Multiple delayed redraws (100ms, 300ms) to fix flaky link rendering
 
+### Completed
+1. ✅ **Pane header height**: Fixed - increased to 36px with py-2 padding
+2. ✅ **Toggles missing**: Fixed - right panel now has C/E/T toggle buttons
+3. ✅ **Prevent drops INTO main panels**: Fixed - using `group.locked = true` on main panels
+4. ✅ **Slots toggle**: Fixed - green 'S' button in top-left corner toggles Slots panel
+5. ✅ **Panel width**: Fixed - panels have initialWidth=280, min=200, max=400
+
 ### TODO (Next Session)
-1. **Pane header height**: Headers are too short for content - see screenshot, text getting cut off
-2. **Toggles missing**: Right panel (Ranges) lost section toggles - need to pass `toggleButtons` prop and `onSectionsChange` handler to ItemsPanel
-3. **Prevent drops INTO main panels**: Use `locked: 'no-drop-target'` on groups or handle `onWillShowOverlay` to reject center drops - but DO allow drops ON TOP of panels
-4. **Slots toggle**: Middle panel needs toggle button to show/hide
-5. **Panel width**: Shrink panels to fit content, minimize whitespace between item names and badges
-6. **Main panel colors lost**: Item type colors (blue/green/purple) not showing in main panels anymore - need to verify ItemsPanel is rendering colors correctly
+1. **Main panel colors**: Investigate if section headers should have type colors (not currently implemented in Section.tsx)
 
 ### Architecture Notes
 - `DockviewPOC.tsx` contains all POC code
