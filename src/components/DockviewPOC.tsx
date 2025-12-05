@@ -7,7 +7,7 @@
  * 3. Test Paneview for collapsible detail/relationship stacks
  */
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, useEffect } from 'react';
 import { DockviewReact, PaneviewReact } from 'dockview';
 import type {
   DockviewReadyEvent,
@@ -73,6 +73,116 @@ function MainPanelContent({ params }: IDockviewPanelProps<{
   );
 }
 
+// Chevron icon for expand/collapse
+function ChevronIcon({ expanded }: { expanded: boolean }) {
+  return (
+    <svg
+      className={`w-4 h-4 transition-transform ${expanded ? 'rotate-90' : ''}`}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+    </svg>
+  );
+}
+
+// Close icon
+function CloseIcon() {
+  return (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  );
+}
+
+// Custom header component for detail panes
+// TODO: Move colors to appConfig
+function DetailPaneHeader({ api, title, containerApi }: IPaneviewPanelProps) {
+  const [isExpanded, setIsExpanded] = useState(api.isExpanded);
+
+  // Sync state with API
+  useEffect(() => {
+    const disposable = api.onDidExpansionChange(() => {
+      setIsExpanded(api.isExpanded);
+    });
+    return () => disposable.dispose();
+  }, [api]);
+
+  const handleClose = () => {
+    const panel = containerApi.getPanel(api.id);
+    if (panel) containerApi.removePanel(panel);
+  };
+
+  const handleToggle = () => {
+    api.setExpanded(!api.isExpanded);
+  };
+
+  return (
+    <div
+      className="flex items-center justify-between px-3 py-2 bg-blue-600 text-white cursor-pointer select-none"
+      onClick={handleToggle}
+    >
+      <div className="flex items-center gap-2">
+        <ChevronIcon expanded={isExpanded} />
+        <span className="font-medium text-sm truncate">{title}</span>
+      </div>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={(e) => { e.stopPropagation(); handleClose(); }}
+          className="p-1 hover:bg-blue-700 rounded"
+          title="Close"
+        >
+          <CloseIcon />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Custom header component for relationship panes
+function RelationshipPaneHeader({ api, title, containerApi }: IPaneviewPanelProps) {
+  const [isExpanded, setIsExpanded] = useState(api.isExpanded);
+
+  // Sync state with API
+  useEffect(() => {
+    const disposable = api.onDidExpansionChange(() => {
+      setIsExpanded(api.isExpanded);
+    });
+    return () => disposable.dispose();
+  }, [api]);
+
+  const handleClose = () => {
+    const panel = containerApi.getPanel(api.id);
+    if (panel) containerApi.removePanel(panel);
+  };
+
+  const handleToggle = () => {
+    api.setExpanded(!api.isExpanded);
+  };
+
+  return (
+    <div
+      className="flex items-center justify-between px-3 py-2 bg-purple-600 text-white cursor-pointer select-none"
+      onClick={handleToggle}
+    >
+      <div className="flex items-center gap-2">
+        <ChevronIcon expanded={isExpanded} />
+        <span className="font-medium text-sm truncate">{title}</span>
+      </div>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={(e) => { e.stopPropagation(); handleClose(); }}
+          className="p-1 hover:bg-purple-700 rounded"
+          title="Close"
+        >
+          <CloseIcon />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // Paneview panel component for detail boxes (collapsible)
 function DetailPaneContent({ params }: IPaneviewPanelProps<{
   dataService: DataService;
@@ -115,8 +225,16 @@ const detailPaneComponents = {
   detailPane: DetailPaneContent,
 };
 
+const detailPaneHeaderComponents = {
+  detailHeader: DetailPaneHeader,
+};
+
 const relationshipPaneComponents = {
   relationshipPane: RelationshipPaneContent,
+};
+
+const relationshipPaneHeaderComponents = {
+  relationshipHeader: RelationshipPaneHeader,
 };
 
 // Dockview panel that contains a Paneview for details
@@ -135,6 +253,7 @@ function DetailStackPanel({ params }: IDockviewPanelProps<{
         className="dockview-theme-light"
         onReady={handleReady}
         components={detailPaneComponents}
+        headerComponents={detailPaneHeaderComponents}
       />
     </div>
   );
@@ -156,6 +275,7 @@ function RelationshipStackPanel({ params }: IDockviewPanelProps<{
         className="dockview-theme-light"
         onReady={handleReady}
         components={relationshipPaneComponents}
+        headerComponents={relationshipPaneHeaderComponents}
       />
     </div>
   );
@@ -221,6 +341,7 @@ export default function DockviewPOC({
     paneApi.addPanel({
       id: paneId,
       component: 'detailPane',
+      headerComponent: 'detailHeader',
       title: itemName,
       params: {
         dataService,
@@ -251,6 +372,7 @@ export default function DockviewPOC({
       paneApi.addPanel({
         id: paneId,
         component: 'relationshipPane',
+        headerComponent: 'relationshipHeader',
         title: `${hoverData.name} Rels`,
         params: {
           dataService,
@@ -276,6 +398,7 @@ export default function DockviewPOC({
       paneApi.addPanel({
         id: paneId,
         component: 'detailPane',
+        headerComponent: 'detailHeader',
         title: hoverData.name,
         params: {
           dataService,
