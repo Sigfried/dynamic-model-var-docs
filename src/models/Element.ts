@@ -85,6 +85,14 @@ export abstract class Element {
   }
 
   /**
+   * Tooltip text explaining what the badge count represents.
+   * Return undefined for no tooltip.
+   */
+  getBadgeTooltip(): string | undefined {
+    return undefined; // Default: no tooltip
+  }
+
+  /**
    * Get the unique identifier for this element.
    * Returns the element name, which serves as its identity.
    *
@@ -142,6 +150,7 @@ export abstract class Element {
       level,
       badgeColor: badge !== undefined ? `${typeInfo.color.badgeBg} ${typeInfo.color.badgeText}` : undefined,
       badgeText: badge !== undefined ? badge.toString() : undefined,
+      badgeTooltip: this.getBadgeTooltip(),
       indicators: this.getIndicators(),
       hasChildren: hasChildren !== undefined ? hasChildren : this.children.length > 0,
       isExpanded,
@@ -491,6 +500,11 @@ export class ClassElement extends Range {
     return this.variableCount > 0 ? this.variableCount : undefined;
   }
 
+  getBadgeTooltip(): string | undefined {
+    const count = this.variableCount;
+    return count > 0 ? `${count} variable${count === 1 ? '' : 's'}` : undefined;
+  }
+
   getIndicators(): Array<{ text: string; color: string }> {
     if (this.isAbstract()) {
       return [{ text: 'abstract', color: 'text-purple-600 dark:text-purple-400' }];
@@ -568,7 +582,12 @@ export class EnumElement extends Range {
   }
 
   getBadge(): number | undefined {
-    return this.permissibleValues.length;
+    return this.permissibleValues.length > 0 ? this.permissibleValues.length : undefined;
+  }
+
+  getBadgeTooltip(): string | undefined {
+    const count = this.permissibleValues.length;
+    return count > 0 ? `${count} value${count === 1 ? '' : 's'}` : undefined;
   }
 
   /**
@@ -779,6 +798,11 @@ export class SlotElement extends Element {
   getBadge(): number | undefined {
     const usedByClasses = this.getUsedByClasses();
     return usedByClasses.length > 0 ? usedByClasses.length : undefined;
+  }
+
+  getBadgeTooltip(): string | undefined {
+    const count = this.getUsedByClasses().length;
+    return count > 0 ? `Used by ${count} class${count === 1 ? '' : 'es'}` : undefined;
   }
 
   /**

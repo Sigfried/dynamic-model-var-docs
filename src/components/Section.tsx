@@ -19,6 +19,7 @@
 import { useExpansionState } from '../hooks/useExpansionState';
 import { getItemHoverHandlers } from '../hooks/useItemHover';
 import { contextualizeId } from '../utils/idContextualization';
+import { WithTooltip } from './Tooltip';
 import type { ItemHoverData, SectionItemData, SectionData, HoverZone } from '../contracts/ComponentData';
 
 // Re-export for backward compatibility with existing imports
@@ -42,7 +43,7 @@ interface ItemRendererProps {
 }
 
 function ItemRenderer({ item, onClickItem, onItemHover, onItemLeave, position, toggleExpansion }: ItemRendererProps) {
-  const { id, displayName, level, hasChildren, isExpanded, isClickable, badgeColor, badgeText, relationshipBadge, indicators, hoverData } = item;
+  const { id, displayName, level, hasChildren, isExpanded, isClickable, badgeColor, badgeText, badgeTooltip, relationshipBadge, indicators, hoverData } = item;
 
   // Create hover handlers for the name zone
   const nameHoverHandlers = getItemHoverHandlers({
@@ -103,13 +104,14 @@ function ItemRenderer({ item, onClickItem, onItemHover, onItemLeave, position, t
         )}
 
         {/* Item name - hover zone for detail preview */}
-        <span
+        <WithTooltip
+          tooltip={isClickable ? `Click to pin ${hoverData.type} details` : undefined}
           className={`flex-1 text-sm font-medium ${isCursorPointer ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 rounded px-1 -mx-1' : ''}`}
           onClick={() => handleClick('name')}
           {...nameHoverHandlers}
         >
           {displayName}
-        </span>
+        </WithTooltip>
 
         {/* Indicators (e.g., "abstract" for classes) */}
         {indicators && indicators.length > 0 && indicators.map((indicator, idx) => (
@@ -120,21 +122,24 @@ function ItemRenderer({ item, onClickItem, onItemHover, onItemLeave, position, t
 
         {/* Type-specific badge (count display) */}
         {badgeText && badgeColor && (
-          <span className={`text-xs px-2 py-0.5 rounded ${badgeColor}`}>
+          <WithTooltip
+            tooltip={badgeTooltip}
+            className={`text-xs px-2 py-0.5 rounded ${badgeColor}`}
+          >
             {badgeText}
-          </span>
+          </WithTooltip>
         )}
 
         {/* Relationship badge - hover zone for relationship info */}
         {hasRelationships && (
-          <span
+          <WithTooltip
+            tooltip="Click to pin relationships"
             className="text-xs px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300 cursor-pointer hover:bg-slate-300 dark:hover:bg-slate-500"
-            title="Hover to see relationships"
             onClick={() => handleClick('badge')}
             {...badgeHoverHandlers}
           >
             ↘{relationshipBadge.incoming} ↗{relationshipBadge.outgoing}
-          </span>
+          </WithTooltip>
         )}
       </div>
     </div>

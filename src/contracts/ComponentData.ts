@@ -72,6 +72,7 @@ export interface SectionItemData {
   // Visual styling
   badgeColor?: string;            // Tailwind: "bg-blue-100 text-blue-800"
   badgeText?: string;             // "103" (type-specific: variables, permissible values, etc.)
+  badgeTooltip?: string;          // "103 variables" - explains what the badge count represents
   relationshipBadge?: RelationshipBadgeData;  // Relationship counts for hover badge
   indicators?: Array<{            // Visual indicators (e.g., "abstract")
     text: string;                 // "abstract"

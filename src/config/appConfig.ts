@@ -166,6 +166,13 @@ export const APP_CONFIG = {
   // Timing constants
   timing: {
     boxTransition: 300,        // Animation duration for box position/size changes (ms)
+    opacityTransition: 200,    // Animation duration for opacity changes (ms)
+    tooltipDelay: 200,         // Delay before showing tooltips (ms) - browser default is ~500-1000ms
+  },
+
+  // Box appearance
+  boxAppearance: {
+    dimmedBrightness: 0.7,     // Brightness filter for boxes not in focus (1 = normal, lower = darker)
   },
 
   // UI layout constants

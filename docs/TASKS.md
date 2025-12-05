@@ -13,6 +13,26 @@
 
 ## 📋 Upcoming Work (Ordered by Priority)
 
+[sg] some remaining issues with hover/click and floating boxes:
+1. ~~tooltip on relationship badges says "Hover to see relationships", but the relationship
+   preview is already displayed at that point~~ ✅ Fixed: "Click to pin relationships" / "Click to pin {type} details"
+2. ~~the delay before showing these tooltips is too long~~ ✅ Fixed: 200ms delay via portal-based Tooltip component
+3. ~~when showing a box preview, slightly reduce opacity on all other boxes~~ ✅ Fixed: brightness filter dims persistent boxes
+4. ~~the old badges still give no indication of what they represent~~ ✅ Fixed: tooltips show "X variables", "X values", "Used by X classes"
+5. boxes in stacked mode still don't allow dragging. but i'm wondering if we should get
+   rid of stacked mode. when there's enough space for it, there would also be enough space
+   that we could show two tall cascade stacks, one for details and one for rel info maybe.
+   we would probably want to reduce the horizontal offset to almost nothing. the current
+   vertical offset is good.
+6. and if there's, say, half as much room as needed for the current stacked mode, we could
+   show one cascade stack on the right and maybe another like the current cascade along the
+   bottom
+7. the point is to find the least obtrusive place to put these boxes
+8. the cascade may look a little weird if we shrink all the box sizes from the default maxes
+   to the min needed to fit content, but we should try that
+9. cascading is weird when some boxes are manually positioned
+
+
 ### Badge-Based Hover/Click Interaction ✅ DONE (Dec 2024)
 **Goal**: Replace complex timing-based hover with explicit badge/name hover areas
 

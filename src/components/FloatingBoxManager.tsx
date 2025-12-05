@@ -69,6 +69,9 @@ export default function FloatingBoxManager({
   const transitoryBoxes = boxes.filter(b => b.mode === 'transitory');
   const persistentBoxes = boxes.filter(b => b.mode === 'persistent');
 
+  // Determine if persistent boxes should be dimmed (when transitory box is showing)
+  const hasTransitoryBox = transitoryBoxes.length > 0;
+
   if (displayMode === 'stacked') {
     // Stacked layout - only persistent boxes in vertical stack (newest at top)
     const reversedPersistent = [...persistentBoxes].reverse();
@@ -91,6 +94,7 @@ export default function FloatingBoxManager({
               onBringToFront={onBringToFront ? () => onBringToFront(box.id) : undefined}
               onUpgradeToPersistent={onUpgradeToPersistent ? () => onUpgradeToPersistent(box.id) : undefined}
               isStacked={true}
+              isDimmed={hasTransitoryBox}
             />
           ))}
         </div>
@@ -123,6 +127,8 @@ export default function FloatingBoxManager({
     <>
       {sortedBoxes.map((box) => {
         const originalIndex = boxIndexMap.get(box.id)!;
+        // Dim persistent boxes when a transitory box is showing
+        const shouldDim = hasTransitoryBox && box.mode === 'persistent';
         return (
           <FloatingBox
             key={box.id}
@@ -134,6 +140,7 @@ export default function FloatingBoxManager({
             onBringToFront={onBringToFront ? () => onBringToFront(box.id) : undefined}
             onUpgradeToPersistent={onUpgradeToPersistent ? () => onUpgradeToPersistent(box.id) : undefined}
             isStacked={false}
+            isDimmed={shouldDim}
           />
         );
       })}
@@ -153,6 +160,7 @@ interface FloatingBoxProps {
   onBringToFront?: () => void;
   onUpgradeToPersistent?: () => void;
   isStacked: boolean;
+  isDimmed?: boolean; // Reduce opacity when another box (transitory) is in focus
 }
 
 function FloatingBox({
@@ -162,7 +170,8 @@ function FloatingBox({
   onChange,
   onBringToFront,
   onUpgradeToPersistent,
-  isStacked
+  isStacked,
+  isDimmed = false
 }: FloatingBoxProps) {
   const MIN_WIDTH = 400;
   const MIN_HEIGHT = 200;
@@ -416,6 +425,10 @@ function FloatingBox({
   // Animate position/size changes only when not actively dragging/resizing
   const shouldAnimate = !isDragging && !isResizing;
 
+  // Dimmed appearance for boxes not in focus (when a transitory box is showing)
+  const filterValue = isDimmed ? `brightness(${APP_CONFIG.boxAppearance.dimmedBrightness})` : 'none';
+  const filterTransition = `filter ${APP_CONFIG.timing.opacityTransition}ms ease-out`;
+
   return (
     <div
       ref={boxRef}
@@ -429,7 +442,10 @@ function FloatingBox({
         ...widthStyle,
         ...heightStyle,
         zIndex,
-        transition: shouldAnimate ? `transform ${APP_CONFIG.timing.boxTransition}ms ease-out, width ${APP_CONFIG.timing.boxTransition}ms ease-out, height ${APP_CONFIG.timing.boxTransition}ms ease-out` : 'none'
+        filter: filterValue,
+        transition: shouldAnimate
+          ? `transform ${APP_CONFIG.timing.boxTransition}ms ease-out, width ${APP_CONFIG.timing.boxTransition}ms ease-out, height ${APP_CONFIG.timing.boxTransition}ms ease-out, ${filterTransition}`
+          : filterTransition
       }}
       onClick={handleClick}
     >
