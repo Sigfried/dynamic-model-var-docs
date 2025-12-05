@@ -4,12 +4,19 @@
  * Goals:
  * 1. Test basic DockviewReact setup with our existing components
  * 2. Verify LinkOverlay can render over Dockview panels
- * 3. Test floating groups for detail boxes
+ * 3. Test Paneview for collapsible detail/relationship stacks
  */
 
 import { useCallback, useRef, useState } from 'react';
-import { DockviewReact } from 'dockview';
-import type { DockviewReadyEvent, IDockviewPanelProps, DockviewApi, DockviewTheme } from 'dockview-core';
+import { DockviewReact, PaneviewReact } from 'dockview';
+import type {
+  DockviewReadyEvent,
+  IDockviewPanelProps,
+  DockviewApi,
+  DockviewTheme,
+  PaneviewApi,
+} from 'dockview-core';
+import type { IPaneviewPanelProps, PaneviewReadyEvent } from 'dockview';
 import 'dockview/dist/styles/dockview.css';
 
 // Custom theme with wider gaps between panels
@@ -66,35 +73,34 @@ function MainPanelContent({ params }: IDockviewPanelProps<{
   );
 }
 
-// Panel component for detail boxes
-function DetailPanelContent({ params }: IDockviewPanelProps<{
+// Paneview panel component for detail boxes (collapsible)
+function DetailPaneContent({ params }: IPaneviewPanelProps<{
   dataService: DataService;
   itemId: string;
 }>) {
   const { dataService, itemId } = params;
 
   return (
-    <div className="h-full overflow-auto">
+    <div className="h-full overflow-auto bg-white">
       <DetailContent
         itemId={itemId}
         dataService={dataService}
-        hideHeader={false}
+        hideHeader={true}
       />
     </div>
   );
 }
 
-// Panel component for relationship info boxes
-function RelationshipPanelContent({ params }: IDockviewPanelProps<{
+// Paneview panel component for relationship info boxes (collapsible)
+function RelationshipPaneContent({ params }: IPaneviewPanelProps<{
   dataService: DataService;
   itemId: string;
   onNavigate: (itemName: string, itemSection: string) => void;
 }>) {
   const { dataService, itemId, onNavigate } = params;
 
-  // RelationshipInfoContent already has p-4 padding
   return (
-    <div className="h-full overflow-auto">
+    <div className="h-full overflow-auto bg-white">
       <RelationshipInfoContent
         itemId={itemId}
         dataService={dataService}
@@ -104,11 +110,62 @@ function RelationshipPanelContent({ params }: IDockviewPanelProps<{
   );
 }
 
+// Paneview component registries
+const detailPaneComponents = {
+  detailPane: DetailPaneContent,
+};
+
+const relationshipPaneComponents = {
+  relationshipPane: RelationshipPaneContent,
+};
+
+// Dockview panel that contains a Paneview for details
+function DetailStackPanel({ params }: IDockviewPanelProps<{
+  onPaneviewReady: (api: PaneviewApi) => void;
+}>) {
+  const { onPaneviewReady } = params;
+
+  const handleReady = useCallback((event: PaneviewReadyEvent) => {
+    onPaneviewReady(event.api);
+  }, [onPaneviewReady]);
+
+  return (
+    <div className="h-full">
+      <PaneviewReact
+        className="dockview-theme-light"
+        onReady={handleReady}
+        components={detailPaneComponents}
+      />
+    </div>
+  );
+}
+
+// Dockview panel that contains a Paneview for relationships
+function RelationshipStackPanel({ params }: IDockviewPanelProps<{
+  onPaneviewReady: (api: PaneviewApi) => void;
+}>) {
+  const { onPaneviewReady } = params;
+
+  const handleReady = useCallback((event: PaneviewReadyEvent) => {
+    onPaneviewReady(event.api);
+  }, [onPaneviewReady]);
+
+  return (
+    <div className="h-full">
+      <PaneviewReact
+        className="dockview-theme-light"
+        onReady={handleReady}
+        components={relationshipPaneComponents}
+      />
+    </div>
+  );
+}
+
 // Component registry for Dockview
 const components = {
   mainPanel: MainPanelContent,
-  detailPanel: DetailPanelContent,
-  relationshipPanel: RelationshipPanelContent,
+  detailStack: DetailStackPanel,
+  relationshipStack: RelationshipStackPanel,
 };
 
 export default function DockviewPOC({
@@ -118,6 +175,8 @@ export default function DockviewPOC({
   rightSections,
 }: DockviewPOCProps) {
   const apiRef = useRef<DockviewApi | null>(null);
+  const detailPaneApiRef = useRef<PaneviewApi | null>(null);
+  const relationshipPaneApiRef = useRef<PaneviewApi | null>(null);
 
   // Build section data
   const leftSectionData = dataService.getAllSectionsData('left');
@@ -135,82 +194,95 @@ export default function DockviewPOC({
     setHoveredItem(null);
   }, []);
 
-  // Navigation handler for relationship links
-  const handleNavigate = useCallback((itemName: string, _itemSection: string) => {
-    const api = apiRef.current;
-    if (!api) return;
+  // Callbacks for Paneview initialization
+  const handleDetailPaneReady = useCallback((api: PaneviewApi) => {
+    detailPaneApiRef.current = api;
+  }, []);
 
-    const panelId = `detail-${itemName}`;
-    const existingPanel = api.getPanel(panelId);
-    if (existingPanel) {
-      existingPanel.api.setActive();
+  const handleRelationshipPaneReady = useCallback((api: PaneviewApi) => {
+    relationshipPaneApiRef.current = api;
+  }, []);
+
+  // Navigation handler for relationship links - adds to detail pane stack
+  const handleNavigate = useCallback((itemName: string, _itemSection: string) => {
+    const paneApi = detailPaneApiRef.current;
+    if (!paneApi) return;
+
+    const paneId = `detail-${itemName}`;
+    const existingPane = paneApi.getPanel(paneId);
+    if (existingPane) {
+      // Expand and scroll to it
+      existingPane.api.setExpanded(true);
       return;
     }
 
-    api.addPanel({
-      id: panelId,
-      component: 'detailPanel',
+    // Add new pane at the top (index 0), expanded, collapse others
+    paneApi.panels.forEach(p => p.api.setExpanded(false));
+    paneApi.addPanel({
+      id: paneId,
+      component: 'detailPane',
       title: itemName,
       params: {
         dataService,
         itemId: itemName,
       },
-      floating: { width: 500, height: 400 },
+      isExpanded: true,
+      index: 0,
     });
   }, [dataService]);
 
-  // Track floating panel positions for cascade effect
-  const nextDetailPosition = useRef({ x: 100, y: 100 });
-  const nextRelPosition = useRef({ x: 150, y: 150 });
-
-  // Click handler - opens floating panel (detail or relationship based on hoverZone)
-  // Each panel is independent (no tabs/grouping)
+  // Click handler - adds to appropriate Paneview stack
   const handleClickItem = useCallback((hoverData: ItemHoverData) => {
-    const api = apiRef.current;
-    if (!api) return;
-
     const isRelationship = hoverData.hoverZone === 'badge';
-    const panelId = isRelationship ? `rel-${hoverData.name}` : `detail-${hoverData.name}`;
-
-    // Check if panel already exists
-    const existingPanel = api.getPanel(panelId);
-    if (existingPanel) {
-      existingPanel.api.setActive();
-      return;
-    }
-
-    // Get position and update for next panel (cascade effect)
-    const posRef = isRelationship ? nextRelPosition : nextDetailPosition;
-    const pos = { ...posRef.current };
-    posRef.current = { x: pos.x + 30, y: pos.y + 30 };
-
-    // Reset cascade if going off screen
-    if (posRef.current.x > 500 || posRef.current.y > 400) {
-      posRef.current = isRelationship ? { x: 150, y: 150 } : { x: 100, y: 100 };
-    }
 
     if (isRelationship) {
-      api.addPanel({
-        id: panelId,
-        component: 'relationshipPanel',
+      const paneApi = relationshipPaneApiRef.current;
+      if (!paneApi) return;
+
+      const paneId = `rel-${hoverData.name}`;
+      const existingPane = paneApi.getPanel(paneId);
+      if (existingPane) {
+        existingPane.api.setExpanded(true);
+        return;
+      }
+
+      // Add new pane at the top, expanded, collapse others
+      paneApi.panels.forEach(p => p.api.setExpanded(false));
+      paneApi.addPanel({
+        id: paneId,
+        component: 'relationshipPane',
         title: `${hoverData.name} Rels`,
         params: {
           dataService,
           itemId: hoverData.name,
           onNavigate: handleNavigate,
         },
-        floating: { width: 450, height: 400, x: pos.x, y: pos.y },
+        isExpanded: true,
+        index: 0,
       });
     } else {
-      api.addPanel({
-        id: panelId,
-        component: 'detailPanel',
+      const paneApi = detailPaneApiRef.current;
+      if (!paneApi) return;
+
+      const paneId = `detail-${hoverData.name}`;
+      const existingPane = paneApi.getPanel(paneId);
+      if (existingPane) {
+        existingPane.api.setExpanded(true);
+        return;
+      }
+
+      // Add new pane at the top, expanded, collapse others
+      paneApi.panels.forEach(p => p.api.setExpanded(false));
+      paneApi.addPanel({
+        id: paneId,
+        component: 'detailPane',
         title: hoverData.name,
         params: {
           dataService,
           itemId: hoverData.name,
         },
-        floating: { width: 500, height: 450, x: pos.x, y: pos.y },
+        isExpanded: true,
+        index: 0,
       });
     }
   }, [dataService, handleNavigate]);
@@ -276,7 +348,29 @@ export default function DockviewPOC({
       },
     });
 
-  }, [dataService, leftSections, middleSections, rightSections, leftSectionData, middleSectionData, rightSectionData, handleClickItem, handleItemHover, handleItemLeave]);
+    // Add detail stack panel (Paneview for collapsible details)
+    event.api.addPanel({
+      id: 'detail-stack',
+      component: 'detailStack',
+      title: 'Details',
+      params: {
+        onPaneviewReady: handleDetailPaneReady,
+      },
+      position: { referencePanel: 'right-panel', direction: 'right' },
+    });
+
+    // Add relationship stack panel (Paneview for collapsible relationships)
+    event.api.addPanel({
+      id: 'relationship-stack',
+      component: 'relationshipStack',
+      title: 'Relationships',
+      params: {
+        onPaneviewReady: handleRelationshipPaneReady,
+      },
+      position: { referencePanel: 'detail-stack', direction: 'below' },
+    });
+
+  }, [dataService, leftSections, middleSections, rightSections, leftSectionData, middleSectionData, rightSectionData, handleClickItem, handleItemHover, handleItemLeave, handleNavigate, handleDetailPaneReady, handleRelationshipPaneReady]);
 
   return (
     <div className="flex-1 relative">
