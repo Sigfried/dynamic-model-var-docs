@@ -96,10 +96,27 @@ function CloseIcon() {
   );
 }
 
-// Custom header component for detail panes
-// TODO: Move colors to appConfig
-function DetailPaneHeader({ api, title, containerApi }: IPaneviewPanelProps) {
+// Get header color based on item type
+// TODO: Move to appConfig
+function getHeaderColors(itemType: string): { bg: string; hoverBg: string } {
+  switch (itemType) {
+    case 'class':
+      return { bg: 'bg-blue-600', hoverBg: 'hover:bg-blue-700' };
+    case 'slot':
+      return { bg: 'bg-green-600', hoverBg: 'hover:bg-green-700' };
+    case 'enum':
+      return { bg: 'bg-purple-600', hoverBg: 'hover:bg-purple-700' };
+    case 'variable':
+      return { bg: 'bg-orange-600', hoverBg: 'hover:bg-orange-700' };
+    default:
+      return { bg: 'bg-gray-600', hoverBg: 'hover:bg-gray-700' };
+  }
+}
+
+// Custom header component for detail panes - color based on item type
+function DetailPaneHeader({ api, title, containerApi, params }: IPaneviewPanelProps<{ itemType?: string }>) {
   const [isExpanded, setIsExpanded] = useState(api.isExpanded);
+  const colors = getHeaderColors(params?.itemType || 'class');
 
   // Sync state with API
   useEffect(() => {
@@ -120,17 +137,17 @@ function DetailPaneHeader({ api, title, containerApi }: IPaneviewPanelProps) {
 
   return (
     <div
-      className="flex items-center justify-between px-3 py-2 bg-blue-600 text-white cursor-pointer select-none"
+      className={`flex items-center justify-between px-3 py-1.5 ${colors.bg} text-white cursor-pointer select-none min-h-[32px]`}
       onClick={handleToggle}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 min-w-0">
         <ChevronIcon expanded={isExpanded} />
         <span className="font-medium text-sm truncate">{title}</span>
       </div>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 flex-shrink-0">
         <button
           onClick={(e) => { e.stopPropagation(); handleClose(); }}
-          className="p-1 hover:bg-blue-700 rounded"
+          className={`p-1 ${colors.hoverBg} rounded`}
           title="Close"
         >
           <CloseIcon />
@@ -140,9 +157,10 @@ function DetailPaneHeader({ api, title, containerApi }: IPaneviewPanelProps) {
   );
 }
 
-// Custom header component for relationship panes
-function RelationshipPaneHeader({ api, title, containerApi }: IPaneviewPanelProps) {
+// Custom header component for relationship panes - color based on item type
+function RelationshipPaneHeader({ api, title, containerApi, params }: IPaneviewPanelProps<{ itemType?: string }>) {
   const [isExpanded, setIsExpanded] = useState(api.isExpanded);
+  const colors = getHeaderColors(params?.itemType || 'class');
 
   // Sync state with API
   useEffect(() => {
@@ -163,17 +181,17 @@ function RelationshipPaneHeader({ api, title, containerApi }: IPaneviewPanelProp
 
   return (
     <div
-      className="flex items-center justify-between px-3 py-2 bg-purple-600 text-white cursor-pointer select-none"
+      className={`flex items-center justify-between px-3 py-1.5 ${colors.bg} text-white cursor-pointer select-none min-h-[32px]`}
       onClick={handleToggle}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 min-w-0">
         <ChevronIcon expanded={isExpanded} />
         <span className="font-medium text-sm truncate">{title}</span>
       </div>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 flex-shrink-0">
         <button
           onClick={(e) => { e.stopPropagation(); handleClose(); }}
-          className="p-1 hover:bg-purple-700 rounded"
+          className={`p-1 ${colors.hoverBg} rounded`}
           title="Close"
         >
           <CloseIcon />
@@ -324,7 +342,7 @@ export default function DockviewPOC({
   }, []);
 
   // Navigation handler for relationship links - adds to detail pane stack
-  const handleNavigate = useCallback((itemName: string, _itemSection: string) => {
+  const handleNavigate = useCallback((itemName: string, itemSection: string) => {
     const paneApi = detailPaneApiRef.current;
     if (!paneApi) return;
 
@@ -336,8 +354,10 @@ export default function DockviewPOC({
       return;
     }
 
-    // Add new pane at the top (index 0), expanded, collapse others
-    paneApi.panels.forEach(p => p.api.setExpanded(false));
+    // Determine item type from section
+    const itemType = itemSection === 'slot' ? 'slot' : itemSection === 'enum' ? 'enum' : 'class';
+
+    // Add new pane at the top (index 0), expanded, NO auto-collapse
     paneApi.addPanel({
       id: paneId,
       component: 'detailPane',
@@ -346,6 +366,7 @@ export default function DockviewPOC({
       params: {
         dataService,
         itemId: itemName,
+        itemType,
       },
       isExpanded: true,
       index: 0,
@@ -355,6 +376,8 @@ export default function DockviewPOC({
   // Click handler - adds to appropriate Paneview stack
   const handleClickItem = useCallback((hoverData: ItemHoverData) => {
     const isRelationship = hoverData.hoverZone === 'badge';
+    // Item type comes directly from hoverData
+    const itemType = hoverData.type;
 
     if (isRelationship) {
       const paneApi = relationshipPaneApiRef.current;
@@ -367,8 +390,7 @@ export default function DockviewPOC({
         return;
       }
 
-      // Add new pane at the top, expanded, collapse others
-      paneApi.panels.forEach(p => p.api.setExpanded(false));
+      // Add new pane at the top, expanded, NO auto-collapse
       paneApi.addPanel({
         id: paneId,
         component: 'relationshipPane',
@@ -378,6 +400,7 @@ export default function DockviewPOC({
           dataService,
           itemId: hoverData.name,
           onNavigate: handleNavigate,
+          itemType,
         },
         isExpanded: true,
         index: 0,
@@ -393,8 +416,7 @@ export default function DockviewPOC({
         return;
       }
 
-      // Add new pane at the top, expanded, collapse others
-      paneApi.panels.forEach(p => p.api.setExpanded(false));
+      // Add new pane at the top, expanded, NO auto-collapse
       paneApi.addPanel({
         id: paneId,
         component: 'detailPane',
@@ -403,6 +425,7 @@ export default function DockviewPOC({
         params: {
           dataService,
           itemId: hoverData.name,
+          itemType,
         },
         isExpanded: true,
         index: 0,

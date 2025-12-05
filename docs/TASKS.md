@@ -11,6 +11,42 @@
 
 - when showing/hiding middle panel, links don't update until some kind of interaction
 
+---
+
+## 🔬 Dockview POC (Branch: `dockview-poc`)
+
+**STATUS**: Active POC evaluating Dockview library for layout management
+
+### What's Working
+- Main panels (Classes, Slots, Ranges) in Dockview with 75px gaps
+- PaneviewReact for collapsible detail/relationship stacks on right side
+- Custom colored pane headers (blue=class, green=slot, purple=enum, orange=variable)
+- Chevron icons for expand/collapse state
+- Close buttons on pane headers
+- New panes added at top (index 0), expanded, NO auto-collapse of others
+- LinkOverlay renders SVG links across Dockview panels
+- Multiple delayed redraws (100ms, 300ms) to fix flaky link rendering
+
+### TODO (Next Session)
+1. **Pane header height**: Headers are too short for content - see screenshot, text getting cut off
+2. **Toggles missing**: Right panel (Ranges) lost section toggles - need to pass `toggleButtons` prop and `onSectionsChange` handler to ItemsPanel
+3. **Prevent drops INTO main panels**: Use `locked: 'no-drop-target'` on groups or handle `onWillShowOverlay` to reject center drops - but DO allow drops ON TOP of panels
+4. **Slots toggle**: Middle panel needs toggle button to show/hide
+5. **Panel width**: Shrink panels to fit content, minimize whitespace between item names and badges
+6. **Main panel colors lost**: Item type colors (blue/green/purple) not showing in main panels anymore - need to verify ItemsPanel is rendering colors correctly
+
+### Architecture Notes
+- `DockviewPOC.tsx` contains all POC code
+- Uses `DockviewReact` for main layout + `PaneviewReact` inside Dockview panels for collapsible stacks
+- Custom theme with `gap: 75` for visible separation between panels
+- Header components receive `params.itemType` to determine color
+- `ItemHoverData.type` field contains item type (class/slot/enum/variable)
+
+### Files Changed
+- `src/components/DockviewPOC.tsx` - Main POC component
+- `src/components/LinkOverlay.tsx` - Added delayed redraws for Dockview
+- `src/App.tsx` - Toggle `USE_DOCKVIEW_POC` to switch between layouts
+
 ## 📋 Upcoming Work (Ordered by Priority)
 
 [sg] some remaining issues with hover/click and floating boxes:
