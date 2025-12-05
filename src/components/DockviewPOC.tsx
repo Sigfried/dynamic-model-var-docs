@@ -33,7 +33,7 @@ import ItemsPanel from './ItemsPanel';
 import LinkOverlay from './LinkOverlay';
 import DetailContent from './DetailContent';
 import { RelationshipInfoContent } from './RelationshipInfoBox';
-import type { SectionData, ItemHoverData } from './Section';
+import type { SectionData, ItemHoverData, ToggleButtonData } from '../contracts/ComponentData';
 import type { DataService } from '../services/DataService';
 
 interface DockviewPOCProps {
@@ -52,18 +52,20 @@ function MainPanelContent({ params }: IDockviewPanelProps<{
   onClickItem: (hoverData: ItemHoverData) => void;
   onItemHover: (hoverData: ItemHoverData) => void;
   onItemLeave: () => void;
+  onSectionsChange: (sections: string[]) => void;
+  toggleButtons: ToggleButtonData[];
   title?: string;
 }>) {
-  const { sections, position, sectionData, onClickItem, onItemHover, onItemLeave, title } = params;
+  const { sections, position, sectionData, onClickItem, onItemHover, onItemLeave, onSectionsChange, toggleButtons, title } = params;
 
   return (
     <div className="h-full overflow-auto">
       <ItemsPanel
         position={position}
         sections={sections}
-        onSectionsChange={() => {}}
+        onSectionsChange={onSectionsChange}
         sectionData={sectionData}
-        toggleButtons={[]}
+        toggleButtons={toggleButtons}
         onClickItem={onClickItem}
         onItemHover={onItemHover}
         onItemLeave={onItemLeave}
@@ -137,7 +139,7 @@ function DetailPaneHeader({ api, title, containerApi, params }: IPaneviewPanelPr
 
   return (
     <div
-      className={`flex items-center justify-between px-3 py-1.5 ${colors.bg} text-white cursor-pointer select-none min-h-[32px]`}
+      className={`flex items-center justify-between px-3 py-2 ${colors.bg} text-white cursor-pointer select-none min-h-[36px]`}
       onClick={handleToggle}
     >
       <div className="flex items-center gap-2 min-w-0">
@@ -181,7 +183,7 @@ function RelationshipPaneHeader({ api, title, containerApi, params }: IPaneviewP
 
   return (
     <div
-      className={`flex items-center justify-between px-3 py-1.5 ${colors.bg} text-white cursor-pointer select-none min-h-[32px]`}
+      className={`flex items-center justify-between px-3 py-2 ${colors.bg} text-white cursor-pointer select-none min-h-[36px]`}
       onClick={handleToggle}
     >
       <div className="flex items-center gap-2 min-w-0">
@@ -308,18 +310,30 @@ const components = {
 
 export default function DockviewPOC({
   dataService,
-  leftSections,
-  middleSections,
-  rightSections,
+  leftSections: initialLeftSections,
+  middleSections: initialMiddleSections,
+  rightSections: initialRightSections,
 }: DockviewPOCProps) {
   const apiRef = useRef<DockviewApi | null>(null);
   const detailPaneApiRef = useRef<PaneviewApi | null>(null);
   const relationshipPaneApiRef = useRef<PaneviewApi | null>(null);
 
+  // Section state - can change when toggles are clicked
+  const [currentLeftSections, setCurrentLeftSections] = useState(initialLeftSections);
+  // Middle sections state for future use when slots toggle is implemented
+  const [, setCurrentMiddleSections] = useState(initialMiddleSections);
+  const [currentRightSections, setCurrentRightSections] = useState(initialRightSections);
+
   // Build section data
   const leftSectionData = dataService.getAllSectionsData('left');
   const middleSectionData = dataService.getAllSectionsData('middle');
   const rightSectionData = dataService.getAllSectionsData('right');
+
+  // Get toggle button data
+  const allToggleButtons = dataService.getToggleButtonsData();
+  const rightPanelToggleButtons = allToggleButtons.filter(btn =>
+    btn.id === 'class' || btn.id === 'enum' || btn.id === 'type'
+  );
 
   // Hover state for LinkOverlay (must be state to trigger re-renders)
   const [hoveredItem, setHoveredItem] = useState<ItemHoverData | null>(null);
@@ -330,6 +344,31 @@ export default function DockviewPOC({
 
   const handleItemLeave = useCallback(() => {
     setHoveredItem(null);
+  }, []);
+
+  // Section change handlers - update state AND Dockview panel params
+  const handleLeftSectionsChange = useCallback((sections: string[]) => {
+    setCurrentLeftSections(sections);
+    const panel = apiRef.current?.getPanel('left-panel');
+    if (panel) {
+      panel.api.updateParameters({ sections });
+    }
+  }, []);
+
+  const handleMiddleSectionsChange = useCallback((sections: string[]) => {
+    setCurrentMiddleSections(sections);
+    const panel = apiRef.current?.getPanel('middle-panel');
+    if (panel) {
+      panel.api.updateParameters({ sections });
+    }
+  }, []);
+
+  const handleRightSectionsChange = useCallback((sections: string[]) => {
+    setCurrentRightSections(sections);
+    const panel = apiRef.current?.getPanel('right-panel');
+    if (panel) {
+      panel.api.updateParameters({ sections });
+    }
   }, []);
 
   // Callbacks for Paneview initialization
@@ -437,59 +476,65 @@ export default function DockviewPOC({
   const onReady = useCallback((event: DockviewReadyEvent) => {
     apiRef.current = event.api;
 
-    // Add left panel (Classes)
+    // Add left panel (Classes) - no toggles, just displays classes
     event.api.addPanel({
       id: 'left-panel',
       component: 'mainPanel',
       title: 'Classes',
       params: {
         dataService,
-        sections: leftSections,
+        sections: initialLeftSections,
         position: 'left' as const,
         sectionData: leftSectionData,
         onClickItem: handleClickItem,
         onItemHover: handleItemHover,
         onItemLeave: handleItemLeave,
+        onSectionsChange: handleLeftSectionsChange,
+        toggleButtons: [], // No toggles for left panel
       },
     });
 
-    // Add middle panel (Slots) if visible
-    if (middleSections.length > 0) {
+    // Add middle panel (Slots) if visible - no toggles currently
+    if (initialMiddleSections.length > 0) {
       event.api.addPanel({
         id: 'middle-panel',
         component: 'mainPanel',
         title: 'Slots',
         params: {
           dataService,
-          sections: middleSections,
+          sections: initialMiddleSections,
           position: 'middle' as const,
           sectionData: middleSectionData,
           onClickItem: handleClickItem,
           onItemHover: handleItemHover,
           onItemLeave: handleItemLeave,
+          onSectionsChange: handleMiddleSectionsChange,
+          toggleButtons: [], // TODO: Add slots toggle
           title: 'Slots',
         },
         position: { referencePanel: 'left-panel', direction: 'right' },
       });
     }
 
-    // Add right panel (Ranges)
+    // Add right panel (Ranges) - with C/E/T toggles
     event.api.addPanel({
       id: 'right-panel',
       component: 'mainPanel',
       title: 'Ranges',
       params: {
         dataService,
-        sections: rightSections,
+        sections: initialRightSections,
         position: 'right' as const,
         sectionData: rightSectionData,
         onClickItem: handleClickItem,
         onItemHover: handleItemHover,
         onItemLeave: handleItemLeave,
+        onSectionsChange: handleRightSectionsChange,
+        toggleButtons: rightPanelToggleButtons,
         title: 'Ranges:',
       },
       position: {
-        referencePanel: middleSections.length > 0 ? 'middle-panel' : 'left-panel',
+        referencePanel: initialMiddleSections.length > 0 ? 'middle-panel' : 'left-panel',
         direction: 'right'
       },
     });
@@ -516,7 +561,7 @@ export default function DockviewPOC({
       position: { referencePanel: 'detail-stack', direction: 'below' },
     });
 
-  }, [dataService, leftSections, middleSections, rightSections, leftSectionData, middleSectionData, rightSectionData, handleClickItem, handleItemHover, handleItemLeave, handleNavigate, handleDetailPaneReady, handleRelationshipPaneReady]);
+  }, [dataService, initialLeftSections, initialMiddleSections, initialRightSections, leftSectionData, middleSectionData, rightSectionData, handleClickItem, handleItemHover, handleItemLeave, handleNavigate, handleDetailPaneReady, handleRelationshipPaneReady, handleLeftSectionsChange, handleMiddleSectionsChange, handleRightSectionsChange, rightPanelToggleButtons]);
 
   return (
     <div className="flex-1 relative">
@@ -537,8 +582,8 @@ export default function DockviewPOC({
       {/* LinkOverlay - positioned absolutely over Dockview */}
       {/* This tests whether we can draw SVG links across panels */}
       <LinkOverlay
-        leftSections={leftSections}
-        rightSections={rightSections}
+        leftSections={currentLeftSections}
+        rightSections={currentRightSections}
         dataService={dataService}
         hoveredItem={hoveredItem}
       />

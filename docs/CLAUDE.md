@@ -199,6 +199,10 @@ if (!element) {
 
 ## 🔧 WORKFLOW
 
+### Dev Server
+
+**The dev server is always running at http://localhost:5173/** - never start it yourself.
+
 ### TypeScript Build Configuration
 
 **CRITICAL**: Always use `npm run typecheck` before committing!
