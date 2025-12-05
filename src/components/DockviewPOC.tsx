@@ -8,9 +8,19 @@
  */
 
 import { useCallback, useRef, useState } from 'react';
-import { DockviewReact, themeLightSpaced } from 'dockview';
-import type { DockviewReadyEvent, IDockviewPanelProps, DockviewApi } from 'dockview-core';
+import { DockviewReact } from 'dockview';
+import type { DockviewReadyEvent, IDockviewPanelProps, DockviewApi, DockviewTheme } from 'dockview-core';
 import 'dockview/dist/styles/dockview.css';
+
+// Custom theme with wider gaps between panels
+// TODO: Move gap value to appConfig
+const customTheme: DockviewTheme = {
+  name: 'lightSpacedWide',
+  className: 'dockview-theme-light-spaced',
+  gap: 75,
+  dndOverlayMounting: 'absolute',
+  dndPanelOverlay: 'group',
+};
 
 import ItemsPanel from './ItemsPanel';
 import LinkOverlay from './LinkOverlay';
@@ -279,7 +289,7 @@ export default function DockviewPOC({
 
       {/* Dockview container */}
       <DockviewReact
-        theme={themeLightSpaced}
+        theme={customTheme}
         onReady={onReady}
         components={components}
       />

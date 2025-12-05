@@ -129,13 +129,28 @@ export default function LinkOverlay({
   }, []);
 
   // Force redraw when panel data changes (after DOM updates)
+  // With Dockview, we need to wait longer for the layout to settle
   useEffect(() => {
     // Use requestAnimationFrame to wait for DOM to be committed
     const frameId = requestAnimationFrame(() => {
       setScrollTick(tick => tick + 1);
     });
 
-    return () => cancelAnimationFrame(frameId);
+    // Also schedule a delayed redraw in case Dockview takes longer to render
+    const timeoutId = setTimeout(() => {
+      setScrollTick(tick => tick + 1);
+    }, 100);
+
+    // And another one slightly later for good measure
+    const timeoutId2 = setTimeout(() => {
+      setScrollTick(tick => tick + 1);
+    }, 300);
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      clearTimeout(timeoutId);
+      clearTimeout(timeoutId2);
+    };
   }, [leftSections, rightSections, dataService]);
 
   // Link pair with edge info for rendering
