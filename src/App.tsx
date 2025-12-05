@@ -1,9 +1,13 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import LayoutManager from './components/LayoutManager';
+import DockviewPOC from './components/DockviewPOC';
 import { getInitialState, type DialogState } from './utils/statePersistence';
 import { useModelData } from './hooks/useModelData';
 import { useLayoutState } from './hooks/useLayoutState';
 import { DataService } from './services/DataService';
+
+// Toggle for Dockview POC testing
+const USE_DOCKVIEW_POC = true;
 
 function App() {
   const [hasRestoredFromURL, setHasRestoredFromURL] = useState(false);
@@ -218,18 +222,27 @@ function App() {
         </div>
       </header>
 
-      {/* Main content: LayoutManager handles everything */}
-      <LayoutManager
-        dataService={dataService}
-        leftSections={leftSections}
-        middleSections={middleSections}
-        rightSections={rightSections}
-        setMiddleSections={setMiddleSections}
-        setRightSections={setRightSections}
-        initialDialogs={initialDialogs}
-        setDialogStatesGetter={setDialogStatesGetter}
-        onDialogsChange={triggerURLSave}
-      />
+      {/* Main content */}
+      {USE_DOCKVIEW_POC ? (
+        <DockviewPOC
+          dataService={dataService}
+          leftSections={leftSections}
+          middleSections={middleSections}
+          rightSections={rightSections}
+        />
+      ) : (
+        <LayoutManager
+          dataService={dataService}
+          leftSections={leftSections}
+          middleSections={middleSections}
+          rightSections={rightSections}
+          setMiddleSections={setMiddleSections}
+          setRightSections={setRightSections}
+          initialDialogs={initialDialogs}
+          setDialogStatesGetter={setDialogStatesGetter}
+          onDialogsChange={triggerURLSave}
+        />
+      )}
     </div>
   );
 }

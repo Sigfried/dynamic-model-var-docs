@@ -20,6 +20,7 @@
     "test:coverage": "vitest --coverage"
   },
   "dependencies": {
+    "dockview": "^4.11.0",
     "graphology": "^0.26.0",
     "graphology-types": "^0.24.8",
     "react": "^19.1.1",
