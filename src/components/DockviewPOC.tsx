@@ -561,6 +561,16 @@ export default function DockviewPOC({
       position: { referencePanel: 'detail-stack', direction: 'below' },
     });
 
+    // Lock main panels to prevent center drops while keeping edge drops
+    // This allows panels to be reordered but not merged into tab groups
+    const leftPanel = event.api.getPanel('left-panel');
+    const middlePanel = event.api.getPanel('middle-panel');
+    const rightPanel = event.api.getPanel('right-panel');
+
+    if (leftPanel?.group) leftPanel.group.locked = true;
+    if (middlePanel?.group) middlePanel.group.locked = true;
+    if (rightPanel?.group) rightPanel.group.locked = true;
+
   }, [dataService, initialLeftSections, initialMiddleSections, initialRightSections, leftSectionData, middleSectionData, rightSectionData, handleClickItem, handleItemHover, handleItemLeave, handleNavigate, handleDetailPaneReady, handleRelationshipPaneReady, handleLeftSectionsChange, handleMiddleSectionsChange, handleRightSectionsChange, rightPanelToggleButtons]);
 
   return (
