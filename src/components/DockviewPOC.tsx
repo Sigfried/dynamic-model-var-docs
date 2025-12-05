@@ -490,11 +490,14 @@ export default function DockviewPOC({
       setMiddlePanelVisible(false);
       setCurrentMiddleSections([]);
     } else {
-      // Show: add the panel back
+      // Show: add the panel back with same width constraints as other main panels
       api.addPanel({
         id: 'middle-panel',
         component: 'mainPanel',
         title: 'Slots',
+        initialWidth: 280,
+        minimumWidth: 200,
+        maximumWidth: 400,
         params: {
           dataService,
           sections: ['slot'],
@@ -523,11 +526,16 @@ export default function DockviewPOC({
   const onReady = useCallback((event: DockviewReadyEvent) => {
     apiRef.current = event.api;
 
+    // Main panel width constraints - keep them compact
+    const mainPanelWidth = { initialWidth: 280, minimumWidth: 200, maximumWidth: 400 };
+    const stackPanelWidth = { initialWidth: 350, minimumWidth: 250, maximumWidth: 500 };
+
     // Add left panel (Classes) - no toggles, just displays classes
     event.api.addPanel({
       id: 'left-panel',
       component: 'mainPanel',
       title: 'Classes',
+      ...mainPanelWidth,
       params: {
         dataService,
         sections: initialLeftSections,
@@ -547,6 +555,7 @@ export default function DockviewPOC({
         id: 'middle-panel',
         component: 'mainPanel',
         title: 'Slots',
+        ...mainPanelWidth,
         params: {
           dataService,
           sections: initialMiddleSections,
@@ -568,6 +577,7 @@ export default function DockviewPOC({
       id: 'right-panel',
       component: 'mainPanel',
       title: 'Ranges',
+      ...mainPanelWidth,
       params: {
         dataService,
         sections: initialRightSections,
@@ -591,6 +601,7 @@ export default function DockviewPOC({
       id: 'detail-stack',
       component: 'detailStack',
       title: 'Details',
+      ...stackPanelWidth,
       params: {
         onPaneviewReady: handleDetailPaneReady,
       },
