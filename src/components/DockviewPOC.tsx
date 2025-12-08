@@ -1,10 +1,13 @@
 /**
  * DockviewPOC - Proof of concept for Dockview integration
  *
- * Goals:
- * 1. Test basic DockviewReact setup with our existing components
- * 2. Verify LinkOverlay can render over Dockview panels
- * 3. Test Paneview for collapsible detail/relationship stacks
+ * Architecture:
+ * - Single Dockview panel for main content (Classes | Slots | Ranges with gutters)
+ * - Paneview stacks for collapsible detail/relationship boxes on right
+ * - LinkOverlay renders over everything
+ *
+ * The main content uses the original 3-panel flex layout from LayoutManager.
+ * Dockview's value here is for the detail/relationship panes, not the main panels.
  */
 
 import { useCallback, useRef, useState, useEffect } from 'react';
@@ -19,22 +22,21 @@ import type {
 import type { IPaneviewPanelProps, PaneviewReadyEvent } from 'dockview';
 import 'dockview/dist/styles/dockview.css';
 
-// Custom theme with wider gaps between panels
-// TODO: Move gap value to appConfig
-const customTheme: DockviewTheme = {
-  name: 'lightSpacedWide',
-  className: 'dockview-theme-light-spaced',
-  gap: 75,
-  dndOverlayMounting: 'absolute',
-  dndPanelOverlay: 'group',
-};
-
 import ItemsPanel from './ItemsPanel';
 import LinkOverlay from './LinkOverlay';
 import DetailContent from './DetailContent';
 import { RelationshipInfoContent } from './RelationshipInfoBox';
 import type { SectionData, ItemHoverData, ToggleButtonData } from '../contracts/ComponentData';
 import type { DataService } from '../services/DataService';
+
+// Custom theme - minimal gap since main content is in single panel
+const customTheme: DockviewTheme = {
+  name: 'lightSpacedWide',
+  className: 'dockview-theme-light-spaced',
+  gap: 8,
+  dndOverlayMounting: 'absolute',
+  dndPanelOverlay: 'group',
+};
 
 interface DockviewPOCProps {
   dataService: DataService;
@@ -43,39 +45,172 @@ interface DockviewPOCProps {
   rightSections: string[];
 }
 
-// Panel component for the main sections (Classes, Slots, Ranges)
-function MainPanelContent({ params }: IDockviewPanelProps<{
+// Panel dimensions (matching LayoutManager)
+const EMPTY_PANEL_WIDTH = 180;
+const MAX_PANEL_WIDTH = 450;
+const GUTTER_WIDTH = 160; // Width for link gutters between panels
+
+// =============================================================================
+// Main Content Panel - Contains the original 3-panel layout
+// =============================================================================
+
+interface MainContentParams {
   dataService: DataService;
-  sections: string[];
-  position: 'left' | 'middle' | 'right';
-  sectionData: Map<string, SectionData>;
+  leftSections: string[];
+  middleSections: string[];
+  rightSections: string[];
+  leftSectionData: Map<string, SectionData>;
+  middleSectionData: Map<string, SectionData>;
+  rightSectionData: Map<string, SectionData>;
+  rightPanelToggleButtons: ToggleButtonData[];
   onClickItem: (hoverData: ItemHoverData) => void;
   onItemHover: (hoverData: ItemHoverData) => void;
   onItemLeave: () => void;
-  onSectionsChange: (sections: string[]) => void;
-  toggleButtons: ToggleButtonData[];
-  title?: string;
-}>) {
-  const { sections, position, sectionData, onClickItem, onItemHover, onItemLeave, onSectionsChange, toggleButtons, title } = params;
+  onMiddleSectionsChange: (sections: string[]) => void;
+  onRightSectionsChange: (sections: string[]) => void;
+}
+
+function MainContentPanel({ params }: IDockviewPanelProps<MainContentParams>) {
+  const {
+    leftSections,
+    middleSections,
+    rightSections,
+    leftSectionData,
+    middleSectionData,
+    rightSectionData,
+    rightPanelToggleButtons,
+    onClickItem,
+    onItemHover,
+    onItemLeave,
+    onMiddleSectionsChange,
+    onRightSectionsChange,
+  } = params;
+
+  const leftPanelEmpty = leftSections.length === 0;
+  const middlePanelEmpty = middleSections.length === 0;
+  const rightPanelEmpty = rightSections.length === 0;
+
+  // Toggle middle panel (show/hide slots)
+  const handleToggleMiddlePanel = useCallback(() => {
+    if (middlePanelEmpty) {
+      onMiddleSectionsChange(['slot']);
+    } else {
+      onMiddleSectionsChange([]);
+    }
+  }, [middlePanelEmpty, onMiddleSectionsChange]);
 
   return (
-    <div className="h-full overflow-auto">
-      <ItemsPanel
-        position={position}
-        sections={sections}
-        onSectionsChange={onSectionsChange}
-        sectionData={sectionData}
-        toggleButtons={toggleButtons}
-        onClickItem={onClickItem}
-        onItemHover={onItemHover}
-        onItemLeave={onItemLeave}
-        title={title}
-      />
+    <div className="flex-1 flex h-full overflow-hidden">
+      {/* Left Panel - Classes */}
+      <div
+        className="h-full overflow-hidden border-r border-gray-200 flex-shrink-0"
+        style={{
+          width: leftPanelEmpty ? `${EMPTY_PANEL_WIDTH}px` : undefined,
+          maxWidth: leftPanelEmpty ? undefined : `${MAX_PANEL_WIDTH}px`,
+          minWidth: leftPanelEmpty ? undefined : '300px'
+        }}
+      >
+        <ItemsPanel
+          position="left"
+          sections={leftSections}
+          onSectionsChange={() => {}}
+          sectionData={leftSectionData}
+          toggleButtons={[]}
+          onClickItem={onClickItem}
+          onItemHover={onItemHover}
+          onItemLeave={onItemLeave}
+        />
+      </div>
+
+      {/* Left-Middle gutter */}
+      {!middlePanelEmpty && (
+        <div className="bg-gray-100 flex-shrink-0" style={{ width: `${GUTTER_WIDTH}px` }} />
+      )}
+
+      {/* Middle Panel - Slots (toggleable) */}
+      {!middlePanelEmpty && (
+        <div
+          className="h-full overflow-hidden border-x border-gray-200 flex-shrink-0 relative"
+          style={{
+            maxWidth: `${MAX_PANEL_WIDTH}px`,
+            minWidth: '300px'
+          }}
+        >
+          <ItemsPanel
+            position="middle"
+            sections={['slot']}
+            onSectionsChange={() => {}}
+            sectionData={middleSectionData}
+            toggleButtons={[]}
+            onClickItem={onClickItem}
+            onItemHover={onItemHover}
+            onItemLeave={onItemLeave}
+            title="Slots"
+          />
+          {/* Hide button */}
+          <button
+            onClick={handleToggleMiddlePanel}
+            className="absolute top-2 right-2 w-6 h-6 rounded bg-gray-200 hover:bg-gray-300 text-gray-600 flex items-center justify-center text-xs transition-colors z-10"
+            title="Hide Slots panel"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Middle-Right gutter */}
+      {!middlePanelEmpty && (
+        <div className="bg-gray-100 flex-shrink-0" style={{ width: `${GUTTER_WIDTH}px` }} />
+      )}
+
+      {/* Center gutter / toggle button - show when middle panel hidden */}
+      {!leftPanelEmpty && !rightPanelEmpty && middlePanelEmpty && (
+        <button
+          onClick={handleToggleMiddlePanel}
+          className="bg-gray-100 border-x border-gray-200 flex-shrink-0 hover:bg-gray-200 transition-colors flex items-center justify-center group"
+          style={{ width: `${GUTTER_WIDTH}px` }}
+          title="Click to show Slots panel"
+        >
+          <div className="text-center">
+            <div className="text-gray-500 group-hover:text-gray-700 text-sm font-medium">
+              Show Slots
+            </div>
+            <div className="text-gray-400 text-xs mt-1">
+              ▶
+            </div>
+          </div>
+        </button>
+      )}
+
+      {/* Right Panel - Ranges */}
+      <div
+        className="h-full overflow-hidden border-l border-gray-200 flex-shrink-0"
+        style={{
+          width: rightPanelEmpty ? `${EMPTY_PANEL_WIDTH}px` : undefined,
+          maxWidth: rightPanelEmpty ? undefined : `${MAX_PANEL_WIDTH}px`,
+          minWidth: rightPanelEmpty ? undefined : '300px'
+        }}
+      >
+        <ItemsPanel
+          position="right"
+          sections={rightSections}
+          onSectionsChange={onRightSectionsChange}
+          sectionData={rightSectionData}
+          toggleButtons={rightPanelToggleButtons}
+          onClickItem={onClickItem}
+          onItemHover={onItemHover}
+          onItemLeave={onItemLeave}
+          title="Ranges:"
+        />
+      </div>
     </div>
   );
 }
 
-// Chevron icon for expand/collapse
+// =============================================================================
+// Paneview Components for Detail/Relationship Stacks
+// =============================================================================
+
 function ChevronIcon({ expanded }: { expanded: boolean }) {
   return (
     <svg
@@ -89,7 +224,6 @@ function ChevronIcon({ expanded }: { expanded: boolean }) {
   );
 }
 
-// Close icon
 function CloseIcon() {
   return (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -98,8 +232,6 @@ function CloseIcon() {
   );
 }
 
-// Get header color based on item type
-// TODO: Move to appConfig
 function getHeaderColors(itemType: string): { bg: string; hoverBg: string } {
   switch (itemType) {
     case 'class':
@@ -115,12 +247,10 @@ function getHeaderColors(itemType: string): { bg: string; hoverBg: string } {
   }
 }
 
-// Custom header component for detail panes - color based on item type
 function DetailPaneHeader({ api, title, containerApi, params }: IPaneviewPanelProps<{ itemType?: string }>) {
   const [isExpanded, setIsExpanded] = useState(api.isExpanded);
   const colors = getHeaderColors(params?.itemType || 'class');
 
-  // Sync state with API
   useEffect(() => {
     const disposable = api.onDidExpansionChange(() => {
       setIsExpanded(api.isExpanded);
@@ -146,25 +276,21 @@ function DetailPaneHeader({ api, title, containerApi, params }: IPaneviewPanelPr
         <ChevronIcon expanded={isExpanded} />
         <span className="font-medium text-sm truncate">{title}</span>
       </div>
-      <div className="flex items-center gap-1 flex-shrink-0">
-        <button
-          onClick={(e) => { e.stopPropagation(); handleClose(); }}
-          className={`p-1 ${colors.hoverBg} rounded`}
-          title="Close"
-        >
-          <CloseIcon />
-        </button>
-      </div>
+      <button
+        onClick={(e) => { e.stopPropagation(); handleClose(); }}
+        className={`p-1 ${colors.hoverBg} rounded flex-shrink-0`}
+        title="Close"
+      >
+        <CloseIcon />
+      </button>
     </div>
   );
 }
 
-// Custom header component for relationship panes - color based on item type
 function RelationshipPaneHeader({ api, title, containerApi, params }: IPaneviewPanelProps<{ itemType?: string }>) {
   const [isExpanded, setIsExpanded] = useState(api.isExpanded);
   const colors = getHeaderColors(params?.itemType || 'class');
 
-  // Sync state with API
   useEffect(() => {
     const disposable = api.onDidExpansionChange(() => {
       setIsExpanded(api.isExpanded);
@@ -190,20 +316,17 @@ function RelationshipPaneHeader({ api, title, containerApi, params }: IPaneviewP
         <ChevronIcon expanded={isExpanded} />
         <span className="font-medium text-sm truncate">{title}</span>
       </div>
-      <div className="flex items-center gap-1 flex-shrink-0">
-        <button
-          onClick={(e) => { e.stopPropagation(); handleClose(); }}
-          className={`p-1 ${colors.hoverBg} rounded`}
-          title="Close"
-        >
-          <CloseIcon />
-        </button>
-      </div>
+      <button
+        onClick={(e) => { e.stopPropagation(); handleClose(); }}
+        className={`p-1 ${colors.hoverBg} rounded flex-shrink-0`}
+        title="Close"
+      >
+        <CloseIcon />
+      </button>
     </div>
   );
 }
 
-// Paneview panel component for detail boxes (collapsible)
 function DetailPaneContent({ params }: IPaneviewPanelProps<{
   dataService: DataService;
   itemId: string;
@@ -221,7 +344,6 @@ function DetailPaneContent({ params }: IPaneviewPanelProps<{
   );
 }
 
-// Paneview panel component for relationship info boxes (collapsible)
 function RelationshipPaneContent({ params }: IPaneviewPanelProps<{
   dataService: DataService;
   itemId: string;
@@ -257,7 +379,10 @@ const relationshipPaneHeaderComponents = {
   relationshipHeader: RelationshipPaneHeader,
 };
 
-// Dockview panel that contains a Paneview for details
+// =============================================================================
+// Dockview Stack Panels (contain Paneviews)
+// =============================================================================
+
 function DetailStackPanel({ params }: IDockviewPanelProps<{
   onPaneviewReady: (api: PaneviewApi) => void;
 }>) {
@@ -279,7 +404,6 @@ function DetailStackPanel({ params }: IDockviewPanelProps<{
   );
 }
 
-// Dockview panel that contains a Paneview for relationships
 function RelationshipStackPanel({ params }: IDockviewPanelProps<{
   onPaneviewReady: (api: PaneviewApi) => void;
 }>) {
@@ -303,10 +427,14 @@ function RelationshipStackPanel({ params }: IDockviewPanelProps<{
 
 // Component registry for Dockview
 const components = {
-  mainPanel: MainPanelContent,
+  mainContent: MainContentPanel,
   detailStack: DetailStackPanel,
   relationshipStack: RelationshipStackPanel,
 };
+
+// =============================================================================
+// Main Component
+// =============================================================================
 
 export default function DockviewPOC({
   dataService,
@@ -318,15 +446,10 @@ export default function DockviewPOC({
   const detailPaneApiRef = useRef<PaneviewApi | null>(null);
   const relationshipPaneApiRef = useRef<PaneviewApi | null>(null);
 
-  // Section state - can change when toggles are clicked
-  const [currentLeftSections, setCurrentLeftSections] = useState(initialLeftSections);
-  // currentMiddleSections used for future LinkOverlay middle panel support
+  // Section state
+  const [currentLeftSections] = useState(initialLeftSections);
   const [currentMiddleSections, setCurrentMiddleSections] = useState(initialMiddleSections);
-  void currentMiddleSections; // Suppress unused warning - will be used when LinkOverlay supports middle panel
   const [currentRightSections, setCurrentRightSections] = useState(initialRightSections);
-
-  // Track if middle panel (Slots) is visible
-  const [middlePanelVisible, setMiddlePanelVisible] = useState(initialMiddleSections.length > 0);
 
   // Build section data
   const leftSectionData = dataService.getAllSectionsData('left');
@@ -339,10 +462,10 @@ export default function DockviewPOC({
     btn.id === 'class' || btn.id === 'enum' || btn.id === 'type'
   );
 
-  // Hover state for LinkOverlay (must be state to trigger re-renders)
+  // Hover state for LinkOverlay
   const [hoveredItem, setHoveredItem] = useState<ItemHoverData | null>(null);
 
-  // Layout version - incremented when Dockview layout changes to trigger LinkOverlay redraw
+  // Layout version for LinkOverlay redraw
   const [layoutVersion, setLayoutVersion] = useState(0);
 
   const handleItemHover = useCallback((hoverData: ItemHoverData) => {
@@ -351,31 +474,6 @@ export default function DockviewPOC({
 
   const handleItemLeave = useCallback(() => {
     setHoveredItem(null);
-  }, []);
-
-  // Section change handlers - update state AND Dockview panel params
-  const handleLeftSectionsChange = useCallback((sections: string[]) => {
-    setCurrentLeftSections(sections);
-    const panel = apiRef.current?.getPanel('left-panel');
-    if (panel) {
-      panel.api.updateParameters({ sections });
-    }
-  }, []);
-
-  const handleMiddleSectionsChange = useCallback((sections: string[]) => {
-    setCurrentMiddleSections(sections);
-    const panel = apiRef.current?.getPanel('middle-panel');
-    if (panel) {
-      panel.api.updateParameters({ sections });
-    }
-  }, []);
-
-  const handleRightSectionsChange = useCallback((sections: string[]) => {
-    setCurrentRightSections(sections);
-    const panel = apiRef.current?.getPanel('right-panel');
-    if (panel) {
-      panel.api.updateParameters({ sections });
-    }
   }, []);
 
   // Callbacks for Paneview initialization
@@ -387,7 +485,7 @@ export default function DockviewPOC({
     relationshipPaneApiRef.current = api;
   }, []);
 
-  // Navigation handler for relationship links - adds to detail pane stack
+  // Navigation handler for relationship links
   const handleNavigate = useCallback((itemName: string, itemSection: string) => {
     const paneApi = detailPaneApiRef.current;
     if (!paneApi) return;
@@ -395,20 +493,18 @@ export default function DockviewPOC({
     const paneId = `detail-${itemName}`;
     const existingPane = paneApi.getPanel(paneId);
     if (existingPane) {
-      // Expand and scroll to it
       existingPane.api.setExpanded(true);
       return;
     }
 
-    // Determine item type from section
     const itemType = itemSection === 'slot' ? 'slot' : itemSection === 'enum' ? 'enum' : 'class';
 
-    // Add new pane at the top (index 0), expanded, NO auto-collapse
     paneApi.addPanel({
       id: paneId,
       component: 'detailPane',
       headerComponent: 'detailHeader',
       title: itemName,
+      headerSize: 44,
       params: {
         dataService,
         itemId: itemName,
@@ -422,7 +518,6 @@ export default function DockviewPOC({
   // Click handler - adds to appropriate Paneview stack
   const handleClickItem = useCallback((hoverData: ItemHoverData) => {
     const isRelationship = hoverData.hoverZone === 'badge';
-    // Item type comes directly from hoverData
     const itemType = hoverData.type;
 
     if (isRelationship) {
@@ -436,12 +531,12 @@ export default function DockviewPOC({
         return;
       }
 
-      // Add new pane at the top, expanded, NO auto-collapse
       paneApi.addPanel({
         id: paneId,
         component: 'relationshipPane',
         headerComponent: 'relationshipHeader',
         title: `${hoverData.name} Rels`,
+        headerSize: 44,
         params: {
           dataService,
           itemId: hoverData.name,
@@ -462,12 +557,12 @@ export default function DockviewPOC({
         return;
       }
 
-      // Add new pane at the top, expanded, NO auto-collapse
       paneApi.addPanel({
         id: paneId,
         component: 'detailPane',
         headerComponent: 'detailHeader',
         title: hoverData.name,
+        headerSize: 44,
         params: {
           dataService,
           itemId: hoverData.name,
@@ -479,139 +574,71 @@ export default function DockviewPOC({
     }
   }, [dataService, handleNavigate]);
 
-  // Toggle middle panel visibility (show/hide Slots)
-  const handleToggleMiddlePanel = useCallback(() => {
-    const api = apiRef.current;
-    if (!api) return;
-
-    if (middlePanelVisible) {
-      // Hide: remove the panel
-      const panel = api.getPanel('middle-panel');
-      if (panel) {
-        api.removePanel(panel);
-      }
-      setMiddlePanelVisible(false);
-      setCurrentMiddleSections([]);
-    } else {
-      // Show: add the panel back with same width constraints as other main panels
-      api.addPanel({
-        id: 'middle-panel',
-        component: 'mainPanel',
-        title: 'Slots',
-        initialWidth: 280,
-        minimumWidth: 200,
-        maximumWidth: 400,
-        params: {
-          dataService,
-          sections: ['slot'],
-          position: 'middle' as const,
-          sectionData: middleSectionData,
-          onClickItem: handleClickItem,
-          onItemHover: handleItemHover,
-          onItemLeave: handleItemLeave,
-          onSectionsChange: handleMiddleSectionsChange,
-          toggleButtons: [],
-          title: 'Slots',
-        },
-        position: { referencePanel: 'left-panel', direction: 'right' },
+  // Update main content panel when sections change
+  const updateMainContentParams = useCallback(() => {
+    const panel = apiRef.current?.getPanel('main-content');
+    if (panel) {
+      panel.api.updateParameters({
+        middleSections: currentMiddleSections,
+        rightSections: currentRightSections,
       });
-
-      // Lock the new panel to prevent center drops
-      const middlePanel = api.getPanel('middle-panel');
-      if (middlePanel?.group) middlePanel.group.locked = true;
-
-      setMiddlePanelVisible(true);
-      setCurrentMiddleSections(['slot']);
     }
-  }, [middlePanelVisible, dataService, middleSectionData, handleClickItem, handleItemHover, handleItemLeave, handleMiddleSectionsChange]);
+  }, [currentMiddleSections, currentRightSections]);
+
+  useEffect(() => {
+    updateMainContentParams();
+  }, [updateMainContentParams]);
+
+  // Section change handlers
+  const handleMiddleSectionsChange = useCallback((sections: string[]) => {
+    setCurrentMiddleSections(sections);
+  }, []);
+
+  const handleRightSectionsChange = useCallback((sections: string[]) => {
+    setCurrentRightSections(sections);
+  }, []);
 
   // Setup panels when Dockview is ready
   const onReady = useCallback((event: DockviewReadyEvent) => {
     apiRef.current = event.api;
 
-    // Main panel width constraints - keep them compact
-    const mainPanelWidth = { initialWidth: 280, minimumWidth: 200, maximumWidth: 400 };
-    const stackPanelWidth = { initialWidth: 350, minimumWidth: 250, maximumWidth: 500 };
-
-    // Add left panel (Classes) - no toggles, just displays classes
+    // Add main content panel (contains the 3-panel layout)
     event.api.addPanel({
-      id: 'left-panel',
-      component: 'mainPanel',
-      title: 'Classes',
-      ...mainPanelWidth,
+      id: 'main-content',
+      component: 'mainContent',
+      title: 'Main',
       params: {
         dataService,
-        sections: initialLeftSections,
-        position: 'left' as const,
-        sectionData: leftSectionData,
+        leftSections: initialLeftSections,
+        middleSections: initialMiddleSections,
+        rightSections: initialRightSections,
+        leftSectionData,
+        middleSectionData,
+        rightSectionData,
+        rightPanelToggleButtons,
         onClickItem: handleClickItem,
         onItemHover: handleItemHover,
         onItemLeave: handleItemLeave,
-        onSectionsChange: handleLeftSectionsChange,
-        toggleButtons: [], // No toggles for left panel
+        onMiddleSectionsChange: handleMiddleSectionsChange,
+        onRightSectionsChange: handleRightSectionsChange,
       },
     });
 
-    // Add middle panel (Slots) if visible - no toggles currently
-    if (initialMiddleSections.length > 0) {
-      event.api.addPanel({
-        id: 'middle-panel',
-        component: 'mainPanel',
-        title: 'Slots',
-        ...mainPanelWidth,
-        params: {
-          dataService,
-          sections: initialMiddleSections,
-          position: 'middle' as const,
-          sectionData: middleSectionData,
-          onClickItem: handleClickItem,
-          onItemHover: handleItemHover,
-          onItemLeave: handleItemLeave,
-          onSectionsChange: handleMiddleSectionsChange,
-          toggleButtons: [], // TODO: Add slots toggle
-          title: 'Slots',
-        },
-        position: { referencePanel: 'left-panel', direction: 'right' },
-      });
-    }
-
-    // Add right panel (Ranges) - with C/E/T toggles
-    event.api.addPanel({
-      id: 'right-panel',
-      component: 'mainPanel',
-      title: 'Ranges',
-      ...mainPanelWidth,
-      params: {
-        dataService,
-        sections: initialRightSections,
-        position: 'right' as const,
-        sectionData: rightSectionData,
-        onClickItem: handleClickItem,
-        onItemHover: handleItemHover,
-        onItemLeave: handleItemLeave,
-        onSectionsChange: handleRightSectionsChange,
-        toggleButtons: rightPanelToggleButtons,
-        title: 'Ranges:',
-      },
-      position: {
-        referencePanel: initialMiddleSections.length > 0 ? 'middle-panel' : 'left-panel',
-        direction: 'right'
-      },
-    });
-
-    // Add detail stack panel (Paneview for collapsible details)
+    // Add detail stack panel
     event.api.addPanel({
       id: 'detail-stack',
       component: 'detailStack',
       title: 'Details',
-      ...stackPanelWidth,
+      initialWidth: 350,
+      minimumWidth: 250,
+      maximumWidth: 500,
       params: {
         onPaneviewReady: handleDetailPaneReady,
       },
-      position: { referencePanel: 'right-panel', direction: 'right' },
+      position: { referencePanel: 'main-content', direction: 'right' },
     });
 
-    // Add relationship stack panel (Paneview for collapsible relationships)
+    // Add relationship stack panel below details
     event.api.addPanel({
       id: 'relationship-stack',
       component: 'relationshipStack',
@@ -622,67 +649,27 @@ export default function DockviewPOC({
       position: { referencePanel: 'detail-stack', direction: 'below' },
     });
 
-    // Lock main panels to prevent center drops while keeping edge drops
-    // This allows panels to be reordered but not merged into tab groups
-    const leftPanel = event.api.getPanel('left-panel');
-    const middlePanel = event.api.getPanel('middle-panel');
-    const rightPanel = event.api.getPanel('right-panel');
-
-    if (leftPanel?.group) leftPanel.group.locked = true;
-    if (middlePanel?.group) middlePanel.group.locked = true;
-    if (rightPanel?.group) rightPanel.group.locked = true;
-
-    // Listen for panel removal to sync toggle button state
-    event.api.onDidRemovePanel((panel) => {
-      if (panel.id === 'middle-panel') {
-        setMiddlePanelVisible(false);
-        setCurrentMiddleSections([]);
-      }
-    });
-
-    // Listen for layout changes to trigger LinkOverlay redraw
+    // Listen for layout changes
     event.api.onDidLayoutChange(() => {
-      // Increment layout version to trigger re-render
-      // Use multiple timeouts to catch DOM settling at different stages
       setTimeout(() => setLayoutVersion(v => v + 1), 50);
       setTimeout(() => setLayoutVersion(v => v + 1), 150);
-      setTimeout(() => setLayoutVersion(v => v + 1), 300);
     });
 
-  }, [dataService, initialLeftSections, initialMiddleSections, initialRightSections, leftSectionData, middleSectionData, rightSectionData, handleClickItem, handleItemHover, handleItemLeave, handleNavigate, handleDetailPaneReady, handleRelationshipPaneReady, handleLeftSectionsChange, handleMiddleSectionsChange, handleRightSectionsChange, rightPanelToggleButtons]);
+  }, [dataService, initialLeftSections, initialMiddleSections, initialRightSections, leftSectionData, middleSectionData, rightSectionData, rightPanelToggleButtons, handleClickItem, handleItemHover, handleItemLeave, handleMiddleSectionsChange, handleRightSectionsChange, handleDetailPaneReady, handleRelationshipPaneReady]);
 
   return (
     <div className="flex-1 relative">
-      {/* Custom styles - theme handles most spacing via gap */}
+      {/* Custom styles */}
       <style>{`
         .dockview-theme-light-spaced {
           --dv-background-color: #f3f4f6;
-          --dv-tabs-and-actions-container-height: 40px;
+          --dv-tabs-and-actions-container-height: 0px;
         }
-        .dockview-theme-light-spaced .tabs-container {
-          padding: 4px 8px;
-        }
-        .dockview-theme-light-spaced .tab {
-          padding: 6px 12px;
-        }
-        /* Hide close buttons on main panel tabs - only Slots toggle controls visibility */
-        .dockview-theme-light-spaced .tab .dv-default-tab-action {
+        /* Hide tab bar for all panels */
+        .dockview-theme-light-spaced .dv-tabs-and-actions-container {
           display: none;
         }
       `}</style>
-
-      {/* Slots toggle button - positioned in gap area below tabs */}
-      <button
-        onClick={handleToggleMiddlePanel}
-        title={middlePanelVisible ? 'Hide Slots panel' : 'Show Slots panel'}
-        className={`absolute top-12 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded text-white text-xs font-medium transition-all shadow-md ${
-          middlePanelVisible
-            ? 'bg-green-600 hover:bg-green-700'
-            : 'bg-gray-400 hover:bg-gray-500'
-        }`}
-      >
-        {middlePanelVisible ? 'Hide Slots' : 'Show Slots'}
-      </button>
 
       {/* Dockview container */}
       <DockviewReact
@@ -692,8 +679,7 @@ export default function DockviewPOC({
         disableDnd={true}
       />
 
-      {/* LinkOverlay - positioned absolutely over Dockview */}
-      {/* This tests whether we can draw SVG links across panels */}
+      {/* LinkOverlay */}
       <LinkOverlay
         leftSections={currentLeftSections}
         rightSections={currentRightSections}
