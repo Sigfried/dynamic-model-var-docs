@@ -90,13 +90,16 @@ export interface LinkOverlayProps {
   dataService: DataService | null;
   /** Currently hovered item for link highlighting */
   hoveredItem?: ItemHoverData | null;
+  /** Layout version - incremented when layout changes (e.g., Dockview panel moves) */
+  layoutVersion?: number;
 }
 
 export default function LinkOverlay({
   leftSections,
   rightSections,
   dataService,
-  hoveredItem
+  hoveredItem,
+  layoutVersion
 }: LinkOverlayProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [, setScrollTick] = useState(0);
@@ -151,7 +154,7 @@ export default function LinkOverlay({
       clearTimeout(timeoutId);
       clearTimeout(timeoutId2);
     };
-  }, [leftSections, rightSections, dataService]);
+  }, [leftSections, rightSections, dataService, layoutVersion]);
 
   // Link pair with edge info for rendering
   type LinkPair = [string, string, EdgeInfo];

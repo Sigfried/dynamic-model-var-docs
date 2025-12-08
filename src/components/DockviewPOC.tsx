@@ -139,7 +139,7 @@ function DetailPaneHeader({ api, title, containerApi, params }: IPaneviewPanelPr
 
   return (
     <div
-      className={`flex items-center justify-between px-3 py-2 ${colors.bg} text-white cursor-pointer select-none min-h-[36px]`}
+      className={`flex items-center justify-between px-3 py-3 ${colors.bg} text-white cursor-pointer select-none min-h-[44px]`}
       onClick={handleToggle}
     >
       <div className="flex items-center gap-2 min-w-0">
@@ -183,7 +183,7 @@ function RelationshipPaneHeader({ api, title, containerApi, params }: IPaneviewP
 
   return (
     <div
-      className={`flex items-center justify-between px-3 py-2 ${colors.bg} text-white cursor-pointer select-none min-h-[36px]`}
+      className={`flex items-center justify-between px-3 py-3 ${colors.bg} text-white cursor-pointer select-none min-h-[44px]`}
       onClick={handleToggle}
     >
       <div className="flex items-center gap-2 min-w-0">
@@ -341,6 +341,9 @@ export default function DockviewPOC({
 
   // Hover state for LinkOverlay (must be state to trigger re-renders)
   const [hoveredItem, setHoveredItem] = useState<ItemHoverData | null>(null);
+
+  // Layout version - incremented when Dockview layout changes to trigger LinkOverlay redraw
+  const [layoutVersion, setLayoutVersion] = useState(0);
 
   const handleItemHover = useCallback((hoverData: ItemHoverData) => {
     setHoveredItem(hoverData);
@@ -629,28 +632,56 @@ export default function DockviewPOC({
     if (middlePanel?.group) middlePanel.group.locked = true;
     if (rightPanel?.group) rightPanel.group.locked = true;
 
+    // Listen for panel removal to sync toggle button state
+    event.api.onDidRemovePanel((panel) => {
+      if (panel.id === 'middle-panel') {
+        setMiddlePanelVisible(false);
+        setCurrentMiddleSections([]);
+      }
+    });
+
+    // Listen for layout changes to trigger LinkOverlay redraw
+    event.api.onDidLayoutChange(() => {
+      // Increment layout version to trigger re-render
+      // Use multiple timeouts to catch DOM settling at different stages
+      setTimeout(() => setLayoutVersion(v => v + 1), 50);
+      setTimeout(() => setLayoutVersion(v => v + 1), 150);
+      setTimeout(() => setLayoutVersion(v => v + 1), 300);
+    });
+
   }, [dataService, initialLeftSections, initialMiddleSections, initialRightSections, leftSectionData, middleSectionData, rightSectionData, handleClickItem, handleItemHover, handleItemLeave, handleNavigate, handleDetailPaneReady, handleRelationshipPaneReady, handleLeftSectionsChange, handleMiddleSectionsChange, handleRightSectionsChange, rightPanelToggleButtons]);
 
   return (
     <div className="flex-1 relative">
-      {/* Custom styles - theme handles most spacing via gap: 10 */}
+      {/* Custom styles - theme handles most spacing via gap */}
       <style>{`
         .dockview-theme-light-spaced {
           --dv-background-color: #f3f4f6;
+          --dv-tabs-and-actions-container-height: 40px;
+        }
+        .dockview-theme-light-spaced .tabs-container {
+          padding: 4px 8px;
+        }
+        .dockview-theme-light-spaced .tab {
+          padding: 6px 12px;
+        }
+        /* Hide close buttons on main panel tabs - only Slots toggle controls visibility */
+        .dockview-theme-light-spaced .tab .dv-default-tab-action {
+          display: none;
         }
       `}</style>
 
-      {/* Slots toggle button - positioned in top-left corner */}
+      {/* Slots toggle button - positioned in gap area below tabs */}
       <button
         onClick={handleToggleMiddlePanel}
         title={middlePanelVisible ? 'Hide Slots panel' : 'Show Slots panel'}
-        className={`absolute top-2 left-2 z-10 px-3 py-1.5 rounded text-white text-sm font-medium transition-all ${
+        className={`absolute top-12 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded text-white text-xs font-medium transition-all shadow-md ${
           middlePanelVisible
             ? 'bg-green-600 hover:bg-green-700'
             : 'bg-gray-400 hover:bg-gray-500'
         }`}
       >
-        S
+        {middlePanelVisible ? 'Hide Slots' : 'Show Slots'}
       </button>
 
       {/* Dockview container */}
@@ -658,6 +689,7 @@ export default function DockviewPOC({
         theme={customTheme}
         onReady={onReady}
         components={components}
+        disableDnd={true}
       />
 
       {/* LinkOverlay - positioned absolutely over Dockview */}
@@ -667,6 +699,7 @@ export default function DockviewPOC({
         rightSections={currentRightSections}
         dataService={dataService}
         hoveredItem={hoveredItem}
+        layoutVersion={layoutVersion}
       />
     </div>
   );
