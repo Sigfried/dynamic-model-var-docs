@@ -9,39 +9,6 @@
 
 ## 🐛 Current Bugs
 
-- when showing/hiding middle panel, links don't update until some kind of interaction
-
----
-
-## 📦 Archived: Dockview POC (Dec 2024)
-
-**Branch**: `dockview-poc` (tagged as `dockview-poc-archived`)
-
-**Status**: Abandoned - too much effort to recreate existing features, not enough ROI
-
-**What we tried**:
-- Used Dockview library for dockable/floating panel management
-- Single main Dockview panel containing 3-column flex layout
-- Floating groups for detail/relationship info boxes
-- PaneviewReact for vertical collapsible stacking within floating groups
-
-**Why it failed**:
-- Significant time spent just recreating features we already had (dragging, headers, controls)
-- Dockview's opinionated structure didn't fit our use case well
-- Floating panels appeared below link overlay (z-index issues)
-- Complex state synchronization between Dockview, Paneview, and React
-- Missing basic controls (popout, maximize) required more custom work
-
-**Lessons learned**:
-- Our FloatingBoxManager already handles most of what we need
-- Better to enhance existing system than adopt heavy-weight library
-- Popout windows and grouped panels can be implemented ourselves
-
-**Features we still want (implement ourselves)**:
-1. **Popout windows**: Use `window.open()` + React portals to render floating boxes in separate browser windows. Allow popping back into main window.
-2. **Grouped/collapsible panels**: Enhance FloatingBoxManager to support grouping multiple boxes into a single container with collapsible sections (one group for details, one for relationships)
-3. **Snap-to-edge**: Optional docking behavior where boxes snap to viewport edges
-
 ---
 
 ## 📋 Upcoming Work (Ordered by Priority)
@@ -53,13 +20,19 @@
 3. ~~when showing a box preview, slightly reduce opacity on all other boxes~~ ✅ Fixed: brightness filter dims persistent boxes
 4. ~~the old badges still give no indication of what they represent~~ ✅ Fixed: tooltips show "X variables", "X values", "Used by X classes"
 5. ~~boxes in stacked mode still don't allow dragging~~ ✅ Fixed: Removed stacked mode entirely - all boxes now use cascade mode and are draggable
-6. two tall cascade stacks (one for details, one for relationships) - FUTURE: could implement
-   when we want to separate detail vs relationship boxes into distinct cascades
-7. adaptive positioning (find least obtrusive place for boxes) - FUTURE: could implement
-   more sophisticated positioning algorithms based on available space
 8. ~~the cascade may look a little weird if we shrink all the box sizes from the default maxes
    to the min needed to fit content, but we should try that~~ ✅ Fixed: boxes use fit-content sizing (user-resized boxes keep explicit dimensions)
 9. ~~cascading is weird when some boxes are manually positioned~~ ✅ Fixed: user-positioned boxes excluded from cascade calculation; ESC closes auto-positioned first (FIFO), then user-positioned (FIFO)
+- **Grouped/collapsible panels**: Enhance FloatingBoxManager to support grouping multiple boxes into a single container with collapsible sections (one group for details, one for relationships)
+  - clicking to open a detail or relationship box will open a group box if it isn't already open
+  - each group should initially open with its right edge at the right edge of the viewport
+  - the relationship group should open at y=20%, details at y=65% (constants as always go in appConfig)
+  - groups should be horizontally sized to fit contents
+  - groups should be draggable, resizable, closable (closing a group closes its contents, but clicking a detail
+    another detail or relationship will open a new group for it)
+  - groups should also have popout window functionality (using `window.open()`)
+  - new boxes within a group should appear below previous boxes and previous boxes should automatically collapse
+  - boxes will have expand/collapse and close buttons
 
 
 ### Badge-Based Hover/Click Interaction ✅ DONE (Dec 2024)
