@@ -23,16 +23,79 @@
 8. ~~the cascade may look a little weird if we shrink all the box sizes from the default maxes
    to the min needed to fit content, but we should try that~~ ✅ Fixed: boxes use fit-content sizing (user-resized boxes keep explicit dimensions)
 9. ~~cascading is weird when some boxes are manually positioned~~ ✅ Fixed: user-positioned boxes excluded from cascade calculation; ESC closes auto-positioned first (FIFO), then user-positioned (FIFO)
-- **Grouped/collapsible panels**: Enhance FloatingBoxManager to support grouping multiple boxes into a single container with collapsible sections (one group for details, one for relationships)
-  - clicking to open a detail or relationship box will open a group box if it isn't already open
-  - each group should initially open with its right edge at the right edge of the viewport
-  - the relationship group should open at y=20%, details at y=65% (constants as always go in appConfig)
-  - groups should be horizontally sized to fit contents
-  - groups should be draggable, resizable, closable (closing a group closes its contents, but clicking a detail
-    another detail or relationship will open a new group for it)
-  - groups should also have popout window functionality (using `window.open()`)
-  - new boxes within a group should appear below previous boxes and previous boxes should automatically collapse
-  - boxes will have expand/collapse and close buttons
+### Grouped/Collapsible Floating Panels 🔲 **NEXT UP**
+
+**Goal**: Replace cascade layout with two group containers (details, relationships) containing collapsible item boxes. Major simplification of floating box management.
+
+**Behavior Spec**:
+- Two groups: **Details** (y=65%) and **Relationships** (y=20%) - positions in appConfig
+- Clicking to open detail/relationship opens group container if not already open
+- Groups open with right edge at viewport right edge, sized to fit contents horizontally
+- Groups are draggable, resizable, closable (closing group closes all contents)
+- Re-clicking detail/relationship after closing group opens new group
+- Groups have popout window functionality (`window.open()`)
+- New boxes within group appear below previous boxes
+- Previous boxes auto-collapse when new box opens
+- Individual boxes have expand/collapse and close buttons
+
+**Simplifications**:
+- ✅ No more cascade positioning algorithm (delete that code)
+- ✅ No more multi-stack cascade calculations
+- ✅ No more per-box position tracking (groups handle positioning)
+- ✅ Simpler z-index management (just two groups + transitory)
+
+**URL State Persistence**:
+- Store ordered list of open items per group (not individual positions)
+- Group positions: low priority (use defaults on restore), or save if easy
+- Restore expansion state options (appConfig setting):
+  - All collapsed, all expanded, or
+  - Heuristic: if >50% were expanded when saved → restore all expanded, else all collapsed
+- Consider reusing existing `useExpansionState` hook for collapse/expand
+
+**Transitory Boxes**:
+- Keep as-is for hover previews (appear near hovered item, not in groups)
+- Click upgrades to persistent → adds to appropriate group
+
+**Implementation Plan**:
+
+1. **Phase 1: Data Model**
+   - Add `GroupId` type: `'details' | 'relationships'`
+   - Add `FloatingBoxGroupData` interface for group containers
+   - Extend `FloatingBoxData` with `groupId` and `isCollapsed`
+   - Add group config to appConfig (positions, restore behavior)
+
+2. **Phase 2: FloatingBoxGroup Component**
+   - New component renders group container with header
+   - Header: title, collapse-all, popout, close buttons
+   - Contains stacked child boxes (vertical layout)
+   - Each child: expand/collapse toggle, close button, content
+   - Group-level drag/resize
+
+3. **Phase 3: FloatingBoxManager Changes**
+   - Manage two groups (created lazily on first box)
+   - Remove cascade positioning algorithm
+   - Simplify to: groups + transitory boxes only
+   - Delete obsolete cascade code
+
+4. **Phase 4: LayoutManager Integration**
+   - Update `handleOpenFloatingBox` to add boxes to groups
+   - Auto-collapse previous boxes when new one opens
+   - Handle group close → remove all boxes in group
+   - Update URL persistence for new model
+
+5. **Phase 5: Popout Window Support**
+   - `window.open()` creates detached window for group
+   - New items of that type appear in popped-out window (not main window)
+   - Need cross-window communication (postMessage or shared state)
+   - Closing popout returns group to main window (or discards - TBD)
+
+**Files to modify**:
+- `src/components/FloatingBoxManager.tsx` - major refactor, delete cascade code
+- `src/components/FloatingBoxGroup.tsx` - new file
+- `src/components/LayoutManager.tsx` - update box creation/management
+- `src/contracts/ComponentData.ts` - add group types
+- `src/config/appConfig.ts` - add group positions, restore settings
+- `src/utils/statePersistence.ts` - update for group-based state
 
 
 ### Badge-Based Hover/Click Interaction ✅ DONE (Dec 2024)
