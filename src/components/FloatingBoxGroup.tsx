@@ -318,16 +318,111 @@ export default function FloatingBoxGroup({
             No items open
           </div>
         ) : (
-          boxes.map((box) => (
-            <CollapsibleBox
-              key={box.id}
-              box={box}
-              onClose={() => onCloseBox(box.id)}
-              onToggleCollapse={() => onToggleBoxCollapse(box.id)}
-            />
-          ))
+          <BoxesWithEvenHeight boxes={boxes} onCloseBox={onCloseBox} onToggleBoxCollapse={onToggleBoxCollapse} />
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * BoxesWithEvenHeight - Distributes available height evenly among expanded boxes
+ * Boxes that don't need their full allocation give space back to others
+ */
+interface BoxesWithEvenHeightProps {
+  boxes: FloatingBoxData[];
+  onCloseBox: (boxId: string) => void;
+  onToggleBoxCollapse: (boxId: string) => void;
+}
+
+function BoxesWithEvenHeight({ boxes, onCloseBox, onToggleBoxCollapse }: BoxesWithEvenHeightProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerHeight, setContainerHeight] = useState(0);
+  // Track natural content heights for each expanded box
+  const [naturalHeights, setNaturalHeights] = useState<Record<string, number>>({});
+
+  // Observe container height changes
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContainerHeight(entry.contentRect.height);
+      }
+    });
+
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  const reportNaturalHeight = (boxId: string, height: number) => {
+    setNaturalHeights(prev => {
+      if (prev[boxId] === height) return prev;
+      return { ...prev, [boxId]: height };
+    });
+  };
+
+  // Constants for height calculation
+  const collapsedBoxHeight = 32; // Collapsed box header height
+  const gapHeight = 8; // space-y-2 = 0.5rem = 8px
+  const totalGaps = (boxes.length - 1) * gapHeight;
+
+  // Calculate available space
+  const expandedBoxes = boxes.filter(b => !b.isCollapsed);
+  const collapsedCount = boxes.length - expandedBoxes.length;
+  const collapsedSpace = collapsedCount * collapsedBoxHeight;
+  const totalAvailable = containerHeight - collapsedSpace - totalGaps;
+
+  // Calculate heights with redistribution
+  const calculateHeights = (): Record<string, number> => {
+    if (expandedBoxes.length === 0) return {};
+
+    const result: Record<string, number> = {};
+    let remaining = totalAvailable;
+    let needsMore: string[] = [];
+
+    // First pass: give boxes their natural height if it's less than equal share
+    const equalShare = totalAvailable / expandedBoxes.length;
+
+    for (const box of expandedBoxes) {
+      const natural = naturalHeights[box.id];
+      const naturalWithHeader = natural ? natural + collapsedBoxHeight : undefined;
+
+      if (naturalWithHeader !== undefined && naturalWithHeader < equalShare) {
+        // This box doesn't need its full share
+        result[box.id] = natural;
+        remaining -= naturalWithHeader;
+      } else {
+        // This box needs at least equal share (or we don't know yet)
+        needsMore.push(box.id);
+      }
+    }
+
+    // Second pass: distribute remaining space to boxes that need more
+    if (needsMore.length > 0) {
+      const perBox = Math.max(68, Math.floor(remaining / needsMore.length) - collapsedBoxHeight); // 68 = 100 min - 32 header
+      for (const boxId of needsMore) {
+        result[boxId] = perBox;
+      }
+    }
+
+    return result;
+  };
+
+  const heights = calculateHeights();
+
+  return (
+    <div ref={containerRef} className="flex flex-col gap-2 h-full">
+      {boxes.map((box) => (
+        <CollapsibleBox
+          key={box.id}
+          box={box}
+          maxContentHeight={heights[box.id]}
+          onReportNaturalHeight={(h) => reportNaturalHeight(box.id, h)}
+          onClose={() => onCloseBox(box.id)}
+          onToggleCollapse={() => onToggleBoxCollapse(box.id)}
+        />
+      ))}
     </div>
   );
 }
@@ -337,15 +432,37 @@ export default function FloatingBoxGroup({
  */
 interface CollapsibleBoxProps {
   box: FloatingBoxData;
+  maxContentHeight?: number;
+  onReportNaturalHeight?: (height: number) => void;
   onClose: () => void;
   onToggleCollapse: () => void;
 }
 
-function CollapsibleBox({ box, onClose, onToggleCollapse }: CollapsibleBoxProps) {
+function CollapsibleBox({ box, maxContentHeight, onReportNaturalHeight, onClose, onToggleCollapse }: CollapsibleBoxProps) {
   const isCollapsed = box.isCollapsed ?? false;
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Measure and report natural content height
+  useEffect(() => {
+    if (isCollapsed || !contentRef.current || !onReportNaturalHeight) return;
+
+    const measureHeight = () => {
+      if (contentRef.current) {
+        onReportNaturalHeight(contentRef.current.scrollHeight);
+      }
+    };
+
+    // Measure after render
+    measureHeight();
+
+    // Also observe for content changes
+    const observer = new ResizeObserver(measureHeight);
+    observer.observe(contentRef.current);
+    return () => observer.disconnect();
+  }, [isCollapsed, onReportNaturalHeight]);
 
   return (
-    <div className="border border-gray-200 dark:border-slate-600 rounded-lg overflow-hidden">
+    <div className="border border-gray-200 dark:border-slate-600 rounded-lg overflow-hidden flex-shrink-0">
       {/* Box header */}
       <div
         className={`flex items-center justify-between px-3 py-1.5 ${box.metadata.color} text-white cursor-pointer select-none`}
@@ -369,7 +486,11 @@ function CollapsibleBox({ box, onClose, onToggleCollapse }: CollapsibleBoxProps)
 
       {/* Box content - only show when expanded */}
       {!isCollapsed && (
-        <div className="max-h-64 overflow-y-auto">
+        <div
+          ref={contentRef}
+          className="overflow-y-auto"
+          style={{ maxHeight: maxContentHeight ? `${maxContentHeight}px` : undefined }}
+        >
           {box.content}
         </div>
       )}

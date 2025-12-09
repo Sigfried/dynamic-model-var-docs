@@ -16,6 +16,9 @@
 **Status**: Phases 1-4 complete. Bug fixes done. Phase 5 (popout) and hover highlight pending.
 
 **Remaining work**:
+- ✅ Wasting space by limiting box height. have all expanded boxes split the available space evenly
+- detail preview and detail group should both be wider, say, 50% (appConfig)
+- relationship group is a little wider than it needs to be
 - [ ] Hover highlight: When hovering on an item that already has a box open, highlight/dim to make it visible (use `hoverHighlightDelay` in appConfig)
 - [ ] Phase 5: Popout window support
 
