@@ -15,38 +15,66 @@
 
 ## 🔬 Dockview POC (Branch: `dockview-poc`)
 
-**STATUS**: Active POC evaluating Dockview library for layout management
+**STATUS**: Active POC - floating groups implemented, needs refinement
 
-### What's Working
-- Main panels (Classes, Slots, Ranges) in Dockview with 75px gaps
-- PaneviewReact for collapsible detail/relationship stacks on right side
-- Custom colored pane headers (blue=class, green=slot, purple=enum, orange=variable)
-- Chevron icons for expand/collapse state
-- Close buttons on pane headers
-- New panes added at top (index 0), expanded, NO auto-collapse of others
-- LinkOverlay renders SVG links across Dockview panels
-- Multiple delayed redraws (100ms, 300ms) to fix flaky link rendering
+### Current State (Dec 2024)
+- **Main content panel**: Single Dockview panel containing 3-column flex layout (Classes | Slots | Ranges)
+  - Works like original LayoutManager - NOT using Dockview for main panel separation
+  - Slots panel toggleable via button in gutter
+  - Tab header hidden via CSS (no drag/close controls on main panel)
+- **Floating groups**: Detail and Relationship info boxes open as floating Dockview groups
+  - Click item name → opens in "detail" floating group
+  - Click relationship badge → opens in "relationship" floating group
+  - Multiple panels stack as tabs within each group type
+  - Groups positioned on right side of viewport
 
-### Completed
-1. ✅ **Pane header height**: Fixed - increased to 36px with py-2 padding
-2. ✅ **Toggles missing**: Fixed - right panel now has C/E/T toggle buttons
-3. ✅ **Prevent drops INTO main panels**: Fixed - using `group.locked = true` on main panels
-4. ✅ **Slots toggle**: Fixed - green 'S' button in top-left corner toggles Slots panel
-5. ✅ **Panel width**: Fixed - panels have initialWidth=280, min=200, max=400
+### What's Working ✅
+- Main 3-column layout with gutters for link rendering
+- Floating groups appear on item click
+- Panels grouped by type (details vs relationships)
+- LinkOverlay with layoutVersion prop for redraw on layout changes
+- Duplicate panel detection (won't open same item twice)
 
 ### TODO (Next Session)
-1. **Main panel colors**: Investigate if section headers should have type colors (not currently implemented in Section.tsx)
+1. **Panels should be vertical (paneview), not tabs**
+   - Currently multiple detail panels stack as tabs
+   - Should use PaneviewReact for vertical collapsible stacking within each floating group
+
+2. **Use viewport percentages, not pixels for positions**
+   - Change from: `y: 80`, `y: RELATIONSHIP_HEIGHT + 100`
+   - Change to: `y: 20%`, `y: 65%` of viewport height
+   - Move these and all other constants to `appConfig.ts`
+
+3. **Details width should fit content**
+   - Currently hardcoded `FLOATING_WIDTH = 400`
+   - Should fit content up to max 60% viewport width
+
+4. **Add proper headers to floating groups**
+   - Groups currently have no header at all
+   - Panels only show close control
+   - Need full Dockview group header with drag handle
+
+5. **Remove header/close button from main panel**
+   - Tab bar hidden via CSS, but close button still visible
+   - should not be using css for hiding headers. using dockview api
+
+6. **Fix draggability**
+   - Currently `disableDnd={true}` on main DockviewReact
+   - Trying to drag panel headers just selects text
+   - Need: main panel locked, but floating groups draggable and panels within floating groups
+     should allow dragging out of the group into their own floating panel
 
 ### Architecture Notes
 - `DockviewPOC.tsx` contains all POC code
-- Uses `DockviewReact` for main layout + `PaneviewReact` inside Dockview panels for collapsible stacks
-- Custom theme with `gap: 75` for visible separation between panels
-- Header components receive `params.itemType` to determine color
-- `ItemHoverData.type` field contains item type (class/slot/enum/variable)
+- Single main content panel with 3-column flex layout inside
+- `addToFloatingGroup()` helper creates or adds to floating groups by type
+- `findFloatingGroup()` searches panels by ID prefix to find existing groups
+- Custom theme with `gap: 8` (main panel doesn't need large gaps)
+- LinkOverlay uses `layoutVersion` prop to trigger redraws on layout change
 
 ### Files Changed
 - `src/components/DockviewPOC.tsx` - Main POC component
-- `src/components/LinkOverlay.tsx` - Added delayed redraws for Dockview
+- `src/components/LinkOverlay.tsx` - Added layoutVersion prop for redraw triggers
 - `src/App.tsx` - Toggle `USE_DOCKVIEW_POC` to switch between layouts
 
 ## 📋 Upcoming Work (Ordered by Priority)
