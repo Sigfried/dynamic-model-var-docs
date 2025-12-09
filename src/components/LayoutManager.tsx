@@ -3,7 +3,7 @@
  *
  * Consolidates all layout logic for the three-panel interface:
  * - Panel section state management (left, middle, right)
- * - Floating box management (all boxes use cascade mode)
+ * - Floating box management (groups for persistent, transitory for hover)
  * - LinkOverlay conditional rendering
  * - Panel visibility and sizing
  *
@@ -21,12 +21,13 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import ItemsPanel, { type ToggleButtonData } from './ItemsPanel';
 import type { SectionData, ItemHoverData } from './Section';
-import FloatingBoxManager, { type FloatingBoxData } from './FloatingBoxManager';
+import FloatingBoxManager from './FloatingBoxManager';
+import type { FloatingBoxData, FloatingBoxGroupData, GroupId } from '../contracts/ComponentData';
 import DetailContent from './DetailContent';
 import LinkOverlay from './LinkOverlay';
 import { RelationshipInfoContent } from './RelationshipInfoBox';
 import { APP_CONFIG } from '../config/appConfig';
-import { type DialogState } from '../utils/statePersistence';
+import { type DialogState, contentTypeToGroupId } from '../utils/statePersistence';
 import { type DataService } from '../services/DataService';
 
 interface LayoutManagerProps {
@@ -52,64 +53,48 @@ export default function LayoutManager({
   setDialogStatesGetter,
   onDialogsChange
 }: LayoutManagerProps) {
-  // LayoutManager is now a controlled component - receives state from parent
-
-  // Floating box state
+  // Hover state
   const [hoveredItem, setHoveredItem] = useState<ItemHoverData | null>(null);
-  const [floatingBoxes, setFloatingBoxes] = useState<FloatingBoxData[]>([]);
+
+  // Transitory box (only one at a time, for hover preview)
+  const [transitoryBox, setTransitoryBox] = useState<FloatingBoxData | null>(null);
+
+  // Groups containing persistent boxes
+  const [groups, setGroups] = useState<FloatingBoxGroupData[]>([]);
+
   const [hasRestoredDialogs, setHasRestoredDialogs] = useState(false);
 
-  // Convert floating boxes to dialog states for persistence
-  const getDialogStatesFromBoxes = useCallback((): DialogState[] => {
-    return floatingBoxes
-      .filter(box => box.mode === 'persistent')
-      .map(box => {
-        const state: DialogState = {
-          itemName: box.itemId
-        };
-
-        if (box.isUserPositioned && box.position && box.size) {
-          state.x = box.position.x;
-          state.y = box.position.y;
-          state.width = box.size.width;
-          state.height = box.size.height;
-        }
-
-        return state;
-      });
-  }, [floatingBoxes]);
+  // Convert groups to dialog states for persistence (simplified - just item names)
+  const getDialogStatesFromGroups = useCallback((): DialogState[] => {
+    const states: DialogState[] = [];
+    for (const group of groups) {
+      for (const box of group.boxes) {
+        states.push({ itemName: box.itemId });
+      }
+    }
+    return states;
+  }, [groups]);
 
   // Provide dialog states getter to parent (for URL/localStorage persistence)
   useEffect(() => {
-    setDialogStatesGetter(getDialogStatesFromBoxes);
-  }, [getDialogStatesFromBoxes, setDialogStatesGetter]);
+    setDialogStatesGetter(getDialogStatesFromGroups);
+  }, [getDialogStatesFromGroups, setDialogStatesGetter]);
 
   // Notify parent when persistent dialogs change (for URL persistence)
-  // Skip during initial restoration to avoid saving incomplete state
-  // Track serialized state of persistent boxes (count, positions, sizes)
-  const persistentBoxesState = useMemo(() => {
-    return floatingBoxes
-      .filter(b => b.mode === 'persistent')
-      .map(b => ({
-        itemId: b.itemId,
-        contentType: b.contentType,
-        x: b.position?.x ?? 0,
-        y: b.position?.y ?? 0,
-        width: b.size?.width ?? 0,
-        height: b.size?.height ?? 0
-      }));
-  }, [floatingBoxes]);
-
-  const persistentBoxesStateJson = JSON.stringify(persistentBoxesState);
+  const groupsStateJson = useMemo(() => {
+    return JSON.stringify(groups.map(g => ({
+      id: g.id,
+      boxes: g.boxes.map(b => ({ itemId: b.itemId, contentType: b.contentType, isCollapsed: b.isCollapsed }))
+    })));
+  }, [groups]);
 
   useEffect(() => {
-    if (!hasRestoredDialogs && initialDialogs.length > 0) return; // Still restoring
-    // Delay URL save to allow animation to complete before re-render
+    if (!hasRestoredDialogs && initialDialogs.length > 0) return;
     const timer = setTimeout(() => {
       onDialogsChange?.();
-    }, APP_CONFIG.timing.boxTransition + 50); // Animation duration + small buffer
+    }, APP_CONFIG.timing.boxTransition + 50);
     return () => clearTimeout(timer);
-  }, [persistentBoxesStateJson, hasRestoredDialogs, initialDialogs.length, onDialogsChange]);
+  }, [groupsStateJson, hasRestoredDialogs, initialDialogs.length, onDialogsChange]);
 
   // Restore floating boxes from initial dialogs (runs once after data loads)
   useEffect(() => {
@@ -118,7 +103,8 @@ export default function LayoutManager({
 
     setHasRestoredDialogs(true);
 
-    const restoredBoxes: FloatingBoxData[] = [];
+    // Build groups from restored dialogs
+    const detailsBoxes: FloatingBoxData[] = [];
 
     initialDialogs.forEach((dialogState, index) => {
       const itemId = dialogState.itemName;
@@ -129,32 +115,38 @@ export default function LayoutManager({
           const box: FloatingBoxData = {
             id: `restored-${Date.now()}-${index}`,
             mode: 'persistent',
-            contentType: 'detail',  // Restored boxes are always detail type
+            contentType: 'detail',
             metadata,
             content: <DetailContent itemId={itemId} dataService={dataService} hideHeader={true} />,
-            itemId
+            itemId,
+            isCollapsed: false  // Restored boxes start expanded (could use heuristic later)
           };
-
-          if (dialogState.x !== undefined && dialogState.y !== undefined &&
-              dialogState.width !== undefined && dialogState.height !== undefined) {
-            box.position = { x: dialogState.x, y: dialogState.y };
-            box.size = { width: dialogState.width, height: dialogState.height };
-            box.isUserPositioned = true;
-          }
-
-          restoredBoxes.push(box);
+          detailsBoxes.push(box);
         }
       }
     });
 
-    if (restoredBoxes.length > 0) {
-      const sortedBoxes = restoredBoxes.sort((a, b) => {
-        const aPositioned = a.isUserPositioned ? 1 : 0;
-        const bPositioned = b.isUserPositioned ? 1 : 0;
-        return aPositioned - bPositioned;
-      });
+    if (detailsBoxes.length > 0) {
+      // Apply expansion heuristic from config
+      const restoreMode = APP_CONFIG.floatingGroups.restoreExpansionMode;
+      let shouldExpand = true;
+      if (restoreMode === 'all-collapsed') {
+        shouldExpand = false;
+      } else if (restoreMode === 'all-expanded') {
+        shouldExpand = true;
+      }
+      // For 'heuristic', we'd need to know the saved state - default to expanded for now
 
-      setFloatingBoxes(sortedBoxes);
+      const boxesWithExpansion = detailsBoxes.map(box => ({
+        ...box,
+        isCollapsed: !shouldExpand
+      }));
+
+      setGroups([{
+        id: 'details',
+        title: APP_CONFIG.floatingGroups.details.title,
+        boxes: boxesWithExpansion
+      }]);
     }
   }, [dataService, initialDialogs, hasRestoredDialogs]);
 
@@ -182,13 +174,66 @@ export default function LayoutManager({
     return dataService.getAllSectionsData('right');
   }, [dataService]);
 
-  // Box sizes for different content types
-  const RELATIONSHIP_BOX_SIZE = { width: 450, height: 350 };
-  const DETAIL_BOX_SIZE = { width: 600, height: 500 };
-  const BOX_OFFSET = 30; // Offset when multiple boxes for same item
+  // Navigation handler for relationship links
+  const handleNavigate = useCallback((itemName: string, _itemSection: string) => {
+    handleOpenFloatingBox({ type: _itemSection, name: itemName });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Open a new floating box, upgrade transitory to persistent, or bring existing to front
-  const handleOpenFloatingBox = useCallback((hoverData: { type: string; name: string; hoverZone?: 'name' | 'badge' }, position?: { x: number; y: number }, size?: { width: number; height: number }) => {
+  // Add a box to a group (creates group if it doesn't exist)
+  const addBoxToGroup = useCallback((box: FloatingBoxData) => {
+    const groupId = contentTypeToGroupId(box.contentType);
+    const groupConfig = APP_CONFIG.floatingGroups[groupId];
+
+    setGroups(prev => {
+      const existingGroupIndex = prev.findIndex(g => g.id === groupId);
+
+      if (existingGroupIndex !== -1) {
+        // Group exists - add box and collapse others
+        const updatedGroups = [...prev];
+        const group = { ...updatedGroups[existingGroupIndex] };
+
+        // Check if box for this item already exists
+        const existingBoxIndex = group.boxes.findIndex(b =>
+          b.itemId === box.itemId && b.contentType === box.contentType
+        );
+
+        if (existingBoxIndex !== -1) {
+          // Box exists - expand it, collapse others, move to end
+          group.boxes = group.boxes.map((b, i) => ({
+            ...b,
+            isCollapsed: i !== existingBoxIndex
+          }));
+          // Move to end
+          const [existingBox] = group.boxes.splice(existingBoxIndex, 1);
+          group.boxes.push({ ...existingBox, isCollapsed: false });
+        } else {
+          // New box - collapse existing, add new expanded at end
+          group.boxes = [
+            ...group.boxes.map(b => ({ ...b, isCollapsed: true })),
+            { ...box, isCollapsed: false }
+          ];
+        }
+
+        updatedGroups[existingGroupIndex] = group;
+
+        // Move this group to end (most recently used)
+        const [movedGroup] = updatedGroups.splice(existingGroupIndex, 1);
+        return [...updatedGroups, movedGroup];
+      } else {
+        // Create new group
+        const newGroup: FloatingBoxGroupData = {
+          id: groupId,
+          title: groupConfig.title,
+          boxes: [{ ...box, isCollapsed: false }]
+        };
+        return [...prev, newGroup];
+      }
+    });
+  }, []);
+
+  // Open a floating box (click handler)
+  const handleOpenFloatingBox = useCallback((hoverData: { type: string; name: string; hoverZone?: 'name' | 'badge' }) => {
     const itemId = hoverData.name;
     const contentType = hoverData.hoverZone === 'badge' ? 'relationship' : 'detail';
 
@@ -197,83 +242,34 @@ export default function LayoutManager({
       return;
     }
 
-    // Get metadata upfront (needed for new box creation)
     const isRelationship = contentType === 'relationship';
     const metadata = isRelationship
       ? dataService.getRelationshipBoxMetadata(itemId)
       : dataService.getFloatingBoxMetadata(itemId);
 
-    setFloatingBoxes(prev => {
-      // Check for existing transitory box - upgrade it
-      const transitoryIndex = prev.findIndex(b =>
-        b.itemId === itemId && b.mode === 'transitory' && b.contentType === contentType
-      );
-      if (transitoryIndex !== -1) {
-        return prev.map((box, i) => {
-          if (i === transitoryIndex) {
-            return {
-              ...box,
-              mode: 'persistent' as const,
-              position: undefined,
-              size: undefined
-            };
-          }
-          return box;
-        });
-      }
+    if (!metadata) {
+      console.warn(`Could not get metadata for item "${itemId}"`);
+      return;
+    }
 
-      // Check for existing persistent box - bring to front
-      const existingIndex = prev.findIndex(b =>
-        b.itemId === itemId && b.mode === 'persistent' && b.contentType === contentType
-      );
-      if (existingIndex !== -1) {
-        const updated = [...prev];
-        const [existing] = updated.splice(existingIndex, 1);
-        return [...updated, existing];
-      }
+    const newBox: FloatingBoxData = {
+      id: `box-${Date.now()}`,
+      mode: 'persistent',
+      contentType,
+      metadata,
+      content: isRelationship
+        ? <RelationshipInfoContent itemId={itemId} dataService={dataService} onNavigate={handleNavigate} />
+        : <DetailContent itemId={itemId} dataService={dataService} hideHeader={true} />,
+      itemId,
+      isCollapsed: false
+    };
 
-      // No existing box - create new persistent one
-      if (!metadata) {
-        console.warn(`Could not get metadata for item "${itemId}"`);
-        return prev;
-      }
-
-      const newBox: FloatingBoxData = {
-        id: `box-${Date.now()}`, // Use timestamp for unique ID
-        mode: 'persistent',
-        contentType,
-        metadata,
-        content: isRelationship
-          ? <RelationshipInfoContent itemId={itemId} dataService={dataService} onNavigate={handleNavigate} />
-          : <DetailContent itemId={itemId} dataService={dataService} hideHeader={true} />,
-        itemId,
-        position,
-        size: size ?? (isRelationship ? RELATIONSHIP_BOX_SIZE : DETAIL_BOX_SIZE)
-      };
-
-      return [...prev, newBox];
-    });
-
-    // Always clear hover state after click action
+    addBoxToGroup(newBox);
+    setTransitoryBox(null);
     setHoveredItem(null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- handleNavigate excluded to break circular dependency; content uses closure
-  }, [dataService]);
+  }, [dataService, addBoxToGroup, handleNavigate]);
 
-  // Get item ID and DOM ID for hovered item (for RelationshipInfoBox)
-  const hoveredItemId = useMemo(() => {
-    return hoveredItem?.name ?? null;
-  }, [hoveredItem]);
-
-  const hoveredItemDomId = useMemo(() => {
-    return hoveredItem?.id ?? null;
-  }, [hoveredItem]);
-
-  // Navigation handler - opens a new floating box (defined early for use in hover effect)
-  const handleNavigate = useCallback((itemName: string, itemSection: string) => {
-    handleOpenFloatingBox({ type: itemSection, name: itemName });
-  }, [handleOpenFloatingBox]);
-
-  // Helper to calculate position for transitory box based on DOM node
+  // Helper to calculate position for transitory box
   const calculateTransitoryBoxPosition = useCallback((domId: string): { x: number; y: number } | null => {
     const itemNode = document.getElementById(domId);
     if (!itemNode) return null;
@@ -282,7 +278,6 @@ export default function LayoutManager({
     const estimatedBoxHeight = APP_CONFIG.layout.estimatedBoxHeight;
     const maxBoxHeight = window.innerHeight * 0.8;
 
-    // Find the rightmost edge of visible panels
     const leftPanel = document.querySelector('[data-panel-position="left"]')?.parentElement?.parentElement;
     const rightPanel = document.querySelector('[data-panel-position="right"]')?.parentElement?.parentElement;
 
@@ -307,134 +302,174 @@ export default function LayoutManager({
     return { x: xPosition, y: yPosition };
   }, []);
 
-  // Get hover zone from hovered item
-  const hoveredItemZone = useMemo(() => {
-    return hoveredItem?.hoverZone ?? null;
-  }, [hoveredItem]);
-
-  // Effect to create/update transitory floating box on hover
-  // No debounce - immediate show/hide for responsive feel
+  // Effect to create/update transitory box on hover
   useEffect(() => {
+    const hoveredItemId = hoveredItem?.name ?? null;
+    const hoveredItemDomId = hoveredItem?.id ?? null;
+    const hoveredItemZone = hoveredItem?.hoverZone ?? null;
+
     if (hoveredItemId && hoveredItemDomId && hoveredItemZone) {
       const contentType = hoveredItemZone === 'badge' ? 'relationship' : 'detail';
-      const basePosition = calculateTransitoryBoxPosition(hoveredItemDomId);
+      const groupId = contentTypeToGroupId(contentType);
 
-      setFloatingBoxes(prev => {
-        // Check if there's already a persistent box for this item AND content type - bring to front
-        const existingPersistentIdx = prev.findIndex(b =>
-          b.itemId === hoveredItemId && b.mode === 'persistent' && b.contentType === contentType
-        );
-        if (existingPersistentIdx !== -1) {
-          // Bring existing persistent box to front, remove any transitory
-          const filtered = prev.filter(b => b.mode !== 'transitory');
-          const realIdx = filtered.findIndex(b =>
-            b.itemId === hoveredItemId && b.mode === 'persistent' && b.contentType === contentType
-          );
-          if (realIdx !== -1 && realIdx !== filtered.length - 1) {
-            const updated = [...filtered];
-            const [existing] = updated.splice(realIdx, 1);
-            return [...updated, existing];
-          }
-          return filtered;
-        }
+      // Check if there's already a persistent box for this item in the appropriate group
+      const existingGroup = groups.find(g => g.id === groupId);
+      const existingBox = existingGroup?.boxes.find(b =>
+        b.itemId === hoveredItemId && b.contentType === contentType
+      );
 
-        // No existing persistent box of this type - show transitory
-        if (!basePosition) return prev;
+      if (existingBox) {
+        // Already have persistent box - don't show transitory
+        setTransitoryBox(null);
+        return;
+      }
 
-        // Offset position if there's a persistent box of DIFFERENT type for this item
-        let position = basePosition;
-        const existingOtherType = prev.filter(b =>
-          b.itemId === hoveredItemId && b.mode === 'persistent' && b.contentType !== contentType
-        );
-        if (existingOtherType.length > 0) {
-          position = {
-            x: basePosition.x + BOX_OFFSET * existingOtherType.length,
-            y: basePosition.y + BOX_OFFSET * existingOtherType.length
-          };
-        }
+      const position = calculateTransitoryBoxPosition(hoveredItemDomId);
+      if (!position) {
+        setTransitoryBox(null);
+        return;
+      }
 
-        const filtered = prev.filter(b => b.mode !== 'transitory');
+      const isRelationship = contentType === 'relationship';
+      const metadata = isRelationship
+        ? dataService.getRelationshipBoxMetadata(hoveredItemId)
+        : dataService.getFloatingBoxMetadata(hoveredItemId);
 
-        if (hoveredItemZone === 'badge') {
-          // Badge hover - show relationship info box (smaller)
-          const metadata = dataService.getRelationshipBoxMetadata(hoveredItemId);
-          if (!metadata) return prev;
+      if (!metadata) {
+        setTransitoryBox(null);
+        return;
+      }
 
-          const newBox: FloatingBoxData = {
-            id: `rel-${hoveredItemId}`,
-            mode: 'transitory',
-            contentType: 'relationship',
-            metadata,
-            content: <RelationshipInfoContent itemId={hoveredItemId} dataService={dataService} onNavigate={handleNavigate} />,
-            itemId: hoveredItemId,
-            position,
-            size: RELATIONSHIP_BOX_SIZE
-          };
-          return [...filtered, newBox];
-        } else {
-          // Name hover - show detail preview box (larger)
-          const metadata = dataService.getFloatingBoxMetadata(hoveredItemId);
-          if (!metadata) return prev;
-
-          const newBox: FloatingBoxData = {
-            id: `detail-${hoveredItemId}`,
-            mode: 'transitory',
-            contentType: 'detail',
-            metadata,
-            content: <DetailContent itemId={hoveredItemId} dataService={dataService} hideHeader={true} />,
-            itemId: hoveredItemId,
-            position,
-            size: DETAIL_BOX_SIZE
-          };
-          return [...filtered, newBox];
-        }
+      setTransitoryBox({
+        id: `transitory-${hoveredItemId}`,
+        mode: 'transitory',
+        contentType,
+        metadata,
+        content: isRelationship
+          ? <RelationshipInfoContent itemId={hoveredItemId} dataService={dataService} onNavigate={handleNavigate} />
+          : <DetailContent itemId={hoveredItemId} dataService={dataService} hideHeader={true} />,
+        itemId: hoveredItemId,
+        position
       });
     } else {
-      // Item unhovered - remove transitory box immediately
-      setFloatingBoxes(prev => prev.filter(b => b.mode !== 'transitory'));
+      setTransitoryBox(null);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hoveredItemId, hoveredItemDomId, hoveredItemZone, dataService, calculateTransitoryBoxPosition, handleNavigate]);
+  }, [hoveredItem, groups, dataService, calculateTransitoryBoxPosition, handleNavigate]);
 
-  // Handle upgrade: change transitory box to persistent (no new box creation)
-  const handleUpgradeToPersistent = useCallback((boxId: string) => {
-    setFloatingBoxes(prev => prev.map(box => {
-      if (box.id === boxId && box.mode === 'transitory') {
-        // Upgrade to persistent - clear position/size so cascade positioning takes over
-        // Keep same ID so React doesn't remount - enables smooth animation
-        return {
-          ...box,
-          mode: 'persistent' as const,
-          position: undefined,  // Clear so cascade kicks in (triggers animated move)
-          size: undefined       // Clear so default size is used
-        };
-      }
-      return box;
-    }));
+  // Upgrade transitory box to persistent (click on transitory)
+  const handleUpgradeToPersistent = useCallback(() => {
+    if (!transitoryBox) return;
+
+    const newBox: FloatingBoxData = {
+      ...transitoryBox,
+      id: `box-${Date.now()}`,
+      mode: 'persistent',
+      isCollapsed: false
+    };
+
+    addBoxToGroup(newBox);
+    setTransitoryBox(null);
     setHoveredItem(null);
+  }, [transitoryBox, addBoxToGroup]);
+
+  // Close transitory box
+  const handleCloseTransitory = useCallback(() => {
+    setTransitoryBox(null);
   }, []);
 
-  // Close a floating box
-  const handleCloseFloatingBox = useCallback((id: string) => {
-    setFloatingBoxes(prev => prev.filter(b => b.id !== id));
+  // Close entire group
+  const handleCloseGroup = useCallback((groupId: GroupId) => {
+    setGroups(prev => prev.filter(g => g.id !== groupId));
   }, []);
 
-  // Update floating box position/size (marks box as user-positioned)
-  const handleFloatingBoxChange = useCallback((id: string, position: { x: number; y: number }, size: { width: number; height: number }) => {
-    setFloatingBoxes(prev => prev.map(b =>
-      b.id === id ? { ...b, position, size, isUserPositioned: true } : b
-    ));
+  // Close individual box in a group
+  const handleCloseBox = useCallback((groupId: GroupId, boxId: string) => {
+    setGroups(prev => {
+      const groupIndex = prev.findIndex(g => g.id === groupId);
+      if (groupIndex === -1) return prev;
+
+      const group = prev[groupIndex];
+      const newBoxes = group.boxes.filter(b => b.id !== boxId);
+
+      // If no boxes left, remove the group
+      if (newBoxes.length === 0) {
+        return prev.filter(g => g.id !== groupId);
+      }
+
+      const updatedGroups = [...prev];
+      updatedGroups[groupIndex] = { ...group, boxes: newBoxes };
+      return updatedGroups;
+    });
   }, []);
 
-  // Bring floating box to front (move to end of array for higher z-index)
-  const handleBringToFront = useCallback((id: string) => {
-    setFloatingBoxes(prev => {
-      const index = prev.findIndex(b => b.id === id);
-      if (index === -1 || index === prev.length - 1) return prev;
+  // Toggle box collapse state
+  const handleToggleBoxCollapse = useCallback((groupId: GroupId, boxId: string) => {
+    setGroups(prev => {
+      const groupIndex = prev.findIndex(g => g.id === groupId);
+      if (groupIndex === -1) return prev;
+
+      const group = prev[groupIndex];
+      const newBoxes = group.boxes.map(b =>
+        b.id === boxId ? { ...b, isCollapsed: !b.isCollapsed } : b
+      );
+
+      const updatedGroups = [...prev];
+      updatedGroups[groupIndex] = { ...group, boxes: newBoxes };
+      return updatedGroups;
+    });
+  }, []);
+
+  // Collapse all boxes in a group
+  const handleCollapseAll = useCallback((groupId: GroupId) => {
+    setGroups(prev => {
+      const groupIndex = prev.findIndex(g => g.id === groupId);
+      if (groupIndex === -1) return prev;
+
+      const group = prev[groupIndex];
+      const newBoxes = group.boxes.map(b => ({ ...b, isCollapsed: true }));
+
+      const updatedGroups = [...prev];
+      updatedGroups[groupIndex] = { ...group, boxes: newBoxes };
+      return updatedGroups;
+    });
+  }, []);
+
+  // Expand all boxes in a group
+  const handleExpandAll = useCallback((groupId: GroupId) => {
+    setGroups(prev => {
+      const groupIndex = prev.findIndex(g => g.id === groupId);
+      if (groupIndex === -1) return prev;
+
+      const group = prev[groupIndex];
+      const newBoxes = group.boxes.map(b => ({ ...b, isCollapsed: false }));
+
+      const updatedGroups = [...prev];
+      updatedGroups[groupIndex] = { ...group, boxes: newBoxes };
+      return updatedGroups;
+    });
+  }, []);
+
+  // Update group position/size
+  const handleGroupChange = useCallback((groupId: GroupId, position: { x: number; y: number }, size: { width: number; height: number }) => {
+    setGroups(prev => {
+      const groupIndex = prev.findIndex(g => g.id === groupId);
+      if (groupIndex === -1) return prev;
+
+      const updatedGroups = [...prev];
+      updatedGroups[groupIndex] = { ...prev[groupIndex], position, size };
+      return updatedGroups;
+    });
+  }, []);
+
+  // Bring group to front
+  const handleBringGroupToFront = useCallback((groupId: GroupId) => {
+    setGroups(prev => {
+      const groupIndex = prev.findIndex(g => g.id === groupId);
+      if (groupIndex === -1 || groupIndex === prev.length - 1) return prev;
 
       const updated = [...prev];
-      const [box] = updated.splice(index, 1);
-      return [...updated, box];
+      const [group] = updated.splice(groupIndex, 1);
+      return [...updated, group];
     });
   }, []);
 
@@ -472,21 +507,21 @@ export default function LayoutManager({
           <ItemsPanel
             position="left"
             sections={leftSections}
-            onSectionsChange={() => {}} // No-op - left panel fixed
+            onSectionsChange={() => {}}
             sectionData={leftSectionData}
-            toggleButtons={[]} // No toggles for left panel
+            toggleButtons={[]}
             onClickItem={handleOpenFloatingBox}
             onItemHover={setHoveredItem}
             onItemLeave={() => setHoveredItem(null)}
           />
         </div>
 
-        {/* Left-Middle gutter - show when middle panel visible */}
+        {/* Left-Middle gutter */}
         {!middlePanelEmpty && (
           <div className="w-40 bg-gray-100 dark:bg-slate-800 flex-shrink-0" />
         )}
 
-        {/* Middle Panel - Slots (toggleable) */}
+        {/* Middle Panel - Slots */}
         {!middlePanelEmpty && (
           <div
             className="h-full overflow-hidden border-x border-gray-200 dark:border-slate-700 flex-shrink-0 relative"
@@ -497,16 +532,15 @@ export default function LayoutManager({
           >
             <ItemsPanel
               position="middle"
-              sections={['slot']} // Always 'slot' when visible
-              onSectionsChange={() => {}} // No-op - middle panel fixed
+              sections={['slot']}
+              onSectionsChange={() => {}}
               sectionData={middleSectionData}
-              toggleButtons={[]} // No toggles for middle panel
+              toggleButtons={[]}
               onClickItem={handleOpenFloatingBox}
               onItemHover={setHoveredItem}
               onItemLeave={() => setHoveredItem(null)}
               title="Slots"
             />
-            {/* Hide button */}
             <button
               onClick={handleToggleMiddlePanel}
               className="absolute top-2 right-2 w-6 h-6 rounded bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-600 dark:text-gray-300 flex items-center justify-center text-xs transition-colors z-10"
@@ -517,12 +551,12 @@ export default function LayoutManager({
           </div>
         )}
 
-        {/* Middle-Right gutter - show when middle panel visible */}
+        {/* Middle-Right gutter */}
         {!middlePanelEmpty && (
           <div className="w-40 bg-gray-100 dark:bg-slate-800 flex-shrink-0" />
         )}
 
-        {/* Center gutter / toggle button - show when middle panel hidden */}
+        {/* Center gutter / toggle button */}
         {!leftPanelEmpty && !rightPanelEmpty && middlePanelEmpty && (
           <button
             onClick={handleToggleMiddlePanel}
@@ -554,7 +588,7 @@ export default function LayoutManager({
             sections={rightSections}
             onSectionsChange={setRightSections}
             sectionData={rightSectionData}
-            toggleButtons={rightPanelToggleButtons} // Only C, E, T
+            toggleButtons={rightPanelToggleButtons}
             onClickItem={handleOpenFloatingBox}
             onItemHover={setHoveredItem}
             onItemLeave={() => setHoveredItem(null)}
@@ -562,11 +596,11 @@ export default function LayoutManager({
           />
         </div>
 
-        {/* Spacer to push remaining space to the right */}
+        {/* Spacer */}
         <div className="flex-1" />
       </div>
 
-      {/* SVG Link Overlay - single instance queries DOM for all visible items */}
+      {/* SVG Link Overlay */}
       <LinkOverlay
         leftSections={leftSections}
         rightSections={rightSections}
@@ -576,13 +610,18 @@ export default function LayoutManager({
 
       {/* Floating Box Manager */}
       <FloatingBoxManager
-        boxes={floatingBoxes}
-        onClose={handleCloseFloatingBox}
-        onChange={handleFloatingBoxChange}
-        onBringToFront={handleBringToFront}
+        transitoryBox={transitoryBox}
+        groups={groups}
+        onCloseTransitory={handleCloseTransitory}
         onUpgradeToPersistent={handleUpgradeToPersistent}
+        onCloseGroup={handleCloseGroup}
+        onCloseBox={handleCloseBox}
+        onToggleBoxCollapse={handleToggleBoxCollapse}
+        onCollapseAll={handleCollapseAll}
+        onExpandAll={handleExpandAll}
+        onGroupChange={handleGroupChange}
+        onBringGroupToFront={handleBringGroupToFront}
       />
-
     </div>
   );
 }

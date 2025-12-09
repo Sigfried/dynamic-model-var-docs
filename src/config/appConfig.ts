@@ -18,6 +18,9 @@
 /** Element type IDs (lowercase for technical use) */
 export type ElementTypeId = 'class' | 'enum' | 'slot' | 'type' | 'variable';
 
+/** Expansion restore modes for floating box groups */
+export type ExpansionRestoreMode = 'all-collapsed' | 'all-expanded' | 'heuristic';
+
 /** Element type metadata */
 export interface ElementTypeMetadata {
   readonly id: ElementTypeId;
@@ -180,6 +183,28 @@ export const APP_CONFIG = {
     estimatedBoxHeight: 400,   // For positioning calculations (RelationshipInfoBox)
     collapsibleListSize: 20,   // Show "...N more" threshold
     collapsedPreviewCount: 10, // Items to show when collapsed
+  },
+
+  // Floating box group configuration
+  floatingGroups: {
+    // Default Y positions as percentage of viewport height
+    details: {
+      title: 'Details',
+      defaultYPercent: 0.65,   // 65% down from top
+    },
+    relationships: {
+      title: 'Relationships',
+      defaultYPercent: 0.20,   // 20% down from top
+    },
+    // Margin from right edge of viewport
+    rightMargin: 20,
+    // Min/max dimensions for groups
+    minWidth: 350,
+    maxWidth: 800,
+    minHeight: 200,
+    // Restore expansion state on page load
+    // 'all-collapsed' | 'all-expanded' | 'heuristic' (>50% expanded → all expanded)
+    restoreExpansionMode: 'heuristic' as ExpansionRestoreMode,
   },
 } as const;
 

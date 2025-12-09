@@ -1,5 +1,9 @@
 import type { ElementTypeId } from '../config/appConfig';
+import type { GroupId, BoxContentType } from '../contracts/ComponentData';
 
+/**
+ * @deprecated Use GroupedBoxState instead - will be removed in Phase 3
+ */
 export interface DialogState {
   itemName: string;
   itemType?: ElementTypeId;  // Optional - only needed for localStorage compatibility
@@ -9,11 +13,48 @@ export interface DialogState {
   height?: number; // Optional - if missing, use default size
 }
 
+/**
+ * State for a single box within a group
+ */
+export interface GroupedBoxState {
+  itemId: string;        // Item identifier (e.g., "Specimen")
+  contentType: BoxContentType;  // 'detail' or 'relationship'
+  isCollapsed: boolean;  // Whether this box is collapsed
+}
+
+/**
+ * State for a floating box group
+ */
+export interface GroupState {
+  id: GroupId;
+  boxes: GroupedBoxState[];
+  // Position is optional - if not set, use defaults from appConfig
+  position?: { x: number; y: number };
+  size?: { width: number; height: number };
+}
+
+/**
+ * Helper to convert BoxContentType to GroupId
+ */
+export function contentTypeToGroupId(contentType: BoxContentType): GroupId {
+  return contentType === 'detail' ? 'details' : 'relationships';
+}
+
+/**
+ * Helper to convert GroupId to BoxContentType
+ */
+export function groupIdToContentType(groupId: GroupId): BoxContentType {
+  return groupId === 'details' ? 'detail' : 'relationship';
+}
+
 interface AppState {
   leftSections: ElementTypeId[];
   middleSections: ElementTypeId[];  // Middle panel (slots)
   rightSections: ElementTypeId[];
+  /** @deprecated Use groups instead - will be removed in Phase 3 */
   dialogs?: DialogState[];
+  // New group-based state (Phase 1)
+  groups?: GroupState[];
 }
 
 const STORAGE_KEY = 'bdchm-app-state';

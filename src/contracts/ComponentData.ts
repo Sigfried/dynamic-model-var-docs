@@ -133,12 +133,22 @@ export interface FloatingBoxMetadata {
 /**
  * BoxContentType - What kind of content the box displays
  * Used to distinguish detail boxes from relationship boxes for the same item
+ * Also determines which group a persistent box belongs to
  */
 export type BoxContentType = 'detail' | 'relationship';
 
 /**
+ * GroupId - Identifier for floating box groups
+ * Maps directly to BoxContentType for simplicity
+ */
+export type GroupId = 'details' | 'relationships';
+
+/**
  * FloatingBoxData - Complete data structure for a floating box
- * Supports both transitory (auto-dismiss) and persistent (draggable) modes.
+ * Supports both transitory (auto-dismiss) and persistent (grouped) modes.
+ *
+ * Transitory boxes: appear near hovered item, dismissed on mouse leave
+ * Persistent boxes: belong to a group container, can be collapsed/closed individually
  */
 export interface FloatingBoxData {
   id: string;
@@ -147,9 +157,27 @@ export interface FloatingBoxData {
   metadata: FloatingBoxMetadata;
   content: React.ReactNode;
   itemId: string;  // Item identifier for callbacks and state management
+  // For transitory boxes - position near hovered item
+  // For persistent boxes during transition - will be removed in Phase 3
   position?: { x: number; y: number };
   size?: { width: number; height: number };
-  isUserPositioned?: boolean;  // True if user has moved/resized this box
+  /** @deprecated Will be removed when groups are implemented - groups handle positioning */
+  isUserPositioned?: boolean;
+  // For persistent boxes in groups
+  isCollapsed?: boolean;  // Whether this box is collapsed within its group
+}
+
+/**
+ * FloatingBoxGroupData - Data structure for a group container
+ * Groups contain multiple collapsible item boxes (details or relationships)
+ */
+export interface FloatingBoxGroupData {
+  id: GroupId;
+  title: string;  // "Details" or "Relationships"
+  boxes: FloatingBoxData[];  // Ordered list of boxes in this group
+  position?: { x: number; y: number };  // User-dragged position (undefined = use default)
+  size?: { width: number; height: number };  // User-resized dimensions
+  isPoppedOut?: boolean;  // Whether this group is in a popout window
 }
 
 // ============================================================================
