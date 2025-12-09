@@ -185,7 +185,7 @@ export const APP_CONFIG = {
     collapsedPreviewCount: 10, // Items to show when collapsed
   },
 
-  // Floating box group configuration
+  // Floating box group configuration (percentages of viewport)
   floatingGroups: {
     // Default Y positions as percentage of viewport height
     details: {
@@ -196,15 +196,28 @@ export const APP_CONFIG = {
       title: 'Relationships',
       defaultYPercent: 0.20,   // 20% down from top
     },
-    // Margin from right edge of viewport
-    rightMargin: 20,
-    // Min/max dimensions for groups
-    minWidth: 350,
-    maxWidth: 800,
-    minHeight: 200,
+    // Margin from right edge of viewport (percentage)
+    rightMarginPercent: 0.01,  // 1% from right edge
+    // Default dimensions as percentage of viewport
+    defaultWidthPercent: 0.30,  // 30% of viewport width
+    defaultHeightPercent: 0.40, // 40% of viewport height
+    // Minimum dimensions as percentage of viewport
+    minWidthPercent: 0.20,      // 20% of viewport width
+    minHeightPercent: 0.15,     // 15% of viewport height
+    // Resize handle size in pixels (small enough to be unobtrusive)
+    resizeHandleSize: 8,
     // Restore expansion state on page load
     // 'all-collapsed' | 'all-expanded' | 'heuristic' (>50% expanded → all expanded)
     restoreExpansionMode: 'heuristic' as ExpansionRestoreMode,
+    // Delay before highlighting hovered item's box (ms)
+    hoverHighlightDelay: 200,
+  },
+
+  // Transitory box configuration (hover previews)
+  transitoryBox: {
+    minWidthPercent: 0.25,     // 25% of viewport width
+    maxWidthPercent: 0.45,     // 45% of viewport width
+    maxHeightPercent: 0.67,    // 2/3 of viewport height
   },
 } as const;
 

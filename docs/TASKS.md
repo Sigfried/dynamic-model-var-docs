@@ -7,25 +7,22 @@
 
 ---
 
-## 🐛 Current Bugs
-
----
-
 ## 📋 Upcoming Work (Ordered by Priority)
 
-[sg] some remaining issues with hover/click and floating boxes:
-1. ~~tooltip on relationship badges says "Hover to see relationships", but the relationship
-   preview is already displayed at that point~~ ✅ Fixed: "Click to pin relationships" / "Click to pin {type} details"
-2. ~~the delay before showing these tooltips is too long~~ ✅ Fixed: 200ms delay via portal-based Tooltip component
-3. ~~when showing a box preview, slightly reduce opacity on all other boxes~~ ✅ Fixed: brightness filter dims persistent boxes
-4. ~~the old badges still give no indication of what they represent~~ ✅ Fixed: tooltips show "X variables", "X values", "Used by X classes"
-5. ~~boxes in stacked mode still don't allow dragging~~ ✅ Fixed: Removed stacked mode entirely - all boxes now use cascade mode and are draggable
-8. ~~the cascade may look a little weird if we shrink all the box sizes from the default maxes
-   to the min needed to fit content, but we should try that~~ ✅ Fixed: boxes use fit-content sizing (user-resized boxes keep explicit dimensions)
-9. ~~cascading is weird when some boxes are manually positioned~~ ✅ Fixed: user-positioned boxes excluded from cascade calculation; ESC closes auto-positioned first (FIFO), then user-positioned (FIFO)
-### Grouped/Collapsible Floating Panels 🔲 **NEXT UP**
+### Grouped/Collapsible Floating Panels 🔄 **IN PROGRESS**
 
 **Goal**: Replace cascade layout with two group containers (details, relationships) containing collapsible item boxes. Major simplification of floating box management.
+
+**Status**: Phases 1-4 complete. Bug fixes done. Phase 5 (popout) and hover highlight pending.
+
+**Remaining work**:
+- [ ] Hover highlight: When hovering on an item that already has a box open, highlight/dim to make it visible (use `hoverHighlightDelay` in appConfig)
+- [ ] Phase 5: Popout window support
+
+**Completed**:
+- ✅ Phases 1-4: Data model, FloatingBoxGroup, FloatingBoxManager, LayoutManager integration
+- ✅ Drag/resize: Fixed text selection, lag, cursor interactions, full-side handles
+- ✅ Sizing: Percentage-based viewport sizing (not hardcoded pixels), no max width constraint
 
 **Behavior Spec**:
 - Two groups: **Details** (y=65%) and **Relationships** (y=20%) - positions in appConfig

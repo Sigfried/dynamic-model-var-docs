@@ -9,6 +9,7 @@
  */
 
 import type { FloatingBoxData } from '../contracts/ComponentData';
+import { APP_CONFIG } from '../config/appConfig';
 
 interface TransitoryBoxProps {
   box: FloatingBoxData;
@@ -23,9 +24,12 @@ export default function TransitoryBox({
   onUpgrade,
 }: TransitoryBoxProps) {
   const position = box.position ?? { x: 100, y: 100 };
+  const config = APP_CONFIG.transitoryBox;
 
-  // Fit-content sizing with constraints
-  const maxHeight = Math.floor(window.innerHeight * 2 / 3);
+  // Calculate dimensions from viewport percentages
+  const minWidth = Math.floor(window.innerWidth * config.minWidthPercent);
+  const maxWidth = Math.floor(window.innerWidth * config.maxWidthPercent);
+  const maxHeight = Math.floor(window.innerHeight * config.maxHeightPercent);
 
   const handleClick = () => {
     onUpgrade();
@@ -39,8 +43,8 @@ export default function TransitoryBox({
         top: 0,
         transform: `translate(${position.x}px, ${position.y}px)`,
         width: 'fit-content',
-        minWidth: '300px',
-        maxWidth: '700px',
+        minWidth: `${minWidth}px`,
+        maxWidth: `${maxWidth}px`,
         maxHeight: `${maxHeight}px`,
         zIndex,
       }}

@@ -54,15 +54,21 @@ export default function FloatingBoxGroup({
   const groupConfig = APP_CONFIG.floatingGroups;
   const groupSettings = groupConfig[groupId];
 
-  // Calculate default position (right edge at viewport edge, Y from config)
-  const defaultWidth = 500;
-  const defaultPosition = {
-    x: window.innerWidth - defaultWidth - groupConfig.rightMargin,
-    y: window.innerHeight * groupSettings.defaultYPercent
-  };
-  const defaultSize = { width: defaultWidth, height: 400 };
+  // Calculate dimensions from viewport percentages
+  const defaultWidth = Math.floor(window.innerWidth * groupConfig.defaultWidthPercent);
+  const defaultHeight = Math.floor(window.innerHeight * groupConfig.defaultHeightPercent);
+  const minWidth = Math.floor(window.innerWidth * groupConfig.minWidthPercent);
+  const minHeight = Math.floor(window.innerHeight * groupConfig.minHeightPercent);
+  const rightMargin = Math.floor(window.innerWidth * groupConfig.rightMarginPercent);
 
-  // Local state for dragging/resizing
+  // Calculate default position (right edge at viewport edge, Y from config)
+  const defaultPosition = {
+    x: window.innerWidth - defaultWidth - rightMargin,
+    y: Math.floor(window.innerHeight * groupSettings.defaultYPercent)
+  };
+  const defaultSize = { width: defaultWidth, height: defaultHeight };
+
+  // Local state for dragging/resizing - tracks position during interaction
   const [localPosition, setLocalPosition] = useState<{ x: number; y: number } | null>(null);
   const [localSize, setLocalSize] = useState<{ width: number; height: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -72,18 +78,26 @@ export default function FloatingBoxGroup({
 
   const groupRef = useRef<HTMLDivElement>(null);
 
-  // Derive actual position/size
-  const position = propPosition ?? localPosition ?? defaultPosition;
-  const size = propSize ?? localSize ?? defaultSize;
+  // During drag/resize, use local state; otherwise use props or defaults
+  const position = (isDragging || isResizing) && localPosition
+    ? localPosition
+    : (propPosition ?? defaultPosition);
+  const size = (isDragging || isResizing) && localSize
+    ? localSize
+    : (propSize ?? defaultSize);
 
   // Handle dragging start
   const handleDragStart = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent text selection
     if (groupRef.current) {
       const rect = groupRef.current.getBoundingClientRect();
       setDragOffset({
         x: e.clientX - rect.left,
         y: e.clientY - rect.top
       });
+      // Initialize local position from current position
+      setLocalPosition(propPosition ?? defaultPosition);
+      setLocalSize(propSize ?? defaultSize);
       setIsDragging(true);
     }
     onBringToFront?.();
@@ -91,22 +105,30 @@ export default function FloatingBoxGroup({
 
   // Handle resizing start
   const handleResizeStart = (e: React.MouseEvent, handle: ResizeHandle) => {
+    e.preventDefault(); // Prevent text selection
     e.stopPropagation();
+    const currentPos = propPosition ?? defaultPosition;
+    const currentSize = propSize ?? defaultSize;
+    setLocalPosition(currentPos);
+    setLocalSize(currentSize);
     setIsResizing(handle);
     setResizeStart({
       x: e.clientX,
       y: e.clientY,
-      width: size.width,
-      height: size.height,
-      posX: position.x,
-      posY: position.y
+      width: currentSize.width,
+      height: currentSize.height,
+      posX: currentPos.x,
+      posY: currentPos.y
     });
     onBringToFront?.();
   };
 
   // Handle mouse move for dragging/resizing
   useEffect(() => {
+    if (!isDragging && !isResizing) return;
+
     const handleMouseMove = (e: MouseEvent) => {
+      e.preventDefault(); // Prevent text selection during drag
       if (isDragging) {
         setLocalPosition({
           x: e.clientX - dragOffset.x,
@@ -122,21 +144,21 @@ export default function FloatingBoxGroup({
         let newY = resizeStart.posY;
 
         if (isResizing.includes('e')) {
-          newWidth = Math.max(groupConfig.minWidth, Math.min(groupConfig.maxWidth, resizeStart.width + deltaX));
+          newWidth = Math.max(minWidth, resizeStart.width + deltaX);
         }
         if (isResizing.includes('w')) {
           const proposedWidth = resizeStart.width - deltaX;
-          if (proposedWidth >= groupConfig.minWidth && proposedWidth <= groupConfig.maxWidth) {
+          if (proposedWidth >= minWidth) {
             newWidth = proposedWidth;
             newX = resizeStart.posX + deltaX;
           }
         }
         if (isResizing.includes('s')) {
-          newHeight = Math.max(groupConfig.minHeight, resizeStart.height + deltaY);
+          newHeight = Math.max(minHeight, resizeStart.height + deltaY);
         }
         if (isResizing.includes('n')) {
           const proposedHeight = resizeStart.height - deltaY;
-          if (proposedHeight >= groupConfig.minHeight) {
+          if (proposedHeight >= minHeight) {
             newHeight = proposedHeight;
             newY = resizeStart.posY + deltaY;
           }
@@ -148,37 +170,35 @@ export default function FloatingBoxGroup({
     };
 
     const handleMouseUp = () => {
-      const wasDraggingOrResizing = isDragging || isResizing;
+      if (onChange && localPosition && localSize) {
+        onChange(localPosition, localSize);
+      }
       setIsDragging(false);
       setIsResizing(null);
-
-      if (wasDraggingOrResizing && onChange) {
-        const finalPos = localPosition ?? position;
-        const finalSize = localSize ?? size;
-        onChange(finalPos, finalSize);
-      }
     };
 
-    if (isDragging || isResizing) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-      return () => {
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
-  }, [isDragging, isResizing, dragOffset, resizeStart, position, size, localPosition, localSize, onChange, groupConfig]);
+    // Add listeners to window to capture mouse even outside the element
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, isResizing, dragOffset, resizeStart, localPosition, localSize, onChange, minWidth, minHeight]);
 
   // Check if all boxes are collapsed
   const allCollapsed = boxes.length > 0 && boxes.every(b => b.isCollapsed);
 
-  // Animation settings
+  // Animation settings - don't animate during drag/resize
   const shouldAnimate = !isDragging && !isResizing;
 
   // Group header color based on type
   const headerColor = groupId === 'details'
     ? 'bg-slate-700 dark:bg-slate-700'
     : 'bg-indigo-700 dark:bg-indigo-700';
+
+  // Resize handle thickness from config
+  const handleSize = groupConfig.resizeHandleSize;
 
   return (
     <div
@@ -192,24 +212,59 @@ export default function FloatingBoxGroup({
         height: `${size.height}px`,
         zIndex,
         transition: shouldAnimate
-          ? `transform ${APP_CONFIG.timing.boxTransition}ms ease-out`
-          : undefined
+          ? `transform ${APP_CONFIG.timing.boxTransition}ms ease-out, width ${APP_CONFIG.timing.boxTransition}ms ease-out, height ${APP_CONFIG.timing.boxTransition}ms ease-out`
+          : undefined,
+        userSelect: (isDragging || isResizing) ? 'none' : undefined
       }}
       onClick={() => onBringToFront?.()}
     >
-      {/* Resize handles */}
-      <div className="absolute -top-1 -left-1 w-3 h-3 cursor-nw-resize" onMouseDown={(e) => handleResizeStart(e, 'nw')} />
-      <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-8 h-3 cursor-n-resize" onMouseDown={(e) => handleResizeStart(e, 'n')} />
-      <div className="absolute -top-1 -right-1 w-3 h-3 cursor-ne-resize" onMouseDown={(e) => handleResizeStart(e, 'ne')} />
-      <div className="absolute top-1/2 -translate-y-1/2 -left-1 w-3 h-8 cursor-w-resize" onMouseDown={(e) => handleResizeStart(e, 'w')} />
-      <div className="absolute top-1/2 -translate-y-1/2 -right-1 w-3 h-8 cursor-e-resize" onMouseDown={(e) => handleResizeStart(e, 'e')} />
-      <div className="absolute -bottom-1 -left-1 w-3 h-3 cursor-sw-resize" onMouseDown={(e) => handleResizeStart(e, 'sw')} />
-      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-3 cursor-s-resize" onMouseDown={(e) => handleResizeStart(e, 's')} />
-      <div className="absolute -bottom-1 -right-1 w-3 h-3 cursor-se-resize" onMouseDown={(e) => handleResizeStart(e, 'se')} />
+      {/* Resize handles - full edges */}
+      {/* Corners */}
+      <div
+        className="absolute cursor-nw-resize"
+        style={{ top: -handleSize/2, left: -handleSize/2, width: handleSize*2, height: handleSize*2 }}
+        onMouseDown={(e) => handleResizeStart(e, 'nw')}
+      />
+      <div
+        className="absolute cursor-ne-resize"
+        style={{ top: -handleSize/2, right: -handleSize/2, width: handleSize*2, height: handleSize*2 }}
+        onMouseDown={(e) => handleResizeStart(e, 'ne')}
+      />
+      <div
+        className="absolute cursor-sw-resize"
+        style={{ bottom: -handleSize/2, left: -handleSize/2, width: handleSize*2, height: handleSize*2 }}
+        onMouseDown={(e) => handleResizeStart(e, 'sw')}
+      />
+      <div
+        className="absolute cursor-se-resize"
+        style={{ bottom: -handleSize/2, right: -handleSize/2, width: handleSize*2, height: handleSize*2 }}
+        onMouseDown={(e) => handleResizeStart(e, 'se')}
+      />
+      {/* Edges - full length minus corners */}
+      <div
+        className="absolute cursor-n-resize"
+        style={{ top: -handleSize/2, left: handleSize*1.5, right: handleSize*1.5, height: handleSize }}
+        onMouseDown={(e) => handleResizeStart(e, 'n')}
+      />
+      <div
+        className="absolute cursor-s-resize"
+        style={{ bottom: -handleSize/2, left: handleSize*1.5, right: handleSize*1.5, height: handleSize }}
+        onMouseDown={(e) => handleResizeStart(e, 's')}
+      />
+      <div
+        className="absolute cursor-w-resize"
+        style={{ left: -handleSize/2, top: handleSize*1.5, bottom: handleSize*1.5, width: handleSize }}
+        onMouseDown={(e) => handleResizeStart(e, 'w')}
+      />
+      <div
+        className="absolute cursor-e-resize"
+        style={{ right: -handleSize/2, top: handleSize*1.5, bottom: handleSize*1.5, width: handleSize }}
+        onMouseDown={(e) => handleResizeStart(e, 'e')}
+      />
 
       {/* Group Header */}
       <div
-        className={`flex items-center justify-between px-3 py-2 ${headerColor} text-white cursor-move rounded-t-lg`}
+        className={`flex items-center justify-between px-3 py-2 ${headerColor} text-white cursor-move rounded-t-lg select-none`}
         onMouseDown={handleDragStart}
       >
         <div className="font-semibold">{title}</div>
@@ -293,7 +348,7 @@ function CollapsibleBox({ box, onClose, onToggleCollapse }: CollapsibleBoxProps)
     <div className="border border-gray-200 dark:border-slate-600 rounded-lg overflow-hidden">
       {/* Box header */}
       <div
-        className={`flex items-center justify-between px-3 py-1.5 ${box.metadata.color} text-white cursor-pointer`}
+        className={`flex items-center justify-between px-3 py-1.5 ${box.metadata.color} text-white cursor-pointer select-none`}
         onClick={onToggleCollapse}
       >
         <div className="flex items-center gap-2 min-w-0 flex-1">
