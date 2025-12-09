@@ -11,15 +11,13 @@
  */
 
 import { useCallback, useRef, useState, useEffect } from 'react';
-import { DockviewReact, PaneviewReact } from 'dockview';
+import { DockviewReact } from 'dockview';
 import type {
   DockviewReadyEvent,
   IDockviewPanelProps,
   DockviewApi,
   DockviewTheme,
-  PaneviewApi,
 } from 'dockview-core';
-import type { IPaneviewPanelProps, PaneviewReadyEvent } from 'dockview';
 import 'dockview/dist/styles/dockview.css';
 
 import ItemsPanel from './ItemsPanel';
@@ -207,127 +205,12 @@ function MainContentPanel({ params }: IDockviewPanelProps<MainContentParams>) {
   );
 }
 
+
 // =============================================================================
-// Paneview Components for Detail/Relationship Stacks
+// Floating Panel Components (for detail and relationship info)
 // =============================================================================
 
-function ChevronIcon({ expanded }: { expanded: boolean }) {
-  return (
-    <svg
-      className={`w-4 h-4 transition-transform ${expanded ? 'rotate-90' : ''}`}
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-    </svg>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-    </svg>
-  );
-}
-
-function getHeaderColors(itemType: string): { bg: string; hoverBg: string } {
-  switch (itemType) {
-    case 'class':
-      return { bg: 'bg-blue-600', hoverBg: 'hover:bg-blue-700' };
-    case 'slot':
-      return { bg: 'bg-green-600', hoverBg: 'hover:bg-green-700' };
-    case 'enum':
-      return { bg: 'bg-purple-600', hoverBg: 'hover:bg-purple-700' };
-    case 'variable':
-      return { bg: 'bg-orange-600', hoverBg: 'hover:bg-orange-700' };
-    default:
-      return { bg: 'bg-gray-600', hoverBg: 'hover:bg-gray-700' };
-  }
-}
-
-function DetailPaneHeader({ api, title, containerApi, params }: IPaneviewPanelProps<{ itemType?: string }>) {
-  const [isExpanded, setIsExpanded] = useState(api.isExpanded);
-  const colors = getHeaderColors(params?.itemType || 'class');
-
-  useEffect(() => {
-    const disposable = api.onDidExpansionChange(() => {
-      setIsExpanded(api.isExpanded);
-    });
-    return () => disposable.dispose();
-  }, [api]);
-
-  const handleClose = () => {
-    const panel = containerApi.getPanel(api.id);
-    if (panel) containerApi.removePanel(panel);
-  };
-
-  const handleToggle = () => {
-    api.setExpanded(!api.isExpanded);
-  };
-
-  return (
-    <div
-      className={`flex items-center justify-between px-3 py-3 ${colors.bg} text-white cursor-pointer select-none min-h-[44px]`}
-      onClick={handleToggle}
-    >
-      <div className="flex items-center gap-2 min-w-0">
-        <ChevronIcon expanded={isExpanded} />
-        <span className="font-medium text-sm truncate">{title}</span>
-      </div>
-      <button
-        onClick={(e) => { e.stopPropagation(); handleClose(); }}
-        className={`p-1 ${colors.hoverBg} rounded flex-shrink-0`}
-        title="Close"
-      >
-        <CloseIcon />
-      </button>
-    </div>
-  );
-}
-
-function RelationshipPaneHeader({ api, title, containerApi, params }: IPaneviewPanelProps<{ itemType?: string }>) {
-  const [isExpanded, setIsExpanded] = useState(api.isExpanded);
-  const colors = getHeaderColors(params?.itemType || 'class');
-
-  useEffect(() => {
-    const disposable = api.onDidExpansionChange(() => {
-      setIsExpanded(api.isExpanded);
-    });
-    return () => disposable.dispose();
-  }, [api]);
-
-  const handleClose = () => {
-    const panel = containerApi.getPanel(api.id);
-    if (panel) containerApi.removePanel(panel);
-  };
-
-  const handleToggle = () => {
-    api.setExpanded(!api.isExpanded);
-  };
-
-  return (
-    <div
-      className={`flex items-center justify-between px-3 py-3 ${colors.bg} text-white cursor-pointer select-none min-h-[44px]`}
-      onClick={handleToggle}
-    >
-      <div className="flex items-center gap-2 min-w-0">
-        <ChevronIcon expanded={isExpanded} />
-        <span className="font-medium text-sm truncate">{title}</span>
-      </div>
-      <button
-        onClick={(e) => { e.stopPropagation(); handleClose(); }}
-        className={`p-1 ${colors.hoverBg} rounded flex-shrink-0`}
-        title="Close"
-      >
-        <CloseIcon />
-      </button>
-    </div>
-  );
-}
-
-function DetailPaneContent({ params }: IPaneviewPanelProps<{
+function FloatingDetailPanel({ params }: IDockviewPanelProps<{
   dataService: DataService;
   itemId: string;
 }>) {
@@ -338,13 +221,13 @@ function DetailPaneContent({ params }: IPaneviewPanelProps<{
       <DetailContent
         itemId={itemId}
         dataService={dataService}
-        hideHeader={true}
+        hideHeader={false}
       />
     </div>
   );
 }
 
-function RelationshipPaneContent({ params }: IPaneviewPanelProps<{
+function FloatingRelationshipPanel({ params }: IDockviewPanelProps<{
   dataService: DataService;
   itemId: string;
   onNavigate: (itemName: string, itemSection: string) => void;
@@ -362,79 +245,24 @@ function RelationshipPaneContent({ params }: IPaneviewPanelProps<{
   );
 }
 
-// Paneview component registries
-const detailPaneComponents = {
-  detailPane: DetailPaneContent,
-};
-
-const detailPaneHeaderComponents = {
-  detailHeader: DetailPaneHeader,
-};
-
-const relationshipPaneComponents = {
-  relationshipPane: RelationshipPaneContent,
-};
-
-const relationshipPaneHeaderComponents = {
-  relationshipHeader: RelationshipPaneHeader,
-};
-
-// =============================================================================
-// Dockview Stack Panels (contain Paneviews)
-// =============================================================================
-
-function DetailStackPanel({ params }: IDockviewPanelProps<{
-  onPaneviewReady: (api: PaneviewApi) => void;
-}>) {
-  const { onPaneviewReady } = params;
-
-  const handleReady = useCallback((event: PaneviewReadyEvent) => {
-    onPaneviewReady(event.api);
-  }, [onPaneviewReady]);
-
-  return (
-    <div className="h-full">
-      <PaneviewReact
-        className="dockview-theme-light"
-        onReady={handleReady}
-        components={detailPaneComponents}
-        headerComponents={detailPaneHeaderComponents}
-      />
-    </div>
-  );
-}
-
-function RelationshipStackPanel({ params }: IDockviewPanelProps<{
-  onPaneviewReady: (api: PaneviewApi) => void;
-}>) {
-  const { onPaneviewReady } = params;
-
-  const handleReady = useCallback((event: PaneviewReadyEvent) => {
-    onPaneviewReady(event.api);
-  }, [onPaneviewReady]);
-
-  return (
-    <div className="h-full">
-      <PaneviewReact
-        className="dockview-theme-light"
-        onReady={handleReady}
-        components={relationshipPaneComponents}
-        headerComponents={relationshipPaneHeaderComponents}
-      />
-    </div>
-  );
-}
-
 // Component registry for Dockview
 const components = {
   mainContent: MainContentPanel,
-  detailStack: DetailStackPanel,
-  relationshipStack: RelationshipStackPanel,
+  floatingDetail: FloatingDetailPanel,
+  floatingRelationship: FloatingRelationshipPanel,
 };
 
 // =============================================================================
 // Main Component
 // =============================================================================
+
+// Floating group dimensions and positions
+const FLOATING_WIDTH = 400;
+const RELATIONSHIP_HEIGHT = 300;
+const DETAIL_HEIGHT = 400;
+
+// Track floating groups by finding first panel of each type
+type FloatingGroupType = 'detail' | 'relationship';
 
 export default function DockviewPOC({
   dataService,
@@ -443,8 +271,6 @@ export default function DockviewPOC({
   rightSections: initialRightSections,
 }: DockviewPOCProps) {
   const apiRef = useRef<DockviewApi | null>(null);
-  const detailPaneApiRef = useRef<PaneviewApi | null>(null);
-  const relationshipPaneApiRef = useRef<PaneviewApi | null>(null);
 
   // Section state
   const [currentLeftSections] = useState(initialLeftSections);
@@ -476,103 +302,119 @@ export default function DockviewPOC({
     setHoveredItem(null);
   }, []);
 
-  // Callbacks for Paneview initialization
-  const handleDetailPaneReady = useCallback((api: PaneviewApi) => {
-    detailPaneApiRef.current = api;
+  // Find existing floating group by looking for panels with matching prefix
+  const findFloatingGroup = useCallback((groupType: FloatingGroupType) => {
+    const api = apiRef.current;
+    if (!api) return null;
+
+    const prefix = groupType === 'detail' ? 'detail-' : 'rel-';
+
+    // Look through all panels to find one matching our type
+    for (const panel of api.panels) {
+      if (panel.id.startsWith(prefix)) {
+        // Check if this panel's group is floating
+        if (panel.group?.api.location.type === 'floating') {
+          return panel.group;
+        }
+      }
+    }
+    return null;
   }, []);
 
-  const handleRelationshipPaneReady = useCallback((api: PaneviewApi) => {
-    relationshipPaneApiRef.current = api;
-  }, []);
+  // Helper to add panel to floating group (creates group if needed)
+  const addToFloatingGroup = useCallback((
+    groupType: FloatingGroupType,
+    panelId: string,
+    component: string,
+    title: string,
+    params: Record<string, unknown>,
+    groupOptions: { x: number; y: number; width: number; height: number }
+  ) => {
+    const api = apiRef.current;
+    if (!api) return;
 
-  // Navigation handler for relationship links
-  const handleNavigate = useCallback((itemName: string, itemSection: string) => {
-    const paneApi = detailPaneApiRef.current;
-    if (!paneApi) return;
-
-    const paneId = `detail-${itemName}`;
-    const existingPane = paneApi.getPanel(paneId);
-    if (existingPane) {
-      existingPane.api.setExpanded(true);
+    // Check if panel already exists
+    const existingPanel = api.getPanel(panelId);
+    if (existingPanel) {
+      existingPanel.api.setActive();
       return;
     }
 
-    const itemType = itemSection === 'slot' ? 'slot' : itemSection === 'enum' ? 'enum' : 'class';
+    // Check if a floating group for this type already exists
+    const existingGroup = findFloatingGroup(groupType);
 
-    paneApi.addPanel({
-      id: paneId,
-      component: 'detailPane',
-      headerComponent: 'detailHeader',
-      title: itemName,
-      headerSize: 44,
-      params: {
-        dataService,
-        itemId: itemName,
-        itemType,
-      },
-      isExpanded: true,
-      index: 0,
-    });
-  }, [dataService]);
-
-  // Click handler - adds to appropriate Paneview stack
-  const handleClickItem = useCallback((hoverData: ItemHoverData) => {
-    const isRelationship = hoverData.hoverZone === 'badge';
-    const itemType = hoverData.type;
-
-    if (isRelationship) {
-      const paneApi = relationshipPaneApiRef.current;
-      if (!paneApi) return;
-
-      const paneId = `rel-${hoverData.name}`;
-      const existingPane = paneApi.getPanel(paneId);
-      if (existingPane) {
-        existingPane.api.setExpanded(true);
-        return;
-      }
-
-      paneApi.addPanel({
-        id: paneId,
-        component: 'relationshipPane',
-        headerComponent: 'relationshipHeader',
-        title: `${hoverData.name} Rels`,
-        headerSize: 44,
-        params: {
-          dataService,
-          itemId: hoverData.name,
-          onNavigate: handleNavigate,
-          itemType,
-        },
-        isExpanded: true,
-        index: 0,
+    if (existingGroup) {
+      // Add panel to existing floating group
+      api.addPanel({
+        id: panelId,
+        component,
+        title,
+        params,
+        position: { referenceGroup: existingGroup },
       });
     } else {
-      const paneApi = detailPaneApiRef.current;
-      if (!paneApi) return;
-
-      const paneId = `detail-${hoverData.name}`;
-      const existingPane = paneApi.getPanel(paneId);
-      if (existingPane) {
-        existingPane.api.setExpanded(true);
-        return;
-      }
-
-      paneApi.addPanel({
-        id: paneId,
-        component: 'detailPane',
-        headerComponent: 'detailHeader',
-        title: hoverData.name,
-        headerSize: 44,
-        params: {
-          dataService,
-          itemId: hoverData.name,
-          itemType,
-        },
-        isExpanded: true,
-        index: 0,
+      // Create first panel, then convert to floating group
+      const panel = api.addPanel({
+        id: panelId,
+        component,
+        title,
+        params,
       });
+
+      // Now make it a floating group
+      api.addFloatingGroup(panel, groupOptions);
     }
-  }, [dataService, handleNavigate]);
+  }, [findFloatingGroup]);
+
+  // Navigation handler for relationship links - opens a floating detail panel
+  const handleNavigate = useCallback((itemName: string, _itemSection: string) => {
+    const viewportWidth = window.innerWidth;
+    const x = viewportWidth - FLOATING_WIDTH - 20;
+    const y = RELATIONSHIP_HEIGHT + 100; // Below relationship group
+
+    addToFloatingGroup(
+      'detail',
+      `detail-${itemName}`,
+      'floatingDetail',
+      itemName,
+      { dataService, itemId: itemName },
+      { x, y, width: FLOATING_WIDTH, height: DETAIL_HEIGHT }
+    );
+  }, [dataService, addToFloatingGroup]);
+
+  // Click handler - adds to appropriate floating group
+  const handleClickItem = useCallback((hoverData: ItemHoverData) => {
+    const viewportWidth = window.innerWidth;
+    const isRelationship = hoverData.hoverZone === 'badge';
+
+    if (isRelationship) {
+      // Relationship panels go to top-right
+      const x = viewportWidth - FLOATING_WIDTH - 20;
+      const y = 80;
+
+      addToFloatingGroup(
+        'relationship',
+        `rel-${hoverData.name}`,
+        'floatingRelationship',
+        `${hoverData.name} Rels`,
+        { dataService, itemId: hoverData.name, onNavigate: handleNavigate },
+        { x, y, width: FLOATING_WIDTH, height: RELATIONSHIP_HEIGHT }
+      );
+    } else {
+      // Detail panels go below relationships
+      const x = viewportWidth - FLOATING_WIDTH - 20;
+      const y = RELATIONSHIP_HEIGHT + 100;
+
+      addToFloatingGroup(
+        'detail',
+        `detail-${hoverData.name}`,
+        'floatingDetail',
+        hoverData.name,
+        { dataService, itemId: hoverData.name },
+        { x, y, width: FLOATING_WIDTH, height: DETAIL_HEIGHT }
+      );
+    }
+  }, [dataService, handleNavigate, addToFloatingGroup]);
 
   // Update main content panel when sections change
   const updateMainContentParams = useCallback(() => {
@@ -603,6 +445,7 @@ export default function DockviewPOC({
     apiRef.current = event.api;
 
     // Add main content panel (contains the 3-panel layout)
+    // This is the only docked panel - detail/relationship panels open as floating
     event.api.addPanel({
       id: 'main-content',
       component: 'mainContent',
@@ -624,38 +467,13 @@ export default function DockviewPOC({
       },
     });
 
-    // Add detail stack panel
-    event.api.addPanel({
-      id: 'detail-stack',
-      component: 'detailStack',
-      title: 'Details',
-      initialWidth: 350,
-      minimumWidth: 250,
-      maximumWidth: 500,
-      params: {
-        onPaneviewReady: handleDetailPaneReady,
-      },
-      position: { referencePanel: 'main-content', direction: 'right' },
-    });
-
-    // Add relationship stack panel below details
-    event.api.addPanel({
-      id: 'relationship-stack',
-      component: 'relationshipStack',
-      title: 'Relationships',
-      params: {
-        onPaneviewReady: handleRelationshipPaneReady,
-      },
-      position: { referencePanel: 'detail-stack', direction: 'below' },
-    });
-
     // Listen for layout changes
     event.api.onDidLayoutChange(() => {
       setTimeout(() => setLayoutVersion(v => v + 1), 50);
       setTimeout(() => setLayoutVersion(v => v + 1), 150);
     });
 
-  }, [dataService, initialLeftSections, initialMiddleSections, initialRightSections, leftSectionData, middleSectionData, rightSectionData, rightPanelToggleButtons, handleClickItem, handleItemHover, handleItemLeave, handleMiddleSectionsChange, handleRightSectionsChange, handleDetailPaneReady, handleRelationshipPaneReady]);
+  }, [dataService, initialLeftSections, initialMiddleSections, initialRightSections, leftSectionData, middleSectionData, rightSectionData, rightPanelToggleButtons, handleClickItem, handleItemHover, handleItemLeave, handleMiddleSectionsChange, handleRightSectionsChange]);
 
   return (
     <div className="flex-1 relative">
@@ -663,10 +481,9 @@ export default function DockviewPOC({
       <style>{`
         .dockview-theme-light-spaced {
           --dv-background-color: #f3f4f6;
-          --dv-tabs-and-actions-container-height: 0px;
         }
-        /* Hide tab bar for all panels */
-        .dockview-theme-light-spaced .dv-tabs-and-actions-container {
+        /* Hide tab bar only for the main docked panel, not for floating panels */
+        .dockview-theme-light-spaced > .dv-dockview > .dv-gridview-container > .dv-branch-node > .dv-groupview > .dv-tabs-and-actions-container {
           display: none;
         }
       `}</style>
