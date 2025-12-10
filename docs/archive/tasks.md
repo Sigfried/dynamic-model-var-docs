@@ -342,3 +342,86 @@ LinkOverlay and RelationshipInfoBox now use graph-based queries directly. See [a
 - Removed `getRelationshipsForLinking()` from DataService
 - Removed Relationship interface, categorizeRange(), and related code
 
+---
+
+## Grouped/Collapsible Floating Panels ✅ MOSTLY COMPLETE (Dec 2024)
+
+**Goal**: Replace cascade layout with two group containers (Details, Relationships) containing collapsible item boxes.
+
+### Completed (Phases 1-4):
+
+**Phase 1: Data Model** ✅
+- Added `GroupId` type: `'details' | 'relationships'`
+- Added `FloatingBoxGroupData` interface for group containers
+- Extended `FloatingBoxData` with `isCollapsed`
+- Added group config to appConfig (positions, sizing as viewport percentages)
+
+**Phase 2: FloatingBoxGroup Component** ✅
+- New component renders group container with header
+- Header: title, collapse-all, popout, close buttons
+- Contains stacked child boxes (vertical layout)
+- Each child: expand/collapse toggle, close button, content
+- Group-level drag/resize with full-side handles
+
+**Phase 3: FloatingBoxManager Changes** ✅
+- Manages two groups (created lazily on first box)
+- Removed cascade positioning algorithm
+- Simplified to: groups + transitory boxes only
+- Deleted obsolete cascade code
+
+**Phase 4: LayoutManager Integration** ✅
+- `handleOpenFloatingBox` adds boxes to groups
+- Auto-collapse previous boxes when new one opens
+- Group close removes all boxes in group
+
+**Bug Fixes** ✅
+- Fixed text selection during drag (e.preventDefault, select-none)
+- Fixed drag/resize lag (initialize local state from props at drag start)
+- Made full-side resize handles
+- Moved all sizing to viewport percentages (not hardcoded pixels)
+- Removed max width constraint
+- Fixed box height distribution (expanded boxes split space evenly, give back unused)
+- Fixed transitory box positioning (appears to left when right would overflow)
+- Added pointer-events: none to transitory box to prevent hover interference
+
+**Remaining** (see TASKS.md):
+- Hover highlight for open boxes
+- Phase 5: Popout window support
+
+---
+
+## Badge-Based Hover/Click Interaction ✅ COMPLETE (Dec 2024)
+
+**Goal**: Replace complex timing-based hover with explicit badge/name hover areas
+
+**Completed:**
+- Added relationship badge showing `↘N ↗M` (incoming/outgoing counts) to each item
+- Hover badge → shows relationship info box immediately (no timing)
+- Hover item name → shows detail box immediately (no timing)
+- Click while hovering → upgrades transitory box to persistent
+- Removed all debounce/linger timers from LayoutManager
+- URL persistence updates when dialogs open/close/move/resize
+- Removed legacy RelationshipInfoBox component (~160 lines)
+
+**Animation fixes:**
+- Fixed bring-to-front animation by rendering boxes in stable DOM order
+- Fixed infinite loop error by moving state lookups inside setState callbacks
+- Using CSS transform instead of left/top for smoother animations
+
+---
+
+## Floating Box Issues ✅ COMPLETE (Dec 2024)
+
+- Responsive stacked width
+- Transitory→persistent upgrade
+- RelationshipInfoContent extracted for FloatingBox use
+- Transitory boxes managed by FloatingBoxManager
+- Title/subtitle support with relationship counts
+- Fit-content width for transitory boxes
+- Fixed ID collision (rel- vs box- prefixes)
+- Relationship metadata moved to DataService
+- Transitory box height: fit-content up to 2/3 viewport
+- Fixed slots not showing in class details
+- Removed stacked mode entirely - all boxes now draggable
+- Fit-content sizing for all boxes
+
