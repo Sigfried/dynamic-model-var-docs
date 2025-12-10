@@ -8,24 +8,20 @@
 
 ## 📋 Upcoming Work (Ordered by Priority)
 
-### Grouped/Collapsible Floating Panels 🔄 **IN PROGRESS**
+### Grouped/Collapsible Floating Panels ✅ **COMPLETE**
 
 **Goal**: Two group containers (Details, Relationships) with collapsible item boxes.
 
-**Status**: Phases 1-4 complete. Remaining: hover highlight, Phase 5 (popout).
-
-**Remaining work**:
-- [x] Hover highlight: When hovering on item with open box, highlight the box (use `hoverHighlightDelay` in appConfig)
-- [ ] Phase 5: Popout window support
+**Completed**:
+- [x] Phases 1-4: Grouped floating panels with drag/resize
+- [x] Hover highlight: When hovering item with open box, highlight box + dim others + auto-expand
+- [x] Phase 5: Popout window support via `window.open()` + postMessage
 
 **Known issues** (tolerated for now):
 - Transitory box uses `pointer-events: none`, so hovering items behind it triggers new previews
-
-**Phase 5: Popout Window Support** (not started):
-- `window.open()` creates detached window for group
-- New items of that type appear in popped-out window
-- Need cross-window communication (postMessage or shared state)
-- Closing popout returns group to main window (or discards - TBD)
+- [sg] URL state for open boxes doesn't distinguish details from relationships (reload turns relationship boxes into detail boxes)
+- Popout: if main window is at right edge of screen, popout may overlap and hide behind it (could improve positioning logic)
+- Popout: browsers may not honor request to keep focus on main window after opening popout
 
 ---
 

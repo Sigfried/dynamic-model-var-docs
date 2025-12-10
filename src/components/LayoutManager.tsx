@@ -29,6 +29,12 @@ import { RelationshipInfoContent } from './RelationshipInfoBox';
 import { APP_CONFIG } from '../config/appConfig';
 import { type DialogState, contentTypeToGroupId } from '../utils/statePersistence';
 import { type DataService } from '../services/DataService';
+import {
+  openPopout,
+  closeAllPopouts,
+} from '../utils/popoutWindow';
+import { createPortal } from 'react-dom';
+import PopoutContent from './PopoutContent';
 
 interface LayoutManagerProps {
   dataService: DataService;
@@ -65,6 +71,9 @@ export default function LayoutManager({
 
   // Groups containing persistent boxes
   const [groups, setGroups] = useState<FloatingBoxGroupData[]>([]);
+
+  // Track popout containers for React portals (groupId -> container element)
+  const [popoutContainers, setPopoutContainers] = useState<Map<GroupId, HTMLElement>>(new Map());
 
   const [hasRestoredDialogs, setHasRestoredDialogs] = useState(false);
 
@@ -185,6 +194,7 @@ export default function LayoutManager({
   }, []);
 
   // Add a box to a group (creates group if it doesn't exist)
+  // Boxes are stored in groups state; if group is popped out, React portal renders them there
   const addBoxToGroup = useCallback((box: FloatingBoxData) => {
     const groupId = contentTypeToGroupId(box.contentType);
     const groupConfig = APP_CONFIG.floatingGroups[groupId];
@@ -209,7 +219,7 @@ export default function LayoutManager({
             isCollapsed: i !== existingBoxIndex
           }));
           // Move to end
-          const [existingBox] = group.boxes.splice(existingBoxIndex, 1);
+          const [existingBox] = group.boxes.splice(existingGroupIndex, 1);
           group.boxes.push({ ...existingBox, isCollapsed: false });
         } else {
           // New box - collapse existing, add new expanded at end
@@ -495,6 +505,38 @@ export default function LayoutManager({
     });
   }, []);
 
+  // Popout a group to a new window using React portal
+  const handlePopoutGroup = useCallback((groupId: GroupId) => {
+    const group = groups.find(g => g.id === groupId);
+    if (!group) return;
+
+    const container = openPopout(
+      groupId,
+      group.title,
+      () => {
+        // Called when popout window closes - discard the boxes for this group
+        setPopoutContainers(prev => {
+          const next = new Map(prev);
+          next.delete(groupId);
+          return next;
+        });
+        // Remove the group entirely (discard boxes)
+        setGroups(prev => prev.filter(g => g.id !== groupId));
+      }
+    );
+
+    if (container) {
+      setPopoutContainers(prev => new Map(prev).set(groupId, container));
+    }
+  }, [groups]);
+
+  // Clean up popouts when component unmounts
+  useEffect(() => {
+    return () => {
+      closeAllPopouts();
+    };
+  }, []);
+
   // Handle item leave - clear hover state
   const handleItemLeave = useCallback(() => {
     setHoveredItem(null);
@@ -635,10 +677,10 @@ export default function LayoutManager({
         hoveredItem={hoveredItem}
       />
 
-      {/* Floating Box Manager */}
+      {/* Floating Box Manager - filter out popped-out groups */}
       <FloatingBoxManager
         transitoryBox={transitoryBox}
-        groups={groups}
+        groups={groups.filter(g => !popoutContainers.has(g.id))}
         highlightedBoxId={highlightedBoxId}
         onCloseTransitory={handleCloseTransitory}
         onCloseGroup={handleCloseGroup}
@@ -648,7 +690,24 @@ export default function LayoutManager({
         onExpandAll={handleExpandAll}
         onGroupChange={handleGroupChange}
         onBringGroupToFront={handleBringGroupToFront}
+        onPopoutGroup={handlePopoutGroup}
       />
+
+      {/* Render popped-out groups via React portals */}
+      {groups.filter(g => popoutContainers.has(g.id)).map(group => {
+        const container = popoutContainers.get(group.id);
+        if (!container) return null;
+        return createPortal(
+          <PopoutContent
+            key={group.id}
+            group={group}
+            dataService={dataService}
+            onCloseBox={(boxId) => handleCloseBox(group.id, boxId)}
+            onToggleBoxCollapse={(boxId) => handleToggleBoxCollapse(group.id, boxId)}
+          />,
+          container
+        );
+      })}
     </div>
   );
 }
