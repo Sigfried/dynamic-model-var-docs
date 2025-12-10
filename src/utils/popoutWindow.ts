@@ -6,6 +6,7 @@
  */
 
 import type { GroupId } from '../contracts/ComponentData';
+import { APP_CONFIG } from '../config/appConfig';
 
 // Track active popout windows
 interface PopoutWindowInfo {
@@ -82,14 +83,19 @@ function copyStyles(sourceDoc: Document, targetDoc: Document): void {
 export function openPopout(
   groupId: GroupId,
   title: string,
+  groupSize: { width: number; height: number } | undefined,
   onClose: () => void
 ): HTMLElement | null {
   // Close existing popout for this group if any
   closePopout(groupId);
 
-  // Calculate window size and position - place on right edge of screen, not overlapping main window
-  const width = 600;
-  const height = 700;
+  // Use group's current size, or calculate from floatingGroups percentages
+  const { baseFontSize } = APP_CONFIG.popout;
+  const { defaultWidthPercent, defaultHeightPercent } = APP_CONFIG.floatingGroups;
+  const defaultWidth = Math.floor(window.innerWidth * defaultWidthPercent);
+  const defaultHeight = Math.floor(window.innerHeight * defaultHeightPercent);
+  const width = groupSize?.width ?? defaultWidth;
+  const height = groupSize?.height ?? defaultHeight;
 
   // Get available screen space (availLeft/availTop are non-standard but widely supported)
   const screen = window.screen as Screen & { availLeft?: number; availTop?: number };
@@ -113,7 +119,6 @@ export function openPopout(
   }
 
   // Set up the document
-  // Use 67% zoom as baseline - popout windows render larger than main window for unknown reasons
   const doc = popoutWindow.document;
   doc.open();
   doc.write(`
@@ -124,7 +129,7 @@ export function openPopout(
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${title}</title>
   <style>
-    html { font-size: 11px; }
+    html { font-size: ${baseFontSize}; }
   </style>
 </head>
 <body class="bg-gray-100 dark:bg-slate-800 p-2 overflow-y-auto" style="min-height: 100vh;">
@@ -158,15 +163,6 @@ export function openPopout(
     // Use setTimeout to avoid calling onClose during unload
     setTimeout(onClose, 0);
   });
-
-  // Try to keep focus on main window (browsers may not honor this)
-  popoutWindow.blur();
-  window.focus();
-
-  // Also try after a short delay since window creation is async
-  setTimeout(() => {
-    window.focus();
-  }, 100);
 
   return container;
 }

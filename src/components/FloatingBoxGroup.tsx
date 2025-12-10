@@ -55,24 +55,31 @@ export default function FloatingBoxGroup({
 }: FloatingBoxGroupProps) {
   const groupConfig = APP_CONFIG.floatingGroups;
   const groupSettings = groupConfig[groupId];
+  const fitContent = groupSettings.fitContent;
 
-  // Calculate dimensions from viewport percentages (width is per-group)
-  const defaultWidth = Math.floor(window.innerWidth * groupSettings.defaultWidthPercent);
+  // Calculate dimensions from viewport percentages
+  const defaultWidth = Math.floor(window.innerWidth * groupConfig.defaultWidthPercent);
   const defaultHeight = Math.floor(window.innerHeight * groupConfig.defaultHeightPercent);
   const minWidth = Math.floor(window.innerWidth * groupConfig.minWidthPercent);
   const minHeight = Math.floor(window.innerHeight * groupConfig.minHeightPercent);
   const rightMargin = Math.floor(window.innerWidth * groupConfig.rightMarginPercent);
+  const bottomMargin = Math.floor(window.innerHeight * groupConfig.bottomMarginPercent);
+  const stackGap = Math.floor(window.innerHeight * groupConfig.stackGapPercent);
 
-  // Calculate default position (right edge at viewport edge, Y from config)
+  // Calculate default position - stacked from bottom right
+  // stackPosition 0 = bottom, 1 = above that, etc.
+  const stackPosition = groupSettings.stackPosition;
+  const defaultY = window.innerHeight - bottomMargin - defaultHeight - (stackPosition * (defaultHeight + stackGap));
   const defaultPosition = {
     x: window.innerWidth - defaultWidth - rightMargin,
-    y: Math.floor(window.innerHeight * groupSettings.defaultYPercent)
+    y: defaultY
   };
-  const defaultSize = { width: defaultWidth, height: defaultHeight };
+  // For fitContent groups, don't set a default height (let CSS handle it)
+  const defaultSize = fitContent ? { width: defaultWidth, height: undefined } : { width: defaultWidth, height: defaultHeight };
 
   // Local state for dragging/resizing - tracks position during interaction
   const [localPosition, setLocalPosition] = useState<{ x: number; y: number } | null>(null);
-  const [localSize, setLocalSize] = useState<{ width: number; height: number } | null>(null);
+  const [localSize, setLocalSize] = useState<{ width: number; height: number | undefined } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isResizing, setIsResizing] = useState<ResizeHandle>(null);
@@ -118,7 +125,7 @@ export default function FloatingBoxGroup({
       x: e.clientX,
       y: e.clientY,
       width: currentSize.width,
-      height: currentSize.height,
+      height: currentSize.height ?? defaultHeight,  // Use defaultHeight if undefined
       posX: currentPos.x,
       posY: currentPos.y
     });
@@ -173,7 +180,9 @@ export default function FloatingBoxGroup({
 
     const handleMouseUp = () => {
       if (onChange && localPosition && localSize) {
-        onChange(localPosition, localSize);
+        // For fitContent groups, height may be undefined - use defaultHeight as fallback
+        const finalHeight = localSize.height ?? defaultHeight;
+        onChange(localPosition, { width: localSize.width, height: finalHeight });
       }
       setIsDragging(false);
       setIsResizing(null);
@@ -202,16 +211,32 @@ export default function FloatingBoxGroup({
   // Resize handle thickness from config
   const handleSize = groupConfig.resizeHandleSize;
 
+  // For fitContent groups, use 'auto' for dimensions with min/max constraints
+  const widthStyle = fitContent ? 'auto' : `${size.width}px`;
+  const minWidthStyle = fitContent ? `${minWidth}px` : undefined;
+  const maxWidthStyle = fitContent ? `${defaultWidth}px` : undefined;
+  const heightStyle = size.height != null ? `${size.height}px` : 'auto';
+  const maxHeightStyle = fitContent ? `${window.innerHeight * groupConfig.fitContentMaxHeightPercent}px` : undefined;
+
   return (
     <div
       ref={groupRef}
       className="fixed bg-white dark:bg-slate-800 rounded-lg shadow-2xl border-2 border-gray-300 dark:border-slate-600 flex flex-col"
       style={{
-        left: 0,
-        top: 0,
-        transform: `translate(${position.x}px, ${position.y}px)`,
-        width: `${size.width}px`,
-        height: `${size.height}px`,
+        // For fitContent with auto width, use right positioning; otherwise use left+transform
+        ...(fitContent && !propPosition ? {
+          right: rightMargin,
+          top: position.y,
+        } : {
+          left: 0,
+          top: 0,
+          transform: `translate(${position.x}px, ${position.y}px)`,
+        }),
+        width: widthStyle,
+        minWidth: minWidthStyle,
+        maxWidth: maxWidthStyle,
+        height: heightStyle,
+        maxHeight: maxHeightStyle,
         zIndex,
         transition: shouldAnimate
           ? `transform ${APP_CONFIG.timing.boxTransition}ms ease-out, width ${APP_CONFIG.timing.boxTransition}ms ease-out, height ${APP_CONFIG.timing.boxTransition}ms ease-out`

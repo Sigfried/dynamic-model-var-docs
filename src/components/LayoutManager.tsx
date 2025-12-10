@@ -291,22 +291,11 @@ export default function LayoutManager({
     const itemRect = itemNode.getBoundingClientRect();
     const estimatedBoxHeight = APP_CONFIG.layout.estimatedBoxHeight;
     const maxBoxHeight = window.innerHeight * APP_CONFIG.transitoryBox.maxHeightPercent;
-    // Use minWidth for overflow check - box is at least this wide (fit-content)
-    const minBoxWidth = window.innerWidth * APP_CONFIG.transitoryBox.minWidthPercent;
-    const gap = 20;
+    const boxWidth = window.innerWidth * APP_CONFIG.transitoryBox.minWidthPercent;
+    const rightMargin = window.innerWidth * APP_CONFIG.floatingGroups.rightMarginPercent;
 
-    // Try to position to the right of the item
-    let xPosition = itemRect.right + gap;
-
-    // Only flip to left if there's truly not enough room on the right
-    if (xPosition + minBoxWidth > window.innerWidth - 10) {
-      xPosition = itemRect.left - minBoxWidth - gap;
-    }
-
-    // If left positioning would go off-screen, position at left edge
-    if (xPosition < 10) {
-      xPosition = 10;
-    }
+    // Position at right edge of viewport (like persistent boxes)
+    const xPosition = window.innerWidth - boxWidth - rightMargin;
 
     const itemCenterY = itemRect.top + (itemRect.height / 2);
     const idealY = itemCenterY - (estimatedBoxHeight / 2);
@@ -513,6 +502,7 @@ export default function LayoutManager({
     const container = openPopout(
       groupId,
       group.title,
+      group.size,  // Pass current group size to popout
       () => {
         // Called when popout window closes - discard the boxes for this group
         setPopoutContainers(prev => {

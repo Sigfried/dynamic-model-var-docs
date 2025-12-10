@@ -185,26 +185,34 @@ export const APP_CONFIG = {
     collapsedPreviewCount: 10, // Items to show when collapsed
   },
 
+  // Transitory box configuration (hover previews)
   // Floating box group configuration (percentages of viewport)
   floatingGroups: {
-    // Per-group settings (Y position and width)
+    // Shared default dimensions
+    defaultWidthPercent: 0.50,   // 50% of viewport width
+    defaultHeightPercent: 0.35,  // 35% of viewport height
+    // Margin from right edge of viewport (percentage)
+    rightMarginPercent: 0.01,    // 1% from right edge
+    // Margin from bottom edge of viewport (percentage)
+    bottomMarginPercent: 0.02,   // 2% from bottom edge
+    // Gap between stacked groups (percentage)
+    stackGapPercent: 0.01,       // 1% gap between groups
+    // Per-group settings
     details: {
       title: 'Details',
-      defaultYPercent: 0.65,      // 65% down from top
-      defaultWidthPercent: 0.50,  // 50% of viewport width
+      stackPosition: 0,          // Bottom of stack (0 = first from bottom)
+      fitContent: false,         // Use default height
     },
     relationships: {
       title: 'Relationships',
-      defaultYPercent: 0.20,      // 20% down from top
-      defaultWidthPercent: 0.25,  // 25% of viewport width (narrower)
+      stackPosition: 1,          // Second from bottom (stacked above details)
+      fitContent: true,          // Size to fit content
     },
-    // Margin from right edge of viewport (percentage)
-    rightMarginPercent: 0.01,  // 1% from right edge
-    // Default height as percentage of viewport (shared)
-    defaultHeightPercent: 0.40, // 40% of viewport height
     // Minimum dimensions as percentage of viewport
-    minWidthPercent: 0.20,      // 20% of viewport width
-    minHeightPercent: 0.15,     // 15% of viewport height
+    minWidthPercent: 0.20,       // 20% of viewport width
+    minHeightPercent: 0.15,      // 15% of viewport height
+    // Maximum dimensions for fitContent groups (percentage of viewport)
+    fitContentMaxHeightPercent: 0.80,  // 80% of viewport height
     // Resize handle size in pixels (small enough to be unobtrusive)
     resizeHandleSize: 8,
     // Restore expansion state on page load
@@ -219,6 +227,12 @@ export const APP_CONFIG = {
     minWidthPercent: 0.35,     // 35% of viewport width
     maxWidthPercent: 0.50,     // 50% of viewport width
     maxHeightPercent: 0.67,    // 2/3 of viewport height
+  },
+
+  // Popout window configuration
+  popout: {
+    // Default size uses floatingGroups percentages if group has no size
+    baseFontSize: '20px',      // Base font size for popout content
   },
 } as const;
 
