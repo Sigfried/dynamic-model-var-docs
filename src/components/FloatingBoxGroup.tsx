@@ -20,6 +20,7 @@ interface FloatingBoxGroupProps {
   groupId: GroupId;
   title: string;
   boxes: FloatingBoxData[];
+  highlightedBoxId?: string | null;  // ID of box to highlight (hover feedback)
   position?: { x: number; y: number };
   size?: { width: number; height: number };
   zIndex: number;
@@ -39,6 +40,7 @@ export default function FloatingBoxGroup({
   groupId,
   title,
   boxes,
+  highlightedBoxId,
   position: propPosition,
   size: propSize,
   zIndex,
@@ -318,7 +320,7 @@ export default function FloatingBoxGroup({
             No items open
           </div>
         ) : (
-          <BoxesWithEvenHeight boxes={boxes} onCloseBox={onCloseBox} onToggleBoxCollapse={onToggleBoxCollapse} />
+          <BoxesWithEvenHeight boxes={boxes} highlightedBoxId={highlightedBoxId} onCloseBox={onCloseBox} onToggleBoxCollapse={onToggleBoxCollapse} />
         )}
       </div>
     </div>
@@ -331,11 +333,12 @@ export default function FloatingBoxGroup({
  */
 interface BoxesWithEvenHeightProps {
   boxes: FloatingBoxData[];
+  highlightedBoxId?: string | null;
   onCloseBox: (boxId: string) => void;
   onToggleBoxCollapse: (boxId: string) => void;
 }
 
-function BoxesWithEvenHeight({ boxes, onCloseBox, onToggleBoxCollapse }: BoxesWithEvenHeightProps) {
+function BoxesWithEvenHeight({ boxes, highlightedBoxId, onCloseBox, onToggleBoxCollapse }: BoxesWithEvenHeightProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerHeight, setContainerHeight] = useState(0);
   // Track natural content heights for each expanded box
@@ -411,18 +414,32 @@ function BoxesWithEvenHeight({ boxes, onCloseBox, onToggleBoxCollapse }: BoxesWi
 
   const heights = calculateHeights();
 
+  // When highlighting, determine which boxes should appear expanded vs collapsed
+  const hasHighlight = highlightedBoxId != null;
+
   return (
     <div ref={containerRef} className="flex flex-col gap-2 h-full">
-      {boxes.map((box) => (
-        <CollapsibleBox
-          key={box.id}
-          box={box}
-          maxContentHeight={heights[box.id]}
-          onReportNaturalHeight={(h) => reportNaturalHeight(box.id, h)}
-          onClose={() => onCloseBox(box.id)}
-          onToggleCollapse={() => onToggleBoxCollapse(box.id)}
-        />
-      ))}
+      {boxes.map((box) => {
+        const isHighlighted = box.id === highlightedBoxId;
+        // When hovering, temporarily show highlighted box expanded, others collapsed
+        const visuallyCollapsed = hasHighlight
+          ? !isHighlighted  // Highlight mode: only highlighted box expanded
+          : box.isCollapsed;  // Normal mode: use actual state
+
+        return (
+          <CollapsibleBox
+            key={box.id}
+            box={box}
+            isHighlighted={isHighlighted}
+            isDimmed={hasHighlight && !isHighlighted}
+            visuallyCollapsed={visuallyCollapsed}
+            maxContentHeight={heights[box.id]}
+            onReportNaturalHeight={(h) => reportNaturalHeight(box.id, h)}
+            onClose={() => onCloseBox(box.id)}
+            onToggleCollapse={() => onToggleBoxCollapse(box.id)}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -432,14 +449,18 @@ function BoxesWithEvenHeight({ boxes, onCloseBox, onToggleBoxCollapse }: BoxesWi
  */
 interface CollapsibleBoxProps {
   box: FloatingBoxData;
+  isHighlighted?: boolean;
+  isDimmed?: boolean;
+  visuallyCollapsed?: boolean;  // Override collapsed state during highlight
   maxContentHeight?: number;
   onReportNaturalHeight?: (height: number) => void;
   onClose: () => void;
   onToggleCollapse: () => void;
 }
 
-function CollapsibleBox({ box, maxContentHeight, onReportNaturalHeight, onClose, onToggleCollapse }: CollapsibleBoxProps) {
-  const isCollapsed = box.isCollapsed ?? false;
+function CollapsibleBox({ box, isHighlighted, isDimmed, visuallyCollapsed, maxContentHeight, onReportNaturalHeight, onClose, onToggleCollapse }: CollapsibleBoxProps) {
+  // Use visual override if provided, otherwise use actual state
+  const isCollapsed = visuallyCollapsed ?? box.isCollapsed ?? false;
   const contentRef = useRef<HTMLDivElement>(null);
 
   // Measure and report natural content height
@@ -461,8 +482,19 @@ function CollapsibleBox({ box, maxContentHeight, onReportNaturalHeight, onClose,
     return () => observer.disconnect();
   }, [isCollapsed, onReportNaturalHeight]);
 
+  // Highlight and dim styles for hover feedback
+  const highlightClasses = isHighlighted
+    ? 'ring-2 ring-yellow-400 dark:ring-yellow-300 ring-offset-1'
+    : '';
+  const dimStyle = isDimmed
+    ? { opacity: 0.5, filter: 'grayscale(30%)' }
+    : undefined;
+
   return (
-    <div className="border border-gray-200 dark:border-slate-600 rounded-lg overflow-hidden flex-shrink-0">
+    <div
+      className={`border border-gray-200 dark:border-slate-600 rounded-lg overflow-hidden flex-shrink-0 transition-all duration-200 ${highlightClasses}`}
+      style={dimStyle}
+    >
       {/* Box header */}
       <div
         className={`flex items-center justify-between px-3 py-1.5 ${box.metadata.color} text-white cursor-pointer select-none`}

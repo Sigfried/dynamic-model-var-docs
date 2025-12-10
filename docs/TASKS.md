@@ -15,7 +15,7 @@
 **Status**: Phases 1-4 complete. Remaining: hover highlight, Phase 5 (popout).
 
 **Remaining work**:
-- [ ] Hover highlight: When hovering on item with open box, highlight the box (use `hoverHighlightDelay` in appConfig)
+- [x] Hover highlight: When hovering on item with open box, highlight the box (use `hoverHighlightDelay` in appConfig)
 - [ ] Phase 5: Popout window support
 
 **Known issues** (tolerated for now):
@@ -42,8 +42,7 @@
 - Infrastructure already set up
 
 ### Item names as hover/links
-- In detail and hover boxes, make all item references act like panel items
-- Already working for most items in hover boxes but not slot names
+- In detail and relationship boxes, make all item references act like panel items
 
 ---
 
@@ -79,10 +78,6 @@
 - Show multiple counts per element (e.g., "103 vars, 5 enums, 2 slots")
 - Add labels or tooltips to clarify what counts mean
 
-### Search and Filter
-- Search: Important for exploring large schemas
-- Filtering: Grouping provides a lot already
-
 ### Detail Panel Enhancements
 - Show reachable_from info for enums
 - Show inheritance
@@ -97,6 +92,10 @@
 ---
 
 ## 🔮 Low Priority / Future Ideas
+
+### Search and Filter
+- Search: Important for exploring large schemas
+- Filtering: Grouping provides a lot already
 
 ### LayoutManager rename
 - No longer about "whitespace monitoring" - it's now MainLayout/AppLayout

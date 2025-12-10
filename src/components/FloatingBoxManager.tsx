@@ -24,6 +24,8 @@ interface FloatingBoxManagerProps {
   transitoryBox: FloatingBoxData | null;
   // Groups containing persistent boxes
   groups: FloatingBoxGroupData[];
+  // ID of box to highlight (when hovering item with open box)
+  highlightedBoxId?: string | null;
   // Transitory box handlers
   onCloseTransitory: () => void;
   // Group handlers
@@ -40,6 +42,7 @@ interface FloatingBoxManagerProps {
 export default function FloatingBoxManager({
   transitoryBox,
   groups,
+  highlightedBoxId,
   onCloseTransitory,
   onCloseGroup,
   onCloseBox,
@@ -60,14 +63,15 @@ export default function FloatingBoxManager({
           return;
         }
 
-        // 2. Then close most recent box in most recent group with boxes
+        // 2. Then close oldest box in most recent group with boxes
         // Groups are ordered by most recent interaction (last in array = most recent)
+        // Boxes are ordered oldest-first (new boxes added at end), so close first box
         for (let i = groups.length - 1; i >= 0; i--) {
           const group = groups[i];
           if (group.boxes.length > 0) {
-            // Close the most recent box (last in array)
-            const lastBox = group.boxes[group.boxes.length - 1];
-            onCloseBox(group.id, lastBox.id);
+            // Close the oldest box (first in array)
+            const oldestBox = group.boxes[0];
+            onCloseBox(group.id, oldestBox.id);
             return;
           }
         }
@@ -90,6 +94,7 @@ export default function FloatingBoxManager({
           groupId={group.id}
           title={group.title}
           boxes={group.boxes}
+          highlightedBoxId={highlightedBoxId}
           position={group.position}
           size={group.size}
           zIndex={baseZIndex + index}

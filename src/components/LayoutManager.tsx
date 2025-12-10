@@ -56,6 +56,9 @@ export default function LayoutManager({
   // Hover state
   const [hoveredItem, setHoveredItem] = useState<ItemHoverData | null>(null);
 
+  // Highlighted box ID (when hovering an item with an open box)
+  const [highlightedBoxId, setHighlightedBoxId] = useState<string | null>(null);
+
   // Transitory box (only one at a time, for hover preview)
   const [transitoryBox, setTransitoryBox] = useState<FloatingBoxData | null>(null);
 
@@ -303,6 +306,39 @@ export default function LayoutManager({
 
     return { x: xPosition, y: yPosition };
   }, []);
+
+  // Effect to highlight box when hovering item that has an open box
+  useEffect(() => {
+    const hoveredItemId = hoveredItem?.name ?? null;
+    const hoveredItemZone = hoveredItem?.hoverZone ?? null;
+
+    if (!hoveredItemId || !hoveredItemZone) {
+      setHighlightedBoxId(null);
+      return;
+    }
+
+    const contentType = hoveredItemZone === 'badge' ? 'relationship' : 'detail';
+    const groupId = contentTypeToGroupId(contentType);
+    const existingGroup = groups.find(g => g.id === groupId);
+    const existingBox = existingGroup?.boxes.find(b =>
+      b.itemId === hoveredItemId && b.contentType === contentType
+    );
+
+    if (!existingBox) {
+      setHighlightedBoxId(null);
+      return;
+    }
+
+    // Delay highlight to avoid flashing
+    const timer = setTimeout(() => {
+      setHighlightedBoxId(existingBox.id);
+    }, APP_CONFIG.floatingGroups.hoverHighlightDelay);
+
+    return () => {
+      clearTimeout(timer);
+      setHighlightedBoxId(null);
+    };
+  }, [hoveredItem, groups]);
 
   // Effect to create/update transitory box on hover
   useEffect(() => {
@@ -603,6 +639,7 @@ export default function LayoutManager({
       <FloatingBoxManager
         transitoryBox={transitoryBox}
         groups={groups}
+        highlightedBoxId={highlightedBoxId}
         onCloseTransitory={handleCloseTransitory}
         onCloseGroup={handleCloseGroup}
         onCloseBox={handleCloseBox}
