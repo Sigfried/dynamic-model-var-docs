@@ -146,6 +146,18 @@
 **Remaining**:
 - Hover positioning could be improved (currently appears near item, not always ideally placed)
 
+### [sg] improve main panel layout
+- gutters between lp/mp/rp could shrink somewhat -- should actually switch to 
+  ```css
+    .container {
+      display: flex;
+      justify-content: space-between;
+    }
+    ```
+    instead of hard coded gap widths -- though the gutters do need some minimum width for the links to be
+    visible. maybe when the viewport is too narrow for the width of panels+gutters, it should allow scrolling
+    to the right
+
 ### LinkOverlay fixes
 - Edge labels: show on hover; tooltip display needs improvement
 

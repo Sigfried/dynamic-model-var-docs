@@ -54,8 +54,8 @@ export default function FloatingBoxGroup({
   const groupConfig = APP_CONFIG.floatingGroups;
   const groupSettings = groupConfig[groupId];
 
-  // Calculate dimensions from viewport percentages
-  const defaultWidth = Math.floor(window.innerWidth * groupConfig.defaultWidthPercent);
+  // Calculate dimensions from viewport percentages (width is per-group)
+  const defaultWidth = Math.floor(window.innerWidth * groupSettings.defaultWidthPercent);
   const defaultHeight = Math.floor(window.innerHeight * groupConfig.defaultHeightPercent);
   const minWidth = Math.floor(window.innerWidth * groupConfig.minWidthPercent);
   const minHeight = Math.floor(window.innerHeight * groupConfig.minHeightPercent);

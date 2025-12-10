@@ -59,6 +59,7 @@ export default function LayoutManager({
   // Transitory box (only one at a time, for hover preview)
   const [transitoryBox, setTransitoryBox] = useState<FloatingBoxData | null>(null);
 
+
   // Groups containing persistent boxes
   const [groups, setGroups] = useState<FloatingBoxGroupData[]>([]);
 
@@ -276,22 +277,23 @@ export default function LayoutManager({
 
     const itemRect = itemNode.getBoundingClientRect();
     const estimatedBoxHeight = APP_CONFIG.layout.estimatedBoxHeight;
-    const maxBoxHeight = window.innerHeight * 0.8;
+    const maxBoxHeight = window.innerHeight * APP_CONFIG.transitoryBox.maxHeightPercent;
+    // Use minWidth for overflow check - box is at least this wide (fit-content)
+    const minBoxWidth = window.innerWidth * APP_CONFIG.transitoryBox.minWidthPercent;
+    const gap = 20;
 
-    const leftPanel = document.querySelector('[data-panel-position="left"]')?.parentElement?.parentElement;
-    const rightPanel = document.querySelector('[data-panel-position="right"]')?.parentElement?.parentElement;
+    // Try to position to the right of the item
+    let xPosition = itemRect.right + gap;
 
-    let rightmostEdge = 0;
-    if (rightPanel) {
-      rightmostEdge = rightPanel.getBoundingClientRect().right;
-    } else if (leftPanel) {
-      rightmostEdge = leftPanel.getBoundingClientRect().right;
+    // Only flip to left if there's truly not enough room on the right
+    if (xPosition + minBoxWidth > window.innerWidth - 10) {
+      xPosition = itemRect.left - minBoxWidth - gap;
     }
 
-    const idealX = Math.max(370, rightmostEdge + 20);
-    const boxWidth = 500;
-    const maxX = window.innerWidth - boxWidth - 10;
-    const xPosition = Math.min(idealX, maxX);
+    // If left positioning would go off-screen, position at left edge
+    if (xPosition < 10) {
+      xPosition = 10;
+    }
 
     const itemCenterY = itemRect.top + (itemRect.height / 2);
     const idealY = itemCenterY - (estimatedBoxHeight / 2);
@@ -355,22 +357,6 @@ export default function LayoutManager({
       setTransitoryBox(null);
     }
   }, [hoveredItem, groups, dataService, calculateTransitoryBoxPosition, handleNavigate]);
-
-  // Upgrade transitory box to persistent (click on transitory)
-  const handleUpgradeToPersistent = useCallback(() => {
-    if (!transitoryBox) return;
-
-    const newBox: FloatingBoxData = {
-      ...transitoryBox,
-      id: `box-${Date.now()}`,
-      mode: 'persistent',
-      isCollapsed: false
-    };
-
-    addBoxToGroup(newBox);
-    setTransitoryBox(null);
-    setHoveredItem(null);
-  }, [transitoryBox, addBoxToGroup]);
 
   // Close transitory box
   const handleCloseTransitory = useCallback(() => {
@@ -473,6 +459,11 @@ export default function LayoutManager({
     });
   }, []);
 
+  // Handle item leave - clear hover state
+  const handleItemLeave = useCallback(() => {
+    setHoveredItem(null);
+  }, []);
+
   // Panel dimensions
   const EMPTY_PANEL_WIDTH = 180;
   const MAX_PANEL_WIDTH = 450;
@@ -512,7 +503,7 @@ export default function LayoutManager({
             toggleButtons={[]}
             onClickItem={handleOpenFloatingBox}
             onItemHover={setHoveredItem}
-            onItemLeave={() => setHoveredItem(null)}
+            onItemLeave={handleItemLeave}
           />
         </div>
 
@@ -538,7 +529,7 @@ export default function LayoutManager({
               toggleButtons={[]}
               onClickItem={handleOpenFloatingBox}
               onItemHover={setHoveredItem}
-              onItemLeave={() => setHoveredItem(null)}
+              onItemLeave={handleItemLeave}
               title="Slots"
             />
             <button
@@ -591,7 +582,7 @@ export default function LayoutManager({
             toggleButtons={rightPanelToggleButtons}
             onClickItem={handleOpenFloatingBox}
             onItemHover={setHoveredItem}
-            onItemLeave={() => setHoveredItem(null)}
+            onItemLeave={handleItemLeave}
             title="Ranges:"
           />
         </div>
@@ -613,7 +604,6 @@ export default function LayoutManager({
         transitoryBox={transitoryBox}
         groups={groups}
         onCloseTransitory={handleCloseTransitory}
-        onUpgradeToPersistent={handleUpgradeToPersistent}
         onCloseGroup={handleCloseGroup}
         onCloseBox={handleCloseBox}
         onToggleBoxCollapse={handleToggleBoxCollapse}

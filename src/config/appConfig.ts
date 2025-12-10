@@ -187,19 +187,20 @@ export const APP_CONFIG = {
 
   // Floating box group configuration (percentages of viewport)
   floatingGroups: {
-    // Default Y positions as percentage of viewport height
+    // Per-group settings (Y position and width)
     details: {
       title: 'Details',
-      defaultYPercent: 0.65,   // 65% down from top
+      defaultYPercent: 0.65,      // 65% down from top
+      defaultWidthPercent: 0.50,  // 50% of viewport width
     },
     relationships: {
       title: 'Relationships',
-      defaultYPercent: 0.20,   // 20% down from top
+      defaultYPercent: 0.20,      // 20% down from top
+      defaultWidthPercent: 0.25,  // 25% of viewport width (narrower)
     },
     // Margin from right edge of viewport (percentage)
     rightMarginPercent: 0.01,  // 1% from right edge
-    // Default dimensions as percentage of viewport
-    defaultWidthPercent: 0.30,  // 30% of viewport width
+    // Default height as percentage of viewport (shared)
     defaultHeightPercent: 0.40, // 40% of viewport height
     // Minimum dimensions as percentage of viewport
     minWidthPercent: 0.20,      // 20% of viewport width
@@ -215,8 +216,8 @@ export const APP_CONFIG = {
 
   // Transitory box configuration (hover previews)
   transitoryBox: {
-    minWidthPercent: 0.25,     // 25% of viewport width
-    maxWidthPercent: 0.45,     // 45% of viewport width
+    minWidthPercent: 0.35,     // 35% of viewport width
+    maxWidthPercent: 0.50,     // 50% of viewport width
     maxHeightPercent: 0.67,    // 2/3 of viewport height
   },
 } as const;

@@ -14,14 +14,11 @@ import { APP_CONFIG } from '../config/appConfig';
 interface TransitoryBoxProps {
   box: FloatingBoxData;
   zIndex: number;
-  onUpgrade: () => void;
-  dimGroups?: boolean;  // Whether groups should be dimmed (for visual focus)
 }
 
 export default function TransitoryBox({
   box,
   zIndex,
-  onUpgrade,
 }: TransitoryBoxProps) {
   const position = box.position ?? { x: 100, y: 100 };
   const config = APP_CONFIG.transitoryBox;
@@ -31,13 +28,9 @@ export default function TransitoryBox({
   const maxWidth = Math.floor(window.innerWidth * config.maxWidthPercent);
   const maxHeight = Math.floor(window.innerHeight * config.maxHeightPercent);
 
-  const handleClick = () => {
-    onUpgrade();
-  };
-
   return (
     <div
-      className="fixed bg-white dark:bg-slate-800 rounded-lg shadow-2xl border-2 border-gray-400 dark:border-slate-500 flex flex-col cursor-pointer"
+      className="fixed bg-white dark:bg-slate-800 rounded-lg shadow-2xl border-2 border-gray-400 dark:border-slate-500 flex flex-col"
       style={{
         left: 0,
         top: 0,
@@ -47,8 +40,8 @@ export default function TransitoryBox({
         maxWidth: `${maxWidth}px`,
         maxHeight: `${maxHeight}px`,
         zIndex,
+        pointerEvents: 'none',
       }}
-      onClick={handleClick}
     >
       {/* Header */}
       <div

@@ -26,7 +26,6 @@ interface FloatingBoxManagerProps {
   groups: FloatingBoxGroupData[];
   // Transitory box handlers
   onCloseTransitory: () => void;
-  onUpgradeToPersistent: () => void;
   // Group handlers
   onCloseGroup: (groupId: GroupId) => void;
   onCloseBox: (groupId: GroupId, boxId: string) => void;
@@ -42,7 +41,6 @@ export default function FloatingBoxManager({
   transitoryBox,
   groups,
   onCloseTransitory,
-  onUpgradeToPersistent,
   onCloseGroup,
   onCloseBox,
   onToggleBoxCollapse,
@@ -106,13 +104,11 @@ export default function FloatingBoxManager({
         />
       ))}
 
-      {/* Render transitory box (always on top) */}
+      {/* Render transitory box (always on top, pointer-events: none) */}
       {transitoryBox && (
         <TransitoryBox
           box={transitoryBox}
           zIndex={baseZIndex + groups.length + 10}
-          onUpgrade={onUpgradeToPersistent}
-          dimGroups={groups.length > 0}
         />
       )}
     </>
