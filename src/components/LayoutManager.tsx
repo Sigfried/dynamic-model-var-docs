@@ -531,7 +531,8 @@ export default function LayoutManager({
     const container = openPopout(
       groupId,
       group.title,
-      group.size,  // Pass current group size to popout
+      group.size,      // Pass current group size to popout
+      group.position,  // Pass current group position for vertical alignment
       () => {
         // Called when popout window closes - discard the boxes for this group
         setPopoutContainers(prev => {

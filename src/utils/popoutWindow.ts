@@ -84,6 +84,7 @@ export function openPopout(
   groupId: GroupId,
   title: string,
   groupSize: { width: number; height: number } | undefined,
+  groupPosition: { x: number; y: number } | undefined,
   onClose: () => void
 ): HTMLElement | null {
   // Close existing popout for this group if any
@@ -102,9 +103,12 @@ export function openPopout(
   const screenRight = screen.availWidth + (screen.availLeft ?? 0);
   const screenTop = screen.availTop ?? 0;
 
-  // Position at right edge of screen
+  // Position at right edge of screen, using group's Y position if available
   const left = screenRight - width - 20;
-  const top = screenTop + 50;
+  // Convert group's viewport Y position to screen Y position
+  const top = groupPosition
+    ? screenTop + groupPosition.y + (window.screenY - screenTop)
+    : screenTop + 50;
 
   // Open the window
   const popoutWindow = window.open(
