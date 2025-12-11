@@ -76,7 +76,7 @@
 - Consider renaming to better reflect current purpose
 
 ### Animation library
-- Fix funkiness in interactions including link movement with scrolling
+- Smooth animations for various interactions
 
 ### Viewport culling for links
 - Don't show links when both endpoints off screen
