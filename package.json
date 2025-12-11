@@ -20,6 +20,7 @@
     "test:coverage": "vitest --coverage"
   },
   "dependencies": {
+    "@floating-ui/react": "^0.27.16",
     "graphology": "^0.26.0",
     "graphology-types": "^0.24.8",
     "react": "^19.1.1",

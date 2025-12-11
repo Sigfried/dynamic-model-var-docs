@@ -157,8 +157,9 @@ export interface FloatingBoxData {
   metadata: FloatingBoxMetadata;
   content: React.ReactNode;
   itemId: string;  // Item identifier for callbacks and state management
-  // For transitory boxes - position near hovered item
-  // For persistent boxes during transition - will be removed in Phase 3
+  // For transitory boxes - DOM ID of the reference element for Floating UI positioning
+  referenceElementId?: string;
+  // Legacy position (will be removed - use referenceElementId with Floating UI)
   position?: { x: number; y: number };
   size?: { width: number; height: number };
   /** @deprecated Will be removed when groups are implemented - groups handle positioning */

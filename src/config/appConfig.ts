@@ -180,7 +180,6 @@ export const APP_CONFIG = {
 
   // UI layout constants
   layout: {
-    estimatedBoxHeight: 400,   // For positioning calculations (RelationshipInfoBox)
     collapsibleListSize: 20,   // Show "...N more" threshold
     collapsedPreviewCount: 10, // Items to show when collapsed
   },

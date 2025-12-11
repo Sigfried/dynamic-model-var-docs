@@ -310,31 +310,6 @@ export default function LayoutManager({
     setHoveredItem(null);
   }, [dataService, addBoxToGroup, handleNavigate]);
 
-  // Helper to calculate position for transitory box
-  // Uses the same settings as the target group (details or relationships)
-  const calculateTransitoryBoxPosition = useCallback((domId: string, groupId: GroupId): { x: number; y: number } | null => {
-    const itemNode = document.getElementById(domId);
-    if (!itemNode) return null;
-
-    const settings = getFloatSettings(groupId);
-    const itemRect = itemNode.getBoundingClientRect();
-    const estimatedBoxHeight = APP_CONFIG.layout.estimatedBoxHeight;
-    const maxBoxHeight = window.innerHeight * settings.fitContentMaxHeightPercent;
-    const boxWidth = window.innerWidth * settings.defaultWidthPercent;
-    const rightMargin = window.innerWidth * settings.rightMarginPercent;
-
-    // Position at right edge of viewport (like persistent boxes)
-    const xPosition = window.innerWidth - boxWidth - rightMargin;
-
-    const itemCenterY = itemRect.top + (itemRect.height / 2);
-    const idealY = itemCenterY - (estimatedBoxHeight / 2);
-    const minY = 10;
-    const maxY = window.innerHeight - maxBoxHeight - 10;
-    const yPosition = Math.max(minY, Math.min(idealY, maxY));
-
-    return { x: xPosition, y: yPosition };
-  }, []);
-
   // Effect to highlight box when hovering item that has an open box
   useEffect(() => {
     const hoveredItemId = hoveredItem?.name ?? null;
@@ -390,12 +365,6 @@ export default function LayoutManager({
         return;
       }
 
-      const position = calculateTransitoryBoxPosition(hoveredItemDomId, groupId);
-      if (!position) {
-        setTransitoryBox(null);
-        return;
-      }
-
       const isRelationship = contentType === 'relationship';
       const metadata = isRelationship
         ? dataService.getRelationshipBoxMetadata(hoveredItemId)
@@ -406,6 +375,7 @@ export default function LayoutManager({
         return;
       }
 
+      // Use Floating UI for positioning - pass the reference element ID
       setTransitoryBox({
         id: `transitory-${hoveredItemId}`,
         mode: 'transitory',
@@ -415,12 +385,12 @@ export default function LayoutManager({
           ? <RelationshipInfoContent itemId={hoveredItemId} dataService={dataService} onNavigate={handleNavigate} />
           : <DetailContent itemId={hoveredItemId} dataService={dataService} hideHeader={true} />,
         itemId: hoveredItemId,
-        position
+        referenceElementId: hoveredItemDomId,
       });
     } else {
       setTransitoryBox(null);
     }
-  }, [hoveredItem, groups, dataService, calculateTransitoryBoxPosition, handleNavigate]);
+  }, [hoveredItem, groups, dataService, handleNavigate]);
 
   // Close transitory box
   const handleCloseTransitory = useCallback(() => {
