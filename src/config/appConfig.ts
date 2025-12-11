@@ -185,40 +185,42 @@ export const APP_CONFIG = {
     collapsedPreviewCount: 10, // Items to show when collapsed
   },
 
-  // Floating box group configuration (percentages of viewport)
-  floatingGroups: {
-    // Per-group settings (Y position and width)
+  floats: {
+    // Shared defaults (can be overridden per-group)
+    defaultWidthPercent: 0.50,   // 50% of viewport width
+    defaultHeightPercent: 0.35,  // 35% of viewport height
+    minWidthPercent: 0.20,       // 20% of viewport width
+    minHeightPercent: 0.15,      // 15% of viewport height
+    fitContentMaxHeightPercent: 0.80,  // 80% of viewport height for fitContent
+    rightMarginPercent: 0.01,    // 1% from right edge
+    bottomMarginPercent: 0.02,   // 2% from bottom edge
+    stackGapPercent: 0.01,       // 1% gap between groups
+    resizeHandleSize: 8,         // Resize handle size in pixels
+    restoreExpansionMode: 'all-expanded' as ExpansionRestoreMode,
+    hoverHighlightDelay: 200,    // Delay before highlighting hovered item's box (ms)
+    fitContent: false,           // Default: use fixed dimensions
+    width: undefined as 'auto' | undefined,  // Default: use defaultWidthPercent
+    // Per-group settings (override shared defaults)
     details: {
       title: 'Details',
-      defaultYPercent: 0.65,      // 65% down from top
-      defaultWidthPercent: 0.50,  // 50% of viewport width
+      stackPosition: 0,          // Bottom of stack (0 = first from bottom)
+      defaultWidthPercent: 0.50,
+      defaultHeightPercent: 0.35,
     },
     relationships: {
       title: 'Relationships',
-      defaultYPercent: 0.20,      // 20% down from top
-      defaultWidthPercent: 0.25,  // 25% of viewport width (narrower)
+      stackPosition: 1,          // Second from bottom (stacked above details)
+      fitContent: true,          // Size to fit content
+      fitContentMaxHeightPercent: 0.40,
+      width: 'auto' as 'auto' | undefined,
     },
-    // Margin from right edge of viewport (percentage)
-    rightMarginPercent: 0.01,  // 1% from right edge
-    // Default height as percentage of viewport (shared)
-    defaultHeightPercent: 0.40, // 40% of viewport height
-    // Minimum dimensions as percentage of viewport
-    minWidthPercent: 0.20,      // 20% of viewport width
-    minHeightPercent: 0.15,     // 15% of viewport height
-    // Resize handle size in pixels (small enough to be unobtrusive)
-    resizeHandleSize: 8,
-    // Restore expansion state on page load
-    // 'all-collapsed' | 'all-expanded' | 'heuristic' (>50% expanded → all expanded)
-    restoreExpansionMode: 'heuristic' as ExpansionRestoreMode,
-    // Delay before highlighting hovered item's box (ms)
-    hoverHighlightDelay: 200,
   },
 
-  // Transitory box configuration (hover previews)
-  transitoryBox: {
-    minWidthPercent: 0.35,     // 35% of viewport width
-    maxWidthPercent: 0.50,     // 50% of viewport width
-    maxHeightPercent: 0.67,    // 2/3 of viewport height
+
+  // Popout window configuration
+  popout: {
+    // Default size uses floatingGroups percentages if group has no size
+    baseFontSize: '20px',      // Base font size for popout content
   },
 } as const;
 
@@ -247,6 +249,40 @@ export function getElementLinkTooltipColor(type: ElementTypeId): string {
  */
 export function getAllElementTypeIds(): ElementTypeId[] {
   return Object.keys(APP_CONFIG.elementTypes) as ElementTypeId[];
+}
+
+/** Float group IDs */
+export type FloatGroupId = 'details' | 'relationships';
+
+/** Resolved float settings (shared defaults merged with per-group overrides) */
+export interface FloatSettings {
+  title: string;
+  stackPosition: number;
+  defaultWidthPercent: number;
+  defaultHeightPercent: number;
+  minWidthPercent: number;
+  minHeightPercent: number;
+  fitContentMaxHeightPercent: number;
+  rightMarginPercent: number;
+  bottomMarginPercent: number;
+  stackGapPercent: number;
+  resizeHandleSize: number;
+  restoreExpansionMode: ExpansionRestoreMode;
+  hoverHighlightDelay: number;
+  fitContent: boolean;
+  width: 'auto' | undefined;
+}
+
+/**
+ * Get merged float settings for a group (shared defaults + per-group overrides)
+ */
+export function getFloatSettings(groupId: FloatGroupId): FloatSettings {
+  const { details, relationships, ...defaults } = APP_CONFIG.floats;
+  const groupOverrides = groupId === 'details' ? details : relationships;
+  return {
+    ...defaults,
+    ...groupOverrides,
+  } as FloatSettings;
 }
 
 // ============================================================================

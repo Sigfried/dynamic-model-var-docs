@@ -6,10 +6,12 @@
  * - Click upgrades to persistent (adds to group)
  * - Not draggable/resizable
  * - Fit-content sizing with max constraints
+ * - Uses same settings as target group (details or relationships)
  */
 
 import type { FloatingBoxData } from '../contracts/ComponentData';
-import { APP_CONFIG } from '../config/appConfig';
+import { getFloatSettings, type FloatGroupId } from '../config/appConfig';
+import { contentTypeToGroupId } from '../utils/statePersistence';
 
 interface TransitoryBoxProps {
   box: FloatingBoxData;
@@ -21,12 +23,13 @@ export default function TransitoryBox({
   zIndex,
 }: TransitoryBoxProps) {
   const position = box.position ?? { x: 100, y: 100 };
-  const config = APP_CONFIG.transitoryBox;
+  const groupId: FloatGroupId = contentTypeToGroupId(box.contentType) as FloatGroupId;
+  const settings = getFloatSettings(groupId);
 
-  // Calculate dimensions from viewport percentages
-  const minWidth = Math.floor(window.innerWidth * config.minWidthPercent);
-  const maxWidth = Math.floor(window.innerWidth * config.maxWidthPercent);
-  const maxHeight = Math.floor(window.innerHeight * config.maxHeightPercent);
+  // Calculate dimensions from viewport percentages using group settings
+  const minWidth = Math.floor(window.innerWidth * settings.minWidthPercent);
+  const maxWidth = Math.floor(window.innerWidth * settings.defaultWidthPercent);
+  const maxHeight = Math.floor(window.innerHeight * settings.fitContentMaxHeightPercent);
 
   return (
     <div
