@@ -225,6 +225,7 @@ export default function FloatingBoxGroup({
   return (
     <div
       ref={groupRef}
+      data-group-id={groupId}
       className="fixed bg-white dark:bg-slate-800 rounded-lg shadow-2xl border-2 border-gray-300 dark:border-slate-600 flex flex-col"
       style={{
         // For auto width, use right positioning; otherwise use left+transform

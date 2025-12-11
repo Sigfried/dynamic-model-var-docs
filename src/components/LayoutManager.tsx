@@ -528,11 +528,20 @@ export default function LayoutManager({
     const group = groups.find(g => g.id === groupId);
     if (!group) return;
 
+    // Get actual rendered size from DOM (for fitContent groups that haven't been resized)
+    const groupElement = document.querySelector(`[data-group-id="${groupId}"]`);
+    const renderedSize = groupElement
+      ? { width: groupElement.clientWidth, height: groupElement.clientHeight }
+      : group.size;
+    const renderedPosition = groupElement
+      ? { x: groupElement.getBoundingClientRect().left, y: groupElement.getBoundingClientRect().top }
+      : group.position;
+
     const container = openPopout(
       groupId,
       group.title,
-      group.size,      // Pass current group size to popout
-      group.position,  // Pass current group position for vertical alignment
+      renderedSize,      // Use actual rendered size
+      renderedPosition,  // Use actual rendered position
       () => {
         // Called when popout window closes - discard the boxes for this group
         setPopoutContainers(prev => {
