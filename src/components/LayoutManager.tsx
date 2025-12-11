@@ -26,7 +26,7 @@ import type { FloatingBoxData, FloatingBoxGroupData, GroupId } from '../contract
 import DetailContent from './DetailContent';
 import LinkOverlay from './LinkOverlay';
 import { RelationshipInfoContent } from './RelationshipInfoBox';
-import { APP_CONFIG } from '../config/appConfig';
+import { APP_CONFIG, getFloatSettings } from '../config/appConfig';
 import { type DialogState, contentTypeToGroupId } from '../utils/statePersistence';
 import { type DataService } from '../services/DataService';
 import {
@@ -141,7 +141,8 @@ export default function LayoutManager({
 
     if (detailsBoxes.length > 0) {
       // Apply expansion heuristic from config
-      const restoreMode = APP_CONFIG.floatingGroups.restoreExpansionMode;
+      const detailsSettings = getFloatSettings('details');
+      const restoreMode = detailsSettings.restoreExpansionMode;
       let shouldExpand = true;
       if (restoreMode === 'all-collapsed') {
         shouldExpand = false;
@@ -157,7 +158,7 @@ export default function LayoutManager({
 
       setGroups([{
         id: 'details',
-        title: APP_CONFIG.floatingGroups.details.title,
+        title: detailsSettings.title,
         boxes: boxesWithExpansion
       }]);
     }
@@ -197,7 +198,7 @@ export default function LayoutManager({
   // Boxes are stored in groups state; if group is popped out, React portal renders them there
   const addBoxToGroup = useCallback((box: FloatingBoxData) => {
     const groupId = contentTypeToGroupId(box.contentType);
-    const groupConfig = APP_CONFIG.floatingGroups[groupId];
+    const groupSettings = getFloatSettings(groupId);
 
     setGroups(prev => {
       const existingGroupIndex = prev.findIndex(g => g.id === groupId);
@@ -238,7 +239,7 @@ export default function LayoutManager({
         // Create new group
         const newGroup: FloatingBoxGroupData = {
           id: groupId,
-          title: groupConfig.title,
+          title: groupSettings.title,
           boxes: [{ ...box, isCollapsed: false }]
         };
         return [...prev, newGroup];
@@ -284,15 +285,17 @@ export default function LayoutManager({
   }, [dataService, addBoxToGroup, handleNavigate]);
 
   // Helper to calculate position for transitory box
-  const calculateTransitoryBoxPosition = useCallback((domId: string): { x: number; y: number } | null => {
+  // Uses the same settings as the target group (details or relationships)
+  const calculateTransitoryBoxPosition = useCallback((domId: string, groupId: GroupId): { x: number; y: number } | null => {
     const itemNode = document.getElementById(domId);
     if (!itemNode) return null;
 
+    const settings = getFloatSettings(groupId);
     const itemRect = itemNode.getBoundingClientRect();
     const estimatedBoxHeight = APP_CONFIG.layout.estimatedBoxHeight;
-    const maxBoxHeight = window.innerHeight * APP_CONFIG.transitoryBox.maxHeightPercent;
-    const boxWidth = window.innerWidth * APP_CONFIG.transitoryBox.minWidthPercent;
-    const rightMargin = window.innerWidth * APP_CONFIG.floatingGroups.rightMarginPercent;
+    const maxBoxHeight = window.innerHeight * settings.fitContentMaxHeightPercent;
+    const boxWidth = window.innerWidth * settings.defaultWidthPercent;
+    const rightMargin = window.innerWidth * settings.rightMarginPercent;
 
     // Position at right edge of viewport (like persistent boxes)
     const xPosition = window.innerWidth - boxWidth - rightMargin;
@@ -331,7 +334,7 @@ export default function LayoutManager({
     // Delay highlight to avoid flashing
     const timer = setTimeout(() => {
       setHighlightedBoxId(existingBox.id);
-    }, APP_CONFIG.floatingGroups.hoverHighlightDelay);
+    }, APP_CONFIG.floats.hoverHighlightDelay);
 
     return () => {
       clearTimeout(timer);
@@ -361,7 +364,7 @@ export default function LayoutManager({
         return;
       }
 
-      const position = calculateTransitoryBoxPosition(hoveredItemDomId);
+      const position = calculateTransitoryBoxPosition(hoveredItemDomId, groupId);
       if (!position) {
         setTransitoryBox(null);
         return;

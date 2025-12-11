@@ -6,7 +6,7 @@
  */
 
 import type { GroupId } from '../contracts/ComponentData';
-import { APP_CONFIG } from '../config/appConfig';
+import { APP_CONFIG, getFloatSettings } from '../config/appConfig';
 
 // Track active popout windows
 interface PopoutWindowInfo {
@@ -89,11 +89,11 @@ export function openPopout(
   // Close existing popout for this group if any
   closePopout(groupId);
 
-  // Use group's current size, or calculate from floatingGroups percentages
+  // Use group's current size, or calculate from floats settings
   const { baseFontSize } = APP_CONFIG.popout;
-  const { defaultWidthPercent, defaultHeightPercent } = APP_CONFIG.floatingGroups;
-  const defaultWidth = Math.floor(window.innerWidth * defaultWidthPercent);
-  const defaultHeight = Math.floor(window.innerHeight * defaultHeightPercent);
+  const settings = getFloatSettings(groupId);
+  const defaultWidth = Math.floor(window.innerWidth * settings.defaultWidthPercent);
+  const defaultHeight = Math.floor(window.innerHeight * settings.defaultHeightPercent);
   const width = groupSize?.width ?? defaultWidth;
   const height = groupSize?.height ?? defaultHeight;
 
