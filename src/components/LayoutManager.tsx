@@ -18,7 +18,7 @@
  * App.tsx simplified to: load data, create DataService, render LayoutManager
  */
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import ItemsPanel, { type ToggleButtonData } from './ItemsPanel';
 import type { SectionData, ItemHoverData } from './Section';
 import FloatingBoxManager from './FloatingBoxManager';
@@ -77,12 +77,12 @@ export default function LayoutManager({
 
   const [hasRestoredDialogs, setHasRestoredDialogs] = useState(false);
 
-  // Convert groups to dialog states for persistence (simplified - just item names)
+  // Convert groups to dialog states for persistence (item names and content types)
   const getDialogStatesFromGroups = useCallback((): DialogState[] => {
     const states: DialogState[] = [];
     for (const group of groups) {
       for (const box of group.boxes) {
-        states.push({ itemName: box.itemId });
+        states.push({ itemName: box.itemId, contentType: box.contentType });
       }
     }
     return states;
@@ -109,6 +109,9 @@ export default function LayoutManager({
     return () => clearTimeout(timer);
   }, [groupsStateJson, hasRestoredDialogs, initialDialogs.length, onDialogsChange]);
 
+  // Ref for navigate handler (used by restored relationship boxes)
+  const navigateRef = useRef<(itemName: string, itemSection: string) => void>(undefined);
+
   // Restore floating boxes from initial dialogs (runs once after data loads)
   useEffect(() => {
     if (hasRestoredDialogs) return;
@@ -116,52 +119,72 @@ export default function LayoutManager({
 
     setHasRestoredDialogs(true);
 
-    // Build groups from restored dialogs
+    // Build groups from restored dialogs, respecting contentType
     const detailsBoxes: FloatingBoxData[] = [];
+    const relationshipsBoxes: FloatingBoxData[] = [];
 
     initialDialogs.forEach((dialogState, index) => {
       const itemId = dialogState.itemName;
+      const contentType = dialogState.contentType ?? 'detail';
+      const isRelationship = contentType === 'relationship';
 
       if (dataService.itemExists(itemId)) {
-        const metadata = dataService.getFloatingBoxMetadata(itemId);
+        const metadata = isRelationship
+          ? dataService.getRelationshipBoxMetadata(itemId)
+          : dataService.getFloatingBoxMetadata(itemId);
         if (metadata) {
           const box: FloatingBoxData = {
             id: `restored-${Date.now()}-${index}`,
             mode: 'persistent',
-            contentType: 'detail',
+            contentType,
             metadata,
-            content: <DetailContent itemId={itemId} dataService={dataService} hideHeader={true} />,
+            content: isRelationship
+              ? <RelationshipInfoContent itemId={itemId} dataService={dataService} onNavigate={(name, section) => navigateRef.current?.(name, section)} />
+              : <DetailContent itemId={itemId} dataService={dataService} hideHeader={true} />,
             itemId,
             isCollapsed: false  // Restored boxes start expanded (could use heuristic later)
           };
-          detailsBoxes.push(box);
+          if (isRelationship) {
+            relationshipsBoxes.push(box);
+          } else {
+            detailsBoxes.push(box);
+          }
         }
       }
     });
 
+    const newGroups: FloatingBoxGroupData[] = [];
+
+    // Create details group if we have detail boxes
     if (detailsBoxes.length > 0) {
-      // Apply expansion heuristic from config
       const detailsSettings = getFloatSettings('details');
       const restoreMode = detailsSettings.restoreExpansionMode;
-      let shouldExpand = true;
-      if (restoreMode === 'all-collapsed') {
-        shouldExpand = false;
-      } else if (restoreMode === 'all-expanded') {
-        shouldExpand = true;
-      }
-      // For 'heuristic', we'd need to know the saved state - default to expanded for now
+      let shouldExpand = restoreMode !== 'all-collapsed';
 
-      const boxesWithExpansion = detailsBoxes.map(box => ({
-        ...box,
-        isCollapsed: !shouldExpand
-      }));
-
-      setGroups([{
+      newGroups.push({
         id: 'details',
         title: detailsSettings.title,
-        boxes: boxesWithExpansion
-      }]);
+        boxes: detailsBoxes.map(box => ({ ...box, isCollapsed: !shouldExpand }))
+      });
     }
+
+    // Create relationships group if we have relationship boxes
+    if (relationshipsBoxes.length > 0) {
+      const relSettings = getFloatSettings('relationships');
+      const restoreMode = relSettings.restoreExpansionMode;
+      let shouldExpand = restoreMode !== 'all-collapsed';
+
+      newGroups.push({
+        id: 'relationships',
+        title: relSettings.title,
+        boxes: relationshipsBoxes.map(box => ({ ...box, isCollapsed: !shouldExpand }))
+      });
+    }
+
+    if (newGroups.length > 0) {
+      setGroups(newGroups);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- handleNavigate changes but content uses it via closure
   }, [dataService, initialDialogs, hasRestoredDialogs]);
 
   // Build toggle button data
@@ -193,6 +216,9 @@ export default function LayoutManager({
     handleOpenFloatingBox({ type: _itemSection, name: itemName });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Keep navigateRef in sync with handleNavigate
+  navigateRef.current = handleNavigate;
 
   // Add a box to a group (creates group if it doesn't exist)
   // Boxes are stored in groups state; if group is popped out, React portal renders them there
@@ -523,9 +549,14 @@ export default function LayoutManager({
     }
   }, [groups]);
 
-  // Clean up popouts when component unmounts
+  // Clean up popouts when component unmounts or page unloads
   useEffect(() => {
+    const handleBeforeUnload = () => {
+      closeAllPopouts();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
       closeAllPopouts();
     };
   }, []);

@@ -6,6 +6,7 @@ import type { GroupId, BoxContentType } from '../contracts/ComponentData';
  */
 export interface DialogState {
   itemName: string;
+  contentType?: BoxContentType;  // 'detail' or 'relationship' (default: 'detail')
   itemType?: ElementTypeId;  // Optional - only needed for localStorage compatibility
   x?: number;      // Optional - if missing, use default cascade position
   y?: number;      // Optional - if missing, use default cascade position
@@ -118,7 +119,8 @@ export function parseStateFromURL(): Partial<AppState> | null {
   }
 
   // Parse dialogs
-  // Format: name or name:x,y,w,h (position optional)
+  // Format: name or name:type or name:type:x,y,w,h (type and position optional)
+  // type: 'd' for detail, 'r' for relationship (default: 'd')
   const dialogsParam = params.get('dialogs');
   if (dialogsParam) {
     try {
@@ -127,17 +129,30 @@ export function parseStateFromURL(): Partial<AppState> | null {
         if (parts.length < 1) return null;
 
         const itemName = parts[0];
+        let contentType: BoxContentType = 'detail';  // default
 
-        // Position is optional (parts[1])
+        // Check for type code in parts[1]
         if (parts.length >= 2 && parts[1]) {
-          const [x, y, width, height] = parts[1].split(',').map(Number);
-          if (!isNaN(x) && !isNaN(y) && !isNaN(width) && !isNaN(height)) {
-            return { itemName, x, y, width, height } as DialogState;
+          if (parts[1] === 'd' || parts[1] === 'r') {
+            contentType = parts[1] === 'r' ? 'relationship' : 'detail';
+            // Position is in parts[2] if present
+            if (parts.length >= 3 && parts[2]) {
+              const [x, y, width, height] = parts[2].split(',').map(Number);
+              if (!isNaN(x) && !isNaN(y) && !isNaN(width) && !isNaN(height)) {
+                return { itemName, contentType, x, y, width, height } as DialogState;
+              }
+            }
+          } else {
+            // Legacy format: parts[1] is position (no type code)
+            const [x, y, width, height] = parts[1].split(',').map(Number);
+            if (!isNaN(x) && !isNaN(y) && !isNaN(width) && !isNaN(height)) {
+              return { itemName, contentType, x, y, width, height } as DialogState;
+            }
           }
         }
 
         // No position info - use defaults
-        return { itemName } as DialogState;
+        return { itemName, contentType } as DialogState;
       }).filter((d): d is DialogState => d !== null) as DialogState[];
     } catch (e) {
       console.warn('Failed to parse dialogs from URL:', e);
@@ -183,15 +198,16 @@ export function saveStateToURL(state: AppState): void {
   }
 
   // Update dialogs
-  // Format: name or name:x,y,w,h (position optional)
+  // Format: name:type or name:type:x,y,w,h (type: 'd' for detail, 'r' for relationship)
   if (state.dialogs && state.dialogs.length > 0) {
     const dialogsStr = state.dialogs.map(d => {
+      const typeCode = d.contentType === 'relationship' ? 'r' : 'd';
       // If box has explicit position, include it
       if (d.x !== undefined && d.y !== undefined && d.width !== undefined && d.height !== undefined) {
-        return `${d.itemName}:${Math.round(d.x)},${Math.round(d.y)},${Math.round(d.width)},${Math.round(d.height)}`;
+        return `${d.itemName}:${typeCode}:${Math.round(d.x)},${Math.round(d.y)},${Math.round(d.width)},${Math.round(d.height)}`;
       }
-      // Otherwise just save item identity
-      return d.itemName;
+      // Otherwise just save item identity and type
+      return `${d.itemName}:${typeCode}`;
     }).join(';');
     params.set('dialogs', dialogsStr);
   } else {

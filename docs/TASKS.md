@@ -19,7 +19,6 @@
 
 **Known issues** (tolerated for now):
 - Transitory box uses `pointer-events: none`, so hovering items behind it triggers new previews
-- [sg] URL state for open boxes doesn't distinguish details from relationships (reload turns relationship boxes into detail boxes)
 - Popout: if main window is at right edge of screen, popout may overlap and hide behind it (could improve positioning logic)
 - Popout: browsers may not honor request to keep focus on main window after opening popout
 
