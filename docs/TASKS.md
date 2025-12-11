@@ -8,11 +8,6 @@
 
 ## 📋 Upcoming Work (Ordered by Priority)
 
-### [sg] Improve main panel layout
-- Gutters between panels could shrink - use `justify-content: space-between` instead of hardcoded gap widths
-- Gutters need minimum width for links to be visible
-- When viewport too narrow, allow horizontal scrolling
-
 ### LinkOverlay fixes
 - Edge labels: show on hover; tooltip display needs improvement
 

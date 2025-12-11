@@ -579,6 +579,7 @@ export default function LayoutManager({
   // Panel dimensions
   const EMPTY_PANEL_WIDTH = 180;
   const MAX_PANEL_WIDTH = 450;
+  const MIN_GUTTER_WIDTH = 80;  // Minimum gutter width for link visibility
 
   // Panel visibility
   const leftPanelEmpty = leftSections.length === 0;
@@ -594,10 +595,25 @@ export default function LayoutManager({
     }
   }, [middlePanelEmpty, setMiddleSections]);
 
+  // Calculate minimum width based on visible panels
+  const minLayoutWidth = useMemo(() => {
+    const leftWidth = leftPanelEmpty ? EMPTY_PANEL_WIDTH : 300;
+    const rightWidth = rightPanelEmpty ? EMPTY_PANEL_WIDTH : 300;
+    if (!middlePanelEmpty) {
+      // Three panels: left + gutter + middle + gutter + right
+      return leftWidth + MIN_GUTTER_WIDTH + 300 + MIN_GUTTER_WIDTH + rightWidth;
+    }
+    // Two panels: left + gutter + right
+    return leftWidth + MIN_GUTTER_WIDTH + rightWidth;
+  }, [leftPanelEmpty, rightPanelEmpty, middlePanelEmpty]);
+
   return (
-    <div className="flex-1 flex relative overflow-hidden">
-      {/* Three-panel layout */}
-      <div className="flex-1 flex overflow-hidden">
+    <div className="flex-1 flex relative overflow-x-auto overflow-y-hidden">
+      {/* Three-panel layout: panels are fixed/constrained, gutters flex to fill remaining space */}
+      <div
+        className="flex-1 flex"
+        style={{ minWidth: `${minLayoutWidth}px` }}
+      >
         {/* Left Panel - Classes only */}
         <div
           className="h-full overflow-hidden border-r border-gray-200 dark:border-slate-700 flex-shrink-0"
@@ -619,67 +635,73 @@ export default function LayoutManager({
           />
         </div>
 
-        {/* Left-Middle gutter */}
-        {!middlePanelEmpty && (
-          <div className="w-40 bg-gray-100 dark:bg-slate-800 flex-shrink-0" />
-        )}
-
-        {/* Middle Panel - Slots */}
-        {!middlePanelEmpty && (
-          <div
-            className="h-full overflow-hidden border-x border-gray-200 dark:border-slate-700 flex-shrink-0 relative"
-            style={{
-              maxWidth: `${MAX_PANEL_WIDTH}px`,
-              minWidth: '300px'
-            }}
-          >
-            <ItemsPanel
-              position="middle"
-              sections={['slot']}
-              onSectionsChange={() => {}}
-              sectionData={middleSectionData}
-              toggleButtons={[]}
-              onClickItem={handleOpenFloatingBox}
-              onItemHover={setHoveredItem}
-              onItemLeave={handleItemLeave}
-              title="Slots"
+        {/* Middle section: either Slots panel with gutters, or a single gutter with toggle */}
+        {!middlePanelEmpty ? (
+          <>
+            {/* Left-Middle gutter */}
+            <div
+              className="flex-1 bg-gray-100 dark:bg-slate-800"
+              style={{ minWidth: `${MIN_GUTTER_WIDTH}px` }}
             />
+
+            {/* Middle Panel - Slots */}
+            <div
+              className="h-full overflow-hidden border-x border-gray-200 dark:border-slate-700 flex-shrink-0 relative"
+              style={{
+                maxWidth: `${MAX_PANEL_WIDTH}px`,
+                minWidth: '300px'
+              }}
+            >
+              <ItemsPanel
+                position="middle"
+                sections={['slot']}
+                onSectionsChange={() => {}}
+                sectionData={middleSectionData}
+                toggleButtons={[]}
+                onClickItem={handleOpenFloatingBox}
+                onItemHover={setHoveredItem}
+                onItemLeave={handleItemLeave}
+                title="Slots"
+              />
+              <button
+                onClick={handleToggleMiddlePanel}
+                className="absolute top-2 right-2 w-6 h-6 rounded bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-600 dark:text-gray-300 flex items-center justify-center text-xs transition-colors z-10"
+                title="Hide Slots panel"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Middle-Right gutter */}
+            <div
+              className="flex-1 bg-gray-100 dark:bg-slate-800"
+              style={{ minWidth: `${MIN_GUTTER_WIDTH}px` }}
+            />
+          </>
+        ) : (
+          /* Center gutter / toggle button (when middle panel hidden) */
+          !leftPanelEmpty && !rightPanelEmpty && (
             <button
               onClick={handleToggleMiddlePanel}
-              className="absolute top-2 right-2 w-6 h-6 rounded bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-600 dark:text-gray-300 flex items-center justify-center text-xs transition-colors z-10"
-              title="Hide Slots panel"
+              className="flex-1 bg-gray-100 dark:bg-slate-800 border-x border-gray-200 dark:border-slate-700 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors flex items-center justify-center group"
+              style={{ minWidth: `${MIN_GUTTER_WIDTH}px` }}
+              title="Click to show Slots panel"
             >
-              ✕
+              <div className="text-center">
+                <div className="text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 text-sm font-medium">
+                  Show Slots
+                </div>
+                <div className="text-gray-400 dark:text-gray-500 text-xs mt-1">
+                  ▶
+                </div>
+              </div>
             </button>
-          </div>
-        )}
-
-        {/* Middle-Right gutter */}
-        {!middlePanelEmpty && (
-          <div className="w-40 bg-gray-100 dark:bg-slate-800 flex-shrink-0" />
-        )}
-
-        {/* Center gutter / toggle button */}
-        {!leftPanelEmpty && !rightPanelEmpty && middlePanelEmpty && (
-          <button
-            onClick={handleToggleMiddlePanel}
-            className="w-40 bg-gray-100 dark:bg-slate-800 border-x border-gray-200 dark:border-slate-700 flex-shrink-0 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors flex items-center justify-center group"
-            title="Click to show Slots panel"
-          >
-            <div className="text-center">
-              <div className="text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 text-sm font-medium">
-                Show Slots
-              </div>
-              <div className="text-gray-400 dark:text-gray-500 text-xs mt-1">
-                ▶
-              </div>
-            </div>
-          </button>
+          )
         )}
 
         {/* Right Panel - Ranges only */}
         <div
-          className="h-full overflow-hidden border-l border-gray-200 dark:border-slate-700 flex-1"
+          className="h-full overflow-hidden border-l border-gray-200 dark:border-slate-700 flex-shrink-0"
           style={{
             width: rightPanelEmpty ? `${EMPTY_PANEL_WIDTH}px` : undefined,
             maxWidth: rightPanelEmpty ? undefined : `${MAX_PANEL_WIDTH}px`,
@@ -698,9 +720,6 @@ export default function LayoutManager({
             title="Ranges:"
           />
         </div>
-
-        {/* Spacer */}
-        <div className="flex-1" />
       </div>
 
       {/* SVG Link Overlay */}
