@@ -68,6 +68,10 @@ export default function LayoutManager({
   // Transitory box (only one at a time, for hover preview)
   const [transitoryBox, setTransitoryBox] = useState<FloatingBoxData | null>(null);
 
+  // Track scrolling state to suppress transitory boxes during scroll
+  const [isScrolling, setIsScrolling] = useState(false);
+  const scrollTimeoutRef = useRef<number | null>(null);
+
 
   // Groups containing persistent boxes
   const [groups, setGroups] = useState<FloatingBoxGroupData[]>([]);
@@ -343,8 +347,38 @@ export default function LayoutManager({
     };
   }, [hoveredItem, groups]);
 
+  // Effect to detect scrolling and suppress transitory boxes during scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolling(true);
+      setTransitoryBox(null);
+
+      // Clear any existing timeout
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+
+      // Reset scrolling state after scroll stops (150ms debounce)
+      scrollTimeoutRef.current = window.setTimeout(() => {
+        setIsScrolling(false);
+      }, 150);
+    };
+
+    window.addEventListener('scroll', handleScroll, true);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll, true);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Effect to create/update transitory box on hover
   useEffect(() => {
+    // Don't show transitory boxes while scrolling
+    if (isScrolling) return;
+
     const hoveredItemId = hoveredItem?.name ?? null;
     const hoveredItemDomId = hoveredItem?.id ?? null;
     const hoveredItemZone = hoveredItem?.hoverZone ?? null;
@@ -390,7 +424,7 @@ export default function LayoutManager({
     } else {
       setTransitoryBox(null);
     }
-  }, [hoveredItem, groups, dataService, handleNavigate]);
+  }, [hoveredItem, groups, dataService, handleNavigate, isScrolling]);
 
   // Close transitory box
   const handleCloseTransitory = useCallback(() => {

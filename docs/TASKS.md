@@ -8,15 +8,15 @@
 
 ## 📋 Upcoming Work (Ordered by Priority)
 
-### LinkOverlay fixes
-- Edge labels: show on hover; tooltip display needs improvement
-
 ### URLs as clickable links
 - Display URIs as clickable links in detail panels
 - Infrastructure already set up
 
 ### Item names as hover/links
 - In detail and relationship boxes, make all item references act like panel items
+
+### LinkOverlay fixes
+- Edge labels: show on hover; tooltip display needs improvement
 
 ---
 
