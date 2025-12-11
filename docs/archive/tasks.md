@@ -325,7 +325,7 @@ export function getAllElementTypeIds(): ElementTypeId[] {
 4. ✅ **Slot hover shows "No relationships found"** - Fixed by adding CLASS_SLOT/SLOT_RANGE edge support
 
 
-### ✅ Slot Data Consolidation - COMPLETE (Dec 2024)
+### ✅ Slot Data Consolidation - COMPLETE (Dec 2025)
 
 Consolidated slot data structure:
 - Classes now have `slots: SlotReference[]` instead of `attributes` dict
@@ -336,7 +336,7 @@ Consolidated slot data structure:
 
 LinkOverlay and RelationshipInfoBox now use graph-based queries directly. See [archive/tasks.md#phase-2-linkoverlay-migration](archive/tasks.md#phase-2-linkoverlay-migration) for details.
 
-**Step 4: Remove old getRelationships() methods** ✅ COMPLETE (Dec 2024)
+**Step 4: Remove old getRelationships() methods** ✅ COMPLETE (Dec 2025)
 - Deleted from ClassElement, EnumElement, SlotElement, VariableElement
 - Removed ClassSlot class (replaced by graph slot edges)
 - Removed `getRelationshipsForLinking()` from DataService
@@ -344,7 +344,7 @@ LinkOverlay and RelationshipInfoBox now use graph-based queries directly. See [a
 
 ---
 
-## Grouped/Collapsible Floating Panels ✅ MOSTLY COMPLETE (Dec 2024)
+## Grouped/Collapsible Floating Panels ✅ MOSTLY COMPLETE (Dec 2025)
 
 **Goal**: Replace cascade layout with two group containers (Details, Relationships) containing collapsible item boxes.
 
@@ -390,7 +390,7 @@ LinkOverlay and RelationshipInfoBox now use graph-based queries directly. See [a
 
 ---
 
-## Badge-Based Hover/Click Interaction ✅ COMPLETE (Dec 2024)
+## Badge-Based Hover/Click Interaction ✅ COMPLETE (Dec 2025)
 
 **Goal**: Replace complex timing-based hover with explicit badge/name hover areas
 
@@ -410,7 +410,7 @@ LinkOverlay and RelationshipInfoBox now use graph-based queries directly. See [a
 
 ---
 
-## Floating Box Issues ✅ COMPLETE (Dec 2024)
+## Floating Box Issues ✅ COMPLETE (Dec 2025)
 
 - Responsive stacked width
 - Transitory→persistent upgrade
@@ -424,4 +424,21 @@ LinkOverlay and RelationshipInfoBox now use graph-based queries directly. See [a
 - Fixed slots not showing in class details
 - Removed stacked mode entirely - all boxes now draggable
 - Fit-content sizing for all boxes
+
+---
+### Grouped/Collapsible Floating Panels ✅ **COMPLETE**
+
+**Goal**: Two group containers (Details, Relationships) with collapsible item boxes.
+
+**Completed**:
+- [x] Phases 1-4: Grouped floating panels with drag/resize
+- [x] Hover highlight: When hovering item with open box, highlight box + dim others + auto-expand
+- [x] Phase 5: Popout window support via `window.open()` + postMessage
+
+**Known issues** (tolerated for now):
+- Transitory box uses `pointer-events: none`, so hovering items behind it triggers new previews
+- Popout: if main window is at right edge of screen, popout may overlap and hide behind it (could improve positioning logic)
+- Popout: browsers may not honor request to keep focus on main window after opening popout
+
+---
 

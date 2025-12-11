@@ -8,22 +8,6 @@
 
 ## 📋 Upcoming Work (Ordered by Priority)
 
-### Grouped/Collapsible Floating Panels ✅ **COMPLETE**
-
-**Goal**: Two group containers (Details, Relationships) with collapsible item boxes.
-
-**Completed**:
-- [x] Phases 1-4: Grouped floating panels with drag/resize
-- [x] Hover highlight: When hovering item with open box, highlight box + dim others + auto-expand
-- [x] Phase 5: Popout window support via `window.open()` + postMessage
-
-**Known issues** (tolerated for now):
-- Transitory box uses `pointer-events: none`, so hovering items behind it triggers new previews
-- Popout: if main window is at right edge of screen, popout may overlap and hide behind it (could improve positioning logic)
-- Popout: browsers may not honor request to keep focus on main window after opening popout
-
----
-
 ### [sg] Improve main panel layout
 - Gutters between panels could shrink - use `justify-content: space-between` instead of hardcoded gap widths
 - Gutters need minimum width for links to be visible
