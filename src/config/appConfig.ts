@@ -224,8 +224,9 @@ export const APP_CONFIG = {
 
   // Feature flags (for development/testing)
   features: {
-    // Enable clickable element references (Range, class names, etc.) in detail panels
-    clickableElementRefs: false,
+    // Element references (Range, class names, etc.) in detail panels
+    elementRefClick: true,   // Click to open persistent detail box
+    elementRefHover: true,   // Hover to show transitory detail box
   },
 } as const;
 

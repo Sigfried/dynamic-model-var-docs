@@ -9,15 +9,16 @@
  * Uses DataService - never accesses model layer directly.
  * UI layer uses "item" terminology
  */
-import React from 'react';
+import React, { useId } from 'react';
 import type { DataService } from '../services/DataService';
-import { isLinkData, isElementRef, type ElementRef } from '../contracts/ComponentData';
+import { isLinkData, isElementRef, type ElementRef, type ItemHoverData } from '../contracts/ComponentData';
 import { APP_CONFIG } from '../config/appConfig';
 
 interface DetailContentProps {
   itemId?: string;
   dataService?: DataService;
   onNavigate?: (itemName: string, itemType: string) => void;
+  onItemHover?: (data: ItemHoverData | null) => void;
   onClose?: () => void;
   hideHeader?: boolean;  // Hide the item name header (when shown in FloatingBox header)
   hideCloseButton?: boolean;  // Hide the internal close button (when handled by FloatingBox)
@@ -27,10 +28,12 @@ export default function DetailContent({
   itemId,
   dataService,
   onNavigate,
+  onItemHover,
   onClose,
   hideHeader = false,
   hideCloseButton = false
 }: DetailContentProps) {
+  const baseId = useId();
   if (!itemId || !dataService) {
     return null; // Hide panel when nothing is selected
   }
@@ -113,7 +116,7 @@ export default function DetailContent({
                             key={cellIdx}
                             className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm"
                           >
-                            {renderCell(cell, onNavigate)}
+                            {renderCell(cell, `${baseId}-${idx}-${rowIdx}-${cellIdx}`, onNavigate, onItemHover)}
                           </td>
                         ))}
                       </tr>
@@ -147,24 +150,49 @@ function renderLink(text: string, url: string): React.ReactNode {
 }
 
 /**
- * Render a clickable element reference
+ * Render an interactive element reference (with click and/or hover)
  */
 function renderElementRef(
   ref: ElementRef,
-  onNavigate?: (itemName: string, itemType: string) => void
+  domId: string,
+  onNavigate?: (itemName: string, itemType: string) => void,
+  onItemHover?: (data: ItemHoverData | null) => void
 ): React.ReactNode {
-  if (!onNavigate) {
+  const clickEnabled = APP_CONFIG.features.elementRefClick && onNavigate;
+  const hoverEnabled = APP_CONFIG.features.elementRefHover && onItemHover;
+
+  // If neither click nor hover is enabled, return plain text
+  if (!clickEnabled && !hoverEnabled) {
     return ref.name;
   }
 
+  const handleMouseEnter = hoverEnabled ? () => {
+    onItemHover({
+      id: domId,
+      type: ref.type,
+      name: ref.name,
+      hoverZone: 'name'
+    });
+  } : undefined;
+
+  const handleMouseLeave = hoverEnabled ? () => {
+    onItemHover(null);
+  } : undefined;
+
+  const handleClick = clickEnabled ? () => {
+    onNavigate(ref.name, ref.type);
+  } : undefined;
+
   return (
-    <button
-      type="button"
-      onClick={() => onNavigate(ref.name, ref.type)}
-      className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer bg-transparent border-none p-0 font-inherit text-inherit text-left"
+    <span
+      id={domId}
+      onClick={handleClick}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className={`${clickEnabled || hoverEnabled ? 'text-blue-600 dark:text-blue-400 cursor-pointer' : ''} ${clickEnabled ? 'hover:underline' : ''}`}
     >
       {ref.name}
-    </button>
+    </span>
   );
 }
 
@@ -173,7 +201,9 @@ function renderElementRef(
  */
 function renderCell(
   cell: unknown,
-  onNavigate?: (itemName: string, itemType: string) => void
+  domId: string,
+  onNavigate?: (itemName: string, itemType: string) => void,
+  onItemHover?: (data: ItemHoverData | null) => void
 ): React.ReactNode {
   if (cell === null || cell === undefined) {
     return '';
@@ -186,11 +216,7 @@ function renderCell(
 
   // Handle ElementRef objects (references to other schema elements)
   if (isElementRef(cell)) {
-    if (APP_CONFIG.features.clickableElementRefs) {
-      return renderElementRef(cell, onNavigate);
-    }
-    // Feature off: just show the name as plain text
-    return cell.name;
+    return renderElementRef(cell, domId, onNavigate, onItemHover);
   }
 
   return String(cell);
