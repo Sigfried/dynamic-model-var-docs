@@ -14,6 +14,8 @@ After downloading bdchm.yaml, runs data pipeline:
 Usage:
   python download_source_data.py              # Download all files and run full pipeline
   python download_source_data.py --metadata-only   # Skip downloads, just regenerate schemas from existing bdchm.yaml
+  python download_source_data.py --check      # Check if repo sources are up to date
+  python download_source_data.py --update     # Update to latest commits and download
 """
 
 import sys
@@ -34,7 +36,7 @@ local_source_dir = "public/source_data"
 repo_sources = {
     "HM": {         # dependency_name
         "repo": "RTIInternational/NHLBI-BDC-DMC-HM",
-        "commit": "ac8cc23",
+        "commit": "6f555c5",
         "file_paths": [
           "src/bdchm/schema/bdchm.yaml"
         ],
@@ -44,6 +46,76 @@ repo_sources = {
         "file_name": "variable-specs-S1.tsv"
     }
 }
+
+
+def get_latest_commit(repo: str, branch: str = "main") -> str | None:
+    """
+    Get the latest commit SHA from a GitHub repository.
+
+    Args:
+        repo: Repository in format "owner/repo"
+        branch: Branch name (default: main)
+
+    Returns:
+        Short commit SHA (7 chars) or None if failed
+    """
+    api_url = f"https://api.github.com/repos/{repo}/commits/{branch}"
+    try:
+        req = request.Request(api_url, headers={"Accept": "application/vnd.github.v3+json"})
+        with request.urlopen(req) as response:
+            data = json.loads(response.read().decode())
+            return data["sha"][:7]
+    except Exception as e:
+        print(f"  ✗ Failed to get latest commit for {repo}: {e}", file=sys.stderr)
+        return None
+
+
+def check_for_updates() -> dict[str, tuple[str, str]]:
+    """
+    Check if any repo sources have newer commits available.
+
+    Returns:
+        Dict of {dep_name: (current_commit, latest_commit)} for outdated repos
+    """
+    outdated = {}
+    for dep_name, config in repo_sources.items():
+        if "repo" not in config:
+            continue
+        repo = config["repo"]
+        current = config["commit"]
+        latest = get_latest_commit(repo)
+        if latest and latest != current:
+            outdated[dep_name] = (current, latest)
+    return outdated
+
+
+def update_commit_in_script(dep_name: str, new_commit: str) -> bool:
+    """
+    Update the commit hash for a dependency in this script file.
+
+    Args:
+        dep_name: Dependency name (e.g., "HM")
+        new_commit: New commit hash to use
+
+    Returns:
+        True if successful
+    """
+    script_path = Path(__file__)
+    content = script_path.read_text()
+
+    # Find and replace the commit for this dependency
+    # Look for pattern: "dep_name": { ... "commit": "...", ...
+    import re
+    pattern = rf'("{dep_name}":\s*\{{\s*[^}}]*"commit":\s*")[a-f0-9]+"'
+    replacement = rf'\g<1>{new_commit}"'
+    new_content, count = re.subn(pattern, replacement, content, flags=re.DOTALL)
+
+    if count == 0:
+        print(f"  ✗ Could not find commit for {dep_name} in script", file=sys.stderr)
+        return False
+
+    script_path.write_text(new_content)
+    return True
 
 
 def download_file(url: str, output_path: Path, normalize_line_endings: bool = False) -> bool:
@@ -204,7 +276,52 @@ Examples:
         action='store_true',
         help='Skip downloads and only regenerate schemas (bdchm.expanded.json → bdchm.processed.json) from existing bdchm.yaml'
     )
+    parser.add_argument(
+        '--check',
+        action='store_true',
+        help='Check if repo sources are up to date with their remote repositories'
+    )
+    parser.add_argument(
+        '--update',
+        action='store_true',
+        help='Update to latest commits and download (modifies this script)'
+    )
     args = parser.parse_args()
+
+    # Handle --check flag
+    if args.check:
+        print("Checking for updates...")
+        outdated = check_for_updates()
+        if outdated:
+            print("\nUpdates available:")
+            for dep_name, (current, latest) in outdated.items():
+                repo = repo_sources[dep_name]["repo"]
+                print(f"  {dep_name} ({repo}): {current} → {latest}")
+            print("\nRun with --update to update and download.")
+            return 1
+        else:
+            print("All repo sources are up to date.")
+            return 0
+
+    # Handle --update flag
+    if args.update:
+        print("Checking for updates...")
+        outdated = check_for_updates()
+        if not outdated:
+            print("All repo sources are up to date.")
+        else:
+            print("\nUpdating commits:")
+            for dep_name, (current, latest) in outdated.items():
+                repo = repo_sources[dep_name]["repo"]
+                print(f"  {dep_name} ({repo}): {current} → {latest}")
+                if update_commit_in_script(dep_name, latest):
+                    print(f"    ✓ Updated in script")
+                    # Update in-memory config for this run
+                    repo_sources[dep_name]["commit"] = latest
+                else:
+                    print(f"    ✗ Failed to update")
+                    return 1
+        # Continue to download with updated commits
 
     project_root = Path(__file__).parent.parent
     source_dir = project_root / local_source_dir

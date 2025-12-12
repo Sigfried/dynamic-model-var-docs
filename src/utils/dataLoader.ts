@@ -122,12 +122,31 @@ function transformWithMapping<T>(
   return result as T;
 }
 
-// Expected fields for each type - only fields we actually handle in the UI
-// Unexpected fields trigger warnings until we incorporate them
-const EXPECTED_SLOT_FIELDS = ['id', 'name', 'range', 'description', 'slot_uri', 'slot_url', 'identifier', 'required', 'multivalued'];
-const EXPECTED_ENUM_FIELDS = ['id', 'name', 'description', 'permissible_values'];
-const EXPECTED_TYPE_FIELDS = ['id', 'name', 'uri', 'uri_url', 'base', 'description', 'exact_mappings', 'close_mappings', 'broad_mappings'];
-const EXPECTED_CLASS_FIELDS = ['id', 'name', 'description', 'parent', 'abstract', 'slots'];
+// Expected fields for each type - fields we handle OR intentionally ignore
+// Unexpected fields trigger warnings until we incorporate or explicitly ignore them
+const EXPECTED_SLOT_FIELDS = [
+  // Used in UI
+  'id', 'name', 'range', 'description', 'slot_uri', 'slot_url', 'identifier', 'required', 'multivalued',
+  // Used internally
+  'global', 'overrides',
+  // Ignored: alias=name, from_schema=constant, designates_type=rare, domain_of=redundant, owner=arbitrary
+  'alias', 'from_schema', 'designates_type', 'domain_of', 'owner',
+  // TODO: implement display for these
+  'comments', 'examples', 'inlined', 'inlined_as_list', 'unit',
+];
+const EXPECTED_ENUM_FIELDS = [
+  'id', 'name', 'description', 'permissible_values',
+  // TODO: implement display for these
+  'comments', 'inherits', 'include', 'parent', 'reachable_from', 'see_also',
+];
+const EXPECTED_TYPE_FIELDS = [
+  'id', 'name', 'uri', 'uri_url', 'base', 'description', 'exact_mappings', 'close_mappings', 'broad_mappings',
+  'exact_mappings_urls',  // transformed from exact_mappings CURIEs
+];
+const EXPECTED_CLASS_FIELDS = [
+  'id', 'name', 'description', 'parent', 'abstract', 'slots',
+  'class_url',  // transformed from class_uri
+];
 const EXPECTED_VARIABLE_FIELDS = ['maps_to', 'variableLabel', 'dataType', 'ucumUnit', 'curie', 'variableDescription'];
 
 // Collect unexpected fields during loading, report once at end

@@ -1,6 +1,6 @@
 {
   "name": "bdchm",
-  "description": "This is the harmonized data model for use in the BioData Catalyst project.\nThis line is junk just to test json generation on push. Will delete it after \n.github/workflows/deploy_bdchm_docs.yml is working.",
+  "description": "This is the harmonized data model for use in the BioData Catalyst project.",
   "title": "BioData Catalyst Harmonized Model (bdchm)",
   "see_also": [
     "https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/"
@@ -3784,6 +3784,21 @@
         "source_ontology": "bioregistry:icd10cm"
       }
     },
+    "ResearchProjectTypeEnum": {
+      "name": "ResearchProjectTypeEnum",
+      "description": "Values describing types of research projects.",
+      "from_schema": "https://w3id.org/bdchm",
+      "permissible_values": {
+        "CONSORTIUM": {
+          "text": "CONSORTIUM",
+          "description": "Consortium"
+        },
+        "Study": {
+          "text": "Study",
+          "description": "Study"
+        }
+      }
+    },
     "BaseObservationTypeEnum": {
       "name": "BaseObservationTypeEnum",
       "description": "Values describing the types of an Observation.",
@@ -4786,9 +4801,20 @@
         },
         "research_project_type": {
           "name": "research_project_type",
-          "description": "The 'type' of ResearchStudy represented (e.g. a broad-based Program like 'CPTAC' or a more focused Project like 'CPTAC PDAC Discovery Study')",
+          "description": "The 'type' of ResearchStudy represented by this object (e.g. 'Consortium', 'Study')",
           "from_schema": "https://w3id.org/bdchm",
           "alias": "research_project_type",
+          "owner": "ResearchStudy",
+          "domain_of": [
+            "ResearchStudy"
+          ],
+          "range": "ResearchProjectTypeEnum"
+        },
+        "program": {
+          "name": "program",
+          "description": "The name of the overarching research program under which this ResearchStudy is conducted (e.g. 'Heartshare', 'TOPMed', etc.)",
+          "from_schema": "https://w3id.org/bdchm",
+          "alias": "program",
           "owner": "ResearchStudy",
           "domain_of": [
             "ResearchStudy"
@@ -8371,9 +8397,6 @@
           "name": "category",
           "description": "The general category of observation described",
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_Observation_category"
-          ],
           "alias": "category",
           "owner": "DimensionalObservation",
           "domain_of": [
@@ -8418,9 +8441,6 @@
             "This may be a type of observational, measurement, experimental, or computational method specifying how to generate data (e.g. \"manual counting\", \"bright field microscopy\",). Or a Guideline or SOP specifying how to interpret data and/or encode the result of an  Observation (e.g. a Cancer Staging system such as that defined by the AJCC, or variant interpretation guideline such as that provided by the ACMG)."
           ],
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_Observation_method_type"
-          ],
           "alias": "method_type",
           "owner": "DimensionalObservation",
           "domain_of": [
@@ -8719,9 +8739,6 @@
           "name": "category",
           "description": "The general category of observation set described",
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_ObservationSet_category"
-          ],
           "alias": "category",
           "owner": "DimensionalObservationSet",
           "domain_of": [
@@ -8770,9 +8787,6 @@
             "This may be a type of observational, measurement, experimental, or computational method specifying how to generate data (e.g. \"manual counting\", \"bright field microscopy\"). Or a Guideline or SOP specifying how to interpret data and/or encode the result of an  Observation (e.g. a Cancer Staging system such as that defined by the AJCC, or variant interpretation guideline such as that provided by the ACMG)."
           ],
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_ObservationSet_method_type"
-          ],
           "alias": "method_type",
           "owner": "DimensionalObservationSet",
           "domain_of": [
@@ -9449,9 +9463,6 @@
           "name": "document_type",
           "description": "The high-level type of the document (e.g.  'publication', 'pathology report')",
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_Document_document_type"
-          ],
           "alias": "document_type",
           "owner": "Document",
           "domain_of": [
@@ -9657,9 +9668,6 @@
             }
           ],
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_Specimen_specimen_type"
-          ],
           "alias": "specimen_type",
           "owner": "Specimen",
           "domain_of": [
@@ -9693,9 +9701,6 @@
             }
           ],
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_Specimen_analyte_type"
-          ],
           "alias": "analyte_type",
           "owner": "Specimen",
           "domain_of": [
@@ -9938,9 +9943,6 @@
             }
           ],
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_Specimen_cellular_composition_type"
-          ],
           "alias": "cellular_composition_type",
           "owner": "Specimen",
           "domain_of": [
@@ -9981,9 +9983,6 @@
             }
           ],
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_Specimen_section_location"
-          ],
           "alias": "section_location",
           "owner": "Specimen",
           "domain_of": [
@@ -10124,9 +10123,6 @@
             }
           ],
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_SpecimenContainer_container_type"
-          ],
           "alias": "container_type",
           "owner": "SpecimenContainer",
           "domain_of": [
@@ -10409,9 +10405,6 @@
             }
           ],
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_SpecimenCreationActivity_derivation_method_type"
-          ],
           "alias": "derivation_method_type",
           "owner": "SpecimenCreationActivity",
           "domain_of": [
@@ -10640,9 +10633,6 @@
           "name": "category",
           "description": "The general category of observation described",
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_Observation_category"
-          ],
           "alias": "category",
           "owner": "SpecimenQualityObservation",
           "domain_of": [
@@ -10687,9 +10677,6 @@
             "This may be a type of observational, measurement, experimental, or computational method specifying how to generate data (e.g. \"manual counting\", \"bright field microscopy\",). Or a Guideline or SOP specifying how to interpret data and/or encode the result of an  Observation (e.g. a Cancer Staging system such as that defined by the AJCC, or variant interpretation guideline such as that provided by the ACMG)."
           ],
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_Observation_method_type"
-          ],
           "alias": "method_type",
           "owner": "SpecimenQualityObservation",
           "domain_of": [
@@ -10987,9 +10974,6 @@
           "name": "category",
           "description": "The general category of observation described",
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_Observation_category"
-          ],
           "alias": "category",
           "owner": "SpecimenQuantityObservation",
           "domain_of": [
@@ -11034,9 +11018,6 @@
             "This may be a type of observational, measurement, experimental, or computational method specifying how to generate data (e.g. \"manual counting\", \"bright field microscopy\",). Or a Guideline or SOP specifying how to interpret data and/or encode the result of an  Observation (e.g. a Cancer Staging system such as that defined by the AJCC, or variant interpretation guideline such as that provided by the ACMG)."
           ],
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_Observation_method_type"
-          ],
           "alias": "method_type",
           "owner": "SpecimenQuantityObservation",
           "domain_of": [
@@ -11367,9 +11348,6 @@
             }
           ],
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_SpecimenProcessingActivity_method_type"
-          ],
           "alias": "method_type",
           "owner": "SpecimenProcessingActivity",
           "domain_of": [
@@ -11571,9 +11549,6 @@
             }
           ],
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_SpecimenStorageActivity_method_type"
-          ],
           "alias": "method_type",
           "owner": "SpecimenStorageActivity",
           "domain_of": [
@@ -11870,9 +11845,6 @@
             }
           ],
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_BiologicProduct_product_type"
-          ],
           "alias": "product_type",
           "owner": "BiologicProduct",
           "domain_of": [
@@ -12022,9 +11994,6 @@
             }
           ],
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_Substance_substance_type"
-          ],
           "alias": "substance_type",
           "owner": "Substance",
           "domain_of": [
@@ -12052,9 +12021,6 @@
             }
           ],
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_Substance_role"
-          ],
           "alias": "role",
           "owner": "Substance",
           "domain_of": [
@@ -12287,9 +12253,6 @@
             }
           ],
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_BodySite_site"
-          ],
           "alias": "site",
           "owner": "BodySite",
           "domain_of": [
@@ -12314,9 +12277,6 @@
             }
           ],
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_BodySite_qualifier"
-          ],
           "alias": "qualifier",
           "owner": "BodySite",
           "domain_of": [
@@ -12405,9 +12365,6 @@
           "name": "category",
           "description": "The general category of observation set described",
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_ObservationSet_category"
-          ],
           "alias": "category",
           "owner": "ObservationSet",
           "domain_of": [
@@ -12457,9 +12414,6 @@
             "This may be a type of observational, measurement, experimental, or computational method specifying how to generate data (e.g. \"manual counting\", \"bright field microscopy\"). Or a Guideline or SOP specifying how to interpret data and/or encode the result of an  Observation (e.g. a Cancer Staging system such as that defined by the AJCC, or variant interpretation guideline such as that provided by the ACMG)."
           ],
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_ObservationSet_method_type"
-          ],
           "alias": "method_type",
           "owner": "ObservationSet",
           "domain_of": [
@@ -12665,9 +12619,6 @@
           "name": "category",
           "description": "The general category of observation described",
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_Observation_category"
-          ],
           "alias": "category",
           "owner": "Observation",
           "domain_of": [
@@ -12712,9 +12663,6 @@
             "This may be a type of observational, measurement, experimental, or computational method specifying how to generate data (e.g. \"manual counting\", \"bright field microscopy\",). Or a Guideline or SOP specifying how to interpret data and/or encode the result of an  Observation (e.g. a Cancer Staging system such as that defined by the AJCC, or variant interpretation guideline such as that provided by the ACMG)."
           ],
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_Observation_method_type"
-          ],
           "alias": "method_type",
           "owner": "Observation",
           "domain_of": [
@@ -13069,9 +13017,6 @@
           "name": "category",
           "description": "The general category of observation set described",
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_ObservationSet_category"
-          ],
           "alias": "category",
           "owner": "MeasurementObservationSet",
           "domain_of": [
@@ -13121,9 +13066,6 @@
             "This may be a type of observational, measurement, experimental, or computational method specifying how to generate data (e.g. \"manual counting\", \"bright field microscopy\"). Or a Guideline or SOP specifying how to interpret data and/or encode the result of an  Observation (e.g. a Cancer Staging system such as that defined by the AJCC, or variant interpretation guideline such as that provided by the ACMG)."
           ],
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_ObservationSet_method_type"
-          ],
           "alias": "method_type",
           "owner": "MeasurementObservationSet",
           "domain_of": [
@@ -13351,9 +13293,6 @@
           "name": "category",
           "description": "The general category of observation described",
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_Observation_category"
-          ],
           "alias": "category",
           "owner": "MeasurementObservation",
           "domain_of": [
@@ -13378,9 +13317,6 @@
             "This may be a type of observational, measurement, experimental, or computational method specifying how to generate data (e.g. \"manual counting\", \"bright field microscopy\",). Or a Guideline or SOP specifying how to interpret data and/or encode the result of an  Observation (e.g. a Cancer Staging system such as that defined by the AJCC, or variant interpretation guideline such as that provided by the ACMG)."
           ],
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_Observation_method_type"
-          ],
           "alias": "method_type",
           "owner": "MeasurementObservation",
           "domain_of": [
@@ -13683,9 +13619,6 @@
           "name": "category",
           "description": "The general category of observation set described",
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_ObservationSet_category"
-          ],
           "alias": "category",
           "owner": "SdohObservationSet",
           "domain_of": [
@@ -13735,9 +13668,6 @@
             "This may be a type of observational, measurement, experimental, or computational method specifying how to generate data (e.g. \"manual counting\", \"bright field microscopy\"). Or a Guideline or SOP specifying how to interpret data and/or encode the result of an  Observation (e.g. a Cancer Staging system such as that defined by the AJCC, or variant interpretation guideline such as that provided by the ACMG)."
           ],
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_ObservationSet_method_type"
-          ],
           "alias": "method_type",
           "owner": "SdohObservationSet",
           "domain_of": [
@@ -13942,9 +13872,6 @@
           "name": "category",
           "description": "The general category of observation described",
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_Observation_category"
-          ],
           "alias": "category",
           "owner": "SdohObservation",
           "domain_of": [
@@ -13989,9 +13916,6 @@
             "This may be a type of observational, measurement, experimental, or computational method specifying how to generate data (e.g. \"manual counting\", \"bright field microscopy\",). Or a Guideline or SOP specifying how to interpret data and/or encode the result of an  Observation (e.g. a Cancer Staging system such as that defined by the AJCC, or variant interpretation guideline such as that provided by the ACMG)."
           ],
           "from_schema": "https://w3id.org/bdchm",
-          "values_from": [
-            "crdch:enum_CRDCH_Observation_method_type"
-          ],
           "alias": "method_type",
           "owner": "SdohObservation",
           "domain_of": [

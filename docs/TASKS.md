@@ -33,19 +33,19 @@
 
  | Field              | Count          | Decision                                                                     | Notes                                                                                                           |
  |--------------------|----------------|------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
- | `alias`            | 180/180 (100%) | check if it is different from name and report so we deal with it then        | Same as name (ex: `id`→`id`, `species`→`species`)                                                               |
+ | `alias`            | 181/181 (100%) | **IGNORE** - all same as name (verified)                                      | Same as name (ex: `id`→`id`, `species`→`species`)                                                               |
  | `comments`         | 25/180 (14%)   | include in details under description                                         | Array of strings. ex: `days_supply`="The field should be left empty if..."                                      |
  | `designates_type`  | 1/180 (0.6%)   | ignore but leave note to come back to this if generalizing app               | Only `type` slot has this (=true)                                                                               |
  | `domain_of`        | 180/180 (100%) | can this data replace data in "Used By Classes"?                             | Array of class names that use this slot. ex: `id`→`['Entity', 'Person', ...]`                                   |
  | `examples`         | 16/180 (9%)    | include under comments                                                       | Array of {value} objects. ex: `specimen_type`=[{value:'Fresh Specimen'},...]                                    |
  | `from_schema`      | 180/180 (100%) | ignore unless it ever has another value                                      | Always `https://w3id.org/bdchm` - schema URL                                                                    |
- | `global`           | 7/180 (4%)     | this is added by us i believe and used for Slots table "Source" col          | Boolean. Slots: id, identity, associated_participant, entries, derived_product, value, member_of_research_study |
+ | `global`           | 7/181 (4%)     | **ALREADY USED** - just missing from EXPECTED_SLOT_FIELDS                     | Boolean. Slots: id, identity, associated_participant, entries, derived_product, value, member_of_research_study |
  | `inlined`          | 1/180 (0.6%)   | for this and inlined_as_list add as property if present. see below           | Only `entries` slot (=true)                                                                                     |
  | `inlined_as_list`  | 4/180 (2%)     |                                                                              | parent_specimen, derived_product, duration, +1                                                                  |
- | `overrides`        | 10/180 (6%)    | this is being used, right? i don't know why it's not in EXPECTED_SLOT_FIELDS | String (slot name being overridden). ex: `value`→`value` (10 different `value` slots)                           |
+ | `overrides`        | 10/181 (6%)    | **ALREADY USED** - just missing from EXPECTED_SLOT_FIELDS                     | String (slot name being overridden). ex: `value`→`value` (10 different `value` slots)                           |
  | `owner`            | 180/180 (100%) | see below                                                                    | Class that defines this slot. ex: `id`→`Entity`, `species`→`Person`                                             |
  | `unit`             | 12/180 (7%)    | this one is weird. i need to ask team about it                               | Object with ucum_code. ex: `age_at_death`={ucum_code:'d'}                                                       |
- | `values_from`      | 16/180 (9%)    | include as property                                                          | Array of enum references. ex: `category`→['crdch:enum_CRDCH_Observation_category']                              |
+ | `values_from`      | 0/181 (0%)     | **GONE** in new data - removed from schema                                    | Was: Array of enum references                                                                                   |
 
 - **inlined/inlined_as_list**: there's some [explanation here](https://linkml.io/linkml/schemas/inlining.html) but i don't really understand it. i probably should, but this is especially information for
   people writing ingestion or application code based on this schema. we need a way of conveying to them how they are supposed to represent the data based on these fields.
@@ -69,13 +69,13 @@
 
  | Field                 | Count     | Decision                        | Notes                                                  |
  |-----------------------|-----------|---------------------------------|--------------------------------------------------------|
- | `exact_mappings_urls` | 5/7 (71%) | it shows up in the type details | Array of URLs. ex: `string`→['http://schema.org/Text'] |
+ | `exact_mappings_urls` | 5/7 (71%) | **ALREADY USED** - expanded from `exact_mappings` CURIEs, just missing from expected | Array of URLs. ex: `string`→['http://schema.org/Text'] |
 
 ##### ClassInput (51 total classes)
 
  | Field       | Count     | Decision                                                                                     | Notes                                             |
  |-------------|-----------|----------------------------------------------------------------------------------------------|---------------------------------------------------|
- | `class_url` | 1/51 (2%) | i don't know where this is coming from. it doesn't appear in bdchm.yaml or in bdchm.expanded | URL string. Only Entity→'http://schema.org/Thing' |
+ | `class_url` | 1/51 (2%) | **Found**: comes from `class_uri: schema:Thing` in YAML, expanded by transform_schema | URL string. Only Entity→'http://schema.org/Thing' |
 
 ---
 ### render markdown in schema fields
@@ -141,6 +141,10 @@
 
 ### Animation library
 - Smooth animations for various interactions
+
+### Initial render performance
+- Chrome warning: `requestAnimationFrame handler took 75ms`
+- Likely from element tree or link overlay calculations on page load
 
 ### Viewport culling for links
 - Don't show links when both endpoints off screen
