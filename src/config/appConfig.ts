@@ -221,6 +221,12 @@ export const APP_CONFIG = {
     // Default size uses floatingGroups percentages if group has no size
     baseFontSize: '20px',      // Base font size for popout content
   },
+
+  // Feature flags (for development/testing)
+  features: {
+    // Enable clickable element references (Range, class names, etc.) in detail panels
+    clickableElementRefs: false,
+  },
 } as const;
 
 // ============================================================================

@@ -22,7 +22,8 @@ import { type SchemaGraph } from './SchemaTypes';
 import type {
   DetailSection,
   DetailData,
-  LinkData
+  LinkData,
+  ElementRef
 } from '../contracts/ComponentData';
 import { APP_CONFIG } from '../config/appConfig';
 const {elementTypes, } = APP_CONFIG;
@@ -49,6 +50,18 @@ export function initializeGraphReferences(
   _elementLookup: Map<string, Element>  // Kept for API compatibility
 ): void {
   globalGraph = graph;
+}
+
+/**
+ * Get element type from global graph by name.
+ * Returns the type string or undefined if not found.
+ */
+function getElementType(name: string): string | undefined {
+  if (!globalGraph || !globalGraph.hasNode(name)) {
+    return undefined;
+  }
+  const attrs = globalGraph.getNodeAttributes(name);
+  return attrs?.type;
 }
 
 // Base abstract class for all element types
@@ -564,7 +577,10 @@ export class EnumElement extends Range {
     // Used By Classes section
     const usedByClasses = this.getUsedByClasses();
     if (usedByClasses.length > 0) {
-      const classList = usedByClasses.map(className => [className]);
+      // Make class names clickable
+      const classList = usedByClasses.map(className => [
+        { name: className, type: 'class' } as ElementRef
+      ]);
       sections.push({
         name: `Used By Classes (${usedByClasses.length})`,
         tableHeadings: ['Class Name'],
@@ -758,9 +774,14 @@ export class SlotElement extends Element {
     const sections: DetailSection[] = [];
 
     // Slot Properties section
-    const properties: [string, string | LinkData][] = [];
+    const properties: [string, string | LinkData | ElementRef][] = [];
     if (this.range) {
-      properties.push(['Range', this.range]);
+      // Make range clickable if we can determine its type
+      const rangeType = getElementType(this.range);
+      const rangeValue: string | ElementRef = rangeType
+        ? { name: this.range, type: rangeType }
+        : this.range;
+      properties.push(['Range', rangeValue]);
     }
     if (this.required !== undefined) {
       properties.push(['Required', this.required ? 'Yes' : 'No']);
@@ -790,7 +811,10 @@ export class SlotElement extends Element {
     // Used By Classes section
     const usedByClasses = this.getUsedByClasses();
     if (usedByClasses.length > 0) {
-      const classList = usedByClasses.map(className => [className]);
+      // Make class names clickable
+      const classList = usedByClasses.map(className => [
+        { name: className, type: 'class' } as ElementRef
+      ]);
       sections.push({
         name: `Used By Classes (${usedByClasses.length})`,
         tableHeadings: ['Class Name'],

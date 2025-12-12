@@ -11,7 +11,8 @@
  */
 import React from 'react';
 import type { DataService } from '../services/DataService';
-import { isLinkData } from '../contracts/ComponentData';
+import { isLinkData, isElementRef, type ElementRef } from '../contracts/ComponentData';
+import { APP_CONFIG } from '../config/appConfig';
 
 interface DetailContentProps {
   itemId?: string;
@@ -25,7 +26,7 @@ interface DetailContentProps {
 export default function DetailContent({
   itemId,
   dataService,
-  onNavigate: _onNavigate,
+  onNavigate,
   onClose,
   hideHeader = false,
   hideCloseButton = false
@@ -112,7 +113,7 @@ export default function DetailContent({
                             key={cellIdx}
                             className="border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm"
                           >
-                            {renderCell(cell)}
+                            {renderCell(cell, onNavigate)}
                           </td>
                         ))}
                       </tr>
@@ -128,8 +129,9 @@ export default function DetailContent({
   );
 }
 
+
 /**
- * Render a clickable link
+ * Render a clickable external link
  */
 function renderLink(text: string, url: string): React.ReactNode {
   return (
@@ -145,16 +147,50 @@ function renderLink(text: string, url: string): React.ReactNode {
 }
 
 /**
- * Render a cell value, handling LinkData objects and plain text
+ * Render a clickable element reference
  */
-function renderCell(cell: unknown): React.ReactNode {
+function renderElementRef(
+  ref: ElementRef,
+  onNavigate?: (itemName: string, itemType: string) => void
+): React.ReactNode {
+  if (!onNavigate) {
+    return ref.name;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => onNavigate(ref.name, ref.type)}
+      className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer bg-transparent border-none p-0 font-inherit text-inherit text-left"
+    >
+      {ref.name}
+    </button>
+  );
+}
+
+/**
+ * Render a cell value, handling LinkData, ElementRef, and plain text
+ */
+function renderCell(
+  cell: unknown,
+  onNavigate?: (itemName: string, itemType: string) => void
+): React.ReactNode {
   if (cell === null || cell === undefined) {
     return '';
   }
 
-  // Handle LinkData objects (CURIE with URL)
+  // Handle LinkData objects (CURIE with external URL)
   if (isLinkData(cell)) {
     return renderLink(cell.text, cell.url);
+  }
+
+  // Handle ElementRef objects (references to other schema elements)
+  if (isElementRef(cell)) {
+    if (APP_CONFIG.features.clickableElementRefs) {
+      return renderElementRef(cell, onNavigate);
+    }
+    // Feature off: just show the name as plain text
+    return cell.name;
   }
 
   return String(cell);

@@ -144,7 +144,7 @@ export default function LayoutManager({
             metadata,
             content: isRelationship
               ? <RelationshipInfoContent itemId={itemId} dataService={dataService} onNavigate={(name, section) => navigateRef.current?.(name, section)} />
-              : <DetailContent itemId={itemId} dataService={dataService} hideHeader={true} />,
+              : <DetailContent itemId={itemId} dataService={dataService} hideHeader={true} onNavigate={(name, type) => navigateRef.current?.(name, type)} />,
             itemId,
             isCollapsed: false  // Restored boxes start expanded (could use heuristic later)
           };
@@ -304,7 +304,7 @@ export default function LayoutManager({
       metadata,
       content: isRelationship
         ? <RelationshipInfoContent itemId={itemId} dataService={dataService} onNavigate={handleNavigate} />
-        : <DetailContent itemId={itemId} dataService={dataService} hideHeader={true} />,
+        : <DetailContent itemId={itemId} dataService={dataService} hideHeader={true} onNavigate={handleNavigate} />,
       itemId,
       isCollapsed: false
     };
@@ -417,7 +417,7 @@ export default function LayoutManager({
         metadata,
         content: isRelationship
           ? <RelationshipInfoContent itemId={hoveredItemId} dataService={dataService} onNavigate={handleNavigate} />
-          : <DetailContent itemId={hoveredItemId} dataService={dataService} hideHeader={true} />,
+          : <DetailContent itemId={hoveredItemId} dataService={dataService} hideHeader={true} onNavigate={handleNavigate} />,
         itemId: hoveredItemId,
         referenceElementId: hoveredItemDomId,
       });

@@ -70,6 +70,7 @@ function PopoutBox({ box, dataService, onClose, onToggleCollapse }: PopoutBoxPro
         itemId={box.itemId}
         dataService={dataService}
         hideHeader={true}
+        onNavigate={() => {}} // Navigation from popout not supported yet
       />
     );
   };

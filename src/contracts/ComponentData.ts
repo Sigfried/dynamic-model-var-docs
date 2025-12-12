@@ -186,7 +186,7 @@ export interface FloatingBoxGroupData {
 // ============================================================================
 
 /**
- * LinkData - Represents a clickable link in detail content
+ * LinkData - Represents a clickable external link in detail content
  * Used for CURIEs that have full URL resolutions (e.g., "schema:identifier" → "http://schema.org/identifier")
  */
 export interface LinkData {
@@ -195,10 +195,27 @@ export interface LinkData {
 }
 
 /**
+ * ElementRef - Represents a reference to another element in the schema
+ * Used for Range values, class names in "Used By Classes", etc.
+ * Clicking navigates to that element's details.
+ */
+export interface ElementRef {
+  name: string;  // Element name (e.g., "uriorcurie", "Specimen")
+  type: string;  // Element type (e.g., "type", "class", "enum", "slot")
+}
+
+/**
  * Type guard to check if a value is LinkData
  */
 export function isLinkData(value: unknown): value is LinkData {
-  return typeof value === 'object' && value !== null && 'text' in value && 'url' in value;
+  return typeof value === 'object' && value !== null && 'text' in value && 'url' in value && !('type' in value);
+}
+
+/**
+ * Type guard to check if a value is ElementRef
+ */
+export function isElementRef(value: unknown): value is ElementRef {
+  return typeof value === 'object' && value !== null && 'name' in value && 'type' in value && !('url' in value);
 }
 
 /**
