@@ -383,3 +383,45 @@ describe('DetailContent -Header visibility', () => {
     expect(screen.getByText('Test')).toBeInTheDocument();
   });
 });
+
+describe('DetailContent - URI linkification', () => {
+  test('should render CURIE with URL as clickable link', () => {
+    const slotData: SlotData = {
+      id: 'urlSlot',
+      name: 'urlSlot',
+      description: 'Test slot with URL',
+      slotUri: 'schema:identifier',
+      slotUrl: 'http://schema.org/identifier',
+      range: 'string'
+    };
+    const slotElement = new SlotElement('urlSlot', slotData);
+    const slotDataService = createMockDataService(slotElement);
+
+    render(<DetailContent itemId="urlSlot" dataService={slotDataService} />);
+
+    // CURIE is the link text, URL is the href
+    const link = screen.getByRole('link', { name: 'schema:identifier' });
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute('href', 'http://schema.org/identifier');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+
+  test('should render CURIE without URL as plain text', () => {
+    const slotData: SlotData = {
+      id: 'noUrlSlot',
+      name: 'noUrlSlot',
+      description: 'Plain text description',
+      slotUri: 'schema:identifier',  // CURIE without slotUrl
+      range: 'string'
+    };
+    const slotElement = new SlotElement('noUrlSlot', slotData);
+    const slotDataService = createMockDataService(slotElement);
+
+    render(<DetailContent itemId="noUrlSlot" dataService={slotDataService} />);
+
+    // CURIE should be rendered as text, not a link (no slotUrl provided)
+    expect(screen.getByText('schema:identifier')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'schema:identifier' })).not.toBeInTheDocument();
+  });
+});

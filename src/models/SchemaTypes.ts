@@ -36,7 +36,8 @@ export interface SlotData {
   name: string;              // Display name (same as id for base slots, base name for overrides)
   range?: string;
   description?: string;
-  slotUri?: string;          // transformed from slot_uri
+  slotUri?: string;          // CURIE (e.g., "schema:identifier")
+  slotUrl?: string;          // Full URL (e.g., "http://schema.org/identifier")
   identifier?: boolean;
   required?: boolean;
   multivalued?: boolean;
@@ -61,7 +62,8 @@ export interface EnumData {
  * Transformed from TypeDTO with camelCase
  */
 export interface TypeData {
-  uri: string;
+  uri: string;               // CURIE (e.g., "xsd:string")
+  uriUrl?: string;           // Full URL (e.g., "http://www.w3.org/2001/XMLSchema#string")
   base: string;
   repr?: string;
   description?: string;

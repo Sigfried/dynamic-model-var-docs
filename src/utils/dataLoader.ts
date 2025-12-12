@@ -124,9 +124,9 @@ function transformWithMapping<T>(
 
 // Expected fields for each type - only fields we actually handle in the UI
 // Unexpected fields trigger warnings until we incorporate them
-const EXPECTED_SLOT_FIELDS = ['id', 'name', 'range', 'description', 'slot_uri', 'identifier', 'required', 'multivalued'];
+const EXPECTED_SLOT_FIELDS = ['id', 'name', 'range', 'description', 'slot_uri', 'slot_url', 'identifier', 'required', 'multivalued'];
 const EXPECTED_ENUM_FIELDS = ['id', 'name', 'description', 'permissible_values'];
-const EXPECTED_TYPE_FIELDS = ['id', 'name', 'uri', 'base', 'description', 'exact_mappings', 'close_mappings', 'broad_mappings'];
+const EXPECTED_TYPE_FIELDS = ['id', 'name', 'uri', 'uri_url', 'base', 'description', 'exact_mappings', 'close_mappings', 'broad_mappings'];
 const EXPECTED_CLASS_FIELDS = ['id', 'name', 'description', 'parent', 'abstract', 'slots'];
 const EXPECTED_VARIABLE_FIELDS = ['maps_to', 'variableLabel', 'dataType', 'ucumUnit', 'curie', 'variableDescription'];
 
@@ -152,6 +152,7 @@ function transformSlot(input: SlotInput): SlotData {
     range: input.range,
     description: input.description,
     slotUri: input.slot_uri,
+    slotUrl: input.slot_url,
     identifier: input.identifier,
     required: input.required,
     multivalued: input.multivalued,

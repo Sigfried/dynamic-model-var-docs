@@ -21,7 +21,8 @@ import { buildGraphFromSchemaData, getClassesUsingRange, getClassesUsingSlot } f
 import { type SchemaGraph } from './SchemaTypes';
 import type {
   DetailSection,
-  DetailData
+  DetailData,
+  LinkData
 } from '../contracts/ComponentData';
 import { APP_CONFIG } from '../config/appConfig';
 const {elementTypes, } = APP_CONFIG;
@@ -612,7 +613,8 @@ export class TypeElement extends Range {
   readonly type = 'type' as const;
   readonly name: string;
   readonly description: string | undefined;
-  readonly uri: string;
+  readonly uri: string;                      // CURIE (e.g., "xsd:string")
+  readonly uriUrl: string | undefined;       // Full URL (e.g., "http://www.w3.org/2001/XMLSchema#string")
   readonly base: string;
   readonly repr: string | undefined;
   readonly notes: string | undefined;
@@ -626,6 +628,7 @@ export class TypeElement extends Range {
     this.name = name;
     this.description = data.description;
     this.uri = data.uri;
+    this.uriUrl = data.uriUrl;
     this.base = data.base;
     this.repr = data.repr;
     this.notes = data.notes;
@@ -640,8 +643,12 @@ export class TypeElement extends Range {
     const sections: DetailSection[] = [];
 
     // Type Properties section
-    const typeProps: unknown[][] = [];
-    typeProps.push(['URI', this.uri]);
+    const typeProps: [string, string | LinkData][] = [];
+    // If we have a full URL, make URI a clickable link
+    const uriValue: string | LinkData = this.uriUrl
+      ? { text: this.uri, url: this.uriUrl }
+      : this.uri;
+    typeProps.push(['URI', uriValue]);
     typeProps.push(['Base', this.base]);
     if (this.repr) {
       typeProps.push(['Representation', this.repr]);
@@ -724,7 +731,8 @@ export class SlotElement extends Element {
   readonly name: string;
   readonly description: string | undefined;
   readonly range: string | undefined;
-  readonly slot_uri: string | undefined;
+  readonly slotUri: string | undefined;    // CURIE (e.g., "schema:identifier")
+  readonly slotUrl: string | undefined;    // Full URL (e.g., "http://schema.org/identifier")
   readonly identifier: boolean | undefined;
   readonly required: boolean | undefined;
   readonly multivalued: boolean | undefined;
@@ -736,7 +744,8 @@ export class SlotElement extends Element {
     this.name = name;
     this.description = data.description;
     this.range = data.range;
-    this.slot_uri = data.slotUri;
+    this.slotUri = data.slotUri;
+    this.slotUrl = data.slotUrl;
     this.identifier = data.identifier;
     this.required = data.required;
     this.multivalued = data.multivalued;
@@ -749,7 +758,7 @@ export class SlotElement extends Element {
     const sections: DetailSection[] = [];
 
     // Slot Properties section
-    const properties: [string, string][] = [];
+    const properties: [string, string | LinkData][] = [];
     if (this.range) {
       properties.push(['Range', this.range]);
     }
@@ -762,8 +771,12 @@ export class SlotElement extends Element {
     if (this.identifier !== undefined) {
       properties.push(['Identifier', this.identifier ? 'Yes' : 'No']);
     }
-    if (this.slot_uri) {
-      properties.push(['Slot URI', this.slot_uri]);
+    if (this.slotUri) {
+      // If we have a full URL, make it a clickable link
+      const value: string | LinkData = this.slotUrl
+        ? { text: this.slotUri, url: this.slotUrl }
+        : this.slotUri;
+      properties.push(['Slot URI', value]);
     }
 
     if (properties.length > 0) {

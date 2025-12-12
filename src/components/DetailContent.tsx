@@ -11,6 +11,7 @@
  */
 import React from 'react';
 import type { DataService } from '../services/DataService';
+import { isLinkData } from '../contracts/ComponentData';
 
 interface DetailContentProps {
   itemId?: string;
@@ -127,13 +128,34 @@ export default function DetailContent({
   );
 }
 
-// Helper function to render table cells (handles clickable links in the future)
+/**
+ * Render a clickable link
+ */
+function renderLink(text: string, url: string): React.ReactNode {
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-blue-600 dark:text-blue-400 hover:underline break-all"
+    >
+      {text}
+    </a>
+  );
+}
+
+/**
+ * Render a cell value, handling LinkData objects and plain text
+ */
 function renderCell(cell: unknown): React.ReactNode {
   if (cell === null || cell === undefined) {
     return '';
   }
 
-  // For now, just render as text
-  // TODO: Add navigation support for range values, class names, etc.
+  // Handle LinkData objects (CURIE with URL)
+  if (isLinkData(cell)) {
+    return renderLink(cell.text, cell.url);
+  }
+
   return String(cell);
 }

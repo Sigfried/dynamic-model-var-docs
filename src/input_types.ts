@@ -29,7 +29,8 @@ export interface SlotInput {
   name: string;              // Display name (same as id for base slots, base name for overrides)
   range?: string;
   description?: string;
-  slot_uri?: string;
+  slot_uri?: string;         // CURIE (e.g., "schema:identifier")
+  slot_url?: string;         // Full URL (e.g., "http://schema.org/identifier")
   identifier?: boolean;
   required?: boolean;
   multivalued?: boolean;
@@ -56,7 +57,8 @@ export interface EnumInput {
 export interface TypeInput {
   id?: string;
   name?: string;
-  uri: string;  // RDF datatype (e.g., xsd:string)
+  uri: string;      // CURIE (e.g., "xsd:string")
+  uri_url?: string; // Full URL (e.g., "http://www.w3.org/2001/XMLSchema#string")
   base: string;  // Python base type (e.g., str, int)
   repr?: string;  // Representational form if different from base
   description?: string;
@@ -115,6 +117,7 @@ import type { FieldMapping } from './models/SchemaTypes';
 export const FIELD_MAPPINGS = {
   slot: {
     slot_uri: 'slotUri',
+    slot_url: 'slotUrl',
     // id, name, range, description, identifier, required, multivalued, global, overrides copy as-is
   } as FieldMapping,
 
@@ -124,6 +127,7 @@ export const FIELD_MAPPINGS = {
   } as FieldMapping,
 
   type: {
+    uri_url: 'uriUrl',
     exact_mappings: 'exactMappings',
     close_mappings: 'closeMappings',
     broad_mappings: 'broadMappings',

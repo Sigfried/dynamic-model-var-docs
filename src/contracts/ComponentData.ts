@@ -186,6 +186,22 @@ export interface FloatingBoxGroupData {
 // ============================================================================
 
 /**
+ * LinkData - Represents a clickable link in detail content
+ * Used for CURIEs that have full URL resolutions (e.g., "schema:identifier" → "http://schema.org/identifier")
+ */
+export interface LinkData {
+  text: string;  // Display text (e.g., "schema:identifier")
+  url: string;   // Full URL (e.g., "http://schema.org/identifier")
+}
+
+/**
+ * Type guard to check if a value is LinkData
+ */
+export function isLinkData(value: unknown): value is LinkData {
+  return typeof value === 'object' && value !== null && 'text' in value && 'url' in value;
+}
+
+/**
  * DetailSection - Section data for detail panel display
  * Used by DetailContent component to render information sections.
  */
@@ -193,7 +209,7 @@ export interface DetailSection {
   name: string;
   text?: string;
   tableHeadings?: string[];
-  tableContent?: unknown[][];
+  tableContent?: unknown[][];  // Can contain strings, numbers, or LinkData objects
   tableHeadingColor?: string; // Tailwind classes for heading background
 }
 
