@@ -10,6 +10,7 @@
  * UI layer uses "item" terminology
  */
 import React, { useId } from 'react';
+import ReactMarkdown from 'react-markdown';
 import type { DataService } from '../services/DataService';
 import { isLinkData, isElementRef, type ElementRef, type ItemHoverData } from '../contracts/ComponentData';
 import { APP_CONFIG } from '../config/appConfig';
@@ -75,10 +76,10 @@ export default function DetailContent({
       )}
 
       <div className="p-4 space-y-3 text-left">
-        {/* Description */}
+        {/* Description - rendered as markdown */}
         {data.description && (
-          <div>
-            <p className="text-gray-700 dark:text-gray-300">{data.description}</p>
+          <div className="text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none">
+            <ReactMarkdown>{data.description}</ReactMarkdown>
           </div>
         )}
 

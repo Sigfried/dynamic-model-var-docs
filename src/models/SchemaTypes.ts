@@ -43,6 +43,22 @@ export interface SlotData {
   multivalued?: boolean;
   global?: boolean;          // true = defined in schema's global slots section
   overrides?: string;        // For override slots: ID of base slot being overridden
+  comments?: string[];       // Additional notes about the slot
+  examples?: { value: string }[];  // Example values
+  inlined?: boolean;         // Whether values should be inlined in serialization
+  inlinedAsList?: boolean;   // Whether values should be inlined as a list
+}
+
+/**
+ * Reachable-from definition for dynamic enum values from ontologies
+ */
+export interface ReachableFrom {
+  sourceOntology?: string;     // e.g., "obo:ncbitaxon"
+  sourceNodes?: string[];      // e.g., ["ncbitaxon:131567"]
+  sourceNodesUrls?: string[];  // Expanded URLs for source nodes
+  includeSelf?: boolean;
+  relationshipTypes?: string[];
+  isDirectOnly?: boolean;
 }
 
 /**
@@ -55,6 +71,9 @@ export interface EnumData {
     description?: string;
     meaning?: string;
   }>;
+  comments?: string[];         // Additional notes about the enum
+  inherits?: string[];         // Parent enum names whose values are included
+  reachableFrom?: ReachableFrom;  // Dynamic values from ontology traversal
 }
 
 /**

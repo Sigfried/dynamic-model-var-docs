@@ -29,41 +29,62 @@
   - For add, document plans for incorporating 
 #### Unused Schema Fields Workspace
 
+check claude's work:
+
+      SlotInput fields:
+      - ✅ comments - shown under description as "Comments:"
+      - ✅ examples - shown under description as "Examples: value1, value2..."
+      - ✅ inlined / inlinedAsList - shown as properties when true
+      - ✅ domain_of / owner - investigated and marked as IGNORE (domain_of misses inherited slots)
+
+      EnumInput fields:
+      - ✅ comments - shown under description
+      - ✅ inherits - new section "Inherits Values From" with clickable enum links
+      - ✅ reachable_from - new section "Reachable From (Dynamic Values)" with source ontology, nodes, etc.
+
+      Still TODO (marked as LATER):
+      - unit - ask team
+      - include, parent, see_also for enums
+
+      Files changed:
+      - src/models/SchemaTypes.ts - added new field types
+      - src/input_types.ts - added input field definitions
+      - src/utils/dataLoader.ts - transform functions
+      - src/models/Element.ts - SlotElement and EnumElement classes
+      - docs/TASKS.md - updated workspace with completion status
 ##### SlotInput (180 total slots)
 
  | Field              | Count          | Decision                                                                     | Notes                                                                                                           |
  |--------------------|----------------|------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
  | `alias`            | 181/181 (100%) | **IGNORE** - all same as name (verified)                                      | Same as name (ex: `id`→`id`, `species`→`species`)                                                               |
- | `comments`         | 25/180 (14%)   | include in details under description                                         | Array of strings. ex: `days_supply`="The field should be left empty if..."                                      |
- | `designates_type`  | 1/180 (0.6%)   | ignore but leave note to come back to this if generalizing app               | Only `type` slot has this (=true)                                                                               |
- | `domain_of`        | 180/180 (100%) | can this data replace data in "Used By Classes"?                             | Array of class names that use this slot. ex: `id`→`['Entity', 'Person', ...]`                                   |
- | `examples`         | 16/180 (9%)    | include under comments                                                       | Array of {value} objects. ex: `specimen_type`=[{value:'Fresh Specimen'},...]                                    |
- | `from_schema`      | 180/180 (100%) | ignore unless it ever has another value                                      | Always `https://w3id.org/bdchm` - schema URL                                                                    |
+ | `comments`         | 25/180 (14%)   | ✅ **DONE** - shown under description                                         | Array of strings. ex: `days_supply`="The field should be left empty if..."                                      |
+ | `designates_type`  | 1/180 (0.6%)   | **IGNORE** - note to revisit if generalizing app                             | Only `type` slot has this (=true)                                                                               |
+ | `domain_of`        | 180/180 (100%) | **IGNORE** - incomplete (misses inherited slots), keep computed "Used By"    | Array of class names that use this slot. ex: `id`→`['Entity', 'Person', ...]`                                   |
+ | `examples`         | 16/180 (9%)    | ✅ **DONE** - shown under description                                         | Array of {value} objects. ex: `specimen_type`=[{value:'Fresh Specimen'},...]                                    |
+ | `from_schema`      | 180/180 (100%) | **IGNORE** - always same value                                               | Always `https://w3id.org/bdchm` - schema URL                                                                    |
  | `global`           | 7/181 (4%)     | **ALREADY USED** - just missing from EXPECTED_SLOT_FIELDS                     | Boolean. Slots: id, identity, associated_participant, entries, derived_product, value, member_of_research_study |
- | `inlined`          | 1/180 (0.6%)   | for this and inlined_as_list add as property if present. see below           | Only `entries` slot (=true)                                                                                     |
- | `inlined_as_list`  | 4/180 (2%)     |                                                                              | parent_specimen, derived_product, duration, +1                                                                  |
+ | `inlined`          | 1/180 (0.6%)   | ✅ **DONE** - shown as property when true                                     | Only `entries` slot (=true)                                                                                     |
+ | `inlined_as_list`  | 4/180 (2%)     | ✅ **DONE** - shown as property when true                                     | parent_specimen, derived_product, duration, +1                                                                  |
  | `overrides`        | 10/181 (6%)    | **ALREADY USED** - just missing from EXPECTED_SLOT_FIELDS                     | String (slot name being overridden). ex: `value`→`value` (10 different `value` slots)                           |
- | `owner`            | 180/180 (100%) | see below                                                                    | Class that defines this slot. ex: `id`→`Entity`, `species`→`Person`                                             |
- | `unit`             | 12/180 (7%)    | this one is weird. i need to ask team about it                               | Object with ucum_code. ex: `age_at_death`={ucum_code:'d'}                                                       |
+ | `owner`            | 180/180 (100%) | **IGNORE** - arbitrary (first domain_of class), not useful                   | Class that defines this slot. ex: `id`→`Entity`, `species`→`Person`                                             |
+ | `unit`             | 12/180 (7%)    | **LATER** - need to ask team about it                                        | Object with ucum_code. ex: `age_at_death`={ucum_code:'d'}                                                       |
  | `values_from`      | 0/181 (0%)     | **GONE** in new data - removed from schema                                    | Was: Array of enum references                                                                                   |
 
-- **inlined/inlined_as_list**: there's some [explanation here](https://linkml.io/linkml/schemas/inlining.html) but i don't really understand it. i probably should, but this is especially information for
-  people writing ingestion or application code based on this schema. we need a way of conveying to them how they are supposed to represent the data based on these fields.
-- **owner**: this appears in bdchm.expanded where every slot appears under every class that uses it and in that
-  appearance the owner is set to that class. in bdchm.processed each slot appears once and some arbitrary class
-  that uses it is set as the owner. we need to get rid of it in bdchm.processed
+- **inlined/inlined_as_list**: [LinkML docs](https://linkml.io/linkml/schemas/inlining.html) - info for devs writing ingestion code
+- **domain_of**: Investigated - misses inherited slots (e.g., CauseOfDeath←Entity.id) and overrides. Computed "Used By Classes" is more complete.
+- **owner**: Just first domain_of class - not meaningful. Already ignored in EXPECTED_SLOT_FIELDS.
   
 
 ##### EnumInput (41 total enums)
 
  | Field            | Count      | Decision                                                                                                                              | Notes                                                                                                          |
  |------------------|------------|---------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------|
- | `comments`       | 3/41 (7%)  | include in details under description                                                                                                  | Array. ex: DrugExposureProvenanceEnum="Taken from OMOP Drug Type values..."                                    |
- | `include`        | 1/41 (2%)  | it appears once and contains permissible_values which should be added to what it gets from inherits                                   | Complex structure for including other enum values                                                              |
- | `inherits`       | 3/41 (7%)  | this enum includes all the permissible values of its parent enums                                                                     | Array of parent enum names. ex: ConditionConceptEnum→['MondoHumanDiseaseEnum', 'HpoPhenotypicAbnormalityEnum'] |
- | `parent`         | 1/41 (2%)  | deal with later                                                                                                                       | Single parent string. ex: HistoricalStatusEnum→StatusEnum                                                      |
- | `reachable_from` | 9/41 (22%) | include in details like "Reachable from source ontology: <link to ontology>" with sub items for the other fields, expand all as links | Complex: {source_ontology, include_self, source_nodes, ...}. Defines dynamic enum values from ontology         |
- | `see_also`       | 2/41 (5%)  | deal with later                                                                                                                       | Array of URLs. ex: DrugExposureConceptEnum→['https://bioregistry.io/registry/rxnorm', ...]                     |
+ | `comments`       | 3/41 (7%)  | ✅ **DONE** - shown under description                                                                                                  | Array. ex: DrugExposureProvenanceEnum="Taken from OMOP Drug Type values..."                                    |
+ | `include`        | 1/41 (2%)  | **LATER** - complex structure for including other enum values                                                                         | Complex structure for including other enum values                                                              |
+ | `inherits`       | 3/41 (7%)  | ✅ **DONE** - shown as "Inherits Values From" section with clickable links                                                             | Array of parent enum names. ex: ConditionConceptEnum→['MondoHumanDiseaseEnum', 'HpoPhenotypicAbnormalityEnum'] |
+ | `parent`         | 1/41 (2%)  | **LATER** - single parent (different from inherits)                                                                                   | Single parent string. ex: HistoricalStatusEnum→StatusEnum                                                      |
+ | `reachable_from` | 9/41 (22%) | ✅ **DONE** - shown as "Reachable From (Dynamic Values)" section                                                                       | Complex: {source_ontology, include_self, source_nodes, ...}. Defines dynamic enum values from ontology         |
+ | `see_also`       | 2/41 (5%)  | **LATER** - array of reference URLs                                                                                                   | Array of URLs. ex: DrugExposureConceptEnum→['https://bioregistry.io/registry/rxnorm', ...]                     |
 
 ##### TypeInput (7 total types)
 

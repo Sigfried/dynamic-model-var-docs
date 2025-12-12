@@ -36,6 +36,22 @@ export interface SlotInput {
   multivalued?: boolean;
   global?: boolean;          // true = defined in schema's global slots section
   overrides?: string;        // For override slots: ID of base slot being overridden
+  comments?: string[];       // Additional notes about the slot
+  examples?: { value: string }[];  // Example values
+  inlined?: boolean;         // Whether values should be inlined in serialization
+  inlined_as_list?: boolean; // Whether values should be inlined as a list
+}
+
+/**
+ * Reachable-from input (snake_case from JSON)
+ */
+export interface ReachableFromInput {
+  source_ontology?: string;
+  source_nodes?: string[];
+  source_nodes_urls?: string[];
+  include_self?: boolean;
+  relationship_types?: string[];
+  is_direct?: boolean;
 }
 
 /**
@@ -49,6 +65,9 @@ export interface EnumInput {
     description?: string;
     meaning?: string;
   }>;
+  comments?: string[];       // Additional notes about the enum
+  inherits?: string[];       // Parent enum names whose values are included
+  reachable_from?: ReachableFromInput;  // Dynamic values from ontology
 }
 
 /**
@@ -118,12 +137,14 @@ export const FIELD_MAPPINGS = {
   slot: {
     slot_uri: 'slotUri',
     slot_url: 'slotUrl',
-    // id, name, range, description, identifier, required, multivalued, global, overrides copy as-is
+    inlined_as_list: 'inlinedAsList',
+    // id, name, range, description, identifier, required, multivalued, global, overrides, comments, examples, inlined copy as-is
   } as FieldMapping,
 
   enum: {
     permissible_values: 'permissibleValues',
-    // description copies as-is
+    reachable_from: 'reachableFrom',
+    // description, comments, inherits copy as-is
   } as FieldMapping,
 
   type: {

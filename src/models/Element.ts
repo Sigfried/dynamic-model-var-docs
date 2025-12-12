@@ -11,6 +11,7 @@ import type {
   EnumValue,
   SchemaData,
   SlotReference,
+  ReachableFrom,
 } from './SchemaTypes';
 
 // Core application data structure
@@ -538,11 +539,17 @@ export class EnumElement extends Range {
   readonly name: string;
   readonly description: string | undefined;
   readonly permissibleValues: EnumValue[];
+  readonly comments: string[] | undefined;    // Additional notes about the enum
+  readonly inherits: string[] | undefined;    // Parent enum names whose values are included
+  readonly reachableFrom: ReachableFrom | undefined;  // Dynamic values from ontology
 
   constructor(name: string, data: EnumData) {
     super();
     this.name = name;
     this.description = data.description;
+    this.comments = data.comments;
+    this.inherits = data.inherits;
+    this.reachableFrom = data.reachableFrom;
 
     // Transform permissibleValues from Record to EnumValue[]
     this.permissibleValues = [];
@@ -559,6 +566,55 @@ export class EnumElement extends Range {
   getDetailData(): DetailData {
     const metadata = elementTypes[this.type];
     const sections: DetailSection[] = [];
+
+    // Inherits section - show parent enums whose values are included
+    if (this.inherits && this.inherits.length > 0) {
+      const inheritsList = this.inherits.map(enumName => [
+        { name: enumName, type: 'enum' } as ElementRef
+      ]);
+      sections.push({
+        name: 'Inherits Values From',
+        tableHeadings: ['Enumeration'],
+        tableContent: inheritsList
+      });
+    }
+
+    // Reachable From section - dynamic values from ontology
+    if (this.reachableFrom) {
+      const rf = this.reachableFrom;
+      const reachableProps: [string, string | LinkData][] = [];
+
+      if (rf.sourceOntology) {
+        reachableProps.push(['Source Ontology', rf.sourceOntology]);
+      }
+      if (rf.sourceNodes && rf.sourceNodes.length > 0) {
+        // If we have URLs, make them clickable
+        rf.sourceNodes.forEach((node, i) => {
+          const url = rf.sourceNodesUrls?.[i];
+          const value: string | LinkData = url
+            ? { text: node, url }
+            : node;
+          reachableProps.push(['Source Node', value]);
+        });
+      }
+      if (rf.includeSelf !== undefined) {
+        reachableProps.push(['Include Self', rf.includeSelf ? 'Yes' : 'No']);
+      }
+      if (rf.relationshipTypes && rf.relationshipTypes.length > 0) {
+        reachableProps.push(['Relationship Types', rf.relationshipTypes.join(', ')]);
+      }
+      if (rf.isDirectOnly !== undefined) {
+        reachableProps.push(['Direct Only', rf.isDirectOnly ? 'Yes' : 'No']);
+      }
+
+      if (reachableProps.length > 0) {
+        sections.push({
+          name: 'Reachable From (Dynamic Values)',
+          tableHeadings: ['Property', 'Value'],
+          tableContent: reachableProps
+        });
+      }
+    }
 
     // Permissible Values section
     if (this.permissibleValues.length > 0) {
@@ -588,12 +644,21 @@ export class EnumElement extends Range {
       });
     }
 
+    // Build extended description with comments
+    let extendedDescription = this.description;
+    if (this.comments && this.comments.length > 0) {
+      const commentsText = this.comments.join('\n\n');
+      extendedDescription = extendedDescription
+        ? `${extendedDescription}\n\n**Comments:**\n${commentsText}`
+        : `**Comments:**\n${commentsText}`;
+    }
+
     return {
       titlebarTitle: `${metadata.label}: ${this.name}`,
       title: this.name,
       subtitle: undefined,
       titleColor: metadata.color.headerBg,
-      description: this.description,
+      description: extendedDescription,
       sections
     };
   }
@@ -754,6 +819,10 @@ export class SlotElement extends Element {
   readonly multivalued: boolean | undefined;
   readonly global: boolean | undefined;     // true = defined in schema's global slots section
   readonly overrides: string | undefined;   // For override slots: ID of base slot being overridden
+  readonly comments: string[] | undefined;  // Additional notes about the slot
+  readonly examples: { value: string }[] | undefined;  // Example values
+  readonly inlined: boolean | undefined;    // Whether values should be inlined
+  readonly inlinedAsList: boolean | undefined;  // Whether values should be inlined as list
 
   constructor(name: string, data: SlotData) {
     super();
@@ -767,6 +836,10 @@ export class SlotElement extends Element {
     this.multivalued = data.multivalued;
     this.global = data.global;
     this.overrides = data.overrides;
+    this.comments = data.comments;
+    this.examples = data.examples;
+    this.inlined = data.inlined;
+    this.inlinedAsList = data.inlinedAsList;
   }
 
   getDetailData(): DetailData {
@@ -791,6 +864,12 @@ export class SlotElement extends Element {
     }
     if (this.identifier !== undefined) {
       properties.push(['Identifier', this.identifier ? 'Yes' : 'No']);
+    }
+    if (this.inlined) {
+      properties.push(['Inlined', 'Yes']);
+    }
+    if (this.inlinedAsList) {
+      properties.push(['Inlined As List', 'Yes']);
     }
     if (this.slotUri) {
       // If we have a full URL, make it a clickable link
@@ -822,12 +901,27 @@ export class SlotElement extends Element {
       });
     }
 
+    // Build extended description with comments and examples
+    let extendedDescription = this.description;
+    if (this.comments && this.comments.length > 0) {
+      const commentsText = this.comments.join('\n\n');
+      extendedDescription = extendedDescription
+        ? `${extendedDescription}\n\n**Comments:**\n${commentsText}`
+        : `**Comments:**\n${commentsText}`;
+    }
+    if (this.examples && this.examples.length > 0) {
+      const examplesText = this.examples.map(e => e.value).join(', ');
+      extendedDescription = extendedDescription
+        ? `${extendedDescription}\n\n**Examples:** ${examplesText}`
+        : `**Examples:** ${examplesText}`;
+    }
+
     return {
       titlebarTitle: `${metadata.label}: ${this.name}`,
       title: this.name,
       subtitle: undefined,
       titleColor: metadata.color.headerBg,
-      description: this.description,
+      description: extendedDescription,
       sections
     };
   }

@@ -176,7 +176,11 @@ function transformSlot(input: SlotInput): SlotData {
     required: input.required,
     multivalued: input.multivalued,
     global: input.global,
-    overrides: input.overrides
+    overrides: input.overrides,
+    comments: input.comments,
+    examples: input.examples,
+    inlined: input.inlined,
+    inlinedAsList: input.inlined_as_list,
   };
 }
 
@@ -185,7 +189,21 @@ function transformSlot(input: SlotInput): SlotData {
  */
 function transformEnum(input: EnumInput): EnumData {
   validateDTO(input, EXPECTED_ENUM_FIELDS, 'EnumInput');
-  return transformWithMapping<EnumData>(input, FIELD_MAPPINGS.enum);
+  const base = transformWithMapping<EnumData>(input, FIELD_MAPPINGS.enum);
+
+  // Transform nested reachable_from object
+  if (input.reachable_from) {
+    base.reachableFrom = {
+      sourceOntology: input.reachable_from.source_ontology,
+      sourceNodes: input.reachable_from.source_nodes,
+      sourceNodesUrls: input.reachable_from.source_nodes_urls,
+      includeSelf: input.reachable_from.include_self,
+      relationshipTypes: input.reachable_from.relationship_types,
+      isDirectOnly: input.reachable_from.is_direct,
+    };
+  }
+
+  return base;
 }
 
 /**
