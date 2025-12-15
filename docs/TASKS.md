@@ -99,6 +99,40 @@ check claude's work:
  | `class_url` | 1/51 (2%) | **Found**: comes from `class_uri: schema:Thing` in YAML, expanded by transform_schema | URL string. Only Entity→'http://schema.org/Thing' |
 
 ---
+### ⚠️ WIP: Class-specific slot definitions (Dec 15, 2025) - INCOMPLETE
+
+**Problem reported**: DrugExposure's `quantity` slot showed Procedure's description ("The quantity of procedures ordered or administered.") instead of the drug-specific description.
+
+**Root cause**: When multiple classes define the same slot name with different descriptions (e.g., Procedure, DrugExposure, DeviceExposure all define `quantity`), transform_schema.py was using the first definition and ignoring the rest.
+
+**Instructions given**:
+1. User showed screenshot of wrong description
+2. Asked to fix so DrugExposure shows its own quantity description
+3. Suggested adding `name` field to slot references in bdchm.processed.json to simplify UI code
+
+**Changes attempted** (NOT WORKING - still shows wrong names in UI):
+1. `scripts/transform_schema.py`:
+   - Added `find_conflicting_slot_definitions()` to detect slots with different definitions across classes
+   - Modified `transform_classes()` to create class-specific slot IDs (e.g., `quantity-DrugExposure`)
+   - Modified `transform_slots()` to create class-specific slot instances
+   - Added `name` field to slot references when ID differs from display name
+
+2. `src/models/SchemaTypes.ts`:
+   - Added `name?: string` to SlotReference interface
+
+3. `src/models/Element.ts`:
+   - Updated ClassElement.getDetailData() to use `slotRef.name || slot.name` for display
+
+4. `src/components/DetailContent.tsx`:
+   - Added `renderMarkdown()` function for table cell content
+   - Updated `renderCell()` to render markdown in all string cells
+
+5. `public/source_data/HM/bdchm.processed.json`:
+   - Regenerated with class-specific slots
+
+**Status**: UI still shows `quantity-DrugExposure` instead of `quantity`. The `slotRef.name` change is not being picked up. Needs debugging - possibly the dataLoader transform is not reading the `name` field from slot references.
+
+---
 ### render markdown in schema fields
 - e.g., UnitOfMeasurementEnum.description contains markdown but is rendered in plain text in details
 ---
