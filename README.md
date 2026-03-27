@@ -63,143 +63,12 @@ The BioData Catalyst Harmonized Model (BDCHM) is a LinkML schema that defines:
 
 ## For Developers
 
-### 🚨 CRITICAL: Separation of Model and View Concerns
+### Developer Documentation
 
-**Components MUST use abstract `Element` and `ElementCollection` classes ONLY.**
-
-The view layer must NOT import or reference model-specific types (`ClassNode`, `EnumDefinition`, `SlotDefinition`, `VariableSpec`). Extract UI-focused attributes through polymorphic methods whenever conditional logic is needed.
-
-**❌ WRONG** - Component knows about model types:
-```typescript
-import type { ClassNode, EnumDefinition } from '../types';
-
-function MyComponent({ element }: { element: ClassNode | EnumDefinition }) {
-  if ('children' in element) { /* ClassNode logic */ }
-  if ('permissible_values' in element) { /* EnumDefinition logic */ }
-}
-```
-
-**✅ CORRECT** - Component uses abstract Element:
-```typescript
-import type { Element } from '../models/Element';
-
-function MyComponent({ element }: { element: Element }) {
-  const info = element.getDisplayInfo(); // Polymorphism handles type differences
-  return <div>{info.title}</div>;
-}
-```
-
-**Rationale**: This architecture enables:
-- Type-safe polymorphism instead of duck typing
-- Model changes don't cascade to view layer
-- New element types added without touching components
-- Clear separation between data structure and presentation
-
-See `src/models/Element.tsx` for the abstract base classes that all components must use.
-
----
-
-### Architecture Philosophy: Shneiderman's Mantra
-
-**"Overview First, Zoom and Filter, Details on Demand"**
-
-This principle guides the UX design:
-
-**1. Overview First** - Show the model topology with all relationship types visible:
-- Class inheritance tree (hierarchical view)
-- Class→Enum usage patterns (which classes use which value sets)
-- Class→Class associations (domain relationships)
-- Slot definitions shared across classes
-- Visual density indicators (future: show which classes have most variables/connections)
-
-**2. Zoom and Filter** (future enhancements):
-- Full-text search across classes, variables, enums, slots
-- Faceted filtering (class type, variable count, relationship type)
-- k-hop neighborhood view (show only elements within N steps of focal element)
-- Relationship type filters (show only `is_a` vs show associations)
-
-**3. Details on Demand** - Progressive disclosure of information:
-- Click to open detailed views
-- Show class definitions, descriptions, attributes, slots
-- Display variable specifications with data types and units
-- Show inheritance chains with attribute overrides
-- Bidirectional navigation between related elements
-- Future: Sortable/filterable variable tables
-
-### Tech Stack
-
-- **Frontend**: React 18 + TypeScript + Vite
-- **Styling**: Tailwind CSS
-- **Testing**: Vitest + React Testing Library (160 tests)
-- **Data**: LinkML schema (YAML) + TSV variable specifications
-- **Visualization**: Native SVG with gradient definitions
-- **State Management**: React Hooks + URL parameters + localStorage
-
-### Data Flow
-
-```
-bdchm.yaml (LinkML schema)
-    ↓ Python script
-bdchm.metadata.json
-    ↓ dataLoader.ts
-ClassTree + Reverse Indices + Slot Usage
-    ↓
-Element classes (ClassElement, EnumElement, etc.)
-    ↓
-UI Components + SVG Links
-```
-
-### Key Architecture Patterns
-
-**Element-Based Architecture**:
-- Base `Element` class with subclasses: `ClassElement`, `EnumElement`, `SlotElement`, `VariableElement`
-- Each element knows its name, type, and relationships
-- ElementRegistry centralizes type metadata (colors, labels, icons)
-
-**Collection Pattern**:
-- Each element type has a corresponding collection class
-- Collections stored in `Map<ElementTypeId, ElementCollection>`
-- Generic interfaces enable type-safe iteration
-
-**Generic Tree Types**:
-- `Tree<T>` and `TreeNode<T>` for hierarchical data
-- Reusable for class hierarchies and variable groupings
-- Generic operations: flatten(), find(), getLevel(), map()
-
-**RenderableItem Interface**:
-- Separates data structure from presentation
-- Collections provide `getRenderableItems()` returning structure metadata
-- UI components render generically without type-specific logic
-
-### Graph-Based Architecture (Slots-as-Edges)
-
-**Core Concept:**
-- Graph model using graphology library with slots serving dual roles
-- **Slots as nodes**: SlotElement definitions browsable in optional middle panel
-- **Slots as edges**: Slot edges connecting Class → Range, referencing slot definitions
-
-**Graph Structure:**
-
-**Nodes:**
-- **Classes**: Entity, Specimen, Material, etc.
-- **Enums**: SpecimenTypeEnum, AnalyteTypeEnum, etc.
-- **Slots**: All slot definitions (~170 in BDCHM), browsable in middle panel only
-- **Types**: Primitives (string, integer) and custom types from linkml:types
-- **Variables**: No longer appear as panel sections, only in detail boxes and relationship hovers
-
-**Edges:**
-- **Inheritance**: Class → Parent Class (is-a/inherits-from)
-- **Slot**: Class → Range (Class | Enum | Type) through a slot
-  - Properties: slotName, slotDefId, required, multivalued, inheritedFrom
-  - Multiple edges can reference same SlotElement (e.g., inherited with overrides)
-- **MapsTo**: Variable → Class associations
-
-**Three-Panel Layout:**
-- **Left Panel**: Classes only (always visible tree hierarchy)
-- **Middle Panel**: Slots only (toggleable, shows all SlotElement definitions)
-- **Right Panel**: Ranges only (Classes, Enums, Types as range targets)
-
-When middle panel visible, Class→Range slot edges decompose into two visual links: Class→Slot→Range
+- **[CLAUDE.md](CLAUDE.md)** — Development principles and architectural rules
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — Technical architecture, data flow, design patterns
+- **[TASKS.md](TASKS.md)** — Current work, upcoming tasks, and roadmap
+- **[docs/TESTING.md](docs/TESTING.md)** — Testing strategy and documentation
 
 ### Data Sources
 
@@ -253,29 +122,10 @@ When adding new features:
 3. Run full test suite before committing: `npm test -- --run`
 4. Run type checking: `npm run typecheck`
 
-**Documentation**:
-- **README.md** (this file) - User guide, developer overview, architecture philosophy
-- **CLAUDE.md** - Critical architectural principles and development guidelines
-- **TASKS.md** - Current task, upcoming work, and future ideas
-- **PROGRESS.md** - Completed work for reporting to managers/stakeholders
-- **TESTING.md** - Testing strategy and test documentation
-
-### LinkML-Specific Notes
-
-**Understanding Slots, Attributes, and Slot Usage**:
-
-From LinkML documentation: "Attributes are really just a convenient shorthand for being able to declare slots 'inline'."
-
-- **Slots** (top-level): Reusable property definitions in schema's `slots:` section
-- **Attributes** (inline): Class-specific slot definitions in `attributes:` section (syntactic sugar for inline slots)
-- **Slot Usage** (refinements): Class-specific customizations in `slot_usage:` section (add constraints, change range, make required)
-
-The UI displays all three together in a unified "Attributes & Slots" table since they're semantically equivalent.
-
-**Metadata Structure**: LinkML uses `range` (not `type`) for type information, `multivalued` for arrays, `required` for mandatory fields.
+See [Developer Documentation](#developer-documentation) above for links to all docs.
 
 ---
 
 ## Credits
 
-Developed by Scott Gold with AI assistance from Claude (Anthropic).
+Developed by Sigfried Gold with AI assistance from Claude (Anthropic).
