@@ -22,6 +22,8 @@ prefixes:
   UOM: https://units-of-measurement.org/
   OBA: http://purl.obolibrary.org/obo/OBA_
   ICD10CM: http://purl.bioontology.org/ontology/ICD10CM/
+  MMO: http://purl.obolibrary.org/obo/MMO_
+  BAO: http://www.bioassayontology.org/bao#BAO_
 
 default_prefix: bdchm
 default_range: string
@@ -78,13 +80,14 @@ classes:
     attributes:
       sex:
         range: SexEnum
-        description: The biologic character or quality that distinguishes male and female from one another as expressed by analysis of the person's gonadal, morphologic (internal and external), chromosomal, and hormonal characteristics.
+        description: The biologic character or quality that distinguishes male and female from one another as expressed by analysis of the person's gonadal, morphologic (internal and external), chromosomal, and hormonal characteristics. Individuals where these characteristics do not all clearly align with either male or female are often considered intersex.
       ethnicity:
         range: EthnicityEnum
-        description: An individual's self-described social and cultural grouping, specifically whether an individual describes themselves as Hispanic or Latino. The provided values are based on the categories defined by the U.S. Office of Management and Business and used by the U.S. Census Bureau
+        description: A sociopolitically constructed system for classifying human beings according to claims of shared heritage often based on perceived cultural similarities (e.g., language, religion, beliefs); the system varies globally. The provided values are based on the categories defined by the U.S. Office of Management and Business and used by the U.S. Census Bureau and include only the options “Hispanic or Latino” and “Not Hispanic or Latino.”
       race:
         range: RaceEnum
-        description: An arbitrary classification of a taxonomic group that is a division of a species. It usually arises as a consequence of geographical isolation within a species and is characterized by shared heredity, physical attributes and behavior, and in the case of humans, by common history, nationality, or geographic distribution. The provided values are based on the categories defined by the U.S. Office of Management and Business and used by the U.S. Census Bureau.
+        description: A sociopolitically constructed system for classifying human beings according to subjective beliefs about shared ancestry based on perceived innate biological similarities; the system varies globally. The provided values are based on the categories defined by the U.S. Office of Management and Business and used by the U.S. Census Bureau.
+        multivalued: true
     slots:
       - identity
       - associated_participant
@@ -207,6 +210,9 @@ classes:
     description: >-
       Events where Persons engage with the healthcare system for a duration of time. They are often also called “Encounters”. Visits are defined by a configuration of circumstances under which they occur, such as (i) whether the patient comes to a healthcare institution, the other way around, or the interaction is remote, (ii) whether and what kind of trained medical staff is delivering the service during the Visit, and (iii) whether the Visit is transient or for a longer period involving a stay in bed. (OMOP)
     attributes:
+      name:
+        range: string
+        description: A free text field or label used to refer to the visit.
       visit_category:
         range: VisitCategoryEnum
         description: A value representing the kind (or category) of visit, like inpatient or outpatient.
@@ -453,6 +459,10 @@ classes:
       relationship_to_participant:
         range: FamilyRelationshipEnum
         description: A value indicating the relationship between the Participant to which the Condition is attributed and the individual who had the reported Condition.  If the Condition is affecting the participant themselves, then 'Self' is the appropriate relationship.  If the Condition is affecting a family member (e.g. a parent of the Participant) then an appropriate relationship should be provided (e.g. 'Parent')
+      associated_evidence:
+        range: Entity
+        description: Evidence supporting the assertion of the condition (e.g., an ImagingStudy, Procedure, Observation)
+        multivalued: true
     slots:
       - identity
       - associated_visit
@@ -1221,6 +1231,7 @@ classes:
         multivalued: false
         range: Quantity
         required: false
+      
 
   Quantity:
     is_a: Entity
@@ -1399,6 +1410,15 @@ classes:
         description: The type of Observation being represented (e.g. 'diastolic blood pressure')
         comments: This field holds the "key" in the core key-value pair comprised of the observation_type field and the relevant value(s) field.  
         range: MeasurementObservationTypeEnum
+      associated_assay:
+        description: A reference to the assay that was used in generating this observation.
+        range: Assay
+      body_site:
+        description: The body site that is the focus of this observation, if applicable.
+        range: BodySite
+      body_position:
+        description: The position of the body that is the focus of this observation, if applicable.
+        range: BodyPositionEnum
 
   SdohObservationSet:
     is_a: ObservationSet
@@ -1435,6 +1455,33 @@ classes:
         range: integer
         multivalued: false
         required: true
+
+  Assay:
+    is_a: Entity
+    description: A class for representing metadata about an assay performed on a specimen, including the method and instrument used.
+    attributes:
+      method:
+        description: The type of assay performed (e.g. "immunohistochemistry", "RNA-seq", "mass spectrometry")
+        range: AssayMethodEnum
+        multivalued: false
+        required: true
+      instrument:
+        description: The instrument(s) used to perform the assay.
+        range: InstrumentEnum
+        multivalued: true
+      reagent:
+        description: The reagent(s) used to perform the assay.
+        range: Substance
+        multivalued: true
+      lower_limit_of_detection:
+        description: The lower limit of detection for the assay, if applicable.
+        range: Quantity
+        multivalued: false
+      upper_limit_of_detection:
+        description: The upper limit of detection for the assay, if applicable.
+        range: Quantity
+        multivalued: false
+
 
 slots:
   id:
@@ -1551,6 +1598,28 @@ enums:
       relationship_types:
         - rdfs:subClassOf
 
+  AssayMethodEnum:
+    description: >-
+      A constrained set of enumerative values containing the Measurement Method Ontology (MMO) values for assay methods.
+    reachable_from:
+      source_ontology: obo:mmo
+      source_nodes:
+        - MMO:0000000 ## Measurement Method
+      include_self: false
+      relationship_types:
+        - rdfs:subClassOf
+
+  InstrumentEnum:
+    description: >-
+      A constrained set of enumerative values containing the BioAssay Ontology (BAO) values for instruments.
+    reachable_from:
+      source_ontology: BAO
+      source_nodes:
+        - BAO:0003118 ## Instrument
+      include_self: false
+      relationship_types:
+        - rdfs:subClassOf
+
   VitalStatusEnum:
     description: >-
       A constrained set of enumerative values containing the OMOP values for vital status.
@@ -1577,39 +1646,69 @@ enums:
     description: >-
       A constrained set of enumerative values containing the OMOP values for visit categories.
     permissible_values:
-      INPATIENT:
-        description: Person visiting hospital, at a care stie, in bed, for duration of more than one day, with physicians and other Providers permanently available to deliver service around the clock
-        meaning: OMOP:9201
-      EMERGENCY_ROOM:
-        description: Person visiting dedicated healthcare institution for treating emergencies, at a Care Site, within one day, with physicians and Providers permanently available to deliver service around the clock
-        meaning: OMOP:9203
-      EMERGENCY_ROOM_AND_INPATIENT:
+      ALTERNATE_CARE_SITE_ACS:
+        description: Person receiving care at a temporary or non-traditional care site established to expand capacity, such as during a public health emergency
+        meaning: OMOP:33007
+      AMBULANCE_VISIT:
+        description: Person using transportation service for the purpose of initiating one of the other Visits, without a Care Site, within one day, potentially with Providers accompanying the Visit and delivering service
+        meaning: OMOP:581478
+      AMBULATORY_LONG_COVID_CLINIC:
+        description: Person visiting a specialized outpatient clinic dedicated to the assessment and management of persistent post-COVID-19 symptoms
+        meaning: OMOP:705159
+      AMBULATORY_REHABILITATION_VISIT:
+        description: Person visiting a Care Site within one day for the purpose of receiving rehabilitative therapy services without overnight admission
+        meaning: OMOP:581479
+      EMERGENCY_ROOM_AND_INPATIENT_VISIT:
         description: Person visiting ER followed by a subsequent Inpatient Visit, where Emergency department is part of hospital, and transition from the ER to other hospital departments is undefined
         meaning: OMOP:262
-      NON_HOSPITAL_INSTITUTION:
-        description: Person visiting dedicated institution for reasons of poor health, at a Care Site, long-term or permanently, with no physician but possibly other Providers permanently available to deliver service around the clock
-        meaning: OMOP:42898160
-      OUTPATIENT:
-        description: Person visiting dedicated ambulatory healthcare institution, at a Care Site, within one day, without bed, with physicians or medical Providers delivering service during Visit
-        meaning: OMOP:9202
-      HOME:
+      EMERGENCY_ROOM_VISIT:
+        description: Person visiting dedicated healthcare institution for treating emergencies, at a Care Site, within one day, with physicians and Providers permanently available to deliver service around the clock
+        meaning: OMOP:9203
+      HEALTH_EXAMINATION:
+        description: Person visiting a Care Site within one day for a routine or preventive health assessment, without an acute presenting complaint
+        meaning: OMOP:32693
+      HOME_ISOLATION:
+        description: Person remaining at home and separated from others for the purpose of containing or managing an infectious or potentially infectious condition
+        meaning: OMOP:32759
+      HOME_VISIT:
         description: Provider visiting Person, without a Care Site, within one day, delivering service
         meaning: OMOP:581476
-      TELEHEALTH:
-        description: Patient engages with Provider through communication media
-        meaning: OMOP:5083
-      PHARMACY:
-        description: Person visiting pharmacy for dispensing of Drug, at a Care Site, within one day
-        meaning: OMOP:581458
-      LABORATORY:
+      INPATIENT_VISIT:
+        description: Person visiting hospital, at a care site, in bed, for duration of more than one day, with physicians and other Providers permanently available to deliver service around the clock
+        meaning: OMOP:9201
+      INTENSIVE_CARE:
+        description: Person admitted to a specialized hospital unit for more than one day, receiving continuous monitoring and advanced life-support from dedicated Providers
+        meaning: OMOP:32037
+      ISOLATION_IN_INPATIENT_SETTING:
+        description: Person admitted to a hospital and physically separated from other patients to prevent transmission of an infectious or potentially infectious condition
+        meaning: OMOP:32760
+      LABORATORY_VISIT:
         description: Patient visiting dedicated institution, at a Care Site, within one day, for the purpose of a Measurement.
         meaning: OMOP:32036
-      AMBULANCE:
-          description: Person using transportation service for the purpose of initiating one of the other Visits, without a Care Site, within one day, potentially with Providers accompanying the Visit and delivering service
-          meaning: OMOP:581478
-      CASE_MANAGEMENT:
-          description: Person interacting with healthcare system, without a Care Site, within a day, with no Providers involved, for administrative purposes
-          meaning: OMOP:38004193
+      NON_HOSPITAL_INSTITUTION_VISIT:
+        description: Person visiting dedicated institution for reasons of poor health, at a Care Site, long-term or permanently, with no physician but possibly other Providers permanently available to deliver service around the clock
+        meaning: OMOP:42898160
+      OFFICE_VISIT:
+        description: Person visiting a Provider at a Care Site within one day for evaluation or management of a health concern, without bed or overnight stay
+        meaning: OMOP:581477
+      OUTPATIENT_VISIT:
+        description: Person visiting dedicated ambulatory healthcare institution, at a Care Site, within one day, without bed, with physicians or medical Providers delivering service during Visit
+        meaning: OMOP:9202
+      PERSON_UNDER_INVESTIGATION_PUI:
+        description: Person being monitored or assessed at a Care Site due to potential exposure to or symptoms of a reportable or emerging infectious disease
+        meaning: OMOP:32761
+      PHARMACY_VISIT:
+        description: Person visiting pharmacy for dispensing of Drug, at a Care Site, within one day
+        meaning: OMOP:581458
+      SUPPLIER_SERVICE_PROVIDER:
+        description: Person receiving goods or services from a non-clinical supplier or durable medical equipment provider, outside of a traditional Care Site encounter
+        meaning: OMOP:33004
+      TELEHEALTH:
+        description: Patient engages with Provider through communication media
+        meaning: OMOP:722455
+      UNKNOWN:
+        description: Visit category is not known, not observed, not recorded, or refused.
+        meaning: OMOP:8552
 
   VisitProvenanceEnum:
     description: >-
@@ -1889,36 +1988,168 @@ enums:
     description: >-
       A constrained set of enumerative values containing the OMOP values for provenance.
     permissible_values:
-      EHR_BILLING_DIAGNOSIS:
-        meaning: OMOP:4822159
+      CASE_REPORT_FORM:
+        meaning: OMOP:4976882
+      CLAIM:
+        meaning: OMOP:4976883
+      CLAIM_AUTHORIZATION:
+        meaning: OMOP:4976884
+      CLAIM_DISCHARGE_RECORD:
+        meaning: OMOP:4976885
+      CLAIM_ENROLMENT_RECORD:
+        meaning: OMOP:4976886
+      COST_RECORD:
+        meaning: OMOP:4976887
+      DEATH_CERTIFICATE:
+        meaning: OMOP:4976888
+      DENTAL_CLAIM:
+        meaning: OMOP:4976889
+      EHR:
+        meaning: OMOP:4976890
+      EHR_ADMINISTRATION_RECORD:
+        meaning: OMOP:4976891
+      EHR_ADMISSION_NOTE:
+        meaning: OMOP:4976892
+      EHR_ANCILLARY_REPORT:
+        meaning: OMOP:4976893
+      EHR_BILLING_RECORD:
+        meaning: OMOP:4976894
       EHR_CHIEF_COMPLAINT:
-        meaning: OMOP:4822124
-      EHR_ENCOUNTER_DIAGNOSIS:
-        meaning: OMOP:4822160
-      EHR_EPISODE_ENTRY:
-        meaning: OMOP:4822135
-      EHR_PROBLEM_LIST_ENTRY:
-        meaning: OMOP:4822121
-      FIRST_POSITION_CONDITION:
-        meaning: OMOP:4822128
-      NLP_DERIVED:
-        meaning: OMOP:4822058
-      OBSERVATION_RECORDED_FROM_EHR:
-        meaning: OMOP:4822126
-      PATIENT_SELF-REPORTED_CONDITION:
-        meaning: OMOP:4822157
-      PRIMARY_CONDITION:
-        meaning: OMOP:4822127
-      REFERRAL_RECORD:
-        meaning: OMOP:4822125
-      SECONDARY_CONDITION:
-        meaning: OMOP:4822129
-      TUMOR_REGISTRY:
-        meaning: OMOP:4822266
-      WORKING_DIAGNOSIS:
-        meaning: OMOP:4208085
-      CLINICAL_DIAGNOSIS:
-        meaning: OMOP:4309119
+        meaning: OMOP:4976895
+      EHR_DISCHARGE_RECORD:
+        meaning: OMOP:4976896
+      EHR_DISCHARGE_SUMMARY:
+        meaning: OMOP:4976897
+      EHR_DISPENSING_RECORD:
+        meaning: OMOP:4976898
+      EHR_EMERGENCY_ROOM_NOTE:
+        meaning: OMOP:4976899
+      EHR_ENCOUNTER_RECORD:
+        meaning: OMOP:4976900
+      EHR_EPISODE_RECORD:
+        meaning: OMOP:4976901
+      EHR_INPATIENT_NOTE:
+        meaning: OMOP:4976902
+      EHR_MEDICATION_LIST:
+        meaning: OMOP:4976903
+      EHR_NOTE:
+        meaning: OMOP:4976904
+      EHR_NURSING_REPORT:
+        meaning: OMOP:4976905
+      EHR_ORDER:
+        meaning: OMOP:4976906
+      EHR_OUTPATIENT_NOTE:
+        meaning: OMOP:4976907
+      EHR_PATHOLOGY_REPORT:
+        meaning: OMOP:4976908
+      EHR_PHYSICAL_EXAMINATION:
+        meaning: OMOP:4976909
+      EHR_PLANNED_DISPENSING_RECORD:
+        meaning: OMOP:4976910
+      EHR_PRESCRIPTION:
+        meaning: OMOP:4976911
+      EHR_PRESCRIPTION_ISSUE_RECORD:
+        meaning: OMOP:4976912
+      EHR_PROBLEM_LIST:
+        meaning: OMOP:4976913
+      EHR_RADIOLOGY_REPORT:
+        meaning: OMOP:4976914
+      EHR_REFERRAL_RECORD:
+        meaning: OMOP:4976915
+      EXTERNAL_CDM_INSTANCE:
+        meaning: OMOP:4976916
+      FACILITY_CLAIM:
+        meaning: OMOP:4976917
+      FACILITY_CLAIM_DETAIL:
+        meaning: OMOP:4976918
+      FACILITY_CLAIM_HEADER:
+        meaning: OMOP:4976919
+      GEOGRAPHIC_ISOLATION_RECORD:
+        meaning: OMOP:4976920
+      GOVERNMENT_REPORT:
+        meaning: OMOP:4976921
+      HEALTH_INFORMATION_EXCHANGE_RECORD:
+        meaning: OMOP:4976922
+      HEALTH_RISK_ASSESSMENT:
+        meaning: OMOP:4976923
+      HEALTHCARE_PROFESSIONAL_FILLED_SURVEY:
+        meaning: OMOP:4976924
+      HOSPITAL_COST:
+        meaning: OMOP:4976925
+      INPATIENT_CLAIM:
+        meaning: OMOP:4976926
+      INPATIENT_CLAIM_DETAIL:
+        meaning: OMOP:4976927
+      INPATIENT_CLAIM_HEADER:
+        meaning: OMOP:4976928
+      LAB:
+        meaning: OMOP:4976929
+      MAIL_ORDER_RECORD:
+        meaning: OMOP:4976930
+      NLP:
+        meaning: OMOP:4976931
+      OBITUARY:
+        meaning: OMOP:5584804
+      OUTPATIENT_CLAIM:
+        meaning: OMOP:4976932
+      OUTPATIENT_CLAIM_DETAIL:
+        meaning: OMOP:4976933
+      OUTPATIENT_CLAIM_HEADER:
+        meaning: OMOP:4976934
+      PATIENT_FILLED_SURVEY:
+        meaning: OMOP:4976935
+      PATIENT_OR_PAYER_PAID_RECORD:
+        meaning: OMOP:4976936
+      PATIENT_REPORTED_COST:
+        meaning: OMOP:4976937
+      PATIENT_SELF_REPORT:
+        meaning: OMOP:4976938
+      PATIENT_SELF_TESTED:
+        meaning: OMOP:5181830
+      PAYER_SYSTEM_RECORD_PAID_PREMIUM:
+        meaning: OMOP:4976939
+      PAYER_SYSTEM_RECORD_PRIMARY_PAYER:
+        meaning: OMOP:4976940
+      PAYER_SYSTEM_RECORD_SECONDARY_PAYER:
+        meaning: OMOP:4976941
+      PHARMACY_CLAIM:
+        meaning: OMOP:4976942
+      POINT_OF_CARE/EXPRESS_LAB:
+        meaning: OMOP:5042951
+      PRE_QUALIFICATION_TIME_PERIOD:
+        meaning: OMOP:4976943
+      PROFESSIONAL_CLAIM:
+        meaning: OMOP:4976944
+      PROFESSIONAL_CLAIM_DETAIL:
+        meaning: OMOP:4976945
+      PROFESSIONAL_CLAIM_HEADER:
+        meaning: OMOP:4976946
+      PROVIDER_CHARGE_LIST_PRICE:
+        meaning: OMOP:4976947
+      PROVIDER_FINANCIAL_SYSTEM:
+        meaning: OMOP:4976948
+      PROVIDER_INCURRED_COST_RECORD:
+        meaning: OMOP:4976949
+      RANDOMIZATION_RECORD:
+        meaning: OMOP:4976950
+      REFERENCE_LAB:
+        meaning: OMOP:4976951
+      REGISTRY:
+        meaning: OMOP:4976952
+      STANDARD_ALGORITHM:
+        meaning: OMOP:4976953
+      STANDARD_ALGORITHM_FROM_CLAIMS:
+        meaning: OMOP:4976954
+      STANDARD_ALGORITHM_FROM_EHR:
+        meaning: OMOP:4976955
+      SURVEY:
+        meaning: OMOP:4976956
+      URGENT_LAB:
+        meaning: OMOP:4976957
+      US_SOCIAL_SECURITY_DEATH_MASTER_FILE:
+        meaning: OMOP:4976958  
+      VISION_CLAIM:
+        meaning: OMOP:4976959
 
   StatusEnum:
     description: >-
@@ -1932,7 +2163,6 @@ enums:
         description: was of unknown status in the patient at observation time.
 
   HistoricalStatusEnum:
-    is_a: StatusEnum
     description: >-
       A constrained set of enumerative values indicating whether something is present, absent, historical, or its status is unknown.
     inherits:
@@ -1961,52 +2191,52 @@ enums:
     description: Source of drug exposure record
     comments: Taken from OMOP Drug Type values; "select * from concept where vocabulary_id = 'Drug Type';" Do we need descriptions beyond the name?
     permissible_values:
-      RANDOMIZED DRUG:
+      RANDOMIZED_DRUG:
         description: Randomized Drug
         meaning: OMOP:44777970                                                                                              
-      PATIENT SELF-REPORTED MEDICATION:
+      PATIENT_SELF_REPORTED_MEDICATION:
         description: Patient Self-Reported Medication
         meaning: OMOP:44787730                                                            
-      NLP DERIVED:
+      NLP_DERIVED:
         description: NLP derived
         meaning: OMOP:32426                                                                                                         
-      PRESCRIPTION DISPENSED IN PHARMACY:
+      PRESCRIPTION_DISPENSED_IN_PHARMACY:
         description: Prescription dispensed in pharmacy
         meaning: OMOP:38000175                                                        
-      PHYSICIAN ADMINISTERED DRUG (IDENTIFIED FROM EHR ORDER):
+      PHYSICIAN_ADMINISTERED_DRUG_IDENTIFIED_FROM_EHR_ORDER:
         description: Physician administered drug (identified from EHR order)
         meaning: OMOP:581373                
-      DISPENSED IN OUTPATIENT OFFICE:
+      DISPENSED_IN_OUTPATIENT_OFFICE:
         description: Dispensed in Outpatient office
         meaning: OMOP:581452                                                                  
-      PRESCRIPTION DISPENSED THROUGH MAIL ORDER:
+      PRESCRIPTION_DISPENSED_THROUGH_MAIL_ORDER:
         description: Prescription dispensed through mail order
         meaning: OMOP:38000176                                          
-      PRESCRIPTION WRITTEN:
+      PRESCRIPTION_WRITTEN:
         description: Prescription written
         meaning: OMOP:38000177                                                                                    
-      MEDICATION LIST ENTRY:
+      MEDICATION_LIST_ENTRY:
         description: Medication list entry
         meaning: OMOP:38000178                                                                                  
-      PHYSICIAN ADMINISTERED DRUG (IDENTIFIED AS PROCEDURE):
+      PHYSICIAN_ADMINISTERED_DRUG_IDENTIFIED_AS_PROCEDURE:
         description: Physician administered drug (identified as procedure)
         meaning: OMOP:38000179                  
-      INPATIENT ADMINISTRATION:
+      INPATIENT_ADMINISTRATION:
         description: Inpatient administration
         meaning: OMOP:38000180                                                                            
-      DRUG ERA - 0 DAYS PERSISTENCE WINDOW:
+      DRUG_ERA_0_DAYS_PERSISTENCE_WINDOW:
         description: Drug era - 0 days persistence window
         meaning: OMOP:38000181                                                    
-      DRUG ERA - 30 DAYS PERSISTENCE WINDOW:
+      DRUG_ERA_30_DAYS_PERSISTENCE_WINDOW:
         description: Drug era - 30 days persistence window
         meaning: OMOP:38000182                                                  
-      PHYSICIAN ADMINISTERED DRUG (IDENTIFIED FROM EHR PROBLEM LIST):
+      PHYSICIAN_ADMINISTERED_DRUG_IDENTIFIED_FROM_EHR_PROBLEM_LIST:
         description: Physician administered drug (identified from EHR problem list)
         meaning: OMOP:43542356
-      PHYSICIAN ADMINISTERED DRUG (IDENTIFIED FROM REFERRAL RECORD):
+      PHYSICIAN_ADMINISTERED_DRUG_IDENTIFIED_FROM_REFERRAL_RECORD:
         description: Physician administered drug (identified from referral record)
         meaning: OMOP:43542357  
-      PHYSICIAN ADMINISTERED DRUG (IDENTIFIED FROM EHR OBSERVATION):
+      PHYSICIAN_ADMINISTERED_DRUG_IDENTIFIED_FROM_EHR_OBSERVATION:
         description: Physician administered drug (identified from EHR observation)
         meaning: OMOP:43542358  
 
@@ -2014,7 +2244,7 @@ enums:
     description: Routes of drug administration.
     comments: OMOP contains 165 standard values; `select * from concept where domain_id = 'Route' and invalid_reason is null and standard_concept is not null;` from SNOMED. Do we need descriptions beyond the name?
     permissible_values:
-      ARTERIOVENOUS FISTULA:
+      ARTERIOVENOUS_FISTULA:
         description: Arteriovenous fistula
         meaning: OMOP:44783786                     
       HAEMODIAFILTRATION:
@@ -2029,19 +2259,19 @@ enums:
       INTRAMURAL:
         description: Intramural
         meaning: OMOP:46272926                                           
-      INTRACATHETER INSTILLATION:
+      INTRACATHETER_INSTILLATION:
         description: Intracatheter instillation
         meaning: OMOP:605428             
       SUBLABIAL:
         description: Sublabial
         meaning: OMOP:600817                                               
-      INTRA-ARTICULAR:
+      INTRA_ARTICULAR:
         description: Intra-articular
         meaning: OMOP:4006860                                  
       INTRADIALYTIC:
         description: Intradialytic
         meaning: OMOP:618805                                       
-      ARTERIOVENOUS GRAFT:
+      ARTERIOVENOUS_GRAFT:
         description: Arteriovenous graft
         meaning: OMOP:762840                           
       OTIC:
@@ -2053,7 +2283,7 @@ enums:
       VAGINAL:
         description: Vaginal
         meaning: OMOP:4057765                                                  
-      ROUTE OF ADMINISTRATION VALUE:
+      ROUTE_OF_ADMINISTRATION_VALUE:
         description: Route of administration value
         meaning: OMOP:4106215      
       GASTROSTOMY:
@@ -2119,13 +2349,13 @@ enums:
       SUBCONJUNCTIVAL:
         description: Subconjunctival
         meaning: OMOP:4163770                                  
-      MUCOUS FISTULA:
+      MUCOUS_FISTULA:
         description: Mucous fistula
         meaning: OMOP:4171243                                    
       INTRAPROSTATIC:
         description: Intraprostatic
         meaning: OMOP:4171725                                    
-      INTRAVENOUS PERIPHERAL:
+      INTRAVENOUS_PERIPHERAL:
         description: Intravenous peripheral
         meaning: OMOP:4171884                    
       PERIOSTEAL:
@@ -2158,7 +2388,7 @@ enums:
       INTRATYMPANIC:
         description: Intratympanic
         meaning: OMOP:4168656                                      
-      GASTRO-INTESTINAL STOMA:
+      GASTRO_INTESTINAL_STOMA:
         description: Gastro-intestinal stoma
         meaning: OMOP:4168665                  
       INTRAPULMONARY:
@@ -2167,7 +2397,7 @@ enums:
       INTRASINAL:
         description: Intrasinal
         meaning: OMOP:4169440                                            
-      TUMOR CAVITY:
+      TUMOR_CAVITY:
         description: Tumor cavity
         meaning: OMOP:4169472                                        
       SUBMUCOSAL:
@@ -2176,7 +2406,7 @@ enums:
       INTRADUCTAL:
         description: Intraductal
         meaning: OMOP:4170083                                          
-      INTRAVENOUS CENTRAL:
+      INTRAVENOUS_CENTRAL:
         description: Intravenous central
         meaning: OMOP:4170113                          
       PARAVERTEBRAL:
@@ -2188,7 +2418,7 @@ enums:
       LARYNGEAL:
         description: Laryngeal
         meaning: OMOP:4170440                                              
-      SURGICAL CAVITY:
+      SURGICAL_CAVITY:
         description: Surgical cavity
         meaning: OMOP:4170771                                  
       INTRAVENOUS:
@@ -2203,7 +2433,7 @@ enums:
       ENDOTRACHEOPULMONARY:
         description: Endotracheopulmonary
         meaning: OMOP:4186832                        
-      EXTRA-AMNIOTIC:
+      EXTRA_AMNIOTIC:
         description: Extra-amniotic
         meaning: OMOP:4186833                                    
       GASTROENTERAL:
@@ -2233,13 +2463,13 @@ enums:
       OPHTHALMIC:
         description: Ophthalmic
         meaning: OMOP:4184451                                            
-      BODY CAVITY:
+      BODY_CAVITY:
         description: Body cavity
         meaning: OMOP:4222254                                          
       INTRAOSSEOUS:
         description: Intraosseous
         meaning: OMOP:4213522                                        
-      INTRAVENTRICULAR ROUTE - CARDIAC:
+      INTRAVENTRICULAR_ROUTE_CARDIAC:
         description: Intraventricular route - cardiac
         meaning: OMOP:4222259
       INTRABILIARY:
@@ -2266,7 +2496,7 @@ enums:
       TRANSDERMAL:
         description: Transdermal
         meaning: OMOP:4262099                                          
-      INTRA-ARTERIAL:
+      INTRA_ARTERIAL:
         description: Intra-arterial
         meaning: OMOP:4240824                                    
       INTRAPERITONEAL:
@@ -2380,7 +2610,7 @@ enums:
       FISTULA:
         description: Fistula
         meaning: OMOP:4304277                                                  
-      SURGICAL DRAIN:
+      SURGICAL_DRAIN:
         description: Surgical drain
         meaning: OMOP:4304412                                    
       URETERAL:
@@ -2389,7 +2619,7 @@ enums:
       EPILESIONAL:
         description: Epilesional
         meaning: OMOP:35608078                                         
-      EXTRACORPOREAL HEMODIALYSIS:
+      EXTRACORPOREAL_HEMODIALYSIS:
         description: Extracorporeal hemodialysis
         meaning: OMOP:35624178         
       SUPRACHOROIDAL:
@@ -2398,7 +2628,7 @@ enums:
       EXTRACORPOREAL:
         description: Extracorporeal
         meaning: OMOP:37018288                                   
-      INTRACORPORUS CAVERNOSUM:
+      INTRACORPORUS_CAVERNOSUM:
         description: Intracorporus cavernosum
         meaning: OMOP:37174549               
       INTRAGLANDULAR:
@@ -2413,7 +2643,7 @@ enums:
       PERITUMORAL:
         description: Peritumoral
         meaning: OMOP:37207463                                         
-      POSTERIOR JUXTASCLERAL:
+      POSTERIOR_JUXTASCLERAL:
         description: Posterior juxtascleral
         meaning: OMOP:37207464                   
       SUBRETINAL:
@@ -2452,7 +2682,7 @@ enums:
       PERIDURAL:
         description: Peridural
         meaning: OMOP:40490896                                             
-      LOWER RESPIRATORY TRACT:
+      LOWER_RESPIRATORY_TRACT:
         description: Lower respiratory tract
         meaning: OMOP:40490898                 
       INTRAMAMMARY:
@@ -2491,7 +2721,7 @@ enums:
       INTRALINGUAL:
         description: Intralingual
         meaning: OMOP:40493227                                       
-      RESPIRATORY TRACT:
+      RESPIRATORY_TRACT:
         description: Respiratory tract
         meaning: OMOP:40486069                             
       INTRAHEPATIC:
@@ -2503,7 +2733,7 @@ enums:
       INTRAEPICARDIAL:
         description: Intraepicardial
         meaning: OMOP:40487473                                 
-      DIGESTIVE TRACT:
+      DIGESTIVE_TRACT:
         description: Digestive tract
         meaning: OMOP:40487501                                 
       OCULAR:
@@ -2524,244 +2754,244 @@ enums:
     description: Source of device exposure record
     comments: Taken from OMOP Type Concept Domain
     permissible_values:
-      CASE REPORT FORM:
+      CASE_REPORT_FORM:
         description: Case Report Form
         meaning: OMOP:32809
       CLAIM:
         description: Claim
         meaning: OMOP:32810
-      CLAIM AUTHORIZATION:
+      CLAIM_AUTHORIZATION:
         description: Claim authorization
         meaning: OMOP:32811
-      CLAIM DISCHARGE RECORD:
+      CLAIM_DISCHARGE_RECORD:
         description: Claim discharge record
         meaning: OMOP:32812
-      CLAIM ENROLMENT RECORD:
+      CLAIM_ENROLMENT_RECORD:
         description: Claim enrolment record
         meaning: OMOP:32813
-      COST RECORD:
+      COST_RECORD:
         description: Cost record
         meaning: OMOP:32814
-      DEATH CERTIFICATE:
+      DEATH_CERTIFICATE:
         description: Death Certificate
         meaning: OMOP:32815
-      DENTAL CLAIM:
+      DENTAL_CLAIM:
         description: Dental claim
         meaning: OMOP:32816
       EHR:
         description: EHR
         meaning: OMOP:32817
-      EHR ADMINISTRATION RECORD:
+      EHR_ADMINISTRATION_RECORD:
         description: EHR administration record
         meaning: OMOP:32818
-      EHR ADMISSION NOTE:
+      EHR_ADMISSION_NOTE:
         description: EHR admission note
         meaning: OMOP:32819
-      EHR ANCILLARY REPORT:
+      EHR_ANCILLARY_REPORT:
         description: EHR ancillary report
         meaning: OMOP:32820
-      EHR BILLING RECORD:
+      EHR_BILLING_RECORD:
         description: EHR billing record
         meaning: OMOP:32821
-      EHR CHIEF COMPLAINT:
+      EHR_CHIEF_COMPLAINT:
         description: EHR chief complaint
         meaning: OMOP:32822
-      EHR DISCHARGE RECORD:
+      EHR_DISCHARGE_RECORD:
         description: EHR discharge record
         meaning: OMOP:32823
-      EHR DISCHARGE SUMMARY:
+      EHR_DISCHARGE_SUMMARY:
         description: EHR discharge summary
         meaning: OMOP:32824
-      EHR DISPENSING RECORD:
+      EHR_DISPENSING_RECORD:
         description: EHR dispensing record
         meaning: OMOP:32825
-      EHR EMERGENCY ROOM NOTE:
+      EHR_EMERGENCY_ROOM_NOTE:
         description: EHR emergency room note
         meaning: OMOP:32826
-      EHR ENCOUNTER RECORD:
+      EHR_ENCOUNTER_RECORD:
         description: EHR encounter record
         meaning: OMOP:32827
-      EHR EPISODE RECORD:
+      EHR_EPISODE_RECORD:
         description: EHR episode record
         meaning: OMOP:32828
-      EHR INPATIENT NOTE:
+      EHR_INPATIENT_NOTE:
         description: EHR inpatient note
         meaning: OMOP:32829
-      EHR MEDICATION LIST:
+      EHR_MEDICATION_LIST:
         description: EHR medication list
         meaning: OMOP:32830
-      EHR NOTE:
+      EHR_NOTE:
         description: EHR note
         meaning: OMOP:32831
-      EHR NURSING REPORT:
+      EHR_NURSING_REPORT:
         description: EHR nursing report
         meaning: OMOP:32832
-      EHR ORDER:
+      EHR_ORDER:
         description: EHR order
         meaning: OMOP:32833
-      EHR OUTPATIENT NOTE:
+      EHR_OUTPATIENT_NOTE:
         description: EHR outpatient note
         meaning: OMOP:32834
-      EHR PATHOLOGY REPORT:
+      EHR_PATHOLOGY_REPORT:
         description: EHR Pathology report
         meaning: OMOP:32835
-      EHR PHYSICAL EXAMINATION:
+      EHR_PHYSICAL_EXAMINATION:
         description: EHR physical examination
         meaning: OMOP:32836
-      EHR PLANNED DISPENSING RECORD:
+      EHR_PLANNED_DISPENSING_RECORD:
         description: EHR planned dispensing record
         meaning: OMOP:32837
-      EHR PERSCRIPTION:
+      EHR_PRESCRIPTION:
         description: EHR prescription
         meaning: OMOP:32838
-      EHR PERSCRIPTION ISSUE RECORD:
+      EHR_PRESCRIPTION_ISSUE_RECORD:
         description: EHR prescription issue record
         meaning: OMOP:32839
-      EHR PROBLEM LIST:
+      EHR_PROBLEM_LIST:
         description: EHR problem list
         meaning: OMOP:32840
-      EHR RADIOLOGY REPORT:
+      EHR_RADIOLOGY_REPORT:
         description: EHR radiology report
         meaning: OMOP:32841
-      EHR REFERRAL RECORD:
+      EHR_REFERRAL_RECORD:
         description: EHR referral record
         meaning: OMOP:32842
-      EXTERNAL CDM INSTANCE:
+      EXTERNAL_CDM_INSTANCE:
         description: External CDM instance
         meaning: OMOP:32843
-      FACILITY CLAIM:
+      FACILITY_CLAIM:
         description: Facility claim
         meaning: OMOP:32844
-      FACILITY CLAIM DETAIL:
+      FACILITY_CLAIM_DETAIL:
         description: Facility claim detail
         meaning: OMOP:32845
-      FACILITY CLAIM HEADER:
+      FACILITY_CLAIM_HEADER:
         description: Facility claim header
         meaning: OMOP:32846
-      GEOGRAPHIC ISOLATION RECORD:
+      GEOGRAPHIC_ISOLATION_RECORD:
         description: Geographic isolation record
         meaning: OMOP:32847
-      GOVERNMENT REPORT:
+      GOVERNMENT_REPORT:
         description: Government report
         meaning: OMOP:32848
-      HEALTH INFORMATION EXCHANGE RECORD:
+      HEALTH_INFORMATION_EXCHANGE_RECORD:
         description: Health Information Exchange record
         meaning: OMOP:32849
-      HEALTH RISK ASSESSMENT:
+      HEALTH_RISK_ASSESSMENT:
         description: Health Risk Assessment
         meaning: OMOP:32850
-      HEALTHCARE PROFESSIONAL FILLED SURVEY:
+      HEALTHCARE_PROFESSIONAL_FILLED_SURVEY:
         description: Healthcare professional filled survey
         meaning: OMOP:32851
-      HOSPITAL COST:
+      HOSPITAL_COST:
         description: Hospital cost
         meaning: OMOP:32852
-      INPATIENT CLAIM:
+      INPATIENT_CLAIM:
         description: Inpatient claim
         meaning: OMOP:32853
-      INPATIENT CLAIM DETAIL:
+      INPATIENT_CLAIM_DETAIL:
         description: Inpatient claim detail
         meaning: OMOP:32854
-      INPATIENT CLAIM HEADER:
+      INPATIENT_CLAIM_HEADER:
         description: Inpatient claim header
         meaning: OMOP:32855
       LAB:
         description: Lab
         meaning: OMOP:32856
-      MAIL ORDER RECORD:
+      MAIL_ORDER_RECORD:
         description: Mail order record
         meaning: OMOP:32857
       NLP:
         description: NLP
         meaning: OMOP:32858
-      OUTPATIENT CLAIM:
+      OUTPATIENT_CLAIM:
         description: Outpatient claim
         meaning: OMOP:32859
-      OUTPATIENT CLAIM DETAIL:
+      OUTPATIENT_CLAIM_DETAIL:
         description: Outpatient claim detail
         meaning: OMOP:32860
-      OUTPATIENT CLAIM HEADER:
+      OUTPATIENT_CLAIM_HEADER:
         description: Outpatient claim header
         meaning: OMOP:32861
-      PATIENT FILLED SURVEY:
+      PATIENT_FILLED_SURVEY:
         description: Patient filled survey
         meaning: OMOP:32862
-      PATIENT OR PAYER PAID RECORD:
+      PATIENT_OR_PAYER_PAID_RECORD:
         description: Patient or payer paid record
         meaning: OMOP:32863
-      PATIENT REPORTED COST:
+      PATIENT_REPORTED_COST:
         description: Patient reported cost
         meaning: OMOP:32864
-      PATIENT SELF-REPORT:
+      PATIENT_SELF-REPORT:
         description: Patient self-report
         meaning: OMOP:32865
-      PATIENT SELF-TESTED:
+      PATIENT_SELF_TESTED:
         description: Patient self-tested
         meaning: OMOP:705183
-      PAYER SYSTEM RECORD (PAID PREMIUM):
+      PAYER_SYSTEM_RECORD_PAID_PREMIUM:
         description: Payer system record (paid premium)
         meaning: OMOP:32866
-      PAYER SYSTEM RECORD (PRIMARY PAYER):
+      PAYER_SYSTEM_RECORD_PRIMARY_PAYER:
         description: Payer system record (primary payer)
         meaning: OMOP:32867
-      PAYER SYSTEM RECORD (SECONDARY PAYER):
+      PAYER_SYSTEM_RECORD_SECONDARY_PAYER:
         description: Payer system record (secondary payer)
         meaning: OMOP:32868
-      PHARMACY CLAIM:
+      PHARMACY_CLAIM:
         description: Pharmacy claim
         meaning: OMOP:32869
-      POINT OF CARE/EXPRESS LAB:
+      POINT_OF_CARE_EXPRESS_LAB:
         description: Point of care/express lab
         meaning: OMOP:703249
-      PRE-QUALIFICATION TIME PERIOD:
+      PRE_QUALIFICATION_TIME_PERIOD:
         description: Pre-qualification time period
         meaning: OMOP:32870
-      PROFESSIONAL CLAIM:
+      PROFESSIONAL_CLAIM:
         description: Professional claim
         meaning: OMOP:32871
-      PROFESSIONAL CLAIM DETAIL:
+      PROFESSIONAL_CLAIM_DETAIL:
         description: Professional claim detail
         meaning: OMOP:32872
-      PROFESSIONAL CLAIM HEADER:
+      PROFESSIONAL_CLAIM_HEADER:
         description: Professional claim header
         meaning: OMOP:32873
-      PROVIDER CHARGE LIST PRICE:
+      PROVIDER_CHARGE_LIST_PRICE:
         description: Provider charge list price
         meaning: OMOP:32874
-      PROVIDER FINANCIAL SYSTEM:
+      PROVIDER_FINANCIAL_SYSTEM:
         description: Provider financial system
         meaning: OMOP:32875
-      PROVIDER INCURRED COST RECORD:
+      PROVIDER_INCURRED_COST_RECORD:
         description: Provider incurred cost record
         meaning: OMOP:32876
-      RANDOMIZATION RECORD:
+      RANDOMIZATION_RECORD:
         description: Randomization record
         meaning: OMOP:32877
-      REFERENCE LAB:
+      REFERENCE_LAB:
         description: Reference lab
         meaning: OMOP:32878
       REGISTRY:
         description: Registry
         meaning: OMOP:32879
-      STANDARD ALGORITHM:
+      STANDARD_ALGORITHM:
         description: Standard algorithm
         meaning: OMOP:32880
-      STANDARD ALGORITHM FROM CLAIMS:
+      STANDARD_ALGORITHM_FROM_CLAIMS:
         description: Standard algorithm from claims
         meaning: OMOP:32881
-      STANDARD ALGORITHM FROM EHR:
+      STANDARD_ALGORITHM_FROM_EHR:
         description: Standard algorithm from EHR
         meaning: OMOP:32882
       SURVEY:
         description: Survey
         meaning: OMOP:32883
-      URGENT LAB:
+      URGENT_LAB:
         description: Urgent lab
         meaning: OMOP:32884
-      US SOCIAL SECURITY DEATH MASTER FILE:
+      US_SOCIAL_SECURITY_DEATH_MASTER_FILE:
         description: US Social Security Death Master File
         meaning: OMOP:32885
-      VISION CLAIM:
+      VISION_CLAIM:
         description: Vision claim
         meaning: OMOP:32886
 
@@ -2770,177 +3000,159 @@ enums:
     description: A high-level type of specimen, based on its derivation provenance (i.e. how far removed it is from the original sample extracted from a source).
     permissible_values:
       ALIQUOT:
-        text: ALIQUOT
         description: A specimen that results from the division of some parent specimen into equal amounts for downstream analysis.
       ANALYTE:
-        text: ANALYTE
         description: A specimen generated through the extraction of a specified class of substance/chemical (e.g. DNA, RNA, protein) from a parent specimen, which is stored in solution as an analyte.
       FRESH_SPECIMEN:
-        text: FRESH_SPECIMEN
         description: A specimen representing the material that was directly collected from a subject (i.e. not generated through portioning, aliquoting, or analyte extraction from an existing specimen).
       PORTION:
-        text: PORTION
         description: A physical sub-part taken from an existing specimen.
       SLIDE:
-        text: SLIDE
         description: A specimen that is mounted on a slide or coverslip for microscopic analysis.
 
   AnalyteTypeEnum:
     name: AnalyteTypeEnum
     permissible_values:
-      FFPE DNA:
-        text: FFPE DNA
+      FFPE_DNA:
         description: Formalin-Fixed Paraffin-Embedded DNA
-      Repli-G (Qiagen) DNA:
-        text: Repli-G (Qiagen) DNA
+      REPLI_G_QIAGEN_DNA:
         description: Repli-G (Qiagen) DNA
-      GenomePlex (Rubicon) Amplified DNA:
-        text: GenomePlex (Rubicon) Amplified DNA
-      Total RNA:
-        text: Total RNA
+      GENOME_PLEX_RUBICON_AMPLIFIED_DNA:
+        description: GenomePlex Rubicon Amplified DNA
+      TOTAL_RNA:
         description: Total Ribonucleic Acid
-      Repli-G X (Qiagen) DNA:
-        text: Repli-G X (Qiagen) DNA
+      REPLI_G_X_QIAGEN_DNA:
         description: Repli-G X (Qiagen) DNA
       RNA:
-        text: RNA
         description: Ribonucleic Acid
-      Repli-G Pooled (Qiagen) DNA:
-        text: Repli-G Pooled (Qiagen) DNA
-        description: REPLI-g Pooled DNA
+      REPLI_G_POOLED_QIAGEN_DNA:
+        description: Repli-G Pooled (Qiagen) DNA
       DNA:
-        text: DNA
         description: DNA
-      EBV Immortalized Normal:
-        text: EBV Immortalized Normal
+      EBV_IMMORTALIZED_NORMAL:
         description: Normal Epstein-Barr Virus Immortalization
-      FFPE RNA:
-        text: FFPE RNA
+      FFPE_RNA:
         description: Formalin-Fixed Paraffin-Embedded RNA
-      Protein:
-        text: Protein
+      PROTEIN:
         description: Protein
-      Nuclei RNA:
-        text: Nuclei RNA
-      cfDNA:
-        text: cfDNA
+      NUCLEI_RNA:
+        description: Nuclei RNA
+      CFDNA:
+        description: Cell-free DNA
 
   SourceMaterialTypeEnum:
     name: SourceMaterialTypeEnum
     permissible_values:
       ADDITIONAL_METASTATIC:
-        text: ADDITIONAL_METASTATIC
+        description: A metastatic tumor sample collected in addition to a previously collected metastatic specimen.
       ADDITIONAL_NEW_PRIMARY:
-        text: ADDITIONAL_NEW_PRIMARY
+        description: A new primary tumor sample collected in addition to a previously collected primary specimen.
       BENIGN_NEOPLASMS:
-        text: BENIGN_NEOPLASMS
+        description: Tissue derived from a non-cancerous tumor that does not invade nearby tissue or metastasize.
       BLOOD_DERIVED_CANCER_BONE_MARROW:
-        text: BLOOD_DERIVED_CANCER_BONE_MARROW
+        description: Cancerous cells isolated from bone marrow as part of a blood-derived cancer sample.
       BLOOD_DERIVED_CANCER_BONE_MARROW_POST_TREATMENT:
-        text: BLOOD_DERIVED_CANCER_BONE_MARROW_POST_TREATMENT
+        description: Cancerous cells isolated from bone marrow following therapeutic intervention.
       BLOOD_DERIVED_CANCER_PERIPHERAL_BLOOD:
-        text: BLOOD_DERIVED_CANCER_PERIPHERAL_BLOOD
+        description: Cancerous cells isolated from peripheral blood as part of a blood-derived cancer sample.
       BLOOD_DERIVED_CANCER_PERIPHERAL_BLOOD_POST_TREATMENT:
-        text: BLOOD_DERIVED_CANCER_PERIPHERAL_BLOOD_POST_TREATMENT
+        description: Cancerous cells isolated from peripheral blood following therapeutic intervention.
       BLOOD_DERIVED_LIQUID_BIOPSY:
-        text: BLOOD_DERIVED_LIQUID_BIOPSY
+        description: Tumor-derived material, such as circulating tumor DNA or cells, extracted from a blood sample.
       BLOOD_DERIVED_NORMAL:
-        text: BLOOD_DERIVED_NORMAL
+        description: Non-cancerous blood sample used as a normal reference for genomic or molecular analyses.
       BONE_MARROW_NORMAL:
-        text: BONE_MARROW_NORMAL
+        description: Non-cancerous bone marrow sample used as a normal reference for genomic or molecular analyses.
       BUCCAL_CELL_NORMAL:
-        text: BUCCAL_CELL_NORMAL
+        description: Normal cells collected from the inner cheek mucosa, typically used as a germline reference.
       CELL_LINE_DERIVED_XENOGRAFT_TISSUE:
-        text: CELL_LINE_DERIVED_XENOGRAFT_TISSUE
+        description: Tumor tissue derived from a xenograft model that was originally established from a cultured cell line.
       CELL_LINES:
-        text: CELL_LINES
+        description: Immortalized cells grown in culture, derived from tumor or normal tissue for experimental use.
       CONTROL_ANALYTE:
-        text: CONTROL_ANALYTE
+        description: A reference material used to validate or calibrate laboratory assays and analytical processes.
       DNA:
-        text: DNA
+        description: Deoxyribonucleic acid extracted from a biological sample for genomic analysis.
       EBV_IMMORTALIZED_NORMAL:
-        text: EBV_IMMORTALIZED_NORMAL
+        description: Normal B-lymphocytes immortalized by Epstein-Barr virus transformation, used as a germline reference.
       EXPANDED_NEXT_GENERATION_CANCER_MODEL:
-        text: EXPANDED_NEXT_GENERATION_CANCER_MODEL
+        description: A cancer model, such as an organoid or cell line, that has been propagated or expanded from a next-generation model system.
       FFPE_RECURRENT:
-        text: FFPE_RECURRENT
+        description: Formalin-fixed paraffin-embedded tissue from a recurrent tumor, preserved for histological or molecular analysis.
       FFPE_SCROLLS:
-        text: FFPE_SCROLLS
+        description: Thin sections cut from formalin-fixed paraffin-embedded tissue blocks for nucleic acid or protein extraction.
       FIBROBLASTS_FROM_BONE_MARROW_NORMAL:
-        text: FIBROBLASTS_FROM_BONE_MARROW_NORMAL
+        description: Normal fibroblast cells isolated from bone marrow, used as a non-cancerous reference.
       GRANULOCYTES:
-        text: GRANULOCYTES
+        description: White blood cells of the granulocyte lineage isolated from blood, often used as a normal germline reference.
       HUMAN_TUMOR_ORIGINAL_CELLS:
-        text: HUMAN_TUMOR_ORIGINAL_CELLS
+        description: Primary tumor cells taken directly from a human subject without prior in vitro expansion.
       IN_SITU_NEOPLASMS:
-        text: IN_SITU_NEOPLASMS
+        description: Tissue from a neoplasm that has not yet invaded surrounding tissue, representing an early-stage malignancy.
       LYMPHOID_NORMAL:
-        text: LYMPHOID_NORMAL
+        description: Non-cancerous lymphoid tissue used as a normal reference for genomic or molecular analyses.
       METASTATIC:
-        text: METASTATIC
+        description: Tumor tissue collected from a site distant from the primary tumor, representing metastatic disease.
       MIXED_ADHERENT_SUSPENSION:
-        text: MIXED_ADHERENT_SUSPENSION
+        description: A cell culture sample containing both adherent and suspension cell populations.
       MONONUCLEAR_CELLS_FROM_BONE_MARROW_NORMAL:
-        text: MONONUCLEAR_CELLS_FROM_BONE_MARROW_NORMAL
+        description: Normal mononuclear cells isolated from bone marrow, used as a non-cancerous reference.
       NEOPLASMS_OF_UNCERTAIN_AND_UNKNOWN_BEHAVIOR:
-        text: NEOPLASMS_OF_UNCERTAIN_AND_UNKNOWN_BEHAVIOR
+        description: Tissue from a neoplasm whose malignant potential cannot be determined based on available information.
       NEXT_GENERATION_CANCER_MODEL:
-        text: NEXT_GENERATION_CANCER_MODEL
+        description: A modern in vitro or in vivo cancer model, such as a patient-derived organoid or xenograft, that recapitulates tumor biology.
       NORMAL_ADJACENT_TISSUE:
-        text: NORMAL_ADJACENT_TISSUE
-      PLEURAL_EFFUSION:
-        text: PLEURAL_EFFUSION
-      POST_NEOADJUVANT_THERAPY:
-        text: POST_NEOADJUVANT_THERAPY
-      PRIMARY_BLOOD_DERIVED_CANCER_BONE_MARROW:
-        text: PRIMARY_BLOOD_DERIVED_CANCER_BONE_MARROW
-      PRIMARY_BLOOD_DERIVED_CANCER_PERIPHERAL_BLOOD:
-        text: PRIMARY_BLOOD_DERIVED_CANCER_PERIPHERAL_BLOOD
-      PRIMARY_TUMOR:
-        text: PRIMARY_TUMOR
-      PRIMARY_XENOGRAFT_TISSUE:
-        text: PRIMARY_XENOGRAFT_TISSUE
-      RECURRENT_BLOOD_DERIVED_CANCER_BONE_MARROW:
-        text: RECURRENT_BLOOD_DERIVED_CANCER_BONE_MARROW
-      RECURRENT_BLOOD_DERIVED_CANCER_PERIPHERAL_BLOOD:
-        text: RECURRENT_BLOOD_DERIVED_CANCER_PERIPHERAL_BLOOD
-      RECURRENT_TUMOR:
-        text: RECURRENT_TUMOR
-      RNA:
-        text: RNA
-      SALIVA:
-        text: SALIVA
-      SLIDES:
-        text: SLIDES
-      SOLID_TISSUE_NORMAL:
-        text: SOLID_TISSUE_NORMAL
-      TOTAL_RNA:
-        text: TOTAL_RNA
-      TUMOR:
-        text: TUMOR
-      TUMOR_ADJACENT_NORMAL_POST_NEOADJUVANT_THERAPY:
-        text: TUMOR_ADJACENT_NORMAL_POST_NEOADJUVANT_THERAPY
-      XENOGRAFT_TISSUE:
-        text: XENOGRAFT_TISSUE
+        description: Histologically normal tissue collected from a site adjacent to a tumor, used as a local reference.
       NOT_ALLOWED_TO_COLLECT:
-        text: NOT_ALLOWED_TO_COLLECT
+        description: A sample that was not obtained because collection was prohibited by consent, regulation, or protocol.
       NOT_REPORTED:
-        text: NOT_REPORTED
+        description: The source material type was not documented or reported for this sample.
+      PLEURAL_EFFUSION:
+        description: Fluid collected from the pleural cavity, which may contain tumor cells in the context of malignancy.
+      POST_NEOADJUVANT_THERAPY:
+        description: Tumor tissue collected after the administration of neoadjuvant (pre-surgical) therapy.
+      PRIMARY_BLOOD_DERIVED_CANCER_BONE_MARROW:
+        description: The initial cancerous bone marrow sample collected from a patient with a blood-derived malignancy.
+      PRIMARY_BLOOD_DERIVED_CANCER_PERIPHERAL_BLOOD:
+        description: The initial cancerous peripheral blood sample collected from a patient with a blood-derived malignancy.
+      PRIMARY_TUMOR:
+        description: Tissue collected from the original site of tumor origin, prior to any metastatic spread.
+      PRIMARY_XENOGRAFT_TISSUE:
+        description: Tumor tissue derived from a first-generation xenograft established directly from a patient sample.
+      RECURRENT_BLOOD_DERIVED_CANCER_BONE_MARROW:
+        description: Cancerous bone marrow sample collected at the time of disease recurrence in a blood-derived malignancy.
+      RECURRENT_BLOOD_DERIVED_CANCER_PERIPHERAL_BLOOD:
+        description: Cancerous peripheral blood sample collected at the time of disease recurrence in a blood-derived malignancy.
+      RECURRENT_TUMOR:
+        description: Tumor tissue collected following disease recurrence after prior treatment or remission.
+      RNA:
+        description: Ribonucleic acid extracted from a biological sample for transcriptomic or gene expression analysis.
+      SALIVA:
+        description: Saliva collected as a non-invasive source of DNA or other biological material, typically for germline analysis.
+      SLIDES:
+        description: Prepared microscopy slides containing tissue or cell specimens for histological or molecular examination.
+      SOLID_TISSUE_NORMAL:
+        description: Non-cancerous solid tissue used as a normal reference for genomic or molecular analyses.
+      TOTAL_RNA:
+        description: The complete RNA complement extracted from a sample, including messenger, ribosomal, and non-coding RNA species.
+      TUMOR:
+        description: Tissue derived from a malignant neoplasm, used broadly when more specific tumor classification is not specified.
+      TUMOR_ADJACENT_NORMAL_POST_NEOADJUVANT_THERAPY:
+        description: Histologically normal tissue adjacent to a tumor, collected after completion of neoadjuvant therapy.
       UNKNOWN:
-        text: UNKNOWN
+        description: The source material type is not known or could not be determined for this sample.
+      XENOGRAFT_TISSUE:
+        description: Tumor tissue derived from a xenograft model in which human tumor cells are propagated in an animal host.
 
   SectionLocationEnum:
     name: SectionLocationEnum
     description: The location in a parent specimen from which a section/portion was excised.
     permissible_values:
       BOTTOM:
-        text: BOTTOM
         description: The part of a specimen designated as its 'bottom' based on specified orientation criteria.
       TOP:
-        text: TOP
         description: The part of a specimen designated as its 'top' based on specified orientation criteria.
       UNKNOWN:
-        text: UNKNOWN
         description: An unknown location on a specimen.
 
   SpecimenCreationActivityTypeEnum:
@@ -2948,229 +3160,225 @@ enums:
     description: The high-level type of activity through which the specimen was generated (i.e. via collection from the original source, or via derivation from an existing specimen)
     permissible_values:
       COLLECTION_FROM_SOURCE:
-        text: COLLECTION_FROM_SOURCE
         description: An activity that collects an initial sample directly from a subject / source.
       DERIVATION_FROM_SPECIMEN:
-        text: DERIVATION_FROM_SPECIMEN
         description: An activity that derives a new specimen from an existing one.
 
   SpecimenCollectionMethodType:
     name: SpecimenCollectionMethodType
     permissible_values:
       ORCHIECTOMY:
-        text: ORCHIECTOMY
+        description: Surgical removal of one or both testicles, typically performed to treat testicular cancer or as part of prostate cancer management.
       METASTASECTOMY:
-        text: METASTASECTOMY
+        description: Surgical removal of one or more metastatic tumor deposits that have spread from a primary cancer site to distant organs or tissues.
       AUTOPSY:
-        text: AUTOPSY
+        description: Post-mortem surgical examination of a body to determine cause of death and collect tissue specimens for pathological analysis.
       UNKNOWN:
-        text: UNKNOWN
+        description: The method of specimen collection performed is not known.
       ASPIRATE:
-        text: ASPIRATE
+        description: Collection of fluid or semi-solid material by suction through a needle or syringe from a body cavity or tissue mass.
       RIGHT_HEMICOLECTOMY:
-        text: RIGHT_HEMICOLECTOMY
+        description: Surgical removal of the right portion of the colon, including the cecum, ascending colon, and part of the transverse colon.
       INCISIONAL_BIOPSY:
-        text: INCISIONAL_BIOPSY
+        description: Surgical procedure in which a portion of a suspicious lesion or tumor is cut out for pathological examination, leaving the remainder in place.
       BLOOD_DRAW:
-        text: BLOOD_DRAW
+        description: Collection of a blood sample via venipuncture for laboratory analysis or biospecimen banking.
       PERITONEAL_LAVAGE:
-        text: PERITONEAL_LAVAGE
+        description: Washing of the peritoneal cavity with fluid, which is then collected and analyzed for the presence of malignant cells or other diagnostic information.
       OPEN_RADICAL_PROSTATECTOMY:
-        text: OPEN_RADICAL_PROSTATECTOMY
+        description: Complete surgical removal of the prostate gland and surrounding tissues through a traditional open abdominal or perineal incision.
       ABDOMINO_PERINEAL_RESECTION_OF_RECTUM:
-        text: ABDOMINO_PERINEAL_RESECTION_OF_RECTUM
+        description: Surgical removal of the rectum, anus, and surrounding tissue via both abdominal and perineal incisions, typically resulting in a permanent colostomy.
       SALPINGECTOMY:
-        text: SALPINGECTOMY
+        description: Surgical removal of one or both fallopian tubes, often performed to treat or reduce risk of ovarian or tubal cancer.
       ENDO_RECTAL_TUMOR_RESECTION:
-        text: ENDO_RECTAL_TUMOR_RESECTION
+        description: Surgical excision of a rectal tumor through an endoscopic or transanal approach without requiring an external incision.
       BIOPSY:
-        text: BIOPSY
+        description: Removal of a small sample of tissue or cells from the body for microscopic examination and pathological diagnosis.
       SALPINGO_OOPHORECTOMY:
-        text: SALPINGO_OOPHORECTOMY
+        description: Surgical removal of one or both ovaries along with the corresponding fallopian tube(s), performed to treat or prevent gynecologic cancers.
       NOT_ALLOWED_TO_COLLECT:
-        text: NOT_ALLOWED_TO_COLLECT
+        description: Specimen collection was not permitted due to regulatory, ethical, institutional, or patient consent restrictions.
       WHIPPLE_PROCEDURE:
-        text: WHIPPLE_PROCEDURE
+        description: A complex surgical procedure (pancreaticoduodenectomy) involving removal of the head of the pancreas, duodenum, gallbladder, and part of the bile duct, typically performed for pancreatic cancer.
       ENUCLEATION:
-        text: ENUCLEATION
+        description: Surgical removal of a tumor or organ intact and in its entirety without cutting into the mass.
       MODIFIED_RADICAL_MASTECTOMY:
-        text: MODIFIED_RADICAL_MASTECTOMY
+        description: Surgical removal of the entire breast along with most or all of the axillary lymph nodes, while preserving the chest wall muscles.
       PARACENTESIS:
-        text: PARACENTESIS
+        description: A minimally invasive procedure in which a needle is inserted into the peritoneal cavity to drain ascitic fluid for diagnostic or therapeutic purposes.
       OPEN_CRANIOTOMY:
-        text: OPEN_CRANIOTOMY
+        description: Surgical procedure involving the removal of a portion of the skull to access the brain for tumor resection or biopsy.
       WEDGE_RESECTION:
-        text: WEDGE_RESECTION
+        description: Surgical removal of a wedge-shaped section of an organ, most commonly the lung, to excise a tumor or lesion.
       LAPAROSCOPIC_RADICAL_NEPHRECTOMY:
-        text: LAPAROSCOPIC_RADICAL_NEPHRECTOMY
+        description: Minimally invasive surgical removal of an entire kidney and surrounding tissue using a laparoscope, performed to treat renal cell carcinoma.
       OPEN_PARTIAL_NEPHRECTOMY:
-        text: OPEN_PARTIAL_NEPHRECTOMY
+        description: Surgical removal of a tumor-bearing portion of the kidney through an open incision while preserving the remaining healthy kidney tissue.
       TRANSURETHRAL_RESECTION:
-        text: TRANSURETHRAL_RESECTION
+        description: Endoscopic surgical procedure performed through the urethra to remove tumors or tissue from the bladder or prostate without external incision.
       SIGMOID_COLECTOMY:
-        text: SIGMOID_COLECTOMY
+        description: Surgical removal of the sigmoid colon, the S-shaped final section of the large intestine before the rectum.
       OOPHORECTOMY:
-        text: OOPHORECTOMY
+        description: Surgical removal of one or both ovaries, performed to treat ovarian cancer or as a risk-reducing measure in high-risk individuals.
       TOTAL_HEPATECTOMY:
-        text: TOTAL_HEPATECTOMY
+        description: Complete surgical removal of the liver, typically performed in preparation for liver transplantation.
       INDETERMINANT:
-        text: INDETERMINANT
+        description: The method of specimen collection could not be definitively determined from available information.
       SUBTOTAL_RESECTION:
-        text: SUBTOTAL_RESECTION
+        description: Surgical removal of the majority but not all of a tumor or organ, leaving behind a remnant due to technical or safety constraints.
       LEFT_HEMICOLECTOMY:
-        text: LEFT_HEMICOLECTOMY
+        description: Surgical removal of the left portion of the colon, including the descending colon and part of the transverse colon.
       NEEDLE_BIOPSY:
-        text: NEEDLE_BIOPSY
+        description: Minimally invasive collection of tissue or fluid using a hollow needle inserted into a lesion or mass for pathological analysis.
       OTHER:
-        text: OTHER
+        description: A specimen collection method that does not correspond to any of the other specifically defined permissible values.
       PANCREATECTOMY:
-        text: PANCREATECTOMY
+        description: Surgical removal of all or part of the pancreas, performed to treat pancreatic cancer or other pancreatic neoplasms.
       THORACOSCOPIC_BIOPSY:
-        text: THORACOSCOPIC_BIOPSY
+        description: Minimally invasive biopsy of thoracic structures performed using a thoracoscope inserted through small chest wall incisions.
       TOTAL_MASTECTOMY:
-        text: TOTAL_MASTECTOMY
+        description: Surgical removal of the entire breast tissue including the nipple and areola, without removal of the underlying chest muscles or axillary lymph nodes.
       EXCISIONAL_BIOPSY:
-        text: EXCISIONAL_BIOPSY
+        description: Surgical removal of an entire suspicious lesion or lymph node for pathological examination, intending complete excision of the abnormal tissue.
       BONE_MARROW_ASPIRATE:
-        text: BONE_MARROW_ASPIRATE
+        description: Collection of a liquid bone marrow sample via needle aspiration, typically from the iliac crest, for hematologic diagnosis and analysis.
       LOCAL_RESECTION:
-        text: LOCAL_RESECTION
+        description: Surgical removal of a tumor and a small margin of surrounding tissue, limited to the immediate area of the lesion.
       LOBECTOMY:
-        text: LOBECTOMY
+        description: Surgical removal of a lobe of an organ, most commonly a lobe of the lung, to treat malignancies confined to that lobe.
       FINE_NEEDLE_ASPIRATION:
-        text: FINE_NEEDLE_ASPIRATION
+        description: Minimally invasive diagnostic procedure using a thin needle and syringe to extract cells or fluid from a suspicious lesion for cytological analysis.
       OMENTECTOMY:
-        text: OMENTECTOMY
+        description: Surgical removal of all or part of the omentum, the fatty tissue covering the abdominal organs, often performed during cytoreductive surgery for ovarian cancer.
       TUMOR_RESECTION:
-        text: TUMOR_RESECTION
+        description: Surgical excision of a tumor mass, with the extent of surrounding tissue removal depending on tumor type, location, and surgical intent.
       CYSTECTOMY:
-        text: CYSTECTOMY
+        description: Surgical removal of the urinary bladder, either in part (partial) or entirety (radical), typically performed to treat bladder cancer.
       GROSS_TOTAL_RESECTION:
-        text: GROSS_TOTAL_RESECTION
+        description: Surgical removal of all visually and grossly identifiable tumor tissue, as determined by the operating surgeon at the time of surgery.
       THORACENTESIS:
-        text: THORACENTESIS
+        description: Minimally invasive procedure in which a needle is inserted into the pleural space to aspirate fluid for diagnostic analysis or therapeutic relief.
       ANTERIOR_RESECTION_OF_RECTUM:
-        text: ANTERIOR_RESECTION_OF_RECTUM
+        description: Surgical removal of the upper rectum through an abdominal approach with restoration of bowel continuity, used to treat rectal cancer.
       TRANSPLANT:
-        text: TRANSPLANT
+        description: Surgical procedure involving the transfer of an organ or tissue from a donor to a recipient, with specimen collection occurring at the time of organ procurement or implantation.
       LAPAROSCOPIC_PARTIAL_NEPHRECTOMY:
-        text: LAPAROSCOPIC_PARTIAL_NEPHRECTOMY
+        description: Minimally invasive removal of a tumor-bearing portion of the kidney using laparoscopic techniques, preserving the remaining renal tissue.
       LAPAROSCOPIC_RADICAL_PROSTATECTOMY_WITH_ROBOTICS:
-        text: LAPAROSCOPIC_RADICAL_PROSTATECTOMY_WITH_ROBOTICS
+        description: Complete removal of the prostate gland performed using robot-assisted laparoscopic surgery, offering enhanced precision and minimal invasiveness.
       PNEUMONECTOMY:
-        text: PNEUMONECTOMY
+        description: Surgical removal of an entire lung, typically performed to treat lung cancer confined to one lung that is not amenable to lesser resection.
       PAN_PROCTO_COLECTOMY:
-        text: PAN_PROCTO_COLECTOMY
+        description: Surgical removal of the entire colon and rectum, typically performed for colorectal cancer or inflammatory bowel disease with dysplasia.
       HYSTERECTOMY_NOS:
-        text: HYSTERECTOMY_NOS
+        description: Surgical removal of the uterus by an unspecified or not otherwise specified technique or extent.
       CORE_BIOPSY:
-        text: CORE_BIOPSY
+        description: Removal of a cylindrical core of tissue using a large-bore needle to obtain a histologically intact sample for pathological diagnosis.
       SIMPLE_MASTECTOMY:
-        text: SIMPLE_MASTECTOMY
+        description: Surgical removal of the entire breast tissue including the nipple-areola complex, without removing axillary lymph nodes or chest wall muscles.
       LUMPECTOMY:
-        text: LUMPECTOMY
+        description: Breast-conserving surgery in which only the tumor and a margin of surrounding normal tissue are removed, leaving the remaining breast intact.
       ENDOSCOPIC_BIOPSY:
-        text: ENDOSCOPIC_BIOPSY
+        description: Tissue sampling performed through an endoscope inserted into a body cavity, allowing direct visualization and targeted biopsy of suspicious lesions.
       SIMPLE_HYSTERECTOMY:
-        text: SIMPLE_HYSTERECTOMY
+        description: Surgical removal of the uterus and cervix without removing the parametria, upper vagina, or lymph nodes, used for benign or early-stage disease.
       LYMPHADENECTOMY:
-        text: LYMPHADENECTOMY
+        description: Surgical removal of one or more lymph nodes for pathological examination or as part of cancer staging and treatment.
       LAPAROSCOPIC_BIOPSY:
-        text: LAPAROSCOPIC_BIOPSY
+        description: Tissue sampling performed using a laparoscope introduced through small abdominal incisions, allowing visualization and biopsy of intraperitoneal structures.
       TUMOR_DEBULKING:
-        text: TUMOR_DEBULKING
+        description: Cytoreductive surgery aimed at removing as much tumor mass as possible when complete resection is not feasible, to reduce tumor burden and improve treatment response.
       ASCITES_DRAINAGE:
-        text: ASCITES_DRAINAGE
+        description: Therapeutic or diagnostic removal of accumulated fluid from the peritoneal cavity, which may be examined for malignant cells.
       ENDOSCOPIC_MUCOSAL_RESECTION:
-        text: ENDOSCOPIC_MUCOSAL_RESECTION
+        description: Endoscopic technique for removing superficial tumors or lesions confined to the mucosal layer of the gastrointestinal tract.
       LAPAROSCOPIC_RADICAL_PROSTATECTOMY_WITHOUT_ROBOTICS:
-        text: LAPAROSCOPIC_RADICAL_PROSTATECTOMY_WITHOUT_ROBOTICS
+        description: Complete removal of the prostate gland using standard laparoscopic techniques without robotic assistance.
       TOTAL_COLECTOMY:
-        text: TOTAL_COLECTOMY
+        description: Surgical removal of the entire large intestine (colon) while preserving the rectum, typically performed for colorectal cancer or hereditary polyposis syndromes.
       LIQUID_BIOPSY:
-        text: LIQUID_BIOPSY
+        description: Non-invasive sampling of circulating tumor cells, cell-free DNA, or other cancer biomarkers from a body fluid, most commonly blood.
       RADICAL_HYSTERECTOMY:
-        text: RADICAL_HYSTERECTOMY
+        description: Extensive surgical removal of the uterus, cervix, upper vagina, parametria, and regional lymph nodes, performed for gynecologic malignancies such as cervical cancer.
       SURGICAL_RESECTION:
-        text: SURGICAL_RESECTION
+        description: Surgical removal of a tumor or diseased tissue, used as a general term when the specific resection type is not further specified.
       OPEN_RADICAL_NEPHRECTOMY:
-        text: OPEN_RADICAL_NEPHRECTOMY
+        description: Complete removal of a kidney, adrenal gland, and surrounding fatty tissue through a traditional open incision, performed to treat renal cell carcinoma.
       TRANSVERSE_COLECTOMY:
-        text: TRANSVERSE_COLECTOMY
+        description: Surgical removal of the transverse colon, the middle horizontal portion of the large intestine connecting the ascending and descending colon.
       HAND_ASSISTED_LAPAROSCOPIC_RADICAL_NEPHRECTOMY:
-        text: HAND_ASSISTED_LAPAROSCOPIC_RADICAL_NEPHRECTOMY
+        description: Laparoscopic radical nephrectomy performed with the aid of a hand port that allows direct manual assistance during the minimally invasive procedure.
       PUNCH_BIOPSY:
-        text: PUNCH_BIOPSY
+        description: Removal of a small cylindrical core of skin or mucosal tissue using a circular cutting instrument for dermatological or mucosal pathological diagnosis.
       PARTIAL_HEPATECTOMY:
-        text: PARTIAL_HEPATECTOMY
+        description: Surgical removal of a portion of the liver, performed to resect primary liver tumors or metastatic deposits while preserving adequate hepatic function.
       SUPRACERVICAL_HYSTERECTOMY:
-        text: SUPRACERVICAL_HYSTERECTOMY
+        description: Surgical removal of the uterine body while leaving the cervix in place, also known as a subtotal hysterectomy.
       OTHER_SURGICAL_RESECTION:
-        text: OTHER_SURGICAL_RESECTION
+        description: A surgical resection procedure that does not correspond to any of the other specifically defined resection types.
       NOT_REPORTED:
-        text: NOT_REPORTED
+        description: The method of specimen collection was not documented or reported in the available records.
       FULL_HYSTERECTOMY:
-        text: FULL_HYSTERECTOMY
+        description: Complete surgical removal of the uterus and cervix, sometimes also including the ovaries and fallopian tubes, to treat uterine or cervical malignancies.
       TONSILLECTOMY:
-        text: TONSILLECTOMY
+        description: Surgical removal of the palatine tonsils, performed for tonsillar tumors or as part of treatment for oropharyngeal cancer.
       SUPRAGLOTTIC_LARYNGECTOMY:
-        text: SUPRAGLOTTIC_LARYNGECTOMY
+        description: Partial removal of the larynx above the vocal cords (glottis), used to treat supraglottic laryngeal cancer while preserving voice function.
       SUPERFICIAL_PAROTIDECTOMY:
-        text: SUPERFICIAL_PAROTIDECTOMY
+        description: Surgical removal of the superficial lobe of the parotid gland, typically performed to excise parotid tumors located superficial to the facial nerve.
       LARYNGOPHARYNGECTOMY:
-        text: LARYNGOPHARYNGECTOMY
+        description: Surgical removal of the larynx and part or all of the pharynx, performed for advanced cancers involving both structures.
       MAXILLECTOMY:
-        text: MAXILLECTOMY
+        description: Surgical removal of all or part of the maxilla (upper jaw), performed to treat malignant tumors of the hard palate, maxillary sinus, or upper jaw.
       PARTIAL_NEPHRECTOMY:
-        text: PARTIAL_NEPHRECTOMY
+        description: Nephron-sparing surgery in which only the tumor-bearing portion of the kidney is removed, preserving the remaining healthy renal parenchyma.
       MANDIBULECTOMY:
-        text: MANDIBULECTOMY
+        description: Surgical removal of all or part of the mandible (lower jaw), performed to treat malignant tumors involving the mandible or adjacent oral cavity.
       BUCCAL_MUCOSAL_RESECTION:
-        text: BUCCAL_MUCOSAL_RESECTION
+        description: Surgical excision of tumor-bearing tissue from the buccal mucosa (inner lining of the cheek), performed to treat oral cavity cancers.
       VERTICAL_HEMILARYNGECTOMY:
-        text: VERTICAL_HEMILARYNGECTOMY
+        description: Partial laryngectomy involving vertical removal of one side of the larynx, used to treat glottic cancers while preserving voice and swallowing function.
       TOTAL_NEPHRECTOMY:
-        text: TOTAL_NEPHRECTOMY
+        description: Complete surgical removal of an entire kidney, performed to treat renal malignancies or other kidney diseases.
       TOTAL_LARYNGECTOMY:
-        text: TOTAL_LARYNGECTOMY
+        description: Complete surgical removal of the larynx, resulting in permanent loss of natural voice, performed for advanced laryngeal cancer.
       TRANSORAL_LASER_EXCISION:
-        text: TRANSORAL_LASER_EXCISION
+        description: Minimally invasive surgical technique using a laser delivered through the mouth to precisely excise laryngeal or pharyngeal tumors without external incision.
       PAROTIDECTOMY_NOS:
-        text: PAROTIDECTOMY_NOS
+        description: Surgical removal of the parotid gland by an unspecified or not otherwise specified extent or technique.
       RADICAL_MAXILLECTOMY:
-        text: RADICAL_MAXILLECTOMY
+        description: Extensive surgical removal of the entire maxilla along with surrounding structures, performed for aggressive or extensive malignant tumors of the upper jaw.
       ENDOLARYNGEAL_EXCISION:
-        text: ENDOLARYNGEAL_EXCISION
+        description: Surgical removal of a laryngeal lesion performed entirely through the mouth using endoscopic instruments, without external neck incision.
       PALATECTOMY:
-        text: PALATECTOMY
+        description: Surgical removal of all or part of the palate, performed to treat malignant tumors involving the hard or soft palate.
       GLOSSECTOMY:
-        text: GLOSSECTOMY
+        description: Surgical removal of all or part of the tongue, performed to treat oral tongue or base of tongue malignancies.
       PARTIAL_LARYNGECTOMY:
-        text: PARTIAL_LARYNGECTOMY
+        description: Surgical removal of a portion of the larynx while preserving remaining laryngeal function, used for early to intermediate-stage laryngeal cancers.
       LYMPH_NODE_DISSECTION:
-        text: LYMPH_NODE_DISSECTION
+        description: Systematic surgical removal of a group of regional lymph nodes for pathological staging or therapeutic management of cancer spread.
       RADICAL_PROSTATECTOMY:
-        text: RADICAL_PROSTATECTOMY
+        description: Complete surgical removal of the prostate gland, seminal vesicles, and surrounding tissue, performed to treat localized prostate cancer.
       DEEP_PAROTIDECTOMY:
-        text: DEEP_PAROTIDECTOMY
+        description: Surgical removal of the deep lobe of the parotid gland, performed for tumors located deep to the facial nerve.
       SUBTOTAL_PROSTATECTOMY:
-        text: SUBTOTAL_PROSTATECTOMY
+        description: Partial surgical removal of the prostate gland, in which only a portion of the gland is excised rather than the complete organ.
       RADICAL_NEPHRECTOMY:
-        text: RADICAL_NEPHRECTOMY
+        description: Complete surgical removal of the kidney along with the adrenal gland, surrounding fatty tissue, and regional lymph nodes, performed for renal cell carcinoma.
       SUPRACRICOID_LARYNGECTOMY:
-        text: SUPRACRICOID_LARYNGECTOMY
+        description: Partial laryngectomy involving removal of the supracricoid structures while preserving the cricoid cartilage, used for select intermediate-stage laryngeal cancers.
       PARTIAL_MAXILLECTOMY:
-        text: PARTIAL_MAXILLECTOMY
+        description: Surgical removal of a portion of the maxilla, performed for localized malignant or benign tumors that do not require total maxillary resection.
 
   SpecimenQualityObservationTypeEnum:
     name: SpecimenQualityObservationTypeEnum
     description: Types of measurements that reflect the quality of a specimen or its suitability for use.
     permissible_values:
       A260_A280_RATIO:
-        text: A260_A280_RATIO
         description: Ratio of absorbance measured at a wavelength of 260 over that at a wavelength of 280.
       RIBOSOMAL_RNA_28S_16S_RATIO:
-        text: RIBOSOMAL_RNA_28S_16S_RATIO
         description: Ratio of quantity of 28s RNA over that of 16s RNA.
 
   SpecimenQualityObservationMethodEnum:
@@ -3178,10 +3386,8 @@ enums:
     description: A type of method used in determining the quantity of a specimen.
     permissible_values:
       UV_SPEC:
-        text: UV_SPEC
         description: A technique used to measure light absorbance across the ultraviolet and visible ranges of the electromagnetic spectrum.
       PICO_GREEN:
-        text: PICO_GREEN
         description: A technique applying the Pico488 fluorescent sensor dye that is used for quantifying the amount of double-stranded DNA (dsDNA) present in a given sample.
 
   SpecimenQuantityObservationTypeEnum:
@@ -3189,13 +3395,10 @@ enums:
     description: Measures related to the quantity of a specimen or analyte it currently contains - e.g. its weight, volume, or concentration.
     permissible_values:
       WEIGHT:
-        text: WEIGHT
         description: The current weight of the specimen, at the time of recording (as opposed to an initial weight before its processing or portioning).
       VOLUME:
-        text: VOLUME
         description: The current total volume of the specimen, at the time of recording.
       CONCENTRATION:
-        text: CONCENTRATION
         description: The concentration of an extracted analyte that is present in a specimen (specifically, in a specimen of type 'analyte', or an 'aliquot' derived from an analyte). For example, the concentration of DNA in a specimen created through extracting DNA from a blood sample.
 
   SpecimenProcessingActivityTypeEnum:
@@ -3203,16 +3406,12 @@ enums:
     description: The high-level type of processing activity performed.
     permissible_values:
       FIXATION:
-        text: FIXATION
         description: A processing activity that applies chemicals to preserve biological tissues from decay due to autolysis or putrefaction
       FREEZING:
-        text: FREEZING
         description: A processing activity that aims to freeze a specimen.
       MOUNTING:
-        text: MOUNTING
         description: A processing activity that aims to secure a specimen or slide in place in preparation for further examination (usually via microscopy)
       PRESERVATION:
-        text: PRESERVATION
         description: A processing activity that aims to preserve a specimen.
         
   UnitOfMeasurementEnum:
@@ -3223,80 +3422,60 @@ enums:
   GravityDomainEnum:
     description: Social Determinants of Health domains as defined in the Gravity Project
     permissible_values:
-      FOOD_INSECURITY:
-        text: FOOD_INSECURITY
-        description:
-      HOUSING_INSTABILITY:
-        text: HOUSING_INSTABILITY
-        description:
-      HOMELESSNESS:
-        text: HOMELESSNESS
-        description:
-      INADEQUATE_HOUSING:
-        text: INADEQUATE_HOUSING
-        description:
-      TRANSPORTATION_INSECURITY:
-        text: TRANSPORTATION_INSECURITY
-        description:
-      FINANCIAL_INSECURITY:
-        text: FINANCIAL_INSECURITY
-        description:
-      MATERIAL_HARDSHIP:
-        text: MATERIAL_HARDSHIP
-        description:
-      EMPLOYMENT_STATUS:
-        text: EMPLOYMENT_STATUS
-        description:
-      EDUCATIONAL_ATTAINMENT:
-        text: EDUCATIONAL_ATTAINMENT
-        description:
-      VETERAN_STATUS:
-        text: VETERAN_STATUS
-        description:
-      STRESS:
-        text: STRESS
-        description:
-      SOCIAL_CONNECTION:
-        text: SOCIAL_CONNECTION
-        description:
-      INTIMATE_PARTNER_VIOLENCE_IPV:
-        text: INTIMATE_PARTNER_VIOLENCE_IPV
-        description:
-      ELDER_ABUSE:
-        text: ELDER_ABUSE
-        description:
-      HEALTH_LITERACY:
-        text: HEALTH_LITERACY
-        description:
-      MEDICAL_COST_BURDEN:
-        text: MEDICAL_COST_BURDEN
-        description:
-      HEALTH_INSURANCE_COVERAGE_STATUS:
-        text: HEALTH_INSURANCE_COVERAGE_STATUS
-        description:
-      DIGITAL_LITERACY:
-        text: DIGITAL_LITERACY
-        description:
       DIGITAL_ACCESS:
-        text: DIGITAL_ACCESS
-        description:
+        description: The ability to access and use digital technologies, including internet connectivity and devices.
+      DIGITAL_LITERACY:
+        description: The capacity to find, evaluate, and communicate information using digital technology.
+      EDUCATIONAL_ATTAINMENT:
+        description: The highest level of formal education an individual has completed.
+      ELDER_ABUSE:
+        description: Physical, emotional, financial, or other mistreatment or neglect of older adults.
+      EMPLOYMENT_STATUS:
+        description: An individual's current relationship to the workforce, including employment, unemployment, or underemployment.
+      FINANCIAL_INSECURITY:
+        description: Inadequate financial resources to meet basic needs and maintain economic stability.
+      FOOD_INSECURITY:
+        description: Limited or uncertain access to adequate, nutritious food due to financial or other constraints.
+      HEALTH_INSURANCE_COVERAGE_STATUS:
+        description: Whether an individual has health insurance and the type or adequacy of that coverage.
+      HEALTH_LITERACY:
+        description: The degree to which individuals can obtain, process, and understand basic health information to make appropriate health decisions.
+      HOMELESSNESS:
+        description: The condition of lacking a fixed, regular, and adequate nighttime residence.
+      HOUSING_INSTABILITY:
+        description: Difficulty maintaining stable housing, including risk of eviction, frequent moves, or inability to pay rent or mortgage.
+      INADEQUATE_HOUSING:
+        description: Living conditions that are unsafe, overcrowded, or otherwise fail to meet basic habitability standards.
+      INTIMATE_PARTNER_VIOLENCE_IPV:
+        description: Physical, sexual, psychological, or economic abuse perpetrated by a current or former intimate partner.
+      MATERIAL_HARDSHIP:
+        description: Inability to meet basic material needs such as food, housing, clothing, or medical care.
+      MEDICAL_COST_BURDEN:
+        description: The financial strain caused by out-of-pocket medical expenses relative to an individual's or household's income.
+      SOCIAL_CONNECTION:
+        description: The degree to which an individual has relationships and social support networks that promote well-being.
+      STRESS:
+        description: Psychological or physical tension arising from adverse or demanding circumstances that affects health and well-being.
+      TRANSPORTATION_INSECURITY:
+        description: Lack of reliable, safe, or affordable transportation needed to meet daily needs and access services.
       UTILITY_INSECURITY:
-        text: UTILITY_INSECURITY
-        description:
+        description: Inability to reliably afford or access essential utilities such as electricity, heat, or water.
+      VETERAN_STATUS:
+        description: Whether an individual has served in the military, which may affect eligibility for benefits and expose them to unique health risks.
   
   ConditionSeverityEnum:
-    description: Social Determinants of Health domains as defined in the Gravity Project
+    description: The clinical severity level assigned to a condition or diagnosis.
     permissible_values:
       MILD:
-        text: MILD
+        description: A condition that causes minimal symptoms or functional impairment and typically does not require intensive intervention.
         meaning: OMOP:4116992
       MODERATE:
-        text: MODERATE
+        description: A condition that causes noticeable symptoms or functional impairment and may require active treatment or monitoring.
         meaning: OMOP:3272197
       SEVERE:
-        text: SEVERE
+        description: A condition that causes significant symptoms or functional impairment, often requiring urgent or intensive intervention.
         meaning: OMOP:4087703
-
+  
   FamilyRelationshipEnum:
     description: Values describing the relationship between an individual and family members.
     permissible_values:
@@ -3572,7 +3751,7 @@ enums:
     permissible_values:
       CURRENT_SMOKER:
         meaning: OMOP:40766945
-      FORMER_SOMKER:
+      FORMER_SMOKER:
         meaning: OMOP:45883458
       NEVER_SMOKED:
         meaning: OMOP:45883537
@@ -3590,8 +3769,24 @@ enums:
     permissible_values:
       CONSORTIUM:
         description: Consortium
-      Study:
+      STUDY:
         description: Study
+  
+  BodyPositionEnum:
+    description: Values describing the body position of a patient during a measurement or observation.
+    permissible_values:
+      SITTING_POSITION:
+        description: The patient is in a sitting position during the measurement or observation.
+        meaning: OMOP:4142787
+      ORTHOSTATIC_BODY_POSITION:
+        description: The patient is in a standing position during the measurement or observation.
+        meaning: OMOP:4033753
+      SUPINE_BODY_POSITION:
+        description: The patient is lying on their back during the measurement or observation.
+        meaning: OMOP:4221822
+      PRONE_BODY_POSITION:
+        description: The patient is lying on their stomach during the measurement or observation.
+        meaning: OMOP:4050473
 
   BaseObservationTypeEnum:
     description: Values describing the types of an Observation.
