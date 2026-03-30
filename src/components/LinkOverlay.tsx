@@ -345,45 +345,85 @@ export default function LinkOverlay({
       const markerId = getMarkerIdForTargetType(targetType, isHovered);
       const markerEnd = isSelfRef ? undefined : `url(#${markerId})`;
 
+      const showLabel = isHovered && !isSelfRef && edge.label &&
+        edge.edgeType !== EDGE_TYPES.INHERITANCE;
+
+      // Compute label position at midpoint of the bezier
+      let labelX = 0, labelY = 0;
+      if (showLabel) {
+        const sourceAdjRect = sourceEl.getBoundingClientRect();
+        const targetAdjRect = targetEl.getBoundingClientRect();
+        const { source, target } = calculateCrossPanelAnchors(sourceAdjRect, targetAdjRect);
+        labelX = (source.x + target.x) / 2 - svgRect.left;
+        labelY = (source.y + target.y) / 2 - svgRect.top;
+      }
+
       links.push(
-        <path
-          key={key}
-          data-link-id={key}
-          d={pathData}
-          fill="none"
-          stroke={color}
-          markerEnd={markerEnd}
-          opacity={isHovered ? 1.0 : 0.2}
-          strokeWidth={isHovered ? 3 : strokeWidth}
-          className="transition-opacity cursor-pointer"
-          style={{ pointerEvents: 'stroke' }}
-          onMouseEnter={(e: React.MouseEvent) => {
-            setHoveredLinkKey(key);
-            if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-            hoverTimeoutRef.current = window.setTimeout(() => {
-              setTooltipData({
-                data: {
-                  relationshipType: edge.edgeType,
-                  relationshipLabel: edge.label,
-                  sourceName: edge.sourceItem.displayName,
-                  sourceType,
-                  targetName: edge.targetItem.displayName,
-                  targetType
-                },
-                x: e.clientX,
-                y: e.clientY
-              });
-            }, 300);
-          }}
-          onMouseLeave={() => {
-            setHoveredLinkKey(null);
-            setTooltipData(null);
-            if (hoverTimeoutRef.current) {
-              clearTimeout(hoverTimeoutRef.current);
-              hoverTimeoutRef.current = null;
-            }
-          }}
-        />
+        <g key={key}>
+          <path
+            data-link-id={key}
+            d={pathData}
+            fill="none"
+            stroke={color}
+            markerEnd={markerEnd}
+            opacity={isHovered ? 1.0 : 0.2}
+            strokeWidth={isHovered ? 3 : strokeWidth}
+            className="transition-opacity cursor-pointer"
+            style={{ pointerEvents: 'stroke' }}
+            onMouseEnter={(e: React.MouseEvent) => {
+              setHoveredLinkKey(key);
+              if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+              hoverTimeoutRef.current = window.setTimeout(() => {
+                setTooltipData({
+                  data: {
+                    relationshipType: edge.edgeType,
+                    relationshipLabel: edge.label,
+                    sourceName: edge.sourceItem.displayName,
+                    sourceType,
+                    targetName: edge.targetItem.displayName,
+                    targetType
+                  },
+                  x: e.clientX,
+                  y: e.clientY
+                });
+              }, 300);
+            }}
+            onMouseLeave={() => {
+              setHoveredLinkKey(null);
+              setTooltipData(null);
+              if (hoverTimeoutRef.current) {
+                clearTimeout(hoverTimeoutRef.current);
+                hoverTimeoutRef.current = null;
+              }
+            }}
+          />
+          {showLabel && (
+            <g className="pointer-events-none select-none">
+              <rect
+                x={labelX - (edge.label!.length * 3.3 + 6)}
+                y={labelY - 8}
+                width={edge.label!.length * 6.6 + 12}
+                height={16}
+                rx={3}
+                fill="white"
+                fillOpacity="0.9"
+                stroke="#10b981"
+                strokeWidth="1"
+              />
+              <text
+                x={labelX}
+                y={labelY}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize="11"
+                fontWeight="500"
+                fill="#065f46"
+              >
+                {edge.label}
+              </text>
+            </g>
+          )}
+        </g>
       );
     });
 
