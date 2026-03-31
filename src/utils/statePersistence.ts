@@ -253,8 +253,8 @@ export function getInitialState(): AppState {
 
   const defaultState: AppState = {
     leftSections: ['class'],
-    middleSections: [],  // Middle panel hidden by default
-    rightSections: []
+    middleSections: [],
+    rightSections: ['enum', 'class', 'type']
   };
 
   const state: AppState = {

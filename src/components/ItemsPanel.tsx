@@ -24,6 +24,8 @@ interface ItemsPanelProps {
   onItemHover?: (hoverData: ItemHoverData) => void;
   onItemLeave?: () => void;
   title?: string;                                           // Custom panel title (e.g., "Classes", "Slots", "Ranges:")
+  pinnedDetailItemIds?: Set<string>;
+  pinnedRelationshipItemIds?: Set<string>;
 }
 
 interface SectionToggleButtonProps {
@@ -57,7 +59,9 @@ export default function ItemsPanel({
   onClickItem,
   onItemHover,
   onItemLeave,
-  title
+  title,
+  pinnedDetailItemIds,
+  pinnedRelationshipItemIds
 }: ItemsPanelProps) {
   const activeSections = new Set(sections);
 
@@ -112,6 +116,8 @@ export default function ItemsPanel({
                 onItemHover={onItemHover}
                 onItemLeave={onItemLeave}
                 position={position}
+                pinnedDetailItemIds={pinnedDetailItemIds}
+                pinnedRelationshipItemIds={pinnedRelationshipItemIds}
               />
             );
           })}

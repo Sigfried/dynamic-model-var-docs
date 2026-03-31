@@ -15,6 +15,9 @@ dist-ssr
 # Python virtual environment
 scripts/.venv
 
+# Temporary files
+temp
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

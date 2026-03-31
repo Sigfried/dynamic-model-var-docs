@@ -156,9 +156,9 @@ export function useLayoutState({ hasRestoredFromURL, getDialogStates }: UseLayou
         console.error('Failed to parse stored state:', err);
       }
     } else {
-      // Reset to default (classes only preset)
+      // Reset to default (classes + ranges preset)
       // Navigate to clean default URL (clears all params and triggers reload)
-      const newURL = `${window.location.pathname}?sections=lc`;
+      const newURL = `${window.location.pathname}?sections=lc~re~rc~rt`;
       window.location.href = newURL;
     }
   };

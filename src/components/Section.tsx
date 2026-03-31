@@ -31,6 +31,8 @@ interface SectionProps {
   onItemHover?: (hoverData: ItemHoverData) => void;
   onItemLeave?: () => void;
   position: 'left' | 'middle' | 'right';
+  pinnedDetailItemIds?: Set<string>;
+  pinnedRelationshipItemIds?: Set<string>;
 }
 
 interface ItemRendererProps {
@@ -40,9 +42,11 @@ interface ItemRendererProps {
   onItemLeave?: () => void;
   position: 'left' | 'middle' | 'right';
   toggleExpansion?: (itemName: string) => void;
+  pinnedDetailItemIds?: Set<string>;
+  pinnedRelationshipItemIds?: Set<string>;
 }
 
-function ItemRenderer({ item, onClickItem, onItemHover, onItemLeave, position, toggleExpansion }: ItemRendererProps) {
+function ItemRenderer({ item, onClickItem, onItemHover, onItemLeave, position, toggleExpansion, pinnedDetailItemIds, pinnedRelationshipItemIds }: ItemRendererProps) {
   const { id, displayName, level, hasChildren, isExpanded, isClickable, badgeColor, badgeText, badgeTooltip, relationshipBadge, indicators, hoverData } = item;
 
   // Create hover handlers for the name zone
@@ -105,7 +109,7 @@ function ItemRenderer({ item, onClickItem, onItemHover, onItemLeave, position, t
 
         {/* Item name - hover zone for detail preview */}
         <WithTooltip
-          tooltip={isClickable ? `Click to pin ${hoverData.type} details` : undefined}
+          tooltip={isClickable && !pinnedDetailItemIds?.has(hoverData.name) ? `Click to pin ${hoverData.type} details` : undefined}
           className={`flex-1 text-sm font-medium ${isCursorPointer ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 rounded px-1 -mx-1' : ''}`}
           onClick={() => handleClick('name')}
           {...nameHoverHandlers}
@@ -133,7 +137,7 @@ function ItemRenderer({ item, onClickItem, onItemHover, onItemLeave, position, t
         {/* Relationship badge - hover zone for relationship info */}
         {hasRelationships && (
           <WithTooltip
-            tooltip="Click to pin relationships"
+            tooltip={pinnedRelationshipItemIds?.has(hoverData.name) ? undefined : "Click to pin relationships"}
             className="text-xs px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300 cursor-pointer hover:bg-slate-300 dark:hover:bg-slate-500"
             onClick={() => handleClick('badge')}
             {...badgeHoverHandlers}
@@ -146,7 +150,7 @@ function ItemRenderer({ item, onClickItem, onItemHover, onItemLeave, position, t
   );
 }
 
-export default function Section({ sectionData, onClickItem, onItemHover, onItemLeave, position }: SectionProps) {
+export default function Section({ sectionData, onClickItem, onItemHover, onItemLeave, position, pinnedDetailItemIds, pinnedRelationshipItemIds }: SectionProps) {
   const { label, getItems, expansionKey, defaultExpansion } = sectionData;
 
   // Use expansion state hook only if needed
@@ -179,6 +183,8 @@ export default function Section({ sectionData, onClickItem, onItemHover, onItemL
             onItemLeave={onItemLeave}
             position={position}
             toggleExpansion={toggleExpansion}
+            pinnedDetailItemIds={pinnedDetailItemIds}
+            pinnedRelationshipItemIds={pinnedRelationshipItemIds}
           />
         ))}
       </div>

@@ -58,6 +58,23 @@ function App() {
     return urlState.dialogs ?? [];
   }, []);
 
+  // Hover popups toggle — persisted in query string as hover=0
+  const [hoverPopupsEnabled, setHoverPopupsEnabled] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('hover') !== '0';
+  });
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (hoverPopupsEnabled) {
+      params.delete('hover');
+    } else {
+      params.set('hover', '0');
+    }
+    const newURL = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
+    window.history.replaceState({}, '', newURL);
+  }, [hoverPopupsEnabled]);
+
   // TEMPORARY HACK BECAUSE DARK MODE IS UNREADABLE
   const [isDarkMode, setIsDarkMode] = useState(false);
 
@@ -135,7 +152,13 @@ function App() {
             <p className="text-sm text-blue-100">BioData Catalyst Harmonized Model Explorer</p>
           </div>
           <div className="flex items-center gap-4 text-sm">
-            {/* TODO: Restore presets after Stage 4 layout changes complete */}
+            <button
+              onClick={() => setHoverPopupsEnabled(v => !v)}
+              className={`px-3 py-1 rounded transition-colors ${hoverPopupsEnabled ? 'bg-blue-700 hover:bg-blue-800' : 'bg-blue-800 opacity-70 hover:opacity-100'}`}
+              title={hoverPopupsEnabled ? 'Disable hover popups' : 'Enable hover popups'}
+            >
+              {hoverPopupsEnabled ? 'Hover: On' : 'Hover: Off'}
+            </button>
             <div className="relative">
               {hasLocalStorage ? (
                 <button
@@ -229,6 +252,7 @@ function App() {
         initialDialogs={initialDialogs}
         setDialogStatesGetter={setDialogStatesGetter}
         onDialogsChange={triggerURLSave}
+        hoverPopupsEnabled={hoverPopupsEnabled}
       />
     </div>
   );

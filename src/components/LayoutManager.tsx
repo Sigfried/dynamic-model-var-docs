@@ -46,6 +46,7 @@ interface LayoutManagerProps {
   initialDialogs?: DialogState[];
   setDialogStatesGetter: (getter: () => DialogState[]) => void;
   onDialogsChange?: () => void;  // Called when persistent dialogs change (for URL persistence)
+  hoverPopupsEnabled?: boolean;
 }
 
 export default function LayoutManager({
@@ -57,7 +58,8 @@ export default function LayoutManager({
   setRightSections,
   initialDialogs = [],
   setDialogStatesGetter,
-  onDialogsChange
+  onDialogsChange,
+  hoverPopupsEnabled = true
 }: LayoutManagerProps) {
   // Hover state
   const [hoveredItem, setHoveredItem] = useState<ItemHoverData | null>(null);
@@ -80,6 +82,28 @@ export default function LayoutManager({
   const [popoutContainers, setPopoutContainers] = useState<Map<GroupId, HTMLElement>>(new Map());
 
   const [hasRestoredDialogs, setHasRestoredDialogs] = useState(false);
+
+  // Set of item IDs that have pinned detail boxes (for tooltip suppression)
+  const pinnedDetailItemIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const group of groups) {
+      for (const box of group.boxes) {
+        if (box.contentType === 'detail') ids.add(box.itemId);
+      }
+    }
+    return ids;
+  }, [groups]);
+
+  // Set of item IDs that have pinned relationship boxes
+  const pinnedRelationshipItemIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const group of groups) {
+      for (const box of group.boxes) {
+        if (box.contentType === 'relationship') ids.add(box.itemId);
+      }
+    }
+    return ids;
+  }, [groups]);
 
   // Convert groups to dialog states for persistence (item names and content types)
   const getDialogStatesFromGroups = useCallback((): DialogState[] => {
@@ -376,8 +400,11 @@ export default function LayoutManager({
 
   // Effect to create/update transitory box on hover
   useEffect(() => {
-    // Don't show transitory boxes while scrolling
-    if (isScrolling) return;
+    // Don't show transitory boxes while scrolling or when disabled
+    if (isScrolling || !hoverPopupsEnabled) {
+      setTransitoryBox(null);
+      return;
+    }
 
     const hoveredItemId = hoveredItem?.name ?? null;
     const hoveredItemDomId = hoveredItem?.id ?? null;
@@ -424,7 +451,7 @@ export default function LayoutManager({
     } else {
       setTransitoryBox(null);
     }
-  }, [hoveredItem, groups, dataService, handleNavigate, isScrolling]);
+  }, [hoveredItem, groups, dataService, handleNavigate, isScrolling, hoverPopupsEnabled]);
 
   // Close transitory box
   const handleCloseTransitory = useCallback(() => {
@@ -636,6 +663,8 @@ export default function LayoutManager({
             onClickItem={handleOpenFloatingBox}
             onItemHover={setHoveredItem}
             onItemLeave={handleItemLeave}
+            pinnedDetailItemIds={pinnedDetailItemIds}
+            pinnedRelationshipItemIds={pinnedRelationshipItemIds}
           />
         </div>
 
@@ -721,6 +750,8 @@ export default function LayoutManager({
             onClickItem={handleOpenFloatingBox}
             onItemHover={setHoveredItem}
             onItemLeave={handleItemLeave}
+            pinnedDetailItemIds={pinnedDetailItemIds}
+            pinnedRelationshipItemIds={pinnedRelationshipItemIds}
             title="Ranges:"
           />
         </div>
