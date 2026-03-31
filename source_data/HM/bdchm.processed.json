@@ -52,6 +52,14 @@
       "prefix_prefix": "ICD10CM",
       "prefix_reference": "http://purl.bioontology.org/ontology/ICD10CM/"
     },
+    "MMO": {
+      "prefix_prefix": "MMO",
+      "prefix_reference": "http://purl.obolibrary.org/obo/MMO_"
+    },
+    "BAO": {
+      "prefix_prefix": "BAO",
+      "prefix_reference": "http://www.bioassayontology.org/bao#BAO_"
+    },
     "xsd": {
       "prefix_prefix": "xsd",
       "prefix_reference": "http://www.w3.org/2001/XMLSchema#"
@@ -278,6 +286,9 @@
       "parent": "Entity",
       "abstract": false,
       "slots": [
+        {
+          "id": "name"
+        },
         {
           "id": "visit_category"
         },
@@ -669,6 +680,9 @@
         },
         {
           "id": "relationship_to_participant"
+        },
+        {
+          "id": "associated_evidence"
         },
         {
           "id": "identity"
@@ -1737,6 +1751,15 @@
           "inherited_from": "Observation"
         },
         {
+          "id": "associated_assay"
+        },
+        {
+          "id": "body_site"
+        },
+        {
+          "id": "body_position"
+        },
+        {
           "id": "associated_visit",
           "inherited_from": "Observation"
         },
@@ -1910,6 +1933,34 @@
         }
       ],
       "description": "A class / complex datatype for handling both values and ordinality for causes of death."
+    },
+    "Assay": {
+      "id": "Assay",
+      "name": "Assay",
+      "parent": "Entity",
+      "abstract": false,
+      "slots": [
+        {
+          "id": "method"
+        },
+        {
+          "id": "instrument"
+        },
+        {
+          "id": "reagent"
+        },
+        {
+          "id": "lower_limit_of_detection"
+        },
+        {
+          "id": "upper_limit_of_detection"
+        },
+        {
+          "id": "id",
+          "inherited_from": "Entity"
+        }
+      ],
+      "description": "A class for representing metadata about an assay performed on a specimen, including the method and instrument used."
     }
   },
   "slots": {
@@ -1971,7 +2022,8 @@
         "MeasurementObservationSet",
         "MeasurementObservation",
         "SdohObservationSet",
-        "SdohObservation"
+        "SdohObservation",
+        "CauseOfDeath"
       ],
       "range": "uriorcurie",
       "required": true,
@@ -2101,7 +2153,7 @@
     "sex": {
       "id": "sex",
       "name": "sex",
-      "description": "The biologic character or quality that distinguishes male and female from one another as expressed by analysis of the person's gonadal, morphologic (internal and external), chromosomal, and hormonal characteristics.",
+      "description": "The biologic character or quality that distinguishes male and female from one another as expressed by analysis of the person's gonadal, morphologic (internal and external), chromosomal, and hormonal characteristics. Individuals where these characteristics do not all clearly align with either male or female are often considered intersex.",
       "from_schema": "https://w3id.org/bdchm",
       "alias": "sex",
       "owner": "Demography",
@@ -2113,7 +2165,7 @@
     "ethnicity": {
       "id": "ethnicity",
       "name": "ethnicity",
-      "description": "An individual's self-described social and cultural grouping, specifically whether an individual describes themselves as Hispanic or Latino. The provided values are based on the categories defined by the U.S. Office of Management and Business and used by the U.S. Census Bureau",
+      "description": "A sociopolitically constructed system for classifying human beings according to claims of shared heritage often based on perceived cultural similarities (e.g., language, religion, beliefs); the system varies globally. The provided values are based on the categories defined by the U.S. Office of Management and Business and used by the U.S. Census Bureau and include only the options \u201cHispanic or Latino\u201d and \u201cNot Hispanic or Latino.\u201d",
       "from_schema": "https://w3id.org/bdchm",
       "alias": "ethnicity",
       "owner": "Demography",
@@ -2125,14 +2177,15 @@
     "race": {
       "id": "race",
       "name": "race",
-      "description": "An arbitrary classification of a taxonomic group that is a division of a species. It usually arises as a consequence of geographical isolation within a species and is characterized by shared heredity, physical attributes and behavior, and in the case of humans, by common history, nationality, or geographic distribution. The provided values are based on the categories defined by the U.S. Office of Management and Business and used by the U.S. Census Bureau.",
+      "description": "A sociopolitically constructed system for classifying human beings according to subjective beliefs about shared ancestry based on perceived innate biological similarities; the system varies globally. The provided values are based on the categories defined by the U.S. Office of Management and Business and used by the U.S. Census Bureau.",
       "from_schema": "https://w3id.org/bdchm",
       "alias": "race",
       "owner": "Demography",
       "domain_of": [
         "Demography"
       ],
-      "range": "RaceEnum"
+      "range": "RaceEnum",
+      "multivalued": true
     },
     "associated_participant": {
       "id": "associated_participant",
@@ -2312,6 +2365,7 @@
       "owner": "ResearchStudy",
       "domain_of": [
         "ResearchStudy",
+        "Visit",
         "Organization",
         "Questionnaire",
         "QuestionnaireResponseValue"
@@ -2962,6 +3016,19 @@
         "Condition"
       ],
       "range": "FamilyRelationshipEnum"
+    },
+    "associated_evidence": {
+      "id": "associated_evidence",
+      "name": "associated_evidence",
+      "description": "Evidence supporting the assertion of the condition (e.g., an ImagingStudy, Procedure, Observation)",
+      "from_schema": "https://w3id.org/bdchm",
+      "alias": "associated_evidence",
+      "owner": "Condition",
+      "domain_of": [
+        "Condition"
+      ],
+      "range": "Entity",
+      "multivalued": true
     },
     "procedure_concept": {
       "id": "procedure_concept",
@@ -4634,6 +4701,42 @@
       ],
       "range": "Quantity"
     },
+    "associated_assay": {
+      "id": "associated_assay",
+      "name": "associated_assay",
+      "description": "A reference to the assay that was used in generating this observation.",
+      "from_schema": "https://w3id.org/bdchm",
+      "alias": "associated_assay",
+      "owner": "MeasurementObservation",
+      "domain_of": [
+        "MeasurementObservation"
+      ],
+      "range": "Assay"
+    },
+    "body_site": {
+      "id": "body_site",
+      "name": "body_site",
+      "description": "The body site that is the focus of this observation, if applicable.",
+      "from_schema": "https://w3id.org/bdchm",
+      "alias": "body_site",
+      "owner": "MeasurementObservation",
+      "domain_of": [
+        "MeasurementObservation"
+      ],
+      "range": "BodySite"
+    },
+    "body_position": {
+      "id": "body_position",
+      "name": "body_position",
+      "description": "The position of the body that is the focus of this observation, if applicable.",
+      "from_schema": "https://w3id.org/bdchm",
+      "alias": "body_position",
+      "owner": "MeasurementObservation",
+      "domain_of": [
+        "MeasurementObservation"
+      ],
+      "range": "BodyPositionEnum"
+    },
     "related_questionnaire_item": {
       "id": "related_questionnaire_item",
       "name": "related_questionnaire_item",
@@ -4672,6 +4775,72 @@
       ],
       "range": "integer",
       "required": true,
+      "multivalued": false
+    },
+    "method": {
+      "id": "method",
+      "name": "method",
+      "description": "The type of assay performed (e.g. \"immunohistochemistry\", \"RNA-seq\", \"mass spectrometry\")",
+      "from_schema": "https://w3id.org/bdchm",
+      "alias": "method",
+      "owner": "Assay",
+      "domain_of": [
+        "Assay"
+      ],
+      "range": "AssayMethodEnum",
+      "required": true,
+      "multivalued": false
+    },
+    "instrument": {
+      "id": "instrument",
+      "name": "instrument",
+      "description": "The instrument(s) used to perform the assay.",
+      "from_schema": "https://w3id.org/bdchm",
+      "alias": "instrument",
+      "owner": "Assay",
+      "domain_of": [
+        "Assay"
+      ],
+      "range": "InstrumentEnum",
+      "multivalued": true
+    },
+    "reagent": {
+      "id": "reagent",
+      "name": "reagent",
+      "description": "The reagent(s) used to perform the assay.",
+      "from_schema": "https://w3id.org/bdchm",
+      "alias": "reagent",
+      "owner": "Assay",
+      "domain_of": [
+        "Assay"
+      ],
+      "range": "Substance",
+      "multivalued": true
+    },
+    "lower_limit_of_detection": {
+      "id": "lower_limit_of_detection",
+      "name": "lower_limit_of_detection",
+      "description": "The lower limit of detection for the assay, if applicable.",
+      "from_schema": "https://w3id.org/bdchm",
+      "alias": "lower_limit_of_detection",
+      "owner": "Assay",
+      "domain_of": [
+        "Assay"
+      ],
+      "range": "Quantity",
+      "multivalued": false
+    },
+    "upper_limit_of_detection": {
+      "id": "upper_limit_of_detection",
+      "name": "upper_limit_of_detection",
+      "description": "The upper limit of detection for the assay, if applicable.",
+      "from_schema": "https://w3id.org/bdchm",
+      "alias": "upper_limit_of_detection",
+      "owner": "Assay",
+      "domain_of": [
+        "Assay"
+      ],
+      "range": "Quantity",
       "multivalued": false
     },
     "value-QuestionnaireResponseValueDecimal": {
@@ -5015,6 +5184,42 @@
         ]
       }
     },
+    "AssayMethodEnum": {
+      "id": "AssayMethodEnum",
+      "name": "AssayMethodEnum",
+      "description": "A constrained set of enumerative values containing the Measurement Method Ontology (MMO) values for assay methods.",
+      "reachable_from": {
+        "source_ontology": "obo:mmo",
+        "include_self": false,
+        "source_nodes": [
+          "MMO:0000000"
+        ],
+        "source_nodes_urls": [
+          "http://purl.obolibrary.org/obo/MMO_0000000"
+        ],
+        "relationship_types": [
+          "rdfs:subClassOf"
+        ]
+      }
+    },
+    "InstrumentEnum": {
+      "id": "InstrumentEnum",
+      "name": "InstrumentEnum",
+      "description": "A constrained set of enumerative values containing the BioAssay Ontology (BAO) values for instruments.",
+      "reachable_from": {
+        "source_ontology": "BAO",
+        "include_self": false,
+        "source_nodes": [
+          "BAO:0003118"
+        ],
+        "source_nodes_urls": [
+          "http://www.bioassayontology.org/bao#BAO_0003118"
+        ],
+        "relationship_types": [
+          "rdfs:subClassOf"
+        ]
+      }
+    },
     "VitalStatusEnum": {
       "id": "VitalStatusEnum",
       "name": "VitalStatusEnum",
@@ -5057,71 +5262,131 @@
       "name": "VisitCategoryEnum",
       "description": "A constrained set of enumerative values containing the OMOP values for visit categories.",
       "permissible_values": {
-        "INPATIENT": {
-          "text": "INPATIENT",
-          "description": "Person visiting hospital, at a care stie, in bed, for duration of more than one day, with physicians and other Providers permanently available to deliver service around the clock",
-          "meaning": "OMOP:9201",
-          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/9201"
+        "ALTERNATE_CARE_SITE_ACS": {
+          "text": "ALTERNATE_CARE_SITE_ACS",
+          "description": "Person receiving care at a temporary or non-traditional care site established to expand capacity, such as during a public health emergency",
+          "meaning": "OMOP:33007",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/33007"
         },
-        "EMERGENCY_ROOM": {
-          "text": "EMERGENCY_ROOM",
-          "description": "Person visiting dedicated healthcare institution for treating emergencies, at a Care Site, within one day, with physicians and Providers permanently available to deliver service around the clock",
-          "meaning": "OMOP:9203",
-          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/9203"
-        },
-        "EMERGENCY_ROOM_AND_INPATIENT": {
-          "text": "EMERGENCY_ROOM_AND_INPATIENT",
-          "description": "Person visiting ER followed by a subsequent Inpatient Visit, where Emergency department is part of hospital, and transition from the ER to other hospital departments is undefined",
-          "meaning": "OMOP:262",
-          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/262"
-        },
-        "NON_HOSPITAL_INSTITUTION": {
-          "text": "NON_HOSPITAL_INSTITUTION",
-          "description": "Person visiting dedicated institution for reasons of poor health, at a Care Site, long-term or permanently, with no physician but possibly other Providers permanently available to deliver service around the clock",
-          "meaning": "OMOP:42898160",
-          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/42898160"
-        },
-        "OUTPATIENT": {
-          "text": "OUTPATIENT",
-          "description": "Person visiting dedicated ambulatory healthcare institution, at a Care Site, within one day, without bed, with physicians or medical Providers delivering service during Visit",
-          "meaning": "OMOP:9202",
-          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/9202"
-        },
-        "HOME": {
-          "text": "HOME",
-          "description": "Provider visiting Person, without a Care Site, within one day, delivering service",
-          "meaning": "OMOP:581476",
-          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/581476"
-        },
-        "TELEHEALTH": {
-          "text": "TELEHEALTH",
-          "description": "Patient engages with Provider through communication media",
-          "meaning": "OMOP:5083",
-          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/5083"
-        },
-        "PHARMACY": {
-          "text": "PHARMACY",
-          "description": "Person visiting pharmacy for dispensing of Drug, at a Care Site, within one day",
-          "meaning": "OMOP:581458",
-          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/581458"
-        },
-        "LABORATORY": {
-          "text": "LABORATORY",
-          "description": "Patient visiting dedicated institution, at a Care Site, within one day, for the purpose of a Measurement.",
-          "meaning": "OMOP:32036",
-          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32036"
-        },
-        "AMBULANCE": {
-          "text": "AMBULANCE",
+        "AMBULANCE_VISIT": {
+          "text": "AMBULANCE_VISIT",
           "description": "Person using transportation service for the purpose of initiating one of the other Visits, without a Care Site, within one day, potentially with Providers accompanying the Visit and delivering service",
           "meaning": "OMOP:581478",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/581478"
         },
-        "CASE_MANAGEMENT": {
-          "text": "CASE_MANAGEMENT",
-          "description": "Person interacting with healthcare system, without a Care Site, within a day, with no Providers involved, for administrative purposes",
-          "meaning": "OMOP:38004193",
-          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/38004193"
+        "AMBULATORY_LONG_COVID_CLINIC": {
+          "text": "AMBULATORY_LONG_COVID_CLINIC",
+          "description": "Person visiting a specialized outpatient clinic dedicated to the assessment and management of persistent post-COVID-19 symptoms",
+          "meaning": "OMOP:705159",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/705159"
+        },
+        "AMBULATORY_REHABILITATION_VISIT": {
+          "text": "AMBULATORY_REHABILITATION_VISIT",
+          "description": "Person visiting a Care Site within one day for the purpose of receiving rehabilitative therapy services without overnight admission",
+          "meaning": "OMOP:581479",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/581479"
+        },
+        "EMERGENCY_ROOM_AND_INPATIENT_VISIT": {
+          "text": "EMERGENCY_ROOM_AND_INPATIENT_VISIT",
+          "description": "Person visiting ER followed by a subsequent Inpatient Visit, where Emergency department is part of hospital, and transition from the ER to other hospital departments is undefined",
+          "meaning": "OMOP:262",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/262"
+        },
+        "EMERGENCY_ROOM_VISIT": {
+          "text": "EMERGENCY_ROOM_VISIT",
+          "description": "Person visiting dedicated healthcare institution for treating emergencies, at a Care Site, within one day, with physicians and Providers permanently available to deliver service around the clock",
+          "meaning": "OMOP:9203",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/9203"
+        },
+        "HEALTH_EXAMINATION": {
+          "text": "HEALTH_EXAMINATION",
+          "description": "Person visiting a Care Site within one day for a routine or preventive health assessment, without an acute presenting complaint",
+          "meaning": "OMOP:32693",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32693"
+        },
+        "HOME_ISOLATION": {
+          "text": "HOME_ISOLATION",
+          "description": "Person remaining at home and separated from others for the purpose of containing or managing an infectious or potentially infectious condition",
+          "meaning": "OMOP:32759",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32759"
+        },
+        "HOME_VISIT": {
+          "text": "HOME_VISIT",
+          "description": "Provider visiting Person, without a Care Site, within one day, delivering service",
+          "meaning": "OMOP:581476",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/581476"
+        },
+        "INPATIENT_VISIT": {
+          "text": "INPATIENT_VISIT",
+          "description": "Person visiting hospital, at a care site, in bed, for duration of more than one day, with physicians and other Providers permanently available to deliver service around the clock",
+          "meaning": "OMOP:9201",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/9201"
+        },
+        "INTENSIVE_CARE": {
+          "text": "INTENSIVE_CARE",
+          "description": "Person admitted to a specialized hospital unit for more than one day, receiving continuous monitoring and advanced life-support from dedicated Providers",
+          "meaning": "OMOP:32037",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32037"
+        },
+        "ISOLATION_IN_INPATIENT_SETTING": {
+          "text": "ISOLATION_IN_INPATIENT_SETTING",
+          "description": "Person admitted to a hospital and physically separated from other patients to prevent transmission of an infectious or potentially infectious condition",
+          "meaning": "OMOP:32760",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32760"
+        },
+        "LABORATORY_VISIT": {
+          "text": "LABORATORY_VISIT",
+          "description": "Patient visiting dedicated institution, at a Care Site, within one day, for the purpose of a Measurement.",
+          "meaning": "OMOP:32036",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32036"
+        },
+        "NON_HOSPITAL_INSTITUTION_VISIT": {
+          "text": "NON_HOSPITAL_INSTITUTION_VISIT",
+          "description": "Person visiting dedicated institution for reasons of poor health, at a Care Site, long-term or permanently, with no physician but possibly other Providers permanently available to deliver service around the clock",
+          "meaning": "OMOP:42898160",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/42898160"
+        },
+        "OFFICE_VISIT": {
+          "text": "OFFICE_VISIT",
+          "description": "Person visiting a Provider at a Care Site within one day for evaluation or management of a health concern, without bed or overnight stay",
+          "meaning": "OMOP:581477",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/581477"
+        },
+        "OUTPATIENT_VISIT": {
+          "text": "OUTPATIENT_VISIT",
+          "description": "Person visiting dedicated ambulatory healthcare institution, at a Care Site, within one day, without bed, with physicians or medical Providers delivering service during Visit",
+          "meaning": "OMOP:9202",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/9202"
+        },
+        "PERSON_UNDER_INVESTIGATION_PUI": {
+          "text": "PERSON_UNDER_INVESTIGATION_PUI",
+          "description": "Person being monitored or assessed at a Care Site due to potential exposure to or symptoms of a reportable or emerging infectious disease",
+          "meaning": "OMOP:32761",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32761"
+        },
+        "PHARMACY_VISIT": {
+          "text": "PHARMACY_VISIT",
+          "description": "Person visiting pharmacy for dispensing of Drug, at a Care Site, within one day",
+          "meaning": "OMOP:581458",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/581458"
+        },
+        "SUPPLIER_SERVICE_PROVIDER": {
+          "text": "SUPPLIER_SERVICE_PROVIDER",
+          "description": "Person receiving goods or services from a non-clinical supplier or durable medical equipment provider, outside of a traditional Care Site encounter",
+          "meaning": "OMOP:33004",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/33004"
+        },
+        "TELEHEALTH": {
+          "text": "TELEHEALTH",
+          "description": "Patient engages with Provider through communication media",
+          "meaning": "OMOP:722455",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/722455"
+        },
+        "UNKNOWN": {
+          "text": "UNKNOWN",
+          "description": "Visit category is not known, not observed, not recorded, or refused.",
+          "meaning": "OMOP:8552",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/8552"
         }
       }
     },
@@ -5662,80 +5927,410 @@
       "name": "ProvenanceEnum",
       "description": "A constrained set of enumerative values containing the OMOP values for provenance.",
       "permissible_values": {
-        "EHR_BILLING_DIAGNOSIS": {
-          "text": "EHR_BILLING_DIAGNOSIS",
-          "meaning": "OMOP:4822159",
-          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4822159"
+        "CASE_REPORT_FORM": {
+          "text": "CASE_REPORT_FORM",
+          "meaning": "OMOP:4976882",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976882"
+        },
+        "CLAIM": {
+          "text": "CLAIM",
+          "meaning": "OMOP:4976883",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976883"
+        },
+        "CLAIM_AUTHORIZATION": {
+          "text": "CLAIM_AUTHORIZATION",
+          "meaning": "OMOP:4976884",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976884"
+        },
+        "CLAIM_DISCHARGE_RECORD": {
+          "text": "CLAIM_DISCHARGE_RECORD",
+          "meaning": "OMOP:4976885",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976885"
+        },
+        "CLAIM_ENROLMENT_RECORD": {
+          "text": "CLAIM_ENROLMENT_RECORD",
+          "meaning": "OMOP:4976886",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976886"
+        },
+        "COST_RECORD": {
+          "text": "COST_RECORD",
+          "meaning": "OMOP:4976887",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976887"
+        },
+        "DEATH_CERTIFICATE": {
+          "text": "DEATH_CERTIFICATE",
+          "meaning": "OMOP:4976888",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976888"
+        },
+        "DENTAL_CLAIM": {
+          "text": "DENTAL_CLAIM",
+          "meaning": "OMOP:4976889",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976889"
+        },
+        "EHR": {
+          "text": "EHR",
+          "meaning": "OMOP:4976890",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976890"
+        },
+        "EHR_ADMINISTRATION_RECORD": {
+          "text": "EHR_ADMINISTRATION_RECORD",
+          "meaning": "OMOP:4976891",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976891"
+        },
+        "EHR_ADMISSION_NOTE": {
+          "text": "EHR_ADMISSION_NOTE",
+          "meaning": "OMOP:4976892",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976892"
+        },
+        "EHR_ANCILLARY_REPORT": {
+          "text": "EHR_ANCILLARY_REPORT",
+          "meaning": "OMOP:4976893",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976893"
+        },
+        "EHR_BILLING_RECORD": {
+          "text": "EHR_BILLING_RECORD",
+          "meaning": "OMOP:4976894",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976894"
         },
         "EHR_CHIEF_COMPLAINT": {
           "text": "EHR_CHIEF_COMPLAINT",
-          "meaning": "OMOP:4822124",
-          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4822124"
+          "meaning": "OMOP:4976895",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976895"
         },
-        "EHR_ENCOUNTER_DIAGNOSIS": {
-          "text": "EHR_ENCOUNTER_DIAGNOSIS",
-          "meaning": "OMOP:4822160",
-          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4822160"
+        "EHR_DISCHARGE_RECORD": {
+          "text": "EHR_DISCHARGE_RECORD",
+          "meaning": "OMOP:4976896",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976896"
         },
-        "EHR_EPISODE_ENTRY": {
-          "text": "EHR_EPISODE_ENTRY",
-          "meaning": "OMOP:4822135",
-          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4822135"
+        "EHR_DISCHARGE_SUMMARY": {
+          "text": "EHR_DISCHARGE_SUMMARY",
+          "meaning": "OMOP:4976897",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976897"
         },
-        "EHR_PROBLEM_LIST_ENTRY": {
-          "text": "EHR_PROBLEM_LIST_ENTRY",
-          "meaning": "OMOP:4822121",
-          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4822121"
+        "EHR_DISPENSING_RECORD": {
+          "text": "EHR_DISPENSING_RECORD",
+          "meaning": "OMOP:4976898",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976898"
         },
-        "FIRST_POSITION_CONDITION": {
-          "text": "FIRST_POSITION_CONDITION",
-          "meaning": "OMOP:4822128",
-          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4822128"
+        "EHR_EMERGENCY_ROOM_NOTE": {
+          "text": "EHR_EMERGENCY_ROOM_NOTE",
+          "meaning": "OMOP:4976899",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976899"
         },
-        "NLP_DERIVED": {
-          "text": "NLP_DERIVED",
-          "meaning": "OMOP:4822058",
-          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4822058"
+        "EHR_ENCOUNTER_RECORD": {
+          "text": "EHR_ENCOUNTER_RECORD",
+          "meaning": "OMOP:4976900",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976900"
         },
-        "OBSERVATION_RECORDED_FROM_EHR": {
-          "text": "OBSERVATION_RECORDED_FROM_EHR",
-          "meaning": "OMOP:4822126",
-          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4822126"
+        "EHR_EPISODE_RECORD": {
+          "text": "EHR_EPISODE_RECORD",
+          "meaning": "OMOP:4976901",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976901"
         },
-        "PATIENT_SELF-REPORTED_CONDITION": {
-          "text": "PATIENT_SELF-REPORTED_CONDITION",
-          "meaning": "OMOP:4822157",
-          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4822157"
+        "EHR_INPATIENT_NOTE": {
+          "text": "EHR_INPATIENT_NOTE",
+          "meaning": "OMOP:4976902",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976902"
         },
-        "PRIMARY_CONDITION": {
-          "text": "PRIMARY_CONDITION",
-          "meaning": "OMOP:4822127",
-          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4822127"
+        "EHR_MEDICATION_LIST": {
+          "text": "EHR_MEDICATION_LIST",
+          "meaning": "OMOP:4976903",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976903"
         },
-        "REFERRAL_RECORD": {
-          "text": "REFERRAL_RECORD",
-          "meaning": "OMOP:4822125",
-          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4822125"
+        "EHR_NOTE": {
+          "text": "EHR_NOTE",
+          "meaning": "OMOP:4976904",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976904"
         },
-        "SECONDARY_CONDITION": {
-          "text": "SECONDARY_CONDITION",
-          "meaning": "OMOP:4822129",
-          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4822129"
+        "EHR_NURSING_REPORT": {
+          "text": "EHR_NURSING_REPORT",
+          "meaning": "OMOP:4976905",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976905"
         },
-        "TUMOR_REGISTRY": {
-          "text": "TUMOR_REGISTRY",
-          "meaning": "OMOP:4822266",
-          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4822266"
+        "EHR_ORDER": {
+          "text": "EHR_ORDER",
+          "meaning": "OMOP:4976906",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976906"
         },
-        "WORKING_DIAGNOSIS": {
-          "text": "WORKING_DIAGNOSIS",
-          "meaning": "OMOP:4208085",
-          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4208085"
+        "EHR_OUTPATIENT_NOTE": {
+          "text": "EHR_OUTPATIENT_NOTE",
+          "meaning": "OMOP:4976907",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976907"
         },
-        "CLINICAL_DIAGNOSIS": {
-          "text": "CLINICAL_DIAGNOSIS",
-          "meaning": "OMOP:4309119",
-          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4309119"
+        "EHR_PATHOLOGY_REPORT": {
+          "text": "EHR_PATHOLOGY_REPORT",
+          "meaning": "OMOP:4976908",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976908"
+        },
+        "EHR_PHYSICAL_EXAMINATION": {
+          "text": "EHR_PHYSICAL_EXAMINATION",
+          "meaning": "OMOP:4976909",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976909"
+        },
+        "EHR_PLANNED_DISPENSING_RECORD": {
+          "text": "EHR_PLANNED_DISPENSING_RECORD",
+          "meaning": "OMOP:4976910",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976910"
+        },
+        "EHR_PRESCRIPTION": {
+          "text": "EHR_PRESCRIPTION",
+          "meaning": "OMOP:4976911",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976911"
+        },
+        "EHR_PRESCRIPTION_ISSUE_RECORD": {
+          "text": "EHR_PRESCRIPTION_ISSUE_RECORD",
+          "meaning": "OMOP:4976912",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976912"
+        },
+        "EHR_PROBLEM_LIST": {
+          "text": "EHR_PROBLEM_LIST",
+          "meaning": "OMOP:4976913",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976913"
+        },
+        "EHR_RADIOLOGY_REPORT": {
+          "text": "EHR_RADIOLOGY_REPORT",
+          "meaning": "OMOP:4976914",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976914"
+        },
+        "EHR_REFERRAL_RECORD": {
+          "text": "EHR_REFERRAL_RECORD",
+          "meaning": "OMOP:4976915",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976915"
+        },
+        "EXTERNAL_CDM_INSTANCE": {
+          "text": "EXTERNAL_CDM_INSTANCE",
+          "meaning": "OMOP:4976916",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976916"
+        },
+        "FACILITY_CLAIM": {
+          "text": "FACILITY_CLAIM",
+          "meaning": "OMOP:4976917",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976917"
+        },
+        "FACILITY_CLAIM_DETAIL": {
+          "text": "FACILITY_CLAIM_DETAIL",
+          "meaning": "OMOP:4976918",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976918"
+        },
+        "FACILITY_CLAIM_HEADER": {
+          "text": "FACILITY_CLAIM_HEADER",
+          "meaning": "OMOP:4976919",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976919"
+        },
+        "GEOGRAPHIC_ISOLATION_RECORD": {
+          "text": "GEOGRAPHIC_ISOLATION_RECORD",
+          "meaning": "OMOP:4976920",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976920"
+        },
+        "GOVERNMENT_REPORT": {
+          "text": "GOVERNMENT_REPORT",
+          "meaning": "OMOP:4976921",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976921"
+        },
+        "HEALTH_INFORMATION_EXCHANGE_RECORD": {
+          "text": "HEALTH_INFORMATION_EXCHANGE_RECORD",
+          "meaning": "OMOP:4976922",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976922"
+        },
+        "HEALTH_RISK_ASSESSMENT": {
+          "text": "HEALTH_RISK_ASSESSMENT",
+          "meaning": "OMOP:4976923",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976923"
+        },
+        "HEALTHCARE_PROFESSIONAL_FILLED_SURVEY": {
+          "text": "HEALTHCARE_PROFESSIONAL_FILLED_SURVEY",
+          "meaning": "OMOP:4976924",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976924"
+        },
+        "HOSPITAL_COST": {
+          "text": "HOSPITAL_COST",
+          "meaning": "OMOP:4976925",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976925"
+        },
+        "INPATIENT_CLAIM": {
+          "text": "INPATIENT_CLAIM",
+          "meaning": "OMOP:4976926",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976926"
+        },
+        "INPATIENT_CLAIM_DETAIL": {
+          "text": "INPATIENT_CLAIM_DETAIL",
+          "meaning": "OMOP:4976927",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976927"
+        },
+        "INPATIENT_CLAIM_HEADER": {
+          "text": "INPATIENT_CLAIM_HEADER",
+          "meaning": "OMOP:4976928",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976928"
+        },
+        "LAB": {
+          "text": "LAB",
+          "meaning": "OMOP:4976929",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976929"
+        },
+        "MAIL_ORDER_RECORD": {
+          "text": "MAIL_ORDER_RECORD",
+          "meaning": "OMOP:4976930",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976930"
+        },
+        "NLP": {
+          "text": "NLP",
+          "meaning": "OMOP:4976931",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976931"
+        },
+        "OBITUARY": {
+          "text": "OBITUARY",
+          "meaning": "OMOP:5584804",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/5584804"
+        },
+        "OUTPATIENT_CLAIM": {
+          "text": "OUTPATIENT_CLAIM",
+          "meaning": "OMOP:4976932",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976932"
+        },
+        "OUTPATIENT_CLAIM_DETAIL": {
+          "text": "OUTPATIENT_CLAIM_DETAIL",
+          "meaning": "OMOP:4976933",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976933"
+        },
+        "OUTPATIENT_CLAIM_HEADER": {
+          "text": "OUTPATIENT_CLAIM_HEADER",
+          "meaning": "OMOP:4976934",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976934"
+        },
+        "PATIENT_FILLED_SURVEY": {
+          "text": "PATIENT_FILLED_SURVEY",
+          "meaning": "OMOP:4976935",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976935"
+        },
+        "PATIENT_OR_PAYER_PAID_RECORD": {
+          "text": "PATIENT_OR_PAYER_PAID_RECORD",
+          "meaning": "OMOP:4976936",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976936"
+        },
+        "PATIENT_REPORTED_COST": {
+          "text": "PATIENT_REPORTED_COST",
+          "meaning": "OMOP:4976937",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976937"
+        },
+        "PATIENT_SELF_REPORT": {
+          "text": "PATIENT_SELF_REPORT",
+          "meaning": "OMOP:4976938",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976938"
+        },
+        "PATIENT_SELF_TESTED": {
+          "text": "PATIENT_SELF_TESTED",
+          "meaning": "OMOP:5181830",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/5181830"
+        },
+        "PAYER_SYSTEM_RECORD_PAID_PREMIUM": {
+          "text": "PAYER_SYSTEM_RECORD_PAID_PREMIUM",
+          "meaning": "OMOP:4976939",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976939"
+        },
+        "PAYER_SYSTEM_RECORD_PRIMARY_PAYER": {
+          "text": "PAYER_SYSTEM_RECORD_PRIMARY_PAYER",
+          "meaning": "OMOP:4976940",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976940"
+        },
+        "PAYER_SYSTEM_RECORD_SECONDARY_PAYER": {
+          "text": "PAYER_SYSTEM_RECORD_SECONDARY_PAYER",
+          "meaning": "OMOP:4976941",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976941"
+        },
+        "PHARMACY_CLAIM": {
+          "text": "PHARMACY_CLAIM",
+          "meaning": "OMOP:4976942",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976942"
+        },
+        "POINT_OF_CARE/EXPRESS_LAB": {
+          "text": "POINT_OF_CARE/EXPRESS_LAB",
+          "meaning": "OMOP:5042951",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/5042951"
+        },
+        "PRE_QUALIFICATION_TIME_PERIOD": {
+          "text": "PRE_QUALIFICATION_TIME_PERIOD",
+          "meaning": "OMOP:4976943",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976943"
+        },
+        "PROFESSIONAL_CLAIM": {
+          "text": "PROFESSIONAL_CLAIM",
+          "meaning": "OMOP:4976944",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976944"
+        },
+        "PROFESSIONAL_CLAIM_DETAIL": {
+          "text": "PROFESSIONAL_CLAIM_DETAIL",
+          "meaning": "OMOP:4976945",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976945"
+        },
+        "PROFESSIONAL_CLAIM_HEADER": {
+          "text": "PROFESSIONAL_CLAIM_HEADER",
+          "meaning": "OMOP:4976946",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976946"
+        },
+        "PROVIDER_CHARGE_LIST_PRICE": {
+          "text": "PROVIDER_CHARGE_LIST_PRICE",
+          "meaning": "OMOP:4976947",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976947"
+        },
+        "PROVIDER_FINANCIAL_SYSTEM": {
+          "text": "PROVIDER_FINANCIAL_SYSTEM",
+          "meaning": "OMOP:4976948",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976948"
+        },
+        "PROVIDER_INCURRED_COST_RECORD": {
+          "text": "PROVIDER_INCURRED_COST_RECORD",
+          "meaning": "OMOP:4976949",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976949"
+        },
+        "RANDOMIZATION_RECORD": {
+          "text": "RANDOMIZATION_RECORD",
+          "meaning": "OMOP:4976950",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976950"
+        },
+        "REFERENCE_LAB": {
+          "text": "REFERENCE_LAB",
+          "meaning": "OMOP:4976951",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976951"
+        },
+        "REGISTRY": {
+          "text": "REGISTRY",
+          "meaning": "OMOP:4976952",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976952"
+        },
+        "STANDARD_ALGORITHM": {
+          "text": "STANDARD_ALGORITHM",
+          "meaning": "OMOP:4976953",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976953"
+        },
+        "STANDARD_ALGORITHM_FROM_CLAIMS": {
+          "text": "STANDARD_ALGORITHM_FROM_CLAIMS",
+          "meaning": "OMOP:4976954",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976954"
+        },
+        "STANDARD_ALGORITHM_FROM_EHR": {
+          "text": "STANDARD_ALGORITHM_FROM_EHR",
+          "meaning": "OMOP:4976955",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976955"
+        },
+        "SURVEY": {
+          "text": "SURVEY",
+          "meaning": "OMOP:4976956",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976956"
+        },
+        "URGENT_LAB": {
+          "text": "URGENT_LAB",
+          "meaning": "OMOP:4976957",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976957"
+        },
+        "US_SOCIAL_SECURITY_DEATH_MASTER_FILE": {
+          "text": "US_SOCIAL_SECURITY_DEATH_MASTER_FILE",
+          "meaning": "OMOP:4976958",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976958"
+        },
+        "VISION_CLAIM": {
+          "text": "VISION_CLAIM",
+          "meaning": "OMOP:4976959",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976959"
         }
       }
     },
@@ -5762,7 +6357,6 @@
       "id": "HistoricalStatusEnum",
       "name": "HistoricalStatusEnum",
       "description": "A constrained set of enumerative values indicating whether something is present, absent, historical, or its status is unknown.",
-      "parent": "StatusEnum",
       "inherits": [
         "StatusEnum"
       ],
@@ -5807,98 +6401,98 @@
         "Taken from OMOP Drug Type values; \"select * from concept where vocabulary_id = 'Drug Type';\" Do we need descriptions beyond the name?"
       ],
       "permissible_values": {
-        "RANDOMIZED DRUG": {
-          "text": "RANDOMIZED DRUG",
+        "RANDOMIZED_DRUG": {
+          "text": "RANDOMIZED_DRUG",
           "description": "Randomized Drug",
           "meaning": "OMOP:44777970",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/44777970"
         },
-        "PATIENT SELF-REPORTED MEDICATION": {
-          "text": "PATIENT SELF-REPORTED MEDICATION",
+        "PATIENT_SELF_REPORTED_MEDICATION": {
+          "text": "PATIENT_SELF_REPORTED_MEDICATION",
           "description": "Patient Self-Reported Medication",
           "meaning": "OMOP:44787730",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/44787730"
         },
-        "NLP DERIVED": {
-          "text": "NLP DERIVED",
+        "NLP_DERIVED": {
+          "text": "NLP_DERIVED",
           "description": "NLP derived",
           "meaning": "OMOP:32426",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32426"
         },
-        "PRESCRIPTION DISPENSED IN PHARMACY": {
-          "text": "PRESCRIPTION DISPENSED IN PHARMACY",
+        "PRESCRIPTION_DISPENSED_IN_PHARMACY": {
+          "text": "PRESCRIPTION_DISPENSED_IN_PHARMACY",
           "description": "Prescription dispensed in pharmacy",
           "meaning": "OMOP:38000175",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/38000175"
         },
-        "PHYSICIAN ADMINISTERED DRUG (IDENTIFIED FROM EHR ORDER)": {
-          "text": "PHYSICIAN ADMINISTERED DRUG (IDENTIFIED FROM EHR ORDER)",
+        "PHYSICIAN_ADMINISTERED_DRUG_IDENTIFIED_FROM_EHR_ORDER": {
+          "text": "PHYSICIAN_ADMINISTERED_DRUG_IDENTIFIED_FROM_EHR_ORDER",
           "description": "Physician administered drug (identified from EHR order)",
           "meaning": "OMOP:581373",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/581373"
         },
-        "DISPENSED IN OUTPATIENT OFFICE": {
-          "text": "DISPENSED IN OUTPATIENT OFFICE",
+        "DISPENSED_IN_OUTPATIENT_OFFICE": {
+          "text": "DISPENSED_IN_OUTPATIENT_OFFICE",
           "description": "Dispensed in Outpatient office",
           "meaning": "OMOP:581452",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/581452"
         },
-        "PRESCRIPTION DISPENSED THROUGH MAIL ORDER": {
-          "text": "PRESCRIPTION DISPENSED THROUGH MAIL ORDER",
+        "PRESCRIPTION_DISPENSED_THROUGH_MAIL_ORDER": {
+          "text": "PRESCRIPTION_DISPENSED_THROUGH_MAIL_ORDER",
           "description": "Prescription dispensed through mail order",
           "meaning": "OMOP:38000176",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/38000176"
         },
-        "PRESCRIPTION WRITTEN": {
-          "text": "PRESCRIPTION WRITTEN",
+        "PRESCRIPTION_WRITTEN": {
+          "text": "PRESCRIPTION_WRITTEN",
           "description": "Prescription written",
           "meaning": "OMOP:38000177",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/38000177"
         },
-        "MEDICATION LIST ENTRY": {
-          "text": "MEDICATION LIST ENTRY",
+        "MEDICATION_LIST_ENTRY": {
+          "text": "MEDICATION_LIST_ENTRY",
           "description": "Medication list entry",
           "meaning": "OMOP:38000178",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/38000178"
         },
-        "PHYSICIAN ADMINISTERED DRUG (IDENTIFIED AS PROCEDURE)": {
-          "text": "PHYSICIAN ADMINISTERED DRUG (IDENTIFIED AS PROCEDURE)",
+        "PHYSICIAN_ADMINISTERED_DRUG_IDENTIFIED_AS_PROCEDURE": {
+          "text": "PHYSICIAN_ADMINISTERED_DRUG_IDENTIFIED_AS_PROCEDURE",
           "description": "Physician administered drug (identified as procedure)",
           "meaning": "OMOP:38000179",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/38000179"
         },
-        "INPATIENT ADMINISTRATION": {
-          "text": "INPATIENT ADMINISTRATION",
+        "INPATIENT_ADMINISTRATION": {
+          "text": "INPATIENT_ADMINISTRATION",
           "description": "Inpatient administration",
           "meaning": "OMOP:38000180",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/38000180"
         },
-        "DRUG ERA - 0 DAYS PERSISTENCE WINDOW": {
-          "text": "DRUG ERA - 0 DAYS PERSISTENCE WINDOW",
+        "DRUG_ERA_0_DAYS_PERSISTENCE_WINDOW": {
+          "text": "DRUG_ERA_0_DAYS_PERSISTENCE_WINDOW",
           "description": "Drug era - 0 days persistence window",
           "meaning": "OMOP:38000181",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/38000181"
         },
-        "DRUG ERA - 30 DAYS PERSISTENCE WINDOW": {
-          "text": "DRUG ERA - 30 DAYS PERSISTENCE WINDOW",
+        "DRUG_ERA_30_DAYS_PERSISTENCE_WINDOW": {
+          "text": "DRUG_ERA_30_DAYS_PERSISTENCE_WINDOW",
           "description": "Drug era - 30 days persistence window",
           "meaning": "OMOP:38000182",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/38000182"
         },
-        "PHYSICIAN ADMINISTERED DRUG (IDENTIFIED FROM EHR PROBLEM LIST)": {
-          "text": "PHYSICIAN ADMINISTERED DRUG (IDENTIFIED FROM EHR PROBLEM LIST)",
+        "PHYSICIAN_ADMINISTERED_DRUG_IDENTIFIED_FROM_EHR_PROBLEM_LIST": {
+          "text": "PHYSICIAN_ADMINISTERED_DRUG_IDENTIFIED_FROM_EHR_PROBLEM_LIST",
           "description": "Physician administered drug (identified from EHR problem list)",
           "meaning": "OMOP:43542356",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/43542356"
         },
-        "PHYSICIAN ADMINISTERED DRUG (IDENTIFIED FROM REFERRAL RECORD)": {
-          "text": "PHYSICIAN ADMINISTERED DRUG (IDENTIFIED FROM REFERRAL RECORD)",
+        "PHYSICIAN_ADMINISTERED_DRUG_IDENTIFIED_FROM_REFERRAL_RECORD": {
+          "text": "PHYSICIAN_ADMINISTERED_DRUG_IDENTIFIED_FROM_REFERRAL_RECORD",
           "description": "Physician administered drug (identified from referral record)",
           "meaning": "OMOP:43542357",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/43542357"
         },
-        "PHYSICIAN ADMINISTERED DRUG (IDENTIFIED FROM EHR OBSERVATION)": {
-          "text": "PHYSICIAN ADMINISTERED DRUG (IDENTIFIED FROM EHR OBSERVATION)",
+        "PHYSICIAN_ADMINISTERED_DRUG_IDENTIFIED_FROM_EHR_OBSERVATION": {
+          "text": "PHYSICIAN_ADMINISTERED_DRUG_IDENTIFIED_FROM_EHR_OBSERVATION",
           "description": "Physician administered drug (identified from EHR observation)",
           "meaning": "OMOP:43542358",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/43542358"
@@ -5913,8 +6507,8 @@
         "OMOP contains 165 standard values; `select * from concept where domain_id = 'Route' and invalid_reason is null and standard_concept is not null;` from SNOMED. Do we need descriptions beyond the name?"
       ],
       "permissible_values": {
-        "ARTERIOVENOUS FISTULA": {
-          "text": "ARTERIOVENOUS FISTULA",
+        "ARTERIOVENOUS_FISTULA": {
+          "text": "ARTERIOVENOUS_FISTULA",
           "description": "Arteriovenous fistula",
           "meaning": "OMOP:44783786",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/44783786"
@@ -5943,8 +6537,8 @@
           "meaning": "OMOP:46272926",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/46272926"
         },
-        "INTRACATHETER INSTILLATION": {
-          "text": "INTRACATHETER INSTILLATION",
+        "INTRACATHETER_INSTILLATION": {
+          "text": "INTRACATHETER_INSTILLATION",
           "description": "Intracatheter instillation",
           "meaning": "OMOP:605428",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/605428"
@@ -5955,8 +6549,8 @@
           "meaning": "OMOP:600817",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/600817"
         },
-        "INTRA-ARTICULAR": {
-          "text": "INTRA-ARTICULAR",
+        "INTRA_ARTICULAR": {
+          "text": "INTRA_ARTICULAR",
           "description": "Intra-articular",
           "meaning": "OMOP:4006860",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4006860"
@@ -5967,8 +6561,8 @@
           "meaning": "OMOP:618805",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/618805"
         },
-        "ARTERIOVENOUS GRAFT": {
-          "text": "ARTERIOVENOUS GRAFT",
+        "ARTERIOVENOUS_GRAFT": {
+          "text": "ARTERIOVENOUS_GRAFT",
           "description": "Arteriovenous graft",
           "meaning": "OMOP:762840",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/762840"
@@ -5991,8 +6585,8 @@
           "meaning": "OMOP:4057765",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4057765"
         },
-        "ROUTE OF ADMINISTRATION VALUE": {
-          "text": "ROUTE OF ADMINISTRATION VALUE",
+        "ROUTE_OF_ADMINISTRATION_VALUE": {
+          "text": "ROUTE_OF_ADMINISTRATION_VALUE",
           "description": "Route of administration value",
           "meaning": "OMOP:4106215",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4106215"
@@ -6123,8 +6717,8 @@
           "meaning": "OMOP:4163770",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4163770"
         },
-        "MUCOUS FISTULA": {
-          "text": "MUCOUS FISTULA",
+        "MUCOUS_FISTULA": {
+          "text": "MUCOUS_FISTULA",
           "description": "Mucous fistula",
           "meaning": "OMOP:4171243",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4171243"
@@ -6135,8 +6729,8 @@
           "meaning": "OMOP:4171725",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4171725"
         },
-        "INTRAVENOUS PERIPHERAL": {
-          "text": "INTRAVENOUS PERIPHERAL",
+        "INTRAVENOUS_PERIPHERAL": {
+          "text": "INTRAVENOUS_PERIPHERAL",
           "description": "Intravenous peripheral",
           "meaning": "OMOP:4171884",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4171884"
@@ -6201,8 +6795,8 @@
           "meaning": "OMOP:4168656",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4168656"
         },
-        "GASTRO-INTESTINAL STOMA": {
-          "text": "GASTRO-INTESTINAL STOMA",
+        "GASTRO_INTESTINAL_STOMA": {
+          "text": "GASTRO_INTESTINAL_STOMA",
           "description": "Gastro-intestinal stoma",
           "meaning": "OMOP:4168665",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4168665"
@@ -6219,8 +6813,8 @@
           "meaning": "OMOP:4169440",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4169440"
         },
-        "TUMOR CAVITY": {
-          "text": "TUMOR CAVITY",
+        "TUMOR_CAVITY": {
+          "text": "TUMOR_CAVITY",
           "description": "Tumor cavity",
           "meaning": "OMOP:4169472",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4169472"
@@ -6237,8 +6831,8 @@
           "meaning": "OMOP:4170083",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4170083"
         },
-        "INTRAVENOUS CENTRAL": {
-          "text": "INTRAVENOUS CENTRAL",
+        "INTRAVENOUS_CENTRAL": {
+          "text": "INTRAVENOUS_CENTRAL",
           "description": "Intravenous central",
           "meaning": "OMOP:4170113",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4170113"
@@ -6261,8 +6855,8 @@
           "meaning": "OMOP:4170440",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4170440"
         },
-        "SURGICAL CAVITY": {
-          "text": "SURGICAL CAVITY",
+        "SURGICAL_CAVITY": {
+          "text": "SURGICAL_CAVITY",
           "description": "Surgical cavity",
           "meaning": "OMOP:4170771",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4170771"
@@ -6291,8 +6885,8 @@
           "meaning": "OMOP:4186832",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4186832"
         },
-        "EXTRA-AMNIOTIC": {
-          "text": "EXTRA-AMNIOTIC",
+        "EXTRA_AMNIOTIC": {
+          "text": "EXTRA_AMNIOTIC",
           "description": "Extra-amniotic",
           "meaning": "OMOP:4186833",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4186833"
@@ -6351,8 +6945,8 @@
           "meaning": "OMOP:4184451",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4184451"
         },
-        "BODY CAVITY": {
-          "text": "BODY CAVITY",
+        "BODY_CAVITY": {
+          "text": "BODY_CAVITY",
           "description": "Body cavity",
           "meaning": "OMOP:4222254",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4222254"
@@ -6363,8 +6957,8 @@
           "meaning": "OMOP:4213522",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4213522"
         },
-        "INTRAVENTRICULAR ROUTE - CARDIAC": {
-          "text": "INTRAVENTRICULAR ROUTE - CARDIAC",
+        "INTRAVENTRICULAR_ROUTE_CARDIAC": {
+          "text": "INTRAVENTRICULAR_ROUTE_CARDIAC",
           "description": "Intraventricular route - cardiac",
           "meaning": "OMOP:4222259",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4222259"
@@ -6417,8 +7011,8 @@
           "meaning": "OMOP:4262099",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4262099"
         },
-        "INTRA-ARTERIAL": {
-          "text": "INTRA-ARTERIAL",
+        "INTRA_ARTERIAL": {
+          "text": "INTRA_ARTERIAL",
           "description": "Intra-arterial",
           "meaning": "OMOP:4240824",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4240824"
@@ -6645,8 +7239,8 @@
           "meaning": "OMOP:4304277",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4304277"
         },
-        "SURGICAL DRAIN": {
-          "text": "SURGICAL DRAIN",
+        "SURGICAL_DRAIN": {
+          "text": "SURGICAL_DRAIN",
           "description": "Surgical drain",
           "meaning": "OMOP:4304412",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4304412"
@@ -6663,8 +7257,8 @@
           "meaning": "OMOP:35608078",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/35608078"
         },
-        "EXTRACORPOREAL HEMODIALYSIS": {
-          "text": "EXTRACORPOREAL HEMODIALYSIS",
+        "EXTRACORPOREAL_HEMODIALYSIS": {
+          "text": "EXTRACORPOREAL_HEMODIALYSIS",
           "description": "Extracorporeal hemodialysis",
           "meaning": "OMOP:35624178",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/35624178"
@@ -6681,8 +7275,8 @@
           "meaning": "OMOP:37018288",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/37018288"
         },
-        "INTRACORPORUS CAVERNOSUM": {
-          "text": "INTRACORPORUS CAVERNOSUM",
+        "INTRACORPORUS_CAVERNOSUM": {
+          "text": "INTRACORPORUS_CAVERNOSUM",
           "description": "Intracorporus cavernosum",
           "meaning": "OMOP:37174549",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/37174549"
@@ -6711,8 +7305,8 @@
           "meaning": "OMOP:37207463",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/37207463"
         },
-        "POSTERIOR JUXTASCLERAL": {
-          "text": "POSTERIOR JUXTASCLERAL",
+        "POSTERIOR_JUXTASCLERAL": {
+          "text": "POSTERIOR_JUXTASCLERAL",
           "description": "Posterior juxtascleral",
           "meaning": "OMOP:37207464",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/37207464"
@@ -6789,8 +7383,8 @@
           "meaning": "OMOP:40490896",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40490896"
         },
-        "LOWER RESPIRATORY TRACT": {
-          "text": "LOWER RESPIRATORY TRACT",
+        "LOWER_RESPIRATORY_TRACT": {
+          "text": "LOWER_RESPIRATORY_TRACT",
           "description": "Lower respiratory tract",
           "meaning": "OMOP:40490898",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40490898"
@@ -6867,8 +7461,8 @@
           "meaning": "OMOP:40493227",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40493227"
         },
-        "RESPIRATORY TRACT": {
-          "text": "RESPIRATORY TRACT",
+        "RESPIRATORY_TRACT": {
+          "text": "RESPIRATORY_TRACT",
           "description": "Respiratory tract",
           "meaning": "OMOP:40486069",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40486069"
@@ -6891,8 +7485,8 @@
           "meaning": "OMOP:40487473",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40487473"
         },
-        "DIGESTIVE TRACT": {
-          "text": "DIGESTIVE TRACT",
+        "DIGESTIVE_TRACT": {
+          "text": "DIGESTIVE_TRACT",
           "description": "Digestive tract",
           "meaning": "OMOP:40487501",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40487501"
@@ -6927,8 +7521,8 @@
         "Taken from OMOP Type Concept Domain"
       ],
       "permissible_values": {
-        "CASE REPORT FORM": {
-          "text": "CASE REPORT FORM",
+        "CASE_REPORT_FORM": {
+          "text": "CASE_REPORT_FORM",
           "description": "Case Report Form",
           "meaning": "OMOP:32809",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32809"
@@ -6939,38 +7533,38 @@
           "meaning": "OMOP:32810",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32810"
         },
-        "CLAIM AUTHORIZATION": {
-          "text": "CLAIM AUTHORIZATION",
+        "CLAIM_AUTHORIZATION": {
+          "text": "CLAIM_AUTHORIZATION",
           "description": "Claim authorization",
           "meaning": "OMOP:32811",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32811"
         },
-        "CLAIM DISCHARGE RECORD": {
-          "text": "CLAIM DISCHARGE RECORD",
+        "CLAIM_DISCHARGE_RECORD": {
+          "text": "CLAIM_DISCHARGE_RECORD",
           "description": "Claim discharge record",
           "meaning": "OMOP:32812",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32812"
         },
-        "CLAIM ENROLMENT RECORD": {
-          "text": "CLAIM ENROLMENT RECORD",
+        "CLAIM_ENROLMENT_RECORD": {
+          "text": "CLAIM_ENROLMENT_RECORD",
           "description": "Claim enrolment record",
           "meaning": "OMOP:32813",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32813"
         },
-        "COST RECORD": {
-          "text": "COST RECORD",
+        "COST_RECORD": {
+          "text": "COST_RECORD",
           "description": "Cost record",
           "meaning": "OMOP:32814",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32814"
         },
-        "DEATH CERTIFICATE": {
-          "text": "DEATH CERTIFICATE",
+        "DEATH_CERTIFICATE": {
+          "text": "DEATH_CERTIFICATE",
           "description": "Death Certificate",
           "meaning": "OMOP:32815",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32815"
         },
-        "DENTAL CLAIM": {
-          "text": "DENTAL CLAIM",
+        "DENTAL_CLAIM": {
+          "text": "DENTAL_CLAIM",
           "description": "Dental claim",
           "meaning": "OMOP:32816",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32816"
@@ -6981,230 +7575,230 @@
           "meaning": "OMOP:32817",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32817"
         },
-        "EHR ADMINISTRATION RECORD": {
-          "text": "EHR ADMINISTRATION RECORD",
+        "EHR_ADMINISTRATION_RECORD": {
+          "text": "EHR_ADMINISTRATION_RECORD",
           "description": "EHR administration record",
           "meaning": "OMOP:32818",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32818"
         },
-        "EHR ADMISSION NOTE": {
-          "text": "EHR ADMISSION NOTE",
+        "EHR_ADMISSION_NOTE": {
+          "text": "EHR_ADMISSION_NOTE",
           "description": "EHR admission note",
           "meaning": "OMOP:32819",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32819"
         },
-        "EHR ANCILLARY REPORT": {
-          "text": "EHR ANCILLARY REPORT",
+        "EHR_ANCILLARY_REPORT": {
+          "text": "EHR_ANCILLARY_REPORT",
           "description": "EHR ancillary report",
           "meaning": "OMOP:32820",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32820"
         },
-        "EHR BILLING RECORD": {
-          "text": "EHR BILLING RECORD",
+        "EHR_BILLING_RECORD": {
+          "text": "EHR_BILLING_RECORD",
           "description": "EHR billing record",
           "meaning": "OMOP:32821",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32821"
         },
-        "EHR CHIEF COMPLAINT": {
-          "text": "EHR CHIEF COMPLAINT",
+        "EHR_CHIEF_COMPLAINT": {
+          "text": "EHR_CHIEF_COMPLAINT",
           "description": "EHR chief complaint",
           "meaning": "OMOP:32822",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32822"
         },
-        "EHR DISCHARGE RECORD": {
-          "text": "EHR DISCHARGE RECORD",
+        "EHR_DISCHARGE_RECORD": {
+          "text": "EHR_DISCHARGE_RECORD",
           "description": "EHR discharge record",
           "meaning": "OMOP:32823",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32823"
         },
-        "EHR DISCHARGE SUMMARY": {
-          "text": "EHR DISCHARGE SUMMARY",
+        "EHR_DISCHARGE_SUMMARY": {
+          "text": "EHR_DISCHARGE_SUMMARY",
           "description": "EHR discharge summary",
           "meaning": "OMOP:32824",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32824"
         },
-        "EHR DISPENSING RECORD": {
-          "text": "EHR DISPENSING RECORD",
+        "EHR_DISPENSING_RECORD": {
+          "text": "EHR_DISPENSING_RECORD",
           "description": "EHR dispensing record",
           "meaning": "OMOP:32825",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32825"
         },
-        "EHR EMERGENCY ROOM NOTE": {
-          "text": "EHR EMERGENCY ROOM NOTE",
+        "EHR_EMERGENCY_ROOM_NOTE": {
+          "text": "EHR_EMERGENCY_ROOM_NOTE",
           "description": "EHR emergency room note",
           "meaning": "OMOP:32826",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32826"
         },
-        "EHR ENCOUNTER RECORD": {
-          "text": "EHR ENCOUNTER RECORD",
+        "EHR_ENCOUNTER_RECORD": {
+          "text": "EHR_ENCOUNTER_RECORD",
           "description": "EHR encounter record",
           "meaning": "OMOP:32827",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32827"
         },
-        "EHR EPISODE RECORD": {
-          "text": "EHR EPISODE RECORD",
+        "EHR_EPISODE_RECORD": {
+          "text": "EHR_EPISODE_RECORD",
           "description": "EHR episode record",
           "meaning": "OMOP:32828",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32828"
         },
-        "EHR INPATIENT NOTE": {
-          "text": "EHR INPATIENT NOTE",
+        "EHR_INPATIENT_NOTE": {
+          "text": "EHR_INPATIENT_NOTE",
           "description": "EHR inpatient note",
           "meaning": "OMOP:32829",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32829"
         },
-        "EHR MEDICATION LIST": {
-          "text": "EHR MEDICATION LIST",
+        "EHR_MEDICATION_LIST": {
+          "text": "EHR_MEDICATION_LIST",
           "description": "EHR medication list",
           "meaning": "OMOP:32830",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32830"
         },
-        "EHR NOTE": {
-          "text": "EHR NOTE",
+        "EHR_NOTE": {
+          "text": "EHR_NOTE",
           "description": "EHR note",
           "meaning": "OMOP:32831",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32831"
         },
-        "EHR NURSING REPORT": {
-          "text": "EHR NURSING REPORT",
+        "EHR_NURSING_REPORT": {
+          "text": "EHR_NURSING_REPORT",
           "description": "EHR nursing report",
           "meaning": "OMOP:32832",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32832"
         },
-        "EHR ORDER": {
-          "text": "EHR ORDER",
+        "EHR_ORDER": {
+          "text": "EHR_ORDER",
           "description": "EHR order",
           "meaning": "OMOP:32833",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32833"
         },
-        "EHR OUTPATIENT NOTE": {
-          "text": "EHR OUTPATIENT NOTE",
+        "EHR_OUTPATIENT_NOTE": {
+          "text": "EHR_OUTPATIENT_NOTE",
           "description": "EHR outpatient note",
           "meaning": "OMOP:32834",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32834"
         },
-        "EHR PATHOLOGY REPORT": {
-          "text": "EHR PATHOLOGY REPORT",
+        "EHR_PATHOLOGY_REPORT": {
+          "text": "EHR_PATHOLOGY_REPORT",
           "description": "EHR Pathology report",
           "meaning": "OMOP:32835",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32835"
         },
-        "EHR PHYSICAL EXAMINATION": {
-          "text": "EHR PHYSICAL EXAMINATION",
+        "EHR_PHYSICAL_EXAMINATION": {
+          "text": "EHR_PHYSICAL_EXAMINATION",
           "description": "EHR physical examination",
           "meaning": "OMOP:32836",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32836"
         },
-        "EHR PLANNED DISPENSING RECORD": {
-          "text": "EHR PLANNED DISPENSING RECORD",
+        "EHR_PLANNED_DISPENSING_RECORD": {
+          "text": "EHR_PLANNED_DISPENSING_RECORD",
           "description": "EHR planned dispensing record",
           "meaning": "OMOP:32837",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32837"
         },
-        "EHR PERSCRIPTION": {
-          "text": "EHR PERSCRIPTION",
+        "EHR_PRESCRIPTION": {
+          "text": "EHR_PRESCRIPTION",
           "description": "EHR prescription",
           "meaning": "OMOP:32838",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32838"
         },
-        "EHR PERSCRIPTION ISSUE RECORD": {
-          "text": "EHR PERSCRIPTION ISSUE RECORD",
+        "EHR_PRESCRIPTION_ISSUE_RECORD": {
+          "text": "EHR_PRESCRIPTION_ISSUE_RECORD",
           "description": "EHR prescription issue record",
           "meaning": "OMOP:32839",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32839"
         },
-        "EHR PROBLEM LIST": {
-          "text": "EHR PROBLEM LIST",
+        "EHR_PROBLEM_LIST": {
+          "text": "EHR_PROBLEM_LIST",
           "description": "EHR problem list",
           "meaning": "OMOP:32840",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32840"
         },
-        "EHR RADIOLOGY REPORT": {
-          "text": "EHR RADIOLOGY REPORT",
+        "EHR_RADIOLOGY_REPORT": {
+          "text": "EHR_RADIOLOGY_REPORT",
           "description": "EHR radiology report",
           "meaning": "OMOP:32841",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32841"
         },
-        "EHR REFERRAL RECORD": {
-          "text": "EHR REFERRAL RECORD",
+        "EHR_REFERRAL_RECORD": {
+          "text": "EHR_REFERRAL_RECORD",
           "description": "EHR referral record",
           "meaning": "OMOP:32842",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32842"
         },
-        "EXTERNAL CDM INSTANCE": {
-          "text": "EXTERNAL CDM INSTANCE",
+        "EXTERNAL_CDM_INSTANCE": {
+          "text": "EXTERNAL_CDM_INSTANCE",
           "description": "External CDM instance",
           "meaning": "OMOP:32843",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32843"
         },
-        "FACILITY CLAIM": {
-          "text": "FACILITY CLAIM",
+        "FACILITY_CLAIM": {
+          "text": "FACILITY_CLAIM",
           "description": "Facility claim",
           "meaning": "OMOP:32844",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32844"
         },
-        "FACILITY CLAIM DETAIL": {
-          "text": "FACILITY CLAIM DETAIL",
+        "FACILITY_CLAIM_DETAIL": {
+          "text": "FACILITY_CLAIM_DETAIL",
           "description": "Facility claim detail",
           "meaning": "OMOP:32845",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32845"
         },
-        "FACILITY CLAIM HEADER": {
-          "text": "FACILITY CLAIM HEADER",
+        "FACILITY_CLAIM_HEADER": {
+          "text": "FACILITY_CLAIM_HEADER",
           "description": "Facility claim header",
           "meaning": "OMOP:32846",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32846"
         },
-        "GEOGRAPHIC ISOLATION RECORD": {
-          "text": "GEOGRAPHIC ISOLATION RECORD",
+        "GEOGRAPHIC_ISOLATION_RECORD": {
+          "text": "GEOGRAPHIC_ISOLATION_RECORD",
           "description": "Geographic isolation record",
           "meaning": "OMOP:32847",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32847"
         },
-        "GOVERNMENT REPORT": {
-          "text": "GOVERNMENT REPORT",
+        "GOVERNMENT_REPORT": {
+          "text": "GOVERNMENT_REPORT",
           "description": "Government report",
           "meaning": "OMOP:32848",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32848"
         },
-        "HEALTH INFORMATION EXCHANGE RECORD": {
-          "text": "HEALTH INFORMATION EXCHANGE RECORD",
+        "HEALTH_INFORMATION_EXCHANGE_RECORD": {
+          "text": "HEALTH_INFORMATION_EXCHANGE_RECORD",
           "description": "Health Information Exchange record",
           "meaning": "OMOP:32849",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32849"
         },
-        "HEALTH RISK ASSESSMENT": {
-          "text": "HEALTH RISK ASSESSMENT",
+        "HEALTH_RISK_ASSESSMENT": {
+          "text": "HEALTH_RISK_ASSESSMENT",
           "description": "Health Risk Assessment",
           "meaning": "OMOP:32850",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32850"
         },
-        "HEALTHCARE PROFESSIONAL FILLED SURVEY": {
-          "text": "HEALTHCARE PROFESSIONAL FILLED SURVEY",
+        "HEALTHCARE_PROFESSIONAL_FILLED_SURVEY": {
+          "text": "HEALTHCARE_PROFESSIONAL_FILLED_SURVEY",
           "description": "Healthcare professional filled survey",
           "meaning": "OMOP:32851",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32851"
         },
-        "HOSPITAL COST": {
-          "text": "HOSPITAL COST",
+        "HOSPITAL_COST": {
+          "text": "HOSPITAL_COST",
           "description": "Hospital cost",
           "meaning": "OMOP:32852",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32852"
         },
-        "INPATIENT CLAIM": {
-          "text": "INPATIENT CLAIM",
+        "INPATIENT_CLAIM": {
+          "text": "INPATIENT_CLAIM",
           "description": "Inpatient claim",
           "meaning": "OMOP:32853",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32853"
         },
-        "INPATIENT CLAIM DETAIL": {
-          "text": "INPATIENT CLAIM DETAIL",
+        "INPATIENT_CLAIM_DETAIL": {
+          "text": "INPATIENT_CLAIM_DETAIL",
           "description": "Inpatient claim detail",
           "meaning": "OMOP:32854",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32854"
         },
-        "INPATIENT CLAIM HEADER": {
-          "text": "INPATIENT CLAIM HEADER",
+        "INPATIENT_CLAIM_HEADER": {
+          "text": "INPATIENT_CLAIM_HEADER",
           "description": "Inpatient claim header",
           "meaning": "OMOP:32855",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32855"
@@ -7215,8 +7809,8 @@
           "meaning": "OMOP:32856",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32856"
         },
-        "MAIL ORDER RECORD": {
-          "text": "MAIL ORDER RECORD",
+        "MAIL_ORDER_RECORD": {
+          "text": "MAIL_ORDER_RECORD",
           "description": "Mail order record",
           "meaning": "OMOP:32857",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32857"
@@ -7227,134 +7821,134 @@
           "meaning": "OMOP:32858",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32858"
         },
-        "OUTPATIENT CLAIM": {
-          "text": "OUTPATIENT CLAIM",
+        "OUTPATIENT_CLAIM": {
+          "text": "OUTPATIENT_CLAIM",
           "description": "Outpatient claim",
           "meaning": "OMOP:32859",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32859"
         },
-        "OUTPATIENT CLAIM DETAIL": {
-          "text": "OUTPATIENT CLAIM DETAIL",
+        "OUTPATIENT_CLAIM_DETAIL": {
+          "text": "OUTPATIENT_CLAIM_DETAIL",
           "description": "Outpatient claim detail",
           "meaning": "OMOP:32860",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32860"
         },
-        "OUTPATIENT CLAIM HEADER": {
-          "text": "OUTPATIENT CLAIM HEADER",
+        "OUTPATIENT_CLAIM_HEADER": {
+          "text": "OUTPATIENT_CLAIM_HEADER",
           "description": "Outpatient claim header",
           "meaning": "OMOP:32861",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32861"
         },
-        "PATIENT FILLED SURVEY": {
-          "text": "PATIENT FILLED SURVEY",
+        "PATIENT_FILLED_SURVEY": {
+          "text": "PATIENT_FILLED_SURVEY",
           "description": "Patient filled survey",
           "meaning": "OMOP:32862",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32862"
         },
-        "PATIENT OR PAYER PAID RECORD": {
-          "text": "PATIENT OR PAYER PAID RECORD",
+        "PATIENT_OR_PAYER_PAID_RECORD": {
+          "text": "PATIENT_OR_PAYER_PAID_RECORD",
           "description": "Patient or payer paid record",
           "meaning": "OMOP:32863",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32863"
         },
-        "PATIENT REPORTED COST": {
-          "text": "PATIENT REPORTED COST",
+        "PATIENT_REPORTED_COST": {
+          "text": "PATIENT_REPORTED_COST",
           "description": "Patient reported cost",
           "meaning": "OMOP:32864",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32864"
         },
-        "PATIENT SELF-REPORT": {
-          "text": "PATIENT SELF-REPORT",
+        "PATIENT_SELF-REPORT": {
+          "text": "PATIENT_SELF-REPORT",
           "description": "Patient self-report",
           "meaning": "OMOP:32865",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32865"
         },
-        "PATIENT SELF-TESTED": {
-          "text": "PATIENT SELF-TESTED",
+        "PATIENT_SELF_TESTED": {
+          "text": "PATIENT_SELF_TESTED",
           "description": "Patient self-tested",
           "meaning": "OMOP:705183",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/705183"
         },
-        "PAYER SYSTEM RECORD (PAID PREMIUM)": {
-          "text": "PAYER SYSTEM RECORD (PAID PREMIUM)",
+        "PAYER_SYSTEM_RECORD_PAID_PREMIUM": {
+          "text": "PAYER_SYSTEM_RECORD_PAID_PREMIUM",
           "description": "Payer system record (paid premium)",
           "meaning": "OMOP:32866",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32866"
         },
-        "PAYER SYSTEM RECORD (PRIMARY PAYER)": {
-          "text": "PAYER SYSTEM RECORD (PRIMARY PAYER)",
+        "PAYER_SYSTEM_RECORD_PRIMARY_PAYER": {
+          "text": "PAYER_SYSTEM_RECORD_PRIMARY_PAYER",
           "description": "Payer system record (primary payer)",
           "meaning": "OMOP:32867",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32867"
         },
-        "PAYER SYSTEM RECORD (SECONDARY PAYER)": {
-          "text": "PAYER SYSTEM RECORD (SECONDARY PAYER)",
+        "PAYER_SYSTEM_RECORD_SECONDARY_PAYER": {
+          "text": "PAYER_SYSTEM_RECORD_SECONDARY_PAYER",
           "description": "Payer system record (secondary payer)",
           "meaning": "OMOP:32868",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32868"
         },
-        "PHARMACY CLAIM": {
-          "text": "PHARMACY CLAIM",
+        "PHARMACY_CLAIM": {
+          "text": "PHARMACY_CLAIM",
           "description": "Pharmacy claim",
           "meaning": "OMOP:32869",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32869"
         },
-        "POINT OF CARE/EXPRESS LAB": {
-          "text": "POINT OF CARE/EXPRESS LAB",
+        "POINT_OF_CARE_EXPRESS_LAB": {
+          "text": "POINT_OF_CARE_EXPRESS_LAB",
           "description": "Point of care/express lab",
           "meaning": "OMOP:703249",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/703249"
         },
-        "PRE-QUALIFICATION TIME PERIOD": {
-          "text": "PRE-QUALIFICATION TIME PERIOD",
+        "PRE_QUALIFICATION_TIME_PERIOD": {
+          "text": "PRE_QUALIFICATION_TIME_PERIOD",
           "description": "Pre-qualification time period",
           "meaning": "OMOP:32870",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32870"
         },
-        "PROFESSIONAL CLAIM": {
-          "text": "PROFESSIONAL CLAIM",
+        "PROFESSIONAL_CLAIM": {
+          "text": "PROFESSIONAL_CLAIM",
           "description": "Professional claim",
           "meaning": "OMOP:32871",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32871"
         },
-        "PROFESSIONAL CLAIM DETAIL": {
-          "text": "PROFESSIONAL CLAIM DETAIL",
+        "PROFESSIONAL_CLAIM_DETAIL": {
+          "text": "PROFESSIONAL_CLAIM_DETAIL",
           "description": "Professional claim detail",
           "meaning": "OMOP:32872",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32872"
         },
-        "PROFESSIONAL CLAIM HEADER": {
-          "text": "PROFESSIONAL CLAIM HEADER",
+        "PROFESSIONAL_CLAIM_HEADER": {
+          "text": "PROFESSIONAL_CLAIM_HEADER",
           "description": "Professional claim header",
           "meaning": "OMOP:32873",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32873"
         },
-        "PROVIDER CHARGE LIST PRICE": {
-          "text": "PROVIDER CHARGE LIST PRICE",
+        "PROVIDER_CHARGE_LIST_PRICE": {
+          "text": "PROVIDER_CHARGE_LIST_PRICE",
           "description": "Provider charge list price",
           "meaning": "OMOP:32874",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32874"
         },
-        "PROVIDER FINANCIAL SYSTEM": {
-          "text": "PROVIDER FINANCIAL SYSTEM",
+        "PROVIDER_FINANCIAL_SYSTEM": {
+          "text": "PROVIDER_FINANCIAL_SYSTEM",
           "description": "Provider financial system",
           "meaning": "OMOP:32875",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32875"
         },
-        "PROVIDER INCURRED COST RECORD": {
-          "text": "PROVIDER INCURRED COST RECORD",
+        "PROVIDER_INCURRED_COST_RECORD": {
+          "text": "PROVIDER_INCURRED_COST_RECORD",
           "description": "Provider incurred cost record",
           "meaning": "OMOP:32876",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32876"
         },
-        "RANDOMIZATION RECORD": {
-          "text": "RANDOMIZATION RECORD",
+        "RANDOMIZATION_RECORD": {
+          "text": "RANDOMIZATION_RECORD",
           "description": "Randomization record",
           "meaning": "OMOP:32877",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32877"
         },
-        "REFERENCE LAB": {
-          "text": "REFERENCE LAB",
+        "REFERENCE_LAB": {
+          "text": "REFERENCE_LAB",
           "description": "Reference lab",
           "meaning": "OMOP:32878",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32878"
@@ -7365,20 +7959,20 @@
           "meaning": "OMOP:32879",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32879"
         },
-        "STANDARD ALGORITHM": {
-          "text": "STANDARD ALGORITHM",
+        "STANDARD_ALGORITHM": {
+          "text": "STANDARD_ALGORITHM",
           "description": "Standard algorithm",
           "meaning": "OMOP:32880",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32880"
         },
-        "STANDARD ALGORITHM FROM CLAIMS": {
-          "text": "STANDARD ALGORITHM FROM CLAIMS",
+        "STANDARD_ALGORITHM_FROM_CLAIMS": {
+          "text": "STANDARD_ALGORITHM_FROM_CLAIMS",
           "description": "Standard algorithm from claims",
           "meaning": "OMOP:32881",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32881"
         },
-        "STANDARD ALGORITHM FROM EHR": {
-          "text": "STANDARD ALGORITHM FROM EHR",
+        "STANDARD_ALGORITHM_FROM_EHR": {
+          "text": "STANDARD_ALGORITHM_FROM_EHR",
           "description": "Standard algorithm from EHR",
           "meaning": "OMOP:32882",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32882"
@@ -7389,20 +7983,20 @@
           "meaning": "OMOP:32883",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32883"
         },
-        "URGENT LAB": {
-          "text": "URGENT LAB",
+        "URGENT_LAB": {
+          "text": "URGENT_LAB",
           "description": "Urgent lab",
           "meaning": "OMOP:32884",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32884"
         },
-        "US SOCIAL SECURITY DEATH MASTER FILE": {
-          "text": "US SOCIAL SECURITY DEATH MASTER FILE",
+        "US_SOCIAL_SECURITY_DEATH_MASTER_FILE": {
+          "text": "US_SOCIAL_SECURITY_DEATH_MASTER_FILE",
           "description": "US Social Security Death Master File",
           "meaning": "OMOP:32885",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32885"
         },
-        "VISION CLAIM": {
-          "text": "VISION CLAIM",
+        "VISION_CLAIM": {
+          "text": "VISION_CLAIM",
           "description": "Vision claim",
           "meaning": "OMOP:32886",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/32886"
@@ -7440,54 +8034,57 @@
       "id": "AnalyteTypeEnum",
       "name": "AnalyteTypeEnum",
       "permissible_values": {
-        "FFPE DNA": {
-          "text": "FFPE DNA",
+        "FFPE_DNA": {
+          "text": "FFPE_DNA",
           "description": "Formalin-Fixed Paraffin-Embedded DNA"
         },
-        "Repli-G (Qiagen) DNA": {
-          "text": "Repli-G (Qiagen) DNA",
+        "REPLI_G_QIAGEN_DNA": {
+          "text": "REPLI_G_QIAGEN_DNA",
           "description": "Repli-G (Qiagen) DNA"
         },
-        "GenomePlex (Rubicon) Amplified DNA": {
-          "text": "GenomePlex (Rubicon) Amplified DNA"
+        "GENOME_PLEX_RUBICON_AMPLIFIED_DNA": {
+          "text": "GENOME_PLEX_RUBICON_AMPLIFIED_DNA",
+          "description": "GenomePlex Rubicon Amplified DNA"
         },
-        "Total RNA": {
-          "text": "Total RNA",
+        "TOTAL_RNA": {
+          "text": "TOTAL_RNA",
           "description": "Total Ribonucleic Acid"
         },
-        "Repli-G X (Qiagen) DNA": {
-          "text": "Repli-G X (Qiagen) DNA",
+        "REPLI_G_X_QIAGEN_DNA": {
+          "text": "REPLI_G_X_QIAGEN_DNA",
           "description": "Repli-G X (Qiagen) DNA"
         },
         "RNA": {
           "text": "RNA",
           "description": "Ribonucleic Acid"
         },
-        "Repli-G Pooled (Qiagen) DNA": {
-          "text": "Repli-G Pooled (Qiagen) DNA",
-          "description": "REPLI-g Pooled DNA"
+        "REPLI_G_POOLED_QIAGEN_DNA": {
+          "text": "REPLI_G_POOLED_QIAGEN_DNA",
+          "description": "Repli-G Pooled (Qiagen) DNA"
         },
         "DNA": {
           "text": "DNA",
           "description": "DNA"
         },
-        "EBV Immortalized Normal": {
-          "text": "EBV Immortalized Normal",
+        "EBV_IMMORTALIZED_NORMAL": {
+          "text": "EBV_IMMORTALIZED_NORMAL",
           "description": "Normal Epstein-Barr Virus Immortalization"
         },
-        "FFPE RNA": {
-          "text": "FFPE RNA",
+        "FFPE_RNA": {
+          "text": "FFPE_RNA",
           "description": "Formalin-Fixed Paraffin-Embedded RNA"
         },
-        "Protein": {
-          "text": "Protein",
+        "PROTEIN": {
+          "text": "PROTEIN",
           "description": "Protein"
         },
-        "Nuclei RNA": {
-          "text": "Nuclei RNA"
+        "NUCLEI_RNA": {
+          "text": "NUCLEI_RNA",
+          "description": "Nuclei RNA"
         },
-        "cfDNA": {
-          "text": "cfDNA"
+        "CFDNA": {
+          "text": "CFDNA",
+          "description": "Cell-free DNA"
         }
       }
     },
@@ -7496,154 +8093,204 @@
       "name": "SourceMaterialTypeEnum",
       "permissible_values": {
         "ADDITIONAL_METASTATIC": {
-          "text": "ADDITIONAL_METASTATIC"
+          "text": "ADDITIONAL_METASTATIC",
+          "description": "A metastatic tumor sample collected in addition to a previously collected metastatic specimen."
         },
         "ADDITIONAL_NEW_PRIMARY": {
-          "text": "ADDITIONAL_NEW_PRIMARY"
+          "text": "ADDITIONAL_NEW_PRIMARY",
+          "description": "A new primary tumor sample collected in addition to a previously collected primary specimen."
         },
         "BENIGN_NEOPLASMS": {
-          "text": "BENIGN_NEOPLASMS"
+          "text": "BENIGN_NEOPLASMS",
+          "description": "Tissue derived from a non-cancerous tumor that does not invade nearby tissue or metastasize."
         },
         "BLOOD_DERIVED_CANCER_BONE_MARROW": {
-          "text": "BLOOD_DERIVED_CANCER_BONE_MARROW"
+          "text": "BLOOD_DERIVED_CANCER_BONE_MARROW",
+          "description": "Cancerous cells isolated from bone marrow as part of a blood-derived cancer sample."
         },
         "BLOOD_DERIVED_CANCER_BONE_MARROW_POST_TREATMENT": {
-          "text": "BLOOD_DERIVED_CANCER_BONE_MARROW_POST_TREATMENT"
+          "text": "BLOOD_DERIVED_CANCER_BONE_MARROW_POST_TREATMENT",
+          "description": "Cancerous cells isolated from bone marrow following therapeutic intervention."
         },
         "BLOOD_DERIVED_CANCER_PERIPHERAL_BLOOD": {
-          "text": "BLOOD_DERIVED_CANCER_PERIPHERAL_BLOOD"
+          "text": "BLOOD_DERIVED_CANCER_PERIPHERAL_BLOOD",
+          "description": "Cancerous cells isolated from peripheral blood as part of a blood-derived cancer sample."
         },
         "BLOOD_DERIVED_CANCER_PERIPHERAL_BLOOD_POST_TREATMENT": {
-          "text": "BLOOD_DERIVED_CANCER_PERIPHERAL_BLOOD_POST_TREATMENT"
+          "text": "BLOOD_DERIVED_CANCER_PERIPHERAL_BLOOD_POST_TREATMENT",
+          "description": "Cancerous cells isolated from peripheral blood following therapeutic intervention."
         },
         "BLOOD_DERIVED_LIQUID_BIOPSY": {
-          "text": "BLOOD_DERIVED_LIQUID_BIOPSY"
+          "text": "BLOOD_DERIVED_LIQUID_BIOPSY",
+          "description": "Tumor-derived material, such as circulating tumor DNA or cells, extracted from a blood sample."
         },
         "BLOOD_DERIVED_NORMAL": {
-          "text": "BLOOD_DERIVED_NORMAL"
+          "text": "BLOOD_DERIVED_NORMAL",
+          "description": "Non-cancerous blood sample used as a normal reference for genomic or molecular analyses."
         },
         "BONE_MARROW_NORMAL": {
-          "text": "BONE_MARROW_NORMAL"
+          "text": "BONE_MARROW_NORMAL",
+          "description": "Non-cancerous bone marrow sample used as a normal reference for genomic or molecular analyses."
         },
         "BUCCAL_CELL_NORMAL": {
-          "text": "BUCCAL_CELL_NORMAL"
+          "text": "BUCCAL_CELL_NORMAL",
+          "description": "Normal cells collected from the inner cheek mucosa, typically used as a germline reference."
         },
         "CELL_LINE_DERIVED_XENOGRAFT_TISSUE": {
-          "text": "CELL_LINE_DERIVED_XENOGRAFT_TISSUE"
+          "text": "CELL_LINE_DERIVED_XENOGRAFT_TISSUE",
+          "description": "Tumor tissue derived from a xenograft model that was originally established from a cultured cell line."
         },
         "CELL_LINES": {
-          "text": "CELL_LINES"
+          "text": "CELL_LINES",
+          "description": "Immortalized cells grown in culture, derived from tumor or normal tissue for experimental use."
         },
         "CONTROL_ANALYTE": {
-          "text": "CONTROL_ANALYTE"
+          "text": "CONTROL_ANALYTE",
+          "description": "A reference material used to validate or calibrate laboratory assays and analytical processes."
         },
         "DNA": {
-          "text": "DNA"
+          "text": "DNA",
+          "description": "Deoxyribonucleic acid extracted from a biological sample for genomic analysis."
         },
         "EBV_IMMORTALIZED_NORMAL": {
-          "text": "EBV_IMMORTALIZED_NORMAL"
+          "text": "EBV_IMMORTALIZED_NORMAL",
+          "description": "Normal B-lymphocytes immortalized by Epstein-Barr virus transformation, used as a germline reference."
         },
         "EXPANDED_NEXT_GENERATION_CANCER_MODEL": {
-          "text": "EXPANDED_NEXT_GENERATION_CANCER_MODEL"
+          "text": "EXPANDED_NEXT_GENERATION_CANCER_MODEL",
+          "description": "A cancer model, such as an organoid or cell line, that has been propagated or expanded from a next-generation model system."
         },
         "FFPE_RECURRENT": {
-          "text": "FFPE_RECURRENT"
+          "text": "FFPE_RECURRENT",
+          "description": "Formalin-fixed paraffin-embedded tissue from a recurrent tumor, preserved for histological or molecular analysis."
         },
         "FFPE_SCROLLS": {
-          "text": "FFPE_SCROLLS"
+          "text": "FFPE_SCROLLS",
+          "description": "Thin sections cut from formalin-fixed paraffin-embedded tissue blocks for nucleic acid or protein extraction."
         },
         "FIBROBLASTS_FROM_BONE_MARROW_NORMAL": {
-          "text": "FIBROBLASTS_FROM_BONE_MARROW_NORMAL"
+          "text": "FIBROBLASTS_FROM_BONE_MARROW_NORMAL",
+          "description": "Normal fibroblast cells isolated from bone marrow, used as a non-cancerous reference."
         },
         "GRANULOCYTES": {
-          "text": "GRANULOCYTES"
+          "text": "GRANULOCYTES",
+          "description": "White blood cells of the granulocyte lineage isolated from blood, often used as a normal germline reference."
         },
         "HUMAN_TUMOR_ORIGINAL_CELLS": {
-          "text": "HUMAN_TUMOR_ORIGINAL_CELLS"
+          "text": "HUMAN_TUMOR_ORIGINAL_CELLS",
+          "description": "Primary tumor cells taken directly from a human subject without prior in vitro expansion."
         },
         "IN_SITU_NEOPLASMS": {
-          "text": "IN_SITU_NEOPLASMS"
+          "text": "IN_SITU_NEOPLASMS",
+          "description": "Tissue from a neoplasm that has not yet invaded surrounding tissue, representing an early-stage malignancy."
         },
         "LYMPHOID_NORMAL": {
-          "text": "LYMPHOID_NORMAL"
+          "text": "LYMPHOID_NORMAL",
+          "description": "Non-cancerous lymphoid tissue used as a normal reference for genomic or molecular analyses."
         },
         "METASTATIC": {
-          "text": "METASTATIC"
+          "text": "METASTATIC",
+          "description": "Tumor tissue collected from a site distant from the primary tumor, representing metastatic disease."
         },
         "MIXED_ADHERENT_SUSPENSION": {
-          "text": "MIXED_ADHERENT_SUSPENSION"
+          "text": "MIXED_ADHERENT_SUSPENSION",
+          "description": "A cell culture sample containing both adherent and suspension cell populations."
         },
         "MONONUCLEAR_CELLS_FROM_BONE_MARROW_NORMAL": {
-          "text": "MONONUCLEAR_CELLS_FROM_BONE_MARROW_NORMAL"
+          "text": "MONONUCLEAR_CELLS_FROM_BONE_MARROW_NORMAL",
+          "description": "Normal mononuclear cells isolated from bone marrow, used as a non-cancerous reference."
         },
         "NEOPLASMS_OF_UNCERTAIN_AND_UNKNOWN_BEHAVIOR": {
-          "text": "NEOPLASMS_OF_UNCERTAIN_AND_UNKNOWN_BEHAVIOR"
+          "text": "NEOPLASMS_OF_UNCERTAIN_AND_UNKNOWN_BEHAVIOR",
+          "description": "Tissue from a neoplasm whose malignant potential cannot be determined based on available information."
         },
         "NEXT_GENERATION_CANCER_MODEL": {
-          "text": "NEXT_GENERATION_CANCER_MODEL"
+          "text": "NEXT_GENERATION_CANCER_MODEL",
+          "description": "A modern in vitro or in vivo cancer model, such as a patient-derived organoid or xenograft, that recapitulates tumor biology."
         },
         "NORMAL_ADJACENT_TISSUE": {
-          "text": "NORMAL_ADJACENT_TISSUE"
-        },
-        "PLEURAL_EFFUSION": {
-          "text": "PLEURAL_EFFUSION"
-        },
-        "POST_NEOADJUVANT_THERAPY": {
-          "text": "POST_NEOADJUVANT_THERAPY"
-        },
-        "PRIMARY_BLOOD_DERIVED_CANCER_BONE_MARROW": {
-          "text": "PRIMARY_BLOOD_DERIVED_CANCER_BONE_MARROW"
-        },
-        "PRIMARY_BLOOD_DERIVED_CANCER_PERIPHERAL_BLOOD": {
-          "text": "PRIMARY_BLOOD_DERIVED_CANCER_PERIPHERAL_BLOOD"
-        },
-        "PRIMARY_TUMOR": {
-          "text": "PRIMARY_TUMOR"
-        },
-        "PRIMARY_XENOGRAFT_TISSUE": {
-          "text": "PRIMARY_XENOGRAFT_TISSUE"
-        },
-        "RECURRENT_BLOOD_DERIVED_CANCER_BONE_MARROW": {
-          "text": "RECURRENT_BLOOD_DERIVED_CANCER_BONE_MARROW"
-        },
-        "RECURRENT_BLOOD_DERIVED_CANCER_PERIPHERAL_BLOOD": {
-          "text": "RECURRENT_BLOOD_DERIVED_CANCER_PERIPHERAL_BLOOD"
-        },
-        "RECURRENT_TUMOR": {
-          "text": "RECURRENT_TUMOR"
-        },
-        "RNA": {
-          "text": "RNA"
-        },
-        "SALIVA": {
-          "text": "SALIVA"
-        },
-        "SLIDES": {
-          "text": "SLIDES"
-        },
-        "SOLID_TISSUE_NORMAL": {
-          "text": "SOLID_TISSUE_NORMAL"
-        },
-        "TOTAL_RNA": {
-          "text": "TOTAL_RNA"
-        },
-        "TUMOR": {
-          "text": "TUMOR"
-        },
-        "TUMOR_ADJACENT_NORMAL_POST_NEOADJUVANT_THERAPY": {
-          "text": "TUMOR_ADJACENT_NORMAL_POST_NEOADJUVANT_THERAPY"
-        },
-        "XENOGRAFT_TISSUE": {
-          "text": "XENOGRAFT_TISSUE"
+          "text": "NORMAL_ADJACENT_TISSUE",
+          "description": "Histologically normal tissue collected from a site adjacent to a tumor, used as a local reference."
         },
         "NOT_ALLOWED_TO_COLLECT": {
-          "text": "NOT_ALLOWED_TO_COLLECT"
+          "text": "NOT_ALLOWED_TO_COLLECT",
+          "description": "A sample that was not obtained because collection was prohibited by consent, regulation, or protocol."
         },
         "NOT_REPORTED": {
-          "text": "NOT_REPORTED"
+          "text": "NOT_REPORTED",
+          "description": "The source material type was not documented or reported for this sample."
+        },
+        "PLEURAL_EFFUSION": {
+          "text": "PLEURAL_EFFUSION",
+          "description": "Fluid collected from the pleural cavity, which may contain tumor cells in the context of malignancy."
+        },
+        "POST_NEOADJUVANT_THERAPY": {
+          "text": "POST_NEOADJUVANT_THERAPY",
+          "description": "Tumor tissue collected after the administration of neoadjuvant (pre-surgical) therapy."
+        },
+        "PRIMARY_BLOOD_DERIVED_CANCER_BONE_MARROW": {
+          "text": "PRIMARY_BLOOD_DERIVED_CANCER_BONE_MARROW",
+          "description": "The initial cancerous bone marrow sample collected from a patient with a blood-derived malignancy."
+        },
+        "PRIMARY_BLOOD_DERIVED_CANCER_PERIPHERAL_BLOOD": {
+          "text": "PRIMARY_BLOOD_DERIVED_CANCER_PERIPHERAL_BLOOD",
+          "description": "The initial cancerous peripheral blood sample collected from a patient with a blood-derived malignancy."
+        },
+        "PRIMARY_TUMOR": {
+          "text": "PRIMARY_TUMOR",
+          "description": "Tissue collected from the original site of tumor origin, prior to any metastatic spread."
+        },
+        "PRIMARY_XENOGRAFT_TISSUE": {
+          "text": "PRIMARY_XENOGRAFT_TISSUE",
+          "description": "Tumor tissue derived from a first-generation xenograft established directly from a patient sample."
+        },
+        "RECURRENT_BLOOD_DERIVED_CANCER_BONE_MARROW": {
+          "text": "RECURRENT_BLOOD_DERIVED_CANCER_BONE_MARROW",
+          "description": "Cancerous bone marrow sample collected at the time of disease recurrence in a blood-derived malignancy."
+        },
+        "RECURRENT_BLOOD_DERIVED_CANCER_PERIPHERAL_BLOOD": {
+          "text": "RECURRENT_BLOOD_DERIVED_CANCER_PERIPHERAL_BLOOD",
+          "description": "Cancerous peripheral blood sample collected at the time of disease recurrence in a blood-derived malignancy."
+        },
+        "RECURRENT_TUMOR": {
+          "text": "RECURRENT_TUMOR",
+          "description": "Tumor tissue collected following disease recurrence after prior treatment or remission."
+        },
+        "RNA": {
+          "text": "RNA",
+          "description": "Ribonucleic acid extracted from a biological sample for transcriptomic or gene expression analysis."
+        },
+        "SALIVA": {
+          "text": "SALIVA",
+          "description": "Saliva collected as a non-invasive source of DNA or other biological material, typically for germline analysis."
+        },
+        "SLIDES": {
+          "text": "SLIDES",
+          "description": "Prepared microscopy slides containing tissue or cell specimens for histological or molecular examination."
+        },
+        "SOLID_TISSUE_NORMAL": {
+          "text": "SOLID_TISSUE_NORMAL",
+          "description": "Non-cancerous solid tissue used as a normal reference for genomic or molecular analyses."
+        },
+        "TOTAL_RNA": {
+          "text": "TOTAL_RNA",
+          "description": "The complete RNA complement extracted from a sample, including messenger, ribosomal, and non-coding RNA species."
+        },
+        "TUMOR": {
+          "text": "TUMOR",
+          "description": "Tissue derived from a malignant neoplasm, used broadly when more specific tumor classification is not specified."
+        },
+        "TUMOR_ADJACENT_NORMAL_POST_NEOADJUVANT_THERAPY": {
+          "text": "TUMOR_ADJACENT_NORMAL_POST_NEOADJUVANT_THERAPY",
+          "description": "Histologically normal tissue adjacent to a tumor, collected after completion of neoadjuvant therapy."
         },
         "UNKNOWN": {
-          "text": "UNKNOWN"
+          "text": "UNKNOWN",
+          "description": "The source material type is not known or could not be determined for this sample."
+        },
+        "XENOGRAFT_TISSUE": {
+          "text": "XENOGRAFT_TISSUE",
+          "description": "Tumor tissue derived from a xenograft model in which human tumor cells are propagated in an animal host."
         }
       }
     },
@@ -7686,310 +8333,412 @@
       "name": "SpecimenCollectionMethodType",
       "permissible_values": {
         "ORCHIECTOMY": {
-          "text": "ORCHIECTOMY"
+          "text": "ORCHIECTOMY",
+          "description": "Surgical removal of one or both testicles, typically performed to treat testicular cancer or as part of prostate cancer management."
         },
         "METASTASECTOMY": {
-          "text": "METASTASECTOMY"
+          "text": "METASTASECTOMY",
+          "description": "Surgical removal of one or more metastatic tumor deposits that have spread from a primary cancer site to distant organs or tissues."
         },
         "AUTOPSY": {
-          "text": "AUTOPSY"
+          "text": "AUTOPSY",
+          "description": "Post-mortem surgical examination of a body to determine cause of death and collect tissue specimens for pathological analysis."
         },
         "UNKNOWN": {
-          "text": "UNKNOWN"
+          "text": "UNKNOWN",
+          "description": "The method of specimen collection performed is not known."
         },
         "ASPIRATE": {
-          "text": "ASPIRATE"
+          "text": "ASPIRATE",
+          "description": "Collection of fluid or semi-solid material by suction through a needle or syringe from a body cavity or tissue mass."
         },
         "RIGHT_HEMICOLECTOMY": {
-          "text": "RIGHT_HEMICOLECTOMY"
+          "text": "RIGHT_HEMICOLECTOMY",
+          "description": "Surgical removal of the right portion of the colon, including the cecum, ascending colon, and part of the transverse colon."
         },
         "INCISIONAL_BIOPSY": {
-          "text": "INCISIONAL_BIOPSY"
+          "text": "INCISIONAL_BIOPSY",
+          "description": "Surgical procedure in which a portion of a suspicious lesion or tumor is cut out for pathological examination, leaving the remainder in place."
         },
         "BLOOD_DRAW": {
-          "text": "BLOOD_DRAW"
+          "text": "BLOOD_DRAW",
+          "description": "Collection of a blood sample via venipuncture for laboratory analysis or biospecimen banking."
         },
         "PERITONEAL_LAVAGE": {
-          "text": "PERITONEAL_LAVAGE"
+          "text": "PERITONEAL_LAVAGE",
+          "description": "Washing of the peritoneal cavity with fluid, which is then collected and analyzed for the presence of malignant cells or other diagnostic information."
         },
         "OPEN_RADICAL_PROSTATECTOMY": {
-          "text": "OPEN_RADICAL_PROSTATECTOMY"
+          "text": "OPEN_RADICAL_PROSTATECTOMY",
+          "description": "Complete surgical removal of the prostate gland and surrounding tissues through a traditional open abdominal or perineal incision."
         },
         "ABDOMINO_PERINEAL_RESECTION_OF_RECTUM": {
-          "text": "ABDOMINO_PERINEAL_RESECTION_OF_RECTUM"
+          "text": "ABDOMINO_PERINEAL_RESECTION_OF_RECTUM",
+          "description": "Surgical removal of the rectum, anus, and surrounding tissue via both abdominal and perineal incisions, typically resulting in a permanent colostomy."
         },
         "SALPINGECTOMY": {
-          "text": "SALPINGECTOMY"
+          "text": "SALPINGECTOMY",
+          "description": "Surgical removal of one or both fallopian tubes, often performed to treat or reduce risk of ovarian or tubal cancer."
         },
         "ENDO_RECTAL_TUMOR_RESECTION": {
-          "text": "ENDO_RECTAL_TUMOR_RESECTION"
+          "text": "ENDO_RECTAL_TUMOR_RESECTION",
+          "description": "Surgical excision of a rectal tumor through an endoscopic or transanal approach without requiring an external incision."
         },
         "BIOPSY": {
-          "text": "BIOPSY"
+          "text": "BIOPSY",
+          "description": "Removal of a small sample of tissue or cells from the body for microscopic examination and pathological diagnosis."
         },
         "SALPINGO_OOPHORECTOMY": {
-          "text": "SALPINGO_OOPHORECTOMY"
+          "text": "SALPINGO_OOPHORECTOMY",
+          "description": "Surgical removal of one or both ovaries along with the corresponding fallopian tube(s), performed to treat or prevent gynecologic cancers."
         },
         "NOT_ALLOWED_TO_COLLECT": {
-          "text": "NOT_ALLOWED_TO_COLLECT"
+          "text": "NOT_ALLOWED_TO_COLLECT",
+          "description": "Specimen collection was not permitted due to regulatory, ethical, institutional, or patient consent restrictions."
         },
         "WHIPPLE_PROCEDURE": {
-          "text": "WHIPPLE_PROCEDURE"
+          "text": "WHIPPLE_PROCEDURE",
+          "description": "A complex surgical procedure (pancreaticoduodenectomy) involving removal of the head of the pancreas, duodenum, gallbladder, and part of the bile duct, typically performed for pancreatic cancer."
         },
         "ENUCLEATION": {
-          "text": "ENUCLEATION"
+          "text": "ENUCLEATION",
+          "description": "Surgical removal of a tumor or organ intact and in its entirety without cutting into the mass."
         },
         "MODIFIED_RADICAL_MASTECTOMY": {
-          "text": "MODIFIED_RADICAL_MASTECTOMY"
+          "text": "MODIFIED_RADICAL_MASTECTOMY",
+          "description": "Surgical removal of the entire breast along with most or all of the axillary lymph nodes, while preserving the chest wall muscles."
         },
         "PARACENTESIS": {
-          "text": "PARACENTESIS"
+          "text": "PARACENTESIS",
+          "description": "A minimally invasive procedure in which a needle is inserted into the peritoneal cavity to drain ascitic fluid for diagnostic or therapeutic purposes."
         },
         "OPEN_CRANIOTOMY": {
-          "text": "OPEN_CRANIOTOMY"
+          "text": "OPEN_CRANIOTOMY",
+          "description": "Surgical procedure involving the removal of a portion of the skull to access the brain for tumor resection or biopsy."
         },
         "WEDGE_RESECTION": {
-          "text": "WEDGE_RESECTION"
+          "text": "WEDGE_RESECTION",
+          "description": "Surgical removal of a wedge-shaped section of an organ, most commonly the lung, to excise a tumor or lesion."
         },
         "LAPAROSCOPIC_RADICAL_NEPHRECTOMY": {
-          "text": "LAPAROSCOPIC_RADICAL_NEPHRECTOMY"
+          "text": "LAPAROSCOPIC_RADICAL_NEPHRECTOMY",
+          "description": "Minimally invasive surgical removal of an entire kidney and surrounding tissue using a laparoscope, performed to treat renal cell carcinoma."
         },
         "OPEN_PARTIAL_NEPHRECTOMY": {
-          "text": "OPEN_PARTIAL_NEPHRECTOMY"
+          "text": "OPEN_PARTIAL_NEPHRECTOMY",
+          "description": "Surgical removal of a tumor-bearing portion of the kidney through an open incision while preserving the remaining healthy kidney tissue."
         },
         "TRANSURETHRAL_RESECTION": {
-          "text": "TRANSURETHRAL_RESECTION"
+          "text": "TRANSURETHRAL_RESECTION",
+          "description": "Endoscopic surgical procedure performed through the urethra to remove tumors or tissue from the bladder or prostate without external incision."
         },
         "SIGMOID_COLECTOMY": {
-          "text": "SIGMOID_COLECTOMY"
+          "text": "SIGMOID_COLECTOMY",
+          "description": "Surgical removal of the sigmoid colon, the S-shaped final section of the large intestine before the rectum."
         },
         "OOPHORECTOMY": {
-          "text": "OOPHORECTOMY"
+          "text": "OOPHORECTOMY",
+          "description": "Surgical removal of one or both ovaries, performed to treat ovarian cancer or as a risk-reducing measure in high-risk individuals."
         },
         "TOTAL_HEPATECTOMY": {
-          "text": "TOTAL_HEPATECTOMY"
+          "text": "TOTAL_HEPATECTOMY",
+          "description": "Complete surgical removal of the liver, typically performed in preparation for liver transplantation."
         },
         "INDETERMINANT": {
-          "text": "INDETERMINANT"
+          "text": "INDETERMINANT",
+          "description": "The method of specimen collection could not be definitively determined from available information."
         },
         "SUBTOTAL_RESECTION": {
-          "text": "SUBTOTAL_RESECTION"
+          "text": "SUBTOTAL_RESECTION",
+          "description": "Surgical removal of the majority but not all of a tumor or organ, leaving behind a remnant due to technical or safety constraints."
         },
         "LEFT_HEMICOLECTOMY": {
-          "text": "LEFT_HEMICOLECTOMY"
+          "text": "LEFT_HEMICOLECTOMY",
+          "description": "Surgical removal of the left portion of the colon, including the descending colon and part of the transverse colon."
         },
         "NEEDLE_BIOPSY": {
-          "text": "NEEDLE_BIOPSY"
+          "text": "NEEDLE_BIOPSY",
+          "description": "Minimally invasive collection of tissue or fluid using a hollow needle inserted into a lesion or mass for pathological analysis."
         },
         "OTHER": {
-          "text": "OTHER"
+          "text": "OTHER",
+          "description": "A specimen collection method that does not correspond to any of the other specifically defined permissible values."
         },
         "PANCREATECTOMY": {
-          "text": "PANCREATECTOMY"
+          "text": "PANCREATECTOMY",
+          "description": "Surgical removal of all or part of the pancreas, performed to treat pancreatic cancer or other pancreatic neoplasms."
         },
         "THORACOSCOPIC_BIOPSY": {
-          "text": "THORACOSCOPIC_BIOPSY"
+          "text": "THORACOSCOPIC_BIOPSY",
+          "description": "Minimally invasive biopsy of thoracic structures performed using a thoracoscope inserted through small chest wall incisions."
         },
         "TOTAL_MASTECTOMY": {
-          "text": "TOTAL_MASTECTOMY"
+          "text": "TOTAL_MASTECTOMY",
+          "description": "Surgical removal of the entire breast tissue including the nipple and areola, without removal of the underlying chest muscles or axillary lymph nodes."
         },
         "EXCISIONAL_BIOPSY": {
-          "text": "EXCISIONAL_BIOPSY"
+          "text": "EXCISIONAL_BIOPSY",
+          "description": "Surgical removal of an entire suspicious lesion or lymph node for pathological examination, intending complete excision of the abnormal tissue."
         },
         "BONE_MARROW_ASPIRATE": {
-          "text": "BONE_MARROW_ASPIRATE"
+          "text": "BONE_MARROW_ASPIRATE",
+          "description": "Collection of a liquid bone marrow sample via needle aspiration, typically from the iliac crest, for hematologic diagnosis and analysis."
         },
         "LOCAL_RESECTION": {
-          "text": "LOCAL_RESECTION"
+          "text": "LOCAL_RESECTION",
+          "description": "Surgical removal of a tumor and a small margin of surrounding tissue, limited to the immediate area of the lesion."
         },
         "LOBECTOMY": {
-          "text": "LOBECTOMY"
+          "text": "LOBECTOMY",
+          "description": "Surgical removal of a lobe of an organ, most commonly a lobe of the lung, to treat malignancies confined to that lobe."
         },
         "FINE_NEEDLE_ASPIRATION": {
-          "text": "FINE_NEEDLE_ASPIRATION"
+          "text": "FINE_NEEDLE_ASPIRATION",
+          "description": "Minimally invasive diagnostic procedure using a thin needle and syringe to extract cells or fluid from a suspicious lesion for cytological analysis."
         },
         "OMENTECTOMY": {
-          "text": "OMENTECTOMY"
+          "text": "OMENTECTOMY",
+          "description": "Surgical removal of all or part of the omentum, the fatty tissue covering the abdominal organs, often performed during cytoreductive surgery for ovarian cancer."
         },
         "TUMOR_RESECTION": {
-          "text": "TUMOR_RESECTION"
+          "text": "TUMOR_RESECTION",
+          "description": "Surgical excision of a tumor mass, with the extent of surrounding tissue removal depending on tumor type, location, and surgical intent."
         },
         "CYSTECTOMY": {
-          "text": "CYSTECTOMY"
+          "text": "CYSTECTOMY",
+          "description": "Surgical removal of the urinary bladder, either in part (partial) or entirety (radical), typically performed to treat bladder cancer."
         },
         "GROSS_TOTAL_RESECTION": {
-          "text": "GROSS_TOTAL_RESECTION"
+          "text": "GROSS_TOTAL_RESECTION",
+          "description": "Surgical removal of all visually and grossly identifiable tumor tissue, as determined by the operating surgeon at the time of surgery."
         },
         "THORACENTESIS": {
-          "text": "THORACENTESIS"
+          "text": "THORACENTESIS",
+          "description": "Minimally invasive procedure in which a needle is inserted into the pleural space to aspirate fluid for diagnostic analysis or therapeutic relief."
         },
         "ANTERIOR_RESECTION_OF_RECTUM": {
-          "text": "ANTERIOR_RESECTION_OF_RECTUM"
+          "text": "ANTERIOR_RESECTION_OF_RECTUM",
+          "description": "Surgical removal of the upper rectum through an abdominal approach with restoration of bowel continuity, used to treat rectal cancer."
         },
         "TRANSPLANT": {
-          "text": "TRANSPLANT"
+          "text": "TRANSPLANT",
+          "description": "Surgical procedure involving the transfer of an organ or tissue from a donor to a recipient, with specimen collection occurring at the time of organ procurement or implantation."
         },
         "LAPAROSCOPIC_PARTIAL_NEPHRECTOMY": {
-          "text": "LAPAROSCOPIC_PARTIAL_NEPHRECTOMY"
+          "text": "LAPAROSCOPIC_PARTIAL_NEPHRECTOMY",
+          "description": "Minimally invasive removal of a tumor-bearing portion of the kidney using laparoscopic techniques, preserving the remaining renal tissue."
         },
         "LAPAROSCOPIC_RADICAL_PROSTATECTOMY_WITH_ROBOTICS": {
-          "text": "LAPAROSCOPIC_RADICAL_PROSTATECTOMY_WITH_ROBOTICS"
+          "text": "LAPAROSCOPIC_RADICAL_PROSTATECTOMY_WITH_ROBOTICS",
+          "description": "Complete removal of the prostate gland performed using robot-assisted laparoscopic surgery, offering enhanced precision and minimal invasiveness."
         },
         "PNEUMONECTOMY": {
-          "text": "PNEUMONECTOMY"
+          "text": "PNEUMONECTOMY",
+          "description": "Surgical removal of an entire lung, typically performed to treat lung cancer confined to one lung that is not amenable to lesser resection."
         },
         "PAN_PROCTO_COLECTOMY": {
-          "text": "PAN_PROCTO_COLECTOMY"
+          "text": "PAN_PROCTO_COLECTOMY",
+          "description": "Surgical removal of the entire colon and rectum, typically performed for colorectal cancer or inflammatory bowel disease with dysplasia."
         },
         "HYSTERECTOMY_NOS": {
-          "text": "HYSTERECTOMY_NOS"
+          "text": "HYSTERECTOMY_NOS",
+          "description": "Surgical removal of the uterus by an unspecified or not otherwise specified technique or extent."
         },
         "CORE_BIOPSY": {
-          "text": "CORE_BIOPSY"
+          "text": "CORE_BIOPSY",
+          "description": "Removal of a cylindrical core of tissue using a large-bore needle to obtain a histologically intact sample for pathological diagnosis."
         },
         "SIMPLE_MASTECTOMY": {
-          "text": "SIMPLE_MASTECTOMY"
+          "text": "SIMPLE_MASTECTOMY",
+          "description": "Surgical removal of the entire breast tissue including the nipple-areola complex, without removing axillary lymph nodes or chest wall muscles."
         },
         "LUMPECTOMY": {
-          "text": "LUMPECTOMY"
+          "text": "LUMPECTOMY",
+          "description": "Breast-conserving surgery in which only the tumor and a margin of surrounding normal tissue are removed, leaving the remaining breast intact."
         },
         "ENDOSCOPIC_BIOPSY": {
-          "text": "ENDOSCOPIC_BIOPSY"
+          "text": "ENDOSCOPIC_BIOPSY",
+          "description": "Tissue sampling performed through an endoscope inserted into a body cavity, allowing direct visualization and targeted biopsy of suspicious lesions."
         },
         "SIMPLE_HYSTERECTOMY": {
-          "text": "SIMPLE_HYSTERECTOMY"
+          "text": "SIMPLE_HYSTERECTOMY",
+          "description": "Surgical removal of the uterus and cervix without removing the parametria, upper vagina, or lymph nodes, used for benign or early-stage disease."
         },
         "LYMPHADENECTOMY": {
-          "text": "LYMPHADENECTOMY"
+          "text": "LYMPHADENECTOMY",
+          "description": "Surgical removal of one or more lymph nodes for pathological examination or as part of cancer staging and treatment."
         },
         "LAPAROSCOPIC_BIOPSY": {
-          "text": "LAPAROSCOPIC_BIOPSY"
+          "text": "LAPAROSCOPIC_BIOPSY",
+          "description": "Tissue sampling performed using a laparoscope introduced through small abdominal incisions, allowing visualization and biopsy of intraperitoneal structures."
         },
         "TUMOR_DEBULKING": {
-          "text": "TUMOR_DEBULKING"
+          "text": "TUMOR_DEBULKING",
+          "description": "Cytoreductive surgery aimed at removing as much tumor mass as possible when complete resection is not feasible, to reduce tumor burden and improve treatment response."
         },
         "ASCITES_DRAINAGE": {
-          "text": "ASCITES_DRAINAGE"
+          "text": "ASCITES_DRAINAGE",
+          "description": "Therapeutic or diagnostic removal of accumulated fluid from the peritoneal cavity, which may be examined for malignant cells."
         },
         "ENDOSCOPIC_MUCOSAL_RESECTION": {
-          "text": "ENDOSCOPIC_MUCOSAL_RESECTION"
+          "text": "ENDOSCOPIC_MUCOSAL_RESECTION",
+          "description": "Endoscopic technique for removing superficial tumors or lesions confined to the mucosal layer of the gastrointestinal tract."
         },
         "LAPAROSCOPIC_RADICAL_PROSTATECTOMY_WITHOUT_ROBOTICS": {
-          "text": "LAPAROSCOPIC_RADICAL_PROSTATECTOMY_WITHOUT_ROBOTICS"
+          "text": "LAPAROSCOPIC_RADICAL_PROSTATECTOMY_WITHOUT_ROBOTICS",
+          "description": "Complete removal of the prostate gland using standard laparoscopic techniques without robotic assistance."
         },
         "TOTAL_COLECTOMY": {
-          "text": "TOTAL_COLECTOMY"
+          "text": "TOTAL_COLECTOMY",
+          "description": "Surgical removal of the entire large intestine (colon) while preserving the rectum, typically performed for colorectal cancer or hereditary polyposis syndromes."
         },
         "LIQUID_BIOPSY": {
-          "text": "LIQUID_BIOPSY"
+          "text": "LIQUID_BIOPSY",
+          "description": "Non-invasive sampling of circulating tumor cells, cell-free DNA, or other cancer biomarkers from a body fluid, most commonly blood."
         },
         "RADICAL_HYSTERECTOMY": {
-          "text": "RADICAL_HYSTERECTOMY"
+          "text": "RADICAL_HYSTERECTOMY",
+          "description": "Extensive surgical removal of the uterus, cervix, upper vagina, parametria, and regional lymph nodes, performed for gynecologic malignancies such as cervical cancer."
         },
         "SURGICAL_RESECTION": {
-          "text": "SURGICAL_RESECTION"
+          "text": "SURGICAL_RESECTION",
+          "description": "Surgical removal of a tumor or diseased tissue, used as a general term when the specific resection type is not further specified."
         },
         "OPEN_RADICAL_NEPHRECTOMY": {
-          "text": "OPEN_RADICAL_NEPHRECTOMY"
+          "text": "OPEN_RADICAL_NEPHRECTOMY",
+          "description": "Complete removal of a kidney, adrenal gland, and surrounding fatty tissue through a traditional open incision, performed to treat renal cell carcinoma."
         },
         "TRANSVERSE_COLECTOMY": {
-          "text": "TRANSVERSE_COLECTOMY"
+          "text": "TRANSVERSE_COLECTOMY",
+          "description": "Surgical removal of the transverse colon, the middle horizontal portion of the large intestine connecting the ascending and descending colon."
         },
         "HAND_ASSISTED_LAPAROSCOPIC_RADICAL_NEPHRECTOMY": {
-          "text": "HAND_ASSISTED_LAPAROSCOPIC_RADICAL_NEPHRECTOMY"
+          "text": "HAND_ASSISTED_LAPAROSCOPIC_RADICAL_NEPHRECTOMY",
+          "description": "Laparoscopic radical nephrectomy performed with the aid of a hand port that allows direct manual assistance during the minimally invasive procedure."
         },
         "PUNCH_BIOPSY": {
-          "text": "PUNCH_BIOPSY"
+          "text": "PUNCH_BIOPSY",
+          "description": "Removal of a small cylindrical core of skin or mucosal tissue using a circular cutting instrument for dermatological or mucosal pathological diagnosis."
         },
         "PARTIAL_HEPATECTOMY": {
-          "text": "PARTIAL_HEPATECTOMY"
+          "text": "PARTIAL_HEPATECTOMY",
+          "description": "Surgical removal of a portion of the liver, performed to resect primary liver tumors or metastatic deposits while preserving adequate hepatic function."
         },
         "SUPRACERVICAL_HYSTERECTOMY": {
-          "text": "SUPRACERVICAL_HYSTERECTOMY"
+          "text": "SUPRACERVICAL_HYSTERECTOMY",
+          "description": "Surgical removal of the uterine body while leaving the cervix in place, also known as a subtotal hysterectomy."
         },
         "OTHER_SURGICAL_RESECTION": {
-          "text": "OTHER_SURGICAL_RESECTION"
+          "text": "OTHER_SURGICAL_RESECTION",
+          "description": "A surgical resection procedure that does not correspond to any of the other specifically defined resection types."
         },
         "NOT_REPORTED": {
-          "text": "NOT_REPORTED"
+          "text": "NOT_REPORTED",
+          "description": "The method of specimen collection was not documented or reported in the available records."
         },
         "FULL_HYSTERECTOMY": {
-          "text": "FULL_HYSTERECTOMY"
+          "text": "FULL_HYSTERECTOMY",
+          "description": "Complete surgical removal of the uterus and cervix, sometimes also including the ovaries and fallopian tubes, to treat uterine or cervical malignancies."
         },
         "TONSILLECTOMY": {
-          "text": "TONSILLECTOMY"
+          "text": "TONSILLECTOMY",
+          "description": "Surgical removal of the palatine tonsils, performed for tonsillar tumors or as part of treatment for oropharyngeal cancer."
         },
         "SUPRAGLOTTIC_LARYNGECTOMY": {
-          "text": "SUPRAGLOTTIC_LARYNGECTOMY"
+          "text": "SUPRAGLOTTIC_LARYNGECTOMY",
+          "description": "Partial removal of the larynx above the vocal cords (glottis), used to treat supraglottic laryngeal cancer while preserving voice function."
         },
         "SUPERFICIAL_PAROTIDECTOMY": {
-          "text": "SUPERFICIAL_PAROTIDECTOMY"
+          "text": "SUPERFICIAL_PAROTIDECTOMY",
+          "description": "Surgical removal of the superficial lobe of the parotid gland, typically performed to excise parotid tumors located superficial to the facial nerve."
         },
         "LARYNGOPHARYNGECTOMY": {
-          "text": "LARYNGOPHARYNGECTOMY"
+          "text": "LARYNGOPHARYNGECTOMY",
+          "description": "Surgical removal of the larynx and part or all of the pharynx, performed for advanced cancers involving both structures."
         },
         "MAXILLECTOMY": {
-          "text": "MAXILLECTOMY"
+          "text": "MAXILLECTOMY",
+          "description": "Surgical removal of all or part of the maxilla (upper jaw), performed to treat malignant tumors of the hard palate, maxillary sinus, or upper jaw."
         },
         "PARTIAL_NEPHRECTOMY": {
-          "text": "PARTIAL_NEPHRECTOMY"
+          "text": "PARTIAL_NEPHRECTOMY",
+          "description": "Nephron-sparing surgery in which only the tumor-bearing portion of the kidney is removed, preserving the remaining healthy renal parenchyma."
         },
         "MANDIBULECTOMY": {
-          "text": "MANDIBULECTOMY"
+          "text": "MANDIBULECTOMY",
+          "description": "Surgical removal of all or part of the mandible (lower jaw), performed to treat malignant tumors involving the mandible or adjacent oral cavity."
         },
         "BUCCAL_MUCOSAL_RESECTION": {
-          "text": "BUCCAL_MUCOSAL_RESECTION"
+          "text": "BUCCAL_MUCOSAL_RESECTION",
+          "description": "Surgical excision of tumor-bearing tissue from the buccal mucosa (inner lining of the cheek), performed to treat oral cavity cancers."
         },
         "VERTICAL_HEMILARYNGECTOMY": {
-          "text": "VERTICAL_HEMILARYNGECTOMY"
+          "text": "VERTICAL_HEMILARYNGECTOMY",
+          "description": "Partial laryngectomy involving vertical removal of one side of the larynx, used to treat glottic cancers while preserving voice and swallowing function."
         },
         "TOTAL_NEPHRECTOMY": {
-          "text": "TOTAL_NEPHRECTOMY"
+          "text": "TOTAL_NEPHRECTOMY",
+          "description": "Complete surgical removal of an entire kidney, performed to treat renal malignancies or other kidney diseases."
         },
         "TOTAL_LARYNGECTOMY": {
-          "text": "TOTAL_LARYNGECTOMY"
+          "text": "TOTAL_LARYNGECTOMY",
+          "description": "Complete surgical removal of the larynx, resulting in permanent loss of natural voice, performed for advanced laryngeal cancer."
         },
         "TRANSORAL_LASER_EXCISION": {
-          "text": "TRANSORAL_LASER_EXCISION"
+          "text": "TRANSORAL_LASER_EXCISION",
+          "description": "Minimally invasive surgical technique using a laser delivered through the mouth to precisely excise laryngeal or pharyngeal tumors without external incision."
         },
         "PAROTIDECTOMY_NOS": {
-          "text": "PAROTIDECTOMY_NOS"
+          "text": "PAROTIDECTOMY_NOS",
+          "description": "Surgical removal of the parotid gland by an unspecified or not otherwise specified extent or technique."
         },
         "RADICAL_MAXILLECTOMY": {
-          "text": "RADICAL_MAXILLECTOMY"
+          "text": "RADICAL_MAXILLECTOMY",
+          "description": "Extensive surgical removal of the entire maxilla along with surrounding structures, performed for aggressive or extensive malignant tumors of the upper jaw."
         },
         "ENDOLARYNGEAL_EXCISION": {
-          "text": "ENDOLARYNGEAL_EXCISION"
+          "text": "ENDOLARYNGEAL_EXCISION",
+          "description": "Surgical removal of a laryngeal lesion performed entirely through the mouth using endoscopic instruments, without external neck incision."
         },
         "PALATECTOMY": {
-          "text": "PALATECTOMY"
+          "text": "PALATECTOMY",
+          "description": "Surgical removal of all or part of the palate, performed to treat malignant tumors involving the hard or soft palate."
         },
         "GLOSSECTOMY": {
-          "text": "GLOSSECTOMY"
+          "text": "GLOSSECTOMY",
+          "description": "Surgical removal of all or part of the tongue, performed to treat oral tongue or base of tongue malignancies."
         },
         "PARTIAL_LARYNGECTOMY": {
-          "text": "PARTIAL_LARYNGECTOMY"
+          "text": "PARTIAL_LARYNGECTOMY",
+          "description": "Surgical removal of a portion of the larynx while preserving remaining laryngeal function, used for early to intermediate-stage laryngeal cancers."
         },
         "LYMPH_NODE_DISSECTION": {
-          "text": "LYMPH_NODE_DISSECTION"
+          "text": "LYMPH_NODE_DISSECTION",
+          "description": "Systematic surgical removal of a group of regional lymph nodes for pathological staging or therapeutic management of cancer spread."
         },
         "RADICAL_PROSTATECTOMY": {
-          "text": "RADICAL_PROSTATECTOMY"
+          "text": "RADICAL_PROSTATECTOMY",
+          "description": "Complete surgical removal of the prostate gland, seminal vesicles, and surrounding tissue, performed to treat localized prostate cancer."
         },
         "DEEP_PAROTIDECTOMY": {
-          "text": "DEEP_PAROTIDECTOMY"
+          "text": "DEEP_PAROTIDECTOMY",
+          "description": "Surgical removal of the deep lobe of the parotid gland, performed for tumors located deep to the facial nerve."
         },
         "SUBTOTAL_PROSTATECTOMY": {
-          "text": "SUBTOTAL_PROSTATECTOMY"
+          "text": "SUBTOTAL_PROSTATECTOMY",
+          "description": "Partial surgical removal of the prostate gland, in which only a portion of the gland is excised rather than the complete organ."
         },
         "RADICAL_NEPHRECTOMY": {
-          "text": "RADICAL_NEPHRECTOMY"
+          "text": "RADICAL_NEPHRECTOMY",
+          "description": "Complete surgical removal of the kidney along with the adrenal gland, surrounding fatty tissue, and regional lymph nodes, performed for renal cell carcinoma."
         },
         "SUPRACRICOID_LARYNGECTOMY": {
-          "text": "SUPRACRICOID_LARYNGECTOMY"
+          "text": "SUPRACRICOID_LARYNGECTOMY",
+          "description": "Partial laryngectomy involving removal of the supracricoid structures while preserving the cricoid cartilage, used for select intermediate-stage laryngeal cancers."
         },
         "PARTIAL_MAXILLECTOMY": {
-          "text": "PARTIAL_MAXILLECTOMY"
+          "text": "PARTIAL_MAXILLECTOMY",
+          "description": "Surgical removal of a portion of the maxilla, performed for localized malignant or benign tumors that do not require total maxillary resection."
         }
       }
     },
@@ -8078,85 +8827,108 @@
       "name": "GravityDomainEnum",
       "description": "Social Determinants of Health domains as defined in the Gravity Project",
       "permissible_values": {
-        "FOOD_INSECURITY": {
-          "text": "FOOD_INSECURITY"
-        },
-        "HOUSING_INSTABILITY": {
-          "text": "HOUSING_INSTABILITY"
-        },
-        "HOMELESSNESS": {
-          "text": "HOMELESSNESS"
-        },
-        "INADEQUATE_HOUSING": {
-          "text": "INADEQUATE_HOUSING"
-        },
-        "TRANSPORTATION_INSECURITY": {
-          "text": "TRANSPORTATION_INSECURITY"
-        },
-        "FINANCIAL_INSECURITY": {
-          "text": "FINANCIAL_INSECURITY"
-        },
-        "MATERIAL_HARDSHIP": {
-          "text": "MATERIAL_HARDSHIP"
-        },
-        "EMPLOYMENT_STATUS": {
-          "text": "EMPLOYMENT_STATUS"
-        },
-        "EDUCATIONAL_ATTAINMENT": {
-          "text": "EDUCATIONAL_ATTAINMENT"
-        },
-        "VETERAN_STATUS": {
-          "text": "VETERAN_STATUS"
-        },
-        "STRESS": {
-          "text": "STRESS"
-        },
-        "SOCIAL_CONNECTION": {
-          "text": "SOCIAL_CONNECTION"
-        },
-        "INTIMATE_PARTNER_VIOLENCE_IPV": {
-          "text": "INTIMATE_PARTNER_VIOLENCE_IPV"
-        },
-        "ELDER_ABUSE": {
-          "text": "ELDER_ABUSE"
-        },
-        "HEALTH_LITERACY": {
-          "text": "HEALTH_LITERACY"
-        },
-        "MEDICAL_COST_BURDEN": {
-          "text": "MEDICAL_COST_BURDEN"
-        },
-        "HEALTH_INSURANCE_COVERAGE_STATUS": {
-          "text": "HEALTH_INSURANCE_COVERAGE_STATUS"
+        "DIGITAL_ACCESS": {
+          "text": "DIGITAL_ACCESS",
+          "description": "The ability to access and use digital technologies, including internet connectivity and devices."
         },
         "DIGITAL_LITERACY": {
-          "text": "DIGITAL_LITERACY"
+          "text": "DIGITAL_LITERACY",
+          "description": "The capacity to find, evaluate, and communicate information using digital technology."
         },
-        "DIGITAL_ACCESS": {
-          "text": "DIGITAL_ACCESS"
+        "EDUCATIONAL_ATTAINMENT": {
+          "text": "EDUCATIONAL_ATTAINMENT",
+          "description": "The highest level of formal education an individual has completed."
+        },
+        "ELDER_ABUSE": {
+          "text": "ELDER_ABUSE",
+          "description": "Physical, emotional, financial, or other mistreatment or neglect of older adults."
+        },
+        "EMPLOYMENT_STATUS": {
+          "text": "EMPLOYMENT_STATUS",
+          "description": "An individual's current relationship to the workforce, including employment, unemployment, or underemployment."
+        },
+        "FINANCIAL_INSECURITY": {
+          "text": "FINANCIAL_INSECURITY",
+          "description": "Inadequate financial resources to meet basic needs and maintain economic stability."
+        },
+        "FOOD_INSECURITY": {
+          "text": "FOOD_INSECURITY",
+          "description": "Limited or uncertain access to adequate, nutritious food due to financial or other constraints."
+        },
+        "HEALTH_INSURANCE_COVERAGE_STATUS": {
+          "text": "HEALTH_INSURANCE_COVERAGE_STATUS",
+          "description": "Whether an individual has health insurance and the type or adequacy of that coverage."
+        },
+        "HEALTH_LITERACY": {
+          "text": "HEALTH_LITERACY",
+          "description": "The degree to which individuals can obtain, process, and understand basic health information to make appropriate health decisions."
+        },
+        "HOMELESSNESS": {
+          "text": "HOMELESSNESS",
+          "description": "The condition of lacking a fixed, regular, and adequate nighttime residence."
+        },
+        "HOUSING_INSTABILITY": {
+          "text": "HOUSING_INSTABILITY",
+          "description": "Difficulty maintaining stable housing, including risk of eviction, frequent moves, or inability to pay rent or mortgage."
+        },
+        "INADEQUATE_HOUSING": {
+          "text": "INADEQUATE_HOUSING",
+          "description": "Living conditions that are unsafe, overcrowded, or otherwise fail to meet basic habitability standards."
+        },
+        "INTIMATE_PARTNER_VIOLENCE_IPV": {
+          "text": "INTIMATE_PARTNER_VIOLENCE_IPV",
+          "description": "Physical, sexual, psychological, or economic abuse perpetrated by a current or former intimate partner."
+        },
+        "MATERIAL_HARDSHIP": {
+          "text": "MATERIAL_HARDSHIP",
+          "description": "Inability to meet basic material needs such as food, housing, clothing, or medical care."
+        },
+        "MEDICAL_COST_BURDEN": {
+          "text": "MEDICAL_COST_BURDEN",
+          "description": "The financial strain caused by out-of-pocket medical expenses relative to an individual's or household's income."
+        },
+        "SOCIAL_CONNECTION": {
+          "text": "SOCIAL_CONNECTION",
+          "description": "The degree to which an individual has relationships and social support networks that promote well-being."
+        },
+        "STRESS": {
+          "text": "STRESS",
+          "description": "Psychological or physical tension arising from adverse or demanding circumstances that affects health and well-being."
+        },
+        "TRANSPORTATION_INSECURITY": {
+          "text": "TRANSPORTATION_INSECURITY",
+          "description": "Lack of reliable, safe, or affordable transportation needed to meet daily needs and access services."
         },
         "UTILITY_INSECURITY": {
-          "text": "UTILITY_INSECURITY"
+          "text": "UTILITY_INSECURITY",
+          "description": "Inability to reliably afford or access essential utilities such as electricity, heat, or water."
+        },
+        "VETERAN_STATUS": {
+          "text": "VETERAN_STATUS",
+          "description": "Whether an individual has served in the military, which may affect eligibility for benefits and expose them to unique health risks."
         }
       }
     },
     "ConditionSeverityEnum": {
       "id": "ConditionSeverityEnum",
       "name": "ConditionSeverityEnum",
-      "description": "Social Determinants of Health domains as defined in the Gravity Project",
+      "description": "The clinical severity level assigned to a condition or diagnosis.",
       "permissible_values": {
         "MILD": {
           "text": "MILD",
+          "description": "A condition that causes minimal symptoms or functional impairment and typically does not require intensive intervention.",
           "meaning": "OMOP:4116992",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4116992"
         },
         "MODERATE": {
           "text": "MODERATE",
+          "description": "A condition that causes noticeable symptoms or functional impairment and may require active treatment or monitoring.",
           "meaning": "OMOP:3272197",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/3272197"
         },
         "SEVERE": {
           "text": "SEVERE",
+          "description": "A condition that causes significant symptoms or functional impairment, often requiring urgent or intensive intervention.",
           "meaning": "OMOP:4087703",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4087703"
         }
@@ -8825,8 +9597,8 @@
           "meaning": "OMOP:40766945",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/40766945"
         },
-        "FORMER_SOMKER": {
-          "text": "FORMER_SOMKER",
+        "FORMER_SMOKER": {
+          "text": "FORMER_SMOKER",
           "meaning": "OMOP:45883458",
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/45883458"
         },
@@ -8859,9 +9631,40 @@
           "text": "CONSORTIUM",
           "description": "Consortium"
         },
-        "Study": {
-          "text": "Study",
+        "STUDY": {
+          "text": "STUDY",
           "description": "Study"
+        }
+      }
+    },
+    "BodyPositionEnum": {
+      "id": "BodyPositionEnum",
+      "name": "BodyPositionEnum",
+      "description": "Values describing the body position of a patient during a measurement or observation.",
+      "permissible_values": {
+        "SITTING_POSITION": {
+          "text": "SITTING_POSITION",
+          "description": "The patient is in a sitting position during the measurement or observation.",
+          "meaning": "OMOP:4142787",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4142787"
+        },
+        "ORTHOSTATIC_BODY_POSITION": {
+          "text": "ORTHOSTATIC_BODY_POSITION",
+          "description": "The patient is in a standing position during the measurement or observation.",
+          "meaning": "OMOP:4033753",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4033753"
+        },
+        "SUPINE_BODY_POSITION": {
+          "text": "SUPINE_BODY_POSITION",
+          "description": "The patient is lying on their back during the measurement or observation.",
+          "meaning": "OMOP:4221822",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4221822"
+        },
+        "PRONE_BODY_POSITION": {
+          "text": "PRONE_BODY_POSITION",
+          "description": "The patient is lying on their stomach during the measurement or observation.",
+          "meaning": "OMOP:4050473",
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4050473"
         }
       }
     },

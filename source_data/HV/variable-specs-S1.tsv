@@ -32,7 +32,7 @@ Person	Cause of death	Uriorcurie
 MeasurementObservation	CD40 in blood	decimal	pg/mL	OBA:2052305	Concentration of CD40 (Cluster of differentiation antigen 40) in blood, typically measured in serum or plasma
 MeasurementObservation	CESD score	integer	{score}	OMOP:36303297	Score from a self-report questionnaire, the CES-D (Center for Epidemiological Studies Depression Scale)
 MeasurementObservation	Chloride in blood	decimal	mmol/L	OBA:VT0003018	Concentration of chloride in blood, also known as serum chloride
-Observation	Cigarette smoking	SmokingStatusObservationTypeEnum		OMOP:4282779	Cigarette smoking status - Does not include other forms of tobacco use like pipes or chewing tobacco
+Observation	Cigarette smoking	SmokingStatusObservationTypeEnum		OMOP:35811013	Cigarette smoking status - Does not include other forms of tobacco use like pipes or chewing tobacco
 Condition	COPD	Uriorcurie			
 MeasurementObservation	Creatinine in blood	decimal	mg/dL	OBA:2050096	Concentration of creatinine in blood, typically measured in serum or plasma
 MeasurementObservation	Creatinine in urine	decimal	mg/dL	OBA:VT0010540	Concentration of creatinine in a sample of urine
@@ -97,12 +97,12 @@ MeasurementObservation	Monocytes count	decimal	10*3/uL	OBA:VT0000223	Concentrati
 MeasurementObservation	Myeloperoxidase in blood	decimal	ng/mL	OBA:2052389	Concentration of Myeloperoxidase (MPO) in blood, typically measured in plasma or serum
 MeasurementObservation	Neutrophils count	decimal	10*3/uL	OBA:VT0000222	Concentration of neutrophil cells in whole blood
 MeasurementObservation	Neutrophils percent	decimal	%{WBCs}	OMOP:37208698	Percent of total leukocytes that are neutrophils
-MeasurementObservation	NT pro BNP	decimal	pg/mL	OBA:2045303	Concentration of NT-proBNP in blood, typically measured in serum or plasma. Also known as N-terminal prohormone of brain natriuretic peptide
+MeasurementObservation	NT pro BNP	decimal	pg/mL	OBA:2045349	Concentration of NT-proBNP in blood, typically measured in serum or plasma. Also known as N-terminal prohormone of brain natriuretic peptide
 Condition	Obesity	ConditionStatusEnum			
 MeasurementObservation	Osteoprotegerin in blood	decimal	ng/mL	OMOP:1552124	Concentration of Osteoprotegerin (OPG) in blood, typically measured in serum or plasma
 MeasurementObservation	P-selectin in blood	decimal	ng/mL	OBA:2052701	Concentration of P-selectin in blood, typically measured in plasma
 Procedure	Pacemaker implant status	BaseEnum			
-Condition	peripheral arterial disease	Uriorcurie			
+Condition	Peripheral arterial disease	Uriorcurie			
 MeasurementObservation	Platelet count	decimal	10*3/uL	OMOP:4267147	Concentration of platelets in whole blood
 MeasurementObservation	Potassium in blood	decimal	mmol/L	OBA:VT0002668	Concentration of potassium in blood, typically measured in whole blood or serum
 MeasurementObservation	PR interval	decimal	ms	OMOP:4274406	Time it takes for electrical impulses to travel from the atria to the ventricles of the heart. Measured using ECG/EKG
