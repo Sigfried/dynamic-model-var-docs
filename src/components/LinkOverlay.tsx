@@ -82,6 +82,7 @@ function LinkTooltip({ data, x, y }: { data: LinkTooltipData; x: number; y: numb
 
 export interface LinkOverlayProps {
   leftSections: string[];
+  middleSections: string[];
   rightSections: string[];
   dataService: DataService | null;
   hoveredItem?: ItemHoverData | null;
@@ -89,6 +90,7 @@ export interface LinkOverlayProps {
 
 export default function LinkOverlay({
   leftSections,
+  middleSections,
   rightSections,
   dataService,
   hoveredItem
@@ -291,7 +293,7 @@ export default function LinkOverlay({
       cancelAnimationFrame(frameId);
       window.removeEventListener('expansionStateChanged', handleExpansion);
     };
-  }, [leftSections, rightSections, dataService, buildLinkData, hasStructuralChange, updatePathPositions]);
+  }, [leftSections, middleSections, rightSections, dataService, buildLinkData, hasStructuralChange, updatePathPositions]);
 
   // Helper to get marker ID based on target item type
   const getMarkerIdForTargetType = (targetType: string, isHovered: boolean = false): string => {

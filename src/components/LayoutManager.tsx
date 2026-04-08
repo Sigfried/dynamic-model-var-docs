@@ -760,6 +760,7 @@ export default function LayoutManager({
       {/* SVG Link Overlay */}
       <LinkOverlay
         leftSections={leftSections}
+        middleSections={middleSections}
         rightSections={rightSections}
         dataService={dataService}
         hoveredItem={hoveredItem}
