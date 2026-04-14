@@ -27,7 +27,7 @@ These would be separate SPAs but sharing code where possible. Might consider usi
     - Something other than classes and slots. Model entities? Properties?
 - **Progressive disclosure**
     - Start with classes
-    - Hover/click goes to tabular details display
+    - [Hover/click goes to tabular details display](./tabular-drilldown-mockup.html)
         - Slots
             - Ranges
         - Variables
@@ -58,7 +58,8 @@ Noticed there's no way to see from Observation that it's connected to Observatio
 line of inquiry to decide what to do before fixing. But ObservationSet.observations should point to Observation.
 
     
-# BDCHM Interactive Documentation: Questions for Stakeholders
+# Addressed above
+## BDCHM Interactive Documentation: Questions for Stakeholders
 
 We'd like your input on the direction of this tool. Below are some questions
 about how you use (or would like to use) the interactive schema explorer, with
