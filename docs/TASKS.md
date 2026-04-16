@@ -6,7 +6,75 @@
 
 ---
 
+## 🎯 Target release: 2026-07-30
+
+Need to work backwards from this date to set intermediate deadlines for requesting,
+receiving, and implementing stakeholder feedback.
+
+---
+
+## 🚀 Progressive-Disclosure Refactor (TOP PRIORITY)
+
+New UX direction captured in the [tabular drilldown mockup](../public/tabular-drilldown-mockup.html)
+(deployed at https://sigfried.github.io/dynamic-model-var-docs/tabular-drilldown-mockup.html)
+and feedback document. The current "kitchen sink" layout is overwhelming; this refactor
+replaces the default view with a categorized entity list that progressively reveals
+slots, variables, enum detail, and class detail inline. See
+[temp-but-share-for-now/STAKEHOLDER_QUESTIONS.md](../temp-but-share-for-now/STAKEHOLDER_QUESTIONS.md)
+for the broader direction.
+
+**Dependency note:** once the Variable Library is live, the variable-drilldown portion
+of the refactor can be simplified — no need for deep variable views inside the entity
+explorer.
+
+### Subtasks (rough order)
+
+1. **Finalize UX direction** — mockup review, stakeholder sign-off, decide primary
+   audience (non-technical vs. technical vs. both-via-progressive-disclosure).
+2. **Has-a hierarchy — try it.** Build a whole-model has-a visualization to see what
+   it looks like. Then evaluate the "pin a set of entities → generate a filtered
+   diagram" idea as a more focused way to view has-a. Consider reusing / adapting the
+   LinkML-generated Mermaid diagrams (hollow-triangle = is-a, chevron with cardinality
+   = has-a).
+3. **Categorized entity list** — top-level Pinned section plus semantic categories
+   (Admin/Study, Clinical, Lab/Biospecimen, etc.). Collapsible; only Pinned expanded by
+   default.
+4. **Default pinning** — Demography, Condition, MeasurementObservation. Pin state
+   persisted in URL / localStorage.
+5. **Inline slot drilldown** — Slots and Variables tabs, inherited and overridden tags,
+   range-type badges.
+6. **Inline enum-range detail card** — permissible values including CURIE labels and
+   definitions (not just CURIE identifiers), "used by" links, inherits / reachable_from
+   sections. Benefits from already-done EnumInput work (see Unused Schema Fields
+   workspace below).
+7. **Inline class-range detail card** — "Referenced by" list above the slot summary,
+   "Go to entity" link for navigation.
+8. **Non-LinkML terminology with LinkML-term tooltips**.
+   - Default to general-audience terms: *property* (for slot), *value set* /
+     *permissible values* (for enum), *property type* (for range), etc.
+   - Show LinkML equivalents in tooltips or a secondary label, OR provide a user
+     setting to toggle between "general" and "LinkML" vocabularies.
+   - Link to LinkML docs from tooltips.
+9. **URL state encoding** — deep-linking and working browser back button. Current app
+   encodes some state in the URL but the back button is reportedly buggy; investigate
+   root cause. Key states to encode: expanded entity, drilldown tab (slots / vars),
+   open inline card.
+10. **Release checklist** for 2026-07-30 (QA, deploy path, feedback loop, etc.).
+
+---
+
 ## 📋 Upcoming Work (Ordered by Priority)
+
+### Render markdown in schema fields
+- e.g., `UnitOfMeasurementEnum.description` contains markdown but is rendered as plain
+  text in detail views.
+- **Feeds the refactor**: needed for the inline enum detail card (Example 4 in the
+  mockup).
+
+### Slot names in class detail Slots table should be linked
+- Should behave like other element refs (hover + click navigation).
+- **Feeds the refactor**: needed for the inline class detail card (Example 5 in the
+  mockup).
 
 ### Incorporate Unused Schema Fields into UI
 - Enum inheritance and other fields
@@ -133,14 +201,11 @@ check claude's work:
 **Status**: UI still shows `quantity-DrugExposure` instead of `quantity`. The `slotRef.name` change is not being picked up. Needs debugging - possibly the dataLoader transform is not reading the `name` field from slot references.
 
 ---
-### render markdown in schema fields
-- e.g., UnitOfMeasurementEnum.description contains markdown but is rendered in plain text in details
----
-### slot names in class detail Slots table should be linked for hover and click like other element refs
-
----
-### LinkOverlay fixes
-- Edge labels: show on hover; tooltip display needs improvement
+### LinkOverlay fixes (lower priority — may be superseded by inline cards)
+- Edge labels: show on hover; tooltip display needs improvement.
+- Note: the progressive-disclosure refactor's inline entity-summary cards and
+  "Referenced by" lists may replace most of what links currently communicate. Revisit
+  priority after the refactor's direction is finalized.
 
 ---
 
@@ -162,6 +227,8 @@ check claude's work:
 - Show inheritance (inherited vs defined here vs overridden)
 - Visual indicators for slot origin
 - **Uses**: Abstract Tree system for rendering
+- ⚠️ **Possibly obsolete if progressive-disclosure refactor ships** — slot grouping
+  moves into the inline per-entity drilldown. Keep here pending decision.
 
 ---
 
@@ -170,6 +237,9 @@ check claude's work:
 ### Overhaul Badge Display System
 - Show multiple counts per element (e.g., "103 vars, 5 enums, 2 slots")
 - Add labels or tooltips to clarify what counts mean
+- ⚠️ **Partially obsoleted by progressive-disclosure refactor** — the new entity table
+  uses separate columns for Slots / Cls / Enm / Typ / Vars, which serves most of this
+  need. Revisit after refactor.
 
 ### Detail Panel Enhancements
 - Show reachable_from info for enums
