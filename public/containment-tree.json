@@ -1,0 +1,2266 @@
+[
+  {
+    "id": "ResearchStudyCollection",
+    "label": "ResearchStudyCollection",
+    "description": "A holder for ResearchStudy objects",
+    "abstract": false,
+    "kind": "has-a",
+    "children": [
+      {
+        "id": "ResearchStudy",
+        "label": "ResearchStudy",
+        "description": "A process where a researcher or organization plans and then executes a series of steps intended to increase the field of healthcare-related knowledge. This includes studies of safety, efficacy, comparative effectiveness and other information about medications, devices, therapies and other interventional and investigative techniques. A ResearchStudy involves the gathering of information about human or animal subjects.",
+        "abstract": false,
+        "kind": "has-a",
+        "slot": "entries",
+        "cardinality": "*",
+        "flipped": false,
+        "children": [
+          {
+            "id": "TimePoint",
+            "label": "TimePoint",
+            "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+            "abstract": false,
+            "kind": "has-a",
+            "slot": "associated_timepoint",
+            "cardinality": "*",
+            "flipped": false,
+            "children": [
+              {
+                "id": "TimePoint",
+                "label": "TimePoint",
+                "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                "abstract": false,
+                "kind": "has-a",
+                "slot": "index_time_point",
+                "cardinality": "0..1",
+                "flipped": false,
+                "cycle": true,
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": "Consent",
+            "label": "Consent",
+            "description": "An entity that can be used to capture consent code and other relevant data about consent for a study.",
+            "abstract": false,
+            "kind": "has-a",
+            "slot": "consents",
+            "cardinality": "*",
+            "flipped": false,
+            "children": [
+              {
+                "id": "TimePoint",
+                "label": "TimePoint",
+                "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                "abstract": false,
+                "kind": "has-a",
+                "slot": "valid_from",
+                "cardinality": "0..1",
+                "flipped": false,
+                "children": [
+                  {
+                    "id": "TimePoint",
+                    "label": "TimePoint",
+                    "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "index_time_point",
+                    "cardinality": "0..1",
+                    "flipped": false,
+                    "cycle": true,
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": "TimePoint",
+                "label": "TimePoint",
+                "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                "abstract": false,
+                "kind": "has-a",
+                "slot": "valid_to",
+                "cardinality": "0..1",
+                "flipped": false,
+                "children": [
+                  {
+                    "id": "TimePoint",
+                    "label": "TimePoint",
+                    "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "index_time_point",
+                    "cardinality": "0..1",
+                    "flipped": false,
+                    "cycle": true,
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "TimePoint",
+            "label": "TimePoint",
+            "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+            "abstract": false,
+            "kind": "has-a",
+            "slot": "date_ended",
+            "cardinality": "0..1",
+            "flipped": false,
+            "children": [
+              {
+                "id": "TimePoint",
+                "label": "TimePoint",
+                "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                "abstract": false,
+                "kind": "has-a",
+                "slot": "index_time_point",
+                "cardinality": "0..1",
+                "flipped": false,
+                "cycle": true,
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": "TimePoint",
+            "label": "TimePoint",
+            "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+            "abstract": false,
+            "kind": "has-a",
+            "slot": "date_started",
+            "cardinality": "0..1",
+            "flipped": false,
+            "children": [
+              {
+                "id": "TimePoint",
+                "label": "TimePoint",
+                "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                "abstract": false,
+                "kind": "has-a",
+                "slot": "index_time_point",
+                "cardinality": "0..1",
+                "flipped": false,
+                "cycle": true,
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": "Participant",
+            "label": "Participant",
+            "description": "A Participant is the entity of interest in a research study, typically a human being or an animal, but can also be a device, group of humans or animals, or a tissue sample. Human research subjects are usually not traceable to a particular person to protect the subject\u2019s privacy.",
+            "abstract": false,
+            "kind": "has-a",
+            "slot": "member_of_research_study",
+            "cardinality": "0..1",
+            "flipped": true,
+            "children": [
+              {
+                "id": "Demography",
+                "label": "Demography",
+                "description": "Demographics about an individual or animal receiving care or other health-related services.",
+                "abstract": false,
+                "kind": "has-a",
+                "slot": "associated_participant",
+                "cardinality": "0..1",
+                "flipped": true,
+                "children": []
+              },
+              {
+                "id": "Visit",
+                "label": "Visit",
+                "description": "Events where Persons engage with the healthcare system for a duration of time. They are often also called \u201cEncounters\u201d. Visits are defined by a configuration of circumstances under which they occur, such as (i) whether the patient comes to a healthcare institution, the other way around, or the interaction is remote, (ii) whether and what kind of trained medical staff is delivering the service during the Visit, and (iii) whether the Visit is transient or for a longer period involving a stay in bed. (OMOP)",
+                "abstract": false,
+                "kind": "has-a",
+                "slot": "associated_participant",
+                "cardinality": "0..1",
+                "flipped": true,
+                "children": [
+                  {
+                    "id": "Demography",
+                    "label": "Demography",
+                    "description": "Demographics about an individual or animal receiving care or other health-related services.",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "associated_visit",
+                    "cardinality": "0..1",
+                    "flipped": true,
+                    "children": []
+                  },
+                  {
+                    "id": "QuestionnaireResponse",
+                    "label": "QuestionnaireResponse",
+                    "description": "QuestionnaireResponse provides a complete or partial list of answers to a set of questions filled when responding to a questionnaire. (FHIR)",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "associated_visit",
+                    "cardinality": "0..1",
+                    "flipped": true,
+                    "children": [
+                      {
+                        "id": "QuestionnaireResponseItem",
+                        "label": "QuestionnaireResponseItem",
+                        "description": "QuestionnaireResponseItem provides a complete or partial list of answers to a set of questions filled when responding to a questionnaire. (FHIR)",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "items",
+                        "cardinality": "+",
+                        "flipped": false,
+                        "children": [
+                          {
+                            "id": "QuestionnaireResponseValue",
+                            "label": "QuestionnaireResponseValue",
+                            "description": "Single-valued answer to the question. (FHIR)",
+                            "abstract": true,
+                            "kind": "has-a",
+                            "slot": "response_value",
+                            "cardinality": "1",
+                            "flipped": false,
+                            "children": [
+                              {
+                                "id": "QuestionnaireResponseValueBoolean",
+                                "label": "QuestionnaireResponseValueBoolean",
+                                "description": "Single-valued boolean answer to the question",
+                                "abstract": false,
+                                "kind": "subclass",
+                                "children": []
+                              },
+                              {
+                                "id": "QuestionnaireResponseValueDecimal",
+                                "label": "QuestionnaireResponseValueDecimal",
+                                "description": "Single-valued decimal answer to the question",
+                                "abstract": false,
+                                "kind": "subclass",
+                                "children": []
+                              },
+                              {
+                                "id": "QuestionnaireResponseValueInteger",
+                                "label": "QuestionnaireResponseValueInteger",
+                                "description": "Single-valued integer answer to the question",
+                                "abstract": false,
+                                "kind": "subclass",
+                                "children": []
+                              },
+                              {
+                                "id": "QuestionnaireResponseValueString",
+                                "label": "QuestionnaireResponseValueString",
+                                "description": "Single-valued string answer to the question",
+                                "abstract": false,
+                                "kind": "subclass",
+                                "children": []
+                              },
+                              {
+                                "id": "QuestionnaireResponseValueTimePoint",
+                                "label": "QuestionnaireResponseValueTimePoint",
+                                "description": "Single-valued TimePoint answer to the question",
+                                "abstract": false,
+                                "kind": "subclass",
+                                "children": []
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "id": "Condition",
+                    "label": "Condition",
+                    "description": "Conditions are records of a Person suggesting the presence of a disease or medical condition stated as a diagnosis, a sign or a symptom, which is either observed by a Provider or reported by the patient. Conditions are recorded in different sources and levels of standardization.",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "associated_visit",
+                    "cardinality": "0..1",
+                    "flipped": true,
+                    "children": []
+                  },
+                  {
+                    "id": "Procedure",
+                    "label": "Procedure",
+                    "description": "Procedure contains records of activities or processes ordered by, or carried out by, a healthcare provider on the patient to have a diagnostic or therapeutic purpose. Procedures are present in various data sources in different forms with varying levels of standardization. [Derived from OMOP]",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "associated_visit",
+                    "cardinality": "0..1",
+                    "flipped": true,
+                    "children": [
+                      {
+                        "id": "Quantity",
+                        "label": "Quantity",
+                        "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "quantity",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": "ImagingStudy",
+                    "label": "ImagingStudy",
+                    "description": "An ImagingStudy is a set of images produced in a single study (one or more series of references images).  It may include images from different modalities (e.g. CT, MR, Ultrasound) and from different instances in time.  The ImagingStudy may be linked to other information such as the clinical context in which the images were acquired.",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "associated_visit",
+                    "cardinality": "0..1",
+                    "flipped": true,
+                    "children": [
+                      {
+                        "id": "BodySite",
+                        "label": "BodySite",
+                        "description": "A site in the body of an organism, typically described in terms of an anatomical concept and optional qualifiers (e.g. left/right, upper/lower). But body sites as defined here may include non-canonical sites, such as an implanted medical device.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "body_part_examined",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": "Exposure",
+                    "label": "Exposure",
+                    "description": "Exposures are records of a Person suggesting exposure to a medication, device, environmental material.",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "associated_visit",
+                    "cardinality": "0..1",
+                    "flipped": true,
+                    "children": [
+                      {
+                        "id": "DeviceExposure",
+                        "label": "DeviceExposure",
+                        "description": "DeviceExposures are records of a Person suggesting exposure to a foreign object. The source is typically physical objects used in procedures, measurements, or observations.",
+                        "abstract": false,
+                        "kind": "subclass",
+                        "children": []
+                      },
+                      {
+                        "id": "DrugExposure",
+                        "label": "DrugExposure",
+                        "description": "DrugExposures are records of a Person suggesting exposure to a medication. The source could be prescription, dispensing, medication administration records (MARs), or patient medication list.",
+                        "abstract": false,
+                        "kind": "subclass",
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": "ObservationSet",
+                    "label": "ObservationSet",
+                    "description": "A structured object to hold related Observations in a set.",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "associated_visit",
+                    "cardinality": "0..1",
+                    "flipped": true,
+                    "children": [
+                      {
+                        "id": "Observation",
+                        "label": "Observation",
+                        "description": "A data structure with key (observation_type) and value (value) attributes that represents a single observation, such as the hematocrit component of a complete blood count panel.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "observations",
+                        "cardinality": "*",
+                        "flipped": false,
+                        "children": [
+                          {
+                            "id": "Organization",
+                            "label": "Organization",
+                            "description": "A grouping of people or organizations with a common purpose such as a data coordinating center, an university, or an institute within a university.",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "performed_by",
+                            "cardinality": "0..1",
+                            "flipped": false,
+                            "children": []
+                          },
+                          {
+                            "id": "Quantity",
+                            "label": "Quantity",
+                            "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "value_quantity",
+                            "cardinality": "0..1",
+                            "flipped": false,
+                            "children": []
+                          },
+                          {
+                            "id": "DimensionalObservation",
+                            "label": "DimensionalObservation",
+                            "description": "A structured object that describes a single data item about the physical dimensions of an entity (e.g. length width, area), as generated through a point-in-time observation or measurement.",
+                            "abstract": false,
+                            "kind": "subclass",
+                            "children": []
+                          },
+                          {
+                            "id": "MeasurementObservation",
+                            "label": "MeasurementObservation",
+                            "description": "A data structure with key (observation_type) and value (value) attributes that represents a single observation, such as the hematocrit component of a complete blood count panel.",
+                            "abstract": false,
+                            "kind": "subclass",
+                            "children": [
+                              {
+                                "id": "Assay",
+                                "label": "Assay",
+                                "description": "A class for representing metadata about an assay performed on a specimen, including the method and instrument used.",
+                                "abstract": false,
+                                "kind": "has-a",
+                                "slot": "associated_assay",
+                                "cardinality": "0..1",
+                                "flipped": false,
+                                "children": [
+                                  {
+                                    "id": "Quantity",
+                                    "label": "Quantity",
+                                    "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                                    "abstract": false,
+                                    "kind": "has-a",
+                                    "slot": "lower_limit_of_detection",
+                                    "cardinality": "0..1",
+                                    "flipped": false,
+                                    "children": []
+                                  },
+                                  {
+                                    "id": "Substance",
+                                    "label": "Substance",
+                                    "description": "A type of material substance, or instance thereof, as used in a particular application. May include information about the role the substance played in a particular application.",
+                                    "abstract": false,
+                                    "kind": "has-a",
+                                    "slot": "reagent",
+                                    "cardinality": "*",
+                                    "flipped": false,
+                                    "children": [
+                                      {
+                                        "id": "Quantity",
+                                        "label": "Quantity",
+                                        "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                                        "abstract": false,
+                                        "kind": "has-a",
+                                        "slot": "substance_quantity",
+                                        "cardinality": "0..1",
+                                        "flipped": false,
+                                        "children": []
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "id": "Quantity",
+                                    "label": "Quantity",
+                                    "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                                    "abstract": false,
+                                    "kind": "has-a",
+                                    "slot": "upper_limit_of_detection",
+                                    "cardinality": "0..1",
+                                    "flipped": false,
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "id": "BodySite",
+                                "label": "BodySite",
+                                "description": "A site in the body of an organism, typically described in terms of an anatomical concept and optional qualifiers (e.g. left/right, upper/lower). But body sites as defined here may include non-canonical sites, such as an implanted medical device.",
+                                "abstract": false,
+                                "kind": "has-a",
+                                "slot": "body_site",
+                                "cardinality": "0..1",
+                                "flipped": false,
+                                "children": []
+                              },
+                              {
+                                "id": "Quantity",
+                                "label": "Quantity",
+                                "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                                "abstract": false,
+                                "kind": "has-a",
+                                "slot": "range_high",
+                                "cardinality": "0..1",
+                                "flipped": false,
+                                "children": []
+                              },
+                              {
+                                "id": "Quantity",
+                                "label": "Quantity",
+                                "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                                "abstract": false,
+                                "kind": "has-a",
+                                "slot": "range_low",
+                                "cardinality": "0..1",
+                                "flipped": false,
+                                "children": []
+                              }
+                            ]
+                          },
+                          {
+                            "id": "SdohObservation",
+                            "label": "SdohObservation",
+                            "description": "A data structure with key (observation_type) and value (value) attributes that represents a single observation, such as the hematocrit component of a complete blood count panel.",
+                            "abstract": false,
+                            "kind": "subclass",
+                            "children": [
+                              {
+                                "id": "QuestionnaireItem",
+                                "label": "QuestionnaireItem",
+                                "description": "QuestionnaireItem defines a question or section within the Questionnaire",
+                                "abstract": false,
+                                "kind": "has-a",
+                                "slot": "related_questionnaire_item",
+                                "cardinality": "0..1",
+                                "flipped": false,
+                                "children": [
+                                  {
+                                    "id": "QuestionnaireResponseItem",
+                                    "label": "QuestionnaireResponseItem",
+                                    "description": "QuestionnaireResponseItem provides a complete or partial list of answers to a set of questions filled when responding to a questionnaire. (FHIR)",
+                                    "abstract": false,
+                                    "kind": "has-a",
+                                    "slot": "has_questionnaire_item",
+                                    "cardinality": "0..1",
+                                    "flipped": true,
+                                    "children": [
+                                      {
+                                        "id": "QuestionnaireResponseValue",
+                                        "label": "QuestionnaireResponseValue",
+                                        "description": "Single-valued answer to the question. (FHIR)",
+                                        "abstract": true,
+                                        "kind": "has-a",
+                                        "slot": "response_value",
+                                        "cardinality": "1",
+                                        "flipped": false,
+                                        "children": [
+                                          {
+                                            "id": "QuestionnaireResponseValueBoolean",
+                                            "label": "QuestionnaireResponseValueBoolean",
+                                            "description": "Single-valued boolean answer to the question",
+                                            "abstract": false,
+                                            "kind": "subclass",
+                                            "children": []
+                                          },
+                                          {
+                                            "id": "QuestionnaireResponseValueDecimal",
+                                            "label": "QuestionnaireResponseValueDecimal",
+                                            "description": "Single-valued decimal answer to the question",
+                                            "abstract": false,
+                                            "kind": "subclass",
+                                            "children": []
+                                          },
+                                          {
+                                            "id": "QuestionnaireResponseValueInteger",
+                                            "label": "QuestionnaireResponseValueInteger",
+                                            "description": "Single-valued integer answer to the question",
+                                            "abstract": false,
+                                            "kind": "subclass",
+                                            "children": []
+                                          },
+                                          {
+                                            "id": "QuestionnaireResponseValueString",
+                                            "label": "QuestionnaireResponseValueString",
+                                            "description": "Single-valued string answer to the question",
+                                            "abstract": false,
+                                            "kind": "subclass",
+                                            "children": []
+                                          },
+                                          {
+                                            "id": "QuestionnaireResponseValueTimePoint",
+                                            "label": "QuestionnaireResponseValueTimePoint",
+                                            "description": "Single-valued TimePoint answer to the question",
+                                            "abstract": false,
+                                            "kind": "subclass",
+                                            "children": []
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "id": "QuestionnaireItem",
+                                    "label": "QuestionnaireItem",
+                                    "description": "QuestionnaireItem defines a question or section within the Questionnaire",
+                                    "abstract": false,
+                                    "kind": "has-a",
+                                    "slot": "part_of",
+                                    "cardinality": "0..1",
+                                    "flipped": true,
+                                    "cycle": true,
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "id": "SpecimenQualityObservation",
+                            "label": "SpecimenQualityObservation",
+                            "description": "A structured object that describes a characteristic of a specimen indicative of its quality or suitability for use, as generated through a point-in-time observation or measurement.",
+                            "abstract": false,
+                            "kind": "subclass",
+                            "children": []
+                          },
+                          {
+                            "id": "SpecimenQuantityObservation",
+                            "label": "SpecimenQuantityObservation",
+                            "description": "A structured object that describes a single data item about the quantity of a Specimen, as generated through a point-in-time observation or measurement.",
+                            "abstract": false,
+                            "kind": "subclass",
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": "Organization",
+                        "label": "Organization",
+                        "description": "A grouping of people or organizations with a common purpose such as a data coordinating center, an university, or an institute within a university.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "performed_by",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": []
+                      },
+                      {
+                        "id": "DimensionalObservationSet",
+                        "label": "DimensionalObservationSet",
+                        "description": "A set of one or more discrete observations about the physical dimensions of an object (e.g. length, width, area).",
+                        "abstract": false,
+                        "kind": "subclass",
+                        "children": []
+                      },
+                      {
+                        "id": "MeasurementObservationSet",
+                        "label": "MeasurementObservationSet",
+                        "description": "A structured object to hold related Observations in a set.",
+                        "abstract": false,
+                        "kind": "subclass",
+                        "children": []
+                      },
+                      {
+                        "id": "SdohObservationSet",
+                        "label": "SdohObservationSet",
+                        "description": "A structured object to hold related Observations in a set.",
+                        "abstract": false,
+                        "kind": "subclass",
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": "Observation",
+                    "label": "Observation",
+                    "description": "A data structure with key (observation_type) and value (value) attributes that represents a single observation, such as the hematocrit component of a complete blood count panel.",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "associated_visit",
+                    "cardinality": "0..1",
+                    "flipped": true,
+                    "children": [
+                      {
+                        "id": "Organization",
+                        "label": "Organization",
+                        "description": "A grouping of people or organizations with a common purpose such as a data coordinating center, an university, or an institute within a university.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "performed_by",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": []
+                      },
+                      {
+                        "id": "Quantity",
+                        "label": "Quantity",
+                        "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "value_quantity",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": []
+                      },
+                      {
+                        "id": "DimensionalObservation",
+                        "label": "DimensionalObservation",
+                        "description": "A structured object that describes a single data item about the physical dimensions of an entity (e.g. length width, area), as generated through a point-in-time observation or measurement.",
+                        "abstract": false,
+                        "kind": "subclass",
+                        "children": []
+                      },
+                      {
+                        "id": "MeasurementObservation",
+                        "label": "MeasurementObservation",
+                        "description": "A data structure with key (observation_type) and value (value) attributes that represents a single observation, such as the hematocrit component of a complete blood count panel.",
+                        "abstract": false,
+                        "kind": "subclass",
+                        "children": [
+                          {
+                            "id": "Assay",
+                            "label": "Assay",
+                            "description": "A class for representing metadata about an assay performed on a specimen, including the method and instrument used.",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "associated_assay",
+                            "cardinality": "0..1",
+                            "flipped": false,
+                            "children": [
+                              {
+                                "id": "Quantity",
+                                "label": "Quantity",
+                                "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                                "abstract": false,
+                                "kind": "has-a",
+                                "slot": "lower_limit_of_detection",
+                                "cardinality": "0..1",
+                                "flipped": false,
+                                "children": []
+                              },
+                              {
+                                "id": "Substance",
+                                "label": "Substance",
+                                "description": "A type of material substance, or instance thereof, as used in a particular application. May include information about the role the substance played in a particular application.",
+                                "abstract": false,
+                                "kind": "has-a",
+                                "slot": "reagent",
+                                "cardinality": "*",
+                                "flipped": false,
+                                "children": [
+                                  {
+                                    "id": "Quantity",
+                                    "label": "Quantity",
+                                    "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                                    "abstract": false,
+                                    "kind": "has-a",
+                                    "slot": "substance_quantity",
+                                    "cardinality": "0..1",
+                                    "flipped": false,
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "id": "Quantity",
+                                "label": "Quantity",
+                                "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                                "abstract": false,
+                                "kind": "has-a",
+                                "slot": "upper_limit_of_detection",
+                                "cardinality": "0..1",
+                                "flipped": false,
+                                "children": []
+                              }
+                            ]
+                          },
+                          {
+                            "id": "BodySite",
+                            "label": "BodySite",
+                            "description": "A site in the body of an organism, typically described in terms of an anatomical concept and optional qualifiers (e.g. left/right, upper/lower). But body sites as defined here may include non-canonical sites, such as an implanted medical device.",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "body_site",
+                            "cardinality": "0..1",
+                            "flipped": false,
+                            "children": []
+                          },
+                          {
+                            "id": "Quantity",
+                            "label": "Quantity",
+                            "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "range_high",
+                            "cardinality": "0..1",
+                            "flipped": false,
+                            "children": []
+                          },
+                          {
+                            "id": "Quantity",
+                            "label": "Quantity",
+                            "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "range_low",
+                            "cardinality": "0..1",
+                            "flipped": false,
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": "SdohObservation",
+                        "label": "SdohObservation",
+                        "description": "A data structure with key (observation_type) and value (value) attributes that represents a single observation, such as the hematocrit component of a complete blood count panel.",
+                        "abstract": false,
+                        "kind": "subclass",
+                        "children": [
+                          {
+                            "id": "QuestionnaireItem",
+                            "label": "QuestionnaireItem",
+                            "description": "QuestionnaireItem defines a question or section within the Questionnaire",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "related_questionnaire_item",
+                            "cardinality": "0..1",
+                            "flipped": false,
+                            "children": [
+                              {
+                                "id": "QuestionnaireResponseItem",
+                                "label": "QuestionnaireResponseItem",
+                                "description": "QuestionnaireResponseItem provides a complete or partial list of answers to a set of questions filled when responding to a questionnaire. (FHIR)",
+                                "abstract": false,
+                                "kind": "has-a",
+                                "slot": "has_questionnaire_item",
+                                "cardinality": "0..1",
+                                "flipped": true,
+                                "children": [
+                                  {
+                                    "id": "QuestionnaireResponseValue",
+                                    "label": "QuestionnaireResponseValue",
+                                    "description": "Single-valued answer to the question. (FHIR)",
+                                    "abstract": true,
+                                    "kind": "has-a",
+                                    "slot": "response_value",
+                                    "cardinality": "1",
+                                    "flipped": false,
+                                    "children": [
+                                      {
+                                        "id": "QuestionnaireResponseValueBoolean",
+                                        "label": "QuestionnaireResponseValueBoolean",
+                                        "description": "Single-valued boolean answer to the question",
+                                        "abstract": false,
+                                        "kind": "subclass",
+                                        "children": []
+                                      },
+                                      {
+                                        "id": "QuestionnaireResponseValueDecimal",
+                                        "label": "QuestionnaireResponseValueDecimal",
+                                        "description": "Single-valued decimal answer to the question",
+                                        "abstract": false,
+                                        "kind": "subclass",
+                                        "children": []
+                                      },
+                                      {
+                                        "id": "QuestionnaireResponseValueInteger",
+                                        "label": "QuestionnaireResponseValueInteger",
+                                        "description": "Single-valued integer answer to the question",
+                                        "abstract": false,
+                                        "kind": "subclass",
+                                        "children": []
+                                      },
+                                      {
+                                        "id": "QuestionnaireResponseValueString",
+                                        "label": "QuestionnaireResponseValueString",
+                                        "description": "Single-valued string answer to the question",
+                                        "abstract": false,
+                                        "kind": "subclass",
+                                        "children": []
+                                      },
+                                      {
+                                        "id": "QuestionnaireResponseValueTimePoint",
+                                        "label": "QuestionnaireResponseValueTimePoint",
+                                        "description": "Single-valued TimePoint answer to the question",
+                                        "abstract": false,
+                                        "kind": "subclass",
+                                        "children": []
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "id": "QuestionnaireItem",
+                                "label": "QuestionnaireItem",
+                                "description": "QuestionnaireItem defines a question or section within the Questionnaire",
+                                "abstract": false,
+                                "kind": "has-a",
+                                "slot": "part_of",
+                                "cardinality": "0..1",
+                                "flipped": true,
+                                "cycle": true,
+                                "children": []
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "id": "SpecimenQualityObservation",
+                        "label": "SpecimenQualityObservation",
+                        "description": "A structured object that describes a characteristic of a specimen indicative of its quality or suitability for use, as generated through a point-in-time observation or measurement.",
+                        "abstract": false,
+                        "kind": "subclass",
+                        "children": []
+                      },
+                      {
+                        "id": "SpecimenQuantityObservation",
+                        "label": "SpecimenQuantityObservation",
+                        "description": "A structured object that describes a single data item about the quantity of a Specimen, as generated through a point-in-time observation or measurement.",
+                        "abstract": false,
+                        "kind": "subclass",
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "Condition",
+                "label": "Condition",
+                "description": "Conditions are records of a Person suggesting the presence of a disease or medical condition stated as a diagnosis, a sign or a symptom, which is either observed by a Provider or reported by the patient. Conditions are recorded in different sources and levels of standardization.",
+                "abstract": false,
+                "kind": "has-a",
+                "slot": "associated_participant",
+                "cardinality": "0..1",
+                "flipped": true,
+                "children": []
+              },
+              {
+                "id": "Procedure",
+                "label": "Procedure",
+                "description": "Procedure contains records of activities or processes ordered by, or carried out by, a healthcare provider on the patient to have a diagnostic or therapeutic purpose. Procedures are present in various data sources in different forms with varying levels of standardization. [Derived from OMOP]",
+                "abstract": false,
+                "kind": "has-a",
+                "slot": "associated_participant",
+                "cardinality": "0..1",
+                "flipped": true,
+                "children": [
+                  {
+                    "id": "Quantity",
+                    "label": "Quantity",
+                    "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "quantity",
+                    "cardinality": "0..1",
+                    "flipped": false,
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": "ImagingStudy",
+                "label": "ImagingStudy",
+                "description": "An ImagingStudy is a set of images produced in a single study (one or more series of references images).  It may include images from different modalities (e.g. CT, MR, Ultrasound) and from different instances in time.  The ImagingStudy may be linked to other information such as the clinical context in which the images were acquired.",
+                "abstract": false,
+                "kind": "has-a",
+                "slot": "associated_participant",
+                "cardinality": "0..1",
+                "flipped": true,
+                "children": [
+                  {
+                    "id": "BodySite",
+                    "label": "BodySite",
+                    "description": "A site in the body of an organism, typically described in terms of an anatomical concept and optional qualifiers (e.g. left/right, upper/lower). But body sites as defined here may include non-canonical sites, such as an implanted medical device.",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "body_part_examined",
+                    "cardinality": "0..1",
+                    "flipped": false,
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": "Exposure",
+                "label": "Exposure",
+                "description": "Exposures are records of a Person suggesting exposure to a medication, device, environmental material.",
+                "abstract": false,
+                "kind": "has-a",
+                "slot": "associated_participant",
+                "cardinality": "0..1",
+                "flipped": true,
+                "children": [
+                  {
+                    "id": "DeviceExposure",
+                    "label": "DeviceExposure",
+                    "description": "DeviceExposures are records of a Person suggesting exposure to a foreign object. The source is typically physical objects used in procedures, measurements, or observations.",
+                    "abstract": false,
+                    "kind": "subclass",
+                    "children": []
+                  },
+                  {
+                    "id": "DrugExposure",
+                    "label": "DrugExposure",
+                    "description": "DrugExposures are records of a Person suggesting exposure to a medication. The source could be prescription, dispensing, medication administration records (MARs), or patient medication list.",
+                    "abstract": false,
+                    "kind": "subclass",
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": "File",
+                "label": "File",
+                "description": "Abstract class for various kinds of files. Subclasses may be defined for specific file types.",
+                "abstract": false,
+                "kind": "has-a",
+                "slot": "associated_participant",
+                "cardinality": "0..1",
+                "flipped": true,
+                "children": [
+                  {
+                    "id": "File",
+                    "label": "File",
+                    "description": "Abstract class for various kinds of files. Subclasses may be defined for specific file types.",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "derived_from",
+                    "cardinality": "0..1",
+                    "flipped": true,
+                    "cycle": true,
+                    "children": []
+                  },
+                  {
+                    "id": "ImagingFile",
+                    "label": "ImagingFile",
+                    "description": "A file that contains diagnostic imaging data, such as a DICOM file, or a JPEG or PNG image.",
+                    "abstract": false,
+                    "kind": "subclass",
+                    "children": [
+                      {
+                        "id": "BodySite",
+                        "label": "BodySite",
+                        "description": "A site in the body of an organism, typically described in terms of an anatomical concept and optional qualifiers (e.g. left/right, upper/lower). But body sites as defined here may include non-canonical sites, such as an implanted medical device.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "anatomical_site",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": []
+                      },
+                      {
+                        "id": "ImagingStudy",
+                        "label": "ImagingStudy",
+                        "description": "An ImagingStudy is a set of images produced in a single study (one or more series of references images).  It may include images from different modalities (e.g. CT, MR, Ultrasound) and from different instances in time.  The ImagingStudy may be linked to other information such as the clinical context in which the images were acquired.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "related_imaging_study",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": [
+                          {
+                            "id": "BodySite",
+                            "label": "BodySite",
+                            "description": "A site in the body of an organism, typically described in terms of an anatomical concept and optional qualifiers (e.g. left/right, upper/lower). But body sites as defined here may include non-canonical sites, such as an implanted medical device.",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "body_part_examined",
+                            "cardinality": "0..1",
+                            "flipped": false,
+                            "children": []
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "ObservationSet",
+                "label": "ObservationSet",
+                "description": "A structured object to hold related Observations in a set.",
+                "abstract": false,
+                "kind": "has-a",
+                "slot": "associated_participant",
+                "cardinality": "0..1",
+                "flipped": true,
+                "children": [
+                  {
+                    "id": "Observation",
+                    "label": "Observation",
+                    "description": "A data structure with key (observation_type) and value (value) attributes that represents a single observation, such as the hematocrit component of a complete blood count panel.",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "observations",
+                    "cardinality": "*",
+                    "flipped": false,
+                    "children": [
+                      {
+                        "id": "Organization",
+                        "label": "Organization",
+                        "description": "A grouping of people or organizations with a common purpose such as a data coordinating center, an university, or an institute within a university.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "performed_by",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": []
+                      },
+                      {
+                        "id": "Quantity",
+                        "label": "Quantity",
+                        "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "value_quantity",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": []
+                      },
+                      {
+                        "id": "DimensionalObservation",
+                        "label": "DimensionalObservation",
+                        "description": "A structured object that describes a single data item about the physical dimensions of an entity (e.g. length width, area), as generated through a point-in-time observation or measurement.",
+                        "abstract": false,
+                        "kind": "subclass",
+                        "children": []
+                      },
+                      {
+                        "id": "MeasurementObservation",
+                        "label": "MeasurementObservation",
+                        "description": "A data structure with key (observation_type) and value (value) attributes that represents a single observation, such as the hematocrit component of a complete blood count panel.",
+                        "abstract": false,
+                        "kind": "subclass",
+                        "children": [
+                          {
+                            "id": "Assay",
+                            "label": "Assay",
+                            "description": "A class for representing metadata about an assay performed on a specimen, including the method and instrument used.",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "associated_assay",
+                            "cardinality": "0..1",
+                            "flipped": false,
+                            "children": [
+                              {
+                                "id": "Quantity",
+                                "label": "Quantity",
+                                "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                                "abstract": false,
+                                "kind": "has-a",
+                                "slot": "lower_limit_of_detection",
+                                "cardinality": "0..1",
+                                "flipped": false,
+                                "children": []
+                              },
+                              {
+                                "id": "Substance",
+                                "label": "Substance",
+                                "description": "A type of material substance, or instance thereof, as used in a particular application. May include information about the role the substance played in a particular application.",
+                                "abstract": false,
+                                "kind": "has-a",
+                                "slot": "reagent",
+                                "cardinality": "*",
+                                "flipped": false,
+                                "children": [
+                                  {
+                                    "id": "Quantity",
+                                    "label": "Quantity",
+                                    "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                                    "abstract": false,
+                                    "kind": "has-a",
+                                    "slot": "substance_quantity",
+                                    "cardinality": "0..1",
+                                    "flipped": false,
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "id": "Quantity",
+                                "label": "Quantity",
+                                "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                                "abstract": false,
+                                "kind": "has-a",
+                                "slot": "upper_limit_of_detection",
+                                "cardinality": "0..1",
+                                "flipped": false,
+                                "children": []
+                              }
+                            ]
+                          },
+                          {
+                            "id": "BodySite",
+                            "label": "BodySite",
+                            "description": "A site in the body of an organism, typically described in terms of an anatomical concept and optional qualifiers (e.g. left/right, upper/lower). But body sites as defined here may include non-canonical sites, such as an implanted medical device.",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "body_site",
+                            "cardinality": "0..1",
+                            "flipped": false,
+                            "children": []
+                          },
+                          {
+                            "id": "Quantity",
+                            "label": "Quantity",
+                            "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "range_high",
+                            "cardinality": "0..1",
+                            "flipped": false,
+                            "children": []
+                          },
+                          {
+                            "id": "Quantity",
+                            "label": "Quantity",
+                            "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "range_low",
+                            "cardinality": "0..1",
+                            "flipped": false,
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": "SdohObservation",
+                        "label": "SdohObservation",
+                        "description": "A data structure with key (observation_type) and value (value) attributes that represents a single observation, such as the hematocrit component of a complete blood count panel.",
+                        "abstract": false,
+                        "kind": "subclass",
+                        "children": [
+                          {
+                            "id": "QuestionnaireItem",
+                            "label": "QuestionnaireItem",
+                            "description": "QuestionnaireItem defines a question or section within the Questionnaire",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "related_questionnaire_item",
+                            "cardinality": "0..1",
+                            "flipped": false,
+                            "children": [
+                              {
+                                "id": "QuestionnaireResponseItem",
+                                "label": "QuestionnaireResponseItem",
+                                "description": "QuestionnaireResponseItem provides a complete or partial list of answers to a set of questions filled when responding to a questionnaire. (FHIR)",
+                                "abstract": false,
+                                "kind": "has-a",
+                                "slot": "has_questionnaire_item",
+                                "cardinality": "0..1",
+                                "flipped": true,
+                                "children": [
+                                  {
+                                    "id": "QuestionnaireResponseValue",
+                                    "label": "QuestionnaireResponseValue",
+                                    "description": "Single-valued answer to the question. (FHIR)",
+                                    "abstract": true,
+                                    "kind": "has-a",
+                                    "slot": "response_value",
+                                    "cardinality": "1",
+                                    "flipped": false,
+                                    "children": [
+                                      {
+                                        "id": "QuestionnaireResponseValueBoolean",
+                                        "label": "QuestionnaireResponseValueBoolean",
+                                        "description": "Single-valued boolean answer to the question",
+                                        "abstract": false,
+                                        "kind": "subclass",
+                                        "children": []
+                                      },
+                                      {
+                                        "id": "QuestionnaireResponseValueDecimal",
+                                        "label": "QuestionnaireResponseValueDecimal",
+                                        "description": "Single-valued decimal answer to the question",
+                                        "abstract": false,
+                                        "kind": "subclass",
+                                        "children": []
+                                      },
+                                      {
+                                        "id": "QuestionnaireResponseValueInteger",
+                                        "label": "QuestionnaireResponseValueInteger",
+                                        "description": "Single-valued integer answer to the question",
+                                        "abstract": false,
+                                        "kind": "subclass",
+                                        "children": []
+                                      },
+                                      {
+                                        "id": "QuestionnaireResponseValueString",
+                                        "label": "QuestionnaireResponseValueString",
+                                        "description": "Single-valued string answer to the question",
+                                        "abstract": false,
+                                        "kind": "subclass",
+                                        "children": []
+                                      },
+                                      {
+                                        "id": "QuestionnaireResponseValueTimePoint",
+                                        "label": "QuestionnaireResponseValueTimePoint",
+                                        "description": "Single-valued TimePoint answer to the question",
+                                        "abstract": false,
+                                        "kind": "subclass",
+                                        "children": []
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "id": "QuestionnaireItem",
+                                "label": "QuestionnaireItem",
+                                "description": "QuestionnaireItem defines a question or section within the Questionnaire",
+                                "abstract": false,
+                                "kind": "has-a",
+                                "slot": "part_of",
+                                "cardinality": "0..1",
+                                "flipped": true,
+                                "cycle": true,
+                                "children": []
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "id": "SpecimenQualityObservation",
+                        "label": "SpecimenQualityObservation",
+                        "description": "A structured object that describes a characteristic of a specimen indicative of its quality or suitability for use, as generated through a point-in-time observation or measurement.",
+                        "abstract": false,
+                        "kind": "subclass",
+                        "children": []
+                      },
+                      {
+                        "id": "SpecimenQuantityObservation",
+                        "label": "SpecimenQuantityObservation",
+                        "description": "A structured object that describes a single data item about the quantity of a Specimen, as generated through a point-in-time observation or measurement.",
+                        "abstract": false,
+                        "kind": "subclass",
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": "Organization",
+                    "label": "Organization",
+                    "description": "A grouping of people or organizations with a common purpose such as a data coordinating center, an university, or an institute within a university.",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "performed_by",
+                    "cardinality": "0..1",
+                    "flipped": false,
+                    "children": []
+                  },
+                  {
+                    "id": "DimensionalObservationSet",
+                    "label": "DimensionalObservationSet",
+                    "description": "A set of one or more discrete observations about the physical dimensions of an object (e.g. length, width, area).",
+                    "abstract": false,
+                    "kind": "subclass",
+                    "children": []
+                  },
+                  {
+                    "id": "MeasurementObservationSet",
+                    "label": "MeasurementObservationSet",
+                    "description": "A structured object to hold related Observations in a set.",
+                    "abstract": false,
+                    "kind": "subclass",
+                    "children": []
+                  },
+                  {
+                    "id": "SdohObservationSet",
+                    "label": "SdohObservationSet",
+                    "description": "A structured object to hold related Observations in a set.",
+                    "abstract": false,
+                    "kind": "subclass",
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": "Observation",
+                "label": "Observation",
+                "description": "A data structure with key (observation_type) and value (value) attributes that represents a single observation, such as the hematocrit component of a complete blood count panel.",
+                "abstract": false,
+                "kind": "has-a",
+                "slot": "associated_participant",
+                "cardinality": "0..1",
+                "flipped": true,
+                "children": [
+                  {
+                    "id": "Organization",
+                    "label": "Organization",
+                    "description": "A grouping of people or organizations with a common purpose such as a data coordinating center, an university, or an institute within a university.",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "performed_by",
+                    "cardinality": "0..1",
+                    "flipped": false,
+                    "children": []
+                  },
+                  {
+                    "id": "Quantity",
+                    "label": "Quantity",
+                    "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "value_quantity",
+                    "cardinality": "0..1",
+                    "flipped": false,
+                    "children": []
+                  },
+                  {
+                    "id": "DimensionalObservation",
+                    "label": "DimensionalObservation",
+                    "description": "A structured object that describes a single data item about the physical dimensions of an entity (e.g. length width, area), as generated through a point-in-time observation or measurement.",
+                    "abstract": false,
+                    "kind": "subclass",
+                    "children": []
+                  },
+                  {
+                    "id": "MeasurementObservation",
+                    "label": "MeasurementObservation",
+                    "description": "A data structure with key (observation_type) and value (value) attributes that represents a single observation, such as the hematocrit component of a complete blood count panel.",
+                    "abstract": false,
+                    "kind": "subclass",
+                    "children": [
+                      {
+                        "id": "Assay",
+                        "label": "Assay",
+                        "description": "A class for representing metadata about an assay performed on a specimen, including the method and instrument used.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "associated_assay",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": [
+                          {
+                            "id": "Quantity",
+                            "label": "Quantity",
+                            "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "lower_limit_of_detection",
+                            "cardinality": "0..1",
+                            "flipped": false,
+                            "children": []
+                          },
+                          {
+                            "id": "Substance",
+                            "label": "Substance",
+                            "description": "A type of material substance, or instance thereof, as used in a particular application. May include information about the role the substance played in a particular application.",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "reagent",
+                            "cardinality": "*",
+                            "flipped": false,
+                            "children": [
+                              {
+                                "id": "Quantity",
+                                "label": "Quantity",
+                                "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                                "abstract": false,
+                                "kind": "has-a",
+                                "slot": "substance_quantity",
+                                "cardinality": "0..1",
+                                "flipped": false,
+                                "children": []
+                              }
+                            ]
+                          },
+                          {
+                            "id": "Quantity",
+                            "label": "Quantity",
+                            "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "upper_limit_of_detection",
+                            "cardinality": "0..1",
+                            "flipped": false,
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": "BodySite",
+                        "label": "BodySite",
+                        "description": "A site in the body of an organism, typically described in terms of an anatomical concept and optional qualifiers (e.g. left/right, upper/lower). But body sites as defined here may include non-canonical sites, such as an implanted medical device.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "body_site",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": []
+                      },
+                      {
+                        "id": "Quantity",
+                        "label": "Quantity",
+                        "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "range_high",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": []
+                      },
+                      {
+                        "id": "Quantity",
+                        "label": "Quantity",
+                        "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "range_low",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": "SdohObservation",
+                    "label": "SdohObservation",
+                    "description": "A data structure with key (observation_type) and value (value) attributes that represents a single observation, such as the hematocrit component of a complete blood count panel.",
+                    "abstract": false,
+                    "kind": "subclass",
+                    "children": [
+                      {
+                        "id": "QuestionnaireItem",
+                        "label": "QuestionnaireItem",
+                        "description": "QuestionnaireItem defines a question or section within the Questionnaire",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "related_questionnaire_item",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": [
+                          {
+                            "id": "QuestionnaireResponseItem",
+                            "label": "QuestionnaireResponseItem",
+                            "description": "QuestionnaireResponseItem provides a complete or partial list of answers to a set of questions filled when responding to a questionnaire. (FHIR)",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "has_questionnaire_item",
+                            "cardinality": "0..1",
+                            "flipped": true,
+                            "children": [
+                              {
+                                "id": "QuestionnaireResponseValue",
+                                "label": "QuestionnaireResponseValue",
+                                "description": "Single-valued answer to the question. (FHIR)",
+                                "abstract": true,
+                                "kind": "has-a",
+                                "slot": "response_value",
+                                "cardinality": "1",
+                                "flipped": false,
+                                "children": [
+                                  {
+                                    "id": "QuestionnaireResponseValueBoolean",
+                                    "label": "QuestionnaireResponseValueBoolean",
+                                    "description": "Single-valued boolean answer to the question",
+                                    "abstract": false,
+                                    "kind": "subclass",
+                                    "children": []
+                                  },
+                                  {
+                                    "id": "QuestionnaireResponseValueDecimal",
+                                    "label": "QuestionnaireResponseValueDecimal",
+                                    "description": "Single-valued decimal answer to the question",
+                                    "abstract": false,
+                                    "kind": "subclass",
+                                    "children": []
+                                  },
+                                  {
+                                    "id": "QuestionnaireResponseValueInteger",
+                                    "label": "QuestionnaireResponseValueInteger",
+                                    "description": "Single-valued integer answer to the question",
+                                    "abstract": false,
+                                    "kind": "subclass",
+                                    "children": []
+                                  },
+                                  {
+                                    "id": "QuestionnaireResponseValueString",
+                                    "label": "QuestionnaireResponseValueString",
+                                    "description": "Single-valued string answer to the question",
+                                    "abstract": false,
+                                    "kind": "subclass",
+                                    "children": []
+                                  },
+                                  {
+                                    "id": "QuestionnaireResponseValueTimePoint",
+                                    "label": "QuestionnaireResponseValueTimePoint",
+                                    "description": "Single-valued TimePoint answer to the question",
+                                    "abstract": false,
+                                    "kind": "subclass",
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "id": "QuestionnaireItem",
+                            "label": "QuestionnaireItem",
+                            "description": "QuestionnaireItem defines a question or section within the Questionnaire",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "part_of",
+                            "cardinality": "0..1",
+                            "flipped": true,
+                            "cycle": true,
+                            "children": []
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "id": "SpecimenQualityObservation",
+                    "label": "SpecimenQualityObservation",
+                    "description": "A structured object that describes a characteristic of a specimen indicative of its quality or suitability for use, as generated through a point-in-time observation or measurement.",
+                    "abstract": false,
+                    "kind": "subclass",
+                    "children": []
+                  },
+                  {
+                    "id": "SpecimenQuantityObservation",
+                    "label": "SpecimenQuantityObservation",
+                    "description": "A structured object that describes a single data item about the quantity of a Specimen, as generated through a point-in-time observation or measurement.",
+                    "abstract": false,
+                    "kind": "subclass",
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": "Person",
+                "label": "Person",
+                "description": "Administrative information about an individual or animal receiving care or other health-related services.",
+                "abstract": false,
+                "kind": "has-a",
+                "slot": "associated_person",
+                "cardinality": "0..1",
+                "flipped": false,
+                "children": [
+                  {
+                    "id": "CauseOfDeath",
+                    "label": "CauseOfDeath",
+                    "description": "A class / complex datatype for handling both values and ordinality for causes of death.",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "cause_of_death",
+                    "cardinality": "*",
+                    "flipped": false,
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": "Consent",
+                "label": "Consent",
+                "description": "An entity that can be used to capture consent code and other relevant data about consent for a study.",
+                "abstract": false,
+                "kind": "has-a",
+                "slot": "consents",
+                "cardinality": "*",
+                "flipped": false,
+                "children": [
+                  {
+                    "id": "TimePoint",
+                    "label": "TimePoint",
+                    "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "valid_from",
+                    "cardinality": "0..1",
+                    "flipped": false,
+                    "children": [
+                      {
+                        "id": "TimePoint",
+                        "label": "TimePoint",
+                        "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "index_time_point",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "cycle": true,
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": "TimePoint",
+                    "label": "TimePoint",
+                    "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "valid_to",
+                    "cardinality": "0..1",
+                    "flipped": false,
+                    "children": [
+                      {
+                        "id": "TimePoint",
+                        "label": "TimePoint",
+                        "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "index_time_point",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "cycle": true,
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "Organization",
+                "label": "Organization",
+                "description": "A grouping of people or organizations with a common purpose such as a data coordinating center, an university, or an institute within a university.",
+                "abstract": false,
+                "kind": "has-a",
+                "slot": "originating_site",
+                "cardinality": "0..1",
+                "flipped": false,
+                "children": []
+              },
+              {
+                "id": "Specimen",
+                "label": "Specimen",
+                "description": "Any material taken as a sample from a biological entity (living or dead), or from a physical object or the environment. Specimens are usually collected as an example of their kind, often for use in some investigation.",
+                "abstract": false,
+                "kind": "has-a",
+                "slot": "source_participant",
+                "cardinality": "0..1",
+                "flipped": true,
+                "children": [
+                  {
+                    "id": "SpecimenContainer",
+                    "label": "SpecimenContainer",
+                    "description": "A vessel in which a specimen is held or to which it is attached - for storage or as a substrate for growth (e.g. a cell culture dish) or analysis (e.g. a microscope slide or 96-well plate)",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "contained_in",
+                    "cardinality": "0..1",
+                    "flipped": false,
+                    "children": [
+                      {
+                        "id": "Substance",
+                        "label": "Substance",
+                        "description": "A type of material substance, or instance thereof, as used in a particular application. May include information about the role the substance played in a particular application.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "additive",
+                        "cardinality": "*",
+                        "flipped": false,
+                        "children": [
+                          {
+                            "id": "Quantity",
+                            "label": "Quantity",
+                            "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "substance_quantity",
+                            "cardinality": "0..1",
+                            "flipped": false,
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": "SpecimenContainer",
+                        "label": "SpecimenContainer",
+                        "description": "A vessel in which a specimen is held or to which it is attached - for storage or as a substrate for growth (e.g. a cell culture dish) or analysis (e.g. a microscope slide or 96-well plate)",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "parent_container",
+                        "cardinality": "0..1",
+                        "flipped": true,
+                        "cycle": true,
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": "SpecimenCreationActivity",
+                    "label": "SpecimenCreationActivity",
+                    "description": "The process of creating a specimen. This may occur through observing and/or collecting material from an biological source or natural setting, or through derivation from an existing specimen (e.g. via portioning or aliquoting).",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "creation_activity",
+                    "cardinality": "0..1",
+                    "flipped": false,
+                    "children": [
+                      {
+                        "id": "Substance",
+                        "label": "Substance",
+                        "description": "A type of material substance, or instance thereof, as used in a particular application. May include information about the role the substance played in a particular application.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "additive",
+                        "cardinality": "*",
+                        "flipped": false,
+                        "children": [
+                          {
+                            "id": "Quantity",
+                            "label": "Quantity",
+                            "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "substance_quantity",
+                            "cardinality": "0..1",
+                            "flipped": false,
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": "BodySite",
+                        "label": "BodySite",
+                        "description": "A site in the body of an organism, typically described in terms of an anatomical concept and optional qualifiers (e.g. left/right, upper/lower). But body sites as defined here may include non-canonical sites, such as an implanted medical device.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "collection_site",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": []
+                      },
+                      {
+                        "id": "TimePoint",
+                        "label": "TimePoint",
+                        "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "date_ended",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": [
+                          {
+                            "id": "TimePoint",
+                            "label": "TimePoint",
+                            "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "index_time_point",
+                            "cardinality": "0..1",
+                            "flipped": false,
+                            "cycle": true,
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": "TimePoint",
+                        "label": "TimePoint",
+                        "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "date_started",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": [
+                          {
+                            "id": "TimePoint",
+                            "label": "TimePoint",
+                            "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "index_time_point",
+                            "cardinality": "0..1",
+                            "flipped": false,
+                            "cycle": true,
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": "Organization",
+                        "label": "Organization",
+                        "description": "A grouping of people or organizations with a common purpose such as a data coordinating center, an university, or an institute within a university.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "performed_by",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": []
+                      },
+                      {
+                        "id": "Quantity",
+                        "label": "Quantity",
+                        "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "quantity_collected",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": "BiologicProduct",
+                    "label": "BiologicProduct",
+                    "description": "A living organism, or a metabolically active biological system such as a cell culture, tissue culture, or organoid that is maintained or propagated in vitro.",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "derived_product",
+                    "cardinality": "*",
+                    "flipped": false,
+                    "children": []
+                  },
+                  {
+                    "id": "DimensionalObservationSet",
+                    "label": "DimensionalObservationSet",
+                    "description": "A set of one or more discrete observations about the physical dimensions of an object (e.g. length, width, area).",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "dimensional_measures",
+                    "cardinality": "0..1",
+                    "flipped": false,
+                    "children": []
+                  },
+                  {
+                    "id": "Specimen",
+                    "label": "Specimen",
+                    "description": "Any material taken as a sample from a biological entity (living or dead), or from a physical object or the environment. Specimens are usually collected as an example of their kind, often for use in some investigation.",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "parent_specimen",
+                    "cardinality": "*",
+                    "flipped": false,
+                    "cycle": true,
+                    "children": []
+                  },
+                  {
+                    "id": "SpecimenProcessingActivity",
+                    "label": "SpecimenProcessingActivity",
+                    "description": "An activity that modifies the physical structure, composition, or state of a specimen. Unlike SpecimenCreation, SpecimenProcessing activities do not result in the generation of new entities - they take a single specimen as input, and output that same specimen.",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "processing_activity",
+                    "cardinality": "*",
+                    "flipped": false,
+                    "children": [
+                      {
+                        "id": "Substance",
+                        "label": "Substance",
+                        "description": "A type of material substance, or instance thereof, as used in a particular application. May include information about the role the substance played in a particular application.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "additive",
+                        "cardinality": "*",
+                        "flipped": false,
+                        "children": [
+                          {
+                            "id": "Quantity",
+                            "label": "Quantity",
+                            "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "substance_quantity",
+                            "cardinality": "0..1",
+                            "flipped": false,
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": "TimePoint",
+                        "label": "TimePoint",
+                        "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "date_ended",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": [
+                          {
+                            "id": "TimePoint",
+                            "label": "TimePoint",
+                            "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "index_time_point",
+                            "cardinality": "0..1",
+                            "flipped": false,
+                            "cycle": true,
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": "TimePoint",
+                        "label": "TimePoint",
+                        "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "date_started",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": [
+                          {
+                            "id": "TimePoint",
+                            "label": "TimePoint",
+                            "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "index_time_point",
+                            "cardinality": "0..1",
+                            "flipped": false,
+                            "cycle": true,
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": "Quantity",
+                        "label": "Quantity",
+                        "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "duration",
+                        "cardinality": "*",
+                        "flipped": false,
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": "SpecimenQualityObservation",
+                    "label": "SpecimenQualityObservation",
+                    "description": "A structured object that describes a characteristic of a specimen indicative of its quality or suitability for use, as generated through a point-in-time observation or measurement.",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "quality_measure",
+                    "cardinality": "*",
+                    "flipped": false,
+                    "children": []
+                  },
+                  {
+                    "id": "SpecimenQuantityObservation",
+                    "label": "SpecimenQuantityObservation",
+                    "description": "A structured object that describes a single data item about the quantity of a Specimen, as generated through a point-in-time observation or measurement.",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "quantity_measure",
+                    "cardinality": "*",
+                    "flipped": false,
+                    "children": []
+                  },
+                  {
+                    "id": "Document",
+                    "label": "Document",
+                    "description": "A collection of information intented to be understood together as a whole, and codified in human-readable form.",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "related_document",
+                    "cardinality": "*",
+                    "flipped": false,
+                    "children": []
+                  },
+                  {
+                    "id": "SpecimenStorageActivity",
+                    "label": "SpecimenStorageActivity",
+                    "description": "An activity in which a specimen is stored or maintained in a particular location, container, or state. Unlike 'processing' activities, storage does not alter the \\nintrinsic physical nature of a specimen.",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "storage_activity",
+                    "cardinality": "*",
+                    "flipped": false,
+                    "children": [
+                      {
+                        "id": "SpecimenContainer",
+                        "label": "SpecimenContainer",
+                        "description": "A vessel in which a specimen is held or to which it is attached - for storage or as a substrate for growth (e.g. a cell culture dish) or analysis (e.g. a microscope slide or 96-well plate)",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "container",
+                        "cardinality": "*",
+                        "flipped": false,
+                        "children": [
+                          {
+                            "id": "Substance",
+                            "label": "Substance",
+                            "description": "A type of material substance, or instance thereof, as used in a particular application. May include information about the role the substance played in a particular application.",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "additive",
+                            "cardinality": "*",
+                            "flipped": false,
+                            "children": [
+                              {
+                                "id": "Quantity",
+                                "label": "Quantity",
+                                "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                                "abstract": false,
+                                "kind": "has-a",
+                                "slot": "substance_quantity",
+                                "cardinality": "0..1",
+                                "flipped": false,
+                                "children": []
+                              }
+                            ]
+                          },
+                          {
+                            "id": "SpecimenContainer",
+                            "label": "SpecimenContainer",
+                            "description": "A vessel in which a specimen is held or to which it is attached - for storage or as a substrate for growth (e.g. a cell culture dish) or analysis (e.g. a microscope slide or 96-well plate)",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "parent_container",
+                            "cardinality": "0..1",
+                            "flipped": true,
+                            "cycle": true,
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": "TimePoint",
+                        "label": "TimePoint",
+                        "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "date_ended",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": [
+                          {
+                            "id": "TimePoint",
+                            "label": "TimePoint",
+                            "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "index_time_point",
+                            "cardinality": "0..1",
+                            "flipped": false,
+                            "cycle": true,
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": "TimePoint",
+                        "label": "TimePoint",
+                        "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "date_started",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": [
+                          {
+                            "id": "TimePoint",
+                            "label": "TimePoint",
+                            "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "index_time_point",
+                            "cardinality": "0..1",
+                            "flipped": false,
+                            "cycle": true,
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": "Quantity",
+                        "label": "Quantity",
+                        "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "duration",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": "SpecimenTransportActivity",
+                    "label": "SpecimenTransportActivity",
+                    "description": "An activity through which a specimen is transported between locations or organizations.",
+                    "abstract": false,
+                    "kind": "has-a",
+                    "slot": "transport_activity",
+                    "cardinality": "*",
+                    "flipped": false,
+                    "children": [
+                      {
+                        "id": "TimePoint",
+                        "label": "TimePoint",
+                        "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "date_ended",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": [
+                          {
+                            "id": "TimePoint",
+                            "label": "TimePoint",
+                            "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "index_time_point",
+                            "cardinality": "0..1",
+                            "flipped": false,
+                            "cycle": true,
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": "TimePoint",
+                        "label": "TimePoint",
+                        "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "date_started",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": [
+                          {
+                            "id": "TimePoint",
+                            "label": "TimePoint",
+                            "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+                            "abstract": false,
+                            "kind": "has-a",
+                            "slot": "index_time_point",
+                            "cardinality": "0..1",
+                            "flipped": false,
+                            "cycle": true,
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": "Organization",
+                        "label": "Organization",
+                        "description": "A grouping of people or organizations with a common purpose such as a data coordinating center, an university, or an institute within a university.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "transport_destination",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": []
+                      },
+                      {
+                        "id": "Organization",
+                        "label": "Organization",
+                        "description": "A grouping of people or organizations with a common purpose such as a data coordinating center, an university, or an institute within a university.",
+                        "abstract": false,
+                        "kind": "has-a",
+                        "slot": "transport_origin",
+                        "cardinality": "0..1",
+                        "flipped": false,
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "ResearchStudy",
+            "label": "ResearchStudy",
+            "description": "A process where a researcher or organization plans and then executes a series of steps intended to increase the field of healthcare-related knowledge. This includes studies of safety, efficacy, comparative effectiveness and other information about medications, devices, therapies and other interventional and investigative techniques. A ResearchStudy involves the gathering of information about human or animal subjects.",
+            "abstract": false,
+            "kind": "has-a",
+            "slot": "part_of",
+            "cardinality": "0..1",
+            "flipped": true,
+            "cycle": true,
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+]

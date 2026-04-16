@@ -1,0 +1,1750 @@
+{
+  "nodes": [
+    {
+      "id": "Entity",
+      "label": "Entity",
+      "abstract": true,
+      "is_a": null,
+      "description": "Any resource that has its own identifier"
+    },
+    {
+      "id": "Person",
+      "label": "Person",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "Administrative information about an individual or animal receiving care or other health-related services."
+    },
+    {
+      "id": "Demography",
+      "label": "Demography",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "Demographics about an individual or animal receiving care or other health-related services."
+    },
+    {
+      "id": "Participant",
+      "label": "Participant",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "A Participant is the entity of interest in a research study, typically a human being or an animal, but can also be a device, group of humans or animals, or a tissue sample. Human research subjects are usually not traceable to a particular person to protect the subject\u2019s privacy."
+    },
+    {
+      "id": "ResearchStudy",
+      "label": "ResearchStudy",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "A process where a researcher or organization plans and then executes a series of steps intended to increase the field of healthcare-related knowledge. This includes studies of safety, efficacy, comparative effectiveness and other information about medications, devices, therapies and other interventional and investigative techniques. A ResearchStudy involves the gathering of information about human or animal subjects."
+    },
+    {
+      "id": "Consent",
+      "label": "Consent",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "An entity that can be used to capture consent code and other relevant data about consent for a study."
+    },
+    {
+      "id": "Visit",
+      "label": "Visit",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "Events where Persons engage with the healthcare system for a duration of time. They are often also called \u201cEncounters\u201d. Visits are defined by a configuration of circumstances under which they occur, such as (i) whether the patient comes to a healthcare institution, the other way around, or the interaction is remote, (ii) whether and what kind of trained medical staff is delivering the service during the Visit, and (iii) whether the Visit is transient or for a longer period involving a stay in bed. (OMOP)"
+    },
+    {
+      "id": "Organization",
+      "label": "Organization",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "A grouping of people or organizations with a common purpose such as a data coordinating center, an university, or an institute within a university."
+    },
+    {
+      "id": "TimePoint",
+      "label": "TimePoint",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred."
+    },
+    {
+      "id": "TimePeriod",
+      "label": "TimePeriod",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "A period of time between a start and end time point."
+    },
+    {
+      "id": "ResearchStudyCollection",
+      "label": "ResearchStudyCollection",
+      "abstract": false,
+      "is_a": null,
+      "description": "A holder for ResearchStudy objects"
+    },
+    {
+      "id": "Questionnaire",
+      "label": "Questionnaire",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "A Questionnaire is an organized collection of questions intended to solicit information from patients, providers or other individuals involved in the healthcare domain. They may be simple flat lists of questions or can be hierarchically organized in groups and sub-groups, each containing questions. The Questionnaire defines the questions to be asked, how they are ordered and grouped, any intervening instructional text and what the constraints are on the allowed answers. The results of a Questionnaire can be communicated using the QuestionnaireResponse. (FHIR)"
+    },
+    {
+      "id": "QuestionnaireItem",
+      "label": "QuestionnaireItem",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "QuestionnaireItem defines a question or section within the Questionnaire"
+    },
+    {
+      "id": "QuestionnaireResponse",
+      "label": "QuestionnaireResponse",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "QuestionnaireResponse provides a complete or partial list of answers to a set of questions filled when responding to a questionnaire. (FHIR)"
+    },
+    {
+      "id": "QuestionnaireResponseItem",
+      "label": "QuestionnaireResponseItem",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "QuestionnaireResponseItem provides a complete or partial list of answers to a set of questions filled when responding to a questionnaire. (FHIR)"
+    },
+    {
+      "id": "QuestionnaireResponseValue",
+      "label": "QuestionnaireResponseValue",
+      "abstract": true,
+      "is_a": "Entity",
+      "description": "Single-valued answer to the question. (FHIR)"
+    },
+    {
+      "id": "QuestionnaireResponseValueDecimal",
+      "label": "QuestionnaireResponseValueDecimal",
+      "abstract": false,
+      "is_a": "QuestionnaireResponseValue",
+      "description": "Single-valued decimal answer to the question"
+    },
+    {
+      "id": "QuestionnaireResponseValueBoolean",
+      "label": "QuestionnaireResponseValueBoolean",
+      "abstract": false,
+      "is_a": "QuestionnaireResponseValue",
+      "description": "Single-valued boolean answer to the question"
+    },
+    {
+      "id": "QuestionnaireResponseValueInteger",
+      "label": "QuestionnaireResponseValueInteger",
+      "abstract": false,
+      "is_a": "QuestionnaireResponseValue",
+      "description": "Single-valued integer answer to the question"
+    },
+    {
+      "id": "QuestionnaireResponseValueTimePoint",
+      "label": "QuestionnaireResponseValueTimePoint",
+      "abstract": false,
+      "is_a": "QuestionnaireResponseValue",
+      "description": "Single-valued TimePoint answer to the question"
+    },
+    {
+      "id": "QuestionnaireResponseValueString",
+      "label": "QuestionnaireResponseValueString",
+      "abstract": false,
+      "is_a": "QuestionnaireResponseValue",
+      "description": "Single-valued string answer to the question"
+    },
+    {
+      "id": "Condition",
+      "label": "Condition",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "Conditions are records of a Person suggesting the presence of a disease or medical condition stated as a diagnosis, a sign or a symptom, which is either observed by a Provider or reported by the patient. Conditions are recorded in different sources and levels of standardization."
+    },
+    {
+      "id": "Procedure",
+      "label": "Procedure",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "Procedure contains records of activities or processes ordered by, or carried out by, a healthcare provider on the patient to have a diagnostic or therapeutic purpose. Procedures are present in various data sources in different forms with varying levels of standardization. [Derived from OMOP]"
+    },
+    {
+      "id": "ImagingStudy",
+      "label": "ImagingStudy",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "An ImagingStudy is a set of images produced in a single study (one or more series of references images).  It may include images from different modalities (e.g. CT, MR, Ultrasound) and from different instances in time.  The ImagingStudy may be linked to other information such as the clinical context in which the images were acquired."
+    },
+    {
+      "id": "Exposure",
+      "label": "Exposure",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "Exposures are records of a Person suggesting exposure to a medication, device, environmental material."
+    },
+    {
+      "id": "DrugExposure",
+      "label": "DrugExposure",
+      "abstract": false,
+      "is_a": "Exposure",
+      "description": "DrugExposures are records of a Person suggesting exposure to a medication. The source could be prescription, dispensing, medication administration records (MARs), or patient medication list."
+    },
+    {
+      "id": "DeviceExposure",
+      "label": "DeviceExposure",
+      "abstract": false,
+      "is_a": "Exposure",
+      "description": "DeviceExposures are records of a Person suggesting exposure to a foreign object. The source is typically physical objects used in procedures, measurements, or observations."
+    },
+    {
+      "id": "DimensionalObservation",
+      "label": "DimensionalObservation",
+      "abstract": false,
+      "is_a": "Observation",
+      "description": "A structured object that describes a single data item about the physical dimensions of an entity (e.g. length width, area), as generated through a point-in-time observation or measurement."
+    },
+    {
+      "id": "DimensionalObservationSet",
+      "label": "DimensionalObservationSet",
+      "abstract": false,
+      "is_a": "ObservationSet",
+      "description": "A set of one or more discrete observations about the physical dimensions of an object (e.g. length, width, area)."
+    },
+    {
+      "id": "File",
+      "label": "File",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "Abstract class for various kinds of files. Subclasses may be defined for specific file types."
+    },
+    {
+      "id": "ImagingFile",
+      "label": "ImagingFile",
+      "abstract": false,
+      "is_a": "File",
+      "description": "A file that contains diagnostic imaging data, such as a DICOM file, or a JPEG or PNG image."
+    },
+    {
+      "id": "Document",
+      "label": "Document",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "A collection of information intented to be understood together as a whole, and codified in human-readable form."
+    },
+    {
+      "id": "Specimen",
+      "label": "Specimen",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "Any material taken as a sample from a biological entity (living or dead), or from a physical object or the environment. Specimens are usually collected as an example of their kind, often for use in some investigation."
+    },
+    {
+      "id": "SpecimenContainer",
+      "label": "SpecimenContainer",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "A vessel in which a specimen is held or to which it is attached - for storage or as a substrate for growth (e.g. a cell culture dish) or analysis (e.g. a microscope slide or 96-well plate)"
+    },
+    {
+      "id": "SpecimenCreationActivity",
+      "label": "SpecimenCreationActivity",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "The process of creating a specimen. This may occur through observing and/or collecting material from an biological source or natural setting, or through derivation from an existing specimen (e.g. via portioning or aliquoting)."
+    },
+    {
+      "id": "SpecimenQualityObservation",
+      "label": "SpecimenQualityObservation",
+      "abstract": false,
+      "is_a": "Observation",
+      "description": "A structured object that describes a characteristic of a specimen indicative of its quality or suitability for use, as generated through a point-in-time observation or measurement."
+    },
+    {
+      "id": "SpecimenQuantityObservation",
+      "label": "SpecimenQuantityObservation",
+      "abstract": false,
+      "is_a": "Observation",
+      "description": "A structured object that describes a single data item about the quantity of a Specimen, as generated through a point-in-time observation or measurement."
+    },
+    {
+      "id": "SpecimenProcessingActivity",
+      "label": "SpecimenProcessingActivity",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "An activity that modifies the physical structure, composition, or state of a specimen. Unlike SpecimenCreation, SpecimenProcessing activities do not result in the generation of new entities - they take a single specimen as input, and output that same specimen."
+    },
+    {
+      "id": "SpecimenStorageActivity",
+      "label": "SpecimenStorageActivity",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "An activity in which a specimen is stored or maintained in a particular location, container, or state. Unlike 'processing' activities, storage does not alter the \\nintrinsic physical nature of a specimen."
+    },
+    {
+      "id": "SpecimenTransportActivity",
+      "label": "SpecimenTransportActivity",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "An activity through which a specimen is transported between locations or organizations."
+    },
+    {
+      "id": "BiologicProduct",
+      "label": "BiologicProduct",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "A living organism, or a metabolically active biological system such as a cell culture, tissue culture, or organoid that is maintained or propagated in vitro."
+    },
+    {
+      "id": "Substance",
+      "label": "Substance",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "A type of material substance, or instance thereof, as used in a particular application. May include information about the role the substance played in a particular application."
+    },
+    {
+      "id": "Quantity",
+      "label": "Quantity",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "A structured object to represent an amount of something (e.g., weight, mass, length, duration of time) - including a value and unit."
+    },
+    {
+      "id": "BodySite",
+      "label": "BodySite",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "A site in the body of an organism, typically described in terms of an anatomical concept and optional qualifiers (e.g. left/right, upper/lower). But body sites as defined here may include non-canonical sites, such as an implanted medical device."
+    },
+    {
+      "id": "ObservationSet",
+      "label": "ObservationSet",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "A structured object to hold related Observations in a set."
+    },
+    {
+      "id": "Observation",
+      "label": "Observation",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "A data structure with key (observation_type) and value (value) attributes that represents a single observation, such as the hematocrit component of a complete blood count panel."
+    },
+    {
+      "id": "MeasurementObservationSet",
+      "label": "MeasurementObservationSet",
+      "abstract": false,
+      "is_a": "ObservationSet",
+      "description": "A structured object to hold related Observations in a set."
+    },
+    {
+      "id": "MeasurementObservation",
+      "label": "MeasurementObservation",
+      "abstract": false,
+      "is_a": "Observation",
+      "description": "A data structure with key (observation_type) and value (value) attributes that represents a single observation, such as the hematocrit component of a complete blood count panel."
+    },
+    {
+      "id": "SdohObservationSet",
+      "label": "SdohObservationSet",
+      "abstract": false,
+      "is_a": "ObservationSet",
+      "description": "A structured object to hold related Observations in a set."
+    },
+    {
+      "id": "SdohObservation",
+      "label": "SdohObservation",
+      "abstract": false,
+      "is_a": "Observation",
+      "description": "A data structure with key (observation_type) and value (value) attributes that represents a single observation, such as the hematocrit component of a complete blood count panel."
+    },
+    {
+      "id": "CauseOfDeath",
+      "label": "CauseOfDeath",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "A class / complex datatype for handling both values and ordinality for causes of death."
+    },
+    {
+      "id": "Assay",
+      "label": "Assay",
+      "abstract": false,
+      "is_a": "Entity",
+      "description": "A class for representing metadata about an assay performed on a specimen, including the method and instrument used."
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-0",
+      "source": "Person",
+      "target": "CauseOfDeath",
+      "label": "cause_of_death",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-1",
+      "source": "Demography",
+      "target": "Participant",
+      "label": "associated_participant",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-2",
+      "source": "Demography",
+      "target": "Visit",
+      "label": "associated_visit",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-3",
+      "source": "Participant",
+      "target": "Person",
+      "label": "associated_person",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-4",
+      "source": "Participant",
+      "target": "ResearchStudy",
+      "label": "member_of_research_study",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-5",
+      "source": "Participant",
+      "target": "Organization",
+      "label": "originating_site",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-6",
+      "source": "Participant",
+      "target": "Consent",
+      "label": "consents",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-7",
+      "source": "ResearchStudy",
+      "target": "TimePoint",
+      "label": "date_started",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-8",
+      "source": "ResearchStudy",
+      "target": "TimePoint",
+      "label": "date_ended",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-9",
+      "source": "ResearchStudy",
+      "target": "ResearchStudy",
+      "label": "part_of",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-10",
+      "source": "ResearchStudy",
+      "target": "TimePoint",
+      "label": "associated_timepoint",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-11",
+      "source": "ResearchStudy",
+      "target": "Consent",
+      "label": "consents",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-12",
+      "source": "Consent",
+      "target": "TimePoint",
+      "label": "valid_from",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-13",
+      "source": "Consent",
+      "target": "TimePoint",
+      "label": "valid_to",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-14",
+      "source": "Visit",
+      "target": "Participant",
+      "label": "associated_participant",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-15",
+      "source": "TimePoint",
+      "target": "TimePoint",
+      "label": "index_time_point",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-16",
+      "source": "TimePeriod",
+      "target": "TimePoint",
+      "label": "period_start",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-17",
+      "source": "TimePeriod",
+      "target": "TimePoint",
+      "label": "period_end",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-18",
+      "source": "ResearchStudyCollection",
+      "target": "ResearchStudy",
+      "label": "entries",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-19",
+      "source": "Questionnaire",
+      "target": "QuestionnaireItem",
+      "label": "items",
+      "cardinality": "+",
+      "multivalued": true,
+      "required": true,
+      "inherited": false
+    },
+    {
+      "id": "edge-20",
+      "source": "QuestionnaireItem",
+      "target": "QuestionnaireItem",
+      "label": "part_of",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-21",
+      "source": "QuestionnaireResponse",
+      "target": "Visit",
+      "label": "associated_visit",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-22",
+      "source": "QuestionnaireResponse",
+      "target": "QuestionnaireResponseItem",
+      "label": "items",
+      "cardinality": "+",
+      "multivalued": true,
+      "required": true,
+      "inherited": false
+    },
+    {
+      "id": "edge-23",
+      "source": "QuestionnaireResponseItem",
+      "target": "QuestionnaireItem",
+      "label": "has_questionnaire_item",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-24",
+      "source": "QuestionnaireResponseItem",
+      "target": "QuestionnaireResponseValue",
+      "label": "response_value",
+      "cardinality": "1",
+      "multivalued": false,
+      "required": true,
+      "inherited": false
+    },
+    {
+      "id": "edge-25",
+      "source": "Condition",
+      "target": "Visit",
+      "label": "associated_visit",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-26",
+      "source": "Condition",
+      "target": "Participant",
+      "label": "associated_participant",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-27",
+      "source": "Condition",
+      "target": "Entity",
+      "label": "associated_evidence",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-28",
+      "source": "Procedure",
+      "target": "Visit",
+      "label": "associated_visit",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-29",
+      "source": "Procedure",
+      "target": "Participant",
+      "label": "associated_participant",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-30",
+      "source": "Procedure",
+      "target": "Quantity",
+      "label": "quantity",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-31",
+      "source": "ImagingStudy",
+      "target": "Visit",
+      "label": "associated_visit",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-32",
+      "source": "ImagingStudy",
+      "target": "Participant",
+      "label": "associated_participant",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-33",
+      "source": "ImagingStudy",
+      "target": "BodySite",
+      "label": "body_part_examined",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-34",
+      "source": "Exposure",
+      "target": "Visit",
+      "label": "associated_visit",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-35",
+      "source": "Exposure",
+      "target": "Participant",
+      "label": "associated_participant",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-36",
+      "source": "DrugExposure",
+      "target": "Visit",
+      "label": "associated_visit",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-37",
+      "source": "DrugExposure",
+      "target": "Participant",
+      "label": "associated_participant",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-38",
+      "source": "DeviceExposure",
+      "target": "Visit",
+      "label": "associated_visit",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-39",
+      "source": "DeviceExposure",
+      "target": "Participant",
+      "label": "associated_participant",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-40",
+      "source": "DimensionalObservation",
+      "target": "Visit",
+      "label": "associated_visit",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-41",
+      "source": "DimensionalObservation",
+      "target": "Participant",
+      "label": "associated_participant",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-42",
+      "source": "DimensionalObservation",
+      "target": "Entity",
+      "label": "focus",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-43",
+      "source": "DimensionalObservation",
+      "target": "Organization",
+      "label": "performed_by",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-44",
+      "source": "DimensionalObservation",
+      "target": "Quantity",
+      "label": "value_quantity",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-45",
+      "source": "DimensionalObservationSet",
+      "target": "Observation",
+      "label": "observations",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-46",
+      "source": "DimensionalObservationSet",
+      "target": "Visit",
+      "label": "associated_visit",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-47",
+      "source": "DimensionalObservationSet",
+      "target": "Participant",
+      "label": "associated_participant",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-48",
+      "source": "DimensionalObservationSet",
+      "target": "Entity",
+      "label": "focus",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-49",
+      "source": "DimensionalObservationSet",
+      "target": "Organization",
+      "label": "performed_by",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-50",
+      "source": "File",
+      "target": "Participant",
+      "label": "associated_participant",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-51",
+      "source": "File",
+      "target": "File",
+      "label": "derived_from",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-52",
+      "source": "ImagingFile",
+      "target": "Participant",
+      "label": "associated_participant",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-53",
+      "source": "ImagingFile",
+      "target": "File",
+      "label": "derived_from",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-54",
+      "source": "ImagingFile",
+      "target": "BodySite",
+      "label": "anatomical_site",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-55",
+      "source": "ImagingFile",
+      "target": "ImagingStudy",
+      "label": "related_imaging_study",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-56",
+      "source": "Document",
+      "target": "Entity",
+      "label": "focus",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-57",
+      "source": "Specimen",
+      "target": "Specimen",
+      "label": "parent_specimen",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-58",
+      "source": "Specimen",
+      "target": "Participant",
+      "label": "source_participant",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-59",
+      "source": "Specimen",
+      "target": "SpecimenCreationActivity",
+      "label": "creation_activity",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-60",
+      "source": "Specimen",
+      "target": "SpecimenProcessingActivity",
+      "label": "processing_activity",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-61",
+      "source": "Specimen",
+      "target": "SpecimenStorageActivity",
+      "label": "storage_activity",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-62",
+      "source": "Specimen",
+      "target": "SpecimenTransportActivity",
+      "label": "transport_activity",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-63",
+      "source": "Specimen",
+      "target": "SpecimenContainer",
+      "label": "contained_in",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-64",
+      "source": "Specimen",
+      "target": "DimensionalObservationSet",
+      "label": "dimensional_measures",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-65",
+      "source": "Specimen",
+      "target": "SpecimenQuantityObservation",
+      "label": "quantity_measure",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-66",
+      "source": "Specimen",
+      "target": "SpecimenQualityObservation",
+      "label": "quality_measure",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-67",
+      "source": "Specimen",
+      "target": "Document",
+      "label": "related_document",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-68",
+      "source": "Specimen",
+      "target": "BiologicProduct",
+      "label": "derived_product",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-69",
+      "source": "SpecimenContainer",
+      "target": "Substance",
+      "label": "additive",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-70",
+      "source": "SpecimenContainer",
+      "target": "SpecimenContainer",
+      "label": "parent_container",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-71",
+      "source": "SpecimenCreationActivity",
+      "target": "TimePoint",
+      "label": "date_started",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-72",
+      "source": "SpecimenCreationActivity",
+      "target": "TimePoint",
+      "label": "date_ended",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-73",
+      "source": "SpecimenCreationActivity",
+      "target": "Organization",
+      "label": "performed_by",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-74",
+      "source": "SpecimenCreationActivity",
+      "target": "Substance",
+      "label": "additive",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-75",
+      "source": "SpecimenCreationActivity",
+      "target": "BodySite",
+      "label": "collection_site",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-76",
+      "source": "SpecimenCreationActivity",
+      "target": "Quantity",
+      "label": "quantity_collected",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-77",
+      "source": "SpecimenQualityObservation",
+      "target": "Visit",
+      "label": "associated_visit",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-78",
+      "source": "SpecimenQualityObservation",
+      "target": "Participant",
+      "label": "associated_participant",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-79",
+      "source": "SpecimenQualityObservation",
+      "target": "Entity",
+      "label": "focus",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-80",
+      "source": "SpecimenQualityObservation",
+      "target": "Organization",
+      "label": "performed_by",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-81",
+      "source": "SpecimenQualityObservation",
+      "target": "Quantity",
+      "label": "value_quantity",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-82",
+      "source": "SpecimenQuantityObservation",
+      "target": "Visit",
+      "label": "associated_visit",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-83",
+      "source": "SpecimenQuantityObservation",
+      "target": "Participant",
+      "label": "associated_participant",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-84",
+      "source": "SpecimenQuantityObservation",
+      "target": "Entity",
+      "label": "focus",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-85",
+      "source": "SpecimenQuantityObservation",
+      "target": "Organization",
+      "label": "performed_by",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-86",
+      "source": "SpecimenQuantityObservation",
+      "target": "Quantity",
+      "label": "value_quantity",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-87",
+      "source": "SpecimenProcessingActivity",
+      "target": "TimePoint",
+      "label": "date_started",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-88",
+      "source": "SpecimenProcessingActivity",
+      "target": "TimePoint",
+      "label": "date_ended",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-89",
+      "source": "SpecimenProcessingActivity",
+      "target": "Quantity",
+      "label": "duration",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-90",
+      "source": "SpecimenProcessingActivity",
+      "target": "Substance",
+      "label": "additive",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-91",
+      "source": "SpecimenStorageActivity",
+      "target": "TimePoint",
+      "label": "date_started",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-92",
+      "source": "SpecimenStorageActivity",
+      "target": "TimePoint",
+      "label": "date_ended",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-93",
+      "source": "SpecimenStorageActivity",
+      "target": "Quantity",
+      "label": "duration",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-94",
+      "source": "SpecimenStorageActivity",
+      "target": "SpecimenContainer",
+      "label": "container",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-95",
+      "source": "SpecimenTransportActivity",
+      "target": "TimePoint",
+      "label": "date_started",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-96",
+      "source": "SpecimenTransportActivity",
+      "target": "TimePoint",
+      "label": "date_ended",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-97",
+      "source": "SpecimenTransportActivity",
+      "target": "Organization",
+      "label": "transport_origin",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-98",
+      "source": "SpecimenTransportActivity",
+      "target": "Organization",
+      "label": "transport_destination",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-99",
+      "source": "Substance",
+      "target": "Quantity",
+      "label": "substance_quantity",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-100",
+      "source": "ObservationSet",
+      "target": "Observation",
+      "label": "observations",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-101",
+      "source": "ObservationSet",
+      "target": "Visit",
+      "label": "associated_visit",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-102",
+      "source": "ObservationSet",
+      "target": "Participant",
+      "label": "associated_participant",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-103",
+      "source": "ObservationSet",
+      "target": "Entity",
+      "label": "focus",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-104",
+      "source": "ObservationSet",
+      "target": "Organization",
+      "label": "performed_by",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-105",
+      "source": "Observation",
+      "target": "Visit",
+      "label": "associated_visit",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-106",
+      "source": "Observation",
+      "target": "Participant",
+      "label": "associated_participant",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-107",
+      "source": "Observation",
+      "target": "Entity",
+      "label": "focus",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-108",
+      "source": "Observation",
+      "target": "Organization",
+      "label": "performed_by",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-109",
+      "source": "Observation",
+      "target": "Quantity",
+      "label": "value_quantity",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-110",
+      "source": "MeasurementObservationSet",
+      "target": "Observation",
+      "label": "observations",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-111",
+      "source": "MeasurementObservationSet",
+      "target": "Visit",
+      "label": "associated_visit",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-112",
+      "source": "MeasurementObservationSet",
+      "target": "Participant",
+      "label": "associated_participant",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-113",
+      "source": "MeasurementObservationSet",
+      "target": "Entity",
+      "label": "focus",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-114",
+      "source": "MeasurementObservationSet",
+      "target": "Organization",
+      "label": "performed_by",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-115",
+      "source": "MeasurementObservation",
+      "target": "Visit",
+      "label": "associated_visit",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-116",
+      "source": "MeasurementObservation",
+      "target": "Participant",
+      "label": "associated_participant",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-117",
+      "source": "MeasurementObservation",
+      "target": "Entity",
+      "label": "focus",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-118",
+      "source": "MeasurementObservation",
+      "target": "Organization",
+      "label": "performed_by",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-119",
+      "source": "MeasurementObservation",
+      "target": "Quantity",
+      "label": "value_quantity",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-120",
+      "source": "MeasurementObservation",
+      "target": "Quantity",
+      "label": "range_low",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-121",
+      "source": "MeasurementObservation",
+      "target": "Quantity",
+      "label": "range_high",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-122",
+      "source": "MeasurementObservation",
+      "target": "Assay",
+      "label": "associated_assay",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-123",
+      "source": "MeasurementObservation",
+      "target": "BodySite",
+      "label": "body_site",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-124",
+      "source": "SdohObservationSet",
+      "target": "Observation",
+      "label": "observations",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-125",
+      "source": "SdohObservationSet",
+      "target": "Visit",
+      "label": "associated_visit",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-126",
+      "source": "SdohObservationSet",
+      "target": "Participant",
+      "label": "associated_participant",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-127",
+      "source": "SdohObservationSet",
+      "target": "Entity",
+      "label": "focus",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-128",
+      "source": "SdohObservationSet",
+      "target": "Organization",
+      "label": "performed_by",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-129",
+      "source": "SdohObservation",
+      "target": "Visit",
+      "label": "associated_visit",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-130",
+      "source": "SdohObservation",
+      "target": "Participant",
+      "label": "associated_participant",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-131",
+      "source": "SdohObservation",
+      "target": "Entity",
+      "label": "focus",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-132",
+      "source": "SdohObservation",
+      "target": "Organization",
+      "label": "performed_by",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-133",
+      "source": "SdohObservation",
+      "target": "Quantity",
+      "label": "value_quantity",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": true
+    },
+    {
+      "id": "edge-134",
+      "source": "SdohObservation",
+      "target": "QuestionnaireItem",
+      "label": "related_questionnaire_item",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-135",
+      "source": "Assay",
+      "target": "Substance",
+      "label": "reagent",
+      "cardinality": "*",
+      "multivalued": true,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-136",
+      "source": "Assay",
+      "target": "Quantity",
+      "label": "lower_limit_of_detection",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    },
+    {
+      "id": "edge-137",
+      "source": "Assay",
+      "target": "Quantity",
+      "label": "upper_limit_of_detection",
+      "cardinality": "0..1",
+      "multivalued": false,
+      "required": false,
+      "inherited": false
+    }
+  ]
+}
