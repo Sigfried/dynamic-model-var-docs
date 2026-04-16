@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BDCHM Containment Tree</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --surface: #ffffff;
+    --border: #d0d5dd;
+    --text: #1a1a2e;
+    --text-muted: #5f6b7a;
+    --accent: #1a73c7;
+    --node-hover: rgba(26,115,199,0.06);
+    --slot-color: #5f6b7a;
+    --card-color: #c27a0a;
+    --flip-color: #8e44ad;
+    --cycle-color: #c0392b;
+    --abstract-color: #8e44ad;
+    --subclass-color: #278741;
+    --subclass-bg: rgba(39,135,65,0.06);
+    --subclass-border: rgba(39,135,65,0.2);
+    --indent: 24px;
+  }
+
+  [data-theme="dark"] {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --border: #334;
+    --text: #e0e0e0;
+    --text-muted: #8892a8;
+    --accent: #4fc3f7;
+    --node-hover: rgba(79,195,247,0.08);
+    --slot-color: #8892a8;
+    --card-color: #ffcc80;
+    --flip-color: #ce93d8;
+    --cycle-color: #ef9a9a;
+    --abstract-color: #ce93d8;
+    --subclass-color: #a5d6a7;
+    --subclass-bg: rgba(165,214,167,0.06);
+    --subclass-border: rgba(165,214,167,0.2);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    padding: 0;
+  }
+
+  header {
+    padding: 12px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  h1 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+  }
+
+  .controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-left: auto;
+  }
+
+  .btn {
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.78rem;
+    cursor: pointer;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.active { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+
+  .legend {
+    padding: 6px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .legend-item { display: flex; align-items: center; gap: 4px; }
+
+  .tree-container {
+    padding: 16px 24px;
+    max-width: 1000px;
+  }
+
+  /* Tree node */
+  .tree-node {
+    position: relative;
+  }
+
+  .tree-node-row {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .tree-node-row:hover {
+    background: var(--node-hover);
+  }
+
+  /* Subclass row styling */
+  .tree-node-row.subclass-row {
+    background: var(--subclass-bg);
+    border-left: 2px solid var(--subclass-border);
+    margin-left: -2px;
+  }
+  .tree-node-row.subclass-row:hover {
+    background: rgba(39,135,65,0.12);
+  }
+  [data-theme="dark"] .tree-node-row.subclass-row:hover {
+    background: rgba(165,214,167,0.12);
+  }
+
+  .tree-children {
+    padding-left: var(--indent);
+    border-left: 1px solid var(--border);
+    margin-left: 8px;
+  }
+
+  .tree-children.collapsed {
+    display: none;
+  }
+
+  /* Subclass connector — dashed instead of solid */
+  .tree-children.subclass-children {
+    border-left-style: dashed;
+    border-left-color: var(--subclass-border);
+  }
+
+  /* Chevron */
+  .chevron {
+    width: 14px;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    text-align: center;
+    transition: transform 0.15s;
+  }
+  .chevron.expanded { transform: rotate(90deg); }
+  .chevron.leaf { visibility: hidden; }
+
+  /* Subclass diamond marker */
+  .subclass-marker {
+    width: 14px;
+    font-size: 0.7rem;
+    color: var(--subclass-color);
+    flex-shrink: 0;
+    text-align: center;
+    font-weight: 600;
+  }
+
+  /* Class name */
+  .class-name {
+    font-weight: 600;
+    font-size: 0.88rem;
+  }
+  .class-name.abstract {
+    font-style: italic;
+    color: var(--abstract-color);
+  }
+  .class-name.subclass-name {
+    color: var(--subclass-color);
+  }
+
+  /* Slot annotation */
+  .slot-via {
+    font-size: 0.75rem;
+    color: var(--slot-color);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  .cardinality {
+    font-size: 0.72rem;
+    color: var(--card-color);
+    font-weight: 600;
+  }
+
+  .flip-tag {
+    font-size: 0.62rem;
+    color: var(--flip-color);
+    background: rgba(142,68,173,0.08);
+    padding: 0 4px;
+    border-radius: 3px;
+  }
+  [data-theme="dark"] .flip-tag {
+    background: rgba(206,147,216,0.12);
+  }
+
+  .is-a-tag {
+    font-size: 0.62rem;
+    color: var(--subclass-color);
+    background: rgba(39,135,65,0.08);
+    padding: 0 4px;
+    border-radius: 3px;
+  }
+  [data-theme="dark"] .is-a-tag {
+    background: rgba(165,214,167,0.12);
+  }
+
+  .cycle-tag {
+    font-size: 0.72rem;
+    color: var(--cycle-color);
+    font-weight: 600;
+    cursor: help;
+  }
+
+  .desc-tooltip {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-left: 8px;
+    max-width: 400px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: none;
+  }
+  .tree-node-row:hover .desc-tooltip {
+    display: inline;
+  }
+
+  /* Child count badge */
+  .child-count {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    background: rgba(0,0,0,0.04);
+    padding: 0 5px;
+    border-radius: 8px;
+    margin-left: 2px;
+  }
+  [data-theme="dark"] .child-count {
+    background: rgba(255,255,255,0.06);
+  }
+
+  .note {
+    padding: 12px 16px;
+    margin: 16px 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+  .note strong { color: var(--text); font-weight: 600; }
+  .note code {
+    background: rgba(0,0,0,0.05);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 0.78rem;
+  }
+  [data-theme="dark"] .note code {
+    background: rgba(255,255,255,0.08);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>BDCHM Containment Tree</h1>
+  <span class="subtitle">What contains what — has-a (composition) and is-a (inheritance) combined</span>
+  <div class="controls">
+    <button class="btn" id="expand-all-btn">Expand all</button>
+    <button class="btn" id="collapse-all-btn">Collapse all</button>
+    <button class="btn" id="hide-subclasses-btn" title="Toggle subclass visibility">Hide subclasses</button>
+    <button class="btn" id="theme-btn">Dark</button>
+  </div>
+</header>
+
+<div class="legend">
+  <div class="legend-item"><span style="font-size:0.65rem">&#x25B6;</span> has-a (composition)</div>
+  <div class="legend-item"><span class="subclass-marker" style="display:inline">&#x25C7;</span><span style="color:var(--subclass-color)">subclass (is-a)</span></div>
+  <div class="legend-item"><span class="cardinality">*</span> cardinality</div>
+  <div class="legend-item"><span class="flip-tag">flipped</span> FK inverted for display</div>
+  <div class="legend-item"><span class="cycle-tag">&#x21BB;</span> cycle</div>
+  <div class="legend-item"><span class="class-name abstract" style="font-size:0.75rem">Italic</span> abstract</div>
+</div>
+
+<div class="note">
+  <strong>How to read this:</strong>
+  Indented items show containment: a parent class "contains" the child via a named slot.
+  <span class="subclass-marker" style="font-size:0.8rem">&#x25C7;</span> marks subclasses
+  (inheritance) — they inherit the parent's has-a slots and only show their
+  <em>own</em> additional slots, avoiding duplication.
+  BDCHM stores foreign keys on the child side (e.g., <code>Participant.member_of_research_study</code>),
+  so many containment edges are <span class="flip-tag">flipped</span> for this view.
+  Classes can appear under multiple parents. Click any row to expand/collapse.
+</div>
+
+<div class="tree-container" id="tree-container">
+  <em style="color:var(--text-muted)">Loading…</em>
+</div>
+
+<script>
+(async function() {
+  const resp = await fetch('./containment-tree.json');
+  const tree = await resp.json();
+
+  const container = document.getElementById('tree-container');
+  container.innerHTML = '';
+
+  let hideSubclasses = false;
+
+  function renderNode(node, isRoot) {
+    const isSubclass = node.kind === 'subclass';
+    const div = document.createElement('div');
+    div.className = 'tree-node';
+    if (isSubclass) div.dataset.subclass = '1';
+
+    const row = document.createElement('div');
+    row.className = 'tree-node-row' + (isSubclass ? ' subclass-row' : '');
+
+    const hasChildren = node.children && node.children.length > 0 && !node.cycle;
+    const startExpanded = isRoot;
+
+    // Chevron or diamond marker
+    if (isSubclass) {
+      const marker = document.createElement('span');
+      marker.className = 'subclass-marker';
+      marker.textContent = '◇';
+      row.appendChild(marker);
+
+      // Subclasses also need a chevron if they have children
+      if (hasChildren) {
+        const chev = document.createElement('span');
+        chev.className = 'chevron' + (startExpanded ? ' expanded' : '');
+        chev.textContent = '▶';
+        row.appendChild(chev);
+      }
+    } else {
+      const chev = document.createElement('span');
+      chev.className = 'chevron' + (hasChildren ? (startExpanded ? ' expanded' : '') : ' leaf');
+      chev.textContent = '▶';
+      row.appendChild(chev);
+    }
+
+    // Class name
+    const name = document.createElement('span');
+    const nameClasses = ['class-name'];
+    if (node.abstract) nameClasses.push('abstract');
+    if (isSubclass) nameClasses.push('subclass-name');
+    name.className = nameClasses.join(' ');
+    name.textContent = node.label;
+    name.title = node.description || '';
+    row.appendChild(name);
+
+    // Is-a tag for subclasses
+    if (isSubclass) {
+      const tag = document.createElement('span');
+      tag.className = 'is-a-tag';
+      tag.textContent = 'is-a';
+      row.appendChild(tag);
+    }
+
+    // Slot via (has-a nodes only)
+    if (node.slot) {
+      const via = document.createElement('span');
+      via.className = 'slot-via';
+      via.textContent = node.slot;
+      row.appendChild(via);
+    }
+
+    // Cardinality
+    if (node.cardinality) {
+      const card = document.createElement('span');
+      card.className = 'cardinality';
+      card.textContent = node.cardinality;
+      row.appendChild(card);
+    }
+
+    // Flipped tag
+    if (node.flipped) {
+      const tag = document.createElement('span');
+      tag.className = 'flip-tag';
+      tag.textContent = 'flipped';
+      tag.title = 'FK direction inverted: in the model, ' + node.label + '.' + node.slot + ' references the parent';
+      row.appendChild(tag);
+    }
+
+    // Cycle tag
+    if (node.cycle) {
+      const tag = document.createElement('span');
+      tag.className = 'cycle-tag';
+      tag.textContent = '↻ cycle';
+      tag.title = node.label + ' references itself (recursive hierarchy)';
+      row.appendChild(tag);
+    }
+
+    // Child count
+    if (hasChildren) {
+      const badge = document.createElement('span');
+      badge.className = 'child-count';
+      badge.textContent = node.children.length;
+      row.appendChild(badge);
+    }
+
+    // Description tooltip
+    if (node.description) {
+      const desc = document.createElement('span');
+      desc.className = 'desc-tooltip';
+      desc.textContent = node.description;
+      row.appendChild(desc);
+    }
+
+    div.appendChild(row);
+
+    // Children
+    if (hasChildren) {
+      const childrenDiv = document.createElement('div');
+      const childClasses = ['tree-children'];
+      if (!startExpanded) childClasses.push('collapsed');
+      // Use dashed connector for subclass children
+      if (isSubclass) childClasses.push('subclass-children');
+      childrenDiv.className = childClasses.join(' ');
+
+      for (const child of node.children) {
+        childrenDiv.appendChild(renderNode(child, false));
+      }
+      div.appendChild(childrenDiv);
+
+      // Toggle
+      const chevrons = row.querySelectorAll('.chevron');
+      row.addEventListener('click', () => {
+        childrenDiv.classList.toggle('collapsed');
+        chevrons.forEach(c => c.classList.toggle('expanded'));
+      });
+    }
+
+    return div;
+  }
+
+  for (let i = 0; i < tree.length; i++) {
+    container.appendChild(renderNode(tree[i], true));
+  }
+
+  // Controls
+  document.getElementById('expand-all-btn').addEventListener('click', () => {
+    container.querySelectorAll('.tree-children').forEach(el => {
+      el.classList.remove('collapsed');
+    });
+    container.querySelectorAll('.chevron:not(.leaf)').forEach(el => {
+      el.classList.add('expanded');
+    });
+  });
+
+  document.getElementById('collapse-all-btn').addEventListener('click', () => {
+    container.querySelectorAll('.tree-children').forEach(el => {
+      el.classList.add('collapsed');
+    });
+    container.querySelectorAll('.chevron:not(.leaf)').forEach(el => {
+      el.classList.remove('expanded');
+    });
+  });
+
+  document.getElementById('hide-subclasses-btn').addEventListener('click', () => {
+    hideSubclasses = !hideSubclasses;
+    const btn = document.getElementById('hide-subclasses-btn');
+    btn.classList.toggle('active', hideSubclasses);
+    btn.textContent = hideSubclasses ? 'Show subclasses' : 'Hide subclasses';
+    container.querySelectorAll('.tree-node[data-subclass]').forEach(el => {
+      el.style.display = hideSubclasses ? 'none' : '';
+    });
+  });
+
+  document.getElementById('theme-btn').addEventListener('click', () => {
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-btn');
+    if (html.getAttribute('data-theme') === 'dark') {
+      html.removeAttribute('data-theme');
+      btn.textContent = 'Dark';
+    } else {
+      html.setAttribute('data-theme', 'dark');
+      btn.textContent = 'Light';
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
