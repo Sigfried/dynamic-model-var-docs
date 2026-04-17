@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BDCHM Interactive Documentation — Design Explorations</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --surface: #ffffff;
+    --border: #d8dde4;
+    --text: #1a1a2e;
+    --text-muted: #5f6b7a;
+    --accent: #1a73c7;
+    --card-hover: rgba(26,115,199,0.04);
+    --tag-bg: rgba(26,115,199,0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 32px 24px;
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    margin-bottom: 8px;
+  }
+
+  .intro {
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    margin-bottom: 28px;
+    line-height: 1.7;
+  }
+
+  .intro a { color: var(--accent); text-decoration: none; }
+  .intro a:hover { text-decoration: underline; }
+
+  h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-top: 32px;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--border);
+  }
+
+  .card {
+    display: block;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 2px 8px rgba(26,115,199,0.08);
+    background: var(--card-hover);
+  }
+
+  .card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+
+  .card-desc {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 8px;
+  }
+
+  .card-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .tag {
+    font-size: 0.72rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--tag-bg);
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .tag.status-wip {
+    background: rgba(194,120,10,0.1);
+    color: #c2780a;
+  }
+
+  .tag.status-active {
+    background: rgba(39,135,65,0.1);
+    color: #278741;
+  }
+
+  .section-note {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+
+  .feedback-box {
+    margin-top: 36px;
+    padding: 16px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  .feedback-box strong {
+    color: var(--text);
+  }
+
+  footer {
+    margin-top: 36px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+
+  footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<h1>BDCHM Interactive Documentation</h1>
+<p class="subtitle">Design explorations for the BioData Catalyst Harmonized Model schema explorer</p>
+
+<p class="intro">
+  We're redesigning the
+  <a href="./">interactive schema documentation</a>
+  based on stakeholder feedback. The current view shows too much at once;
+  the new direction uses <strong>progressive disclosure</strong> — start simple, drill
+  into detail on demand. Below are mockups exploring different approaches.
+  We'd love your feedback on what's useful and what isn't.
+</p>
+
+<!-- ===== PROGRESSIVE DISCLOSURE ===== -->
+<h2>Progressive Disclosure (Tabular Drilldown)</h2>
+
+<p class="section-note">
+  The proposed new default view. Entities organized by category, with inline
+  drilldowns for slots, variables, and range details. This is a static mockup
+  showing a sequence of narrated examples — not yet interactive beyond
+  category expand/collapse and dark mode.
+</p>
+
+<a class="card" href="./tabular-drilldown-mockup.html">
+  <div class="card-title">Tabular Drilldown Mockup</div>
+  <div class="card-desc">
+    Seven narrated examples walking through the proposed UI: default view with
+    pinned entities, expanding categories, slot drilldown with inherited/overridden
+    tags, clicking enum and class range badges for inline detail cards, and
+    variable drilldowns (rich vs. simple). Includes UI controls mockup (search,
+    column toggles, expand/collapse) and a design notes section.
+  </div>
+  <div class="card-tags">
+    <span class="tag">progressive disclosure</span>
+    <span class="tag">light + dark mode</span>
+    <span class="tag">7 examples</span>
+    <span class="tag status-active">primary direction</span>
+  </div>
+</a>
+
+<!-- ===== HAS-A / CONTAINMENT ===== -->
+<h2>Model Structure: Containment Hierarchy</h2>
+
+<p class="section-note">
+  BDCHM uses relational FK-style references (child points to parent), so we invert
+  certain edges to show "what contains what." These views are proof-of-concept
+  explorations, not proposed final designs. The containment hierarchy can inform
+  navigation, default groupings, and the "pin entities to generate a focused diagram"
+  feature.
+</p>
+
+<a class="card" href="./containment-tree-mockup.html">
+  <div class="card-title">Containment Tree (Indented List)</div>
+  <div class="card-desc">
+    Interactive indented list rooted at ResearchStudyCollection showing the full
+    containment hierarchy. FK-direction edges are inverted for the containment view.
+    Inheritance (is-a) subclasses are nested inline with a diamond marker and only
+    show their own additional slots — no inherited duplication. Expand/collapse,
+    hide subclasses toggle, dark mode.
+  </div>
+  <div class="card-tags">
+    <span class="tag">containment</span>
+    <span class="tag">is-a + has-a</span>
+    <span class="tag">FK inversion</span>
+    <span class="tag status-wip">proof of concept</span>
+  </div>
+</a>
+
+<a class="card" href="./has-a-mockup.html">
+  <div class="card-title">Containment Graph (Node-Link Diagram)</div>
+  <div class="card-desc">
+    Cytoscape + dagre graph visualization of the same containment data (49 nodes,
+    95 edges). Three visually distinct edge types: solid (has-a), purple (flipped FK),
+    and dashed green (is-a subclass). Click a node to highlight its neighborhood and
+    see details in a side panel. Toggle has-a and is-a edges independently. Multiple
+    layout options (top-down, left-right, force-directed).
+  </div>
+  <div class="card-tags">
+    <span class="tag">graph view</span>
+    <span class="tag">Cytoscape + dagre</span>
+    <span class="tag">interactive</span>
+    <span class="tag status-wip">proof of concept</span>
+  </div>
+</a>
+
+<!-- ===== CURRENT APP ===== -->
+<h2>Current App</h2>
+
+<a class="card" href="./">
+  <div class="card-title">Current Interactive Schema Explorer</div>
+  <div class="card-desc">
+    The existing app with two/three-panel layout, link overlays connecting classes
+    to their ranges, detail popups, and variable tables. This is the "kitchen sink"
+    view that stakeholders found overwhelming — we're exploring alternatives above.
+    Still useful for detailed exploration and as a reference for what information
+    needs to be accessible in the redesign.
+  </div>
+  <div class="card-tags">
+    <span class="tag">current app</span>
+    <span class="tag">links + panels</span>
+    <span class="tag status-wip">being redesigned</span>
+  </div>
+</a>
+
+<!-- ===== FEEDBACK ===== -->
+<div class="feedback-box">
+  <strong>We'd like your feedback!</strong> Some questions to consider as you explore:
+  <ul style="margin-top: 8px; padding-left: 20px;">
+    <li>Does the progressive disclosure approach (tabular drilldown) feel like the right direction?</li>
+    <li>Is the containment tree useful for understanding model structure?
+        Does the hierarchy make sense, or are some edges pointing the wrong way?</li>
+    <li>Should the "current app" link-based view be kept as an option (e.g., a
+        "Kitchen Sink" tab), or does the new design fully replace it?</li>
+    <li>Would you use a "pin entities of interest, generate a focused diagram" feature?</li>
+    <li>What's confusing, missing, or that you wish worked differently?</li>
+  </ul>
+</div>
+
+<footer>
+  <strong>Target release: July 30, 2026</strong> &mdash;
+  <a href="https://github.com/Sigfried/dynamic-model-var-docs">GitHub repo</a>
+</footer>
+
+</body>
+</html>

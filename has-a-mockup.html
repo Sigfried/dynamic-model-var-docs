@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BDCHM has-a graph</title>
+<title>BDCHM Containment Graph</title>
 
 <!-- Cytoscape + dagre layout -->
 <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
@@ -18,15 +18,15 @@
     --text: #1a1a2e;
     --text-muted: #5f6b7a;
     --accent: #1a73c7;
-    --accent-dim: #b3d4f7;
-    --node-bg: #e6eff9;
+    --node-bg: #dce8f5;
     --node-border: #1a73c7;
-    --node-abstract-bg: #f0e6ff;
-    --node-abstract-border: #8e44ad;
-    --edge: #9aa5b4;
-    --edge-inherited: #d0d5dd;
-    --edge-highlight: #1a73c7;
-    --edge-highlight-incoming: #c27a0a;
+    --node-abstract-bg: #e8d5f5;
+    --node-abstract-border: #7b2d8e;
+    --edge-has-a: #2c3e50;
+    --edge-subclass: #1a8a3a;
+    --edge-flipped: #b33dc6;
+    --edge-highlight: #0d5baf;
+    --edge-highlight-in: #d4830a;
   }
 
   [data-theme="dark"] {
@@ -36,15 +36,15 @@
     --text: #e0e0e0;
     --text-muted: #8892a8;
     --accent: #4fc3f7;
-    --accent-dim: #2a6e8e;
     --node-bg: #1e3a5f;
     --node-border: #4fc3f7;
     --node-abstract-bg: #3a1e5a;
     --node-abstract-border: #ce93d8;
-    --edge: #6a7588;
-    --edge-inherited: #334;
+    --edge-has-a: #b0bec5;
+    --edge-subclass: #66bb6a;
+    --edge-flipped: #e040fb;
     --edge-highlight: #4fc3f7;
-    --edge-highlight-incoming: #ffcc80;
+    --edge-highlight-in: #ffcc80;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -57,11 +57,7 @@
     color: var(--text);
   }
 
-  .app {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-  }
+  .app { display: flex; flex-direction: column; height: 100vh; }
 
   header {
     padding: 10px 20px;
@@ -73,238 +69,129 @@
     flex-wrap: wrap;
   }
 
-  h1 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--accent);
-    margin-right: 8px;
-  }
+  h1 { font-size: 1.1rem; font-weight: 600; color: var(--accent); margin-right: 8px; }
+  .subtitle { color: var(--text-muted); font-size: 0.82rem; }
 
-  .subtitle {
-    color: var(--text-muted);
-    font-size: 0.82rem;
-  }
-
-  .controls {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    margin-left: auto;
-  }
+  .controls { display: flex; gap: 8px; align-items: center; margin-left: auto; }
 
   .control-group {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    font-size: 0.78rem;
-    color: var(--text-muted);
+    display: flex; gap: 4px; align-items: center;
+    font-size: 0.78rem; color: var(--text-muted);
   }
-
-  .control-group label {
-    white-space: nowrap;
-  }
+  .control-group label { white-space: nowrap; }
 
   .btn {
-    padding: 4px 10px;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    background: var(--surface);
-    color: var(--text);
-    font-size: 0.78rem;
-    cursor: pointer;
+    padding: 4px 10px; border: 1px solid var(--border); border-radius: 4px;
+    background: var(--surface); color: var(--text); font-size: 0.78rem; cursor: pointer;
   }
-  .btn:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-  .btn.active {
-    background: var(--accent);
-    color: var(--surface);
-    border-color: var(--accent);
-  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.active { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 
   select {
-    padding: 3px 6px;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    background: var(--surface);
-    color: var(--text);
-    font-size: 0.78rem;
+    padding: 3px 6px; border: 1px solid var(--border); border-radius: 4px;
+    background: var(--surface); color: var(--text); font-size: 0.78rem;
   }
 
   .legend {
     padding: 6px 20px;
     background: var(--surface);
     border-bottom: 1px solid var(--border);
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     color: var(--text-muted);
     display: flex;
     gap: 18px;
     flex-wrap: wrap;
     align-items: center;
   }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-edge { width: 24px; height: 2px; }
+  .legend-edge.dashed { border-top: 2px dashed; height: 0; }
 
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
+  .stats { margin-left: auto; font-size: 0.78rem; }
 
-  .legend-swatch {
-    width: 18px;
-    height: 12px;
-    border-radius: 3px;
-    border: 1px solid var(--border);
-  }
+  #cy { flex: 1; min-height: 0; background: var(--bg); }
 
-  .legend-edge {
-    width: 24px;
-    height: 2px;
-    background: var(--edge);
-  }
-  .legend-edge.inherited {
-    background: var(--edge-inherited);
-  }
-
-  .stats {
-    margin-left: auto;
-    color: var(--text-muted);
-    font-size: 0.78rem;
-  }
-
-  #cy {
-    flex: 1;
-    min-height: 0;
-    background: var(--bg);
-  }
-
+  /* Info panel */
   .info-panel {
-    position: absolute;
-    top: 110px;
-    right: 20px;
-    width: 340px;
-    max-height: calc(100vh - 140px);
-    overflow-y: auto;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 12px 14px;
+    position: absolute; top: 110px; right: 20px; width: 340px;
+    max-height: calc(100vh - 140px); overflow-y: auto;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; padding: 12px 14px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    font-size: 0.82rem;
-    display: none;
-    z-index: 10;
+    font-size: 0.82rem; display: none; z-index: 10;
   }
-
   .info-panel.visible { display: block; }
-
-  .info-panel h2 {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--accent);
-    margin-bottom: 4px;
-  }
-  .info-panel .desc {
-    color: var(--text-muted);
-    font-size: 0.78rem;
-    margin-bottom: 10px;
-    line-height: 1.4;
-  }
+  .info-panel h2 { font-size: 0.95rem; font-weight: 600; color: var(--accent); margin-bottom: 4px; }
+  .info-panel .desc { color: var(--text-muted); font-size: 0.78rem; margin-bottom: 10px; line-height: 1.4; }
   .info-panel .section-label {
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-top: 10px;
-    margin-bottom: 4px;
+    font-size: 0.7rem; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.5px; margin-top: 10px; margin-bottom: 4px;
   }
-  .info-panel ul {
-    list-style: none;
-    margin-bottom: 8px;
+  .info-panel ul { list-style: none; margin-bottom: 8px; }
+  .info-panel li { padding: 2px 0; font-size: 0.78rem; }
+  .info-panel .clickable {
+    color: var(--accent); cursor: pointer;
+    font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.75rem;
   }
-  .info-panel li {
-    padding: 2px 0;
-    font-family: 'SF Mono', 'Fira Code', monospace;
-    font-size: 0.75rem;
-  }
-  .info-panel .slot-name {
-    color: var(--accent);
-    cursor: pointer;
-  }
-  .info-panel .cardinality {
-    color: var(--text-muted);
-    font-size: 0.7rem;
-  }
+  .info-panel .clickable:hover { text-decoration: underline; }
+  .info-panel .card-label { font-size: 0.72rem; color: var(--text-muted); }
   .info-panel .close {
-    float: right;
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-size: 1rem;
+    float: right; background: none; border: none;
+    color: var(--text-muted); cursor: pointer; font-size: 1rem;
   }
   .info-panel .close:hover { color: var(--text); }
-
-  .loading {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    color: var(--text-muted);
-    font-size: 0.9rem;
-  }
-
-  /* Edge-label visibility is controlled by the style() function against edge data */
 </style>
 </head>
 <body>
 
 <div class="app">
   <header>
-    <h1>BDCHM has-a graph</h1>
-    <span class="subtitle">Classes connected by slot-range (composition) relationships</span>
+    <h1>BDCHM Containment Graph</h1>
+    <span class="subtitle">Has-a and is-a relationships — FK edges inverted for containment</span>
     <div class="controls">
       <div class="control-group">
         <label>Layout:</label>
         <select id="layout-select">
-          <option value="dagre-LR" selected>Dagre (left→right)</option>
-          <option value="dagre-TB">Dagre (top→bottom)</option>
+          <option value="dagre-TB" selected>Dagre (top-down)</option>
+          <option value="dagre-LR">Dagre (left-right)</option>
           <option value="cose">Cose (force)</option>
-          <option value="circle">Circle</option>
-          <option value="concentric">Concentric</option>
         </select>
       </div>
       <div class="control-group">
-        <label>Edge labels:</label>
-        <button class="btn active" id="labels-all" title="Show all slot names on edges">All</button>
-        <button class="btn" id="labels-hover" title="Only show labels on hover/selection">Hover</button>
-        <button class="btn" id="labels-none" title="Hide slot names">None</button>
+        <label>Labels:</label>
+        <button class="btn" id="labels-all">All</button>
+        <button class="btn active" id="labels-hover">Hover</button>
+        <button class="btn" id="labels-none">None</button>
       </div>
       <div class="control-group">
-        <button class="btn" id="fit-btn" title="Fit graph to screen">Fit</button>
+        <label>Show:</label>
+        <button class="btn active" id="show-has-a">has-a</button>
+        <button class="btn active" id="show-subclass">is-a</button>
       </div>
       <div class="control-group">
-        <button class="btn" id="theme-btn" title="Toggle dark mode">Dark</button>
+        <button class="btn" id="fit-btn">Fit</button>
+        <button class="btn" id="theme-btn">Dark</button>
       </div>
     </div>
   </header>
   <div class="legend">
-    <div class="legend-item"><span class="legend-swatch" style="background:var(--node-bg); border-color:var(--node-border)"></span> concrete class</div>
-    <div class="legend-item"><span class="legend-swatch" style="background:var(--node-abstract-bg); border-color:var(--node-abstract-border)"></span> abstract class</div>
-    <div class="legend-item"><span class="legend-edge"></span> defined here</div>
-    <div class="legend-item"><span class="legend-edge inherited"></span> inherited slot</div>
-    <div class="legend-item">edge label: <code style="background:rgba(0,0,0,0.06);padding:1px 4px;border-radius:3px">slot_name (cardinality)</code></div>
+    <div class="legend-item"><span class="legend-edge" style="background:var(--edge-has-a)"></span> has-a</div>
+    <div class="legend-item"><span class="legend-edge" style="background:var(--edge-flipped)"></span> has-a (flipped FK)</div>
+    <div class="legend-item"><span class="legend-edge dashed" style="border-color:var(--edge-subclass)"></span> is-a (subclass)</div>
+    <div class="legend-item" style="gap:3px">
+      <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:var(--node-bg);border:1px solid var(--node-border)"></span> concrete
+    </div>
+    <div class="legend-item" style="gap:3px">
+      <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:var(--node-abstract-bg);border:1px solid var(--node-abstract-border)"></span> abstract
+    </div>
     <div class="stats" id="stats">loading…</div>
   </div>
-  <div id="cy"><div class="loading">Loading graph…</div></div>
+  <div id="cy"></div>
   <div class="info-panel" id="info-panel">
     <button class="close" id="info-close">&#x2715;</button>
     <h2 id="info-name"></h2>
     <div class="desc" id="info-desc"></div>
-    <div class="section-label">has-a (outgoing)</div>
-    <ul id="info-outgoing"></ul>
-    <div class="section-label">referenced by (incoming)</div>
-    <ul id="info-incoming"></ul>
+    <div id="info-sections"></div>
   </div>
 </div>
 
@@ -312,49 +199,43 @@
 (async function() {
   cytoscape.use(cytoscapeDagre);
 
-  const resp = await fetch('./has-a-graph.json');
+  const resp = await fetch('./containment-graph.json');
   const data = await resp.json();
 
-  // Clear the "Loading..." placeholder so cytoscape has a clean container
-  document.getElementById('cy').innerHTML = '';
-
   document.getElementById('stats').textContent =
-    `${data.nodes.length} classes, ${data.edges.length} has-a edges`;
+    `${data.nodes.length} classes, ${data.edges.length} edges`;
 
-  // Map to cytoscape elements
   const elements = [
-    ...data.nodes.map(n => ({
-      data: {
-        id: n.id,
-        label: n.label,
-        abstract: n.abstract,
-        description: n.description,
-      }
-    })),
+    ...data.nodes.map(n => ({ data: { ...n } })),
     ...data.edges.map(e => ({
       data: {
-        id: e.id,
-        source: e.source,
-        target: e.target,
-        label: e.label,
-        cardinality: e.cardinality,
-        multivalued: e.multivalued,
-        inherited: e.inherited,
-        isLoop: e.source === e.target,
-        displayLabel: `${e.label} (${e.cardinality})`,
+        ...e,
+        displayLabel: e.kind === 'subclass'
+          ? 'is-a'
+          : e.label + (e.cardinality ? ` (${e.cardinality})` : ''),
       }
     })),
   ];
 
-  // Build outgoing/incoming indexes for the info panel
-  const outgoing = {};
-  const incoming = {};
+  // Build indexes for info panel
+  const outgoing = {}, incoming = {}, subclassOf = {}, subclasses = {};
   for (const e of data.edges) {
-    (outgoing[e.source] ||= []).push(e);
-    (incoming[e.target] ||= []).push(e);
+    if (e.kind === 'subclass') {
+      (subclasses[e.source] ||= []).push(e);
+      subclassOf[e.target] = e.source;
+    } else {
+      (outgoing[e.source] ||= []).push(e);
+      (incoming[e.target] ||= []).push(e);
+    }
   }
 
-  let labelMode = 'all'; // 'all' | 'hover' | 'none'
+  let labelMode = 'hover';
+  let showHasA = true;
+  let showSubclass = true;
+
+  function getCss(v) {
+    return getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  }
 
   function buildStyle() {
     return [
@@ -362,30 +243,19 @@
         selector: 'node',
         style: {
           'label': 'data(label)',
-          'background-color': function(ele) {
-            return ele.data('abstract')
-              ? getCss('--node-abstract-bg')
-              : getCss('--node-bg');
-          },
-          'border-color': function(ele) {
-            return ele.data('abstract')
-              ? getCss('--node-abstract-border')
-              : getCss('--node-border');
-          },
+          'background-color': ele => ele.data('abstract') ? getCss('--node-abstract-bg') : getCss('--node-bg'),
+          'border-color': ele => ele.data('abstract') ? getCss('--node-abstract-border') : getCss('--node-border'),
           'border-width': 1.5,
           'color': getCss('--text'),
-          'font-size': '11px',
+          'font-size': '14px',
           'font-weight': 500,
           'text-valign': 'center',
           'text-halign': 'center',
           'shape': 'round-rectangle',
-          'width': function(ele) {
-            // approximate: 7px per char, min 60
-            return Math.max(60, ele.data('label').length * 7);
-          },
-          'height': 26,
-          'padding': '6px',
-          'text-max-width': '160px',
+          'width': ele => Math.max(70, ele.data('label').length * 9),
+          'height': 32,
+          'padding': '8px',
+          'text-max-width': '200px',
           'text-wrap': 'wrap',
         }
       },
@@ -396,49 +266,89 @@
           'border-color': getCss('--accent'),
         }
       },
+      // has-a edges (not flipped)
       {
-        selector: 'edge',
+        selector: 'edge[kind = "has-a"][!flipped]',
         style: {
-          'width': 1.2,
+          'width': 1.4,
           'curve-style': 'bezier',
           'control-point-step-size': 40,
-          'line-color': function(ele) {
-            return ele.data('inherited') ? getCss('--edge-inherited') : getCss('--edge');
-          },
-          'target-arrow-color': function(ele) {
-            return ele.data('inherited') ? getCss('--edge-inherited') : getCss('--edge');
-          },
+          'line-color': getCss('--edge-has-a'),
+          'target-arrow-color': getCss('--edge-has-a'),
           'target-arrow-shape': 'vee',
           'arrow-scale': 0.8,
-          'opacity': function(ele) {
-            return ele.data('inherited') ? 0.5 : 0.85;
-          },
-          'font-size': '9px',
+          'opacity': 0.7,
+          'font-size': '11px',
           'color': getCss('--text-muted'),
           'text-background-color': getCss('--surface'),
           'text-background-opacity': 0.85,
           'text-background-padding': '2px',
           'text-rotation': 'autorotate',
-          'label': function(ele) {
+          'label': ele => {
             if (labelMode === 'all') return ele.data('displayLabel');
-            if (labelMode === 'hover' && (ele.hasClass('highlighted-out') || ele.hasClass('highlighted-in'))) {
+            if (labelMode === 'hover' && (ele.hasClass('hl-out') || ele.hasClass('hl-in')))
               return ele.data('displayLabel');
-            }
             return '';
           },
         }
       },
+      // has-a edges (flipped)
       {
-        selector: 'edge[?isLoop]',
+        selector: 'edge[kind = "has-a"][?flipped]',
         style: {
+          'width': 1.4,
           'curve-style': 'bezier',
-          'control-point-step-size': 60,
-          'loop-direction': '-45deg',
-          'loop-sweep': '-90deg',
+          'control-point-step-size': 40,
+          'line-color': getCss('--edge-flipped'),
+          'target-arrow-color': getCss('--edge-flipped'),
+          'target-arrow-shape': 'vee',
+          'arrow-scale': 0.8,
+          'opacity': 0.55,
+          'font-size': '11px',
+          'color': getCss('--edge-flipped'),
+          'text-background-color': getCss('--surface'),
+          'text-background-opacity': 0.85,
+          'text-background-padding': '2px',
+          'text-rotation': 'autorotate',
+          'label': ele => {
+            if (labelMode === 'all') return ele.data('displayLabel');
+            if (labelMode === 'hover' && (ele.hasClass('hl-out') || ele.hasClass('hl-in')))
+              return ele.data('displayLabel');
+            return '';
+          },
         }
       },
+      // subclass edges
       {
-        selector: 'edge.highlighted-out',
+        selector: 'edge[kind = "subclass"]',
+        style: {
+          'width': 1.2,
+          'curve-style': 'bezier',
+          'control-point-step-size': 40,
+          'line-style': 'dashed',
+          'line-dash-pattern': [6, 4],
+          'line-color': getCss('--edge-subclass'),
+          'target-arrow-color': getCss('--edge-subclass'),
+          'target-arrow-shape': 'triangle',
+          'arrow-scale': 0.7,
+          'opacity': 0.5,
+          'font-size': '11px',
+          'color': getCss('--edge-subclass'),
+          'text-background-color': getCss('--surface'),
+          'text-background-opacity': 0.85,
+          'text-background-padding': '2px',
+          'text-rotation': 'autorotate',
+          'label': ele => {
+            if (labelMode === 'all') return 'is-a';
+            if (labelMode === 'hover' && (ele.hasClass('hl-out') || ele.hasClass('hl-in')))
+              return 'is-a';
+            return '';
+          },
+        }
+      },
+      // highlighted outgoing
+      {
+        selector: 'edge.hl-out',
         style: {
           'width': 2.5,
           'line-color': getCss('--edge-highlight'),
@@ -450,24 +360,27 @@
           'font-weight': 600,
         }
       },
+      // highlighted incoming
       {
-        selector: 'edge.highlighted-in',
+        selector: 'edge.hl-in',
         style: {
           'width': 2.5,
-          'line-color': getCss('--edge-highlight-incoming'),
-          'target-arrow-color': getCss('--edge-highlight-incoming'),
+          'line-color': getCss('--edge-highlight-in'),
+          'target-arrow-color': getCss('--edge-highlight-in'),
           'opacity': 1,
           'z-index': 10,
           'label': 'data(displayLabel)',
-          'color': getCss('--edge-highlight-incoming'),
+          'color': getCss('--edge-highlight-in'),
           'font-weight': 600,
         }
       },
       {
         selector: 'node.faded, edge.faded',
-        style: {
-          'opacity': 0.15,
-        }
+        style: { 'opacity': 0.12 }
+      },
+      {
+        selector: 'edge.hidden-kind',
+        style: { 'display': 'none' }
       },
     ];
   }
@@ -476,16 +389,15 @@
     container: document.getElementById('cy'),
     elements,
     style: buildStyle(),
-    wheelSensitivity: 0.2,
-    layout: dagreOpts('LR'),
+    wheelSensitivity: 0.3,
+    layout: dagreOpts('TB'),
   });
 
-  // ----- Layout options -----
-  function dagreOpts(rank) {
+  function dagreOpts(dir) {
     return {
       name: 'dagre',
-      rankDir: rank, // LR or TB
-      nodeSep: 30,
+      rankDir: dir,
+      nodeSep: 35,
       edgeSep: 15,
       rankSep: 80,
       animate: false,
@@ -496,132 +408,193 @@
 
   function runLayout(name) {
     let opts;
-    if (name === 'dagre-LR') opts = dagreOpts('LR');
-    else if (name === 'dagre-TB') opts = dagreOpts('TB');
+    if (name === 'dagre-TB') opts = dagreOpts('TB');
+    else if (name === 'dagre-LR') opts = dagreOpts('LR');
     else if (name === 'cose') {
       opts = {
-        name: 'cose',
-        animate: false,
-        fit: true,
-        padding: 30,
-        nodeRepulsion: 8000,
-        idealEdgeLength: 120,
-        gravity: 0.25,
-      };
-    } else if (name === 'circle') {
-      opts = { name: 'circle', animate: false, fit: true, padding: 30 };
-    } else if (name === 'concentric') {
-      opts = {
-        name: 'concentric',
-        animate: false,
-        fit: true,
-        padding: 30,
-        concentric: function(node) {
-          return (incoming[node.id()] || []).length;
-        },
-        levelWidth: function() { return 4; },
+        name: 'cose', animate: false, fit: true, padding: 30,
+        nodeRepulsion: 8000, idealEdgeLength: 100, gravity: 0.25,
       };
     }
     cy.layout(opts).run();
   }
 
-  // ----- Interactions -----
-  cy.on('tap', 'node', evt => {
-    const node = evt.target;
-    selectNode(node.id());
+  // --- Interactions ---
+  cy.on('tap', 'node', evt => selectNode(evt.target.id()));
+
+  cy.on('tap', evt => {
+    if (evt.target === cy) clearSelection();
   });
 
-  cy.on('tap', (evt) => {
-    if (evt.target === cy) {
-      cy.elements().removeClass('faded highlighted-out highlighted-in');
-      document.getElementById('info-panel').classList.remove('visible');
-      cy.nodes().unselect();
-    }
+  // Hover on node: highlight connected edges (shows labels in hover mode)
+  let hoverLocked = false; // true when a node is tap-selected
+
+  cy.on('mouseover', 'node', evt => {
+    if (hoverLocked) return;
+    const node = evt.target;
+    cy.elements().addClass('faded');
+    node.removeClass('faded');
+    const outEdges = node.outgoers('edge');
+    const inEdges = node.incomers('edge');
+    const neighborhood = node
+      .union(outEdges).union(outEdges.targets())
+      .union(inEdges).union(inEdges.sources());
+    neighborhood.removeClass('faded');
+    outEdges.addClass('hl-out');
+    inEdges.addClass('hl-in');
+  });
+
+  cy.on('mouseout', 'node', () => {
+    if (hoverLocked) return;
+    cy.elements().removeClass('faded hl-out hl-in');
+  });
+
+  // Hover on edge: show its label
+  cy.on('mouseover', 'edge', evt => {
+    if (hoverLocked) return;
+    evt.target.addClass('hl-out');
+  });
+
+  cy.on('mouseout', 'edge', evt => {
+    if (hoverLocked) return;
+    evt.target.removeClass('hl-out');
   });
 
   function selectNode(id) {
+    hoverLocked = true;
     const node = cy.getElementById(id);
     if (!node || node.length === 0) return;
-    cy.elements().removeClass('faded highlighted-out highlighted-in');
+    cy.elements().removeClass('faded hl-out hl-in');
     cy.elements().addClass('faded');
     node.removeClass('faded');
 
     const outEdges = node.outgoers('edge');
     const inEdges = node.incomers('edge');
-    const neighborhood = node.union(outEdges).union(outEdges.targets()).union(inEdges).union(inEdges.sources());
+    const neighborhood = node
+      .union(outEdges).union(outEdges.targets())
+      .union(inEdges).union(inEdges.sources());
     neighborhood.removeClass('faded');
-    outEdges.addClass('highlighted-out');
-    inEdges.addClass('highlighted-in');
-
+    outEdges.addClass('hl-out');
+    inEdges.addClass('hl-in');
     node.select();
     showInfoPanel(id);
+  }
+
+  function clearSelection() {
+    hoverLocked = false;
+    cy.elements().removeClass('faded hl-out hl-in');
+    cy.nodes().unselect();
+    document.getElementById('info-panel').classList.remove('visible');
   }
 
   function showInfoPanel(id) {
     const nodeData = data.nodes.find(n => n.id === id);
     const panel = document.getElementById('info-panel');
-    document.getElementById('info-name').textContent = id + (nodeData.abstract ? ' (abstract)' : '');
+    document.getElementById('info-name').textContent =
+      id + (nodeData.abstract ? ' (abstract)' : '');
     document.getElementById('info-desc').textContent = nodeData.description || '';
 
-    const outgoingList = document.getElementById('info-outgoing');
-    outgoingList.innerHTML = '';
-    const outs = (outgoing[id] || []).slice().sort((a, b) => a.label.localeCompare(b.label));
-    if (outs.length === 0) outgoingList.innerHTML = '<li style="color:var(--text-muted); font-family:inherit; font-style:italic">(none)</li>';
-    for (const e of outs) {
-      const li = document.createElement('li');
-      const inh = e.inherited ? ' <span style="color:var(--text-muted);font-size:0.68rem">[inherited]</span>' : '';
-      li.innerHTML = `<span class="slot-name" data-target="${e.target}">${e.label}</span> <span class="cardinality">(${e.cardinality})</span> &rarr; <span class="slot-name" data-target="${e.target}">${e.target}</span>${inh}`;
-      outgoingList.appendChild(li);
+    const sections = document.getElementById('info-sections');
+    sections.innerHTML = '';
+
+    function addSection(label, items) {
+      if (!items || items.length === 0) return;
+      const lbl = document.createElement('div');
+      lbl.className = 'section-label';
+      lbl.textContent = label;
+      sections.appendChild(lbl);
+      const ul = document.createElement('ul');
+      for (const item of items) {
+        const li = document.createElement('li');
+        li.innerHTML = item;
+        ul.appendChild(li);
+      }
+      sections.appendChild(ul);
     }
 
-    const incomingList = document.getElementById('info-incoming');
-    incomingList.innerHTML = '';
-    const ins = (incoming[id] || []).slice().sort((a, b) => a.source.localeCompare(b.source));
-    if (ins.length === 0) incomingList.innerHTML = '<li style="color:var(--text-muted); font-family:inherit; font-style:italic">(none)</li>';
-    for (const e of ins) {
-      const li = document.createElement('li');
-      const inh = e.inherited ? ' <span style="color:var(--text-muted);font-size:0.68rem">[inherited]</span>' : '';
-      li.innerHTML = `<span class="slot-name" data-target="${e.source}">${e.source}</span>.${e.label} <span class="cardinality">(${e.cardinality})</span>${inh}`;
-      incomingList.appendChild(li);
+    // Has-a children (outgoing)
+    const outs = (outgoing[id] || []).sort((a, b) => a.label.localeCompare(b.label));
+    addSection('Contains (has-a)', outs.map(e => {
+      const flip = e.flipped ? ' <span class="card-label">[flipped]</span>' : '';
+      return `<span class="clickable" data-id="${e.target}">${e.target}</span>` +
+        ` <span class="card-label">via ${e.label} (${e.cardinality})</span>${flip}`;
+    }));
+
+    // Has-a parents (incoming)
+    const ins = (incoming[id] || []).sort((a, b) => a.source.localeCompare(b.source));
+    addSection('Contained by', ins.map(e => {
+      const flip = e.flipped ? ' <span class="card-label">[flipped]</span>' : '';
+      return `<span class="clickable" data-id="${e.source}">${e.source}</span>` +
+        ` <span class="card-label">via ${e.label} (${e.cardinality})</span>${flip}`;
+    }));
+
+    // Subclasses
+    const subs = (subclasses[id] || []).sort((a, b) => a.target.localeCompare(b.target));
+    addSection('Subclasses (is-a)', subs.map(e =>
+      `<span class="clickable" data-id="${e.target}">${e.target}</span>`
+    ));
+
+    // Parent class
+    if (subclassOf[id]) {
+      addSection('Parent class', [
+        `<span class="clickable" data-id="${subclassOf[id]}">${subclassOf[id]}</span>`
+      ]);
+    }
+
+    // No sections at all
+    if (sections.children.length === 0) {
+      sections.innerHTML = '<div class="card-label" style="margin-top:8px">(no containment relationships)</div>';
     }
 
     panel.classList.add('visible');
 
-    panel.querySelectorAll('.slot-name').forEach(el => {
+    panel.querySelectorAll('.clickable').forEach(el => {
       el.addEventListener('click', () => {
-        const tgt = el.dataset.target;
+        const tgt = el.dataset.id;
         if (tgt) selectNode(tgt);
       });
     });
   }
 
-  document.getElementById('info-close').addEventListener('click', () => {
-    document.getElementById('info-panel').classList.remove('visible');
-    cy.elements().removeClass('faded highlighted-out highlighted-in');
-    cy.nodes().unselect();
-  });
+  document.getElementById('info-close').addEventListener('click', clearSelection);
 
-  // ----- Controls -----
+  // --- Controls ---
   document.getElementById('layout-select').addEventListener('change', e => {
     runLayout(e.target.value);
   });
 
-  document.getElementById('fit-btn').addEventListener('click', () => {
-    cy.fit(undefined, 30);
-  });
+  document.getElementById('fit-btn').addEventListener('click', () => cy.fit(undefined, 30));
 
   function setLabelMode(mode) {
     labelMode = mode;
     ['labels-all', 'labels-hover', 'labels-none'].forEach(id => {
       document.getElementById(id).classList.toggle('active', id === `labels-${mode}`);
     });
-    // Rebuild styles so the edge label function picks up the new mode
     cy.style().fromJson(buildStyle()).update();
   }
-
   document.getElementById('labels-all').addEventListener('click', () => setLabelMode('all'));
   document.getElementById('labels-hover').addEventListener('click', () => setLabelMode('hover'));
   document.getElementById('labels-none').addEventListener('click', () => setLabelMode('none'));
+
+  function updateEdgeVisibility() {
+    cy.edges().forEach(edge => {
+      const kind = edge.data('kind');
+      const hidden = (kind === 'has-a' && !showHasA) || (kind === 'subclass' && !showSubclass);
+      edge.toggleClass('hidden-kind', hidden);
+    });
+  }
+
+  document.getElementById('show-has-a').addEventListener('click', () => {
+    showHasA = !showHasA;
+    document.getElementById('show-has-a').classList.toggle('active', showHasA);
+    updateEdgeVisibility();
+  });
+
+  document.getElementById('show-subclass').addEventListener('click', () => {
+    showSubclass = !showSubclass;
+    document.getElementById('show-subclass').classList.toggle('active', showSubclass);
+    updateEdgeVisibility();
+  });
 
   document.getElementById('theme-btn').addEventListener('click', () => {
     const html = document.documentElement;
@@ -633,13 +606,8 @@
       html.setAttribute('data-theme', 'dark');
       btn.textContent = 'Light';
     }
-    // Rebuild cytoscape styles so functions re-read CSS variables
     cy.style().fromJson(buildStyle()).update();
   });
-
-  function getCss(varName) {
-    return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-  }
 })();
 </script>
 
