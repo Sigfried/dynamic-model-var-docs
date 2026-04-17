@@ -34,16 +34,27 @@ at once. The direction below is a progressive-disclosure approach captured in a
   the model — it's not just a peer class. The inheritance view doesn't make this
   visible.
 - So far we've been showing the inheritance (is-a) hierarchy. The has-a hierarchy is
-  probably of interest too, but may be big and overwhelming.
-  - **Plan:** try building a whole-model has-a visualization and see what it looks
-    like.
-  - Then: can the "pin a set of entities, generate a diagram just for those" idea
-    serve as a more focused way to view has-a relationships?
+  also of interest. Two exploratory mockups have been built:
+  - **[Containment tree](https://sigfried.github.io/dynamic-model-var-docs/containment-tree-mockup.html)**
+    — interactive indented list rooted at ResearchStudyCollection. Shows what contains
+    what, with is-a subclasses nested inline. Subclasses only show their own additional
+    slots (no inherited duplication).
+  - **[Containment graph](https://sigfried.github.io/dynamic-model-var-docs/has-a-mockup.html)**
+    — Cytoscape node-link diagram of the same containment data. Three visually distinct
+    edge types: has-a (solid), flipped FK (purple), is-a subclass (dashed green).
+- **Key design issue:** BDCHM follows relational FK conventions — references point from
+  child to parent (e.g., `Participant.member_of_research_study → ResearchStudy`). For a
+  containment view, these need to be inverted (ResearchStudy "contains" Participants).
+  A heuristic handles this: single-valued slots pointing to other entities are treated
+  as back-references and flipped; multi-valued slots and value-object targets stay
+  unflipped. A small override list handles exceptions.
+- **Open question:** the whole-model graph is borderline legible with 49 nodes and 95
+  edges. Would the "pin a set of entities → generate a filtered diagram" idea produce
+  a more useful view?
 - The [LinkML-generated docs](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/Assay/)
-  already render per-class Mermaid diagrams that distinguish the two:
-  hollow-triangle arrowheads (`<|--`) for is-a, chevron arrows with cardinality
-  (`-->` with `*`, `0..1`, `1`) for has-a. Worth considering for reuse or as a
-  convention to match.
+  already render per-class Mermaid diagrams that distinguish is-a (hollow-triangle
+  arrowheads) from has-a (chevron arrows with cardinality). Worth considering for reuse
+  or as a convention to match.
 
 ---
 

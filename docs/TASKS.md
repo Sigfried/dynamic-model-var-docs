@@ -31,11 +31,22 @@ explorer.
 
 1. **Finalize UX direction** — mockup review, stakeholder sign-off, decide primary
    audience (non-technical vs. technical vs. both-via-progressive-disclosure).
-2. **Has-a hierarchy — try it.** Build a whole-model has-a visualization to see what
-   it looks like. Then evaluate the "pin a set of entities → generate a filtered
-   diagram" idea as a more focused way to view has-a. Consider reusing / adapting the
-   LinkML-generated Mermaid diagrams (hollow-triangle = is-a, chevron with cardinality
-   = has-a).
+2. **Has-a hierarchy — try it.** ⚠️ IN PROGRESS. Built two exploratory mockups:
+   - [Containment tree](../public/containment-tree-mockup.html) — interactive indented
+     list rooted at ResearchStudyCollection. FK-direction edges inverted for containment
+     view; is-a subclasses nested inline (own slots only, no inherited duplication).
+   - [Containment graph](../public/has-a-mockup.html) — Cytoscape + dagre node-link
+     diagram from the same containment data (49 nodes, 95 edges). Three edge types:
+     has-a, flipped FK, and is-a subclass.
+   - Key finding: BDCHM uses FK-style back-references (child points to parent), so
+     most edges need inversion for a containment view. A heuristic (flip single-valued
+     slots to entities; keep multi-valued and value-object slots) plus a small override
+     list gets this ~90% right.
+   - Scripts: `scripts/extract_containment_tree.py`, `scripts/extract_has_a_graph.py`.
+   - **Still TODO**: evaluate the "pin a set of entities → generate filtered diagram"
+     idea. The whole-model graph is borderline legible; a pin-subset view may be the
+     more useful deliverable. Also: discuss FK-inversion heuristic with model designer
+     to validate edge-direction decisions.
 3. **Categorized entity list** — top-level Pinned section plus semantic categories
    (Admin/Study, Clinical, Lab/Biospecimen, etc.). Collapsible; only Pinned expanded by
    default.
