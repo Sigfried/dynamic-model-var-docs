@@ -6,6 +6,8 @@
 
 import { useState, useMemo } from 'react';
 import type { DataService } from '../services/DataService';
+import { EnumDetailCard } from './EnumDetailCard';
+import { ClassDetailCard } from './ClassDetailCard';
 
 interface SlotDrilldownProps {
   classId: string;
@@ -17,6 +19,7 @@ type Tab = 'slots' | 'variables';
 
 export function SlotDrilldown({ classId, dataService, onClose }: SlotDrilldownProps) {
   const [activeTab, setActiveTab] = useState<Tab>('slots');
+  const [openCard, setOpenCard] = useState<{ type: 'enum' | 'class'; id: string } | null>(null);
 
   const detail = useMemo(
     () => dataService.getDetailContent(classId),
@@ -80,8 +83,33 @@ export function SlotDrilldown({ classId, dataService, onClose }: SlotDrilldownPr
           <SlotTable
             headings={slotsSection.tableHeadings ?? []}
             rows={slotsSection.tableContent as string[][]}
+            onRangeClick={(range) => {
+              // Classify: if ends in Enum → enum card, if exists as class → class card
+              if (range.endsWith('Enum')) {
+                setOpenCard(openCard?.id === range ? null : { type: 'enum', id: range });
+              } else if (dataService.itemExists(range)) {
+                setOpenCard(openCard?.id === range ? null : { type: 'class', id: range });
+              }
+            }}
           />
         )}
+
+        {/* Inline detail card */}
+        {openCard?.type === 'enum' && (
+          <EnumDetailCard
+            enumId={openCard.id}
+            dataService={dataService}
+            onClose={() => setOpenCard(null)}
+          />
+        )}
+        {openCard?.type === 'class' && (
+          <ClassDetailCard
+            classId={openCard.id}
+            dataService={dataService}
+            onClose={() => setOpenCard(null)}
+          />
+        )}
+
         {activeTab === 'variables' && variablesSection?.tableContent && (
           <VariableTable
             headings={variablesSection.tableHeadings ?? []}
@@ -122,7 +150,7 @@ function TabButton({ label, count, active, onClick, activeColor }: {
 }
 
 
-function RangeBadge({ range }: { range: string }) {
+function RangeBadge({ range, onClick }: { range: string; onClick?: () => void }) {
   // Classify range by name heuristic: if it ends in Enum → enum, if capitalized and not a primitive → class
   const primitives = new Set([
     'string', 'integer', 'boolean', 'float', 'double', 'decimal',
@@ -139,14 +167,18 @@ function RangeBadge({ range }: { range: string }) {
   }
 
   return (
-    <span className={`inline-block px-1.5 py-0 rounded text-xs font-medium cursor-pointer ${colorClass}`}>
+    <span
+      className={`inline-block px-1.5 py-0 rounded text-xs font-medium cursor-pointer hover:ring-1 hover:ring-current ${colorClass}`}
+      onClick={onClick}
+      title={`Click to see ${range} details`}
+    >
       {range.length > 30 ? range.slice(0, 28) + '…' : range}
     </span>
   );
 }
 
 
-function SlotTable({ headings, rows }: { headings: string[]; rows: string[][] }) {
+function SlotTable({ headings, rows, onRangeClick }: { headings: string[]; rows: string[][]; onRangeClick?: (range: string) => void }) {
   // Columns: Name, Source, Range, Required, Multivalued, Description
   return (
     <table className="w-full text-xs">
@@ -165,7 +197,7 @@ function SlotTable({ headings, rows }: { headings: string[]; rows: string[][] })
             {row.map((cell, ci) => (
               <td key={ci} className={`px-2 py-1 ${ci === row.length - 1 ? 'text-gray-400 max-w-[300px] truncate' : ''}`}>
                 {ci === 2 && cell ? ( // Range column
-                  <RangeBadge range={cell} />
+                  <RangeBadge range={cell} onClick={() => onRangeClick?.(cell)} />
                 ) : ci === 1 && cell.includes('Inherited') ? ( // Source column with inherited
                   <span className="text-gray-400">
                     {cell}

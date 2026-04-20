@@ -33,6 +33,26 @@ const {elementTypes, } = APP_CONFIG;
 // Re-export UI types for UI components
 export type { EdgeInfo, ItemInfo };
 
+/** Enum detail for inline cards (no Element exposure) */
+export interface EnumDetailInfo {
+  name: string;
+  description: string;
+  permissibleValues: Array<{ key: string; description?: string }>;
+  totalValues: number;
+  usedBy: Array<{ classId: string; slotName: string }>;
+  inherits?: string[];
+}
+
+/** Class summary for inline cards (no Element exposure) */
+export interface ClassSummaryInfo {
+  name: string;
+  description: string;
+  isAbstract: boolean;
+  parentId?: string;
+  slots: Array<{ name: string; range: string; description: string }>;
+  referencedBy: Array<{ classId: string; slotName: string }>;
+}
+
 export class DataService {
   private modelData: ModelData;
 
@@ -256,6 +276,101 @@ export class DataService {
       classId,
       (_edge: string, attrs: EdgeAttributes) => attrs.type === EDGE_TYPES.MAPS_TO
     ).length;
+  }
+
+  /**
+   * Get enum detail for inline card display
+   */
+  getEnumDetail(enumId: string): EnumDetailInfo | null {
+    const element = this.modelData.elementLookup.get(enumId);
+    if (!element) return null;
+
+    const detail = element.getDetailData();
+    // Get permissible values from the enum's detail sections
+    const pvSection = detail.sections.find(s => s.name === 'Permissible Values');
+    const pvRows = (pvSection?.tableContent ?? []) as string[][];
+
+    // Build permissible values from the element directly via graph lookup
+    // The enum element stores permissibleValues but we access via detail data
+    // to maintain separation. The PV section has columns: [Key, Description]
+    const permissibleValues = pvRows.map(row => ({
+      key: String(row[0] ?? ''),
+      description: row[1] ? String(row[1]) : undefined,
+    }));
+
+    // Find all slots that use this enum as a range
+    const usedBy: Array<{ classId: string; slotName: string }> = [];
+    const edgeKeys = this.modelData.graph.filterEdges(
+      enumId,
+      (_edge: string, attrs: EdgeAttributes) =>
+        attrs.type === EDGE_TYPES.CLASS_RANGE || attrs.type === EDGE_TYPES.SLOT_RANGE
+    );
+    for (const edgeKey of edgeKeys) {
+      const sourceId = this.modelData.graph.source(edgeKey);
+      const sourceAttrs = this.modelData.graph.getNodeAttributes(sourceId);
+      if (sourceAttrs.type === 'class') {
+        const edgeAttrs = this.modelData.graph.getEdgeAttributes(edgeKey) as SlotEdgeAttributes;
+        usedBy.push({ classId: sourceId, slotName: edgeAttrs.slotName ?? '' });
+      }
+    }
+
+    // Check for inherits
+    const inheritsSection = detail.sections.find(s => s.name === 'Inherits Values From');
+    const inherits = inheritsSection?.tableContent
+      ? (inheritsSection.tableContent as Array<Array<{name: string}>>).map(row => row[0]?.name).filter(Boolean)
+      : undefined;
+
+    return {
+      name: detail.title ?? enumId,
+      description: detail.description ?? '',
+      permissibleValues,
+      totalValues: permissibleValues.length,
+      usedBy,
+      inherits: inherits && inherits.length > 0 ? inherits : undefined,
+    };
+  }
+
+  /**
+   * Get class summary for inline card display
+   */
+  getClassSummary(classId: string): ClassSummaryInfo | null {
+    const element = this.modelData.elementLookup.get(classId);
+    if (!element) return null;
+
+    const detail = element.getDetailData();
+    const slotsSection = detail.sections.find(s => s.name === 'Slots');
+    const slotRows = (slotsSection?.tableContent ?? []) as string[][];
+
+    // Slots: [Name, Source, Range, Required, Multivalued, Description]
+    const slots = slotRows.map(row => ({
+      name: String(row[0] ?? ''),
+      range: String(row[2] ?? ''),
+      description: String(row[5] ?? ''),
+    }));
+
+    // Find all classes that reference this class via CLASS_RANGE edges
+    const referencedBy: Array<{ classId: string; slotName: string }> = [];
+    const edgeKeys = this.modelData.graph.filterEdges(
+      classId,
+      (_edge: string, attrs: EdgeAttributes) => attrs.type === EDGE_TYPES.CLASS_RANGE
+    );
+    for (const edgeKey of edgeKeys) {
+      const sourceId = this.modelData.graph.source(edgeKey);
+      if (sourceId !== classId) {
+        // This is an incoming edge (some class references this class)
+        const edgeAttrs = this.modelData.graph.getEdgeAttributes(edgeKey) as SlotEdgeAttributes;
+        referencedBy.push({ classId: sourceId, slotName: edgeAttrs.slotName ?? '' });
+      }
+    }
+
+    return {
+      name: detail.title ?? classId,
+      description: detail.description ?? '',
+      isAbstract: detail.subtitle?.includes('abstract') ?? false,
+      parentId: detail.subtitle?.replace('extends ', '') ?? undefined,
+      slots,
+      referencedBy,
+    };
   }
 
   /**
