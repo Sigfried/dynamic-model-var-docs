@@ -202,6 +202,62 @@ export class DataService {
     return collection ? collection.getAllElements().map(e => e.name) : [];
   }
 
+  // ====================================================================
+  // Entity Explorer queries
+  // ====================================================================
+
+  /**
+   * Get class description
+   */
+  getClassDescription(classId: string): string {
+    const element = this.modelData.elementLookup.get(classId);
+    if (!element) return '';
+    const detail = element.getDetailData();
+    return detail.description ?? '';
+  }
+
+  /**
+   * Get slot count for a class (own + inherited)
+   */
+  getSlotCount(classId: string): number {
+    return this.modelData.graph.filterEdges(
+      classId,
+      (_edge: string, attrs: EdgeAttributes) => attrs.type === EDGE_TYPES.CLASS_SLOT
+    ).length;
+  }
+
+  /**
+   * Get range counts by type for a class.
+   * Classifies each CLASS_RANGE target as 'class', 'enum', or 'type'.
+   */
+  getRangeCountsByType(classId: string): { cls: number; enm: number; typ: number } {
+    const edgeKeys = this.modelData.graph.filterEdges(
+      classId,
+      (_edge: string, attrs: EdgeAttributes) => attrs.type === EDGE_TYPES.CLASS_RANGE
+    );
+    let cls = 0, enm = 0, typ = 0;
+    for (const edgeKey of edgeKeys) {
+      const targetId = this.modelData.graph.target(edgeKey);
+      const targetAttrs = this.modelData.graph.getNodeAttributes(targetId);
+      switch (targetAttrs.type) {
+        case 'class': cls++; break;
+        case 'enum': enm++; break;
+        default: typ++; break;
+      }
+    }
+    return { cls, enm, typ };
+  }
+
+  /**
+   * Get variable count for a class
+   */
+  getVariableCount(classId: string): number {
+    return this.modelData.graph.filterEdges(
+      classId,
+      (_edge: string, attrs: EdgeAttributes) => attrs.type === EDGE_TYPES.MAPS_TO
+    ).length;
+  }
+
   /**
    * Get all available item type IDs
    * Returns array of type IDs that can be used for sections/filtering

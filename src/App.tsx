@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import LayoutManager from './components/LayoutManager';
+import EntityExplorer from './components/EntityExplorer';
 import { getInitialState, type DialogState } from './utils/statePersistence';
 import { useModelData } from './hooks/useModelData';
 import { useLayoutState } from './hooks/useLayoutState';
@@ -57,6 +58,23 @@ function App() {
     const urlState = getInitialState();
     return urlState.dialogs ?? [];
   }, []);
+
+  // View mode toggle: 'explorer' (new default) or 'kitchen-sink' (old layout)
+  const [viewMode, setViewMode] = useState<'explorer' | 'kitchen-sink'>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('view') === 'kitchen-sink' ? 'kitchen-sink' : 'explorer';
+  });
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (viewMode === 'explorer') {
+      params.delete('view');
+    } else {
+      params.set('view', viewMode);
+    }
+    const newURL = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
+    window.history.replaceState({}, '', newURL);
+  }, [viewMode]);
 
   // Hover popups toggle — persisted in query string as hover=0
   const [hoverPopupsEnabled, setHoverPopupsEnabled] = useState(() => {
@@ -152,13 +170,30 @@ function App() {
             <p className="text-sm text-blue-100">BioData Catalyst Harmonized Model Explorer</p>
           </div>
           <div className="flex items-center gap-4 text-sm">
-            <button
-              onClick={() => setHoverPopupsEnabled(v => !v)}
-              className={`px-3 py-1 rounded transition-colors ${hoverPopupsEnabled ? 'bg-blue-700 hover:bg-blue-800' : 'bg-blue-800 opacity-70 hover:opacity-100'}`}
-              title={hoverPopupsEnabled ? 'Disable hover popups' : 'Enable hover popups'}
-            >
-              {hoverPopupsEnabled ? 'Hover: On' : 'Hover: Off'}
-            </button>
+            {/* View mode toggle */}
+            <div className="flex items-center rounded overflow-hidden border border-blue-400">
+              <button
+                onClick={() => setViewMode('explorer')}
+                className={`px-3 py-1 text-xs transition-colors ${viewMode === 'explorer' ? 'bg-white text-blue-700 font-semibold' : 'bg-blue-700 text-blue-100 hover:bg-blue-600'}`}
+              >
+                Explorer
+              </button>
+              <button
+                onClick={() => setViewMode('kitchen-sink')}
+                className={`px-3 py-1 text-xs transition-colors ${viewMode === 'kitchen-sink' ? 'bg-white text-blue-700 font-semibold' : 'bg-blue-700 text-blue-100 hover:bg-blue-600'}`}
+              >
+                Kitchen Sink
+              </button>
+            </div>
+            {viewMode === 'kitchen-sink' && (
+              <button
+                onClick={() => setHoverPopupsEnabled(v => !v)}
+                className={`px-3 py-1 rounded transition-colors ${hoverPopupsEnabled ? 'bg-blue-700 hover:bg-blue-800' : 'bg-blue-800 opacity-70 hover:opacity-100'}`}
+                title={hoverPopupsEnabled ? 'Disable hover popups' : 'Enable hover popups'}
+              >
+                {hoverPopupsEnabled ? 'Hover: On' : 'Hover: Off'}
+              </button>
+            )}
             <div className="relative">
               {hasLocalStorage ? (
                 <button
@@ -241,19 +276,23 @@ function App() {
         </div>
       </header>
 
-      {/* Main content: LayoutManager handles everything */}
-      <LayoutManager
-        dataService={dataService}
-        leftSections={leftSections}
-        middleSections={middleSections}
-        rightSections={rightSections}
-        setMiddleSections={setMiddleSections}
-        setRightSections={setRightSections}
-        initialDialogs={initialDialogs}
-        setDialogStatesGetter={setDialogStatesGetter}
-        onDialogsChange={triggerURLSave}
-        hoverPopupsEnabled={hoverPopupsEnabled}
-      />
+      {/* Main content */}
+      {viewMode === 'explorer' ? (
+        <EntityExplorer dataService={dataService} />
+      ) : (
+        <LayoutManager
+          dataService={dataService}
+          leftSections={leftSections}
+          middleSections={middleSections}
+          rightSections={rightSections}
+          setMiddleSections={setMiddleSections}
+          setRightSections={setRightSections}
+          initialDialogs={initialDialogs}
+          setDialogStatesGetter={setDialogStatesGetter}
+          onDialogsChange={triggerURLSave}
+          hoverPopupsEnabled={hoverPopupsEnabled}
+        />
+      )}
     </div>
   );
 }
