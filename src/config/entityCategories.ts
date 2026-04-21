@@ -14,6 +14,23 @@ export interface EntityCategory {
   readonly defaultExpanded: boolean;
 }
 
+/**
+ * Subclass relationships to show with indentation in the entity table.
+ * Key is the child class, value is its parent class. Both must appear
+ * in the same category's classIds list, with the parent listed first.
+ */
+export const SUBCLASS_OF: Record<string, string> = {
+  DrugExposure: 'Exposure',
+  DeviceExposure: 'Exposure',
+  ImagingFile: 'File',
+  DimensionalObservation: 'Observation',
+  DimensionalObservationSet: 'ObservationSet',
+  MeasurementObservationSet: 'ObservationSet',
+  SdohObservationSet: 'ObservationSet',
+  SpecimenQualityObservation: 'Observation',
+  SpecimenQuantityObservation: 'Observation',
+};
+
 /** Default pinned entities shown on first visit */
 export const DEFAULT_PINS = ['Demography', 'Condition', 'MeasurementObservation'];
 

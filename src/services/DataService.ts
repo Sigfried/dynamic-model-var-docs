@@ -331,6 +331,26 @@ export class DataService {
   }
 
   /**
+   * Get "referenced by" list for a class — which other classes point to it
+   * via CLASS_RANGE edges (incoming edges where this class is the target).
+   */
+  getReferencedBy(classId: string): Array<{ classId: string; slotName: string }> {
+    const result: Array<{ classId: string; slotName: string }> = [];
+    const edgeKeys = this.modelData.graph.filterEdges(
+      classId,
+      (_edge: string, attrs: EdgeAttributes) => attrs.type === EDGE_TYPES.CLASS_RANGE
+    );
+    for (const edgeKey of edgeKeys) {
+      const sourceId = this.modelData.graph.source(edgeKey);
+      if (sourceId !== classId) {
+        const edgeAttrs = this.modelData.graph.getEdgeAttributes(edgeKey) as SlotEdgeAttributes;
+        result.push({ classId: sourceId, slotName: edgeAttrs.slotName ?? '' });
+      }
+    }
+    return result;
+  }
+
+  /**
    * Get class summary for inline card display
    */
   getClassSummary(classId: string): ClassSummaryInfo | null {

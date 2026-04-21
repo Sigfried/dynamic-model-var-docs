@@ -6,6 +6,7 @@
 
 import { useMemo, useState } from 'react';
 import { SlotDrilldown } from './SlotDrilldown';
+import { SUBCLASS_OF } from '../config/entityCategories';
 import type { DataService } from '../services/DataService';
 
 interface EntityTableProps {
@@ -60,7 +61,7 @@ export function EntityTable({ classIds, dataService, isPinned, onTogglePin }: En
   };
 
   return (
-    <div className="border-x border-b border-gray-200 rounded-b-md">
+    <div className="border-x border-b border-gray-200 rounded-b-md pl-5">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-gray-200 bg-gray-50">
@@ -101,6 +102,8 @@ interface EntityRowProps {
 }
 
 function EntityRow({ row, isExpanded, isPinned, onTogglePin, onToggleDrilldown, dataService }: EntityRowProps) {
+  const isSubclass = row.id in SUBCLASS_OF;
+
   return (
     <>
       <tr
@@ -108,8 +111,9 @@ function EntityRow({ row, isExpanded, isPinned, onTogglePin, onToggleDrilldown, 
           isExpanded ? 'bg-blue-50 border-b-0' : ''
         }`}
       >
-        <td className="px-3 py-1.5">
+        <td className="px-3 py-1.5" style={isSubclass ? { paddingLeft: '2rem' } : undefined}>
           <span className="flex items-center gap-1.5">
+            {isSubclass && <span className="text-gray-400 text-xs">↳</span>}
             <button
               onClick={onToggleDrilldown}
               className="font-semibold text-gray-900 hover:text-blue-600 cursor-pointer"
@@ -149,11 +153,12 @@ function EntityRow({ row, isExpanded, isPinned, onTogglePin, onToggleDrilldown, 
       </tr>
       {isExpanded && (
         <tr>
-          <td colSpan={6} className="p-0">
+          <td colSpan={6} className="p-0 pl-4">
             <SlotDrilldown
               classId={row.id}
               dataService={dataService}
               onClose={onToggleDrilldown}
+              depth={0}
             />
           </td>
         </tr>

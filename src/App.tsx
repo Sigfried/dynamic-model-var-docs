@@ -276,10 +276,11 @@ function App() {
         </div>
       </header>
 
-      {/* Main content */}
-      {viewMode === 'explorer' ? (
+      {/* Main content — both views stay mounted to preserve state */}
+      <div className={viewMode === 'explorer' ? 'flex-1 flex flex-col' : 'hidden'}>
         <EntityExplorer dataService={dataService} />
-      ) : (
+      </div>
+      <div className={viewMode === 'kitchen-sink' ? 'flex-1 flex flex-col' : 'hidden'}>
         <LayoutManager
           dataService={dataService}
           leftSections={leftSections}
@@ -292,7 +293,7 @@ function App() {
           onDialogsChange={triggerURLSave}
           hoverPopupsEnabled={hoverPopupsEnabled}
         />
-      )}
+      </div>
     </div>
   );
 }
