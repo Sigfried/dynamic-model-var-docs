@@ -44,6 +44,10 @@ function CountBadge({ count, colorClass, title }: {
 export function EntityTable({ classIds, dataService, isPinned, onTogglePin }: EntityTableProps) {
   const [expandedEntity, setExpandedEntity] = useState<string | null>(null);
 
+  // Track which classIds are in this table so we only indent subclasses
+  // when their parent is also present
+  const classIdSet = useMemo(() => new Set(classIds), [classIds]);
+
   const rows: ClassRowData[] = useMemo(() => {
     return classIds
       .filter(id => dataService.itemExists(id))
@@ -83,6 +87,7 @@ export function EntityTable({ classIds, dataService, isPinned, onTogglePin }: En
               onTogglePin={() => onTogglePin(row.id)}
               onToggleDrilldown={() => toggleDrilldown(row.id)}
               dataService={dataService}
+              classIdSet={classIdSet}
             />
           ))}
         </tbody>
@@ -99,10 +104,13 @@ interface EntityRowProps {
   onTogglePin: () => void;
   onToggleDrilldown: () => void;
   dataService: DataService;
+  classIdSet: Set<string>;
 }
 
-function EntityRow({ row, isExpanded, isPinned, onTogglePin, onToggleDrilldown, dataService }: EntityRowProps) {
-  const isSubclass = row.id in SUBCLASS_OF;
+function EntityRow({ row, isExpanded, isPinned, onTogglePin, onToggleDrilldown, dataService, classIdSet }: EntityRowProps) {
+  // Only show subclass indentation if the parent is also in this table
+  const parentId = SUBCLASS_OF[row.id];
+  const isSubclass = parentId !== undefined && classIdSet.has(parentId);
 
   return (
     <>

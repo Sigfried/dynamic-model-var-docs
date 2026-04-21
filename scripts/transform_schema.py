@@ -267,11 +267,21 @@ def transform_slots(
             slot_def = {'id': attr_name, 'name': attr_name, **attr_def}
             processed[attr_name] = slot_def
 
-    # Part 2: Mark global slots and add extra fields from schema_slots
+    # Part 2: Mark global slots and add extra fields from schema_slots.
+    # IMPORTANT: For global slots, override range/required/multivalued with the
+    # canonical definition from schema_slots, not whichever class happened to be
+    # processed first in Part 1 (which may have had a slot_usage override merged
+    # into its attributes by gen-linkml's expand step).
     for slot_name, global_slot_def in schema_slots.items():
         if slot_name in processed:
             # Mark as global and add any extra fields
             processed[slot_name]['global'] = True
+
+            # Restore canonical range/required/multivalued from the global
+            # slot definition (before any class-specific slot_usage overrides)
+            for field in ('range', 'required', 'multivalued', 'description'):
+                if field in global_slot_def:
+                    processed[slot_name][field] = global_slot_def[field]
 
             # Add slot_uri if present in global definition
             if global_slot_def.get('slot_uri'):

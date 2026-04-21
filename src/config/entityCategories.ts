@@ -19,16 +19,26 @@ export interface EntityCategory {
  * Key is the child class, value is its parent class. Both must appear
  * in the same category's classIds list, with the parent listed first.
  */
+/**
+ * Subclass relationships to show with indentation in the entity table.
+ * Key is the child class, value is its parent class. Both must appear
+ * in the same category's classIds list, with the parent listed before the child.
+ */
 export const SUBCLASS_OF: Record<string, string> = {
+  // Clinical
   DrugExposure: 'Exposure',
   DeviceExposure: 'Exposure',
-  ImagingFile: 'File',
+  // Observation hierarchy
+  MeasurementObservation: 'Observation',
+  SdohObservation: 'Observation',
   DimensionalObservation: 'Observation',
-  DimensionalObservationSet: 'ObservationSet',
   MeasurementObservationSet: 'ObservationSet',
   SdohObservationSet: 'ObservationSet',
+  DimensionalObservationSet: 'ObservationSet',
   SpecimenQualityObservation: 'Observation',
   SpecimenQuantityObservation: 'Observation',
+  // Files
+  ImagingFile: 'File',
 };
 
 /** Default pinned entities shown on first visit */
@@ -60,8 +70,22 @@ export const ENTITY_CATEGORIES: EntityCategory[] = [
       'DeviceExposure',
       'CauseOfDeath',
       'ImagingStudy',
-      'ObservationSet',
+    ],
+    defaultExpanded: false,
+  },
+  {
+    id: 'observation',
+    label: 'Observations / Measurements',
+    classIds: [
       'Observation',
+      'MeasurementObservation',
+      'SdohObservation',
+      'DimensionalObservation',
+      'ObservationSet',
+      'MeasurementObservationSet',
+      'SdohObservationSet',
+      'DimensionalObservationSet',
+      'Quantity',
     ],
     defaultExpanded: false,
   },
@@ -81,20 +105,6 @@ export const ENTITY_CATEGORIES: EntityCategory[] = [
       'SpecimenQualityObservation',
       'SpecimenQuantityObservation',
       'BodySite',
-    ],
-    defaultExpanded: false,
-  },
-  {
-    id: 'measurement',
-    label: 'Measurement / Observation',
-    classIds: [
-      'MeasurementObservation',
-      'MeasurementObservationSet',
-      'SdohObservation',
-      'SdohObservationSet',
-      'DimensionalObservation',
-      'DimensionalObservationSet',
-      'Quantity',
     ],
     defaultExpanded: false,
   },

@@ -45,9 +45,9 @@ export function ClassDetailCard({ classId, dataService, onClose, onNavigate }: C
             <button
               onClick={() => onNavigate(classId)}
               className="text-xs text-blue-600 hover:underline cursor-pointer"
-              title="Navigate to this entity's full drilldown"
+              title="Expand this entity's slots inline"
             >
-              Go to entity →
+              Expand slots ▼
             </button>
           )}
           <button
