@@ -3555,7 +3555,7 @@
         "DimensionalObservationSet",
         "MeasurementObservationSet"
       ],
-      "range": "DimensionalObservation",
+      "range": "Observation",
       "required": true,
       "multivalued": true,
       "global": true
