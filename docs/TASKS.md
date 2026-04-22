@@ -15,52 +15,38 @@ receiving, and implementing stakeholder feedback.
 
 ## 🚀 Progressive-Disclosure Refactor (TOP PRIORITY)
 
-New UX direction captured in the [tabular drilldown mockup](../public/tabular-drilldown-mockup.html)
-(deployed at https://sigfried.github.io/dynamic-model-var-docs/tabular-drilldown-mockup.html)
-and feedback document. The current "kitchen sink" layout is overwhelming; this refactor
-replaces the default view with a categorized entity list that progressively reveals
-slots, variables, enum detail, and class detail inline. See
-[temp-but-share-for-now/STAKEHOLDER_QUESTIONS.md](../temp-but-share-for-now/STAKEHOLDER_QUESTIONS.md)
-for the broader direction.
+The Entity Explorer is now the default view (toggle to "Kitchen Sink" for the old
+layout). It replaces the multi-panel layout with progressive disclosure: categorized
+entity list → inline slot/variable drilldown → recursive inline range detail cards.
+See [temp-but-share-for-now/STAKEHOLDER_QUESTIONS.md](../temp-but-share-for-now/STAKEHOLDER_QUESTIONS.md)
+for background.
 
 **Dependency note:** once the Variable Library is live, the variable-drilldown portion
-of the refactor can be simplified — no need for deep variable views inside the entity
-explorer.
+can be simplified — no deep variable views needed inside the entity explorer.
 
-### Subtasks (rough order)
+### Subtasks
 
-1. **Finalize UX direction** — mockup review, stakeholder sign-off, decide primary
-   audience (non-technical vs. technical vs. both-via-progressive-disclosure).
-2. **Has-a hierarchy — try it.** ⚠️ IN PROGRESS. Built two exploratory mockups:
+1. ~~**Finalize UX direction**~~ ✅ Done — Entity Explorer shipped as default view.
+2. **Has-a hierarchy** ⚠️ IN PROGRESS. Built two standalone mockups:
    - [Containment tree](../public/containment-tree-mockup.html) — interactive indented
-     list rooted at ResearchStudyCollection. FK-direction edges inverted for containment
-     view; is-a subclasses nested inline (own slots only, no inherited duplication).
+     list rooted at ResearchStudyCollection. FK-direction edges inverted for containment.
    - [Containment graph](../public/has-a-mockup.html) — Cytoscape + dagre node-link
-     diagram from the same containment data (49 nodes, 95 edges). Three edge types:
-     has-a, flipped FK, and is-a subclass.
-   - Key finding: BDCHM uses FK-style back-references (child points to parent), so
-     most edges need inversion for a containment view. A heuristic (flip single-valued
-     slots to entities; keep multi-valued and value-object slots) plus a small override
-     list gets this ~90% right.
+     diagram (49 nodes, 95 edges).
    - Scripts: `scripts/extract_containment_tree.py`, `scripts/extract_has_a_graph.py`.
-   - **Still TODO**: evaluate the "pin a set of entities → generate filtered diagram"
-     idea. The whole-model graph is borderline legible; a pin-subset view may be the
-     more useful deliverable. Also: discuss FK-inversion heuristic with model designer
-     to validate edge-direction decisions.
-3. **Categorized entity list** — top-level Pinned section plus semantic categories
-   (Admin/Study, Clinical, Lab/Biospecimen, etc.). Collapsible; only Pinned expanded by
-   default.
-4. **Default pinning** — Demography, Condition, MeasurementObservation. Pin state
-   persisted in URL / localStorage.
-5. **Inline slot drilldown** — Slots and Variables tabs, inherited and overridden tags,
-   range-type badges.
-6. **Inline enum-range detail card** — permissible values including CURIE labels and
-   definitions (not just CURIE identifiers), "used by" links, inherits / reachable_from
-   sections. Benefits from already-done EnumInput work (see Unused Schema Fields
-   workspace below).
-7. **Inline class-range detail card** — "Referenced by" list above the slot summary,
-   "Go to entity" link for navigation.
-8. **Non-LinkML terminology with LinkML-term tooltips**.
+   - **Still TODO**: "pin entities → generate filtered diagram" feature. Discuss
+     FK-inversion heuristic with model designer.
+3. ~~**Categorized entity list**~~ ✅ Done — Admin/Study, Clinical, Observations/
+   Measurements, Lab/Biospecimen, Survey, Files/Other. Subclass indentation.
+4. ~~**Default pinning**~~ ✅ Done — Demography, Condition, MeasurementObservation.
+   localStorage persistence.
+5. ~~**Inline slot drilldown**~~ ✅ Done — Slots/Variables tabs, inherited/overridden
+   tags, range-type badges. Recursive: clicking a class-range badge opens a nested
+   drilldown.
+6. ~~**Inline enum detail card**~~ ✅ Done — permissible values, "used by" list.
+   TODO: CURIE labels and definitions (not just identifiers).
+7. ~~**Inline class detail card**~~ ✅ Done — merged into SlotDrilldown (referenced-by
+   info + slots + variables in one component, no redundant summary card).
+8. **Non-LinkML terminology with LinkML-term tooltips** — not started.
    - Default to general-audience terms: *property* (for slot), *value set* /
      *permissible values* (for enum), *property type* (for range), etc.
    - Show LinkML equivalents in tooltips or a secondary label, OR provide a user

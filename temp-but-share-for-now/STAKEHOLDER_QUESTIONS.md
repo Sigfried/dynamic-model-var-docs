@@ -8,7 +8,7 @@ both; the answer affects defaults and terminology.
 
 Recent stakeholder feedback converged on a single theme: the current UI shows too much
 at once. The direction below is a progressive-disclosure approach captured in a
-[tabular drilldown mockup](https://sigfried.github.io/dynamic-model-var-docs/tabular-drilldown-mockup.html).
+[Entity Explorer](https://sigfried.github.io/dynamic-model-var-docs/) (the app's default view).
 
 ---
 
@@ -99,7 +99,7 @@ for code reuse.
   - Support showing LinkML-native terms via tooltips or a config toggle for users
     who want them.
 - **Progressive disclosure** (captured in the
-  [tabular drilldown mockup](https://sigfried.github.io/dynamic-model-var-docs/tabular-drilldown-mockup.html)):
+  [Entity Explorer](https://sigfried.github.io/dynamic-model-var-docs/) (the app's default view)):
   - Start with entities.
   - Drill down through inline slot / variable tables.
   - Drill down further into inline enum and class detail cards.
