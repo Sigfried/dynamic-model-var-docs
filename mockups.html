@@ -165,30 +165,30 @@
   We'd love your feedback on what's useful and what isn't.
 </p>
 
-<!-- ===== PROGRESSIVE DISCLOSURE ===== -->
-<h2>Progressive Disclosure (Tabular Drilldown)</h2>
+<!-- ===== ENTITY EXPLORER ===== -->
+<h2>Entity Explorer (Live)</h2>
 
 <p class="section-note">
-  The proposed new default view. Entities organized by category, with inline
-  drilldowns for slots, variables, and range details. This is a static mockup
-  showing a sequence of narrated examples — not yet interactive beyond
-  category expand/collapse and dark mode.
+  The new default view, now implemented in the app. Entities organized by
+  category with progressive disclosure: click to drill down into slots,
+  variables, and range details. Toggle to "Kitchen Sink" for the old layout.
 </p>
 
-<a class="card" href="./tabular-drilldown-mockup.html">
-  <div class="card-title">Tabular Drilldown Mockup</div>
+<a class="card" href="./">
+  <div class="card-title">Entity Explorer</div>
   <div class="card-desc">
-    Seven narrated examples walking through the proposed UI: default view with
-    pinned entities, expanding categories, slot drilldown with inherited/overridden
-    tags, clicking enum and class range badges for inline detail cards, and
-    variable drilldowns (rich vs. simple). Includes UI controls mockup (search,
-    column toggles, expand/collapse) and a design notes section.
+    Categorized entity list with pinned entities at top (default: Demography,
+    Condition, MeasurementObservation). Click an entity to see its slots and
+    variables inline. Click a range badge to drill into enum details (permissible
+    values, usages) or class details (referenced-by, nested slot drilldown).
+    Recursive: drill down through class references as deep as you want.
+    Subclass indentation for inheritance relationships.
   </div>
   <div class="card-tags">
     <span class="tag">progressive disclosure</span>
-    <span class="tag">light + dark mode</span>
-    <span class="tag">7 examples</span>
-    <span class="tag status-active">primary direction</span>
+    <span class="tag">recursive drilldown</span>
+    <span class="tag">pinning</span>
+    <span class="tag status-active">live</span>
   </div>
 </a>
 
