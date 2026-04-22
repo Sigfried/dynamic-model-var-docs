@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BDCHM Interactive Documentation — Overview</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --surface: #ffffff;
+    --border: #d8dde4;
+    --text: #1a1a2e;
+    --text-muted: #5f6b7a;
+    --accent: #1a73c7;
+    --card-hover: rgba(26,115,199,0.04);
+    --tag-bg: rgba(26,115,199,0.08);
+    --done-bg: rgba(39,135,65,0.06);
+    --done-border: #278741;
+    --wip-bg: rgba(194,120,10,0.06);
+    --wip-border: #c2780a;
+    --todo-bg: rgba(100,100,120,0.04);
+    --todo-border: #999;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 32px 24px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  h1 { font-size: 1.5rem; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+  .subtitle { color: var(--text-muted); font-size: 0.92rem; margin-bottom: 4px; }
+  .release-date { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 20px; }
+  .release-date strong { color: var(--text); }
+
+  .intro {
+    color: var(--text-muted); font-size: 0.88rem; margin-bottom: 28px; line-height: 1.7;
+  }
+  .intro a { color: var(--accent); text-decoration: none; }
+  .intro a:hover { text-decoration: underline; }
+
+  h2 {
+    font-size: 1.1rem; font-weight: 600; color: var(--text);
+    margin-top: 36px; margin-bottom: 12px; padding-bottom: 6px;
+    border-bottom: 2px solid var(--border);
+  }
+
+  h3 {
+    font-size: 0.95rem; font-weight: 600; color: var(--text);
+    margin-top: 20px; margin-bottom: 6px;
+  }
+
+  .card {
+    display: block; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px 20px; margin-bottom: 12px;
+    text-decoration: none; color: inherit;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 2px 8px rgba(26,115,199,0.08);
+    background: var(--card-hover);
+  }
+  .card-title { font-size: 1rem; font-weight: 600; color: var(--accent); margin-bottom: 4px; }
+  .card-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 8px; }
+  .card-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .tag {
+    font-size: 0.72rem; padding: 2px 8px; border-radius: 10px;
+    background: var(--tag-bg); color: var(--accent); font-weight: 500;
+  }
+  .tag.done { background: rgba(39,135,65,0.1); color: #278741; }
+  .tag.wip { background: rgba(194,120,10,0.1); color: #c2780a; }
+  .tag.todo { background: rgba(100,100,120,0.1); color: #666; }
+
+  .section-note {
+    font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.6;
+  }
+
+  /* Feature list */
+  .feature-list {
+    list-style: none; margin-bottom: 16px;
+  }
+  .feature-list li {
+    padding: 8px 12px; margin-bottom: 4px; border-radius: 6px;
+    font-size: 0.85rem; line-height: 1.5;
+    border-left: 3px solid;
+  }
+  .feature-list li.done { background: var(--done-bg); border-color: var(--done-border); }
+  .feature-list li.wip { background: var(--wip-bg); border-color: var(--wip-border); }
+  .feature-list li.todo { background: var(--todo-bg); border-color: var(--todo-border); }
+
+  .feature-list li strong { font-weight: 600; }
+  .feature-list li .status {
+    font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.5px; margin-right: 6px;
+  }
+  .feature-list li.done .status { color: #278741; }
+  .feature-list li.wip .status { color: #c2780a; }
+  .feature-list li.todo .status { color: #888; }
+
+  .discussion {
+    padding: 12px 16px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; font-size: 0.85rem; color: var(--text-muted);
+    line-height: 1.6; margin-bottom: 12px;
+  }
+  .discussion strong { color: var(--text); }
+  .discussion ul { padding-left: 20px; margin-top: 6px; }
+
+  footer {
+    margin-top: 36px; padding-top: 16px; border-top: 1px solid var(--border);
+    font-size: 0.78rem; color: var(--text-muted);
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<h1>BDCHM Interactive Documentation</h1>
+<p class="subtitle">BioData Catalyst Harmonized Model — Schema Explorer</p>
+<p class="release-date"><strong>Target release: July 30, 2026</strong></p>
+
+<p class="intro">
+  This page documents the current state of the interactive schema explorer,
+  what's been built, what remains, and open design questions.
+  The app itself is at <a href="./">sigfried.github.io/dynamic-model-var-docs</a>.
+</p>
+
+<!-- ================================================================ -->
+<h2>What's Shipped</h2>
+<!-- ================================================================ -->
+
+<a class="card" href="./">
+  <div class="card-title">Entity Explorer (default view)</div>
+  <div class="card-desc">
+    Progressive-disclosure interface replacing the original multi-panel layout.
+    Entities organized by category (Admin/Study, Clinical, Observations/Measurements,
+    Lab/Biospecimen, Survey, Files/Other) with a Pinned section at top. Click an entity
+    to drill down into its slots and variables. Click a range badge to see enum details
+    (permissible values, usages) or to recursively drill into another entity. Subclass
+    indentation for inheritance relationships. Pin/unpin entities to customize the top
+    section. The old "Kitchen Sink" multi-panel view is still available via a toggle
+    in the header.
+  </div>
+  <div class="card-tags">
+    <span class="tag done">live</span>
+    <span class="tag">progressive disclosure</span>
+    <span class="tag">recursive drilldown</span>
+    <span class="tag">pinning</span>
+  </div>
+</a>
+
+<a class="card" href="./?view=kitchen-sink">
+  <div class="card-title">Kitchen Sink view (legacy)</div>
+  <div class="card-desc">
+    The original multi-panel layout with link overlays connecting classes to their
+    ranges, detail popups, relationship info boxes, and variable tables. All entity
+    types (classes, enums, slots, types, variables) visible simultaneously. Still
+    accessible via the Explorer/Kitchen Sink toggle in the header.
+  </div>
+  <div class="card-tags">
+    <span class="tag">legacy view</span>
+    <span class="tag">links + panels</span>
+  </div>
+</a>
+
+
+<!-- ================================================================ -->
+<h2>Explorations &amp; Mockups</h2>
+<!-- ================================================================ -->
+
+<p class="section-note">
+  Standalone proof-of-concept visualizations exploring model structure.
+  Not yet integrated into the main app.
+</p>
+
+<a class="card" href="./containment-tree-mockup.html">
+  <div class="card-title">Containment Tree</div>
+  <div class="card-desc">
+    Interactive indented list showing the full containment hierarchy rooted at
+    ResearchStudyCollection. BDCHM uses FK-style back-references (child points to parent),
+    so single-valued entity references are inverted to show "what contains what."
+    Inheritance subclasses nested inline with diamond markers, showing only their own
+    additional slots. Expand/collapse, hide-subclasses toggle, dark mode.
+  </div>
+  <div class="card-tags">
+    <span class="tag wip">exploration</span>
+    <span class="tag">containment</span>
+    <span class="tag">FK inversion</span>
+  </div>
+</a>
+
+<a class="card" href="./has-a-mockup.html">
+  <div class="card-title">Containment Graph</div>
+  <div class="card-desc">
+    Cytoscape + dagre node-link diagram of the containment hierarchy (49 nodes, 95 edges).
+    Three edge types: solid (has-a), purple (flipped FK), dashed green (is-a subclass).
+    Click nodes to highlight neighborhoods. Multiple layouts (top-down, left-right,
+    force-directed). Legibility is borderline at full scale — motivates the
+    "pin a subset" approach below.
+  </div>
+  <div class="card-tags">
+    <span class="tag wip">exploration</span>
+    <span class="tag">graph</span>
+    <span class="tag">Cytoscape + dagre</span>
+  </div>
+</a>
+
+
+<!-- ================================================================ -->
+<h2>What's Next</h2>
+<!-- ================================================================ -->
+
+<ul class="feature-list">
+  <li class="wip">
+    <span class="status">in progress</span>
+    <strong>Pinned-entity diagram.</strong>
+    Let users select a set of entities and generate a focused containment
+    diagram with just those entities and their relationships. Uses the
+    FK-inversion heuristic from the containment tree. Graph renderer TBD
+    (Cytoscape/dagre, ELK, or adapted from the icd11-playground's D3+ELK
+    renderer).
+  </li>
+  <li class="todo">
+    <span class="status">todo</span>
+    <strong>Non-LinkML terminology.</strong>
+    Default to general-audience terms (<em>property</em> for slot,
+    <em>value set</em> for enum, <em>property type</em> for range) with
+    LinkML equivalents shown in tooltips. Possibly a toggle between
+    "general" and "LinkML" vocabulary modes.
+  </li>
+  <li class="todo">
+    <span class="status">todo</span>
+    <strong>Search / filter.</strong>
+    Search across entity names, descriptions, slot names, and variable labels.
+    Auto-expand categories with matches.
+  </li>
+  <li class="todo">
+    <span class="status">todo</span>
+    <strong>URL state encoding.</strong>
+    Persist expanded entity, drilldown tab, and open inline cards to the URL
+    for deep-linking and browser back button support.
+  </li>
+  <li class="todo">
+    <span class="status">todo</span>
+    <strong>Enum detail: CURIE labels and definitions.</strong>
+    Show CURIE labels and definitions in enum detail cards, not just the
+    CURIE identifiers.
+  </li>
+  <li class="todo">
+    <span class="status">todo</span>
+    <strong>Render markdown in schema fields.</strong>
+    Some descriptions (e.g., UnitOfMeasurementEnum) contain markdown but are
+    currently rendered as plain text.
+  </li>
+</ul>
+
+<!-- ================================================================ -->
+<h2>Open Design Questions</h2>
+<!-- ================================================================ -->
+
+<div class="discussion">
+  <strong>Model structure: is-a vs has-a</strong>
+  <ul>
+    <li>BDCHM follows relational FK conventions — references point from child to parent.
+      For a containment view, we invert single-valued entity references. A small override
+      list handles exceptions. The heuristic needs validation with the model designer.</li>
+    <li>ResearchStudyCollection is the top-level container, but the has-a hierarchy doesn't
+      form a clean tree (some entities are referenced by multiple parents, some are
+      associational references rather than containment).</li>
+    <li>The full-model graph (49 nodes, 95 edges) is borderline legible. A "pin a subset
+      and generate a focused diagram" approach may be more useful than trying to show
+      everything.</li>
+  </ul>
+</div>
+
+<div class="discussion">
+  <strong>User audience</strong>
+  <ul>
+    <li>Balancing: NHLBI (customer), data quality presentation, end-user experience,
+      and internal dogfooding (team's own use of the tool).</li>
+    <li>Non-technical users want simpler terms; technical users want LinkML precision.
+      Progressive disclosure can serve both: general terms by default, LinkML terms
+      in tooltips or via a toggle.</li>
+  </ul>
+</div>
+
+<div class="discussion">
+  <strong>Where do links fit?</strong>
+  <ul>
+    <li>The old Kitchen Sink view's curving-line connections were visually appealing and
+      gave an immediate sense of structure. Some stakeholders want to keep them available.</li>
+    <li>The Entity Explorer's inline drilldown and "referenced by" lists provide the same
+      relationship information in a more compact, contextual way.</li>
+    <li>Possible compromise: links as an optional overlay or a separate "Relationships"
+      tab/view, rather than the default.</li>
+  </ul>
+</div>
+
+<div class="discussion">
+  <strong>Variable Library dependency</strong>
+  <ul>
+    <li>Once the Variable Library is live, variable drilldowns in the Entity Explorer
+      can be simplified or removed — variables will have their own dedicated tool.</li>
+  </ul>
+</div>
+
+<footer>
+  <a href="https://github.com/Sigfried/dynamic-model-var-docs">GitHub repo</a>
+</footer>
+
+</body>
+</html>
