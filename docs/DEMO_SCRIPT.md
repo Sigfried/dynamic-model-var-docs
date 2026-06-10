@@ -1,11 +1,5 @@
 # Demo Script — BDCHM Interactive Documentation
 
-**Audience (2026-06-11 call):** 1 NIH program officer (non-technical, the client —
-surfacing *her* priorities is the point of the call), 1 unknown, 2 technical peers
-(here to help with design; they invited her). **Lead for the program officer; keep
-jargon out of the spotlight; reserve design questions for the tail where the
-technical folks engage.**
-
 **Target length:** ≤ 10 minutes. **App:** http://localhost:5173/dynamic-model-var-docs
 
 **Recording tool: Snagit** (better than macOS native here — it has a trim/cut editor,
@@ -82,37 +76,43 @@ vocabulary / enum), **entity** (a thing in the model). Avoid "slot," "enum,"
   show. Read them once: **Props** = how many fields it has · **Cls / Enm / Typ** =
   what those fields point to (another entity, a value set, or a basic type like a
   number) · **Vars** = how many real study variables map to it.
-- "So before opening anything, you can see *shape* — some entities are simple, some
-  carry most of the study's variables."
-- Click the **Clinical** category header to expand it.
+- "So before opening anything, you can see *shape* — some entities are simple, and one
+  in particular, **MeasurementObservation**, carries most of the study's variables
+  (about 100 of the ~150). That's the workhorse, so let's open it."
+- `MeasurementObservation` is in the default **Pinned** set, so it's already at the
+  top — you can click it there. (Or expand **Observations / Measurements** to show it
+  in context; look for the big **Vars** badge.)
 
 ### 3. Drill into an entity (2:30–4:15) — the core move
 
-- Click **`Condition`**. The detail opens inline under the row.
-- Read the top: "Plain-language definition — *records suggesting the presence of a
-  disease or condition, observed by a provider or reported by the patient.*"
+- Click **`MeasurementObservation`**. The detail opens inline under the row.
+- Read the top: "Plain-language definition — *a single observation with a type and a
+  value — like the hematocrit component of a blood-count panel.*" (It *extends
+  Observation* — note the inheritance.)
 - Point at the **Properties** table, walking the columns that matter:
   - **Source** — "this tells you where each field comes from: *Defined here* means
-    it's specific to Condition; *Global* or *Global (from Entity)* means it's
-    inherited / shared. So you can see what's unique vs. common at a glance."
+    it's specific to this entity; *Global* or *Global (from …)* means it's inherited /
+    shared. So you can see what's unique vs. common at a glance."
   - **Range** (the colored badges) — "what each field holds. **Green** is a basic
     type — a number, a date. **Blue** points to another entity. **Purple** is a
-    controlled value set." Point at examples on screen: `integer` (green),
-    `Participant` (blue), `ConditionConceptEnum` (purple).
-- Click the **Variables** tab: "and these are the concrete study variables that map
-  to Condition — real measurements with data types and source identifiers. This is
-  the bridge from the abstract model to data someone actually collected."
+    controlled value set." Point at one of each colour on screen.
+- Click the **Variables** tab: "and these are the concrete study variables that map to
+  MeasurementObservation — real measurements, each with a **data type, a unit**
+  (mg/dL, pg/mL…), and a **source code** (an OMOP / OBA identifier). This is the bridge
+  from the abstract model to data someone actually collected." *(MeasurementObservation
+  is the entity where this tab really shines — its variables are fully specified.)*
 
 ### 4. Recursive drilldown — the payoff (4:15–6:00)
 
 *The moment that sells progressive disclosure. Slow down.*
 
-- Back on **Properties**, click a **purple** Range badge (e.g. `ConditionConceptEnum`).
+- Back on **Properties**, click a **purple** Range badge (a value set, e.g. a `…Enum`).
   "When a field uses a controlled vocabulary, click it — the value set opens right
   here: the permitted values, and which entities use it."
-- Then click a **blue** badge (e.g. `Participant`). "When a field points to another
-  entity, that entity's detail opens **nested right here** — I can keep following the
-  structure as deep as I want without ever opening a new screen or losing my place."
+- Then click a **blue** badge (a field pointing to another entity). "When a field
+  points to another entity, that entity's detail opens **nested right here** — I can
+  keep following the structure as deep as I want without ever opening a new screen or
+  losing my place."
 - Close a nested card with its ✕. "And it collapses back. You're never more than a
   click from where you started — that's the whole idea."
 
@@ -122,13 +122,13 @@ vocabulary / enum), **entity** (a thing in the model). Avoid "slot," "enum,"
   — it appears under **Pinned**.
 - "Everyone cares about a different slice of the model. You pin what matters to you and
   it sticks between visits."
-- *(To the program officer:)* "If there's a set your reviewers always start from, we
+- *(To the lead stakeholder:)* "If there's a set your reviewers always start from, we
   can make that the default."
 
 ### 6. Where it's heading (6:40–7:45) — optional, watch the clock
 
-*Skip / shorten if past ~6:45. Good bait for the technical folks; don't let it eat her
-airtime.*
+*Skip / shorten if past ~6:45. Good bait for the technical folks; don't let it eat the
+client's airtime.*
 
 - "A couple of directions we're exploring —" (mention, don't deep-dive):
   - **Containment views** — "showing what *contains* what across the model. The full
@@ -138,13 +138,13 @@ airtime.*
   - **Plain-language toggle** — "a switch between everyday terms and the exact
     technical vocabulary, so both audiences are served."
 
-### 7. Close + the ask (7:45–9:30) — hand her the floor
+### 7. Close + the ask (7:45–9:30) — hand the client the floor
 
 *The most important 90 seconds — why the call exists.*
 
 - "That's the core. What I most want from this call is to shape the next stage around
   what's actually useful to **you**."
-- Put 2–3 concrete questions to the program officer:
+- Put 2–3 concrete questions to the client:
   - "When you look at a model like this, what's the first question you're trying to
     answer — *what data is in here*, *how do two things relate*, or something else?"
   - "Who do you picture using it — your reviewers, data submitters, the public? That
@@ -165,7 +165,7 @@ a sentence, skip 6. The recursive drilldown (4) + the ask (7) are non-negotiable
 ## Don't do on camera
 
 - No DevTools / `localStorage` reset on screen (do it before).
-- Don't say "slot / enum / LinkML / DTO" to her without translating to
-  *property / value set / entity*.
+- Don't say "slot / enum / LinkML / DTO" to non-technical viewers without translating
+  to *property / value set / entity*.
 - Don't apologize for unfinished work — frame it as "next, and I want your input."
 - Don't free-navigate. Every click here is one you've rehearsed.
