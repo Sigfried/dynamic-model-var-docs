@@ -1,0 +1,171 @@
+# Demo Script — BDCHM Interactive Documentation
+
+**Audience (2026-06-11 call):** 1 NIH program officer (non-technical, the client —
+surfacing *her* priorities is the point of the call), 1 unknown, 2 technical peers
+(here to help with design; they invited her). **Lead for the program officer; keep
+jargon out of the spotlight; reserve design questions for the tail where the
+technical folks engage.**
+
+**Target length:** ≤ 10 minutes. **App:** http://localhost:5173/dynamic-model-var-docs
+
+**Recording tool: Snagit** (better than macOS native here — it has a trim/cut editor,
+so a fluffed click can be snipped out instead of forcing a full retake; cursor
+highlighting; clean export). Capture the browser window region only. Do one silent
+practice pass for click rhythm, then a real take; trim mistakes after.
+
+---
+
+## Terminology note (a rename shipped for this demo)
+
+In the **Entity Explorer** (default view), the old word "Slots" now reads
+**"Props" / "Properties"** so it lands for a non-technical viewer. The **Kitchen
+Sink** (legacy) view still says "Slots" — that's fine, it's framed as the old
+version. When you talk, use **property** (a field), **value set** (a controlled
+vocabulary / enum), **entity** (a thing in the model). Avoid "slot," "enum,"
+"LinkML," "DTO" unless a technical peer raises them.
+
+---
+
+## Before you hit record (setup, 2 min)
+
+1. **Reset to a clean state.** In the app tab's DevTools console run `localStorage.clear()`
+   then reload. Restores default pins (Demography, Condition, MeasurementObservation)
+   and collapsed categories. *(Do this BEFORE recording — never show DevTools on camera.)*
+2. Browser at default zoom (Cmd-0), window wide enough that the Props/Cls/Enm/Typ/Vars
+   columns aren't cramped. Hide the bookmarks bar.
+3. Start on the **Entity Explorer**, collapsed, nothing drilled in.
+4. Have this script on a second screen/phone — don't read it on camera.
+
+---
+
+## The story (hold this in your head)
+
+> *"BDCHM is a big harmonized data model. Our first pass showed all of it at once —
+> people found it overwhelming. So we rebuilt it around progressive disclosure: start
+> from the things you care about, open up just the detail you need."*
+
+---
+
+## Beat-by-beat
+
+### 0. Open (0:00–0:40) — what this is
+
+*Start on the Entity Explorer, collapsed.*
+
+- "This is interactive documentation for the BioData Catalyst Harmonized Model — the
+  schema that defines how clinical and observational study data gets described
+  consistently across the program."
+- "It's large — roughly 47 entities, 40 value sets, ~150 study variables. A flat spec
+  is hard to navigate, so the tool is built to let you go from the big picture down to
+  one detail without losing your place."
+
+### 1. The honest backstory — Kitchen Sink (0:40–1:35) — ~45–60s, keep it brief
+
+*Toggle to Kitchen Sink (header toggle, or `?view=kitchen-sink`).*
+
+- "I want to show you our **first** pass, quickly — because it's fancier, and it may
+  be closer to what some of you initially pictured."
+- Let the panels + connecting links be visible; maybe drag one panel or open one
+  detail. "Everything's on screen at once — classes, value sets, variables — with
+  lines connecting what relates to what. People liked how it *looked*."
+- "But in early testing it overwhelmed people — too much at once, hard to know where
+  to start. So that feedback drove the redesign I'll show you now." *Toggle back to
+  the Explorer.* **Don't linger — this is context, not the pitch.**
+
+### 2. The categorized list (1:35–2:30) — orientation
+
+*Back on the Entity Explorer.*
+
+- "Now everything starts as a simple categorized list — Clinical, Observations,
+  Lab/Biospecimen, Survey — with the entities people use most **pinned at the top**."
+- "The numbers are a quick profile of each entity." Hover a row so badge tooltips
+  show. Read them once: **Props** = how many fields it has · **Cls / Enm / Typ** =
+  what those fields point to (another entity, a value set, or a basic type like a
+  number) · **Vars** = how many real study variables map to it.
+- "So before opening anything, you can see *shape* — some entities are simple, some
+  carry most of the study's variables."
+- Click the **Clinical** category header to expand it.
+
+### 3. Drill into an entity (2:30–4:15) — the core move
+
+- Click **`Condition`**. The detail opens inline under the row.
+- Read the top: "Plain-language definition — *records suggesting the presence of a
+  disease or condition, observed by a provider or reported by the patient.*"
+- Point at the **Properties** table, walking the columns that matter:
+  - **Source** — "this tells you where each field comes from: *Defined here* means
+    it's specific to Condition; *Global* or *Global (from Entity)* means it's
+    inherited / shared. So you can see what's unique vs. common at a glance."
+  - **Range** (the colored badges) — "what each field holds. **Green** is a basic
+    type — a number, a date. **Blue** points to another entity. **Purple** is a
+    controlled value set." Point at examples on screen: `integer` (green),
+    `Participant` (blue), `ConditionConceptEnum` (purple).
+- Click the **Variables** tab: "and these are the concrete study variables that map
+  to Condition — real measurements with data types and source identifiers. This is
+  the bridge from the abstract model to data someone actually collected."
+
+### 4. Recursive drilldown — the payoff (4:15–6:00)
+
+*The moment that sells progressive disclosure. Slow down.*
+
+- Back on **Properties**, click a **purple** Range badge (e.g. `ConditionConceptEnum`).
+  "When a field uses a controlled vocabulary, click it — the value set opens right
+  here: the permitted values, and which entities use it."
+- Then click a **blue** badge (e.g. `Participant`). "When a field points to another
+  entity, that entity's detail opens **nested right here** — I can keep following the
+  structure as deep as I want without ever opening a new screen or losing my place."
+- Close a nested card with its ✕. "And it collapses back. You're never more than a
+  click from where you started — that's the whole idea."
+
+### 5. Pinning / personalization (6:00–6:40)
+
+- Hover a row to reveal the **○** control; pin one entity (e.g. `Specimen`). Scroll up
+  — it appears under **Pinned**.
+- "Everyone cares about a different slice of the model. You pin what matters to you and
+  it sticks between visits."
+- *(To the program officer:)* "If there's a set your reviewers always start from, we
+  can make that the default."
+
+### 6. Where it's heading (6:40–7:45) — optional, watch the clock
+
+*Skip / shorten if past ~6:45. Good bait for the technical folks; don't let it eat her
+airtime.*
+
+- "A couple of directions we're exploring —" (mention, don't deep-dive):
+  - **Containment views** — "showing what *contains* what across the model. The full
+    picture is dense, so we're leaning toward 'pick a few entities, generate a focused
+    diagram.'" *(Mockups: `/containment-tree-mockup.html`, `/has-a-mockup.html` — only
+    open if a technical peer asks.)*
+  - **Plain-language toggle** — "a switch between everyday terms and the exact
+    technical vocabulary, so both audiences are served."
+
+### 7. Close + the ask (7:45–9:30) — hand her the floor
+
+*The most important 90 seconds — why the call exists.*
+
+- "That's the core. What I most want from this call is to shape the next stage around
+  what's actually useful to **you**."
+- Put 2–3 concrete questions to the program officer:
+  - "When you look at a model like this, what's the first question you're trying to
+    answer — *what data is in here*, *how do two things relate*, or something else?"
+  - "Who do you picture using it — your reviewers, data submitters, the public? That
+    changes how much we hide vs. show by default."
+  - "Is the priority *understanding* the model, or *checking the quality* of the data
+    it describes?" *(These pull different features forward.)*
+- Then to the technical peers: the open design questions — is-a vs. has-a / FK
+  inversion, whether the connecting links belong as an optional overlay, the
+  terminology toggle.
+
+---
+
+## If you only have 5 minutes (cut list)
+
+Keep **0, 2, 3, 4, 7**. Compress Kitchen Sink (1) to one sentence, drop pinning (5) to
+a sentence, skip 6. The recursive drilldown (4) + the ask (7) are non-negotiable.
+
+## Don't do on camera
+
+- No DevTools / `localStorage` reset on screen (do it before).
+- Don't say "slot / enum / LinkML / DTO" to her without translating to
+  *property / value set / entity*.
+- Don't apologize for unfinished work — frame it as "next, and I want your input."
+- Don't free-navigate. Every click here is one you've rehearsed.

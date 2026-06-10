@@ -70,7 +70,7 @@ export function EntityTable({ classIds, dataService, isPinned, onTogglePin }: En
         <thead>
           <tr className="border-b border-gray-200 bg-gray-50">
             <th className="text-left px-3 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Entity</th>
-            <th className="text-center px-2 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide" title="Total slots (own + inherited)">Slots</th>
+            <th className="text-center px-2 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide" title="Total properties (own + inherited)">Props</th>
             <th className="text-center px-2 py-1.5 text-xs font-medium text-blue-500 uppercase tracking-wide" title="Entity-typed ranges">Cls</th>
             <th className="text-center px-2 py-1.5 text-xs font-medium text-purple-500 uppercase tracking-wide" title="Enum-typed ranges">Enm</th>
             <th className="text-center px-2 py-1.5 text-xs font-medium text-green-600 uppercase tracking-wide" title="Primitive-typed ranges">Typ</th>

@@ -96,7 +96,7 @@ export function SlotDrilldown({ classId, dataService, onClose, depth = 0 }: Slot
       {/* Tabs */}
       <div className="flex gap-0.5 px-3 border-b border-gray-200">
         <TabButton
-          label="Slots"
+          label="Properties"
           count={slotCount}
           active={activeTab === 'slots'}
           onClick={() => setActiveTab('slots')}
