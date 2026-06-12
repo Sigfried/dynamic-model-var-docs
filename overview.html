@@ -132,6 +132,20 @@
   The app itself is at <a href="./">sigfried.github.io/dynamic-model-var-docs</a>.
 </p>
 
+<div style="margin:16px 0;padding:12px 16px;border-left:3px solid var(--wip-border,#c2780a);background:var(--wip-bg,rgba(194,120,10,0.08));border-radius:4px;font-size:0.95em;">
+  <strong>⚠️ This page predates the June 11, 2026 feedback round and needs updating.</strong>
+  The current plan reframes the audience around <em>researchers</em> (data users and
+  study designers pre-harmonizing with BDCHM), not only modelers, and reprioritizes the
+  work: (1)&nbsp;configurable plain-language vs. LinkML terminology, (2)&nbsp;a more
+  compact Kitchen Sink with progressive disclosure and multi-class selection,
+  (3)&nbsp;a node-link/tree visualization for a user-selected subset of entities, and
+  (4)&nbsp;contextual help mode. The containment-graph work shown below is now
+  <strong>parked</strong>. Open questions for the team (whether to merge the two views,
+  which audience to optimize defaults for) are deliberately left undecided.
+  See the up-to-date plan in <code>temp-but-share-for-now/STAKEHOLDER_QUESTIONS.md</code>
+  and the retriaged backlog in <code>docs/TASKS.md</code>.
+</div>
+
 <!-- ================================================================ -->
 <h2>What's Shipped</h2>
 <!-- ================================================================ -->
@@ -142,8 +156,8 @@
     Progressive-disclosure interface replacing the original multi-panel layout.
     Entities organized by category (Admin/Study, Clinical, Observations/Measurements,
     Lab/Biospecimen, Survey, Files/Other) with a Pinned section at top. Click an entity
-    to drill down into its slots and variables. Click a range badge to see enum details
-    (permissible values, usages) or to recursively drill into another entity. Subclass
+    to drill down into its properties and variables. Click a range badge to see enum
+    details (permissible values, usages) or to recursively drill into another entity. Subclass
     indentation for inheritance relationships. Pin/unpin entities to customize the top
     section. The old "Kitchen Sink" multi-panel view is still available via a toggle
     in the header.
@@ -227,13 +241,13 @@
     (Cytoscape/dagre, ELK, or adapted from the icd11-playground's D3+ELK
     renderer).
   </li>
-  <li class="todo">
-    <span class="status">todo</span>
+  <li class="wip">
+    <span class="status">in progress</span>
     <strong>Non-LinkML terminology.</strong>
-    Default to general-audience terms (<em>property</em> for slot,
-    <em>value set</em> for enum, <em>property type</em> for range) with
-    LinkML equivalents shown in tooltips. Possibly a toggle between
-    "general" and "LinkML" vocabulary modes.
+    The Entity Explorer now labels slots as <em>Properties</em>. Still to do:
+    general-audience terms for the rest (<em>value set</em> for enum,
+    <em>property type</em> for range), LinkML equivalents shown in tooltips,
+    and possibly a toggle between "general" and "LinkML" vocabulary modes.
   </li>
   <li class="todo">
     <span class="status">todo</span>
