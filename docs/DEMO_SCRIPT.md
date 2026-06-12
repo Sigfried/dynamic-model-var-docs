@@ -46,12 +46,10 @@ vocabulary / enum), **entity** (a thing in the model). Avoid "slot," "enum,"
 
 *Start on the Entity Explorer, collapsed.*
 
-- "This is interactive documentation for the BioData Catalyst Harmonized Model — the
-  schema that defines how clinical and observational study data gets described
-  consistently across the program."
-- "It's large — roughly 47 entities, 40 value sets, ~150 study variables. A flat spec
-  is hard to navigate, so the tool is built to let you go from the big picture down to
-  one detail without losing your place."
+- "This is interactive documentation for the BioData Catalyst Harmonized LinkML Model."
+- "It's large — roughly 47 entities, 40 value sets, ~150 study variables, almost 4000
+- lines of LinkML specifications. A flat spec is hard to navigate, so the tool is built
+- to let you go from the big picture down to one detail without losing your place."
 
 ### 1. The honest backstory — Kitchen Sink (0:40–1:35) — ~45–60s, keep it brief
 
@@ -151,9 +149,18 @@ client's airtime.*
     changes how much we hide vs. show by default."
   - "Is the priority *understanding* the model, or *checking the quality* of the data
     it describes?" *(These pull different features forward.)*
-- Then to the technical peers: the open design questions — is-a vs. has-a / FK
-  inversion, whether the connecting links belong as an optional overlay, the
-  terminology toggle.
+- Then to the technical peers, name the three open design tensions (don't solve them
+  on the call — just surface them):
+  - **is-a vs. has-a** — for a "what contains what" view we invert the model's
+    foreign-key references. The heuristic needs a designer's eye.
+  - **Where do the connecting links fit?** — keep Kitchen Sink's curving connections
+    as an optional overlay, or is the inline "drill down + referenced-by" enough?
+  - **Terminology** — how far to push general-audience terms vs. exact technical ones,
+    and whether to offer a toggle.
+- **Leave-behind:** "I'll drop a link to a one-page status & open-questions writeup" —
+  that's `overview.html` (the app's `/overview.html`). Don't show it on screen as your
+  closing slide; send it as the follow-up so the detail lives somewhere without
+  ending the demo on a roadmap wall.
 
 ---
 

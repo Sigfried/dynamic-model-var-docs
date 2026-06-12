@@ -13,65 +13,113 @@ receiving, and implementing stakeholder feedback.
 
 ---
 
-## 🚀 Progressive-Disclosure Refactor (TOP PRIORITY)
+## 🧭 Current round (post-2026-06-11 feedback) — TOP PRIORITY
 
-The Entity Explorer is now the default view (toggle to "Kitchen Sink" for the old
-layout). It replaces the multi-panel layout with progressive disclosure: categorized
-entity list → inline slot/variable drilldown → recursive inline range detail cards.
-See [temp-but-share-for-now/STAKEHOLDER_QUESTIONS.md](../temp-but-share-for-now/STAKEHOLDER_QUESTIONS.md)
-for background.
+Team-facing plan: [STAKEHOLDER_QUESTIONS.md](../temp-but-share-for-now/STAKEHOLDER_QUESTIONS.md).
+Read that first — it holds the audience reframing and the **open questions for the
+team** (view architecture, audience, links, terminology). This section is the
+implementation backlog for the four new priorities. Items lower in this file are
+re-tagged **[FEEDS]** (supports this round), **[LATER]**, or **[PARKED]/[OBSOLETE]**.
+
+> **Audience reframing:** much of the real audience is **researchers** — data users
+> ("what's in here / what does this mean?") and study designers pre-harmonizing their
+> own study with BDCHM ("where would my variable fit?") — not only modelers/LinkML
+> people. The four priorities below bend toward them.
 
 **Dependency note:** once the Variable Library is live, the variable-drilldown portion
-can be simplified — no deep variable views needed inside the entity explorer.
+of the Explorer can be simplified — no deep variable views needed inside it.
 
-### Subtasks
+### Priority 1 — Configurable terminology (was subtask 8)
 
-1. ~~**Finalize UX direction**~~ ✅ Done — Entity Explorer shipped as default view.
-2. **Has-a hierarchy** ⚠️ IN PROGRESS. Built two standalone mockups:
-   - [Containment tree](../public/containment-tree-mockup.html) — interactive indented
-     list rooted at ResearchStudyCollection. FK-direction edges inverted for containment.
-   - [Containment graph](../public/has-a-mockup.html) — Cytoscape + dagre node-link
-     diagram (49 nodes, 95 edges).
-   - Scripts: `scripts/extract_containment_tree.py`, `scripts/extract_has_a_graph.py`.
-   - **Still TODO**: "pin entities → generate filtered diagram" feature. Discuss
-     FK-inversion heuristic with model designer.
-3. ~~**Categorized entity list**~~ ✅ Done — Admin/Study, Clinical, Observations/
-   Measurements, Lab/Biospecimen, Survey, Files/Other. Subclass indentation.
-4. ~~**Default pinning**~~ ✅ Done — Demography, Condition, MeasurementObservation.
-   localStorage persistence.
-5. ~~**Inline slot drilldown**~~ ✅ Done — Slots/Variables tabs, inherited/overridden
-   tags, range-type badges. Recursive: clicking a class-range badge opens a nested
-   drilldown.
-6. ~~**Inline enum detail card**~~ ✅ Done — permissible values, "used by" list.
-   TODO: CURIE labels and definitions (not just identifiers).
-7. ~~**Inline class detail card**~~ ✅ Done — merged into SlotDrilldown (referenced-by
-   info + slots + variables in one component, no redundant summary card).
-8. **Non-LinkML terminology with LinkML-term tooltips** — not started.
-   - Default to general-audience terms: *property* (for slot), *value set* /
-     *permissible values* (for enum), *property type* (for range), etc.
-   - Show LinkML equivalents in tooltips or a secondary label, OR provide a user
-     setting to toggle between "general" and "LinkML" vocabularies.
-   - Link to LinkML docs from tooltips.
-9. **URL state encoding** — deep-linking and working browser back button. Current app
-   encodes some state in the URL but the back button is reportedly buggy; investigate
-   root cause. Key states to encode: expanded entity, drilldown tab (slots / vars),
-   open inline card.
-10. **Release checklist** for 2026-07-30 (QA, deploy path, feedback loop, etc.).
+Default to general-audience terms; LinkML term on demand.
+- *property* (slot), *value set* / *permissible values* (enum), *property type*
+  (range), *entity* (class).
+- A vocabulary **config toggle**: general user vs. LinkML/modeler (possibly a
+  data-modeler middle setting). LinkML equivalents in tooltips + links to LinkML docs.
+- Status: **not started.**
+
+### Priority 2 — Compact Kitchen Sink w/ progressive disclosure
+
+- **Left panel: reuse `src/config/entityCategories.ts`** grouping (already exists —
+  reuse, not new taxonomy).
+- Other two panels **start empty**, fill in as classes are selected.
+- **Allow selecting multiple classes.**
+- Status: **not started.** Most affected by the open view-architecture question
+  (STAKEHOLDER_QUESTIONS.md, "One interface or two?").
+
+### Priority 3 — Subset visualization (node-link or tree)
+
+A diagram for a **user-selected subset** of entities, not the whole model.
+- **Reality check:** there is **no node-link diagram in the React app** today. The
+  only graph-style rendering in-app is the SVG panel-connector overlay
+  (`LinkOverlay.tsx`). A real node-link diagram exists only as standalone mockups:
+  `public/has-a-mockup.html` (Cytoscape+dagre) and `public/containment-tree-mockup.html`
+  (indented tree). So this is "promote a mockup into the app, scoped to a subset."
+- Converges with the "pin entities → focused diagram" idea. Consider matching the
+  LinkML-generated per-class Mermaid diagram conventions (is-a vs has-a).
+- Status: **not started.** Borrows the *idea* from the parked containment work
+  without committing to FK-inversion (see [PARKED] below).
+
+### Priority 4 — Help mode (port from icd11-playground)
+
+DOM-driven contextual help: `data-help-id` attributes + markdown content file +
+`?`-toggled mode. Source in `../icd11-playground/web/src`: `hooks/useHelpMode.ts`,
+`components/HelpPopover.tsx`, `utils/parseHelpContent.ts`, `assets/help-content.md`.
+- Status: **not started.** Low-pri open question: extract as a shared package?
+  Default: copy in now, extract later.
+
+### Supporting / housekeeping for the release
+
+- **URL state encoding** — deep-linking + working browser back button. Current app
+  encodes some state but the back button is reportedly buggy; investigate root cause.
+  States to encode: expanded entity, drilldown tab (slots / vars), open inline card.
+- **Release checklist** for 2026-07-30 (QA, deploy path, feedback loop).
+
+### Done (shipped — kept for reference)
+
+- ✅ Entity Explorer as default view (progressive disclosure).
+- ✅ Categorized entity list (`entityCategories.ts`) + subclass indentation.
+- ✅ Default pinning (Demography, Condition, MeasurementObservation) + localStorage.
+- ✅ Inline slot drilldown (Slots/Variables tabs, inherited/overridden tags, range
+  badges, recursive nested drilldown).
+- ✅ Inline enum detail card (permissible values, "used by"). **[FEEDS]** still TODO:
+  CURIE *labels + definitions*, not just identifiers.
+- ✅ Inline class detail card (merged into SlotDrilldown).
 
 ---
 
-## 📋 Upcoming Work (Ordered by Priority)
+## 🅿️ PARKED — Containment graph / has-a hierarchy (revisit later)
 
-### Render markdown in schema fields
+**Not this round.** Was previously the lead item; deprioritized per 2026-06-11
+feedback. Subset-visualization (Priority 3) borrows the "pick entities → focused
+diagram" idea but does not commit to the full containment treatment.
+
+- Mockups: [Containment tree](../public/containment-tree-mockup.html) (indented list
+  rooted at ResearchStudyCollection, FK edges inverted), [Containment graph](../public/has-a-mockup.html)
+  (Cytoscape+dagre, 49 nodes / 95 edges).
+- Scripts: `scripts/extract_containment_tree.py`, `scripts/extract_has_a_graph.py`.
+- On revival: the **FK-inversion heuristic** (flip single-valued entity-ranged slots;
+  leave multivalued / value-object targets; override list) needs a model designer's
+  eye. `ResearchStudyCollection` is the real top-level container. TODO: "pin entities
+  → generate filtered diagram."
+
+---
+
+## 📋 Secondary backlog (supports the current round; not itself a priority)
+
+> The ordered priorities for this round are in "Current round" up top. The items
+> here are smaller polish/enablement tasks — tagged **[FEEDS]** where they directly
+> support a current-round priority.
+
+### Render markdown in schema fields  **[FEEDS]**
 - e.g., `UnitOfMeasurementEnum.description` contains markdown but is rendered as plain
   text in detail views.
-- **Feeds the refactor**: needed for the inline enum detail card (Example 4 in the
-  mockup).
+- Feeds the inline **enum detail card** (which still needs CURIE labels/definitions —
+  see Done list up top).
 
-### Slot names in class detail Slots table should be linked
+### Slot names in class detail Slots table should be linked  **[FEEDS]**
 - Should behave like other element refs (hover + click navigation).
-- **Feeds the refactor**: needed for the inline class detail card (Example 5 in the
-  mockup).
+- Feeds the inline **class detail card**.
 
 ### Incorporate Unused Schema Fields into UI
 - Enum inheritance and other fields
@@ -198,11 +246,13 @@ check claude's work:
 **Status**: UI still shows `quantity-DrugExposure` instead of `quantity`. The `slotRef.name` change is not being picked up. Needs debugging - possibly the dataLoader transform is not reading the `name` field from slot references.
 
 ---
-### LinkOverlay fixes (lower priority — may be superseded by inline cards)
+### LinkOverlay fixes  **[LATER — gated on an open question]**
 - Edge labels: show on hover; tooltip display needs improvement.
-- Note: the progressive-disclosure refactor's inline entity-summary cards and
-  "Referenced by" lists may replace most of what links currently communicate. Revisit
-  priority after the refactor's direction is finalized.
+- **Gated on open question B** in [STAKEHOLDER_QUESTIONS.md](../temp-but-share-for-now/STAKEHOLDER_QUESTIONS.md)
+  ("are the connecting links worth their screen real estate?"). Inline entity-summary
+  cards + "Referenced by" lists may replace most of what links communicate; links may
+  become an optional overlay / "Relationships" tab. Don't invest in link polish until
+  this resolves.
 
 ---
 
@@ -219,32 +269,32 @@ check claude's work:
 - **Blocked by**: Abstract Tree system
 - See [detailed plan](#reduce-element-subclass-code-details) below
 
-### Grouped Slots Panel
-- Display slots grouped by Global + per-class sections
-- Show inheritance (inherited vs defined here vs overridden)
-- Visual indicators for slot origin
-- **Uses**: Abstract Tree system for rendering
-- ⚠️ **Possibly obsolete if progressive-disclosure refactor ships** — slot grouping
-  moves into the inline per-entity drilldown. Keep here pending decision.
+### Grouped Slots Panel  **[OBSOLETE]**
+- Was: display slots grouped by Global + per-class sections, with inheritance origin.
+- **Superseded** — the Explorer shipped; slot grouping now lives in the inline
+  per-entity drilldown (inherited / defined-here / overridden tags). Remove unless a
+  Kitchen-Sink-specific need resurfaces.
 
 ---
 
 ## 🔧 Medium Priority
 
-### Overhaul Badge Display System
-- Show multiple counts per element (e.g., "103 vars, 5 enums, 2 slots")
-- Add labels or tooltips to clarify what counts mean
-- ⚠️ **Partially obsoleted by progressive-disclosure refactor** — the new entity table
-  uses separate columns for Slots / Cls / Enm / Typ / Vars, which serves most of this
-  need. Revisit after refactor.
+### Overhaul Badge Display System  **[MOSTLY OBSOLETE]**
+- Was: show multiple counts per element with clarifying labels/tooltips.
+- The Explorer entity table shipped with separate Props / Cls / Enm / Typ / Vars
+  columns, which serves most of this. Any remaining gap is just badge tooltips.
 
 ### Detail Panel Enhancements
-- Show reachable_from info for enums
+- Show reachable_from info for enums  *(note: reachable_from already shown in enum
+  detail card per the unused-fields workspace — confirm and close if done)*
 - Show inheritance
 - Slot order: Inherited slots at top
 
-### Change "attribute" to "slot" terminology
-- Throughout codebase
+### ~~Change "attribute" to "slot" terminology~~  **[OBSOLETE — REVERSED]**
+- ⚠️ This is now **backwards** relative to Priority 1 (configurable terminology),
+  which moves *away* from "slot" toward general-audience "property." Do not act on
+  this. The codebase-internal naming cleanup ("attribute" vs "slot") is a separate,
+  low-value concern from the user-facing vocabulary.
 
 ### Condition/DrugExposure Variable Display
 - Show message that these are handled as records, not specific variables

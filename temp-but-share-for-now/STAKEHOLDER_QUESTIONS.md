@@ -2,124 +2,195 @@
 
 **Target release: 2026-07-30**
 
-**Open question: primary audience.** Should the release target non-technical users,
-technical/model-designer users, or serve both via progressive disclosure? Planning for
-both; the answer affects defaults and terminology.
-
-Recent stakeholder feedback converged on a single theme: the current UI shows too much
-at once. The direction below is a progressive-disclosure approach captured in a
-[Entity Explorer](https://sigfried.github.io/dynamic-model-var-docs/) (the app's default view).
-
----
-
-## Feedback on the tabular drilldown mockup
-
-- Progressive disclosure is welcomed — it's an improvement over the current "everything
-  at once" view.
-- Basic terms like "slot" need to be defined somewhere (glossary, tooltips, or links to
-  LinkML documentation). See terminology notes below.
-- Enum detail cards (Example 4) should show CURIE labels and definitions, not just the
-  CURIE identifiers.
-- The variable drilldowns in Examples 6 and 7 will mostly be obsoleted by the coming
-  Variable Library — no need to invest further effort in those.
-- Idea raised in mockup review AND in the has-a hierarchy discussion (see below):
-  let users pin a set of entities of interest and generate a model diagram just for
-  those.
+> This is the team-facing planning doc. It captures the direction coming out of
+> the **2026-06-11 feedback meeting**, the open questions we want the
+> design/management team and stakeholders to weigh in on, and how the existing
+> backlog re-sorts against the new priorities. Implementation-level detail lives
+> in [TASKS.md](../docs/TASKS.md).
+>
+> *(Previous rounds of this doc are in git history. The containment-graph work
+> that earlier rounds led with is now **parked** — see "Parked" below.)*
 
 ---
 
-## Model structure — is-a vs has-a
+## The reframing: who is this for?
 
-- `ResearchStudyCollection` is actually the top-level container for everything else in
-  the model — it's not just a peer class. The inheritance view doesn't make this
-  visible.
-- So far we've been showing the inheritance (is-a) hierarchy. The has-a hierarchy is
-  also of interest. Two exploratory mockups have been built:
-  - **[Containment tree](https://sigfried.github.io/dynamic-model-var-docs/containment-tree-mockup.html)**
-    — interactive indented list rooted at ResearchStudyCollection. Shows what contains
-    what, with is-a subclasses nested inline. Subclasses only show their own additional
-    slots (no inherited duplication).
-  - **[Containment graph](https://sigfried.github.io/dynamic-model-var-docs/has-a-mockup.html)**
-    — Cytoscape node-link diagram of the same containment data. Three visually distinct
-    edge types: has-a (solid), flipped FK (purple), is-a subclass (dashed green).
-- **Key design issue:** BDCHM follows relational FK conventions — references point from
-  child to parent (e.g., `Participant.member_of_research_study → ResearchStudy`). For a
-  containment view, these need to be inverted (ResearchStudy "contains" Participants).
-  A heuristic handles this: single-valued slots pointing to other entities are treated
-  as back-references and flipped; multi-valued slots and value-object targets stay
-  unflipped. A small override list handles exceptions.
-- **Open question:** the whole-model graph is borderline legible with 49 nodes and 95
-  edges. Would the "pin a set of entities → generate a filtered diagram" idea produce
-  a more useful view?
-- The [LinkML-generated docs](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/Assay/)
-  already render per-class Mermaid diagrams that distinguish is-a (hollow-triangle
-  arrowheads) from has-a (chevron arrows with cardinality). Worth considering for reuse
-  or as a convention to match.
+The biggest shift from the latest feedback is about **audience**. The current app
+is good for ontologists, data modelers, and people already fluent in LinkML. But
+much of the target audience is **researchers**, and they come in two flavors:
+
+- **Data users** — people working with *already-harmonized* data who, for whatever
+  reason, need to understand something about the model. Their question is usually
+  *"what's in here?"* or *"what does this field/value mean?"*
+- **Study designers / pre-harmonizers** — people designing their own study who need
+  to **pre-harmonize it with BDCHM**. Their question is *"where would my variable
+  or concept fit in this model?"*
+
+Neither group thinks in terms of slots, enums, or induced slots. The plan below
+bends the product toward them without abandoning the modeler audience (who still
+want the exact spec).
+
+> **OPEN QUESTION — primary audience.** Which of these audiences do we optimize
+> *defaults* for? This affects terminology defaults, what's shown vs. hidden on
+> first load, and how much we invest in the study-designer "where does my thing
+> fit?" flow vs. the data-user "what does this mean?" flow. **This is a question
+> for stakeholders — we are not deciding it here.** Personas above are offered as
+> a vocabulary for that discussion.
 
 ---
 
-## Are links worth all the screen real estate they occupy?
+## What we're proposing to build (this round)
 
-- Links have value for their flashiness — they make users feel like they're looking at
-  something sophisticated, and they give an immediate sense of structure.
-- But only if you consider slots and ranges important on their own. If slots and ranges
-  are just properties of classes, they don't need elevation to class-level in a
-  bi/tri-partite graph.
-- Slot reuse and override is probably of interest, at least to model designers. And enum
-  hierarchy hasn't been dealt with either.
-- In the new progressive-disclosure design, inline entity-summary cards and
-  "Referenced by" lists cover the relationship-viewing need in a more compact way. Links
-  could become an optional overlay or separate "Relationships" tab.
+Ordered roughly by how directly each item serves the reframed audience.
+
+### 1. Simplify the jargon — configurable terminology
+
+Default to general-audience terms with the LinkML-native term available on demand.
+
+- *property* (not "slot"), *value set* / *permissible values* (not "enum"),
+  *property type* (not "range"), *entity* (not "class").
+- A **language/vocabulary configuration** the user can switch between — at minimum
+  **general user** vs. **LinkML/modeler**; possibly a third **data-modeler**
+  middle setting. (This is the long-standing TASKS subtask 8.)
+- LinkML equivalents surfaced via tooltips and links to LinkML docs for the curious.
+
+*Serves:* data users and study designers primarily; modelers via the toggle.
+
+### 2. Update the Kitchen Sink view — compact + progressive disclosure
+
+Rather than showing everything at once, make Kitchen Sink open mostly empty and
+fill in as the user selects.
+
+- **Left panel: reuse the Explorer's category grouping** of entities. (This already
+  exists in `src/config/entityCategories.ts` — Admin/Study, Clinical, Observations/
+  Measurements, Lab/Biospecimen, Survey, Files/Other — so this is reuse, not new
+  taxonomy work.)
+- The other two panels **start empty** and populate as classes are selected.
+- **Allow selecting multiple classes** (not just one focal element).
+
+*Serves:* all audiences; this is the view modelers tend to like, made less
+overwhelming.
+
+### 3. Visualization of a user-selected subset of entities
+
+A node-link diagram (or tree) for a **subset of entities the user picks**, rather
+than the whole model at once.
+
+- **Status of what exists today:** there is **no node-link diagram inside the React
+  app**. The only graph-style rendering in the app is the SVG connector overlay
+  between Kitchen Sink panels (`LinkOverlay.tsx`). A real node-link diagram exists
+  **only as a standalone mockup** — `public/has-a-mockup.html` (Cytoscape + dagre,
+  49 nodes / 95 edges) — plus an indented-tree mockup at
+  `public/containment-tree-mockup.html`. So this item is "promote/rebuild a mockup
+  into the app, scoped to a user-selected subset," not "we already have it."
+- This converges with the long-discussed **"pin a set of entities → generate a
+  focused diagram"** idea. Whole-model diagrams are borderline legible; a
+  user-chosen subset is the bet.
+- Note the LinkML-generated docs already render per-class Mermaid diagrams
+  (is-a vs has-a distinguished); worth considering for reuse / as a visual
+  convention to match.
+
+*Serves:* study designers most (seeing where a region of the model sits); data
+users secondarily.
+
+### 4. Help mode (contextual help)
+
+Port the **contextual help** system from `../icd11-playground/web`. It's a clean,
+DOM-driven design: elements carry a `data-help-id`, a markdown file holds the help
+content, and a hook + popover drive a "?"-toggled help mode that intercepts clicks
+and shows per-element explanations. It's largely self-contained
+(`useHelpMode.ts`, `HelpPopover.tsx`, `parseHelpContent.ts`, `help-content.md`).
+
+> **LOW-PRIORITY OPEN QUESTION — shared package?** Could help mode become a
+> standalone module shared across projects (this app + icd11-playground + future
+> ones)? The icd11 implementation is portable enough that extraction looks
+> feasible, but it's not worth blocking this work on. Default plan: copy it in
+> now, consider extracting later.
+
+*Serves:* all audiences; especially valuable while terminology is in flux.
 
 ---
 
-## Interface clean-up (for the current app, and principles for the refactor)
+## Open design questions for the team
 
-- Hide unhighlighted range items.
-- Type at top of range panel (fix order to type, enum, class).
-- Make classes start collapsed.
-- In ranges, only include classes that appear as ranges.
-- Recommended starter classes to lead with: Condition, Demography, MeasurementObservation.
-- Make table sections collapsible, start collapsed.
-- Make descriptions in tables collapsible — start as single line with full text in title
-  text / tooltip.
+These are genuinely undecided. We want input rather than to pre-commit.
+
+### A. One interface, or two? (the view-architecture question)
+
+The Entity Explorer (progressive disclosure) and Kitchen Sink (everything-at-once,
+with connecting links) currently coexist as a header toggle. Nobody in the
+2026-06-11 meeting except the author endorsed **merging** them into a single
+interface that combines the best of both — but that may still be the right move.
+
+Three framings on the table, **left open for the team to decide:**
+
+- **Evolve Explorer, retire Kitchen Sink** — make Explorer the single interface and
+  fold in the few things Kitchen Sink does well (cross-entity links, multi-class
+  compare). Kitchen Sink stays only as a legacy/demo toggle.
+- **Design an explicit merged view** — treat the combined interface as a first-class
+  deliverable to design and pitch. Higher risk/reward; needs design buy-in not yet
+  given.
+- **Keep both, evolve separately** — two distinct views maintained in parallel; new
+  work lands wherever it fits. Lowest re-architecture risk, more maintenance.
+
+The proposed work above is deliberately written to be **mostly view-agnostic** so
+this decision can come slightly later: the terminology toggle, help mode, and
+subset visualization all apply regardless of how this resolves. The "update Kitchen
+Sink" item (#2) is the one most affected by the answer.
+
+### B. Are the connecting links worth their screen real estate?
+
+Links look sophisticated and convey structure at a glance, but in the
+progressive-disclosure design, inline entity-summary cards and "Referenced by"
+lists already cover much of the relationship-viewing need more compactly. Should
+links become an **optional overlay / separate "Relationships" tab** rather than
+always-on? (Slot reuse/override and enum hierarchy are the cases links still
+arguably earn their keep — mainly for modelers.)
+
+### C. How far to push general-audience terminology?
+
+Tied to the audience question (A above): how aggressively do we replace technical
+vocabulary by default, and do we ship the toggle as the escape hatch for modelers?
+
+### D. is-a vs has-a inversion (parked, but flag it)
+
+For any "what contains what" view we have to invert the model's foreign-key
+references (child→parent becomes parent contains children). The heuristic
+(flip single-valued entity-ranged slots; leave multivalued / value-object targets;
+small override list) needs a model designer's eye. **This is parked with the
+containment work** but stays a real open question whenever a containment/has-a view
+is revived.
 
 ---
 
-## New interface ideas
+## Parked (revisit later — not this round)
 
-These could be separate SPAs sharing code, or tabs within a single app. Worth
-considering features from [`../icd11-playground/web`](https://sigfried.github.io/icd11-playground/)
-for code reuse.
-
-- **Non-technical user-oriented vocabulary.** Avoid LinkML-specific language.
-  - "Permissible values" / "value sets" instead of "enumeration."
-  - Something other than "classes" and "slots." Possibilities: *entity* /
-    *property*, or *entity* / *attribute*.
-  - Support showing LinkML-native terms via tooltips or a config toggle for users
-    who want them.
-- **Progressive disclosure** (captured in the
-  [Entity Explorer](https://sigfried.github.io/dynamic-model-var-docs/) (the app's default view)):
-  - Start with entities.
-  - Drill down through inline slot / variable tables.
-  - Drill down further into inline enum and class detail cards.
-- **Feature-toggle widget** that explains each feature and lets users turn them on.
-- **Tabs (not separate SPAs).** The current app could become a "Kitchen Sink" tab.
+- **Containment graph / has-a hierarchy.** The Cytoscape whole-model graph
+  (`has-a-mockup.html`) and indented containment tree (`containment-tree-mockup.html`)
+  and their extract scripts. We are **not** pursuing this in the current round. The
+  subset-visualization item (#3) borrows the "pick entities → focused diagram"
+  *idea* from this work but does not commit to the full containment treatment or the
+  FK-inversion heuristic (question D). Revisit after the subset viz and audience
+  questions settle.
 
 ---
 
-## Features from the ICD-11 Foundation Explorer worth incorporating
+## Carried-over context (still true, still relevant)
 
-- Contextual help.
-- Resizable panel layout.
-- Cross-panel interactions (highlighting, …).
-- Light / dark mode.
+- **Variable Library is coming.** Deep variable drilldowns inside the Explorer will
+  be largely obsoleted by it — don't over-invest there.
+- **Enum detail cards** should show CURIE *labels and definitions*, not just
+  identifiers.
+- **`ResearchStudyCollection` is the real top-level container** of the model, which
+  the inheritance view doesn't make visible — relevant whenever containment is
+  revived.
+- **Known data bug:** `ObservationSet.observations` should point to `Observation`
+  but doesn't; from `Observation` there's no way to see its connection to
+  `ObservationSet`. This bug helped motivate the redesign.
 
 ---
 
-## Known bugs
+## Features still worth borrowing from the ICD-11 Foundation Explorer
 
-- From Observation there's no way to see it's connected to ObservationSet. In the other
-  direction, ObservationSet only points to DimensionalObservation.
-  `ObservationSet.observations` should point to Observation. This bug is part of what
-  inspired the current redesign discussion.
+Beyond help mode (#4 above): resizable panel layout, cross-panel interactions
+(highlighting), light/dark mode.
