@@ -10,26 +10,26 @@ Four decisions. **Reply in the GitHub issue** — quote the question number (Q1�
 so answers stay sortable. You don't need to read the whole plan to answer; the
 context for each is linked. The rest of this doc is reference.
 
+**Settled (not a question):** the **default audience is the general user** — a
+researcher. We optimize defaults for them; modelers are served via opt-in (the
+vocabulary toggle in Q2, plus the Kitchen Sink / LinkML mode).
+
 - **Q1 — One interface or two?** Today the **Entity Explorer** (progressive
   disclosure) and the **Kitchen Sink** (everything-at-once + connecting links)
   coexist as a toggle. Pick a direction: **(a)** evolve one, retire the other;
   **(b)** design an explicit *merged* view; **(c)** keep both, evolve separately.
   *(See Q1 below.)*
-- **Q2 — Which audience do we optimize the defaults for?** Data users
-  ("what's in here / what does this mean?"), study designers pre-harmonizing
-  ("where would my variable fit?"), modelers — or "plan for both, defer." This
-  sets the default vocabulary mode and what's shown vs. hidden on first load.
-  *(See Q2 + the term-set table in priority #1 below.)*
+- **Q2 — What language / terminology should we use?** We're **assuming a vocabulary
+  toggle** (2–3 modes), so the question is *which terms*, not how far to push.
+  General-user default leads; LinkML mode is the escape hatch; an optional
+  data-modeler (relational: table / field / column) mode is on the table. **React
+  to / edit the candidate term-set table.** *(See Q2 below.)*
 - **Q3 — Are the connecting links worth their screen space?** Keep them
   always-on, make them an **optional overlay / "Relationships" tab**, or drop
   them in favor of the inline "Referenced by" lists? *(See Q3 below.)*
 - **Q4 — Confirm the priority order** of the four proposed work items
   (1 terminology toggle · 2 compact Kitchen Sink · 3 subset visualization ·
   4 help mode), or reorder them. *(See Q4 below.)*
-
-> We're **assuming a vocabulary toggle** (2–3 modes), so the terminology question
-> is *which terms*, not *how far to push*. The candidate term sets are in
-> **priority #1** below — react to / edit that table.
 
 *(One lower-stakes item if you have an opinion: whether help mode should become a
 shared cross-project package.)*
@@ -64,12 +64,11 @@ Neither group thinks in terms of slots, enums, or induced slots. The plan below
 bends the product toward them without abandoning the modeler audience (who still
 want the exact spec).
 
-> **OPEN QUESTION — primary audience.** Which of these audiences do we optimize
-> *defaults* for? This affects terminology defaults, what's shown vs. hidden on
-> first load, and how much we invest in the study-designer "where does my thing
-> fit?" flow vs. the data-user "what does this mean?" flow. **This is a question
-> for stakeholders — we are not deciding it here.** Personas above are offered as
-> a vocabulary for that discussion.
+> **DECISION — defaults target the general user.** We optimize the default
+> experience (vocabulary, what's shown vs. hidden on first load) for the
+> **general-user researcher**. Modelers are served via opt-in: the LinkML
+> vocabulary mode (Q2) and the Kitchen Sink view. This is settled; what remains
+> open is the *specific language* — see Q2.
 
 ---
 
@@ -191,17 +190,26 @@ Three framings on the table, **left open for the team to decide:**
 
 The proposed work above is deliberately written to be **mostly view-agnostic** so
 this decision can come slightly later: the terminology toggle, help mode, and
-subset visualization all apply regardless of how this resolves. The "update Kitchen
-Sink" item (priority #2) is the one most affected by the answer.
+subset visualization all apply regardless of how this resolves. The
+[**Kitchen Sink** item (priority #2)](#2-update-the-kitchen-sink-view--compact--progressive-disclosure)
+is the one most affected by the answer.
 
-### Q2. Which audience do we optimize the defaults for?
+### Q2. What language / terminology should we use?
 
-See **"The reframing"** above for the personas. The choice — data users, study
-designers (pre-harmonizers), modelers, or "plan for both, defer" — sets the
-**default vocabulary mode** (see priority #1's term-set table) and what's shown vs.
-hidden on first load, and how much we invest in the study-designer "where does my
-thing fit?" flow vs. the data-user "what does this mean?" flow. **A question for
-stakeholders — we are not deciding it here.**
+Defaults target the general-user researcher (settled — see
+[The reframing](#the-reframing-who-is-this-for) above), so the question is **which
+words**, assuming a **vocabulary toggle** (2–3 modes).
+
+This is the concrete ask: **react to, edit, or add rows to the candidate term-set
+table in [priority #1](#1-simplify-the-jargon--configurable-terminology)** above.
+The decisions inside it:
+
+- **How many modes** — 2 (general / LinkML) or 3 (add a **data-modeler** relational
+  mode: *table / field / column*)?
+- **Which term per concept** — e.g. `class` → *entity* or *table*; `slot` →
+  *property* or *field / column*; `enum` → *value set* / *permissible values*;
+  `range` → *property type* / *data type*.
+- Any concepts or better terms we've missed.
 
 ### Q3. Are the connecting links worth their screen real estate?
 
@@ -214,9 +222,9 @@ arguably earn their keep — mainly for modelers.)
 
 ### Q4. Confirm (or reorder) the four priorities
 
-The four items under "What we're proposing to build" are ordered 1–4 (terminology ·
-compact Kitchen Sink · subset visualization · help mode). Confirm that order or
-propose a different one.
+The four items under [What we're proposing to build](#what-were-proposing-to-build-this-round)
+are ordered 1–4 (terminology · compact Kitchen Sink · subset visualization · help
+mode). Confirm that order or propose a different one.
 
 ### Parked open question: is-a vs has-a inversion
 
