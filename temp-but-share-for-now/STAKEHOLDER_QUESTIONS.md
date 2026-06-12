@@ -2,6 +2,37 @@
 
 **Target release: 2026-07-30**
 
+---
+
+## ⏱️ What we need from you (please respond in the tracking issue)
+
+Four decisions. **Reply in the GitHub issue** — quote the question number (Q1…Q4)
+so answers stay sortable. You don't need to read the whole plan to answer; the
+context for each is linked. The rest of this doc is reference.
+
+- **Q1 — One interface or two?** Today the **Entity Explorer** (progressive
+  disclosure) and the **Kitchen Sink** (everything-at-once + connecting links)
+  coexist as a toggle. Pick a direction: **(a)** evolve Explorer, retire Kitchen
+  Sink; **(b)** design an explicit *merged* view; **(c)** keep both, evolve
+  separately. *(See "One interface, or two?" below.)*
+- **Q2 — Which audience do we optimize the defaults for?** Data users
+  ("what's in here / what does this mean?"), study designers pre-harmonizing
+  ("where would my variable fit?"), modelers — or "plan for both, defer." This
+  sets default terminology and what's shown vs. hidden on first load.
+  *(See "The reframing" below.)*
+- **Q3 — Are the connecting links worth their screen space?** Keep them
+  always-on, make them an **optional overlay / "Relationships" tab**, or drop
+  them in favor of the inline "Referenced by" lists? *(See "Are the connecting
+  links worth it?" below.)*
+- **Q4 — Confirm the priority order** of the four proposed work items
+  (1 terminology toggle · 2 compact Kitchen Sink · 3 subset visualization ·
+  4 help mode), or reorder them. *(See "What we're proposing to build" below.)*
+
+*(Two lower-stakes items if you have an opinion: how far to push plain-language
+vocabulary, and whether help mode should become a shared cross-project package.)*
+
+---
+
 > This is the team-facing planning doc. It captures the direction coming out of
 > the **2026-06-11 feedback meeting**, the open questions we want the
 > design/management team and stakeholders to weigh in on, and how the existing
