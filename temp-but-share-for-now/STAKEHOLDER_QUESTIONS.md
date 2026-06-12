@@ -4,46 +4,12 @@
 
 ---
 
-## ⏱️ What we need from you (please respond in the tracking issue)
-
-Four decisions. **Reply in the GitHub issue** — quote the question number (Q1…Q4)
-so answers stay sortable. You don't need to read the whole plan to answer; the
-context for each is linked. The rest of this doc is reference.
-
-**Settled (not a question):** the **default audience is the general user** — a
-researcher. We optimize defaults for them; modelers are served via opt-in (the
-vocabulary toggle in Q2, plus the Kitchen Sink / LinkML mode).
-
-- **Q1 — One interface or two?** Today the **Entity Explorer** (progressive
-  disclosure) and the **Kitchen Sink** (everything-at-once + connecting links)
-  coexist as a toggle. Pick a direction: **(a)** evolve one, retire the other;
-  **(b)** design an explicit *merged* view; **(c)** keep both, evolve separately.
-  *(See Q1 below.)*
-- **Q2 — What language / terminology should we use?** We're **assuming a vocabulary
-  toggle** (2–3 modes), so the question is *which terms*, not how far to push.
-  General-user default leads; LinkML mode is the escape hatch; an optional
-  data-modeler (relational: table / field / column) mode is on the table. **React
-  to / edit the candidate term-set table.** *(See Q2 below.)*
-- **Q3 — Are the connecting links worth their screen space?** Keep them
-  always-on, make them an **optional overlay / "Relationships" tab**, or drop
-  them in favor of the inline "Referenced by" lists? *(See Q3 below.)*
-- **Q4 — Confirm the priority order** of the four proposed work items
-  (1 terminology toggle · 2 compact Kitchen Sink · 3 subset visualization ·
-  4 help mode), or reorder them. *(See Q4 below.)*
-
-*(One lower-stakes item if you have an opinion: whether help mode should become a
-shared cross-project package.)*
-
----
-
-> This is the team-facing planning doc. It captures the direction coming out of
-> the **2026-06-11 feedback meeting**, the open questions we want the
-> design/management team and stakeholders to weigh in on, and how the existing
-> backlog re-sorts against the new priorities. Implementation-level detail lives
-> in [TASKS.md](../docs/TASKS.md).
->
-> *(Previous rounds of this doc are in git history. The containment-graph work
-> that earlier rounds led with is now **parked** — see "Parked" below.)*
+> Team-facing plan from the **2026-06-11 feedback meeting**. The four decisions we
+> need are in **[Decisions needed](#decisions-needed-q1q4)** below — **please reply
+> in the [tracking issue](https://github.com/Sigfried/dynamic-model-var-docs/issues/1)**,
+> quoting the question number. Implementation detail lives in
+> [TASKS.md](../docs/TASKS.md); the containment-graph work earlier rounds led with is
+> now **parked** (see below).
 
 ---
 
@@ -72,144 +38,54 @@ want the exact spec).
 
 ---
 
-## What we're proposing to build (this round)
+## Decisions needed (Q1–Q4)
 
-Ordered roughly by how directly each item serves the reframed audience.
+The four proposed work items are folded into the questions below. **Please reply in
+the [tracking issue](https://github.com/Sigfried/dynamic-model-var-docs/issues/1),
+quoting the question number.**
 
-### 1. Simplify the jargon — configurable terminology
-
-**We are assuming a vocabulary toggle** (2 or 3 modes the user can switch between).
-So the question is *not* "how far do we push plain language" — it's **what should
-the term sets actually be?** We want the team to react to and fill in the table
-below. (This is the long-standing TASKS subtask 8.)
-
-Proposed modes (final count TBD — 2 or 3):
-
-- **General user** — everyday words for researchers.
-- *(optional)* **Data modeler** — relational/database vocabulary (table/field/column).
-- **LinkML / spec** — the exact LinkML terms; the escape hatch for modelers.
-
-Candidate term mappings — **please confirm, edit, or add a column:**
-
-| Concept (LinkML)      | General-user candidate              | Data-modeler candidate | Notes / alternatives |
-|-----------------------|-------------------------------------|------------------------|----------------------|
-| `class`               | **entity**                          | **table**              | which leads?          |
-| `slot`                | **property**                        | **field** / **column** | "attribute"?          |
-| `enum`                | **value set** / **permissible values** | (same as general)   | "controlled vocabulary"? |
-| `range`               | **property type**                   | **data type**          |                       |
-| *(add rows as needed)*|                                     |                        |                       |
-
-> **PROMPTS for the team:**
-> - Do we want **2 modes** (general / LinkML) or **3** (add data-modeler)?
-> - For each row, which candidate do you prefer — or propose a better term?
-> - Is the **data-modeler / relational** vocabulary (table/field/column) worth a
->   distinct mode, or does it just confuse things?
-
-LinkML equivalents would also be surfaced via tooltips + links to LinkML docs for
-the curious, regardless of mode.
-
-*Serves:* data users and study designers primarily; modelers via the toggle.
-
-### 2. Update the Kitchen Sink view — compact + progressive disclosure
-
-Rather than showing everything at once, make Kitchen Sink open mostly empty and
-fill in as the user selects.
-
-- **Left panel: reuse the Explorer's category grouping** of entities. (This already
-  exists in `src/config/entityCategories.ts` — Admin/Study, Clinical, Observations/
-  Measurements, Lab/Biospecimen, Survey, Files/Other — so this is reuse, not new
-  taxonomy work.)
-- The other two panels **start empty** and populate as classes are selected.
-- **Allow selecting multiple classes** (not just one focal element).
-
-*Serves:* all audiences; this is the view modelers tend to like, made less
-overwhelming.
-
-### 3. Visualization of a user-selected subset of entities
-
-A node-link diagram (or tree) for a **subset of entities the user picks**, rather
-than the whole model at once.
-
-- **Status of what exists today:** there is **no node-link diagram inside the React
-  app**. The only graph-style rendering in the app is the SVG connector overlay
-  between Kitchen Sink panels (`LinkOverlay.tsx`). A real node-link diagram exists
-  **only as a standalone mockup** — `public/has-a-mockup.html` (Cytoscape + dagre,
-  49 nodes / 95 edges) — plus an indented-tree mockup at
-  `public/containment-tree-mockup.html`. So this item is "promote/rebuild a mockup
-  into the app, scoped to a user-selected subset," not "we already have it."
-- This converges with the long-discussed **"pin a set of entities → generate a
-  focused diagram"** idea. Whole-model diagrams are borderline legible; a
-  user-chosen subset is the bet.
-- Note the LinkML-generated docs already render per-class Mermaid diagrams
-  (is-a vs has-a distinguished); worth considering for reuse / as a visual
-  convention to match.
-
-*Serves:* study designers most (seeing where a region of the model sits); data
-users secondarily.
-
-### 4. Help mode (contextual help)
-
-Port the **contextual help** system from `../icd11-playground/web`. It's a clean,
-DOM-driven design: elements carry a `data-help-id`, a markdown file holds the help
-content, and a hook + popover drive a "?"-toggled help mode that intercepts clicks
-and shows per-element explanations. It's largely self-contained
-(`useHelpMode.ts`, `HelpPopover.tsx`, `parseHelpContent.ts`, `help-content.md`).
-
-> **LOW-PRIORITY OPEN QUESTION — shared package?** Could help mode become a
-> standalone module shared across projects (this app + icd11-playground + future
-> ones)? The icd11 implementation is portable enough that extraction looks
-> feasible, but it's not worth blocking this work on. Default plan: copy it in
-> now, consider extracting later.
-
-*Serves:* all audiences; especially valuable while terminology is in flux.
-
----
-
-## Open design questions for the team
-
-These are genuinely undecided. We want input rather than to pre-commit. **Numbered
-to match the issue (Q1–Q4)** — reply there, quoting the number.
-
-### Q1. One interface, or two? (the view-architecture question)
+### Q1. One interface or two? — and how to compact the Kitchen Sink
 
 The Entity Explorer (progressive disclosure) and Kitchen Sink (everything-at-once,
 with connecting links) currently coexist as a header toggle. Nobody in the
 2026-06-11 meeting except the author endorsed **merging** them into a single
-interface that combines the best of both — but that may still be the right move.
+interface — but that may still be right. **Pick a direction:**
 
-Three framings on the table, **left open for the team to decide:**
-
-- **(a) Evolve one, retire the other** — make one view the single interface and
-  fold in the few things the other does well (cross-entity links, multi-class
+- **(a) Evolve one, retire the other** — one view becomes the single interface and
+  folds in the few things the other does well (cross-entity links, multi-class
   compare). The retired one stays only as a legacy/demo toggle.
-- **(b) Design an explicit merged view** — treat the combined interface as a
-  first-class deliverable to design and pitch. Higher risk/reward; needs design
-  buy-in not yet given.
-- **(c) Keep both, evolve separately** — two distinct views maintained in parallel;
-  new work lands wherever it fits. Lowest re-architecture risk, more maintenance.
+- **(b) Design an explicit merged view** — a first-class combined interface to
+  design and pitch. Higher risk/reward; needs design buy-in not yet given.
+- **(c) Keep both, evolve separately** — two views in parallel. Lowest
+  re-architecture risk, more maintenance.
 
-The proposed work above is deliberately written to be **mostly view-agnostic** so
-this decision can come slightly later: the terminology toggle, help mode, and
-subset visualization all apply regardless of how this resolves. The
-[**Kitchen Sink** item (priority #2)](#2-update-the-kitchen-sink-view--compact--progressive-disclosure)
-is the one most affected by the answer.
+**Proposed work either way — compact the Kitchen Sink** (the item this decision most
+affects): open it mostly empty and fill in on selection. Left panel **reuses the
+Explorer's category grouping** (already in `src/config/entityCategories.ts` —
+reuse, not new taxonomy); the other two panels **start empty**; **allow selecting
+multiple classes**. The terminology toggle, subset viz, and help mode (below) apply
+regardless of how Q1 resolves.
 
 ### Q2. What language / terminology should we use?
 
 Defaults target the general-user researcher (settled — see
-[The reframing](#the-reframing-who-is-this-for) above), so the question is **which
-words**, assuming a **vocabulary toggle** (2–3 modes).
+[The reframing](#the-reframing-who-is-this-for)), so the question is **which words**,
+assuming a **vocabulary toggle** (2–3 modes). LinkML equivalents would also show in
+tooltips + doc links regardless of mode. (Long-standing TASKS subtask 8.)
 
-This is the concrete ask: **react to, edit, or add rows to the candidate term-set
-table in [priority #1](#1-simplify-the-jargon--configurable-terminology)** above.
-The decisions inside it:
+**React to, edit, or add rows to this candidate term-set table:**
 
-- **How many modes** — 2 (general / LinkML) or 3 (add a **data-modeler** relational
-  mode: *table / field / column*)?
-- **Which term per concept** — e.g. `class` → *entity* or *table*; `slot` →
-  *property* or *field / column*; `enum` → *value set* / *permissible values*;
-  `range` → *property type* / *data type*.
-- Any concepts or better terms we've missed.
+| Concept (LinkML)      | General-user candidate                 | Data-modeler candidate | Notes / alternatives     |
+|-----------------------|----------------------------------------|------------------------|--------------------------|
+| `class`               | **entity**                             | **table**              | which leads?             |
+| `slot`                | **property**                           | **field** / **column** | "attribute"?             |
+| `enum`                | **value set** / **permissible values** | (same as general)      | "controlled vocabulary"? |
+| `range`               | **property type**                      | **data type**          |                          |
+| *(add rows as needed)*|                                        |                        |                          |
+
+Open decisions in the table: **2 modes** (general / LinkML) or **3** (add the
+**data-modeler** relational mode — is table/field/column worth a distinct mode or
+just confusing?); the preferred term per row; anything missing.
 
 ### Q3. Are the connecting links worth their screen real estate?
 
@@ -222,9 +98,24 @@ arguably earn their keep — mainly for modelers.)
 
 ### Q4. Confirm (or reorder) the four priorities
 
-The four items under [What we're proposing to build](#what-were-proposing-to-build-this-round)
-are ordered 1–4 (terminology · compact Kitchen Sink · subset visualization · help
-mode). Confirm that order or propose a different one.
+Confirm this order, or propose a different one:
+
+1. **Configurable terminology** — the vocabulary toggle (Q2). *Serves data users +
+   study designers; modelers via the toggle.*
+2. **Compact Kitchen Sink** — progressive disclosure + multi-class select (Q1).
+   *Serves all audiences; the modeler-favored view, made less overwhelming.*
+3. **Subset visualization** — a node-link diagram (or tree) for a **user-picked
+   subset** of entities, not the whole model. *Reality check:* there is **no
+   node-link diagram in the app today** — only the SVG panel-connector overlay
+   (`LinkOverlay.tsx`); real diagrams exist only as standalone mockups
+   (`public/has-a-mockup.html` Cytoscape+dagre, `public/containment-tree-mockup.html`).
+   So this is "promote a mockup into the app, scoped to a subset." Converges with the
+   "pin entities → focused diagram" idea; could match the LinkML per-class Mermaid
+   conventions (is-a vs has-a). *Serves study designers most.*
+4. **Help mode** — port the DOM-driven contextual help from `../icd11-playground/web`
+   (`data-help-id` + markdown content + "?"-toggled popover; self-contained:
+   `useHelpMode.ts`, `HelpPopover.tsx`, `parseHelpContent.ts`, `help-content.md`).
+   *Serves all audiences; valuable while terminology is in flux.*
 
 ### Parked open question: is-a vs has-a inversion
 
@@ -265,5 +156,5 @@ targets; small override list) needs a model designer's eye.
 
 ## Features still worth borrowing from the ICD-11 Foundation Explorer
 
-Beyond help mode (#4 above): resizable panel layout, cross-panel interactions
+Beyond help mode (Q4, item 4): resizable panel layout, cross-panel interactions
 (highlighting), light/dark mode.
