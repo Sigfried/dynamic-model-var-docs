@@ -12,24 +12,27 @@ context for each is linked. The rest of this doc is reference.
 
 - **Q1 — One interface or two?** Today the **Entity Explorer** (progressive
   disclosure) and the **Kitchen Sink** (everything-at-once + connecting links)
-  coexist as a toggle. Pick a direction: **(a)** evolve Explorer, retire Kitchen
-  Sink; **(b)** design an explicit *merged* view; **(c)** keep both, evolve
-  separately. *(See "One interface, or two?" below.)*
+  coexist as a toggle. Pick a direction: **(a)** evolve one, retire the other;
+  **(b)** design an explicit *merged* view; **(c)** keep both, evolve separately.
+  *(See Q1 below.)*
 - **Q2 — Which audience do we optimize the defaults for?** Data users
   ("what's in here / what does this mean?"), study designers pre-harmonizing
   ("where would my variable fit?"), modelers — or "plan for both, defer." This
-  sets default terminology and what's shown vs. hidden on first load.
-  *(See "The reframing" below.)*
+  sets the default vocabulary mode and what's shown vs. hidden on first load.
+  *(See Q2 + the term-set table in priority #1 below.)*
 - **Q3 — Are the connecting links worth their screen space?** Keep them
   always-on, make them an **optional overlay / "Relationships" tab**, or drop
-  them in favor of the inline "Referenced by" lists? *(See "Are the connecting
-  links worth it?" below.)*
+  them in favor of the inline "Referenced by" lists? *(See Q3 below.)*
 - **Q4 — Confirm the priority order** of the four proposed work items
   (1 terminology toggle · 2 compact Kitchen Sink · 3 subset visualization ·
-  4 help mode), or reorder them. *(See "What we're proposing to build" below.)*
+  4 help mode), or reorder them. *(See Q4 below.)*
 
-*(Two lower-stakes items if you have an opinion: how far to push plain-language
-vocabulary, and whether help mode should become a shared cross-project package.)*
+> We're **assuming a vocabulary toggle** (2–3 modes), so the terminology question
+> is *which terms*, not *how far to push*. The candidate term sets are in
+> **priority #1** below — react to / edit that table.
+
+*(One lower-stakes item if you have an opinion: whether help mode should become a
+shared cross-project package.)*
 
 ---
 
@@ -76,14 +79,35 @@ Ordered roughly by how directly each item serves the reframed audience.
 
 ### 1. Simplify the jargon — configurable terminology
 
-Default to general-audience terms with the LinkML-native term available on demand.
+**We are assuming a vocabulary toggle** (2 or 3 modes the user can switch between).
+So the question is *not* "how far do we push plain language" — it's **what should
+the term sets actually be?** We want the team to react to and fill in the table
+below. (This is the long-standing TASKS subtask 8.)
 
-- *property* (not "slot"), *value set* / *permissible values* (not "enum"),
-  *property type* (not "range"), *entity* (not "class").
-- A **language/vocabulary configuration** the user can switch between — at minimum
-  **general user** vs. **LinkML/modeler**; possibly a third **data-modeler**
-  middle setting. (This is the long-standing TASKS subtask 8.)
-- LinkML equivalents surfaced via tooltips and links to LinkML docs for the curious.
+Proposed modes (final count TBD — 2 or 3):
+
+- **General user** — everyday words for researchers.
+- *(optional)* **Data modeler** — relational/database vocabulary (table/field/column).
+- **LinkML / spec** — the exact LinkML terms; the escape hatch for modelers.
+
+Candidate term mappings — **please confirm, edit, or add a column:**
+
+| Concept (LinkML)      | General-user candidate              | Data-modeler candidate | Notes / alternatives |
+|-----------------------|-------------------------------------|------------------------|----------------------|
+| `class`               | **entity**                          | **table**              | which leads?          |
+| `slot`                | **property**                        | **field** / **column** | "attribute"?          |
+| `enum`                | **value set** / **permissible values** | (same as general)   | "controlled vocabulary"? |
+| `range`               | **property type**                   | **data type**          |                       |
+| *(add rows as needed)*|                                     |                        |                       |
+
+> **PROMPTS for the team:**
+> - Do we want **2 modes** (general / LinkML) or **3** (add data-modeler)?
+> - For each row, which candidate do you prefer — or propose a better term?
+> - Is the **data-modeler / relational** vocabulary (table/field/column) worth a
+>   distinct mode, or does it just confuse things?
+
+LinkML equivalents would also be surfaced via tooltips + links to LinkML docs for
+the curious, regardless of mode.
 
 *Serves:* data users and study designers primarily; modelers via the toggle.
 
@@ -144,9 +168,10 @@ and shows per-element explanations. It's largely self-contained
 
 ## Open design questions for the team
 
-These are genuinely undecided. We want input rather than to pre-commit.
+These are genuinely undecided. We want input rather than to pre-commit. **Numbered
+to match the issue (Q1–Q4)** — reply there, quoting the number.
 
-### A. One interface, or two? (the view-architecture question)
+### Q1. One interface, or two? (the view-architecture question)
 
 The Entity Explorer (progressive disclosure) and Kitchen Sink (everything-at-once,
 with connecting links) currently coexist as a header toggle. Nobody in the
@@ -155,21 +180,30 @@ interface that combines the best of both — but that may still be the right mov
 
 Three framings on the table, **left open for the team to decide:**
 
-- **Evolve Explorer, retire Kitchen Sink** — make Explorer the single interface and
-  fold in the few things Kitchen Sink does well (cross-entity links, multi-class
-  compare). Kitchen Sink stays only as a legacy/demo toggle.
-- **Design an explicit merged view** — treat the combined interface as a first-class
-  deliverable to design and pitch. Higher risk/reward; needs design buy-in not yet
-  given.
-- **Keep both, evolve separately** — two distinct views maintained in parallel; new
-  work lands wherever it fits. Lowest re-architecture risk, more maintenance.
+- **(a) Evolve one, retire the other** — make one view the single interface and
+  fold in the few things the other does well (cross-entity links, multi-class
+  compare). The retired one stays only as a legacy/demo toggle.
+- **(b) Design an explicit merged view** — treat the combined interface as a
+  first-class deliverable to design and pitch. Higher risk/reward; needs design
+  buy-in not yet given.
+- **(c) Keep both, evolve separately** — two distinct views maintained in parallel;
+  new work lands wherever it fits. Lowest re-architecture risk, more maintenance.
 
 The proposed work above is deliberately written to be **mostly view-agnostic** so
 this decision can come slightly later: the terminology toggle, help mode, and
 subset visualization all apply regardless of how this resolves. The "update Kitchen
-Sink" item (#2) is the one most affected by the answer.
+Sink" item (priority #2) is the one most affected by the answer.
 
-### B. Are the connecting links worth their screen real estate?
+### Q2. Which audience do we optimize the defaults for?
+
+See **"The reframing"** above for the personas. The choice — data users, study
+designers (pre-harmonizers), modelers, or "plan for both, defer" — sets the
+**default vocabulary mode** (see priority #1's term-set table) and what's shown vs.
+hidden on first load, and how much we invest in the study-designer "where does my
+thing fit?" flow vs. the data-user "what does this mean?" flow. **A question for
+stakeholders — we are not deciding it here.**
+
+### Q3. Are the connecting links worth their screen real estate?
 
 Links look sophisticated and convey structure at a glance, but in the
 progressive-disclosure design, inline entity-summary cards and "Referenced by"
@@ -178,19 +212,19 @@ links become an **optional overlay / separate "Relationships" tab** rather than
 always-on? (Slot reuse/override and enum hierarchy are the cases links still
 arguably earn their keep — mainly for modelers.)
 
-### C. How far to push general-audience terminology?
+### Q4. Confirm (or reorder) the four priorities
 
-Tied to the audience question (A above): how aggressively do we replace technical
-vocabulary by default, and do we ship the toggle as the escape hatch for modelers?
+The four items under "What we're proposing to build" are ordered 1–4 (terminology ·
+compact Kitchen Sink · subset visualization · help mode). Confirm that order or
+propose a different one.
 
-### D. is-a vs has-a inversion (parked, but flag it)
+### Parked open question: is-a vs has-a inversion
 
-For any "what contains what" view we have to invert the model's foreign-key
-references (child→parent becomes parent contains children). The heuristic
-(flip single-valued entity-ranged slots; leave multivalued / value-object targets;
-small override list) needs a model designer's eye. **This is parked with the
-containment work** but stays a real open question whenever a containment/has-a view
-is revived.
+*(Not numbered — parked with the containment work, flagged for whenever it's
+revived.)* For any "what contains what" view we have to invert the model's
+foreign-key references (child→parent becomes parent contains children). The
+heuristic (flip single-valued entity-ranged slots; leave multivalued / value-object
+targets; small override list) needs a model designer's eye.
 
 ---
 
@@ -199,10 +233,10 @@ is revived.
 - **Containment graph / has-a hierarchy.** The Cytoscape whole-model graph
   (`has-a-mockup.html`) and indented containment tree (`containment-tree-mockup.html`)
   and their extract scripts. We are **not** pursuing this in the current round. The
-  subset-visualization item (#3) borrows the "pick entities → focused diagram"
-  *idea* from this work but does not commit to the full containment treatment or the
-  FK-inversion heuristic (question D). Revisit after the subset viz and audience
-  questions settle.
+  subset-visualization item (priority #3) borrows the "pick entities → focused
+  diagram" *idea* from this work but does not commit to the full containment
+  treatment or the FK-inversion heuristic (see the parked is-a/has-a question above).
+  Revisit after the subset viz and audience questions settle.
 
 ---
 
