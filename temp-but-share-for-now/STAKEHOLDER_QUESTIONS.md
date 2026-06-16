@@ -104,7 +104,15 @@ picks in **bold**, alternatives noted):
 
 ⚠️ Anne flagged some of these as **still too jargony** and will **send more
 guidance** — treat the bold picks as provisional pending that. Add rows for any
-concept we've missed.
+concept we've missed. *(SG leans **property** over **attribute** for `slot`.)*
+
+> **Now wired as code config (no UI affordance).** All UI vocabulary is centralized
+> in `src/config/appConfig.ts` (`VOCAB` + greppable `SectionId` constants); code
+> looks sections up by stable id, never by display word. **Changing any term is a
+> one-line edit there** — so the words above can churn freely without code changes.
+> The seeded words are Anne's provisional picks. (Also un-abbreviated the Explorer
+> columns per feedback: Props/Cls/Enm/Typ/Vars → Properties/Entities/Value Sets/Data
+> Types/Variables.)
 
 ### Q3. Are the connecting links worth their screen real estate?
 
