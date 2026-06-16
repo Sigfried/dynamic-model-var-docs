@@ -27,7 +27,7 @@ import type {
 import { EDGE_TYPES } from "../models/SchemaTypes";
 import type { ToggleButtonData } from '../components/ItemsPanel';
 import type { SectionData } from '../components/Section';
-import { APP_CONFIG, getAllElementTypeIds, SectionId, VOCAB } from '../config/appConfig';
+import { APP_CONFIG, getAllElementTypeIds, SectionId, ACTIVE_VOCAB } from '../config/appConfig';
 // Re-export so UI components (which must not import from config/ or models/) can
 // reference section identities without depending on display strings.
 export { SectionId } from '../config/appConfig';
@@ -251,13 +251,13 @@ export class DataService {
 
   /** Display config for the Entity Explorer summary columns (header + tooltip). */
   getEntityColumns() {
-    return VOCAB.entityCol;
+    return ACTIVE_VOCAB.entityCol;
   }
 
   /** Display title for a section, by stable SectionId. For components that render
    *  section labels directly (not via getDetailData). */
   getSectionLabel(sectionId: SectionId): string {
-    return VOCAB.section[sectionId];
+    return ACTIVE_VOCAB.section[sectionId];
   }
 
   /** Jargon-free display word for an element type, e.g. getTypeLabel('slot') ->
@@ -269,9 +269,11 @@ export class DataService {
   }
 
   /** Jargon-free word for a model concept, e.g. getConceptLabel('attributeType')
-   *  -> "Attribute type". For components rendering concept words directly. */
-  getConceptLabel(concept: keyof typeof VOCAB.concept): string {
-    return VOCAB.concept[concept];
+   *  -> "Attribute Type". Pass plural=true for the plural form. For components
+   *  rendering concept words directly. */
+  getConceptLabel(concept: keyof typeof ACTIVE_VOCAB.concept, plural = false): string {
+    const c = ACTIVE_VOCAB.concept[concept];
+    return plural ? c.plural : c.singular;
   }
 
   /**

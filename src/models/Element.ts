@@ -26,7 +26,7 @@ import type {
   LinkData,
   ElementRef
 } from '../contracts/ComponentData';
-import { APP_CONFIG, VOCAB, SectionId } from '../config/appConfig';
+import { APP_CONFIG, ACTIVE_VOCAB, SectionId } from '../config/appConfig';
 const {elementTypes, } = APP_CONFIG;
 
 // Helper function to map panel position to context string
@@ -433,7 +433,7 @@ export class ClassElement extends Range {
     if (this.parentId) {
       sections.push({
         sectionId: SectionId.Inheritance,
-        name: VOCAB.section[SectionId.Inheritance],
+        name: ACTIVE_VOCAB.section[SectionId.Inheritance],
         text: `Inherits from: ${this.parentId}`
       });
     }
@@ -477,8 +477,8 @@ export class ClassElement extends Range {
       if (slotsList.length > 0) {
         sections.push({
           sectionId: SectionId.Attributes,
-          name: VOCAB.section[SectionId.Attributes],
-          tableHeadings: ['Name', 'Source', VOCAB.concept.attributeType, 'Required', 'Multivalued', 'Description'],
+          name: ACTIVE_VOCAB.section[SectionId.Attributes],
+          tableHeadings: ['Name', 'Source', ACTIVE_VOCAB.concept.attributeType.singular, 'Required', 'Multivalued', 'Description'],
           tableContent: slotsList,
           tableHeadingColor: elementTypes['slot'].color.headerBg
         });
@@ -497,7 +497,7 @@ export class ClassElement extends Range {
 
       sections.push({
         sectionId: SectionId.Variables,
-        name: `${VOCAB.section[SectionId.Variables]} (${this.variableCount})`,
+        name: `${ACTIVE_VOCAB.section[SectionId.Variables]} (${this.variableCount})`,
         tableHeadings: ['Label', 'Data Type', 'Unit', 'CURIE', 'Description'],
         tableContent: variableList,
         tableHeadingColor: elementTypes['variable'].color.headerBg
@@ -577,8 +577,8 @@ export class EnumElement extends Range {
       ]);
       sections.push({
         sectionId: SectionId.InheritsValues,
-        name: VOCAB.section[SectionId.InheritsValues],
-        tableHeadings: [VOCAB.concept.permissibleValues],
+        name: ACTIVE_VOCAB.section[SectionId.InheritsValues],
+        tableHeadings: [ACTIVE_VOCAB.concept.valueSet.singular],
         tableContent: inheritsList
       });
     }
@@ -614,7 +614,7 @@ export class EnumElement extends Range {
       if (reachableProps.length > 0) {
         sections.push({
           sectionId: SectionId.ReachableFrom,
-          name: VOCAB.section[SectionId.ReachableFrom],
+          name: ACTIVE_VOCAB.section[SectionId.ReachableFrom],
           tableHeadings: ['Property', 'Value'],
           tableContent: reachableProps
         });
@@ -630,7 +630,7 @@ export class EnumElement extends Range {
 
       sections.push({
         sectionId: SectionId.PermissibleValues,
-        name: VOCAB.section[SectionId.PermissibleValues],
+        name: ACTIVE_VOCAB.section[SectionId.PermissibleValues],
         tableHeadings: ['Value', 'Description'],
         tableContent: values
       });
@@ -645,8 +645,8 @@ export class EnumElement extends Range {
       ]);
       sections.push({
         sectionId: SectionId.UsedByEntities,
-        name: `${VOCAB.section[SectionId.UsedByEntities]} (${usedByClasses.length})`,
-        tableHeadings: [VOCAB.concept.entity],
+        name: `${ACTIVE_VOCAB.section[SectionId.UsedByEntities]} (${usedByClasses.length})`,
+        tableHeadings: [ACTIVE_VOCAB.concept.entity.singular],
         tableContent: classList
       });
     }
@@ -747,7 +747,7 @@ export class TypeElement extends Range {
 
     sections.push({
       sectionId: SectionId.Properties,
-      name: VOCAB.section[SectionId.Properties],
+      name: ACTIVE_VOCAB.section[SectionId.Properties],
       tableHeadings: ['Property', 'Value'],
       tableContent: typeProps,
       tableHeadingColor: metadata.color.headerBg
@@ -769,7 +769,7 @@ export class TypeElement extends Range {
       if (mappings.length > 0) {
         sections.push({
           sectionId: SectionId.Mappings,
-          name: VOCAB.section[SectionId.Mappings],
+          name: ACTIVE_VOCAB.section[SectionId.Mappings],
           tableHeadings: ['Type', 'Values'],
           tableContent: mappings,
           tableHeadingColor: metadata.color.headerBg
@@ -781,7 +781,7 @@ export class TypeElement extends Range {
     if (this.notes) {
       sections.push({
         sectionId: SectionId.Notes,
-        name: VOCAB.section[SectionId.Notes],
+        name: ACTIVE_VOCAB.section[SectionId.Notes],
         text: this.notes
       });
     }
@@ -864,7 +864,7 @@ export class SlotElement extends Element {
       const rangeValue: string | ElementRef = rangeType
         ? { name: this.range, type: rangeType }
         : this.range;
-      properties.push([VOCAB.concept.attributeType, rangeValue]);
+      properties.push([ACTIVE_VOCAB.concept.attributeType.singular, rangeValue]);
     }
     if (this.required !== undefined) {
       properties.push(['Required', this.required ? 'Yes' : 'No']);
@@ -892,7 +892,7 @@ export class SlotElement extends Element {
     if (properties.length > 0) {
       sections.push({
         sectionId: SectionId.Properties,
-        name: VOCAB.section[SectionId.Properties],
+        name: ACTIVE_VOCAB.section[SectionId.Properties],
         tableHeadings: ['Property', 'Value'],
         tableContent: properties
       });
@@ -907,8 +907,8 @@ export class SlotElement extends Element {
       ]);
       sections.push({
         sectionId: SectionId.UsedByEntities,
-        name: `${VOCAB.section[SectionId.UsedByEntities]} (${usedByClasses.length})`,
-        tableHeadings: [VOCAB.concept.entity],
+        name: `${ACTIVE_VOCAB.section[SectionId.UsedByEntities]} (${usedByClasses.length})`,
+        tableHeadings: [ACTIVE_VOCAB.concept.entity.singular],
         tableContent: classList
       });
     }
@@ -1003,7 +1003,7 @@ export class VariableElement extends Element {
 
     sections.push({
       sectionId: SectionId.Properties,
-      name: VOCAB.section[SectionId.Properties],
+      name: ACTIVE_VOCAB.section[SectionId.Properties],
       tableHeadings: ['Property', 'Value'],
       tableContent: properties
     });

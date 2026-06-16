@@ -6,7 +6,7 @@ import type { ClassData, EnumData, SlotData, VariableSpec } from '../models/Sche
 import type { ModelData } from '../models/ModelData';
 import { createSchemaGraph } from '../models/Graph';
 import { DataService } from '../services/DataService';
-import { VOCAB, SectionId } from '../config/appConfig';
+import { ACTIVE_VOCAB, SectionId } from '../config/appConfig';
 
 /**
  * DetailContent Tests (renamed from DetailPanel)
@@ -129,7 +129,7 @@ describe('DetailContent - ClassElement', () => {
     render(<DetailContent itemId="TestClass" dataService={dataService} />);
 
     // Attributes section (formerly "Slots")
-    expect(screen.getByText(VOCAB.section[SectionId.Attributes])).toBeInTheDocument();
+    expect(screen.getByText(ACTIVE_VOCAB.section[SectionId.Attributes])).toBeInTheDocument();
 
     // Verify all slots are present
     expect(screen.getByText('testProperty')).toBeInTheDocument();
@@ -198,7 +198,7 @@ describe('DetailContent -EnumElement', () => {
   test('should render permissible values section', () => {
     render(<DetailContent itemId="TestEnum" dataService={enumDataService} />);
 
-    expect(screen.getByText(VOCAB.section[SectionId.PermissibleValues])).toBeInTheDocument();
+    expect(screen.getByText(ACTIVE_VOCAB.section[SectionId.PermissibleValues])).toBeInTheDocument();
     expect(screen.getByText('VALUE1')).toBeInTheDocument();
     expect(screen.getByText('VALUE2')).toBeInTheDocument();
     expect(screen.getByText('VALUE3')).toBeInTheDocument();
@@ -210,7 +210,7 @@ describe('DetailContent -EnumElement', () => {
     // TODO: Re-enable after implementing getUsedByClasses() in Phase 5
     render(<DetailContent itemId="TestEnum" dataService={enumDataService} />);
 
-    expect(screen.getByText(`${VOCAB.section[SectionId.UsedByEntities]} (2)`)).toBeInTheDocument();
+    expect(screen.getByText(`${ACTIVE_VOCAB.section[SectionId.UsedByEntities]} (2)`)).toBeInTheDocument();
     expect(screen.getByText('TestClass')).toBeInTheDocument();
     expect(screen.getByText('AnotherClass')).toBeInTheDocument();
   });
@@ -261,7 +261,7 @@ describe('DetailContent -SlotElement', () => {
     render(<DetailContent itemId="testSlot" dataService={slotDataService} />);
 
     expect(screen.getByText('Properties')).toBeInTheDocument();
-    expect(screen.getByText(VOCAB.concept.attributeType)).toBeInTheDocument();
+    expect(screen.getByText(ACTIVE_VOCAB.concept.attributeType.singular)).toBeInTheDocument();
     expect(screen.getByText('string')).toBeInTheDocument();
     expect(screen.getByText('Required')).toBeInTheDocument();
     expect(screen.getByText('Multivalued')).toBeInTheDocument();
@@ -274,7 +274,7 @@ describe('DetailContent -SlotElement', () => {
     // TODO: Re-enable after implementing getUsedByClasses() in Phase 5
     render(<DetailContent itemId="testSlot" dataService={slotDataService} />);
 
-    expect(screen.getByText(`${VOCAB.section[SectionId.UsedByEntities]} (3)`)).toBeInTheDocument();
+    expect(screen.getByText(`${ACTIVE_VOCAB.section[SectionId.UsedByEntities]} (3)`)).toBeInTheDocument();
     expect(screen.getByText('ClassA')).toBeInTheDocument();
     expect(screen.getByText('ClassB')).toBeInTheDocument();
     expect(screen.getByText('ClassC')).toBeInTheDocument();

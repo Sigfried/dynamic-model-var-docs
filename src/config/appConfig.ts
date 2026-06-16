@@ -50,26 +50,158 @@ export interface ElementTypeMetadata {
 }
 
 // ============================================================================
-// User-facing vocabulary — SINGLE SOURCE OF TRUTH
+// User-facing vocabulary
 // ============================================================================
 //
-// Every user-facing concept word is defined ONCE here. Element type labels
-// (APP_CONFIG.elementTypes[...].label) and VOCAB both draw from TERM, so a word
-// change is a single edit. (Q2 of the stakeholder plan: one jargon-free
-// vocabulary, no in-app toggle. Words are Anne's provisional 2026-06-15 picks;
-// SG leans "Property" over "Attribute" — change TERM.attribute to swap it
-// everywhere.)
+// SINGLE SOURCE OF TRUTH for every concept word shown in the UI. VOCAB is keyed
+// by audience; `defaultVocab` selects the active one. Element type labels and all
+// display strings draw from VOCAB[defaultVocab], so a term change is one edit.
+// (Q2 of the stakeholder plan: ship the `researcher` vocab; `linkml`/`modeler`
+// exist so an in-app toggle is cheap to add later — change/derive `defaultVocab`.)
 //
-// Defined before APP_CONFIG so elementTypes can reference it.
-export const TERM = {
-  entity:            { singular: 'Entity',     plural: 'Entities' },   // was Class
-  attribute:         { singular: 'Attribute',  plural: 'Attributes' }, // was Slot
-  valueSet:          { singular: 'Value Set',  plural: 'Value Sets' }, // was Enum (the type)
-  permissibleValues: { singular: 'Permissible Values', plural: 'Permissible Values' }, // an enum's contents
-  attributeType:     { singular: 'Attribute type', plural: 'Attribute types' },         // was Range
-  dataType:          { singular: 'Data Type',  plural: 'Data Types' }, // the `type` element
-  variable:          { singular: 'Variable',   plural: 'Variables' },
+// Code must NEVER branch on these display strings. For section identity use the
+// greppable `SectionId` constants below and DetailSection.sectionId, not `name`.
+
+/**
+ * Stable, greppable identifiers for detail-panel sections. Used as
+ * DetailSection.sectionId and in all section lookups. Searching e.g.
+ * `SectionId.PermissibleValues` finds the emit site and every consumer.
+ * The string values are internal keys — never shown to users.
+ */
+export const SectionId = {
+  Inheritance: 'inheritance',
+  Attributes: 'attributes',           // was "Slots"
+  Variables: 'variables',
+  InheritsValues: 'inheritsValues',
+  ReachableFrom: 'reachableFrom',
+  PermissibleValues: 'permissibleValues',
+  UsedByEntities: 'usedByEntities',   // was "Used By Classes"
+  Properties: 'properties',
+  Mappings: 'mappings',
+  Notes: 'notes',
 } as const;
+export type SectionId = (typeof SectionId)[keyof typeof SectionId];
+
+export type VocabAudience = 'researcher' | 'modeler' | 'linkml';
+
+/** The active vocabulary. Change this (or derive it at runtime) to re-term the
+ *  whole app — that's the Q2 "toggle" hook. */
+export const defaultVocab: VocabAudience = 'researcher';
+
+/**
+ * Per-audience display vocabulary. Each audience supplies the same shape:
+ * - `concept`: every model concept as {singular, plural}. Element type labels,
+ *   section titles, and summary columns all derive from these — single source.
+ * - `section`: detail-panel section titles, keyed by SectionId.
+ * - `entityCol`: Entity Explorer summary column {header, tip}.
+ */
+export const VOCAB = {
+  // ── Researcher: jargon-free terms (Anne's provisional 2026-06-15 picks). ──
+  // SG leans "Property" over "Attribute" — change concept.attribute to swap it.
+  researcher: {
+    concept: {
+      entity:        { singular: 'Entity',               plural: 'Entities' },
+      attribute:     { singular: 'Attribute',            plural: 'Attributes' },
+      valueSet:      { singular: 'Permissible Value Set', plural: 'Permissible Value Sets' },
+      attributeType: { singular: 'Attribute Type',       plural: 'Attribute Types' },
+      dataType:      { singular: 'Data Type',            plural: 'Data Types' },
+      variable:      { singular: 'Variable',             plural: 'Variables' },
+    },
+    section: {
+      [SectionId.Inheritance]: 'Inheritance',
+      [SectionId.Attributes]: 'Attributes',
+      [SectionId.Variables]: 'Variables',
+      [SectionId.InheritsValues]: 'Inherits Values From',
+      [SectionId.ReachableFrom]: 'Reachable From (Dynamic Values)',
+      [SectionId.PermissibleValues]: 'Permissible Values', // an enum's actual members
+      [SectionId.UsedByEntities]: 'Used By Entities',
+      [SectionId.Properties]: 'Properties',
+      [SectionId.Mappings]: 'Mappings',
+      [SectionId.Notes]: 'Notes',
+    } as Record<SectionId, string>,
+    // Entity Explorer summary columns, un-abbreviated per feedback
+    // (no more Props/Cls/Enm/Typ/Vars).
+    entityCol: {
+      props: { header: 'Attributes',           tip: 'Total attributes (own + inherited)' },
+      cls:   { header: 'Entities',             tip: 'Entity-typed ranges' },
+      enm:   { header: 'Permissible Value Sets', tip: 'Permissible-value-set ranges' },
+      typ:   { header: 'Data Types',           tip: 'Primitive-typed ranges' },
+      vars:  { header: 'Variables',            tip: 'Mapped study variables' },
+    },
+  },
+
+  // ── Modeler: relational/database vocabulary. STUB — fill in later (Q2). ──
+  // Intended direction (per SG): enum -> "Value Set", class -> "Table",
+  // slot -> "Field"/"Column". Currently mirrors researcher so it type-checks.
+  modeler: {
+    concept: {
+      entity:        { singular: 'Entity',               plural: 'Entities' },        // TODO: "Table"?
+      attribute:     { singular: 'Attribute',            plural: 'Attributes' },      // TODO: "Field"/"Column"?
+      valueSet:      { singular: 'Value Set',            plural: 'Value Sets' },
+      attributeType: { singular: 'Attribute Type',       plural: 'Attribute Types' }, // TODO: "Data Type"?
+      dataType:      { singular: 'Data Type',            plural: 'Data Types' },
+      variable:      { singular: 'Variable',             plural: 'Variables' },
+    },
+    section: {
+      [SectionId.Inheritance]: 'Inheritance',
+      [SectionId.Attributes]: 'Attributes',
+      [SectionId.Variables]: 'Variables',
+      [SectionId.InheritsValues]: 'Inherits Values From',
+      [SectionId.ReachableFrom]: 'Reachable From (Dynamic Values)',
+      [SectionId.PermissibleValues]: 'Permissible Values',
+      [SectionId.UsedByEntities]: 'Used By Entities',
+      [SectionId.Properties]: 'Properties',
+      [SectionId.Mappings]: 'Mappings',
+      [SectionId.Notes]: 'Notes',
+    } as Record<SectionId, string>,
+    entityCol: {
+      props: { header: 'Attributes',  tip: 'Total attributes (own + inherited)' },
+      cls:   { header: 'Entities',    tip: 'Entity-typed ranges' },
+      enm:   { header: 'Value Sets',  tip: 'Value-set ranges' },
+      typ:   { header: 'Data Types',  tip: 'Primitive-typed ranges' },
+      vars:  { header: 'Variables',   tip: 'Mapped study variables' },
+    },
+  },
+
+  // ── LinkML: the original/native vocabulary used before Anne's changes. ──
+  // Where the old code was inconsistent, one term is chosen and the alternates
+  // that appeared elsewhere are noted in comments.
+  linkml: {
+    concept: {
+      entity:        { singular: 'Class',       plural: 'Classes' },
+      attribute:     { singular: 'Slot',        plural: 'Slots' },        // also called "attribute" in places
+      valueSet:      { singular: 'Enumeration', plural: 'Enumerations' }, // also "Enum" / "value set" / "Permissible Values"
+      attributeType: { singular: 'Range',       plural: 'Ranges' },
+      dataType:      { singular: 'Type',         plural: 'Types' },
+      variable:      { singular: 'Variable',     plural: 'Variables' },
+    },
+    section: {
+      [SectionId.Inheritance]: 'Inheritance',
+      [SectionId.Attributes]: 'Slots',
+      [SectionId.Variables]: 'Variables',
+      [SectionId.InheritsValues]: 'Inherits Values From',
+      [SectionId.ReachableFrom]: 'Reachable From (Dynamic Values)',
+      [SectionId.PermissibleValues]: 'Permissible Values',
+      [SectionId.UsedByEntities]: 'Used By Classes',
+      [SectionId.Properties]: 'Properties',
+      [SectionId.Mappings]: 'Mappings',
+      [SectionId.Notes]: 'Notes',
+    } as Record<SectionId, string>,
+    entityCol: {
+      props: { header: 'Slots', tip: 'Total slots (own + inherited)' },
+      cls:   { header: 'Cls',   tip: 'Class-typed ranges' },
+      enm:   { header: 'Enm',   tip: 'Enum-typed ranges' },
+      typ:   { header: 'Typ',   tip: 'Primitive-typed ranges' },
+      vars:  { header: 'Vars',  tip: 'Mapped study variables' },
+    },
+  },
+} as const satisfies Record<VocabAudience, unknown>;
+
+/** The active vocabulary's words — the handle consumers should use for display
+ *  terms (e.g. ACTIVE_VOCAB.section[id], ACTIVE_VOCAB.concept.entity.singular).
+ *  Resolves the audience indirection in one place. */
+export const ACTIVE_VOCAB = VOCAB[defaultVocab];
+const V = ACTIVE_VOCAB;
 
 // ============================================================================
 // Configuration
@@ -80,8 +212,8 @@ export const APP_CONFIG = {
   elementTypes: {
     class: {
       id: 'class' as const,
-      label: TERM.entity.singular,
-      pluralLabel: TERM.entity.plural,
+      label: V.concept.entity.singular,
+      pluralLabel: V.concept.entity.plural,
       icon: 'C',
       color: {
         name: 'blue',
@@ -100,8 +232,8 @@ export const APP_CONFIG = {
     },
     enum: {
       id: 'enum' as const,
-      label: TERM.valueSet.singular,    // its contents shown as "Permissible Values"
-      pluralLabel: TERM.valueSet.plural,
+      label: V.concept.valueSet.singular,   // its contents shown as "Permissible Values"
+      pluralLabel: V.concept.valueSet.plural,
       icon: 'E',
       color: {
         name: 'purple',
@@ -120,8 +252,8 @@ export const APP_CONFIG = {
     },
     slot: {
       id: 'slot' as const,
-      label: TERM.attribute.singular,
-      pluralLabel: TERM.attribute.plural,
+      label: V.concept.attribute.singular,
+      pluralLabel: V.concept.attribute.plural,
       icon: 'S',
       color: {
         name: 'green',
@@ -140,8 +272,8 @@ export const APP_CONFIG = {
     },
     type: {
       id: 'type' as const,
-      label: TERM.dataType.singular,
-      pluralLabel: TERM.dataType.plural,
+      label: V.concept.dataType.singular,
+      pluralLabel: V.concept.dataType.plural,
       icon: 'T',
       color: {
         name: 'cyan',
@@ -160,8 +292,8 @@ export const APP_CONFIG = {
     },
     variable: {
       id: 'variable' as const,
-      label: TERM.variable.singular,
-      pluralLabel: TERM.variable.plural,
+      label: V.concept.variable.singular,
+      pluralLabel: V.concept.variable.plural,
       icon: 'V',
       color: {
         name: 'orange',
@@ -249,70 +381,6 @@ export const APP_CONFIG = {
     // Element references (Range, class names, etc.) in detail panels
     elementRefClick: true,   // Click to open persistent detail box
     elementRefHover: true,   // Hover to show transitory detail box
-  },
-} as const;
-
-// ============================================================================
-// Section identity + display vocabulary
-// ============================================================================
-//
-// Display words come from TERM (defined above APP_CONFIG). Code must NEVER
-// branch on display strings — for section identity use the greppable
-// `SectionId` constants below and DetailSection.sectionId, not the `name`.
-
-/**
- * Stable, greppable identifiers for detail-panel sections. Used as
- * DetailSection.sectionId and in all section lookups. Searching e.g.
- * `SectionId.PermissibleValues` finds the emit site and every consumer.
- * The string values are internal keys — never shown to users.
- */
-export const SectionId = {
-  Inheritance: 'inheritance',
-  Attributes: 'attributes',           // was "Slots"
-  Variables: 'variables',
-  InheritsValues: 'inheritsValues',
-  ReachableFrom: 'reachableFrom',
-  PermissibleValues: 'permissibleValues',
-  UsedByEntities: 'usedByEntities',   // was "Used By Classes"
-  Properties: 'properties',
-  Mappings: 'mappings',
-  Notes: 'notes',
-} as const;
-export type SectionId = (typeof SectionId)[keyof typeof SectionId];
-
-/** Display words for sections, column headings, and the Explorer summary columns.
- *  Words for the core concepts come from TERM (single source); only
- *  section-specific phrases are spelled out here. */
-export const VOCAB = {
-  // Section titles (keyed by SectionId value)
-  section: {
-    [SectionId.Inheritance]: 'Inheritance',
-    [SectionId.Attributes]: TERM.attribute.plural,
-    [SectionId.Variables]: TERM.variable.plural,
-    [SectionId.InheritsValues]: 'Inherits Values From',
-    [SectionId.ReachableFrom]: 'Reachable From (Dynamic Values)',
-    [SectionId.PermissibleValues]: TERM.permissibleValues.plural,
-    [SectionId.UsedByEntities]: `Used By ${TERM.entity.plural}`,
-    [SectionId.Properties]: 'Properties',
-    [SectionId.Mappings]: 'Mappings',
-    [SectionId.Notes]: 'Notes',
-  } as Record<SectionId, string>,
-  // Concept words used in table column headings. Generic words (Name, Value,
-  // Description, Source, etc.) are left inline at the call sites.
-  concept: {
-    entity: TERM.entity.singular,
-    attribute: TERM.attribute.singular,
-    permissibleValues: TERM.permissibleValues.singular,
-    attributeType: TERM.attributeType.singular,
-  },
-  // Entity Explorer summary columns — un-abbreviated per stakeholder feedback
-  // (no more Props/Cls/Enm/Typ/Vars). { header, tip }.
-  entityCol: {
-    props: { header: TERM.attribute.plural, tip: `Total ${TERM.attribute.plural.toLowerCase()} (own + inherited)` },
-    cls:   { header: TERM.entity.plural,    tip: `${TERM.entity.singular}-typed ranges` },
-    enm:   { header: TERM.valueSet.plural,  tip: 'Permissible-value ranges' },
-    typ:   { header: TERM.dataType.plural,  tip: 'Primitive-typed ranges' },
-    vars:  { header: TERM.variable.plural,  tip: `Mapped study ${TERM.variable.plural.toLowerCase()}` },
   },
 } as const;
 
