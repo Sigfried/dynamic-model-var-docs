@@ -50,6 +50,28 @@ export interface ElementTypeMetadata {
 }
 
 // ============================================================================
+// User-facing vocabulary — SINGLE SOURCE OF TRUTH
+// ============================================================================
+//
+// Every user-facing concept word is defined ONCE here. Element type labels
+// (APP_CONFIG.elementTypes[...].label) and VOCAB both draw from TERM, so a word
+// change is a single edit. (Q2 of the stakeholder plan: one jargon-free
+// vocabulary, no in-app toggle. Words are Anne's provisional 2026-06-15 picks;
+// SG leans "Property" over "Attribute" — change TERM.attribute to swap it
+// everywhere.)
+//
+// Defined before APP_CONFIG so elementTypes can reference it.
+export const TERM = {
+  entity:            { singular: 'Entity',     plural: 'Entities' },   // was Class
+  attribute:         { singular: 'Attribute',  plural: 'Attributes' }, // was Slot
+  valueSet:          { singular: 'Value Set',  plural: 'Value Sets' }, // was Enum (the type)
+  permissibleValues: { singular: 'Permissible Values', plural: 'Permissible Values' }, // an enum's contents
+  attributeType:     { singular: 'Attribute type', plural: 'Attribute types' },         // was Range
+  dataType:          { singular: 'Data Type',  plural: 'Data Types' }, // the `type` element
+  variable:          { singular: 'Variable',   plural: 'Variables' },
+} as const;
+
+// ============================================================================
 // Configuration
 // ============================================================================
 
@@ -58,8 +80,8 @@ export const APP_CONFIG = {
   elementTypes: {
     class: {
       id: 'class' as const,
-      label: 'Entity',          // jargon-free (was "Class")
-      pluralLabel: 'Entities',
+      label: TERM.entity.singular,
+      pluralLabel: TERM.entity.plural,
       icon: 'C',
       color: {
         name: 'blue',
@@ -78,8 +100,8 @@ export const APP_CONFIG = {
     },
     enum: {
       id: 'enum' as const,
-      label: 'Value Set',       // jargon-free (was "Enumeration"); its contents are
-      pluralLabel: 'Value Sets', // shown as "Permissible Values" (per Anne)
+      label: TERM.valueSet.singular,    // its contents shown as "Permissible Values"
+      pluralLabel: TERM.valueSet.plural,
       icon: 'E',
       color: {
         name: 'purple',
@@ -98,8 +120,8 @@ export const APP_CONFIG = {
     },
     slot: {
       id: 'slot' as const,
-      label: 'Attribute',       // jargon-free (was "Slot"; per Anne)
-      pluralLabel: 'Attributes',
+      label: TERM.attribute.singular,
+      pluralLabel: TERM.attribute.plural,
       icon: 'S',
       color: {
         name: 'green',
@@ -118,8 +140,8 @@ export const APP_CONFIG = {
     },
     type: {
       id: 'type' as const,
-      label: 'Data Type',       // jargon-free (was "Type"; per Anne)
-      pluralLabel: 'Data Types',
+      label: TERM.dataType.singular,
+      pluralLabel: TERM.dataType.plural,
       icon: 'T',
       color: {
         name: 'cyan',
@@ -138,8 +160,8 @@ export const APP_CONFIG = {
     },
     variable: {
       id: 'variable' as const,
-      label: 'Variable',
-      pluralLabel: 'Variables',
+      label: TERM.variable.singular,
+      pluralLabel: TERM.variable.plural,
       icon: 'V',
       color: {
         name: 'orange',
@@ -231,18 +253,12 @@ export const APP_CONFIG = {
 } as const;
 
 // ============================================================================
-// User-facing vocabulary
+// Section identity + display vocabulary
 // ============================================================================
 //
-// SINGLE SOURCE OF TRUTH for every concept word shown in the UI. To change a
-// displayed term, edit the value here — nothing else. (Q2 of the stakeholder
-// plan: a single jargon-free vocabulary, no in-app toggle. Words below are
-// Anne's provisional 2026-06-15 picks; e.g. SG leans "Properties" over
-// "Attributes" — change VOCAB.section.attributes to swap it everywhere.)
-//
-// Code must NEVER branch on these display strings. For section identity, use
-// the greppable `SectionId` constants below and DetailSection.sectionId — not
-// the display `name`.
+// Display words come from TERM (defined above APP_CONFIG). Code must NEVER
+// branch on display strings — for section identity use the greppable
+// `SectionId` constants below and DetailSection.sectionId, not the `name`.
 
 /**
  * Stable, greppable identifiers for detail-panel sections. Used as
@@ -264,17 +280,19 @@ export const SectionId = {
 } as const;
 export type SectionId = (typeof SectionId)[keyof typeof SectionId];
 
-/** Display words for sections, column headings, and the Explorer summary columns. */
+/** Display words for sections, column headings, and the Explorer summary columns.
+ *  Words for the core concepts come from TERM (single source); only
+ *  section-specific phrases are spelled out here. */
 export const VOCAB = {
   // Section titles (keyed by SectionId value)
   section: {
     [SectionId.Inheritance]: 'Inheritance',
-    [SectionId.Attributes]: 'Attributes',
-    [SectionId.Variables]: 'Variables',
+    [SectionId.Attributes]: TERM.attribute.plural,
+    [SectionId.Variables]: TERM.variable.plural,
     [SectionId.InheritsValues]: 'Inherits Values From',
     [SectionId.ReachableFrom]: 'Reachable From (Dynamic Values)',
-    [SectionId.PermissibleValues]: 'Permissible Values',
-    [SectionId.UsedByEntities]: 'Used By Entities',
+    [SectionId.PermissibleValues]: TERM.permissibleValues.plural,
+    [SectionId.UsedByEntities]: `Used By ${TERM.entity.plural}`,
     [SectionId.Properties]: 'Properties',
     [SectionId.Mappings]: 'Mappings',
     [SectionId.Notes]: 'Notes',
@@ -282,19 +300,19 @@ export const VOCAB = {
   // Concept words used in table column headings. Generic words (Name, Value,
   // Description, Source, etc.) are left inline at the call sites.
   concept: {
-    entity: 'Entity',                 // was "Class"
-    attribute: 'Attribute',           // was "Slot"
-    permissibleValues: 'Permissible Values',  // was "Enumeration"
-    attributeType: 'Attribute type',  // was "Range" (what an attribute holds)
+    entity: TERM.entity.singular,
+    attribute: TERM.attribute.singular,
+    permissibleValues: TERM.permissibleValues.singular,
+    attributeType: TERM.attributeType.singular,
   },
   // Entity Explorer summary columns — un-abbreviated per stakeholder feedback
   // (no more Props/Cls/Enm/Typ/Vars). { header, tip }.
   entityCol: {
-    props: { header: 'Attributes', tip: 'Total attributes (own + inherited)' },
-    cls:   { header: 'Entities',   tip: 'Entity-typed ranges' },
-    enm:   { header: 'Value Sets', tip: 'Permissible-value ranges' },
-    typ:   { header: 'Data Types', tip: 'Primitive-typed ranges' },
-    vars:  { header: 'Variables',  tip: 'Mapped study variables' },
+    props: { header: TERM.attribute.plural, tip: `Total ${TERM.attribute.plural.toLowerCase()} (own + inherited)` },
+    cls:   { header: TERM.entity.plural,    tip: `${TERM.entity.singular}-typed ranges` },
+    enm:   { header: TERM.valueSet.plural,  tip: 'Permissible-value ranges' },
+    typ:   { header: TERM.dataType.plural,  tip: 'Primitive-typed ranges' },
+    vars:  { header: TERM.variable.plural,  tip: `Mapped study ${TERM.variable.plural.toLowerCase()}` },
   },
 } as const;
 
