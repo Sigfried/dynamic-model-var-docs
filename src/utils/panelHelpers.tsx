@@ -34,7 +34,7 @@ export function getPanelTitle(element: Element, elementType: ElementTypeId): Rea
     const classElement = element as ClassElement;
     return (
       <span className="text-base">
-        <span className="font-bold">Class:</span> <span className="font-bold">{element.name}</span>
+        <span className="font-bold">{metadata.label}:</span> <span className="font-bold">{element.name}</span>
         {classElement.parentId && <span className="ml-1 text-sm">extends {classElement.parentId}</span>}
       </span>
     );

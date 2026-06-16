@@ -26,7 +26,7 @@ import type {
   LinkData,
   ElementRef
 } from '../contracts/ComponentData';
-import { APP_CONFIG } from '../config/appConfig';
+import { APP_CONFIG, VOCAB, SectionId } from '../config/appConfig';
 const {elementTypes, } = APP_CONFIG;
 
 // Helper function to map panel position to context string
@@ -432,7 +432,8 @@ export class ClassElement extends Range {
     // Inheritance section
     if (this.parentId) {
       sections.push({
-        name: 'Inheritance',
+        sectionId: SectionId.Inheritance,
+        name: VOCAB.section[SectionId.Inheritance],
         text: `Inherits from: ${this.parentId}`
       });
     }
@@ -475,8 +476,9 @@ export class ClassElement extends Range {
 
       if (slotsList.length > 0) {
         sections.push({
-          name: 'Slots',
-          tableHeadings: ['Name', 'Source', 'Range', 'Required', 'Multivalued', 'Description'],
+          sectionId: SectionId.Attributes,
+          name: VOCAB.section[SectionId.Attributes],
+          tableHeadings: ['Name', 'Source', VOCAB.concept.attributeType, 'Required', 'Multivalued', 'Description'],
           tableContent: slotsList,
           tableHeadingColor: elementTypes['slot'].color.headerBg
         });
@@ -494,7 +496,8 @@ export class ClassElement extends Range {
       ]);
 
       sections.push({
-        name: `Variables (${this.variableCount})`,
+        sectionId: SectionId.Variables,
+        name: `${VOCAB.section[SectionId.Variables]} (${this.variableCount})`,
         tableHeadings: ['Label', 'Data Type', 'Unit', 'CURIE', 'Description'],
         tableContent: variableList,
         tableHeadingColor: elementTypes['variable'].color.headerBg
@@ -573,8 +576,9 @@ export class EnumElement extends Range {
         { name: enumName, type: 'enum' } as ElementRef
       ]);
       sections.push({
-        name: 'Inherits Values From',
-        tableHeadings: ['Enumeration'],
+        sectionId: SectionId.InheritsValues,
+        name: VOCAB.section[SectionId.InheritsValues],
+        tableHeadings: [VOCAB.concept.permissibleValues],
         tableContent: inheritsList
       });
     }
@@ -609,7 +613,8 @@ export class EnumElement extends Range {
 
       if (reachableProps.length > 0) {
         sections.push({
-          name: 'Reachable From (Dynamic Values)',
+          sectionId: SectionId.ReachableFrom,
+          name: VOCAB.section[SectionId.ReachableFrom],
           tableHeadings: ['Property', 'Value'],
           tableContent: reachableProps
         });
@@ -624,13 +629,14 @@ export class EnumElement extends Range {
       ]);
 
       sections.push({
-        name: 'Permissible Values',
+        sectionId: SectionId.PermissibleValues,
+        name: VOCAB.section[SectionId.PermissibleValues],
         tableHeadings: ['Value', 'Description'],
         tableContent: values
       });
     }
 
-    // Used By Classes section
+    // Used By Entities section
     const usedByClasses = this.getUsedByClasses();
     if (usedByClasses.length > 0) {
       // Make class names clickable
@@ -638,8 +644,9 @@ export class EnumElement extends Range {
         { name: className, type: 'class' } as ElementRef
       ]);
       sections.push({
-        name: `Used By Classes (${usedByClasses.length})`,
-        tableHeadings: ['Class Name'],
+        sectionId: SectionId.UsedByEntities,
+        name: `${VOCAB.section[SectionId.UsedByEntities]} (${usedByClasses.length})`,
+        tableHeadings: [VOCAB.concept.entity],
         tableContent: classList
       });
     }
@@ -739,7 +746,8 @@ export class TypeElement extends Range {
     }
 
     sections.push({
-      name: 'Properties',
+      sectionId: SectionId.Properties,
+      name: VOCAB.section[SectionId.Properties],
       tableHeadings: ['Property', 'Value'],
       tableContent: typeProps,
       tableHeadingColor: metadata.color.headerBg
@@ -760,7 +768,8 @@ export class TypeElement extends Range {
 
       if (mappings.length > 0) {
         sections.push({
-          name: 'Mappings',
+          sectionId: SectionId.Mappings,
+          name: VOCAB.section[SectionId.Mappings],
           tableHeadings: ['Type', 'Values'],
           tableContent: mappings,
           tableHeadingColor: metadata.color.headerBg
@@ -771,7 +780,8 @@ export class TypeElement extends Range {
     // Notes section (if exists)
     if (this.notes) {
       sections.push({
-        name: 'Notes',
+        sectionId: SectionId.Notes,
+        name: VOCAB.section[SectionId.Notes],
         text: this.notes
       });
     }
@@ -854,7 +864,7 @@ export class SlotElement extends Element {
       const rangeValue: string | ElementRef = rangeType
         ? { name: this.range, type: rangeType }
         : this.range;
-      properties.push(['Range', rangeValue]);
+      properties.push([VOCAB.concept.attributeType, rangeValue]);
     }
     if (this.required !== undefined) {
       properties.push(['Required', this.required ? 'Yes' : 'No']);
@@ -881,13 +891,14 @@ export class SlotElement extends Element {
 
     if (properties.length > 0) {
       sections.push({
-        name: 'Properties',
+        sectionId: SectionId.Properties,
+        name: VOCAB.section[SectionId.Properties],
         tableHeadings: ['Property', 'Value'],
         tableContent: properties
       });
     }
 
-    // Used By Classes section
+    // Used By Entities section
     const usedByClasses = this.getUsedByClasses();
     if (usedByClasses.length > 0) {
       // Make class names clickable
@@ -895,8 +906,9 @@ export class SlotElement extends Element {
         { name: className, type: 'class' } as ElementRef
       ]);
       sections.push({
-        name: `Used By Classes (${usedByClasses.length})`,
-        tableHeadings: ['Class Name'],
+        sectionId: SectionId.UsedByEntities,
+        name: `${VOCAB.section[SectionId.UsedByEntities]} (${usedByClasses.length})`,
+        tableHeadings: [VOCAB.concept.entity],
         tableContent: classList
       });
     }
@@ -990,7 +1002,8 @@ export class VariableElement extends Element {
     }
 
     sections.push({
-      name: 'Properties',
+      sectionId: SectionId.Properties,
+      name: VOCAB.section[SectionId.Properties],
       tableHeadings: ['Property', 'Value'],
       tableContent: properties
     });

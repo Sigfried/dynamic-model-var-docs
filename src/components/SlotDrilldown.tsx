@@ -8,7 +8,7 @@
  */
 
 import { useState, useMemo } from 'react';
-import type { DataService } from '../services/DataService';
+import { type DataService, SectionId } from '../services/DataService';
 import { EnumDetailCard } from './EnumDetailCard';
 
 interface SlotDrilldownProps {
@@ -34,8 +34,8 @@ export function SlotDrilldown({ classId, dataService, onClose, depth = 0 }: Slot
     [classId, dataService]
   );
 
-  const slotsSection = detail.sections.find(s => s.name === 'Slots');
-  const variablesSection = detail.sections.find(s => s.name?.startsWith('Variables'));
+  const slotsSection = detail.sections.find(s => s.sectionId === SectionId.Attributes);
+  const variablesSection = detail.sections.find(s => s.sectionId === SectionId.Variables);
 
   const slotCount = slotsSection?.tableContent?.length ?? 0;
   const varCount = variablesSection?.tableContent?.length ?? 0;

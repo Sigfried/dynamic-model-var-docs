@@ -11,7 +11,7 @@
  */
 
 import { useState } from 'react';
-import type { DataService } from '../services/DataService';
+import { type DataService, SectionId } from '../services/DataService';
 import { APP_CONFIG, getElementLinkColor, type ElementTypeId } from '../config/appConfig';
 import { EDGE_TYPES, type EdgeInfo, type EdgeType } from '../models/SchemaTypes';
 
@@ -359,7 +359,7 @@ export function RelationshipInfoContent({ itemId, dataService, onNavigate }: Rel
           {incomingClassSlot.length > 0 && (
             <div className="mb-3">
               <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                Used By Classes ({incomingClassSlot.length}):
+                {dataService.getSectionLabel(SectionId.UsedByEntities)} ({incomingClassSlot.length}):
               </div>
               <div className="ml-3 space-y-0.5">
                 {incomingClassSlot.map((edge, idx) => (

@@ -223,7 +223,8 @@ export function isElementRef(value: unknown): value is ElementRef {
  * Used by DetailContent component to render information sections.
  */
 export interface DetailSection {
-  name: string;
+  sectionId: string;  // Stable identity (SectionId value); use for lookups, NEVER `name`
+  name: string;       // Display title, from VOCAB.section.* — may include a count suffix
   text?: string;
   tableHeadings?: string[];
   tableContent?: unknown[][];  // Can contain strings, numbers, or LinkData objects

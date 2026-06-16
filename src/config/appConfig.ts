@@ -58,8 +58,8 @@ export const APP_CONFIG = {
   elementTypes: {
     class: {
       id: 'class' as const,
-      label: 'Class',
-      pluralLabel: 'Classes',
+      label: 'Entity',          // jargon-free (was "Class")
+      pluralLabel: 'Entities',
       icon: 'C',
       color: {
         name: 'blue',
@@ -78,8 +78,8 @@ export const APP_CONFIG = {
     },
     enum: {
       id: 'enum' as const,
-      label: 'Enumeration',
-      pluralLabel: 'Enumerations',
+      label: 'Value Set',       // jargon-free (was "Enumeration"); its contents are
+      pluralLabel: 'Value Sets', // shown as "Permissible Values" (per Anne)
       icon: 'E',
       color: {
         name: 'purple',
@@ -98,8 +98,8 @@ export const APP_CONFIG = {
     },
     slot: {
       id: 'slot' as const,
-      label: 'Slot',
-      pluralLabel: 'Slots',
+      label: 'Attribute',       // jargon-free (was "Slot"; per Anne)
+      pluralLabel: 'Attributes',
       icon: 'S',
       color: {
         name: 'green',
@@ -118,8 +118,8 @@ export const APP_CONFIG = {
     },
     type: {
       id: 'type' as const,
-      label: 'Type',
-      pluralLabel: 'Types',
+      label: 'Data Type',       // jargon-free (was "Type"; per Anne)
+      pluralLabel: 'Data Types',
       icon: 'T',
       color: {
         name: 'cyan',
@@ -227,6 +227,74 @@ export const APP_CONFIG = {
     // Element references (Range, class names, etc.) in detail panels
     elementRefClick: true,   // Click to open persistent detail box
     elementRefHover: true,   // Hover to show transitory detail box
+  },
+} as const;
+
+// ============================================================================
+// User-facing vocabulary
+// ============================================================================
+//
+// SINGLE SOURCE OF TRUTH for every concept word shown in the UI. To change a
+// displayed term, edit the value here — nothing else. (Q2 of the stakeholder
+// plan: a single jargon-free vocabulary, no in-app toggle. Words below are
+// Anne's provisional 2026-06-15 picks; e.g. SG leans "Properties" over
+// "Attributes" — change VOCAB.section.attributes to swap it everywhere.)
+//
+// Code must NEVER branch on these display strings. For section identity, use
+// the greppable `SectionId` constants below and DetailSection.sectionId — not
+// the display `name`.
+
+/**
+ * Stable, greppable identifiers for detail-panel sections. Used as
+ * DetailSection.sectionId and in all section lookups. Searching e.g.
+ * `SectionId.PermissibleValues` finds the emit site and every consumer.
+ * The string values are internal keys — never shown to users.
+ */
+export const SectionId = {
+  Inheritance: 'inheritance',
+  Attributes: 'attributes',           // was "Slots"
+  Variables: 'variables',
+  InheritsValues: 'inheritsValues',
+  ReachableFrom: 'reachableFrom',
+  PermissibleValues: 'permissibleValues',
+  UsedByEntities: 'usedByEntities',   // was "Used By Classes"
+  Properties: 'properties',
+  Mappings: 'mappings',
+  Notes: 'notes',
+} as const;
+export type SectionId = (typeof SectionId)[keyof typeof SectionId];
+
+/** Display words for sections, column headings, and the Explorer summary columns. */
+export const VOCAB = {
+  // Section titles (keyed by SectionId value)
+  section: {
+    [SectionId.Inheritance]: 'Inheritance',
+    [SectionId.Attributes]: 'Attributes',
+    [SectionId.Variables]: 'Variables',
+    [SectionId.InheritsValues]: 'Inherits Values From',
+    [SectionId.ReachableFrom]: 'Reachable From (Dynamic Values)',
+    [SectionId.PermissibleValues]: 'Permissible Values',
+    [SectionId.UsedByEntities]: 'Used By Entities',
+    [SectionId.Properties]: 'Properties',
+    [SectionId.Mappings]: 'Mappings',
+    [SectionId.Notes]: 'Notes',
+  } as Record<SectionId, string>,
+  // Concept words used in table column headings. Generic words (Name, Value,
+  // Description, Source, etc.) are left inline at the call sites.
+  concept: {
+    entity: 'Entity',                 // was "Class"
+    attribute: 'Attribute',           // was "Slot"
+    permissibleValues: 'Permissible Values',  // was "Enumeration"
+    attributeType: 'Attribute type',  // was "Range" (what an attribute holds)
+  },
+  // Entity Explorer summary columns — un-abbreviated per stakeholder feedback
+  // (no more Props/Cls/Enm/Typ/Vars). { header, tip }.
+  entityCol: {
+    props: { header: 'Attributes', tip: 'Total attributes (own + inherited)' },
+    cls:   { header: 'Entities',   tip: 'Entity-typed ranges' },
+    enm:   { header: 'Value Sets', tip: 'Permissible-value ranges' },
+    typ:   { header: 'Data Types', tip: 'Primitive-typed ranges' },
+    vars:  { header: 'Variables',  tip: 'Mapped study variables' },
   },
 } as const;
 

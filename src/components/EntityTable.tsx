@@ -64,17 +64,19 @@ export function EntityTable({ classIds, dataService, isPinned, onTogglePin }: En
     setExpandedEntity(prev => prev === id ? null : id);
   };
 
+  const col = dataService.getEntityColumns();
+
   return (
     <div className="border-x border-b border-gray-200 rounded-b-md pl-5">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-gray-200 bg-gray-50">
             <th className="text-left px-3 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Entity</th>
-            <th className="text-center px-2 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide" title="Total properties (own + inherited)">Props</th>
-            <th className="text-center px-2 py-1.5 text-xs font-medium text-blue-500 uppercase tracking-wide" title="Entity-typed ranges">Cls</th>
-            <th className="text-center px-2 py-1.5 text-xs font-medium text-purple-500 uppercase tracking-wide" title="Enum-typed ranges">Enm</th>
-            <th className="text-center px-2 py-1.5 text-xs font-medium text-green-600 uppercase tracking-wide" title="Primitive-typed ranges">Typ</th>
-            <th className="text-center px-2 py-1.5 text-xs font-medium text-amber-600 uppercase tracking-wide" title="Mapped study variables">Vars</th>
+            <th className="text-center px-2 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide" title={col.props.tip}>{col.props.header}</th>
+            <th className="text-center px-2 py-1.5 text-xs font-medium text-blue-500 uppercase tracking-wide" title={col.cls.tip}>{col.cls.header}</th>
+            <th className="text-center px-2 py-1.5 text-xs font-medium text-purple-500 uppercase tracking-wide" title={col.enm.tip}>{col.enm.header}</th>
+            <th className="text-center px-2 py-1.5 text-xs font-medium text-green-600 uppercase tracking-wide" title={col.typ.tip}>{col.typ.header}</th>
+            <th className="text-center px-2 py-1.5 text-xs font-medium text-amber-600 uppercase tracking-wide" title={col.vars.tip}>{col.vars.header}</th>
           </tr>
         </thead>
         <tbody>

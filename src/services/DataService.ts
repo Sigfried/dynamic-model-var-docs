@@ -27,7 +27,10 @@ import type {
 import { EDGE_TYPES } from "../models/SchemaTypes";
 import type { ToggleButtonData } from '../components/ItemsPanel';
 import type { SectionData } from '../components/Section';
-import { APP_CONFIG, getAllElementTypeIds, } from '../config/appConfig';
+import { APP_CONFIG, getAllElementTypeIds, SectionId, VOCAB } from '../config/appConfig';
+// Re-export so UI components (which must not import from config/ or models/) can
+// reference section identities without depending on display strings.
+export { SectionId } from '../config/appConfig';
 const {elementTypes, } = APP_CONFIG;
 
 // Re-export UI types for UI components
@@ -246,6 +249,31 @@ export class DataService {
     ).length;
   }
 
+  /** Display config for the Entity Explorer summary columns (header + tooltip). */
+  getEntityColumns() {
+    return VOCAB.entityCol;
+  }
+
+  /** Display title for a section, by stable SectionId. For components that render
+   *  section labels directly (not via getDetailData). */
+  getSectionLabel(sectionId: SectionId): string {
+    return VOCAB.section[sectionId];
+  }
+
+  /** Jargon-free display word for an element type, e.g. getTypeLabel('slot') ->
+   *  "Attribute". Pass plural=true for "Attributes". Pulls from the central config
+   *  so components never hardcode type vocabulary. */
+  getTypeLabel(typeId: ElementTypeId, plural = false): string {
+    const m = APP_CONFIG.elementTypes[typeId];
+    return plural ? m.pluralLabel : m.label;
+  }
+
+  /** Jargon-free word for a model concept, e.g. getConceptLabel('attributeType')
+   *  -> "Attribute type". For components rendering concept words directly. */
+  getConceptLabel(concept: keyof typeof VOCAB.concept): string {
+    return VOCAB.concept[concept];
+  }
+
   /**
    * Get range counts by type for a class.
    * Classifies each CLASS_RANGE target as 'class', 'enum', or 'type'.
@@ -287,7 +315,7 @@ export class DataService {
 
     const detail = element.getDetailData();
     // Get permissible values from the enum's detail sections
-    const pvSection = detail.sections.find(s => s.name === 'Permissible Values');
+    const pvSection = detail.sections.find(s => s.sectionId === SectionId.PermissibleValues);
     const pvRows = (pvSection?.tableContent ?? []) as string[][];
 
     // Build permissible values from the element directly via graph lookup
@@ -315,7 +343,7 @@ export class DataService {
     }
 
     // Check for inherits
-    const inheritsSection = detail.sections.find(s => s.name === 'Inherits Values From');
+    const inheritsSection = detail.sections.find(s => s.sectionId === SectionId.InheritsValues);
     const inherits = inheritsSection?.tableContent
       ? (inheritsSection.tableContent as Array<Array<{name: string}>>).map(row => row[0]?.name).filter(Boolean)
       : undefined;
@@ -358,7 +386,7 @@ export class DataService {
     if (!element) return null;
 
     const detail = element.getDetailData();
-    const slotsSection = detail.sections.find(s => s.name === 'Slots');
+    const slotsSection = detail.sections.find(s => s.sectionId === SectionId.Attributes);
     const slotRows = (slotsSection?.tableContent ?? []) as string[][];
 
     // Slots: [Name, Source, Range, Required, Multivalued, Description]

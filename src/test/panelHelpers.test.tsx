@@ -5,6 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import { getHeaderColor, getPanelTitle } from '../utils/panelHelpers';
+import { ELEMENT_TYPES } from '../config/appConfig';
 import { ClassElement, EnumElement, SlotElement, VariableElement, SlotCollection } from '../models/Element';
 import type { ModelData } from '../models/ModelData';
 
@@ -101,7 +102,7 @@ describe('getPanelTitle', () => {
       const title = getPanelTitle(mockClassWithParent, 'class');
       const { container } = render(title);
 
-      expect(container.textContent).toContain('Class:');
+      expect(container.textContent).toContain(`${ELEMENT_TYPES.class.label}:`);
       expect(container.textContent).toContain('Specimen');
       expect(container.textContent).toContain('extends Entity');
     });
@@ -110,7 +111,7 @@ describe('getPanelTitle', () => {
       const title = getPanelTitle(mockClassWithoutParent, 'class');
       const { container } = render(title);
 
-      expect(container.textContent).toContain('Class:');
+      expect(container.textContent).toContain(`${ELEMENT_TYPES.class.label}:`);
       expect(container.textContent).toContain('Entity');
       expect(container.textContent).not.toContain('extends');
     });
@@ -152,7 +153,7 @@ describe('getPanelTitle', () => {
       const title = getPanelTitle(mockSlot, 'slot');
       const { container } = render(title);
 
-      expect(container.textContent).toContain('Slot:');
+      expect(container.textContent).toContain(`${ELEMENT_TYPES.slot.label}:`);
       expect(container.textContent).toContain('identifier');
     });
 

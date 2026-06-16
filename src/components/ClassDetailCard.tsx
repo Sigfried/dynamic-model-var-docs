@@ -85,17 +85,17 @@ export function ClassDetailCard({ classId, dataService, onClose, onNavigate }: C
           </div>
         )}
 
-        {/* Slot summary table */}
+        {/* Attribute summary table */}
         {shownSlots.length > 0 && (
           <div>
             <div className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1">
-              Slots ({summary.slots.length})
+              {dataService.getTypeLabel('slot', true)} ({summary.slots.length})
             </div>
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left px-2 py-0.5 text-[10px] font-medium text-gray-400 uppercase">Slot</th>
-                  <th className="text-left px-2 py-0.5 text-[10px] font-medium text-gray-400 uppercase">Range</th>
+                  <th className="text-left px-2 py-0.5 text-[10px] font-medium text-gray-400 uppercase">{dataService.getTypeLabel('slot')}</th>
+                  <th className="text-left px-2 py-0.5 text-[10px] font-medium text-gray-400 uppercase">{dataService.getConceptLabel('attributeType')}</th>
                   <th className="text-left px-2 py-0.5 text-[10px] font-medium text-gray-400 uppercase">Description</th>
                 </tr>
               </thead>
@@ -112,7 +112,7 @@ export function ClassDetailCard({ classId, dataService, onClose, onNavigate }: C
                 {remainingSlots > 0 && (
                   <tr>
                     <td colSpan={3} className="px-2 py-1 text-gray-400 italic cursor-pointer">
-                      … {remainingSlots} more slots
+                      … {remainingSlots} more {dataService.getTypeLabel('slot', true).toLowerCase()}
                     </td>
                   </tr>
                 )}

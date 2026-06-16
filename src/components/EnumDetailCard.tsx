@@ -5,7 +5,7 @@
  */
 
 import { useMemo } from 'react';
-import type { DataService, EnumDetailInfo } from '../services/DataService';
+import { type DataService, type EnumDetailInfo, SectionId } from '../services/DataService';
 
 interface EnumDetailCardProps {
   enumId: string;
@@ -83,7 +83,7 @@ export function EnumDetailCard({ enumId, dataService, onClose, onNavigate }: Enu
         {shownValues.length > 0 && (
           <div>
             <div className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1">
-              Permissible Values ({detail.totalValues})
+              {dataService.getSectionLabel(SectionId.PermissibleValues)} ({detail.totalValues})
             </div>
             <table className="w-full text-xs">
               <thead>
