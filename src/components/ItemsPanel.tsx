@@ -41,7 +41,7 @@ function SectionToggleButton({ button, active, onClick }: SectionToggleButtonPro
     <button
       onClick={onClick}
       title={label}
-      className={`w-8 h-8 rounded flex items-center justify-center text-white text-sm font-bold transition-all ${
+      className={`min-w-8 h-8 px-1.5 rounded flex items-center justify-center text-white text-xs font-bold transition-all ${
         active ? activeColor : inactiveColor
       } hover:scale-110`}
     >

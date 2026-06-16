@@ -752,7 +752,7 @@ export default function LayoutManager({
             onItemLeave={handleItemLeave}
             pinnedDetailItemIds={pinnedDetailItemIds}
             pinnedRelationshipItemIds={pinnedRelationshipItemIds}
-            title="Ranges:"
+            title={`${dataService.getConceptLabel('attributeType', true)}:`}
           />
         </div>
       </div>

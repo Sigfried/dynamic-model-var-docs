@@ -110,7 +110,7 @@ export interface SectionData {
  */
 export interface ToggleButtonData {
   id: string;                     // "class", "enum", "slot", "variable"
-  icon: string;                   // "C"
+  icon: string;                   // Short badge abbreviation, vocab-driven (e.g. "Ent", "Attr", "PVS")
   label: string;                  // "Classes"
   activeColor: string;            // Tailwind: "bg-blue-500"
   inactiveColor: string;          // Tailwind: "bg-gray-300 dark:bg-gray-600"

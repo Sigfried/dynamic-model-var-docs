@@ -26,7 +26,7 @@ export interface ElementTypeMetadata {
   readonly id: ElementTypeId;
   readonly label: string;         // Human-readable label (e.g., "Class", "Enumeration")
   readonly pluralLabel: string;   // Plural form (e.g., "Classes", "Enumerations")
-  readonly icon: string;          // Single-character icon for toggle buttons (C, E, S, V)
+  readonly icon: string;          // Short badge abbreviation for toggle buttons, vocab-driven (e.g. "Ent", "Attr", "PVS")
   readonly color: {
     // Tailwind color names (for bg, text, border classes)
     name: string;               // e.g., 'blue', 'purple', 'green', 'orange'
@@ -100,12 +100,12 @@ export const VOCAB = {
   // SG leans "Property" over "Attribute" — change concept.attribute to swap it.
   researcher: {
     concept: {
-      entity:        { singular: 'Entity',               plural: 'Entities' },
-      attribute:     { singular: 'Attribute',            plural: 'Attributes' },
-      valueSet:      { singular: 'Permissible Value Set', plural: 'Permissible Value Sets' },
-      attributeType: { singular: 'Attribute Type',       plural: 'Attribute Types' },
-      dataType:      { singular: 'Data Type',            plural: 'Data Types' },
-      variable:      { singular: 'Variable',             plural: 'Variables' },
+      entity:        { singular: 'Entity',               plural: 'Entities',              abbr: 'Ent' },
+      attribute:     { singular: 'Attribute',            plural: 'Attributes',            abbr: 'Attr' },
+      valueSet:      { singular: 'Permissible Value Set', plural: 'Permissible Value Sets', abbr: 'PVS' },
+      attributeType: { singular: 'Attribute Type',       plural: 'Attribute Types' }, // no badge -> no abbr
+      dataType:      { singular: 'Data Type',            plural: 'Data Types',            abbr: 'DT' },
+      variable:      { singular: 'Variable',             plural: 'Variables',             abbr: 'Var' },
     },
     section: {
       [SectionId.Inheritance]: 'Inheritance',
@@ -130,35 +130,44 @@ export const VOCAB = {
     },
   },
 
-  // ── Modeler: relational/database vocabulary. STUB — fill in later (Q2). ──
-  // Intended direction (per SG): enum -> "Value Set", class -> "Table",
-  // slot -> "Field"/"Column". Currently mirrors researcher so it type-checks.
+  // ── Modeler: relational/database vocabulary (per SG 2026-06-16). ──
+  // class -> "Table", slot -> "Column", enum -> "Value Set", type -> "Type".
+  // attributeType (the kind a column points at: Table/Value Set/Type) -> "Column Type".
+  //
+  // UNRESOLVED (SG to revisit — provisional choices made to fill the stub):
+  //   - dataType: used "Type"; SG floated "Data Type" / "Column Type" too. If
+  //     "Data Type" is preferred, change concept.dataType + entityCol.typ.
+  //   - attributeType: used "Column Type" (also the right-panel title). Distinct
+  //     from dataType on purpose; revisit if these should merge.
+  //   - section.UsedByEntities: used "Used By Tables"; SG wondered about
+  //     "Used By Variable" / something else (no such SectionId exists today).
+  // Inactive unless defaultVocab flips to 'modeler'.
   modeler: {
     concept: {
-      entity:        { singular: 'Entity',               plural: 'Entities' },        // TODO: "Table"?
-      attribute:     { singular: 'Attribute',            plural: 'Attributes' },      // TODO: "Field"/"Column"?
-      valueSet:      { singular: 'Value Set',            plural: 'Value Sets' },
-      attributeType: { singular: 'Attribute Type',       plural: 'Attribute Types' }, // TODO: "Data Type"?
-      dataType:      { singular: 'Data Type',            plural: 'Data Types' },
-      variable:      { singular: 'Variable',             plural: 'Variables' },
+      entity:        { singular: 'Table',       plural: 'Tables',       abbr: 'Tbl' },
+      attribute:     { singular: 'Column',      plural: 'Columns',      abbr: 'Col' },
+      valueSet:      { singular: 'Value Set',   plural: 'Value Sets',   abbr: 'VS' },
+      attributeType: { singular: 'Column Type', plural: 'Column Types' }, // no badge -> no abbr
+      dataType:      { singular: 'Type',        plural: 'Types',        abbr: 'Type' },
+      variable:      { singular: 'Variable',    plural: 'Variables',    abbr: 'Var' },
     },
     section: {
       [SectionId.Inheritance]: 'Inheritance',
-      [SectionId.Attributes]: 'Attributes',
+      [SectionId.Attributes]: 'Columns',
       [SectionId.Variables]: 'Variables',
       [SectionId.InheritsValues]: 'Inherits Values From',
       [SectionId.ReachableFrom]: 'Reachable From (Dynamic Values)',
       [SectionId.PermissibleValues]: 'Permissible Values',
-      [SectionId.UsedByEntities]: 'Used By Entities',
+      [SectionId.UsedByEntities]: 'Used By Tables',
       [SectionId.Properties]: 'Properties',
       [SectionId.Mappings]: 'Mappings',
       [SectionId.Notes]: 'Notes',
     } as Record<SectionId, string>,
     entityCol: {
-      props: { header: 'Attributes',  tip: 'Total attributes (own + inherited)' },
-      cls:   { header: 'Entities',    tip: 'Entity-typed ranges' },
-      enm:   { header: 'Value Sets',  tip: 'Value-set ranges' },
-      typ:   { header: 'Data Types',  tip: 'Primitive-typed ranges' },
+      props: { header: 'Columns',     tip: 'Total columns (own + inherited)' },
+      cls:   { header: 'Tables',      tip: 'Table-typed columns' },
+      enm:   { header: 'Value Sets',  tip: 'Value-set columns' },
+      typ:   { header: 'Types',       tip: 'Primitive-typed columns' },
       vars:  { header: 'Variables',   tip: 'Mapped study variables' },
     },
   },
@@ -168,12 +177,12 @@ export const VOCAB = {
   // that appeared elsewhere are noted in comments.
   linkml: {
     concept: {
-      entity:        { singular: 'Class',       plural: 'Classes' },
-      attribute:     { singular: 'Slot',        plural: 'Slots' },        // also called "attribute" in places
-      valueSet:      { singular: 'Enumeration', plural: 'Enumerations' }, // also "Enum" / "value set" / "Permissible Values"
-      attributeType: { singular: 'Range',       plural: 'Ranges' },
-      dataType:      { singular: 'Type',         plural: 'Types' },
-      variable:      { singular: 'Variable',     plural: 'Variables' },
+      entity:        { singular: 'Class',       plural: 'Classes',      abbr: 'Class' },
+      attribute:     { singular: 'Slot',        plural: 'Slots',        abbr: 'Slot' }, // also called "attribute" in places
+      valueSet:      { singular: 'Enumeration', plural: 'Enumerations', abbr: 'Enum' }, // also "Enum" / "value set" / "Permissible Values"
+      attributeType: { singular: 'Range',       plural: 'Ranges' },     // no badge -> no abbr
+      dataType:      { singular: 'Type',         plural: 'Types',        abbr: 'Type' },
+      variable:      { singular: 'Variable',     plural: 'Variables',    abbr: 'Var' },
     },
     section: {
       [SectionId.Inheritance]: 'Inheritance',
@@ -214,7 +223,7 @@ export const APP_CONFIG = {
       id: 'class' as const,
       label: V.concept.entity.singular,
       pluralLabel: V.concept.entity.plural,
-      icon: 'C',
+      icon: V.concept.entity.abbr,
       color: {
         name: 'blue',
         hex: '#3b82f6',  // blue-500
@@ -234,7 +243,7 @@ export const APP_CONFIG = {
       id: 'enum' as const,
       label: V.concept.valueSet.singular,   // its contents shown as "Permissible Values"
       pluralLabel: V.concept.valueSet.plural,
-      icon: 'E',
+      icon: V.concept.valueSet.abbr,
       color: {
         name: 'purple',
         hex: '#a855f7',  // purple-500
@@ -254,7 +263,7 @@ export const APP_CONFIG = {
       id: 'slot' as const,
       label: V.concept.attribute.singular,
       pluralLabel: V.concept.attribute.plural,
-      icon: 'S',
+      icon: V.concept.attribute.abbr,
       color: {
         name: 'green',
         hex: '#10b981',  // green-500
@@ -274,7 +283,7 @@ export const APP_CONFIG = {
       id: 'type' as const,
       label: V.concept.dataType.singular,
       pluralLabel: V.concept.dataType.plural,
-      icon: 'T',
+      icon: V.concept.dataType.abbr,
       color: {
         name: 'cyan',
         hex: '#06b6d4',  // cyan-500
@@ -294,7 +303,7 @@ export const APP_CONFIG = {
       id: 'variable' as const,
       label: V.concept.variable.singular,
       pluralLabel: V.concept.variable.plural,
-      icon: 'V',
+      icon: V.concept.variable.abbr,
       color: {
         name: 'orange',
         hex: '#f97316',  // orange-500
