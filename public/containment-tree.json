@@ -1,5 +1,102 @@
 [
   {
+    "id": "Questionnaire",
+    "label": "Questionnaire",
+    "description": "A Questionnaire is an organized collection of questions intended to solicit information from patients, providers or other individuals involved in the healthcare domain. They may be simple flat lists of questions or can be hierarchically organized in groups and sub-groups, each containing questions. The Questionnaire defines the questions to be asked, how they are ordered and grouped, any intervening instructional text and what the constraints are on the allowed answers. The results of a Questionnaire can be communicated using the QuestionnaireResponse. (FHIR)",
+    "abstract": false,
+    "kind": "has-a",
+    "children": [
+      {
+        "id": "QuestionnaireItem",
+        "label": "QuestionnaireItem",
+        "description": "QuestionnaireItem defines a question or section within the Questionnaire",
+        "abstract": false,
+        "kind": "has-a",
+        "slot": "items",
+        "cardinality": "+",
+        "flipped": false,
+        "children": [
+          {
+            "id": "QuestionnaireResponseItem",
+            "label": "QuestionnaireResponseItem",
+            "description": "QuestionnaireResponseItem provides a complete or partial list of answers to a set of questions filled when responding to a questionnaire. (FHIR)",
+            "abstract": false,
+            "kind": "has-a",
+            "slot": "has_questionnaire_item",
+            "cardinality": "0..1",
+            "flipped": true,
+            "children": [
+              {
+                "id": "QuestionnaireResponseValue",
+                "label": "QuestionnaireResponseValue",
+                "description": "Single-valued answer to the question. (FHIR)",
+                "abstract": true,
+                "kind": "has-a",
+                "slot": "response_value",
+                "cardinality": "1",
+                "flipped": false,
+                "children": [
+                  {
+                    "id": "QuestionnaireResponseValueBoolean",
+                    "label": "QuestionnaireResponseValueBoolean",
+                    "description": "Single-valued boolean answer to the question",
+                    "abstract": false,
+                    "kind": "subclass",
+                    "children": []
+                  },
+                  {
+                    "id": "QuestionnaireResponseValueDecimal",
+                    "label": "QuestionnaireResponseValueDecimal",
+                    "description": "Single-valued decimal answer to the question",
+                    "abstract": false,
+                    "kind": "subclass",
+                    "children": []
+                  },
+                  {
+                    "id": "QuestionnaireResponseValueInteger",
+                    "label": "QuestionnaireResponseValueInteger",
+                    "description": "Single-valued integer answer to the question",
+                    "abstract": false,
+                    "kind": "subclass",
+                    "children": []
+                  },
+                  {
+                    "id": "QuestionnaireResponseValueString",
+                    "label": "QuestionnaireResponseValueString",
+                    "description": "Single-valued string answer to the question",
+                    "abstract": false,
+                    "kind": "subclass",
+                    "children": []
+                  },
+                  {
+                    "id": "QuestionnaireResponseValueTimePoint",
+                    "label": "QuestionnaireResponseValueTimePoint",
+                    "description": "Single-valued TimePoint answer to the question",
+                    "abstract": false,
+                    "kind": "subclass",
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "QuestionnaireItem",
+            "label": "QuestionnaireItem",
+            "description": "QuestionnaireItem defines a question or section within the Questionnaire",
+            "abstract": false,
+            "kind": "has-a",
+            "slot": "part_of",
+            "cardinality": "0..1",
+            "flipped": true,
+            "cycle": true,
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
     "id": "ResearchStudyCollection",
     "label": "ResearchStudyCollection",
     "description": "A holder for ResearchStudy objects",
@@ -2256,6 +2353,63 @@
             "slot": "part_of",
             "cardinality": "0..1",
             "flipped": true,
+            "cycle": true,
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "TimePeriod",
+    "label": "TimePeriod",
+    "description": "A period of time between a start and end time point.",
+    "abstract": false,
+    "kind": "has-a",
+    "children": [
+      {
+        "id": "TimePoint",
+        "label": "TimePoint",
+        "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+        "abstract": false,
+        "kind": "has-a",
+        "slot": "period_end",
+        "cardinality": "0..1",
+        "flipped": false,
+        "children": [
+          {
+            "id": "TimePoint",
+            "label": "TimePoint",
+            "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+            "abstract": false,
+            "kind": "has-a",
+            "slot": "index_time_point",
+            "cardinality": "0..1",
+            "flipped": false,
+            "cycle": true,
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "TimePoint",
+        "label": "TimePoint",
+        "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+        "abstract": false,
+        "kind": "has-a",
+        "slot": "period_start",
+        "cardinality": "0..1",
+        "flipped": false,
+        "children": [
+          {
+            "id": "TimePoint",
+            "label": "TimePoint",
+            "description": "A structured representation of a single point in time that allows direct/explicit declaration as a dateTime, specification in terms of offset from a defined index, or description of an event type as a proxy for the time point when it occurred.",
+            "abstract": false,
+            "kind": "has-a",
+            "slot": "index_time_point",
+            "cardinality": "0..1",
+            "flipped": false,
             "cycle": true,
             "children": []
           }

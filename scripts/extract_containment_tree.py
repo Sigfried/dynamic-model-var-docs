@@ -216,8 +216,15 @@ def build_tree(
         children_of[e["parent"]].append(e)
         has_parent.add(e["child"])
 
-    # Also mark classes that are subclasses as "having a parent" for root detection
+    # Mark classes that are subclasses as "having a parent" for root detection,
+    # but ONLY when that parent actually renders them. Subclasses of a class in
+    # SKIP_SUBCLASS_EXPANSION are never expanded under their parent, so if such
+    # a subclass has no has-a parent either, it would silently disappear from
+    # the tree (e.g. Questionnaire, TimePeriod — Entity subclasses that nothing
+    # contains). Those must remain eligible to be roots.
     for parent, subs in subclasses_of.items():
+        if parent in SKIP_SUBCLASS_EXPANSION:
+            continue
         for s in subs:
             has_parent.add(s)
 
