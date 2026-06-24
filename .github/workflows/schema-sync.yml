@@ -1,0 +1,78 @@
+name: Schema sync
+
+# Watches the upstream BDCHM schema (RTIInternational/NHLBI-BDC-DMC-HM,
+# src/bdchm/schema/bdchm.yaml). When the pinned commit is behind main, pulls the
+# new schema, regenerates the downstream artifacts (bdchm.expanded.json →
+# bdchm.processed.json — what the app loads), and opens a PR with the diff.
+#
+# The pipeline lives in scripts/download_source_data.py:
+#   --check   exit 1 if the pinned commit is behind upstream main, 0 if current
+#   --update  bump the pin (edits the script), re-download, regenerate schemas
+
+on:
+  schedule:
+    - cron: '0 7 * * *'   # daily at 07:00 UTC
+  workflow_dispatch:       # allow manual runs from the Actions tab
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write       # push the update branch
+      pull-requests: write  # open the PR
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install schema-pipeline deps
+        working-directory: scripts
+        run: uv sync
+
+      - name: Check upstream for updates
+        id: check
+        working-directory: scripts
+        run: |
+          if uv run python download_source_data.py --check; then
+            echo "updates=false" >> "$GITHUB_OUTPUT"
+            echo "Upstream schema is up to date."
+          else
+            echo "updates=true" >> "$GITHUB_OUTPUT"
+            echo "Upstream schema has updates; will pull and regenerate."
+          fi
+
+      - name: Pull update and regenerate downstream artifacts
+        if: steps.check.outputs.updates == 'true'
+        working-directory: scripts
+        run: uv run python download_source_data.py --update
+
+      - name: Open pull request
+        if: steps.check.outputs.updates == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: schema-sync/upstream-update
+          # Reuse a single open PR across runs rather than stacking new ones.
+          base: main
+          commit-message: "chore: sync upstream BDCHM schema and regenerate artifacts"
+          title: "Sync upstream BDCHM schema"
+          body: |
+            Automated upstream schema sync.
+
+            `scripts/download_source_data.py --update` detected a newer commit of
+            `RTIInternational/NHLBI-BDC-DMC-HM/src/bdchm/schema/bdchm.yaml`,
+            pulled it, bumped the pinned commit in the script, and regenerated
+            the downstream artifacts (`bdchm.expanded.json` → `bdchm.processed.json`).
+
+            **Review checklist**
+            - [ ] Diff in `bdchm.processed.json` looks like intended schema changes
+            - [ ] `npm run typecheck` / `npx vitest run` pass against the new model
+            - [ ] No heuristic-sensitive slots changed (containment FK-flip — see
+                  `src/models/containmentGraph.ts` `NO_FLIP_SLOTS` / `VALUE_OBJECTS`)
+          labels: |
+            schema-sync
+            automated
