@@ -28,6 +28,9 @@ import { EDGE_TYPES } from "../models/SchemaTypes";
 import type { ToggleButtonData } from '../components/ItemsPanel';
 import type { SectionData } from '../components/Section';
 import { APP_CONFIG, getAllElementTypeIds, SectionId, ACTIVE_VOCAB } from '../config/appConfig';
+import { ENTITY_CATEGORIES } from '../config/entityCategories';
+import { buildContainmentGraph } from '../models/containmentGraph';
+import type { ContainmentGraph } from '../models/containmentGraph';
 // Re-export so UI components (which must not import from config/ or models/) can
 // reference section identities without depending on display strings.
 export { SectionId } from '../config/appConfig';
@@ -35,6 +38,14 @@ const {elementTypes, } = APP_CONFIG;
 
 // Re-export UI types for UI components
 export type { EdgeInfo, ItemInfo };
+export type { ContainmentGraph, ContainmentNode, ContainmentEdge } from '../models/containmentGraph';
+
+/** A category of classes for the Focus selector (e.g. "Clinical"). */
+export interface CategoryGroup {
+  id: string;
+  label: string;
+  classIds: string[];
+}
 
 /** Enum detail for inline cards (no Element exposure) */
 export interface EnumDetailInfo {
@@ -487,5 +498,52 @@ export class DataService {
       map.set(typeId, augmentedSectionData);
     });
     return map;
+  }
+
+  // ====================================================================
+  // Focus view queries
+  // ====================================================================
+
+  /**
+   * Class categories for the Focus selector, drawn from ENTITY_CATEGORIES and
+   * filtered to classes that actually exist in the model (mirrors the Entity
+   * Explorer's validCategories filtering). Lets components group classes
+   * without importing config/ directly.
+   */
+  getCategoryGroups(): CategoryGroup[] {
+    return ENTITY_CATEGORIES
+      .map(cat => ({
+        id: cat.id,
+        label: cat.label,
+        classIds: cat.classIds.filter(id => this.itemExists(id)),
+      }))
+      .filter(cat => cat.classIds.length > 0);
+  }
+
+  /**
+   * Build the containment ({nodes, edges}) graph for the diagram, derived live
+   * from the schema graph with FK inversion applied (see models/containmentGraph).
+   *
+   * @param classIds  the subset of classes to include. Omit for the full graph
+   *                  (all classes, isolated nodes pruned).
+   */
+  getContainmentGraph(classIds?: string[]): ContainmentGraph {
+    const full = classIds === undefined;
+    const collection = this.modelData.collections.get('class' as ElementTypeId);
+    const allClassIds = collection ? collection.getAllElements().map(e => e.name) : [];
+    const ids = full ? allClassIds : classIds.filter(id => this.itemExists(id));
+
+    return buildContainmentGraph(
+      this.modelData.graph,
+      ids,
+      (classId) => {
+        const el = this.modelData.elementLookup.get(classId);
+        return {
+          abstract: el?.isAbstract() ?? false,
+          description: el?.description ?? '',
+        };
+      },
+      { pruneIsolated: full },
+    );
   }
 }
