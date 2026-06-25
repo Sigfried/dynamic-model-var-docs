@@ -68,6 +68,10 @@
       "prefix_prefix": "BAO",
       "prefix_reference": "http://www.bioassayontology.org/bao#BAO_"
     },
+    "UBERON": {
+      "prefix_prefix": "UBERON",
+      "prefix_reference": "http://purl.obolibrary.org/obo/UBERON_"
+    },
     "xsd": {
       "prefix_prefix": "xsd",
       "prefix_reference": "http://www.w3.org/2001/XMLSchema#"
@@ -406,6 +410,11 @@
           "text": "BLACK_OR_AFRICAN_AMERICAN",
           "description": "A person having origins in any of the Black racial groups of Africa. Terms such as \"Haitian\" or \"Negro\" can be used in addition to \"Black or African American\". (OMB)",
           "meaning": "OMOP:8516"
+        },
+        "MIDDLE_EASTERN_OR_NORTH_AFRICAN": {
+          "text": "MIDDLE_EASTERN_OR_NORTH_AFRICAN",
+          "description": "A person having origins in any of the original peoples of the Middle East or North Africa, including, for example, Lebanese, Iranian, Egyptian, Syrian, Iraqi, and Israeli. (OMB)",
+          "meaning": "OMOP:38003615"
         },
         "NATIVE_HAWAIIAN_OR_OTHER_PACIFIC_ISLANDER": {
           "text": "NATIVE_HAWAIIAN_OR_OTHER_PACIFIC_ISLANDER",
@@ -1077,6 +1086,21 @@
         "include_self": false
       }
     },
+    "AnatomicSiteEnum": {
+      "name": "AnatomicSiteEnum",
+      "description": "A constrained set of enumerative values containing the Uberon values for anatomic sites.",
+      "from_schema": "https://w3id.org/bdchm",
+      "reachable_from": {
+        "source_ontology": "obo:uberon",
+        "source_nodes": [
+          "UBERON:0001062"
+        ],
+        "relationship_types": [
+          "rdfs:subClassOf"
+        ],
+        "include_self": false
+      }
+    },
     "ConditionConceptEnum": {
       "name": "ConditionConceptEnum",
       "description": "A constrained set of enumerative values containing both the MONDO values for human diseases and the HPO values for phenotypic abnormalities.",
@@ -1118,6 +1142,10 @@
         "DEATH_CERTIFICATE": {
           "text": "DEATH_CERTIFICATE",
           "meaning": "OMOP:4976888"
+        },
+        "DEATH_RECORD": {
+          "text": "DEATH_RECORD",
+          "description": "The condition was recorded in a death record, a more general category that includes death certificates but also other types of records of death (e.g. autopsy record, medical examiner report"
         },
         "DENTAL_CLAIM": {
           "text": "DENTAL_CLAIM",
@@ -1255,6 +1283,10 @@
           "text": "HEALTH_INFORMATION_EXCHANGE_RECORD",
           "meaning": "OMOP:4976922"
         },
+        "HEALTH_RECORD": {
+          "text": "HEALTH_RECORD",
+          "description": "The condition was recorded in a patient's health record."
+        },
         "HEALTH_RISK_ASSESSMENT": {
           "text": "HEALTH_RISK_ASSESSMENT",
           "meaning": "OMOP:4976923"
@@ -1311,6 +1343,10 @@
           "text": "PATIENT_FILLED_SURVEY",
           "meaning": "OMOP:4976935"
         },
+        "PATIENT_MEDICATION_REPORT": {
+          "text": "PATIENT_MEDICATION_REPORT",
+          "description": "The condition was recorded based on a patient-provided medication report."
+        },
         "PATIENT_OR_PAYER_PAID_RECORD": {
           "text": "PATIENT_OR_PAYER_PAID_RECORD",
           "meaning": "OMOP:4976936"
@@ -1322,6 +1358,10 @@
         "PATIENT_SELF_REPORT": {
           "text": "PATIENT_SELF_REPORT",
           "meaning": "OMOP:4976938"
+        },
+        "PATIENT_SELF_REPORT_DR_CONFIRMED": {
+          "text": "PATIENT_SELF_REPORT_DR_CONFIRMED",
+          "description": "The condition was recorded based on a patient self-report that was confirmed by a doctor."
         },
         "PATIENT_SELF_TESTED": {
           "text": "PATIENT_SELF_TESTED",
@@ -1342,6 +1382,10 @@
         "PHARMACY_CLAIM": {
           "text": "PHARMACY_CLAIM",
           "meaning": "OMOP:4976942"
+        },
+        "PHYSICIAN_ADJUDICATION": {
+          "text": "PHYSICIAN_ADJUDICATION",
+          "description": "The condition was recorded following adjudication by one or more physicians."
         },
         "POINT_OF_CARE/EXPRESS_LAB": {
           "text": "POINT_OF_CARE/EXPRESS_LAB",
@@ -1399,6 +1443,10 @@
           "text": "STANDARD_ALGORITHM_FROM_EHR",
           "meaning": "OMOP:4976955"
         },
+        "STUDY_RECORD": {
+          "text": "STUDY_RECORD",
+          "description": "The condition was recorded in a study-related record."
+        },
         "SURVEY": {
           "text": "SURVEY",
           "meaning": "OMOP:4976956"
@@ -1414,6 +1462,10 @@
         "VISION_CLAIM": {
           "text": "VISION_CLAIM",
           "meaning": "OMOP:4976959"
+        },
+        "WORKING_DIAGNOSIS": {
+          "text": "WORKING_DIAGNOSIS",
+          "description": "The condition was recorded as a working diagnosis."
         }
       }
     },
@@ -1480,10 +1532,14 @@
       "name": "DrugExposureProvenanceEnum",
       "description": "Source of drug exposure record",
       "comments": [
-        "Taken from OMOP Drug Type values; \"select * from concept where vocabulary_id = 'Drug Type';\" Do we need descriptions beyond the name?"
+        "Taken from OMOP Drug Type values; \"select * from concept where vocabulary_id = 'Drug Type';\""
       ],
       "from_schema": "https://w3id.org/bdchm",
       "permissible_values": {
+        "AT_DISCHARGE": {
+          "text": "AT_DISCHARGE",
+          "description": "Participant is discharged from an inpatient facility either with the medication or a prescription for the medication"
+        },
         "RANDOMIZED_DRUG": {
           "text": "RANDOMIZED_DRUG",
           "description": "Randomized Drug",
@@ -1523,6 +1579,10 @@
           "text": "PRESCRIPTION_WRITTEN",
           "description": "Prescription written",
           "meaning": "OMOP:38000177"
+        },
+        "PRESCIPTION_LABEL": {
+          "text": "PRESCIPTION_LABEL",
+          "description": "For use when a Participant brings in their medications and an investigator makes a list of medications using the labels"
         },
         "MEDICATION_LIST_ENTRY": {
           "text": "MEDICATION_LIST_ENTRY",
@@ -3813,6 +3873,10 @@
           "text": "ALBUMIN_IN_BLOOD",
           "meaning": "OBA:2050068"
         },
+        "ALPHA-1_ANTITRYPSIN_IN_SERUM": {
+          "text": "ALPHA-1_ANTITRYPSIN_IN_SERUM",
+          "meaning": "OBA:2050075"
+        },
         "ALT_SGPT": {
           "text": "ALT_SGPT",
           "meaning": "OBA:2050062"
@@ -3939,7 +4003,7 @@
         },
         "LYMPHOCYTES_COUNT": {
           "text": "LYMPHOCYTES_COUNT",
-          "meaning": "OBA:VT0000217"
+          "meaning": "OBA:VT0000717"
         },
         "MCP1_IN_BLOOD": {
           "text": "MCP1_IN_BLOOD",
@@ -4000,6 +4064,10 @@
         "SLEEP_HOURS": {
           "text": "SLEEP_HOURS",
           "meaning": "OBA:2040171"
+        },
+        "SMOKING_STATUS": {
+          "text": "SMOKING_STATUS",
+          "meaning": "OMOP:4282779"
         },
         "SODIUM_IN_BLOOD": {
           "text": "SODIUM_IN_BLOOD",
@@ -4279,6 +4347,10 @@
         "MASTERS_OR_DOCTORAL_DEGREE": {
           "text": "MASTERS_OR_DOCTORAL_DEGREE",
           "meaning": "OMOP:45880652"
+        },
+        "UNKNOWN": {
+          "text": "UNKNOWN",
+          "description": "Educational attainment is unknown or not reported."
         }
       }
     },
@@ -4363,6 +4435,142 @@
         "EducationalAttainmentObservationTypeEnum",
         "SmokingStatusObservationTypeEnum"
       ]
+    },
+    "RelativeTimingEnum": {
+      "name": "RelativeTimingEnum",
+      "description": "A constrained set of enumerative values describing the relative timing of an activity.",
+      "from_schema": "https://w3id.org/bdchm",
+      "permissible_values": {
+        "AFTER": {
+          "text": "AFTER",
+          "description": "Occurring later than"
+        },
+        "BEFORE": {
+          "text": "BEFORE",
+          "description": "Occurring prior to"
+        },
+        "CONCURRENT_WITH": {
+          "text": "CONCURRENT_WITH",
+          "description": "Occurring simultaneous to"
+        }
+      }
+    },
+    "MeasuredByPersonnelTypeEnum": {
+      "name": "MeasuredByPersonnelTypeEnum",
+      "description": "A constrained set of enumerative values describing the type of personnel performing a measurement.",
+      "from_schema": "https://w3id.org/bdchm",
+      "permissible_values": {
+        "PHYSICIAN": {
+          "text": "PHYSICIAN",
+          "description": "A medical doctor (MD) or doctor of osteopathic medicine (DO) who is licensed to practice medicine and provide healthcare services."
+        },
+        "NURSE": {
+          "text": "NURSE",
+          "description": "A registered nurse (RN), licensed practical nurse (LPN), or other nursing professional who provides patient care and support under the supervision of a physician or independently within their scope of practice."
+        },
+        "TECHNICIAN": {
+          "text": "TECHNICIAN",
+          "description": "A healthcare worker trained to perform specific technical tasks, such as laboratory tests, imaging procedures, or medical equipment operation, but who does not have the full scope of practice of a physician or nurse."
+        },
+        "OTHER_HEALTHCARE_PROFESSIONAL": {
+          "text": "OTHER_HEALTHCARE_PROFESSIONAL",
+          "description": "Any other type of healthcare professional involved in performing an activity, such as a physical therapist, occupational therapist, pharmacist, or social worker."
+        }
+      }
+    },
+    "ActivityTypeEnum": {
+      "name": "ActivityTypeEnum",
+      "description": "A constrained set of enumerative values describing types of activities.",
+      "from_schema": "https://w3id.org/bdchm",
+      "permissible_values": {
+        "FASTING": {
+          "text": "FASTING",
+          "description": "Abstaining from intake of food or liquid"
+        },
+        "BRONCHODILATOR_MEDICATION_USE": {
+          "text": "BRONCHODILATOR_MEDICATION_USE",
+          "description": "The act of taking one or more medication in the class of \"bronchodilators\""
+        },
+        "DIABETES_MEDICATION_USE": {
+          "text": "DIABETES_MEDICATION_USE",
+          "description": "The act of taking one or more medication used in control of diabetes"
+        },
+        "ANTIHYPERLIPIDEMICS_MEDICATION_USE": {
+          "text": "ANTIHYPERLIPIDEMICS_MEDICATION_USE",
+          "description": "The act of taking one or more medication in the class of \"antihyperlipidemics\""
+        },
+        "PHYSICAL_ACTIVITY": {
+          "text": "PHYSICAL_ACTIVITY",
+          "description": "The act of engaging in aerobic movement (e.g., brisk walking, running)"
+        },
+        "MEDICAL_PROCEDURE": {
+          "text": "MEDICAL_PROCEDURE",
+          "description": "A therapeutic or diagnostic procedure undertaken in the context of healthcare or research"
+        }
+      }
+    },
+    "MeasurementQualifierEnum": {
+      "name": "MeasurementQualifierEnum",
+      "description": "A constrained set of enumerative values describing qualifiers of a measurement.",
+      "from_schema": "https://w3id.org/bdchm",
+      "permissible_values": {
+        "AVERAGE": {
+          "text": "AVERAGE",
+          "description": "An average of measurements taken across a time period or under specific conditions"
+        },
+        "MINIMUM": {
+          "text": "MINIMUM",
+          "description": "The minimum value among measurements taken across a time period or under specific conditions"
+        },
+        "MAXIMUM": {
+          "text": "MAXIMUM",
+          "description": "The maximum value among measurements taken across a time period or under specific conditions"
+        },
+        "SUM": {
+          "text": "SUM",
+          "description": "The sum of measurements taken across a time period or under specific conditions"
+        },
+        "FIRST_MEASUREMENT": {
+          "text": "FIRST_MEASUREMENT",
+          "description": "The first measurement taken in a series of measurements across a time period or under specific conditions"
+        },
+        "LAST_MEASUREMENT": {
+          "text": "LAST_MEASUREMENT",
+          "description": "The last measurement taken in a series of measurements across a time period or under specific conditions"
+        }
+      }
+    },
+    "QuantityOperatorEnum": {
+      "name": "QuantityOperatorEnum",
+      "description": "A constrained set of enumerative values describing operators that can be applied to a quantity.",
+      "from_schema": "https://w3id.org/bdchm",
+      "permissible_values": {
+        "LESS_THAN": {
+          "text": "LESS_THAN",
+          "description": "The quantity is less than a specified value",
+          "meaning": "OMOP:4171756"
+        },
+        "LESS_THAN_OR_EQUAL_TO": {
+          "text": "LESS_THAN_OR_EQUAL_TO",
+          "description": "The quantity is less than or equal to a specified value",
+          "meaning": "OMOP:4171754"
+        },
+        "EQUAL_TO": {
+          "text": "EQUAL_TO",
+          "description": "The quantity is equal to a specified value",
+          "meaning": "OMOP:4172703"
+        },
+        "GREATER_THAN_OR_EQUAL_TO": {
+          "text": "GREATER_THAN_OR_EQUAL_TO",
+          "description": "The quantity is greater than or equal to a specified value",
+          "meaning": "OMOP:4171755"
+        },
+        "GREATER_THAN": {
+          "text": "GREATER_THAN",
+          "description": "The quantity is greater than a specified value",
+          "meaning": "OMOP:4172704"
+        }
+      }
     }
   },
   "slots": {
@@ -4383,6 +4591,7 @@
         "Organization",
         "TimePoint",
         "TimePeriod",
+        "ResearchStudyCollection",
         "Questionnaire",
         "QuestionnaireItem",
         "QuestionnaireResponse",
@@ -4422,7 +4631,9 @@
         "MeasurementObservation",
         "SdohObservationSet",
         "SdohObservation",
-        "CauseOfDeath"
+        "CauseOfDeath",
+        "Assay",
+        "Context"
       ],
       "range": "uriorcurie",
       "required": true
@@ -4570,6 +4781,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -4609,7 +4821,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -4635,7 +4849,8 @@
           "domain_of": [
             "Person"
           ],
-          "range": "CellularOrganismSpeciesEnum"
+          "range": "CellularOrganismSpeciesEnum",
+          "required": false
         },
         "breed": {
           "name": "breed",
@@ -4646,7 +4861,8 @@
           "domain_of": [
             "Person"
           ],
-          "range": "VertebrateBreedEnum"
+          "range": "VertebrateBreedEnum",
+          "required": false
         },
         "year_of_birth": {
           "name": "year_of_birth",
@@ -4657,7 +4873,8 @@
           "domain_of": [
             "Person"
           ],
-          "range": "integer"
+          "range": "integer",
+          "required": false
         },
         "vital_status": {
           "name": "vital_status",
@@ -4680,6 +4897,7 @@
             "Person"
           ],
           "range": "integer",
+          "required": false,
           "unit": {
             "ucum_code": "d"
           }
@@ -4693,7 +4911,8 @@
           "domain_of": [
             "Person"
           ],
-          "range": "integer"
+          "range": "integer",
+          "required": false
         },
         "cause_of_death": {
           "name": "cause_of_death",
@@ -4705,6 +4924,7 @@
             "Person"
           ],
           "range": "CauseOfDeath",
+          "required": false,
           "multivalued": true
         },
         "identity": {
@@ -4755,6 +4975,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -4794,7 +5015,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie"
         }
@@ -4810,6 +5033,16 @@
         "associated_participant",
         "associated_visit"
       ],
+      "slot_usage": {
+        "associated_participant": {
+          "name": "associated_participant",
+          "required": true
+        },
+        "associated_visit": {
+          "name": "associated_visit",
+          "required": false
+        }
+      },
       "attributes": {
         "sex": {
           "name": "sex",
@@ -4820,7 +5053,8 @@
           "domain_of": [
             "Demography"
           ],
-          "range": "SexEnum"
+          "range": "SexEnum",
+          "required": false
         },
         "ethnicity": {
           "name": "ethnicity",
@@ -4831,7 +5065,8 @@
           "domain_of": [
             "Demography"
           ],
-          "range": "EthnicityEnum"
+          "range": "EthnicityEnum",
+          "required": false
         },
         "race": {
           "name": "race",
@@ -4843,6 +5078,7 @@
             "Demography"
           ],
           "range": "RaceEnum",
+          "required": false,
           "multivalued": true
         },
         "identity": {
@@ -4901,7 +5137,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Participant"
+          "range": "Participant",
+          "required": true
         },
         "associated_visit": {
           "name": "associated_visit",
@@ -4928,7 +5165,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Visit"
+          "range": "Visit",
+          "required": false
         },
         "id": {
           "name": "id",
@@ -4949,6 +5187,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -4988,7 +5227,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -5004,6 +5245,12 @@
         "associated_person",
         "identity"
       ],
+      "slot_usage": {
+        "associated_person": {
+          "name": "associated_person",
+          "required": true
+        }
+      },
       "attributes": {
         "description": {
           "name": "description",
@@ -5020,7 +5267,8 @@
             "Specimen",
             "BiologicProduct"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "member_of_research_study": {
           "name": "member_of_research_study",
@@ -5031,7 +5279,8 @@
           "domain_of": [
             "Participant"
           ],
-          "range": "ResearchStudy"
+          "range": "ResearchStudy",
+          "required": true
         },
         "age_at_index": {
           "name": "age_at_index",
@@ -5043,6 +5292,7 @@
             "Participant"
           ],
           "range": "integer",
+          "required": false,
           "unit": {
             "ucum_code": "d"
           }
@@ -5056,7 +5306,8 @@
           "domain_of": [
             "Participant"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "originating_site": {
           "name": "originating_site",
@@ -5067,7 +5318,8 @@
           "domain_of": [
             "Participant"
           ],
-          "range": "Organization"
+          "range": "Organization",
+          "required": false
         },
         "study_arm": {
           "name": "study_arm",
@@ -5079,6 +5331,7 @@
             "Participant"
           ],
           "range": "string",
+          "required": false,
           "multivalued": true
         },
         "consents": {
@@ -5092,6 +5345,7 @@
             "ResearchStudy"
           ],
           "range": "Consent",
+          "required": false,
           "multivalued": true
         },
         "associated_person": {
@@ -5103,7 +5357,8 @@
           "domain_of": [
             "Participant"
           ],
-          "range": "Person"
+          "range": "Person",
+          "required": true
         },
         "identity": {
           "name": "identity",
@@ -5153,6 +5408,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -5192,7 +5448,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -5221,7 +5479,8 @@
             "Questionnaire",
             "QuestionnaireResponseValue"
           ],
-          "range": "string"
+          "range": "string",
+          "required": true
         },
         "name_shortened": {
           "name": "name_shortened",
@@ -5232,7 +5491,8 @@
           "domain_of": [
             "ResearchStudy"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "description": {
           "name": "description",
@@ -5249,7 +5509,8 @@
             "Specimen",
             "BiologicProduct"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "description_shortened": {
           "name": "description_shortened",
@@ -5260,7 +5521,8 @@
           "domain_of": [
             "ResearchStudy"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "sponsor": {
           "name": "sponsor",
@@ -5271,7 +5533,8 @@
           "domain_of": [
             "ResearchStudy"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "date_started": {
           "name": "date_started",
@@ -5286,7 +5549,8 @@
             "SpecimenStorageActivity",
             "SpecimenTransportActivity"
           ],
-          "range": "TimePoint"
+          "range": "TimePoint",
+          "required": false
         },
         "date_ended": {
           "name": "date_ended",
@@ -5301,7 +5565,8 @@
             "SpecimenStorageActivity",
             "SpecimenTransportActivity"
           ],
-          "range": "TimePoint"
+          "range": "TimePoint",
+          "required": false
         },
         "accession_number": {
           "name": "accession_number",
@@ -5312,7 +5577,8 @@
           "domain_of": [
             "ResearchStudy"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "accession_authority": {
           "name": "accession_authority",
@@ -5323,7 +5589,8 @@
           "domain_of": [
             "ResearchStudy"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "version": {
           "name": "version",
@@ -5335,7 +5602,8 @@
             "ResearchStudy",
             "Questionnaire"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "url": {
           "name": "url",
@@ -5348,7 +5616,8 @@
             "Questionnaire",
             "Document"
           ],
-          "range": "uriorcurie"
+          "range": "uriorcurie",
+          "required": false
         },
         "part_of": {
           "name": "part_of",
@@ -5360,7 +5629,8 @@
             "ResearchStudy",
             "QuestionnaireItem"
           ],
-          "range": "ResearchStudy"
+          "range": "ResearchStudy",
+          "required": false
         },
         "research_project_type": {
           "name": "research_project_type",
@@ -5371,7 +5641,8 @@
           "domain_of": [
             "ResearchStudy"
           ],
-          "range": "ResearchProjectTypeEnum"
+          "range": "ResearchProjectTypeEnum",
+          "required": true
         },
         "program": {
           "name": "program",
@@ -5382,7 +5653,8 @@
           "domain_of": [
             "ResearchStudy"
           ],
-          "range": "string"
+          "range": "string",
+          "required": true
         },
         "associated_timepoint": {
           "name": "associated_timepoint",
@@ -5394,6 +5666,7 @@
             "ResearchStudy"
           ],
           "range": "TimePoint",
+          "required": false,
           "multivalued": true
         },
         "principal_investigator": {
@@ -5406,6 +5679,7 @@
             "ResearchStudy"
           ],
           "range": "string",
+          "required": true,
           "multivalued": true
         },
         "consents": {
@@ -5419,6 +5693,7 @@
             "ResearchStudy"
           ],
           "range": "Consent",
+          "required": false,
           "multivalued": true
         },
         "identity": {
@@ -5469,6 +5744,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -5508,7 +5784,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -5531,6 +5809,7 @@
             "Consent"
           ],
           "range": "DataUseEnum",
+          "required": true,
           "multivalued": false
         },
         "valid_from": {
@@ -5542,7 +5821,8 @@
           "domain_of": [
             "Consent"
           ],
-          "range": "TimePoint"
+          "range": "TimePoint",
+          "required": false
         },
         "valid_to": {
           "name": "valid_to",
@@ -5553,7 +5833,8 @@
           "domain_of": [
             "Consent"
           ],
-          "range": "TimePoint"
+          "range": "TimePoint",
+          "required": false
         },
         "id": {
           "name": "id",
@@ -5574,6 +5855,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -5613,7 +5895,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -5628,6 +5912,12 @@
       "slots": [
         "associated_participant"
       ],
+      "slot_usage": {
+        "associated_participant": {
+          "name": "associated_participant",
+          "required": true
+        }
+      },
       "attributes": {
         "name": {
           "name": "name",
@@ -5642,7 +5932,8 @@
             "Questionnaire",
             "QuestionnaireResponseValue"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "visit_category": {
           "name": "visit_category",
@@ -5653,7 +5944,8 @@
           "domain_of": [
             "Visit"
           ],
-          "range": "VisitCategoryEnum"
+          "range": "VisitCategoryEnum",
+          "required": true
         },
         "age_at_visit_start": {
           "name": "age_at_visit_start",
@@ -5665,6 +5957,7 @@
             "Visit"
           ],
           "range": "integer",
+          "required": false,
           "unit": {
             "ucum_code": "d"
           }
@@ -5679,9 +5972,25 @@
             "Visit"
           ],
           "range": "integer",
+          "required": false,
           "unit": {
             "ucum_code": "d"
           }
+        },
+        "year_range": {
+          "name": "year_range",
+          "description": "The time period demarcating the years between the start and end of the Visit (e.g., 2020-2021).",
+          "comments": [
+            "The TimePoint defining the start of the year range should be set to 'January 1' of the year in question and the TimePoint defining the end of the year range should be set to 'December 31' of the year in question."
+          ],
+          "from_schema": "https://w3id.org/bdchm",
+          "alias": "year_range",
+          "owner": "Visit",
+          "domain_of": [
+            "Visit"
+          ],
+          "range": "TimePeriod",
+          "required": false
         },
         "visit_provenance": {
           "name": "visit_provenance",
@@ -5692,7 +6001,8 @@
           "domain_of": [
             "Visit"
           ],
-          "range": "VisitProvenanceEnum"
+          "range": "VisitProvenanceEnum",
+          "required": true
         },
         "associated_participant": {
           "name": "associated_participant",
@@ -5721,7 +6031,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Participant"
+          "range": "Participant",
+          "required": true
         },
         "id": {
           "name": "id",
@@ -5742,6 +6053,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -5781,7 +6093,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -5810,7 +6124,8 @@
             "Questionnaire",
             "QuestionnaireResponseValue"
           ],
-          "range": "string"
+          "range": "string",
+          "required": true
         },
         "alias": {
           "name": "alias",
@@ -5821,7 +6136,8 @@
           "domain_of": [
             "Organization"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "organization_type": {
           "name": "organization_type",
@@ -5832,7 +6148,8 @@
           "domain_of": [
             "Organization"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "identity": {
           "name": "identity",
@@ -5882,6 +6199,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -5921,7 +6239,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -5943,7 +6263,8 @@
           "domain_of": [
             "TimePoint"
           ],
-          "range": "datetime"
+          "range": "datetime",
+          "required": false
         },
         "index_time_point": {
           "name": "index_time_point",
@@ -5954,7 +6275,8 @@
           "domain_of": [
             "TimePoint"
           ],
-          "range": "TimePoint"
+          "range": "TimePoint",
+          "required": false
         },
         "offset_from_index": {
           "name": "offset_from_index",
@@ -5965,7 +6287,8 @@
           "domain_of": [
             "TimePoint"
           ],
-          "range": "integer"
+          "range": "integer",
+          "required": false
         },
         "event_type": {
           "name": "event_type",
@@ -5976,7 +6299,8 @@
           "domain_of": [
             "TimePoint"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "id": {
           "name": "id",
@@ -5997,6 +6321,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -6036,7 +6361,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -6058,7 +6385,8 @@
           "domain_of": [
             "TimePeriod"
           ],
-          "range": "TimePoint"
+          "range": "TimePoint",
+          "required": true
         },
         "period_end": {
           "name": "period_end",
@@ -6069,7 +6397,8 @@
           "domain_of": [
             "TimePeriod"
           ],
-          "range": "TimePoint"
+          "range": "TimePoint",
+          "required": true
         },
         "id": {
           "name": "id",
@@ -6090,6 +6419,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -6129,7 +6459,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -6140,6 +6472,7 @@
       "name": "ResearchStudyCollection",
       "description": "A holder for ResearchStudy objects",
       "from_schema": "https://w3id.org/bdchm",
+      "is_a": "Entity",
       "attributes": {
         "entries": {
           "name": "entries",
@@ -6150,8 +6483,75 @@
             "ResearchStudyCollection"
           ],
           "range": "ResearchStudy",
+          "required": true,
           "multivalued": true,
           "inlined": true
+        },
+        "id": {
+          "name": "id",
+          "description": "The 'logical' identifier of the entity within the system of record.  The simple value of this attribute stands for an identifier of this data object within the system, it can be used as a reference from other objects within the same system (i.e. primary and foreign keys), and it should be unique per type of object. The same data object copied to a different system will likely have a different \"id\" in the new system since \"id\" values are system specific and do not represent persistent business identifiers. Business identifiers are assigned outside the information system and are captured in the \"identifier\" field. The \"id\" field is more likely to be a serially or randomly generated value that is assigned to the data object as it is created in a system.",
+          "from_schema": "https://w3id.org/bdchm",
+          "slot_uri": "schema:identifier",
+          "identifier": true,
+          "alias": "id",
+          "owner": "ResearchStudyCollection",
+          "domain_of": [
+            "Entity",
+            "Person",
+            "Demography",
+            "Participant",
+            "ResearchStudy",
+            "Consent",
+            "Visit",
+            "Organization",
+            "TimePoint",
+            "TimePeriod",
+            "ResearchStudyCollection",
+            "Questionnaire",
+            "QuestionnaireItem",
+            "QuestionnaireResponse",
+            "QuestionnaireResponseItem",
+            "QuestionnaireResponseValue",
+            "QuestionnaireResponseValueDecimal",
+            "QuestionnaireResponseValueBoolean",
+            "QuestionnaireResponseValueInteger",
+            "QuestionnaireResponseValueTimePoint",
+            "QuestionnaireResponseValueString",
+            "Condition",
+            "Procedure",
+            "ImagingStudy",
+            "Exposure",
+            "DrugExposure",
+            "DeviceExposure",
+            "DimensionalObservation",
+            "DimensionalObservationSet",
+            "File",
+            "ImagingFile",
+            "Document",
+            "Specimen",
+            "SpecimenContainer",
+            "SpecimenCreationActivity",
+            "SpecimenQualityObservation",
+            "SpecimenQuantityObservation",
+            "SpecimenProcessingActivity",
+            "SpecimenStorageActivity",
+            "SpecimenTransportActivity",
+            "BiologicProduct",
+            "Substance",
+            "Quantity",
+            "BodySite",
+            "ObservationSet",
+            "Observation",
+            "MeasurementObservationSet",
+            "MeasurementObservation",
+            "SdohObservationSet",
+            "SdohObservation",
+            "CauseOfDeath",
+            "Assay",
+            "Context"
+          ],
+          "range": "uriorcurie",
+          "required": true
         }
       },
       "tree_root": true
@@ -6178,7 +6578,8 @@
             "Questionnaire",
             "QuestionnaireResponseValue"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "title": {
           "name": "title",
@@ -6189,7 +6590,8 @@
           "domain_of": [
             "Questionnaire"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "description": {
           "name": "description",
@@ -6206,7 +6608,8 @@
             "Specimen",
             "BiologicProduct"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "url": {
           "name": "url",
@@ -6219,7 +6622,8 @@
             "Questionnaire",
             "Document"
           ],
-          "range": "uriorcurie"
+          "range": "uriorcurie",
+          "required": false
         },
         "version": {
           "name": "version",
@@ -6231,7 +6635,8 @@
             "ResearchStudy",
             "Questionnaire"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "publisher": {
           "name": "publisher",
@@ -6242,7 +6647,8 @@
           "domain_of": [
             "Questionnaire"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "copyright": {
           "name": "copyright",
@@ -6253,7 +6659,8 @@
           "domain_of": [
             "Questionnaire"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "copyright_label": {
           "name": "copyright_label",
@@ -6264,7 +6671,8 @@
           "domain_of": [
             "Questionnaire"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "language": {
           "name": "language",
@@ -6276,6 +6684,7 @@
             "Questionnaire"
           ],
           "range": "string",
+          "required": false,
           "multivalued": true
         },
         "items": {
@@ -6340,6 +6749,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -6379,7 +6789,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -6405,7 +6817,8 @@
             "QuestionnaireItem",
             "QuestionnaireResponseItem"
           ],
-          "range": "string"
+          "range": "string",
+          "required": true
         },
         "code": {
           "name": "code",
@@ -6416,7 +6829,8 @@
           "domain_of": [
             "QuestionnaireItem"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "part_of": {
           "name": "part_of",
@@ -6428,7 +6842,8 @@
             "ResearchStudy",
             "QuestionnaireItem"
           ],
-          "range": "QuestionnaireItem"
+          "range": "QuestionnaireItem",
+          "required": false
         },
         "identity": {
           "name": "identity",
@@ -6478,6 +6893,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -6517,7 +6933,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -6532,6 +6950,12 @@
       "slots": [
         "associated_visit"
       ],
+      "slot_usage": {
+        "associated_visit": {
+          "name": "associated_visit",
+          "required": true
+        }
+      },
       "attributes": {
         "age_at_response": {
           "name": "age_at_response",
@@ -6543,6 +6967,7 @@
             "QuestionnaireResponse"
           ],
           "range": "integer",
+          "required": false,
           "unit": {
             "ucum_code": "d"
           }
@@ -6586,7 +7011,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Visit"
+          "range": "Visit",
+          "required": true
         },
         "id": {
           "name": "id",
@@ -6607,6 +7033,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -6646,7 +7073,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -6668,7 +7097,8 @@
           "domain_of": [
             "QuestionnaireResponseItem"
           ],
-          "range": "QuestionnaireItem"
+          "range": "QuestionnaireItem",
+          "required": false
         },
         "text": {
           "name": "text",
@@ -6680,7 +7110,8 @@
             "QuestionnaireItem",
             "QuestionnaireResponseItem"
           ],
-          "range": "string"
+          "range": "string",
+          "required": true
         },
         "response_value": {
           "name": "response_value",
@@ -6712,6 +7143,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -6751,7 +7183,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -6767,6 +7201,12 @@
       "slots": [
         "value"
       ],
+      "slot_usage": {
+        "value": {
+          "name": "value",
+          "required": true
+        }
+      },
       "attributes": {
         "type": {
           "name": "type",
@@ -6781,7 +7221,8 @@
             "QuestionnaireResponseValueInteger",
             "QuestionnaireResponseValueTimePoint"
           ],
-          "range": "string"
+          "range": "string",
+          "required": true
         },
         "name": {
           "name": "name",
@@ -6799,7 +7240,8 @@
             "QuestionnaireResponseValueInteger",
             "QuestionnaireResponseValueTimePoint"
           ],
-          "range": "string"
+          "range": "string",
+          "required": true
         },
         "value": {
           "name": "value",
@@ -6814,7 +7256,8 @@
             "QuestionnaireResponseValueInteger",
             "QuestionnaireResponseValueTimePoint"
           ],
-          "range": "string"
+          "range": "string",
+          "required": true
         },
         "id": {
           "name": "id",
@@ -6835,6 +7278,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -6874,7 +7318,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -6923,7 +7369,8 @@
             "QuestionnaireResponseValueInteger",
             "QuestionnaireResponseValueTimePoint"
           ],
-          "range": "string"
+          "range": "string",
+          "required": true
         },
         "name": {
           "name": "name",
@@ -6941,7 +7388,8 @@
             "QuestionnaireResponseValueInteger",
             "QuestionnaireResponseValueTimePoint"
           ],
-          "range": "string"
+          "range": "string",
+          "required": true
         },
         "id": {
           "name": "id",
@@ -6962,6 +7410,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -7001,7 +7450,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -7050,7 +7501,8 @@
             "QuestionnaireResponseValueInteger",
             "QuestionnaireResponseValueTimePoint"
           ],
-          "range": "string"
+          "range": "string",
+          "required": true
         },
         "name": {
           "name": "name",
@@ -7068,7 +7520,8 @@
             "QuestionnaireResponseValueInteger",
             "QuestionnaireResponseValueTimePoint"
           ],
-          "range": "string"
+          "range": "string",
+          "required": true
         },
         "id": {
           "name": "id",
@@ -7089,6 +7542,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -7128,7 +7582,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -7177,7 +7633,8 @@
             "QuestionnaireResponseValueInteger",
             "QuestionnaireResponseValueTimePoint"
           ],
-          "range": "string"
+          "range": "string",
+          "required": true
         },
         "name": {
           "name": "name",
@@ -7195,7 +7652,8 @@
             "QuestionnaireResponseValueInteger",
             "QuestionnaireResponseValueTimePoint"
           ],
-          "range": "string"
+          "range": "string",
+          "required": true
         },
         "id": {
           "name": "id",
@@ -7216,6 +7674,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -7255,7 +7714,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -7304,7 +7765,8 @@
             "QuestionnaireResponseValueInteger",
             "QuestionnaireResponseValueTimePoint"
           ],
-          "range": "string"
+          "range": "string",
+          "required": true
         },
         "name": {
           "name": "name",
@@ -7322,7 +7784,8 @@
             "QuestionnaireResponseValueInteger",
             "QuestionnaireResponseValueTimePoint"
           ],
-          "range": "string"
+          "range": "string",
+          "required": true
         },
         "id": {
           "name": "id",
@@ -7343,6 +7806,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -7382,7 +7846,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -7431,7 +7897,8 @@
             "QuestionnaireResponseValueInteger",
             "QuestionnaireResponseValueTimePoint"
           ],
-          "range": "string"
+          "range": "string",
+          "required": true
         },
         "name": {
           "name": "name",
@@ -7449,7 +7916,8 @@
             "QuestionnaireResponseValueInteger",
             "QuestionnaireResponseValueTimePoint"
           ],
-          "range": "string"
+          "range": "string",
+          "required": true
         },
         "id": {
           "name": "id",
@@ -7470,6 +7938,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -7509,7 +7978,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -7526,6 +7997,16 @@
         "associated_visit",
         "associated_participant"
       ],
+      "slot_usage": {
+        "associated_visit": {
+          "name": "associated_visit",
+          "required": false
+        },
+        "associated_participant": {
+          "name": "associated_participant",
+          "required": true
+        }
+      },
       "attributes": {
         "condition_concept": {
           "name": "condition_concept",
@@ -7536,7 +8017,8 @@
           "domain_of": [
             "Condition"
           ],
-          "range": "ConditionConceptEnum"
+          "range": "ConditionConceptEnum",
+          "required": true
         },
         "age_at_condition_start": {
           "name": "age_at_condition_start",
@@ -7548,6 +8030,7 @@
             "Condition"
           ],
           "range": "integer",
+          "required": false,
           "unit": {
             "ucum_code": "d"
           }
@@ -7562,6 +8045,7 @@
             "Condition"
           ],
           "range": "integer",
+          "required": false,
           "unit": {
             "ucum_code": "d"
           }
@@ -7575,7 +8059,8 @@
           "domain_of": [
             "Condition"
           ],
-          "range": "ProvenanceEnum"
+          "range": "ProvenanceEnum",
+          "required": true
         },
         "condition_status": {
           "name": "condition_status",
@@ -7586,7 +8071,8 @@
           "domain_of": [
             "Condition"
           ],
-          "range": "HistoricalStatusEnum"
+          "range": "HistoricalStatusEnum",
+          "required": true
         },
         "condition_severity": {
           "name": "condition_severity",
@@ -7597,7 +8083,8 @@
           "domain_of": [
             "Condition"
           ],
-          "range": "ConditionSeverityEnum"
+          "range": "ConditionSeverityEnum",
+          "required": false
         },
         "relationship_to_participant": {
           "name": "relationship_to_participant",
@@ -7608,7 +8095,8 @@
           "domain_of": [
             "Condition"
           ],
-          "range": "FamilyRelationshipEnum"
+          "range": "FamilyRelationshipEnum",
+          "required": true
         },
         "associated_evidence": {
           "name": "associated_evidence",
@@ -7620,7 +8108,21 @@
             "Condition"
           ],
           "range": "Entity",
+          "required": false,
           "multivalued": true
+        },
+        "affected_body_site": {
+          "name": "affected_body_site",
+          "description": "The anatomical site affected by the condition.",
+          "from_schema": "https://w3id.org/bdchm",
+          "alias": "affected_body_site",
+          "owner": "Condition",
+          "domain_of": [
+            "Condition",
+            "Procedure"
+          ],
+          "range": "BodySite",
+          "required": false
         },
         "identity": {
           "name": "identity",
@@ -7676,7 +8178,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Visit"
+          "range": "Visit",
+          "required": false
         },
         "associated_participant": {
           "name": "associated_participant",
@@ -7705,7 +8208,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Participant"
+          "range": "Participant",
+          "required": true
         },
         "id": {
           "name": "id",
@@ -7726,6 +8230,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -7765,7 +8270,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -7782,6 +8289,16 @@
         "associated_visit",
         "associated_participant"
       ],
+      "slot_usage": {
+        "associated_visit": {
+          "name": "associated_visit",
+          "required": false
+        },
+        "associated_participant": {
+          "name": "associated_participant",
+          "required": true
+        }
+      },
       "attributes": {
         "procedure_concept": {
           "name": "procedure_concept",
@@ -7792,7 +8309,8 @@
           "domain_of": [
             "Procedure"
           ],
-          "range": "ProcedureConceptEnum"
+          "range": "ProcedureConceptEnum",
+          "required": true
         },
         "age_at_procedure": {
           "name": "age_at_procedure",
@@ -7804,6 +8322,7 @@
             "Procedure"
           ],
           "range": "integer",
+          "required": false,
           "unit": {
             "ucum_code": "d"
           }
@@ -7817,7 +8336,8 @@
           "domain_of": [
             "Procedure"
           ],
-          "range": "ProvenanceEnum"
+          "range": "ProvenanceEnum",
+          "required": true
         },
         "procedure_status": {
           "name": "procedure_status",
@@ -7828,7 +8348,8 @@
           "domain_of": [
             "Procedure"
           ],
-          "range": "StatusEnum"
+          "range": "StatusEnum",
+          "required": true
         },
         "quantity": {
           "name": "quantity",
@@ -7841,7 +8362,21 @@
             "DrugExposure",
             "DeviceExposure"
           ],
-          "range": "Quantity"
+          "range": "Quantity",
+          "required": false
+        },
+        "affected_body_site": {
+          "name": "affected_body_site",
+          "description": "The anatomical site affected by the procedure.",
+          "from_schema": "https://w3id.org/bdchm",
+          "alias": "affected_body_site",
+          "owner": "Procedure",
+          "domain_of": [
+            "Condition",
+            "Procedure"
+          ],
+          "range": "BodySite",
+          "required": false
         },
         "identity": {
           "name": "identity",
@@ -7897,7 +8432,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Visit"
+          "range": "Visit",
+          "required": false
         },
         "associated_participant": {
           "name": "associated_participant",
@@ -7926,7 +8462,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Participant"
+          "range": "Participant",
+          "required": true
         },
         "id": {
           "name": "id",
@@ -7947,6 +8484,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -7986,7 +8524,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -8002,6 +8542,16 @@
         "associated_visit",
         "associated_participant"
       ],
+      "slot_usage": {
+        "associated_visit": {
+          "name": "associated_visit",
+          "required": false
+        },
+        "associated_participant": {
+          "name": "associated_participant",
+          "required": true
+        }
+      },
       "attributes": {
         "age_at_imaging_study": {
           "name": "age_at_imaging_study",
@@ -8013,6 +8563,7 @@
             "ImagingStudy"
           ],
           "range": "integer",
+          "required": false,
           "unit": {
             "ucum_code": "d"
           }
@@ -8026,7 +8577,8 @@
           "domain_of": [
             "ImagingStudy"
           ],
-          "range": "integer"
+          "range": "integer",
+          "required": true
         },
         "number_of_instances": {
           "name": "number_of_instances",
@@ -8037,7 +8589,8 @@
           "domain_of": [
             "ImagingStudy"
           ],
-          "range": "integer"
+          "range": "integer",
+          "required": true
         },
         "study_description": {
           "name": "study_description",
@@ -8048,7 +8601,8 @@
           "domain_of": [
             "ImagingStudy"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "study_modality": {
           "name": "study_modality",
@@ -8059,7 +8613,8 @@
           "domain_of": [
             "ImagingStudy"
           ],
-          "range": "string"
+          "range": "string",
+          "required": true
         },
         "study_uid": {
           "name": "study_uid",
@@ -8070,7 +8625,8 @@
           "domain_of": [
             "ImagingStudy"
           ],
-          "range": "string"
+          "range": "string",
+          "required": true
         },
         "body_part_examined": {
           "name": "body_part_examined",
@@ -8081,7 +8637,8 @@
           "domain_of": [
             "ImagingStudy"
           ],
-          "range": "BodySite"
+          "range": "BodySite",
+          "required": false
         },
         "associated_visit": {
           "name": "associated_visit",
@@ -8108,7 +8665,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Visit"
+          "range": "Visit",
+          "required": false
         },
         "associated_participant": {
           "name": "associated_participant",
@@ -8137,7 +8695,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Participant"
+          "range": "Participant",
+          "required": true
         },
         "id": {
           "name": "id",
@@ -8158,6 +8717,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -8197,7 +8757,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -8214,6 +8776,16 @@
         "associated_visit",
         "associated_participant"
       ],
+      "slot_usage": {
+        "associated_visit": {
+          "name": "associated_visit",
+          "required": false
+        },
+        "associated_participant": {
+          "name": "associated_participant",
+          "required": true
+        }
+      },
       "attributes": {
         "age_at_exposure_start": {
           "name": "age_at_exposure_start",
@@ -8226,6 +8798,7 @@
             "DrugExposure"
           ],
           "range": "integer",
+          "required": false,
           "unit": {
             "ucum_code": "d"
           }
@@ -8241,6 +8814,7 @@
             "DrugExposure"
           ],
           "range": "integer",
+          "required": false,
           "unit": {
             "ucum_code": "d"
           }
@@ -8255,7 +8829,8 @@
             "Exposure",
             "DrugExposure"
           ],
-          "range": "HistoricalStatusEnum"
+          "range": "HistoricalStatusEnum",
+          "required": true
         },
         "identity": {
           "name": "identity",
@@ -8311,7 +8886,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Visit"
+          "range": "Visit",
+          "required": false
         },
         "associated_participant": {
           "name": "associated_participant",
@@ -8340,7 +8916,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Participant"
+          "range": "Participant",
+          "required": true
         },
         "id": {
           "name": "id",
@@ -8361,6 +8938,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -8400,7 +8978,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -8422,7 +9002,8 @@
           "domain_of": [
             "DrugExposure"
           ],
-          "range": "DrugExposureConceptEnum"
+          "range": "DrugExposureConceptEnum",
+          "required": true
         },
         "exposure_provenance": {
           "name": "exposure_provenance",
@@ -8434,7 +9015,8 @@
             "DrugExposure",
             "DeviceExposure"
           ],
-          "range": "DrugExposureProvenanceEnum"
+          "range": "DrugExposureProvenanceEnum",
+          "required": true
         },
         "refills": {
           "name": "refills",
@@ -8501,7 +9083,8 @@
           "domain_of": [
             "DrugExposure"
           ],
-          "range": "DrugRouteEnum"
+          "range": "DrugRouteEnum",
+          "required": false
         },
         "identity": {
           "name": "identity",
@@ -8557,7 +9140,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Visit"
+          "range": "Visit",
+          "required": false
         },
         "associated_participant": {
           "name": "associated_participant",
@@ -8586,7 +9170,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Participant"
+          "range": "Participant",
+          "required": true
         },
         "age_at_exposure_start": {
           "name": "age_at_exposure_start",
@@ -8599,6 +9184,7 @@
             "DrugExposure"
           ],
           "range": "integer",
+          "required": false,
           "unit": {
             "ucum_code": "d"
           }
@@ -8614,6 +9200,7 @@
             "DrugExposure"
           ],
           "range": "integer",
+          "required": false,
           "unit": {
             "ucum_code": "d"
           }
@@ -8628,7 +9215,8 @@
             "Exposure",
             "DrugExposure"
           ],
-          "range": "HistoricalStatusEnum"
+          "range": "HistoricalStatusEnum",
+          "required": true
         },
         "id": {
           "name": "id",
@@ -8649,6 +9237,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -8688,7 +9277,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -8710,7 +9301,8 @@
           "domain_of": [
             "DeviceExposure"
           ],
-          "range": "DeviceExposureConceptEnum"
+          "range": "DeviceExposureConceptEnum",
+          "required": true
         },
         "exposure_provenance": {
           "name": "exposure_provenance",
@@ -8722,7 +9314,8 @@
             "DrugExposure",
             "DeviceExposure"
           ],
-          "range": "DeviceExposureProvenanceEnum"
+          "range": "DeviceExposureProvenanceEnum",
+          "required": true
         },
         "quantity": {
           "name": "quantity",
@@ -8792,7 +9385,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Visit"
+          "range": "Visit",
+          "required": false
         },
         "associated_participant": {
           "name": "associated_participant",
@@ -8821,7 +9415,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Participant"
+          "range": "Participant",
+          "required": true
         },
         "age_at_exposure_start": {
           "name": "age_at_exposure_start",
@@ -8834,6 +9429,7 @@
             "DrugExposure"
           ],
           "range": "integer",
+          "required": false,
           "unit": {
             "ucum_code": "d"
           }
@@ -8849,6 +9445,7 @@
             "DrugExposure"
           ],
           "range": "integer",
+          "required": false,
           "unit": {
             "ucum_code": "d"
           }
@@ -8863,7 +9460,8 @@
             "Exposure",
             "DrugExposure"
           ],
-          "range": "HistoricalStatusEnum"
+          "range": "HistoricalStatusEnum",
+          "required": true
         },
         "id": {
           "name": "id",
@@ -8884,6 +9482,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -8923,7 +9522,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -8964,7 +9565,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Visit"
+          "range": "Visit",
+          "required": false
         },
         "associated_participant": {
           "name": "associated_participant",
@@ -8993,7 +9595,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Participant"
+          "range": "Participant",
+          "required": true
         },
         "age_at_observation": {
           "name": "age_at_observation",
@@ -9009,6 +9612,7 @@
             "MeasurementObservation"
           ],
           "range": "integer",
+          "required": false,
           "unit": {
             "ucum_code": "d"
           }
@@ -9207,6 +9811,23 @@
           "required": false,
           "multivalued": false
         },
+        "context": {
+          "name": "context",
+          "description": "The context within which an observation was made.",
+          "from_schema": "https://w3id.org/bdchm",
+          "alias": "context",
+          "owner": "DimensionalObservation",
+          "domain_of": [
+            "Observation",
+            "DimensionalObservation",
+            "SpecimenQualityObservation",
+            "SpecimenQuantityObservation",
+            "MeasurementObservation"
+          ],
+          "range": "Context",
+          "required": false,
+          "multivalued": true
+        },
         "id": {
           "name": "id",
           "description": "The 'logical' identifier of the entity within the system of record.  The simple value of this attribute stands for an identifier of this data object within the system, it can be used as a reference from other objects within the same system (i.e. primary and foreign keys), and it should be unique per type of object. The same data object copied to a different system will likely have a different \"id\" in the new system since \"id\" values are system specific and do not represent persistent business identifiers. Business identifiers are assigned outside the information system and are captured in the \"identifier\" field. The \"id\" field is more likely to be a serially or randomly generated value that is assigned to the data object as it is created in a system.",
@@ -9226,6 +9847,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -9265,7 +9887,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -9325,7 +9949,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Visit"
+          "range": "Visit",
+          "required": false
         },
         "associated_participant": {
           "name": "associated_participant",
@@ -9354,7 +9979,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Participant"
+          "range": "Participant",
+          "required": true
         },
         "category": {
           "name": "category",
@@ -9466,6 +10092,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -9505,7 +10132,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -9521,6 +10150,12 @@
         "identity",
         "associated_participant"
       ],
+      "slot_usage": {
+        "associated_participant": {
+          "name": "associated_participant",
+          "required": true
+        }
+      },
       "attributes": {
         "file_name": {
           "name": "file_name",
@@ -9531,7 +10166,8 @@
           "domain_of": [
             "File"
           ],
-          "range": "string"
+          "range": "string",
+          "required": true
         },
         "file_size": {
           "name": "file_size",
@@ -9542,7 +10178,8 @@
           "domain_of": [
             "File"
           ],
-          "range": "integer"
+          "range": "integer",
+          "required": false
         },
         "file_location": {
           "name": "file_location",
@@ -9554,6 +10191,7 @@
             "File"
           ],
           "range": "uriorcurie",
+          "required": true,
           "multivalued": true
         },
         "md5sum": {
@@ -9565,7 +10203,8 @@
           "domain_of": [
             "File"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "data_type": {
           "name": "data_type",
@@ -9576,7 +10215,8 @@
           "domain_of": [
             "File"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "data_category": {
           "name": "data_category",
@@ -9587,7 +10227,8 @@
           "domain_of": [
             "File"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "format": {
           "name": "format",
@@ -9598,7 +10239,8 @@
           "domain_of": [
             "File"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "description": {
           "name": "description",
@@ -9615,7 +10257,8 @@
             "Specimen",
             "BiologicProduct"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "derived_from": {
           "name": "derived_from",
@@ -9626,7 +10269,9 @@
           "domain_of": [
             "File"
           ],
-          "range": "File"
+          "range": "File",
+          "required": false,
+          "multivalued": true
         },
         "identity": {
           "name": "identity",
@@ -9684,7 +10329,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Participant"
+          "range": "Participant",
+          "required": true
         },
         "id": {
           "name": "id",
@@ -9705,6 +10351,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -9744,7 +10391,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -9766,7 +10415,8 @@
           "domain_of": [
             "ImagingFile"
           ],
-          "range": "string"
+          "range": "string",
+          "required": true
         },
         "anatomical_site": {
           "name": "anatomical_site",
@@ -9777,7 +10427,8 @@
           "domain_of": [
             "ImagingFile"
           ],
-          "range": "BodySite"
+          "range": "BodySite",
+          "required": false
         },
         "series_number": {
           "name": "series_number",
@@ -9788,7 +10439,8 @@
           "domain_of": [
             "ImagingFile"
           ],
-          "range": "integer"
+          "range": "integer",
+          "required": true
         },
         "series_uid": {
           "name": "series_uid",
@@ -9799,7 +10451,8 @@
           "domain_of": [
             "ImagingFile"
           ],
-          "range": "string"
+          "range": "string",
+          "required": true
         },
         "series_description": {
           "name": "series_description",
@@ -9810,7 +10463,8 @@
           "domain_of": [
             "ImagingFile"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "related_imaging_study": {
           "name": "related_imaging_study",
@@ -9821,7 +10475,8 @@
           "domain_of": [
             "ImagingFile"
           ],
-          "range": "ImagingStudy"
+          "range": "ImagingStudy",
+          "required": true
         },
         "manufacturer": {
           "name": "manufacturer",
@@ -9832,7 +10487,8 @@
           "domain_of": [
             "ImagingFile"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "manufacturer_model": {
           "name": "manufacturer_model",
@@ -9843,7 +10499,8 @@
           "domain_of": [
             "ImagingFile"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "identity": {
           "name": "identity",
@@ -9901,7 +10558,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Participant"
+          "range": "Participant",
+          "required": true
         },
         "file_name": {
           "name": "file_name",
@@ -9912,7 +10570,8 @@
           "domain_of": [
             "File"
           ],
-          "range": "string"
+          "range": "string",
+          "required": true
         },
         "file_size": {
           "name": "file_size",
@@ -9923,7 +10582,8 @@
           "domain_of": [
             "File"
           ],
-          "range": "integer"
+          "range": "integer",
+          "required": false
         },
         "file_location": {
           "name": "file_location",
@@ -9935,6 +10595,7 @@
             "File"
           ],
           "range": "uriorcurie",
+          "required": true,
           "multivalued": true
         },
         "md5sum": {
@@ -9946,7 +10607,8 @@
           "domain_of": [
             "File"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "data_type": {
           "name": "data_type",
@@ -9957,7 +10619,8 @@
           "domain_of": [
             "File"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "data_category": {
           "name": "data_category",
@@ -9968,7 +10631,8 @@
           "domain_of": [
             "File"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "format": {
           "name": "format",
@@ -9979,7 +10643,8 @@
           "domain_of": [
             "File"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "description": {
           "name": "description",
@@ -9996,7 +10661,8 @@
             "Specimen",
             "BiologicProduct"
           ],
-          "range": "string"
+          "range": "string",
+          "required": false
         },
         "derived_from": {
           "name": "derived_from",
@@ -10007,7 +10673,9 @@
           "domain_of": [
             "File"
           ],
-          "range": "File"
+          "range": "File",
+          "required": false,
+          "multivalued": true
         },
         "id": {
           "name": "id",
@@ -10028,6 +10696,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -10067,7 +10736,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -10145,7 +10816,7 @@
             "Document"
           ],
           "range": "string",
-          "required": false,
+          "required": true,
           "multivalued": true,
           "inlined_as_list": true
         },
@@ -10197,6 +10868,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -10236,7 +10908,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -10679,6 +11353,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -10718,7 +11393,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -10832,6 +11509,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -10871,7 +11549,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -10906,7 +11586,8 @@
           "owner": "SpecimenCreationActivity",
           "domain_of": [
             "SpecimenCreationActivity",
-            "SpecimenProcessingActivity"
+            "SpecimenProcessingActivity",
+            "Activity"
           ],
           "range": "SpecimenCreationActivityTypeEnum",
           "required": false,
@@ -11131,6 +11812,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -11170,7 +11852,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -11208,7 +11892,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Visit"
+          "range": "Visit",
+          "required": false
         },
         "associated_participant": {
           "name": "associated_participant",
@@ -11237,7 +11922,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Participant"
+          "range": "Participant",
+          "required": true
         },
         "age_at_observation": {
           "name": "age_at_observation",
@@ -11253,6 +11939,7 @@
             "MeasurementObservation"
           ],
           "range": "integer",
+          "required": false,
           "unit": {
             "ucum_code": "d"
           }
@@ -11451,6 +12138,23 @@
           "required": false,
           "multivalued": false
         },
+        "context": {
+          "name": "context",
+          "description": "The context within which an observation was made.",
+          "from_schema": "https://w3id.org/bdchm",
+          "alias": "context",
+          "owner": "SpecimenQualityObservation",
+          "domain_of": [
+            "Observation",
+            "DimensionalObservation",
+            "SpecimenQualityObservation",
+            "SpecimenQuantityObservation",
+            "MeasurementObservation"
+          ],
+          "range": "Context",
+          "required": false,
+          "multivalued": true
+        },
         "id": {
           "name": "id",
           "description": "The 'logical' identifier of the entity within the system of record.  The simple value of this attribute stands for an identifier of this data object within the system, it can be used as a reference from other objects within the same system (i.e. primary and foreign keys), and it should be unique per type of object. The same data object copied to a different system will likely have a different \"id\" in the new system since \"id\" values are system specific and do not represent persistent business identifiers. Business identifiers are assigned outside the information system and are captured in the \"identifier\" field. The \"id\" field is more likely to be a serially or randomly generated value that is assigned to the data object as it is created in a system.",
@@ -11470,6 +12174,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -11509,7 +12214,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -11550,7 +12257,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Visit"
+          "range": "Visit",
+          "required": false
         },
         "associated_participant": {
           "name": "associated_participant",
@@ -11579,7 +12287,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Participant"
+          "range": "Participant",
+          "required": true
         },
         "age_at_observation": {
           "name": "age_at_observation",
@@ -11595,6 +12304,7 @@
             "MeasurementObservation"
           ],
           "range": "integer",
+          "required": false,
           "unit": {
             "ucum_code": "d"
           }
@@ -11793,6 +12503,23 @@
           "required": false,
           "multivalued": false
         },
+        "context": {
+          "name": "context",
+          "description": "The context within which an observation was made.",
+          "from_schema": "https://w3id.org/bdchm",
+          "alias": "context",
+          "owner": "SpecimenQuantityObservation",
+          "domain_of": [
+            "Observation",
+            "DimensionalObservation",
+            "SpecimenQualityObservation",
+            "SpecimenQuantityObservation",
+            "MeasurementObservation"
+          ],
+          "range": "Context",
+          "required": false,
+          "multivalued": true
+        },
         "id": {
           "name": "id",
           "description": "The 'logical' identifier of the entity within the system of record.  The simple value of this attribute stands for an identifier of this data object within the system, it can be used as a reference from other objects within the same system (i.e. primary and foreign keys), and it should be unique per type of object. The same data object copied to a different system will likely have a different \"id\" in the new system since \"id\" values are system specific and do not represent persistent business identifiers. Business identifiers are assigned outside the information system and are captured in the \"identifier\" field. The \"id\" field is more likely to be a serially or randomly generated value that is assigned to the data object as it is created in a system.",
@@ -11812,6 +12539,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -11851,7 +12579,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -11889,7 +12619,8 @@
           "owner": "SpecimenProcessingActivity",
           "domain_of": [
             "SpecimenCreationActivity",
-            "SpecimenProcessingActivity"
+            "SpecimenProcessingActivity",
+            "Activity"
           ],
           "range": "SpecimenProcessingActivityTypeEnum",
           "required": false,
@@ -12034,6 +12765,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -12073,7 +12805,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -12229,6 +12963,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -12268,7 +13003,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -12385,6 +13122,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -12424,7 +13162,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -12561,6 +13301,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -12600,7 +13341,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -12696,6 +13439,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -12735,7 +13479,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -12803,6 +13549,19 @@
           "required": false,
           "multivalued": false
         },
+        "operator": {
+          "name": "operator",
+          "description": "An operator to apply when interpreting the value of the quantity (e.g. \">\", \"<\", \">=\", \"<=\")",
+          "from_schema": "https://w3id.org/bdchm",
+          "alias": "operator",
+          "owner": "Quantity",
+          "domain_of": [
+            "Quantity"
+          ],
+          "range": "QuantityOperatorEnum",
+          "required": false,
+          "multivalued": false
+        },
         "id": {
           "name": "id",
           "description": "The 'logical' identifier of the entity within the system of record.  The simple value of this attribute stands for an identifier of this data object within the system, it can be used as a reference from other objects within the same system (i.e. primary and foreign keys), and it should be unique per type of object. The same data object copied to a different system will likely have a different \"id\" in the new system since \"id\" values are system specific and do not represent persistent business identifiers. Business identifiers are assigned outside the information system and are captured in the \"identifier\" field. The \"id\" field is more likely to be a serially or randomly generated value that is assigned to the data object as it is created in a system.",
@@ -12822,6 +13581,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -12861,7 +13621,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -12894,7 +13656,7 @@
           "domain_of": [
             "BodySite"
           ],
-          "range": "string",
+          "range": "AnatomicSiteEnum",
           "required": true,
           "multivalued": false
         },
@@ -12916,7 +13678,8 @@
           "alias": "qualifier",
           "owner": "BodySite",
           "domain_of": [
-            "BodySite"
+            "BodySite",
+            "MeasurementObservation"
           ],
           "range": "string",
           "required": false,
@@ -12941,6 +13704,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -12980,7 +13744,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -12997,6 +13763,20 @@
         "associated_visit",
         "associated_participant"
       ],
+      "slot_usage": {
+        "observations": {
+          "name": "observations",
+          "required": true
+        },
+        "associated_visit": {
+          "name": "associated_visit",
+          "required": false
+        },
+        "associated_participant": {
+          "name": "associated_participant",
+          "required": true
+        }
+      },
       "attributes": {
         "category": {
           "name": "category",
@@ -13102,6 +13882,7 @@
             "MeasurementObservationSet"
           ],
           "range": "Observation",
+          "required": true,
           "multivalued": true
         },
         "associated_visit": {
@@ -13129,7 +13910,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Visit"
+          "range": "Visit",
+          "required": false
         },
         "associated_participant": {
           "name": "associated_participant",
@@ -13158,7 +13940,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Participant"
+          "range": "Participant",
+          "required": true
         },
         "id": {
           "name": "id",
@@ -13179,6 +13962,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -13218,7 +14002,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -13234,6 +14020,16 @@
         "associated_visit",
         "associated_participant"
       ],
+      "slot_usage": {
+        "associated_visit": {
+          "name": "associated_visit",
+          "required": false
+        },
+        "associated_participant": {
+          "name": "associated_participant",
+          "required": true
+        }
+      },
       "attributes": {
         "age_at_observation": {
           "name": "age_at_observation",
@@ -13249,6 +14045,7 @@
             "MeasurementObservation"
           ],
           "range": "integer",
+          "required": false,
           "unit": {
             "ucum_code": "d"
           }
@@ -13447,6 +14244,23 @@
           "required": false,
           "multivalued": false
         },
+        "context": {
+          "name": "context",
+          "description": "The context within which an observation was made.",
+          "from_schema": "https://w3id.org/bdchm",
+          "alias": "context",
+          "owner": "Observation",
+          "domain_of": [
+            "Observation",
+            "DimensionalObservation",
+            "SpecimenQualityObservation",
+            "SpecimenQuantityObservation",
+            "MeasurementObservation"
+          ],
+          "range": "Context",
+          "required": false,
+          "multivalued": true
+        },
         "associated_visit": {
           "name": "associated_visit",
           "description": "A reference to the Visit that is associated with this record.",
@@ -13472,7 +14286,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Visit"
+          "range": "Visit",
+          "required": false
         },
         "associated_participant": {
           "name": "associated_participant",
@@ -13501,7 +14316,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Participant"
+          "range": "Participant",
+          "required": true
         },
         "id": {
           "name": "id",
@@ -13522,6 +14338,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -13561,7 +14378,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -13621,7 +14440,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Visit"
+          "range": "Visit",
+          "required": false
         },
         "associated_participant": {
           "name": "associated_participant",
@@ -13650,7 +14470,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Participant"
+          "range": "Participant",
+          "required": true
         },
         "category": {
           "name": "category",
@@ -13763,6 +14584,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -13802,7 +14624,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -13824,7 +14648,8 @@
           "domain_of": [
             "MeasurementObservation"
           ],
-          "range": "Quantity"
+          "range": "Quantity",
+          "required": false
         },
         "range_high": {
           "name": "range_high",
@@ -13835,7 +14660,8 @@
           "domain_of": [
             "MeasurementObservation"
           ],
-          "range": "Quantity"
+          "range": "Quantity",
+          "required": false
         },
         "observation_type": {
           "name": "observation_type",
@@ -13853,7 +14679,8 @@
             "Observation",
             "MeasurementObservation"
           ],
-          "range": "MeasurementObservationTypeEnum"
+          "range": "MeasurementObservationTypeEnum",
+          "required": true
         },
         "associated_assay": {
           "name": "associated_assay",
@@ -13864,7 +14691,8 @@
           "domain_of": [
             "MeasurementObservation"
           ],
-          "range": "Assay"
+          "range": "Assay",
+          "required": false
         },
         "body_site": {
           "name": "body_site",
@@ -13875,7 +14703,8 @@
           "domain_of": [
             "MeasurementObservation"
           ],
-          "range": "BodySite"
+          "range": "BodySite",
+          "required": false
         },
         "body_position": {
           "name": "body_position",
@@ -13886,7 +14715,34 @@
           "domain_of": [
             "MeasurementObservation"
           ],
-          "range": "BodyPositionEnum"
+          "range": "BodyPositionEnum",
+          "required": false
+        },
+        "measured_by": {
+          "name": "measured_by",
+          "description": "The type of personnel that performed the measurement activity (e.g., \"physician\", \"nurse\", \"technician\").",
+          "from_schema": "https://w3id.org/bdchm",
+          "alias": "measured_by",
+          "owner": "MeasurementObservation",
+          "domain_of": [
+            "MeasurementObservation"
+          ],
+          "range": "MeasuredByPersonnelTypeEnum",
+          "required": false
+        },
+        "qualifier": {
+          "name": "qualifier",
+          "description": "A qualifier that further refines or specifies the measurement method (e.g. to indicate the measurement was an average, sum, best, worst, first, last).",
+          "from_schema": "https://w3id.org/bdchm",
+          "alias": "qualifier",
+          "owner": "MeasurementObservation",
+          "domain_of": [
+            "BodySite",
+            "MeasurementObservation"
+          ],
+          "range": "MeasurementQualifierEnum",
+          "required": false,
+          "multivalued": false
         },
         "associated_visit": {
           "name": "associated_visit",
@@ -13913,7 +14769,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Visit"
+          "range": "Visit",
+          "required": false
         },
         "associated_participant": {
           "name": "associated_participant",
@@ -13942,7 +14799,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Participant"
+          "range": "Participant",
+          "required": true
         },
         "age_at_observation": {
           "name": "age_at_observation",
@@ -13958,6 +14816,7 @@
             "MeasurementObservation"
           ],
           "range": "integer",
+          "required": false,
           "unit": {
             "ucum_code": "d"
           }
@@ -14136,6 +14995,23 @@
           "required": false,
           "multivalued": false
         },
+        "context": {
+          "name": "context",
+          "description": "The context within which an observation was made.",
+          "from_schema": "https://w3id.org/bdchm",
+          "alias": "context",
+          "owner": "MeasurementObservation",
+          "domain_of": [
+            "Observation",
+            "DimensionalObservation",
+            "SpecimenQualityObservation",
+            "SpecimenQuantityObservation",
+            "MeasurementObservation"
+          ],
+          "range": "Context",
+          "required": false,
+          "multivalued": true
+        },
         "id": {
           "name": "id",
           "description": "The 'logical' identifier of the entity within the system of record.  The simple value of this attribute stands for an identifier of this data object within the system, it can be used as a reference from other objects within the same system (i.e. primary and foreign keys), and it should be unique per type of object. The same data object copied to a different system will likely have a different \"id\" in the new system since \"id\" values are system specific and do not represent persistent business identifiers. Business identifiers are assigned outside the information system and are captured in the \"identifier\" field. The \"id\" field is more likely to be a serially or randomly generated value that is assigned to the data object as it is created in a system.",
@@ -14155,6 +15031,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -14194,7 +15071,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -14258,7 +15137,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Visit"
+          "range": "Visit",
+          "required": false
         },
         "associated_participant": {
           "name": "associated_participant",
@@ -14287,7 +15167,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Participant"
+          "range": "Participant",
+          "required": true
         },
         "category": {
           "name": "category",
@@ -14400,6 +15281,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -14439,7 +15321,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -14494,7 +15378,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Visit"
+          "range": "Visit",
+          "required": false
         },
         "associated_participant": {
           "name": "associated_participant",
@@ -14523,7 +15408,8 @@
             "MeasurementObservation",
             "SdohObservationSet"
           ],
-          "range": "Participant"
+          "range": "Participant",
+          "required": true
         },
         "age_at_observation": {
           "name": "age_at_observation",
@@ -14539,6 +15425,7 @@
             "MeasurementObservation"
           ],
           "range": "integer",
+          "required": false,
           "unit": {
             "ucum_code": "d"
           }
@@ -14737,6 +15624,23 @@
           "required": false,
           "multivalued": false
         },
+        "context": {
+          "name": "context",
+          "description": "The context within which an observation was made.",
+          "from_schema": "https://w3id.org/bdchm",
+          "alias": "context",
+          "owner": "SdohObservation",
+          "domain_of": [
+            "Observation",
+            "DimensionalObservation",
+            "SpecimenQualityObservation",
+            "SpecimenQuantityObservation",
+            "MeasurementObservation"
+          ],
+          "range": "Context",
+          "required": false,
+          "multivalued": true
+        },
         "id": {
           "name": "id",
           "description": "The 'logical' identifier of the entity within the system of record.  The simple value of this attribute stands for an identifier of this data object within the system, it can be used as a reference from other objects within the same system (i.e. primary and foreign keys), and it should be unique per type of object. The same data object copied to a different system will likely have a different \"id\" in the new system since \"id\" values are system specific and do not represent persistent business identifiers. Business identifiers are assigned outside the information system and are captured in the \"identifier\" field. The \"id\" field is more likely to be a serially or randomly generated value that is assigned to the data object as it is created in a system.",
@@ -14756,6 +15660,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -14795,7 +15700,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -14853,6 +15760,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -14892,7 +15800,9 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -14928,6 +15838,7 @@
             "Assay"
           ],
           "range": "InstrumentEnum",
+          "required": false,
           "multivalued": true
         },
         "reagent": {
@@ -14940,6 +15851,7 @@
             "Assay"
           ],
           "range": "Substance",
+          "required": false,
           "multivalued": true
         },
         "lower_limit_of_detection": {
@@ -14952,6 +15864,7 @@
             "Assay"
           ],
           "range": "Quantity",
+          "required": false,
           "multivalued": false
         },
         "upper_limit_of_detection": {
@@ -14964,6 +15877,7 @@
             "Assay"
           ],
           "range": "Quantity",
+          "required": false,
           "multivalued": false
         },
         "id": {
@@ -14985,6 +15899,7 @@
             "Organization",
             "TimePoint",
             "TimePeriod",
+            "ResearchStudyCollection",
             "Questionnaire",
             "QuestionnaireItem",
             "QuestionnaireResponse",
@@ -15024,7 +15939,203 @@
             "MeasurementObservation",
             "SdohObservationSet",
             "SdohObservation",
-            "CauseOfDeath"
+            "CauseOfDeath",
+            "Assay",
+            "Context"
+          ],
+          "range": "uriorcurie",
+          "required": true
+        }
+      }
+    },
+    "Context": {
+      "name": "Context",
+      "description": "The context within which an observation was made.",
+      "from_schema": "https://w3id.org/bdchm",
+      "is_a": "Entity",
+      "attributes": {
+        "activity": {
+          "name": "activity",
+          "description": "The activity that provides context to the observation (e.g. \"fasting\", \"bronchodilator use\")",
+          "from_schema": "https://w3id.org/bdchm",
+          "alias": "activity",
+          "owner": "Context",
+          "domain_of": [
+            "Context"
+          ],
+          "range": "Activity"
+        },
+        "relative_timing": {
+          "name": "relative_timing",
+          "description": "The timing of the observation relative to the observation (e.g., \"before\", \"concurrent with\")",
+          "from_schema": "https://w3id.org/bdchm",
+          "alias": "relative_timing",
+          "owner": "Context",
+          "domain_of": [
+            "Context"
+          ],
+          "range": "RelativeTimingEnum"
+        },
+        "id": {
+          "name": "id",
+          "description": "The 'logical' identifier of the entity within the system of record.  The simple value of this attribute stands for an identifier of this data object within the system, it can be used as a reference from other objects within the same system (i.e. primary and foreign keys), and it should be unique per type of object. The same data object copied to a different system will likely have a different \"id\" in the new system since \"id\" values are system specific and do not represent persistent business identifiers. Business identifiers are assigned outside the information system and are captured in the \"identifier\" field. The \"id\" field is more likely to be a serially or randomly generated value that is assigned to the data object as it is created in a system.",
+          "from_schema": "https://w3id.org/bdchm",
+          "slot_uri": "schema:identifier",
+          "identifier": true,
+          "alias": "id",
+          "owner": "Context",
+          "domain_of": [
+            "Entity",
+            "Person",
+            "Demography",
+            "Participant",
+            "ResearchStudy",
+            "Consent",
+            "Visit",
+            "Organization",
+            "TimePoint",
+            "TimePeriod",
+            "ResearchStudyCollection",
+            "Questionnaire",
+            "QuestionnaireItem",
+            "QuestionnaireResponse",
+            "QuestionnaireResponseItem",
+            "QuestionnaireResponseValue",
+            "QuestionnaireResponseValueDecimal",
+            "QuestionnaireResponseValueBoolean",
+            "QuestionnaireResponseValueInteger",
+            "QuestionnaireResponseValueTimePoint",
+            "QuestionnaireResponseValueString",
+            "Condition",
+            "Procedure",
+            "ImagingStudy",
+            "Exposure",
+            "DrugExposure",
+            "DeviceExposure",
+            "DimensionalObservation",
+            "DimensionalObservationSet",
+            "File",
+            "ImagingFile",
+            "Document",
+            "Specimen",
+            "SpecimenContainer",
+            "SpecimenCreationActivity",
+            "SpecimenQualityObservation",
+            "SpecimenQuantityObservation",
+            "SpecimenProcessingActivity",
+            "SpecimenStorageActivity",
+            "SpecimenTransportActivity",
+            "BiologicProduct",
+            "Substance",
+            "Quantity",
+            "BodySite",
+            "ObservationSet",
+            "Observation",
+            "MeasurementObservationSet",
+            "MeasurementObservation",
+            "SdohObservationSet",
+            "SdohObservation",
+            "CauseOfDeath",
+            "Assay",
+            "Context"
+          ],
+          "range": "uriorcurie",
+          "required": true
+        }
+      }
+    },
+    "Activity": {
+      "name": "Activity",
+      "description": "An activity that provides context to an observation.",
+      "from_schema": "https://w3id.org/bdchm",
+      "is_a": "Entity",
+      "attributes": {
+        "activity_type": {
+          "name": "activity_type",
+          "description": "The type of activity being recorded (e.g. \"fasting\", \"bronchodilator use\")",
+          "from_schema": "https://w3id.org/bdchm",
+          "alias": "activity_type",
+          "owner": "Activity",
+          "domain_of": [
+            "SpecimenCreationActivity",
+            "SpecimenProcessingActivity",
+            "Activity"
+          ],
+          "range": "ActivityTypeEnum"
+        },
+        "time_duration": {
+          "name": "time_duration",
+          "description": "The quantity of time over which the activity occurred (e.g. \"8 hours\", \"1 week\")",
+          "from_schema": "https://w3id.org/bdchm",
+          "alias": "time_duration",
+          "owner": "Activity",
+          "domain_of": [
+            "Activity"
+          ],
+          "range": "Quantity"
+        },
+        "id": {
+          "name": "id",
+          "description": "The 'logical' identifier of the entity within the system of record.  The simple value of this attribute stands for an identifier of this data object within the system, it can be used as a reference from other objects within the same system (i.e. primary and foreign keys), and it should be unique per type of object. The same data object copied to a different system will likely have a different \"id\" in the new system since \"id\" values are system specific and do not represent persistent business identifiers. Business identifiers are assigned outside the information system and are captured in the \"identifier\" field. The \"id\" field is more likely to be a serially or randomly generated value that is assigned to the data object as it is created in a system.",
+          "from_schema": "https://w3id.org/bdchm",
+          "slot_uri": "schema:identifier",
+          "identifier": true,
+          "alias": "id",
+          "owner": "Activity",
+          "domain_of": [
+            "Entity",
+            "Person",
+            "Demography",
+            "Participant",
+            "ResearchStudy",
+            "Consent",
+            "Visit",
+            "Organization",
+            "TimePoint",
+            "TimePeriod",
+            "ResearchStudyCollection",
+            "Questionnaire",
+            "QuestionnaireItem",
+            "QuestionnaireResponse",
+            "QuestionnaireResponseItem",
+            "QuestionnaireResponseValue",
+            "QuestionnaireResponseValueDecimal",
+            "QuestionnaireResponseValueBoolean",
+            "QuestionnaireResponseValueInteger",
+            "QuestionnaireResponseValueTimePoint",
+            "QuestionnaireResponseValueString",
+            "Condition",
+            "Procedure",
+            "ImagingStudy",
+            "Exposure",
+            "DrugExposure",
+            "DeviceExposure",
+            "DimensionalObservation",
+            "DimensionalObservationSet",
+            "File",
+            "ImagingFile",
+            "Document",
+            "Specimen",
+            "SpecimenContainer",
+            "SpecimenCreationActivity",
+            "SpecimenQualityObservation",
+            "SpecimenQuantityObservation",
+            "SpecimenProcessingActivity",
+            "SpecimenStorageActivity",
+            "SpecimenTransportActivity",
+            "BiologicProduct",
+            "Substance",
+            "Quantity",
+            "BodySite",
+            "ObservationSet",
+            "Observation",
+            "MeasurementObservationSet",
+            "MeasurementObservation",
+            "SdohObservationSet",
+            "SdohObservation",
+            "CauseOfDeath",
+            "Assay",
+            "Context"
           ],
           "range": "uriorcurie",
           "required": true
@@ -15032,6 +16143,6 @@
       }
     }
   },
-  "source_file": "/Users/sgold15/github-repos/dynamic-model-var-docs/public/source_data/HM/bdchm.yaml",
+  "source_file": "/home/runner/work/dynamic-model-var-docs/dynamic-model-var-docs/public/source_data/HM/bdchm.yaml",
   "@type": "SchemaDefinition"
 }
