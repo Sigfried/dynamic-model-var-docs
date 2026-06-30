@@ -145,6 +145,29 @@ When middle panel is visible, Class→Range slot edges decompose into two visual
 
 ---
 
+## Views: Explorer, Kitchen Sink, Focus
+
+Three top-level views (header toggle; `?view=` URL param), all mounted, shown via
+CSS in `App.tsx`:
+- **Explorer** (default) — progressive-disclosure entity browser (`EntityExplorer`).
+- **Kitchen Sink** — the three-panel layout (`LayoutManager`) described above.
+- **Focus** — selection-driven subset view (`FocusView`). See **[FOCUS_VIEW.md](FOCUS_VIEW.md)**.
+
+**Focus reuses Kitchen Sink primitives, not its layout.** It is a separate
+component (`FocusView`) that composes `ItemsPanel`/`Section`/`LinkOverlay` and the
+floating-box system — NOT a mode of `LayoutManager` (whose layout is hardcoded to
+the 3-panel shape). The shared floating-box orchestration is being extracted into a
+`useFloatingBoxes` hook consumed by both.
+
+**Containment graph.** `DataService.getContainmentGraph(classIds?)` derives a
+directed (possibly cyclic) containment graph live from the schema graph via the
+FK-inversion heuristic in `src/models/containmentGraph.ts` (TS port of
+`scripts/extract_containment_tree.py`). `getContainmentNodes()` adapts it to the
+`dag-browser-widget` `Node[]` shape. This replaces the static
+`public/*-graph.json` mockup data (which had drifted from the schema).
+
+---
+
 ## Architecture Patterns
 
 **Element-Based Architecture**:

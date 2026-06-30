@@ -36,29 +36,54 @@ Default to general-audience terms; LinkML term on demand.
   (range), *entity* (class).
 - A vocabulary **config toggle**: general user vs. LinkML/modeler (possibly a
   data-modeler middle setting). LinkML equivalents in tooltips + links to LinkML docs.
-- Status: **not started.**
+- Status: **partially built.** The vocabulary is centralized as code config in
+  `src/config/appConfig.ts` (`VOCAB` per audience, `ACTIVE_VOCAB`, `defaultVocab`);
+  components read it via `DataService.getConceptLabel()` / `getTypeLabel()` /
+  `getSectionLabel()`, and badge abbreviations are vocab-driven. The `researcher`
+  vocab is active; a `modeler` vocab is filled in but INACTIVE (`defaultVocab =
+  'researcher'`), with unresolved-term notes in appConfig.ts. **Remaining:** the
+  in-app UI **toggle** to switch vocab at runtime (lowest priority — the machinery
+  is the hook, no UI yet), and LinkML tooltips/links.
 
-### Priority 2 — Compact Kitchen Sink w/ progressive disclosure
+### Priority 2 + 3 — Focus view (compact selector + subset visualization)
 
-- **Left panel: reuse `src/config/entityCategories.ts`** grouping (already exists —
-  reuse, not new taxonomy).
-- Other two panels **start empty**, fill in as classes are selected.
-- **Allow selecting multiple classes.**
-- Status: **not started.** Most affected by the open view-architecture question
-  (STAKEHOLDER_QUESTIONS.md, "One interface or two?").
+Priorities 2 ("compact Kitchen Sink + multi-select") and 3 ("subset
+visualization") turned out to be **one feature** and are now built as a third
+view, **Focus**. Full design/semantics: **[FOCUS_VIEW.md](FOCUS_VIEW.md)**.
 
-### Priority 3 — Subset visualization (node-link or tree)
+Focus = the Kitchen Sink with minimal differences: category-grouped multi-select
+left panel, a containment digraph widget (`dag-browser-widget`) below it, and
+middle/right panels scoped to the selected entities. Selection drives everything.
 
-A diagram for a **user-selected subset** of entities, not the whole model.
-- **Reality check:** there is **no node-link diagram in the React app** today. The
-  only graph-style rendering in-app is the SVG panel-connector overlay
-  (`LinkOverlay.tsx`). A real node-link diagram exists only as standalone mockups:
-  `public/has-a-mockup.html` (Cytoscape+dagre) and `public/containment-tree-mockup.html`
-  (indented tree). So this is "promote a mockup into the app, scoped to a subset."
-- Converges with the "pin entities → focused diagram" idea. Consider matching the
-  LinkML-generated per-class Mermaid diagram conventions (is-a vs has-a).
-- Status: **not started.** Borrows the *idea* from the parked containment work
-  without committing to FK-inversion (see [PARKED] below).
+**Shipped:**
+- ✅ Containment foundation (`c76fdcf`): `src/models/containmentGraph.ts`
+  (FK-inversion heuristic, ported from `scripts/extract_containment_tree.py`),
+  `DataService.getContainmentGraph()` (live-derived `{nodes,edges}`),
+  `getCategoryGroups()`, 10 property-based tests.
+- ✅ Focus scaffold + category multi-select selector + containment widget +
+  panel-scroll regression fix (`d9f4cc8`).
+
+**Remaining (ordered):**
+1. **Restructure middle/right to reuse Kitchen Sink panels.** Rework
+   `getFocusPanelSections`: middle = one **section per selected entity** (slots);
+   right = **two-level** — entity (outer) × Ent/PVS/DT (inner). Remove the
+   select/unselect affordance that leaked into middle/right (selection belongs
+   only on the left selector + the widget). Restore inter-panel gutters.
+2. **Add `<LinkOverlay>`** to FocusView (needs `relative` root + the gutters).
+3. **Extract `useFloatingBoxes` hook** from LayoutManager; consume in both
+   LayoutManager (no behavior change) and FocusView → working detail/relationship
+   boxes in Focus.
+4. **Widget select/unselect** shared bidirectionally with the left selector.
+5. **Widget "show all entities"** option (full graph, not just the subset).
+6. **Resizable panels** (draggable edges; Kitchen Sink uses flex gutters — likely
+   `react-resizable-panels`).
+7. **Floating Cytoscape diagram** (summonable node-link view of the subset;
+   promote `public/has-a-mockup.html`).
+8. **URL persistence** of `selectedClassIds` (`?focus=...`).
+
+Then: retire stale mockups (`has-a-mockup.html`, `containment-graph.json`,
+`has-a-graph.json`, `extract_has_a_graph.py`) once the in-app diagram replaces
+them — see [PARKED] below.
 
 ### Priority 4 — Help mode (port from icd11-playground)
 
@@ -88,20 +113,27 @@ DOM-driven contextual help: `data-help-id` attributes + markdown content file +
 
 ---
 
-## 🅿️ PARKED — Containment graph / has-a hierarchy (revisit later)
+## 🅿️ PARKED — Containment heuristic de-fragility (revisit after demo)
 
-**Not this round.** Was previously the lead item; deprioritized per 2026-06-11
-feedback. Subset-visualization (Priority 3) borrows the "pick entities → focused
-diagram" idea but does not commit to the full containment treatment.
+**No longer parked: the containment graph itself.** The FK-inversion heuristic is
+ported to TypeScript and live (`src/models/containmentGraph.ts`,
+`DataService.getContainmentGraph()`), driving the Focus containment widget. The
+Python mockups/scripts are now the *legacy* version; the in-app graph derives live
+from the loaded model so it can't drift.
 
-- Mockups: [Containment tree](../public/containment-tree-mockup.html) (indented list
-  rooted at ResearchStudyCollection, FK edges inverted), [Containment graph](../public/has-a-mockup.html)
-  (Cytoscape+dagre, 49 nodes / 95 edges).
-- Scripts: `scripts/extract_containment_tree.py`, `scripts/extract_has_a_graph.py`.
-- On revival: the **FK-inversion heuristic** (flip single-valued entity-ranged slots;
-  leave multivalued / value-object targets; override list) needs a model designer's
-  eye. `ResearchStudyCollection` is the real top-level container. TODO: "pin entities
-  → generate filtered diagram."
+**Still parked — making the heuristic less fragile.** The override sets
+(`VALUE_OBJECTS`, `NO_FLIP_SLOTS`, `EXCLUDE_HAS_A_TARGETS`, `SKIP_SUBCLASS_EXPANSION`)
+are hand-curated and rot silently when the schema changes. Planned (after the demo
+proves value): per-slot LinkML `annotations: { containment_direction: contains |
+contained_by | ? }`, auto-generated from the current heuristic then human-reviewed
+(Brian only touches new/ambiguous), plus a CI check that fails on un-annotated new
+single-valued entity slots. `owns`/`owned_by` floated as broader vocab for the
+`performed_by` family. See [FOCUS_VIEW.md](FOCUS_VIEW.md#containment-digraph-semantics-settled-enough-to-demo).
+
+**Retire once the in-app Cytoscape diagram lands:** `public/has-a-mockup.html`,
+`public/containment-graph.json`, `public/has-a-graph.json`, and the now-redundant
+`scripts/extract_has_a_graph.py`. (`containment-tree-mockup.html` was superseded by
+the `dag-browser-widget`.)
 
 ---
 
