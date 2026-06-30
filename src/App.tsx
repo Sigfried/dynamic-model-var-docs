@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import LayoutManager from './components/LayoutManager';
 import EntityExplorer from './components/EntityExplorer';
+import FocusView from './components/FocusView';
 import { getInitialState, type DialogState } from './utils/statePersistence';
 import { useModelData } from './hooks/useModelData';
 import { useLayoutState } from './hooks/useLayoutState';
@@ -59,10 +60,11 @@ function App() {
     return urlState.dialogs ?? [];
   }, []);
 
-  // View mode toggle: 'explorer' (new default) or 'kitchen-sink' (old layout)
-  const [viewMode, setViewMode] = useState<'explorer' | 'kitchen-sink'>(() => {
+  // View mode toggle: 'explorer' (default), 'kitchen-sink' (old layout), 'focus'
+  const [viewMode, setViewMode] = useState<'explorer' | 'kitchen-sink' | 'focus'>(() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get('view') === 'kitchen-sink' ? 'kitchen-sink' : 'explorer';
+    const view = params.get('view');
+    return view === 'kitchen-sink' || view === 'focus' ? view : 'explorer';
   });
 
   useEffect(() => {
@@ -172,18 +174,19 @@ function App() {
           <div className="flex items-center gap-4 text-sm">
             {/* View mode toggle */}
             <div className="flex items-center rounded overflow-hidden border border-blue-400">
-              <button
-                onClick={() => setViewMode('explorer')}
-                className={`px-3 py-1 text-xs transition-colors ${viewMode === 'explorer' ? 'bg-white text-blue-700 font-semibold' : 'bg-blue-700 text-blue-100 hover:bg-blue-600'}`}
-              >
-                Explorer
-              </button>
-              <button
-                onClick={() => setViewMode('kitchen-sink')}
-                className={`px-3 py-1 text-xs transition-colors ${viewMode === 'kitchen-sink' ? 'bg-white text-blue-700 font-semibold' : 'bg-blue-700 text-blue-100 hover:bg-blue-600'}`}
-              >
-                Kitchen Sink
-              </button>
+              {([
+                ['explorer', 'Explorer'],
+                ['kitchen-sink', 'Kitchen Sink'],
+                ['focus', 'Focus'],
+              ] as const).map(([mode, label]) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  className={`px-3 py-1 text-xs transition-colors ${viewMode === mode ? 'bg-white text-blue-700 font-semibold' : 'bg-blue-700 text-blue-100 hover:bg-blue-600'}`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
             {viewMode === 'kitchen-sink' && (
               <button
@@ -276,11 +279,13 @@ function App() {
         </div>
       </header>
 
-      {/* Main content — both views stay mounted to preserve state */}
-      <div className={viewMode === 'explorer' ? 'flex-1 flex flex-col' : 'hidden'}>
+      {/* Main content — both views stay mounted to preserve state.
+          min-h-0 lets these flex-1 wrappers shrink to the viewport so inner
+          panels scroll independently instead of growing the whole page. */}
+      <div className={viewMode === 'explorer' ? 'flex-1 flex flex-col min-h-0' : 'hidden'}>
         <EntityExplorer dataService={dataService} />
       </div>
-      <div className={viewMode === 'kitchen-sink' ? 'flex-1 flex flex-col' : 'hidden'}>
+      <div className={viewMode === 'kitchen-sink' ? 'flex-1 flex flex-col min-h-0' : 'hidden'}>
         <LayoutManager
           dataService={dataService}
           leftSections={leftSections}
@@ -293,6 +298,9 @@ function App() {
           onDialogsChange={triggerURLSave}
           hoverPopupsEnabled={hoverPopupsEnabled}
         />
+      </div>
+      <div className={viewMode === 'focus' ? 'flex-1 flex flex-col min-h-0' : 'hidden'}>
+        <FocusView dataService={dataService} />
       </div>
     </div>
   );

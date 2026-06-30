@@ -26,7 +26,7 @@ import type {
 } from "../models/SchemaTypes";
 import { EDGE_TYPES } from "../models/SchemaTypes";
 import type { ToggleButtonData } from '../components/ItemsPanel';
-import type { SectionData } from '../components/Section';
+import type { SectionData, SectionItemData } from '../components/Section';
 import { APP_CONFIG, getAllElementTypeIds, SectionId, ACTIVE_VOCAB } from '../config/appConfig';
 import { ENTITY_CATEGORIES } from '../config/entityCategories';
 import { buildContainmentGraph } from '../models/containmentGraph';
@@ -45,6 +45,14 @@ export interface CategoryGroup {
   id: string;
   label: string;
   classIds: string[];
+}
+
+/** Node shape for the containment tree/DAG widget (structurally matches
+ *  dag-browser-widget's Node; defined here to keep DataService UI-lib agnostic). */
+export interface ContainmentWidgetNode {
+  id: string;
+  name: string;
+  parentIds: string[];
 }
 
 /** Enum detail for inline cards (no Element exposure) */
@@ -521,6 +529,54 @@ export class DataService {
   }
 
   /**
+   * Section data for the Focus selector: a two-level tree where category headers
+   * (level 0) expand to their member classes (level 1). Reuses getCategoryGroups()
+   * for grouping and getRelationshipCounts() for the class badges, so it renders
+   * through the existing ItemsPanel/Section unchanged. Categories are expanded by
+   * key (one expansion entry per category id).
+   */
+  getCategorySelectorSection(): SectionData {
+    const groups = this.getCategoryGroups();
+    const totalClasses = groups.reduce((n, g) => n + g.classIds.length, 0);
+
+    return {
+      id: 'focus-categories',
+      label: `${this.getConceptLabel('entity', true)} (${totalClasses})`,
+      expansionKey: 'focus::categories',
+      defaultExpansion: new Set(),  // start all categories collapsed
+      getItems: (expandedItems) => {
+        const items: SectionItemData[] = [];
+        for (const group of groups) {
+          const isExpanded = expandedItems?.has(group.id) ?? false;
+          items.push({
+            id: group.id,
+            displayName: `${group.label} (${group.classIds.length})`,
+            level: 0,
+            hasChildren: true,
+            isExpanded,
+            isClickable: false,
+            hoverData: { id: group.id, type: 'category', name: group.id },
+          });
+          if (isExpanded) {
+            for (const classId of group.classIds) {
+              const counts = this.getRelationshipCounts(classId);
+              items.push({
+                id: classId,
+                displayName: classId,
+                level: 1,
+                isClickable: true,
+                relationshipBadge: counts ?? undefined,
+                hoverData: { id: classId, type: 'class', name: classId },
+              });
+            }
+          }
+        }
+        return items;
+      },
+    };
+  }
+
+  /**
    * Build the containment ({nodes, edges}) graph for the diagram, derived live
    * from the schema graph with FK inversion applied (see models/containmentGraph).
    *
@@ -545,5 +601,84 @@ export class DataService {
       },
       { pruneIsolated: full },
     );
+  }
+
+  /**
+   * Per-selected-class section data for the Focus middle/right panels. One
+   * section per selected class (stacked); middle shows that class's slots, right
+   * shows the distinct ranges those slots point to. Returns a Map keyed by a
+   * per-class section id so ItemsPanel renders them stacked in selection order.
+   *
+   * @param classIds  the selected classes, in display order
+   * @param mode      'slots' (middle) or 'ranges' (right)
+   */
+  getFocusPanelSections(
+    classIds: string[],
+    mode: 'slots' | 'ranges',
+  ): { sectionIds: string[]; sectionData: Map<string, SectionData> } {
+    const sectionIds: string[] = [];
+    const map = new Map<string, SectionData>();
+
+    for (const classId of classIds) {
+      const summary = this.getClassSummary(classId);
+      if (!summary) continue;
+      const sectionId = `focus-${mode}-${classId}`;
+      sectionIds.push(sectionId);
+
+      const items: SectionItemData[] = mode === 'slots'
+        ? summary.slots.map(slot => ({
+            id: `${classId}.${slot.name}`,
+            displayName: slot.name,
+            level: 0,
+            isClickable: false,
+            badgeText: slot.range || undefined,
+            badgeColor: slot.range ? 'bg-gray-100 text-gray-700' : undefined,
+            badgeTooltip: slot.range ? `Range: ${slot.range}` : undefined,
+            hoverData: { id: `${classId}.${slot.name}`, type: 'slot', name: slot.name },
+          }))
+        // ranges: distinct range targets across this class's slots, clickable
+        : [...new Set(summary.slots.map(s => s.range).filter(Boolean))].map(range => {
+            const counts = this.getRelationshipCounts(range);
+            return {
+              id: range,
+              displayName: range,
+              level: 0,
+              isClickable: this.itemExists(range),
+              relationshipBadge: counts ?? undefined,
+              hoverData: { id: range, type: this.getItemType(range) ?? 'class', name: range },
+            };
+          });
+
+      map.set(sectionId, {
+        id: sectionId,
+        label: classId,
+        getItems: () => items,
+      });
+    }
+
+    return { sectionIds, sectionData: map };
+  }
+
+  /**
+   * Containment graph as dag-browser-widget Node[] ({id, name, parentIds}).
+   * A containment edge source→target means "source contains target", so target
+   * lists source among its parentIds. Polyhierarchy (multiple parents) and
+   * cycles fall out naturally; the widget handles them. Same scoping rules as
+   * getContainmentGraph (omit classIds for the full graph).
+   */
+  getContainmentNodes(classIds?: string[]): ContainmentWidgetNode[] {
+    const { nodes, edges } = this.getContainmentGraph(classIds);
+    const parentIds = new Map<string, string[]>(nodes.map(n => [n.id, []]));
+    for (const e of edges) {
+      // skip self-loops as parent links (a node isn't its own parent); the
+      // widget renders them as backedges from the edge set if needed.
+      if (e.source === e.target) continue;
+      parentIds.get(e.target)?.push(e.source);
+    }
+    return nodes.map(n => ({
+      id: n.id,
+      name: n.label,
+      parentIds: parentIds.get(n.id) ?? [],
+    }));
   }
 }

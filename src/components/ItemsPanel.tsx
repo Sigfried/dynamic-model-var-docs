@@ -26,6 +26,10 @@ interface ItemsPanelProps {
   title?: string;                                           // Custom panel title (e.g., "Classes", "Slots", "Ranges:")
   pinnedDetailItemIds?: Set<string>;
   pinnedRelationshipItemIds?: Set<string>;
+  // Multi-select affordance (Focus selector). When provided, clickable rows show
+  // a checkbox reflecting membership in selectedIds; toggling calls onToggleSelect.
+  selectedIds?: Set<string>;
+  onToggleSelect?: (name: string) => void;
 }
 
 interface SectionToggleButtonProps {
@@ -61,7 +65,9 @@ export default function ItemsPanel({
   onItemLeave,
   title,
   pinnedDetailItemIds,
-  pinnedRelationshipItemIds
+  pinnedRelationshipItemIds,
+  selectedIds,
+  onToggleSelect
 }: ItemsPanelProps) {
   const activeSections = new Set(sections);
 
@@ -118,6 +124,8 @@ export default function ItemsPanel({
                 position={position}
                 pinnedDetailItemIds={pinnedDetailItemIds}
                 pinnedRelationshipItemIds={pinnedRelationshipItemIds}
+                selectedIds={selectedIds}
+                onToggleSelect={onToggleSelect}
               />
             );
           })}

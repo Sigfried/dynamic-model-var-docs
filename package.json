@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@floating-ui/react": "^0.27.16",
+    "dag-browser-widget": "^0.2.0",
     "graphology": "^0.26.0",
     "graphology-types": "^0.24.8",
     "react": "^19.1.1",

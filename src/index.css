@@ -1,23 +1,16 @@
 @import "tailwindcss";
 
-/*
-    the app is currently unreadable in dark mode, this was supposed to help fix it but doesn't
-    
-/* Override dark mode at the root level * /
+/* App is currently light-mode only; force light color scheme. */
 :root {
   color-scheme: light only;
 }
 
-/* Force all dark mode classes to be ignored * /
-@media (prefers-color-scheme: dark) {
-  * {
-    color-scheme: light only !important;
-  }
-
-  body,
-  #root {
-    background-color: white !important;
-    color: black !important;
-  }
+/* Pin the document to the viewport so inner flex panels scroll independently
+   instead of the whole page scrolling. The app root uses h-screen + flex; this
+   gives that chain a bounded height to distribute. */
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
 }
-*/

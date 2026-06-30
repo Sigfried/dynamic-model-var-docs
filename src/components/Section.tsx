@@ -33,6 +33,8 @@ interface SectionProps {
   position: 'left' | 'middle' | 'right';
   pinnedDetailItemIds?: Set<string>;
   pinnedRelationshipItemIds?: Set<string>;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (name: string) => void;
 }
 
 interface ItemRendererProps {
@@ -44,10 +46,17 @@ interface ItemRendererProps {
   toggleExpansion?: (itemName: string) => void;
   pinnedDetailItemIds?: Set<string>;
   pinnedRelationshipItemIds?: Set<string>;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (name: string) => void;
 }
 
-function ItemRenderer({ item, onClickItem, onItemHover, onItemLeave, position, toggleExpansion, pinnedDetailItemIds, pinnedRelationshipItemIds }: ItemRendererProps) {
+function ItemRenderer({ item, onClickItem, onItemHover, onItemLeave, position, toggleExpansion, pinnedDetailItemIds, pinnedRelationshipItemIds, selectedIds, onToggleSelect }: ItemRendererProps) {
   const { id, displayName, level, hasChildren, isExpanded, isClickable, badgeColor, badgeText, badgeTooltip, relationshipBadge, indicators, hoverData } = item;
+
+  // Multi-select checkbox is shown for clickable rows when a selection handler is
+  // supplied (Focus selector). Selection is keyed by item name, not contextualized id.
+  const showSelect = onToggleSelect !== undefined && isClickable;
+  const isSelected = selectedIds?.has(hoverData.name) ?? false;
 
   // Create hover handlers for the name zone
   const nameHoverHandlers = getItemHoverHandlers({
@@ -89,9 +98,24 @@ function ItemRenderer({ item, onClickItem, onItemHover, onItemLeave, position, t
       <div
         id={id}
         data-panel-position={position}
-        className={`item flex items-center gap-2 px-2 py-1 rounded`}
+        className={`item flex items-center gap-2 px-2 py-1 rounded ${isSelected ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}
         style={{ paddingLeft: `${level * 16 + 8}px` }}
       >
+        {/* Multi-select checkbox (Focus selector) */}
+        {showSelect && (
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={(e) => {
+              e.stopPropagation();
+              onToggleSelect!(hoverData.name);
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-3.5 h-3.5 cursor-pointer accent-blue-600 flex-shrink-0"
+            title={isSelected ? 'Remove from selection' : 'Add to selection'}
+          />
+        )}
+
         {/* Expansion toggle for items with children */}
         {showToggleButton ? (
           <button
@@ -150,7 +174,7 @@ function ItemRenderer({ item, onClickItem, onItemHover, onItemLeave, position, t
   );
 }
 
-export default function Section({ sectionData, onClickItem, onItemHover, onItemLeave, position, pinnedDetailItemIds, pinnedRelationshipItemIds }: SectionProps) {
+export default function Section({ sectionData, onClickItem, onItemHover, onItemLeave, position, pinnedDetailItemIds, pinnedRelationshipItemIds, selectedIds, onToggleSelect }: SectionProps) {
   const { label, getItems, expansionKey, defaultExpansion } = sectionData;
 
   // Use expansion state hook only if needed
@@ -185,6 +209,8 @@ export default function Section({ sectionData, onClickItem, onItemHover, onItemL
             toggleExpansion={toggleExpansion}
             pinnedDetailItemIds={pinnedDetailItemIds}
             pinnedRelationshipItemIds={pinnedRelationshipItemIds}
+            selectedIds={selectedIds}
+            onToggleSelect={onToggleSelect}
           />
         ))}
       </div>
