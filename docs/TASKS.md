@@ -63,16 +63,28 @@ middle/right panels scoped to the selected entities. Selection drives everything
 - ✅ Focus scaffold + category multi-select selector + containment widget +
   panel-scroll regression fix (`d9f4cc8`).
 
+**Shipped (this round):**
+- ✅ **Middle/right now reuse the Kitchen Sink rendering path, scoped to the
+  subset.** Deleted the bespoke `getFocusPanelSections`/`getClassSummary`-based
+  item building; middle = the `slot` section, right = the `class`/`enum`/`type`
+  (Ent/PVS/DT) sections, each a flat list filtered to the selected classes'
+  slots / range targets and rendered via the elements' own `getSectionItemData`.
+  Filtering flattens via `getAllElements()` (deep subclasses included) with
+  subset-accurate section counts. New DataService helpers `getFocusSubsetSections`
+  + `subsetTargets`/`subsetSection` (graph `CLASS_SLOT`/`CLASS_RANGE` edges).
+  Select/unselect no longer leaks into middle/right (inert click handlers until
+  floating boxes land). **Deferred:** per-entity nesting in the right panel —
+  range rows from different selected classes intermix within a section for now.
+
 **Remaining (ordered):**
-1. **Restructure middle/right to reuse Kitchen Sink panels.** Rework
-   `getFocusPanelSections`: middle = one **section per selected entity** (slots);
-   right = **two-level** — entity (outer) × Ent/PVS/DT (inner). Remove the
-   select/unselect affordance that leaked into middle/right (selection belongs
-   only on the left selector + the widget). Restore inter-panel gutters.
-2. **Add `<LinkOverlay>`** to FocusView (needs `relative` root + the gutters).
+1. **Per-entity grouping/nesting in the right panel** (deferred from the reuse
+   work above) — group range rows under the selected entity they belong to.
+   Revisit how to implement once the flat version has been demoed.
+2. **Restore inter-panel gutters** + **add `<LinkOverlay>`** to FocusView (needs
+   `relative` root + the gutters).
 3. **Extract `useFloatingBoxes` hook** from LayoutManager; consume in both
    LayoutManager (no behavior change) and FocusView → working detail/relationship
-   boxes in Focus.
+   boxes in Focus. Then wire the now-inert middle/right click handlers to it.
 4. **Widget select/unselect** shared bidirectionally with the left selector.
 5. **Widget "show all entities"** option (full graph, not just the subset).
 6. **Resizable panels** (draggable edges; Kitchen Sink uses flex gutters — likely

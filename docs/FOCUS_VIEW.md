@@ -39,14 +39,28 @@ reimplementation. It reuses `LayoutManager`'s primitives (`ItemsPanel`,
    tree layer above classes. Multi-select checkboxes. Starts all-collapsed.
 2. **Left panel (bottom): containment digraph widget** (`dag-browser-widget`),
    scoped to the selected subset. Shares selection with the top selector.
-3. **Middle panel: one SECTION per selected entity** (the Kitchen Sink middle has
-   no stacking today; Focus uses the panel's existing section feature to stack).
-   Each section = that entity's slots.
-4. **Right panel: two-level stacking** — one section per selected entity (outer),
-   and within each, the ranges grouped Ent/PVS/DT (Entities / Permissible Value
-   Sets / Data Types) as the Kitchen Sink right panel does.
+3. **Middle panel: the Kitchen Sink `slot` section, scoped to the subset.** One
+   flat Attributes section listing the slots the selected entities declare —
+   *not* a section per entity (that was the earlier plan; it was the bespoke
+   reimplementation we backed out of). Rendered through the elements' own
+   `getSectionItemData` so rows match the Kitchen Sink.
+4. **Right panel: the Kitchen Sink `class`/`enum`/`type` sections (Ent/PVS/DT),
+   scoped to the subset.** Three flat sections holding the range targets the
+   selected entities point to. **Per-entity nesting is deferred** — range rows
+   from different selected entities intermix within a section for now (revisit
+   once the flat version is demoed). See TASKS.md remaining item 1.
 5. Everything else — gutters, link overlays, detail/relationship floating boxes —
    comes for free from reusing the shared machinery.
+
+> **Design note (why flat, not section-per-entity):** the scaffold commit
+> (`d9f4cc8`) built middle/right bespoke — hand-assembling items from
+> `getClassSummary` (which re-scrapes `getDetailData` table rows), a parallel
+> rendering path that would drift from the Kitchen Sink. That contradicted the
+> "minimal differences / reuse the primitives" mandate. It was replaced with
+> `getFocusSubsetSections`, which filters the real collections
+> (`getAllElements()` → subset → `getSectionItemData`) so Focus rows *are*
+> Kitchen Sink rows. Nesting was dropped to keep that reuse clean; it can be
+> layered back on top later.
 
 ### Layout
 ```
@@ -112,11 +126,12 @@ reimplementation. It reuses `LayoutManager`'s primitives (`ItemsPanel`,
 - Schema-sync GitHub Action (`8adb971`).
 - Focus scaffold + category selector + containment widget + scroll fix (`d9f4cc8`).
 
+- Middle/right restructured to **reuse the Kitchen Sink rendering path scoped to
+  the subset** (`getFocusSubsetSections`); bespoke `getFocusPanelSections` deleted.
+  Select/unselect removed from middle/right. Per-entity nesting deferred.
+
 **Remaining (see TASKS.md for ordered steps):**
-- **Undo/rework** `getFocusPanelSections` to the section-based structure above
-  (middle = section per entity; right = entity × Ent/PVS/DT). Currently a bespoke
-  per-class list that doesn't match Kitchen Sink panels.
-- **Remove** select/unselect from middle/right panels.
+- **Per-entity nesting** in the right panel (deferred above).
 - **Restore gutters + add `<LinkOverlay>`** to FocusView.
 - **Extract `useFloatingBoxes`**, wire detail/relationship boxes into Focus.
 - **Widget select/unselect** shared with the selector (bidirectional).

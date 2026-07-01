@@ -604,59 +604,78 @@ export class DataService {
   }
 
   /**
-   * Per-selected-class section data for the Focus middle/right panels. One
-   * section per selected class (stacked); middle shows that class's slots, right
-   * shows the distinct ranges those slots point to. Returns a Map keyed by a
-   * per-class section id so ItemsPanel renders them stacked in selection order.
-   *
-   * @param classIds  the selected classes, in display order
-   * @param mode      'slots' (middle) or 'ranges' (right)
+   * Names reachable from a set of classes by one edge type (e.g. the slots a
+   * class declares via CLASS_SLOT, or the range targets it points to via
+   * CLASS_RANGE). Returns the union across all given classes.
    */
-  getFocusPanelSections(
-    classIds: string[],
-    mode: 'slots' | 'ranges',
-  ): { sectionIds: string[]; sectionData: Map<string, SectionData> } {
-    const sectionIds: string[] = [];
-    const map = new Map<string, SectionData>();
-
+  private subsetTargets(classIds: Iterable<string>, edgeType: EdgeType): Set<string> {
+    const names = new Set<string>();
     for (const classId of classIds) {
-      const summary = this.getClassSummary(classId);
-      if (!summary) continue;
-      const sectionId = `focus-${mode}-${classId}`;
-      sectionIds.push(sectionId);
-
-      const items: SectionItemData[] = mode === 'slots'
-        ? summary.slots.map(slot => ({
-            id: `${classId}.${slot.name}`,
-            displayName: slot.name,
-            level: 0,
-            isClickable: false,
-            badgeText: slot.range || undefined,
-            badgeColor: slot.range ? 'bg-gray-100 text-gray-700' : undefined,
-            badgeTooltip: slot.range ? `Range: ${slot.range}` : undefined,
-            hoverData: { id: `${classId}.${slot.name}`, type: 'slot', name: slot.name },
-          }))
-        // ranges: distinct range targets across this class's slots, clickable
-        : [...new Set(summary.slots.map(s => s.range).filter(Boolean))].map(range => {
-            const counts = this.getRelationshipCounts(range);
-            return {
-              id: range,
-              displayName: range,
-              level: 0,
-              isClickable: this.itemExists(range),
-              relationshipBadge: counts ?? undefined,
-              hoverData: { id: range, type: this.getItemType(range) ?? 'class', name: range },
-            };
-          });
-
-      map.set(sectionId, {
-        id: sectionId,
-        label: classId,
-        getItems: () => items,
-      });
+      const edgeKeys = this.modelData.graph.filterEdges(
+        classId,
+        (_edge: string, attrs: EdgeAttributes, source: string) =>
+          attrs.type === edgeType && source === classId,
+      );
+      for (const edgeKey of edgeKeys) names.add(this.modelData.graph.target(edgeKey));
     }
+    return names;
+  }
 
-    return { sectionIds, sectionData: map };
+  /**
+   * A flat section listing exactly the named subset of one collection, rendered
+   * through the elements' own getSectionItemData (so rows match the Kitchen Sink)
+   * but flattened to level 0 — no hierarchy. Flattening via getAllElements()
+   * means deep subclasses are included regardless of tree depth, and the label
+   * count reflects the subset, not the whole collection.
+   */
+  private subsetSection(
+    typeId: ElementTypeId,
+    names: Set<string>,
+    context: 'middlePanel' | 'rightPanel',
+  ): SectionData {
+    const collection = this.modelData.collections.get(typeId);
+    if (!collection) throw new Error(`No collection for type: ${typeId}`);
+    const elements = collection
+      .getAllElements()
+      .filter(el => names.has(el.name))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    return {
+      id: typeId,
+      label: `${this.getTypeLabel(typeId, true)} (${elements.length})`,
+      getItems: () =>
+        elements.map(el => ({
+          ...el.getSectionItemData(context, 0, false, this.itemExists(el.name)),
+          relationshipBadge: this.getRelationshipCounts(el.name) ?? undefined,
+        })),
+    };
+  }
+
+  /**
+   * Section data for the Focus middle/right panels, scoped to a selected subset
+   * of classes. Rows are rendered by the model's own getSectionItemData (same as
+   * the Kitchen Sink) but flat — no tree:
+   *  - 'middle' → one 'slot' section: the slots the selected classes declare.
+   *  - 'right'  → 'class' / 'enum' / 'type' sections (the Ent/PVS/DT split), each
+   *    holding the range targets the selected classes point to. Range rows from
+   *    different selected classes intermix within a section for now; per-entity
+   *    nesting is deferred (see FOCUS_VIEW.md / TASKS.md item 1).
+   */
+  getFocusSubsetSections(
+    classIds: string[],
+    position: 'middle' | 'right',
+  ): Map<string, SectionData> {
+    if (position === 'middle') {
+      const slots = this.subsetTargets(classIds, EDGE_TYPES.CLASS_SLOT);
+      return new Map([['slot', this.subsetSection('slot', slots, 'middlePanel')]]);
+    }
+    const ranges = this.subsetTargets(classIds, EDGE_TYPES.CLASS_RANGE);
+    return new Map(
+      (['class', 'enum', 'type'] as const).map(typeId => [
+        typeId,
+        this.subsetSection(typeId, ranges, 'rightPanel'),
+      ]),
+    );
   }
 
   /**

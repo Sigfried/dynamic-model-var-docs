@@ -44,8 +44,11 @@ export default function FocusView({ dataService }: FocusViewProps) {
     return new Map([[section.id, section]]);
   }, [dataService]);
 
-  // Clicking a class name (not the checkbox) toggles selection too, for now.
-  const handleClickItem = (hoverData: ItemHoverData) => {
+  // Selection is driven ONLY by the left selector (checkbox or class-name click)
+  // and, later, the containment widget — never by the middle/right panels.
+  // Middle/right clicks will open floating detail boxes once useFloatingBoxes is
+  // wired (TASKS.md item 3); until then they're inert.
+  const handleSelectorClick = (hoverData: ItemHoverData) => {
     if (hoverData.type === 'class') toggleSelect(hoverData.name);
   };
 
@@ -60,14 +63,15 @@ export default function FocusView({ dataService }: FocusViewProps) {
     [dataService, selectedKey],
   );
 
-  // Middle (slots) and right (ranges) sections, one per selected class.
+  // Middle (slots) and right (ranges, split Ent/PVS/DT) sections — the Kitchen
+  // Sink panel sections, scoped to the selected subset.
   const middle = useMemo(
-    () => dataService.getFocusPanelSections(selectedOrder, 'slots'),
+    () => dataService.getFocusSubsetSections(selectedOrder, 'middle'),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [dataService, selectedKey],
   );
   const right = useMemo(
-    () => dataService.getFocusPanelSections(selectedOrder, 'ranges'),
+    () => dataService.getFocusSubsetSections(selectedOrder, 'right'),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [dataService, selectedKey],
   );
@@ -83,7 +87,7 @@ export default function FocusView({ dataService }: FocusViewProps) {
             onSectionsChange={() => {}}
             sectionData={selectorSectionData}
             toggleButtons={[]}
-            onClickItem={handleClickItem}
+            onClickItem={handleSelectorClick}
             selectedIds={selectedClassIds}
             onToggleSelect={toggleSelect}
           />
@@ -109,27 +113,29 @@ export default function FocusView({ dataService }: FocusViewProps) {
         </div>
       ) : (
         <>
-          {/* Middle: selected classes' slots (stacked per class) */}
+          {/* Middle: the subset's slots (Kitchen Sink slot section, filtered).
+              Clicks are inert until floating boxes are wired (TASKS.md item 3). */}
           <div className="flex-1 min-h-0 border-r border-gray-200 dark:border-slate-700">
             <ItemsPanel
               position="middle"
-              sections={middle.sectionIds}
+              sections={['slot']}
               onSectionsChange={() => {}}
-              sectionData={middle.sectionData}
+              sectionData={middle}
               toggleButtons={[]}
-              onClickItem={handleClickItem}
+              onClickItem={() => {}}
               title={dataService.getTypeLabel('slot', true)}
             />
           </div>
-          {/* Right: ranges those slots point to (stacked per class) */}
+          {/* Right: the subset's ranges, split Ent/PVS/DT (Kitchen Sink
+              class/enum/type sections, filtered). */}
           <div className="flex-1 min-h-0">
             <ItemsPanel
               position="right"
-              sections={right.sectionIds}
+              sections={['class', 'enum', 'type']}
               onSectionsChange={() => {}}
-              sectionData={right.sectionData}
+              sectionData={right}
               toggleButtons={[]}
-              onClickItem={handleClickItem}
+              onClickItem={() => {}}
               title={dataService.getConceptLabel('attributeType', true)}
             />
           </div>
