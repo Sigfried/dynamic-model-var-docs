@@ -1,5 +1,11 @@
 # Focus View — Design & Working Spec
 
+> **⚠️ PARTLY SUPERSEDED (2026-07-13)** by the subgraph-viz SPA experiment —
+> see [EXPLORE_VIZ.md](EXPLORE_VIZ.md). The Focus view still exists and its
+> shipped work stands, but the three-panel + LinkOverlay direction is no
+> longer the primary path; remaining Focus items in TASKS.md are re-tagged
+> [LATER].
+>
 > The durable spec for the **Focus** view (the "compact Kitchen Sink" / subset
 > visualization). Read this to resume Focus work. Ordered remaining steps live in
 > [TASKS.md](TASKS.md); architecture context in [ARCHITECTURE.md](ARCHITECTURE.md).

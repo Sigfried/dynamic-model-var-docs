@@ -45,7 +45,19 @@ Default to general-audience terms; LinkML term on demand.
   in-app UI **toggle** to switch vocab at runtime (lowest priority — the machinery
   is the hook, no UI yet), and LinkML tooltips/links.
 
-### Priority 2 + 3 — Focus view (compact selector + subset visualization)
+### Priority 2 + 3 — NOW: subgraph-viz SPA (supersedes the Focus direction)
+
+**Current phase (2026-07-13):** the subset-visualization goal is being rebuilt
+as a **new SPA** (same repo, new Vite entry): Explorer-style selection table →
+layered ownership DAG with expand-on-demand, renderer adapted from
+icd11-playground's NodeLinkView. Full design + build order:
+**[EXPLORE_VIZ.md](EXPLORE_VIZ.md)** (step 1 is the ownership-classification
+review). Terminology going forward: say **ownership**, not "containment."
+
+The Focus view below stays in place for stakeholder comparison; its remaining
+items are re-tagged **[LATER]**.
+
+#### Focus view (compact selector + subset visualization) — [LATER]
 
 Priorities 2 ("compact Kitchen Sink + multi-select") and 3 ("subset
 visualization") turned out to be **one feature** and are now built as a third
@@ -76,12 +88,14 @@ middle/right panels scoped to the selected entities. Selection drives everything
   floating boxes land). **Deferred:** per-entity nesting in the right panel —
   range rows from different selected classes intermix within a section for now.
 
-**Remaining (ordered):**
+**Remaining (ordered) — all [LATER], superseded by EXPLORE_VIZ.md:**
 1. **Per-entity grouping/nesting in the right panel** (deferred from the reuse
    work above) — group range rows under the selected entity they belong to.
    Revisit how to implement once the flat version has been demoed.
-2. **Restore inter-panel gutters** + **add `<LinkOverlay>`** to FocusView (needs
-   `relative` root + the gutters).
+2. ~~**Restore inter-panel gutters** + **add `<LinkOverlay>`** to FocusView~~
+   Shipped 2026-07-13 (gutters + working links; the duplicate-id LinkOverlay
+   fixes benefit Kitchen Sink too). Known-imperfect: flex/gutter model, link
+   anchors under the widget, hover highlighting unwired — left as-is.
 3. **Extract `useFloatingBoxes` hook** from LayoutManager; consume in both
    LayoutManager (no behavior change) and FocusView → working detail/relationship
    boxes in Focus. Then wire the now-inert middle/right click handlers to it.
