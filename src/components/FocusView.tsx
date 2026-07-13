@@ -7,18 +7,20 @@
  *  - middle/right: the selected classes' slots and ranges
  *  - a node-link diagram available as a floating box
  *
- * Architecture: imports only from services/DataService, other components, and
- * utils/ — never from models/ or config/ (see CLAUDE.md). Selection state is
- * owned here and shared across the selector, the containment widget, and the
- * middle/right scoping.
+ * Architecture: imports from services/DataService, other components, utils/, and
+ * config/ (constants, like LayoutManager does) — never from models/ or DTOs (see
+ * CLAUDE.md). Selection state is owned here and shared across the selector, the
+ * containment widget, and the middle/right scoping.
  */
 
 import { useMemo, useState } from 'react';
 import { DagBrowser } from 'dag-browser-widget';
 import 'dag-browser-widget/styles.css';
 import ItemsPanel from './ItemsPanel';
+import LinkOverlay from './LinkOverlay';
 import type { DataService } from '../services/DataService';
 import type { SectionData, ItemHoverData } from '../contracts/ComponentData';
+import { FOCUS_GUTTER_WIDTH, MAX_PANEL_WIDTH, MIN_PANEL_WIDTH } from '../config/layoutConstants';
 
 interface FocusViewProps {
   dataService: DataService;
@@ -76,8 +78,13 @@ export default function FocusView({ dataService }: FocusViewProps) {
     [dataService, selectedKey],
   );
 
+  const hasSelection = selectedClassIds.size > 0;
+
   return (
-    <div className="flex-1 flex min-h-0">
+    // `relative` + `overflow-hidden` root: LinkOverlay positions its SVG against
+    // this box. The horizontal gutters between panels give connector curves room
+    // (LinkOverlay keys off DOM data-panel-position + item rects, not props).
+    <div className="flex-1 flex relative overflow-hidden min-h-0">
       {/* Left column: selector (top) + containment widget (bottom) */}
       <div className="flex flex-col w-80 flex-shrink-0 border-r border-gray-200 dark:border-slate-700 min-h-0">
         <div className="flex-1 min-h-0 border-b border-gray-200 dark:border-slate-700">
@@ -93,7 +100,7 @@ export default function FocusView({ dataService }: FocusViewProps) {
           />
         </div>
         <div className="flex-1 min-h-0 overflow-auto p-2">
-          {selectedClassIds.size === 0 ? (
+          {!hasSelection ? (
             <div className="p-2 text-sm text-gray-400">
               Containment digraph — select classes to populate
             </div>
@@ -107,15 +114,27 @@ export default function FocusView({ dataService }: FocusViewProps) {
         </div>
       </div>
 
-      {selectedClassIds.size === 0 ? (
+      {!hasSelection ? (
         <div className="flex-1 flex items-center justify-center text-gray-400 text-sm min-h-0">
           Select classes to see their slots and ranges
         </div>
       ) : (
         <>
+          {/* Left–middle gutter: small fixed width (user-resizable later),
+              just enough room for link curves. */}
+          <div
+            className="bg-gray-100 dark:bg-slate-800 flex-shrink-0"
+            style={{ width: `${FOCUS_GUTTER_WIDTH}px` }}
+          />
+
           {/* Middle: the subset's slots (Kitchen Sink slot section, filtered).
-              Clicks are inert until floating boxes are wired (TASKS.md item 3). */}
-          <div className="flex-1 min-h-0 border-r border-gray-200 dark:border-slate-700">
+              Content-sized between min/max; the trailing spacer absorbs slack so
+              panels take only the width they need. Clicks are inert until
+              floating boxes are wired (TASKS.md item 3). */}
+          <div
+            className="h-full overflow-hidden border-x border-gray-200 dark:border-slate-700 flex-shrink-0"
+            style={{ minWidth: `${MIN_PANEL_WIDTH}px`, maxWidth: `${MAX_PANEL_WIDTH}px` }}
+          >
             <ItemsPanel
               position="middle"
               sections={['slot']}
@@ -126,9 +145,19 @@ export default function FocusView({ dataService }: FocusViewProps) {
               title={dataService.getTypeLabel('slot', true)}
             />
           </div>
+
+          {/* Middle–right gutter */}
+          <div
+            className="bg-gray-100 dark:bg-slate-800 flex-shrink-0"
+            style={{ width: `${FOCUS_GUTTER_WIDTH}px` }}
+          />
+
           {/* Right: the subset's ranges, split Ent/PVS/DT (Kitchen Sink
               class/enum/type sections, filtered). */}
-          <div className="flex-1 min-h-0">
+          <div
+            className="h-full overflow-hidden border-l border-gray-200 dark:border-slate-700 flex-shrink-0"
+            style={{ minWidth: `${MIN_PANEL_WIDTH}px`, maxWidth: `${MAX_PANEL_WIDTH}px` }}
+          >
             <ItemsPanel
               position="right"
               sections={['class', 'enum', 'type']}
@@ -139,7 +168,23 @@ export default function FocusView({ dataService }: FocusViewProps) {
               title={dataService.getConceptLabel('attributeType', true)}
             />
           </div>
+
+          {/* Trailing spacer: absorbs leftover width so the panels above stay
+              content-sized instead of stretching to fill. */}
+          <div className="flex-1 bg-gray-100 dark:bg-slate-800" />
         </>
+      )}
+
+      {/* SVG link overlay — connects selector→slots→ranges via DOM item rects.
+          hoveredItem wiring (hover-highlight) comes with the floating-box work. */}
+      {hasSelection && (
+        <LinkOverlay
+          leftSections={['focus-categories']}
+          middleSections={['slot']}
+          rightSections={['class', 'enum', 'type']}
+          dataService={dataService}
+          hoveredItem={null}
+        />
       )}
     </div>
   );
