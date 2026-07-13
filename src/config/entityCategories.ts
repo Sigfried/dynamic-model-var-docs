@@ -52,6 +52,7 @@ export const ENTITY_CATEGORIES: EntityCategory[] = [
     classIds: [
       'Person',
       'Participant',
+      'Demography',
       'Visit',
       'Consent',
       'ResearchStudy',
