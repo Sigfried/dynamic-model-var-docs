@@ -693,6 +693,9 @@ export class DataService {
     const { nodes, edges } = this.getContainmentGraph(classIds);
     const parentIds = new Map<string, string[]>(nodes.map(n => [n.id, []]));
     for (const e of edges) {
+      // Only ownership + subclass edges nest; 'ref' edges are non-owning
+      // associations and must not create parent links.
+      if (e.kind === 'ref') continue;
       // skip self-loops as parent links (a node isn't its own parent); the
       // widget renders them as backedges from the edge set if needed.
       if (e.source === e.target) continue;

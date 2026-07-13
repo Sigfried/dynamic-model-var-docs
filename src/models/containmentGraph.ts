@@ -1,19 +1,20 @@
 /**
- * Containment graph derivation.
+ * Ownership graph derivation ("ownership" is the current term; this module
+ * retains its historical "containment" naming until a broader rename).
  *
- * Produces the flat {nodes, edges} graph the has-a / containment diagram
- * consumes, derived from the live SchemaGraph. This is the TypeScript port of
- * the heuristic in scripts/extract_containment_tree.py + extract_has_a_graph.py.
- * The hand-tuned public/containment-graph.json is the golden fixture: this
- * module reproduces it exactly (verified in containmentGraph.test.ts).
+ * Produces the flat {nodes, edges} graph the ownership diagram consumes,
+ * derived from the live SchemaGraph. Originally a TypeScript port of the
+ * heuristic in scripts/extract_containment_tree.py + extract_has_a_graph.py.
  *
- * Heuristic (FK inversion for containment):
- *   - multi-valued slot → class            : forward containment (owner has-a range)
- *   - single-valued slot → value object     : forward containment
- *   - single-valued slot → other entity     : FK back-reference → FLIP
- *                                             (the target "contains" the source)
- *   - NO_FLIP_SLOTS                          : associational refs, never flipped
- *   - EXCLUDE_HAS_A_TARGETS                  : too-abstract targets, edge dropped
+ * Every class-ranged slot is classified with an OwnershipVerdict
+ * (see classifySlotEdge). Default heuristic (FK inversion), in order:
+ *   - range in EXCLUDE_HAS_A_TARGETS         : 'excluded' (edge dropped)
+ *   - multi-valued slot → class              : 'own-fwd'  (owner has-a range)
+ *   - single-valued slot → value object      : 'own-fwd'
+ *   - single-valued slot → other entity      : 'own-flip' (FK back-reference:
+ *                                              the target owns the source)
+ * OWNERSHIP_OVERRIDES pre-empts the default per slot name. Adjudicated
+ * 2026-07-13 — see docs/OWNERSHIP_CLASSIFICATION.md for every edge + rationale.
  *   - is_a relationships                     : emitted as kind:"subclass" edges
  *
  * This module is model-layer (it reads the SchemaGraph). Components reach it
@@ -23,8 +24,10 @@
 import type { SchemaGraph } from './SchemaTypes';
 import { getSlotEdgesForClass, getParentClass } from './Graph';
 
+export type OwnershipVerdict = 'own-fwd' | 'own-flip' | 'ref' | 'excluded';
+
 // Value-object classes: single-valued slots pointing to these are forward
-// containment (the owner has-a value object), never flipped.
+// ownership (the owner has-a value object), never flipped.
 export const VALUE_OBJECTS = new Set<string>([
   'Quantity', 'TimePoint', 'TimePeriod', 'BodySite', 'CauseOfDeath',
   'QuestionnaireResponseValue',
@@ -34,23 +37,51 @@ export const VALUE_OBJECTS = new Set<string>([
   'Substance', 'BiologicProduct',
 ]);
 
-// Single-valued entity-ranged slots that should NOT be flipped: these are
-// associational references, not containment back-references.
-export const NO_FLIP_SLOTS = new Set<string>([
-  'performed_by',
-  'originating_site',
-  'associated_assay',
-  'transport_origin',
-  'transport_destination',
-  'focus',
-  'related_imaging_study',
-  'document',
-  'associated_person',
-  'creation_activity',
-  'contained_in',
-  'dimensional_measures',
-  'related_questionnaire_item',
+// Per-slot verdicts that pre-empt the default heuristic. These encode the
+// 2026-07-13 adjudication (docs/OWNERSHIP_CLASSIFICATION.md); entries marked
+// (default) restate what the heuristic would do anyway and exist to record
+// that the classification was a decision, not an accident.
+export const OWNERSHIP_OVERRIDES = new Map<string, OwnershipVerdict>([
+  // Non-owning associational references.
+  ['originating_site', 'ref'],          // site of origin is provenance
+  ['associated_assay', 'ref'],          // assay is method metadata
+  ['transport_origin', 'ref'],
+  ['transport_destination', 'ref'],
+  ['related_questionnaire_item', 'ref'],
+  ['has_questionnaire_item', 'ref'],    // answer points at its question;
+                                        // owner is QuestionnaireResponse
+  ['container', 'ref'],                 // storage activity uses containers
+  ['related_document', 'ref'],
+  // Forward ownership despite single-valued entity range.
+  ['creation_activity', 'own-fwd'],     // consistent w/ processing/storage/
+                                        // transport_activity (own-fwd)
+  ['dimensional_measures', 'own-fwd'],  // same family as quality/quantity_measure
+  // Flipped despite multivalued: parent_specimen points UP the derivation
+  // tree, so the parent owns the child.
+  ['parent_specimen', 'own-flip'],
+  // (default) adjudicated ownership, previously refs in NO_FLIP_SLOTS:
+  ['performed_by', 'own-flip'],         // Organization owns performed work
+  ['associated_person', 'own-flip'],    // Person owns Participant
+  ['contained_in', 'own-flip'],         // Container owns Specimen
+  ['related_imaging_study', 'own-flip'],// ImagingStudy owns ImagingFile
 ]);
+
+/**
+ * Classify one class-ranged slot edge. Override wins; otherwise the default
+ * FK-inversion heuristic (see module header).
+ */
+export function classifySlotEdge(
+  slotName: string,
+  range: string,
+  multivalued: boolean,
+): OwnershipVerdict {
+  if (EXCLUDE_HAS_A_TARGETS.has(range)) return 'excluded';
+  const override = OWNERSHIP_OVERRIDES.get(slotName);
+  if (override) return override;
+  if (multivalued) return 'own-fwd';
+  if (VALUE_OBJECTS.has(range)) return 'own-fwd';
+  return 'own-flip';
+}
 
 // Targets excluded as has-a ranges: abstract refs that don't point to a
 // specific class — they'd appear everywhere and add noise.
@@ -71,7 +102,7 @@ export interface ContainmentNode {
   description: string;
 }
 
-export type ContainmentEdgeKind = 'has-a' | 'subclass';
+export type ContainmentEdgeKind = 'has-a' | 'ref' | 'subclass';
 
 export interface ContainmentEdge {
   id: string;
@@ -128,28 +159,27 @@ export function buildContainmentGraph(
     edges.push({ ...e, id: `edge-${idx++}`, isLoop: e.source === e.target });
   };
 
-  // has-a edges (with FK inversion). Iterate every class's slot edges (own +
-  // inherited), matching extract_has_a_graph.py which keeps inherited edges.
+  // Ownership + reference edges, per classifySlotEdge. Iterate every class's
+  // slot edges (own + inherited), matching extract_has_a_graph.py which keeps
+  // inherited edges.
   for (const cname of classIds) {
     for (const slot of getSlotEdgesForClass(graph, cname)) {
       const rng = slot.range;
       if (!included.has(rng)) continue;           // range not a class in scope
-      if (EXCLUDE_HAS_A_TARGETS.has(rng)) continue;
+
+      const verdict = classifySlotEdge(slot.slotName, rng, slot.multivalued);
+      if (verdict === 'excluded') continue;
 
       const card = cardinalityLabel(slot.required, slot.multivalued);
-      const shouldFlip =
-        !slot.multivalued &&
-        !VALUE_OBJECTS.has(rng) &&
-        !NO_FLIP_SLOTS.has(slot.slotName);
-
-      const [source, target] = shouldFlip ? [rng, cname] : [cname, rng];
+      const flipped = verdict === 'own-flip';
+      const [source, target] = flipped ? [rng, cname] : [cname, rng];
       pushEdge({
         source,
         target,
         label: slot.slotName,
         cardinality: card,
-        flipped: shouldFlip,
-        kind: 'has-a',
+        flipped,
+        kind: verdict === 'ref' ? 'ref' : 'has-a',
       });
     }
   }

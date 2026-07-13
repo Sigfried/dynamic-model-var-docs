@@ -3,7 +3,8 @@ import { loadModelData } from '../utils/dataLoader';
 import { DataService } from '../services/DataService';
 import type { ContainmentGraph } from '../services/DataService';
 import {
-  VALUE_OBJECTS, NO_FLIP_SLOTS, EXCLUDE_HAS_A_TARGETS, SKIP_SUBCLASS_EXPANSION,
+  VALUE_OBJECTS, OWNERSHIP_OVERRIDES, EXCLUDE_HAS_A_TARGETS,
+  SKIP_SUBCLASS_EXPANSION, classifySlotEdge,
 } from '../models/containmentGraph';
 import { getSlotEdgesForClass } from '../models/Graph';
 
@@ -32,42 +33,57 @@ describe('getContainmentGraph', () => {
     const data = await loadModelData();
     const nodeIds = new Set(graph.nodes.map(n => n.id));
 
-    // Recompute expected has-a edges directly from the slot edges.
-    type Expected = { source: string; target: string; flipped: boolean; cardinality: string };
+    // Recompute expected slot edges directly via the classifier.
+    type Expected = { source: string; target: string; flipped: boolean; cardinality: string; kind: string };
     const expected = new Map<string, Expected>();
     for (const cname of nodeIds) {
       for (const slot of getSlotEdgesForClass(data.graph, cname)) {
         const rng = slot.range;
-        if (!nodeIds.has(rng) || EXCLUDE_HAS_A_TARGETS.has(rng)) continue;
+        if (!nodeIds.has(rng)) continue;
+        const verdict = classifySlotEdge(slot.slotName, rng, slot.multivalued);
+        if (verdict === 'excluded') continue;
         const card = slot.multivalued
           ? (slot.required ? '+' : '*')
           : (slot.required ? '1' : '0..1');
-        const flip = !slot.multivalued && !VALUE_OBJECTS.has(rng) && !NO_FLIP_SLOTS.has(slot.slotName);
+        const flip = verdict === 'own-flip';
         const [source, target] = flip ? [rng, cname] : [cname, rng];
-        expected.set([source, target, slot.slotName].join('|'), { source, target, flipped: flip, cardinality: card });
+        expected.set([source, target, slot.slotName].join('|'), {
+          source, target, flipped: flip, cardinality: card,
+          kind: verdict === 'ref' ? 'ref' : 'has-a',
+        });
       }
     }
 
-    for (const e of graph.edges.filter(e => e.kind === 'has-a')) {
+    for (const e of graph.edges.filter(e => e.kind !== 'subclass')) {
       const exp = expected.get([e.source, e.target, e.label].join('|'));
-      expect(exp, `unexpected has-a edge ${e.source}->${e.target} via ${e.label}`).toBeDefined();
+      expect(exp, `unexpected edge ${e.source}->${e.target} via ${e.label}`).toBeDefined();
       expect(e.flipped, `flip for ${e.label}`).toBe(exp!.flipped);
       expect(e.cardinality, `cardinality for ${e.label}`).toBe(exp!.cardinality);
+      expect(e.kind, `kind for ${e.label}`).toBe(exp!.kind);
     }
     // and every expected edge was produced
-    const produced = new Set(graph.edges.filter(e => e.kind === 'has-a').map(e => [e.source, e.target, e.label].join('|')));
+    const produced = new Set(graph.edges.filter(e => e.kind !== 'subclass').map(e => [e.source, e.target, e.label].join('|')));
     for (const k of expected.keys()) {
-      expect(produced.has(k), `missing expected has-a edge ${k}`).toBe(true);
+      expect(produced.has(k), `missing expected edge ${k}`).toBe(true);
     }
   });
 
-  test('NO_FLIP_SLOTS are never flipped', () => {
+  test('ref-verdict slots produce unflipped ref edges, never parent links', () => {
+    const refSlots = new Set(
+      [...OWNERSHIP_OVERRIDES].filter(([, v]) => v === 'ref').map(([k]) => k),
+    );
+    let seen = 0;
     for (const e of graph.edges) {
-      if (NO_FLIP_SLOTS.has(e.label)) expect(e.flipped, e.label).toBe(false);
+      if (refSlots.has(e.label)) {
+        seen++;
+        expect(e.kind, e.label).toBe('ref');
+        expect(e.flipped, e.label).toBe(false);
+      }
     }
+    expect(seen).toBeGreaterThan(0);
   });
 
-  test('value-object ranges are never flipped (forward containment)', () => {
+  test('value-object ranges are never flipped (forward ownership)', () => {
     for (const e of graph.edges.filter(e => e.kind === 'has-a')) {
       // an unflipped edge's range is its target; a flipped edge's range is its source
       const range = e.flipped ? e.source : e.target;
@@ -75,9 +91,10 @@ describe('getContainmentGraph', () => {
     }
   });
 
-  test('multivalued slots are never flipped', () => {
+  test('multivalued slots flip only via explicit own-flip override', () => {
     for (const e of graph.edges.filter(e => e.kind === 'has-a' && (e.cardinality === '*' || e.cardinality === '+'))) {
-      expect(e.flipped, `${e.label} (${e.cardinality})`).toBe(false);
+      const expectFlip = OWNERSHIP_OVERRIDES.get(e.label) === 'own-flip';
+      expect(e.flipped, `${e.label} (${e.cardinality})`).toBe(expectFlip);
     }
   });
 
