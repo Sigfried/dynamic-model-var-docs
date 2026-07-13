@@ -7,7 +7,7 @@
  * Architecture: Uses DataService - maintains view/model separation!
  */
 
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback, useId } from 'react';
 import type { DataService } from '../services/DataService';
 import {
   generateSelfRefPath,
@@ -105,6 +105,27 @@ export default function LinkOverlay({
   // Version to trigger React re-render when links change structurally
   const [structuralVersion, setStructuralVersion] = useState(0);
 
+  // Gradient/marker ids must be unique per overlay instance: one overlay is
+  // mounted per view (hidden views included) and url(#id) resolves
+  // document-wide, so a collision resolves to the hidden view's defs — and
+  // browsers won't paint a gradient that lives in a display:none subtree.
+  const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
+  const scopedId = useCallback((base: string) => `${base}-${uid}`, [uid]);
+
+  // All DOM queries must be scoped to this overlay's own view container (the
+  // svg's parent — the `relative` root that also contains the panels). All
+  // views stay mounted (App hides inactive ones with `hidden`), so item ids
+  // like `lp::Person` are duplicated across views; a document-wide lookup can
+  // resolve to a hidden view's element, whose rect is 0×0 — links then render
+  // as degenerate paths at the origin.
+  const getScopeRoot = useCallback((): ParentNode => {
+    return svgRef.current?.parentElement ?? document;
+  }, []);
+
+  const getItemEl = useCallback((id: string): HTMLElement | null => {
+    return getScopeRoot().querySelector<HTMLElement>(`[id="${id}"]`);
+  }, [getScopeRoot]);
+
   // Path calculation helpers (pure functions, no DOM access)
   const calculateCrossPanelAnchors = useCallback((
     sourceRect: DOMRect,
@@ -147,8 +168,8 @@ export default function LinkOverlay({
     linkInfo: LinkInfo,
     svgRect: DOMRect
   ): string | null => {
-    const sourceEl = document.getElementById(linkInfo.sourceId);
-    const targetEl = document.getElementById(linkInfo.targetId);
+    const sourceEl = getItemEl(linkInfo.sourceId);
+    const targetEl = getItemEl(linkInfo.targetId);
     if (!sourceEl || !targetEl) return null;
 
     const sourceRect = sourceEl.getBoundingClientRect();
@@ -172,7 +193,7 @@ export default function LinkOverlay({
       const adjustedTarget = { x: target.x - svgRect.left, y: target.y - svgRect.top };
       return generateDirectionalBezierPath(adjustedSource, adjustedTarget);
     }
-  }, [calculateCrossPanelAnchors, generateDirectionalBezierPath]);
+  }, [getItemEl, calculateCrossPanelAnchors, generateDirectionalBezierPath]);
 
   // Direct DOM update for path positions (no React re-render)
   const updatePathPositions = useCallback(() => {
@@ -195,10 +216,11 @@ export default function LinkOverlay({
   const buildLinkData = useCallback((): Map<string, LinkInfo> => {
     if (!dataService) return new Map();
 
-    const middlePanelVisible = document.querySelector('[data-panel-position="middle"]') !== null;
+    const root = getScopeRoot();
+    const middlePanelVisible = root.querySelector('[data-panel-position="middle"]') !== null;
     const panelOrder = middlePanelVisible ? { lp: 1, mp: 2, rp: 3 } : { lp: 1, rp: 2 };
     const edgeTypes = getEdgeTypesForLinks(middlePanelVisible);
-    const itemEls = document.querySelectorAll('.item');
+    const itemEls = root.querySelectorAll('.item');
     const links = new Map<string, LinkInfo>();
 
     itemEls.forEach(itemEl => {
@@ -215,7 +237,7 @@ export default function LinkOverlay({
 
         const targetId = edge.targetItem.id;
         const selector = panelPrefixes.map(p => `[id="${contextualizeId({ id: targetId, context: p })}"]`).join(', ');
-        const targetEls: NodeListOf<Element> = document.querySelectorAll(selector);
+        const targetEls: NodeListOf<Element> = root.querySelectorAll(selector);
 
         for (const _targetEl of targetEls) {
           if (contextualizedId === _targetEl.id) {
@@ -223,6 +245,11 @@ export default function LinkOverlay({
             links.set(key, { sourceId: contextualizedId, targetId: contextualizedId, edge, isSelfRef: true });
             break;
           } else if (_targetEl.id > contextualizedId) {
+            // Only draw an edge from source→target when target sorts AFTER
+            // source, so each undirected pair is emitted once (not twice). This
+            // relies on the panel prefixes being lexically ordered lp < mp < rp,
+            // which matches left→middle→right; the adjacency check below then
+            // keeps only links between neighbouring panels.
             idParts = splitId(_targetEl.id);
             panelPrefix = idParts[0];
             const targetPanelNum = panelOrder[panelPrefix]!;
@@ -235,7 +262,7 @@ export default function LinkOverlay({
     });
 
     return links;
-  }, [dataService]);
+  }, [dataService, getScopeRoot]);
 
   // Check if link structure changed
   const hasStructuralChange = useCallback((newLinks: Map<string, LinkInfo>): boolean => {
@@ -321,8 +348,8 @@ export default function LinkOverlay({
       const pathData = calculatePathForLink(linkInfo, svgRect);
       if (!pathData) return;
 
-      const sourceEl = document.getElementById(sourceId);
-      const targetEl = document.getElementById(targetId);
+      const sourceEl = getItemEl(sourceId);
+      const targetEl = getItemEl(targetId);
       if (!sourceEl || !targetEl) return;
 
       const sourceRect = sourceEl.getBoundingClientRect();
@@ -332,11 +359,8 @@ export default function LinkOverlay({
       const sourceType = edge.sourceItem.type;
       const targetType = edge.targetItem.type;
 
-      const gradientId = getLinkGradientId(sourceType, targetType);
-      let color = `url(#${gradientId})`;
-      if (!isLeftToRight) {
-        color = color.replace(')', '-reverse)');
-      }
+      const gradientBase = getLinkGradientId(sourceType, targetType);
+      const color = `url(#${scopedId(isLeftToRight ? gradientBase : `${gradientBase}-reverse`)})`;
 
       const strokeWidth = edge.edgeType === EDGE_TYPES.INHERITANCE ? 2 : 1.5;
 
@@ -344,7 +368,7 @@ export default function LinkOverlay({
         sourceId === hoveredItem.id || targetId === hoveredItem.id
       );
       const isHovered = hoveredLinkKey === key || matchesHoveredItem;
-      const markerId = getMarkerIdForTargetType(targetType, isHovered);
+      const markerId = scopedId(getMarkerIdForTargetType(targetType, isHovered));
       const markerEnd = isSelfRef ? undefined : `url(#${markerId})`;
 
       const showLabel = isHovered && !isSelfRef && edge.label &&
@@ -446,7 +470,7 @@ export default function LinkOverlay({
           {/* Gradients for all source→target combinations */}
           {(() => {
             const createGradient = (sourceType: string, targetType: string, reverse = false) => {
-              const id = reverse ? `${getLinkGradientId(sourceType, targetType)}-reverse` : getLinkGradientId(sourceType, targetType);
+              const id = scopedId(reverse ? `${getLinkGradientId(sourceType, targetType)}-reverse` : getLinkGradientId(sourceType, targetType));
               const [x1, x2] = reverse ? ["100%", "0%"] : ["0%", "100%"];
               return (
                 <linearGradient key={`${sourceType}-${targetType}${reverse ? '-rev' : ''}`} id={id} x1={x1} y1="0%" x2={x2} y2="0%">
@@ -474,7 +498,7 @@ export default function LinkOverlay({
               { id: 'gray', color: '#6b7280' }
             ];
             const createMarker = (id: string, color: string, hover = false) => {
-              const markerId = hover ? `arrow-${id}-hover` : `arrow-${id}`;
+              const markerId = scopedId(hover ? `arrow-${id}-hover` : `arrow-${id}`);
               const markerSize = hover ? 7 : 6;
               const fillOpacity = hover ? undefined : 0.3;
               return (

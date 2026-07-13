@@ -204,9 +204,13 @@ export class DataService {
 
   /**
    * Get all edges for a specific item from the graph
-   * Used by LinkOverlay for DOM-based link rendering
+   * Used by LinkOverlay for DOM-based link rendering. LinkOverlay iterates raw
+   * DOM `.item` rows, which can include non-graph items (e.g. Focus's category
+   * headers) — those simply have no edges, so return [] rather than letting
+   * graphology throw NotFoundGraphError.
    */
   getEdgesForItem(itemId: string, types: EdgeType[]): EdgeInfo[] {
+    if (!this.modelData.graph.hasNode(itemId)) return [];
     let edgeKeys = this.modelData.graph.filterEdges(itemId, (_edge: string, attributes: EdgeAttributes, _source: string, _target: string) => {
       return types.includes(attributes.type)
     });
