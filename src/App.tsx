@@ -279,28 +279,29 @@ function App() {
         </div>
       </header>
 
-      {/* Main content — both views stay mounted to preserve state.
-          min-h-0 lets these flex-1 wrappers shrink to the viewport so inner
+      {/* Main content — only the ACTIVE view is mounted. Keeping inactive
+          views mounted-but-hidden duplicated ids document-wide (item ids,
+          SVG def ids), which broke LinkOverlay twice; in-memory view state
+          is deliberately sacrificed on switch (URL-encoded state survives).
+          min-h-0 lets the flex-1 wrapper shrink to the viewport so inner
           panels scroll independently instead of growing the whole page. */}
-      <div className={viewMode === 'explorer' ? 'flex-1 flex flex-col min-h-0' : 'hidden'}>
-        <EntityExplorer dataService={dataService} />
-      </div>
-      <div className={viewMode === 'kitchen-sink' ? 'flex-1 flex flex-col min-h-0' : 'hidden'}>
-        <LayoutManager
-          dataService={dataService}
-          leftSections={leftSections}
-          middleSections={middleSections}
-          rightSections={rightSections}
-          setMiddleSections={setMiddleSections}
-          setRightSections={setRightSections}
-          initialDialogs={initialDialogs}
-          setDialogStatesGetter={setDialogStatesGetter}
-          onDialogsChange={triggerURLSave}
-          hoverPopupsEnabled={hoverPopupsEnabled}
-        />
-      </div>
-      <div className={viewMode === 'focus' ? 'flex-1 flex flex-col min-h-0' : 'hidden'}>
-        <FocusView dataService={dataService} />
+      <div className="flex-1 flex flex-col min-h-0">
+        {viewMode === 'explorer' && <EntityExplorer dataService={dataService} />}
+        {viewMode === 'kitchen-sink' && (
+          <LayoutManager
+            dataService={dataService}
+            leftSections={leftSections}
+            middleSections={middleSections}
+            rightSections={rightSections}
+            setMiddleSections={setMiddleSections}
+            setRightSections={setRightSections}
+            initialDialogs={initialDialogs}
+            setDialogStatesGetter={setDialogStatesGetter}
+            onDialogsChange={triggerURLSave}
+            hoverPopupsEnabled={hoverPopupsEnabled}
+          />
+        )}
+        {viewMode === 'focus' && <FocusView dataService={dataService} />}
       </div>
     </div>
   );
