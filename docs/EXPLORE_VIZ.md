@@ -90,6 +90,15 @@ getOwnershipSubgraph(selectedIds, expansions) -> {
 Built on the existing containment graph + graphology edges. Unit-tested in
 the style of the containment property tests.
 
+**Intended backbone: `supergroup/dag` v2** (`../supergroup`, spec:
+`../supergroup/docs/specs/2026-07-13-supergroup-v2-design.md`) — `fromEdges`
+over the ownership edges, `subgraph()` for selection scoping, `ancestors()`
+for paths-to-root, per-node `maxDepth` as the layer assignment, cycle
+discipline matching ours (self-loops → backedges). Gated on its packaging
+milestone (unpublished; git install currently yields v1). Until it's
+pinnable, implement against graphology behind the same DataService seam and
+swap the internals later.
+
 ### Ownership classification review (build step 1)
 
 Whether a member→owner FK is *ownership* (flip) or a *reference* (leave) is a

@@ -139,6 +139,16 @@ if (!element) {
 
 ---
 
+## 📦 Related local library
+
+**supergroup v2** (`../supergroup`, spec in
+`../supergroup/docs/specs/2026-07-13-supergroup-v2-design.md`): grouping +
+DAG library planned as the backbone of `getOwnershipSubgraph` (see
+docs/EXPLORE_VIZ.md). Check its packaging state before building graph
+plumbing by hand — don't rebuild capabilities it already has.
+
+---
+
 ## 📋 CURRENT TASK
 
 See **[TASKS.md](TASKS.md)** for:
