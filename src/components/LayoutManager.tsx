@@ -27,6 +27,7 @@ import DetailContent from './DetailContent';
 import LinkOverlay from './LinkOverlay';
 import { RelationshipInfoContent } from './RelationshipInfoBox';
 import { APP_CONFIG, getFloatSettings } from '../config/appConfig';
+import { EMPTY_PANEL_WIDTH, MAX_PANEL_WIDTH, MIN_GUTTER_WIDTH } from '../config/layoutConstants';
 import { type DialogState, contentTypeToGroupId } from '../utils/statePersistence';
 import { type DataService } from '../services/DataService';
 import {
@@ -607,10 +608,6 @@ export default function LayoutManager({
     setHoveredItem(null);
   }, []);
 
-  // Panel dimensions
-  const EMPTY_PANEL_WIDTH = 180;
-  const MAX_PANEL_WIDTH = 450;
-  const MIN_GUTTER_WIDTH = 80;  // Minimum gutter width for link visibility
 
   // Panel visibility
   const leftPanelEmpty = leftSections.length === 0;
