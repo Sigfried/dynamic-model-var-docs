@@ -28,7 +28,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type {
   DataService, OwnershipSubgraph, OwnershipSubgraphEdge, OwnershipSubgraphNode,
-  OwnershipNodeSlot,
 } from '../services/DataService';
 import { useGraphLayout, useZoomPan, pathFromSections, anchoredPath } from './graph-core';
 import type { AnchorDir, EdgeSection, GraphSpec, GraphSpecPort, Point } from './graph-core';
@@ -42,8 +41,15 @@ const PAD = 28;
 type Direction = 'RIGHT' | 'DOWN';
 type EdgeStyle = 'orthogonal' | 'curved';
 
-interface RowVM extends OwnershipNodeSlot {
-  /** Carries a drawn edge (or is a self-loop) — rendered undimmed. */
+interface RowVM {
+  slot: string;
+  range: string;
+  /** 'plain' = scalar/enum-valued attribute — listed when expanded, never an edge. */
+  channel: 'ownership' | 'reference' | 'plain';
+  flipped: boolean;
+  cardinality: string;
+  isLoop: boolean;
+  /** Carries a drawn edge (or is a self-loop) — rendered with full emphasis. */
   connected: boolean;
 }
 
@@ -68,7 +74,11 @@ function hostOf(e: OwnershipSubgraphEdge): string {
   return e.storageDirection === 'flipped' ? e.target : e.source;
 }
 
-function buildViewModel(sub: OwnershipSubgraph, expandedNodes: Set<string>): ViewModel {
+function buildViewModel(
+  sub: OwnershipSubgraph,
+  expandedNodes: Set<string>,
+  plainSlotsFor: (id: string) => Array<{ name: string; range: string }>,
+): ViewModel {
   const isaParents = new Map<string, string[]>();
   const subclassCount = new Map<string, number>();
   const edges: OwnershipSubgraphEdge[] = [];
@@ -85,12 +95,21 @@ function buildViewModel(sub: OwnershipSubgraph, expandedNodes: Set<string>): Vie
   }
 
   const nodes = sub.nodes.map((n): NodeVM => {
-    const all = n.slots.map((s): RowVM => ({
+    const entityRows = n.slots.map((s): RowVM => ({
       ...s,
       connected: s.isLoop || drawn.has(`${n.id}|${s.slot}`),
     }));
-    const connected = all.filter(r => r.connected);
-    const hidden = all.filter(r => !r.connected);
+    const entityNames = new Set(entityRows.map(r => r.slot));
+    // Scalar/enum-valued attributes: everything getClassSummary lists that
+    // isn't already an entity-ranged row.
+    const plainRows = plainSlotsFor(n.id)
+      .filter(s => !entityNames.has(s.name))
+      .map((s): RowVM => ({
+        slot: s.name, range: s.range, channel: 'plain',
+        flipped: false, cardinality: '', isLoop: false, connected: false,
+      }));
+    const connected = entityRows.filter(r => r.connected);
+    const hidden = [...entityRows.filter(r => !r.connected), ...plainRows];
     const expanded = expandedNodes.has(n.id);
     const rows = expanded ? [...connected, ...hidden] : connected;
     return {
@@ -106,6 +125,19 @@ function buildViewModel(sub: OwnershipSubgraph, expandedNodes: Set<string>): Vie
   });
 
   return { nodes, edges };
+}
+
+/** Self-loop marker: SVG so size/alignment don't depend on font metrics. */
+function LoopIcon({ title }: { title: string }) {
+  return (
+    <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="false"
+      className="shrink-0 text-amber-600 dark:text-amber-400">
+      <title>{title}</title>
+      <path d="M12.9 9.5 A5.2 5.2 0 1 1 12.9 6.5" fill="none"
+        stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M15.6 8 L10.9 5.4 L10.9 10.6 Z" fill="currentColor" />
+    </svg>
+  );
 }
 
 /** y-center of a slot's displayed row, relative to the node's top-left. */
@@ -226,9 +258,14 @@ export default function OwnershipGraphView({
     () => dataService.getOwnershipSubgraph([...selectedIds].sort()),
     [dataService, selectedIds],
   );
+  const plainSlots = useMemo(
+    () => new Map(subgraph.nodes.map(n =>
+      [n.id, dataService.getClassSummary(n.id)?.slots ?? []] as const)),
+    [dataService, subgraph],
+  );
   const vm = useMemo(
-    () => buildViewModel(subgraph, expandedNodes),
-    [subgraph, expandedNodes],
+    () => buildViewModel(subgraph, expandedNodes, id => plainSlots.get(id) ?? []),
+    [subgraph, expandedNodes, plainSlots],
   );
   const spec = useMemo(() => buildSpec(vm, direction), [vm, direction]);
 
@@ -509,19 +546,24 @@ export default function OwnershipGraphView({
                         <div
                           key={r.slot}
                           data-row={r.slot}
-                          title={`${r.slot} → ${r.range} (${r.cardinality})${r.flipped ? ' — owner side' : ''}`}
+                          title={r.channel === 'plain'
+                            ? `${r.slot}: ${r.range}`
+                            : `${r.slot} → ${r.range} (${r.cardinality})${r.flipped ? ' — owner side' : ''}`}
                           className={`flex items-center gap-1.5 px-2 text-[11px] ${r.connected
                             ? 'text-gray-700 dark:text-gray-300'
-                            : 'opacity-45 text-gray-500 dark:text-gray-400'}`}
+                            : 'text-gray-400 dark:text-gray-500'}`}
                           style={{ height: ROW_H }}
                         >
-                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${r.channel === 'ownership' ? 'bg-amber-500' : 'bg-gray-400'}`} />
+                          {r.channel === 'plain' ? (
+                            <span className="w-1.5 h-1.5 rounded-full shrink-0 border border-gray-400 dark:border-gray-500" />
+                          ) : (
+                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${r.channel === 'ownership' ? 'bg-amber-500' : 'bg-gray-400'} ${r.connected ? '' : 'opacity-60'}`} />
+                          )}
                           <span className="truncate">{r.slot}</span>
                           {r.isLoop && (
-                            <span className="text-[17px] leading-none font-bold text-amber-600 dark:text-amber-400"
-                              title={`self-referential: a ${r.range} can own another ${r.range} via ${r.slot}`}>⟲</span>
+                            <LoopIcon title={`self-referential: a ${r.range} can own another ${r.range} via ${r.slot}`} />
                           )}
-                          <span className="ml-auto text-[9px] text-gray-400 truncate max-w-[90px]">
+                          <span className="ml-auto text-[9px] text-gray-400 dark:text-gray-500 truncate max-w-[90px]">
                             {r.range} {r.cardinality}
                           </span>
                         </div>
@@ -530,7 +572,7 @@ export default function OwnershipGraphView({
                         <button
                           className="w-full text-left px-2 text-[10px] text-sky-600 dark:text-sky-400 hover:underline"
                           style={{ height: FOOTER_H }}
-                          title={`${attributesWord} with no edge drawn on the current canvas`}
+                          title={`${attributesWord} without an edge on the current canvas, plus plain (non-entity) ${attributesWord}`}
                           onClick={ev => {
                             ev.stopPropagation();
                             toggleExpanded(n.id);
