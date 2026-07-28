@@ -141,11 +141,12 @@ if (!element) {
 
 ## 📦 Related local library
 
-**supergroup v2** (`../supergroup`, spec in
-`../supergroup/docs/specs/2026-07-13-supergroup-v2-design.md`): grouping +
-DAG library planned as the backbone of `getOwnershipSubgraph` (see
-docs/EXPLORE_VIZ.md). Check its packaging state before building graph
-plumbing by hand — don't rebuild capabilities it already has.
+**supergroup v2**: grouping + DAG library, the backbone of
+`getOwnershipSubgraph` (see docs/EXPLORE_VIZ.md). Published as
+`supergroup@2.0.0` on npm and installed as a dependency. Source repo:
+`~/github-repos/personal/supergroup` (spec in its
+`docs/specs/2026-07-13-supergroup-v2-design.md`; README is outdated — trust
+`dist/*.d.ts` and `src/`). Don't rebuild capabilities it already has.
 
 ---
 

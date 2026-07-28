@@ -31,6 +31,8 @@ import { APP_CONFIG, getAllElementTypeIds, SectionId, ACTIVE_VOCAB } from '../co
 import { ENTITY_CATEGORIES } from '../config/entityCategories';
 import { buildContainmentGraph } from '../models/containmentGraph';
 import type { ContainmentGraph } from '../models/containmentGraph';
+import { buildOwnershipDag, buildOwnershipSubgraph } from '../models/ownershipSubgraph';
+import type { OwnershipDag, OwnershipSubgraph } from '../models/ownershipSubgraph';
 // Re-export so UI components (which must not import from config/ or models/) can
 // reference section identities without depending on display strings.
 export { SectionId } from '../config/appConfig';
@@ -39,6 +41,10 @@ const {elementTypes, } = APP_CONFIG;
 // Re-export UI types for UI components
 export type { EdgeInfo, ItemInfo };
 export type { ContainmentGraph, ContainmentNode, ContainmentEdge } from '../models/containmentGraph';
+export type {
+  OwnershipSubgraph, OwnershipSubgraphNode, OwnershipSubgraphEdge,
+  OwnershipNodeRole, OwnershipEdgeType,
+} from '../models/ownershipSubgraph';
 
 /** A category of classes for the Focus selector (e.g. "Clinical"). */
 export interface CategoryGroup {
@@ -605,6 +611,31 @@ export class DataService {
       },
       { pruneIsolated: full },
     );
+  }
+
+  /** Memoized full (unpruned) graph + supergroup DAG for getOwnershipSubgraph.
+   *  Unpruned so a deliberately-selected isolated class still resolves. */
+  private ownershipDagCache?: { full: ContainmentGraph; dag: OwnershipDag };
+
+  private getOwnershipDag(): { full: ContainmentGraph; dag: OwnershipDag } {
+    if (!this.ownershipDagCache) {
+      const collection = this.modelData.collections.get('class' as ElementTypeId);
+      const allClassIds = collection ? collection.getAllElements().map(e => e.name) : [];
+      const full = this.getContainmentGraph(allClassIds);
+      this.ownershipDagCache = { full, dag: buildOwnershipDag(full) };
+    }
+    return this.ownershipDagCache;
+  }
+
+  /**
+   * Drawable ownership subgraph for the Explore viz (docs/EXPLORE_VIZ.md):
+   * selected nodes, edges among them, ownership paths-to-root as dimmed
+   * 'context' nodes, plus expand-on-demand additions. Node.layer (maxDepth in
+   * the full ownership DAG) is stable across selection changes.
+   */
+  getOwnershipSubgraph(selectedIds: string[], expansions: string[] = []): OwnershipSubgraph {
+    const { full, dag } = this.getOwnershipDag();
+    return buildOwnershipSubgraph(full, dag, selectedIds, expansions);
   }
 
   /**
