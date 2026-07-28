@@ -2,56 +2,48 @@
  * OwnershipGraphView — the layered ownership DAG (docs/EXPLORE_VIZ.md).
  *
  * Bindings over graph-core: HTML entity nodes (title + attribute rows) are
- * absolutely positioned over an SVG edge layer. Channel rules:
- *  - ownership: amber solid, drawn owner → member (normalized). Edges whose
- *    storage direction was flipped get a re-verbed label ("owns · via slot"),
- *    never the bare slot name pointing the wrong way.
- *  - reference: gray dashed, drawn in FK direction, slot-name label.
- *  - is-a: never an arrow in the ownership plane — rendered as chips on the
- *    nodes (parent: "▷ N", child: "⊳ Parent").
- *  - self-loops: "⟲ slot" chip on the node, not a routed edge.
- * Edges anchor at the attribute row of the slot's storage-side node
- * (Azimutt-style); the other endpoint attaches to the node boundary.
+ * absolutely positioned over an SVG edge layer. Layout and edge routing are
+ * both ELK's (layered, left→right, orthogonal sections): each drawn edge
+ * attaches to a fixed-position ELK port at its slot's attribute row on the
+ * storage-side node, so crossing minimization and routing account for the
+ * real attach points (the icd11 NodeLinkView approach, plus ports).
+ *
+ * Channel rules:
+ *  - ownership: amber solid, drawn owner → member (normalized). No floating
+ *    edge labels — the row the edge attaches to names the slot.
+ *  - reference: gray dashed, drawn in FK direction.
+ *  - is-a: never an arrow in the ownership plane — chips on the nodes
+ *    (parent: "▷ N", child: "⊳ Parent").
+ *  - self-loops: ⟲ marker on the slot's own row, not a routed edge.
+ * Nodes list ALL their entity-ranged slots (schema order, selection-
+ * independent); rows whose range is off-canvas are dimmed — these become
+ * the expand-on-demand affordances.
  *
  * Talks to services/DataService only (per app architecture rules);
  * graph-core is pure layout code with zero app imports.
  */
 
 import { useEffect, useId, useMemo } from 'react';
-import type { DataService, OwnershipSubgraph, OwnershipSubgraphEdge } from '../services/DataService';
-import {
-  useGraphLayout, useZoomPan, anchoredPath, anchoredPathPoint,
-} from './graph-core';
-import type { AnchorDir, GraphSpec, PlacedNode, Point } from './graph-core';
+import type {
+  DataService, OwnershipSubgraph, OwnershipSubgraphEdge, OwnershipSubgraphNode,
+} from '../services/DataService';
+import { useGraphLayout, useZoomPan, pathFromSections } from './graph-core';
+import type { GraphSpec, GraphSpecPort } from './graph-core';
 
-const NODE_W = 210;
+const NODE_W = 240;
 const HEADER_H = 30;
 const ROW_H = 20;
 const PAD = 28;
 
-interface RowVM {
-  slot: string;
-  cardinality: string;
-  channel: 'ownership' | 'reference';
-}
-
-interface NodeVM {
-  id: string;
-  label: string;
-  role: 'selected' | 'context';
-  layer: number;
-  abstract: boolean;
-  description: string;
-  rows: RowVM[];
+interface NodeVM extends OwnershipSubgraphNode {
   isaParents: string[];
   subclassCount: number;
-  loops: string[];
   height: number;
 }
 
 interface ViewModel {
   nodes: NodeVM[];
-  /** Drawable (routed) edges: ownership + reference, minus self-loops. */
+  /** Routed edges: ownership + reference, minus self-loops (row ⟲ markers). */
   edges: OwnershipSubgraphEdge[];
 }
 
@@ -60,141 +52,81 @@ function hostOf(e: OwnershipSubgraphEdge): string {
   return e.storageDirection === 'flipped' ? e.target : e.source;
 }
 
+const portId = (nodeId: string, slot: string) => `${nodeId}::${slot}`;
+
 function buildViewModel(sub: OwnershipSubgraph): ViewModel {
-  const rowsByNode = new Map<string, RowVM[]>();
   const isaParents = new Map<string, string[]>();
   const subclassCount = new Map<string, number>();
-  const loops = new Map<string, string[]>();
   const edges: OwnershipSubgraphEdge[] = [];
 
   for (const e of sub.edges) {
     if (e.type === 'isa') {
       isaParents.set(e.target, [...(isaParents.get(e.target) ?? []), e.source]);
       subclassCount.set(e.source, (subclassCount.get(e.source) ?? 0) + 1);
-      continue;
+    } else if (!e.isLoop) {
+      edges.push(e);
     }
-    if (e.isLoop) {
-      loops.set(e.source, [...(loops.get(e.source) ?? []), e.slotName]);
-      continue;
-    }
-    const host = hostOf(e);
-    const rows = rowsByNode.get(host) ?? [];
-    if (!rows.some(r => r.slot === e.slotName)) {
-      rows.push({
-        slot: e.slotName,
-        cardinality: e.cardinality,
-        channel: e.type === 'reference' ? 'reference' : 'ownership',
-      });
-      rowsByNode.set(host, rows);
-    }
-    edges.push(e);
   }
 
-  const nodes = sub.nodes.map((n): NodeVM => {
-    const rows = rowsByNode.get(n.id) ?? [];
-    return {
-      ...n,
-      rows,
-      isaParents: isaParents.get(n.id) ?? [],
-      subclassCount: subclassCount.get(n.id) ?? 0,
-      loops: loops.get(n.id) ?? [],
-      height: HEADER_H + rows.length * ROW_H + (rows.length ? 5 : 0),
-    };
-  });
+  const nodes = sub.nodes.map((n): NodeVM => ({
+    ...n,
+    isaParents: isaParents.get(n.id) ?? [],
+    subclassCount: subclassCount.get(n.id) ?? 0,
+    height: HEADER_H + n.slots.length * ROW_H + (n.slots.length ? 5 : 0),
+  }));
 
   return { nodes, edges };
 }
 
-interface EndPoint {
-  pt: Point;
-  dir: AnchorDir;
-  /** Non-row anchors sharing a node side get spread apart by this key. */
-  spreadKey?: string;
+/** y-center of a slot's row, relative to the node's top-left. */
+function rowY(node: NodeVM, slot: string): number {
+  const idx = node.slots.findIndex(s => s.slot === slot);
+  if (idx < 0) throw new Error(`No attribute row for ${slot} on ${node.id}`);
+  return HEADER_H + idx * ROW_H + ROW_H / 2;
 }
 
-interface EdgeGeometry {
-  edge: OwnershipSubgraphEdge;
-  start: EndPoint;
-  end: EndPoint;   // arrow side (drawn target)
-  dimmed: boolean;
-}
-
-function computeEdgeGeometry(
-  vm: ViewModel,
-  placed: Map<string, PlacedNode>,
-  roles: Map<string, 'selected' | 'context'>,
-): EdgeGeometry[] {
-  const rowsByNode = new Map(vm.nodes.map(n => [n.id, n.rows]));
-
-  const geos = vm.edges.flatMap((edge): EdgeGeometry[] => {
-    const host = hostOf(edge);
-    const other = edge.source === host ? edge.target : edge.source;
-    const hp = placed.get(host);
-    const op = placed.get(other);
-    if (!hp || !op) return []; // layout still catching up to a new subgraph
-    const idx = rowsByNode.get(host)?.findIndex(r => r.slot === edge.slotName) ?? -1;
-    if (idx < 0) throw new Error(`No attribute row for ${edge.slotName} on ${host}`);
-
-    const hostCx = hp.x + hp.width / 2;
-    const otherCx = op.x + op.width / 2;
-    const side: AnchorDir = otherCx >= hostCx ? 'right' : 'left';
-    const rowEnd: EndPoint = {
-      pt: {
-        x: side === 'right' ? hp.x + hp.width : hp.x,
-        y: hp.y + HEADER_H + idx * ROW_H + ROW_H / 2,
-      },
-      dir: side,
-    };
-
-    const hostCy = hp.y + hp.height / 2;
-    const otherCy = op.y + op.height / 2;
-    let otherEnd: EndPoint;
-    if (otherCy > hostCy + 10) {
-      otherEnd = { pt: { x: otherCx, y: op.y }, dir: 'up', spreadKey: `${other}:top` };
-    } else if (otherCy < hostCy - 10) {
-      otherEnd = { pt: { x: otherCx, y: op.y + op.height }, dir: 'down', spreadKey: `${other}:bottom` };
-    } else {
-      const s: AnchorDir = hostCx >= otherCx ? 'right' : 'left';
-      otherEnd = {
-        pt: { x: s === 'right' ? op.x + op.width : op.x, y: otherCy },
-        dir: s,
-        spreadKey: `${other}:${s}`,
-      };
+/**
+ * ELK spec: one port per drawn edge's slot row on its storage-side node.
+ * Direction is RIGHT (owners left), so forward-stored slots exit the host's
+ * east side and flipped ones receive on the host's west side — both flow
+ * with the layout.
+ */
+function buildSpec(vm: ViewModel): GraphSpec {
+  const portsByNode = new Map<string, GraphSpecPort[]>();
+  const addPort = (node: NodeVM, slot: string, side: 'east' | 'west'): string => {
+    const id = portId(node.id, slot);
+    const ports = portsByNode.get(node.id) ?? [];
+    if (!ports.some(p => p.id === id)) {
+      ports.push({ id, x: side === 'east' ? NODE_W : 0, y: rowY(node, slot) });
+      portsByNode.set(node.id, ports);
     }
+    return id;
+  };
 
-    // Arrow points into the drawn target: for flipped ownership the slot row
-    // is on the member (drawn target); otherwise the row is on the source.
-    const [start, end] = edge.storageDirection === 'flipped'
-      ? [otherEnd, rowEnd]
-      : [rowEnd, otherEnd];
-    const dimmed = roles.get(edge.source) === 'context' || roles.get(edge.target) === 'context';
-    return [{ edge, start, end, dimmed }];
+  const nodeById = new Map(vm.nodes.map(n => [n.id, n]));
+  const edges = vm.edges.map(e => {
+    const host = nodeById.get(hostOf(e));
+    if (!host) throw new Error(`Edge ${e.id} host missing from subgraph`);
+    const flipped = e.storageDirection === 'flipped';
+    const pid = addPort(host, e.slotName, flipped ? 'west' : 'east');
+    return {
+      id: e.id,
+      source: e.source,
+      target: e.target,
+      ...(flipped ? { targetPort: pid } : { sourcePort: pid }),
+    };
   });
 
-  // Spread boundary anchors that share a node side so edges don't stack.
-  const groups = new Map<string, EndPoint[]>();
-  for (const g of geos) {
-    for (const ep of [g.start, g.end]) {
-      if (ep.spreadKey) groups.set(ep.spreadKey, [...(groups.get(ep.spreadKey) ?? []), ep]);
-    }
-  }
-  for (const eps of groups.values()) {
-    if (eps.length < 2) continue;
-    eps.forEach((ep, i) => {
-      const offset = (i - (eps.length - 1) / 2) * 16;
-      if (ep.dir === 'up' || ep.dir === 'down') ep.pt.x += offset;
-      else ep.pt.y += offset;
-    });
-  }
-
-  return geos;
-}
-
-function edgeLabel(e: OwnershipSubgraphEdge): string {
-  if (e.type === 'ownership' && e.storageDirection === 'flipped') {
-    return `owns · via ${e.slotName}`;
-  }
-  return e.slotName;
+  return {
+    nodes: vm.nodes.map(n => ({
+      id: n.id,
+      width: NODE_W,
+      height: n.height,
+      partition: n.layer,
+      ports: portsByNode.get(n.id),
+    })),
+    edges,
+  };
 }
 
 export default function OwnershipGraphView({
@@ -214,16 +146,19 @@ export default function OwnershipGraphView({
     [dataService, selectedIds],
   );
   const vm = useMemo(() => buildViewModel(subgraph), [subgraph]);
-
-  const spec = useMemo((): GraphSpec => ({
-    nodes: vm.nodes.map(n => ({
-      id: n.id, width: NODE_W, height: n.height, partition: n.layer,
-    })),
-    edges: vm.edges.map(e => ({ id: e.id, source: e.source, target: e.target })),
-  }), [vm]);
+  const spec = useMemo(() => buildSpec(vm), [vm]);
 
   const { layout, inProgress } = useGraphLayout(spec, {
-    direction: 'DOWN', usePartitions: true, nodeSpacing: 40, layerSpacing: 64,
+    direction: 'RIGHT',
+    usePartitions: true,
+    nodeSpacing: 28,
+    layerSpacing: 72,
+    extraLayoutOptions: {
+      'elk.spacing.edgeNode': '18',
+      'elk.spacing.edgeEdge': '12',
+      'elk.layered.spacing.edgeNodeBetweenLayers': '18',
+      'elk.layered.spacing.edgeEdgeBetweenLayers': '10',
+    },
   });
 
   const zp = useZoomPan();
@@ -242,10 +177,7 @@ export default function OwnershipGraphView({
     () => new Map(vm.nodes.map(n => [n.id, n.role])),
     [vm],
   );
-  const edgeGeos = useMemo(
-    () => (layout ? computeEdgeGeometry(vm, placed, roles) : []),
-    [layout, vm, placed, roles],
-  );
+  const visibleIds = useMemo(() => new Set(vm.nodes.map(n => n.id)), [vm]);
 
   return (
     <div className="relative w-full h-full">
@@ -294,36 +226,27 @@ export default function OwnershipGraphView({
                       <path d="M0,0L10,3.5L0,7Z" fill="#9ca3af" />
                     </marker>
                   </defs>
-                  {edgeGeos.map(({ edge, start, end, dimmed }) => {
-                    const shift = (p: Point): Point => ({ x: p.x + PAD, y: p.y + PAD });
-                    const p0 = shift(start.pt);
-                    const p1 = shift(end.pt);
-                    const isOwn = edge.type === 'ownership';
-                    const mid = anchoredPathPoint(p0, start.dir, p1, end.dir, 0.5);
-                    return (
-                      <g key={edge.id} opacity={dimmed ? 0.4 : 1}>
+                  <g transform={`translate(${PAD}, ${PAD})`}>
+                    {layout.edges.map(e => {
+                      const d = pathFromSections(e.sections);
+                      if (!d) return null;
+                      const isOwn = subgraph.edges.find(se => se.id === e.id)?.type === 'ownership';
+                      const dimmed =
+                        roles.get(e.source) === 'context' || roles.get(e.target) === 'context';
+                      return (
                         <path
-                          d={anchoredPath(p0, start.dir, p1, end.dir)}
+                          key={e.id}
+                          d={d}
                           fill="none"
+                          opacity={dimmed ? 0.4 : 1}
                           stroke={isOwn ? '#d97706' : '#9ca3af'}
                           strokeWidth={isOwn ? 1.8 : 1.2}
                           strokeDasharray={isOwn ? undefined : '5 4'}
                           markerEnd={`url(#${markerId(isOwn ? 'arrow-own' : 'arrow-ref')})`}
                         />
-                        <text
-                          x={mid.x}
-                          y={mid.y - 4}
-                          textAnchor="middle"
-                          className={`text-[9px] ${isOwn
-                            ? 'fill-amber-800 dark:fill-amber-400'
-                            : 'fill-gray-500 dark:fill-gray-400'} stroke-white dark:stroke-slate-900`}
-                          style={{ paintOrder: 'stroke', strokeWidth: 3 }}
-                        >
-                          {edgeLabel(edge)}
-                        </text>
-                      </g>
-                    );
-                  })}
+                      );
+                    })}
+                  </g>
                 </svg>
 
                 {vm.nodes.map(n => {
@@ -352,12 +275,6 @@ export default function OwnershipGraphView({
                           {n.label}
                         </span>
                         <span className="ml-auto flex gap-1 shrink-0">
-                          {n.loops.map(slot => (
-                            <span key={slot} title={`self-referential: ${slot}`}
-                              className="text-[9px] px-1 rounded bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200">
-                              ⟲ {slot}
-                            </span>
-                          ))}
                           {n.isaParents.map(parent => (
                             <span key={parent} title={`is-a ${parent}`}
                               className="text-[9px] px-1 rounded bg-sky-100 dark:bg-sky-900 text-sky-800 dark:text-sky-200">
@@ -372,17 +289,27 @@ export default function OwnershipGraphView({
                           )}
                         </span>
                       </div>
-                      {n.rows.map(r => (
-                        <div
-                          key={r.slot}
-                          className="flex items-center gap-1.5 px-2 text-[11px] text-gray-700 dark:text-gray-300"
-                          style={{ height: ROW_H }}
-                        >
-                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${r.channel === 'ownership' ? 'bg-amber-500' : 'bg-gray-400'}`} />
-                          <span className="truncate">{r.slot}</span>
-                          <span className="ml-auto text-[9px] text-gray-400">{r.cardinality}</span>
-                        </div>
-                      ))}
+                      {n.slots.map(s => {
+                        const connected = s.isLoop || visibleIds.has(s.range);
+                        return (
+                          <div
+                            key={s.slot}
+                            data-row={s.slot}
+                            title={`${s.slot} → ${s.range} (${s.cardinality})${s.flipped ? ' — owner side' : ''}`}
+                            className={`flex items-center gap-1.5 px-2 text-[11px] ${connected
+                              ? 'text-gray-700 dark:text-gray-300'
+                              : 'opacity-45 text-gray-500 dark:text-gray-400'}`}
+                            style={{ height: ROW_H }}
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${s.channel === 'ownership' ? 'bg-amber-500' : 'bg-gray-400'}`} />
+                            <span className="truncate">{s.slot}</span>
+                            {s.isLoop && <span className="text-amber-600 dark:text-amber-400">⟲</span>}
+                            <span className="ml-auto text-[9px] text-gray-400 truncate max-w-[80px]">
+                              {s.range} {s.cardinality}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 })}

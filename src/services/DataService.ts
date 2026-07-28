@@ -43,7 +43,7 @@ export type { EdgeInfo, ItemInfo };
 export type { ContainmentGraph, ContainmentNode, ContainmentEdge } from '../models/containmentGraph';
 export type {
   OwnershipSubgraph, OwnershipSubgraphNode, OwnershipSubgraphEdge,
-  OwnershipNodeRole, OwnershipEdgeType,
+  OwnershipNodeRole, OwnershipEdgeType, OwnershipNodeSlot,
 } from '../models/ownershipSubgraph';
 
 /** A category of classes for the Focus selector (e.g. "Clinical"). */

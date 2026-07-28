@@ -12,6 +12,14 @@ export interface Point {
   y: number;
 }
 
+/** Fixed-position edge attach point on a node (ELK port). Coordinates are
+ *  relative to the node's top-left corner; ids must be globally unique. */
+export interface GraphSpecPort {
+  id: string;
+  x: number;
+  y: number;
+}
+
 export interface GraphSpecNode {
   id: string;
   width: number;
@@ -22,12 +30,18 @@ export interface GraphSpecNode {
    * i.e. above, in DOWN direction — nodes with a higher one.
    */
   partition?: number;
+  /** When present, the node gets FIXED_POS port constraints and edges may
+   *  reference these ports; edge routing accounts for the attach points. */
+  ports?: GraphSpecPort[];
 }
 
 export interface GraphSpecEdge {
   id: string;
   source: string;
   target: string;
+  /** Attach to a specific port (must belong to source/target node). */
+  sourcePort?: string;
+  targetPort?: string;
 }
 
 export interface GraphSpec {
@@ -73,4 +87,6 @@ export interface LayoutEngineOptions {
   layerSpacing?: number;
   /** Honor GraphSpecNode.partition as a hard layer assignment. */
   usePartitions?: boolean;
+  /** Extra raw ELK layoutOptions merged onto the root (tuning escape hatch). */
+  extraLayoutOptions?: Record<string, string>;
 }

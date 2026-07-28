@@ -4,7 +4,7 @@
  */
 
 export type {
-  Point, GraphSpec, GraphSpecNode, GraphSpecEdge,
+  Point, GraphSpec, GraphSpecNode, GraphSpecEdge, GraphSpecPort,
   PlacedNode, RoutedEdge, EdgeSection, LayoutResult, LayoutEngineOptions,
 } from './types';
 export { ElkLayoutEngine } from './elkLayout';

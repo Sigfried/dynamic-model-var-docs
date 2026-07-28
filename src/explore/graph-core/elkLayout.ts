@@ -28,6 +28,7 @@ export class ElkLayoutEngine {
       nodeSpacing = 32,
       layerSpacing = 56,
       usePartitions = false,
+      extraLayoutOptions = {},
     } = opts;
 
     const root: ElkNode = {
@@ -40,20 +41,36 @@ export class ElkLayoutEngine {
         'elk.edgeRouting': 'ORTHOGONAL',
         'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
         ...(usePartitions ? { 'elk.partitioning.activate': 'true' } : {}),
+        ...extraLayoutOptions,
       },
       children: spec.nodes.map(n => ({
         id: n.id,
         width: n.width,
         height: n.height,
-        ...(usePartitions && n.partition !== undefined
-          ? { layoutOptions: { 'elk.partitioning.partition': String(n.partition) } }
+        ...(n.ports?.length
+          ? { ports: n.ports.map(p => ({ id: p.id, x: p.x, y: p.y, width: 0, height: 0 })) }
+          : {}),
+        ...(usePartitions && n.partition !== undefined || n.ports?.length
+          ? {
+              layoutOptions: {
+                ...(usePartitions && n.partition !== undefined
+                  ? { 'elk.partitioning.partition': String(n.partition) }
+                  : {}),
+                ...(n.ports?.length ? { 'elk.portConstraints': 'FIXED_POS' } : {}),
+              },
+            }
           : {}),
       })),
       edges: spec.edges
         .filter(e => e.source !== e.target)
-        .map(e => ({ id: e.id, sources: [e.source], targets: [e.target] })),
+        .map(e => ({
+          id: e.id,
+          sources: [e.sourcePort ?? e.source],
+          targets: [e.targetPort ?? e.target],
+        })),
     };
 
+    const specEdgeById = new Map(spec.edges.map(e => [e.id, e]));
     const out = await this.ensure().layout(root);
 
     const nodes: PlacedNode[] = (out.children ?? []).map(n => ({
@@ -64,12 +81,18 @@ export class ElkLayoutEngine {
       height: n.height ?? 0,
     }));
 
-    const edges: RoutedEdge[] = (out.edges ?? []).map(e => ({
-      id: e.id,
-      source: e.sources[0],
-      target: e.targets[0],
-      sections: e.sections as EdgeSection[] | undefined,
-    }));
+    // Report spec-level node ids (ELK's sources/targets echo port ids when
+    // the edge attached to a port).
+    const edges: RoutedEdge[] = (out.edges ?? []).map(e => {
+      const specEdge = specEdgeById.get(e.id);
+      if (!specEdge) throw new Error(`ELK returned unknown edge id: ${e.id}`);
+      return {
+        id: e.id,
+        source: specEdge.source,
+        target: specEdge.target,
+        sections: e.sections as EdgeSection[] | undefined,
+      };
+    });
 
     const width = Math.max(0, ...nodes.map(n => n.x + n.width));
     const height = Math.max(0, ...nodes.map(n => n.y + n.height));

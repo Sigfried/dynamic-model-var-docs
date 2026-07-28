@@ -127,6 +127,26 @@ describe('getOwnershipSubgraph', () => {
     expect(() => ds.getOwnershipSubgraph(['Specimen'], ['NopeToo'])).toThrow(/NopeToo/);
   });
 
+  test('every drawn edge slot has an attribute row on its storage-side node', () => {
+    const g = ds.getOwnershipSubgraph(['Participant', 'Specimen', 'MeasurementObservation']);
+    const byId = new Map(g.nodes.map(n => [n.id, n]));
+    for (const e of g.edges.filter(e => e.type !== 'isa')) {
+      const host = e.storageDirection === 'flipped' ? e.target : e.source;
+      const slots = byId.get(host)!.slots;
+      expect(slots.map(s => s.slot), `${host} should store ${e.slotName}`)
+        .toContain(e.slotName);
+    }
+  });
+
+  test('node slot lists are selection-independent', () => {
+    const a = ds.getOwnershipSubgraph(['Participant']);
+    const b = ds.getOwnershipSubgraph(['Participant', 'Specimen', 'Visit']);
+    const pa = a.nodes.find(n => n.id === 'Participant')!;
+    const pb = b.nodes.find(n => n.id === 'Participant')!;
+    expect(pa.slots).toEqual(pb.slots);
+    expect(pa.slots.length).toBeGreaterThan(0);
+  });
+
   test('nodes are sorted by layer then id', () => {
     const g = ds.getOwnershipSubgraph(['MeasurementObservation', 'Specimen']);
     const sorted = [...g.nodes].sort((a, b) => a.layer - b.layer || a.id.localeCompare(b.id));
