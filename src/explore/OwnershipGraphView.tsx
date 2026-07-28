@@ -133,9 +133,11 @@ function LoopIcon({ title }: { title: string }) {
     <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="false"
       className="shrink-0 text-amber-600 dark:text-amber-400">
       <title>{title}</title>
-      <path d="M12.9 9.5 A5.2 5.2 0 1 1 12.9 6.5" fill="none"
-        stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path d="M15.6 8 L10.9 5.4 L10.9 10.6 Z" fill="currentColor" />
+      {/* 300° arc with a 60° gap on the right; arrowhead at the top end
+          pointing into the gap, so the loop reads as an arrow, not an O */}
+      <path d="M12.33 10.5 A5 5 0 1 1 12.33 5.5" fill="none"
+        stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M13.7 7.9 L10.6 6.7 L13.7 4.2 Z" fill="currentColor" />
     </svg>
   );
 }
