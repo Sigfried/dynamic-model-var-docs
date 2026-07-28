@@ -94,11 +94,13 @@ the style of the containment property tests.
 and installed (2026-07-28); the graphology fallback is dead. Implementation:
 `src/models/ownershipSubgraph.ts` builds the full ownership DAG once via
 `fromEdges` (self-loops skipped, parallel edges collapsed), uses
-`ancestors()` for paths-to-root and per-node `maxDepth` over the FULL DAG as
-the layer assignment — so a node keeps its layer as the selection changes.
-Edge policy: ownership edges emit whenever both endpoints are visible;
-reference/isa edges only between explicitly-requested (selected or expanded)
-nodes. Source repo: `~/github-repos/personal/supergroup` (README outdated;
+`ancestors()` for paths-to-root and **sunk layers** over the FULL DAG as the
+layer assignment (owners sink to one above their topmost owning child; leaf
+classes dangle below their deepest owner — see `computeSunkLayers`), so a
+node keeps its layer as the selection changes and roots aren't stranded far
+from their members. Edge policy: ownership edges emit whenever both
+endpoints are visible; reference/isa edges need both endpoints visible and
+at least one explicitly requested (selected or expanded). Source repo: `~/github-repos/personal/supergroup` (README outdated;
 trust `dist/*.d.ts` + `src/`).
 
 ### Ownership classification review (build step 1)
@@ -156,14 +158,20 @@ New dependency: `elkjs` only (skip NodeLinkView's d3-force mode in v1).
 2. ~~Shell entry + selection table (basic), selection in URL.~~ **DONE**
    2026-07-13 (`028e3a0`).
 3. Renderer port: **mostly DONE** 2026-07-28. `src/explore/graph-core/`
-   (ELK-worker layout + cancellation, partition-constrained layers, RAF
-   zoom/pan, anchored bezier paths — zero app imports; d3 and force mode
+   (ELK-worker layout + cancellation, partition-constrained layers,
+   fixed-position ports, RAF zoom/pan — zero app imports; d3 and force mode
    dropped in the port) + `src/explore/OwnershipGraphView.tsx` bindings:
-   HTML attribute-row nodes over an SVG edge layer, row-anchored edges,
-   amber/gray channels, re-verbed flipped labels, self-loop chips, context
-   dimming. Still open from this step: **expand-on-demand** (↘/↗ counts +
-   click-to-pull-in) and proper **is-a side-stacks** (currently header chips
-   ⊳/▷).
+   HTML attribute-row nodes over an SVG edge layer; edges attach to ELK
+   ports at their slot row (storage side) and at a header port on the peer,
+   rendered from ELK's routed orthogonal sections (curved rendering as a
+   toggle, plus LR/TB). No floating edge labels — the row an edge lands on
+   names the slot; flipped storage is marked by a back-pointing arrowhead
+   at the member end. Rows default to edge-connected slots with a "+N more"
+   footer expanding to all entity-ranged slots (dimmed = range off-canvas).
+   Still open from this step: **expand-on-demand** (click a dimmed row to
+   pull its range in) and proper **is-a side-stacks** (currently header
+   chips ⊳/▷); cardinality indicators at edge endpoints under
+   consideration.
 4. Detail drawer (Explorer card reuse + the two fixes).
 5. Polish: animation on selection change (surviving nodes keep layers),
    self-loop badges, dim/dismiss for context nodes.

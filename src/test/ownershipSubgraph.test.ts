@@ -27,20 +27,18 @@ describe('getOwnershipSubgraph', () => {
     for (const id of sel) expect(nodeById(g, id)).toBeDefined();
   });
 
-  test('ownership paths-to-root: context nodes chain up to a root', () => {
-    // Every context node must reach a layer-0 node by following ownership
-    // edges upward, and selected nodes must connect into that structure.
+  test('ownership paths-to-root: every context node touches ownership structure', () => {
+    // Context nodes exist only as (or on) ownership paths of selected nodes —
+    // each must be incident to at least one ownership edge.
     const g = ds.getOwnershipSubgraph(['MeasurementObservation']);
-    const ownersOf = new Map<string, string[]>();
+    const touched = new Set<string>();
     for (const e of g.edges.filter(e => e.type === 'ownership' && !e.isLoop)) {
-      ownersOf.set(e.target, [...(ownersOf.get(e.target) ?? []), e.source]);
+      touched.add(e.source);
+      touched.add(e.target);
     }
-    for (const n of g.nodes) {
-      if (n.layer === 0) continue;
-      expect(ownersOf.get(n.id)?.length, `${n.id} (layer ${n.layer}) has no in-edge`)
-        .toBeGreaterThan(0);
+    for (const n of g.nodes.filter(n => n.role === 'context')) {
+      expect(touched.has(n.id), `context node ${n.id} touches no ownership edge`).toBe(true);
     }
-    expect(g.nodes.some(n => n.layer === 0)).toBe(true);
   });
 
   test('poly-parent case: Participant has ≥2 ownership in-edges (Person + ResearchStudy)', () => {
@@ -64,6 +62,15 @@ describe('getOwnershipSubgraph', () => {
     }
   });
 
+  test('sunk layers: an owner sits directly above its topmost member', () => {
+    // Person owns only Participant, so sinking puts it exactly one layer up —
+    // not stranded at the root layer.
+    const g = ds.getOwnershipSubgraph(['Participant']);
+    const person = nodeById(g, 'Person')!;
+    const participant = nodeById(g, 'Participant')!;
+    expect(person.layer).toBe(participant.layer - 1);
+  });
+
   test('layers are stable across selections (maxDepth over the full DAG)', () => {
     const a = ds.getOwnershipSubgraph(['MeasurementObservation']);
     const b = ds.getOwnershipSubgraph(['MeasurementObservation', 'Specimen', 'Condition']);
@@ -73,14 +80,27 @@ describe('getOwnershipSubgraph', () => {
     }
   });
 
-  test('reference and isa edges only connect explicitly-requested nodes', () => {
+  test('reference/isa edges need at least one explicitly-requested endpoint', () => {
     const sel = ['Specimen', 'BodySite'];
     const expansions = ['Assay'];
     const g = ds.getOwnershipSubgraph(sel, expansions);
     const core = new Set([...sel, ...expansions]);
     for (const e of g.edges.filter(e => e.type !== 'ownership')) {
-      expect(core.has(e.source), `${e.type} ${e.source}->${e.target}`).toBe(true);
-      expect(core.has(e.target), `${e.type} ${e.source}->${e.target}`).toBe(true);
+      expect(
+        core.has(e.source) || core.has(e.target),
+        `${e.type} ${e.source}->${e.target} connects two pure-context nodes`,
+      ).toBe(true);
+    }
+  });
+
+  test('refs from a selected node to a visible context node are drawn', () => {
+    // Participant.originating_site → Organization; Organization enters the
+    // canvas as a context ancestor, and the ref should draw (the row shows
+    // undimmed, so a missing edge would contradict the display).
+    const g = ds.getOwnershipSubgraph(['Participant', 'MeasurementObservationSet']);
+    if (g.nodes.some(n => n.id === 'Organization')) {
+      expect(g.edges.some(e => e.slotName === 'originating_site' && e.target === 'Organization'))
+        .toBe(true);
     }
   });
 
