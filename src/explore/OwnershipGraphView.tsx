@@ -25,7 +25,7 @@
  * graph-core is pure layout code with zero app imports.
  */
 
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type {
   DataService, OwnershipSubgraph, OwnershipSubgraphEdge, OwnershipSubgraphNode,
   OwnershipNodeSlot,
@@ -175,6 +175,21 @@ function dirBetween(a: Point, b: Point): AnchorDir {
   return b.y >= a.y ? 'down' : 'up';
 }
 
+/** Pull the routed end back along its final segment (so back-pointing
+ *  arrowheads don't abut the node border). */
+function trimSectionsEnd(sections: EdgeSection[] | undefined, dist: number): EdgeSection[] | undefined {
+  if (!sections?.length) return sections;
+  const s = sections[0];
+  const prev = s.bendPoints?.length ? s.bendPoints[s.bendPoints.length - 1] : s.startPoint;
+  const dx = s.endPoint.x - prev.x;
+  const dy = s.endPoint.y - prev.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 1) return sections;
+  const k = Math.min(dist, len * 0.8) / len;
+  const endPoint = { x: s.endPoint.x - dx * k, y: s.endPoint.y - dy * k };
+  return [{ ...s, endPoint }, ...sections.slice(1)];
+}
+
 /** Curved rendering of an ELK-routed edge: cubic between the routed
  *  endpoints, leaving/arriving along the routed segment directions. */
 function curvedFromSections(sections: EdgeSection[] | undefined): string {
@@ -251,6 +266,76 @@ export default function OwnershipGraphView({
     [vm],
   );
 
+  // --- Hover emphasis (icd11 pattern: RAF-throttled direct DOM styling,
+  // no React state, so rapid mouse movement can't cause render storms) ---
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const hoverRafRef = useRef<number | null>(null);
+  const pendingHoverRef = useRef<{ kind: 'node' | 'edge'; id: string } | null | undefined>(undefined);
+  const adjacency = useMemo(() => {
+    const nodeEdges = new Map<string, string[]>();
+    const edgeEnds = new Map<string, [string, string]>();
+    for (const e of vm.edges) {
+      edgeEnds.set(e.id, [e.source, e.target]);
+      for (const nid of [e.source, e.target]) {
+        nodeEdges.set(nid, [...(nodeEdges.get(nid) ?? []), e.id]);
+      }
+    }
+    return { nodeEdges, edgeEnds };
+  }, [vm]);
+  const adjacencyRef = useRef(adjacency);
+  adjacencyRef.current = adjacency;
+
+  const applyHover = useCallback((target: { kind: 'node' | 'edge'; id: string } | null) => {
+    pendingHoverRef.current = target;
+    if (hoverRafRef.current !== null) return;
+    hoverRafRef.current = requestAnimationFrame(() => {
+      hoverRafRef.current = null;
+      const t = pendingHoverRef.current;
+      pendingHoverRef.current = undefined;
+      const svg = svgRef.current;
+      const wrapper = zp.wrapperRef.current;
+      if (t === undefined || !svg || !wrapper) return;
+
+      let edgeSet: Set<string> | null = null;
+      let nodeSet: Set<string> | null = null;
+      if (t) {
+        const { nodeEdges, edgeEnds } = adjacencyRef.current;
+        if (t.kind === 'node') {
+          edgeSet = new Set(nodeEdges.get(t.id) ?? []);
+          nodeSet = new Set([t.id]);
+          for (const eid of edgeSet) {
+            for (const nid of edgeEnds.get(eid) ?? []) nodeSet.add(nid);
+          }
+        } else {
+          edgeSet = new Set([t.id]);
+          nodeSet = new Set(edgeEnds.get(t.id) ?? []);
+        }
+      }
+
+      svg.querySelectorAll<SVGPathElement>('path[data-edge-id]').forEach(p => {
+        const id = p.dataset.edgeId ?? '';
+        if (!edgeSet) {
+          p.style.opacity = '';
+          p.style.strokeWidth = '';
+        } else if (edgeSet.has(id)) {
+          p.style.opacity = '1';
+          p.style.strokeWidth = '2.6';
+        } else {
+          p.style.opacity = '0.08';
+          p.style.strokeWidth = '';
+        }
+      });
+      wrapper.querySelectorAll<HTMLElement>('[data-node-id]').forEach(el => {
+        const id = el.dataset.nodeId ?? '';
+        el.style.opacity = !nodeSet ? '' : nodeSet.has(id) ? '1' : '0.25';
+      });
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- zp.wrapperRef is a stable ref
+  }, []);
+
+  // Clear stale inline hover styles when the graph changes under the cursor.
+  useEffect(() => applyHover(null), [vm, layout, applyHover]);
+
   const toggleExpanded = (id: string) =>
     setExpandedNodes(prev => {
       const next = new Set(prev);
@@ -313,6 +398,7 @@ export default function OwnershipGraphView({
             {layout && (
               <>
                 <svg
+                  ref={svgRef}
                   className="absolute top-0 left-0 pointer-events-none"
                   width={contentW}
                   height={contentH}
@@ -335,28 +421,43 @@ export default function OwnershipGraphView({
                   </defs>
                   <g transform={`translate(${PAD}, ${PAD})`}>
                     {layout.edges.map(e => {
-                      const d = edgeStyle === 'curved'
-                        ? curvedFromSections(e.sections)
-                        : pathFromSections(e.sections);
-                      if (!d) return null;
                       const spec = edgeById.get(e.id);
                       if (!spec) throw new Error(`Routed edge ${e.id} missing from view model`);
-                      const isOwn = spec.type === 'ownership';
                       const flipped = spec.storageDirection === 'flipped';
+                      // back-pointing arrowheads get breathing room off the border
+                      const sections = flipped ? trimSectionsEnd(e.sections, 5) : e.sections;
+                      const d = edgeStyle === 'curved'
+                        ? curvedFromSections(sections)
+                        : pathFromSections(sections);
+                      if (!d) return null;
+                      const isOwn = spec.type === 'ownership';
                       const dimmed =
                         roles.get(e.source) === 'context' || roles.get(e.target) === 'context';
                       const marker = isOwn ? (flipped ? 'arrow-own-back' : 'arrow-own') : 'arrow-ref';
                       return (
-                        <path
-                          key={e.id}
-                          d={d}
-                          fill="none"
-                          opacity={dimmed ? 0.4 : 1}
-                          stroke={isOwn ? '#d97706' : '#9ca3af'}
-                          strokeWidth={isOwn ? 1.8 : 1.2}
-                          strokeDasharray={isOwn ? undefined : '5 4'}
-                          markerEnd={`url(#${markerId(marker)})`}
-                        />
+                        <g key={e.id}>
+                          <path
+                            data-edge-id={e.id}
+                            d={d}
+                            fill="none"
+                            opacity={dimmed ? 0.4 : 1}
+                            stroke={isOwn ? '#d97706' : '#9ca3af'}
+                            strokeWidth={isOwn ? 1.8 : 1.2}
+                            strokeDasharray={isOwn ? undefined : '5 4'}
+                            markerEnd={`url(#${markerId(marker)})`}
+                            style={{ transition: 'opacity 120ms, stroke-width 120ms' }}
+                          />
+                          {/* invisible fat hit area for edge hover */}
+                          <path
+                            d={d}
+                            fill="none"
+                            stroke="transparent"
+                            strokeWidth={11}
+                            style={{ pointerEvents: 'stroke' }}
+                            onMouseEnter={() => applyHover({ kind: 'edge', id: e.id })}
+                            onMouseLeave={() => applyHover(null)}
+                          />
+                        </g>
                       );
                     })}
                   </g>
@@ -371,7 +472,9 @@ export default function OwnershipGraphView({
                       key={n.id}
                       data-node-id={n.id}
                       onClick={() => onNodeClick?.(n.id)}
-                      className={`absolute rounded-md text-xs bg-white dark:bg-slate-800 transition-transform duration-300 cursor-pointer ${context
+                      onMouseEnter={() => applyHover({ kind: 'node', id: n.id })}
+                      onMouseLeave={() => applyHover(null)}
+                      className={`absolute rounded-md text-xs bg-white dark:bg-slate-800 [transition:transform_300ms,opacity_120ms] cursor-pointer ${context
                         ? 'opacity-60 border border-dashed border-gray-400 dark:border-slate-500'
                         : 'border-2 border-slate-500 dark:border-slate-400 shadow-md'}`}
                       style={{
@@ -415,8 +518,8 @@ export default function OwnershipGraphView({
                           <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${r.channel === 'ownership' ? 'bg-amber-500' : 'bg-gray-400'}`} />
                           <span className="truncate">{r.slot}</span>
                           {r.isLoop && (
-                            <span className="text-[15px] leading-none font-bold text-amber-600 dark:text-amber-400"
-                              title={`self-referential: ${r.slot}`}>⟲</span>
+                            <span className="text-[17px] leading-none font-bold text-amber-600 dark:text-amber-400"
+                              title={`self-referential: a ${r.range} can own another ${r.range} via ${r.slot}`}>⟲</span>
                           )}
                           <span className="ml-auto text-[9px] text-gray-400 truncate max-w-[90px]">
                             {r.range} {r.cardinality}
@@ -427,6 +530,7 @@ export default function OwnershipGraphView({
                         <button
                           className="w-full text-left px-2 text-[10px] text-sky-600 dark:text-sky-400 hover:underline"
                           style={{ height: FOOTER_H }}
+                          title={`${attributesWord} with no edge drawn on the current canvas`}
                           onClick={ev => {
                             ev.stopPropagation();
                             toggleExpanded(n.id);

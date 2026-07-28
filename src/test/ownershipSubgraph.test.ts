@@ -2,6 +2,7 @@ import { describe, test, expect, beforeAll } from 'vitest';
 import { loadModelData } from '../utils/dataLoader';
 import { DataService } from '../services/DataService';
 import type { OwnershipSubgraph } from '../services/DataService';
+import { buildOwnershipDag } from '../models/ownershipSubgraph';
 
 /**
  * getOwnershipSubgraph() drives the Explore viz (docs/EXPLORE_VIZ.md). Like
@@ -165,6 +166,16 @@ describe('getOwnershipSubgraph', () => {
     const pb = b.nodes.find(n => n.id === 'Participant')!;
     expect(pa.slots).toEqual(pb.slots);
     expect(pa.slots.length).toBeGreaterThan(0);
+  });
+
+  test('ownership cycles are self-loops only (no multi-node cycles)', () => {
+    // buildOwnershipDag excludes self-loops before construction, so any
+    // backedge supergroup reports would be a real A→…→A ownership cycle.
+    // The renderer assumes there are none (layer(owner) < layer(member)
+    // globally); if the schema ever grows one, this fails and the viz
+    // needs a cycle treatment.
+    const dag = buildOwnershipDag(ds.getContainmentGraph());
+    expect(dag.backedges.map(b => `${b.parent.id}->${b.child.id}`)).toEqual([]);
   });
 
   test('nodes are sorted by layer then id', () => {
