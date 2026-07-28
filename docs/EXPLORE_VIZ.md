@@ -90,14 +90,16 @@ getOwnershipSubgraph(selectedIds, expansions) -> {
 Built on the existing containment graph + graphology edges. Unit-tested in
 the style of the containment property tests.
 
-**Intended backbone: `supergroup/dag` v2** (`../supergroup`, spec:
-`../supergroup/docs/specs/2026-07-13-supergroup-v2-design.md`) — `fromEdges`
-over the ownership edges, `subgraph()` for selection scoping, `ancestors()`
-for paths-to-root, per-node `maxDepth` as the layer assignment, cycle
-discipline matching ours (self-loops → backedges). Gated on its packaging
-milestone (unpublished; git install currently yields v1). Until it's
-pinnable, implement against graphology behind the same DataService seam and
-swap the internals later.
+**Backbone: `supergroup/dag` v2** — published as `supergroup@2.0.0` on npm
+and installed (2026-07-28); the graphology fallback is dead. Implementation:
+`src/models/ownershipSubgraph.ts` builds the full ownership DAG once via
+`fromEdges` (self-loops skipped, parallel edges collapsed), uses
+`ancestors()` for paths-to-root and per-node `maxDepth` over the FULL DAG as
+the layer assignment — so a node keeps its layer as the selection changes.
+Edge policy: ownership edges emit whenever both endpoints are visible;
+reference/isa edges only between explicitly-requested (selected or expanded)
+nodes. Source repo: `~/github-repos/personal/supergroup` (README outdated;
+trust `dist/*.d.ts` + `src/`).
 
 ### Ownership classification review (build step 1)
 
@@ -147,12 +149,21 @@ New dependency: `elkjs` only (skip NodeLinkView's d3-force mode in v1).
 
 ## Build order
 
-1. `getOwnershipSubgraph` + **ownership classification review** (gate:
-   Siggie adjudicates the slot list) + unit tests.
-2. Shell entry + selection table (basic), selection in URL.
-3. Renderer port: `graph-core/` extraction from NodeLinkView, then bindings —
-   layered ownership DAG with row-anchored edges, expand-on-demand, is-a
-   stacks, re-verbed labels.
+1. ~~`getOwnershipSubgraph` + **ownership classification review** (gate:
+   Siggie adjudicates the slot list) + unit tests.~~ **DONE** — classification
+   2026-07-13 (`16da5f1`); `getOwnershipSubgraph` on supergroup/dag
+   2026-07-28 (`src/models/ownershipSubgraph.ts` + property tests).
+2. ~~Shell entry + selection table (basic), selection in URL.~~ **DONE**
+   2026-07-13 (`028e3a0`).
+3. Renderer port: **mostly DONE** 2026-07-28. `src/explore/graph-core/`
+   (ELK-worker layout + cancellation, partition-constrained layers, RAF
+   zoom/pan, anchored bezier paths — zero app imports; d3 and force mode
+   dropped in the port) + `src/explore/OwnershipGraphView.tsx` bindings:
+   HTML attribute-row nodes over an SVG edge layer, row-anchored edges,
+   amber/gray channels, re-verbed flipped labels, self-loop chips, context
+   dimming. Still open from this step: **expand-on-demand** (↘/↗ counts +
+   click-to-pull-in) and proper **is-a side-stacks** (currently header chips
+   ⊳/▷).
 4. Detail drawer (Explorer card reuse + the two fixes).
 5. Polish: animation on selection change (surviving nodes keep layers),
    self-loop badges, dim/dismiss for context nodes.

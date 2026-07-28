@@ -16,6 +16,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useModelData } from '../hooks/useModelData';
 import { DataService } from '../services/DataService';
 import SelectionTable from './SelectionTable';
+import OwnershipGraphView from './OwnershipGraphView';
 
 const SEL_PARAM = 'sel';
 
@@ -87,14 +88,17 @@ export default function ExploreApp() {
           />
         </div>
 
-        {/* Viz canvas — placeholder until the graph-core renderer lands */}
-        <div className="flex-1 min-w-0 flex items-center justify-center text-sm text-gray-400 p-8">
+        {/* Viz canvas — layered ownership DAG */}
+        <div className="flex-1 min-w-0">
           {selectedIds.size === 0 ? (
-            <span>Select entities on the left to build the ownership subgraph.</span>
+            <div className="h-full flex items-center justify-center text-sm text-gray-400 p-8">
+              Select entities on the left to build the ownership subgraph.
+            </div>
           ) : (
-            <span>
-              Viz canvas placeholder — selected: {[...selectedIds].sort().join(', ')}
-            </span>
+            <OwnershipGraphView
+              dataService={dataService}
+              selectedIds={selectedIds}
+            />
           )}
         </div>
       </div>
