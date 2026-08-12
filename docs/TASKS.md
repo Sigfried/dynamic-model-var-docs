@@ -13,45 +13,72 @@ receiving, and implementing stakeholder feedback.
 
 ---
 
-## 🔁 HANDOFF — start here next session (updated 2026-08-12)
+## 🔁 HANDOFF — start here next session (updated 2026-08-12, late)
 
-State as of the 2026-07-28 work burst: the Explore SPA's layered ownership
-DAG is live and iterated (see [EXPLORE_VIZ.md](EXPLORE_VIZ.md) build-order
-status; commits `b3c3297`…`c863b94`).
+The schema-sync work is **fully closed**: fix pushed, PR #2 merged
+(`be3d5fd` / `778afca`), deployed. Typecheck and the full suite are green
+against the new upstream schema.
 
-Items 1–3 of the 2026-08-12 handoff **shipped** (entry swap, cross-links,
-view renames — new SPA is `index.html`/"Explorer", old app is
-`previous.html` with its "Explorer" view renamed "Nested Tabular";
-`explore.html` kept as a redirect stub in `public/`). The schema-sync
-Action fix also shipped (see below). **Next:** deploy (`npm run deploy`),
-then resume the EXPLORE_VIZ remaining items: expand-on-demand (click a
-dimmed row / context node; `expansions` param already in the DataService
-API), is-a side-stacks, detail drawer, endpoint cardinality markers.
+The Explore SPA's three-region layout (EXPLORE_VIZ.md#layout) is now
+**complete**: selection table (collapsible) + ownership DAG canvas + detail
+drawer. Build steps 1, 2, 4 done; step 3 mostly done.
 
-### 🐛 Known broken
+**Next — EXPLORE_VIZ.md build order, what's left:**
+1. **Expand-on-demand** (step 3 remainder) — click a dimmed row / context
+   node to pull its range in. `expansions` is already a parameter of
+   `getOwnershipSubgraph`, so this is renderer + state wiring, not data work.
+2. **is-a side-stacks** (step 3 remainder) — currently header chips ⊳/▷;
+   spec wants an expandable subclass stack on the parent node.
+3. **Endpoint cardinality markers** — listed as "under consideration," not
+   a settled requirement. Decide before building.
+4. Step 5 polish: animation on selection change, self-loop badges,
+   dim/dismiss for context nodes.
 
-- ~~**The Schema sync GitHub Action has been failing.**~~ **Fixed
-  2026-08-12** (needs push + a green run to confirm): Google's
-  spreadsheet `/export` endpoint began rejecting requests with a `gid`
-  param (HTTP 400), killing `download_source_data.py --update` before the
-  PR step. Fix: omit `gid` when it's `0` (the default first sheet).
-  Related, caught in the same pass: the upstream variables sheet gained
-  columns (`var_name`, `status`, `Ontology CURIE`, `OMOP Concept ID`,
-  `Deprecated Codes`) and the OMOP ids moved from "CURIE" to "OMOP Concept
-  ID"; `loadVariableSpecs` parsed by position and would have silently
-  misassigned fields, so it now resolves columns by header name (accepts
-  old and new headers) and skips rows flagged `status=ignore` (six
-  duplicate placeholder rows upstream). Upstream schema is also behind
-  (`d742e38` → `ec0130e`) — the sync PR (#2) carries it; the new sheet
-  columns are loaded but not yet surfaced in the UI (candidates for the
-  unused-fields workflow below).
-- Upstream `ec0130e` had deleted `BaseObservationTypeEnum` while leaving
-  range references to it (crashes the app's graph builder); fixed
-  upstream in RTIInternational/NHLBI-BDC-DMC-HM#240 (`range: BaseEnum`,
-  merged 2026-08-12, head `c394434`) — re-run the sync action so PR #2
-  picks it up. `transform_schema.py` now fails loudly on any dangling
-  range, so a future dangler turns the sync run red with a readable
-  message instead of breaking the deployed app.
+### ⚖️ Needs Siggie's decision
+
+- **`Context.activity` ownership classification.** The 2026-08-12 sync added
+  classes `Context` and `Activity`. The FK-inversion heuristic classifies
+  `Context.activity` (single-valued, entity range) as `own-flip`, i.e.
+  "**Activity owns Context**" — which reads backwards against the schema's
+  own descriptions (Context = "the context within which an observation was
+  made", holding `activity`; Activity = "an activity that provides context to
+  an observation"). Adding `Activity` to `VALUE_OBJECTS` in
+  `src/models/containmentGraph.ts` would make it `own-fwd` ("Context owns
+  Activity"). **Left unchanged** — classification is an adjudication call, not
+  a drawing one. The other new entity-ranged slots classify correctly:
+  `Visit.year_range`→TimePeriod, `Condition/Procedure.affected_body_site`→
+  BodySite, `Activity.time_duration`→Quantity, `Observation.context`→Context
+  (own-fwd via multivalued).
+- **Category placement of `Context` / `Activity`** — parked in
+  `observation` beside `Quantity`; trivial to move.
+
+### 🐛 Fixed this session
+
+- **`Context` and `Activity` were invisible in the entity list.**
+  `ENTITY_CATEGORIES` is a hand-curated allowlist and both the Entity Explorer
+  and Focus selector map categories → classes, never the reverse, so any class
+  nobody lists renders nowhere, silently. Both new classes are now categorized;
+  `Entity` is recorded in `UNCATEGORIZED_BY_DESIGN` with its reason so
+  deliberate omissions are distinguishable from forgotten ones. Guarded going
+  forward by `entityCategories.test.ts` (fails CI, verified it fails when the
+  classes are removed again) plus a dev-console warning from the DataService
+  constructor. **This is the same rot pattern flagged for the ownership
+  overrides** — worth expecting after every upstream sync.
+- ~~Schema sync Action failing~~ / ~~dangling `BaseObservationTypeEnum`~~ —
+  both resolved and merged; see archive. `transform_schema.py` now fails loudly
+  on any dangling range.
+
+### 📌 Also worth knowing
+
+- The upstream variables sheet gained columns (`var_name`, `status`,
+  `Ontology CURIE`, `OMOP Concept ID`, `Deprecated Codes`); they are loaded
+  but **not yet surfaced in the UI** — candidates for the unused-fields
+  workflow below.
+- Playwright is not installed, so the spec's probe-rig verification (screenshot
+  review, layer-ordering assertions) has not been run against the drawer; it
+  is covered by jsdom tests instead.
+- `npm run lint` reports 22 pre-existing problems (test files,
+  `popoutWindow.ts`), untouched and unrelated to recent work.
 
 ---
 

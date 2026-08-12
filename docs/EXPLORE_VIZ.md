@@ -178,7 +178,17 @@ New dependency: `elkjs` only (skip NodeLinkView's d3-force mode in v1).
    row to pull its range in) and proper **is-a side-stacks** (currently
    header chips ⊳/▷); cardinality indicators at edge endpoints under
    consideration.
-4. Detail drawer (Explorer card reuse + the two fixes).
+4. ~~Detail drawer (Explorer card reuse + the two fixes).~~ **DONE**
+   2026-08-12. `src/explore/DetailDrawer.tsx` opens on node click, reusing
+   `getClassSummary` (the Explorer card's data path) rather than
+   `ClassDetailCard` itself — that card is sized to sit inline between table
+   rows, hence its 8-slot cap and `max-w-[250px] truncate` descriptions. Both
+   spec'd fixes are in: "Referenced by" entries are links, descriptions render
+   wrapped and complete. Adds link navigation with a back stack (referenced-by,
+   `is_a` parent, entity-valued ranges), Esc to close, and an
+   add/remove-from-diagram toggle. Open entity encodes as `?detail=X` beside
+   `?sel=`, through a single URL writer. The left selection table is now
+   collapsible, completing the three-region layout.
 5. Polish: animation on selection change (surviving nodes keep layers),
    self-loop badges, dim/dismiss for context nodes.
 
