@@ -74,13 +74,17 @@ async function loadVariableSpecs(): Promise<VariableSpecInput[]> {
     curie: col('OMOP Concept ID', 'CURIE'),  // renamed upstream 2026-08
     variableDescription: col('Variable Description'),
   };
+  // Optional column: rows flagged status=ignore are placeholders the sheet
+  // keeps but consumers must skip (e.g. the six duplicate "Spirometry
+  // metadata" rows added 2026-08 — duplicate labels break variable node ids).
+  const statusIdx = headers.indexOf('status');
 
-  return lines.slice(1).map(line => {
-    const values = line.split('\t');
-    return Object.fromEntries(
+  return lines.slice(1)
+    .map(line => line.split('\t'))
+    .filter(values => statusIdx < 0 || values[statusIdx]?.trim() !== 'ignore')
+    .map(values => Object.fromEntries(
       Object.entries(cols).map(([field, i]) => [field, values[i] || ''])
-    ) as unknown as VariableSpecInput;
-  });
+    ) as unknown as VariableSpecInput);
 }
 
 /**
