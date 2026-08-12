@@ -13,35 +13,37 @@ receiving, and implementing stakeholder feedback.
 
 ---
 
-## 🔁 HANDOFF — start here next session (written 2026-08-12)
+## 🔁 HANDOFF — start here next session (updated 2026-08-12)
 
 State as of the 2026-07-28 work burst: the Explore SPA's layered ownership
 DAG is live and iterated (see [EXPLORE_VIZ.md](EXPLORE_VIZ.md) build-order
-status; commits `b3c3297`…`c863b94`). Siggie's ordered instructions for the
-next session, BEFORE resuming the EXPLORE_VIZ backlog:
+status; commits `b3c3297`…`c863b94`).
 
-1. **Promote the new SPA to the default.**
-   https://sigfried.github.io/dynamic-model-var-docs/ should load the new
-   (Explore) app. The old app moves to a secondary entry (currently the new
-   one is `explore.html`; swap roles — old app gets its own entry, new app
-   becomes `index.html`).
-2. **Cross-link the two apps.** The new default keeps a link to the old
-   app labeled **"previous views"** (NOT "classic" — rename the current
-   header link), and the old app gets a link back to the default.
-3. **Rename the views.** The OLD app's "Explorer" view is renamed
-   **"Nested Tabular"**; the NEW app takes the name **"Explorer"**
-   (update headers/titles/toggles accordingly).
-4. **Then** resume the EXPLORE_VIZ remaining items: expand-on-demand
-   (click a dimmed row / context node; `expansions` param already in the
-   DataService API), is-a side-stacks, detail drawer, endpoint cardinality
-   markers.
+Items 1–3 of the 2026-08-12 handoff **shipped** (entry swap, cross-links,
+view renames — new SPA is `index.html`/"Explorer", old app is
+`previous.html` with its "Explorer" view renamed "Nested Tabular";
+`explore.html` kept as a redirect stub in `public/`). The schema-sync
+Action fix also shipped (see below). **Next:** deploy (`npm run deploy`),
+then resume the EXPLORE_VIZ remaining items: expand-on-demand (click a
+dimmed row / context node; `expansions` param already in the DataService
+API), is-a side-stacks, detail drawer, endpoint cardinality markers.
 
 ### 🐛 Known broken
 
-- **The Schema sync GitHub Action has been failing.** (The action that
-  pulls upstream `bdchm.yaml` via `download_source_data.py` and rebuilds
-  the processed JSON.) Investigate the run logs and fix; until then the
-  deployed schema may be stale relative to upstream.
+- ~~**The Schema sync GitHub Action has been failing.**~~ **Fixed
+  2026-08-12** (needs push + a green run to confirm): Google's
+  spreadsheet `/export` endpoint began rejecting requests with a `gid`
+  param (HTTP 400), killing `download_source_data.py --update` before the
+  PR step. Fix: omit `gid` when it's `0` (the default first sheet).
+  Related, caught in the same pass: the upstream variables sheet gained
+  columns (`var_name`, `status`, `Ontology CURIE`, `OMOP Concept ID`,
+  `Deprecated Codes`) and the OMOP ids moved from "CURIE" to "OMOP Concept
+  ID"; `loadVariableSpecs` parsed by position and would have silently
+  misassigned fields, so it now resolves columns by header name (accepts
+  old and new headers). Upstream schema is also behind (`d742e38` →
+  `ec0130e`) — expect a real sync PR on the next green run; the new sheet
+  columns are loaded but not yet surfaced in the UI (candidates for the
+  unused-fields workflow below).
 
 ---
 

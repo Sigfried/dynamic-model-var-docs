@@ -52,17 +52,34 @@ async function loadVariableSpecs(): Promise<VariableSpecInput[]> {
 
   const text = await response.text();
   const lines = text.trim().split('\n');
-  // Skip header row
+
+  // Resolve columns by header name, not position — the upstream sheet gains
+  // and renames columns over time (2026-08: added var_name, status, Ontology
+  // CURIE, OMOP Concept ID, Deprecated Codes; the OMOP ids moved from "CURIE"
+  // to "OMOP Concept ID"). Positional parsing silently misassigns fields.
+  // Not-yet-used new columns: var_name, status, Ontology CURIE, Deprecated Codes.
+  const headers = lines[0].split('\t').map(h => h.trim());
+  const col = (...names: string[]): number => {
+    const idx = names.map(n => headers.indexOf(n)).find(i => i >= 0);
+    if (idx === undefined) {
+      throw new Error(`variable-specs TSV missing expected column ${names.join(' / ')} (headers: ${headers.join(', ')})`);
+    }
+    return idx;
+  };
+  const cols = {
+    maps_to: col('BDCHM Element'),
+    variableLabel: col('Variable Label'),
+    dataType: col('Data Type'),
+    ucumUnit: col('UCUM Unit'),
+    curie: col('OMOP Concept ID', 'CURIE'),  // renamed upstream 2026-08
+    variableDescription: col('Variable Description'),
+  };
+
   return lines.slice(1).map(line => {
     const values = line.split('\t');
-    return {
-      maps_to: values[0] || '',
-      variableLabel: values[1] || '',
-      dataType: values[2] || '',
-      ucumUnit: values[3] || '',
-      curie: values[4] || '',
-      variableDescription: values[5] || ''
-    };
+    return Object.fromEntries(
+      Object.entries(cols).map(([field, i]) => [field, values[i] || ''])
+    ) as unknown as VariableSpecInput;
   });
 }
 

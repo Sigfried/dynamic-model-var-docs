@@ -372,8 +372,15 @@ Examples:
                     if "gid=" in sheet_url:
                         gid = sheet_url.split("gid=")[1].split("#")[0].split("&")[0]
 
-                    # Construct export URL for TSV format
-                    export_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=tsv&gid={gid}"
+                    # Construct export URL for TSV format.
+                    # Google's export endpoint started rejecting requests that
+                    # include a gid param (HTTP 400, observed 2026-08); without
+                    # it, it exports the first visible sheet — equivalent for
+                    # gid=0. Keep gid for non-default tabs and hope Google
+                    # fixes the endpoint (no known workaround as of 2026-08).
+                    export_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=tsv"
+                    if gid != "0":
+                        export_url += f"&gid={gid}"
                     output_path = source_dir / dep_name / file_name
 
                     # TSV files should use Unix line endings
