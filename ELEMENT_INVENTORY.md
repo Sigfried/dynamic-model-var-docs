@@ -1,1 +1,0 @@
-docs/ELEMENT_INVENTORY.md

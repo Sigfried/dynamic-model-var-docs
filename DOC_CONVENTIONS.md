@@ -1,1 +1,0 @@
-docs/DOC_CONVENTIONS.md
