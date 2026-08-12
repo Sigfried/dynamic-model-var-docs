@@ -53,10 +53,12 @@ Terminology: we say **ownership** (has-a), not "containment," from here on.
 
 ## Architecture
 
-- **New Vite entry point in this repo** (`explore.html`, shell under
-  `src/explore/`). The existing app is untouched except a header link each
-  way. All existing architectural rules apply (components ↔ DataService only;
-  fail loudly; vocab via `VOCAB` config — no hardcoded terms).
+- **Vite entry point in this repo** — now the default (`index.html`, shell
+  under `src/explore/`; promoted from `explore.html` 2026-08-12, which is
+  kept as a redirect stub in `public/`). The previous app lives at
+  `previous.html`, untouched except a header link each way. All existing
+  architectural rules apply (components ↔ DataService only; fail loudly;
+  vocab via `VOCAB` config — no hardcoded terms).
 - Old views stay in place for stakeholder comparison; deletion is a separate
   later decision.
 

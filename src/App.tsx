@@ -60,7 +60,9 @@ function App() {
     return urlState.dialogs ?? [];
   }, []);
 
-  // View mode toggle: 'explorer' (default), 'kitchen-sink' (old layout), 'focus'
+  // View mode toggle: 'explorer' (default; labeled "Nested Tabular" — the
+  // "Explorer" name now belongs to the default app at index.html),
+  // 'kitchen-sink' (old layout), 'focus'
   const [viewMode, setViewMode] = useState<'explorer' | 'kitchen-sink' | 'focus'>(() => {
     const params = new URLSearchParams(window.location.search);
     const view = params.get('view');
@@ -169,13 +171,20 @@ function App() {
             >
               BDCHM Interactive Documentation
             </h1>
-            <p className="text-sm text-blue-100">BioData Catalyst Harmonized Model Explorer</p>
+            <p className="text-sm text-blue-100">BioData Catalyst Harmonized Model — previous views</p>
           </div>
           <div className="flex items-center gap-4 text-sm">
+            <a
+              href={import.meta.env.BASE_URL}
+              className="underline text-blue-100 hover:text-white"
+              title="Back to the Explorer (default app)"
+            >
+              ← Explorer
+            </a>
             {/* View mode toggle */}
             <div className="flex items-center rounded overflow-hidden border border-blue-400">
               {([
-                ['explorer', 'Explorer'],
+                ['explorer', 'Nested Tabular'],
                 ['kitchen-sink', 'Kitchen Sink'],
                 ['focus', 'Focus'],
               ] as const).map(([mode, label]) => (

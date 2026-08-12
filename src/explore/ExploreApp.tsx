@@ -1,12 +1,13 @@
 /**
- * ExploreApp — shell for the subgraph-viz SPA experiment (docs/EXPLORE_VIZ.md).
+ * ExploreApp — shell for the Explorer SPA (docs/EXPLORE_VIZ.md), the default
+ * app (index.html entry). The previous app lives at previous.html.
  *
- * A separate Vite entry (explore.html) sharing src/ with the main app. Three
- * regions: selection table (left), viz canvas (main), detail drawer (right).
- * Selection is owned here and encoded in the URL (?sel=A~B~C) from day one.
+ * Three regions: selection table (left), viz canvas (main), detail drawer
+ * (right). Selection is owned here and encoded in the URL (?sel=A~B~C) from
+ * day one.
  *
- * Architecture: same rules as the main app — this file and everything under
- * src/explore/ talks to services/DataService only, never models/ or DTOs.
+ * Architecture: same rules as the previous app — this file and everything
+ * under src/explore/ talks to services/DataService only, never models/ or DTOs.
  * The graph-core/ engine (ported from icd11-playground's NodeLinkView) is the
  * one exception by design: it is pure layout/interaction code with zero app
  * imports (the future package-extraction boundary).
@@ -65,16 +66,16 @@ export default function ExploreApp() {
     <div className="flex flex-col h-screen bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100">
       <header className="flex items-center justify-between px-4 py-2 bg-blue-600 text-white shrink-0">
         <div>
-          <h1 className="text-lg font-bold leading-tight">BDCHM Explore</h1>
+          <h1 className="text-lg font-bold leading-tight">BDCHM Explorer</h1>
           <p className="text-xs text-blue-100">
-            subset visualization experiment
+            BioData Catalyst Harmonized Model
           </p>
         </div>
         <a
-          href={import.meta.env.BASE_URL}
+          href={`${import.meta.env.BASE_URL}previous.html`}
           className="text-sm underline text-blue-100 hover:text-white"
         >
-          classic views
+          previous views
         </a>
       </header>
 

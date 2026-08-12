@@ -10,10 +10,12 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
+        // The default app: the Explorer SPA (docs/EXPLORE_VIZ.md), shell
+        // under src/explore/, sharing src/ (DataService, models) with the
+        // previous app.
         main: resolve(__dirname, 'index.html'),
-        // The subgraph-viz SPA experiment (docs/EXPLORE_VIZ.md) — a separate
-        // page sharing src/ (DataService, models) with the main app.
-        explore: resolve(__dirname, 'explore.html'),
+        // The previous app (Nested Tabular / Kitchen Sink / Focus views).
+        previous: resolve(__dirname, 'previous.html'),
       },
     },
   },
