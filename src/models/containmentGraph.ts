@@ -35,6 +35,12 @@ export const VALUE_OBJECTS = new Set<string>([
   'QuestionnaireResponseValueInteger', 'QuestionnaireResponseValueTimePoint',
   'QuestionnaireResponseValueString',
   'Substance', 'BiologicProduct',
+  // PROPOSED 2026-08-12 — awaiting Siggie's adjudication. Without this,
+  // Context.activity classifies as own-flip ("Activity owns Context"), which
+  // puts Activity at layer 0 as a false root while Context sinks to layer 6,
+  // drawing a full-canvas edge. With it: Context -> Activity forward, Activity
+  // at layer 7 directly below Context, beside the other leaf value objects.
+  'Activity',
 ]);
 
 // Per-slot verdicts that pre-empt the default heuristic. These encode the
