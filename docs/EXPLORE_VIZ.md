@@ -174,10 +174,15 @@ New dependency: `elkjs` only (skip NodeLinkView's d3-force mode in v1).
    member — `computeSunkLayers`), hover emphasis (entity → neighborhood,
    edge → isolate; RAF direct-DOM), expanded rows include plain scalar/enum
    attributes (hollow dot), SVG self-loop icon, LR/TB + orthogonal/curved
-   toggles. Still open from this step: **expand-on-demand** (click a dimmed
-   row to pull its range in) and proper **is-a side-stacks** (currently
-   header chips ⊳/▷); cardinality indicators at edge endpoints under
-   consideration.
+   toggles.
+   **Expand-on-demand DONE** 2026-08-12: clicking a dimmed entity row adds
+   its range as a context node (`?exp=`, state in ExploreApp beside
+   selection); expanded nodes carry an ✕ to dismiss, path-to-root context
+   does not. Rows pointing at on-canvas entities, plain scalar/enum rows,
+   and self-loops are not expandable. Still open from this step: proper
+   **is-a side-stacks** (currently header chips ⊳/▷); cardinality indicators
+   at edge endpoints remain **under consideration, not a settled
+   requirement** — decide before building.
 4. ~~Detail drawer (Explorer card reuse + the two fixes).~~ **DONE**
    2026-08-12. `src/explore/DetailDrawer.tsx` opens on node click, reusing
    `getClassSummary` (the Explorer card's data path) rather than

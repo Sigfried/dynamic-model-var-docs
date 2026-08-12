@@ -24,33 +24,49 @@ The Explore SPA's three-region layout (EXPLORE_VIZ.md#layout) is now
 drawer. Build steps 1, 2, 4 done; step 3 mostly done.
 
 **Next — EXPLORE_VIZ.md build order, what's left:**
-1. **Expand-on-demand** (step 3 remainder) — click a dimmed row / context
-   node to pull its range in. `expansions` is already a parameter of
-   `getOwnershipSubgraph`, so this is renderer + state wiring, not data work.
-2. **is-a side-stacks** (step 3 remainder) — currently header chips ⊳/▷;
-   spec wants an expandable subclass stack on the parent node.
-3. **Endpoint cardinality markers** — listed as "under consideration," not
-   a settled requirement. Decide before building.
-4. Step 5 polish: animation on selection change, self-loop badges,
-   dim/dismiss for context nodes.
+1. **is-a side-stacks** (step 3 remainder) — currently header chips ⊳/▷;
+   spec wants an expandable subclass stack on the parent node. Left undone
+   deliberately: it's a visual-design call best made looking at the canvas.
+2. **Endpoint cardinality markers** — "under consideration," **not a settled
+   requirement**. Decide whether it's wanted before building.
+3. Step 5 polish: animation on selection change, self-loop badges.
+4. **A visual pass over the whole thing.** Everything below the data layer is
+   verified by jsdom tests only; nobody has looked at the drawer, the count
+   badges, or expand-on-demand in a browser. Playwright is not installed.
 
 ### ⚖️ Needs Siggie's decision
 
-- **`Context.activity` ownership classification.** The 2026-08-12 sync added
-  classes `Context` and `Activity`. The FK-inversion heuristic classifies
+- **`Context.activity` ownership classification — a fix is waiting on branch
+  `proposal/activity-value-object`.** The heuristic classifies
   `Context.activity` (single-valued, entity range) as `own-flip`, i.e.
-  "**Activity owns Context**" — which reads backwards against the schema's
-  own descriptions (Context = "the context within which an observation was
-  made", holding `activity`; Activity = "an activity that provides context to
-  an observation"). Adding `Activity` to `VALUE_OBJECTS` in
-  `src/models/containmentGraph.ts` would make it `own-fwd` ("Context owns
-  Activity"). **Left unchanged** — classification is an adjudication call, not
-  a drawing one. The other new entity-ranged slots classify correctly:
+  "**Activity owns Context**", which reads backwards against the schema's own
+  descriptions (Context = "the context within which an observation was made",
+  holding `activity`; Activity = "an activity that provides context to an
+  observation").
+
+  The consequence is **structural, not cosmetic**: owners sink to one layer
+  above their topmost owning child, so treating Activity as Context's owner
+  strands it at **layer 0 — a false root**, beside ResearchStudyCollection,
+  while Context sinks to layer 6 under the six observation classes that own
+  it. That is the full-canvas edge in the 2026-08-12 screenshot.
+
+  Measured, with `Activity` added to `VALUE_OBJECTS`:
+  | | Activity | Context | edge |
+  |---|---|---|---|
+  | before | layer 0 | layer 6 | `Activity → Context` (flipped) |
+  | after | layer 7 | layer 6 | `Context → Activity` (forward) |
+
+  Blast radius is that one edge — `Activity` is referenced only by
+  `Context.activity`. Full suite passes either way. **Left off main** because
+  classification is an adjudication call, not a drawing one.
+  Accept: `git merge proposal/activity-value-object` ·
+  Drop: `git branch -D proposal/activity-value-object`
+- **Category placement of `Context` / `Activity`** — parked in
+  `observation` beside `Quantity`; trivial to move.
+- The other new entity-ranged slots classify correctly and need no review:
   `Visit.year_range`→TimePeriod, `Condition/Procedure.affected_body_site`→
   BodySite, `Activity.time_duration`→Quantity, `Observation.context`→Context
   (own-fwd via multivalued).
-- **Category placement of `Context` / `Activity`** — parked in
-  `observation` beside `Quantity`; trivial to move.
 
 ### 🐛 Fixed this session
 
