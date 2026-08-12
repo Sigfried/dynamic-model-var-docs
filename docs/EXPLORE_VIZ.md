@@ -168,9 +168,13 @@ New dependency: `elkjs` only (skip NodeLinkView's d3-force mode in v1).
    names the slot; flipped storage is marked by a back-pointing arrowhead
    at the member end. Rows default to edge-connected slots with a "+N more"
    footer expanding to all entity-ranged slots (dimmed = range off-canvas).
-   Still open from this step: **expand-on-demand** (click a dimmed row to
-   pull its range in) and proper **is-a side-stacks** (currently header
-   chips ⊳/▷); cardinality indicators at edge endpoints under
+   Later same-day iterations: sunk layers (owners sit beside their topmost
+   member — `computeSunkLayers`), hover emphasis (entity → neighborhood,
+   edge → isolate; RAF direct-DOM), expanded rows include plain scalar/enum
+   attributes (hollow dot), SVG self-loop icon, LR/TB + orthogonal/curved
+   toggles. Still open from this step: **expand-on-demand** (click a dimmed
+   row to pull its range in) and proper **is-a side-stacks** (currently
+   header chips ⊳/▷); cardinality indicators at edge endpoints under
    consideration.
 4. Detail drawer (Explorer card reuse + the two fixes).
 5. Polish: animation on selection change (surviving nodes keep layers),
