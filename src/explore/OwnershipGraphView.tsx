@@ -240,10 +240,19 @@ export default function OwnershipGraphView({
   dataService,
   selectedIds,
   onNodeClick,
+  expandedIds,
+  onExpand,
+  onCollapse,
 }: {
   dataService: DataService;
   selectedIds: Set<string>;
   onNodeClick?: (id: string) => void;
+  /** Expand-on-demand: extra classes pulled onto the canvas, drawn as context. */
+  expandedIds?: Set<string>;
+  /** Clicking a dimmed entity row pulls its range in. */
+  onExpand?: (classId: string) => void;
+  /** Dismiss an expanded context node. */
+  onCollapse?: (classId: string) => void;
 }) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const markerId = (name: string) => `${name}-${uid}`;
@@ -256,9 +265,16 @@ export default function OwnershipGraphView({
   );
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
 
+  // Expansions that duplicate the selection are dropped: a selected class is
+  // already visible, and passing it as an expansion would not change the
+  // subgraph but would let a stale id linger in the URL.
+  const expansionList = useMemo(
+    () => [...(expandedIds ?? [])].filter(id => !selectedIds.has(id)).sort(),
+    [expandedIds, selectedIds],
+  );
   const subgraph = useMemo(
-    () => dataService.getOwnershipSubgraph([...selectedIds].sort()),
-    [dataService, selectedIds],
+    () => dataService.getOwnershipSubgraph([...selectedIds].sort(), expansionList),
+    [dataService, selectedIds, expansionList],
   );
   const plainSlots = useMemo(
     () => new Map(subgraph.nodes.map(n =>
@@ -303,6 +319,18 @@ export default function OwnershipGraphView({
   const edgeById = useMemo(
     () => new Map(vm.edges.map(e => [e.id, e])),
     [vm],
+  );
+
+  /**
+   * A row is an expand-on-demand affordance when it points at an entity that
+   * isn't on the canvas yet. Plain (scalar/enum) rows have no node to add, and
+   * self-loops point back at their own node, so neither is expandable.
+   */
+  const onCanvas = useMemo(() => new Set(vm.nodes.map(n => n.id)), [vm]);
+  const isExpandable = useCallback(
+    (r: RowVM) =>
+      !!onExpand && r.channel !== 'plain' && !r.isLoop && !onCanvas.has(r.range),
+    [onExpand, onCanvas],
   );
 
   // --- Hover emphasis (icd11 pattern: RAF-throttled direct DOM styling,
@@ -542,18 +570,38 @@ export default function OwnershipGraphView({
                               ▷ {n.subclassCount}
                             </span>
                           )}
+                          {/* Dismiss — only on nodes the user pulled in, not on
+                              path-to-root context, which the selection implies. */}
+                          {expandedIds?.has(n.id) && (
+                            <button
+                              data-dismiss={n.id}
+                              title={`Remove ${n.label} from the canvas`}
+                              onClick={ev => { ev.stopPropagation(); onCollapse?.(n.id); }}
+                              className="text-[10px] leading-none px-1 rounded text-gray-400
+                                         hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/40"
+                            >
+                              ✕
+                            </button>
+                          )}
                         </span>
                       </div>
                       {n.rows.map(r => (
                         <div
                           key={r.slot}
                           data-row={r.slot}
+                          data-expandable={isExpandable(r) ? '' : undefined}
                           title={r.channel === 'plain'
                             ? `${r.slot}: ${r.range}`
-                            : `${r.slot} → ${r.range} (${r.cardinality})${r.flipped ? ' — owner side' : ''}`}
+                            : `${r.slot} → ${r.range} (${r.cardinality})${r.flipped ? ' — owner side' : ''}` +
+                              (isExpandable(r) ? ` — click to add ${r.range}` : '')}
+                          onClick={isExpandable(r)
+                            ? ev => { ev.stopPropagation(); onExpand?.(r.range); }
+                            : undefined}
                           className={`flex items-center gap-1.5 px-2 text-[11px] ${r.connected
                             ? 'text-gray-700 dark:text-gray-300'
-                            : 'text-gray-400 dark:text-gray-500'}`}
+                            : 'text-gray-400 dark:text-gray-500'} ${isExpandable(r)
+                              ? 'cursor-pointer hover:bg-sky-50 dark:hover:bg-sky-900/30 hover:text-sky-700 dark:hover:text-sky-300'
+                              : ''}`}
                           style={{ height: ROW_H }}
                         >
                           {r.channel === 'plain' ? (

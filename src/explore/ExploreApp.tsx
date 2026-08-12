@@ -23,9 +23,10 @@ import DetailDrawer from './DetailDrawer';
 
 const SEL_PARAM = 'sel';
 const DETAIL_PARAM = 'detail';
+const EXP_PARAM = 'exp';
 
-function readSelectionFromURL(): Set<string> {
-  const raw = new URLSearchParams(window.location.search).get(SEL_PARAM);
+function readIdsFromURL(param: string): Set<string> {
+  const raw = new URLSearchParams(window.location.search).get(param);
   return new Set(raw ? raw.split('~').filter(Boolean) : []);
 }
 
@@ -33,11 +34,15 @@ function readDetailFromURL(): string | null {
   return new URLSearchParams(window.location.search).get(DETAIL_PARAM) || null;
 }
 
-/** Single writer for both params so they never clobber each other. */
-function writeStateToURL(sel: Set<string>, detailId: string | null) {
+/** Single writer for every param so they never clobber each other. */
+function writeStateToURL(sel: Set<string>, expanded: Set<string>, detailId: string | null) {
   const url = new URL(window.location.href);
-  if (sel.size === 0) url.searchParams.delete(SEL_PARAM);
-  else url.searchParams.set(SEL_PARAM, [...sel].sort().join('~'));
+  const setIds = (param: string, ids: Set<string>) => {
+    if (ids.size === 0) url.searchParams.delete(param);
+    else url.searchParams.set(param, [...ids].sort().join('~'));
+  };
+  setIds(SEL_PARAM, sel);
+  setIds(EXP_PARAM, expanded);
   if (detailId) url.searchParams.set(DETAIL_PARAM, detailId);
   else url.searchParams.delete(DETAIL_PARAM);
   window.history.replaceState(null, '', url);
@@ -50,18 +55,50 @@ export default function ExploreApp() {
     [modelData],
   );
 
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(readSelectionFromURL);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => readIdsFromURL(SEL_PARAM));
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => readIdsFromURL(EXP_PARAM));
   const [detailId, setDetailId] = useState<string | null>(readDetailFromURL);
   const [tableCollapsed, setTableCollapsed] = useState(false);
 
-  useEffect(() => writeStateToURL(selectedIds, detailId), [selectedIds, detailId]);
+  // Expansions only mean something relative to a selection — with nothing
+  // selected the canvas shows its empty state, so keeping ?exp= would strand
+  // ids that are invisible and never dismissable.
+  useEffect(() => {
+    if (selectedIds.size === 0 && expandedIds.size > 0) setExpandedIds(new Set());
+  }, [selectedIds, expandedIds]);
 
-  const toggleSelect = useCallback(
+  useEffect(
+    () => writeStateToURL(selectedIds, expandedIds, detailId),
+    [selectedIds, expandedIds, detailId],
+  );
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    // Selecting a class supersedes having expanded it: it becomes a first-class
+    // node rather than dimmed context, and a stale id would linger in ?exp=.
+    setExpandedIds(prev => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const expand = useCallback(
+    (id: string) => setExpandedIds(prev => (prev.has(id) ? prev : new Set(prev).add(id))),
+    [],
+  );
+  const collapse = useCallback(
     (id: string) =>
-      setSelectedIds(prev => {
+      setExpandedIds(prev => {
+        if (!prev.has(id)) return prev;
         const next = new Set(prev);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
+        next.delete(id);
         return next;
       }),
     [],
@@ -142,6 +179,9 @@ export default function ExploreApp() {
               dataService={dataService}
               selectedIds={selectedIds}
               onNodeClick={setDetailId}
+              expandedIds={expandedIds}
+              onExpand={expand}
+              onCollapse={collapse}
             />
           )}
         </div>
