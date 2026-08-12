@@ -2,9 +2,10 @@
  * ExploreApp — shell for the Explorer SPA (docs/EXPLORE_VIZ.md), the default
  * app (index.html entry). The previous app lives at previous.html.
  *
- * Three regions: selection table (left), viz canvas (main), detail drawer
- * (right). Selection is owned here and encoded in the URL (?sel=A~B~C) from
- * day one.
+ * Three regions: selection table (left, collapsible), viz canvas (main), and
+ * detail drawer (right, opens on node click). Selection and the open drawer
+ * are owned here and encoded in the URL (?sel=A~B~C&detail=X) so a view is
+ * shareable.
  *
  * Architecture: same rules as the previous app — this file and everything
  * under src/explore/ talks to services/DataService only, never models/ or DTOs.
@@ -13,23 +14,32 @@
  * imports (the future package-extraction boundary).
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useModelData } from '../hooks/useModelData';
 import { DataService } from '../services/DataService';
 import SelectionTable from './SelectionTable';
 import OwnershipGraphView from './OwnershipGraphView';
+import DetailDrawer from './DetailDrawer';
 
 const SEL_PARAM = 'sel';
+const DETAIL_PARAM = 'detail';
 
 function readSelectionFromURL(): Set<string> {
   const raw = new URLSearchParams(window.location.search).get(SEL_PARAM);
   return new Set(raw ? raw.split('~').filter(Boolean) : []);
 }
 
-function writeSelectionToURL(sel: Set<string>) {
+function readDetailFromURL(): string | null {
+  return new URLSearchParams(window.location.search).get(DETAIL_PARAM) || null;
+}
+
+/** Single writer for both params so they never clobber each other. */
+function writeStateToURL(sel: Set<string>, detailId: string | null) {
   const url = new URL(window.location.href);
   if (sel.size === 0) url.searchParams.delete(SEL_PARAM);
   else url.searchParams.set(SEL_PARAM, [...sel].sort().join('~'));
+  if (detailId) url.searchParams.set(DETAIL_PARAM, detailId);
+  else url.searchParams.delete(DETAIL_PARAM);
   window.history.replaceState(null, '', url);
 }
 
@@ -41,15 +51,21 @@ export default function ExploreApp() {
   );
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(readSelectionFromURL);
-  useEffect(() => writeSelectionToURL(selectedIds), [selectedIds]);
+  const [detailId, setDetailId] = useState<string | null>(readDetailFromURL);
+  const [tableCollapsed, setTableCollapsed] = useState(false);
 
-  const toggleSelect = (id: string) =>
-    setSelectedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  useEffect(() => writeStateToURL(selectedIds, detailId), [selectedIds, detailId]);
+
+  const toggleSelect = useCallback(
+    (id: string) =>
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      }),
+    [],
+  );
 
   if (error) {
     return (
@@ -80,14 +96,40 @@ export default function ExploreApp() {
       </header>
 
       <div className="flex-1 flex min-h-0">
-        {/* Selection table */}
-        <div className="w-96 shrink-0 border-r border-gray-200 dark:border-slate-700 overflow-y-auto">
-          <SelectionTable
-            dataService={dataService}
-            selectedIds={selectedIds}
-            onToggle={toggleSelect}
-          />
-        </div>
+        {/* Selection table (collapsible) */}
+        {tableCollapsed ? (
+          <button
+            onClick={() => setTableCollapsed(false)}
+            title="Show entity selection"
+            className="shrink-0 w-8 border-r border-gray-200 dark:border-slate-700
+                       bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700
+                       flex flex-col items-center gap-2 py-2 text-gray-400"
+          >
+            <span className="text-xs">▶</span>
+            <span className="text-[10px] uppercase tracking-wider [writing-mode:vertical-rl]">
+              {dataService.getConceptLabel('entity', true)}
+              {selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
+            </span>
+          </button>
+        ) : (
+          <div className="w-96 shrink-0 flex flex-col min-h-0 border-r border-gray-200 dark:border-slate-700">
+            <div className="flex-1 overflow-y-auto min-h-0">
+              <SelectionTable
+                dataService={dataService}
+                selectedIds={selectedIds}
+                onToggle={toggleSelect}
+              />
+            </div>
+            <button
+              onClick={() => setTableCollapsed(true)}
+              title="Hide entity selection"
+              className="shrink-0 px-3 py-1 text-xs text-gray-400 border-t border-gray-200
+                         dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 text-left"
+            >
+              ◀ Hide
+            </button>
+          </div>
+        )}
 
         {/* Viz canvas — layered ownership DAG */}
         <div className="flex-1 min-w-0">
@@ -99,9 +141,22 @@ export default function ExploreApp() {
             <OwnershipGraphView
               dataService={dataService}
               selectedIds={selectedIds}
+              onNodeClick={setDetailId}
             />
           )}
         </div>
+
+        {/* Detail drawer — opens on node click */}
+        {detailId && (
+          <DetailDrawer
+            classId={detailId}
+            dataService={dataService}
+            onClose={() => setDetailId(null)}
+            onNavigate={setDetailId}
+            isSelected={selectedIds.has(detailId)}
+            onToggleSelect={toggleSelect}
+          />
+        )}
       </div>
     </div>
   );
