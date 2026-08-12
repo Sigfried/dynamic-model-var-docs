@@ -31,6 +31,53 @@ from urllib.error import URLError, HTTPError
 # Delimiter for override slot IDs: "{slotName}-{ClassName}" e.g., "category-SdohObservation"
 SLOT_OVERRIDE_DELIMITER = '-'
 
+# ── TEMPORARY upstream patches ───────────────────────────────────────────────
+# Range rewrites applied to the expanded schema while we wait for an upstream
+# fix to merge. Keyed by the dangling range name; every occurrence (class
+# attributes, slot_usage, global slots) is rewritten to the replacement —
+# mirroring what the upstream fix will produce once merged. The script warns
+# loudly on every application, and tells you to REMOVE an entry once it no
+# longer matches anything (i.e. the upstream fix landed).
+UPSTREAM_RANGE_PATCHES: Dict[str, str] = {
+    # Observation.observation_type references BaseObservationTypeEnum, which
+    # is never defined (upstream bug from the issue-233/234/235 commits).
+    # Fix pending: https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/pull/240
+    'BaseObservationTypeEnum': 'string',
+}
+
+
+def iter_range_sites(expanded: Dict[str, Any]):
+    """Yield (label, def_dict) for every place a range can appear."""
+    for cname, cdef in expanded.get('classes', {}).items():
+        for section in ('attributes', 'slot_usage'):
+            for aname, adef in (cdef.get(section) or {}).items():
+                if isinstance(adef, dict):
+                    yield f"{cname}.{aname}" + (" (slot_usage)" if section == 'slot_usage' else ""), adef
+    for sname, sdef in expanded.get('slots', {}).items():
+        if isinstance(sdef, dict):
+            yield f"global slot {sname}", sdef
+
+
+def apply_upstream_patches(expanded: Dict[str, Any]) -> None:
+    """Apply UPSTREAM_RANGE_PATCHES to the expanded schema, loudly."""
+    for old_range, new_range in UPSTREAM_RANGE_PATCHES.items():
+        hits = [label for label, d in iter_range_sites(expanded) if d.get('range') == old_range]
+        for label, d in iter_range_sites(expanded):
+            if d.get('range') == old_range:
+                d['range'] = new_range
+        if hits:
+            print(f"  ⚠ TEMPORARY PATCH: range {old_range} → {new_range} at {len(hits)} site(s): {', '.join(hits)}")
+        else:
+            print(f"  ⚠ Upstream patch for {old_range!r} no longer matches anything — upstream fix has landed; REMOVE it from UPSTREAM_RANGE_PATCHES")
+
+
+def find_dangling_ranges(expanded: Dict[str, Any]) -> list:
+    """Ranges that resolve to no known class/enum/type — they would crash the app's graph builder."""
+    known = set(expanded.get('classes', {})) | set(expanded.get('enums', {})) | set(expanded.get('types', {}))
+    return [f"{label} → {d['range']}"
+            for label, d in iter_range_sites(expanded)
+            if d.get('range') and d['range'] not in known]
+
 # Track invalid prefixes encountered during URI expansion
 invalid_prefixes: Set[str] = set()
 # Track which prefixes have been validated
@@ -490,6 +537,17 @@ def transform_schema(expanded_path: Path, output_path: Path) -> bool:
 
         expanded_size = expanded_path.stat().st_size
         print(f"  ✓ Loaded ({expanded_size:,} bytes)")
+
+        # Apply temporary upstream patches, then refuse to ship a schema with
+        # dangling ranges — the app's graph builder throws on them at load
+        # time, so fail here (in the sync run) with a readable message instead.
+        apply_upstream_patches(expanded)
+        dangling = find_dangling_ranges(expanded)
+        if dangling:
+            print(f"  ✗ {len(dangling)} dangling range(s) — fix upstream or add a temporary patch to UPSTREAM_RANGE_PATCHES:", file=sys.stderr)
+            for entry in dangling:
+                print(f"      {entry}", file=sys.stderr)
+            return False
 
         # Extract prefixes
         prefixes = expanded.get('prefixes', {})

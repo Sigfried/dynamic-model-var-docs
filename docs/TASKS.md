@@ -40,10 +40,21 @@ API), is-a side-stacks, detail drawer, endpoint cardinality markers.
   `Deprecated Codes`) and the OMOP ids moved from "CURIE" to "OMOP Concept
   ID"; `loadVariableSpecs` parsed by position and would have silently
   misassigned fields, so it now resolves columns by header name (accepts
-  old and new headers). Upstream schema is also behind (`d742e38` →
-  `ec0130e`) — expect a real sync PR on the next green run; the new sheet
+  old and new headers) and skips rows flagged `status=ignore` (six
+  duplicate placeholder rows upstream). Upstream schema is also behind
+  (`d742e38` → `ec0130e`) — the sync PR (#2) carries it; the new sheet
   columns are loaded but not yet surfaced in the UI (candidates for the
   unused-fields workflow below).
+- **TEMPORARY upstream patch active** in
+  `scripts/transform_schema.py` (`UPSTREAM_RANGE_PATCHES`): upstream's
+  `ec0130e` references a never-defined `BaseObservationTypeEnum`
+  (required range on `Observation.observation_type` + 3 subclasses),
+  which crashes the app's graph builder. Patched to `range: string`,
+  mirroring the pending upstream fix
+  (RTIInternational/NHLBI-BDC-DMC-HM#240). The transform also now fails
+  loudly on any dangling range so future upstream danglers turn the sync
+  run red instead of breaking the deployed app. **Remove the patch entry
+  once #240 merges** — the script warns when it stops matching.
 
 ---
 
