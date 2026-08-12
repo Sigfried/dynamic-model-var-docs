@@ -13,6 +13,38 @@ receiving, and implementing stakeholder feedback.
 
 ---
 
+## 🔁 HANDOFF — start here next session (written 2026-08-12)
+
+State as of the 2026-07-28 work burst: the Explore SPA's layered ownership
+DAG is live and iterated (see [EXPLORE_VIZ.md](EXPLORE_VIZ.md) build-order
+status; commits `b3c3297`…`c863b94`). Siggie's ordered instructions for the
+next session, BEFORE resuming the EXPLORE_VIZ backlog:
+
+1. **Promote the new SPA to the default.**
+   https://sigfried.github.io/dynamic-model-var-docs/ should load the new
+   (Explore) app. The old app moves to a secondary entry (currently the new
+   one is `explore.html`; swap roles — old app gets its own entry, new app
+   becomes `index.html`).
+2. **Cross-link the two apps.** The new default keeps a link to the old
+   app labeled **"previous views"** (NOT "classic" — rename the current
+   header link), and the old app gets a link back to the default.
+3. **Rename the views.** The OLD app's "Explorer" view is renamed
+   **"Nested Tabular"**; the NEW app takes the name **"Explorer"**
+   (update headers/titles/toggles accordingly).
+4. **Then** resume the EXPLORE_VIZ remaining items: expand-on-demand
+   (click a dimmed row / context node; `expansions` param already in the
+   DataService API), is-a side-stacks, detail drawer, endpoint cardinality
+   markers.
+
+### 🐛 Known broken
+
+- **The Schema sync GitHub Action has been failing.** (The action that
+  pulls upstream `bdchm.yaml` via `download_source_data.py` and rebuilds
+  the processed JSON.) Investigate the run logs and fix; until then the
+  deployed schema may be stale relative to upstream.
+
+---
+
 ## 🧭 Current round (post-2026-06-11 feedback) — TOP PRIORITY
 
 Team-facing plan: [STAKEHOLDER_QUESTIONS.md](../temp-but-share-for-now/STAKEHOLDER_QUESTIONS.md).
