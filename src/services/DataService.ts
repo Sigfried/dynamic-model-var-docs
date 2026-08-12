@@ -28,7 +28,7 @@ import { EDGE_TYPES } from "../models/SchemaTypes";
 import type { ToggleButtonData } from '../components/ItemsPanel';
 import type { SectionData, SectionItemData } from '../components/Section';
 import { APP_CONFIG, getAllElementTypeIds, SectionId, ACTIVE_VOCAB } from '../config/appConfig';
-import { ENTITY_CATEGORIES } from '../config/entityCategories';
+import { ENTITY_CATEGORIES, findUncategorizedClasses } from '../config/entityCategories';
 import { buildContainmentGraph } from '../models/containmentGraph';
 import type { ContainmentGraph } from '../models/containmentGraph';
 import { buildOwnershipDag, buildOwnershipSubgraph } from '../models/ownershipSubgraph';
@@ -86,6 +86,29 @@ export class DataService {
 
   constructor(modelData: ModelData) {
     this.modelData = modelData;
+    this.warnOnUncategorizedClasses();
+  }
+
+  /**
+   * ENTITY_CATEGORIES is a hand-curated allowlist, so a class added by an
+   * upstream schema sync renders nowhere until someone lists it — silently.
+   * That is how Context and Activity went missing after the 2026-08-12 sync.
+   * entityCategories.test.ts fails on this in CI; this warns in the dev
+   * console for anyone running against freshly synced data.
+   */
+  private warnOnUncategorizedClasses(): void {
+    if (!import.meta.env?.DEV) return;
+    const classes = this.modelData.collections.get('class');
+    if (!classes) return;
+    const missing = findUncategorizedClasses(classes.getAllElements().map(el => el.name));
+    if (missing.length) {
+      console.warn(
+        `[entityCategories] ${missing.length} schema class(es) are in no category and ` +
+        `will not appear in the entity list: ${missing.join(', ')}. ` +
+        'Add them in src/config/entityCategories.ts, or record them in ' +
+        'UNCATEGORIZED_BY_DESIGN if they should stay hidden.',
+      );
+    }
   }
 
   /**

@@ -1,0 +1,131 @@
+import { describe, test, expect, beforeAll } from 'vitest';
+import { loadModelData } from '../utils/dataLoader';
+import {
+  ENTITY_CATEGORIES,
+  SUBCLASS_OF,
+  DEFAULT_PINS,
+  UNCATEGORIZED_BY_DESIGN,
+  findUncategorizedClasses,
+} from '../config/entityCategories';
+
+/**
+ * ENTITY_CATEGORIES is a hand-curated allowlist: the Entity Explorer and the
+ * Focus selector both map categories -> classes, never the reverse, so a class
+ * in no category is invisible in the UI with no warning.
+ *
+ * That rots on every upstream schema sync. The 2026-08-12 sync (778afca) added
+ * Context and Activity; both silently vanished until someone noticed Context
+ * missing from the entity list. These tests assert the config against the LIVE
+ * schema so the next sync turns red instead of quietly hiding classes.
+ */
+describe('entityCategories config vs. live schema', () => {
+  let classIds: string[];
+
+  beforeAll(async () => {
+    const data = await loadModelData();
+    const classes = data.collections.get('class');
+    if (!classes) throw new Error('No "class" collection in loaded model data');
+    classIds = classes.getAllElements().map(el => el.name);
+  });
+
+  test('every schema class is categorized or explicitly excluded', () => {
+    const uncategorized = findUncategorizedClasses(classIds);
+    expect(
+      uncategorized,
+      `Schema classes missing from ENTITY_CATEGORIES: ${uncategorized.join(', ')}.\n` +
+        'Add each to a category in src/config/entityCategories.ts, or — if it ' +
+        'should never appear in the entity list — record it in ' +
+        'UNCATEGORIZED_BY_DESIGN with the reason.',
+    ).toEqual([]);
+  });
+
+  test('no category lists a class that no longer exists in the schema', () => {
+    const known = new Set(classIds);
+    const stale = ENTITY_CATEGORIES.flatMap(cat =>
+      cat.classIds.filter(id => !known.has(id)).map(id => `${cat.id}:${id}`),
+    );
+    expect(stale, `Categorized classes absent from the schema: ${stale.join(', ')}`).toEqual([]);
+  });
+
+  test('UNCATEGORIZED_BY_DESIGN entries still exist and stay out of categories', () => {
+    const known = new Set(classIds);
+    const categorized = new Set(ENTITY_CATEGORIES.flatMap(cat => cat.classIds));
+    for (const [id, reason] of Object.entries(UNCATEGORIZED_BY_DESIGN)) {
+      expect(known.has(id), `${id} is excluded by design but not in the schema`).toBe(true);
+      expect(categorized.has(id), `${id} is excluded by design but also categorized`).toBe(false);
+      expect(reason.length, `${id} needs a non-empty exclusion reason`).toBeGreaterThan(0);
+    }
+  });
+
+  test('no class is listed in two categories', () => {
+    const seen = new Map<string, string>();
+    const dupes: string[] = [];
+    for (const cat of ENTITY_CATEGORIES) {
+      for (const id of cat.classIds) {
+        const prev = seen.get(id);
+        if (prev) dupes.push(`${id} (${prev} + ${cat.id})`);
+        else seen.set(id, cat.id);
+      }
+    }
+    expect(dupes, `Classes in multiple categories: ${dupes.join(', ')}`).toEqual([]);
+  });
+
+  test('SUBCLASS_OF pairs are real classes and match the schema is_a', async () => {
+    const data = await loadModelData();
+    const known = new Set(classIds);
+    const problems: string[] = [];
+    for (const [child, parent] of Object.entries(SUBCLASS_OF)) {
+      if (!known.has(child)) problems.push(`${child} (child) not in schema`);
+      if (!known.has(parent)) problems.push(`${parent} (parent) not in schema`);
+      // The indentation hint must not contradict the actual schema hierarchy.
+      const actual = data.graph.classes?.[child]?.is_a;
+      if (actual && actual !== parent) {
+        problems.push(`${child}: SUBCLASS_OF says ${parent}, schema is_a says ${actual}`);
+      }
+    }
+    expect(problems, problems.join('; ')).toEqual([]);
+  });
+
+  /**
+   * Indentation is only rendered when the parent is in the SAME category
+   * (EntityTable guards with classIdSet.has(parentId)), and it only looks
+   * right when the parent is listed first. Cross-category pairs — e.g. the
+   * Specimen*Observation classes sit in `lab` while Observation sits in
+   * `observation` — are legitimate and simply render unindented, so they are
+   * reported rather than failed.
+   */
+  test('same-category SUBCLASS_OF pairs list the parent before the child', () => {
+    const problems: string[] = [];
+    const crossCategory: string[] = [];
+    for (const [child, parent] of Object.entries(SUBCLASS_OF)) {
+      const cat = ENTITY_CATEGORIES.find(c => c.classIds.includes(child));
+      if (!cat) {
+        problems.push(`${child} not in any category`);
+        continue;
+      }
+      const pi = cat.classIds.indexOf(parent);
+      if (pi === -1) {
+        crossCategory.push(`${child} (in ${cat.id}) vs parent ${parent}`);
+        continue;
+      }
+      if (pi > cat.classIds.indexOf(child)) {
+        problems.push(`${parent} listed after child ${child} in ${cat.id}`);
+      }
+    }
+    if (crossCategory.length) {
+      console.info(
+        `SUBCLASS_OF pairs spanning categories (render unindented by design): ${crossCategory.join(', ')}`,
+      );
+    }
+    expect(problems, problems.join('; ')).toEqual([]);
+  });
+
+  test('DEFAULT_PINS reference real, categorized classes', () => {
+    const known = new Set(classIds);
+    const categorized = new Set(ENTITY_CATEGORIES.flatMap(cat => cat.classIds));
+    for (const id of DEFAULT_PINS) {
+      expect(known.has(id), `default pin ${id} is not in the schema`).toBe(true);
+      expect(categorized.has(id), `default pin ${id} is not in any category`).toBe(true);
+    }
+  });
+});
