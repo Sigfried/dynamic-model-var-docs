@@ -304,7 +304,12 @@ export default function OwnershipGraphView({
   const contentW = (layout?.width ?? 0) + PAD * 2;
   const contentH = (layout?.height ?? 0) + PAD * 2;
   useEffect(() => {
-    if (layout) zp.setContentSize(contentW, contentH);
+    if (!layout) return;
+    zp.setContentSize(contentW, contentH);
+    // Default to fit-to-view: re-fit whenever a new layout lands, until the
+    // user takes manual zoom control (a +/−/1:1 click or ctrl+wheel), after
+    // which their chosen level is left alone.
+    if (zp.isAutoFit()) zp.zoomToFit();
   // eslint-disable-next-line react-hooks/exhaustive-deps -- zp fns are stable
   }, [layout, contentW, contentH]);
 
@@ -430,7 +435,7 @@ export default function OwnershipGraphView({
   return (
     <div className="relative w-full h-full">
       {/* Toolbar */}
-      <div className="absolute top-2 right-2 z-10 flex gap-1 items-center">
+      <div data-pan-ignore className="absolute top-2 right-2 z-10 flex gap-1 items-center">
         <button className={toolBtn(direction === 'RIGHT')} title="Layout left to right"
           onClick={() => setDir('RIGHT')}>LR</button>
         <button className={toolBtn(direction === 'DOWN')} title="Layout top down"
@@ -459,7 +464,7 @@ export default function OwnershipGraphView({
         </div>
       )}
 
-      <div ref={zp.containerRef} className="w-full h-full overflow-auto">
+      <div ref={zp.containerRef} className="w-full h-full overflow-auto cursor-grab">
         <div ref={zp.spacerRef}>
           <div ref={zp.wrapperRef} className="relative">
             {layout && (
@@ -538,6 +543,7 @@ export default function OwnershipGraphView({
                     <div
                       key={n.id}
                       data-node-id={n.id}
+                      data-pan-ignore
                       onClick={() => onNodeClick?.(n.id)}
                       onMouseEnter={() => applyHover({ kind: 'node', id: n.id })}
                       onMouseLeave={() => applyHover(null)}

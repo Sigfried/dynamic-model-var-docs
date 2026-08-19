@@ -9,6 +9,13 @@
  *
  * Ctrl/Cmd+wheel (and trackpad pinch, which browsers report as ctrl+wheel)
  * zooms; plain wheel scrolls natively.
+ *
+ * Panning is drag-to-pan on the background (mouse or touch), implemented by
+ * moving the container's scroll offsets. Scrollbars alone were not enough:
+ * fit-to-view clamps the content to fit, which leaves nothing to scroll, so
+ * there was no way to pan a fitted graph at all. Drags starting on an
+ * interactive element (a node, a button) are ignored so clicking a node still
+ * opens the drawer.
  */
 
 import { useCallback, useEffect, useRef } from 'react';
@@ -26,6 +33,8 @@ export interface ZoomPan {
   zoomBy: (factor: number) => void;
   zoomToFit: () => void;
   getZoom: () => number;
+  /** True until the user takes manual zoom control (button or ctrl+wheel). */
+  isAutoFit: () => boolean;
   /** Tell the hook the unscaled content size (call when layout changes). */
   setContentSize: (width: number, height: number) => void;
 }
@@ -39,6 +48,9 @@ export function useZoomPan(opts: { min?: number; max?: number } = {}): ZoomPan {
   const sizeRef = useRef({ w: 0, h: 0 });
   const rafRef = useRef<number | null>(null);
   const spacerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Cleared the first time the user zooms deliberately, so a re-layout stops
+  // re-fitting under them and respects the zoom level they chose.
+  const autoFitRef = useRef(true);
 
   const syncSpacer = useCallback(() => {
     const spacer = spacerRef.current;
@@ -48,7 +60,7 @@ export function useZoomPan(opts: { min?: number; max?: number } = {}): ZoomPan {
     }
   }, []);
 
-  const applyZoom = useCallback((level: number) => {
+  const setZoom = useCallback((level: number) => {
     zoomRef.current = Math.min(max, Math.max(min, level));
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(() => {
@@ -62,6 +74,12 @@ export function useZoomPan(opts: { min?: number; max?: number } = {}): ZoomPan {
       syncSpacer();
     }, 100);
   }, [min, max, syncSpacer]);
+
+  // Public entry point: any caller-driven zoom is a deliberate user action.
+  const applyZoom = useCallback((level: number) => {
+    autoFitRef.current = false;
+    setZoom(level);
+  }, [setZoom]);
 
   const zoomBy = useCallback(
     (factor: number) => applyZoom(zoomRef.current * factor),
@@ -80,17 +98,20 @@ export function useZoomPan(opts: { min?: number; max?: number } = {}): ZoomPan {
     syncSpacer();
   }, [syncSpacer]);
 
+  // Fitting does NOT count as taking manual control — it is what auto-fit
+  // does on every re-layout, and the ⛶ button asks for the same thing.
   const zoomToFit = useCallback(() => {
     const container = containerRef.current;
     const { w, h } = sizeRef.current;
     if (!container || !w || !h) return;
-    applyZoom(Math.min(container.clientWidth / w, container.clientHeight / h, 1));
+    autoFitRef.current = true;
+    setZoom(Math.min(container.clientWidth / w, container.clientHeight / h, 1));
     syncSpacer();
     requestAnimationFrame(() => {
       container.scrollLeft = 0;
       container.scrollTop = 0;
     });
-  }, [applyZoom, syncSpacer]);
+  }, [setZoom, syncSpacer]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -104,10 +125,76 @@ export function useZoomPan(opts: { min?: number; max?: number } = {}): ZoomPan {
     return () => container.removeEventListener('wheel', onWheel);
   }, [applyZoom]);
 
+  // --- Drag-to-pan -------------------------------------------------------
+  // Panning moves the container's scroll offsets rather than the wrapper's
+  // transform, so it composes with the zoom transform and with the native
+  // scrollbars instead of fighting them.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    let panning = false;
+    let startX = 0, startY = 0, startLeft = 0, startTop = 0;
+    let moved = false;
+
+    // A drag beginning on a node/button is that element's interaction, not a
+    // pan — otherwise clicking a node to open the drawer would drag the canvas.
+    const onBackground = (target: EventTarget | null) =>
+      target instanceof Element && !target.closest('[data-pan-ignore]');
+
+    const onPointerDown = (e: PointerEvent) => {
+      if (e.button !== 0 || !onBackground(e.target)) return;
+      panning = true;
+      moved = false;
+      startX = e.clientX;
+      startY = e.clientY;
+      startLeft = container.scrollLeft;
+      startTop = container.scrollTop;
+      container.style.cursor = 'grabbing';
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (!panning) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      // Small jitter during a click shouldn't capture the pointer and swallow
+      // the click that follows.
+      if (!moved && Math.hypot(dx, dy) < 3) return;
+      if (!moved) {
+        moved = true;
+        container.setPointerCapture(e.pointerId);
+      }
+      e.preventDefault();
+      container.scrollLeft = startLeft - dx;
+      container.scrollTop = startTop - dy;
+    };
+
+    const endPan = (e: PointerEvent) => {
+      if (!panning) return;
+      panning = false;
+      container.style.cursor = '';
+      if (container.hasPointerCapture(e.pointerId)) {
+        container.releasePointerCapture(e.pointerId);
+      }
+    };
+
+    container.addEventListener('pointerdown', onPointerDown);
+    container.addEventListener('pointermove', onPointerMove);
+    container.addEventListener('pointerup', endPan);
+    container.addEventListener('pointercancel', endPan);
+    return () => {
+      container.removeEventListener('pointerdown', onPointerDown);
+      container.removeEventListener('pointermove', onPointerMove);
+      container.removeEventListener('pointerup', endPan);
+      container.removeEventListener('pointercancel', endPan);
+    };
+  }, []);
+
   return {
     containerRef, spacerRef, wrapperRef,
     applyZoom, zoomBy, zoomToFit,
     getZoom: () => zoomRef.current,
+    isAutoFit: () => autoFitRef.current,
     setContentSize,
   };
 }
