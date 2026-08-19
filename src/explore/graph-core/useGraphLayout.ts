@@ -15,14 +15,19 @@ export function useGraphLayout(
   const engineRef = useRef<ElkLayoutEngine | null>(null);
   if (!engineRef.current) engineRef.current = new ElkLayoutEngine();
 
-  const [layout, setLayout] = useState<LayoutResult | null>(null);
+  // The spec is stored alongside its result: layout is async (ELK runs in a
+  // worker), so a re-render with a new spec arrives while `layout` still holds
+  // the previous run's nodes/edges. Callers that join layout output back to
+  // their own view model must not consume a result computed from a different
+  // spec — see the staleness guard in OwnershipGraphView.
+  const [state, setState] = useState<{ spec: GraphSpec; layout: LayoutResult } | null>(null);
   const [inProgress, setInProgress] = useState(false);
   const optsKey = JSON.stringify(opts);
 
   useEffect(() => {
     const engine = engineRef.current!;
     if (!spec || spec.nodes.length === 0) {
-      setLayout(null);
+      setState(null);
       setInProgress(false);
       return;
     }
@@ -31,7 +36,7 @@ export function useGraphLayout(
     engine.layout(spec, JSON.parse(optsKey) as LayoutEngineOptions).then(
       result => {
         if (cancelled) return;
-        setLayout(result);
+        setState({ spec, layout: result });
         setInProgress(false);
       },
       (err: unknown) => {
@@ -48,5 +53,13 @@ export function useGraphLayout(
 
   useEffect(() => () => engineRef.current?.dispose(), []);
 
-  return { layout, inProgress };
+  // Hand back nothing while a new spec is still being laid out, rather than
+  // the previous spec's result: a stale layout references node/edge ids the
+  // caller's current view model no longer contains.
+  //
+  // An empty spec is not pending — the effect above short-circuits it without
+  // ever calling the engine, so it must not read as perpetually in progress.
+  const pending = !!spec && spec.nodes.length > 0;
+  const fresh = state && state.spec === spec ? state.layout : null;
+  return { layout: fresh, inProgress: (inProgress || !fresh) && pending };
 }
