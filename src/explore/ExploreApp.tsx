@@ -104,6 +104,18 @@ export default function ExploreApp() {
     [],
   );
 
+  // Clicking the app title clears everything back to the empty canvas, matching
+  // the previous app's title-click reset. Every piece of shareable state goes:
+  // selection, expansions, and the open drawer (the URL follows via the write
+  // effect); the table is re-opened since a collapsed panel over an empty
+  // canvas looks like breakage.
+  const resetApp = useCallback(() => {
+    setSelectedIds(new Set());
+    setExpandedIds(new Set());
+    setDetailId(null);
+    setTableCollapsed(false);
+  }, []);
+
   if (error) {
     return (
       <div className="p-8 text-red-600">
@@ -119,7 +131,13 @@ export default function ExploreApp() {
     <div className="flex flex-col h-screen bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100">
       <header className="flex items-center justify-between px-4 py-2 bg-blue-600 text-white shrink-0">
         <div>
-          <h1 className="text-lg font-bold leading-tight">BDCHM Explorer</h1>
+          <h1
+            className="text-lg font-bold leading-tight cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={resetApp}
+            title="Click to clear the selection and reset the view"
+          >
+            BDCHM Explorer
+          </h1>
           <p className="text-xs text-blue-100">
             BioData Catalyst Harmonized Model
           </p>
