@@ -35,11 +35,12 @@ export const VALUE_OBJECTS = new Set<string>([
   'QuestionnaireResponseValueInteger', 'QuestionnaireResponseValueTimePoint',
   'QuestionnaireResponseValueString',
   'Substance', 'BiologicProduct',
-  // PROPOSED 2026-08-12 — awaiting Siggie's adjudication. Without this,
-  // Context.activity classifies as own-flip ("Activity owns Context"), which
-  // puts Activity at layer 0 as a false root while Context sinks to layer 6,
-  // drawing a full-canvas edge. With it: Context -> Activity forward, Activity
-  // at layer 7 directly below Context, beside the other leaf value objects.
+  // Adjudicated 2026-08-19. Activity is is_a: Entity but has no identity of
+  // its own (activity_type + time_duration only) and nothing references it
+  // except Context.activity — so the FK-inversion default misfires on it:
+  // single-valued + entity range alone made it own-flip ("Activity owns
+  // Context"), stranding Activity at layer 0 as a false root while Context
+  // sank to layer 6. Forward now: Context -> Activity, Activity at layer 7.
   'Activity',
 ]);
 
