@@ -1,10 +1,15 @@
 # Ownership classification — adjudication list
 
-> **Status: AWAITING ADJUDICATION** (EXPLORE_VIZ.md build step 1).
-> Every class-ranged slot in the live schema (142 edges), with the FK-flip
-> heuristic's current verdict and a proposed verdict where they differ.
-> Once adjudicated, decisions are encoded in `src/models/containmentGraph.ts`
-> overrides and seed the future LinkML `containment_direction` annotations.
+> **Status: ADJUDICATED 2026-07-13**, encoded in `OWNERSHIP_OVERRIDES` /
+> `VALUE_OBJECTS` in `src/models/containmentGraph.ts`. This file is now the
+> *rationale record*, not a pending worklist — the code is authoritative.
+> Still seeds the future LinkML `containment_direction` annotations.
+>
+> **Re-check this after every upstream schema sync.** The overrides are
+> hand-curated and go stale silently: new classes fall through to the default
+> heuristic, which guesses. `Activity` (added by the 2026-08-12 sync) was
+> misclassified as owning `Context` and needed a follow-up adjudication on
+> 2026-08-19 — see "Later adjudications" below.
 >
 > Verdict vocabulary (matches the viz's edge channels):
 > - **own-fwd** — source owns range (drawn source above range)
@@ -12,20 +17,57 @@
 > - **ref** — non-owning reference (gray dashed, FK direction)
 > - **excluded** — edge not drawn (abstract target)
 
-## Mechanism gap (implementation note)
+## Mechanism (implemented)
 
-The current overrides are three binary sets (`VALUE_OBJECTS`,
-`NO_FLIP_SLOTS`, `EXCLUDE_HAS_A_TARGETS`) plus two hard rules (multivalued →
-own-fwd; single → own-flip). Several proposals below are inexpressible in
-that scheme (e.g. own-fwd for a single-valued entity range; ref or own-flip
-for a multivalued slot). Build step 1 replaces the sets with one override
-map, slot-name-keyed with optional `Class.slot` keys:
+The override map described here as a plan **now exists**:
 
 ```
-OWNERSHIP_OVERRIDES: Map<slotKey, 'own-fwd' | 'own-flip' | 'ref' | 'excluded'>
+OWNERSHIP_OVERRIDES: Map<slotName, 'own-fwd' | 'own-flip' | 'ref' | 'excluded'>
 ```
 
-defaulting to the existing heuristic when a slot has no entry.
+in `src/models/containmentGraph.ts`, consulted by `classifySlotEdge()` before
+the default heuristic. `VALUE_OBJECTS` and `EXCLUDE_HAS_A_TARGETS` remain as
+range-keyed sets. The old `NO_FLIP_SLOTS` set is gone, folded into the map.
+
+Resolution order: `EXCLUDE_HAS_A_TARGETS` → `OWNERSHIP_OVERRIDES` →
+multivalued ⇒ own-fwd → range in `VALUE_OBJECTS` ⇒ own-fwd → own-flip.
+
+That last fallthrough is the one that misfires: it assumes a single-valued
+entity range is a foreign key, so any identity-less value object not listed in
+`VALUE_OBJECTS` is read as *owning* the class that stores it.
+
+## Later adjudications
+
+### `Context.activity` → Activity (2026-08-19)
+
+The 2026-08-12 upstream sync added `Context` and `Activity`. `Context.activity`
+is single-valued with an entity range and `Activity` was not in
+`VALUE_OBJECTS`, so it fell through to `own-flip`: **"Activity owns Context"**,
+backwards against the schema's own descriptions (Context = "the context within
+which an observation was made", holding `activity`; Activity = "an activity
+that provides context to an observation").
+
+The consequence was structural, not cosmetic. Owners sink to one layer above
+their topmost owning child, so treating Activity as Context's owner stranded it
+at **layer 0 — a false root** — while Context sank to layer 6.
+
+| | Activity | Context | edge |
+|---|---|---|---|
+| before | layer 0 | layer 6 | `Activity → Context` (flipped) |
+| after | layer 7 | layer 6 | `Context → Activity` (forward) |
+
+**Decided: Activity is a value object.** It is `is_a: Entity` but has no
+identity of its own (`activity_type` + `time_duration` only) and nothing in the
+schema references it except `Context.activity`. Added to `VALUE_OBJECTS`.
+
+Noted but not acted on: `Context.activity` is `0..1`, so a `Context` can exist
+with no `Activity`, leaving only `relative_timing`. Possible upstream modeling
+smell — worth raising with the schema authors; does not affect classification.
+
+Other slots from the same sync classify correctly and need no review:
+`Visit.year_range`→TimePeriod, `Condition/Procedure.affected_body_site`→
+BodySite, `Activity.time_duration`→Quantity, `Observation.context`→Context
+(own-fwd via multivalued).
 
 ## A. Decided (Siggie, 2026-07-13)
 

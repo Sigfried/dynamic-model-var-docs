@@ -14,6 +14,19 @@
 - For Users: What is BDCHM, features, usage
 - For Developers: Architecture philosophy, separation of concerns principle, data flow
 
+### WORKLOG.md (repo root)
+**Audience**: A future AI session — **Siggie will never read it**
+**Purpose**: Reasoning, dead ends, and corrections. Why an approach was chosen
+over its alternative; what was tried and abandoned; what turned out to be wrong.
+
+**Rules**:
+- Not a status report, and not a place for "needs Siggie" items — those go in
+  TASKS.md or the chat.
+- Live docs state *current* state; the history that would clutter them goes here.
+- Read it before guessing about history: a convention with no obvious
+  motivation, a half-migrated file, or a decision that looks arbitrary.
+- Newest entries first.
+
 ### ARCHITECTURE.md
 **Audience**: Developers (especially AI assistants)
 **Purpose**: Quick reference for key files and architectural patterns to prevent duplication

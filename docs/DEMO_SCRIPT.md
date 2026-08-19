@@ -1,6 +1,14 @@
 # Demo Script — BDCHM Interactive Documentation
 
+> **⚠️ STALE (as of 2026-08-19).** This script was written before the app
+> split of 2026-08-12. It describes the Entity Explorer as "the default
+> view" — that app now lives at **`previous.html`**, and the default
+> (`index.html`) is the **Explore SPA** (see [EXPLORE_VIZ.md](EXPLORE_VIZ.md)),
+> which this script does not cover at all. Every URL and "default view"
+> reference below needs rewriting before the script is used again.
+
 **Target length:** ≤ 10 minutes. **App:** http://localhost:5173/dynamic-model-var-docs
+(the previous app is at `/previous.html`)
 
 **Recording tool: Snagit** (better than macOS native here — it has a trim/cut editor,
 so a fluffed click can be snipped out instead of forcing a full retake; cursor

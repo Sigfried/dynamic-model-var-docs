@@ -6,95 +6,107 @@
 
 ---
 
-## 🎯 Target release: 2026-07-30
+## 🎯 Target release: 2026-07-30 — **PASSED, not renegotiated**
 
-Need to work backwards from this date to set intermediate deadlines for requesting,
-receiving, and implementing stakeholder feedback.
+This date is three weeks past as of 2026-08-19 and no new one has been set.
+Work has continued without a deadline; treat "before the release" language
+elsewhere in the docs as stale. **Needs Siggie: set a new target or drop it.**
 
 ---
 
-## 🔁 HANDOFF — start here next session (updated 2026-08-12, late)
+## 🔁 HANDOFF — start here next session (updated 2026-08-19)
 
-The schema-sync work is **fully closed**: fix pushed, PR #2 merged
-(`be3d5fd` / `778afca`), deployed. Typecheck and the full suite are green
-against the new upstream schema.
+Explore SPA is the default app and the three-region layout is complete. This
+session was a **visual-pass session**: Siggie drove the real page and reported
+bugs; several were invisible to the test suite.
 
-The Explore SPA's three-region layout (EXPLORE_VIZ.md#layout) is now
-**complete**: selection table (collapsible) + ownership DAG canvas + detail
-drawer. Build steps 1, 2, 4 done; step 3 mostly done.
+**Next up: is-a side-stacks** (EXPLORE_VIZ.md step 3 remainder). Inheritance is
+currently rendered as header chips ⊳/▷ and essentially nothing else — the spec
+wants an expandable subclass stack on the parent node. Agreed as the next piece
+of work, deliberately left until the canvas was legible enough to design
+against. **Note every class is `is_a: Entity`**, so naive rendering adds noise.
 
-**Next — EXPLORE_VIZ.md build order, what's left:**
-1. **is-a side-stacks** (step 3 remainder) — currently header chips ⊳/▷;
-   spec wants an expandable subclass stack on the parent node. Left undone
-   deliberately: it's a visual-design call best made looking at the canvas.
-2. **Endpoint cardinality markers** — "under consideration," **not a settled
-   requirement**. Decide whether it's wanted before building.
-3. Step 5 polish: animation on selection change, self-loop badges.
-4. **A visual pass over the whole thing.** Everything below the data layer is
-   verified by jsdom tests only; nobody has looked at the drawer, the count
-   badges, or expand-on-demand in a browser. Playwright is not installed.
+**Also confirmed wanted** (2026-08-19):
+- **Cardinality markers at edge endpoints** — previously "under consideration,"
+  now a yes. Wants some form of **label/title text on links** alongside.
+- **Step 5 polish** — selection-change animation, self-loop badges.
+
+### 🐛 Fixed this session (2026-08-19)
+
+- **Crash on uncheck.** Select Person + Participant, uncheck Participant →
+  `Routed edge edge-80 missing from view model`. ELK layout is async while the
+  view model is a sync `useMemo`, so React rendered fresh nodes against the
+  previous spec's routed edges. `useGraphLayout` now stores each result with
+  the spec it came from and returns null unless they match. The throw was kept
+  (it is a real invariant) and made unreachable instead of softened.
+- **Pan did not work at all.** `useZoomPan` relied entirely on native
+  scrollbars, but fit-to-view clamps content to fit, leaving nothing to
+  scroll. Added drag-to-pan; nodes/toolbar carry `data-pan-ignore`.
+- **Fit-to-view is now the default** until the user takes manual zoom control.
+- **Title-click reset** — parity with the previous app; clears selection,
+  expansions, drawer, and re-opens the table.
+- **Path-to-root blowup.** Selecting one class could draw most of the schema
+  (`Quantity`: 29 of 53 classes, 87 edges). Now one-hop direct owners, capped
+  at 8; transitive is opt-in via `⇱ roots` / `?roots=1`. Full reasoning in
+  EXPLORE_VIZ.md §6 — including the intermediate chips-only design that was
+  also wrong.
+- **Phantom edge** between Condition and MeasurementObservation: a routing
+  artifact, not missing data. All incoming edges shared one `::hdr:in` port;
+  each edge now gets its own fanned port.
+- **Empty node box.** `BodySite` (all-scalar attributes) rendered as an empty
+  box whose only content was a "+3 more attributes" collapser. Auto-expands now.
+- **`Activity` misclassification** — adjudicated and merged; see
+  OWNERSHIP_CLASSIFICATION.md.
+
+### ⚠️ Known-imperfect, not yet addressed
+
+- **Curved edges look poor** at current spacing. Siggie explicitly deferred
+  retuning them; orthogonal is the target. Don't "fix" curved unprompted.
+- **Chip-strip height is estimated** from label lengths (ELK needs a height
+  before the browser wraps). Rounded up, so a wide set leaves blank px rather
+  than clipping — but the estimate could be wrong for unusual names.
+- **Amber collision**: variable counts, ownership dots, AND owner chips are all
+  amber. Flagged by Siggie; unresolved. Owner chips arguably *should* be amber
+  (they are ownership), which makes the count badges the thing to move.
+- **Drawer section headers** ("Referenced by", "Attributes") are 10px gray
+  uppercase — too recessive to show panel structure.
+- **Cross-view state preservation** — navigating to the previous app and back
+  loses context. Explore already URL-encodes its state, so this is mostly a
+  matter of nav links carrying the query string.
+- **Expand-on-demand discoverability** — a dimmed row gives no signal that it
+  is clickable, and expandable rows often hide inside "+N more attributes".
+- **No expand downward** — chips and rows only reach owners/ranges, never
+  "what does this class own".
 
 ### ⚖️ Needs Siggie's decision
 
-- **`Context.activity` ownership classification — a fix is waiting on branch
-  `proposal/activity-value-object`.** The heuristic classifies
-  `Context.activity` (single-valued, entity range) as `own-flip`, i.e.
-  "**Activity owns Context**", which reads backwards against the schema's own
-  descriptions (Context = "the context within which an observation was made",
-  holding `activity`; Activity = "an activity that provides context to an
-  observation").
-
-  The consequence is **structural, not cosmetic**: owners sink to one layer
-  above their topmost owning child, so treating Activity as Context's owner
-  strands it at **layer 0 — a false root**, beside ResearchStudyCollection,
-  while Context sinks to layer 6 under the six observation classes that own
-  it. That is the full-canvas edge in the 2026-08-12 screenshot.
-
-  Measured, with `Activity` added to `VALUE_OBJECTS`:
-  | | Activity | Context | edge |
-  |---|---|---|---|
-  | before | layer 0 | layer 6 | `Activity → Context` (flipped) |
-  | after | layer 7 | layer 6 | `Context → Activity` (forward) |
-
-  Blast radius is that one edge — `Activity` is referenced only by
-  `Context.activity`. Full suite passes either way. **Left off main** because
-  classification is an adjudication call, not a drawing one.
-  Accept: `git merge proposal/activity-value-object` ·
-  Drop: `git branch -D proposal/activity-value-object`
-- **Category placement of `Context` / `Activity`** — parked in
-  `observation` beside `Quantity`; trivial to move.
-- The other new entity-ranged slots classify correctly and need no review:
-  `Visit.year_range`→TimePeriod, `Condition/Procedure.affected_body_site`→
-  BodySite, `Activity.time_duration`→Quantity, `Observation.context`→Context
-  (own-fwd via multivalued).
-
-### 🐛 Fixed this session
-
-- **`Context` and `Activity` were invisible in the entity list.**
-  `ENTITY_CATEGORIES` is a hand-curated allowlist and both the Entity Explorer
-  and Focus selector map categories → classes, never the reverse, so any class
-  nobody lists renders nowhere, silently. Both new classes are now categorized;
-  `Entity` is recorded in `UNCATEGORIZED_BY_DESIGN` with its reason so
-  deliberate omissions are distinguishable from forgotten ones. Guarded going
-  forward by `entityCategories.test.ts` (fails CI, verified it fails when the
-  classes are removed again) plus a dev-console warning from the DataService
-  constructor. **This is the same rot pattern flagged for the ownership
-  overrides** — worth expecting after every upstream sync.
-- ~~Schema sync Action failing~~ / ~~dangling `BaseObservationTypeEnum`~~ —
-  both resolved and merged; see archive. `transform_schema.py` now fails loudly
-  on any dangling range.
+- **Owner cap is 8**, chosen without discussion. `BodySite` (6) draws; any node
+  over 8 falls back to chips.
+- **Category placement of `Context` / `Activity`** — parked in `observation`
+  beside `Quantity`; trivial to move.
+- **EXPLORE_VIZ.md language** — Siggie: "a lot of the language doesn't make
+  sense to me." Terms like sunk layers, storage direction, own-flip are doing
+  real work but were written for their author. A rewrite pass is wanted, **as a
+  conversation, not a solo edit.**
 
 ### 📌 Also worth knowing
 
+- **Node version**: the repo needs Node ≥18 (Vite 7). Siggie's interactive
+  shell has v24 via nvm, but a non-interactive shell falls back to a system
+  v16, where `npx vitest` dies at startup with
+  `node:fs/promises does not provide an export named 'constants'`. Export the
+  nvm bin path first. No `.nvmrc` yet — worth adding.
+- **Use `npm run typecheck`** (`tsc -b --noEmit`), not bare `tsc --noEmit`;
+  the latter is less strict and has hidden dozens of build-breaking errors
+  before.
+- **Playwright is still not installed**; the spec's probe rig was never built.
+  Everything above the data layer is jsdom-tested only. Both the pan bug and
+  the uncheck crash were invisible to the suite and found by looking at the page.
 - The upstream variables sheet gained columns (`var_name`, `status`,
-  `Ontology CURIE`, `OMOP Concept ID`, `Deprecated Codes`); they are loaded
-  but **not yet surfaced in the UI** — candidates for the unused-fields
-  workflow below.
-- Playwright is not installed, so the spec's probe-rig verification (screenshot
-  review, layer-ordering assertions) has not been run against the drawer; it
-  is covered by jsdom tests instead.
+  `Ontology CURIE`, `OMOP Concept ID`, `Deprecated Codes`); loaded but **not
+  yet surfaced in the UI**.
 - `npm run lint` reports 22 pre-existing problems (test files,
-  `popoutWindow.ts`), untouched and unrelated to recent work.
+  `popoutWindow.ts`), untouched and unrelated.
 
 ---
 

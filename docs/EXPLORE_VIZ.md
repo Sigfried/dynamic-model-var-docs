@@ -1,9 +1,14 @@
 # EXPLORE_VIZ.md — Subgraph-viz SPA (design spec)
 
-> **Status**: Design approved in conversation 2026-07-13; implementation not
-> started. Supersedes parts of [FOCUS_VIEW.md](FOCUS_VIEW.md) (the three-panel
-> Focus layout and its LinkOverlay work continue to exist but are no longer
-> the primary direction). Target: demoable before the 2026-07-30 release.
+> **Status**: Design approved 2026-07-13; **built and running** — this is the
+> default app (`index.html`). Build steps 1, 2, 4 done; step 3 done except
+> is-a side-stacks; step 5 outstanding. Where this document and the code
+> disagree, the code wins and the doc is the bug — the content policy below
+> (§6) has already been rewritten once for that reason.
+>
+> Supersedes parts of [FOCUS_VIEW.md](FOCUS_VIEW.md) (the three-panel Focus
+> layout and its LinkOverlay work continue to exist but are no longer the
+> primary direction).
 >
 > Companion artifact: visual survey of has-a/is-a techniques rendered on a
 > BDCHM subset — https://claude.ai/code/artifact/ab245ee1-eca7-4efe-9c46-65b5d2f6ee6a
@@ -43,11 +48,30 @@ Terminology: we say **ownership** (has-a), not "containment," from here on.
    direction gets a re-verbed label ("has members — via
    `member_of_research_study`"), never the bare slot name pointing the wrong
    way. Unflipped edges and references keep plain slot-name labels.
-6. **Content policy**: the diagram shows the selected entities, edges among
-   them, and each selected entity's ownership path(s) to root (dimmed).
-   Everything else arrives by **expand-on-demand**: nodes/rows carry ↘/↗-style
-   counts per relation kind (the app's existing badge language); clicking
-   pulls those neighbors in, dimmed and dismissible.
+6. **Content policy** — *revised 2026-08-19; the original spec is recorded at
+   the end of this list because the revision is the interesting part.*
+   The diagram shows the selected entities, edges among them, and each
+   selected entity's **direct owners** (one hop, drawn as dimmed context),
+   capped at 8 per node. Everything else arrives by **expand-on-demand**:
+   clicking a dimmed attribute row, or an owner chip, pulls that class in,
+   dismissible via ✕.
+
+   The original policy was *transitive* paths-to-root. It was measured against
+   the live schema and abandoned: ancestors fan OUT rather than up a spine,
+   because a value object is owned by everything that stores one and each of
+   those owners drags in its own path to root. Selecting `BodySite` drew 15
+   context nodes / 32 edges; `Quantity` drew 29 of the schema's 53 classes
+   with 87 edges — from one checkbox. It also swamped expand-on-demand, which
+   assumes a small canvas you grow deliberately. Transitive paths-to-root
+   survives as an opt-in toggle (`⇱ roots`, `?roots=1`).
+
+   A first revision summarized owners as clickable chips instead of drawing
+   them. That was also wrong, and for an instructive reason: a value object's
+   owners *are* the answer to "what is this" — `BodySite`'s six owners are the
+   content of the diagram, not a footnote to expand one chip at a time.
+   Drawing them is the right default; chips are the fallback above the cap
+   (`Quantity`: 16 owners), where every owner is listed and clickable with an
+   "add all", never silently truncated.
 7. Self-loops (ResearchStudy `part_of` ResearchStudy) draw as a loop badge on
    the node, not a layer violation.
 
@@ -82,10 +106,16 @@ Selection ids encode in the URL from day one.
 New DataService method:
 
 ```
-getOwnershipSubgraph(selectedIds, expansions) -> {
-  nodes: [{ id, role: 'selected' | 'context', ... }],
+getOwnershipSubgraph(selectedIds, expansions, options?) -> {
+  nodes: [{ id, role: 'selected' | 'context', layer, slots, ... }],
   edges: [{ source, target, type: 'ownership' | 'reference' | 'isa',
             slotName, storageDirection, cardinality }],
+  hiddenOwners: Map<classId, ownerId[]>,   // owners NOT drawn → chips
+}
+
+options = {
+  pathToRoot?: boolean,   // default false — transitive ancestors (⇱ roots)
+  ownerCap?: number,      // default 8 — draw direct owners up to this many
 }
 ```
 
@@ -96,7 +126,8 @@ the style of the containment property tests.
 and installed (2026-07-28); the graphology fallback is dead. Implementation:
 `src/models/ownershipSubgraph.ts` builds the full ownership DAG once via
 `fromEdges` (self-loops skipped, parallel edges collapsed), uses
-`ancestors()` for paths-to-root and **sunk layers** over the FULL DAG as the
+`parents` for the one-hop owner walk (`ancestors()` only under
+`pathToRoot`) and **sunk layers** over the FULL DAG as the
 layer assignment (owners sink to one above their topmost owning child; leaf
 classes dangle below their deepest owner — see `computeSunkLayers`), so a
 node keeps its layer as the selection changes and roots aren't stranded far
@@ -179,10 +210,26 @@ New dependency: `elkjs` only (skip NodeLinkView's d3-force mode in v1).
    its range as a context node (`?exp=`, state in ExploreApp beside
    selection); expanded nodes carry an ✕ to dismiss, path-to-root context
    does not. Rows pointing at on-canvas entities, plain scalar/enum rows,
-   and self-loops are not expandable. Still open from this step: proper
-   **is-a side-stacks** (currently header chips ⊳/▷); cardinality indicators
-   at edge endpoints remain **under consideration, not a settled
-   requirement** — decide before building.
+   and self-loops are not expandable. Owner chips (above the cap) are the
+   same affordance reached from the owner side.
+
+   **Edge port fan-out DONE** 2026-08-19. Every incoming edge previously
+   shared one `::hdr:in` port, so N edges converging on a node landed on a
+   single point and their orthogonal runs overlapped — six owners of
+   `BodySite` read as an edge between two unrelated owners. Each edge now
+   gets its own port fanned along the border. Orthogonal routing retained;
+   curved is still a toggle and still looks poor at tight spacing —
+   **not retuned, deliberately deferred.**
+
+   **Empty-node fix DONE** 2026-08-19: a class whose attributes are all
+   scalars (`BodySite`: id/qualifier/site) has nothing edge-connected, so
+   collapsed it rendered as an empty box whose only content was a
+   "+3 more attributes" collapser. Those nodes now auto-expand.
+
+   Still open from this step: proper **is-a side-stacks** (currently header
+   chips ⊳/▷) — **this is the next piece of work.** Cardinality indicators
+   at edge endpoints are wanted (Siggie, 2026-08-19), together with some
+   form of label/title text on links.
 4. ~~Detail drawer (Explorer card reuse + the two fixes).~~ **DONE**
    2026-08-12. `src/explore/DetailDrawer.tsx` opens on node click, reusing
    `getClassSummary` (the Explorer card's data path) rather than
@@ -195,14 +242,20 @@ New dependency: `elkjs` only (skip NodeLinkView's d3-force mode in v1).
    `?sel=`, through a single URL writer. The left selection table is now
    collapsible, completing the three-region layout.
 5. Polish: animation on selection change (surviving nodes keep layers),
-   self-loop badges, dim/dismiss for context nodes.
+   self-loop badges, dim/dismiss for context nodes. **Confirmed wanted**
+   (2026-08-19), not started.
 
 ## Verification
 
 - vitest for extraction + classification (property tests like containment's).
-- Drive the real page with the playwright probe rig (scratchpad pattern from
-  the 2026-07-10 LinkOverlay debugging): assert node/edge presence, layer
-  ordering (owner above member), expand behavior; screenshot review.
+- **Playwright is NOT installed** and the probe rig was never built. Everything
+  above the data layer is verified by jsdom tests only; visual review is done
+  by Siggie against the dev server. Two bugs that shipped — pan not working at
+  all, and a crash on uncheck — were both invisible to the test suite and
+  found by looking at the page.
+- Regression tests worth knowing about: `useGraphLayout.test.ts` (async
+  layout staleness), `exploreReset.test.ts` (title-click reset),
+  `ownershipSubgraph.test.ts` (owner-cap and chip/node invariants).
 
 ## Explicitly out of v1
 

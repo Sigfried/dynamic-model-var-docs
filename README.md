@@ -21,6 +21,18 @@ The BioData Catalyst Harmonized Model (BDCHM) is a LinkML schema that defines:
 - 68% of variables (103) map to MeasurementObservation class
 - Rich graph structure with multiple relationship types
 
+### Two apps
+
+Since 2026-08-12 the repo builds **two entry points**:
+
+- **`index.html` (default)** — the **Explore SPA**: pick entities from a
+  selection table and see them as a layered ownership diagram with a detail
+  drawer. Design notes: `docs/EXPLORE_VIZ.md`.
+- **`previous.html`** — the previous app, holding the Entity Explorer, Kitchen
+  Sink, and Focus views. Linked from the Explore header and vice versa.
+
+Most of the feature description below refers to the previous app.
+
 ### What You Can Explore
 
 **Browse relationships**:

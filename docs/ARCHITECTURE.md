@@ -145,7 +145,22 @@ When middle panel is visible, Class→Range slot edges decompose into two visual
 
 ---
 
-## Views: Explorer, Kitchen Sink, Focus
+## Two apps: the Explore SPA (default) and the previous app
+
+Since 2026-08-12 there are **two Vite entry points**:
+
+- **`index.html` → `src/explore/`** — the Explore SPA, now the default app.
+  Selection table + layered ownership DAG + detail drawer. See
+  **[EXPLORE_VIZ.md](EXPLORE_VIZ.md)**. State (`?sel=`, `?exp=`, `?detail=`,
+  `?roots=`) is URL-encoded through a single writer in `ExploreApp.tsx`.
+- **`previous.html` → `src/App.tsx`** — the previous app, holding the three
+  older views below, linked each way from the header.
+
+`src/explore/graph-core/` is the layout/zoom engine (ELK in a worker, pan/zoom,
+edge paths) with **zero app imports** — the intended package-extraction
+boundary. Do not import DataService or app state into it.
+
+### The previous app's three views
 
 Three top-level views (header toggle; `?view=` URL param), all mounted, shown via
 CSS in `App.tsx`:
@@ -159,12 +174,28 @@ floating-box system — NOT a mode of `LayoutManager` (whose layout is hardcoded
 the 3-panel shape). The shared floating-box orchestration is being extracted into a
 `useFloatingBoxes` hook consumed by both.
 
-**Containment graph.** `DataService.getContainmentGraph(classIds?)` derives a
-directed (possibly cyclic) containment graph live from the schema graph via the
-FK-inversion heuristic in `src/models/containmentGraph.ts` (TS port of
+**Ownership graph** (called "containment" in code; the rename is pending).
+`DataService.getContainmentGraph(classIds?)` derives a directed (possibly
+cyclic) graph live from the schema graph via the FK-inversion heuristic in
+`src/models/containmentGraph.ts` (TS port of
 `scripts/extract_containment_tree.py`). `getContainmentNodes()` adapts it to the
 `dag-browser-widget` `Node[]` shape. This replaces the static
 `public/*-graph.json` mockup data (which had drifted from the schema).
+
+**The heuristic's default is a guess, and it misfires.** Single-valued slot to
+an entity range ⇒ `own-flip` ("the target owns the source"), which is right for
+real FKs and wrong for identity-less value objects. `Activity` was misclassified
+exactly this way and had to be adjudicated onto `VALUE_OBJECTS` (2026-08-19).
+Expect to re-check `VALUE_OBJECTS` and `OWNERSHIP_OVERRIDES` after every
+upstream schema sync — see [OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md).
+
+**`DataService.getOwnershipSubgraph(selected, expansions, options)`**
+(`src/models/ownershipSubgraph.ts`) is what the Explore canvas draws: the
+selection, edges among them, and each node's **direct owners** (one hop, capped
+at `ownerCap`, default 8). Owners over the cap are returned in `hiddenOwners`
+for chip rendering instead. `pathToRoot: true` restores transitive
+ancestors-to-root, which is off by default because it is a reverse-reachability
+closure — see EXPLORE_VIZ.md §6 for the measurements.
 
 ---
 
