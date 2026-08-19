@@ -32,7 +32,9 @@ import { ENTITY_CATEGORIES, findUncategorizedClasses } from '../config/entityCat
 import { buildContainmentGraph } from '../models/containmentGraph';
 import type { ContainmentGraph } from '../models/containmentGraph';
 import { buildOwnershipDag, buildOwnershipSubgraph } from '../models/ownershipSubgraph';
-import type { OwnershipDag, OwnershipSubgraph } from '../models/ownershipSubgraph';
+import type {
+  OwnershipDag, OwnershipSubgraph, OwnershipSubgraphOptions,
+} from '../models/ownershipSubgraph';
 // Re-export so UI components (which must not import from config/ or models/) can
 // reference section identities without depending on display strings.
 export { SectionId } from '../config/appConfig';
@@ -43,6 +45,7 @@ export type { EdgeInfo, ItemInfo };
 export type { ContainmentGraph, ContainmentNode, ContainmentEdge } from '../models/containmentGraph';
 export type {
   OwnershipSubgraph, OwnershipSubgraphNode, OwnershipSubgraphEdge,
+  OwnershipSubgraphOptions,
   OwnershipNodeRole, OwnershipEdgeType, OwnershipNodeSlot,
 } from '../models/ownershipSubgraph';
 
@@ -656,9 +659,13 @@ export class DataService {
    * 'context' nodes, plus expand-on-demand additions. Node.layer (maxDepth in
    * the full ownership DAG) is stable across selection changes.
    */
-  getOwnershipSubgraph(selectedIds: string[], expansions: string[] = []): OwnershipSubgraph {
+  getOwnershipSubgraph(
+    selectedIds: string[],
+    expansions: string[] = [],
+    options: OwnershipSubgraphOptions = {},
+  ): OwnershipSubgraph {
     const { full, dag } = this.getOwnershipDag();
-    return buildOwnershipSubgraph(full, dag, selectedIds, expansions);
+    return buildOwnershipSubgraph(full, dag, selectedIds, expansions, options);
   }
 
   /**

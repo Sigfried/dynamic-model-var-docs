@@ -43,12 +43,65 @@ describe('getOwnershipSubgraph', () => {
   });
 
   test('poly-parent case: Participant has ≥2 ownership in-edges (Person + ResearchStudy)', () => {
-    const g = ds.getOwnershipSubgraph(['Participant']);
+    // Owners are only drawn when path-to-root is on (it is off by default).
+    const g = ds.getOwnershipSubgraph(['Participant'], [], { pathToRoot: true });
     const owners = g.edges
       .filter(e => e.type === 'ownership' && e.target === 'Participant' && !e.isLoop)
       .map(e => e.source);
     expect(owners).toContain('Person');
     expect(owners).toContain('ResearchStudy');
+  });
+
+  test('path-to-root is OFF by default: nothing but the selection is drawn', () => {
+    // Ancestors fan out rather than up a spine, so the walk is a reverse-
+    // reachability closure: BodySite pulled 15 context nodes and Quantity 29
+    // of the schema's 53 classes, from one checkbox. Hence the default.
+    for (const id of ['BodySite', 'Quantity', 'Participant']) {
+      const g = ds.getOwnershipSubgraph([id]);
+      expect(g.nodes.map(n => n.id), id).toEqual([id]);
+      expect(g.nodes[0].role).toBe('selected');
+    }
+  });
+
+  test('path-to-root on: the leaf-value-object blowup is what the flag buys', () => {
+    const off = ds.getOwnershipSubgraph(['BodySite']);
+    const on = ds.getOwnershipSubgraph(['BodySite'], [], { pathToRoot: true });
+    expect(off.nodes).toHaveLength(1);
+    // Exact counts are schema-dependent; the point is the order of magnitude.
+    expect(on.nodes.length).toBeGreaterThan(10);
+    expect(on.nodes.filter(n => n.role === 'context').length)
+      .toBe(on.nodes.length - 1);
+  });
+
+  test('hidden owners are reported as chips when they are not drawn', () => {
+    const g = ds.getOwnershipSubgraph(['Participant']);
+    const owners = g.hiddenOwners.get('Participant') ?? [];
+    // The same owners path-to-root would have drawn as nodes.
+    expect(owners).toContain('Person');
+    expect(owners).toContain('ResearchStudy');
+  });
+
+  test('an owner already on the canvas is a node, not a chip', () => {
+    const g = ds.getOwnershipSubgraph(['Participant', 'Person'], [], {});
+    expect(g.hiddenOwners.get('Participant') ?? []).not.toContain('Person');
+    expect(g.nodes.map(n => n.id)).toContain('Person');
+  });
+
+  test('path-to-root on: owners are drawn, so no chips duplicate them', () => {
+    const g = ds.getOwnershipSubgraph(['Participant'], [], { pathToRoot: true });
+    const drawn = new Set(g.nodes.map(n => n.id));
+    for (const [, owners] of g.hiddenOwners) {
+      for (const o of owners) expect(drawn.has(o)).toBe(false);
+    }
+  });
+
+  test('expanding a chip owner turns it into a node', () => {
+    const before = ds.getOwnershipSubgraph(['Participant']);
+    expect(before.hiddenOwners.get('Participant')).toContain('Person');
+
+    const after = ds.getOwnershipSubgraph(['Participant'], ['Person']);
+    expect(after.nodes.map(n => n.id)).toContain('Person');
+    expect(after.hiddenOwners.get('Participant') ?? []).not.toContain('Person');
   });
 
   test('owners sit above members: non-loop ownership edges go down layers', () => {
@@ -66,7 +119,7 @@ describe('getOwnershipSubgraph', () => {
   test('sunk layers: an owner sits directly above its topmost member', () => {
     // Person owns only Participant, so sinking puts it exactly one layer up —
     // not stranded at the root layer.
-    const g = ds.getOwnershipSubgraph(['Participant']);
+    const g = ds.getOwnershipSubgraph(['Participant'], [], { pathToRoot: true });
     const person = nodeById(g, 'Person')!;
     const participant = nodeById(g, 'Participant')!;
     expect(person.layer).toBe(participant.layer - 1);
@@ -121,7 +174,8 @@ describe('getOwnershipSubgraph', () => {
 
   test('flipped ownership edges are marked for re-verbed labels', () => {
     // associated_person: Person owns Participant, stored member-side.
-    const g = ds.getOwnershipSubgraph(['Participant']);
+    // Needs Person on the canvas, i.e. path-to-root.
+    const g = ds.getOwnershipSubgraph(['Participant'], [], { pathToRoot: true });
     const e = g.edges.find(e => e.slotName === 'associated_person');
     expect(e).toBeDefined();
     expect(e!.type).toBe('ownership');

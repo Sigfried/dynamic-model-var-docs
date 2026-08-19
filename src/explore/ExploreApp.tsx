@@ -24,6 +24,7 @@ import DetailDrawer from './DetailDrawer';
 const SEL_PARAM = 'sel';
 const DETAIL_PARAM = 'detail';
 const EXP_PARAM = 'exp';
+const ROOTS_PARAM = 'roots';
 
 function readIdsFromURL(param: string): Set<string> {
   const raw = new URLSearchParams(window.location.search).get(param);
@@ -34,8 +35,18 @@ function readDetailFromURL(): string | null {
   return new URLSearchParams(window.location.search).get(DETAIL_PARAM) || null;
 }
 
+/** Path-to-root is off by default; only its non-default state is in the URL. */
+function readPathToRootFromURL(): boolean {
+  return new URLSearchParams(window.location.search).get(ROOTS_PARAM) === '1';
+}
+
 /** Single writer for every param so they never clobber each other. */
-function writeStateToURL(sel: Set<string>, expanded: Set<string>, detailId: string | null) {
+function writeStateToURL(
+  sel: Set<string>,
+  expanded: Set<string>,
+  detailId: string | null,
+  pathToRoot: boolean,
+) {
   const url = new URL(window.location.href);
   const setIds = (param: string, ids: Set<string>) => {
     if (ids.size === 0) url.searchParams.delete(param);
@@ -45,6 +56,8 @@ function writeStateToURL(sel: Set<string>, expanded: Set<string>, detailId: stri
   setIds(EXP_PARAM, expanded);
   if (detailId) url.searchParams.set(DETAIL_PARAM, detailId);
   else url.searchParams.delete(DETAIL_PARAM);
+  if (pathToRoot) url.searchParams.set(ROOTS_PARAM, '1');
+  else url.searchParams.delete(ROOTS_PARAM);
   window.history.replaceState(null, '', url);
 }
 
@@ -59,6 +72,7 @@ export default function ExploreApp() {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => readIdsFromURL(EXP_PARAM));
   const [detailId, setDetailId] = useState<string | null>(readDetailFromURL);
   const [tableCollapsed, setTableCollapsed] = useState(false);
+  const [pathToRoot, setPathToRoot] = useState<boolean>(readPathToRootFromURL);
 
   // Expansions only mean something relative to a selection — with nothing
   // selected the canvas shows its empty state, so keeping ?exp= would strand
@@ -68,8 +82,8 @@ export default function ExploreApp() {
   }, [selectedIds, expandedIds]);
 
   useEffect(
-    () => writeStateToURL(selectedIds, expandedIds, detailId),
-    [selectedIds, expandedIds, detailId],
+    () => writeStateToURL(selectedIds, expandedIds, detailId, pathToRoot),
+    [selectedIds, expandedIds, detailId, pathToRoot],
   );
 
   const toggleSelect = useCallback((id: string) => {
@@ -114,6 +128,7 @@ export default function ExploreApp() {
     setExpandedIds(new Set());
     setDetailId(null);
     setTableCollapsed(false);
+    setPathToRoot(false);
   }, []);
 
   if (error) {
@@ -200,6 +215,8 @@ export default function ExploreApp() {
               expandedIds={expandedIds}
               onExpand={expand}
               onCollapse={collapse}
+              pathToRoot={pathToRoot}
+              onTogglePathToRoot={() => setPathToRoot(v => !v)}
             />
           )}
         </div>

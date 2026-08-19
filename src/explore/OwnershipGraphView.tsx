@@ -35,6 +35,8 @@ import type { AnchorDir, EdgeSection, GraphSpec, GraphSpecPort, Point } from './
 const NODE_W = 240;
 const HEADER_H = 30;
 const ROW_H = 20;
+/** Strip under the header listing owners that aren't on the canvas. */
+const OWNERS_H = 18;
 const FOOTER_H = 18;
 const PAD = 28;
 
@@ -56,6 +58,12 @@ interface RowVM {
 interface NodeVM extends OwnershipSubgraphNode {
   isaParents: string[];
   subclassCount: number;
+  /**
+   * Owners of this class that aren't drawn — the "what uses this?" answer
+   * path-to-root used to give by drawing the entire upstream graph. Empty
+   * when pathToRoot is on, since those owners are then real nodes.
+   */
+  hiddenOwners: string[];
   /** Rows currently displayed (connected first; all when expanded). */
   rows: RowVM[];
   hiddenCount: number;
@@ -112,14 +120,16 @@ function buildViewModel(
     const hidden = [...entityRows.filter(r => !r.connected), ...plainRows];
     const expanded = expandedNodes.has(n.id);
     const rows = expanded ? [...connected, ...hidden] : connected;
+    const owners = sub.hiddenOwners.get(n.id) ?? [];
     return {
       ...n,
       isaParents: isaParents.get(n.id) ?? [],
       subclassCount: subclassCount.get(n.id) ?? 0,
+      hiddenOwners: owners,
       rows,
       hiddenCount: hidden.length,
       expanded,
-      height: HEADER_H + rows.length * ROW_H
+      height: HEADER_H + (owners.length ? OWNERS_H : 0) + rows.length * ROW_H
         + (hidden.length ? FOOTER_H : 0) + (rows.length ? 5 : 0),
     };
   });
@@ -142,11 +152,16 @@ function LoopIcon({ title }: { title: string }) {
   );
 }
 
+/** Top of the row list: below the header, and below the owners strip if shown. */
+function rowsTop(node: NodeVM): number {
+  return HEADER_H + (node.hiddenOwners.length ? OWNERS_H : 0);
+}
+
 /** y-center of a slot's displayed row, relative to the node's top-left. */
 function rowY(node: NodeVM, slot: string): number {
   const idx = node.rows.findIndex(r => r.slot === slot);
   if (idx < 0) throw new Error(`No displayed row for ${slot} on ${node.id}`);
-  return HEADER_H + idx * ROW_H + ROW_H / 2;
+  return rowsTop(node) + idx * ROW_H + ROW_H / 2;
 }
 
 /**
@@ -243,6 +258,8 @@ export default function OwnershipGraphView({
   expandedIds,
   onExpand,
   onCollapse,
+  pathToRoot = false,
+  onTogglePathToRoot,
 }: {
   dataService: DataService;
   selectedIds: Set<string>;
@@ -253,6 +270,9 @@ export default function OwnershipGraphView({
   onExpand?: (classId: string) => void;
   /** Dismiss an expanded context node. */
   onCollapse?: (classId: string) => void;
+  /** Draw each selected class's ownership ancestors as dimmed context nodes. */
+  pathToRoot?: boolean;
+  onTogglePathToRoot?: () => void;
 }) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const markerId = (name: string) => `${name}-${uid}`;
@@ -273,8 +293,10 @@ export default function OwnershipGraphView({
     [expandedIds, selectedIds],
   );
   const subgraph = useMemo(
-    () => dataService.getOwnershipSubgraph([...selectedIds].sort(), expansionList),
-    [dataService, selectedIds, expansionList],
+    () => dataService.getOwnershipSubgraph(
+      [...selectedIds].sort(), expansionList, { pathToRoot },
+    ),
+    [dataService, selectedIds, expansionList, pathToRoot],
   );
   const plainSlots = useMemo(
     () => new Map(subgraph.nodes.map(n =>
@@ -436,6 +458,20 @@ export default function OwnershipGraphView({
     <div className="relative w-full h-full">
       {/* Toolbar */}
       <div data-pan-ignore className="absolute top-2 right-2 z-10 flex gap-1 items-center">
+        {onTogglePathToRoot && (
+          <>
+            <button
+              className={toolBtn(pathToRoot)}
+              title={pathToRoot
+                ? 'Hide owners: show only what you selected'
+                : 'Show every owner up to the root (can pull in most of the schema)'}
+              onClick={onTogglePathToRoot}
+            >
+              ⇱ roots
+            </button>
+            <span className="w-px h-4 bg-gray-300 dark:bg-slate-600 mx-1" />
+          </>
+        )}
         <button className={toolBtn(direction === 'RIGHT')} title="Layout left to right"
           onClick={() => setDir('RIGHT')}>LR</button>
         <button className={toolBtn(direction === 'DOWN')} title="Layout top down"
@@ -591,6 +627,42 @@ export default function OwnershipGraphView({
                           )}
                         </span>
                       </div>
+                      {/* Owners left off the canvas. Clicking one pulls it in,
+                          the same affordance a dimmed attribute row offers. */}
+                      {n.hiddenOwners.length > 0 && (
+                        <div
+                          className="flex items-center gap-1 px-2 overflow-hidden border-b
+                                     border-gray-200 dark:border-slate-600
+                                     bg-amber-50/60 dark:bg-amber-950/30"
+                          style={{ height: OWNERS_H }}
+                        >
+                          <span className="text-[9px] text-gray-500 dark:text-gray-400 shrink-0">
+                            owned by
+                          </span>
+                          {n.hiddenOwners.slice(0, 3).map(owner => (
+                            <button
+                              key={owner}
+                              data-owner-chip={owner}
+                              title={`${owner} owns ${n.label} — click to add it`}
+                              onClick={ev => { ev.stopPropagation(); onExpand?.(owner); }}
+                              className="text-[9px] leading-none px-1 py-0.5 rounded truncate
+                                         bg-amber-100 dark:bg-amber-900/60
+                                         text-amber-900 dark:text-amber-200
+                                         hover:bg-amber-200 dark:hover:bg-amber-800"
+                            >
+                              {owner}
+                            </button>
+                          ))}
+                          {n.hiddenOwners.length > 3 && (
+                            <span
+                              className="text-[9px] text-gray-500 dark:text-gray-400 shrink-0"
+                              title={n.hiddenOwners.join(', ')}
+                            >
+                              +{n.hiddenOwners.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      )}
                       {n.rows.map(r => (
                         <div
                           key={r.slot}
