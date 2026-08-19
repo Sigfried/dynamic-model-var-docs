@@ -35,8 +35,31 @@ import type { AnchorDir, EdgeSection, GraphSpec, GraphSpecPort, Point } from './
 const NODE_W = 240;
 const HEADER_H = 30;
 const ROW_H = 20;
-/** Strip under the header listing owners that aren't on the canvas. */
-const OWNERS_H = 18;
+/** One wrapped line of owner chips. */
+const OWNERS_LINE_H = 15;
+/** Vertical padding around the owner-chip strip. */
+const OWNERS_PAD = 8;
+
+/**
+ * Height of the owner-chip strip. Chips wrap, so the strip grows with the
+ * number of owners; estimated from label widths since the real wrap happens
+ * in the browser and ELK needs a height up front. Over-estimating costs a few
+ * px of blank node; under-estimating clips chips, so round up.
+ */
+function ownersStripHFor(owners: string[]): number {
+  if (!owners.length) return 0;
+  const CHAR_W = 4.6;      // ~9px font
+  const CHIP_PAD = 10;
+  const AVAIL = NODE_W - 16;
+  let line = 52;           // "owned by" label
+  let lines = 1;
+  for (const o of [...owners, 'add all']) {
+    const w = o.length * CHAR_W + CHIP_PAD;
+    if (line + w > AVAIL) { lines++; line = w; }
+    else line += w + 4;
+  }
+  return lines * OWNERS_LINE_H + OWNERS_PAD;
+}
 const FOOTER_H = 18;
 const PAD = 28;
 
@@ -118,7 +141,10 @@ function buildViewModel(
       }));
     const connected = entityRows.filter(r => r.connected);
     const hidden = [...entityRows.filter(r => !r.connected), ...plainRows];
-    const expanded = expandedNodes.has(n.id);
+    // A node whose attributes are all scalars (BodySite: id/qualifier/site)
+    // has nothing connected, so collapsed it renders as an empty box offering
+    // to reveal its only content. Show the attributes instead.
+    const expanded = expandedNodes.has(n.id) || connected.length === 0;
     const rows = expanded ? [...connected, ...hidden] : connected;
     const owners = sub.hiddenOwners.get(n.id) ?? [];
     return {
@@ -129,7 +155,7 @@ function buildViewModel(
       rows,
       hiddenCount: hidden.length,
       expanded,
-      height: HEADER_H + (owners.length ? OWNERS_H : 0) + rows.length * ROW_H
+      height: HEADER_H + ownersStripHFor(owners) + rows.length * ROW_H
         + (hidden.length ? FOOTER_H : 0) + (rows.length ? 5 : 0),
     };
   });
@@ -154,7 +180,7 @@ function LoopIcon({ title }: { title: string }) {
 
 /** Top of the row list: below the header, and below the owners strip if shown. */
 function rowsTop(node: NodeVM): number {
-  return HEADER_H + (node.hiddenOwners.length ? OWNERS_H : 0);
+  return HEADER_H + ownersStripHFor(node.hiddenOwners);
 }
 
 /** y-center of a slot's displayed row, relative to the node's top-left. */
@@ -183,6 +209,21 @@ function buildSpec(vm: ViewModel, direction: Direction): GraphSpec {
   };
 
   const nodeById = new Map(vm.nodes.map(n => [n.id, n]));
+
+  /**
+   * Free-end ports fan out along the node border instead of all sharing one
+   * header point. Six edges converging on BodySite through a single ::hdr:in
+   * port produced overlapping orthogonal runs that read as an edge between two
+   * unrelated owners. One port per edge, ordered, keeps the runs distinct.
+   */
+  const freeEndSlot = new Map<string, number>();
+  const freeEndTotal = new Map<string, number>();
+  for (const e of vm.edges) {
+    const freeId = hostOf(e) === e.source ? e.target : e.source;
+    const side = `${freeId}|${freeId === e.source ? 'out' : 'in'}`;
+    freeEndTotal.set(side, (freeEndTotal.get(side) ?? 0) + 1);
+  }
+
   const edges = vm.edges.map(e => {
     const host = nodeById.get(hostOf(e));
     const free = nodeById.get(hostOf(e) === e.source ? e.target : e.source);
@@ -193,11 +234,20 @@ function buildSpec(vm: ViewModel, direction: Direction): GraphSpec {
       host, `${host.id}::row:${e.slotName}`, flipped ? 0 : NODE_W, y,
     );
     const freeIsSource = free.id === e.source;
+    const side = `${free.id}|${freeIsSource ? 'out' : 'in'}`;
+    const total = freeEndTotal.get(side) ?? 1;
+    const idx = freeEndSlot.get(side) ?? 0;
+    freeEndSlot.set(side, idx + 1);
+    // Spread the attach points across the header band (and a little below it
+    // when there are many), so each edge gets its own approach lane.
+    const band = Math.min(free.height - 6, HEADER_H + (total - 1) * 9);
+    const offset = total === 1 ? HEADER_H / 2 : 3 + (band - 6) * (idx / (total - 1));
     const headerPort = direction === 'RIGHT'
-      ? addPort(free, `${free.id}::hdr:${freeIsSource ? 'out' : 'in'}`,
-          freeIsSource ? NODE_W : 0, HEADER_H / 2)
-      : addPort(free, `${free.id}::hdr:${freeIsSource ? 'out' : 'in'}`,
-          NODE_W / 2, freeIsSource ? free.height : 0);
+      ? addPort(free, `${free.id}::hdr:${freeIsSource ? 'out' : 'in'}:${idx}`,
+          freeIsSource ? NODE_W : 0, offset)
+      : addPort(free, `${free.id}::hdr:${freeIsSource ? 'out' : 'in'}:${idx}`,
+          NODE_W / 2 + (idx - (total - 1) / 2) * 12,
+          freeIsSource ? free.height : 0);
     return {
       id: e.id,
       source: e.source,
@@ -631,21 +681,23 @@ export default function OwnershipGraphView({
                           the same affordance a dimmed attribute row offers. */}
                       {n.hiddenOwners.length > 0 && (
                         <div
-                          className="flex items-center gap-1 px-2 overflow-hidden border-b
+                          className="flex flex-wrap items-center gap-x-1 gap-y-0.5 px-2 py-1 border-b
                                      border-gray-200 dark:border-slate-600
                                      bg-amber-50/60 dark:bg-amber-950/30"
-                          style={{ height: OWNERS_H }}
+                          style={{ height: ownersStripHFor(n.hiddenOwners) }}
                         >
                           <span className="text-[9px] text-gray-500 dark:text-gray-400 shrink-0">
                             owned by
                           </span>
-                          {n.hiddenOwners.slice(0, 3).map(owner => (
+                          {/* Every owner is listed and clickable — a silently
+                              truncated "+3" hid names with no way to reach them. */}
+                          {n.hiddenOwners.map(owner => (
                             <button
                               key={owner}
                               data-owner-chip={owner}
                               title={`${owner} owns ${n.label} — click to add it`}
                               onClick={ev => { ev.stopPropagation(); onExpand?.(owner); }}
-                              className="text-[9px] leading-none px-1 py-0.5 rounded truncate
+                              className="text-[9px] leading-none px-1 py-0.5 rounded max-w-full truncate
                                          bg-amber-100 dark:bg-amber-900/60
                                          text-amber-900 dark:text-amber-200
                                          hover:bg-amber-200 dark:hover:bg-amber-800"
@@ -653,14 +705,18 @@ export default function OwnershipGraphView({
                               {owner}
                             </button>
                           ))}
-                          {n.hiddenOwners.length > 3 && (
-                            <span
-                              className="text-[9px] text-gray-500 dark:text-gray-400 shrink-0"
-                              title={n.hiddenOwners.join(', ')}
-                            >
-                              +{n.hiddenOwners.length - 3}
-                            </span>
-                          )}
+                          <button
+                            title={`Add all ${n.hiddenOwners.length} owners of ${n.label}`}
+                            onClick={ev => {
+                              ev.stopPropagation();
+                              n.hiddenOwners.forEach(o => onExpand?.(o));
+                            }}
+                            className="text-[9px] leading-none px-1 py-0.5 rounded shrink-0
+                                       text-amber-800 dark:text-amber-300 underline
+                                       hover:bg-amber-200 dark:hover:bg-amber-800"
+                          >
+                            add all
+                          </button>
                         </div>
                       )}
                       {n.rows.map(r => (

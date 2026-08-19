@@ -52,56 +52,63 @@ describe('getOwnershipSubgraph', () => {
     expect(owners).toContain('ResearchStudy');
   });
 
-  test('path-to-root is OFF by default: nothing but the selection is drawn', () => {
-    // Ancestors fan out rather than up a spine, so the walk is a reverse-
-    // reachability closure: BodySite pulled 15 context nodes and Quantity 29
-    // of the schema's 53 classes, from one checkbox. Hence the default.
-    for (const id of ['BodySite', 'Quantity', 'Participant']) {
-      const g = ds.getOwnershipSubgraph([id]);
-      expect(g.nodes.map(n => n.id), id).toEqual([id]);
-      expect(g.nodes[0].role).toBe('selected');
-    }
+  test('direct owners are drawn by default — one hop, not the closure', () => {
+    // A value object's owners ARE the answer to "what is this", so they are
+    // drawn rather than summarized as chips to click one at a time. BodySite
+    // has six; all appear without any clicking.
+    const g = ds.getOwnershipSubgraph(['BodySite']);
+    const ids = new Set(g.nodes.map(n => n.id));
+    expect(ids.has('BodySite')).toBe(true);
+    expect(ids.has('Condition')).toBe(true);
+    expect(ids.has('MeasurementObservation')).toBe(true);
+    expect(g.nodes.length).toBeGreaterThan(3);
+    // But NOT transitive: the owners' own owners stay off, which is what
+    // stops this becoming the reverse-reachability closure.
+    expect(ids.has('ResearchStudyCollection')).toBe(false);
   });
 
-  test('path-to-root on: the leaf-value-object blowup is what the flag buys', () => {
-    const off = ds.getOwnershipSubgraph(['BodySite']);
+  test('over the cap, owners stay chips rather than flooding the canvas', () => {
+    // Quantity is owned by ~20 classes — the blowup case.
+    const g = ds.getOwnershipSubgraph(['Quantity'], [], { ownerCap: 8 });
+    expect(g.nodes.map(n => n.id)).toEqual(['Quantity']);
+    expect((g.hiddenOwners.get('Quantity') ?? []).length).toBeGreaterThan(8);
+  });
+
+  test('the owner cap is honored exactly', () => {
+    const drawn = ds.getOwnershipSubgraph(['BodySite'], [], { ownerCap: 8 });
+    expect(drawn.nodes.length).toBeGreaterThan(1);
+    // Same selection, cap below its owner count: chips instead of nodes.
+    const chipped = ds.getOwnershipSubgraph(['BodySite'], [], { ownerCap: 2 });
+    expect(chipped.nodes.map(n => n.id)).toEqual(['BodySite']);
+    expect((chipped.hiddenOwners.get('BodySite') ?? []).length).toBeGreaterThan(2);
+  });
+
+  test('path-to-root on: still available, and still transitive', () => {
     const on = ds.getOwnershipSubgraph(['BodySite'], [], { pathToRoot: true });
-    expect(off.nodes).toHaveLength(1);
-    // Exact counts are schema-dependent; the point is the order of magnitude.
-    expect(on.nodes.length).toBeGreaterThan(10);
-    expect(on.nodes.filter(n => n.role === 'context').length)
-      .toBe(on.nodes.length - 1);
+    // Reaches all the way up, unlike the one-hop default.
+    expect(on.nodes.map(n => n.id)).toContain('ResearchStudyCollection');
   });
 
-  test('hidden owners are reported as chips when they are not drawn', () => {
-    const g = ds.getOwnershipSubgraph(['Participant']);
-    const owners = g.hiddenOwners.get('Participant') ?? [];
-    // The same owners path-to-root would have drawn as nodes.
-    expect(owners).toContain('Person');
-    expect(owners).toContain('ResearchStudy');
-  });
-
-  test('an owner already on the canvas is a node, not a chip', () => {
-    const g = ds.getOwnershipSubgraph(['Participant', 'Person'], [], {});
-    expect(g.hiddenOwners.get('Participant') ?? []).not.toContain('Person');
-    expect(g.nodes.map(n => n.id)).toContain('Person');
-  });
-
-  test('path-to-root on: owners are drawn, so no chips duplicate them', () => {
-    const g = ds.getOwnershipSubgraph(['Participant'], [], { pathToRoot: true });
-    const drawn = new Set(g.nodes.map(n => n.id));
-    for (const [, owners] of g.hiddenOwners) {
-      for (const o of owners) expect(drawn.has(o)).toBe(false);
+  test('chips never duplicate a node already on the canvas', () => {
+    for (const opts of [{}, { pathToRoot: true }, { ownerCap: 2 }]) {
+      const g = ds.getOwnershipSubgraph(['BodySite', 'Participant'], [], opts);
+      const drawn = new Set(g.nodes.map(n => n.id));
+      for (const [, owners] of g.hiddenOwners) {
+        for (const o of owners) {
+          expect(drawn.has(o), `${o} is both a node and a chip`).toBe(false);
+        }
+      }
     }
   });
 
   test('expanding a chip owner turns it into a node', () => {
-    const before = ds.getOwnershipSubgraph(['Participant']);
-    expect(before.hiddenOwners.get('Participant')).toContain('Person');
+    const before = ds.getOwnershipSubgraph(['Quantity'], [], { ownerCap: 8 });
+    const owner = (before.hiddenOwners.get('Quantity') ?? [])[0];
+    expect(owner).toBeDefined();
 
-    const after = ds.getOwnershipSubgraph(['Participant'], ['Person']);
-    expect(after.nodes.map(n => n.id)).toContain('Person');
-    expect(after.hiddenOwners.get('Participant') ?? []).not.toContain('Person');
+    const after = ds.getOwnershipSubgraph(['Quantity'], [owner], { ownerCap: 8 });
+    expect(after.nodes.map(n => n.id)).toContain(owner);
+    expect(after.hiddenOwners.get('Quantity') ?? []).not.toContain(owner);
   });
 
   test('owners sit above members: non-loop ownership edges go down layers', () => {
