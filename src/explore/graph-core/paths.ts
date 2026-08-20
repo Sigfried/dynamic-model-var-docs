@@ -81,21 +81,25 @@ export function roundedPathFromSections(
  * This keeps the routed run up to `mergeDist` from the end, then sweeps each
  * edge into one shared point, so a convergence reads as one arrival.
  *
- * The tail is a cubic whose first control point continues the incoming
- * direction, so the straight run flows into the curve without a kink.
+ * The tail is a STRAIGHT segment from the cut point to the shared target, so a
+ * convergence reads as a fan of straight approaches meeting one arrowhead. The
+ * cut is an ordinary interior corner, which `render` rounds like any other.
  *
  * `mergeDist <= 0` disables merging (path returned unchanged).
  */
-export function mergeTail(
+/**
+ * Where a merging edge stops being routed and becomes a straight tail: walk
+ * back from the end until `mergeDist` of path length is accumulated.
+ *
+ * Shared because the renderer needs the cut point too — it ranks converging
+ * approaches by the direction they arrive FROM, which is the cut, not the
+ * routed endpoint (that already sits inside the fan, where every edge looks
+ * alike). Deriving it twice invites the two copies to drift.
+ */
+export function mergeCut(
   pts: Point[],
-  target: Point,
   mergeDist: number,
-  render: (pts: Point[]) => string,
-): string {
-  if (pts.length < 2 || mergeDist <= 0) return render(pts);
-
-  // Walk back from the end until we've accumulated mergeDist of path length;
-  // everything before that point is drawn as routed, the rest becomes the tail.
+): { cut: number; cutPoint: Point } {
   let acc = 0;
   let cut = pts.length - 1;
   let cutPoint = pts[pts.length - 1];
@@ -113,19 +117,34 @@ export function mergeTail(
     acc += seg;
     cut = i - 1;
   }
+  return { cut, cutPoint };
+}
 
-  const head = [...pts.slice(0, cut + 1), cutPoint];
-  const prev = head[head.length - 2] ?? cutPoint;
-  const dx = cutPoint.x - prev.x;
-  const dy = cutPoint.y - prev.y;
-  const len = Math.hypot(dx, dy) || 1;
-  const reach = Math.min(mergeDist * 0.55, Math.hypot(target.x - cutPoint.x, target.y - cutPoint.y) * 0.6);
-  const c1 = { x: cutPoint.x + (dx / len) * reach, y: cutPoint.y + (dy / len) * reach };
-  // Second control sits back along the shared approach so every edge arrives
-  // at the same angle — the arrowhead then reads as one, not N overlapping.
-  const c2 = { x: target.x - (dx / len) * reach * 0.5, y: target.y - (dy / len) * reach * 0.5 };
+export function mergeTail(
+  pts: Point[],
+  target: Point,
+  mergeDist: number,
+  render: (pts: Point[]) => string,
+): string {
+  if (pts.length < 2 || mergeDist <= 0) return render(pts);
 
-  return `${render(head)}C${c1.x},${c1.y} ${c2.x},${c2.y} ${target.x},${target.y}`;
+  const { cut, cutPoint } = mergeCut(pts, mergeDist);
+
+  // The tail is a STRAIGHT run from the cut to the shared target, appended as
+  // one more point rather than a curve. It used to be a cubic, but the control
+  // points were placed along the incoming direction and the result rendered
+  // visually straight anyway — the curve bought nothing and its seam with the
+  // routed head could not be rounded (2026-08-19). As a plain point, the cut
+  // becomes an ordinary interior corner and `render` rounds it like any other.
+  // Drop a duplicate cut: in 'bend' mode mergeDist lands exactly on the last
+  // routed corner, so cutPoint coincides with pts[cut] and a repeated point
+  // would make render() round a zero-length segment.
+  const head = pts.slice(0, cut + 1);
+  const lastHead = head[head.length - 1];
+  const dup = lastHead
+    && Math.abs(lastHead.x - cutPoint.x) < 1e-6
+    && Math.abs(lastHead.y - cutPoint.y) < 1e-6;
+  return render([...head, ...(dup ? [] : [cutPoint]), target]);
 }
 
 /**
@@ -226,4 +245,30 @@ export function anchoredPathPoint(
     x: u * u * u * p0.x + 3 * u * u * t * c0.x + 3 * u * t * t * c1.x + t * t * t * p1.x,
     y: u * u * u * p0.y + 3 * u * u * t * c0.y + 3 * u * t * t * c1.y + t * t * t * p1.y,
   };
+}
+
+/**
+ * The single arrowhead drawn at a convergence point.
+ *
+ * `base` is the centre of the arrow's BASE — the point every converging edge
+ * terminates at — and `dir` is the unit vector it points along. The triangle is
+ * `span` wide across the base and `len` from base to point, so callers size it
+ * off the entity title text rather than in absolute px.
+ *
+ * Because the base is built from the perpendicular of `dir`, an LR arrow
+ * (dir = ±x) gets a vertical base and a TB arrow (dir = ±y) a horizontal one —
+ * the span/length swap falls out of the geometry, no direction branch needed.
+ */
+export function arrowPath(base: Point, dir: Point, span: number, len: number): string {
+  const m = Math.hypot(dir.x, dir.y) || 1;
+  const ux = dir.x / m;
+  const uy = dir.y / m;
+  // Perpendicular to the arrow's direction: the base runs along this.
+  const px = -uy;
+  const py = ux;
+  const h = span / 2;
+  const a = { x: base.x + px * h, y: base.y + py * h };
+  const b = { x: base.x - px * h, y: base.y - py * h };
+  const tip = { x: base.x + ux * len, y: base.y + uy * len };
+  return `M${a.x},${a.y}L${tip.x},${tip.y}L${b.x},${b.y}Z`;
 }

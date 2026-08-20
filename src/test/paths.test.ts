@@ -1,7 +1,8 @@
 import { describe, test, expect } from 'vitest';
 import {
   pathFromSections, roundedPathFromSections, smoothPathFromSections, sectionPoints,
-  simplifyPoints, mergeTail, polyline,
+  roundedPath,
+  simplifyPoints, mergeTail, polyline, arrowPath, mergeCut,
 } from '../explore/graph-core/paths';
 import type { Point } from '../explore/graph-core/types';
 import type { EdgeSection } from '../explore/graph-core/types';
@@ -147,6 +148,33 @@ describe('mergeTail', () => {
     const c = coords(mergeTail(PTS, TARGET, 10_000, polyline));
     expect(c[c.length - 1]).toEqual([TARGET.x, TARGET.y]);
   });
+
+  // The tail was a cubic until 2026-08-19. It rendered visually straight
+  // anyway, and its seam with the routed head could not be rounded, which is
+  // what produced the hard right angles in 'bend' mode.
+  test('the tail is straight — no cubic is emitted', () => {
+    expect(mergeTail(PTS, TARGET, 40, polyline)).not.toMatch(/C/);
+  });
+
+  test('the cut is an ordinary corner, so roundedPath rounds it', () => {
+    // A quadratic at the join is the tell: roundedPath emits Q per interior
+    // corner, and the cut must now be one of them.
+    const d = mergeTail(PTS, TARGET, 40, p => roundedPath(p, 10));
+    expect(d).toMatch(/Q/);
+    expect(coords(d)[coords(d).length - 1]).toEqual([TARGET.x, TARGET.y]);
+  });
+
+  test('a cut landing exactly on a routed corner emits no zero-length segment', () => {
+    // 'bend' mode cuts exactly at the last corner, so cutPoint coincides with
+    // it; a duplicated point would round a zero-length segment.
+    const last = PTS[PTS.length - 1];
+    const prev = PTS[PTS.length - 2];
+    const exact = Math.hypot(last.x - prev.x, last.y - prev.y);
+    const c = coords(mergeTail(PTS, TARGET, exact, polyline));
+    for (let i = 1; i < c.length; i++) {
+      expect([c[i][0] - c[i - 1][0], c[i][1] - c[i - 1][1]]).not.toEqual([0, 0]);
+    }
+  });
 });
 
 describe('smoothPathFromSections', () => {
@@ -176,5 +204,113 @@ describe('smoothPathFromSections', () => {
     const c = coords(smoothPathFromSections(STAIRS));
     expect(c[0]).toEqual([pts[0].x, pts[0].y]);
     expect(c[c.length - 1]).toEqual([pts[pts.length - 1].x, pts[pts.length - 1].y]);
+  });
+});
+
+describe('mergeCut', () => {
+  const PTS_C = sectionPoints(STAIRS);
+
+  test('the cut sits mergeDist of path length back from the end', () => {
+    const { cutPoint } = mergeCut(PTS_C, 40);
+    // Accumulate the path from the cut to the end; it must equal mergeDist.
+    const tail = [cutPoint, ...PTS_C.slice(mergeCut(PTS_C, 40).cut + 1)];
+    let len = 0;
+    for (let i = 1; i < tail.length; i++) {
+      len += Math.hypot(tail[i].x - tail[i - 1].x, tail[i].y - tail[i - 1].y);
+    }
+    expect(len).toBeCloseTo(40, 6);
+  });
+
+  test('a distance longer than the path clamps to the start', () => {
+    const { cut } = mergeCut(PTS_C, 10_000);
+    expect(cut).toBe(0);
+  });
+
+  test('agrees with the cut mergeTail actually draws', () => {
+    // The renderer ranks approaches by this point, so a drift between the two
+    // would order the fan by one geometry and draw it with another.
+    const { cutPoint } = mergeCut(PTS_C, 40);
+    const drawn = coords(mergeTail(PTS_C, { x: 200, y: 50 }, 40, polyline));
+    const match = drawn.some(
+      ([x, y]) => Math.abs(x - cutPoint.x) < 1e-6 && Math.abs(y - cutPoint.y) < 1e-6,
+    );
+    expect(match).toBe(true);
+  });
+});
+
+describe('arrowPath — the one head per convergence', () => {
+  const coordsOf = (d: string) =>
+    [...d.matchAll(/(-?[\d.]+),(-?[\d.]+)/g)].map(m => [Number(m[1]), Number(m[2])]);
+
+  test('LR: base is vertical, tip is len along +x', () => {
+    // span across the base, len from base to point.
+    const d = arrowPath({ x: 100, y: 50 }, { x: 1, y: 0 }, 12, 18);
+    expect(coordsOf(d)).toEqual([[100, 56], [118, 50], [100, 44]]);
+  });
+
+  test('TB swaps the axes: base is horizontal, tip is len along +y', () => {
+    // Same span/len, but the arrow points down — the base must run across x.
+    const d = arrowPath({ x: 100, y: 50 }, { x: 0, y: 1 }, 12, 18);
+    expect(coordsOf(d)).toEqual([[94, 50], [100, 68], [106, 50]]);
+  });
+
+  test('points back the other way for an incoming arrival', () => {
+    const d = arrowPath({ x: 100, y: 50 }, { x: -1, y: 0 }, 12, 18);
+    expect(coordsOf(d)[1]).toEqual([82, 50]);
+  });
+
+  test('the base centre is the midpoint of the two base corners', () => {
+    // Every converging edge terminates here, so it must be exactly centred.
+    const [a, , b] = coordsOf(arrowPath({ x: 40, y: 90 }, { x: 0, y: -1 }, 12, 18));
+    expect([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]).toEqual([40, 90]);
+  });
+
+  test('normalizes a non-unit direction', () => {
+    const d = arrowPath({ x: 0, y: 0 }, { x: 5, y: 0 }, 12, 18);
+    expect(coordsOf(d)[1]).toEqual([18, 0]);
+  });
+
+  test('closes the triangle', () => {
+    expect(arrowPath({ x: 0, y: 0 }, { x: 1, y: 0 }, 12, 18)).toMatch(/Z$/);
+  });
+});
+
+describe('arrowPath — a convergence head always points INTO its node', () => {
+  const tipOf = (d: string) =>
+    [...d.matchAll(/(-?[\d.]+),(-?[\d.]+)/g)].map(m => [Number(m[1]), Number(m[2])])[1];
+
+  // Regression: the side of the node a head sits on and the way it points are
+  // independent. Deriving `dir` from the side sign drew every merged head
+  // backwards (2026-08-19). The head terminates edges landing on the class, so
+  // it points at the class from whichever border it sits on.
+  const NODE = { x: 100, y: 50, w: 240, h: 80 };
+  const back = 21; // ARROW_GAP + ARROW_LEN at the shipped sizes
+
+  test('LR near border (west): base outside, tip points east into the node', () => {
+    const base = { x: NODE.x - back, y: NODE.y };
+    const tip = tipOf(arrowPath(base, { x: 1, y: 0 }, 12, 18));
+    expect(tip[0]).toBeGreaterThan(base.x);
+    expect(tip[0]).toBeLessThan(NODE.x);
+  });
+
+  test('LR far border (east): base outside, tip points west into the node', () => {
+    const base = { x: NODE.x + NODE.w + back, y: NODE.y };
+    const tip = tipOf(arrowPath(base, { x: -1, y: 0 }, 12, 18));
+    expect(tip[0]).toBeLessThan(base.x);
+    expect(tip[0]).toBeGreaterThan(NODE.x + NODE.w);
+  });
+
+  test('TB near border (north): tip points south into the node', () => {
+    const base = { x: NODE.x, y: NODE.y - back };
+    const tip = tipOf(arrowPath(base, { x: 0, y: 1 }, 12, 18));
+    expect(tip[1]).toBeGreaterThan(base.y);
+    expect(tip[1]).toBeLessThan(NODE.y);
+  });
+
+  test('TB far border (south): tip points north into the node', () => {
+    const base = { x: NODE.x, y: NODE.y + NODE.h + back };
+    const tip = tipOf(arrowPath(base, { x: 0, y: -1 }, 12, 18));
+    expect(tip[1]).toBeLessThan(base.y);
+    expect(tip[1]).toBeGreaterThan(NODE.y + NODE.h);
   });
 });

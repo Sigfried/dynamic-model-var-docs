@@ -10,8 +10,8 @@ export type {
 export { ElkLayoutEngine } from './elkLayout';
 export {
   pathFromSections, roundedPathFromSections, smoothPathFromSections,
-  roundedPath, smoothPath, polyline, sectionPoints, simplifyPoints, mergeTail,
-  anchoredPath, anchoredPathPoint,
+  roundedPath, smoothPath, polyline, sectionPoints, simplifyPoints, mergeTail, mergeCut,
+  anchoredPath, anchoredPathPoint, arrowPath,
 } from './paths';
 export type { AnchorDir } from './paths';
 export { useGraphLayout } from './useGraphLayout';
