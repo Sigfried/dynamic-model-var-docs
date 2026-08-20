@@ -3,10 +3,13 @@
  *
  * Bindings over graph-core: HTML entity nodes (title + attribute rows) are
  * absolutely positioned over an SVG edge layer. Layout and edge routing are
- * both ELK's (layered, orthogonal): each drawn edge attaches to a
- * fixed-position ELK port at its slot's attribute row on the storage-side
- * node, and its other end to a header-level port on the peer — so edges
- * "point at the entity name" and routing sees the real attach points.
+ * both ELK's (layered, orthogonal). An edge joins an ATTRIBUTE on one class to
+ * another class AS A WHOLE, so its two ends are not alike:
+ *  - the ATTRIBUTE END attaches to a fixed-position ELK port at its slot's own
+ *    row, and is the only end that names a slot;
+ *  - the ENTITY END attaches to a header-level port on the target class, which
+ *    has no corresponding row, so edges "point at the entity name".
+ * Routing therefore sees the real attach points.
  *
  * Channel rules:
  *  - ownership: amber solid, drawn owner → member (normalized). Flipped
@@ -15,7 +18,6 @@
  *  - reference: gray dashed, drawn in FK direction.
  *  - is-a: never an arrow in the ownership plane — chips on the nodes.
  *  - self-loops: ⟲ marker on the slot's own row, not a routed edge.
- * No floating edge labels: the row an edge lands on names the slot.
  *
  * Row policy: by default a node shows the rows that carry a drawn edge
  * (plus ⟲ self-loops); a "+N more" footer expands to ALL entity-ranged
@@ -30,9 +32,15 @@ import type {
   DataService, OwnershipSubgraph, OwnershipSubgraphEdge, OwnershipSubgraphNode,
 } from '../services/DataService';
 import {
-  useGraphLayout, useZoomPan, roundedPath, smoothPath, sectionPoints, mergeTail,
+  useGraphLayout, useZoomPan, roundedPath, sectionPoints, mergeTail,
+  arrowPath,
 } from './graph-core';
 import type { EdgeSection, GraphSpec, GraphSpecPort, Point } from './graph-core';
+
+/** Where a convergence group's single arrowhead sits: `base` is the centre of
+ *  its base (every merging edge terminates there, none draws a head of its own)
+ *  and `dir` is the unit vector it points along. */
+type MergeTarget = { base: Point; dir: Point };
 
 const NODE_W = 240;
 const HEADER_H = 30;
@@ -66,7 +74,6 @@ const FOOTER_H = 18;
 const PAD = 28;
 
 type Direction = 'RIGHT' | 'DOWN';
-type EdgeStyle = 'orthogonal' | 'curved';
 
 interface RowVM {
   slot: string;
@@ -128,10 +135,24 @@ function buildViewModel(
   }
 
   const nodes = sub.nodes.map((n): NodeVM => {
+    // Schema order. The subgraph's slot lists come out in graph-insertion
+    // order (collectNodeSlots walks the edge set, and the edges come from
+    // graphology's outbound iteration), which is arbitrary — it put date_ended
+    // before date_started and valid_to before valid_from. getClassSummary
+    // lists every attribute of the class in the order bdchm declares them, so
+    // it is the authoritative index; anything missing from it sorts last
+    // rather than disappearing.
+    const schemaOrder = new Map(
+      plainSlotsFor(n.id).map((s, i) => [s.name, i] as const),
+    );
+    const bySchema = (a: { slot: string }, b: { slot: string }) =>
+      (schemaOrder.get(a.slot) ?? Number.MAX_SAFE_INTEGER)
+      - (schemaOrder.get(b.slot) ?? Number.MAX_SAFE_INTEGER);
+
     const entityRows = n.slots.map((s): RowVM => ({
       ...s,
       connected: s.isLoop || drawn.has(`${n.id}|${s.slot}`),
-    }));
+    })).sort(bySchema);
     const entityNames = new Set(entityRows.map(r => r.slot));
     // Scalar/enum-valued attributes: everything getClassSummary lists that
     // isn't already an entity-ranged row.
@@ -142,7 +163,10 @@ function buildViewModel(
         flipped: false, cardinality: '', isLoop: false, connected: false,
       }));
     const connected = entityRows.filter(r => r.connected);
-    const hidden = [...entityRows.filter(r => !r.connected), ...plainRows];
+    // Entity-ranged and plain rows interleave by schema order once hidden,
+    // rather than showing all the entity ones then all the scalars.
+    const hidden = [...entityRows.filter(r => !r.connected), ...plainRows]
+      .sort(bySchema);
     // A node whose attributes are all scalars (BodySite: id/qualifier/site)
     // has nothing connected, so collapsed it renders as an empty box offering
     // to reveal its only content. Show the attributes instead.
@@ -201,19 +225,42 @@ const ENTITY_FAN_GAP = 4;
  *  right angles; 0 would render exactly like the old square-cornered mode. */
 const CORNER_R = 10;
 
-/** Arrowhead size in px (markerUnits="userSpaceOnUse", so these do NOT scale
- *  with stroke width — see the <defs> comment). */
-const ARROW_W = 8;
-const ARROW_H = 6;
+/** Entity title font size (px). The node body is Tailwind `text-xs`, and the
+ *  title span inherits it, so 1em at the title is 12px. The single convergence
+ *  arrowhead is sized off this so it reads as belonging to the name it points
+ *  at, rather than to an arbitrary px scale. */
+const TITLE_EM = 12;
+
+/** The one arrowhead per convergence, sized off the title text: ~1em across the
+ *  BASE, ~1.5em from base to point. In LR the arrow points along x, so the base
+ *  is vertical (span = height, len = along x); for TB the arrow points down and
+ *  the two swap — handled at draw time, not here. */
+const ARROW_SPAN = TITLE_EM;        // base width, ~1em
+const ARROW_LEN = TITLE_EM * 1.5;   // base → point, ~1.5em
 
 /** Gap between a node's border and the arrowhead TIP, so the whole head is
  *  visible against the canvas rather than half-buried in the border. */
 const ARROW_GAP = 3;
 
+/** Reference edges are secondary; their heads are a touch smaller. */
+const REF_SCALE = 0.85;
+
+
+/** Edge stroke widths. Kept here rather than inline because the hover value is
+ *  applied by direct DOM styling in the RAF pass, far from the render that sets
+ *  the default — as literals the two silently drift apart. References stay
+ *  proportionally lighter than ownership. */
+const STROKE_OWN = 0.8;
+const STROKE_OWN_HOVER = 1.6;
+const STROKE_REF = STROKE_OWN * 0.67;
+const STROKE_REF_HOVER = STROKE_OWN_HOVER * 0.67;
+
 /**
  * Where converging edges stop being separate lines and become one.
- * Three candidates, switchable in the toolbar so they can be compared on real
- * data (2026-08-19 — Siggie wants to see all three before one is settled on):
+ * Four candidates, switchable in the toolbar so they can be compared on real
+ * data. Kept deliberately: Siggie wants to see all four rendered with the
+ * single convergence arrowhead before one is settled on. Until then, do not
+ * delete the losers — there is no winner yet.
  *  - 'near'  ~40px: parallel and distinct until close to the node, then sweep
  *            together. Each edge stays traceable to its owner.
  *  - 'far'   ~120px: converge early, so the approach reads as one trunk that
@@ -230,6 +277,15 @@ function mergeDistFor(mode: MergeMode, pts: Point[]): number {
   if (mode === 'near') return 40;
   if (mode === 'far') return 120;
   // 'bend': distance from the end back to the last routed corner.
+  //
+  // NB: cutting exactly here puts the corner at the seam between the routed
+  // head and the merge curve, and roundedPath cannot round a seam corner (it
+  // rounds only corners with segments on BOTH sides). That is why this mode
+  // shows hard right angles. Overshooting by CORNER_R*1.5 to swallow the
+  // corner was tried on 2026-08-19 and is WORSE: when the last segment is
+  // short the cut lands past the corner, onto the long run before it, so the
+  // approaches get replaced by curve far too early and bunch into a cramped
+  // parallel bundle. Fix the rounding at the seam, not the cut distance.
   const end = pts[pts.length - 1];
   const prev = pts[pts.length - 2];
   return Math.hypot(end.x - prev.x, end.y - prev.y);
@@ -276,13 +332,25 @@ function buildSpec(vm: ViewModel, direction: Direction): GraphSpec {
    * falsely implied "this edge is about that row". Only the ATTRIBUTE end
    * carries row meaning; the entity end points at the class as a whole.
    */
-  const freeEndSlot = new Map<string, number>();
   const freeEndTotal = new Map<string, number>();
   for (const e of vm.edges) {
     const freeId = hostOf(e) === e.source ? e.target : e.source;
     const side = `${freeId}|${freeId === e.source ? 'out' : 'in'}`;
     freeEndTotal.set(side, (freeEndTotal.get(side) ?? 0) + 1);
   }
+
+  /**
+   * NB: fan slot index here is just a distinct lane per edge — it deliberately
+   * carries NO ordering meaning. Ordering the ports by any pre-layout proxy
+   * (row y, owner name) is guesswork, because which approach arrives from where
+   * is ELK's decision and is not known until after layout. An attempt to sort
+   * by row y made things worse (2026-08-20): it gave the top row the straight
+   * shot and forced every lower one to climb over it.
+   *
+   * The approaches are re-ordered at RENDER time instead, by where each routed
+   * path actually arrives from — see `fanOrder` in the component.
+   */
+  const freeEndSlot = new Map<string, number>();
 
   const edges = vm.edges.map(e => {
     const host = nodeById.get(hostOf(e));
@@ -373,9 +441,6 @@ export default function OwnershipGraphView({
   const [direction, setDirection] = useState<Direction>(
     () => (localStorage.getItem('explore-nl-dir') as Direction) || 'RIGHT',
   );
-  const [edgeStyle, setEdgeStyle] = useState<EdgeStyle>(
-    () => (localStorage.getItem('explore-nl-edges') as EdgeStyle) || 'orthogonal',
-  );
   const [mergeMode, setMergeMode] = useState<MergeMode>(
     () => (localStorage.getItem('explore-nl-merge') as MergeMode) || 'near',
   );
@@ -431,10 +496,64 @@ export default function OwnershipGraphView({
   // eslint-disable-next-line react-hooks/exhaustive-deps -- zp fns are stable
   }, [layout, contentW, contentH]);
 
-  const placed = useMemo(
-    () => new Map((layout?.nodes ?? []).map(n => [n.id, n])),
-    [layout],
-  );
+  /**
+   * Manual node nudges, id → {dx, dy}, applied on top of ELK's placement.
+   *
+   * A probe, not a feature: ELK's routing choices depend on where the boxes
+   * sit, and dragging one is the only way to see WHICH choice changes without
+   * re-running a whole selection. Edges keep ELK's original routing, so a
+   * dragged box shows its edges leaving from the old geometry — that mismatch
+   * is the point (it is exactly what ELK decided, unsmoothed).
+   */
+  const [nudges, setNudges] = useState<Map<string, { dx: number; dy: number }>>(new Map());
+  // Nudges are meaningless once a fresh layout moves everything.
+  useEffect(() => setNudges(new Map()), [layout]);
+
+  const placed = useMemo(() => {
+    const m = new Map((layout?.nodes ?? []).map(n => [n.id, n]));
+    for (const [id, { dx, dy }] of nudges) {
+      const n = m.get(id);
+      if (n) m.set(id, { ...n, x: n.x + dx, y: n.y + dy });
+    }
+    return m;
+  }, [layout, nudges]);
+
+  /**
+   * Drag a node box. Pointer capture keeps the drag alive when the cursor
+   * leaves the box; the delta is divided by zoom so a drag tracks the cursor
+   * at any zoom level.
+   */
+  const startDrag = useCallback((id: string, ev: React.PointerEvent) => {
+    if (ev.button !== 0) return;
+    // Only drag from inert parts of the box. Starting a drag on a chip, an
+    // "add all" link, a row or the × swallowed their click: pointerdown fires
+    // first, and capturing the pointer here meant the later click never
+    // reached them (2026-08-20).
+    if ((ev.target as HTMLElement).closest('button, a, [role="button"], [data-no-drag]')) return;
+    ev.stopPropagation();
+    const startX = ev.clientX;
+    const startY = ev.clientY;
+    const z = zp.getZoom() || 1;
+    const base = nudges.get(id) ?? { dx: 0, dy: 0 };
+    const el = ev.currentTarget as HTMLElement;
+    el.setPointerCapture(ev.pointerId);
+    let moved = false;
+    const move = (e: PointerEvent) => {
+      const dx = (e.clientX - startX) / z;
+      const dy = (e.clientY - startY) / z;
+      if (!moved && Math.hypot(dx, dy) < 3) return;  // let a click stay a click
+      moved = true;
+      setNudges(prev => new Map(prev).set(id, { dx: base.dx + dx, dy: base.dy + dy }));
+    };
+    const up = (e: PointerEvent) => {
+      el.releasePointerCapture(e.pointerId);
+      el.removeEventListener('pointermove', move);
+      el.removeEventListener('pointerup', up);
+    };
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', up);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- zp is a stable ref holder
+  }, [nudges]);
   const roles = useMemo(
     () => new Map(vm.nodes.map(n => [n.id, n.role])),
     [vm],
@@ -445,17 +564,25 @@ export default function OwnershipGraphView({
   );
 
   /**
-   * Shared arrival point per (node, side) for edge merging: the vertical centre
-   * of the entity's header, offset so the arrowhead TIP lands ARROW_GAP off the
-   * border. Edges converging here are drawn into this one point with one
-   * arrowhead instead of N stacked in the fanned-port band.
+   * One arrowhead per convergence: the shared arrival point per (node, side).
+   *
+   * Edges do NOT carry markers of their own — N stacked markers were the blobby
+   * wedge this replaces. Instead every edge in a group terminates at the CENTRE
+   * OF THE BASE of a single arrowhead, which is drawn once per group (see
+   * `arrowPath`). So the point recorded here is the base centre, which sits
+   * ARROW_LEN further out from the border than the tip: tip at ARROW_GAP off
+   * the border, base a whole arrow-length beyond that.
+   *
+   * `dir` is the unit vector the arrow points along (tipward). In LR that is
+   * ±x with a vertical base; in TB it is ±y with a horizontal base, which is
+   * what swaps the arrow's span/length axes.
    *
    * Keyed the same way buildSpec keys its fan, so a group merges iff ELK fanned
    * it. Only ENTITY-end arrivals merge — the attribute end is anchored at its
    * slot's own row and must stay there.
    */
   const mergeTargets = useMemo(() => {
-    const byKey = new Map<string, Point>();
+    const byKey = new Map<string, MergeTarget>();
     if (!layout) return byKey;
     for (const e of vm.edges) {
       const entityId = hostOf(e) === e.source ? e.target : e.source;
@@ -464,18 +591,120 @@ export default function OwnershipGraphView({
       const entityIsSource = entityId === e.source;
       const key = `${entityId}|${entityIsSource ? 'out' : 'in'}`;
       if (byKey.has(key)) continue;
+      // Which BORDER the head sits on, and which way it POINTS, are separate
+      // questions — conflating them drew every merged head backwards.
+      //
+      // Side: an edge drawn out of the entity leaves by the far border (east in
+      // LR, south in TB); one drawn into it arrives at the near border.
+      //
+      // Direction: ALWAYS into the node. This head terminates edges landing on
+      // the class, so it points at the class whichever end the edge was drawn
+      // from — inward from the border it sits on, i.e. the opposite of the
+      // outward offset. Hence `dir` is the negation of the side sign.
+      const farSide = entityIsSource;
+      const back = ARROW_GAP + ARROW_LEN;
       byKey.set(key, direction === 'RIGHT'
         ? {
-            x: entityIsSource ? node.x + NODE_W + ARROW_GAP : node.x - ARROW_GAP,
-            y: node.y + HEADER_H / 2,
+            // base sits `back` OUTSIDE the border; the tip is ARROW_LEN inward
+            // from there, landing ARROW_GAP off the border.
+            base: {
+              x: farSide ? node.x + NODE_W + back : node.x - back,
+              y: node.y + HEADER_H / 2,
+            },
+            dir: { x: farSide ? -1 : 1, y: 0 },
           }
         : {
-            x: node.x + NODE_W / 2,
-            y: entityIsSource ? node.y + node.height + ARROW_GAP : node.y - ARROW_GAP,
+            base: {
+              x: node.x + NODE_W / 2,
+              y: farSide ? node.y + node.height + back : node.y - back,
+            },
+            dir: { x: 0, y: farSide ? -1 : 1 },
           });
     }
     return byKey;
   }, [vm, placed, layout, direction]);
+
+  /**
+   * TEMPORARY probe (2026-08-20): dump what ELK actually routed for each
+   * convergence, so the "why is one approach a bare diagonal" question can be
+   * answered from real bend points instead of inferred. Enable with ?dbg=1.
+   * Remove once the diagonal is understood.
+   */
+  useEffect(() => {
+    if (!layout || !new URLSearchParams(window.location.search).has('dbg')) return;
+    const groups = new Map<string, string[]>();
+    for (const e of layout.edges) {
+      const spec = edgeById.get(e.id);
+      if (!spec) continue;
+      const pts = sectionPoints(e.sections);
+      if (pts.length < 2) continue;
+      const entityId = hostOf(spec) === spec.source ? spec.target : spec.source;
+      // Count real direction changes, and flag a segment that is neither
+      // horizontal nor vertical — a bare diagonal ELK chose not to step.
+      let bends = 0;
+      let diagonals = 0;
+      for (let i = 1; i < pts.length; i++) {
+        const dx = Math.abs(pts[i].x - pts[i - 1].x);
+        const dy = Math.abs(pts[i].y - pts[i - 1].y);
+        if (dx > 0.5 && dy > 0.5) diagonals++;
+        if (i > 1) bends++;
+      }
+      const from = hostOf(spec);
+      groups.set(entityId, [
+        ...(groups.get(entityId) ?? []),
+        `${from}.${spec.slotName}  pts=${pts.length} bends=${bends}`
+        + `${diagonals ? ` DIAGONAL x${diagonals}` : ''}`
+        + `  start=(${Math.round(pts[0].x)},${Math.round(pts[0].y)})`
+        + ` end=(${Math.round(pts[pts.length - 1].x)},${Math.round(pts[pts.length - 1].y)})`,
+      ]);
+    }
+    for (const [entity, lines] of groups) {
+      if (lines.length < 2) continue;
+      console.log(`\n=== approaches to ${entity} (${lines.length}) ===`);
+      const node = placed.get(entity);
+      if (node) console.log(`   box at (${Math.round(node.x)},${Math.round(node.y)}) h=${Math.round(node.height)}`);
+      lines.forEach(l => console.log('   ' + l));
+    }
+  }, [layout, edgeById, placed]);
+
+  /**
+   * The arrowheads actually drawn: one per convergence group that has at least
+   * one merging edge. A group whose edges all fall back to their own markers
+   * (merge off, or flipped edges that keep their attribute-row anchor) must NOT
+   * get a head here, or it would float unattached beside the node.
+   *
+   * Channel and dimming come from the group's edges: mixed groups render amber
+   * if any ownership edge arrives, since ownership is the stronger signal.
+   */
+  const arrowheads = useMemo(() => {
+    const heads = new Map<
+      string,
+      MergeTarget & { isOwn: boolean; dimmed: boolean; edgeIds: string[] }
+    >();
+    if (!layout) return heads;
+    for (const e of layout.edges) {
+      const spec = edgeById.get(e.id);
+      if (!spec || spec.storageDirection === 'flipped') continue;
+      if (mergeDistFor(mergeMode, sectionPoints(e.sections)) <= 0) continue;
+      const entityId = hostOf(spec) === spec.source ? spec.target : spec.source;
+      const key = `${entityId}|${entityId === spec.source ? 'out' : 'in'}`;
+      const t = mergeTargets.get(key);
+      if (!t) continue;
+      const isOwn = spec.type === 'ownership';
+      const dimmed =
+        roles.get(spec.source) === 'context' || roles.get(spec.target) === 'context';
+      const prev = heads.get(key);
+      heads.set(key, prev
+        ? {
+            ...prev,
+            isOwn: prev.isOwn || isOwn,
+            dimmed: prev.dimmed && dimmed,
+            edgeIds: [...prev.edgeIds, e.id],
+          }
+        : { ...t, isOwn, dimmed, edgeIds: [e.id] });
+    }
+    return heads;
+  }, [layout, edgeById, mergeTargets, mergeMode, roles]);
 
   /**
    * A row is an expand-on-demand affordance when it points at an entity that
@@ -542,11 +771,23 @@ export default function OwnershipGraphView({
           p.style.strokeWidth = '';
         } else if (edgeSet.has(id)) {
           p.style.opacity = '1';
-          p.style.strokeWidth = '2.6';
+          // Thicken relative to this edge's own channel, so a hovered dashed
+          // reference doesn't jump to ownership weight.
+          p.style.strokeWidth = String(
+            p.dataset.channel === 'reference' ? STROKE_REF_HOVER : STROKE_OWN_HOVER,
+          );
         } else {
           p.style.opacity = '0.08';
           p.style.strokeWidth = '';
         }
+      });
+      // A convergence arrowhead belongs to a GROUP of edges, so it stays lit
+      // while any one of them is highlighted and dims only when none is —
+      // otherwise hovering one edge of a merge left its head greyed out.
+      svg.querySelectorAll<SVGPathElement>('path[data-arrowhead]').forEach(p => {
+        const ids = (p.dataset.arrowhead ?? '').split(' ');
+        if (!edgeSet) p.style.opacity = '';
+        else p.style.opacity = ids.some(id => edgeSet.has(id)) ? '1' : '0.08';
       });
       wrapper.querySelectorAll<HTMLElement>('[data-node-id]').forEach(el => {
         const id = el.dataset.nodeId ?? '';
@@ -570,10 +811,6 @@ export default function OwnershipGraphView({
   const setDir = (d: Direction) => {
     localStorage.setItem('explore-nl-dir', d);
     setDirection(d);
-  };
-  const setEdges = (s: EdgeStyle) => {
-    localStorage.setItem('explore-nl-edges', s);
-    setEdgeStyle(s);
   };
   const setMerge = (m: MergeMode) => {
     localStorage.setItem('explore-nl-merge', m);
@@ -609,11 +846,6 @@ export default function OwnershipGraphView({
           onClick={() => setDir('RIGHT')}>LR</button>
         <button className={toolBtn(direction === 'DOWN')} title="Layout top down"
           onClick={() => setDir('DOWN')}>TB</button>
-        <span className="w-px h-4 bg-gray-300 dark:bg-slate-600 mx-1" />
-        <button className={toolBtn(edgeStyle === 'orthogonal')} title="Orthogonal edges"
-          onClick={() => setEdges('orthogonal')}>⌐</button>
-        <button className={toolBtn(edgeStyle === 'curved')} title="Curved edges"
-          onClick={() => setEdges('curved')}>∿</button>
         <span className="w-px h-4 bg-gray-300 dark:bg-slate-600 mx-1" />
         {/* Merge-point comparison — temporary, for picking one by eye. */}
         <button className={toolBtn(mergeMode === 'near')}
@@ -659,46 +891,56 @@ export default function OwnershipGraphView({
                   height={contentH}
                 >
                   {/*
+                    Markers here are ONLY for edges that do not converge: an
+                    edge arriving at a merge group carries no marker at all and
+                    stops at the shared arrowhead's base, which is drawn once per
+                    group below. Stacking a marker on every edge of a group was
+                    the blobby wedge this replaces — ~6 identical heads piled up.
+
                     markerUnits="userSpaceOnUse": without it markers scale by
                     strokeWidth, so a 9-unit marker on a 1.8px ownership stroke
-                    rendered ~16px wide — a wedge bigger than the row it points
-                    at. Sizes below are now literal px. refX=0 keeps the TIP at
-                    the path's end point (refX=9 pushed the tip past the end and
-                    buried the body in the node border).
+                    rendered ~16px wide. refX=0 keeps the TIP at the path's end.
                   */}
                   <defs>
+                    {/* An edge that does NOT converge (merge off, or the only
+                        edge of its group) still needs a head of its own. */}
                     <marker id={markerId('arrow-own')} viewBox="0 0 10 7" refX="0" refY="3.5"
-                      markerWidth={ARROW_W} markerHeight={ARROW_H}
+                      markerWidth={ARROW_SPAN} markerHeight={ARROW_SPAN * 0.75}
                       markerUnits="userSpaceOnUse" orient="auto-start-reverse">
                       <path d="M0,0L10,3.5L0,7Z" fill="#d97706" />
                     </marker>
-                    {/* flipped storage: arrowhead at the member end points BACK
-                        toward the owner (the member stores the FK) */}
+                    {/* flipped storage: the head sits at the ATTRIBUTE end (its
+                        own row, never merged) and points BACK toward the owner,
+                        because the member stores the FK. */}
                     <marker id={markerId('arrow-own-back')} viewBox="0 0 10 7" refX="10" refY="3.5"
-                      markerWidth={ARROW_W} markerHeight={ARROW_H}
+                      markerWidth={ARROW_SPAN} markerHeight={ARROW_SPAN * 0.75}
                       markerUnits="userSpaceOnUse" orient="auto-start-reverse">
                       <path d="M10,0L0,3.5L10,7Z" fill="#d97706" />
                     </marker>
                     <marker id={markerId('arrow-ref')} viewBox="0 0 10 7" refX="0" refY="3.5"
-                      markerWidth={ARROW_W * 0.85} markerHeight={ARROW_H * 0.85}
+                      markerWidth={ARROW_SPAN * REF_SCALE} markerHeight={ARROW_SPAN * 0.75 * REF_SCALE}
                       markerUnits="userSpaceOnUse" orient="auto-start-reverse">
                       <path d="M0,0L10,3.5L0,7Z" fill="#9ca3af" />
                     </marker>
                   </defs>
                   <g transform={`translate(${PAD}, ${PAD})`}>
+                    {/* The one arrowhead per convergence. Drawn before the edges
+                        so a stroke that overshoots its base by a fraction of a
+                        px is covered by the head rather than crossing it. */}
+                    {[...arrowheads].map(([key, a]) => (
+                      <path
+                        key={`head-${key}`}
+                        data-arrowhead={a.edgeIds.join(' ')}
+                        d={arrowPath(a.base, a.dir, ARROW_SPAN, ARROW_LEN)}
+                        fill={a.isOwn ? '#d97706' : '#9ca3af'}
+                        opacity={a.dimmed ? 0.4 : 1}
+                        style={{ transition: 'opacity 120ms' }}
+                      />
+                    ))}
                     {layout.edges.map(e => {
                       const spec = edgeById.get(e.id);
                       if (!spec) throw new Error(`Routed edge ${e.id} missing from view model`);
                       const flipped = spec.storageDirection === 'flipped';
-                      // Stop the stroke ARROW_W + ARROW_GAP short of the port so
-                      // the arrowhead sits fully on the canvas: with refX=0 the
-                      // tip lands at the path end, so an untrimmed path buried
-                      // the head in the node border (and read as no arrow at
-                      // all). Flipped edges get the same treatment plus a little
-                      // extra, their head pointing back the other way.
-                      const sections = trimSectionsEnd(
-                        e.sections, ARROW_W + ARROW_GAP + (flipped ? 2 : 0),
-                      );
                       // Merge the entity-end tail into the group's shared
                       // arrival point (see mergeTargets). Flipped edges end at
                       // an attribute row, which must keep its own anchor.
@@ -706,30 +948,45 @@ export default function OwnershipGraphView({
                       const target = flipped
                         ? undefined
                         : mergeTargets.get(`${entityId}|${entityId === spec.source ? 'out' : 'in'}`);
+                      // A merging edge stops at the shared arrowhead's BASE and
+                      // draws no head of its own, so its own tail needs no trim
+                      // — mergeTail replaces it wholesale. A non-merging edge
+                      // still carries a marker, so trim back far enough for the
+                      // head to sit on the canvas rather than in the border.
+                      const willMerge = !!target && mergeDistFor(mergeMode, sectionPoints(e.sections)) > 0;
+                      const sections = willMerge
+                        ? e.sections
+                        : trimSectionsEnd(
+                            e.sections, ARROW_SPAN + ARROW_GAP + (flipped ? 2 : 0),
+                          );
                       const pts = sectionPoints(sections);
-                      const render = (p: Point[]) => edgeStyle === 'curved'
-                        ? smoothPath(p)
-                        : roundedPath(p, CORNER_R);
+                      const render = (p: Point[]) => roundedPath(p, CORNER_R);
                       const dist = mergeDistFor(mergeMode, pts);
                       const d = target && dist > 0
-                        ? mergeTail(pts, target, dist, render)
+                        ? mergeTail(pts, target.base, dist, render)
                         : render(pts);
                       if (!d) return null;
                       const isOwn = spec.type === 'ownership';
                       const dimmed =
                         roles.get(e.source) === 'context' || roles.get(e.target) === 'context';
-                      const marker = isOwn ? (flipped ? 'arrow-own-back' : 'arrow-own') : 'arrow-ref';
+                      // No marker on a merged edge: the group's one arrowhead is
+                      // drawn separately. Flipped edges head back at their own
+                      // attribute row; references keep their smaller head.
+                      const marker = willMerge
+                        ? undefined
+                        : isOwn ? (flipped ? 'arrow-own-back' : 'arrow-own') : 'arrow-ref';
                       return (
                         <g key={e.id}>
                           <path
                             data-edge-id={e.id}
+                            data-channel={isOwn ? 'ownership' : 'reference'}
                             d={d}
                             fill="none"
                             opacity={dimmed ? 0.4 : 1}
                             stroke={isOwn ? '#d97706' : '#9ca3af'}
-                            strokeWidth={isOwn ? 1.8 : 1.2}
+                            strokeWidth={isOwn ? STROKE_OWN : STROKE_REF}
                             strokeDasharray={isOwn ? undefined : '5 4'}
-                            markerEnd={`url(#${markerId(marker)})`}
+                            markerEnd={marker ? `url(#${markerId(marker)})` : undefined}
                             style={{ transition: 'opacity 120ms, stroke-width 120ms' }}
                           />
                           {/* invisible fat hit area for edge hover */}
@@ -757,10 +1014,13 @@ export default function OwnershipGraphView({
                       key={n.id}
                       data-node-id={n.id}
                       data-pan-ignore
+                      onPointerDown={ev => startDrag(n.id, ev)}
                       onClick={() => onNodeClick?.(n.id)}
                       onMouseEnter={() => applyHover({ kind: 'node', id: n.id })}
                       onMouseLeave={() => applyHover(null)}
-                      className={`absolute rounded-md text-xs bg-white dark:bg-slate-800 [transition:transform_300ms,opacity_120ms] cursor-pointer ${context
+                      className={`absolute rounded-md text-xs bg-white dark:bg-slate-800 ${
+                        nudges.has(n.id) ? '' : '[transition:transform_300ms,opacity_120ms]'
+                      } cursor-pointer ${context
                         ? 'opacity-60 border border-dashed border-gray-400 dark:border-slate-500'
                         : 'border-2 border-slate-500 dark:border-slate-400 shadow-md'}`}
                       style={{
@@ -851,6 +1111,7 @@ export default function OwnershipGraphView({
                           key={r.slot}
                           data-row={r.slot}
                           data-expandable={isExpandable(r) ? '' : undefined}
+                          data-no-drag={isExpandable(r) ? '' : undefined}
                           title={r.channel === 'plain'
                             ? `${r.slot}: ${r.range}`
                             : `${r.slot} → ${r.range} (${r.cardinality})${r.flipped ? ' — owner side' : ''}` +

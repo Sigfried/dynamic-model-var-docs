@@ -183,8 +183,6 @@ noise.
 
 ### ⚠️ Known-imperfect, not yet addressed
 
-- **Curved edges look poor** at current spacing. Siggie explicitly deferred
-  retuning them; orthogonal is the target. Don't "fix" curved unprompted.
 - **Chip-strip height is estimated** from label lengths (ELK needs a height
   before the browser wraps). Rounded up, so a wide set leaves blank px rather
   than clipping — but the estimate could be wrong for unusual names.

@@ -195,17 +195,15 @@ New dependency: `elkjs` only (skip NodeLinkView's d3-force mode in v1).
    fixed-position ports, RAF zoom/pan — zero app imports; d3 and force mode
    dropped in the port) + `src/explore/OwnershipGraphView.tsx` bindings:
    HTML attribute-row nodes over an SVG edge layer; edges attach to ELK
-   ports at their slot row (storage side) and at a header port on the peer,
-   rendered from ELK's routed orthogonal sections (curved rendering as a
-   toggle, plus LR/TB). No floating edge labels — the row an edge lands on
-   names the slot; flipped storage is marked by a back-pointing arrowhead
-   at the member end. Rows default to edge-connected slots with a "+N more"
+   ports at their slot row (the ATTRIBUTE END) and at a header port on the
+   target class (the ENTITY END, which names no slot), rendered from ELK's
+   routed orthogonal sections (plus LR/TB).
+   Flipped storage is marked by a back-pointing arrowhead at the member end. Rows default to edge-connected slots with a "+N more"
    footer expanding to all entity-ranged slots (dimmed = range off-canvas).
    Later same-day iterations: sunk layers (owners sit beside their topmost
    member — `computeSunkLayers`), hover emphasis (entity → neighborhood,
    edge → isolate; RAF direct-DOM), expanded rows include plain scalar/enum
-   attributes (hollow dot), SVG self-loop icon, LR/TB + orthogonal/curved
-   toggles.
+   attributes (hollow dot), SVG self-loop icon, LR/TB toggle.
    **Expand-on-demand DONE** 2026-08-12: clicking a dimmed entity row adds
    its range as a context node (`?exp=`, state in ExploreApp beside
    selection); expanded nodes carry an ✕ to dismiss, path-to-root context
@@ -217,9 +215,11 @@ New dependency: `elkjs` only (skip NodeLinkView's d3-force mode in v1).
    shared one `::hdr:in` port, so N edges converging on a node landed on a
    single point and their orthogonal runs overlapped — six owners of
    `BodySite` read as an edge between two unrelated owners. Each edge now
-   gets its own port fanned along the border. Orthogonal routing retained;
-   curved is still a toggle and still looks poor at tight spacing —
-   **not retuned, deliberately deferred.**
+   gets its own port fanned along the border. Orthogonal routing retained.
+   **Curved edges were REMOVED 2026-08-19** — never retuned, and once
+   convergences merged into a single arrowhead the curved mode was, in
+   Siggie's words, "enough of a mess that I'm ready to give up on them."
+   `smoothPath` survives in graph-core as an unused geometry utility.
 
    **Empty-node fix DONE** 2026-08-19: a class whose attributes are all
    scalars (`BodySite`: id/qualifier/site) has nothing edge-connected, so
