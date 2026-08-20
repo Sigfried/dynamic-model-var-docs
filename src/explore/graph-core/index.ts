@@ -8,7 +8,11 @@ export type {
   PlacedNode, RoutedEdge, EdgeSection, LayoutResult, LayoutEngineOptions,
 } from './types';
 export { ElkLayoutEngine } from './elkLayout';
-export { pathFromSections, anchoredPath, anchoredPathPoint } from './paths';
+export {
+  pathFromSections, roundedPathFromSections, smoothPathFromSections,
+  roundedPath, smoothPath, polyline, sectionPoints, simplifyPoints, mergeTail,
+  anchoredPath, anchoredPathPoint,
+} from './paths';
 export type { AnchorDir } from './paths';
 export { useGraphLayout } from './useGraphLayout';
 export { useZoomPan } from './useZoomPan';

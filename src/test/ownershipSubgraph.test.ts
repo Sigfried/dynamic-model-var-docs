@@ -2,7 +2,7 @@ import { describe, test, expect, beforeAll } from 'vitest';
 import { loadModelData } from '../utils/dataLoader';
 import { DataService } from '../services/DataService';
 import type { OwnershipSubgraph } from '../services/DataService';
-import { buildOwnershipDag } from '../models/ownershipSubgraph';
+import { buildOwnershipDag, DEFAULT_OWNER_CAP } from '../models/ownershipSubgraph';
 
 /**
  * getOwnershipSubgraph() drives the Explore viz (docs/EXPLORE_VIZ.md). Like
@@ -52,11 +52,13 @@ describe('getOwnershipSubgraph', () => {
     expect(owners).toContain('ResearchStudy');
   });
 
-  test('direct owners are drawn by default — one hop, not the closure', () => {
+  test('direct owners are drawn — one hop, not the closure', () => {
     // A value object's owners ARE the answer to "what is this", so they are
     // drawn rather than summarized as chips to click one at a time. BodySite
-    // has six; all appear without any clicking.
-    const g = ds.getOwnershipSubgraph(['BodySite']);
+    // has six; all appear without any clicking, given a cap that admits them.
+    // (Cap passed explicitly: this asserts the drawing behaviour, not whatever
+    // DEFAULT_OWNER_CAP currently is — see the dedicated default test below.)
+    const g = ds.getOwnershipSubgraph(['BodySite'], [], { ownerCap: 8 });
     const ids = new Set(g.nodes.map(n => n.id));
     expect(ids.has('BodySite')).toBe(true);
     expect(ids.has('Condition')).toBe(true);
@@ -72,6 +74,17 @@ describe('getOwnershipSubgraph', () => {
     const g = ds.getOwnershipSubgraph(['Quantity'], [], { ownerCap: 8 });
     expect(g.nodes.map(n => n.id)).toEqual(['Quantity']);
     expect((g.hiddenOwners.get('Quantity') ?? []).length).toBeGreaterThan(8);
+  });
+
+  test('the default cap is 5 — BodySite (6 owners) falls back to chips', () => {
+    // Lowered from 8 (2026-08-19). BodySite sits just over the new cap, so the
+    // default now summarizes its owners as chips instead of drawing them; with
+    // an explicit cap of 8 they are drawn (test above). If this fails after a
+    // schema sync, check BodySite's owner count before changing the cap.
+    expect(DEFAULT_OWNER_CAP).toBe(5);
+    const g = ds.getOwnershipSubgraph(['BodySite']);
+    expect(g.nodes.map(n => n.id)).toEqual(['BodySite']);
+    expect((g.hiddenOwners.get('BodySite') ?? []).length).toBeGreaterThan(DEFAULT_OWNER_CAP);
   });
 
   test('the owner cap is honored exactly', () => {

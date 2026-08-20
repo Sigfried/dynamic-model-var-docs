@@ -89,6 +89,14 @@ export interface OwnershipSubgraph {
   hiddenOwners: Map<string, string[]>;
 }
 
+/**
+ * Owners drawn per node before falling back to chips. Lowered 8 → 5
+ * (2026-08-19, Siggie): 8 was picked without discussion, and a node with 6-8
+ * drawn owners crowds the canvas enough that the converging edges are hard to
+ * follow even with fanned ports.
+ */
+export const DEFAULT_OWNER_CAP = 5;
+
 export interface OwnershipSubgraphOptions {
   /** Walk each selected node's ownership ancestors in as dimmed context. */
   pathToRoot?: boolean;
@@ -204,7 +212,7 @@ export function buildOwnershipSubgraph(
   expansions: string[] = [],
   options: OwnershipSubgraphOptions = {},
 ): OwnershipSubgraph {
-  const { pathToRoot = false, ownerCap = 8 } = options;
+  const { pathToRoot = false, ownerCap = DEFAULT_OWNER_CAP } = options;
   const byId = new Map(dag.nodes.map(n => [n.id, n]));
   const resolve = (id: string) => {
     const n = byId.get(id);

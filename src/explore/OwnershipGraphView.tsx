@@ -29,8 +29,10 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type {
   DataService, OwnershipSubgraph, OwnershipSubgraphEdge, OwnershipSubgraphNode,
 } from '../services/DataService';
-import { useGraphLayout, useZoomPan, pathFromSections, anchoredPath } from './graph-core';
-import type { AnchorDir, EdgeSection, GraphSpec, GraphSpecPort, Point } from './graph-core';
+import {
+  useGraphLayout, useZoomPan, roundedPath, smoothPath, sectionPoints, mergeTail,
+} from './graph-core';
+import type { EdgeSection, GraphSpec, GraphSpecPort, Point } from './graph-core';
 
 const NODE_W = 240;
 const HEADER_H = 30;
@@ -190,12 +192,63 @@ function rowY(node: NodeVM, slot: string): number {
   return rowsTop(node) + idx * ROW_H + ROW_H / 2;
 }
 
+/** Gap between adjacent entity-end ports (px). Small on purpose: the fan is a
+ *  routing device, not a visual one — see buildSpec. */
+const ENTITY_FAN_GAP = 4;
+
+/** Corner radius for orthogonal edges. Large enough that a tight fan of
+ *  converging edges sweeps into the header rather than meeting it at hard
+ *  right angles; 0 would render exactly like the old square-cornered mode. */
+const CORNER_R = 10;
+
+/** Arrowhead size in px (markerUnits="userSpaceOnUse", so these do NOT scale
+ *  with stroke width — see the <defs> comment). */
+const ARROW_W = 8;
+const ARROW_H = 6;
+
+/** Gap between a node's border and the arrowhead TIP, so the whole head is
+ *  visible against the canvas rather than half-buried in the border. */
+const ARROW_GAP = 3;
+
 /**
- * ELK spec. Each drawn edge gets a fixed-position port at its slot row on
- * the storage-side node (east when the host is the drawn source, west when
- * it receives). The free end gets a header-level port (side by drawn
- * direction — top/bottom center in DOWN mode), so edges land on the entity
- * name instead of an arbitrary border point.
+ * Where converging edges stop being separate lines and become one.
+ * Three candidates, switchable in the toolbar so they can be compared on real
+ * data (2026-08-19 — Siggie wants to see all three before one is settled on):
+ *  - 'near'  ~40px: parallel and distinct until close to the node, then sweep
+ *            together. Each edge stays traceable to its owner.
+ *  - 'far'   ~120px: converge early, so the approach reads as one trunk that
+ *            splits back to its sources. Quieter near the node, harder to trace.
+ *  - 'bend'  at ELK's last corner: adaptive per edge, but the distance then
+ *            varies between nodes and layouts.
+ *  - 'off'   no merging — every edge runs to its own fanned port.
+ */
+export type MergeMode = 'near' | 'far' | 'bend' | 'off';
+
+/** Merge distance in px for a mode, given the edge's routed points. */
+function mergeDistFor(mode: MergeMode, pts: Point[]): number {
+  if (mode === 'off' || pts.length < 2) return 0;
+  if (mode === 'near') return 40;
+  if (mode === 'far') return 120;
+  // 'bend': distance from the end back to the last routed corner.
+  const end = pts[pts.length - 1];
+  const prev = pts[pts.length - 2];
+  return Math.hypot(end.x - prev.x, end.y - prev.y);
+}
+
+/** Per-edge offset for a fan of `total` ports, shrunk to stay inside `limit`
+ *  px overall however many edges converge. */
+function fanSpread(total: number, limit: number): number {
+  if (total < 2) return 0;
+  return Math.min(ENTITY_FAN_GAP, limit / (total - 1));
+}
+
+/**
+ * ELK spec. Each drawn edge gets a fixed-position port at its slot's row on
+ * the ATTRIBUTE-end node (east when that node is the drawn source, west when
+ * it receives) — the end that genuinely names a slot. The ENTITY end (the peer
+ * class, which has no corresponding row) gets a header-level port, tightly
+ * fanned, so edges land on the entity name rather than beside an unrelated
+ * attribute row.
  */
 function buildSpec(vm: ViewModel, direction: Direction): GraphSpec {
   const portsByNode = new Map<string, GraphSpecPort[]>();
@@ -211,10 +264,17 @@ function buildSpec(vm: ViewModel, direction: Direction): GraphSpec {
   const nodeById = new Map(vm.nodes.map(n => [n.id, n]));
 
   /**
-   * Free-end ports fan out along the node border instead of all sharing one
-   * header point. Six edges converging on BodySite through a single ::hdr:in
-   * port produced overlapping orthogonal runs that read as an edge between two
-   * unrelated owners. One port per edge, ordered, keeps the runs distinct.
+   * Entity-end ports fan out instead of all sharing one header point: six
+   * edges converging on BodySite through a single ::hdr:in port produced
+   * overlapping orthogonal runs that read as an edge between two unrelated
+   * owners. One port per edge, ordered, keeps ELK's runs distinct.
+   *
+   * The fan is deliberately TIGHT (ENTITY_FAN_GAP px apart, centred on the
+   * header) — it exists only so ELK routes the approach lanes separately, not
+   * as a visual feature. An earlier version spread ports over the whole header
+   * band and spilled below it, so arrows landed beside attribute rows and
+   * falsely implied "this edge is about that row". Only the ATTRIBUTE end
+   * carries row meaning; the entity end points at the class as a whole.
    */
   const freeEndSlot = new Map<string, number>();
   const freeEndTotal = new Map<string, number>();
@@ -238,15 +298,15 @@ function buildSpec(vm: ViewModel, direction: Direction): GraphSpec {
     const total = freeEndTotal.get(side) ?? 1;
     const idx = freeEndSlot.get(side) ?? 0;
     freeEndSlot.set(side, idx + 1);
-    // Spread the attach points across the header band (and a little below it
-    // when there are many), so each edge gets its own approach lane.
-    const band = Math.min(free.height - 6, HEADER_H + (total - 1) * 9);
-    const offset = total === 1 ? HEADER_H / 2 : 3 + (band - 6) * (idx / (total - 1));
+    // Tight fan centred on the header: just enough separation for ELK to route
+    // each approach in its own lane, never spilling past the header band.
+    const spread = fanSpread(total, HEADER_H - 4);
+    const offset = HEADER_H / 2 + (idx - (total - 1) / 2) * spread;
     const headerPort = direction === 'RIGHT'
       ? addPort(free, `${free.id}::hdr:${freeIsSource ? 'out' : 'in'}:${idx}`,
           freeIsSource ? NODE_W : 0, offset)
       : addPort(free, `${free.id}::hdr:${freeIsSource ? 'out' : 'in'}:${idx}`,
-          NODE_W / 2 + (idx - (total - 1) / 2) * 12,
+          NODE_W / 2 + (idx - (total - 1) / 2) * fanSpread(total, NODE_W / 2),
           freeIsSource ? free.height : 0);
     return {
       id: e.id,
@@ -269,11 +329,6 @@ function buildSpec(vm: ViewModel, direction: Direction): GraphSpec {
   };
 }
 
-function dirBetween(a: Point, b: Point): AnchorDir {
-  if (Math.abs(b.x - a.x) >= Math.abs(b.y - a.y)) return b.x >= a.x ? 'right' : 'left';
-  return b.y >= a.y ? 'down' : 'up';
-}
-
 /** Pull the routed end back along its final segment (so back-pointing
  *  arrowheads don't abut the node border). */
 function trimSectionsEnd(sections: EdgeSection[] | undefined, dist: number): EdgeSection[] | undefined {
@@ -287,18 +342,6 @@ function trimSectionsEnd(sections: EdgeSection[] | undefined, dist: number): Edg
   const k = Math.min(dist, len * 0.8) / len;
   const endPoint = { x: s.endPoint.x - dx * k, y: s.endPoint.y - dy * k };
   return [{ ...s, endPoint }, ...sections.slice(1)];
-}
-
-/** Curved rendering of an ELK-routed edge: cubic between the routed
- *  endpoints, leaving/arriving along the routed segment directions. */
-function curvedFromSections(sections: EdgeSection[] | undefined): string {
-  if (!sections?.length) return '';
-  const s = sections[0];
-  const pts = [s.startPoint, ...(s.bendPoints ?? []), s.endPoint];
-  if (pts.length < 2) return '';
-  const d0 = dirBetween(pts[0], pts[1]);
-  const d1 = dirBetween(pts[pts.length - 1], pts[pts.length - 2]);
-  return anchoredPath(pts[0], d0, pts[pts.length - 1], d1);
 }
 
 export default function OwnershipGraphView({
@@ -332,6 +375,9 @@ export default function OwnershipGraphView({
   );
   const [edgeStyle, setEdgeStyle] = useState<EdgeStyle>(
     () => (localStorage.getItem('explore-nl-edges') as EdgeStyle) || 'orthogonal',
+  );
+  const [mergeMode, setMergeMode] = useState<MergeMode>(
+    () => (localStorage.getItem('explore-nl-merge') as MergeMode) || 'near',
   );
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
 
@@ -397,6 +443,39 @@ export default function OwnershipGraphView({
     () => new Map(vm.edges.map(e => [e.id, e])),
     [vm],
   );
+
+  /**
+   * Shared arrival point per (node, side) for edge merging: the vertical centre
+   * of the entity's header, offset so the arrowhead TIP lands ARROW_GAP off the
+   * border. Edges converging here are drawn into this one point with one
+   * arrowhead instead of N stacked in the fanned-port band.
+   *
+   * Keyed the same way buildSpec keys its fan, so a group merges iff ELK fanned
+   * it. Only ENTITY-end arrivals merge — the attribute end is anchored at its
+   * slot's own row and must stay there.
+   */
+  const mergeTargets = useMemo(() => {
+    const byKey = new Map<string, Point>();
+    if (!layout) return byKey;
+    for (const e of vm.edges) {
+      const entityId = hostOf(e) === e.source ? e.target : e.source;
+      const node = placed.get(entityId);
+      if (!node) continue;
+      const entityIsSource = entityId === e.source;
+      const key = `${entityId}|${entityIsSource ? 'out' : 'in'}`;
+      if (byKey.has(key)) continue;
+      byKey.set(key, direction === 'RIGHT'
+        ? {
+            x: entityIsSource ? node.x + NODE_W + ARROW_GAP : node.x - ARROW_GAP,
+            y: node.y + HEADER_H / 2,
+          }
+        : {
+            x: node.x + NODE_W / 2,
+            y: entityIsSource ? node.y + node.height + ARROW_GAP : node.y - ARROW_GAP,
+          });
+    }
+    return byKey;
+  }, [vm, placed, layout, direction]);
 
   /**
    * A row is an expand-on-demand affordance when it points at an entity that
@@ -496,6 +575,10 @@ export default function OwnershipGraphView({
     localStorage.setItem('explore-nl-edges', s);
     setEdgeStyle(s);
   };
+  const setMerge = (m: MergeMode) => {
+    localStorage.setItem('explore-nl-merge', m);
+    setMergeMode(m);
+  };
 
   const attributesWord = dataService.getConceptLabel('attribute', true).toLowerCase();
 
@@ -532,6 +615,20 @@ export default function OwnershipGraphView({
         <button className={toolBtn(edgeStyle === 'curved')} title="Curved edges"
           onClick={() => setEdges('curved')}>∿</button>
         <span className="w-px h-4 bg-gray-300 dark:bg-slate-600 mx-1" />
+        {/* Merge-point comparison — temporary, for picking one by eye. */}
+        <button className={toolBtn(mergeMode === 'near')}
+          title="Merge converging edges near the node (~40px)"
+          onClick={() => setMerge('near')}>⋙</button>
+        <button className={toolBtn(mergeMode === 'far')}
+          title="Merge converging edges early (~120px)"
+          onClick={() => setMerge('far')}>⋙⋙</button>
+        <button className={toolBtn(mergeMode === 'bend')}
+          title="Merge at ELK's last corner"
+          onClick={() => setMerge('bend')}>⌙</button>
+        <button className={toolBtn(mergeMode === 'off')}
+          title="No merging — every edge runs to its own port"
+          onClick={() => setMerge('off')}>≡</button>
+        <span className="w-px h-4 bg-gray-300 dark:bg-slate-600 mx-1" />
         {([
           ['+', () => zp.zoomBy(1.3), 'Zoom in'],
           ['−', () => zp.zoomBy(1 / 1.3), 'Zoom out'],
@@ -561,19 +658,30 @@ export default function OwnershipGraphView({
                   width={contentW}
                   height={contentH}
                 >
+                  {/*
+                    markerUnits="userSpaceOnUse": without it markers scale by
+                    strokeWidth, so a 9-unit marker on a 1.8px ownership stroke
+                    rendered ~16px wide — a wedge bigger than the row it points
+                    at. Sizes below are now literal px. refX=0 keeps the TIP at
+                    the path's end point (refX=9 pushed the tip past the end and
+                    buried the body in the node border).
+                  */}
                   <defs>
-                    <marker id={markerId('arrow-own')} viewBox="0 0 10 7" refX="9" refY="3.5"
-                      markerWidth="9" markerHeight="6.5" orient="auto-start-reverse">
+                    <marker id={markerId('arrow-own')} viewBox="0 0 10 7" refX="0" refY="3.5"
+                      markerWidth={ARROW_W} markerHeight={ARROW_H}
+                      markerUnits="userSpaceOnUse" orient="auto-start-reverse">
                       <path d="M0,0L10,3.5L0,7Z" fill="#d97706" />
                     </marker>
                     {/* flipped storage: arrowhead at the member end points BACK
                         toward the owner (the member stores the FK) */}
-                    <marker id={markerId('arrow-own-back')} viewBox="0 0 10 7" refX="9" refY="3.5"
-                      markerWidth="9" markerHeight="6.5" orient="auto-start-reverse">
+                    <marker id={markerId('arrow-own-back')} viewBox="0 0 10 7" refX="10" refY="3.5"
+                      markerWidth={ARROW_W} markerHeight={ARROW_H}
+                      markerUnits="userSpaceOnUse" orient="auto-start-reverse">
                       <path d="M10,0L0,3.5L10,7Z" fill="#d97706" />
                     </marker>
-                    <marker id={markerId('arrow-ref')} viewBox="0 0 10 7" refX="9" refY="3.5"
-                      markerWidth="8" markerHeight="5.5" orient="auto-start-reverse">
+                    <marker id={markerId('arrow-ref')} viewBox="0 0 10 7" refX="0" refY="3.5"
+                      markerWidth={ARROW_W * 0.85} markerHeight={ARROW_H * 0.85}
+                      markerUnits="userSpaceOnUse" orient="auto-start-reverse">
                       <path d="M0,0L10,3.5L0,7Z" fill="#9ca3af" />
                     </marker>
                   </defs>
@@ -582,11 +690,30 @@ export default function OwnershipGraphView({
                       const spec = edgeById.get(e.id);
                       if (!spec) throw new Error(`Routed edge ${e.id} missing from view model`);
                       const flipped = spec.storageDirection === 'flipped';
-                      // back-pointing arrowheads get breathing room off the border
-                      const sections = flipped ? trimSectionsEnd(e.sections, 5) : e.sections;
-                      const d = edgeStyle === 'curved'
-                        ? curvedFromSections(sections)
-                        : pathFromSections(sections);
+                      // Stop the stroke ARROW_W + ARROW_GAP short of the port so
+                      // the arrowhead sits fully on the canvas: with refX=0 the
+                      // tip lands at the path end, so an untrimmed path buried
+                      // the head in the node border (and read as no arrow at
+                      // all). Flipped edges get the same treatment plus a little
+                      // extra, their head pointing back the other way.
+                      const sections = trimSectionsEnd(
+                        e.sections, ARROW_W + ARROW_GAP + (flipped ? 2 : 0),
+                      );
+                      // Merge the entity-end tail into the group's shared
+                      // arrival point (see mergeTargets). Flipped edges end at
+                      // an attribute row, which must keep its own anchor.
+                      const entityId = hostOf(spec) === spec.source ? spec.target : spec.source;
+                      const target = flipped
+                        ? undefined
+                        : mergeTargets.get(`${entityId}|${entityId === spec.source ? 'out' : 'in'}`);
+                      const pts = sectionPoints(sections);
+                      const render = (p: Point[]) => edgeStyle === 'curved'
+                        ? smoothPath(p)
+                        : roundedPath(p, CORNER_R);
+                      const dist = mergeDistFor(mergeMode, pts);
+                      const d = target && dist > 0
+                        ? mergeTail(pts, target, dist, render)
+                        : render(pts);
                       if (!d) return null;
                       const isOwn = spec.type === 'ownership';
                       const dimmed =
