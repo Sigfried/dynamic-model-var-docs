@@ -14,21 +14,144 @@ elsewhere in the docs as stale. **Needs Siggie: set a new target or drop it.**
 
 ---
 
-## 🔁 HANDOFF — start here next session (updated 2026-08-19)
+## 🔁 HANDOFF — start here next session (updated 2026-08-19, edge session)
 
-Explore SPA is the default app and the three-region layout is complete. This
-session was a **visual-pass session**: Siggie drove the real page and reported
-bugs; several were invisible to the test suite.
+> **START HERE: finish the single-arrowhead merge.** Spec and the exact way the
+> last session got it wrong are in the next block. Everything else in this
+> handoff is older context.
 
-**Next up: is-a side-stacks** (EXPLORE_VIZ.md step 3 remainder). Inheritance is
-currently rendered as header chips ⊳/▷ and essentially nothing else — the spec
-wants an expandable subclass stack on the parent node. Agreed as the next piece
-of work, deliberately left until the canvas was legible enough to design
-against. **Note every class is `is_a: Entity`**, so naive rendering adds noise.
+### ▶️ IN PROGRESS — one arrowhead per convergence (`a5f54c4`, incomplete)
 
-**Also confirmed wanted** (2026-08-19):
-- **Cardinality markers at edge endpoints** — previously "under consideration,"
-  now a yes. Wants some form of **label/title text on links** alongside.
+**The spec, in Siggie's words** (2026-08-19, after seeing three wrong versions):
+
+- There should only be **one arrowhead** per convergence point.
+- Size it off the entity title text: **~1em tall at the base, ~1.5em from base
+  to point**. Tall/wide **swap for TB** (arrow points down, so the base is
+  horizontal).
+- **Edges have no arrowheads of their own** and terminate at the **centre of the
+  single arrowhead's base** — not at its tip, and not at the node border.
+
+**What `a5f54c4` actually does (all three points wrong):**
+
+1. Every edge still carries `markerEnd`, so N markers stack at the merge point.
+   That is the blobby wedge in Siggie's screenshots — it looks like one fat
+   arrow because ~6 identical markers are piled up, not because one is drawn.
+   **Fix: drop `markerEnd` from the edge paths entirely** and render one
+   arrowhead per merge group as its own SVG element.
+2. `mergeTargets` aims edges at a point `ARROW_GAP` off the node border, i.e.
+   roughly where the **tip** goes. Edges must converge at the **base centre**,
+   which is a further `ARROW_LEN` out from the border.
+3. Arrowheads are sized in absolute px (`ARROW_W`/`ARROW_H`), not in `em` off
+   the title text, and don't swap for TB.
+
+Do **not** re-litigate the fan or the merge distance while fixing this — those
+are settled (see below). This is purely how the arrowhead is drawn and where
+edges stop.
+
+**Temporary scaffolding to remove:** the four merge-mode toolbar buttons
+(`⋙ ⋙⋙ ⌙ ≡`, `MergeMode` / `mergeDistFor` / `explore-nl-merge`) exist only so
+Siggie could compare merge distances by eye. **Siggie never picked one** — ask,
+then delete the other modes and hardcode the winner.
+
+**Where the code is:**
+- `src/explore/graph-core/paths.ts` — `mergeTail` (tail replacement),
+  `roundedPath`, `smoothPath`, `simplifyPoints`, `polyline`. Pure geometry,
+  tested in `src/test/paths.test.ts` (19 tests).
+- `src/explore/OwnershipGraphView.tsx` — `mergeTargets` (shared arrival point
+  per node+side), the `<defs>` markers, and the edge render block.
+
+### ✅ Settled this session — don't redo
+
+- **Terminology.** An edge joins **an attribute on one class** to **another
+  class as a whole**. Call these the **attribute end** and the **entity end**.
+  The old code words *host* / *storage side* (= attribute end) and *free* /
+  *peer* (= entity end) confused Siggie and are being retired. In LR the
+  attribute end is on the **right** border at its slot's row, the entity end on
+  the **left** border of the target — swapped when ownership is flipped.
+- **Only the attribute end names a slot.** The entity end never did; the peer
+  class has no corresponding row. An earlier fan spilled below the header so
+  arrows landed beside unrelated attribute rows and implied otherwise. Three
+  stale doc/comment claims still assert the old invariant and **need deleting**:
+  `OwnershipGraphView.tsx:8-9`, `:18`, and `EXPLORE_VIZ.md:200-201`
+  ("the row an edge lands on names the slot"). That claim was also the stated
+  justification for having no edge labels — and labels are now wanted, so the
+  premise is gone either way.
+- **The tight fan stays.** 4px, centred on the header. It is a *routing* device
+  so ELK gives each approach its own lane; it is not meant to be seen. Reverting
+  to a single shared port brings back the bug where six owners of `BodySite`
+  rendered as one edge between two unrelated owners.
+
+### 🔁 Loops: answered with data (2026-08-19)
+
+Probed the live schema (throwaway test, not kept). Ownership alone (`has-a`,
+133 edges) is **acyclic apart from 5 self-loops** — `TimePoint.index_time_point`,
+`File.derived_from`, `Specimen.parent_specimen`, `ResearchStudy.part_of`,
+`SpecimenContainer.parent_container`. The layered DAG's assumption holds.
+
+**One genuine multi-node cycle exists**, but only once reference edges join in:
+`Specimen --storage_activity--> SpecimenStorageActivity --container-->
+SpecimenContainer --contained_in (has-a)--> Specimen`. Two refs plus one
+ownership edge. Siggie's call: **self-loop markers only; document this cycle as
+known and deliberately unhandled** — a self-loop badge won't cover it, and a
+3-node cycle drawn across layers is what a user would actually notice as odd.
+
+(A third apparent cycle, `File → ImagingFile --derived_from--> File`, is an
+artifact of mixing is-a into the traversal — `ImagingFile` inherits
+`derived_from`. Not real; noted so nobody "fixes" it.)
+
+### ⚠️ Tooling gotcha that cost this session real time
+
+`grep` in the non-interactive shell is shadowed by a **shell function** (from
+Claude Code's own setup, not Siggie's dotfiles — it is invisible in an
+interactive shell, where `which grep` shows only a normal `--color=auto` alias).
+It execs the `claude` binary as `ugrep` with `-I --ignore-files`; **this ugrep
+build rejects both flags and exits non-zero printing nothing**, which is
+indistinguishable from "no matches found".
+
+**Use `command grep`.** Several searches this session returned false negatives,
+including one that led to a wrong claim to Siggie about colours not being
+config-driven. Also note zsh eats unquoted `--include=*.ts` — quote the globs.
+
+### 🎨 Amber collision — decided, not yet built
+
+Siggie: **keep amber = ownership**; move **variable counts** to brown/maroon.
+Wants colours driven by config shared between Explore and the previous views
+"if true, otherwise make this an upcoming task" — **it's the otherwise branch.**
+`appConfig.ts` has an `elementTypes[].color` config, but it is keyed by element
+*type* (class=blue, enum=purple…) and has no notion of "amber = ownership". All
+amber is hardcoded Tailwind:
+
+- **variable counts** (→ brown/maroon): `SelectionTable.tsx:71,113`,
+  `EntityTable.tsx:79,161`, `SlotDrilldown.tsx:111` (Variables tab)
+- **ownership** (stays amber): `OwnershipGraphView.tsx`
+- **pin star** — a *third* amber meaning, `EntityTable.tsx:138,140`. Surfaced
+  after Siggie's decision, so it is undecided; fold it into the semantic layer
+  but **don't recolour it without asking.**
+
+Plan: add a semantic colour layer to `appConfig.ts` (`ownership` / `variables` /
+`pinned`) and point both apps at it, rather than sprinkling maroon in 5 places.
+
+### 📋 Rest of the round Siggie listed (not started)
+
+Ordered as given: edge improvements (**cardinality markers at endpoints** +
+**label/title text on links**, re-verbed for flipped — *not* curved retuning),
+self-loop markers, **drawer section headers** (10px gray uppercase, too
+recessive), **cross-view state preservation** (Explore already URL-encodes
+state; mostly a matter of nav links carrying the query string), amber, and then
+a **real docs cleanup** — leave only current state / actual plans, moving
+previous-view plans to `docs/old` or `docs/previous_views` linked from the
+appropriate places. Siggie also wants to **discuss the remaining Known-imperfect
+items** (curved edges, chip-strip height estimate, expand-on-demand
+discoverability, no-expand-downward) *after* the buildable work.
+
+### 📌 Older context (pre-edge session)
+
+**is-a side-stacks** (EXPLORE_VIZ.md step 3 remainder) were the previously
+agreed next piece, deferred behind the edge work. Inheritance renders as header
+chips ⊳/▷ and little else; the spec wants an expandable subclass stack on the
+parent node. **Note every class is `is_a: Entity`**, so naive rendering adds
+noise.
+
 - **Step 5 polish** — selection-change animation, self-loop badges.
 
 ### 🐛 Fixed this session (2026-08-19)
