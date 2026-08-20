@@ -56,9 +56,14 @@ export interface OwnershipSubgraphNode {
   abstract: boolean;
   description: string;
   /**
-   * ALL entity-ranged slots stored on this class (schema order, selection-
-   * independent), whether or not their range is currently visible. Rows whose
-   * range is off-canvas are the expand-on-demand affordances.
+   * ALL entity-ranged slots stored on this class (selection-independent),
+   * whether or not their range is currently visible. Rows whose range is
+   * off-canvas are the expand-on-demand affordances.
+   *
+   * NOT in schema order — this list is built by walking the edge set, so it
+   * inherits graphology's insertion order. Consumers that display it sort by
+   * getClassSummary's slot list, which is authoritative (OwnershipGraphView's
+   * buildViewModel).
    */
   slots: OwnershipNodeSlot[];
 }

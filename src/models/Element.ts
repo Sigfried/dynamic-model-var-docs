@@ -471,8 +471,16 @@ export class ClassElement extends Range {
             slot.description || ''
           ];
         })
-        .filter((row): row is string[] => row !== null)
-        .sort((a, b) => a[0].localeCompare(b[0]));
+        .filter((row): row is string[] => row !== null);
+        // NOT sorted: attributes keep the order the schema declares them in.
+        // bdchm lists e.g. Consent as consent_code / valid_from / valid_to and
+        // SpecimenCreationActivity as date_started / date_ended; alphabetising
+        // scrambled those into an order that reads as arbitrary (and inverted
+        // the started/ended pairs). Source order survives ingestion intact —
+        // see `slots` in bdchm.processed.json — so this just stops discarding
+        // it. Other sorts in this file order browsable LISTS (enums, types,
+        // variables, tree children) where alphabetical is genuinely wanted;
+        // this one ordered a single class's own attributes.
 
       if (slotsList.length > 0) {
         sections.push({
