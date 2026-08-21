@@ -14,51 +14,82 @@ elsewhere in the docs as stale. **Needs Siggie: set a new target or drop it.**
 
 ---
 
-## 🔁 HANDOFF — start here next session (updated 2026-08-19, edge session)
+## 🔁 HANDOFF — start here next session (updated 2026-08-21)
 
-> **START HERE: finish the single-arrowhead merge.** Spec and the exact way the
-> last session got it wrong are in the next block. Everything else in this
-> handoff is older context.
+> The single-arrowhead merge is **DONE** (`0950472`). Schema-order attributes
+> are **DONE** (`4b2adf6`). Node dragging is **DONE but incomplete**
+> (`c483912`). Full reasoning and every rejected approach: `WORKLOG.md`,
+> entry 2026-08-19/21.
 
-### ▶️ IN PROGRESS — one arrowhead per convergence (`a5f54c4`, incomplete)
+### ▶️ OPEN — the bare diagonal
 
-**The spec, in Siggie's words** (2026-08-19, after seeing three wrong versions):
+One approach in a convergence arrives as a **straight diagonal with no steps**
+while its neighbours step once or twice, cutting across other boxes. Reproduce:
 
-- There should only be **one arrowhead** per convergence point.
-- Size it off the entity title text: **~1em tall at the base, ~1.5em from base
-  to point**. Tall/wide **swap for TB** (arrow points down, so the base is
-  horizontal).
-- **Edges have no arrowheads of their own** and terminate at the **centre of the
-  single arrowhead's base** — not at its tip, and not at the node border.
+```
+?sel=BodySite~Condition~Consent~Demography~Exposure~Observation~Procedure
+&exp=ImagingFile~ImagingStudy~MeasurementObservation~SpecimenCreationActivity
+```
 
-**What `a5f54c4` actually does (all three points wrong):**
+Siggie's reframing, which is the better question: *why does the second edge step
+up twice then dive, when the others step once?* Adding `TimePoint → add all`
+makes the diagonal disappear but introduces many crossings — so ELK appears to
+trade one against the other by corridor crowding.
 
-1. Every edge still carries `markerEnd`, so N markers stack at the merge point.
-   That is the blobby wedge in Siggie's screenshots — it looks like one fat
-   arrow because ~6 identical markers are piled up, not because one is drawn.
-   **Fix: drop `markerEnd` from the edge paths entirely** and render one
-   arrowhead per merge group as its own SVG element.
-2. `mergeTargets` aims edges at a point `ARROW_GAP` off the node border, i.e.
-   roughly where the **tip** goes. Edges must converge at the **base centre**,
-   which is a further `ARROW_LEN` out from the border.
-3. Arrowheads are sized in absolute px (`ARROW_W`/`ARROW_H`), not in `em` off
-   the title text, and don't swap for TB.
+**Three guesses were made and all three were wrong.** Do not theorise from the
+code. `?dbg=1` logs each convergence's routed approaches (point count, bend
+count, diagonal flag, endpoints); start there.
 
-Do **not** re-litigate the fan or the merge distance while fixing this — those
-are settled (see below). This is purely how the arrowhead is drawn and where
-edges stop.
+### ▶️ OPEN — dragging is unfinished
 
-**Temporary scaffolding to remove:** the four merge-mode toolbar buttons
-(`⋙ ⋙⋙ ⌙ ≡`, `MergeMode` / `mergeDistFor` / `explore-nl-merge`) exist only so
-Siggie could compare merge distances by eye. **Siggie never picked one** — ask,
-then delete the other modes and hardcode the winner.
+Works: drag, drop-in-place, edges re-routed, amber border, double-click to
+release, drawer no longer pops open mid-drag.
 
-**Where the code is:**
-- `src/explore/graph-core/paths.ts` — `mergeTail` (tail replacement),
-  `roundedPath`, `smoothPath`, `simplifyPoints`, `polyline`. Pure geometry,
-  tested in `src/test/paths.test.ts` (19 tests).
-- `src/explore/OwnershipGraphView.tsx` — `mergeTargets` (shared arrival point
-  per node+side), the `<defs>` markers, and the edge render block.
+Missing:
+1. **No obstacle awareness.** `smoothStepPath` routes between two anchors and
+   knows nothing about other nodes, so a moved node's edges cross boxes ELK
+   would have routed around. **ELK cannot fix this** — see WORKLOG for why
+   `noLayout`, `Fixed Layout`, INTERACTIVE, and libavoid are all dead ends.
+   The real fix is an orthogonal obstacle router (A*/visibility graph), pure
+   geometry, testable in `paths.ts`. **Not scoped — needs Siggie's go-ahead.**
+2. **No URL persistence.** Moves live in `OwnershipGraphView` and vanish on
+   reload. Siggie wants dragging permanent, so they should lift to
+   `ExploreApp` and encode alongside `?sel=`/`?exp=`. Note coordinates are
+   layout-dependent — a move saved against one selection may land oddly in
+   another.
+
+### ⚠️ Un-settled: the fan is visible
+
+`ENTITY_FAN_GAP = 4` (`OwnershipGraphView.tsx:222`) was documented as "a routing
+device, not meant to be seen" and marked settled. **Siggie pointed out that 4px
+is plainly visible** — it renders as the staircase of nested arcs sweeping into
+the arrowhead. The settled status rested on a false premise.
+
+Two knobs, pulling opposite ways: a smaller gap (1–2px) nests less but risks
+ELK collapsing the lanes back into overlapping runs (the bug the fan fixed);
+a longer merge distance cuts before the arcs splay. Siggie has the code map
+and may experiment. `ARROW_GAP` is currently **0** in the working tree —
+Siggie's experiment, deliberately uncommitted.
+
+### 🧹 Temporary scaffolding still in place
+
+- **Four merge-mode buttons** (`⋙ ⋙⋙ ⌙ ≡`). Siggie picked **`bend`** (the ⌙,
+  "merge at last corner") after seeing all four. Not yet hardcoded — the
+  diagonal work may still want the comparison.
+- **`?dbg=1` routing log** — keep until the diagonal is understood.
+
+### ✅ Answered this session
+
+- **Which classes show owner chips** (>5 direct owners, per `classifySlotEdge`,
+  which is what an earlier raw-slot count got wrong): **Quantity 16, TimePoint
+  9, BodySite 6, Context 6.** Below the cap: 4 owners — the observation family
+  and Substance; 3 — File, Specimen, QuestionnaireItem, the three
+  `*ObservationSet`s; 2 — twelve classes, mostly Participant+Visit pairs; 1 —
+  eleven, including TimePeriod (owner: Visit); 0 — thirteen, including
+  Organization, Person, Assay, Document. `Participant`/`Visit`/`Organization`
+  own heavily and are owned by almost nothing.
+- **Curved edges: removed.** `smoothPath` survives in graph-core unused.
+- **Stroke widths**: ownership 0.8 / 1.6 hover, references 0.67× those.
 
 ### ✅ Settled this session — don't redo
 
@@ -70,15 +101,13 @@ then delete the other modes and hardcode the winner.
   the **left** border of the target — swapped when ownership is flipped.
 - **Only the attribute end names a slot.** The entity end never did; the peer
   class has no corresponding row. An earlier fan spilled below the header so
-  arrows landed beside unrelated attribute rows and implied otherwise. Three
-  stale doc/comment claims still assert the old invariant and **need deleting**:
-  `OwnershipGraphView.tsx:8-9`, `:18`, and `EXPLORE_VIZ.md:200-201`
-  ("the row an edge lands on names the slot"). That claim was also the stated
-  justification for having no edge labels — and labels are now wanted, so the
-  premise is gone either way.
-- **The tight fan stays.** 4px, centred on the header. It is a *routing* device
-  so ELK gives each approach its own lane; it is not meant to be seen. Reverting
-  to a single shared port brings back the bug where six owners of `BodySite`
+  arrows landed beside unrelated attribute rows and implied otherwise. The three
+  stale "the row an edge lands on names the slot" claims were **deleted
+  2026-08-19** and rewritten in attribute-end / entity-end terms.
+- **The fan stays, but is NO LONGER "settled".** 4px, centred on the header, so
+  ELK gives each approach its own lane. It was justified as invisible; Siggie
+  observed on 2026-08-21 that it plainly is not (see the handoff). Reverting
+  to a single shared port still brings back the bug where six owners of `BodySite`
   rendered as one edge between two unrelated owners.
 
 ### 🔁 Loops: answered with data (2026-08-19)
@@ -201,8 +230,12 @@ noise.
 
 ### ⚖️ Needs Siggie's decision
 
-- **Owner cap is 8**, chosen without discussion. `BodySite` (6) draws; any node
-  over 8 falls back to chips.
+- **Owner cap is 5** (`DEFAULT_OWNER_CAP`, lowered from 8 on 2026-08-19). Four
+  classes exceed it and show chips: Quantity 16, TimePoint 9, BodySite 6,
+  Context 6. Still never explicitly ratified.
+- **Chips are one-way** — a chip adds an owner and vanishes; there is no way to
+  remove one from the strip. Siggie raised this and had no preference among the
+  options offered (persistent toggling chips / removal via the node's ×). Open.
 - **Category placement of `Context` / `Activity`** — parked in `observation`
   beside `Quantity`; trivial to move.
 - **EXPLORE_VIZ.md language** — Siggie: "a lot of the language doesn't make

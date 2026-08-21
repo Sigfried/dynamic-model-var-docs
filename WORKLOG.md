@@ -8,6 +8,144 @@ Newest first.
 
 ---
 
+## 2026-08-19/21 — Arrowhead merge finished; schema order; node dragging
+
+Picked up the unfinished single-arrowhead spec, finished it, then spent most of
+the session on edge geometry and a failed attempt at interactive routing.
+
+### The arrowhead spec — what "one arrowhead" actually required
+
+`a5f54c4` had all three points wrong; the fix was structural, not cosmetic.
+Merged edges now carry **no `markerEnd` at all** — the "blobby wedge" was ~6
+identical SVG markers stacked at one point, not one fat arrow. One head per
+convergence is drawn as its own path, and edges terminate at the **centre of
+its base**, one `ARROW_LEN` further out than the tip.
+
+Sizing off the title text (`TITLE_EM = 12`) made the LR/TB swap free: the
+arrow's base is built from the *perpendicular* of its direction vector, so an
+LR arrow gets a vertical base and a TB arrow a horizontal one with no direction
+branch. Worth preserving — an earlier instinct was to branch on direction.
+
+**Sign error worth remembering:** the first version drew every head backwards.
+One flag was doing two jobs — which *border* the head sits on (from whether the
+entity is the drawn source) and which way it *points*. Those are independent:
+the head always points INTO the node, so `dir` is the negation of the side sign.
+Four regression tests now pin this across both borders in LR and TB.
+
+### The curved merge tail was doing nothing
+
+`mergeTail` built a cubic whose control points were laid along the incoming
+direction — so it rendered visually straight anyway, while its seam with the
+routed head could not be rounded (`roundedPath` only rounds corners with
+segments on *both* sides). That seam was the source of the hard right angles in
+`bend` mode.
+
+Siggie's observation ("since the final leg is showing up straight anyway, could
+we just draw it as a diagonal with a rounded corner?") was correct and the fix
+was a net deletion: append the target as one more *point*, and the cut becomes
+an ordinary interior corner that rounds like any other.
+
+**Failed first attempt, don't retry:** adding `CORNER_R * 1.5` to the merge
+distance so the cut lands *before* ELK's corner. When the last routed segment is
+short the cut lands past the corner onto the long run before it, and the
+approaches bunch into a cramped parallel bundle. Fix the rounding at the seam,
+not the cut distance.
+
+### Fan ordering: two wrong turns
+
+The Consent `valid_to`/`valid_from` crossing prompted two failed fixes.
+
+1. **Sorting fan ports by row y (pre-layout).** Made it worse: the top row got
+   the topmost port — the straightest shot — and every lower edge had to climb
+   over it. Which approach arrives from where is ELK's decision and is *not*
+   knowable in `buildSpec`; any pre-layout proxy is a guess.
+2. **Re-ordering at render time by arrival direction.** Correct in principle,
+   but it was implemented as a spread of the *arrival points* across the
+   arrowhead base — Siggie had asked for more spread at the **penultimate**
+   points (the last bend), not the final ones. Reverted entirely.
+
+Fan slot index is therefore deliberately meaningless — just a distinct lane per
+edge. Both attempts are recorded in the `buildSpec` comment so they are not
+retried.
+
+**Still unexplained:** why one approach in a convergence arrives as a bare
+diagonal with no steps while its neighbours step once or twice. `?dbg=1` logs
+each convergence's routed approaches (point count, bend count, diagonal flag,
+endpoints) to answer this from real geometry. Three guesses were made and all
+three were wrong; the next attempt should start from that log.
+
+### Schema order — two separate discard sites
+
+Attributes rendered alphabetically, inverting `date_started`/`date_ended` and
+`period_start`/`period_end` and hoisting `id` to the top.
+
+- `Element.ts` sorted a class's attribute table with `localeCompare`. Removed.
+  The other six `localeCompare` sorts in that file order browsable *lists*
+  (enums, types, variables, tree children) where alphabetical is correct.
+- `ownershipSubgraph`'s node slots come from a walk over the edge set, so they
+  inherit graphology's insertion order. **Its doc comment claimed "schema
+  order", which sent the first fix looking in the wrong place.** Corrected.
+
+`getClassSummary`'s slot list is the authoritative index (every attribute, in
+declaration order); the view sorts both row kinds against it. Source order
+survives ingestion intact — see `slots` in `bdchm.processed.json`.
+
+`DataService.subsetSection` (Focus/relationships) keeps its alphabetical sort:
+it orders slot names gathered across *several* classes, where no single class's
+schema order applies. Siggie's instruction: don't fix previous views unless the
+fix pertains to Explore.
+
+### ELK cannot route for a hand-placed arrangement
+
+Node dragging was added as a probe and Siggie then wanted it permanent. The
+question became whether ELK can re-route edges around a node the user moved.
+**It cannot**, and each avenue was checked rather than assumed:
+
+- **`elk.noLayout`** — exists in elkjs, but ELK's own description is "No layout
+  is done for the associated element ... to avoid their inclusion in the layout
+  graph, or to ... prevent layout engines from processing them." It EXCLUDES the
+  node; its edges are not routed either. It is not a pin. (A recommendation to
+  use it for exactly this was checked and is wrong.)
+- **`Fixed Layout` algorithm** — keeps positions but requires `elk.bendPoints`
+  supplied by the caller. A no-op router.
+- **INTERACTIVE layering/crossing/cycle-breaking** — tried first. These read
+  coordinates as ORDERING HINTS: ELK infers which layer a node belongs in, then
+  re-places it there. Dropping BodySite far right moved it somewhere else
+  entirely, and one graph hung. Fully reverted.
+- **libavoid** — ELK's own answer ("routing edges without changing node
+  positions has been a highly requested feature for several years"), algorithm
+  id `org.eclipse.elk.alg.libavoid`. It is C++ wrapped as a Java plugin; elkjs
+  is GWT-compiled Java and ships eleven algorithms (box, fixed, force, layered,
+  mrtree, radial, random, rectpacking, sporeCompaction, sporeOverlap, stress).
+  libavoid is absent and structurally cannot be ported.
+
+So edges touching a moved node are re-routed by `smoothStepPath`, matching what
+React Flow and Cytoscape do (engine places nodes, renderer computes edge paths).
+**Neither of those libraries has obstacle-aware routing either** — React Flow's
+`smoothstep` and Cytoscape's `taxi` both compute from endpoints alone. Switching
+renderers would not fix this and would cost the fanned ports and merged
+arrowhead. The missing piece is an orthogonal obstacle router, independent of
+who draws the SVG.
+
+### A correction to how the fan was described
+
+The fan was documented as "deliberately tight, not meant to be seen." Siggie
+pointed out that 4px is plainly visible — it shows up as the staircase of nested
+arcs sweeping into the arrowhead. The "settled, don't touch" status of
+`ENTITY_FAN_GAP` was therefore decided on a premise that does not hold. Not
+changed, but no longer settled.
+
+### Process note
+
+Several wrong calls this session came from reasoning over a stale mental model
+rather than re-reading the code: the arrowhead sign error, the row-y sort, the
+`CORNER_R * 1.5` overshoot, the ELK pinning, and a set of line numbers quoted
+from memory that were ~25 lines stale. Two claims to Siggie were also wrong —
+the owner-chip count (raw slot ranges, ignoring `classifySlotEdge`, so eight
+classes instead of the real four) and "React Flow's dagre example handles drag
+continuously" (it does not re-run the layout engine; it recomputes its own edge
+geometry). **Check before asserting; the file is cheap to read.**
+
 ## 2026-08-19 (later) — Edge rendering: fan, corners, arrowheads
 
 Second session of the day. Siggie listed a round of work (edge improvements,
