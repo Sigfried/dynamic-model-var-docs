@@ -29,8 +29,13 @@ import type { ToggleButtonData } from '../components/ItemsPanel';
 import type { SectionData, SectionItemData } from '../components/Section';
 import { APP_CONFIG, getAllElementTypeIds, SectionId, ACTIVE_VOCAB } from '../config/appConfig';
 import { ENTITY_CATEGORIES, findUncategorizedClasses } from '../config/entityCategories';
-import { buildContainmentGraph } from '../models/containmentGraph';
-import type { ContainmentGraph } from '../models/containmentGraph';
+import {
+  buildContainmentGraph, classifySlotEdgeExplained, OWNERSHIP_RULE_TEXT,
+} from '../models/containmentGraph';
+import type {
+  ContainmentGraph, OwnershipVerdict, OwnershipRule,
+} from '../models/containmentGraph';
+import { getSlotEdgesForClass } from '../models/Graph';
 import { buildOwnershipDag, buildOwnershipSubgraph } from '../models/ownershipSubgraph';
 import type {
   OwnershipDag, OwnershipSubgraph, OwnershipSubgraphOptions,
@@ -82,6 +87,46 @@ export interface ClassSummaryInfo {
   parentId?: string;
   slots: Array<{ name: string; range: string; description: string }>;
   referencedBy: Array<{ classId: string; slotName: string }>;
+}
+
+/** One class-ranged slot, with ownership resolved to owner/owned as drawn. */
+export interface OwnershipPair {
+  /** The class that DECLARES the slot (inherited slots count for each subclass). */
+  declaredOn: string;
+  slotName: string;
+  /** The slot's declared range class. */
+  range: string;
+  multivalued: boolean;
+  /** Ownership direction as drawn — swapped from declaredOn/range when flipped. */
+  owner: string;
+  owned: string;
+  isLoop: boolean;
+}
+
+/** All pairs sharing one verdict + the rule that produced it. */
+export interface OwnershipPairGroup {
+  verdict: OwnershipVerdict;
+  rule: OwnershipRule;
+  /** Plain-language statement of the rule. */
+  ruleText: string;
+  pairs: OwnershipPair[];
+}
+
+/** How many ownership edges LEAVE one entity, and to whom. */
+export interface DivergenceInfo {
+  entity: string;
+  edgeCount: number;
+  /** How many of those are flipped — flipped edges do not merge. */
+  flippedCount: number;
+  owned: string[];
+}
+
+/** How many ownership edges arrive at one entity, and from whom. */
+export interface ConvergenceInfo {
+  entity: string;
+  /** Slot-edges, not distinct owners — this is what crowds a corridor. */
+  edgeCount: number;
+  owners: string[];
 }
 
 export class DataService {
@@ -637,6 +682,122 @@ export class DataService {
       },
       { pruneIsolated: full },
     );
+  }
+
+  /**
+   * Every class-ranged slot in the schema, grouped by how it was classified.
+   *
+   * Backs the ownership legend. Derived from `classifySlotEdgeExplained` — the
+   * same call the graph builder makes — so the legend cannot drift from what is
+   * actually drawn. That matters more than usual here: OWNERSHIP_OVERRIDES and
+   * VALUE_OBJECTS are hand-curated and go stale silently on every schema sync,
+   * and a legend built from a second copy of the rules would hide exactly the
+   * rot it is supposed to expose.
+   *
+   * Groups are keyed `verdict/rule` because the two are not one-to-one: an
+   * override can produce any verdict, and 'own-fwd' arrives by three different
+   * routes. `pairs` is sorted, and `owner`/`owned` are the ownership direction
+   * as DRAWN (flipped for own-flip), not the slot's declaration direction.
+   */
+  getOwnershipPairGroups(): OwnershipPairGroup[] {
+    const collection = this.modelData.collections.get('class' as ElementTypeId);
+    const allClassIds = collection ? collection.getAllElements().map(e => e.name) : [];
+    const known = new Set(allClassIds);
+    const groups = new Map<string, OwnershipPairGroup>();
+
+    for (const cname of allClassIds) {
+      for (const slot of getSlotEdgesForClass(this.modelData.graph, cname)) {
+        const rng = slot.range;
+        if (!known.has(rng)) continue;          // enum/type range: not a class pair
+        const { verdict, rule } = classifySlotEdgeExplained(
+          slot.slotName, rng, slot.multivalued,
+        );
+        const key = `${verdict}/${rule}`;
+        let g = groups.get(key);
+        if (!g) {
+          g = { verdict, rule, ruleText: OWNERSHIP_RULE_TEXT[rule], pairs: [] };
+          groups.set(key, g);
+        }
+        const flipped = verdict === 'own-flip';
+        g.pairs.push({
+          declaredOn: cname,
+          slotName: slot.slotName,
+          range: rng,
+          multivalued: slot.multivalued,
+          owner: flipped ? rng : cname,
+          owned: flipped ? cname : rng,
+          isLoop: cname === rng,
+        });
+      }
+    }
+
+    for (const g of groups.values()) {
+      g.pairs.sort((a, b) =>
+        a.declaredOn.localeCompare(b.declaredOn) || a.slotName.localeCompare(b.slotName));
+    }
+    // Biggest groups first: the legend is read to find cases, and the crowded
+    // classifications are where the interesting ones are.
+    return [...groups.values()].sort((a, b) => b.pairs.length - a.pairs.length);
+  }
+
+  /**
+   * Classes ranked by how many ownership edges CONVERGE on them.
+   *
+   * This is the number that drives the routing work: a convergence is N edges
+   * arriving at one node, and N counts slot-edges, not owning classes (one
+   * class owning a target through two slots crowds the corridor twice — which
+   * is exactly why TimePoint is denser than its owner count suggests).
+   */
+  getConvergenceRanking(): ConvergenceInfo[] {
+    const byTarget = new Map<string, ConvergenceInfo>();
+    for (const g of this.getOwnershipPairGroups()) {
+      if (g.verdict !== 'own-fwd' && g.verdict !== 'own-flip') continue;
+      for (const p of g.pairs) {
+        if (p.isLoop) continue;
+        let info = byTarget.get(p.owned);
+        if (!info) {
+          info = { entity: p.owned, edgeCount: 0, owners: [] };
+          byTarget.set(p.owned, info);
+        }
+        info.edgeCount++;
+        if (!info.owners.includes(p.owner)) info.owners.push(p.owner);
+      }
+    }
+    for (const i of byTarget.values()) i.owners.sort();
+    return [...byTarget.values()].sort(
+      (a, b) => b.edgeCount - a.edgeCount || a.entity.localeCompare(b.entity));
+  }
+
+  /**
+   * Classes ranked by how many ownership edges LEAVE them — the divergences.
+   *
+   * The mirror of getConvergenceRanking, and not redundant with it: because
+   * flipped edges reverse direction, an FK hub shows up here rather than there.
+   * That is not a detail — Participant fans out to 22 targets and Visit to 19,
+   * both bigger than the largest inbound convergence (Quantity, 19 edges), and
+   * they are almost entirely FLIPPED edges, which keep their attribute-row
+   * anchor and must not merge. The routing work was scoped off the convergence
+   * ranking alone and so had not looked at them.
+   */
+  getDivergenceRanking(): DivergenceInfo[] {
+    const bySource = new Map<string, DivergenceInfo>();
+    for (const g of this.getOwnershipPairGroups()) {
+      if (g.verdict !== 'own-fwd' && g.verdict !== 'own-flip') continue;
+      for (const p of g.pairs) {
+        if (p.isLoop) continue;
+        let info = bySource.get(p.owner);
+        if (!info) {
+          info = { entity: p.owner, edgeCount: 0, flippedCount: 0, owned: [] };
+          bySource.set(p.owner, info);
+        }
+        info.edgeCount++;
+        if (g.verdict === 'own-flip') info.flippedCount++;
+        if (!info.owned.includes(p.owned)) info.owned.push(p.owned);
+      }
+    }
+    for (const i of bySource.values()) i.owned.sort();
+    return [...bySource.values()].sort(
+      (a, b) => b.edgeCount - a.edgeCount || a.entity.localeCompare(b.entity));
   }
 
   /** Memoized full (unpruned) graph + supergroup DAG for getOwnershipSubgraph.

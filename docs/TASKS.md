@@ -40,6 +40,125 @@ trade one against the other by corridor crowding.
 code. `?dbg=1` logs each convergence's routed approaches (point count, bend
 count, diagonal flag, endpoints); start there.
 
+#### ✅ Root cause found (2026-08-21) — Siggie's diagnosis, confirmed
+
+**`bend` mode degenerates when there is no corner to bend from.**
+`mergeDistFor(mode, pts)` returns, for `bend`, the length of the LAST ROUTED
+SEGMENT. When ELK routes an approach as a single straight run — which happens
+whenever the outermost fan lane lines up with the source row, i.e. to the
+TOP approach of a large convergence — that "last segment" is the whole edge.
+`mergeCut` then walks back past the source, `cut` lands at index 0, and the
+entire path is replaced by one straight line from the source anchor to the
+shared arrowhead base. That is the bare diagonal.
+
+Verified numerically: a 2-point route 1020px long yields `mergeDist = 1020`,
+`cut = 0`. `near`/`far` are immune because their distance is a fixed 40/120px,
+so the cut always lands on the horizontal run near the node.
+
+So `merge-near` is not "better here" in general — `bend` is simply undefined on
+a corner-less route. The fix Siggie half-remembered (combine near with
+from-last-corner) is well-founded, but as a **guard**, not a compromise: clamp
+`bend` to `Math.min(lastSegment, nearDistance)`, or fall back to `near` when the
+route has fewer than 3 points. **Not yet implemented** — Siggie chose to build
+the comparison harness first.
+
+### ✅ DONE — the comparison harness (2026-08-21)
+
+"example cases" in the header opens a two-tab pane.
+
+**Cases tab** — 20 named selections in four groups (`src/explore/exampleCases.ts`),
+each with a note saying what to look at. Clicking one applies it to app state
+IN PLACE, deliberately not as a navigation: a reload would drop the merge mode
+(localStorage, read once at mount), which is the thing being compared.
+
+**Ownership legend tab** — every class-ranged slot in the schema grouped by the
+rule that classified it, plus the convergence/divergence rankings. Derived live
+from `classifySlotEdgeExplained` (new; `classifySlotEdge` now delegates to it),
+so it cannot drift from what is drawn — which matters because
+`OWNERSHIP_OVERRIDES`/`VALUE_OBJECTS` are hand-curated and rot on every schema
+sync. A test asserts the legend's pairs equal the graph's actual edges.
+
+**The legend immediately earned its keep.** The case set had been built off the
+convergence ranking, which hides FK hubs because flipped edges reverse
+direction. The listing showed 43 pairs in one `own-flip / fk-inversion` group,
+which is how these turned up:
+
+- **Participant fans OUT to 22 targets (21 flipped)** — larger than any inbound
+  convergence, including Quantity's 19.
+- **Visit fans out to 19**, Organization to 11, both almost entirely flipped.
+- Flipped edges keep their attribute-row anchor and **must not merge**, so
+  these are precisely the fans the merge code never touches, and therefore the
+  ones nothing has ever been tuned against.
+
+Real numbers now on record (slot-edges / distinct classes): converging —
+Quantity 19/16, TimePoint 16/8, BodySite 6/6, Context 6/6. Diverging —
+Participant 22, Visit 19, Organization 11, Specimen 8.
+
+### 🛑 OPEN — ownership classification may be broken; rules need rethinking
+
+**Siggie, 2026-08-21:** *"i think ownership graph stuff may be totally broken --
+certainly the OWNERSHIP_CLASSIFICATION.md doc is broken. let's save and then get
+a new session to figure out what the right rules SHOULD be -- not based on the
+code or previous decisions. i don't know if the code really has all the different
+categories listed in the dialog's ownership rules, but it shouldn't"*
+
+**Everything is in [docs/OWNERSHIP_RETHINK.md](OWNERSHIP_RETHINK.md)** — the
+four concrete problems found (all confirmed against the code, none were
+misunderstandings), why the old doc fails, measured facts, and how to approach
+the rethink. **Start there, not in the code.**
+
+The short version: of five classification rules, only `multivalued` reads the
+schema — the other four are hand-typed lists of names. `OWNERSHIP_OVERRIDES` is
+an edit log presented as a category, which is why `performed_by` and
+`associated_participant` land in different groups despite being the same kind of
+relationship. `docs/OWNERSHIP_CLASSIFICATION.md` is superseded as a rationale
+document; keep it as history only.
+
+This blocks nothing mechanically, but the diagram's largest structure
+(Participant's 22-edge outbound fan) is produced by the rule most in question,
+so **routing/aesthetic work tuned against today's classification may be tuned
+against the wrong graph.**
+
+### ▶️ OPEN — connections are invisible until attributes are expanded
+
+Siggie, 2026-08-21, with screenshots:
+
+- Selecting **Participant** alone shows a box with no indication that 22 classes
+  connect to it (21 flipped). The connections exist; nothing on the node hints
+  at them.
+- **Specimen** likewise gives no indication of its connections without expanding
+  attributes.
+
+There is an existing owners strip (`ownersStripHFor`, shown for classes with >5
+hidden owners — Quantity, TimePoint, BodySite, Context) which is the obvious
+mechanism to extend, but it currently covers only inbound owners and only above
+a threshold. **Options were drafted and NOT chosen — Siggie dismissed the
+question; do not pick one unilaterally.**
+
+Note this interacts with the rethink above: what counts as a connection worth
+advertising depends on what ownership means.
+
+### ▶️ OPEN — example-cases pane needs restructuring
+
+Siggie, 2026-08-21, on the pane built this session:
+
+1. **Reuse the DetailDrawer panel** rather than the new floating box, for
+   consistency. (First thought was draggable/resizable; Siggie revised to
+   "just use the same panel as the details drawer".)
+2. **Un-nest the legend from cases.** The **Ownership legend is meant to be
+   permanent**; example cases serve a different purpose and may not be. Using
+   the legend to find routing cases was a *temporary* use, not its reason to
+   exist. They should not be tabs of one pane.
+3. **BIGGEST FANS belongs with example cases**, not the legend — it serves the
+   case-finding purpose and *"may be redundant with those -- more on those
+   later."* (Siggie has more to say about the cases; wait for it.)
+4. **fk-inversion text is too verbose.** Siggie's suggested wording:
+   *'Ownership arrows can go "backwards" when a single-valued ENTITY (A)
+   attribute points at another ENTITY (B). We can interpret this as A belongs
+   to B."* — but see the rethink doc: the rule itself may not survive.
+
+Still owed from upcoming-thoughts #1: toolbar buttons, colours, dashed edges.
+
 ### [sg] upcoming thoughts
 1. i need this for current experimentation but should probably be permanent
    feature: a help or legend listing every type of ownership pair, the rules
@@ -101,6 +220,10 @@ Siggie's experiment, deliberately uncommitted.
 - **Four merge-mode buttons** (`⋙ ⋙⋙ ⌙ ≡`). Siggie picked **`bend`** (the ⌙,
   "merge at last corner") after seeing all four. Not yet hardcoded — the
   diagonal work may still want the comparison.
+- **"example cases" pane.** The Cases tab is scaffolding for the routing work.
+  The Ownership legend tab is NOT — it is upcoming-thoughts #1 delivered, and
+  should stay. It still needs the rest of #1: toolbar buttons, colours, dashed
+  edges.
 - **`?dbg=1` routing log** — keep until the diagonal is understood.
 
 ### ✅ Answered this session

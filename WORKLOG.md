@@ -8,6 +8,141 @@ Newest first.
 
 ---
 
+## 2026-08-21 — The bare diagonal explained; comparison harness + ownership legend
+
+Siggie arrived with the diagnosis already made, from screenshots rather than
+code, and it was right. Worth recording because the previous session made three
+wrong guesses at this by theorising from the source.
+
+### The bare diagonal: `bend` is undefined on a corner-less route
+
+`mergeDistFor(mode, pts)` returns, for `'bend'`, the length of the **last routed
+segment** — the distance back to ELK's final corner. That is well-defined only
+if there IS a final corner. When ELK routes an approach as a single straight
+run, `pts.length === 2` and the "last segment" is the entire edge. `mergeCut`
+then walks back past the source, `cut` lands at index 0, the routed head is
+empty, and the whole path becomes one straight line from the source anchor to
+the shared arrowhead base. The bare diagonal is not ELK declining to step; it
+is the merge code discarding a perfectly good horizontal route.
+
+Confirmed numerically before touching anything: a 2-point route 1020px long
+gives `mergeDist = 1020`, `cut = 0`. `near`/`far` never do this because their
+distance is a fixed 40/120px, so the cut always lands on the long horizontal
+run near the node.
+
+This is why `merge-near` looked fine on the same layout. It is **not** that
+near is better here — `bend` simply has nothing to bend from. It also explains
+why it hits the TOP approach of a big convergence: that is where the outermost
+fan lane happens to line up with the source row, so ELK has no reason to step.
+
+**The fix, not yet implemented** (Siggie chose harness-first): clamp `bend` to
+`Math.min(lastSegment, nearDistance)`, or fall back to `near` when
+`pts.length < 3`. Siggie half-remembered wanting to "combine merge-near with
+merge-from-last-corner" but could not recall the motivating cases. The
+motivation is better than remembered — this is a **guard on a degenerate
+input**, not a compromise between two aesthetics, so it does not need those
+cases to justify it.
+
+Do NOT re-try overshooting the cut by `CORNER_R*1.5` to swallow the corner;
+2026-08-19 established that is worse (short last segments push the cut onto the
+long run before the corner). Different problem, same function.
+
+### Harness before fix — and why the legend was the valuable half
+
+Siggie asked for the case harness first, then mid-build added upcoming-thoughts
+#1 (a legend of every ownership pair type) explicitly *"to help me find cases
+you may miss"*. That framing turned out to be the whole point.
+
+The curated case set had been built from the **convergence ranking** — how many
+ownership edges arrive at each class. That ranking structurally cannot show FK
+hubs, because flipped edges reverse direction: an edge that reads
+`Condition.associated_participant -> Participant` is drawn as Participant
+owning Condition, so Participant appears as an *owner*, never as a target. The
+case set therefore had a hole exactly where the schema is densest.
+
+The legend, which groups by classification rule rather than by target, put 43
+pairs in a single `own-flip / fk-inversion` bucket and made the hole obvious.
+Measured: **Participant fans out to 22 targets (21 flipped), Visit to 19,
+Organization to 11** — Participant's outbound fan is larger than the largest
+inbound convergence in the schema (Quantity, 19 edges). And because flipped
+edges keep their attribute-row anchor and never merge, these are precisely the
+fans the merge code deliberately does not touch, hence the ones no constant has
+ever been tuned against. Four cases added for them.
+
+Lesson for the next session: a ranking is a projection, and this codebase has
+two directions of ownership. Ranking by target alone hides half the graph.
+
+### Legend derives from the classifier; it does not restate it
+
+`classifySlotEdge` now delegates to a new `classifySlotEdgeExplained`, which
+returns the verdict **plus which rule fired** (`excluded` / `override` /
+`multivalued` / `value-object` / `fk-inversion`). The legend renders that.
+
+The alternative — hand-writing the rule listing in the UI — was rejected
+outright. `OWNERSHIP_OVERRIDES` and `VALUE_OBJECTS` are hand-curated and go
+stale silently on every schema sync (this is already a tracked hazard). A
+legend built from a second copy of the rules would conceal exactly the rot it
+exists to reveal. A test asserts the legend's pair list equals the containment
+graph's actual has-a/ref edges, so the two cannot drift.
+
+`verdict/rule` is the group key, not verdict alone: they are not one-to-one. An
+override can yield any verdict, and `own-fwd` arrives by three separate routes.
+
+### Cases apply in place, not by navigation
+
+Clicking a case sets `selectedIds`/`expandedIds`/`pathToRoot` directly rather
+than changing `location`. A reload would re-read the merge mode from
+localStorage and reset zoom/scroll — i.e. it would destroy the very state being
+held constant while flipping modes on one case. The URL still updates via the
+existing write effect, so a case remains shareable.
+
+### Siggie's verdict at the end of the session: the classification is suspect
+
+The legend was built to find edge-routing cases. It did that, then did
+something more useful: reading its own listing made Siggie doubt the
+classification underneath it. Four questions came out of that reading, each was
+checked against the code, and **all four were real problems** — not
+misunderstandings of a sound design:
+
+1. No rule separates fk-inversion from value-object; `VALUE_OBJECTS` is 14
+   hand-typed names checked before the FK fallthrough.
+2. `performed_by` and `associated_participant` are the same kind of
+   relationship in different groups, purely because the former used to be
+   pinned to `ref` and needed an entry to change. `OWNERSHIP_OVERRIDES` is an
+   edit log presented as a category.
+3. Excluding `focus`/`associated_evidence` → Entity conflates the sound
+   inheritance reason (every class is-a Entity) with ownership, where the
+   polymorphic pointer carries real meaning. The old doc already flagged this
+   and it was never revisited.
+4. Three of eight `ref` overrides rest on the slot being *named* `related_*`.
+
+Siggie's call: stop, save, and start a fresh session on what the rules SHOULD
+be — explicitly **not** derived from the current code or the 2026-07-13
+adjudication. Written up in `docs/OWNERSHIP_RETHINK.md`, which deliberately
+proposes no answer; `OWNERSHIP_CLASSIFICATION.md` is banner-marked superseded
+as a rationale document and kept as history.
+
+**Consequence for the routing work:** the bare-diagonal fix is still correct
+and still worth doing (it is a guard on a degenerate input, independent of
+classification). But aesthetic tuning against convergence sizes may be tuning
+against the wrong graph — Participant's 22-edge fan, the largest structure in
+the diagram, is produced entirely by the FK-inversion rule now in question.
+
+**Process note worth keeping:** what exposed all four problems was
+`classifySlotEdgeExplained` reporting *which rule fired*, then rendering the
+pairs grouped by rule. Neither the graph nor the old doc made the groupings
+visible, so their incoherence was invisible too. Whatever replaces the rules,
+keep the property that the classifier can explain itself.
+
+### Environment note
+
+`npm test` / `npx vitest` fail under the repo's default node (v16 on PATH):
+vite imports `constants` from `node:fs/promises`. Run with
+`PATH="$HOME/.nvm/versions/node/v22.20.0/bin:$PATH"`. Full suite: 216 pass.
+`npm run lint` reports 18 pre-existing errors in files untouched here.
+
+---
+
 ## 2026-08-19/21 — Arrowhead merge finished; schema order; node dragging
 
 Picked up the unfinished single-arrowhead spec, finished it, then spent most of

@@ -1,5 +1,24 @@
 # Ownership classification — adjudication list
 
+> # ⚠️ SUPERSEDED AS A RATIONALE DOCUMENT (2026-08-21)
+>
+> **Do not start here.** Siggie's assessment: this *"totally fails as an
+> explanatory document and seems to have just captured history of decisions
+> without a rationale even for why the decisions needed to be made in the first
+> place."*
+>
+> The classification rules themselves are now in question — see
+> **[OWNERSHIP_RETHINK.md](OWNERSHIP_RETHINK.md)**, which is the live document.
+> Four concrete problems were confirmed against the code on 2026-08-21,
+> including that `OWNERSHIP_OVERRIDES` is an edit log rather than a semantic
+> category, and that `VALUE_OBJECTS` is a hand-typed list implementing no
+> stated rule.
+>
+> **This file is kept as history only** — it still accurately records *what*
+> was decided on 2026-07-13 and 2026-08-19, and the per-slot tables below are
+> the only record of several individual calls. It does not record *why* the
+> framework was chosen, which is the gap being addressed.
+
 > **Status: ADJUDICATED 2026-07-13**, encoded in `OWNERSHIP_OVERRIDES` /
 > `VALUE_OBJECTS` in `src/models/containmentGraph.ts`. This file is now the
 > *rationale record*, not a pending worklist — the code is authoritative.

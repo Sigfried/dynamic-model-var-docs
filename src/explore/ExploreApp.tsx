@@ -20,6 +20,8 @@ import { DataService } from '../services/DataService';
 import SelectionTable from './SelectionTable';
 import OwnershipGraphView from './OwnershipGraphView';
 import DetailDrawer from './DetailDrawer';
+import ExampleCasesPane from './ExampleCasesPane';
+import type { ExampleCase } from './exampleCases';
 
 const SEL_PARAM = 'sel';
 const DETAIL_PARAM = 'detail';
@@ -73,6 +75,17 @@ export default function ExploreApp() {
   const [detailId, setDetailId] = useState<string | null>(readDetailFromURL);
   const [tableCollapsed, setTableCollapsed] = useState(false);
   const [pathToRoot, setPathToRoot] = useState<boolean>(readPathToRootFromURL);
+  const [casesOpen, setCasesOpen] = useState(false);
+
+  // Applying a case replaces every piece of graph state at once. Deliberately
+  // NOT a navigation: the merge mode lives in localStorage and is read once at
+  // mount, so a reload would reset the very thing being compared.
+  const applyCase = useCallback((c: ExampleCase) => {
+    setSelectedIds(new Set(c.sel));
+    setExpandedIds(new Set(c.exp ?? []));
+    setPathToRoot(!!c.roots);
+    setDetailId(null);
+  }, []);
 
   // Expansions only mean something relative to a selection — with nothing
   // selected the canvas shows its empty state, so keeping ?exp= would strand
@@ -143,7 +156,7 @@ export default function ExploreApp() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100">
+    <div className="relative flex flex-col h-screen bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100">
       <header className="flex items-center justify-between px-4 py-2 bg-blue-600 text-white shrink-0">
         <div>
           <h1
@@ -157,13 +170,31 @@ export default function ExploreApp() {
             BioData Catalyst Harmonized Model
           </p>
         </div>
+        <div className="flex items-center gap-4">
+        <button
+          onClick={() => setCasesOpen(v => !v)}
+          className={`text-sm underline hover:text-white ${casesOpen ? 'text-white' : 'text-blue-100'}`}
+          title="Named selections for comparing edge routing"
+        >
+          example cases
+        </button>
         <a
           href={`${import.meta.env.BASE_URL}previous.html`}
           className="text-sm underline text-blue-100 hover:text-white"
         >
           previous views
         </a>
+        </div>
       </header>
+
+      {casesOpen && (
+        <ExampleCasesPane
+          onClose={() => setCasesOpen(false)}
+          onApply={applyCase}
+          selectedIds={selectedIds}
+          dataService={dataService}
+        />
+      )}
 
       <div className="flex-1 flex min-h-0">
         {/* Selection table (collapsible) */}

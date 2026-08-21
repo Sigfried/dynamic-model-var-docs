@@ -82,12 +82,54 @@ export function classifySlotEdge(
   range: string,
   multivalued: boolean,
 ): OwnershipVerdict {
-  if (EXCLUDE_HAS_A_TARGETS.has(range)) return 'excluded';
+  return classifySlotEdgeExplained(slotName, range, multivalued).verdict;
+}
+
+/**
+ * Which of the module-header rules decided a slot's verdict.
+ *
+ * `excluded`/`override` pre-empt the default heuristic; the other three ARE the
+ * default heuristic, in the order it tries them.
+ */
+export type OwnershipRule =
+  | 'excluded'          // range in EXCLUDE_HAS_A_TARGETS
+  | 'override'          // OWNERSHIP_OVERRIDES named this slot
+  | 'multivalued'       // multi-valued slot → class
+  | 'value-object'      // single-valued slot → value object
+  | 'fk-inversion';     // single-valued slot → other entity
+
+/** Human-readable statement of each rule, for the legend. */
+export const OWNERSHIP_RULE_TEXT: Record<OwnershipRule, string> = {
+  'excluded': 'Range is an abstract root (EXCLUDE_HAS_A_TARGETS) — the edge is dropped '
+    + 'entirely, since it would point at everything and mean nothing.',
+  'override': 'A hand-adjudicated per-slot decision in OWNERSHIP_OVERRIDES pre-empts the '
+    + 'heuristic. These encode the 2026-07-13 adjudication; see docs/OWNERSHIP_CLASSIFICATION.md.',
+  'multivalued': 'A multi-valued slot pointing at a class means the owner has-a collection '
+    + 'of them, so ownership runs forward: owner → range.',
+  'value-object': 'A single-valued slot pointing at a VALUE OBJECT (a class with no identity '
+    + 'of its own, like Quantity or TimePoint) is forward ownership — the value belongs to '
+    + 'whoever holds it.',
+  'fk-inversion': 'A single-valued slot pointing at another ENTITY reads as a foreign key, so '
+    + 'ownership is FLIPPED: the target owns the source, not the other way round.',
+};
+
+/**
+ * Classify one class-ranged slot edge, reporting which rule fired.
+ *
+ * `classifySlotEdge` delegates here so the legend and the graph can never
+ * disagree about why an edge was classified the way it was.
+ */
+export function classifySlotEdgeExplained(
+  slotName: string,
+  range: string,
+  multivalued: boolean,
+): { verdict: OwnershipVerdict; rule: OwnershipRule } {
+  if (EXCLUDE_HAS_A_TARGETS.has(range)) return { verdict: 'excluded', rule: 'excluded' };
   const override = OWNERSHIP_OVERRIDES.get(slotName);
-  if (override) return override;
-  if (multivalued) return 'own-fwd';
-  if (VALUE_OBJECTS.has(range)) return 'own-fwd';
-  return 'own-flip';
+  if (override) return { verdict: override, rule: 'override' };
+  if (multivalued) return { verdict: 'own-fwd', rule: 'multivalued' };
+  if (VALUE_OBJECTS.has(range)) return { verdict: 'own-fwd', rule: 'value-object' };
+  return { verdict: 'own-flip', rule: 'fk-inversion' };
 }
 
 // Targets excluded as has-a ranges: abstract refs that don't point to a
