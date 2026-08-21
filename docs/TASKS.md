@@ -702,6 +702,40 @@ check claude's work:
 
 **Status**: UI still shows `quantity-DrugExposure` instead of `quantity`. The `slotRef.name` change is not being picked up. Needs debugging - possibly the dataLoader transform is not reading the `name` field from slot references.
 
+**Second instance found 2026-08-21 — `focus` shows the wrong cardinality.** Same
+root cause, different symptom: it's not just descriptions that collapse, it's
+*properties that change the meaning of the edge.*
+
+`focus` has no top-level slot definition. It is declared as an `attributes`
+entry on three classes, and the other 8 sites inherit via `is_a`:
+
+| declared on | multivalued | inherited by |
+|---|---|---|
+| `Document.focus` | No | — |
+| `Observation.focus` | No | DimensionalObservation, MeasurementObservation, SdohObservation, SpecimenQualityObservation, SpecimenQuantityObservation |
+| `ObservationSet.focus` | **Yes** (+ `inlined_as_list`) | DimensionalObservationSet, MeasurementObservationSet, SdohObservationSet |
+
+The Kitchen Sink detail panel shows **one** `focus` element with
+"Multivalued: No" and all 11 classes pooled under "Used By Entities (11)" — so
+the 4 multivalued sites (ObservationSet + its 3 Set subclasses) are silently
+misreported as single-valued.
+
+Mechanism: `SlotElement.getUsedByClasses()` (`src/models/Element.ts`) calls
+`getClassesUsingSlot(globalGraph, this.name)` — **keyed by slot name only**. The
+rendering in `getDetailData()` is fine; it faithfully prints whatever
+`this.multivalued` holds, which came from whichever declaration won ingestion.
+
+Why this one matters more than the `quantity` description bug: cardinality is
+the input to ownership classification (see
+[OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md) — multivalued vs
+single-valued decides edge direction). A viewer reading this panel would draw
+the wrong conclusion about 4 edges.
+
+Not a quick fix — needs attribute elements keyed by `class.slot`, or a
+"varies by class" treatment in the Used By table. Both ripple through
+everything that resolves attributes by name. **Left as a known bug 2026-08-21**
+(Siggie: fix if super-easy, otherwise defer — it isn't).
+
 ---
 ### LinkOverlay fixes  **[LATER — gated on an open question]**
 - Edge labels: show on hover; tooltip display needs improvement.

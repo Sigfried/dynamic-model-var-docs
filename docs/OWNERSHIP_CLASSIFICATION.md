@@ -1,131 +1,98 @@
 # Ownership classification
 
 How every class-ranged slot in the schema becomes an edge in the ownership
-diagram, and what "ownership" means here.
+diagram, and what the relationship it draws means.
 
-> **Status: proposed target, not yet implemented.** The rules in Part 1 are a
-> proposal for where we are going. Part 4 records where we actually are — the
-> rules the code runs today, their exceptions, and where they live. The two do
-> not agree; the gap is the work.
->
-> Ownership classification is Siggie's call. Part 2 lists what the simple rule
-> gets wrong and Part 3 argues the exceptions; both are input to that call, not
-> a settled answer.
+> **Status: proposed target, not yet implemented.** Parts 0–3 are the proposal.
+> Part 4 records what the code does today. Ownership classification is
+> Siggie's call; the open questions are marked as such rather than settled here.
 
 ---
 
-## Part 0 — What ownership means
+## Part 0 — What the diagram says
 
-The diagram is a **layered DAG**: if `A` is drawn above `B` with an ownership
-edge between them, a reader should conclude **`B` is reached through `A`.** `A`
-is where you start if you want to find `B`; `B` is a part of `A`'s record
-rather than a thing you look up independently.
+The diagram arranges classes in **layers**. If `A` is drawn above `B`, a reader
+should conclude **`B` is reached through `A`** — `A` is where you start if you
+want to find `B`.
 
-Two consequences follow, and they are what make the classification non-obvious:
+The schema states these relationships **both ways round**. `ObservationSet`
+stores its `observations` **owner-side** — the owner holds a collection.
+`Observation.associated_participant` stores the same kind of relationship
+**member-side** — the member holds a pointer up to what it belongs to. Both say
+"X belongs to Y"; they differ only in which end the schema chose to put the
+slot on. **Storage direction must be normalized before drawing**, or every
+observation, exposure and procedure lands *above* the Participant it describes.
 
-- **Ownership is not slot direction.** A slot is a pointer, and pointers in
-  this schema mostly run *from* the dependent thing *to* the thing it depends
-  on. `Condition.associated_participant` is declared on `Condition`, but a
-  reader navigates Participant → Condition, not the reverse. Drawing edges as
-  declared would put every observation, exposure and procedure *above* the
-  Participant they describe. So ownership edges are often **flipped** relative
-  to the schema declaration.
-- **Ownership must stay acyclic** (self-loops aside), or there are no layers to
-  draw. This is not an aesthetic preference — it is the constraint that decides
-  several otherwise-arguable calls, and it is the strongest available argument
-  for the one exception in Part 3.
+### Verdicts
 
-Three verdicts, plus one non-verdict:
-
-| verdict | meaning | drawn |
+| verdict | relationship | drawn |
 |---|---|---|
-| `own-fwd` | source owns range | source above range, edge as declared |
-| `own-flip` | range owns source | range above source, edge reversed |
-| `ref` | real relationship, not ownership | gray dashed, declared direction, no layering effect |
-| `excluded` | edge not drawn at all | — |
+| `own-fwd` | source **owns** range | source above range, edge as declared |
+| `own-flip` | source **belongs to** range | range above source, edge reversed |
+| `association` | neither owns the other | both above/below is wrong — see below |
 
-`ref` and `excluded` are escape hatches. Every one of them is a place the model
-is telling us something the layered DAG cannot show, and each should have to
-justify itself.
+The distinction between the first two and the third is **not** direction — it
+is whether an ownership claim is being made at all.
+
+**"Owns" vs "belongs to" is a real distinction, not a synonym pair.** `own-fwd`
+targets have no independent existence: a `Quantity` of `5 mg` is not a thing
+you look up, and calling it *owned* is accurate. `own-flip` targets do exist
+independently — an `Organization`, a `Participant`, a `Visit` — and saying a
+class *owns* them overclaims. **"Belongs to" is the correct verb for `own-flip`
+throughout**, and should be the wording in the legend and any edge label.
+
+### On cycles
+
+The layered arrangement needs the layering edges to be acyclic. **The full
+relationship graph is not and cannot be a DAG** — every class `is_a Entity`,
+and slots that range on `Entity` therefore point at everything, including
+themselves. Cycles are intrinsic.
+
+The resolution is not to force acyclicity but to **keep un-layerable
+relationships out of the layering channel**. That is what `association` is for.
+Measured (2026-08-21): with Rules 1–3 applied, `Entity`-ranged slots in the
+association channel, and `container` not layering, the layering channel is
+acyclic apart from 5 self-loops.
 
 ---
 
 ## Part 1 — The rules
 
 **Rule 1 — Multivalued slot ⇒ `own-fwd`.**
-`A.things: B[]` means A holds a collection of Bs. The collection is part of A's
-record. Draw A above B.
+`A.things: B[]` — A holds a collection of Bs, stored owner-side. Draw A above B.
 
 **Rule 2 — Single-valued slot ⇒ `own-flip`.**
-`A.thing: B` reads as a foreign key: A carries a pointer to one B that exists
-independently. The B is the anchor and the A hangs off it. Draw B above A.
+`A.thing: B` — A carries a pointer to one B that exists independently, stored
+member-side. **A belongs to B.** Draw B above A.
 
-That is the whole rule. It is a one-line function of `multivalued`, reads
-nothing but the schema, and cannot go stale on a sync:
+**Rule 3 — Single-valued slot whose range has no independent existence ⇒
+`own-fwd`.**
+Rule 2's premise fails when the target is not a thing you can navigate to. The
+pointer is containment expressed as a pointer; the value belongs to whoever
+holds it. Draw A above B. Membership is the `single_value_owner_slots` list —
+see Part 2 Group A.
 
 ```
-verdict = multivalued ? 'own-fwd' : 'own-flip'
+verdict = multivalued              ? 'own-fwd'
+        : range ∈ single_value_owner_slots ? 'own-fwd'
+        :                            'own-flip'
 ```
 
-It classifies **150 of 150** class-ranged slot edges with no lookup tables, no
-name matching, and no hand-curated sets.
-
-**Why this shape.** Cardinality is the only ownership signal the schema
-actually carries. Checked on 2026-08-21 against `public/source_data/HM/bdchm.yaml`:
-
-- `identifier` — useless. Every one of the 54 classes inherits `id` from
-  `Entity`, so every class has an identifier. It discriminates nothing.
-- `inlined` / `inlined_as_list` — set on only 10 of 150 edges, and not
-  consistently with ownership: `Specimen.parent_specimen` is
-  `inlined_as_list` but points *up* the derivation tree, and
-  `SpecimenStorageActivity.container` is inlined but is a use, not an
-  ownership.
-- `required`, `abstract`, `is_a` depth — carry no ownership signal.
-- Derived "value object" predicates were tested and fail. "Class with no
-  class-ranged slots of its own" catches 9 of the 14 classes currently listed
-  by hand but misses `TimePoint`, `TimePeriod`, `Substance`, `Activity`,
-  `QuestionnaireResponseValueTimePoint`. Closing that recursively (a class all
-  of whose class-ranged slots target value objects) over-collects wildly — it
-  pulls in `Participant`, `Visit`, `Organization`, `ResearchStudy` and 22
-  others, i.e. most of the schema.
-
-So there is no schema-derived way to distinguish "value object" from "entity."
-If that distinction is needed, it has to be asserted — which is what Part 3 is
-about.
-
-**Rule 0 (mechanical, not a judgement).** A slot whose range is `Entity` has no
-specific target. `Entity` is the universal root; an edge to it points at
-everything and constrains nothing. These are handled as a rendering question,
-not a classification one — see Part 2, misfit group C.
+Rules 1–2 alone classify all 150 class-ranged slot edges from the schema with
+no lookup tables. Rule 3 adds the one list that cannot be derived.
 
 ---
 
 ## Part 2 — What doesn't fit
 
-Applying Rules 1–2 with **zero exceptions** changes **63 of 150 edges**
-relative to what the code produces today. Grouped by what is actually at stake.
+Rules 1–2 with **zero exceptions** differ from today's output on 63 of 150
+edges. Grouped by what is at stake.
 
-### Group A — Value objects become owners (40 edges)
+### Group A — targets with no independent existence (40 edges)
 
-Single-valued slots pointing at `Quantity`, `TimePoint`, `BodySite`,
-`TimePeriod`, `Substance`, `Activity`, `CauseOfDeath`, `BiologicProduct`,
-`QuestionnaireResponseValue*`. Rule 2 flips these, making the value the owner.
-
-Consequence, measured: **`Quantity` acquires 13 owned classes and `TimePoint`
-8** — Quantity ends up above `MeasurementObservation`, `Procedure`,
-`SpecimenCreationActivity`, `Assay`, `Substance` and others; TimePoint above
-`ResearchStudy`, `Consent`, and every Specimen activity. A reader would
-conclude that to find a ResearchStudy you start from a TimePoint.
-
-It also breaks the DAG. Three cycles appear, all routed through a value object:
-
-```
-ResearchStudy → TimePoint → ResearchStudy
-SpecimenCreationActivity → Specimen → SpecimenProcessingActivity → Quantity → SpecimenCreationActivity
-Specimen → SpecimenProcessingActivity → Quantity → SpecimenStorageActivity → SpecimenContainer → Specimen
-```
-
-The 40 affected edges:
+Rule 2 flips these, making the value the owner: `Quantity` acquires 13 owned
+classes and `TimePoint` 8. A reader would conclude that to find a
+`ResearchStudy` you start from a `TimePoint`.
 
 | range | edges | sample slots |
 |---|---|---|
@@ -136,45 +103,111 @@ The 40 affected edges:
 | Activity | 1 | `Context.activity` |
 | QuestionnaireResponseValue | 1 | `QuestionnaireResponseItem.response_value` |
 
-### Group B — Association slots become ownership (8 edges)
+**This list cannot be derived from the schema.** Verified 2026-08-21:
 
-Currently `ref`; Rule 1 or 2 makes them ownership.
+- `identifier` — all 54 classes inherit `id` from `Entity`. Discriminates nothing.
+- `inlined` / `inlined_as_list` — set on 10 of 150 edges and inconsistent with
+  ownership (`Specimen.parent_specimen` is `inlined_as_list` but points *up*
+  the derivation tree; `SpecimenStorageActivity.container` is inlined but is a
+  use, not an ownership).
+- `required`, `abstract`, `is_a` depth — no signal.
+- "Class with no class-ranged slots of its own" catches 9 of the 14 but misses
+  `TimePoint`, `TimePeriod`, `Substance`, `Activity`,
+  `QuestionnaireResponseValueTimePoint`. Closing it recursively over-collects
+  to 40 classes including `Participant`, `Visit`, `Organization`.
 
-| slot | becomes | reading it forces |
-|---|---|---|
-| `Participant.originating_site → Organization` | own-flip | Organization owns Participant |
-| `SpecimenTransportActivity.transport_origin → Organization` | own-flip | Organization owns the transport |
-| `SpecimenTransportActivity.transport_destination → Organization` | own-flip | ditto — and both at once |
-| `MeasurementObservation.associated_assay → Assay` | own-flip | Assay owns the measurement |
-| `QuestionnaireResponseItem.has_questionnaire_item → QuestionnaireItem` | own-flip | question owns the answer |
-| `SdohObservation.related_questionnaire_item → QuestionnaireItem` | own-flip | question owns the observation |
-| `Specimen.related_document → Document[]` | own-fwd | Specimen owns the Document |
-| `SpecimenStorageActivity.container → SpecimenContainer[]` | own-fwd | the activity owns the container |
+So it must be asserted. Call it **`single_value_owner_slots`** — 14 classes:
+`Quantity`, `TimePoint`, `TimePeriod`, `BodySite`, `CauseOfDeath`, `Substance`,
+`BiologicProduct`, `Activity`, `QuestionnaireResponseValue` + its 5 typed
+subclasses.
+
+Where to keep it, worst to best: a hand-typed TypeScript set (status quo,
+silent staleness) → a LinkML overlay (`annotations: is_value_object`, reviewable
+as a diff, schema-shaped, matches the preference for linkml-conventional
+formats) → upstream in the schema itself. **Add a sync check** either way: any
+unlisted class that is a pure leaf, or any listed class that stops being one,
+gets flagged. That converts silent rot into a visible question.
+
+### Group B — single-valued slots to independently-existing targets (6 edges)
+
+Currently `ref`; Rule 2 makes them `own-flip`. **All six are correct as
+belongs-to** — they were only uncomfortable under the word "owns."
+
+| slot | reading under Rule 2 |
+|---|---|
+| `Participant.originating_site → Organization` | Participant belongs to Organization |
+| `SpecimenTransportActivity.transport_origin → Organization` | transport belongs to Organization |
+| `SpecimenTransportActivity.transport_destination → Organization` | transport belongs to Organization |
+| `MeasurementObservation.associated_assay → Assay` | measurement belongs to Assay |
+| `QuestionnaireResponseItem.has_questionnaire_item → QuestionnaireItem` | answer belongs to question |
+| `SdohObservation.related_questionnaire_item → QuestionnaireItem` | observation belongs to question |
+
+`originating_site` is the clearest case: when an Organization enrolls a
+Participant, **the org should get credit** — that is exactly a belongs-to, and
+the current `ref` override is wrong. The same logic covers the two transport
+slots, and is consistent with `performed_by` already being own-flip.
 
 Note `transport_origin` and `transport_destination` both land on `Organization`
-from the same class — under Rule 2 the same Organization node is drawn as owner
-twice over for opposite roles. That is a real signal that the slot is a role,
-not a containment.
+from the same class, so the same node is drawn above the transport twice for
+opposite roles. Not wrong under belongs-to, but it is the clue worth pulling on
+if a role-vs-membership distinction is ever wanted.
 
-`SpecimenStorageActivity.container` is the edge that produces the one cycle
-that survives even *with* the Part 3 exception:
-`Specimen → SpecimenStorageActivity → SpecimenContainer → Specimen`.
+**Open — Siggie's call:** these six could instead be `association`, with the
+target still placed in a prior layer. That keeps the layout and drops the
+ownership claim entirely. The trade-off is one more verdict against wording
+nobody has to defend.
 
-### Group C — `Entity`-ranged slots (12 edges)
+### Group C — multivalued slots that assert ownership (2 edges)
 
-7 single-valued `focus` slots and 5 multivalued (`focus` ×4 plus
-`Condition.associated_evidence`). Today they are dropped. Under Rules 1–2 the
-single-valued ones make `Entity` the owner of 5 observation classes, and the
-multivalued ones make 5 classes own `Entity` — i.e. own everything, since every
-class `is_a Entity`.
+Split out from Group B because these are **not** belongs-to. Rule 1 makes them
+`own-fwd`, an actual ownership claim.
 
-Both readings are wrong, but **dropping them is also wrong** — `focus` carries
-real meaning ("this observation is about *something*") and deleting it silently
-removes information. This is a rendering problem (a wildcard port, or an
-`Entity` node that is drawn but not layered), not a classification problem. It
-should not be solved with a classification exception.
+| slot | reading under Rule 1 |
+|---|---|
+| `Specimen.related_document → Document[]` | Specimen owns the Documents |
+| `SpecimenStorageActivity.container → SpecimenContainer[]` | the activity owns the containers |
 
-### Group D — Specimen-family inconsistencies (3 edges)
+`container` is the harder one: it is also the sole cause of the one cycle that
+survives Rules 1–3 —
+`Specimen → SpecimenStorageActivity → SpecimenContainer → Specimen`. Treating it
+as `association` (non-layering) makes the layering channel fully acyclic.
+
+**Open — not yet considered.** Both are candidates for `association`.
+
+### Group D — `Entity`-ranged slots (12 edges)
+
+The only slots ranging on `Entity` are `focus` (11 sites) and
+`Condition.associated_evidence` (1). Nothing else in the schema targets
+`Entity`.
+
+`focus` has no top-level definition — it is declared on three classes and
+inherited by the rest:
+
+| declared on | multivalued | inherited by |
+|---|---|---|
+| `Document.focus` | No | — |
+| `Observation.focus` | No | DimensionalObservation, MeasurementObservation, SdohObservation, SpecimenQualityObservation, SpecimenQuantityObservation |
+| `ObservationSet.focus` | **Yes** | DimensionalObservationSet, MeasurementObservationSet, SdohObservationSet |
+
+So **7 single-valued + 4 multivalued `focus`, + 1 multivalued
+`associated_evidence` = 12.**
+
+Under Rules 1–2 the single-valued ones make `Entity` the owner of 7 classes,
+and the multivalued ones make 5 classes own `Entity` — i.e. own everything.
+Both are wrong. But dropping them (today's behavior) is also wrong: `focus`
+carries real meaning — "this observation is about *something*."
+
+**`associated_evidence` admits no sensible ownership assignment in either
+direction.** It is the case that forces the `association` channel to exist:
+drawn with **arrows at both ends**, asserting a relationship without a claim
+about which side is primary.
+
+> **Note:** the Kitchen Sink detail panel currently misreports `focus` as
+> single-valued at all 11 sites, because attribute elements are keyed by slot
+> name and the three declarations collapse into one. Known bug, logged in
+> `docs/TASKS.md` under "Class-specific slot definitions."
+
+### Group E — Specimen-family inconsistencies (3 edges)
 
 | slot | today | Rules 1–2 |
 |---|---|---|
@@ -184,116 +217,50 @@ should not be solved with a classification exception.
 
 The first two are single-valued slots whose multivalued siblings
 (`processing_activity`, `storage_activity`, `transport_activity`;
-`quality_measure`, `quantity_measure`) are own-fwd under Rule 1. So Rules 1–2
-split a family of five slots by cardinality alone, and the schema's choice of
-`0..1` vs `0..*` here looks incidental rather than meaningful.
+`quality_measure`, `quantity_measure`) are `own-fwd` under Rule 1. Rules 1–2
+split a family of five by cardinality alone, and the schema's `0..1` vs `0..*`
+choice here looks incidental.
 
-`parent_specimen` is the mirror case: multivalued, so Rule 1 says Specimen owns
-its parents — pointing up the derivation tree. It is a self-loop, so it does
-not affect layering, but the arrow reads backwards.
+`parent_specimen` is multivalued, so Rule 1 says Specimen owns its parents —
+pointing up the derivation tree. Self-loop, so no layering effect, but the
+arrow reads backwards.
 
-**These three are the strongest evidence that cardinality is not a perfect
-proxy for ownership.** They are also only three edges, and two of them are
-arguably an upstream modeling inconsistency worth raising rather than
-patching locally.
+**These are the strongest evidence that cardinality is not a perfect proxy.**
+They are also 3 edges, and the inconsistency is upstream. Recommend drawing
+honestly and raising it with the schema authors rather than patching locally.
 
 ---
 
-## Part 3 — Arguments for exceptions
+## Part 3 — Where that leaves us
 
-Only one exception is worth making. The rest are listed with the argument
-against.
-
-### Recommended: value objects are never owners (1 exception, covers 40 edges)
-
-**Rule 3 — a single-valued slot whose range is a *value object* is `own-fwd`.**
-
-The argument is not aesthetic. It is that Rule 2's premise fails for these
-classes. Rule 2 says "a single-valued pointer means the target exists
-independently and the source hangs off it." For `Quantity`, `TimePoint`,
-`BodySite` that is false: a Quantity of `5 mg` is not a thing you navigate to
-and find its observations hanging beneath it. It has no independent existence
-and no identity worth anchoring on. The pointer is *containment expressed as a
-pointer* — the value belongs to whoever holds it.
-
-Three independent facts support treating this as a real category, not a
-preference:
-
-1. **It is the only thing that makes the graph a DAG.** All three cycles under
-   Rules 1–2 route through `Quantity` or `TimePoint`. Adding this exception
-   removes all three, leaving only the one genuine cycle in group B.
-2. **The degree numbers are absurd without it.** Quantity as owner of 13
-   classes and TimePoint of 8 is a larger structure than anything real in the
-   schema.
-3. **These classes are structurally distinct.** 9 of the 14 have *no
-   class-ranged slots at all* — they are pure leaves. The other 5 point only at
-   other value objects. No non-value-object class has that shape except
-   `Organization` (which is a genuine entity, and a known false positive for
-   this test).
-
-**The cost, stated plainly: this is an assertion, not a derivation.** As
-established in Part 1, nothing in the schema marks these classes. Membership
-has to be written down somewhere and will go stale on every upstream sync — the
-exact hazard tracked in `docs/TASKS.md` as hand-curated config rot.
-
-Three ways to pay that cost, worst to best:
-
-- **Keep a hand-typed list in TypeScript** (status quo). Silent staleness, no
-  review point.
-- **Assert it in a LinkML overlay.** A side schema, or `annotations:` on the
-  classes, saying `is_value_object: true`. Still hand-maintained, but it lives
-  in schema-shaped data, is reviewable as a diff, and is the format that could
-  eventually go upstream. Matches the stated preference for
-  linkml-conventional formats and Python linkml tooling.
-- **Get it upstream.** The right long-run answer: these classes genuinely are
-  value objects and the schema should say so. Requires the schema authors.
-
-Either way, **add a sync check**: any class not in the list that is a pure leaf,
-or any listed class that stops being one, is flagged for review. That converts
-silent rot into a visible question. It also gives the 14-name list an
-independent test rather than leaving it as bare enumeration.
-
-### Not recommended, with reasons
-
-**Exception for group B associations.** Tempting — `Organization` owning every
-Participant it originated is clearly wrong. But there is no test that separates
-these 8 from the ~40 single-valued entity slots that stay own-flip. The current
-code's reasons ("provenance, not ownership"; "the activity *uses* containers")
-restate the conclusion. Three of the eight rest on the slot being *named*
-`related_*`, which is a naming convention doing semantic work. **Take the
-mis-reading instead, and note it.** If a distinction later emerges that
-separates role-pointers from FK-pointers, revisit — the `transport_origin` /
-`transport_destination` pair landing on one target is the clue worth pulling on.
-
-**Exception for group D.** Three edges, and the inconsistency is upstream
-(`creation_activity` being `0..1` while its four siblings are `0..*`). Patching
-it here hides a schema question that should be raised. Draw honestly, flag
-upstream.
-
-**Exception for group C (`Entity`).** Not a classification problem. See group C.
-
-### Where that leaves us
-
-| | rules | hand-maintained entries | edges classified by schema alone |
+| | rules | hand-maintained entries | edges classified from schema alone |
 |---|---|---|---|
 | today | 5 | 30 (15 override + 14 value-object + 1 exclude) | 32 / 150 |
 | Rules 1–2 | 2 | 0 | 150 / 150 |
-| Rules 1–3 | 3 | 14 (value objects, ideally upstream) | 110 / 150 |
+| Rules 1–3 | 3 | 14 (ideally upstream) | 110 / 150 |
 
-Rules 1–3 leave **one** hand-maintained set, with a stated principle, an
-independent structural test, and a path to being asserted in the schema itself.
+Rules 1–3 leave **one** hand-maintained list, with a stated principle, an
+independent structural test, and a path into the schema itself.
 
-Open, deliberately not decided here: whether `ref` should survive at all as a
-verdict. Under Rules 1–3 nothing produces it. Keeping it means keeping a
-category with no rule that assigns it; dropping it means group B renders as
-wrong-direction ownership. That is a call about what the diagram is for.
+Verified: Rules 1–3, with all of Group B flipped, `Entity` edges in the
+association channel, and `container` non-layering, produce a layering channel
+that is **acyclic apart from 5 self-loops** (`TimePoint.index_time_point`,
+`File.derived_from`, `Specimen.parent_specimen`, `ResearchStudy.part_of`,
+`SpecimenContainer.parent_container`).
+
+**Open questions for Siggie:**
+
+1. Group B (6 edges) — belongs-to, or association-with-layering?
+2. Group C (2 edges) — is `Specimen owns Document` / `activity owns container`
+   acceptable, or association?
+3. Does `association` layer its target, or float free? (Group D's
+   `associated_evidence` cannot layer; Group B's could.)
 
 ---
 
 ## Part 4 — Where we are now
 
-What the code does today. Recorded so the gap is visible; **not a description
-of what it should do.**
+What the code does today. Recorded so the gap is visible.
 
 ### Resolution order
 
@@ -307,7 +274,7 @@ of what it should do.**
 5. otherwise                      → own-flip
 ```
 
-Steps 3–5 are Rules 1–3 above. Steps 1–2 are the accumulated exceptions.
+Steps 3–5 are Rules 1–3. Steps 1–2 are the accumulated exceptions.
 
 ### Live output (2026-08-21)
 
@@ -326,14 +293,10 @@ to combinations that occur — not seven designed categories.
 
 ### The hand-curated sets
 
-**`VALUE_OBJECTS`** (14) — `Quantity`, `TimePoint`, `TimePeriod`, `BodySite`,
-`CauseOfDeath`, `Substance`, `BiologicProduct`, `Activity`,
-`QuestionnaireResponseValue` + its 5 typed subclasses.
-Intended principle: "a class with no identity of its own." Nothing computes it;
-membership is by typing a name into the list.
+**`VALUE_OBJECTS`** (14) — becomes `single_value_owner_slots` under the
+proposal; same membership.
 
-**`OWNERSHIP_OVERRIDES`** (15) — keyed by slot name, pre-empts everything but
-`excluded`:
+**`OWNERSHIP_OVERRIDES`** (15) — keyed by slot name:
 
 | verdict | slots |
 |---|---|
@@ -344,52 +307,48 @@ membership is by typing a name into the list.
 **This set is not a semantic category.** It is an edit log: membership records
 that the heuristic was wrong *or* that an earlier override had to be undone.
 `performed_by` is in it and `associated_participant` is not, despite being the
-same kind of relationship — the difference is that `performed_by` was
-previously pinned to `ref` by the retired `NO_FLIP_SLOTS` set, so changing it
-needed an entry. Nothing distinguishes the two semantically.
+same kind of relationship — `performed_by` was previously pinned to `ref` by
+the retired `NO_FLIP_SLOTS` set, so changing it needed an entry.
 
-**`EXCLUDE_HAS_A_TARGETS`** (1) — `Entity`. Drops the 12 `focus` /
-`associated_evidence` edges. Distinct from `SKIP_SUBCLASS_EXPANSION` (also
-`Entity`), which suppresses is-a edges to the universal root and is sound.
+Under the proposal, the 5 `own-flip` entries become what Rule 2 already
+produces (no entry needed), and the 8 `ref` entries are resolved by Groups B
+and C.
+
+**`EXCLUDE_HAS_A_TARGETS`** (1) — `Entity`. Drops the 12 Group D edges.
+Distinct from `SKIP_SUBCLASS_EXPANSION` (also `Entity`), which suppresses is-a
+edges to the universal root and is sound.
 
 ### Where it lives
 
 - `src/models/containmentGraph.ts` — `classifySlotEdge`,
   `classifySlotEdgeExplained` (returns verdict + which rule fired),
-  `OWNERSHIP_RULE_TEXT`, and the three sets above.
+  `OWNERSHIP_RULE_TEXT`, the three sets.
 - `src/services/DataService.ts` — `getOwnershipPairGroups()`,
   `getConvergenceRanking()`, `getDivergenceRanking()`.
-- `src/explore/OwnershipLegend.tsx` — renders every slot grouped by the rule
-  that classified it.
+- `src/explore/OwnershipLegend.tsx` — renders every slot grouped by rule.
 - `src/test/ownershipLegend.test.ts` — asserts the legend cannot drift from the
   graph's actual edges.
 
-`classifySlotEdgeExplained` should survive any rewrite. Having the classifier
+`classifySlotEdgeExplained` should survive any rewrite; having the classifier
 report *which* rule fired is what made these problems visible.
 
-### Measured structure, for comparing any change against
+### Scale of any Rule-2 change
 
-Diverging (ownership edges out): Participant 22 (21 flipped), Visit 19 (18
-flipped), Organization 11 (11 flipped), Specimen 8 (0 flipped).
+Diverging (edges out): Participant 22 (21 flipped), Visit 19 (18 flipped),
+Organization 11 (11 flipped), Specimen 8 (0 flipped).
 Converging (in): Quantity 19 (16 classes), TimePoint 16 (8), BodySite 6,
 Context 6.
 
-Participant's outbound fan is the largest structure in the diagram and is
-almost entirely `associated_participant` (20 sites) — produced by Rule 2. Rule
-2 also produces `associated_visit` (18 sites) and `performed_by` (11 sites).
-**These three slot names alone account for 49 of the 112 single-valued edges.**
-Any change to Rule 2 reshapes most of the diagram.
-
-Ownership today is acyclic apart from 5 self-loops
-(`TimePoint.index_time_point`, `File.derived_from`, `Specimen.parent_specimen`,
-`ResearchStudy.part_of`, `SpecimenContainer.parent_container`) and one real
-3-node cycle once refs join:
-`Specimen → SpecimenStorageActivity → SpecimenContainer → Specimen`.
+`associated_participant` (20 sites), `associated_visit` (18) and `performed_by`
+(11) account for **49 of the 112 single-valued edges**. Any change to Rule 2
+reshapes most of the diagram.
 
 ---
 
 ## See also
 
 - [OWNERSHIP_RETHINK.md](OWNERSHIP_RETHINK.md) — why the previous version of
-  this document was discarded, and the four problems that prompted it.
-- `docs/TASKS.md` — hand-curated config rot, the recurring staleness hazard.
+  this document was discarded.
+- [EXPLORE_VIZ.md](EXPLORE_VIZ.md) §"Core visual-design conclusions" — the
+  owner-side/member-side normalization and the channel/label conventions.
+- `docs/TASKS.md` — hand-curated config rot; the `focus` cardinality bug.
