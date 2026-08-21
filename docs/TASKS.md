@@ -40,6 +40,31 @@ trade one against the other by corridor crowding.
 code. `?dbg=1` logs each convergence's routed approaches (point count, bend
 count, diagonal flag, endpoints); start there.
 
+### [sg] upcoming thoughts
+1. i need this for current experimentation but should probably be permanent
+   feature: a help or legend listing every type of ownership pair, the rules
+   and overrides for assigning them and the entity.slot-->entity pairs for
+   each
+   - should also explain all toolbar buttons, colors, dashed edges, etc.
+2. i don't know why OwnershipGraphView.tsx ended up with everything that
+   should be a constant hardcoded instead of living somewhere like appConfig.ts.
+   - i want to be able to change the dim-other-while-something-is-hightlighted
+     opacity but don't know where to find it
+3. bring dag-browser-widget into Explorer 
+   - change inheritance rail color to entity/inheritance/blue and ownnership
+     color to amber
+   - try populating it with the whole graph, all collapsed to start
+   - try including categories as top layer (expanded) -- hmm...inheritance
+     pairs should all fit within categories i think, but not ownership; so,
+     with whole graph populated, a lot more duplicates will appear, across 
+     categories
+   - the idea is that, unlike in Focus (which needed changing anyway), there
+     wouldn't be one pane for selection and another for dag-browser. everything
+     becomes accessible through dag-browser including some kind of selection
+     affordance
+
+-
+
 ### ▶️ OPEN — dragging is unfinished
 
 Works: drag, drop-in-place, edges re-routed, amber border, double-click to
