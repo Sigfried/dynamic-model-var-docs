@@ -347,8 +347,10 @@ function buildSpec(vm: ViewModel, direction: Direction): GraphSpec {
    * by row y made things worse (2026-08-20): it gave the top row the straight
    * shot and forced every lower one to climb over it.
    *
-   * The approaches are re-ordered at RENDER time instead, by where each routed
-   * path actually arrives from — see `fanOrder` in the component.
+   * Re-ordering the approaches at render time by where each routed path
+   * arrives from was also tried and reverted: it spread the arrival points
+   * across the arrowhead base, which is not what was wanted. The lanes are
+   * therefore unordered, and ELK decides which approach uses which.
    */
   const freeEndSlot = new Map<string, number>();
 
