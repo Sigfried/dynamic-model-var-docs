@@ -2,7 +2,7 @@ import { describe, test, expect } from 'vitest';
 import {
   pathFromSections, roundedPathFromSections, smoothPathFromSections, sectionPoints,
   roundedPath,
-  simplifyPoints, mergeTail, polyline, arrowPath, mergeCut,
+  simplifyPoints, mergeTail, polyline, arrowPath, mergeCut, smoothStepPath,
 } from '../explore/graph-core/paths';
 import type { Point } from '../explore/graph-core/types';
 import type { EdgeSection } from '../explore/graph-core/types';
@@ -312,5 +312,56 @@ describe('arrowPath — a convergence head always points INTO its node', () => {
     const tip = tipOf(arrowPath(base, { x: 0, y: -1 }, 12, 18));
     expect(tip[1]).toBeLessThan(base.y);
     expect(tip[1]).toBeGreaterThan(NODE.y + NODE.h);
+  });
+});
+
+describe('smoothStepPath — drag-time orthogonal routing', () => {
+  const R = { x: 1, y: 0 };
+  const L = { x: -1, y: 0 };
+  const D = { x: 0, y: 1 };
+  const U = { x: 0, y: -1 };
+
+  test('every segment is axis-aligned', () => {
+    // The whole point is that a dragged edge still READS as orthogonal; a
+    // diagonal segment would look like a different kind of edge.
+    const pts = smoothStepPath({ x: 0, y: 0 }, { x: 200, y: 80 }, R, L);
+    for (let i = 1; i < pts.length; i++) {
+      const dx = Math.abs(pts[i].x - pts[i - 1].x);
+      const dy = Math.abs(pts[i].y - pts[i - 1].y);
+      expect(Math.min(dx, dy)).toBeLessThan(1e-6);
+    }
+  });
+
+  test('starts and ends exactly at the anchors', () => {
+    const from = { x: 10, y: 20 };
+    const to = { x: 300, y: 140 };
+    const pts = smoothStepPath(from, to, R, L);
+    expect(pts[0]).toEqual(from);
+    expect(pts[pts.length - 1]).toEqual(to);
+  });
+
+  test('leaves along fromDir and arrives against toDir', () => {
+    const pts = smoothStepPath({ x: 0, y: 0 }, { x: 200, y: 80 }, R, L);
+    expect(pts[1].x).toBeGreaterThan(pts[0].x);          // stubs out to the east
+    const last = pts[pts.length - 1];
+    const prev = pts[pts.length - 2];
+    expect(prev.x).toBeLessThan(last.x);                  // arrives heading east
+  });
+
+  test('a straight shot collapses to two points', () => {
+    // simplifyPoints must drop the redundant mid-channel when the anchors
+    // already line up, or a straight edge gains phantom bends.
+    const pts = smoothStepPath({ x: 0, y: 50 }, { x: 200, y: 50 }, R, L);
+    expect(pts).toHaveLength(2);
+  });
+
+  test('routes vertically for a TB layout', () => {
+    const pts = smoothStepPath({ x: 0, y: 0 }, { x: 90, y: 200 }, D, U);
+    expect(pts[1].y).toBeGreaterThan(pts[0].y);
+    for (let i = 1; i < pts.length; i++) {
+      const dx = Math.abs(pts[i].x - pts[i - 1].x);
+      const dy = Math.abs(pts[i].y - pts[i - 1].y);
+      expect(Math.min(dx, dy)).toBeLessThan(1e-6);
+    }
   });
 });

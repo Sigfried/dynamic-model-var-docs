@@ -272,3 +272,52 @@ export function arrowPath(base: Point, dir: Point, span: number, len: number): s
   const tip = { x: base.x + ux * len, y: base.y + uy * len };
   return `M${a.x},${a.y}L${tip.x},${tip.y}L${b.x},${b.y}Z`;
 }
+
+/**
+ * A React-Flow-style "smoothstep" orthogonal route between two anchors.
+ *
+ * Used for edges touching a node the user has moved. ELK's bendpoints describe
+ * where the boxes WERE, so a moved box strands its edges, and ELK cannot be
+ * asked to re-route for a hand-placed arrangement: it is a batch layouter whose
+ * edge routing falls out of its own layer assignment. (Verified 2026-08-20 —
+ * `elk.noLayout` EXCLUDES a node from the graph rather than pinning it,
+ * `Fixed Layout` requires bend points you supply yourself, and the INTERACTIVE
+ * strategies read coordinates as ordering hints, which flung a dropped node
+ * across the canvas.) React Flow and Cytoscape hit the same wall and answer it
+ * the same way: the engine places nodes, and edge paths are recomputed from
+ * current positions on every render.
+ *
+ * The route leaves `from` along `fromDir` and enters `to` against `toDir`,
+ * with a mid-channel between them, so it reads as orthogonal like the real
+ * routed edges rather than collapsing to a straight line.
+ *
+ * KNOWN LIMITATION: no obstacle awareness. This routes between two anchors and
+ * knows nothing about other nodes or edges, so a moved node's edges can cross
+ * boxes that ELK would have routed around. Fixing that needs a real orthogonal
+ * obstacle router (libavoid does this, but it is C++ and absent from elkjs).
+ */
+export function smoothStepPath(
+  from: Point,
+  to: Point,
+  fromDir: Point,
+  toDir: Point,
+  stub = 16,
+): Point[] {
+  const a = { x: from.x + fromDir.x * stub, y: from.y + fromDir.y * stub };
+  const b = { x: to.x + toDir.x * stub, y: to.y + toDir.y * stub };
+  const pts: Point[] = [from, a];
+  // Horizontal run: step through a vertical channel midway between the stubs.
+  if (Math.abs(fromDir.x) > 0.5) {
+    const midX = (a.x + b.x) / 2;
+    if (Math.abs(a.y - b.y) > 0.5) {
+      pts.push({ x: midX, y: a.y }, { x: midX, y: b.y });
+    }
+  } else {
+    const midY = (a.y + b.y) / 2;
+    if (Math.abs(a.x - b.x) > 0.5) {
+      pts.push({ x: a.x, y: midY }, { x: b.x, y: midY });
+    }
+  }
+  pts.push(b, to);
+  return simplifyPoints(pts);
+}

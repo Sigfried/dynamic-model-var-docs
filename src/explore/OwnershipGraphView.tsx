@@ -33,9 +33,10 @@ import type {
 } from '../services/DataService';
 import {
   useGraphLayout, useZoomPan, roundedPath, sectionPoints, mergeTail,
+  smoothStepPath,
   arrowPath,
 } from './graph-core';
-import type { EdgeSection, GraphSpec, GraphSpecPort, Point } from './graph-core';
+import type { EdgeSection, GraphSpec, GraphSpecPort, PlacedNode, Point } from './graph-core';
 
 /** Where a convergence group's single arrowhead sits: `base` is the centre of
  *  its base (every merging edge terminates there, none draws a head of its own)
@@ -470,6 +471,22 @@ export default function OwnershipGraphView({
     () => buildViewModel(subgraph, expandedNodes, id => plainSlots.get(id) ?? []),
     [subgraph, expandedNodes, plainSlots],
   );
+  const [nudges, setNudges] = useState<Map<string, { dx: number; dy: number }>>(new Map());
+  /**
+   * Nodes moved by a completed drag, id → offset from ELK's placement. The
+   * node STAYS where it was dropped and its edges are re-routed by our own
+   * geometry (see dragRoutes); ELK is not re-run.
+   *
+   * Feeding the dropped coordinates back to ELK was tried on 2026-08-20 and
+   * does not work. Honouring supplied x/y needs the INTERACTIVE layering /
+   * crossing-minimisation strategies, and those read coordinates as ORDERING
+   * HINTS, not positions: ELK infers which layer and what sequence the node
+   * belongs in, then re-places it wherever that layer falls. Dropping BodySite
+   * at the far right moved it somewhere else entirely, and on one graph the
+   * layout hung. ELK is a batch layouter; it has no "keep this here" mode.
+   */
+  const [pins, setPins] = useState<Map<string, { dx: number; dy: number }>>(new Map());
+
   const spec = useMemo(() => buildSpec(vm, direction), [vm, direction]);
 
   const { layout, inProgress } = useGraphLayout(spec, {
@@ -507,18 +524,33 @@ export default function OwnershipGraphView({
    * dragged box shows its edges leaving from the old geometry — that mismatch
    * is the point (it is exactly what ELK decided, unsmoothed).
    */
-  const [nudges, setNudges] = useState<Map<string, { dx: number; dy: number }>>(new Map());
-  // Nudges are meaningless once a fresh layout moves everything.
-  useEffect(() => setNudges(new Map()), [layout]);
 
+  // The in-flight delta is spent once it becomes a pin; pins themselves
+  // survive re-layouts of the same selection.
+  useEffect(() => setNudges(new Map()), [layout]);
+  // Selection changes invalidate pins: the node may not even be on canvas.
+  useEffect(() => setPins(new Map()), [subgraph]);
+
+  const placedRef = useRef<Map<string, PlacedNode>>(new Map());
+  // Set when a drag actually moved something, so the click that ends the drag
+  // does not also open the drawer (dragging a node popped it up in the detail
+  // pane, 2026-08-20).
+  const draggedRef = useRef(false);
+  const nudgesRef = useRef(nudges);
+  nudgesRef.current = nudges;
   const placed = useMemo(() => {
     const m = new Map((layout?.nodes ?? []).map(n => [n.id, n]));
-    for (const [id, { dx, dy }] of nudges) {
+    // A dropped pin and an in-flight drag are the same kind of offset; the
+    // live one wins while the pointer is down.
+    const offsets = new Map(pins);
+    for (const [id, o] of nudges) offsets.set(id, o);
+    for (const [id, { dx, dy }] of offsets) {
       const n = m.get(id);
       if (n) m.set(id, { ...n, x: n.x + dx, y: n.y + dy });
     }
+    placedRef.current = m;
     return m;
-  }, [layout, nudges]);
+  }, [layout, nudges, pins]);
 
   /**
    * Drag a node box. Pointer capture keeps the drag alive when the cursor
@@ -545,12 +577,19 @@ export default function OwnershipGraphView({
       const dy = (e.clientY - startY) / z;
       if (!moved && Math.hypot(dx, dy) < 3) return;  // let a click stay a click
       moved = true;
+      draggedRef.current = true;
       setNudges(prev => new Map(prev).set(id, { dx: base.dx + dx, dy: base.dy + dy }));
     };
     const up = (e: PointerEvent) => {
       el.releasePointerCapture(e.pointerId);
       el.removeEventListener('pointermove', move);
       el.removeEventListener('pointerup', up);
+      // Drop keeps the node where it was left. The offset persists across
+      // re-layouts of the same selection, so the arrangement is yours to keep.
+      if (moved) {
+        const n = nudgesRef.current.get(id);
+        if (n) setPins(prev => new Map(prev).set(id, n));
+      }
     };
     el.addEventListener('pointermove', move);
     el.addEventListener('pointerup', up);
@@ -625,6 +664,75 @@ export default function OwnershipGraphView({
     }
     return byKey;
   }, [vm, placed, layout, direction]);
+
+  /**
+   * Synthesised routes for edges touching a nudged node, id → points.
+   *
+   * ELK's bendpoints describe where the boxes WERE, so a dragged box leaves
+   * its edges stranded. ELK cannot be re-run per frame — it is a batch
+   * layouter, and it would re-place every other node, destroying the
+   * comparison. React Flow's dagre/elk examples hit the same wall and answer
+   * it the same way: the engine places nodes once, and edge paths are
+   * recomputed from current positions on every render (their edges are
+   * `SmoothStep`, which is what `smoothStepPath` reproduces).
+   *
+   * Only edges with a nudged endpoint are rerouted; everything else keeps
+   * ELK's real routing, so the canvas stays mostly authentic.
+   */
+  const dragRoutes = useMemo(() => {
+    const byEdge = new Map<string, Point[]>();
+    const dbg = new URLSearchParams(window.location.search).has('dbg');
+    const moved = new Set([...pins.keys(), ...nudges.keys()]);
+    if (!layout || moved.size === 0) return byEdge;
+    if (dbg) console.log(`[drag] moved: ${[...moved].join(', ')}`);
+    const nodeVm = new Map(vm.nodes.map(n => [n.id, n]));
+    for (const e of vm.edges) {
+      const hostId = hostOf(e);
+      const entityId = hostId === e.source ? e.target : e.source;
+      if (!moved.has(hostId) && !moved.has(entityId)) continue;
+      const host = placed.get(hostId);
+      const entity = placed.get(entityId);
+      const hostVm = nodeVm.get(hostId);
+      if (!host || !entity || !hostVm) continue;
+      const flipped = e.storageDirection === 'flipped';
+      const lr = direction === 'RIGHT';
+      // Attribute end: the slot's own row. Entity end: the header.
+      let y: number;
+      try {
+        y = rowY(hostVm, e.slotName);
+      } catch {
+        // Row not currently displayed (collapsed node): there is no anchor to
+        // route from, so the edge keeps ELK's stale route. Logged because a
+        // silent skip here looks identical to "reroute is broken".
+        if (dbg) console.log(`   SKIP ${hostId}.${e.slotName}: row not displayed`);
+        continue;
+      }
+      const attrAt = lr
+        ? { x: host.x + (flipped ? 0 : NODE_W), y: host.y + y }
+        : { x: host.x + NODE_W / 2, y: host.y + y };
+      const attrDir = lr
+        ? { x: flipped ? -1 : 1, y: 0 }
+        : { x: 0, y: 1 };
+      // The entity end meets the near border at header height.
+      const entityIsSource = entityId === e.source;
+      const entAt = lr
+        ? {
+            x: entityIsSource ? entity.x + NODE_W : entity.x,
+            y: entity.y + HEADER_H / 2,
+          }
+        : {
+            x: entity.x + NODE_W / 2,
+            y: entityIsSource ? entity.y + entity.height : entity.y,
+          };
+      const entDir = lr
+        ? { x: entityIsSource ? 1 : -1, y: 0 }
+        : { x: 0, y: entityIsSource ? 1 : -1 };
+      byEdge.set(e.id, smoothStepPath(attrAt, entAt, attrDir, entDir));
+      if (dbg) console.log(`   reroute ${hostId}.${e.slotName} -> ${entityId}`);
+    }
+    if (dbg) console.log(`[drag] rerouted ${byEdge.size} edge(s)`);
+    return byEdge;
+  }, [layout, nudges, pins, vm, placed, direction]);
 
   /**
    * TEMPORARY probe (2026-08-20): dump what ELK actually routed for each
@@ -955,13 +1063,17 @@ export default function OwnershipGraphView({
                       // — mergeTail replaces it wholesale. A non-merging edge
                       // still carries a marker, so trim back far enough for the
                       // head to sit on the canvas rather than in the border.
-                      const willMerge = !!target && mergeDistFor(mergeMode, sectionPoints(e.sections)) > 0;
+                      // A dragged node's edges use the synthesised route; the
+                      // rest keep ELK's real bendpoints.
+                      const dragged = dragRoutes.get(e.id);
+                      const willMerge = !!target
+                        && mergeDistFor(mergeMode, dragged ?? sectionPoints(e.sections)) > 0;
                       const sections = willMerge
                         ? e.sections
                         : trimSectionsEnd(
                             e.sections, ARROW_SPAN + ARROW_GAP + (flipped ? 2 : 0),
                           );
-                      const pts = sectionPoints(sections);
+                      const pts = dragged ?? sectionPoints(sections);
                       const render = (p: Point[]) => roundedPath(p, CORNER_R);
                       const dist = mergeDistFor(mergeMode, pts);
                       const d = target && dist > 0
@@ -1016,15 +1128,32 @@ export default function OwnershipGraphView({
                       key={n.id}
                       data-node-id={n.id}
                       data-pan-ignore
+                      data-pinned={pins.has(n.id) ? '' : undefined}
                       onPointerDown={ev => startDrag(n.id, ev)}
-                      onClick={() => onNodeClick?.(n.id)}
+                      onDoubleClick={ev => {
+                        // Double-click releases a pin, so a drag is undoable
+                        // without clearing the whole selection.
+                        if (!pins.has(n.id)) return;
+                        ev.stopPropagation();
+                        setPins(prev => {
+                          const next = new Map(prev);
+                          next.delete(n.id);
+                          return next;
+                        });
+                      }}
+                      onClick={() => {
+                        if (draggedRef.current) { draggedRef.current = false; return; }
+                        onNodeClick?.(n.id);
+                      }}
                       onMouseEnter={() => applyHover({ kind: 'node', id: n.id })}
                       onMouseLeave={() => applyHover(null)}
                       className={`absolute rounded-md text-xs bg-white dark:bg-slate-800 ${
                         nudges.has(n.id) ? '' : '[transition:transform_300ms,opacity_120ms]'
                       } cursor-pointer ${context
                         ? 'opacity-60 border border-dashed border-gray-400 dark:border-slate-500'
-                        : 'border-2 border-slate-500 dark:border-slate-400 shadow-md'}`}
+                        : pins.has(n.id)
+                          ? 'border-2 border-amber-500 dark:border-amber-400 shadow-md'
+                          : 'border-2 border-slate-500 dark:border-slate-400 shadow-md'}`}
                       style={{
                         width: NODE_W,
                         height: n.height,
