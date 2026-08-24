@@ -11,9 +11,11 @@ diagram, and what the relationship it draws means.
 
 ## Part 0 — What the diagram says
 
-The diagram arranges classes in **layers**. If `A` is drawn above `B`, a reader
-should conclude **`B` is reached through `A`** — `A` is where you start if you
-want to find `B`.
+The diagram arranges classes in **layers**, laid out left-to-right by default.
+If `A` is drawn before `B`, a reader should conclude **`B` is reached through
+`A`** — `A` is where you start if you want to find `B`. ("Before" is layer
+order, not screen position: it means earlier in the flow, whichever direction
+the layout runs.)
 
 The schema states these relationships **both ways round**. `ObservationSet`
 stores its `observations` **owner-side** — the owner holds a collection.
@@ -21,15 +23,15 @@ stores its `observations` **owner-side** — the owner holds a collection.
 **member-side** — the member holds a pointer up to what it belongs to. Both say
 "X belongs to Y"; they differ only in which end the schema chose to put the
 slot on. **Storage direction must be normalized before drawing**, or every
-observation, exposure and procedure lands *above* the Participant it describes.
+observation, exposure and procedure lands *before* the Participant it describes.
 
 ### Verdicts
 
 | verdict | relationship | drawn |
 |---|---|---|
-| `own-fwd` | source **owns** range | source above range, edge as declared |
-| `own-flip` | source **belongs to** range | range above source, edge reversed |
-| `association` | neither owns the other | both above/below is wrong — see below |
+| `own-fwd` | source **owns** range | forward: source before range, edge as declared |
+| `own-flip` | source **belongs to** range | back: range before source, edge reversed |
+| `association` | neither owns the other | ordering either way is wrong — see below |
 
 The distinction between the first two and the third is **not** direction — it
 is whether an ownership claim is being made at all.
@@ -59,17 +61,17 @@ acyclic apart from 5 self-loops.
 ## Part 1 — The rules
 
 **Rule 1 — Multivalued slot ⇒ `own-fwd`.**
-`A.things: B[]` — A holds a collection of Bs, stored owner-side. Draw A above B.
+`A.things: B[]` — A holds a collection of Bs, stored owner-side. Draw A before B.
 
 **Rule 2 — Single-valued slot ⇒ `own-flip`.**
 `A.thing: B` — A carries a pointer to one B that exists independently, stored
-member-side. **A belongs to B.** Draw B above A.
+member-side. **A belongs to B.** Draw B before A.
 
 **Rule 3 — Single-valued slot whose range has no independent existence ⇒
 `own-fwd`.**
 Rule 2's premise fails when the target is not a thing you can navigate to. The
 pointer is containment expressed as a pointer; the value belongs to whoever
-holds it. Draw A above B. Membership is the `single_value_owner_slots` list —
+holds it. Draw A before B. Membership is the `single_value_owner_slots` list —
 see Part 2 Group A.
 
 ```
@@ -148,7 +150,7 @@ the current `ref` override is wrong. The same logic covers the two transport
 slots, and is consistent with `performed_by` already being own-flip.
 
 Note `transport_origin` and `transport_destination` both land on `Organization`
-from the same class, so the same node is drawn above the transport twice for
+from the same class, so the same node is drawn before the transport twice for
 opposite roles. Not wrong under belongs-to, but it is the clue worth pulling on
 if a role-vs-membership distinction is ever wanted.
 
@@ -262,6 +264,19 @@ that is **acyclic apart from 5 self-loops** (`TimePoint.index_time_point`,
 
 What the code does today. Recorded so the gap is visible.
 
+> **Implementing this: do not start here, and do not start from the code.**
+> Steps 1–2 below are the accumulated result of decisions whose reasoning is
+> lost; reading them first anchors the answer to the thing being replaced.
+> Start from Parts 0–1, decide the open questions in Part 3, then come back
+> here to see what changes.
+>
+> **Keep `classifySlotEdgeExplained`.** Having the classifier report *which*
+> rule fired — and rendering the pairs grouped by rule in the legend — is what
+> made the incoherence visible in the first place. Neither the graph nor the
+> old rationale doc exposed the groupings, so nobody could see they were
+> arbitrary. Whatever the rules become, the classifier must still explain
+> itself.
+
 ### Resolution order
 
 `classifySlotEdge` in `src/models/containmentGraph.ts`:
@@ -274,7 +289,11 @@ What the code does today. Recorded so the gap is visible.
 5. otherwise                      → own-flip
 ```
 
-Steps 3–5 are Rules 1–3. Steps 1–2 are the accumulated exceptions.
+Steps 3–5 are Rules 1–3. Steps 1–2 are the accumulated exceptions, and
+**both are already known to be wrong** — step 1 by a decision that was recorded
+but never implemented (see `EXCLUDE_HAS_A_TARGETS` below), step 2 because it is
+an edit log rather than a category. Neither is a standing position to be argued
+with; they are work not yet done.
 
 ### Live output (2026-08-21)
 
@@ -315,8 +334,20 @@ produces (no entry needed), and the 8 `ref` entries are resolved by Groups B
 and C.
 
 **`EXCLUDE_HAS_A_TARGETS`** (1) — `Entity`. Drops the 12 Group D edges.
-Distinct from `SKIP_SUBCLASS_EXPANSION` (also `Entity`), which suppresses is-a
-edges to the universal root and is sound.
+**Already decided to be wrong, not yet removed** (WORKLOG.md, 2026-08-21): it
+conflates two different reasons to skip `Entity`.
+
+- `SKIP_SUBCLASS_EXPANSION` (also `Entity`) suppresses **is-a** edges to the
+  universal root. Every class `is_a Entity`, so those edges are pure noise.
+  **Sound; keep.**
+- `EXCLUDE_HAS_A_TARGETS` suppresses slots that **range on** `Entity`. Different
+  situation: `focus` and `associated_evidence` are deliberate polymorphic
+  pointers carrying real meaning, and dropping them silently removes
+  information.
+
+Only the first was ever intended. The second survives because
+`classifySlotEdgeExplained` still tests it first (`containmentGraph.ts:127`),
+before any other rule. Group D replaces it with the `association` channel.
 
 ### Where it lives
 
@@ -328,9 +359,6 @@ edges to the universal root and is sound.
 - `src/explore/OwnershipLegend.tsx` — renders every slot grouped by rule.
 - `src/test/ownershipLegend.test.ts` — asserts the legend cannot drift from the
   graph's actual edges.
-
-`classifySlotEdgeExplained` should survive any rewrite; having the classifier
-report *which* rule fired is what made these problems visible.
 
 ### Scale of any Rule-2 change
 
@@ -347,8 +375,13 @@ reshapes most of the diagram.
 
 ## See also
 
-- [OWNERSHIP_RETHINK.md](OWNERSHIP_RETHINK.md) — why the previous version of
-  this document was discarded.
-- [EXPLORE_VIZ.md](EXPLORE_VIZ.md) §"Core visual-design conclusions" — the
-  owner-side/member-side normalization and the channel/label conventions.
+- `WORKLOG.md` (2026-08-21) — why the previous version of this document was
+  discarded: the four problems found, and Siggie's call to restart from the
+  modeling question rather than the code.
+- [EXPLORE_VIZ.md](EXPLORE_VIZ.md) §"Core visual-design conclusions" **item 1**
+  — the owner-side/member-side normalization, which Rule 2 above builds on.
+  Cite that item only: audited 2026-08-24, and items 2, 3, 5 and 6 of that list
+  are stale (vertical-orientation language predating the LR default; is-a
+  "stacks" that ship as chips; re-verbed edge labels that were never built; an
+  owner cap of 8 that is actually 5). See `docs/TASKS.md`.
 - `docs/TASKS.md` — hand-curated config rot; the `focus` cardinality bug.

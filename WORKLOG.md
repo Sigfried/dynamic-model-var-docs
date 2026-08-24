@@ -118,9 +118,14 @@ misunderstandings of a sound design:
 
 Siggie's call: stop, save, and start a fresh session on what the rules SHOULD
 be — explicitly **not** derived from the current code or the 2026-07-13
-adjudication. Written up in `docs/OWNERSHIP_RETHINK.md`, which deliberately
-proposes no answer; `OWNERSHIP_CLASSIFICATION.md` is banner-marked superseded
-as a rationale document and kept as history.
+adjudication. Written up at the time in `docs/OWNERSHIP_RETHINK.md`,
+which deliberately proposed no answer.
+
+**Follow-up 2026-08-24:** the rethink doc has been removed. Its still-necessary
+content — the instruction not to start from the code, and the note to keep
+`classifySlotEdgeExplained` — moved into `docs/OWNERSHIP_CLASSIFICATION.md`
+(Part 4); everything else it held was either duplicated in this entry already or
+superseded by the rewrite. One live document again.
 
 **Consequence for the routing work:** the bare-diagonal fix is still correct
 and still worth doing (it is a guard on a degenerate input, independent of

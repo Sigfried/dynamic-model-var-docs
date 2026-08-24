@@ -94,7 +94,7 @@ Real numbers now on record (slot-edges / distinct classes): converging —
 Quantity 19/16, TimePoint 16/8, BodySite 6/6, Context 6/6. Diverging —
 Participant 22, Visit 19, Organization 11, Specimen 8.
 
-### 🛑 OPEN — ownership classification may be broken; rules need rethinking
+### 🛑 OPEN — ownership classification: rules proposed, 3 questions open
 
 **Siggie, 2026-08-21:** *"i think ownership graph stuff may be totally broken --
 certainly the OWNERSHIP_CLASSIFICATION.md doc is broken. let's save and then get
@@ -102,22 +102,94 @@ a new session to figure out what the right rules SHOULD be -- not based on the
 code or previous decisions. i don't know if the code really has all the different
 categories listed in the dialog's ownership rules, but it shouldn't"*
 
-**Everything is in [docs/OWNERSHIP_RETHINK.md](OWNERSHIP_RETHINK.md)** — the
-four concrete problems found (all confirmed against the code, none were
-misunderstandings), why the old doc fails, measured facts, and how to approach
-the rethink. **Start there, not in the code.**
+**[docs/OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md) is now the
+live document** — rewritten 2026-08-21/24 to lead with what the relationships
+mean and what test decides them. **Start there, not in the code.** (The
+diagnosis of what was wrong is in `WORKLOG.md`, 2026-08-21; the interim
+`OWNERSHIP_RETHINK.md` was folded in and removed.)
 
 The short version: of five classification rules, only `multivalued` reads the
 schema — the other four are hand-typed lists of names. `OWNERSHIP_OVERRIDES` is
 an edit log presented as a category, which is why `performed_by` and
 `associated_participant` land in different groups despite being the same kind of
-relationship. `docs/OWNERSHIP_CLASSIFICATION.md` is superseded as a rationale
-document; keep it as history only.
+relationship.
+
+**Proposed:** three rules — multivalued ⇒ owns-forward, single-valued ⇒
+belongs-to (drawn back), single-valued to a target with no independent existence
+⇒ owns-forward. That leaves one hand-maintained list
+(`single_value_owner_slots`, 14 classes) instead of 30 entries across three
+sets, and it cannot be derived — `identifier` is on all 54 classes, `inlined` is
+on 10/150 edges and disagrees with ownership.
+
+**Needs Siggie's call (3 open questions, Part 3 of the doc):**
+1. Group B (6 single-valued slots to real entities) — belongs-to, or
+   association-with-layering?
+2. Group C (`Specimen.related_document`, `SpecimenStorageActivity.container`) —
+   real ownership claims, not yet considered.
+3. Does `association` order its target, or float free? `associated_evidence`
+   cannot be ordered; Group B's could be.
 
 This blocks nothing mechanically, but the diagram's largest structure
 (Participant's 22-edge outbound fan) is produced by the rule most in question,
 so **routing/aesthetic work tuned against today's classification may be tuned
 against the wrong graph.**
+
+### 📄 OPEN — EXPLORE_VIZ.md is ~20–25% stale (audited 2026-08-24)
+
+The doc's own rule is "where this document and the code disagree, the code wins
+and the doc is the bug." Audited claim-by-claim against the code. Staleness is
+**concentrated, not spread** — Architecture, Data layer, Renderer and Build
+order are in good shape.
+
+**Cluster 1 — the "Core visual-design conclusions" list (lines 31–76) is the
+worst section**, and the most damaging, because it reads as settled design law
+and is written in the present indicative. 3 of 7 items are wrong:
+
+- **Item 2** — "direction is encoded by vertical position (owners above
+  members)". The default is LR: `OwnershipGraphView.tsx:444-445` reads
+  `'explore-nl-dir'` defaulting to `'RIGHT'`. Owners are to the *left*. (TB is
+  a toggle, `:956-958`.)
+- **Item 3** — is-a as an "expandable stack (▸ 3 subclasses)". Ships as header
+  chips `⊳ {parent}` / `▷ {n.subclassCount}` (`:1171-1180`).
+- **Item 5** — flipped edges get a "re-verbed label". **Never built.** No SVG
+  text exists on the edge layer at all; the intent survives only as a comment
+  at `ownershipSubgraph.ts:80-81`. What actually marks a flipped edge is the
+  back-pointing arrowhead (`:1091` `arrow-own-back`).
+- **Item 1** (owner-side/member-side normalization) is CURRENT — it is the one
+  `OWNERSHIP_CLASSIFICATION.md` builds Rule 2 on.
+
+**The doc contradicts itself twice**: items 3 and 5 assert as fact what lines
+230 and 232 correctly list as still-wanted. A reader who stops after the
+numbered list comes away materially wrong.
+
+**Cluster 2 — the owner cap 8→5 change (2026-08-19) was never propagated.**
+Wrong at line 55 and again at line 118. `DEFAULT_OWNER_CAP = 5`
+(`ownershipSubgraph.ts:103`), locked by `ownershipSubgraph.test.ts:84`.
+Knock-on: the doc's flagship BodySite example (lines 69–74, "six owners are the
+content of the diagram; drawing them is the right default") now demonstrates
+the **opposite** of what ships — 6 > 5, so BodySite falls back to chips, as the
+test says outright.
+
+**Cluster 3 — vertical language survived a horizontal default.** Lines 37–38
+and 131–133 ("owners sink to one above their topmost owning child; leaf classes
+dangle below"). The *algorithm* is current (`computeSunkLayers`,
+`ownershipSubgraph.ts:176-195`); only the orientation words are wrong. **Note
+this is not doc-only rot** — the same idiom is in the code's own comment
+(`ownershipSubgraph.ts:168-175`), so a rename should probably cover both.
+Interestingly line 205 says owners sit *beside* their topmost member, which
+survives LR and is the better wording.
+
+**Largest gap is omission, not contradiction.** Shipped 2026-08-19→21 and
+absent from the doc entirely: node dragging + edge re-routing, merge-mode
+routing probes, the example-cases pane, the ownership legend,
+one-arrowhead-per-convergence, thinner strokes.
+
+Also: `exploreReset.test.ts` is actually `.tsx`, and five Explore-relevant tests
+are unlisted (`ownershipExpansion`, `ownershipLegend`, `paths`, `DetailDrawer`,
+`SelectionTable`).
+
+**Fix the numbered list and the two `ownerCap` mentions first** — by the doc's
+own rule those are the bugs.
 
 ### ▶️ OPEN — connections are invisible until attributes are expanded
 
