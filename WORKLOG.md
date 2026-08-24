@@ -8,6 +8,175 @@ Newest first.
 
 ---
 
+## 2026-08-24 — Ownership rules settled; four assumptions found wrong on inspection
+
+Session was doc + investigation only; no code changed. Siggie left mid-session,
+twice. Everything below is written into `docs/OWNERSHIP_CLASSIFICATION.md` and
+`docs/TASKS.md` as current state — this records *why*, and what was wrong first.
+
+### The pattern of the session: verify before writing
+
+Four things that "everyone knew" turned out false when actually checked. Each was
+believed by the doc, by me, or by both. Recording them because the failure mode
+is uniform — plausible reasoning from code shape, never executed.
+
+**1. The edge counts were all wrong and 150 was unreproducible.** The doc said
+31/59/40/150. Real numbers, from running the live code path
+(`getSlotEdgesForClass` over the in-scope class set in a throwaway vitest file,
+since the raw-JSON walk uses a different denominator): R2 is **57**, 2a is **41**.
+And there are three legitimate denominators, which is how 150 got in and stuck:
+**153** = every class-ranged slot in the processed JSON; **141** = what the
+builder emits today (12 `Entity` edges excluded before classification); **151** =
+the target under the new rules. The doc's 150 matches none of them. Any future
+count must say which it means — this is now stated in both docs.
+
+**2. `Entity` needs no node-set change.** I assumed making `Entity` a range node
+meant adding it to `classIds`, and asked Siggie to weigh a node-set change. Wrong:
+`Entity` is *already* in `classIds`. It vanishes only because
+`SKIP_SUBCLASS_EXPANSION` kills its is-a edges and `EXCLUDE_HAS_A_TARGETS` kills
+its 12 inbound edges, leaving it touching nothing, so `pruneIsolated` drops it —
+and the comment at `containmentGraph.ts:193` says so outright ("the universal
+root"). Deleting `EXCLUDE_HAS_A_TARGETS` alone makes it a node. The question put
+to Siggie was more consequential than the actual change.
+
+**3. Rule 1b cannot be derived structurally.** Siggie proposed promoting the
+`*Set` case to its own rule ("range is a collection class ⇒ forward"), which
+reads well. Tested it: "class whose only class-ranged slot is one multivalued
+collection" also catches `Person`, `Questionnaire`, `ResearchStudyCollection`.
+The only clean discriminator for the four `*Set` classes is the **name suffix**,
+and exactly one slot in the whole schema ranges single-valued on one
+(`dimensional_measures`). So 1b would be a rule with a single member resting on a
+naming convention. Rejected in favour of Exception 2b: two asserted entries with
+stated reasons, which is more honest than a rule that *looks* derived and is not.
+
+**4. The inheritance accessors are not a choke point.** Siggie said the `Entity`
+inheritance exclusion belongs "wherever inheritance trees are derived" — correct
+in principle. But `getSubclasses` (`Graph.ts:416`) has **zero callers** and
+`getParentClass` has exactly one. The older views derive inheritance a completely
+different way: `RelationshipInfoBox.tsx:68,85` and `LinkOverlay.tsx:48,365,375`
+filter `getEdgesForItem` on `EDGE_TYPES.INHERITANCE`. Two independent paths over
+the same edges, neither calling the other. So the instruction as stated would not
+have reached the old views at all.
+
+Siggie's resolution: **build the single route, with a REQUIRED `includeEntity`
+argument.** The reasoning is worth preserving — a default is precisely what let
+this rot. `EXCLUDE_HAS_A_TARGETS` and `SKIP_SUBCLASS_EXPANSION` sat side by side
+as two silent `Set<string>`s, and no call site ever had to say which behaviour it
+wanted, so the ranges case picked up the inheritance case's answer by accident. A
+required argument forces intent at the call and makes a new caller fail to
+compile rather than inherit the wrong default.
+
+Also settled there: **the problem is never the fact, it is the fan.** A detail
+panel stating "Parent class: Entity" is true and useful; drawing 53 of them is
+noise. So `RelationshipInfoBox` passes `true`, drawing sites pass `false`.
+
+### Decisions superseding the earlier round
+
+- **`Entity`-ranged edges point FORWARD**, not `association` as previously
+  proposed. Nice side effect: it makes the classifier immune to the `focus`
+  cardinality defect below, since all 12 go forward regardless of cardinality.
+- **`creation_activity` / `dimensional_measures` stay `own-fwd`** (Exception 2b).
+  The previous draft dropped them as "warts drawn honestly". Siggie's argument
+  won: their multivalued siblings are `own-fwd`, and splitting a family of five
+  on an incidental `0..1` vs `0..*` is itself the wart. `dimensional_measures`
+  has a second reason the doc never had — its range is a `*Set`, so the singular
+  cardinality is only apparent.
+- **`association` renders slate `#64748b` dashed**, both ends arrowed. Today's
+  gray `#9ca3af` is too faint to see. Dashed kept — it correctly reads as the
+  weaker claim.
+- **`own-bkwd` vs `association` kept separate DELIBERATELY**, though Siggie is
+  leaning toward merging. They already layer identically, so a merge is
+  rendering + vocabulary only — but it moves 57 edges, the largest group, out of
+  "ownership". Not a change to make as a side effect.
+
+### Doc restructuring
+
+The old "Exception 1a" / "Exception 2b" split existed only so each rule's
+exception list looked complete; it made one set of 8 association slots read as
+two concepts. Collapsed. **Beware:** "Exception 2b" now names something entirely
+different (the cardinality-split pair). Old references will mislead.
+
+Also killed: `Specimen.parent_specimen` as a "Known wart". It is a self-loop
+rendered as a `⟲` row marker, never a routed edge — nothing about its direction
+is visible. Siggie: "just forget about this."
+
+### The `focus` investigation — bigger and different than expected
+
+Dispatched an agent at what looked like a narrow data bug. Three things came back
+that changed the picture. **My stated hypothesis was wrong**: I guessed the
+conflict detector only compared `description`. It compares *all* fields
+(`transform_schema.py:280-291`), warns to stderr, then `continue`s and keeps the
+first-seen definition anyway. The `continue` is the bug. Worse, the comparison is
+so strict that `owner`/`domain_of` alone make nearly every repeated slot
+"differ", so the warning fires constantly and is noise — presumably why nobody
+acted on it.
+
+**`find_conflicting_slot_definitions()` does not exist.** It lives only in
+orphaned commit `41313ed` (not an ancestor of HEAD) and in the TASKS.md prose
+describing the December attempt. The machinery that *does* exist fires only on
+`slot_usage` blocks — and the three `focus` declarations are plain `attributes`,
+which is the entire reason it never fired.
+
+**`owner: "DimensionalObservation"` is a red herring.** Pure dict iteration
+order, and inert anyway: `dataLoader.ts:153-154` explicitly ignores
+`owner`/`domain_of`. A useful symptom of first-wins collapse, nothing more.
+
+**The headline finding was not `focus`.** Of 13 slots disagreeing on a
+load-bearing field, only **two produce wrong edges in the shipped diagram**, both
+via wrong `range`: `items` (draws `QuestionnaireResponse → QuestionnaireItem`,
+should be `→ QuestionnaireResponseItem`) and `part_of` (spurious
+`QuestionnaireItem ↔ ResearchStudy` instead of a self-loop). `focus` is *not*
+among them, because range `Entity` hits `EXCLUDE_HAS_A_TARGETS` at
+`containmentGraph.ts:127` before `multivalued` is read at `:130`. So `focus` is a
+panel bug today — **but removing that exclusion makes it a graph bug**, which is
+why Option B is sequenced after the classification work.
+
+**The December regression is live at HEAD.** Verified by running the real loader,
+not by reading: `ObservationSet`'s attribute table renders
+`observations-ObservationSet` etc. Its TASKS.md status ("NOT WORKING") has been
+accurate for nine months. Root cause is one place — `Element.ts:845-847` assigns
+the map key (qualified id) to `this.name` and discards `data.name`, so the bare
+name never reaches the element. Same root cause produces a second live defect:
+`OwnershipGraphView.tsx:157-161` filters bare `entityNames` against qualified
+`s.name`, so those slots render twice, once as a phantom disconnected row.
+
+Why it survived nine months: **no test asserts the attributes-table Name column
+matches the graph's edge label.** That test is on the Option A checklist.
+
+Option C (key everything by `class.slot`) was rejected for now — it forces
+decisions on `OWNERSHIP_OVERRIDES`/`VALUE_OBJECTS`, which are bare-name-keyed by
+design and are exactly what the classification rewrite is changing. Wrong moment.
+
+### A/B framing — corrected by Siggie at the end of the session
+
+I first wrote these up as "A fixes the display, B fixes the data", and offered A
+as a standalone track. Siggie: *"i don't see how it makes sense to fix focus in
+display while leaving it broken in the incoming data."* Correct, and the framing
+was the error — it implied two halves of one fix. They are fixes for two
+unrelated bugs that happen to share a file:
+
+- **Qualified ids on screen** — data correct (`id` AND `name` both present), UI
+  reads the wrong field. A is the entire fix.
+- **`focus` collapsed** — data wrong, information destroyed in the transform.
+  **A does nothing here**; there is no second field for the UI to fall back on.
+
+The sequencing reason was mechanical, not principled: B adds ~11 qualified ids,
+which land on screen if the display bug is still live — that is what sank
+December. That argues for A *before* B, not for shipping A and stopping.
+
+Recorded because stopping after A is actively worse than today: `focus` still
+collapsed, `items`/`part_of` still drawing wrong edges, but on a screen that now
+looks tidy — removing the visible symptom that anything is wrong. Docs now say
+**B is the job, A is its prerequisite.**
+
+### Invariant to protect
+
+`containmentGraph.ts:128` looks up `OWNERSHIP_OVERRIDES` by **bare** `slotName`
+(from `Graph.ts:505`, bare regardless of ids). Load-bearing for the
+classification work. Anything qualifying slot identity must leave it alone.
+
+---
+
 ## 2026-08-21 — The bare diagonal explained; comparison harness + ownership legend
 
 Siggie arrived with the diagnosis already made, from screenshots rather than

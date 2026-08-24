@@ -35,6 +35,27 @@ appears in the legend or an edge label.
 
 `association` makes **no ownership claim in either direction**.
 
+> **Open — `own-bkwd` vs `association` may collapse (2026-08-24).** Siggie is
+> leaning toward displaying `own-bkwd` *as* `association`: if we cannot defend
+> the "belongs to" claim on a bare foreign key, the honest reading is that the
+> two are one category and the distinction is a distinction without a
+> difference. **Kept separate for now, deliberately**, to see the implications
+> before merging. They already layer identically (see below), so a merge is a
+> rendering and vocabulary change, not a layout change — but it would move
+> **57 edges**, the single largest group, out of "ownership" entirely. Do not
+> merge them without deciding that on purpose.
+
+### How they are drawn
+
+| category | stroke | arrowheads |
+|---|---|---|
+| `own-fwd`, `own-bkwd` | amber solid `#d97706` | one, at the target end |
+| `association` | **slate dashed `#64748b`**, dash `5 4` | **both ends** |
+
+Association was gray dashed `#9ca3af`, which is too faint to see against either
+background. Slate keeps the dash — dashed correctly reads as the weaker claim —
+while being legible.
+
 ---
 
 ## Rule 1 — Multivalued slot ⇒ `own-fwd`
@@ -52,17 +73,13 @@ of their holder.)
 **31 edges.** Examples: `ObservationSet.observations`, `Questionnaire.items`,
 `Participant.consents`, `Specimen.processing_activity`.
 
-### Exception 1a — association slots (2 edges)
+Two multivalued slots are **not** `own-fwd` — `Specimen.related_document` and
+`SpecimenStorageActivity.container` are association; see that table.
 
-Multivalued, but no ownership is claimed: `Specimen.related_document` and
-`SpecimenStorageActivity.container`. See the association table below.
-
-### Known wart — `Specimen.parent_specimen` (1 edge)
-
-Multivalued, so Rule 1 makes Specimen own its parents — pointing up the
-derivation tree. It is a self-loop, so layering is unaffected, but the arrow
-reads backwards. **Drawn honestly rather than patched**; the inconsistency is
-upstream and worth raising with the schema authors.
+`Specimen.parent_specimen` is multivalued, so Rule 1 makes Specimen own its
+parents, pointing up the derivation tree. It is a **self-loop, rendered as a `⟲`
+marker on the slot's own row rather than a routed edge**, so nothing about
+layering or direction is visible. Ignore it.
 
 ---
 
@@ -71,11 +88,11 @@ upstream and worth raising with the schema authors.
 `A.thing: B` — A carries a pointer to one B that exists independently, stored
 member-side. **A belongs to B.** Draw B before A.
 
-**59 edges** — the largest category. `associated_participant` (20 sites),
-`associated_visit` (18) and `performed_by` (11) alone account for 49 of them, so
-any change to this rule reshapes most of the diagram.
+**57 edges** — the largest category. `associated_participant`, `associated_visit`
+and `performed_by` account for most of them, so any change to this rule reshapes
+most of the diagram. (This is the group the open question above would move.)
 
-### Exception 2a — targets with no independent existence ⇒ `own-fwd` (40 edges)
+### Exception 2a — targets with no independent existence ⇒ `own-fwd` (41 edges)
 
 Rule 2's premise fails when the target is not something you can navigate to. The
 pointer is containment expressed as a pointer, and the value belongs to whoever
@@ -85,14 +102,14 @@ Without this exception `Quantity` would acquire 13 owned classes and `TimePoint`
 8, and a reader would conclude that to find a `ResearchStudy` you start from a
 `TimePoint`.
 
-| range | edges | slots |
-|---|---|---|
-| TimePoint | 17 | `date_started`/`date_ended` (×5 each), `valid_from`, `valid_to`, `period_start`, `period_end`, `index_time_point` |
-| Quantity | 16 | `value_quantity` (×6), `range_low`, `range_high`, `duration`, `quantity_collected`, `substance_quantity`, `lower/upper_limit_of_detection` |
-| BodySite | 6 | `affected_body_site` (×2), `body_site`, `anatomical_site`, `body_part_examined`, `collection_site` |
-| TimePeriod | 1 | `Visit.year_range` |
-| Activity | 1 | `Context.activity` |
-| QuestionnaireResponseValue | 1 | `QuestionnaireResponseItem.response_value` |
+| range | slots |
+|---|---|
+| TimePoint | `date_started`/`date_ended`, `valid_from`, `valid_to`, `period_start`, `period_end`, `index_time_point` |
+| Quantity | `value_quantity`, `range_low`, `range_high`, `duration`, `quantity_collected`, `substance_quantity`, `lower/upper_limit_of_detection` |
+| BodySite | `affected_body_site`, `body_site`, `anatomical_site`, `body_part_examined`, `collection_site` |
+| TimePeriod | `Visit.year_range` |
+| Activity | `Context.activity` |
+| QuestionnaireResponseValue | `QuestionnaireResponseItem.response_value` |
 
 Membership is the **`single_value_owner_slots`** list — 14 classes: `Quantity`,
 `TimePoint`, `TimePeriod`, `BodySite`, `CauseOfDeath`, `Substance`,
@@ -101,8 +118,8 @@ subclasses.
 
 **This list cannot be derived from the schema.** Verified 2026-08-21:
 
-- `identifier` — all 54 classes inherit `id` from `Entity`. Discriminates nothing.
-- `inlined` / `inlined_as_list` — set on 10 of 150 edges and inconsistent with
+- `identifier` — all classes inherit `id` from `Entity`. Discriminates nothing.
+- `inlined` / `inlined_as_list` — set on 10 of ~150 edges and inconsistent with
   ownership (`Specimen.parent_specimen` is `inlined_as_list` but points *up* the
   derivation tree; `SpecimenStorageActivity.container` is inlined but is a use).
 - `required`, `abstract`, `is_a` depth — no signal.
@@ -117,28 +134,41 @@ reviewable as a diff, schema-shaped) → upstream in the schema. **Add a sync
 check** either way: flag any unlisted class that is a pure leaf, or any listed
 class that stops being one, so rot becomes a visible question.
 
-### Exception 2b — association slots (6 edges)
+### Exception 2b — cardinality splits a family ⇒ `own-fwd` (2 edges)
 
-Single-valued, but no ownership is claimed. See below.
+Two single-valued slots whose multivalued siblings are `own-fwd` under Rule 1.
+Rules 1–2 would split a family by cardinality alone, and the schema's `0..1` vs
+`0..*` choice here looks incidental.
 
-### Known wart — `creation_activity`, `dimensional_measures` (2 edges)
+| slot | why forward |
+|---|---|
+| `Specimen.creation_activity` | Its siblings `processing_activity`, `storage_activity`, `transport_activity` are all `own-fwd` by Rule 1. A specimen's activities are one family; cardinality is the wrong axis to split them on. |
+| `Specimen.dimensional_measures` | Its siblings `quality_measure`, `quantity_measure` are `own-fwd`. **And** its range is `DimensionalObservationSet` — a `0..1` pointer at something that is itself a collection, so the singular cardinality is only apparent. |
 
-Single-valued, so Rule 2 makes them `own-bkwd`, while their multivalued siblings
-(`processing_activity`, `storage_activity`, `transport_activity`;
-`quality_measure`, `quantity_measure`) are `own-fwd` under Rule 1. Rules 1–2
-split a family of five by cardinality alone, and the schema's `0..1` vs `0..*`
-choice here looks incidental. **Drawn honestly; raise upstream.**
+**Asserted, not derived.** A structural test was tried and rejected: "class whose
+only class-ranged slot is one multivalued collection" also catches `Person`,
+`Questionnaire` and `ResearchStudyCollection`. The only clean discriminator for
+the four `*Set` classes is the name suffix, and exactly one slot in the schema
+ranges single-valued on one — so a "collection-ranged" rule would have a single
+member resting on a naming convention. Two asserted entries with stated reasons
+is more honest than a rule that looks derived and is not.
 
 ---
 
-## `association` — 20 edges
+## `association` — 8 edges
 
-Neither class owns the other. Drawn with **arrowheads at both ends**, target
-ordered first (same layering as `own-bkwd`, no ownership claim).
+Neither class owns the other. Drawn slate dashed with **arrowheads at both
+ends**, target ordered first (same layering as `own-bkwd`, no ownership claim).
 
 Each of these could have been `own-bkwd` — the target does exist independently,
 so "belongs to" would be defensible — but the relationship is a role, a
 reference, or a use rather than membership.
+
+This is **one set of 8 slots**, six single-valued and two multivalued. (An
+earlier draft split it across two headings — one under each rule — so that each
+rule's exception list looked complete. That made one concept read as two and is
+gone. Note "Exception 2b" now means something different: the cardinality-split
+pair above.)
 
 | source | slot | target | why not ownership |
 |---|---|---|---|
@@ -151,53 +181,175 @@ reference, or a use rather than membership.
 | Specimen | `related_document` | Document[] | Multivalued, so Rule 1 would claim the Specimen *owns* the document — but a document a specimen references is not part of it, and other classes may reference the same one. |
 | SpecimenStorageActivity | `container` | SpecimenContainer[] | Multivalued, so Rule 1 would claim the activity owns the containers. It doesn't: a container outlives the activity and holds specimens independently of it. Ownership here also creates the graph's only non-self cycle — `Specimen → SpecimenStorageActivity → SpecimenContainer → Specimen` — which association breaks. |
 
-### `Entity`-ranged slots (12 edges)
+**The set is enumerated by slot name, not by (class, slot) pair.**
+`OWNERSHIP_OVERRIDES` is keyed on the name alone, so listing `container` catches
+every site of `container`. All 8 happen to occur at exactly one class each, so 8
+names = 8 edges — **that is luck, not design.** It is exactly how `performed_by`
+(11 sites) did damage when it landed in the same list. If keyed by name, a sync
+check should assert each of the 8 still has one site.
+
+---
+
+## `Entity`-ranged slots ⇒ `own-fwd` (12 edges)
+
+**Decided 2026-08-24: these point forward**, like any other ownership edge —
+source before range, single arrowhead. They are not association.
 
 The only slots ranging on `Entity` are `focus` (11 sites) and
 `Condition.associated_evidence` (1). Nothing else in the schema targets `Entity`.
 
-`focus` has no top-level definition — it is declared on three classes and
-inherited by the rest:
-
-| declared on | multivalued | inherited by |
-|---|---|---|
-| `Document.focus` | No | — |
-| `Observation.focus` | No | DimensionalObservation, MeasurementObservation, SdohObservation, SpecimenQualityObservation, SpecimenQuantityObservation |
-| `ObservationSet.focus` | **Yes** | DimensionalObservationSet, MeasurementObservationSet, SdohObservationSet |
-
-So **7 single-valued + 4 multivalued `focus`, + 1 multivalued
-`associated_evidence` = 12.**
-
-Neither rule can classify these: the single-valued ones would make `Entity` the
-owner of 7 classes, and the multivalued ones would make 5 classes own `Entity` —
-i.e. own everything. **`associated_evidence` admits no sensible ownership
-assignment in either direction**, which is the case that requires the
-association category to exist.
-
 They must not be dropped. `focus` carries real meaning — "this observation is
 about *something*" — and deleting it silently removes information.
 
-> **Note:** the Kitchen Sink detail panel currently misreports `focus` as
-> single-valued at all 11 sites, because attribute elements are keyed by slot
-> name and the three declarations collapse into one. Known bug — see
-> `docs/TASKS.md`, "Class-specific slot definitions."
+### `Entity` is a range node but not an inheritance parent
+
+This is the distinction the whole `Entity` problem turns on, and the code
+currently conflates it in **three** places:
+
+- **As an inheritance parent** — every class `is_a Entity`, so drawing those
+  edges adds a fan of pure noise. **Correctly suppressed** by
+  `SKIP_SUBCLASS_EXPANSION`, but **in the wrong place** — see below. This holds
+  for the inheritance view the Explorer will eventually grow, too.
+- **As a slot range** — a deliberate polymorphic pointer that means something.
+  **Wrongly suppressed** by `EXCLUDE_HAS_A_TARGETS`. Remove it.
+- **As a node** — `Entity` *is* in `classIds`, but with its is-a edges skipped
+  and its 12 inbound edges excluded it touches no edge, so `pruneIsolated` drops
+  it. The comment at `containmentGraph.ts:193` says so outright ("the universal
+  root").
+
+**Removing `EXCLUDE_HAS_A_TARGETS` is sufficient.** Once the 12 edges are
+classified, `Entity` touches edges, `pruneIsolated` keeps it, and it appears as a
+node — present as a range target, absent from inheritance, with no node-set
+change required.
+
+Expect a **12-edge convergence on `Entity`**. That is a real consequence of the
+decision and worth looking at once it renders.
+
+### Where the inheritance exclusion belongs (decided 2026-08-24)
+
+**Move it into the inheritance-tree accessors** — `getParentClass` and
+`getSubclasses` (`src/models/Graph.ts:398,416`) — rather than leaving it as a set
+the containment builder consults at `containmentGraph.ts:240`.
+
+The reason the two `Entity` exclusions got conflated is that they lived side by
+side in the same module, as two similar-looking `Set<string>`s. Excluding the
+universal root from *inheritance* is a property of what an inheritance tree
+means, not a property of the ownership diagram — so it belongs where inheritance
+is read.
+
+Worth knowing before the move: `getSubclasses` currently has **no callers**, and
+`getParentClass` has exactly one (the containment builder). So today the
+behaviour is identical either way and this is purely about placement. It pays off
+when the Explorer grows an inheritance view — that view gets the exclusion for
+free instead of rediscovering the problem.
+
+Whether the accessors hard-code `Entity` or take an opt-out parameter is an
+implementation call; a caller that genuinely wants the raw tree (a schema
+validator, say) should still be able to ask for it.
+
+#### But there is no single choke point yet (checked 2026-08-24)
+
+**The older views do not use those accessors.** Inheritance is derived in two
+independent ways:
+
+| path | used by |
+|---|---|
+| `getParentClass` / `getSubclasses` (`Graph.ts:398,416`) | only `buildContainmentGraph` (`containmentGraph.ts:239`). `getSubclasses` has **no callers at all**. |
+| `DataService.getEdgesForItem(...)` filtered on `EDGE_TYPES.INHERITANCE` | `RelationshipInfoBox.tsx:68,85`; `LinkOverlay.tsx:48,365,375` |
+
+Both read the same `type: 'inheritance'` edges built at `Graph.ts:120`, but
+neither calls the other. So excluding `Entity` inside the accessors would **not**
+affect the detail panel or the kitchen-sink link overlay.
+
+That is probably fine, because the two sites want different things:
+
+- **Reporting the fact** — `RelationshipInfoBox` saying "Parent class: Entity" is
+  true and useful. It is one line about one class, not a fan.
+- **Drawing the edges** — `LinkOverlay` rendering every `is_a Entity` link, and
+  the containment graph fanning 53 of them, is the noise.
+
+**The problem is never the fact, it is the fan** — the same distinction as
+range-vs-inheritance.
+
+#### Decided 2026-08-24: build the single route, with a required argument
+
+**All inheritance derivation goes through one accessor**, and that accessor takes
+a **required** parameter saying whether `Entity` inheritance is included. Not
+optional, not defaulted.
+
+```ts
+// shape, not final naming
+getInheritance(graph, classId, { includeEntity: boolean })
+```
+
+Required is the whole point. A default is what let this rot in the first place:
+`EXCLUDE_HAS_A_TARGETS` and `SKIP_SUBCLASS_EXPANSION` sat side by side as two
+silent `Set<string>`s, and no call site ever had to say which behaviour it
+wanted — so the ranges case inherited the inheritance case's answer by accident.
+A required argument makes every caller state its intent at the call, and makes a
+new caller *fail to compile* rather than quietly pick up the wrong one.
+
+Expected call sites once routed:
+
+| caller | `includeEntity` | why |
+|---|---|---|
+| `buildContainmentGraph` (`containmentGraph.ts:239`) | `false` | drawing; the 53-edge fan is pure noise |
+| `LinkOverlay` (`:48,365,375`) | `false` | drawing |
+| `RelationshipInfoBox` (`:68,85`) | `true` | reporting a fact about one class — "Parent class: Entity" is true and useful |
+| future Explorer inheritance view | `false` | drawing |
+
+This replaces `SKIP_SUBCLASS_EXPANSION` entirely. The components must stop
+filtering `getEdgesForItem` on `EDGE_TYPES.INHERITANCE` directly and call the
+accessor instead — that filtering *is* the second derivation path, and leaving it
+in place means there is still no single route.
+
+### The `focus` cardinality bug is in the data, not just the panel
+
+The source YAML declares `focus` three times, and they disagree:
+
+| declared on | multivalued | `bdchm.yaml` |
+|---|---|---|
+| `Document.focus` | No | line 862 |
+| `ObservationSet.focus` | **Yes** | line 1468 |
+| `Observation.focus` | No | line 1529 |
+
+`bdchm.processed.json` **collapses all three into one slot** keyed `focus`, with
+`multivalued: false` and `owner: DimensionalObservation` (which is neither of the
+three declaring classes). So every one of the 12 sites currently reads as
+single-valued to the classifier, not just to the Kitchen Sink panel — the doc
+previously described this as a display bug only.
+
+Under the forward decision **this no longer changes any verdict**, since all 12
+go forward regardless of cardinality. That is a point in the decision's favour:
+it makes the classifier immune to a known data defect. Still worth fixing
+upstream; see `docs/TASKS.md`, "Class-specific slot definitions."
 
 ---
 
 ## Summary
 
+Counts verified 2026-08-24 against the live code path (`getSlotEdgesForClass`
+over the in-scope class set), not by hand.
+
 | category | edges | drawn |
 |---|---|---|
-| `own-fwd` — Rule 1 (multivalued) | 31 | forward |
-| `own-fwd` — Exception 2a (no independent existence) | 40 | forward |
-| `own-bkwd` — Rule 2 (single-valued) | 59 | back |
-| `association` — slot-level | 8 | back, both ends arrowed |
-| `association` — `Entity`-ranged | 12 | back, both ends arrowed |
-| **total** | **150** | |
+| `own-fwd` — Rule 1 (multivalued) | 31 | forward, amber |
+| `own-fwd` — Exception 2a (no independent existence) | 41 | forward, amber |
+| `own-fwd` — Exception 2b (cardinality splits a family) | 2 | forward, amber |
+| `own-fwd` — `Entity`-ranged | 12 | forward, amber |
+| `own-bkwd` — Rule 2 (single-valued) | 57 | back, amber |
+| `association` | 8 | back, slate dashed, both ends arrowed |
+| **total** | **151** | |
 
-Two rules, one asserted list of 14 class names, and one enumerated set of 8
-association slots. Everything else reads directly from the schema's
-`multivalued` flag.
+Two rules, one asserted list of 14 class names, one enumerated set of 8
+association slots, and two named cardinality exceptions. Everything else reads
+directly from the schema's `multivalued` flag.
+
+> **Earlier drafts of this doc said 150 and cannot be reproduced.** Three
+> different denominators were in play: **153** = every class-ranged slot in the
+> processed JSON; **141** = what the builder emits *today* (the 12 `Entity`
+> edges excluded before classification); **151** = the target above. Any future
+> count should say which one it means.
 
 ---
 
@@ -214,17 +366,22 @@ themselves.
 
 `association` edges order their target first, exactly as `own-bkwd` does, and so
 participate in layering normally. Only the ownership *claim* differs, not the
-geometry.
+geometry. **This is why merging `own-bkwd` into `association` would not change
+the layout** — see the open question at the top.
 
-Verified 2026-08-24: under the rules above, the layering channel has **zero
-cycles** apart from 5 self-loops (`TimePoint.index_time_point`,
-`File.derived_from`, `Specimen.parent_specimen`, `ResearchStudy.part_of`,
-`SpecimenContainer.parent_container`). This holds whether or not the
-`Entity`-ranged edges participate in layering, so either choice is safe.
+Verified 2026-08-24: **5 self-loops**, unchanged under these rules —
+`File.derived_from`, `ResearchStudy.part_of`, `Specimen.parent_specimen`,
+`SpecimenContainer.parent_container`, `TimePoint.index_time_point`. Zero non-self
+cycles.
 
 Two properties worth preserving as tests: the self-loop count, and that
 `SpecimenStorageActivity.container` as `own-fwd` reintroduces the one non-self
 cycle (`Specimen → SpecimenStorageActivity → SpecimenContainer → Specimen`).
+
+**Not yet re-verified:** the cycle check above predates the decision to draw the
+12 `Entity` edges forward. `Entity` as a live range target with 12 inbound edges
+is exactly the shape that could introduce cycles. **Re-run the check as part of
+implementation.**
 
 ### What the code does today
 
@@ -257,30 +414,31 @@ wrong *or* that an earlier override had to be undone, which is why `performed_by
 is here and `associated_participant` is not despite being the same kind of
 relationship.
 
-Under the rules above: the 8 `ref` entries become the `association` set, the 5
-`own-flip` entries become what Rule 2 already produces (no entry needed), and the
-2 `own-fwd` entries are dropped as warts drawn honestly.
+Under the rules above: the 8 `ref` entries become the `association` set, the 2
+`own-fwd` entries become Exception 2b (**kept, with reasons** — an earlier draft
+dropped them), and the 5 `own-flip` entries become what Rule 2 already produces,
+so no entry is needed.
 
-**`EXCLUDE_HAS_A_TARGETS`** (1) — `Entity`. Drops the 12 `Entity`-ranged edges.
-**Already decided to be wrong, not yet removed** (WORKLOG.md, 2026-08-21):
+The `ref` verdict and the `reference` channel go away entirely.
+`OwnershipGraphView.tsx:1095-1102` currently switches on `isOwn` to pick amber
+solid vs gray dashed; that becomes a three-way switch on the verdict.
 
-- `SKIP_SUBCLASS_EXPANSION` (also `Entity`) suppresses **is-a** edges to the
-  universal root. Every class `is_a Entity`, so those are pure noise. **Sound;
-  keep.**
-- `EXCLUDE_HAS_A_TARGETS` suppresses slots that **range on** `Entity` — a
-  different situation, since those are deliberate polymorphic pointers.
+**`EXCLUDE_HAS_A_TARGETS`** (1) — `Entity`. See the `Entity` section above for
+why it goes, why the inheritance exclusion stays, and where that exclusion should
+live instead. `src/test/containmentGraph.test.ts:102` asserts the rejected
+behavior and will need updating.
 
-Only the first was ever intended. The second survives because
-`classifySlotEdgeExplained` tests it first (`containmentGraph.ts:127`).
-`src/test/containmentGraph.test.ts:102` currently asserts the rejected behavior
-and will need updating.
+`src/config/entityCategories.ts:56` carries a comment referencing both sets by
+name; update it when they move.
 
 ### Where it lives
 
 - `src/models/containmentGraph.ts` — `classifySlotEdge`,
   `classifySlotEdgeExplained`, `OWNERSHIP_RULE_TEXT`, the three sets.
 - `src/services/DataService.ts` — `getOwnershipPairGroups()`,
-  `getConvergenceRanking()`, `getDivergenceRanking()`.
+  `getConvergenceRanking()`, `getDivergenceRanking()`, `getContainmentGraph()`.
+- `src/explore/OwnershipGraphView.tsx` — edge stroke/marker selection
+  (`:1091`, `:1095-1102`); the module header comment documents the channels.
 - `src/explore/OwnershipLegend.tsx` — renders every slot grouped by rule.
 - `src/test/ownershipLegend.test.ts` — asserts the legend cannot drift from the
   graph's actual edges.
