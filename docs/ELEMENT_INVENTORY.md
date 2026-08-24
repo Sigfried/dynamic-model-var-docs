@@ -1,5 +1,17 @@
 # Element Usage Inventory - Phase 3 Step 5
 
+> **Historical snapshot — line numbers are stale.** This records a point-in-time
+> inventory taken during Phase 3 Step 5; the file has moved a long way since
+> (it lists `SlotElement` at :1322, which is now :845). Read it for the *shape*
+> of the analysis, not as a current index.
+>
+> One substantive change since: `Element` now has a `displayName` getter,
+> overridden in `SlotElement` to return the bare slot name, so `.name` is
+> identity and `.displayName` is what the user reads. Anywhere this inventory
+> shows a `displayName: element.name` assignment, the live code now reads
+> `this.displayName`. See [ARCHITECTURE.md](ARCHITECTURE.md) § "Element
+> Identity: .displayName vs .name / getId()".
+
 ## Executive Summary
 
 **Goal**: Assess whether Element classes can be eliminated or reduced by using graph queries directly.

@@ -21,26 +21,29 @@ elsewhere in the docs as stale. **Needs Siggie: set a new target or drop it.**
 > (`c483912`). Full reasoning and every rejected approach: `WORKLOG.md`,
 > entry 2026-08-19/21.
 
-### 📍 Two independent tracks are ready to implement (2026-08-24)
+### 📍 Option A→B is DONE (2026-08-24). Ownership classification is what remains.
 
-Both are fully specified. They touch **different files** and can be done in
-either order, or by two sessions in parallel:
+**Option A→B shipped together**, uncommitted in the working tree. Reasoning,
+rejected approaches and the corrected measurements: `WORKLOG.md`, entry
+"2026-08-24 (later)". Verification: 229 tests / 20 files green, typecheck clean,
+transform re-run byte-identical. Both new test files were confirmed to fail
+against the pre-fix state.
 
-1. **Option A→B — slot identity and the collapsed-slot data bug.** ~1 day for
-   both; A alone is ~2-4h but **should not ship alone** (see the callout under
-   "READY TO IMPLEMENT"). A repairs a display regression shipping since Dec 2025
-   (`Element.ts`, `OwnershipGraphView.tsx`); B repairs the transform
-   (`transform_schema.py`, regenerated `bdchm.processed.json`).
-2. **Ownership classification.** The larger piece, immediately below. Files:
-   `containmentGraph.ts`, `Graph.ts`, `OwnershipGraphView.tsx`, components.
+Remaining work: **ownership classification**, immediately below. Files:
+`containmentGraph.ts`, `Graph.ts`, `OwnershipGraphView.tsx`, components.
 
-Only overlap is `OwnershipGraphView.tsx`, in different regions (A: `:146-161`;
-classification: `:1091-1102` + header comment). Coordinate if run in parallel.
+**Two inputs to that work changed under it — re-derive, don't reuse:**
 
-**Sequencing note:** A is a **prerequisite for B, not an alternative to it** —
-they fix two different bugs and A does nothing for `focus`. Plan on A→B as one
-job (~1 day). B interacts with the classification work: removing
-`EXCLUDE_HAS_A_TARGETS` is what turns `focus` from a panel bug into a graph bug.
+- `Entity`-ranged slot *definitions* went 2 → 6, but the **12 class sites are
+  unchanged**, so "expect a 12-edge convergence" still holds. However those 12
+  now split **5 multivalued / 7 single-valued**; the collapse previously made
+  every `focus` site look single-valued. Rules 1 and 2 classify them
+  differently, so counts taken from the old data are stale.
+- `bdchm.processed.json` now has 337 slot ids (was 220) — conflicting slots are
+  qualified per class. **All three counts in the section below shift down by 3**
+  (the wrong edges, now removed): 153 → **150** class-ranged sites, 141 → **138**
+  emitted today, 151 → **150** target. Verified against the live data
+  2026-08-24. The 12 `Entity` sites are unchanged.
 
 ### 🛑 OPEN — ownership classification: rules decided, implementation pending
 
@@ -161,189 +164,92 @@ This blocks nothing mechanically, but the diagram's largest structure
 tuned against today's classification may be tuned against the wrong graph.**
 Adding `Entity` as a node with a 12-edge convergence changes the layout too.
 
-### 🛠️ READY TO IMPLEMENT — "Option A": slot display name vs slot id
+### ✅ DONE — "Option A": slot display name vs slot id (2026-08-24)
 
-**Promoted out of LATER 2026-08-24** after investigation. Independent of the
-ownership classification work — can be done first, in parallel, or by a
-different session. ~2-4 hours.
+The Dec 2025 "Class-specific slot definitions" WIP, fixed nine months on.
+`SlotElement`'s constructor assigned the map key (the qualified id) to
+`this.name` and discarded `data.name`, so every display path rendered
+`observations-ObservationSet` where the user should read `observations`.
 
-> **A and B fix two DIFFERENT bugs, on two DISJOINT sets of slots.**
->
-> This is the fact that makes the ordering make sense, and it is easy to miss:
->
-> - **A's 31 slots have CORRECT data.** `associated_participant` (9 classes),
->   `associated_visit` (8), `observations` (4), `value` (6), `category` (2),
->   `associated_person`, `observation_type`. Every one carries a qualified `id`
->   AND a correct `name` in `processed.json`; the per-class distinctions came
->   through the transform intact. They render wrong ONLY because
->   `Element.ts:845-847` discards `data.name`. This is a plain frontend bug that
->   would exist even if the transform were perfect.
-> - **B's 13 slots have BROKEN data** — `focus`, `items`, `part_of`, etc. Their
->   declarations were collapsed and information destroyed.
->
-> **A is not "fixing the display of the broken data."** It never touches B's
-> slots. The two sets do not overlap.
->
-> An earlier framing here said "A fixes the display, B fixes the data", which
-> wrongly implies they are two halves of one fix. They are not:
->
-> - **Qualified ids on screen** (`observations-ObservationSet`) — the DATA IS
->   CORRECT. `processed.json` carries both `id` and `name`; the UI renders the
->   wrong field. A is the complete fix.
-> - **`focus` collapsed** — the DATA IS WRONG. There is ONE `focus` entry with
->   `multivalued: false`; the multivalued `ObservationSet` declaration was
->   destroyed in the transform. **A does nothing for this** — there is no second
->   field for the UI to render instead. Only B recovers it.
->
-> A does not change `bdchm.processed.json` or `transform_schema.py`. The
-> qualified ids stay in the data, and should — they are what `elementLookup`,
-> `getClassesUsingSlot`, `subsetSection` and the CLASS_SLOT/SLOT_RANGE edge keys
-> join on.
->
-> **Why A first — one reason only, and it is not a principle.** B qualifies ~11
-> more slots. Every slot B qualifies starts rendering as `focus-ObservationSet`
-> the moment it appears, because the display bug is live. That is precisely the
-> December failure: that build qualified ~109 slots, the screen filled with ids,
-> and the branch was abandoned having fixed nothing. Doing A first means B's new
-> ids display correctly as they land.
->
-> B-first is defensible if you accept temporary ugliness; one branch containing
-> both never shows an intermediate state at all. **What must not happen is
-> B-without-A** — that is the December repeat.
->
-> **And do not ship A alone.** It leaves `focus` collapsed and `items`/`part_of`
-> drawing wrong edges, on a screen that now looks tidy — removing the visible
-> symptom that anything is wrong. Worse than today.
+**Fix:** `displayName` is now a getter on the base `Element`, defaulting to
+`name` and overridden in `SlotElement` to return the bare name. `name` stays the
+qualified id — it is the map key and every lookup joins on it.
 
-#### The bug, as actually diagnosed
+Display sites switched to `displayName`: attributes-table Name column, slot
+panel titlebar, `getSectionItemData` (panel section rows), `getPanelTitle`, and
+the two sort sites (`SlotCollection.fromData`, `DataService.subsetSection`) that
+were ordering the visible list by qualified id.
 
-The Kitchen Sink attributes table and detail panels display **qualified slot
-ids** — `observations-ObservationSet`, `associated_visit-ObservationSet` — where
-the user should see `observations`, `associated_visit`. Verified live at HEAD by
-running the real loader (not by reading code): `ObservationSet`'s attribute table
-renders `[["observations-ObservationSet","Observation","Yes"], …]`.
+`OwnershipGraphView.tsx` needed **no** edit — its `:147`/`:161` sites read
+`getClassSummary().slots[].name`, which is the attributes-table cell, so fixing
+that cell fixed both. The phantom duplicate rows and the lost schema order are
+gone (verified by measurement, before and after).
 
-**This is the December 15 2025 "Class-specific slot definitions" WIP, still
-broken.** Its status line ("NOT WORKING - still shows wrong names in UI") is
-accurate at HEAD, nine months on. See that section below for the original
-attempt. Do not start a new investigation — it is fully diagnosed here.
+Test: `src/test/slotDisplayName.test.ts` — confirmed to fail 3-of-7 against the
+old behavior. It asserts the attributes-table Name column equals the graph's
+edge label, the check whose absence let this ship for nine months.
 
-**Root cause, one place:** `Element.ts:1186-1188` constructs
-`new SlotElement(name, data)` where `name` is the **map key** — the qualified id
-set at `dataLoader.ts:290`. `SlotElement`'s constructor (`:845-847`) assigns that
-to `this.name` and **discards `data.name`**, so the bare name is never stored on
-the element. `Element.ts:466` then renders `slot.name` into the Name column and
-`Element.ts:940` into the panel titlebar.
-
-The data is not at fault: `bdchm.processed.json` carries `id`,
-`name` and `alias` side by side. The UI has the right value available and
-renders the wrong field.
-
-#### A second live defect, same root cause
-
-`OwnershipGraphView.tsx:157-161` builds `entityNames` from **bare** names and
-filters it against **qualified** `s.name`. A qualified entity-ranged slot
-therefore renders **twice** — once connected, once as a phantom disconnected
-scalar row. Live today on `observations-ObservationSet` and the
-`value-QuestionnaireResponseValue*` family.
-
-Related: `OwnershipGraphView.tsx:146-151` builds `schemaOrder` keys from
-qualified names but looks them up with bare edge labels, so those slots lose
-schema order and sort last. The `?? MAX_SAFE_INTEGER` fallback hides it.
-
-#### Checklist
-
-- [ ] `Element.ts:845-847` — stop discarding `data.name`. Keep `this.id` = map
-      key (qualified) for all lookups; add `this.displayName` = bare name.
-- [ ] `Element.ts:466` (Name column) and `Element.ts:940` (titlebar) — render
-      `displayName`.
-- [ ] `OwnershipGraphView.tsx:147` and `:161` — join on the bare name.
-- [ ] Add a test asserting **the attributes-table Name column equals the graph's
-      edge label**. No such test exists, which is why this survived nine months.
-
-#### Do not disturb
+#### Still true — do not disturb
 
 `containmentGraph.ts:128` looks up `OWNERSHIP_OVERRIDES` by **bare** `slotName`
-(sourced from `Graph.ts:505`, which stays bare regardless of ids). This is
-load-bearing for the ownership classification work. Lookups keyed on the
-qualified id — `getClassesUsingSlot`, `subsetSection`, `elementLookup`,
-CLASS_SLOT/SLOT_RANGE edge keys — must keep using the id.
+(from `Graph.ts`, which stays bare). Lookups keyed on the qualified id —
+`getClassesUsingSlot`, `subsetSection`, `elementLookup`, CLASS_SLOT/SLOT_RANGE
+edge keys — must keep using `name`. `subsetSection`'s `names.has(el.name)` is
+the trap: `names` holds graph node ids, so a bare name there yields zero rows.
 
-Tests keyed on qualified ids (`getUsedByClasses`, `data-integrity`,
-`idContextualization`) auto-adapt. Tests keyed on bare `slotName`
-(`containmentGraph`, `ownershipLegend`, `ownershipSubgraph`,
-`ownershipExpansion`) are unaffected.
+### ✅ DONE — two WRONG EDGES in the shipped diagram (2026-08-24)
 
-### 🐞 OPEN — two WRONG EDGES in the shipped diagram (found 2026-08-24)
+`scripts/transform_schema.py` kept the first-seen definition when a slot was
+declared on several classes with different definitions, and `continue`d past the
+rest. First-seen was dict iteration order.
 
-Higher severity than the display bug above: these are edges a viewer would act
-on, and they are simply incorrect.
+Both wrong edges are fixed and asserted:
 
-`scripts/transform_schema.py:280-291` detects when a slot is declared on several
-classes with different definitions, prints a stderr warning, then `continue`s and
-**keeps the first-seen definition regardless**. The `continue` is the bug. First
-seen = dict iteration order, nothing meaningful.
+- **`items`** — `QuestionnaireResponse → QuestionnaireResponseItem` (was
+  `→ QuestionnaireItem`).
+- **`part_of`** — `QuestionnaireItem` self-loops (was a spurious
+  `QuestionnaireItem ↔ ResearchStudy`).
 
-Consequences in the DAG (both via wrong `range`, not cardinality):
+**Fix:** `resolve_slot_ids()` decides the id for every (class, attribute) site
+once, comparing only `range`/`multivalued`/`required` with `None` ≡ `False`.
+Divergent sites get `{slot}-{Class}`. Both `transform_slots` and
+`transform_classes` consume that one decision — they previously decided
+independently, and disagreement would leave a class referencing a slot id with
+no entry.
 
-- **`items`** — collapsed to `range: QuestionnaireItem`. The DAG draws
-  `QuestionnaireResponse → QuestionnaireItem`; it should be
-  `QuestionnaireResponse → QuestionnaireResponseItem`.
-- **`part_of`** — collapsed to `range: ResearchStudy`. `QuestionnaireItem.part_of`
-  should self-loop to `QuestionnaireItem`; instead it emits a spurious
-  `QuestionnaireItem ↔ ResearchStudy` edge.
+**One rule, no exceptions:** if sites disagree, they are not the same slot, so
+**every** site of that name is qualified and none keeps the bare id. A name
+whose sites all agree keeps its bare id.
 
-**Blast radius: 13 slots** disagree on a load-bearing field
-(`multivalued`/`range`/`required`); 22 if description-only disagreements are
-counted. But only the two above corrupt the graph — the rest are scalar/enum
-ranged, or range on a `VALUE_OBJECT` where both branches give the same verdict
-(`duration`, `quantity`), so only the displayed cardinality is wrong.
+An earlier implementation let one variant keep the bare id, picked by a headcount
+of sites, and needed two exceptions (globals outrank the count; ties qualify
+everything) before it stopped producing nonsense. Siggie rejected it: a headcount
+answers "which id is shortest", not "which slots are distinct", and needing
+exceptions to stop a rule misbehaving means the rule is wrong. See `WORKLOG.md`.
 
-**Fix ("Option B", ~1 day incl. Option A, which is a prerequisite):** add a
-conflict detector to `transform_schema.py` comparing **only** `range`,
-`multivalued`, `required` — normalizing `None` ≡ `False`, ignoring `owner`,
-`domain_of`, `alias`, `from_schema`, `description`. Also replace the useless
-warning at `:285-287` with the same normalized comparison, so remaining warnings
-mean something.
+**Measured, correcting the earlier estimate of "~11":** 46 slot names are
+declared on >1 class; 18 conflict on a load-bearing field; 165 sites qualified;
+220 → 337 slot ids. The larger id set is internal plumbing — `displayName`
+renders the bare name, so qualified ids never reach the screen. **Verified: both
+strategies draw a byte-identical graph** (all 86 edges), so the id scheme moves
+nothing the user sees.
 
-This will NOT reproduce the December explosion: that attempt compared nearly
-every field and produced ~109 qualified ids out of 260 slots, which is what made
-the display bug unmissable and got the branch abandoned. Load-bearing-only
-comparison qualifies ~11 additional names.
+**Part 2 of `transform_slots` had to change with it.** It keyed global-slot
+metadata on the bare id, which conflicted global slots no longer have — `id`
+lost its schema.org `slot_uri` and three slots lost their `global` flag. It now
+looks entries up by NAME and applies identity metadata (`global`, `slot_url`) to
+every site, while the canonical `range`/`required`/`multivalued` restore stays
+on the unqualified entry only — applying it to a qualified entry would overwrite
+the per-class definition that entry exists to record. `slot_url` coverage went
+2 → 55, `global` 5 → 77.
 
-**Unresolved, must be checked by running it:** whether plain-attribute conflicts
-propagate qualified ids into subclasses the way `slot_usage` conflicts do
-(gen-linkml materializes `observations-DimensionalObservationSet` for the
-`slot_usage` case). If they do not, the three `*ObservationSet` subclasses keep
-pointing at bare `focus` and stay wrong — this decides whether the fix covers 4
-`focus` sites or 1.
+**The open question is answered: the fix covers all 4 `focus` sites, not 1.**
+gen-linkml materializes inherited attributes onto every subclass, so each
+`*ObservationSet` is its own site with its own id.
 
-#### The `focus` case specifically
-
-`bdchm.yaml` declares `focus` three times with different cardinality:
-`Document.focus` (line 862, `multivalued: false`), `ObservationSet.focus`
-(line 1468, **`multivalued: true`**, `inlined_as_list: true`), `Observation.focus`
-(line 1529, `multivalued: false`). All collapse to one `multivalued: false` entry
-owned by `DimensionalObservation` — a class that is not one of the three, chosen
-purely by iteration order. (`owner` is inert: `dataLoader.ts:153-154` ignores it.)
-
-**`focus` does not currently corrupt the graph**, because its range `Entity` hits
-`EXCLUDE_HAS_A_TARGETS` at `containmentGraph.ts:127` before `multivalued` is read
-at `:130`. It is a panel-display bug today.
-
-**But the ownership work changes that.** Removing `EXCLUDE_HAS_A_TARGETS` — which
-is on that checklist — makes the 12 `Entity` edges live, at which point `focus`'s
-wrong cardinality starts mattering. Sequence B after the classification lands.
-
-#### Note on prior art
-
-`find_conflicting_slot_definitions()` referred to in the December WIP below
-**does not exist in the codebase**. It survives only in orphaned commit
-`41313ed`, which is not an ancestor of HEAD. What exists today qualifies slots
-**only** when a class carries a `slot_usage` block
-(`transform_schema.py:222-228`, `:320-341`) — and none of the `focus`
-declarations use `slot_usage`; they are plain `attributes`. That is the whole
-reason the existing machinery never fired for it.
+Test: `src/test/slotConflictResolution.test.ts` — confirmed to fail 4-of-6
+against the old `bdchm.processed.json`. Includes a structural guard that every
+class slot-ref resolves.
 
 ### 🎨 OPEN — own-fwd arrowheads are on the wrong end (formatting round)
 

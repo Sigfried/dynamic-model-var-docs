@@ -67,7 +67,33 @@ npm test:coverage
 
 ## Current Test Coverage
 
-**Total: 134 tests across 8 test files** (all passing ✅)
+**Total: 229 tests + 2 skipped, across 20 test files** (all passing ✅,
+verified 2026-08-24 — run `npx vitest run` for the live figure).
+
+> ⚠️ **The per-file inventory below is stale and is not maintained.** It
+> describes 8 files totalling 134 tests; four of those files
+> (`ClassSection`, `linkLogic`, `linkHelpers`, `adaptiveLayout`) no longer
+> exist, and a dozen files since added are missing from it. Trust `src/test/`
+> and the test runner, not this list. Kept because the per-file *purpose*
+> descriptions still explain intent well for the files that remain.
+
+### Slot identity regression tests (added 2026-08-24)
+
+Two files worth knowing about, because both guard bugs that shipped for months:
+
+- **`slotDisplayName.test.ts`** — a slot's `.name` is its (possibly qualified)
+  identity and `.displayName` is the bare name the user reads. The key assertion
+  is that **the attributes-table Name column equals the graph's edge label**;
+  no such check existed, which is why qualified ids rendered on screen from Dec
+  2025 to Aug 2026.
+- **`slotConflictResolution.test.ts`** — conflicting slot declarations must not
+  collapse. Pins the two edges that were drawn wrong (`items`, `part_of`), the
+  `focus` multivalued distinction, and a structural guard that every class
+  slot-reference resolves to a slot element.
+
+Both were confirmed to **fail** against the pre-fix state before being accepted
+(3-of-7 and 4-of-6). A regression test that has never failed proves nothing —
+see "Aim for regression prevention" above.
 
 ### Test Files
 

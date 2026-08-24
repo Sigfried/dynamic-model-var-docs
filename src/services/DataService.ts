@@ -863,8 +863,11 @@ export class DataService {
     if (!collection) throw new Error(`No collection for type: ${typeId}`);
     const elements = collection
       .getAllElements()
+      // Filter on `name`: `names` holds graph node ids, which for slots are the
+      // qualified ids. Sort on `displayName`, which is what the rows show.
       .filter(el => names.has(el.name))
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .sort((a, b) => a.displayName.localeCompare(b.displayName)
+        || a.name.localeCompare(b.name));
 
     return {
       id: typeId,

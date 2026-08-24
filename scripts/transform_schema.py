@@ -31,6 +31,84 @@ from urllib.error import URLError, HTTPError
 # Delimiter for override slot IDs: "{slotName}-{ClassName}" e.g., "category-SdohObservation"
 SLOT_OVERRIDE_DELIMITER = '-'
 
+# Fields whose disagreement across two declarations of the same slot name changes
+# what the app DRAWS or ASSERTS, so the two declarations cannot share one id.
+#
+# Deliberately short. An earlier (Dec 2025) attempt compared nearly every field,
+# including `description` and `owner`, qualified ~109 of 260 slots, and was
+# abandoned. Cosmetic disagreement is not a conflict.
+LOAD_BEARING_SLOT_FIELDS = ('range', 'multivalued', 'required')
+
+
+def _load_bearing_signature(attr_def: Dict[str, Any]) -> tuple:
+    """The part of a slot declaration that must match for two sites to share an id.
+
+    `None` and `False` are normalized together: LinkML omits `multivalued` rather
+    than writing `false`, so a missing key and an explicit false are the same
+    statement and must not read as a conflict.
+    """
+    return tuple(
+        (field, False if attr_def.get(field) in (None, False) else attr_def.get(field))
+        for field in LOAD_BEARING_SLOT_FIELDS
+    )
+
+
+def resolve_slot_ids(expanded_classes: Dict[str, Any]) -> Dict[tuple, str]:
+    """Decide the slot id for every (class, attribute) site in the schema.
+
+    One rule: **if two sites disagree on a load-bearing field, they are not the
+    same slot**, so every site of that name gets its own `{slot}-{Class}` id and
+    none keeps the bare name. A name whose sites all agree keeps its bare id.
+
+    Returns {(class_name, attr_name): slot_id}.
+
+    The rule follows from the modeling question rather than from convenience.
+    `items` on `Questionnaire` ranges on `QuestionnaireItem`; `items` on
+    `QuestionnaireResponse` ranges on `QuestionnaireResponseItem`. Those are two
+    different slots that collide in the namespace, and neither has a claim on
+    the short name. Previously this loop kept whichever definition was iterated
+    first and dropped the others, which is what drew two wrong edges.
+
+    An earlier version of this function let one variant keep the bare id, chosen
+    by a headcount of sites. That was rejected: it answers "which id is
+    shortest", not "which slots are distinct", and it needed two exceptions
+    (globals outrank the count; ties qualify everything) before it stopped
+    producing nonsense — `observations` has four all-distinct sites, so its
+    "majority" was a 1-1-1-1 tie. Needing exceptions to stop a rule misbehaving
+    meant the rule was wrong.
+
+    The cost is a larger id set (`id` alone is declared on 54 classes). That is
+    internal plumbing: `SlotElement.displayName` renders the bare name, so
+    qualified ids never reach the screen. The Dec 2025 attempt was abandoned
+    because ~109 qualified ids DID reach the screen — a display bug, since
+    fixed, not a reason to keep ids scarce.
+    """
+    sites: Dict[str, list] = {}
+    for class_name, class_def in expanded_classes.items():
+        for attr_name, attr_def in (class_def.get('attributes') or {}).items():
+            sites.setdefault(attr_name, []).append(
+                (class_name, _load_bearing_signature(attr_def))
+            )
+
+    slot_ids: Dict[tuple, str] = {}
+    for attr_name, entries in sites.items():
+        variants = {sig for _, sig in entries}
+        if len(variants) < 2:
+            # One definition everywhere: one slot, one bare id.
+            for class_name, _ in entries:
+                slot_ids[(class_name, attr_name)] = attr_name
+            continue
+
+        # Sites disagree, so these are NOT one slot that needs a winner picked
+        # among them — they are several distinct slots sharing a name. Each gets
+        # its own id and none keeps the bare one.
+        for class_name, _ in entries:
+            slot_ids[(class_name, attr_name)] = (
+                f"{attr_name}{SLOT_OVERRIDE_DELIMITER}{class_name}"
+            )
+
+    return slot_ids
+
 def iter_range_sites(expanded: Dict[str, Any]):
     """Yield (label, def_dict) for every place a range can appear."""
     for cname, cdef in expanded.get('classes', {}).items():
@@ -202,7 +280,8 @@ def transform_classes(
     expanded_classes: Dict[str, Any],
     hierarchy: Dict[str, Optional[str]],
     prefixes: Dict[str, Any],
-    global_slots: Dict[str, Any]
+    global_slots: Dict[str, Any],
+    slot_ids: Dict[tuple, str]
 ) -> Dict[str, Any]:
     """Transform classes to streamlined format with slot references (no duplication)."""
     processed = {}
@@ -219,13 +298,17 @@ def transform_classes(
             # Check for slot_usage override
             slot_usage_override = find_slot_usage(class_name, attr_name, expanded_classes)
 
-            # Determine slot ID
+            # Determine slot ID. A slot_usage override always gets its own
+            # instance id; otherwise use the shared decision from
+            # resolve_slot_ids, which qualifies sites whose load-bearing fields
+            # diverge from the majority. Both branches must agree with
+            # transform_slots or the class would reference a slot id that has no
+            # entry in `slots`.
             if slot_usage_override:
                 # Has override - use instance ID
                 slot_id = f"{attr_name}{SLOT_OVERRIDE_DELIMITER}{class_name}"
             else:
-                # No override - use base slot name
-                slot_id = attr_name
+                slot_id = slot_ids.get((class_name, attr_name), attr_name)
 
             # Build slot reference (minimal - just id and inherited_from if present)
             slot_ref: Dict[str, Any] = {'id': slot_id}
@@ -261,7 +344,8 @@ def transform_classes(
 def transform_slots(
     schema_slots: Dict[str, Any],
     schema_classes: Dict[str, Any],
-    prefixes: Dict[str, Any]
+    prefixes: Dict[str, Any],
+    slot_ids: Dict[tuple, str]
 ) -> Dict[str, Any]:
     """
     Transform slots to include all slot definitions in one place.
@@ -278,17 +362,31 @@ def transform_slots(
         class_attrs = class_def.get('attributes', {})
 
         for attr_name, attr_def in class_attrs.items():
-            if attr_name in processed:
-                # Check if definitions match (they should for the same slot)
-                existing = processed[attr_name]
-                # Compare relevant fields (exclude 'id', 'name', 'global' which we add)
-                if {k: v for k, v in existing.items() if k not in ('id', 'name', 'global')} != attr_def:
-                    print(f"  ⚠ Warning: slot '{attr_name}' has different definition in class '{class_name}'", file=sys.stderr)
+            # `slot_id` is the bare name where every site agrees on the
+            # load-bearing fields, and `{attr}-{Class}` where this site diverges.
+            # Previously this loop kept the FIRST definition seen and dropped the
+            # rest, so `items` collapsed to QuestionnaireItem and `part_of` to
+            # ResearchStudy — two wrong edges in the shipped diagram.
+            slot_id = slot_ids.get((class_name, attr_name), attr_name)
+
+            if slot_id in processed:
+                existing = processed[slot_id]
+                # Reaching here means two sites share an id, which resolve_slot_ids
+                # only allows when the load-bearing fields agree. If they don't,
+                # the two are out of sync — a real bug, not a cosmetic diff.
+                if _load_bearing_signature(existing) != _load_bearing_signature(attr_def):
+                    print(
+                        f"  ⚠ Warning: slot '{slot_id}' has conflicting load-bearing "
+                        f"definition in class '{class_name}' "
+                        f"({_load_bearing_signature(attr_def)} vs {_load_bearing_signature(existing)})",
+                        file=sys.stderr,
+                    )
                 continue
 
-            # Copy all fields from attr_def and add id/name
-            slot_def = {'id': attr_name, 'name': attr_name, **attr_def}
-            processed[attr_name] = slot_def
+            # Copy all fields from attr_def and add id/name. `name` stays BARE:
+            # it is what the user reads, while `id` is what lookups join on.
+            slot_def = {'id': slot_id, 'name': attr_name, **attr_def}
+            processed[slot_id] = slot_def
 
     # Part 2: Mark global slots and add extra fields from schema_slots.
     # IMPORTANT: For global slots, override range/required/multivalued with the
@@ -296,21 +394,35 @@ def transform_slots(
     # processed first in Part 1 (which may have had a slot_usage override merged
     # into its attributes by gen-linkml's expand step).
     for slot_name, global_slot_def in schema_slots.items():
-        if slot_name in processed:
-            # Mark as global and add any extra fields
-            processed[slot_name]['global'] = True
-
-            # Restore canonical range/required/multivalued from the global
-            # slot definition (before any class-specific slot_usage overrides)
-            for field in ('range', 'required', 'multivalued', 'description'):
-                if field in global_slot_def:
-                    processed[slot_name][field] = global_slot_def[field]
-
-            # Add slot_uri if present in global definition
+        # A global slot whose sites disagree has no bare entry — every site was
+        # qualified — so look up its entries by NAME rather than assuming the
+        # bare id exists. Without this, `id`'s schema.org slot_uri and the
+        # `global` flag on `associated_visit`/`associated_participant` are
+        # silently dropped.
+        entries = [d for d in processed.values() if d.get('name') == slot_name]
+        if entries:
+            expanded_url = None
             if global_slot_def.get('slot_uri'):
                 expanded_url = expand_uri(global_slot_def['slot_uri'], prefixes, validate=True)
+
+            for entry in entries:
+                # Identity metadata belongs to the slot NAME, so it applies to
+                # every site.
+                entry['global'] = True
                 if expanded_url:
-                    processed[slot_name]['slot_url'] = expanded_url
+                    entry['slot_url'] = expanded_url
+
+                # Canonical range/required/multivalued, on the other hand,
+                # describe ONE definition. Restoring them onto a qualified entry
+                # would overwrite the per-class definition that entry exists to
+                # record — undoing the conflict fix. Only the unqualified entry,
+                # which by definition is the one every site agreed on, gets them.
+                # (The restore matters because gen-linkml merges slot_usage into
+                # attributes, so Part 1 may have picked up an override.)
+                if entry['id'] == slot_name:
+                    for field in ('range', 'required', 'multivalued', 'description'):
+                        if field in global_slot_def:
+                            entry[field] = global_slot_def[field]
         else:
             # Global slot not used by any class - this is unexpected
             # Note: If future schemas have intentionally unused global slots that should
@@ -537,13 +649,20 @@ def transform_schema(expanded_path: Path, output_path: Path) -> bool:
         # Get global slots for inline flag computation
         expanded_slots = expanded.get('slots', {})
 
+        # Decide slot ids ONCE, so transform_classes and transform_slots cannot
+        # disagree about which sites are qualified.
+        slot_ids = resolve_slot_ids(classes)
+        qualified = sorted({sid for sid, v in slot_ids.items() if v != sid[1]})
+        if qualified:
+            print(f"  ✓ {len(qualified)} attribute sites qualified (divergent slot definitions)")
+
         # Transform each section (passing prefixes for URI expansion)
         print("Transforming classes...")
-        processed_classes = transform_classes(classes, hierarchy, prefixes, expanded_slots)
+        processed_classes = transform_classes(classes, hierarchy, prefixes, expanded_slots, slot_ids)
         print(f"  ✓ {len(processed_classes)} classes processed")
 
         print("Transforming slots...")
-        processed_slots = transform_slots(expanded_slots, classes, prefixes)
+        processed_slots = transform_slots(expanded_slots, classes, prefixes, slot_ids)
         print(f"  ✓ {len(processed_slots)} slots processed ({len(expanded_slots)} base + {len(processed_slots) - len(expanded_slots)} overrides)")
 
         print("Transforming enums...")

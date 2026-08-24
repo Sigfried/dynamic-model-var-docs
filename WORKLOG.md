@@ -8,6 +8,169 @@ Newest first.
 
 ---
 
+## 2026-08-24 (later) — Option A→B implemented
+
+Both shipped together in one working tree, as `docs/TASKS.md` insisted: A alone
+tidies the screen while leaving `focus` collapsed, and B alone is the December
+2025 repeat. Baseline before starting: 216 tests / 18 files green, typecheck
+clean.
+
+### A: the fix is one field, but there were 3 more display sites than documented
+
+`docs/TASKS.md` named `Element.ts:466` (attributes table) and `:940` (titlebar).
+An inventory of every `.name` read that can reach a `SlotElement` found three
+more, all rendering the qualified id today:
+
+- `Element.getSectionItemData` (`:164`) — `displayName: this.name`, the left and
+  middle panel section rows.
+- `panelHelpers.getPanelTitle` (`:48`) — the `else` branch explicitly handles
+  slot and variable.
+- Two sort sites — `SlotCollection.fromData` and `DataService.subsetSection` —
+  sorted the user-visible list by qualified id, filing
+  `value-QuestionnaireResponseValueBoolean` under its class suffix instead of
+  next to the other `value` slots.
+
+**Shape chosen: `displayName` as a getter on the base `Element`, defaulting to
+`name`, overridden in `SlotElement`.** Rejected: adding a `displayName` field to
+`SlotElement` only. The base already *emits* a `displayName` key in
+`getSectionItemData`, and `Element.ts:119-129` already has `getId()`/`get id()`
+delegating to `name` — so the base was already the place where identity and
+label are distinguished. A getter on the base makes the section-row site correct
+for free and gives every future subclass a sane default. Also: the codebase
+already uses `displayName` for exactly this distinction in `contracts/Item.ts`
+and `contracts/ComponentData.ts`, and `DataService.getItemInfo` already returns
+`{id: nodeId, displayName: nodeAttrs.name}` — the graph layer never had this bug.
+Only the Element layer collapsed the two.
+
+`name` stays the qualified id everywhere. That is load-bearing and was verified
+rather than assumed: `elementLookup`, `getClassesUsingSlot`, `SlotCollection.
+getSlots()`, `getElement()`, and `subsetSection`'s `names.has(el.name)` filter
+all join on it. `subsetSection` is the trap — `names` holds *graph node ids*, so
+switching that filter to the bare name silently yields zero rows.
+
+**`OwnershipGraphView.tsx` needed no edit at all.** TASKS.md listed `:147` and
+`:161` as separate fixes. They aren't: both read
+`getClassSummary().slots[].name`, which is `row[0]` of the attributes table —
+i.e. `Element.ts:466`. Fixing 466 fixes them. The underlying mismatch was that
+`row[0]` was qualified while the graph's `slotName` (`Graph.ts:509`,
+`slotData.name`) has always been bare, and `OwnershipGraphView` joins across
+both. Confirmed by measurement, not reading: before, `ObservationSet`'s plain
+(scalar) rows contained `observations-ObservationSet`,
+`associated_visit-ObservationSet` and `associated_participant-ObservationSet`
+*in addition to* their connected rows — the phantom duplicates — and all three
+were missing from `schemaOrder`, so they hit the `?? MAX_SAFE_INTEGER` fallback
+and sorted last. After: plain rows are `category`, `focus`, `method_type`, `id`
+only, and nothing is missing from `schemaOrder`.
+
+### B: the handoff's blast-radius estimate was wrong, and it changed the design
+
+TASKS.md predicted "~11 additional names". Measured against
+`bdchm.expanded.json` with the specified comparison (`range`/`multivalued`/
+`required`, `None` ≡ `False`): **46 slot names are declared on more than one
+class, and 18 of those conflict on a load-bearing field.** Three strategies were
+possible and the choice mattered:
+
+- Qualify every site of a conflicted slot → **165** sites, 337 ids.
+- Qualify only divergent sites, one variant keeping the bare id → 60 sites, 249.
+- Qualify only the DAG-corrupting slots → ~6.
+
+**Final rule: qualify every site. One rule, no exceptions.** If two sites
+disagree on a load-bearing field they are not the same slot, so neither has a
+claim on the short name.
+
+#### The majority rule was implemented first, and was wrong. Why it was wrong
+
+The first implementation picked one variant to keep the bare id, by a headcount
+of sites. Siggie challenged it — "I don't get why you'd be looking at majorities
+of anything at all" — and the challenge was correct. Recording the diagnosis
+because the failure mode is subtle and repeatable:
+
+- **It answers the wrong question.** The modeling question is "which of these
+  sites are distinct slots?", and the answer is simply "all of them, that's what
+  disagreeing means". Majority instead answers "which id gets to be short",
+  which is cosmetic. Presenting a cosmetic choice as a modeling decision is the
+  same defect the ownership docs complain about: a category produced by a
+  hand-wavy rule rather than derived from the question.
+- **It needed two exceptions to stop misbehaving**, and that was the tell,
+  noticed and then patched over instead of heeded:
+  1. Globals had to outrank the count, because `observations` has four
+     all-distinct sites — its "majority" was a 1-1-1-1 tie that handed the bare
+     id to `SdohObservation` while the schema plainly says `Observation`.
+  2. Ties had to qualify everything, because 7 slots have no majority —
+     including `items` and `part_of`, precisely the two whose collapse drew the
+     wrong edges. A coin-flip deciding those was indefensible.
+
+  Needing two patches to make a rule stop producing nonsense means the rule is
+  wrong, not that it needs patches.
+- **The 165-id fear was a dead constraint.** It came from December 2025, where
+  ~109 qualified ids made the branch unshippable. But that was a *display* bug,
+  and Option A — landed hours earlier in the same session — fixed it. With
+  `displayName` rendering bare names, qualified ids never reach the screen, so
+  the count is internal plumbing. A resolved constraint was still driving a live
+  decision.
+
+**Verified the two strategies are equivalent for the user**: dumped every drawn
+edge across every class under both and diffed. **Byte-identical, all 86 edges.**
+The id scheme moves nothing visible; class-ranged edge sites are 150 either way
+(153 before, the drop being the wrong edges removed), and the 12 `Entity` sites
+are unchanged.
+
+#### Two consequences that had to be fixed with it
+
+**`transform_classes`, easy to miss.** It decides slot ids independently of
+`transform_slots`, keyed only on `slot_usage`. If the two disagree, a class
+references a slot id with no entry in `slots`. Fixed by computing the decision
+once in `resolve_slot_ids` and passing it to both. Guarded by a test asserting
+every class slot-ref resolves.
+
+**Part 2 of `transform_slots` silently lost metadata.** It keyed global-slot
+handling on the bare id, which conflicted global slots no longer have. Caught by
+checking rather than assuming: `id` lost its schema.org `slot_uri`, and
+`associated_visit`/`associated_participant`/`id` lost the `global` flag that
+drives the "Source: global" label. Now looks entries up by NAME and applies
+identity metadata to every site — but **only** the identity metadata. The
+canonical `range`/`required`/`multivalued` restore stays on the unqualified
+entry, because applying it to a qualified entry would overwrite the per-class
+definition that entry exists to record, undoing the whole fix. `slot_url`
+coverage 2 → 55, `global` 5 → 77. This latent bug would have bitten the majority
+version too.
+
+### The open question in TASKS.md, answered
+
+*"Whether plain-attribute conflicts propagate qualified ids into subclasses the
+way `slot_usage` conflicts do — this decides whether the fix covers 4 `focus`
+sites or 1."*
+
+**It covers all 4.** gen-linkml materializes inherited attributes into every
+subclass's `attributes`, so each `*ObservationSet` is its own site and gets its
+own id (`focus-ObservationSet`, `focus-DimensionalObservationSet`,
+`focus-MeasurementObservationSet`, `focus-SdohObservationSet`), each multivalued.
+The scalar `Observation` family keeps its single-valued declaration on its own
+per-class ids. The collapse had made every `focus` site look single-valued.
+
+### Verified, not assumed
+
+Every claim above was checked by running something. Specifically, both new test
+files were confirmed to FAIL against the pre-fix state — `slotDisplayName`
+3-of-7 failing when `bareName` is set to the map key, `slotConflictResolution`
+4-of-6 failing against `git show HEAD:…/bdchm.processed.json`. A test that has
+never failed proves nothing, and "no test asserted this" is exactly why the
+display bug shipped for nine months.
+
+Transform re-run confirmed byte-identical (deterministic). Orphaned slot entries
+went 3 → 1; the remaining one (`associated_person`) predates this work.
+
+### Note for the ownership-classification track
+
+`Entity`-ranged slot *definitions* went 2 → 6, but the **12 class sites are
+unchanged** — so the "expect a 12-edge convergence" figure still holds. What
+changed is that those 12 now split **5 multivalued / 7 single-valued**, where
+the collapse previously made every `focus` site look single-valued. Under Rule 1
+vs Rule 2 those classify differently, so any count derived from the old data
+needs re-deriving.
+
+---
+
 ## 2026-08-24 — Ownership rules settled; four assumptions found wrong on inspection
 
 Session was doc + investigation only; no code changed. Siggie left mid-session,

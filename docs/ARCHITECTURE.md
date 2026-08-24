@@ -108,13 +108,22 @@ The canonical way to get a slot's effective definition for a specific class is L
 
 All LinkML generators (JSON Schema, Python, Pydantic) use `class_induced_slots()` to get per-class definitions.
 
-### Known Issue: Conflicting Inline Attributes
+### Conflicting Inline Attributes (fixed 2026-08-24)
 
-Our current `transform_schema.py` creates one slot entry per unique name. When multiple classes define the same attribute name with different descriptions or ranges, the **first class encountered wins** and the rest are silently dropped (with a stderr warning).
+`transform_schema.py` used to create one slot entry per unique name: when several classes declared the same attribute name differently, the **first class encountered won** — first being dict iteration order — and the rest were silently dropped behind a stderr warning. Two edges in the shipped diagram were wrong as a result (`items` and `part_of`).
 
-This affects **20 of 43 shared attributes**, including `quantity` (3 classes, different ranges and descriptions), `category` (10 classes), `observations` (4 classes), `value` (6 classes), and others.
+`resolve_slot_ids()` now decides the id for every `(class, attribute)` site up front. **One rule: if two sites disagree on a load-bearing field, they are not the same slot**, so every site of that name gets its own `{slot}-{Class}` id and none keeps the bare name. A name whose sites all agree keeps its bare id.
 
-The planned fix is to use `induced_slot()` from Python `linkml-runtime` in the transform step to produce per-class slot definitions. See [TASKS.md](../TASKS.md).
+Load-bearing means `range`, `multivalued`, `required` — and only those, with `None` normalized to `False`. Disagreement on `description` or `owner` is not a conflict. This is deliberate: a Dec 2025 attempt compared nearly every field, qualified ~109 of 260 slots, and was abandoned.
+
+Of 46 attribute names declared on more than one class, **18 conflict**; 165 sites are qualified, giving 337 slot ids. The larger id set is internal — `SlotElement.displayName` renders the bare name, so qualified ids never reach the UI.
+
+Two invariants this rests on, both easy to break:
+
+- **`transform_classes` and `transform_slots` must consume the same decision.** They previously derived slot ids independently; disagreement leaves a class referencing an id with no entry in `slots`.
+- **Global-slot metadata is keyed by NAME, not by the bare id** (which conflicting global slots no longer have). `global` and `slot_url` apply to every site; the canonical `range`/`required`/`multivalued` restore applies **only** to an unqualified entry, since writing it onto a qualified entry would overwrite the per-class definition that entry exists to record.
+
+Using `induced_slot()` from `linkml-runtime` remains the more principled long-term route (see [TASKS.md](../TASKS.md)); the current approach reproduces the part of it this app needs without adding the dependency.
 
 ---
 
@@ -125,7 +134,7 @@ Graph model using graphology with slots serving dual roles.
 **Nodes:**
 - **Classes**: Entity, Specimen, Material, etc.
 - **Enums**: SpecimenTypeEnum, AnalyteTypeEnum, etc.
-- **Slots**: All slot definitions (~170 in BDCHM), browsable in middle panel only
+- **Slots**: All slot definitions (337 in BDCHM; conflicting names are qualified per class), browsable in middle panel only
 - **Types**: Primitives (string, integer) and custom types
 - **Variables**: Appear in detail boxes and relationship hovers, not as panel sections
 
@@ -241,12 +250,27 @@ closure — see EXPLORE_VIZ.md §6 for the measurements.
 - UI types (`ItemInfo`, `EdgeInfo`, `DetailSection`) → `ComponentData.ts`
 - `import_types.ts` imported only by dataLoader, Element, SchemaTypes, and tests
 
-### Element Identity: .name vs getId()
+### Element Identity: .displayName vs .name / getId()
 
-Use `.name` for display, `getId()` for identity/comparisons.
+Use `.displayName` for anything the user reads, `.name`/`getId()` for identity.
 
 | Method | Use for |
 |--------|---------|
-| `.name` | Display (titles, labels, sorting) |
+| `.displayName` | Display (titles, labels, table cells, sorting) |
+| `.name` | Identity: map keys, lookups, joins against graph node ids |
 | `getId()` | Identity comparisons, relationship data structures |
 | `getId(context)` | DOM IDs needing panel-specific uniqueness |
+
+**`.name` is NOT the display name.** For most elements the two are equal, so the
+distinction is invisible until it isn't. `SlotElement` is the exception: where a
+slot name has per-class definitions the transform qualifies its id, so `.name`
+is `observations-ObservationSet` while `.displayName` is `observations`.
+
+`displayName` is a getter on the base `Element` returning `this.name`, overridden
+in `SlotElement`. Sorting a user-visible list belongs in the display column —
+sorting slots by `.name` files `value-QuestionnaireResponseValueBoolean` under
+its class suffix instead of beside the other `value` slots.
+
+Rendering `.name` for a slot is the bug that shipped from Dec 2025 to Aug 2026
+(qualified ids on screen). `src/test/slotDisplayName.test.ts` guards it by
+asserting the attributes-table Name column equals the graph's edge label.

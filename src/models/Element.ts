@@ -71,6 +71,20 @@ export abstract class Element {
   abstract readonly name: string;
   abstract readonly description: string | undefined;
 
+  /**
+   * What the user should SEE, as opposed to `name`, which is the identity every
+   * lookup joins on. They differ only where the ingest pipeline had to qualify
+   * an id to keep it unique: `SlotElement` overrides this to return the bare
+   * slot name, so the Kitchen Sink table, the panel titlebar and the section
+   * lists show `observations` rather than `observations-ObservationSet`.
+   *
+   * Never use this as a key. `name` stays the map key, the sort key and the
+   * join key (`elementLookup`, `getClassesUsingSlot`, `subsetSection`).
+   */
+  get displayName(): string {
+    return this.name;
+  }
+
   // Detail data extraction (data-focused approach for DetailPanel)
   abstract getDetailData(): DetailData;
 
@@ -161,7 +175,7 @@ export abstract class Element {
 
     return {
       id: this.getId(),
-      displayName: this.name,
+      displayName: this.displayName,
       level,
       badgeColor: badge !== undefined ? `${typeInfo.color.badgeBg} ${typeInfo.color.badgeText}` : undefined,
       badgeText: badge !== undefined ? badge.toString() : undefined,
@@ -463,7 +477,11 @@ export class ClassElement extends Range {
           }
 
           return [
-            slot.name,
+            // Bare name: the lookup above already used the qualified
+            // `slotRef.id`, so nothing downstream needs the qualified form.
+            // getClassSummary reads this cell, so the ownership graph's slot
+            // rows join correctly on it too.
+            slot.displayName,
             source,
             slot.range || '',
             slot.required ? 'Yes' : 'No',
@@ -827,7 +845,11 @@ export class TypeElement extends Range {
 // SlotElement - represents a slot definition (global, inline, or override)
 export class SlotElement extends Element {
   readonly type = 'slot' as const;
+  /** Qualified id where the slot has per-class definitions (`value-QuestionnaireResponseValue`),
+   *  bare otherwise. This is the identity: the map key, and what every lookup joins on. */
   readonly name: string;
+  /** The bare slot name (`value`) — what the user reads. See `Element.displayName`. */
+  private readonly bareName: string;
   readonly description: string | undefined;
   readonly range: string | undefined;
   readonly slotUri: string | undefined;    // CURIE (e.g., "schema:identifier")
@@ -845,6 +867,10 @@ export class SlotElement extends Element {
   constructor(name: string, data: SlotData) {
     super();
     this.name = name;
+    // `data.name` is the bare name the schema declares; `name` is the map key,
+    // which the transform qualifies for per-class definitions. Discarding
+    // `data.name` here is what made qualified ids leak onto the screen.
+    this.bareName = data.name || name;
     this.description = data.description;
     this.range = data.range;
     this.slotUri = data.slotUri;
@@ -858,6 +884,10 @@ export class SlotElement extends Element {
     this.examples = data.examples;
     this.inlined = data.inlined;
     this.inlinedAsList = data.inlinedAsList;
+  }
+
+  override get displayName(): string {
+    return this.bareName;
   }
 
   getDetailData(): DetailData {
@@ -937,8 +967,8 @@ export class SlotElement extends Element {
     }
 
     return {
-      titlebarTitle: `${metadata.label}: ${this.name}`,
-      title: this.name,
+      titlebarTitle: `${metadata.label}: ${this.displayName}`,
+      title: this.displayName,
       subtitle: undefined,
       titleColor: metadata.color.headerBg,
       description: extendedDescription,
@@ -1189,7 +1219,11 @@ export class SlotCollection extends ElementCollection {
         element.pathFromRoot = [element.name];  // Flat list: pathFromRoot = [name]
         return element;
       })
-      .sort((a, b) => a.name.localeCompare(b.name));
+      // Sort on what the reader sees. Sorting on the qualified id would file
+      // `value-QuestionnaireResponseValueBoolean` under its class suffix rather
+      // than next to the other `value` slots. Ties keep a stable order.
+      .sort((a, b) => a.displayName.localeCompare(b.displayName)
+        || a.name.localeCompare(b.name));
 
     return new SlotCollection(roots);
   }

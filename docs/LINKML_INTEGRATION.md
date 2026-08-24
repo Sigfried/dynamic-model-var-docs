@@ -1,9 +1,19 @@
 # LinkML Integration: Analysis and Options
 
 > Research notes on using LinkML tooling instead of custom transforms.
-> Context: Our `transform_schema.py` has a bug where same-named attributes on
-> different classes get collapsed into one slot definition (first class wins).
-> 20 of 43 shared attributes are affected. See [TASKS.md](../TASKS.md).
+>
+> **Update 2026-08-24 — the motivating bug is fixed.** The collapse (same-named
+> attributes on different classes merged into one definition, first class wins)
+> was repaired inside `transform_schema.py` by `resolve_slot_ids()`, which
+> qualifies every site of a conflicting name — producing exactly the per-class
+> ids Option 1 below predicted (`quantity-Procedure`, `quantity-DrugExposure`).
+> 18 of 46 shared attribute names conflicted on a load-bearing field.
+>
+> These notes remain live for the **broader** question: whether to adopt
+> `linkml-runtime` rather than maintain a custom transform. Option 1 is now
+> largely done by hand; its "Pros" argument (authoritative resolution logic
+> instead of our own) still stands and is the reason to revisit.
+> See [ARCHITECTURE.md](ARCHITECTURE.md) for what the transform does today.
 
 ---
 

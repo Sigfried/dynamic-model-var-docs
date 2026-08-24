@@ -42,10 +42,11 @@ export function getPanelTitle(element: Element, elementType: ElementTypeId): Rea
     // Don't show "Enum:" prefix since name ends with "Enum"
     return <span className="text-base font-bold">{element.name}</span>;
   } else {
-    // For slot and variable, show type prefix
+    // For slot and variable, show type prefix. `displayName` because a slot's
+    // `name` is the qualified id (`value-QuestionnaireResponseValue`).
     return (
       <span className="text-base">
-        <span className="font-bold">{metadata.label}:</span> <span className="font-bold">{element.name}</span>
+        <span className="font-bold">{metadata.label}:</span> <span className="font-bold">{element.displayName}</span>
       </span>
     );
   }
