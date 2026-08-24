@@ -1,13 +1,12 @@
-# Ownership classification
+# Ownership / containment / has-a relationships
 
 How every class-ranged slot in the schema becomes an edge in the diagram, and
 what each kind of edge means.
 
-The diagram arranges classes in **layers**, laid out left-to-right by default.
-If `A` is drawn before `B`, a reader should conclude **`B` is reached through
-`A`** — `A` is where you start if you want to find `B`. ("Before" is layer
-order, not screen position: it means earlier in the flow, whichever direction
-the layout runs.)
+Classes are arranged so that if `A` is drawn **before** `B`, a reader should
+conclude **`B` is reached through `A`** — `A` is where you start if you want to
+find `B`. (The layout runs left-to-right by default, so "before" usually means
+to the left.)
 
 The schema states these relationships **both ways round**. `ObservationSet`
 stores its `observations` **owner-side** — the owner holds a collection.
@@ -25,34 +24,30 @@ exposure and procedure lands before the Participant it describes.
 | `own-bkwd` | source **belongs to** range | back: range before source, edge reversed |
 | `association` | neither owns the other | back: range before source, both ends arrowed |
 
-**"Owns" and "belongs to" are different claims, not synonyms.** `own-fwd`
-targets have no independent existence — a `Quantity` of `5 mg` is not something
-you look up — so *owned* is accurate. `own-bkwd` targets do exist independently
-(an `Organization`, a `Participant`, a `Visit`), so saying a class *owns* them
+**"Owns" and "belongs to" are different claims, not synonyms.** A class *owns*
+what it holds — the schema puts the collection on the owner, or the target is a
+value with no independent existence (a `Quantity` of `5 mg` is not something you
+look up). A class *belongs to* something that exists independently of it: an
+`Organization`, a `Participant`, a `Visit` carry on existing whether or not any
+particular observation points at them, so saying the observation *owns* them
 overclaims. **"Belongs to" is the correct verb for `own-bkwd`** wherever it
 appears in the legend or an edge label.
 
-`association` makes **no ownership claim in either direction**, but still orders
-its target first, so it participates in layering exactly as `own-bkwd` does. The
-difference is the claim, not the geometry.
-
-### On cycles
-
-Layering needs the layering edges to be acyclic. **The full relationship graph is
-not and cannot be a DAG** — every class `is_a Entity`, so slots ranging on
-`Entity` point at everything, including themselves.
-
-Verified 2026-08-24: under the rules below, with `association` edges layered as
-described, the layering channel has **zero cycles** apart from 5 self-loops
-(`TimePoint.index_time_point`, `File.derived_from`, `Specimen.parent_specimen`,
-`ResearchStudy.part_of`, `SpecimenContainer.parent_container`). This holds
-whether or not the `Entity`-ranged edges participate in layering.
+`association` makes **no ownership claim in either direction**.
 
 ---
 
 ## Rule 1 — Multivalued slot ⇒ `own-fwd`
 
-`A.things: B[]` — A holds a collection of Bs, stored owner-side. Draw A before B.
+`A.things: B[]` — A holds a collection of Bs, stored owner-side. The schema put
+the collection on A, which is the schema saying A is where the Bs are found.
+Draw A before B.
+
+Most of these targets *do* exist independently — `Observation`, `Specimen`,
+`ResearchStudy`, `Consent` are all real entities. Rule 1 does not claim
+otherwise; it reads the storage direction the schema chose. (Exception 2a below
+reaches the same verdict by a different route: targets that exist only as part
+of their holder.)
 
 **31 edges.** Examples: `ObservationSet.observations`, `Questionnaire.items`,
 `Participant.consents`, `Specimen.processing_activity`.
@@ -206,9 +201,32 @@ association slots. Everything else reads directly from the schema's
 
 ---
 
-## Appendix — what the code does today
+## Appendix — implementation notes
 
-Implementation reference only; delete once the rules above ship.
+Developer reference; delete once the rules above ship.
+
+### Layering and cycles
+
+Class order comes from a layered DAG, so the layering edges must be acyclic.
+**The full relationship graph is not and cannot be a DAG** — every class
+`is_a Entity`, so slots ranging on `Entity` point at everything, including
+themselves.
+
+`association` edges order their target first, exactly as `own-bkwd` does, and so
+participate in layering normally. Only the ownership *claim* differs, not the
+geometry.
+
+Verified 2026-08-24: under the rules above, the layering channel has **zero
+cycles** apart from 5 self-loops (`TimePoint.index_time_point`,
+`File.derived_from`, `Specimen.parent_specimen`, `ResearchStudy.part_of`,
+`SpecimenContainer.parent_container`). This holds whether or not the
+`Entity`-ranged edges participate in layering, so either choice is safe.
+
+Two properties worth preserving as tests: the self-loop count, and that
+`SpecimenStorageActivity.container` as `own-fwd` reintroduces the one non-self
+cycle (`Specimen → SpecimenStorageActivity → SpecimenContainer → Specimen`).
+
+### What the code does today
 
 `classifySlotEdge` in `src/models/containmentGraph.ts`:
 

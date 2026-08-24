@@ -86,6 +86,18 @@ This blocks nothing mechanically, but the diagram's largest structure
 (Participant's 22-edge outbound fan) is produced by Rule 2, so **routing work
 tuned against today's classification may be tuned against the wrong graph.**
 
+### 🎨 OPEN — own-fwd arrowheads are on the wrong end (formatting round)
+
+Noticed 2026-08-24 from a screenshot (Participant / Visit / Condition). On
+forward ownership edges the arrowhead renders at the **source**, not the target.
+`Visit.associated_participant` draws its head pointing back into Participant.
+
+**Deferred to the formatting round on purpose** — do not fix mid-classification.
+The classification rewrite renames `own-flip` → `own-bkwd` and adds
+`association` (which needs heads at *both* ends), so the marker selection at
+`OwnershipGraphView.tsx:1091` (`flipped ? 'arrow-own-back' : 'arrow-own'`) is
+being rewritten anyway. Fixing it twice wastes the work.
+
 ### ▶️ OPEN — the bare diagonal
 
 One approach in a convergence arrives as a **straight diagonal with no steps**
