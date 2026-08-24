@@ -14,12 +14,77 @@ elsewhere in the docs as stale. **Needs Siggie: set a new target or drop it.**
 
 ---
 
-## 🔁 HANDOFF — start here next session (updated 2026-08-21)
+## 🔁 HANDOFF — start here next session (updated 2026-08-24)
 
 > The single-arrowhead merge is **DONE** (`0950472`). Schema-order attributes
 > are **DONE** (`4b2adf6`). Node dragging is **DONE but incomplete**
 > (`c483912`). Full reasoning and every rejected approach: `WORKLOG.md`,
 > entry 2026-08-19/21.
+
+### 🛑 OPEN — ownership classification: rules decided, implementation pending
+
+**THIS IS THE CURRENT WORK.** Finish and implement this before returning to
+routing/formatting.
+
+**[docs/OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md) is the live
+document** — rewritten 2026-08-21/24 to read as a permanent end-user doc plus
+temporary implementation instructions. **Start there, not in the code.** (The
+diagnosis of what was wrong is in `WORKLOG.md`, 2026-08-21; the interim
+`OWNERSHIP_RETHINK.md` was folded in and removed.)
+
+**Status: proposed target, not yet implemented.** The doc describes where we are
+going; its Appendix records what the code does today and is deleted once the
+rules ship. Ownership classification is Siggie's call — the three open questions
+below were decided 2026-08-24.
+
+#### What was wrong
+
+Of five classification rules, only `multivalued` read the schema — the other
+four were hand-typed lists of names. `OWNERSHIP_OVERRIDES` is an edit log
+presented as a category, which is why `performed_by` and
+`associated_participant` landed in different groups despite being the same kind
+of relationship.
+
+#### The rules now
+
+Three edge categories: `own-fwd` (owns), `own-bkwd` (belongs to — renamed from
+`own-flip` for symmetry), `association` (no ownership claim, both ends arrowed,
+but still ordered like `own-bkwd`).
+
+- **Rule 1** — multivalued ⇒ `own-fwd` (31 edges)
+- **Rule 2** — single-valued ⇒ `own-bkwd` (59 edges)
+- **Exception 2a** — single-valued to a target with no independent existence ⇒
+  `own-fwd` (40 edges). The `single_value_owner_slots` list, 14 classes.
+- **association** — 8 slot-level + 12 `Entity`-ranged = 20 edges
+
+Leaves one asserted list of 14 class names and one enumerated set of 8
+association slots, instead of 30 entries across three sets. The 14 cannot be
+derived — `identifier` is on all 54 classes, `inlined` is on 10/150 edges and
+disagrees with ownership.
+
+**Decided 2026-08-24 (Siggie):** Group B → association; Group C → association;
+association edges layer as `own-bkwd`. Verified: zero cycles under these rules,
+apart from 5 self-loops.
+
+#### Implementation checklist
+
+- [ ] Rename `own-flip` → `own-bkwd` throughout.
+- [ ] Add the `association` verdict; drop `ref`.
+- [ ] Replace `OWNERSHIP_OVERRIDES` (15 entries) with the 8-slot association set.
+- [ ] Delete `EXCLUDE_HAS_A_TARGETS` so the 12 `Entity`-ranged edges are drawn
+      as association. **Keep `SKIP_SUBCLASS_EXPANSION`** — excluding `Entity`
+      from *inheritance* is sound; excluding it from *ranges* was never
+      intended. `src/test/containmentGraph.test.ts:102` currently asserts the
+      rejected behavior and must be updated.
+- [ ] Rename `VALUE_OBJECTS` → `single_value_owner_slots`; consider moving it to
+      a LinkML overlay + add a sync check for pure-leaf drift.
+- [ ] Keep `classifySlotEdgeExplained` and the legend's group-by-rule rendering.
+- [ ] Both ends arrowed for association; update the legend text.
+- [ ] Delete the doc's Appendix once shipped.
+
+This blocks nothing mechanically, but the diagram's largest structure
+(Participant's 22-edge outbound fan) is produced by Rule 2, so **routing work
+tuned against today's classification may be tuned against the wrong graph.**
 
 ### ▶️ OPEN — the bare diagonal
 
@@ -93,46 +158,6 @@ which is how these turned up:
 Real numbers now on record (slot-edges / distinct classes): converging —
 Quantity 19/16, TimePoint 16/8, BodySite 6/6, Context 6/6. Diverging —
 Participant 22, Visit 19, Organization 11, Specimen 8.
-
-### 🛑 OPEN — ownership classification: rules proposed, 3 questions open
-
-**Siggie, 2026-08-21:** *"i think ownership graph stuff may be totally broken --
-certainly the OWNERSHIP_CLASSIFICATION.md doc is broken. let's save and then get
-a new session to figure out what the right rules SHOULD be -- not based on the
-code or previous decisions. i don't know if the code really has all the different
-categories listed in the dialog's ownership rules, but it shouldn't"*
-
-**[docs/OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md) is now the
-live document** — rewritten 2026-08-21/24 to lead with what the relationships
-mean and what test decides them. **Start there, not in the code.** (The
-diagnosis of what was wrong is in `WORKLOG.md`, 2026-08-21; the interim
-`OWNERSHIP_RETHINK.md` was folded in and removed.)
-
-The short version: of five classification rules, only `multivalued` reads the
-schema — the other four are hand-typed lists of names. `OWNERSHIP_OVERRIDES` is
-an edit log presented as a category, which is why `performed_by` and
-`associated_participant` land in different groups despite being the same kind of
-relationship.
-
-**Proposed:** three rules — multivalued ⇒ owns-forward, single-valued ⇒
-belongs-to (drawn back), single-valued to a target with no independent existence
-⇒ owns-forward. That leaves one hand-maintained list
-(`single_value_owner_slots`, 14 classes) instead of 30 entries across three
-sets, and it cannot be derived — `identifier` is on all 54 classes, `inlined` is
-on 10/150 edges and disagrees with ownership.
-
-**Needs Siggie's call (3 open questions, Part 3 of the doc):**
-1. Group B (6 single-valued slots to real entities) — belongs-to, or
-   association-with-layering?
-2. Group C (`Specimen.related_document`, `SpecimenStorageActivity.container`) —
-   real ownership claims, not yet considered.
-3. Does `association` order its target, or float free? `associated_evidence`
-   cannot be ordered; Group B's could be.
-
-This blocks nothing mechanically, but the diagram's largest structure
-(Participant's 22-edge outbound fan) is produced by the rule most in question,
-so **routing/aesthetic work tuned against today's classification may be tuned
-against the wrong graph.**
 
 ### 📄 OPEN — EXPLORE_VIZ.md is ~20–25% stale (audited 2026-08-24)
 
