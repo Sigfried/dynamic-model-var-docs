@@ -421,6 +421,28 @@ function trimSectionsEnd(sections: EdgeSection[] | undefined, dist: number): Edg
   return [{ ...s, endPoint }, ...sections.slice(1)];
 }
 
+/** The mirror of trimSectionsEnd, for the START vertex.
+ *
+ *  Only association edges need it, because only they carry a markerStart.
+ *  arrow-assoc uses refX=0, which puts the marker's BASE on the path vertex and
+ *  its tip ARROW_LEN beyond — and since the node boxes are opaque divs stacked
+ *  ON TOP of this SVG layer, a tip that overshoots the border is painted over
+ *  and the arrowhead simply vanishes. (It showed up only when hovering a dimmed
+ *  box, which is translucent.) Pulling the start back by the head's own length
+ *  puts the tip on the border instead of behind it. */
+function trimSectionsStart(sections: EdgeSection[] | undefined, dist: number): EdgeSection[] | undefined {
+  if (!sections?.length) return sections;
+  const s = sections[0];
+  const next = s.bendPoints?.length ? s.bendPoints[0] : s.endPoint;
+  const dx = next.x - s.startPoint.x;
+  const dy = next.y - s.startPoint.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 1) return sections;
+  const k = Math.min(dist, len * 0.8) / len;
+  const startPoint = { x: s.startPoint.x + dx * k, y: s.startPoint.y + dy * k };
+  return [{ ...s, startPoint }, ...sections.slice(1)];
+}
+
 export default function OwnershipGraphView({
   dataService,
   selectedIds,
@@ -1034,17 +1056,28 @@ export default function OwnershipGraphView({
                       <path d="M10,0L0,3.5L10,7Z" fill="#d97706" />
                     </marker>
                     {/* association: no ownership claim, so BOTH ends are
-                        arrowed. Slate rather than the old #9ca3af, which was
-                        too faint to see against the background. */}
+                        arrowed, each head pointing INTO the entity it sits next
+                        to. Slate rather than the old #9ca3af, which was too
+                        faint to see against the background.
+
+                        ONE marker serves both ends: that is what
+                        orient="auto-start-reverse" is for. On markerEnd its +x
+                        axis runs forward along the path; on markerStart the
+                        "-start-reverse" half turns it 180deg so +x runs
+                        backward, out of the source node. A forward-pointing
+                        glyph (tip at x=10) therefore points outward at BOTH
+                        ends, and refX=0 keeps the base on the path vertex with
+                        the tip overshooting into the node, exactly as for
+                        arrow-own.
+
+                        The previous arrow-assoc-start reversed twice - the
+                        marker by auto-start-reverse AND the glyph by drawing
+                        the tip at x=0 - so the two cancelled and the start head
+                        pointed back down the edge instead of into its node. */}
                     <marker id={markerId('arrow-assoc')} viewBox="0 0 10 7" refX="0" refY="3.5"
                       markerWidth={ARROW_SPAN * REF_SCALE} markerHeight={ARROW_SPAN * 0.75 * REF_SCALE}
                       markerUnits="userSpaceOnUse" orient="auto-start-reverse">
                       <path d="M0,0L10,3.5L0,7Z" fill="#64748b" />
-                    </marker>
-                    <marker id={markerId('arrow-assoc-start')} viewBox="0 0 10 7" refX="10" refY="3.5"
-                      markerWidth={ARROW_SPAN * REF_SCALE} markerHeight={ARROW_SPAN * 0.75 * REF_SCALE}
-                      markerUnits="userSpaceOnUse" orient="auto-start-reverse">
-                      <path d="M10,0L0,3.5L10,7Z" fill="#64748b" />
                     </marker>
                   </defs>
                   <g transform={`translate(${PAD}, ${PAD})`}>
@@ -1082,11 +1115,17 @@ export default function OwnershipGraphView({
                       const dragged = dragRoutes.get(e.id);
                       const willMerge = !!target
                         && mergeDistFor(mergeMode, dragged ?? sectionPoints(e.sections)) > 0;
-                      const sections = willMerge
+                      const isAssoc = spec.type !== 'ownership';
+                      const trimmedEnd = willMerge
                         ? e.sections
                         : trimSectionsEnd(
                             e.sections, ARROW_SPAN + ARROW_GAP + (flipped ? 2 : 0),
                           );
+                      // Associations are arrowed at BOTH ends, so both ends
+                      // need clearance from the opaque node box.
+                      const sections = isAssoc
+                        ? trimSectionsStart(trimmedEnd, ARROW_LEN + ARROW_GAP)
+                        : trimmedEnd;
                       const pts = dragged ?? sectionPoints(sections);
                       const render = (p: Point[]) => roundedPath(p, CORNER_R);
                       const dist = mergeDistFor(mergeMode, pts);
@@ -1115,7 +1154,7 @@ export default function OwnershipGraphView({
                             strokeWidth={isOwn ? STROKE_OWN : STROKE_REF}
                             strokeDasharray={isOwn ? undefined : '5 4'}
                             markerEnd={marker ? `url(#${markerId(marker)})` : undefined}
-                            markerStart={!isOwn && !willMerge ? `url(#${markerId('arrow-assoc-start')})` : undefined}
+                            markerStart={!isOwn && !willMerge ? `url(#${markerId('arrow-assoc')})` : undefined}
                             style={{ transition: 'opacity 120ms, stroke-width 120ms' }}
                           />
                           {/* invisible fat hit area for edge hover */}

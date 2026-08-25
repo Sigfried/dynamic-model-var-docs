@@ -83,7 +83,22 @@ export const EXAMPLE_CASES: ExampleCaseGroup[] = [
           'SpecimenStorageActivity'],
       },
       {
-        name: '5. A small real neighbourhood',
+        name: '5. Both associations, under crowding',
+        note: 'The schema has exactly TWO association edges and both are here: '
+          + '`Specimen.related_document` → Document and '
+          + '`SpecimenStorageActivity.container` → SpecimenContainer. Case 4 '
+          + 'shows the three verdicts isolated; this shows them competing for '
+          + 'the same borders. Watch SpecimenContainer\'s right side, where an '
+          + 'association and an own-bkwd edge arrive together — both leave a '
+          + 'slot row on the right and point back left, so they are the pair '
+          + 'that header-side merging has to keep distinguishable. '
+          + '`Participant.originating_site` → Organization is the other thing '
+          + 'to look at: own-bkwd today, arguably an association.',
+        sel: ['Document', 'Organization', 'Participant', 'Specimen',
+          'SpecimenContainer', 'SpecimenStorageActivity'],
+      },
+      {
+        name: '6. A small real neighbourhood',
         note: 'BodySite and its six owners — the smallest convergence that still '
           + 'looks like a real diagram. Six edges arriving on one box, each from a '
           + 'different attribute row.',
