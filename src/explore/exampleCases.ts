@@ -167,6 +167,51 @@ export const EXAMPLE_CASES: ExampleCaseGroup[] = [
     ],
   },
   {
+    heading: 'Inheritance (the ⑃ siblings toggle)',
+    cases: [
+      {
+        name: 'One child, merged with its parent',
+        note: 'MeasurementObservation alone. It still merges: the box is titled '
+          + 'Observation, its 13 inherited rows sit at the top in black, and '
+          + "MeasurementObservation's own 9 follow under its coloured header. "
+          + 'Merging does not wait for a second sibling — a class must not '
+          + 'change shape because of what else you happen to select.',
+        sel: ['MeasurementObservation'],
+      },
+      {
+        name: 'Children that add nothing',
+        note: 'SpecimenQuality- and SpecimenQuantityObservation declare no '
+          + 'slots of their own. Both still get a header under the shared rows, '
+          + 'because "this subclass adds nothing" is the answer to what they '
+          + 'are — and without the headers the selection would leave no trace '
+          + 'in the box at all.',
+        sel: ['SpecimenQualityObservation', 'SpecimenQuantityObservation'],
+      },
+      {
+        name: 'slot_usage — same name, different type',
+        note: "QuestionnaireResponseValue's five children each narrow `value` "
+          + 'to a different type (boolean, decimal, integer, TimePoint, and the '
+          + "parent's string). That narrowing is the entire reason the five "
+          + 'classes exist, so each keeps its OWN row rather than merging into '
+          + "the parent's — the one place a shared row would be a lie.",
+        sel: ['QuestionnaireResponseValueBoolean', 'QuestionnaireResponseValueDecimal',
+          'QuestionnaireResponseValueInteger', 'QuestionnaireResponseValueString',
+          'QuestionnaireResponseValueTimePoint'],
+      },
+      {
+        name: 'The full Observation family',
+        note: 'All five Observation subclasses plus the parent. One box where '
+          + 'there would be six, and the shared rows are stated once. Turn ⑃ '
+          + 'siblings off to see what it replaces. Note each edge leaves in the '
+          + "colour of the child that owns its row; inherited slots' edges are "
+          + "the parent's and are drawn once, not once per child.",
+        sel: ['Observation', 'MeasurementObservation', 'SdohObservation',
+          'DimensionalObservation', 'SpecimenQualityObservation',
+          'SpecimenQuantityObservation'],
+      },
+    ],
+  },
+  {
     heading: 'The bare diagonal',
     cases: [
       {

@@ -36,7 +36,7 @@ import type {
   DataService, OwnershipSubgraph, OwnershipSubgraphEdge, OwnershipSubgraphNode,
 } from '../services/DataService';
 import {
-  cardinalityLabel, SKIP_SUBCLASS_EXPANSION, GRAPH_COLORS,
+  cardinalityLabel, SKIP_SUBCLASS_EXPANSION, GRAPH_COLORS, DEFAULT_OWNER_CAP,
 } from '../services/DataService';
 import {
   useGraphLayout, useZoomPan, roundedPath, sectionPoints, mergeTail,
@@ -600,6 +600,9 @@ const STROKE_REF_HOVER = STROKE_OWN_HOVER * 0.67;
  */
 export type MergeMode = 'near' | 'far' | 'bend' | 'off';
 
+/** How many one-hop owners to draw per node. See `ownerScope`. */
+export type OwnerScope = 'none' | 'some' | 'all';
+
 /** Merge distance in px for a mode, given the edge's routed points. */
 function mergeDistFor(mode: MergeMode, pts: Point[]): number {
   if (mode === 'off' || pts.length < 2) return 0;
@@ -805,22 +808,21 @@ export default function OwnershipGraphView({
     () => localStorage.getItem('explore-nl-sibs') !== '0',
   );
   /**
-   * Draw ONLY what was selected (plus explicit expansions): no owners pulled
-   * in automatically.
+   * How many owners to draw per node, one hop up.
    *
-   * NB this is ZERO hops, not one — `ownerCap` is a legibility CEILING ("draw
-   * a node's owners only if there are at most N of them"), so 0 means never.
-   * The default of 5 is already the one-hop behaviour. Labelled accordingly:
-   * calling this button "1 hop" was wrong and Siggie caught it.
+   *  - 'none' : draw none — every owner is an `owned by` chip. Zero hops.
+   *  - 'some' : the legibility cap (DEFAULT_OWNER_CAP, 5). A node with MORE
+   *             owners than that falls back to chips entirely, which is why
+   *             BodySite (6 owners) drew none even with the old toggle off —
+   *             the toggle looked broken because the default was already
+   *             behaving like 'none' for exactly the crowded nodes you notice.
+   *  - 'all'  : draw every owner, one hop, no cap. Genuinely one hop.
    *
-   * Useful anyway, and the reason it exists: with owners auto-drawn, five
-   * selected classes pull in up to five owners each and the inheritance work
-   * is impossible to look at. The `owned by` chip strip is already the reveal
-   * affordance, so nothing becomes unreachable — every owner is a chip
-   * instead of some of them boxes.
+   * A boolean could not express this: it switched between 'none' and 'some',
+   * and 'some' silently degrades to 'none' on the nodes with the most owners.
    */
-  const [tightScope, setTightScope] = useState<boolean>(
-    () => localStorage.getItem('explore-nl-tight') === '1',
+  const [ownerScope, setOwnerScope] = useState<OwnerScope>(
+    () => (localStorage.getItem('explore-nl-owners') as OwnerScope) || 'some',
   );
 
   // Expansions that duplicate the selection are dropped: a selected class is
@@ -833,9 +835,14 @@ export default function OwnershipGraphView({
   const subgraph = useMemo(
     () => dataService.getOwnershipSubgraph(
       [...selectedIds].sort(), expansionList,
-      { pathToRoot, ...(tightScope ? { ownerCap: 0 } : {}) },
+      {
+        pathToRoot,
+        ...(ownerScope === 'none' ? { ownerCap: 0 }
+          : ownerScope === 'all' ? { ownerCap: Number.MAX_SAFE_INTEGER }
+          : {}),
+      },
     ),
-    [dataService, selectedIds, expansionList, pathToRoot, tightScope],
+    [dataService, selectedIds, expansionList, pathToRoot, ownerScope],
   );
   const plainSlots = useMemo(
     () => new Map(subgraph.nodes.map(n =>
@@ -1382,11 +1389,9 @@ export default function OwnershipGraphView({
     localStorage.setItem('explore-nl-merge', m);
     setMergeMode(m);
   };
-  const toggleTight = () => {
-    setTightScope(prev => {
-      localStorage.setItem('explore-nl-tight', prev ? '0' : '1');
-      return !prev;
-    });
+  const setOwners = (v: OwnerScope) => {
+    localStorage.setItem('explore-nl-owners', v);
+    setOwnerScope(v);
   };
   const toggleSibs = () => {
     setMergeSibs(prev => {
@@ -1420,11 +1425,17 @@ export default function OwnershipGraphView({
             <span className="w-px h-4 bg-gray-300 dark:bg-slate-600 mx-1" />
           </>
         )}
-        <button className={toolBtn(tightScope)}
-          title={tightScope
-            ? 'Selection only: every owner is a chip — click one to draw it'
-            : 'Owners drawn automatically, up to 5 per class'}
-          onClick={toggleTight}>only sel</button>
+        {/* Owners drawn per node, one hop up. Three states because the middle
+            one silently degrades to 'none' above its cap. */}
+        <button className={toolBtn(ownerScope === 'none')}
+          title="Draw no owners — every one is a chip you can click"
+          onClick={() => setOwners('none')}>0</button>
+        <button className={toolBtn(ownerScope === 'some')}
+          title={`Draw owners only where a class has at most ${DEFAULT_OWNER_CAP}`}
+          onClick={() => setOwners('some')}>≤{DEFAULT_OWNER_CAP}</button>
+        <button className={toolBtn(ownerScope === 'all')}
+          title="Draw every owner, one hop up — no cap"
+          onClick={() => setOwners('all')}>all</button>
         <span className="w-px h-4 bg-gray-300 dark:bg-slate-600 mx-1" />
         <button className={toolBtn(mergeSibs)}
           title={mergeSibs

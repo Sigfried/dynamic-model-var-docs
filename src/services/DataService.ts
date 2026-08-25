@@ -52,6 +52,7 @@ export type { EdgeInfo, ItemInfo };
 export type { AttributeSummary } from '../models/Element';
 export type { ContainmentGraph, ContainmentNode, ContainmentEdge } from '../models/containmentGraph';
 export { cardinalityLabel, SKIP_SUBCLASS_EXPANSION } from '../models/containmentGraph';
+export { DEFAULT_OWNER_CAP } from '../models/ownershipSubgraph';
 export type {
   OwnershipSubgraph, OwnershipSubgraphNode, OwnershipSubgraphEdge,
   OwnershipSubgraphOptions,
