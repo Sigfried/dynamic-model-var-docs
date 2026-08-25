@@ -792,7 +792,10 @@ export class DataService {
           bySource.set(p.owner, info);
         }
         info.edgeCount++;
-        if (g.verdict === 'own-bkwd' || g.verdict === 'association') info.flippedCount++;
+        // Only own-bkwd can reach here: the guard above admits own-fwd and
+        // own-bkwd only. An `|| g.verdict === 'association'` arm was dead code
+        // that tsc -b flags as a never-comparison.
+        if (g.verdict === 'own-bkwd') info.flippedCount++;
         if (!info.owned.includes(p.owned)) info.owned.push(p.owned);
       }
     }
@@ -919,9 +922,10 @@ export class DataService {
     const { nodes, edges } = this.getContainmentGraph(classIds);
     const parentIds = new Map<string, string[]>(nodes.map(n => [n.id, []]));
     for (const e of edges) {
-      // Only ownership + subclass edges nest; 'ref' edges are non-owning
-      // associations and must not create parent links.
-      if (e.kind === 'ref') continue;
+      // Only ownership + subclass edges nest; association edges are non-owning
+      // and must not create parent links. This tested for 'ref', which is not
+      // a ContainmentEdgeKind, so it never fired — associations were nesting.
+      if (e.kind === 'association') continue;
       // skip self-loops as parent links (a node isn't its own parent); the
       // widget renders them as backedges from the edge set if needed.
       if (e.source === e.target) continue;
