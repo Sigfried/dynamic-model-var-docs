@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """
-Transform bdchm.expanded.json (from gen-linkml) into bdchm.processed.json (optimized for our app).
+Transform bdchm.yaml into bdchm.processed.json (optimized for our app).
 
-Input: bdchm.expanded.json
-- Contains classes, enums, slots, types from gen-linkml
-- Inherited slots merged into class.attributes
-- Has slot_usage for overrides
-- Lacks inherited_from metadata
-- Has redundant data
+Input: bdchm.yaml, read through LinkML's own SchemaView (see induced_schema.py).
+- SchemaView resolves imports and merges inherited slots itself, so the
+  gen-linkml step and the bdchm.expanded.json artifact are both gone.
+- `induced_class(c).attributes[a]` IS the per-class slot definition. The
+  transform no longer reconstructs it, which is what used to go wrong.
 
 Output: bdchm.processed.json
 - Computed inherited_from for all attributes
@@ -17,6 +16,8 @@ Output: bdchm.processed.json
 
 Usage:
   python transform_schema.py [--input PATH] [--output PATH]
+
+  --input is bdchm.yaml (was bdchm.expanded.json).
 """
 
 import sys
@@ -27,12 +28,22 @@ from typing import Dict, Any, Optional, Set
 from urllib import request
 from urllib.error import URLError, HTTPError
 
+from induced_schema import build_expanded
+
 
 # Delimiter for override slot IDs: "{slotName}-{ClassName}" e.g., "category-SdohObservation"
 SLOT_OVERRIDE_DELIMITER = '-'
 
-# Fields whose disagreement across two declarations of the same slot name changes
-# what the app DRAWS or ASSERTS, so the two declarations cannot share one id.
+# Delimiter for qualified slot IDs: "{slotName}-{ClassName}".
+#
+# A FLAT slot index cannot hold two different definitions under one bare name,
+# so sites whose definitions differ get qualified ids. Note this is now a
+# property of the *index*, not of the data: the real per-class definition lives
+# on the class, and this index is derived from it. See docs/TASKS.md.
+SLOT_OVERRIDE_DELIMITER = '-'
+
+# Fields whose disagreement means two sites are not the same slot, so they
+# cannot share one entry in the flat index.
 #
 # Deliberately short. An earlier (Dec 2025) attempt compared nearly every field,
 # including `description` and `owner`, qualified ~109 of 260 slots, and was
@@ -41,10 +52,10 @@ LOAD_BEARING_SLOT_FIELDS = ('range', 'multivalued', 'required')
 
 
 def _load_bearing_signature(attr_def: Dict[str, Any]) -> tuple:
-    """The part of a slot declaration that must match for two sites to share an id.
+    """The part of a slot definition that must match for two sites to share an id.
 
-    `None` and `False` are normalized together: LinkML omits `multivalued` rather
-    than writing `false`, so a missing key and an explicit false are the same
+    `None` and `False` normalize together: LinkML omits `multivalued` rather than
+    writing `false`, so a missing key and an explicit false are the same
     statement and must not read as a conflict.
     """
     return tuple(
@@ -54,60 +65,31 @@ def _load_bearing_signature(attr_def: Dict[str, Any]) -> tuple:
 
 
 def resolve_slot_ids(expanded_classes: Dict[str, Any]) -> Dict[tuple, str]:
-    """Decide the slot id for every (class, attribute) site in the schema.
+    """Decide the flat-index id for every (class, attribute) site.
 
-    One rule: **if two sites disagree on a load-bearing field, they are not the
-    same slot**, so every site of that name gets its own `{slot}-{Class}` id and
-    none keeps the bare name. A name whose sites all agree keeps its bare id.
+    One rule, no exceptions: **if two sites disagree on a load-bearing field
+    they are not the same slot**, so every site of that name is qualified and
+    none keeps the bare id. A name whose sites all agree keeps its bare id.
 
-    Returns {(class_name, attr_name): slot_id}.
-
-    The rule follows from the modeling question rather than from convenience.
-    `items` on `Questionnaire` ranges on `QuestionnaireItem`; `items` on
-    `QuestionnaireResponse` ranges on `QuestionnaireResponseItem`. Those are two
-    different slots that collide in the namespace, and neither has a claim on
-    the short name. Previously this loop kept whichever definition was iterated
-    first and dropped the others, which is what drew two wrong edges.
-
-    An earlier version of this function let one variant keep the bare id, chosen
-    by a headcount of sites. That was rejected: it answers "which id is
-    shortest", not "which slots are distinct", and it needed two exceptions
-    (globals outrank the count; ties qualify everything) before it stopped
-    producing nonsense — `observations` has four all-distinct sites, so its
-    "majority" was a 1-1-1-1 tie. Needing exceptions to stop a rule misbehaving
-    meant the rule was wrong.
-
-    The cost is a larger id set (`id` alone is declared on 54 classes). That is
-    internal plumbing: `SlotElement.displayName` renders the bare name, so
-    qualified ids never reach the screen. The Dec 2025 attempt was abandoned
-    because ~109 qualified ids DID reach the screen — a display bug, since
-    fixed, not a reason to keep ids scarce.
+    This is now purely an indexing concern. The definitions themselves come from
+    `induced_class` and are already correct per class; nothing here decides what
+    a slot MEANS, only what to call it in the derived flat index.
     """
-    sites: Dict[str, list] = {}
+    sites: Dict[str, Dict[str, Any]] = {}
     for class_name, class_def in expanded_classes.items():
         for attr_name, attr_def in (class_def.get('attributes') or {}).items():
-            sites.setdefault(attr_name, []).append(
-                (class_name, _load_bearing_signature(attr_def))
-            )
+            sites.setdefault(attr_name, {})[class_name] = attr_def
 
     slot_ids: Dict[tuple, str] = {}
-    for attr_name, entries in sites.items():
-        variants = {sig for _, sig in entries}
-        if len(variants) < 2:
-            # One definition everywhere: one slot, one bare id.
-            for class_name, _ in entries:
-                slot_ids[(class_name, attr_name)] = attr_name
-            continue
-
-        # Sites disagree, so these are NOT one slot that needs a winner picked
-        # among them — they are several distinct slots sharing a name. Each gets
-        # its own id and none keeps the bare one.
-        for class_name, _ in entries:
+    for attr_name, per_class in sites.items():
+        signatures = {_load_bearing_signature(d) for d in per_class.values()}
+        divergent = len(signatures) > 1
+        for class_name in per_class:
             slot_ids[(class_name, attr_name)] = (
-                f"{attr_name}{SLOT_OVERRIDE_DELIMITER}{class_name}"
+                f"{attr_name}{SLOT_OVERRIDE_DELIMITER}{class_name}" if divergent else attr_name
             )
-
     return slot_ids
+
 
 def iter_range_sites(expanded: Dict[str, Any]):
     """Yield (label, def_dict) for every place a range can appear."""
@@ -206,79 +188,16 @@ def expand_uri(uri: str, prefixes: Dict[str, Any], validate: bool = False) -> Op
         return None
 
 
-def build_class_hierarchy(classes: Dict[str, Any]) -> Dict[str, Optional[str]]:
-    """Build map of class_name -> parent_name."""
-    hierarchy = {}
-    for class_name, class_def in classes.items():
-        # is_a is the LinkML field for inheritance
-        parent = class_def.get('is_a')
-        hierarchy[class_name] = parent
-    return hierarchy
-
-
-def get_defining_class(
-    class_name: str,
-    attr_name: str,
-    classes: Dict[str, Any],
-    hierarchy: Dict[str, Optional[str]]
-) -> Optional[str]:
-    """
-    Walk up class hierarchy to find which ancestor originally defined this attribute.
-
-    Returns:
-    - None if attribute is defined on this class (not inherited)
-    - ancestor_name if attribute was inherited from ancestor
-    """
-    # Check parent chain
-    current = class_name
-    parent = hierarchy.get(current)
-
-    if parent is None:
-        # No parent - this is the root, attribute must be defined here
-        return None
-
-    # Walk up to find where attribute was first defined
-    # If attribute exists on parent, it's inherited from parent (or higher)
-    while parent is not None:
-        parent_def = classes.get(parent)
-        if parent_def is None:
-            break
-
-        parent_attrs = parent_def.get('attributes', {})
-        if attr_name in parent_attrs:
-            # Found in parent, keep walking to find original definer
-            current = parent
-            parent = hierarchy.get(current)
-        else:
-            # Not in parent, so current was the original definer
-            break
-
-    # If we found it in an ancestor, current is the definer
-    if current != class_name:
-        return current
-
-    return None
-
-
 def find_slot_usage(class_name: str, attr_name: str, classes: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    """
-    Check if this class has a slot_usage override for this attribute.
-
-    Returns:
-    - slot_usage dict if override exists
-    - None otherwise
-    """
+    """The class's slot_usage entry for this attribute, if it has one."""
     class_def = classes.get(class_name)
     if not class_def:
         return None
-
-    slot_usage = class_def.get('slot_usage', {})
-    return slot_usage.get(attr_name)
+    return (class_def.get('slot_usage') or {}).get(attr_name)
 
 
 def transform_classes(
     expanded_classes: Dict[str, Any],
-    hierarchy: Dict[str, Optional[str]],
     prefixes: Dict[str, Any],
     global_slots: Dict[str, Any],
     slot_ids: Dict[tuple, str]
@@ -291,9 +210,13 @@ def transform_classes(
         slots = []
         class_attrs = class_def.get('attributes', {})
 
-        for attr_name in class_attrs.keys():
-            # Compute inherited_from
-            inherited_from = get_defining_class(class_name, attr_name, expanded_classes, hierarchy)
+        for attr_name, attr_def in class_attrs.items():
+            # `inherited_from` is computed once, in induced_schema.defining_class,
+            # and travels on the attribute definition. It used to be re-derived
+            # here by walking gen-linkml's already-merged attributes, which finds
+            # the topmost class that HAS the attribute rather than the one that
+            # DECLARED it.
+            inherited_from = attr_def.get('inherited_from')
 
             # Check for slot_usage override
             slot_usage_override = find_slot_usage(class_name, attr_name, expanded_classes)
@@ -347,110 +270,72 @@ def transform_slots(
     prefixes: Dict[str, Any],
     slot_ids: Dict[tuple, str]
 ) -> Dict[str, Any]:
-    """
-    Transform slots to include all slot definitions in one place.
+    """Build the flat slot index.
 
-    Includes:
-    - Global slots (marked with global: True)
-    - Inline slots (defined on classes, not in global slots)
-    - Override slots (have overrides field pointing to base slot)
+    DERIVED, NOT THE SOURCE OF TRUTH. Each class carries its own slot
+    definitions (from `induced_class`); this flattens them into the one-entry-
+    per-distinct-definition index that Kitchen Sink, `SlotCollection`,
+    `getClassesUsingSlot` and `elementLookup` are keyed on. See the `_comment`
+    written into this section in transform_schema().
     """
-    processed = {}
+    processed: Dict[str, Any] = {}
 
-    # Part 1: Collect all base slots from class attributes (both inline and global refs)
+    # Pass 1: one entry per distinct definition, plus a slot_usage instance for
+    # every class that overrides. `name` stays BARE — it is what the user reads,
+    # while `id` is what lookups join on.
     for class_name, class_def in schema_classes.items():
-        class_attrs = class_def.get('attributes', {})
+        for attr_name, attr_def in (class_def.get('attributes') or {}).items():
+            entry = {k: v for k, v in attr_def.items() if k != 'inherited_from'}
 
-        for attr_name, attr_def in class_attrs.items():
-            # `slot_id` is the bare name where every site agrees on the
-            # load-bearing fields, and `{attr}-{Class}` where this site diverges.
-            # Previously this loop kept the FIRST definition seen and dropped the
-            # rest, so `items` collapsed to QuestionnaireItem and `part_of` to
-            # ResearchStudy — two wrong edges in the shipped diagram.
+            if find_slot_usage(class_name, attr_name, schema_classes):
+                instance_id = f"{attr_name}{SLOT_OVERRIDE_DELIMITER}{class_name}"
+                processed[instance_id] = {
+                    'id': instance_id,
+                    'name': attr_name,
+                    'overrides': attr_name,
+                    **entry,
+                }
+                continue
+
             slot_id = slot_ids.get((class_name, attr_name), attr_name)
-
             if slot_id in processed:
                 existing = processed[slot_id]
-                # Reaching here means two sites share an id, which resolve_slot_ids
-                # only allows when the load-bearing fields agree. If they don't,
-                # the two are out of sync — a real bug, not a cosmetic diff.
-                if _load_bearing_signature(existing) != _load_bearing_signature(attr_def):
+                # Two sites share an id, which resolve_slot_ids only allows when
+                # the load-bearing fields agree. If they don't, they are out of
+                # sync — a real bug, not a cosmetic diff.
+                if _load_bearing_signature(existing) != _load_bearing_signature(entry):
                     print(
                         f"  ⚠ Warning: slot '{slot_id}' has conflicting load-bearing "
                         f"definition in class '{class_name}' "
-                        f"({_load_bearing_signature(attr_def)} vs {_load_bearing_signature(existing)})",
+                        f"({_load_bearing_signature(entry)} vs {_load_bearing_signature(existing)})",
                         file=sys.stderr,
                     )
                 continue
 
-            # Copy all fields from attr_def and add id/name. `name` stays BARE:
-            # it is what the user reads, while `id` is what lookups join on.
-            slot_def = {'id': slot_id, 'name': attr_name, **attr_def}
-            processed[slot_id] = slot_def
+            processed[slot_id] = {'id': slot_id, 'name': attr_name, **entry}
 
-    # Part 2: Mark global slots and add extra fields from schema_slots.
-    # IMPORTANT: For global slots, override range/required/multivalued with the
-    # canonical definition from schema_slots, not whichever class happened to be
-    # processed first in Part 1 (which may have had a slot_usage override merged
-    # into its attributes by gen-linkml's expand step).
+    # Pass 2: identity metadata from the schema's `slots:` section.
+    #
+    # Runs AFTER every entry exists, including slot_usage instances. It used to
+    # run in between, so a slot declared ONLY as an override — `observations`,
+    # `value` — was invisible to it and silently lost both `global` and
+    # `slot_url`, as did every override instance of a global slot. That also
+    # produced a bogus "global slot is not used by any class" warning.
     for slot_name, global_slot_def in schema_slots.items():
-        # A global slot whose sites disagree has no bare entry — every site was
-        # qualified — so look up its entries by NAME rather than assuming the
-        # bare id exists. Without this, `id`'s schema.org slot_uri and the
-        # `global` flag on `associated_visit`/`associated_participant` are
-        # silently dropped.
         entries = [d for d in processed.values() if d.get('name') == slot_name]
-        if entries:
-            expanded_url = None
-            if global_slot_def.get('slot_uri'):
-                expanded_url = expand_uri(global_slot_def['slot_uri'], prefixes, validate=True)
-
-            for entry in entries:
-                # Identity metadata belongs to the slot NAME, so it applies to
-                # every site.
-                entry['global'] = True
-                if expanded_url:
-                    entry['slot_url'] = expanded_url
-
-                # Canonical range/required/multivalued, on the other hand,
-                # describe ONE definition. Restoring them onto a qualified entry
-                # would overwrite the per-class definition that entry exists to
-                # record — undoing the conflict fix. Only the unqualified entry,
-                # which by definition is the one every site agreed on, gets them.
-                # (The restore matters because gen-linkml merges slot_usage into
-                # attributes, so Part 1 may have picked up an override.)
-                if entry['id'] == slot_name:
-                    for field in ('range', 'required', 'multivalued', 'description'):
-                        if field in global_slot_def:
-                            entry[field] = global_slot_def[field]
-        else:
-            # Global slot not used by any class - this is unexpected
-            # Note: If future schemas have intentionally unused global slots that should
-            # appear in the UI, add them here. For now, warn since it's likely an error.
+        if not entries:
             print(f"  ⚠ Warning: global slot '{slot_name}' is not used by any class", file=sys.stderr)
+            continue
 
-    # Part 3: Create override instances for slot_usage
-    for class_name, class_def in schema_classes.items():
-        slot_usage = class_def.get('slot_usage', {})
+        expanded_url = None
+        if global_slot_def.get('slot_uri'):
+            expanded_url = expand_uri(global_slot_def['slot_uri'], prefixes, validate=True)
 
-        for slot_name, usage_override in slot_usage.items():
-            # Get merged attribute definition from class (includes slot_usage overrides)
-            class_attrs = class_def.get('attributes', {})
-            merged_attr = class_attrs.get(slot_name)
-
-            if not merged_attr:
-                print(f"  ⚠ Warning: slot_usage for '{slot_name}' in class '{class_name}' not found in attributes", file=sys.stderr)
-                continue
-
-            # Create override slot instance - copy all fields and add override-specific ones
-            instance_id = f"{slot_name}{SLOT_OVERRIDE_DELIMITER}{class_name}"
-            override_slot = {
-                'id': instance_id,
-                'name': slot_name,  # Display name (same as base)
-                'overrides': slot_name,  # Reference to base slot
-                **merged_attr
-            }
-            processed[instance_id] = override_slot
+        for entry in entries:
+            # Identity metadata belongs to the slot NAME, so every site gets it.
+            entry['global'] = True
+            if expanded_url:
+                entry['slot_url'] = expanded_url
 
     return processed
 
@@ -608,7 +493,7 @@ def transform_types(expanded_types: Dict[str, Any], prefixes: Dict[str, Any], us
 
 def transform_schema(expanded_path: Path, output_path: Path) -> bool:
     """
-    Transform bdchm.expanded.json to bdchm.processed.json.
+    Transform bdchm.yaml to bdchm.processed.json.
 
     Returns:
         True if successful, False otherwise
@@ -619,12 +504,9 @@ def transform_schema(expanded_path: Path, output_path: Path) -> bool:
         invalid_prefixes = set()
         validated_prefixes = {}
 
-        print(f"Loading {expanded_path.name}...")
-        with open(expanded_path, 'r') as f:
-            expanded = json.load(f)
-
-        expanded_size = expanded_path.stat().st_size
-        print(f"  ✓ Loaded ({expanded_size:,} bytes)")
+        print(f"Loading {expanded_path.name} via SchemaView...")
+        expanded = build_expanded(expanded_path)
+        print(f"  ✓ Loaded ({expanded_path.stat().st_size:,} bytes of YAML)")
 
         # Refuse to ship a schema with dangling ranges — the app's graph
         # builder throws on them at load time, so fail here (in the sync run)
@@ -640,11 +522,8 @@ def transform_schema(expanded_path: Path, output_path: Path) -> bool:
         prefixes = expanded.get('prefixes', {})
         print(f"  ✓ {len(prefixes)} prefixes loaded")
 
-        # Build class hierarchy
-        print("Building class hierarchy...")
         classes = expanded.get('classes', {})
-        hierarchy = build_class_hierarchy(classes)
-        print(f"  ✓ {len(hierarchy)} classes")
+        print(f"  ✓ {len(classes)} classes")
 
         # Get global slots for inline flag computation
         expanded_slots = expanded.get('slots', {})
@@ -658,12 +537,26 @@ def transform_schema(expanded_path: Path, output_path: Path) -> bool:
 
         # Transform each section (passing prefixes for URI expansion)
         print("Transforming classes...")
-        processed_classes = transform_classes(classes, hierarchy, prefixes, expanded_slots, slot_ids)
+        processed_classes = transform_classes(classes, prefixes, expanded_slots, slot_ids)
         print(f"  ✓ {len(processed_classes)} classes processed")
 
         print("Transforming slots...")
         processed_slots = transform_slots(expanded_slots, classes, prefixes, slot_ids)
-        print(f"  ✓ {len(processed_slots)} slots processed ({len(expanded_slots)} base + {len(processed_slots) - len(expanded_slots)} overrides)")
+        print(f"  ✓ {len(processed_slots)} slots indexed")
+
+        # JSON has no comments, so leave the note as a field. This section is
+        # derived; the class definitions are the source of truth.
+        processed_slots = {
+            '_comment': (
+                'DERIVED INDEX — not the source of truth. Every slot definition '
+                'lives on its class (classes.*.attributes), which is where '
+                'SchemaView.induced_class puts it. This flat section exists only '
+                'because Kitchen Sink, SlotCollection, getClassesUsingSlot and '
+                'elementLookup are still keyed on slot ids. Stop generating it '
+                'once those are refactored to read induced slots off the class.'
+            ),
+            **processed_slots,
+        }
 
         print("Transforming enums...")
         expanded_enums = expanded.get('enums', {})
@@ -699,9 +592,7 @@ def transform_schema(expanded_path: Path, output_path: Path) -> bool:
             json.dump(processed, f, indent=2)
 
         processed_size = output_path.stat().st_size
-        reduction = ((expanded_size - processed_size) / expanded_size) * 100
         print(f"  ✓ Written ({processed_size:,} bytes)")
-        print(f"  ✓ Size reduction: {reduction:.1f}%")
 
         # Report prefix validation results
         print(f"\nPrefix URL Validation Results:")
@@ -744,19 +635,19 @@ def transform_schema(expanded_path: Path, output_path: Path) -> bool:
 def main():
     """Transform expanded schema to processed format."""
     parser = argparse.ArgumentParser(
-        description="Transform bdchm.expanded.json to optimized bdchm.processed.json",
+        description="Transform bdchm.yaml to optimized bdchm.processed.json",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   python transform_schema.py
-  python transform_schema.py --input public/source_data/HM/bdchm.expanded.json
+  python transform_schema.py --input public/source_data/HM/bdchm.yaml
         """
     )
     parser.add_argument(
         '--input',
         type=Path,
         default=None,
-        help='Path to bdchm.expanded.json (default: public/source_data/HM/bdchm.expanded.json)'
+        help='Path to bdchm.yaml (default: public/source_data/HM/bdchm.yaml)'
     )
     parser.add_argument(
         '--output',
@@ -772,7 +663,7 @@ Examples:
     if args.input:
         input_path = args.input
     else:
-        input_path = project_root / 'public' / 'source_data' / 'HM' / 'bdchm.expanded.json'
+        input_path = project_root / 'public' / 'source_data' / 'HM' / 'bdchm.yaml'
 
     if args.output:
         output_path = args.output
