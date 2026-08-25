@@ -134,7 +134,59 @@ and the multi-owner ordering rule (a row two children declare is headed by the
 first in member order) is exactly the kind of thing that needs a unit test
 rather than a squint at the canvas.
 
-**Not done, deliberately:** scrollable/resizable boxes (Siggie raised them with
+### Second review round — three assumptions caught by looking at the render
+
+**"Pretend children don't have parent slots" (Siggie's framing) beat my
+"collapse the duplicates."** I had five siblings each producing an
+`associated_visit` edge, all rewritten onto one anchor row, and proposed
+deduping them by a key. Siggie: *"better to pretend that children don't have
+parent slots so there's no collapsing to do."* That is the difference between
+constructing the right graph and repairing a wrong one — and the repair had a
+real defect, since dedup must pick a winner among edges that are only ASSUMED
+identical. I then added a caveat ("but an unmerged child still needs the
+inherited row") which was already obsolete: with unconditional parent merging,
+there is no unmerged child. Check whether an earlier decision has already
+eliminated the case before defending against it.
+
+**Siggie's parenthetical was the real requirement, and my filter got it
+wrong.** *"(for slot_usage or other possibilities for same-named slot to have
+different defs, then of course they get their own rows and edges."* I had keyed
+on `inheritedFrom`, assuming an override would clear it. **It does not.** All
+four Observation children report `observation_type` as `inheritedFrom:
+Observation` while narrowing its range to
+MeasurementObservationTypeEnum/SdohEnum/BaseEnum. Worse,
+QuestionnaireResponseValue's five children each narrow `value` to a different
+type — boolean/decimal/integer/TimePoint — which is *the entire reason those
+five classes exist*, and name-keyed merging would have collapsed them into one
+row reading `string`. **The lesson: I probed for the answer instead of assuming
+it, and only because Siggie named the case.** The test is now "is the child's
+definition the same as what it inherited", comparing range and multivalued.
+
+`required` is deliberately excluded from that comparison: LinkML derives
+`required` from `identifier: true` at the inherited site, so all 53 classes
+report inherited `id` as required while Entity declares it optional. Comparing
+it marks `id` as redefined everywhere and gives every child its own `id` row.
+(This is the same inverted-`required` fact the induced-slots session recorded —
+it keeps surfacing in new places.)
+
+**A child with no rows of its own was invisible.** Headers were emitted only
+where an owned row appeared, so SpecimenQuality/QuantityObservation and
+DimensionalObservation — which add nothing to Observation — produced no header
+and no rows. Selecting exactly those two drew a box with no trace of the
+selection. Both of Siggie's screenshots were this one bug. Generalisable shape:
+**a view that renders a group only when the group has contents will silently
+drop empty groups, and "empty" is often the answer the user wanted.**
+
+**`1 hop` did zero hops.** `ownerCap` is a legibility CEILING — "draw a node's
+owners only if there are at most N" — so `ownerCap: 0` means never draw any.
+The default of 5 was already one hop; what floods the canvas is the cap being
+generous, not the hop count. I had reasoned about the name rather than reading
+the loop. Renamed `only sel`.
+
+**Not done, deliberately:** narrowed edges pointing at a child's header inside
+a merged target box (Siggie's ask, deferred by him for time — the entity end
+has never had row meaning and the fan/convergence/arrowhead rules all assume
+it, so it is a real change, written up in TASKS.md), scrollable/resizable boxes (Siggie raised them with
 the header design; a fully-expanded merged Observation is tall), a class
 appearing in several boxes (SpecimenQuality/QuantityObservation — explicitly
 deferred, and the real question there is whether the second grouping is

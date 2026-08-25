@@ -66,6 +66,37 @@ make the graph unreadable. so we will brainstorm designs. Off the cuff:
   - maybe parent must always be displayed
 - merged is definitely better. other ideas?
 
+### ▶️ OPEN — a narrowed edge should point at the CHILD's header, not the box
+
+Siggie, 2026-08-25, deferred deliberately: *"IF the container is also a merged
+box (e.g., ObservationSet, MeasurementObservationSet), then the edge points at
+the appropriate header."*
+
+**The case.** `MeasurementObservationSet.observations` narrows its range from
+`Observation` to `MeasurementObservation` (verified: all three ObservationSet
+children narrow `observations` to their matching Observation subtype). Both
+ends are merged boxes. The edge leaves the `MeasurementObservationSet` block
+of one box and should ARRIVE at the `MeasurementObservation` header inside the
+other — today it lands on the target box's header band like every other edge.
+
+**Why this is not a tweak.** The entity end has never carried row meaning. From
+the file header: *"the ENTITY END attaches to a header-level port on the target
+class, which has no corresponding row, so edges point at the entity name."*
+That assumption is load-bearing for the fan (`freeEndTotal`/`freeEndSlot`
+spread ports across the header band), for convergence merging, and for the
+single shared arrowhead. Pointing at a child header means the entity end
+sometimes anchors on a ROW, so all three need to handle both.
+
+**Design question to settle first:** does EVERY edge into a merged box target
+the child header matching its range, or only a `slot_usage`-narrowed one? The
+first is one rule; the second leaves existing edges untouched but means the
+entity end means different things on different edges. Siggie has not chosen.
+
+Note the row machinery is already in place: rows carry `declaringClass`, header
+rows are real rows with a y-position, and `rowY(node, slot, declaringClass)`
+resolves an anchor. What is missing is a port on the entity side that targets
+a header row, and the fan/merge rules knowing about it.
+
 ### ▶️ OPEN — a class should be able to appear in SEVERAL merged boxes
 
 Siggie, 2026-08-25, looking at the first merged render: *"SpecimenQua...
@@ -132,6 +163,29 @@ renderer), so a merged box is just another node and merged edges are edges with
 rewritten endpoints. Layout and routing never learn this happened. Grouping
 policy is in `src/explore/siblingMerge.ts`; tests in
 `src/test/siblingMerge.test.ts` (6, against the live schema).
+
+**Second review round (2026-08-25, commit `21d5be3`):**
+- **Every child gets a header, even one that adds no rows.**
+  SpecimenQuality/QuantityObservation and DimensionalObservation declare zero
+  own slots, so header-per-owned-row made them invisible: selecting exactly
+  those two drew a box with no sign of them.
+- **An inherited slot's edge belongs to the parent and is drawn once.** Five
+  siblings declaring `associated_visit` produced five edges into one anchor
+  row. Dropped at construction rather than deduped after — dedup has to pick a
+  winner among edges only ASSUMED identical.
+- **`slot_usage` overrides keep their own row AND edge.** `inheritedFrom` alone
+  is not enough: all four Observation children report `observation_type` as
+  inherited while narrowing its range, and QuestionnaireResponseValue's five
+  children each narrow `value` to a different type — which is the whole reason
+  those classes exist. A row is the parent's only when the child's definition
+  MATCHES; rows key on (declaringClass, slot). `required` is excluded from the
+  comparison because every class reports inherited `id` as required while
+  Entity declares it optional.
+- Row sort is the declaring class's schema order. Headers are filled colour
+  bars with white type; child rows take the child's colour; swatches gone.
+- **`1 hop` was renamed `only sel` — it did ZERO hops.** `ownerCap` is a
+  legibility ceiling ("draw owners only if at most N"), so 0 means never draw
+  any. The default of 5 was already the one-hop behaviour.
 
 **Also shipped in the same pass (Siggie's list off the first render):**
 - The PARENT is absorbed when it is itself selected. It rendered as a second
