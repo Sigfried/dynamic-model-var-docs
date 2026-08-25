@@ -50,7 +50,14 @@ walking her through it. The stakeholders present asked for two things:
 
 Siggie wants to know what the options are for both, *"probably to be hosted on
 gh pages."* The task in that session is to lay out options and trade-offs, not
-to pick one unilaterally. Relevant constraints already known: the app is a
+to pick one unilaterally.
+
+**Hard dependency, and it runs the other way from what you'd guess:** a
+**doc page with live embeds** is one of the two things Siggie named for the
+guided tour, and an embed IS a URL — so nothing that lives only in
+localStorage can be embedded. See "put essentially the WHOLE app state in the
+URL" below. That work is sequenced after the development clean-up, so the
+sharing session should scope around it rather than assume it exists. Relevant constraints already known: the app is a
 static Vite build under `base: '/dynamic-model-var-docs/'`, deploys manually
 via `npm run deploy` (gh-pages branch), and the **example cases pane already
 exists** and is close to a guided-tour primitive — named selections that
@@ -82,6 +89,63 @@ UP below is in scope for that; the sharing work is not development time.
 5. **own-bkwd → association verdict merge** (70 edges). Siggie deliberately did
    NOT decide this before the demo — *"need to ask stakeholders."* Still open;
    header-side merging (0b) is gated on it.
+6. **Whole app state in the URL** — see the dedicated section below. Deliberately
+   LAST of the development items: it freezes the control vocabulary into every
+   link ever sent, so the obsolete/provisional buttons above must be resolved
+   first. It is also the main technical prerequisite for the guided-tour half of
+   the sharing work.
+
+### 🔗 NEW — put essentially the WHOLE app state in the URL
+
+**Siggie, 2026-08-25 (end of day).** Wanted for two reasons, both about
+sharing rather than about the app itself:
+- **sending links** — a recipient must see what the sender saw;
+- **a doc page with LIVE EMBEDS** — each embed is a URL, so anything not in the
+  URL cannot be embedded.
+
+**Sequencing, in Siggie's words:** *"there are a number of obsolete buttons and
+stuff unresolved from today that should be resolved before implementing."* So
+this comes AFTER the NEXT UP items above — in particular the owner-scope
+control (`0 / ≤5 / all`) is explicitly provisional and is being replaced by a
+cap plus toggleable chips, and the merge-mode buttons (⋙ ⋙⋙ ⌙ ≡) are a
+temporary comparison harness with no winner picked yet. **Encoding a control
+into the URL freezes its vocabulary in every link ever sent**, so settle which
+controls survive first.
+
+**Current split, measured 2026-08-25:**
+
+| in the URL (`ExploreApp.writeStateToURL`) | in localStorage only (`OwnershipGraphView`) |
+|---|---|
+| `sel` selected ids | `explore-nl-dir` — LR / TB |
+| `exp` expanded ids | `explore-nl-merge` — merge mode (⋙ ⋙⋙ ⌙ ≡) |
+| `detail` open drawer | `explore-nl-sibs` — ⑃ siblings on/off |
+| `roots` path-to-root | `explore-nl-owners` — 0 / ≤5 / all |
+
+Not persisted anywhere: per-node expand state (`expandedNodes`), node pins and
+drags, zoom/pan, table collapse, which example case is open.
+
+**So a shared link today reproduces the SELECTION but renders it with whatever
+settings happen to be in the recipient's browser — or, for a first-time
+visitor, the defaults.** The sibling merge that the whole inheritance feature
+is about is a localStorage flag, so a link showing it off looks like the
+feature does not exist.
+
+**Known knock-on, worth fixing at the same time:** `ExploreApp.tsx:81` carries
+a comment explaining that applying an example case is deliberately NOT a
+navigation, *because* the merge mode lives in localStorage and is read once at
+mount, so a reload would reset the thing being compared. That workaround exists
+only because toolbar state is not in the URL; once it is, example cases can
+become plain links — which is most of what a "non-video guided tour" needs.
+
+**Design questions to settle when implementing:**
+- Which controls are genuinely shareable state vs. personal preference? (Zoom
+  probably preference; ⑃ siblings definitely shareable.)
+- Omit defaults from the URL, as `roots` already does, or write everything so a
+  link is explicit and immune to a later default change? For embeds, explicit
+  is safer.
+- `replaceState` (today) or real history entries, so Back steps through a tour?
+- Keep localStorage as the fallback when a param is absent, so a bare visit
+  still remembers a returning user's preferences.
 
 ### ⚠️ PROCESS NOTE FOR THE NEXT SESSION — read this one
 
