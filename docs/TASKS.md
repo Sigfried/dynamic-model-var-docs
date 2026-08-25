@@ -328,6 +328,55 @@ the definition simply lives on the class. That deletes a large amount of
 machinery added 2026-08-24, and the id scheme was the least-reviewed part of it
 (see the WORKLOG caveat).
 
+#### Are Parts 1/2/3 of `transform_slots` still necessary? Mostly not (measured 2026-08-25)
+
+Siggie's question. Verified against `bdchm.yaml` + the live
+`bdchm.processed.json`, not reasoned from the code.
+
+| block | lines | verdict |
+|---|---|---|
+| Part 1 — collect slots from class attributes | `:360` | **subsumed.** Its job is one definition per (class, attribute) site; that IS `induced_class`. No slot name in processed.json is missing from induced. |
+| Part 2 — global metadata + canonical restore | `:391` | **split.** See below. |
+| Part 3 — `slot_usage` override entries | `:432` | **subsumed.** All 31 override entries checked field-by-field against `induced_class(cls).attributes[name]`: **0 mismatches** on range/multivalued/required. Part 3 re-derives from the same gen-linkml-merged `attributes` induced already reads. |
+
+Part 2 is not one thing:
+
+- **Canonical `range`/`required`/`multivalued`/`description` restore — obsolete.**
+  It exists only to undo Part 1 picking up a `slot_usage`-merged value. Induced
+  never has that problem, so the restore has nothing to fix.
+- **`slot_uri` — subsumed.** Values are identical to induced (verified).
+- **`slot_url` — NOT subsumed.** Computed via prefixes + live HTTP validation.
+  Replaceable with `sv.expand_curie`. See the CURIE task further down.
+- **`global: True` — NOT subsumed.** No induced equivalent; it is membership in
+  the YAML `slots:` section. Replace with `set(sv.all_slots(attributes=False))`.
+
+**Keep the `overrides` fact even if Part 3 goes.** The app consumes it as
+provenance, not as data: `Element.ts:517` labels the row "override",
+`dataLoader.ts:200` passes it through, `Graph.ts:276` tests it. Source it from
+`sv.get_class(cls).slot_usage` instead of a duplicate slot entry.
+
+##### Two live bugs found while checking — both CURED by the migration, not caused by it
+
+Recording these so the migration is not later blamed for fixing them, and so
+neither gets reintroduced.
+
+1. **Part 2 can never flag an override-only slot as `global`.** Part 2 looks up
+   entries built by Part 1 but runs *before* Part 3. `observations` and `value`
+   are in the YAML `slots:` section yet have **no Part 1 entry at all** — they
+   exist only as Part 3 override entries. Both lose `global: True` and
+   `slot_url`, as does every override entry of a global slot (all 20
+   `associated_participant-*`, etc.). The transform's "global slot ... is not
+   used by any class" warning for these two reads as a schema problem but is
+   really this ordering bug. Currently **masked** in the UI because
+   `Element.ts:517` tests `slot.overrides` before `slot.global`, so an override
+   row never consults the flag — latent, not visible.
+
+2. **`SLOT_OVERRIDE_DELIMITER = '-'` is overloaded.** `:107` builds
+   *conflict-qualified* ids `{attr}-{Class}`; `:446` builds *override* ids with
+   the identical shape. Today: 135 qualified vs 31 override ids, **0 collisions,
+   0 ids with more than one delimiter** — luck, not design, the same way
+   `performed_by` was. The migration deletes the qualified-id half, retiring it.
+
 Verified details worth knowing before designing this:
 
 - **Metadata survives.** `slot_uri`, `identifier`, `description`, `alias`,
@@ -344,8 +393,9 @@ Verified details worth knowing before designing this:
   slot ids today. A class-first store has to either derive that index or keep a
   reduced one. 
   **[sg] leave a comment (as a field since json doesn't take comments) at the top of the "slots:" section in processed.json with a reminder to stop using this when/if there's time to refactor kitchen sink (etc?) to use induced slots instead**
-- **This is a pipeline change, so `download_source_data.py` and the planned
-  GitHub Action are in scope**, and it adds `linkml-runtime` as a real runtime
+- **This is a pipeline change, so `download_source_data.py` and the schema-sync
+  GitHub Action (`.github/workflows/schema-sync.yml`, shipped `8adb971` — not
+  "planned") are in scope**, and it adds `linkml-runtime` as a real runtime
   dependency of the transform rather than an aspiration.
 
 Open question for the design: whether `bdchm.processed.json` keeps a `slots:`
@@ -391,6 +441,46 @@ for cls_name in sv.all_classes():
 ```
 (this also gives us the canonical_id back which Explorer may not need but previous views might)
 
+
+### 🔗 OPEN — CURIE → external definition links (deferred, Siggie 2026-08-25)
+
+**The goal:** every CURIE in the schema should link to its external source
+definition. Raised because `transform_schema.py` looked like it expanded only
+`id`/`identity`. **It doesn't** — that impression was wrong, and the real gap is
+elsewhere. Measured against `bdchm.yaml`, 2026-08-25.
+
+`expand_uri()` already has 8 call sites: `class_uri` (`:335`), `slot_uri`
+(`:406`), enum `permissible_values.meaning` (`:492`), `reachable_from` nodes
+(`:516`) and relationships (`:527`), type `uri` (`:589`), type `mappings`
+(`:598`).
+
+It only *looks* id-only because of what the source schema contains:
+
+| location | CURIEs present |
+|---|---|
+| enum `permissible_values.meaning` | **611** |
+| attribute `slot_uri` | 71 — every one is `schema:identifier` |
+| class `class_uri` | 1 — `Entity` → `schema:Thing` |
+| `exact_/close_/related_/narrow_/broad_mappings`, `see_also` | **0** |
+
+16 prefixes declared: BAO, DUO, HP, ICD10CM, MMO, MONDO, OBA, OMOP, UBERON,
+UOM, VBO, bdchm, linkml, ncbitaxon, rxnorm, schema.
+
+**So the real questions are not "which fields get expanded":**
+
+1. The 611 expanded enum-value URLs are the bulk of the external references.
+   Are they reaching the UI as clickable links, or only stored? That is where
+   the user-facing win is.
+2. Slots carry no external mappings at all — only `schema:identifier`. If slots
+   should link out to ontology terms, the `*_mappings` fields have to be
+   populated **upstream** in bdchm.yaml; no transform change can invent them.
+3. `expand_uri` does a live HTTP `HEAD` per prefix (`validate=True`). Under the
+   schema-sync Action that is network I/O in CI on every run. `sv.expand_curie`
+   would drop the hand-rolled prefix walk; decide separately whether to keep
+   validation, and if so cache it rather than re-probing.
+
+**Do not fold this into the induced-slots migration** — it is orthogonal to
+where slot definitions are stored.
 
 ### 🎨 OPEN — own-fwd arrowheads are on the wrong end (formatting round)
 
