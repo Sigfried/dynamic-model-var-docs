@@ -274,3 +274,18 @@ its class suffix instead of beside the other `value` slots.
 Rendering `.name` for a slot is the bug that shipped from Dec 2025 to Aug 2026
 (qualified ids on screen). `src/test/slotDisplayName.test.ts` guards it by
 asserting the attributes-table Name column equals the graph's edge label.
+
+### Attributes as data: `getAttributeSummaries()`
+
+`getDetailData()` renders a class's attributes as a **table**, with
+required/multivalued printed as `'Yes'`/`'No'`. Anything that needs to *reason*
+about attributes — cardinality labels, for instance — must not parse that back
+out. `Element.getAttributeSummaries()` returns the same slots in the same
+declared order as `{name, range, description, required, multivalued}`, with
+`name` already the bare display name.
+
+It is a polymorphic method on the base `Element` returning `[]`, overridden in
+`ClassElement`, rather than an `instanceof ClassElement` narrowing in
+DataService — see the enforcement rules in [CLAUDE.md](CLAUDE.md).
+`getClassSummary` consumes it, which is why every attribute row in the
+ownership view can show a cardinality whether or not it is drawn as an edge.

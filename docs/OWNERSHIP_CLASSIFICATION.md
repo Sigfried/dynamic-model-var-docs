@@ -157,6 +157,28 @@ is more honest than a rule that looks derived and is not.
 
 ## `association` — 8 edges
 
+> ⚠️ **CHALLENGED 2026-08-25 (Siggie), not yet resolved — settle before
+> implementing.** Two objections, both about this set specifically:
+>
+> 1. **The six single-valued ones may not need to be here at all.** Rule 2
+>    already gives them `own-bkwd`, and `association` layers identically — so
+>    the override changes only their *rendering*, not their position or
+>    ordering. Verified 2026-08-25: none of the six ranges on a
+>    `VALUE_OBJECT`, so Exception 2a does not intercept them; deleting them
+>    from the set sends all six to Rule 2 with no other effect.
+> 2. **The two multivalued ones are the real associations** and should be
+>    marked as such explicitly, on their own grounds — they exist to defeat
+>    Rule 1, which would otherwise claim ownership.
+>
+> The table below already shows this asymmetry in its own justifications: the
+> two multivalued rows argue "Rule 1 would claim X, but it doesn't" — a genuine
+> correction — while the six single-valued rows argue "it's a role, not
+> membership", which is what `own-bkwd` ("belongs to") already says.
+>
+> This bears on the open "merge `own-bkwd` and `association`?" question below:
+> if the six collapse into Rule 2, the association set is 2 edges, and merging
+> becomes a much smaller question than the 57-edge one described there.
+
 Neither class owns the other. Drawn slate dashed with **arrowheads at both
 ends**, target ordered first (same layering as `own-bkwd`, no ownership claim).
 

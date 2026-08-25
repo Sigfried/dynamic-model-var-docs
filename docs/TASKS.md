@@ -50,6 +50,26 @@ Remaining work: **ownership classification**, immediately below. Files:
 **THIS IS THE CURRENT WORK.** Finish and implement this before returning to
 routing/formatting.
 
+> 🚧 **SETTLE THE `association` SET FIRST (raised 2026-08-25, Siggie).**
+> Nothing else in this section is blocked, but this changes what gets built.
+> Full statement in
+> [OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md) § `association`.
+>
+> - The **six single-valued** members may not belong in the set: Rule 2 already
+>   yields `own-bkwd`, which layers identically, so `association` changes only
+>   their rendering. Verified against the data — none ranges on a
+>   `VALUE_OBJECT`, so Exception 2a does not intercept, and dropping them from
+>   the set sends all six to Rule 2 cleanly.
+> - The **two multivalued** members (`related_document`, `container`) are the
+>   real associations and should be marked explicitly as such — they exist to
+>   defeat Rule 1.
+>
+> If that resolves as Siggie leans, the association set is **2 edges, not 8**,
+> and the checklist item "replace `OWNERSHIP_OVERRIDES` with the 8-slot
+> association set" becomes a 2-slot set. It also shrinks the open
+> `own-bkwd`/`association` merge question, which is currently framed around
+> moving 57 edges.
+
 **[docs/OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md) is the live
 document** — rewritten 2026-08-21/24 to read as a permanent end-user doc plus
 temporary implementation instructions. **Start there, not in the code.** (The
@@ -132,11 +152,12 @@ say which denominator it means.
 
 - [ ] Rename `own-flip` → `own-bkwd` throughout.
 - [ ] Add the `association` verdict; drop `ref` and the `reference` channel.
-- [ ] Replace `OWNERSHIP_OVERRIDES` (15 entries) with the 8-slot association set
-      **plus the 2-slot Exception 2b set**. Add a sync check that each of the 8
-      still has exactly one site — the set is keyed by slot NAME, and all 8
-      having one class each is luck, not design. That is what made
-      `performed_by` (11 sites) so damaging.
+- [ ] Replace `OWNERSHIP_OVERRIDES` (15 entries) with the association set
+      **plus the 2-slot Exception 2b set**. ⚠️ **The association set is 8 slots
+      or 2 depending on the unsettled question above** — settle it first. Add a
+      sync check that each member still has exactly one site: the set is keyed
+      by slot NAME, and every member having one class each is luck, not design.
+      That is what made `performed_by` (11 sites) so damaging.
 - [ ] Delete `EXCLUDE_HAS_A_TARGETS` so the 12 `Entity`-ranged edges are drawn
       as `own-fwd`. `src/test/containmentGraph.test.ts:102` asserts the rejected
       behavior and must be updated. Update the comment at

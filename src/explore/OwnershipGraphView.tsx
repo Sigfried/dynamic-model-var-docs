@@ -29,8 +29,10 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type {
+  AttributeSummary,
   DataService, OwnershipSubgraph, OwnershipSubgraphEdge, OwnershipSubgraphNode,
 } from '../services/DataService';
+import { cardinalityLabel } from '../services/DataService';
 import {
   useGraphLayout, useZoomPan, roundedPath, sectionPoints, mergeTail,
   smoothStepPath,
@@ -118,7 +120,7 @@ function hostOf(e: OwnershipSubgraphEdge): string {
 function buildViewModel(
   sub: OwnershipSubgraph,
   expandedNodes: Set<string>,
-  plainSlotsFor: (id: string) => Array<{ name: string; range: string }>,
+  plainSlotsFor: (id: string) => AttributeSummary[],
 ): ViewModel {
   const isaParents = new Map<string, string[]>();
   const subclassCount = new Map<string, number>();
@@ -161,7 +163,11 @@ function buildViewModel(
       .filter(s => !entityNames.has(s.name))
       .map((s): RowVM => ({
         slot: s.name, range: s.range, channel: 'plain',
-        flipped: false, cardinality: '', isLoop: false, connected: false,
+        // Same label drawn edges use. These rows have no edge to carry it —
+        // scalar/enum ranges are never drawn — but the cardinality is a fact
+        // about the attribute, not about whether it happens to be drawn.
+        flipped: false, cardinality: cardinalityLabel(s.required, s.multivalued),
+        isLoop: false, connected: false,
       }));
     const connected = entityRows.filter(r => r.connected);
     // Entity-ranged and plain rows interleave by schema order once hidden,

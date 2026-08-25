@@ -230,6 +230,13 @@ New dependency: `elkjs` only (skip NodeLinkView's d3-force mode in v1).
    chips ⊳/▷) — **this is the next piece of work.** Cardinality indicators
    at edge endpoints are wanted (Siggie, 2026-08-19), together with some
    form of label/title text on links.
+
+   Note this is about **edge endpoints** and is still open. Cardinality in the
+   **attribute rows** is done (2026-08-25): every row shows one, drawn or not.
+   It used to come from the edge, so scalar-ranged rows — which are never
+   drawn — showed a blank, and `Document.url` read as though it had no
+   cardinality when it is `1..*`. Rows now derive it from the model
+   (`getAttributeSummaries`) via the same `cardinalityLabel` the edges use.
 4. ~~Detail drawer (Explorer card reuse + the two fixes).~~ **DONE**
    2026-08-12. `src/explore/DetailDrawer.tsx` opens on node click, reusing
    `getClassSummary` (the Explorer card's data path) rather than

@@ -8,7 +8,95 @@ Newest first.
 
 ---
 
+## 2026-08-25 — Cardinality on undrawn rows; `association` set challenged
+
+> ⚠️ **REVIEW CAVEAT, stated by Siggie: this session's work was not reviewed
+> closely and should be treated as suspect.** That covers the A→B commit
+> (`6671166`) as well as the cardinality fix below. Verification was thorough
+> in the mechanical sense — tests confirmed failing before fixing, byte-identical
+> transform re-runs, before/after measurements — but *thorough verification is
+> not the same as human review*, and the design judgements (especially the slot
+> id scheme) had far less scrutiny than the test counts suggest. Treat
+> conclusions here as provisional; re-derive rather than cite.
+
+### The cardinality gap: mostly NOT the `Entity` exclusion
+
+Siggie's screenshot: `Document.focus` renders `Entity` with no cardinality.
+My first answer called it "a third symptom of the same `Entity` exclusion" —
+too neat, and wrong. Checking properly: of Document's six rows, only `focus`
+would gain a cardinality when `EXCLUDE_HAS_A_TARGETS` is removed. The other
+five are scalar/enum-ranged, never become edges, and would have stayed blank
+forever. `Document.url` is `1..*` and showed nothing.
+
+Root cause, two layers:
+
+1. Cardinality was attached to **edges**. Rows without a drawn edge got a
+   hardcoded `cardinality: ''`.
+2. `getClassSummary` re-parsed the RENDERED attributes table, which prints
+   required/multivalued as `'Yes'`/`'No'` — so the booleans were already gone
+   before the view could use them.
+
+Fix: `getAttributeSummaries()`, a polymorphic method on `Element` returning
+`{name, range, description, required, multivalued}`, overridden in
+`ClassElement`. Deliberately NOT `instanceof ClassElement` in DataService —
+docs/CLAUDE.md prescribes a polymorphic method for exactly this. `getClassSummary`
+now reads the model instead of re-parsing its own output, and `cardinalityLabel`
+is exported so the view labels undrawn rows the same way edges do rather than
+reimplementing it.
+
+### A test gap I could not close cleanly — recorded because it is a real hole
+
+The tests cover the data thoroughly but NOT the single line in
+`OwnershipGraphView` that calls `cardinalityLabel`. Two routes tried and
+rejected:
+
+- **Export `buildViewModel`** — trips `react-refresh/only-export-components`.
+  Real rule, no precedent in this repo for suppressing it, and I was not willing
+  to invent one for a test.
+- **Render the component in jsdom** — produces no rows at all. Layout is async
+  via an ELK worker (see the reasoning already recorded in
+  `useGraphLayout.test.ts`), so nothing settles.
+
+Verified the gap is real: reverting the view line leaves the whole suite green.
+The proper fix is extracting `buildViewModel` plus the five node-geometry
+constants it uses (`HEADER_H`, `ROW_H`, `FOOTER_H`, `hostOf`, `ownersStripHFor`)
+into their own module — which is precisely what the lint rule was pointing at.
+Not done here because it would ripple through the render code, and this was
+meant to be a contained fix. Noted in the test file too.
+
+### `association — 8 edges` challenged (Siggie)
+
+Not implemented — recorded for the classification session. Siggie's objection,
+and it holds up against the data:
+
+- The **six single-valued** members do not obviously need the verdict. Rule 2
+  already gives them `own-bkwd`, and `association` layers IDENTICALLY, so the
+  override changes only rendering. Checked whether Exception 2a would intercept
+  them instead: it would not — none of the six ranges (`Organization`, `Assay`,
+  `QuestionnaireItem`) is in `VALUE_OBJECTS`. So deleting them from the set
+  sends all six to Rule 2 with no other effect.
+- The **two multivalued** members (`related_document`, `container`) are the real
+  associations: they exist to defeat Rule 1, which would otherwise read
+  multivalued as ownership.
+
+The doc's own table already encodes the asymmetry without naming it — the two
+multivalued rows argue "Rule 1 would claim X, but it doesn't" (a correction),
+while the six single-valued rows argue "it's a role, not membership", which is
+what `own-bkwd` already means.
+
+If it resolves this way the association set is **2 edges, not 8**, and the open
+"merge `own-bkwd` and `association`?" question shrinks a lot — it is currently
+framed as moving 57 edges out of "ownership".
+
+---
+
 ## 2026-08-24 (later) — Option A→B implemented
+
+> ⚠️ **Not closely reviewed by Siggie — treat as suspect.** See the review
+> caveat in the 2026-08-25 entry above; it applies to this work too. The slot
+> id scheme in particular (qualify every site of a conflicting name, 220 → 337
+> ids) is a design decision that got far less human scrutiny than the volume of
+> verification here implies.
 
 Both shipped together in one working tree, as `docs/TASKS.md` insisted: A alone
 tidies the screen while leaving `focus` collapsed, and B alone is the December

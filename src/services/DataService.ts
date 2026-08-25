@@ -16,6 +16,7 @@ import type {
   DetailData,
   FloatingBoxMetadata
 } from '../contracts/ComponentData';
+import type { AttributeSummary } from '../models/Element';
 import type { ElementTypeId } from '../config/appConfig';
 import type {
   EdgeAttributes,
@@ -47,7 +48,10 @@ const {elementTypes, } = APP_CONFIG;
 
 // Re-export UI types for UI components
 export type { EdgeInfo, ItemInfo };
+// Re-exported so UI components get it from DataService, never from models/.
+export type { AttributeSummary } from '../models/Element';
 export type { ContainmentGraph, ContainmentNode, ContainmentEdge } from '../models/containmentGraph';
+export { cardinalityLabel } from '../models/containmentGraph';
 export type {
   OwnershipSubgraph, OwnershipSubgraphNode, OwnershipSubgraphEdge,
   OwnershipSubgraphOptions,
@@ -85,7 +89,7 @@ export interface ClassSummaryInfo {
   description: string;
   isAbstract: boolean;
   parentId?: string;
-  slots: Array<{ name: string; range: string; description: string }>;
+  slots: AttributeSummary[];
   referencedBy: Array<{ classId: string; slotName: string }>;
 }
 
@@ -488,15 +492,11 @@ export class DataService {
     if (!element) return null;
 
     const detail = element.getDetailData();
-    const slotsSection = detail.sections.find(s => s.sectionId === SectionId.Attributes);
-    const slotRows = (slotsSection?.tableContent ?? []) as string[][];
 
-    // Slots: [Name, Source, Range, Required, Multivalued, Description]
-    const slots = slotRows.map(row => ({
-      name: String(row[0] ?? ''),
-      range: String(row[2] ?? ''),
-      description: String(row[5] ?? ''),
-    }));
+    // From the model rather than by re-parsing the rendered table: the table
+    // renders required/multivalued as 'Yes'/'No', and callers need the booleans
+    // to label cardinality. Same slots, same declared order.
+    const slots = element.getAttributeSummaries();
 
     // Find all classes that reference this class via CLASS_RANGE edges
     const referencedBy: Array<{ classId: string; slotName: string }> = [];

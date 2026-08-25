@@ -65,6 +65,19 @@ function getElementType(name: string): string | undefined {
   return attrs?.type;
 }
 
+/**
+ * One attribute of a class, as data rather than as a rendered table row.
+ * `name` is the bare display name (see `Element.displayName`); `required` and
+ * `multivalued` are the booleans the cardinality label is derived from.
+ */
+export interface AttributeSummary {
+  name: string;
+  range: string;
+  description: string;
+  required: boolean;
+  multivalued: boolean;
+}
+
 // Base abstract class for all element types
 export abstract class Element {
   protected abstract readonly type: ElementTypeId;
@@ -119,6 +132,21 @@ export abstract class Element {
    */
   getBadgeTooltip(): string | undefined {
     return undefined; // Default: no tooltip
+  }
+
+  /**
+   * The element's attributes as data, for callers that need the FACTS rather
+   * than the rendered table.
+   *
+   * `getDetailData()` renders required/multivalued as 'Yes'/'No' strings for
+   * display; anything that has to reason about cardinality would otherwise have
+   * to parse those back, which is why the ownership view showed no cardinality
+   * on unconnected rows. Only classes have attributes, so the default is empty
+   * and `ClassElement` overrides it — a polymorphic method rather than a
+   * `instanceof ClassElement` narrowing in DataService (see docs/CLAUDE.md).
+   */
+  getAttributeSummaries(): AttributeSummary[] {
+    return [];
   }
 
   /**
@@ -437,6 +465,29 @@ export class ClassElement extends Range {
     this.parentId = data.parent;
     this.abstract = data.abstract;
     this.slotRefs = data.slots;
+  }
+
+  /**
+   * Attributes as data, in the schema's declared order — the same slots and the
+   * same order as the Attributes table, so the two cannot drift apart.
+   */
+  override getAttributeSummaries(): AttributeSummary[] {
+    return this.slotRefs
+      .map(slotRef => {
+        const slot = this.getSlotElement(slotRef.id);
+        if (!slot) return null;
+        return {
+          // Bare name, matching the table's Name column and the graph's edge
+          // label — those three must agree (see slotDisplayName.test.ts).
+          name: slot.displayName,
+          range: slot.range ?? '',
+          description: slot.description ?? '',
+          // LinkML omits these rather than writing false.
+          required: slot.required ?? false,
+          multivalued: slot.multivalued ?? false,
+        };
+      })
+      .filter((s): s is AttributeSummary => s !== null);
   }
 
   getDetailData(): DetailData {

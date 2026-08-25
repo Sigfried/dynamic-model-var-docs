@@ -67,8 +67,8 @@ npm test:coverage
 
 ## Current Test Coverage
 
-**Total: 229 tests + 2 skipped, across 20 test files** (all passing ✅,
-verified 2026-08-24 — run `npx vitest run` for the live figure).
+**Total: 235 tests + 2 skipped, across 21 test files** (all passing ✅,
+verified 2026-08-25 — run `npx vitest run` for the live figure).
 
 > ⚠️ **The per-file inventory below is stale and is not maintained.** It
 > describes 8 files totalling 134 tests; four of those files
@@ -77,9 +77,9 @@ verified 2026-08-24 — run `npx vitest run` for the live figure).
 > and the test runner, not this list. Kept because the per-file *purpose*
 > descriptions still explain intent well for the files that remain.
 
-### Slot identity regression tests (added 2026-08-24)
+### Regression tests added 2026-08-24/25
 
-Two files worth knowing about, because both guard bugs that shipped for months:
+Three files worth knowing about, because each guards a bug that shipped for months:
 
 - **`slotDisplayName.test.ts`** — a slot's `.name` is its (possibly qualified)
   identity and `.displayName` is the bare name the user reads. The key assertion
@@ -91,9 +91,23 @@ Two files worth knowing about, because both guard bugs that shipped for months:
   `focus` multivalued distinction, and a structural guard that every class
   slot-reference resolves to a slot element.
 
-Both were confirmed to **fail** against the pre-fix state before being accepted
-(3-of-7 and 4-of-6). A regression test that has never failed proves nothing —
-see "Aim for regression prevention" above.
+- **`attributeCardinality.test.ts`** — every attribute row carries a
+  cardinality, whether or not it is drawn as an edge. The label used to come
+  from the edge, so scalar-ranged rows (never drawn) showed a blank and
+  `Document.url` read as having no cardinality when it is `1..*`.
+
+Both slot-identity files were confirmed to **fail** against the pre-fix state
+before being accepted (3-of-7 and 4-of-6). A regression test that has never
+failed proves nothing — see "Aim for regression prevention" above.
+
+> **Known gap in `attributeCardinality.test.ts`:** it pins the data the rows are
+> built from, but not the line in `OwnershipGraphView` that applies the label.
+> Exporting `buildViewModel` to reach it trips
+> `react-refresh/only-export-components`, and rendering the component in jsdom
+> yields no rows (layout is async via an ELK worker). Closing this properly
+> means extracting `buildViewModel` and its node-geometry constants into their
+> own module — which is what the lint rule is pointing at. Verified the gap is
+> real: reverting the view line leaves the suite green.
 
 ### Test Files
 

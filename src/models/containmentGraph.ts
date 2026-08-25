@@ -175,8 +175,10 @@ export interface ClassMeta {
   description: string;
 }
 
-/** LinkML cardinality label from required/multivalued. */
-function cardinalityLabel(required: boolean, multivalued: boolean): string {
+/** LinkML cardinality label from required/multivalued.
+ *  Exported so unconnected (scalar-ranged) rows in the ownership view label
+ *  cardinality the same way drawn edges do, rather than reimplementing it. */
+export function cardinalityLabel(required: boolean, multivalued: boolean): string {
   if (multivalued) return required ? '+' : '*';
   return required ? '1' : '0..1';
 }
