@@ -247,7 +247,7 @@ const ARROW_LEN = TITLE_EM * 1.5;   // base → point, ~1.5em
 
 /** Gap between a node's border and the arrowhead TIP, so the whole head is
  *  visible against the canvas rather than half-buried in the border. */
-const ARROW_GAP = 3;
+const ARROW_GAP = 0;
 
 /** Reference edges are secondary; their heads are a touch smaller. */
 const REF_SCALE = 0.85;
@@ -893,7 +893,7 @@ export default function OwnershipGraphView({
             p.dataset.channel === 'reference' ? STROKE_REF_HOVER : STROKE_OWN_HOVER,
           );
         } else {
-          p.style.opacity = '0.08';
+          p.style.opacity = '0.38'; // [sg] changed this...needs to live in config
           p.style.strokeWidth = '';
         }
       });

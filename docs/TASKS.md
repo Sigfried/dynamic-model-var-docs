@@ -39,13 +39,15 @@ state.
 Remaining work: **ownership classification**, immediately below. Files:
 `containmentGraph.ts`, `Graph.ts`, `OwnershipGraphView.tsx`, components.
 
-> 🏗️ **Also queued, and it may delete work rather than add it:** moving slot
-> storage onto the class definitions via `SchemaView.induced_class()` (Siggie,
-> 2026-08-25 — see the section further down). If that lands, the qualified-id
-> scheme and conflict detection added in `6671166` all become unnecessary.
-> It does **not** block classification — the classifier reads bare slot names
-> and per-class range/cardinality either way — but it is worth knowing before
-> building anything new on top of the `slots:` section.
+> 🏗️ **Also queued, and it should delete a bunch of work:**
+> moving slot storage onto the class definitions via
+> `SchemaView.induced_class()` (Siggie, 2026-08-25 — see the section
+> further down). If that lands, the qualified-id scheme and conflict
+> detection added in `6671166` all become unnecessary. It does **not**
+> block classification — the classifier reads bare slot names and
+> per-class range/cardinality either way — but it is worth knowing before
+> building anything new on top of the `slots:` section. **[sg] no, the
+> induced class thing should come first**
 
 **Two inputs to that work changed under it — re-derive, don't reuse:**
 
@@ -64,6 +66,8 @@ Remaining work: **ownership classification**, immediately below. Files:
 
 **THIS IS THE CURRENT WORK.** Finish and implement this before returning to
 routing/formatting.
+
+[sg] No, deal with the 08-25 work first
 
 > 🚧 **SETTLE THE `association` SET FIRST (raised 2026-08-25, Siggie).**
 > Nothing else in this section is blocked, but this changes what gets built.
@@ -338,14 +342,55 @@ Verified details worth knowing before designing this:
 - **Kitchen Sink needs the slot-oriented view.** `SlotCollection`,
   `getClassesUsingSlot`, `elementLookup` and the middle panel are all keyed on
   slot ids today. A class-first store has to either derive that index or keep a
-  reduced one.
+  reduced one. 
+  **[sg] leave a comment (as a field since json doesn't take comments) at the top of the "slots:" section in processed.json with a reminder to stop using this when/if there's time to refactor kitchen sink (etc?) to use induced slots instead**
 - **This is a pipeline change, so `download_source_data.py` and the planned
   GitHub Action are in scope**, and it adds `linkml-runtime` as a real runtime
   dependency of the transform rather than an aspiration.
 
 Open question for the design: whether `bdchm.processed.json` keeps a `slots:`
 section at all, and if so whether it becomes a derived index rather than the
-source of truth.
+source of truth. **[sg] see might note above**
+
+**[sg] the Explorer detail pane doesn't include all the details it should.**
+it should be modelled on the Nested Tabular details table (which means it
+will need more horizontal space, maybe taking up bottom of viewport). attribute
+defs in induced class defs do not include where the attribute was inherited
+from. here's some code for that:
+```
+def find_defining_class(sv, current_class: str, attribute_name: str) -> str:
+    """Traces up the ancestry tree to find the exact class that declared the attribute."""
+    # Ordered list from the class up to its oldest ancestors
+    for ancestor in sv.class_ancestors(current_class):
+        raw_ancestor_def = sv.get_class(ancestor)
+
+        # Check if this ancestor explicitly contains the inline attribute definition
+        if raw_ancestor_def.attributes and attribute_name in raw_ancestor_def.attributes:
+            return ancestor
+
+    # Fallback to the current class if it wasn't inherited
+    return current_class
+
+target_attr = "focus"
+class_attribute_lineage = {}
+
+for cls_name in sv.all_classes():
+    # Use induced_class just like you were doing to safely pull downstream attributes
+    induced_cls = sv.induced_class(cls_name)
+
+    if target_attr in induced_cls.attributes:
+        # Trace the true structural origin
+        origin_class = find_defining_class(sv, cls_name, target_attr)
+
+        class_attribute_lineage[cls_name] = {
+            "canonical_id": f"{origin_class}__{target_attr}",
+            "defined_in_class": origin_class,
+            "is_inherited": origin_class != cls_name,
+            "slot_definition": induced_cls.attributes[target_attr] # Contains your local 'multivalued' rules
+        }
+```
+(this also gives us the canonical_id back which Explorer may not need but previous views might)
+
 
 ### 🎨 OPEN — own-fwd arrowheads are on the wrong end (formatting round)
 
