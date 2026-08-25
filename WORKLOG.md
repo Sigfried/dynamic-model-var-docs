@@ -8,7 +8,7 @@ Newest first.
 
 ---
 
-## 2026-08-25 — Cardinality on undrawn rows; `association` set challenged
+## 2026-08-25 — Cardinality on undrawn rows; `association` and slot storage challenged
 
 > ⚠️ **REVIEW CAVEAT, stated by Siggie: this session's work was not reviewed
 > closely and should be treated as suspect.** That covers the A→B commit
@@ -63,6 +63,49 @@ constants it uses (`HEADER_H`, `ROW_H`, `FOOTER_H`, `hostOf`, `ownersStripHFor`)
 into their own module — which is precisely what the lint rule was pointing at.
 Not done here because it would ripple through the render code, and this was
 meant to be a contained fix. Noted in the test file too.
+
+### Slot storage moving onto classes — and why it deletes 6671166's machinery
+
+Siggie's call, recorded not implemented: the `slots:` section of
+`bdchm.processed.json` has been a recurring source of problems, and induced slot
+definitions should live **with the class definitions**, at least for Explorer.
+Kitchen Sink still wants all slots together, so a slot-oriented view survives in
+some form.
+
+Siggie proposed the mechanism; I verified it runs before writing it down
+(`linkml_runtime` 1.9.5, already in `scripts/.venv`):
+
+```python
+sv = SchemaView(".../bdchm.yaml")
+classes = {cls: sv.induced_class(cls) for cls in sv.all_classes()}
+```
+
+**Every case that broke `transform_schema.py` comes out right natively** —
+`items` splits Questionnaire/QuestionnaireResponse correctly, `part_of`
+self-loops on QuestionnaireItem, `focus` is multivalued on the sets and
+single-valued on the scalars, `quantity` is Quantity vs float. That is precisely
+what `resolve_slot_ids()` was built to reconstruct.
+
+**So this deletes rather than adds.** With definitions on the class there is no
+shared slot entry for two declarations to collide in, so the conflict detection,
+the qualified ids, the majority/tie rules and the Part 2 name-keyed metadata fix
+— everything added in `6671166` — stop being necessary. Worth stating plainly
+because I built that machinery yesterday and it would be easy to defend it out
+of sunk cost; the id scheme was also the least-reviewed part of it.
+
+Two things checked that a future session should not have to rediscover:
+
+- **Metadata survives.** `slot_uri`, `identifier`, `description`, `alias`,
+  `inlined`, `comments`, `examples` are all on the induced attribute — including
+  the `slot_uri` whose loss forced the Part 2 fix.
+- **`domain_of` is NOT `inherited_from`.** I nearly wrote that it was. It is the
+  list of *every* declaring class (`DrugExposure.identity.domain_of` has 14
+  entries), not the nearest ancestor: 54 of 432 sites disagree. The nearest
+  declaring ancestor still needs computing, via `sv.class_ancestors()`.
+
+Does not block the classification work — the classifier reads only bare
+`slotName`, `range`, `multivalued`, `required` (verified at
+`containmentGraph.ts:221-230`), none of which depends on where slots are stored.
 
 ### `association — 8 edges` challenged (Siggie)
 

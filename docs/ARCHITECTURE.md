@@ -123,7 +123,7 @@ Two invariants this rests on, both easy to break:
 - **`transform_classes` and `transform_slots` must consume the same decision.** They previously derived slot ids independently; disagreement leaves a class referencing an id with no entry in `slots`.
 - **Global-slot metadata is keyed by NAME, not by the bare id** (which conflicting global slots no longer have). `global` and `slot_url` apply to every site; the canonical `range`/`required`/`multivalued` restore applies **only** to an unqualified entry, since writing it onto a qualified entry would overwrite the per-class definition that entry exists to record.
 
-Using `induced_slot()` from `linkml-runtime` remains the more principled long-term route (see [TASKS.md](../TASKS.md)); the current approach reproduces the part of it this app needs without adding the dependency.
+**This machinery is expected to be removed.** Siggie's direction (2026-08-25) is to move induced slot definitions onto the class definitions, built with `SchemaView.induced_class()`. Verified: it produces every one of the per-class definitions above natively, so there is no shared slot entry for declarations to collide in and the conflict detection, the qualified ids and the tie rules all stop being necessary. See [TASKS.md](../TASKS.md) § "move slot storage into the class definitions" for the verified details and the open questions (Kitchen Sink still needs a slot-oriented view; `domain_of` is not `inherited_from`).
 
 ---
 

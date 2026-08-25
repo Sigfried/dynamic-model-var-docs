@@ -14,6 +14,15 @@
 > largely done by hand; its "Pros" argument (authoritative resolution logic
 > instead of our own) still stands and is the reason to revisit.
 > See [ARCHITECTURE.md](ARCHITECTURE.md) for what the transform does today.
+>
+> **Update 2026-08-25 — Siggie has chosen this direction**, with a variation:
+> `induced_class()` rather than per-slot `induced_slot()`, and the induced
+> definitions stored **with the class definitions** rather than in a shared
+> `slots:` section. Verified working against `bdchm.yaml`. That makes Option 1
+> below the live plan, so read the Options as a decision already taken rather
+> than an open menu. The concrete snippet, what was verified, and the open
+> questions are in [TASKS.md](../TASKS.md) § "move slot storage into the class
+> definitions".
 
 ---
 

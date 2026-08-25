@@ -23,14 +23,29 @@ elsewhere in the docs as stale. **Needs Siggie: set a new target or drop it.**
 
 ### 📍 Option A→B is DONE (2026-08-24). Ownership classification is what remains.
 
-**Option A→B shipped together**, uncommitted in the working tree. Reasoning,
-rejected approaches and the corrected measurements: `WORKLOG.md`, entry
-"2026-08-24 (later)". Verification: 229 tests / 20 files green, typecheck clean,
-transform re-run byte-identical. Both new test files were confirmed to fail
-against the pre-fix state.
+**Option A→B shipped together** as `6671166`; the attribute-cardinality fix
+followed as `9dec0d7`. Reasoning, rejected approaches and the corrected
+measurements: `WORKLOG.md`, entries "2026-08-24 (later)" and "2026-08-25".
+Verification: 235 tests / 21 files green, typecheck clean, transform re-run
+byte-identical. Every new test file was confirmed to fail against its pre-fix
+state.
+
+> ⚠️ **Both commits carry a review caveat from Siggie: they were not closely
+> reviewed and should be treated as suspect.** The verification was mechanically
+> thorough, but that is not the same as human review, and the slot id scheme in
+> particular had far less scrutiny than the test counts suggest. Re-derive
+> rather than cite. See the WORKLOG entries.
 
 Remaining work: **ownership classification**, immediately below. Files:
 `containmentGraph.ts`, `Graph.ts`, `OwnershipGraphView.tsx`, components.
+
+> 🏗️ **Also queued, and it may delete work rather than add it:** moving slot
+> storage onto the class definitions via `SchemaView.induced_class()` (Siggie,
+> 2026-08-25 — see the section further down). If that lands, the qualified-id
+> scheme and conflict detection added in `6671166` all become unnecessary.
+> It does **not** block classification — the classifier reads bare slot names
+> and per-class range/cardinality either way — but it is worth knowing before
+> building anything new on top of the `slots:` section.
 
 **Two inputs to that work changed under it — re-derive, don't reuse:**
 
@@ -271,6 +286,66 @@ gen-linkml materializes inherited attributes onto every subclass, so each
 Test: `src/test/slotConflictResolution.test.ts` — confirmed to fail 4-of-6
 against the old `bdchm.processed.json`. Includes a structural guard that every
 class slot-ref resolves.
+
+### 🏗️ OPEN — move slot storage into the class definitions (Siggie, 2026-08-25)
+
+**Siggie's direction, not yet designed.** The `slots:` section of
+`bdchm.processed.json` has been a recurring source of problems — the collapse
+bug, the qualified-id scheme, the `global`/`slot_uri` metadata keyed on a bare
+id. The proposal: **induced slot definitions should live with the class
+definitions**, at least for Explorer. Kitchen Sink still wants all slots
+together, so a slot-oriented view has to survive in some form.
+
+The mechanism Siggie proposes, and it works — verified 2026-08-25 against
+`bdchm.yaml` with `linkml_runtime` 1.9.5, already installed in `scripts/.venv`:
+
+```python
+from linkml_runtime.utils.schemaview import SchemaView
+sv = SchemaView(".../bdchm.yaml")
+classes = {cls: sv.induced_class(cls) for cls in sv.all_classes()}
+```
+
+`induced_class(c).attributes[slot]` gives the fully-merged per-class definition.
+**Every case that broke `transform_schema.py` comes out right natively:**
+
+| case | induced result |
+|---|---|
+| `Questionnaire.items` | `QuestionnaireItem` |
+| `QuestionnaireResponse.items` | `QuestionnaireResponseItem` |
+| `QuestionnaireItem.part_of` | `QuestionnaireItem` (not `ResearchStudy`) |
+| `ObservationSet.focus` | `Entity`, multivalued |
+| `Observation.focus` | `Entity`, single-valued |
+| `Procedure.quantity` / `DrugExposure.quantity` | `Quantity` / `float` |
+
+That is the whole reason `resolve_slot_ids()` exists. **If slots move onto
+classes, the conflict detection, the qualified ids and the majority/tie rules
+all become unnecessary** — there is no shared slot entry to collide in, because
+the definition simply lives on the class. That deletes a large amount of
+machinery added 2026-08-24, and the id scheme was the least-reviewed part of it
+(see the WORKLOG caveat).
+
+Verified details worth knowing before designing this:
+
+- **Metadata survives.** `slot_uri`, `identifier`, `description`, `alias`,
+  `inlined`, `comments`, `examples` are all on the induced attribute — including
+  the `slot_uri` that Part 2 of `transform_slots` currently has to reattach by
+  name.
+- **`domain_of` is NOT `inherited_from`.** It is the list of *every* class
+  declaring the attribute (`DrugExposure.identity.domain_of` has 14 entries), not the nearest
+  ancestor. 54 of 432 sites disagree. Use `sv.class_ancestors(cls)` to find the
+  nearest declaring ancestor instead — that still replaces the hand-rolled
+  hierarchy walk, just not with a single field.
+- **Kitchen Sink needs the slot-oriented view.** `SlotCollection`,
+  `getClassesUsingSlot`, `elementLookup` and the middle panel are all keyed on
+  slot ids today. A class-first store has to either derive that index or keep a
+  reduced one.
+- **This is a pipeline change, so `download_source_data.py` and the planned
+  GitHub Action are in scope**, and it adds `linkml-runtime` as a real runtime
+  dependency of the transform rather than an aspiration.
+
+Open question for the design: whether `bdchm.processed.json` keeps a `slots:`
+section at all, and if so whether it becomes a derived index rather than the
+source of truth.
 
 ### 🎨 OPEN — own-fwd arrowheads are on the wrong end (formatting round)
 
