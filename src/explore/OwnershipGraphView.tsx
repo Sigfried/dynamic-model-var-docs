@@ -45,7 +45,7 @@ import {
 } from './graph-core';
 import type { EdgeSection, GraphSpec, GraphSpecPort, PlacedNode, Point } from './graph-core';
 import {
-  groupSiblings, mergedIdFor, siblingColor, withChildHeaders,
+  groupSiblings, isMergedId, mergedIdFor, siblingColor, withChildHeaders,
 } from './siblingMerge';
 import type { MergedMember } from './siblingMerge';
 
@@ -87,7 +87,7 @@ const PAD = 28;
 
 type Direction = 'RIGHT' | 'DOWN';
 
-interface RowVM {
+export interface RowVM {
   slot: string;
   range: string;
   /** 'plain' = scalar/enum-valued attribute — listed when expanded, never an edge. */
@@ -118,7 +118,7 @@ interface RowVM {
   declaringClass?: string;
 }
 
-interface NodeVM extends OwnershipSubgraphNode {
+export interface NodeVM extends OwnershipSubgraphNode {
   isaParents: string[];
   subclassCount: number;
   /** Set on a merged sibling box: the classes folded into it, in colour order.
@@ -144,7 +144,7 @@ interface NodeVM extends OwnershipSubgraphNode {
   allRows: RowVM[];
 }
 
-interface ViewModel {
+export interface ViewModel {
   nodes: NodeVM[];
   /** Routed edges: ownership + reference, minus self-loops (row ⟲ markers). */
   edges: OwnershipSubgraphEdge[];
@@ -178,7 +178,7 @@ function anchorOf(e: AnchoredEdge): string {
   return e.anchorClass ?? hostOf(e);
 }
 
-function buildViewModel(
+export function buildViewModel(
   sub: OwnershipSubgraph,
   expandedNodes: Set<string>,
   plainSlotsFor: (id: string) => AttributeSummary[],
@@ -281,7 +281,7 @@ function nodeHeight(
  * BETWEEN two siblings of the same parent becomes a self-loop on the merged
  * box and is dropped from routing — the box already shows both of its ends.
  */
-function mergeSiblings(
+export function mergeSiblings(
   vm: ViewModel,
   parentOf: (id: string) => string | undefined,
   isMergeableParent: (parent: string) => boolean,
@@ -457,42 +457,44 @@ function mergeSiblings(
   ];
   /**
    * Inside a merged box a child does not have its parent's slots — the PARENT
-   * has them, and the child is shown as the delta. So an edge anchored on a
-   * child's INHERITED slot is not that child's edge at all; it is the parent's,
-   * seen once per child.
+   * has them, and the child is shown as the delta. An inherited slot therefore
+   * carries ONE edge for the whole box, not one per child: five siblings all
+   * declaring `associated_visit` fanned five lines into a single anchor row.
    *
-   * Dropping those (rather than drawing five and collapsing them afterwards) is
-   * the difference between constructing the right graph and repairing a wrong
-   * one. Five siblings declaring `associated_visit` produced five edges into
-   * one anchor row, which the render fanned five ways for a single
-   * relationship. Deduping after the fact would also have had to pick a winner
-   * among five edges that are only ASSUMED identical — a child narrowing an
-   * inherited range would be silently discarded.
+   * But it must be one, not zero. An earlier version dropped every child's
+   * copy on the theory that "the parent's own copy survives" — which is false
+   * whenever the parent is not itself on the canvas. Selecting
+   * DimensionalObservation alone drew Organization, Participant and Visit as
+   * unconnected boxes: their edges were the parent's, and no parent was there
+   * to contribute them.
    *
-   * The parent's own copy survives because the parent is a source whenever any
-   * child is merged (`parentEdgeFor`), so nothing is lost by dropping the
-   * children's.
+   * So: keep the FIRST edge per (box, anchor row, other end, direction) and
+   * drop the rest. A child's genuine override anchors on its own row, so it
+   * has a different key and always survives — the case dedup-by-value would
+   * have got wrong.
    */
+  const seenEdge = new Set<string>();
   const edges = vm.edges
-    .filter(e => {
-      const host = hostOf(e);
-      if (!absorbed.has(host)) return true;        // not merged, keep as-is
-      const declaredBy = declaringClassOf(host, e.slotName);
-      // Kept when the host is the declarer — which covers both the parent's
-      // own slots and a child's genuine override. A child's copy of a slot it
-      // merely INHERITS unchanged is dropped: that edge is the parent's, and
-      // keeping all five was what fanned one relationship into five lines.
-      return declaredBy === undefined || declaredBy === host;
-    })
     .map(e => ({
       ...e,
       source: absorbed.get(e.source) ?? e.source,
       target: absorbed.get(e.target) ?? e.target,
       // Which row inside the box this edge anchors on. A merged box can hold
-      // several rows with one slot name (parent's plus each override), so the
-      // name alone is no longer a unique anchor.
-      anchorClass: hostOf(e),
+      // several rows with one slot name (the parent's, plus each child's
+      // override), so the slot name alone is not a unique anchor.
+      anchorClass: absorbed.has(hostOf(e))
+        ? declaringClassOf(hostOf(e), e.slotName) ?? hostOf(e)
+        : hostOf(e),
     }))
+    .filter(e => {
+      const host = hostOf(e);
+      if (!isMergedId(host)) return true;          // untouched by merging
+      const other = host === e.source ? e.target : e.source;
+      const key = `${host}|${e.anchorClass}|${e.slotName}|${other}|${e.storageDirection}`;
+      if (seenEdge.has(key)) return false;
+      seenEdge.add(key);
+      return true;
+    })
     // Both ends in the same box: the relationship is inside the box now.
     .filter(e => e.source !== e.target);
 
