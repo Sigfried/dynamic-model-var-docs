@@ -43,7 +43,7 @@ import type {
 } from '../models/ownershipSubgraph';
 // Re-export so UI components (which must not import from config/ or models/) can
 // reference section identities without depending on display strings.
-export { SectionId } from '../config/appConfig';
+export { SectionId, GRAPH_COLORS } from '../config/appConfig';
 const {elementTypes, } = APP_CONFIG;
 
 // Re-export UI types for UI components

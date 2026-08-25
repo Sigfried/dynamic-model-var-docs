@@ -24,23 +24,19 @@
  * happened.
  */
 
-/** Swatch colours for a sibling's own rows. Chosen to stay distinguishable
- *  from the channel dots (amber = ownership, gray = reference) and from each
- *  other in both themes. Cycles if a parent ever has more siblings than this
- *  on canvas at once. */
-export const SIBLING_COLORS = [
-  '#2563eb', // blue
-  '#16a34a', // green
-  '#db2777', // pink
-  '#9333ea', // purple
-  '#0891b2', // cyan
-  '#ca8a04', // yellow-dark
-  '#dc2626', // red
-  '#4f46e5', // indigo
-] as const;
+import { GRAPH_COLORS } from '../config/appConfig';
 
+/**
+ * Colour for the nth child of a merged box. The palette itself lives in
+ * appConfig (GRAPH_COLORS.siblings) — never inline a colour here.
+ *
+ * Wraps rather than throwing when a box has more children than the palette:
+ * a recycled colour is a legibility problem, a crash is a broken canvas. If
+ * boxes routinely exceed the palette, lengthen it there.
+ */
 export function siblingColor(index: number): string {
-  return SIBLING_COLORS[index % SIBLING_COLORS.length];
+  const p = GRAPH_COLORS.siblings;
+  return p[index % p.length];
 }
 
 /** One class folded into a merged box. */
@@ -89,4 +85,54 @@ export function isMergedId(id: string): boolean {
 /** The parent class a merged id was built from. */
 export function parentOfMergedId(id: string): string {
   return id.slice('merged::'.length);
+}
+
+/**
+ * A row as `withChildHeaders` needs to see it. The view's RowVM is a superset;
+ * stated structurally so the grouping policy does not depend on the view's
+ * row type.
+ */
+export interface HeadableRow {
+  owners?: MergedMember[];
+}
+
+/**
+ * Insert a child's name as a header row above the block of rows it declares.
+ *
+ * Replaces the earlier colour-swatch-per-row scheme (Siggie, 2026-08-25: "i'm
+ * not sure i like the swatches"): with five children the swatch legend could
+ * not fit in the box header, and a swatch answers "whose is this?" one row at
+ * a time rather than showing each child as a thing with a shape. A header per
+ * block scales to any number of children and reads as an outline.
+ *
+ * Shared (parent) rows come first and get NO header — they are the box's
+ * subject, and labelling them would imply they are just another block.
+ *
+ * Rows must already be sorted so each child's rows are contiguous; a header is
+ * inserted wherever the owning child changes. `makeHeader` builds the header
+ * row, so the caller owns the row type and this stays view-agnostic.
+ */
+export function withChildHeaders<T extends HeadableRow>(
+  rows: T[],
+  members: MergedMember[],
+  makeHeader: (child: MergedMember) => T,
+): T[] {
+  if (!members.length) return rows;
+  const out: T[] = [];
+  let current: string | undefined;
+  for (const r of rows) {
+    // A row several children declare independently is headed by the first of
+    // them in member order; its remaining owners still show on the row.
+    const owner = r.owners?.length
+      ? [...r.owners].sort(
+          (a, b) => members.findIndex(m => m.id === a.id)
+            - members.findIndex(m => m.id === b.id))[0]
+      : undefined;
+    if (owner?.id !== current) {
+      current = owner?.id;
+      if (owner) out.push(makeHeader(owner));
+    }
+    out.push(r);
+  }
+  return out;
 }

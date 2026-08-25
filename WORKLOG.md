@@ -81,10 +81,66 @@ Both had survived because the previous session verified with bare `--noEmit`
 too. **The stale-literal trap is not hypothetical and not once-off — it has now
 bitten twice. Use `npm run typecheck`.**
 
-**Not done, deliberately:** the own-bkwd/association verdict merge (still
-waiting on Siggie), header-side merging (0b, gated on that decision), and the
-expand/collapse work. The demo needed one legible new capability, not three
-half ones.
+### Revision, same session, after Siggie saw the first render
+
+**Swatches lost to per-child headers.** The swatch scheme (a colour chip per
+row, siblings listed in a legend strip) failed on contact with 5 children: the
+legend truncated after 2½ names. That is not a width bug to fix — a legend is a
+fixed-width channel and the child count is unbounded, so the scheme could not
+scale. Headers grow downward with the list instead. The swatch survives in one
+place only: a row several children declare independently sits under the first
+of them, and the others are marked on the row.
+
+**The parent-absorption bug is worth remembering as a class of bug.** With
+`Observation` selected AND its children selected, the canvas drew Observation
+twice — once as itself, once as the merged box titled by it. `groupSiblings`
+only ever considered the CHILDREN, so the parent stayed an ordinary node.
+Anything that synthesises a node standing for an existing one has to decide
+what happens when the original is also present; I did not, and the default was
+wrong.
+
+**"+N more" on merged boxes never worked, and this took a correction to get
+right.** I first told Siggie it was broken without saying which box, and my
+explanation ("rows are filtered before the merge sees them") describes
+something that could never have worked — which contradicted "it worked
+recently" and rightly got challenged. Resolution: the ordinary-node expand path
+is byte-identical to `3ee8965` (verified with `git diff 3ee8965 HEAD~2 -- src/`,
+empty), so nothing regressed; only merged boxes were broken, and they were
+hours old. **The lesson is about the report, not the code — "X is broken" needs
+to say which X, or it reads as a regression claim.** The fix: NodeVM carries
+`allRows` (everything it could show) so the merge can re-derive its own
+visible/hidden split, instead of unioning members' already-filtered `rows`.
+
+**Colours: "don't hard code colors (ever)."** Siggie's rule, mid-session. Moved
+the sibling palette AND the pre-existing channel colours (`#d97706` ownership,
+`#64748b` reference, which were hex literals inline in `stroke=` and `fill=`
+before this work) into `GRAPH_COLORS` in appConfig, beside the element-type
+palette. Widened 8 → 12: recycling matters only INSIDE one box, where two
+children would share a header colour, so the palette must exceed the largest
+group the schema can produce, not the largest it produces today.
+`siblingColor` wraps rather than throwing — a repeated colour is a legibility
+problem, a crash is a dead canvas.
+
+**One hop needed no new machinery.** `ownerCap` already existed and already
+meant "draw at most N owners per node, else make them chips." Siggie's ask —
+one hop back, slot-clicking to reveal more — is `ownerCap: 0` plus the
+`owned by` chips that were already there. Worth checking for an existing knob
+before building a scope system; I nearly wrote one.
+
+**`withChildHeaders` moved to `siblingMerge.ts` and takes a `makeHeader`
+callback.** It started in the view because it built a RowVM. Parameterising the
+row constructor kept the grouping policy testable without the view's types —
+and the multi-owner ordering rule (a row two children declare is headed by the
+first in member order) is exactly the kind of thing that needs a unit test
+rather than a squint at the canvas.
+
+**Not done, deliberately:** scrollable/resizable boxes (Siggie raised them with
+the header design; a fully-expanded merged Observation is tall), a class
+appearing in several boxes (SpecimenQuality/QuantityObservation — explicitly
+deferred, and the real question there is whether the second grouping is
+inheritance at all or a different axis), the own-bkwd/association verdict merge (Siggie is
+taking it to stakeholders rather than deciding before the demo), and
+header-side merging (0b, gated on that decision).
 
 ---
 

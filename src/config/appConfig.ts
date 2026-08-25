@@ -455,6 +455,51 @@ export function getFloatSettings(groupId: FloatGroupId): FloatSettings {
 }
 
 // ============================================================================
+// Graph colours
+// ============================================================================
+
+/**
+ * Colours for the ownership graph. Kept here with the rest of the app's
+ * palette rather than inline in the view: every colour the app draws is
+ * configurable in one place, and a literal buried in a `stroke=` is the thing
+ * that makes a palette impossible to change.
+ *
+ * Values are Tailwind's scale (named in comments) so they sit beside the
+ * element-type colours above without introducing a second colour vocabulary.
+ */
+export const GRAPH_COLORS = {
+  /** Ownership edges and their arrowheads. */
+  ownership: '#d97706',   // amber-600
+  /** Reference / association edges — deliberately quieter than ownership. */
+  reference: '#64748b',   // slate-500
+
+  /**
+   * One colour per child in a merged sibling box: its header, its rows, and
+   * the edges leaving them. Twelve because a merged box takes as many children
+   * as the schema gives it (Observation has 5 today, and nothing caps it), and
+   * a palette that runs out silently recycles a colour onto two children in
+   * the SAME box — the one place the colours must stay distinct.
+   *
+   * Ordered so adjacent entries contrast: children are assigned in sequence,
+   * and a box with three children should not get three neighbouring hues.
+   */
+  siblings: [
+    '#2563eb',  // blue-600
+    '#16a34a',  // green-600
+    '#db2777',  // pink-600
+    '#9333ea',  // purple-600
+    '#0891b2',  // cyan-600
+    '#ca8a04',  // yellow-600
+    '#dc2626',  // red-600
+    '#4f46e5',  // indigo-600
+    '#059669',  // emerald-600
+    '#c026d3',  // fuchsia-600
+    '#0284c7',  // sky-600
+    '#ea580c',  // orange-600
+  ],
+} as const;
+
+// ============================================================================
 // Legacy Exports (for backward compatibility during migration)
 // ============================================================================
 

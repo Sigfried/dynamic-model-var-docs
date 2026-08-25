@@ -1,7 +1,10 @@
 import { describe, test, expect, beforeAll } from 'vitest';
 import { loadModelData } from '../utils/dataLoader';
 import { DataService, SKIP_SUBCLASS_EXPANSION } from '../services/DataService';
-import { groupSiblings, mergedIdFor, siblingColor } from '../explore/siblingMerge';
+import {
+  groupSiblings, mergedIdFor, siblingColor, withChildHeaders,
+} from '../explore/siblingMerge';
+import type { MergedMember } from '../explore/siblingMerge';
 
 /**
  * Sibling merging renders inheritance as adjacency rather than as edges
@@ -52,6 +55,16 @@ describe('siblingMerge', () => {
     expect(siblingColor(0)).not.toBe(siblingColor(1));
   });
 
+  test('the palette is long enough for the biggest real group, with no repeat', () => {
+    const groups = groupSiblings(classIds, parentOf, mergeable);
+    const biggest = Math.max(...[...groups.values()].map(m => m.length));
+    const colors = Array.from({ length: biggest }, (_, i) => siblingColor(i));
+    // A recycled colour inside ONE box is the failure that matters: two
+    // children would share a header colour and their edges would be
+    // indistinguishable.
+    expect(new Set(colors).size).toBe(biggest);
+  });
+
   test('merged ids cannot collide with a class id', () => {
     for (const id of classIds) expect(mergedIdFor('Entity')).not.toBe(id);
   });
@@ -66,5 +79,34 @@ describe('siblingMerge', () => {
     // And the parent's own slots are exactly the ones the child reports as
     // inherited from it or above it.
     expect(ds.getClassSummary(parent)).not.toBeNull();
+  });
+
+  describe('withChildHeaders', () => {
+    const a: MergedMember = { id: 'A', label: 'A', color: 'red' };
+    const b: MergedMember = { id: 'B', label: 'B', color: 'blue' };
+    const hdr = (c: MergedMember) => ({ id: `hdr:${c.id}`, header: c });
+    const row = (id: string, owners?: MergedMember[]) => ({ id, ...(owners ? { owners } : {}) });
+
+    test('shared rows get no header; each child block gets exactly one', () => {
+      const out = withChildHeaders(
+        [row('shared1'), row('shared2'), row('a1', [a]), row('a2', [a]), row('b1', [b])],
+        [a, b], hdr,
+      );
+      expect(out.map(r => ('header' in r && r.header ? `H:${r.header.id}` : r.id)))
+        .toEqual(['shared1', 'shared2', 'H:A', 'a1', 'a2', 'H:B', 'b1']);
+    });
+
+    test('a row several children declare is headed by the first in member order', () => {
+      // Reversed owners must still head under A, or the block a row sits in
+      // would depend on the order the owners happened to accumulate.
+      const out = withChildHeaders([row('shared'), row('both', [b, a])], [a, b], hdr);
+      expect(out.map(r => ('header' in r && r.header ? `H:${r.header.id}` : r.id)))
+        .toEqual(['shared', 'H:A', 'both']);
+    });
+
+    test('no members means no headers at all', () => {
+      const rows = [row('x'), row('y')];
+      expect(withChildHeaders(rows, [], hdr)).toEqual(rows);
+    });
   });
 });

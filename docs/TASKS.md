@@ -66,20 +66,50 @@ make the graph unreadable. so we will brainstorm designs. Off the cuff:
   - maybe parent must always be displayed
 - merged is definitely better. other ideas?
 
+### ▶️ OPEN — a class should be able to appear in SEVERAL merged boxes
+
+Siggie, 2026-08-25, looking at the first merged render: *"SpecimenQua...
+Observation should appear in both categories — don't fix now, leave as task."*
+
+`SpecimenQualityObservation` and `SpecimenQuantityObservation` are children of
+`Observation`, so they merge into the Observation box. But they are also
+Specimen-related, and belong in that grouping too. Today `groupSiblings` maps
+each class to AT MOST ONE parent (`parentOf` returns a single id, and
+`absorbed` is a `Map`, one box per class), so a class can only ever land in one
+box.
+
+Making this work is not a rendering tweak. It needs:
+- a class to be a member of N boxes, so `absorbed` becomes id → id[];
+- an edge anchored on a slot of a multiply-merged class to pick WHICH box it
+  attaches to, or be drawn once per box;
+- a rule for what "both categories" even means — is the second grouping still
+  inheritance (a second superclass), or a different axis (entityCategories)?
+  If the latter, this is not sibling merging at all but a general grouping
+  feature that merging is one case of.
+
+**That last question is the one to answer first**, and it is Siggie's call.
+
 ### ✅ SHIPPED — inheritance as adjacency (merged sibling boxes), 2026-08-25
 
 Built to Siggie's "merged is definitely better" option, in 90 minutes before a
 stakeholder demo. Branch `inheritance-merged-siblings`, off
 `induced-slots-and-ownership`.
 
-**The design.** Classes on canvas that share a parent collapse into ONE box
-titled by the parent. Inside it:
-- rows the PARENT declares carry no swatch and are set in bolder, darker type
-  — absence of a swatch is the "shared by every sibling" signal;
-- rows a SIBLING declares itself carry that sibling's colour swatch;
-- a legend strip under the header lists the merged siblings in their colours
-  (clickable → detail drawer), answering "which siblings, and which slot is
-  whose" in place rather than with a line leaving the box.
+**The design, as revised after Siggie saw the first render.** Classes on canvas
+that share a parent collapse into ONE box titled by the parent. Inside it:
+- rows the PARENT declares come first, in bolder darker type, with no marker —
+  they are the box's subject;
+- then one CHILD HEADER per sibling, in that child's colour, followed by the
+  rows that child declares;
+- edges leaving a child's rows are drawn in that child's colour, so a line can
+  be traced back to the block it came from. A convergence arrowhead takes the
+  colour only when every edge merging into it shares one.
+
+**The swatch scheme this replaced** put a colour chip on each row and listed
+the siblings in a legend strip under the header. Siggie, on seeing it: *"i'm
+not sure i like the swatches"* — and with 5 children the legend truncated after
+2½ names, which is the deeper problem: a legend is a fixed-width channel and
+the number of children is not bounded. Headers scale.
 
 `Entity` is excluded via `SKIP_SUBCLASS_EXPANSION` — the same reason it carries
 no is-a edges. A box holding 37 classes is the crowding, relocated.
@@ -103,6 +133,24 @@ rewritten endpoints. Layout and routing never learn this happened. Grouping
 policy is in `src/explore/siblingMerge.ts`; tests in
 `src/test/siblingMerge.test.ts` (6, against the live schema).
 
+**Also shipped in the same pass (Siggie's list off the first render):**
+- The PARENT is absorbed when it is itself selected. It rendered as a second
+  Observation box beside the merged one.
+- "+ N more attributes" now works on a merged box. It never had: the footer
+  toggled `expandedNodes` under the synthetic `merged::` id while the row set
+  was unioned from members' ALREADY-FILTERED rows, so nothing could change.
+  NodeVM now carries `allRows` and the merged box makes its own visible/hidden
+  split. (Ordinary boxes were never affected — that path is untouched.)
+- Colours moved to `GRAPH_COLORS` in appConfig (Siggie: *"don't hard code
+  colors (ever)"*). Palette widened 8 → 12: a box takes as many children as
+  the schema gives it, and recycling a colour inside ONE box is the failure
+  that matters. Channel colours and arrowhead fills moved there too — they were
+  hex literals in `stroke=`/`fill=` from before this work.
+- **`1 hop` toolbar toggle**: `ownerCap: 0`, so nothing is auto-drawn but the
+  selection. Owners become `owned by` chips, which were already the reveal
+  affordance. Off by default; turn it ON to look at inheritance without five
+  selected classes dragging in up to five owners each.
+
 **Decisions taken as defaults, open to reversal:**
 - A merged box's click opens the PARENT's detail; the legend chips open members.
 - Rows are deduped by slot name (one anchor per name), so a slot two siblings
@@ -111,6 +159,11 @@ policy is in `src/explore/siblingMerge.ts`; tests in
   several classes, which is a different feature.
 - Cascaded mode was NOT built. Siggie said merged is better; the toggle is
   merged/off, not merged/cascaded.
+- **Scrollable / resizable boxes were NOT built** (Siggie raised them with the
+  per-child-header design). Boxes still auto-size to their rows, and a merged
+  Observation with everything expanded is tall. ELK is given the real height so
+  nothing overlaps, but a very tall box is a real problem — the `1 hop` toggle
+  and "+N more" are the mitigations for the demo.
 
 **Two pre-existing bugs fixed in passing**, both found only by `tsc -b`:
 - `DataService.ts:924` tested `e.kind === 'ref'`, which is not a
