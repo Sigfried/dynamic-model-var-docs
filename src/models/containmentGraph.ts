@@ -105,6 +105,7 @@ export function classifySlotEdge(
  */
 export type OwnershipRule =
   | 'association'           // slot in ASSOCIATION_SLOTS
+  | 'entity-ranged'         // range is Entity: always forward
   | 'backward-multivalued'  // slot in BACKWARD_DESPITE_MULTIVALUED
   | 'cardinality-split'     // slot in CARDINALITY_SPLIT_OWN_FWD (Exception 2b)
   | 'multivalued'           // Rule 1: multi-valued slot → class
@@ -113,6 +114,9 @@ export type OwnershipRule =
 
 /** Human-readable statement of each rule, for the legend. */
 export const OWNERSHIP_RULE_TEXT: Record<OwnershipRule, string> = {
+  'entity-ranged': 'The range is Entity, the universal root. A slot pointing at Entity is '
+    + 'never a foreign key back to an owner, so ownership always runs forward regardless of '
+    + 'cardinality — otherwise single-valued sites would draw Entity as the owner.',
   'association': 'A named association: the slot connects two things without either owning '
     + 'the other. Both ends are arrowed. These are listed explicitly because they are '
     + 'multivalued, so Rule 1 would otherwise read them as forward ownership.',
@@ -145,6 +149,11 @@ export function classifySlotEdgeExplained(
   if (ASSOCIATION_SLOTS.has(slotName)) return { verdict: 'association', rule: 'association' };
   if (BACKWARD_DESPITE_MULTIVALUED.has(slotName)) return { verdict: 'own-bkwd', rule: 'backward-multivalued' };
   if (CARDINALITY_SPLIT_OWN_FWD.has(slotName)) return { verdict: 'own-fwd', rule: 'cardinality-split' };
+  // Entity-ranged: always forward, regardless of cardinality. Entity is the
+  // universal root, so a slot pointing AT it is never a foreign key back to an
+  // owner — Rule 2 would reverse the 7 single-valued `focus` sites and draw
+  // Entity as the owner of Document/Observation, which is backwards.
+  if (range === ENTITY_ROOT) return { verdict: 'own-fwd', rule: 'entity-ranged' };
   // Rule 1
   if (multivalued) return { verdict: 'own-fwd', rule: 'multivalued' };
   // Exception 2a
@@ -162,6 +171,9 @@ export function classifySlotEdgeExplained(
 // The inheritance exclusion is a SEPARATE concern and stays below: Entity must
 // be a range node while staying out of the inheritance tree. Keeping these as
 // two side-by-side sets is what conflated the two cases originally.
+
+/** The universal root. Both a drawn range node and an excluded inheritance parent. */
+export const ENTITY_ROOT = 'Entity';
 
 // Classes whose subclasses are NOT emitted as is-a edges (the universal root
 // would add 34 edges of pure noise).
