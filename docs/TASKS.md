@@ -8,117 +8,98 @@
 
 ## 🎯 Dates
 
-- **Explorer demo: 2026-08-25**, a couple of hours after the session that
-  shipped the induced-slot migration and the ownership rules. Work was
-  prioritised around it; see the handoff for what was and wasn't done for it.
+- **Explorer demo: 2026-08-25 — DONE.** Held a couple of hours after the
+  session that shipped the induced-slot migration and the ownership rules; the
+  merged-sibling inheritance work was built in the ~90 minutes before it. The
+  big program manager was NOT there, which is what drives the sharing work.
+- **Development wrap-up: end of week (~2026-08-28/29).** Siggie, 2026-08-25:
+  *"which we have to wrap up by the end of the week or so."*
+- **Sharing / presentation (video demo + non-video guided tour):** asked for by
+  the stakeholders on 2026-08-25, to be scoped in its OWN session before
+  further development. See the handoff.
 - **Target release 2026-07-30 passed and was never renegotiated.** Treat
   "before the release" language elsewhere in the docs as stale.
   **Needs Siggie: set a new target or drop it.**
 
 ---
 
-## 🔁 HANDOFF — start here next session (updated 2026-08-25)
+## 🔁 HANDOFF — start here next session (updated 2026-08-25, end of day)
 
-> **Everything below is on branch `induced-slots-and-ownership`, 5 commits,
-> NOT pushed and NOT merged.** `main` is at `ef80fea`.
-
-> **THE REAL GOAL NEXT SESSION: inheritance relationships.** Siggie,
-> 2026-08-25: "what I really want, unrealistic as it may be, is to figure out
-> and maybe get a POC for including inheritance relationships." Everything in
-> NEXT UP below is tweaking what already exists; this is the one item that is a
-> genuine design question, and it is what he actually wants worked on. Start by
-> brainstorming the modeling question, not the code — the same instruction that
-> governed the ownership rethink.
+> **Everything is MERGED TO MAIN and DEPLOYED.** `main` is at `4f33c23`, clean
+> tree, nothing unpushed. Siggie deployed to gh-pages by hand at the end of the
+> session (`npm run deploy` — there is no deploy Action, and the site had been
+> 13 days stale before that; **check `origin/gh-pages` against `main` before
+> assuming the live site shows current code**).
 >
-> **What already exists, verified 2026-08-25 — the data is present, and it is
-> not unused, it is DELIBERATELY NOT DRAWN:**
-> - 53 of 54 classes carry `parent` in the processed JSON; 37 of them are
->   direct children of `Entity`.
-> - `containmentGraph` emits real `kind: 'subclass'` edges, with a
->   `SKIP_SUBCLASS_EXPANSION` set controlling which roots are excluded.
-> - Those survive `ownershipSubgraph`'s filter (either endpoint in `core`) and
->   arrive as `type: 'isa'`.
-> - **`OwnershipGraphView.tsx:131` then converts them into node metadata**
->   (`isaParents`) instead of routing them. That is the "is a Entity" line in
->   the detail drawer. So an is-a edge is currently a LABEL, not a line.
->
-> The design question is therefore not "how do we get the data" but "what
-> should an is-a relationship look like when 37 classes share one parent" —
-> drawing that naively is a 37-way fan into `Entity`, which is worse than the
-> convergence problems already open. Consider whether is-a belongs in this
-> diagram at all, in a separate view, or as the layering it already implicitly
-> is.
+> The demo happened. The inheritance work below was built during it, in
+> roughly 90 minutes, in response to Siggie reviewing renders as they landed.
 
-**[sg] NO -- we will not be showing inheritance from Entity because it's**
-so crowded and not particularly meaningful. And don't assume that we will be
-representing inheritance with edges; that will probably crowd too much and
-make the graph unreadable. so we will brainstorm designs. Off the cuff:
-- group displayed siblings together 
-  - cascaded like img-1 in current session
-  - or merged (probably want both options)
-- if parent is displayed it should be first in cascade and set off a bit
-- or for merged siblings, it could be merged with them
-- maybe parent gets solid black type and each sibling's own slots
-  get their own color
-  - probably easier to handle than cascading
-  - will need a way to indicate what all the displayed siblings are
-    and which slot goes with which
-  - maybe parent must always be displayed
-- merged is definitely better. other ideas?
+### 🚦 TWO WORKSTREAMS, IN THIS ORDER
 
-### ▶️ OPEN — a narrowed edge should point at the CHILD's header, not the box
+**1. SHARING / PRESENTATION — Siggie wants this figured out FIRST, in its own
+session.** He said explicitly: *"i should just open a separate session for
+that."* Do not start it as a side-quest inside a development session.
 
-Siggie, 2026-08-25, deferred deliberately: *"IF the container is also a merged
-box (e.g., ObservationSet, MeasurementObservationSet), then the edge points at
-the appropriate header."*
+The stakeholder meeting on 2026-08-25 did **not** include the big program
+manager, who matters most. Her first exposure — after seeing the app a couple
+of months ago — will be **from links sent to her**, possibly without Siggie
+walking her through it. The stakeholders present asked for two things:
 
-**The case.** `MeasurementObservationSet.observations` narrows its range from
-`Observation` to `MeasurementObservation` (verified: all three ObservationSet
-children narrow `observations` to their matching Observation subtype). Both
-ends are merged boxes. The edge leaves the `MeasurementObservationSet` block
-of one box and should ARRIVE at the `MeasurementObservation` header inside the
-other — today it lands on the target box's header band like every other edge.
+  1. **a video demo**
+  2. **a non-video guided tour**
 
-**Why this is not a tweak.** The entity end has never carried row meaning. From
-the file header: *"the ENTITY END attaches to a header-level port on the target
-class, which has no corresponding row, so edges point at the entity name."*
-That assumption is load-bearing for the fan (`freeEndTotal`/`freeEndSlot`
-spread ports across the header band), for convergence merging, and for the
-single shared arrowhead. Pointing at a child header means the entity end
-sometimes anchors on a ROW, so all three need to handle both.
+Siggie wants to know what the options are for both, *"probably to be hosted on
+gh pages."* The task in that session is to lay out options and trade-offs, not
+to pick one unilaterally. Relevant constraints already known: the app is a
+static Vite build under `base: '/dynamic-model-var-docs/'`, deploys manually
+via `npm run deploy` (gh-pages branch), and the **example cases pane already
+exists** and is close to a guided-tour primitive — named selections that
+restore app state in place (`src/explore/exampleCases.ts`, with an
+`ExampleCase.note` field already written as explanatory prose).
 
-**Design question to settle first:** does EVERY edge into a merged box target
-the child header matching its range, or only a `slot_usage`-narrowed one? The
-first is one rule; the second leaves existing edges untouched but means the
-entity end means different things on different edges. Siggie has not chosen.
+**2. DEVELOPMENT — wrap up by end of week (~2026-08-28/29).** Siggie:
+*"which we have to wrap up by the end of the week or so."* Everything in NEXT
+UP below is in scope for that; the sharing work is not development time.
 
-Note the row machinery is already in place: rows carry `declaringClass`, header
-rows are real rows with a y-position, and `rowY(node, slot, declaringClass)`
-resolves an anchor. What is missing is a port on the entity side that targets
-a header row, and the fan/merge rules knowing about it.
+### ▶️ NEXT UP (development, in Siggie's priority order)
 
-### ▶️ OPEN — a class should be able to appear in SEVERAL merged boxes
+1. **Owner cap + chips as add/remove TOGGLES.** Siggie's last design ask of the
+   session, not started. *"the fix for how many parents to show ... should be a
+   cap, and then the parent chips should be toggles allowing you to add/remove."*
+   Today the `owned by` chips are **add-only** — clicking one draws that owner,
+   and there is no way to click it back off. The toolbar's `0 / ≤5 / all`
+   control is a blunt stand-in for this and should probably collapse into it.
+2. **Narrowed edges should point at the CHILD's header** inside a merged target
+   box. Deferred by Siggie for time, written up in full below. **Needs his
+   decision first:** every edge into a merged box, or only `slot_usage`-narrowed
+   ones?
+3. **A class in several merged boxes** (SpecimenQuality/QuantityObservation).
+   Written up below. **Needs his modelling decision first:** is the second
+   grouping inheritance at all, or a different axis (entityCategories)?
+4. **Scrollable / resizable boxes.** Merged boxes now show EVERY row and can run
+   long. Not as easy as it looks: edge anchors are computed from row positions,
+   so scrolling content inside a box points its edges at the wrong rows.
+5. **own-bkwd → association verdict merge** (70 edges). Siggie deliberately did
+   NOT decide this before the demo — *"need to ask stakeholders."* Still open;
+   header-side merging (0b) is gated on it.
 
-Siggie, 2026-08-25, looking at the first merged render: *"SpecimenQua...
-Observation should appear in both categories — don't fix now, leave as task."*
+### ⚠️ PROCESS NOTE FOR THE NEXT SESSION — read this one
 
-`SpecimenQualityObservation` and `SpecimenQuantityObservation` are children of
-`Observation`, so they merge into the Observation box. But they are also
-Specimen-related, and belong in that grouping too. Today `groupSiblings` maps
-each class to AT MOST ONE parent (`parentOf` returns a single id, and
-`absorbed` is a `Map`, one box per class), so a class can only ever land in one
-box.
+Four bugs this session came from **reasoning about the render instead of
+measuring the data**, and each was settled in ~30 seconds by a throwaway probe
+test once I bothered. Wrong guesses included: "context nodes shouldn't merge"
+(they should), "DimensionalObservation narrows observation_type" (it does not —
+it is `BaseEnum`, identical to the parent), and a claim that "+N more" was
+broken generally when only merged boxes were affected.
 
-Making this work is not a rendering tweak. It needs:
-- a class to be a member of N boxes, so `absorbed` becomes id → id[];
-- an edge anchored on a slot of a multiply-merged class to pick WHICH box it
-  attaches to, or be drawn once per box;
-- a rule for what "both categories" even means — is the second grouping still
-  inheritance (a second superclass), or a different axis (entityCategories)?
-  If the latter, this is not sibling merging at all but a general grouping
-  feature that merging is one case of.
+**When a render looks wrong, write a probe test that prints the actual view
+model before proposing a cause.** The pipeline is
+`getOwnershipSubgraph → buildViewModel → mergeSiblings`, and all three are now
+exported specifically so a probe can call them (see
+`src/test/mergedEdges.test.ts`, which is that pattern made permanent).
 
-**That last question is the one to answer first**, and it is Siggie's call.
+Also: `npm run typecheck` (= `tsc -b --noEmit`), never bare `npx tsc --noEmit`.
+It caught four real errors this session that the bare form did not.
 
 ### ✅ SHIPPED — inheritance as adjacency (merged sibling boxes), 2026-08-25
 
@@ -186,6 +167,29 @@ policy is in `src/explore/siblingMerge.ts`; tests in
 - **`1 hop` was renamed `only sel` — it did ZERO hops.** `ownerCap` is a
   legibility ceiling ("draw owners only if at most N"), so 0 means never draw
   any. The default of 5 was already the one-hop behaviour.
+
+**Third round — the last three commits (`43870ce`, `ff921f5`, `4f33c23`):**
+- **`0 / ≤5 / all` replaced the `only sel` toggle.** The toggle appeared to do
+  nothing, and a boolean genuinely could not express the control: `ownerCap` is
+  a legibility CEILING, so the default of 5 silently degrades to drawing NO
+  owners on exactly the crowded nodes you notice (BodySite has 6). `all` is the
+  only setting that is genuinely one hop. **This whole control is provisional —
+  item 1 in NEXT UP replaces it with a cap plus toggleable chips.**
+- **Disconnected boxes fixed.** Selecting DimensionalObservation alone drew
+  Organization / Participant / Visit with no edges at all. Cause: dropping every
+  child's copy of an inherited slot's edge, on the stated premise that "the
+  parent's own copy survives" — false whenever the parent is not on the canvas,
+  which is most of the time. One edge became zero. Now a keyed dedup keeps the
+  first edge per (box, anchor row, other end, direction).
+- **Merged boxes show EVERY row; the "+N more" collapse is gone on them.**
+  Siggie: *"show all of them. let the box flow over bottom of page if needed."*
+  The collapse also made a child whose rows were all unconnected render as an
+  EMPTY block — indistinguishable from a child that genuinely adds nothing.
+  Ordinary boxes keep their footer. **Boxes can now be very tall; see item 4.**
+- **`src/test/mergedEdges.test.ts` added.** The merged-edge path had NO test
+  coverage, which is why 247 tests stayed green straight through the
+  disconnected-boxes bug. `mergeSiblings`, `buildViewModel` and the view-model
+  types are exported so probes can drive the real pipeline.
 
 **Also shipped in the same pass (Siggie's list off the first render):**
 - The PARENT is absorbed when it is itself selected. It rendered as a second

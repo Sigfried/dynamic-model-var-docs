@@ -183,6 +183,53 @@ The default of 5 was already one hop; what floods the canvas is the cap being
 generous, not the hop count. I had reasoned about the name rather than reading
 the loop. Renamed `only sel`.
 
+### Third round — and the process lesson that matters more than any of it
+
+**Four wrong guesses this session, every one settled in ~30 seconds by a probe
+test I should have written first.** In order: that context nodes should be
+excluded from merging (they should not — Siggie: *"observationSet should be
+there"*); that "+N more" was broken generally when only merged boxes were
+affected; that `DimensionalObservation` narrows `observation_type` (it does
+NOT — measured as `BaseEnum`, identical to the parent); and that a
+name-collision between an override row and its parent's row was a problem to
+work around rather than the requirement Siggie had already stated.
+
+The pattern in all four: **I reasoned from the rendered picture instead of
+printing the view model.** Screenshots show symptoms; the view model shows
+causes, and a throwaway `expect(x).toBe('SENTINEL')` prints it in under a
+minute. `mergeSiblings`, `buildViewModel` and the VM types are now exported
+specifically so a probe can drive the real pipeline —
+`src/test/mergedEdges.test.ts` is that pattern kept.
+
+**The disconnected-boxes bug is the one to learn from.** I dropped every
+child's copy of an inherited slot's edge, and wrote the justification into the
+code: *"the parent's own copy survives because the parent is a source whenever
+any child is merged."* That sentence is false — `parentOnCanvas` is usually
+false — and I wrote it as an assertion rather than checking it. Selecting
+DimensionalObservation then drew Organization, Participant and Visit as boxes
+with no edges. **A confident comment is not a verified one**; the give-away was
+that I could have tested the claim in the same time it took to write it.
+
+Also: **247 tests passed straight through that bug**, because nothing in the
+suite touched the merged-edge path. Test count is not coverage of the thing you
+just changed. The new file asserts the reported selection leaves no node
+stranded, which is the property a human would have noticed instantly.
+
+**Siggie's framing beat mine twice more.** "Pretend children don't have parent
+slots" (construction) over my "collapse the duplicates" (repair). And on
+merged-box rows: I was optimising which rows to hide when the right answer was
+to hide none — *"show all of them. let the box flow over bottom of page if
+needed."* Both times I had reached for a mechanism where the answer was to
+remove one.
+
+**Deploy is manual and was 13 days stale.** `npm run deploy` (build → gh-pages
+branch); there is no Action, and `base: '/dynamic-model-var-docs/'` in
+vite.config makes it look more automatic than it is. Nothing from the session
+was live until Siggie deployed by hand at the end. Worth checking
+`origin/gh-pages` against `main` before believing the live site is current —
+note that SSH to GitHub is blocked from the sandbox, so that check has to be
+run by Siggie.
+
 **Not done, deliberately:** narrowed edges pointing at a child's header inside
 a merged target box (Siggie's ask, deferred by him for time — the entity end
 has never had row meaning and the fan/convergence/arrowhead rules all assume

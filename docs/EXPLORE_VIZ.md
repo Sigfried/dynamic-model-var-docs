@@ -1,10 +1,11 @@
 # EXPLORE_VIZ.md — Subgraph-viz SPA (design spec)
 
 > **Status**: Design approved 2026-07-13; **built and running** — this is the
-> default app (`index.html`). Build steps 1, 2, 4 done; step 3 done except
-> is-a side-stacks; step 5 outstanding. Where this document and the code
-> disagree, the code wins and the doc is the bug — the content policy below
-> (§6) has already been rewritten once for that reason.
+> default app (`index.html`). Build steps 1, 2, 4 done; step 5 outstanding.
+> Step 3's is-a treatment shipped 2026-08-25 as **merged sibling boxes**, NOT
+> the side-stack this document originally specified — see §3 below. Where this
+> document and the code disagree, the code wins and the doc is the bug — the
+> content policy below (§6) has already been rewritten once for that reason.
 >
 > Supersedes parts of [FOCUS_VIEW.md](FOCUS_VIEW.md) (the three-panel Focus
 > layout and its LinkOverlay work continue to exist but are no longer the
@@ -38,12 +39,39 @@ Terminology: we say **ownership** (has-a), not "containment," from here on.
    by arrowheads alone. Layered DAG: poly-parent nodes get multiple in-edges;
    no node duplication — this eliminates the "★ also under" problem, which
    is intrinsic to nesting/outline techniques, not a widget bug.
-3. **is-a never shares the ownership plane.** Subclasses render as an
-   expandable stack attached to the parent node ("▸ 3 subclasses"), not as
-   another arrow among the amber ones. (Other treatments — hulls, badges —
-   are future modes.)
+3. **is-a never shares the ownership plane — it is ADJACENCY, not a line.**
+   *(Revised 2026-08-25. The original spec here was an expandable side-stack
+   attached to the parent node, "▸ 3 subclasses". That was never built; the
+   shipped answer is different and better-motivated, so the spec is updated
+   rather than left aspirational.)*
+
+   Classes on canvas that share a parent collapse into **one box titled by
+   that parent**. Inside it: the parent's rows first, in bold dark type and
+   unmarked, because they are shared by every child and absence-of-marking is
+   the quiet signal for the common case; then one **coloured header per child**
+   followed by the rows that child declares, in the child's colour. Edges
+   leaving a child's rows are drawn in that child's colour.
+
+   Why not edges: 37 classes are direct children of `Entity` alone, so drawing
+   is-a naively is a 37-way fan — worse than the convergence problems already
+   open. `Entity` is excluded as a merge parent via `SKIP_SUBCLASS_EXPANSION`
+   for exactly that reason; a box holding 37 classes is the same crowding,
+   relocated.
+
+   Merging is **unconditional**: a class with a mergeable parent merges even
+   when it is the only child on canvas. Otherwise a box's anatomy would depend
+   on what else happened to be selected.
+
+   An inherited slot belongs to the parent and carries ONE edge for the box. A
+   child that **redefines** it (`slot_usage` narrowing a range) keeps its own
+   row and its own edge — QuestionnaireResponseValue's five children each
+   narrow `value` to a different type, which is the entire reason those classes
+   exist. Rows are therefore keyed by (declaring class, slot), not by name.
+
+   Merged boxes show every row; the "+N more" collapse applies only to ordinary
+   boxes. Toggleable in the toolbar (`⑃ siblings`); off restores the is-a chips.
 4. **Relation channels**: ownership = amber solid, drawn normalized;
-   references = gray dashed, drawn in FK direction; is-a = the side-stack.
+   references = gray dashed, drawn in FK direction; is-a = the merged box.
 5. **Label convention**: an ownership edge drawn *flipped* from its storage
    direction gets a re-verbed label ("has members — via
    `member_of_research_study`"), never the bare slot name pointing the wrong
@@ -110,6 +138,9 @@ getOwnershipSubgraph(selectedIds, expansions, options?) -> {
   nodes: [{ id, role: 'selected' | 'context', layer, slots, ... }],
   edges: [{ source, target, type: 'ownership' | 'reference' | 'isa',
             slotName, storageDirection, cardinality }],
+  // NB 'isa' edges are never ROUTED. The view consumes them into node
+  // metadata (isaParents/subclassCount) and, when ⑃ siblings is on, into the
+  // merged-box grouping — see §3.
   hiddenOwners: Map<classId, ownerId[]>,   // owners NOT drawn → chips
 }
 
