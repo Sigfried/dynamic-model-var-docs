@@ -6,11 +6,11 @@
  * that once: the example set was built off the CONVERGENCE ranking, which
  * hides FK hubs because flipped edges reverse direction — so Participant's
  * 22-edge outbound fan, the largest in the schema, was absent until this
- * listing showed 43 `own-flip / fk-inversion` pairs sitting in one group.
+ * listing showed 43 `own-bkwd / fk-inversion` pairs sitting in one group.
  *
  * Everything here is derived live from `classifySlotEdgeExplained` via
  * DataService — the same call the graph builder makes. Nothing is restated.
- * That is deliberate and load-bearing: OWNERSHIP_OVERRIDES and VALUE_OBJECTS
+ * That is deliberate and load-bearing: ASSOCIATION_SLOTS and SINGLE_VALUE_OWNER_TARGETS
  * are hand-curated and go stale silently on every schema sync, so a legend
  * built from a second copy of the rules would conceal the drift it exists to
  * reveal. If a pair looks wrong here, the classification is wrong, not the
@@ -35,13 +35,13 @@ const VERDICT_LABEL: Record<string, { text: string; cls: string }> = {
     text: 'owns (forward)',
     cls: 'text-amber-700 dark:text-amber-400 border-amber-400',
   },
-  'own-flip': {
-    text: 'owns (flipped)',
+  'own-bkwd': {
+    text: 'belongs to (backward)',
     cls: 'text-amber-800 dark:text-amber-300 border-amber-600',
   },
-  'ref': {
-    text: 'reference',
-    cls: 'text-gray-600 dark:text-gray-300 border-gray-400',
+  'association': {
+    text: 'association (no ownership)',
+    cls: 'text-slate-600 dark:text-slate-300 border-slate-500',
   },
   'excluded': {
     text: 'dropped',
@@ -161,7 +161,7 @@ export default function OwnershipLegend({ dataService, onSelect }: OwnershipLege
                         </span>
                         {classLink(p.range)}
                         {p.isLoop && <span className="ml-1 text-amber-600">loop</span>}
-                        {g.verdict === 'own-flip' && (
+                        {(g.verdict === 'own-bkwd' || g.verdict === 'association') && (
                           <span className="ml-1 text-gray-400">
                             (owner: {p.owner})
                           </span>

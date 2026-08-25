@@ -1033,10 +1033,18 @@ export default function OwnershipGraphView({
                       markerUnits="userSpaceOnUse" orient="auto-start-reverse">
                       <path d="M10,0L0,3.5L10,7Z" fill="#d97706" />
                     </marker>
-                    <marker id={markerId('arrow-ref')} viewBox="0 0 10 7" refX="0" refY="3.5"
+                    {/* association: no ownership claim, so BOTH ends are
+                        arrowed. Slate rather than the old #9ca3af, which was
+                        too faint to see against the background. */}
+                    <marker id={markerId('arrow-assoc')} viewBox="0 0 10 7" refX="0" refY="3.5"
                       markerWidth={ARROW_SPAN * REF_SCALE} markerHeight={ARROW_SPAN * 0.75 * REF_SCALE}
                       markerUnits="userSpaceOnUse" orient="auto-start-reverse">
-                      <path d="M0,0L10,3.5L0,7Z" fill="#9ca3af" />
+                      <path d="M0,0L10,3.5L0,7Z" fill="#64748b" />
+                    </marker>
+                    <marker id={markerId('arrow-assoc-start')} viewBox="0 0 10 7" refX="10" refY="3.5"
+                      markerWidth={ARROW_SPAN * REF_SCALE} markerHeight={ARROW_SPAN * 0.75 * REF_SCALE}
+                      markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+                      <path d="M10,0L0,3.5L10,7Z" fill="#64748b" />
                     </marker>
                   </defs>
                   <g transform={`translate(${PAD}, ${PAD})`}>
@@ -1048,7 +1056,7 @@ export default function OwnershipGraphView({
                         key={`head-${key}`}
                         data-arrowhead={a.edgeIds.join(' ')}
                         d={arrowPath(a.base, a.dir, ARROW_SPAN, ARROW_LEN)}
-                        fill={a.isOwn ? '#d97706' : '#9ca3af'}
+                        fill={a.isOwn ? '#d97706' : '#64748b'}
                         opacity={a.dimmed ? 0.4 : 1}
                         style={{ transition: 'opacity 120ms' }}
                       />
@@ -1094,7 +1102,7 @@ export default function OwnershipGraphView({
                       // attribute row; references keep their smaller head.
                       const marker = willMerge
                         ? undefined
-                        : isOwn ? (flipped ? 'arrow-own-back' : 'arrow-own') : 'arrow-ref';
+                        : isOwn ? (flipped ? 'arrow-own-back' : 'arrow-own') : 'arrow-assoc';
                       return (
                         <g key={e.id}>
                           <path
@@ -1103,10 +1111,11 @@ export default function OwnershipGraphView({
                             d={d}
                             fill="none"
                             opacity={dimmed ? 0.4 : 1}
-                            stroke={isOwn ? '#d97706' : '#9ca3af'}
+                            stroke={isOwn ? '#d97706' : '#64748b'}
                             strokeWidth={isOwn ? STROKE_OWN : STROKE_REF}
                             strokeDasharray={isOwn ? undefined : '5 4'}
                             markerEnd={marker ? `url(#${markerId(marker)})` : undefined}
+                            markerStart={!isOwn && !willMerge ? `url(#${markerId('arrow-assoc-start')})` : undefined}
                             style={{ transition: 'opacity 120ms, stroke-width 120ms' }}
                           />
                           {/* invisible fat hit area for edge hover */}

@@ -43,7 +43,7 @@ describe('attribute cardinality', () => {
   });
 
   test('an Entity-ranged attribute has a cardinality even while undrawn', () => {
-    // `Entity` is in EXCLUDE_HAS_A_TARGETS, so `focus` draws no edge today. The
+    // `focus` now DRAWS: EXCLUDE_HAS_A_TARGETS was deleted 2026-08-25. The
     // cardinality must not depend on that — and must survive the exclusion
     // being lifted by the ownership-classification work.
     expect(label('Document', 'focus')).toBe('0..1');

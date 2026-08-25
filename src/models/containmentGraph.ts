@@ -7,15 +7,23 @@
  * heuristic in scripts/extract_containment_tree.py + extract_has_a_graph.py.
  *
  * Every class-ranged slot is classified with an OwnershipVerdict
- * (see classifySlotEdge). Default heuristic (FK inversion), in order:
- *   - range in EXCLUDE_HAS_A_TARGETS         : 'excluded' (edge dropped)
- *   - multi-valued slot → class              : 'own-fwd'  (owner has-a range)
- *   - single-valued slot → value object      : 'own-fwd'
- *   - single-valued slot → other entity      : 'own-flip' (FK back-reference:
+ * (see classifySlotEdge). Three categories: 'own-fwd' (owns), 'own-bkwd'
+ * (belongs to), 'association' (no ownership claim, both ends arrowed, but
+ * still ordered like own-bkwd). Rules, in the order they are tried:
+ *
+ *   - slot in ASSOCIATION_SLOTS              : 'association'  (tested first —
+ *                                              these exist to defeat Rule 1)
+ *   - slot in BACKWARD_DESPITE_MULTIVALUED   : 'own-bkwd'
+ *   - slot in CARDINALITY_SPLIT_OWN_FWD      : 'own-fwd'      (Exception 2b)
+ *   - Rule 1: multi-valued slot → class      : 'own-fwd'      (owner has-a
+ *                                              collection of them)
+ *   - Exception 2a: single-valued → a target with no independent existence
+ *                                            : 'own-fwd'
+ *   - Rule 2: single-valued → other entity   : 'own-bkwd'     (FK back-ref:
  *                                              the target owns the source)
- * OWNERSHIP_OVERRIDES pre-empts the default per slot name. Adjudicated
- * 2026-07-13 — see docs/OWNERSHIP_CLASSIFICATION.md for every edge + rationale.
  *   - is_a relationships                     : emitted as kind:"subclass" edges
+ *
+ * See docs/OWNERSHIP_CLASSIFICATION.md for every edge + rationale.
  *
  * This module is model-layer (it reads the SchemaGraph). Components reach it
  * only through DataService.getContainmentGraph().
@@ -24,11 +32,11 @@
 import type { SchemaGraph } from './SchemaTypes';
 import { getSlotEdgesForClass, getParentClass } from './Graph';
 
-export type OwnershipVerdict = 'own-fwd' | 'own-flip' | 'ref' | 'excluded';
+export type OwnershipVerdict = 'own-fwd' | 'own-bkwd' | 'association' | 'excluded';
 
 // Value-object classes: single-valued slots pointing to these are forward
 // ownership (the owner has-a value object), never flipped.
-export const VALUE_OBJECTS = new Set<string>([
+export const SINGLE_VALUE_OWNER_TARGETS = new Set<string>([
   'Quantity', 'TimePoint', 'TimePeriod', 'BodySite', 'CauseOfDeath',
   'QuestionnaireResponseValue',
   'QuestionnaireResponseValueDecimal', 'QuestionnaireResponseValueBoolean',
@@ -38,39 +46,43 @@ export const VALUE_OBJECTS = new Set<string>([
   // Adjudicated 2026-08-19. Activity is is_a: Entity but has no identity of
   // its own (activity_type + time_duration only) and nothing references it
   // except Context.activity — so the FK-inversion default misfires on it:
-  // single-valued + entity range alone made it own-flip ("Activity owns
+  // single-valued + entity range alone made it own-bkwd ("Activity owns
   // Context"), stranding Activity at layer 0 as a false root while Context
   // sank to layer 6. Forward now: Context -> Activity, Activity at layer 7.
   'Activity',
 ]);
 
-// Per-slot verdicts that pre-empt the default heuristic. These encode the
-// 2026-07-13 adjudication (docs/OWNERSHIP_CLASSIFICATION.md); entries marked
-// (default) restate what the heuristic would do anyway and exist to record
-// that the classification was a decision, not an accident.
-export const OWNERSHIP_OVERRIDES = new Map<string, OwnershipVerdict>([
-  // Non-owning associational references.
-  ['originating_site', 'ref'],          // site of origin is provenance
-  ['associated_assay', 'ref'],          // assay is method metadata
-  ['transport_origin', 'ref'],
-  ['transport_destination', 'ref'],
-  ['related_questionnaire_item', 'ref'],
-  ['has_questionnaire_item', 'ref'],    // answer points at its question;
-                                        // owner is QuestionnaireResponse
-  ['container', 'ref'],                 // storage activity uses containers
-  ['related_document', 'ref'],
-  // Forward ownership despite single-valued entity range.
-  ['creation_activity', 'own-fwd'],     // consistent w/ processing/storage/
-                                        // transport_activity (own-fwd)
-  ['dimensional_measures', 'own-fwd'],  // same family as quality/quantity_measure
-  // Flipped despite multivalued: parent_specimen points UP the derivation
-  // tree, so the parent owns the child.
-  ['parent_specimen', 'own-flip'],
-  // (default) adjudicated ownership, previously refs in NO_FLIP_SLOTS:
-  ['performed_by', 'own-flip'],         // Organization owns performed work
-  ['associated_person', 'own-flip'],    // Person owns Participant
-  ['contained_in', 'own-flip'],         // Container owns Specimen
-  ['related_imaging_study', 'own-flip'],// ImagingStudy owns ImagingFile
+// Slots that make no ownership claim: both ends arrowed, ordered like
+// own-bkwd but rendered distinctly. These exist specifically to defeat Rule 1
+// (multivalued would otherwise read as forward ownership).
+//
+// Settled 2026-08-25: the six single-valued members of the old 8-slot set were
+// dropped. Rule 2 already sends them to own-bkwd, which layers identically, so
+// membership changed only their rendering — and none ranges on a
+// single-value-owner target, so Exception 2a does not intercept them. Only the
+// two genuinely-multivalued associations remain.
+//
+// To restore the 8-slot behaviour, add back: originating_site,
+// associated_assay, transport_origin, transport_destination,
+// related_questionnaire_item, has_questionnaire_item.
+export const ASSOCIATION_SLOTS = new Set<string>([
+  'related_document',
+  'container',                          // storage activity uses containers
+]);
+
+// Exception 2b: cardinality splits a family. Both have multivalued siblings
+// that are own-fwd; dimensional_measures also ranges on a *Set. Asserted, not
+// derived — a structural "collection class" test over-collects (Person,
+// Questionnaire, ResearchStudyCollection).
+export const CARDINALITY_SPLIT_OWN_FWD = new Set<string>([
+  'creation_activity',                  // cf. processing/storage/transport_activity
+  'dimensional_measures',               // cf. quality/quantity_measure
+]);
+
+// Multivalued slots that still point UP: parent_specimen walks the derivation
+// tree, so the parent owns the child.
+export const BACKWARD_DESPITE_MULTIVALUED = new Set<string>([
+  'parent_specimen',
 ]);
 
 /**
@@ -92,27 +104,31 @@ export function classifySlotEdge(
  * default heuristic, in the order it tries them.
  */
 export type OwnershipRule =
-  | 'excluded'          // range in EXCLUDE_HAS_A_TARGETS
-  | 'override'          // OWNERSHIP_OVERRIDES named this slot
-  | 'multivalued'       // multi-valued slot → class
-  | 'value-object'      // single-valued slot → value object
-  | 'fk-inversion';     // single-valued slot → other entity
+  | 'association'           // slot in ASSOCIATION_SLOTS
+  | 'backward-multivalued'  // slot in BACKWARD_DESPITE_MULTIVALUED
+  | 'cardinality-split'     // slot in CARDINALITY_SPLIT_OWN_FWD (Exception 2b)
+  | 'multivalued'           // Rule 1: multi-valued slot → class
+  | 'value-object'          // Exception 2a: single-valued → no independent existence
+  | 'fk-inversion';         // Rule 2: single-valued slot → other entity
 
 /** Human-readable statement of each rule, for the legend. */
 export const OWNERSHIP_RULE_TEXT: Record<OwnershipRule, string> = {
-  'excluded': 'Range is an abstract root (EXCLUDE_HAS_A_TARGETS) — the edge is dropped '
-    + 'entirely, since it would point at everything and mean nothing.',
-  'override': 'A hand-adjudicated per-slot decision in OWNERSHIP_OVERRIDES pre-empts the '
-    + 'heuristic. These encode the 2026-07-13 adjudication; see docs/OWNERSHIP_CLASSIFICATION.md.',
+  'association': 'A named association: the slot connects two things without either owning '
+    + 'the other. Both ends are arrowed. These are listed explicitly because they are '
+    + 'multivalued, so Rule 1 would otherwise read them as forward ownership.',
+  'backward-multivalued': 'Multivalued, but pointing UP rather than down: parent_specimen '
+    + 'walks the derivation tree, so the parent owns the child and ownership runs backward.',
+  'cardinality-split': 'Cardinality splits a family. These are single-valued but have '
+    + 'multivalued siblings that are forward-owned, so they are forced forward to keep the '
+    + 'family consistent (Exception 2b).',
   'multivalued': 'A multi-valued slot pointing at a class means the owner has-a collection '
     + 'of them, so ownership runs forward: owner → range.',
-  'value-object': 'A single-valued slot pointing at a VALUE OBJECT (a class with no identity '
-    + 'of its own, like Quantity or TimePoint) is forward ownership — the value belongs to '
-    + 'whoever holds it.',
+  'value-object': 'A single-valued slot pointing at a target with NO INDEPENDENT EXISTENCE '
+    + '(Quantity, TimePoint, and the like) is forward ownership — the value belongs to '
+    + 'whoever holds it (Exception 2a).',
   'fk-inversion': 'A single-valued slot pointing at another ENTITY reads as a foreign key, so '
-    + 'ownership is FLIPPED: the target owns the source, not the other way round.',
+    + 'ownership runs BACKWARD: the target owns the source, not the other way round.',
 };
-
 /**
  * Classify one class-ranged slot edge, reporting which rule fired.
  *
@@ -124,19 +140,28 @@ export function classifySlotEdgeExplained(
   range: string,
   multivalued: boolean,
 ): { verdict: OwnershipVerdict; rule: OwnershipRule } {
-  if (EXCLUDE_HAS_A_TARGETS.has(range)) return { verdict: 'excluded', rule: 'excluded' };
-  const override = OWNERSHIP_OVERRIDES.get(slotName);
-  if (override) return { verdict: override, rule: 'override' };
+  // Association first: these exist to defeat Rule 1, so they must be tested
+  // before the multivalued rule that they are defeating.
+  if (ASSOCIATION_SLOTS.has(slotName)) return { verdict: 'association', rule: 'association' };
+  if (BACKWARD_DESPITE_MULTIVALUED.has(slotName)) return { verdict: 'own-bkwd', rule: 'backward-multivalued' };
+  if (CARDINALITY_SPLIT_OWN_FWD.has(slotName)) return { verdict: 'own-fwd', rule: 'cardinality-split' };
+  // Rule 1
   if (multivalued) return { verdict: 'own-fwd', rule: 'multivalued' };
-  if (VALUE_OBJECTS.has(range)) return { verdict: 'own-fwd', rule: 'value-object' };
-  return { verdict: 'own-flip', rule: 'fk-inversion' };
+  // Exception 2a
+  if (SINGLE_VALUE_OWNER_TARGETS.has(range)) return { verdict: 'own-fwd', rule: 'value-object' };
+  // Rule 2
+  return { verdict: 'own-bkwd', rule: 'fk-inversion' };
 }
 
-// Targets excluded as has-a ranges: abstract refs that don't point to a
-// specific class — they'd appear everywhere and add noise.
-export const EXCLUDE_HAS_A_TARGETS = new Set<string>([
-  'Entity',
-]);
+// NOTE: EXCLUDE_HAS_A_TARGETS is gone (2026-08-25). It dropped every
+// Entity-ranged edge before classification, which hid the 12 `focus`/Entity
+// sites entirely. Entity is already in classIds and was only disappearing
+// because pruneIsolated removed it when nothing touched it. Entity-ranged
+// edges now classify normally and draw forward.
+//
+// The inheritance exclusion is a SEPARATE concern and stays below: Entity must
+// be a range node while staying out of the inheritance tree. Keeping these as
+// two side-by-side sets is what conflated the two cases originally.
 
 // Classes whose subclasses are NOT emitted as is-a edges (the universal root
 // would add 34 edges of pure noise).
@@ -151,7 +176,7 @@ export interface ContainmentNode {
   description: string;
 }
 
-export type ContainmentEdgeKind = 'has-a' | 'ref' | 'subclass';
+export type ContainmentEdgeKind = 'has-a' | 'association' | 'subclass';
 
 export interface ContainmentEdge {
   id: string;
@@ -161,6 +186,8 @@ export interface ContainmentEdge {
   cardinality: string;
   flipped: boolean;
   kind: ContainmentEdgeKind;
+  /** The rule verdict this edge came from; absent on subclass edges. */
+  verdict?: OwnershipVerdict;
   isLoop: boolean;
 }
 
@@ -222,7 +249,10 @@ export function buildContainmentGraph(
       if (verdict === 'excluded') continue;
 
       const card = cardinalityLabel(slot.required, slot.multivalued);
-      const flipped = verdict === 'own-flip';
+      // `association` is ordered like own-bkwd (target first) but rendered
+      // differently — both ends arrowed. Only the rendering differs, which is
+      // why the two layer identically.
+      const flipped = verdict === 'own-bkwd' || verdict === 'association';
       const [source, target] = flipped ? [rng, cname] : [cname, rng];
       pushEdge({
         source,
@@ -230,7 +260,8 @@ export function buildContainmentGraph(
         label: slot.slotName,
         cardinality: card,
         flipped,
-        kind: verdict === 'ref' ? 'ref' : 'has-a',
+        kind: verdict === 'association' ? 'association' : 'has-a',
+        verdict,
       });
     }
   }

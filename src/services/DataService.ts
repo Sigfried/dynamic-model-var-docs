@@ -689,15 +689,16 @@ export class DataService {
    *
    * Backs the ownership legend. Derived from `classifySlotEdgeExplained` — the
    * same call the graph builder makes — so the legend cannot drift from what is
-   * actually drawn. That matters more than usual here: OWNERSHIP_OVERRIDES and
-   * VALUE_OBJECTS are hand-curated and go stale silently on every schema sync,
+   * actually drawn. That matters more than usual here: ASSOCIATION_SLOTS and
+   * SINGLE_VALUE_OWNER_TARGETS are hand-curated and go stale silently on every sync,
    * and a legend built from a second copy of the rules would hide exactly the
    * rot it is supposed to expose.
    *
    * Groups are keyed `verdict/rule` because the two are not one-to-one: an
    * override can produce any verdict, and 'own-fwd' arrives by three different
    * routes. `pairs` is sorted, and `owner`/`owned` are the ownership direction
-   * as DRAWN (flipped for own-flip), not the slot's declaration direction.
+   * as DRAWN (reversed for own-bkwd and association), not the slot's
+   * declaration direction.
    */
   getOwnershipPairGroups(): OwnershipPairGroup[] {
     const collection = this.modelData.collections.get('class' as ElementTypeId);
@@ -718,7 +719,7 @@ export class DataService {
           g = { verdict, rule, ruleText: OWNERSHIP_RULE_TEXT[rule], pairs: [] };
           groups.set(key, g);
         }
-        const flipped = verdict === 'own-flip';
+        const flipped = verdict === 'own-bkwd' || verdict === 'association';
         g.pairs.push({
           declaredOn: cname,
           slotName: slot.slotName,
@@ -751,7 +752,7 @@ export class DataService {
   getConvergenceRanking(): ConvergenceInfo[] {
     const byTarget = new Map<string, ConvergenceInfo>();
     for (const g of this.getOwnershipPairGroups()) {
-      if (g.verdict !== 'own-fwd' && g.verdict !== 'own-flip') continue;
+      if (g.verdict !== 'own-fwd' && g.verdict !== 'own-bkwd') continue;
       for (const p of g.pairs) {
         if (p.isLoop) continue;
         let info = byTarget.get(p.owned);
@@ -782,7 +783,7 @@ export class DataService {
   getDivergenceRanking(): DivergenceInfo[] {
     const bySource = new Map<string, DivergenceInfo>();
     for (const g of this.getOwnershipPairGroups()) {
-      if (g.verdict !== 'own-fwd' && g.verdict !== 'own-flip') continue;
+      if (g.verdict !== 'own-fwd' && g.verdict !== 'own-bkwd') continue;
       for (const p of g.pairs) {
         if (p.isLoop) continue;
         let info = bySource.get(p.owner);
@@ -791,7 +792,7 @@ export class DataService {
           bySource.set(p.owner, info);
         }
         info.edgeCount++;
-        if (g.verdict === 'own-flip') info.flippedCount++;
+        if (g.verdict === 'own-bkwd' || g.verdict === 'association') info.flippedCount++;
         if (!info.owned.includes(p.owned)) info.owned.push(p.owned);
       }
     }

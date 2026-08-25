@@ -167,14 +167,18 @@ describe('getOwnershipSubgraph', () => {
     }
   });
 
-  test('refs from a selected node to a visible context node are drawn', () => {
+  test('edges from a selected node to a visible context node are drawn', () => {
     // Participant.originating_site → Organization; Organization enters the
-    // canvas as a context ancestor, and the ref should draw (the row shows
+    // canvas as a context ancestor, and the edge should draw (the row shows
     // undimmed, so a missing edge would contradict the display).
+    //
+    // originating_site is single-valued, so it is own-bkwd as of 2026-08-25 —
+    // it was dropped from the association set, which reversed the drawn
+    // direction. Assert the edge EXISTS between the pair, not its orientation.
     const g = ds.getOwnershipSubgraph(['Participant', 'MeasurementObservationSet']);
     if (g.nodes.some(n => n.id === 'Organization')) {
-      expect(g.edges.some(e => e.slotName === 'originating_site' && e.target === 'Organization'))
-        .toBe(true);
+      expect(g.edges.some(e => e.slotName === 'originating_site'
+        && (e.target === 'Organization' || e.source === 'Organization'))).toBe(true);
     }
   });
 

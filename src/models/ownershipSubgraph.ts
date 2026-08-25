@@ -133,7 +133,7 @@ export function collectNodeSlots(full: ContainmentGraph): Map<string, OwnershipN
       slots.push({
         slot: e.label,
         range,
-        channel: e.kind === 'ref' ? 'reference' : 'ownership',
+        channel: e.kind === 'association' ? 'reference' : 'ownership',
         flipped: e.flipped,
         cardinality: e.cardinality,
         isLoop: e.isLoop,
@@ -267,7 +267,7 @@ export function buildOwnershipSubgraph(
       source: e.source,
       target: e.target,
       type: (e.kind === 'has-a' ? 'ownership'
-        : e.kind === 'ref' ? 'reference' : 'isa') as OwnershipEdgeType,
+        : e.kind === 'association' ? 'reference' : 'isa') as OwnershipEdgeType,
       slotName: e.kind === 'subclass' ? '' : e.label,
       storageDirection: (e.flipped ? 'flipped' : 'forward') as 'forward' | 'flipped',
       cardinality: e.cardinality,

@@ -3,7 +3,7 @@ import { loadModelData } from '../utils/dataLoader';
 import { DataService } from '../services/DataService';
 import type { ContainmentGraph } from '../services/DataService';
 import {
-  VALUE_OBJECTS, OWNERSHIP_OVERRIDES, EXCLUDE_HAS_A_TARGETS,
+  SINGLE_VALUE_OWNER_TARGETS, ASSOCIATION_SLOTS, BACKWARD_DESPITE_MULTIVALUED,
   SKIP_SUBCLASS_EXPANSION, classifySlotEdge,
 } from '../models/containmentGraph';
 import { getSlotEdgesForClass } from '../models/Graph';
@@ -45,11 +45,11 @@ describe('getContainmentGraph', () => {
         const card = slot.multivalued
           ? (slot.required ? '+' : '*')
           : (slot.required ? '1' : '0..1');
-        const flip = verdict === 'own-flip';
+        const flip = verdict === 'own-bkwd' || verdict === 'association';
         const [source, target] = flip ? [rng, cname] : [cname, rng];
         expected.set([source, target, slot.slotName].join('|'), {
           source, target, flipped: flip, cardinality: card,
-          kind: verdict === 'ref' ? 'ref' : 'has-a',
+          kind: verdict === 'association' ? 'association' : 'has-a',
         });
       }
     }
@@ -68,16 +68,14 @@ describe('getContainmentGraph', () => {
     }
   });
 
-  test('ref-verdict slots produce unflipped ref edges, never parent links', () => {
-    const refSlots = new Set(
-      [...OWNERSHIP_OVERRIDES].filter(([, v]) => v === 'ref').map(([k]) => k),
-    );
+  test('association slots produce association edges, ordered like own-bkwd', () => {
     let seen = 0;
     for (const e of graph.edges) {
-      if (refSlots.has(e.label)) {
+      if (ASSOCIATION_SLOTS.has(e.label)) {
         seen++;
-        expect(e.kind, e.label).toBe('ref');
-        expect(e.flipped, e.label).toBe(false);
+        expect(e.kind, e.label).toBe('association');
+        // association layers identically to own-bkwd: target-first ordering.
+        expect(e.flipped, e.label).toBe(true);
       }
     }
     expect(seen).toBeGreaterThan(0);
@@ -87,21 +85,23 @@ describe('getContainmentGraph', () => {
     for (const e of graph.edges.filter(e => e.kind === 'has-a')) {
       // an unflipped edge's range is its target; a flipped edge's range is its source
       const range = e.flipped ? e.source : e.target;
-      if (VALUE_OBJECTS.has(range)) expect(e.flipped, `${e.label}->${range}`).toBe(false);
+      if (SINGLE_VALUE_OWNER_TARGETS.has(range)) expect(e.flipped, `${e.label}->${range}`).toBe(false);
     }
   });
 
-  test('multivalued slots flip only via explicit own-flip override', () => {
+  test('multivalued slots run forward unless explicitly listed as backward', () => {
     for (const e of graph.edges.filter(e => e.kind === 'has-a' && (e.cardinality === '*' || e.cardinality === '+'))) {
-      const expectFlip = OWNERSHIP_OVERRIDES.get(e.label) === 'own-flip';
+      const expectFlip = BACKWARD_DESPITE_MULTIVALUED.has(e.label);
       expect(e.flipped, `${e.label} (${e.cardinality})`).toBe(expectFlip);
     }
   });
 
-  test('excluded targets and skipped subclass roots do not appear', () => {
-    for (const id of EXCLUDE_HAS_A_TARGETS) {
-      expect(graph.nodes.map(n => n.id)).not.toContain(id);
-    }
+  test('Entity is now a drawn range node; skipped subclass roots stay out of is-a', () => {
+    // EXCLUDE_HAS_A_TARGETS is gone: Entity-ranged edges (the 12 `focus` sites)
+    // are classified and drawn like any other. Entity must be a RANGE node
+    // while staying out of the INHERITANCE tree — two separate concerns.
+    const entityEdges = graph.edges.filter(e => e.kind !== 'subclass' && (e.source === 'Entity' || e.target === 'Entity'));
+    expect(entityEdges.length, 'Entity-ranged edges should now be drawn').toBeGreaterThan(0);
     // SKIP_SUBCLASS_EXPANSION classes are never a subclass-edge parent
     for (const e of graph.edges.filter(e => e.kind === 'subclass')) {
       expect([...SKIP_SUBCLASS_EXPANSION]).not.toContain(e.source);

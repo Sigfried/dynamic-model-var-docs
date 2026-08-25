@@ -56,10 +56,10 @@ describe('ownership legend', () => {
     }
   });
 
-  test('owner/owned is the drawn direction: flipped iff own-flip', () => {
+  test('owner/owned is the drawn direction: reversed for own-bkwd + association', () => {
     for (const g of groups) {
       for (const p of g.pairs) {
-        if (g.verdict === 'own-flip') {
+        if (g.verdict === 'own-bkwd' || g.verdict === 'association') {
           expect(p.owner).toBe(p.range);
           expect(p.owned).toBe(p.declaredOn);
         } else {

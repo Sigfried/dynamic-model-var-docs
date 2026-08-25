@@ -53,7 +53,8 @@ export const DEFAULT_PINS = ['Demography', 'Condition', 'MeasurementObservation'
  * live schema (see assertAllClassesCategorized + entityCategories.test.ts).
  */
 export const UNCATEGORIZED_BY_DESIGN: Record<string, string> = {
-  // Universal root; also in EXCLUDE_HAS_A_TARGETS / SKIP_SUBCLASS_EXPANSION
+  // Universal root; in SKIP_SUBCLASS_EXPANSION (kept out of the inheritance
+  // tree). It IS drawn as a range node now — EXCLUDE_HAS_A_TARGETS is gone.
   // (containmentGraph.ts) because it would attach to everything as noise.
   Entity: 'Universal root class — too general to be a browsable entity.',
 };
