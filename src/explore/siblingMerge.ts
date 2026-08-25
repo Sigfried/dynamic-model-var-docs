@@ -47,9 +47,19 @@ export interface MergedMember {
 }
 
 /**
- * Group ids by parent, keeping only groups of 2+ that share a mergeable
- * parent. Classes with no parent, an unmergeable parent, or no sibling on
- * canvas are left alone.
+ * Group ids by parent. EVERY class with a mergeable parent forms a group, even
+ * a lone child.
+ *
+ * Siggie, 2026-08-25: *"when any entity with a parent is shown, it merges the
+ * parent even if the parent (and no other sibling) is not selected."* The
+ * earlier rule — 2+ siblings required — meant a box's shape depended on what
+ * ELSE happened to be selected: `MeasurementObservation` alone showed its own
+ * flat attribute list, while adding a sibling reorganised it into shared rows
+ * plus child blocks. Same class, different anatomy, for reasons outside it.
+ *
+ * Merging unconditionally makes the parent's rows the top block ALWAYS, which
+ * is also what makes slot order stable: shared rows come first in the parent's
+ * declared order, then each child's own rows in theirs.
  *
  * `order` fixes member (and therefore colour) assignment: sorted by id, so a
  * sibling keeps its colour as unrelated classes come and go from the canvas.
@@ -64,9 +74,6 @@ export function groupSiblings(
     const parent = parentOf(id);
     if (!parent || !isMergeableParent(parent)) continue;
     byParent.set(parent, [...(byParent.get(parent) ?? []), id]);
-  }
-  for (const [parent, members] of byParent) {
-    if (members.length < 2) byParent.delete(parent);
   }
   return byParent;
 }
@@ -118,21 +125,27 @@ export function withChildHeaders<T extends HeadableRow>(
   makeHeader: (child: MergedMember) => T,
 ): T[] {
   if (!members.length) return rows;
-  const out: T[] = [];
-  let current: string | undefined;
+  const byChild = new Map<string, T[]>(members.map(m => [m.id, []]));
+  const shared: T[] = [];
   for (const r of rows) {
-    // A row several children declare independently is headed by the first of
+    // A row several children declare independently is filed under the first of
     // them in member order; its remaining owners still show on the row.
     const owner = r.owners?.length
       ? [...r.owners].sort(
           (a, b) => members.findIndex(m => m.id === a.id)
             - members.findIndex(m => m.id === b.id))[0]
       : undefined;
-    if (owner?.id !== current) {
-      current = owner?.id;
-      if (owner) out.push(makeHeader(owner));
-    }
-    out.push(r);
+    if (owner) byChild.get(owner.id)?.push(r);
+    else shared.push(r);
   }
-  return out;
+  // EVERY member gets a header, including one that adds no rows of its own.
+  // Emitting headers only for children that own rows made three of the
+  // Observation subclasses invisible — SpecimenQuality/QuantityObservation and
+  // DimensionalObservation each add nothing to Observation, so selecting them
+  // drew a box with no sign they were there. "This subclass adds nothing" is
+  // information, and it is the answer to "why did my selection not appear".
+  return [
+    ...shared,
+    ...members.flatMap(m => [makeHeader(m), ...(byChild.get(m.id) ?? [])]),
+  ];
 }

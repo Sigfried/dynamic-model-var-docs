@@ -34,17 +34,25 @@ describe('siblingMerge', () => {
   test('the schema has real non-Entity sibling groups to merge', () => {
     const groups = groupSiblings(classIds, parentOf, mergeable);
     expect(groups.size).toBeGreaterThan(0);
-    for (const [, members] of groups) expect(members.length).toBeGreaterThanOrEqual(2);
+    expect([...groups.values()].some(m => m.length >= 2)).toBe(true);
   });
 
-  test('a lone class never merges', () => {
-    const groups = groupSiblings(['Participant'], parentOf, mergeable);
-    expect(groups.size).toBe(0);
+  test('a LONE child still merges into its parent', () => {
+    // The rule Siggie asked for: a box's anatomy must not depend on what else
+    // is selected. MeasurementObservation on its own gets the same shared-rows
+    // -then-child-block shape it gets beside its siblings.
+    const groups = groupSiblings(['MeasurementObservation'], parentOf, mergeable);
+    expect(groups.get('Observation')).toEqual(['MeasurementObservation']);
+  });
+
+  test('a class with no mergeable parent still does not merge', () => {
+    // Participant is a direct child of Entity, which is excluded.
+    expect(groupSiblings(['Participant'], parentOf, mergeable).size).toBe(0);
   });
 
   test('member order (and so colour) is stable as the canvas changes', () => {
     const groups = groupSiblings(classIds, parentOf, mergeable);
-    const [parent, members] = [...groups][0];
+    const [parent, members] = [...groups].find(([, m]) => m.length >= 2)!;
     // The same two members, reached via a differently-ordered selection, keep
     // their colours — otherwise a box recolours itself when an unrelated class
     // is added elsewhere on the canvas.
@@ -71,7 +79,7 @@ describe('siblingMerge', () => {
 
   test('inheritedFrom reaches getClassSummary — the shared/own row split', () => {
     const groups = groupSiblings(classIds, parentOf, mergeable);
-    const [parent, members] = [...groups][0];
+    const [parent, members] = [...groups].find(([, m]) => m.length >= 2)!;
     const slots = ds.getClassSummary(members[0])!.slots;
     // At least one row must come from an ancestor, or every row in a merged
     // box would be swatched and "shared" would render as empty.
@@ -100,8 +108,19 @@ describe('siblingMerge', () => {
       // Reversed owners must still head under A, or the block a row sits in
       // would depend on the order the owners happened to accumulate.
       const out = withChildHeaders([row('shared'), row('both', [b, a])], [a, b], hdr);
+      // B still gets a header (every member does), it just owns nothing.
       expect(out.map(r => ('header' in r && r.header ? `H:${r.header.id}` : r.id)))
-        .toEqual(['shared', 'H:A', 'both']);
+        .toEqual(['shared', 'H:A', 'both', 'H:B']);
+    });
+
+    test('a child that owns NO rows still gets a header', () => {
+      // SpecimenQuality/QuantityObservation and DimensionalObservation add
+      // nothing to Observation. Emitting headers only for children with rows
+      // made them vanish from the box entirely — selecting them drew no sign
+      // they were there.
+      const out = withChildHeaders([row('shared'), row('a1', [a])], [a, b], hdr);
+      expect(out.map(r => ('header' in r && r.header ? `H:${r.header.id}` : r.id)))
+        .toEqual(['shared', 'H:A', 'a1', 'H:B']);
     });
 
     test('no members means no headers at all', () => {

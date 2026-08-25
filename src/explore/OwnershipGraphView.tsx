@@ -109,6 +109,13 @@ interface RowVM {
    * `rowY` skips it by name, since no edge names a header.
    */
   header?: MergedMember;
+  /**
+   * Merged boxes only: the class whose definition this row shows. A merged box
+   * can hold SEVERAL rows with one slot name — the parent's `value` plus each
+   * child's narrowed override — so a name alone no longer identifies a row,
+   * and edges anchor via (declaringClass, slot).
+   */
+  declaringClass?: string;
 }
 
 interface NodeVM extends OwnershipSubgraphNode {
@@ -154,6 +161,21 @@ interface ViewModel {
 /** The node whose attribute row stores the slot (edge anchor side). */
 function hostOf(e: OwnershipSubgraphEdge): string {
   return e.storageDirection === 'flipped' ? e.target : e.source;
+}
+
+/**
+ * An edge inside a merged box, tagged with the class whose row it anchors on.
+ * Only edges rewritten by `mergeSiblings` carry the tag.
+ */
+type AnchoredEdge = OwnershipSubgraphEdge & { anchorClass?: string };
+
+/**
+ * The class whose ROW an edge attaches to. For an ordinary node this is just
+ * the host; inside a merged box it is the class that DECLARES the slot, since
+ * the box can hold a parent row and several child overrides sharing one name.
+ */
+function anchorOf(e: AnchoredEdge): string {
+  return e.anchorClass ?? hostOf(e);
 }
 
 function buildViewModel(
@@ -263,10 +285,20 @@ function mergeSiblings(
   vm: ViewModel,
   parentOf: (id: string) => string | undefined,
   isMergeableParent: (parent: string) => boolean,
+  /**
+   * Whose row a slot is, inside a merged box. Returns the PARENT when the
+   * child's definition is identical to what it inherited, and the CHILD when
+   * the child redefines it (`slot_usage` narrowing a range, changing
+   * cardinality, and so on) — a redefinition is a fact about that child and
+   * has to keep its own row and its own edge.
+   */
   declaringClassOf: (classId: string, slot: string) => string | undefined,
   /** The parent's own identity. It is usually NOT a node in the subgraph —
    *  only selected classes are — so it cannot be read off vm.nodes. */
   describeClass: (id: string) => { description: string; abstract: boolean },
+  /** Position of a slot in a class's declared attribute order; MAX_SAFE_INTEGER
+   *  when the class does not list it, so unknowns sort last rather than first. */
+  schemaIndexOf: (classId: string, slot: string) => number,
   expandedNodes: Set<string>,
 ): ViewModel {
   const groups = groupSiblings(vm.nodes.map(n => n.id), parentOf, isMergeableParent);
@@ -305,6 +337,18 @@ function mergeSiblings(
      * nothing re-derives the hierarchy. Parent rows own no colour; sibling
      * rows carry the declaring sibling(s).
      */
+    /**
+     * Keyed by DECLARING CLASS + slot name, not by name alone.
+     *
+     * A child that redefines an inherited slot needs its own row alongside the
+     * parent's: QuestionnaireResponseValue's five children each narrow `value`
+     * to a different type (boolean / decimal / integer / TimePoint), which is
+     * the entire reason those five classes exist. Keyed by name, they collapse
+     * into one row reporting `string` and the distinction vanishes.
+     *
+     * Rows whose definition is unchanged still key on the parent, so the
+     * shared ones merge exactly as before.
+     */
     const rows = new Map<string, RowVM>();
     const sources = parentOnCanvas ? [parent, ...memberIds] : memberIds;
     for (const mid of sources) {
@@ -312,33 +356,52 @@ function mergeSiblings(
       if (!node) continue;
       const isParent = mid === parent;
       for (const r of node.allRows) {
+        // declaringClassOf already accounts for slot_usage: a child that
+        // NARROWS an inherited slot is returned as the declarer, so its
+        // redefined row stays its own rather than merging into the parent's.
         const declaredBy = declaringClassOf(mid, r.slot);
         const inherited = declaredBy !== undefined && declaredBy !== mid;
-        const prev = rows.get(r.slot);
+        const key = `${isParent || inherited ? declaredBy ?? parent : mid}|${r.slot}`;
+        const prev = rows.get(key);
         const owner = byColor.get(mid);
         // Rows reached via the parent node are shared by construction.
         const owners = (isParent || inherited)
           ? (prev?.owners ?? [])
           : [...(prev?.owners ?? []), ...(owner ? [owner] : [])];
-        rows.set(r.slot, {
+        rows.set(key, {
           // A row connected on ANY member is connected on the box: it carries
           // a drawn edge, whichever sibling stores it.
           ...(prev ?? r),
           connected: (prev?.connected ?? false) || r.connected,
           owners,
+          declaringClass: key.slice(0, key.indexOf('|')),
         });
       }
     }
-    for (const [slot, r] of rows) {
-      if (r.owners?.length) slotColor.set(`${id}|${slot}`, r.owners[0].color);
+    for (const [key, r] of rows) {
+      // `key` is already `declaringClass|slot`, the same pair edges resolve by.
+      if (r.owners?.length) slotColor.set(`${id}|${key}`, r.owners[0].color);
     }
     const all = [...rows.values()];
-    // Shared rows first, then each sibling's own, grouped by sibling in
-    // member order so a child's block is contiguous under its header.
-    const rank = (r: RowVM) => r.owners?.length
-      ? 1 + Math.min(...r.owners.map(o => members.findIndex(m => m.id === o.id)))
-      : 0;
-    all.sort((a, b) => rank(a) - rank(b));
+    /**
+     * Sort by the DECLARING class's own schema order — the same rule an
+     * unmerged box uses, so merging never reshuffles a class's attributes
+     * relative to how the schema lists them. (Siggie: "i have no idea how
+     * slots are sorted"; before this, rows inside a block kept map insertion
+     * order, which is member-iteration order and reads as random.)
+     *
+     * Grouping into shared-then-per-child blocks is NOT done here —
+     * `withChildHeaders` regroups by owner so that every member gets a header
+     * even when it owns no rows. This sort only has to make each block's
+     * internal order meaningful.
+     */
+    const declOrder = (r: RowVM) => {
+      // Shared rows are ordered by the parent's declaration, a child's own
+      // rows by that child's.
+      const owner = r.owners?.length ? r.owners[0].id : parent;
+      return schemaIndexOf(owner, r.slot);
+    };
+    all.sort((a, b) => declOrder(a) - declOrder(b));
     const connected = all.filter(r => r.connected);
     const hidden = all.filter(r => !r.connected);
     // Same rule as an ordinary node: a box with nothing connected shows its
@@ -392,11 +455,43 @@ function mergeSiblings(
     ...vm.nodes.filter(n => !absorbed.has(n.id)),
     ...merged,
   ];
+  /**
+   * Inside a merged box a child does not have its parent's slots — the PARENT
+   * has them, and the child is shown as the delta. So an edge anchored on a
+   * child's INHERITED slot is not that child's edge at all; it is the parent's,
+   * seen once per child.
+   *
+   * Dropping those (rather than drawing five and collapsing them afterwards) is
+   * the difference between constructing the right graph and repairing a wrong
+   * one. Five siblings declaring `associated_visit` produced five edges into
+   * one anchor row, which the render fanned five ways for a single
+   * relationship. Deduping after the fact would also have had to pick a winner
+   * among five edges that are only ASSUMED identical — a child narrowing an
+   * inherited range would be silently discarded.
+   *
+   * The parent's own copy survives because the parent is a source whenever any
+   * child is merged (`parentEdgeFor`), so nothing is lost by dropping the
+   * children's.
+   */
   const edges = vm.edges
+    .filter(e => {
+      const host = hostOf(e);
+      if (!absorbed.has(host)) return true;        // not merged, keep as-is
+      const declaredBy = declaringClassOf(host, e.slotName);
+      // Kept when the host is the declarer — which covers both the parent's
+      // own slots and a child's genuine override. A child's copy of a slot it
+      // merely INHERITS unchanged is dropped: that edge is the parent's, and
+      // keeping all five was what fanned one relationship into five lines.
+      return declaredBy === undefined || declaredBy === host;
+    })
     .map(e => ({
       ...e,
       source: absorbed.get(e.source) ?? e.source,
       target: absorbed.get(e.target) ?? e.target,
+      // Which row inside the box this edge anchors on. A merged box can hold
+      // several rows with one slot name (parent's plus each override), so the
+      // name alone is no longer a unique anchor.
+      anchorClass: hostOf(e),
     }))
     // Both ends in the same box: the relationship is inside the box now.
     .filter(e => e.source !== e.target);
@@ -406,7 +501,7 @@ function mergeSiblings(
   // right: the relationship belongs to every child equally.
   const edgeColors = new Map<string, string>();
   for (const e of edges) {
-    const c = slotColor.get(`${hostOf(e)}|${e.slotName}`);
+    const c = slotColor.get(`${hostOf(e)}|${anchorOf(e)}|${e.slotName}`);
     if (c) edgeColors.set(e.id, c);
   }
 
@@ -435,9 +530,17 @@ function rowsTop(node: NodeVM): number {
   return HEADER_H + ownersStripHFor(node.hiddenOwners);
 }
 
-/** y-center of a slot's displayed row, relative to the node's top-left. */
-function rowY(node: NodeVM, slot: string): number {
-  const idx = node.rows.findIndex(r => r.slot === slot);
+/**
+ * y-center of a slot's displayed row, relative to the node's top-left.
+ *
+ * `declaringClass` disambiguates a merged box holding several rows with one
+ * slot name (the parent's, plus each child's override). Matching on the name
+ * alone anchored every child's edge on the parent's row.
+ */
+function rowY(node: NodeVM, slot: string, declaringClass?: string): number {
+  const idx = node.rows.findIndex(r =>
+    r.slot === slot && !r.header
+    && (!declaringClass || !r.declaringClass || r.declaringClass === declaringClass));
   if (idx < 0) throw new Error(`No displayed row for ${slot} on ${node.id}`);
   return rowsTop(node) + idx * ROW_H + ROW_H / 2;
 }
@@ -585,7 +688,7 @@ function buildSpec(vm: ViewModel, direction: Direction): GraphSpec {
     const free = nodeById.get(hostOf(e) === e.source ? e.target : e.source);
     if (!host || !free) throw new Error(`Edge ${e.id} endpoint missing from subgraph`);
     const flipped = e.storageDirection === 'flipped';
-    const y = rowY(host, e.slotName);
+    const y = rowY(host, e.slotName, anchorOf(e));
     const rowPort = addPort(
       host, `${host.id}::row:${e.slotName}`, flipped ? 0 : NODE_W, y,
     );
@@ -703,11 +806,18 @@ export default function OwnershipGraphView({
   );
   /**
    * Draw ONLY what was selected (plus explicit expansions): no owners pulled
-   * in automatically. Siggie, 2026-08-25 — with owners auto-drawn, five
-   * selected classes can pull in up to five owners each, and the inheritance
-   * work is impossible to look at. The `owned by` chip strip is already the
-   * reveal affordance, so nothing becomes unreachable; ownerCap 0 just makes
-   * every owner a chip instead of some of them boxes.
+   * in automatically.
+   *
+   * NB this is ZERO hops, not one — `ownerCap` is a legibility CEILING ("draw
+   * a node's owners only if there are at most N of them"), so 0 means never.
+   * The default of 5 is already the one-hop behaviour. Labelled accordingly:
+   * calling this button "1 hop" was wrong and Siggie caught it.
+   *
+   * Useful anyway, and the reason it exists: with owners auto-drawn, five
+   * selected classes pull in up to five owners each and the inheritance work
+   * is impossible to look at. The `owned by` chip strip is already the reveal
+   * affordance, so nothing becomes unreachable — every owner is a chip
+   * instead of some of them boxes.
    */
   const [tightScope, setTightScope] = useState<boolean>(
     () => localStorage.getItem('explore-nl-tight') === '1',
@@ -753,17 +863,60 @@ export default function OwnershipGraphView({
     // holding 37 classes is the crowding it was supposed to remove.
     const isMergeableParent = (parent: string) =>
       !SKIP_SUBCLASS_EXPANSION.has(parent);
+    /**
+     * Whose slot is this, for merging purposes?
+     *
+     * `inheritedFrom` alone is NOT enough, and assuming it was would have been
+     * a silent bug: all four Observation children report `observation_type` as
+     * inheritedFrom Observation, yet each NARROWS its range (
+     * MeasurementObservationTypeEnum / SdohEnum / BaseEnum). That is
+     * `slot_usage`, and a narrowed slot is genuinely the child's — it needs its
+     * own row and its own edge, not a shared one that would misreport three of
+     * the four ranges.
+     *
+     * So: inherited AND identical to the parent's version → the parent's.
+     * Anything else → the child's.
+     *
+     * (Goes through dataService, not `summaries`: that map holds only subgraph
+     * NODES, and the parent is usually not one — it is the box's title.)
+     */
+    // `required` is deliberately NOT compared. Every class in the schema
+    // reports inherited `id` as required while Entity declares it optional
+    // (LinkML derives required from identifier:true at the inherited site) —
+    // comparing it would mark `id` as redefined on all 53 classes and give
+    // every child an `id` row of its own. Range and multivalued are the
+    // differences that actually change what is drawn.
+    const sameDef = (a: AttributeSummary, b: AttributeSummary) =>
+      a.range === b.range && a.multivalued === b.multivalued;
     const declaringClassOf = (classId: string, slot: string) => {
-      const s = summaries.get(classId)?.slots.find(a => a.name === slot);
-      return s ? (s.inheritedFrom ?? classId) : undefined;
+      const own = dataService.getClassSummary(classId)?.slots
+        .find(a => a.name === slot);
+      if (!own) return undefined;
+      if (!own.inheritedFrom) return classId;
+      const inh = dataService.getClassSummary(own.inheritedFrom)?.slots
+        .find(a => a.name === slot);
+      return inh && sameDef(own, inh) ? own.inheritedFrom : classId;
     };
     const describeClass = (id: string) => {
       const sum = dataService.getClassSummary(id);
       return { description: sum?.description ?? '', abstract: sum?.isAbstract ?? false };
     };
+    // Position in the class's declared attribute order. getClassSummary lists
+    // attributes in the order bdchm declares them, which is the authoritative
+    // index the unmerged boxes already sort by.
+    // NB: goes through dataService, not `summaries` — that map holds only
+    // subgraph NODES, and the parent whose order we need is usually not one
+    // (it is the box's title, not a selected class). Reading it from the
+    // wrong map returned MAX_SAFE_INTEGER for every shared row, which sorts
+    // them all last and looks exactly like no sort at all.
+    const schemaIndexOf = (classId: string, slot: string) => {
+      const i = dataService.getClassSummary(classId)?.slots
+        .findIndex(a => a.name === slot) ?? -1;
+      return i < 0 ? Number.MAX_SAFE_INTEGER : i;
+    };
     return mergeSiblings(
       baseVm, parentOf, isMergeableParent, declaringClassOf, describeClass,
-      expandedNodes,
+      schemaIndexOf, expandedNodes,
     );
   }, [baseVm, summaries, mergeSibs, dataService, expandedNodes]);
   const [nudges, setNudges] = useState<Map<string, { dx: number; dy: number }>>(new Map());
@@ -1269,9 +1422,9 @@ export default function OwnershipGraphView({
         )}
         <button className={toolBtn(tightScope)}
           title={tightScope
-            ? 'Selection only: owners are chips, click one to draw it'
-            : 'Owners auto-drawn (up to 5 per class)'}
-          onClick={toggleTight}>1 hop</button>
+            ? 'Selection only: every owner is a chip — click one to draw it'
+            : 'Owners drawn automatically, up to 5 per class'}
+          onClick={toggleTight}>only sel</button>
         <span className="w-px h-4 bg-gray-300 dark:bg-slate-600 mx-1" />
         <button className={toolBtn(mergeSibs)}
           title={mergeSibs
@@ -1609,13 +1762,14 @@ export default function OwnershipGraphView({
                           data-no-drag
                           title={`${r.header.label} — is a ${n.label}; click for details`}
                           onClick={ev => { ev.stopPropagation(); onNodeClick?.(r.header!.id); }}
-                          className="flex items-center gap-1.5 px-2 text-[10px] font-semibold
-                                     cursor-pointer hover:underline border-t
-                                     border-gray-200 dark:border-slate-600"
-                          style={{ height: ROW_H, color: r.header.color }}
+                          className="flex items-center px-2 text-[10px] font-semibold
+                                     cursor-pointer hover:brightness-110"
+                          style={{
+                            height: ROW_H,
+                            background: r.header.color,
+                            color: '#fff',
+                          }}
                         >
-                          <span className="w-1.5 h-3 rounded-[1px] shrink-0"
-                            style={{ background: r.header.color }} />
                           <span className="truncate">{r.header.label}</span>
                         </div>
                       ) : (
@@ -1624,35 +1778,43 @@ export default function OwnershipGraphView({
                           data-row={r.slot}
                           data-expandable={isExpandable(r) ? '' : undefined}
                           data-no-drag={isExpandable(r) ? '' : undefined}
-                          title={r.channel === 'plain'
+                          title={(r.channel === 'plain'
                             ? `${r.slot}: ${r.range}`
                             : `${r.slot} → ${r.range} (${r.cardinality})${r.flipped ? ' — owner side' : ''}` +
-                              (isExpandable(r) ? ` — click to add ${r.range}` : '')}
+                              (isExpandable(r) ? ` — click to add ${r.range}` : ''))
+                            // A slot several children declare independently is
+                            // drawn once, in the first one's colour; the rest
+                            // are named here rather than by extra swatches.
+                            + ((r.owners?.length ?? 0) > 1
+                              ? `\nalso declared by ${r.owners!.slice(1).map(o => o.label).join(', ')}`
+                              : '')}
                           onClick={isExpandable(r)
                             ? ev => { ev.stopPropagation(); onExpand?.(r.range); }
                             : undefined}
-                          className={`flex items-center gap-1.5 px-2 text-[11px] ${r.connected
-                            ? 'text-gray-700 dark:text-gray-300'
-                            : 'text-gray-400 dark:text-gray-500'} ${isExpandable(r)
+                          className={`flex items-center gap-1.5 px-2 text-[11px] ${
+                            r.owners?.length ? '' : r.connected
+                              ? 'text-gray-700 dark:text-gray-300'
+                              : 'text-gray-400 dark:text-gray-500'} ${isExpandable(r)
                               ? 'cursor-pointer hover:bg-sky-50 dark:hover:bg-sky-900/30 hover:text-sky-700 dark:hover:text-sky-300'
                               : ''}`}
-                          style={{ height: ROW_H }}
+                          style={{
+                            height: ROW_H,
+                            // A child's rows are set in its own colour, which
+                            // is the header's background and the colour its
+                            // edges are drawn in — so the block, its label and
+                            // its lines are one thing. Unconnected rows fade,
+                            // matching what the gray classes do.
+                            ...(r.owners?.length
+                              ? { color: r.owners[0].color,
+                                  opacity: r.connected ? 1 : 0.55 }
+                              : {}),
+                          }}
                         >
                           {r.channel === 'plain' ? (
                             <span className="w-1.5 h-1.5 rounded-full shrink-0 border border-gray-400 dark:border-gray-500" />
                           ) : (
                             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${r.channel === 'ownership' ? 'bg-amber-500' : 'bg-gray-400'} ${r.connected ? '' : 'opacity-60'}`} />
                           )}
-                          {/* Rows sit under their child's header, so whose
-                              row this is needs no per-row marker. The
-                              exception is a slot SEVERAL children declare
-                              independently: it appears once, under the first,
-                              and the others are named here. */}
-                          {(r.owners?.length ?? 0) > 1 && r.owners!.slice(1).map(o => (
-                            <span key={o.id} title={`${r.slot} is also declared by ${o.label}`}
-                              className="w-1.5 h-3 rounded-[1px] shrink-0"
-                              style={{ background: o.color }} />
-                          ))}
                           <span className={`truncate ${
                             n.members.length && !r.owners?.length
                               ? 'font-semibold text-gray-900 dark:text-gray-100'
