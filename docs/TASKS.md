@@ -6,441 +6,121 @@
 
 ---
 
-## 🎯 Target release: 2026-07-30 — **PASSED, not renegotiated**
+## 🎯 Dates
 
-This date is three weeks past as of 2026-08-19 and no new one has been set.
-Work has continued without a deadline; treat "before the release" language
-elsewhere in the docs as stale. **Needs Siggie: set a new target or drop it.**
+- **Explorer demo: 2026-08-25**, a couple of hours after the session that
+  shipped the induced-slot migration and the ownership rules. Work was
+  prioritised around it; see the handoff for what was and wasn't done for it.
+- **Target release 2026-07-30 passed and was never renegotiated.** Treat
+  "before the release" language elsewhere in the docs as stale.
+  **Needs Siggie: set a new target or drop it.**
 
 ---
 
-## 🔁 HANDOFF — start here next session (updated 2026-08-24)
+## 🔁 HANDOFF — start here next session (updated 2026-08-25)
 
-> The single-arrowhead merge is **DONE** (`0950472`). Schema-order attributes
-> are **DONE** (`4b2adf6`). Node dragging is **DONE but incomplete**
-> (`c483912`). Full reasoning and every rejected approach: `WORKLOG.md`,
-> entry 2026-08-19/21.
+> **Everything below is on branch `induced-slots-and-ownership`, 4 commits,
+> NOT pushed and NOT merged.** `main` is at `ef80fea`.
 
-### 📍 Option A→B is DONE (2026-08-24). Ownership classification is what remains.
+### 📍 State: the pipeline migration and the ownership rules both SHIPPED
 
-**Option A→B shipped together** as `6671166`; the attribute-cardinality fix
-followed as `9dec0d7`. Reasoning, rejected approaches and the corrected
-measurements: `WORKLOG.md`, entries "2026-08-24 (later)" and "2026-08-25".
-Verification: 235 tests / 21 files green, typecheck clean, transform re-run
-byte-identical. Every new test file was confirmed to fail against its pre-fix
-state.
+Four commits, in order:
 
-> ⚠️ **Both commits carry a review caveat from Siggie: they were not closely
-> reviewed and should be treated as suspect.** The verification was mechanically
-> thorough, but that is not the same as human review, and the slot id scheme in
-> particular had far less scrutiny than the test counts suggest. Re-derive
-> rather than cite. See the WORKLOG entries.
-
-Remaining work: **ownership classification**, immediately below. Files:
-`containmentGraph.ts`, `Graph.ts`, `OwnershipGraphView.tsx`, components.
-
-> 🏗️ **Also queued, and it should delete a bunch of work:**
-> moving slot storage onto the class definitions via
-> `SchemaView.induced_class()` (Siggie, 2026-08-25 — see the section
-> further down). If that lands, the qualified-id scheme and conflict
-> detection added in `6671166` all become unnecessary. It does **not**
-> block classification — the classifier reads bare slot names and
-> per-class range/cardinality either way — but it is worth knowing before
-> building anything new on top of the `slots:` section. **[sg] no, the
-> induced class thing should come first**
-
-**Two inputs to that work changed under it — re-derive, don't reuse:**
-
-- `Entity`-ranged slot *definitions* went 2 → 6, but the **12 class sites are
-  unchanged**, so "expect a 12-edge convergence" still holds. However those 12
-  now split **5 multivalued / 7 single-valued**; the collapse previously made
-  every `focus` site look single-valued. Rules 1 and 2 classify them
-  differently, so counts taken from the old data are stale.
-- `bdchm.processed.json` now has 337 slot ids (was 220) — conflicting slots are
-  qualified per class. **All three counts in the section below shift down by 3**
-  (the wrong edges, now removed): 153 → **150** class-ranged sites, 141 → **138**
-  emitted today, 151 → **150** target. Verified against the live data
-  2026-08-24. The 12 `Entity` sites are unchanged.
-
-### 🛑 OPEN — ownership classification: rules decided, implementation pending
-
-**THIS IS THE CURRENT WORK.** Finish and implement this before returning to
-routing/formatting.
-
-[sg] No, deal with the 08-25 work first
-
-> 🚧 **SETTLE THE `association` SET FIRST (raised 2026-08-25, Siggie).**
-> Nothing else in this section is blocked, but this changes what gets built.
-> Full statement in
-> [OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md) § `association`.
->
-> - The **six single-valued** members may not belong in the set: Rule 2 already
->   yields `own-bkwd`, which layers identically, so `association` changes only
->   their rendering. Verified against the data — none ranges on a
->   `VALUE_OBJECT`, so Exception 2a does not intercept, and dropping them from
->   the set sends all six to Rule 2 cleanly.
-> - The **two multivalued** members (`related_document`, `container`) are the
->   real associations and should be marked explicitly as such — they exist to
->   defeat Rule 1.
->
-> If that resolves as Siggie leans, the association set is **2 edges, not 8**,
-> and the checklist item "replace `OWNERSHIP_OVERRIDES` with the 8-slot
-> association set" becomes a 2-slot set. It also shrinks the open
-> `own-bkwd`/`association` merge question, which is currently framed around
-> moving 57 edges.
-
-**[docs/OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md) is the live
-document** — rewritten 2026-08-21/24 to read as a permanent end-user doc plus
-temporary implementation instructions. **Start there, not in the code.** (The
-diagnosis of what was wrong is in `WORKLOG.md`, 2026-08-21; the interim
-`OWNERSHIP_RETHINK.md` was folded in and removed.)
-
-**Status: proposed target, not yet implemented.** The doc describes where we are
-going; its Appendix records what the code does today and is deleted once the
-rules ship. Ownership classification is Siggie's call — the open questions below
-were decided 2026-08-24 across two rounds; where the rounds disagree, the second
-(marked "superseding") wins.
-
-#### What was wrong
-
-Of five classification rules, only `multivalued` read the schema — the other
-four were hand-typed lists of names. `OWNERSHIP_OVERRIDES` is an edit log
-presented as a category, which is why `performed_by` and
-`associated_participant` landed in different groups despite being the same kind
-of relationship.
-
-#### The rules now
-
-Three edge categories: `own-fwd` (owns), `own-bkwd` (belongs to — renamed from
-`own-flip` for symmetry), `association` (no ownership claim, both ends arrowed,
-but still ordered like `own-bkwd`).
-
-- **Rule 1** — multivalued ⇒ `own-fwd` (31 edges)
-- **Rule 2** — single-valued ⇒ `own-bkwd` (57 edges)
-- **Exception 2a** — single-valued to a target with no independent existence ⇒
-  `own-fwd` (41 edges). The `single_value_owner_slots` list, 14 classes.
-- **Exception 2b** — cardinality splits a family ⇒ `own-fwd` (2 edges):
-  `creation_activity`, `dimensional_measures`.
-- **`Entity`-ranged** ⇒ `own-fwd` (12 edges)
-- **`association`** — 8 named slots
-
-**Decided 2026-08-24 (Siggie), superseding the earlier round:**
-
-- **`Entity`-ranged edges point FORWARD**, not association. `Entity` must be a
-  range node while staying out of inheritance. Removing `EXCLUDE_HAS_A_TARGETS`
-  is sufficient — `Entity` is already in `classIds` and is only dropped by
-  `pruneIsolated` because nothing touches it. Expect a 12-edge convergence.
-- **The inheritance exclusion moves into the inheritance-tree accessors**
-  (`getParentClass`/`getSubclasses`, `Graph.ts:398,416`), not a set the
-  containment builder consults. Side-by-side sets are what conflated the two
-  `Entity` cases in the first place. **But there is no single choke point yet**
-  — the older views (`RelationshipInfoBox`, `LinkOverlay`) derive inheritance by
-  filtering `getEdgesForItem` on `EDGE_TYPES.INHERITANCE` and never call those
-  accessors, so the move would not affect them.
-- **Build the single route (decided).** One accessor for all inheritance
-  derivation, taking a **REQUIRED** `includeEntity` argument — not optional, not
-  defaulted. A default is exactly what let this rot: two silent `Set<string>`s
-  side by side, no call site ever stating which it wanted. Required makes intent
-  explicit at each call and makes a new caller fail to compile rather than
-  quietly inherit the wrong answer. Replaces `SKIP_SUBCLASS_EXPANSION`.
-  Drawing sites pass `false`; `RelationshipInfoBox` passes `true` (stating
-  "Parent class: Entity" is a useful fact — the fan is the noise, not the fact).
-  **The components must stop filtering `getEdgesForItem` on
-  `EDGE_TYPES.INHERITANCE` directly** — that filtering IS the second derivation
-  path, and leaving it means there is still no single route.
-- **`creation_activity` and `dimensional_measures` stay `own-fwd`** as
-  Exception 2b — an earlier draft dropped them as "warts drawn honestly". Both
-  have multivalued siblings that are `own-fwd`; `dimensional_measures` also
-  ranges on a `*Set`. Asserted, not derived: a structural "collection class"
-  test over-collects (`Person`, `Questionnaire`, `ResearchStudyCollection`).
-- **`association` renders slate dashed `#64748b`**, dash `5 4`, both ends
-  arrowed. Today's gray `#9ca3af` is too faint to see.
-- **`own-bkwd` vs `association` kept separate FOR NOW, deliberately.** Siggie is
-  leaning toward merging them but wants the implications visible first. They
-  already layer identically, so a merge is rendering + vocabulary only — but it
-  moves 57 edges, the largest group, out of "ownership".
-
-**Counts corrected.** The old figures (59/40/150) predate pulling out the
-association set and 2b, and 150 could not be reproduced. Verified against the
-live code path 2026-08-24: **153** = every class-ranged slot in the processed
-JSON; **141** = what the builder emits today (12 `Entity` edges excluded before
-classification); **151** = the target. 5 self-loops, unchanged. Any count should
-say which denominator it means.
-
-#### Implementation checklist
-
-- [ ] Rename `own-flip` → `own-bkwd` throughout.
-- [ ] Add the `association` verdict; drop `ref` and the `reference` channel.
-- [ ] Replace `OWNERSHIP_OVERRIDES` (15 entries) with the association set
-      **plus the 2-slot Exception 2b set**. ⚠️ **The association set is 8 slots
-      or 2 depending on the unsettled question above** — settle it first. Add a
-      sync check that each member still has exactly one site: the set is keyed
-      by slot NAME, and every member having one class each is luck, not design.
-      That is what made `performed_by` (11 sites) so damaging.
-- [ ] Delete `EXCLUDE_HAS_A_TARGETS` so the 12 `Entity`-ranged edges are drawn
-      as `own-fwd`. `src/test/containmentGraph.test.ts:102` asserts the rejected
-      behavior and must be updated. Update the comment at
-      `src/config/entityCategories.ts:56`, which names both sets.
-- [ ] **Single inheritance route.** Replace `SKIP_SUBCLASS_EXPANSION` with one
-      accessor taking a required `includeEntity` arg. Route
-      `buildContainmentGraph` (`:239`, false), `LinkOverlay` (`:48,365,375`,
-      false) and `RelationshipInfoBox` (`:68,85`, true) through it; delete the
-      direct `EDGE_TYPES.INHERITANCE` filtering in those components.
-      `getSubclasses` currently has zero callers.
-- [ ] **Re-verify the cycle check.** The zero-non-self-cycles result predates the
-      `Entity`-forward decision, and `Entity` with 12 live inbound edges is
-      exactly the shape that could introduce cycles.
-- [ ] Rename `VALUE_OBJECTS` → `single_value_owner_slots`; consider moving it to
-      a LinkML overlay + add a sync check for pure-leaf drift.
-- [ ] Keep `classifySlotEdgeExplained` and the legend's group-by-rule rendering.
-- [ ] Association: both ends arrowed, slate dashed. `OwnershipGraphView.tsx`
-      `:1095-1102` switches on `isOwn` today and becomes a three-way switch on
-      the verdict. Update the module header comment (`:14-20`), which documents
-      the old two-channel scheme, and the legend text.
-- [ ] Delete the doc's Appendix once shipped.
-
-This blocks nothing mechanically, but the diagram's largest structure
-(Participant's 22-edge outbound fan) is produced by Rule 2, so **routing work
-tuned against today's classification may be tuned against the wrong graph.**
-Adding `Entity` as a node with a 12-edge convergence changes the layout too.
-
-### ✅ DONE — "Option A": slot display name vs slot id (2026-08-24)
-
-The Dec 2025 "Class-specific slot definitions" WIP, fixed nine months on.
-`SlotElement`'s constructor assigned the map key (the qualified id) to
-`this.name` and discarded `data.name`, so every display path rendered
-`observations-ObservationSet` where the user should read `observations`.
-
-**Fix:** `displayName` is now a getter on the base `Element`, defaulting to
-`name` and overridden in `SlotElement` to return the bare name. `name` stays the
-qualified id — it is the map key and every lookup joins on it.
-
-Display sites switched to `displayName`: attributes-table Name column, slot
-panel titlebar, `getSectionItemData` (panel section rows), `getPanelTitle`, and
-the two sort sites (`SlotCollection.fromData`, `DataService.subsetSection`) that
-were ordering the visible list by qualified id.
-
-`OwnershipGraphView.tsx` needed **no** edit — its `:147`/`:161` sites read
-`getClassSummary().slots[].name`, which is the attributes-table cell, so fixing
-that cell fixed both. The phantom duplicate rows and the lost schema order are
-gone (verified by measurement, before and after).
-
-Test: `src/test/slotDisplayName.test.ts` — confirmed to fail 3-of-7 against the
-old behavior. It asserts the attributes-table Name column equals the graph's
-edge label, the check whose absence let this ship for nine months.
-
-#### Still true — do not disturb
-
-`containmentGraph.ts:128` looks up `OWNERSHIP_OVERRIDES` by **bare** `slotName`
-(from `Graph.ts`, which stays bare). Lookups keyed on the qualified id —
-`getClassesUsingSlot`, `subsetSection`, `elementLookup`, CLASS_SLOT/SLOT_RANGE
-edge keys — must keep using `name`. `subsetSection`'s `names.has(el.name)` is
-the trap: `names` holds graph node ids, so a bare name there yields zero rows.
-
-### ✅ DONE — two WRONG EDGES in the shipped diagram (2026-08-24)
-
-`scripts/transform_schema.py` kept the first-seen definition when a slot was
-declared on several classes with different definitions, and `continue`d past the
-rest. First-seen was dict iteration order.
-
-Both wrong edges are fixed and asserted:
-
-- **`items`** — `QuestionnaireResponse → QuestionnaireResponseItem` (was
-  `→ QuestionnaireItem`).
-- **`part_of`** — `QuestionnaireItem` self-loops (was a spurious
-  `QuestionnaireItem ↔ ResearchStudy`).
-
-**Fix:** `resolve_slot_ids()` decides the id for every (class, attribute) site
-once, comparing only `range`/`multivalued`/`required` with `None` ≡ `False`.
-Divergent sites get `{slot}-{Class}`. Both `transform_slots` and
-`transform_classes` consume that one decision — they previously decided
-independently, and disagreement would leave a class referencing a slot id with
-no entry.
-
-**One rule, no exceptions:** if sites disagree, they are not the same slot, so
-**every** site of that name is qualified and none keeps the bare id. A name
-whose sites all agree keeps its bare id.
-
-An earlier implementation let one variant keep the bare id, picked by a headcount
-of sites, and needed two exceptions (globals outrank the count; ties qualify
-everything) before it stopped producing nonsense. Siggie rejected it: a headcount
-answers "which id is shortest", not "which slots are distinct", and needing
-exceptions to stop a rule misbehaving means the rule is wrong. See `WORKLOG.md`.
-
-**Measured, correcting the earlier estimate of "~11":** 46 slot names are
-declared on >1 class; 18 conflict on a load-bearing field; 165 sites qualified;
-220 → 337 slot ids. The larger id set is internal plumbing — `displayName`
-renders the bare name, so qualified ids never reach the screen. **Verified: both
-strategies draw a byte-identical graph** (all 86 edges), so the id scheme moves
-nothing the user sees.
-
-**Part 2 of `transform_slots` had to change with it.** It keyed global-slot
-metadata on the bare id, which conflicted global slots no longer have — `id`
-lost its schema.org `slot_uri` and three slots lost their `global` flag. It now
-looks entries up by NAME and applies identity metadata (`global`, `slot_url`) to
-every site, while the canonical `range`/`required`/`multivalued` restore stays
-on the unqualified entry only — applying it to a qualified entry would overwrite
-the per-class definition that entry exists to record. `slot_url` coverage went
-2 → 55, `global` 5 → 77.
-
-**The open question is answered: the fix covers all 4 `focus` sites, not 1.**
-gen-linkml materializes inherited attributes onto every subclass, so each
-`*ObservationSet` is its own site with its own id.
-
-Test: `src/test/slotConflictResolution.test.ts` — confirmed to fail 4-of-6
-against the old `bdchm.processed.json`. Includes a structural guard that every
-class slot-ref resolves.
-
-### 🏗️ OPEN — move slot storage into the class definitions (Siggie, 2026-08-25)
-
-**Siggie's direction, not yet designed.** The `slots:` section of
-`bdchm.processed.json` has been a recurring source of problems — the collapse
-bug, the qualified-id scheme, the `global`/`slot_uri` metadata keyed on a bare
-id. The proposal: **induced slot definitions should live with the class
-definitions**, at least for Explorer. Kitchen Sink still wants all slots
-together, so a slot-oriented view has to survive in some form.
-
-The mechanism Siggie proposes, and it works — verified 2026-08-25 against
-`bdchm.yaml` with `linkml_runtime` 1.9.5, already installed in `scripts/.venv`:
-
-```python
-from linkml_runtime.utils.schemaview import SchemaView
-sv = SchemaView(".../bdchm.yaml")
-classes = {cls: sv.induced_class(cls) for cls in sv.all_classes()}
-```
-
-`induced_class(c).attributes[slot]` gives the fully-merged per-class definition.
-**Every case that broke `transform_schema.py` comes out right natively:**
-
-| case | induced result |
+| commit | what |
 |---|---|
-| `Questionnaire.items` | `QuestionnaireItem` |
-| `QuestionnaireResponse.items` | `QuestionnaireResponseItem` |
-| `QuestionnaireItem.part_of` | `QuestionnaireItem` (not `ResearchStudy`) |
-| `ObservationSet.focus` | `Entity`, multivalued |
-| `Observation.focus` | `Entity`, single-valued |
-| `Procedure.quantity` / `DrugExposure.quantity` | `Quantity` / `float` |
+| `e8b8bd0` | Slot definitions moved onto classes via `SchemaView.induced_class`. gen-linkml and `bdchm.expanded.json` are **gone**; `transform_schema.py` reads `bdchm.yaml` directly through new `scripts/induced_schema.py`. |
+| `721f98e` | Ownership classification rules implemented. `own-flip`→`own-bkwd`, `association` added, `OWNERSHIP_OVERRIDES` deleted. |
+| `c0e265b` | Entity-ranged edges always `own-fwd` (they were half-reversing). |
+| `a18d78b` | Example cases reordered simple→complex, edge-type cases added. |
 
-That is the whole reason `resolve_slot_ids()` exists. **If slots move onto
-classes, the conflict detection, the qualified ids and the majority/tie rules
-all become unnecessary** — there is no shared slot entry to collide in, because
-the definition simply lives on the class. That deletes a large amount of
-machinery added 2026-08-24, and the id scheme was the least-reviewed part of it
-(see the WORKLOG caveat).
+Verification at each step: 235 tests / 21 files green, `npx tsc --noEmit`
+clean. **Counts measured against the live graph after the work:**
 
-#### Are Parts 1/2/3 of `transform_slots` still necessary? Mostly not (measured 2026-08-25)
+- 148 has-a + 2 association = **150 slot edges** (the predicted target)
+- **12 Entity edges** (the predicted convergence)
+- Groups: `own-bkwd/fk-inversion` 70, `own-fwd/value-object` 40,
+  `own-fwd/multivalued` 35, `own-fwd/cardinality-split` 2, `association` 2,
+  `own-bkwd/backward-multivalued` 1
 
-Siggie's question. Verified against `bdchm.yaml` + the live
-`bdchm.processed.json`, not reasoned from the code.
+### ⚖️ THE ONE DECISION WAITING ON SIGGIE
 
-| block | lines | verdict |
-|---|---|---|
-| Part 1 — collect slots from class attributes | `:360` | **subsumed.** Its job is one definition per (class, attribute) site; that IS `induced_class`. No slot name in processed.json is missing from induced. |
-| Part 2 — global metadata + canonical restore | `:391` | **split.** See below. |
-| Part 3 — `slot_usage` override entries | `:432` | **subsumed.** All 31 override entries checked field-by-field against `induced_class(cls).attributes[name]`: **0 mismatches** on range/multivalued/required. Part 3 re-derives from the same gen-linkml-merged `attributes` induced already reads. |
+**Merge `own-bkwd` into `association`?** It moves **70 edges** — the largest
+group — out of "ownership". They already layer identically, so this is
+rendering and vocabulary only, not structure.
 
-Part 2 is not one thing:
+**Look at example case "4. All three edge types at once" to decide.**
+`SpecimenContainer` carries exactly one edge of each verdict — `additive`
+(own-fwd), `contained_in` (own-bkwd), `container` (association) — so all three
+are comparable on one small box.
 
-- **Canonical `range`/`required`/`multivalued`/`description` restore — obsolete.**
-  It exists only to undo Part 1 picking up a `slot_usage`-merged value. Induced
-  never has that problem, so the restore has nothing to fix.
-- **`slot_uri` — subsumed.** Values are identical to induced (verified).
-- **`slot_url` — NOT subsumed.** Computed via prefixes + live HTTP validation.
-  Replaceable with `sv.expand_curie`. See the CURIE task further down.
-- **`global: True` — NOT subsumed.** No induced equivalent; it is membership in
-  the YAML `slots:` section. Replace with `set(sv.all_slots(attributes=False))`.
+### ▶️ NEXT UP (demo goals, in Siggie's priority order)
 
-**Keep the `overrides` fact even if Part 3 goes.** The app consumes it as
-provenance, not as data: `Element.ts:517` labels the row "override",
-`dataLoader.ts:200` passes it through, `Graph.ts:276` tests it. Source it from
-`sv.get_class(cls).slot_usage` instead of a duplicate slot entry.
+1. **Too many entities displayed.** Siggie's direction: from a selected entity,
+   default to **one hop in either direction**, with the ability to expand each
+   way and to close boxes. Open question he raised: what to do with a closed
+   box BETWEEN two displayed boxes — *for now, probably disallow it*.
+   Worth knowing: the `owned by` chip row already lists owners without drawing
+   them, which is arguably the right primitive — chips for the un-expanded hop,
+   boxes for the expanded one.
+2. **Fix the ownership legend.** Siggie asked for this but has not yet said
+   what is wrong with it. **Ask before changing anything.** The older
+   restructuring notes further down (un-nest from example cases, move BIGGEST
+   FANS, shorten the fk-inversion text) may or may not be what he means.
+3. **Everything displays and points where it should.** img-1 (Entity arrowheads)
+   is fixed; no other reported breakage outstanding.
 
-##### Two live bugs found while checking — both CURED by the migration, not caused by it
+### 🚧 Gotchas that cost time this session — read before running anything
 
-Recording these so the migration is not later blamed for fixing them, and so
-neither gets reintroduced.
+- **`npx vitest` needs node 22+.** The default `node` is v16 and fails with a
+  `node:fs/promises` export error that looks like a broken test setup but is
+  not. Use
+  `export PATH="$HOME/.nvm/versions/node/v22.20.0/bin:$PATH"`.
+- **Never run `npm run dev`.** Siggie keeps the app running himself.
+- **`tsc` will NOT catch a stale union comparison.** When `'own-flip'` left the
+  `OwnershipVerdict` union, every surviving `x === 'own-flip'` narrowed to
+  `never` instead of erroring — so the typecheck stayed green while two live
+  sites silently stopped matching (edge emission, and the legend's
+  `flippedCount`). **Grep for the old literal; do not trust tsc for this.**
+- **`console.log` is swallowed in vitest here.** To surface a value, assert it
+  against a sentinel string and read the diff.
 
-1. **Part 2 can never flag an override-only slot as `global`.** Part 2 looks up
-   entries built by Part 1 but runs *before* Part 3. `observations` and `value`
-   are in the YAML `slots:` section yet have **no Part 1 entry at all** — they
-   exist only as Part 3 override entries. Both lose `global: True` and
-   `slot_url`, as does every override entry of a global slot (all 20
-   `associated_participant-*`, etc.). The transform's "global slot ... is not
-   used by any class" warning for these two reads as a schema problem but is
-   really this ordering bug. Currently **masked** in the UI because
-   `Element.ts:517` tests `slot.overrides` before `slot.global`, so an override
-   row never consults the flag — latent, not visible.
+---
 
-2. **`SLOT_OVERRIDE_DELIMITER = '-'` is overloaded.** `:107` builds
-   *conflict-qualified* ids `{attr}-{Class}`; `:446` builds *override* ids with
-   the identical shape. Today: 135 qualified vs 31 override ids, **0 collisions,
-   0 ids with more than one delimiter** — luck, not design, the same way
-   `performed_by` was. The migration deletes the qualified-id half, retiring it.
+### ✅ DONE — slot storage moved onto class definitions (`e8b8bd0`, 2026-08-25)
 
-Verified details worth knowing before designing this:
+`transform_schema.py` reads `bdchm.yaml` through `SchemaView`; gen-linkml and
+`bdchm.expanded.json` are gone. Deleted `build_class_hierarchy`,
+`get_defining_class`, and the three-pass `transform_slots`. `resolve_slot_ids`
+survives but only decides what to CALL a slot in the derived flat index, not
+what it means.
 
-- **Metadata survives.** `slot_uri`, `identifier`, `description`, `alias`,
-  `inlined`, `comments`, `examples` are all on the induced attribute — including
-  the `slot_uri` that Part 2 of `transform_slots` currently has to reattach by
-  name.
-- **`domain_of` is NOT `inherited_from`.** It is the list of *every* class
-  declaring the attribute (`DrugExposure.identity.domain_of` has 14 entries), not the nearest
-  ancestor. 54 of 432 sites disagree. Use `sv.class_ancestors(cls)` to find the
-  nearest declaring ancestor instead — that still replaces the hand-rolled
-  hierarchy walk, just not with a single field.
-- **Kitchen Sink needs the slot-oriented view.** `SlotCollection`,
-  `getClassesUsingSlot`, `elementLookup` and the middle panel are all keyed on
-  slot ids today. A class-first store has to either derive that index or keep a
-  reduced one. 
-  **[sg] leave a comment (as a field since json doesn't take comments) at the top of the "slots:" section in processed.json with a reminder to stop using this when/if there's time to refactor kitchen sink (etc?) to use induced slots instead**
-- **This is a pipeline change, so `download_source_data.py` and the schema-sync
-  GitHub Action (`.github/workflows/schema-sync.yml`, shipped `8adb971` — not
-  "planned") are in scope**, and it adds `linkml-runtime` as a real runtime
-  dependency of the transform rather than an aspiration.
+**Still true, and load-bearing:**
 
-Open question for the design: whether `bdchm.processed.json` keeps a `slots:`
-section at all, and if so whether it becomes a derived index rather than the
-source of truth. **[sg] see might note above**
+- The top-level `slots:` section is a **derived index**, not the source of
+  truth, and carries a `_comment` field saying so. Dropping it entirely would
+  break `Graph.ts:502` for all 432 refs → zero slot edges → the ownership
+  diagram collapses. Kitchen Sink, `SlotCollection`, `getClassesUsingSlot` and
+  `elementLookup` are all still keyed on slot ids; the index goes away only
+  when those are refactored.
+- `inherited_from` is computed in `induced_schema.defining_class`: walk
+  `class_ancestors` and keep the **topmost** class that declares the attribute
+  — inline in `attributes:` **or** by name in its `slots:` list. Missing the
+  second half silently breaks every global slot. Matches the old output on
+  432/432 refs.
+- **`domain_of` is NOT the defining ancestor.** It lists every declaring class.
+  Do not reach for it again.
 
-**[sg] the Explorer detail pane doesn't include all the details it should.**
-it should be modelled on the Nested Tabular details table (which means it
-will need more horizontal space, maybe taking up bottom of viewport). attribute
-defs in induced class defs do not include where the attribute was inherited
-from. here's some code for that:
-```
-def find_defining_class(sv, current_class: str, attribute_name: str) -> str:
-    """Traces up the ancestry tree to find the exact class that declared the attribute."""
-    # Ordered list from the class up to its oldest ancestors
-    for ancestor in sv.class_ancestors(current_class):
-        raw_ancestor_def = sv.get_class(ancestor)
+**Three data changes shipped with it, all pre-existing bugs:**
 
-        # Check if this ancestor explicitly contains the inline attribute definition
-        if raw_ancestor_def.attributes and attribute_name in raw_ancestor_def.attributes:
-            return ancestor
-
-    # Fallback to the current class if it wasn't inherited
-    return current_class
-
-target_attr = "focus"
-class_attribute_lineage = {}
-
-for cls_name in sv.all_classes():
-    # Use induced_class just like you were doing to safely pull downstream attributes
-    induced_cls = sv.induced_class(cls_name)
-
-    if target_attr in induced_cls.attributes:
-        # Trace the true structural origin
-        origin_class = find_defining_class(sv, cls_name, target_attr)
-
-        class_attribute_lineage[cls_name] = {
-            "canonical_id": f"{origin_class}__{target_attr}",
-            "defined_in_class": origin_class,
-            "is_inherited": origin_class != cls_name,
-            "slot_definition": induced_cls.attributes[target_attr] # Contains your local 'multivalued' rules
-        }
-```
-(this also gives us the canonical_id back which Explorer may not need but previous views might)
-
+- 28 slots gained `global` (a pass-ordering bug hid it from override-only
+  slots), and a bogus "global slot not used by any class" warning is gone.
+- `id-Person` / `id-Entity` had `required` **inverted**. LinkML derives
+  `required` from `identifier: true`, so the inherited site is required and the
+  raw declaration on Entity is not.
+- `associated_person` dropped (337→336). Referenced by no class, so it rendered
+  as a dead Kitchen Sink row with a used-by count of 0. **Flagged, not
+  decided** — restore by unioning with `all_slots(attributes=False)` if the
+  intent is that Kitchen Sink lists every declared slot.
 
 ### 🔗 OPEN — CURIE → external definition links (deferred, Siggie 2026-08-25)
 
@@ -481,18 +161,6 @@ UOM, VBO, bdchm, linkml, ncbitaxon, rxnorm, schema.
 
 **Do not fold this into the induced-slots migration** — it is orthogonal to
 where slot definitions are stored.
-
-### 🎨 OPEN — own-fwd arrowheads are on the wrong end (formatting round)
-
-Noticed 2026-08-24 from a screenshot (Participant / Visit / Condition). On
-forward ownership edges the arrowhead renders at the **source**, not the target.
-`Visit.associated_participant` draws its head pointing back into Participant.
-
-**Deferred to the formatting round on purpose** — do not fix mid-classification.
-The classification rewrite renames `own-flip` → `own-bkwd` and adds
-`association` (which needs heads at *both* ends), so the marker selection at
-`OwnershipGraphView.tsx:1091` (`flipped ? 'arrow-own-back' : 'arrow-own'`) is
-being rewritten anyway. Fixing it twice wastes the work.
 
 ### ▶️ OPEN — the bare diagonal
 
@@ -539,8 +207,8 @@ the comparison harness first.
 
 "example cases" in the header opens a two-tab pane.
 
-**Cases tab** — 20 named selections in four groups (`src/explore/exampleCases.ts`),
-each with a note saying what to look at. Clicking one applies it to app state
+**Cases tab** — named selections grouped in `src/explore/exampleCases.ts`,
+ordered simple→complex as of `a18d78b`, each with a note saying what to look at. Clicking one applies it to app state
 IN PLACE, deliberately not as a navigation: a reload would drop the merge mode
 (localStorage, read once at mount), which is the thing being compared.
 
@@ -548,18 +216,20 @@ IN PLACE, deliberately not as a navigation: a reload would drop the merge mode
 rule that classified it, plus the convergence/divergence rankings. Derived live
 from `classifySlotEdgeExplained` (new; `classifySlotEdge` now delegates to it),
 so it cannot drift from what is drawn — which matters because
-`OWNERSHIP_OVERRIDES`/`VALUE_OBJECTS` are hand-curated and rot on every schema
-sync. A test asserts the legend's pairs equal the graph's actual edges.
+`ASSOCIATION_SLOTS`/`SINGLE_VALUE_OWNER_TARGETS` are hand-curated and rot on
+every schema sync. A test asserts the legend's pairs equal the graph's actual edges.
 
 **The legend immediately earned its keep.** The case set had been built off the
 convergence ranking, which hides FK hubs because flipped edges reverse
 direction. The listing showed 43 pairs in one `own-flip / fk-inversion` group,
-which is how these turned up:
+which is how these turned up (that group is now `own-bkwd / fk-inversion`, and
+is 70 pairs after the 2026-08-25 rules):
 
 - **Participant fans OUT to 22 targets (21 flipped)** — larger than any inbound
   convergence, including Quantity's 19.
 - **Visit fans out to 19**, Organization to 11, both almost entirely flipped.
-- Flipped edges keep their attribute-row anchor and **must not merge**, so
+- Backward (`own-bkwd`) edges keep their attribute-row anchor and **must not
+  merge**, so
   these are precisely the fans the merge code never touches, and therefore the
   ones nothing has ever been tuned against.
 
@@ -645,9 +315,11 @@ advertising depends on what ownership means.
 
 ### ▶️ OPEN — example-cases pane needs restructuring
 
-Siggie, 2026-08-21, on the pane built this session:
+Siggie, 2026-08-21. **Items 3 and 4 are done as of `a18d78b`** — the cases were
+reordered simple→complex, edge-type cases were added, and the rule text was
+rewritten (`OWNERSHIP_RULE_TEXT` in `containmentGraph.ts`). What remains:
 
-1. **Reuse the DetailDrawer panel** rather than the new floating box, for
+1. **Reuse the DetailDrawer panel** rather than the floating box, for
    consistency. (First thought was draggable/resizable; Siggie revised to
    "just use the same panel as the details drawer".)
 2. **Un-nest the legend from cases.** The **Ownership legend is meant to be
@@ -655,14 +327,12 @@ Siggie, 2026-08-21, on the pane built this session:
    the legend to find routing cases was a *temporary* use, not its reason to
    exist. They should not be tabs of one pane.
 3. **BIGGEST FANS belongs with example cases**, not the legend — it serves the
-   case-finding purpose and *"may be redundant with those -- more on those
-   later."* (Siggie has more to say about the cases; wait for it.)
-4. **fk-inversion text is too verbose.** Siggie's suggested wording:
-   *'Ownership arrows can go "backwards" when a single-valued ENTITY (A)
-   attribute points at another ENTITY (B). We can interpret this as A belongs
-   to B."* — but see the rethink doc: the rule itself may not survive.
+   case-finding purpose.
 
 Still owed from upcoming-thoughts #1: toolbar buttons, colours, dashed edges.
+
+> ⚠️ Siggie has asked for **"fix the ownership legend"** (2026-08-25) without
+> saying what is wrong. It may or may not mean the items above. **Ask first.**
 
 ### [sg] upcoming thoughts
 1. i need this for current experimentation but should probably be permanent
@@ -765,21 +435,26 @@ Siggie's experiment, deliberately uncommitted.
 
 ### 🔁 Loops: answered with data (2026-08-19)
 
-Probed the live schema (throwaway test, not kept). Ownership alone (`has-a`,
-133 edges) is **acyclic apart from 5 self-loops** — `TimePoint.index_time_point`,
+Probed the live schema (throwaway test, not kept). Ownership alone (`has-a`;
+133 edges then, 148 after the 2026-08-25 rules) is **acyclic apart from 5
+self-loops** — `TimePoint.index_time_point`,
 `File.derived_from`, `Specimen.parent_specimen`, `ResearchStudy.part_of`,
 `SpecimenContainer.parent_container`. The layered DAG's assumption holds.
 
 **One genuine multi-node cycle exists**, but only once reference edges join in:
 `Specimen --storage_activity--> SpecimenStorageActivity --container-->
-SpecimenContainer --contained_in (has-a)--> Specimen`. Two refs plus one
-ownership edge. Siggie's call: **self-loop markers only; document this cycle as
+SpecimenContainer --contained_in (has-a)--> Specimen`. As of the 2026-08-25
+rules that is one association (`container`) plus two ownership edges. Siggie's call: **self-loop markers only; document this cycle as
 known and deliberately unhandled** — a self-loop badge won't cover it, and a
 3-node cycle drawn across layers is what a user would actually notice as odd.
 
 (A third apparent cycle, `File → ImagingFile --derived_from--> File`, is an
 artifact of mixing is-a into the traversal — `ImagingFile` inherits
 `derived_from`. Not real; noted so nobody "fixes" it.)
+
+> ⚠️ **Re-verify the cycle check.** This result predates the Entity-forward
+> decision, and Entity now has 12 live inbound edges — exactly the shape that
+> could introduce a new cycle. Not yet re-run.
 
 ### ⚠️ Tooling gotcha that cost this session real time
 
@@ -894,7 +569,8 @@ noise.
 - **EXPLORE_VIZ.md language** — Siggie: "a lot of the language doesn't make
   sense to me." Terms like sunk layers, storage direction, own-flip are doing
   real work but were written for their author. A rewrite pass is wanted, **as a
-  conversation, not a solo edit.**
+  conversation, not a solo edit.** (`own-flip` is now `own-bkwd`, but the
+  language complaint stands.)
 
 ### 📌 Also worth knowing
 
@@ -1051,9 +727,12 @@ ported to TypeScript and live (`src/models/containmentGraph.ts`,
 Python mockups/scripts are now the *legacy* version; the in-app graph derives live
 from the loaded model so it can't drift.
 
-**Still parked — making the heuristic less fragile.** The override sets
-(`VALUE_OBJECTS`, `NO_FLIP_SLOTS`, `EXCLUDE_HAS_A_TARGETS`, `SKIP_SUBCLASS_EXPANSION`)
-are hand-curated and rot silently when the schema changes. Planned (after the demo
+**Still parked — making the heuristic less fragile.** The hand-curated sets rot
+silently when the schema changes. As of 2026-08-25 they are
+`SINGLE_VALUE_OWNER_TARGETS`, `ASSOCIATION_SLOTS`, `CARDINALITY_SPLIT_OWN_FWD`,
+`BACKWARD_DESPITE_MULTIVALUED` and `SKIP_SUBCLASS_EXPANSION`
+(`VALUE_OBJECTS`/`NO_FLIP_SLOTS`/`OWNERSHIP_OVERRIDES` were renamed or deleted;
+`EXCLUDE_HAS_A_TARGETS` is gone entirely). Planned (after the demo
 proves value): per-slot LinkML `annotations: { containment_direction: contains |
 contained_by | ? }`, auto-generated from the current heuristic then human-reviewed
 (Brian only touches new/ambiguous), plus a CI check that fails on un-annotated new
