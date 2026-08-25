@@ -105,6 +105,23 @@ describe('merged-box edges', () => {
     expect(anchors.size).toBe(obs.length);
   });
 
+  test('a merged box shows every row — nothing is collapsed away', () => {
+    // Siggie: "show all of them. let the box flow over bottom of page if
+    // needed." A merged box is a comparison, so hiding the rows that differ
+    // defeats it — and an unconnected child block rendered EMPTY, which reads
+    // as "adds nothing" when it means "hidden".
+    const vm = merged(['MeasurementObservation', 'SdohObservation']);
+    const box = vm.nodes.find(n => isMergedId(n.id))!;
+    expect(box.hiddenCount).toBe(0);
+    // Every attribute row of allRows is displayed; rows also carries headers.
+    const shown = box.rows.filter(r => !r.header);
+    expect(shown).toHaveLength(box.allRows.length);
+    // MeasurementObservation's 9 own slots are all present, connected or not.
+    for (const slot of ['range_low', 'range_high', 'body_position', 'qualifier']) {
+      expect(shown.some(r => r.slot === slot), `missing ${slot}`).toBe(true);
+    }
+  });
+
   test('every edge anchor resolves to a displayed row', () => {
     // rowY throws when an edge names a row the box does not show; that throw
     // blanks the canvas, so it is worth asserting directly.

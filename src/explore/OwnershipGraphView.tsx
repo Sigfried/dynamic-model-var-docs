@@ -299,7 +299,6 @@ export function mergeSiblings(
   /** Position of a slot in a class's declared attribute order; MAX_SAFE_INTEGER
    *  when the class does not list it, so unknowns sort last rather than first. */
   schemaIndexOf: (classId: string, slot: string) => number,
-  expandedNodes: Set<string>,
 ): ViewModel {
   const groups = groupSiblings(vm.nodes.map(n => n.id), parentOf, isMergeableParent);
   if (!groups.size) return vm;
@@ -402,13 +401,20 @@ export function mergeSiblings(
       return schemaIndexOf(owner, r.slot);
     };
     all.sort((a, b) => declOrder(a) - declOrder(b));
-    const connected = all.filter(r => r.connected);
-    const hidden = all.filter(r => !r.connected);
-    // Same rule as an ordinary node: a box with nothing connected shows its
-    // attributes rather than rendering empty.
-    const expanded = expandedNodes.has(id) || connected.length === 0;
+    /**
+     * A merged box shows EVERY row, always — no connected/hidden split and no
+     * "+N more" footer (Siggie, 2026-08-25: "i think there are more slots.
+     * show all of them. let the box flow over bottom of page if needed").
+     *
+     * The collapse exists on ordinary boxes to keep a canvas of many classes
+     * readable. A merged box is the opposite situation: you selected these
+     * classes to compare them, so hiding the rows that differ defeats the
+     * point — and worse, a child whose only rows were unconnected showed an
+     * empty block under its header, which reads as "adds nothing" when it
+     * actually means "hidden".
+     */
     const rowList = withChildHeaders(
-      expanded ? all : connected, members,
+      all, members,
       (child): RowVM => ({
         slot: `::hdr:${child.id}`, range: '', channel: 'plain',
         flipped: false, cardinality: '', isLoop: false, connected: false,
@@ -444,10 +450,12 @@ export function mergeSiblings(
       hiddenOwners,
       rows: rowList,
       allRows: all,
-      hiddenCount: hidden.length,
-      expanded,
+      // Nothing is ever hidden on a merged box, so there is no footer to
+      // offer and no collapsed state to return to.
+      hiddenCount: 0,
+      expanded: true,
       // rowList already includes the child header rows, each one line tall.
-      height: nodeHeight(rowList.length, hidden.length, hiddenOwners),
+      height: nodeHeight(rowList.length, 0, hiddenOwners),
     });
   }
 
@@ -925,9 +933,9 @@ export default function OwnershipGraphView({
     };
     return mergeSiblings(
       baseVm, parentOf, isMergeableParent, declaringClassOf, describeClass,
-      schemaIndexOf, expandedNodes,
+      schemaIndexOf,
     );
-  }, [baseVm, summaries, mergeSibs, dataService, expandedNodes]);
+  }, [baseVm, summaries, mergeSibs, dataService]);
   const [nudges, setNudges] = useState<Map<string, { dx: number; dy: number }>>(new Map());
   /**
    * Nodes moved by a completed drag, id → offset from ELK's placement. The
