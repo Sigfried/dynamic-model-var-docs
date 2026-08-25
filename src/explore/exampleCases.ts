@@ -1,7 +1,13 @@
 /**
- * Example cases — a curated set of selections for eyeballing edge routing.
+ * Example cases — a curated set of selections, ordered simple to complex.
  *
- * Why this exists: the merge-mode buttons (⋙ ⋙⋙ ⌙ ≡) and the routing
+ * ORDERING IS THE POINT. The first group explains the app to someone seeing it
+ * for the first time: one edge, then one of each edge type, then a small real
+ * neighbourhood. Later groups get progressively denser and end at the routing
+ * stress cases, which are for debugging rather than explaining. When adding a
+ * case, put it where its complexity belongs, not at the end.
+ *
+ * Why the later groups exist: the merge-mode buttons (⋙ ⋙⋙ ⌙ ≡) and the routing
  * constants can only be judged by looking at real convergences, and
  * reconstructing a case by hand (click seven classes, expand four more) is
  * slow enough that comparisons got made against whatever happened to be on
@@ -40,6 +46,111 @@ export interface ExampleCaseGroup {
 }
 
 export const EXAMPLE_CASES: ExampleCaseGroup[] = [
+  {
+    heading: 'Start here — what the diagram says',
+    cases: [
+      {
+        name: '1. One box',
+        note: 'A single class. Rows are its attributes: name, then range and '
+          + 'cardinality on the right. Filled amber dots are attributes that '
+          + 'draw an edge; hollow grey dots are scalars and enums, which never do.',
+        sel: ['Organization'],
+      },
+      {
+        name: '2. One edge — A owns B',
+        note: 'Visit owns TimePeriod. The edge leaves the `year_range` ROW, not '
+          + 'the box, and the arrowhead lands on the owned class. This anchoring '
+          + 'is the whole idea: an edge tells you WHICH attribute made it.',
+        sel: ['Visit', 'TimePeriod'],
+      },
+      {
+        name: '3. Owns vs. belongs-to',
+        note: 'Opposite directions. Specimen OWNS its creation activity (forward). '
+          + 'Specimen BELONGS TO a Participant — declared as `source_participant` '
+          + 'on Specimen, but drawn Participant → Specimen, because a '
+          + 'single-valued pointer at an entity is a foreign key. '
+          + '`parent_specimen` is also here as a self-loop.',
+        sel: ['Specimen', 'Participant', 'SpecimenCreationActivity'],
+      },
+      {
+        name: '4. All three edge types at once',
+        note: 'THE DECISION CASE. SpecimenContainer has exactly one of each: '
+          + '`additive` → Substance is own-fwd; `contained_in` → Specimen is '
+          + 'own-bkwd; `container` → SpecimenStorageActivity is an association '
+          + '(slate, dashed, arrowed BOTH ends). Compare own-bkwd against '
+          + 'association here — they layer identically and differ only in ink.',
+        sel: ['SpecimenContainer', 'Specimen', 'Substance',
+          'SpecimenStorageActivity'],
+      },
+      {
+        name: '5. A small real neighbourhood',
+        note: 'BodySite and its six owners — the smallest convergence that still '
+          + 'looks like a real diagram. Six edges arriving on one box, each from a '
+          + 'different attribute row.',
+        sel: ['BodySite', 'Condition', 'ImagingFile', 'ImagingStudy',
+          'MeasurementObservation', 'Procedure', 'SpecimenCreationActivity'],
+      },
+    ],
+  },
+  {
+    heading: 'One rule at a time',
+    cases: [
+      {
+        name: 'Rule 1 — multivalued owns forward',
+        note: 'A multivalued slot means the owner has-a collection, so ownership '
+          + 'runs forward: Questionnaire.items and ResearchStudy.consents. The two '
+          + '`part_of` self-loops are the counterexample — multivalued but drawn '
+          + 'backward, because they walk UP a tree.',
+        sel: ['ResearchStudy', 'Consent', 'Questionnaire', 'QuestionnaireItem'],
+      },
+      {
+        name: 'Rule 2 — single-valued belongs backward',
+        note: 'The largest group (70 edges). Participant fans OUT to 22 targets, '
+          + 'nearly all reversed: each target declares `associated_participant` '
+          + 'and is drawn as belonging to Participant. This is the group that '
+          + 'would move if own-bkwd merges into association.',
+        sel: ['Participant', 'Condition', 'Demography', 'Exposure', 'Procedure',
+          'Visit'],
+      },
+      {
+        name: 'Exception 2a — no independent existence',
+        note: 'Single-valued, but forward anyway: Quantity, TimePoint and the like '
+          + 'have no identity of their own, so the value belongs to whoever holds '
+          + 'it rather than owning the holder.',
+        sel: ['SpecimenStorageActivity', 'Quantity', 'TimePoint', 'Activity'],
+      },
+      {
+        name: 'Entity-ranged — always forward',
+        note: 'The twelve focus / associated_evidence slots range on Entity, the '
+          + 'universal root. A pointer AT the root is never a foreign key back to '
+          + 'an owner, so these run forward whatever their cardinality. Both '
+          + 'single- and multi-valued focus sites are here — all should point '
+          + 'AT Entity.',
+        sel: ['Observation', 'ObservationSet', 'MeasurementObservation', 'Document',
+          'Condition', 'SdohObservation', 'Entity'],
+      },
+      {
+        name: 'Association — no ownership claim',
+        note: 'Both associations in the schema: Document.related_document → '
+          + 'Specimen, and SpecimenContainer.container → SpecimenStorageActivity. '
+          + 'Slate and dashed, arrowed at both ends. They are listed explicitly '
+          + 'because they are multivalued, so Rule 1 would otherwise call them '
+          + 'ownership.',
+        sel: ['Document', 'Specimen', 'SpecimenContainer',
+          'SpecimenStorageActivity'],
+      },
+      {
+        name: 'Self-loops',
+        note: 'The five self-owning slots (TimePoint.index_time_point, '
+          + 'File.derived_from, Specimen.parent_specimen, ResearchStudy.part_of, '
+          + 'SpecimenContainer.parent_container) — loop markers, not routed edges. '
+          + 'ResearchStudy also pulls in its TimePoint edges; the loops are the '
+          + 'circular arrows on the rows.',
+        sel: ['TimePoint', 'File', 'Specimen', 'ResearchStudy',
+          'SpecimenContainer'],
+      },
+    ],
+  },
   {
     heading: 'The bare diagonal',
     cases: [
@@ -188,35 +299,19 @@ export const EXAMPLE_CASES: ExampleCaseGroup[] = [
           'SpecimenTransportActivity', 'Participant'],
       },
       {
-        name: 'Self-loops',
-        note: 'The five self-owning slots (TimePoint.index_time_point, '
-          + 'File.derived_from, Specimen.parent_specimen, ResearchStudy.part_of, '
-          + 'SpecimenContainer.parent_container) — loop markers, not routed edges.',
-        sel: ['TimePoint', 'File', 'Specimen', 'ResearchStudy',
-          'SpecimenContainer'],
-      },
-      {
         name: 'The known 3-node cycle',
         note: 'Specimen -> SpecimenStorageActivity -> SpecimenContainer -> '
-          + 'Specimen: two refs plus one ownership edge. Documented as known '
+          + 'Specimen: an association plus two ownership edges. Known '
           + 'and deliberately unhandled; here so it stays visible.',
         sel: ['Specimen', 'SpecimenStorageActivity', 'SpecimenContainer'],
       },
       {
-        name: 'Flipped ownership',
-        note: 'Slots whose ownership is flipped (performed_by, associated_person, '
-          + 'contained_in, related_imaging_study). Flipped edges keep their '
+        name: 'Backward ownership (own-bkwd)',
+        note: 'Slots drawn backward (performed_by, associated_person, '
+          + 'contained_in, related_imaging_study). These keep their '
           + 'attribute-row anchor and must NOT merge — check the arrowheads.',
         sel: ['Organization', 'Person', 'Participant', 'ImagingFile',
           'ImagingStudy', 'SpecimenContainer', 'Specimen'],
-      },
-      {
-        name: 'Dropped Entity refs',
-        note: 'The twelve focus / associated_evidence slots range on Entity and are '
-          + 'EXCLUDED — no edge at all. These boxes should show those rows with no '
-          + 'line leaving them; a line here means the exclusion regressed.',
-        sel: ['Observation', 'ObservationSet', 'MeasurementObservation', 'Document',
-          'Condition', 'SdohObservation'],
       },
       {
         name: 'Path to root',
