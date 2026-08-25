@@ -19,8 +19,35 @@
 
 ## 🔁 HANDOFF — start here next session (updated 2026-08-25)
 
-> **Everything below is on branch `induced-slots-and-ownership`, 4 commits,
+> **Everything below is on branch `induced-slots-and-ownership`, 5 commits,
 > NOT pushed and NOT merged.** `main` is at `ef80fea`.
+
+> **THE REAL GOAL NEXT SESSION: inheritance relationships.** Siggie,
+> 2026-08-25: "what I really want, unrealistic as it may be, is to figure out
+> and maybe get a POC for including inheritance relationships." Everything in
+> NEXT UP below is tweaking what already exists; this is the one item that is a
+> genuine design question, and it is what he actually wants worked on. Start by
+> brainstorming the modeling question, not the code — the same instruction that
+> governed the ownership rethink.
+>
+> **What already exists, verified 2026-08-25 — the data is present, and it is
+> not unused, it is DELIBERATELY NOT DRAWN:**
+> - 53 of 54 classes carry `parent` in the processed JSON; 37 of them are
+>   direct children of `Entity`.
+> - `containmentGraph` emits real `kind: 'subclass'` edges, with a
+>   `SKIP_SUBCLASS_EXPANSION` set controlling which roots are excluded.
+> - Those survive `ownershipSubgraph`'s filter (either endpoint in `core`) and
+>   arrive as `type: 'isa'`.
+> - **`OwnershipGraphView.tsx:131` then converts them into node metadata**
+>   (`isaParents`) instead of routing them. That is the "is a Entity" line in
+>   the detail drawer. So an is-a edge is currently a LABEL, not a line.
+>
+> The design question is therefore not "how do we get the data" but "what
+> should an is-a relationship look like when 37 classes share one parent" —
+> drawing that naively is a 37-way fan into `Entity`, which is worse than the
+> convergence problems already open. Consider whether is-a belongs in this
+> diagram at all, in a separate view, or as the layering it already implicitly
+> is.
 
 ### 📍 State: the pipeline migration and the ownership rules both SHIPPED
 
@@ -32,6 +59,7 @@ Four commits, in order:
 | `721f98e` | Ownership classification rules implemented. `own-flip`→`own-bkwd`, `association` added, `OWNERSHIP_OVERRIDES` deleted. |
 | `c0e265b` | Entity-ranged edges always `own-fwd` (they were half-reversing). |
 | `a18d78b` | Example cases reordered simple→complex, edge-type cases added. |
+| `3ee8965` | Association arrowheads fixed at both ends; example case 5 added. |
 
 Verification at each step: 235 tests / 21 files green, `npx tsc --noEmit`
 clean. **Counts measured against the live graph after the work:**
@@ -48,22 +76,46 @@ clean. **Counts measured against the live graph after the work:**
 group — out of "ownership". They already layer identically, so this is
 rendering and vocabulary only, not structure.
 
-**Look at example case "4. All three edge types at once" to decide.**
+**Look at example cases 4 and 5 to decide.** Case 4 —
 `SpecimenContainer` carries exactly one edge of each verdict — `additive`
 (own-fwd), `contained_in` (own-bkwd), `container` (association) — so all three
-are comparable on one small box.
+are comparable on one small box. Case 5 adds the crowded version: **the schema
+contains exactly TWO association edges** (`Specimen.related_document` and
+`SpecimenStorageActivity.container`, verified 2026-08-25) and case 5 holds
+both, so it is the only selection that can show associations competing for a
+border at all.
+
+**Merging the verdicts also dissolves 0b above**, since one merge point per
+header side then needs only one head. Keeping them distinct means inventing a
+second visual channel at that header to preserve a distinction nothing else in
+the layout preserves — they share `flipped`, share the routing, and layer
+identically.
 
 ### ▶️ NEXT UP (in Siggie's priority order)
 
-0. **FIRST JOB: fix the association arrowheads** (Siggie, 2026-08-25).
-   **Both heads should point INTO the entity they sit next to.** Association
-   edges are arrowed at both ends — `markerStart` + `markerEnd` in
-   `OwnershipGraphView.tsx` — but the two markers are not both oriented
-   outward, so at least one points the wrong way. The pair is
-   `arrow-assoc` (`refX="0"`, `M0,0L10,3.5L0,7Z`) and `arrow-assoc-start`
-   (`refX="10"`, `M10,0L0,3.5L10,7Z"`), both `orient="auto-start-reverse"`.
-   Check the same thing for the merged case: `markerStart` is currently
-   suppressed when `willMerge` is true.
+0. ✅ **DONE — association arrowheads** (`3ee8965`). Two stacked bugs. The
+   start head was reversed TWICE — by `orient="auto-start-reverse"` and again
+   by a glyph drawn tip-at-x=0 — so they cancelled; `arrow-assoc-start` is
+   deleted and one marker serves both ends. And even once correct it was
+   invisible: node boxes are opaque divs stacked OVER the SVG layer, and
+   `refX=0` puts the tip `ARROW_LEN` past the vertex, under the box.
+   `trimSectionsEnd` only ever trimmed the END. Added `trimSectionsStart`,
+   association edges only. **Watch for this class of bug again** — anything the
+   SVG draws inside a box's rectangle is painted over, and it shows up only on
+   hover over a dimmed (translucent) box.
+
+0b. **OPEN — header-side merging has no machinery at all.** Flipped edges are
+   excluded from merging at BOTH ends (`OwnershipGraphView.tsx:803`, and
+   `target = flipped ? undefined`), and **associations are always
+   `flipped: true`** (`containmentGraph.ts:267`) — same flag as `own-bkwd`. So
+   `willMerge` is permanently false for associations and the `!willMerge` guard
+   on `markerStart` is dead code. This never showed because own-bkwd drew no
+   head at that end; associations now do, on every strand of a fan.
+   **Siggie's own framing, which is the crux:** if RL edges merge into the
+   header's vertical centre they become indistinguishable from associations
+   merging into that same point — moot if all own-bkwd become associations.
+   **So this is gated on the verdict decision below; do not build it first.**
+   Currently mild: only 2 association edges exist in the entire schema.
 
 1. **Too many entities displayed.** Siggie's direction: from a selected entity,
    default to **one hop in either direction**, with the ability to expand each
@@ -72,12 +124,23 @@ are comparable on one small box.
    Worth knowing: the `owned by` chip row already lists owners without drawing
    them, which is arguably the right primitive — chips for the un-expanded hop,
    boxes for the expanded one.
+   **The other half, observed 2026-08-25: there is no way to EXPAND.** With one
+   class selected, the only route to a neighbour is reading the detail drawer's
+   REFERENCED BY list and adding each class by hand. Organization shows 14
+   entries there — all reachable, none reachable *from the diagram*. Expansion
+   and pruning are the same feature and should be designed together.
 2. **Fix the ownership legend.** Siggie asked for this but has not yet said
    what is wrong with it. **Ask before changing anything.** The older
    restructuring notes further down (un-nest from example cases, move BIGGEST
    FANS, shorten the fk-inversion text) may or may not be what he means.
 3. **Everything displays and points where it should.** img-1 (Entity arrowheads)
-   is fixed; no other reported breakage outstanding.
+   and the association arrowheads are both fixed; no reported breakage
+   outstanding.
+4. **Deferred, deliberately: why does Explore need a slot index at all?**
+   Siggie raised it 2026-08-25 and chose not to chase it. Context is in the
+   induced-slots DONE section below — the top-level `slots:` block is a derived
+   index, and `Graph.ts:502` plus Kitchen Sink are what still key on it. Not a
+   bug, just unexamined.
 
 ### 🚧 Gotchas that cost time this session — read before running anything
 
