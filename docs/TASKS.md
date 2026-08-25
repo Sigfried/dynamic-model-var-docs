@@ -53,7 +53,17 @@ rendering and vocabulary only, not structure.
 (own-fwd), `contained_in` (own-bkwd), `container` (association) — so all three
 are comparable on one small box.
 
-### ▶️ NEXT UP (demo goals, in Siggie's priority order)
+### ▶️ NEXT UP (in Siggie's priority order)
+
+0. **FIRST JOB: fix the association arrowheads** (Siggie, 2026-08-25).
+   **Both heads should point INTO the entity they sit next to.** Association
+   edges are arrowed at both ends — `markerStart` + `markerEnd` in
+   `OwnershipGraphView.tsx` — but the two markers are not both oriented
+   outward, so at least one points the wrong way. The pair is
+   `arrow-assoc` (`refX="0"`, `M0,0L10,3.5L0,7Z`) and `arrow-assoc-start`
+   (`refX="10"`, `M10,0L0,3.5L10,7Z"`), both `orient="auto-start-reverse"`.
+   Check the same thing for the merged case: `markerStart` is currently
+   suppressed when `willMerge` is true.
 
 1. **Too many entities displayed.** Siggie's direction: from a selected entity,
    default to **one hop in either direction**, with the ability to expand each
