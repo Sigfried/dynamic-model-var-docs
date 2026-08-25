@@ -49,6 +49,80 @@
 > diagram at all, in a separate view, or as the layering it already implicitly
 > is.
 
+**[sg] NO -- we will not be showing inheritance from Entity because it's**
+so crowded and not particularly meaningful. And don't assume that we will be
+representing inheritance with edges; that will probably crowd too much and
+make the graph unreadable. so we will brainstorm designs. Off the cuff:
+- group displayed siblings together 
+  - cascaded like img-1 in current session
+  - or merged (probably want both options)
+- if parent is displayed it should be first in cascade and set off a bit
+- or for merged siblings, it could be merged with them
+- maybe parent gets solid black type and each sibling's own slots
+  get their own color
+  - probably easier to handle than cascading
+  - will need a way to indicate what all the displayed siblings are
+    and which slot goes with which
+  - maybe parent must always be displayed
+- merged is definitely better. other ideas?
+
+### ✅ SHIPPED — inheritance as adjacency (merged sibling boxes), 2026-08-25
+
+Built to Siggie's "merged is definitely better" option, in 90 minutes before a
+stakeholder demo. Branch `inheritance-merged-siblings`, off
+`induced-slots-and-ownership`.
+
+**The design.** Classes on canvas that share a parent collapse into ONE box
+titled by the parent. Inside it:
+- rows the PARENT declares carry no swatch and are set in bolder, darker type
+  — absence of a swatch is the "shared by every sibling" signal;
+- rows a SIBLING declares itself carry that sibling's colour swatch;
+- a legend strip under the header lists the merged siblings in their colours
+  (clickable → detail drawer), answering "which siblings, and which slot is
+  whose" in place rather than with a line leaving the box.
+
+`Entity` is excluded via `SKIP_SUBCLASS_EXPANSION` — the same reason it carries
+no is-a edges. A box holding 37 classes is the crowding, relocated.
+
+Toolbar toggle `⑃ siblings` (persisted, default ON). Off = today's behaviour.
+
+**What actually merges** (measured against the live schema):
+
+| parent | members | own-slot rows |
+|---|---|---|
+| Observation | 5 | MeasurementObservation 8, SdohObservation 1, three add none |
+| QuestionnaireResponseValue | 5 | none — five boxes become one |
+| ObservationSet | 3 | none |
+| Exposure | 2 | Device/Drug; both declare `exposure_provenance` + `quantity`, so those rows carry TWO swatches |
+
+**Where it lives.** `mergeSiblings()` is a pass over the ViewModel in
+`OwnershipGraphView.tsx`, not a change to the subgraph. Nodes are addressed by
+id and rows by slot name everywhere downstream (buildSpec ports, rowY, the
+renderer), so a merged box is just another node and merged edges are edges with
+rewritten endpoints. Layout and routing never learn this happened. Grouping
+policy is in `src/explore/siblingMerge.ts`; tests in
+`src/test/siblingMerge.test.ts` (6, against the live schema).
+
+**Decisions taken as defaults, open to reversal:**
+- A merged box's click opens the PARENT's detail; the legend chips open members.
+- Rows are deduped by slot name (one anchor per name), so a slot two siblings
+  declare independently is one row with two swatches, not two rows.
+- The dismiss ✕ is suppressed on merged boxes — dismissing one means dismissing
+  several classes, which is a different feature.
+- Cascaded mode was NOT built. Siggie said merged is better; the toggle is
+  merged/off, not merged/cascaded.
+
+**Two pre-existing bugs fixed in passing**, both found only by `tsc -b`:
+- `DataService.ts:924` tested `e.kind === 'ref'`, which is not a
+  `ContainmentEdgeKind` — the guard never fired, so association edges WERE
+  creating parent links in `getContainmentNodes`. Now `'association'`.
+- `DataService.ts:795` had a dead `|| verdict === 'association'` arm.
+
+**⚠️ Use `npm run typecheck` (= `tsc -b --noEmit`), never bare `npx tsc
+--noEmit`.** docs/CLAUDE.md says so and this session proved it again: bare
+`--noEmit` was green while `tsc -b` had four real errors. Same never-narrowing
+trap the induced-slots handoff warned about.
+
 ### 📍 State: the pipeline migration and the ownership rules both SHIPPED
 
 Four commits, in order:

@@ -16,7 +16,10 @@
  *    storage direction is marked at the member end: the arrowhead points
  *    BACK toward the owner (the member stores the FK).
  *  - reference: gray dashed, drawn in FK direction.
- *  - is-a: never an arrow in the ownership plane — chips on the nodes.
+ *  - is-a: never an arrow in the ownership plane. Rendered as ADJACENCY —
+ *    siblings sharing a parent collapse into one box titled by that parent,
+ *    parent rows unswatched and bolder, each sibling's own rows carrying its
+ *    colour (see siblingMerge.ts). Toggleable; off leaves the is-a chips.
  *  - self-loops: ⟲ marker on the slot's own row, not a routed edge.
  *
  * Row policy: by default a node shows the rows that carry a drawn edge
@@ -32,13 +35,17 @@ import type {
   AttributeSummary,
   DataService, OwnershipSubgraph, OwnershipSubgraphEdge, OwnershipSubgraphNode,
 } from '../services/DataService';
-import { cardinalityLabel } from '../services/DataService';
+import { cardinalityLabel, SKIP_SUBCLASS_EXPANSION } from '../services/DataService';
 import {
   useGraphLayout, useZoomPan, roundedPath, sectionPoints, mergeTail,
   smoothStepPath,
   arrowPath,
 } from './graph-core';
 import type { EdgeSection, GraphSpec, GraphSpecPort, PlacedNode, Point } from './graph-core';
+import {
+  groupSiblings, mergedIdFor, siblingColor,
+} from './siblingMerge';
+import type { MergedMember } from './siblingMerge';
 
 /** Where a convergence group's single arrowhead sits: `base` is the centre of
  *  its base (every merging edge terminates there, none draws a head of its own)
@@ -74,6 +81,8 @@ function ownersStripHFor(owners: string[]): number {
   return lines * OWNERS_LINE_H + OWNERS_PAD;
 }
 const FOOTER_H = 18;
+/** Sibling-colour legend strip on a merged box. */
+const LEGEND_H = 18;
 const PAD = 28;
 
 type Direction = 'RIGHT' | 'DOWN';
@@ -88,11 +97,20 @@ interface RowVM {
   isLoop: boolean;
   /** Carries a drawn edge (or is a self-loop) — rendered with full emphasis. */
   connected: boolean;
+  /**
+   * Merged boxes only: the siblings that declare this row themselves. Empty
+   * means the row comes from the parent and is shared by every sibling, which
+   * is why absence — not a flag — is the "shared" signal.
+   */
+  owners?: MergedMember[];
 }
 
 interface NodeVM extends OwnershipSubgraphNode {
   isaParents: string[];
   subclassCount: number;
+  /** Set on a merged sibling box: the classes folded into it, in colour order.
+   *  Empty on an ordinary node. */
+  members: MergedMember[];
   /**
    * Owners of this class that aren't drawn — the "what uses this?" answer
    * path-to-root used to give by drawing the entire upstream graph. Empty
@@ -184,14 +202,146 @@ function buildViewModel(
       ...n,
       isaParents: isaParents.get(n.id) ?? [],
       subclassCount: subclassCount.get(n.id) ?? 0,
+      members: [],
       hiddenOwners: owners,
       rows,
       hiddenCount: hidden.length,
       expanded,
-      height: HEADER_H + ownersStripHFor(owners) + rows.length * ROW_H
-        + (hidden.length ? FOOTER_H : 0) + (rows.length ? 5 : 0),
+      height: nodeHeight(rows.length, hidden.length, owners, 0),
     };
   });
+
+  return { nodes, edges };
+}
+
+/** Box height. Shared by the plain build and the sibling merge so the two
+ *  cannot drift — a merged box adds a legend strip and nothing else. */
+function nodeHeight(
+  rowCount: number, hiddenCount: number, owners: string[], memberCount: number,
+): number {
+  return HEADER_H + ownersStripHFor(owners) + (memberCount ? LEGEND_H : 0)
+    + rowCount * ROW_H + (hiddenCount ? FOOTER_H : 0) + (rowCount ? 5 : 0);
+}
+
+/**
+ * Fold sibling classes into one box per shared parent.
+ *
+ * Row policy inside a merged box, in display order:
+ *   1. rows the PARENT declares (no swatch — shared by every sibling);
+ *   2. rows a SIBLING declares itself, swatched with that sibling's colour.
+ * A row several siblings declare independently gets several swatches rather
+ * than being duplicated: it is one attribute name at one anchor point, and
+ * duplicating it would give rowY two candidate rows for one slot.
+ *
+ * Edges are rewritten to the merged id at whichever end was a member. An edge
+ * BETWEEN two siblings of the same parent becomes a self-loop on the merged
+ * box and is dropped from routing — the box already shows both of its ends.
+ */
+function mergeSiblings(
+  vm: ViewModel,
+  parentOf: (id: string) => string | undefined,
+  isMergeableParent: (parent: string) => boolean,
+  declaringClassOf: (classId: string, slot: string) => string | undefined,
+  /** The parent's own identity. It is usually NOT a node in the subgraph —
+   *  only selected classes are — so it cannot be read off vm.nodes. */
+  describeClass: (id: string) => { description: string; abstract: boolean },
+): ViewModel {
+  const groups = groupSiblings(vm.nodes.map(n => n.id), parentOf, isMergeableParent);
+  if (!groups.size) return vm;
+
+  const byId = new Map(vm.nodes.map(n => [n.id, n]));
+  /** member class id → merged box id */
+  const absorbed = new Map<string, string>();
+  const merged: NodeVM[] = [];
+
+  for (const [parent, memberIds] of groups) {
+    const id = mergedIdFor(parent);
+    const members: MergedMember[] = memberIds.map((mid, i) => ({
+      id: mid,
+      label: byId.get(mid)?.label ?? mid,
+      color: siblingColor(i),
+    }));
+    for (const m of members) absorbed.set(m.id, id);
+    const byColor = new Map(members.map(m => [m.id, m]));
+
+    // Union the members' rows by slot name. A row is the parent's when the
+    // class that DECLARES it is the parent or one of its ancestors — that is
+    // the honest test, and inheritedFrom already carries it, so nothing has to
+    // be re-derived from the class hierarchy here.
+    const rows = new Map<string, RowVM>();
+    for (const mid of memberIds) {
+      const node = byId.get(mid);
+      if (!node) continue;
+      for (const r of node.rows) {
+        const declaredBy = declaringClassOf(mid, r.slot);
+        const inherited = declaredBy !== undefined && declaredBy !== mid;
+        const prev = rows.get(r.slot);
+        const owner = byColor.get(mid);
+        const owners = inherited
+          ? (prev?.owners ?? [])
+          : [...(prev?.owners ?? []), ...(owner ? [owner] : [])];
+        rows.set(r.slot, {
+          // A row connected on ANY member is connected on the box: it carries
+          // a drawn edge, whichever sibling stores it.
+          ...(prev ?? r),
+          connected: (prev?.connected ?? false) || r.connected,
+          owners,
+        });
+      }
+    }
+    const rowList = [...rows.values()];
+    // Parent rows first, then sibling-own rows: the shared part of the box
+    // reads as its subject, the differences as the annotation on it.
+    rowList.sort((a, b) =>
+      (a.owners?.length ? 1 : 0) - (b.owners?.length ? 1 : 0));
+
+    const hiddenOwners = [...new Set(
+      memberIds.flatMap(mid => byId.get(mid)?.hiddenOwners ?? []),
+    )].filter(o => !absorbed.has(o) && !memberIds.includes(o));
+    const first = byId.get(memberIds[0]);
+    const hiddenCount = Math.max(
+      ...memberIds.map(mid => byId.get(mid)?.hiddenCount ?? 0));
+    // The box IS the parent, so its identity — name, description, abstractness
+    // — must be the parent's. Spreading a member and forgetting to override
+    // these showed the first sibling's description on the box's tooltip.
+    const parentInfo = describeClass(parent);
+
+    merged.push({
+      ...(first as NodeVM),
+      id,
+      label: parent,
+      description: parentInfo.description,
+      abstract: parentInfo.abstract,
+      slots: [],
+      members,
+      // The box stands for its members, so it is selected if any member is.
+      role: memberIds.some(mid => byId.get(mid)?.role === 'selected')
+        ? 'selected' : 'context',
+      // Layering: the shallowest member, so the box sits where the earliest of
+      // its siblings would have.
+      layer: Math.min(...memberIds.map(mid => byId.get(mid)?.layer ?? 0)),
+      isaParents: [],
+      subclassCount: members.length,
+      hiddenOwners,
+      rows: rowList,
+      hiddenCount,
+      expanded: memberIds.every(mid => byId.get(mid)?.expanded ?? false),
+      height: nodeHeight(rowList.length, hiddenCount, hiddenOwners, members.length),
+    });
+  }
+
+  const nodes = [
+    ...vm.nodes.filter(n => !absorbed.has(n.id)),
+    ...merged,
+  ];
+  const edges = vm.edges
+    .map(e => ({
+      ...e,
+      source: absorbed.get(e.source) ?? e.source,
+      target: absorbed.get(e.target) ?? e.target,
+    }))
+    // Both ends in the same box: the relationship is inside the box now.
+    .filter(e => e.source !== e.target);
 
   return { nodes, edges };
 }
@@ -211,9 +361,11 @@ function LoopIcon({ title }: { title: string }) {
   );
 }
 
-/** Top of the row list: below the header, and below the owners strip if shown. */
+/** Top of the row list: below the header, the sibling legend if the box is a
+ *  merged one, and the owners strip if shown. */
 function rowsTop(node: NodeVM): number {
-  return HEADER_H + ownersStripHFor(node.hiddenOwners);
+  return HEADER_H + (node.members.length ? LEGEND_H : 0)
+    + ownersStripHFor(node.hiddenOwners);
 }
 
 /** y-center of a slot's displayed row, relative to the node's top-left. */
@@ -476,6 +628,12 @@ export default function OwnershipGraphView({
     () => (localStorage.getItem('explore-nl-merge') as MergeMode) || 'near',
   );
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  /** Merge sibling classes into one box per shared parent (docs/EXPLORE_VIZ.md
+   *  "inheritance as adjacency"). On by default: with it off, inheritance is
+   *  invisible in the diagram entirely. */
+  const [mergeSibs, setMergeSibs] = useState<boolean>(
+    () => localStorage.getItem('explore-nl-sibs') !== '0',
+  );
 
   // Expansions that duplicate the selection are dropped: a selected class is
   // already visible, and passing it as an expansion would not change the
@@ -495,10 +653,39 @@ export default function OwnershipGraphView({
       [n.id, dataService.getClassSummary(n.id)?.slots ?? []] as const)),
     [dataService, subgraph],
   );
-  const vm = useMemo(
+  const baseVm = useMemo(
     () => buildViewModel(subgraph, expandedNodes, id => plainSlots.get(id) ?? []),
     [subgraph, expandedNodes, plainSlots],
   );
+  /**
+   * Per-class parent and per-slot declaring class, for the sibling merge.
+   * Read from the same getClassSummary already fetched for plainSlots, so the
+   * merge costs no extra model work.
+   */
+  const summaries = useMemo(
+    () => new Map(subgraph.nodes.map(n =>
+      [n.id, dataService.getClassSummary(n.id)] as const)),
+    [dataService, subgraph],
+  );
+  const vm = useMemo(() => {
+    if (!mergeSibs) return baseVm;
+    const parentOf = (id: string) => summaries.get(id)?.parentId;
+    // `Entity` is excluded for the same reason it carries no is-a edges: a box
+    // holding 37 classes is the crowding it was supposed to remove.
+    const isMergeableParent = (parent: string) =>
+      !SKIP_SUBCLASS_EXPANSION.has(parent);
+    const declaringClassOf = (classId: string, slot: string) => {
+      const s = summaries.get(classId)?.slots.find(a => a.name === slot);
+      return s ? (s.inheritedFrom ?? classId) : undefined;
+    };
+    const describeClass = (id: string) => {
+      const sum = dataService.getClassSummary(id);
+      return { description: sum?.description ?? '', abstract: sum?.isAbstract ?? false };
+    };
+    return mergeSiblings(
+      baseVm, parentOf, isMergeableParent, declaringClassOf, describeClass,
+    );
+  }, [baseVm, summaries, mergeSibs, dataService]);
   const [nudges, setNudges] = useState<Map<string, { dx: number; dy: number }>>(new Map());
   /**
    * Nodes moved by a completed drag, id → offset from ELK's placement. The
@@ -954,6 +1141,12 @@ export default function OwnershipGraphView({
     localStorage.setItem('explore-nl-merge', m);
     setMergeMode(m);
   };
+  const toggleSibs = () => {
+    setMergeSibs(prev => {
+      localStorage.setItem('explore-nl-sibs', prev ? '0' : '1');
+      return !prev;
+    });
+  };
 
   const attributesWord = dataService.getConceptLabel('attribute', true).toLowerCase();
 
@@ -980,6 +1173,12 @@ export default function OwnershipGraphView({
             <span className="w-px h-4 bg-gray-300 dark:bg-slate-600 mx-1" />
           </>
         )}
+        <button className={toolBtn(mergeSibs)}
+          title={mergeSibs
+            ? 'Siblings merged: classes sharing a parent share one box'
+            : 'Siblings separate: no inheritance shown'}
+          onClick={toggleSibs}>⑃ siblings</button>
+        <span className="w-px h-4 bg-gray-300 dark:bg-slate-600 mx-1" />
         <button className={toolBtn(direction === 'RIGHT')} title="Layout left to right"
           onClick={() => setDir('RIGHT')}>LR</button>
         <button className={toolBtn(direction === 'DOWN')} title="Layout top down"
@@ -1197,7 +1396,10 @@ export default function OwnershipGraphView({
                       }}
                       onClick={() => {
                         if (draggedRef.current) { draggedRef.current = false; return; }
-                        onNodeClick?.(n.id);
+                        // A merged box has a synthetic id; the class it stands
+                        // for is the parent it is titled by, and that is what
+                        // the detail drawer must be asked for.
+                        onNodeClick?.(n.members.length ? n.label : n.id);
                       }}
                       onMouseEnter={() => applyHover({ kind: 'node', id: n.id })}
                       onMouseLeave={() => applyHover(null)}
@@ -1222,6 +1424,12 @@ export default function OwnershipGraphView({
                           {n.label}
                         </span>
                         <span className="ml-auto flex gap-1 shrink-0">
+                          {n.members.length > 0 && (
+                            <span title={`${n.members.length} classes that are a ${n.label}, merged into one box`}
+                              className="text-[9px] px-1 rounded bg-sky-100 dark:bg-sky-900 text-sky-800 dark:text-sky-200">
+                              ⑃ {n.members.length}
+                            </span>
+                          )}
                           {n.isaParents.map(parent => (
                             <span key={parent} title={`is-a ${parent}`}
                               className="text-[9px] px-1 rounded bg-sky-100 dark:bg-sky-900 text-sky-800 dark:text-sky-200">
@@ -1236,7 +1444,7 @@ export default function OwnershipGraphView({
                           )}
                           {/* Dismiss — only on nodes the user pulled in, not on
                               path-to-root context, which the selection implies. */}
-                          {expandedIds?.has(n.id) && (
+                          {expandedIds?.has(n.id) && !n.members.length && (
                             <button
                               data-dismiss={n.id}
                               title={`Remove ${n.label} from the canvas`}
@@ -1249,6 +1457,33 @@ export default function OwnershipGraphView({
                           )}
                         </span>
                       </div>
+                      {/* Merged sibling box: which classes are folded in, and
+                          which colour marks each one's own attributes. Without
+                          this the swatches on the rows below are unreadable. */}
+                      {n.members.length > 0 && (
+                        <div
+                          className="flex items-center gap-1.5 px-2 overflow-hidden border-b
+                                     border-gray-200 dark:border-slate-600
+                                     bg-slate-50 dark:bg-slate-900/40"
+                          style={{ height: LEGEND_H }}
+                        >
+                          {n.members.map(m => (
+                            <button
+                              key={m.id}
+                              data-no-drag
+                              title={`${m.label} — is a ${n.label}; click for details`}
+                              onClick={ev => { ev.stopPropagation(); onNodeClick?.(m.id); }}
+                              className="flex items-center gap-1 text-[9px] leading-none shrink-0
+                                         hover:underline"
+                            >
+                              <span className="w-2 h-2 rounded-sm shrink-0"
+                                style={{ background: m.color }} />
+                              <span className="truncate max-w-[70px]"
+                                style={{ color: m.color }}>{m.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       {/* Owners left off the canvas. Clicking one pulls it in,
                           the same affordance a dimmed attribute row offers. */}
                       {n.hiddenOwners.length > 0 && (
@@ -1316,7 +1551,20 @@ export default function OwnershipGraphView({
                           ) : (
                             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${r.channel === 'ownership' ? 'bg-amber-500' : 'bg-gray-400'} ${r.connected ? '' : 'opacity-60'}`} />
                           )}
-                          <span className="truncate">{r.slot}</span>
+                          {/* Sibling swatches: whose attribute this is. No
+                              swatch means the parent declares it, so every
+                              sibling in the box has it — absence is the
+                              "shared" signal, which is why parent rows carry
+                              no marker of their own. */}
+                          {r.owners?.map(o => (
+                            <span key={o.id} title={`${r.slot} is declared by ${o.label}`}
+                              className="w-1.5 h-3 rounded-[1px] shrink-0"
+                              style={{ background: o.color }} />
+                          ))}
+                          <span className={`truncate ${
+                            n.members.length && !r.owners?.length
+                              ? 'font-semibold text-gray-900 dark:text-gray-100'
+                              : ''}`}>{r.slot}</span>
                           {r.isLoop && (
                             <LoopIcon title={`self-referential: a ${r.range} can own another ${r.range} via ${r.slot}`} />
                           )}

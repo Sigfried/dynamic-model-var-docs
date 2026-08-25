@@ -76,6 +76,10 @@ export interface AttributeSummary {
   description: string;
   required: boolean;
   multivalued: boolean;
+  /** Ancestor that declared this slot; undefined when the class declares it
+   *  itself. Sibling merging reads this to tell shared (parent) rows from a
+   *  sibling's own rows. */
+  inheritedFrom?: string;
 }
 
 // Base abstract class for all element types
@@ -473,7 +477,7 @@ export class ClassElement extends Range {
    */
   override getAttributeSummaries(): AttributeSummary[] {
     return this.slotRefs
-      .map(slotRef => {
+      .map((slotRef): AttributeSummary | null => {
         const slot = this.getSlotElement(slotRef.id);
         if (!slot) return null;
         return {
@@ -485,6 +489,9 @@ export class ClassElement extends Range {
           // LinkML omits these rather than writing false.
           required: slot.required ?? false,
           multivalued: slot.multivalued ?? false,
+          // Spread rather than assign: exactOptionalPropertyTypes rejects an
+          // explicit `undefined` for an optional property.
+          ...(slotRef.inheritedFrom ? { inheritedFrom: slotRef.inheritedFrom } : {}),
         };
       })
       .filter((s): s is AttributeSummary => s !== null);

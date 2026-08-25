@@ -8,6 +8,86 @@ Newest first.
 
 ---
 
+## 2026-08-25 (later) — Inheritance as adjacency, not edges
+
+**Context: 90 minutes, then a stakeholder demo.** Siggie asked for a few
+minutes of brainstorming and then implementation, on a branch off
+`induced-slots-and-ownership`. That budget shaped every call below; several are
+defaults chosen to be reversible rather than settled answers.
+
+**The design question was already answered before the session started.** The
+previous handoff framed inheritance as "should we draw is-a edges, given 37
+classes hang off Entity" and left it open. Siggie's `[sg]` note in TASKS.md had
+already closed it: no Entity inheritance, and *don't assume edges at all* —
+they would crowd the graph out of legibility. So the work was never "route the
+is-a edges we already compute"; it was "render is-a as ADJACENCY." Reading the
+note before designing saved the whole wrong branch.
+
+Of the options in that note — cascaded vs merged — Siggie said "merged is
+definitely better," so cascaded was NOT built. The toggle is merged/off, not
+merged/cascaded. If cascading is wanted later it is a second render mode over
+the same `mergeSiblings` grouping, not a rewrite.
+
+**Why the merge is a ViewModel pass and not a subgraph change.** Everything
+downstream addresses nodes by id and rows by slot NAME — `buildSpec`'s ports,
+`rowY`, the renderer, the drag/pin machinery. So folding siblings into one
+NodeVM and rewriting edge endpoints to the merged id makes a merged box
+indistinguishable from an ordinary node to layout and routing. ELK never learns
+it happened. Doing it in `ownershipSubgraph` instead would have meant teaching
+the DAG, the layering, and `hiddenOwners` about a node kind that is not a
+class — much more surface for the same picture.
+
+**Row dedup by slot name is forced, not chosen.** `rowY(node, slot)` finds a
+row by name and throws if there isn't exactly one. Two siblings that each
+declare `quantity` (Device/DrugExposure do) MUST become one row, or the anchor
+is ambiguous. That turned out to be the right rendering anyway — one row with
+two swatches — but the constraint came first.
+
+**Swatch ABSENCE is the "shared" signal.** Marking parent rows with their own
+colour was considered and dropped: it makes the common case the noisy one, and
+the parent rows are the majority in every real group (Observation: 14 shared vs
+9 own). Parent rows get weight and darkness instead, matching Siggie's "parent
+gets solid black type."
+
+**`inheritedFrom` already carried the shared/own test**, so nothing had to
+re-derive the class hierarchy in the view. It only needed adding to
+`AttributeSummary` — it was computed in the pipeline and dropped at the service
+boundary. Note `exactOptionalPropertyTypes` is on: `inheritedFrom: x` where x
+may be undefined does NOT satisfy `inheritedFrom?: string`; it must be spread
+conditionally.
+
+**Merged ids are namespaced `merged::Parent`** and must never reach anything
+expecting a class id. Two leaks were found and fixed by inspection, not by
+tests: `onNodeClick` (would have opened a detail drawer on nothing — now
+resolves to the parent) and the dismiss ✕ (suppressed; dismissing a merged box
+means dismissing several classes, a different feature). Anything else that
+consumes node ids is a candidate for the same bug.
+
+**Corrected mid-session: `npx tsc --noEmit` is NOT the typecheck.**
+`docs/CLAUDE.md` says to use `npm run typecheck` (= `tsc -b --noEmit`) and says
+plainly that bare `--noEmit` is less strict. Bare `--noEmit` was green here
+while `tsc -b` had four real errors — two of mine, and two PRE-EXISTING
+never-comparisons of exactly the kind the induced-slots handoff warned about:
+
+- `DataService.ts:924` guarded on `e.kind === 'ref'`, which is not a
+  `ContainmentEdgeKind` at all (`has-a | association | subclass`). The guard
+  never fired, so **association edges were creating parent links** in
+  `getContainmentNodes` — a live bug, not just dead code. Fixed to
+  `'association'`.
+- `DataService.ts:795` had a dead `|| verdict === 'association'` arm, harmless
+  because the guard above it already excludes associations.
+
+Both had survived because the previous session verified with bare `--noEmit`
+too. **The stale-literal trap is not hypothetical and not once-off — it has now
+bitten twice. Use `npm run typecheck`.**
+
+**Not done, deliberately:** the own-bkwd/association verdict merge (still
+waiting on Siggie), header-side merging (0b, gated on that decision), and the
+expand/collapse work. The demo needed one legible new capability, not three
+half ones.
+
+---
+
 ## 2026-08-25 — Cardinality on undrawn rows; `association` and slot storage challenged
 
 > ⚠️ **REVIEW CAVEAT, stated by Siggie: this session's work was not reviewed
