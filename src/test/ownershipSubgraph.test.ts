@@ -69,31 +69,52 @@ describe('getOwnershipSubgraph', () => {
     expect(ids.has('ResearchStudyCollection')).toBe(false);
   });
 
-  test('over the cap, owners stay chips rather than flooding the canvas', () => {
-    // Quantity is owned by ~20 classes — the blowup case.
+  test('over the cap, the OVERFLOW is chipped — the first N are still drawn', () => {
+    // Quantity is owned by ~20 classes — the blowup case. A cap of 8 draws 8
+    // and chips the rest; it does not refuse to draw any.
     const g = ds.getOwnershipSubgraph(['Quantity'], [], { ownerCap: 8 });
-    expect(g.nodes.map(n => n.id)).toEqual(['Quantity']);
-    expect((g.hiddenOwners.get('Quantity') ?? []).length).toBeGreaterThan(8);
+    const drawn = g.nodes.map(n => n.id).filter(id => id !== 'Quantity');
+    expect(drawn.length).toBe(8);
+    expect((g.hiddenOwners.get('Quantity') ?? []).length).toBeGreaterThan(0);
   });
 
-  test('the default cap is 5 — BodySite (6 owners) falls back to chips', () => {
-    // Lowered from 8 (2026-08-19). BodySite sits just over the new cap, so the
-    // default now summarizes its owners as chips instead of drawing them; with
-    // an explicit cap of 8 they are drawn (test above). If this fails after a
-    // schema sync, check BodySite's owner count before changing the cap.
+  test('drawn owners + chipped owners together cover EVERY owner, with no overlap', () => {
+    // The cap PARTITIONS the owner set; it never loses one. This is the
+    // property that makes the cap safe to lower — nothing becomes
+    // unreachable, it just moves from a box to a chip.
+    const total = (ds.getOwnershipSubgraph(['Quantity'], [], { ownerCap: 0 })
+      .hiddenOwners.get('Quantity') ?? []).length;
+    expect(total).toBeGreaterThan(8);
+    for (const cap of [0, 1, 3, 8, 100]) {
+      const g = ds.getOwnershipSubgraph(['Quantity'], [], { ownerCap: cap });
+      const drawn = new Set(g.nodes.map(n => n.id));
+      drawn.delete('Quantity');
+      const chipped = g.hiddenOwners.get('Quantity') ?? [];
+      for (const c of chipped) {
+        expect(drawn.has(c), `${c} is both drawn and chipped at cap ${cap}`).toBe(false);
+      }
+      expect(drawn.size).toBeLessThanOrEqual(cap);
+      expect(drawn.size + chipped.length).toBe(total);
+    }
+  });
+
+  test('a cap of 0 draws no owners at all — every one becomes a chip', () => {
+    const g = ds.getOwnershipSubgraph(['BodySite'], [], { ownerCap: 0 });
+    expect(g.nodes.map(n => n.id)).toEqual(['BodySite']);
+    expect((g.hiddenOwners.get('BodySite') ?? []).length).toBeGreaterThan(0);
+  });
+
+  test('the default cap is 5 — BodySite (6 owners) DRAWS 5 and chips the 6th', () => {
+    // Changed 2026-08-26. This previously asserted BodySite drew ZERO owners,
+    // because ownerCap was an all-or-nothing gate: 6 owners > cap of 5 meant
+    // none were drawn, so the node you were looking at appeared unowned.
+    // Siggie: the fix "should be a cap". If this fails after a schema sync,
+    // check BodySite's owner count before changing the cap.
     expect(DEFAULT_OWNER_CAP).toBe(5);
     const g = ds.getOwnershipSubgraph(['BodySite']);
-    expect(g.nodes.map(n => n.id)).toEqual(['BodySite']);
-    expect((g.hiddenOwners.get('BodySite') ?? []).length).toBeGreaterThan(DEFAULT_OWNER_CAP);
-  });
-
-  test('the owner cap is honored exactly', () => {
-    const drawn = ds.getOwnershipSubgraph(['BodySite'], [], { ownerCap: 8 });
-    expect(drawn.nodes.length).toBeGreaterThan(1);
-    // Same selection, cap below its owner count: chips instead of nodes.
-    const chipped = ds.getOwnershipSubgraph(['BodySite'], [], { ownerCap: 2 });
-    expect(chipped.nodes.map(n => n.id)).toEqual(['BodySite']);
-    expect((chipped.hiddenOwners.get('BodySite') ?? []).length).toBeGreaterThan(2);
+    const drawn = g.nodes.map(n => n.id).filter(id => id !== 'BodySite');
+    expect(drawn.length).toBe(DEFAULT_OWNER_CAP);
+    expect((g.hiddenOwners.get('BodySite') ?? []).length).toBe(1);
   });
 
   test('path-to-root on: still available, and still transitive', () => {

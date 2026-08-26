@@ -130,6 +130,13 @@ export interface NodeVM extends OwnershipSubgraphNode {
    * when pathToRoot is on, since those owners are then real nodes.
    */
   hiddenOwners: string[];
+  /**
+   * Direct owners of this class that ARE drawn on the canvas. Rendered in the
+   * same strip as `hiddenOwners` but in an "on" state, so one chip row shows
+   * every owner and clicking toggles that owner on or off (Siggie: "the
+   * parent chips should be toggles allowing you to add/remove").
+   */
+  drawnOwners: string[];
   /** Rows currently displayed (connected first; all when expanded). */
   rows: RowVM[];
   hiddenCount: number;
@@ -241,17 +248,20 @@ export function buildViewModel(
     const expanded = expandedNodes.has(n.id) || connected.length === 0;
     const rows = expanded ? [...connected, ...hidden] : connected;
     const owners = sub.hiddenOwners.get(n.id) ?? [];
+    const shown = sub.drawnOwners.get(n.id) ?? [];
     return {
       ...n,
       isaParents: isaParents.get(n.id) ?? [],
       subclassCount: subclassCount.get(n.id) ?? 0,
       members: [],
       hiddenOwners: owners,
+      drawnOwners: shown,
       rows,
       allRows: [...connected, ...hidden],
       hiddenCount: hidden.length,
       expanded,
-      height: nodeHeight(rows.length, hidden.length, owners),
+      // The strip holds BOTH chip states, so it must be sized for both.
+      height: nodeHeight(rows.length, hidden.length, [...shown, ...owners]),
     };
   });
 
@@ -422,9 +432,15 @@ export function mergeSiblings(
       }),
     );
 
+    const notSelfOrMember = (o: string) => !absorbed.has(o) && !sources.includes(o);
     const hiddenOwners = [...new Set(
       sources.flatMap(mid => byId.get(mid)?.hiddenOwners ?? []),
-    )].filter(o => !absorbed.has(o) && !sources.includes(o));
+    )].filter(notSelfOrMember);
+    // Drawn owners union the same way. A box's own members are never chips on
+    // it, and neither is a class absorbed into some other merged box.
+    const drawnOwners = [...new Set(
+      sources.flatMap(mid => byId.get(mid)?.drawnOwners ?? []),
+    )].filter(notSelfOrMember).filter(o => !hiddenOwners.includes(o));
     const first = byId.get(memberIds[0]);
     // The box IS the parent, so its identity — name, description, abstractness
     // — must be the parent's. Spreading a member and forgetting to override
@@ -448,6 +464,7 @@ export function mergeSiblings(
       isaParents: [],
       subclassCount: members.length,
       hiddenOwners,
+      drawnOwners,
       rows: rowList,
       allRows: all,
       // Nothing is ever hidden on a merged box, so there is no footer to
@@ -455,7 +472,7 @@ export function mergeSiblings(
       hiddenCount: 0,
       expanded: true,
       // rowList already includes the child header rows, each one line tall.
-      height: nodeHeight(rowList.length, 0, hiddenOwners),
+      height: nodeHeight(rowList.length, 0, [...drawnOwners, ...hiddenOwners]),
     });
   }
 
@@ -537,7 +554,18 @@ function LoopIcon({ title }: { title: string }) {
  *  A merged box needs no extra band — its children are introduced by header
  *  ROWS inside the list, which are ordinary rows as far as geometry cares. */
 function rowsTop(node: NodeVM): number {
-  return HEADER_H + ownersStripHFor(node.hiddenOwners);
+  return HEADER_H + ownersStripHFor(ownerChips(node));
+}
+
+/**
+ * Every owner chip on a node, drawn ones first, in render order.
+ *
+ * Single source of truth for the strip: the height estimate, the row offset
+ * that edge anchors are measured from, and the render must all agree on this
+ * list, or edges point at the wrong rows.
+ */
+function ownerChips(node: NodeVM): string[] {
+  return [...node.drawnOwners, ...node.hiddenOwners];
 }
 
 /**
@@ -785,6 +813,9 @@ export default function OwnershipGraphView({
   expandedIds,
   onExpand,
   onCollapse,
+  onHideOwner,
+  onDeselect,
+  hiddenOwnerIds,
   pathToRoot = false,
   onTogglePathToRoot,
 }: {
@@ -797,6 +828,17 @@ export default function OwnershipGraphView({
   onExpand?: (classId: string) => void;
   /** Dismiss an expanded context node. */
   onCollapse?: (classId: string) => void;
+  /**
+   * Remove an owner that is currently DRAWN. Distinct from `onCollapse`: an
+   * owner can be on the canvas because the cap admitted it, never having been
+   * expanded, so there is nothing in `expandedIds` to delete. The app keeps a
+   * separate suppression set for these.
+   */
+  onHideOwner?: (classId: string) => void;
+  /** Owners dismissed via a lit chip; kept off the canvas until re-added. */
+  hiddenOwnerIds?: Set<string>;
+  /** Remove a SELECTED class from the canvas by deselecting it. */
+  onDeselect?: (classId: string) => void;
   /** Draw each selected class's ownership ancestors as dimmed context nodes. */
   pathToRoot?: boolean;
   onTogglePathToRoot?: () => void;
@@ -842,17 +884,25 @@ export default function OwnershipGraphView({
     () => [...(expandedIds ?? [])].filter(id => !selectedIds.has(id)).sort(),
     [expandedIds, selectedIds],
   );
+  // A selected class is always drawn — selecting something outranks having
+  // dismissed it as somebody else's owner, and a suppressed id that is also
+  // selected would otherwise be filtered out of its own selection.
+  const suppressedList = useMemo(
+    () => [...(hiddenOwnerIds ?? [])].filter(id => !selectedIds.has(id)).sort(),
+    [hiddenOwnerIds, selectedIds],
+  );
   const subgraph = useMemo(
     () => dataService.getOwnershipSubgraph(
       [...selectedIds].sort(), expansionList,
       {
         pathToRoot,
+        suppressedOwners: suppressedList,
         ...(ownerScope === 'none' ? { ownerCap: 0 }
           : ownerScope === 'all' ? { ownerCap: Number.MAX_SAFE_INTEGER }
           : {}),
       },
     ),
-    [dataService, selectedIds, expansionList, pathToRoot, ownerScope],
+    [dataService, selectedIds, expansionList, pathToRoot, ownerScope, suppressedList],
   );
   const plainSlots = useMemo(
     () => new Map(subgraph.nodes.map(n =>
@@ -1717,61 +1767,110 @@ export default function OwnershipGraphView({
                               ▷ {n.subclassCount}
                             </span>
                           )}
-                          {/* Dismiss — only on nodes the user pulled in, not on
-                              path-to-root context, which the selection implies. */}
-                          {expandedIds?.has(n.id) && !n.members.length && (
+                          {/*
+                            Dismiss. Every box gets one now (Siggie: "Boxes
+                            should also have close icons") — previously only
+                            EXPANDED, unmerged nodes did, so a selected class
+                            or a capped-in owner could be shown and never hidden.
+
+                            Which handler depends on WHY the box is here:
+                              - selected        -> deselect it
+                              - merged box      -> deselect every member
+                              - expanded/capped -> collapse + suppress
+                            path-to-root context is still exempt: it is implied
+                            by the selection, so there is nothing to remove.
+                          */}
+                          {(() => {
+                            const memberIds = n.members.length
+                              ? n.members.map(m => m.id) : [n.id];
+                            const selectedHere = memberIds.filter(id => selectedIds.has(id));
+                            // A path-to-root context node is implied by the
+                            // selection, so there is nothing to remove and no
+                            // ✕. Everything else on the canvas is here because
+                            // it was selected, expanded, or drawn as a capped
+                            // owner — all three are dismissable.
+                            const isPathContext = pathToRoot
+                              && !selectedHere.length && !expandedIds?.has(n.id);
+                            if (isPathContext) return null;
+                            return (
                             <button
                               data-dismiss={n.id}
-                              title={`Remove ${n.label} from the canvas`}
-                              onClick={ev => { ev.stopPropagation(); onCollapse?.(n.id); }}
+                              title={selectedHere.length > 1
+                                ? `Remove all ${selectedHere.length} selected classes in ${n.label}`
+                                : `Remove ${n.label} from the canvas`}
+                              onClick={ev => {
+                                ev.stopPropagation();
+                                if (selectedHere.length) selectedHere.forEach(id => onDeselect?.(id));
+                                else { onCollapse?.(n.id); onHideOwner?.(n.id); }
+                              }}
                               className="text-[10px] leading-none px-1 rounded text-gray-400
                                          hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/40"
                             >
                               ✕
                             </button>
-                          )}
+                            );
+                          })()}
                         </span>
                       </div>
-                      {/* Owners left off the canvas. Clicking one pulls it in,
-                          the same affordance a dimmed attribute row offers. */}
-                      {n.hiddenOwners.length > 0 && (
+                      {/* Every direct owner, as a TOGGLE. Drawn owners show
+                          filled ("on") and clicking removes them; off-canvas
+                          owners show outlined and clicking adds them. Chips
+                          used to list only the off-canvas half, which is why
+                          there was no way to hide an owner once shown. */}
+                      {ownerChips(n).length > 0 && (
                         <div
                           className="flex flex-wrap items-center gap-x-1 gap-y-0.5 px-2 py-1 border-b
                                      border-gray-200 dark:border-slate-600
                                      bg-amber-50/60 dark:bg-amber-950/30"
-                          style={{ height: ownersStripHFor(n.hiddenOwners) }}
+                          style={{ height: ownersStripHFor(ownerChips(n)) }}
                         >
                           <span className="text-[9px] text-gray-500 dark:text-gray-400 shrink-0">
                             owned by
                           </span>
-                          {/* Every owner is listed and clickable — a silently
-                              truncated "+3" hid names with no way to reach them. */}
-                          {n.hiddenOwners.map(owner => (
+                          {/* Every owner is listed — a silently truncated "+3"
+                              hid names with no way to reach them. */}
+                          {ownerChips(n).map(owner => {
+                            const on = n.drawnOwners.includes(owner);
+                            return (
+                              <button
+                                key={owner}
+                                data-owner-chip={owner}
+                                data-owner-on={on ? '' : undefined}
+                                title={on
+                                  ? `${owner} owns ${n.label} — click to remove it from the canvas`
+                                  : `${owner} owns ${n.label} — click to add it`}
+                                onClick={ev => {
+                                  ev.stopPropagation();
+                                  if (on) onHideOwner?.(owner); else onExpand?.(owner);
+                                }}
+                                className={`text-[9px] leading-none px-1 py-0.5 rounded max-w-full truncate
+                                           border ${on
+                                    ? `bg-amber-200 dark:bg-amber-800 border-amber-400 dark:border-amber-600
+                                       text-amber-950 dark:text-amber-100
+                                       hover:bg-amber-300 dark:hover:bg-amber-700 hover:line-through`
+                                    : `bg-amber-100/60 dark:bg-amber-900/40 border-dashed
+                                       border-amber-300 dark:border-amber-700
+                                       text-amber-900 dark:text-amber-200
+                                       hover:bg-amber-200 dark:hover:bg-amber-800`}`}
+                              >
+                                {owner}
+                              </button>
+                            );
+                          })}
+                          {n.hiddenOwners.length > 0 && (
                             <button
-                              key={owner}
-                              data-owner-chip={owner}
-                              title={`${owner} owns ${n.label} — click to add it`}
-                              onClick={ev => { ev.stopPropagation(); onExpand?.(owner); }}
-                              className="text-[9px] leading-none px-1 py-0.5 rounded max-w-full truncate
-                                         bg-amber-100 dark:bg-amber-900/60
-                                         text-amber-900 dark:text-amber-200
+                              title={`Add all ${n.hiddenOwners.length} remaining owners of ${n.label}`}
+                              onClick={ev => {
+                                ev.stopPropagation();
+                                n.hiddenOwners.forEach(o => onExpand?.(o));
+                              }}
+                              className="text-[9px] leading-none px-1 py-0.5 rounded shrink-0
+                                         text-amber-800 dark:text-amber-300 underline
                                          hover:bg-amber-200 dark:hover:bg-amber-800"
                             >
-                              {owner}
+                              add all
                             </button>
-                          ))}
-                          <button
-                            title={`Add all ${n.hiddenOwners.length} owners of ${n.label}`}
-                            onClick={ev => {
-                              ev.stopPropagation();
-                              n.hiddenOwners.forEach(o => onExpand?.(o));
-                            }}
-                            className="text-[9px] leading-none px-1 py-0.5 rounded shrink-0
-                                       text-amber-800 dark:text-amber-300 underline
-                                       hover:bg-amber-200 dark:hover:bg-amber-800"
-                          >
-                            add all
-                          </button>
+                          )}
                         </div>
                       )}
                       {n.rows.map(r => r.header ? (

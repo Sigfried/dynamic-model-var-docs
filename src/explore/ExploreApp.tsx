@@ -27,6 +27,8 @@ const SEL_PARAM = 'sel';
 const DETAIL_PARAM = 'detail';
 const EXP_PARAM = 'exp';
 const ROOTS_PARAM = 'roots';
+/** Owners the user dismissed from the canvas (see onHideOwner). */
+const HIDDEN_PARAM = 'hidden';
 
 function readIdsFromURL(param: string): Set<string> {
   const raw = new URLSearchParams(window.location.search).get(param);
@@ -48,6 +50,7 @@ function writeStateToURL(
   expanded: Set<string>,
   detailId: string | null,
   pathToRoot: boolean,
+  hiddenOwners: Set<string>,
 ) {
   const url = new URL(window.location.href);
   const setIds = (param: string, ids: Set<string>) => {
@@ -56,6 +59,7 @@ function writeStateToURL(
   };
   setIds(SEL_PARAM, sel);
   setIds(EXP_PARAM, expanded);
+  setIds(HIDDEN_PARAM, hiddenOwners);
   if (detailId) url.searchParams.set(DETAIL_PARAM, detailId);
   else url.searchParams.delete(DETAIL_PARAM);
   if (pathToRoot) url.searchParams.set(ROOTS_PARAM, '1');
@@ -76,6 +80,14 @@ export default function ExploreApp() {
   const [tableCollapsed, setTableCollapsed] = useState(false);
   const [pathToRoot, setPathToRoot] = useState<boolean>(readPathToRootFromURL);
   const [casesOpen, setCasesOpen] = useState(false);
+  /**
+   * Owners dismissed by clicking a lit `owned by` chip. Separate from
+   * `expandedIds` because a capped-in owner was never expanded — there is no
+   * expansion to remove, only a dismissal to record.
+   */
+  const [hiddenOwnerIds, setHiddenOwnerIds] = useState<Set<string>>(
+    () => readIdsFromURL(HIDDEN_PARAM),
+  );
 
   // Applying a case replaces every piece of graph state at once. Deliberately
   // NOT a navigation: the merge mode lives in localStorage and is read once at
@@ -84,6 +96,7 @@ export default function ExploreApp() {
     setSelectedIds(new Set(c.sel));
     setExpandedIds(new Set(c.exp ?? []));
     setPathToRoot(!!c.roots);
+    setHiddenOwnerIds(new Set());
     setDetailId(null);
   }, []);
 
@@ -94,9 +107,16 @@ export default function ExploreApp() {
     if (selectedIds.size === 0 && expandedIds.size > 0) setExpandedIds(new Set());
   }, [selectedIds, expandedIds]);
 
+  // Same reasoning for dismissals: with nothing selected there is no canvas to
+  // have dismissed anything from, so a stale ?hidden= would silently suppress
+  // owners on the next selection.
+  useEffect(() => {
+    if (selectedIds.size === 0 && hiddenOwnerIds.size > 0) setHiddenOwnerIds(new Set());
+  }, [selectedIds, hiddenOwnerIds]);
+
   useEffect(
-    () => writeStateToURL(selectedIds, expandedIds, detailId, pathToRoot),
-    [selectedIds, expandedIds, detailId, pathToRoot],
+    () => writeStateToURL(selectedIds, expandedIds, detailId, pathToRoot, hiddenOwnerIds),
+    [selectedIds, expandedIds, detailId, pathToRoot, hiddenOwnerIds],
   );
 
   const toggleSelect = useCallback((id: string) => {
@@ -116,10 +136,33 @@ export default function ExploreApp() {
     });
   }, []);
 
-  const expand = useCallback(
-    (id: string) => setExpandedIds(prev => (prev.has(id) ? prev : new Set(prev).add(id))),
-    [],
-  );
+  const expand = useCallback((id: string) => {
+    setExpandedIds(prev => (prev.has(id) ? prev : new Set(prev).add(id)));
+    // An explicit request outranks an earlier dismissal. Without this, clicking
+    // a dismissed owner's chip would add an expansion the suppression set then
+    // immediately filtered back out, and the chip would look broken.
+    setHiddenOwnerIds(prev => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
+  /**
+   * Dismiss a DRAWN owner. Records a suppression rather than removing an
+   * expansion, since a capped-in owner has none; also drops any expansion so
+   * an owner that was both expanded and capped-in actually disappears.
+   */
+  const hideOwner = useCallback((id: string) => {
+    setHiddenOwnerIds(prev => (prev.has(id) ? prev : new Set(prev).add(id)));
+    setExpandedIds(prev => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
   const collapse = useCallback(
     (id: string) =>
       setExpandedIds(prev => {
@@ -246,6 +289,9 @@ export default function ExploreApp() {
               expandedIds={expandedIds}
               onExpand={expand}
               onCollapse={collapse}
+              onHideOwner={hideOwner}
+              onDeselect={toggleSelect}
+              hiddenOwnerIds={hiddenOwnerIds}
               pathToRoot={pathToRoot}
               onTogglePathToRoot={() => setPathToRoot(v => !v)}
             />

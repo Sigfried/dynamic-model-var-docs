@@ -5,7 +5,9 @@
  * selection, and returns the drawable subgraph per the content policy:
  * selected entities, edges among them, explicit expansions, and each node's
  * DIRECT owners (one hop, up to `ownerCap`) as dimmed 'context' nodes. Owners
- * past the cap are returned in `hiddenOwners` for chip rendering instead.
+ * past the cap are returned in `hiddenOwners` for chip rendering instead; the
+ * ones that were drawn come back in `drawnOwners`, so every owner is
+ * accounted for and the UI can render chips that both add and remove.
  * With `pathToRoot` on, the one-hop walk is replaced by the full transitive
  * ancestors-to-root.
  *
@@ -92,6 +94,15 @@ export interface OwnershipSubgraph {
    * pathToRoot is on (those owners are drawn as real nodes instead).
    */
   hiddenOwners: Map<string, string[]>;
+  /**
+   * Direct owners of selected/expanded classes that ARE on the canvas — the
+   * complement of `hiddenOwners`. Together the two cover every direct owner.
+   *
+   * Exists so the UI can render every owner as a chip and let the chip's
+   * state mean add-or-remove; with only the hidden half reported, chips could
+   * only ever add.
+   */
+  drawnOwners: Map<string, string[]>;
 }
 
 /**
@@ -106,13 +117,28 @@ export interface OwnershipSubgraphOptions {
   /** Walk each selected node's ownership ancestors in as dimmed context. */
   pathToRoot?: boolean;
   /**
-   * Draw each core node's DIRECT owners (one hop, not transitive) as context.
-   * A value object's owners are the interesting thing about it — BodySite's
-   * six owners are the answer to "what is BodySite", not a footnote to expand
-   * one chip at a time. Above the cap the owners stay chips, since drawing
-   * ~20 of them (Quantity) is the blowup this replaced.
+   * How many of each core node's DIRECT owners (one hop, not transitive) to
+   * draw as context. A value object's owners are the interesting thing about
+   * it — BodySite's six owners are the answer to "what is BodySite", not a
+   * footnote to expand one chip at a time.
+   *
+   * A true CAP: the first `ownerCap` owners are drawn and the rest become
+   * chips, so a node with 20 owners (Quantity) draws N and chips the other
+   * 20-N instead of blowing up the canvas. Previously an all-or-nothing gate;
+   * see the comment at the use site for why that was wrong.
    */
   ownerCap?: number;
+  /**
+   * Owners the user has explicitly dismissed. They are kept OUT of the drawn
+   * set and reported as chips instead, so the chip can toggle them back on.
+   *
+   * Needed because the cap draws owners the user never asked for: dismissing
+   * one cannot be expressed by removing an expansion (there is none), only by
+   * recording the dismissal. A suppressed owner still appears if it is
+   * selected or expanded in its own right — an explicit request outranks a
+   * previous dismissal.
+   */
+  suppressedOwners?: readonly string[];
 }
 
 export type OwnershipDag = Supergroup<unknown>;
@@ -217,7 +243,7 @@ export function buildOwnershipSubgraph(
   expansions: string[] = [],
   options: OwnershipSubgraphOptions = {},
 ): OwnershipSubgraph {
-  const { pathToRoot = false, ownerCap = DEFAULT_OWNER_CAP } = options;
+  const { pathToRoot = false, ownerCap = DEFAULT_OWNER_CAP, suppressedOwners = [] } = options;
   const byId = new Map(dag.nodes.map(n => [n.id, n]));
   const resolve = (id: string) => {
     const n = byId.get(id);
@@ -234,27 +260,51 @@ export function buildOwnershipSubgraph(
       for (const a of resolve(id).ancestors()) visible.add(a.id);
     }
   } else {
-    // One hop up, per node, only when the count stays legible. Not transitive:
-    // the owners' own owners stay off, which is what keeps this from becoming
-    // the reverse-reachability closure pathToRoot was turned off for.
+    /**
+     * One hop up, per node, capped at `ownerCap` owners. Not transitive: the
+     * owners' own owners stay off, which is what keeps this from becoming the
+     * reverse-reachability closure pathToRoot was turned off for.
+     *
+     * **`ownerCap` is a CAP, not a legibility gate (changed 2026-08-26).** It
+     * used to read `owners.length <= ownerCap`, i.e. draw ALL owners or NONE.
+     * That inverted the control on exactly the nodes you notice: BodySite has
+     * 6 owners, so the default of 5 drew **zero** of them and the node looked
+     * unowned. Siggie: the fix "should be a cap". Now N owners are drawn and
+     * the remainder fall through to `hiddenOwners` as chips, so the two
+     * mechanisms compose instead of replacing one another.
+     *
+     * Owners are taken in DAG order and the overflow is chipped, so which
+     * owners are drawn is stable across renders rather than dependent on
+     * iteration accidents.
+     */
+    const suppressed = new Set(suppressedOwners);
     for (const id of core) {
-      const owners = resolve(id).parents;
-      if (owners.length && owners.length <= ownerCap) {
-        for (const o of owners) visible.add(o.id);
-      }
+      // Dismissed owners are filtered BEFORE the cap, so dismissing one
+      // promotes the next owner into the freed slot rather than leaving a
+      // gap — the canvas keeps showing `ownerCap` owners while any remain.
+      const owners = resolve(id).parents.filter(p => !suppressed.has(p.id));
+      for (const o of owners.slice(0, ownerCap)) visible.add(o.id);
     }
   }
 
-  // Direct owners left off the canvas become chips rather than nodes. Only
-  // one hop up: the chip answers "what uses this?", and walking further is
-  // what produced the closure pathToRoot was turned off for.
+  /**
+   * Direct owners split into the ones drawn as boxes and the ones left off.
+   * Only one hop up: the chip answers "what uses this?", and walking further
+   * is what produced the closure pathToRoot was turned off for.
+   *
+   * Both halves are reported so the UI can render EVERY owner as a chip and
+   * use the chip's state to mean add-or-remove (Siggie, 2026-08-25: "the
+   * parent chips should be toggles allowing you to add/remove"). Reporting
+   * only the hidden half is what made the chips inherently add-only.
+   */
   const hiddenOwners = new Map<string, string[]>();
+  const drawnOwners = new Map<string, string[]>();
   for (const id of core) {
-    const owners = resolve(id).parents
-      .map(p => p.id)
-      .filter(pid => !visible.has(pid))
-      .sort();
-    if (owners.length) hiddenOwners.set(id, owners);
+    const parents = resolve(id).parents.map(p => p.id);
+    const hidden = parents.filter(pid => !visible.has(pid)).sort();
+    const drawn = parents.filter(pid => visible.has(pid)).sort();
+    if (hidden.length) hiddenOwners.set(id, hidden);
+    if (drawn.length) drawnOwners.set(id, drawn);
   }
 
   const edges = full.edges
@@ -295,5 +345,5 @@ export function buildOwnershipSubgraph(
     })
     .sort((a, b) => a.layer - b.layer || a.id.localeCompare(b.id));
 
-  return { nodes, edges, hiddenOwners };
+  return { nodes, edges, hiddenOwners, drawnOwners };
 }
