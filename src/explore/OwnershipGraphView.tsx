@@ -245,8 +245,14 @@ export function buildViewModel(
     // A node whose attributes are all scalars (BodySite: id/qualifier/site)
     // has nothing connected, so collapsed it renders as an empty box offering
     // to reveal its only content. Show the attributes instead.
-    const expanded = expandedNodes.has(n.id) || connected.length === 0;
+    // A node whose rows are ALL unconnected is force-expanded: collapsed it
+    // would be an empty box offering to reveal its only content.
+    const forced = connected.length === 0;
+    const expanded = expandedNodes.has(n.id) || forced;
     const rows = expanded ? [...connected, ...hidden] : connected;
+    // Forced expansion has no collapsed state to return to, so offering a
+    // "− fewer" footer there would be a control that does nothing.
+    const footerCount = forced ? 0 : hidden.length;
     const owners = sub.hiddenOwners.get(n.id) ?? [];
     const shown = sub.drawnOwners.get(n.id) ?? [];
     return {
@@ -258,10 +264,14 @@ export function buildViewModel(
       drawnOwners: shown,
       rows,
       allRows: [...connected, ...hidden],
-      hiddenCount: hidden.length,
+      // Forced expansion has no collapsed state to return to, so offering a
+      // "− fewer" footer there would be a control that does nothing.
+      hiddenCount: footerCount,
       expanded,
-      // The strip holds BOTH chip states, so it must be sized for both.
-      height: nodeHeight(rows.length, hidden.length, [...shown, ...owners]),
+      // The strip holds BOTH chip states, so it must be sized for both. The
+      // footer count must be the SAME one the render uses, or the box
+      // reserves height for a footer it never draws.
+      height: nodeHeight(rows.length, footerCount, [...shown, ...owners]),
     };
   });
 
