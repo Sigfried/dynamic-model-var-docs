@@ -23,22 +23,221 @@
 
 ---
 
-## 🔁 HANDOFF — start here next session (updated 2026-08-25, end of day)
+## 🔁 HANDOFF — start here (written 2026-08-26, end of a long session)
 
-> **Everything is MERGED TO MAIN and DEPLOYED.** The DEPLOYED code is `4f33c23`
-> — Siggie deployed to gh-pages by hand (`npm run deploy`).
->
-> **`main` has since moved past it (docs only, no code):** `f141d03`
-> URL-state plan, `9999dcd` help-package plan, `bd8f8ed` TASKS edits. So the
-> deployed app still matches `4f33c23`; don't read a later `main` as deployed.
->
-> A lot of fast work was done prepping for demo: mostly inheritance/merged
-> view. It needs cleanup.
->
-> Wrap up by end of week (~2026-08-28/29).** Won't be able to do
-> everything. Need to prioritize something like:
-> - Fix visibly broken stuff (unless it's pretty minor)
-> - Balance between impact and cost
+> **Read this whole section before touching anything.** The previous session
+> ran long, and Siggie ended it with: *"this session is definitely too old and
+> you are choosing to 'fix' things that you may be too dumb at this point to
+> fix. i'm not sure what all you've already 'fixed' and what parts of it are
+> worth keeping."* Take that seriously. The work below is **unreviewed in a
+> browser** and needs judgement, not momentum.
+
+### The state of the tree, exactly
+
+Branch **`tweaking-expand-prune`**, 9 commits, 0 behind `main`. Nothing merged,
+nothing deployed. `main` is unchanged apart from one docs commit (`8bfd294`).
+
+The commits split into two groups, and **the split is the important part**:
+
+| | commits | status |
+|---|---|---|
+| **Reviewed-ish** | `fb6d6a7` `8dd93aa` `319e58c` `39c9695` `82039a6` `9d477e6` `7fe1999` `0ded7e0` | Siggie saw these running and gave screenshot feedback. They work; they have bugs. |
+| **UNREVIEWED** | `0c6cfdc` (the last one) | Written AFTER that feedback, late in the session, never seen in a browser. |
+
+**`0c6cfdc` is deliberately one commit so it can be dropped whole.** If any of
+it looks wrong, `git revert 0c6cfdc` and start those items over. Do not assume
+it is good because tests pass — 294 tests passing is not evidence the UI is
+right, and every bug Siggie reported was invisible to the test suite.
+
+### Branches — answered 2026-08-26
+
+Only **`tweaking-expand-prune`** was created this session. All others predate it.
+
+- **Safe to delete (fully merged, nothing unique):** `dom-based-link-overlay`,
+  `induced-slots-and-ownership`, `inheritance-merged-siblings`,
+  `proposal/activity-value-object`
+- **Have unique commits, all stale — Siggie's call:**
+  `broken-linkoverlay-refactor` (1 commit, 178 behind, Dec 2025),
+  `dockview-poc` (15, 153 behind), `trying-to-merge-element-files` (2, 236
+  behind), `wip/class-specific-slots` (1, 126 behind),
+  `schema-sync/upstream-update` (1, 63 behind)
+- None need pushing unless Siggie wants them off-machine.
+
+---
+
+### 📸 Siggie's screenshots — ASK FOR THESE
+
+Siggie reviewed a running build on 2026-08-26 and sent four screenshots. **They
+could not be saved to the repo** (they arrived as conversation images). He has
+offered to re-attach them: *"the new session will need my screenshots. if you
+don't have an easy way to provide them, i will."*
+
+**Ask for them at the start, and say which you need — he does not have to
+re-order them, the descriptions below identify each one:**
+
+1. **The selection tree, mid-height, several rows expanded.** Shows the
+   overlap bug: "★ also under Organization/MeasurementObservation…" text
+   running over the rows beside it, and the panel with no horizontal scroll.
+   Referred to below as **img-1**.
+2. **The tour open at step 2 of 4** ("Choosing what to look at"), popover
+   sitting in the middle-left over the diagram, with a Participant box visible
+   to its right. This is the placement complaint. **img-2**.
+3. **The tree collapsed to 7 roots** (Assay, Document, Organization, Person,
+   Questionnaire, ResearchStudyCollection, SpecimenContainer), Assay expanded
+   two levels. This is the "what happened to categories" one. **img-3**.
+4. **A wide browser shot**, URL
+   `localhost:5173/dynamic-model-var-docs/?merge=bend&owners=all&sel=Organization`,
+   showing Organization drawn as a lone box with 5 scalar rows and nothing
+   else. This is the one-hop dead end. **img-4**.
+
+Worth knowing: img-4's URL is itself evidence the serializable-state work
+functions — `merge`, `owners` and `sel` all round-tripped into a shareable link.
+
+### ▶️ DO THIS FIRST — the one thing that is not understood
+
+**"Most clicks (chip, selection, +N attributes, etc.) cause at least the main
+panel to refresh. didn't used to do that i don't think."**
+
+This is a **regression report that was never investigated**, and it is the most
+serious item on the list because it affects every interaction. Everything else
+is a visual defect in one feature.
+
+Likely suspects, in order — but **measure before believing any of them**:
+1. `ExploreApp` now owns the four toolbar settings (`82039a6`). Every one is a
+   `useState` in the top-level component, so any change re-renders the whole
+   tree including `OwnershipGraphView`.
+2. The new `writeExploreState` effect depends on nine values instead of four.
+3. `HelpProvider` wraps the app and its `api` useMemo depends on ~13 values, so
+   it may be invalidating on every render.
+4. `SelectionTree` recomputes `counts` over all 54 classes via `useMemo` keyed
+   on `[nodes, dataService]` — should be stable, but verify.
+
+**Do not fix by guessing.** Add a render counter or use the React DevTools
+profiler and find out which component re-renders and why. The standing process
+note in this file exists because four bugs in an earlier session came from
+reasoning about the render instead of measuring it.
+
+### ▶️ dag-browser — the biggest open area
+
+Siggie's list, verbatim:
+- *"writing on top of itself (or the rows are anyway)"* (img-1)
+- *"needs horizontal scroll"*
+- *"needs panel resizing"*
+- *"maybe should allow panel to be detached and moved"*
+- *"what happened to categories"* (img-3)
+
+**Diagnosis for the first two (confirmed by reading the widget's CSS):** the
+widget ships `.dbw-row { white-space: nowrap }` with no overflow handling, so
+its own cross-reference text ("★ also under Organization/MeasurementObservation,
+…") runs past the panel edge and paints over neighbouring rows. `renderRow`
+truncates the class NAME, but the xref markup belongs to the widget, so it
+cannot be fixed there.
+
+`0c6cfdc` attempts a CSS-only fix in `src/explore/selectionTree.css`
+(horizontal scroll on `.dbw-root`, `width: max-content` on rows, xref notes
+clamped to 18ch). **Unverified visually. Check it before trusting it**, and if
+it does not hold, the honest options are to patch the widget upstream
+(`~/github-repos/personal/` has no copy; it is an npm dep at `^0.2.0`) or to
+stop using its default row chrome.
+
+**"What happened to categories" — genuinely unanswered.** The tree is built
+from `getContainmentNodes()`, i.e. the OWNERSHIP graph, which has 7 roots
+(Assay, Document, Organization, Person, Questionnaire, ResearchStudyCollection,
+SpecimenContainer). It has **nothing to do with `ENTITY_CATEGORIES`** — those
+are the hand-curated navigation groups (Admin/Study, Clinical, Observations/
+Measurements, Laboratory/Biospecimen, Survey/Questionnaire, Files/Other) the
+old flat list showed. So categories did not break; they were never in the tree.
+
+That is a design question for Siggie, not a bug to fix:
+- Categories as an expanded TOP LAYER above the ownership roots (his own
+  earlier idea, and he predicted the consequence: *"a lot more duplicates will
+  appear, across categories"*), or
+- Two separate trees, or
+- Keep the flat category list as the primary selector after all.
+
+The flat list is still available behind the `☰ flat list` / `⑃ tree` toggle at
+the bottom of the panel, so this is comparable side by side right now.
+
+**Panel resizing / detaching: NOT attempted.** Resizing is small; detaching is
+not, and `dockview-poc` (an old branch, 153 behind) suggests this was explored
+before — read it before designing anything.
+
+### ▶️ Tour and help
+
+Siggie's report: *"need to be more careful about placement (in img-2 it should
+be on right) or ability to drag or both"*, and *"getting no highlighting or
+indication of what's going on between steps"*.
+
+`0c6cfdc` attempts both — placement now picks the side with more room rather
+than defaulting right, plus a `.help-spotlight` ring around the current
+anchor. Also adds hover-to-preview / click-to-pin on the hint dots, which
+Siggie asked for. **All three unverified visually.**
+
+**Dragging the popover was NOT built** and is probably worth it regardless of
+whether the placement heuristic holds — it is the escape hatch for every case
+the geometry gets wrong.
+
+Where things live: `src/help/` — `HelpProvider.tsx` (modes, keyboard),
+`helpContext.ts`, `HelpLayer.tsx` (all rendering + positioning),
+`parseHelpContent.ts` (ported from icd11), `help-content.md` (the content),
+`help.css`. Tests in `src/test/helpContent.test.ts` check the content parses,
+the tour is numbered 1..n, and every entry id is actually tagged in the app.
+
+### ▶️ One-hop default
+
+Siggie: *"after refresh and selecting organization, just get the box on its
+own."*
+
+**Diagnosed by probe, and it is real:** Organization has **no owners** (it is a
+DAG root) and **no un-flipped ownership slots** — it owns 14 things, but every
+edge is stored on the other class (`Observation.performed_by → Organization`).
+So one-hop-up finds nothing and there are no rows to expand downward. A genuine
+dead end, while the tree shows "14" beside it.
+
+`0c6cfdc` adds `hiddenOwned` to the subgraph and an "owns" chip strip. The
+model half has tests; **the rendered strip does not, and it adds a second chip
+strip to boxes, which changes box height and therefore edge anchoring.** That
+is the part most likely to be subtly wrong — check that edges still point at
+the right rows on a box that has both strips.
+
+### 📄 DOCS ARE STALE — Siggie, 2026-08-26: *"TASKS.md (and other docs) is at least partly out of date"*
+
+Not audited. Known-stale spots, as a starting list rather than a complete one:
+
+- **This file below the handoff.** The "NEXT UP — ordered 2026-08-26" list was
+  written mid-session and uses letters (A–I) Siggie never saw; he said so:
+  *"you haven't even fixed TASKS yet so i don't know what items you're
+  referring to"*. Several of its items are now done or superseded by the
+  handoff above. **Reconcile it against the handoff, or delete it.**
+- **The tail of this file** (from "Current round (post-2026-06-11 feedback)"
+  onward, ~470 lines) is an older planning round largely superseded by
+  EXPLORE_VIZ.md. Several items are already tagged [OBSOLETE]/[LATER]. Cutting
+  it is mechanical, but the keep/drop calls are Siggie's.
+- **`docs/EXPLORE_VIZ.md`** was audited 2026-08-24 as "~20–25% stale" and has
+  not been revised since; the ownership-chip and selector changes since then
+  make that worse.
+- **`docs/HELP_PACKAGE_PLAN.md`** says "not yet started" — it IS started, in
+  `src/help/`, with two deliberate departures from the plan (no native-title
+  swapping; measured positioning rather than CSS anchor positioning). Record
+  that, or the next session will re-litigate both.
+- **Dates section at the top** still lists the wrap-up as "~2026-08-28/29" and
+  carries a "**Needs Siggie**: set a new target or drop it" note from an older
+  release date. Still needs him.
+
+### 🚧 Gotchas — unchanged, still true
+
+- `npx vitest` needs node 22: `export PATH="$HOME/.nvm/versions/node/v22.20.0/bin:$PATH"`
+- **Never run `npm run dev`** — Siggie keeps the app running himself.
+- `npm run typecheck` (`tsc -b --noEmit`), never bare `npx tsc --noEmit`.
+- `tsc` will NOT catch a stale union comparison — grep for removed literals.
+  Hit again this session: `MergeMode` is `'bend'`, not `'full'`.
+- `console.log` is swallowed in vitest; assert against a sentinel and read the
+  diff. That trick found every real diagnosis in this session.
+- Lint baseline is **20 errors**, all pre-existing (a missing `react-hooks` rule
+  definition plus `.vite/deps` cache files). Compare against the baseline rather
+  than expecting zero.
+
+---
 
 ### ✅ IMPLEMENTED 2026-08-26 — branch `tweaking-expand-prune`, NOT merged
 
