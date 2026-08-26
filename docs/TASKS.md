@@ -26,100 +26,129 @@
 ## 🔁 HANDOFF — start here next session (updated 2026-08-25, end of day)
 
 > **Everything is MERGED TO MAIN and DEPLOYED.** `main` is at `4f33c23`, clean
-> tree, nothing unpushed. Siggie deployed to gh-pages by hand at the end of the
-> session (`npm run deploy` — there is no deploy Action, and the site had been
-> 13 days stale before that; **check `origin/gh-pages` against `main` before
-> assuming the live site shows current code**).
+> tree, nothing unpushed. Siggie deployed to gh-pages by hand at the end
+> of the session (`npm run deploy`)
 >
-> The demo happened. The inheritance work below was built during it, in
-> roughly 90 minutes, in response to Siggie reviewing renders as they landed.
+> A lot of fast work was done prepping for demo: mostly inheritance/merged
+> view. It needs cleanup.
+>
+> Wrap up by end of week (~2026-08-28/29).** Won't be able to do
+> everything. Need to prioritize something like:
+> - Fix visibly broken stuff (unless it's pretty minor)
+> - Balance between impact and cost
 
-### 🚦 TWO WORKSTREAMS, IN THIS ORDER
+### ▶️ NEXT UP — needs prioritization
+**[sg] I'll mark items with impact estimates to help**
 
-**1. SHARING / PRESENTATION — Siggie wants this figured out FIRST, in its own
-session.** He said explicitly: *"i should just open a separate session for
-that."* Do not start it as a side-quest inside a development session.
-
-The stakeholder meeting on 2026-08-25 did **not** include the big program
-manager, who matters most. Her first exposure — after seeing the app a couple
-of months ago — will be **from links sent to her**, possibly without Siggie
-walking her through it. The stakeholders present asked for two things:
-
-  1. **a video demo**
-  2. **a non-video guided tour**
-
-Siggie wants to know what the options are for both, *"probably to be hosted on
-gh pages."* The task in that session is to lay out options and trade-offs, not
-to pick one unilaterally.
-
-**Hard dependency, and it runs the other way from what you'd guess:** a
-**doc page with live embeds** is one of the two things Siggie named for the
-guided tour, and an embed IS a URL — so nothing that lives only in
-localStorage can be embedded. See "put essentially the WHOLE app state in the
-URL" below. That work is sequenced after the development clean-up, so the
-sharing session should scope around it rather than assume it exists. Relevant constraints already known: the app is a
-static Vite build under `base: '/dynamic-model-var-docs/'`, deploys manually
-via `npm run deploy` (gh-pages branch), and the **example cases pane already
-exists** and is close to a guided-tour primitive — named selections that
-restore app state in place (`src/explore/exampleCases.ts`, with an
-`ExampleCase.note` field already written as explanatory prose).
-
-**2. DEVELOPMENT — wrap up by end of week (~2026-08-28/29).** Siggie:
-*"which we have to wrap up by the end of the week or so."* Everything in NEXT
-UP below is in scope for that; the sharing work is not development time.
-
-### ▶️ NEXT UP (development, in Siggie's priority order)
-
+1. **[sg] Fix this document (do this first)**
+   - try to get rid of anything in this document that isn't still
+     relevant, especially from SHIPPED / DONE sections, or things that
+     have been implemented / resolved even if not marked as such
+   - bring together redundant/same-topic material. in this list if it's pretty
+     short, otherwise to new section referred to from here
+   - clean up this list and everything else: remove redundancy, make
+     language clear and concise
+   - for high impact items, make **modest** effort to calculate a cost in
+     terms of time
+   - then you can put this list in a sensible order
 1. **Owner cap + chips as add/remove TOGGLES.** Siggie's last design ask of the
    session, not started. *"the fix for how many parents to show ... should be a
    cap, and then the parent chips should be toggles allowing you to add/remove."*
    Today the `owned by` chips are **add-only** — clicking one draws that owner,
    and there is no way to click it back off. The toolbar's `0 / ≤5 / all`
    control is a blunt stand-in for this and should probably collapse into it.
+   (**high impact** -- we at least need a way to hide entities once they're shown)
+   1. [sg] related to what i've been referring to as "tweaking" -- making better
+   decisions about when and which entities to display depending on context and
+   user settings.
+   1. **Too many entities displayed.** Siggie's direction: from a selected entity,
+      default to **one hop in either direction**, with the ability to expand each
+      way and to close boxes. Open question he raised: what to do with a closed
+      box BETWEEN two displayed boxes — *for now, probably disallow it*.
+      Worth knowing: the `owned by` chip row already lists owners without drawing
+      them, which is arguably the right primitive — chips for the un-expanded hop,
+      boxes for the expanded one.
+      **The other half, observed 2026-08-25: there is no way to EXPAND.** With one
+      class selected, the only route to a neighbour is reading the detail drawer's
+      REFERENCED BY list and adding each class by hand. Organization shows 14
+      entries there — all reachable, none reachable *from the diagram*. Expansion
+      and pruning are the same feature and should be designed together.
+   1. **[sg] Maybe all this can be stated as:**
+      - Default should be one hop either direction capped at N boxes.
+        Need a way to show additional owners and owned from the box.
+        Chips work but are currently kind of ugly and should maybe be
+        toggleable to hide connected boxes. Boxes should also have close
+        icons. For boxes connected at both ends try something like: collapse
+        into a little box with a + icon for edges to attach to; clicking
+        restores the whole box.
 2. **Narrowed edges should point at the CHILD's header** inside a merged target
    box. Deferred by Siggie for time, written up in full below. **Needs his
    decision first:** every edge into a merged box, or only `slot_usage`-narrowed
-   ones?
+   ones? (**low impact**)
 3. **A class in several merged boxes** (SpecimenQuality/QuantityObservation).
    Written up below. **Needs his modelling decision first:** is the second
    grouping inheritance at all, or a different axis (entityCategories)?
-4. **Scrollable / resizable boxes.** Merged boxes now show EVERY row and can run
+   **[sg] i'm not sure what this is referring to**
+4. was: **Scrollable / resizable boxes.** Merged boxes now show EVERY row and can run
    long. Not as easy as it looks: edge anchors are computed from row positions,
    so scrolling content inside a box points its edges at the wrong rows.
-5. **own-bkwd → association verdict merge** (70 edges). Siggie deliberately did
-   NOT decide this before the demo — *"need to ask stakeholders."* Still open;
-   header-side merging (0b) is gated on it.
-6. **Whole app state in the URL** — see the dedicated section below. Deliberately
+   **[sg] (high impact) Must be able to show every slot that should appear in**
+   a box. Not sure if that is happening now.
+5. **own-bkwd → association verdict merge** (70 edges). **[sg] decided, no merge**
+6. **Tour and help system.** The stakeholder meeting on 2026-08-25 did **not** include the big program
+   manager, who matters most. Her first exposure — after seeing the app a couple
+   of months ago — will be **from links sent to her**, probably without Siggie
+   walking her through it at first. The stakeholders present asked for 
+   **a video demo** and **a non-video guided tour**. Made decisions and specs
+   for tour and help system in [HELP_PACKAGE_PLAN](/docs/HELP_PACKAGE_PLAN.md). 
+   **High impact**
+1. Make further attempts to clean up merged edge/arrow tangling (**lowish impact**)
+1. Remove merge style buttons -- after cleaning up tangling but definitely
+   before delivery. And if we give up those efforts before being
+   completely satisfied, make it easy to restore these buttons because
+   they help with figuring out what's going on an experimenting.
+6. **Whole app state serializable** — see the dedicated section below. Deliberately
    LAST of the development items: it freezes the control vocabulary into every
    link ever sent, so the obsolete/provisional buttons above must be resolved
    first. It is also the main technical prerequisite for the guided-tour half of
    the sharing work.
+2. **Fix the ownership legend.** Siggie asked for this but has not yet said
+   what is wrong with it. **Ask before changing anything.** The older
+   restructuring notes further down (un-nest from example cases, move BIGGEST
+   FANS, shorten the fk-inversion text) may or may not be what he means.
+   (**medium impact**) **[sg] the legend is hard to find and currently**
+   all wrong. It should possibly be implemented through help system.
+4. **Deferred, deliberately: why does Explore need a slot index at all?**
+   Siggie raised it 2026-08-25 and chose not to chase it. Context is in the
+   induced-slots DONE section below — the top-level `slots:` block is a derived
+   index, and `Graph.ts:502` plus Kitchen Sink are what still key on it. Not a
+   bug, just unexamined.
+9. **bring dag-browser-widget into Explorer (high impact)**
+   - change inheritance rail color to entity/inheritance/blue and ownnership
+     color to amber
+   - try populating it with the whole graph, all collapsed to start
+   - try including categories as top layer (expanded) -- hmm...inheritance
+     pairs should all fit within categories i think, but not ownership; so,
+     with whole graph populated, a lot more duplicates will appear, across 
+     categories
+   - the idea is that, unlike in Focus (which needed changing anyway), there
+     wouldn't be one pane for selection and another for dag-browser. everything
+     becomes accessible through dag-browser including some kind of selection
+     affordance
 
-### 🔗 NEW — put essentially the WHOLE app state in the URL
-
-**Siggie, 2026-08-25 (end of day).** Wanted for two reasons, both about
-sharing rather than about the app itself:
-- **sending links** — a recipient must see what the sender saw;
-- **a doc page with LIVE EMBEDS** — each embed is a URL, so anything not in the
-  URL cannot be embedded.
-
-**Sequencing, in Siggie's words:** *"there are a number of obsolete buttons and
-stuff unresolved from today that should be resolved before implementing."* So
-this comes AFTER the NEXT UP items above — in particular the owner-scope
-control (`0 / ≤5 / all`) is explicitly provisional and is being replaced by a
-cap plus toggleable chips, and the merge-mode buttons (⋙ ⋙⋙ ⌙ ≡) are a
-temporary comparison harness with no winner picked yet. **Encoding a control
-into the URL freezes its vocabulary in every link ever sent**, so settle which
-controls survive first.
+### 🔗 NEW — make all important parts of app state serializable
+- to allow sending links and for loading state in step-by-step tour
+- icd11-playground has a state system for this. maybe, like help/tour
+  system, could be packaged for use in other apps
 
 **Current split, measured 2026-08-25:**
 
-| in the URL (`ExploreApp.writeStateToURL`) | in localStorage only (`OwnershipGraphView`) |
-|---|---|
-| `sel` selected ids | `explore-nl-dir` — LR / TB |
-| `exp` expanded ids | `explore-nl-merge` — merge mode (⋙ ⋙⋙ ⌙ ≡) |
-| `detail` open drawer | `explore-nl-sibs` — ⑃ siblings on/off |
-| `roots` path-to-root | `explore-nl-owners` — 0 / ≤5 / all |
+ | in the URL (`ExploreApp.writeStateToURL`) | in localStorage only (`OwnershipGraphView`) |
+ |-------------------------------------------|---------------------------------------------|
+ | `sel` selected ids                        | `explore-nl-dir` — LR / TB                  |
+ | `exp` expanded ids                        | `explore-nl-merge` — merge mode (⋙ ⋙⋙ ⌙ ≡)  |
+ | `detail` open drawer                      | `explore-nl-sibs` — ⑃ siblings on/off       |
+ | `roots` path-to-root                      | `explore-nl-owners` — 0 / ≤5 / all          |
 
 Not persisted anywhere: per-node expand state (`expandedNodes`), node pins and
 drags, zoom/pan, table collapse, which example case is open.
@@ -164,6 +193,22 @@ exported specifically so a probe can call them (see
 
 Also: `npm run typecheck` (= `tsc -b --noEmit`), never bare `npx tsc --noEmit`.
 It caught four real errors this session that the bare form did not.
+
+### 🚧 Gotchas that cost time this session — read before running anything
+
+- **`npx vitest` needs node 22+.** The default `node` is v16 and fails with a
+  `node:fs/promises` export error that looks like a broken test setup but is
+  not. Use
+  `export PATH="$HOME/.nvm/versions/node/v22.20.0/bin:$PATH"`.
+- **Never run `npm run dev`.** Siggie keeps the app running himself.
+- **`tsc` will NOT catch a stale union comparison.** When `'own-flip'` left the
+  `OwnershipVerdict` union, every surviving `x === 'own-flip'` narrowed to
+  `never` instead of erroring — so the typecheck stayed green while two live
+  sites silently stopped matching (edge emission, and the legend's
+  `flippedCount`). **Grep for the old literal; do not trust tsc for this.**
+- **`console.log` is swallowed in vitest here.** To surface a value, assert it
+  against a sentinel string and read the diff.
+
 
 ### ✅ SHIPPED — inheritance as adjacency (merged sibling boxes), 2026-08-25
 
@@ -318,93 +363,6 @@ clean. **Counts measured against the live graph after the work:**
 - Groups: `own-bkwd/fk-inversion` 70, `own-fwd/value-object` 40,
   `own-fwd/multivalued` 35, `own-fwd/cardinality-split` 2, `association` 2,
   `own-bkwd/backward-multivalued` 1
-
-### ⚖️ THE ONE DECISION WAITING ON SIGGIE
-
-**Merge `own-bkwd` into `association`?** It moves **70 edges** — the largest
-group — out of "ownership". They already layer identically, so this is
-rendering and vocabulary only, not structure.
-
-**Look at example cases 4 and 5 to decide.** Case 4 —
-`SpecimenContainer` carries exactly one edge of each verdict — `additive`
-(own-fwd), `contained_in` (own-bkwd), `container` (association) — so all three
-are comparable on one small box. Case 5 adds the crowded version: **the schema
-contains exactly TWO association edges** (`Specimen.related_document` and
-`SpecimenStorageActivity.container`, verified 2026-08-25) and case 5 holds
-both, so it is the only selection that can show associations competing for a
-border at all.
-
-**Merging the verdicts also dissolves 0b above**, since one merge point per
-header side then needs only one head. Keeping them distinct means inventing a
-second visual channel at that header to preserve a distinction nothing else in
-the layout preserves — they share `flipped`, share the routing, and layer
-identically.
-
-### ▶️ NEXT UP (in Siggie's priority order)
-
-0. ✅ **DONE — association arrowheads** (`3ee8965`). Two stacked bugs. The
-   start head was reversed TWICE — by `orient="auto-start-reverse"` and again
-   by a glyph drawn tip-at-x=0 — so they cancelled; `arrow-assoc-start` is
-   deleted and one marker serves both ends. And even once correct it was
-   invisible: node boxes are opaque divs stacked OVER the SVG layer, and
-   `refX=0` puts the tip `ARROW_LEN` past the vertex, under the box.
-   `trimSectionsEnd` only ever trimmed the END. Added `trimSectionsStart`,
-   association edges only. **Watch for this class of bug again** — anything the
-   SVG draws inside a box's rectangle is painted over, and it shows up only on
-   hover over a dimmed (translucent) box.
-
-0b. **OPEN — header-side merging has no machinery at all.** Flipped edges are
-   excluded from merging at BOTH ends (`OwnershipGraphView.tsx:803`, and
-   `target = flipped ? undefined`), and **associations are always
-   `flipped: true`** (`containmentGraph.ts:267`) — same flag as `own-bkwd`. So
-   `willMerge` is permanently false for associations and the `!willMerge` guard
-   on `markerStart` is dead code. This never showed because own-bkwd drew no
-   head at that end; associations now do, on every strand of a fan.
-   **Siggie's own framing, which is the crux:** if RL edges merge into the
-   header's vertical centre they become indistinguishable from associations
-   merging into that same point — moot if all own-bkwd become associations.
-   **So this is gated on the verdict decision below; do not build it first.**
-   Currently mild: only 2 association edges exist in the entire schema.
-
-1. **Too many entities displayed.** Siggie's direction: from a selected entity,
-   default to **one hop in either direction**, with the ability to expand each
-   way and to close boxes. Open question he raised: what to do with a closed
-   box BETWEEN two displayed boxes — *for now, probably disallow it*.
-   Worth knowing: the `owned by` chip row already lists owners without drawing
-   them, which is arguably the right primitive — chips for the un-expanded hop,
-   boxes for the expanded one.
-   **The other half, observed 2026-08-25: there is no way to EXPAND.** With one
-   class selected, the only route to a neighbour is reading the detail drawer's
-   REFERENCED BY list and adding each class by hand. Organization shows 14
-   entries there — all reachable, none reachable *from the diagram*. Expansion
-   and pruning are the same feature and should be designed together.
-2. **Fix the ownership legend.** Siggie asked for this but has not yet said
-   what is wrong with it. **Ask before changing anything.** The older
-   restructuring notes further down (un-nest from example cases, move BIGGEST
-   FANS, shorten the fk-inversion text) may or may not be what he means.
-3. **Everything displays and points where it should.** img-1 (Entity arrowheads)
-   and the association arrowheads are both fixed; no reported breakage
-   outstanding.
-4. **Deferred, deliberately: why does Explore need a slot index at all?**
-   Siggie raised it 2026-08-25 and chose not to chase it. Context is in the
-   induced-slots DONE section below — the top-level `slots:` block is a derived
-   index, and `Graph.ts:502` plus Kitchen Sink are what still key on it. Not a
-   bug, just unexamined.
-
-### 🚧 Gotchas that cost time this session — read before running anything
-
-- **`npx vitest` needs node 22+.** The default `node` is v16 and fails with a
-  `node:fs/promises` export error that looks like a broken test setup but is
-  not. Use
-  `export PATH="$HOME/.nvm/versions/node/v22.20.0/bin:$PATH"`.
-- **Never run `npm run dev`.** Siggie keeps the app running himself.
-- **`tsc` will NOT catch a stale union comparison.** When `'own-flip'` left the
-  `OwnershipVerdict` union, every surviving `x === 'own-flip'` narrowed to
-  `never` instead of erroring — so the typecheck stayed green while two live
-  sites silently stopped matching (edge emission, and the legend's
-  `flippedCount`). **Grep for the old literal; do not trust tsc for this.**
-- **`console.log` is swallowed in vitest here.** To surface a value, assert it
-  against a sentinel string and read the diff.
 
 ---
 
@@ -666,18 +624,6 @@ Still owed from upcoming-thoughts #1: toolbar buttons, colours, dashed edges.
    should be a constant hardcoded instead of living somewhere like appConfig.ts.
    - i want to be able to change the dim-other-while-something-is-hightlighted
      opacity but don't know where to find it
-3. bring dag-browser-widget into Explorer 
-   - change inheritance rail color to entity/inheritance/blue and ownnership
-     color to amber
-   - try populating it with the whole graph, all collapsed to start
-   - try including categories as top layer (expanded) -- hmm...inheritance
-     pairs should all fit within categories i think, but not ownership; so,
-     with whole graph populated, a lot more duplicates will appear, across 
-     categories
-   - the idea is that, unlike in Focus (which needed changing anyway), there
-     wouldn't be one pane for selection and another for dag-browser. everything
-     becomes accessible through dag-browser including some kind of selection
-     affordance
 
 -
 
