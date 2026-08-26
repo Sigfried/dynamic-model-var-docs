@@ -1,0 +1,143 @@
+/* Help mode + tour chrome. Plain CSS (not Tailwind) so the whole src/help
+   directory can move into a standalone package without a build dependency. */
+
+body.help-mode {
+  cursor: help;
+}
+
+/* Hint dot: one per helpable element, so help mode SHOWS what is helpable
+   instead of relying on swapped native tooltips (see HelpProvider). */
+.help-hint {
+  position: fixed;
+  z-index: 2147483000;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #0284c7;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+  cursor: help;
+  box-shadow: 0 0 0 2px #fff;
+  animation: help-hint-in 120ms ease-out;
+}
+.help-hint:hover {
+  background: #0369a1;
+  transform: scale(1.15);
+}
+
+@keyframes help-hint-in {
+  from { opacity: 0; transform: scale(0.5); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* The popover itself. `position: fixed` + the Popover API's top layer, so no
+   z-index or overflow:hidden ancestor can clip it. */
+.help-popover {
+  position: fixed;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;
+  font-size: 13px;
+  line-height: 1.45;
+  box-shadow: 0 8px 28px rgb(15 23 42 / 18%);
+  overflow: visible;
+}
+
+.help-popover-title {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.help-popover-body p,
+.help-popover-context p { margin: 0 0 6px; }
+
+.help-popover-interactions {
+  margin: 6px 0;
+  padding-left: 18px;
+}
+.help-popover-interactions li { margin: 2px 0; }
+.help-popover-interactions p { margin: 0; }
+
+.help-popover-shortcut {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #475569;
+}
+.help-popover-shortcut kbd {
+  padding: 1px 5px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #f1f5f9;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+}
+
+.help-popover-context {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e2e8f0;
+  font-size: 12px;
+  color: #475569;
+}
+
+.help-tour-nav {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #e2e8f0;
+}
+.help-tour-spacer { flex: 1; }
+.help-tour-count { font-size: 11px; color: #64748b; }
+
+.help-tour-nav button {
+  padding: 3px 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  background: #f8fafc;
+  font-size: 12px;
+  cursor: pointer;
+}
+.help-tour-nav button:hover:not(:disabled) { background: #e2e8f0; }
+.help-tour-nav button:disabled { opacity: 0.4; cursor: default; }
+.help-tour-nav button.help-tour-next {
+  border-color: #0284c7;
+  background: #0284c7;
+  color: #fff;
+}
+.help-tour-nav button.help-tour-next:hover { background: #0369a1; }
+
+/* The app is theme-aware, so the popover must be too — a white card in dark
+   mode is the kind of thing a stakeholder notices immediately. */
+@media (prefers-color-scheme: dark) {
+  .help-popover {
+    border-color: #334155;
+    background: #0f172a;
+    color: #e2e8f0;
+  }
+  .help-popover-context,
+  .help-popover-shortcut { color: #94a3b8; }
+  .help-popover-context,
+  .help-tour-nav { border-top-color: #1e293b; }
+  .help-popover-shortcut kbd {
+    border-color: #334155;
+    background: #1e293b;
+  }
+  .help-tour-nav button {
+    border-color: #334155;
+    background: #1e293b;
+    color: #e2e8f0;
+  }
+  .help-tour-nav button:hover:not(:disabled) { background: #334155; }
+  .help-hint { box-shadow: 0 0 0 2px #0f172a; }
+}

@@ -23,13 +23,22 @@ import OwnershipGraphView from './OwnershipGraphView';
 import DetailDrawer from './DetailDrawer';
 import ExampleCasesPane from './ExampleCasesPane';
 import type { ExampleCase } from './exampleCases';
+import { HelpProvider, useHelp } from '../help/HelpProvider';
+import HelpLayer from '../help/HelpLayer';
+import helpMarkdown from '../help/help-content.md?raw';
 
 import {
   readExploreState, writeExploreState, buildShareURL,
   type Direction, type MergeMode, type OwnerScope,
 } from './exploreState';
 
-export default function ExploreApp() {
+/**
+ * Applying a tour step's `State:` query. The help package has no idea how this
+ * app stores its state, so it hands the query string back and we translate it
+ * into the same setters a click would use -- reusing readExploreState so a
+ * step's query is validated exactly like a link's.
+ */
+function ExploreAppInner() {
   const { modelData, loading, error } = useModelData();
   const dataService = useMemo(
     () => (modelData ? new DataService(modelData) : null),
@@ -101,6 +110,28 @@ export default function ExploreApp() {
   useEffect(() => {
     if (selectedIds.size === 0 && hiddenOwnerIds.size > 0) setHiddenOwnerIds(new Set());
   }, [selectedIds, hiddenOwnerIds]);
+
+  /**
+   * A tour step writes its `State:` query to the URL and fires this event;
+   * we re-read it through the SAME parser a link uses. One code path for
+   * "put the app into this state", whether it came from a link or a step.
+   */
+  useEffect(() => {
+    const apply = () => {
+      const next = readExploreState();
+      setSelectedIds(new Set(next.sel));
+      setExpandedIds(new Set(next.exp));
+      setHiddenOwnerIds(new Set(next.hidden));
+      setDetailId(next.detail);
+      setPathToRoot(next.roots);
+      setMergeSibs(next.sibs);
+      setDirection(next.dir);
+      setMergeMode(next.merge);
+      setOwnerScope(next.owners);
+    };
+    window.addEventListener('explore:state-from-url', apply);
+    return () => window.removeEventListener('explore:state-from-url', apply);
+  }, []);
 
   useEffect(
     () => writeExploreState({
@@ -201,6 +232,7 @@ export default function ExploreApp() {
       <header className="flex items-center justify-between px-4 py-2 bg-blue-600 text-white shrink-0">
         <div>
           <h1
+            data-help-id="app-title"
             className="text-lg font-bold leading-tight cursor-pointer hover:opacity-80 transition-opacity"
             onClick={resetApp}
             title="Click to clear the selection and reset the view"
@@ -231,12 +263,15 @@ export default function ExploreApp() {
               window.prompt('Copy this link:', url);
             }
           }}
+          data-help-id="copy-link"
           className="text-sm underline text-blue-100 hover:text-white"
           title="Copy a link that reproduces exactly this view, settings included"
         >
           {copied ? '✓ copied' : 'copy link'}
         </button>
+        <HelpButton />
         <button
+          data-help-id="example-cases"
           onClick={() => setCasesOpen(v => !v)}
           className={`text-sm underline hover:text-white ${casesOpen ? 'text-white' : 'text-blue-100'}`}
           title="Named selections for comparing edge routing"
@@ -279,7 +314,7 @@ export default function ExploreApp() {
           </button>
         ) : (
           <div className="w-96 shrink-0 flex flex-col min-h-0 border-r border-gray-200 dark:border-slate-700">
-            <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="flex-1 overflow-y-auto min-h-0" data-help-id="selection-tree">
               {selectorMode === 'tree' ? (
                 <SelectionTree
                   dataService={dataService}
@@ -322,7 +357,7 @@ export default function ExploreApp() {
         )}
 
         {/* Viz canvas — layered ownership DAG */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0" data-help-id="graph-canvas">
           {selectedIds.size === 0 ? (
             <div className="h-full flex items-center justify-center text-sm text-gray-400 p-8">
               Select entities on the left to build the ownership subgraph.
@@ -365,5 +400,59 @@ export default function ExploreApp() {
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * The provider must wrap the app (it owns help/tour state), but applying a
+ * tour step's state needs the app's own setters -- so the state-applying
+ * bridge lives in ExploreAppInner and is registered through a ref-like
+ * callback the provider calls. Simplest correct arrangement: the provider
+ * wraps, and the inner component reads the api via useHelp().
+ */
+export default function ExploreApp() {
+  return (
+    <HelpProvider
+      markdown={helpMarkdown}
+      onApplyState={query => {
+        // A step's State: is the same vocabulary as a share link, so it is
+        // applied by writing it to the URL and letting the app re-read it.
+        // That keeps ONE parser for both, instead of a second code path that
+        // can drift from the first.
+        const url = new URL(window.location.href);
+        url.search = query;
+        window.history.replaceState(null, '', url);
+        window.dispatchEvent(new Event('explore:state-from-url'));
+      }}
+    >
+      <ExploreAppInner />
+      <HelpLayer />
+    </HelpProvider>
+  );
+}
+
+/**
+ * Entry point for both modes. Separate component because it needs useHelp(),
+ * which is only available inside the provider.
+ */
+function HelpButton() {
+  const { helpMode, toggleHelpMode, startTour } = useHelp();
+  return (
+    <span className="flex items-center gap-2" data-help-id="help-button">
+      <button
+        onClick={startTour}
+        className="text-sm underline text-blue-100 hover:text-white"
+        title="A short guided walk through the app"
+      >
+        take the tour
+      </button>
+      <button
+        onClick={toggleHelpMode}
+        className={`text-sm underline hover:text-white ${helpMode ? 'text-white font-semibold' : 'text-blue-100'}`}
+        title="Show a dot on everything that has help (press ? anywhere)"
+      >
+        {helpMode ? '✓ help mode' : 'help'}
+      </button>
+    </span>
   );
 }

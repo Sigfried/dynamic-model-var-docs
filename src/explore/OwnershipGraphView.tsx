@@ -1500,19 +1500,24 @@ export default function OwnershipGraphView({
             <span className="w-px h-4 bg-gray-300 dark:bg-slate-600 mx-1" />
           </>
         )}
-        {/* Owners drawn per node, one hop up. Three states because the middle
-            one silently degrades to 'none' above its cap. */}
-        <button className={toolBtn(ownerScope === 'none')}
-          title="Draw no owners — every one is a chip you can click"
-          onClick={() => setOwners('none')}>0</button>
-        <button className={toolBtn(ownerScope === 'some')}
-          title={`Draw owners only where a class has at most ${DEFAULT_OWNER_CAP}`}
-          onClick={() => setOwners('some')}>≤{DEFAULT_OWNER_CAP}</button>
-        <button className={toolBtn(ownerScope === 'all')}
-          title="Draw every owner, one hop up — no cap"
-          onClick={() => setOwners('all')}>all</button>
+        {/* Owners drawn per node, one hop up. The middle setting is a true CAP
+            since 2026-08-26 -- it draws up to N and chips the overflow. It used
+            to be an all-or-nothing gate, which is why the old comment here said
+            it "silently degrades to 'none' above its cap". */}
+        <span className="flex items-center gap-1" data-help-id="toolbar-owners">
+          <button className={toolBtn(ownerScope === 'none')}
+            title="Draw no owners — every one becomes a chip you can click"
+            onClick={() => setOwners('none')}>0</button>
+          <button className={toolBtn(ownerScope === 'some')}
+            title={`Draw up to ${DEFAULT_OWNER_CAP} owners per class; the rest become chips`}
+            onClick={() => setOwners('some')}>≤{DEFAULT_OWNER_CAP}</button>
+          <button className={toolBtn(ownerScope === 'all')}
+            title="Draw every owner, one hop up — no cap"
+            onClick={() => setOwners('all')}>all</button>
+        </span>
         <span className="w-px h-4 bg-gray-300 dark:bg-slate-600 mx-1" />
         <button className={toolBtn(mergeSibs)}
+          data-help-id="toolbar-siblings"
           title={mergeSibs
             ? 'Siblings merged: classes sharing a parent share one box'
             : 'Siblings separate: no inheritance shown'}
@@ -1810,6 +1815,7 @@ export default function OwnershipGraphView({
                             return (
                             <button
                               data-dismiss={n.id}
+                              data-help-id="node-dismiss" 
                               title={selectedHere.length > 1
                                 ? `Remove all ${selectedHere.length} selected classes in ${n.label}`
                                 : `Remove ${n.label} from the canvas`}
@@ -1834,6 +1840,7 @@ export default function OwnershipGraphView({
                           there was no way to hide an owner once shown. */}
                       {ownerChips(n).length > 0 && (
                         <div
+                          data-help-id="owner-chips"
                           className="flex flex-wrap items-center gap-x-1 gap-y-0.5 px-2 py-1 border-b
                                      border-gray-200 dark:border-slate-600
                                      bg-amber-50/60 dark:bg-amber-950/30"
