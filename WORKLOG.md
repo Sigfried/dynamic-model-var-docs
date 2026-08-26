@@ -7,6 +7,94 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-26 — Product tour: why no tour library
+
+Task was "a gh-pages-hosted product tour for this app, not a video." Surveyed
+tour libraries first, then found icd11-playground already had a help system that
+was a better starting point than any of them. Plan is in
+`docs/HELP_PACKAGE_PLAN.md`, which deliberately records *only* the spec — this
+section holds the rejected alternatives so they don't get re-proposed.
+
+### Libraries considered and why each was dropped
+
+- **driver.js** — MIT, ~5kb, best-documented of the three, and the default
+  recommendation before the icd11 code was read. **It does have hints**
+  (https://driverjs.com/docs/hints) — I initially claimed it didn't, from memory
+  and with no web access; Siggie found the docs page. That removed one of four
+  objections but not the decisive ones: it still brings a second content model
+  (HTML-string config vs. markdown registry), a second anchoring scheme (CSS
+  selectors vs. `data-help-id`), and a second popover to reconcile with
+  `HelpPopover`. Starting from nothing, driver.js-with-hints would be the obvious
+  pick; starting from icd11's system, reconciliation cost decides it.
+- **intro.js** — the only library with *hints* (persistent markers showing where
+  help exists), which is a feature Siggie specifically wants. Disqualified by
+  **AGPL**. Siggie is personally fine with AGPL and dual-licenses their own GPL
+  work, but that escape hatch requires holding all copyright — you cannot
+  sublicense someone else's AGPL code. As a dependency it would forever infect
+  any consumer, foreclosing e.g. the LinkML community incorporating the tool into
+  their Apache-2.0 offering (AGPL→Apache-2.0 is one-way incompatible). This
+  mattered enough that it was the deciding constraint on the whole survey.
+- **Reactour** — MIT, React-idiomatic, SVG-based masking. No hints. Its docs say
+  it was born "trying to simplify the logic of intro.js with React components";
+  read as reimplementation-by-inspiration, not a dependency, but this was never
+  verified (no web access that session — check its npm deps if it ever matters).
+  Under a build-your-own-package plan it would mean wrapping a React library to
+  expose a different React API.
+- **SaaS click-through recorders** (Arcade, Storylane, Navattic, Supademo) —
+  screenshot-replay demos. Fast, never break, but frozen, branded, third-party-
+  hosted iframes. Wrong fit for a public research app; also stale the moment the
+  app changes.
+- **Narrative doc-page with live iframes** (the Bret Victor / Distill.pub shape)
+  — viable because dmvd already encodes state in the URL, but a separate page to
+  maintain rather than something reusable across products.
+
+### Why building it won
+
+The general principle, worth keeping: **adopting a library saves work when you
+have nothing; it costs work when you already have a system it must be reconciled
+with.** Bolting driver.js onto the icd11 registry would have meant a second
+content model (HTML-string config vs. markdown registry), a second anchoring
+scheme (CSS selectors vs. `data-help-id`), a second popover with its own styling,
+and a second notion of "active step" alongside `activeHelpEntry` — plus an
+adapter between them.
+
+Meanwhile hints and tour are ~100 lines *total* on top of what exists, because
+both are additive over the same registry rather than new subsystems. Sizing
+estimates (40 / 60 lines) are estimates of the behavior's complexity, not
+measurements — they assume reuse of `useHelpMode`'s existing element iteration
+and `HelpPopover`.
+
+The genuinely valuable thing icd11 has, and no library provides, is the set of
+solved DOM edge cases in `useHelpMode`: SVG needs `<title>` children for native
+tooltips; competing non-help `title` attributes must be suppressed and restored;
+clicks need capture-phase interception so they don't fall through to the app; and
+restore-on-exit has to check whether React already rewrote a title before putting
+the old one back. That is the part that took real work.
+
+### Intermediate design ideas that were dropped
+
+- Early on, before reading the icd11 code, the plan was "intro.js behind a thin
+  adapter module" to keep the AGPL surface extractable. Siggie correctly pushed
+  back that a help system built into the app wouldn't be easy to extract — which
+  is what redirected this toward a separate package.
+- Also floated: build hints from scratch on `@floating-ui/react` (dmvd already
+  depends on it). Still the right call for the tour *backdrop/cutout* math, but
+  the rest is superseded by reusing icd11's popover.
+
+### Process note
+
+Asked a 3-question AskUserQuestion covering state ownership / repo location /
+rollout scope. The state question was poorly framed: it presented
+context-vs-store as if persistence ("don't show again" in localStorage) were a
+differentiator, when persistence is orthogonal and available either way. Siggie
+answered "maybe 2? or 1 could just save do-not-show-again to localStorage" and
+then asked what the help state actually *does* — the right question, since the
+answer (one boolean, one nullable pair, one constant) made the whole
+context-vs-store debate nearly moot and settled it as context-by-default.
+Establish how big a thing is before asking who should own it.
+
+---
+
 
 ## 2026-08-25 (later) — Inheritance as adjacency, not edges
 
