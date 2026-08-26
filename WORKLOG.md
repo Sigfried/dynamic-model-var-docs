@@ -7,6 +7,171 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-26 (later) — Siggie's five: tweaking, slots, dag-browser, state, tour
+
+Branch `tweaking-expand-prune`, off `main` at `8bfd294`. Five tasks, all
+implemented, none merged. Written up here in the order the reasoning matters,
+not the order they were built.
+
+### The one finding that changes how to think about the owner controls
+
+`ownerCap` was **not a cap**. `ownershipSubgraph.ts` read
+`owners.length <= ownerCap` — draw ALL owners or NONE. So the default of 5
+drew **zero** owners for BodySite (6 owners), and the node you were looking at
+appeared unowned. That is why the toolbar control read as broken and why the
+old `only sel` toggle "appeared to do nothing": for the crowded nodes you
+actually notice, the middle setting was already behaving like `none`.
+
+This had been half-diagnosed before — the third-round notes describe the
+symptom ("silently degrades to drawing NO owners on exactly the crowded nodes
+you notice") but treated it as an inherent property of a legibility ceiling
+rather than as the wrong comparison. It is just `<=` where `slice(0, n)` was
+meant.
+
+**Consequence worth remembering:** several tests, a tooltip, and two code
+comments had all been written to describe the gate behaviour, so they all
+*agreed* with each other and with the code. Three tests failed the moment the
+semantics changed, which is the correct outcome — but it means the old
+behaviour was well-documented, not unexamined. Documentation agreeing with code
+is not evidence the behaviour is right.
+
+### Dismissal needed a new concept, not a new handler
+
+The obvious implementation of "click a chip to remove that owner" is to reuse
+`onCollapse` / `expandedIds`. That does not work: an owner drawn **by the cap**
+was never expanded, so there is no expansion to remove. Hence
+`suppressedOwners`, a separate set, filtered BEFORE the cap.
+
+Filtering before the cap has a consequence I did not anticipate and initially
+wrote a test asserting the opposite of: dismissing a drawn owner **promotes**
+the next chipped owner into the freed slot. BodySite has 6 owners; dismiss all
+5 drawn ones and the 6th appears. My test expected an empty canvas, failed, and
+the probe showed the promotion. The behaviour is right — a single dismissal
+should backfill rather than leave a gap — so the test was wrong, not the code.
+Pinned it explicitly, because "I closed it and another appeared" reads as a bug
+if you don't know it is deliberate. Emptying the canvas of owners is what the
+toolbar `0` is for.
+
+### "One hop either direction" was already true; only the controls were missing
+
+Before building a downward hop, measured what the model does. Result: UP
+(owners) is automatic, capped, chipped; DOWN (owned) is on demand, per row —
+every entity-ranged row whose range is off-canvas is *already* a click-to-add
+affordance. So "one hop either direction" is already true of what is
+REACHABLE. The asymmetry is in what is DRAWN, and it is deliberate: automatic
+one-hop-down is the blowup `pathToRoot` was turned off for.
+
+**So the remaining gap for that item is narrow**: the downward equivalent of
+owner chips — seeing from a box what it owns without expanding rows one at a
+time. Did not build it; it needs a design decision about where those chips
+live on a box that already has an `owned by` strip.
+
+### Slots: nothing was unreachable, but one control lied
+
+Siggie: "make sure all slots visible". Verified against the live schema rather
+than by reading the render: every class-ranged slot and every `getClassSummary`
+slot is reachable as a row, for every class. No gaps. The collapsed/hidden
+split was never the risk — a slot in NEITHER list would have been.
+
+Found one real bug while checking: a box whose rows are ALL unconnected
+(BodySite) is force-expanded (`expanded = ... || connected.length === 0`), so
+collapsing it is impossible — but it still rendered a "− fewer attributes"
+footer that did nothing when clicked. Suppressed the footer for forced boxes,
+and made the height calculation use the same count the render does, or the box
+reserves space for a footer it never draws.
+
+### dag-browser: no forking needed, and the widget says so
+
+The constraint was "a selection mechanism that doesn't interfere with widget
+controls". `DagBrowserProps` answers this directly: *"The widget does NOT own
+the meaning of 'selected' or its highlight styling — do that in renderRow."*
+So selection lives entirely in row content. Two rules keep it clean: the
+checkbox is the ONLY selection target (the row body stays free for the chevron
+and the widget's cross-reference links), and our controls `stopPropagation`.
+
+Measured before trusting `levelsExpanded={0}`: 54 nodes, **7 roots**, 31
+multi-parent nodes. So collapsed-to-roots is a usable 7-row start, not one
+mega-root and not a flat wall. The 31 multi-parent classes are the duplicates
+Siggie predicted for the categories-as-layer idea.
+
+Side benefit worth knowing: the old flat list drew from `ENTITY_CATEGORIES`, a
+hand-curated allowlist that silently omits newly-synced classes (the Context /
+Activity failure). The tree draws from the graph and cannot.
+
+Kept the counts. Siggie said losing them was acceptable, but they cost one
+DataService call each.
+
+### Serializable state: the precedence rule is the whole design
+
+URL > stored preference > default. That ordering is what lets a link pin the
+settings it cares about without flattening everything else the visitor chose,
+and it is why localStorage stays rather than being deleted.
+
+Second rule, easy to miss: a **deliberate toolbar click** records the value as
+a preference; **following a link does not**. Otherwise opening someone's
+`?sibs=0` link silently becomes your new default forever.
+
+Two traps hit while building:
+- `MergeMode` is `'near'|'far'|'bend'|'off'`. I wrote `'full'` from memory.
+  Caught by reading the union, not by tsc — a wrong literal in a validation
+  list silently rejects valid values, exactly the never-narrowing trap the
+  process note warns about.
+- Booleans need `has` before value. `sibs` defaults to TRUE, so a naive
+  `get('sibs') === '1'` reads an absent param as "off" and disables the sibling
+  merge on every bare visit.
+
+Also: `resetApp` did not clear dismissed owners, so they would have survived a
+reset and suppressed owners on the next selection with no visible cause.
+Toolbar settings are deliberately NOT reset — they are how the user prefers to
+read the diagram, not part of the view being cleared.
+
+**Knock-on now unblocked:** `applyCase` carried a comment explaining it was
+deliberately not a navigation *because* merge mode was read once at mount from
+localStorage. That constraint is gone. Left the implementation alone (cases do
+not yet declare which settings they depend on) but rewrote the comment so the
+next session does not treat a dead constraint as live.
+
+### Help/tour: what was dropped from the icd11 original, and why
+
+`icd11-playground` is at `~/github-repos/personal/icd11-playground` — one level
+deeper than a `~/github-repos/*icd11*` glob reaches, which is why an early
+search missed it and I wrongly reported it absent.
+
+Dropped the **native-`title` swapping** entirely (the plan recommends this).
+It is the most intricate code in `useHelpMode` — SVG `<title>` injection plus a
+restore-on-exit race against React rewriting the attribute — and it existed
+only because nothing showed WHICH elements have help. Hint dots do that job.
+
+Did **not** adopt CSS anchor positioning despite the plan preferring it. It
+needs `anchor-name` set on each ANCHOR, and the anchors are ordinary app
+elements tagged only with `data-help-id`; assigning those from script is not
+obviously simpler than measuring. Took the measured route, kept the Popover API
+for top-layer rendering (which is the part that removes the portal). Noted in
+the file so the migration is a known deferral, not an oversight.
+
+Built **in-repo under `src/help/`**, not as the standalone npm package the plan
+specifies. With two days of runway, publishing a package and wiring npm auth
+costs a day and delivers nothing the stakeholder sees. Kept dependency-clean
+(plain CSS, parser has no app imports) so extraction stays a move.
+
+The tour is written for the unattended-link case: **no step depends on the
+visitor having clicked anything**. Each carries a `State:` query applied on
+entry and says so. That reuses the serializable-state work — a step's State is
+the same vocabulary as a share link and goes through the SAME parser, so there
+is no second code path to drift.
+
+### What is NOT done
+
+- The downward equivalent of owner chips (see above).
+- Boxes connected at both ends collapsing to a `+` stub — Siggie's specific
+  suggestion, not attempted.
+- The flat category list is still behind a toggle rather than deleted, so the
+  two can be compared. Delete it and the `SelectionTable` import once the tree
+  is confirmed.
+- Example cases are not yet plain links (they could be now).
+- Nothing merged to main; nothing deployed.
+
+---
 ## 2026-08-26 — Item 3 recovered; the "both categories" question answered
 
 ### The task had been orphaned by a doc edit, not abandoned

@@ -40,6 +40,44 @@
 > - Fix visibly broken stuff (unless it's pretty minor)
 > - Balance between impact and cost
 
+### ✅ IMPLEMENTED 2026-08-26 — branch `tweaking-expand-prune`, NOT merged
+
+Siggie asked for five things, in his words:
+
+| # | ask | status |
+|---|---|---|
+| 1 | "all the tweaking (item 2.iii)" | **partly** — see below |
+| 2 | "make sure all slots visible" | **done** — nothing was unreachable; verified + one dead control fixed |
+| 3 | "dag-browser-widget instead of current checkbox list" | **done** — flat list kept behind a toggle for comparison |
+| 4 | "serializable state" | **done** — toolbar settings now travel in the link |
+| 5 | "tour/help system" | **done** — 4-step tour + help mode + hints |
+
+Commits: `fb6d6a7` `8dd93aa` `319e58c` `39c9695` `82039a6` `9d477e6` `7fe1999`.
+292 tests pass, typecheck clean, lint at the pre-existing baseline, production
+build succeeds. **Nothing merged, nothing deployed.**
+
+Reasoning, dead ends and the things that surprised me are in WORKLOG.md.
+
+**What is still open on item 1 (tweaking).** The *upward* half is done — the
+owner cap is a real cap, chips add AND remove, every box has a close button.
+Two pieces are not:
+- **The downward equivalent of owner chips**: seeing from a box what it owns
+  without expanding rows one at a time. Measured first: "one hop either
+  direction" is ALREADY true of what is reachable (every entity-ranged row
+  whose range is off-canvas is a click-to-add affordance); the gap is only that
+  there is no summary of them. Needs a design call about where those chips sit
+  on a box that already has an `owned by` strip.
+- **Boxes connected at both ends collapsing to a `+` stub** — Siggie's specific
+  suggestion, not attempted.
+
+**Two follow-ups this unblocked:**
+- Example cases can now be plain links (the localStorage constraint that
+  prevented it is gone). Cases need optional sibs/dir/merge/owners fields first.
+- The flat category list and its `SelectionTable` import should be deleted once
+  the tree is confirmed.
+
+---
+
 ### ▶️ NEXT UP — ordered 2026-08-26
 
 Ordered by Siggie's own impact marks, with **modest** time estimates (item 0's
