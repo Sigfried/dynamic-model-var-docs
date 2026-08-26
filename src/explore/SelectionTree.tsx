@@ -34,6 +34,7 @@
 import { useMemo } from 'react';
 import { DagBrowser } from 'dag-browser-widget';
 import 'dag-browser-widget/styles.css';
+import './selectionTree.css';
 import type { DataService } from '../services/DataService';
 
 interface SelectionTreeProps {
@@ -66,7 +67,7 @@ export default function SelectionTree({
   }, [nodes, dataService]);
 
   return (
-    <div className="text-sm">
+    <div className="text-sm selection-tree">
       <div className="flex items-baseline gap-2 px-3 py-2 border-b border-gray-200 dark:border-slate-700">
         <span className="font-semibold flex-1">
           {dataService.getConceptLabel('entity', true)} ({nodes.length})

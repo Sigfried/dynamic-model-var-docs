@@ -1,0 +1,51 @@
+/*
+ * Fixes for dag-browser-widget inside the Explore selector.
+ *
+ * The widget sets `.dbw-row { white-space: nowrap }` with no overflow
+ * handling, so its own cross-reference text ("★ also under
+ * Organization/MeasurementObservation, …") runs straight past the panel edge
+ * and paints over the rows beside it. Our renderRow truncates the NAME, but
+ * that markup is the widget's, not ours -- so it has to be handled here.
+ *
+ * Two changes, both CSS-only so the widget stays unforked:
+ *  1. the tree scrolls horizontally instead of overflowing;
+ *  2. xref notes are clamped so a long one cannot dominate a row.
+ */
+
+.selection-tree .dbw-root {
+  border: none;
+  border-radius: 0;
+  padding: 4px 0 8px;
+  background: transparent;
+  /* Horizontal scroll rather than silent overflow. */
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Rows must be at least as wide as the content, or the scroll has nothing to
+   reveal and the row still clips. */
+.selection-tree .dbw-row {
+  width: max-content;
+  min-width: 100%;
+  padding-right: 8px;
+}
+
+/* A cross-reference note is context, not the point of the row. Cap it so a
+   class listed under six parents cannot push its own name off screen. */
+.selection-tree .dbw-backedge-note,
+.selection-tree .dbw-xref {
+  display: inline-block;
+  max-width: 18ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+  white-space: nowrap;
+}
+
+@media (prefers-color-scheme: dark) {
+  .selection-tree .dbw-root {
+    color: #e2e8f0;
+    background: transparent;
+  }
+  .selection-tree .dbw-name { color: #e2e8f0; }
+}

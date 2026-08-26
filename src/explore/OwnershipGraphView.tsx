@@ -140,6 +140,8 @@ export interface NodeVM extends OwnershipSubgraphNode {
    * parent chips should be toggles allowing you to add/remove").
    */
   drawnOwners: string[];
+  /** What this class owns that is NOT on the canvas — the downward chips. */
+  hiddenOwned: string[];
   /** Rows currently displayed (connected first; all when expanded). */
   rows: RowVM[];
   hiddenCount: number;
@@ -258,6 +260,7 @@ export function buildViewModel(
     const footerCount = forced ? 0 : hidden.length;
     const owners = sub.hiddenOwners.get(n.id) ?? [];
     const shown = sub.drawnOwners.get(n.id) ?? [];
+    const owned = sub.hiddenOwned.get(n.id) ?? [];
     return {
       ...n,
       isaParents: isaParents.get(n.id) ?? [],
@@ -265,6 +268,7 @@ export function buildViewModel(
       members: [],
       hiddenOwners: owners,
       drawnOwners: shown,
+      hiddenOwned: owned,
       rows,
       allRows: [...connected, ...hidden],
       // Forced expansion has no collapsed state to return to, so offering a
@@ -274,7 +278,7 @@ export function buildViewModel(
       // The strip holds BOTH chip states, so it must be sized for both. The
       // footer count must be the SAME one the render uses, or the box
       // reserves height for a footer it never draws.
-      height: nodeHeight(rows.length, footerCount, [...shown, ...owners]),
+      height: nodeHeight(rows.length, footerCount, [...shown, ...owners], owned),
     };
   });
 
@@ -284,9 +288,9 @@ export function buildViewModel(
 /** Box height. Shared by the plain build and the sibling merge so the two
  *  cannot drift — a merged box adds a legend strip and nothing else. */
 function nodeHeight(
-  rowCount: number, hiddenCount: number, owners: string[],
+  rowCount: number, hiddenCount: number, owners: string[], owned: string[] = [],
 ): number {
-  return HEADER_H + ownersStripHFor(owners)
+  return HEADER_H + ownersStripHFor(owners) + ownersStripHFor(owned)
     + rowCount * ROW_H + (hiddenCount ? FOOTER_H : 0) + (rowCount ? 5 : 0);
 }
 
@@ -454,6 +458,9 @@ export function mergeSiblings(
     const drawnOwners = [...new Set(
       sources.flatMap(mid => byId.get(mid)?.drawnOwners ?? []),
     )].filter(notSelfOrMember).filter(o => !hiddenOwners.includes(o));
+    const hiddenOwned = [...new Set(
+      sources.flatMap(mid => byId.get(mid)?.hiddenOwned ?? []),
+    )].filter(notSelfOrMember);
     const first = byId.get(memberIds[0]);
     // The box IS the parent, so its identity — name, description, abstractness
     // — must be the parent's. Spreading a member and forgetting to override
@@ -478,6 +485,7 @@ export function mergeSiblings(
       subclassCount: members.length,
       hiddenOwners,
       drawnOwners,
+      hiddenOwned,
       rows: rowList,
       allRows: all,
       // Nothing is ever hidden on a merged box, so there is no footer to
@@ -485,7 +493,7 @@ export function mergeSiblings(
       hiddenCount: 0,
       expanded: true,
       // rowList already includes the child header rows, each one line tall.
-      height: nodeHeight(rowList.length, 0, [...drawnOwners, ...hiddenOwners]),
+      height: nodeHeight(rowList.length, 0, [...drawnOwners, ...hiddenOwners], hiddenOwned),
     });
   }
 
@@ -567,7 +575,8 @@ function LoopIcon({ title }: { title: string }) {
  *  A merged box needs no extra band — its children are introduced by header
  *  ROWS inside the list, which are ordinary rows as far as geometry cares. */
 function rowsTop(node: NodeVM): number {
-  return HEADER_H + ownersStripHFor(ownerChips(node));
+  return HEADER_H + ownersStripHFor(ownerChips(node))
+    + ownersStripHFor(node.hiddenOwned);
 }
 
 /**
@@ -1893,6 +1902,54 @@ export default function OwnershipGraphView({
                               add all
                             </button>
                           )}
+                        </div>
+                      )}
+                      {/*
+                        What this class OWNS, off-canvas. Needed because a
+                        class whose ownership edges are all flipped has no rows
+                        for them (the slot lives on the other class), so its box
+                        would be a dead end -- Organization owns 14 things and
+                        drew alone. Add-only: removing one is closing that box.
+                      */}
+                      {n.hiddenOwned.length > 0 && (
+                        <div
+                          data-help-id="owns-chips"
+                          className="flex flex-wrap items-center gap-x-1 gap-y-0.5 px-2 py-1 border-b
+                                     border-gray-200 dark:border-slate-600
+                                     bg-sky-50/60 dark:bg-sky-950/30"
+                          style={{ height: ownersStripHFor(n.hiddenOwned) }}
+                        >
+                          <span className="text-[9px] text-gray-500 dark:text-gray-400 shrink-0">
+                            owns
+                          </span>
+                          {n.hiddenOwned.map(owned => (
+                            <button
+                              key={owned}
+                              data-owned-chip={owned}
+                              title={`${n.label} owns ${owned} — click to add it`}
+                              onClick={ev => { ev.stopPropagation(); onExpand?.(owned); }}
+                              className="text-[9px] leading-none px-1 py-0.5 rounded max-w-full truncate
+                                         border border-dashed
+                                         bg-sky-100/60 dark:bg-sky-900/40
+                                         border-sky-300 dark:border-sky-700
+                                         text-sky-900 dark:text-sky-200
+                                         hover:bg-sky-200 dark:hover:bg-sky-800"
+                            >
+                              {owned}
+                            </button>
+                          ))}
+                          <button
+                            title={`Add all ${n.hiddenOwned.length} things ${n.label} owns`}
+                            onClick={ev => {
+                              ev.stopPropagation();
+                              n.hiddenOwned.forEach(o => onExpand?.(o));
+                            }}
+                            className="text-[9px] leading-none px-1 py-0.5 rounded shrink-0
+                                       text-sky-800 dark:text-sky-300 underline
+                                       hover:bg-sky-200 dark:hover:bg-sky-800"
+                          >
+                            add all
+                          </button>
                         </div>
                       )}
                       {n.rows.map(r => r.header ? (

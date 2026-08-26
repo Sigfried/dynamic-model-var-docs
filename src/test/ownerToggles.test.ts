@@ -40,21 +40,21 @@ describe('owner cap + suppression', () => {
     expect([...reportedDrawn].sort()).toEqual([...drawn].sort());
   });
 
-  test('dismissing a drawn owner removes it and promotes the next one in', () => {
-    // BodySite has 6 owners and the cap is 5, so one is already chipped.
-    // Dismissing a drawn owner should free a slot that the chipped owner
-    // fills — the canvas keeps showing `ownerCap` owners while any remain.
+  test('dismissing a drawn owner REMOVES it — nothing takes its place', () => {
+    // Siggie, 2026-08-26, on the earlier behaviour: "'I closed it and another
+    // appeared' is not good". Closing something must mean it is gone. The cap
+    // is a ceiling, not a quota to keep full, so the canvas simply drops below
+    // it. Suppression is therefore applied AFTER the cap, not before.
     const before = ownersOf('BodySite');
     expect(before.drawn.length).toBe(DEFAULT_OWNER_CAP);
-    expect(before.chipped.length).toBe(1);
 
     const victim = before.drawn[0];
     const after = ownersOf('BodySite', { suppressedOwners: [victim] });
 
     expect(after.drawn).not.toContain(victim);
-    expect(after.chipped).toContain(victim);
-    // Still full: the previously-chipped owner was promoted.
-    expect(after.drawn.length).toBe(DEFAULT_OWNER_CAP);
+    expect(after.drawn.length).toBe(DEFAULT_OWNER_CAP - 1);
+    // The rest are untouched — dismissing one owner does not reshuffle others.
+    expect(after.drawn).toEqual(before.drawn.filter(o => o !== victim));
   });
 
   test('a suppressed owner stays chipped, never silently vanishes', () => {
@@ -67,22 +67,13 @@ describe('owner cap + suppression', () => {
     }
   });
 
-  test('dismissing every DRAWN owner promotes the chipped ones — by design', () => {
-    // Measured: BodySite has 6 owners, 5 drawn. Dismissing all 5 does NOT
-    // empty the canvas — it promotes the 6th (SpecimenCreationActivity) into
-    // a freed slot. That follows from filtering suppressed owners BEFORE the
-    // cap, which is what makes a single dismissal backfill instead of leaving
-    // a gap. Pinned here because "I closed it and another appeared" reads as
-    // a bug if you don't know it is deliberate.
-    //
-    // Emptying the canvas of owners is what the toolbar's owner-scope `0`
-    // control is for; dismissal is per-owner.
+  test('dismissing every drawn owner empties the canvas of owners', () => {
+    // The follow-on from the rule above: with nothing promoted, closing all
+    // the drawn owners leaves none — and the chipped one that was never drawn
+    // stays chipped rather than being pulled in.
     const first = ownersOf('BodySite');
     const after = ownersOf('BodySite', { suppressedOwners: first.drawn });
-    expect(after.drawn).toEqual(first.chipped);
-    // Suppressing the promoted one too finally clears them.
-    const all = [...first.drawn, ...first.chipped];
-    expect(ownersOf('BodySite', { suppressedOwners: all }).drawn).toEqual([]);
+    expect(after.drawn).toEqual([]);
   });
 
   test('suppression never drops an owner from the union of both lists', () => {
@@ -112,5 +103,25 @@ describe('owner cap + suppression', () => {
     const after = ownersOf('BodySite', { suppressedOwners: ['Questionnaire'] });
     expect(after.drawn.sort()).toEqual(before.drawn.sort());
     expect(after.chipped.sort()).toEqual(before.chipped.sort());
+  });
+  test('a class whose ownership edges are all FLIPPED still offers a way forward', () => {
+    // Organization owns 14 things, but every edge is stored on the other class
+    // (Observation.performed_by -> Organization), so its box has no rows for
+    // them. Selecting it alone drew a lone box with nothing to click -- a dead
+    // end, even though the tree showed "14". The downward chips are the fix.
+    const g = ds.getOwnershipSubgraph(['Organization']);
+    const node = g.nodes.find(n => n.id === 'Organization')!;
+    expect(node.slots.filter(s => !s.flipped && !s.isLoop)).toEqual([]);
+    expect((g.hiddenOwners.get('Organization') ?? []).length).toBe(0);
+    // ...and yet there is somewhere to go.
+    expect((g.hiddenOwned.get('Organization') ?? []).length).toBeGreaterThan(0);
+  });
+
+  test('owned chips disappear as their targets are added', () => {
+    const before = ds.getOwnershipSubgraph(['Organization']);
+    const target = (before.hiddenOwned.get('Organization') ?? [])[0];
+    const after = ds.getOwnershipSubgraph(['Organization'], [target]);
+    expect(after.nodes.map(n => n.id)).toContain(target);
+    expect(after.hiddenOwned.get('Organization') ?? []).not.toContain(target);
   });
 });

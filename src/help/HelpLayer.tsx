@@ -33,6 +33,8 @@ export default function HelpLayer() {
   const inTour = tourStep !== null;
   const entry = activeId ? content.entries.get(activeId) : undefined;
   const [rect, setRect] = useState<DOMRect | null>(null);
+  /** A hovered entry is transient; a clicked one stays until dismissed. */
+  const [pinned, setPinned] = useState(false);
   const popRef = useRef<HTMLDivElement>(null);
 
   // Scroll the tour's anchor into view BEFORE measuring, or the popover lands
@@ -72,12 +74,34 @@ export default function HelpLayer() {
     }
   }, [entry, rect]);
 
+  // Leaving help mode, or starting a tour, drops any pin -- otherwise a
+  // previously pinned popover outlives the mode that produced it.
+  useEffect(() => {
+    if (!helpMode || inTour) setPinned(false);
+  }, [helpMode, inTour]);
+
   const hintIds = helpMode && !inTour
     ? [...content.entries.keys()].filter(id => rectOf(id))
     : [];
 
   return (
     <>
+      {/*
+        Ring around the current anchor. Without it the tour reads as a popover
+        appearing in space -- Siggie: "getting no highlighting or indication of
+        what's going on between steps". Drawn as a fixed overlay rather than by
+        restyling the anchor, so it cannot disturb the app's own layout.
+      */}
+      {rect && activeId && (
+        <div
+          className="help-spotlight"
+          style={{
+            left: rect.left - 4, top: rect.top - 4,
+            width: rect.width + 8, height: rect.height + 8,
+          }}
+        />
+      )}
+
       {/* Hints: one dot per tagged element, so help mode SHOWS what is
           helpable instead of relying on swapped native tooltips. */}
       {hintIds.map(id => {
@@ -89,7 +113,15 @@ export default function HelpLayer() {
             className="help-hint"
             title={content.entries.get(id)?.title ?? id}
             style={{ left: r.right - 6, top: r.top - 6 }}
-            onClick={ev => { ev.stopPropagation(); showEntry(id); }}
+            /*
+             * Hover previews, click pins (Siggie: "when hovering over ? icons
+             * would be nice to show popover, then click to make it stay").
+             * A previewed entry is dismissed on mouse-out; a pinned one is not,
+             * so moving the mouse away to read it does not close it.
+             */
+            onMouseEnter={() => { if (!pinned) showEntry(id); }}
+            onMouseLeave={() => { if (!pinned) dismissEntry(); }}
+            onClick={ev => { ev.stopPropagation(); setPinned(true); showEntry(id); }}
           >
             ?
           </button>
@@ -134,7 +166,7 @@ export default function HelpLayer() {
             ) : (
               <div className="help-tour-nav">
                 <span className="help-tour-spacer" />
-                <button onClick={dismissEntry}>close</button>
+                <button onClick={() => { setPinned(false); dismissEntry(); }}>close</button>
               </div>
             )}
           </>
@@ -151,14 +183,31 @@ export default function HelpLayer() {
  */
 function popoverPosition(r: DOMRect): React.CSSProperties {
   const W = 320;
-  const GAP = 10;
+  const GAP = 12;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  let left = r.right + GAP;
-  if (left + W > vw - 12) left = r.left - W - GAP;   // flip to the other side
-  left = Math.max(8, Math.min(left, vw - W - 8));
-  // Height is unknown before render, so clamp against a generous estimate
-  // rather than measuring and re-rendering.
-  const top = Math.max(8, Math.min(r.top, vh - 240));
-  return { left, top, width: W };
+
+  /*
+   * Pick the side with more room, rather than defaulting to the right and
+   * flipping only when it would overflow. A tall anchor on the LEFT of the
+   * screen (the selection tree) left just enough room on the right for the
+   * popover to fit while still covering the diagram it was describing --
+   * Siggie: "in img-2 it should be on right".
+   *
+   * Measuring both gaps and taking the larger one puts the popover in the
+   * empty half of the screen, which is where it belongs regardless of which
+   * side the anchor is on.
+   */
+  const roomRight = vw - r.right - GAP;
+  const roomLeft = r.left - GAP;
+  const left = roomRight >= roomLeft
+    ? Math.min(r.right + GAP, vw - W - 8)
+    : Math.max(8, r.left - W - GAP);
+
+  // Vertically: centre on the anchor where possible, so a short anchor does
+  // not get a popover hanging far below it. Height is unknown before render,
+  // so this uses a generous estimate rather than measuring and re-rendering.
+  const EST_H = 260;
+  const top = Math.max(8, Math.min(r.top + r.height / 2 - EST_H / 3, vh - EST_H));
+  return { left: Math.max(8, left), top, width: W };
 }

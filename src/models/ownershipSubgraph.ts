@@ -103,6 +103,14 @@ export interface OwnershipSubgraph {
    * only ever add.
    */
   drawnOwners: Map<string, string[]>;
+  /**
+   * What each core class OWNS that is not on the canvas — the downward
+   * counterpart of `hiddenOwners`.
+   *
+   * Not simply "rows you could expand": a class whose ownership edges are all
+   * flipped has no such rows at all, and would otherwise be a dead end.
+   */
+  hiddenOwned: Map<string, string[]>;
 }
 
 /**
@@ -279,11 +287,18 @@ export function buildOwnershipSubgraph(
      */
     const suppressed = new Set(suppressedOwners);
     for (const id of core) {
-      // Dismissed owners are filtered BEFORE the cap, so dismissing one
-      // promotes the next owner into the freed slot rather than leaving a
-      // gap — the canvas keeps showing `ownerCap` owners while any remain.
-      const owners = resolve(id).parents.filter(p => !suppressed.has(p.id));
-      for (const o of owners.slice(0, ownerCap)) visible.add(o.id);
+      /*
+       * Dismissed owners are filtered AFTER the cap, so closing one just
+       * REMOVES it. Filtering before the cap instead made a dismissal promote
+       * the next chipped owner into the freed slot; Siggie, on seeing that:
+       * *"'I closed it and another appeared' is not good"*. Closing something
+       * must mean it is gone, even though that leaves the canvas below the
+       * cap — the cap is a ceiling, not a quota to keep full.
+       */
+      const owners = resolve(id).parents.slice(0, ownerCap);
+      for (const o of owners) {
+        if (!suppressed.has(o.id)) visible.add(o.id);
+      }
     }
   }
 
@@ -299,12 +314,31 @@ export function buildOwnershipSubgraph(
    */
   const hiddenOwners = new Map<string, string[]>();
   const drawnOwners = new Map<string, string[]>();
+  const hiddenOwned = new Map<string, string[]>();
   for (const id of core) {
     const parents = resolve(id).parents.map(p => p.id);
     const hidden = parents.filter(pid => !visible.has(pid)).sort();
     const drawn = parents.filter(pid => visible.has(pid)).sort();
     if (hidden.length) hiddenOwners.set(id, hidden);
     if (drawn.length) drawnOwners.set(id, drawn);
+
+    /*
+     * The DOWNWARD equivalent: what this class owns that is not on the canvas.
+     *
+     * Needed because a class whose ownership edges are all FLIPPED has no rows
+     * for them — the slot is stored on the other class — so there is nothing
+     * on its box to click. Organization is the case Siggie hit: it owns 14
+     * things, every edge flipped (`Observation.performed_by -> Organization`),
+     * so selecting it drew a lone box with no way forward, even though the
+     * tree showed 14 relationships.
+     *
+     * Reported as ids only; the UI renders them as chips like the owners.
+     */
+    const owned = resolve(id).children
+      .map(c => c.id)
+      .filter(cid => !visible.has(cid))
+      .sort();
+    if (owned.length) hiddenOwned.set(id, owned);
   }
 
   const edges = full.edges
@@ -345,5 +379,5 @@ export function buildOwnershipSubgraph(
     })
     .sort((a, b) => a.layer - b.layer || a.id.localeCompare(b.id));
 
-  return { nodes, edges, hiddenOwners, drawnOwners };
+  return { nodes, edges, hiddenOwners, drawnOwners, hiddenOwned };
 }

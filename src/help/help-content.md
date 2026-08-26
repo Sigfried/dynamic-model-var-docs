@@ -75,6 +75,12 @@ What the boxes and lines mean.
   - "add all" — draw every remaining owner at once.
 - **Context:** Only a few owners are drawn by default, to keep things readable; the rest wait as chips. Removing a drawn owner promotes one of the waiting ones into its place.
 
+### owns-chips
+
+- **Title:** "owns" chips
+- **Description:** Things this entity owns that are not on the diagram yet. Click one to add it.
+- **Context:** Some entities own things without showing a row for them, because the model stores the link on the other side. Organization is like this — it owns fourteen kinds of thing, none of which appear as its own attributes. These chips are the way in.
+
 ### node-dismiss
 
 - **Title:** Closing a box
