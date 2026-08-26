@@ -18,6 +18,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useModelData } from '../hooks/useModelData';
 import { DataService } from '../services/DataService';
 import SelectionTable from './SelectionTable';
+import SelectionTree from './SelectionTree';
 import OwnershipGraphView from './OwnershipGraphView';
 import DetailDrawer from './DetailDrawer';
 import ExampleCasesPane from './ExampleCasesPane';
@@ -78,6 +79,8 @@ export default function ExploreApp() {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => readIdsFromURL(EXP_PARAM));
   const [detailId, setDetailId] = useState<string | null>(readDetailFromURL);
   const [tableCollapsed, setTableCollapsed] = useState(false);
+  /** Provisional: 'tree' is the intended selector, 'list' the one it replaces. */
+  const [selectorMode, setSelectorMode] = useState<'tree' | 'list'>('tree');
   const [pathToRoot, setPathToRoot] = useState<boolean>(readPathToRootFromURL);
   const [casesOpen, setCasesOpen] = useState(false);
   /**
@@ -258,12 +261,36 @@ export default function ExploreApp() {
         ) : (
           <div className="w-96 shrink-0 flex flex-col min-h-0 border-r border-gray-200 dark:border-slate-700">
             <div className="flex-1 overflow-y-auto min-h-0">
-              <SelectionTable
-                dataService={dataService}
-                selectedIds={selectedIds}
-                onToggle={toggleSelect}
-              />
+              {selectorMode === 'tree' ? (
+                <SelectionTree
+                  dataService={dataService}
+                  selectedIds={selectedIds}
+                  onToggle={toggleSelect}
+                  onShowDetail={setDetailId}
+                />
+              ) : (
+                <SelectionTable
+                  dataService={dataService}
+                  selectedIds={selectedIds}
+                  onToggle={toggleSelect}
+                />
+              )}
             </div>
+            {/*
+              The flat category list is kept alongside the DAG tree so the two
+              can be compared before the list is retired. Siggie asked for the
+              tree to REPLACE the list; this switch is the safety rail for
+              that swap, not a permanent feature -- delete it and the
+              SelectionTable import once the tree is confirmed.
+            */}
+            <button
+              onClick={() => setSelectorMode(m => (m === 'tree' ? 'list' : 'tree'))}
+              title="Switch between the ownership tree and the flat category list"
+              className="shrink-0 px-3 py-1 text-xs text-gray-400 border-t border-gray-200
+                         dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 text-left"
+            >
+              {selectorMode === 'tree' ? '☰ flat list' : '⑃ tree'}
+            </button>
             <button
               onClick={() => setTableCollapsed(true)}
               title="Hide entity selection"
