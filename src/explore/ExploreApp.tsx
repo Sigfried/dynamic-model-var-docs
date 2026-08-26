@@ -23,7 +23,8 @@ import OwnershipGraphView from './OwnershipGraphView';
 import DetailDrawer from './DetailDrawer';
 import ExampleCasesPane from './ExampleCasesPane';
 import type { ExampleCase } from './exampleCases';
-import { HelpProvider, useHelp } from '../help/HelpProvider';
+import { HelpProvider } from '../help/HelpProvider';
+import { useHelp } from '../help/helpContext';
 import HelpLayer from '../help/HelpLayer';
 import helpMarkdown from '../help/help-content.md?raw';
 

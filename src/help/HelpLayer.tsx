@@ -15,7 +15,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
-import { useHelp } from './HelpProvider';
+import { useHelp } from './helpContext';
 import './help.css';
 
 /** Where an anchor currently sits, or null when it is not on screen. */

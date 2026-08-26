@@ -26,36 +26,9 @@
  * Escape (close the popover, then leave the mode), and exit-on-window-blur.
  */
 
-import {
-  createContext, useCallback, useContext, useEffect, useMemo, useState,
-  type ReactNode,
-} from 'react';
-import { parseHelpContent, tourSteps, type HelpContent, type HelpEntry } from './parseHelpContent';
-
-interface HelpApi {
-  helpMode: boolean;
-  toggleHelpMode: () => void;
-  exitHelpMode: () => void;
-  /** Tour step index, or null when no tour is running. */
-  tourStep: number | null;
-  startTour: () => void;
-  endTour: () => void;
-  nextStep: () => void;
-  prevStep: () => void;
-  steps: HelpEntry[];
-  content: HelpContent;
-  activeId: string | null;
-  showEntry: (id: string) => void;
-  dismissEntry: () => void;
-}
-
-const HelpContext = createContext<HelpApi | null>(null);
-
-export function useHelp(): HelpApi {
-  const ctx = useContext(HelpContext);
-  if (!ctx) throw new Error('useHelp must be used inside <HelpProvider>');
-  return ctx;
-}
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { parseHelpContent, tourSteps } from './parseHelpContent';
+import { HelpContext, type HelpApi } from './helpContext';
 
 /** True when focus is in a text field, so `?` types instead of toggling. */
 function isInputFocused(): boolean {
