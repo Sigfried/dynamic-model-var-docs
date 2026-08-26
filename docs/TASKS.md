@@ -25,9 +25,12 @@
 
 ## 🔁 HANDOFF — start here next session (updated 2026-08-25, end of day)
 
-> **Everything is MERGED TO MAIN and DEPLOYED.** `main` is at `4f33c23`, clean
-> tree, nothing unpushed. Siggie deployed to gh-pages by hand at the end
-> of the session (`npm run deploy`)
+> **Everything is MERGED TO MAIN and DEPLOYED.** The DEPLOYED code is `4f33c23`
+> — Siggie deployed to gh-pages by hand (`npm run deploy`).
+>
+> **`main` has since moved past it (docs only, no code):** `f141d03`
+> URL-state plan, `9999dcd` help-package plan, `bd8f8ed` TASKS edits. So the
+> deployed app still matches `4f33c23`; don't read a later `main` as deployed.
 >
 > A lot of fast work was done prepping for demo: mostly inheritance/merged
 > view. It needs cleanup.
@@ -37,104 +40,177 @@
 > - Fix visibly broken stuff (unless it's pretty minor)
 > - Balance between impact and cost
 
-### ▶️ NEXT UP — needs prioritization
-**[sg] I'll mark items with impact estimates to help**
+### ▶️ NEXT UP — ordered 2026-08-26
 
-1. **[sg] Fix this document (do this first)**
-   - try to get rid of anything in this document that isn't still
-     relevant, especially from SHIPPED / DONE sections, or things that
-     have been implemented / resolved even if not marked as such
-   - bring together redundant/same-topic material. in this list if it's pretty
-     short, otherwise to new section referred to from here
-   - clean up this list and everything else: remove redundancy, make
-     language clear and concise
-   - for high impact items, make **modest** effort to calculate a cost in
-     terms of time
-   - then you can put this list in a sensible order
-1. **Owner cap + chips as add/remove TOGGLES.** Siggie's last design ask of the
-   session, not started. *"the fix for how many parents to show ... should be a
-   cap, and then the parent chips should be toggles allowing you to add/remove."*
-   Today the `owned by` chips are **add-only** — clicking one draws that owner,
-   and there is no way to click it back off. The toolbar's `0 / ≤5 / all`
-   control is a blunt stand-in for this and should probably collapse into it.
-   (**high impact** -- we at least need a way to hide entities once they're shown)
-   1. [sg] related to what i've been referring to as "tweaking" -- making better
-   decisions about when and which entities to display depending on context and
-   user settings.
-   1. **Too many entities displayed.** Siggie's direction: from a selected entity,
-      default to **one hop in either direction**, with the ability to expand each
-      way and to close boxes. Open question he raised: what to do with a closed
-      box BETWEEN two displayed boxes — *for now, probably disallow it*.
-      Worth knowing: the `owned by` chip row already lists owners without drawing
-      them, which is arguably the right primitive — chips for the un-expanded hop,
-      boxes for the expanded one.
-      **The other half, observed 2026-08-25: there is no way to EXPAND.** With one
-      class selected, the only route to a neighbour is reading the detail drawer's
-      REFERENCED BY list and adding each class by hand. Organization shows 14
-      entries there — all reachable, none reachable *from the diagram*. Expansion
-      and pruning are the same feature and should be designed together.
-   1. **[sg] Maybe all this can be stated as:**
-      - Default should be one hop either direction capped at N boxes.
-        Need a way to show additional owners and owned from the box.
-        Chips work but are currently kind of ugly and should maybe be
-        toggleable to hide connected boxes. Boxes should also have close
-        icons. For boxes connected at both ends try something like: collapse
-        into a little box with a + icon for edges to attach to; clicking
-        restores the whole box.
-2. **Narrowed edges should point at the CHILD's header** inside a merged target
-   box. Deferred by Siggie for time, written up in full below. **Needs his
-   decision first:** every edge into a merged box, or only `slot_usage`-narrowed
-   ones? (**low impact**)
-3. **A class in several merged boxes** (SpecimenQuality/QuantityObservation).
-   Written up below. **Needs his modelling decision first:** is the second
-   grouping inheritance at all, or a different axis (entityCategories)?
-   **[sg] i'm not sure what this is referring to**
-4. was: **Scrollable / resizable boxes.** Merged boxes now show EVERY row and can run
-   long. Not as easy as it looks: edge anchors are computed from row positions,
-   so scrolling content inside a box points its edges at the wrong rows.
-   **[sg] (high impact) Must be able to show every slot that should appear in**
-   a box. Not sure if that is happening now.
-5. **own-bkwd → association verdict merge** (70 edges). **[sg] decided, no merge**
-6. **Tour and help system.** The stakeholder meeting on 2026-08-25 did **not** include the big program
-   manager, who matters most. Her first exposure — after seeing the app a couple
-   of months ago — will be **from links sent to her**, probably without Siggie
-   walking her through it at first. The stakeholders present asked for 
-   **a video demo** and **a non-video guided tour**. Made decisions and specs
-   for tour and help system in [HELP_PACKAGE_PLAN](/docs/HELP_PACKAGE_PLAN.md). 
-   **High impact**
-1. Make further attempts to clean up merged edge/arrow tangling (**lowish impact**)
-1. Remove merge style buttons -- after cleaning up tangling but definitely
-   before delivery. And if we give up those efforts before being
-   completely satisfied, make it easy to restore these buttons because
-   they help with figuring out what's going on an experimenting.
-6. **Whole app state serializable** — see the dedicated section below. Deliberately
-   LAST of the development items: it freezes the control vocabulary into every
-   link ever sent, so the obsolete/provisional buttons above must be resolved
-   first. It is also the main technical prerequisite for the guided-tour half of
-   the sharing work.
-2. **Fix the ownership legend.** Siggie asked for this but has not yet said
-   what is wrong with it. **Ask before changing anything.** The older
-   restructuring notes further down (un-nest from example cases, move BIGGEST
-   FANS, shorten the fk-inversion text) may or may not be what he means.
-   (**medium impact**) **[sg] the legend is hard to find and currently**
-   all wrong. It should possibly be implemented through help system.
-4. **Deferred, deliberately: why does Explore need a slot index at all?**
-   Siggie raised it 2026-08-25 and chose not to chase it. Context is in the
-   induced-slots DONE section below — the top-level `slots:` block is a derived
-   index, and `Graph.ts:502` plus Kitchen Sink are what still key on it. Not a
-   bug, just unexamined.
-9. **bring dag-browser-widget into Explorer (high impact)**
-   - change inheritance rail color to entity/inheritance/blue and ownnership
-     color to amber
-   - try populating it with the whole graph, all collapsed to start
-   - try including categories as top layer (expanded) -- hmm...inheritance
-     pairs should all fit within categories i think, but not ownership; so,
-     with whole graph populated, a lot more duplicates will appear, across 
-     categories
-   - the idea is that, unlike in Focus (which needed changing anyway), there
-     wouldn't be one pane for selection and another for dag-browser. everything
-     becomes accessible through dag-browser including some kind of selection
-     affordance
+Ordered by Siggie's own impact marks, with **modest** time estimates (item 0's
+ask). Estimates are for a working session with the code already understood;
+they exclude review cycles with Siggie. **~2 days of runway remain** before the
+~2026-08-28/29 wrap-up, so the line below A–C is unlikely to be reached.
+
+**Wrap-up reality check:** A + B + C alone is roughly 1.5–3 days. Anything in
+"if there is time" should be assumed NOT to happen unless Siggie drops
+something above it.
+
+---
+
+#### A. Tweaking: expand / prune the canvas — **high impact, ~1–1.5 days**
+
+The largest item, and the one Siggie has described most often (he calls it
+"tweaking": deciding when and which entities to display, given context and user
+settings). Absorbs the former items 1 and 4.
+
+**The ask, in Siggie's words:** *"the fix for how many parents to show ...
+should be a cap, and then the parent chips should be toggles allowing you to
+add/remove."* And: *"Default should be one hop either direction capped at N
+boxes. Need a way to show additional owners and owned from the box. Chips work
+but are currently kind of ugly and should maybe be toggleable to hide connected
+boxes. Boxes should also have close icons. For boxes connected at both ends try
+something like: collapse into a little box with a + icon for edges to attach
+to; clicking restores the whole box."*
+
+**Why it is one feature, not several.** Expansion and pruning are the same
+control surface:
+- **Pruning is impossible today.** The `owned by` chips are **add-only** —
+  clicking draws that owner, and nothing clicks it back off.
+- **Expansion is also impossible from the diagram** (observed 2026-08-25). With
+  one class selected, the only route to a neighbour is the detail drawer's
+  REFERENCED BY list, added by hand. Organization lists 14 there — all
+  reachable, none reachable *from the canvas*.
+- The `0 / ≤5 / all` toolbar control is a blunt stand-in and should collapse
+  into this.
+
+**Useful primitive already in place:** the chip row lists owners *without*
+drawing them — chips for the un-expanded hop, boxes for the expanded one.
+
+**Open question Siggie raised:** a closed box BETWEEN two displayed boxes —
+*for now, probably disallow it.*
+
+**Row visibility is NOT part of this** — settled 2026-08-26, see the answered
+note under "Row visibility" below. Nothing is unreachable; only the
+collapsed-by-default choice is a live UX question, and it belongs here.
+
+#### B. Tour and help system — **high impact, ~0.5–1 day to a first cut**
+
+Specs and decisions already made in
+[HELP_PACKAGE_PLAN.md](HELP_PACKAGE_PLAN.md) (210 lines), so this is execution,
+not design.
+
+**Why it ranks this high:** the big program manager — who matters most — was
+NOT at the 2026-08-25 meeting. Her first exposure, after seeing the app months
+ago, will be **from a link, unattended**. The stakeholders present asked for a
+video demo AND a non-video guided tour.
+
+**Dependency worth knowing:** the *guided-tour* half wants D (serializable
+state) to express steps as plain links. A static help/hints layer does not, and
+can ship first. Sequence B-then-D, or accept a hand-rolled step mechanism.
+
+#### C. Bring dag-browser-widget into Explorer — **high impact, ~0.5–1 day**
+
+Mostly reuse: `dag-browser-widget@^0.2.0` is already a dependency, already
+mounted in `FocusView.tsx`, and `DataService.ts:916` already adapts the
+containment graph to its `Node[]` shape.
+
+- Recolour: inheritance rail → entity/inheritance blue; ownership → amber.
+- Populate with the whole graph, all collapsed to start.
+- Try categories as an expanded top layer. Siggie's own caveat: *"inheritance
+  pairs should all fit within categories i think, but not ownership; so, with
+  whole graph populated, a lot more duplicates will appear, across categories."*
+- The point: unlike Focus (which needed changing anyway), there is no separate
+  selection pane — **everything becomes accessible through dag-browser**,
+  including a selection affordance.
+
+**Couples to E** — the duplicates Siggie predicts here are the same
+multi-category problem as E, approached from the other side. Design together or
+C will re-solve it.
+
+---
+
+#### If there is time — in rough order
+
+**D. Whole app state serializable** — see the dedicated section below.
+Deliberately **after** A: it freezes the control vocabulary into every link ever
+sent, so the provisional controls A replaces must be settled first. Also the
+main technical prerequisite for the guided-tour half of B.
+
+**E. A class in several CATEGORIES** — **question ANSWERED 2026-08-26**, write-up
+and full breakage audit below. It is `entityCategories` (an imposed navigation
+aid), **not** inheritance, so it is general multi-category membership and NOT
+sibling merging. Blocked on nothing. **~0.5 day** for the mechanism plus the two
+classes Siggie named; longer if all 53 get audited. Note one existing test
+(`entityCategories.test.ts:60`) forbids this and must be retired deliberately.
+
+**F. Merged edge/arrow tangling** — further cleanup attempts (*lowish impact*).
+
+**G. Remove merge-style buttons** — after F, but definitely before delivery. If
+F is abandoned before Siggie is satisfied, **keep restoring these buttons easy**
+— they help in figuring out what is going on.
+
+**H. Fix the ownership legend** — *"the legend is hard to find and currently all
+wrong. It should possibly be implemented through help system."*
+**POSTPONED by Siggie, 2026-08-26: "the legend is low priority ... postpone
+figuring it out till later."** Do not touch it without him. Older restructuring
+notes further down (un-nest from example cases, move BIGGEST FANS, shorten the
+fk-inversion text) may or may not be what he means. If it does get done, doing
+it *inside* B is probably cheapest.
+
+**I. Narrowed edges should point at the CHILD's header** inside a merged target
+box (*low impact*). Written up below. **Needs Siggie's decision first:** every
+edge into a merged box, or only `slot_usage`-narrowed ones?
+
+---
+
+#### Answered / closed since the list was written
+
+- **Row visibility (was item 4)** — **nothing is unreachable.** Merged boxes
+  show every row always (`OwnershipGraphView.tsx:405`). Ordinary boxes collapse
+  rows with no edge on the current canvas plus all plain rows, but the
+  `+ N more` footer reveals them and an all-unconnected box auto-expands
+  (`:241`), so the empty-box failure cannot recur. Only the *default* is still
+  a question; folded into A. Full note below.
+- **own-bkwd → association merge** — **DECIDED: no merge** (64 edges,
+  re-measured 2026-08-26, not 70). `OWNERSHIP_CLASSIFICATION.md` now records the
+  decision rather than posing it as open.
+- **Why does Explore need a slot index at all?** — Siggie raised it 2026-08-25
+  and chose not to chase it; **still deliberately deferred, not a bug.** Context
+  in the induced-slots DONE section below: the top-level `slots:` block is a
+  derived index, and `Graph.ts:502` plus Kitchen Sink still key on it.
+
+#### Doc hygiene (was item 0 — largely done 2026-08-26)
+
+Done: item 3's orphaned write-up restored (it had been deleted in `0c9db03`
+while the pointer survived); stale ownership group counts re-measured; the
+`own-bkwd`/`association` open block converted to the decision; the deployed-vs-
+`main` confusion in the handoff header fixed; this list de-duplicated, ordered,
+and costed.
+
+**Still to do, needs Siggie's judgment:** the tail of this file (the
+"Current round (post-2026-06-11 feedback)" section onward, ~470 lines) is an
+older planning round largely superseded by EXPLORE_VIZ.md and the work since.
+Several items there are already tagged [OBSOLETE] / [LATER]. Cutting it is
+mechanical but the keep/drop calls are his.
+
+### 📐 Row visibility — ANSWERED 2026-08-26 (was NEXT UP item 4)
+
+Siggie: *"Must be able to show every slot that should appear in a box. Not sure
+if that is happening now."* Read the code rather than guessing:
+
+- **Merged boxes show EVERY row, always** — no connected/hidden split and no
+  footer (`OwnershipGraphView.tsx:405`, shipped 2026-08-25 to Siggie's *"show
+  all of them. let the box flow over bottom of page if needed"*).
+- **Ordinary boxes collapse by default** (`:236`, `:242`). Hidden =
+  rows with **no edge on the current canvas** + **all plain (non-entity) rows**.
+- Hidden rows are reachable via the `+ N more` footer (`:1851`), and a box whose
+  rows are ALL unconnected **auto-expands** (`:241`) — so the empty-box failure
+  that motivated the merged-box change cannot recur on ordinary boxes either.
+
+**So nothing is unreachable.** What remains is whether collapsed-by-default is
+the right default — a tweaking/UX question, folded into item A.
+
+The original "scrollable / resizable boxes" concern is still real in principle:
+edge anchors are computed from row positions, so scrolling content *inside* a
+fixed-height box would point its edges at the wrong rows. But boxes currently
+grow instead of scrolling, so no edge mis-anchors today. Only revisit if a
+fixed height is introduced.
 
 ### 🔗 NEW — make all important parts of app state serializable
 - to allow sending links and for loading state in step-by-step tour
@@ -209,6 +285,112 @@ It caught four real errors this session that the bare form did not.
 - **`console.log` is swallowed in vitest here.** To surface a value, assert it
   against a sentinel string and read the diff.
 
+
+### ▶️ OPEN — a narrowed edge should point at the CHILD's header, not the box
+
+> Restored 2026-08-26 — deleted in `0c9db03` while NEXT UP still pointed
+> at it, same as the multi-category write-up below. Original:
+> `git show 4f33c23:docs/TASKS.md` lines 69–99.
+
+Siggie, 2026-08-25, deferred deliberately: *"IF the container is also a merged
+box (e.g., ObservationSet, MeasurementObservationSet), then the edge points at
+the appropriate header."*
+
+**The case.** `MeasurementObservationSet.observations` narrows its range from
+`Observation` to `MeasurementObservation` (verified: all three ObservationSet
+children narrow `observations` to their matching Observation subtype). Both
+ends are merged boxes. The edge leaves the `MeasurementObservationSet` block
+of one box and should ARRIVE at the `MeasurementObservation` header inside the
+other — today it lands on the target box's header band like every other edge.
+
+**Why this is not a tweak.** The entity end has never carried row meaning. From
+the file header: *"the ENTITY END attaches to a header-level port on the target
+class, which has no corresponding row, so edges point at the entity name."*
+That assumption is load-bearing for the fan (`freeEndTotal`/`freeEndSlot`
+spread ports across the header band), for convergence merging, and for the
+single shared arrowhead. Pointing at a child header means the entity end
+sometimes anchors on a ROW, so all three need to handle both.
+
+**Design question to settle first:** does EVERY edge into a merged box target
+the child header matching its range, or only a `slot_usage`-narrowed one? The
+first is one rule; the second leaves existing edges untouched but means the
+entity end means different things on different edges. Siggie has not chosen.
+
+Note the row machinery is already in place: rows carry `declaringClass`, header
+rows are real rows with a y-position, and `rowY(node, slot, declaringClass)`
+resolves an anchor. What is missing is a port on the entity side that targets
+a header row, and the fan/merge rules knowing about it.
+
+
+### ▶️ OPEN — a class should appear in SEVERAL CATEGORIES
+
+Restored 2026-08-26. This write-up was deleted in `0c9db03` while the NEXT UP
+pointer to it survived, leaving item 3 dangling. Original text is at
+`git show 4f33c23:docs/TASKS.md` (lines 100–121).
+
+Siggie, 2026-08-25, looking at the first merged render: *"SpecimenQua...
+Observation should appear in both categories — don't fix now, leave as task."*
+
+**The modelling question is now ANSWERED (2026-08-26).** Siggie: *"they should
+appear in both Observation/Measurements and Laboratory/Specimens. these
+categories don't live in the schema. we imposed them to make the app easier to
+navigate."*
+
+That picks the second branch the original write-up posed. The second grouping
+is **`entityCategories`, an imposed navigation aid — not a second superclass.**
+So this is **not sibling merging at all**; it is general multi-category
+membership, and sibling merging is one case of it. The `absorbed` /
+`groupSiblings` work the original write-up described is NOT the place to start.
+
+**Measured 2026-08-26 (probe over `ENTITY_CATEGORIES`, since deleted):**
+
+- 53 classes, 53 memberships — **no class is in two categories today.**
+- `SpecimenQualityObservation` and `SpecimenQuantityObservation` are in `lab`
+  ONLY. They are children of `Observation`, which sits in `observation`.
+- The two category labels involved are `observation` = "Observations /
+  Measurements" and `lab` = "Laboratory / Biospecimen".
+
+**Single-membership is an ENFORCED INVARIANT, not an accident.**
+`src/test/entityCategories.test.ts:60` — *"no class is listed in two
+categories"* — fails the build on exactly the change being asked for. That test
+must be deliberately retired as part of this work, not worked around.
+
+**The file header comment is already wrong.** `entityCategories.ts:3-6` says
+*"An entity can appear in multiple categories (e.g., Condition appears in both
+Pinned and Clinical)"* — true only of the special DYNAMIC `Pinned` category.
+No static class is dual-listed, and the test above forbids it. Fix the comment
+whichever way this lands.
+
+**What breaks under dual-listing — audited, not guessed:**
+
+| site | behaviour | severity |
+|---|---|---|
+| `DataService.ts:622` `getCategorySelectorSection` | `totalClasses` sums `classIds.length` across groups → **double-counts** the class in the header | real, cosmetic |
+| `DataService.ts:643` same fn | emits `SectionItemData` with `id: classId` once per category → **duplicate ids in one section** | real; duplicate ids are what caused the LinkOverlay bug |
+| `entityCategories.test.ts:100` | `ENTITY_CATEGORIES.find(c => c.classIds.includes(child))` takes the FIRST match → silently picks one category | latent |
+| `EntityTable.tsx:49` `classIdSet` | per-table set; indentation guard still correct in each table | fine |
+| `EntityExplorer.tsx:52` | maps categories → classes, never the reverse | fine |
+
+The reverse direction (class → its categories) does not exist anywhere in the
+codebase. Every consumer walks categories → classes, which is why
+multi-membership was never exercised.
+
+**Open design questions — Siggie's call:**
+- Does a dual-listed class render identically in both places, or does the
+  secondary appearance get marked (dimmed, an italic "also in Observations"
+  note) so it does not read as two different classes?
+- Is the pin state per-class or per-(class, category)? Pinning
+  `SpecimenQualityObservation` from `lab` presumably pins the class.
+- Which other classes deserve dual listing? Doing this for exactly two classes
+  is a config edit; doing it as a general feature invites an audit of all 53.
+  **Recommend: build the mechanism, dual-list only the two Siggie named, and
+  leave the rest for a later pass.**
+
+**Knock-on for item 9 (dag-browser-widget in Explorer).** Siggie already
+predicted this from the other direction: *"with whole graph populated, a lot
+more duplicates will appear, across categories."* If categories become a
+dag-browser layer, that widget needs a class-appears-N-times story regardless.
+These two items should be designed together, or item 9 will re-solve it.
 
 ### ✅ SHIPPED — inheritance as adjacency (merged sibling boxes), 2026-08-25
 
@@ -360,9 +542,24 @@ clean. **Counts measured against the live graph after the work:**
 
 - 148 has-a + 2 association = **150 slot edges** (the predicted target)
 - **12 Entity edges** (the predicted convergence)
-- Groups: `own-bkwd/fk-inversion` 70, `own-fwd/value-object` 40,
-  `own-fwd/multivalued` 35, `own-fwd/cardinality-split` 2, `association` 2,
-  `own-bkwd/backward-multivalued` 1
+
+**Group counts RE-MEASURED 2026-08-26** (probe over `getOwnershipPairGroups`,
+since deleted). The 2026-08-25 numbers below them had drifted — total is still
+150, but three rows were wrong and `entity-ranged` was missing:
+
+| verdict / rule | live 2026-08-26 | was written |
+|---|---|---|
+| `own-bkwd/fk-inversion` | **63** | 70 |
+| `own-fwd/value-object` | 40 | 40 |
+| `own-fwd/multivalued` | **30** | 35 |
+| `own-fwd/entity-ranged` | **12** | *(counted separately above, not in the list)* |
+| `own-fwd/cardinality-split` | 2 | 2 |
+| `association/association` | 2 | 2 |
+| `own-bkwd/backward-multivalued` | 1 | 1 |
+
+Consequence for NEXT UP item 5: the "own-bkwd → association verdict merge"
+is **64 edges** (63 + 1), not 70. Siggie has decided **no merge**, so this
+matters only as a number that should not outlive the decision.
 
 ---
 

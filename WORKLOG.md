@@ -7,6 +7,79 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-26 — Item 3 recovered; the "both categories" question answered
+
+### The task had been orphaned by a doc edit, not abandoned
+
+NEXT UP item 3 read *"A class in several merged boxes ... written up below"*
+with Siggie's note *"i'm not sure what this is referring to"* — and there was
+no write-up below. Cause: the section was deleted in `0c9db03` ("Wrap up the
+inheritance session") while the pointer to it survived. Recovered from
+`git show 4f33c23:docs/TASKS.md` lines 100–121 and restored.
+
+**Lesson worth keeping:** a NEXT UP entry that says "written up below" is a
+dangling reference the moment someone prunes the body. When compressing this
+doc (item 0), check that every "see below" still resolves.
+
+### The modelling question — answered, and it changes the approach
+
+The restored write-up ended with *"is the second grouping still inheritance (a
+second superclass), or a different axis (entityCategories)? That last question
+is the one to answer first, and it is Siggie's call."*
+
+Siggie, 2026-08-26: *"they should appear in both Observation/Measurements and
+Laboratory/Specimens. these categories don't live in the schema. we imposed
+them to make the app easier to navigate."*
+
+So: **entityCategories, not inheritance.** The write-up itself predicted the
+consequence — "if the latter, this is not sibling merging at all but a general
+grouping feature that merging is one case of." So the `absorbed` → id[] and
+`groupSiblings` work it described is the WRONG starting point, and anyone who
+reads only the old text will start in the wrong file.
+
+### What measuring turned up that reasoning would have missed
+
+Followed the standing process note (measure, don't reason about the render).
+Three findings, none of which were guessable from the task text:
+
+1. **The config's own header comment is false.** It claims "an entity can
+   appear in multiple categories (e.g. Condition appears in both Pinned and
+   Clinical)" — true only because `Pinned` is populated dynamically from pin
+   state. Probe over `ENTITY_CATEGORIES`: 53 classes, 53 memberships, **zero**
+   static duplicates. Fixed the comment.
+
+2. **Single membership is an ENFORCED INVARIANT.**
+   `entityCategories.test.ts:60` is literally `test('no class is listed in two
+   categories')`. The requested feature fails an existing test on purpose —
+   that test has to be retired as a deliberate act, not discovered as a
+   surprise mid-implementation. This is the single most useful thing the probe
+   found.
+
+3. **`DataService.getCategorySelectorSection` emits `id: classId` per
+   category.** Dual-listing produces duplicate ids inside one section — which
+   is exactly the failure mode behind the LinkOverlay links bug (dup ids across
+   mounted views). Also `totalClasses` sums across groups, so it double-counts.
+   Audited every consumer: no code anywhere maps class → its categories; every
+   site walks categories → classes, which is *why* multi-membership was never
+   exercised.
+
+### Stale counts corrected while in there
+
+Re-measured `getOwnershipPairGroups` (throwaway probe, deleted). Total is still
+150 as documented, but three group rows had drifted: `fk-inversion` 70→**63**,
+`multivalued` 35→**30**, and `entity-ranged` (12) was absent from the list
+because it was counted on a separate line above. Consequence: the "own-bkwd →
+association merge" was described as 70 edges; it is **64**. Siggie has decided
+no merge, so the number only mattered as something that shouldn't outlive the
+decision — `OWNERSHIP_CLASSIFICATION.md`'s "may collapse" open block is now
+rewritten as the decision, with the earlier 57 and 70 both noted as stale.
+
+Also corrected the handoff's "`main` is at `4f33c23`" — main has three
+docs-only commits past it, but `4f33c23` is still what is DEPLOYED. Worth
+keeping distinct: a future session reading "main is deployed" would draw the
+wrong conclusion about what users see.
+
+---
 ## 2026-08-26 — Product tour: why no tour library
 
 Task was "a gh-pages-hosted product tour for this app, not a video." Surveyed

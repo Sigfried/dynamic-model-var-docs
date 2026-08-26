@@ -1,10 +1,20 @@
 /**
  * Entity category definitions for the Entity Explorer view.
  *
- * Categories are hand-curated groupings of BDCHM classes. An entity can
- * appear in multiple categories (e.g., Condition appears in both Pinned
- * and Clinical). The Pinned category is special — it's populated
- * dynamically from user pin state.
+ * Categories are hand-curated groupings of BDCHM classes.
+ *
+ * **A class appears in exactly ONE category today.** This comment used to say
+ * an entity could appear in several, citing "Condition appears in both Pinned
+ * and Clinical" — but `Pinned` is the special DYNAMIC category populated from
+ * user pin state, not a static listing. Measured 2026-08-26: 53 classes, 53
+ * memberships, zero duplicates. Single membership is ENFORCED by
+ * `entityCategories.test.ts` ("no class is listed in two categories").
+ *
+ * Siggie has asked for genuine multi-membership — SpecimenQuality/
+ * QuantityObservation should appear under BOTH Observations/Measurements and
+ * Laboratory/Biospecimen. That is an open task, not current behaviour; see
+ * "a class should appear in SEVERAL CATEGORIES" in docs/TASKS.md for the
+ * audit of what breaks. Retire that test deliberately when implementing.
  */
 
 export interface EntityCategory {

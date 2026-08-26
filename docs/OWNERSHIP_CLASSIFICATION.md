@@ -35,15 +35,16 @@ appears in the legend or an edge label.
 
 `association` makes **no ownership claim in either direction**.
 
-> **Open — `own-bkwd` vs `association` may collapse (2026-08-24).** Siggie is
-> leaning toward displaying `own-bkwd` *as* `association`: if we cannot defend
-> the "belongs to" claim on a bare foreign key, the honest reading is that the
-> two are one category and the distinction is a distinction without a
-> difference. **Kept separate for now, deliberately**, to see the implications
-> before merging. They already layer identically (see below), so a merge is a
-> rendering and vocabulary change, not a layout change — but it would move
-> **57 edges**, the single largest group, out of "ownership" entirely. Do not
-> merge them without deciding that on purpose.
+> **DECIDED — `own-bkwd` and `association` stay SEPARATE (Siggie, 2026-08-26).**
+> The 2026-08-24 note below was open; it is now settled. **No merge.**
+>
+> The question had been whether to display `own-bkwd` *as* `association` — if
+> the "belongs to" claim on a bare foreign key cannot be defended, the two are
+> arguably one category. Siggie's call is to keep the distinction. The affected
+> group is **64 edges** (`fk-inversion` 63 + `backward-multivalued` 1,
+> re-measured 2026-08-26); earlier notes said 57 and then 70, both stale.
+>
+> Do not reopen this without Siggie saying so.
 
 ### How they are drawn
 
