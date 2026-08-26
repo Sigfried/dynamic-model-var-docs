@@ -24,49 +24,10 @@ import DetailDrawer from './DetailDrawer';
 import ExampleCasesPane from './ExampleCasesPane';
 import type { ExampleCase } from './exampleCases';
 
-const SEL_PARAM = 'sel';
-const DETAIL_PARAM = 'detail';
-const EXP_PARAM = 'exp';
-const ROOTS_PARAM = 'roots';
-/** Owners the user dismissed from the canvas (see onHideOwner). */
-const HIDDEN_PARAM = 'hidden';
-
-function readIdsFromURL(param: string): Set<string> {
-  const raw = new URLSearchParams(window.location.search).get(param);
-  return new Set(raw ? raw.split('~').filter(Boolean) : []);
-}
-
-function readDetailFromURL(): string | null {
-  return new URLSearchParams(window.location.search).get(DETAIL_PARAM) || null;
-}
-
-/** Path-to-root is off by default; only its non-default state is in the URL. */
-function readPathToRootFromURL(): boolean {
-  return new URLSearchParams(window.location.search).get(ROOTS_PARAM) === '1';
-}
-
-/** Single writer for every param so they never clobber each other. */
-function writeStateToURL(
-  sel: Set<string>,
-  expanded: Set<string>,
-  detailId: string | null,
-  pathToRoot: boolean,
-  hiddenOwners: Set<string>,
-) {
-  const url = new URL(window.location.href);
-  const setIds = (param: string, ids: Set<string>) => {
-    if (ids.size === 0) url.searchParams.delete(param);
-    else url.searchParams.set(param, [...ids].sort().join('~'));
-  };
-  setIds(SEL_PARAM, sel);
-  setIds(EXP_PARAM, expanded);
-  setIds(HIDDEN_PARAM, hiddenOwners);
-  if (detailId) url.searchParams.set(DETAIL_PARAM, detailId);
-  else url.searchParams.delete(DETAIL_PARAM);
-  if (pathToRoot) url.searchParams.set(ROOTS_PARAM, '1');
-  else url.searchParams.delete(ROOTS_PARAM);
-  window.history.replaceState(null, '', url);
-}
+import {
+  readExploreState, writeExploreState, buildShareURL,
+  type Direction, type MergeMode, type OwnerScope,
+} from './exploreState';
 
 export default function ExploreApp() {
   const { modelData, loading, error } = useModelData();
@@ -75,26 +36,50 @@ export default function ExploreApp() {
     [modelData],
   );
 
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => readIdsFromURL(SEL_PARAM));
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => readIdsFromURL(EXP_PARAM));
-  const [detailId, setDetailId] = useState<string | null>(readDetailFromURL);
+  // One read at mount resolves URL > stored preference > default for every
+  // piece of shareable state, so no two useStates can disagree about it.
+  const initial = useMemo(() => readExploreState(), []);
+
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set(initial.sel));
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set(initial.exp));
+  const [detailId, setDetailId] = useState<string | null>(initial.detail);
   const [tableCollapsed, setTableCollapsed] = useState(false);
   /** Provisional: 'tree' is the intended selector, 'list' the one it replaces. */
   const [selectorMode, setSelectorMode] = useState<'tree' | 'list'>('tree');
-  const [pathToRoot, setPathToRoot] = useState<boolean>(readPathToRootFromURL);
+  const [pathToRoot, setPathToRoot] = useState<boolean>(initial.roots);
+  /**
+   * Toolbar settings, lifted out of OwnershipGraphView. They used to live in
+   * localStorage only, so a shared link reproduced the selection and then drew
+   * it with the RECIPIENT's settings -- a link showing off the sibling merge
+   * looked, to a first-time visitor, like the feature did not exist.
+   */
+  const [mergeSibs, setMergeSibs] = useState<boolean>(initial.sibs);
+  const [direction, setDirection] = useState<Direction>(initial.dir);
+  const [mergeMode, setMergeMode] = useState<MergeMode>(initial.merge);
+  const [ownerScope, setOwnerScope] = useState<OwnerScope>(initial.owners);
   const [casesOpen, setCasesOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   /**
    * Owners dismissed by clicking a lit `owned by` chip. Separate from
    * `expandedIds` because a capped-in owner was never expanded — there is no
    * expansion to remove, only a dismissal to record.
    */
   const [hiddenOwnerIds, setHiddenOwnerIds] = useState<Set<string>>(
-    () => readIdsFromURL(HIDDEN_PARAM),
+    () => new Set(initial.hidden),
   );
 
-  // Applying a case replaces every piece of graph state at once. Deliberately
-  // NOT a navigation: the merge mode lives in localStorage and is read once at
-  // mount, so a reload would reset the very thing being compared.
+  /*
+   * Applying a case replaces every piece of graph state at once.
+   *
+   * This used to carry a warning that it was deliberately NOT a navigation,
+   * "because the merge mode lives in localStorage and is read once at mount,
+   * so a reload would reset the very thing being compared". **That constraint
+   * is gone (2026-08-26):** the toolbar settings are URL state now, so a case
+   * CAN be expressed as a plain link — which is most of what the guided tour
+   * needs. Left as a state update for now because the cases do not yet say
+   * which settings they depend on; giving ExampleCase optional sibs/dir/merge/
+   * owners fields is the next step, and then a case is just a share URL.
+   */
   const applyCase = useCallback((c: ExampleCase) => {
     setSelectedIds(new Set(c.sel));
     setExpandedIds(new Set(c.exp ?? []));
@@ -118,8 +103,13 @@ export default function ExploreApp() {
   }, [selectedIds, hiddenOwnerIds]);
 
   useEffect(
-    () => writeStateToURL(selectedIds, expandedIds, detailId, pathToRoot, hiddenOwnerIds),
-    [selectedIds, expandedIds, detailId, pathToRoot, hiddenOwnerIds],
+    () => writeExploreState({
+      sel: [...selectedIds], exp: [...expandedIds], hidden: [...hiddenOwnerIds],
+      detail: detailId, roots: pathToRoot,
+      sibs: mergeSibs, dir: direction, merge: mergeMode, owners: ownerScope,
+    }),
+    [selectedIds, expandedIds, detailId, pathToRoot, hiddenOwnerIds,
+     mergeSibs, direction, mergeMode, ownerScope],
   );
 
   const toggleSelect = useCallback((id: string) => {
@@ -188,6 +178,11 @@ export default function ExploreApp() {
     setDetailId(null);
     setTableCollapsed(false);
     setPathToRoot(false);
+    // Dismissals are per-canvas. Left behind, they would silently suppress
+    // owners on the next selection with no visible cause.
+    setHiddenOwnerIds(new Set());
+    // Toolbar settings are deliberately NOT reset: they are how this user
+    // prefers to read the diagram, not part of the view being cleared.
   }, []);
 
   if (error) {
@@ -217,6 +212,30 @@ export default function ExploreApp() {
           </p>
         </div>
         <div className="flex items-center gap-4">
+        <button
+          onClick={async () => {
+            const url = buildShareURL({
+              sel: [...selectedIds], exp: [...expandedIds],
+              hidden: [...hiddenOwnerIds], detail: detailId, roots: pathToRoot,
+              sibs: mergeSibs, dir: direction, merge: mergeMode, owners: ownerScope,
+            });
+            try {
+              await navigator.clipboard.writeText(url);
+              setCopied(true);
+              window.setTimeout(() => setCopied(false), 1500);
+            } catch {
+              // Clipboard needs a secure context and permission; if it is
+              // refused the URL bar already holds the same state, so say so
+              // rather than failing silently.
+              setCopied(false);
+              window.prompt('Copy this link:', url);
+            }
+          }}
+          className="text-sm underline text-blue-100 hover:text-white"
+          title="Copy a link that reproduces exactly this view, settings included"
+        >
+          {copied ? '✓ copied' : 'copy link'}
+        </button>
         <button
           onClick={() => setCasesOpen(v => !v)}
           className={`text-sm underline hover:text-white ${casesOpen ? 'text-white' : 'text-blue-100'}`}
@@ -321,6 +340,14 @@ export default function ExploreApp() {
               hiddenOwnerIds={hiddenOwnerIds}
               pathToRoot={pathToRoot}
               onTogglePathToRoot={() => setPathToRoot(v => !v)}
+              direction={direction}
+              setDirection={setDirection}
+              mergeMode={mergeMode}
+              setMergeMode={setMergeMode}
+              mergeSibs={mergeSibs}
+              setMergeSibs={setMergeSibs}
+              ownerScope={ownerScope}
+              setOwnerScope={setOwnerScope}
             />
           )}
         </div>

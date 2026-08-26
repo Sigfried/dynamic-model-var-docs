@@ -48,6 +48,10 @@ import {
   groupSiblings, isMergedId, mergedIdFor, siblingColor, withChildHeaders,
 } from './siblingMerge';
 import type { MergedMember } from './siblingMerge';
+import {
+  rememberPreference,
+  type Direction, type MergeMode, type OwnerScope,
+} from './exploreState';
 
 /** Where a convergence group's single arrowhead sits: `base` is the centre of
  *  its base (every merging edge terminates there, none draws a head of its own)
@@ -85,7 +89,6 @@ function ownersStripHFor(owners: string[]): number {
 const FOOTER_H = 18;
 const PAD = 28;
 
-type Direction = 'RIGHT' | 'DOWN';
 
 export interface RowVM {
   slot: string;
@@ -646,10 +649,8 @@ const STROKE_REF_HOVER = STROKE_OWN_HOVER * 0.67;
  *            varies between nodes and layouts.
  *  - 'off'   no merging — every edge runs to its own fanned port.
  */
-export type MergeMode = 'near' | 'far' | 'bend' | 'off';
 
 /** How many one-hop owners to draw per node. See `ownerScope`. */
-export type OwnerScope = 'none' | 'some' | 'all';
 
 /** Merge distance in px for a mode, given the edge's routed points. */
 function mergeDistFor(mode: MergeMode, pts: Point[]): number {
@@ -828,6 +829,14 @@ export default function OwnershipGraphView({
   hiddenOwnerIds,
   pathToRoot = false,
   onTogglePathToRoot,
+  direction,
+  setDirection,
+  mergeMode,
+  setMergeMode,
+  mergeSibs,
+  setMergeSibs,
+  ownerScope,
+  setOwnerScope,
 }: {
   dataService: DataService;
   selectedIds: Set<string>;
@@ -851,41 +860,42 @@ export default function OwnershipGraphView({
   onDeselect?: (classId: string) => void;
   /** Draw each selected class's ownership ancestors as dimmed context nodes. */
   pathToRoot?: boolean;
+  /** Layout direction: LR or TB. */
+  direction: Direction;
+  setDirection: (d: Direction) => void;
+  /** How converging edges merge before their target. */
+  mergeMode: MergeMode;
+  setMergeMode: (m: MergeMode) => void;
+  /**
+   * Merge sibling classes into one box per shared parent (docs/EXPLORE_VIZ.md
+   * "inheritance as adjacency"). On by default: with it off, inheritance is
+   * invisible in the diagram entirely.
+   */
+  mergeSibs: boolean;
+  setMergeSibs: (v: boolean) => void;
+  /**
+   * How many owners to draw per node, one hop up.
+   *
+   *  - 'none' : draw none — every owner is an `owned by` chip. Zero hops.
+   *  - 'some' : the cap (DEFAULT_OWNER_CAP, 5) — draw up to five, chip the
+   *             rest. Since 2026-08-26 this is a true cap; it used to be an
+   *             all-or-nothing gate, so a node with SIX owners drew none.
+   *  - 'all'  : draw every owner, one hop, no cap.
+   */
+  ownerScope: OwnerScope;
+  setOwnerScope: (v: OwnerScope) => void;
   onTogglePathToRoot?: () => void;
 }) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const markerId = (name: string) => `${name}-${uid}`;
 
-  const [direction, setDirection] = useState<Direction>(
-    () => (localStorage.getItem('explore-nl-dir') as Direction) || 'RIGHT',
-  );
-  const [mergeMode, setMergeMode] = useState<MergeMode>(
-    () => (localStorage.getItem('explore-nl-merge') as MergeMode) || 'near',
-  );
+  // Toolbar settings are owned by ExploreApp so they can live in the URL and
+  // travel in a shared link; see explore/exploreState.ts. This component used
+  // to hold them in localStorage-backed useState, which is exactly why a link
+  // rendered with the recipient's settings rather than the sender's.
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
-  /** Merge sibling classes into one box per shared parent (docs/EXPLORE_VIZ.md
-   *  "inheritance as adjacency"). On by default: with it off, inheritance is
-   *  invisible in the diagram entirely. */
-  const [mergeSibs, setMergeSibs] = useState<boolean>(
-    () => localStorage.getItem('explore-nl-sibs') !== '0',
-  );
-  /**
-   * How many owners to draw per node, one hop up.
-   *
-   *  - 'none' : draw none — every owner is an `owned by` chip. Zero hops.
-   *  - 'some' : the legibility cap (DEFAULT_OWNER_CAP, 5). A node with MORE
-   *             owners than that falls back to chips entirely, which is why
-   *             BodySite (6 owners) drew none even with the old toggle off —
-   *             the toggle looked broken because the default was already
-   *             behaving like 'none' for exactly the crowded nodes you notice.
-   *  - 'all'  : draw every owner, one hop, no cap. Genuinely one hop.
-   *
-   * A boolean could not express this: it switched between 'none' and 'some',
-   * and 'some' silently degrades to 'none' on the nodes with the most owners.
-   */
-  const [ownerScope, setOwnerScope] = useState<OwnerScope>(
-    () => (localStorage.getItem('explore-nl-owners') as OwnerScope) || 'some',
-  );
+
+
 
   // Expansions that duplicate the selection are dropped: a selected class is
   // already visible, and passing it as an expansion would not change the
@@ -1451,23 +1461,18 @@ export default function OwnershipGraphView({
       return next;
     });
 
-  const setDir = (d: Direction) => {
-    localStorage.setItem('explore-nl-dir', d);
-    setDirection(d);
-  };
-  const setMerge = (m: MergeMode) => {
-    localStorage.setItem('explore-nl-merge', m);
-    setMergeMode(m);
-  };
-  const setOwners = (v: OwnerScope) => {
-    localStorage.setItem('explore-nl-owners', v);
-    setOwnerScope(v);
-  };
+  /*
+   * A deliberate toolbar click both changes the state AND records it as this
+   * browser's preference. Following a link does NOT: readExploreState only
+   * reads localStorage, so a visitor who opens `?sibs=0` sees that link's
+   * setting without it becoming their default for every later visit.
+   */
+  const setDir = (d: Direction) => { rememberPreference('dir', d); setDirection(d); };
+  const setMerge = (m: MergeMode) => { rememberPreference('merge', m); setMergeMode(m); };
+  const setOwners = (v: OwnerScope) => { rememberPreference('owners', v); setOwnerScope(v); };
   const toggleSibs = () => {
-    setMergeSibs(prev => {
-      localStorage.setItem('explore-nl-sibs', prev ? '0' : '1');
-      return !prev;
-    });
+    rememberPreference('sibs', !mergeSibs);
+    setMergeSibs(!mergeSibs);
   };
 
   const attributesWord = dataService.getConceptLabel('attribute', true).toLowerCase();
