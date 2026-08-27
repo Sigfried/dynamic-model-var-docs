@@ -166,6 +166,13 @@ so arriving at it from either direction gives the same view.
 - **State:** sel=BodySite~Participant
 ```
 
+**It is absolute even where it looks additive.** Applying a state REPLACES the
+whole query, so the line above means "BodySite and Participant selected and
+nothing else, every other field back to its default" — not "add these two".
+Today's steps all happen to want states expressible in one field, which is why
+they read like deltas; a step that also wanted `dir=TB` would have to write
+`sel=BodySite~Participant&dir=TB` or lose the selection.
+
 **Every `Tour:` step must carry a `State:`, and an empty value is a real one.**
 
 | Written | Means |

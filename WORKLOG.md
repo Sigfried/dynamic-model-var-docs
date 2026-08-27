@@ -83,10 +83,32 @@ user to reclick the button."* A tour step that sets `dir=TB` over the viewer's
 `dir=LR` costs one click to undo; carrying a second frame type through the
 format, the parser and the tests costs considerably more. Do the simple stack.
 
+**Build it against the state as it exists today**, which is nine fields:
+`sel`, `exp`, `hidden` (set-like) and `detail`, `roots`, `sibs`, `dir`, `merge`,
+`owners` (scalar). Per the decision above, all nine push and pop the same way.
+
 One implementation note that is NOT an edge case: `toggleSelect` has a side
-effect — selecting a class removes it from `expandedIds` (an expansion
-superseded by a real selection). So a frame must record what actually changed,
-not what the step asked for, or the pop will not invert it.
+effect — selecting a class removes it from `expandedIds`, because an expansion
+is superseded by a real selection. So a frame must record what actually
+changed, not what the step asked for, or the pop will not invert it.
+
+*(Not to be confused with a separate, unscheduled idea: the relation-menu
+redesign would make expansion IMPLY selection, which folds `exp` into `sel` and
+removes that side effect along with the field. That is not scheduled, is not a
+prerequisite, and must not be assumed here. If it ever lands, this note becomes
+moot — until then `exp` is real and the side effect is live.)*
+
+**Why the current `State:` values look additive even though they are not.**
+Worth knowing before touching them, because it makes the change look smaller
+than it is. `applyExploreQuery` does `url.search = query`: it REPLACES the whole
+query and lets the app re-read it, so `State: sel=MeasurementObservation` means
+"this selected and nothing else, every other field back to its default", not
+"add this". It reads as a delta only because these particular steps want states
+expressible in one field, starting from an empty canvas and never setting a
+scalar. A step wanting `dir=TB` would have to write `sel=...&dir=TB`, repeating
+the selection or losing it. So today's values are literally indistinguishable
+from deltas — which is a trap: switching to a stack is a semantic INVERSION of
+fields that will not visibly change.
 
 **Not started.** It replaces the "every position carries full absolute state"
 design that S3a/S3b are built on: `State:` becomes a delta field (probably
