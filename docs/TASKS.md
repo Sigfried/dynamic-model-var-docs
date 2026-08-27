@@ -7,11 +7,136 @@
 > next session, not for Siggie.
 
 ---
+## ⭐ NEXT SESSION — START HERE (decided 2026-08-27)
+
+Two implementations, both decided by Siggie in the help-mode review session,
+both written up here in full. **Do these before anything else in this file.**
+They are independent — either order works, and neither blocks the other.
+
+Design work is DONE for both. Do not re-open the decisions; if something looks
+wrong, the reasoning is in WORKLOG.md 2026-08-27 ("Siggie reviews help mode")
+and the alternatives were already argued and rejected there.
+
+---
+
+### ⭐ 1. Canvas content: no caps · only what is selected · expand = select
+
+**The problem.** Ticking one checkbox does not draw one box. Probed against the
+live schema on 2026-08-27:
+
+| Selection | Boxes drawn |
+|---|---|
+| `sel=MeasurementObservation` | **6** — 1 selected + 5 auto-drawn owners |
+| `sel=BodySite~Participant` | **10** — 2 selected + 8 auto-drawn owners |
+
+Every selected node silently pulls in up to `DEFAULT_OWNER_CAP = 5` owners.
+Worse, expansions are indistinguishable from selections: `ownershipSubgraph.ts`
+does `const core = new Set([...selectedIds, ...expansions])` and runs the owner
+loop over `core`, so clicking an attribute row to see ONE class also drags in
+that class's owners. Siggie hit this on `value_quantity` and it is the
+long-standing *"distinguish selected from expanded"* complaint, deferred twice
+as too risky (see WORKLOG "Distinguish selected from expanded").
+
+**Siggie's design, 2026-08-27 — implement exactly this:**
+
+1. **Display nothing that is not selected or expanded-to.** The automatic
+   one-hop-up owner draw goes away entirely.
+2. **Get rid of the cap options** (`0 / ≤5 / all`). They exist only to bound the
+   automatic expansion being removed, so they lose their subject. This also
+   retires the "owners" toolbar label, which points *up* while the classifier's
+   `own-fwd` means *down* — an inconsistency that confused Siggie repeatedly.
+3. **Open the cascading relation menus on hover.** Click is then needed only to
+   expand.
+4. **Put "add all" at the top of each menu group, toggling with "hide all".**
+5. **"Hide all" hides everything in the group even if it was selected**, and
+   **"add" automatically ticks the selection checkbox.**
+
+**Why this is much cheaper than the earlier deferral assumed.** The deferral was
+protecting against splitting `core` by provenance while KEEPING automatic
+owners. Removing the owner loop instead means the coupling simply disappears.
+And point 5 is the real simplifier: if expanding *is* selecting, `expansions`
+folds into `selectedIds`, `?exp=` disappears, and the selected/expanded
+distinction stops existing rather than needing to be tracked.
+
+**Tests that become moot, not wrong** — expect to delete, not repair:
+- `hopSymmetry.test.ts` — its UP test asserts owners are drawn without being
+  asked for, which is the removed behaviour. (Note its header comment is
+  *correct* about today: UP automatic, DOWN on demand. It is not asserting that
+  expanding behaves like selecting; an earlier note in this repo said so and was
+  wrong.)
+- `ownerToggles.test.ts` — seven behaviours pinning a cap that will not exist.
+
+**Consequence to confirm when building:** with "add" ticking the checkbox, the
+left panel's checkboxes become the single record of what is drawn. Expanding
+from a diagram row will tick a checkbox that may be scrolled out of view. That
+is probably good — one source of truth, and undo is obvious — but it is a
+visible behaviour change Siggie has not seen yet.
+
+---
+
+### ⭐ 2. Tour state: a push/pop stack instead of absolute snapshots
+
+**The problem.** `State:` is a full absolute URL query: `applyExploreQuery` does
+`url.search = query`, replacing everything. Three consequences:
+
+- The tour must snapshot the viewer's state on entry and restore it on exit.
+- A mid-tour viewer edit gets clobbered, which is why there is a yellow *"your
+  changes will be discarded"* warning.
+- **Any field a step does not name snaps back to its default.** Live example:
+  Siggie had the owner cap on `all`; every step carrying a `State:` reset it to
+  5, because no step writes `owners=`. Nothing warned; the canvas just changed
+  density mid-tour.
+
+**Siggie's design, 2026-08-27 — implement exactly this:**
+
+Keep the concise "what changes" in `State:` (**rename it** — it is a delta now,
+not a state) and hold the tour's contributions as a **stack**:
+
+- Each position **pushes** what it adds; `back` **pops**.
+- **If the pushed value is already present, push it again anyway.** That second
+  copy is a reference count: popping removes only the tour's copy, so the
+  viewer's own selection survives untouched.
+- Leaving the tour by any exit unwinds the remaining stack.
+
+**What this deletes:** the entry snapshot, the restore-on-exit, the yellow
+warning, and the silent-reset problem above (a step that never mentions
+`owners` never touches it).
+
+**Explicitly decided — do NOT build the hybrid.** I proposed refcounted pushes
+for the set-like fields plus previous-value frames for the six scalars
+(`detail`, `roots`, `sibs`, `dir`, `merge`, `owners`), since a scalar has one
+slot and no refcount meaning. Siggie rejected it: *"you're overcomplicating for
+the sake of probably rare edge cases. just do the stack. if scalar settings
+clobber user actions, don't worry about it. easy enough for the user to reclick
+the button."* **All nine fields push and pop the same way.**
+
+**Two traps, both real:**
+
+1. **Today's `State:` values are indistinguishable from deltas.** `State:
+   sel=MeasurementObservation` currently means "this selected and nothing else,
+   every other field defaulted" — it only *reads* as "add this" because these
+   steps all want states expressible in one field, from an empty canvas, never
+   setting a scalar. So the migration is a semantic INVERSION of fields whose
+   text will not visibly change. Do not "migrate" them by leaving them alone.
+2. **A frame must record what actually changed, not what the step declared.**
+   `toggleSelect` has a side effect: selecting a class removes it from
+   `expandedIds`. If the frame stores the declared delta, the pop will not
+   invert it. *(If task 1 above lands first, `expandedIds` is gone and this
+   trap goes with it — but do not assume that; task 1 is not a prerequisite.)*
+
+**Also update:** the `State:` section of `src/help/help-content.md` (the format
+spec), and delete the *"every tour STEP carries an absolute state"* test in
+`helpContent.test.ts` — it pins the model being replaced and says so in a
+comment.
+
+---
 
 ## 🗓️ ONE DAY LEFT — the list
 
 | # | Task | Est. | Status | Detail |
 |---|---|---|---|---|
+| **1** | **⭐ Canvas content: no caps · only what is selected · expand = select** | ~1 day | ⭐ **NEXT — designed, not started** | [§](#1-canvas-content-no-caps-only-what-is-selected-expand-select) |
+| **2** | **⭐ Tour state: push/pop stack instead of absolute snapshots** | ~0.5 day | ⭐ **NEXT — designed, not started** | [§](#2-tour-state-a-pushpop-stack-instead-of-absolute-snapshots) |
 | 3 | **The tour** — format (S3a ✅) + mechanism (S3b ✅) + copy (Siggie's) | ~0.5–1 day | ▶️ **S3a + S3b DONE — copy is Siggie's** | [format](#s3a-tour-authoring-format-brief) · [mechanism](#s3b-tour-mechanism-brief) · [package plan](HELP_PACKAGE_PLAN.md) |
 | 5 | **Dark-gray box headers, white text** | ~10 min | ⬜ | [quick wins](#quick-wins-one-session-no-design-decisions) |
 | 6 | **Edge rendering** — one edge per declaring class; fixes the missing `Specimen.quality_measure` edge. **Decided: do not suppress `ObservationSet.observations`** | ~0.5 day | ⬜ | [§](#edge-rendering-the-fan-from-observationsetobservations) |
@@ -45,7 +170,9 @@ the ownership legend (postponed by Siggie) · multi-category membership ·
 CURIE links · the bare diagonal · dragging polish · example-cases restructuring.
 These keep their write-ups below so nothing is lost.
 
-## 🔁 HANDOFF — start here (2026-08-27, after the parallel-session round)
+## 🔁 HANDOFF — earlier round (2026-08-27, after the parallel-session round)
+
+*(Superseded as the entry point by [NEXT SESSION](#next-session-start-here-decided-2026-08-27) above; the rules and loose ends below still apply.)*
 
 ### Rules learned the hard way — keep these
 
@@ -804,6 +931,13 @@ the tour is numbered 1..n, and every entry id is actually tagged in the app.
 ---
 
 ### ▶️ One-hop default
+
+> **⚠️ Largely OBSOLETE as of 2026-08-27.** [Task 1](#1-canvas-content-no-caps-only-what-is-selected-expand-select)
+> removes automatic one-hop-up owners and the cap entirely, so the behaviour
+> analysed below stops existing. The Organization diagnosis is still worth
+> reading — it is *why* the automatic hop was never enough — and the warning
+> about the second chip strip changing box height still applies to any strip
+> work.
 
 Siggie: *"after refresh and selecting organization, just get the box on its
 own."*
