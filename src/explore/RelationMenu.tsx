@@ -17,9 +17,10 @@
  *
  * Shape (Siggie, deciding D3): a trigger reading "N related", branching to
  * "N belong to me by my attribute", "N belong to me by their attribute",
- * "N I belong to", "N associated with". Leaf items toggle: an entity already
- * on the canvas is struck through and clicking REMOVES it (Siggie: "is there
- * any reason not to allow clicking one of these ... to re-hide it?" — no).
+ * "N I belong to", "N associated with" — five branches after Siggie chose the
+ * declaring side as a top-level split. Leaf items toggle: an entity already on
+ * the canvas is GREYED and clicking REMOVES it (Siggie: "is there any reason
+ * not to allow clicking one of these ... to re-hide it?" — no).
  *
  * Rendered in a portal because the box it hangs off is inside the zoom/pan
  * transform and has `overflow` ancestors; a menu positioned in that space gets
@@ -48,6 +49,10 @@ export interface RelationMenuProps {
 
 /** Where a submenu opens, in viewport coordinates. */
 type Anchor = { x: number; y: number };
+
+/** Floor for a width-capped submenu: narrower than this and the names are
+ *  unreadable, so it is better to overflow slightly than to shrink further. */
+const MIN_SUBMENU_W = 140;
 
 export function RelationMenu({
   label, groups, relatedCount, shownCount, onAdd, onRemove, onInspect,
@@ -207,9 +212,7 @@ function MenuPanel({
  * the panel was itself clamped.
  *
  * Each item shows the slots that put the entity in this position, so the
- * distinction between "mine because I say so" and "mine because it says so"
- * stays legible inside the merged `I belong to` branch, where the two are
- * neighbours.
+ * declaring side stays legible next to the branch label that names it.
  */
 function Submenu({
   group, label, onAdd, onRemove, onInspect,
@@ -219,12 +222,49 @@ function Submenu({
 } & Pick<RelationMenuProps, 'onAdd' | 'onRemove' | 'onInspect'>) {
   const ref = useRef<HTMLDivElement>(null);
   const [flip, setFlip] = useState(false);
+  /** Set only when the panel fits on neither side; see the effect below. */
+  const [maxW, setMaxW] = useState<number | undefined>(undefined);
 
+  /*
+   * The flip is decided from the PARENT's right edge plus this panel's own
+   * width — never from this panel's measured position.
+   *
+   * Measuring our own `right` was self-referential and produced a menu that
+   * hung off the viewport (Siggie, 2026-08-27, screenshot of ObservationSet).
+   * The effect re-runs on `group.position`, so switching branches measured the
+   * panel while the PREVIOUS branch's flip was still applied: sitting on the
+   * left it is comfortably inside the viewport, so the test said "no flip
+   * needed", `flip` went false, and the panel jumped right and overflowed —
+   * with nothing left to trigger another measurement. Parent geometry and our
+   * own width are both independent of `flip`, so this cannot oscillate.
+   *
+   * Covered by RelationMenuPlacement.test.tsx. If you change WHICH properties
+   * are read here, update that file's stubs to match — jsdom returns zeroes
+   * for anything unstubbed, so the tests would keep passing while measuring
+   * nothing. See docs/TESTING.md, "Testing code that measures layout".
+   */
   useLayoutEffect(() => {
     const el = ref.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    setFlip(r.right > window.innerWidth - 4);
+    const parent = el?.offsetParent as HTMLElement | null;
+    if (!el || !parent) return;
+    const p = parent.getBoundingClientRect();
+    const w = el.offsetWidth;
+    const M = 4;
+    // Room on the right is the test; falling back to the left only helps if
+    // there is actually room there.
+    const right = window.innerWidth - M - p.right;
+    const left = p.left - M;
+    if (w <= right) {          // fits on the right: the preferred side
+      setFlip(false); setMaxW(undefined);
+    } else if (w <= left) {    // only the left fits
+      setFlip(true); setMaxW(undefined);
+    } else {
+      // Neither gutter fits — a narrow window, or a box near the middle of
+      // one. Take the roomier side and CAP the width to it rather than
+      // overflowing the viewport; the list scrolls and long names truncate.
+      setFlip(left > right);
+      setMaxW(Math.max(Math.max(left, right), MIN_SUBMENU_W));
+    }
   }, [group.position]);
 
   return (
@@ -232,6 +272,7 @@ function Submenu({
       ref={ref}
       data-relation-menu
       data-relation-submenu={group.position}
+      style={maxW === undefined ? undefined : { maxWidth: maxW, minWidth: 0 }}
       className={`absolute top-0 max-h-[60vh] min-w-[14rem] overflow-y-auto rounded border shadow-lg
                   border-gray-300 dark:border-slate-600
                   bg-white dark:bg-slate-800

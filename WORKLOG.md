@@ -91,6 +91,50 @@ than a full one.
   `countsOf()` dedupes by name before counting, for the same reason
   `relatedCount` does: a class occupying two positions must not count twice.
 
+### The submenu hung off the viewport — a self-referential measurement
+
+Siggie, screenshot of ObservationSet: *"menu overflows viewport."* The submenu
+already had flip-to-the-left logic, so the interesting question was why it did
+not fire.
+
+It measured **its own** `right` and flipped if that exceeded the window. That is
+self-referential, and the effect keys on `[group.position]`, so it re-runs when
+you switch branches — measuring the panel *with the previous branch's flip still
+applied*. Sitting on the left it is comfortably inside the viewport, so the test
+says "no flip needed", `flip` goes false, the panel jumps right, and it
+overflows. Nothing then changes `group.position` again, so it never re-measures.
+Probed before touching anything, at a 676px viewport:
+
+```
+SWITCH first        -> right-full? true   right = 462   OVERFLOWS = false
+SWITCH second       -> right-full? false  right = 894   OVERFLOWS = true
+SWITCH back to first-> right-full? true   right = 462   OVERFLOWS = false
+```
+
+Fixed by deciding the flip from inputs that do not depend on `flip`: the
+**parent's** rect plus the submenu's own `offsetWidth`. Both are stable, so it
+cannot oscillate.
+
+Probing this needed more scaffolding than usual. jsdom reports every element
+0×0 with a null `offsetParent`, so a naive test passes vacuously — the first
+version of the fix looked like it made things *worse* (never flipped at all)
+purely because `offsetParent`/`offsetWidth` were unstubbed and the condition
+collapsed to false. Both had to be stubbed before the probe measured the code
+rather than the harness. Worth remembering: the "measured value" is only
+evidence if the thing under test can actually see it.
+
+A third case fell out of the rewrite: a submenu fitting on **neither** side
+(208 + 224 = 432, so any viewport under ~440px, and also a box near the middle
+of a narrow one). Previously it would silently overflow. Now it takes the
+roomier gutter and caps `maxWidth` to it, with `minWidth: 0` because
+`min-w-[14rem]` would otherwise defeat the cap, floored at `MIN_SUBMENU_W` since
+below ~140px the names are unreadable and slight overflow is the better failure.
+
+`RelationMenuPlacement.test.tsx` is separate from `RelationMenu.test.tsx`
+because of that layout faking — it patches shared prototypes, and keeping it out
+of the behavioural file stops the stubs from silently applying there. Three of
+its four tests fail against the old implementation.
+
 ### Left undone, at Siggie's own priority
 
 Undoing an `add all` in bulk — *"if i add all and then want to undo or re-hide
