@@ -19,13 +19,88 @@ The estimates assume the code is already understood and exclude review cycles.
 
 ### Must decide before building (blocking, minutes not hours)
 
-| # | Decision | Why it blocks | Detail |
-|---|---|---|---|
-| D1 | Tour `back`: restore whole state, only tour-set keys, or lock interaction during a tour? | Determines the tour's state mechanism; wrong pick means rewriting it | [Tour rework](#the-tour--the-problem-was-never-placement) |
-| D2 | `ObservationSet.observations` — still suppress its edge? **Your premise was wrong**: it is NOT abstract and DOES declare the slot | Changes what the edge redesign builds | [Edge rendering](#edge-rendering--the-fan-from-observationsetobservations) |
-| D3 | Chip-strip replacement: rows-per-relation-type vs cascading menu | The single largest build item; everything visual depends on it | [Chip strips](#chip-strips--relation-counts--menu-the-main-redesign) |
+ | #  | Decision                                                                                                                          | Why it blocks                                                        | Detail                                                                     |
+ |----|-----------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------|----------------------------------------------------------------------------|
+ | D1 | Tour `back`: restore whole state, only tour-set keys, or lock interaction during a tour?                                          | Determines the tour's state mechanism; wrong pick means rewriting it | [Tour rework](#the-tour--the-problem-was-never-placement)                  |
+ | D2 | `ObservationSet.observations` — still suppress its edge? **Your premise was wrong**: it is NOT abstract and DOES declare the slot | Changes what the edge redesign builds                                | [Edge rendering](#edge-rendering--the-fan-from-observationsetobservations) |
+ | D3 | Chip-strip replacement: rows-per-relation-type vs cascading menu                                                                  | The single largest build item; everything visual depends on it       | [Chip strips](#chip-strips--relation-counts--menu-the-main-redesign)       |
+
+- D1: if tour starts when state is not default, record state; 
+  when tour ends/is exited, restore prior state; every step of tour is prespecified
+  so navigation either way gives exact state. allow interaction, but explain to user
+  that their changes will be undone by each step on tour
+- D2: don't suppress 
+- D3: cascading menu
 
 ### Build, in recommended order
+
+**[sg] quicker for me to make my own list. you can integrate into the table or whatever**
+
+1. **selection panel**: i wrote the below about deciding whether to keep dag-browser. we just don't have
+   time to fix it. but keeping it for after deadline if we have time to work on it then.
+   so, for now, go back to "flat" list but structure it by inheritance like in the
+   kitchen sink view, except categories at top level and no Entity
+   1. **dag-browser**: need to determine if we keep it. i can't even explore it
+      until we have horizontal scrolling and at least panel resize (drag right edge)
+      1. top level must be by our made-up categories; maybe second level also follows
+         flat tree order. i'm not sure what happens with roots -- but in order to get
+         top level to be categories, the dag will need, just for browser, to add the
+         categories as parents of entities
+      2. let's bang this out as quickly as possible and make determination
+      3. if we do go back to flat list, structure it by inheritance like in the
+         kitchen sink view, but categories at top level and no Entity. tour description
+         below should work either way
+2. replace chips with cascading menus. need this to go fast. tour depends on it
+2. **create the actual tour**:
+   1. current first step sort of highlights the title but doesn't dim the rest. fix
+      only if it takes less than a minute. text:
+      - **BDCHM Explorer**
+      - An interactive map of the [BioData Catalyst Harmonized Model](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/)
+        [add a phrase/sentence about the overall project; i'm trying to find a
+        good link for that]
+        — the ~55 entities defined by its [LinkML schema](https://linkml.io/)
+        and how they relate to each other. You can use it to more quickly and thoroughly
+        understand the relationships than with the static [LinkML documentation](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/).
+        It is meant to help researchers who:
+        - Have access to data in BDCHM format and want to understand its structure;
+        - Have data that they want to harmonize to BDCHM format; or
+        - Are designing studies and want to model them using BDCHM or want to use
+          BDCHM for ideas or inspiration for their own efforts.
+      - Pick some entities on the left and the diagram shows how they fit
+        together. Click the title to clear everything and start over.
+   2. highlight selection panel. text:
+      - **Entities**
+      - A LinkML schema defines classes representing a data model's entities.
+        A class defines a set of slots or attributes (like columns in a database table)
+        which can hold
+        - other entities,
+        - permissible value sets (enumerations),
+        - or raw data types (strings, integers, etc.)
+   3. select MeasurementObservation and highlight observation_type. text:
+      - While the relationship between an entity and its enumerations and raw
+        data attributes is direct (e.g.,
+        `MeasurementObservation.observation_type` --> `MeasurementObservationTypeEnum`
+        or `MeasurementObservation.age_at_observation` --> `integer`), it can be
+        related to other entities in more complex ways
+        [can we animate this so that step 4 keeps this popover but shows the next bullet, etc?
+        not sure best way to represent this in my outline...well, we're going to need a reasonably
+        human-readable/writable format for the full tour specs anyway]
+        - inheritance, known in modeling parlance as IS_A relationships,
+          e.g., `MeasurementObservation.is_a` --> `Observation`, or
+        - association / ownership / containment, known in modeling parlance as HAS_A relationships,
+          e.g., `Visit.associated_participant` --> `Participant`.
+        A primary goal 
+      - Entities can be related to each other through
+      
+      
+   3. goal is to show all the relationship types. if there are any entities
+      that use all four, select one of those, otherwise will have to select
+      one that has most and then select another that has the others. steps:
+      1. **Selecting an entity** Select an entity by clicking its checkbox;
+         the entity will appear in the main panel along with directly related
+         entities. There are five ways an entity can be related to another.
+      2. highlight row
+      3. click checkbox. 
 
 | # | Task | Est. | Detail |
 |---|---|---|---|
