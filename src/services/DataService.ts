@@ -56,6 +56,7 @@ export type { ContainmentGraph, ContainmentNode, ContainmentEdge } from '../mode
 export { cardinalityLabel, SKIP_SUBCLASS_EXPANSION } from '../models/containmentGraph';
 export {
   DEFAULT_OWNER_CAP, RELATION_POSITION_LABEL, RELATION_POSITION_ORDER,
+  relationPositionLabel,
 } from '../models/ownershipSubgraph';
 export type {
   OwnershipSubgraph, OwnershipSubgraphNode, OwnershipSubgraphEdge,

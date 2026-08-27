@@ -105,9 +105,13 @@ describe('relation menu groups', () => {
     }
   });
 
-  test('the two `I belong to` positions render as ONE branch', () => {
-    // Siggie named four branches, not five: the declaring side is shown in the
-    // item's slot subtitle rather than as a separate top-level row.
+  test('the two `I belong to` positions render as SEPARATE branches', () => {
+    /*
+     * Siggie's sketch named four branches, folding these two together, and
+     * that is how this first shipped. Asked directly (2026-08-27) he chose
+     * five: the declaring side is a top-level distinction, not something to
+     * find in an item's slot subtitle.
+     */
     const groups = buildRelationGroups(
       [
         { other: 'A', position: 'owned-mine', slot: 'a', declaredBy: 'X', cardinality: '1' },
@@ -115,8 +119,43 @@ describe('relation menu groups', () => {
       ],
       () => false,
     );
-    expect(groups).toHaveLength(1);
-    expect(groups[0].items.map(i => i.other)).toEqual(['A', 'B']);
+    expect(groups.map(g => g.position)).toEqual(['owned-mine', 'owned-theirs']);
+    expect(groups.map(g => g.items.map(i => i.other))).toEqual([['A'], ['B']]);
+    // Sharing a label would make the five branches unreadable, so they differ.
+    expect(groups[0].label).not.toEqual(groups[1].label);
+  });
+
+  test('branch labels agree in number with their own count', () => {
+    // "1 belong to me by my attribute" was the tell that the label was a
+    // fixed string rather than a rendering of the branch (Siggie, 2026-08-27).
+    const one = buildRelationGroups(
+      [{ other: 'A', position: 'owns-mine', slot: 'a', declaredBy: 'X', cardinality: '1' }],
+      () => false,
+    );
+    expect(one[0].label).toBe('belongs to me by my attribute');
+
+    const two = buildRelationGroups(
+      [
+        { other: 'A', position: 'owns-mine', slot: 'a', declaredBy: 'X', cardinality: '1' },
+        { other: 'B', position: 'owns-mine', slot: 'b', declaredBy: 'X', cardinality: '1' },
+      ],
+      () => false,
+    );
+    expect(two[0].label).toBe('belong to me by my attribute');
+  });
+
+  test('shownCount counts related classes on the canvas, never the box itself', () => {
+    // Organization has no owners at all, so selecting it alone draws exactly
+    // one box and none of its 13 related classes: "13 related · 0 shown".
+    const org = groupsFor('Organization');
+    expect(org.relatedCount).toBe(13);
+    expect(org.shownCount).toBe(0);
+    // Specimen's two owners ARE drawn, so its trigger reports them.
+    const spec = groupsFor('Specimen');
+    expect(spec.shownCount).toBe(
+      new Set(spec.relationGroups.flatMap(g => g.items).filter(i => i.drawn).map(i => i.other)).size,
+    );
+    expect(spec.shownCount).toBeGreaterThan(0);
   });
 
   test('items report drawn state, so the menu can remove as well as add', () => {

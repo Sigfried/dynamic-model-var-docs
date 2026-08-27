@@ -38,7 +38,7 @@ import type {
 } from '../services/DataService';
 import {
   cardinalityLabel, SKIP_SUBCLASS_EXPANSION, GRAPH_COLORS, DEFAULT_OWNER_CAP,
-  RELATION_POSITION_LABEL, RELATION_POSITION_ORDER,
+  relationPositionLabel, RELATION_POSITION_ORDER,
 } from '../services/DataService';
 import {
   useGraphLayout, useZoomPan, roundedPath, sectionPoints, mergeTail,
@@ -140,20 +140,15 @@ export function buildRelationGroups(
   exclude: (id: string) => boolean = () => false,
 ): RelationGroupVM[] {
   /*
-   * Branches are keyed by the DISPLAYED position, not the raw one. The two
-   * `I belong to` positions differ only in which side declares the slot —
-   * which the item's slot subtitle already shows — so they share one branch,
-   * keeping the cascade at the four Siggie named: "'N belong to me by my
-   * attribute,' 'N belong to me by their attribute,' 'N I belong to,' and
-   * 'N associated with'".
+   * FIVE branches, one per RelationPosition. Siggie's original sketch named
+   * four, folding the two `I belong to` positions together, and that is how
+   * this shipped first; asked directly on 2026-08-27 he chose five, with the
+   * declaring side named in the label rather than only in the slot subtitle.
    */
-  const displayed = (p: RelationPosition): RelationPosition =>
-    p === 'owned-theirs' ? 'owned-mine' : p;
-
   const byPosition = new Map<RelationPosition, Map<string, string[]>>();
   for (const r of relations) {
     if (exclude(r.other)) continue;
-    const pos = displayed(r.position);
+    const pos = r.position;
     const byOther = byPosition.get(pos) ?? new Map<string, string[]>();
     const slots = byOther.get(r.other) ?? [];
     if (!slots.includes(r.slot)) slots.push(r.slot);
@@ -163,13 +158,14 @@ export function buildRelationGroups(
 
   return RELATION_POSITION_ORDER
     .filter(p => byPosition.has(p))
-    .map((position): RelationGroupVM => ({
-      position,
-      label: RELATION_POSITION_LABEL[position],
-      items: [...byPosition.get(position)!]
+    .map((position): RelationGroupVM => {
+      const items = [...byPosition.get(position)!]
         .map(([other, slots]): RelationItemVM => ({ other, slots, drawn: visible(other) }))
-        .sort((a, b) => a.other.localeCompare(b.other)),
-    }));
+        .sort((a, b) => a.other.localeCompare(b.other));
+      // Label agrees with the branch's own count, so a one-entity branch reads
+      // "1 belongs to me by my attribute" rather than "1 belong to me…".
+      return { position, label: relationPositionLabel(position, items.length), items };
+    });
 }
 
 export interface NodeVM extends OwnershipSubgraphNode {
@@ -204,6 +200,8 @@ export interface NodeVM extends OwnershipSubgraphNode {
   relationGroups: RelationGroupVM[];
   /** Distinct related classes across every group — the "N related" count. */
   relatedCount: number;
+  /** How many of those are on the canvas — the trigger's "M shown". */
+  shownCount: number;
   /** Rows currently displayed (connected first; all when expanded). */
   rows: RowVM[];
   hiddenCount: number;
@@ -339,7 +337,7 @@ export function buildViewModel(
       drawnOwners: shown,
       hiddenOwned: owned,
       relationGroups,
-      relatedCount: countRelated(relationGroups),
+      ...countsOf(relationGroups),
       rows,
       allRows: [...connected, ...hidden],
       // Forced expansion has no collapsed state to return to, so offering a
@@ -355,11 +353,29 @@ export function buildViewModel(
   return { nodes, edges, edgeColors: new Map() };
 }
 
-/** Distinct related classes across every group. A class can occupy two
- *  positions at once (each end declaring a slot at the other), so the count is
- *  over names, not entries — "N related" must match the names you can reach. */
-function countRelated(groups: readonly RelationGroupVM[]): number {
-  return new Set(groups.flatMap(g => g.items.map(i => i.other))).size;
+/**
+ * Distinct related classes across every group, and how many of them are on the
+ * canvas — the trigger's "N related · M shown".
+ *
+ * Counted over NAMES, not entries: a class can occupy two positions at once
+ * (each end declaring a slot at the other), and "N related" has to match the
+ * number of distinct names the menu can reach, not the number of branch rows.
+ *
+ * `shown` counts related classes only. The box's own class is excluded from
+ * its relations upstream, so a lone Organization reads "13 related · 0 shown"
+ * rather than counting itself (Siggie, 2026-08-27).
+ */
+function countsOf(
+  groups: readonly RelationGroupVM[],
+): { relatedCount: number; shownCount: number } {
+  const drawn = new Map<string, boolean>();
+  for (const g of groups) for (const i of g.items) {
+    drawn.set(i.other, (drawn.get(i.other) ?? false) || i.drawn);
+  }
+  return {
+    relatedCount: drawn.size,
+    shownCount: [...drawn.values()].filter(Boolean).length,
+  };
 }
 
 /**
@@ -589,7 +605,7 @@ export function mergeSiblings(
        * when the class is on the canvas in any form, merged or not.
        */
       relationGroups: mergedRelations,
-      relatedCount: countRelated(mergedRelations),
+      ...countsOf(mergedRelations),
       rows: rowList,
       allRows: all,
       // Nothing is ever hidden on a merged box, so there is no footer to
@@ -1968,6 +1984,7 @@ export default function OwnershipGraphView({
                             label={n.label}
                             groups={n.relationGroups}
                             relatedCount={n.relatedCount}
+                            shownCount={n.shownCount}
                             onAdd={id => onExpand?.(id)}
                             onRemove={id => {
                               /*

@@ -36,6 +36,8 @@ export interface RelationMenuProps {
   groups: RelationGroupVM[];
   /** Distinct related classes, for the trigger's count. */
   relatedCount: number;
+  /** How many of them are on the canvas — the trigger's second number. */
+  shownCount: number;
   /** Put an entity on the canvas. */
   onAdd: (classId: string) => void;
   /** Take a DRAWN entity off it. */
@@ -48,7 +50,7 @@ export interface RelationMenuProps {
 type Anchor = { x: number; y: number };
 
 export function RelationMenu({
-  label, groups, relatedCount, onAdd, onRemove, onInspect,
+  label, groups, relatedCount, shownCount, onAdd, onRemove, onInspect,
 }: RelationMenuProps) {
   const [anchor, setAnchor] = useState<Anchor | null>(null);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
@@ -95,15 +97,27 @@ export function RelationMenu({
         data-relation-trigger
         data-no-drag
         data-help-id="relation-menu"
-        title={`${relatedCount} entities related to ${label} — click to browse them`}
+        title={`${relatedCount} entities related to ${label}, ${shownCount} of them`
+          + ` on the diagram — click to browse them`}
         onClick={open}
-        className="text-[9px] leading-none px-1.5 py-0.5 rounded border
-                   border-amber-300 dark:border-amber-700
-                   bg-amber-50 dark:bg-amber-950/40
-                   text-amber-900 dark:text-amber-200
-                   hover:bg-amber-200 dark:hover:bg-amber-800"
+        className={`flex items-center gap-1 text-[9px] leading-none px-1.5 py-0.5
+                    rounded border
+                    border-amber-300 dark:border-amber-700
+                    bg-amber-50 dark:bg-amber-950/40
+                    text-amber-900 dark:text-amber-200
+                    hover:bg-amber-200 dark:hover:bg-amber-800
+                    ${anchor ? 'bg-amber-200 dark:bg-amber-800' : ''}`}
       >
-        {relatedCount} related ▾
+        {/* A bare count read as a static badge rather than an opener (Siggie:
+            "doesn't look like beginning of a cascading menu"). The stacked-bars
+            glyph plus the caret says "this opens a list" before the hover. */}
+        <span aria-hidden className="opacity-60">☰</span>
+        <span className="tabular-nums">{relatedCount}</span>
+        <span>related</span>
+        {/* Second number is the state the menu would otherwise hide: how much
+            of this box's neighbourhood is already on the canvas. */}
+        <span className="opacity-70">· {shownCount} shown</span>
+        <span aria-hidden className="opacity-60">▾</span>
       </button>
       {anchor && createPortal(
         <MenuPanel
@@ -244,8 +258,11 @@ function Submenu({
               ev.stopPropagation();
               if (item.drawn) onRemove(item.other); else onAdd(item.other);
             }}
+            /* Drawn items are DIMMED, not struck through: strikethrough reads
+               as "deleted / unavailable", and these are the live ones (Siggie,
+               2026-08-27: "gray out but don't strikeout"). */
             className={`flex-1 min-w-0 text-left ${item.drawn
-              ? 'text-gray-400 dark:text-gray-500 line-through decoration-1'
+              ? 'text-gray-400 dark:text-gray-500'
               : 'text-gray-800 dark:text-gray-100'}`}
           >
             <span className="block truncate">{item.other}</span>
@@ -279,8 +296,10 @@ function Submenu({
         </div>
       ))}
       {/* The count is visible BEFORE the click, which is the point: "add all"
-          used to hide its cost. On Participant that reads "add all 21". */}
-      {group.items.some(i => !i.drawn) && (
+          used to hide its cost. On Participant that reads "add all 21".
+          Suppressed when only ONE item is addable — there "add all 1" is a
+          second control that does exactly what the item above it does. */}
+      {group.items.filter(i => !i.drawn).length > 1 && (
         <button
           data-relation-add-all={group.position}
           onClick={ev => {

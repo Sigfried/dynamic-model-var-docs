@@ -60,20 +60,42 @@ export type RelationPosition =
   | 'owned-theirs'   // I belong to it, by an attribute on IT (own-fwd on them)
   | 'association';   // named association, neither owns the other
 
-/** Siggie's labels, which describe the READER's situation rather than the
- *  classifier (cf. OwnershipLegend.tsx, which describes the rule that fired). */
+/**
+ * Siggie's labels, which describe the READER's situation rather than the
+ * classifier (cf. OwnershipLegend.tsx, which describes the rule that fired).
+ *
+ * Plural by default; `relationPositionLabel` picks the singular when a branch
+ * holds exactly one entity ("1 belongs to me by my attribute"). The `I belong
+ * to` pair takes its verb from "I", so it does not inflect.
+ *
+ * All four ownership labels name the declaring side the same way — "by my
+ * attribute" / "by their attribute" — so they read as one paradigm rather than
+ * two unrelated pairs (Siggie, choosing between wordings 2026-08-27).
+ */
 export const RELATION_POSITION_LABEL: Record<RelationPosition, string> = {
   'owns-mine': 'belong to me by my attribute',
   'owns-theirs': 'belong to me by their attribute',
-  'owned-mine': 'I belong to',
-  'owned-theirs': 'I belong to',
+  'owned-mine': 'I belong to, by my attribute',
+  'owned-theirs': 'I belong to, by their attribute',
   'association': 'associated with',
 };
 
+/** The plural verb replaced when a branch holds one entity. Only the two
+ *  `owns-*` labels have a subject that inflects. */
+const RELATION_POSITION_LABEL_ONE: Partial<Record<RelationPosition, string>> = {
+  'owns-mine': 'belongs to me by my attribute',
+  'owns-theirs': 'belongs to me by their attribute',
+};
+
+/** A position's label, agreeing with `count`. */
+export function relationPositionLabel(p: RelationPosition, count: number): string {
+  return (count === 1 && RELATION_POSITION_LABEL_ONE[p]) || RELATION_POSITION_LABEL[p];
+}
+
 /**
- * Menu order. The two `I belong to` positions share a label and sit adjacent so
- * they read as one group in the cascade; they stay separate positions because
- * the declaring side is what you would edit to change the relationship.
+ * Menu order. The two `I belong to` positions sit adjacent so they read as a
+ * pair in the cascade; they are separate branches because the declaring side
+ * is what you would edit to change the relationship.
  */
 export const RELATION_POSITION_ORDER: readonly RelationPosition[] = [
   'owns-mine', 'owns-theirs', 'owned-mine', 'owned-theirs', 'association',

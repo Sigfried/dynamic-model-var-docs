@@ -7,6 +7,110 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-27 (S2, second session) — first human look at the menu
+
+The menu had never been seen by anyone when the first S2 session ended. Siggie
+looked at it in the running app and sent three screenshots plus a list. Almost
+everything he raised was presentation, and the two things that looked like bugs
+were not bugs. Recorded here because *both* of those cost the session a probe
+to establish, and both would otherwise get "fixed."
+
+### "Why do I get only one box even when set to `all`?" — not a bug
+
+Screenshot: Organization selected, owner scope `all`, one box on the canvas,
+trigger reading "13 related". The obvious reading is that `all` is broken.
+
+Probed (`getOwnershipSubgraph(['Organization'], [], { ownerCap: MAX })`):
+
+```
+ORG nodes:        [Organization]
+ORG hiddenOwners: []          <- nothing was suppressed
+ORG drawnOwners:  []          <- nothing was drawn
+ORG hiddenOwned:  13 classes
+```
+
+`0 / ≤5 / all` caps **owners**, one hop *up*. Organization declares no
+entity-ranged slots at all, so it has **zero owners** — every one of its 13
+relations is `owns-theirs`, things pointing *at* it. `all` of zero is zero, and
+one box is the correct render at every setting.
+
+This is a genuine discoverability failure, not a code failure, so the fix went
+into `help-content.md`: `toolbar-owners` now says the control governs only the
+hop *up*, and names Organization as the case where that means nothing appears.
+Do not "fix" the cap to also pull in owned entities — that is a different
+feature (and the thing the relation menu already does).
+
+### "Distinguish selected from expanded" — deferred again, deliberately
+
+Siggie asked how much work and how risky. Answer given: moderate work, high
+risk, and it does not belong on this branch. The change is at
+`ownershipSubgraph.ts`'s one-hop-up loop, which runs over every core node
+without distinguishing *why* each is core; making the cap apply to selected
+nodes only means splitting that. `ownerToggles.test.ts` pins seven behaviours
+on that seam and `hopSymmetry.test.ts` explicitly asserts that expanding
+behaves like selecting — so it is a design reversal with test churn, not a
+tweak. TASKS deferred it pending exactly this look at the menu; it survives the
+look.
+
+### Five branches, and the labels had to change with them
+
+Asked directly, Siggie chose five. Mechanically that is deleting the
+`displayed()` fold in `buildRelationGroups` — but it could not stop there:
+`owned-mine` and `owned-theirs` both read "I belong to", which was fine while
+they shared a branch and impossible once they were adjacent rows. Offered two
+wordings; he took the one that mirrors the outward pair, so all four ownership
+branches now name the declaring side identically:
+
+```
+belong to me by my attribute      /  belong to me by their attribute
+I belong to, by my attribute      /  I belong to, by their attribute
+associated with
+```
+
+Also his: **"'belongs' if count is 1."** The labels were fixed strings, so a
+one-item branch read "1 belong to me by my attribute". `relationPositionLabel(p,
+count)` now inflects; only the two `owns-*` labels have a subject that agrees
+(the `I belong to` pair takes its verb from "I", and "associated with" has no
+verb), which is why `RELATION_POSITION_LABEL_ONE` is a `Partial` record rather
+than a full one.
+
+### Presentation fixes, and why each was right
+
+- **Grey, don't strike through.** Strikethrough reads as deleted/unavailable;
+  drawn entities are the *live* ones. Siggie caught this immediately.
+- **No "add all" at count 1** — "add all 1" is a second control doing exactly
+  what the item above it does. Guard is `> 1` addable, not `> 1` total: a
+  branch of five with four already drawn is also a one-item case.
+- **The trigger did not read as a menu.** *"doesn't look like beginning of a
+  cascading menu."* A bare count in a pill reads as a static badge. Now
+  `☰ 13 related · 0 shown ▾`, and it highlights while open.
+- **The second number.** Siggie asked for "13 related / 1 shown". Asked what
+  "shown" should count, since Organization alone would be `0` under the literal
+  reading (the box excludes itself from its own relations) — he confirmed
+  **related entities drawn**, so a lone Organization reads `0 shown`.
+  `countsOf()` dedupes by name before counting, for the same reason
+  `relatedCount` does: a class occupying two positions must not count twice.
+
+### Left undone, at Siggie's own priority
+
+Undoing an `add all` in bulk — *"if i add all and then want to undo or re-hide
+a bunch, no way to do that"* — explicitly marked low priority and not built.
+The cheap version is a mirror-image "remove all N shown" footer in the same
+submenu; noted for whoever picks it up.
+
+### Tests
+
+`RelationMenu.test.tsx` is new — there was no component-level test at all, so
+the greying and the `add all` guard had nothing pinning them. Both new
+assertions were checked against the *old* implementation and both fail there,
+which is the only thing that makes them worth having.
+
+`relationPositions.test.ts`'s "renders as ONE branch" was inverted rather than
+deleted, and now asserts the two branches are separate *and* differently
+labelled — the second half is what would catch a five-way split that renders
+two identical rows.
+
+---
 ## 2026-08-27 (S2) — chip strips → cascading relation menu
 
 Session S2 of the three-way parallel plan. Branch `s2-cascading-menus` off
@@ -87,6 +191,13 @@ Resolved by keying the menu branches on a **displayed** position, so
 `RelationPosition` in the model. The declaring side stays visible in the item's
 slot subtitle. Do not "fix" this into five branches: it was a deliberate read
 of Siggie's own list.
+
+> **SUPERSEDED 2026-08-27 (second S2 session).** Siggie was asked directly once
+> he had seen the menu and chose **five**. The `displayed()` mapping is gone;
+> see "Five branches, and the labels had to change with them" below. The
+> reasoning above is kept because the four-branch read was correct *from the
+> written brief* — the sketch really did name four — and a future session
+> re-reading TASKS alone would arrive at four again.
 
 First attempt built all five groups and then merged two afterwards — it worked
 but was awkward (a filter-concat-resort over freshly built groups). Replaced

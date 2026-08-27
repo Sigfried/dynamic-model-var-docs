@@ -69,13 +69,13 @@ What the boxes and lines mean.
 ### relation-menu
 
 - **Title:** The relation menu
-- **Description:** Every entity related to this one, grouped by how it is related. The trigger says how many there are; opening it branches into the four kinds of relationship, and each branch lists the entities in it.
+- **Description:** Every entity related to this one, grouped by how it is related. The trigger says how many there are and how many are already on the diagram; opening it branches into the five kinds of relationship, and each branch lists the entities in it.
 - **Interactions:**
-  - Click **N related** to open the menu, then a branch to list its entities.
-  - Click an entity to put it on the diagram. Click it again — or its ✕ — to take it off; entities already drawn are shown struck through.
-  - "add all N" — draw a whole branch at once. The count is shown before you click.
+  - Click **☰ N related · M shown** to open the menu, then a branch to list its entities.
+  - Click an entity to put it on the diagram. Click it again — or its ✕ — to take it off; entities already drawn are greyed out.
+  - "add all N" — draw a whole branch at once. The count is shown before you click. It appears only when there is more than one entity left to add.
   - **ⓘ** opens an entity's details without adding it to the diagram.
-- **Context:** From one entity's point of view there are four ways to be related. Two of them are ownership running *outward*: things that **belong to me by my attribute** (this entity declares the slot) and things that **belong to me by their attribute** (they declare it, pointing back here). Organization is entirely the second kind — it owns fourteen kinds of thing and declares no slot for any of them. Then there are the things **I belong to**, and finally **associations**, where neither entity owns the other.
+- **Context:** From one entity's point of view there are five ways to be related. Four are ownership, and each names which side declares the attribute that creates it. Running *outward*: things that **belong to me by my attribute** (this entity declares the slot) and things that **belong to me by their attribute** (they declare it, pointing back here). Organization is entirely the second kind — it owns thirteen kinds of thing and declares no slot for any of them. Running *inward*, the same split: entities **I belong to, by my attribute** and entities **I belong to, by their attribute**. Fifth are **associations**, where neither entity owns the other.
 ### node-dismiss
 
 - **Title:** Closing a box
@@ -84,8 +84,8 @@ What the boxes and lines mean.
 ### toolbar-owners
 
 - **Title:** How many owners to draw
-- **Description:** Sets how many owning entities are drawn per box: **0** draws none (all become chips), **≤5** draws up to five, **all** draws every one.
-- **Context:** "all" can pull a lot onto the diagram at once — a value type like Quantity is owned by around twenty entities.
+- **Description:** Sets how many **owning** entities are drawn per box: **0** draws none, **≤5** draws up to five, **all** draws every one.
+- **Context:** This governs only the entities one hop *up* — the ones that own the boxes you selected. An entity nothing owns draws nothing extra even at **all**: Organization, for instance, is owned by nothing, so selecting it alone gives one box at every setting. Its thirteen relations all run the other way, and the relation menu is where you reach those. "all" can pull a lot onto the diagram at once — a value type like Quantity is owned by around twenty entities.
 
 ### toolbar-siblings
 
