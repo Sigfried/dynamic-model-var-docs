@@ -31,9 +31,26 @@
  * clipped and scaled with the canvas.
  */
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { RelationGroupVM } from './OwnershipGraphView';
+
+/**
+ * Which menu is open, shared across every instance — at most one, ever.
+ *
+ * Open state used to be per-instance `useState` with no coordination, which
+ * was survivable while opening took a CLICK (the outside-click listener closed
+ * the previous one first). On HOVER it broke immediately: the listener bails
+ * on any `[data-relation-menu]` subtree, so moving the pointer from one box's
+ * trigger to another's left BOTH menus on screen (Siggie, screenshot
+ * 2026-08-27). Hovering a trigger has to close whatever else is open, and a
+ * shared subscription is what makes "at most one" structural rather than a
+ * cleanup someone has to remember.
+ */
+const openListeners = new Set<(id: string | null) => void>();
+function setOpenMenu(id: string | null) {
+  for (const fn of openListeners) fn(id);
+}
 
 export interface RelationMenuProps {
   /** The class the menu hangs off — named in every tooltip. */
@@ -64,6 +81,20 @@ export function RelationMenu({
   const [anchor, setAnchor] = useState<Anchor | null>(null);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const id = useId();
+
+  // Another instance opening closes this one. Subscribed unconditionally —
+  // an instance that is currently closed still has to hear that it lost, or
+  // it could never learn it had been superseded.
+  useEffect(() => {
+    const onOpen = (which: string | null) => {
+      if (which === id) return;
+      setAnchor(null);
+      setOpenGroup(null);
+    };
+    openListeners.add(onOpen);
+    return () => { openListeners.delete(onOpen); };
+  }, [id]);
 
   // Close on any outside click or Escape. The menu lives in a portal, so an
   // outside click is anything not inside a [data-relation-menu] subtree —
@@ -73,11 +104,10 @@ export function RelationMenu({
     const close = (ev: Event) => {
       const t = ev.target as HTMLElement | null;
       if (t?.closest('[data-relation-menu]')) return;
-      setAnchor(null);
-      setOpenGroup(null);
+      setOpenMenu(null);
     };
     const onKey = (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape') { setAnchor(null); setOpenGroup(null); }
+      if (ev.key === 'Escape') setOpenMenu(null);
     };
     // Capture phase: the canvas stops propagation on its own handlers, so a
     // bubbling listener never sees clicks on boxes.
@@ -99,11 +129,15 @@ export function RelationMenu({
    */
   const open = () => {
     const r = triggerRef.current?.getBoundingClientRect();
-    if (r) setAnchor({ x: r.left, y: r.bottom + 2 });
+    if (!r) return;
+    // Announce FIRST: this closes every other instance, including any whose
+    // menu the pointer just left.
+    setOpenMenu(id);
+    setAnchor({ x: r.left, y: r.bottom + 2 });
   };
   const toggle = (ev: React.MouseEvent) => {
     ev.stopPropagation();
-    if (anchor) { setAnchor(null); setOpenGroup(null); } else open();
+    if (anchor) setOpenMenu(null); else open();
   };
 
   return (

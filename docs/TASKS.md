@@ -48,6 +48,40 @@ row ticks a checkbox that may be scrolled out of view. Nothing was added to
 soften it (no scroll-into-view, no flash) — that was not part of the design.
 Siggie has not seen this yet.
 
+### Deferred — "hide all" leaves boxes behind with nothing shown
+
+Siggie, 2026-08-27, on seeing it: *"i guess this is correct but a little
+surprising. maybe consider dealing with eventually."* **Filed, not scheduled.**
+
+Repro: select MeasurementObservation → on it, `add all` *belong to me by my
+attribute* → on BodySite, `add all` *I belong to, by their attribute* → on
+Observation/MeasurementObservation, `hide all` *belong to me by my attribute*.
+
+What you get: Condition, Procedure, ImagingStudy, SpecimenCreationActivity and
+Observation still drawn, each reading **`N related · 0 shown`**, several with no
+edges at all — boxes with no visible reason to be there.
+
+**It is correct, and that is the point.** Those classes were added a second
+time by BodySite's `add all`, so they are selected in their own right; the
+`hide all` on Observation removed only what *Observation's* group named. Nothing
+is tracking "who asked for this", by design — that is exactly the provenance
+the selected/expanded merge deleted, and reintroducing it to make `hide all`
+cascade would undo the simplification.
+
+So the surprise is not the removal semantics, it is that **a box can survive
+with `0 shown` and no edges**, which reads as breakage even when it is right.
+Options if this gets picked up, cheapest first:
+
+1. Do nothing. It is self-consistent and the checkboxes explain it.
+2. Style the `0 shown` / edgeless case so it reads as deliberate rather than
+   stranded.
+3. Have `hide all` offer to drop the boxes it just orphaned — a follow-up
+   action, still no provenance tracking.
+
+**Do not** solve it by making `hide all` cascade through provenance.
+
+---
+
 ### ⭐ 2. Tour state: a push/pop stack instead of absolute snapshots
 
 **The problem.** `State:` is a full absolute URL query: `applyExploreQuery` does

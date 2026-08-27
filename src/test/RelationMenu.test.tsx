@@ -86,6 +86,31 @@ describe('RelationMenu', () => {
     expect(document.querySelector('[data-relation-group]')).not.toBeNull();
   });
 
+  test('hovering one trigger closes any menu already open', () => {
+    // Open state used to be per-instance with no coordination. On hover that
+    // left BOTH menus on screen when the pointer crossed from one box to
+    // another (Siggie, screenshot 2026-08-27). At most one, ever.
+    render(
+      <>
+        <RelationMenu
+          label="A" groups={[group([['X', false]])]}
+          relatedCount={1} shownCount={0}
+          onAdd={vi.fn()} onRemove={vi.fn()}
+        />
+        <RelationMenu
+          label="B" groups={[group([['Y', false]])]}
+          relatedCount={1} shownCount={0}
+          onAdd={vi.fn()} onRemove={vi.fn()}
+        />
+      </>,
+    );
+    const [a, b] = [...document.querySelectorAll('[data-relation-trigger]')];
+    fireEvent.mouseEnter(a);
+    expect(document.querySelectorAll('[data-relation-group]')).toHaveLength(1);
+    fireEvent.mouseEnter(b);
+    expect(document.querySelectorAll('[data-relation-group]')).toHaveLength(1);
+  });
+
   test('`hide all` removes every drawn entity in the group', () => {
     // It hides them even though each was selected in its own right: the group
     // control is about what is on the canvas, not how each entity got there.
