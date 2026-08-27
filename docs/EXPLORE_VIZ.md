@@ -118,9 +118,23 @@ Terminology: we say **ownership** (has-a), not "containment," from here on.
 
 Three regions:
 - **Selection table** (left, collapsible): lean Explorer-style
-  category-grouped entity table — checkboxes + count-badge columns. Built
-  fresh against existing DataService accessors; does NOT import Explorer's
-  pin/drilldown machinery.
+  category-grouped entity table — checkboxes, in-category is-a nesting, no
+  count columns and no per-category totals; `w-80`, sized to the longest class
+  id. Built fresh against existing DataService accessors; does NOT
+  import Explorer's pin/drilldown machinery.
+  - The count-badge columns this spec originally asked for were **removed**
+    2026-08-27. In a panel whose job is finding an entity by name, five
+    always-on numeric columns cost ~140px of a 384px panel — enough to
+    truncate `ResearchStudyCollection` — while three of the five read mostly
+    `·`. The counts remain in the Explorer's entity table and the detail
+    panel. If some subset earns its way back, `Attr` + `Ent` + `Var` were the
+    populated ones; `PVS` and `DT` were the sparse ones.
+  - The per-category class count went the same way for the same reason. The
+    header still shows `3 / 10` when a category has selections — that half is
+    about the task, and is the only cue to selections inside a collapsed group.
+  - Removing the counts is what allowed `w-96` → `w-80`: while the badges were
+    there, width was set by badges + name; now it is set by the longest name
+    (`QuestionnaireResponseValueTimePoint`, 35 chars, at depth-1 indent).
 - **Viz canvas** (main): the layered ownership DAG described above.
 - **Detail drawer** (right, opens on node click): reuses the Explorer
   nested-table card, with two known fixes rolled in — "Referenced by" items

@@ -2,10 +2,10 @@
  * SelectionTable — the Explore SPA's left-hand entity multi-select
  * (docs/EXPLORE_VIZ.md, "Layout" region 1).
  *
- * The spec asks for "checkboxes + count-badge columns" matching the
- * Explorer's entity table. These tests assert the badges carry the SAME
- * numbers the Explorer computes, from the same DataService accessors, so the
- * two tables cannot silently drift apart.
+ * The count-badge columns were removed on 2026-08-27 to give the name column
+ * back its width, so the badge-parity test that used to live here is gone
+ * too. What remains guards the selection contract: every categorized class is
+ * listed exactly once, with one checkbox, and nesting never cascades.
  */
 
 import { describe, test, expect, beforeAll, vi } from 'vitest';
@@ -64,38 +64,32 @@ describe('SelectionTable', () => {
     expect((within(other).getByRole('checkbox') as HTMLInputElement).checked).toBe(false);
   });
 
-  test('count badges match the Explorer\'s numbers for the same class', () => {
-    renderTable();
+  const groupOf = (classId: string) =>
+    ds.getCategoryGroups().find(g => g.classIds.includes(classId))!;
 
-    // Spot-check across categories, including a class with zero of some kinds.
-    for (const id of ['Participant', 'Observation', 'Context', 'Activity', 'Quantity']) {
-      const row = screen.getByText(id).closest('label')!;
-      const ranges = ds.getRangeCountsByType(id);
-      const expected = [
-        ds.getSlotCount(id),
-        ranges.cls,
-        ranges.enm,
-        ranges.typ,
-        ds.getVariableCount(id),
-      ];
-      // Zeros render as '·' so the eye lands on non-empty counts.
-      const rendered = [...row.querySelectorAll('[data-count-badge]')]
-        .map(s => s.textContent ?? '')
-        .map(t => (t === '·' ? 0 : Number(t)));
-
-      expect(rendered, `${id} badge counts`).toEqual(expected);
-    }
-  });
-
-  test('category headers show selected-of-total and collapse', () => {
+  test('category headers show selected-of-total', () => {
+    const obs = groupOf('Context');
     renderTable(['Context']);
-    const groups = ds.getCategoryGroups();
-    const obs = groups.find(g => g.classIds.includes('Context'))!;
 
     const header = screen.getByText(obs.label).closest('button')!;
     expect(header.textContent).toContain(`1 / ${obs.classIds.length}`);
+  });
 
-    // Collapsing hides the group's rows.
+  test('category headers show no count when nothing is selected', () => {
+    // The bare category total was dropped 2026-08-27; only selected-of-total
+    // survives, so an unselected group's header carries no number at all.
+    const obs = groupOf('Context');
+    renderTable();
+
+    const header = screen.getByText(obs.label).closest('button')!;
+    expect(header.textContent).not.toMatch(/\d/);
+  });
+
+  test('collapsing a category hides its rows', () => {
+    const obs = groupOf('Context');
+    renderTable();
+
+    const header = screen.getByText(obs.label).closest('button')!;
     expect(screen.queryAllByText('Context').length).toBeGreaterThan(0);
     fireEvent.click(header);
     expect(screen.queryByText('Context')).toBeNull();

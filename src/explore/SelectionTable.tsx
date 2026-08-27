@@ -1,9 +1,12 @@
 /**
  * SelectionTable — category-grouped entity multi-select for the Explore SPA.
  *
- * Category headers + checkbox rows with the Explorer's five count badges
- * (Props / Cls / Enm / Typ / Vars), from the same DataService accessors and
- * the same vocab-driven headers, so the two tables read as one language.
+ * Category headers + checkbox rows. The five count badges the Explorer's
+ * entity table shows (Props / Cls / Enm / Typ / Vars) were REMOVED here on
+ * 2026-08-27: in a panel whose job is finding an entity by name, five
+ * always-on numeric columns cost ~120px of the name column while three of
+ * them read mostly "·". The counts still live in the Explorer's entity table
+ * and the detail panel; see WORKLOG.md for the full reasoning.
  *
  * Within a category, classes nest by inheritance (`getCategoryTrees()`).
  * Nesting is presentation only — the selection contract is unchanged:
@@ -22,39 +25,9 @@ interface SelectionTableProps {
   onToggle: (classId: string) => void;
 }
 
-interface Counts {
-  props: number;
-  cls: number;
-  enm: number;
-  typ: number;
-  vars: number;
-}
-
 export default function SelectionTable({ dataService, selectedIds, onToggle }: SelectionTableProps) {
   const groups = useMemo(() => dataService.getCategoryTrees(), [dataService]);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-
-  // Same five counts the Explorer's entity table shows (Props / Cls / Enm /
-  // Typ / Vars), from the same DataService accessors, so the two tables read
-  // as one language. Headers/tooltips come from getEntityColumns() so they
-  // stay vocab-driven.
-  const col = useMemo(() => dataService.getEntityColumns(), [dataService]);
-  const countsById = useMemo(() => {
-    const map = new Map<string, Counts>();
-    for (const group of groups) {
-      for (const id of group.classIds) {
-        const ranges = dataService.getRangeCountsByType(id);
-        map.set(id, {
-          props: dataService.getSlotCount(id),
-          cls: ranges.cls,
-          enm: ranges.enm,
-          typ: ranges.typ,
-          vars: dataService.getVariableCount(id),
-        });
-      }
-    }
-    return map;
-  }, [groups, dataService]);
 
   const toggleCategory = (id: string) =>
     setCollapsed(prev => {
@@ -72,15 +45,6 @@ export default function SelectionTable({ dataService, selectedIds, onToggle }: S
         <span className="font-semibold flex-1">
           {dataService.getConceptLabel('entity', true)} ({total})
         </span>
-        {/* Column key for the per-row badges — the rows are too narrow for a
-            real <thead>, so the legend carries the headers and tooltips. */}
-        <span className="flex items-center gap-1 text-[10px] uppercase tracking-wide shrink-0">
-          <span className="text-gray-500" title={col.props.tip}>{col.props.header}</span>
-          <span className="text-blue-500" title={col.cls.tip}>{col.cls.header}</span>
-          <span className="text-purple-500" title={col.enm.tip}>{col.enm.header}</span>
-          <span className="text-green-600" title={col.typ.tip}>{col.typ.header}</span>
-          <span className="text-amber-600" title={col.vars.tip}>{col.vars.header}</span>
-        </span>
       </div>
       {groups.map(group => {
         const isCollapsed = collapsed.has(group.id);
@@ -96,17 +60,23 @@ export default function SelectionTable({ dataService, selectedIds, onToggle }: S
             >
               <span className="text-xs text-gray-400">{isCollapsed ? '▶' : '▼'}</span>
               <span className="flex-1">{group.label}</span>
-              <span className="text-xs text-gray-400">
-                {selectedInGroup > 0 ? `${selectedInGroup} / ` : ''}{group.classIds.length}
-              </span>
+              {/* Selected-of-total only, and only once something in this group
+                  is selected. The bare category total was dropped 2026-08-27
+                  (SG): it is a fact about the model, not about the task, and
+                  the rows are right there to count. The selected count earns
+                  its place — it is the only way to see where selections live
+                  when a group is collapsed. */}
+              {selectedInGroup > 0 && (
+                <span className="text-xs text-gray-400">
+                  {selectedInGroup} / {group.classIds.length}
+                </span>
+              )}
             </button>
             {!isCollapsed && group.roots.map(node => (
               <ClassRows
                 key={node.classId}
                 node={node}
                 depth={0}
-                countsById={countsById}
-                col={col}
                 selectedIds={selectedIds}
                 onToggle={onToggle}
               />
@@ -121,28 +91,24 @@ export default function SelectionTable({ dataService, selectedIds, onToggle }: S
 /**
  * One class row plus its is-a subclasses, recursively.
  *
- * Subclasses are indented and marked with `↳`; a root whose is-a parent sits
- * in another category gets the same marker as a muted "↳ Parent" hint instead,
- * since it cannot be nested without duplicating that parent across categories.
+ * Subclasses are shown by indentation alone (a leading `↳` was redundant with
+ * it, per SG 2026-08-27). A root whose is-a parent sits in another category
+ * keeps a muted "↳ Parent" hint, which indentation cannot express: that parent
+ * cannot be nested here without duplicating it across categories.
  * Depth is measured (2026-08-27) to reach 1, so indentation stays linear.
  */
 function ClassRows({
   node,
   depth,
-  countsById,
-  col,
   selectedIds,
   onToggle,
 }: {
   node: CategoryTreeNode;
   depth: number;
-  countsById: Map<string, Counts>;
-  col: ReturnType<DataService['getEntityColumns']>;
   selectedIds: Set<string>;
   onToggle: (classId: string) => void;
 }) {
   const { classId } = node;
-  const counts = countsById.get(classId);
   return (
     <>
       <label
@@ -158,7 +124,6 @@ function ClassRows({
           onChange={() => onToggle(classId)}
         />
         <span className="flex-1 min-w-0 truncate">
-          {depth > 0 && <span className="text-gray-300 dark:text-slate-600 mr-1">↳</span>}
           <span className="font-mono text-xs">{classId}</span>
           {node.outOfCategoryParent && (
             <span
@@ -169,43 +134,16 @@ function ClassRows({
             </span>
           )}
         </span>
-        {counts && (
-          <span className="flex items-center gap-1 shrink-0 tabular-nums">
-            <CountBadge n={counts.props} title={col.props.tip} className="text-gray-500" />
-            <CountBadge n={counts.cls} title={col.cls.tip} className="text-blue-500" />
-            <CountBadge n={counts.enm} title={col.enm.tip} className="text-purple-500" />
-            <CountBadge n={counts.typ} title={col.typ.tip} className="text-green-600" />
-            <CountBadge n={counts.vars} title={col.vars.tip} className="text-amber-600" />
-          </span>
-        )}
       </label>
       {node.children.map(child => (
         <ClassRows
           key={child.classId}
           node={child}
           depth={depth + 1}
-          countsById={countsById}
-          col={col}
           selectedIds={selectedIds}
           onToggle={onToggle}
         />
       ))}
     </>
-  );
-}
-
-/**
- * One count cell. Zero renders as a muted dash rather than "0" so the eye
- * lands on entities that actually have something of that kind.
- */
-function CountBadge({ n, title, className }: { n: number; title: string; className: string }) {
-  return (
-    <span
-      title={title}
-      data-count-badge=""
-      className={`w-5 text-right text-[11px] ${n === 0 ? 'text-gray-300 dark:text-slate-600' : className}`}
-    >
-      {n === 0 ? '·' : n}
-    </span>
   );
 }
