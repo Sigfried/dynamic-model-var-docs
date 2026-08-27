@@ -102,24 +102,27 @@ The estimates assume the code is already understood and exclude review cycles.
       2. highlight row
       3. click checkbox. 
 
-| # | Task | Est. | Detail |
-|---|---|---|---|
-| 1 | **Chip strips → relation counts + menu.** Replaces the ugly wrapped strips; **also fixes the box-height/text-overlap bug as a side effect**, because a fixed-size count makes box height predictable | ~0.5–1 day | [§](#chip-strips--relation-counts--menu-the-main-redesign) |
-| 2 | **Tour rework** — visible actions, spotlight the *row* not the panel, `back` undoes | ~0.5 day | [§](#the-tour--the-problem-was-never-placement) |
-| 3 | **Edge rendering** — one edge per declaring class, colored by it; fixes the missing `Specimen.quality_measure` edge | ~0.5 day | [§](#edge-rendering--the-fan-from-observationsetobservations) |
-| 4 | **Drop the duplicate header badge** — `⑃` and `▷` are identical by construction on a merged box | ~10 min | [§](#what-is-confirmed-broken-in-priority-order) |
-| 5 | **Dark-gray box headers, white text** — matches the colored child headers | ~10 min | [§](#smaller-items-raised) |
-| 6 | **Horizontal scroll in the tree** — the fix belongs on the ancestor, not `.dbw-root` | ~15 min | [§](#what-is-confirmed-broken-in-priority-order) |
-| 7 | **Re-render regression** — "most clicks refresh the main panel". Still uninvestigated; **measure, don't guess** | ~unknown | [§](#still-not-investigated--the-one-thing-that-is-not-understood) |
-| 8 | **Drag the tour popover** — escape hatch regardless of placement logic | ~0.5 day | [§](#tour-and-help) |
-| 9 | **Edge crossings** — "we should try". Cause unmeasured | ~unknown | [§](#smaller-items-raised) |
+**Reconciled with Siggie's list above, 2026-08-27.** His numbering wins; the
+old A–I-era table is replaced by this. Sessions S1/S2/S3 below implement 1–3.
 
-> **Reality check on the estimates.** Items 1–3 alone are ~1.5–2 days against
-> ~1 day of runway. **They do not all fit.** Items 4–6 are the cheap visible
-> wins (~35 min total) and are worth doing regardless. Item 7 is the only
-> unknown that could eat the whole day — it is a real regression report but it
-> affects no single feature, so it is ranked below the visible work
-> deliberately. Pick a subset rather than starting all of them.
+| # | Task | Est. | Session | Detail |
+|---|---|---|---|---|
+| 1 | **Selection panel → flat list, nested by inheritance, categories on top, no `Entity`.** dag-browser kept behind the toggle for after the deadline | ~0.5 day | **S1** | [brief](#s1--selection-panel-brief) |
+| 2 | **Chips → cascading menus.** *"need this to go fast. tour depends on it"*; also fixes the box-height/text-overlap bug | ~0.5–1 day | **S2** | [brief](#s2--cascading-menus-brief) · [design](#chip-strips--relation-counts--menu-the-main-redesign) |
+| 3 | **The tour** — mechanism *and* authoring Siggie's copy. **Blocked on 1 and 2** | ~0.5–1 day | **S3** | [brief](#s3--tour-brief) · [design](#the-tour--the-problem-was-never-placement) |
+| 4 | **Drop the duplicate header badge** — `⑃` and `▷` are identical by construction on a merged box; frees header room for S2's menu trigger | ~10 min | S2 takes it | [§](#what-is-confirmed-broken-in-priority-order) |
+| 5 | **Dark-gray box headers, white text** — matches the colored child headers | ~10 min | any | [§](#smaller-items-raised) |
+| 6 | **Edge rendering** — one edge per declaring class, colored by it; fixes the missing `Specimen.quality_measure` edge. **D2 answered: do not suppress** | ~0.5 day | unassigned | [§](#edge-rendering--the-fan-from-observationsetobservations) |
+| 7 | **Re-render regression** — "most clicks refresh the main panel". Still uninvestigated; **measure, don't guess** | ~unknown | unassigned | [§](#still-not-investigated--the-one-thing-that-is-not-understood) |
+| 8 | **Drag the tour popover** — escape hatch. Note placement itself was exonerated | ~0.5 day | S3 if time | [§](#tour-and-help) |
+| 9 | **Edge crossings** — "we should try". Cause unmeasured | ~unknown | unassigned | [§](#smaller-items-raised) |
+
+> **Reality check.** Items 1–3 are ~1.5–2.5 days against ~1 day of runway, even
+> with S1 and S2 running in parallel — and 3 cannot start until both land, so it
+> is the one at real risk. Items 4–5 are ~20 minutes of visible win. Item 7 is
+> the only unknown that could eat the whole day; it is ranked below the visible
+> work deliberately. **Expect to cut something; decide which rather than
+> discovering it at 5pm.**
 
 ### Explicitly NOT this week
 
@@ -134,6 +137,209 @@ Nine commits sit unmerged on `tweaking-expand-prune`, reviewed but not
 deployed. **Verdict on the last one (`0c6cfdc`): keep it, fix forward** — see
 [the review](#verdict-on-0c6cfdc-keep-it-fix-forward). With one day left, decide
 early whether to merge to `main` and deploy what exists before adding to it.
+
+---
+
+---
+
+## 🚦 PARALLEL SESSION PLAN — set up 2026-08-27
+
+**Siggie is running these as separate Claude sessions while continuing to edit
+this file.** Read your own brief and ONLY your own brief. The briefs are written
+so two sessions can run at once without colliding.
+
+| Session | Brief | Touches | Runs |
+|---|---|---|---|
+| **S1 — Selection panel** | [§](#s1--selection-panel-brief) | `src/explore/SelectionTable.tsx`, `src/explore/ExploreApp.tsx` (selector wiring only) | now, in parallel with S2 |
+| **S2 — Cascading menus** | [§](#s2--cascading-menus-brief) | `src/explore/OwnershipGraphView.tsx`, `src/models/ownershipSubgraph.ts`, `src/models/containmentGraph.ts` | now, in parallel with S1 |
+| **S3 — Tour** | [§](#s3--tour-brief) | `src/help/*` | **AFTER S1 and S2 merge** |
+
+### Rules for all three sessions
+
+1. **Do not edit `docs/TASKS.md`.** Siggie is editing it live; a concurrent write
+   will collide. Put findings in `WORKLOG.md` (append a dated section) or report
+   in chat. This rule exists because the file is being hand-edited *right now*.
+2. **Branch off `tweaking-expand-prune`**, one branch per session:
+   `s1-selection-panel`, `s2-cascading-menus`. Do not merge to `main`.
+3. **Never run `npm run dev`** — Siggie keeps the app running himself on 5173.
+4. `npx vitest` needs node 22:
+   `export PATH="$HOME/.nvm/versions/node/v22.20.0/bin:$PATH"`.
+   Typecheck with `npm run typecheck`, never bare `npx tsc --noEmit`.
+5. **Lint baseline is 20 pre-existing errors.** Compare against the baseline;
+   do not chase zero.
+6. **When a render looks wrong, write a throwaway probe test and read the actual
+   value before proposing a cause.** `console.log` is swallowed in vitest —
+   assert against a sentinel string and read the diff. This is the single
+   highest-value habit in this repo; see the PROCESS NOTE below. Every correct
+   diagnosis in the last two sessions came from a probe, and every wrong one
+   came from reasoning about the render instead.
+7. **Deadline is real: ~1 day.** If your brief turns out bigger than described,
+   say so early rather than delivering half of it silently. Ship the smallest
+   thing that Siggie can look at.
+
+---
+
+### S1 — Selection panel (brief)
+
+**Goal: replace the dag-browser tree with a flat, category-grouped list that
+nests by inheritance.** Siggie, 2026-08-27:
+
+> *"i wrote the below about deciding whether to keep dag-browser. we just don't
+> have time to fix it. but keeping it for after deadline if we have time to work
+> on it then. so, for now, go back to 'flat' list but structure it by
+> inheritance like in the kitchen sink view, except categories at top level and
+> no Entity."*
+
+**This is a decision already made — do not relitigate whether to keep
+dag-browser.** It stays in the codebase behind the existing toggle for after the
+deadline; it just stops being the default.
+
+**Start from what exists.** `src/explore/SelectionTable.tsx` is already the
+category-grouped flat list, and its own header comment names the missing piece:
+
+> *"Still flat within each category — in-category is-a nesting (see
+> docs/EXPLORE_VIZ.md, 'Layout') layers on top without changing the selection
+> contract: `selectedIds` + `onToggle(classId)`."*
+
+So the work is: **add is-a nesting inside each category, and drop `Entity`.**
+The selection contract does not change.
+
+**What you need:**
+- `dataService.getCategoryGroups()` (`DataService.ts:603`) gives the six
+  hand-curated categories from `src/config/entityCategories.ts` (`admin`,
+  `clinical`, `observation`, `lab`, `survey`, `other`).
+- Inheritance edges are `EDGE_TYPES.INHERITANCE` (`SchemaTypes.ts:230`). There
+  is **no** existing `getIsaChildren`-style accessor on DataService — check
+  again before writing one, and if you add one, put it next to
+  `getCategoryGroups`.
+- `ExploreApp.tsx` has a `selectorMode` state with a `☰ flat list` / `⑃ tree`
+  toggle at the bottom of the panel. **Flip the default to the flat list**;
+  leave the toggle so dag-browser stays reachable.
+
+**Decisions Siggie already made, do not re-ask:**
+- Categories at top level. No `Entity` node.
+- A class in exactly one category (multi-category membership is explicitly NOT
+  this week).
+
+**Judgement calls that are yours:** what to do with a class whose is-a parent is
+in a *different* category (it happens); whether to keep the count badges (they
+exist and cost one call each — probably keep); how deep to nest before it stops
+helping.
+
+**Do NOT build:** panel resizing, detaching, horizontal scroll for dag-browser,
+or the category-as-DAG-parent idea in the superseded notes below. Those were
+prerequisites for *keeping* dag-browser, and that path is now deferred.
+
+**Definition of done:** Siggie can open the app, see categories with entities
+nested by inheritance under them, and select from it. Tests pass, typecheck
+clean. Report in chat; do not edit TASKS.md.
+
+---
+
+### S2 — Cascading menus (brief)
+
+**Goal: replace the wrapped chip strips on each box with a cascading menu.**
+Siggie, 2026-08-27: *"replace chips with cascading menus. need this to go fast.
+tour depends on it"* — and, deciding D3: **cascading menu**, not rows.
+
+**S3 is blocked on this.** Speed matters more than polish.
+
+**Read [Chip strips → relation counts +
+menu](#chip-strips--relation-counts--menu-the-main-redesign) in full first** —
+it has the measured findings, the four-position table, and the labels Siggie
+wants. The essentials:
+
+- The menu starts from something like **"N related"** and branches to
+  **"N belong to me by my attribute," "N belong to me by their attribute,"
+  "N I belong to," "N associated with."** Those are Siggie's own labels and
+  are better than the ones in `OwnershipLegend.tsx:33`, which describe the
+  classifier rather than the reader.
+- **⚠️ The declaring side is currently erased.** `containmentGraph.ts:267`
+  flips `own-bkwd` edges at graph-build time, so by the time you hold a DAG
+  node's `parents`/`children` you cannot tell "mine because I say so" from
+  "mine because it says so" — which is *exactly* the distinction the menu
+  must show. **Recovering it means carrying the verdict through the DAG, not
+  just the direction.** This is the part most likely to be underestimated:
+  it is not a UI-only change. Measure it before promising a timeline.
+- **Associations must appear** (`ASSOCIATION_SLOTS` = `related_document`,
+  `container`). They are currently in neither strip.
+- **This also fixes the box-height/text-overlap bug**, which is why it ranks
+  first: the strips are `flex-wrap` with a height *estimated in JS* while the
+  browser does the real wrapping, so the reserved band and the drawn band
+  diverge and rows below overlap. A fixed-size trigger makes box height
+  deterministic. Do not patch the height estimator — replacing the strips is
+  the fix.
+- **Re-hiding:** clicking a displayed entity in the menu should un-display it
+  (grayed out when displayed, or a red ✕). Siggie: *"is there any reason not to
+  allow clicking one of these... to re-hide it?"* No.
+
+**Known adjacent bug, cheap, take it if it is in your way:** `⑃ {members.length}`
+and `▷ {subclassCount}` on a merged box header are identical by construction
+(`OwnershipGraphView.tsx:485` sets `subclassCount: members.length`). Dropping
+`▷` frees header room for the menu trigger.
+
+**Deliberately deferred, do NOT fix here:** the expansion fan-out (one chip
+click currently draws up to three boxes, measured). Siggie: *"let's see where we
+end up with chip strip replacement before implementing."* If your menu makes the
+cost visible before the click, the problem may not need a rule change.
+
+**Definition of done:** boxes show a compact relation trigger instead of wrapped
+chips; the four positions plus associations are reachable; clicking adds and
+re-clicking removes; no text overlap on Observation (the worst case, 13 owners).
+
+---
+
+### S3 — Tour (brief)
+
+> **BLOCKED until S1 and S2 land.** Do not start early.
+
+**Two jobs: the mechanism, and authoring the actual tour.** Siggie has written
+substantial tour copy in his own list above — **that copy is the spec; use his
+words, do not rewrite them.**
+
+**Blocked because** his step 2 highlights the selection panel (S1 is changing
+it) and later steps depend on the relation menus (S2). Starting early means
+authoring against UI that is about to change.
+
+**D1 is decided.** Siggie:
+
+> *"if tour starts when state is not default, record state; when tour ends/is
+> exited, restore prior state; every step of tour is prespecified so navigation
+> either way gives exact state. allow interaction, but explain to user that
+> their changes will be undone by each step on tour"*
+
+So: snapshot on entry, restore on exit, **every step carries its full state**
+(not a diff), and navigation in either direction sets that state absolutely.
+Interaction is allowed, and the popover must **say** that stepping will discard
+it. This is simpler than the per-key tracking I proposed — take it as given.
+
+**Known gaps to close** (details in [The
+tour](#the-tour--the-problem-was-never-placement)):
+1. **Steps perform state changes invisibly.** Step 2 carries
+   `**State:** sel=Participant`, a Participant box appears, and nothing says the
+   tour did it. Siggie misread the whole step because of this.
+2. **The spotlight can only ring a whole `data-help-id` element**, i.e. a panel.
+   Siggie needs it to ring **a single row** ("the participant row highlighted,
+   not the whole tree"). This is a real capability gap in `HelpLayer.tsx`, not a
+   tweak — anchors must be able to address a row inside the selection panel.
+3. **Popover dragging** is still wanted as the escape hatch. Note the placement
+   heuristic was **exonerated** — it did the right thing; the bug was the
+   invisible action. Do not "fix" placement.
+
+**Siggie has asked for two things in his draft that need answers:**
+- *"can we animate this so that step 4 keeps this popover but shows the next
+  bullet, etc?"* — i.e. progressive disclosure within one step.
+- *"we're going to need a reasonably human-readable/writable format for the full
+  tour specs anyway"* — `help-content.md` + `parseHelpContent.ts` is the
+  existing format; decide whether it stretches to per-step state + sub-steps or
+  needs extending. **This is the first thing to settle**, because his copy is
+  already outgrowing the current format.
+
+His draft also has two items numbered `2` and two numbered `3` — ask him for the
+intended order rather than guessing.
+
+**Definition of done:** the tour runs end to end with Siggie's copy, actions are
+visibly performed, `back` restores exactly, and the spotlight can hit a row.
 
 ---
 
