@@ -72,6 +72,43 @@ body.help-mode {
 .help-popover-body p,
 .help-popover-context p { margin: 0 0 6px; }
 
+/* The ACTION band: what the tour just DID.
+
+   Deliberately unlike the body — tinted, ruled down the left, checked, and in
+   the smaller size the app uses for chrome — because the whole bug it fixes is
+   that "I ticked this for you" read as "here is what you are looking at". Two
+   different kinds of sentence must not look like one paragraph. */
+.help-popover-action {
+  display: flex;
+  gap: 7px;
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  border-left: 3px solid #0284c7;
+  border-radius: 0 5px 5px 0;
+  background: #f0f9ff;
+  font-size: 12px;
+  color: #075985;
+}
+.help-popover-action p { margin: 0; }
+.help-popover-action p + p { margin-top: 4px; }
+.help-popover-action-mark {
+  flex: none;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+/* "Your changes will be discarded" — shown only once the viewer has actually
+   changed something mid-tour. Amber rather than red: it is a consequence to
+   know about, not a mistake they made. */
+.help-popover-warning {
+  margin: 8px 0 0;
+  padding: 5px 8px;
+  border-radius: 5px;
+  background: #fffbeb;
+  font-size: 11px;
+  color: #92400e;
+}
+
 .help-popover-interactions {
   margin: 6px 0;
   padding-left: 18px;
@@ -139,6 +176,14 @@ body.help-mode {
   }
   .help-popover-context,
   .help-popover-shortcut { color: #94a3b8; }
+  .help-popover-action {
+    background: #082f49;
+    color: #bae6fd;
+  }
+  .help-popover-warning {
+    background: #422006;
+    color: #fcd34d;
+  }
   .help-popover-context,
   .help-tour-nav { border-top-color: #1e293b; }
   .help-popover-shortcut kbd {

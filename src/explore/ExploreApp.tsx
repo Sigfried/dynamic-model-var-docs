@@ -26,6 +26,7 @@ import type { ExampleCase } from './exampleCases';
 import { HelpProvider } from '../help/HelpProvider';
 import { useHelp } from '../help/helpContext';
 import HelpLayer from '../help/HelpLayer';
+import { helpResolvers } from './helpResolvers';
 import helpMarkdown from '../help/help-content.md?raw';
 
 import {
@@ -41,6 +42,9 @@ import {
  */
 function ExploreAppInner() {
   const { modelData, loading, error } = useModelData();
+  // Tells the tour the viewer changed the app themselves; see the URL-writing
+  // effect below. A no-op outside a tour.
+  const { noteViewerEdit } = useHelp();
   const dataService = useMemo(
     () => (modelData ? new DataService(modelData) : null),
     [modelData],
@@ -139,15 +143,25 @@ function ExploreAppInner() {
     return () => window.removeEventListener('explore:state-from-url', apply);
   }, []);
 
-  useEffect(
-    () => writeExploreState({
+  /*
+   * Single writer for the URL — and, during a tour, the signal that the viewer
+   * changed something themselves.
+   *
+   * `noteViewerEdit` reads the state back and ignores anything equal to what
+   * the tour just applied, so the step's own write does not count as an edit;
+   * only a click of the viewer's does. That is what puts the "your changes will
+   * be discarded" line in the popover, and only when there is something to
+   * discard.
+   */
+  useEffect(() => {
+    writeExploreState({
       sel: [...selectedIds], exp: [...expandedIds], hidden: [...hiddenOwnerIds],
       detail: detailId, roots: pathToRoot,
       sibs: mergeSibs, dir: direction, merge: mergeMode, owners: ownerScope,
-    }),
-    [selectedIds, expandedIds, detailId, pathToRoot, hiddenOwnerIds,
-     mergeSibs, direction, mergeMode, ownerScope],
-  );
+    });
+    noteViewerEdit();
+  }, [selectedIds, expandedIds, detailId, pathToRoot, hiddenOwnerIds,
+      mergeSibs, direction, mergeMode, ownerScope, noteViewerEdit]);
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
@@ -415,26 +429,51 @@ function ExploreAppInner() {
 }
 
 /**
- * The provider must wrap the app (it owns help/tour state), but applying a
- * tour step's state needs the app's own setters -- so the state-applying
- * bridge lives in ExploreAppInner and is registered through a ref-like
- * callback the provider calls. Simplest correct arrangement: the provider
- * wraps, and the inner component reads the api via useHelp().
+ * The two halves of the tour's state bridge.
+ *
+ * The provider must wrap the app (it owns help/tour state), but it knows
+ * nothing about how this app stores its own state -- so the app supplies the
+ * pair below and the provider calls them. They are module-level rather than
+ * bound to ExploreAppInner because both go through the URL, which is
+ * authoritative for every piece of shareable state; neither needs a setter.
  */
+
+/**
+ * Put the app into a state given as a query string.
+ *
+ * A step's `State:` is the same vocabulary as a share link, so it is applied by
+ * writing it to the URL and letting the app re-read it. That keeps ONE parser
+ * for both, instead of a second code path that can drift from the first.
+ */
+function applyExploreQuery(query: string): void {
+  const url = new URL(window.location.href);
+  url.search = query;
+  window.history.replaceState(null, '', url);
+  window.dispatchEvent(new Event('explore:state-from-url'));
+}
+
+/**
+ * Read the app's state back out as a query string — the inverse of
+ * `applyExploreQuery`, and the reason the tour can restore what the viewer had.
+ *
+ * The URL is authoritative: `ExploreAppInner` writes the whole state to it on
+ * every change through `writeExploreState`, so reading `location.search` is
+ * reading the live state, not a stale copy.
+ */
+function readExploreQuery(): string {
+  return window.location.search.replace(/^\?/, '');
+}
+
 export default function ExploreApp() {
   return (
     <HelpProvider
       markdown={helpMarkdown}
-      onApplyState={query => {
-        // A step's State: is the same vocabulary as a share link, so it is
-        // applied by writing it to the URL and letting the app re-read it.
-        // That keeps ONE parser for both, instead of a second code path that
-        // can drift from the first.
-        const url = new URL(window.location.href);
-        url.search = query;
-        window.history.replaceState(null, '', url);
-        window.dispatchEvent(new Event('explore:state-from-url'));
-      }}
+      onApplyState={applyExploreQuery}
+      onReadState={readExploreQuery}
+      /* Resolvers for the row-level anchor kinds. They live here, not in
+         src/help/, because knowing what a dmvd entity row is is exactly what
+         the extractable package must not know. */
+      resolvers={helpResolvers}
     >
       <ExploreAppInner />
       <HelpLayer />

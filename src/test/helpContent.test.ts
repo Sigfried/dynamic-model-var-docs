@@ -24,9 +24,10 @@ const positions = tourPositions(content);
 
 /**
  * Anchor kinds the dmvd app knows how to resolve. `help-id` is the built-in;
- * the rest are dmvd-specific resolvers registered by the host (S3b builds
- * them). Listed here so a typo like `entity_row:` fails the build rather than
- * silently anchoring nothing.
+ * the rest are dmvd-specific resolvers registered by the host in
+ * `explore/helpResolvers.ts` (and tested in `helpResolvers.test.ts`). Listed
+ * here so a typo like `entity_row:` fails the build rather than silently
+ * anchoring nothing.
  */
 const ANCHOR_KINDS = new Set([
   'help-id', 'entity-row', 'entity-checkbox', 'slot-row', 'node-box',

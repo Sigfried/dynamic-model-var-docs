@@ -88,6 +88,12 @@ export default function SelectionTree({
           const c = counts.get(node.id);
           return (
             <span
+              /* Names the row so the tour can ring it (`entity-row:<Entity>`).
+                 The DagBrowser widget's own row wrapper carries no node id, and
+                 this span is the only host-controlled element in the row — the
+                 resolver walks up to `.dbw-row` from here for the full-width
+                 rect. See `entityRowResolvers` in help/resolvers.ts. */
+              data-entity-row={node.id}
               className={`flex items-center gap-2 flex-1 min-w-0 px-1 rounded
                           ${isSelected ? 'bg-blue-100 dark:bg-sky-900/50' : ''}`}
             >

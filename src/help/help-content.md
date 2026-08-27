@@ -101,8 +101,18 @@ extracted without knowing what a dmvd "entity row" is.
 | `slot-row:<Entity>.<slot>` | one attribute row inside a diagram box |
 | `node-box:<Entity>` | a whole entity box on the diagram |
 
-Only `help-id` is implemented today. The others resolve to null and degrade to
-an unringed popover until S3b builds them.
+All five resolve. An anchor whose element is not on screen — a collapsed tree
+row, a box the current selection does not include — degrades to an unringed,
+centred popover rather than failing.
+
+Two of them have an edge worth knowing when you author:
+
+- **`entity-row` / `entity-checkbox`** work in both left-panel modes (table and
+  tree). In tree mode everything starts collapsed, so a deeply nested entity's
+  row may not exist in the DOM when the step fires; give such a step a
+  `State:` that selects the entity, or anchor it at the diagram instead.
+- **`slot-row:<E>.<slot>`** splits on the LAST dot. Inside a merged sibling box
+  several rows can share a slot name, and `<E>` is what picks between them.
 
 ### Actions
 
@@ -160,7 +170,9 @@ A beat that omits a field inherits the step's.
 
 A step with no `Beats:` is exactly one beat, so steps written before beats
 existed still parse and behave identically. `next` advances beat by beat, then
-to the next step; the counter reads `4.2 / 6`.
+to the next step; the counter reads `4.2 / 6` — beat 2 of step 4, of six
+STEPS. A step with no beats reads plain `5 / 6`, so the sub-number shows up
+only where there is a beat to number.
 
 ### Who the tour is for
 

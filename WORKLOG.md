@@ -7,6 +7,120 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-27 (S3b) — the tour mechanism
+
+Ran in a worktree parallel to Siggie writing tour copy on `main`, so
+`help-content.md` was treated as someone else's file: only the two spec lines
+that S3b made factually wrong were edited ("only `help-id` is implemented", and
+the counter description), never any copy.
+
+### The seam held, and that is the finding
+
+S3a's claim was that `tourPositions()` would let the mechanism ignore nesting
+entirely. It did. The navigator is `positions[i ± 1]`; there is no beat-vs-step
+branch anywhere in `HelpProvider`. Two consequences worth keeping:
+
+- **`back` needed no undo machinery at all.** The plan had recorded state
+  snapshots-per-step as the chosen mechanism and rejected porting
+  icd11-playground's history-carrying state as overkill. It turned out neither
+  was needed *for navigation*: because every position carries FULL absolute
+  state, arriving at position *i* from either direction applies the same query.
+  `back` is exact by construction, not by replay. The snapshot survives for one
+  narrower job — restoring the *viewer's own* state when the tour ends.
+- **The API rename cost one line.** `steps`/`tourStep` → `positions`/
+  `tourIndex` looked like a breaking change to the context, but grep found
+  exactly one consumer outside `src/help/` (`HelpButton`, using only
+  `startTour`). Worth knowing before hesitating over a similar rename.
+
+### Why `viewerEdited` is derived rather than tracked
+
+The obvious implementation is a flag set by every interaction handler. That
+means touching every handler, and it lies: the tour's *own* state write goes
+through the same setters, so the flag trips on the tour's echo and the popover
+warns about changes the viewer never made.
+
+Instead the host calls `noteViewerEdit()` from the single effect that already
+writes the URL, and the provider ignores anything equal to the state it just
+applied. One call site, no false positives, and the "what counts as an edit"
+judgement lives in the provider where the tour's own writes are known.
+
+This works only because `writeExploreState` keeps `location.search`
+authoritative for the whole app. That is also what makes `onReadState` a
+one-liner. If explore state ever stops round-tripping through the URL, both
+break together — they are the same assumption.
+
+### Two pre-existing bugs found on the way
+
+Neither was in the brief, both were real:
+
+1. **The popover was gated on a resolved anchor** (`if (entry && rect)`), so
+   any step authored `Anchor: none` — step 1 and step 3 — showed *nothing at
+   all*. This had been invisible because before S3a nothing could be authored
+   anchorless. Now centred instead.
+2. **`scrollIntoView` ran exactly once**, in an effect firing the moment the
+   step became active. But a step applies its `State:` and the row it points at
+   is created by the render *that state causes*, so at that moment the element
+   reliably does not exist. Row anchors were never scrolled to. Now retried
+   inside the existing 250ms measure loop, and only on the first resolve so it
+   cannot yank the view while someone is reading.
+
+Note both are *timing* bugs of the same shape — asking about the DOM before the
+state that creates it has rendered. The 250ms poll (which task 11 wants to
+delete) is currently what papers over this. **Task 11 must not delete the poll
+without replacing that retry**, or row anchors silently stop resolving again.
+
+### The row-anchor gap was two-thirds already solved
+
+Expected to be the hard gap; wasn't. `node-box` (`data-node-id`) and `slot-row`
+(`data-row`) were already addressable — the attributes existed for edge
+anchoring and drag handling. Only the left panel needed new markup, and only in
+*tree* mode: `SelectionTable` already had `data-class-row`, while the tree
+delegates rows to the external `dag-browser-widget`, whose row wrapper carries
+no node id and which dmvd cannot change. Marked the one span dmvd controls
+(`data-entity-row`) and resolve upward to `.dbw-row` for the full-width rect.
+
+**Sibling merge is where the identity model actually gets hard**, and it is
+worth understanding before touching these:
+
+- A merged box's `data-node-id` is `merged::<parent>`, not a class name.
+- A merged *child* has no box of its own at all.
+- Inside a merged box, `data-row` is **not unique**: the parent's slot and each
+  child's narrowed override all carry the same slot name. `RowVM.declaringClass`
+  already existed for exactly this reason (edges anchor by the
+  `(declaringClass, slot)` pair) but was not emitted to the DOM. Now it is, as
+  `data-declaring-class` — which also fixed a latent duplicate-React-key bug on
+  those same rows.
+
+So `node-box:X` tries `X`, then `merged::X`, then any box containing a row
+declared by `X`. Three fallbacks for one anchor looks like over-engineering
+until you try to point at a merged child.
+
+### Rejected: putting resolvers behind `data-help-id`
+
+Tempting, because it would keep one anchoring mechanism and keep the
+`helpContent.test.ts` grep assertion covering everything. Rejected: it means
+stamping `data-help-id` on every row of a 55-entity tree and every slot row of
+every box, ids would have to be synthesised per row, and they would collide
+across the two selector modes and the Focus view's second DagBrowser. The
+resolver indirection exists precisely so anchors can be *computed* rather than
+enumerated.
+
+The cost is real and should be stated: those four kinds are **not covered by
+the grep test**, because there is no attribute literal to grep for. That is why
+`helpResolvers.test.ts` asserts against DOM fixtures copied from the real render
+sites — it is the only thing standing between a markup rename and a silently
+unringed popover.
+
+### Not verified
+
+`npm test` could not run: vitest needs to write `node_modules/.vite-temp/`, and
+the sandbox denies writes under `node_modules/` in this worktree. Typecheck
+(`tsc -b`) and eslint are clean. `src/test/helpResolvers.test.ts` is written but
+has never executed — treat its passing as unproven until someone runs it.
+(`tsc -b` also cannot write its `.tsbuildinfo` cache for the same reason; that
+one is harmless, it just means no incremental reuse.)
+
+---
 ## 2026-08-27 (S3a) — the tour authoring format
 
 ### The one insight the whole design turns on

@@ -33,13 +33,15 @@ re-litigated:
    before S3b's resolvers exist means designing anchor-name assignment twice.
    **Do it as one focused change after S3b lands**, not during.
 
-**Known gaps, scoped 2026-08-26** (details in the PLANNING section of TASKS.md):
-tour steps perform state changes invisibly; `back` does not undo them; the
-spotlight can only ring a whole `data-help-id` element, so it cannot highlight a
-single ROW inside the dag-browser tree — which is what step 2 needs. Popover
-dragging is wanted as an escape hatch. State snapshots per step are the chosen
-mechanism; porting icd11-playground's history-carrying state was considered and
-rejected as overkill.
+**Known gaps, scoped 2026-08-26 — CLOSED by S3b 2026-08-27** (details in the
+PLANNING section of TASKS.md): tour steps performed state changes invisibly;
+`back` did not undo them; the spotlight could only ring a whole `data-help-id`
+element, so it could not highlight a single ROW inside the dag-browser tree.
+State snapshots per step were the chosen mechanism; porting
+icd11-playground's history-carrying state was considered and rejected as
+overkill — and turned out to be unnecessary, because every position carries
+full absolute state, which makes `back` exact by construction rather than by
+replay. **Still open:** popover dragging, wanted as an escape hatch (task 8).
 
 **Authoring format extended 2026-08-27 (S3a). The format spec is the header
 comment of [`src/help/help-content.md`](../src/help/help-content.md)** — keep it
@@ -55,9 +57,11 @@ though the mechanism acting on it is still S3b's work:
   knowing what a dmvd entity row is, which this package must not.
   **This is an extraction constraint: do not "simplify" it back into the
   parser.** dmvd's kinds: `help-id`, `entity-row`, `entity-checkbox`,
-  `slot-row`, `node-box`. Only `help-id` is implemented (in `HelpLayer.tsx`);
-  the others resolve to null and degrade to an unringed popover until S3b
-  builds them.
+  `slot-row`, `node-box`. **All implemented as of S3b** — `help-id` and `none`
+  in `HelpProvider.resolveAnchor`, the other four in
+  `src/explore/helpResolvers.ts`, handed in as
+  `<HelpProvider resolvers={...}>`. That prop IS the seam; nothing under
+  `src/help/` names a dmvd concept.
 - **`Beats:` gives a step ordered sub-steps.** One popover advancing through
   several beats — this covers both nested sub-steps and
   reveal-the-next-bullet, which Siggie asked for separately but which are one
@@ -79,7 +83,39 @@ though the mechanism acting on it is still S3b's work:
   `Action:`".
 
 Entry/exit state snapshots are runtime, not format — nothing is authored for
-them. That is S3b's to build.
+them.
+
+## Mechanism shipped 2026-08-27 (S3b)
+
+The three gaps above are closed. What the extraction now has to carry:
+
+- **The provider navigates `tourPositions()`, not entries.** `tourIndex` is an
+  index into that flat list, so it counts BEATS; `position.step` supplies the
+  displayed `4.2 / 6`. Only `HelpButton` consumed the old `steps` API, which is
+  why replacing it was cheap.
+- **Two host callbacks, not one.** `onApplyState(query)` was already there;
+  `onReadState()` is its inverse and is what makes restore possible. dmvd
+  implements both against the URL, because `writeExploreState` keeps
+  `location.search` authoritative — so reading it back IS reading live state,
+  and the tour never learns what a selection is.
+- **Restore runs on EVERY exit path** (done, ✕, Escape, `?`): they are one
+  event from the viewer's side. The snapshot is taken before the first
+  position applies its state, or it would snapshot the tour.
+- **`viewerEdited` is derived, not tracked.** The host calls `noteViewerEdit()`
+  from the same effect that writes the URL; the provider ignores anything equal
+  to the state it just applied, so the tour's own write is not mistaken for the
+  viewer's click. That is what gates the "your changes will be discarded" line
+  — it appears only once there is something to discard.
+- **The action band is deliberately unlike the body** — tinted, ruled, checked,
+  chrome-sized. The bug it fixes is that "I ticked this for you" read as "here
+  is what you are looking at", and two kinds of sentence that look alike is
+  exactly how that happened.
+- **The popover no longer requires a resolved anchor to show.** It used to gate
+  on `rect`, which meant an `Anchor: none` step displayed nothing at all. An
+  unresolved anchor now centres it.
+- **Scrolling the anchor into view is retried, not done once.** A step applies
+  its `State:`, and the row it points at is created by the render that state
+  causes — so at first measure the element usually does not exist yet.
 **Goal:** a gh-pages-hosted product tour for dmvd Explorer (not a video), built on
 a reusable help package shared across products.
 

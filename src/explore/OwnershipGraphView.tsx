@@ -2030,8 +2030,16 @@ export default function OwnershipGraphView({
                         </div>
                       ) : (
                         <div
-                          key={r.slot}
+                          key={r.declaringClass ? `${r.declaringClass}|${r.slot}` : r.slot}
                           data-row={r.slot}
+                          /* A merged box holds several rows with the same slot
+                             name — the parent's and each child's override — so
+                             `data-row` alone is not unique there. The declaring
+                             class is what `slot-row:<Entity>.<slot>` resolves
+                             against, and it is the same pair edges anchor by
+                             (see `rowY`). Absent on an unmerged box, where the
+                             box's own `data-node-id` already says it. */
+                          data-declaring-class={r.declaringClass}
                           data-expandable={isExpandable(r) ? '' : undefined}
                           data-no-drag={isExpandable(r) ? '' : undefined}
                           title={(r.channel === 'plain'

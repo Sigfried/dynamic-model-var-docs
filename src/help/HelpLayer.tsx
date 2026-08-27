@@ -10,79 +10,106 @@
  * height, and the smooth-scroll settling race.
  *
  * It is deferred for a SEQUENCING reason, not a technical one (2026-08-27,
- * revised): S3b is about to add resolvers for `entity-row`, `slot-row` and
- * friends, which point at rows created and destroyed as the diagram redraws.
- * Those elements do not carry `data-help-id`, so a blanket
- * `[data-help-id] { anchor-name: ... }` rule would not cover them, and
- * migrating positioning before the anchor model settles means doing it twice.
+ * revised): the resolvers for `entity-row`, `slot-row` and friends point at
+ * rows created and destroyed as the diagram redraws, and those elements do not
+ * carry `data-help-id` — so a blanket `[data-help-id] { anchor-name: ... }`
+ * rule would not cover them, and migrating before the anchor model settled
+ * meant doing it twice.
  *
  * The previously recorded reason — "assigning per-anchor `anchor-name` from
  * script is not obviously simpler than measuring" — was weaker than it looked:
  * a single CSS rule can assign anchor names for the tagged case without any
  * script. That is not the blocker; the resolver-backed anchors are.
  *
- * Migrate once S3b's resolvers exist. The popover already uses the **Popover
- * API** for top-layer rendering, which is the part that removes the portal.
+ * **Those resolvers now exist** (S3b, 2026-08-27; `explore/helpResolvers.ts`),
+ * so the sequencing reason is discharged and the migration is unblocked — it
+ * is task 11 in docs/TASKS.md. What it must handle: the rows the resolvers
+ * find are marked with `data-class-row` / `data-entity-row` / `data-row` /
+ * `data-node-id`, so it needs anchor-name rules per attribute rather than one,
+ * and `slot-row` picks its element by a PAIR of attributes, which no single
+ * `anchor-name` rule expresses. The popover already uses the **Popover API**
+ * for top-layer rendering, which is the part that removes the portal.
  */
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
 import { useHelp } from './helpContext';
 import type { HelpAnchor } from './parseHelpContent';
 import './help.css';
 
-/**
- * Resolve a parsed anchor to the element it points at.
- *
- * Only the built-in `help-id` kind is handled here. The dmvd-specific kinds
- * (`entity-row`, `slot-row`, ...) need host-registered resolvers, which is
- * S3b's work -- until those exist they resolve to null, which degrades to a
- * centered, unringed popover rather than a crash.
- */
-function elementFor(anchor: HelpAnchor | undefined): Element | null {
-  if (!anchor || anchor.kind === 'none') return null;
-  if (anchor.kind === 'help-id') {
-    return document.querySelector(`[data-help-id="${CSS.escape(anchor.arg)}"]`);
-  }
-  return null;
-}
-
-/** Where an anchor currently sits, or null when it is not on screen. */
-function rectOf(anchor: HelpAnchor | undefined): DOMRect | null {
-  const el = elementFor(anchor);
-  return el ? el.getBoundingClientRect() : null;
-}
-
 export default function HelpLayer() {
   const {
-    helpMode, tourStep, steps, content, activeId, dismissEntry,
-    nextStep, prevStep, endTour, showEntry,
+    helpMode, tourIndex, position, positions, stepCount, content, activeId,
+    dismissEntry, nextStep, prevStep, endTour, showEntry, resolveAnchor,
+    viewerEdited,
   } = useHelp();
 
-  const inTour = tourStep !== null;
+  const inTour = tourIndex !== null;
   const entry = activeId ? content.entries.get(activeId) : undefined;
+
   /**
-   * What the popover points at. Taken from the entry's `Anchor:` rather than
-   * from its id, so an entry's identity no longer has to double as a DOM
-   * selector. Entries authored without `Anchor:` parse to `help-id:<own id>`,
-   * which is the previous behaviour exactly.
+   * Resolve an anchor to its element and to where it currently sits.
+   *
+   * Resolution itself lives in the provider, which holds the host's resolver
+   * table -- `help-id` is built in, `entity-row` and friends are dmvd's. The
+   * layer only measures what comes back.
    */
-  const anchor = entry?.anchor;
+  const elementFor = resolveAnchor;
+  const rectOf = useCallback(
+    (a: HelpAnchor | undefined) => elementFor(a)?.getBoundingClientRect() ?? null,
+    [elementFor],
+  );
+
+  /**
+   * What the popover points at. During a tour this is the POSITION's anchor,
+   * so a beat can override its step's; outside one it is the entry's own.
+   * Entries authored without `Anchor:` parse to `help-id:<own id>`, which is
+   * the pre-S3a behaviour exactly.
+   */
+  const anchor = inTour ? position?.anchor : entry?.anchor;
+
+  /**
+   * `4.2 / 6` — step number, then beat within it, against the number of
+   * STEPS. A beatless step reads plain `4`, so the sub-number appears only
+   * where it means something. The denominator deliberately counts steps and
+   * not positions: "4.2 / 11" would be arithmetic nobody can follow.
+   */
+  const counterLabel = () => {
+    if (!position) return '';
+    const multiBeat = (position.entry.beats?.length ?? 0) > 1;
+    return multiBeat ? `${position.step}.${position.beatIndex + 1}` : `${position.step}`;
+  };
+
   const [rect, setRect] = useState<DOMRect | null>(null);
   /** A hovered entry is transient; a clicked one stays until dismissed. */
   const [pinned, setPinned] = useState(false);
   const popRef = useRef<HTMLDivElement>(null);
 
-  // Scroll the tour's anchor into view BEFORE measuring, or the popover lands
-  // where the element used to be.
-  useEffect(() => {
-    if (!activeId) return;
-    elementFor(anchor)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  }, [activeId, anchor]);
+  /*
+   * Scroll the anchor into view BEFORE measuring, or the popover lands where
+   * the element used to be.
+   *
+   * Retried until the element turns up, not done once: a step applies its
+   * `State:` and the row it points at is created by the render that state
+   * causes, so at the moment this effect first runs the element frequently
+   * does not exist yet. Scrolling once and giving up left row anchors
+   * unscrolled and, on a long tree, off screen. Scrolls only the FIRST time
+   * an anchor resolves, so the poll below cannot keep yanking the view back
+   * while the viewer is reading.
+   */
+  const scrolledFor = useRef<Element | null>(null);
+  useEffect(() => { scrolledFor.current = null; }, [activeId, anchor]);
 
   useLayoutEffect(() => {
     if (!activeId) { setRect(null); return; }
-    const measure = () => setRect(rectOf(anchor));
+    const measure = () => {
+      const el = elementFor(anchor);
+      if (el && scrolledFor.current !== el) {
+        scrolledFor.current = el;
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+      setRect(el?.getBoundingClientRect() ?? null);
+    };
     measure();
     // The anchor moves when the canvas relayouts, the window resizes, or a
     // smooth scroll settles. Re-measuring on all three is cheaper than trying
@@ -95,19 +122,26 @@ export default function HelpLayer() {
       window.removeEventListener('scroll', measure, true);
       window.clearInterval(t);
     };
-  }, [activeId, anchor]);
+  }, [activeId, anchor, elementFor]);
 
-  // Popover API: showPopover puts it in the top layer, above every z-index and
-  // overflow:hidden ancestor.
+  /*
+   * Popover API: showPopover puts it in the top layer, above every z-index and
+   * overflow:hidden ancestor.
+   *
+   * Shown whenever there is an entry to show, NOT only when its anchor
+   * resolved. `Anchor: none` is a deliberate authoring choice -- step 1 uses
+   * it -- and gating on `rect` made those steps show nothing at all. An
+   * unresolved anchor centres the popover instead; see `popoverPosition`.
+   */
   useEffect(() => {
     const el = popRef.current;
     if (!el) return;
-    if (entry && rect) {
+    if (entry) {
       if (!el.matches(':popover-open')) el.showPopover();
     } else if (el.matches(':popover-open')) {
       el.hidePopover();
     }
-  }, [entry, rect]);
+  }, [entry]);
 
   // Leaving help mode, or starting a tour, drops any pin -- otherwise a
   // previously pinned popover outlives the mode that produced it.
@@ -171,35 +205,83 @@ export default function HelpLayer() {
         popover="manual"
         data-help-popover=""
         className="help-popover"
-        style={rect ? popoverPosition(rect) : undefined}
+        style={popoverPosition(rect)}
       >
         {entry && (
           <>
             <h4 className="help-popover-title">{entry.title}</h4>
-            {entry.description && (
-              <div className="help-popover-body"><Markdown>{entry.description}</Markdown></div>
+
+            {/*
+              The ACTION band: what the tour just did, in its own voice.
+
+              This is gap 1 of S3b and the bug that made Siggie misread step 2
+              entirely -- the tour ticked Participant, the canvas changed, and
+              the popover read as a description of whatever had appeared. It
+              gets its own band, above the body and visually unlike it, because
+              "what I did" and "what you are looking at" are different kinds of
+              sentence and running them together is exactly the confusion.
+            */}
+            {inTour && position?.action && (
+              <div className="help-popover-action">
+                <span className="help-popover-action-mark" aria-hidden="true">✓</span>
+                <div><Markdown>{position.action}</Markdown></div>
+              </div>
             )}
-            {entry.interactions.length > 0 && (
+
+            {/*
+              In a tour the BODY is the position's text -- a beat's own text
+              when the step has beats, the step's description otherwise. Outside
+              a tour it is the entry's description, unchanged.
+            */}
+            {(inTour ? position?.text : entry.description) && (
+              <div className="help-popover-body">
+                <Markdown>{(inTour ? position!.text : entry.description)}</Markdown>
+              </div>
+            )}
+
+            {/*
+              Interactions, shortcut and context are HELP furniture: they
+              describe an element you are inspecting. During a tour they would
+              bury the step's own text under a list the viewer did not ask for,
+              so the tour shows only action + text + nav.
+            */}
+            {!inTour && entry.interactions.length > 0 && (
               <ul className="help-popover-interactions">
                 {entry.interactions.map((it, i) => <li key={i}><Markdown>{it}</Markdown></li>)}
               </ul>
             )}
-            {entry.shortcut && (
+            {!inTour && entry.shortcut && (
               <p className="help-popover-shortcut">Shortcut: <kbd>{entry.shortcut}</kbd></p>
             )}
-            {entry.context && (
+            {!inTour && entry.context && (
               <div className="help-popover-context"><Markdown>{entry.context}</Markdown></div>
+            )}
+
+            {/*
+              The viewer is free to click around mid-tour, but the next step
+              sets the whole world absolutely and their changes go with it.
+              Siggie: "allow interaction, but explain to user that their changes
+              will be undone by each step on tour." Shown only once they have
+              actually changed something -- a standing warning about a thing
+              nobody did is noise.
+            */}
+            {inTour && viewerEdited && (
+              <p className="help-popover-warning">
+                Your changes will be discarded when you move to the next step.
+              </p>
             )}
 
             {inTour ? (
               <div className="help-tour-nav">
-                <span className="help-tour-count">{tourStep! + 1} / {steps.length}</span>
+                <span className="help-tour-count" title={`Position ${tourIndex! + 1} of ${positions.length}`}>
+                  {counterLabel()} / {stepCount}
+                </span>
                 <span className="help-tour-spacer" />
-                <button onClick={prevStep} disabled={tourStep === 0}>← back</button>
+                <button onClick={prevStep} disabled={tourIndex === 0}>← back</button>
                 <button onClick={nextStep} className="help-tour-next">
-                  {tourStep! + 1 === steps.length ? 'done' : 'next →'}
+                  {tourIndex! + 1 === positions.length ? 'done' : 'next →'}
                 </button>
-                <button onClick={endTour} title="End the tour">✕</button>
+                <button onClick={endTour} title="End the tour and restore your own view">✕</button>
               </div>
             ) : (
               <div className="help-tour-nav">
@@ -218,12 +300,24 @@ export default function HelpLayer() {
  * Place the popover beside its anchor, flipping and clamping to stay on
  * screen. Fixed positioning, so these are viewport coordinates — the same
  * frame `getBoundingClientRect` reports in.
+ *
+ * A null rect means the anchor is `none` or did not resolve; the popover is
+ * centred instead, which is what `Anchor: none` is authored to mean.
  */
-function popoverPosition(r: DOMRect): React.CSSProperties {
+function popoverPosition(r: DOMRect | null): React.CSSProperties {
   const W = 320;
   const GAP = 12;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
+
+  if (!r) {
+    const EST_H = 260;
+    return {
+      left: Math.max(8, (vw - W) / 2),
+      top: Math.max(8, (vh - EST_H) / 2),
+      width: W,
+    };
+  }
 
   /*
    * Pick the side with more room, rather than defaulting to the right and

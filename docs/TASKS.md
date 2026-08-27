@@ -12,14 +12,14 @@
 
 | # | Task | Est. | Status | Detail |
 |---|---|---|---|---|
-| 3 | **The tour** — format (S3a ✅) + mechanism (S3b) + copy (Siggie's) | ~0.5–1 day | ▶️ **S3a DONE — S3b next** | [format](#s3a-tour-authoring-format-brief) · [mechanism](#s3b-tour-mechanism-brief) · [package plan](HELP_PACKAGE_PLAN.md) |
+| 3 | **The tour** — format (S3a ✅) + mechanism (S3b ✅) + copy (Siggie's) | ~0.5–1 day | ▶️ **S3a + S3b DONE — copy is Siggie's** | [format](#s3a-tour-authoring-format-brief) · [mechanism](#s3b-tour-mechanism-brief) · [package plan](HELP_PACKAGE_PLAN.md) |
 | 5 | **Dark-gray box headers, white text** | ~10 min | ⬜ | [quick wins](#quick-wins-one-session-no-design-decisions) |
 | 6 | **Edge rendering** — one edge per declaring class; fixes the missing `Specimen.quality_measure` edge. **Decided: do not suppress `ObservationSet.observations`** | ~0.5 day | ⬜ | [§](#edge-rendering-the-fan-from-observationsetobservations) |
 | 7 | **Re-render regression** — "most clicks refresh the main panel". **Measure, don't guess** | ~unknown | ⬜ still uninvestigated | [§](#still-not-investigated-the-one-thing-that-is-not-understood) |
 | 8 | **Drag the tour popover.** Placement itself was exonerated | ~0.5 day | ⬜ | [§](#tour-and-help) |
 | 9 | **Edge crossings.** Cause unmeasured | ~unknown | ⬜ | [§](#smaller-items-raised) |
 | 10 | **Tour authoring notes + draft preview** — `Note:` / `Draft:` / `ForClaude:` fields, and a way to view a tour *including* its parked and unfinished steps. Siggie wants all of it; deferred 2026-08-27 for time | ~0.5 day | ⬜ deferred | [§](#deferred-authoring-notes-and-draft-preview) |
-| 11 | **Migrate positioning to CSS anchor positioning** — deletes the 250ms poll, the flip/clamp, and the `EST_H` guess. **Do it AFTER S3b's resolvers land**, not during | ~0.5 day | ⬜ after S3b | [HELP_PACKAGE_PLAN](HELP_PACKAGE_PLAN.md) |
+| 11 | **Migrate positioning to CSS anchor positioning** — deletes the 250ms poll, the flip/clamp, and the `EST_H` guess. **UNBLOCKED: S3b's resolvers landed.** Note `slot-row` selects on a PAIR of attributes, which no single `anchor-name` rule expresses | ~0.5 day | ⬜ ready | [HelpLayer.tsx header](../src/help/HelpLayer.tsx) · [HELP_PACKAGE_PLAN](HELP_PACKAGE_PLAN.md) |
 
 ### 🍒 QUICK WINS — one session, no design decisions
 
@@ -32,7 +32,7 @@ first except confirming it looks right afterwards.
 |---|---|---|
 | **Dark-gray box headers, white text** (table item 5) — currently `bg-slate-100 dark:bg-slate-700`; makes the colored child headers read as a family rather than anomalies | `OwnershipGraphView.tsx:1882` | ~10 min |
 | **`entityCol` tooltips say "ranges"** — LinkML jargon in researcher-facing text. Replace with *"Attributes whose value is an entity"* / *"...comes from a permissible value set"* / *"...is a data type"*, which also makes the three read as a partition of the attribute count. **`researcher` vocab only** — the `linkml` vocab keeps "ranges" legitimately | `appConfig.ts:126-128` (and `:203` for the short vocab) | ~10 min |
-| **First tour step doesn't dim the rest** while highlighting the title. Siggie: fix *only* if it takes under a minute — otherwise leave it for S3b | `HelpLayer.tsx` | ~1 min or skip |
+| ~~**First tour step doesn't dim the rest**~~ **— explained, not a bug.** The dim is the spotlight ring's outer `box-shadow`, so no ring means no dim. Step 1 is authored `Anchor: none`, which S3a deliberately chose (it is a whole-app introduction, not a pointer at the title). To get the dim back, change step 1's anchor to `app-title` — an authoring decision, Siggie's | `help-content.md` | ~1 min |
 
 **Deliberately NOT in this list**, though they look small: edge crossings and
 the re-render regression (item 7) — both have **unmeasured causes**, and the
@@ -211,6 +211,41 @@ before designing; each is a real limit in today's parser, not a guess:
 ---
 
 ### S3b — Tour mechanism (brief)
+
+> ## ✅ DONE 2026-08-27
+>
+> All three gaps closed. **The brief below is kept for its reasoning.**
+>
+> - **Actions render** in their own band — tinted, ruled, checked, above the
+>   body, deliberately unlike it.
+> - **Row anchors resolve.** `src/explore/helpResolvers.ts` implements
+>   `entity-row`, `entity-checkbox`, `slot-row`, `node-box`; the provider
+>   takes them as a `resolvers` prop, so nothing under `src/help/` names a dmvd
+>   concept. Two markup additions were needed: `data-entity-row` in
+>   `SelectionTree.tsx` (the DagBrowser widget's row carries no node id) and
+>   `data-declaring-class` on slot rows (a merged box holds several rows with
+>   one slot name).
+> - **`back` restores.** The provider navigates `tourPositions()`, snapshots
+>   the viewer's state on entry via a new `onReadState` prop, and restores on
+>   every exit path. The popover says changes will be discarded, but only once
+>   the viewer has actually changed something.
+> - The counter reads `4.2 / 6`, and a beatless step reads plain `5 / 6`.
+>
+> **Two bugs found and fixed while in there**, both pre-existing: the popover
+> was gated on a resolved anchor, so `Anchor: none` steps (step 1, step 3)
+> displayed nothing at all; and `scrollIntoView` ran once, before the row a
+> step's `State:` creates exists, so row anchors were never scrolled to.
+>
+> **Task 11 (CSS anchor positioning) is now unblocked** — its stated blocker
+> was these resolvers. See the header comment in `HelpLayer.tsx` for what the
+> migration must handle: rows are marked by four different attributes, and
+> `slot-row` selects on a PAIR of them, which no single `anchor-name` rule
+> expresses.
+>
+> **Not verified by a test run.** `npm test` cannot start in the S3b worktree —
+> vitest needs to write `node_modules/.vite-temp/`, which the sandbox denies.
+> Typecheck and lint are clean; `src/test/helpResolvers.test.ts` is written but
+> unrun. **Needs Siggie: run the suite.**
 
 **Goal: close the three known gaps in the tour machinery.** All are in
 `src/help/HelpLayer.tsx` and `HelpProvider.tsx`.
