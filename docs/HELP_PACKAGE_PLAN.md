@@ -1,6 +1,26 @@
 # Help/Tour Package — implementation plan
 
-**Status:** decided 2026-08-26, not yet started.
+**Status:** decided 2026-08-26; **STARTED, not extracted.** The help system is
+implemented in-app under `src/help/` (`HelpProvider.tsx`, `helpContext.ts`,
+`HelpLayer.tsx`, `parseHelpContent.ts`, `help-content.md`, `help.css`) on branch
+`tweaking-expand-prune`. It has NOT been extracted into a standalone package.
+
+**Two deliberate departures from the plan below** — recorded so they are not
+re-litigated:
+1. **No native-title swapping.**
+2. **Measured positioning** (`getBoundingClientRect`) rather than CSS anchor
+   positioning; the plan prefers `anchor-name`/`position-anchor`, which remains
+   the right end state but needs a CSS property set on each anchor, and the
+   anchors here are ordinary elements tagged only with `data-help-id`. See the
+   header comment in `HelpLayer.tsx`.
+
+**Known gaps, scoped 2026-08-26** (details in the PLANNING section of TASKS.md):
+tour steps perform state changes invisibly; `back` does not undo them; the
+spotlight can only ring a whole `data-help-id` element, so it cannot highlight a
+single ROW inside the dag-browser tree — which is what step 2 needs. Popover
+dragging is wanted as an escape hatch. State snapshots per step are the chosen
+mechanism; porting icd11-playground'"'"'s history-carrying state was considered and
+rejected as overkill.
 **Goal:** a gh-pages-hosted product tour for dmvd Explorer (not a video), built on
 a reusable help package shared across products.
 

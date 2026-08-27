@@ -7,6 +7,182 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-26 (planning session) — reviewing `0c6cfdc`; two of my answers were wrong
+
+A **planning-only** session. Siggie, midway: *"this whole session should be
+considered planning at this point, btw; not fixing."* Nothing was implemented.
+The output is the PLANNING section at the top of TASKS.md. What follows is the
+reasoning behind it, and — more usefully for a future session — the two places
+I reasoned confidently and was wrong, plus what actually caught it.
+
+### The method that worked: probe, don't reason
+
+Four questions got answered by writing a throwaway `src/test/zz-probe.test.ts`
+that asserted the real value against the string `'SENTINEL'` and read the diff
+out of the failure. (`console.log` is swallowed in vitest — that trick is in the
+gotchas list and it earned its place again.) Every probe took under a minute and
+each one produced a fact I would otherwise have guessed at. Deleted afterwards.
+
+The two answers I got wrong were both ones I *didn't* probe. That is the whole
+lesson of this session.
+
+### Wrong answer #1: "the popover is anchored to Participant"
+
+Siggie's screenshot showed the tour's step-2 popover sitting mid-left over the
+diagram with a Participant box beside it. I explained this as the placement
+heuristic maximizing whitespace instead of minimizing occlusion, and recommended
+abandoning the heuristic for dragging.
+
+Siggie pushed back — *"I don't understand what you're saying. Was/is the popover
+attached to Participant or to something else? I'm not totally ready to give up
+on heuristics but need to understand what's happening."* — and reading the code
+took thirty seconds: step 2's entry id is `selection-tree`
+(`help-content.md:41`), `ExploreApp.tsx:319` tags the left panel with it,
+`roomRight ≈ 640` vs `roomLeft ≈ -12`, popover goes right of the tree. **The
+heuristic did exactly the right thing.** Nothing was ever anchored to
+Participant.
+
+The actual bug is that step 2 carries `**State:** sel=Participant`, so **the
+step silently performs an action** — a Participant box appears and nothing says
+the tour did it. Siggie got there himself: *"the problem isn't/wasn't with
+placement, it's with the tour itself."*
+
+**The lesson is not "read the code first" (I know that).** It is that a
+screenshot of a wrong-looking output invites you to explain the *rendering*,
+when the cause can be a step *side effect* two layers away. I pattern-matched
+"popover in a bad place" → "placement bug" without checking what the popover was
+even pointing at. Had I not been corrected, we would have spent a session tuning
+geometry that was already correct.
+
+Note also that the fix Siggie wants for the highlighting — spotlight the
+**Participant row**, not the whole tree — means help anchors have to address a
+row inside the dag-browser widget, not only whole panels tagged with
+`data-help-id`. That is a real capability gap in the help layer, not a tweak.
+
+### Wrong answer #2: "there are only two relationship types"
+
+Asked how many one-hop relationship types exist, I answered **two** — `owns` and
+`owned by` — reasoning (correctly, as far as it went) that
+`containmentGraph.ts:267` **flips `own-bkwd` edges at graph-build time**, so by
+the time you hold a DAG node's `parents`/`children` the declaring side is gone.
+I concluded `hiddenOwned` was not a new type and that fwd/bkwd was
+invisible-by-design.
+
+Siggie: *"i'm not sure i'm happy with the new `hiddenOwned` getting merged with
+owns. the distinction is sort of like 'mine because i say so' and 'mine because
+it says so'."*
+
+He is right and the error is instructive: **I described the data structure's
+state and called it the user's model.** The flip is an implementation choice
+that erases information — it does not mean the information is unwanted. Whether
+a relationship is declared on my class or theirs changes what you would edit to
+change it, which is exactly the sort of thing a schema browser exists to show.
+From one entity's view there are four ownership positions (my-attr / their-attr
+× I-own / owns-me), plus association.
+
+**Consequence a future session must not miss:** recovering the declaring side
+for the chip redesign means **carrying the verdict through the DAG**, not just
+the direction. The flip at line 267 is upstream of everything the chips read.
+Not deep, but it is not a UI-only change, and anyone scoping the redesign as
+"just swap chips for counts" will hit this.
+
+Siggie's labels are better than the ones in the code and should be used:
+*"N belong to me by my attribute," "N belong to me by their attribute," "N I
+belong to," "N associated with."* `OwnershipLegend.tsx:33` currently has
+`'owns (forward)'` / `'belongs to (backward)'`, which describe the classifier
+rather than the reader's situation.
+
+### The premise-check that paid off: ObservationSet
+
+Siggie reasoned: *"I guess if it's abstract then there's no case in which an
+ObservationSet could own Observations, only in subclasses. so, yeah, i think
+suppress."* Conditional decision, so I checked the condition instead of
+recording the conclusion.
+
+**`ObservationSet` is not abstract** — no `abstract: true` in `bdchm.yaml`, just
+`is_a: Entity`. Nor are Observation or any of the `*Set` subclasses. **And it
+does declare `observations`** (slots: `category, focus, method_type,
+performed_by, observations, associated_visit, associated_participant`), with the
+subclasses narrowing the range.
+
+So the black `ObservationSet.observations → Observation` edge represents a real
+slot on a real instantiable class, and suppression cannot be justified the way
+he justified it. Left as an open question addressed back to him rather than
+implemented, because the conclusion might still be what he wants for other
+reasons — but not *for that reason*.
+
+**Generalize this:** when a decision arrives in the form "if X then Y, so Y",
+verify X. It cost one grep and prevented shipping a suppression rule built on a
+false premise. This is the second time in the project's history a
+plausible-sounding structural assumption about the schema turned out false on
+inspection (cf. 2026-08-24, "four assumptions found wrong on inspection").
+
+### `Specimen.quality_measure` — chased to the right layer
+
+Siggie: *"i'm not sure i'm happy... but it should have a magenta (?) edge from
+Specimen.quality_measure. Why doesn't it?"*
+
+First grep for `quality_measure` in `src/` came back empty, which briefly looked
+like the slot did not exist. It does — it is schema data, not code, and lives in
+`public/source_data/HM/bdchm.yaml`. **Searching `src/` for a schema slot name is
+a category error**; the slot names only appear in code when they are in an
+override set.
+
+`quality_measure` is `multivalued: true, range: SpecimenQualityObservation` →
+Rule 1 → own-fwd, no override intercepts it, and a probe confirms the edge is in
+the subgraph (`Specimen --quality_measure[ownership]--> SpecimenQualityObservation`).
+So it is not a classification bug.
+
+It disappears from the canvas because SQO gets **absorbed into the merged
+Observation box**, and `mergeSiblings` filters owners with `notSelfOrMember`
+(`OwnershipGraphView.tsx:452`), folding member ownership into the merged box's
+chip strip rather than drawing it. SQO also has exactly 5 owners against
+`DEFAULT_OWNER_CAP = 5`, so the cap is live on the same node — a coincidence
+worth knowing, because it makes "raise the cap" look like a fix when it is not.
+
+### The duplicate badge, and why it is worth mentioning at all
+
+`⑃ {members.length}` and `▷ {subclassCount}` render the same number on a merged
+box because `mergeSiblings` sets `subclassCount: members.length`
+(`OwnershipGraphView.tsx:485`). They can only differ on an unmerged box, where
+`members` is empty and only one renders. So on every box where both appear, they
+are identical **by construction**.
+
+Small, but it came from Siggie asking *"could the numbers ever be different from
+each other?"* — a question about invariants rather than appearance. Worth
+recording because the answer ("no, provably") is the kind of thing that is
+cheap to determine once and expensive to keep re-wondering about.
+
+### Why `0c6cfdc` is being kept
+
+The handoff invited dropping it whole. After review: keep it. The CSS fix works
+(Siggie confirmed the row overlap is gone), the owner-cap suppression rule went
+uncontested, and the spotlight/hover-pin drew no objection. The two failing
+parts — box-height overlap and the chip strips — are design problems whose fix
+is the redesign, not a revert. Reverting would also lose `hiddenOwned`'s model
+half, which is well-tested and is what stops Organization being a dead end.
+
+One structural note about the failure, because it explains why the redesign is
+the fix rather than a patch: both chip strips are `flex-wrap` with a height
+**estimated in JS** while the browser does the actual wrapping. When the
+estimate and reality disagree, the reserved band and the drawn band diverge and
+rows below overlap — which is also the edge-anchoring risk the commit message
+flagged. A fixed-size count badge makes box height deterministic and removes the
+whole class of bug. That is the strongest argument for counts-over-chips, and it
+is a stronger one than "chips are ugly".
+
+### Deferred deliberately
+
+The expansion fan-out (one chip click → three boxes, measured) has an obvious
+candidate fix: give expansions different status from selections so they arrive
+without their owners. Siggie: *"I'm inclined to agree about distinguishing
+selection from expansion. But let's see where we end up with chip strip
+replacement before implementing."* Recorded as deferred-with-reason rather than
+open, because the redesign may dissolve it — if a count menu makes the cost
+visible before the click, the fan-out may stop being a problem worth a rule
+change.
+
+---
 ## 2026-08-26 (later) — Siggie's five: tweaking, slots, dag-browser, state, tour
 
 Branch `tweaking-expand-prune`, off `main` at `8bfd294`. Five tasks, all

@@ -93,7 +93,313 @@ re-order them, the descriptions below identify each one:**
 Worth knowing: img-4's URL is itself evidence the serializable-state work
 functions — `merge`, `owners` and `sel` all round-tripped into a shareable link.
 
-### ▶️ DO THIS FIRST — the one thing that is not understood
+---
+
+## 📋 PLANNING — 2026-08-26 review of `0c6cfdc` (session 2)
+
+> **This was a PLANNING session. Siggie: *"this whole session should be
+> considered planning at this point, btw; not fixing."*** Nothing below was
+> implemented. Three screenshots were reviewed against the code and several
+> answers were **measured with throwaway probes**, not reasoned — those are
+> marked MEASURED and can be trusted without re-deriving them.
+
+### Verdict on `0c6cfdc`: keep it, fix forward
+
+Do **not** revert. Of the six changes, four are settled: the owner-cap
+suppression rule (uncontested), the CSS overlap fix (**Siggie confirmed the
+row-overlap bug is gone**), the spotlight, and the hint hover-pin. The two that
+need work are design conversations, not bad code. See below.
+
+### What is confirmed BROKEN, in priority order
+
+1. **No horizontal scroll in the tree** (Siggie: *"i don't see any horizontal
+   scroll capability"*). MEASURED by reading the mount site: `selectionTree.css`
+   puts `overflow-x: auto` on `.dbw-root`, but `ExploreApp.tsx:319` wraps it in
+   `<div className="flex-1 overflow-y-auto min-h-0">` — **that** ancestor is the
+   one sized to the fixed `w-96` panel, so it clips first and the inner scroll
+   container never has anything to scroll. The overlap went away because of the
+   18ch xref clamp, not because scrolling started working. Fix belongs on the
+   ancestor — but see the chip-strip work first; scroll may not be the answer.
+
+2. **Box-height / text overlap inside boxes.** Confirmed by img-1 (Participant:
+   `+ 7 more attributes` colliding with `associated_person` / `Visit add all`)
+   and img-3 (Observation: chip strips colliding with each other and with
+   `Spec…`/`Context`). **Root cause, and it is structural:** `nodeHeight` now
+   adds a second `ownersStripHFor(owned)` band, and both strips are
+   `flex-wrap` with a height *estimated in JS* while the browser does the real
+   wrapping. When the estimate and the actual wrap count disagree, the reserved
+   band and the drawn band diverge and rows below overlap. Same root cause as
+   the edge-anchoring risk the commit message flagged. **This is the strongest
+   argument for the count-plus-menu redesign below: a fixed-size count badge
+   makes box height predictable and kills this bug as a side effect rather than
+   as a patch.**
+
+3. **Duplicate header badges — MEASURED.** `⑃ {n.members.length}` (line 1784)
+   and `▷ {n.subclassCount}` (line 1796) show the same number on a merged box,
+   because `mergeSiblings` sets `subclassCount: members.length` at line 485.
+   They can only differ on an *unmerged* box, where `subclassCount` counts drawn
+   is-a edges (line 206) and `members` is empty — so only one renders anyway.
+   **On a merged box they are identical by construction.** Drop one (probably
+   `▷`, keeping `⑃` for "merged"). This also frees header room for the relation
+   counts.
+
+4. **`Specimen.quality_measure → SpecimenQualityObservation` is missing from the
+   canvas — MEASURED, and it is NOT a classification bug.** The edge exists:
+   `quality_measure` is `multivalued: true, range: SpecimenQualityObservation`
+   → Rule 1 → own-fwd, and a probe confirms `Specimen --quality_measure
+   [ownership]--> SpecimenQualityObservation` is in the subgraph, with SQO's
+   parents being `Visit, Participant, Organization, Specimen, Observation`.
+   It vanishes in img-3 because SQO is **absorbed into the merged Observation
+   box**, and `mergeSiblings` filters owners with `notSelfOrMember` (line 452),
+   folding member ownership into the merged box's chip strip instead of drawing
+   it. Note SQO has exactly 5 owners against `DEFAULT_OWNER_CAP = 5`, so the cap
+   is also live here. **Fix inside the edge-rendering redesign, not by raising
+   the cap.**
+
+### ▶️ The tour — the problem was never placement
+
+Siggie initially read this as a popover-placement bug. It is not. MEASURED:
+step 2's entry id is `selection-tree` (`help-content.md:41`), and
+`ExploreApp.tsx:319` tags the **left panel** with `data-help-id="selection-tree"`.
+Nothing is anchored to Participant. The geometry in `HelpLayer.tsx:203` computed
+`roomRight ≈ 640` vs `roomLeft ≈ -12` and placed the popover right of the tree —
+**exactly as designed.**
+
+The confusion came from step 2 carrying `**State:** sel=Participant`
+(`help-content.md:48`): **the step silently performs an action**, a Participant
+box appears, and nothing in the popover says the tour did it. Siggie: *"i was
+totally misreading the step 2/4 popover... the reason is that Participant
+appears in this step. So the problem isn't/wasn't with placement, it's with the
+tour itself."*
+
+Two requirements, both Siggie's:
+
+- **T1. An action in a step must be visibly performed.** *"if the tour includes
+  an action, the action needs to be very visibly performed, maybe broken into
+  steps so the user follows what's going on."* And specifically: **highlight the
+  Participant ROW, not the whole tree** — the current spotlight rings the entire
+  left panel, which is why the action reads as ambient rather than as a thing
+  that just happened. That means help anchors need to address a row inside the
+  tree, not only whole panels.
+- **T2. `back` must undo actions taken since that step.** Currently `State:` is
+  applied forward with no inverse.
+
+**Proposed mechanism (cheap, because item D already paid for it):** snapshot the
+serializable state on entering each step; `back` restores the snapshot. All the
+graph state already round-trips (`sel`/`exp`/`hidden`/`sibs`/`dir`/`merge`/
+`owners`), so a step becomes literally a URL — which is what the guided-tour
+half of B wanted anyway.
+
+**Siggie's note on prior art:** *"didn't we talk about extracting
+icd11-playground's state management as well as its help system? i guess we
+didn't do it. it handles this in a complex but effective way. though its ability
+to share a state with all its history is overkill for this app (and maybe for
+that one too). but your solution is probably easier."* The earlier note is at
+TASKS.md ~L458 (*"icd11-playground has a state system for this"*). **Decision:
+go with per-step snapshots; do not port icd11's history-carrying state.** Record
+this so it is not re-litigated.
+
+**OPEN — Siggie's carry-forward #1, needs an answer before building:** *"can
+restoring only tour actions work? it couldn't just be revert to previous url at
+that point."* He is right that it cannot be a plain URL revert. If the user
+interacts freely mid-tour, a whole-state snapshot restore discards **their**
+changes too, which is surprising. The alternatives:
+  - whole-state snapshot (simple, clobbers user edits on `back`);
+  - track only the keys the tour itself set and restore just those (matches what
+    he asked for, but "the tour set `sel=Participant` and then the user added
+    Condition" has no obviously right answer);
+  - soft-lock interaction during a tour (sidesteps it; may be too restrictive).
+  This is also entangled with the still-open question of whether the user may
+  interact at all during a tour. **Needs Siggie.**
+
+### ▶️ Edge rendering — the fan from `ObservationSet.observations`
+
+img-3 shows ~5 colored edges leaving one source row and landing on one target
+header. Siggie's three options were: one black edge / colored edges to child
+headers / keep-and-explain. **He then specified what he actually wants, which is
+neither of the first two as stated:**
+
+> *"ObservationSet.observations should be one black edge;
+> DimensionalObservationSet.observations should be one blue edge (ideally to
+> DimensionalObservation but could be Observation because of edge crossings),
+> etc."*
+
+I.e. **one edge per DECLARING class, colored by that class**, black for the
+parent's own slot. This resolves the fan at the source rather than the target,
+so it avoids both the tangle and the crossings his objection to option 1 raised
+(*"the problem with option 1 is there would probably be a lot of edge crossing.
+easier to read with colors, but not ideal"*).
+
+Rejected: **keep-and-explain** — it needs explaining *because* it is not
+working; documentation is not a fix for an unreadable diagram. Rejected as a
+blanket rule: **one black edge for everything** — it loses genuine modeling
+content, because `observations` is narrowed per subclass (DimensionalObservation**Set**
+→ DimensionalObservation, etc.), and one black edge drops the fact that each set
+holds its own kind. That answers Siggie's carry-forward question *"with option
+2, is there information we'd be losing when there's slot_usage involved?"* —
+**yes, real loss.**
+
+**⚠️ ObservationSet — Siggie's carry-forward #2 needs REVISING, the premise is
+wrong.** He said: *"I guess if it's abstract then there's no case in which an
+ObservationSet could own Observations, only in subclasses. so, yeah, i think
+suppress."* MEASURED against `public/source_data/HM/bdchm.yaml`:
+
+- **`ObservationSet` is NOT abstract.** No `abstract: true`; it is
+  `is_a: Entity` with a plain description. Neither are Observation,
+  DimensionalObservationSet, MeasurementObservationSet or SdohObservationSet.
+- **But ObservationSet DOES declare `observations`** — its slots are `category,
+  focus, method_type, performed_by, observations, associated_visit,
+  associated_participant` — and the subclasses each *narrow* it
+  (DimensionalObservationSet → DimensionalObservation, etc.).
+
+So the conditional he attached his decision to ("if it's abstract") is false,
+and suppression cannot be justified on those grounds. The black
+`ObservationSet.observations → Observation` edge represents a real slot on a
+real instantiable class. **Do not suppress it without asking him again** —
+the honest question is now "ObservationSet is concrete and declares
+`observations`; do you still want its edge hidden?", which is a modeling
+judgement, not a mechanical consequence.
+
+**Also in scope here:** the missing `Specimen.quality_measure` edge (item 4
+above) — same subsystem, same merge-suppression cause.
+
+### ▶️ Chip strips → relation counts + menu (the main redesign)
+
+Siggie: *"i think we need something other than chip strips. we should talk about
+it. they're ugly and also tend to have text overlap."* Confirmed by img-3
+(Observation carries 13 `owned by` chips over three wrapped lines plus an `owns`
+strip plus `add all`; the box is mostly chips before it is mostly content).
+
+**Keep the underlying model.** "Relations that exist but are not drawn" is
+sound and is what stops Organization being a dead end (img-4). It is the
+*presentation* as inline wrapped chip strips that fails — and it fails
+structurally, per item 2 above.
+
+#### How many relationship types — CORRECTED
+
+An earlier answer in-session said "only two, `owns` / `owned by`, and
+`hiddenOwned` is not a new type" on the grounds that the DAG flips `own-bkwd`
+at build (`containmentGraph.ts:267`) so `parents`/`children` are pure direction.
+**Siggie rejected this, correctly:**
+
+> *"i'm not sure i'm happy with the new `hiddenOwned` getting merged with owns.
+> the distinction is sort of like 'mine because i say so' and 'mine because it
+> says so'."*
+
+That distinction is real and user-visible: whether the relationship is declared
+on my class or on theirs changes what you would edit to change it. From a single
+entity's perspective there are **four** ownership positions plus association:
+
+| | declared on me | declared on them |
+|---|---|---|
+| **I own it** | own-fwd (my attribute) | own-bkwd flipped (their FK) |
+| **it owns me** | own-bkwd (my FK) | own-fwd (their attribute) |
+
+Siggie's own labels, which are better than anything currently in the code:
+*"N belong to me by my attribute," "N belong to me by their attribute," "N I
+belong to," "N associated with."* Compare `OwnershipLegend.tsx:33`, which has
+`'owns (forward)'` / `'belongs to (backward)'` / `'association (no ownership)'`
+— those describe the **classifier**, not the reader's situation.
+
+**⚠️ Implementation consequence, know this before designing:** the DAG **flips
+`own-bkwd` at graph-build time** (`containmentGraph.ts:267`), so by the time you
+hold `parents`/`children` the declaring side has been erased. Recovering it for
+the chips means **carrying the verdict through the DAG**, not just the
+direction. Not deep, but not free either.
+
+**Associations must be surfaced.** Siggie: *"there are only two association
+edges currently. but they shouldn't be hidden from user. i guess they get their
+own `associated with 1`."* They currently appear in neither strip.
+`ASSOCIATION_SLOTS` = `related_document`, `container`
+(`containmentGraph.ts:68`).
+
+#### Shape
+
+Replace N inline chips with a **count per relation type**, expanding to a menu:
+
+> *"i was thinking each gets its own row. or it could be a cascading menu
+> starting from something sort of like 'N related' and branching to 'N belong to
+> me by my attribute,' 'N belong to me by their attribute,' 'N I belong to,'
+> and 'N associated with'."*
+
+Rows and the cascade are compatible — the rows **are** the top level of the
+cascade. Rows are the safer default because a fixed-height row per category is
+what makes box height predictable (item 2).
+
+**Re-hiding: yes, include it.** Siggie: *"on the menu level with the individual
+related entities, clicking displays it, but if it's displayed it could be grayed
+out, and is there any reason not to allow clicking one of these (or a red x next
+to it) to re-hide it?"* No reason not to. This is strictly better than today's
+chips and it preserves the drawn/undrawn state that would otherwise be lost when
+chips collapse to counts. It also gives the fan-out control (below) somewhere to
+live: pick one, several, or all, with the count showing the cost before you
+click.
+
+#### Fan-out — why `add all` is dangerous today
+
+MEASURED. `expand` (`ExploreApp.tsx:164`) adds exactly one id, so the extra
+boxes are not the click — they come from `ownershipSubgraph.ts:290`, where
+**one-hop-up is applied to every core node including newly expanded ones**,
+capped at 5.
+
+Probe, Participant selected alone → 4 boxes:
+`Participant:selected, Organization:context, Person:context, ResearchStudy:context`.
+Then expanding DimensionalObservation → **7 boxes**, adding
+`DimensionalObservation, DimensionalObservationSet, Visit`. Cause:
+DimensionalObservation's parents are `Organization, DimensionalObservationSet,
+Participant, Visit`; Organization and Participant are already drawn, so the
+other two arrive uninvited. **One chip clicked, three boxes appeared.**
+
+`add all` multiplies the same rule: ~4 ids each pulling up to 5 owners, drawn
+from across the graph so they barely overlap — roughly 4 requested, up to ~20
+drawn. On Organization's 14-item strip it is far worse.
+
+**Siggie is inclined to distinguish selection from expansion** (expanded nodes
+arrive bare; their owners appear as counts to expand from) — *"I'm inclined to
+agree about distinguishing selection from expansion. But let's see where we end
+up with chip strip replacement before implementing."* **Deferred deliberately:
+the redesign may dissolve the question.**
+
+### ▶️ Smaller items raised
+
+- **Box headers should be dark-gray with white text**, to match the (infrequent)
+  colored child headers. Siggie: *"been meaning to say."* Currently
+  `bg-slate-100 dark:bg-slate-700` (`OwnershipGraphView.tsx:1774`). Trivial, and
+  it makes the child-header colors read as a family rather than as anomalies.
+- **Unnecessary edge crossings.** *"there are a lot of unnecessary edge
+  crossings. i don't know how much we can do to fix them, but we should try."*
+  Layout is `useGraphLayout`. Not investigated — do not speculate on cause
+  without measuring.
+- **Dragging the tour popover** is still wanted as the escape hatch (*"yes,
+  dragging is the escape hatch"*), even though placement was exonerated.
+- **Legend regrouping.** Siggie noticed the legend really has 7 pair types and
+  *"might be easier to read if all the owns (forward) were grouped together."*
+  He also asked *"what would it look like if we just gave the types from the
+  perspective of a single entity"* — i.e. the same four-position table above.
+  **Carry-forward #3: he wants this DESCRIBED to him before deciding.** Deferred;
+  he was *"too tired to work it all out."* Note the legend is separately
+  postponed (item H).
+
+### 🔓 Still open — needs Siggie
+
+1. **Tour `back` semantics** — restore whole state, restore only tour-set keys,
+   or soft-lock interaction during a tour? (carry-forward #1, discussed above)
+2. **ObservationSet edge** — his "suppress" was premised on it being abstract,
+   **and it is not**. Re-ask. (carry-forward #2, corrected above)
+3. **Legend from a single entity's perspective** — describe it to him first.
+   (carry-forward #3)
+4. Everything already open in the handoff: the re-render regression (still
+   uninvestigated), "what happened to categories", panel resizing/detaching.
+
+### ▶️ STILL NOT INVESTIGATED — the one thing that is not understood
+
+> **[sg] actually, before trying to fix anything, let's review all the changes**
+> made in the last commit. i see that the writing on top of itself
+> bug is fixed at least.
+>
+> **That review HAPPENED — see the PLANNING section immediately above.** The
+> item below was deferred by it, not dropped, and is still the most serious
+> unexplained report. It was NOT investigated in the planning session either.
 
 **"Most clicks (chip, selection, +N attributes, etc.) cause at least the main
 panel to refresh. didn't used to do that i don't think."**
@@ -453,6 +759,10 @@ fixed height is introduced.
 - to allow sending links and for loading state in step-by-step tour
 - icd11-playground has a state system for this. maybe, like help/tour
   system, could be packaged for use in other apps
+  - **DECIDED 2026-08-26, do not re-litigate:** NOT porting it. Siggie: *"its
+    ability to share a state with all its history is overkill for this app (and
+    maybe for that one too)."* The tour gets per-step state snapshots instead —
+    see the PLANNING section near the top of this file.
 
 **Current split, measured 2026-08-25:**
 
