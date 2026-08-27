@@ -319,7 +319,11 @@ function ExploreAppInner() {
             </span>
           </button>
         ) : (
-          <div className="w-96 shrink-0 flex flex-col min-h-0 border-r border-gray-200 dark:border-slate-700">
+          // w-80 is sized to the longest class id (QuestionnaireResponseValue-
+          // TimePoint, 35 chars) at depth-1 indent. Narrowed from w-96 on
+          // 2026-08-27 once the count columns came out of SelectionTable: the
+          // panel is a name list now, so it only needs to fit the widest name.
+          <div className="w-80 shrink-0 flex flex-col min-h-0 border-r border-gray-200 dark:border-slate-700">
             <div className="flex-1 overflow-y-auto min-h-0" data-help-id="selection-tree">
               {selectorMode === 'tree' ? (
                 <SelectionTree

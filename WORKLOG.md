@@ -7,6 +7,123 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-27 (S1) — selection panel: legend attempts, then cut the counts
+
+Branch `s1-selection-panel`. Started as two small fixes from Siggie's
+screenshots; the second one turned into a scope question worth recording.
+
+### The rail arrow: deleted, not restyled
+
+Nested subclass rows carried a leading `↳` *and* an indent. Siggie: "no need
+for rail arrow, already have indent." Removed. The muted `↳ Parent` hint on a
+root whose is-a parent lives in another category **stays** — that one is not
+redundant with indentation, because indentation cannot express a parent that
+isn't in this category to indent under.
+
+### The legend: three attempts, all wrong, then the real problem
+
+The header row's count-column legend spelled out full vocab headers
+(`ATTRIBUTES ENTITIES PERMISSIBLE VALUE SETS DATA TYPES`) and overflowed the
+384px (`w-96`) panel — Siggie couldn't read it. Attempts:
+
+1. **Single letters** (`A E P D V`) at `w-5`, derived from
+   `header.charAt(0)`. Fit fine. But the derivation collides in two of the
+   three vocabs: modeler gives Tables/Types both `T` and Value
+   Sets/Variables both `V`; linkml likewise. Only `researcher` is active, so
+   this was latent, not live.
+2. **Concept abbrs** (`Attr Ent PVS DT Var`) at `w-9`, keyed off
+   `concept.*.abbr` rather than the header word — necessary because the
+   mapping isn't one-to-one (`entityCol.cls` reads "Entities" but its abbr
+   comes from `concept.entity`). Distinct in every vocab. Cost: the badge
+   strip grew 116px → 176px, eating the name column until
+   `ResearchStudyCollection` truncated. Siggie: "cuts off entity names, not
+   great... that's valuable screen real estate."
+
+The panel never actually got wider in either attempt — `ExploreApp.tsx`
+`w-96` was untouched throughout. What changed was the *split* between name
+and badges. Worth remembering: in a fixed-width panel, "make the legend
+readable" and "keep names readable" are the same budget.
+
+3. **Cut the counts entirely.** Siggie's call, and the right one. The
+   telling detail was in their own screenshot: `PVS` and `DT` render `·` on
+   most rows. Five always-on numeric columns, three of them mostly empty, in
+   a panel whose job is *finding an entity by name*. The counts still live in
+   the Explorer's entity table and the detail panel; nothing was lost, only
+   relocated to where the task is comparison rather than lookup.
+
+Removed from `SelectionTable.tsx`: the `Counts` interface, the
+`countsById`/`col`/`abbr` memos, the legend, the row badge strip, and both
+the `ColumnKey` and `CountBadge` components. The DataService accessors
+(`getSlotCount`, `getRangeCountsByType`, `getVariableCount`,
+`getEntityColumns`) all **stay** — `EntityTable.tsx` and `SelectionTree.tsx`
+still use them. A `getConceptAbbr()` accessor added for attempt 2 was
+reverted; nothing uses it now, and `concept.*.abbr` is still reachable if a
+future caller wants it.
+
+Dropped the `count badges match the Explorer's numbers` test along with the
+badges. It guarded a real anti-drift property, so noting what it did in case
+counts return: it spot-checked five classes across categories, mapping
+rendered `·` back to 0, against the same DataService accessors the Explorer
+calls.
+
+### Then the category count, and the width
+
+Same logic, one step further (Siggie, same session): the category header's
+bare class count (`Survey / Questionnaire   10`) is a fact about the model,
+not about the task, and the rows are right there to count. Dropped.
+
+What was NOT dropped: that span shows `3 / 10` once something in the group is
+selected, and the selected half is the only way to see where your selections
+live when a group is collapsed. It now renders only when `selectedInGroup > 0`.
+
+**Panel width `w-96` → `w-80`** (384px → 320px). Sized off the data rather
+than guessed: the longest class id is `QuestionnaireResponseValueTimePoint`
+(35 chars), which sits at depth 1. Budget at that depth is 28px indent + ~13px
+checkbox + 8px gap + 12px right padding + the name; at `font-mono text-xs`
+(12px, 0.6em advance) 35 chars ≈ 252px, so ≈ 313px total. 320px fits with a
+few px to spare — deliberately tight, since truncation shows up immediately if
+the estimate is off. Tailwind 4 here (CSS-first `@import "tailwindcss"`), so an
+arbitrary `w-[320px]` was available; `w-80` is the same number and stays
+idiomatic.
+
+Note the ordering: the counts had to come out BEFORE the panel could shrink.
+While five numeric columns were in the row, width was set by badges + name
+together; now it is set by the name alone.
+
+Gotcha: a `{/* */}` JSX comment placed just inside a ternary's `: (` branch is
+a syntax error (TS1005/TS1382) — that position is JS expression context, not
+JSX children. Use `//` there, or move the comment inside the element.
+
+### Tooltip wording — flagged, NOT fixed
+
+Siggie: "get rid of technical term 'ranges', should [be] entity-typed
+attributes." The `researcher` vocab's `entityCol` tips still say
+`Entity-typed ranges` / `Permissible-value-set ranges` / `Primitive-typed
+ranges` — LinkML jargon leaking into the researcher-facing vocab. This
+became moot for the selection panel when the counts came out, but the SAME
+tips still render in `EntityTable.tsx`, so the problem is live there.
+
+Proposed phrasing, not yet applied: *"Attributes whose value is an entity"* /
+*"...comes from a permissible value set"* / *"...is a data type"*. Besides
+dropping the jargon, this exposes something the current wording hides: those
+three counts are a partition of the attribute count. `modeler` says "columns"
+(fine) and `linkml` legitimately keeps "ranges" (it's the native term there),
+so only `researcher` needs the rewrite.
+
+### Environment
+
+This worktree's `node_modules` was empty until Siggie symlinked it mid-session
+and started a dev server on :5177. Two sandbox consequences, both about
+writes landing inside the symlink:
+
+- `npm run typecheck` (`tsc -b`) fails EPERM writing
+  `node_modules/.tmp/*.tsbuildinfo`. Workaround that works:
+  `npx tsc --noEmit -p tsconfig.app.json --tsBuildInfoFile "$TMPDIR/app.tsbuildinfo"`.
+- **vitest cannot run at all.** It bundles `vitest.config.ts` into
+  `node_modules/.vite-temp/` before doing anything, and there is no flag to
+  relocate that path. Not worked around; asked Siggie to run them instead.
+  Don't burn time re-attempting this from inside the sandbox.
+
 ## 2026-08-27 (S2) — chip strips → cascading relation menu
 
 Session S2 of the three-way parallel plan. Branch `s2-cascading-menus` off
@@ -257,7 +374,7 @@ subclasses narrowing the range.
 
 So the black `ObservationSet.observations → Observation` edge represents a real
 slot on a real instantiable class, and suppression cannot be justified the way
-he justified it. Left as an open question addressed back to him rather than
+he justified it. Left as an open question addressed back to Siggie rather than
 implemented, because the conclusion might still be what he wants for other
 reasons — but not *for that reason*.
 
@@ -883,7 +1000,7 @@ note that SSH to GitHub is blocked from the sandbox, so that check has to be
 run by Siggie.
 
 **Not done, deliberately:** narrowed edges pointing at a child's header inside
-a merged target box (Siggie's ask, deferred by him for time — the entity end
+a merged target box (Siggie's ask, deferred by them for time — the entity end
 has never had row meaning and the fan/convergence/arrowhead rules all assume
 it, so it is a real change, written up in TASKS.md), scrollable/resizable boxes (Siggie raised them with
 the header design; a fully-expanded merged Observation is tall), a class

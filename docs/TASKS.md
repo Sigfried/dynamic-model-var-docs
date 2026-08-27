@@ -193,7 +193,7 @@ the message does not describe the contents.
    sharing a checkout will `git checkout` the filesystem out from under each
    other — no amount of care prevents it.
 3. **Do not move the coordinating session off the branch the work is on.**
-   Doing that hid S1's and S2's work from Siggie in the running app and cost him
+   Doing that hid S1's and S2's work from Siggie in the running app and cost them
    real time looking for work that was already done.
 4. Ask before committing another session's work.
 
@@ -215,10 +215,18 @@ the message does not describe the contents.
 - **Item 7 — the re-render regression**, still uninvestigated. Measure, do not
   guess.
 - Items 4, 5, 8, 9 — see the task table.
+- **`entityCol` tooltips say "ranges"** (S1, 2026-08-27). The researcher vocab's
+  count tips read `Entity-typed ranges` / `Permissible-value-set ranges` /
+  `Primitive-typed ranges` — LinkML jargon in researcher-facing text, flagged by
+  Siggie. No longer visible in the selection panel (counts removed there), but
+  still live in `EntityTable.tsx`. Proposed: *"Attributes whose value is an
+  entity"* / *"...comes from a permissible value set"* / *"...is a data type"*,
+  which also makes clear the three are a partition of the attribute count.
+  `researcher` vocab only — `linkml` keeps "ranges" legitimately.
 
 ### Open questions for Siggie
 
-- His tour draft says *"five ways an entity can be related"* while surrounding
+- Their tour draft says *"five ways an entity can be related"* while surrounding
   text says four. S2 built four positions plus association. **Which is right?**
 - Two sentences in the tour draft trail off (`A primary goal`, `Entities can be
   related to each other through`), and two bracketed notes-to-self remain.
@@ -237,15 +245,15 @@ the message does not describe the contents.
 > *"the tour can be broken up into two or three sessions, only the authoring is
 > blocked but these can proceed."*
 
-**Goal: design the format Siggie will write the tour in, then translate his
-current draft into it — gaps, mistakes and all — so he can keep writing.**
+**Goal: design the format Siggie will write the tour in, then translate their
+current draft into it — gaps, mistakes and all — so they can keep writing.**
 
 > *"create tour authoring spec/format; and translate current tour contents —
 > with their gaps and mistakes — into it for me to continue from"*
 
-**You are not writing tour copy and not fixing his copy.** Translate it
-faithfully. Where his draft is unfinished, carry the gap into the new format as
-a visible TODO rather than completing it — he is continuing from your output,
+**You are not writing tour copy and not fixing their copy.** Translate it
+faithfully. Where their draft is unfinished, carry the gap into the new format as
+a visible TODO rather than completing it — they are continuing from your output,
 and a plausible-looking invented sentence is worse than an obvious hole. Two
 sentences literally trail off (`A primary goal` and `Entities can be related to
 each other through`); keep them as-is and mark them.
@@ -262,10 +270,10 @@ before designing; each is a real limit in today's parser, not a guess:
    match a `data-help-id` attribute. So two tour steps cannot point at the same
    element, and a step cannot point at something that has no tagged element.
    Siggie's draft needs both.
-2. **`tour:` is a flat 1-based integer.** His draft is nested — step 4 has
+2. **`tour:` is a flat 1-based integer.** Their draft is nested — step 4 has
    sub-steps 1/2/3 ("Selecting an entity" → highlight row → click checkbox).
    There is no representation for that.
-3. **No progressive disclosure within a step.** He asked directly:
+3. **No progressive disclosure within a step.** Siggie asked directly:
    *"can we animate this so that step 4 keeps this popover but shows the next
    bullet, etc? not sure best way to represent this in my outline...well, we're
    going to need a reasonably human-readable/writable format for the full tour
@@ -276,7 +284,7 @@ before designing; each is a real limit in today's parser, not a guess:
 5. **A step cannot describe an ACTION it performs.** This is what confused
    Siggie in review: step 2 silently selects Participant and nothing says the
    tour did it. The format needs somewhere to say "we just ticked this for you."
-6. **Anchors are whole elements.** He needs to highlight *a row*
+6. **Anchors are whole elements.** Siggie needs to highlight *a row*
    ("the participant row highlighted, not the whole tree") and *a slot row*
    (`observation_type`). Whether that is a format problem or purely S3b's
    problem is yours to determine — but the format has to be able to EXPRESS it.
@@ -289,8 +297,8 @@ before designing; each is a real limit in today's parser, not a guess:
 > their changes will be undone by each step on tour"*
 
 **Constraints on your design:**
-- **Markdown, hand-writable.** Siggie writes this; it is not a config file. His
-  draft is nested markdown lists and that is a strong hint at what he finds
+- **Markdown, hand-writable.** Siggie writes this; it is not a config file. Their
+  draft is nested markdown lists and that is a strong hint at what they find
   natural. Do not invent YAML/JSON front-matter unless markdown genuinely cannot
   express it.
 - **The help-only entries must keep working.** `help-content.md` serves BOTH
@@ -307,7 +315,7 @@ before designing; each is a real limit in today's parser, not a guess:
    shape with them first — that interface is your seam.
 4. A short note in chat on what you could not express and why.
 
-**Ask Siggie, do not guess:** his draft says *"There are five ways an entity can
+**Ask Siggie, do not guess:** their draft says *"There are five ways an entity can
 be related to another"* while the surrounding text says four, and the
 chip-strip design has four positions plus association. Five may be right and
 four the typo. He is available; ask.
@@ -337,7 +345,7 @@ user must be able to tell that the tour acted.
 **2. The spotlight must be able to ring a ROW, not just a panel.** Siggie: *"the
 participant row highlighted, not the whole tree."* Today
 `document.querySelector('[data-help-id="..."]')` finds one element, and the
-tagged elements are whole panels. He also wants to highlight a slot row
+tagged elements are whole panels. Siggie also wants to highlight a slot row
 (`observation_type`) inside a box. **This is a real capability gap, not a
 tweak** — it needs anchors that can address a row.
 
@@ -522,7 +530,7 @@ neither of the first two as stated:**
 
 I.e. **one edge per DECLARING class, colored by that class**, black for the
 parent's own slot. This resolves the fan at the source rather than the target,
-so it avoids both the tangle and the crossings his objection to option 1 raised
+so it avoids both the tangle and the crossings their objection to option 1 raised
 (*"the problem with option 1 is there would probably be a lot of edge crossing.
 easier to read with colors, but not ideal"*).
 
@@ -536,7 +544,7 @@ holds its own kind. That answers Siggie's carry-forward question *"with option
 **yes, real loss.**
 
 **⚠️ ObservationSet — Siggie's carry-forward #2 needs REVISING, the premise is
-wrong.** He said: *"I guess if it's abstract then there's no case in which an
+wrong.** Siggie said: *"I guess if it's abstract then there's no case in which an
 ObservationSet could own Observations, only in subclasses. so, yeah, i think
 suppress."* MEASURED against `public/source_data/HM/bdchm.yaml`:
 
@@ -548,10 +556,10 @@ suppress."* MEASURED against `public/source_data/HM/bdchm.yaml`:
   associated_participant` — and the subclasses each *narrow* it
   (DimensionalObservationSet → DimensionalObservation, etc.).
 
-So the conditional he attached his decision to ("if it's abstract") is false,
+So the conditional they attached their decision to ("if it's abstract") is false,
 and suppression cannot be justified on those grounds. The black
 `ObservationSet.observations → Observation` edge represents a real slot on a
-real instantiable class. **Do not suppress it without asking him again** —
+real instantiable class. **Do not suppress it without asking them again** —
 the honest question is now "ObservationSet is concrete and declares
 `observations`; do you still want its edge hidden?", which is a modeling
 judgement, not a mechanical consequence.
@@ -672,7 +680,7 @@ the redesign may dissolve the question.**
   *"might be easier to read if all the owns (forward) were grouped together."*
   He also asked *"what would it look like if we just gave the types from the
   perspective of a single entity"* — i.e. the same four-position table above.
-  **Carry-forward #3: he wants this DESCRIBED to him before deciding.** Deferred;
+  **Carry-forward #3: they want this DESCRIBED to them before deciding.** Deferred;
   he was *"too tired to work it all out."* Note the legend is separately
   postponed (item H).
 
@@ -680,9 +688,9 @@ the redesign may dissolve the question.**
 
 1. **Tour `back` semantics** — restore whole state, restore only tour-set keys,
    or soft-lock interaction during a tour? (carry-forward #1, discussed above)
-2. **ObservationSet edge** — his "suppress" was premised on it being abstract,
+2. **ObservationSet edge** — their "suppress" was premised on it being abstract,
    **and it is not**. Re-ask. (carry-forward #2, corrected above)
-3. **Legend from a single entity's perspective** — describe it to him first.
+3. **Legend from a single entity's perspective** — describe it to them first.
    (carry-forward #3)
 4. Everything already open in the handoff: the re-render regression (still
    uninvestigated), "what happened to categories", panel resizing/detaching.
@@ -755,7 +763,7 @@ Measurements, Laboratory/Biospecimen, Survey/Questionnaire, Files/Other) the
 old flat list showed. So categories did not break; they were never in the tree.
 
 That is a design question for Siggie, not a bug to fix:
-- Categories as an expanded TOP LAYER above the ownership roots (his own
+- Categories as an expanded TOP LAYER above the ownership roots (their own
   earlier idea, and he predicted the consequence: *"a lot more duplicates will
   appear, across categories"*), or
 - Two separate trees, or
@@ -814,7 +822,7 @@ the right rows on a box that has both strips.
 
 ### ✅ IMPLEMENTED 2026-08-26 — branch `tweaking-expand-prune`, NOT merged
 
-Siggie asked for five things, in his words:
+Siggie asked for five things, in their words:
 
 | # | ask | status |
 |---|---|---|
@@ -1197,7 +1205,7 @@ resolutions so the remaining two are not lost among them.
   positioning) and the gaps scoped in the PLANNING section.
 - **Dates section at the top** still lists the wrap-up as "~2026-08-28/29" and
   carries a "**Needs Siggie**: set a new target or drop it" note from an older
-  release date. Still needs him.
+  release date. Still needs Siggie.
 
 ---
 
