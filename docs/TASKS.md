@@ -64,6 +64,70 @@ These keep their write-ups below so nothing is lost.
 
 ## 🚦 THE TOUR — S3a and S3b, next up
 
+### Next up — Siggie is refining the format doc, then editing the tour
+
+Stated 2026-08-27 at the end of the S3b session: *"my next step is going to be
+refining the format doc (i find parts of it hard to understand) and then
+editing/testing changes to the tour."*
+
+**The doc is `## Format` in `src/help/help-content.md`** — 175 lines, eight
+`###` sections. That length is itself a candidate explanation for "hard to
+understand": it is written as a reference (every field, every edge case) but
+gets read as a tutorial by someone about to write a step. **Which parts are
+unclear has NOT been diagnosed — ask before rewriting**, since the fix differs
+completely depending on the answer: a quick-start section at the top solves an
+ordering problem, while it does nothing for a section whose prose is muddled.
+
+**Editing the tour is safe — the tests catch the real mistakes.** Verified by
+deliberately breaking the content and confirming each failure, so these are
+demonstrated, not assumed:
+
+| Mistake | Caught by | Message |
+|---|---|---|
+| Typo'd anchor kind (`entity_row:`) | `every anchor names a known kind` | names the entry and the bad kind |
+| Step changes state with no `Action:` | `a step that changes state says what it did` | names the exact position |
+| `help-id` anchor with no tagged element | `every help-id anchor is actually tagged` | lists untagged ids |
+| Duplicate/gapped `Tour:` numbers | `numbered 1..n with no gaps or repeats` | — |
+| Unknown `State:` param | `every State: field is a parseable query string` | names entry and param |
+
+So: edit freely and run `npx vitest run src/test/helpContent.test.ts` (fast,
+~700ms). A green run means the content is structurally sound; it says nothing
+about whether the copy reads well, which is the part only you can judge.
+
+**Resolver anchors are the exception** — `entity-row`, `slot-row`,
+`entity-checkbox` and `node-box` are checked for *known kind* but cannot be
+checked for *actually resolving*, since there is no attribute to grep. A typo in
+the ARGUMENT (`entity-row:Participnt`) passes every test and degrades silently
+to an unringed popover. Those need the browser.
+
+### Deferred — authoring notes and draft preview
+
+Raised by Siggie 2026-08-27 while reviewing the S3a format, deferred the same
+day for time: *"i want all the options and maybe an ability to view the draft
+version of a tour, but no time now."*
+
+Four distinct needs, all currently served by HTML comments:
+
+| Want | Sketched as | Renders? |
+|---|---|---|
+| Notes to self | `- **Note:** ...` | never |
+| Half-written copy | `- **Draft:** ...` | yes, marked loudly as unfinished |
+| Instructions to Claude | `- **ForClaude:** ...` | never |
+| A step written but not ready | `- **_Tour:** 4` | **shipped** — see below |
+
+**The parking half is already done.** Prefixing any field with `_` parks it:
+`_Tour:` drops an entry out of the tour while keeping it as help. That covers
+the "not ready yet" case; the three note fields are what remains.
+
+**The interesting part is the draft preview**, and it is why this is a task
+rather than three fields: viewing a tour *including* its parked steps and
+unfinished `Draft:` text means a second rendering mode, not just a parser
+change. Worth designing rather than bolting on.
+
+Until then: HTML comments work, never render, and are what the S3a translation
+already uses (`TODO(siggie):` beside each entry with a gap).
+
+---
 ### Current tour unfinished draft
 
 1. current first step sort of highlights the title but doesn't dim the rest. fix
@@ -315,34 +379,6 @@ existing 4-step tour, even though its copy is about to be replaced.
 
 ---
 
-### Deferred — authoring notes and draft preview
-
-Raised by Siggie 2026-08-27 while reviewing the S3a format, deferred the same
-day for time: *"i want all the options and maybe an ability to view the draft
-version of a tour, but no time now."*
-
-Four distinct needs, all currently served by HTML comments:
-
-| Want | Sketched as | Renders? |
-|---|---|---|
-| Notes to self | `- **Note:** ...` | never |
-| Half-written copy | `- **Draft:** ...` | yes, marked loudly as unfinished |
-| Instructions to Claude | `- **ForClaude:** ...` | never |
-| A step written but not ready | `- **_Tour:** 4` | **shipped** — see below |
-
-**The parking half is already done.** Prefixing any field with `_` parks it:
-`_Tour:` drops an entry out of the tour while keeping it as help. That covers
-the "not ready yet" case; the three note fields are what remains.
-
-**The interesting part is the draft preview**, and it is why this is a task
-rather than three fields: viewing a tour *including* its parked steps and
-unfinished `Draft:` text means a second rendering mode, not just a parser
-change. Worth designing rather than bolting on.
-
-Until then: HTML comments work, never render, and are what the S3a translation
-already uses (`TODO(siggie):` beside each entry with a gap).
-
----
 
 ## 🎯 Dates
 
