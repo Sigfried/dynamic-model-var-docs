@@ -1,8 +1,64 @@
 # Tasks
 
-> **Active planning document** - Completed work archived to [docs/archive/tasks.md](docs/archive/tasks.md)
->
-> **Development principles** - See [CLAUDE.md](CLAUDE.md) for architectural rules and workflow
+> **Active planning document.** Completed and superseded rounds are in
+> [docs/archive/tasks-2026-08.md](archive/tasks-2026-08.md).
+> Architectural rules and workflow are in [CLAUDE.md](../CLAUDE.md).
+> Reasoning and dead ends are in [WORKLOG.md](../WORKLOG.md) — written for the
+> next session, not for Siggie.
+
+---
+
+## 🗓️ ONE DAY LEFT — the list
+
+**Restructured 2026-08-27 for Siggie to edit.** Everything below the fold is
+detail; this table is the whole plan. Nothing is merged or deployed — all work
+sits on branch `tweaking-expand-prune`.
+
+**Siggie: edit this table.** Reorder, delete, or mark what you actually want.
+The estimates assume the code is already understood and exclude review cycles.
+
+### Must decide before building (blocking, minutes not hours)
+
+| # | Decision | Why it blocks | Detail |
+|---|---|---|---|
+| D1 | Tour `back`: restore whole state, only tour-set keys, or lock interaction during a tour? | Determines the tour's state mechanism; wrong pick means rewriting it | [Tour rework](#the-tour--the-problem-was-never-placement) |
+| D2 | `ObservationSet.observations` — still suppress its edge? **Your premise was wrong**: it is NOT abstract and DOES declare the slot | Changes what the edge redesign builds | [Edge rendering](#edge-rendering--the-fan-from-observationsetobservations) |
+| D3 | Chip-strip replacement: rows-per-relation-type vs cascading menu | The single largest build item; everything visual depends on it | [Chip strips](#chip-strips--relation-counts--menu-the-main-redesign) |
+
+### Build, in recommended order
+
+| # | Task | Est. | Detail |
+|---|---|---|---|
+| 1 | **Chip strips → relation counts + menu.** Replaces the ugly wrapped strips; **also fixes the box-height/text-overlap bug as a side effect**, because a fixed-size count makes box height predictable | ~0.5–1 day | [§](#chip-strips--relation-counts--menu-the-main-redesign) |
+| 2 | **Tour rework** — visible actions, spotlight the *row* not the panel, `back` undoes | ~0.5 day | [§](#the-tour--the-problem-was-never-placement) |
+| 3 | **Edge rendering** — one edge per declaring class, colored by it; fixes the missing `Specimen.quality_measure` edge | ~0.5 day | [§](#edge-rendering--the-fan-from-observationsetobservations) |
+| 4 | **Drop the duplicate header badge** — `⑃` and `▷` are identical by construction on a merged box | ~10 min | [§](#what-is-confirmed-broken-in-priority-order) |
+| 5 | **Dark-gray box headers, white text** — matches the colored child headers | ~10 min | [§](#smaller-items-raised) |
+| 6 | **Horizontal scroll in the tree** — the fix belongs on the ancestor, not `.dbw-root` | ~15 min | [§](#what-is-confirmed-broken-in-priority-order) |
+| 7 | **Re-render regression** — "most clicks refresh the main panel". Still uninvestigated; **measure, don't guess** | ~unknown | [§](#still-not-investigated--the-one-thing-that-is-not-understood) |
+| 8 | **Drag the tour popover** — escape hatch regardless of placement logic | ~0.5 day | [§](#tour-and-help) |
+| 9 | **Edge crossings** — "we should try". Cause unmeasured | ~unknown | [§](#smaller-items-raised) |
+
+> **Reality check on the estimates.** Items 1–3 alone are ~1.5–2 days against
+> ~1 day of runway. **They do not all fit.** Items 4–6 are the cheap visible
+> wins (~35 min total) and are worth doing regardless. Item 7 is the only
+> unknown that could eat the whole day — it is a real regression report but it
+> affects no single feature, so it is ranked below the visible work
+> deliberately. Pick a subset rather than starting all of them.
+
+### Explicitly NOT this week
+
+Panel resizing/detaching · categories in the tree (design question, not a bug) ·
+the ownership legend (postponed by Siggie) · multi-category membership ·
+CURIE links · the bare diagonal · dragging polish · example-cases restructuring.
+These keep their write-ups below so nothing is lost.
+
+### Before any of it — merge decision
+
+Nine commits sit unmerged on `tweaking-expand-prune`, reviewed but not
+deployed. **Verdict on the last one (`0c6cfdc`): keep it, fix forward** — see
+[the review](#verdict-on-0c6cfdc-keep-it-fix-forward). With one day left, decide
+early whether to merge to `main` and deploy what exists before adding to it.
 
 ---
 
@@ -12,8 +68,9 @@
   session that shipped the induced-slot migration and the ownership rules; the
   merged-sibling inheritance work was built in the ~90 minutes before it. The
   big program manager was NOT there, which is what drives the sharing work.
-- **Development wrap-up: end of week (~2026-08-28/29).** Siggie, 2026-08-25:
-  *"which we have to wrap up by the end of the week or so."*
+- **Development wrap-up: ~2026-08-28/29 — ONE DAY LEFT as of 2026-08-27.**
+  Siggie, 2026-08-27: *"i need to focus on the upcoming tasks. only have a day
+  left."* The list at the top of this file is scoped to that.
 - **Sharing / presentation (video demo + non-video guided tour):** asked for by
   the stakeholders on 2026-08-25, to be scoped in its OWN session before
   further development. See the handoff.
@@ -95,6 +152,8 @@ functions — `merge`, `owners` and `sel` all round-tripped into a shareable lin
 
 ---
 
+---
+
 ## 📋 PLANNING — 2026-08-26 review of `0c6cfdc` (session 2)
 
 > **This was a PLANNING session. Siggie: *"this whole session should be
@@ -156,7 +215,7 @@ need work are design conversations, not bad code. See below.
    is also live here. **Fix inside the edge-rendering redesign, not by raising
    the cap.**
 
-### ▶️ The tour — the problem was never placement
+### The tour — the problem was never placement
 
 Siggie initially read this as a popover-placement bug. It is not. MEASURED:
 step 2's entry id is `selection-tree` (`help-content.md:41`), and
@@ -212,7 +271,7 @@ changes too, which is surprising. The alternatives:
   This is also entangled with the still-open question of whether the user may
   interact at all during a tour. **Needs Siggie.**
 
-### ▶️ Edge rendering — the fan from `ObservationSet.observations`
+### Edge rendering — the fan from `ObservationSet.observations`
 
 img-3 shows ~5 colored edges leaving one source row and landing on one target
 header. Siggie's three options were: one black edge / colored edges to child
@@ -263,7 +322,7 @@ judgement, not a mechanical consequence.
 **Also in scope here:** the missing `Specimen.quality_measure` edge (item 4
 above) — same subsystem, same merge-suppression cause.
 
-### ▶️ Chip strips → relation counts + menu (the main redesign)
+### Chip strips → relation counts + menu (the main redesign)
 
 Siggie: *"i think we need something other than chip strips. we should talk about
 it. they're ugly and also tend to have text overlap."* Confirmed by img-3
@@ -360,7 +419,7 @@ agree about distinguishing selection from expansion. But let's see where we end
 up with chip strip replacement before implementing."* **Deferred deliberately:
 the redesign may dissolve the question.**
 
-### ▶️ Smaller items raised
+### Smaller items raised
 
 - **Box headers should be dark-gray with white text**, to match the (infrequent)
   colored child headers. Siggie: *"been meaning to say."* Currently
@@ -391,7 +450,9 @@ the redesign may dissolve the question.**
 4. Everything already open in the handoff: the re-render regression (still
    uninvestigated), "what happened to categories", panel resizing/detaching.
 
-### ▶️ STILL NOT INVESTIGATED — the one thing that is not understood
+---
+
+### STILL NOT INVESTIGATED — the one thing that is not understood
 
 > **[sg] actually, before trying to fix anything, let's review all the changes**
 > made in the last commit. i see that the writing on top of itself
@@ -422,6 +483,8 @@ Likely suspects, in order — but **measure before believing any of them**:
 profiler and find out which component re-renders and why. The standing process
 note in this file exists because four bugs in an earlier session came from
 reasoning about the render instead of measuring it.
+
+---
 
 ### ▶️ dag-browser — the biggest open area
 
@@ -468,7 +531,9 @@ the bottom of the panel, so this is comparable side by side right now.
 not, and `dockview-poc` (an old branch, 153 behind) suggests this was explored
 before — read it before designing anything.
 
-### ▶️ Tour and help
+---
+
+### Tour and help
 
 Siggie's report: *"need to be more careful about placement (in img-2 it should
 be on right) or ability to drag or both"*, and *"getting no highlighting or
@@ -489,6 +554,8 @@ Where things live: `src/help/` — `HelpProvider.tsx` (modes, keyboard),
 `help.css`. Tests in `src/test/helpContent.test.ts` check the content parses,
 the tour is numbered 1..n, and every entry id is actually tagged in the app.
 
+---
+
 ### ▶️ One-hop default
 
 Siggie: *"after refresh and selecting organization, just get the box on its
@@ -505,43 +572,6 @@ model half has tests; **the rendered strip does not, and it adds a second chip
 strip to boxes, which changes box height and therefore edge anchoring.** That
 is the part most likely to be subtly wrong — check that edges still point at
 the right rows on a box that has both strips.
-
-### 📄 DOCS ARE STALE — Siggie, 2026-08-26: *"TASKS.md (and other docs) is at least partly out of date"*
-
-Not audited. Known-stale spots, as a starting list rather than a complete one:
-
-- **This file below the handoff.** The "NEXT UP — ordered 2026-08-26" list was
-  written mid-session and uses letters (A–I) Siggie never saw; he said so:
-  *"you haven't even fixed TASKS yet so i don't know what items you're
-  referring to"*. Several of its items are now done or superseded by the
-  handoff above. **Reconcile it against the handoff, or delete it.**
-- **The tail of this file** (from "Current round (post-2026-06-11 feedback)"
-  onward, ~470 lines) is an older planning round largely superseded by
-  EXPLORE_VIZ.md. Several items are already tagged [OBSOLETE]/[LATER]. Cutting
-  it is mechanical, but the keep/drop calls are Siggie's.
-- **`docs/EXPLORE_VIZ.md`** was audited 2026-08-24 as "~20–25% stale" and has
-  not been revised since; the ownership-chip and selector changes since then
-  make that worse.
-- **`docs/HELP_PACKAGE_PLAN.md`** says "not yet started" — it IS started, in
-  `src/help/`, with two deliberate departures from the plan (no native-title
-  swapping; measured positioning rather than CSS anchor positioning). Record
-  that, or the next session will re-litigate both.
-- **Dates section at the top** still lists the wrap-up as "~2026-08-28/29" and
-  carries a "**Needs Siggie**: set a new target or drop it" note from an older
-  release date. Still needs him.
-
-### 🚧 Gotchas — unchanged, still true
-
-- `npx vitest` needs node 22: `export PATH="$HOME/.nvm/versions/node/v22.20.0/bin:$PATH"`
-- **Never run `npm run dev`** — Siggie keeps the app running himself.
-- `npm run typecheck` (`tsc -b --noEmit`), never bare `npx tsc --noEmit`.
-- `tsc` will NOT catch a stale union comparison — grep for removed literals.
-  Hit again this session: `MergeMode` is `'bend'`, not `'full'`.
-- `console.log` is swallowed in vitest; assert against a sentinel and read the
-  diff. That trick found every real diagnosis in this session.
-- Lint baseline is **20 errors**, all pre-existing (a missing `react-hooks` rule
-  definition plus `.vite/deps` cache files). Compare against the baseline rather
-  than expecting zero.
 
 ---
 
@@ -583,154 +613,7 @@ Two pieces are not:
 
 ---
 
-### ▶️ NEXT UP — ordered 2026-08-26
-
-Ordered by Siggie's own impact marks, with **modest** time estimates (item 0's
-ask). Estimates are for a working session with the code already understood;
-they exclude review cycles with Siggie. **~2 days of runway remain** before the
-~2026-08-28/29 wrap-up, so the line below A–C is unlikely to be reached.
-
-**Wrap-up reality check:** A + B + C alone is roughly 1.5–3 days. Anything in
-"if there is time" should be assumed NOT to happen unless Siggie drops
-something above it.
-
 ---
-
-#### A. Tweaking: expand / prune the canvas — **high impact, ~1–1.5 days**
-
-The largest item, and the one Siggie has described most often (he calls it
-"tweaking": deciding when and which entities to display, given context and user
-settings). Absorbs the former items 1 and 4.
-
-**The ask, in Siggie's words:** *"the fix for how many parents to show ...
-should be a cap, and then the parent chips should be toggles allowing you to
-add/remove."* And: *"Default should be one hop either direction capped at N
-boxes. Need a way to show additional owners and owned from the box. Chips work
-but are currently kind of ugly and should maybe be toggleable to hide connected
-boxes. Boxes should also have close icons. For boxes connected at both ends try
-something like: collapse into a little box with a + icon for edges to attach
-to; clicking restores the whole box."*
-
-**Why it is one feature, not several.** Expansion and pruning are the same
-control surface:
-- **Pruning is impossible today.** The `owned by` chips are **add-only** —
-  clicking draws that owner, and nothing clicks it back off.
-- **Expansion is also impossible from the diagram** (observed 2026-08-25). With
-  one class selected, the only route to a neighbour is the detail drawer's
-  REFERENCED BY list, added by hand. Organization lists 14 there — all
-  reachable, none reachable *from the canvas*.
-- The `0 / ≤5 / all` toolbar control is a blunt stand-in and should collapse
-  into this.
-
-**Useful primitive already in place:** the chip row lists owners *without*
-drawing them — chips for the un-expanded hop, boxes for the expanded one.
-
-**Open question Siggie raised:** a closed box BETWEEN two displayed boxes —
-*for now, probably disallow it.*
-
-**Row visibility is NOT part of this** — settled 2026-08-26, see the answered
-note under "Row visibility" below. Nothing is unreachable; only the
-collapsed-by-default choice is a live UX question, and it belongs here.
-
-#### B. Tour and help system — **high impact, ~0.5–1 day to a first cut**
-
-Specs and decisions already made in
-[HELP_PACKAGE_PLAN.md](HELP_PACKAGE_PLAN.md) (210 lines), so this is execution,
-not design.
-
-**Why it ranks this high:** the big program manager — who matters most — was
-NOT at the 2026-08-25 meeting. Her first exposure, after seeing the app months
-ago, will be **from a link, unattended**. The stakeholders present asked for a
-video demo AND a non-video guided tour.
-
-**Dependency worth knowing:** the *guided-tour* half wants D (serializable
-state) to express steps as plain links. A static help/hints layer does not, and
-can ship first. Sequence B-then-D, or accept a hand-rolled step mechanism.
-
-#### C. Bring dag-browser-widget into Explorer — **high impact, ~0.5–1 day**
-
-Mostly reuse: `dag-browser-widget@^0.2.0` is already a dependency, already
-mounted in `FocusView.tsx`, and `DataService.ts:916` already adapts the
-containment graph to its `Node[]` shape.
-
-- Recolour: inheritance rail → entity/inheritance blue; ownership → amber.
-- Populate with the whole graph, all collapsed to start.
-- Try categories as an expanded top layer. Siggie's own caveat: *"inheritance
-  pairs should all fit within categories i think, but not ownership; so, with
-  whole graph populated, a lot more duplicates will appear, across categories."*
-- The point: unlike Focus (which needed changing anyway), there is no separate
-  selection pane — **everything becomes accessible through dag-browser**,
-  including a selection affordance.
-
-**Couples to E** — the duplicates Siggie predicts here are the same
-multi-category problem as E, approached from the other side. Design together or
-C will re-solve it.
-
----
-
-#### If there is time — in rough order
-
-**D. Whole app state serializable** — see the dedicated section below.
-Deliberately **after** A: it freezes the control vocabulary into every link ever
-sent, so the provisional controls A replaces must be settled first. Also the
-main technical prerequisite for the guided-tour half of B.
-
-**E. A class in several CATEGORIES** — **question ANSWERED 2026-08-26**, write-up
-and full breakage audit below. It is `entityCategories` (an imposed navigation
-aid), **not** inheritance, so it is general multi-category membership and NOT
-sibling merging. Blocked on nothing. **~0.5 day** for the mechanism plus the two
-classes Siggie named; longer if all 53 get audited. Note one existing test
-(`entityCategories.test.ts:60`) forbids this and must be retired deliberately.
-
-**F. Merged edge/arrow tangling** — further cleanup attempts (*lowish impact*).
-
-**G. Remove merge-style buttons** — after F, but definitely before delivery. If
-F is abandoned before Siggie is satisfied, **keep restoring these buttons easy**
-— they help in figuring out what is going on.
-
-**H. Fix the ownership legend** — *"the legend is hard to find and currently all
-wrong. It should possibly be implemented through help system."*
-**POSTPONED by Siggie, 2026-08-26: "the legend is low priority ... postpone
-figuring it out till later."** Do not touch it without him. Older restructuring
-notes further down (un-nest from example cases, move BIGGEST FANS, shorten the
-fk-inversion text) may or may not be what he means. If it does get done, doing
-it *inside* B is probably cheapest.
-
-**I. Narrowed edges should point at the CHILD's header** inside a merged target
-box (*low impact*). Written up below. **Needs Siggie's decision first:** every
-edge into a merged box, or only `slot_usage`-narrowed ones?
-
----
-
-#### Answered / closed since the list was written
-
-- **Row visibility (was item 4)** — **nothing is unreachable.** Merged boxes
-  show every row always (`OwnershipGraphView.tsx:405`). Ordinary boxes collapse
-  rows with no edge on the current canvas plus all plain rows, but the
-  `+ N more` footer reveals them and an all-unconnected box auto-expands
-  (`:241`), so the empty-box failure cannot recur. Only the *default* is still
-  a question; folded into A. Full note below.
-- **own-bkwd → association merge** — **DECIDED: no merge** (64 edges,
-  re-measured 2026-08-26, not 70). `OWNERSHIP_CLASSIFICATION.md` now records the
-  decision rather than posing it as open.
-- **Why does Explore need a slot index at all?** — Siggie raised it 2026-08-25
-  and chose not to chase it; **still deliberately deferred, not a bug.** Context
-  in the induced-slots DONE section below: the top-level `slots:` block is a
-  derived index, and `Graph.ts:502` plus Kitchen Sink still key on it.
-
-#### Doc hygiene (was item 0 — largely done 2026-08-26)
-
-Done: item 3's orphaned write-up restored (it had been deleted in `0c9db03`
-while the pointer survived); stale ownership group counts re-measured; the
-`own-bkwd`/`association` open block converted to the decision; the deployed-vs-
-`main` confusion in the handoff header fixed; this list de-duplicated, ordered,
-and costed.
-
-**Still to do, needs Siggie's judgment:** the tail of this file (the
-"Current round (post-2026-06-11 feedback)" section onward, ~470 lines) is an
-older planning round largely superseded by EXPLORE_VIZ.md and the work since.
-Several items there are already tagged [OBSOLETE] / [LATER]. Cutting it is
-mechanical but the keep/drop calls are his.
 
 ### 📐 Row visibility — ANSWERED 2026-08-26 (was NEXT UP item 4)
 
@@ -754,6 +637,8 @@ edge anchors are computed from row positions, so scrolling content *inside* a
 fixed-height box would point its edges at the wrong rows. But boxes currently
 grow instead of scrolling, so no edge mis-anchors today. Only revisit if a
 fixed height is introduced.
+
+---
 
 ### 🔗 NEW — make all important parts of app state serializable
 - to allow sending links and for loading state in step-by-step tour
@@ -799,39 +684,7 @@ become plain links — which is most of what a "non-video guided tour" needs.
 - Keep localStorage as the fallback when a param is absent, so a bare visit
   still remembers a returning user's preferences.
 
-### ⚠️ PROCESS NOTE FOR THE NEXT SESSION — read this one
-
-Four bugs this session came from **reasoning about the render instead of
-measuring the data**, and each was settled in ~30 seconds by a throwaway probe
-test once I bothered. Wrong guesses included: "context nodes shouldn't merge"
-(they should), "DimensionalObservation narrows observation_type" (it does not —
-it is `BaseEnum`, identical to the parent), and a claim that "+N more" was
-broken generally when only merged boxes were affected.
-
-**When a render looks wrong, write a probe test that prints the actual view
-model before proposing a cause.** The pipeline is
-`getOwnershipSubgraph → buildViewModel → mergeSiblings`, and all three are now
-exported specifically so a probe can call them (see
-`src/test/mergedEdges.test.ts`, which is that pattern made permanent).
-
-Also: `npm run typecheck` (= `tsc -b --noEmit`), never bare `npx tsc --noEmit`.
-It caught four real errors this session that the bare form did not.
-
-### 🚧 Gotchas that cost time this session — read before running anything
-
-- **`npx vitest` needs node 22+.** The default `node` is v16 and fails with a
-  `node:fs/promises` export error that looks like a broken test setup but is
-  not. Use
-  `export PATH="$HOME/.nvm/versions/node/v22.20.0/bin:$PATH"`.
-- **Never run `npm run dev`.** Siggie keeps the app running himself.
-- **`tsc` will NOT catch a stale union comparison.** When `'own-flip'` left the
-  `OwnershipVerdict` union, every surviving `x === 'own-flip'` narrowed to
-  `never` instead of erroring — so the typecheck stayed green while two live
-  sites silently stopped matching (edge emission, and the legend's
-  `flippedCount`). **Grep for the old literal; do not trust tsc for this.**
-- **`console.log` is swallowed in vitest here.** To surface a value, assert it
-  against a sentinel string and read the diff.
-
+---
 
 ### ▶️ OPEN — a narrowed edge should point at the CHILD's header, not the box
 
@@ -868,6 +721,7 @@ rows are real rows with a y-position, and `rowY(node, slot, declaringClass)`
 resolves an anchor. What is missing is a port on the entity side that targets
 a header row, and the fan/merge rules knowing about it.
 
+---
 
 ### ▶️ OPEN — a class should appear in SEVERAL CATEGORIES
 
@@ -939,212 +793,7 @@ more duplicates will appear, across categories."* If categories become a
 dag-browser layer, that widget needs a class-appears-N-times story regardless.
 These two items should be designed together, or item 9 will re-solve it.
 
-### ✅ SHIPPED — inheritance as adjacency (merged sibling boxes), 2026-08-25
-
-Built to Siggie's "merged is definitely better" option, in 90 minutes before a
-stakeholder demo. Branch `inheritance-merged-siblings`, off
-`induced-slots-and-ownership`.
-
-**The design, as revised after Siggie saw the first render.** Classes on canvas
-that share a parent collapse into ONE box titled by the parent. Inside it:
-- rows the PARENT declares come first, in bolder darker type, with no marker —
-  they are the box's subject;
-- then one CHILD HEADER per sibling, in that child's colour, followed by the
-  rows that child declares;
-- edges leaving a child's rows are drawn in that child's colour, so a line can
-  be traced back to the block it came from. A convergence arrowhead takes the
-  colour only when every edge merging into it shares one.
-
-**The swatch scheme this replaced** put a colour chip on each row and listed
-the siblings in a legend strip under the header. Siggie, on seeing it: *"i'm
-not sure i like the swatches"* — and with 5 children the legend truncated after
-2½ names, which is the deeper problem: a legend is a fixed-width channel and
-the number of children is not bounded. Headers scale.
-
-`Entity` is excluded via `SKIP_SUBCLASS_EXPANSION` — the same reason it carries
-no is-a edges. A box holding 37 classes is the crowding, relocated.
-
-Toolbar toggle `⑃ siblings` (persisted, default ON). Off = today's behaviour.
-
-**What actually merges** (measured against the live schema):
-
-| parent | members | own-slot rows |
-|---|---|---|
-| Observation | 5 | MeasurementObservation 8, SdohObservation 1, three add none |
-| QuestionnaireResponseValue | 5 | none — five boxes become one |
-| ObservationSet | 3 | none |
-| Exposure | 2 | Device/Drug; both declare `exposure_provenance` + `quantity`, so those rows carry TWO swatches |
-
-**Where it lives.** `mergeSiblings()` is a pass over the ViewModel in
-`OwnershipGraphView.tsx`, not a change to the subgraph. Nodes are addressed by
-id and rows by slot name everywhere downstream (buildSpec ports, rowY, the
-renderer), so a merged box is just another node and merged edges are edges with
-rewritten endpoints. Layout and routing never learn this happened. Grouping
-policy is in `src/explore/siblingMerge.ts`; tests in
-`src/test/siblingMerge.test.ts` (6, against the live schema).
-
-**Second review round (2026-08-25, commit `21d5be3`):**
-- **Every child gets a header, even one that adds no rows.**
-  SpecimenQuality/QuantityObservation and DimensionalObservation declare zero
-  own slots, so header-per-owned-row made them invisible: selecting exactly
-  those two drew a box with no sign of them.
-- **An inherited slot's edge belongs to the parent and is drawn once.** Five
-  siblings declaring `associated_visit` produced five edges into one anchor
-  row. Dropped at construction rather than deduped after — dedup has to pick a
-  winner among edges only ASSUMED identical.
-- **`slot_usage` overrides keep their own row AND edge.** `inheritedFrom` alone
-  is not enough: all four Observation children report `observation_type` as
-  inherited while narrowing its range, and QuestionnaireResponseValue's five
-  children each narrow `value` to a different type — which is the whole reason
-  those classes exist. A row is the parent's only when the child's definition
-  MATCHES; rows key on (declaringClass, slot). `required` is excluded from the
-  comparison because every class reports inherited `id` as required while
-  Entity declares it optional.
-- Row sort is the declaring class's schema order. Headers are filled colour
-  bars with white type; child rows take the child's colour; swatches gone.
-- **`1 hop` was renamed `only sel` — it did ZERO hops.** `ownerCap` is a
-  legibility ceiling ("draw owners only if at most N"), so 0 means never draw
-  any. The default of 5 was already the one-hop behaviour.
-
-**Third round — the last three commits (`43870ce`, `ff921f5`, `4f33c23`):**
-- **`0 / ≤5 / all` replaced the `only sel` toggle.** The toggle appeared to do
-  nothing, and a boolean genuinely could not express the control: `ownerCap` is
-  a legibility CEILING, so the default of 5 silently degrades to drawing NO
-  owners on exactly the crowded nodes you notice (BodySite has 6). `all` is the
-  only setting that is genuinely one hop. **This whole control is provisional —
-  item 1 in NEXT UP replaces it with a cap plus toggleable chips.**
-- **Disconnected boxes fixed.** Selecting DimensionalObservation alone drew
-  Organization / Participant / Visit with no edges at all. Cause: dropping every
-  child's copy of an inherited slot's edge, on the stated premise that "the
-  parent's own copy survives" — false whenever the parent is not on the canvas,
-  which is most of the time. One edge became zero. Now a keyed dedup keeps the
-  first edge per (box, anchor row, other end, direction).
-- **Merged boxes show EVERY row; the "+N more" collapse is gone on them.**
-  Siggie: *"show all of them. let the box flow over bottom of page if needed."*
-  The collapse also made a child whose rows were all unconnected render as an
-  EMPTY block — indistinguishable from a child that genuinely adds nothing.
-  Ordinary boxes keep their footer. **Boxes can now be very tall; see item 4.**
-- **`src/test/mergedEdges.test.ts` added.** The merged-edge path had NO test
-  coverage, which is why 247 tests stayed green straight through the
-  disconnected-boxes bug. `mergeSiblings`, `buildViewModel` and the view-model
-  types are exported so probes can drive the real pipeline.
-
-**Also shipped in the same pass (Siggie's list off the first render):**
-- The PARENT is absorbed when it is itself selected. It rendered as a second
-  Observation box beside the merged one.
-- "+ N more attributes" now works on a merged box. It never had: the footer
-  toggled `expandedNodes` under the synthetic `merged::` id while the row set
-  was unioned from members' ALREADY-FILTERED rows, so nothing could change.
-  NodeVM now carries `allRows` and the merged box makes its own visible/hidden
-  split. (Ordinary boxes were never affected — that path is untouched.)
-- Colours moved to `GRAPH_COLORS` in appConfig (Siggie: *"don't hard code
-  colors (ever)"*). Palette widened 8 → 12: a box takes as many children as
-  the schema gives it, and recycling a colour inside ONE box is the failure
-  that matters. Channel colours and arrowhead fills moved there too — they were
-  hex literals in `stroke=`/`fill=` from before this work.
-- **`1 hop` toolbar toggle**: `ownerCap: 0`, so nothing is auto-drawn but the
-  selection. Owners become `owned by` chips, which were already the reveal
-  affordance. Off by default; turn it ON to look at inheritance without five
-  selected classes dragging in up to five owners each.
-
-**Decisions taken as defaults, open to reversal:**
-- A merged box's click opens the PARENT's detail; the legend chips open members.
-- Rows are deduped by slot name (one anchor per name), so a slot two siblings
-  declare independently is one row with two swatches, not two rows.
-- The dismiss ✕ is suppressed on merged boxes — dismissing one means dismissing
-  several classes, which is a different feature.
-- Cascaded mode was NOT built. Siggie said merged is better; the toggle is
-  merged/off, not merged/cascaded.
-- **Scrollable / resizable boxes were NOT built** (Siggie raised them with the
-  per-child-header design). Boxes still auto-size to their rows, and a merged
-  Observation with everything expanded is tall. ELK is given the real height so
-  nothing overlaps, but a very tall box is a real problem — the `1 hop` toggle
-  and "+N more" are the mitigations for the demo.
-
-**Two pre-existing bugs fixed in passing**, both found only by `tsc -b`:
-- `DataService.ts:924` tested `e.kind === 'ref'`, which is not a
-  `ContainmentEdgeKind` — the guard never fired, so association edges WERE
-  creating parent links in `getContainmentNodes`. Now `'association'`.
-- `DataService.ts:795` had a dead `|| verdict === 'association'` arm.
-
-**⚠️ Use `npm run typecheck` (= `tsc -b --noEmit`), never bare `npx tsc
---noEmit`.** docs/CLAUDE.md says so and this session proved it again: bare
-`--noEmit` was green while `tsc -b` had four real errors. Same never-narrowing
-trap the induced-slots handoff warned about.
-
-### 📍 State: the pipeline migration and the ownership rules both SHIPPED
-
-Four commits, in order:
-
-| commit | what |
-|---|---|
-| `e8b8bd0` | Slot definitions moved onto classes via `SchemaView.induced_class`. gen-linkml and `bdchm.expanded.json` are **gone**; `transform_schema.py` reads `bdchm.yaml` directly through new `scripts/induced_schema.py`. |
-| `721f98e` | Ownership classification rules implemented. `own-flip`→`own-bkwd`, `association` added, `OWNERSHIP_OVERRIDES` deleted. |
-| `c0e265b` | Entity-ranged edges always `own-fwd` (they were half-reversing). |
-| `a18d78b` | Example cases reordered simple→complex, edge-type cases added. |
-| `3ee8965` | Association arrowheads fixed at both ends; example case 5 added. |
-
-Verification at each step: 235 tests / 21 files green, `npx tsc --noEmit`
-clean. **Counts measured against the live graph after the work:**
-
-- 148 has-a + 2 association = **150 slot edges** (the predicted target)
-- **12 Entity edges** (the predicted convergence)
-
-**Group counts RE-MEASURED 2026-08-26** (probe over `getOwnershipPairGroups`,
-since deleted). The 2026-08-25 numbers below them had drifted — total is still
-150, but three rows were wrong and `entity-ranged` was missing:
-
-| verdict / rule | live 2026-08-26 | was written |
-|---|---|---|
-| `own-bkwd/fk-inversion` | **63** | 70 |
-| `own-fwd/value-object` | 40 | 40 |
-| `own-fwd/multivalued` | **30** | 35 |
-| `own-fwd/entity-ranged` | **12** | *(counted separately above, not in the list)* |
-| `own-fwd/cardinality-split` | 2 | 2 |
-| `association/association` | 2 | 2 |
-| `own-bkwd/backward-multivalued` | 1 | 1 |
-
-Consequence for NEXT UP item 5: the "own-bkwd → association verdict merge"
-is **64 edges** (63 + 1), not 70. Siggie has decided **no merge**, so this
-matters only as a number that should not outlive the decision.
-
 ---
-
-### ✅ DONE — slot storage moved onto class definitions (`e8b8bd0`, 2026-08-25)
-
-`transform_schema.py` reads `bdchm.yaml` through `SchemaView`; gen-linkml and
-`bdchm.expanded.json` are gone. Deleted `build_class_hierarchy`,
-`get_defining_class`, and the three-pass `transform_slots`. `resolve_slot_ids`
-survives but only decides what to CALL a slot in the derived flat index, not
-what it means.
-
-**Still true, and load-bearing:**
-
-- The top-level `slots:` section is a **derived index**, not the source of
-  truth, and carries a `_comment` field saying so. Dropping it entirely would
-  break `Graph.ts:502` for all 432 refs → zero slot edges → the ownership
-  diagram collapses. Kitchen Sink, `SlotCollection`, `getClassesUsingSlot` and
-  `elementLookup` are all still keyed on slot ids; the index goes away only
-  when those are refactored.
-- `inherited_from` is computed in `induced_schema.defining_class`: walk
-  `class_ancestors` and keep the **topmost** class that declares the attribute
-  — inline in `attributes:` **or** by name in its `slots:` list. Missing the
-  second half silently breaks every global slot. Matches the old output on
-  432/432 refs.
-- **`domain_of` is NOT the defining ancestor.** It lists every declaring class.
-  Do not reach for it again.
-
-**Three data changes shipped with it, all pre-existing bugs:**
-
-- 28 slots gained `global` (a pass-ordering bug hid it from override-only
-  slots), and a bogus "global slot not used by any class" warning is gone.
-- `id-Person` / `id-Entity` had `required` **inverted**. LinkML derives
-  `required` from `identifier: true`, so the inherited site is required and the
-  raw declaration on Entity is not.
-- `associated_person` dropped (337→336). Referenced by no class, so it rendered
-  as a dead Kitchen Sink row with a used-by count of 0. **Flagged, not
-  decided** — restore by unioning with `all_slots(attributes=False)` if the
-  intent is that Kitchen Sink lists every declared slot.
 
 ### 🔗 OPEN — CURIE → external definition links (deferred, Siggie 2026-08-25)
 
@@ -1185,6 +834,8 @@ UOM, VBO, bdchm, linkml, ncbitaxon, rxnorm, schema.
 
 **Do not fold this into the induced-slots migration** — it is orthogonal to
 where slot definitions are stored.
+
+---
 
 ### ▶️ OPEN — the bare diagonal
 
@@ -1227,39 +878,91 @@ from-last-corner) is well-founded, but as a **guard**, not a compromise: clamp
 route has fewer than 3 points. **Not yet implemented** — Siggie chose to build
 the comparison harness first.
 
-### ✅ DONE — the comparison harness (2026-08-21)
+---
 
-"example cases" in the header opens a two-tab pane.
+### ▶️ OPEN — example-cases pane needs restructuring
 
-**Cases tab** — named selections grouped in `src/explore/exampleCases.ts`,
-ordered simple→complex as of `a18d78b`, each with a note saying what to look at. Clicking one applies it to app state
-IN PLACE, deliberately not as a navigation: a reload would drop the merge mode
-(localStorage, read once at mount), which is the thing being compared.
+Siggie, 2026-08-21. **Items 3 and 4 are done as of `a18d78b`** — the cases were
+reordered simple→complex, edge-type cases were added, and the rule text was
+rewritten (`OWNERSHIP_RULE_TEXT` in `containmentGraph.ts`). What remains:
 
-**Ownership legend tab** — every class-ranged slot in the schema grouped by the
-rule that classified it, plus the convergence/divergence rankings. Derived live
-from `classifySlotEdgeExplained` (new; `classifySlotEdge` now delegates to it),
-so it cannot drift from what is drawn — which matters because
-`ASSOCIATION_SLOTS`/`SINGLE_VALUE_OWNER_TARGETS` are hand-curated and rot on
-every schema sync. A test asserts the legend's pairs equal the graph's actual edges.
+1. **Reuse the DetailDrawer panel** rather than the floating box, for
+   consistency. (First thought was draggable/resizable; Siggie revised to
+   "just use the same panel as the details drawer".)
+2. **Un-nest the legend from cases.** The **Ownership legend is meant to be
+   permanent**; example cases serve a different purpose and may not be. Using
+   the legend to find routing cases was a *temporary* use, not its reason to
+   exist. They should not be tabs of one pane.
+3. **BIGGEST FANS belongs with example cases**, not the legend — it serves the
+   case-finding purpose.
 
-**The legend immediately earned its keep.** The case set had been built off the
-convergence ranking, which hides FK hubs because flipped edges reverse
-direction. The listing showed 43 pairs in one `own-flip / fk-inversion` group,
-which is how these turned up (that group is now `own-bkwd / fk-inversion`, and
-is 70 pairs after the 2026-08-25 rules):
+Still owed from upcoming-thoughts #1: toolbar buttons, colours, dashed edges.
 
-- **Participant fans OUT to 22 targets (21 flipped)** — larger than any inbound
-  convergence, including Quantity's 19.
-- **Visit fans out to 19**, Organization to 11, both almost entirely flipped.
-- Backward (`own-bkwd`) edges keep their attribute-row anchor and **must not
-  merge**, so
-  these are precisely the fans the merge code never touches, and therefore the
-  ones nothing has ever been tuned against.
+> ⚠️ Siggie has asked for **"fix the ownership legend"** (2026-08-25) without
+> saying what is wrong. It may or may not mean the items above. **Ask first.**
 
-Real numbers now on record (slot-edges / distinct classes): converging —
-Quantity 19/16, TimePoint 16/8, BodySite 6/6, Context 6/6. Diverging —
-Participant 22, Visit 19, Organization 11, Specimen 8.
+---
+
+### [sg] upcoming thoughts
+1. i need this for current experimentation but should probably be permanent
+   feature: a help or legend listing every type of ownership pair, the rules
+   and overrides for assigning them and the entity.slot-->entity pairs for
+   each
+   - should also explain all toolbar buttons, colors, dashed edges, etc.
+2. i don't know why OwnershipGraphView.tsx ended up with everything that
+   should be a constant hardcoded instead of living somewhere like appConfig.ts.
+   - i want to be able to change the dim-other-while-something-is-hightlighted
+     opacity but don't know where to find it
+
+-
+
+---
+
+### ▶️ OPEN — dragging is unfinished
+
+Works: drag, drop-in-place, edges re-routed, amber border, double-click to
+release, drawer no longer pops open mid-drag.
+
+Missing:
+1. **No obstacle awareness.** `smoothStepPath` routes between two anchors and
+   knows nothing about other nodes, so a moved node's edges cross boxes ELK
+   would have routed around. **ELK cannot fix this** — see WORKLOG for why
+   `noLayout`, `Fixed Layout`, INTERACTIVE, and libavoid are all dead ends.
+   The real fix is an orthogonal obstacle router (A*/visibility graph), pure
+   geometry, testable in `paths.ts`. **Not scoped — needs Siggie's go-ahead.**
+2. **No URL persistence.** Moves live in `OwnershipGraphView` and vanish on
+   reload. Siggie wants dragging permanent, so they should lift to
+   `ExploreApp` and encode alongside `?sel=`/`?exp=`. Note coordinates are
+   layout-dependent — a move saved against one selection may land oddly in
+   another.
+
+---
+
+### 📄 DOCS ARE STALE — Siggie, 2026-08-26: *"TASKS.md (and other docs) is at least partly out of date"*
+
+**Two of the four items below were FIXED 2026-08-27** — kept with their
+resolutions so the remaining two are not lost among them.
+
+- ~~**This file below the handoff** (the A–I "NEXT UP" list Siggie never
+  saw)~~ — **DONE 2026-08-27.** Moved to
+  [archive/tasks-2026-08.md](archive/tasks-2026-08.md) and replaced by the
+  one-day list at the top of this file.
+- ~~**The tail of this file** ("Current round (post-2026-06-11 feedback)"
+  onward, ~470 lines)~~ — **DONE 2026-08-27.** Archived with the rest; the
+  keep/drop calls were made conservatively, so nothing was deleted, only moved.
+- **`docs/EXPLORE_VIZ.md`** was audited 2026-08-24 as "~20–25% stale" and has
+  **still not been revised**; the ownership-chip and selector changes since then
+  make that worse. See the dedicated section below.
+- ~~**`docs/HELP_PACKAGE_PLAN.md`** says "not yet started"~~ — **DONE
+  2026-08-27.** Its status now records that the system is built in `src/help/`
+  but not extracted, plus the two deliberate departures from the plan (no
+  native-title swapping; measured positioning rather than CSS anchor
+  positioning) and the gaps scoped in the PLANNING section.
+- **Dates section at the top** still lists the wrap-up as "~2026-08-28/29" and
+  carries a "**Needs Siggie**: set a new target or drop it" note from an older
+  release date. Still needs him.
+
+---
 
 ### 📄 OPEN — EXPLORE_VIZ.md is ~20–25% stale (audited 2026-08-24)
 
@@ -1318,759 +1021,58 @@ are unlisted (`ownershipExpansion`, `ownershipLegend`, `paths`, `DetailDrawer`,
 **Fix the numbered list and the two `ownerCap` mentions first** — by the doc's
 own rule those are the bugs.
 
-### ▶️ OPEN — connections are invisible until attributes are expanded
+---
 
-Siggie, 2026-08-21, with screenshots:
+### ⚠️ PROCESS NOTE FOR THE NEXT SESSION — read this one
 
-- Selecting **Participant** alone shows a box with no indication that 22 classes
-  connect to it (21 flipped). The connections exist; nothing on the node hints
-  at them.
-- **Specimen** likewise gives no indication of its connections without expanding
-  attributes.
+Four bugs this session came from **reasoning about the render instead of
+measuring the data**, and each was settled in ~30 seconds by a throwaway probe
+test once I bothered. Wrong guesses included: "context nodes shouldn't merge"
+(they should), "DimensionalObservation narrows observation_type" (it does not —
+it is `BaseEnum`, identical to the parent), and a claim that "+N more" was
+broken generally when only merged boxes were affected.
 
-There is an existing owners strip (`ownersStripHFor`, shown for classes with >5
-hidden owners — Quantity, TimePoint, BodySite, Context) which is the obvious
-mechanism to extend, but it currently covers only inbound owners and only above
-a threshold. **Options were drafted and NOT chosen — Siggie dismissed the
-question; do not pick one unilaterally.**
+**When a render looks wrong, write a probe test that prints the actual view
+model before proposing a cause.** The pipeline is
+`getOwnershipSubgraph → buildViewModel → mergeSiblings`, and all three are now
+exported specifically so a probe can call them (see
+`src/test/mergedEdges.test.ts`, which is that pattern made permanent).
 
-Note this interacts with the rethink above: what counts as a connection worth
-advertising depends on what ownership means.
-
-### ▶️ OPEN — example-cases pane needs restructuring
-
-Siggie, 2026-08-21. **Items 3 and 4 are done as of `a18d78b`** — the cases were
-reordered simple→complex, edge-type cases were added, and the rule text was
-rewritten (`OWNERSHIP_RULE_TEXT` in `containmentGraph.ts`). What remains:
-
-1. **Reuse the DetailDrawer panel** rather than the floating box, for
-   consistency. (First thought was draggable/resizable; Siggie revised to
-   "just use the same panel as the details drawer".)
-2. **Un-nest the legend from cases.** The **Ownership legend is meant to be
-   permanent**; example cases serve a different purpose and may not be. Using
-   the legend to find routing cases was a *temporary* use, not its reason to
-   exist. They should not be tabs of one pane.
-3. **BIGGEST FANS belongs with example cases**, not the legend — it serves the
-   case-finding purpose.
-
-Still owed from upcoming-thoughts #1: toolbar buttons, colours, dashed edges.
-
-> ⚠️ Siggie has asked for **"fix the ownership legend"** (2026-08-25) without
-> saying what is wrong. It may or may not mean the items above. **Ask first.**
-
-### [sg] upcoming thoughts
-1. i need this for current experimentation but should probably be permanent
-   feature: a help or legend listing every type of ownership pair, the rules
-   and overrides for assigning them and the entity.slot-->entity pairs for
-   each
-   - should also explain all toolbar buttons, colors, dashed edges, etc.
-2. i don't know why OwnershipGraphView.tsx ended up with everything that
-   should be a constant hardcoded instead of living somewhere like appConfig.ts.
-   - i want to be able to change the dim-other-while-something-is-hightlighted
-     opacity but don't know where to find it
-
--
-
-### ▶️ OPEN — dragging is unfinished
-
-Works: drag, drop-in-place, edges re-routed, amber border, double-click to
-release, drawer no longer pops open mid-drag.
-
-Missing:
-1. **No obstacle awareness.** `smoothStepPath` routes between two anchors and
-   knows nothing about other nodes, so a moved node's edges cross boxes ELK
-   would have routed around. **ELK cannot fix this** — see WORKLOG for why
-   `noLayout`, `Fixed Layout`, INTERACTIVE, and libavoid are all dead ends.
-   The real fix is an orthogonal obstacle router (A*/visibility graph), pure
-   geometry, testable in `paths.ts`. **Not scoped — needs Siggie's go-ahead.**
-2. **No URL persistence.** Moves live in `OwnershipGraphView` and vanish on
-   reload. Siggie wants dragging permanent, so they should lift to
-   `ExploreApp` and encode alongside `?sel=`/`?exp=`. Note coordinates are
-   layout-dependent — a move saved against one selection may land oddly in
-   another.
-
-### ⚠️ Un-settled: the fan is visible
-
-`ENTITY_FAN_GAP = 4` (`OwnershipGraphView.tsx:222`) was documented as "a routing
-device, not meant to be seen" and marked settled. **Siggie pointed out that 4px
-is plainly visible** — it renders as the staircase of nested arcs sweeping into
-the arrowhead. The settled status rested on a false premise.
-
-Two knobs, pulling opposite ways: a smaller gap (1–2px) nests less but risks
-ELK collapsing the lanes back into overlapping runs (the bug the fan fixed);
-a longer merge distance cuts before the arcs splay. Siggie has the code map
-and may experiment. `ARROW_GAP` is currently **0** in the working tree —
-Siggie's experiment, deliberately uncommitted.
-
-### 🧹 Temporary scaffolding still in place
-
-- **Four merge-mode buttons** (`⋙ ⋙⋙ ⌙ ≡`). Siggie picked **`bend`** (the ⌙,
-  "merge at last corner") after seeing all four. Not yet hardcoded — the
-  diagonal work may still want the comparison.
-- **"example cases" pane.** The Cases tab is scaffolding for the routing work.
-  The Ownership legend tab is NOT — it is upcoming-thoughts #1 delivered, and
-  should stay. It still needs the rest of #1: toolbar buttons, colours, dashed
-  edges.
-- **`?dbg=1` routing log** — keep until the diagonal is understood.
-
-### ✅ Answered this session
-
-- **Which classes show owner chips** (>5 direct owners, per `classifySlotEdge`,
-  which is what an earlier raw-slot count got wrong): **Quantity 16, TimePoint
-  9, BodySite 6, Context 6.** Below the cap: 4 owners — the observation family
-  and Substance; 3 — File, Specimen, QuestionnaireItem, the three
-  `*ObservationSet`s; 2 — twelve classes, mostly Participant+Visit pairs; 1 —
-  eleven, including TimePeriod (owner: Visit); 0 — thirteen, including
-  Organization, Person, Assay, Document. `Participant`/`Visit`/`Organization`
-  own heavily and are owned by almost nothing.
-- **Curved edges: removed.** `smoothPath` survives in graph-core unused.
-- **Stroke widths**: ownership 0.8 / 1.6 hover, references 0.67× those.
-
-### ✅ Settled this session — don't redo
-
-- **Terminology.** An edge joins **an attribute on one class** to **another
-  class as a whole**. Call these the **attribute end** and the **entity end**.
-  The old code words *host* / *storage side* (= attribute end) and *free* /
-  *peer* (= entity end) confused Siggie and are being retired. In LR the
-  attribute end is on the **right** border at its slot's row, the entity end on
-  the **left** border of the target — swapped when ownership is flipped.
-- **Only the attribute end names a slot.** The entity end never did; the peer
-  class has no corresponding row. An earlier fan spilled below the header so
-  arrows landed beside unrelated attribute rows and implied otherwise. The three
-  stale "the row an edge lands on names the slot" claims were **deleted
-  2026-08-19** and rewritten in attribute-end / entity-end terms.
-- **The fan stays, but is NO LONGER "settled".** 4px, centred on the header, so
-  ELK gives each approach its own lane. It was justified as invisible; Siggie
-  observed on 2026-08-21 that it plainly is not (see the handoff). Reverting
-  to a single shared port still brings back the bug where six owners of `BodySite`
-  rendered as one edge between two unrelated owners.
-
-### 🔁 Loops: answered with data (2026-08-19)
-
-Probed the live schema (throwaway test, not kept). Ownership alone (`has-a`;
-133 edges then, 148 after the 2026-08-25 rules) is **acyclic apart from 5
-self-loops** — `TimePoint.index_time_point`,
-`File.derived_from`, `Specimen.parent_specimen`, `ResearchStudy.part_of`,
-`SpecimenContainer.parent_container`. The layered DAG's assumption holds.
-
-**One genuine multi-node cycle exists**, but only once reference edges join in:
-`Specimen --storage_activity--> SpecimenStorageActivity --container-->
-SpecimenContainer --contained_in (has-a)--> Specimen`. As of the 2026-08-25
-rules that is one association (`container`) plus two ownership edges. Siggie's call: **self-loop markers only; document this cycle as
-known and deliberately unhandled** — a self-loop badge won't cover it, and a
-3-node cycle drawn across layers is what a user would actually notice as odd.
-
-(A third apparent cycle, `File → ImagingFile --derived_from--> File`, is an
-artifact of mixing is-a into the traversal — `ImagingFile` inherits
-`derived_from`. Not real; noted so nobody "fixes" it.)
-
-> ⚠️ **Re-verify the cycle check.** This result predates the Entity-forward
-> decision, and Entity now has 12 live inbound edges — exactly the shape that
-> could introduce a new cycle. Not yet re-run.
-
-### ⚠️ Tooling gotcha that cost this session real time
-
-`grep` in the non-interactive shell is shadowed by a **shell function** (from
-Claude Code's own setup, not Siggie's dotfiles — it is invisible in an
-interactive shell, where `which grep` shows only a normal `--color=auto` alias).
-It execs the `claude` binary as `ugrep` with `-I --ignore-files`; **this ugrep
-build rejects both flags and exits non-zero printing nothing**, which is
-indistinguishable from "no matches found".
-
-**Use `command grep`.** Several searches this session returned false negatives,
-including one that led to a wrong claim to Siggie about colours not being
-config-driven. Also note zsh eats unquoted `--include=*.ts` — quote the globs.
-
-### 🎨 Amber collision — decided, not yet built
-
-Siggie: **keep amber = ownership**; move **variable counts** to brown/maroon.
-Wants colours driven by config shared between Explore and the previous views
-"if true, otherwise make this an upcoming task" — **it's the otherwise branch.**
-`appConfig.ts` has an `elementTypes[].color` config, but it is keyed by element
-*type* (class=blue, enum=purple…) and has no notion of "amber = ownership". All
-amber is hardcoded Tailwind:
-
-- **variable counts** (→ brown/maroon): `SelectionTable.tsx:71,113`,
-  `EntityTable.tsx:79,161`, `SlotDrilldown.tsx:111` (Variables tab)
-- **ownership** (stays amber): `OwnershipGraphView.tsx`
-- **pin star** — a *third* amber meaning, `EntityTable.tsx:138,140`. Surfaced
-  after Siggie's decision, so it is undecided; fold it into the semantic layer
-  but **don't recolour it without asking.**
-
-Plan: add a semantic colour layer to `appConfig.ts` (`ownership` / `variables` /
-`pinned`) and point both apps at it, rather than sprinkling maroon in 5 places.
-
-### 📋 Rest of the round Siggie listed (not started)
-
-Ordered as given: edge improvements (**cardinality markers at endpoints** +
-**label/title text on links**, re-verbed for flipped — *not* curved retuning),
-self-loop markers, **drawer section headers** (10px gray uppercase, too
-recessive), **cross-view state preservation** (Explore already URL-encodes
-state; mostly a matter of nav links carrying the query string), amber, and then
-a **real docs cleanup** — leave only current state / actual plans, moving
-previous-view plans to `docs/old` or `docs/previous_views` linked from the
-appropriate places. Siggie also wants to **discuss the remaining Known-imperfect
-items** (curved edges, chip-strip height estimate, expand-on-demand
-discoverability, no-expand-downward) *after* the buildable work.
-
-### 📌 Older context (pre-edge session)
-
-**is-a side-stacks** (EXPLORE_VIZ.md step 3 remainder) were the previously
-agreed next piece, deferred behind the edge work. Inheritance renders as header
-chips ⊳/▷ and little else; the spec wants an expandable subclass stack on the
-parent node. **Note every class is `is_a: Entity`**, so naive rendering adds
-noise.
-
-- **Step 5 polish** — selection-change animation, self-loop badges.
-
-### 🐛 Fixed this session (2026-08-19)
-
-- **Crash on uncheck.** Select Person + Participant, uncheck Participant →
-  `Routed edge edge-80 missing from view model`. ELK layout is async while the
-  view model is a sync `useMemo`, so React rendered fresh nodes against the
-  previous spec's routed edges. `useGraphLayout` now stores each result with
-  the spec it came from and returns null unless they match. The throw was kept
-  (it is a real invariant) and made unreachable instead of softened.
-- **Pan did not work at all.** `useZoomPan` relied entirely on native
-  scrollbars, but fit-to-view clamps content to fit, leaving nothing to
-  scroll. Added drag-to-pan; nodes/toolbar carry `data-pan-ignore`.
-- **Fit-to-view is now the default** until the user takes manual zoom control.
-- **Title-click reset** — parity with the previous app; clears selection,
-  expansions, drawer, and re-opens the table.
-- **Path-to-root blowup.** Selecting one class could draw most of the schema
-  (`Quantity`: 29 of 53 classes, 87 edges). Now one-hop direct owners, capped
-  at 8; transitive is opt-in via `⇱ roots` / `?roots=1`. Full reasoning in
-  EXPLORE_VIZ.md §6 — including the intermediate chips-only design that was
-  also wrong.
-- **Phantom edge** between Condition and MeasurementObservation: a routing
-  artifact, not missing data. All incoming edges shared one `::hdr:in` port;
-  each edge now gets its own fanned port.
-- **Empty node box.** `BodySite` (all-scalar attributes) rendered as an empty
-  box whose only content was a "+3 more attributes" collapser. Auto-expands now.
-- **`Activity` misclassification** — adjudicated and merged; see
-  OWNERSHIP_CLASSIFICATION.md.
-
-### ⚠️ Known-imperfect, not yet addressed
-
-- **Chip-strip height is estimated** from label lengths (ELK needs a height
-  before the browser wraps). Rounded up, so a wide set leaves blank px rather
-  than clipping — but the estimate could be wrong for unusual names.
-- **Amber collision**: variable counts, ownership dots, AND owner chips are all
-  amber. Flagged by Siggie; unresolved. Owner chips arguably *should* be amber
-  (they are ownership), which makes the count badges the thing to move.
-- **Drawer section headers** ("Referenced by", "Attributes") are 10px gray
-  uppercase — too recessive to show panel structure.
-- **Cross-view state preservation** — navigating to the previous app and back
-  loses context. Explore already URL-encodes its state, so this is mostly a
-  matter of nav links carrying the query string.
-- **Expand-on-demand discoverability** — a dimmed row gives no signal that it
-  is clickable, and expandable rows often hide inside "+N more attributes".
-- **No expand downward** — chips and rows only reach owners/ranges, never
-  "what does this class own".
-
-### ⚖️ Needs Siggie's decision
-
-- **Owner cap is 5** (`DEFAULT_OWNER_CAP`, lowered from 8 on 2026-08-19). Four
-  classes exceed it and show chips: Quantity 16, TimePoint 9, BodySite 6,
-  Context 6. Still never explicitly ratified.
-- **Chips are one-way** — a chip adds an owner and vanishes; there is no way to
-  remove one from the strip. Siggie raised this and had no preference among the
-  options offered (persistent toggling chips / removal via the node's ×). Open.
-- **Category placement of `Context` / `Activity`** — parked in `observation`
-  beside `Quantity`; trivial to move.
-- **EXPLORE_VIZ.md language** — Siggie: "a lot of the language doesn't make
-  sense to me." Terms like sunk layers, storage direction, own-flip are doing
-  real work but were written for their author. A rewrite pass is wanted, **as a
-  conversation, not a solo edit.** (`own-flip` is now `own-bkwd`, but the
-  language complaint stands.)
-
-### 📌 Also worth knowing
-
-- **Node version**: the repo needs Node ≥18 (Vite 7). Siggie's interactive
-  shell has v24 via nvm, but a non-interactive shell falls back to a system
-  v16, where `npx vitest` dies at startup with
-  `node:fs/promises does not provide an export named 'constants'`. Export the
-  nvm bin path first. No `.nvmrc` yet — worth adding.
-- **Use `npm run typecheck`** (`tsc -b --noEmit`), not bare `tsc --noEmit`;
-  the latter is less strict and has hidden dozens of build-breaking errors
-  before.
-- **Playwright is still not installed**; the spec's probe rig was never built.
-  Everything above the data layer is jsdom-tested only. Both the pan bug and
-  the uncheck crash were invisible to the suite and found by looking at the page.
-- The upstream variables sheet gained columns (`var_name`, `status`,
-  `Ontology CURIE`, `OMOP Concept ID`, `Deprecated Codes`); loaded but **not
-  yet surfaced in the UI**.
-- `npm run lint` reports 22 pre-existing problems (test files,
-  `popoutWindow.ts`), untouched and unrelated.
+Also: `npm run typecheck` (= `tsc -b --noEmit`), never bare `npx tsc --noEmit`.
+It caught four real errors this session that the bare form did not.
 
 ---
 
-## 🧭 Current round (post-2026-06-11 feedback) — TOP PRIORITY
+### 🚧 Gotchas — unchanged, still true
 
-Team-facing plan: [STAKEHOLDER_QUESTIONS.md](../temp-but-share-for-now/STAKEHOLDER_QUESTIONS.md).
-Read that first — it holds the audience reframing and the **open questions for the
-team** (view architecture, audience, links, terminology). This section is the
-implementation backlog for the four new priorities. Items lower in this file are
-re-tagged **[FEEDS]** (supports this round), **[LATER]**, or **[PARKED]/[OBSOLETE]**.
-
-> **Audience reframing:** much of the real audience is **researchers** — data users
-> ("what's in here / what does this mean?") and study designers pre-harmonizing their
-> own study with BDCHM ("where would my variable fit?") — not only modelers/LinkML
-> people. The four priorities below bend toward them.
-
-**Dependency note:** once the Variable Library is live, the variable-drilldown portion
-of the Explorer can be simplified — no deep variable views needed inside it.
-
-### Priority 1 — Configurable terminology (was subtask 8)
-
-Default to general-audience terms; LinkML term on demand.
-- *property* (slot), *value set* / *permissible values* (enum), *property type*
-  (range), *entity* (class).
-- A vocabulary **config toggle**: general user vs. LinkML/modeler (possibly a
-  data-modeler middle setting). LinkML equivalents in tooltips + links to LinkML docs.
-- Status: **partially built.** The vocabulary is centralized as code config in
-  `src/config/appConfig.ts` (`VOCAB` per audience, `ACTIVE_VOCAB`, `defaultVocab`);
-  components read it via `DataService.getConceptLabel()` / `getTypeLabel()` /
-  `getSectionLabel()`, and badge abbreviations are vocab-driven. The `researcher`
-  vocab is active; a `modeler` vocab is filled in but INACTIVE (`defaultVocab =
-  'researcher'`), with unresolved-term notes in appConfig.ts. **Remaining:** the
-  in-app UI **toggle** to switch vocab at runtime (lowest priority — the machinery
-  is the hook, no UI yet), and LinkML tooltips/links.
-
-### Priority 2 + 3 — NOW: subgraph-viz SPA (supersedes the Focus direction)
-
-**Current phase (2026-07-13):** the subset-visualization goal is being rebuilt
-as a **new SPA** (same repo, new Vite entry): Explorer-style selection table →
-layered ownership DAG with expand-on-demand, renderer adapted from
-icd11-playground's NodeLinkView. Full design + build order:
-**[EXPLORE_VIZ.md](EXPLORE_VIZ.md)** (step 1 is the ownership-classification
-review). Terminology going forward: say **ownership**, not "containment."
-
-The Focus view below stays in place for stakeholder comparison; its remaining
-items are re-tagged **[LATER]**.
-
-#### Focus view (compact selector + subset visualization) — [LATER]
-
-Priorities 2 ("compact Kitchen Sink + multi-select") and 3 ("subset
-visualization") turned out to be **one feature** and are now built as a third
-view, **Focus**. Full design/semantics: **[FOCUS_VIEW.md](FOCUS_VIEW.md)**.
-
-Focus = the Kitchen Sink with minimal differences: category-grouped multi-select
-left panel, a containment digraph widget (`dag-browser-widget`) below it, and
-middle/right panels scoped to the selected entities. Selection drives everything.
-
-**Shipped:**
-- ✅ Containment foundation (`c76fdcf`): `src/models/containmentGraph.ts`
-  (FK-inversion heuristic, ported from `scripts/extract_containment_tree.py`),
-  `DataService.getContainmentGraph()` (live-derived `{nodes,edges}`),
-  `getCategoryGroups()`, 10 property-based tests.
-- ✅ Focus scaffold + category multi-select selector + containment widget +
-  panel-scroll regression fix (`d9f4cc8`).
-
-**Shipped (this round):**
-- ✅ **Middle/right now reuse the Kitchen Sink rendering path, scoped to the
-  subset.** Deleted the bespoke `getFocusPanelSections`/`getClassSummary`-based
-  item building; middle = the `slot` section, right = the `class`/`enum`/`type`
-  (Ent/PVS/DT) sections, each a flat list filtered to the selected classes'
-  slots / range targets and rendered via the elements' own `getSectionItemData`.
-  Filtering flattens via `getAllElements()` (deep subclasses included) with
-  subset-accurate section counts. New DataService helpers `getFocusSubsetSections`
-  + `subsetTargets`/`subsetSection` (graph `CLASS_SLOT`/`CLASS_RANGE` edges).
-  Select/unselect no longer leaks into middle/right (inert click handlers until
-  floating boxes land). **Deferred:** per-entity nesting in the right panel —
-  range rows from different selected classes intermix within a section for now.
-
-**Remaining (ordered) — all [LATER], superseded by EXPLORE_VIZ.md:**
-1. **Per-entity grouping/nesting in the right panel** (deferred from the reuse
-   work above) — group range rows under the selected entity they belong to.
-   Revisit how to implement once the flat version has been demoed.
-2. ~~**Restore inter-panel gutters** + **add `<LinkOverlay>`** to FocusView~~
-   Shipped 2026-07-13 (gutters + working links; the duplicate-id LinkOverlay
-   fixes benefit Kitchen Sink too). Known-imperfect: flex/gutter model, link
-   anchors under the widget, hover highlighting unwired — left as-is.
-3. **Extract `useFloatingBoxes` hook** from LayoutManager; consume in both
-   LayoutManager (no behavior change) and FocusView → working detail/relationship
-   boxes in Focus. Then wire the now-inert middle/right click handlers to it.
-4. **Widget select/unselect** shared bidirectionally with the left selector.
-5. **Widget "show all entities"** option (full graph, not just the subset).
-6. **Resizable panels** (draggable edges; Kitchen Sink uses flex gutters — likely
-   `react-resizable-panels`).
-7. **Floating Cytoscape diagram** (summonable node-link view of the subset;
-   promote `public/has-a-mockup.html`).
-8. **URL persistence** of `selectedClassIds` (`?focus=...`).
-
-Then: retire stale mockups (`has-a-mockup.html`, `containment-graph.json`,
-`has-a-graph.json`, `extract_has_a_graph.py`) once the in-app diagram replaces
-them — see [PARKED] below.
-
-### Priority 4 — Help mode (port from icd11-playground)
-
-DOM-driven contextual help: `data-help-id` attributes + markdown content file +
-`?`-toggled mode. Source in `../icd11-playground/web/src`: `hooks/useHelpMode.ts`,
-`components/HelpPopover.tsx`, `utils/parseHelpContent.ts`, `assets/help-content.md`.
-- Status: **not started.** Low-pri open question: extract as a shared package?
-  Default: copy in now, extract later.
-
-### Supporting / housekeeping for the release
-
-- **URL state encoding** — deep-linking + working browser back button. Current app
-  encodes some state but the back button is reportedly buggy; investigate root cause.
-  States to encode: expanded entity, drilldown tab (slots / vars), open inline card.
-- **Release checklist** for 2026-07-30 (QA, deploy path, feedback loop).
-
-### Done (shipped — kept for reference)
-
-- ✅ Entity Explorer as default view (progressive disclosure).
-- ✅ Categorized entity list (`entityCategories.ts`) + subclass indentation.
-- ✅ Default pinning (Demography, Condition, MeasurementObservation) + localStorage.
-- ✅ Inline slot drilldown (Slots/Variables tabs, inherited/overridden tags, range
-  badges, recursive nested drilldown).
-- ✅ Inline enum detail card (permissible values, "used by"). **[FEEDS]** still TODO:
-  CURIE *labels + definitions*, not just identifiers.
-- ✅ Inline class detail card (merged into SlotDrilldown).
+- `npx vitest` needs node 22: `export PATH="$HOME/.nvm/versions/node/v22.20.0/bin:$PATH"`
+- **Never run `npm run dev`** — Siggie keeps the app running himself.
+- `npm run typecheck` (`tsc -b --noEmit`), never bare `npx tsc --noEmit`.
+- `tsc` will NOT catch a stale union comparison — grep for removed literals.
+  Hit again this session: `MergeMode` is `'bend'`, not `'full'`.
+- `console.log` is swallowed in vitest; assert against a sentinel and read the
+  diff. That trick found every real diagnosis in this session.
+- Lint baseline is **20 errors**, all pre-existing (a missing `react-hooks` rule
+  definition plus `.vite/deps` cache files). Compare against the baseline rather
+  than expecting zero.
 
 ---
 
-## 🅿️ PARKED — Containment heuristic de-fragility (revisit after demo)
-
-**No longer parked: the containment graph itself.** The FK-inversion heuristic is
-ported to TypeScript and live (`src/models/containmentGraph.ts`,
-`DataService.getContainmentGraph()`), driving the Focus containment widget. The
-Python mockups/scripts are now the *legacy* version; the in-app graph derives live
-from the loaded model so it can't drift.
-
-**Still parked — making the heuristic less fragile.** The hand-curated sets rot
-silently when the schema changes. As of 2026-08-25 they are
-`SINGLE_VALUE_OWNER_TARGETS`, `ASSOCIATION_SLOTS`, `CARDINALITY_SPLIT_OWN_FWD`,
-`BACKWARD_DESPITE_MULTIVALUED` and `SKIP_SUBCLASS_EXPANSION`
-(`VALUE_OBJECTS`/`NO_FLIP_SLOTS`/`OWNERSHIP_OVERRIDES` were renamed or deleted;
-`EXCLUDE_HAS_A_TARGETS` is gone entirely). Planned (after the demo
-proves value): per-slot LinkML `annotations: { containment_direction: contains |
-contained_by | ? }`, auto-generated from the current heuristic then human-reviewed
-(Brian only touches new/ambiguous), plus a CI check that fails on un-annotated new
-single-valued entity slots. `owns`/`owned_by` floated as broader vocab for the
-`performed_by` family. See [FOCUS_VIEW.md](FOCUS_VIEW.md#containment-digraph-semantics-settled-enough-to-demo).
-
-**Retire once the in-app Cytoscape diagram lands:** `public/has-a-mockup.html`,
-`public/containment-graph.json`, `public/has-a-graph.json`, and the now-redundant
-`scripts/extract_has_a_graph.py`. (`containment-tree-mockup.html` was superseded by
-the `dag-browser-widget`.)
-
 ---
 
-## 📋 Secondary backlog (supports the current round; not itself a priority)
+### 🚧 Gotchas that cost time this session — read before running anything
 
-> The ordered priorities for this round are in "Current round" up top. The items
-> here are smaller polish/enablement tasks — tagged **[FEEDS]** where they directly
-> support a current-round priority.
-
-### Render markdown in schema fields  **[FEEDS]**
-- e.g., `UnitOfMeasurementEnum.description` contains markdown but is rendered as plain
-  text in detail views.
-- Feeds the inline **enum detail card** (which still needs CURIE labels/definitions —
-  see Done list up top).
-
-### Slot names in class detail Slots table should be linked  **[FEEDS]**
-- Should behave like other element refs (hover + click navigation).
-- Feeds the inline **class detail card**.
-
-### Incorporate Unused Schema Fields into UI
-- Enum inheritance and other fields
-    - LinkML enums use `inherits` field (not `is_a` like classes)
-    - Currently dataLoader/Element ignores enum `inherits` and other fields
-    - Need to audit EnumInput for all fields and surface in UI
-- Check console for "Unexpected fields" warnings. Currently seeing:
-  ```
-    dataLoader.ts:97 Unexpected fields in processed JSON (not yet used in UI):
-        dataLoader.ts:100   SlotInput: alias, comments, designates_type, domain_of, examples, from_schema, global, inlined, inlined_as_list, overrides, owner, unit, values_from
-        dataLoader.ts:100   EnumInput: comments, include, inherits, parent, reachable_from, see_also
-        dataLoader.ts:100   TypeInput: exact_mappings_urls
-        dataLoader.ts:100   ClassInput: class_url
-  ```
-- Add to UI or document why ignored
-- For each field:
-  - Show me some examples and give me stats (e.g., x of y SlotInputs have alias. example1, example 2...)
-  - I decide if we add / ignore / deal with later
-  - For add and ignore, add to expected fields; make clear which are ignored
-  - For add, document plans for incorporating 
-#### Unused Schema Fields Workspace
-
-check claude's work:
-
-      SlotInput fields:
-      - ✅ comments - shown under description as "Comments:"
-      - ✅ examples - shown under description as "Examples: value1, value2..."
-      - ✅ inlined / inlinedAsList - shown as properties when true
-      - ✅ domain_of / owner - investigated and marked as IGNORE (domain_of misses inherited slots)
-
-      EnumInput fields:
-      - ✅ comments - shown under description
-      - ✅ inherits - new section "Inherits Values From" with clickable enum links
-      - ✅ reachable_from - new section "Reachable From (Dynamic Values)" with source ontology, nodes, etc.
-
-      Still TODO (marked as LATER):
-      - unit - ask team
-      - include, parent, see_also for enums
-
-      Files changed:
-      - src/models/SchemaTypes.ts - added new field types
-      - src/input_types.ts - added input field definitions
-      - src/utils/dataLoader.ts - transform functions
-      - src/models/Element.ts - SlotElement and EnumElement classes
-      - docs/TASKS.md - updated workspace with completion status
-##### SlotInput (180 total slots)
-
- | Field              | Count          | Decision                                                                     | Notes                                                                                                           |
- |--------------------|----------------|------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
- | `alias`            | 181/181 (100%) | **IGNORE** - all same as name (verified)                                      | Same as name (ex: `id`→`id`, `species`→`species`)                                                               |
- | `comments`         | 25/180 (14%)   | ✅ **DONE** - shown under description                                         | Array of strings. ex: `days_supply`="The field should be left empty if..."                                      |
- | `designates_type`  | 1/180 (0.6%)   | **IGNORE** - note to revisit if generalizing app                             | Only `type` slot has this (=true)                                                                               |
- | `domain_of`        | 180/180 (100%) | **IGNORE** - incomplete (misses inherited slots), keep computed "Used By"    | Array of class names that use this slot. ex: `id`→`['Entity', 'Person', ...]`                                   |
- | `examples`         | 16/180 (9%)    | ✅ **DONE** - shown under description                                         | Array of {value} objects. ex: `specimen_type`=[{value:'Fresh Specimen'},...]                                    |
- | `from_schema`      | 180/180 (100%) | **IGNORE** - always same value                                               | Always `https://w3id.org/bdchm` - schema URL                                                                    |
- | `global`           | 7/181 (4%)     | **ALREADY USED** - just missing from EXPECTED_SLOT_FIELDS                     | Boolean. Slots: id, identity, associated_participant, entries, derived_product, value, member_of_research_study |
- | `inlined`          | 1/180 (0.6%)   | ✅ **DONE** - shown as property when true                                     | Only `entries` slot (=true)                                                                                     |
- | `inlined_as_list`  | 4/180 (2%)     | ✅ **DONE** - shown as property when true                                     | parent_specimen, derived_product, duration, +1                                                                  |
- | `overrides`        | 10/181 (6%)    | **ALREADY USED** - just missing from EXPECTED_SLOT_FIELDS                     | String (slot name being overridden). ex: `value`→`value` (10 different `value` slots)                           |
- | `owner`            | 180/180 (100%) | **IGNORE** - arbitrary (first domain_of class), not useful                   | Class that defines this slot. ex: `id`→`Entity`, `species`→`Person`                                             |
- | `unit`             | 12/180 (7%)    | **LATER** - need to ask team about it                                        | Object with ucum_code. ex: `age_at_death`={ucum_code:'d'}                                                       |
- | `values_from`      | 0/181 (0%)     | **GONE** in new data - removed from schema                                    | Was: Array of enum references                                                                                   |
-
-- **inlined/inlined_as_list**: [LinkML docs](https://linkml.io/linkml/schemas/inlining.html) - info for devs writing ingestion code
-- **domain_of**: Investigated - misses inherited slots (e.g., CauseOfDeath←Entity.id) and overrides. Computed "Used By Classes" is more complete.
-- **owner**: Just first domain_of class - not meaningful. Already ignored in EXPECTED_SLOT_FIELDS.
-  
-
-##### EnumInput (41 total enums)
-
- | Field            | Count      | Decision                                                                                                                              | Notes                                                                                                          |
- |------------------|------------|---------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------|
- | `comments`       | 3/41 (7%)  | ✅ **DONE** - shown under description                                                                                                  | Array. ex: DrugExposureProvenanceEnum="Taken from OMOP Drug Type values..."                                    |
- | `include`        | 1/41 (2%)  | **LATER** - complex structure for including other enum values                                                                         | Complex structure for including other enum values                                                              |
- | `inherits`       | 3/41 (7%)  | ✅ **DONE** - shown as "Inherits Values From" section with clickable links                                                             | Array of parent enum names. ex: ConditionConceptEnum→['MondoHumanDiseaseEnum', 'HpoPhenotypicAbnormalityEnum'] |
- | `parent`         | 1/41 (2%)  | **LATER** - single parent (different from inherits)                                                                                   | Single parent string. ex: HistoricalStatusEnum→StatusEnum                                                      |
- | `reachable_from` | 9/41 (22%) | ✅ **DONE** - shown as "Reachable From (Dynamic Values)" section                                                                       | Complex: {source_ontology, include_self, source_nodes, ...}. Defines dynamic enum values from ontology         |
- | `see_also`       | 2/41 (5%)  | **LATER** - array of reference URLs                                                                                                   | Array of URLs. ex: DrugExposureConceptEnum→['https://bioregistry.io/registry/rxnorm', ...]                     |
-
-##### TypeInput (7 total types)
-
- | Field                 | Count     | Decision                        | Notes                                                  |
- |-----------------------|-----------|---------------------------------|--------------------------------------------------------|
- | `exact_mappings_urls` | 5/7 (71%) | **ALREADY USED** - expanded from `exact_mappings` CURIEs, just missing from expected | Array of URLs. ex: `string`→['http://schema.org/Text'] |
-
-##### ClassInput (51 total classes)
-
- | Field       | Count     | Decision                                                                                     | Notes                                             |
- |-------------|-----------|----------------------------------------------------------------------------------------------|---------------------------------------------------|
- | `class_url` | 1/51 (2%) | **Found**: comes from `class_uri: schema:Thing` in YAML, expanded by transform_schema | URL string. Only Entity→'http://schema.org/Thing' |
+- **`npx vitest` needs node 22+.** The default `node` is v16 and fails with a
+  `node:fs/promises` export error that looks like a broken test setup but is
+  not. Use
+  `export PATH="$HOME/.nvm/versions/node/v22.20.0/bin:$PATH"`.
+- **Never run `npm run dev`.** Siggie keeps the app running himself.
+- **`tsc` will NOT catch a stale union comparison.** When `'own-flip'` left the
+  `OwnershipVerdict` union, every surviving `x === 'own-flip'` narrowed to
+  `never` instead of erroring — so the typecheck stayed green while two live
+  sites silently stopped matching (edge emission, and the legend's
+  `flippedCount`). **Grep for the old literal; do not trust tsc for this.**
+- **`console.log` is swallowed in vitest here.** To surface a value, assert it
+  against a sentinel string and read the diff.
 
 ---
-### ⚠️ WIP: Class-specific slot definitions (Dec 15, 2025) - INCOMPLETE
-
-**Problem reported**: DrugExposure's `quantity` slot showed Procedure's description ("The quantity of procedures ordered or administered.") instead of the drug-specific description.
-
-**Root cause**: When multiple classes define the same slot name with different descriptions (e.g., Procedure, DrugExposure, DeviceExposure all define `quantity`), transform_schema.py was using the first definition and ignoring the rest.
-
-**Instructions given**:
-1. User showed screenshot of wrong description
-2. Asked to fix so DrugExposure shows its own quantity description
-3. Suggested adding `name` field to slot references in bdchm.processed.json to simplify UI code
-
-**Changes attempted** (NOT WORKING - still shows wrong names in UI):
-1. `scripts/transform_schema.py`:
-   - Added `find_conflicting_slot_definitions()` to detect slots with different definitions across classes
-   - Modified `transform_classes()` to create class-specific slot IDs (e.g., `quantity-DrugExposure`)
-   - Modified `transform_slots()` to create class-specific slot instances
-   - Added `name` field to slot references when ID differs from display name
-
-2. `src/models/SchemaTypes.ts`:
-   - Added `name?: string` to SlotReference interface
-
-3. `src/models/Element.ts`:
-   - Updated ClassElement.getDetailData() to use `slotRef.name || slot.name` for display
-
-4. `src/components/DetailContent.tsx`:
-   - Added `renderMarkdown()` function for table cell content
-   - Updated `renderCell()` to render markdown in all string cells
-
-5. `public/source_data/HM/bdchm.processed.json`:
-   - Regenerated with class-specific slots
-
-**Status**: UI still shows `quantity-DrugExposure` instead of `quantity`. The `slotRef.name` change is not being picked up. Needs debugging - possibly the dataLoader transform is not reading the `name` field from slot references.
-
-**Second instance found 2026-08-21 — `focus` shows the wrong cardinality.** Same
-root cause, different symptom: it's not just descriptions that collapse, it's
-*properties that change the meaning of the edge.*
-
-`focus` has no top-level slot definition. It is declared as an `attributes`
-entry on three classes, and the other 8 sites inherit via `is_a`:
-
-| declared on | multivalued | inherited by |
-|---|---|---|
-| `Document.focus` | No | — |
-| `Observation.focus` | No | DimensionalObservation, MeasurementObservation, SdohObservation, SpecimenQualityObservation, SpecimenQuantityObservation |
-| `ObservationSet.focus` | **Yes** (+ `inlined_as_list`) | DimensionalObservationSet, MeasurementObservationSet, SdohObservationSet |
-
-The Kitchen Sink detail panel shows **one** `focus` element with
-"Multivalued: No" and all 11 classes pooled under "Used By Entities (11)" — so
-the 4 multivalued sites (ObservationSet + its 3 Set subclasses) are silently
-misreported as single-valued.
-
-Mechanism: `SlotElement.getUsedByClasses()` (`src/models/Element.ts`) calls
-`getClassesUsingSlot(globalGraph, this.name)` — **keyed by slot name only**. The
-rendering in `getDetailData()` is fine; it faithfully prints whatever
-`this.multivalued` holds, which came from whichever declaration won ingestion.
-
-Why this one matters more than the `quantity` description bug: cardinality is
-the input to ownership classification (see
-[OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md) — multivalued vs
-single-valued decides edge direction). A viewer reading this panel would draw
-the wrong conclusion about 4 edges.
-
-Not a quick fix — needs attribute elements keyed by `class.slot`, or a
-"varies by class" treatment in the Used By table. Both ripple through
-everything that resolves attributes by name. **Left as a known bug 2026-08-21**
-(Siggie: fix if super-easy, otherwise defer — it isn't).
-
----
-### LinkOverlay fixes  **[LATER — gated on an open question]**
-- Edge labels: show on hover; tooltip display needs improvement.
-- **Gated on open question B** in [STAKEHOLDER_QUESTIONS.md](../temp-but-share-for-now/STAKEHOLDER_QUESTIONS.md)
-  ("are the connecting links worth their screen real estate?"). Inline entity-summary
-  cards + "Referenced by" lists may replace most of what links communicate; links may
-  become an optional overlay / "Relationships" tab. Don't invest in link polish until
-  this resolves.
-
----
-
-## 📚 Larger Refactoring Tasks
-
-### Abstract Tree Rendering System
-- Extract tree rendering and expansion logic from Element
-- Enables consistent tree UX across Elements panel and info boxes
-- See [detailed plan](#abstract-tree) below
-
-### Reduce Element subclass code
-- Most behavior should move to graph queries
-- Element classes become thinner wrappers around graph data
-- **Blocked by**: Abstract Tree system
-- See [detailed plan](#reduce-element-subclass-code-details) below
-
-### Grouped Slots Panel  **[OBSOLETE]**
-- Was: display slots grouped by Global + per-class sections, with inheritance origin.
-- **Superseded** — the Explorer shipped; slot grouping now lives in the inline
-  per-entity drilldown (inherited / defined-here / overridden tags). Remove unless a
-  Kitchen-Sink-specific need resurfaces.
-
----
-
-## 🔧 Medium Priority
-
-### Overhaul Badge Display System  **[MOSTLY OBSOLETE]**
-- Was: show multiple counts per element with clarifying labels/tooltips.
-- The Explorer entity table shipped with separate Props / Cls / Enm / Typ / Vars
-  columns, which serves most of this. Any remaining gap is just badge tooltips.
-
-### Detail Panel Enhancements
-- Show reachable_from info for enums  *(note: reachable_from already shown in enum
-  detail card per the unused-fields workspace — confirm and close if done)*
-- Show inheritance
-- Slot order: Inherited slots at top
-
-### ~~Change "attribute" to "slot" terminology~~  **[OBSOLETE — REVERSED]**
-- ⚠️ This is now **backwards** relative to Priority 1 (configurable terminology),
-  which moves *away* from "slot" toward general-audience "property." Do not act on
-  this. The codebase-internal naming cleanup ("attribute" vs "slot") is a separate,
-  low-value concern from the user-facing vocabulary.
-
-### Condition/DrugExposure Variable Display
-- Show message that these are handled as records, not specific variables
-
----
-
-## 🔮 Low Priority / Future Ideas
-
-### Search and Filter
-- Search: Important for exploring large schemas
-- Filtering: Grouping provides a lot already
-
-### LayoutManager rename
-- No longer about "whitespace monitoring" - it's now MainLayout/AppLayout
-- Consider renaming to better reflect current purpose
-
-### Animation library
-- Smooth animations for various interactions
-
-### Initial render performance
-- Chrome warning: `requestAnimationFrame handler took 75ms`
-- Likely from element tree or link overlay calculations on page load
-
-### Viewport culling for links
-- Don't show links when both endpoints off screen
-
-### Responsive panel widths
-- Currently fixed: MAX_PANEL_WIDTH=450px, EMPTY_PANEL_WIDTH=180px
-
-### Relationship Info Box - Keyboard navigation
-
-### Neighborhood Zoom + Feature Parity with Official Docs
-- See archived REFACTOR_PLAN for full details
-
----
-
-## 📝 Detailed Plans
-
-<a id="abstract-tree"></a>
-### Abstract Tree Rendering System - Details
-
-**Goal**: Extract tree rendering and expansion logic from Element into reusable abstractions.
-
-**Current state**:
-- Element class has tree capabilities (parent, children, traverse, ancestorList)
-- Expansion state managed by useExpansionState hook
-- Tree rendering handled in each component
-
-**Proposed abstraction**:
-- Create parent class or mixin with tree capabilities
-- Element becomes a child of this abstraction
-- Info box data structures as tree nodes
-- Shared rendering components/hooks
-
-[sg] i'm not sure when this was written, but it's not how i was thinking about
-     it. the abstract tree is for rendering -- it's in the UI so it probably
-     shouldn't be (closely) tied to Element. need to discuss before implementing
-
-**Key insight**: All presentation data should be tree-shaped.
-
-**Methods to extract from Element:**
-- `toRenderableItems()` - tree → flat list with expansion
-- `toSectionItems()` - tree → SectionItemData list
-- `getSectionItemData()` - single element → SectionItemData
-- `ancestorList()` - walk up parent chain
-- `traverse()` - depth-first traversal
-
-<a id="reduce-element-subclass-code-details"></a>
-### Reduce Element Subclass Code - Details
-
-**Implementation Plan:**
-1. Simplify `getDetailData()` via tree abstraction (BLOCKED: needs Abstract Tree)
-2. Move tree methods to Abstract Tree system
-3. Consolidate flat collections (Enum, Type, Slot)
-4. Simplify Element subclass constructors
-5. Graph as primary for relationship queries (partially done)
-6. Fix remaining "DTO" terminology in codebase
-
-**Target state:**
-- Element subclasses: ~30-50 lines each
-- Presentation logic: components layer
-- Tree logic: Abstract Tree system
-- Relationship queries: Graph module
-
----
-
-## 🧹 Documentation & Technical Debt
-
-### Implement devError() utility
-- Throws in development, logs quietly in production
-- Replace silent `return null` patterns
-
