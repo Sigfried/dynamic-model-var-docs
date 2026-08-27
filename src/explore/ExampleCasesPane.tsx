@@ -127,7 +127,6 @@ export default function ExampleCasesPane({
                       </span>
                       <span className="ml-1.5 text-[10px] text-gray-400">
                         {c.sel.length}
-                        {c.exp?.length ? `+${c.exp.length}` : ''}
                         {c.roots ? ' ⇱' : ''}
                       </span>
                       <p className="text-[11px] leading-snug text-gray-600 dark:text-gray-400 mt-0.5">

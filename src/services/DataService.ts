@@ -55,7 +55,7 @@ export type { AttributeSummary } from '../models/Element';
 export type { ContainmentGraph, ContainmentNode, ContainmentEdge } from '../models/containmentGraph';
 export { cardinalityLabel, SKIP_SUBCLASS_EXPANSION } from '../models/containmentGraph';
 export {
-  DEFAULT_OWNER_CAP, RELATION_POSITION_LABEL, RELATION_POSITION_ORDER,
+  RELATION_POSITION_LABEL, RELATION_POSITION_ORDER,
   relationPositionLabel,
 } from '../models/ownershipSubgraph';
 export type {
@@ -913,17 +913,16 @@ export class DataService {
 
   /**
    * Drawable ownership subgraph for the Explore viz (docs/EXPLORE_VIZ.md):
-   * selected nodes, edges among them, ownership paths-to-root as dimmed
-   * 'context' nodes, plus expand-on-demand additions. Node.layer (maxDepth in
-   * the full ownership DAG) is stable across selection changes.
+   * exactly the selected nodes and the edges among them, plus the opt-in
+   * pathToRoot ancestors as dimmed context. Node.layer (maxDepth in the full
+   * ownership DAG) is stable across selection changes.
    */
   getOwnershipSubgraph(
     selectedIds: string[],
-    expansions: string[] = [],
     options: OwnershipSubgraphOptions = {},
   ): OwnershipSubgraph {
     const { full, dag } = this.getOwnershipDag();
-    return buildOwnershipSubgraph(full, dag, selectedIds, expansions, options);
+    return buildOwnershipSubgraph(full, dag, selectedIds, options);
   }
 
   /**

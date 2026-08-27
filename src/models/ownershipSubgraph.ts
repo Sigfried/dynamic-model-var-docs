@@ -3,13 +3,23 @@
  *
  * Takes the full classified ownership graph (models/containmentGraph) and a
  * selection, and returns the drawable subgraph per the content policy:
- * selected entities, edges among them, explicit expansions, and each node's
- * DIRECT owners (one hop, up to `ownerCap`) as dimmed 'context' nodes. Owners
- * past the cap are returned in `hiddenOwners` for chip rendering instead; the
- * ones that were drawn come back in `drawnOwners`, so every owner is
- * accounted for and the UI can render chips that both add and remove.
- * With `pathToRoot` on, the one-hop walk is replaced by the full transitive
- * ancestors-to-root.
+ * **nothing is drawn that was not selected.** Selected entities and the edges
+ * among them, and that is all. What a node relates to but does not draw is
+ * reported in `hiddenOwners` / `hiddenOwned` so the UI can offer it.
+ *
+ * **The automatic owner draw is gone (2026-08-27, Siggie).** Every selected
+ * node used to pull in up to `DEFAULT_OWNER_CAP = 5` of its direct owners
+ * unasked, so `sel=MeasurementObservation` drew SIX boxes and
+ * `sel=BodySite~Participant` drew TEN. Ticking one checkbox has to draw one
+ * box. The `ownerCap` option (`0 / ≤5 / all` in the toolbar) and the
+ * `suppressedOwners` dismissal set both existed only to bound that automatic
+ * draw, so removing it takes them with it: with nothing drawn unasked, there
+ * is nothing to cap and nothing to dismiss that is not simply deselected.
+ *
+ * This also retires `expansions` as a separate input. Expanding IS selecting
+ * now, so a class is on the canvas for exactly one reason and the
+ * selected/expanded distinction — long complained about, deferred twice as too
+ * risky — stops existing rather than needing to be tracked.
  *
  * pathToRoot defaults OFF. Ancestors fan OUT rather than up a spine: a value
  * object is owned by everything that stores one, and each of those owners
@@ -220,23 +230,15 @@ export interface OwnershipSubgraph {
   nodes: OwnershipSubgraphNode[];
   edges: OwnershipSubgraphEdge[];
   /**
-   * Owners of selected/expanded classes that are NOT on the canvas — the
-   * "what uses this?" answer that path-to-root used to give by drawing the
-   * whole upstream graph. Rendered as chips on the node; empty when
-   * pathToRoot is on (those owners are drawn as real nodes instead).
+   * Direct owners of selected classes that are NOT on the canvas — the "what
+   * uses this?" answer that path-to-root gives by drawing the whole upstream
+   * graph. Since the automatic owner draw was removed this is normally EVERY
+   * direct owner; it is empty only when pathToRoot is on (those owners are
+   * drawn as real nodes) or when the owner happens to be selected too.
    */
   hiddenOwners: Map<string, string[]>;
   /**
-   * Direct owners of selected/expanded classes that ARE on the canvas — the
-   * complement of `hiddenOwners`. Together the two cover every direct owner.
-   *
-   * Exists so the UI can render every owner as a chip and let the chip's
-   * state mean add-or-remove; with only the hidden half reported, chips could
-   * only ever add.
-   */
-  drawnOwners: Map<string, string[]>;
-  /**
-   * What each core class OWNS that is not on the canvas — the downward
+   * What each selected class OWNS that is not on the canvas — the downward
    * counterpart of `hiddenOwners`.
    *
    * Not simply "rows you could expand": a class whose ownership edges are all
@@ -245,40 +247,9 @@ export interface OwnershipSubgraph {
   hiddenOwned: Map<string, string[]>;
 }
 
-/**
- * Owners drawn per node before falling back to chips. Lowered 8 → 5
- * (2026-08-19, Siggie): 8 was picked without discussion, and a node with 6-8
- * drawn owners crowds the canvas enough that the converging edges are hard to
- * follow even with fanned ports.
- */
-export const DEFAULT_OWNER_CAP = 5;
-
 export interface OwnershipSubgraphOptions {
   /** Walk each selected node's ownership ancestors in as dimmed context. */
   pathToRoot?: boolean;
-  /**
-   * How many of each core node's DIRECT owners (one hop, not transitive) to
-   * draw as context. A value object's owners are the interesting thing about
-   * it — BodySite's six owners are the answer to "what is BodySite", not a
-   * footnote to expand one chip at a time.
-   *
-   * A true CAP: the first `ownerCap` owners are drawn and the rest become
-   * chips, so a node with 20 owners (Quantity) draws N and chips the other
-   * 20-N instead of blowing up the canvas. Previously an all-or-nothing gate;
-   * see the comment at the use site for why that was wrong.
-   */
-  ownerCap?: number;
-  /**
-   * Owners the user has explicitly dismissed. They are kept OUT of the drawn
-   * set and reported as chips instead, so the chip can toggle them back on.
-   *
-   * Needed because the cap draws owners the user never asked for: dismissing
-   * one cannot be expressed by removing an expansion (there is none), only by
-   * recording the dismissal. A suppressed owner still appears if it is
-   * selected or expanded in its own right — an explicit request outranks a
-   * previous dismissal.
-   */
-  suppressedOwners?: readonly string[];
 }
 
 export type OwnershipDag = Supergroup<unknown>;
@@ -373,17 +344,16 @@ export function computeSunkLayers(dag: OwnershipDag): Map<string, number> {
  *
  * @param full        the full (unpruned) classified graph the DAG was built from
  * @param dag         buildOwnershipDag(full)
- * @param selectedIds classes the user selected
- * @param expansions  extra classes pulled in by expand-on-demand (role 'context')
+ * @param selectedIds classes the user selected — the ONLY thing drawn, apart
+ *                    from the opt-in pathToRoot ancestors
  */
 export function buildOwnershipSubgraph(
   full: ContainmentGraph,
   dag: OwnershipDag,
   selectedIds: string[],
-  expansions: string[] = [],
   options: OwnershipSubgraphOptions = {},
 ): OwnershipSubgraph {
-  const { pathToRoot = false, ownerCap = DEFAULT_OWNER_CAP, suppressedOwners = [] } = options;
+  const { pathToRoot = false } = options;
   const byId = new Map(dag.nodes.map(n => [n.id, n]));
   const resolve = (id: string) => {
     const n = byId.get(id);
@@ -392,67 +362,39 @@ export function buildOwnershipSubgraph(
   };
 
   const selected = new Set(selectedIds);
-  const core = new Set([...selectedIds, ...expansions]);
-  const visible = new Set(core);
-  for (const id of core) resolve(id); // fail loudly on unknown expansions too
+  const visible = new Set(selected);
+  for (const id of selected) resolve(id); // fail loudly on unknown ids
+  /*
+   * The ONLY thing that adds a node the user did not tick is the opt-in
+   * pathToRoot walk. There used to be an `else` branch here drawing each
+   * selected node's direct owners up to `ownerCap`; that is the automatic
+   * draw removed on 2026-08-27, and with it the whole notion of a node being
+   * on the canvas for a reason other than selection.
+   */
   if (pathToRoot) {
     for (const id of selected) {
       for (const a of resolve(id).ancestors()) visible.add(a.id);
     }
-  } else {
-    /**
-     * One hop up, per node, capped at `ownerCap` owners. Not transitive: the
-     * owners' own owners stay off, which is what keeps this from becoming the
-     * reverse-reachability closure pathToRoot was turned off for.
-     *
-     * **`ownerCap` is a CAP, not a legibility gate (changed 2026-08-26).** It
-     * used to read `owners.length <= ownerCap`, i.e. draw ALL owners or NONE.
-     * That inverted the control on exactly the nodes you notice: BodySite has
-     * 6 owners, so the default of 5 drew **zero** of them and the node looked
-     * unowned. Siggie: the fix "should be a cap". Now N owners are drawn and
-     * the remainder fall through to `hiddenOwners` as chips, so the two
-     * mechanisms compose instead of replacing one another.
-     *
-     * Owners are taken in DAG order and the overflow is chipped, so which
-     * owners are drawn is stable across renders rather than dependent on
-     * iteration accidents.
-     */
-    const suppressed = new Set(suppressedOwners);
-    for (const id of core) {
-      /*
-       * Dismissed owners are filtered AFTER the cap, so closing one just
-       * REMOVES it. Filtering before the cap instead made a dismissal promote
-       * the next chipped owner into the freed slot; Siggie, on seeing that:
-       * *"'I closed it and another appeared' is not good"*. Closing something
-       * must mean it is gone, even though that leaves the canvas below the
-       * cap — the cap is a ceiling, not a quota to keep full.
-       */
-      const owners = resolve(id).parents.slice(0, ownerCap);
-      for (const o of owners) {
-        if (!suppressed.has(o.id)) visible.add(o.id);
-      }
-    }
   }
 
   /**
-   * Direct owners split into the ones drawn as boxes and the ones left off.
-   * Only one hop up: the chip answers "what uses this?", and walking further
-   * is what produced the closure pathToRoot was turned off for.
+   * Direct owners that are not drawn — one hop up only, since the chip
+   * answers "what uses this?" and walking further is what produced the
+   * closure pathToRoot was turned off for.
    *
-   * Both halves are reported so the UI can render EVERY owner as a chip and
-   * use the chip's state to mean add-or-remove (Siggie, 2026-08-25: "the
-   * parent chips should be toggles allowing you to add/remove"). Reporting
-   * only the hidden half is what made the chips inherently add-only.
+   * There is no `drawnOwners` counterpart any more. It existed so an owner
+   * drawn by the cap could be told apart from one that was not, and be
+   * dismissed; now an owner is on the canvas only if it was selected, so the
+   * relation menu reads its drawn-ness from the node set directly.
    */
   const hiddenOwners = new Map<string, string[]>();
-  const drawnOwners = new Map<string, string[]>();
   const hiddenOwned = new Map<string, string[]>();
-  for (const id of core) {
-    const parents = resolve(id).parents.map(p => p.id);
-    const hidden = parents.filter(pid => !visible.has(pid)).sort();
-    const drawn = parents.filter(pid => visible.has(pid)).sort();
+  for (const id of selected) {
+    const hidden = resolve(id).parents
+      .map(p => p.id)
+      .filter(pid => !visible.has(pid))
+      .sort();
     if (hidden.length) hiddenOwners.set(id, hidden);
-    if (drawn.length) drawnOwners.set(id, drawn);
 
     /*
      * The DOWNWARD equivalent: what this class owns that is not on the canvas.
@@ -476,7 +418,11 @@ export function buildOwnershipSubgraph(
   const edges = full.edges
     .filter(e => {
       if (!visible.has(e.source) || !visible.has(e.target)) return false;
-      return e.kind === 'has-a' || core.has(e.source) || core.has(e.target);
+      // Reference and isa edges need one SELECTED endpoint: with pathToRoot on,
+      // the ancestors are context the user did not ask for, and the web among
+      // themselves is not what they were drawn for. Without it every visible
+      // node is selected, so this only ever excludes path context.
+      return e.kind === 'has-a' || selected.has(e.source) || selected.has(e.target);
     })
     .map(e => ({
       id: e.id,
@@ -513,5 +459,5 @@ export function buildOwnershipSubgraph(
     })
     .sort((a, b) => a.layer - b.layer || a.id.localeCompare(b.id));
 
-  return { nodes, edges, hiddenOwners, drawnOwners, hiddenOwned };
+  return { nodes, edges, hiddenOwners, hiddenOwned };
 }

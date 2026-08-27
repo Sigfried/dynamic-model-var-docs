@@ -71,6 +71,50 @@ describe('RelationMenu', () => {
     expect(addAll.textContent).toBe('add all 2');
   });
 
+  test('the trigger opens on hover — click is only needed to expand', () => {
+    // Siggie, 2026-08-27: with nothing drawn unasked, the menu is the main way
+    // to grow the canvas, so looking inside one should not cost a click.
+    render(
+      <RelationMenu
+        label="Thing" groups={[group([['A', false]])]}
+        relatedCount={1} shownCount={0}
+        onAdd={vi.fn()} onRemove={vi.fn()}
+      />,
+    );
+    expect(document.querySelector('[data-relation-group]')).toBeNull();
+    fireEvent.mouseEnter(document.querySelector('[data-relation-trigger]') as HTMLElement);
+    expect(document.querySelector('[data-relation-group]')).not.toBeNull();
+  });
+
+  test('`hide all` removes every drawn entity in the group', () => {
+    // It hides them even though each was selected in its own right: the group
+    // control is about what is on the canvas, not how each entity got there.
+    const onRemove = vi.fn();
+    render(
+      <RelationMenu
+        label="Thing" groups={[group([['A', true], ['B', true], ['C', false]])]}
+        relatedCount={3} shownCount={2}
+        onAdd={vi.fn()} onRemove={onRemove}
+      />,
+    );
+    fireEvent.click(document.querySelector('[data-relation-trigger]') as HTMLElement);
+    fireEvent.click(document.querySelector('[data-relation-group]') as HTMLElement);
+    const hideAll = document.querySelector('[data-relation-hide-all]')!;
+    expect(hideAll.textContent).toBe('hide all 2');
+    fireEvent.click(hideAll);
+    expect(onRemove.mock.calls.map(c => c[0])).toEqual(['A', 'B']);
+  });
+
+  test('the group controls lead the group, above its items', () => {
+    // Siggie asked for "add all" at the TOP of each menu group; it used to sit
+    // below the last item, where its cost was read after the scroll.
+    const menu = openBranch([group([['A', false], ['B', false]])]);
+    const addAll = menu.querySelector('[data-relation-add-all]')!;
+    const firstItem = menu.querySelector('[data-relation-item]')!;
+    expect(addAll.compareDocumentPosition(firstItem))
+      .toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
   test('a one-item branch reads its label in the singular', () => {
     // The label is supplied by buildRelationGroups, which inflects it; this
     // pins that the menu renders what it is given rather than re-deriving.

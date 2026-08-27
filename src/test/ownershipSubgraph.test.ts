@@ -2,7 +2,7 @@ import { describe, test, expect, beforeAll } from 'vitest';
 import { loadModelData } from '../utils/dataLoader';
 import { DataService } from '../services/DataService';
 import type { OwnershipSubgraph } from '../services/DataService';
-import { buildOwnershipDag, DEFAULT_OWNER_CAP } from '../models/ownershipSubgraph';
+import { buildOwnershipDag } from '../models/ownershipSubgraph';
 
 /**
  * getOwnershipSubgraph() drives the Explore viz (docs/EXPLORE_VIZ.md). Like
@@ -44,7 +44,7 @@ describe('getOwnershipSubgraph', () => {
 
   test('poly-parent case: Participant has ≥2 ownership in-edges (Person + ResearchStudy)', () => {
     // Owners are only drawn when path-to-root is on (it is off by default).
-    const g = ds.getOwnershipSubgraph(['Participant'], [], { pathToRoot: true });
+    const g = ds.getOwnershipSubgraph(['Participant'], { pathToRoot: true });
     const owners = g.edges
       .filter(e => e.type === 'ownership' && e.target === 'Participant' && !e.isLoop)
       .map(e => e.source);
@@ -52,80 +52,56 @@ describe('getOwnershipSubgraph', () => {
     expect(owners).toContain('ResearchStudy');
   });
 
-  test('direct owners are drawn — one hop, not the closure', () => {
-    // A value object's owners ARE the answer to "what is this", so they are
-    // drawn rather than summarized as chips to click one at a time. BodySite
-    // has six; all appear without any clicking, given a cap that admits them.
-    // (Cap passed explicitly: this asserts the drawing behaviour, not whatever
-    // DEFAULT_OWNER_CAP currently is — see the dedicated default test below.)
-    const g = ds.getOwnershipSubgraph(['BodySite'], [], { ownerCap: 8 });
-    const ids = new Set(g.nodes.map(n => n.id));
-    expect(ids.has('BodySite')).toBe(true);
-    expect(ids.has('Condition')).toBe(true);
-    expect(ids.has('MeasurementObservation')).toBe(true);
-    expect(g.nodes.length).toBeGreaterThan(3);
-    // But NOT transitive: the owners' own owners stay off, which is what
-    // stops this becoming the reverse-reachability closure.
-    expect(ids.has('ResearchStudyCollection')).toBe(false);
-  });
-
-  test('over the cap, the OVERFLOW is chipped — the first N are still drawn', () => {
-    // Quantity is owned by ~20 classes — the blowup case. A cap of 8 draws 8
-    // and chips the rest; it does not refuse to draw any.
-    const g = ds.getOwnershipSubgraph(['Quantity'], [], { ownerCap: 8 });
-    const drawn = g.nodes.map(n => n.id).filter(id => id !== 'Quantity');
-    expect(drawn.length).toBe(8);
-    expect((g.hiddenOwners.get('Quantity') ?? []).length).toBeGreaterThan(0);
-  });
-
-  test('drawn owners + chipped owners together cover EVERY owner, with no overlap', () => {
-    // The cap PARTITIONS the owner set; it never loses one. This is the
-    // property that makes the cap safe to lower — nothing becomes
-    // unreachable, it just moves from a box to a chip.
-    const total = (ds.getOwnershipSubgraph(['Quantity'], [], { ownerCap: 0 })
-      .hiddenOwners.get('Quantity') ?? []).length;
-    expect(total).toBeGreaterThan(8);
-    for (const cap of [0, 1, 3, 8, 100]) {
-      const g = ds.getOwnershipSubgraph(['Quantity'], [], { ownerCap: cap });
-      const drawn = new Set(g.nodes.map(n => n.id));
-      drawn.delete('Quantity');
-      const chipped = g.hiddenOwners.get('Quantity') ?? [];
-      for (const c of chipped) {
-        expect(drawn.has(c), `${c} is both drawn and chipped at cap ${cap}`).toBe(false);
-      }
-      expect(drawn.size).toBeLessThanOrEqual(cap);
-      expect(drawn.size + chipped.length).toBe(total);
-    }
-  });
-
-  test('a cap of 0 draws no owners at all — every one becomes a chip', () => {
-    const g = ds.getOwnershipSubgraph(['BodySite'], [], { ownerCap: 0 });
+  test('NOTHING is drawn that was not selected', () => {
+    /*
+     * The content policy, changed 2026-08-27 (Siggie): ticking one checkbox
+     * draws one box. Every selected node used to pull in up to
+     * DEFAULT_OWNER_CAP=5 of its direct owners unasked, so this same call drew
+     * SIX boxes — 1 selected plus 5 owners nobody asked for.
+     */
+    const g = ds.getOwnershipSubgraph(['BodySite']);
     expect(g.nodes.map(n => n.id)).toEqual(['BodySite']);
+    // The owners are still REPORTED, so the UI can offer them; they are just
+    // not drawn until asked for.
     expect((g.hiddenOwners.get('BodySite') ?? []).length).toBeGreaterThan(0);
   });
 
-  test('the default cap is 5 — BodySite (6 owners) DRAWS 5 and chips the 6th', () => {
-    // Changed 2026-08-26. This previously asserted BodySite drew ZERO owners,
-    // because ownerCap was an all-or-nothing gate: 6 owners > cap of 5 meant
-    // none were drawn, so the node you were looking at appeared unowned.
-    // Siggie: the fix "should be a cap". If this fails after a schema sync,
-    // check BodySite's owner count before changing the cap.
-    expect(DEFAULT_OWNER_CAP).toBe(5);
-    const g = ds.getOwnershipSubgraph(['BodySite']);
-    const drawn = g.nodes.map(n => n.id).filter(id => id !== 'BodySite');
-    expect(drawn.length).toBe(DEFAULT_OWNER_CAP);
-    expect((g.hiddenOwners.get('BodySite') ?? []).length).toBe(1);
+  test('a multi-class selection draws exactly those classes', () => {
+    // ?sel=BodySite~Participant used to draw TEN boxes: 2 selected + 8 owners.
+    const g = ds.getOwnershipSubgraph(['BodySite', 'Participant']);
+    expect(g.nodes.map(n => n.id).sort()).toEqual(['BodySite', 'Participant']);
+  });
+
+  test('adding an owner is just selecting it', () => {
+    // What used to be `expansions` is now a plain selection — a class is on
+    // the canvas for exactly one reason.
+    const before = ds.getOwnershipSubgraph(['Quantity']);
+    const owner = (before.hiddenOwners.get('Quantity') ?? [])[0];
+    expect(owner).toBeDefined();
+
+    const after = ds.getOwnershipSubgraph(['Quantity', owner]);
+    expect(after.nodes.map(n => n.id)).toContain(owner);
+    expect(after.hiddenOwners.get('Quantity') ?? []).not.toContain(owner);
+  });
+
+  test('hiddenOwners reports EVERY direct owner, since none are drawn', () => {
+    // With the cap gone the chip list is the complete one-hop-up answer.
+    const g = ds.getOwnershipSubgraph(['Quantity']);
+    const chipped = g.hiddenOwners.get('Quantity') ?? [];
+    expect(chipped.length).toBeGreaterThan(8);
+    // Still not transitive: the owners' own owners are not reported either.
+    expect(g.nodes.map(n => n.id)).toEqual(['Quantity']);
   });
 
   test('path-to-root on: still available, and still transitive', () => {
-    const on = ds.getOwnershipSubgraph(['BodySite'], [], { pathToRoot: true });
+    const on = ds.getOwnershipSubgraph(['BodySite'], { pathToRoot: true });
     // Reaches all the way up, unlike the one-hop default.
     expect(on.nodes.map(n => n.id)).toContain('ResearchStudyCollection');
   });
 
   test('chips never duplicate a node already on the canvas', () => {
-    for (const opts of [{}, { pathToRoot: true }, { ownerCap: 2 }]) {
-      const g = ds.getOwnershipSubgraph(['BodySite', 'Participant'], [], opts);
+    for (const opts of [{}, { pathToRoot: true }]) {
+      const g = ds.getOwnershipSubgraph(['BodySite', 'Participant'], opts);
       const drawn = new Set(g.nodes.map(n => n.id));
       for (const [, owners] of g.hiddenOwners) {
         for (const o of owners) {
@@ -133,16 +109,6 @@ describe('getOwnershipSubgraph', () => {
         }
       }
     }
-  });
-
-  test('expanding a chip owner turns it into a node', () => {
-    const before = ds.getOwnershipSubgraph(['Quantity'], [], { ownerCap: 8 });
-    const owner = (before.hiddenOwners.get('Quantity') ?? [])[0];
-    expect(owner).toBeDefined();
-
-    const after = ds.getOwnershipSubgraph(['Quantity'], [owner], { ownerCap: 8 });
-    expect(after.nodes.map(n => n.id)).toContain(owner);
-    expect(after.hiddenOwners.get('Quantity') ?? []).not.toContain(owner);
   });
 
   test('owners sit above members: non-loop ownership edges go down layers', () => {
@@ -160,7 +126,7 @@ describe('getOwnershipSubgraph', () => {
   test('sunk layers: an owner sits directly above its topmost member', () => {
     // Person owns only Participant, so sinking puts it exactly one layer up —
     // not stranded at the root layer.
-    const g = ds.getOwnershipSubgraph(['Participant'], [], { pathToRoot: true });
+    const g = ds.getOwnershipSubgraph(['Participant'], { pathToRoot: true });
     const person = nodeById(g, 'Person')!;
     const participant = nodeById(g, 'Participant')!;
     expect(person.layer).toBe(participant.layer - 1);
@@ -204,7 +170,9 @@ describe('getOwnershipSubgraph', () => {
   });
 
   test('every edge endpoint is a returned node', () => {
-    const g = ds.getOwnershipSubgraph(['QuestionnaireResponse', 'Participant'], ['Questionnaire']);
+    const g = ds.getOwnershipSubgraph(
+      ['QuestionnaireResponse', 'Participant', 'Questionnaire'],
+    );
     const ids = new Set(g.nodes.map(n => n.id));
     for (const e of g.edges) {
       expect(ids.has(e.source), e.source).toBe(true);
@@ -212,15 +180,17 @@ describe('getOwnershipSubgraph', () => {
     }
   });
 
-  test('expansions appear as context nodes', () => {
-    const g = ds.getOwnershipSubgraph(['Specimen'], ['Assay']);
-    expect(nodeById(g, 'Assay')?.role).toBe('context');
+  test("an added class is 'selected', never dimmed context", () => {
+    // Expanding IS selecting since 2026-08-27, so there is no dimmer tier for
+    // a class you added from the diagram. Only pathToRoot yields 'context'.
+    const g = ds.getOwnershipSubgraph(['Specimen', 'Assay']);
+    expect(nodeById(g, 'Assay')?.role).toBe('selected');
   });
 
   test('flipped ownership edges are marked for re-verbed labels', () => {
     // associated_person: Person owns Participant, stored member-side.
     // Needs Person on the canvas, i.e. path-to-root.
-    const g = ds.getOwnershipSubgraph(['Participant'], [], { pathToRoot: true });
+    const g = ds.getOwnershipSubgraph(['Participant'], { pathToRoot: true });
     const e = g.edges.find(e => e.slotName === 'associated_person');
     expect(e).toBeDefined();
     expect(e!.type).toBe('ownership');
@@ -244,7 +214,7 @@ describe('getOwnershipSubgraph', () => {
 
   test('unknown ids fail loudly', () => {
     expect(() => ds.getOwnershipSubgraph(['NoSuchClass'])).toThrow(/NoSuchClass/);
-    expect(() => ds.getOwnershipSubgraph(['Specimen'], ['NopeToo'])).toThrow(/NopeToo/);
+    expect(() => ds.getOwnershipSubgraph(['Specimen', 'NopeToo'])).toThrow(/NopeToo/);
   });
 
   test('every drawn edge slot has an attribute row on its storage-side node', () => {

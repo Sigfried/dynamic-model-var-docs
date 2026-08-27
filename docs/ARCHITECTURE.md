@@ -160,8 +160,10 @@ Since 2026-08-12 there are **two Vite entry points**:
 
 - **`index.html` → `src/explore/`** — the Explore SPA, now the default app.
   Selection table + layered ownership DAG + detail drawer. See
-  **[EXPLORE_VIZ.md](EXPLORE_VIZ.md)**. State (`?sel=`, `?exp=`, `?detail=`,
-  `?roots=`) is URL-encoded through a single writer in `ExploreApp.tsx`.
+  **[EXPLORE_VIZ.md](EXPLORE_VIZ.md)**. State (`?sel=`, `?detail=`, `?roots=`,
+  `?sibs=`, `?dir=`, `?merge=`) is URL-encoded through a single writer in
+  `ExploreApp.tsx`. `?sel=` is the whole content of the canvas: adding a class
+  from the diagram selects it, so there is no separate `?exp=`.
 - **`previous.html` → `src/App.tsx`** — the previous app, holding the three
   older views below, linked each way from the header.
 
@@ -198,13 +200,15 @@ exactly this way and had to be adjudicated onto `VALUE_OBJECTS` (2026-08-19).
 Expect to re-check `VALUE_OBJECTS` and `OWNERSHIP_OVERRIDES` after every
 upstream schema sync — see [OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md).
 
-**`DataService.getOwnershipSubgraph(selected, expansions, options)`**
-(`src/models/ownershipSubgraph.ts`) is what the Explore canvas draws: the
-selection, edges among them, and each node's **direct owners** (one hop, capped
-at `ownerCap`, default 8). Owners over the cap are returned in `hiddenOwners`
-for chip rendering instead. `pathToRoot: true` restores transitive
-ancestors-to-root, which is off by default because it is a reverse-reachability
-closure — see EXPLORE_VIZ.md §6 for the measurements.
+**`DataService.getOwnershipSubgraph(selected, options)`**
+(`src/models/ownershipSubgraph.ts`) is what the Explore canvas draws: **nothing
+that was not selected** — the selection and the edges among them, full stop
+(Siggie, 2026-08-27; ticking one checkbox has to draw one box). Each node's
+direct owners are reported in `hiddenOwners`, and what it owns in
+`hiddenOwned`, for the relation menu to offer. `pathToRoot: true` is the one
+exception, restoring transitive ancestors-to-root; it is off by default because
+it is a reverse-reachability closure — see EXPLORE_VIZ.md §6 for the
+measurements.
 
 ---
 

@@ -24,8 +24,9 @@
  * nearly as many edges, because the four Specimen*Activity classes each own it
  * twice (date_started, date_ended).
  *
- * `sel` are selected (first-class) nodes; `exp` are expanded context nodes
- * (dimmed). `roots` turns on path-to-root. Keep these as ids, not URLs — the
+ * `sel` is the whole content of the canvas — there is no separate expanded
+ * tier since adding a class selects it (2026-08-27). `roots` turns on
+ * path-to-root. Keep these as ids, not URLs — the
  * pane applies them to app state in place rather than navigating, so the merge
  * mode (localStorage) and the scroll position survive a case switch.
  */
@@ -36,7 +37,6 @@ export interface ExampleCase {
   /** One line on what this case is for — what to look at, not what it is. */
   note: string;
   sel: string[];
-  exp?: string[];
   roots?: boolean;
 }
 
@@ -220,9 +220,8 @@ export const EXAMPLE_CASES: ExampleCaseGroup[] = [
           + 'arrives as a straight diagonal with no steps; in ⋙ (near) it keeps '
           + 'its horizontal run. This is the case the fix has to fix.',
         sel: ['BodySite', 'Condition', 'Consent', 'Demography', 'Exposure',
-          'Observation', 'Procedure'],
-        exp: ['ImagingFile', 'ImagingStudy', 'MeasurementObservation',
-          'SpecimenCreationActivity'],
+          'Observation', 'Procedure', 'ImagingFile', 'ImagingStudy',
+          'MeasurementObservation', 'SpecimenCreationActivity'],
       },
       {
         name: 'BodySite, owners only',

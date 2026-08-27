@@ -33,8 +33,14 @@ describe('conflicting slot declarations', () => {
     return summary?.slots.find(s => s.name === slotName)?.range;
   };
 
-  const nonIsaEdges = (classId: string) =>
-    ds.getOwnershipSubgraph([classId]).edges.filter(e => e.type !== 'isa');
+  /*
+   * Both ends are selected explicitly: since 2026-08-27 nothing is drawn that
+   * was not selected, so an edge exists only when its owner is on the canvas
+   * too. What these tests pin down is which edge gets drawn, not what the
+   * content policy pulls in.
+   */
+  const nonIsaEdges = (...classIds: string[]) =>
+    ds.getOwnershipSubgraph(classIds).edges.filter(e => e.type !== 'isa');
 
   test('`items` keeps a distinct range per declaring class', () => {
     expect(rangeOf('Questionnaire', 'items')).toBe('QuestionnaireItem');
@@ -42,7 +48,7 @@ describe('conflicting slot declarations', () => {
   });
 
   test('`items` draws QuestionnaireResponse → QuestionnaireResponseItem', () => {
-    const edges = nonIsaEdges('QuestionnaireResponseItem');
+    const edges = nonIsaEdges('QuestionnaireResponseItem', 'QuestionnaireResponse');
     expect(edges).toContainEqual(expect.objectContaining({
       source: 'QuestionnaireResponse',
       target: 'QuestionnaireResponseItem',

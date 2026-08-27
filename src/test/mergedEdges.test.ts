@@ -56,10 +56,13 @@ describe('merged-box edges', () => {
   };
 
   test('no drawn node is left without an edge — the reported bug', () => {
-    // The exact selection from the report. Organization / Participant / Visit
-    // arrive only because DimensionalObservation points at them, so if their
-    // edges are gone they are unexplained boxes.
-    const vm = merged(['DimensionalObservation']);
+    // The selection from the report, with the classes DimensionalObservation
+    // points at now named explicitly: since 2026-08-27 nothing is drawn that
+    // was not selected, so they no longer arrive on their own. The bug is the
+    // same one either way — a drawn box with no edge is unexplained.
+    const vm = merged([
+      'DimensionalObservation', 'Organization', 'Participant', 'Visit',
+    ]);
     const touched = new Set(vm.edges.flatMap(e => [e.source, e.target]));
     const stranded = vm.nodes.filter(n => !touched.has(n.id)).map(n => n.id);
     expect(stranded).toEqual([]);
@@ -67,11 +70,12 @@ describe('merged-box edges', () => {
 
   test('an inherited slot draws ONE edge per box, not one per child', () => {
     // All five children inherit associated_visit unchanged. Before merging
-    // that is five edges into what becomes a single anchor row.
+    // that is five edges into what becomes a single anchor row. Visit is
+    // selected because the edges only exist with both ends on the canvas.
     const vm = merged([
       'Observation', 'MeasurementObservation', 'SdohObservation',
       'DimensionalObservation', 'SpecimenQualityObservation',
-      'SpecimenQuantityObservation',
+      'SpecimenQuantityObservation', 'Visit',
     ]);
     const box = vm.nodes.find(n => isMergedId(n.id) && n.label === 'Observation');
     expect(box).toBeDefined();

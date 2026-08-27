@@ -89,8 +89,11 @@ describe('relation menu groups', () => {
   let ds: DataService;
   beforeAll(async () => { ds = new DataService(await loadModelData()); });
 
-  const groupsFor = (id: string) => {
-    const sub = ds.getOwnershipSubgraph([id]);
+  /** `also` names classes to put on the canvas alongside `id`. Since nothing
+   *  is drawn unasked (2026-08-27), a drawn RELATION only exists if it was
+   *  selected too. */
+  const groupsFor = (id: string, ...also: string[]) => {
+    const sub = ds.getOwnershipSubgraph([id, ...also]);
     const vm = buildViewModel(sub, new Set(), c => ds.getClassSummary(c)?.slots ?? []);
     return vm.nodes.find(n => n.id === id)!;
   };
@@ -145,26 +148,24 @@ describe('relation menu groups', () => {
   });
 
   test('shownCount counts related classes on the canvas, never the box itself', () => {
-    // Organization has no owners at all, so selecting it alone draws exactly
-    // one box and none of its 13 related classes: "13 related · 0 shown".
+    // Selecting a class alone now draws exactly one box, so every relation
+    // reads as unshown: "13 related · 0 shown".
     const org = groupsFor('Organization');
     expect(org.relatedCount).toBe(13);
     expect(org.shownCount).toBe(0);
-    // Specimen's two owners ARE drawn, so its trigger reports them.
-    const spec = groupsFor('Specimen');
-    expect(spec.shownCount).toBe(
-      new Set(spec.relationGroups.flatMap(g => g.items).filter(i => i.drawn).map(i => i.other)).size,
-    );
-    expect(spec.shownCount).toBeGreaterThan(0);
+    // Select a related class as well and the trigger counts it — and only it.
+    const withOne = groupsFor('Organization', 'Participant');
+    expect(withOne.shownCount).toBe(1);
+    expect(withOne.relatedCount).toBe(13);
   });
 
   test('items report drawn state, so the menu can remove as well as add', () => {
     // The chips could only ever add on the `owns` side. Every item now toggles.
-    const n = groupsFor('Specimen');
+    const n = groupsFor('Specimen', 'Participant');
     const drawn = n.relationGroups.flatMap(g => g.items).filter(i => i.drawn);
-    expect(drawn.length).toBeGreaterThan(0);
+    expect(drawn.map(i => i.other)).toContain('Participant');
     // Anything marked drawn really is a box on the canvas.
-    const sub = ds.getOwnershipSubgraph(['Specimen']);
+    const sub = ds.getOwnershipSubgraph(['Specimen', 'Participant']);
     const onCanvas = new Set(sub.nodes.map(x => x.id));
     for (const i of drawn) expect(onCanvas.has(i.other)).toBe(true);
   });

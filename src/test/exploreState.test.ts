@@ -32,9 +32,7 @@ describe('explore state', () => {
   test('stored preference is used when the URL is silent', () => {
     // A bare visit still remembers a returning user's settings.
     rememberPreference('merge', 'far');
-    rememberPreference('owners', 'all');
     expect(read('').merge).toBe('far');
-    expect(read('').owners).toBe('all');
   });
 
   test('?sibs=0 is distinguishable from an absent sibs param', () => {
@@ -51,7 +49,6 @@ describe('explore state', () => {
     // handle, so values are validated against their allowed sets, not cast.
     expect(read('?merge=nonsense').merge).toBe(DEFAULTS.merge);
     expect(read('?dir=sideways').dir).toBe(DEFAULTS.dir);
-    expect(read('?owners=lots').owners).toBe(DEFAULTS.owners);
   });
 
   test('a corrupt stored preference also falls through', () => {
@@ -63,22 +60,18 @@ describe('explore state', () => {
     const state: ExploreState = {
       ...DEFAULTS,
       sel: ['Participant', 'BodySite'],
-      exp: ['Condition'],
-      hidden: ['Procedure'],
       detail: 'BodySite',
     };
     const url = buildShareURL(state, 'https://example.org/explore');
     const back = read(new URL(url).search);
     expect(back.sel.sort()).toEqual(['BodySite', 'Participant']);
-    expect(back.exp).toEqual(['Condition']);
-    expect(back.hidden).toEqual(['Procedure']);
     expect(back.detail).toBe('BodySite');
   });
 
   test('every non-default setting survives a full round-trip', () => {
     const state: ExploreState = {
-      sel: ['Specimen'], exp: [], hidden: [], detail: null,
-      roots: true, sibs: false, dir: 'DOWN', merge: 'bend', owners: 'none',
+      sel: ['Specimen'], detail: null,
+      roots: true, sibs: false, dir: 'DOWN', merge: 'bend',
     };
     const back = read(new URL(buildShareURL(state, 'https://x.test/')).search);
     expect(back).toEqual(state);
@@ -88,7 +81,7 @@ describe('explore state', () => {
     const url = buildShareURL({ ...DEFAULTS, sel: ['Person'] }, 'https://x.test/');
     const q = new URL(url).searchParams;
     expect(q.get('sel')).toBe('Person');
-    for (const k of ['sibs', 'dir', 'merge', 'owners', 'roots', 'detail']) {
+    for (const k of ['sibs', 'dir', 'merge', 'roots', 'detail']) {
       expect(q.has(k), `${k} should be omitted at its default`).toBe(false);
     }
   });

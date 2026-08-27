@@ -7,6 +7,83 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-27 (canvas content) — nothing is drawn that was not selected
+
+TASKS item 1, implemented as specified. Net **-372 lines** (405 added, 777
+deleted) across 21 files. Worth recording *why* it was so much smaller than the
+last two attempts predicted.
+
+### The deferral was protecting the wrong thing
+
+"Distinguish selected from expanded" was deferred twice as too risky. The risk
+was real but conditional: splitting `core` by provenance is hard *while you are
+still drawing owners automatically*, because then a node can be on the canvas
+for three unrelated reasons and every removal path has to try all three. Remove
+the automatic draw and the coupling has no subject. `core` — the union
+`new Set([...selectedIds, ...expansions])` that the whole complaint was about —
+did not get split. It got **deleted**, along with:
+
+- `ownerCap`, `DEFAULT_OWNER_CAP`, `suppressedOwners`, `drawnOwners`
+- the `expansions` parameter on `buildOwnershipSubgraph`/`getOwnershipSubgraph`
+- `ExploreState.exp` / `.hidden` / `.owners`, and the `owners` localStorage key
+- `expandedIds`, `hiddenOwnerIds`, `expand`, `collapse`, `hideOwner`, and the
+  two effects that cleared stale `?exp=`/`?hidden=` when the selection emptied
+- `ExampleCase.exp`
+- `hopSymmetry.test.ts` and `ownerToggles.test.ts` entirely
+
+The three-way removal split (selected → deselect, expanded → collapse, capped →
+suppress) appeared in *three* places — the box ✕, the relation-menu item, and
+`ExploreApp`'s callbacks. All three became one call.
+
+### What replaced the moot tests, and what that exposed
+
+TASKS said to expect deletion rather than repair for the two files above, and
+that was right. But several *other* tests failed for a reason worth naming: they
+selected one class and asserted something about an edge or a relation, relying
+on the partner class being auto-drawn. Those tests are about edge resolution,
+not content policy, so the fix was to select both ends explicitly
+(`slotConflictResolution`, `mergedEdges`, `relationPositions`). Where a test was
+genuinely about the old policy it was rewritten to pin the new one.
+
+`exploreReset` caught a real bug rather than needing an update.
+`writeExploreState` mutates the live URL instead of rebuilding it, so a
+retired param from an old link (`?exp=`, `?hidden=`, `?owners=`) would sit in
+the address bar forever and get copied into every shared link. Added
+`RETIRED_PARAMS`, deleted on every write. This is a general hazard of the
+single-writer-mutation design: **removing a param from `ExploreState` does not
+remove it from the URL.**
+
+### Points 3-5 of the design
+
+Hover-to-open kept click as a toggle, so the menu is still reachable without a
+pointer and a stray hover can be dismissed. "add all" moved to the top of the
+group and gained "hide all" beside it; both are suppressed at count 1, which
+preserves Siggie's earlier *"no add all if count is 1"* — the two rules do not
+conflict, since a group control that duplicates the single item below it is
+redundant regardless of where it sits.
+
+"hide all" removes drawn entities **including ones that were selected in their
+own right**, per the design. That is the same premise as "add" ticking the
+checkbox: one record of what is drawn, and the group control acts on the canvas
+rather than on provenance.
+
+### Consequence Siggie has not seen yet
+
+TASKS flagged it and it is real: expanding from a diagram row now ticks a
+checkbox that may be scrolled out of view in the left panel. Nothing was done
+to mitigate it — no scroll-into-view, no flash — because the design says the
+checkboxes are the single source of truth and mitigation was not asked for.
+
+### Stale copy the change created
+
+The tour's `graph-canvas` step said selecting an entity makes it "appear in the
+main panel along with directly related entities", which was a description of
+the removed behaviour. Corrected in `help-content.md` along with the
+`copy-link` description ("what is expanded") and the `node-dismiss` entry. The
+`toolbar-owners` help section was deleted with its control — `helpContent.test`
+caught it, since every anchor must be tagged in the app.
+
+---
 ## 2026-08-27 (later) — Siggie reviews help mode; it goes off
 
 First review the help system ever got. It was written before the tour work and

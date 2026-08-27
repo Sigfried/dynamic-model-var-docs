@@ -11,8 +11,8 @@
  * **The split, and why.** Not everything belongs in a link:
  *
  *  - **Shareable** — anything that changes WHAT the diagram says: the
- *    selection, expansions, dismissed owners, sibling merge, owner scope,
- *    path-to-root, layout direction, edge merge mode, the open drawer.
+ *    selection, sibling merge, path-to-root, layout direction, edge merge
+ *    mode, the open drawer.
  *  - **Personal preference** — zoom, pan, pins, drags, which panel is
  *    collapsed. These describe how one person is looking at the diagram, not
  *    what it shows, and pinning them into a link would fight the recipient's
@@ -30,31 +30,32 @@
  *
  * **Defaults are omitted from the URL.** Keeps links short and readable. The
  * cost is that a later change to a default silently changes old links; the
- * alternative (write everything explicitly) makes every link carry nine params.
+ * alternative (write everything explicitly) makes every link carry every param.
  * Chosen deliberately — revisit if links start being embedded somewhere
  * long-lived.
  */
 
 export type Direction = 'RIGHT' | 'DOWN';
 export type MergeMode = 'near' | 'far' | 'bend' | 'off';
-export type OwnerScope = 'none' | 'some' | 'all';
 
-/** Everything a link can carry. */
+/**
+ * Everything a link can carry.
+ *
+ * `sel` is the whole content of the canvas: since expanding became selecting
+ * (2026-08-27) there is no separate `exp`, and with no owners drawn unasked
+ * there is nothing to dismiss, so `hidden` and the `owners` scope went too.
+ */
 export interface ExploreState {
   sel: string[];
-  exp: string[];
-  hidden: string[];
   detail: string | null;
   roots: boolean;
   sibs: boolean;
   dir: Direction;
   merge: MergeMode;
-  owners: OwnerScope;
 }
 
 export const DEFAULTS: ExploreState = {
-  sel: [], exp: [], hidden: [], detail: null,
-  roots: false, sibs: true, dir: 'RIGHT', merge: 'near', owners: 'some',
+  sel: [], detail: null, roots: false, sibs: true, dir: 'RIGHT', merge: 'near',
 };
 
 /** localStorage keys, unchanged so existing preferences survive the move. */
@@ -62,10 +63,16 @@ const LS_KEYS = {
   dir: 'explore-nl-dir',
   merge: 'explore-nl-merge',
   sibs: 'explore-nl-sibs',
-  owners: 'explore-nl-owners',
 } as const;
 
 const IDS_SEP = '~';
+
+/**
+ * Params Explore used to write. `exp` and `hidden` died when expanding became
+ * selecting (2026-08-27) and nothing was left drawn unasked to dismiss;
+ * `owners` was the cap that bounded that automatic draw.
+ */
+const RETIRED_PARAMS = ['exp', 'hidden', 'owners'] as const;
 
 function readIds(params: URLSearchParams, key: string): string[] {
   const raw = params.get(key);
@@ -109,10 +116,6 @@ export function readExploreState(search = window.location.search): ExploreState 
   const merge = oneOf(p.get('merge'), ['near', 'far', 'bend', 'off'] as const)
     ?? oneOf(lsGet(LS_KEYS.merge), ['near', 'far', 'bend', 'off'] as const)
     ?? DEFAULTS.merge;
-  const owners = oneOf(p.get('owners'), ['none', 'some', 'all'] as const)
-    ?? oneOf(lsGet(LS_KEYS.owners), ['none', 'some', 'all'] as const)
-    ?? DEFAULTS.owners;
-
   // Booleans need three states: present-in-URL, stored, unset. `has` before
   // value, or `?sibs=0` would be indistinguishable from absent.
   const sibs = p.has('sibs')
@@ -123,14 +126,11 @@ export function readExploreState(search = window.location.search): ExploreState 
 
   return {
     sel: readIds(p, 'sel'),
-    exp: readIds(p, 'exp'),
-    hidden: readIds(p, 'hidden'),
     detail: p.get('detail') || null,
     roots: p.get('roots') === '1',
     sibs,
     dir,
     merge,
-    owners,
   };
 }
 
@@ -153,16 +153,21 @@ export function writeExploreState(state: ExploreState): void {
     else q.set(key, value);
   };
 
+  /*
+   * Params that used to exist and no longer do. The write is a mutation of the
+   * live URL, not a rebuild, so without this a dead param from an old link (or
+   * from a session that predates the change) sits in the address bar forever
+   * and gets copied along with everything else.
+   */
+  for (const dead of RETIRED_PARAMS) q.delete(dead);
+
   setIds('sel', state.sel);
-  setIds('exp', state.exp);
-  setIds('hidden', state.hidden);
   if (state.detail) q.set('detail', state.detail);
   else q.delete('detail');
   setIf('roots', '1', !state.roots);
   setIf('sibs', state.sibs ? '1' : '0', state.sibs === DEFAULTS.sibs);
   setIf('dir', state.dir, state.dir === DEFAULTS.dir);
   setIf('merge', state.merge, state.merge === DEFAULTS.merge);
-  setIf('owners', state.owners, state.owners === DEFAULTS.owners);
 
   window.history.replaceState(null, '', url);
 }
@@ -188,14 +193,11 @@ export function buildShareURL(state: ExploreState, base = window.location.href):
   const keep = new URLSearchParams();
   const set = (k: string, v: string) => keep.set(k, v);
   if (state.sel.length) set('sel', [...state.sel].sort().join(IDS_SEP));
-  if (state.exp.length) set('exp', [...state.exp].sort().join(IDS_SEP));
-  if (state.hidden.length) set('hidden', [...state.hidden].sort().join(IDS_SEP));
   if (state.detail) set('detail', state.detail);
   if (state.roots) set('roots', '1');
   if (state.sibs !== DEFAULTS.sibs) set('sibs', state.sibs ? '1' : '0');
   if (state.dir !== DEFAULTS.dir) set('dir', state.dir);
   if (state.merge !== DEFAULTS.merge) set('merge', state.merge);
-  if (state.owners !== DEFAULTS.owners) set('owners', state.owners);
   url.search = keep.toString();
   return url.toString();
 }

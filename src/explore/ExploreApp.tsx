@@ -31,7 +31,7 @@ import helpMarkdown from '../help/help-content.md?raw';
 
 import {
   readExploreState, writeExploreState, buildShareURL,
-  type Direction, type MergeMode, type OwnerScope,
+  type Direction, type MergeMode,
 } from './exploreState';
 
 /**
@@ -55,7 +55,6 @@ function ExploreAppInner() {
   const initial = useMemo(() => readExploreState(), []);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set(initial.sel));
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set(initial.exp));
   const [detailId, setDetailId] = useState<string | null>(initial.detail);
   const [tableCollapsed, setTableCollapsed] = useState(false);
   /**
@@ -75,17 +74,8 @@ function ExploreAppInner() {
   const [mergeSibs, setMergeSibs] = useState<boolean>(initial.sibs);
   const [direction, setDirection] = useState<Direction>(initial.dir);
   const [mergeMode, setMergeMode] = useState<MergeMode>(initial.merge);
-  const [ownerScope, setOwnerScope] = useState<OwnerScope>(initial.owners);
   const [casesOpen, setCasesOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  /**
-   * Owners dismissed by clicking a lit `owned by` chip. Separate from
-   * `expandedIds` because a capped-in owner was never expanded — there is no
-   * expansion to remove, only a dismissal to record.
-   */
-  const [hiddenOwnerIds, setHiddenOwnerIds] = useState<Set<string>>(
-    () => new Set(initial.hidden),
-  );
 
   /*
    * Applying a case replaces every piece of graph state at once.
@@ -96,30 +86,14 @@ function ExploreAppInner() {
    * is gone (2026-08-26):** the toolbar settings are URL state now, so a case
    * CAN be expressed as a plain link — which is most of what the guided tour
    * needs. Left as a state update for now because the cases do not yet say
-   * which settings they depend on; giving ExampleCase optional sibs/dir/merge/
-   * owners fields is the next step, and then a case is just a share URL.
+   * which settings they depend on; giving ExampleCase optional sibs/dir/merge
+   * fields is the next step, and then a case is just a share URL.
    */
   const applyCase = useCallback((c: ExampleCase) => {
     setSelectedIds(new Set(c.sel));
-    setExpandedIds(new Set(c.exp ?? []));
     setPathToRoot(!!c.roots);
-    setHiddenOwnerIds(new Set());
     setDetailId(null);
   }, []);
-
-  // Expansions only mean something relative to a selection — with nothing
-  // selected the canvas shows its empty state, so keeping ?exp= would strand
-  // ids that are invisible and never dismissable.
-  useEffect(() => {
-    if (selectedIds.size === 0 && expandedIds.size > 0) setExpandedIds(new Set());
-  }, [selectedIds, expandedIds]);
-
-  // Same reasoning for dismissals: with nothing selected there is no canvas to
-  // have dismissed anything from, so a stale ?hidden= would silently suppress
-  // owners on the next selection.
-  useEffect(() => {
-    if (selectedIds.size === 0 && hiddenOwnerIds.size > 0) setHiddenOwnerIds(new Set());
-  }, [selectedIds, hiddenOwnerIds]);
 
   /**
    * A tour step writes its `State:` query to the URL and fires this event;
@@ -130,14 +104,11 @@ function ExploreAppInner() {
     const apply = () => {
       const next = readExploreState();
       setSelectedIds(new Set(next.sel));
-      setExpandedIds(new Set(next.exp));
-      setHiddenOwnerIds(new Set(next.hidden));
       setDetailId(next.detail);
       setPathToRoot(next.roots);
       setMergeSibs(next.sibs);
       setDirection(next.dir);
       setMergeMode(next.merge);
-      setOwnerScope(next.owners);
     };
     window.addEventListener('explore:state-from-url', apply);
     return () => window.removeEventListener('explore:state-from-url', apply);
@@ -155,13 +126,12 @@ function ExploreAppInner() {
    */
   useEffect(() => {
     writeExploreState({
-      sel: [...selectedIds], exp: [...expandedIds], hidden: [...hiddenOwnerIds],
-      detail: detailId, roots: pathToRoot,
-      sibs: mergeSibs, dir: direction, merge: mergeMode, owners: ownerScope,
+      sel: [...selectedIds], detail: detailId, roots: pathToRoot,
+      sibs: mergeSibs, dir: direction, merge: mergeMode,
     });
     noteViewerEdit();
-  }, [selectedIds, expandedIds, detailId, pathToRoot, hiddenOwnerIds,
-      mergeSibs, direction, mergeMode, ownerScope, noteViewerEdit]);
+  }, [selectedIds, detailId, pathToRoot,
+      mergeSibs, direction, mergeMode, noteViewerEdit]);
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
@@ -170,51 +140,32 @@ function ExploreAppInner() {
       else next.add(id);
       return next;
     });
-    // Selecting a class supersedes having expanded it: it becomes a first-class
-    // node rather than dimmed context, and a stale id would linger in ?exp=.
-    setExpandedIds(prev => {
-      if (!prev.has(id)) return prev;
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
-  }, []);
-
-  const expand = useCallback((id: string) => {
-    setExpandedIds(prev => (prev.has(id) ? prev : new Set(prev).add(id)));
-    // An explicit request outranks an earlier dismissal. Without this, clicking
-    // a dismissed owner's chip would add an expansion the suppression set then
-    // immediately filtered back out, and the chip would look broken.
-    setHiddenOwnerIds(prev => {
-      if (!prev.has(id)) return prev;
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
   }, []);
 
   /**
-   * Dismiss a DRAWN owner. Records a suppression rather than removing an
-   * expansion, since a capped-in owner has none; also drops any expansion so
-   * an owner that was both expanded and capped-in actually disappears.
+   * Put a class on the canvas from a diagram affordance — an attribute row or
+   * a relation-menu item.
+   *
+   * **Expanding IS selecting** (Siggie, 2026-08-27). There used to be a second
+   * `expandedIds` set for classes pulled in this way, distinct from the
+   * selection and from the owners drawn automatically by the cap, so a class
+   * could be on the canvas for three different reasons and every removal path
+   * had to try all three. Ticking the checkbox instead makes the left panel's
+   * checkboxes the single record of what is drawn — note it may be scrolled
+   * out of view when the click came from the diagram.
    */
-  const hideOwner = useCallback((id: string) => {
-    setHiddenOwnerIds(prev => (prev.has(id) ? prev : new Set(prev).add(id)));
-    setExpandedIds(prev => {
+  const addToCanvas = useCallback(
+    (id: string) => setSelectedIds(prev => (prev.has(id) ? prev : new Set(prev).add(id))),
+    [],
+  );
+
+  const removeFromCanvas = useCallback(
+    (id: string) => setSelectedIds(prev => {
       if (!prev.has(id)) return prev;
       const next = new Set(prev);
       next.delete(id);
       return next;
-    });
-  }, []);
-  const collapse = useCallback(
-    (id: string) =>
-      setExpandedIds(prev => {
-        if (!prev.has(id)) return prev;
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      }),
+    }),
     [],
   );
 
@@ -225,13 +176,9 @@ function ExploreAppInner() {
   // canvas looks like breakage.
   const resetApp = useCallback(() => {
     setSelectedIds(new Set());
-    setExpandedIds(new Set());
     setDetailId(null);
     setTableCollapsed(false);
     setPathToRoot(false);
-    // Dismissals are per-canvas. Left behind, they would silently suppress
-    // owners on the next selection with no visible cause.
-    setHiddenOwnerIds(new Set());
     // Toolbar settings are deliberately NOT reset: they are how this user
     // prefers to read the diagram, not part of the view being cleared.
   }, []);
@@ -267,9 +214,8 @@ function ExploreAppInner() {
         <button
           onClick={async () => {
             const url = buildShareURL({
-              sel: [...selectedIds], exp: [...expandedIds],
-              hidden: [...hiddenOwnerIds], detail: detailId, roots: pathToRoot,
-              sibs: mergeSibs, dir: direction, merge: mergeMode, owners: ownerScope,
+              sel: [...selectedIds], detail: detailId, roots: pathToRoot,
+              sibs: mergeSibs, dir: direction, merge: mergeMode,
             });
             try {
               await navigator.clipboard.writeText(url);
@@ -392,12 +338,8 @@ function ExploreAppInner() {
               dataService={dataService}
               selectedIds={selectedIds}
               onNodeClick={setDetailId}
-              expandedIds={expandedIds}
-              onExpand={expand}
-              onCollapse={collapse}
-              onHideOwner={hideOwner}
-              onDeselect={toggleSelect}
-              hiddenOwnerIds={hiddenOwnerIds}
+              onAdd={addToCanvas}
+              onRemove={removeFromCanvas}
               pathToRoot={pathToRoot}
               onTogglePathToRoot={() => setPathToRoot(v => !v)}
               direction={direction}
@@ -406,8 +348,6 @@ function ExploreAppInner() {
               setMergeMode={setMergeMode}
               mergeSibs={mergeSibs}
               setMergeSibs={setMergeSibs}
-              ownerScope={ownerScope}
-              setOwnerScope={setOwnerScope}
             />
           )}
         </div>

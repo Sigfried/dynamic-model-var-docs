@@ -3,9 +3,12 @@
  *
  * The previous app resets when its title is clicked (App.tsx handleResetApp);
  * the Explore header was inert text. Reset has to clear every piece of
- * shareable state — selection, expansions, and the open drawer — and the URL
- * has to follow, since a leftover ?sel=/?exp=/?detail= would resurrect the
- * old view on reload.
+ * shareable state — the selection and the open drawer — and the URL has to
+ * follow, since a leftover ?sel=/?detail= would resurrect the old view on
+ * reload.
+ *
+ * There is no ?exp= any more: expanding IS selecting since 2026-08-27, so the
+ * selection is the whole content of the canvas.
  */
 
 import { describe, test, expect, beforeAll, beforeEach } from 'vitest';
@@ -45,19 +48,21 @@ describe('Explore title-click reset', () => {
     expect(boxes.some(b => b.checked)).toBe(false);
   });
 
-  test('clears expansions and the open drawer too', async () => {
+  test('clears the open drawer too, and drops a stale ?exp=', async () => {
+    // ?exp= is a dead param from before expanding became selecting. An old
+    // link carrying one must not strand an id the URL writer never rewrites.
     window.history.replaceState(
       null, '', '/dynamic-model-var-docs/?sel=Person&exp=Participant&detail=Person',
     );
     await renderApp();
 
     await waitFor(() => expect(params().get('detail')).toBe('Person'));
+    expect(params().get('exp')).toBeNull();
 
     fireEvent.click(screen.getByRole('heading', { name: /BDCHM Explorer/i }));
 
     await waitFor(() => {
       expect(params().get('sel')).toBeNull();
-      expect(params().get('exp')).toBeNull();
       expect(params().get('detail')).toBeNull();
     });
   });
@@ -84,7 +89,6 @@ describe('Explore title-click reset', () => {
 
     await waitFor(() => {
       expect(params().get('sel')).toBeNull();
-      expect(params().get('exp')).toBeNull();
       expect(params().get('detail')).toBeNull();
     });
     expect(screen.getByRole('heading', { name: /BDCHM Explorer/i })).toBeInTheDocument();

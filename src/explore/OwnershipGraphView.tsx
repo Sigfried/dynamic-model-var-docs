@@ -37,7 +37,7 @@ import type {
   RelationEntry, RelationPosition,
 } from '../services/DataService';
 import {
-  cardinalityLabel, SKIP_SUBCLASS_EXPANSION, GRAPH_COLORS, DEFAULT_OWNER_CAP,
+  cardinalityLabel, SKIP_SUBCLASS_EXPANSION, GRAPH_COLORS,
   relationPositionLabel, RELATION_POSITION_ORDER,
 } from '../services/DataService';
 import {
@@ -53,7 +53,7 @@ import type { MergedMember } from './siblingMerge';
 import { RelationMenu } from './RelationMenu';
 import {
   rememberPreference,
-  type Direction, type MergeMode, type OwnerScope,
+  type Direction, type MergeMode,
 } from './exploreState';
 
 /** Where a convergence group's single arrowhead sits: `base` is the centre of
@@ -176,17 +176,10 @@ export interface NodeVM extends OwnershipSubgraphNode {
   members: MergedMember[];
   /**
    * Owners of this class that aren't drawn — the "what uses this?" answer
-   * path-to-root used to give by drawing the entire upstream graph. Empty
-   * when pathToRoot is on, since those owners are then real nodes.
+   * path-to-root gives by drawing the entire upstream graph. Empty when
+   * pathToRoot is on, since those owners are then real nodes.
    */
   hiddenOwners: string[];
-  /**
-   * Direct owners of this class that ARE drawn on the canvas. Rendered in the
-   * same strip as `hiddenOwners` but in an "on" state, so one chip row shows
-   * every owner and clicking toggles that owner on or off (Siggie: "the
-   * parent chips should be toggles allowing you to add/remove").
-   */
-  drawnOwners: string[];
   /** What this class owns that is NOT on the canvas — the downward chips. */
   hiddenOwned: string[];
   /**
@@ -323,7 +316,6 @@ export function buildViewModel(
     // "− fewer" footer there would be a control that does nothing.
     const footerCount = forced ? 0 : hidden.length;
     const owners = sub.hiddenOwners.get(n.id) ?? [];
-    const shown = sub.drawnOwners.get(n.id) ?? [];
     const owned = sub.hiddenOwned.get(n.id) ?? [];
     const relationGroups = buildRelationGroups(
       n.relations, id => visible.has(id), id => id === n.id,
@@ -334,7 +326,6 @@ export function buildViewModel(
       subclassCount: subclassCount.get(n.id) ?? 0,
       members: [],
       hiddenOwners: owners,
-      drawnOwners: shown,
       hiddenOwned: owned,
       relationGroups,
       ...countsOf(relationGroups),
@@ -558,9 +549,6 @@ export function mergeSiblings(
     )].filter(notSelfOrMember);
     // Drawn owners union the same way. A box's own members are never chips on
     // it, and neither is a class absorbed into some other merged box.
-    const drawnOwners = [...new Set(
-      sources.flatMap(mid => byId.get(mid)?.drawnOwners ?? []),
-    )].filter(notSelfOrMember).filter(o => !hiddenOwners.includes(o));
     const hiddenOwned = [...new Set(
       sources.flatMap(mid => byId.get(mid)?.hiddenOwned ?? []),
     )].filter(notSelfOrMember);
@@ -592,7 +580,6 @@ export function mergeSiblings(
       isaParents: [],
       subclassCount: members.length,
       hiddenOwners,
-      drawnOwners,
       hiddenOwned,
       /*
        * The merged box's relations are the UNION of its members' — it stands
@@ -767,8 +754,6 @@ const STROKE_REF_HOVER = STROKE_OWN_HOVER * 0.67;
  *  - 'off'   no merging — every edge runs to its own fanned port.
  */
 
-/** How many one-hop owners to draw per node. See `ownerScope`. */
-
 /** Merge distance in px for a mode, given the edge's routed points. */
 function mergeDistFor(mode: MergeMode, pts: Point[]): number {
   if (mode === 'off' || pts.length < 2) return 0;
@@ -938,12 +923,8 @@ export default function OwnershipGraphView({
   dataService,
   selectedIds,
   onNodeClick,
-  expandedIds,
-  onExpand,
-  onCollapse,
-  onHideOwner,
-  onDeselect,
-  hiddenOwnerIds,
+  onAdd,
+  onRemove,
   pathToRoot = false,
   onTogglePathToRoot,
   direction,
@@ -952,29 +933,18 @@ export default function OwnershipGraphView({
   setMergeMode,
   mergeSibs,
   setMergeSibs,
-  ownerScope,
-  setOwnerScope,
 }: {
   dataService: DataService;
   selectedIds: Set<string>;
   onNodeClick?: (id: string) => void;
-  /** Expand-on-demand: extra classes pulled onto the canvas, drawn as context. */
-  expandedIds?: Set<string>;
-  /** Clicking a dimmed entity row pulls its range in. */
-  onExpand?: (classId: string) => void;
-  /** Dismiss an expanded context node. */
-  onCollapse?: (classId: string) => void;
   /**
-   * Remove an owner that is currently DRAWN. Distinct from `onCollapse`: an
-   * owner can be on the canvas because the cap admitted it, never having been
-   * expanded, so there is nothing in `expandedIds` to delete. The app keeps a
-   * separate suppression set for these.
+   * Put a class on the canvas — from an attribute row or a relation-menu item.
+   * Adding IS selecting (2026-08-27), so this ticks the left panel's checkbox;
+   * there is no longer a second, dimmer way for a class to be here.
    */
-  onHideOwner?: (classId: string) => void;
-  /** Owners dismissed via a lit chip; kept off the canvas until re-added. */
-  hiddenOwnerIds?: Set<string>;
-  /** Remove a SELECTED class from the canvas by deselecting it. */
-  onDeselect?: (classId: string) => void;
+  onAdd?: (classId: string) => void;
+  /** Take a class off the canvas. The exact inverse of `onAdd`. */
+  onRemove?: (classId: string) => void;
   /** Draw each selected class's ownership ancestors as dimmed context nodes. */
   pathToRoot?: boolean;
   /** Layout direction: LR or TB. */
@@ -990,17 +960,6 @@ export default function OwnershipGraphView({
    */
   mergeSibs: boolean;
   setMergeSibs: (v: boolean) => void;
-  /**
-   * How many owners to draw per node, one hop up.
-   *
-   *  - 'none' : draw none — every owner is an `owned by` chip. Zero hops.
-   *  - 'some' : the cap (DEFAULT_OWNER_CAP, 5) — draw up to five, chip the
-   *             rest. Since 2026-08-26 this is a true cap; it used to be an
-   *             all-or-nothing gate, so a node with SIX owners drew none.
-   *  - 'all'  : draw every owner, one hop, no cap.
-   */
-  ownerScope: OwnerScope;
-  setOwnerScope: (v: OwnerScope) => void;
   onTogglePathToRoot?: () => void;
 }) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
@@ -1014,32 +973,9 @@ export default function OwnershipGraphView({
 
 
 
-  // Expansions that duplicate the selection are dropped: a selected class is
-  // already visible, and passing it as an expansion would not change the
-  // subgraph but would let a stale id linger in the URL.
-  const expansionList = useMemo(
-    () => [...(expandedIds ?? [])].filter(id => !selectedIds.has(id)).sort(),
-    [expandedIds, selectedIds],
-  );
-  // A selected class is always drawn — selecting something outranks having
-  // dismissed it as somebody else's owner, and a suppressed id that is also
-  // selected would otherwise be filtered out of its own selection.
-  const suppressedList = useMemo(
-    () => [...(hiddenOwnerIds ?? [])].filter(id => !selectedIds.has(id)).sort(),
-    [hiddenOwnerIds, selectedIds],
-  );
   const subgraph = useMemo(
-    () => dataService.getOwnershipSubgraph(
-      [...selectedIds].sort(), expansionList,
-      {
-        pathToRoot,
-        suppressedOwners: suppressedList,
-        ...(ownerScope === 'none' ? { ownerCap: 0 }
-          : ownerScope === 'all' ? { ownerCap: Number.MAX_SAFE_INTEGER }
-          : {}),
-      },
-    ),
-    [dataService, selectedIds, expansionList, pathToRoot, ownerScope, suppressedList],
+    () => dataService.getOwnershipSubgraph([...selectedIds].sort(), { pathToRoot }),
+    [dataService, selectedIds, pathToRoot],
   );
   const plainSlots = useMemo(
     () => new Map(subgraph.nodes.map(n =>
@@ -1484,8 +1420,8 @@ export default function OwnershipGraphView({
   const onCanvas = useMemo(() => new Set(vm.nodes.map(n => n.id)), [vm]);
   const isExpandable = useCallback(
     (r: RowVM) =>
-      !!onExpand && r.channel !== 'plain' && !r.isLoop && !onCanvas.has(r.range),
-    [onExpand, onCanvas],
+      !!onAdd && r.channel !== 'plain' && !r.isLoop && !onCanvas.has(r.range),
+    [onAdd, onCanvas],
   );
 
   // --- Hover emphasis (icd11 pattern: RAF-throttled direct DOM styling,
@@ -1586,7 +1522,6 @@ export default function OwnershipGraphView({
    */
   const setDir = (d: Direction) => { rememberPreference('dir', d); setDirection(d); };
   const setMerge = (m: MergeMode) => { rememberPreference('merge', m); setMergeMode(m); };
-  const setOwners = (v: OwnerScope) => { rememberPreference('owners', v); setOwnerScope(v); };
   const toggleSibs = () => {
     rememberPreference('sibs', !mergeSibs);
     setMergeSibs(!mergeSibs);
@@ -1617,22 +1552,6 @@ export default function OwnershipGraphView({
             <span className="w-px h-4 bg-gray-300 dark:bg-slate-600 mx-1" />
           </>
         )}
-        {/* Owners drawn per node, one hop up. The middle setting is a true CAP
-            since 2026-08-26 -- it draws up to N and chips the overflow. It used
-            to be an all-or-nothing gate, which is why the old comment here said
-            it "silently degrades to 'none' above its cap". */}
-        <span className="flex items-center gap-1" data-help-id="toolbar-owners">
-          <button className={toolBtn(ownerScope === 'none')}
-            title="Draw no owners — every one becomes a chip you can click"
-            onClick={() => setOwners('none')}>0</button>
-          <button className={toolBtn(ownerScope === 'some')}
-            title={`Draw up to ${DEFAULT_OWNER_CAP} owners per class; the rest become chips`}
-            onClick={() => setOwners('some')}>≤{DEFAULT_OWNER_CAP}</button>
-          <button className={toolBtn(ownerScope === 'all')}
-            title="Draw every owner, one hop up — no cap"
-            onClick={() => setOwners('all')}>all</button>
-        </span>
-        <span className="w-px h-4 bg-gray-300 dark:bg-slate-600 mx-1" />
         <button className={toolBtn(mergeSibs)}
           data-help-id="toolbar-siblings"
           title={mergeSibs
@@ -1917,25 +1836,15 @@ export default function OwnershipGraphView({
                             EXPANDED, unmerged nodes did, so a selected class
                             or a capped-in owner could be shown and never hidden.
 
-                            Which handler depends on WHY the box is here:
-                              - selected        -> deselect it
-                              - merged box      -> deselect every member
-                              - expanded/capped -> collapse + suppress
-                            path-to-root context is still exempt: it is implied
+                            A merged box removes every selected member at once.
+                            A path-to-root context node has no ✕: it is implied
                             by the selection, so there is nothing to remove.
                           */}
                           {(() => {
                             const memberIds = n.members.length
                               ? n.members.map(m => m.id) : [n.id];
                             const selectedHere = memberIds.filter(id => selectedIds.has(id));
-                            // A path-to-root context node is implied by the
-                            // selection, so there is nothing to remove and no
-                            // ✕. Everything else on the canvas is here because
-                            // it was selected, expanded, or drawn as a capped
-                            // owner — all three are dismissable.
-                            const isPathContext = pathToRoot
-                              && !selectedHere.length && !expandedIds?.has(n.id);
-                            if (isPathContext) return null;
+                            if (!selectedHere.length) return null;
                             return (
                             <button
                               data-dismiss={n.id}
@@ -1945,8 +1854,7 @@ export default function OwnershipGraphView({
                                 : `Remove ${n.label} from the canvas`}
                               onClick={ev => {
                                 ev.stopPropagation();
-                                if (selectedHere.length) selectedHere.forEach(id => onDeselect?.(id));
-                                else { onCollapse?.(n.id); onHideOwner?.(n.id); }
+                                selectedHere.forEach(id => onRemove?.(id));
                               }}
                               className="text-[10px] leading-none px-1 rounded text-gray-400
                                          hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/40"
@@ -1985,26 +1893,8 @@ export default function OwnershipGraphView({
                             groups={n.relationGroups}
                             relatedCount={n.relatedCount}
                             shownCount={n.shownCount}
-                            onAdd={id => onExpand?.(id)}
-                            onRemove={id => {
-                              /*
-                               * THREE mechanisms, because a class can be on the
-                               * canvas for three reasons, and the wrong one is
-                               * a no-op that makes the item look broken:
-                               *   - SELECTED       -> deselect it
-                               *   - expanded       -> drop the expansion
-                               *   - drawn by cap   -> record a dismissal (it
-                               *                       was never expanded, so
-                               *                       there is nothing to drop)
-                               * This is the same three-way split the box's own
-                               * ✕ makes, for the same reason. Selection has to
-                               * be tested first: a selected class is also in
-                               * neither of the other two sets, so collapse and
-                               * dismiss would both silently do nothing.
-                               */
-                              if (selectedIds.has(id)) onDeselect?.(id);
-                              else { onCollapse?.(id); onHideOwner?.(id); }
-                            }}
+                            onAdd={id => onAdd?.(id)}
+                            onRemove={id => onRemove?.(id)}
                             onInspect={onNodeClick}
                           />
                         </div>
@@ -2053,7 +1943,7 @@ export default function OwnershipGraphView({
                               ? `\nalso declared by ${r.owners!.slice(1).map(o => o.label).join(', ')}`
                               : '')}
                           onClick={isExpandable(r)
-                            ? ev => { ev.stopPropagation(); onExpand?.(r.range); }
+                            ? ev => { ev.stopPropagation(); onAdd?.(r.range); }
                             : undefined}
                           className={`flex items-center gap-1.5 px-2 text-[11px] ${
                             r.owners?.length ? '' : r.connected

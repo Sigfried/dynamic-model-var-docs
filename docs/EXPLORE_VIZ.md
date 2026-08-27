@@ -155,12 +155,12 @@ getOwnershipSubgraph(selectedIds, expansions, options?) -> {
   // NB 'isa' edges are never ROUTED. The view consumes them into node
   // metadata (isaParents/subclassCount) and, when ⑃ siblings is on, into the
   // merged-box grouping — see §3.
-  hiddenOwners: Map<classId, ownerId[]>,   // owners NOT drawn → chips
+  hiddenOwners: Map<classId, ownerId[]>,   // direct owners NOT drawn
+  hiddenOwned: Map<classId, memberId[]>,   // what it owns, NOT drawn
 }
 
 options = {
   pathToRoot?: boolean,   // default false — transitive ancestors (⇱ roots)
-  ownerCap?: number,      // default 8 — draw direct owners up to this many
 }
 ```
 
@@ -171,8 +171,9 @@ the style of the containment property tests.
 and installed (2026-07-28); the graphology fallback is dead. Implementation:
 `src/models/ownershipSubgraph.ts` builds the full ownership DAG once via
 `fromEdges` (self-loops skipped, parallel edges collapsed), uses
-`parents` for the one-hop owner walk (`ancestors()` only under
-`pathToRoot`) and **sunk layers** over the FULL DAG as the
+`parents` to report the one-hop owners (`ancestors()` only under
+`pathToRoot`, the sole thing that draws an unselected node) and **sunk layers**
+over the FULL DAG as the
 layer assignment (owners sink to one above their topmost owning child; leaf
 classes dangle below their deepest owner — see `computeSunkLayers`), so a
 node keeps its layer as the selection changes and roots aren't stranded far
@@ -249,12 +250,15 @@ New dependency: `elkjs` only (skip NodeLinkView's d3-force mode in v1).
    member — `computeSunkLayers`), hover emphasis (entity → neighborhood,
    edge → isolate; RAF direct-DOM), expanded rows include plain scalar/enum
    attributes (hollow dot), SVG self-loop icon, LR/TB toggle.
-   **Expand-on-demand DONE** 2026-08-12: clicking a dimmed entity row adds
-   its range as a context node (`?exp=`, state in ExploreApp beside
-   selection); expanded nodes carry an ✕ to dismiss, path-to-root context
-   does not. Rows pointing at on-canvas entities, plain scalar/enum rows,
-   and self-loops are not expandable. Owner chips (above the cap) are the
-   same affordance reached from the owner side.
+   **Expand-on-demand DONE** 2026-08-12, **and expanding became selecting**
+   2026-08-27: clicking a dimmed entity row adds its range to `?sel=` and
+   ticks its checkbox. It used to add a dimmer `?exp=` context node instead,
+   so a class could be on the canvas for three different reasons (selected,
+   expanded, or drawn by the owner cap) and every removal path had to try all
+   three; now the checkboxes are the single record of what is drawn. Rows
+   pointing at on-canvas entities, plain scalar/enum rows, and self-loops are
+   not expandable. The relation menu reaches the same classes from the owner
+   side, and is the only route to owners that declare the slot themselves.
 
    **Edge port fan-out DONE** 2026-08-19. Every incoming edge previously
    shared one `::hdr:in` port, so N edges converging on a node landed on a

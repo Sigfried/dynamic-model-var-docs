@@ -15,6 +15,10 @@
  *     estimator patched.
  *  3. They showed the cost of a click only after the click.
  *
+ * The trigger opens on HOVER and each group leads with "add all" / "hide all"
+ * (Siggie, 2026-08-27): with nothing drawn unasked, the menu is the main way
+ * to grow the canvas, so it should not cost a click to look inside one.
+ *
  * Shape (Siggie, deciding D3): a trigger reading "N related", branching to
  * "N belong to me by my attribute", "N belong to me by their attribute",
  * "N I belong to", "N associated with" — five branches after Siggie chose the
@@ -87,11 +91,19 @@ export function RelationMenu({
 
   if (!groups.length) return null;
 
-  const open = (ev: React.MouseEvent) => {
-    ev.stopPropagation();
-    if (anchor) { setAnchor(null); setOpenGroup(null); return; }
+  /*
+   * Opens on HOVER (Siggie, 2026-08-27: "open the cascading relation menus on
+   * hover. click is then needed only to expand"). Click still toggles, so the
+   * menu is reachable without a pointer and a stray hover can be dismissed by
+   * clicking the trigger.
+   */
+  const open = () => {
     const r = triggerRef.current?.getBoundingClientRect();
     if (r) setAnchor({ x: r.left, y: r.bottom + 2 });
+  };
+  const toggle = (ev: React.MouseEvent) => {
+    ev.stopPropagation();
+    if (anchor) { setAnchor(null); setOpenGroup(null); } else open();
   };
 
   return (
@@ -103,8 +115,9 @@ export function RelationMenu({
         data-no-drag
         data-help-id="relation-menu"
         title={`${relatedCount} entities related to ${label}, ${shownCount} of them`
-          + ` on the diagram — click to browse them`}
-        onClick={open}
+          + ` on the diagram — hover to browse them`}
+        onMouseEnter={open}
+        onClick={toggle}
         className={`flex items-center gap-1 text-[9px] leading-none px-1.5 py-0.5
                     rounded border
                     border-amber-300 dark:border-amber-700
@@ -224,6 +237,8 @@ function Submenu({
   const [flip, setFlip] = useState(false);
   /** Set only when the panel fits on neither side; see the effect below. */
   const [maxW, setMaxW] = useState<number | undefined>(undefined);
+  const addable = group.items.filter(i => !i.drawn);
+  const drawnItems = group.items.filter(i => i.drawn);
 
   /*
    * The flip is decided from the PARENT's right edge plus this panel's own
@@ -278,11 +293,49 @@ function Submenu({
                   bg-white dark:bg-slate-800
                   ${flip ? 'right-full mr-0.5' : 'left-full ml-0.5'}`}
     >
-      <div className="sticky top-0 px-2 py-1 border-b text-[9px]
+      <div className="sticky top-0 border-b
                       border-gray-200 dark:border-slate-600
-                      bg-white dark:bg-slate-800
-                      text-gray-500 dark:text-gray-400">
-        {group.items.length} {group.label}
+                      bg-white dark:bg-slate-800">
+        <div className="px-2 py-1 text-[9px] text-gray-500 dark:text-gray-400">
+          {group.items.length} {group.label}
+        </div>
+        {/*
+          Group-level add/hide, at the TOP of the group (Siggie, 2026-08-27).
+          It used to sit at the bottom and offer only "add all".
+
+          "hide all" removes EVERY entity in the group, including ones that
+          were selected in their own right — the group control is about what is
+          on the canvas, not about how each entity got there. That is the same
+          premise as "add" ticking the checkbox: one record of what is drawn.
+
+          The counts are visible before the click, which is the point: on
+          Participant this reads "add all 21".
+        */}
+        <div className="flex items-center gap-2 px-2 pb-1 text-[9px]">
+          {/* "add all 1" is a second control doing exactly what the single item
+              below it does (Siggie: "no add all if count is 1"); same for
+              "hide all 1". */}
+          {addable.length > 1 && (
+            <button
+              data-relation-add-all={group.position}
+              onClick={ev => { ev.stopPropagation(); addable.forEach(i => onAdd(i.other)); }}
+              className="underline text-amber-800 dark:text-amber-300
+                         hover:text-amber-950 dark:hover:text-amber-100"
+            >
+              add all {addable.length}
+            </button>
+          )}
+          {drawnItems.length > 1 && (
+            <button
+              data-relation-hide-all={group.position}
+              onClick={ev => { ev.stopPropagation(); drawnItems.forEach(i => onRemove(i.other)); }}
+              className="underline text-gray-500 dark:text-gray-400
+                         hover:text-red-600 dark:hover:text-red-400"
+            >
+              hide all {drawnItems.length}
+            </button>
+          )}
+        </div>
       </div>
       {group.items.map(item => (
         <div
@@ -294,7 +347,8 @@ function Submenu({
           <button
             title={item.drawn
               ? `${item.other} is on the diagram — click to remove it`
-              : `Add ${item.other} to the diagram (${group.label} ${label})`}
+              : `Add ${item.other} to the diagram and tick its checkbox`
+                + ` (${group.label} ${label})`}
             onClick={ev => {
               ev.stopPropagation();
               if (item.drawn) onRemove(item.other); else onAdd(item.other);
@@ -336,25 +390,6 @@ function Submenu({
           )}
         </div>
       ))}
-      {/* The count is visible BEFORE the click, which is the point: "add all"
-          used to hide its cost. On Participant that reads "add all 21".
-          Suppressed when only ONE item is addable — there "add all 1" is a
-          second control that does exactly what the item above it does. */}
-      {group.items.filter(i => !i.drawn).length > 1 && (
-        <button
-          data-relation-add-all={group.position}
-          onClick={ev => {
-            ev.stopPropagation();
-            group.items.filter(i => !i.drawn).forEach(i => onAdd(i.other));
-          }}
-          className="w-full px-2 py-1 border-t text-left text-[9px] underline
-                     border-gray-200 dark:border-slate-600
-                     text-amber-800 dark:text-amber-300
-                     hover:bg-amber-100 dark:hover:bg-amber-900/60"
-        >
-          add all {group.items.filter(i => !i.drawn).length}
-        </button>
-      )}
     </div>
   );
 }

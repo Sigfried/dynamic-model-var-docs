@@ -10,8 +10,8 @@
 ## ⭐ NEXT SESSION — START HERE (decided 2026-08-27)
 
 Two implementations, both decided by Siggie in the help-mode review session,
-both written up here in full. **Do these before anything else in this file.**
-They are independent — either order works, and neither blocks the other.
+both written up here in full. **Item 1 is DONE (2026-08-27); item 2 is the
+entry point.** They were independent, and item 1 did not block item 2.
 
 Design work is DONE for both. Do not re-open the decisions; if something looks
 wrong, the reasoning is in WORKLOG.md 2026-08-27 ("Siggie reviews help mode")
@@ -19,60 +19,34 @@ and the alternatives were already argued and rejected there.
 
 ---
 
-### ⭐ 1. Canvas content: no caps · only what is selected · expand = select
+### ✅ 1. Canvas content: no caps · only what is selected · expand = select
 
-**The problem.** Ticking one checkbox does not draw one box. Probed against the
-live schema on 2026-08-27:
+**DONE 2026-08-27.** Implemented exactly as designed, all five points. Net
+**-372 lines** (405 added, 777 deleted) across 21 files; full test suite green
+(346 passing), typecheck clean, lint unchanged from baseline.
 
-| Selection | Boxes drawn |
-|---|---|
-| `sel=MeasurementObservation` | **6** — 1 selected + 5 auto-drawn owners |
-| `sel=BodySite~Participant` | **10** — 2 selected + 8 auto-drawn owners |
+What went, beyond the five points: `core`, `ownerCap`, `DEFAULT_OWNER_CAP`,
+`suppressedOwners`, `drawnOwners`, the `expansions` parameter, `ExploreState`'s
+`exp`/`hidden`/`owners`, the `owners` localStorage key, `ExampleCase.exp`, and
+the three-way removal split that appeared in three separate places. Both moot
+test files (`hopSymmetry`, `ownerToggles`) deleted rather than repaired, as
+predicted.
 
-Every selected node silently pulls in up to `DEFAULT_OWNER_CAP = 5` owners.
-Worse, expansions are indistinguishable from selections: `ownershipSubgraph.ts`
-does `const core = new Set([...selectedIds, ...expansions])` and runs the owner
-loop over `core`, so clicking an attribute row to see ONE class also drags in
-that class's owners. Siggie hit this on `value_quantity` and it is the
-long-standing *"distinguish selected from expanded"* complaint, deferred twice
-as too risky (see WORKLOG "Distinguish selected from expanded").
+**Two things found while building, both recorded in WORKLOG.md:**
 
-**Siggie's design, 2026-08-27 — implement exactly this:**
+1. **A real bug, caught by `exploreReset`.** `writeExploreState` mutates the
+   live URL rather than rebuilding it, so a retired param from an old link sat
+   in the address bar forever and got copied into shared links. Fixed with
+   `RETIRED_PARAMS`. General hazard: **removing a field from `ExploreState`
+   does not remove it from the URL.**
+2. **Tests that were not about the content policy still broke** — they selected
+   one class and relied on the partner being auto-drawn to have an edge to
+   inspect. Fixed by selecting both ends, not by relaxing the assertion.
 
-1. **Display nothing that is not selected or expanded-to.** The automatic
-   one-hop-up owner draw goes away entirely.
-2. **Get rid of the cap options** (`0 / ≤5 / all`). They exist only to bound the
-   automatic expansion being removed, so they lose their subject. This also
-   retires the "owners" toolbar label, which points *up* while the classifier's
-   `own-fwd` means *down* — an inconsistency that confused Siggie repeatedly.
-3. **Open the cascading relation menus on hover.** Click is then needed only to
-   expand.
-4. **Put "add all" at the top of each menu group, toggling with "hide all".**
-5. **"Hide all" hides everything in the group even if it was selected**, and
-   **"add" automatically ticks the selection checkbox.**
-
-**Why this is much cheaper than the earlier deferral assumed.** The deferral was
-protecting against splitting `core` by provenance while KEEPING automatic
-owners. Removing the owner loop instead means the coupling simply disappears.
-And point 5 is the real simplifier: if expanding *is* selecting, `expansions`
-folds into `selectedIds`, `?exp=` disappears, and the selected/expanded
-distinction stops existing rather than needing to be tracked.
-
-**Tests that become moot, not wrong** — expect to delete, not repair:
-- `hopSymmetry.test.ts` — its UP test asserts owners are drawn without being
-  asked for, which is the removed behaviour. (Note its header comment is
-  *correct* about today: UP automatic, DOWN on demand. It is not asserting that
-  expanding behaves like selecting; an earlier note in this repo said so and was
-  wrong.)
-- `ownerToggles.test.ts` — seven behaviours pinning a cap that will not exist.
-
-**Consequence to confirm when building:** with "add" ticking the checkbox, the
-left panel's checkboxes become the single record of what is drawn. Expanding
-from a diagram row will tick a checkbox that may be scrolled out of view. That
-is probably good — one source of truth, and undo is obvious — but it is a
-visible behaviour change Siggie has not seen yet.
-
----
+**The flagged consequence is live and unmitigated:** expanding from a diagram
+row ticks a checkbox that may be scrolled out of view. Nothing was added to
+soften it (no scroll-into-view, no flash) — that was not part of the design.
+Siggie has not seen this yet.
 
 ### ⭐ 2. Tour state: a push/pop stack instead of absolute snapshots
 
@@ -85,7 +59,9 @@ visible behaviour change Siggie has not seen yet.
 - **Any field a step does not name snaps back to its default.** Live example:
   Siggie had the owner cap on `all`; every step carrying a `State:` reset it to
   5, because no step writes `owners=`. Nothing warned; the canvas just changed
-  density mid-tour.
+  density mid-tour. *(That particular control is gone as of task 1, but the
+  bug is not about `owners` — it is about every field a step does not name.
+  `sibs`, `dir` and `merge` still reset the same way.)*
 
 **Siggie's design, 2026-08-27 — implement exactly this:**
 
@@ -108,7 +84,10 @@ for the set-like fields plus previous-value frames for the six scalars
 slot and no refcount meaning. Siggie rejected it: *"you're overcomplicating for
 the sake of probably rare edge cases. just do the stack. if scalar settings
 clobber user actions, don't worry about it. easy enough for the user to reclick
-the button."* **All nine fields push and pop the same way.**
+the button."* **Every field pushes and pops the same way.** (Task 1 cut the
+field list from nine to six: `sel`, `detail`, `roots`, `sibs`, `dir`, `merge`.
+Only `sel` is set-like now, so five of the six are scalars — which makes
+Siggie's "don't worry about it" the operative decision, not a corner case.)
 
 **Two traps, both real:**
 
@@ -119,10 +98,10 @@ the button."* **All nine fields push and pop the same way.**
    setting a scalar. So the migration is a semantic INVERSION of fields whose
    text will not visibly change. Do not "migrate" them by leaving them alone.
 2. **A frame must record what actually changed, not what the step declared.**
-   `toggleSelect` has a side effect: selecting a class removes it from
-   `expandedIds`. If the frame stores the declared delta, the pop will not
-   invert it. *(If task 1 above lands first, `expandedIds` is gone and this
-   trap goes with it — but do not assume that; task 1 is not a prerequisite.)*
+   `toggleSelect` used to have a side effect: selecting a class removed it
+   from `expandedIds`. **Task 1 landed first, so `expandedIds` is gone and this
+   particular trap with it** — but the principle stands for any other setter
+   that does more than it declares.
 
 **Also update:** the `State:` section of `src/help/help-content.md` (the format
 spec), and delete the *"every tour STEP carries an absolute state"* test in
@@ -135,7 +114,7 @@ comment.
 
 | # | Task | Est. | Status | Detail |
 |---|---|---|---|---|
-| **1** | **⭐ Canvas content: no caps · only what is selected · expand = select** | ~1 day | ⭐ **NEXT — designed, not started** | [§](#1-canvas-content-no-caps-only-what-is-selected-expand-select) |
+| **1** | **Canvas content: no caps · only what is selected · expand = select** | ~1 day | ✅ **DONE 2026-08-27** (-372 lines) | [§](#1-canvas-content-no-caps-only-what-is-selected-expand-select) |
 | **2** | **⭐ Tour state: push/pop stack instead of absolute snapshots** | ~0.5 day | ⭐ **NEXT — designed, not started** | [§](#2-tour-state-a-pushpop-stack-instead-of-absolute-snapshots) |
 | 3 | **The tour** — format (S3a ✅) + mechanism (S3b ✅) + copy (Siggie's) | ~0.5–1 day | ▶️ **S3a + S3b DONE — copy is Siggie's** | [format](#s3a-tour-authoring-format-brief) · [mechanism](#s3b-tour-mechanism-brief) · [package plan](HELP_PACKAGE_PLAN.md) |
 | 5 | **Dark-gray box headers, white text** | ~10 min | ⬜ | [quick wins](#quick-wins-one-session-no-design-decisions) |
@@ -582,9 +561,9 @@ need work are design conversations, not bad code. See below.
    It vanishes in img-3 because SQO is **absorbed into the merged Observation
    box**, and `mergeSiblings` filters owners with `notSelfOrMember` (line 452),
    folding member ownership into the merged box's chip strip instead of drawing
-   it. Note SQO has exactly 5 owners against `DEFAULT_OWNER_CAP = 5`, so the cap
-   is also live here. **Fix inside the edge-rendering redesign, not by raising
-   the cap.**
+   it. *(The `DEFAULT_OWNER_CAP = 5` half of this note is obsolete as of task
+   1 — there is no cap, and no owner is drawn unless selected. The
+   `notSelfOrMember` filtering in `mergeSiblings` is the live half.)*
 
 ### The tour — the problem was never placement
 

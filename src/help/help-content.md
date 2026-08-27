@@ -360,12 +360,12 @@ What the boxes and lines mean.
 ### graph-canvas
 
 - **Title:** Selecting an entity
-- **Description:** Select an entity by clicking its checkbox; the entity will appear in the main panel along with directly related entities. There are five ways an entity can be related to another.
+- **Description:** Select an entity by clicking its checkbox and it appears in the main panel. Only what you select is drawn — related entities are reached from the box's relation menu. There are five ways an entity can be related to another.
 - **Action:** Selected Participant and BodySite for you. You would normally do this by ticking them in the tree on the left.
 - **State:** sel=BodySite~Participant
 - **Tour:** 4
 - **Beats:**
-  1. Select an entity by clicking its checkbox; the entity will appear in the main panel along with directly related entities. There are five ways an entity can be related to another.
+  1. Select an entity by clicking its checkbox and it appears in the main panel. Only what you select is drawn. There are five ways an entity can be related to another.
      - Anchor: selection-tree
   2. This is the entity's row in the selection panel.
      - Anchor: entity-row:Participant
@@ -406,22 +406,16 @@ What the boxes and lines mean.
 - **Title:** The relation menu
 - **Description:** Every entity related to this one, grouped by how it is related. The trigger says how many there are and how many are already on the diagram; opening it branches into the five kinds of relationship, and each branch lists the entities in it.
 - **Interactions:**
-  - Click **☰ N related · M shown** to open the menu, then a branch to list its entities.
-  - Click an entity to put it on the diagram. Click it again — or its ✕ — to take it off; entities already drawn are greyed out.
-  - "add all N" — draw a whole branch at once. The count is shown before you click. It appears only when there is more than one entity left to add.
+  - Hover **☰ N related · M shown** to open the menu, then a branch to list its entities.
+  - Click an entity to put it on the diagram — which also ticks its checkbox on the left. Click it again — or its ✕ — to take it off; entities already drawn are greyed out.
+  - "add all N" / "hide all N" at the top of a branch — draw or clear the whole branch at once. Both counts are shown before you click. "hide all" removes every entity in the branch, including ones you had selected yourself.
   - **ⓘ** opens an entity's details without adding it to the diagram.
 - **Context:** From one entity's point of view there are five ways to be related. Four are ownership, and each names which side declares the attribute that creates it. Running *outward*: things that **belong to me by my attribute** (this entity declares the slot) and things that **belong to me by their attribute** (they declare it, pointing back here). Organization is entirely the second kind — it owns thirteen kinds of thing and declares no slot for any of them. Running *inward*, the same split: entities **I belong to, by my attribute** and entities **I belong to, by their attribute**. Fifth are **associations**, where neither entity owns the other.
 
 ### node-dismiss
 
 - **Title:** Closing a box
-- **Description:** Removes this entity from the diagram. What that means depends on why it is here: a selected entity is deselected, and one that arrived as context is simply hidden.
-
-### toolbar-owners
-
-- **Title:** How many owners to draw
-- **Description:** Sets how many **owning** entities are drawn per box: **0** draws none, **≤5** draws up to five, **all** draws every one.
-- **Context:** This governs only the entities one hop *up* — the ones that own the boxes you selected. An entity nothing owns draws nothing extra even at **all**: Organization, for instance, is owned by nothing, so selecting it alone gives one box at every setting. Its thirteen relations all run the other way, and the relation menu is where you reach those. "all" can pull a lot onto the diagram at once — a value type like Quantity is owned by around twenty entities.
+- **Description:** Removes this entity from the diagram and unticks its checkbox on the left. A merged box removes every entity in it at once.
 
 ### toolbar-siblings
 
@@ -438,7 +432,7 @@ What the boxes and lines mean.
 ### copy-link
 
 - **Title:** Copy link
-- **Description:** Copies a link that reproduces **exactly** this view — the selection, what is expanded, and the toolbar settings. Anyone opening it sees what you see.
+- **Description:** Copies a link that reproduces **exactly** this view — the selection and the toolbar settings. Anyone opening it sees what you see.
 - **Interactions:**
   - Click to copy; the URL bar always holds the same link.
 - **Context:** Settings travel in the link, so a diagram you set up deliberately does not get redrawn with someone else's preferences.
