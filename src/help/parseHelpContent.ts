@@ -79,9 +79,21 @@ export interface HelpEntry {
   beats?: TourBeat[];
 }
 
+/**
+ * A `## Section` grouping. Organises the source file; nothing in the app
+ * renders a section's `title` or `body` today — the popover shows one entry at
+ * a time, and both the tour and help mode reach entries through
+ * `HelpContent.entries`, never through sections.
+ *
+ * **`body` is unused, not unsupported.** It is parsed and kept for a help mode
+ * that wants section intros. Do not conclude from "nothing reads it" that
+ * sections can be flattened away: their `---` separators are what
+ * `parseHelpContent` splits on, and they keep the content file legible.
+ */
 export interface HelpSection {
   id: string;
   title: string;
+  /** Text between the `##` heading and the first `###` entry. Rendered nowhere. */
   body: string;
   entries: HelpEntry[];
 }

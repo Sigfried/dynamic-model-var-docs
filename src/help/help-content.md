@@ -24,6 +24,22 @@ Package-level design lives in [docs/HELP_PACKAGE_PLAN.md](../../docs/HELP_PACKAG
 
 Sections are separated by `---` lines.
 
+**Sections organise the source file; they do not appear in the app.** Neither
+a section's title nor its body text is rendered anywhere today — the popover
+shows one entry at a time, and both the tour and help mode reach entries
+through the flat registry, never through sections. So:
+
+- **Prose written as section body text is invisible to the reader.** If you
+  want it in the tour, it belongs in an entry's `Description:`.
+- **Section boundaries do not constrain tour order.** `Tour:` is sorted across
+  the whole file, so consecutive steps may sit in different sections and steps
+  can be renumbered without moving entries.
+
+They are still doing two jobs, so do not remove them: they group entries
+legibly in this file, and the `---` separators between them are what the
+parser splits on. `HelpSection.body` is parsed and available if a future help
+mode wants to show section intros — it is unused, not unsupported.
+
 ### Entry fields
 
 | Field | Meaning |
