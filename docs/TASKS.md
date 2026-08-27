@@ -18,6 +18,8 @@
 | 7 | **Re-render regression** — "most clicks refresh the main panel". **Measure, don't guess** | ~unknown | ⬜ still uninvestigated | [§](#still-not-investigated-the-one-thing-that-is-not-understood) |
 | 8 | **Drag the tour popover.** Placement itself was exonerated | ~0.5 day | ⬜ | [§](#tour-and-help) |
 | 9 | **Edge crossings.** Cause unmeasured | ~unknown | ⬜ | [§](#smaller-items-raised) |
+| 10 | **Tour authoring notes + draft preview** — `Note:` / `Draft:` / `ForClaude:` fields, and a way to view a tour *including* its parked and unfinished steps. Siggie wants all of it; deferred 2026-08-27 for time | ~0.5 day | ⬜ deferred | [§](#deferred-authoring-notes-and-draft-preview) |
+| 11 | **Migrate positioning to CSS anchor positioning** — deletes the 250ms poll, the flip/clamp, and the `EST_H` guess. **Do it AFTER S3b's resolvers land**, not during | ~0.5 day | ⬜ after S3b | [HELP_PACKAGE_PLAN](HELP_PACKAGE_PLAN.md) |
 
 ### 🍒 QUICK WINS — one session, no design decisions
 
@@ -267,6 +269,35 @@ Also note the tour counter: with beats, `4.2 / 6` replaces `4 / 6`.
 **Definition of done:** a tour step can announce that it acted, ring a specific
 row, and be navigated backwards into an exact prior state — demonstrated on the
 existing 4-step tour, even though its copy is about to be replaced.
+
+---
+
+### Deferred — authoring notes and draft preview
+
+Raised by Siggie 2026-08-27 while reviewing the S3a format, deferred the same
+day for time: *"i want all the options and maybe an ability to view the draft
+version of a tour, but no time now."*
+
+Four distinct needs, all currently served by HTML comments:
+
+| Want | Sketched as | Renders? |
+|---|---|---|
+| Notes to self | `- **Note:** ...` | never |
+| Half-written copy | `- **Draft:** ...` | yes, marked loudly as unfinished |
+| Instructions to Claude | `- **ForClaude:** ...` | never |
+| A step written but not ready | `- **_Tour:** 4` | **shipped** — see below |
+
+**The parking half is already done.** Prefixing any field with `_` parks it:
+`_Tour:` drops an entry out of the tour while keeping it as help. That covers
+the "not ready yet" case; the three note fields are what remains.
+
+**The interesting part is the draft preview**, and it is why this is a task
+rather than three fields: viewing a tour *including* its parked steps and
+unfinished `Draft:` text means a second rendering mode, not just a parser
+change. Worth designing rather than bolting on.
+
+Until then: HTML comments work, never render, and are what the S3a translation
+already uses (`TODO(siggie):` beside each entry with a gap).
 
 ---
 

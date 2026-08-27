@@ -1,111 +1,156 @@
-<!--
-  Help + tour content for the dmvd Explorer.
-
-  This comment IS the format spec. Keep it current when the format changes.
-  Parsed by parseHelpContent.ts; pinned by src/test/helpContent.test.ts.
-  Package-level design lives in docs/HELP_PACKAGE_PLAN.md.
-
-  ── STRUCTURE ───────────────────────────────────────────────────────────
-    ## Section Title          — groups entries; body text before the first ###
-    ### entry-id              — one entry: a help topic and/or a tour step
-  Sections are separated by `---` lines.
-
-  ── ENTRY FIELDS ────────────────────────────────────────────────────────
-    - **Title:**         short name shown as the popover heading
-    - **Description:**   one or two sentences; markdown allowed
-    - **Interactions:**  bullet list of what you can do
-    - **Shortcut:**      key hint, rendered as a <kbd>
-    - **Context:**       smaller footnote text
-    - **Anchor:**        what to point at (see ANCHORS); defaults to the id
-    - **Action:**        one sentence saying what the tour just DID (see ACTIONS)
-    - **State:**         full URL query the app is put into before this step
-    - **Tour:**          1-based position in the guided tour; omit for help-only
-    - **Beats:**         ordered sub-steps within one step (see BEATS)
-
-  Only Title and Description are required. An entry with no `Tour:` is
-  help-only: reachable in help mode, never visited by the tour.
-
-  ── ANCHORS ─────────────────────────────────────────────────────────────
-  An entry's `### id` is its IDENTITY — the key in the registry and the
-  thing tests and links refer to. It is no longer required to name a DOM
-  element. `Anchor:` says what to point at, and takes three forms:
-
-    (omitted)          — the element tagged `data-help-id="<the entry id>"`.
-                         This is the old behaviour, so every help-only entry
-                         written before this format keeps working untouched.
-    none               — no anchor. The popover is centered, nothing is
-                         ringed. For steps that talk about the app as a whole.
-    <kind>:<argument>  — a resolver looks the element up at runtime.
-
-  Resolver kinds are registered by the HOST APP, not by the parser — the
-  parser treats `kind:argument` as an opaque string so the help package can
-  be extracted without knowing what a dmvd "entity row" is. dmvd registers:
-
-    help-id:<id>                    an element tagged data-help-id="<id>"
-    entity-row:<Entity>             that entity's row in the selection panel
-    entity-checkbox:<Entity>        that row's checkbox
-    slot-row:<Entity>.<slot>        one attribute row inside a diagram box
-    node-box:<Entity>               a whole entity box on the diagram
-
-  A bare `Anchor: some-id` with no colon means `help-id:some-id`.
-
-  ── ACTIONS ─────────────────────────────────────────────────────────────
-  When a step changes the app for the viewer, it MUST say so. Write it as a
-  plain sentence in the tour's own voice:
-
-    - **Action:** Ticked MeasurementObservation for you in the panel on the left.
-
-  This exists because a step that silently changes the diagram reads as a
-  description of whatever just appeared. The popover renders Action text in
-  its own band, visually distinct from the Description.
-
-  Rule of thumb: if the step carries a `State:` that differs from the
-  previous step's, it needs an `Action:`.
-
-  ── STATE ───────────────────────────────────────────────────────────────
-  `State:` is a FULL, ABSOLUTE URL query — never a diff from the previous
-  step. That is what makes `back` exact: every step and beat sets the whole
-  world, so arriving at it from either direction gives the same view.
-
-    - **State:** sel=BodySite~Participant
-
-  A step or beat that changes nothing omits `State:` and inherits whatever
-  the previous one set.
-
-  The tour ALSO snapshots the viewer's own state when it starts and restores
-  it when it ends. That is runtime behaviour, not format — nothing is
-  authored for it here.
-
-  ── BEATS ───────────────────────────────────────────────────────────────
-  A tour step is one popover that can advance through several BEATS without
-  moving to the next step. Use beats for sub-steps of one idea, and for
-  revealing a list one item at a time.
-
-    - **Beats:**
-      1. First beat's text. Markdown allowed.
-         - Anchor: selection-tree
-      2. Second beat's text.
-         - Anchor: entity-row:MeasurementObservation
-         - Action: Ticked it for you.
-         - State: sel=MeasurementObservation
-
-  Each beat may carry its own `Anchor:`, `Action:` and `State:` as indented
-  `- Field: value` lines (note: NOT `- **Field:**` — beat fields are plain,
-  which is what keeps them distinguishable from entry fields). A beat that
-  omits a field inherits the step's.
-
-  A step with no `Beats:` is exactly one beat, so the four steps written
-  before this format still parse and behave identically. `next` advances
-  beat by beat, then to the next step; the counter reads "4.2 / 6".
-
-  ── THE AUDIENCE ────────────────────────────────────────────────────────
-  The tour is written for someone who arrives from a LINK with no one
-  explaining it — the program manager case. So step 1 assumes nothing, and
-  any step that needs a selection brings its own via `State:` rather than
-  asking the visitor to click first.
--->
-
 # Explorer help
+
+Help + tour content for the dmvd Explorer. The **Format** section below is the
+spec; everything from *Getting started* onward is the content itself.
+
+Parsed by `parseHelpContent.ts`; pinned by `src/test/helpContent.test.ts`.
+Package-level design lives in [docs/HELP_PACKAGE_PLAN.md](../../docs/HELP_PACKAGE_PLAN.md).
+
+---
+
+## Format
+
+> This section is the spec, and it is deliberately part of the document so it
+> renders wherever the file is read. The parser skips it by name — see
+> `SPEC_SECTION` in `parseHelpContent.ts`. Keep it current when the format
+> changes.
+
+### Structure
+
+```
+## Section Title          — groups entries; body text before the first ###
+### entry-id              — one entry: a help topic and/or a tour step
+```
+
+Sections are separated by `---` lines.
+
+### Entry fields
+
+| Field | Meaning |
+|---|---|
+| `Title:` | short name shown as the popover heading |
+| `Description:` | one or two sentences; markdown allowed |
+| `Interactions:` | bullet list of what you can do |
+| `Shortcut:` | key hint, rendered as a `<kbd>` |
+| `Context:` | smaller footnote text |
+| `Anchor:` | what to point at — see [Anchors](#anchors) |
+| `Action:` | one sentence saying what the tour just DID — see [Actions](#actions) |
+| `State:` | full URL query the app is put into before this step |
+| `Tour:` | 1-based position in the guided tour; omit for help-only |
+| `Beats:` | ordered sub-steps within one step — see [Beats](#beats) |
+
+Written as `- **Field:** value`. Only `Title` and `Description` are required.
+An entry with no `Tour:` is help-only: reachable in help mode, never visited by
+the tour.
+
+### Disabling a field
+
+**Prefix any field name with `_` to park it.** The field is still parsed, but
+treated as absent:
+
+```markdown
+- **_Tour:** 4        <- entry drops out of the tour, stays available as help
+- **_State:** sel=X   <- state not applied
+```
+
+Use it for a step that is written but not ready to appear. The tour renumbers
+around the gap, so parking step 4 of 6 leaves a working 5-step tour rather than
+a hole.
+
+### Anchors
+
+An entry's `### id` is its **identity** — the key in the registry, and what
+tests and links refer to. It is not required to name a DOM element. `Anchor:`
+says what to point at:
+
+| Form | Meaning |
+|---|---|
+| *(omitted)* | the element tagged `data-help-id="<the entry id>"` |
+| `none` | no anchor; the popover is centred and nothing is ringed |
+| `<kind>:<argument>` | a resolver looks the element up at runtime |
+| `<bare-id>` | shorthand for `help-id:<bare-id>` |
+
+Omitting it reproduces the old behaviour exactly, so **every help entry written
+before this format keeps working untouched**.
+
+Resolver kinds are registered by the **host app**, not by the parser — the
+parser treats `kind:argument` as an opaque string so the help package can be
+extracted without knowing what a dmvd "entity row" is.
+
+| Kind | Points at |
+|---|---|
+| `help-id:<id>` | an element tagged `data-help-id="<id>"` |
+| `entity-row:<Entity>` | that entity's row in the selection panel |
+| `entity-checkbox:<Entity>` | that row's checkbox |
+| `slot-row:<Entity>.<slot>` | one attribute row inside a diagram box |
+| `node-box:<Entity>` | a whole entity box on the diagram |
+
+Only `help-id` is implemented today. The others resolve to null and degrade to
+an unringed popover until S3b builds them.
+
+### Actions
+
+When a step changes the app for the viewer, it **must** say so:
+
+```markdown
+- **Action:** Ticked MeasurementObservation for you in the panel on the left.
+```
+
+Write it as a plain sentence in the tour's own voice. This exists because a step
+that silently changes the diagram reads as a description of whatever just
+appeared. The popover renders `Action:` text in its own band, visually distinct
+from the description.
+
+**Rule of thumb:** if the step carries a `State:` that differs from the previous
+step's, it needs an `Action:`. A test enforces this.
+
+### State
+
+`State:` is a **full, absolute** URL query — never a diff from the previous
+step. That is what makes `back` exact: every step and beat sets the whole world,
+so arriving at it from either direction gives the same view.
+
+```markdown
+- **State:** sel=BodySite~Participant
+```
+
+A step or beat that changes nothing omits `State:` and inherits whatever the
+previous one set.
+
+The tour **also** snapshots the viewer's own state when it starts and restores
+it when it ends. That is runtime behaviour, not format — nothing is authored
+for it here.
+
+### Beats
+
+A tour step is one popover that can advance through several **beats** without
+moving on to the next step. Use beats for sub-steps of one idea, and for
+revealing a list one item at a time.
+
+```markdown
+- **Beats:**
+  1. First beat's text. Markdown allowed.
+     - Anchor: selection-tree
+  2. Second beat's text.
+     - Anchor: entity-row:MeasurementObservation
+     - Action: Ticked it for you.
+     - State: sel=MeasurementObservation
+```
+
+Each beat may carry its own `Anchor:`, `Action:` and `State:` as indented
+`- Field: value` lines. Note these are **plain, not bold** — that is what keeps
+a beat's own fields distinguishable from the entry fields that follow the block.
+A beat that omits a field inherits the step's.
+
+A step with no `Beats:` is exactly one beat, so steps written before beats
+existed still parse and behave identically. `next` advances beat by beat, then
+to the next step; the counter reads `4.2 / 6`.
+
+### Who the tour is for
+
+Someone who arrives from a **link** with no one explaining it — the program
+manager case. So step 1 assumes nothing, and any step that needs a selection
+brings its own via `State:` rather than asking the visitor to click first.
 
 ---
 

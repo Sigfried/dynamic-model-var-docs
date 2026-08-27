@@ -179,6 +179,66 @@ describe('help content', () => {
   });
 });
 
+describe('the spec section', () => {
+  test('is not parsed as content', () => {
+    // The spec lives in the document as a rendered `## Format` section so it
+    // can be read as markdown. Its ### sub-headings are prose; if the skip
+    // broke, "Anchors" and "Beats" would show up as help entries.
+    expect(content.sections.map(s => s.title)).not.toContain('Format');
+    for (const stray of ['Structure', 'Anchors', 'Beats', 'Actions', 'State']) {
+      expect(
+        [...content.entries.keys()],
+        `spec sub-heading "${stray}" leaked in as an entry`,
+      ).not.toContain(stray);
+    }
+  });
+});
+
+describe('parking a field with _', () => {
+  const parked = parseHelpContent(`
+## Bits
+
+### thing
+
+- **Title:** T
+- **Description:** D
+- **_Tour:** 4
+- **_State:** sel=Nope
+- **Anchor:** none
+`);
+
+  test('a parked field reads as absent', () => {
+    const e = parked.entries.get('thing')!;
+    expect(e.tour).toBeUndefined();
+    expect(e.state).toBeUndefined();
+  });
+
+  test('the entry survives as help-only', () => {
+    // Parking Tour: must not delete the entry -- the point is to keep written
+    // work in the file while removing it from the tour.
+    const e = parked.entries.get('thing')!;
+    expect(e.title).toBe('T');
+    expect(e.anchor).toEqual({ kind: 'none' });
+    expect(tourSteps(parked)).toEqual([]);
+  });
+
+  test('an unparked field beside a parked one still reads', () => {
+    const mixed = parseHelpContent(`
+## Bits
+
+### thing
+
+- **Title:** T
+- **Description:** D
+- **_Tour:** 4
+- **State:** sel=Yes
+`);
+    const e = mixed.entries.get('thing')!;
+    expect(e.tour).toBeUndefined();
+    expect(e.state).toBe('sel=Yes');
+  });
+});
+
 describe('parseAnchor', () => {
   test('omitted anchor falls back to the entry id as a help-id', () => {
     expect(parseAnchor(undefined, 'graph-canvas'))

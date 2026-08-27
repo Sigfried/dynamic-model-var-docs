@@ -127,8 +127,25 @@ export function parseAnchor(raw: string | undefined, fallbackId: string): HelpAn
   return { kind: value.slice(0, colon).trim(), arg: value.slice(colon + 1).trim() };
 }
 
-/** Extract a field value like "**Title:** ..." from the lines */
+/**
+ * The spec lives in the document as a rendered `## Format` section rather than
+ * an HTML comment, so it can be read as markdown wherever the file is opened.
+ * Its `###` sub-headings are prose, not entries, so the section is skipped by
+ * name. Renaming the section in the markdown means renaming it here.
+ */
+const SPEC_SECTION = 'Format';
+
+/**
+ * Extract a field value like "**Title:** ..." from the lines.
+ *
+ * A field whose name is prefixed with `_` is PARKED: still written down, but
+ * treated as absent. `- **_Tour:** 4` drops the entry out of the tour while
+ * leaving it available as help, which is how a step that is written but not
+ * ready stays in the file without appearing.
+ */
 function extractField(lines: string[], label: string): string | undefined {
+  // `- **_Tour:**` simply does not match `- **Tour:**`, so parking a field is
+  // just a non-match. Spelled out because it looks like an omission otherwise.
   const prefix = `- **${label}:**`;
   const idx = lines.findIndex(l => l.trimStart().startsWith(prefix));
   if (idx === -1) return undefined;
@@ -317,6 +334,9 @@ export function parseHelpContent(markdown: string): HelpContent {
   for (const block of sectionBlocks) {
     // Skip blocks that don't start with ## (e.g., the # title)
     if (!block.match(/^## /m)) continue;
+    // Skip the spec section: its ### sub-headings document the format, they
+    // are not entries.
+    if (block.match(/^##\s+(.+)$/m)?.[1].trim() === SPEC_SECTION) continue;
 
     const section = parseSection(block);
     sections.push(section);

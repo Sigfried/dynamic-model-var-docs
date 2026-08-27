@@ -10,9 +10,28 @@ re-litigated:
 1. **No native-title swapping.**
 2. **Measured positioning** (`getBoundingClientRect`) rather than CSS anchor
    positioning; the plan prefers `anchor-name`/`position-anchor`, which remains
-   the right end state but needs a CSS property set on each anchor, and the
-   anchors here are ordinary elements tagged only with `data-help-id`. See the
-   header comment in `HelpLayer.tsx`.
+   the right end state. See the header comment in `HelpLayer.tsx`.
+
+   **Reasoning revised 2026-08-27** — Siggie questioned this decision and the
+   original justification did not survive the check. It said CSS anchoring
+   "needs a CSS property set on each anchor, and the anchors here are ordinary
+   elements tagged only with `data-help-id`", implying per-anchor assignment
+   from script. That is not required: one blanket rule keyed on the attribute
+   assigns anchor names for every tagged element with no script at all.
+
+   **What migrating would actually delete:** the `resize` and capture-phase
+   `scroll` listeners, the **250ms `setInterval` that polls while any popover
+   is open**, the flip/clamp arithmetic in `placePopover`, its `EST_H`
+   *estimate* of the popover's own height (`position-try` uses the real one),
+   and the smooth-scroll settling race. The polling in particular re-renders on
+   a timer whether or not anything moved.
+
+   **The real blocker, and why it is still deferred:** S3a's resolver-backed
+   anchor kinds (`entity-row`, `slot-row`, `node-box`, `entity-checkbox`) point
+   at elements created and destroyed as the diagram redraws, and those do NOT
+   carry `data-help-id` — so the blanket rule does not reach them. Migrating
+   before S3b's resolvers exist means designing anchor-name assignment twice.
+   **Do it as one focused change after S3b lands**, not during.
 
 **Known gaps, scoped 2026-08-26** (details in the PLANNING section of TASKS.md):
 tour steps perform state changes invisibly; `back` does not undo them; the

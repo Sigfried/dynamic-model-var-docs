@@ -3,14 +3,26 @@
  * prev/next chrome.
  *
  * Positioning is done with `getBoundingClientRect` against the live anchor
- * rather than CSS anchor positioning. The plan prefers `anchor-name` /
- * `position-anchor` (Baseline 2026), and that is the right end state — but it
- * needs a CSS property set on each ANCHOR, and the anchors here are ordinary
- * app elements tagged only with `data-help-id`. Assigning per-anchor
- * `anchor-name` values from script is not obviously simpler than measuring, so
- * this takes the measured route and leaves the CSS-anchor migration for when
- * the package is extracted. The popover still uses the **Popover API** for
- * top-layer rendering, which is the part that removes the portal.
+ * rather than CSS anchor positioning (`anchor-name` / `position-anchor`,
+ * Baseline 2026). CSS anchoring remains the right end state and would delete
+ * real code: the resize/scroll listeners AND the 250ms polling interval below,
+ * the flip/clamp in `placePopover`, its `EST_H` *estimate* of the popover's own
+ * height, and the smooth-scroll settling race.
+ *
+ * It is deferred for a SEQUENCING reason, not a technical one (2026-08-27,
+ * revised): S3b is about to add resolvers for `entity-row`, `slot-row` and
+ * friends, which point at rows created and destroyed as the diagram redraws.
+ * Those elements do not carry `data-help-id`, so a blanket
+ * `[data-help-id] { anchor-name: ... }` rule would not cover them, and
+ * migrating positioning before the anchor model settles means doing it twice.
+ *
+ * The previously recorded reason — "assigning per-anchor `anchor-name` from
+ * script is not obviously simpler than measuring" — was weaker than it looked:
+ * a single CSS rule can assign anchor names for the tagged case without any
+ * script. That is not the blocker; the resolver-backed anchors are.
+ *
+ * Migrate once S3b's resolvers exist. The popover already uses the **Popover
+ * API** for top-layer rendering, which is the part that removes the portal.
  */
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
