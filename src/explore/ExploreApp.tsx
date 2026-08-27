@@ -54,8 +54,13 @@ function ExploreAppInner() {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set(initial.exp));
   const [detailId, setDetailId] = useState<string | null>(initial.detail);
   const [tableCollapsed, setTableCollapsed] = useState(false);
-  /** Provisional: 'tree' is the intended selector, 'list' the one it replaces. */
-  const [selectorMode, setSelectorMode] = useState<'tree' | 'list'>('tree');
+  /**
+   * 'list' is the default selector: the category list, nested by inheritance.
+   * 'tree' is the dag-browser, kept reachable but no longer default — Siggie
+   * 2026-08-27 deferred fixing it (it needs horizontal scroll and panel resize
+   * before it can even be evaluated) rather than dropping it.
+   */
+  const [selectorMode, setSelectorMode] = useState<'tree' | 'list'>('list');
   const [pathToRoot, setPathToRoot] = useState<boolean>(initial.roots);
   /**
    * Toolbar settings, lifted out of OwnershipGraphView. They used to live in
@@ -332,11 +337,12 @@ function ExploreAppInner() {
               )}
             </div>
             {/*
-              The flat category list is kept alongside the DAG tree so the two
-              can be compared before the list is retired. Siggie asked for the
-              tree to REPLACE the list; this switch is the safety rail for
-              that swap, not a permanent feature -- delete it and the
-              SelectionTable import once the tree is confirmed.
+              The category list is now the default; the DAG tree stays behind
+              this switch for after the deadline. Reversed 2026-08-27: the
+              tree was going to replace the list, but it needs horizontal
+              scroll + panel resize before it can be judged, and there is no
+              runway for that. Do not delete the tree -- the decision is
+              "deferred", not "dropped".
             */}
             <button
               onClick={() => setSelectorMode(m => (m === 'tree' ? 'list' : 'tree'))}

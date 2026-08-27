@@ -36,6 +36,109 @@ import type { ContainmentGraph } from './containmentGraph';
 export type OwnershipNodeRole = 'selected' | 'context';
 export type OwnershipEdgeType = 'ownership' | 'reference' | 'isa';
 
+/**
+ * Where another class sits relative to THIS one, from this class's point of
+ * view. Four ownership positions plus association (docs/TASKS.md, "Chip strips
+ * → relation counts + menu"):
+ *
+ * |              | declared on me   | declared on them  |
+ * |--------------|------------------|-------------------|
+ * | I own it     | `owns-mine`      | `owns-theirs`     |
+ * | it owns me   | `owned-mine`     | `owned-theirs`    |
+ *
+ * The DAG erases this: `containmentGraph` flips `own-bkwd` at build time, so
+ * `parents`/`children` carry direction only and "mine because I say so" is
+ * indistinguishable from "mine because it says so" — the exact distinction
+ * Siggie asked the menu to show. It is recovered here from the FULL edge list,
+ * which still carries `flipped` and `verdict`, rather than by threading the
+ * verdict through the DAG.
+ */
+export type RelationPosition =
+  | 'owns-mine'      // I own it, by my own attribute (own-fwd declared here)
+  | 'owns-theirs'    // I own it, by an attribute on IT (own-bkwd, flipped here)
+  | 'owned-mine'     // I belong to it, by my own attribute (own-bkwd declared here)
+  | 'owned-theirs'   // I belong to it, by an attribute on IT (own-fwd on them)
+  | 'association';   // named association, neither owns the other
+
+/** Siggie's labels, which describe the READER's situation rather than the
+ *  classifier (cf. OwnershipLegend.tsx, which describes the rule that fired). */
+export const RELATION_POSITION_LABEL: Record<RelationPosition, string> = {
+  'owns-mine': 'belong to me by my attribute',
+  'owns-theirs': 'belong to me by their attribute',
+  'owned-mine': 'I belong to',
+  'owned-theirs': 'I belong to',
+  'association': 'associated with',
+};
+
+/**
+ * Menu order. The two `I belong to` positions share a label and sit adjacent so
+ * they read as one group in the cascade; they stay separate positions because
+ * the declaring side is what you would edit to change the relationship.
+ */
+export const RELATION_POSITION_ORDER: readonly RelationPosition[] = [
+  'owns-mine', 'owns-theirs', 'owned-mine', 'owned-theirs', 'association',
+];
+
+/** One related class, as seen from a given class. */
+export interface RelationEntry {
+  /** The class at the other end. */
+  other: string;
+  position: RelationPosition;
+  /** The slot carrying the relationship, and the class that declares it. */
+  slot: string;
+  declaredBy: string;
+  cardinality: string;
+}
+
+/**
+ * Every class related to `id`, grouped by position — the data behind the
+ * relation menu that replaced the wrapped chip strips. Self-loops are excluded
+ * (they render as ⟲ row markers, and "related to itself" is not a menu item).
+ *
+ * A pair can occupy more than one position at once (two classes can each
+ * declare a slot pointing at the other), so entries are per EDGE, not per
+ * class; the UI dedupes within a position.
+ */
+export function collectRelations(full: ContainmentGraph): Map<string, RelationEntry[]> {
+  const byNode = new Map<string, RelationEntry[]>();
+  const add = (id: string, e: RelationEntry) => {
+    const list = byNode.get(id) ?? [];
+    // One entry per (other, position, slot): the same slot inherited by several
+    // classes reaches the same pair more than once.
+    if (!list.some(x => x.other === e.other && x.position === e.position && x.slot === e.slot)) {
+      list.push(e);
+      byNode.set(id, list);
+    }
+  };
+  for (const e of full.edges) {
+    if (e.kind === 'subclass' || e.isLoop) continue;
+    // Edges are normalized owner → member, with `flipped` recording that the
+    // slot is stored on the member (the target) rather than the source.
+    const declaredBy = e.flipped ? e.target : e.source;
+    const [owner, member] = [e.source, e.target];
+    const common = { slot: e.label, declaredBy, cardinality: e.cardinality };
+    if (e.verdict === 'association') {
+      add(owner, { other: member, position: 'association', ...common });
+      add(member, { other: owner, position: 'association', ...common });
+      continue;
+    }
+    // From the OWNER's side it owns the member; from the MEMBER's side it
+    // belongs to the owner. Which of the two sub-positions applies depends on
+    // which end declares the slot.
+    add(owner, {
+      other: member,
+      position: declaredBy === owner ? 'owns-mine' : 'owns-theirs',
+      ...common,
+    });
+    add(member, {
+      other: owner,
+      position: declaredBy === member ? 'owned-mine' : 'owned-theirs',
+      ...common,
+    });
+  }
+  return byNode;
+}
+
 /** One entity-ranged slot stored on a class (its attribute row in the viz). */
 export interface OwnershipNodeSlot {
   slot: string;
@@ -68,6 +171,13 @@ export interface OwnershipSubgraphNode {
    * buildViewModel).
    */
   slots: OwnershipNodeSlot[];
+  /**
+   * Every class related to this one, grouped-ready by position — the data
+   * behind the relation menu. Selection-independent like `slots`; whether each
+   * entry is currently DRAWN is a property of the canvas, so the UI reads that
+   * from the node set rather than from here.
+   */
+  relations: RelationEntry[];
 }
 
 export interface OwnershipSubgraphEdge {
@@ -360,6 +470,7 @@ export function buildOwnershipSubgraph(
 
   const meta = new Map(full.nodes.map(n => [n.id, n]));
   const slotsByNode = collectNodeSlots(full);
+  const relationsByNode = collectRelations(full);
   const sunkLayers = computeSunkLayers(dag);
   const nodes = [...visible]
     .map((id): OwnershipSubgraphNode => {
@@ -375,6 +486,7 @@ export function buildOwnershipSubgraph(
         abstract: m.abstract,
         description: m.description,
         slots: slotsByNode.get(id) ?? [],
+        relations: relationsByNode.get(id) ?? [],
       };
     })
     .sort((a, b) => a.layer - b.layer || a.id.localeCompare(b.id));

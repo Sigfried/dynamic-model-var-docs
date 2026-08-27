@@ -107,7 +107,7 @@ old A–I-era table is replaced by this. Sessions S1/S2/S3 below implement 1–3
 |---|---|---|---|---|
 | 1 | **Selection panel → flat list, nested by inheritance, categories on top, no `Entity`.** dag-browser kept behind the toggle for after the deadline | ~0.5 day | **S1** | [brief](#s1--selection-panel-brief) |
 | 2 | **Chips → cascading menus.** *"need this to go fast. tour depends on it"*; also fixes the box-height/text-overlap bug | ~0.5–1 day | **S2** | [brief](#s2--cascading-menus-brief) · [design](#chip-strips--relation-counts--menu-the-main-redesign) |
-| 3 | **The tour** — mechanism *and* authoring Siggie's copy. **Blocked on 1 and 2** | ~0.5–1 day | **S3** | [brief](#s3--tour-brief) · [design](#the-tour--the-problem-was-never-placement) |
+| 3 | **The tour** — split three ways. **Format (S3a) and mechanism (S3b) are NOT blocked**; only authoring the copy is | ~0.5–1 day | **S3a + S3b** | [format](#s3a--tour-authoring-format-brief) · [mechanism](#s3b--tour-mechanism-brief) · [design](#the-tour--the-problem-was-never-placement) |
 | 4 | **Drop the duplicate header badge** — `⑃` and `▷` are identical by construction on a merged box; frees header room for S2's menu trigger | ~10 min | S2 takes it | [§](#what-is-confirmed-broken-in-priority-order) |
 | 5 | **Dark-gray box headers, white text** — matches the colored child headers | ~10 min | any | [§](#smaller-items-raised) |
 | 6 | **Edge rendering** — one edge per declaring class, colored by it; fixes the missing `Specimen.quality_measure` edge. **D2 answered: do not suppress** | ~0.5 day | unassigned | [§](#edge-rendering--the-fan-from-observationsetobservations) |
@@ -115,12 +115,13 @@ old A–I-era table is replaced by this. Sessions S1/S2/S3 below implement 1–3
 | 8 | **Drag the tour popover** — escape hatch. Note placement itself was exonerated | ~0.5 day | S3 if time | [§](#tour-and-help) |
 | 9 | **Edge crossings** — "we should try". Cause unmeasured | ~unknown | unassigned | [§](#smaller-items-raised) |
 
-> **Reality check.** Items 1–3 are ~1.5–2.5 days against ~1 day of runway, even
-> with S1 and S2 running in parallel — and 3 cannot start until both land, so it
-> is the one at real risk. Items 4–5 are ~20 minutes of visible win. Item 7 is
-> the only unknown that could eat the whole day; it is ranked below the visible
-> work deliberately. **Expect to cut something; decide which rather than
-> discovering it at 5pm.**
+> **Reality check.** Items 1–3 are ~1.5–2.5 days against ~1 day of runway.
+> Splitting the tour (2026-08-27) helps: **four sessions now run in parallel**
+> instead of two, and only the tour COPY is genuinely blocked — that part is
+> Siggie's to write, not a session's. Items 4–5 are ~20 minutes of visible win.
+> Item 7 is the only unknown that could eat the whole day; it is ranked below
+> the visible work deliberately. **Expect to cut something; decide which rather
+> than discovering it at 5pm.**
 
 ### Explicitly NOT this week
 
@@ -150,15 +151,18 @@ so two sessions can run at once without colliding.
 |---|---|---|---|
 | **S1 — Selection panel** | [§](#s1--selection-panel-brief) | `src/explore/SelectionTable.tsx`, `src/explore/ExploreApp.tsx` (selector wiring only) | now, in parallel with S2 |
 | **S2 — Cascading menus** | [§](#s2--cascading-menus-brief) | `src/explore/OwnershipGraphView.tsx`, `src/models/ownershipSubgraph.ts`, `src/models/containmentGraph.ts` | now, in parallel with S1 |
-| **S3 — Tour** | [§](#s3--tour-brief) | `src/help/*` | **AFTER S1 and S2 merge** |
+| **S3a — Tour format** | [§](#s3a--tour-authoring-format-brief) | `src/help/help-content.md`, `parseHelpContent.ts` | **now**, in parallel |
+| **S3b — Tour mechanism** | [§](#s3b--tour-mechanism-brief) | `src/help/HelpLayer.tsx`, `HelpProvider.tsx` | **now**; coordinate with S1 on row anchors |
+| **S3c — Tour authoring** | — | `help-content.md` | **Siggie's**, after S3a; needs S1+S2 landed |
 
-### Rules for all three sessions
+### Rules for every session
 
 1. **Do not edit `docs/TASKS.md`.** Siggie is editing it live; a concurrent write
    will collide. Put findings in `WORKLOG.md` (append a dated section) or report
    in chat. This rule exists because the file is being hand-edited *right now*.
 2. **Branch off `tweaking-expand-prune`**, one branch per session:
-   `s1-selection-panel`, `s2-cascading-menus`. Do not merge to `main`.
+   `s1-selection-panel`, `s2-cascading-menus`, `s3a-tour-format`,
+   `s3b-tour-mechanism`. Do not merge to `main`.
 3. **Never run `npm run dev`** — Siggie keeps the app running himself on 5173.
 4. `npx vitest` needs node 22:
    `export PATH="$HOME/.nvm/versions/node/v22.20.0/bin:$PATH"`.
@@ -287,57 +291,141 @@ re-clicking removes; no text overlap on Observation (the worst case, 13 owners).
 
 ---
 
-### S3 — Tour (brief)
+### S3a — Tour authoring format (brief)
 
-> **BLOCKED until S1 and S2 land.** Do not start early.
+> **NOT blocked. Run now, in parallel with S1 and S2.** Siggie, 2026-08-27:
+> *"the tour can be broken up into two or three sessions, only the authoring is
+> blocked but these can proceed."*
 
-**Two jobs: the mechanism, and authoring the actual tour.** Siggie has written
-substantial tour copy in his own list above — **that copy is the spec; use his
-words, do not rewrite them.**
+**Goal: design the format Siggie will write the tour in, then translate his
+current draft into it — gaps, mistakes and all — so he can keep writing.**
 
-**Blocked because** his step 2 highlights the selection panel (S1 is changing
-it) and later steps depend on the relation menus (S2). Starting early means
-authoring against UI that is about to change.
+> *"create tour authoring spec/format; and translate current tour contents —
+> with their gaps and mistakes — into it for me to continue from"*
 
-**D1 is decided.** Siggie:
+**You are not writing tour copy and not fixing his copy.** Translate it
+faithfully. Where his draft is unfinished, carry the gap into the new format as
+a visible TODO rather than completing it — he is continuing from your output,
+and a plausible-looking invented sentence is worse than an obvious hole. Two
+sentences literally trail off (`A primary goal` and `Entities can be related to
+each other through`); keep them as-is and mark them.
+
+**What the current format is.** `src/help/help-content.md`, parsed by
+`src/help/parseHelpContent.ts` into `HelpEntry`
+(`id, title, description, interactions[], shortcut?, context?, state?, tour?`).
+The format is documented in a comment at the top of `help-content.md`.
+
+**Why it does not stretch — the specific constraints to break.** Read these
+before designing; each is a real limit in today's parser, not a guess:
+
+1. **An entry's `id` is BOTH its DOM anchor and its identity.** `### <id>` must
+   match a `data-help-id` attribute. So two tour steps cannot point at the same
+   element, and a step cannot point at something that has no tagged element.
+   Siggie's draft needs both.
+2. **`tour:` is a flat 1-based integer.** His draft is nested — step 4 has
+   sub-steps 1/2/3 ("Selecting an entity" → highlight row → click checkbox).
+   There is no representation for that.
+3. **No progressive disclosure within a step.** He asked directly:
+   *"can we animate this so that step 4 keeps this popover but shows the next
+   bullet, etc? not sure best way to represent this in my outline...well, we're
+   going to need a reasonably human-readable/writable format for the full tour
+   specs anyway"* — that last clause is this brief.
+4. **`state:` is a URL query applied before the step.** D1 (below) needs every
+   step to carry its FULL state, not a diff, and needs an entry/exit snapshot.
+   Check whether `state:` as-is already satisfies "full state" — it may.
+5. **A step cannot describe an ACTION it performs.** This is what confused
+   Siggie in review: step 2 silently selects Participant and nothing says the
+   tour did it. The format needs somewhere to say "we just ticked this for you."
+6. **Anchors are whole elements.** He needs to highlight *a row*
+   ("the participant row highlighted, not the whole tree") and *a slot row*
+   (`observation_type`). Whether that is a format problem or purely S3b's
+   problem is yours to determine — but the format has to be able to EXPRESS it.
+
+**D1 is decided; design to it.** Siggie:
 
 > *"if tour starts when state is not default, record state; when tour ends/is
 > exited, restore prior state; every step of tour is prespecified so navigation
 > either way gives exact state. allow interaction, but explain to user that
 > their changes will be undone by each step on tour"*
 
-So: snapshot on entry, restore on exit, **every step carries its full state**
-(not a diff), and navigation in either direction sets that state absolutely.
-Interaction is allowed, and the popover must **say** that stepping will discard
-it. This is simpler than the per-key tracking I proposed — take it as given.
+**Constraints on your design:**
+- **Markdown, hand-writable.** Siggie writes this; it is not a config file. His
+  draft is nested markdown lists and that is a strong hint at what he finds
+  natural. Do not invent YAML/JSON front-matter unless markdown genuinely cannot
+  express it.
+- **The help-only entries must keep working.** `help-content.md` serves BOTH
+  help mode and the tour. Do not break the help half to serve the tour.
+- **`src/test/helpContent.test.ts` pins the current contract** (content parses,
+  tour numbered 1..n, every entry id is tagged in the app). Expect to change it
+  deliberately, and say what you changed.
 
-**Known gaps to close** (details in [The
-tour](#the-tour--the-problem-was-never-placement)):
-1. **Steps perform state changes invisibly.** Step 2 carries
-   `**State:** sel=Participant`, a Participant box appears, and nothing says the
-   tour did it. Siggie misread the whole step because of this.
-2. **The spotlight can only ring a whole `data-help-id` element**, i.e. a panel.
-   Siggie needs it to ring **a single row** ("the participant row highlighted,
-   not the whole tree"). This is a real capability gap in `HelpLayer.tsx`, not a
-   tweak — anchors must be able to address a row inside the selection panel.
-3. **Popover dragging** is still wanted as the escape hatch. Note the placement
-   heuristic was **exonerated** — it did the right thing; the bug was the
-   invisible action. Do not "fix" placement.
+**Deliverables:**
+1. The format, documented in the header comment of `help-content.md` the way the
+   current one is (that comment IS the spec — keep that convention).
+2. Siggie's draft translated into it, faithfully, with gaps marked.
+3. A parser that reads it. If S3b is running separately, agree the TypeScript
+   shape with them first — that interface is your seam.
+4. A short note in chat on what you could not express and why.
 
-**Siggie has asked for two things in his draft that need answers:**
-- *"can we animate this so that step 4 keeps this popover but shows the next
-  bullet, etc?"* — i.e. progressive disclosure within one step.
-- *"we're going to need a reasonably human-readable/writable format for the full
-  tour specs anyway"* — `help-content.md` + `parseHelpContent.ts` is the
-  existing format; decide whether it stretches to per-step state + sub-steps or
-  needs extending. **This is the first thing to settle**, because his copy is
-  already outgrowing the current format.
+**Ask Siggie, do not guess:** his draft says *"There are five ways an entity can
+be related to another"* while the surrounding text says four, and the
+chip-strip design has four positions plus association. Five may be right and
+four the typo. He is available; ask.
 
-His draft also has two items numbered `2` and two numbered `3` — ask him for the
-intended order rather than guessing.
+---
 
-**Definition of done:** the tour runs end to end with Siggie's copy, actions are
-visibly performed, `back` restores exactly, and the spotlight can hit a row.
+### S3b — Tour mechanism (brief)
+
+> **NOT blocked on S1/S2 for the mechanism itself.** Siggie: *"implement the
+> mechanisms. parts of the tour as currently written will work, but how
+> selection happens will change with S1 and material i haven't written yet
+> depends on S2."*
+>
+> **So: build the machinery, do not hard-code against today's selection UI.**
+> S1 is replacing the selection panel underneath you.
+
+**Goal: close the three known gaps in the tour machinery.** All are in
+`src/help/HelpLayer.tsx` and `HelpProvider.tsx`.
+
+**1. Steps must visibly perform their actions.** Today a step carries
+`**State:** sel=Participant`, the canvas changes, and nothing says the tour did
+it. **This is the bug that made Siggie misread the entire step** — he read the
+popover as describing the Participant box that had just appeared. Whatever form
+this takes (a line in the popover, a beat before the change, an animation), the
+user must be able to tell that the tour acted.
+
+**2. The spotlight must be able to ring a ROW, not just a panel.** Siggie: *"the
+participant row highlighted, not the whole tree."* Today
+`document.querySelector('[data-help-id="..."]')` finds one element, and the
+tagged elements are whole panels. He also wants to highlight a slot row
+(`observation_type`) inside a box. **This is a real capability gap, not a
+tweak** — it needs anchors that can address a row.
+
+> ⚠️ **Coordinate with S1 on this one.** S1 is rewriting the selection panel, so
+> the row you must highlight will be S1's markup, not today's dag-browser rows.
+> Agree the tagging convention with them rather than tagging rows that are about
+> to be deleted.
+
+**3. `back` must restore exactly, per D1** (quoted in S3a above). Snapshot on
+tour entry, restore on exit; every step sets its full state absolutely so
+navigation either way is exact; interaction allowed, but the popover must SAY
+that stepping will discard it.
+
+**Do NOT do:**
+- **Do not "fix" popover placement.** It was investigated and **exonerated** —
+  the geometry did the right thing; the bug was the invisible action (gap 1).
+  See [The tour](#the-tour--the-problem-was-never-placement). Popover
+  **dragging** is still wanted as an escape hatch, but it is item 8, not this.
+- Do not author tour copy — that is Siggie's, via S3a's format.
+
+**Seam with S3a:** they are designing the format and its parsed shape. Agree the
+TypeScript interface early, then work against it. If S3a has not landed, build
+against today's `HelpEntry` and keep the state/anchor logic behind small
+functions so swapping the shape is cheap.
+
+**Definition of done:** a tour step can announce that it acted, ring a specific
+row, and be navigated backwards into an exact prior state — demonstrated on the
+existing 4-step tour, even though its copy is about to be replaced.
 
 ---
 

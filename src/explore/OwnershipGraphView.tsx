@@ -34,9 +34,11 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type {
   AttributeSummary,
   DataService, OwnershipSubgraph, OwnershipSubgraphEdge, OwnershipSubgraphNode,
+  RelationEntry, RelationPosition,
 } from '../services/DataService';
 import {
   cardinalityLabel, SKIP_SUBCLASS_EXPANSION, GRAPH_COLORS, DEFAULT_OWNER_CAP,
+  RELATION_POSITION_LABEL, RELATION_POSITION_ORDER,
 } from '../services/DataService';
 import {
   useGraphLayout, useZoomPan, roundedPath, sectionPoints, mergeTail,
@@ -48,6 +50,7 @@ import {
   groupSiblings, isMergedId, mergedIdFor, siblingColor, withChildHeaders,
 } from './siblingMerge';
 import type { MergedMember } from './siblingMerge';
+import { RelationMenu } from './RelationMenu';
 import {
   rememberPreference,
   type Direction, type MergeMode, type OwnerScope,
@@ -61,31 +64,17 @@ type MergeTarget = { base: Point; dir: Point };
 const NODE_W = 240;
 const HEADER_H = 30;
 const ROW_H = 20;
-/** One wrapped line of owner chips. */
-const OWNERS_LINE_H = 15;
-/** Vertical padding around the owner-chip strip. */
-const OWNERS_PAD = 8;
-
 /**
- * Height of the owner-chip strip. Chips wrap, so the strip grows with the
- * number of owners; estimated from label widths since the real wrap happens
- * in the browser and ELK needs a height up front. Over-estimating costs a few
- * px of blank node; under-estimating clips chips, so round up.
+ * The relation-menu trigger band: ONE line, always, on any box with relations.
+ *
+ * This replaced two `flex-wrap` chip strips whose heights were *estimated in
+ * JS* while the browser did the real wrapping. The two necessarily diverged —
+ * ELK reserved N lines and the browser drew N+1 — so the rows below overlapped
+ * the chips. Observation (13 owners over three wrapped lines) was the worst
+ * case. A fixed-height trigger makes box height deterministic by construction,
+ * which is why the strips were replaced rather than the estimator patched.
  */
-function ownersStripHFor(owners: string[]): number {
-  if (!owners.length) return 0;
-  const CHAR_W = 4.6;      // ~9px font
-  const CHIP_PAD = 10;
-  const AVAIL = NODE_W - 16;
-  let line = 52;           // "owned by" label
-  let lines = 1;
-  for (const o of [...owners, 'add all']) {
-    const w = o.length * CHAR_W + CHIP_PAD;
-    if (line + w > AVAIL) { lines++; line = w; }
-    else line += w + 4;
-  }
-  return lines * OWNERS_LINE_H + OWNERS_PAD;
-}
+const RELATIONS_BAND_H = 22;
 const FOOTER_H = 18;
 const PAD = 28;
 
@@ -121,6 +110,68 @@ export interface RowVM {
   declaringClass?: string;
 }
 
+/** One related class as the menu shows it: name, why, and whether it is drawn. */
+export interface RelationItemVM {
+  other: string;
+  /** The slots that put it in this position (several when a class reaches the
+   *  same neighbour more than one way). Shown as the item's subtitle. */
+  slots: string[];
+  /** On the canvas right now — the item toggles it OFF rather than on. */
+  drawn: boolean;
+}
+
+/** One branch of the cascade: a position, its label, and its members. */
+export interface RelationGroupVM {
+  position: RelationPosition;
+  label: string;
+  items: RelationItemVM[];
+}
+
+/**
+ * Group a node's relations by position and mark which are drawn.
+ *
+ * `visible` is the id set actually on the canvas. Drawn-ness has to be
+ * computed here rather than in the model because a merged box changes what is
+ * "on the canvas" — its members are absorbed into one id.
+ */
+export function buildRelationGroups(
+  relations: readonly RelationEntry[],
+  visible: (id: string) => boolean,
+  exclude: (id: string) => boolean = () => false,
+): RelationGroupVM[] {
+  /*
+   * Branches are keyed by the DISPLAYED position, not the raw one. The two
+   * `I belong to` positions differ only in which side declares the slot —
+   * which the item's slot subtitle already shows — so they share one branch,
+   * keeping the cascade at the four Siggie named: "'N belong to me by my
+   * attribute,' 'N belong to me by their attribute,' 'N I belong to,' and
+   * 'N associated with'".
+   */
+  const displayed = (p: RelationPosition): RelationPosition =>
+    p === 'owned-theirs' ? 'owned-mine' : p;
+
+  const byPosition = new Map<RelationPosition, Map<string, string[]>>();
+  for (const r of relations) {
+    if (exclude(r.other)) continue;
+    const pos = displayed(r.position);
+    const byOther = byPosition.get(pos) ?? new Map<string, string[]>();
+    const slots = byOther.get(r.other) ?? [];
+    if (!slots.includes(r.slot)) slots.push(r.slot);
+    byOther.set(r.other, slots);
+    byPosition.set(pos, byOther);
+  }
+
+  return RELATION_POSITION_ORDER
+    .filter(p => byPosition.has(p))
+    .map((position): RelationGroupVM => ({
+      position,
+      label: RELATION_POSITION_LABEL[position],
+      items: [...byPosition.get(position)!]
+        .map(([other, slots]): RelationItemVM => ({ other, slots, drawn: visible(other) }))
+        .sort((a, b) => a.other.localeCompare(b.other)),
+    }));
+}
+
 export interface NodeVM extends OwnershipSubgraphNode {
   isaParents: string[];
   subclassCount: number;
@@ -142,6 +193,17 @@ export interface NodeVM extends OwnershipSubgraphNode {
   drawnOwners: string[];
   /** What this class owns that is NOT on the canvas — the downward chips. */
   hiddenOwned: string[];
+  /**
+   * Related classes grouped by position, each tagged with whether it is
+   * currently on the canvas — the relation menu's contents.
+   *
+   * Replaces the two chip strips. The strips could only express two of the
+   * five positions (and neither showed associations), and they were what made
+   * box height non-deterministic; see RELATIONS_BAND_H.
+   */
+  relationGroups: RelationGroupVM[];
+  /** Distinct related classes across every group — the "N related" count. */
+  relatedCount: number;
   /** Rows currently displayed (connected first; all when expanded). */
   rows: RowVM[];
   hiddenCount: number;
@@ -210,6 +272,10 @@ export function buildViewModel(
     }
   }
 
+  // What is on the canvas, for the relation menu's drawn/undrawn state. The
+  // menu's items toggle: a drawn one removes, an undrawn one adds.
+  const visible = new Set(sub.nodes.map(n => n.id));
+
   const nodes = sub.nodes.map((n): NodeVM => {
     // Schema order. The subgraph's slot lists come out in graph-insertion
     // order (collectNodeSlots walks the edge set, and the edges come from
@@ -261,6 +327,9 @@ export function buildViewModel(
     const owners = sub.hiddenOwners.get(n.id) ?? [];
     const shown = sub.drawnOwners.get(n.id) ?? [];
     const owned = sub.hiddenOwned.get(n.id) ?? [];
+    const relationGroups = buildRelationGroups(
+      n.relations, id => visible.has(id), id => id === n.id,
+    );
     return {
       ...n,
       isaParents: isaParents.get(n.id) ?? [],
@@ -269,28 +338,43 @@ export function buildViewModel(
       hiddenOwners: owners,
       drawnOwners: shown,
       hiddenOwned: owned,
+      relationGroups,
+      relatedCount: countRelated(relationGroups),
       rows,
       allRows: [...connected, ...hidden],
       // Forced expansion has no collapsed state to return to, so offering a
       // "− fewer" footer there would be a control that does nothing.
       hiddenCount: footerCount,
       expanded,
-      // The strip holds BOTH chip states, so it must be sized for both. The
-      // footer count must be the SAME one the render uses, or the box
+      // The footer count must be the SAME one the render uses, or the box
       // reserves height for a footer it never draws.
-      height: nodeHeight(rows.length, footerCount, [...shown, ...owners], owned),
+      height: nodeHeight(rows.length, footerCount, relationGroups.length > 0),
     };
   });
 
   return { nodes, edges, edgeColors: new Map() };
 }
 
-/** Box height. Shared by the plain build and the sibling merge so the two
- *  cannot drift — a merged box adds a legend strip and nothing else. */
+/** Distinct related classes across every group. A class can occupy two
+ *  positions at once (each end declaring a slot at the other), so the count is
+ *  over names, not entries — "N related" must match the names you can reach. */
+function countRelated(groups: readonly RelationGroupVM[]): number {
+  return new Set(groups.flatMap(g => g.items.map(i => i.other))).size;
+}
+
+/**
+ * Box height. Shared by the plain build and the sibling merge so the two
+ * cannot drift.
+ *
+ * The relation band is a FIXED one-line height, unlike the chip strips it
+ * replaced: those wrapped in the browser while their height was estimated in
+ * JS, so the reserved band and the drawn band diverged and the rows below
+ * overlapped them. Nothing here estimates text any more.
+ */
 function nodeHeight(
-  rowCount: number, hiddenCount: number, owners: string[], owned: string[] = [],
+  rowCount: number, hiddenCount: number, hasRelations: boolean,
 ): number {
-  return HEADER_H + ownersStripHFor(owners) + ownersStripHFor(owned)
+  return HEADER_H + (hasRelations ? RELATIONS_BAND_H : 0)
     + rowCount * ROW_H + (hiddenCount ? FOOTER_H : 0) + (rowCount ? 5 : 0);
 }
 
@@ -331,6 +415,9 @@ export function mergeSiblings(
   if (!groups.size) return vm;
 
   const byId = new Map(vm.nodes.map(n => [n.id, n]));
+  /** The PRE-merge canvas, for relation drawn-ness: a class folded into a box
+   *  is still on the canvas, so its menu item must read as drawn. */
+  const vmVisible = new Set(vm.nodes.map(n => n.id));
   /** member class id → merged box id */
   const absorbed = new Map<string, string>();
   const merged: NodeVM[] = [];
@@ -461,6 +548,11 @@ export function mergeSiblings(
     const hiddenOwned = [...new Set(
       sources.flatMap(mid => byId.get(mid)?.hiddenOwned ?? []),
     )].filter(notSelfOrMember);
+    const mergedRelations = buildRelationGroups(
+      sources.flatMap(mid => byId.get(mid)?.relations ?? []),
+      id => vmVisible.has(id),
+      id => !notSelfOrMember(id),
+    );
     const first = byId.get(memberIds[0]);
     // The box IS the parent, so its identity — name, description, abstractness
     // — must be the parent's. Spreading a member and forgetting to override
@@ -486,6 +578,18 @@ export function mergeSiblings(
       hiddenOwners,
       drawnOwners,
       hiddenOwned,
+      /*
+       * The merged box's relations are the UNION of its members' — it stands
+       * for all of them — minus anything folded into this same box, which is
+       * inside it rather than related to it. `notSelfOrMember` also drops
+       * classes absorbed into some OTHER merged box, matching how the chips
+       * behaved; those are reachable from that box instead.
+       *
+       * Drawn-ness is asked of the pre-merge node set, so an item is "drawn"
+       * when the class is on the canvas in any form, merged or not.
+       */
+      relationGroups: mergedRelations,
+      relatedCount: countRelated(mergedRelations),
       rows: rowList,
       allRows: all,
       // Nothing is ever hidden on a merged box, so there is no footer to
@@ -493,7 +597,7 @@ export function mergeSiblings(
       hiddenCount: 0,
       expanded: true,
       // rowList already includes the child header rows, each one line tall.
-      height: nodeHeight(rowList.length, 0, [...drawnOwners, ...hiddenOwners], hiddenOwned),
+      height: nodeHeight(rowList.length, 0, mergedRelations.length > 0),
     });
   }
 
@@ -575,19 +679,7 @@ function LoopIcon({ title }: { title: string }) {
  *  A merged box needs no extra band — its children are introduced by header
  *  ROWS inside the list, which are ordinary rows as far as geometry cares. */
 function rowsTop(node: NodeVM): number {
-  return HEADER_H + ownersStripHFor(ownerChips(node))
-    + ownersStripHFor(node.hiddenOwned);
-}
-
-/**
- * Every owner chip on a node, drawn ones first, in render order.
- *
- * Single source of truth for the strip: the height estimate, the row offset
- * that edge anchors are measured from, and the render must all agree on this
- * list, or edges point at the wrong rows.
- */
-function ownerChips(node: NodeVM): string[] {
-  return [...node.drawnOwners, ...node.hiddenOwners];
+  return HEADER_H + (node.relationGroups.length > 0 ? RELATIONS_BAND_H : 0);
 }
 
 /**
@@ -1842,114 +1934,48 @@ export default function OwnershipGraphView({
                           })()}
                         </span>
                       </div>
-                      {/* Every direct owner, as a TOGGLE. Drawn owners show
-                          filled ("on") and clicking removes them; off-canvas
-                          owners show outlined and clicking adds them. Chips
-                          used to list only the off-canvas half, which is why
-                          there was no way to hide an owner once shown. */}
-                      {ownerChips(n).length > 0 && (
+                      {/*
+                        The relation band: a fixed-height trigger opening the
+                        cascading menu, in place of the two wrapped chip strips.
+
+                        The strips were `flex-wrap` with a height estimated in
+                        JS while the browser did the real wrapping, so the band
+                        ELK reserved and the band drawn diverged and the rows
+                        below overlapped them (Observation, 13 owners over three
+                        wrapped lines). One line, always, removes the estimate
+                        from the geometry entirely -- see RELATIONS_BAND_H.
+
+                        It also carries what the strips could not: all four
+                        ownership positions instead of two, and associations,
+                        which appeared in neither strip.
+                      */}
+                      {n.relationGroups.length > 0 && (
                         <div
-                          data-help-id="owner-chips"
-                          className="flex flex-wrap items-center gap-x-1 gap-y-0.5 px-2 py-1 border-b
+                          data-help-id="relation-menu"
+                          className="flex items-center gap-1 px-2 border-b overflow-hidden
                                      border-gray-200 dark:border-slate-600
                                      bg-amber-50/60 dark:bg-amber-950/30"
-                          style={{ height: ownersStripHFor(ownerChips(n)) }}
+                          style={{ height: RELATIONS_BAND_H }}
                         >
-                          <span className="text-[9px] text-gray-500 dark:text-gray-400 shrink-0">
-                            owned by
-                          </span>
-                          {/* Every owner is listed — a silently truncated "+3"
-                              hid names with no way to reach them. */}
-                          {ownerChips(n).map(owner => {
-                            const on = n.drawnOwners.includes(owner);
-                            return (
-                              <button
-                                key={owner}
-                                data-owner-chip={owner}
-                                data-owner-on={on ? '' : undefined}
-                                title={on
-                                  ? `${owner} owns ${n.label} — click to remove it from the canvas`
-                                  : `${owner} owns ${n.label} — click to add it`}
-                                onClick={ev => {
-                                  ev.stopPropagation();
-                                  if (on) onHideOwner?.(owner); else onExpand?.(owner);
-                                }}
-                                className={`text-[9px] leading-none px-1 py-0.5 rounded max-w-full truncate
-                                           border ${on
-                                    ? `bg-amber-200 dark:bg-amber-800 border-amber-400 dark:border-amber-600
-                                       text-amber-950 dark:text-amber-100
-                                       hover:bg-amber-300 dark:hover:bg-amber-700 hover:line-through`
-                                    : `bg-amber-100/60 dark:bg-amber-900/40 border-dashed
-                                       border-amber-300 dark:border-amber-700
-                                       text-amber-900 dark:text-amber-200
-                                       hover:bg-amber-200 dark:hover:bg-amber-800`}`}
-                              >
-                                {owner}
-                              </button>
-                            );
-                          })}
-                          {n.hiddenOwners.length > 0 && (
-                            <button
-                              title={`Add all ${n.hiddenOwners.length} remaining owners of ${n.label}`}
-                              onClick={ev => {
-                                ev.stopPropagation();
-                                n.hiddenOwners.forEach(o => onExpand?.(o));
-                              }}
-                              className="text-[9px] leading-none px-1 py-0.5 rounded shrink-0
-                                         text-amber-800 dark:text-amber-300 underline
-                                         hover:bg-amber-200 dark:hover:bg-amber-800"
-                            >
-                              add all
-                            </button>
-                          )}
-                        </div>
-                      )}
-                      {/*
-                        What this class OWNS, off-canvas. Needed because a
-                        class whose ownership edges are all flipped has no rows
-                        for them (the slot lives on the other class), so its box
-                        would be a dead end -- Organization owns 14 things and
-                        drew alone. Add-only: removing one is closing that box.
-                      */}
-                      {n.hiddenOwned.length > 0 && (
-                        <div
-                          data-help-id="owns-chips"
-                          className="flex flex-wrap items-center gap-x-1 gap-y-0.5 px-2 py-1 border-b
-                                     border-gray-200 dark:border-slate-600
-                                     bg-sky-50/60 dark:bg-sky-950/30"
-                          style={{ height: ownersStripHFor(n.hiddenOwned) }}
-                        >
-                          <span className="text-[9px] text-gray-500 dark:text-gray-400 shrink-0">
-                            owns
-                          </span>
-                          {n.hiddenOwned.map(owned => (
-                            <button
-                              key={owned}
-                              data-owned-chip={owned}
-                              title={`${n.label} owns ${owned} — click to add it`}
-                              onClick={ev => { ev.stopPropagation(); onExpand?.(owned); }}
-                              className="text-[9px] leading-none px-1 py-0.5 rounded max-w-full truncate
-                                         border border-dashed
-                                         bg-sky-100/60 dark:bg-sky-900/40
-                                         border-sky-300 dark:border-sky-700
-                                         text-sky-900 dark:text-sky-200
-                                         hover:bg-sky-200 dark:hover:bg-sky-800"
-                            >
-                              {owned}
-                            </button>
-                          ))}
-                          <button
-                            title={`Add all ${n.hiddenOwned.length} things ${n.label} owns`}
-                            onClick={ev => {
-                              ev.stopPropagation();
-                              n.hiddenOwned.forEach(o => onExpand?.(o));
+                          <RelationMenu
+                            label={n.label}
+                            groups={n.relationGroups}
+                            relatedCount={n.relatedCount}
+                            onAdd={id => onExpand?.(id)}
+                            onRemove={id => {
+                              /*
+                               * Two mechanisms, because a class can be on the
+                               * canvas for two reasons. An EXPANSION is undone
+                               * by removing it; an owner drawn by the cap was
+                               * never expanded, so only a recorded dismissal
+                               * removes it. Firing both is what the box's own
+                               * dismiss button does, and for the same reason.
+                               */
+                              onCollapse?.(id);
+                              onHideOwner?.(id);
                             }}
-                            className="text-[9px] leading-none px-1 py-0.5 rounded shrink-0
-                                       text-sky-800 dark:text-sky-300 underline
-                                       hover:bg-sky-200 dark:hover:bg-sky-800"
-                          >
-                            add all
-                          </button>
+                            onInspect={onNodeClick}
+                          />
                         </div>
                       )}
                       {n.rows.map(r => r.header ? (

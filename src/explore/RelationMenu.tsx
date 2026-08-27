@@ -1,0 +1,324 @@
+/**
+ * RelationMenu — the cascading "N related" menu on each entity box.
+ *
+ * Replaces the two wrapped chip strips (`owned by` / `owns`). Those failed on
+ * three counts, all measured (docs/TASKS.md, "Chip strips → relation counts +
+ * menu"):
+ *
+ *  1. They could express only two of the five relation positions, and showed
+ *     ASSOCIATIONS in neither — Specimen ↔ Document was unreachable.
+ *  2. They were `flex-wrap` with a height ESTIMATED IN JS while the browser did
+ *     the real wrapping, so the reserved band and the drawn band diverged and
+ *     the rows below overlapped. Observation, with 13 owners over three wrapped
+ *     lines, was the worst case. A fixed-size trigger makes box height
+ *     deterministic — which is why the strips were replaced rather than the
+ *     estimator patched.
+ *  3. They showed the cost of a click only after the click.
+ *
+ * Shape (Siggie, deciding D3): a trigger reading "N related", branching to
+ * "N belong to me by my attribute", "N belong to me by their attribute",
+ * "N I belong to", "N associated with". Leaf items toggle: an entity already
+ * on the canvas is struck through and clicking REMOVES it (Siggie: "is there
+ * any reason not to allow clicking one of these ... to re-hide it?" — no).
+ *
+ * Rendered in a portal because the box it hangs off is inside the zoom/pan
+ * transform and has `overflow` ancestors; a menu positioned in that space gets
+ * clipped and scaled with the canvas.
+ */
+
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import type { RelationGroupVM } from './OwnershipGraphView';
+
+export interface RelationMenuProps {
+  /** The class the menu hangs off — named in every tooltip. */
+  label: string;
+  groups: RelationGroupVM[];
+  /** Distinct related classes, for the trigger's count. */
+  relatedCount: number;
+  /** Put an entity on the canvas. */
+  onAdd: (classId: string) => void;
+  /** Take a DRAWN entity off it. */
+  onRemove: (classId: string) => void;
+  /** Open its detail drawer — the leaf's secondary action. */
+  onInspect?: (classId: string) => void;
+}
+
+/** Where a submenu opens, in viewport coordinates. */
+type Anchor = { x: number; y: number };
+
+export function RelationMenu({
+  label, groups, relatedCount, onAdd, onRemove, onInspect,
+}: RelationMenuProps) {
+  const [anchor, setAnchor] = useState<Anchor | null>(null);
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  // Close on any outside click or Escape. The menu lives in a portal, so an
+  // outside click is anything not inside a [data-relation-menu] subtree —
+  // ancestry in the DOM, not in the React tree.
+  useEffect(() => {
+    if (!anchor) return;
+    const close = (ev: Event) => {
+      const t = ev.target as HTMLElement | null;
+      if (t?.closest('[data-relation-menu]')) return;
+      setAnchor(null);
+      setOpenGroup(null);
+    };
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') { setAnchor(null); setOpenGroup(null); }
+    };
+    // Capture phase: the canvas stops propagation on its own handlers, so a
+    // bubbling listener never sees clicks on boxes.
+    document.addEventListener('mousedown', close, true);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', close, true);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [anchor]);
+
+  if (!groups.length) return null;
+
+  const open = (ev: React.MouseEvent) => {
+    ev.stopPropagation();
+    if (anchor) { setAnchor(null); setOpenGroup(null); return; }
+    const r = triggerRef.current?.getBoundingClientRect();
+    if (r) setAnchor({ x: r.left, y: r.bottom + 2 });
+  };
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        data-relation-menu
+        data-relation-trigger
+        data-no-drag
+        data-help-id="relation-menu"
+        title={`${relatedCount} entities related to ${label} — click to browse them`}
+        onClick={open}
+        className="text-[9px] leading-none px-1.5 py-0.5 rounded border
+                   border-amber-300 dark:border-amber-700
+                   bg-amber-50 dark:bg-amber-950/40
+                   text-amber-900 dark:text-amber-200
+                   hover:bg-amber-200 dark:hover:bg-amber-800"
+      >
+        {relatedCount} related ▾
+      </button>
+      {anchor && createPortal(
+        <MenuPanel
+          anchor={anchor}
+          label={label}
+          groups={groups}
+          openGroup={openGroup}
+          setOpenGroup={setOpenGroup}
+          onAdd={onAdd}
+          onRemove={onRemove}
+          onInspect={onInspect}
+        />,
+        document.body,
+      )}
+    </>
+  );
+}
+
+/**
+ * The top-level panel: one row per relation position, each opening a submenu.
+ *
+ * Kept flush against the viewport by `useClamped`, since a box near the right
+ * or bottom edge would otherwise open a menu half off-screen — and the canvas
+ * pans, so "near the edge" is not a rare case.
+ */
+function MenuPanel({
+  anchor, label, groups, openGroup, setOpenGroup, onAdd, onRemove, onInspect,
+}: {
+  anchor: Anchor;
+  label: string;
+  groups: RelationGroupVM[];
+  openGroup: string | null;
+  setOpenGroup: (g: string | null) => void;
+} & Pick<RelationMenuProps, 'onAdd' | 'onRemove' | 'onInspect'>) {
+  const { ref, style } = useClamped(anchor);
+  const active = groups.find(g => g.position === openGroup);
+
+  return (
+    <div
+      ref={ref}
+      data-relation-menu
+      style={style}
+      className="fixed z-50 min-w-[13rem] rounded border shadow-lg text-[11px]
+                 border-gray-300 dark:border-slate-600
+                 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-100"
+    >
+      <div className="px-2 py-1 border-b border-gray-200 dark:border-slate-600
+                      text-[9px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
+        {label} — related entities
+      </div>
+      {groups.map(g => (
+        <button
+          key={g.position}
+          data-relation-group={g.position}
+          onMouseEnter={() => setOpenGroup(g.position)}
+          onClick={ev => {
+            ev.stopPropagation();
+            setOpenGroup(openGroup === g.position ? null : g.position);
+          }}
+          className={`flex w-full items-center gap-2 px-2 py-1 text-left
+                      hover:bg-amber-50 dark:hover:bg-amber-900/40
+                      ${openGroup === g.position ? 'bg-amber-50 dark:bg-amber-900/40' : ''}`}
+        >
+          <span className="tabular-nums font-semibold shrink-0">{g.items.length}</span>
+          <span className="flex-1 truncate">{g.label}</span>
+          <span className="text-gray-400 shrink-0">▸</span>
+        </button>
+      ))}
+      {active && (
+        <Submenu
+          group={active}
+          label={label}
+          onAdd={onAdd}
+          onRemove={onRemove}
+          onInspect={onInspect}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * The leaf list for one position.
+ *
+ * Opens to the RIGHT of the parent panel when there is room and to the left
+ * otherwise; both are absolute against the parent, so it follows the panel if
+ * the panel was itself clamped.
+ *
+ * Each item shows the slots that put the entity in this position, so the
+ * distinction between "mine because I say so" and "mine because it says so"
+ * stays legible inside the merged `I belong to` branch, where the two are
+ * neighbours.
+ */
+function Submenu({
+  group, label, onAdd, onRemove, onInspect,
+}: {
+  group: RelationGroupVM;
+  label: string;
+} & Pick<RelationMenuProps, 'onAdd' | 'onRemove' | 'onInspect'>) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [flip, setFlip] = useState(false);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setFlip(r.right > window.innerWidth - 4);
+  }, [group.position]);
+
+  return (
+    <div
+      ref={ref}
+      data-relation-menu
+      data-relation-submenu={group.position}
+      className={`absolute top-0 max-h-[60vh] min-w-[14rem] overflow-y-auto rounded border shadow-lg
+                  border-gray-300 dark:border-slate-600
+                  bg-white dark:bg-slate-800
+                  ${flip ? 'right-full mr-0.5' : 'left-full ml-0.5'}`}
+    >
+      <div className="sticky top-0 px-2 py-1 border-b text-[9px]
+                      border-gray-200 dark:border-slate-600
+                      bg-white dark:bg-slate-800
+                      text-gray-500 dark:text-gray-400">
+        {group.items.length} {group.label}
+      </div>
+      {group.items.map(item => (
+        <div
+          key={item.other}
+          data-relation-item={item.other}
+          data-relation-drawn={item.drawn ? '' : undefined}
+          className="flex items-center gap-1 px-2 py-0.5 hover:bg-amber-50 dark:hover:bg-amber-900/40"
+        >
+          <button
+            title={item.drawn
+              ? `${item.other} is on the diagram — click to remove it`
+              : `Add ${item.other} to the diagram (${group.label} ${label})`}
+            onClick={ev => {
+              ev.stopPropagation();
+              if (item.drawn) onRemove(item.other); else onAdd(item.other);
+            }}
+            className={`flex-1 min-w-0 text-left ${item.drawn
+              ? 'text-gray-400 dark:text-gray-500 line-through decoration-1'
+              : 'text-gray-800 dark:text-gray-100'}`}
+          >
+            <span className="block truncate">{item.other}</span>
+            <span className="block truncate text-[9px] text-gray-400 dark:text-gray-500">
+              {item.slots.join(', ')}
+            </span>
+          </button>
+          {/* Removing is the non-obvious half of the toggle, so a drawn item
+              gets an explicit ✕ as well as the struck-through label. */}
+          {item.drawn && (
+            <button
+              data-relation-remove={item.other}
+              title={`Remove ${item.other} from the diagram`}
+              onClick={ev => { ev.stopPropagation(); onRemove(item.other); }}
+              className="text-[10px] leading-none px-1 rounded text-gray-400 shrink-0
+                         hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/40"
+            >
+              ✕
+            </button>
+          )}
+          {onInspect && (
+            <button
+              title={`Open ${item.other}'s details`}
+              onClick={ev => { ev.stopPropagation(); onInspect(item.other); }}
+              className="text-[10px] leading-none px-1 rounded text-gray-400 shrink-0
+                         hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-900/40"
+            >
+              ⓘ
+            </button>
+          )}
+        </div>
+      ))}
+      {/* The count is visible BEFORE the click, which is the point: "add all"
+          used to hide its cost. On Participant that reads "add all 21". */}
+      {group.items.some(i => !i.drawn) && (
+        <button
+          data-relation-add-all={group.position}
+          onClick={ev => {
+            ev.stopPropagation();
+            group.items.filter(i => !i.drawn).forEach(i => onAdd(i.other));
+          }}
+          className="w-full px-2 py-1 border-t text-left text-[9px] underline
+                     border-gray-200 dark:border-slate-600
+                     text-amber-800 dark:text-amber-300
+                     hover:bg-amber-100 dark:hover:bg-amber-900/60"
+        >
+          add all {group.items.filter(i => !i.drawn).length}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Position a fixed panel at `anchor`, pulled back inside the viewport.
+ *
+ * Measured after mount rather than estimated: the panel's height depends on
+ * how many positions the class occupies, which varies from one to five.
+ */
+function useClamped(anchor: Anchor) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState(anchor);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const M = 6;
+    setPos({
+      x: Math.max(M, Math.min(anchor.x, window.innerWidth - r.width - M)),
+      y: Math.max(M, Math.min(anchor.y, window.innerHeight - r.height - M)),
+    });
+  }, [anchor]);
+
+  return { ref, style: { left: pos.x, top: pos.y } };
+}

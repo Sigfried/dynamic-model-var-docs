@@ -29,14 +29,16 @@ import { EDGE_TYPES } from "../models/SchemaTypes";
 import type { ToggleButtonData } from '../components/ItemsPanel';
 import type { SectionData, SectionItemData } from '../components/Section';
 import { APP_CONFIG, getAllElementTypeIds, SectionId, ACTIVE_VOCAB } from '../config/appConfig';
-import { ENTITY_CATEGORIES, findUncategorizedClasses } from '../config/entityCategories';
+import {
+  ENTITY_CATEGORIES, findUncategorizedClasses, UNCATEGORIZED_BY_DESIGN,
+} from '../config/entityCategories';
 import {
   buildContainmentGraph, classifySlotEdgeExplained, OWNERSHIP_RULE_TEXT,
 } from '../models/containmentGraph';
 import type {
   ContainmentGraph, OwnershipVerdict, OwnershipRule,
 } from '../models/containmentGraph';
-import { getSlotEdgesForClass } from '../models/Graph';
+import { getSlotEdgesForClass, getParentClass } from '../models/Graph';
 import { buildOwnershipDag, buildOwnershipSubgraph } from '../models/ownershipSubgraph';
 import type {
   OwnershipDag, OwnershipSubgraph, OwnershipSubgraphOptions,
@@ -52,17 +54,51 @@ export type { EdgeInfo, ItemInfo };
 export type { AttributeSummary } from '../models/Element';
 export type { ContainmentGraph, ContainmentNode, ContainmentEdge } from '../models/containmentGraph';
 export { cardinalityLabel, SKIP_SUBCLASS_EXPANSION } from '../models/containmentGraph';
-export { DEFAULT_OWNER_CAP } from '../models/ownershipSubgraph';
+export {
+  DEFAULT_OWNER_CAP, RELATION_POSITION_LABEL, RELATION_POSITION_ORDER,
+} from '../models/ownershipSubgraph';
 export type {
   OwnershipSubgraph, OwnershipSubgraphNode, OwnershipSubgraphEdge,
   OwnershipSubgraphOptions,
   OwnershipNodeRole, OwnershipEdgeType, OwnershipNodeSlot,
+  RelationEntry, RelationPosition,
 } from '../models/ownershipSubgraph';
 
 /** A category of classes for the Focus selector (e.g. "Clinical"). */
 export interface CategoryGroup {
   id: string;
   label: string;
+  classIds: string[];
+}
+
+/**
+ * One class in a category, with its in-category is-a children nested beneath.
+ *
+ * `outOfCategoryParent` is set when the class DOES have an is-a parent but that
+ * parent lives in another VISIBLE category, so the row renders at the
+ * category's top level with its inheritance shown as a hint rather than as
+ * nesting. Measured 2026-08-27: exactly two such classes
+ * (SpecimenQuality/QuantityObservation, both in `lab` with parent
+ * `Observation` in `observation`). The alternative — duplicating the parent
+ * into both categories — needs multi-category membership, which is explicitly
+ * out of scope.
+ *
+ * A parent in UNCATEGORIZED_BY_DESIGN (i.e. `Entity`) does NOT set it: those
+ * classes are roots with nothing useful to point at.
+ */
+export interface CategoryTreeNode {
+  classId: string;
+  children: CategoryTreeNode[];
+  outOfCategoryParent?: string;
+}
+
+/** A category whose classes are nested by inheritance. */
+export interface CategoryTree {
+  id: string;
+  label: string;
+  /** Roots only; use classIds for the flat membership. */
+  roots: CategoryTreeNode[];
+  /** Every class in the category, flat — same set getCategoryGroups() returns. */
   classIds: string[];
 }
 
@@ -608,6 +644,61 @@ export class DataService {
         classIds: cat.classIds.filter(id => this.itemExists(id)),
       }))
       .filter(cat => cat.classIds.length > 0);
+  }
+
+  /**
+   * The is-a parent of a class, or null for a root.
+   *
+   * Straight from the schema graph's INHERITANCE edges (subclass → superclass),
+   * NOT from the hand-curated SUBCLASS_OF map in config/entityCategories.ts.
+   * The two agree today (measured 2026-08-27) but the config is exactly the
+   * kind of hand-maintained mirror that rots on an upstream sync.
+   */
+  getIsaParent(classId: string): string | null {
+    return getParentClass(this.modelData.graph, classId);
+  }
+
+  /**
+   * getCategoryGroups(), with each category's classes nested by inheritance.
+   *
+   * A class nests under its is-a parent only when that parent is in the SAME
+   * category; otherwise it stays a category root and carries
+   * `outOfCategoryParent` so the row can say what it extends. That mirrors the
+   * Entity Explorer's existing convention (entityCategories.ts, SUBCLASS_OF)
+   * and avoids duplicating a parent into two categories, which would need
+   * multi-category membership.
+   *
+   * Category order and within-level order both follow ENTITY_CATEGORIES, so a
+   * class's neighbours do not jump around when nesting is turned on.
+   */
+  getCategoryTrees(): CategoryTree[] {
+    return this.getCategoryGroups().map(group => {
+      const inCategory = new Set(group.classIds);
+      const nodes = new Map<string, CategoryTreeNode>(
+        group.classIds.map(id => [id, { classId: id, children: [] }]),
+      );
+      const roots: CategoryTreeNode[] = [];
+
+      for (const classId of group.classIds) {
+        const node = nodes.get(classId)!;
+        const parent = this.getIsaParent(classId);
+        if (parent && inCategory.has(parent)) {
+          nodes.get(parent)!.children.push(node);
+        } else {
+          // A parent that is uncategorized BY DESIGN (Entity) is not a
+          // "different category" — it is hidden from the UI everywhere, so
+          // naming it would point at something the reader can never open.
+          // Measured 2026-08-27: without this guard, "↳ Entity" renders on 44
+          // of 53 rows and buries the two hints that carry information.
+          if (parent && !(parent in UNCATEGORIZED_BY_DESIGN)) {
+            node.outOfCategoryParent = parent;
+          }
+          roots.push(node);
+        }
+      }
+
+      return { id: group.id, label: group.label, roots, classIds: group.classIds };
+    });
   }
 
   /**
