@@ -7,6 +7,101 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-27 (S3a) — the tour authoring format
+
+### The one insight the whole design turns on
+
+Five of the six constraints the S3a brief lists are the *same* constraint.
+`### <id>` was simultaneously (a) the entry's identity, (b) the tour's key,
+and (c) the DOM selector via `data-help-id`. Because (a) and (c) were welded
+together, two steps could not point at the same element, a step could not point
+at nothing, and no step could point at anything that was not already a tagged
+whole panel.
+
+Splitting identity from anchor — `Anchor:` as a separate field — dissolves them
+all at once. That is why the format has one new addressing field rather than
+several special cases. Worth remembering if someone later proposes "simplifying"
+by defaulting the anchor back to the id: the default is *already* the id
+(`parseAnchor(undefined, id)`), and it is the ability to override that matters.
+
+### Beats: two requests, one mechanism
+
+Siggie asked for two things that looked separate: nested sub-steps (their draft's
+step 4 has 1/2/3 inside it) and "can we animate this so that step 4 keeps this
+popover but shows the next bullet". Both are "one popover, several ordered
+positions." Building them separately would have meant two navigation concepts in
+the same tour. `Beats:` is the single mechanism; a step with no beats is one
+implicit beat, which is what keeps every pre-beat step behaving identically.
+
+### Rejected: YAML/JSON front-matter
+
+Considered and dropped. Siggie authors this by hand and their draft is nested
+markdown lists — that is the strongest available signal about what they find
+natural to write. Beat fields are plain (`- Anchor: x`) rather than bold
+(`- **Anchor:** x`) specifically so the parser can tell a beat's own fields from
+the entry fields that follow the block, without needing a structured format.
+
+### Why anchor kinds are NOT resolved in the parser
+
+`parseHelpContent.ts` splits `kind:argument` and stops. It deliberately does not
+know what `entity-row:Participant` means. Reason: HELP_PACKAGE_PLAN.md has this
+code being extracted into an npm package shared with icd11-playground, vs-hub and
+lifeflow, and the file's own header says it is kept dependency-free for that.
+A parser that knows what a dmvd entity row is cannot be extracted.
+
+**I nearly got this wrong.** The first design had the resolver registry inside
+the parser. Siggie asked whether the work was based on HELP_PACKAGE_PLAN.md — it
+was not; the design had come from the TASKS.md briefs plus the code. Reading the
+plan changed the anchor design (host-pluggable, not parser-aware) and surfaced
+that "tour applies the state *and says so*" had already been **decided on
+2026-08-26** and simply never implemented. The `Action:` field is not a new idea;
+it is a decided one that got lost. Lesson: follow the pointer in a file header
+before designing against that file.
+
+### The regression I introduced and then fixed
+
+Translating the draft created three new entry ids that no element carries
+(`relationship-kinds`, `selection-tree-mechanics`, `graph-canvas-reading`).
+Typecheck passed and the new tests passed, because `anchor` was purely additive
+and nothing read it yet — but `HelpLayer.tsx` still did
+`querySelector('[data-help-id="${activeId}"]')`, so at *runtime* those entries
+would have shown an unringed popover at position zero. The format was correct and
+the app was worse.
+
+Fixed by making `HelpLayer` resolve through `entry.anchor` (built-in `help-id`
+kind only; the dmvd kinds return null and degrade to unringed, which is S3b's to
+finish). Recorded because it is a good example of green typecheck + green tests
+proving nothing about a change whose consumers do not read the new field yet.
+
+### Two entries preserved rather than overwritten
+
+Siggie's draft step 2 and step 4 replace copy that was about something else
+entirely — the old step 2 covered ownership nesting and what the checkbox vs
+arrow vs name each do; the old step 3 covered reading the diagram. Rather than
+let the translation destroy them, they are kept as help-only entries
+(`selection-tree-mechanics`, `graph-canvas-reading`) with a TODO asking whether
+the new steps should absorb them. Faithful translation should not silently drop
+content that took effort to write.
+
+### Unfinished on purpose
+
+`A primary goal` and `Entities can be related to each other through` are carried
+over exactly as they trail off, as beats 4 and 5 of step 3. They will render as
+broken fragments. That is deliberate — the brief says a plausible invented
+sentence is worse than an obvious hole, and a hole that renders visibly cannot
+ship unnoticed.
+
+Also unresolved and left as a TODO: the draft's step 4 says "if there are any
+entities that use all four, select one of those" — an instruction to self, not
+copy. It is not translated into a beat, and the `State:` still carries the old
+`sel=BodySite~Participant`. Siggie picks the entity once they check which one
+actually demonstrates all five relationship kinds.
+
+(The four-vs-five contradiction the brief said to ask about: Siggie confirmed
+**five** is right — four ownership kinds plus associations — and had already
+deleted the stale note from TASKS.md themselves.)
+
+---
 ## 2026-08-27 (S2, second session) — first human look at the menu
 
 The menu had never been seen by anyone when the first S2 session ended. Siggie

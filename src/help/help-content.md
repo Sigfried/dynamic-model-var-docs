@@ -1,23 +1,108 @@
 <!--
   Help + tour content for the dmvd Explorer.
 
-  FORMAT (parsed by parseHelpContent.ts):
-    ## Section Title          — groups entries; body text before the first ###
-    ### element-id            — MUST match a data-help-id attribute in the app
-      - **Title:** short name shown as the popover heading
-      - **Description:** one or two sentences; markdown allowed
-      - **Interactions:** bullet list of what you can do
-      - **Shortcut:** key hint, rendered as a <kbd>
-      - **Context:** smaller footnote text
-      - **State:** URL query applied before this step (tour steps only)
-      - **Tour:** 1-based position in the guided tour; omit for help-only
+  This comment IS the format spec. Keep it current when the format changes.
+  Parsed by parseHelpContent.ts; pinned by src/test/helpContent.test.ts.
+  Package-level design lives in docs/HELP_PACKAGE_PLAN.md.
 
+  ── STRUCTURE ───────────────────────────────────────────────────────────
+    ## Section Title          — groups entries; body text before the first ###
+    ### entry-id              — one entry: a help topic and/or a tour step
   Sections are separated by `---` lines.
 
+  ── ENTRY FIELDS ────────────────────────────────────────────────────────
+    - **Title:**         short name shown as the popover heading
+    - **Description:**   one or two sentences; markdown allowed
+    - **Interactions:**  bullet list of what you can do
+    - **Shortcut:**      key hint, rendered as a <kbd>
+    - **Context:**       smaller footnote text
+    - **Anchor:**        what to point at (see ANCHORS); defaults to the id
+    - **Action:**        one sentence saying what the tour just DID (see ACTIONS)
+    - **State:**         full URL query the app is put into before this step
+    - **Tour:**          1-based position in the guided tour; omit for help-only
+    - **Beats:**         ordered sub-steps within one step (see BEATS)
+
+  Only Title and Description are required. An entry with no `Tour:` is
+  help-only: reachable in help mode, never visited by the tour.
+
+  ── ANCHORS ─────────────────────────────────────────────────────────────
+  An entry's `### id` is its IDENTITY — the key in the registry and the
+  thing tests and links refer to. It is no longer required to name a DOM
+  element. `Anchor:` says what to point at, and takes three forms:
+
+    (omitted)          — the element tagged `data-help-id="<the entry id>"`.
+                         This is the old behaviour, so every help-only entry
+                         written before this format keeps working untouched.
+    none               — no anchor. The popover is centered, nothing is
+                         ringed. For steps that talk about the app as a whole.
+    <kind>:<argument>  — a resolver looks the element up at runtime.
+
+  Resolver kinds are registered by the HOST APP, not by the parser — the
+  parser treats `kind:argument` as an opaque string so the help package can
+  be extracted without knowing what a dmvd "entity row" is. dmvd registers:
+
+    help-id:<id>                    an element tagged data-help-id="<id>"
+    entity-row:<Entity>             that entity's row in the selection panel
+    entity-checkbox:<Entity>        that row's checkbox
+    slot-row:<Entity>.<slot>        one attribute row inside a diagram box
+    node-box:<Entity>               a whole entity box on the diagram
+
+  A bare `Anchor: some-id` with no colon means `help-id:some-id`.
+
+  ── ACTIONS ─────────────────────────────────────────────────────────────
+  When a step changes the app for the viewer, it MUST say so. Write it as a
+  plain sentence in the tour's own voice:
+
+    - **Action:** Ticked MeasurementObservation for you in the panel on the left.
+
+  This exists because a step that silently changes the diagram reads as a
+  description of whatever just appeared. The popover renders Action text in
+  its own band, visually distinct from the Description.
+
+  Rule of thumb: if the step carries a `State:` that differs from the
+  previous step's, it needs an `Action:`.
+
+  ── STATE ───────────────────────────────────────────────────────────────
+  `State:` is a FULL, ABSOLUTE URL query — never a diff from the previous
+  step. That is what makes `back` exact: every step and beat sets the whole
+  world, so arriving at it from either direction gives the same view.
+
+    - **State:** sel=BodySite~Participant
+
+  A step or beat that changes nothing omits `State:` and inherits whatever
+  the previous one set.
+
+  The tour ALSO snapshots the viewer's own state when it starts and restores
+  it when it ends. That is runtime behaviour, not format — nothing is
+  authored for it here.
+
+  ── BEATS ───────────────────────────────────────────────────────────────
+  A tour step is one popover that can advance through several BEATS without
+  moving to the next step. Use beats for sub-steps of one idea, and for
+  revealing a list one item at a time.
+
+    - **Beats:**
+      1. First beat's text. Markdown allowed.
+         - Anchor: selection-tree
+      2. Second beat's text.
+         - Anchor: entity-row:MeasurementObservation
+         - Action: Ticked it for you.
+         - State: sel=MeasurementObservation
+
+  Each beat may carry its own `Anchor:`, `Action:` and `State:` as indented
+  `- Field: value` lines (note: NOT `- **Field:**` — beat fields are plain,
+  which is what keeps them distinguishable from entry fields). A beat that
+  omits a field inherits the step's.
+
+  A step with no `Beats:` is exactly one beat, so the four steps written
+  before this format still parse and behave identically. `next` advances
+  beat by beat, then to the next step; the counter reads "4.2 / 6".
+
+  ── THE AUDIENCE ────────────────────────────────────────────────────────
   The tour is written for someone who arrives from a LINK with no one
-  explaining it — the program manager case. So step 1 assumes nothing, and any
-  step that needs a selection brings its own via `State:` rather than asking
-  the visitor to click first.
+  explaining it — the program manager case. So step 1 assumes nothing, and
+  any step that needs a selection brings its own via `State:` rather than
+  asking the visitor to click first.
 -->
 
 # Explorer help
@@ -31,12 +116,61 @@ What this app is and how to move around it.
 ### app-title
 
 - **Title:** BDCHM Explorer
-- **Description:** An interactive map of the **BioData Catalyst Harmonized Model** — the classes it defines and how they relate. Pick some entities on the left and the diagram shows how they fit together.
+- **Description:** An interactive map of the [BioData Catalyst Harmonized Model](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/) — the ~55 entities defined by its [LinkML schema](https://linkml.io/) and how they relate to each other. You can use it to understand those relationships more quickly and thoroughly than with the static [LinkML documentation](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/).
+- **Context:** It is meant to help researchers who have access to data in BDCHM format and want to understand its structure; have data they want to harmonize to BDCHM format; or are designing studies and want to model them using BDCHM, or want to use BDCHM for ideas or inspiration for their own efforts.
 - **Interactions:**
+  - Pick some entities on the left and the diagram shows how they fit together.
   - Click the title to clear everything and start over.
+- **Anchor:** none
 - **Tour:** 1
 
+<!--
+  TODO(siggie): your draft has a bracketed note here —
+  "[add a phrase/sentence about the overall project; i'm trying to find a
+  good link for that]". Nothing invented in its place; the Description
+  above stops where your draft stops.
+
+  TODO(siggie): `Anchor: none` is a change of behaviour, not a translation.
+  Your draft says step 1 "sort of highlights the title but doesn't dim the
+  rest", and that you'd fix it only if it took under a minute. `none`
+  centers the popover and dims everything, which is the cheap fix. Switch
+  to `Anchor: app-title` if you'd rather it ring the title after all.
+-->
+
 ### selection-tree
+
+- **Title:** Entities
+- **Description:** A LinkML schema defines classes representing a data model's entities. A class defines a set of slots or attributes (like columns in a database table) which can hold
+- **Interactions:**
+  - other entities,
+  - permissible value sets (enumerations),
+  - or raw data types (strings, integers, etc.)
+- **Tour:** 2
+
+<!--
+  TODO(siggie): translated faithfully, but note what this replaced. The
+  entry that used to sit at tour position 2 was different copy entirely
+  ("Choosing what to look at" — ownership nesting, what the checkbox vs the
+  arrow vs the name each do, and a Context about an entity appearing in
+  more than one place). Your draft's step 2 does not cover any of that.
+  It is preserved verbatim as `selection-tree-mechanics` below, help-only,
+  so nothing is lost. Decide whether your step 2 should absorb it.
+
+  TODO(siggie): the three bullets are the tail of the Description sentence
+  ("...which can hold: other entities, ..."), not really "Interactions" —
+  they describe the schema, not things the viewer can do. Rendered as a
+  bullet list under the description, which reads correctly, but if you want
+  them typographically part of the sentence they should move into
+  Description as inline markdown.
+
+  TODO(siggie): no `State:`. Your draft's step 2 is pure exposition, but
+  the old step 2 carried `sel=Participant`. The test that required every
+  step after the first to bring its own state has been relaxed (see
+  helpContent.test.ts) — but if this step should show something on the
+  diagram, give it a State: and an Action:.
+-->
+
+### selection-tree-mechanics
 
 - **Title:** Choosing what to look at
 - **Description:** Entities are arranged by **ownership**: an entity is nested under whatever owns it. Tick a checkbox to put an entity on the diagram. The checkbox is the only thing that selects — clicking the row or the arrow just opens and closes the tree.
@@ -45,8 +179,45 @@ What this app is and how to move around it.
   - Arrow — expand or collapse, without changing the selection.
   - Name — open the details panel without changing the selection.
 - **Context:** An entity can sit in more than one place in the tree, because things can be owned by more than one kind of thing. The widget marks the duplicates for you.
-- **State:** sel=Participant
-- **Tour:** 2
+- **Anchor:** selection-tree
+
+### relationship-kinds
+
+- **Title:** How entities relate
+- **Description:** While the relationship between an entity and its enumerations and raw data attributes is direct (e.g., `MeasurementObservation.observation_type` → `MeasurementObservationTypeEnum`, or `MeasurementObservation.age_at_observation` → `integer`), it can be related to other entities in more complex ways.
+- **Action:** Selected MeasurementObservation for you, and highlighted its `observation_type` attribute.
+- **Anchor:** none
+- **State:** sel=MeasurementObservation
+- **Tour:** 3
+- **Beats:**
+  1. While the relationship between an entity and its enumerations and raw data attributes is direct, it can be related to other entities in more complex ways.
+     - Anchor: slot-row:MeasurementObservation.observation_type
+  2. **Inheritance**, known in modeling parlance as IS_A relationships — e.g. `MeasurementObservation.is_a` → `Observation`.
+     - Anchor: node-box:MeasurementObservation
+  3. **Association / ownership / containment**, known in modeling parlance as HAS_A relationships — e.g. `Visit.associated_participant` → `Participant`.
+     - Anchor: node-box:MeasurementObservation
+  4. A primary goal
+     - Anchor: none
+  5. Entities can be related to each other through
+     - Anchor: none
+
+<!--
+  TODO(siggie): beats 4 and 5 are your two truncated sentences, carried
+  over exactly as they trail off. Nothing invented. They will render as
+  broken fragments in the tour until you finish them — that is deliberate,
+  so they cannot ship unnoticed.
+
+  TODO(siggie): this step is where you asked "can we animate this so that
+  step 4 keeps this popover but shows the next bullet, etc?" Beats are the
+  answer: one popover, `next` reveals the following beat. Beat 1 repeats
+  the Description because a step's Description shows before its beats do;
+  if that reads as a stutter, cut one of them.
+
+  TODO(siggie): your draft numbers this "3" and puts "select
+  MeasurementObservation and highlight observation_type" in the step title.
+  The Action: field now says that out loud, which is the fix for the bug
+  where a step changed the app silently.
+-->
 
 ---
 
@@ -56,15 +227,47 @@ What the boxes and lines mean.
 
 ### graph-canvas
 
+- **Title:** Selecting an entity
+- **Description:** Select an entity by clicking its checkbox; the entity will appear in the main panel along with directly related entities. There are five ways an entity can be related to another.
+- **Action:** Selected Participant and BodySite for you. You would normally do this by ticking them in the tree on the left.
+- **State:** sel=BodySite~Participant
+- **Tour:** 4
+- **Beats:**
+  1. Select an entity by clicking its checkbox; the entity will appear in the main panel along with directly related entities. There are five ways an entity can be related to another.
+     - Anchor: selection-tree
+  2. This is the entity's row in the selection panel.
+     - Anchor: entity-row:Participant
+  3. Clicking the checkbox is what puts it on the diagram.
+     - Anchor: entity-checkbox:Participant
+
+<!--
+  TODO(siggie): your draft's step 4 says "goal is to show all the
+  relationship types. if there are any entities that use all four, select
+  one of those, otherwise will have to select one that has most and then
+  select another that has the others." That is an instruction to yourself,
+  not copy — it is NOT translated into a beat. The State: above still
+  carries the old `sel=BodySite~Participant`; pick the entity or entities
+  that actually demonstrate all five once you have checked which do.
+
+  Note the count: your draft says "five ways" here and you confirmed five
+  is right (four ownership kinds + associations). The stale "four" note is
+  gone.
+
+  TODO(siggie): this entry kept the id `graph-canvas` so its help-only
+  content is not orphaned, but your draft's step 4 is about the SELECTION
+  panel, not the canvas. The old canvas copy is preserved as
+  `graph-canvas-reading` below. Consider renaming this entry.
+-->
+
+### graph-canvas-reading
+
 - **Title:** The diagram
 - **Description:** Each box is an entity; each row inside it is one of that entity's attributes. Lines run from an owner to the thing it owns, so reading left to right is reading "contains".
 - **Interactions:**
   - Click a box to open its details.
   - Drag a box to move it; drag the background to pan.
   - Click an attribute row that names an entity to pull that entity onto the diagram.
-- **Context:** I have selected **Participant** and **BodySite** for you. You would normally do this by ticking them in the tree on the left.
-- **State:** sel=BodySite~Participant
-- **Tour:** 3
+- **Anchor:** graph-canvas
 
 ### relation-menu
 
@@ -76,6 +279,7 @@ What the boxes and lines mean.
   - "add all N" — draw a whole branch at once. The count is shown before you click. It appears only when there is more than one entity left to add.
   - **ⓘ** opens an entity's details without adding it to the diagram.
 - **Context:** From one entity's point of view there are five ways to be related. Four are ownership, and each names which side declares the attribute that creates it. Running *outward*: things that **belong to me by my attribute** (this entity declares the slot) and things that **belong to me by their attribute** (they declare it, pointing back here). Organization is entirely the second kind — it owns thirteen kinds of thing and declares no slot for any of them. Running *inward*, the same split: entities **I belong to, by my attribute** and entities **I belong to, by their attribute**. Fifth are **associations**, where neither entity owns the other.
+
 ### node-dismiss
 
 - **Title:** Closing a box
@@ -107,7 +311,7 @@ What the boxes and lines mean.
   - Click to copy; the URL bar always holds the same link.
 - **Context:** Settings travel in the link, so a diagram you set up deliberately does not get redrawn with someone else's preferences.
 - **State:** sel=BodySite~Participant
-- **Tour:** 4
+- **Tour:** 5
 
 ### example-cases
 

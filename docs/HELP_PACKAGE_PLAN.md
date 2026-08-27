@@ -19,8 +19,48 @@ tour steps perform state changes invisibly; `back` does not undo them; the
 spotlight can only ring a whole `data-help-id` element, so it cannot highlight a
 single ROW inside the dag-browser tree — which is what step 2 needs. Popover
 dragging is wanted as an escape hatch. State snapshots per step are the chosen
-mechanism; porting icd11-playground'"'"'s history-carrying state was considered and
+mechanism; porting icd11-playground's history-carrying state was considered and
 rejected as overkill.
+
+**Authoring format extended 2026-08-27 (S3a). The format spec is the header
+comment of [`src/help/help-content.md`](../src/help/help-content.md)** — keep it
+there, and keep it current. The format now expresses what the gaps above need,
+though the mechanism acting on it is still S3b's work:
+
+- **`Anchor:` separates identity from DOM target.** `### <id>` is identity
+  only; `Anchor:` says what to point at. Omitting it means
+  `help-id:<the entry id>`, so every entry written before this parses
+  unchanged. `Anchor: none` centres the popover and rings nothing.
+- **Anchor kinds are host-registered, not parser-known.** The parser splits
+  `kind:argument` and stops there — resolving `entity-row:Participant` means
+  knowing what a dmvd entity row is, which this package must not.
+  **This is an extraction constraint: do not "simplify" it back into the
+  parser.** dmvd's kinds: `help-id`, `entity-row`, `entity-checkbox`,
+  `slot-row`, `node-box`. Only `help-id` is implemented (in `HelpLayer.tsx`);
+  the others resolve to null and degrade to an unringed popover until S3b
+  builds them.
+- **`Beats:` gives a step ordered sub-steps.** One popover advancing through
+  several beats — this covers both nested sub-steps and
+  reveal-the-next-bullet, which Siggie asked for separately but which are one
+  mechanism. A step with no `Beats:` is one implicit beat, so pre-beat steps
+  behave identically.
+- **`Action:`** is where a step says what it just did to the app. This is the
+  format half of the "tour applies the state *and says so*" decision recorded
+  below under *Tour steps need per-step state* — settled 2026-08-26 but never
+  implemented, which is the bug that made Siggie misread step 2 in review.
+- **`tourPositions()` is the seam with the mechanism.** It flattens steps and
+  beats into one ordered list, each position carrying resolved
+  text/anchor/action/state, so the tour navigator never handles nesting.
+  `back` is `positions[i - 1]`.
+- **Test contract changed deliberately.** `helpContent.test.ts` used to assert
+  every entry *id* was tagged with a `data-help-id` — the very coupling this
+  format breaks. It now asserts every `help-id` *anchor* is tagged and that
+  anchor kinds are known, and replaces "every step after the first brings its
+  own state" with the stronger "a position that changes state carries an
+  `Action:`".
+
+Entry/exit state snapshots are runtime, not format — nothing is authored for
+them. That is S3b's to build.
 **Goal:** a gh-pages-hosted product tour for dmvd Explorer (not a video), built on
 a reusable help package shared across products.
 
@@ -163,6 +203,11 @@ The dmvd Explorer tour is roughly:
 2. Select an entity or two
 3. Examine the resulting graph — information and interaction features
 4. Open example cases, click one or two
+
+**Superseded 2026-08-27:** this four-step sketch is no longer the tour. Siggie
+is authoring the real thing in `help-content.md`; their draft is longer, uses
+nested beats, and highlights individual rows. Treat the sketch as history — the
+authored content is the source of truth for what the tour contains.
 
 Steps 3–4 only make sense once step 2 has happened, so **`HelpEntry` needs a
 per-step state field** — a URL param string the tour applies on entry.

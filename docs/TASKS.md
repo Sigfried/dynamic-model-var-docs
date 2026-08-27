@@ -12,9 +12,7 @@
 
 | # | Task | Est. | Status | Detail |
 |---|---|---|---|---|
-| 1 | **Selection panel → flat list, nested by inheritance, categories on top, no `Entity`.** dag-browser kept behind the toggle | ~0.5 day | ✅ done | `SelectionTable.tsx` 140→211 lines |
-| 2 | **Chips → cascading menus.** Also fixes the box-height/text-overlap bug | ~0.5–1 day | ✅ done | `RelationMenu.tsx` · [design](#chip-strips-relation-counts-menu-the-main-redesign) |
-| 3 | **The tour** — format (S3a) + mechanism (S3b) + copy (Siggie's) | ~0.5–1 day | ▶️ **NEXT — S3a first, then S3b** | [format](#s3a-tour-authoring-format-brief) · [mechanism](#s3b-tour-mechanism-brief) |
+| 3 | **The tour** — format (S3a ✅) + mechanism (S3b) + copy (Siggie's) | ~0.5–1 day | ▶️ **S3a DONE — S3b next** | [format](#s3a-tour-authoring-format-brief) · [mechanism](#s3b-tour-mechanism-brief) · [package plan](HELP_PACKAGE_PLAN.md) |
 | 5 | **Dark-gray box headers, white text** | ~10 min | ⬜ | [quick wins](#quick-wins-one-session-no-design-decisions) |
 | 6 | **Edge rendering** — one edge per declaring class; fixes the missing `Specimen.quality_measure` edge. **Decided: do not suppress `ObservationSet.observations`** | ~0.5 day | ⬜ | [§](#edge-rendering-the-fan-from-observationsetobservations) |
 | 7 | **Re-render regression** — "most clicks refresh the main panel". **Measure, don't guess** | ~unknown | ⬜ still uninvestigated | [§](#still-not-investigated-the-one-thing-that-is-not-understood) |
@@ -117,6 +115,26 @@ These keep their write-ups below so nothing is lost.
 
 ### S3a — Tour authoring format (brief)
 
+> ## ✅ DONE 2026-08-27
+>
+> The format is specified in the header comment of
+> [`src/help/help-content.md`](../src/help/help-content.md) — that comment is
+> the spec, per the existing convention. The decisions and the changed test
+> contract are recorded in
+> [HELP_PACKAGE_PLAN.md](HELP_PACKAGE_PLAN.md#known-gaps-scoped-2026-08-26),
+> which is the doc that survives the package extraction.
+>
+> **New fields:** `Anchor:` (identity no longer doubles as DOM selector),
+> `Beats:` (ordered sub-steps in one popover), `Action:` (a step says what it
+> just did). `tourPositions()` in `parseHelpContent.ts` is the seam S3b
+> navigates.
+>
+> **Siggie's draft is translated in, with gaps marked** as `TODO(siggie)` HTML
+> comments beside each entry — including the two sentences that trail off,
+> carried over unfinished on purpose. **The brief below is kept for its
+> reasoning**; the six constraints it lists are what the format was designed
+> against.
+
 **Goal: design the format Siggie will write the tour in, then translate their
 current draft into it — gaps, mistakes and all — so they can keep writing.**
 
@@ -188,11 +206,6 @@ before designing; each is a real limit in today's parser, not a guess:
    shape with them first — that interface is your seam.
 4. A short note in chat on what you could not express and why.
 
-**Ask Siggie, do not guess:** their draft says *"There are five ways an entity can
-be related to another"* while the surrounding text says four, and the
-chip-strip design has four positions plus association. Five may be right and
-four the typo. Ask — it is one of the open questions in the handoff.
-
 ---
 
 ### S3b — Tour mechanism (brief)
@@ -227,10 +240,29 @@ discard it.
   **dragging** is still wanted as an escape hatch, but it is item 8, not this.
 - Do not author tour copy — that is Siggie's, via S3a's format.
 
-**Seam with S3a:** S3a defines the format and its parsed shape. Doing S3a first
-means that shape exists before you start — build against it directly. Keep the
-state/anchor logic behind small functions anyway; the shape will still move once
-Siggie writes real copy against it.
+**Seam with S3a — now concrete (S3a shipped 2026-08-27).** Build against
+`tourPositions(content): TourPosition[]` in `parseHelpContent.ts`: one flat,
+ordered list of navigable positions, each carrying resolved
+`text` / `anchor` / `action` / `state`. Steps and beats are already flattened,
+so the navigator never handles nesting, and `back` is `positions[i - 1]`.
+
+What S3a left for you, mapped onto the three gaps above:
+
+1. **Announce actions** — `position.action` is authored and parsed; nothing
+   renders it. It needs its own visually distinct band in the popover.
+2. **Ring a row** — `position.anchor` is a `{ kind, arg }` pair.
+   `HelpLayer.elementFor()` implements only `help-id`; `entity-row`,
+   `entity-checkbox`, `slot-row` and `node-box` return null today and degrade
+   to an unringed popover. **These resolvers are the row-highlighting gap** —
+   they belong in the dmvd app, NOT in the parser, which must stay
+   host-agnostic for the package extraction.
+3. **Exact `back`** — every position carries a full absolute `state`, never a
+   diff, so navigation either way is already exact by construction. What is
+   missing is runtime: snapshot on tour entry, restore on exit, and the
+   popover line telling the viewer their own changes will be discarded.
+
+Also note the tour counter: with beats, `4.2 / 6` replaces `4 / 6`.
+`HelpLayer.tsx:158` still renders `tourStep + 1 / steps.length`.
 
 **Definition of done:** a tour step can announce that it acted, ring a specific
 row, and be navigated backwards into an exact prior state — demonstrated on the

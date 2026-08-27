@@ -16,11 +16,28 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
 import { useHelp } from './helpContext';
+import type { HelpAnchor } from './parseHelpContent';
 import './help.css';
 
+/**
+ * Resolve a parsed anchor to the element it points at.
+ *
+ * Only the built-in `help-id` kind is handled here. The dmvd-specific kinds
+ * (`entity-row`, `slot-row`, ...) need host-registered resolvers, which is
+ * S3b's work -- until those exist they resolve to null, which degrades to a
+ * centered, unringed popover rather than a crash.
+ */
+function elementFor(anchor: HelpAnchor | undefined): Element | null {
+  if (!anchor || anchor.kind === 'none') return null;
+  if (anchor.kind === 'help-id') {
+    return document.querySelector(`[data-help-id="${CSS.escape(anchor.arg)}"]`);
+  }
+  return null;
+}
+
 /** Where an anchor currently sits, or null when it is not on screen. */
-function rectOf(id: string): DOMRect | null {
-  const el = document.querySelector(`[data-help-id="${CSS.escape(id)}"]`);
+function rectOf(anchor: HelpAnchor | undefined): DOMRect | null {
+  const el = elementFor(anchor);
   return el ? el.getBoundingClientRect() : null;
 }
 
@@ -32,6 +49,13 @@ export default function HelpLayer() {
 
   const inTour = tourStep !== null;
   const entry = activeId ? content.entries.get(activeId) : undefined;
+  /**
+   * What the popover points at. Taken from the entry's `Anchor:` rather than
+   * from its id, so an entry's identity no longer has to double as a DOM
+   * selector. Entries authored without `Anchor:` parse to `help-id:<own id>`,
+   * which is the previous behaviour exactly.
+   */
+  const anchor = entry?.anchor;
   const [rect, setRect] = useState<DOMRect | null>(null);
   /** A hovered entry is transient; a clicked one stays until dismissed. */
   const [pinned, setPinned] = useState(false);
@@ -41,13 +65,12 @@ export default function HelpLayer() {
   // where the element used to be.
   useEffect(() => {
     if (!activeId) return;
-    const el = document.querySelector(`[data-help-id="${CSS.escape(activeId)}"]`);
-    el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  }, [activeId]);
+    elementFor(anchor)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [activeId, anchor]);
 
   useLayoutEffect(() => {
     if (!activeId) { setRect(null); return; }
-    const measure = () => setRect(rectOf(activeId));
+    const measure = () => setRect(rectOf(anchor));
     measure();
     // The anchor moves when the canvas relayouts, the window resizes, or a
     // smooth scroll settles. Re-measuring on all three is cheaper than trying
@@ -60,7 +83,7 @@ export default function HelpLayer() {
       window.removeEventListener('scroll', measure, true);
       window.clearInterval(t);
     };
-  }, [activeId]);
+  }, [activeId, anchor]);
 
   // Popover API: showPopover puts it in the top layer, above every z-index and
   // overflow:hidden ancestor.
@@ -80,8 +103,11 @@ export default function HelpLayer() {
     if (!helpMode || inTour) setPinned(false);
   }, [helpMode, inTour]);
 
+  // One hint per entry whose anchor is currently on screen. Keyed by entry id
+  // but resolved through the anchor, so an entry pointing at another element
+  // still gets its dot -- and an anchorless one correctly gets none.
   const hintIds = helpMode && !inTour
-    ? [...content.entries.keys()].filter(id => rectOf(id))
+    ? [...content.entries.values()].filter(e => rectOf(e.anchor)).map(e => e.id)
     : [];
 
   return (
@@ -105,7 +131,7 @@ export default function HelpLayer() {
       {/* Hints: one dot per tagged element, so help mode SHOWS what is
           helpable instead of relying on swapped native tooltips. */}
       {hintIds.map(id => {
-        const r = rectOf(id);
+        const r = rectOf(content.entries.get(id)?.anchor);
         if (!r) return null;
         return (
           <button
