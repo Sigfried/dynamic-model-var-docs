@@ -51,7 +51,7 @@ The estimates assume the code is already understood and exclude review cycles.
          kitchen sink view, but categories at top level and no Entity. tour description
          below should work either way
 2. replace chips with cascading menus. need this to go fast. tour depends on it
-2. **create the actual tour**:
+3. **create the actual tour**:
    1. current first step sort of highlights the title but doesn't dim the rest. fix
       only if it takes less than a minute. text:
       - **BDCHM Explorer**
@@ -91,9 +91,7 @@ The estimates assume the code is already understood and exclude review cycles.
           e.g., `Visit.associated_participant` --> `Participant`.
         A primary goal 
       - Entities can be related to each other through
-      
-      
-   3. goal is to show all the relationship types. if there are any entities
+   4. goal is to show all the relationship types. if there are any entities
       that use all four, select one of those, otherwise will have to select
       one that has most and then select another that has the others. steps:
       1. **Selecting an entity** Select an entity by clicking its checkbox;
