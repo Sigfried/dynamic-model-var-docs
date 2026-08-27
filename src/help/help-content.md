@@ -66,21 +66,16 @@ What the boxes and lines mean.
 - **State:** sel=BodySite~Participant
 - **Tour:** 3
 
-### owner-chips
+### relation-menu
 
-- **Title:** "owned by" chips
-- **Description:** Everything that owns this entity, listed as chips. A **filled** chip is on the diagram — click it to take it off. A **dashed** chip is not — click it to add it.
+- **Title:** The relation menu
+- **Description:** Every entity related to this one, grouped by how it is related. The trigger says how many there are; opening it branches into the four kinds of relationship, and each branch lists the entities in it.
 - **Interactions:**
-  - Click any chip to toggle that owner on or off.
-  - "add all" — draw every remaining owner at once.
-- **Context:** Only a few owners are drawn by default, to keep things readable; the rest wait as chips. Removing a drawn owner promotes one of the waiting ones into its place.
-
-### owns-chips
-
-- **Title:** "owns" chips
-- **Description:** Things this entity owns that are not on the diagram yet. Click one to add it.
-- **Context:** Some entities own things without showing a row for them, because the model stores the link on the other side. Organization is like this — it owns fourteen kinds of thing, none of which appear as its own attributes. These chips are the way in.
-
+  - Click **N related** to open the menu, then a branch to list its entities.
+  - Click an entity to put it on the diagram. Click it again — or its ✕ — to take it off; entities already drawn are shown struck through.
+  - "add all N" — draw a whole branch at once. The count is shown before you click.
+  - **ⓘ** opens an entity's details without adding it to the diagram.
+- **Context:** From one entity's point of view there are four ways to be related. Two of them are ownership running *outward*: things that **belong to me by my attribute** (this entity declares the slot) and things that **belong to me by their attribute** (they declare it, pointing back here). Organization is entirely the second kind — it owns fourteen kinds of thing and declares no slot for any of them. Then there are the things **I belong to**, and finally **associations**, where neither entity owns the other.
 ### node-dismiss
 
 - **Title:** Closing a box

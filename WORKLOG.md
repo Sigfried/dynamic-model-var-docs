@@ -7,6 +7,156 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-27 (S2) — chip strips → cascading relation menu
+
+Session S2 of the three-way parallel plan. Branch `s2-cascading-menus` off
+`tweaking-expand-prune`. Implements TASKS item 2 (D3: cascading menu) and
+item 4 (drop the duplicate header badge).
+
+### The brief's central warning was half right, and the half that was wrong
+### saved most of the day
+
+The brief said, in bold: *"the declaring side is currently erased.
+`containmentGraph.ts:267` flips `own-bkwd` edges at graph-build time...
+Recovering it means carrying the verdict through the DAG, not just the
+direction. This is the part most likely to be underestimated: it is not a
+UI-only change."*
+
+**That is true of the DAG and false of the edge list.** `ContainmentEdge`
+already carries BOTH `flipped` and `verdict` (containmentGraph.ts:193-204);
+what erases the declaring side is `buildOwnershipDag`, which projects edges
+down to `[source, target]` pairs, and the `hiddenOwners`/`drawnOwners`/
+`hiddenOwned` maps that are derived from `dag.parents`/`dag.children`.
+
+So the recovery does NOT need the verdict threaded through the DAG. A new
+`collectRelations(full)` walks the full edge list directly — the same shape as
+the existing `collectNodeSlots` right above it — and reads the declaring side
+off `e.flipped`. The DAG is untouched, layering is untouched, and the cap /
+suppression machinery is untouched.
+
+**Why this matters for the next session:** the estimate that "it is not a
+UI-only change" was driving a timeline. It was based on the DAG being the only
+route to the data, and there was a second route sitting one function above.
+Worth checking for a cheaper path before accepting a stated cost, even a
+measured-sounding one.
+
+### The four positions, measured before designing
+
+Per the brief's rule 6, a throwaway probe (deleted; superseded by
+`src/test/relationPositions.test.ts`) measured the actual position counts
+rather than reasoning about them. The result, which is what the menu branches
+on:
+
+| class        | owns-mine | owns-theirs | owned-mine | owned-theirs | assoc |
+|--------------|-----------|-------------|------------|--------------|-------|
+| Observation  | 3         | 0           | 3          | 1            | 0     |
+| Organization | 0         | **13**      | 0          | 0            | 0     |
+| Specimen     | 8         | 0           | 2          | 0            | 1     |
+| Quantity     | 0         | 0           | 0          | **13**       | 0     |
+| Document     | 1         | 0           | 0          | 0            | 1     |
+
+Two things fell out of this that the design notes did not predict:
+
+1. **Organization and Quantity are pure single-position classes.** Every one of
+   Organization's relationships is "belongs to me by THEIR attribute" and every
+   one of Quantity's is "I belong to, by their attribute". (13 distinct classes
+   each; the "14" in TASKS counts edges, and SpecimenTransportActivity reaches
+   Organization by two slots.) The old chips
+   showed each of these as one undifferentiated strip, so the strip conveyed
+   nothing the count did not. The menu's value on these two classes is entirely
+   in the *label*, not in the branching.
+2. **The "13 owner chips on Observation" in TASKS does not reproduce.**
+   Measured with `ownerCap: 0` (every owner chipped, the worst case):
+   Observation has 4 `hiddenOwners` + 3 `hiddenOwned` = 7 chips, and 7
+   relations across 4 positions. The class that actually carries 13-14 is
+   **Organization**. Either img-3 was Organization, or the schema changed since.
+   I did not chase which. **The overlap bug is real regardless** — it is
+   structural (JS-estimated height vs. browser `flex-wrap`), not a function of
+   any particular class's count — but do not go looking for a 13-chip
+   Observation to reproduce it against; it is not there.
+
+### Siggie named four branches; there are five positions
+
+The table in TASKS has four ownership cells, and Siggie's labels are *"N belong
+to me by my attribute," "N belong to me by their attribute," "N I belong to,"
+"N associated with"* — four, not five. The two `I belong to` cells share one
+label.
+
+Resolved by keying the menu branches on a **displayed** position, so
+`owned-theirs` folds into `owned-mine` for grouping while staying a distinct
+`RelationPosition` in the model. The declaring side stays visible in the item's
+slot subtitle. Do not "fix" this into five branches: it was a deliberate read
+of Siggie's own list.
+
+First attempt built all five groups and then merged two afterwards — it worked
+but was awkward (a filter-concat-resort over freshly built groups). Replaced
+with grouping by display key directly. Same output, half the code.
+
+### The height bug: replaced, not patched — and why the test asserts it sideways
+
+The brief was right that the strips' height was estimated in JS
+(`ownersStripHFor` counted characters at `CHAR_W = 4.6`) while the browser did
+the real `flex-wrap`. Both the estimator AND `rowsTop` — which edge anchors are
+measured from — consumed that estimate, so a low guess moved the rows up into
+the chips.
+
+The band is now `RELATIONS_BAND_H = 22`, one line unconditionally.
+`ownersStripHFor`, `OWNERS_LINE_H`, `OWNERS_PAD` and `ownerChips()` are gone.
+
+`src/test/boxHeightDeterministic.test.ts` asserts this **without importing the
+size constants** — it groups boxes by (rowCount, hasFooter, hasBand) and
+asserts each group agrees on a height, then asserts the per-row delta is a
+single value across all boxes. Written that way deliberately: importing
+`ROW_H`/`HEADER_H` would make the test restate the formula, so it would pass
+against any formula including a text-measuring one. Grouping catches the actual
+regression (height varying with label text) and survives someone retuning the
+constants.
+
+### Things deliberately NOT done
+
+- **The expansion fan-out.** Explicitly deferred by Siggie (*"let's see where we
+  end up with chip strip replacement before implementing"*). The menu now shows
+  the count before the click — `add all 21` on Participant — which was the
+  stated hope for making the rule change unnecessary. Untested against a real
+  user; leave the question open.
+- **`hiddenOwners`/`drawnOwners`/`hiddenOwned` were NOT removed.** They still
+  drive the cap and the suppression set, and `ownerToggles.test.ts` pins seven
+  behaviours on them. `relations` is additive. Removing them is a separate
+  change and would need that test suite rethought first.
+- **The `▷` badge was suppressed, not deleted.** It is identical to `⑃` only on
+  a MERGED box (`mergeSiblings` sets `subclassCount = members.length`). On an
+  ordinary box it counts drawn is-a out-edges, which is a different number.
+  TASKS item 4 said "identical by construction" — true, but only for the merged
+  case. Condition is `n.members.length === 0`.
+
+### A three-way parallel session in ONE working tree
+
+The plan assigned S1/S2/S3 separate branches, but `git checkout -b` does not
+give separate working trees — S1 and S2 were editing the same files
+simultaneously. Observed directly: my `OwnershipGraphView.tsx` write vanished
+mid-session because S1 ran `git stash` to isolate itself, and reappeared when
+S1 popped it. S1's session then committed **both sessions' in-progress work**
+together under commit `b17db08`, whose message is about TASKS.md.
+
+Nothing was lost, but the recovery cost time and the commit history now
+misattributes S2's work. **If sessions are run in parallel again, use
+`git worktree add`, not `git checkout -b`.**
+
+### Files
+
+- `src/models/ownershipSubgraph.ts` — `RelationPosition`,
+  `RELATION_POSITION_LABEL/ORDER`, `RelationEntry`, `collectRelations()`, and
+  `relations` on `OwnershipSubgraphNode`.
+- `src/explore/RelationMenu.tsx` — new. Portal-rendered (the box lives inside
+  the zoom/pan transform, so an in-place menu is clipped and scaled).
+- `src/explore/OwnershipGraphView.tsx` — `RelationGroupVM`,
+  `buildRelationGroups()`, `RELATIONS_BAND_H`; both chip strips replaced;
+  `nodeHeight`/`rowsTop` no longer estimate.
+- `src/help/help-content.md` — `owner-chips` + `owns-chips` → `relation-menu`.
+  **No `Tour:` number**: S3 owns tour ordering and 4 was already taken.
+- Tests: `relationPositions.test.ts` (11), `boxHeightDeterministic.test.ts` (3).
+
+---
 ## 2026-08-26 (planning session) — reviewing `0c6cfdc`; two of my answers were wrong
 
 A **planning-only** session. Siggie, midway: *"this whole session should be

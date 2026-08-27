@@ -1882,7 +1882,14 @@ export default function OwnershipGraphView({
                               ⊳ {parent}
                             </span>
                           ))}
-                          {n.subclassCount > 0 && (
+                          {/* On a MERGED box this is identical to ⑃ by
+                              construction (mergeSiblings sets subclassCount =
+                              members.length), so it was the same number twice
+                              and cost header room the relation trigger now
+                              needs. On an ordinary box it still means
+                              something different — drawn is-a out-edges — so
+                              it is suppressed rather than removed. */}
+                          {n.subclassCount > 0 && n.members.length === 0 && (
                             <span title={`${n.subclassCount} subclasses shown`}
                               className="text-[9px] px-1 rounded bg-sky-100 dark:bg-sky-900 text-sky-800 dark:text-sky-200">
                               ▷ {n.subclassCount}
@@ -1964,15 +1971,22 @@ export default function OwnershipGraphView({
                             onAdd={id => onExpand?.(id)}
                             onRemove={id => {
                               /*
-                               * Two mechanisms, because a class can be on the
-                               * canvas for two reasons. An EXPANSION is undone
-                               * by removing it; an owner drawn by the cap was
-                               * never expanded, so only a recorded dismissal
-                               * removes it. Firing both is what the box's own
-                               * dismiss button does, and for the same reason.
+                               * THREE mechanisms, because a class can be on the
+                               * canvas for three reasons, and the wrong one is
+                               * a no-op that makes the item look broken:
+                               *   - SELECTED       -> deselect it
+                               *   - expanded       -> drop the expansion
+                               *   - drawn by cap   -> record a dismissal (it
+                               *                       was never expanded, so
+                               *                       there is nothing to drop)
+                               * This is the same three-way split the box's own
+                               * ✕ makes, for the same reason. Selection has to
+                               * be tested first: a selected class is also in
+                               * neither of the other two sets, so collapse and
+                               * dismiss would both silently do nothing.
                                */
-                              onCollapse?.(id);
-                              onHideOwner?.(id);
+                              if (selectedIds.has(id)) onDeselect?.(id);
+                              else { onCollapse?.(id); onHideOwner?.(id); }
                             }}
                             onInspect={onNodeClick}
                           />
