@@ -7,6 +7,60 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-27 — the parallel-session round: what the git mess cost, and why
+
+Three sessions (S1 selection panel, S2 relation menu, S3 tour) were run against
+**one shared working tree**. The code all worked. The coordination cost ~90
+minutes and briefly made Siggie believe finished work was unfinished. Recorded
+so it is not repeated.
+
+### Three compounding failures
+
+1. **`git add -A` in a shared tree.** The coordinating session ran it to commit
+   a docs change while S1 and S2 had uncommitted work. Commit `b17db08` — message
+   "Split the tour session into S3a (format) and S3b (mechanism)", described as
+   docs-only — actually carries ~1128 lines of both sessions' implementation.
+   **The commit message is a lie and stays one**; splitting it was not worth the
+   time with a day left.
+2. **Sessions checked out branches under each other.** `git checkout` is global
+   to a working tree, so one session switching branches yanks the filesystem out
+   from under the others mid-edit. No amount of care prevents this — it is
+   structural. `git worktree` is the fix, one directory per session.
+3. **The coordinating session moved itself off the branch holding the work.**
+   To free branches for worktrees, it checked out `tweaking-expand-prune`, two
+   commits behind. Siggie then ran the app, saw no S1/S2 changes, and concluded
+   a lot of work remained. It was already done. **This was the expensive one** —
+   not because it lost anything, but because it made finished work look missing.
+
+Also: `s1-selection-panel` was left pointing at a docs commit containing the
+OLD 140-line `SelectionTable.tsx`. S1's work existed only inside `b17db08` on
+S2's branch. Repointed with `git branch -f`.
+
+### The rules that follow
+
+- **Never `git add -A`, `git add .`, or `git commit -a`.** Explicit paths only.
+  Siggie, after seeing the damage: *"i NEVER git add -A!!"*
+- **One worktree per concurrent session.** `git worktree add ../dir branch`.
+- **Never move the coordinating session off the branch under review.** If Siggie
+  is running the app from a checkout, that checkout must hold the work being
+  discussed.
+- **Ask before committing another session's uncommitted work.** Doing it
+  unasked was a further irritation on top of the mess.
+
+### What actually shipped
+
+`s2-cascading-menus` is a strict superset of `s1-selection-panel`, and `main` is
+an ancestor of it, so one fast-forward merge lands everything. S2's menu was
+seen running and judged "seems fine"; **S1's selection panel has never been
+looked at in a browser** — that is the first thing to check.
+
+### The meta-lesson
+
+The briefs were careful about *code* collisions (disjoint files per session) and
+said nothing useful about *git* collisions. Splitting work by file is not enough
+when every session shares one HEAD. Next time: worktrees first, then briefs.
+
+---
 ## 2026-08-26 (planning session) — reviewing `0c6cfdc`; two of my answers were wrong
 
 A **planning-only** session. Siggie, midway: *"this whole session should be
