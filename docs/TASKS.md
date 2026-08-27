@@ -11,8 +11,8 @@
 ## 🗓️ ONE DAY LEFT — the list
 
 **Restructured 2026-08-27 for Siggie to edit.** Everything below the fold is
-detail; this table is the whole plan. Nothing is merged or deployed — all work
-sits on branch `tweaking-expand-prune`.
+detail; this table is the whole plan. **S1 and S2 are merged to `main` and all
+tests pass; nothing is deployed.**
 
 **Siggie: edit this table.** Reorder, delete, or mark what you actually want.
 The estimates assume the code is already understood and exclude review cycles.
@@ -21,9 +21,9 @@ The estimates assume the code is already understood and exclude review cycles.
 
  | #  | Decision                                                                                                                          | Why it blocks                                                        | Detail                                                                     |
  |----|-----------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------|----------------------------------------------------------------------------|
- | D1 | Tour `back`: restore whole state, only tour-set keys, or lock interaction during a tour?                                          | Determines the tour's state mechanism; wrong pick means rewriting it | [Tour rework](#the-tour--the-problem-was-never-placement)                  |
- | D2 | `ObservationSet.observations` — still suppress its edge? **Your premise was wrong**: it is NOT abstract and DOES declare the slot | Changes what the edge redesign builds                                | [Edge rendering](#edge-rendering--the-fan-from-observationsetobservations) |
- | D3 | Chip-strip replacement: rows-per-relation-type vs cascading menu                                                                  | The single largest build item; everything visual depends on it       | [Chip strips](#chip-strips--relation-counts--menu-the-main-redesign)       |
+ | D1 | Tour `back`: restore whole state, only tour-set keys, or lock interaction during a tour?                                          | Determines the tour's state mechanism; wrong pick means rewriting it | [Tour rework](#the-tour-the-problem-was-never-placement)                  |
+ | D2 | `ObservationSet.observations` — still suppress its edge? **Your premise was wrong**: it is NOT abstract and DOES declare the slot | Changes what the edge redesign builds                                | [Edge rendering](#edge-rendering-the-fan-from-observationsetobservations) |
+ | D3 | Chip-strip replacement: rows-per-relation-type vs cascading menu                                                                  | The single largest build item; everything visual depends on it       | [Chip strips](#chip-strips-relation-counts-menu-the-main-redesign)       |
 
 - D1: if tour starts when state is not default, record state; 
   when tour ends/is exited, restore prior state; every step of tour is prespecified
@@ -100,25 +100,39 @@ The estimates assume the code is already understood and exclude review cycles.
       2. highlight row
       3. click checkbox. 
 
-**Status 2026-08-27, after the parallel round.** Items 1 and 2 are BUILT (not
-reviewed in a browser except S2, which Siggie says "seems fine"). See the
-[handoff](#-handoff--start-here-2026-08-27-after-the-parallel-session-round).
+**Status 2026-08-27, after the parallel round.** Items 1 and 2 are built and
+merged to `main`; tests pass; both reviewed. See the
+[handoff](#handoff-start-here-2026-08-27-after-the-parallel-session-round).
 
 | # | Task | Est. | Status | Detail |
 |---|---|---|---|---|
-| 1 | **Selection panel → flat list, nested by inheritance, categories on top, no `Entity`.** dag-browser kept behind the toggle | ~0.5 day | ✅ **built — UNCHECKED in browser** | `SelectionTable.tsx` 140→211 lines |
-| 2 | **Chips → cascading menus.** Also fixes the box-height/text-overlap bug | ~0.5–1 day | ✅ **built — Siggie: "seems fine"** | `RelationMenu.tsx` · [design](#chip-strips--relation-counts--menu-the-main-redesign) |
-| 3 | **The tour** — format (S3a) + mechanism (S3b) + copy (Siggie's) | ~0.5–1 day | ⬜ **unstarted; NOT blocked** | [format](#s3a--tour-authoring-format-brief) · [mechanism](#s3b--tour-mechanism-brief) |
-| 4 | **Drop the duplicate header badge** — `⑃` and `▷` identical by construction on a merged box | ~10 min | ⬜ check whether S2 took it | [§](#what-is-confirmed-broken-in-priority-order) |
-| 5 | **Dark-gray box headers, white text** | ~10 min | ⬜ | [§](#smaller-items-raised) |
-| 6 | **Edge rendering** — one edge per declaring class; fixes the missing `Specimen.quality_measure` edge. **D2: do not suppress** | ~0.5 day | ⬜ | [§](#edge-rendering--the-fan-from-observationsetobservations) |
-| 7 | **Re-render regression** — "most clicks refresh the main panel". **Measure, don't guess** | ~unknown | ⬜ still uninvestigated | [§](#still-not-investigated--the-one-thing-that-is-not-understood) |
+| 1 | **Selection panel → flat list, nested by inheritance, categories on top, no `Entity`.** dag-browser kept behind the toggle | ~0.5 day | ✅ done | `SelectionTable.tsx` 140→211 lines |
+| 2 | **Chips → cascading menus.** Also fixes the box-height/text-overlap bug | ~0.5–1 day | ✅ done | `RelationMenu.tsx` · [design](#chip-strips-relation-counts-menu-the-main-redesign) |
+| 3 | **The tour** — format (S3a) + mechanism (S3b) + copy (Siggie's) | ~0.5–1 day | ▶️ **NEXT — S3a first, then S3b** | [format](#s3a-tour-authoring-format-brief) · [mechanism](#s3b-tour-mechanism-brief) |
+| 4 | **Drop the duplicate header badge** — `⑃` and `▷` identical by construction on a merged box | ~10 min | ✅ merged — S2 took it | `OwnershipGraphView.tsx` (suppressed on merged boxes only) |
+| 5 | **Dark-gray box headers, white text** | ~10 min | ⬜ | [quick wins](#quick-wins-one-session-no-design-decisions) |
+| 6 | **Edge rendering** — one edge per declaring class; fixes the missing `Specimen.quality_measure` edge. **D2: do not suppress** | ~0.5 day | ⬜ | [§](#edge-rendering-the-fan-from-observationsetobservations) |
+| 7 | **Re-render regression** — "most clicks refresh the main panel". **Measure, don't guess** | ~unknown | ⬜ still uninvestigated | [§](#still-not-investigated-the-one-thing-that-is-not-understood) |
 | 8 | **Drag the tour popover.** Placement itself was exonerated | ~0.5 day | ⬜ | [§](#tour-and-help) |
 | 9 | **Edge crossings.** Cause unmeasured | ~unknown | ⬜ | [§](#smaller-items-raised) |
 
-> **First: merge `s2-cascading-menus` into `main`** (fast-forward — it contains
-> everything, S1 included) **and look at S1's selection panel in a browser.** It
-> is the one piece nobody has seen run.
+### 🍒 QUICK WINS — one session, no design decisions
+
+Small, self-contained, and none of them blocks or is blocked by the tour work.
+Each has an exact location and a decided outcome, so this list can be worked
+top-to-bottom without stopping to ask anything. Nothing here needs a browser
+first except confirming it looks right afterwards.
+
+| Item | Where | Est. |
+|---|---|---|
+| **Dark-gray box headers, white text** (table item 5) — currently `bg-slate-100 dark:bg-slate-700`; makes the colored child headers read as a family rather than anomalies | `OwnershipGraphView.tsx:1882` | ~10 min |
+| **`entityCol` tooltips say "ranges"** — LinkML jargon in researcher-facing text. Replace with *"Attributes whose value is an entity"* / *"...comes from a permissible value set"* / *"...is a data type"*, which also makes the three read as a partition of the attribute count. **`researcher` vocab only** — the `linkml` vocab keeps "ranges" legitimately | `appConfig.ts:126-128` (and `:203` for the short vocab) | ~10 min |
+| **First tour step doesn't dim the rest** while highlighting the title. Siggie: fix *only* if it takes under a minute — otherwise leave it for S3b | `HelpLayer.tsx` | ~1 min or skip |
+
+**Deliberately NOT in this list**, though they look small: edge crossings and
+the re-render regression (item 7) — both have **unmeasured causes**, and the
+standing rule is measure before proposing one. They are not quick wins; they are
+investigations wearing a quick win's clothes.
 
 ### Explicitly NOT this week
 
@@ -127,106 +141,35 @@ the ownership legend (postponed by Siggie) · multi-category membership ·
 CURIE links · the bare diagonal · dragging polish · example-cases restructuring.
 These keep their write-ups below so nothing is lost.
 
-### Before any of it — merge decision
-
-Nine commits sit unmerged on `tweaking-expand-prune`, reviewed but not
-deployed. **Verdict on the last one (`0c6cfdc`): keep it, fix forward** — see
-[the review](#verdict-on-0c6cfdc-keep-it-fix-forward). With one day left, decide
-early whether to merge to `main` and deploy what exists before adding to it.
-
----
-
----
-
----
-
 ## 🔁 HANDOFF — start here (2026-08-27, after the parallel-session round)
 
-> **Read this before touching branches.** The parallel-session experiment cost
-> ~90 minutes to untangle. The code is fine; only the git layout was a mess.
-
-### Where the code is
-
-**All of it is on `s2-cascading-menus`.** That branch is a strict superset of
-`s1-selection-panel` — S1's work sits inside commit `b17db08`, which S2's branch
-also contains. `main` is an ancestor, so **`git merge s2-cascading-menus` onto
-`main` fast-forwards cleanly.** Siggie's plan, 2026-08-27: *"i'll just merge it
-all to main and figure out where to go from there."*
-
-```
-04c6adb  tweaking-expand-prune   docs only
-   ↓
-b17db08  s1-selection-panel      S1's code + S2's, under a docs-only message
-   ↓
-d281aa7  s2-cascading-menus      S2's remaining work  ← EVERYTHING IS HERE
-```
-
-Worktrees exist at `../dmvd-s1` and `../dmvd-s2`. Once the merge lands they can
-be removed (`git worktree remove`).
-
-**⚠️ `b17db08`'s message is a lie.** It says "Split the tour session into S3a
-and S3b" and is described as docs-only; it actually contains ~1128 lines of S1's
-and S2's implementation (`RelationMenu.tsx`, `SelectionTable.tsx`,
-`ExploreApp.tsx`, `DataService.ts`, `ownershipSubgraph.ts`, tests). Cause: a
-`git add -A` in a working tree shared by three sessions. **Do not try to split
-it now** — both branches are built on it and it is not worth the time. Just know
-the message does not describe the contents.
-
-### What got built (needs review in a browser — none of it verified visually)
-
-- **S1 — selection panel.** Flat category-grouped list nested by inheritance,
-  no `Entity`, dag-browser kept behind the existing toggle. `SelectionTable.tsx`
-  went 140 → 211 lines; `SelectionTable.test.tsx` added.
-- **S2 — cascading relation menu.** `RelationMenu.tsx` (new, ~324 lines),
-  replacing the chip strips. Adds `RELATION_POSITION_ORDER` /
-  `buildRelationGroups`, and new tests `boxHeightDeterministic.test.ts` and
-  `relationPositions.test.ts`. Its own WORKLOG section is in the tree.
-  Also rewrote the `owner-chips` / `owns-chips` help entries into one
-  `relation-menu` entry.
-- **Siggie has seen S2 running and says it "seems fine". S1 is UNCHECKED.**
+**S1 and S2 are done** — merged to `main`, tests pass, reviewed. What is left
+below is the part that outlived the merge: the rules and a few loose ends.
 
 ### Rules learned the hard way — keep these
 
 1. **NEVER `git add -A`, `git add .`, or `git commit -a`.** Stage explicit paths.
-   This single mistake caused the whole mess.
+   A single such mistake put ~1128 lines of two sessions' implementation inside
+   `b17db08`, a commit whose message claims it is docs-only. That commit is now
+   in `main`'s history; its message still does not describe its contents.
 2. **One working tree per concurrent session**, via `git worktree`. Sessions
    sharing a checkout will `git checkout` the filesystem out from under each
    other — no amount of care prevents it.
 3. **Do not move the coordinating session off the branch the work is on.**
-   Doing that hid S1's and S2's work from Siggie in the running app and cost them
+   Doing that hid S1's and S2's work from Siggie in the running app and cost
    real time looking for work that was already done.
 4. Ask before committing another session's work.
 
-### Immediate next steps
+### Loose ends
 
-1. **Merge `s2-cascading-menus` → `main`** (fast-forward) and remove the
-   worktrees.
-2. **Look at S1's selection panel in the browser** — it is the one piece nobody
-   has seen run.
-3. Then pick up the task list at the top of this file.
-
-### Still not done, from the pre-existing plan
-
-- **S3a / S3b (tour format + mechanism)** — briefs are in this file, unstarted.
-  Only the tour COPY was ever blocked, and that is Siggie's to write.
-- **Item 6 — edge rendering** (one edge per declaring class; fixes the missing
-  `Specimen.quality_measure` edge). D2 answered: **do not suppress**
-  `ObservationSet.observations`; it is NOT abstract and DOES declare the slot.
-- **Item 7 — the re-render regression**, still uninvestigated. Measure, do not
-  guess.
-- Items 4, 5, 8, 9 — see the task table.
-- **`entityCol` tooltips say "ranges"** (S1, 2026-08-27). The researcher vocab's
-  count tips read `Entity-typed ranges` / `Permissible-value-set ranges` /
-  `Primitive-typed ranges` — LinkML jargon in researcher-facing text, flagged by
-  Siggie. No longer visible in the selection panel (counts removed there), but
-  still live in `EntityTable.tsx`. Proposed: *"Attributes whose value is an
-  entity"* / *"...comes from a permissible value set"* / *"...is a data type"*,
-  which also makes clear the three are a partition of the attribute count.
-  `researcher` vocab only — `linkml` keeps "ranges" legitimately.
+- The `entityCol` "ranges" tooltips moved to [Quick wins](#quick-wins-one-session-no-design-decisions).
+  Note the write-up used to say `EntityTable.tsx`; they actually live in
+  `appConfig.ts:126-128`.
+- Worktrees removed and the S1/S2 branches deleted, 2026-08-27.
 
 ### Open questions for Siggie
 
-- Their tour draft says *"five ways an entity can be related"* while surrounding
+- Your tour draft says *"five ways an entity can be related"* while surrounding
   text says four. S2 built four positions plus association. **Which is right?**
 - Two sentences in the tour draft trail off (`A primary goal`, `Entities can be
   related to each other through`), and two bracketed notes-to-self remain.
@@ -234,16 +177,22 @@ the message does not describe the contents.
 
 ---
 
-## 🚦 TOUR SESSION BRIEFS — S3a and S3b, still unstarted
+## 🚦 THE TOUR — S3a and S3b, next up
 
-> S1 and S2 are DONE (see the handoff above); their briefs are gone.
-> These two remain. Read the shared rules in the handoff first.
+> **This is the current work.** S1 and S2 are done and merged; their briefs are
+> gone. S3a (format) and S3b (mechanism) are unstarted and neither is blocked.
+>
+> **They are no longer parallel sessions.** Run them in one session, S3a first:
+> S3a defines the parsed shape that S3b builds against, so doing them in order
+> removes the "agree the interface early" coordination the briefs below assume.
+> Where a brief says "coordinate with S1/S2", that is now moot — read it as
+> describing the merged code in `main`.
 
 ### S3a — Tour authoring format (brief)
 
-> **NOT blocked. Run now, in parallel with S1 and S2.** Siggie, 2026-08-27:
-> *"the tour can be broken up into two or three sessions, only the authoring is
-> blocked but these can proceed."*
+> **NOT blocked; do this first.** Siggie, 2026-08-27: *"the tour can be broken
+> up into two or three sessions, only the authoring is blocked but these can
+> proceed."*
 
 **Goal: design the format Siggie will write the tour in, then translate their
 current draft into it — gaps, mistakes and all — so they can keep writing.**
@@ -318,7 +267,7 @@ before designing; each is a real limit in today's parser, not a guess:
 **Ask Siggie, do not guess:** their draft says *"There are five ways an entity can
 be related to another"* while the surrounding text says four, and the
 chip-strip design has four positions plus association. Five may be right and
-four the typo. He is available; ask.
+four the typo. Ask — it is one of the open questions in the handoff.
 
 ---
 
@@ -337,7 +286,7 @@ four the typo. He is available; ask.
 
 **1. Steps must visibly perform their actions.** Today a step carries
 `**State:** sel=Participant`, the canvas changes, and nothing says the tour did
-it. **This is the bug that made Siggie misread the entire step** — he read the
+it. **This is the bug that made Siggie misread the entire step** — they read the
 popover as describing the Participant box that had just appeared. Whatever form
 this takes (a line in the popover, a beat before the change, an animation), the
 user must be able to tell that the tour acted.
@@ -349,10 +298,9 @@ tagged elements are whole panels. Siggie also wants to highlight a slot row
 (`observation_type`) inside a box. **This is a real capability gap, not a
 tweak** — it needs anchors that can address a row.
 
-> ⚠️ **Coordinate with S1 on this one.** S1 is rewriting the selection panel, so
-> the row you must highlight will be S1's markup, not today's dag-browser rows.
-> Agree the tagging convention with them rather than tagging rows that are about
-> to be deleted.
+> ⚠️ **S1's markup is already in `main`** — the rows to highlight are
+> `SelectionTable.tsx`'s, not the old dag-browser rows. Tag against what is
+> there now; nothing is about to be deleted underneath you.
 
 **3. `back` must restore exactly, per D1** (quoted in S3a above). Snapshot on
 tour entry, restore on exit; every step sets its full state absolutely so
@@ -362,20 +310,18 @@ that stepping will discard it.
 **Do NOT do:**
 - **Do not "fix" popover placement.** It was investigated and **exonerated** —
   the geometry did the right thing; the bug was the invisible action (gap 1).
-  See [The tour](#the-tour--the-problem-was-never-placement). Popover
+  See [The tour](#the-tour-the-problem-was-never-placement). Popover
   **dragging** is still wanted as an escape hatch, but it is item 8, not this.
 - Do not author tour copy — that is Siggie's, via S3a's format.
 
-**Seam with S3a:** they are designing the format and its parsed shape. Agree the
-TypeScript interface early, then work against it. If S3a has not landed, build
-against today's `HelpEntry` and keep the state/anchor logic behind small
-functions so swapping the shape is cheap.
+**Seam with S3a:** S3a defines the format and its parsed shape. Doing S3a first
+means that shape exists before you start — build against it directly. Keep the
+state/anchor logic behind small functions anyway; the shape will still move once
+Siggie writes real copy against it.
 
 **Definition of done:** a tour step can announce that it acted, ring a specific
 row, and be navigated backwards into an exact prior state — demonstrated on the
 existing 4-step tour, even though its copy is about to be replaced.
-
----
 
 ---
 
@@ -394,8 +340,6 @@ existing 4-step tour, even though its copy is about to be replaced.
 - **Target release 2026-07-30 passed and was never renegotiated.** Treat
   "before the release" language elsewhere in the docs as stale.
   **Needs Siggie: set a new target or drop it.**
-
----
 
 ---
 
@@ -510,7 +454,7 @@ interacts freely mid-tour, a whole-state snapshot restore discards **their**
 changes too, which is surprising. The alternatives:
   - whole-state snapshot (simple, clobbers user edits on `back`);
   - track only the keys the tour itself set and restore just those (matches what
-    he asked for, but "the tour set `sel=Participant` and then the user added
+    they asked for, but "the tour set `sel=Participant` and then the user added
     Condition" has no obviously right answer);
   - soft-lock interaction during a tour (sidesteps it; may be too restrictive).
   This is also entangled with the still-open question of whether the user may
@@ -520,7 +464,7 @@ changes too, which is surprising. The alternatives:
 
 img-3 shows ~5 colored edges leaving one source row and landing on one target
 header. Siggie's three options were: one black edge / colored edges to child
-headers / keep-and-explain. **He then specified what he actually wants, which is
+headers / keep-and-explain. **They then specified what they actually want, which is
 neither of the first two as stated:**
 
 > *"ObservationSet.observations should be one black edge;
@@ -668,7 +612,7 @@ the redesign may dissolve the question.**
 
 - **Box headers should be dark-gray with white text**, to match the (infrequent)
   colored child headers. Siggie: *"been meaning to say."* Currently
-  `bg-slate-100 dark:bg-slate-700` (`OwnershipGraphView.tsx:1774`). Trivial, and
+  `bg-slate-100 dark:bg-slate-700` (`OwnershipGraphView.tsx:1882`). Trivial, and
   it makes the child-header colors read as a family rather than as anomalies.
 - **Unnecessary edge crossings.** *"there are a lot of unnecessary edge
   crossings. i don't know how much we can do to fix them, but we should try."*
@@ -681,7 +625,7 @@ the redesign may dissolve the question.**
   He also asked *"what would it look like if we just gave the types from the
   perspective of a single entity"* — i.e. the same four-position table above.
   **Carry-forward #3: they want this DESCRIBED to them before deciding.** Deferred;
-  he was *"too tired to work it all out."* Note the legend is separately
+  they were *"too tired to work it all out."* Note the legend is separately
   postponed (item H).
 
 ### 🔓 Still open — needs Siggie
@@ -764,7 +708,7 @@ old flat list showed. So categories did not break; they were never in the tree.
 
 That is a design question for Siggie, not a bug to fix:
 - Categories as an expanded TOP LAYER above the ownership roots (their own
-  earlier idea, and he predicted the consequence: *"a lot more duplicates will
+  earlier idea, and they predicted the consequence: *"a lot more duplicates will
   appear, across categories"*), or
 - Two separate trees, or
 - Keep the flat category list as the primary selector after all.
@@ -820,7 +764,7 @@ the right rows on a box that has both strips.
 
 ---
 
-### ✅ IMPLEMENTED 2026-08-26 — branch `tweaking-expand-prune`, NOT merged
+### ✅ IMPLEMENTED 2026-08-26 — merged to `main` 2026-08-27
 
 Siggie asked for five things, in their words:
 
@@ -855,8 +799,6 @@ Two pieces are not:
   prevented it is gone). Cases need optional sibs/dir/merge/owners fields first.
 - The flat category list and its `SelectionTable` import should be deleted once
   the tree is confirmed.
-
----
 
 ---
 
@@ -1288,36 +1230,29 @@ It caught four real errors this session that the bare form did not.
 
 ---
 
-### 🚧 Gotchas — unchanged, still true
-
-- `npx vitest` needs node 22: `export PATH="$HOME/.nvm/versions/node/v22.20.0/bin:$PATH"`
-- **Never run `npm run dev`** — Siggie keeps the app running himself.
-- `npm run typecheck` (`tsc -b --noEmit`), never bare `npx tsc --noEmit`.
-- `tsc` will NOT catch a stale union comparison — grep for removed literals.
-  Hit again this session: `MergeMode` is `'bend'`, not `'full'`.
-- `console.log` is swallowed in vitest; assert against a sentinel and read the
-  diff. That trick found every real diagnosis in this session.
-- Lint baseline is **20 errors**, all pre-existing (a missing `react-hooks` rule
-  definition plus `.vite/deps` cache files). Compare against the baseline rather
-  than expecting zero.
-
----
-
----
-
-### 🚧 Gotchas that cost time this session — read before running anything
+### 🚧 Gotchas — read before running anything
 
 - **`npx vitest` needs node 22+.** The default `node` is v16 and fails with a
   `node:fs/promises` export error that looks like a broken test setup but is
   not. Use
   `export PATH="$HOME/.nvm/versions/node/v22.20.0/bin:$PATH"`.
-- **Never run `npm run dev`.** Siggie keeps the app running himself.
+- **Never run `npm run dev`** — Siggie keeps the app running themselves.
+- `npm run typecheck` (`tsc -b --noEmit`), never bare `npx tsc --noEmit`.
+  It caught four real errors in one session that the bare form did not.
+  (In a sandbox `tsc -b` fails EPERM on `node_modules/.tmp`; the workaround is
+  `npx tsc --noEmit -p tsconfig.app.json --tsBuildInfoFile "$TMPDIR/app.tsbuildinfo"`.)
 - **`tsc` will NOT catch a stale union comparison.** When `'own-flip'` left the
   `OwnershipVerdict` union, every surviving `x === 'own-flip'` narrowed to
   `never` instead of erroring — so the typecheck stayed green while two live
   sites silently stopped matching (edge emission, and the legend's
   `flippedCount`). **Grep for the old literal; do not trust tsc for this.**
+  Hit again later: `MergeMode` is `'bend'`, not `'full'`.
 - **`console.log` is swallowed in vitest here.** To surface a value, assert it
   against a sentinel string and read the diff.
+- Lint baseline is **20 errors**, all pre-existing (a missing `react-hooks` rule
+  definition plus `.vite/deps` cache files). Compare against the baseline rather
+  than expecting zero.
+- jsdom does not do layout — see [TESTING.md](TESTING.md) before writing a test
+  that measures element positions.
 
 ---
