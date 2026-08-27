@@ -395,7 +395,12 @@ describe('MyComponent', () => {
 2. **Check if the API changed** - Did you modify function signatures?
 3. **Verify test assumptions** - Are mock data structures still valid?
 4. **Run single test file** - Isolate the failing test: `npm test -- filename`
-5. **Add console.log** in tests to debug - Vitest shows console output
+5. **To see `console.log`, pass `--disableConsoleIntercept`.** Plain
+   `npx vitest run` swallows it, and `--silent=false` does **not** bring it
+   back — measured both ways, 2026-08-27. Writing to a file with
+   `appendFileSync` and `cat`ing it afterwards also works and survives a crash.
+   (Do not reach for `--reporter=basic`: that reporter no longer exists in
+   vitest 4 and the error it throws looks unrelated to what you asked for.)
 
 ### Common Test Issues
 
@@ -414,6 +419,55 @@ describe('MyComponent', () => {
 **React Testing Library issues**
 - Ensure you're using `render()` from `@testing-library/react`
 - Check that components are properly exported
+
+### Testing code that measures layout
+
+**jsdom has no layout engine.** Every element reports `0×0`, every
+`getBoundingClientRect()` returns all zeroes, `offsetWidth`/`offsetHeight` are
+`0`, and `offsetParent` is `null`. Nothing throws — you just get zeroes.
+
+This makes a whole class of test **pass vacuously**: a component that clamps,
+flips, or repositions itself sees `0` everywhere, takes some arbitrary branch,
+and the assertion agrees with it. The test is green and pins nothing.
+
+Worse, it corrupts *debugging*. While fixing the relation submenu's overflow
+(2026-08-27), a correct fix appeared to make things **worse** — the menu never
+flipped at all — purely because the new code read `offsetParent`/`offsetWidth`,
+which were unstubbed, so its condition collapsed to `false`. The measurement was
+reporting on the harness, not the code.
+
+**Rule: stub every property the code under test reads, not just the obvious
+one.** Before trusting a layout measurement in a test, check what the component
+actually touches — `getBoundingClientRect` is rarely the only one.
+
+`src/test/RelationMenuPlacement.test.tsx` is the worked example: it stubs
+`getBoundingClientRect`, `offsetParent`, `offsetWidth`, `window.innerWidth` and
+`window.innerHeight`, using the component's own Tailwind widths as the numbers
+so the fake geometry stays honest.
+
+Two conventions from that file worth copying:
+
+- **Keep layout-faking tests in their own file.** They patch shared prototypes
+  (`Element.prototype`, `HTMLElement.prototype`), and mixing them with ordinary
+  behavioural tests means those silently run under fake geometry. Restore the
+  originals in `afterEach` regardless — vitest isolates files today, but that is
+  not something a test should depend on.
+- **Verify the test fails against the old code.** A layout test that has never
+  been seen red is the most likely kind to be pinning nothing at all. Revert the
+  fix, watch it fail, restore it. This is the only thing that distinguishes a
+  real regression test from a vacuous one here.
+
+**When *not* to reach for this.** Faking geometry is a lot of scaffolding and it
+can drift from the real CSS. If the behaviour is decidable from data rather than
+pixels, test it there instead — `relationPositions.test.ts` covers what the menu
+*contains* with no layout at all, and only *where it opens* needed the stubs.
+
+**Known gap (2026-08-27).** Five other components measure layout and have no
+placement test between them: `FloatingBoxGroup`, `Tooltip`, `LayoutManager`,
+`LinkOverlay`, and `help/HelpLayer`. Any positioning bug in those is currently
+found by looking at the screen. Not a call to go write five test files — but if
+one of them misbehaves, this section plus `RelationMenuPlacement.test.tsx` is
+the pattern to reach for rather than re-deriving it.
 
 ---
 

@@ -237,6 +237,11 @@ function Submenu({
    * needed", `flip` went false, and the panel jumped right and overflowed —
    * with nothing left to trigger another measurement. Parent geometry and our
    * own width are both independent of `flip`, so this cannot oscillate.
+   *
+   * Covered by RelationMenuPlacement.test.tsx. If you change WHICH properties
+   * are read here, update that file's stubs to match — jsdom returns zeroes
+   * for anything unstubbed, so the tests would keep passing while measuring
+   * nothing. See docs/TESTING.md, "Testing code that measures layout".
    */
   useLayoutEffect(() => {
     const el = ref.current;

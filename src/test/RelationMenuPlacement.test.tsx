@@ -6,11 +6,19 @@ import type { RelationGroupVM } from '../explore/OwnershipGraphView';
 /**
  * Where the cascade's submenu opens.
  *
+ * ⚠️ READ `docs/TESTING.md`, "Testing code that measures layout", BEFORE
+ * EDITING. jsdom has no layout engine, so a test like this passes vacuously
+ * unless every property the component reads is stubbed — and an unstubbed one
+ * makes a CORRECT fix look broken. That is not hypothetical; it happened while
+ * writing this file.
+ *
  * Split from RelationMenu.test.tsx because these tests have to fake layout:
  * jsdom reports every element as 0×0 with a null `offsetParent`, so the flip
  * logic would see zeroes and every assertion would pass vacuously. `stubLayout`
  * supplies plausible geometry; the numbers are the component's own Tailwind
  * widths (parent `min-w-[13rem]` = 208px, submenu `min-w-[14rem]` = 224px).
+ * Keep those in sync with the component if its widths change — nothing here
+ * reads the real CSS.
  *
  * The bug that motivated the file: the submenu measured ITS OWN `right` to
  * decide whether to flip, which is self-referential. Switching branches re-ran
