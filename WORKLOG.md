@@ -111,14 +111,31 @@ the grep test**, because there is no attribute literal to grep for. That is why
 sites — it is the only thing standing between a markup rename and a silently
 unringed popover.
 
-### Not verified
+### Verification, and the worktree trap that delayed it
 
-`npm test` could not run: vitest needs to write `node_modules/.vite-temp/`, and
-the sandbox denies writes under `node_modules/` in this worktree. Typecheck
-(`tsc -b`) and eslint are clean. `src/test/helpResolvers.test.ts` is written but
-has never executed — treat its passing as unproven until someone runs it.
-(`tsc -b` also cannot write its `.tsbuildinfo` cache for the same reason; that
-one is harmless, it just means no incremental reuse.)
+Full suite green: 34 files, 358 passed, 2 skipped (both pre-existing in
+`DetailContent.test.tsx`), 0 failed. `helpResolvers.test.ts` is 17 of those.
+Typecheck and eslint clean. **Not verified in a browser** — the resolvers' logic
+is tested against DOM fixtures, but nothing here has been seen rendering.
+
+**Worth knowing if you set up another worktree:** this one initially had
+`node_modules` symlinked to the main checkout's
+(`s3b-implement-tour/node_modules -> ../dynamic-model-var-docs/node_modules`).
+That saves an install but makes the test suite **unrunnable under the sandbox**:
+vitest must write a transient bundled config into `node_modules/.vite-temp/`,
+and the sandbox resolves symlinks before matching its allow-list — so writes
+were evaluated against the *main checkout's* path, which no worktree-scoped rule
+covers. `tsc -b` hit the same wall on its `.tsbuildinfo` cache (harmless, just
+no incremental reuse).
+
+Two false leads before finding it, both worth skipping next time: the first
+sandbox patch anchored the globs at `~/.claude/**` rather than the repo, and the
+second used `github-repos/**/node_modules/...` which *looks* correct and still
+failed — because the symlink meant the resolved path was the main checkout's.
+The tell was `cd node_modules && pwd -P`, which no amount of reading the config
+would have surfaced. **Diagnosis: resolve the real path before debugging the
+glob.** Siggie removed the symlink and installed properly, which fixed it
+outright.
 
 ---
 ## 2026-08-27 (S3a) — the tour authoring format

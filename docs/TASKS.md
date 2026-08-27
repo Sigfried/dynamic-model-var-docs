@@ -32,7 +32,6 @@ first except confirming it looks right afterwards.
 |---|---|---|
 | **Dark-gray box headers, white text** (table item 5) — currently `bg-slate-100 dark:bg-slate-700`; makes the colored child headers read as a family rather than anomalies | `OwnershipGraphView.tsx:1882` | ~10 min |
 | **`entityCol` tooltips say "ranges"** — LinkML jargon in researcher-facing text. Replace with *"Attributes whose value is an entity"* / *"...comes from a permissible value set"* / *"...is a data type"*, which also makes the three read as a partition of the attribute count. **`researcher` vocab only** — the `linkml` vocab keeps "ranges" legitimately | `appConfig.ts:126-128` (and `:203` for the short vocab) | ~10 min |
-| ~~**First tour step doesn't dim the rest**~~ **— explained, not a bug.** The dim is the spotlight ring's outer `box-shadow`, so no ring means no dim. Step 1 is authored `Anchor: none`, which S3a deliberately chose (it is a whole-app introduction, not a pointer at the title). To get the dim back, change step 1's anchor to `app-title` — an authoring decision, Siggie's | `help-content.md` | ~1 min |
 
 **Deliberately NOT in this list**, though they look small: edge crossings and
 the re-render regression (item 7) — both have **unmeasured causes**, and the
@@ -232,9 +231,14 @@ before designing; each is a real limit in today's parser, not a guess:
 > - The counter reads `4.2 / 6`, and a beatless step reads plain `5 / 6`.
 >
 > **Two bugs found and fixed while in there**, both pre-existing: the popover
-> was gated on a resolved anchor, so `Anchor: none` steps (step 1, step 3)
-> displayed nothing at all; and `scrollIntoView` ran once, before the row a
-> step's `State:` creates exists, so row anchors were never scrolled to.
+> was gated on a resolved anchor, so `Anchor: none` steps displayed nothing at
+> all; and `scrollIntoView` ran once, before the row a step's `State:` creates
+> exists, so row anchors were never scrolled to.
+>
+> **Step 1 now uses `Anchor: app-title`** (Siggie, 2026-08-27), so it rings the
+> title and dims the rest — closing the old "first step doesn't dim" quick win,
+> which was an authoring choice rather than a bug: the dim IS the spotlight
+> ring's outer shadow, so an anchorless step cannot have one.
 >
 > **Task 11 (CSS anchor positioning) is now unblocked** — its stated blocker
 > was these resolvers. See the header comment in `HelpLayer.tsx` for what the
@@ -242,10 +246,14 @@ before designing; each is a real limit in today's parser, not a guess:
 > `slot-row` selects on a PAIR of them, which no single `anchor-name` rule
 > expresses.
 >
-> **Not verified by a test run.** `npm test` cannot start in the S3b worktree —
-> vitest needs to write `node_modules/.vite-temp/`, which the sandbox denies.
-> Typecheck and lint are clean; `src/test/helpResolvers.test.ts` is written but
-> unrun. **Needs Siggie: run the suite.**
+> **Verified 2026-08-27:** full suite green — 34 files, 358 passed, 2 skipped
+> (both pre-existing, in `DetailContent.test.tsx`), 0 failed. Typecheck and
+> lint clean. `src/test/helpResolvers.test.ts` covers the four resolvers with
+> DOM fixtures copied from the real render sites: 17 tests, all passing.
+>
+> **Still unverified: the browser.** Nothing here has been seen running. The
+> logic is tested, the *look* is not — the action band, the warning line, and
+> whether step 3's beats behave when the diagram relayouts between anchors.
 
 **Goal: close the three known gaps in the tour machinery.** All are in
 `src/help/HelpLayer.tsx` and `HelpProvider.tsx`.

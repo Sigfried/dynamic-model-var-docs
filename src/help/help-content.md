@@ -194,7 +194,7 @@ What this app is and how to move around it.
 - **Interactions:**
   - Pick some entities on the left and the diagram shows how they fit together.
   - Click the title to clear everything and start over.
-- **Anchor:** none
+- **Anchor:** app-title
 - **Tour:** 1
 
 <!--
@@ -203,11 +203,10 @@ What this app is and how to move around it.
   good link for that]". Nothing invented in its place; the Description
   above stops where your draft stops.
 
-  TODO(siggie): `Anchor: none` is a change of behaviour, not a translation.
-  Your draft says step 1 "sort of highlights the title but doesn't dim the
-  rest", and that you'd fix it only if it took under a minute. `none`
-  centers the popover and dims everything, which is the cheap fix. Switch
-  to `Anchor: app-title` if you'd rather it ring the title after all.
+  Anchor resolved 2026-08-27 (Siggie): `app-title`, not `none`. Rings the
+  title AND dims the rest — the dim is the spotlight ring's outer shadow,
+  so an anchorless step gets no dim by construction. This closes your
+  draft's "sort of highlights the title but doesn't dim the rest".
 -->
 
 ### selection-tree
