@@ -24,7 +24,7 @@ import DetailDrawer from './DetailDrawer';
 import ExampleCasesPane from './ExampleCasesPane';
 import type { ExampleCase } from './exampleCases';
 import { HelpProvider } from '../help/HelpProvider';
-import { useHelp } from '../help/helpContext';
+import { useHelp, HELP_MODE_ENABLED } from '../help/helpContext';
 import HelpLayer from '../help/HelpLayer';
 import { helpResolvers } from './helpResolvers';
 import helpMarkdown from '../help/help-content.md?raw';
@@ -496,13 +496,21 @@ function HelpButton() {
       >
         take the tour
       </button>
-      <button
-        onClick={toggleHelpMode}
-        className={`text-sm underline hover:text-white ${helpMode ? 'text-white font-semibold' : 'text-blue-100'}`}
-        title="Show a dot on everything that has help (press ? anywhere)"
-      >
-        {helpMode ? '✓ help mode' : 'help'}
-      </button>
+      {/*
+        The help-mode toggle is hidden while HELP_MODE_ENABLED is false — it
+        was the only way in, and the mode is off pending the fixes listed in
+        docs/HELP_PACKAGE_PLAN.md. Kept rather than deleted so turning the
+        flag back on restores the button with it.
+      */}
+      {HELP_MODE_ENABLED && (
+        <button
+          onClick={toggleHelpMode}
+          className={`text-sm underline hover:text-white ${helpMode ? 'text-white font-semibold' : 'text-blue-100'}`}
+          title="Show a dot on everything that has help (press ? anywhere)"
+        >
+          {helpMode ? '✓ help mode' : 'help'}
+        </button>
+      )}
     </span>
   );
 }

@@ -7,6 +7,128 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-27 (later) — Siggie reviews help mode; it goes off
+
+First review the help system ever got. It was written before the tour work and
+Siggie had never looked at it: *"you wrote the whole help system before we
+started on the tour stuff and i never reviewed it."* It did not survive. Full
+defect list and fix order are in HELP_PACKAGE_PLAN.md ("Help mode: switched
+off"); what belongs here is why it went off rather than getting fixed, and the
+corrections I had to make along the way.
+
+**Off, not deleted.** `HELP_MODE_ENABLED = false` in `helpContext.ts` hides the
+toggle and disables `?`. Every entry, anchor, resolver and the popover itself
+still work, and the tour drives the same registry. The alternative — fix it now
+— was rejected on scope: the real repair is re-tagging the UI at row/control
+granularity (30+ new entries, each needing copy someone must write), plus the
+hint measurement, the exits, `(i)` for `?`, and a decision about help mode
+forbidding the interactions its own text describes. That is a project, and it
+competes with shipping the tour. Siggie: *"maybe help is so buggy we turn it
+off so we can focus on tour?"*
+
+**Two corrections I owe the record.**
+
+1. *"Anchor api should help — the hints are supposed to be popovers
+   themselves."* Right, and I had underrated it: I had been treating CSS anchor
+   positioning as a popover-follows-anchor concern only. The hint dots go stale
+   (misplaced until hovered) because **React** owns their position and only
+   repositions on re-render — `hintIds` and each dot's `left/top` are computed
+   during render, and the 250ms re-measure interval only runs while `activeId`
+   is set. `anchor-name`/`position-anchor` hands tracking to the browser and
+   deletes the bug rather than patching it. `popover="hint"` and `interestfor`
+   cover the rest of the hint interaction. Recorded in the plan.
+
+2. *"How does it become wrong?"* — challenging my claim that the relation-menu
+   redesign would make `hopSymmetry.test.ts` wrong by design. I had named the
+   wrong file and overstated the cost. `hopSymmetry.test.ts` asserts the
+   OPPOSITE of what I said: UP automatic, DOWN on demand, "one hop either
+   direction" true of what is REACHABLE, not what is drawn. The actual coupling
+   is one line in `ownershipSubgraph.ts` — `const core = new Set([...selectedIds,
+   ...expansions])`, with the owner loop running over `core` — which is why
+   expanding a row also drags in that class's owners (Siggie hitting this on
+   `value_quantity`). Under the redesign the owner loop DISAPPEARS, so those
+   tests do not become wrong, they become moot, along with `ownerToggles.test.ts`
+   (seven behaviours pinning a cap that would no longer exist). Deleting a
+   feature is cheaper than splitting `core` by provenance, which is what the
+   earlier deferral (see "Distinguish selected from expanded" above) was
+   actually protecting against. Siggie's two concessions — hide-all hides the
+   whole group even if selected, and add auto-checks the selection box — remove
+   the need for provenance tracking entirely: if expanding IS selecting,
+   `expansions` folds into `selectedIds` and the distinction stops existing.
+
+### Absolute-per-step state may not survive — the stack idea
+
+Siggie, on seeing the `back` fix land: *"i think there's a better way with
+back: keep the concise 'what changes' in State: ... and hold on to state as a
+stack. if the new piece of state is already in the state, add it a second time,
+so back can just pop off the stack and the user's actions remain untouched."*
+
+It works, and it is better than what shipped. The duplicate push is a
+**reference count**, which is the standard correct answer for shared ownership:
+if the viewer already had `Participant` selected and a step also wants it, the
+second push means popping removes only the TOUR's copy. Viewer actions survive
+`back` by construction rather than by warning about them.
+
+What it buys, beyond exact `back`: **no restore-on-exit** (leaving mid-tour just
+unwinds the remaining stack, which also preserves edits the snapshot approach
+clobbers) and **no "your changes will be discarded" warning**.
+
+I argued for a hybrid — refcounted pushes for the set-like fields (`sel`, `exp`,
+`hidden`) and previous-value frames for the six scalars (`detail`, `roots`,
+`sibs`, `dir`, `merge`, `owners`), which have one slot each and so have no
+refcount meaning. **Siggie declined, and was right to:** *"you're
+overcomplicating for the sake of probably rare edge cases. just do the stack. if
+scalar settings clobber user actions, don't worry about it. easy enough for the
+user to reclick the button."* A tour step that sets `dir=TB` over the viewer's
+`dir=LR` costs one click to undo; carrying a second frame type through the
+format, the parser and the tests costs considerably more. Do the simple stack.
+
+One implementation note that is NOT an edge case: `toggleSelect` has a side
+effect — selecting a class removes it from `expandedIds` (an expansion
+superseded by a real selection). So a frame must record what actually changed,
+not what the step asked for, or the pop will not invert it.
+
+**Not started.** It replaces the "every position carries full absolute state"
+design that S3a/S3b are built on: `State:` becomes a delta field (probably
+renamed), `goTo` becomes push-or-pop by direction, beat inheritance changes
+meaning, and the absolute-state tests below become wrong. Deliberately sequenced
+AFTER the fixes in this entry, so the tour works today either way.
+
+### Two tour bugs, both real
+
+**`back` did not undo anything.** S3b's design claim was that `back` is exact
+"by construction" because every position carries full absolute state. It holds
+only if every step HAS a state, and steps 1 and 2 had none (there was already a
+`TODO(siggie)` in the file saying step 2 needed one). Returning to them from
+step 3 applied nothing and kept `sel=MeasurementObservation` on screen.
+
+Fixing the content alone was not enough: an empty `State:` parses to `''`, and
+`goTo` read `if (pos.state && ...)`, so the empty query — a REAL state, the
+default view — was treated as "no state" and skipped. `endTour` already had
+this right for its snapshot (*"`''` ... is a real state to restore, not a
+missing one, so test for null"*); `goTo` did not. Now `!= null` in both, with
+`State:` present-but-empty meaning "default view" and the field's ABSENCE
+meaning inherit. That distinction is now documented in the format spec and
+pinned by a test requiring every tour step to carry a `State:`.
+
+Strengthening the companion "a step that changes state says what it did" test
+to `!= null` immediately failed on step 1 — correctly by its own logic, since
+`''` differs from `undefined`. But the first position establishes the tour's
+starting view rather than changing one the viewer was looking at, and opening
+the tour with "I cleared your selection" is wrong. So position 0 is exempt,
+which is stated in the test rather than worked around.
+
+**Interactions/Shortcut/Context were dead content.** They were gated on
+`!inTour` — deliberate, with a recorded reason (help furniture would bury a
+step's own text). With help mode off, `!inTour` never holds, so every
+`Interactions:`, `Shortcut:` and `Context:` in the file was authored, parsed,
+tested, and rendered nowhere. Ungated. Siggie asked why they show in help but
+not the tour; the honest answer is that the tour is exactly where someone is
+learning what they can do, so withholding "here is what you can do here" was
+backwards even before the mode went away. If a popover grows too long the fix
+is to shorten that entry, not to hide a field the author deliberately wrote.
+
+---
 ## 2026-08-27 (S3b) — the tour mechanism
 
 Ran in a worktree parallel to Siggie writing tour copy on `main`, so

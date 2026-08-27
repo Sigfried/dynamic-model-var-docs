@@ -116,6 +116,116 @@ The three gaps above are closed. What the extraction now has to carry:
 - **Scrolling the anchor into view is retried, not done once.** A step applies
   its `State:`, and the row it points at is created by the render that state
   causes — so at first measure the element usually does not exist yet.
+
+## Help mode: switched off 2026-08-27, tour unaffected
+
+`HELP_MODE_ENABLED` in `src/help/helpContext.ts` is `false`. That hides the
+`help mode` toggle and disables the `?` shortcut — the only two ways in.
+**Nothing is deleted**: entries, anchors, resolvers, hints and the popover all
+still work, and the tour drives the same registry. Flip the flag to get the
+mode back exactly as it was.
+
+Why: Siggie reviewed help mode for the first time on 2026-08-27 (the whole help
+system was written before the tour work and never reviewed) and it did not
+survive contact. The problems are a cluster, several structural, and fixing
+them properly is a project competing with shipping the tour. The tour is the
+deliverable; help mode is the thing that can wait.
+
+### What is actually broken
+
+**1. No visible way out — the trap.** Exits exist (`Escape`, `?` again,
+clicking an untagged element, window blur) and *none* is discoverable. Worse:
+- `close` on the popover closes the POPOVER, not the mode, so the viewer
+  believes they have left and has not. Their next ordinary click is then eaten
+  by the capture-phase interceptor.
+- "Click outside a tagged element" barely exists as a target: `graph-canvas`
+  and `selection-tree` tag the two big regions, so nearly the whole screen is
+  tagged. Siggie: *"the whole screen is tagged."*
+- Clicking the `help mode` toggle while in help mode did nothing, because the
+  toggle sits inside `data-help-id="help-button"` — the interceptor resolved
+  the click to "show the help-button entry" instead of letting it toggle. The
+  one control that looks like the way out was disabled by the mode it exits.
+
+**Fix:** the toggle already renders state (`✓ help mode`); make it read as the
+exit (`✕ exit help`) and let its click through the interceptor. Then drop
+exit-on-blur (Siggie: *"actually kind of annoying"* — you switch windows to
+read something and come back to a silently changed mode), and collapse the
+two-stage Escape to one (*"two escapes is a lot"*); the popover already has
+`close` and click-away.
+
+**2. Help mode forbids the interactions its own text describes.** The
+selection-panel entry says *"Tick a checkbox to put an entity on the
+diagram"* — and in help mode ticking it cannot work, because the capture-phase
+handler cancels the click by design. Content and mode contradict each other and
+nothing catches it.
+
+**3. Click resolution is far too coarse.** `showEntry` uses
+`target.closest('[data-help-id]')`, and **no row, checkbox or disclosure arrow
+is tagged** — the nearest tagged ancestor of all 53 rows is the whole
+`selection-tree` panel. So clicking any row, any checkbox, any arrow returns
+the same panel-level entry. It is not choosing the wrong entry; there is only
+one entry for that entire region. Siggie: *"not even one that seems to match
+what i clicked on."*
+
+**4. Coverage is wherever tags happened to land.** 11 `data-help-id` tags
+exist, placed for the TOUR's needs. Hence help for `close` and the relation
+menu but nothing for attribute rows, the related-count pill, or the edge
+types — and no help for *reading* the diagram, which is the thing a newcomer
+most needs. Nobody has yet walked the UI asking "what does a first-timer need
+explained here?"
+
+**5. Hints are misplaced until hovered.** Two distinct defects:
+- **Stale positions.** `hintIds` and each dot's `left/top` are computed
+  **during render** in `HelpLayer`, and the 250ms re-measure interval only runs
+  while `activeId` is set. With no popover open, dots are placed once and never
+  updated, so any relayout strands them. Hovering calls `showEntry`, which
+  re-renders, which is why *"it moves when i hover over it"*.
+- **No viewport test.** `rectOf` is `getBoundingClientRect()` and tests only
+  that the element EXISTS. An entry anchored at a `node-box` scrolled far
+  outside the visible canvas still gets a dot, drawn at that off-screen
+  element's coordinates. This is why dots pile onto the first entity drawn.
+
+**6. `?` is overloaded three ways.** The hint glyph, the keyboard shortcut, and
+the `?` on the help/tour buttons are all `?` meaning different things.
+**Siggie's call: use `(i)` and call them info buttons**, freeing `?` for the
+shortcut alone. The hint `title` should say "info button", not "dot".
+
+### The CSS anchor API is the right fix for the hint bugs
+
+Siggie, 2026-08-27: *"anchor api should help — the hints are supposed to be
+popovers themselves."* Correct, and this note previously undersold it by
+treating anchor positioning as only a popover-follows-anchor concern.
+
+Defect 5 is exactly what `anchor-name` / `position-anchor` removes. The dots go
+stale because **React** is responsible for repositioning them and only does so
+on re-render. Hand that to the browser and the dot tracks its anchor through
+scrolls, relayouts and canvas redraws with no measurement, no interval, and no
+re-render — deleting the stale-position bug rather than patching it.
+
+Two related platform features land on the rest of it:
+- **`popover="hint"`** — hint popovers do not close other popovers the way
+  `auto` does, which is the wanted behaviour when a hint opens during help mode.
+- **Interest invokers (`interestfor`)** — hover-to-preview, declaratively.
+  That is most of the current `onMouseEnter`/`onMouseLeave`/`pinned` logic.
+
+**Caveat, unchanged:** the blanket `[data-help-id] { anchor-name }` rule does
+not reach resolver-backed anchors (`entity-row`, `slot-row`, `node-box`,
+`entity-checkbox`), whose elements the diagram creates and destroys as it
+relayouts. Those need anchor names assigned where the rows are rendered. That
+is the same reason the migration was deferred until after S3b, and it is still
+the one piece of real design work in it.
+
+### Order to do this in, when help mode comes back
+
+1. Migrate to CSS anchor positioning (kills defect 5, and the popover's
+   `setInterval` / flip-clamp arithmetic with it).
+2. Exit affordance + drop blur-exit + single Escape (defect 1).
+3. `(i)` instead of `?` (defect 6).
+4. Tag rows and controls, and write the entries for them (defects 3 and 4) —
+   the largest piece, and the one that is content work rather than code.
+5. Decide what help mode does about interactions it must block (defect 2):
+   either soften the text under help mode or let some controls through.
+
 **Goal:** a gh-pages-hosted product tour for dmvd Explorer (not a video), built on
 a reusable help package shared across products.
 

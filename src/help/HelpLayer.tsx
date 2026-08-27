@@ -240,20 +240,29 @@ export default function HelpLayer() {
             )}
 
             {/*
-              Interactions, shortcut and context are HELP furniture: they
-              describe an element you are inspecting. During a tour they would
-              bury the step's own text under a list the viewer did not ask for,
-              so the tour shows only action + text + nav.
+              Interactions, shortcut and context used to be gated on `!inTour`:
+              help furniture for an element you are inspecting, which during a
+              tour would bury the step's own text.
+              **Ungated 2026-08-27.** With help mode switched off
+              (HELP_MODE_ENABLED), `!inTour` never holds, so the gate made
+              every `Interactions:`, `Shortcut:` and `Context:` in the file
+              dead content — authored, parsed, tested, and rendered nowhere.
+              Siggie asked why interactions appear in help but not the tour;
+              the honest answer is that the tour is exactly where someone is
+              learning what they can do, so withholding "here is what you can
+              do here" was backwards even before the mode went away.
+              If a step's popover grows too long, the fix is to shorten that
+              entry, not to hide a field the author deliberately wrote.
             */}
-            {!inTour && entry.interactions.length > 0 && (
+            {entry.interactions.length > 0 && (
               <ul className="help-popover-interactions">
                 {entry.interactions.map((it, i) => <li key={i}><Markdown>{it}</Markdown></li>)}
               </ul>
             )}
-            {!inTour && entry.shortcut && (
+            {entry.shortcut && (
               <p className="help-popover-shortcut">Shortcut: <kbd>{entry.shortcut}</kbd></p>
             )}
-            {!inTour && entry.context && (
+            {entry.context && (
               <div className="help-popover-context"><Markdown>{entry.context}</Markdown></div>
             )}
 

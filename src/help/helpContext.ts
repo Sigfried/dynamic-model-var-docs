@@ -21,6 +21,22 @@ import type { HelpAnchor, HelpContent, TourPosition } from './parseHelpContent';
  */
 export type AnchorResolver = (arg: string) => Element | null;
 
+/**
+ * Help MODE is off; the tour is not.
+ *
+ * Turned off 2026-08-27 after Siggie reviewed it (the whole help system was
+ * written before the tour work and never reviewed). It was not one bug but a
+ * cluster, several of them structural — see the "Help mode: switched off"
+ * section of docs/HELP_PACKAGE_PLAN.md for the full list and the fix plan.
+ *
+ * NOTHING is deleted: every entry, anchor, resolver and popover still works,
+ * and the tour reads the same registry. This flag only removes the way IN to
+ * help mode — the `help mode` toggle and the `?` shortcut. Set it back to
+ * true to get the mode back exactly as it was, which is the point: the fixes
+ * are worth doing, just not before the tour ships.
+ */
+export const HELP_MODE_ENABLED = false;
+
 export interface HelpApi {
   helpMode: boolean;
   toggleHelpMode: () => void;

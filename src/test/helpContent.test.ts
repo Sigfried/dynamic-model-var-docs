@@ -166,16 +166,53 @@ describe('help content', () => {
     // The bug this format exists to fix: a step silently altered the diagram
     // and the popover read as a description of whatever appeared. A position
     // whose state differs from the one before it must carry an Action:.
+    //
+    // `!= null`, not truthiness: an empty `State:` means the DEFAULT view,
+    // and arriving at it from a step that had a selection clears the diagram
+    // — very much a change the viewer needs told about.
+    // The FIRST position is exempt: it establishes the tour's starting view
+    // rather than changing one the viewer was looking at. (The tour restores
+    // whatever they had when it ends, which is where that is accounted for.)
     const silent: string[] = [];
     positions.forEach((p, i) => {
-      const prev = i === 0 ? undefined : positions[i - 1].state;
-      if (p.state && p.state !== prev && !p.action) {
+      if (i === 0) return;
+      const prev = positions[i - 1].state;
+      if (p.state != null && p.state !== prev && !p.action) {
         silent.push(`${p.entry.id}#${p.beatIndex}`);
       }
     });
     expect(
       silent,
       `Tour positions that change the app without saying so: ${silent.join(', ')}`,
+    ).toEqual([]);
+  });
+
+  test('every tour STEP carries an absolute state, so back is exact', () => {
+    /*
+     * Siggie, 2026-08-27: "backwards tour step doesn't undo anything."
+     *
+     * `back` is `positions[i - 1]` and applies that position's `State:`. That
+     * is only exact if every step HAS one: steps 1 and 2 had none, so going
+     * back to them applied nothing and left the following step's selection on
+     * screen. An exposition step that shows the default view must say so with
+     * an empty `State:` rather than by omitting the field.
+     *
+     * Steps, not positions: a BEAT may omit `State:` and inherit its step's,
+     * which is the mechanism that keeps a long `sel=` from being repeated on
+     * every beat. Back within a step is exact either way.
+     *
+     * NOTE: this test encodes the absolute-per-step model, which may be
+     * replaced by the state STACK described in WORKLOG.md (2026-08-27). Under
+     * a stack a step declares only what it ADDS and `back` pops, so requiring
+     * a full state per step becomes meaningless — delete this test then rather
+     * than trying to satisfy it.
+     */
+    const stateless = tourSteps(content)
+      .filter(e => e.state == null)
+      .map(e => e.id);
+    expect(
+      stateless,
+      `Tour steps with no State: (back cannot undo into them): ${stateless.join(', ')}`,
     ).toEqual([]);
   });
 });

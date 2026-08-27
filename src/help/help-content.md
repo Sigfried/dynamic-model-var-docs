@@ -166,8 +166,33 @@ so arriving at it from either direction gives the same view.
 - **State:** sel=BodySite~Participant
 ```
 
-A step or beat that changes nothing omits `State:` and inherits whatever the
-previous one set.
+**Every `Tour:` step must carry a `State:`, and an empty value is a real one.**
+
+| Written | Means |
+|---|---|
+| `- **State:** sel=Participant` | that selection |
+| `- **State:**` (no value) | the default view — nothing selected |
+| *(field absent)* | inherit whatever the previous position set |
+
+The empty form is what an exposition step needs. Omitting the field entirely
+looks equivalent but is not: `back` applies the previous position's state, so a
+step with no state of its own cannot undo the step after it, and the viewer
+steps backwards into last step's diagram. That is the bug behind *"backwards
+tour step doesn't undo anything"* — steps 1 and 2 had no `State:`, so returning
+to them from step 3 kept `sel=MeasurementObservation` on screen. A test now
+requires one per step.
+
+Inheritance is still right for **beats**, which is what keeps a long `sel=` from
+being repeated on every beat of a step.
+
+> **This whole model may be replaced.** Absolute-per-step state is why the tour
+> must snapshot and restore the viewer's view, and why a mid-tour edit raises a
+> "your changes will be discarded" warning: applying a full query overwrites
+> whatever the viewer did. Siggie proposed a **state stack** instead —
+> each step pushes only what it adds, `back` pops, and a push of something the
+> viewer already had is pushed again so popping removes only the tour's copy.
+> That leaves viewer actions untouched, and makes both the restore-on-exit and
+> the warning unnecessary. See WORKLOG.md, 2026-08-27.
 
 The tour **also** snapshots the viewer's own state when it starts and restores
 it when it ends. That is runtime behaviour, not format — nothing is authored
@@ -221,6 +246,7 @@ What this app is and how to move around it.
   - Pick some entities on the left and the diagram shows how they fit together.
   - Click the title to clear everything and start over.
 - **Anchor:** app-title
+- **State:**
 - **Tour:** 1
 
 <!--
@@ -243,6 +269,7 @@ What this app is and how to move around it.
   - other entities,
   - permissible value sets (enumerations),
   - or raw data types (strings, integers, etc.)
+- **State:**
 - **Tour:** 2
 
 <!--

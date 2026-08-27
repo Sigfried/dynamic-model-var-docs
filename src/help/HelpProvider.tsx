@@ -31,7 +31,9 @@ import {
 } from 'react';
 import { parseHelpContent, tourPositions, tourSteps } from './parseHelpContent';
 import type { HelpAnchor } from './parseHelpContent';
-import { HelpContext, type AnchorResolver, type HelpApi } from './helpContext';
+import {
+  HelpContext, HELP_MODE_ENABLED, type AnchorResolver, type HelpApi,
+} from './helpContext';
 
 /** True when focus is in a text field, so `?` types instead of toggling. */
 function isInputFocused(): boolean {
@@ -116,7 +118,19 @@ export function HelpProvider({
     setTourIndex(i);
     setActiveId(pos.entry.id);
     setViewerEdited(false);
-    if (pos.state && onApplyState) {
+    /*
+     * `!= null`, not truthiness. `State:` with an empty value is a REAL
+     * state — the default view, nothing selected — exactly as `endTour`'s
+     * snapshot of `''` is. Testing truthiness treated it as "no state" and
+     * applied nothing, so stepping BACK to an exposition step left the
+     * following step's selection on screen (Siggie, 2026-08-27: "backwards
+     * tour step doesn't undo anything"). Steps 1 and 2 now carry an empty
+     * `State:` for exactly this reason.
+     *
+     * A step with NO `State:` field at all is still inheritance, which is
+     * what lets a multi-beat step avoid repeating a long `sel=` per beat.
+     */
+    if (pos.state != null && onApplyState) {
       onApplyState(pos.state);
       appliedState.current = pos.state;
     }
@@ -166,6 +180,9 @@ export function HelpProvider({
     // restore like every other exit.
     if (tourIndex !== null) endTour();
     setActiveId(null);
+    // Gated rather than removed: with help mode off this is the only door,
+    // so closing it here means no caller can open the mode by accident.
+    if (!HELP_MODE_ENABLED) return;
     setHelpMode(v => !v);
   }, [tourIndex, endTour]);
 
@@ -239,7 +256,7 @@ export function HelpProvider({
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === '?' && !isInputFocused()) {
+      if (e.key === '?' && !isInputFocused() && HELP_MODE_ENABLED) {
         e.preventDefault();
         toggleHelpMode();
         return;
