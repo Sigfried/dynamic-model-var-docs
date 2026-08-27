@@ -10,108 +10,13 @@
 
 ## 🗓️ ONE DAY LEFT — the list
 
-**Restructured 2026-08-27 for Siggie to edit.** Everything below the fold is
-detail; this table is the whole plan. **S1 and S2 are merged to `main` and all
-tests pass; nothing is deployed.**
-
-**Siggie: edit this table.** Reorder, delete, or mark what you actually want.
-The estimates assume the code is already understood and exclude review cycles.
-
-### Must decide before building (blocking, minutes not hours)
-
- | #  | Decision                                                                                                                          | Why it blocks                                                        | Detail                                                                     |
- |----|-----------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------|----------------------------------------------------------------------------|
- | D1 | Tour `back`: restore whole state, only tour-set keys, or lock interaction during a tour?                                          | Determines the tour's state mechanism; wrong pick means rewriting it | [Tour rework](#the-tour-the-problem-was-never-placement)                  |
- | D2 | `ObservationSet.observations` — still suppress its edge? **Your premise was wrong**: it is NOT abstract and DOES declare the slot | Changes what the edge redesign builds                                | [Edge rendering](#edge-rendering-the-fan-from-observationsetobservations) |
- | D3 | Chip-strip replacement: rows-per-relation-type vs cascading menu                                                                  | The single largest build item; everything visual depends on it       | [Chip strips](#chip-strips-relation-counts-menu-the-main-redesign)       |
-
-- D1: if tour starts when state is not default, record state; 
-  when tour ends/is exited, restore prior state; every step of tour is prespecified
-  so navigation either way gives exact state. allow interaction, but explain to user
-  that their changes will be undone by each step on tour
-- D2: don't suppress 
-- D3: cascading menu
-
-### Build, in recommended order
-
-**[sg] quicker for me to make my own list. you can integrate into the table or whatever**
-
-1. **selection panel**: i wrote the below about deciding whether to keep dag-browser. we just don't have
-   time to fix it. but keeping it for after deadline if we have time to work on it then.
-   so, for now, go back to "flat" list but structure it by inheritance like in the
-   kitchen sink view, except categories at top level and no Entity
-   1. **dag-browser**: need to determine if we keep it. i can't even explore it
-      until we have horizontal scrolling and at least panel resize (drag right edge)
-      1. top level must be by our made-up categories; maybe second level also follows
-         flat tree order. i'm not sure what happens with roots -- but in order to get
-         top level to be categories, the dag will need, just for browser, to add the
-         categories as parents of entities
-      2. let's bang this out as quickly as possible and make determination
-      3. if we do go back to flat list, structure it by inheritance like in the
-         kitchen sink view, but categories at top level and no Entity. tour description
-         below should work either way
-2. replace chips with cascading menus. need this to go fast. tour depends on it
-3. **create the actual tour**:
-   1. current first step sort of highlights the title but doesn't dim the rest. fix
-      only if it takes less than a minute. text:
-      - **BDCHM Explorer**
-      - An interactive map of the [BioData Catalyst Harmonized Model](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/)
-        [add a phrase/sentence about the overall project; i'm trying to find a
-        good link for that]
-        — the ~55 entities defined by its [LinkML schema](https://linkml.io/)
-        and how they relate to each other. You can use it to more quickly and thoroughly
-        understand the relationships than with the static [LinkML documentation](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/).
-        It is meant to help researchers who:
-        - Have access to data in BDCHM format and want to understand its structure;
-        - Have data that they want to harmonize to BDCHM format; or
-        - Are designing studies and want to model them using BDCHM or want to use
-          BDCHM for ideas or inspiration for their own efforts.
-      - Pick some entities on the left and the diagram shows how they fit
-        together. Click the title to clear everything and start over.
-   2. highlight selection panel. text:
-      - **Entities**
-      - A LinkML schema defines classes representing a data model's entities.
-        A class defines a set of slots or attributes (like columns in a database table)
-        which can hold
-        - other entities,
-        - permissible value sets (enumerations),
-        - or raw data types (strings, integers, etc.)
-   3. select MeasurementObservation and highlight observation_type. text:
-      - While the relationship between an entity and its enumerations and raw
-        data attributes is direct (e.g.,
-        `MeasurementObservation.observation_type` --> `MeasurementObservationTypeEnum`
-        or `MeasurementObservation.age_at_observation` --> `integer`), it can be
-        related to other entities in more complex ways
-        [can we animate this so that step 4 keeps this popover but shows the next bullet, etc?
-        not sure best way to represent this in my outline...well, we're going to need a reasonably
-        human-readable/writable format for the full tour specs anyway]
-        - inheritance, known in modeling parlance as IS_A relationships,
-          e.g., `MeasurementObservation.is_a` --> `Observation`, or
-        - association / ownership / containment, known in modeling parlance as HAS_A relationships,
-          e.g., `Visit.associated_participant` --> `Participant`.
-        A primary goal 
-      - Entities can be related to each other through
-   4. goal is to show all the relationship types. if there are any entities
-      that use all four, select one of those, otherwise will have to select
-      one that has most and then select another that has the others. steps:
-      1. **Selecting an entity** Select an entity by clicking its checkbox;
-         the entity will appear in the main panel along with directly related
-         entities. There are five ways an entity can be related to another.
-      2. highlight row
-      3. click checkbox. 
-
-**Status 2026-08-27, after the parallel round.** Items 1 and 2 are built and
-merged to `main`; tests pass; both reviewed. See the
-[handoff](#handoff-start-here-2026-08-27-after-the-parallel-session-round).
-
 | # | Task | Est. | Status | Detail |
 |---|---|---|---|---|
 | 1 | **Selection panel → flat list, nested by inheritance, categories on top, no `Entity`.** dag-browser kept behind the toggle | ~0.5 day | ✅ done | `SelectionTable.tsx` 140→211 lines |
 | 2 | **Chips → cascading menus.** Also fixes the box-height/text-overlap bug | ~0.5–1 day | ✅ done | `RelationMenu.tsx` · [design](#chip-strips-relation-counts-menu-the-main-redesign) |
 | 3 | **The tour** — format (S3a) + mechanism (S3b) + copy (Siggie's) | ~0.5–1 day | ▶️ **NEXT — S3a first, then S3b** | [format](#s3a-tour-authoring-format-brief) · [mechanism](#s3b-tour-mechanism-brief) |
-| 4 | **Drop the duplicate header badge** — `⑃` and `▷` identical by construction on a merged box | ~10 min | ✅ merged — S2 took it | `OwnershipGraphView.tsx` (suppressed on merged boxes only) |
 | 5 | **Dark-gray box headers, white text** | ~10 min | ⬜ | [quick wins](#quick-wins-one-session-no-design-decisions) |
-| 6 | **Edge rendering** — one edge per declaring class; fixes the missing `Specimen.quality_measure` edge. **D2: do not suppress** | ~0.5 day | ⬜ | [§](#edge-rendering-the-fan-from-observationsetobservations) |
+| 6 | **Edge rendering** — one edge per declaring class; fixes the missing `Specimen.quality_measure` edge. **Decided: do not suppress `ObservationSet.observations`** | ~0.5 day | ⬜ | [§](#edge-rendering-the-fan-from-observationsetobservations) |
 | 7 | **Re-render regression** — "most clicks refresh the main panel". **Measure, don't guess** | ~unknown | ⬜ still uninvestigated | [§](#still-not-investigated-the-one-thing-that-is-not-understood) |
 | 8 | **Drag the tour popover.** Placement itself was exonerated | ~0.5 day | ⬜ | [§](#tour-and-help) |
 | 9 | **Edge crossings.** Cause unmeasured | ~unknown | ⬜ | [§](#smaller-items-raised) |
@@ -143,56 +48,74 @@ These keep their write-ups below so nothing is lost.
 
 ## 🔁 HANDOFF — start here (2026-08-27, after the parallel-session round)
 
-**S1 and S2 are done** — merged to `main`, tests pass, reviewed. What is left
-below is the part that outlived the merge: the rules and a few loose ends.
-
 ### Rules learned the hard way — keep these
 
 1. **NEVER `git add -A`, `git add .`, or `git commit -a`.** Stage explicit paths.
    A single such mistake put ~1128 lines of two sessions' implementation inside
    `b17db08`, a commit whose message claims it is docs-only. That commit is now
    in `main`'s history; its message still does not describe its contents.
-2. **One working tree per concurrent session**, via `git worktree`. Sessions
-   sharing a checkout will `git checkout` the filesystem out from under each
-   other — no amount of care prevents it.
-3. **Do not move the coordinating session off the branch the work is on.**
-   Doing that hid S1's and S2's work from Siggie in the running app and cost
-   real time looking for work that was already done.
-4. Ask before committing another session's work.
 
 ### Loose ends
 
 - The `entityCol` "ranges" tooltips moved to [Quick wins](#quick-wins-one-session-no-design-decisions).
   Note the write-up used to say `EntityTable.tsx`; they actually live in
   `appConfig.ts:126-128`.
-- Worktrees removed and the S1/S2 branches deleted, 2026-08-27.
-
-### Open questions for Siggie
-
-- Your tour draft says *"five ways an entity can be related"* while surrounding
-  text says four. S2 built four positions plus association. **Which is right?**
-- Two sentences in the tour draft trail off (`A primary goal`, `Entities can be
-  related to each other through`), and two bracketed notes-to-self remain.
-- `~55 entities` in the draft vs `Entities (54)` in the app header.
 
 ---
 
 ## 🚦 THE TOUR — S3a and S3b, next up
 
-> **This is the current work.** S1 and S2 are done and merged; their briefs are
-> gone. S3a (format) and S3b (mechanism) are unstarted and neither is blocked.
->
-> **They are no longer parallel sessions.** Run them in one session, S3a first:
-> S3a defines the parsed shape that S3b builds against, so doing them in order
-> removes the "agree the interface early" coordination the briefs below assume.
-> Where a brief says "coordinate with S1/S2", that is now moot — read it as
-> describing the merged code in `main`.
+### Current tour unfinished draft
+
+1. current first step sort of highlights the title but doesn't dim the rest. fix
+   only if it takes less than a minute. text:
+   - **BDCHM Explorer**
+   - An interactive map of the [BioData Catalyst Harmonized Model](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/)
+     [add a phrase/sentence about the overall project; i'm trying to find a
+     good link for that]
+     — the ~55 entities defined by its [LinkML schema](https://linkml.io/)
+     and how they relate to each other. You can use it to more quickly and thoroughly
+     understand the relationships than with the static [LinkML documentation](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/).
+     It is meant to help researchers who:
+     - Have access to data in BDCHM format and want to understand its structure;
+     - Have data that they want to harmonize to BDCHM format; or
+     - Are designing studies and want to model them using BDCHM or want to use
+       BDCHM for ideas or inspiration for their own efforts.
+   - Pick some entities on the left and the diagram shows how they fit
+     together. Click the title to clear everything and start over.
+2. highlight selection panel. text:
+   - **Entities**
+   - A LinkML schema defines classes representing a data model's entities.
+     A class defines a set of slots or attributes (like columns in a database table)
+     which can hold
+     - other entities,
+     - permissible value sets (enumerations),
+     - or raw data types (strings, integers, etc.)
+3. select MeasurementObservation and highlight observation_type. text:
+   - While the relationship between an entity and its enumerations and raw
+     data attributes is direct (e.g.,
+     `MeasurementObservation.observation_type` --> `MeasurementObservationTypeEnum`
+     or `MeasurementObservation.age_at_observation` --> `integer`), it can be
+     related to other entities in more complex ways
+     [can we animate this so that step 4 keeps this popover but shows the next bullet, etc?
+     not sure best way to represent this in my outline...well, we're going to need a reasonably
+     human-readable/writable format for the full tour specs anyway]
+     - inheritance, known in modeling parlance as IS_A relationships,
+       e.g., `MeasurementObservation.is_a` --> `Observation`, or
+     - association / ownership / containment, known in modeling parlance as HAS_A relationships,
+       e.g., `Visit.associated_participant` --> `Participant`.
+     A primary goal 
+   - Entities can be related to each other through
+4. goal is to show all the relationship types. if there are any entities
+   that use all four, select one of those, otherwise will have to select
+   one that has most and then select another that has the others. steps:
+   1. **Selecting an entity** Select an entity by clicking its checkbox;
+      the entity will appear in the main panel along with directly related
+      entities. There are five ways an entity can be related to another.
+   2. highlight row
+   3. click checkbox. 
 
 ### S3a — Tour authoring format (brief)
-
-> **NOT blocked; do this first.** Siggie, 2026-08-27: *"the tour can be broken
-> up into two or three sessions, only the authoring is blocked but these can
-> proceed."*
 
 **Goal: design the format Siggie will write the tour in, then translate their
 current draft into it — gaps, mistakes and all — so they can keep writing.**
@@ -227,9 +150,10 @@ before designing; each is a real limit in today's parser, not a guess:
    bullet, etc? not sure best way to represent this in my outline...well, we're
    going to need a reasonably human-readable/writable format for the full tour
    specs anyway"* — that last clause is this brief.
-4. **`state:` is a URL query applied before the step.** D1 (below) needs every
-   step to carry its FULL state, not a diff, and needs an entry/exit snapshot.
-   Check whether `state:` as-is already satisfies "full state" — it may.
+4. **`state:` is a URL query applied before the step.** The decided `back`
+   behaviour (below) needs every step to carry its FULL state, not a diff, and
+   needs an entry/exit snapshot. Check whether `state:` as-is already satisfies
+   "full state" — it may.
 5. **A step cannot describe an ACTION it performs.** This is what confused
    Siggie in review: step 2 silently selects Participant and nothing says the
    tour did it. The format needs somewhere to say "we just ticked this for you."
@@ -238,7 +162,7 @@ before designing; each is a real limit in today's parser, not a guess:
    (`observation_type`). Whether that is a format problem or purely S3b's
    problem is yours to determine — but the format has to be able to EXPRESS it.
 
-**D1 is decided; design to it.** Siggie:
+**Tour `back` is decided; design to it.** Siggie, 2026-08-27:
 
 > *"if tour starts when state is not default, record state; when tour ends/is
 > exited, restore prior state; every step of tour is prespecified so navigation
@@ -273,14 +197,6 @@ four the typo. Ask — it is one of the open questions in the handoff.
 
 ### S3b — Tour mechanism (brief)
 
-> **NOT blocked on S1/S2 for the mechanism itself.** Siggie: *"implement the
-> mechanisms. parts of the tour as currently written will work, but how
-> selection happens will change with S1 and material i haven't written yet
-> depends on S2."*
->
-> **So: build the machinery, do not hard-code against today's selection UI.**
-> S1 is replacing the selection panel underneath you.
-
 **Goal: close the three known gaps in the tour machinery.** All are in
 `src/help/HelpLayer.tsx` and `HelpProvider.tsx`.
 
@@ -298,14 +214,11 @@ tagged elements are whole panels. Siggie also wants to highlight a slot row
 (`observation_type`) inside a box. **This is a real capability gap, not a
 tweak** — it needs anchors that can address a row.
 
-> ⚠️ **S1's markup is already in `main`** — the rows to highlight are
-> `SelectionTable.tsx`'s, not the old dag-browser rows. Tag against what is
-> there now; nothing is about to be deleted underneath you.
-
-**3. `back` must restore exactly, per D1** (quoted in S3a above). Snapshot on
-tour entry, restore on exit; every step sets its full state absolutely so
-navigation either way is exact; interaction allowed, but the popover must SAY
-that stepping will discard it.
+**3. `back` must restore exactly.** Siggie decided this (2026-08-27; quoted in
+full under [S3a](#s3a-tour-authoring-format-brief)): snapshot on tour entry,
+restore on exit; every step sets its full state absolutely so navigation either
+way is exact; interaction allowed, but the popover must SAY that stepping will
+discard it.
 
 **Do NOT do:**
 - **Do not "fix" popover placement.** It was investigated and **exonerated** —
@@ -503,10 +416,13 @@ suppress."* MEASURED against `public/source_data/HM/bdchm.yaml`:
 So the conditional they attached their decision to ("if it's abstract") is false,
 and suppression cannot be justified on those grounds. The black
 `ObservationSet.observations → Observation` edge represents a real slot on a
-real instantiable class. **Do not suppress it without asking them again** —
-the honest question is now "ObservationSet is concrete and declares
-`observations`; do you still want its edge hidden?", which is a modeling
-judgement, not a mechanical consequence.
+real instantiable class.
+
+> ✅ **ANSWERED (Siggie, 2026-08-27): don't suppress.** Asked again with the
+> corrected premise — "ObservationSet is concrete and declares `observations`;
+> do you still want its edge hidden?" — and the answer was no. So the edge is
+> drawn, and this section's rule stands unqualified: **one edge per declaring
+> class**, black for the parent's own slot.
 
 **Also in scope here:** the missing `Specimen.quality_measure` edge (item 4
 above) — same subsystem, same merge-suppression cause.
