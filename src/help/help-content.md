@@ -75,37 +75,63 @@ a hole.
 
 ### Anchors
 
-An entry's `### id` is its **identity** — the key in the registry, and what
-tests and links refer to. It is not required to name a DOM element. `Anchor:`
-says what to point at:
+`Anchor:` says which element on screen the popover points at and rings. It is
+separate from the entry's `### id`, which is only identity: the registry key
+that tests, `Beats:` and cross-links use.
+
+There are two ways to name an element, and they differ in *when* the element
+has to exist.
+
+**Tagged elements — `data-help-id`.** Dmvd hand-writes
+`data-help-id="<name>"` on the dozen or so landmarks worth explaining (the
+title, the left panel, the graph canvas, the toolbar toggles). The attribute is
+not only for anchoring: in help mode a click anywhere inside a tagged element
+opens that element's entry, so the tag is what makes a region clickable-for-help
+in the first place. Anchoring reuses it. Grep for `data-help-id=` to see every
+one.
+
+**Runtime lookups — `<kind>:<argument>`.** A diagram row or tree row cannot
+carry a stable tag: the diagram destroys and rebuilds its boxes on every
+relayout, and one class can be drawn in several places. So instead of naming an
+element the anchor names a **question** — `entity-row:Participant` means "ask
+the host where Participant's row is, right now" — and a resolver function
+answers it at the moment the popover is placed.
 
 | Form | Meaning |
 |---|---|
-| *(omitted)* | the element tagged `data-help-id="<the entry id>"` |
-| `none` | no anchor; the popover is centred and nothing is ringed |
-| `<kind>:<argument>` | a resolver looks the element up at runtime |
-| `<bare-id>` | shorthand for `help-id:<bare-id>` |
-
-Omitting it reproduces the old behaviour exactly, so **every help entry written
-before this format keeps working untouched**.
-
-Resolver kinds are registered by the **host app**, not by the parser — the
-parser treats `kind:argument` as an opaque string so the help package can be
-extracted without knowing what a dmvd "entity row" is.
+| *(omitted)* | `help-id:<the entry id>` — the common case, when the entry explains a tagged element and shares its name |
+| `<bare-id>` | `help-id:<bare-id>` — for an entry pointing at a tagged element under some other name |
+| `<kind>:<argument>` | run the host's `<kind>` resolver on `<argument>` |
+| `none` | point at nothing; the popover is centred and nothing is ringed |
 
 | Kind | Points at |
 |---|---|
-| `help-id:<id>` | an element tagged `data-help-id="<id>"` |
+| `help-id:<id>` | the element tagged `data-help-id="<id>"` |
 | `entity-row:<Entity>` | that entity's row in the selection panel |
 | `entity-checkbox:<Entity>` | that row's checkbox |
 | `slot-row:<Entity>.<slot>` | one attribute row inside a diagram box |
 | `node-box:<Entity>` | a whole entity box on the diagram |
 
-All five resolve. An anchor whose element is not on screen — a collapsed tree
-row, a box the current selection does not include — degrades to an unringed,
-centred popover rather than failing.
+Only `help-id` and `none` are built in. **The other kinds are registered by the
+host app, not known to the parser**, which splits `kind:argument` and stops:
+resolving "entity row" means knowing what a dmvd entity row is, which the help
+package must not. They are handed in as `<HelpProvider resolvers={...}>`; dmvd's
+live in `src/explore/helpResolvers.ts`.
 
-Two of them have an edge worth knowing when you author:
+**Why an attribute rather than a CSS selector or a plain `id`.** A selector
+anchor (`.left-panel > div:nth-child(2)`) would resolve fine — `help-id` is a
+`querySelector` underneath — but it breaks silently on any restyle, and nothing
+in the styled file hints that help depends on it. `data-help-id` greps, survives
+refactors, and is visible at the point of use. A plain `id` would anchor, but it
+is a page-wide namespace shared with anything else that wants one, and it does
+not mark "this region is help-clickable" the way the dedicated attribute does.
+
+An anchor whose element is not on screen — a collapsed tree row, a box the
+current selection does not include — degrades to an unringed, centred popover
+rather than failing.
+
+Two kinds have an edge worth knowing when you author:
+
 
 - **`entity-row` / `entity-checkbox`** work in both left-panel modes (table and
   tree). In tree mode everything starts collapsed, so a deeply nested entity's
