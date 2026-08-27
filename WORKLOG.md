@@ -110,6 +110,14 @@ the selection or losing it. So today's values are literally indistinguishable
 from deltas — which is a trap: switching to a stack is a semantic INVERSION of
 fields that will not visibly change.
 
+**Absolute state silently resets whatever the step does not name**, which is
+invisible from a default view and confusing from any other. Live example:
+Siggie had the owner cap on `all`, started the tour, and every step with a
+`State:` snapped it back to `DEFAULT_OWNER_CAP = 5`, because no step writes
+`owners=`. Nothing warned; the canvas just quietly changed density mid-tour.
+Under the stack this costs nothing to fix — a step that never mentions `owners`
+never touches it.
+
 **Not started.** It replaces the "every position carries full absolute state"
 design that S3a/S3b are built on: `State:` becomes a delta field (probably
 renamed), `goTo` becomes push-or-pop by direction, beat inheritance changes
