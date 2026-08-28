@@ -192,6 +192,25 @@ body.help-mode {
 .help-tour-spacer { flex: 1; }
 .help-tour-count { font-size: 11px; color: #64748b; }
 
+/* Reveal dots: progress through one step's beats, beside the step counter.
+   A SECOND widget rather than a second number, because the fraction counts
+   steps and a `2.1 / 6` mixes two scales in one reading -- `2.1` is not a
+   position out of 6. Hidden entirely on a step with no beats. */
+.help-tour-dots {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+  margin-left: 6px;
+}
+.help-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  transition: background 160ms ease;
+}
+.help-dot-on { background: #0284c7; }
+
 .help-tour-nav button {
   padding: 3px 9px;
   border: 1px solid #cbd5e1;
@@ -236,6 +255,8 @@ body.help-mode {
   }
   .help-tour-nav button:hover:not(:disabled) { background: #334155; }
   .help-hint { box-shadow: 0 0 0 2px #0f172a; }
+  .help-dot { background: #334155; }
+  .help-dot-on { background: #38bdf8; }
   /* #0369a1 on the dark card fails contrast; the lighter end of the same
      ramp keeps links reading as links in both themes. */
   .help-popover a { color: #7dd3fc; }

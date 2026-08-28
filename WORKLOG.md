@@ -7,6 +7,48 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-28 (beats, follow-up) — the opening position, and why the counter got dots
+
+Two things from Siggie's screenshot of the `selection-tree` step.
+
+### The bug: I specified "the description is beat one" and did not implement it
+
+`tourPositions` pushed one position PER AUTHORED BEAT, and the first of those
+already had beat 1 appended — so the description never had a position of its
+own and the step opened showing description+beat-1 together. Siggie: *"the
+popover starts on Beat 1, it should start on the stuff before Beat 1."*
+
+Fixed by pushing an opening position with `beatIndex: -1` before the beat loop.
+A step with N beats is now N+1 positions. **A step whose description is empty
+gets no opening position** — there would be nothing to show — so it still
+starts on beat 1.
+
+**The fix moved `change` and `action` ownership**, which is the part that could
+have gone wrong quietly. Both used to be inherited by beat 0 (`beatIndex === 0
+? entry.change : undefined`). With an opening position that also carries them,
+that inheritance became a DOUBLE push: two frames for one step's change, and
+`back` crawling out of them. Beats now carry only what they declare themselves.
+A new test states the invariant directly — a step pushes its change exactly
+once across all its positions — rather than leaving it implied by the old
+per-beat rule.
+
+### The counter: two scales cannot share one fraction
+
+Siggie proposed `2.1 / 2` and `2.1 / 2.2` and immediately doubted both:
+*"neither of those are very clear. any ideas? or we can forget this."* The
+reason neither reads is that the numerator and denominator would be counting
+different things — and the shipped `2.1 / 6` had the same defect, since `2.1`
+is not a position out of 6.
+
+So: **the fraction always counts STEPS** (`2 / 6` for all of step 2, however
+many beats), and beat progress became a SECOND widget — reveal dots, one per
+beat, filled as they appear, hidden entirely on a beatless step. Siggie chose
+this over a worded sub-count, the old decimal, and a progress bar.
+
+Dots also happen to be the honest shape: beat progress is ordinal and small,
+which is exactly what a dot strip expresses and what a fraction over-states.
+
+---
 ## 2026-08-28 (beats) — beats ADD instead of replacing; `Clear:` to start over
 
 Siggie's TODO bullet: *"I don't like the way beats work. This is what i want to

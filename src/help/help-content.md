@@ -23,6 +23,14 @@ Package-level design lives in [docs/HELP_PACKAGE_PLAN.md](../../docs/HELP_PACKAG
   - `relationship-kinds` lost its old beat 1, which existed only to repeat the
     Description so it would not vanish; its `slot-row` anchor moved up to the
     entry.
+- **A step now OPENS on its description alone** — the bug where the popover
+  started on description+beat-1 together, so the setup could never be read by
+  itself. A step with N beats is N+1 positions.
+- **The counter counts steps; beats get reveal dots.** `2 / 6` for the whole of
+  step 2, with one dot per beat filling as they appear. Replaces `2.1 / 6`,
+  which mixed two scales in one fraction — `2.1` was never a position out of 6.
+  Your `2.1 / 2` and `2.1 / 2.2` had the same problem, which is why neither
+  read clearly.
 
 ### Still open
 
@@ -400,9 +408,14 @@ moving on to the next step. Use beats for sub-steps of one idea, and for
 revealing a list one item at a time.
 
 **The step's own `Description:` is the first beat, and beats ADD to what is
-showing rather than replacing it.** Each `next` leaves the previous text on
-screen and appends the new block below it; everything but the newest block is
-dimmed, so the reader can see what just arrived without losing the setup.
+showing rather than replacing it.** The step OPENS on its description alone;
+each `next` then appends a beat below what is already there, with everything
+but the newest block dimmed, so the reader sees what just arrived without
+losing the setup.
+
+So a step with N beats has **N+1 positions**: the opening, then one per beat.
+(A step whose `Description:` is empty has no opening position — there would be
+nothing to show — and starts on beat 1.)
 
 ```markdown
 - **Description:** The setup. This is beat one — it stays on screen.
@@ -444,11 +457,15 @@ follow the block. A beat that omits `Anchor:` or `Action:` inherits the step's.
 > the first beat / by default, the beat text is additive on top of that / in
 > order to clear previous text add a 'clear' marker or field."*
 
-A step with no `Beats:` is exactly one beat, so steps written before beats
+A step with no `Beats:` is exactly one position, so steps written before beats
 existed still parse and behave identically. `next` advances beat by beat, then
-to the next step; the counter reads `4.2 / 6` — beat 2 of step 4, of six
-STEPS. A step with no beats reads plain `5 / 6`, so the sub-number shows up
-only where there is a beat to number.
+to the next step.
+
+**The counter always counts STEPS** — `2 / 6` for the whole of step 2, however
+many beats it has — and beat progress is shown beside it as **reveal dots**,
+one per beat, filled as they appear. Two scales, two widgets: a fraction that
+mixes them cannot be read, which is what was wrong with the old `2.1 / 6`
+(`2.1` is not a position out of 6). A step with no beats shows no dots.
 
 ### Who the tour is for
 

@@ -150,8 +150,17 @@ export interface TourPosition {
    * read off the entry — `entry.tour` is the tour's name now, not a position.
    */
   step: number;
-  /** 0-based index into `entry.beats`, or 0 for a step with no beats. */
+  /**
+   * 0-based index into `entry.beats`; **-1 at a step's opening position**,
+   * which shows the description alone before any beat has revealed. A step
+   * with no beats has exactly that one position.
+   */
   beatIndex: number;
+  /**
+   * How many beats this step has, for the reveal dots beside the counter.
+   * 0 when the step has none, in which case the popover shows no dots.
+   */
+  beatCount: number;
   /** The beat itself, if this step has any. */
   beat?: TourBeat;
   /**
@@ -480,7 +489,7 @@ export function tourPositions(content: HelpContent, tour?: string): TourPosition
     const step = i + 1;
     if (!entry.beats || entry.beats.length === 0) {
       positions.push({
-        entry, step, beatIndex: 0,
+        entry, step, beatIndex: 0, beatCount: 0,
         blocks: [entry.description],
         text: entry.description,
         anchor: entry.anchor,
@@ -502,26 +511,53 @@ export function tourPositions(content: HelpContent, tour?: string): TourPosition
      * a stutter to fix, it is a beat to delete.
      */
     let showing = entry.description ? [entry.description] : [];
+
+    /*
+     * THE OPENING POSITION: the step's own text, alone, before any beat has
+     * revealed. If the description is beat one then it needs a position of its
+     * own -- without one the step opens on description+beat-1 together and the
+     * setup can never be read by itself, which is the bug Siggie caught in the
+     * `selection-tree` screenshot ("the popover starts on Beat 1, it should
+     * start on the stuff before Beat 1").
+     *
+     * `beatIndex: -1` marks it: it is not one of the authored beats, and the
+     * counter shows a bare `2 / 6` there while the beats add reveal dots.
+     */
+    if (showing.length > 0) {
+      positions.push({
+        entry, step, beatIndex: -1, beatCount: entry.beats!.length,
+        blocks: showing,
+        text: showing.join('\n\n'),
+        anchor: entry.anchor,
+        action: entry.action,
+        // The step's own change belongs to the position that opens it.
+        change: entry.change,
+      });
+    }
+
     entry.beats.forEach((beat, beatIndex) => {
       // `Clear: true` starts the popover over at this beat.
       showing = beat.clear ? [beat.text] : [...showing, beat.text];
       positions.push({
-        entry, step, beatIndex, beat,
+        entry, step, beatIndex, beat, beatCount: entry.beats!.length,
         blocks: showing,
         text: showing.join('\n\n'),
         anchor: beat.anchor ?? entry.anchor,
-        action: beat.action ?? (beatIndex === 0 ? entry.action : undefined),
+        action: beat.action,
         /*
-         * A beat inherits the step's anchor and action, but NOT its `change`:
-         * only the first beat pushes it. Under absolute state every beat
-         * re-applied the step's full query, which was harmless because
-         * re-applying the same absolute state is idempotent. Pushing the same
-         * delta once per beat is NOT — a four-beat step would push four frames
-         * and `back` would step through them one useless pop at a time. So the
-         * step's change belongs to its first beat, and a later beat pushes only
-         * a `change` it declares itself.
+         * A beat inherits the step's anchor and action, but NOT its `change`
+         * or `action`: the OPENING position above owns both, and a beat pushes
+         * only a `change` it declares itself.
+         *
+         * Under absolute state every beat re-applied the step's full query,
+         * which was harmless because re-applying the same absolute state is
+         * idempotent. Pushing the same delta once per beat is NOT — a
+         * four-beat step would push four frames and `back` would crawl out of
+         * them one useless pop at a time. Since 2026-08-28 the step opens on
+         * its own position, so that is where its change belongs; letting beat
+         * 0 also push it would double-count the very thing this guards.
          */
-        change: beat.change ?? (beatIndex === 0 ? entry.change : undefined),
+        change: beat.change,
       });
     });
   });

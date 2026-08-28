@@ -167,12 +167,28 @@ describe('help content', () => {
     expect(ids.length).toBe(new Set(ids).size);
   });
 
-  test('a step with no beats is one position; a step with beats is one each', () => {
-    // tourPositions is the seam the tour mechanism navigates, so its
-    // arithmetic is worth pinning: beatless steps must not vanish, and a
-    // step's beats must not collapse into one.
-    const expected = steps.reduce((n, s) => n + Math.max(1, s.beats?.length ?? 1), 0);
+  test('a step with beats gets an opening position plus one per beat', () => {
+    /*
+     * tourPositions is the seam the tour mechanism navigates, so its
+     * arithmetic is worth pinning: beatless steps must not vanish, a step's
+     * beats must not collapse into one, and a step WITH beats must open on its
+     * own description before any beat reveals (2026-08-28) -- without that
+     * opening position the step starts on description+beat-1 together and the
+     * setup can never be read alone.
+     */
+    const expected = steps.reduce(
+      (n, s) => n + (s.beats?.length ? s.beats.length + 1 : 1), 0,
+    );
     expect(positions.length).toBe(expected);
+  });
+
+  test('a step with beats opens on its description alone', () => {
+    for (const step of steps) {
+      if (!step.beats?.length) continue;
+      const opening = positions.find(p => p.entry.id === step.id);
+      expect(opening!.beatIndex, `${step.id} opens on a beat`).toBe(-1);
+      expect(opening!.blocks, `${step.id} opening blocks`).toEqual([step.description]);
+    }
   });
 
   test('every tour position has text and an anchor', () => {
@@ -182,19 +198,33 @@ describe('help content', () => {
     expect(bad, `Tour positions with no text/anchor: ${bad.join(', ')}`).toEqual([]);
   });
 
-  test('only a step\'s FIRST beat pushes its change', () => {
+  test("a step's change is pushed once, by the position that opens it", () => {
     /*
      * Under absolute state every beat re-applied its step's full query, which
      * was harmless: re-applying the same absolute state is idempotent. Pushing
      * the same DELTA once per beat is not — a four-beat step would stack four
      * identical frames and `back` would crawl out of them one useless pop at a
-     * time. So the step's change belongs to beat 0, and a later beat pushes
-     * only a change it declares itself.
+     * time.
+     *
+     * Since the step opens on its own position (beatIndex -1), that is where
+     * its change belongs; a BEAT pushes only a change it declares itself.
+     * Letting beat 0 also inherit it would double-push the very thing this
+     * guards against.
      */
     for (const p of positions) {
-      if (!p.beat || p.beat.change) continue;
-      expect(p.change, `${p.entry.id}#${p.beatIndex}`)
-        .toBe(p.beatIndex === 0 ? p.entry.change : undefined);
+      if (p.beat?.change) continue;
+      const expected = p.beat ? undefined : p.entry.change;
+      expect(p.change, `${p.entry.id}#${p.beatIndex}`).toBe(expected);
+    }
+  });
+
+  test('a step pushes its change exactly once across all its positions', () => {
+    // The arithmetic the test above implies, stated directly.
+    for (const step of steps) {
+      if (!step.change) continue;
+      const pushes = positions
+        .filter(p => p.entry.id === step.id && p.change === step.change);
+      expect(pushes.length, `${step.id} pushes its change ${pushes.length}x`).toBe(1);
     }
   });
 
@@ -363,22 +393,35 @@ describe('beats accumulate', () => {
 `);
   const pos = tourPositions(md);
 
-  test("the step's own text is the first block", () => {
-    expect(pos[0].blocks[0]).toBe('The intro.');
+  test('the step opens on its own text, alone', () => {
+    // Siggie, 2026-08-28: "the popover starts on Beat 1, it should start on
+    // the stuff before Beat 1."
+    expect(pos[0].beatIndex).toBe(-1);
+    expect(pos[0].blocks).toEqual(['The intro.']);
   });
 
   test('each beat adds to what is already showing', () => {
-    expect(pos[0].blocks).toEqual(['The intro.', 'First reveal.']);
-    expect(pos[1].blocks).toEqual(['The intro.', 'First reveal.', 'Second reveal.']);
+    expect(pos[1].blocks).toEqual(['The intro.', 'First reveal.']);
+    expect(pos[2].blocks).toEqual(['The intro.', 'First reveal.', 'Second reveal.']);
   });
 
   test('the last block is the one that just appeared', () => {
     // What the popover renders at full strength; everything before it dims.
-    expect(pos[1].blocks[pos[1].blocks.length - 1]).toBe('Second reveal.');
+    expect(pos[2].blocks[pos[2].blocks.length - 1]).toBe('Second reveal.');
   });
 
   test('text is the blocks joined, for consumers that want one string', () => {
-    expect(pos[1].text).toBe('The intro.\n\nFirst reveal.\n\nSecond reveal.');
+    expect(pos[2].text).toBe('The intro.\n\nFirst reveal.\n\nSecond reveal.');
+  });
+
+  test('a two-beat step is three positions', () => {
+    expect(pos.length).toBe(3);
+    expect(pos.map(p => p.beatIndex)).toEqual([-1, 0, 1]);
+  });
+
+  test('every position knows how many beats its step has', () => {
+    // What the popover draws its reveal dots from.
+    expect(pos.map(p => p.beatCount)).toEqual([2, 2, 2]);
   });
 
   test('a step with no beats is a single block', () => {
@@ -395,6 +438,9 @@ describe('beats accumulate', () => {
     const p = tourPositions(plain)[0];
     expect(p.blocks).toEqual(['Just this.']);
     expect(p.text).toBe('Just this.');
+    // No beats means no dots.
+    expect(p.beatCount).toBe(0);
+    expect(tourPositions(plain).length).toBe(1);
   });
 
   test('a step with an empty description starts from the first beat', () => {
@@ -410,7 +456,11 @@ describe('beats accumulate', () => {
 - **Beats:**
   1. Only this.
 `);
-    expect(tourPositions(noDesc)[0].blocks).toEqual(['Only this.']);
+    // With nothing to show before the first beat there is no opening
+    // position -- the step starts on beat 1 because that is all it has.
+    const p = tourPositions(noDesc);
+    expect(p[0].beatIndex).toBe(0);
+    expect(p[0].blocks).toEqual(['Only this.']);
   });
 });
 
@@ -432,16 +482,18 @@ describe('Clear: on a beat', () => {
 `);
   const pos = tourPositions(md);
 
+  // Positions are: [0] the opening (description alone), then one per beat.
   test('a cleared beat shows alone', () => {
-    expect(pos[1].blocks).toEqual(['Fresh thought.']);
+    expect(pos[2].blocks).toEqual(['Fresh thought.']);
   });
 
   test('accumulation resumes from the cleared beat', () => {
-    expect(pos[2].blocks).toEqual(['Fresh thought.', 'Adds to the fresh thought.']);
+    expect(pos[3].blocks).toEqual(['Fresh thought.', 'Adds to the fresh thought.']);
   });
 
   test('beats before the clear are unaffected', () => {
-    expect(pos[0].blocks).toEqual(['The intro.', 'Adds to the intro.']);
+    expect(pos[0].blocks).toEqual(['The intro.']);
+    expect(pos[1].blocks).toEqual(['The intro.', 'Adds to the intro.']);
   });
 
   test('a bare `- Clear:` counts as true', () => {
@@ -459,7 +511,7 @@ describe('Clear: on a beat', () => {
   1. Alone.
      - Clear:
 `);
-    expect(tourPositions(bare)[0].blocks).toEqual(['Alone.']);
+    expect(tourPositions(bare)[1].blocks).toEqual(['Alone.']);
   });
 
   test('`Clear: false` is not a clear', () => {
@@ -476,7 +528,7 @@ describe('Clear: on a beat', () => {
   1. Adds.
      - Clear: false
 `);
-    expect(tourPositions(off)[0].blocks).toEqual(['Intro.', 'Adds.']);
+    expect(tourPositions(off)[1].blocks).toEqual(['Intro.', 'Adds.']);
   });
 });
 

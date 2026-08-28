@@ -88,10 +88,31 @@ export default function HelpLayer() {
    * where it means something. The denominator deliberately counts steps and
    * not positions: "4.2 / 11" would be arithmetic nobody can follow.
    */
-  const counterLabel = () => {
-    if (!position) return '';
-    const multiBeat = (position.entry.beats?.length ?? 0) > 1;
-    return multiBeat ? `${position.step}.${position.beatIndex + 1}` : `${position.step}`;
+  /*
+   * The counter always counts STEPS -- `2 / 6` for the whole of step 2,
+   * however many beats it has. Beat progress is shown separately as reveal
+   * dots, because a fraction that mixes the two scales cannot be read: Siggie,
+   * 2026-08-28, on `2.1 / 2` and `2.1 / 2.2` -- "neither of those are very
+   * clear". A step number that changes meaning halfway through a step is worse
+   * than a second widget.
+   */
+  const beatDots = () => {
+    if (!position || position.beatCount === 0) return null;
+    // beatIndex -1 is the opening position: nothing revealed yet.
+    const revealed = position.beatIndex + 1;
+    return (
+      <span
+        className="help-tour-dots"
+        title={`Beat ${revealed} of ${position.beatCount} in this step`}
+      >
+        {Array.from({ length: position.beatCount }, (_, i) => (
+          <span
+            key={i}
+            className={i < revealed ? 'help-dot help-dot-on' : 'help-dot'}
+          />
+        ))}
+      </span>
+    );
   };
 
   const [rect, setRect] = useState<DOMRect | null>(null);
@@ -302,8 +323,9 @@ export default function HelpLayer() {
             {inTour ? (
               <div className="help-tour-nav">
                 <span className="help-tour-count" title={`Position ${tourIndex! + 1} of ${positions.length}`}>
-                  {counterLabel()} / {stepCount}
+                  {position?.step} / {stepCount}
                 </span>
+                {beatDots()}
                 <span className="help-tour-spacer" />
                 <button onClick={prevStep} disabled={tourIndex === 0}>← back</button>
                 <button onClick={nextStep} className="help-tour-next">
