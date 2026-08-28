@@ -57,6 +57,8 @@ export interface TourBeat {
   action?: string;
   /** What this beat ADDS to the app state, as a URL query. See `HelpEntry.change`. */
   change?: string;
+  /** Overrides the step's `Highlight:` for this beat. */
+  highlight?: Highlight;
   /** Overrides the step's `Position:` for this beat. */
   position?: PopoverSide;
   /** Overrides the step's `OffsetX:` for this beat. */
@@ -123,6 +125,15 @@ export interface HelpEntry {
    * describing.
    */
   position?: PopoverSide;
+  /**
+   * How hard to point at the anchor: `Highlight: ring` draws the ring without
+   * the scrim, `none` draws nothing at all. Unset means ring-plus-scrim.
+   *
+   * `none` still resolves the anchor, so the anchor keeps positioning the
+   * popover. Emphasis and placement are separate jobs and a step should be
+   * able to ask for one without the other (Siggie, 2026-08-28).
+   */
+  highlight?: Highlight;
   /**
    * Horizontal nudge in CSS pixels, applied after placement. `OffsetX: 260`,
    * or in terms of the anchor's own size: `OffsetX: anchor.width * 1.3`.
@@ -212,6 +223,8 @@ export interface TourPosition {
   beatCount: number;
   /** The beat itself, if this step has any. */
   beat?: TourBeat;
+  /** Emphasis for this position; a beat's wins over its step's. */
+  highlight?: Highlight;
   /** Placement override for this position; a beat's wins over its step's. */
   position?: PopoverSide;
   /** Horizontal nudge for this position; a beat's wins over its step's. */
@@ -244,6 +257,19 @@ export interface TourPosition {
   change?: string;
 }
 
+/**
+ * How much emphasis the anchor gets, as authored by `Highlight:`.
+ *
+ *  - `dim` (the default): the ring PLUS the scrim over everything else.
+ *  - `ring`: the ring alone. For a step whose anchor is one control among
+ *    several the reader is meant to compare, where dimming the rest hides the
+ *    context the step is talking about.
+ *  - `none`: draw nothing. The anchor still resolves, so it still POSITIONS
+ *    the popover -- which is the point: a step can point the popover at
+ *    something without visually seizing it.
+ */
+export type Highlight = 'dim' | 'ring' | 'none';
+
 /** A side of the anchor, as authored by `Position:`. */
 export type PopoverSide = 'left' | 'right' | 'top' | 'bottom';
 
@@ -259,6 +285,15 @@ export type PopoverSide = 'left' | 'right' | 'top' | 'bottom';
 export type Offset =
   | { px: number }
   | { of: 'width' | 'height'; times: number };
+
+/**
+ * `Highlight: ring|dim|none`. Like `Position:`, an unrecognised value is
+ * ignored rather than throwing, so a typo costs the override and not the tour.
+ */
+function parseHighlight(value: string | undefined): Highlight | undefined {
+  const v = value?.trim().toLowerCase();
+  return v === 'dim' || v === 'ring' || v === 'none' ? v : undefined;
+}
 
 /**
  * `Position: left|right|top|bottom`. Anything else is ignored rather than
@@ -459,6 +494,7 @@ function extractBeats(lines: string[], entryId: string): TourBeat[] | undefined 
       if (key === 'anchor') current.anchor = parseAnchor(value, entryId);
       else if (key === 'action') current.action = value.trim();
       else if (key === 'change') current.change = value.trim();
+      else if (key === 'highlight') current.highlight = parseHighlight(value);
       else if (key === 'position') current.position = parsePosition(value);
       else if (key === 'offsetx') current.offsetX = parseOffset(value);
       // `- Keep: true`. A bare `- Keep:` counts too: it is a marker, and an
@@ -496,6 +532,7 @@ function parseEntry(block: string, order: number): HelpEntry | null {
   const action = extractField(lines, 'Action');
   const once = extractField(lines, 'Once');
   const change = extractField(lines, 'Change');
+  const highlight = parseHighlight(extractField(lines, 'Highlight'));
   const position = parsePosition(extractField(lines, 'Position'));
   const offsetX = parseOffset(extractField(lines, 'OffsetX'));
   const beats = extractBeats(lines, id);
@@ -508,7 +545,7 @@ function parseEntry(block: string, order: number): HelpEntry | null {
 
   return {
     id, title, description, interactions, shortcut, context,
-    anchor, action, once, change, position, offsetX, tour, order, beats,
+    anchor, action, once, change, highlight, position, offsetX, tour, order, beats,
   };
 }
 
@@ -600,6 +637,7 @@ export function tourPositions(content: HelpContent, tour?: string): TourPosition
         anchor: entry.anchor,
         action: entry.action,
         change: entry.change,
+        highlight: entry.highlight,
         position: entry.position,
         offsetX: entry.offsetX,
       });
@@ -639,6 +677,7 @@ export function tourPositions(content: HelpContent, tour?: string): TourPosition
         action: entry.action,
         // The step's own change belongs to the position that opens it.
         change: entry.change,
+        highlight: entry.highlight,
         position: entry.position,
         offsetX: entry.offsetX,
       });
@@ -655,6 +694,7 @@ export function tourPositions(content: HelpContent, tour?: string): TourPosition
         action: beat.action,
         // Inherited like `anchor`: a beat that does not move the popover keeps
         // the step's placement rather than snapping back to automatic.
+        highlight: beat.highlight ?? entry.highlight,
         position: beat.position ?? entry.position,
         offsetX: beat.offsetX ?? entry.offsetX,
         /*

@@ -7,6 +7,41 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-28 (Highlight: ring | dim | none)
+
+Siggie: *"can we have an option for anchor without dimming?"* Offered three
+shapes; they picked the widest — one field naming the whole emphasis treatment,
+including turning the ring off entirely.
+
+The dimming was never a separate element: it is the SECOND half of the
+spotlight's `box-shadow`, a `0 0 0 9999px rgb(15 23 42 / 12%)` spread on the
+ring itself. So `ring` is one extra class that redeclares `box-shadow` with
+only the glow, and `none` skips the element.
+
+**`Highlight: none` is not `Anchor: none`, and the difference is the reason the
+field is worth having.** `Anchor: none` means there is no anchor, so the
+popover centres. `Highlight: none` keeps the anchor — it still resolves, still
+measures, still POSITIONS the popover and still feeds the `WAIT_MS` change
+gate — and only declines to draw it. Emphasis and placement are separate jobs
+and a step should be able to ask for one without the other. Verified that
+`rect` is computed independently of `highlight`, so nothing downstream of the
+measurement changes.
+
+Only the tour honours it. Help mode's whole job is pointing at things, so a
+help-only entry keeps the ring.
+
+### A caught mistake worth recording
+
+The patch that added the entry-level field matched `position?: PopoverSide;`
+and landed it in `TourBeat` instead of `HelpEntry` — the two interfaces now
+carry near-identical field lists, so a naive string match hits the wrong one.
+`npx tsc --noEmit` PASSED on the broken tree; `npm run build` caught it. That
+is the second time the build has caught what tsc missed, which is why
+[[feedback_verify_with_npm_run_build]] exists. Also confirmed
+`help-spotlight-ring` is present in the emitted CSS rather than trusting that
+the rule was written.
+
+---
 ## 2026-08-28 (Position: / OffsetX:, and the relation-menu anchor that wasn't)
 
 ### The anchor experiment, and why it was dropped

@@ -188,6 +188,13 @@ export default function HelpLayer() {
    * the pre-S3a behaviour exactly.
    */
   const anchor = inTour ? position?.anchor : entry?.anchor;
+  /*
+   * `Highlight: none` still RESOLVES the anchor -- it only stops it being
+   * drawn. That is the point of the field: the anchor keeps positioning the
+   * popover while the step declines to seize the element visually. Only the
+   * tour honours it; help mode's job is to point at things.
+   */
+  const highlight = (inTour ? position?.highlight : entry?.highlight) ?? 'dim';
 
   /**
    * `4.2 / 6` — step number, then beat within it, against the number of
@@ -377,9 +384,9 @@ export default function HelpLayer() {
         what's going on between steps". Drawn as a fixed overlay rather than by
         restyling the anchor, so it cannot disturb the app's own layout.
       */}
-      {rect && activeId && (
+      {rect && activeId && highlight !== 'none' && (
         <div
-          className="help-spotlight"
+          className={`help-spotlight${highlight === 'ring' ? ' help-spotlight-ring' : ''}`}
           style={{
             left: rect.left - 4, top: rect.top - 4,
             width: rect.width + 8, height: rect.height + 8,

@@ -929,6 +929,17 @@ describe('Position: and OffsetX:', () => {
 ${fields}
 `).entries.get('step')!;
 
+  test('Highlight: takes ring, dim and none', () => {
+    // `ring` drops the scrim but keeps the ring; `none` draws nothing while
+    // the anchor still resolves, so it still positions the popover.
+    expect(parse('- **Highlight:** ring').highlight).toBe('ring');
+    expect(parse('- **Highlight:** none').highlight).toBe('none');
+    expect(parse('- **Highlight:** DIM').highlight).toBe('dim');
+    expect(parse('- **Highlight:** sparkly').highlight).toBeUndefined();
+    // Unset is the default treatment, applied at render rather than at parse.
+    expect(parse('').highlight).toBeUndefined();
+  });
+
   test('Position: takes the four sides and ignores anything else', () => {
     expect(parse('- **Position:** bottom').position).toBe('bottom');
     expect(parse('- **Position:** LEFT').position).toBe('left');
@@ -974,17 +985,21 @@ ${fields}
 - **Description:** D
 - **Position:** bottom
 - **OffsetX:** anchor.width * 1.3
+- **Highlight:** ring
 - **Beats:**
   1. inherits
   2. overrides
      - Position: right
+     - Highlight: none
 `);
     const [, first, second] = tourPositions(md);
     // Inherited like `anchor` is: a beat that does not move the popover keeps
     // the step's placement rather than snapping back to automatic.
     expect(first.position).toBe('bottom');
     expect(first.offsetX).toEqual({ of: 'width', times: 1.3 });
+    expect(first.highlight).toBe('ring');
     expect(second.position).toBe('right');
+    expect(second.highlight).toBe('none');
     // The override is per-field: OffsetX still comes from the step.
     expect(second.offsetX).toEqual({ of: 'width', times: 1.3 });
   });

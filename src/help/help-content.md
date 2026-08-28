@@ -163,6 +163,7 @@ does not get swallowed into that entry's `Description:`.
 | `Action:` | one sentence saying what the tour just DID — see [Actions](#actions) |
 | `Once:` | storage key letting this entry's alerts be dismissed for good — see [Alerts](#alerts) |
 | `Change:` | what this step ADDS to the app state, as a URL query — see [Change](#change) |
+| `Highlight:` | how hard to point at the anchor: `ring`, `dim`, `none` — see [Highlight](#highlight) |
 | `Position:` | force the popover to a side: `left`, `right`, `top`, `bottom` — see [Placement](#placement) |
 | `OffsetX:` | nudge it horizontally — see [Placement](#placement) |
 | `Tour:` | which tour this is a step of, e.g. `Walkthrough`; omit for help-only |
@@ -378,6 +379,33 @@ never looked has already spent their one showing.
 **The key is authored, not derived from the entry id.** Two entries can share a
 key so that one tick silences the same note in both, and renaming an entry does
 not resurrect a note the viewer already put away.
+
+### Highlight
+
+By default an anchored step draws a blue ring around its anchor **and** dims
+everything else. `Highlight:` changes that:
+
+```
+- **Highlight:** ring
+```
+
+| value | effect |
+|---|---|
+| (omitted) | ring + dimming — the default |
+| `dim` | the same, written out |
+| `ring` | the ring alone, nothing dimmed |
+| `none` | draw nothing |
+
+Use `ring` when the anchor is one control among several the reader is meant to
+compare — dimming the rest hides the context the step is talking about.
+
+**`none` still resolves the anchor**, so the anchor keeps positioning the
+popover. That is the point of it: a step can aim the popover at something
+without visually seizing it. (`Anchor: none` is the different thing — no anchor
+at all, so the popover is centred.)
+
+Unrecognised values are ignored, so a typo costs the override and not the tour.
+A beat inherits its step's `Highlight:` and can override it.
 
 ### Placement
 
