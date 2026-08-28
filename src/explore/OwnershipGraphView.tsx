@@ -1596,7 +1596,14 @@ export default function OwnershipGraphView({
         </div>
       )}
 
-      <div ref={zp.containerRef} className="w-full h-full overflow-auto cursor-grab">
+      {/* Direction is published on the DOM so the help package can place the
+          tour popover on the axis the diagram does NOT grow along (LR grows
+          rightwards, so the popover goes below; TB grows down, so it goes
+          beside). HelpLayer is host-agnostic and has no access to Explore's
+          state — the same reason anchors are resolved through data attributes
+          and the resolver table rather than passed as props. */}
+      <div ref={zp.containerRef} data-graph-direction={direction}
+           className="w-full h-full overflow-auto cursor-grab">
         <div ref={zp.spacerRef}>
           <div ref={zp.wrapperRef} className="relative">
             {layout && (

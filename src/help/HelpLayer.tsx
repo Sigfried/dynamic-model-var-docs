@@ -580,6 +580,39 @@ function popoverPosition(r: DOMRect | null): React.CSSProperties {
    * empty half of the screen, which is where it belongs regardless of which
    * side the anchor is on.
    */
+  const EST_H = 260;
+
+  /*
+   * Prefer the axis the DIAGRAM DOES NOT GROW ALONG (Siggie, 2026-08-28).
+   *
+   * Beside-the-anchor is the wrong default when the anchor is a node box: in
+   * LR the graph grows rightwards, so the popover sitting on the right is
+   * standing exactly where the next box will be laid out. Clicking
+   * `cause_of_death` on step 2 put the new box under it twice running, once
+   * from a clean start.
+   *
+   * So in LR the popover goes BELOW the box and in TB it goes BESIDE it —
+   * across the growth axis either way. This only applies when the anchor is
+   * inside the canvas; the selection tree and toolbar are not laid out by ELK
+   * and keep the beside-with-more-room rule that was chosen for them.
+   */
+  const canvas = document.querySelector('[data-graph-direction]');
+  const dir = canvas?.getAttribute('data-graph-direction');
+  const inCanvas = !!canvas && overlaps(r, canvas.getBoundingClientRect());
+
+  if (inCanvas && dir === 'RIGHT') {
+    // Below the box, left-aligned with it, both clamped on screen.
+    const below = r.bottom + GAP;
+    // No room underneath (a box near the bottom) — fall through to beside.
+    if (below + EST_H <= vh - 8) {
+      return {
+        left: Math.max(8, Math.min(r.left, vw - W - 8)),
+        top: below,
+        width: W,
+      };
+    }
+  }
+
   const roomRight = vw - r.right - GAP;
   const roomLeft = r.left - GAP;
   const left = roomRight >= roomLeft
@@ -589,7 +622,11 @@ function popoverPosition(r: DOMRect | null): React.CSSProperties {
   // Vertically: centre on the anchor where possible, so a short anchor does
   // not get a popover hanging far below it. Height is unknown before render,
   // so this uses a generous estimate rather than measuring and re-rendering.
-  const EST_H = 260;
   const top = Math.max(8, Math.min(r.top + r.height / 2 - EST_H / 3, vh - EST_H));
   return { left: Math.max(8, left), top, width: W };
+}
+
+/** Do two viewport rects intersect at all? */
+function overlaps(a: DOMRect, b: DOMRect): boolean {
+  return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
 }

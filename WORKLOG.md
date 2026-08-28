@@ -7,6 +7,73 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-28 (tour popover vs. the canvas: place across the growth axis)
+
+Follow-on from the `zoomToFit` inset below, **which did not work.** Siggie
+clicked `cause_of_death` on tour step 2 and the new box landed behind the
+popover again, twice — including from a clean start.
+
+### Why the inset was the wrong fix
+
+It made the diagram fit into the space beside the popover, which is the right
+idea and the wrong lever: `zoomToFit` only runs when a new LAYOUT lands, and
+the popover's own placement is the thing putting it in the growth path. ELK in
+LR grows the graph RIGHTWARDS, and `popoverPosition` picks whichever side has
+more room — which, with a single box on the left, is the right. The popover was
+parking itself exactly where the next box would be laid out. Insetting the fit
+fights that instead of removing it.
+
+### The actual rule
+
+Place the popover **across the axis the diagram grows along**: in LR (`RIGHT`)
+below the anchor, in TB beside it. Siggie's suggestion, and it is better than
+what was there because it is a rule about the DIAGRAM rather than about the
+viewport. Only applies when the anchor is inside the canvas — the selection
+tree and toolbar are not laid out by ELK and keep the beside-with-more-room
+rule that was picked for them (see the 2026-08-27 "in img-2 it should be on
+right" note).
+
+Direction reaches the help package as `data-graph-direction` on the canvas
+container, NOT as a prop. `HelpLayer` is host-agnostic; it already resolves
+anchors through data attributes and a resolver table, and threading Explore's
+layout state into it would be the first exception to that.
+
+Falls back to beside-the-anchor when there is no room below (a box near the
+bottom), so it degrades to the old behaviour rather than clamping into a
+corner.
+
+### Relation menu cascade
+
+Same root cause, separate symptom: the submenu measured its right-hand room
+against `window.innerWidth`, so during a tour it opened underneath the popover.
+The popover is in the browser's TOP LAYER, so "under the popover" is exactly as
+invisible as "off the screen" and the flip logic should not distinguish them.
+`rightBoundary()` returns the popover's left edge when one is open, the
+viewport width otherwise.
+
+Only the popover's LEFT EDGE is consulted, not its full rect — the submenu
+opens at the parent panel's vertical offset and a rect test would need a height
+this function does not have. Erring towards flipping left is the safe
+direction: a submenu on the left is always readable; one under the popover
+never is.
+
+**Testing note.** jsdom implements NEITHER half of the Popover API this reads —
+`showPopover()` throws and `:popover-open` never matches. Verified with a
+throwaway test rather than assumed, because a wrong guess here makes
+`rightBoundary` take its no-popover path and the test pass vacuously. Both the
+element and `Element.prototype.matches` are stubbed in
+`RelationMenuPlacement.test.tsx`; the flip test was confirmed to FAIL with the
+fix reverted, and there is a mirror test asserting a popover with room to spare
+does NOT flip, so the rule cannot degenerate into "always flip during a tour".
+
+### Not done
+
+Siggie asked whether a `Change:` could OPEN the relation menu for a tour step,
+and dropped it themselves for time. Still open. The menu's open state is
+module-level in `RelationMenu.tsx` (`openListeners` / `setOpenMenu`), so a tour
+hook has somewhere obvious to attach if this comes back.
+
+---
 ## 2026-08-28 (relation menu: hover-close grace period)
 
 Siggie, with a screenshot: the pointer *flitted* across a `2 related` trigger

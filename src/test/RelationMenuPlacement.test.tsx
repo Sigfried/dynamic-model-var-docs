@@ -60,6 +60,40 @@ function stubLayout(innerWidth: number, triggerLeft = 600) {
   };
 }
 
+
+/**
+ * Fake an open help popover occupying the right of the screen.
+ *
+ * jsdom implements NEITHER half of the Popover API this reads: `showPopover`
+ * throws and `:popover-open` never matches (verified, not assumed). So both
+ * the element and the `matches` check have to be faked, or `rightBoundary`
+ * silently takes its "no popover" path and the test passes vacuously —
+ * the exact hazard this file exists to document.
+ */
+function stubPopover(left: number) {
+  const pop = document.createElement('div');
+  pop.setAttribute('data-help-popover', '');
+  document.body.appendChild(pop);
+  const realMatches = Element.prototype.matches;
+  Element.prototype.matches = function (this: Element, sel: string) {
+    if (sel === ':popover-open') return this === pop;
+    return realMatches.call(this, sel);
+  };
+  const realRect = Element.prototype.getBoundingClientRect;
+  Element.prototype.getBoundingClientRect = function (this: Element) {
+    if (this === pop) {
+      return { left, right: left + 320, top: 0, bottom: 500,
+               width: 320, height: 500 } as DOMRect;
+    }
+    return realRect.call(this);
+  };
+  return () => {
+    Element.prototype.matches = realMatches;
+    Element.prototype.getBoundingClientRect = realRect;
+    pop.remove();
+  };
+}
+
 describe('RelationMenu submenu placement', () => {
   const groups: RelationGroupVM[] = [
     {
@@ -111,6 +145,40 @@ describe('RelationMenu submenu placement', () => {
     if (original.width) Object.defineProperty(HTMLElement.prototype, 'offsetWidth', original.width);
     Object.defineProperty(window, 'innerWidth', { value: original.w, configurable: true });
     Object.defineProperty(window, 'innerHeight', { value: original.h, configurable: true });
+  });
+
+  test('flips left when the tour popover, not the viewport, is the boundary', () => {
+    // The popover renders in the browser's TOP LAYER, so a submenu opening
+    // under it is as invisible as one hanging off the screen — the flip has to
+    // treat the popover's left edge as the right boundary (Siggie, screenshot
+    // 2026-08-28: the cascade opened straight under the tour popover).
+    //
+    // Geometry: a wide viewport where the submenu WOULD fit on the right, so a
+    // pass here cannot be explained by the plain off-screen rule.
+    stubLayout(1400, 600);
+    const restore = stubPopover(760);   // parent right edge is 600+208=808 > 760
+    try {
+      openMenu();
+      const sub = openBranch(1);
+      expect(sub.className).toContain('right-full');
+    } finally {
+      restore();
+    }
+  });
+
+  test('does not flip for a popover that leaves room on the right', () => {
+    // The mirror of the above: a popover far enough right that the submenu
+    // still fits beside the panel must NOT trigger a flip, or the boundary
+    // rule would just be "always flip during a tour".
+    stubLayout(1400, 600);
+    const restore = stubPopover(1100);  // 808 + 224 = 1032 <= 1100 - 4
+    try {
+      openMenu();
+      const sub = openBranch(1);
+      expect(sub.className).toContain('left-full');
+    } finally {
+      restore();
+    }
   });
 
   test('opens leftward when the right gutter cannot hold it', () => {

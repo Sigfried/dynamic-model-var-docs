@@ -108,6 +108,28 @@ type Anchor = { x: number; y: number };
  *  unreadable, so it is better to overflow slightly than to shrink further. */
 const MIN_SUBMENU_W = 140;
 
+
+/**
+ * The x beyond which a submenu is effectively off-screen.
+ *
+ * Normally the viewport's right edge. During a tour it is the LEFT EDGE of the
+ * help popover instead: the popover renders in the browser's top layer, so a
+ * submenu opening underneath it is as invisible as one hanging off the screen,
+ * and the flip logic should treat it the same way (Siggie, 2026-08-28).
+ *
+ * Only the popover's left edge matters, not its full rect — the submenu opens
+ * at the parent panel's vertical position and a rect test would need a height
+ * this function does not have. Erring towards flipping left is the safe
+ * direction: a submenu on the left is always readable, one under the popover
+ * never is.
+ */
+function rightBoundary(): number {
+  const pop = document.querySelector('[data-help-popover]');
+  if (!pop || !(pop as HTMLElement).matches(':popover-open')) return window.innerWidth;
+  const left = pop.getBoundingClientRect().left;
+  return left > 0 ? Math.min(left, window.innerWidth) : window.innerWidth;
+}
+
 export function RelationMenu({
   label, groups, relatedCount, shownCount, onAdd, onRemove, onInspect,
 }: RelationMenuProps) {
@@ -337,7 +359,7 @@ function Submenu({
     const M = 4;
     // Room on the right is the test; falling back to the left only helps if
     // there is actually room there.
-    const right = window.innerWidth - M - p.right;
+    const right = rightBoundary() - M - p.right;
     const left = p.left - M;
     if (w <= right) {          // fits on the right: the preferred side
       setFlip(false); setMaxW(undefined);
