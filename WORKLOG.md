@@ -42,29 +42,35 @@ Falls back to beside-the-anchor when there is no room below (a box near the
 bottom), so it degrades to the old behaviour rather than clamping into a
 corner.
 
-### Relation menu cascade
+### Relation menu cascade — tried and REVERTED
 
-Same root cause, separate symptom: the submenu measured its right-hand room
-against `window.innerWidth`, so during a tour it opened underneath the popover.
-The popover is in the browser's TOP LAYER, so "under the popover" is exactly as
-invisible as "off the screen" and the flip logic should not distinguish them.
-`rightBoundary()` returns the popover's left edge when one is open, the
-viewport width otherwise.
+Same root cause, and the fix did not survive contact. The submenu measures its
+right-hand room against `window.innerWidth`, so during a tour it could open
+underneath the popover. Made `rightBoundary()` return the popover's left edge
+when one was open, on the reasoning that the popover is in the browser's TOP
+LAYER, so "under the popover" is exactly as invisible as "off the screen".
 
-Only the popover's LEFT EDGE is consulted, not its full rect — the submenu
-opens at the parent panel's vertical offset and a rect test would need a height
-this function does not have. Erring towards flipping left is the safe
-direction: a submenu on the left is always readable; one under the popover
-never is.
+**That was wrong, and the popover fix above is why.** With the popover now
+placed BELOW its anchor in LR, it sits in a band far under the menu — and a
+left-edge-only test has no idea, so it flipped every cascade that shared no
+rows with it (Siggie, screenshot: "now menu flips unnecessarily").
 
-**Testing note.** jsdom implements NEITHER half of the Popover API this reads —
-`showPopover()` throws and `:popover-open` never matches. Verified with a
-throwaway test rather than assumed, because a wrong guess here makes
-`rightBoundary` take its no-popover path and the test pass vacuously. Both the
-element and `Element.prototype.matches` are stubbed in
-`RelationMenuPlacement.test.tsx`; the flip test was confirmed to FAIL with the
-fix reverted, and there is a mirror test asserting a popover with room to spare
-does NOT flip, so the rule cannot degenerate into "always flip during a tour".
+The obvious repair is to make it a real rect test — pass the submenu's
+`[top, bottom]` and return the viewport width when the popover shares no rows.
+Written, typechecked, and then **thrown away on Siggie's call**: "just get rid
+of menu's popover awareness and keep the LR-->popover to bottom fix." Correct
+call on the merits, not just on time. Once the popover is placed off the growth
+axis it is rarely beside a cascade at all, so the whole mechanism was buying a
+rare improvement at the cost of a permanent coupling from `RelationMenu` to the
+help package's DOM — plus a rect test that jsdom cannot exercise without
+stubbing `offsetHeight`, `matches(':popover-open')`, and the popover element
+itself, where a 0-height stub yields an empty span that never overlaps and a
+test that passes while measuring nothing.
+
+**If this comes back**, the lesson is the ordering: decide where the popover
+goes FIRST, then ask whether anything still needs to dodge it. Two components
+independently reading the popover's rect and moving themselves is how you get
+one fix undoing another.
 
 ### Not done
 
