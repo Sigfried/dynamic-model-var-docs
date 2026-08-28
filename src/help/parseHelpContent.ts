@@ -59,6 +59,8 @@ export interface TourBeat {
   change?: string;
   /** Overrides the step's `Highlight:` for this beat. */
   highlight?: Highlight;
+  /** Overrides the step's `Width:` for this beat. */
+  width?: number;
   /** Overrides the step's `Position:` for this beat. */
   position?: PopoverSide;
   /** Overrides the step's `OffsetX:` for this beat. */
@@ -134,6 +136,15 @@ export interface HelpEntry {
    * able to ask for one without the other (Siggie, 2026-08-28).
    */
   highlight?: Highlight;
+  /**
+   * How wide the popover is for this step, in CSS pixels. `Width: 480`.
+   *
+   * The default 320 is sized for a step's worth of prose. A step that carries
+   * real exposition -- the intro, which explains what the app IS -- reads badly
+   * in a narrow column (Siggie, 2026-08-28). Values below 240 are ignored, and
+   * the width is capped to the viewport at render.
+   */
+  width?: number;
   /**
    * Horizontal nudge in CSS pixels, applied after placement. `OffsetX: 260`,
    * or in terms of the anchor's own size: `OffsetX: anchor.width * 1.3`.
@@ -225,6 +236,8 @@ export interface TourPosition {
   beat?: TourBeat;
   /** Emphasis for this position; a beat's wins over its step's. */
   highlight?: Highlight;
+  /** Popover width for this position; a beat's wins over its step's. */
+  width?: number;
   /** Placement override for this position; a beat's wins over its step's. */
   position?: PopoverSide;
   /** Horizontal nudge for this position; a beat's wins over its step's. */
@@ -285,6 +298,18 @@ export type PopoverSide = 'left' | 'right' | 'top' | 'bottom';
 export type Offset =
   | { px: number }
   | { of: 'width' | 'height'; times: number };
+
+/**
+ * `Width: 480` — the popover's width in CSS pixels for this step.
+ *
+ * Clamped to a sane band rather than trusted: below ~240 the prose is a column
+ * of single words, and a popover wider than the viewport is not a popover.
+ * The upper bound is applied at render, where the viewport width is known.
+ */
+function parseWidth(value: string | undefined): number | undefined {
+  const n = Number(value?.trim());
+  return Number.isFinite(n) && n >= 240 ? n : undefined;
+}
 
 /**
  * `Highlight: ring|dim|none`. Like `Position:`, an unrecognised value is
@@ -495,6 +520,7 @@ function extractBeats(lines: string[], entryId: string): TourBeat[] | undefined 
       else if (key === 'action') current.action = value.trim();
       else if (key === 'change') current.change = value.trim();
       else if (key === 'highlight') current.highlight = parseHighlight(value);
+      else if (key === 'width') current.width = parseWidth(value);
       else if (key === 'position') current.position = parsePosition(value);
       else if (key === 'offsetx') current.offsetX = parseOffset(value);
       // `- Keep: true`. A bare `- Keep:` counts too: it is a marker, and an
@@ -533,6 +559,7 @@ function parseEntry(block: string, order: number): HelpEntry | null {
   const once = extractField(lines, 'Once');
   const change = extractField(lines, 'Change');
   const highlight = parseHighlight(extractField(lines, 'Highlight'));
+  const width = parseWidth(extractField(lines, 'Width'));
   const position = parsePosition(extractField(lines, 'Position'));
   const offsetX = parseOffset(extractField(lines, 'OffsetX'));
   const beats = extractBeats(lines, id);
@@ -545,7 +572,7 @@ function parseEntry(block: string, order: number): HelpEntry | null {
 
   return {
     id, title, description, interactions, shortcut, context,
-    anchor, action, once, change, highlight, position, offsetX, tour, order, beats,
+    anchor, action, once, change, highlight, width, position, offsetX, tour, order, beats,
   };
 }
 
@@ -638,6 +665,7 @@ export function tourPositions(content: HelpContent, tour?: string): TourPosition
         action: entry.action,
         change: entry.change,
         highlight: entry.highlight,
+        width: entry.width,
         position: entry.position,
         offsetX: entry.offsetX,
       });
@@ -678,6 +706,7 @@ export function tourPositions(content: HelpContent, tour?: string): TourPosition
         // The step's own change belongs to the position that opens it.
         change: entry.change,
         highlight: entry.highlight,
+        width: entry.width,
         position: entry.position,
         offsetX: entry.offsetX,
       });
@@ -695,6 +724,7 @@ export function tourPositions(content: HelpContent, tour?: string): TourPosition
         // Inherited like `anchor`: a beat that does not move the popover keeps
         // the step's placement rather than snapping back to automatic.
         highlight: beat.highlight ?? entry.highlight,
+        width: beat.width ?? entry.width,
         position: beat.position ?? entry.position,
         offsetX: beat.offsetX ?? entry.offsetX,
         /*

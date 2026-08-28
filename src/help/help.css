@@ -69,6 +69,17 @@ body.help-mode {
   line-height: 1.45;
   box-shadow: 0 8px 28px rgb(15 23 42 / 18%);
   overflow: visible;
+  /* Column so a popover taller than the viewport scrolls its BODY and keeps
+     the nav row (back / next / ✕) reachable, rather than pushing it off the
+     bottom. `maxHeight` is set inline by `popoverPosition`. */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Only the prose scrolls; the title and the nav row hold their place. */
+.help-popover-body {
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .help-popover-title {

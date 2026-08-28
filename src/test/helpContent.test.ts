@@ -940,6 +940,16 @@ ${fields}
     expect(parse('').highlight).toBeUndefined();
   });
 
+  test('Width: takes a pixel count and rejects a too-narrow one', () => {
+    // The default 320 suits a step's worth of prose; the intro, which explains
+    // what the app IS, reads badly in a narrow column (Siggie, 2026-08-28).
+    expect(parse('- **Width:** 480').width).toBe(480);
+    // Below ~240 the prose is a column of single words, so it is not honoured.
+    expect(parse('- **Width:** 120').width).toBeUndefined();
+    expect(parse('- **Width:** wide').width).toBeUndefined();
+    expect(parse('').width).toBeUndefined();
+  });
+
   test('Position: takes the four sides and ignores anything else', () => {
     expect(parse('- **Position:** bottom').position).toBe('bottom');
     expect(parse('- **Position:** LEFT').position).toBe('left');
@@ -986,6 +996,7 @@ ${fields}
 - **Position:** bottom
 - **OffsetX:** anchor.width * 1.3
 - **Highlight:** ring
+- **Width:** 460
 - **Beats:**
   1. inherits
   2. overrides
@@ -998,6 +1009,8 @@ ${fields}
     expect(first.position).toBe('bottom');
     expect(first.offsetX).toEqual({ of: 'width', times: 1.3 });
     expect(first.highlight).toBe('ring');
+    expect(first.width).toBe(460);
+    expect(second.width).toBe(460);
     expect(second.position).toBe('right');
     expect(second.highlight).toBe('none');
     // The override is per-field: OffsetX still comes from the step.

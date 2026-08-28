@@ -7,6 +7,45 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-28 (unanchored popover centres on its real height; Width: field)
+
+### The centring bug
+
+Siggie: *"for no anchor, try to center the popover vertically. this is lower on
+the screen than it should be."*
+
+The unanchored branch computed `top: (vh - EST_H) / 2` with `EST_H = 260`
+hardcoded. That is only correct for a popover 260px tall; the tour's intro step
+is nearer 670, so it was placed as if it were 410px shorter than it is —
+visibly low, exactly as reported.
+
+Fixed with `top: 50%` plus a `-50%` translate rather than by measuring. The
+browser knows the real height and this function does not, so CSS is EXACT where
+any estimate is a guess, and it costs no measure-then-re-render pass. The same
+`EST_H` guess is still used on the anchored paths, where it only biases which
+side a popover leans toward and is not worth the extra render.
+
+A popover taller than the viewport now scrolls: `maxHeight` inline, the card as
+a flex column, and `overflow-y: auto` on the BODY only — so the title and the
+back/next row hold their place instead of being pushed off the bottom.
+
+### Width:
+
+Siggie, same message: *"make a width field. i want the introduction to be more
+general and longer."* `Width: 480`, on a step or a beat, inherited and
+overridable like the other placement fields.
+
+Two guards, for opposite failure modes. Below 240 the field is IGNORED at parse
+time — narrower than that the prose is a column of single words, and there is no
+sensible rendering to fall back to. Above the viewport it is CAPPED at render
+instead of ignored, because the author's intent (as wide as possible) is still
+serviceable on a small screen; ignoring it there would drop a deliberate choice
+because someone opened a laptop.
+
+Verified `withOffset` clamps against the capped width rather than the requested
+one, or a wide popover with an `OffsetX:` could still be pushed off-screen.
+
+---
 ## 2026-08-28 (collapsed boxes: a row budget, not connected-only)
 
 Siggie: *"i want to disable the code that hides attributes as soon as a single

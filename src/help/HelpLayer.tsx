@@ -426,7 +426,8 @@ export default function HelpLayer() {
         data-help-popover=""
         className="help-popover"
         style={popoverPosition(rect, inTour ? position?.position : undefined,
-                               inTour ? position?.offsetX : undefined)}
+                               inTour ? position?.offsetX : undefined,
+                               inTour ? position?.width : undefined)}
       >
         {entry && (
           <>
@@ -562,21 +563,40 @@ export default function HelpLayer() {
  * A null rect means the anchor is `none` or did not resolve; the popover is
  * centred instead, which is what `Anchor: none` is authored to mean.
  */
+/** Default popover width; `Width:` overrides it per step. */
+const POPOVER_W = 320;
+
 function popoverPosition(
   r: DOMRect | null,
   side?: PopoverSide,
   offsetX?: Offset,
+  width?: number,
 ): React.CSSProperties {
-  const W = 320;
-  const GAP = 12;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
+  // An authored width is capped to the viewport: a step should be able to ask
+  // for a wide popover, not for one that does not fit on the screen.
+  const W = Math.min(width ?? POPOVER_W, vw - 16);
+  const GAP = 12;
 
+  /*
+   * No anchor: centre it, BOTH ways.
+   *
+   * This used to subtract a hardcoded `EST_H = 260` from the viewport height,
+   * which is only correct for a popover that happens to be 260px tall. The
+   * tour's intro step is nearer 670 and sat visibly low (Siggie, 2026-08-28).
+   *
+   * `top: 50%` with a `-50%` translate centres on the popover's REAL height,
+   * which the browser knows and this function does not — no measurement, no
+   * re-render, exact at any height. `maxHeight` keeps a very tall one on
+   * screen, and the body scrolls inside it.
+   */
   if (!r) {
-    const EST_H = 260;
     return {
       left: Math.max(8, (vw - W) / 2),
-      top: Math.max(8, (vh - EST_H) / 2),
+      top: '50%',
+      transform: 'translateY(-50%)',
+      maxHeight: `${vh - 16}px`,
       width: W,
     };
   }

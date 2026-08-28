@@ -164,6 +164,7 @@ does not get swallowed into that entry's `Description:`.
 | `Once:` | storage key letting this entry's alerts be dismissed for good — see [Alerts](#alerts) |
 | `Change:` | what this step ADDS to the app state, as a URL query — see [Change](#change) |
 | `Highlight:` | how hard to point at the anchor: `ring`, `dim`, `none` — see [Highlight](#highlight) |
+| `Width:` | popover width in pixels, default 320 — see [Placement](#placement) |
 | `Position:` | force the popover to a side: `left`, `right`, `top`, `bottom` — see [Placement](#placement) |
 | `OffsetX:` | nudge it horizontally — see [Placement](#placement) |
 | `Tour:` | which tour this is a step of, e.g. `Walkthrough`; omit for help-only |
@@ -437,11 +438,27 @@ for a box the step is about to add — and it stays right if the box width
 changes. It is a closed grammar, not an expression: `anchor.width + 10` and
 `anchor.left` do not parse.
 
-Both are clamped to the viewport. An override can pick a bad side; it cannot
-push the popover off-screen.
+`Width:` sets the popover's width in pixels for one step; the default is 320,
+sized for a step's worth of prose. A step carrying real exposition — the intro,
+which explains what the app is — reads badly in a narrow column, so:
 
-A beat inherits its step's `Position:` and `OffsetX:` and can override either
-independently, the same way it inherits `Anchor:`.
+```
+- **Width:** 480
+```
+
+Values under 240 are ignored (the prose becomes a column of single words), and
+the width is capped to the viewport, so a wide popover still fits on a small
+screen.
+
+Both `Position:` and `OffsetX:` are clamped to the viewport. An override can
+pick a bad side; it cannot push the popover off-screen.
+
+**With no anchor** (`Anchor: none`) the popover is centred both ways, on its
+real height — so a long step stays centred rather than sitting low. One taller
+than the screen scrolls its body and keeps the back/next row in view.
+
+A beat inherits its step's `Position:`, `OffsetX:` and `Width:` and can override
+each independently, the same way it inherits `Anchor:`.
 
 ### Change
 
@@ -615,7 +632,7 @@ What this app is and how to move around it.
   > This tour will introduce you to all of BDCHM Explorer's major features.
   > - Click the ✕ or hit **Esc** any time to exit.
   > - Use arrow keys or next/back buttons to navigate.
-- **Anchor:** app-title
+- **Anchor:** none
 - **Once:** intro
 - **Change:**
 
