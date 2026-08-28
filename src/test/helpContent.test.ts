@@ -339,6 +339,63 @@ describe('multi-line Description:', () => {
   });
 });
 
+describe('<details> section wrappers', () => {
+  /*
+   * Each `## Section` is wrapped in `<details>` so the file folds on GitHub.
+   * The wrapper puts a `</details>` after the LAST entry of each section --
+   * inside that entry's block, since nothing else ends it -- so a multi-line
+   * field has to stop at it. Otherwise the closing tag is swallowed into the
+   * description and rendered as literal text in the popover.
+   */
+  const md = parseHelpContent(`
+<details open>
+<summary><b>Sec</b></summary>
+
+## Sec
+
+### last
+
+- **Title:** T
+- **Description:** Line one.
+
+  Line two.
+
+</details>
+`);
+
+  test('a closing tag does not leak into the last entry', () => {
+    const d = md.entries.get('last')!.description;
+    expect(d).not.toContain('details');
+    expect(d).toBe('Line one.\n\nLine two.');
+  });
+
+  test('the wrapped section still parses', () => {
+    expect(md.sections.map(s => s.title)).toEqual(['Sec']);
+    expect([...md.entries.keys()]).toEqual(['last']);
+  });
+
+  test('every section in the real file is wrapped', () => {
+    // The point of the wrapper is uniformity -- one unwrapped section renders
+    // as a loose fragment between two folds, which is how the second half of
+    // the TODO block looked before it was absorbed.
+    const headings = [...markdown.matchAll(/^## (.+)$/gm)]
+      .map(m => m[1].trim())
+      // The spec quotes `## Section Title` inside a fenced example.
+      .filter(h => !h.startsWith('Section Title'));
+    const summaries = [...markdown.matchAll(/<summary><b>(.+?)<\/b><\/summary>/g)]
+      .map(m => m[1].trim());
+    expect(summaries).toEqual(headings);
+  });
+
+  test('open/closed tags balance', () => {
+    // Only tags at the start of a line are structure; the spec section
+    // discusses `<details>` in prose and those mentions must not be counted.
+    const opens = (markdown.match(/^<details[ >]/gm) ?? []).length;
+    const closes = (markdown.match(/^<\/details>/gm) ?? []).length;
+    expect(closes).toBe(opens);
+  });
+});
+
 describe('named tours', () => {
   /*
    * `Tour:` names a tour and file order gives the position (2026-08-28,

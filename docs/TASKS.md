@@ -96,9 +96,16 @@ and still have a tour to author"*). Done in that session:
 1. **Multi-line for `Context:` / `Action:` / beat text.** Deliberately not done
    — *"1 for now; may need 2 soon"*. `extractBlockField` is generic, so each is
    a one-line change.
-2. **Move help-only entries below the tour steps.** They interleave with tour
-   steps today. Harmless (file order counts only entries *in* the tour) but it
-   makes the tour hard to read off the page. It is Siggie's file to arrange.
+
+**Done in the second pass (same day):** help-only entries moved below the tour
+steps *per section* (Siggie's choice, so each entry stays beside the topic it
+explains — only `selection-tree-mechanics` was actually interleaved), and every
+`## ` section wrapped in `<details>` so the file folds on GitHub. The wrapping
+exposed two parser bugs, both fixed and tested: `</details>` was being swallowed
+into the last entry's `Description:`, and `parseSection` read its title from
+line 0 so every section became `'Unknown'` (latent regardless — `title` is
+unused). The `<summary>` repeats the `## Heading` on purpose; the parser
+identifies sections by `^## `.
 
 The spec is still long — 8 `###` sections, now 9. **Which parts read badly has
 still not been diagnosed**; the format changes above may have removed the

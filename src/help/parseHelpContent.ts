@@ -196,6 +196,14 @@ export const DEFAULT_TOUR = 'Walkthrough';
 const PROSE_SECTIONS = new Set([SPEC_SECTION, 'TODO']);
 
 /**
+ * Structural markup that ends a multi-line field: the `<details>`/`</details>`
+ * wrappers that let each `## Section` fold when the file is read on GitHub,
+ * and their `<summary>`. These sit in the file for the READER; they are never
+ * part of an entry's content.
+ */
+const SECTION_MARKUP = /^<\/?(?:details|summary)\b[^>]*>$/i;
+
+/**
  * Extract a field value like "**Title:** ..." from the lines.
  *
  * A field whose name is prefixed with `_` is PARKED: still written down, but
@@ -240,6 +248,13 @@ function extractBlockField(lines: string[], label: string): string | undefined {
     // hold two paragraphs, and stopping at the blank would silently drop the
     // second.
     if (lines[i].trimStart().startsWith('- **')) break;
+    // So does the structural markup around a section. `## Section` blocks are
+    // wrapped in `<details>` so the file folds when read on GitHub, which puts
+    // a `</details>` after the LAST entry of each section -- inside that
+    // entry's block, since nothing else ends it. Without this the closing tag
+    // is swallowed into the description and rendered as literal text in the
+    // popover.
+    if (SECTION_MARKUP.test(lines[i].trim())) break;
     rest.push(lines[i]);
   }
   // Trailing blanks are the gap before the next field, not part of the value.
@@ -362,16 +377,21 @@ function parseEntry(block: string, order: number): HelpEntry | null {
  */
 function parseSection(block: string, nextOrder: () => number): HelpSection {
   const lines = block.split('\n');
-  const headerLine = lines[0];
-  const titleMatch = headerLine.match(/^##\s+(.+)$/);
+  // FIND the heading rather than assuming line 0. Each section is wrapped in
+  // `<details>`/`<summary>` so the file folds on GitHub, which puts two lines
+  // above the `## `. Reading line 0 gave every section the title 'Unknown' and
+  // swallowed the wrapper into `body`.
+  const headerIdx = lines.findIndex(l => /^##\s+/.test(l));
+  const titleMatch = headerIdx === -1 ? null : lines[headerIdx].match(/^##\s+(.+)$/);
   const title = titleMatch ? titleMatch[1].trim() : 'Unknown';
   const id = title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
   // Body = everything between the ## header and the first ### entry
   const bodyLines: string[] = [];
-  let i = 1;
-  for (; i < lines.length; i++) {
+  for (let i = headerIdx + 1; i < lines.length; i++) {
     if (lines[i].startsWith('### ')) break;
+    // The wrapper's own markup is not section prose.
+    if (SECTION_MARKUP.test(lines[i].trim())) continue;
     bodyLines.push(lines[i]);
   }
   const body = bodyLines.join('\n').trim();

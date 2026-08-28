@@ -7,54 +7,34 @@ Parsed by `parseHelpContent.ts`; pinned by `src/test/helpContent.test.ts`.
 Package-level design lives in [docs/HELP_PACKAGE_PLAN.md](../../docs/HELP_PACKAGE_PLAN.md).
 
 ---
+<details>
+<summary><b>TODO</b></summary>
+
 <!--
 -->
 ## TODO
 
-**A `## TODO` section did confuse the parser** — its `###` headings parsed as
-entries anchored at nothing, failing two tests. Fixed: the parser skips this
-section by name, the same way it skips `Format` (`PROSE_SECTIONS`). Write
-whatever you like here.
+### Done
 
-### Done 2026-08-28
-
-- **`Tour:` names a tour; ORDER COMES FROM THE FILE.** `Tour: Walkthrough`
-  instead of `Tour: 3`. Insert a step by pasting the entry where it belongs —
-  nothing else in the file moves, and there is no number to renumber. Several
-  tours can share the file (`Tour: Deep dive`). See *Tours and order* in the
-  spec.
-- **`Description:` is a multi-line markdown block.** It runs to the next
-  `- **Field:**`, blank lines included, so paragraphs and bullet lists work.
-  `app-title` is back in your draft's order, with the "It is meant to help
-  researchers who:" bullets inline where you wrote them, and
-  `selection-tree`'s three indented bullets now render (they were in the file
-  all along; the parser was dropping them at the end of the line).
-- **Links render as links.** Not a parser bug: `react-markdown` was always
-  emitting a real `<a>`, but `help.css` had no `a` rule, so links inherited the
-  body colour with no underline. Styled now, in both themes, and they open in a
-  new tab so following one does not throw away the tour's state.
-- **Bullets have bullets again.** Tailwind's preflight resets `ul` to
-  `list-style: none`, and the popover's CSS never set it back — so lists
-  rendered as unmarked indented lines (which is why `Interactions:` has looked
-  like that all along, not a space-saving choice). Fixed for both the
-  description's lists and `Interactions:`.
-- **`Tour:` moved to just below `Title:`** in every entry.
-- **Tour steps were already in file order**, so no rearranging was needed.
+- **Sections fold.** Every `## ` section is wrapped in `<details>` with a
+  `<summary>`, so the file is navigable on GitHub. `Format` and `TODO` start
+  collapsed; the content sections are `<details open>`, because collapsing the
+  tour while you are editing it would hide the work. Two gotchas the wrapper
+  turned up, both fixed and both tested: a `</details>` after a section's last
+  entry was being swallowed into that entry's `Description:` and would have
+  rendered as literal text in the popover; and `parseSection` read its title
+  from line 0, so every section became `'Unknown'` once two lines sat above the
+  heading. The `<summary>` deliberately repeats the `## Heading` — the parser
+  identifies sections by `^## `, so the heading cannot be dropped.
+- **Non-tour entries moved below the tour steps**, per section rather than
+  collected at the end, so each entry stays beside the topic it explains. Only
+  `selection-tree-mechanics` was actually interleaved; the other six already
+  trailed their sections.
 
 ### Still open
 
-- **Move non-tour entries below the tour steps.** Help-only entries
-  (`selection-tree-mechanics`, `graph-canvas-reading`, `relation-menu`,
-  `node-dismiss`, `toolbar-siblings`, `example-cases`, `help-button`) are
-  interleaved with tour steps. Harmless — file order only counts entries in the
-  tour — but it makes the tour harder to read off the page.
-- **Multi-line for the OTHER fields** (`Context:`, `Action:`, beat text).
-  Deliberately not done: you said "1 for now; may need 2 soon". The block
-  reader (`extractBlockField`) is written generically, so each field is a
-  one-line change when you want it.
-- **`Interactions:`** does exactly what you thought: it renders a `<ul>` after
-  the description, nothing more. Now that `Description:` takes bullets, it is
-  optional structure rather than the only way to get a list.
+- **Multi-line for the OTHER fields** (`Context:`, `Action:`, beat text) —
+  still parked at your "1 for now". Also listed below.
 
 ### Original unfinished draft text
 
@@ -104,7 +84,7 @@ whatever you like here.
    2. highlight row
    3. click checkbox.
 
----
+
 ### following steps not finished yet. ignore
 - **Make better Change, Action, Beat implementation**
   - When relationship-kinds (Tour 3.1) pops up the action has already
@@ -121,8 +101,17 @@ whatever you like here.
 - **Tour authoring notes + draft preview** — `Note:` / `Draft:`
   / `ForClaude:` fields, and a way to view a tour *including* its
   parked and unfinished steps. deferred 2026-08-27 for time
+- **Multi-line for the OTHER fields** (`Context:`, `Action:`, beat text).
+  Deliberately not done: you said "1 for now; may need 2 soon". The block
+  reader (`extractBlockField`) is written generically, so each field is a
+  one-line change when you want it.
+
+</details>
 
 ---
+
+<details>
+<summary><b>Format</b></summary>
 
 ## Format
 
@@ -156,6 +145,22 @@ They are still doing two jobs, so do not remove them: they group entries
 legibly in this file, and the `---` separators between them are what the
 parser splits on. `HelpSection.body` is parsed and available if a future help
 mode wants to show section intros — it is unused, not unsupported.
+
+**Each section is wrapped in `<details>` so the file folds when read on
+GitHub**, which is what makes a 600-line document navigable. Two things about
+that wrapper are deliberate:
+
+- **The `<summary>` repeats the `## Heading` below it.** That looks redundant
+  and is load-bearing: the parser identifies a section by `^## ` and matches
+  `PROSE_SECTIONS` on that text, so deleting the heading in favour of the
+  summary makes the section invisible to the parser.
+- **The content sections are `<details open>`; `Format` and `TODO` are not.**
+  Collapsing the tour while you are editing it would hide the work; the long
+  reference material is what benefits from folding.
+
+A multi-line field stops at `<details>`, `</details>` or `<summary>` as well as
+at the next `- **Field:**`, so the closing tag after a section's last entry
+does not get swallowed into that entry's `Description:`.
 
 ### Entry fields
 
@@ -426,7 +431,10 @@ Someone who arrives from a **link** with no one explaining it — the program
 manager case. So step 1 assumes nothing, and any step that needs a selection
 brings its own via `Change:` rather than asking the visitor to click first.
 
+</details>
 ---
+<details open>
+<summary><b>Getting started</b></summary>
 
 ## Getting started
 
@@ -485,17 +493,6 @@ What this app is and how to move around it.
   give it a `Change:` and an `Action:`.
 -->
 
-### selection-tree-mechanics
-
-- **Title:** Choosing what to look at
-- **Description:** Entities are arranged by **ownership**: an entity is nested under whatever owns it. Tick a checkbox to put an entity on the diagram. The checkbox is the only thing that selects — clicking the row or the arrow just opens and closes the tree.
-- **Interactions:**
-  - Checkbox — add or remove that entity from the diagram.
-  - Arrow — expand or collapse, without changing the selection.
-  - Name — open the details panel without changing the selection.
-- **Context:** An entity can sit in more than one place in the tree, because things can be owned by more than one kind of thing. The widget marks the duplicates for you.
-- **Anchor:** selection-tree
-
 ### relationship-kinds
 
 - **Title:** How entities relate
@@ -536,7 +533,21 @@ What this app is and how to move around it.
   where a step changed the app silently.
 -->
 
+### selection-tree-mechanics
+
+- **Title:** Choosing what to look at
+- **Description:** Entities are arranged by **ownership**: an entity is nested under whatever owns it. Tick a checkbox to put an entity on the diagram. The checkbox is the only thing that selects — clicking the row or the arrow just opens and closes the tree.
+- **Interactions:**
+  - Checkbox — add or remove that entity from the diagram.
+  - Arrow — expand or collapse, without changing the selection.
+  - Name — open the details panel without changing the selection.
+- **Context:** An entity can sit in more than one place in the tree, because things can be owned by more than one kind of thing. The widget marks the duplicates for you.
+- **Anchor:** selection-tree
+
+</details>
 ---
+<details open>
+<summary><b>Reading the diagram</b></summary>
 
 ## Reading the diagram
 
@@ -615,7 +626,10 @@ What the boxes and lines mean.
   - Toggle off to draw each entity as its own separate box.
 - **Context:** Lines leaving a child's rows take that child's colour, so you can trace a line back to the block it came from.
 
+</details>
 ---
+<details open>
+<summary><b>Sharing what you see</b></summary>
 
 ## Sharing what you see
 
@@ -639,3 +653,5 @@ What the boxes and lines mean.
 - **Title:** Help and tour
 - **Description:** **Take the tour** for a short guided walk, or turn on **help mode** to explore at your own pace — every part of the screen with help attached gets a dot you can click.
 - **Shortcut:** ?
+
+</details>

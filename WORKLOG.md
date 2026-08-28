@@ -7,6 +7,74 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-28 (tour format, second pass) — `<details>` folds, and the two parser bugs it exposed
+
+Siggie's two remaining TODO items: wrap every `##` section in a collapsed
+`<details>` block, and move non-tour entries below the tour steps.
+
+### The wrapping was not cosmetic — it broke two things
+
+Both were found by writing the test first and both are worth knowing, because
+one of them was latent and had nothing to do with `<details>`:
+
+1. **`</details>` leaked into the last entry's `Description:`.** The wrapper
+   puts a closing tag after each section's final entry, *inside* that entry's
+   block — nothing else ends it. `extractBlockField` stopped only at the next
+   `- **Field:**`, so the tag was swallowed and would have rendered as literal
+   text in the popover. Fixed with `SECTION_MARKUP`, which also ends a block
+   field. Bonus: it fixed the dedent too, since a column-0 tag was pinning the
+   common indent to zero and leaving the real content indented.
+2. **`parseSection` gave every section the title `'Unknown'`.** It read the
+   heading from `lines[0]`, and the wrapper puts two lines above the `## `. It
+   also swallowed the wrapper into `body`. **This was latent regardless** —
+   `HelpSection.title` is parsed and unused (see its doc comment), so nothing
+   would have complained. The wrapping only made it visible. Now it finds the
+   heading rather than assuming its position.
+
+The `<summary>` deliberately repeats the `## Heading` right below it. That
+looks redundant and is load-bearing: `parseHelpContent` identifies a section
+with `if (!block.match(/^## /m)) continue` and matches `PROSE_SECTIONS` on that
+text, so replacing the heading with the summary makes the section invisible to
+the parser. Documented in the spec so nobody "cleans it up".
+
+**Content sections are `<details open>`; `Format` and `TODO` are not.** Siggie
+said "collapsed", but collapsing the tour while they are editing it would hide
+the thing being worked on. The long reference material is what benefits from
+folding.
+
+### A stray `---` had already split the TODO section in two
+
+The second half ("following steps not finished yet") had no `##` heading, so
+the parser skipped it — harmless, and invisible until the wrapping turned it
+into a loose fragment rendered between two folds. Absorbed back into the TODO
+block.
+
+### Moving entries: asked rather than guessed
+
+"Move non-tour entries below the tour steps" has two readings, and only one
+actually addresses the stated pain ("makes the tour harder to read off the
+page"): collect all seven help-only entries at the end, or move only the one
+that interleaves. **Siggie chose per-section** — keeps each entry beside the
+topic it explains. Only `selection-tree-mechanics` was out of place; the other
+six already trailed their sections, which is why the whole item was smaller
+than it read.
+
+First attempt overshot: splitting on `(?=^### )` gives the last entry of a
+section a block that includes the trailing `---` and the *next* `## ` heading,
+so inserting after it landed the entry in the following section. Re-done by
+inserting before the `---` that closes the section.
+
+### Siggie's mid-work note
+
+*"this is more complicated than i thought. if it causes more problems or takes
+much longer, we should probably revert the details blocks...but they would make
+it easier for me to read the file."* Not reverted: the work was already green
+when the note arrived, and the complication was two bounded parser fixes now
+pinned by tests (`<details> section wrappers` — closing tag does not leak,
+wrapped sections still parse, every section is wrapped, tags balance). One of
+those fixes is worth keeping regardless of the wrappers.
+
+---
 ## 2026-08-28 (tour format) — `Tour:` names a tour, file order orders it; `Description:` is a block
 
 TASKS item 1, "work on tour and tour format/mechanics", starting from the
