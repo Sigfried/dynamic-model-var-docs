@@ -97,18 +97,6 @@ body.help-mode {
   line-height: 1.45;
 }
 
-/* "Your changes will be discarded" — shown only once the viewer has actually
-   changed something mid-tour. Amber rather than red: it is a consequence to
-   know about, not a mistake they made. */
-.help-popover-warning {
-  margin: 8px 0 0;
-  padding: 5px 8px;
-  border-radius: 5px;
-  background: #fffbeb;
-  font-size: 11px;
-  color: #92400e;
-}
-
 .help-popover-interactions {
   margin: 6px 0;
   padding-left: 18px;
@@ -179,10 +167,6 @@ body.help-mode {
   .help-popover-action {
     background: #082f49;
     color: #bae6fd;
-  }
-  .help-popover-warning {
-    background: #422006;
-    color: #fcd34d;
   }
   .help-popover-context,
   .help-tour-nav { border-top-color: #1e293b; }

@@ -7,15 +7,20 @@
 > next session, not for Siggie.
 
 ---
-## ⭐ NEXT SESSION — START HERE (decided 2026-08-27)
+## ✅ DONE — the two designed-not-started implementations (2026-08-27)
 
 Two implementations, both decided by Siggie in the help-mode review session,
-both written up here in full. **Item 1 is DONE (2026-08-27); item 2 is the
-entry point.** They were independent, and item 1 did not block item 2.
+both written up here in full. **Both are DONE (2026-08-27).** They were
+independent, and item 1 did not block item 2.
 
-Design work is DONE for both. Do not re-open the decisions; if something looks
-wrong, the reasoning is in WORKLOG.md 2026-08-27 ("Siggie reviews help mode")
-and the alternatives were already argued and rejected there.
+Do not re-open the decisions; if something looks wrong, the reasoning is in
+WORKLOG.md 2026-08-27 ("Siggie reviews help mode") and the alternatives were
+already argued and rejected there.
+
+**Next session starts at the ONE DAY LEFT list below.** One thing came out of
+item 2 that needs Siggie and is not a bug: the authoring format has no way to
+say "take this off the diagram", so tour step 4 now ADDS to step 3's canvas
+rather than replacing it. Noted beside the step in `help-content.md`.
 
 ---
 
@@ -82,7 +87,39 @@ Options if this gets picked up, cheapest first:
 
 ---
 
-### ⭐ 2. Tour state: a push/pop stack instead of absolute snapshots
+### ✅ 2. Tour state: a push/pop stack instead of absolute snapshots
+
+**DONE 2026-08-27.** Implemented exactly as designed — the simple stack, every
+field pushing and popping the same way, no hybrid. `State:` is now `Change:`;
+the entry snapshot, the restore-on-exit, the yellow warning and its CSS are
+gone. New `src/explore/tourStateStack.ts` (the model, host-side) plus a
+push/pop seam replacing apply/read on `HelpProvider`. 26 new tests — 22 unit,
+4 driving the shipping tour through the real app — 372 passing overall,
+typecheck clean, lint unchanged from baseline.
+
+**Four things worth knowing, all recorded in WORKLOG.md:**
+
+1. **The refcount cannot live in `sel`.** It is a Set, so it cannot hold the
+   tour's copy beside the viewer's — the duplicate push has nowhere to go. The
+   tour's contribution is kept as a counted multiset in the stack and `sel` is
+   composed as *viewer ∪ tour*.
+2. **A viewer edit has to be folded back into the stack** (`reconcile`), or an
+   untick of something a step pushed is undone by the very next compose and the
+   checkbox refuses to stay off.
+3. **Only a step's FIRST beat pushes its change.** Re-applying an absolute
+   state per beat was idempotent; re-pushing a delta per beat is not — a
+   four-beat step would stack four frames and `back` would crawl out one
+   useless pop at a time.
+4. **Step 4 now adds to step 3's diagram instead of replacing it.** Its
+   `Action:` says so. The format has no "remove" verb and one was not invented;
+   flagged in the file for Siggie.
+
+**Left for Siggie** — the format cannot express "take this off the diagram". If
+step 4 wants a clean two-box canvas rather than a cumulative one, that is a
+format addition, noted beside the step rather than faked.
+
+<details>
+<summary>Original design, as written before implementation</summary>
 
 **The problem.** `State:` is a full absolute URL query: `applyExploreQuery` does
 `url.search = query`, replacing everything. Three consequences:
@@ -142,6 +179,8 @@ spec), and delete the *"every tour STEP carries an absolute state"* test in
 `helpContent.test.ts` — it pins the model being replaced and says so in a
 comment.
 
+</details>
+
 ---
 
 ## 🗓️ ONE DAY LEFT — the list
@@ -169,7 +208,7 @@ first except confirming it looks right afterwards.
 | Item | Where | Est. |
 |---|---|---|
 | ✅ **Dark-gray box headers, white text** (table item 5) — **DONE 2026-08-28.** Now `bg-slate-700 dark:bg-slate-700 text-white`, matching the `headerBg`/`headerText` family in `appConfig.ts` (`bg-<color>-700` + `text-white`); the bottom border moved from `border-gray-200` to `border-slate-800` so it does not read as a light hairline on a dark bar | `OwnershipGraphView.tsx:1801` | ~10 min |
-| ✅ **`entityCol` tooltips say "ranges"** — **DONE 2026-08-28.** The `researcher` vocab's `cls`/`enm`/`typ` tips now read *"Attributes whose value is an entity / comes from a permissible value set / is a data type"*. **Only `researcher` changed:** `linkml` (`:201-203`) keeps "ranges" legitimately, and `modeler` never said "ranges" — its tips are already column-phrased, so the old note about "`:203` for the short vocab" was wrong. **Note:** these render in the Nested Tabular view (`previous.html`); `EntityTable.tsx:152-158` has a SEPARATE set of hardcoded "…ranges" badge tooltips that bypass the vocab config and were left alone | `src/config/appConfig.ts:126-128` | ~10 min |
+| ✅ **`entityCol` tooltips say "ranges"** — **DONE 2026-08-28.** The `researcher` vocab's `cls`/`enm`/`typ` tips now read *"Attributes whose value is an entity / comes from a permissible value set / is a data type"*. **Only `researcher` changed:** `linkml` (`:201-203`) keeps "ranges" legitimately, and `modeler` never said "ranges" — its tips are already column-phrased, so the old note about "`:203` for the short vocab" was wrong | `src/config/appConfig.ts:126-128` | ~10 min |
 
 **Deliberately NOT in this list**, though they look small: edge crossings and
 the re-render regression (item 7) — both have **unmeasured causes**, and the
@@ -197,9 +236,8 @@ These keep their write-ups below so nothing is lost.
 ### Loose ends
 
 - ~~The `entityCol` "ranges" tooltips moved to [Quick wins](#quick-wins-one-session-no-design-decisions).~~
-  **Done 2026-08-28.** The write-up used to say `EntityTable.tsx`; the vocab tips
-  live in `src/config/appConfig.ts:126-128` — but `EntityTable.tsx` was not
-  entirely wrong: it has its own hardcoded "ranges" badge tooltips at `:152-158`.
+  **Done 2026-08-28.** The write-up used to say `EntityTable.tsx`; they actually
+  live in `src/config/appConfig.ts:126-128`.
 
 ---
 

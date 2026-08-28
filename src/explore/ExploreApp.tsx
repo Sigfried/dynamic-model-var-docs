@@ -31,8 +31,12 @@ import helpMarkdown from '../help/help-content.md?raw';
 
 import {
   readExploreState, writeExploreState, buildShareURL,
-  type Direction, type MergeMode,
+  type Direction, type ExploreState, type MergeMode,
 } from './exploreState';
+import {
+  parseTourChange, pushFrame, popFrame, composeState, viewerState, reconcile,
+  EMPTY_STACK, type TourStack,
+} from './tourStateStack';
 
 /**
  * Applying a tour step's `State:` query. The help package has no idea how this
@@ -42,9 +46,6 @@ import {
  */
 function ExploreAppInner() {
   const { modelData, loading, error } = useModelData();
-  // Tells the tour the viewer changed the app themselves; see the URL-writing
-  // effect below. A no-op outside a tour.
-  const { noteViewerEdit } = useHelp();
   const dataService = useMemo(
     () => (modelData ? new DataService(modelData) : null),
     [modelData],
@@ -115,23 +116,30 @@ function ExploreAppInner() {
   }, []);
 
   /*
-   * Single writer for the URL — and, during a tour, the signal that the viewer
-   * changed something themselves.
+   * Single writer for the URL — and the point where a viewer's mid-tour edit
+   * is folded into the tour's stack.
    *
-   * `noteViewerEdit` reads the state back and ignores anything equal to what
-   * the tour just applied, so the step's own write does not count as an edit;
-   * only a click of the viewer's does. That is what puts the "your changes will
-   * be discarded" line in the popover, and only when there is something to
-   * discard.
+   * `reconcile` matters because `sel` is a SET and cannot hold the tour's copy
+   * of an id beside the viewer's. When the two collide the tour yields its
+   * claim, so an untick stays unticked instead of being restored by the next
+   * compose, and a tick of something a step also pushed is not taken away by
+   * the next pop. Outside a tour the stack is empty and this is a no-op.
+   *
+   * This replaced a `noteViewerEdit()` call that only set a flag, to show the
+   * "your changes will be discarded" warning. Now the changes are not
+   * discarded, so there is nothing to warn about and the reconciliation does
+   * real work instead.
    */
   useEffect(() => {
-    writeExploreState({
+    const state: ExploreState = {
       sel: [...selectedIds], detail: detailId, roots: pathToRoot,
       sibs: mergeSibs, dir: direction, merge: mergeMode,
-    });
-    noteViewerEdit();
-  }, [selectedIds, detailId, pathToRoot,
-      mergeSibs, direction, mergeMode, noteViewerEdit]);
+    };
+    writeExploreState(state);
+    // Only unticks are detectable here; ticks announce themselves through
+    // `claimForViewer` at the click, for the reason given there.
+    setTourStack(reconcile(state, tourStack, {}).stack);
+  }, [selectedIds, detailId, pathToRoot, mergeSibs, direction, mergeMode]);
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
@@ -140,6 +148,12 @@ function ExploreAppInner() {
       else next.add(id);
       return next;
     });
+    // The viewer has spoken for this class either way, so the tour gives up its
+    // claim on it. A TICK needs saying out loud like this: the tour's copy and
+    // the viewer's collapse into one member of `sel`, so the click leaves no
+    // trace in the state for the write effect to notice. An untick is
+    // self-evident there and needs no help.
+    claimForViewer(id);
   }, []);
 
   /**
@@ -154,10 +168,10 @@ function ExploreAppInner() {
    * checkboxes the single record of what is drawn — note it may be scrolled
    * out of view when the click came from the diagram.
    */
-  const addToCanvas = useCallback(
-    (id: string) => setSelectedIds(prev => (prev.has(id) ? prev : new Set(prev).add(id))),
-    [],
-  );
+  const addToCanvas = useCallback((id: string) => {
+    setSelectedIds(prev => (prev.has(id) ? prev : new Set(prev).add(id)));
+    claimForViewer(id);   // same reasoning as toggleSelect
+  }, []);
 
   const removeFromCanvas = useCallback(
     (id: string) => setSelectedIds(prev => {
@@ -369,47 +383,94 @@ function ExploreAppInner() {
 }
 
 /**
- * The two halves of the tour's state bridge.
+ * The tour's state bridge: push a step's `Change:`, pop it on `back`.
  *
- * The provider must wrap the app (it owns help/tour state), but it knows
- * nothing about how this app stores its own state -- so the app supplies the
- * pair below and the provider calls them. They are module-level rather than
- * bound to ExploreAppInner because both go through the URL, which is
- * authoritative for every piece of shareable state; neither needs a setter.
+ * The provider must wrap the app (it owns help/tour state) but knows nothing
+ * about how this app stores its own -- so the app supplies the pair below and
+ * the provider calls them. They are module-level rather than bound to
+ * `ExploreAppInner` because both go through the URL, which is authoritative for
+ * every piece of shareable state; neither needs a setter.
+ *
+ * **What replaced what.** This used to be `onApplyState`/`onReadState`: a step
+ * carried a FULL absolute query, `url.search = query` replaced everything, and
+ * the tour snapshotted the viewer's state on entry to put it back on exit.
+ * Under the stack a step declares only what it ADDS, so nothing is overwritten
+ * and there is nothing to restore -- see `tourStateStack.ts` for the model and
+ * why the duplicate push matters.
  */
 
 /**
- * Put the app into a state given as a query string.
- *
- * A step's `State:` is the same vocabulary as a share link, so it is applied by
- * writing it to the URL and letting the app re-read it. That keeps ONE parser
- * for both, instead of a second code path that can drift from the first.
+ * The tour's live contribution. Module-level for the same reason the functions
+ * are: it belongs to the URL bridge, not to a React subtree, and both halves of
+ * the bridge plus the viewer-edit reconciliation have to see the same one.
  */
-function applyExploreQuery(query: string): void {
-  const url = new URL(window.location.href);
-  url.search = query;
-  window.history.replaceState(null, '', url);
+let tourStack: TourStack = EMPTY_STACK;
+
+/** Replace the stack after a viewer edit has been folded into it. */
+function setTourStack(next: TourStack): void {
+  tourStack = next;
+}
+
+/**
+ * The viewer clicked a class on or off: the tour gives up its claim on it.
+ *
+ * Only a TICK needs reporting this way. The tour's copy and the viewer's
+ * collapse into one member of `sel`, so a tick of something a step already
+ * pushed leaves no trace in the state — without this the next pop would take
+ * it away under them. An untick IS visible in the state, and the write effect
+ * catches it.
+ */
+function claimForViewer(id: string): void {
+  tourStack = reconcile(
+    readExploreState(), tourStack, { ticked: [id] },
+  ).stack;
+}
+
+/** Push the composed result to the URL and let the app re-read it. */
+function publish(state: ExploreState): void {
+  writeExploreState(state);
   window.dispatchEvent(new Event('explore:state-from-url'));
 }
 
 /**
- * Read the app's state back out as a query string — the inverse of
- * `applyExploreQuery`, and the reason the tour can restore what the viewer had.
+ * Push a position's `Change:` onto the stack.
  *
- * The URL is authoritative: `ExploreAppInner` writes the whole state to it on
- * every change through `writeExploreState`, so reading `location.search` is
- * reading the live state, not a stale copy.
+ * The delta is composed ON TOP of the live state rather than replacing it, so
+ * a field the step does not name keeps whatever the viewer had. That is the
+ * bug this whole change exists to fix: Siggie had a non-default setting and
+ * every step with a `State:` silently reset it, because no step wrote that
+ * param.
  */
-function readExploreQuery(): string {
-  return window.location.search.replace(/^\?/, '');
+function pushTourChange(query: string): void {
+  // Split the viewer's half off against the stack as it stands BEFORE the
+  // push. Doing it after would subtract the ids this very step is adding, so a
+  // class the viewer already had ticked would be counted as the tour's — the
+  // exact ownership confusion the duplicate push exists to prevent.
+  const viewer = viewerState(readExploreState(), tourStack);
+  tourStack = pushFrame(tourStack, parseTourChange(query));
+  publish(composeState(viewer, tourStack));
+}
+
+/**
+ * Pop one frame. Called once per `back`, and once per remaining frame when the
+ * tour ends by any exit.
+ *
+ * The viewer's half is recovered from the LIVE state before the pop, not from
+ * anything remembered: what is selected and not held by the stack is theirs,
+ * including anything they ticked mid-tour.
+ */
+function popTourChange(): void {
+  const viewer = viewerState(readExploreState(), tourStack);
+  tourStack = popFrame(tourStack);
+  publish(composeState(viewer, tourStack));
 }
 
 export default function ExploreApp() {
   return (
     <HelpProvider
       markdown={helpMarkdown}
-      onApplyState={applyExploreQuery}
-      onReadState={readExploreQuery}
+      onPushChange={pushTourChange}
+      onPopChange={popTourChange}
       /* Resolvers for the row-level anchor kinds. They live here, not in
          src/help/, because knowing what a dmvd entity row is is exactly what
          the extractable package must not know. */

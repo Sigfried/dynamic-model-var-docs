@@ -55,14 +55,16 @@ describe('help content', () => {
     );
   });
 
-  test('every State: field is a parseable query string naming known params', () => {
-    const known = new Set(['sel', 'exp', 'hidden', 'detail', 'roots', 'sibs',
-      'dir', 'merge', 'owners']);
+  test('every Change: field is a parseable query string naming known params', () => {
+    // The live field list, not a historical one: `exp`, `hidden` and `owners`
+    // went with task 1 (expanding became selecting), and a step still naming
+    // one would push a frame that composes to nothing.
+    const known = new Set(['sel', 'detail', 'roots', 'sibs', 'dir', 'merge']);
     const bad: string[] = [];
-    // Checks beats too -- a beat can carry its own State:.
+    // Checks beats too -- a beat can carry its own Change:.
     for (const p of positions) {
-      if (!p.state) continue;
-      for (const [k] of new URLSearchParams(p.state)) {
+      if (!p.change) continue;
+      for (const [k] of new URLSearchParams(p.change)) {
         if (!known.has(k)) bad.push(`${p.entry.id}: unknown param "${k}"`);
       }
     }
@@ -152,69 +154,39 @@ describe('help content', () => {
     expect(bad, `Tour positions with no text/anchor: ${bad.join(', ')}`).toEqual([]);
   });
 
-  test('a beat inherits the step\'s state when it sets none', () => {
-    // Inheritance is what lets a multi-beat step avoid repeating a long
-    // `sel=` on every beat. If it broke, beats would silently reset the view.
+  test('only a step\'s FIRST beat pushes its change', () => {
+    /*
+     * Under absolute state every beat re-applied its step's full query, which
+     * was harmless: re-applying the same absolute state is idempotent. Pushing
+     * the same DELTA once per beat is not — a four-beat step would stack four
+     * identical frames and `back` would crawl out of them one useless pop at a
+     * time. So the step's change belongs to beat 0, and a later beat pushes
+     * only a change it declares itself.
+     */
     for (const p of positions) {
-      if (p.beat && !p.beat.state && p.entry.state) {
-        expect(p.state).toBe(p.entry.state);
-      }
+      if (!p.beat || p.beat.change) continue;
+      expect(p.change, `${p.entry.id}#${p.beatIndex}`)
+        .toBe(p.beatIndex === 0 ? p.entry.change : undefined);
     }
   });
 
-  test('a step that changes state says what it did', () => {
+  test('a position that changes something says what it did', () => {
     // The bug this format exists to fix: a step silently altered the diagram
-    // and the popover read as a description of whatever appeared. A position
-    // whose state differs from the one before it must carry an Action:.
+    // and the popover read as a description of whatever appeared.
     //
-    // `!= null`, not truthiness: an empty `State:` means the DEFAULT view,
-    // and arriving at it from a step that had a selection clears the diagram
-    // — very much a change the viewer needs told about.
-    // The FIRST position is exempt: it establishes the tour's starting view
-    // rather than changing one the viewer was looking at. (The tour restores
-    // whatever they had when it ends, which is where that is accounted for.)
-    const silent: string[] = [];
-    positions.forEach((p, i) => {
-      if (i === 0) return;
-      const prev = positions[i - 1].state;
-      if (p.state != null && p.state !== prev && !p.action) {
-        silent.push(`${p.entry.id}#${p.beatIndex}`);
-      }
-    });
+    // Truthiness is now the right test, where under absolute state it was the
+    // bug: an empty `Change:` means "change nothing", so it needs no Action:.
+    // An empty `State:` meant the DEFAULT view — clearing the diagram — which
+    // very much did.
+    const silent = positions
+      .filter(p => p.change && !p.action)
+      .map(p => `${p.entry.id}#${p.beatIndex}`);
     expect(
       silent,
       `Tour positions that change the app without saying so: ${silent.join(', ')}`,
     ).toEqual([]);
   });
 
-  test('every tour STEP carries an absolute state, so back is exact', () => {
-    /*
-     * Siggie, 2026-08-27: "backwards tour step doesn't undo anything."
-     *
-     * `back` is `positions[i - 1]` and applies that position's `State:`. That
-     * is only exact if every step HAS one: steps 1 and 2 had none, so going
-     * back to them applied nothing and left the following step's selection on
-     * screen. An exposition step that shows the default view must say so with
-     * an empty `State:` rather than by omitting the field.
-     *
-     * Steps, not positions: a BEAT may omit `State:` and inherit its step's,
-     * which is the mechanism that keeps a long `sel=` from being repeated on
-     * every beat. Back within a step is exact either way.
-     *
-     * NOTE: this test encodes the absolute-per-step model, which may be
-     * replaced by the state STACK described in WORKLOG.md (2026-08-27). Under
-     * a stack a step declares only what it ADDS and `back` pops, so requiring
-     * a full state per step becomes meaningless — delete this test then rather
-     * than trying to satisfy it.
-     */
-    const stateless = tourSteps(content)
-      .filter(e => e.state == null)
-      .map(e => e.id);
-    expect(
-      stateless,
-      `Tour steps with no State: (back cannot undo into them): ${stateless.join(', ')}`,
-    ).toEqual([]);
-  });
 });
 
 describe('the spec section', () => {
@@ -223,7 +195,7 @@ describe('the spec section', () => {
     // can be read as markdown. Its ### sub-headings are prose; if the skip
     // broke, "Anchors" and "Beats" would show up as help entries.
     expect(content.sections.map(s => s.title)).not.toContain('Format');
-    for (const stray of ['Structure', 'Anchors', 'Beats', 'Actions', 'State']) {
+    for (const stray of ['Structure', 'Anchors', 'Beats', 'Actions', 'Change']) {
       expect(
         [...content.entries.keys()],
         `spec sub-heading "${stray}" leaked in as an entry`,
@@ -241,14 +213,14 @@ describe('parking a field with _', () => {
 - **Title:** T
 - **Description:** D
 - **_Tour:** 4
-- **_State:** sel=Nope
+- **_Change:** sel=Nope
 - **Anchor:** none
 `);
 
   test('a parked field reads as absent', () => {
     const e = parked.entries.get('thing')!;
     expect(e.tour).toBeUndefined();
-    expect(e.state).toBeUndefined();
+    expect(e.change).toBeUndefined();
   });
 
   test('the entry survives as help-only', () => {
@@ -269,11 +241,11 @@ describe('parking a field with _', () => {
 - **Title:** T
 - **Description:** D
 - **_Tour:** 4
-- **State:** sel=Yes
+- **Change:** sel=Yes
 `);
     const e = mixed.entries.get('thing')!;
     expect(e.tour).toBeUndefined();
-    expect(e.state).toBe('sel=Yes');
+    expect(e.change).toBe('sel=Yes');
   });
 });
 

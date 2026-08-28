@@ -3,7 +3,7 @@
  * Pure function, no dependencies beyond types.
  *
  * Ported from icd11-playground (web/src/utils/parseHelpContent.ts). The
- * `state`, `tour`, `anchor`, `action` and `beats` fields are dmvd additions;
+ * `change`, `tour`, `anchor`, `action` and `beats` fields are dmvd additions;
  * everything else is unchanged. Kept dependency-free so it can move into the
  * shared help package without edits (docs/HELP_PACKAGE_PLAN.md).
  *
@@ -36,8 +36,8 @@ export interface TourBeat {
   anchor?: HelpAnchor;
   /** What the tour DID on entering this beat; rendered in its own band. */
   action?: string;
-  /** Full absolute URL query for this beat. Never a diff. */
-  state?: string;
+  /** What this beat ADDS to the app state, as a URL query. See `HelpEntry.change`. */
+  change?: string;
 }
 
 export interface HelpEntry {
@@ -61,11 +61,19 @@ export interface HelpEntry {
    */
   action?: string;
   /**
-   * URL query string this step puts the app into before showing its popover
-   * (e.g. `sel=BodySite~Person`). FULL and ABSOLUTE, never a diff from the
-   * previous step: that is what makes `back` land exactly.
+   * What this step ADDS to the app state, as a URL query in the same
+   * vocabulary as a share link (e.g. `sel=BodySite~Person`).
+   *
+   * A DELTA, not a state: a param the step does not name is a param the step
+   * does not touch. Entering the step pushes this onto the tour's stack and
+   * `back` pops it, so `back` is exact without the step having to describe the
+   * whole world — and so a field no step mentions is never disturbed.
+   *
+   * This was `state`, a full absolute query, until 2026-08-27. The rename is
+   * load-bearing: the values look identical either way, and reading an old one
+   * as a delta inverts its meaning (docs/TASKS.md item 2).
    */
-  state?: string;
+  change?: string;
   /**
    * Position in the guided tour, 1-based. Entries without it are help-only:
    * reachable in help mode, never visited by the tour.
@@ -122,8 +130,12 @@ export interface TourPosition {
   anchor: HelpAnchor;
   /** Beat's action if it has one, else the step's. */
   action?: string;
-  /** Beat's state if it has one, else the step's. */
-  state?: string;
+  /**
+   * What this POSITION pushes onto the tour's state stack, or undefined if it
+   * pushes nothing. A beat's own `Change:` if it declares one; otherwise the
+   * step's, but only on its first beat — see `tourPositions`.
+   */
+  change?: string;
 }
 
 /** Parse an `Anchor:` value into a HelpAnchor. `fallbackId` is the entry id. */
@@ -218,7 +230,7 @@ function extractBeats(lines: string[], entryId: string): TourBeat[] | undefined 
       const key = name.toLowerCase();
       if (key === 'anchor') current.anchor = parseAnchor(value, entryId);
       else if (key === 'action') current.action = value.trim();
-      else if (key === 'state') current.state = value.trim();
+      else if (key === 'change') current.change = value.trim();
       continue;
     }
 
@@ -246,7 +258,7 @@ function parseEntry(block: string): HelpEntry | null {
   const context = extractField(lines, 'Context');
   const anchor = parseAnchor(extractField(lines, 'Anchor'), id);
   const action = extractField(lines, 'Action');
-  const state = extractField(lines, 'State');
+  const change = extractField(lines, 'Change');
   const beats = extractBeats(lines, id);
   const tourRaw = extractField(lines, 'Tour');
   const tourNum = tourRaw === undefined ? undefined : Number(tourRaw);
@@ -256,7 +268,7 @@ function parseEntry(block: string): HelpEntry | null {
 
   return {
     id, title, description, interactions, shortcut, context,
-    anchor, action, state, tour, beats,
+    anchor, action, change, tour, beats,
   };
 }
 
@@ -300,9 +312,9 @@ export function tourSteps(content: HelpContent): HelpEntry[] {
  * beats, a beatless step contributing exactly one position.
  *
  * This is the seam with the tour mechanism -- it navigates this flat list and
- * never has to know beats are nested. `back` is `positions[i - 1]`, and since
- * every position carries a full absolute `state`, arriving at one from either
- * direction gives the same view.
+ * never has to know beats are nested. `back` is `positions[i - 1]`, reached by
+ * popping the `change` the position being LEFT pushed, so the two directions
+ * are inverses rather than both being an absolute apply.
  */
 export function tourPositions(content: HelpContent): TourPosition[] {
   const positions: TourPosition[] = [];
@@ -314,7 +326,7 @@ export function tourPositions(content: HelpContent): TourPosition[] {
         text: entry.description,
         anchor: entry.anchor,
         action: entry.action,
-        state: entry.state,
+        change: entry.change,
       });
       continue;
     }
@@ -322,10 +334,19 @@ export function tourPositions(content: HelpContent): TourPosition[] {
       positions.push({
         entry, step, beatIndex, beat,
         text: beat.text,
-        // A beat inherits the step's anchor/action/state unless it overrides.
         anchor: beat.anchor ?? entry.anchor,
         action: beat.action ?? (beatIndex === 0 ? entry.action : undefined),
-        state: beat.state ?? entry.state,
+        /*
+         * A beat inherits the step's anchor and action, but NOT its `change`:
+         * only the first beat pushes it. Under absolute state every beat
+         * re-applied the step's full query, which was harmless because
+         * re-applying the same absolute state is idempotent. Pushing the same
+         * delta once per beat is NOT — a four-beat step would push four frames
+         * and `back` would step through them one useless pop at a time. So the
+         * step's change belongs to its first beat, and a later beat pushes only
+         * a `change` it declares itself.
+         */
+        change: beat.change ?? (beatIndex === 0 ? entry.change : undefined),
       });
     });
   }

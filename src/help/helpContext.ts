@@ -54,20 +54,14 @@ export interface HelpApi {
   /**
    * Every navigable position in the tour, flattened by the parser. The
    * mechanism navigates this list and never handles nesting; `back` is
-   * `positions[i - 1]`.
+   * `positions[i - 1]`, reached by POPPING what the position being left
+   * pushed rather than by re-applying anything.
    */
   positions: TourPosition[];
   /** The position now showing, or undefined outside a tour. */
   position: TourPosition | undefined;
   /** Total number of tour STEPS, for the `4.2 / 6` counter's denominator. */
   stepCount: number;
-  /**
-   * True once the viewer has changed the app themselves during the tour, so
-   * the popover can warn that stepping will discard it. Reset on every move.
-   */
-  viewerEdited: boolean;
-  /** Called by the host when the viewer changes app state during a tour. */
-  noteViewerEdit: () => void;
   content: HelpContent;
   activeId: string | null;
   showEntry: (id: string) => void;

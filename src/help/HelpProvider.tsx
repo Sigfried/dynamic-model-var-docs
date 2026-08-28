@@ -44,26 +44,27 @@ function isInputFocused(): boolean {
 }
 
 export function HelpProvider({
-  markdown, onApplyState, onReadState, resolvers, children,
+  markdown, onPushChange, onPopChange, resolvers, children,
 }: {
   markdown: string;
   /**
-   * Apply a step's `State:` query string. The provider does not know how the
-   * host app stores its state, so the host supplies this; without it, steps
-   * that need a selection simply show their popover against whatever is
-   * on screen.
-   */
-  onApplyState?: (query: string) => void;
-  /**
-   * Read the host's current state back as a query string, in the same
-   * vocabulary `onApplyState` accepts. Used ONLY for the entry snapshot: the
-   * tour records the viewer's own state when it starts and feeds it back
-   * through `onApplyState` when it ends.
+   * Push a position's `Change:` query onto the host's state stack.
    *
-   * Round-tripping through the host's own query format is what keeps this
-   * host-agnostic — the provider never learns what a selection is.
+   * The provider does not know how the host stores its state, and under the
+   * stack it does not need to know what a push MEANS either — it counts
+   * frames and the host composes them. Without this, steps that need a
+   * selection simply show their popover against whatever is on screen.
    */
-  onReadState?: () => string;
+  onPushChange?: (query: string) => void;
+  /**
+   * Pop one frame off the host's stack. Called once per `back`, and once per
+   * remaining frame when the tour ends.
+   *
+   * This pair REPLACED an apply/read pair that made every step absolute. The
+   * provider used to snapshot the viewer's state on entry and feed it back on
+   * exit; there is nothing to restore now, because nothing was overwritten.
+   */
+  onPopChange?: () => void;
   /**
    * Resolvers for the host's own anchor kinds. `help-id` and `none` are built
    * in; everything else in an `Anchor:` field is looked up here. An
@@ -80,21 +81,19 @@ export function HelpProvider({
   const [helpMode, setHelpMode] = useState(false);
   const [tourIndex, setTourIndex] = useState<number | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [viewerEdited, setViewerEdited] = useState(false);
 
   /**
-   * The viewer's own state at the moment the tour started, captured as a query
-   * string. A ref rather than state: nothing renders from it, and it must not
-   * be a dependency of the navigation callbacks or every move would rebuild
-   * them.
+   * How many frames the tour has pushed and not yet popped.
+   *
+   * The provider's whole share of the stack: it counts, the host composes. A
+   * ref rather than state — nothing renders from it, and as a dependency of the
+   * navigation callbacks it would rebuild every one of them on every move.
+   *
+   * Kept even though the host also knows its own depth, because the provider is
+   * the one that decides when to unwind: `endTour` fires from four different
+   * exits and must not leave a frame behind on any of them.
    */
-  const enterSnapshot = useRef<string | null>(null);
-  /**
-   * The state the tour itself last applied. Any state the host reports that
-   * differs from this is the VIEWER's doing, which is what `viewerEdited`
-   * warns about.
-   */
-  const appliedState = useRef<string | null>(null);
+  const depth = useRef(0);
 
   const exitHelpMode = useCallback(() => {
     setHelpMode(false);
@@ -104,67 +103,76 @@ export function HelpProvider({
   const showEntry = useCallback((id: string) => setActiveId(id), []);
 
   /**
-   * Move to a position. Every position carries a FULL absolute `State:`, never
-   * a diff, so this is the whole of `back`: arriving at position i from either
-   * direction applies the same query and therefore lands in the same view.
+   * Move to a position, pushing its `Change:` onto the host's stack.
    *
-   * A position with no `State:` deliberately applies nothing — it inherits
-   * whatever the previous one set, which is what lets a multi-beat step avoid
-   * repeating a long `sel=` on every beat.
+   * Forward only — `back` is `prevStep`, which pops instead. Under the old
+   * absolute model both directions did the same thing (apply the target's full
+   * state), which is why this function used to be the whole of navigation.
+   *
+   * A position with no `Change:` field pushes NOTHING and so has no frame to
+   * pop. That is inheritance: it lets a multi-beat step avoid repeating a long
+   * `sel=` on every beat. Distinct from an EMPTY `Change:`, which pushes an
+   * empty frame — a step that deliberately changes nothing but still occupies
+   * a slot on the stack, so `back` into it is symmetric.
    */
   const goTo = useCallback((i: number) => {
     const pos = positions[i];
     if (!pos) return;
     setTourIndex(i);
     setActiveId(pos.entry.id);
-    setViewerEdited(false);
-    /*
-     * `!= null`, not truthiness. `State:` with an empty value is a REAL
-     * state — the default view, nothing selected — exactly as `endTour`'s
-     * snapshot of `''` is. Testing truthiness treated it as "no state" and
-     * applied nothing, so stepping BACK to an exposition step left the
-     * following step's selection on screen (Siggie, 2026-08-27: "backwards
-     * tour step doesn't undo anything"). Steps 1 and 2 now carry an empty
-     * `State:` for exactly this reason.
-     *
-     * A step with NO `State:` field at all is still inheritance, which is
-     * what lets a multi-beat step avoid repeating a long `sel=` per beat.
-     */
-    if (pos.state != null && onApplyState) {
-      onApplyState(pos.state);
-      appliedState.current = pos.state;
+    if (pos.change != null && onPushChange) {
+      onPushChange(pos.change);
+      depth.current += 1;
     }
-  }, [positions, onApplyState]);
+  }, [positions, onPushChange]);
+
+  /**
+   * Move back a position, popping whatever the position we are LEAVING pushed.
+   *
+   * The asymmetry with `goTo` is the point of the whole design: forward adds,
+   * back removes what was added, and anything the viewer did in between is
+   * neither. A position that pushed nothing pops nothing, so back through an
+   * inheriting beat lands exactly where forward through it did.
+   */
+  const goBack = useCallback((i: number) => {
+    const leaving = positions[i + 1];
+    if (leaving?.change != null && onPopChange && depth.current > 0) {
+      onPopChange();
+      depth.current -= 1;
+    }
+    const pos = positions[i];
+    if (!pos) return;
+    setTourIndex(i);
+    setActiveId(pos.entry.id);
+  }, [positions, onPopChange]);
 
   const startTour = useCallback(() => {
     setHelpMode(false);
-    // Snapshot BEFORE the first position applies its own state, or the
-    // snapshot is of the tour rather than of the viewer.
-    enterSnapshot.current = onReadState ? onReadState() : null;
-    appliedState.current = null;
+    // No entry snapshot: the tour composes on top of the viewer's state instead
+    // of replacing it, so there is nothing to record and nothing to restore.
+    depth.current = 0;
     goTo(0);
-  }, [goTo, onReadState]);
+  }, [goTo]);
 
   /**
-   * Ending the tour puts the viewer back where they were when it started —
-   * Siggie, 2026-08-27: "if tour starts when state is not default, record
-   * state; when tour ends/is exited, restore prior state."
+   * Ending the tour unwinds every frame it still has pushed.
    *
-   * Restoring runs on every exit path (done, ✕, Escape, `?`), because they are
-   * all the same event from the viewer's side: the tour is over and its
-   * selections are not theirs.
+   * This REPLACED a snapshot-and-restore. Restoring an entry snapshot put the
+   * viewer back where they started but threw away anything they did during the
+   * tour — the thing the yellow "your changes will be discarded" warning was
+   * apologising for. Unwinding removes only what the tour added, so a mid-tour
+   * edit is simply still there afterwards.
+   *
+   * Runs on every exit path (done, ✕, Escape, `?`): they are the same event
+   * from the viewer's side, and any one of them that skipped the unwind would
+   * strand the tour's selections in their canvas.
    */
   const endTour = useCallback(() => {
     setTourIndex(null);
     setActiveId(null);
-    setViewerEdited(false);
-    const snapshot = enterSnapshot.current;
-    enterSnapshot.current = null;
-    appliedState.current = null;
-    // `snapshot` is '' when the tour started from the default view. That is a
-    // real state to restore, not a missing one, so test for null.
-    if (snapshot !== null && onApplyState) onApplyState(snapshot);
-  }, [onApplyState]);
+    if (onPopChange) for (let i = 0; i < depth.current; i++) onPopChange();
+    depth.current = 0;
+  }, [onPopChange]);
 
   const nextStep = useCallback(() => {
     if (tourIndex === null) return;
@@ -172,8 +180,8 @@ export function HelpProvider({
     else goTo(tourIndex + 1);
   }, [tourIndex, positions.length, goTo, endTour]);
   const prevStep = useCallback(() => {
-    if (tourIndex !== null && tourIndex > 0) goTo(tourIndex - 1);
-  }, [tourIndex, goTo]);
+    if (tourIndex !== null && tourIndex > 0) goBack(tourIndex - 1);
+  }, [tourIndex, goBack]);
 
   const toggleHelpMode = useCallback(() => {
     // Leaving a tour by pressing `?` is still leaving the tour, so it has to
@@ -185,18 +193,6 @@ export function HelpProvider({
     if (!HELP_MODE_ENABLED) return;
     setHelpMode(v => !v);
   }, [tourIndex, endTour]);
-
-  /**
-   * The host reports that the viewer changed something. Only interesting
-   * during a tour, and only when the new state is not the one the tour just
-   * applied — the host cannot always tell its own echo apart from a real edit,
-   * so that check lives here.
-   */
-  const noteViewerEdit = useCallback(() => {
-    if (tourIndex === null) return;
-    if (onReadState && onReadState() === appliedState.current) return;
-    setViewerEdited(true);
-  }, [tourIndex, onReadState]);
 
   /**
    * Resolve an anchor to its element. `none` points at nothing by definition;
@@ -284,10 +280,10 @@ export function HelpProvider({
     helpMode, toggleHelpMode, exitHelpMode,
     tourIndex, startTour, endTour, nextStep, prevStep,
     positions, position: tourIndex === null ? undefined : positions[tourIndex],
-    stepCount, viewerEdited, noteViewerEdit,
+    stepCount,
     content, activeId, showEntry, dismissEntry, resolveAnchor,
   }), [helpMode, toggleHelpMode, exitHelpMode, tourIndex, startTour, endTour,
-       nextStep, prevStep, positions, stepCount, viewerEdited, noteViewerEdit,
+       nextStep, prevStep, positions, stepCount,
        content, activeId, showEntry, dismissEntry, resolveAnchor]);
 
   return <HelpContext.Provider value={api}>{children}</HelpContext.Provider>;

@@ -39,9 +39,12 @@ PLANNING section of TASKS.md): tour steps performed state changes invisibly;
 element, so it could not highlight a single ROW inside the dag-browser tree.
 State snapshots per step were the chosen mechanism; porting
 icd11-playground's history-carrying state was considered and rejected as
-overkill — and turned out to be unnecessary, because every position carries
-full absolute state, which makes `back` exact by construction rather than by
-replay. **Still open:** popover dragging, wanted as an escape hatch (task 8).
+overkill. **Superseded 2026-08-27:** absolute-per-step state was replaced by a
+push/pop STACK — a step declares only what it ADDS (`Change:`), `back` pops, and
+exit unwinds. `back` is still exact, but by inversion rather than by re-applying
+a whole world; see the `Change` section of `help-content.md` and
+`src/explore/tourStateStack.ts`. **Still open:** popover dragging, wanted as an
+escape hatch (task 8).
 
 **Authoring format extended 2026-08-27 (S3a). The format spec is the header
 comment of [`src/help/help-content.md`](../src/help/help-content.md)** — keep it
@@ -113,8 +116,8 @@ The three gaps above are closed. What the extraction now has to carry:
 - **The popover no longer requires a resolved anchor to show.** It used to gate
   on `rect`, which meant an `Anchor: none` step displayed nothing at all. An
   unresolved anchor now centres it.
-- **Scrolling the anchor into view is retried, not done once.** A step applies
-  its `State:`, and the row it points at is created by the render that state
+- **Scrolling the anchor into view is retried, not done once.** A step pushes
+  its `Change:`, and the row it points at is created by the render that change
   causes — so at first measure the element usually does not exist yet.
 
 ## Help mode: switched off 2026-08-27, tour unaffected

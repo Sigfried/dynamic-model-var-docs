@@ -41,7 +41,6 @@ export default function HelpLayer() {
   const {
     helpMode, tourIndex, position, positions, stepCount, content, activeId,
     dismissEntry, nextStep, prevStep, endTour, showEntry, resolveAnchor,
-    viewerEdited,
   } = useHelp();
 
   const inTour = tourIndex !== null;
@@ -267,19 +266,11 @@ export default function HelpLayer() {
             )}
 
             {/*
-              The viewer is free to click around mid-tour, but the next step
-              sets the whole world absolutely and their changes go with it.
-              Siggie: "allow interaction, but explain to user that their changes
-              will be undone by each step on tour." Shown only once they have
-              actually changed something -- a standing warning about a thing
-              nobody did is noise.
+              There used to be a "your changes will be discarded" warning here.
+              It is gone with the thing it warned about: a step no longer sets
+              the whole world absolutely, so a mid-tour edit of the viewer's
+              simply survives (docs/TASKS.md item 2).
             */}
-            {inTour && viewerEdited && (
-              <p className="help-popover-warning">
-                Your changes will be discarded when you move to the next step.
-              </p>
-            )}
-
             {inTour ? (
               <div className="help-tour-nav">
                 <span className="help-tour-count" title={`Position ${tourIndex! + 1} of ${positions.length}`}>
@@ -290,7 +281,7 @@ export default function HelpLayer() {
                 <button onClick={nextStep} className="help-tour-next">
                   {tourIndex! + 1 === positions.length ? 'done' : 'next →'}
                 </button>
-                <button onClick={endTour} title="End the tour and restore your own view">✕</button>
+                <button onClick={endTour} title="End the tour and undo what it added">✕</button>
               </div>
             ) : (
               <div className="help-tour-nav">

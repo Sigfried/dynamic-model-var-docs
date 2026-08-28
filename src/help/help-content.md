@@ -51,7 +51,7 @@ mode wants to show section intros — it is unused, not unsupported.
 | `Context:` | smaller footnote text |
 | `Anchor:` | what to point at — see [Anchors](#anchors) |
 | `Action:` | one sentence saying what the tour just DID — see [Actions](#actions) |
-| `State:` | full URL query the app is put into before this step |
+| `Change:` | what this step ADDS to the app state, as a URL query — see [Change](#change) |
 | `Tour:` | 1-based position in the guided tour; omit for help-only |
 | `Beats:` | ordered sub-steps within one step — see [Beats](#beats) |
 
@@ -66,7 +66,7 @@ treated as absent:
 
 ```markdown
 - **_Tour:** 4        <- entry drops out of the tour, stays available as help
-- **_State:** sel=X   <- state not applied
+- **_Change:** sel=X  <- change not pushed
 ```
 
 Use it for a step that is written but not ready to appear. The tour renumbers
@@ -136,7 +136,7 @@ Two kinds have an edge worth knowing when you author:
 - **`entity-row` / `entity-checkbox`** work in both left-panel modes (table and
   tree). In tree mode everything starts collapsed, so a deeply nested entity's
   row may not exist in the DOM when the step fires; give such a step a
-  `State:` that selects the entity, or anchor it at the diagram instead.
+  `Change:` that selects the entity, or anchor it at the diagram instead.
 - **`slot-row:<E>.<slot>`** splits on the LAST dot. Inside a merged sibling box
   several rows can share a slot name, and `<E>` is what picks between them.
 
@@ -153,57 +153,67 @@ that silently changes the diagram reads as a description of whatever just
 appeared. The popover renders `Action:` text in its own band, visually distinct
 from the description.
 
-**Rule of thumb:** if the step carries a `State:` that differs from the previous
-step's, it needs an `Action:`. A test enforces this.
+**Rule of thumb:** if the step carries a `Change:` that actually changes
+something, it needs an `Action:`. A test enforces this.
 
-### State
+### Change
 
-`State:` is a **full, absolute** URL query — never a diff from the previous
-step. That is what makes `back` exact: every step and beat sets the whole world,
-so arriving at it from either direction gives the same view.
+`Change:` is a **delta**, in the same vocabulary as a share link: it says what
+the step ADDS to the app state, and a param it does not name is a param it does
+not touch.
 
 ```markdown
-- **State:** sel=BodySite~Participant
+- **Change:** sel=BodySite~Participant
 ```
 
-**It is absolute even where it looks additive.** Applying a state REPLACES the
-whole query, so the line above means "BodySite and Participant selected and
-nothing else, every other field back to its default" — not "add these two".
-Today's steps all happen to want states expressible in one field, which is why
-they read like deltas; a step that also wanted `dir=TB` would have to write
-`sel=BodySite~Participant&dir=TB` or lose the selection.
+**Entering a position pushes its change; `back` pops it.** That is what makes
+`back` exact without every step having to describe the whole world, and it is
+why leaving the tour needs no restore — the tour unwinds only what it added, so
+anything the viewer did during it is simply still there.
 
-**Every `Tour:` step must carry a `State:`, and an empty value is a real one.**
+**A value already present is pushed anyway.** The second copy is a reference
+count: if the viewer had `Participant` ticked and a step also wants it, popping
+removes the tour's copy and leaves theirs. You never author this; it is what the
+mechanism does with a change you wrote.
 
 | Written | Means |
 |---|---|
-| `- **State:** sel=Participant` | that selection |
-| `- **State:**` (no value) | the default view — nothing selected |
-| *(field absent)* | inherit whatever the previous position set |
+| `- **Change:** sel=Participant` | add Participant to whatever is drawn |
+| `- **Change:** dir=DOWN` | set the direction; leave the selection alone |
+| `- **Change:**` (no value) | change nothing, but occupy a slot on the stack |
+| *(field absent)* | push nothing at all — see the beats note below |
 
-The empty form is what an exposition step needs. Omitting the field entirely
-looks equivalent but is not: `back` applies the previous position's state, so a
-step with no state of its own cannot undo the step after it, and the viewer
-steps backwards into last step's diagram. That is the bug behind *"backwards
-tour step doesn't undo anything"* — steps 1 and 2 had no `State:`, so returning
-to them from step 3 kept `sel=MeasurementObservation` on screen. A test now
-requires one per step.
+The empty form is what an exposition step wants. It is not the same as omitting
+the field: an empty `Change:` pushes an empty frame, so stepping back into it
+pops the step after it; omitting the field pushes nothing, so back through the
+position is a plain move.
 
-Inheritance is still right for **beats**, which is what keeps a long `sel=` from
-being repeated on every beat of a step.
+**Scalars overwrite and are not restored.** A step that sets `dir=DOWN` over a
+viewer's `dir=RIGHT` keeps `DOWN` after the pop. Deliberate, and decided rather
+than overlooked — Siggie, 2026-08-27: *"if scalar settings clobber user actions,
+don't worry about it. easy enough for the user to reclick the button."* Only
+`sel` is refcounted, because only `sel` has room to hold two copies.
 
-> **This whole model may be replaced.** Absolute-per-step state is why the tour
-> must snapshot and restore the viewer's view, and why a mid-tour edit raises a
-> "your changes will be discarded" warning: applying a full query overwrites
-> whatever the viewer did. Siggie proposed a **state stack** instead —
-> each step pushes only what it adds, `back` pops, and a push of something the
-> viewer already had is pushed again so popping removes only the tour's copy.
-> That leaves viewer actions untouched, and makes both the restore-on-exit and
-> the warning unnecessary. See WORKLOG.md, 2026-08-27.
+**There is no "remove" verb.** A step can add a class to the diagram; it cannot
+take one away. If a step needs a clean diagram rather than a cumulative one,
+that is a format addition, not something to fake with the fields that exist.
 
-The tour **also** snapshots the viewer's own state when it starts and restores
-it when it ends. That is runtime behaviour, not format — nothing is authored
-for it here.
+**Beats: only the first pushes the step's change.** Under the old model every
+beat re-applied its step's full state, which was harmless because re-applying
+the same absolute state twice does nothing. Pushing the same delta once per beat
+is not: a four-beat step would stack four frames and `back` would crawl out of
+them one useless pop at a time. So a step's `Change:` belongs to its first beat,
+and a later beat pushes only a change it declares itself.
+
+> **What this replaced.** `State:` was a **full, absolute** query, applied with
+> `url.search = query`. So the tour had to snapshot the viewer's state on entry
+> and restore it on exit; a mid-tour edit was clobbered, which is what the
+> yellow *"your changes will be discarded"* warning was for; and **any field a
+> step did not name snapped back to its default** — Siggie had a non-default
+> setting and every step with a `State:` silently reset it, because no step
+> wrote that param. All three are gone. Note the two forms look identical in the
+> file: `State: sel=X` and `Change: sel=X` are the same text meaning opposite
+> things, so an old value cannot be migrated by leaving it alone.
 
 ### Beats
 
@@ -218,10 +228,10 @@ revealing a list one item at a time.
   2. Second beat's text.
      - Anchor: entity-row:MeasurementObservation
      - Action: Ticked it for you.
-     - State: sel=MeasurementObservation
+     - Change: sel=MeasurementObservation
 ```
 
-Each beat may carry its own `Anchor:`, `Action:` and `State:` as indented
+Each beat may carry its own `Anchor:`, `Action:` and `Change:` as indented
 `- Field: value` lines. Note these are **plain, not bold** — that is what keeps
 a beat's own fields distinguishable from the entry fields that follow the block.
 A beat that omits a field inherits the step's.
@@ -236,7 +246,7 @@ only where there is a beat to number.
 
 Someone who arrives from a **link** with no one explaining it — the program
 manager case. So step 1 assumes nothing, and any step that needs a selection
-brings its own via `State:` rather than asking the visitor to click first.
+brings its own via `Change:` rather than asking the visitor to click first.
 
 ---
 
@@ -253,7 +263,7 @@ What this app is and how to move around it.
   - Pick some entities on the left and the diagram shows how they fit together.
   - Click the title to clear everything and start over.
 - **Anchor:** app-title
-- **State:**
+- **Change:**
 - **Tour:** 1
 
 <!--
@@ -276,7 +286,7 @@ What this app is and how to move around it.
   - other entities,
   - permissible value sets (enumerations),
   - or raw data types (strings, integers, etc.)
-- **State:**
+- **Change:**
 - **Tour:** 2
 
 <!--
@@ -295,11 +305,10 @@ What this app is and how to move around it.
   them typographically part of the sentence they should move into
   Description as inline markdown.
 
-  TODO(siggie): no `State:`. Your draft's step 2 is pure exposition, but
-  the old step 2 carried `sel=Participant`. The test that required every
-  step after the first to bring its own state has been relaxed (see
-  helpContent.test.ts) — but if this step should show something on the
-  diagram, give it a State: and an Action:.
+  TODO(siggie): empty `Change:`, i.e. this step changes nothing. Your
+  draft's step 2 is pure exposition, but the old step 2 carried
+  `sel=Participant`. If this step should put something on the diagram,
+  give it a `Change:` and an `Action:`.
 -->
 
 ### selection-tree-mechanics
@@ -319,7 +328,7 @@ What this app is and how to move around it.
 - **Description:** While the relationship between an entity and its enumerations and raw data attributes is direct (e.g., `MeasurementObservation.observation_type` → `MeasurementObservationTypeEnum`, or `MeasurementObservation.age_at_observation` → `integer`), it can be related to other entities in more complex ways.
 - **Action:** Selected MeasurementObservation for you, and highlighted its `observation_type` attribute.
 - **Anchor:** none
-- **State:** sel=MeasurementObservation
+- **Change:** sel=MeasurementObservation
 - **Tour:** 3
 - **Beats:**
   1. While the relationship between an entity and its enumerations and raw data attributes is direct, it can be related to other entities in more complex ways.
@@ -361,8 +370,8 @@ What the boxes and lines mean.
 
 - **Title:** Selecting an entity
 - **Description:** Select an entity by clicking its checkbox and it appears in the main panel. Only what you select is drawn — related entities are reached from the box's relation menu. There are five ways an entity can be related to another.
-- **Action:** Selected Participant and BodySite for you. You would normally do this by ticking them in the tree on the left.
-- **State:** sel=BodySite~Participant
+- **Action:** Added Participant and BodySite to what is already on the diagram. You would normally do this by ticking them in the tree on the left.
+- **Change:** sel=BodySite~Participant
 - **Tour:** 4
 - **Beats:**
   1. Select an entity by clicking its checkbox and it appears in the main panel. Only what you select is drawn. There are five ways an entity can be related to another.
@@ -377,9 +386,14 @@ What the boxes and lines mean.
   relationship types. if there are any entities that use all four, select
   one of those, otherwise will have to select one that has most and then
   select another that has the others." That is an instruction to yourself,
-  not copy — it is NOT translated into a beat. The State: above still
+  not copy — it is NOT translated into a beat. The `Change:` above still
   carries the old `sel=BodySite~Participant`; pick the entity or entities
   that actually demonstrate all five once you have checked which do.
+
+  Note this step now ADDS to the diagram rather than replacing it, so
+  MeasurementObservation from step 3 is still drawn beside Participant and
+  BodySite. The Action: says so. If the step wants a clean two-box diagram
+  instead, the format has no "remove" verb — say so and it can gain one.
 
   Note the count: your draft says "five ways" here and you confirmed five
   is right (four ownership kinds + associations). The stale "four" note is
@@ -436,7 +450,7 @@ What the boxes and lines mean.
 - **Interactions:**
   - Click to copy; the URL bar always holds the same link.
 - **Context:** Settings travel in the link, so a diagram you set up deliberately does not get redrawn with someone else's preferences.
-- **State:** sel=BodySite~Participant
+- **Change:**
 - **Tour:** 5
 
 ### example-cases
