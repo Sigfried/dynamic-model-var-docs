@@ -11,30 +11,50 @@ Package-level design lives in [docs/HELP_PACKAGE_PLAN.md](../../docs/HELP_PACKAG
 -->
 ## TODO
 
-This is a new section. Not sure if parser will complain about it.
+**A `## TODO` section did confuse the parser** — its `###` headings parsed as
+entries anchored at nothing, failing two tests. Fixed: the parser skips this
+section by name, the same way it skips `Format` (`PROSE_SECTIONS`). Write
+whatever you like here.
 
-- **Rearrange tour steps:**
-  - Put them in order by step. Move anything that isn't a tour step below.
-  - Move Tour field just below Title.
-- **Make it easy to add/move steps without having to renumber everything**
-- **Need better format:**
-  - We should have a short discussion about this because i have to deliver
-    in four hours and still have a tour to author
-- The way you implemented the format really does not capture my intent. Compare
-  my original step 1 (below) with `app-title`:
-  - It messed up my orders, breaking "It is meant..." into a separate Context section
-    with the Interactions in between and lost the bullets.
-  - Interactions really doesn't do anything except add bullets after the
-    Description, right?
-  - **Links not rendering**: links in `app-title` Description markdown are
-    rendered as plain text. Fix.
-- **Multi-line markdown handling:** Right now each field only includes
-  text following the colon up to the end of the line. This makes it
-  hard to read the spec markdown while authoring -- though fixing this
-  would not be worth breaking other stuff. More importantly, the Description
-  is limited to a single line (`<p>` probably) of text.
-  - Allow a way to include line breaks in rendered text And other multi-line
-    markdown features?
+### Done 2026-08-28
+
+- **`Tour:` names a tour; ORDER COMES FROM THE FILE.** `Tour: Walkthrough`
+  instead of `Tour: 3`. Insert a step by pasting the entry where it belongs —
+  nothing else in the file moves, and there is no number to renumber. Several
+  tours can share the file (`Tour: Deep dive`). See *Tours and order* in the
+  spec.
+- **`Description:` is a multi-line markdown block.** It runs to the next
+  `- **Field:**`, blank lines included, so paragraphs and bullet lists work.
+  `app-title` is back in your draft's order, with the "It is meant to help
+  researchers who:" bullets inline where you wrote them, and
+  `selection-tree`'s three indented bullets now render (they were in the file
+  all along; the parser was dropping them at the end of the line).
+- **Links render as links.** Not a parser bug: `react-markdown` was always
+  emitting a real `<a>`, but `help.css` had no `a` rule, so links inherited the
+  body colour with no underline. Styled now, in both themes, and they open in a
+  new tab so following one does not throw away the tour's state.
+- **Bullets have bullets again.** Tailwind's preflight resets `ul` to
+  `list-style: none`, and the popover's CSS never set it back — so lists
+  rendered as unmarked indented lines (which is why `Interactions:` has looked
+  like that all along, not a space-saving choice). Fixed for both the
+  description's lists and `Interactions:`.
+- **`Tour:` moved to just below `Title:`** in every entry.
+- **Tour steps were already in file order**, so no rearranging was needed.
+
+### Still open
+
+- **Move non-tour entries below the tour steps.** Help-only entries
+  (`selection-tree-mechanics`, `graph-canvas-reading`, `relation-menu`,
+  `node-dismiss`, `toolbar-siblings`, `example-cases`, `help-button`) are
+  interleaved with tour steps. Harmless — file order only counts entries in the
+  tour — but it makes the tour harder to read off the page.
+- **Multi-line for the OTHER fields** (`Context:`, `Action:`, beat text).
+  Deliberately not done: you said "1 for now; may need 2 soon". The block
+  reader (`extractBlockField`) is written generically, so each field is a
+  one-line change when you want it.
+- **`Interactions:`** does exactly what you thought: it renders a `<ul>` after
+  the description, nothing more. Now that `Description:` takes bullets, it is
+  optional structure rather than the only way to get a list.
 
 ### Original unfinished draft text
 
@@ -127,9 +147,10 @@ through the flat registry, never through sections. So:
 
 - **Prose written as section body text is invisible to the reader.** If you
   want it in the tour, it belongs in an entry's `Description:`.
-- **Section boundaries do not constrain tour order.** `Tour:` is sorted across
-  the whole file, so consecutive steps may sit in different sections and steps
-  can be renumbered without moving entries.
+- **Section boundaries do not constrain tour order, but file order IS tour
+  order.** A tour's steps run in the order they appear in this file, counting
+  across sections — so consecutive steps may sit in different sections, and
+  moving a step means moving its block.
 
 They are still doing two jobs, so do not remove them: they group entries
 legibly in this file, and the `---` separators between them are what the
@@ -148,12 +169,73 @@ mode wants to show section intros — it is unused, not unsupported.
 | `Anchor:` | what to point at — see [Anchors](#anchors) |
 | `Action:` | one sentence saying what the tour just DID — see [Actions](#actions) |
 | `Change:` | what this step ADDS to the app state, as a URL query — see [Change](#change) |
-| `Tour:` | 1-based position in the guided tour; omit for help-only |
+| `Tour:` | which tour this is a step of, e.g. `Walkthrough`; omit for help-only |
 | `Beats:` | ordered sub-steps within one step — see [Beats](#beats) |
 
 Written as `- **Field:** value`. Only `Title` and `Description` are required.
 An entry with no `Tour:` is help-only: reachable in help mode, never visited by
-the tour.
+a tour.
+
+**`Description:` is a multi-line markdown block; every other field is one
+line.** The description runs from the colon to the next `- **Field:**`, so it
+can hold paragraphs, bullet lists and links — write the step's prose the way
+you want it read, in the order you want it read:
+
+```markdown
+- **Description:** An interactive map of the [BDCHM](https://example.org)
+  — what it is, in a sentence or two.
+
+  It is meant to help researchers who:
+
+  - have data in this format;
+  - want to harmonize to it.
+- **Anchor:** app-title
+```
+
+Continuation lines are indented to show they belong to the field; the indent is
+stripped before the markdown is rendered. **Blank lines do not end the block** —
+only the next `- **Field:**` does.
+
+Because the description can carry its own bullets, `Interactions:` and
+`Context:` are now optional structure rather than the only way to get a second
+paragraph. Use them when you want a step's furniture set apart from its prose;
+put the prose in `Description:`.
+
+### Tours and order
+
+`Tour:` does two jobs: it marks an entry as a step, and it names **which tour**
+the step belongs to.
+
+```markdown
+- **Tour:** Walkthrough    <- a step of the Walkthrough tour
+- **Tour:**                <- bare: joins the default tour, also "Walkthrough"
+  (field absent)           <- help-only, never visited by a tour
+```
+
+**Order comes from the file, not from the field.** A tour's steps run top to
+bottom in the order their entries appear here. So:
+
+- **Inserting a step is a paste.** Write the entry where you want it to happen.
+  Nothing else in the file changes.
+- **Moving a step is moving its block.** Cut, paste, done.
+- **There is no number to get wrong** — no duplicates, no gaps, no renumbering
+  a tail of steps because one went in the middle.
+
+The counter the viewer sees (`4.2 / 6`) is computed from rank at parse time.
+
+**Several tours can share this file.** Entries with different `Tour:` names are
+different walks: `Tour: Walkthrough` and `Tour: Deep dive` interleave freely in
+the file and each tour sees only its own steps, in file order. One entry belongs
+to at most one tour; a topic two tours both want is written twice, or written
+once as a help-only entry that both link to.
+
+> **What this replaced.** `Tour:` was a 1-based number until 2026-08-28.
+> Inserting a step between 3 and 4 meant renumbering every step after it, and a
+> duplicate or a gap silently reordered the tour rather than failing. Siggie,
+> 2026-08-28: *"make it easy to add/move steps without having to renumber
+> everything."* Note the two forms are distinguishable on sight — `Tour: 3` is
+> not a tour name — so an unmigrated entry is visible rather than silently
+> wrong, unlike the `State:`/`Change:` rename.
 
 ### Disabling a field
 
@@ -161,13 +243,13 @@ the tour.
 treated as absent:
 
 ```markdown
-- **_Tour:** 4        <- entry drops out of the tour, stays available as help
-- **_Change:** sel=X  <- change not pushed
+- **_Tour:** Walkthrough  <- entry drops out of the tour, stays as help
+- **_Change:** sel=X      <- change not pushed
 ```
 
-Use it for a step that is written but not ready to appear. The tour renumbers
-around the gap, so parking step 4 of 6 leaves a working 5-step tour rather than
-a hole.
+Use it for a step that is written but not ready to appear. The step simply
+drops out of the sequence — parking one of six leaves a working 5-step tour,
+and since order comes from the file there is nothing to renumber.
 
 ### Anchors
 
@@ -353,23 +435,32 @@ What this app is and how to move around it.
 ### app-title
 
 - **Title:** BDCHM Explorer
-- **Description:** An interactive map of the [BioData Catalyst Harmonized Model](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/) — the ~55 entities defined by its [LinkML schema](https://linkml.io/) and how they relate to each other. You can use it to understand those relationships more quickly and thoroughly than with the static [LinkML documentation](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/).
-- **Context:** It is meant to help researchers who have access to data in BDCHM format and want to understand its structure; have data they want to harmonize to BDCHM format; or are designing studies and want to model them using BDCHM, or want to use BDCHM for ideas or inspiration for their own efforts.
-- **Interactions:**
-  - Pick some entities on the left and the diagram shows how they fit together.
-  - Click the title to clear everything and start over.
+- **Tour:** Walkthrough
+- **Description:** An interactive map of the [BioData Catalyst Harmonized Model](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/)
+  — the ~55 entities defined by its [LinkML schema](https://linkml.io/) and how
+  they relate to each other. You can use it to more quickly and thoroughly
+  understand the relationships than with the static
+  [LinkML documentation](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/).
+  It is meant to help researchers who:
+
+  - Have access to data in BDCHM format and want to understand its structure;
+  - Have data that they want to harmonize to BDCHM format; or
+  - Are designing studies and want to model them using BDCHM or want to use
+    BDCHM for ideas or inspiration for their own efforts.
+
+  Pick some entities on the left and the diagram shows how they fit together.
+  Click the title to clear everything and start over.
 - **Anchor:** app-title
 - **Change:**
-- **Tour:** 1
 
 ### selection-tree
 
 - **Title:** Entities
+- **Tour:** Walkthrough
 - **Description:** A LinkML schema defines classes representing a data model's entities. A class defines a set of slots or attributes (like columns in a database table) which can hold
   - other entities,
   - permissible value sets (enumerations),
   - or raw data types (strings, integers, etc.)
-- **Tour:** 2
 
 <!--
   TODO(siggie): translated faithfully, but note what this replaced. The
@@ -408,11 +499,11 @@ What this app is and how to move around it.
 ### relationship-kinds
 
 - **Title:** How entities relate
+- **Tour:** Walkthrough
 - **Description:** While the relationship between an entity and its enumerations and raw data attributes is direct (e.g., `MeasurementObservation.observation_type` → `MeasurementObservationTypeEnum`, or `MeasurementObservation.age_at_observation` → `integer`), it can be related to other entities in more complex ways.
 - **Action:** Selected MeasurementObservation for you, and highlighted its `observation_type` attribute.
 - **Anchor:** none
 - **Change:** sel=MeasurementObservation
-- **Tour:** 3
 - **Beats:**
   1. While the relationship between an entity and its enumerations and raw data attributes is direct, it can be related to other entities in more complex ways.
      - Anchor: slot-row:MeasurementObservation.observation_type
@@ -454,10 +545,10 @@ What the boxes and lines mean.
 ### graph-canvas
 
 - **Title:** Selecting an entity
+- **Tour:** Walkthrough
 - **Description:** Select an entity by clicking its checkbox and it appears in the main panel. Only what you select is drawn — related entities are reached from the box's relation menu. There are five ways an entity can be related to another.
 - **Action:** Added Participant and BodySite to what is already on the diagram. You would normally do this by ticking them in the tree on the left.
 - **Change:** sel=BodySite~Participant
-- **Tour:** 4
 - **Beats:**
   1. Select an entity by clicking its checkbox and it appears in the main panel. Only what you select is drawn. There are five ways an entity can be related to another.
      - Anchor: selection-tree
@@ -531,12 +622,12 @@ What the boxes and lines mean.
 ### copy-link
 
 - **Title:** Copy link
+- **Tour:** Walkthrough
 - **Description:** Copies a link that reproduces **exactly** this view — the selection and the toolbar settings. Anyone opening it sees what you see.
 - **Interactions:**
   - Click to copy; the URL bar always holds the same link.
 - **Context:** Settings travel in the link, so a diagram you set up deliberately does not get redrawn with someone else's preferences.
 - **Change:**
-- **Tour:** 5
 
 ### example-cases
 

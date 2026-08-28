@@ -72,6 +72,48 @@ body.help-mode {
 .help-popover-body p,
 .help-popover-context p { margin: 0 0 6px; }
 
+/* Markdown BLOCK content in the body. `Description:` is read as a multi-line
+   markdown block (2026-08-28), so a step's prose can carry lists and several
+   paragraphs the way the draft was written -- these are the styles that block
+   needs and a one-line description never did. */
+.help-popover-body ul,
+.help-popover-body ol {
+  margin: 0 0 6px;
+  /* `list-style` is restored explicitly: the app's Tailwind preflight resets
+     `ul` to `list-style: none`, so a list in a description rendered as
+     unmarked indented lines -- readable as prose, but not as a list. The
+     popover's CSS is meant to be self-contained (it moves into a package), so
+     it cannot assume the host has or has not reset anything. */
+  list-style: disc outside;
+  padding-left: 18px;
+}
+.help-popover-body ol { list-style: decimal outside; }
+.help-popover-body li {
+  margin: 2px 0;
+  /* Preflight also sets `display: list-item` off in some resets; naming it
+     keeps the marker whatever the host did. */
+  display: list-item;
+}
+.help-popover-body > :last-child { margin-bottom: 0; }
+.help-popover-body code {
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: #f1f5f9;
+  font-size: 12px;
+}
+
+/* Links. react-markdown has always rendered `[text](url)` as a real `<a>`, but
+   nothing here styled one, so it inherited the popover's body colour with no
+   underline and read as plain text -- Siggie, 2026-08-28: "links in `app-title`
+   Description markdown are rendered as plain text". They open in a new tab
+   because leaving the page mid-tour would throw away the tour's state. */
+.help-popover a {
+  color: #0369a1;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.help-popover a:hover { color: #0284c7; }
+
 /* The ACTION band: what the tour just DID.
 
    Deliberately unlike the body — tinted, ruled down the left, checked, and in
@@ -99,9 +141,12 @@ body.help-mode {
 
 .help-popover-interactions {
   margin: 6px 0;
+  /* Same preflight reset as the body's lists -- these have been rendering as
+     unmarked indented lines since the popover shipped. */
+  list-style: disc outside;
   padding-left: 18px;
 }
-.help-popover-interactions li { margin: 2px 0; }
+.help-popover-interactions li { margin: 2px 0; display: list-item; }
 .help-popover-interactions p { margin: 0; }
 
 .help-popover-shortcut {
@@ -181,4 +226,9 @@ body.help-mode {
   }
   .help-tour-nav button:hover:not(:disabled) { background: #334155; }
   .help-hint { box-shadow: 0 0 0 2px #0f172a; }
+  /* #0369a1 on the dark card fails contrast; the lighter end of the same
+     ramp keeps links reading as links in both themes. */
+  .help-popover a { color: #7dd3fc; }
+  .help-popover a:hover { color: #bae6fd; }
+  .help-popover-body code { background: #1e293b; }
 }

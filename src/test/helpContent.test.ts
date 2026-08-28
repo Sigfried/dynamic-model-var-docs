@@ -2,7 +2,8 @@ import { describe, test, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
-  parseHelpContent, tourSteps, tourPositions, parseAnchor,
+  parseHelpContent, tourSteps, tourPositions, tourNames, parseAnchor,
+  DEFAULT_TOUR,
 } from '../help/parseHelpContent';
 
 /**
@@ -46,11 +47,38 @@ describe('help content', () => {
     expect(thin, `Entries missing title/description: ${thin.join(', ')}`).toEqual([]);
   });
 
-  test('the tour has steps, numbered 1..n with no gaps or repeats', () => {
-    // A duplicate or missing number silently reorders the tour, which is the
-    // kind of thing nobody notices until a stakeholder is watching.
+  test('the tour has steps, in file order', () => {
+    // Ordering is by position in the file (2026-08-28), which replaced the
+    // authored 1..n numbering: a number made inserting a step a renumbering of
+    // every step after it, and a gap or a duplicate silently reordered the
+    // tour. There is no longer a number to get wrong -- what this pins is that
+    // the steps come back in the order they are written.
     expect(steps.length).toBeGreaterThan(0);
-    expect(steps.map(s => s.tour)).toEqual(
+    const orders = steps.map(s => s.order);
+    expect(orders).toEqual([...orders].sort((a, b) => a - b));
+    // Every step belongs to the tour it was asked for.
+    expect(new Set(steps.map(s => s.tour)).size).toBe(1);
+  });
+
+  test('no entry still carries an old numeric Tour:', () => {
+    /*
+     * `Tour:` held a 1-based number until 2026-08-28 and holds a tour NAME
+     * now. A leftover `Tour: 3` parses cleanly as a tour named "3" -- a
+     * one-step tour nobody asked for, and a step silently missing from the
+     * real one. Cheap to catch, invisible otherwise.
+     */
+    const numeric = [...content.entries.values()]
+      .filter(e => e.tour !== undefined && /^\d/.test(e.tour))
+      .map(e => `${e.id} (Tour: ${e.tour})`);
+    expect(numeric, `Entries with an unmigrated numeric Tour:: ${numeric.join(', ')}`)
+      .toEqual([]);
+  });
+
+  test('positions are numbered 1..n across the tour', () => {
+    // The number the viewer sees ("4.2 / 6") is computed from rank now, so it
+    // is the thing worth pinning rather than the field it used to read.
+    const stepNumbers = [...new Set(positions.map(p => p.step))];
+    expect(stepNumbers).toEqual(
       Array.from({ length: steps.length }, (_, i) => i + 1),
     );
   });
@@ -212,7 +240,7 @@ describe('parking a field with _', () => {
 
 - **Title:** T
 - **Description:** D
-- **_Tour:** 4
+- **_Tour:** Walkthrough
 - **_Change:** sel=Nope
 - **Anchor:** none
 `);
@@ -240,12 +268,195 @@ describe('parking a field with _', () => {
 
 - **Title:** T
 - **Description:** D
-- **_Tour:** 4
+- **_Tour:** Walkthrough
 - **Change:** sel=Yes
 `);
     const e = mixed.entries.get('thing')!;
     expect(e.tour).toBeUndefined();
     expect(e.change).toBe('sel=Yes');
+  });
+});
+
+describe('multi-line Description:', () => {
+  /*
+   * `Description:` used to stop at the end of its own line, so an authored
+   * draft written as one flowing block had to be split across
+   * Description/Context/Interactions -- Siggie, 2026-08-28: "the way you
+   * implemented the format really does not capture my intent... it lost the
+   * bullets". It is read as a markdown block now.
+   */
+  const md = parseHelpContent(`
+## Bits
+
+### thing
+
+- **Title:** T
+- **Description:** Opening sentence.
+
+  A second paragraph, with a list:
+  - one
+  - two
+- **Anchor:** none
+`);
+  const e = md.entries.get('thing')!;
+
+  test('keeps the lines that follow the colon', () => {
+    expect(e.description).toContain('A second paragraph');
+    expect(e.description).toContain('- one');
+    expect(e.description).toContain('- two');
+  });
+
+  test('does not stop at the blank line between paragraphs', () => {
+    // Stopping there would silently drop everything after it, which is the
+    // failure mode worth pinning: it loses content without an error.
+    expect(e.description.split('\n\n').length).toBeGreaterThan(1);
+  });
+
+  test('dedents, so markdown does not read the block as a code fence', () => {
+    // Four leading spaces are a code block in markdown. The authored indent
+    // shows the lines belong to the field; it must not survive into the value.
+    for (const line of e.description.split('\n')) {
+      expect(line.startsWith('    ')).toBe(false);
+    }
+  });
+
+  test('the next entry field ends the block', () => {
+    expect(e.description).not.toContain('Anchor');
+    expect(e.anchor).toEqual({ kind: 'none' });
+  });
+
+  test('a single-line description is unchanged', () => {
+    const one = parseHelpContent(`
+## Bits
+
+### thing
+
+- **Title:** T
+- **Description:** Just the one line.
+- **Anchor:** none
+`);
+    expect(one.entries.get('thing')!.description).toBe('Just the one line.');
+  });
+});
+
+describe('named tours', () => {
+  /*
+   * `Tour:` names a tour and file order gives the position (2026-08-28,
+   * Siggie: "file order, but maybe `Tour: Walkthrough` so that multiple tours
+   * could be used"). One field does both jobs, and there is no number to
+   * renumber.
+   */
+  const md = parseHelpContent(`
+## Bits
+
+### c
+
+- **Title:** C
+- **Tour:** Walkthrough
+- **Description:** D
+- **Anchor:** none
+
+### a
+
+- **Title:** A
+- **Tour:** Deep dive
+- **Description:** D
+- **Anchor:** none
+
+### b
+
+- **Title:** B
+- **Tour:** Walkthrough
+- **Description:** D
+- **Anchor:** none
+`);
+
+  test('a tour holds only its own steps, in file order', () => {
+    expect(tourSteps(md, 'Walkthrough').map(e => e.id)).toEqual(['c', 'b']);
+    expect(tourSteps(md, 'Deep dive').map(e => e.id)).toEqual(['a']);
+  });
+
+  test('tours are listed in the order their first step appears', () => {
+    expect(tourNames(md)).toEqual(['Walkthrough', 'Deep dive']);
+  });
+
+  test('no tour named means the first one in the file', () => {
+    expect(tourSteps(md).map(e => e.id)).toEqual(['c', 'b']);
+  });
+
+  test('step numbers come from rank in the tour, not from a field', () => {
+    expect(tourPositions(md, 'Walkthrough').map(p => p.step)).toEqual([1, 2]);
+  });
+
+  test('a bare Tour: with no value joins the default tour', () => {
+    const bare = parseHelpContent(`
+## Bits
+
+### thing
+
+- **Title:** T
+- **Tour:**
+- **Description:** D
+- **Anchor:** none
+`);
+    expect(bare.entries.get('thing')!.tour).toBe(DEFAULT_TOUR);
+    expect(tourSteps(bare).map(e => e.id)).toEqual(['thing']);
+  });
+
+  test('inserting a step renumbers nothing', () => {
+    // The point of the change: adding a step is a paste, and no other entry
+    // in the file has to be touched.
+    const withNew = parseHelpContent(`
+## Bits
+
+### c
+
+- **Title:** C
+- **Tour:** Walkthrough
+- **Description:** D
+- **Anchor:** none
+
+### inserted
+
+- **Title:** I
+- **Tour:** Walkthrough
+- **Description:** D
+- **Anchor:** none
+
+### b
+
+- **Title:** B
+- **Tour:** Walkthrough
+- **Description:** D
+- **Anchor:** none
+`);
+    expect(tourSteps(withNew).map(e => e.id)).toEqual(['c', 'inserted', 'b']);
+  });
+});
+
+describe('prose sections', () => {
+  test('a TODO section is not parsed as entries', () => {
+    // Siggie added a `## TODO` section to the content file and asked "Not sure
+    // if parser will complain about it" -- it did: its `###` headings became
+    // entries anchored at nothing, failing two tests.
+    const md = parseHelpContent(`
+## TODO
+
+### Some note to self
+
+Prose, not an entry.
+
+---
+
+## Bits
+
+### thing
+
+- **Title:** T
+- **Description:** D
+- **Anchor:** none
+`);
+    expect([...md.entries.keys()]).toEqual(['thing']);
   });
 });
 

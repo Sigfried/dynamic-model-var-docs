@@ -37,6 +37,21 @@ import { useHelp } from './helpContext';
 import type { HelpAnchor } from './parseHelpContent';
 import './help.css';
 
+/**
+ * Markdown link handling for every popover.
+ *
+ * Links in a `Description:` are references out to the LinkML schema, the BDCHM
+ * docs and so on. Following one in the same tab would leave the app, and the
+ * tour's state stack goes with it -- so they open in a new tab, with the
+ * `noreferrer` that `target="_blank"` needs to not hand the opened page a
+ * handle on this one.
+ */
+const MARKDOWN_COMPONENTS = {
+  a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
+    <a href={href} target="_blank" rel="noreferrer">{children}</a>
+  ),
+};
+
 export default function HelpLayer() {
   const {
     helpMode, tourIndex, position, positions, stepCount, content, activeId,
@@ -234,7 +249,9 @@ export default function HelpLayer() {
             */}
             {(inTour ? position?.text : entry.description) && (
               <div className="help-popover-body">
-                <Markdown>{(inTour ? position!.text : entry.description)}</Markdown>
+                <Markdown components={MARKDOWN_COMPONENTS}>
+                  {(inTour ? position!.text : entry.description)}
+                </Markdown>
               </div>
             )}
 
@@ -255,7 +272,7 @@ export default function HelpLayer() {
             */}
             {entry.interactions.length > 0 && (
               <ul className="help-popover-interactions">
-                {entry.interactions.map((it, i) => <li key={i}><Markdown>{it}</Markdown></li>)}
+                {entry.interactions.map((it, i) => <li key={i}><Markdown components={MARKDOWN_COMPONENTS}>{it}</Markdown></li>)}
               </ul>
             )}
             {entry.shortcut && (

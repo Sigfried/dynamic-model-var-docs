@@ -8,8 +8,8 @@
 > next session, not for Siggie.
 
 **Everything listed here is still to do.** If a section names a status, it is
-open, deferred, or waiting on Siggie — nothing on this page is finished. Tasks 1
-and 2 (canvas content; the tour-state push/pop stack) both shipped and are in
+open, deferred, or waiting on Siggie — nothing on this page is finished. The
+canvas-content task and the tour-state push/pop stack both shipped and are in
 the archive along with the S3a/S3b briefs and the 2026-08-26 planning round.
 
 ---
@@ -18,7 +18,7 @@ the archive along with the S3a/S3b briefs and the 2026-08-26 planning round.
 
   | # | Task                                                                                                                                                                                                                                                                                                                                            | Est.     | Status                  | Detail                                                                                        |
   |---|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|-------------------------|-----------------------------------------------------------------------------------------------|
-  | 1 | Work on tour and tour format/mechanics. Start from `src/help/help-content.md#TODO`  | ~unknown | ⬜                      | [§](#smaller-items-raised)                                                                    |
+  | 1 | Tour format — remaining bits after the 2026-08-28 pass: multi-line for the *other* prose fields, and moving help-only entries below the tour steps                                                                                                                                              | ~small   | 🟨 mostly done          | [§](#-the-tour--copy-is-what-remains)                                                         |
   | 2 | **Legend from a single entity's perspective** — describe it to them first. (carry-forward #3)                                                                                                                                                                                                                                                   | ~unknown | ⬜                      | [§](#smaller-items-raised)                                                                    |
   | 3 | **Re-render regression** — "most clicks refresh the main panel". **Measure, don't guess**                                                                                                                                                                                                                                                       | ~unknown | ⬜ still uninvestigated | [§](#still-not-investigated--the-one-thing-that-is-not-understood)                            |
   | 4 | **Edge crossings.** Cause unmeasured                                                                                                                                                                                                                                                                                                            | ~unknown | ⬜                      | [§](#smaller-items-raised)                                                                    |
@@ -70,19 +70,39 @@ see the chip-strip work first; scroll may not be the answer.
 
 ## 🚦 THE TOUR — copy is what remains
 
-### Next up — Siggie is refining the format doc, then editing the tour
+### Format pass done 2026-08-28 — what changed, and what is left
 
-Stated 2026-08-27 at the end of the S3b session: *"my next step is going to be
-refining the format doc (i find parts of it hard to understand) and then
-editing/testing changes to the tour."*
+Siggie wrote a `## TODO` section into `src/help/help-content.md` listing five
+complaints and asked for a discussion first (*"i have to deliver in four hours
+and still have a tour to author"*). Done in that session:
 
-**The doc is `## Format` in `src/help/help-content.md`** — 175 lines, eight
-`###` sections. That length is itself a candidate explanation for "hard to
-understand": it is written as a reference (every field, every edge case) but
-gets read as a tutorial by someone about to write a step. **Which parts are
-unclear has NOT been diagnosed — ask before rewriting**, since the fix differs
-completely depending on the answer: a quick-start section at the top solves an
-ordering problem, while it does nothing for a section whose prose is muddled.
+- **`Tour:` names a tour; ORDER COMES FROM THE FILE.** `Tour: Walkthrough`, not
+  `Tour: 3`. Inserting a step is a paste — nothing renumbers. Multiple tours can
+  share the file (`Tour: Deep dive`). Siggie's design, better than either option
+  offered.
+- **`Description:` is a multi-line markdown block** — paragraphs, bullet lists,
+  links. `app-title` is back in the draft's order; `selection-tree`'s bullets
+  render (they were in the file, the parser was dropping them).
+- **Links render as links** — was a missing `a` rule in `help.css`, never a
+  parser bug. Open in a new tab so following one does not drop the tour state.
+- **Lists have markers again** — Tailwind's preflight resets `list-style: none`
+  and nothing set it back, so `Interactions:` bullets have been unmarked since
+  the popover shipped.
+- **The `## TODO` section no longer breaks the parser** (it did; its `###`
+  headings parsed as entries).
+
+**Left open, both small and both Siggie's call:**
+
+1. **Multi-line for `Context:` / `Action:` / beat text.** Deliberately not done
+   — *"1 for now; may need 2 soon"*. `extractBlockField` is generic, so each is
+   a one-line change.
+2. **Move help-only entries below the tour steps.** They interleave with tour
+   steps today. Harmless (file order counts only entries *in* the tour) but it
+   makes the tour hard to read off the page. It is Siggie's file to arrange.
+
+The spec is still long — 8 `###` sections, now 9. **Which parts read badly has
+still not been diagnosed**; the format changes above may have removed the
+confusing part or may not have touched it. Ask before rewriting.
 
 **Editing the tour is safe — the tests catch the real mistakes.** Verified by
 deliberately breaking the content and confirming each failure, so these are
@@ -93,7 +113,7 @@ demonstrated, not assumed:
 | Typo'd anchor kind (`entity_row:`) | `every anchor names a known kind` | names the entry and the bad kind |
 | Step changes state with no `Action:` | `a step that changes state says what it did` | names the exact position |
 | `help-id` anchor with no tagged element | `every help-id anchor is actually tagged` | lists untagged ids |
-| Duplicate/gapped `Tour:` numbers | `numbered 1..n with no gaps or repeats` | — |
+| Leftover numeric `Tour: 3` | `no entry still carries an old numeric Tour:` | names the entry and its value |
 | Unknown `State:` param | `every State: field is a parseable query string` | names entry and param |
 
 So: edit freely and run `npx vitest run src/test/helpContent.test.ts` (fast,

@@ -75,10 +75,26 @@ export interface HelpEntry {
    */
   change?: string;
   /**
-   * Position in the guided tour, 1-based. Entries without it are help-only:
-   * reachable in help mode, never visited by the tour.
+   * Which tour this entry is a step of, e.g. `Tour: Walkthrough`. Entries
+   * without it are help-only: reachable in help mode, never visited by a tour.
+   *
+   * **The name is the whole field; ORDER COMES FROM THE FILE.** This was a
+   * 1-based number until 2026-08-28, which made inserting a step a
+   * renumbering of every step after it, and made a duplicate or a gap a silent
+   * reorder. Position is now the entry's position in `help-content.md`, so
+   * moving a step is moving its block and there is no number to collide.
+   *
+   * A bare `- **Tour:**` with no value means the default tour, so a file with
+   * one tour never has to name it.
    */
-  tour?: number;
+  tour?: string;
+  /**
+   * Where this entry sits in the source file. The tour is ordered by it, so
+   * the parser has to record it: `content.entries` is a Map and sections are
+   * parsed block by block, neither of which preserves a usable index on its
+   * own.
+   */
+  order: number;
   /**
    * Ordered beats within this step. Absent means the step is a single
    * implicit beat, which is how every step written before beats existed
@@ -118,7 +134,10 @@ export interface HelpContent {
  */
 export interface TourPosition {
   entry: HelpEntry;
-  /** 1-based step number, i.e. `entry.tour`. */
+  /**
+   * 1-based step number WITHIN ITS TOUR, computed from file order rather than
+   * read off the entry — `entry.tour` is the tour's name now, not a position.
+   */
   step: number;
   /** 0-based index into `entry.beats`, or 0 for a step with no beats. */
   beatIndex: number;
@@ -160,6 +179,23 @@ export function parseAnchor(raw: string | undefined, fallbackId: string): HelpAn
 const SPEC_SECTION = 'Format';
 
 /**
+ * The tour a bare `- **Tour:**` joins. Named tours exist so one file can hold
+ * several walks over the same entries (Siggie, 2026-08-28), but the common
+ * case is one tour, and making every step write its name would be noise.
+ */
+export const DEFAULT_TOUR = 'Walkthrough';
+
+/**
+ * Sections whose `###` headings are prose, not entries, and so are skipped by
+ * name. `Format` is the spec; `TODO` is the authoring scratchpad at the top of
+ * the file. Without this a heading like `### Original unfinished draft text`
+ * parses as an entry with an anchor pointing at nothing — which is exactly
+ * what happened when the TODO section was added (Siggie, 2026-08-28: "Not sure
+ * if parser will complain about it").
+ */
+const PROSE_SECTIONS = new Set([SPEC_SECTION, 'TODO']);
+
+/**
  * Extract a field value like "**Title:** ..." from the lines.
  *
  * A field whose name is prefixed with `_` is PARKED: still written down, but
@@ -174,6 +210,49 @@ function extractField(lines: string[], label: string): string | undefined {
   const idx = lines.findIndex(l => l.trimStart().startsWith(prefix));
   if (idx === -1) return undefined;
   return lines[idx].trimStart().slice(prefix.length).trim();
+}
+
+/**
+ * Extract a field as a multi-line MARKDOWN BLOCK: the text after the colon,
+ * plus every following line up to the next entry-level `- **Field:**`.
+ *
+ * **Why this exists.** `extractField` stops at the end of its own line, so an
+ * authored `Description:` was one paragraph with no bullets, no line breaks and
+ * no second paragraph — Siggie's "the format really does not capture my
+ * intent": a draft written as one flowing block had to be split across
+ * `Description:` / `Context:` / `Interactions:`, which reordered it. A field
+ * read as a block can hold the draft as written.
+ *
+ * Continuation lines are DEDENTED by the common indent of the block, because
+ * markdown reads four leading spaces as a code fence — the authored indent is
+ * there to show the lines belong to the field, and must not survive into the
+ * markdown.
+ */
+function extractBlockField(lines: string[], label: string): string | undefined {
+  const prefix = `- **${label}:**`;
+  const idx = lines.findIndex(l => l.trimStart().startsWith(prefix));
+  if (idx === -1) return undefined;
+
+  const first = lines[idx].trimStart().slice(prefix.length).trim();
+  const rest: string[] = [];
+  for (let i = idx + 1; i < lines.length; i++) {
+    // Any entry-level field ends the block. A blank line does NOT: a field can
+    // hold two paragraphs, and stopping at the blank would silently drop the
+    // second.
+    if (lines[i].trimStart().startsWith('- **')) break;
+    rest.push(lines[i]);
+  }
+  // Trailing blanks are the gap before the next field, not part of the value.
+  while (rest.length && rest[rest.length - 1].trim() === '') rest.pop();
+  if (rest.length === 0) return first;
+
+  const indents = rest.filter(l => l.trim() !== '')
+    .map(l => l.length - l.trimStart().length);
+  const dedent = Math.min(...indents);
+  const body = rest.map(l => l.slice(dedent)).join('\n');
+  // The first line is already dedented (it followed the colon), so it joins
+  // the block at column 0 whatever the continuation's indent was.
+  return first ? `${first}\n${body}` : body;
 }
 
 /** Extract bullet list items under a field header like "- **Interactions:**" */
@@ -244,7 +323,7 @@ function extractBeats(lines: string[], entryId: string): TourBeat[] | undefined 
   return beats.length > 0 ? beats : undefined;
 }
 
-function parseEntry(block: string): HelpEntry | null {
+function parseEntry(block: string, order: number): HelpEntry | null {
   const lines = block.split('\n');
   const headerLine = lines[0];
   const match = headerLine.match(/^###\s+(.+)$/);
@@ -252,7 +331,10 @@ function parseEntry(block: string): HelpEntry | null {
 
   const id = match[1].trim();
   const title = extractField(lines, 'Title') ?? id;
-  const description = extractField(lines, 'Description') ?? '';
+  // Description is the one field read as a multi-line block, so a step can
+  // hold the prose as drafted. The rest stay single-line by design — see
+  // `extractBlockField`.
+  const description = extractBlockField(lines, 'Description') ?? '';
   const interactions = extractBulletList(lines, 'Interactions');
   const shortcut = extractField(lines, 'Shortcut');
   const context = extractField(lines, 'Context');
@@ -261,18 +343,24 @@ function parseEntry(block: string): HelpEntry | null {
   const change = extractField(lines, 'Change');
   const beats = extractBeats(lines, id);
   const tourRaw = extractField(lines, 'Tour');
-  const tourNum = tourRaw === undefined ? undefined : Number(tourRaw);
-  // A non-numeric Tour: field is an authoring mistake; drop it rather than
-  // sorting NaN into the middle of the tour order.
-  const tour = tourNum !== undefined && Number.isFinite(tourNum) ? tourNum : undefined;
+  // `Tour:` names a tour; a bare `- **Tour:**` with no value joins the default
+  // one, so a file with a single tour never has to write its name. A parked
+  // `_Tour:` does not match at all and leaves this undefined, which is what
+  // drops the entry out of the tour while keeping it as help.
+  const tour = tourRaw === undefined ? undefined : (tourRaw || DEFAULT_TOUR);
 
   return {
     id, title, description, interactions, shortcut, context,
-    anchor, action, change, tour, beats,
+    anchor, action, change, tour, order, beats,
   };
 }
 
-function parseSection(block: string): HelpSection {
+/**
+ * @param nextOrder  running file-order counter; the tour is ordered by it, so
+ *                   it has to keep counting ACROSS sections rather than
+ *                   restarting per block.
+ */
+function parseSection(block: string, nextOrder: () => number): HelpSection {
   const lines = block.split('\n');
   const headerLine = lines[0];
   const titleMatch = headerLine.match(/^##\s+(.+)$/);
@@ -293,18 +381,39 @@ function parseSection(block: string): HelpSection {
   const entryBlocks = block.split(/(?=^### )/m);
   for (const entryBlock of entryBlocks) {
     if (!entryBlock.startsWith('### ')) continue;
-    const entry = parseEntry(entryBlock.trim());
+    const entry = parseEntry(entryBlock.trim(), nextOrder());
     if (entry) entries.push(entry);
   }
 
   return { id, title, body, entries };
 }
 
-/** Tour steps in order. Entries with no `Tour:` field are help-only. */
-export function tourSteps(content: HelpContent): HelpEntry[] {
+/**
+ * Every tour named in the file, in the order their first step appears.
+ * One tour is the normal case; the list exists so a second one can be offered
+ * without the host hardcoding its name.
+ */
+export function tourNames(content: HelpContent): string[] {
+  const seen = new Set<string>();
+  for (const e of [...content.entries.values()].sort((a, b) => a.order - b.order)) {
+    if (e.tour) seen.add(e.tour);
+  }
+  return [...seen];
+}
+
+/**
+ * Steps of one tour, in FILE ORDER. Entries with no `Tour:` field are
+ * help-only.
+ *
+ * Ordering by file position rather than an authored number is what makes
+ * inserting a step a paste rather than a renumber, and what makes a gap or a
+ * duplicate impossible to write.
+ */
+export function tourSteps(content: HelpContent, tour?: string): HelpEntry[] {
+  const name = tour ?? tourNames(content)[0];
   return [...content.entries.values()]
-    .filter(e => e.tour !== undefined)
-    .sort((a, b) => a.tour! - b.tour!);
+    .filter(e => e.tour !== undefined && e.tour === name)
+    .sort((a, b) => a.order - b.order);
 }
 
 /**
@@ -316,10 +425,11 @@ export function tourSteps(content: HelpContent): HelpEntry[] {
  * popping the `change` the position being LEFT pushed, so the two directions
  * are inverses rather than both being an absolute apply.
  */
-export function tourPositions(content: HelpContent): TourPosition[] {
+export function tourPositions(content: HelpContent, tour?: string): TourPosition[] {
   const positions: TourPosition[] = [];
-  for (const entry of tourSteps(content)) {
-    const step = entry.tour!;
+  tourSteps(content, tour).forEach((entry, i) => {
+    // The step number is the entry's rank in this tour, not a field on it.
+    const step = i + 1;
     if (!entry.beats || entry.beats.length === 0) {
       positions.push({
         entry, step, beatIndex: 0,
@@ -328,7 +438,7 @@ export function tourPositions(content: HelpContent): TourPosition[] {
         action: entry.action,
         change: entry.change,
       });
-      continue;
+      return;
     }
     entry.beats.forEach((beat, beatIndex) => {
       positions.push({
@@ -349,7 +459,7 @@ export function tourPositions(content: HelpContent): TourPosition[] {
         change: beat.change ?? (beatIndex === 0 ? entry.change : undefined),
       });
     });
-  }
+  });
   return positions;
 }
 
@@ -363,15 +473,18 @@ export function parseHelpContent(markdown: string): HelpContent {
 
   const sections: HelpSection[] = [];
   const entries = new Map<string, HelpEntry>();
+  // File order, counted across sections — it is what orders the tour.
+  let order = 0;
 
   for (const block of sectionBlocks) {
     // Skip blocks that don't start with ## (e.g., the # title)
     if (!block.match(/^## /m)) continue;
-    // Skip the spec section: its ### sub-headings document the format, they
-    // are not entries.
-    if (block.match(/^##\s+(.+)$/m)?.[1].trim() === SPEC_SECTION) continue;
+    // Skip prose sections: their ### sub-headings are documentation and notes,
+    // not entries.
+    const heading = block.match(/^##\s+(.+)$/m)?.[1].trim();
+    if (heading && PROSE_SECTIONS.has(heading)) continue;
 
-    const section = parseSection(block);
+    const section = parseSection(block, () => order++);
     sections.push(section);
     for (const entry of section.entries) {
       entries.set(entry.id, entry);
