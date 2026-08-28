@@ -10,40 +10,15 @@ Package-level design lives in [docs/HELP_PACKAGE_PLAN.md](../../docs/HELP_PACKAG
 <details>
 <summary><b>TODO</b></summary>
 
-- according to my work process loop i give you new todos here,
-  but the next todos require screen shots, so do nothing until i
-  paste them into session
+- next step is to help me authoring the tour. and first step of that is
+  an introduction to the app and what it's for. this has been started in
+  [intro](#intro). i'm going to put notes there inside code blocks about
+  what i want
 
-### Still open
-
-- **open the app at the start of the tour** — the other half of bullet one, left
-  alone pending your call on whether it should auto-fire.
 
 <details>
 <summary><b>Original unfinished draft text</b></summary>
 
-1. current first step sort of highlights the title but doesn't dim the rest. fix
-   only if it takes less than a minute. text:
-   - **BDCHM Explorer**
-   - An interactive map of the [BioData Catalyst Harmonized Model](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/)
-     — the ~55 entities defined by its [LinkML schema](https://linkml.io/)
-     and how they relate to each other. You can use it to more quickly and thoroughly
-     understand the relationships than with the static [LinkML documentation](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/).
-     It is meant to help researchers who:
-     - Have access to data in BDCHM format and want to understand its structure;
-     - Have data that they want to harmonize to BDCHM format; or
-     - Are designing studies and want to model them using BDCHM or want to use
-       BDCHM for ideas or inspiration for their own efforts.
-   - Pick some entities on the left and the diagram shows how they fit
-     together. Click the title to clear everything and start over.
-2. highlight selection panel. text:
-   - **Entities**
-   - A LinkML schema defines classes representing a data model's entities.
-     A class defines a set of slots or attributes (like columns in a database table)
-     which can hold
-     - other entities,
-     - permissible value sets (enumerations),
-     - or raw data types (strings, integers, etc.)
 3. select MeasurementObservation and highlight observation_type. text:
    - While the relationship between an entity and its enumerations and raw
      data attributes is direct (e.g.,
@@ -190,7 +165,7 @@ you want it read, in the order you want it read:
 
   - have data in this format;
   - want to harmonize to it.
-- **Anchor:** app-title
+- **Anchor:** intro
 ```
 
 Continuation lines are indented to show they belong to the field; the indent is
@@ -613,12 +588,29 @@ brings its own via `Change:` rather than asking the visitor to click first.
 
 What this app is and how to move around it.
 
-### app-title
+### intro
 
 - **Title:** BDCHM Explorer
 - **Tour:** Walkthrough
-- **Description:** An interactive map of the **BioData Catalyst Harmonized Model**
-  — the ~55 entities defined by its [LinkML schema](https://linkml.io/) and how
+- **Description:** 
+  BioData Catalyst ([BDC](https://biodatacatalyst.nhlbi.nih.gov/))
+  is a cloud-based ecosystem where researchers can find, access, share,
+  store, and analyze heart, lung, blood, and sleep data resources. 
+  ```
+  read this draft paper about the whole project: temp/IngestPipelinePaper.pdf
+
+  we just want like two sentences explaining where BDCHM Explorer fits. Which
+  is as a tool to introduce and aid researchers using the whole project and
+  the model. 
+
+  you try cleaning up this section. i've committed it so don't worry about
+  preserving what's here. 
+  ```
+
+  ...**BDCHM** 
+
+  ...An interactive map of the **BioData Catalyst Harmonized Model**
+  — the ~55 entities defined by its [LinkML](https://linkml.io/) schema and how
   they relate to each other. You can use it to more quickly and thoroughly
   understand the relationships than with the static
   [LinkML documentation](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/).
@@ -638,7 +630,7 @@ What this app is and how to move around it.
 - **Anchor:** none
 - **Once:** intro
 - **Change:**
-- **Width:** 500
+- **Width:** 900
 
 ### selection-tree
 
