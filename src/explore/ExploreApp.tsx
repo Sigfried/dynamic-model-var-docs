@@ -225,6 +225,15 @@ function ExploreAppInner() {
           </p>
         </div>
         <div className="flex items-center gap-4">
+        <HelpButton />
+        <button
+          data-help-id="example-cases"
+          onClick={() => setCasesOpen(v => !v)}
+          className={`text-sm underline hover:text-white ${casesOpen ? 'text-white' : 'text-blue-100'}`}
+          title="Named selections for comparing edge routing"
+        >
+          example cases
+        </button>
         <button
           onClick={async () => {
             const url = buildShareURL({
@@ -248,15 +257,6 @@ function ExploreAppInner() {
           title="Copy a link that reproduces exactly this view, settings included"
         >
           {copied ? '✓ copied' : 'copy link'}
-        </button>
-        <HelpButton />
-        <button
-          data-help-id="example-cases"
-          onClick={() => setCasesOpen(v => !v)}
-          className={`text-sm underline hover:text-white ${casesOpen ? 'text-white' : 'text-blue-100'}`}
-          title="Named selections for comparing edge routing"
-        >
-          example cases
         </button>
         <a
           href={`${import.meta.env.BASE_URL}previous.html`}

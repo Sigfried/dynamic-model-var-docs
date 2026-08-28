@@ -288,6 +288,55 @@ export default function HelpLayer() {
   }, [activeId, anchor, elementFor]);
 
   /*
+   * Wait for a step's `Change:` to land before showing the popover.
+   *
+   * The visible bug (Siggie, 2026-08-28): on a step that ticks something, the
+   * popover appeared FIRST -- centred, because its anchor did not exist yet --
+   * then the checkbox and the Person box appeared, then the popover jumped to
+   * the box. Three separate movements for one `next`.
+   *
+   * The cause is the order the effects run in: `showPopover` is gated on
+   * `entry`, which is set the instant the position changes, while `rect` is
+   * only filled in once the anchor element EXISTS, which takes the app a
+   * render (or a canvas relayout) after the change is pushed. So the popover
+   * necessarily rendered against a stale measurement.
+   *
+   * Held hidden here until `rect` arrives, which collapses that to one
+   * movement: the app changes, then the popover appears where it belongs.
+   *
+   * **Narrowly scoped, on purpose.** Only a position that both pushes a
+   * `Change:` and names a resolvable anchor waits at all. `Anchor: none` (step
+   * 1) and any step whose anchor is already on screen show immediately, as
+   * they always did -- there is nothing to wait for, and a blanket delay would
+   * put lag on every `next` in the tour to fix the few that need it.
+   *
+   * Siggie's ideal is a staged reveal -- checkbox, then 250ms, then the box,
+   * then the popover -- which needs the Person box's appearance detached from
+   * the checkbox state. Explicitly deferred as too much work for now; this is
+   * the part of it that does not need that refactor.
+   */
+  const WAIT_MS = 600;
+  const waitsForChange = inTour
+    && position?.change != null
+    && anchor !== undefined
+    && anchor.kind !== 'none';
+  const [changeSettled, setChangeSettled] = useState(false);
+  useEffect(() => {
+    if (!waitsForChange) { setChangeSettled(true); return; }
+    setChangeSettled(false);
+    /*
+     * A cap, not just a rect check. An anchor whose ARGUMENT is wrong
+     * (`entity-row:Participnt`) resolves to null forever -- the known
+     * untestable failure in this format -- and without the timeout that step
+     * would show no popover at all, which is far worse than showing it
+     * centred. Failing back to the old behaviour is the right failure.
+     */
+    const t = window.setTimeout(() => setChangeSettled(true), WAIT_MS);
+    return () => window.clearTimeout(t);
+  }, [waitsForChange, tourIndex]);
+  const ready = changeSettled || rect !== null;
+
+  /*
    * Popover API: showPopover puts it in the top layer, above every z-index and
    * overflow:hidden ancestor.
    *
@@ -299,12 +348,12 @@ export default function HelpLayer() {
   useEffect(() => {
     const el = popRef.current;
     if (!el) return;
-    if (entry) {
+    if (entry && ready) {
       if (!el.matches(':popover-open')) el.showPopover();
     } else if (el.matches(':popover-open')) {
       el.hidePopover();
     }
-  }, [entry]);
+  }, [entry, ready]);
 
   // Leaving help mode, or starting a tour, drops any pin -- otherwise a
   // previously pinned popover outlives the mode that produced it.

@@ -7,6 +7,47 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-28 (popover timing, header order)
+
+### Three movements per `next`, collapsed to one
+
+Siggie, with a screenshot of the `selection-tree` step: *"the popover appears,
+then the check and the Person box, then the popover repositions to the Person
+box."*
+
+The cause is effect ordering, not animation. `showPopover` was gated on
+`entry`, which is set the instant the position changes; `rect` is only filled
+in once the anchor ELEMENT exists, which takes the app a render (or a canvas
+relayout) after the `Change:` is pushed. So the popover was guaranteed to
+render once against a stale measurement — centred, since the anchor did not
+exist — and then jump when the 250ms `measure` poll found the real element.
+
+Gated `showPopover` on `rect` arriving as well.
+
+**Scoped narrowly on purpose:** only a position that BOTH pushes a `Change:`
+and names a non-`none` anchor waits. `Anchor: none` (step 1) and any step whose
+anchor is already on screen show immediately, as before. A blanket delay would
+have put lag on every `next` in the tour to fix the handful that need it.
+
+**There is a 600ms cap, and it matters.** An anchor whose *argument* is wrong —
+`entity-row:Participnt` — resolves to null forever; that is the known
+untestable failure of this format (only the anchor KIND is checked, see the
+2026-08-28 tour-format notes). Without the timeout such a step would show no
+popover at all, which is much worse than showing it centred. The cap makes the
+failure mode "falls back to the old behaviour".
+
+**What was NOT done.** Siggie's ideal is a staged reveal — checkbox ticks,
+250ms, the Person box appears, a beat later the popover. That needs the Person
+box's appearance detached from the checkbox state, and they called it too much
+work for now. This is the part of it that needs no such refactor.
+
+### Header order
+
+`copy link` moved to after `example cases`, at Siggie's request. Order is now
+`take the tour` (the pill), `example cases`, `copy link`, `previous views` —
+which also puts the pill first in the bar rather than third.
+
+---
 ## 2026-08-28 (alerts, `Once:`, and the tour button)
 
 Three TODO bullets from Siggie. All three had a "what shape should this be"
