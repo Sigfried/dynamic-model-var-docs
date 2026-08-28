@@ -637,8 +637,10 @@ What this app is and how to move around it.
      - Anchor: node-box:Person
      - Change: sel=Person
      - Action: I clicked the Person checkbox and the Person entity appeared in the viewing panel.
-  3. Hover over
-     - Anchor: none
+  3. Hover over the yellow `☰ 2 related · 0 shown ▾` button to reveal a cascading
+     menu allowing you to display entities related to this one.
+     - Anchor: node-box:Person
+     - Highlight: none
 
 ### entities
 

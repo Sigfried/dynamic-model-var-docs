@@ -7,6 +7,56 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-28 (collapsed boxes: a row budget, not connected-only)
+
+Siggie: *"i want to disable the code that hides attributes as soon as a single
+attribute connects to something"*, then *"expand up to a certain number like
+used to happen."*
+
+**There was no such earlier behaviour to restore.** Checked the history:
+connected-only has been the rule since `bf5ce6c`, the commit that introduced
+row collapse. Siggie's recollection of a count-based cap is of something that
+was never written. Said so and built it fresh rather than hunting for a commit
+that does not exist.
+
+The old rule was `rows = expanded ? all : connected` — a collapsed box showed
+only rows carrying a DRAWN edge. Person has nine attributes and one entity-
+ranged one, so a collapsed Person was a single row plus `+ 8 more attributes`:
+a box that said almost nothing about the class it names. Collapsing is there to
+cap TALL boxes (Observation, 13+), so it should cap them and leave short ones
+alone.
+
+Now: `ROW_BUDGET = 6`, filled **connected-first** (Siggie's choice of the two
+orderings offered). Connected rows are never cut even when they alone exceed
+the budget — an edge arriving at a row the box is not drawing has no anchor to
+point at, which is a correctness constraint and not a preference. `slice` with
+`Math.max(ROW_BUDGET, connected.length)` is what encodes that.
+
+`forced` changed meaning and is worth noting: it was "nothing is connected"
+(the BodySite all-scalars case, where a collapsed box would have been empty),
+and is now "nothing is hidden". The old case is subsumed — BodySite is
+force-expanded because 3 ≤ 6, not because it has no edges.
+
+Merged boxes are untouched; they were already always-expanded. Siggie guessed
+that was to avoid multiple `+ N` links, and the comment in the code says
+something narrower ("nothing is ever hidden on a merged box, so there is no
+footer to offer"), but the concern is real: a budget on a merged box would need
+one cap per child section. Not attempted.
+
+### Testing
+
+New `rowBudget.test.ts`, and it was written against a wrong assumption first:
+`connected` means the edge is DRAWN, so `buildViewModel` on a Person-only
+selection reports zero connected rows — `cause_of_death` has nothing to connect
+to until CauseOfDeath is also on the canvas. The test now selects both, which
+is the state the screenshot was in.
+
+The tests deliberately do NOT import `ROW_BUDGET`. A test that reads the
+constant it is checking passes for every value including a wrong one; the
+numbers are written out so changing the budget fails a test and asks whether
+that was meant. Confirmed 2 of the 4 fail against the old connected-only rule.
+
+---
 ## 2026-08-28 (Highlight: ring | dim | none)
 
 Siggie: *"can we have an option for anchor without dimming?"* Offered three

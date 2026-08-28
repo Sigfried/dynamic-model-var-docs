@@ -65,6 +65,18 @@ const NODE_W = 240;
 const HEADER_H = 30;
 const ROW_H = 20;
 /**
+ * How many attribute rows a COLLAPSED box shows before it offers a footer.
+ *
+ * Replaces "show only the connected rows" (Siggie, 2026-08-28), which hid too
+ * much: Person has one connected attribute, so a collapsed Person was a single
+ * row plus `+ 8 more attributes`. The point of collapsing is to cap tall boxes
+ * like Observation, not to reduce every box to its edges.
+ *
+ * Connected rows are never cut even when they alone exceed this — see the note
+ * at the call site.
+ */
+const ROW_BUDGET = 6;
+/**
  * The relation-menu trigger band: ONE line, always, on any box with relations.
  *
  * This replaced two `flex-wrap` chip strips whose heights were *estimated in
@@ -304,17 +316,32 @@ export function buildViewModel(
     // rather than showing all the entity ones then all the scalars.
     const hidden = [...entityRows.filter(r => !r.connected), ...plainRows]
       .sort(bySchema);
-    // A node whose attributes are all scalars (BodySite: id/qualifier/site)
-    // has nothing connected, so collapsed it renders as an empty box offering
-    // to reveal its only content. Show the attributes instead.
-    // A node whose rows are ALL unconnected is force-expanded: collapsed it
-    // would be an empty box offering to reveal its only content.
-    const forced = connected.length === 0;
+    /*
+     * A collapsed box shows up to ROW_BUDGET rows, not just its connected ones.
+     *
+     * Connected-only was the rule until 2026-08-28 and it hid too much: Person
+     * has one connected attribute, so a collapsed Person was a single row and
+     * `+ 8 more attributes` — a box that showed almost nothing about the class
+     * it names (Siggie, screenshot). The budget exists to cap tall boxes like
+     * Observation, so it should CAP them, not reduce every box to its edges.
+     *
+     * Connected rows fill the budget FIRST and are never cut, even when they
+     * alone exceed it: an edge arriving at a row that is not drawn has nothing
+     * to point at (see the "Row not currently displayed" case in the edge
+     * anchoring below). The remainder fills with unconnected and scalar rows in
+     * schema order.
+     *
+     * `forced` is now just "nothing is hidden": with the budget, a box whose
+     * rows all fit has no collapsed state to return to, so a "− fewer" footer
+     * there would be a control that does nothing. That subsumes the old
+     * all-scalars case (BodySite: id/qualifier/site) — it is force-expanded now
+     * because 3 ≤ 6, not because it has no edges.
+     */
+    const budgeted = [...connected, ...hidden].slice(0, Math.max(ROW_BUDGET, connected.length));
+    const forced = budgeted.length === connected.length + hidden.length;
     const expanded = expandedNodes.has(n.id) || forced;
-    const rows = expanded ? [...connected, ...hidden] : connected;
-    // Forced expansion has no collapsed state to return to, so offering a
-    // "− fewer" footer there would be a control that does nothing.
-    const footerCount = forced ? 0 : hidden.length;
+    const rows = expanded ? [...connected, ...hidden] : budgeted;
+    const footerCount = forced ? 0 : connected.length + hidden.length - budgeted.length;
     const owners = sub.hiddenOwners.get(n.id) ?? [];
     const owned = sub.hiddenOwned.get(n.id) ?? [];
     const relationGroups = buildRelationGroups(
