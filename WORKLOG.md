@@ -7,6 +7,65 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-28 (`?tour=1`, and a URL-timing trap worth remembering)
+
+Siggie wanted a link that drops someone straight into the tour. (Auto-opening
+on a first visit was raised earlier and never decided; still not done, and this
+is the better answer anyway — it opens the tour for people who were SENT the
+link, not for everyone who happens to arrive.)
+
+The feature is ~16 lines. Finding where to put them took several tries, and the
+reason is worth writing down.
+
+### Why `tour` must not survive in the URL
+
+`writeExploreState` MUTATES the live URL rather than rebuilding it, so any
+param nobody deletes stays in the address bar forever. Left there, `tour=1`
+would restart the tour on every reload and be copied into whatever the visitor
+shared next. Hence `ONE_SHOT_PARAMS` — live and meaningful, but consumed rather
+than reflected. (`buildShareURL` rebuilds from scratch, so `copy link` was never
+at risk; checked rather than assumed.)
+
+### The trap: the param is gone before anything can read it
+
+The param has to be destroyed early, which means every reader races that
+destruction. Three approaches were tried and abandoned:
+
+1. **Read it in the consuming component's effect.** Too late — the URL was
+   already rewritten.
+2. **Capture at module load.** Works in the app by luck (the bundle imports
+   before anything navigates), untestable, and wrong for any client-side
+   navigation.
+3. **Read in a `useState` initialiser**, on the theory that render precedes
+   effects. It does — but instrumentation showed `readTourRequest` first seeing
+   `?sel=Person`, i.e. the rewrite had ALREADY happened. Reasoning about React's
+   render/effect ordering by hand produced a wrong answer three times.
+
+**What worked: latch the answer inside the code that DESTROYS the param.**
+`writeExploreState` is by definition the last thing to see it, so capturing
+there needs no ordering assumption at all. `readTourRequest()` can then be
+called from anywhere, at any time, and still be right.
+
+Generalise this: when a value must outlive its own storage, capture it at the
+point of destruction, not at the point you guess runs first.
+
+### A wrong diagnosis, recorded so it is not repeated
+
+Before instrumenting, the failure was blamed on the help content loading
+asynchronously — `startTour` → `goTo(0)` DOES silently no-op when `positions`
+is empty, which looked like a satisfying explanation. A deferral was built into
+`HelpProvider` for it, and then reverted: `markdown` is a STATIC import, so
+`positions` is populated on the first render and there was never a race.
+
+The silent no-op in `goTo` is still there and is still a trap for a future
+caller, but it was not this bug, and fixing an unrelated landmine while chasing
+a live one is how a small change turns into a large one. Left alone
+deliberately.
+
+Also: `npm run build` again caught an unused import that `npx tsc --noEmit`
+passed. Third time this session — see [[feedback_verify_with_npm_run_build]].
+
+---
 ## 2026-08-28 (unanchored popover centres on its real height; Width: field)
 
 ### The centring bug

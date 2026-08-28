@@ -17,6 +17,7 @@ import { describe, test, expect, beforeAll, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { loadModelData } from '../utils/dataLoader';
 import ExploreApp from '../explore/ExploreApp';
+import { resetTourRequest } from '../explore/exploreState';
 
 const params = () => new URLSearchParams(window.location.search);
 const sel = () => params().get('sel');
@@ -49,6 +50,10 @@ describe('tour state stack, end to end', () => {
   beforeEach(() => {
     localStorage.clear();
     window.history.replaceState(null, '', '/dynamic-model-var-docs/');
+    // `?tour=1` is latched on first read so it can outlive the URL rewrite;
+    // one module instance serves every test here, so each simulated page load
+    // has to clear it.
+    resetTourRequest();
   });
 
   /** Render, then walk the tour to the first step that puts something on the canvas. */
@@ -67,6 +72,33 @@ describe('tour state stack, end to end', () => {
     return true;
   };
   const back = () => fireEvent.click(button(/back/i));
+
+  test('?tour=1 opens the tour and removes itself from the URL', async () => {
+    /*
+     * A link that drops someone straight into the tour (Siggie, 2026-08-28).
+     *
+     * The param must NOT survive: `writeExploreState` mutates the live URL
+     * rather than rebuilding it, so anything nobody deletes stays in the
+     * address bar forever -- a `tour=1` left there would restart the tour on
+     * every reload and be copied into whatever the visitor shared next.
+     */
+    window.history.replaceState(null, '', '/dynamic-model-var-docs/?tour=1&sel=Person');
+    render(<ExploreApp />);
+    await screen.findByRole('button', { name: /next/i, hidden: true });
+    // Consumed...
+    expect(params().get('tour')).toBeNull();
+    // ...without disturbing the view state alongside it.
+    expect(sel()).toBe('Person');
+  });
+
+  test('an ordinary visit does not open the tour', async () => {
+    // The complement, and the thing that would break silently: if arrival
+    // fired the tour unconditionally it would fire for every visitor and on
+    // every shared link.
+    render(<ExploreApp />);
+    await screen.findByRole('heading', { name: /BDCHM Explorer/i });
+    expect(screen.queryByRole('button', { name: /next/i, hidden: true })).toBeNull();
+  });
 
   test('? starts the tour, and a second ? leaves it', async () => {
     /*

@@ -74,6 +74,49 @@ const IDS_SEP = '~';
  */
 const RETIRED_PARAMS = ['exp', 'hidden', 'owners'] as const;
 
+/**
+ * Params that are read once at startup and then removed from the URL.
+ *
+ * `tour=1` sends someone straight into the tour (Siggie, 2026-08-28, for
+ * sharing a link that opens it). It is a one-shot INSTRUCTION, not view state,
+ * and the difference matters here: `writeExploreState` mutates the live URL
+ * rather than rebuilding it, so a param nobody deletes sits in the address bar
+ * forever. Left there, `tour=1` would survive a reload and restart the tour
+ * every time the page was refreshed, and would be copied into every `copy
+ * link` the visitor shared afterwards.
+ *
+ * Distinct from RETIRED_PARAMS, which are dead spellings being swept up. These
+ * are live and meaningful -- they are just consumed rather than reflected.
+ */
+export const ONE_SHOT_PARAMS = ['tour'] as const;
+
+/**
+ * Is this a `?tour=1` link?
+ *
+ * LATCHED on first call, because the answer has to outlive the URL. The param
+ * is stripped by the first `writeExploreState` (it must be -- see
+ * ONE_SHOT_PARAMS), which runs in a mount effect, and the component that acts
+ * on the answer is a sibling that has not necessarily asked yet. Latching
+ * makes "did this page load ask for the tour?" a fact about the page load
+ * rather than a question about the address bar right now.
+ *
+ * `resetTourRequest` exists for tests, which drive several page loads through
+ * one module instance.
+ */
+let tourRequest: boolean | undefined;
+
+export function readTourRequest(search = window.location.search): boolean {
+  if (tourRequest === undefined) {
+    tourRequest = new URLSearchParams(search).get('tour') === '1';
+  }
+  return tourRequest;
+}
+
+/** Forget the latched answer. Tests only: one module, many simulated loads. */
+export function resetTourRequest(): void {
+  tourRequest = undefined;
+}
+
 function readIds(params: URLSearchParams, key: string): string[] {
   const raw = params.get(key);
   return raw ? raw.split(IDS_SEP).filter(Boolean) : [];
@@ -160,6 +203,15 @@ export function writeExploreState(state: ExploreState): void {
    * and gets copied along with everything else.
    */
   for (const dead of RETIRED_PARAMS) q.delete(dead);
+  /*
+   * One-shot params are CONSUMED here, not just deleted: this is the code that
+   * destroys them, so it is the one place guaranteed to run before they can be
+   * lost. Latching on the way out means a reader that asks later still gets
+   * the right answer, whatever the render/effect ordering turns out to be --
+   * which is what made this hard to get right by hand (2026-08-28).
+   */
+  if (tourRequest === undefined && q.has('tour')) tourRequest = q.get('tour') === '1';
+  for (const once of ONE_SHOT_PARAMS) q.delete(once);
 
   setIds('sel', state.sel);
   if (state.detail) q.set('detail', state.detail);

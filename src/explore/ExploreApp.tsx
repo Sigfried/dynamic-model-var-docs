@@ -30,7 +30,7 @@ import { helpResolvers } from './helpResolvers';
 import helpMarkdown from '../help/help-content.md?raw';
 
 import {
-  readExploreState, writeExploreState, buildShareURL,
+  readExploreState, writeExploreState, buildShareURL, readTourRequest,
   type Direction, type ExploreState, type MergeMode,
 } from './exploreState';
 import {
@@ -488,6 +488,31 @@ export default function ExploreApp() {
  */
 function HelpButton() {
   const { helpMode, toggleHelpMode, startTour } = useHelp();
+
+  /*
+   * `?tour=1` opens the tour on arrival, for a link that drops someone
+   * straight into it (Siggie, 2026-08-28).
+   *
+   * Read in a `useState` initialiser, which runs during the first RENDER --
+   * before any effect, and so before `writeExploreState` strips the param
+   * (it has to strip it; see ONE_SHOT_PARAMS). Reading it in the effect itself
+   * would race that write, and reading it at module load would bind the answer
+   * to import time, which is wrong for anything that navigates.
+   *
+   * Fires once: the ref survives the StrictMode double-invoke, and since the
+   * param is gone by then a reload does NOT restart the tour -- following the
+   * link again is what asks for it.
+   */
+  useEffect(() => {
+    if (readTourRequest()) startTour();
+    // Mount only. `readTourRequest` LATCHES its answer on the first call, so
+    // it does not matter that the param has been stripped from the URL by
+    // now -- and a reload does not restart the tour, since the link is what
+    // puts the param back. `startTour` copes with being called before the
+    // help content has parsed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <span className="flex items-center gap-2" data-help-id="help-button">
       {/*
