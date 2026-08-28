@@ -42,7 +42,10 @@
   white-space: nowrap;
 }
 
-@media (prefers-color-scheme: dark) {
+/* PARKED. Was `@media (prefers-color-scheme: dark)` -- see the matching note
+   in help/help.css. The app is light-mode only; change this line back to
+   restore. */
+@media (min-width: 99999px) {
   .selection-tree .dbw-root {
     color: #e2e8f0;
     background: transparent;

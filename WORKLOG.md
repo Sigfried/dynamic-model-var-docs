@@ -80,14 +80,25 @@ I had also asserted, wrongly, that commenting out `darkMode` made the `dark:`
 classes dead code. It put Tailwind on its *default* `media` strategy, which
 compiles them. Corrected in the previous entry.
 
-**Deliberately left firing:** the hand-written
+**Then parked too, immediately after.** I had left the hand-written
 `@media (prefers-color-scheme: dark)` blocks in `help/help.css` and
-`explore/selectionTree.css`. They are plain CSS and ignore the variant
-entirely. Two small reviewed palettes, and with the 83 utilities silenced they
-are the only thing left to build real dark support on. The banner in `App.tsx`
-still overstates the case slightly for a dark-mode viewer — the popover and
-tree will look themed — but that is a far smaller inconsistency than the one
-that was there, and it is one component-pair rather than the whole app.
+`explore/selectionTree.css` firing, reasoning they were the only foundation
+left for real dark support. Siggie then hit the actual consequence — a
+dark-mode viewer gets a black popover floating in a fully light app: *"seems
+like it's only affecting the popovers"*. With the 83 utilities silenced these
+blocks were no longer *part* of a partial dark mode, they were the whole of it,
+which is worse than either end state. Parked.
+
+**Parked via `@media (min-width: 99999px)`, not by commenting out.** Both
+blocks contain their own `/* */` comments, and CSS comments do not nest — an
+inner close marker terminates the outer one early and silently reactivates the
+rules. (I hit exactly that on the first attempt and only caught it by counting
+markers.) A never-matching media query has no such failure mode, and restoring
+is a one-line edit back to `prefers-color-scheme: dark`.
+
+Verified: `prefers-color-scheme` occurrences in the built CSS are now **0**
+across both emitted stylesheets. The app is uniformly light and the banner in
+`App.tsx` is finally accurate.
 
 ---
 ## 2026-08-28 (arrow-key hints; and: the app has no dark mode)

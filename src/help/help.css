@@ -287,7 +287,17 @@ body.help-mode {
 
 /* The app is theme-aware, so the popover must be too — a white card in dark
    mode is the kind of thing a stakeholder notices immediately. */
-@media (prefers-color-scheme: dark) {
+/* PARKED. Was `@media (prefers-color-scheme: dark)`. The app is light-mode
+   only -- App.tsx banners dark-mode viewers with "Dark mode is not yet
+   supported" -- but this block is plain CSS and fired anyway, so the popover
+   was the ONE dark thing in an otherwise light app. Siggie, 2026-08-28, on
+   seeing it: "seems like it's only affecting the popovers".
+
+   Neutralised by a query that never matches rather than by commenting out,
+   because the block contains its own comments and a nested close marker would
+   terminate the outer one early. To restore real dark support, change this
+   line back to `prefers-color-scheme: dark`. */
+@media (min-width: 99999px) {
   .help-popover {
     border-color: #334155;
     background: #0f172a;
