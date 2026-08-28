@@ -57,6 +57,10 @@ export interface TourBeat {
   action?: string;
   /** What this beat ADDS to the app state, as a URL query. See `HelpEntry.change`. */
   change?: string;
+  /** Overrides the step's `Position:` for this beat. */
+  position?: PopoverSide;
+  /** Overrides the step's `OffsetX:` for this beat. */
+  offsetX?: Offset;
 }
 
 export interface HelpEntry {
@@ -108,6 +112,28 @@ export interface HelpEntry {
    * as a delta inverts its meaning (docs/TASKS.md item 2).
    */
   change?: string;
+  /**
+   * Which SIDE of the anchor the popover goes on: `left`, `right`, `top` or
+   * `bottom`. Authored as `Position: bottom`.
+   *
+   * Unset means the automatic rule (across the diagram's growth axis inside
+   * the canvas, otherwise the side of the anchor with more room). This is the
+   * override for when that rule picks badly — Siggie, 2026-08-28, after the
+   * relation-menu anchor put the popover straight over the menu it was
+   * describing.
+   */
+  position?: PopoverSide;
+  /**
+   * Horizontal nudge in CSS pixels, applied after placement. `OffsetX: 260`,
+   * or in terms of the anchor's own size: `OffsetX: anchor.width * 1.3`.
+   *
+   * The multiplier form is the useful one for the canvas: every entity box is
+   * the same width today, so `anchor.width * 1.3` clears one box plus a gutter
+   * and leaves room for the box the step is about to add (Siggie's own
+   * example). Writing it relative to the anchor rather than as a constant
+   * keeps it correct if NODE_W changes.
+   */
+  offsetX?: Offset;
   /**
    * Which tour this entry is a step of, e.g. `Tour: Walkthrough`. Entries
    * without it are help-only: reachable in help mode, never visited by a tour.
@@ -186,6 +212,10 @@ export interface TourPosition {
   beatCount: number;
   /** The beat itself, if this step has any. */
   beat?: TourBeat;
+  /** Placement override for this position; a beat's wins over its step's. */
+  position?: PopoverSide;
+  /** Horizontal nudge for this position; a beat's wins over its step's. */
+  offsetX?: Offset;
   /**
    * Everything showing at this position, oldest first: the step's description
    * followed by each beat revealed so far. The LAST block is the one that just
@@ -212,6 +242,53 @@ export interface TourPosition {
    * step's, but only on its first beat — see `tourPositions`.
    */
   change?: string;
+}
+
+/** A side of the anchor, as authored by `Position:`. */
+export type PopoverSide = 'left' | 'right' | 'top' | 'bottom';
+
+/**
+ * A parsed `OffsetX:` — pixels, or a multiple of one of the anchor's own
+ * dimensions.
+ *
+ * Deliberately NOT a general expression. `anchor.width * 1.3` is the shape
+ * Siggie asked for, and a closed grammar that covers it is a regex; anything
+ * that would evaluate authored arithmetic is a code path taking input from a
+ * markdown file, for no reader-visible gain.
+ */
+export type Offset =
+  | { px: number }
+  | { of: 'width' | 'height'; times: number };
+
+/**
+ * `Position: left|right|top|bottom`. Anything else is ignored rather than
+ * throwing — a typo should cost the override, not the tour.
+ */
+function parsePosition(value: string | undefined): PopoverSide | undefined {
+  const v = value?.trim().toLowerCase();
+  return v === 'left' || v === 'right' || v === 'top' || v === 'bottom' ? v : undefined;
+}
+
+/**
+ * `OffsetX: 260` | `OffsetX: anchor.width * 1.3` | `OffsetX: -anchor.height`.
+ *
+ * `parentBox` is accepted as a synonym for `anchor`: that is the word Siggie
+ * used when asking for the field, and an author who writes it means the thing
+ * the popover is anchored to.
+ */
+function parseOffset(value: string | undefined): Offset | undefined {
+  const v = value?.trim();
+  if (!v) return undefined;
+
+  const num = Number(v);
+  if (Number.isFinite(num)) return { px: num };
+
+  const m = v.match(/^(-)?(?:anchor|parentBox)\.(width|height)(?:\s*\*\s*(-?[\d.]+))?$/i);
+  if (!m) return undefined;
+  const [, neg, dim, mult] = m;
+  const times = mult === undefined ? 1 : Number(mult);
+  if (!Number.isFinite(times)) return undefined;
+  return { of: dim.toLowerCase() as 'width' | 'height', times: neg ? -times : times };
 }
 
 /** Parse an `Anchor:` value into a HelpAnchor. `fallbackId` is the entry id. */
@@ -382,6 +459,8 @@ function extractBeats(lines: string[], entryId: string): TourBeat[] | undefined 
       if (key === 'anchor') current.anchor = parseAnchor(value, entryId);
       else if (key === 'action') current.action = value.trim();
       else if (key === 'change') current.change = value.trim();
+      else if (key === 'position') current.position = parsePosition(value);
+      else if (key === 'offsetx') current.offsetX = parseOffset(value);
       // `- Keep: true`. A bare `- Keep:` counts too: it is a marker, and an
       // author who writes it without a value plainly means it.
       else if (key === 'keep') current.keep = value.trim() !== 'false';
@@ -417,6 +496,8 @@ function parseEntry(block: string, order: number): HelpEntry | null {
   const action = extractField(lines, 'Action');
   const once = extractField(lines, 'Once');
   const change = extractField(lines, 'Change');
+  const position = parsePosition(extractField(lines, 'Position'));
+  const offsetX = parseOffset(extractField(lines, 'OffsetX'));
   const beats = extractBeats(lines, id);
   const tourRaw = extractField(lines, 'Tour');
   // `Tour:` names a tour; a bare `- **Tour:**` with no value joins the default
@@ -427,7 +508,7 @@ function parseEntry(block: string, order: number): HelpEntry | null {
 
   return {
     id, title, description, interactions, shortcut, context,
-    anchor, action, once, change, tour, order, beats,
+    anchor, action, once, change, position, offsetX, tour, order, beats,
   };
 }
 
@@ -519,6 +600,8 @@ export function tourPositions(content: HelpContent, tour?: string): TourPosition
         anchor: entry.anchor,
         action: entry.action,
         change: entry.change,
+        position: entry.position,
+        offsetX: entry.offsetX,
       });
       return;
     }
@@ -556,6 +639,8 @@ export function tourPositions(content: HelpContent, tour?: string): TourPosition
         action: entry.action,
         // The step's own change belongs to the position that opens it.
         change: entry.change,
+        position: entry.position,
+        offsetX: entry.offsetX,
       });
     }
 
@@ -568,6 +653,10 @@ export function tourPositions(content: HelpContent, tour?: string): TourPosition
         text: showing.join('\n\n'),
         anchor: beat.anchor ?? entry.anchor,
         action: beat.action,
+        // Inherited like `anchor`: a beat that does not move the popover keeps
+        // the step's placement rather than snapping back to automatic.
+        position: beat.position ?? entry.position,
+        offsetX: beat.offsetX ?? entry.offsetX,
         /*
          * A beat inherits the step's anchor and action, but NOT its `change`
          * or `action`: the OPENING position above owns both, and a beat pushes

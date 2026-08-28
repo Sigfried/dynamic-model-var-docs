@@ -904,3 +904,88 @@ describe('parseAnchor', () => {
       .toEqual({ kind: 'entity-row', arg: 'Participant' });
   });
 });
+
+describe('Position: and OffsetX:', () => {
+  /*
+   * Placement overrides (Siggie, 2026-08-28). The automatic rules reason about
+   * the diagram's growth axis and the emptier half of the viewport; neither can
+   * know that a step is about to open a menu into the space it just picked.
+   * These are the escape hatch, authored per step or per beat.
+   *
+   * `OffsetX` deliberately takes a CLOSED grammar rather than an expression:
+   * pixels, or a multiple of one of the anchor's own dimensions.
+   * `anchor.width * 1.3` is the shape asked for -- every entity box is the same
+   * width, so it clears one box plus a gutter -- and covering it needs a regex,
+   * not something that evaluates authored arithmetic.
+   */
+  const parse = (fields: string) => parseHelpContent(`
+## Bits
+
+### step
+
+- **Title:** T
+- **Tour:** Walkthrough
+- **Description:** D
+${fields}
+`).entries.get('step')!;
+
+  test('Position: takes the four sides and ignores anything else', () => {
+    expect(parse('- **Position:** bottom').position).toBe('bottom');
+    expect(parse('- **Position:** LEFT').position).toBe('left');
+    // A typo costs the override, not the tour.
+    expect(parse('- **Position:** sideways').position).toBeUndefined();
+    expect(parse('').position).toBeUndefined();
+  });
+
+  test('OffsetX: reads a plain pixel count', () => {
+    expect(parse('- **OffsetX:** 260').offsetX).toEqual({ px: 260 });
+    expect(parse('- **OffsetX:** -40').offsetX).toEqual({ px: -40 });
+  });
+
+  test('OffsetX: reads a multiple of the anchor\'s own size', () => {
+    // The form Siggie asked for, and the reason the field is relative.
+    expect(parse('- **OffsetX:** anchor.width * 1.3').offsetX)
+      .toEqual({ of: 'width', times: 1.3 });
+    // A bare dimension means one of it.
+    expect(parse('- **OffsetX:** anchor.height').offsetX)
+      .toEqual({ of: 'height', times: 1 });
+    // `parentBox` is a synonym: it is the word used when asking for the field.
+    expect(parse('- **OffsetX:** parentBox.width * 2').offsetX)
+      .toEqual({ of: 'width', times: 2 });
+    expect(parse('- **OffsetX:** -anchor.width').offsetX)
+      .toEqual({ of: 'width', times: -1 });
+  });
+
+  test('OffsetX: rejects anything outside the grammar', () => {
+    // Nothing here should reach an evaluator, so nothing here should parse.
+    for (const bad of ['anchor.left', 'width * 2', 'anchor.width + 10', 'foo()']) {
+      expect(parse(`- **OffsetX:** ${bad}`).offsetX).toBeUndefined();
+    }
+  });
+
+  test('a beat inherits its step\'s placement and can override it', () => {
+    const md = parseHelpContent(`
+## Bits
+
+### step
+
+- **Title:** T
+- **Tour:** Walkthrough
+- **Description:** D
+- **Position:** bottom
+- **OffsetX:** anchor.width * 1.3
+- **Beats:**
+  1. inherits
+  2. overrides
+     - Position: right
+`);
+    const [, first, second] = tourPositions(md);
+    // Inherited like `anchor` is: a beat that does not move the popover keeps
+    // the step's placement rather than snapping back to automatic.
+    expect(first.position).toBe('bottom');
+    expect(first.offsetX).toEqual({ of: 'width', times: 1.3 });
+    expect(second.position).toBe('right');
+    // The override is per-field: OffsetX still comes from the step.
+    expect(second.offsetX).toEqual({ of: 'width', times: 1.3 });
+  });
+});

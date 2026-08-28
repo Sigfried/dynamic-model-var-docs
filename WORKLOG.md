@@ -7,6 +7,62 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-28 (Position: / OffsetX:, and the relation-menu anchor that wasn't)
+
+### The anchor experiment, and why it was dropped
+
+Siggie asked for a temporary way to anchor a tour step on a box's relation
+menu. First attempt anchored the OPEN menu panel (portal'd to body, stamped
+with its owner's label) — wrong reading; they wanted "the top menu thing for a
+given entity", i.e. the always-present `N related · N shown` chip. Second
+attempt was a `relation-trigger:<Entity>` resolver going through `nodeBox`,
+which inherits its merged-sibling fallbacks.
+
+**It resolved correctly and was still unusable.** The screenshot shows the ring
+drawn at the right coordinates with nothing visible inside it: the open menu
+panel renders ON TOP OF the trigger it belongs to. Anchoring a step on a
+control whose own effect obscures it cannot work, and no amount of popover
+placement fixes it — the obstruction is the menu, not the popover. Siggie:
+"i'll just do menu Beat with no anchor." Resolver reverted; nothing of it
+remains.
+
+Worth remembering if this comes back: the useful anchor for a menu step is
+probably the PANEL (it is what is visible), and the reason that is awkward is
+that it only exists while the menu is open — which, since the menu closes 300ms
+after the pointer leaves, means the ring vanishes as soon as the user reads the
+popover.
+
+### What came out of it instead
+
+Siggie, from the failed experiment: *"now i know how to deal with popover
+placement problems sort of"* — an authored escape hatch rather than more
+automatic rules.
+
+`Position: left|right|top|bottom` forces the side. `OffsetX:` nudges
+horizontally, taking either pixels or a multiple of the anchor's own size.
+Both sit on a step or a beat; a beat inherits its step's and can override
+either independently, the same way it already inherits `Anchor:`.
+
+**`OffsetX:` is a closed grammar, not an expression.** `anchor.width * 1.3` is
+the exact shape asked for — all entity boxes are the same width, so it clears
+one box plus a gutter and leaves room for the box a step is about to add, and
+it survives a change to NODE_W. Covering that needs a regex. Anything that
+would EVALUATE authored arithmetic is a code path taking input from a markdown
+file, for no gain a reader could see. `anchor.left` and `anchor.width + 10`
+deliberately do not parse; a test pins that.
+
+`parentBox` is accepted as a synonym for `anchor` because that is the word
+Siggie used when asking for the field.
+
+Both are clamped to the viewport after applying: an override should be able to
+pick a bad side, not push the popover off-screen. An unrecognised `Position:`
+is ignored rather than throwing — a typo should cost the override, not the
+tour.
+
+The automatic rules (growth axis, then emptier half) are unchanged and still
+run when neither field is authored.
+
+---
 ## 2026-08-28 (tour popover vs. the canvas: place across the growth axis)
 
 Follow-on from the `zoomToFit` inset below, **which did not work.** Siggie

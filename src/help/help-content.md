@@ -163,6 +163,8 @@ does not get swallowed into that entry's `Description:`.
 | `Action:` | one sentence saying what the tour just DID — see [Actions](#actions) |
 | `Once:` | storage key letting this entry's alerts be dismissed for good — see [Alerts](#alerts) |
 | `Change:` | what this step ADDS to the app state, as a URL query — see [Change](#change) |
+| `Position:` | force the popover to a side: `left`, `right`, `top`, `bottom` — see [Placement](#placement) |
+| `OffsetX:` | nudge it horizontally — see [Placement](#placement) |
 | `Tour:` | which tour this is a step of, e.g. `Walkthrough`; omit for help-only |
 | `Beats:` | ordered sub-steps, each REPLACING the last — see [Beats](#beats) |
 
@@ -377,6 +379,42 @@ never looked has already spent their one showing.
 key so that one tick silences the same note in both, and renaming an entry does
 not resurrect a note the viewer already put away.
 
+### Placement
+
+The popover normally places itself: **below** the anchor when the anchor is a
+box on the diagram and the layout is LR, **beside** it (on whichever side has
+more room) otherwise. That rule is about the diagram's growth axis — in LR the
+graph grows rightwards, so a popover on the right is standing where the next
+box will be laid out.
+
+Two fields override it, on a step or on a beat:
+
+```
+- **Position:** bottom
+- **OffsetX:** anchor.width * 1.3
+```
+
+`Position:` is one of `left`, `right`, `top`, `bottom`, relative to the anchor.
+A value that is none of those is ignored, so a typo costs the override rather
+than the tour.
+
+`OffsetX:` shifts the popover horizontally after placing it. It takes either a
+pixel count (`260`, `-40`) or a multiple of the anchor's own size
+(`anchor.width * 1.3`, `anchor.height`, `-anchor.width`). `parentBox` works as
+a synonym for `anchor`.
+
+**Prefer the relative form.** Every entity box is the same width, so
+`anchor.width * 1.3` clears one box plus a gutter — which is how you leave room
+for a box the step is about to add — and it stays right if the box width
+changes. It is a closed grammar, not an expression: `anchor.width + 10` and
+`anchor.left` do not parse.
+
+Both are clamped to the viewport. An override can pick a bad side; it cannot
+push the popover off-screen.
+
+A beat inherits its step's `Position:` and `OffsetX:` and can override either
+independently, the same way it inherits `Anchor:`.
+
 ### Change
 
 `Change:` is a **delta**, in the same vocabulary as a share link: it says what
@@ -571,6 +609,8 @@ What this app is and how to move around it.
      - Anchor: node-box:Person
      - Change: sel=Person
      - Action: I clicked the Person checkbox and the Person entity appeared in the viewing panel.
+  3. Hover over
+     - Anchor: none
 
 ### entities
 

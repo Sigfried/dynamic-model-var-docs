@@ -34,7 +34,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
 import { useHelp } from './helpContext';
-import type { HelpAnchor } from './parseHelpContent';
+import type { HelpAnchor, Offset, PopoverSide } from './parseHelpContent';
 import './help.css';
 
 /**
@@ -418,7 +418,8 @@ export default function HelpLayer() {
         popover="manual"
         data-help-popover=""
         className="help-popover"
-        style={popoverPosition(rect)}
+        style={popoverPosition(rect, inTour ? position?.position : undefined,
+                               inTour ? position?.offsetX : undefined)}
       >
         {entry && (
           <>
@@ -554,7 +555,11 @@ export default function HelpLayer() {
  * A null rect means the anchor is `none` or did not resolve; the popover is
  * centred instead, which is what `Anchor: none` is authored to mean.
  */
-function popoverPosition(r: DOMRect | null): React.CSSProperties {
+function popoverPosition(
+  r: DOMRect | null,
+  side?: PopoverSide,
+  offsetX?: Offset,
+): React.CSSProperties {
   const W = 320;
   const GAP = 12;
   const vw = window.innerWidth;
@@ -596,6 +601,28 @@ function popoverPosition(r: DOMRect | null): React.CSSProperties {
    * inside the canvas; the selection tree and toolbar are not laid out by ELK
    * and keep the beside-with-more-room rule that was chosen for them.
    */
+  /*
+   * An authored `Position:` beats every automatic rule below (Siggie,
+   * 2026-08-28). The automatic rules are about the diagram's growth axis and
+   * the emptier half of the viewport; neither can know that a step is about to
+   * open a menu into the space it just chose. This is the escape hatch for
+   * that, and it is still CLAMPED to the viewport -- an override should be
+   * able to pick a bad side, not push the popover off-screen.
+   */
+  if (side) {
+    const place = {
+      right: { left: r.right + GAP, top: r.top },
+      left: { left: r.left - W - GAP, top: r.top },
+      bottom: { left: r.left, top: r.bottom + GAP },
+      top: { left: r.left, top: r.top - EST_H - GAP },
+    }[side];
+    return withOffset({
+      left: Math.max(8, Math.min(place.left, vw - W - 8)),
+      top: Math.max(8, Math.min(place.top, vh - EST_H)),
+      width: W,
+    }, r, offsetX, vw);
+  }
+
   const canvas = document.querySelector('[data-graph-direction]');
   const dir = canvas?.getAttribute('data-graph-direction');
   const inCanvas = !!canvas && overlaps(r, canvas.getBoundingClientRect());
@@ -605,11 +632,11 @@ function popoverPosition(r: DOMRect | null): React.CSSProperties {
     const below = r.bottom + GAP;
     // No room underneath (a box near the bottom) — fall through to beside.
     if (below + EST_H <= vh - 8) {
-      return {
+      return withOffset({
         left: Math.max(8, Math.min(r.left, vw - W - 8)),
         top: below,
         width: W,
-      };
+      }, r, offsetX, vw);
     }
   }
 
@@ -623,7 +650,28 @@ function popoverPosition(r: DOMRect | null): React.CSSProperties {
   // not get a popover hanging far below it. Height is unknown before render,
   // so this uses a generous estimate rather than measuring and re-rendering.
   const top = Math.max(8, Math.min(r.top + r.height / 2 - EST_H / 3, vh - EST_H));
-  return { left: Math.max(8, left), top, width: W };
+  return withOffset({ left: Math.max(8, left), top, width: W }, r, offsetX, vw);
+}
+
+/**
+ * Apply an authored `OffsetX:` to a placement, re-clamping afterwards.
+ *
+ * `anchor.width * 1.3` is the form Siggie asked for and the reason the offset
+ * is relative rather than a constant: every entity box is the same width, so
+ * that clears one box plus a gutter and leaves room for the box the step is
+ * about to add -- and it stays correct if NODE_W changes.
+ */
+function withOffset(
+  style: { left: number; top: number; width: number },
+  r: DOMRect,
+  offsetX: Offset | undefined,
+  vw: number,
+): React.CSSProperties {
+  if (!offsetX) return style;
+  const dx = 'px' in offsetX
+    ? offsetX.px
+    : (offsetX.of === 'width' ? r.width : r.height) * offsetX.times;
+  return { ...style, left: Math.max(8, Math.min(style.left + dx, vw - style.width - 8)) };
 }
 
 /** Do two viewport rects intersect at all? */
