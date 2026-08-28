@@ -68,6 +68,41 @@ describe('tour state stack, end to end', () => {
   };
   const back = () => fireEvent.click(button(/back/i));
 
+  test('? starts the tour, and a second ? leaves it', async () => {
+    /*
+     * `?` used to toggle HELP MODE, which is disabled (HELP_MODE_ENABLED is
+     * false), so the key did nothing at all — the most guessable shortcut on
+     * the page bound to the one feature that is off (Siggie, 2026-08-28).
+     *
+     * A toggle rather than a plain start: `startTour` resets to step 0, so
+     * binding it raw would make a second `?` silently restart a tour in
+     * progress instead of leaving it.
+     */
+    render(<ExploreApp />);
+    await screen.findByRole('heading', { name: /BDCHM Explorer/i });
+    expect(screen.queryByRole('button', { name: /next/i, hidden: true })).toBeNull();
+
+    fireEvent.keyDown(document, { key: '?' });
+    await screen.findByRole('button', { name: /next/i, hidden: true });
+
+    fireEvent.keyDown(document, { key: '?' });
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /next/i, hidden: true })).toBeNull());
+  });
+
+  test('? is ignored while typing, so it can be typed into a field', async () => {
+    // Guarded by `isInputFocused`: the shortcut must not swallow a question
+    // mark someone is writing.
+    render(<ExploreApp />);
+    await screen.findByRole('heading', { name: /BDCHM Explorer/i });
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    input.focus();
+    fireEvent.keyDown(document, { key: '?' });
+    expect(screen.queryByRole('button', { name: /next/i, hidden: true })).toBeNull();
+    input.remove();
+  });
+
   test('a step adds its own selection and back takes it away again', async () => {
     await startTour();
     expect(sel()).toBeNull();          // steps 1-2 are exposition: they add nothing

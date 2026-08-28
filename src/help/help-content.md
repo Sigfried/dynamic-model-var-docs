@@ -822,7 +822,7 @@ What the boxes and lines mean.
 ### help-button
 
 - **Title:** Help and tour
-- **Description:** **Take the tour** for a short guided walk, or turn on **help mode** to explore at your own pace — every part of the screen with help attached gets a dot you can click.
+- **Description:** **Take the tour** for a short guided walk through the app. Press `?` anywhere to start it, and again (or `Esc`) to leave.
 - **Shortcut:** ?
 
 </details>

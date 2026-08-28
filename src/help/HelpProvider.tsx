@@ -252,9 +252,22 @@ export function HelpProvider({
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === '?' && !isInputFocused() && HELP_MODE_ENABLED) {
+      /*
+       * `?` starts the tour (Siggie, 2026-08-28).
+       *
+       * It used to toggle HELP MODE, which has been disabled
+       * (`HELP_MODE_ENABLED === false`), so the key did nothing at all — the
+       * most discoverable shortcut on the page bound to the one feature that
+       * is turned off. The tour is what a reader pressing `?` wants.
+       *
+       * A TOGGLE rather than a plain start: `startTour` resets to step 0, so
+       * binding it raw would make a second `?` silently restart a tour in
+       * progress. Ending on the second press matches Escape, which already
+       * ends the tour.
+       */
+      if (e.key === '?' && !isInputFocused()) {
         e.preventDefault();
-        toggleHelpMode();
+        if (tourIndex === null) startTour(); else endTour();
         return;
       }
       if (e.key === 'Escape' && (helpMode || tourIndex !== null)) {
@@ -274,7 +287,7 @@ export function HelpProvider({
     document.addEventListener('keydown', onKeyDown, true);
     return () => document.removeEventListener('keydown', onKeyDown, true);
   }, [helpMode, tourIndex, activeId, toggleHelpMode, dismissEntry, endTour,
-      nextStep, prevStep]);
+      startTour, nextStep, prevStep]);
 
   const api = useMemo<HelpApi>(() => ({
     helpMode, toggleHelpMode, exitHelpMode,

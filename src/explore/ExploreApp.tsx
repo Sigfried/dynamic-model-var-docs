@@ -500,7 +500,7 @@ function HelpButton() {
       <button
         onClick={startTour}
         className="text-sm font-semibold px-2.5 py-1 rounded-full bg-white/95 text-blue-700 shadow-sm hover:bg-white hover:shadow"
-        title="A short guided walk through the app"
+        title="A short guided walk through the app (press ? anywhere)"
       >
         take the tour
       </button>
