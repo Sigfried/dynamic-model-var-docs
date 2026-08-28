@@ -24,6 +24,7 @@ the archive along with the S3a/S3b briefs and the 2026-08-26 planning round.
   | 4 | **Edge crossings.** Cause unmeasured                                                                                                                                                                                                                                                                                                            | ~unknown | ⬜                      | [§](#smaller-items-raised)                                                                    |
   | 5 | **Drag the tour popover.** [sg] apparently popover gets repositioned every 250ms, so dragging won't work. think about this more later.                                                                                                                                                                                                          | ~0.5 day | ⬜                      | [§](#tour-and-help)                                                                           |
   | 6 | **Migrate positioning to CSS anchor positioning** — deletes the 250ms poll, the flip/clamp, and the `EST_H` guess. **UNBLOCKED: S3b's resolvers landed.** Note `slot-row` selects on a PAIR of attributes, which no single `anchor-name` rule expresses                                                                                         | ~0.5 day | ⬜ ready                | [HelpLayer.tsx header](../src/help/HelpLayer.tsx) · [HELP_PACKAGE_PLAN](HELP_PACKAGE_PLAN.md) |
+  | 7 | **`goTo` fails silently when the tour has no positions** — `startTour()` before the content is ready does nothing at all, with no error. Not currently reachable; a landmine for the next programmatic caller                                                                                                                                     | ~15 min  | ⬜ ready                | [§](#gotos-silent-no-op)                                                                       |
 
 ---
 
@@ -39,7 +40,7 @@ view (`previous.html`), not the Explore SPA. Left alone; Siggie saw them and
 said it was fine.
 
 **Deliberately NOT quick wins**, though they look small: edge crossings and the
-re-render regression (item 7) — both have **unmeasured causes**, and the
+re-render regression (item 3) — both have **unmeasured causes**, and the
 standing rule is measure before proposing one. They are investigations wearing a
 quick win's clothes.
 
@@ -560,6 +561,48 @@ reasoning about the render instead of measuring it.
 ---
 
 ## 💬 TOUR AND HELP — smaller items
+
+### `goTo`'s silent no-op
+
+`HelpProvider.tsx`, in `goTo`:
+
+```js
+const pos = positions[i];
+if (!pos) return;
+```
+
+`startTour()` calls `goTo(0)`. When `positions` is empty the call **does
+nothing and says nothing** — no error, no warning, no retry when the positions
+later arrive.
+
+**Not a live bug today.** `positions` comes from `tourPositions(content)`, and
+`content` is parsed from a STATIC markdown import, so it is populated on the
+first render and no caller can lose the race. Both current callers (the `take
+the tour` button, and `?tour=1`) are safe.
+
+**Why it is still worth fixing.** It is a trap sized exactly to the next person
+who calls `startTour()` from somewhere new — an effect that runs early, a
+deep-link handler, a test that mounts the provider without content. It cost
+real time on 2026-08-28: `?tour=1` was not working, this looked like a
+satisfying explanation, and a deferral was built in `HelpProvider` for it before
+instrumentation showed the actual cause was URL timing (see WORKLOG, "a wrong
+diagnosis, recorded so it is not repeated"). A silent failure that *looks* like
+the answer is worse than one that does not.
+
+**The fix, roughly.** Either make it loud (`console.warn` on the empty case,
+which is enough — a developer sees it the first time) or make it correct
+(latch the request in a ref and fire it from an effect keyed on
+`positions.length`). The deferral version was written and reverted on
+2026-08-28; `git show 996dffd..fb706bb -- src/help/HelpProvider.tsx` is not it —
+it never got committed, so it would have to be written again. **Loud is
+probably the right call**: the deferral adds real state for a case that cannot
+currently happen, and the whole complaint here is the silence, not the
+behaviour.
+
+Left alone deliberately when found, on the grounds that fixing an unrelated
+landmine while chasing a live bug is how a small change turns into a large one.
+
+---
 
 ### Tour and help
 
