@@ -10,29 +10,13 @@ Package-level design lives in [docs/HELP_PACKAGE_PLAN.md](../../docs/HELP_PACKAG
 <details>
 <summary><b>TODO</b></summary>
 
-### Done
-
-- **Deleting the `## TODO` header is fine** — checked. It works for a different
-  reason than before: with no `##` at all, the block is skipped at the parser's
-  `^## ` guard before `PROSE_SECTIONS` is consulted. Nothing leaks in either
-  way.
-- **Beats are additive now**, exactly as specified: `Description:` is beat one
-  and stays on screen, each beat appends below it, and everything but the newest
-  block is dimmed so you can see what just arrived. `- Clear: true` on a beat
-  starts the popover over at that beat. See *Beats* in the spec.
-  - `relationship-kinds` lost its old beat 1, which existed only to repeat the
-    Description so it would not vanish; its `slot-row` anchor moved up to the
-    entry.
-- **A step now OPENS on its description alone** — the bug where the popover
-  started on description+beat-1 together, so the setup could never be read by
-  itself. A step with N beats is N+1 positions.
-- **The counter counts steps; beats get reveal dots.** `2 / 6` for the whole of
-  step 2, with one dot per beat filling as they appear. Replaces `2.1 / 6`,
-  which mixed two scales in one fraction — `2.1` was never a position out of 6.
-  Your `2.1 / 2` and `2.1 / 2.2` had the same problem, which is why neither
-  read clearly.
-
-### Still open
+- make the take the tour link more prominent; or open the app
+  at the start of the tour
+- i want a way to format alert text in popovers, for something
+  like "This tour will introduce you to all of BDCHM Explorer's
+  major features. Click the X or hit ESCAPE any time to exit"
+- and either a "Do not show again" or localStorage to only show
+  once?
 
 <details>
 <summary><b>Original unfinished draft text</b></summary>
@@ -507,17 +491,18 @@ What this app is and how to move around it.
 
 - **Title:** Entities
 - **Tour:** Walkthrough
+- **Anchor:** selection-tree
 - **Description:** A LinkML schema defines classes representing a data model's
   entities. The left panel lists them, grouped into categories for convenience,
   though these categories are not actually part of the schema.
 - **Beats:** <!-- these are just copied from below, need to get beats working
               right before authoring -->
-  1. While the relationship between an entity and its enumerations and raw data attributes is direct, it can be related to other entities in more complex ways.
-     - Anchor: slot-row:MeasurementObservation.observation_type
-  2. **Inheritance**, known in modeling parlance as IS_A relationships — e.g. `MeasurementObservation.is_a` → `Observation`.
-     - Anchor: node-box:MeasurementObservation
-
-
+  1. In order to select an entity for display, click its checkbox
+     - Anchor: entity-row:Person
+  2. bla blah blah
+     - Anchor: node-box:Person
+     - Change: sel=Person
+     - Action: Ticked Person for you.
 
 ### entities
 
