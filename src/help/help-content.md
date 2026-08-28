@@ -189,7 +189,7 @@ does not get swallowed into that entry's `Description:`.
 | `Once:` | storage key letting this entry's alerts be dismissed for good — see [Alerts](#alerts) |
 | `Change:` | what this step ADDS to the app state, as a URL query — see [Change](#change) |
 | `Tour:` | which tour this is a step of, e.g. `Walkthrough`; omit for help-only |
-| `Beats:` | ordered sub-steps that ADD to the description — see [Beats](#beats) |
+| `Beats:` | ordered sub-steps, each REPLACING the last — see [Beats](#beats) |
 
 Written as `- **Field:** value`. Only `Title` and `Description` are required.
 An entry with no `Tour:` is help-only: reachable in help mode, never visited by
@@ -467,55 +467,65 @@ A tour step is one popover that can advance through several **beats** without
 moving on to the next step. Use beats for sub-steps of one idea, and for
 revealing a list one item at a time.
 
-**The step's own `Description:` is the first beat, and beats ADD to what is
-showing rather than replacing it.** The step OPENS on its description alone;
-each `next` then appends a beat below what is already there, with everything
-but the newest block dimmed, so the reader sees what just arrived without
-losing the setup.
+**The step OPENS on its `Description:` alone, and each beat REPLACES what is
+showing.** One thought on screen at a time.
 
 So a step with N beats has **N+1 positions**: the opening, then one per beat.
 (A step whose `Description:` is empty has no opening position — there would be
 nothing to show — and starts on beat 1.)
 
 ```markdown
-- **Description:** The setup. This is beat one — it stays on screen.
+- **Description:** The setup, shown alone first.
 - **Beats:**
-  1. Appears below the setup, at full strength; the setup dims.
+  1. Replaces the setup.
      - Anchor: selection-tree
-  2. Appears below both. Markdown allowed.
+  2. Replaces beat 1. Markdown allowed.
      - Anchor: entity-row:MeasurementObservation
      - Action: Ticked it for you.
      - Change: sel=MeasurementObservation
 ```
 
-So **do not repeat the description in beat one** — it is already showing. A
-step whose beats reveal a list needs only the list items as beats.
+**Beat text must not be empty.** Under the old accumulating default an empty
+beat was invisible, because the blocks above it filled the popover; now it is
+the only block, and the position renders blank. There is a test for it.
 
-**`Clear:` starts over.** A beat that is a fresh thought rather than a
-continuation drops everything before it:
+**`Keep:` accumulates instead.** A beat that continues the previous thought
+rather than starting a new one keeps what is showing and adds below it:
 
 ```markdown
-  3. A new idea, alone in the popover.
-     - Clear: true
+  3. Adds below beat 2 instead of replacing it.
+     - Keep: true
 ```
 
-Accumulation resumes from there: a beat after the cleared one adds below it. A
-bare `- Clear:` counts as true (it is a marker, not a setting); `Clear: false`
-is not a clear.
+Everything but the newest block is then dimmed, so the reader can see what just
+arrived. Use it for a genuine reveal-the-list step; the next beat without a
+`Keep:` clears the accumulation again. A bare `- Keep:` counts as true (it is a
+marker, not a setting); `Keep: false` is not a keep.
 
-Each beat may carry its own `Anchor:`, `Action:`, `Change:` and `Clear:` as
+Each beat may carry its own `Anchor:`, `Action:`, `Change:` and `Keep:` as
 indented `- Field: value` lines. Note these are **plain, not bold** — that is
 what keeps a beat's own fields distinguishable from the entry fields that
 follow the block. A beat that omits `Anchor:` or `Action:` inherits the step's.
 
-> **What this replaced.** Beats used to REPLACE the body with each beat's text.
-> That forced an author to repeat the description in beat one or watch it
-> vanish the moment the step advanced — `relationship-kinds` did exactly that,
-> and the note beside it asked whether the repetition "reads as a stutter". It
-> was not a stutter to fix; it was a beat that only existed to work around the
-> model. Siggie, 2026-08-28: *"the stuff outside the Beats section is actually
-> the first beat / by default, the beat text is additive on top of that / in
-> order to clear previous text add a 'clear' marker or field."*
+> **This default has been both ways; here is why it settled here.** Beats first
+> REPLACED, which forced an author to repeat the description in beat one or
+> watch it vanish. So on 2026-08-28 they were made to ACCUMULATE, with the
+> description as beat one — *"by default, the beat text is additive on top of
+> that / in order to clear previous text add a 'clear' marker or field"*.
+>
+> That fixed the repetition and introduced a worse problem: the newest text sat
+> at the BOTTOM of a growing block, so the reader had to find where to start.
+> Dimming the old text further, a coloured rule on the new block and an
+> entrance animation were all tried; none of them fixed it. Siggie, same day:
+> *"the blue line isn't quite doing it. let's change the default to
+> Clear: true."*
+>
+> So beats replace again — but the two things that made the ORIGINAL replacing
+> model painful are both gone. The description now has its own opening
+> position, so it is read before any beat replaces it and never has to be
+> repeated; and `Keep:` is there for the steps that genuinely want to build a
+> list up. The default is what most beats want, and the other case is one
+> field away.
 
 A step with no `Beats:` is exactly one position, so steps written before beats
 existed still parse and behave identically. `next` advances beat by beat, then
@@ -580,7 +590,10 @@ What this app is and how to move around it.
               right before authoring -->
   1. In order to select an entity for display, click its checkbox
      - Anchor: entity-row:Person
-  2. 
+  2. TODO — beat text needed here. <!-- Was empty, which was invisible while
+     beats accumulated (the earlier blocks filled the popover) but leaves this
+     position blank now that a beat REPLACES. Placeholder so the build stays
+     green; the words are yours to write. -->
      - Anchor: node-box:Person
      - Change: sel=Person
      - Action: I clicked the Person checkbox and the Person entity appeared in the viewing panel.

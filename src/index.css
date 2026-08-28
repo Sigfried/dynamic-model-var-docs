@@ -1,6 +1,39 @@
 @import "tailwindcss";
 
-/* App is currently light-mode only; force light color scheme. */
+/*
+ * Dark mode: OFF, and this line is what actually turns it off.
+ *
+ * The app is light-mode only -- `App.tsx` banners dark-mode viewers with "Dark
+ * mode is not yet supported. This app may look broken." But it was only
+ * *saying* so: Tailwind's default `dark:` variant is
+ * `@media (prefers-color-scheme: dark)`, so all ~83 `dark:` utilities in src/
+ * were compiling and firing, giving dark-mode viewers a partial, uncontrolled
+ * dark theme under a banner denying it existed.
+ *
+ * Two earlier attempts at this did nothing, and it is worth knowing why:
+ *
+ *  - `darkMode: 'class'` in `tailwind.config.js` ("this was supposed to help
+ *    fix it but doesn't"). **This is Tailwind v4** -- `src/index.css` does
+ *    `@import "tailwindcss"`, and v4 reads its config from CSS. That JS file
+ *    is not consulted at all, so the line could never have had any effect.
+ *  - `color-scheme: light only` below. That governs how the UA paints its own
+ *    widgets (scrollbars, form controls); it does not change what
+ *    `prefers-color-scheme` reports, so the media query still matched.
+ *
+ * Redefining the variant is the v4 equivalent of `darkMode: 'class'`: every
+ * `dark:` utility is now gated on an ancestor `.dark`, which nothing in the app
+ * ever adds. Nothing is deleted -- to START real dark support, toggle `.dark`
+ * on <html>, drop the banner in App.tsx, and all the utilities are still there.
+ *
+ * NOTE the hand-written `@media (prefers-color-scheme: dark)` blocks in
+ * `help/help.css` and `explore/selectionTree.css` are plain CSS and ignore
+ * this entirely. They still fire. Left alone deliberately: they are two small,
+ * reviewed, self-contained palettes, and with the 83 utilities now silenced
+ * they are all that is left to build real dark support ON.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Governs the UA's own widgets only -- see above; not a dark-mode switch. */
 :root {
   color-scheme: light only;
 }

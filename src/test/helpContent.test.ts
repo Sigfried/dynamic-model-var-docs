@@ -477,14 +477,18 @@ describe('multi-line Description:', () => {
   });
 });
 
-describe('beats accumulate', () => {
+describe('beats replace by default', () => {
   /*
-   * Siggie, 2026-08-28: "the stuff outside the Beats section is actually the
-   * first beat / by default, the beat text is additive on top of that / in
-   * order to clear previous text add a 'clear' marker or field."
+   * Beats REPLACE what is showing; `Keep: true` opts into accumulating.
    *
-   * The old model REPLACED the body with each beat's text, which forced an
-   * author to repeat the description in beat one or watch it vanish.
+   * This is the inverse of the accumulate-by-default model that shipped
+   * earlier the same day, and it is the second reversal of this decision --
+   * worth stating why rather than reading it as churn. Accumulation put the
+   * newest text at the BOTTOM of a growing block, so the reader had to hunt
+   * for where to start. Deeper dimming, a blue rule and an entrance animation
+   * were all tried before giving up on it (see WORKLOG); Siggie, 2026-08-28:
+   * "the blue line isn't quite doing it. let's change the default to
+   * Clear: true". When a beat replaces, what is on screen IS the new thing.
    */
   const md = parseHelpContent(`
 ## Bits
@@ -508,18 +512,19 @@ describe('beats accumulate', () => {
     expect(pos[0].blocks).toEqual(['The intro.']);
   });
 
-  test('each beat adds to what is already showing', () => {
-    expect(pos[1].blocks).toEqual(['The intro.', 'First reveal.']);
-    expect(pos[2].blocks).toEqual(['The intro.', 'First reveal.', 'Second reveal.']);
+  test('each beat replaces what was showing', () => {
+    expect(pos[1].blocks).toEqual(['First reveal.']);
+    expect(pos[2].blocks).toEqual(['Second reveal.']);
   });
 
-  test('the last block is the one that just appeared', () => {
-    // What the popover renders at full strength; everything before it dims.
-    expect(pos[2].blocks[pos[2].blocks.length - 1]).toBe('Second reveal.');
+  test('the description does not survive the first beat', () => {
+    // The whole point of the inversion: under the old default the intro sat
+    // above every beat for the rest of the step.
+    expect(pos[1].blocks).not.toContain('The intro.');
   });
 
   test('text is the blocks joined, for consumers that want one string', () => {
-    expect(pos[2].text).toBe('The intro.\n\nFirst reveal.\n\nSecond reveal.');
+    expect(pos[2].text).toBe('Second reveal.');
   });
 
   test('a two-beat step is three positions', () => {
@@ -572,7 +577,7 @@ describe('beats accumulate', () => {
   });
 });
 
-describe('Clear: on a beat', () => {
+describe('Keep: on a beat', () => {
   const md = parseHelpContent(`
 ## Bits
 
@@ -583,28 +588,32 @@ describe('Clear: on a beat', () => {
 - **Description:** The intro.
 - **Anchor:** none
 - **Beats:**
-  1. Adds to the intro.
+  1. Keeps the intro.
+     - Keep: true
   2. Fresh thought.
-     - Clear: true
-  3. Adds to the fresh thought.
+  3. Keeps the fresh thought.
+     - Keep: true
 `);
   const pos = tourPositions(md);
 
   // Positions are: [0] the opening (description alone), then one per beat.
-  test('a cleared beat shows alone', () => {
+  test('a Keep: beat adds to what is showing', () => {
+    expect(pos[1].blocks).toEqual(['The intro.', 'Keeps the intro.']);
+  });
+
+  test('a beat without Keep: replaces, even after one that kept', () => {
     expect(pos[2].blocks).toEqual(['Fresh thought.']);
   });
 
-  test('accumulation resumes from the cleared beat', () => {
-    expect(pos[3].blocks).toEqual(['Fresh thought.', 'Adds to the fresh thought.']);
+  test('Keep: accumulates onto whatever the previous beat left showing', () => {
+    expect(pos[3].blocks).toEqual(['Fresh thought.', 'Keeps the fresh thought.']);
   });
 
-  test('beats before the clear are unaffected', () => {
+  test('the opening position is the description alone', () => {
     expect(pos[0].blocks).toEqual(['The intro.']);
-    expect(pos[1].blocks).toEqual(['The intro.', 'Adds to the intro.']);
   });
 
-  test('a bare `- Clear:` counts as true', () => {
+  test('a bare `- Keep:` counts as true', () => {
     // It is a marker; writing it without a value plainly means it.
     const bare = parseHelpContent(`
 ## Bits
@@ -616,13 +625,13 @@ describe('Clear: on a beat', () => {
 - **Description:** Intro.
 - **Anchor:** none
 - **Beats:**
-  1. Alone.
-     - Clear:
+  1. Added.
+     - Keep:
 `);
-    expect(tourPositions(bare)[1].blocks).toEqual(['Alone.']);
+    expect(tourPositions(bare)[1].blocks).toEqual(['Intro.', 'Added.']);
   });
 
-  test('`Clear: false` is not a clear', () => {
+  test('`Keep: false` is not a keep', () => {
     const off = parseHelpContent(`
 ## Bits
 
@@ -633,10 +642,51 @@ describe('Clear: on a beat', () => {
 - **Description:** Intro.
 - **Anchor:** none
 - **Beats:**
-  1. Adds.
-     - Clear: false
+  1. Replaces.
+     - Keep: false
 `);
-    expect(tourPositions(off)[1].blocks).toEqual(['Intro.', 'Adds.']);
+    expect(tourPositions(off)[1].blocks).toEqual(['Replaces.']);
+  });
+
+  test('no authored beat has empty text', () => {
+    /*
+     * Empty beat text used to be INVISIBLE: under the accumulating default the
+     * blocks above it filled the popover, so a blank beat looked like nothing
+     * had gone wrong. Now that a beat replaces, it is the only block and the
+     * position renders blank. Caught exactly this in `selection-tree` when the
+     * default was inverted.
+     */
+    const empty: string[] = [];
+    for (const entry of content.entries.values()) {
+      (entry.beats ?? []).forEach((b, i) => {
+        if (!b.text.trim()) empty.push(`${entry.id} beat ${i + 1}`);
+      });
+    }
+    expect(empty, `Beats with no text: ${empty.join(', ')}`).toEqual([]);
+  });
+
+  test('a leftover `Clear:` is inert, not an accidental keep', () => {
+    /*
+     * `Clear:` was the OLD field and meant the opposite. It is gone, so it now
+     * parses as an unknown field and is ignored -- which happens to leave the
+     * beat replacing, i.e. doing what `Clear: true` asked for. That is the
+     * safe direction, and this test pins it so a stale `Clear:` in a draft
+     * cannot silently start accumulating.
+     */
+    const stale = parseHelpContent(`
+## Bits
+
+### step
+
+- **Title:** T
+- **Tour:** Walkthrough
+- **Description:** Intro.
+- **Anchor:** none
+- **Beats:**
+  1. Fresh.
+     - Clear: true
+`);
+    expect(tourPositions(stale)[1].blocks).toEqual(['Fresh.']);
   });
 });
 

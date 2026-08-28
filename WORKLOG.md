@@ -7,6 +7,89 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-28 (beats replace again; dark mode actually switched off)
+
+### Beats: `Keep:` opt-in, replacing by default
+
+Siggie: *"the blue line isn't quite doing it. let's change the default to
+Clear: true -- or KeepPreviousText: false might be better so keeping is an
+option but not default."* Named it **`Keep: true`** (asked; they picked it over
+the spelled-out form — every other beat field is short, and an
+implicit-false negative is a double negative to read).
+
+**This is the second reversal of this decision in one day, and that is not
+churn.** The sequence, because otherwise someone will flip it back:
+
+1. Beats originally REPLACED. Painful, because the description vanished the
+   moment a step advanced, so authors repeated it in beat one.
+2. Made to ACCUMULATE, with the description as beat one. Fixed the repetition,
+   introduced a worse problem: the newest text is at the BOTTOM of a growing
+   block and the eye has to hunt for where to start.
+3. Three attempts to fix (2) *within* accumulation — deeper dimming (0.55 →
+   0.38), a blue left rule on the new block, an entrance animation. None
+   worked. That is what "the blue line isn't quite doing it" is about.
+4. Back to replacing — **but the two things that made (1) painful are gone.**
+   The description now has its own opening position (`beatIndex: -1`), so it is
+   read before anything replaces it and never needs repeating; and `Keep:`
+   exists for steps that genuinely build a list.
+
+So the arrow of the change is not a circle. (1) and (4) differ by the opening
+position, which did not exist in (1).
+
+**Removed the rule and the entrance animation**, plus the reserved gutter and
+its negative margin on `.help-popover-body`. They existed only to find the new
+block in a stack; a replacing beat has no stack. Keeping them would have put a
+blue rule down every popover in the tour to distinguish a block from nothing.
+The 0.38 fade stays — `Keep:` beats still need it.
+
+**An empty beat is now a visible bug, and was already in the file.**
+`selection-tree` beat 2 had no text. Under accumulation the blocks above it
+filled the popover so it looked fine; once beats replace it is the only block
+and the position renders blank. The existing "every tour position has text"
+test caught it on the first run after the inversion. Added a second, more
+direct test over authored beats, and left a `TODO` placeholder in the content —
+the words are Siggie's to write.
+
+A stale `Clear:` now parses as an unknown field and is ignored, which leaves
+the beat replacing — i.e. doing what `Clear: true` asked. The safe direction,
+and pinned by a test.
+
+### Dark mode: off, and the two earlier attempts explained
+
+Siggie: *"i don't have time to deal with this right now; do whatever you
+want."* Took the switch-it-off option.
+
+**The real switch is `@custom-variant dark (&:where(.dark, .dark *));` in
+`src/index.css`.** With it, all ~83 `dark:` utilities are gated on an ancestor
+`.dark` that nothing in the app applies. Verified against a build:
+`prefers-color-scheme` occurrences in the emitted CSS went from 1 (the block
+holding all 83) to **0**.
+
+Two previous attempts at this did nothing, and both failure modes are worth
+knowing:
+
+- **`darkMode: 'class'` in `tailwind.config.js`** — "this was supposed to help
+  fix it but doesn't". **The app is on Tailwind v4**, where `@import
+  "tailwindcss"` in CSS replaces the JS config entirely. That file is never
+  read. Left a note in it saying so; it is otherwise dead and safe to delete.
+- **`color-scheme: light only`** in `src/index.css`. That governs how the UA
+  paints its own widgets (scrollbars, form controls). It does not change what
+  `prefers-color-scheme` reports, so the media query still matched.
+
+I had also asserted, wrongly, that commenting out `darkMode` made the `dark:`
+classes dead code. It put Tailwind on its *default* `media` strategy, which
+compiles them. Corrected in the previous entry.
+
+**Deliberately left firing:** the hand-written
+`@media (prefers-color-scheme: dark)` blocks in `help/help.css` and
+`explore/selectionTree.css`. They are plain CSS and ignore the variant
+entirely. Two small reviewed palettes, and with the 83 utilities silenced they
+are the only thing left to build real dark support on. The banner in `App.tsx`
+still overstates the case slightly for a dark-mode viewer — the popover and
+tree will look themed — but that is a far smaller inconsistency than the one
+that was there, and it is one component-pair rather than the whole app.
+
+---
 ## 2026-08-28 (arrow-key hints; and: the app has no dark mode)
 
 ### Keyboard bindings existed but were unannounced

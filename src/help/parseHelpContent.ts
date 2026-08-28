@@ -33,16 +33,24 @@ export interface TourBeat {
   /** Markdown shown for this beat. */
   text: string;
   /**
-   * Start this beat's popover from empty: drop the step's description and
-   * every earlier beat instead of adding to them.
+   * Keep what is already showing and add this beat below it, instead of
+   * replacing the popover's contents with this beat alone.
    *
-   * Beats ACCUMULATE by default (2026-08-28) -- the step's own text is beat
-   * one, and each beat adds below what is already showing. That is what a
-   * reveal-the-next-bullet step wants, and it is why beat one no longer has to
-   * repeat the description. `Clear:` is the escape hatch for a step whose
-   * later beat is a fresh thought rather than a continuation.
+   * **Beats REPLACE by default; `Keep: true` is the opt-in to accumulate.**
+   *
+   * This is the inverse of what shipped earlier the same day, and the reason
+   * is that accumulation did not do the one job it was for. Under
+   * accumulate-by-default the newest text sits at the BOTTOM of a growing
+   * block, and however hard the old text is dimmed the eye still has to find
+   * where to start -- a blue rule and an entrance animation were both tried
+   * first (see WORKLOG). Siggie, 2026-08-28: *"the blue line isn't quite doing
+   * it. let's change the default to Clear: true."* A beat that replaces has no
+   * such problem: what is on screen IS the new thing.
+   *
+   * Accumulation stays available because a genuine reveal-the-list step still
+   * wants it -- it just is not what most beats are.
    */
-  clear?: boolean;
+  keep?: boolean;
   /** Overrides the step's anchor while this beat is showing. */
   anchor?: HelpAnchor;
   /** What the tour DID on entering this beat; rendered in its own band. */
@@ -374,9 +382,9 @@ function extractBeats(lines: string[], entryId: string): TourBeat[] | undefined 
       if (key === 'anchor') current.anchor = parseAnchor(value, entryId);
       else if (key === 'action') current.action = value.trim();
       else if (key === 'change') current.change = value.trim();
-      // `- Clear: true`. A bare `- Clear:` counts too: it is a marker, and an
+      // `- Keep: true`. A bare `- Keep:` counts too: it is a marker, and an
       // author who writes it without a value plainly means it.
-      else if (key === 'clear') current.clear = value.trim() !== 'false';
+      else if (key === 'keep') current.keep = value.trim() !== 'false';
       continue;
     }
 
@@ -552,8 +560,8 @@ export function tourPositions(content: HelpContent, tour?: string): TourPosition
     }
 
     entry.beats.forEach((beat, beatIndex) => {
-      // `Clear: true` starts the popover over at this beat.
-      showing = beat.clear ? [beat.text] : [...showing, beat.text];
+      // A beat REPLACES what is showing unless it asks to `Keep:` it.
+      showing = beat.keep ? [...showing, beat.text] : [beat.text];
       positions.push({
         entry, step, beatIndex, beat, beatCount: entry.beats!.length,
         blocks: showing,
