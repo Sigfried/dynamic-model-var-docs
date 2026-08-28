@@ -10,33 +10,16 @@ Package-level design lives in [docs/HELP_PACKAGE_PLAN.md](../../docs/HELP_PACKAG
 <details>
 <summary><b>TODO</b></summary>
 
-<!--
--->
-## TODO
+- I deleted the ## TODO header because it was annoying next to
+  the TODO summary line. It doesn't seem to have broken anything
+  but make sure it's ok.
+- I don't like the way beats work. This is what i want to try:
+  - the stuff outside the Beats section is actually the first beat
+  - by default, the beat text is additive on top of that
+  - in order to clear previous text add a 'clear' marker or field
 
-### Done
-
-- **Sections fold.** Every `## ` section is wrapped in `<details>` with a
-  `<summary>`, so the file is navigable on GitHub. `Format` and `TODO` start
-  collapsed; the content sections are `<details open>`, because collapsing the
-  tour while you are editing it would hide the work. Two gotchas the wrapper
-  turned up, both fixed and both tested: a `</details>` after a section's last
-  entry was being swallowed into that entry's `Description:` and would have
-  rendered as literal text in the popover; and `parseSection` read its title
-  from line 0, so every section became `'Unknown'` once two lines sat above the
-  heading. The `<summary>` deliberately repeats the `## Heading` — the parser
-  identifies sections by `^## `, so the heading cannot be dropped.
-- **Non-tour entries moved below the tour steps**, per section rather than
-  collected at the end, so each entry stays beside the topic it explains. Only
-  `selection-tree-mechanics` was actually interleaved; the other six already
-  trailed their sections.
-
-### Still open
-
-- **Multi-line for the OTHER fields** (`Context:`, `Action:`, beat text) —
-  still parked at your "1 for now". Also listed below.
-
-### Original unfinished draft text
+<details>
+<summary><b>Original unfinished draft text</b></summary>
 
 1. current first step sort of highlights the title but doesn't dim the rest. fix
    only if it takes less than a minute. text:
@@ -83,6 +66,7 @@ Package-level design lives in [docs/HELP_PACKAGE_PLAN.md](../../docs/HELP_PACKAG
       entities. There are five ways an entity can be related to another.
    2. highlight row
    3. click checkbox.
+</details>
 
 
 ### following steps not finished yet. ignore
@@ -105,6 +89,9 @@ Package-level design lives in [docs/HELP_PACKAGE_PLAN.md](../../docs/HELP_PACKAG
   Deliberately not done: you said "1 for now; may need 2 soon". The block
   reader (`extractBlockField`) is written generically, so each field is a
   one-line change when you want it.
+- **Multi-line for the OTHER fields** (`Context:`, `Action:`, beat text) —
+  still parked at your "1 for now". Also listed below.
+
 
 </details>
 
@@ -444,7 +431,7 @@ What this app is and how to move around it.
 
 - **Title:** BDCHM Explorer
 - **Tour:** Walkthrough
-- **Description:** An interactive map of the [BioData Catalyst Harmonized Model](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/)
+- **Description:** An interactive map of the **BioData Catalyst Harmonized Model**
   — the ~55 entities defined by its [LinkML schema](https://linkml.io/) and how
   they relate to each other. You can use it to more quickly and thoroughly
   understand the relationships than with the static
@@ -465,7 +452,26 @@ What this app is and how to move around it.
 
 - **Title:** Entities
 - **Tour:** Walkthrough
-- **Description:** A LinkML schema defines classes representing a data model's entities. A class defines a set of slots or attributes (like columns in a database table) which can hold
+- **Description:** A LinkML schema defines classes representing a data model's
+  entities. The left panel lists them, grouped into categories for convenience,
+  though these categories are not actually part of the schema.
+- **Beats:** <!-- these are just copied from below, need to get beats working
+              right before authoring -->
+  1. While the relationship between an entity and its enumerations and raw data attributes is direct, it can be related to other entities in more complex ways.
+     - Anchor: slot-row:MeasurementObservation.observation_type
+  2. **Inheritance**, known in modeling parlance as IS_A relationships — e.g. `MeasurementObservation.is_a` → `Observation`.
+     - Anchor: node-box:MeasurementObservation
+
+
+
+### entities
+
+- **Title:** Entities
+- **Tour:** Walkthrough
+- **Anchor:** selection-tree
+- **Description:** A LinkML schema defines classes representing a data model's
+  entities. A class defines a set of slots or attributes (like columns in
+  a database table) which can hold
   - other entities,
   - permissible value sets (enumerations),
   - or raw data types (strings, integers, etc.)
@@ -478,19 +484,6 @@ What this app is and how to move around it.
   more than one place). Your draft's step 2 does not cover any of that.
   It is preserved verbatim as `selection-tree-mechanics` below, help-only,
   so nothing is lost. Decide whether your step 2 should absorb it.
-
-  TODO(claude): the three bullets are the tail of the Description sentence
-  ("...which can hold: other entities, ..."), not really "Interactions" —
-  they describe the schema, not things the viewer can do. Rendered as a
-  bullet list under the description, which reads correctly, but if you want
-  them typographically part of the sentence they should move into
-  Description as inline markdown. -- THIS DOESN'T WORK CURRENTLY. INDENTED
-  BULLETS JUST AREN'T RENDERED
-
-  TODO(siggie): empty `Change:`, i.e. this step changes nothing. Your
-  draft's step 2 is pure exposition, but the old step 2 carried
-  `sel=Participant`. If this step should put something on the diagram,
-  give it a `Change:` and an `Action:`.
 -->
 
 ### relationship-kinds

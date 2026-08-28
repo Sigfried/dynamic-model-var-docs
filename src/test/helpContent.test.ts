@@ -374,17 +374,27 @@ describe('<details> section wrappers', () => {
     expect([...md.entries.keys()]).toEqual(['last']);
   });
 
-  test('every section in the real file is wrapped', () => {
-    // The point of the wrapper is uniformity -- one unwrapped section renders
-    // as a loose fragment between two folds, which is how the second half of
-    // the TODO block looked before it was absorbed.
+  test('every `## ` section is inside a fold', () => {
+    /*
+     * The point of the wrapper is uniformity -- an unwrapped section renders as
+     * a loose fragment between two folds.
+     *
+     * This checks CONTAINMENT, not a one-to-one match with the summaries.
+     * There are legitimately more folds than headings: a `<details>` can nest
+     * (the TODO section folds its "Original unfinished draft text" separately),
+     * and a fold need not have a `## ` heading at all -- the TODO block itself
+     * has none, which is what makes the parser skip it at the `^## ` guard
+     * before PROSE_SECTIONS is even consulted.
+     */
     const headings = [...markdown.matchAll(/^## (.+)$/gm)]
       .map(m => m[1].trim())
       // The spec quotes `## Section Title` inside a fenced example.
       .filter(h => !h.startsWith('Section Title'));
-    const summaries = [...markdown.matchAll(/<summary><b>(.+?)<\/b><\/summary>/g)]
-      .map(m => m[1].trim());
-    expect(summaries).toEqual(headings);
+    const summaries = new Set(
+      [...markdown.matchAll(/<summary><b>(.+?)<\/b><\/summary>/g)].map(m => m[1].trim()),
+    );
+    const unwrapped = headings.filter(h => !summaries.has(h));
+    expect(unwrapped, `Sections with no <summary>: ${unwrapped.join(', ')}`).toEqual([]);
   });
 
   test('open/closed tags balance', () => {
