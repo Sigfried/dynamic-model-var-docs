@@ -69,6 +69,15 @@ body.help-mode {
   font-weight: 700;
 }
 
+/* The body reserves a left gutter for the reveal rule (see `.help-beat-new`)
+   and takes it straight back here, so the prose keeps the left edge it always
+   had. Without the negative margin every popover in the app -- help-only
+   entries included -- would have gained 11px of indent to serve a mark only
+   multi-beat steps ever show. */
+.help-popover-body {
+  margin-left: -11px;
+}
+
 .help-popover-body p,
 .help-popover-context p { margin: 0 0 6px; }
 
@@ -103,13 +112,65 @@ body.help-mode {
 }
 
 /* A beat that has already been revealed. Beats accumulate, so a step's earlier
-   text stays on screen while the newest block sits at full strength below it --
-   dimming is what tells the reader which part just appeared. Opacity rather
-   than a fixed colour so it dims links, bold and code along with the prose, and
-   so it works unchanged in both themes. */
+   text stays on screen while the newest block sits at full strength below it.
+
+   **0.55 was not enough** -- Siggie, 2026-08-28: "the contrast between dimmed
+   and new text isn't quite enough to grab the eye to the new text". Three
+   things were working against it, and the fix addresses all three rather than
+   just turning the number down:
+
+    1. The body colour is #0f172a, near-black, so the NEW block has nowhere to
+       go brighter. Every bit of range is on the dim side, which is why the
+       fade has to be deeper than it feels like it should be.
+    2. The new block is the LAST one, at the bottom -- where the eye does not
+       start reading. Relative dimming alone never says "begin here".
+    3. Nothing MOVED. A reveal that appears between two paints reads as text
+       that was always there.
+
+   So: a deeper fade, plus a positive mark on the new block (a left rule, which
+   is a location cue rather than a contrast one), plus a short entrance so the
+   arrival is something the eye catches. Opacity for the fade rather than a
+   fixed colour, so it dims links, bold and code along with the prose and works
+   unchanged in both themes. */
 .help-popover-body .help-beat-past {
-  opacity: 0.55;
-  transition: opacity 160ms ease;
+  opacity: 0.38;
+  transition: opacity 200ms ease;
+}
+
+/* The block that just arrived. Marked, not merely undimmed -- see above. The
+   rule sits in the padding the body reserves for it, so revealing a beat does
+   not reflow the text that is already on screen. */
+.help-popover-body > div {
+  padding-left: 9px;
+  border-left: 2px solid transparent;
+  transition: border-color 200ms ease;
+}
+.help-popover-body .help-beat-new {
+  border-left-color: #0284c7;
+  animation: help-beat-in 220ms ease-out;
+}
+@keyframes help-beat-in {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* A lone block is NOT a reveal -- it is the whole body, either a beatless
+   step or the opening position of a beated one before any beat has fired.
+   Marking it would put a blue rule down every popover in the tour and make the
+   mark meaningless where it actually matters.
+
+   The transparent border and the padding STAY. Only the colour is suppressed:
+   dropping the reserved space too would make the description visibly shift
+   left-to-right the moment the first beat arrived. */
+.help-popover-body > div:only-child {
+  border-left-color: transparent;
+  animation: none;
+}
+
+/* Respect a viewer who has asked for less motion: the rule and the fade still
+   carry the signal, so only the movement goes. */
+@media (prefers-reduced-motion: reduce) {
+  .help-popover-body .help-beat-new { animation: none; }
 }
 
 /* Links. react-markdown has always rendered `[text](url)` as a real `<a>`, but
@@ -317,4 +378,10 @@ body.help-mode {
   .help-popover a { color: #7dd3fc; }
   .help-popover a:hover { color: #bae6fd; }
   .help-popover-body code { background: #1e293b; }
+  /* Same reason as the links just above: #0284c7 is too dark to read as a mark
+     on the dark card. */
+  .help-popover-body .help-beat-new { border-left-color: #38bdf8; }
+  /* The dark card's body text is #e2e8f0, so the fade has more room to work
+     with than it does on white and does not need to go as deep. */
+  .help-popover-body .help-beat-past { opacity: 0.45; }
 }

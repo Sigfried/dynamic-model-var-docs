@@ -458,14 +458,26 @@ export default function HelpLayer() {
                      empty; rendering it would leave a dimmed blank gap where
                      the note used to be. */
                   .filter(Boolean)
-                  .map((block, i, all) => (
-                    <div
-                      key={i}
-                      className={i === all.length - 1 ? undefined : 'help-beat-past'}
-                    >
-                      <Markdown components={markdownComponents}>{block}</Markdown>
-                    </div>
-                  ))}
+                  .map((block, i, all) => {
+                    const newest = i === all.length - 1;
+                    return (
+                      <div
+                        /*
+                         * The newest block is keyed by the POSITION, not by
+                         * its index. Under `key={i}` React reuses the node the
+                         * previous last block was rendered into, so the
+                         * entrance animation never replays -- the CSS only
+                         * runs when an element mounts. Keying it to the
+                         * position remounts it on each reveal; the earlier
+                         * blocks keep their index keys and so are left alone.
+                         */
+                        key={newest ? `new-${tourIndex ?? 'x'}` : i}
+                        className={newest ? 'help-beat-new' : 'help-beat-past'}
+                      >
+                        <Markdown components={markdownComponents}>{block}</Markdown>
+                      </div>
+                    );
+                  })}
               </div>
             )}
 

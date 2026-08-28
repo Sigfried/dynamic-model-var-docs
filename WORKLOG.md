@@ -7,6 +7,45 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-28 (beat contrast)
+
+Siggie: *"the contrast between dimmed and new text isn't quite enough to grab
+the eye to the new text."* `.help-beat-past` was `opacity: 0.55`.
+
+**Did not just turn the number down.** Three separate things were working
+against the signal, and only one of them is contrast:
+
+1. **The body colour is `#0f172a`**, near-black. The NEW block has nowhere to go
+   brighter, so the entire range available is on the dim side — which is why a
+   fade that feels too deep in the stylesheet is about right on screen. Went to
+   0.38.
+2. **The new block is the LAST one**, at the bottom of the popover, which is not
+   where the eye starts reading. *Relative* dimming can say "that part is old";
+   it can never say "begin here". Added a positive mark — a blue left rule on
+   the new block — because a location cue does what a contrast cue cannot.
+3. **Nothing moved.** A reveal that simply exists on the next paint reads as
+   text that was always there. Added a 220ms entrance (fade + 3px drop).
+
+Two implementation details that were not obvious:
+
+- **The newest block had to be re-keyed.** Under `key={i}` React reuses the DOM
+  node the *previous* last block was rendered into, so a CSS entrance animation
+  — which only runs on mount — never replayed. The newest block is now keyed by
+  the tour position, remounting it per reveal; earlier blocks keep index keys.
+- **The gutter is reserved, then taken back.** Every body block carries the
+  padding and a transparent border, and `.help-popover-body` has a matching
+  negative margin. Two things this avoids: the description visibly shifting
+  right the moment the first beat arrives (if only the marked block had
+  padding), and every popover in the app — help-only entries included — gaining
+  an indent to serve a mark that only multi-beat steps ever show.
+
+`:only-child` suppresses the rule's *colour* but keeps its space, since a lone
+block is the whole body rather than a reveal. Dark mode gets `#38bdf8` for the
+same reason the links do (`#0284c7` is too dark on the dark card) and a shallower
+0.45 fade, since `#e2e8f0` body text leaves more room to dim. The animation is
+dropped under `prefers-reduced-motion`; the rule and fade still carry it.
+
+---
 ## 2026-08-28 (popover timing, header order)
 
 ### Three movements per `next`, collapsed to one

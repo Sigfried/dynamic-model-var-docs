@@ -579,7 +579,8 @@ What this app is and how to move around it.
               right before authoring -->
   1. In order to select an entity for display, click its checkbox
      - Anchor: entity-row:Person
-  2. bla blah blah
+  2. I clicked the Person checkbox and the Person entity appeared in the
+     viewing panel.
      - Anchor: node-box:Person
      - Change: sel=Person
      - Action: Ticked Person for you.
