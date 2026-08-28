@@ -7,6 +7,57 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-28 (relation menu: hover-close grace period)
+
+Siggie, with a screenshot: the pointer *flitted* across a `2 related` trigger
+on the way somewhere else, the menu opened, and it never closed.
+
+**The cause was an asymmetry, not a timing bug.** `RelationMenu` had
+`onMouseEnter={open}` and **no `onMouseLeave` at all** — the only ways out were
+an outside click, Escape, or hovering a different box's trigger. That was
+survivable when the menu opened on CLICK (you closed what you opened); the
+2026-08-27 switch to hover-open made every incidental pass over a box leave a
+panel on screen.
+
+### Why no open-delay
+
+Siggie's own framing named the trade: *"i'm just afraid the timeout will make
+it close while the user is trying to select something."* Three shapes were put
+up — open-delay + close-delay, close-delay only, open-delay only. Claude
+recommended the first (a flit then opens nothing, which is literally what the
+screenshot shows).
+
+**Siggie chose close-delay only:** *"we could try 1 but i think the no-delay
+increases discoverability."* That is the deciding consideration and it beats
+the tidier fix — nothing on the canvas is drawn unasked, so the menu is the
+main way to grow it, and a pointer sweeping over a box *learning that the menu
+exists* is a feature. An open-delay buys a cleaner sweep at the cost of the one
+moment that teaches the control. Don't add one without a new reason.
+
+### Why the close is deferred rather than immediate
+
+The menu tree has real gaps in it: 2px between trigger and panel, 2px between
+panel and submenu, and the submenu overhangs its parent. A bare close-on-leave
+would fire while the pointer is *en route to an item* — Siggie's stated fear,
+and correct. So: `CLOSE_DELAY_MS = 300`, cancelled by entering any part of the
+tree. "Any part of the tree" is the same `[data-relation-menu]` set the
+outside-click listener already keys on, so there is one definition of "inside
+the menu", not two that can drift.
+
+### Why the timer is module-level
+
+Same reason `openListeners` is. Moving from box A to box B has to cancel **A's**
+pending close, and that timer belongs to an instance B cannot reach. Routing it
+through `setOpenMenu` (which now calls `cancelClose`) means every open path
+cancels for free. A per-instance `useState` timer would resurrect the exact
+class of bug the shared open-listener was introduced to kill.
+
+Tests in `RelationMenu.test.tsx`. The flit test was confirmed to FAIL with the
+`onMouseLeave` removed — worth doing here, since this file's sibling
+(`RelationMenuPlacement.test.tsx`) exists because of a test that passed
+vacuously under jsdom.
+
+---
 ## 2026-08-28 (beats replace again; dark mode actually switched off)
 
 ### Beats: `Keep:` opt-in, replacing by default

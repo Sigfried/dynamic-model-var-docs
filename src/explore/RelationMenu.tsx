@@ -17,7 +17,8 @@
  *
  * The trigger opens on HOVER and each group leads with "add all" / "hide all"
  * (Siggie, 2026-08-27): with nothing drawn unasked, the menu is the main way
- * to grow the canvas, so it should not cost a click to look inside one.
+ * to grow the canvas, so it should not cost a click to look inside one. It
+ * closes on leaving the whole tree, after a grace period — see CLOSE_DELAY_MS.
  *
  * Shape (Siggie, deciding D3): a trigger reading "N related", branching to
  * "N belong to me by my attribute", "N belong to me by their attribute",
@@ -49,7 +50,39 @@ import type { RelationGroupVM } from './OwnershipGraphView';
  */
 const openListeners = new Set<(id: string | null) => void>();
 function setOpenMenu(id: string | null) {
+  cancelClose();
   for (const fn of openListeners) fn(id);
+}
+
+/**
+ * Grace period before a menu the pointer has left actually closes.
+ *
+ * Opening stays INSTANT (Siggie, 2026-08-28: "the no-delay increases
+ * discoverability") — sweeping the pointer over a box is how you find out the
+ * menu is there. What was broken is the other half: there was no
+ * `onMouseLeave` at all, so a pointer that merely flitted across a trigger left
+ * the menu open until an outside click, Escape, or another box's trigger
+ * (screenshot 2026-08-28).
+ *
+ * A bare close-on-leave is unusable here — the tree has real gaps in it: 2px
+ * between trigger and panel, 2px between panel and submenu, and the submenu is
+ * a sibling that overhangs the panel. Crossing any of those would close the
+ * menu out from under a pointer that is on its way to an item. So the timer is
+ * cancelled by re-entering ANY part of the tree, which is exactly the
+ * `[data-relation-menu]` set the outside-click listener already uses.
+ *
+ * Module-level rather than per-instance for the same reason `openListeners`
+ * is: moving from one box to the next has to cancel the FIRST box's pending
+ * close, and that timer belongs to an instance the second one cannot reach.
+ */
+const CLOSE_DELAY_MS = 300;
+let closeTimer: ReturnType<typeof setTimeout> | undefined;
+function cancelClose() {
+  if (closeTimer !== undefined) { clearTimeout(closeTimer); closeTimer = undefined; }
+}
+function scheduleClose() {
+  cancelClose();
+  closeTimer = setTimeout(() => { closeTimer = undefined; setOpenMenu(null); }, CLOSE_DELAY_MS);
 }
 
 export interface RelationMenuProps {
@@ -151,6 +184,7 @@ export function RelationMenu({
         title={`${relatedCount} entities related to ${label}, ${shownCount} of them`
           + ` on the diagram — hover to browse them`}
         onMouseEnter={open}
+        onMouseLeave={scheduleClose}
         onClick={toggle}
         className={`flex items-center gap-1 text-[9px] leading-none px-1.5 py-0.5
                     rounded border
@@ -211,6 +245,8 @@ function MenuPanel({
     <div
       ref={ref}
       data-relation-menu
+      onMouseEnter={cancelClose}
+      onMouseLeave={scheduleClose}
       style={style}
       className="fixed z-50 min-w-[13rem] rounded border shadow-lg text-[11px]
                  border-gray-300 dark:border-slate-600
@@ -321,6 +357,8 @@ function Submenu({
       ref={ref}
       data-relation-menu
       data-relation-submenu={group.position}
+      onMouseEnter={cancelClose}
+      onMouseLeave={scheduleClose}
       style={maxW === undefined ? undefined : { maxWidth: maxW, minWidth: 0 }}
       className={`absolute top-0 max-h-[60vh] min-w-[14rem] overflow-y-auto rounded border shadow-lg
                   border-gray-300 dark:border-slate-600

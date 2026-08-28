@@ -1,5 +1,5 @@
 import { describe, test, expect, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, act } from '@testing-library/react';
 import { RelationMenu } from '../explore/RelationMenu';
 import type { RelationGroupVM } from '../explore/OwnershipGraphView';
 
@@ -109,6 +109,61 @@ describe('RelationMenu', () => {
     expect(document.querySelectorAll('[data-relation-group]')).toHaveLength(1);
     fireEvent.mouseEnter(b);
     expect(document.querySelectorAll('[data-relation-group]')).toHaveLength(1);
+  });
+
+  test('a flit across the trigger does not leave the menu open', () => {
+    // The bug (Siggie, screenshot 2026-08-28): the pointer crossed a trigger on
+    // its way somewhere else, the menu opened, and nothing ever closed it —
+    // there was no onMouseLeave at all, only outside-click / Escape / another
+    // box's trigger. Opening stays instant (Siggie chose no open-delay: "the
+    // no-delay increases discoverability"); it is the CLOSE that is deferred.
+    vi.useFakeTimers();
+    try {
+      render(
+        <RelationMenu
+          label="Thing" groups={[group([['A', false]])]}
+          relatedCount={1} shownCount={0}
+          onAdd={vi.fn()} onRemove={vi.fn()}
+        />,
+      );
+      const trigger = document.querySelector('[data-relation-trigger]') as HTMLElement;
+      fireEvent.mouseEnter(trigger);
+      expect(document.querySelector('[data-relation-group]')).not.toBeNull();
+      fireEvent.mouseLeave(trigger);
+      // Still open during the grace period — the gap between the trigger and
+      // the panel is 2px, and crossing it must not close the menu.
+      expect(document.querySelector('[data-relation-group]')).not.toBeNull();
+      act(() => { vi.advanceTimersByTime(400); });
+      expect(document.querySelector('[data-relation-group]')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test('moving onto the panel cancels the pending close', () => {
+    // The whole reason the close is deferred rather than immediate: leaving
+    // the trigger IS how you reach the menu. Re-entering any part of the tree
+    // has to call the close off, or the menu is unusable.
+    vi.useFakeTimers();
+    try {
+      render(
+        <RelationMenu
+          label="Thing" groups={[group([['A', false]])]}
+          relatedCount={1} shownCount={0}
+          onAdd={vi.fn()} onRemove={vi.fn()}
+        />,
+      );
+      const trigger = document.querySelector('[data-relation-trigger]') as HTMLElement;
+      fireEvent.mouseEnter(trigger);
+      fireEvent.mouseLeave(trigger);
+      const panel = [...document.querySelectorAll('[data-relation-menu]')]
+        .find(el => el !== trigger) as HTMLElement;
+      fireEvent.mouseEnter(panel);
+      act(() => { vi.advanceTimersByTime(1000); });
+      expect(document.querySelector('[data-relation-group]')).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   test('`hide all` removes every drawn entity in the group', () => {
