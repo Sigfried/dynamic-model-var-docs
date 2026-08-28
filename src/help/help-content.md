@@ -7,6 +7,102 @@ Parsed by `parseHelpContent.ts`; pinned by `src/test/helpContent.test.ts`.
 Package-level design lives in [docs/HELP_PACKAGE_PLAN.md](../../docs/HELP_PACKAGE_PLAN.md).
 
 ---
+<!--
+-->
+## TODO
+
+This is a new section. Not sure if parser will complain about it.
+
+- **Rearrange tour steps:**
+  - Put them in order by step. Move anything that isn't a tour step below.
+  - Move Tour field just below Title.
+- **Make it easy to add/move steps without having to renumber everything**
+- **Need better format:**
+  - We should have a short discussion about this because i have to deliver
+    in four hours and still have a tour to author
+- The way you implemented the format really does not capture my intent. Compare
+  my original step 1 (below) with `app-title`:
+  - It messed up my orders, breaking "It is meant..." into a separate Context section
+    with the Interactions in between and lost the bullets.
+  - Interactions really doesn't do anything except add bullets after the
+    Description, right?
+  - **Links not rendering**: links in `app-title` Description markdown are
+    rendered as plain text. Fix.
+- **Multi-line markdown handling:** Right now each field only includes
+  text following the colon up to the end of the line. This makes it
+  hard to read the spec markdown while authoring -- though fixing this
+  would not be worth breaking other stuff. More importantly, the Description
+  is limited to a single line (`<p>` probably) of text.
+  - Allow a way to include line breaks in rendered text And other multi-line
+    markdown features?
+
+### Original unfinished draft text
+
+1. current first step sort of highlights the title but doesn't dim the rest. fix
+   only if it takes less than a minute. text:
+   - **BDCHM Explorer**
+   - An interactive map of the [BioData Catalyst Harmonized Model](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/)
+     — the ~55 entities defined by its [LinkML schema](https://linkml.io/)
+     and how they relate to each other. You can use it to more quickly and thoroughly
+     understand the relationships than with the static [LinkML documentation](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/).
+     It is meant to help researchers who:
+     - Have access to data in BDCHM format and want to understand its structure;
+     - Have data that they want to harmonize to BDCHM format; or
+     - Are designing studies and want to model them using BDCHM or want to use
+       BDCHM for ideas or inspiration for their own efforts.
+   - Pick some entities on the left and the diagram shows how they fit
+     together. Click the title to clear everything and start over.
+2. highlight selection panel. text:
+   - **Entities**
+   - A LinkML schema defines classes representing a data model's entities.
+     A class defines a set of slots or attributes (like columns in a database table)
+     which can hold
+     - other entities,
+     - permissible value sets (enumerations),
+     - or raw data types (strings, integers, etc.)
+3. select MeasurementObservation and highlight observation_type. text:
+   - While the relationship between an entity and its enumerations and raw
+     data attributes is direct (e.g.,
+     `MeasurementObservation.observation_type` ==> `MeasurementObservationTypeEnum`
+     or `MeasurementObservation.age_at_observation` ==> `integer`), it can be
+     related to other entities in more complex ways
+     [can we animate this so that step 4 keeps this popover but shows the next bullet, etc?
+     not sure best way to represent this in my outline...well, we're going to need a reasonably
+     human-readable/writable format for the full tour specs anyway]
+     - inheritance, known in modeling parlance as IS_A relationships,
+       e.g., `MeasurementObservation.is_a` ==> `Observation`, or
+     - association / ownership / containment, known in modeling parlance as HAS_A relationships,
+       e.g., `Visit.associated_participant` ==> `Participant`.
+     A primary goal 
+   - Entities can be related to each other through
+4. goal is to show all the relationship types. if there are any entities
+   that use all four, select one of those, otherwise will have to select
+   one that has most and then select another that has the others. steps:
+   1. **Selecting an entity** Select an entity by clicking its checkbox;
+      the entity will appear in the main panel along with directly related
+      entities. There are five ways an entity can be related to another.
+   2. highlight row
+   3. click checkbox.
+
+---
+### following steps not finished yet. ignore
+- **Make better Change, Action, Beat implementation**
+  - When relationship-kinds (Tour 3.1) pops up the action has already
+    occurred and the Action: text does not make the step more legible.
+    A better sequence of events would be:
+    - anchor on unchecked MeasurementObservation selection row
+    - actually would be better if this were not 
+- **Change: allow add, remove, clear.** The authoring
+  format has an additive `Change:` and no remove verb. Consequence
+  today: tour step 4 ADDS to step 3's canvas instead of replacing it,
+  so the canvas is cumulative where the copy reads as if it were
+  showing a clean two-box example. Notes about this also in
+  `help-content.md`
+- **Tour authoring notes + draft preview** — `Note:` / `Draft:`
+  / `ForClaude:` fields, and a way to view a tour *including* its
+  parked and unfinished steps. deferred 2026-08-27 for time
+
+---
 
 ## Format
 
@@ -266,27 +362,13 @@ What this app is and how to move around it.
 - **Change:**
 - **Tour:** 1
 
-<!--
-  TODO(siggie): your draft has a bracketed note here —
-  "[add a phrase/sentence about the overall project; i'm trying to find a
-  good link for that]". Nothing invented in its place; the Description
-  above stops where your draft stops.
-
-  Anchor resolved 2026-08-27 (Siggie): `app-title`, not `none`. Rings the
-  title AND dims the rest — the dim is the spotlight ring's outer shadow,
-  so an anchorless step gets no dim by construction. This closes your
-  draft's "sort of highlights the title but doesn't dim the rest".
--->
-
 ### selection-tree
 
 - **Title:** Entities
 - **Description:** A LinkML schema defines classes representing a data model's entities. A class defines a set of slots or attributes (like columns in a database table) which can hold
-- **Interactions:**
   - other entities,
   - permissible value sets (enumerations),
   - or raw data types (strings, integers, etc.)
-- **Change:**
 - **Tour:** 2
 
 <!--
@@ -298,12 +380,13 @@ What this app is and how to move around it.
   It is preserved verbatim as `selection-tree-mechanics` below, help-only,
   so nothing is lost. Decide whether your step 2 should absorb it.
 
-  TODO(siggie): the three bullets are the tail of the Description sentence
+  TODO(claude): the three bullets are the tail of the Description sentence
   ("...which can hold: other entities, ..."), not really "Interactions" —
   they describe the schema, not things the viewer can do. Rendered as a
   bullet list under the description, which reads correctly, but if you want
   them typographically part of the sentence they should move into
-  Description as inline markdown.
+  Description as inline markdown. -- THIS DOESN'T WORK CURRENTLY. INDENTED
+  BULLETS JUST AREN'T RENDERED
 
   TODO(siggie): empty `Change:`, i.e. this step changes nothing. Your
   draft's step 2 is pure exposition, but the old step 2 carried
@@ -347,6 +430,8 @@ What this app is and how to move around it.
   over exactly as they trail off. Nothing invented. They will render as
   broken fragments in the tour until you finish them — that is deliberate,
   so they cannot ship unnoticed.
+
+  [sg] the "solutions" below are not good
 
   TODO(siggie): this step is where you asked "can we animate this so that
   step 4 keeps this popover but shows the next bullet, etc?" Beats are the

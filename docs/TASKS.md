@@ -16,17 +16,16 @@ the archive along with the S3a/S3b briefs and the 2026-08-26 planning round.
 
 ## 🗓️ THE LIST
 
-| # | Task | Est. | Status | Detail |
-|---|---|---|---|---|
-| 3 | **The tour copy** — format and mechanism both shipped; the writing is Siggie's | ~0.5–1 day | ▶️ **Siggie's** | [next up](#next-up--siggie-is-refining-the-format-doc-then-editing-the-tour) · [draft](#current-tour-unfinished-draft) |
-| 4 | **No horizontal scroll in the tree** — `overflow-x: auto` sits on `.dbw-root` (`selectionTree.css:21`) but the `flex-1 overflow-y-auto min-h-0` ancestor at `ExploreApp.tsx:301` is sized to the fixed `w-96` panel and clips first. **MEASURED**, and re-verified 2026-08-28 | ~0.5 day | ⬜ | [§](#no-horizontal-scroll-in-the-tree) |
-| 6 | **Edge rendering** — one edge per declaring class; fixes the missing `Specimen.quality_measure` edge. **Decided: do not suppress `ObservationSet.observations`** | ~0.5 day | ⬜ | [§](#edge-rendering--the-fan-from-observationsetobservations) |
-| 7 | **Re-render regression** — "most clicks refresh the main panel". **Measure, don't guess** | ~unknown | ⬜ still uninvestigated | [§](#still-not-investigated--the-one-thing-that-is-not-understood) |
-| 8 | **Drag the tour popover.** Placement itself was exonerated | ~0.5 day | ⬜ | [§](#tour-and-help) |
-| 9 | **Edge crossings.** Cause unmeasured | ~unknown | ⬜ | [§](#smaller-items-raised) |
-| 10 | **Tour authoring notes + draft preview** — `Note:` / `Draft:` / `ForClaude:` fields, and a way to view a tour *including* its parked and unfinished steps. Siggie wants all of it; deferred 2026-08-27 for time | ~0.5 day | ⬜ deferred | [§](#deferred--authoring-notes-and-draft-preview) |
-| 11 | **Migrate positioning to CSS anchor positioning** — deletes the 250ms poll, the flip/clamp, and the `EST_H` guess. **UNBLOCKED: S3b's resolvers landed.** Note `slot-row` selects on a PAIR of attributes, which no single `anchor-name` rule expresses | ~0.5 day | ⬜ ready | [HelpLayer.tsx header](../src/help/HelpLayer.tsx) · [HELP_PACKAGE_PLAN](HELP_PACKAGE_PLAN.md) |
-| 12 | **A tour step cannot say "remove this from the diagram."** Fell out of task 2: step 4 now ADDS to step 3's canvas rather than replacing it, because the authoring format has no remove verb and one was not invented. Flagged beside the step in `help-content.md` | ~unknown | 🔓 **needs Siggie** | [§](#still-open--needs-siggie) |
+  | # | Task                                                                                                                                                                                                                                                                                                                                            | Est.     | Status                  | Detail                                                                                        |
+  |---|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|-------------------------|-----------------------------------------------------------------------------------------------|
+  | 1 | Work on tour and tour format/mechanics. Start from `src/help/help-content.md#TODO`  | ~unknown | ⬜                      | [§](#smaller-items-raised)                                                                    |
+  | 2 | **Legend from a single entity's perspective** — describe it to them first. (carry-forward #3)                                                                                                                                                                                                                                                   | ~unknown | ⬜                      | [§](#smaller-items-raised)                                                                    |
+  | 3 | **Re-render regression** — "most clicks refresh the main panel". **Measure, don't guess**                                                                                                                                                                                                                                                       | ~unknown | ⬜ still uninvestigated | [§](#still-not-investigated--the-one-thing-that-is-not-understood)                            |
+  | 4 | **Edge crossings.** Cause unmeasured                                                                                                                                                                                                                                                                                                            | ~unknown | ⬜                      | [§](#smaller-items-raised)                                                                    |
+  | 5 | **Drag the tour popover.** [sg] apparently popover gets repositioned every 250ms, so dragging won't work. think about this more later.                                                                                                                                                                                                          | ~0.5 day | ⬜                      | [§](#tour-and-help)                                                                           |
+  | 6 | **Migrate positioning to CSS anchor positioning** — deletes the 250ms poll, the flip/clamp, and the `EST_H` guess. **UNBLOCKED: S3b's resolvers landed.** Note `slot-row` selects on a PAIR of attributes, which no single `anchor-name` rule expresses                                                                                         | ~0.5 day | ⬜ ready                | [HelpLayer.tsx header](../src/help/HelpLayer.tsx) · [HELP_PACKAGE_PLAN](HELP_PACKAGE_PLAN.md) |
+
+---
 
 ### 🍒 QUICK WINS
 
@@ -138,55 +137,6 @@ already uses (`TODO(siggie):` beside each entry with a gap).
 
 ### Current tour unfinished draft
 
-1. current first step sort of highlights the title but doesn't dim the rest. fix
-   only if it takes less than a minute. text:
-   - **BDCHM Explorer**
-   - An interactive map of the [BioData Catalyst Harmonized Model](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/)
-     [add a phrase/sentence about the overall project; i'm trying to find a
-     good link for that]
-     — the ~55 entities defined by its [LinkML schema](https://linkml.io/)
-     and how they relate to each other. You can use it to more quickly and thoroughly
-     understand the relationships than with the static [LinkML documentation](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/).
-     It is meant to help researchers who:
-     - Have access to data in BDCHM format and want to understand its structure;
-     - Have data that they want to harmonize to BDCHM format; or
-     - Are designing studies and want to model them using BDCHM or want to use
-       BDCHM for ideas or inspiration for their own efforts.
-   - Pick some entities on the left and the diagram shows how they fit
-     together. Click the title to clear everything and start over.
-2. highlight selection panel. text:
-   - **Entities**
-   - A LinkML schema defines classes representing a data model's entities.
-     A class defines a set of slots or attributes (like columns in a database table)
-     which can hold
-     - other entities,
-     - permissible value sets (enumerations),
-     - or raw data types (strings, integers, etc.)
-3. select MeasurementObservation and highlight observation_type. text:
-   - While the relationship between an entity and its enumerations and raw
-     data attributes is direct (e.g.,
-     `MeasurementObservation.observation_type` --> `MeasurementObservationTypeEnum`
-     or `MeasurementObservation.age_at_observation` --> `integer`), it can be
-     related to other entities in more complex ways
-     [can we animate this so that step 4 keeps this popover but shows the next bullet, etc?
-     not sure best way to represent this in my outline...well, we're going to need a reasonably
-     human-readable/writable format for the full tour specs anyway]
-     - inheritance, known in modeling parlance as IS_A relationships,
-       e.g., `MeasurementObservation.is_a` --> `Observation`, or
-     - association / ownership / containment, known in modeling parlance as HAS_A relationships,
-       e.g., `Visit.associated_participant` --> `Participant`.
-     A primary goal 
-   - Entities can be related to each other through
-4. goal is to show all the relationship types. if there are any entities
-   that use all four, select one of those, otherwise will have to select
-   one that has most and then select another that has the others. steps:
-   1. **Selecting an entity** Select an entity by clicking its checkbox;
-      the entity will appear in the main panel along with directly related
-      entities. There are five ways an entity can be related to another.
-   2. highlight row
-   3. click checkbox.
-
----
 
 ## 🧱 CANVAS AND LAYOUT
 
@@ -534,8 +484,6 @@ before — read it before designing anything.
   crossings. i don't know how much we can do to fix them, but we should try."*
   Layout is `useGraphLayout`. Not investigated — do not speculate on cause
   without measuring.
-- **Dragging the tour popover** is still wanted as the escape hatch (*"yes,
-  dragging is the escape hatch"*), even though placement was exonerated.
 - **Legend regrouping.** Siggie noticed the legend really has 7 pair types and
   *"might be easier to read if all the owns (forward) were grouped together."*
   They also asked *"what would it look like if we just gave the types from the
@@ -847,53 +795,6 @@ are unlisted (`ownershipExpansion`, `ownershipLegend`, `paths`, `DetailDrawer`,
 
 **Fix the numbered list and the two `ownerCap` mentions first** — by the doc's
 own rule those are the bugs.
-
----
-
----
-
-## 🎯 Dates
-
-- **Explorer demo: 2026-08-25 — DONE.** Held a couple of hours after the
-  session that shipped the induced-slot migration and the ownership rules; the
-  merged-sibling inheritance work was built in the ~90 minutes before it. The
-  big program manager was NOT there, which is what drives the sharing work.
-- **Development wrap-up: ~2026-08-28/29 — ONE DAY LEFT as of 2026-08-27.**
-  Siggie, 2026-08-27: *"i need to focus on the upcoming tasks. only have a day
-  left."* The list at the top of this file is scoped to that.
-- **Sharing / presentation (video demo + non-video guided tour):** asked for by
-  the stakeholders on 2026-08-25, to be scoped in its OWN session before
-  further development. See the handoff.
-- **Target release 2026-07-30 passed and was never renegotiated.** Treat
-  "before the release" language elsewhere in the docs as stale.
-  **Needs Siggie: set a new target or drop it.**
-
----
-
----
-
-### 🔓 Still open — needs Siggie
-
-1. **A tour step cannot say "remove this from the diagram."** The authoring
-   format has an additive `Change:` and no remove verb. Consequence today: tour
-   step 4 ADDS to step 3's canvas instead of replacing it, so the canvas is
-   cumulative where the copy reads as if it were showing a clean two-box
-   example. One was not invented while implementing task 2; it is flagged beside
-   the step in `help-content.md`. **Does step 4 want a clean canvas?** If so
-   this is a format addition. (Table item 12.)
-2. **ObservationSet edge** — their "suppress" was premised on it being abstract,
-   **and it is not**. Re-ask. (carry-forward #2, corrected below)
-3. **Legend from a single entity's perspective** — describe it to them first.
-   (carry-forward #3)
-4. Everything already open in the handoff: the re-render regression (still
-   uninvestigated), "what happened to categories", panel resizing/detaching.
-5. **Set a new target date or drop it** — see [Dates](#dates); the 2026-07-30
-   release passed and was never renegotiated.
-
-> **Tour `back` semantics** used to be item 1 here. **Answered and shipped**
-> 2026-08-27 as the push/pop stack (`269222e`): neither a whole-state snapshot
-> nor a soft-lock — refcounted push/pop, so mid-tour viewer edits survive by
-> construction. See the archive.
 
 ---
 
