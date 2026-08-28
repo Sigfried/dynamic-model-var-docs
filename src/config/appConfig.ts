@@ -123,9 +123,9 @@ export const VOCAB = {
     // (no more Props/Cls/Enm/Typ/Vars).
     entityCol: {
       props: { header: 'Attributes',           tip: 'Total attributes (own + inherited)' },
-      cls:   { header: 'Entities',             tip: 'Entity-typed ranges' },
-      enm:   { header: 'Permissible Value Sets', tip: 'Permissible-value-set ranges' },
-      typ:   { header: 'Data Types',           tip: 'Primitive-typed ranges' },
+      cls:   { header: 'Entities',             tip: 'Attributes whose value is an entity' },
+      enm:   { header: 'Permissible Value Sets', tip: 'Attributes whose value comes from a permissible value set' },
+      typ:   { header: 'Data Types',           tip: 'Attributes whose value is a data type' },
       vars:  { header: 'Variables',            tip: 'Mapped study variables' },
     },
   },

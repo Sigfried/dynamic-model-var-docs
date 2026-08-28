@@ -7,6 +7,199 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-28 (quick wins) — both TASKS quick-win items, and two stale pointers
+
+TASKS' "🍒 QUICK WINS" list, worked top-to-bottom as it advertises. Both items
+landed as decided; no design questions came up. What is worth recording is that
+**every line number in the quick-win table was stale**, and one of the two
+pointers was substantively wrong, not just off by a few lines.
+
+### The line numbers had drifted; `appConfig.ts` had also moved
+
+`OwnershipGraphView.tsx:1882` is now `:1801` — task 1 (canvas content, -372
+lines) landed in between and shifted everything after it upward. And the file
+`appConfig.ts` is at `src/config/appConfig.ts`, not `src/appConfig.ts`; the
+quick-win row gave a bare filename, which reads as repo-root. Both were found by
+grepping for the *content* (`bg-slate-100 dark:bg-slate-700`, `tip: '...ranges'`)
+rather than trusting the coordinates. **Lesson for the next of these: in a repo
+where a -372-line commit just landed, treat file:line in a doc as a hint about
+which file, never as a location.**
+
+### "and `:203` for the short vocab" was wrong — do not re-do it
+
+The `entityCol` row said to also fix `:203` in "the short vocab". There are three
+vocabs, not two, and the instruction does not survive contact with them:
+
+| Vocab | `cls`/`enm`/`typ` tips | Action |
+|---|---|---|
+| `researcher` (`:126-128`) | said "…ranges" | **changed** — this was the whole point |
+| `linkml` (`:201-203`) | "Class-typed ranges" etc. | **left alone** — the same row says the `linkml` vocab keeps "ranges" legitimately, and it is the native LinkML vocabulary, so "ranges" is the correct word there |
+| `modeler` (`:166-170`) | "Table-typed columns" etc. | **nothing to do** — already column-phrased, never said "ranges" |
+
+So `:203` is inside `linkml`, which the very same row protects. The two halves of
+that sentence contradicted each other; the "`researcher` vocab only" half is the
+one that matches the stated rationale (LinkML jargon in *researcher-facing*
+text), so that is what I followed. TASKS now records this so it is not
+re-litigated.
+
+### The header change is `bg-slate-700`, not an arbitrary dark gray
+
+The stated goal was "makes the colored child headers read as a family rather
+than anomalies", so the new value is not a freehand gray — it copies the shape
+of the existing `headerBg`/`headerText` tokens in `appConfig.ts`, which are all
+`bg-<color>-700 dark:bg-<color>-700` + `text-white`. Hence
+`bg-slate-700 dark:bg-slate-700 text-white`: same family, slate hue.
+
+One thing the task did not mention but the change forces: the header's bottom
+border was `border-gray-200`, chosen against the old *light* `bg-slate-100`. On a
+dark bar that light hairline reads as a seam, so it moved to `border-slate-800`
+(dark side unchanged at `dark:border-slate-600`). **Not verified in a browser** —
+no dev server may be started here (see the standing rule) — so this is reasoned
+from the token values, and it is the one thing in this entry worth a glance when
+someone next has the app open.
+
+Typecheck clean; the 11 test files touching `appConfig` or `OwnershipGraphView`
+pass (105 passed, 2 skipped). No test asserted on either changed string — the
+`ranges` hits in `src/test/` are all comments and test *names* about LinkML
+ranges the concept, not about these tooltips.
+
+---
+## 2026-08-27 (tour state) — the push/pop stack replaced absolute snapshots
+
+TASKS item 2, implemented as designed: the simple stack, every field pushing and
+popping the same way, no hybrid. `State:` became `Change:`; the entry snapshot,
+the restore-on-exit, the yellow "your changes will be discarded" warning and its
+CSS are all gone. 26 new tests, 372 passing, typecheck clean.
+
+The design was already settled (see the previous entry's "Absolute-per-step
+state may not survive"). What follows is what only showed up while building.
+
+### The refcount has nowhere to live in `sel`
+
+**This is the one thing that would have sunk a naive implementation, and the
+design docs do not mention it.** The whole model rests on "if the pushed value
+is already present, push it again anyway" — but `sel` is a **Set**. It cannot
+hold the tour's copy of `Participant` beside the viewer's. Push twice and you
+still have one member; pop once and it is gone, taking the viewer's selection
+with it — the exact failure the duplicate push exists to prevent.
+
+I wrote it that way first and the test `popping the tour's copy leaves the
+viewer's selection standing` is what caught it. The fix: the tour's contribution
+is a **counted multiset** held in the stack (`TourStack.counts`), and the app's
+`sel` is composed as *viewer ∪ tour*. The viewer's half is then derived —
+`viewerState` = selected, minus what the stack is holding — rather than tracked.
+
+**Derived, deliberately.** A tracked "viewer's set" would need updating on every
+click, every push and every pop, and one missed path strands an id under the
+wrong owner permanently. The two inputs used instead are both already
+authoritative: what is selected now, and what the tour pushed.
+
+### A viewer edit has to be folded back INTO the stack
+
+Second thing not in the design. Composing viewer ∪ tour on every render means a
+viewer's untick of something a step pushed is **undone by the very next
+compose** — the stack still holds the id, so it comes straight back and the
+checkbox refuses to stay off. Same problem mirrored: a viewer TICK of something
+a step already pushed is invisible (the set swallows it), so the next pop takes
+it away from under them.
+
+Both are the same move — *drop every tour copy of an id the viewer acted on* —
+and that is `reconcile`, called from the single URL-writing effect. Where
+`noteViewerEdit()` used to set a flag for the warning, `reconcile` now does real
+work. Outside a tour the stack is empty and it is a no-op.
+
+An untick needs no help to detect (the id's absence is the evidence); a tick of
+an already-selected id does, because nothing about the resulting state records
+that it happened. So the two arrive by different routes: the **untick** through
+the write effect, which compares state against the stack; the **tick** through
+`claimForViewer`, called from `toggleSelect` and `addToCanvas`, which know the
+id at the click.
+
+I first wired only the effect and passed `{}`, leaving `ticked` dead — a
+parameter that looks load-bearing and is not is worse than either branch of the
+choice. Writing this entry is what surfaced it.
+
+**Both branches are pinned by tests that fail when the branch is deleted**,
+which is worth stating because I checked and the first version of the
+integration test did NOT do this: it passed with `reconcile` disabled entirely.
+The reason is worth remembering — the shipping tour's later moves are between
+BEATS of one step, and beats push nothing, so a forward walk never crosses a
+frame boundary and never exercises the pop path. The integration test now says
+so in its own comment and claims only the compose path; the pop path is pinned
+in `tourStateStack.test.ts`, where it is isolable.
+
+### Only a step's FIRST beat pushes its change
+
+Beat inheritance **inverted meaning** and this is easy to miss. Under absolute
+state every beat re-applied its step's full query, which was harmless: applying
+the same absolute state twice is idempotent. Pushing the same *delta* once per
+beat is not — a four-beat step would stack four identical frames, and `back`
+would crawl out of them one useless pop at a time before moving anywhere.
+
+So `tourPositions` gives the step's `change` to beat 0 only, and a later beat
+pushes only a change it declares itself. The old test asserting inheritance was
+replaced by one asserting the opposite.
+
+### `goTo` split into `goTo` and `goBack`
+
+Under the old model both directions did the same thing — apply the target's
+absolute state — which is why `goTo` was the whole of navigation. Under the
+stack they are inverses: forward pushes what it arrives at, back pops what it
+**leaves**. `goBack(i)` therefore looks at `positions[i + 1]`, not
+`positions[i]`, which reads wrong until you remember the frame belongs to the
+position being departed.
+
+### An ordering bug in the bridge, worth knowing
+
+`pushTourChange` first computed the viewer's half *after* pushing, which
+subtracts the ids the step is adding and so counts a class the viewer already
+had ticked as the tour's. Caught by reasoning rather than by a test — the unit
+tests exercise the model, and this was in the host bridge. The rule: **split the
+viewer's half against the stack as it stood BEFORE the push.**
+
+### The content migration was the semantic inversion, as warned
+
+Every step had to be re-read; none could be migrated by leaving it alone.
+
+- **Steps 1, 2** — empty `State:` meant "the default view, clear everything".
+  Empty `Change:` means "change nothing". Both are what an exposition step
+  wants, for opposite reasons.
+- **Step 3** — `sel=MeasurementObservation` reads identically and is correct
+  either way. The trap in miniature.
+- **Step 4** — `sel=BodySite~Participant` used to *replace*, so it removed step
+  3's MeasurementObservation. As a delta it does not. **The format has no
+  "remove" verb and I did not invent one** (that is scope beyond the task); the
+  `Action:` was rewritten to say "Added ... to what is already on the diagram",
+  and a note beside the step tells Siggie the option exists. This is the one
+  open decision from this work.
+- **Step 5** — was a verbatim repeat of step 4's absolute state, i.e. "keep this
+  view". As a delta that is "change nothing", so it became empty.
+
+### Tests: what changed and why
+
+The absolute-state test was **deleted**, as TASKS instructed — it pinned the
+model being replaced and said so in its own comment. Two others inverted rather
+than being deleted: beat inheritance (above), and *"a step that changes state
+says what it did"*, where truthiness is now the RIGHT test and used to be the
+bug. Under absolute state an empty `State:` cleared the diagram and very much
+needed an `Action:`; under the stack it changes nothing and needs none.
+
+The known-params list in `every Change: field ... names known params` still had
+`exp`, `hidden` and `owners` in it — retired by item 1 that same day. Updated to
+the live six. **General hazard, same shape as item 1's `RETIRED_PARAMS` find:**
+removing a field from `ExploreState` does not remove it from things that
+enumerate field names.
+
+A new integration suite drives the **shipping tour content** through the real
+app rather than a fixture — deliberately, because the migration was an inversion
+of text that did not visibly change, so a fixture would not catch a step left
+un-migrated. It needs local jsdom stubs for `scrollIntoView` and the Popover
+API, and `hidden: true` on every query: `showPopover` stubs to a no-op, so the
+popover keeps the UA `display: none` and testing-library treats its contents as
+inaccessible. Stubbed in the file, not in `setup.ts`, so the other 33 suites keep
+running against unmodified jsdom.
+
+---
 ## 2026-08-27 (canvas content) — nothing is drawn that was not selected
 
 TASKS item 1, implemented as specified. Net **-372 lines** (405 added, 777

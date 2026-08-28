@@ -151,7 +151,7 @@ comment.
 | **1** | **Canvas content: no caps · only what is selected · expand = select** | ~1 day | ✅ **DONE 2026-08-27** (-372 lines) | [§](#1-canvas-content-no-caps-only-what-is-selected-expand-select) |
 | **2** | **⭐ Tour state: push/pop stack instead of absolute snapshots** | ~0.5 day | ⭐ **NEXT — designed, not started** | [§](#2-tour-state-a-pushpop-stack-instead-of-absolute-snapshots) |
 | 3 | **The tour** — format (S3a ✅) + mechanism (S3b ✅) + copy (Siggie's) | ~0.5–1 day | ▶️ **S3a + S3b DONE — copy is Siggie's** | [format](#s3a-tour-authoring-format-brief) · [mechanism](#s3b-tour-mechanism-brief) · [package plan](HELP_PACKAGE_PLAN.md) |
-| 5 | **Dark-gray box headers, white text** | ~10 min | ⬜ | [quick wins](#quick-wins-one-session-no-design-decisions) |
+| 5 | **Dark-gray box headers, white text** | ~10 min | ✅ **DONE 2026-08-28** | [quick wins](#quick-wins-one-session-no-design-decisions) |
 | 6 | **Edge rendering** — one edge per declaring class; fixes the missing `Specimen.quality_measure` edge. **Decided: do not suppress `ObservationSet.observations`** | ~0.5 day | ⬜ | [§](#edge-rendering-the-fan-from-observationsetobservations) |
 | 7 | **Re-render regression** — "most clicks refresh the main panel". **Measure, don't guess** | ~unknown | ⬜ still uninvestigated | [§](#still-not-investigated-the-one-thing-that-is-not-understood) |
 | 8 | **Drag the tour popover.** Placement itself was exonerated | ~0.5 day | ⬜ | [§](#tour-and-help) |
@@ -168,8 +168,8 @@ first except confirming it looks right afterwards.
 
 | Item | Where | Est. |
 |---|---|---|
-| **Dark-gray box headers, white text** (table item 5) — currently `bg-slate-100 dark:bg-slate-700`; makes the colored child headers read as a family rather than anomalies | `OwnershipGraphView.tsx:1882` | ~10 min |
-| **`entityCol` tooltips say "ranges"** — LinkML jargon in researcher-facing text. Replace with *"Attributes whose value is an entity"* / *"...comes from a permissible value set"* / *"...is a data type"*, which also makes the three read as a partition of the attribute count. **`researcher` vocab only** — the `linkml` vocab keeps "ranges" legitimately | `appConfig.ts:126-128` (and `:203` for the short vocab) | ~10 min |
+| ✅ **Dark-gray box headers, white text** (table item 5) — **DONE 2026-08-28.** Now `bg-slate-700 dark:bg-slate-700 text-white`, matching the `headerBg`/`headerText` family in `appConfig.ts` (`bg-<color>-700` + `text-white`); the bottom border moved from `border-gray-200` to `border-slate-800` so it does not read as a light hairline on a dark bar | `OwnershipGraphView.tsx:1801` | ~10 min |
+| ✅ **`entityCol` tooltips say "ranges"** — **DONE 2026-08-28.** The `researcher` vocab's `cls`/`enm`/`typ` tips now read *"Attributes whose value is an entity / comes from a permissible value set / is a data type"*. **Only `researcher` changed:** `linkml` (`:201-203`) keeps "ranges" legitimately, and `modeler` never said "ranges" — its tips are already column-phrased, so the old note about "`:203` for the short vocab" was wrong. **Note:** these render in the Nested Tabular view (`previous.html`); `EntityTable.tsx:152-158` has a SEPARATE set of hardcoded "…ranges" badge tooltips that bypass the vocab config and were left alone | `src/config/appConfig.ts:126-128` | ~10 min |
 
 **Deliberately NOT in this list**, though they look small: edge crossings and
 the re-render regression (item 7) — both have **unmeasured causes**, and the
@@ -196,9 +196,10 @@ These keep their write-ups below so nothing is lost.
 
 ### Loose ends
 
-- The `entityCol` "ranges" tooltips moved to [Quick wins](#quick-wins-one-session-no-design-decisions).
-  Note the write-up used to say `EntityTable.tsx`; they actually live in
-  `appConfig.ts:126-128`.
+- ~~The `entityCol` "ranges" tooltips moved to [Quick wins](#quick-wins-one-session-no-design-decisions).~~
+  **Done 2026-08-28.** The write-up used to say `EntityTable.tsx`; the vocab tips
+  live in `src/config/appConfig.ts:126-128` — but `EntityTable.tsx` was not
+  entirely wrong: it has its own hardcoded "ranges" badge tooltips at `:152-158`.
 
 ---
 
@@ -808,10 +809,9 @@ the redesign may dissolve the question.**
 
 ### Smaller items raised
 
-- **Box headers should be dark-gray with white text**, to match the (infrequent)
-  colored child headers. Siggie: *"been meaning to say."* Currently
-  `bg-slate-100 dark:bg-slate-700` (`OwnershipGraphView.tsx:1882`). Trivial, and
-  it makes the child-header colors read as a family rather than as anomalies.
+- ~~**Box headers should be dark-gray with white text**~~, to match the
+  (infrequent) colored child headers. Siggie: *"been meaning to say."*
+  **Done 2026-08-28** at `OwnershipGraphView.tsx:1801`.
 - **Unnecessary edge crossings.** *"there are a lot of unnecessary edge
   crossings. i don't know how much we can do to fix them, but we should try."*
   Layout is `useGraphLayout`. Not investigated — do not speculate on cause

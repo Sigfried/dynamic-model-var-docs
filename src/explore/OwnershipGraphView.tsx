@@ -1798,7 +1798,7 @@ export default function OwnershipGraphView({
                       }}
                     >
                       <div
-                        className="flex items-center gap-1 px-2 rounded-t-[4px] bg-slate-100 dark:bg-slate-700 border-b border-gray-200 dark:border-slate-600"
+                        className="flex items-center gap-1 px-2 rounded-t-[4px] bg-slate-700 dark:bg-slate-700 text-white border-b border-slate-800 dark:border-slate-600"
                         style={{ height: HEADER_H }}
                       >
                         <span className={`font-semibold truncate ${n.abstract ? 'italic' : ''}`} title={n.description || n.id}>
