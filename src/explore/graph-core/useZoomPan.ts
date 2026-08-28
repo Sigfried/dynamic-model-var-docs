@@ -39,6 +39,45 @@ export interface ZoomPan {
   setContentSize: (width: number, height: number) => void;
 }
 
+
+/**
+ * The width/height a fit should actually aim at — the container, minus any
+ * part of it the tour popover is sitting on.
+ *
+ * The popover is rendered in the browser's TOP LAYER (Popover API, no
+ * z-index), so nothing in the canvas can be stacked above it and no amount of
+ * repositioning boxes will reveal what it covers. Fitting the diagram to the
+ * full container therefore lays boxes out underneath it: Siggie clicked
+ * `cause_of_death` on tour step 2 and the box it added landed behind the
+ * popover (screenshot 2026-08-28).
+ *
+ * This is the cheap half of the fix. It does NOT reposition the popover or
+ * reserve space for it in general — it just stops the fit from aiming at
+ * pixels that are known to be covered right now. Only the horizontal overlap
+ * is deducted: the popover is a fixed 320px-wide column, so the space it
+ * leaves beside it is usable, whereas deducting its height would throw away a
+ * full-width band for no reason.
+ *
+ * Reads the live rect rather than taking tour state as a prop, because the
+ * popover's position is decided by `popoverPosition` in HelpLayer and mirrored
+ * state would just be a second thing to keep in sync. No popover open (the
+ * normal case) → the container's own size, i.e. exactly the old behaviour.
+ */
+function fitViewport(container: HTMLElement): { w: number; h: number } {
+  const w = container.clientWidth;
+  const h = container.clientHeight;
+  const pop = document.querySelector('[data-help-popover]');
+  if (!pop || !(pop as HTMLElement).matches(':popover-open')) return { w, h };
+  const p = pop.getBoundingClientRect();
+  const c = container.getBoundingClientRect();
+  const overlap = Math.min(p.right, c.right) - Math.max(p.left, c.left);
+  if (overlap <= 0) return { w, h };
+  // Never fit into a sliver: if the popover covers most of the canvas, the
+  // old full-width fit is the lesser evil.
+  const MIN_FRACTION = 0.4;
+  return { w: Math.max(w - overlap, w * MIN_FRACTION), h };
+}
+
 export function useZoomPan(opts: { min?: number; max?: number } = {}): ZoomPan {
   const { min = 0.2, max = 2 } = opts;
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -105,7 +144,8 @@ export function useZoomPan(opts: { min?: number; max?: number } = {}): ZoomPan {
     const { w, h } = sizeRef.current;
     if (!container || !w || !h) return;
     autoFitRef.current = true;
-    setZoom(Math.min(container.clientWidth / w, container.clientHeight / h, 1));
+    const avail = fitViewport(container);
+    setZoom(Math.min(avail.w / w, avail.h / h, 1));
     syncSpacer();
     requestAnimationFrame(() => {
       container.scrollLeft = 0;

@@ -565,10 +565,9 @@ What this app is and how to move around it.
               right before authoring -->
   1. In order to select an entity for display, click its checkbox
      - Anchor: entity-row:Person
-  2. TODO — beat text needed here. <!-- Was empty, which was invisible while
-     beats accumulated (the earlier blocks filled the popover) but leaves this
-     position blank now that a beat REPLACES. Placeholder so the build stays
-     green; the words are yours to write. -->
+  2. The Person box shows the entity name, a dismiss (x) icon, a menu
+     for displaying boxes for related entities, and a list of this entity's
+     attributes.
      - Anchor: node-box:Person
      - Change: sel=Person
      - Action: I clicked the Person checkbox and the Person entity appeared in the viewing panel.
