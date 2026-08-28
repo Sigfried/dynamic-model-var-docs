@@ -10,34 +10,9 @@ Package-level design lives in [docs/HELP_PACKAGE_PLAN.md](../../docs/HELP_PACKAG
 <details>
 <summary><b>TODO</b></summary>
 
-### Done
-
-- **`take the tour` is a filled white pill now**, not a sixth blue underlined
-  link. That was the actual reason it read as chrome: nothing distinguished it
-  from `copy link` / `example cases` / the rest, so there was no visual reason
-  for a first-time visitor to pick it. Did NOT auto-open the tour — that is the
-  other half of your bullet and it is a real decision (it fires on every visit,
-  including yours, and on every share link), so say the word if you want it.
-- **Alerts: write a markdown `>` blockquote** in any `Description:` or beat and
-  it renders as an amber ruled-left band with a `!`. Deliberately not an
-  `Alert:` field — an alert is part of the prose, so it has to be placeable
-  before it, after it, or as the whole block, and a field can only sit in one
-  slot. Amber-and-`!` vs. the action band's blue-and-`✓`: "read this" vs. "the
-  tour did this to your app". Your intro text is authored on step 1.
-- **`Once:` gives an alert a "Don't show this again" checkbox**, stored as
-  `help-once-<key>`; on a later visit the alert is stripped from the entry
-  before it renders. Chose the explicit checkbox over the silent show-once
-  counter you offered as the alternative: with a counter a reader who wanted
-  the note back cannot get it, and one who never looked has already spent their
-  single showing. Step 1 carries `- **Once:** intro`.
-  - The key is authored, not derived from the entry id, so two entries can
-    share one and renaming an entry does not resurrect a dismissed note.
-  - **To see the note again** after ticking it: clear `help-once-intro` from
-    localStorage (devtools → Application → Local Storage).
-- **One fix to your own edits** to keep the build green: `selection-tree` beat 2
-  carried `Change: sel=Person` with no `Action:`, which trips the "a position
-  that changes something says what it did" test. Added a one-line beat
-  `Action:`; the beat text is still your placeholder.
+- according to my work process loop i give you new todos here,
+  but the next todos require screen shots, so do nothing until i
+  paste them into session
 
 ### Still open
 
