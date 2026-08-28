@@ -7,6 +7,87 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-28 (TASKS cleanup) — second cut, 1501 -> 955 lines
+
+Siggie: *"clean up everything in tasks.md except for what still needs to be
+done."* Same instruction as the 2026-08-27 cut, one day later. **There was
+already a precedent and I followed it** rather than inventing a scheme: cut to
+`docs/archive/tasks-2026-08.md` under a new "Second cut" heading, keep original
+text verbatim, and add bracketed `[2026-08-28]` notes where a claim has since
+become false instead of editing the claim. The file's own front matter already
+pointed at that archive, so the convention was load-bearing, not decorative.
+
+### What made something archivable
+
+The test was **"is there anything left to do here?"**, not "does it say DONE".
+Two sections said DONE and still moved for different reasons, and one section
+said BROKEN and did *not* move:
+
+- **"The tour — the problem was never placement"** read as open — it ends with
+  an OPEN carry-forward asking *"can restoring only tour actions work?"* with
+  three alternatives listed. It is archived anyway because task 2 answered it:
+  Siggie's refcounted stack is none of the three (not a whole-state snapshot,
+  not tour-only-keys bookkeeping, not a soft-lock), and its T1/T2 requirements
+  both shipped. An open question that has since been answered by shipped code is
+  history, not work.
+- **"What is confirmed BROKEN, in priority order"** — items 2-4 are all
+  downstream of `DEFAULT_OWNER_CAP` and the chip strips, which task 1 deleted,
+  so they archived. **Item 1 (no horizontal scroll in the tree) did not.** I
+  re-verified it against the code rather than trusting either the doc or my own
+  assumption that a 2026-08-26 finding must be stale: `selectionTree.css:21`
+  still has `overflow-x: auto` on `.dbw-root`, and the clipping ancestor is
+  still there at `ExploreApp.tsx:301` — the line moved from `:319`, the
+  structure did not. It is now item 4 in the live list with its own section.
+
+**This is the trap in a cleanup like this**: a section's own status label is
+about when it was written, not about now. Every status claim I kept or dropped
+was checked against the code or against a commit that landed since.
+
+### Section inventory, not eyeballing
+
+After assembling the new file I diffed the *set of headings* — 43 in the old
+file — against new + archive, and got five unaccounted for. All five turned out
+to be wrappers I had deliberately replaced (`ONE DAY LEFT`, `QUICK WINS`,
+`HANDOFF`, `Loose ends`, `THE TOUR - S3a and S3b`), and I re-read the last two
+to confirm they held nothing unique before letting them go: the HANDOFF
+preamble is a superseded pointer, and `Loose ends` held one item now done.
+**Do this check before committing a cut like this** — it is cheap and it is the
+only thing that catches a section dropped by a bad slice index.
+
+### Anchor links needed real slug rules
+
+Cutting sections orphaned internal `](#...)` links. My first validator used a
+hand-rolled slug function and reported 7 unresolved; 4 were false alarms from
+mishandling em-dashes and emoji. The rule that actually matters: **GitHub strips
+emoji AND the space that follows it**, so `## 🎯 Dates` is `#dates`, not
+`#-dates`. Three links were genuinely broken; one pointed into an archived
+section and now points at the archive file. Zero unresolved at the end.
+
+### Also fixed in passing
+
+- A `He also asked` in "Smaller items raised" referring to Siggie -> `They`.
+- The completed box-header bullet dropped out of "Smaller items raised" rather
+  than being left struck through; the quick-wins section it belonged to is gone.
+- The `EntityTable.tsx:152-158` hardcoded "…ranges" tooltips are recorded in the
+  new QUICK WINS note. They are NOT fixed and were consciously left: Siggie saw
+  them in the Nested Tabular view and said it was fine. Recorded so the next
+  session does not rediscover them as a bug.
+
+### Structure of the new file
+
+Seven `##` groups: THE LIST, THE TOUR, CANVAS AND LAYOUT, UNINVESTIGATED, TOUR
+AND HELP, PARKED, DOCS, then Dates / needs-Siggie / PROCESS. The old file had
+open items scattered across a planning round, a handoff, and a backlog with no
+grouping, which is why the same item could appear in three places with three
+different statuses. The `PARKED` group exists so "explicitly not this week"
+items keep their full write-ups without competing for attention with live work.
+
+New item 12 is a genuine addition, not a re-file: task 2 revealed that the
+authoring format cannot say "remove this from the diagram", which is why tour
+step 4 is cumulative. It needs Siggie, so it is in the list and in the
+needs-Siggie section rather than being quietly fixed.
+
+---
 ## 2026-08-28 (quick wins) — both TASKS quick-win items, and two stale pointers
 
 TASKS' "🍒 QUICK WINS" list, worked top-to-bottom as it advertises. Both items

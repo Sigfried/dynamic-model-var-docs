@@ -1,219 +1,48 @@
 # Tasks
 
-> **Active planning document.** Completed and superseded rounds are in
-> [docs/archive/tasks-2026-08.md](archive/tasks-2026-08.md).
+> **Active planning document — open work only.** Completed and superseded
+> rounds are in [docs/archive/tasks-2026-08.md](archive/tasks-2026-08.md),
+> which was cut twice: 2026-08-27 and again 2026-08-28.
 > Architectural rules and workflow are in [CLAUDE.md](../CLAUDE.md).
 > Reasoning and dead ends are in [WORKLOG.md](../WORKLOG.md) — written for the
 > next session, not for Siggie.
 
----
-## ✅ DONE — the two designed-not-started implementations (2026-08-27)
-
-Two implementations, both decided by Siggie in the help-mode review session,
-both written up here in full. **Both are DONE (2026-08-27).** They were
-independent, and item 1 did not block item 2.
-
-Do not re-open the decisions; if something looks wrong, the reasoning is in
-WORKLOG.md 2026-08-27 ("Siggie reviews help mode") and the alternatives were
-already argued and rejected there.
-
-**Next session starts at the ONE DAY LEFT list below.** One thing came out of
-item 2 that needs Siggie and is not a bug: the authoring format has no way to
-say "take this off the diagram", so tour step 4 now ADDS to step 3's canvas
-rather than replacing it. Noted beside the step in `help-content.md`.
+**Everything listed here is still to do.** If a section names a status, it is
+open, deferred, or waiting on Siggie — nothing on this page is finished. Tasks 1
+and 2 (canvas content; the tour-state push/pop stack) both shipped and are in
+the archive along with the S3a/S3b briefs and the 2026-08-26 planning round.
 
 ---
 
-### ✅ 1. Canvas content: no caps · only what is selected · expand = select
-
-**DONE 2026-08-27.** Implemented exactly as designed, all five points. Net
-**-372 lines** (405 added, 777 deleted) across 21 files; full test suite green
-(346 passing), typecheck clean, lint unchanged from baseline.
-
-What went, beyond the five points: `core`, `ownerCap`, `DEFAULT_OWNER_CAP`,
-`suppressedOwners`, `drawnOwners`, the `expansions` parameter, `ExploreState`'s
-`exp`/`hidden`/`owners`, the `owners` localStorage key, `ExampleCase.exp`, and
-the three-way removal split that appeared in three separate places. Both moot
-test files (`hopSymmetry`, `ownerToggles`) deleted rather than repaired, as
-predicted.
-
-**Two things found while building, both recorded in WORKLOG.md:**
-
-1. **A real bug, caught by `exploreReset`.** `writeExploreState` mutates the
-   live URL rather than rebuilding it, so a retired param from an old link sat
-   in the address bar forever and got copied into shared links. Fixed with
-   `RETIRED_PARAMS`. General hazard: **removing a field from `ExploreState`
-   does not remove it from the URL.**
-2. **Tests that were not about the content policy still broke** — they selected
-   one class and relied on the partner being auto-drawn to have an edge to
-   inspect. Fixed by selecting both ends, not by relaxing the assertion.
-
-**The flagged consequence is live and unmitigated:** expanding from a diagram
-row ticks a checkbox that may be scrolled out of view. Nothing was added to
-soften it (no scroll-into-view, no flash) — that was not part of the design.
-Siggie has not seen this yet.
-
-### Deferred — "hide all" leaves boxes behind with nothing shown
-
-Siggie, 2026-08-27, on seeing it: *"i guess this is correct but a little
-surprising. maybe consider dealing with eventually."* **Filed, not scheduled.**
-
-Repro: select MeasurementObservation → on it, `add all` *belong to me by my
-attribute* → on BodySite, `add all` *I belong to, by their attribute* → on
-Observation/MeasurementObservation, `hide all` *belong to me by my attribute*.
-
-What you get: Condition, Procedure, ImagingStudy, SpecimenCreationActivity and
-Observation still drawn, each reading **`N related · 0 shown`**, several with no
-edges at all — boxes with no visible reason to be there.
-
-**It is correct, and that is the point.** Those classes were added a second
-time by BodySite's `add all`, so they are selected in their own right; the
-`hide all` on Observation removed only what *Observation's* group named. Nothing
-is tracking "who asked for this", by design — that is exactly the provenance
-the selected/expanded merge deleted, and reintroducing it to make `hide all`
-cascade would undo the simplification.
-
-So the surprise is not the removal semantics, it is that **a box can survive
-with `0 shown` and no edges**, which reads as breakage even when it is right.
-Options if this gets picked up, cheapest first:
-
-1. Do nothing. It is self-consistent and the checkboxes explain it.
-2. Style the `0 shown` / edgeless case so it reads as deliberate rather than
-   stranded.
-3. Have `hide all` offer to drop the boxes it just orphaned — a follow-up
-   action, still no provenance tracking.
-
-**Do not** solve it by making `hide all` cascade through provenance.
-
----
-
-### ✅ 2. Tour state: a push/pop stack instead of absolute snapshots
-
-**DONE 2026-08-27.** Implemented exactly as designed — the simple stack, every
-field pushing and popping the same way, no hybrid. `State:` is now `Change:`;
-the entry snapshot, the restore-on-exit, the yellow warning and its CSS are
-gone. New `src/explore/tourStateStack.ts` (the model, host-side) plus a
-push/pop seam replacing apply/read on `HelpProvider`. 26 new tests — 22 unit,
-4 driving the shipping tour through the real app — 372 passing overall,
-typecheck clean, lint unchanged from baseline.
-
-**Four things worth knowing, all recorded in WORKLOG.md:**
-
-1. **The refcount cannot live in `sel`.** It is a Set, so it cannot hold the
-   tour's copy beside the viewer's — the duplicate push has nowhere to go. The
-   tour's contribution is kept as a counted multiset in the stack and `sel` is
-   composed as *viewer ∪ tour*.
-2. **A viewer edit has to be folded back into the stack** (`reconcile`), or an
-   untick of something a step pushed is undone by the very next compose and the
-   checkbox refuses to stay off.
-3. **Only a step's FIRST beat pushes its change.** Re-applying an absolute
-   state per beat was idempotent; re-pushing a delta per beat is not — a
-   four-beat step would stack four frames and `back` would crawl out one
-   useless pop at a time.
-4. **Step 4 now adds to step 3's diagram instead of replacing it.** Its
-   `Action:` says so. The format has no "remove" verb and one was not invented;
-   flagged in the file for Siggie.
-
-**Left for Siggie** — the format cannot express "take this off the diagram". If
-step 4 wants a clean two-box canvas rather than a cumulative one, that is a
-format addition, noted beside the step rather than faked.
-
-<details>
-<summary>Original design, as written before implementation</summary>
-
-**The problem.** `State:` is a full absolute URL query: `applyExploreQuery` does
-`url.search = query`, replacing everything. Three consequences:
-
-- The tour must snapshot the viewer's state on entry and restore it on exit.
-- A mid-tour viewer edit gets clobbered, which is why there is a yellow *"your
-  changes will be discarded"* warning.
-- **Any field a step does not name snaps back to its default.** Live example:
-  Siggie had the owner cap on `all`; every step carrying a `State:` reset it to
-  5, because no step writes `owners=`. Nothing warned; the canvas just changed
-  density mid-tour. *(That particular control is gone as of task 1, but the
-  bug is not about `owners` — it is about every field a step does not name.
-  `sibs`, `dir` and `merge` still reset the same way.)*
-
-**Siggie's design, 2026-08-27 — implement exactly this:**
-
-Keep the concise "what changes" in `State:` (**rename it** — it is a delta now,
-not a state) and hold the tour's contributions as a **stack**:
-
-- Each position **pushes** what it adds; `back` **pops**.
-- **If the pushed value is already present, push it again anyway.** That second
-  copy is a reference count: popping removes only the tour's copy, so the
-  viewer's own selection survives untouched.
-- Leaving the tour by any exit unwinds the remaining stack.
-
-**What this deletes:** the entry snapshot, the restore-on-exit, the yellow
-warning, and the silent-reset problem above (a step that never mentions
-`owners` never touches it).
-
-**Explicitly decided — do NOT build the hybrid.** I proposed refcounted pushes
-for the set-like fields plus previous-value frames for the six scalars
-(`detail`, `roots`, `sibs`, `dir`, `merge`, `owners`), since a scalar has one
-slot and no refcount meaning. Siggie rejected it: *"you're overcomplicating for
-the sake of probably rare edge cases. just do the stack. if scalar settings
-clobber user actions, don't worry about it. easy enough for the user to reclick
-the button."* **Every field pushes and pops the same way.** (Task 1 cut the
-field list from nine to six: `sel`, `detail`, `roots`, `sibs`, `dir`, `merge`.
-Only `sel` is set-like now, so five of the six are scalars — which makes
-Siggie's "don't worry about it" the operative decision, not a corner case.)
-
-**Two traps, both real:**
-
-1. **Today's `State:` values are indistinguishable from deltas.** `State:
-   sel=MeasurementObservation` currently means "this selected and nothing else,
-   every other field defaulted" — it only *reads* as "add this" because these
-   steps all want states expressible in one field, from an empty canvas, never
-   setting a scalar. So the migration is a semantic INVERSION of fields whose
-   text will not visibly change. Do not "migrate" them by leaving them alone.
-2. **A frame must record what actually changed, not what the step declared.**
-   `toggleSelect` used to have a side effect: selecting a class removed it
-   from `expandedIds`. **Task 1 landed first, so `expandedIds` is gone and this
-   particular trap with it** — but the principle stands for any other setter
-   that does more than it declares.
-
-**Also update:** the `State:` section of `src/help/help-content.md` (the format
-spec), and delete the *"every tour STEP carries an absolute state"* test in
-`helpContent.test.ts` — it pins the model being replaced and says so in a
-comment.
-
-</details>
-
----
-
-## 🗓️ ONE DAY LEFT — the list
+## 🗓️ THE LIST
 
 | # | Task | Est. | Status | Detail |
 |---|---|---|---|---|
-| **1** | **Canvas content: no caps · only what is selected · expand = select** | ~1 day | ✅ **DONE 2026-08-27** (-372 lines) | [§](#1-canvas-content-no-caps-only-what-is-selected-expand-select) |
-| **2** | **⭐ Tour state: push/pop stack instead of absolute snapshots** | ~0.5 day | ⭐ **NEXT — designed, not started** | [§](#2-tour-state-a-pushpop-stack-instead-of-absolute-snapshots) |
-| 3 | **The tour** — format (S3a ✅) + mechanism (S3b ✅) + copy (Siggie's) | ~0.5–1 day | ▶️ **S3a + S3b DONE — copy is Siggie's** | [format](#s3a-tour-authoring-format-brief) · [mechanism](#s3b-tour-mechanism-brief) · [package plan](HELP_PACKAGE_PLAN.md) |
-| 5 | **Dark-gray box headers, white text** | ~10 min | ✅ **DONE 2026-08-28** | [quick wins](#quick-wins-one-session-no-design-decisions) |
-| 6 | **Edge rendering** — one edge per declaring class; fixes the missing `Specimen.quality_measure` edge. **Decided: do not suppress `ObservationSet.observations`** | ~0.5 day | ⬜ | [§](#edge-rendering-the-fan-from-observationsetobservations) |
-| 7 | **Re-render regression** — "most clicks refresh the main panel". **Measure, don't guess** | ~unknown | ⬜ still uninvestigated | [§](#still-not-investigated-the-one-thing-that-is-not-understood) |
+| 3 | **The tour copy** — format and mechanism both shipped; the writing is Siggie's | ~0.5–1 day | ▶️ **Siggie's** | [next up](#next-up--siggie-is-refining-the-format-doc-then-editing-the-tour) · [draft](#current-tour-unfinished-draft) |
+| 4 | **No horizontal scroll in the tree** — `overflow-x: auto` sits on `.dbw-root` (`selectionTree.css:21`) but the `flex-1 overflow-y-auto min-h-0` ancestor at `ExploreApp.tsx:301` is sized to the fixed `w-96` panel and clips first. **MEASURED**, and re-verified 2026-08-28 | ~0.5 day | ⬜ | [§](#no-horizontal-scroll-in-the-tree) |
+| 6 | **Edge rendering** — one edge per declaring class; fixes the missing `Specimen.quality_measure` edge. **Decided: do not suppress `ObservationSet.observations`** | ~0.5 day | ⬜ | [§](#edge-rendering--the-fan-from-observationsetobservations) |
+| 7 | **Re-render regression** — "most clicks refresh the main panel". **Measure, don't guess** | ~unknown | ⬜ still uninvestigated | [§](#still-not-investigated--the-one-thing-that-is-not-understood) |
 | 8 | **Drag the tour popover.** Placement itself was exonerated | ~0.5 day | ⬜ | [§](#tour-and-help) |
 | 9 | **Edge crossings.** Cause unmeasured | ~unknown | ⬜ | [§](#smaller-items-raised) |
-| 10 | **Tour authoring notes + draft preview** — `Note:` / `Draft:` / `ForClaude:` fields, and a way to view a tour *including* its parked and unfinished steps. Siggie wants all of it; deferred 2026-08-27 for time | ~0.5 day | ⬜ deferred | [§](#deferred-authoring-notes-and-draft-preview) |
+| 10 | **Tour authoring notes + draft preview** — `Note:` / `Draft:` / `ForClaude:` fields, and a way to view a tour *including* its parked and unfinished steps. Siggie wants all of it; deferred 2026-08-27 for time | ~0.5 day | ⬜ deferred | [§](#deferred--authoring-notes-and-draft-preview) |
 | 11 | **Migrate positioning to CSS anchor positioning** — deletes the 250ms poll, the flip/clamp, and the `EST_H` guess. **UNBLOCKED: S3b's resolvers landed.** Note `slot-row` selects on a PAIR of attributes, which no single `anchor-name` rule expresses | ~0.5 day | ⬜ ready | [HelpLayer.tsx header](../src/help/HelpLayer.tsx) · [HELP_PACKAGE_PLAN](HELP_PACKAGE_PLAN.md) |
+| 12 | **A tour step cannot say "remove this from the diagram."** Fell out of task 2: step 4 now ADDS to step 3's canvas rather than replacing it, because the authoring format has no remove verb and one was not invented. Flagged beside the step in `help-content.md` | ~unknown | 🔓 **needs Siggie** | [§](#still-open--needs-siggie) |
 
-### 🍒 QUICK WINS — one session, no design decisions
+### 🍒 QUICK WINS
 
-Small, self-contained, and none of them blocks or is blocked by the tour work.
-Each has an exact location and a decided outcome, so this list can be worked
-top-to-bottom without stopping to ask anything. Nothing here needs a browser
-first except confirming it looks right afterwards.
+Both 2026-08-28 quick wins are **done** (`1e4d8f6`) and archived: the dark-gray
+box headers, and the `entityCol` tooltips that said "ranges".
 
-| Item | Where | Est. |
-|---|---|---|
-| ✅ **Dark-gray box headers, white text** (table item 5) — **DONE 2026-08-28.** Now `bg-slate-700 dark:bg-slate-700 text-white`, matching the `headerBg`/`headerText` family in `appConfig.ts` (`bg-<color>-700` + `text-white`); the bottom border moved from `border-gray-200` to `border-slate-800` so it does not read as a light hairline on a dark bar | `OwnershipGraphView.tsx:1801` | ~10 min |
-| ✅ **`entityCol` tooltips say "ranges"** — **DONE 2026-08-28.** The `researcher` vocab's `cls`/`enm`/`typ` tips now read *"Attributes whose value is an entity / comes from a permissible value set / is a data type"*. **Only `researcher` changed:** `linkml` (`:201-203`) keeps "ranges" legitimately, and `modeler` never said "ranges" — its tips are already column-phrased, so the old note about "`:203` for the short vocab" was wrong | `src/config/appConfig.ts:126-128` | ~10 min |
+One follow-up was found while doing them and deliberately **not** fixed:
+`EntityTable.tsx:152-158` carries its own hardcoded `"…ranges"` badge tooltips
+that bypass the vocab config entirely. They render in the **Nested Tabular**
+view (`previous.html`), not the Explore SPA. Left alone; Siggie saw them and
+said it was fine.
 
-**Deliberately NOT in this list**, though they look small: edge crossings and
-the re-render regression (item 7) — both have **unmeasured causes**, and the
-standing rule is measure before proposing one. They are not quick wins; they are
-investigations wearing a quick win's clothes.
+**Deliberately NOT quick wins**, though they look small: edge crossings and the
+re-render regression (item 7) — both have **unmeasured causes**, and the
+standing rule is measure before proposing one. They are investigations wearing a
+quick win's clothes.
 
 ### Explicitly NOT this week
 
@@ -222,26 +51,25 @@ the ownership legend (postponed by Siggie) · multi-category membership ·
 CURIE links · the bare diagonal · dragging polish · example-cases restructuring.
 These keep their write-ups below so nothing is lost.
 
-## 🔁 HANDOFF — earlier round (2026-08-27, after the parallel-session round)
+---
 
-*(Superseded as the entry point by [NEXT SESSION](#next-session-start-here-decided-2026-08-27) above; the rules and loose ends below still apply.)*
+### No horizontal scroll in the tree
 
-### Rules learned the hard way — keep these
+Siggie, 2026-08-26: *"i don't see any horizontal scroll capability"*. MEASURED
+by reading the mount site, and re-verified 2026-08-28 (the line moved, the
+structure did not): `selectionTree.css:21` puts `overflow-x: auto` on
+`.dbw-root`, but `ExploreApp.tsx:301` wraps it in
+`<div className="flex-1 overflow-y-auto min-h-0">` — **that** ancestor is the
+one sized to the fixed `w-96` panel, so it clips first and the inner scroll
+container never has anything to scroll.
 
-1. **NEVER `git add -A`, `git add .`, or `git commit -a`.** Stage explicit paths.
-   A single such mistake put ~1128 lines of two sessions' implementation inside
-   `b17db08`, a commit whose message claims it is docs-only. That commit is now
-   in `main`'s history; its message still does not describe its contents.
-
-### Loose ends
-
-- ~~The `entityCol` "ranges" tooltips moved to [Quick wins](#quick-wins-one-session-no-design-decisions).~~
-  **Done 2026-08-28.** The write-up used to say `EntityTable.tsx`; they actually
-  live in `src/config/appConfig.ts:126-128`.
+The row overlap that used to accompany this went away because of the 18ch xref
+clamp, not because scrolling started working. Fix belongs on the ancestor — but
+see the chip-strip work first; scroll may not be the answer.
 
 ---
 
-## 🚦 THE TOUR — S3a and S3b, next up
+## 🚦 THE TOUR — copy is what remains
 
 ### Next up — Siggie is refining the format doc, then editing the tour
 
@@ -307,6 +135,7 @@ Until then: HTML comments work, never render, and are what the S3a translation
 already uses (`TODO(siggie):` beside each entry with a gap).
 
 ---
+
 ### Current tour unfinished draft
 
 1. current first step sort of highlights the title but doesn't dim the rest. fix
@@ -355,344 +184,45 @@ already uses (`TODO(siggie):` beside each entry with a gap).
       the entity will appear in the main panel along with directly related
       entities. There are five ways an entity can be related to another.
    2. highlight row
-   3. click checkbox. 
-
-### S3a — Tour authoring format (brief)
-
-> ## ✅ DONE 2026-08-27
->
-> The format is specified in the header comment of
-> [`src/help/help-content.md`](../src/help/help-content.md) — that comment is
-> the spec, per the existing convention. The decisions and the changed test
-> contract are recorded in
-> [HELP_PACKAGE_PLAN.md](HELP_PACKAGE_PLAN.md#known-gaps-scoped-2026-08-26),
-> which is the doc that survives the package extraction.
->
-> **New fields:** `Anchor:` (identity no longer doubles as DOM selector),
-> `Beats:` (ordered sub-steps in one popover), `Action:` (a step says what it
-> just did). `tourPositions()` in `parseHelpContent.ts` is the seam S3b
-> navigates.
->
-> **Siggie's draft is translated in, with gaps marked** as `TODO(siggie)` HTML
-> comments beside each entry — including the two sentences that trail off,
-> carried over unfinished on purpose. **The brief below is kept for its
-> reasoning**; the six constraints it lists are what the format was designed
-> against.
-
-**Goal: design the format Siggie will write the tour in, then translate their
-current draft into it — gaps, mistakes and all — so they can keep writing.**
-
-> *"create tour authoring spec/format; and translate current tour contents —
-> with their gaps and mistakes — into it for me to continue from"*
-
-**You are not writing tour copy and not fixing their copy.** Translate it
-faithfully. Where their draft is unfinished, carry the gap into the new format as
-a visible TODO rather than completing it — they are continuing from your output,
-and a plausible-looking invented sentence is worse than an obvious hole. Two
-sentences literally trail off (`A primary goal` and `Entities can be related to
-each other through`); keep them as-is and mark them.
-
-**What the current format is.** `src/help/help-content.md`, parsed by
-`src/help/parseHelpContent.ts` into `HelpEntry`
-(`id, title, description, interactions[], shortcut?, context?, state?, tour?`).
-The format is documented in a comment at the top of `help-content.md`.
-
-**Why it does not stretch — the specific constraints to break.** Read these
-before designing; each is a real limit in today's parser, not a guess:
-
-1. **An entry's `id` is BOTH its DOM anchor and its identity.** `### <id>` must
-   match a `data-help-id` attribute. So two tour steps cannot point at the same
-   element, and a step cannot point at something that has no tagged element.
-   Siggie's draft needs both.
-2. **`tour:` is a flat 1-based integer.** Their draft is nested — step 4 has
-   sub-steps 1/2/3 ("Selecting an entity" → highlight row → click checkbox).
-   There is no representation for that.
-3. **No progressive disclosure within a step.** Siggie asked directly:
-   *"can we animate this so that step 4 keeps this popover but shows the next
-   bullet, etc? not sure best way to represent this in my outline...well, we're
-   going to need a reasonably human-readable/writable format for the full tour
-   specs anyway"* — that last clause is this brief.
-4. **`state:` is a URL query applied before the step.** The decided `back`
-   behaviour (below) needs every step to carry its FULL state, not a diff, and
-   needs an entry/exit snapshot. Check whether `state:` as-is already satisfies
-   "full state" — it may.
-5. **A step cannot describe an ACTION it performs.** This is what confused
-   Siggie in review: step 2 silently selects Participant and nothing says the
-   tour did it. The format needs somewhere to say "we just ticked this for you."
-6. **Anchors are whole elements.** Siggie needs to highlight *a row*
-   ("the participant row highlighted, not the whole tree") and *a slot row*
-   (`observation_type`). Whether that is a format problem or purely S3b's
-   problem is yours to determine — but the format has to be able to EXPRESS it.
-
-**Tour `back` is decided; design to it.** Siggie, 2026-08-27:
-
-> *"if tour starts when state is not default, record state; when tour ends/is
-> exited, restore prior state; every step of tour is prespecified so navigation
-> either way gives exact state. allow interaction, but explain to user that
-> their changes will be undone by each step on tour"*
-
-**Constraints on your design:**
-- **Markdown, hand-writable.** Siggie writes this; it is not a config file. Their
-  draft is nested markdown lists and that is a strong hint at what they find
-  natural. Do not invent YAML/JSON front-matter unless markdown genuinely cannot
-  express it.
-- **The help-only entries must keep working.** `help-content.md` serves BOTH
-  help mode and the tour. Do not break the help half to serve the tour.
-- **`src/test/helpContent.test.ts` pins the current contract** (content parses,
-  tour numbered 1..n, every entry id is tagged in the app). Expect to change it
-  deliberately, and say what you changed.
-
-**Deliverables:**
-1. The format, documented in the header comment of `help-content.md` the way the
-   current one is (that comment IS the spec — keep that convention).
-2. Siggie's draft translated into it, faithfully, with gaps marked.
-3. A parser that reads it. If S3b is running separately, agree the TypeScript
-   shape with them first — that interface is your seam.
-4. A short note in chat on what you could not express and why.
+   3. click checkbox.
 
 ---
 
-### S3b — Tour mechanism (brief)
+## 🧱 CANVAS AND LAYOUT
 
-> ## ✅ DONE 2026-08-27
->
-> All three gaps closed. **The brief below is kept for its reasoning.**
->
-> - **Actions render** in their own band — tinted, ruled, checked, above the
->   body, deliberately unlike it.
-> - **Row anchors resolve.** `src/explore/helpResolvers.ts` implements
->   `entity-row`, `entity-checkbox`, `slot-row`, `node-box`; the provider
->   takes them as a `resolvers` prop, so nothing under `src/help/` names a dmvd
->   concept. Two markup additions were needed: `data-entity-row` in
->   `SelectionTree.tsx` (the DagBrowser widget's row carries no node id) and
->   `data-declaring-class` on slot rows (a merged box holds several rows with
->   one slot name).
-> - **`back` restores.** The provider navigates `tourPositions()`, snapshots
->   the viewer's state on entry via a new `onReadState` prop, and restores on
->   every exit path. The popover says changes will be discarded, but only once
->   the viewer has actually changed something.
-> - The counter reads `4.2 / 6`, and a beatless step reads plain `5 / 6`.
->
-> **Two bugs found and fixed while in there**, both pre-existing: the popover
-> was gated on a resolved anchor, so `Anchor: none` steps displayed nothing at
-> all; and `scrollIntoView` ran once, before the row a step's `State:` creates
-> exists, so row anchors were never scrolled to.
->
-> **Step 1 now uses `Anchor: app-title`** (Siggie, 2026-08-27), so it rings the
-> title and dims the rest — closing the old "first step doesn't dim" quick win,
-> which was an authoring choice rather than a bug: the dim IS the spotlight
-> ring's outer shadow, so an anchorless step cannot have one.
->
-> **Task 11 (CSS anchor positioning) is now unblocked** — its stated blocker
-> was these resolvers. See the header comment in `HelpLayer.tsx` for what the
-> migration must handle: rows are marked by four different attributes, and
-> `slot-row` selects on a PAIR of them, which no single `anchor-name` rule
-> expresses.
->
-> **Verified 2026-08-27:** full suite green — 34 files, 358 passed, 2 skipped
-> (both pre-existing, in `DetailContent.test.tsx`), 0 failed. Typecheck and
-> lint clean. `src/test/helpResolvers.test.ts` covers the four resolvers with
-> DOM fixtures copied from the real render sites: 17 tests, all passing.
->
-> **Still unverified: the browser.** Nothing here has been seen running. The
-> logic is tested, the *look* is not — the action band, the warning line, and
-> whether step 3's beats behave when the diagram relayouts between anchors.
+### Deferred — "hide all" leaves boxes behind with nothing shown
 
-**Goal: close the three known gaps in the tour machinery.** All are in
-`src/help/HelpLayer.tsx` and `HelpProvider.tsx`.
+Siggie, 2026-08-27, on seeing it: *"i guess this is correct but a little
+surprising. maybe consider dealing with eventually."* **Filed, not scheduled.**
 
-**1. Steps must visibly perform their actions.** Today a step carries
-`**State:** sel=Participant`, the canvas changes, and nothing says the tour did
-it. **This is the bug that made Siggie misread the entire step** — they read the
-popover as describing the Participant box that had just appeared. Whatever form
-this takes (a line in the popover, a beat before the change, an animation), the
-user must be able to tell that the tour acted.
+Repro: select MeasurementObservation → on it, `add all` *belong to me by my
+attribute* → on BodySite, `add all` *I belong to, by their attribute* → on
+Observation/MeasurementObservation, `hide all` *belong to me by my attribute*.
 
-**2. The spotlight must be able to ring a ROW, not just a panel.** Siggie: *"the
-participant row highlighted, not the whole tree."* Today
-`document.querySelector('[data-help-id="..."]')` finds one element, and the
-tagged elements are whole panels. Siggie also wants to highlight a slot row
-(`observation_type`) inside a box. **This is a real capability gap, not a
-tweak** — it needs anchors that can address a row.
+What you get: Condition, Procedure, ImagingStudy, SpecimenCreationActivity and
+Observation still drawn, each reading **`N related · 0 shown`**, several with no
+edges at all — boxes with no visible reason to be there.
 
-**3. `back` must restore exactly.** Siggie decided this (2026-08-27; quoted in
-full under [S3a](#s3a-tour-authoring-format-brief)): snapshot on tour entry,
-restore on exit; every step sets its full state absolutely so navigation either
-way is exact; interaction allowed, but the popover must SAY that stepping will
-discard it.
+**It is correct, and that is the point.** Those classes were added a second
+time by BodySite's `add all`, so they are selected in their own right; the
+`hide all` on Observation removed only what *Observation's* group named. Nothing
+is tracking "who asked for this", by design — that is exactly the provenance
+the selected/expanded merge deleted, and reintroducing it to make `hide all`
+cascade would undo the simplification.
 
-**Do NOT do:**
-- **Do not "fix" popover placement.** It was investigated and **exonerated** —
-  the geometry did the right thing; the bug was the invisible action (gap 1).
-  See [The tour](#the-tour-the-problem-was-never-placement). Popover
-  **dragging** is still wanted as an escape hatch, but it is item 8, not this.
-- Do not author tour copy — that is Siggie's, via S3a's format.
+So the surprise is not the removal semantics, it is that **a box can survive
+with `0 shown` and no edges**, which reads as breakage even when it is right.
+Options if this gets picked up, cheapest first:
 
-**Seam with S3a — now concrete (S3a shipped 2026-08-27).** Build against
-`tourPositions(content): TourPosition[]` in `parseHelpContent.ts`: one flat,
-ordered list of navigable positions, each carrying resolved
-`text` / `anchor` / `action` / `state`. Steps and beats are already flattened,
-so the navigator never handles nesting, and `back` is `positions[i - 1]`.
+1. Do nothing. It is self-consistent and the checkboxes explain it.
+2. Style the `0 shown` / edgeless case so it reads as deliberate rather than
+   stranded.
+3. Have `hide all` offer to drop the boxes it just orphaned — a follow-up
+   action, still no provenance tracking.
 
-What S3a left for you, mapped onto the three gaps above:
-
-1. **Announce actions** — `position.action` is authored and parsed; nothing
-   renders it. It needs its own visually distinct band in the popover.
-2. **Ring a row** — `position.anchor` is a `{ kind, arg }` pair.
-   `HelpLayer.elementFor()` implements only `help-id`; `entity-row`,
-   `entity-checkbox`, `slot-row` and `node-box` return null today and degrade
-   to an unringed popover. **These resolvers are the row-highlighting gap** —
-   they belong in the dmvd app, NOT in the parser, which must stay
-   host-agnostic for the package extraction.
-3. **Exact `back`** — every position carries a full absolute `state`, never a
-   diff, so navigation either way is already exact by construction. What is
-   missing is runtime: snapshot on tour entry, restore on exit, and the
-   popover line telling the viewer their own changes will be discarded.
-
-Also note the tour counter: with beats, `4.2 / 6` replaces `4 / 6`.
-`HelpLayer.tsx:158` still renders `tourStep + 1 / steps.length`.
-
-**Definition of done:** a tour step can announce that it acted, ring a specific
-row, and be navigated backwards into an exact prior state — demonstrated on the
-existing 4-step tour, even though its copy is about to be replaced.
+**Do not** solve it by making `hide all` cascade through provenance.
 
 ---
-
-
-## 🎯 Dates
-
-- **Explorer demo: 2026-08-25 — DONE.** Held a couple of hours after the
-  session that shipped the induced-slot migration and the ownership rules; the
-  merged-sibling inheritance work was built in the ~90 minutes before it. The
-  big program manager was NOT there, which is what drives the sharing work.
-- **Development wrap-up: ~2026-08-28/29 — ONE DAY LEFT as of 2026-08-27.**
-  Siggie, 2026-08-27: *"i need to focus on the upcoming tasks. only have a day
-  left."* The list at the top of this file is scoped to that.
-- **Sharing / presentation (video demo + non-video guided tour):** asked for by
-  the stakeholders on 2026-08-25, to be scoped in its OWN session before
-  further development. See the handoff.
-- **Target release 2026-07-30 passed and was never renegotiated.** Treat
-  "before the release" language elsewhere in the docs as stale.
-  **Needs Siggie: set a new target or drop it.**
-
----
-
-## 📋 PLANNING — 2026-08-26 review of `0c6cfdc` (session 2)
-
-> **This was a PLANNING session. Siggie: *"this whole session should be
-> considered planning at this point, btw; not fixing."*** Nothing below was
-> implemented. Three screenshots were reviewed against the code and several
-> answers were **measured with throwaway probes**, not reasoned — those are
-> marked MEASURED and can be trusted without re-deriving them.
-
-### Verdict on `0c6cfdc`: keep it, fix forward
-
-Do **not** revert. Of the six changes, four are settled: the owner-cap
-suppression rule (uncontested), the CSS overlap fix (**Siggie confirmed the
-row-overlap bug is gone**), the spotlight, and the hint hover-pin. The two that
-need work are design conversations, not bad code. See below.
-
-### What is confirmed BROKEN, in priority order
-
-1. **No horizontal scroll in the tree** (Siggie: *"i don't see any horizontal
-   scroll capability"*). MEASURED by reading the mount site: `selectionTree.css`
-   puts `overflow-x: auto` on `.dbw-root`, but `ExploreApp.tsx:319` wraps it in
-   `<div className="flex-1 overflow-y-auto min-h-0">` — **that** ancestor is the
-   one sized to the fixed `w-96` panel, so it clips first and the inner scroll
-   container never has anything to scroll. The overlap went away because of the
-   18ch xref clamp, not because scrolling started working. Fix belongs on the
-   ancestor — but see the chip-strip work first; scroll may not be the answer.
-
-2. **Box-height / text overlap inside boxes.** Confirmed by img-1 (Participant:
-   `+ 7 more attributes` colliding with `associated_person` / `Visit add all`)
-   and img-3 (Observation: chip strips colliding with each other and with
-   `Spec…`/`Context`). **Root cause, and it is structural:** `nodeHeight` now
-   adds a second `ownersStripHFor(owned)` band, and both strips are
-   `flex-wrap` with a height *estimated in JS* while the browser does the real
-   wrapping. When the estimate and the actual wrap count disagree, the reserved
-   band and the drawn band diverge and rows below overlap. Same root cause as
-   the edge-anchoring risk the commit message flagged. **This is the strongest
-   argument for the count-plus-menu redesign below: a fixed-size count badge
-   makes box height predictable and kills this bug as a side effect rather than
-   as a patch.**
-
-3. **Duplicate header badges — MEASURED.** `⑃ {n.members.length}` (line 1784)
-   and `▷ {n.subclassCount}` (line 1796) show the same number on a merged box,
-   because `mergeSiblings` sets `subclassCount: members.length` at line 485.
-   They can only differ on an *unmerged* box, where `subclassCount` counts drawn
-   is-a edges (line 206) and `members` is empty — so only one renders anyway.
-   **On a merged box they are identical by construction.** Drop one (probably
-   `▷`, keeping `⑃` for "merged"). This also frees header room for the relation
-   counts.
-
-4. **`Specimen.quality_measure → SpecimenQualityObservation` is missing from the
-   canvas — MEASURED, and it is NOT a classification bug.** The edge exists:
-   `quality_measure` is `multivalued: true, range: SpecimenQualityObservation`
-   → Rule 1 → own-fwd, and a probe confirms `Specimen --quality_measure
-   [ownership]--> SpecimenQualityObservation` is in the subgraph, with SQO's
-   parents being `Visit, Participant, Organization, Specimen, Observation`.
-   It vanishes in img-3 because SQO is **absorbed into the merged Observation
-   box**, and `mergeSiblings` filters owners with `notSelfOrMember` (line 452),
-   folding member ownership into the merged box's chip strip instead of drawing
-   it. *(The `DEFAULT_OWNER_CAP = 5` half of this note is obsolete as of task
-   1 — there is no cap, and no owner is drawn unless selected. The
-   `notSelfOrMember` filtering in `mergeSiblings` is the live half.)*
-
-### The tour — the problem was never placement
-
-Siggie initially read this as a popover-placement bug. It is not. MEASURED:
-step 2's entry id is `selection-tree` (`help-content.md:41`), and
-`ExploreApp.tsx:319` tags the **left panel** with `data-help-id="selection-tree"`.
-Nothing is anchored to Participant. The geometry in `HelpLayer.tsx:203` computed
-`roomRight ≈ 640` vs `roomLeft ≈ -12` and placed the popover right of the tree —
-**exactly as designed.**
-
-The confusion came from step 2 carrying `**State:** sel=Participant`
-(`help-content.md:48`): **the step silently performs an action**, a Participant
-box appears, and nothing in the popover says the tour did it. Siggie: *"i was
-totally misreading the step 2/4 popover... the reason is that Participant
-appears in this step. So the problem isn't/wasn't with placement, it's with the
-tour itself."*
-
-Two requirements, both Siggie's:
-
-- **T1. An action in a step must be visibly performed.** *"if the tour includes
-  an action, the action needs to be very visibly performed, maybe broken into
-  steps so the user follows what's going on."* And specifically: **highlight the
-  Participant ROW, not the whole tree** — the current spotlight rings the entire
-  left panel, which is why the action reads as ambient rather than as a thing
-  that just happened. That means help anchors need to address a row inside the
-  tree, not only whole panels.
-- **T2. `back` must undo actions taken since that step.** Currently `State:` is
-  applied forward with no inverse.
-
-**Proposed mechanism (cheap, because item D already paid for it):** snapshot the
-serializable state on entering each step; `back` restores the snapshot. All the
-graph state already round-trips (`sel`/`exp`/`hidden`/`sibs`/`dir`/`merge`/
-`owners`), so a step becomes literally a URL — which is what the guided-tour
-half of B wanted anyway.
-
-**Siggie's note on prior art:** *"didn't we talk about extracting
-icd11-playground's state management as well as its help system? i guess we
-didn't do it. it handles this in a complex but effective way. though its ability
-to share a state with all its history is overkill for this app (and maybe for
-that one too). but your solution is probably easier."* The earlier note is at
-TASKS.md ~L458 (*"icd11-playground has a state system for this"*). **Decision:
-go with per-step snapshots; do not port icd11's history-carrying state.** Record
-this so it is not re-litigated.
-
-**OPEN — Siggie's carry-forward #1, needs an answer before building:** *"can
-restoring only tour actions work? it couldn't just be revert to previous url at
-that point."* He is right that it cannot be a plain URL revert. If the user
-interacts freely mid-tour, a whole-state snapshot restore discards **their**
-changes too, which is surprising. The alternatives:
-  - whole-state snapshot (simple, clobbers user edits on `back`);
-  - track only the keys the tour itself set and restore just those (matches what
-    they asked for, but "the tour set `sel=Participant` and then the user added
-    Condition" has no obviously right answer);
-  - soft-lock interaction during a tour (sidesteps it; may be too restrictive).
-  This is also entangled with the still-open question of whether the user may
-  interact at all during a tour. **Needs Siggie.**
 
 ### Edge rendering — the fan from `ObservationSet.observations`
 
@@ -845,69 +375,109 @@ agree about distinguishing selection from expansion. But let's see where we end
 up with chip strip replacement before implementing."* **Deferred deliberately:
 the redesign may dissolve the question.**
 
-### Smaller items raised
+### ▶️ OPEN — a narrowed edge should point at the CHILD's header, not the box
 
-- ~~**Box headers should be dark-gray with white text**~~, to match the
-  (infrequent) colored child headers. Siggie: *"been meaning to say."*
-  **Done 2026-08-28** at `OwnershipGraphView.tsx:1801`.
-- **Unnecessary edge crossings.** *"there are a lot of unnecessary edge
-  crossings. i don't know how much we can do to fix them, but we should try."*
-  Layout is `useGraphLayout`. Not investigated — do not speculate on cause
-  without measuring.
-- **Dragging the tour popover** is still wanted as the escape hatch (*"yes,
-  dragging is the escape hatch"*), even though placement was exonerated.
-- **Legend regrouping.** Siggie noticed the legend really has 7 pair types and
-  *"might be easier to read if all the owns (forward) were grouped together."*
-  He also asked *"what would it look like if we just gave the types from the
-  perspective of a single entity"* — i.e. the same four-position table above.
-  **Carry-forward #3: they want this DESCRIBED to them before deciding.** Deferred;
-  they were *"too tired to work it all out."* Note the legend is separately
-  postponed (item H).
+> Restored 2026-08-26 — deleted in `0c9db03` while NEXT UP still pointed
+> at it, same as the multi-category write-up below. Original:
+> `git show 4f33c23:docs/TASKS.md` lines 69–99.
 
-### 🔓 Still open — needs Siggie
+Siggie, 2026-08-25, deferred deliberately: *"IF the container is also a merged
+box (e.g., ObservationSet, MeasurementObservationSet), then the edge points at
+the appropriate header."*
 
-1. **Tour `back` semantics** — restore whole state, restore only tour-set keys,
-   or soft-lock interaction during a tour? (carry-forward #1, discussed above)
-2. **ObservationSet edge** — their "suppress" was premised on it being abstract,
-   **and it is not**. Re-ask. (carry-forward #2, corrected above)
-3. **Legend from a single entity's perspective** — describe it to them first.
-   (carry-forward #3)
-4. Everything already open in the handoff: the re-render regression (still
-   uninvestigated), "what happened to categories", panel resizing/detaching.
+**The case.** `MeasurementObservationSet.observations` narrows its range from
+`Observation` to `MeasurementObservation` (verified: all three ObservationSet
+children narrow `observations` to their matching Observation subtype). Both
+ends are merged boxes. The edge leaves the `MeasurementObservationSet` block
+of one box and should ARRIVE at the `MeasurementObservation` header inside the
+other — today it lands on the target box's header band like every other edge.
+
+**Why this is not a tweak.** The entity end has never carried row meaning. From
+the file header: *"the ENTITY END attaches to a header-level port on the target
+class, which has no corresponding row, so edges point at the entity name."*
+That assumption is load-bearing for the fan (`freeEndTotal`/`freeEndSlot`
+spread ports across the header band), for convergence merging, and for the
+single shared arrowhead. Pointing at a child header means the entity end
+sometimes anchors on a ROW, so all three need to handle both.
+
+**Design question to settle first:** does EVERY edge into a merged box target
+the child header matching its range, or only a `slot_usage`-narrowed one? The
+first is one rule; the second leaves existing edges untouched but means the
+entity end means different things on different edges. Siggie has not chosen.
+
+Note the row machinery is already in place: rows carry `declaringClass`, header
+rows are real rows with a y-position, and `rowY(node, slot, declaringClass)`
+resolves an anchor. What is missing is a port on the entity side that targets
+a header row, and the fan/merge rules knowing about it.
 
 ---
 
-### STILL NOT INVESTIGATED — the one thing that is not understood
+### ▶️ OPEN — the bare diagonal
 
-> **[sg] actually, before trying to fix anything, let's review all the changes**
-> made in the last commit. i see that the writing on top of itself
-> bug is fixed at least.
->
-> **That review HAPPENED — see the PLANNING section immediately above.** The
-> item below was deferred by it, not dropped, and is still the most serious
-> unexplained report. It was NOT investigated in the planning session either.
+One approach in a convergence arrives as a **straight diagonal with no steps**
+while its neighbours step once or twice, cutting across other boxes. Reproduce:
 
-**"Most clicks (chip, selection, +N attributes, etc.) cause at least the main
-panel to refresh. didn't used to do that i don't think."**
+```
+?sel=BodySite~Condition~Consent~Demography~Exposure~Observation~Procedure
+&exp=ImagingFile~ImagingStudy~MeasurementObservation~SpecimenCreationActivity
+```
 
-This is a **regression report that was never investigated**, and it is the most
-serious item on the list because it affects every interaction. Everything else
-is a visual defect in one feature.
+Siggie's reframing, which is the better question: *why does the second edge step
+up twice then dive, when the others step once?* Adding `TimePoint → add all`
+makes the diagonal disappear but introduces many crossings — so ELK appears to
+trade one against the other by corridor crowding.
 
-Likely suspects, in order — but **measure before believing any of them**:
-1. `ExploreApp` now owns the four toolbar settings (`82039a6`). Every one is a
-   `useState` in the top-level component, so any change re-renders the whole
-   tree including `OwnershipGraphView`.
-2. The new `writeExploreState` effect depends on nine values instead of four.
-3. `HelpProvider` wraps the app and its `api` useMemo depends on ~13 values, so
-   it may be invalidating on every render.
-4. `SelectionTree` recomputes `counts` over all 54 classes via `useMemo` keyed
-   on `[nodes, dataService]` — should be stable, but verify.
+**Three guesses were made and all three were wrong.** Do not theorise from the
+code. `?dbg=1` logs each convergence's routed approaches (point count, bend
+count, diagonal flag, endpoints); start there.
 
-**Do not fix by guessing.** Add a render counter or use the React DevTools
-profiler and find out which component re-renders and why. The standing process
-note in this file exists because four bugs in an earlier session came from
-reasoning about the render instead of measuring it.
+#### ✅ Root cause found (2026-08-21) — Siggie's diagnosis, confirmed
+
+**`bend` mode degenerates when there is no corner to bend from.**
+`mergeDistFor(mode, pts)` returns, for `bend`, the length of the LAST ROUTED
+SEGMENT. When ELK routes an approach as a single straight run — which happens
+whenever the outermost fan lane lines up with the source row, i.e. to the
+TOP approach of a large convergence — that "last segment" is the whole edge.
+`mergeCut` then walks back past the source, `cut` lands at index 0, and the
+entire path is replaced by one straight line from the source anchor to the
+shared arrowhead base. That is the bare diagonal.
+
+Verified numerically: a 2-point route 1020px long yields `mergeDist = 1020`,
+`cut = 0`. `near`/`far` are immune because their distance is a fixed 40/120px,
+so the cut always lands on the horizontal run near the node.
+
+So `merge-near` is not "better here" in general — `bend` is simply undefined on
+a corner-less route. The fix Siggie half-remembered (combine near with
+from-last-corner) is well-founded, but as a **guard**, not a compromise: clamp
+`bend` to `Math.min(lastSegment, nearDistance)`, or fall back to `near` when the
+route has fewer than 3 points. **Not yet implemented** — Siggie chose to build
+the comparison harness first.
+
+---
+
+### ▶️ One-hop default
+
+> **⚠️ Largely OBSOLETE as of 2026-08-27.** [Task 1](archive/tasks-2026-08.md)
+> removes automatic one-hop-up owners and the cap entirely, so the behaviour
+> analysed below stops existing. The Organization diagnosis is still worth
+> reading — it is *why* the automatic hop was never enough — and the warning
+> about the second chip strip changing box height still applies to any strip
+> work.
+
+Siggie: *"after refresh and selecting organization, just get the box on its
+own."*
+
+**Diagnosed by probe, and it is real:** Organization has **no owners** (it is a
+DAG root) and **no un-flipped ownership slots** — it owns 14 things, but every
+edge is stored on the other class (`Observation.performed_by → Organization`).
+So one-hop-up finds nothing and there are no rows to expand downward. A genuine
+dead end, while the tree shows "14" beside it.
+
+`0c6cfdc` adds `hiddenOwned` to the subgraph and an "owns" chip strip. The
+model half has tests; **the rendered strip does not, and it adds a second chip
+strip to boxes, which changes box height and therefore edge anchoring.** That
+is the part most likely to be subtly wrong — check that edges still point at
+the right rows on a box that has both strips.
 
 ---
 
@@ -958,6 +528,64 @@ before — read it before designing anything.
 
 ---
 
+### Smaller items raised
+
+- **Unnecessary edge crossings.** *"there are a lot of unnecessary edge
+  crossings. i don't know how much we can do to fix them, but we should try."*
+  Layout is `useGraphLayout`. Not investigated — do not speculate on cause
+  without measuring.
+- **Dragging the tour popover** is still wanted as the escape hatch (*"yes,
+  dragging is the escape hatch"*), even though placement was exonerated.
+- **Legend regrouping.** Siggie noticed the legend really has 7 pair types and
+  *"might be easier to read if all the owns (forward) were grouped together."*
+  They also asked *"what would it look like if we just gave the types from the
+  perspective of a single entity"* — i.e. the same four-position table above.
+  **Carry-forward #3: they want this DESCRIBED to them before deciding.** Deferred;
+  they were *"too tired to work it all out."* Note the legend is separately
+  postponed (item H).
+
+---
+
+## 🔬 UNINVESTIGATED
+
+### STILL NOT INVESTIGATED — the one thing that is not understood
+
+> **[sg] actually, before trying to fix anything, let's review all the changes**
+> made in the last commit. i see that the writing on top of itself
+> bug is fixed at least.
+>
+> **That review HAPPENED — see the PLANNING section immediately above.** The
+> item below was deferred by it, not dropped, and is still the most serious
+> unexplained report. It was NOT investigated in the planning session either.
+
+**"Most clicks (chip, selection, +N attributes, etc.) cause at least the main
+panel to refresh. didn't used to do that i don't think."**
+
+This is a **regression report that was never investigated**, and it is the most
+serious item on the list because it affects every interaction. Everything else
+is a visual defect in one feature.
+
+Likely suspects, in order — but **measure before believing any of them**:
+1. `ExploreApp` now owns the four toolbar settings (`82039a6`). Every one is a
+   `useState` in the top-level component, so any change re-renders the whole
+   tree including `OwnershipGraphView`.
+2. The new `writeExploreState` effect depends on nine values instead of four.
+3. `HelpProvider` wraps the app and its `api` useMemo depends on ~13 values, so
+   it may be invalidating on every render.
+4. `SelectionTree` recomputes `counts` over all 54 classes via `useMemo` keyed
+   on `[nodes, dataService]` — should be stable, but verify.
+
+**Do not fix by guessing.** Add a render counter or use the React DevTools
+profiler and find out which component re-renders and why. The standing process
+note in this file exists because four bugs in an earlier session came from
+reasoning about the render instead of measuring it.
+
+---
+
+---
+
+## 💬 TOUR AND HELP — smaller items
+
 ### Tour and help
 
 Siggie's report: *"need to be more careful about placement (in img-2 it should
@@ -981,177 +609,11 @@ the tour is numbered 1..n, and every entry id is actually tagged in the app.
 
 ---
 
-### ▶️ One-hop default
-
-> **⚠️ Largely OBSOLETE as of 2026-08-27.** [Task 1](#1-canvas-content-no-caps-only-what-is-selected-expand-select)
-> removes automatic one-hop-up owners and the cap entirely, so the behaviour
-> analysed below stops existing. The Organization diagnosis is still worth
-> reading — it is *why* the automatic hop was never enough — and the warning
-> about the second chip strip changing box height still applies to any strip
-> work.
-
-Siggie: *"after refresh and selecting organization, just get the box on its
-own."*
-
-**Diagnosed by probe, and it is real:** Organization has **no owners** (it is a
-DAG root) and **no un-flipped ownership slots** — it owns 14 things, but every
-edge is stored on the other class (`Observation.performed_by → Organization`).
-So one-hop-up finds nothing and there are no rows to expand downward. A genuine
-dead end, while the tree shows "14" beside it.
-
-`0c6cfdc` adds `hiddenOwned` to the subgraph and an "owns" chip strip. The
-model half has tests; **the rendered strip does not, and it adds a second chip
-strip to boxes, which changes box height and therefore edge anchoring.** That
-is the part most likely to be subtly wrong — check that edges still point at
-the right rows on a box that has both strips.
-
 ---
 
-### ✅ IMPLEMENTED 2026-08-26 — merged to `main` 2026-08-27
+## 🧊 PARKED — write-ups kept so nothing is lost
 
-Siggie asked for five things, in their words:
-
-| # | ask | status |
-|---|---|---|
-| 1 | "all the tweaking (item 2.iii)" | **partly** — see below |
-| 2 | "make sure all slots visible" | **done** — nothing was unreachable; verified + one dead control fixed |
-| 3 | "dag-browser-widget instead of current checkbox list" | **done** — flat list kept behind a toggle for comparison |
-| 4 | "serializable state" | **done** — toolbar settings now travel in the link |
-| 5 | "tour/help system" | **done** — 4-step tour + help mode + hints |
-
-Commits: `fb6d6a7` `8dd93aa` `319e58c` `39c9695` `82039a6` `9d477e6` `7fe1999`.
-292 tests pass, typecheck clean, lint at the pre-existing baseline, production
-build succeeds. **Nothing merged, nothing deployed.**
-
-Reasoning, dead ends and the things that surprised me are in WORKLOG.md.
-
-**What is still open on item 1 (tweaking).** The *upward* half is done — the
-owner cap is a real cap, chips add AND remove, every box has a close button.
-Two pieces are not:
-- **The downward equivalent of owner chips**: seeing from a box what it owns
-  without expanding rows one at a time. Measured first: "one hop either
-  direction" is ALREADY true of what is reachable (every entity-ranged row
-  whose range is off-canvas is a click-to-add affordance); the gap is only that
-  there is no summary of them. Needs a design call about where those chips sit
-  on a box that already has an `owned by` strip.
-- **Boxes connected at both ends collapsing to a `+` stub** — Siggie's specific
-  suggestion, not attempted.
-
-**Two follow-ups this unblocked:**
-- Example cases can now be plain links (the localStorage constraint that
-  prevented it is gone). Cases need optional sibs/dir/merge/owners fields first.
-- The flat category list and its `SelectionTable` import should be deleted once
-  the tree is confirmed.
-
----
-
-### 📐 Row visibility — ANSWERED 2026-08-26 (was NEXT UP item 4)
-
-Siggie: *"Must be able to show every slot that should appear in a box. Not sure
-if that is happening now."* Read the code rather than guessing:
-
-- **Merged boxes show EVERY row, always** — no connected/hidden split and no
-  footer (`OwnershipGraphView.tsx:405`, shipped 2026-08-25 to Siggie's *"show
-  all of them. let the box flow over bottom of page if needed"*).
-- **Ordinary boxes collapse by default** (`:236`, `:242`). Hidden =
-  rows with **no edge on the current canvas** + **all plain (non-entity) rows**.
-- Hidden rows are reachable via the `+ N more` footer (`:1851`), and a box whose
-  rows are ALL unconnected **auto-expands** (`:241`) — so the empty-box failure
-  that motivated the merged-box change cannot recur on ordinary boxes either.
-
-**So nothing is unreachable.** What remains is whether collapsed-by-default is
-the right default — a tweaking/UX question, folded into item A.
-
-The original "scrollable / resizable boxes" concern is still real in principle:
-edge anchors are computed from row positions, so scrolling content *inside* a
-fixed-height box would point its edges at the wrong rows. But boxes currently
-grow instead of scrolling, so no edge mis-anchors today. Only revisit if a
-fixed height is introduced.
-
----
-
-### 🔗 NEW — make all important parts of app state serializable
-- to allow sending links and for loading state in step-by-step tour
-- icd11-playground has a state system for this. maybe, like help/tour
-  system, could be packaged for use in other apps
-  - **DECIDED 2026-08-26, do not re-litigate:** NOT porting it. Siggie: *"its
-    ability to share a state with all its history is overkill for this app (and
-    maybe for that one too)."* The tour gets per-step state snapshots instead —
-    see the PLANNING section near the top of this file.
-
-**Current split, measured 2026-08-25:**
-
- | in the URL (`ExploreApp.writeStateToURL`) | in localStorage only (`OwnershipGraphView`) |
- |-------------------------------------------|---------------------------------------------|
- | `sel` selected ids                        | `explore-nl-dir` — LR / TB                  |
- | `exp` expanded ids                        | `explore-nl-merge` — merge mode (⋙ ⋙⋙ ⌙ ≡)  |
- | `detail` open drawer                      | `explore-nl-sibs` — ⑃ siblings on/off       |
- | `roots` path-to-root                      | `explore-nl-owners` — 0 / ≤5 / all          |
-
-Not persisted anywhere: per-node expand state (`expandedNodes`), node pins and
-drags, zoom/pan, table collapse, which example case is open.
-
-**So a shared link today reproduces the SELECTION but renders it with whatever
-settings happen to be in the recipient's browser — or, for a first-time
-visitor, the defaults.** The sibling merge that the whole inheritance feature
-is about is a localStorage flag, so a link showing it off looks like the
-feature does not exist.
-
-**Known knock-on, worth fixing at the same time:** `ExploreApp.tsx:81` carries
-a comment explaining that applying an example case is deliberately NOT a
-navigation, *because* the merge mode lives in localStorage and is read once at
-mount, so a reload would reset the thing being compared. That workaround exists
-only because toolbar state is not in the URL; once it is, example cases can
-become plain links — which is most of what a "non-video guided tour" needs.
-
-**Design questions to settle when implementing:**
-- Which controls are genuinely shareable state vs. personal preference? (Zoom
-  probably preference; ⑃ siblings definitely shareable.)
-- Omit defaults from the URL, as `roots` already does, or write everything so a
-  link is explicit and immune to a later default change? For embeds, explicit
-  is safer.
-- `replaceState` (today) or real history entries, so Back steps through a tour?
-- Keep localStorage as the fallback when a param is absent, so a bare visit
-  still remembers a returning user's preferences.
-
----
-
-### ▶️ OPEN — a narrowed edge should point at the CHILD's header, not the box
-
-> Restored 2026-08-26 — deleted in `0c9db03` while NEXT UP still pointed
-> at it, same as the multi-category write-up below. Original:
-> `git show 4f33c23:docs/TASKS.md` lines 69–99.
-
-Siggie, 2026-08-25, deferred deliberately: *"IF the container is also a merged
-box (e.g., ObservationSet, MeasurementObservationSet), then the edge points at
-the appropriate header."*
-
-**The case.** `MeasurementObservationSet.observations` narrows its range from
-`Observation` to `MeasurementObservation` (verified: all three ObservationSet
-children narrow `observations` to their matching Observation subtype). Both
-ends are merged boxes. The edge leaves the `MeasurementObservationSet` block
-of one box and should ARRIVE at the `MeasurementObservation` header inside the
-other — today it lands on the target box's header band like every other edge.
-
-**Why this is not a tweak.** The entity end has never carried row meaning. From
-the file header: *"the ENTITY END attaches to a header-level port on the target
-class, which has no corresponding row, so edges point at the entity name."*
-That assumption is load-bearing for the fan (`freeEndTotal`/`freeEndSlot`
-spread ports across the header band), for convergence merging, and for the
-single shared arrowhead. Pointing at a child header means the entity end
-sometimes anchors on a ROW, so all three need to handle both.
-
-**Design question to settle first:** does EVERY edge into a merged box target
-the child header matching its range, or only a `slot_usage`-narrowed one? The
-first is one rule; the second leaves existing edges untouched but means the
-entity end means different things on different edges. Siggie has not chosen.
-
-Note the row machinery is already in place: rows carry `declaringClass`, header
-rows are real rows with a y-position, and `rowY(node, slot, declaringClass)`
-resolves an anchor. What is missing is a port on the entity side that targets
-a header row, and the fan/merge rules knowing about it.
-
----
+*Explicitly not this week; each keeps its full write-up.*
 
 ### ▶️ OPEN — a class should appear in SEVERAL CATEGORIES
 
@@ -1267,49 +729,6 @@ where slot definitions are stored.
 
 ---
 
-### ▶️ OPEN — the bare diagonal
-
-One approach in a convergence arrives as a **straight diagonal with no steps**
-while its neighbours step once or twice, cutting across other boxes. Reproduce:
-
-```
-?sel=BodySite~Condition~Consent~Demography~Exposure~Observation~Procedure
-&exp=ImagingFile~ImagingStudy~MeasurementObservation~SpecimenCreationActivity
-```
-
-Siggie's reframing, which is the better question: *why does the second edge step
-up twice then dive, when the others step once?* Adding `TimePoint → add all`
-makes the diagonal disappear but introduces many crossings — so ELK appears to
-trade one against the other by corridor crowding.
-
-**Three guesses were made and all three were wrong.** Do not theorise from the
-code. `?dbg=1` logs each convergence's routed approaches (point count, bend
-count, diagonal flag, endpoints); start there.
-
-#### ✅ Root cause found (2026-08-21) — Siggie's diagnosis, confirmed
-
-**`bend` mode degenerates when there is no corner to bend from.**
-`mergeDistFor(mode, pts)` returns, for `bend`, the length of the LAST ROUTED
-SEGMENT. When ELK routes an approach as a single straight run — which happens
-whenever the outermost fan lane lines up with the source row, i.e. to the
-TOP approach of a large convergence — that "last segment" is the whole edge.
-`mergeCut` then walks back past the source, `cut` lands at index 0, and the
-entire path is replaced by one straight line from the source anchor to the
-shared arrowhead base. That is the bare diagonal.
-
-Verified numerically: a 2-point route 1020px long yields `mergeDist = 1020`,
-`cut = 0`. `near`/`far` are immune because their distance is a fixed 40/120px,
-so the cut always lands on the horizontal run near the node.
-
-So `merge-near` is not "better here" in general — `bend` is simply undefined on
-a corner-less route. The fix Siggie half-remembered (combine near with
-from-last-corner) is well-founded, but as a **guard**, not a compromise: clamp
-`bend` to `Math.min(lastSegment, nearDistance)`, or fall back to `near` when the
-route has fewer than 3 points. **Not yet implemented** — Siggie chose to build
-the comparison harness first.
-
----
-
 ### ▶️ OPEN — example-cases pane needs restructuring
 
 Siggie, 2026-08-21. **Items 3 and 4 are done as of `a18d78b`** — the cases were
@@ -1333,21 +752,6 @@ Still owed from upcoming-thoughts #1: toolbar buttons, colours, dashed edges.
 
 ---
 
-### [sg] upcoming thoughts
-1. i need this for current experimentation but should probably be permanent
-   feature: a help or legend listing every type of ownership pair, the rules
-   and overrides for assigning them and the entity.slot-->entity pairs for
-   each
-   - should also explain all toolbar buttons, colors, dashed edges, etc.
-2. i don't know why OwnershipGraphView.tsx ended up with everything that
-   should be a constant hardcoded instead of living somewhere like appConfig.ts.
-   - i want to be able to change the dim-other-while-something-is-hightlighted
-     opacity but don't know where to find it
-
--
-
----
-
 ### ▶️ OPEN — dragging is unfinished
 
 Works: drag, drop-in-place, edges re-routed, amber border, double-click to
@@ -1368,31 +772,24 @@ Missing:
 
 ---
 
-### 📄 DOCS ARE STALE — Siggie, 2026-08-26: *"TASKS.md (and other docs) is at least partly out of date"*
+### [sg] upcoming thoughts
+1. i need this for current experimentation but should probably be permanent
+   feature: a help or legend listing every type of ownership pair, the rules
+   and overrides for assigning them and the entity.slot-->entity pairs for
+   each
+   - should also explain all toolbar buttons, colors, dashed edges, etc.
+2. i don't know why OwnershipGraphView.tsx ended up with everything that
+   should be a constant hardcoded instead of living somewhere like appConfig.ts.
+   - i want to be able to change the dim-other-while-something-is-hightlighted
+     opacity but don't know where to find it
 
-**Two of the four items below were FIXED 2026-08-27** — kept with their
-resolutions so the remaining two are not lost among them.
-
-- ~~**This file below the handoff** (the A–I "NEXT UP" list Siggie never
-  saw)~~ — **DONE 2026-08-27.** Moved to
-  [archive/tasks-2026-08.md](archive/tasks-2026-08.md) and replaced by the
-  one-day list at the top of this file.
-- ~~**The tail of this file** ("Current round (post-2026-06-11 feedback)"
-  onward, ~470 lines)~~ — **DONE 2026-08-27.** Archived with the rest; the
-  keep/drop calls were made conservatively, so nothing was deleted, only moved.
-- **`docs/EXPLORE_VIZ.md`** was audited 2026-08-24 as "~20–25% stale" and has
-  **still not been revised**; the ownership-chip and selector changes since then
-  make that worse. See the dedicated section below.
-- ~~**`docs/HELP_PACKAGE_PLAN.md`** says "not yet started"~~ — **DONE
-  2026-08-27.** Its status now records that the system is built in `src/help/`
-  but not extracted, plus the two deliberate departures from the plan (no
-  native-title swapping; measured positioning rather than CSS anchor
-  positioning) and the gaps scoped in the PLANNING section.
-- **Dates section at the top** still lists the wrap-up as "~2026-08-28/29" and
-  carries a "**Needs Siggie**: set a new target or drop it" note from an older
-  release date. Still needs Siggie.
+-
 
 ---
+
+---
+
+## 📄 DOCS
 
 ### 📄 OPEN — EXPLORE_VIZ.md is ~20–25% stale (audited 2026-08-24)
 
@@ -1452,6 +849,62 @@ are unlisted (`ownershipExpansion`, `ownershipLegend`, `paths`, `DetailDrawer`,
 own rule those are the bugs.
 
 ---
+
+---
+
+## 🎯 Dates
+
+- **Explorer demo: 2026-08-25 — DONE.** Held a couple of hours after the
+  session that shipped the induced-slot migration and the ownership rules; the
+  merged-sibling inheritance work was built in the ~90 minutes before it. The
+  big program manager was NOT there, which is what drives the sharing work.
+- **Development wrap-up: ~2026-08-28/29 — ONE DAY LEFT as of 2026-08-27.**
+  Siggie, 2026-08-27: *"i need to focus on the upcoming tasks. only have a day
+  left."* The list at the top of this file is scoped to that.
+- **Sharing / presentation (video demo + non-video guided tour):** asked for by
+  the stakeholders on 2026-08-25, to be scoped in its OWN session before
+  further development. See the handoff.
+- **Target release 2026-07-30 passed and was never renegotiated.** Treat
+  "before the release" language elsewhere in the docs as stale.
+  **Needs Siggie: set a new target or drop it.**
+
+---
+
+---
+
+### 🔓 Still open — needs Siggie
+
+1. **A tour step cannot say "remove this from the diagram."** The authoring
+   format has an additive `Change:` and no remove verb. Consequence today: tour
+   step 4 ADDS to step 3's canvas instead of replacing it, so the canvas is
+   cumulative where the copy reads as if it were showing a clean two-box
+   example. One was not invented while implementing task 2; it is flagged beside
+   the step in `help-content.md`. **Does step 4 want a clean canvas?** If so
+   this is a format addition. (Table item 12.)
+2. **ObservationSet edge** — their "suppress" was premised on it being abstract,
+   **and it is not**. Re-ask. (carry-forward #2, corrected below)
+3. **Legend from a single entity's perspective** — describe it to them first.
+   (carry-forward #3)
+4. Everything already open in the handoff: the re-render regression (still
+   uninvestigated), "what happened to categories", panel resizing/detaching.
+5. **Set a new target date or drop it** — see [Dates](#dates); the 2026-07-30
+   release passed and was never renegotiated.
+
+> **Tour `back` semantics** used to be item 1 here. **Answered and shipped**
+> 2026-08-27 as the push/pop stack (`269222e`): neither a whole-state snapshot
+> nor a soft-lock — refcounted push/pop, so mid-tour viewer edits survive by
+> construction. See the archive.
+
+---
+
+## 🧭 PROCESS — read before running anything
+
+### Rules learned the hard way — keep these
+
+1. **NEVER `git add -A`, `git add .`, or `git commit -a`.** Stage explicit paths.
+   A single such mistake put ~1128 lines of two sessions' implementation inside
+   `b17db08`, a commit whose message claims it is docs-only. That commit is now
+   in `main`'s history; its message still does not describe its contents.
 
 ### ⚠️ PROCESS NOTE FOR THE NEXT SESSION — read this one
 
