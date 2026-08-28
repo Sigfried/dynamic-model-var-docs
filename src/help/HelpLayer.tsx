@@ -231,11 +231,12 @@ export default function HelpLayer() {
    * `Once:` — an entry whose alerts the viewer may put away for good.
    *
    * Read at render, not once at mount, because the key is the entry's and the
-   * entry changes as the tour moves. The counter is the re-render trigger: the
-   * checkbox writes to localStorage, which React cannot observe, so ticking it
-   * has to bump something for the alert to actually disappear.
+   * entry changes as the tour moves. The counter is the re-render trigger and
+   * nothing else -- hence the discarded value: the checkbox writes to
+   * localStorage, which React cannot observe, so ticking it has to bump some
+   * state for the alert to actually disappear.
    */
-  const [onceTick, setOnceTick] = useState(0);
+  const [, setOnceTick] = useState(0);
   const onceKey = entry?.once;
   const onceDone = onceKey !== undefined && isDismissedOnce(onceKey);
   const markdownComponents = useMemo(
