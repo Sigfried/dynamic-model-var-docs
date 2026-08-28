@@ -521,11 +521,22 @@ export default function HelpLayer() {
                 </span>
                 {beatDots()}
                 <span className="help-tour-spacer" />
-                <button onClick={prevStep} disabled={tourIndex === 0}>← back</button>
-                <button onClick={nextStep} className="help-tour-next">
+                {/*
+                  The keyboard bindings are announced HERE because nothing else
+                  announces them. `←` / `→` / `Esc` have all worked since the
+                  tour shipped (see the keydown handler in HelpProvider), but a
+                  viewer had no way to find that out -- the buttons looked like
+                  the only way to move.
+                */}
+                <button
+                  onClick={prevStep}
+                  disabled={tourIndex === 0}
+                  title="Previous (← arrow key)"
+                >← back</button>
+                <button onClick={nextStep} className="help-tour-next" title="Next (→ arrow key)">
                   {tourIndex! + 1 === positions.length ? 'done' : 'next →'}
                 </button>
-                <button onClick={endTour} title="End the tour and undo what it added">✕</button>
+                <button onClick={endTour} title="End the tour and undo what it added (Esc)">✕</button>
               </div>
             ) : (
               <div className="help-tour-nav">

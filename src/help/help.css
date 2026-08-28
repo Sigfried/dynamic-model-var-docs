@@ -119,9 +119,10 @@ body.help-mode {
    things were working against it, and the fix addresses all three rather than
    just turning the number down:
 
-    1. The body colour is #0f172a, near-black, so the NEW block has nowhere to
-       go brighter. Every bit of range is on the dim side, which is why the
-       fade has to be deeper than it feels like it should be.
+    1. The body's TEXT colour is #0f172a (inherited from `.help-popover`),
+       near-black, so the NEW block has nowhere to go brighter. Every bit of
+       range is on the dim side, which is why the fade has to be deeper than it
+       feels like it should be.
     2. The new block is the LAST one, at the bottom -- where the eye does not
        start reading. Relative dimming alone never says "begin here".
     3. Nothing MOVED. A reveal that appears between two paints reads as text
@@ -381,7 +382,7 @@ body.help-mode {
   /* Same reason as the links just above: #0284c7 is too dark to read as a mark
      on the dark card. */
   .help-popover-body .help-beat-new { border-left-color: #38bdf8; }
-  /* The dark card's body text is #e2e8f0, so the fade has more room to work
+  /* The dark card's body TEXT is #e2e8f0, so the fade has more room to work
      with than it does on white and does not need to go as deep. */
   .help-popover-body .help-beat-past { opacity: 0.45; }
 }

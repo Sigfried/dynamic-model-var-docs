@@ -7,6 +7,45 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-28 (arrow-key hints; and: the app has no dark mode)
+
+### Keyboard bindings existed but were unannounced
+
+`←` / `→` / `Esc` have all worked since the tour shipped — the keydown handler
+in `HelpProvider` binds them — but nothing in the UI said so, and the buttons
+read as the only way to move. Added `title=` to back, next and ✕. No behaviour
+change; this is purely discoverability.
+
+### The `@media (prefers-color-scheme: dark)` blocks are a live inconsistency
+
+Siggie, on reading a comment about the dark-card colours: *"Oh, I didn't
+realize we had a dark mode. Where's the control for it?"*
+
+**There is no control, and dark mode is deliberately OFF.** Two places say so:
+
+- `tailwind.config.js`: `darkMode: 'class'` is commented out, with *"the app is
+  currently unreadable in dark mode, this was supposed to help fix it but
+  doesn't"*. Every `dark:` utility class in `src/` is therefore dead — Tailwind
+  does not emit them.
+- `App.tsx` has a block labelled `TEMPORARY HACK BECAUSE DARK MODE IS
+  UNREADABLE`: it watches `prefers-color-scheme` and, in dark mode, shows a
+  fixed banner reading *"Dark mode is not yet supported. This app may look
+  broken."*
+
+**But `help.css` and `explore/selectionTree.css` carry real
+`@media (prefers-color-scheme: dark)` blocks, and those DO fire** — a plain CSS
+media query knows nothing about Tailwind's config. So a viewer in dark mode
+currently gets the "not supported" banner over an app where the popover and the
+selection tree have quietly restyled themselves and everything else has not.
+
+Not resolved here — it is Siggie's call which way it goes, and there are two
+coherent answers: delete the media queries so the app is uniformly light and
+the banner is honest, or treat them as the start of the dark support the banner
+says does not exist. Flagged rather than fixed. The help package's blocks were
+written on the assumption the app was theme-aware, which is where the mistaken
+premise entered.
+
+---
 ## 2026-08-28 (beat contrast)
 
 Siggie: *"the contrast between dimmed and new text isn't quite enough to grab

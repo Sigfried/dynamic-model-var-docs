@@ -562,7 +562,8 @@ What this app is and how to move around it.
   Click the title to clear everything and start over.
 
   > This tour will introduce you to all of BDCHM Explorer's major features.
-  > Click the ✕ or hit **Esc** any time to exit.
+  > - Click the ✕ or hit **Esc** any time to exit.
+  > - Use arrow keys or next/back buttons to navigate.
 - **Anchor:** app-title
 - **Once:** intro
 - **Change:**
@@ -579,11 +580,10 @@ What this app is and how to move around it.
               right before authoring -->
   1. In order to select an entity for display, click its checkbox
      - Anchor: entity-row:Person
-  2. I clicked the Person checkbox and the Person entity appeared in the
-     viewing panel.
+  2. 
      - Anchor: node-box:Person
      - Change: sel=Person
-     - Action: Ticked Person for you.
+     - Action: I clicked the Person checkbox and the Person entity appeared in the viewing panel.
 
 ### entities
 
