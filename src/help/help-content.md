@@ -10,13 +10,21 @@ Package-level design lives in [docs/HELP_PACKAGE_PLAN.md](../../docs/HELP_PACKAG
 <details>
 <summary><b>TODO</b></summary>
 
-- I deleted the ## TODO header because it was annoying next to
-  the TODO summary line. It doesn't seem to have broken anything
-  but make sure it's ok.
-- I don't like the way beats work. This is what i want to try:
-  - the stuff outside the Beats section is actually the first beat
-  - by default, the beat text is additive on top of that
-  - in order to clear previous text add a 'clear' marker or field
+### Done
+
+- **Deleting the `## TODO` header is fine** — checked. It works for a different
+  reason than before: with no `##` at all, the block is skipped at the parser's
+  `^## ` guard before `PROSE_SECTIONS` is consulted. Nothing leaks in either
+  way.
+- **Beats are additive now**, exactly as specified: `Description:` is beat one
+  and stays on screen, each beat appends below it, and everything but the newest
+  block is dimmed so you can see what just arrived. `- Clear: true` on a beat
+  starts the popover over at that beat. See *Beats* in the spec.
+  - `relationship-kinds` lost its old beat 1, which existed only to repeat the
+    Description so it would not vanish; its `slot-row` anchor moved up to the
+    entry.
+
+### Still open
 
 <details>
 <summary><b>Original unfinished draft text</b></summary>
@@ -162,7 +170,7 @@ does not get swallowed into that entry's `Description:`.
 | `Action:` | one sentence saying what the tour just DID — see [Actions](#actions) |
 | `Change:` | what this step ADDS to the app state, as a URL query — see [Change](#change) |
 | `Tour:` | which tour this is a step of, e.g. `Walkthrough`; omit for help-only |
-| `Beats:` | ordered sub-steps within one step — see [Beats](#beats) |
+| `Beats:` | ordered sub-steps that ADD to the description — see [Beats](#beats) |
 
 Written as `- **Field:** value`. Only `Title` and `Description` are required.
 An entry with no `Tour:` is help-only: reachable in help mode, never visited by
@@ -391,20 +399,50 @@ A tour step is one popover that can advance through several **beats** without
 moving on to the next step. Use beats for sub-steps of one idea, and for
 revealing a list one item at a time.
 
+**The step's own `Description:` is the first beat, and beats ADD to what is
+showing rather than replacing it.** Each `next` leaves the previous text on
+screen and appends the new block below it; everything but the newest block is
+dimmed, so the reader can see what just arrived without losing the setup.
+
 ```markdown
+- **Description:** The setup. This is beat one — it stays on screen.
 - **Beats:**
-  1. First beat's text. Markdown allowed.
+  1. Appears below the setup, at full strength; the setup dims.
      - Anchor: selection-tree
-  2. Second beat's text.
+  2. Appears below both. Markdown allowed.
      - Anchor: entity-row:MeasurementObservation
      - Action: Ticked it for you.
      - Change: sel=MeasurementObservation
 ```
 
-Each beat may carry its own `Anchor:`, `Action:` and `Change:` as indented
-`- Field: value` lines. Note these are **plain, not bold** — that is what keeps
-a beat's own fields distinguishable from the entry fields that follow the block.
-A beat that omits a field inherits the step's.
+So **do not repeat the description in beat one** — it is already showing. A
+step whose beats reveal a list needs only the list items as beats.
+
+**`Clear:` starts over.** A beat that is a fresh thought rather than a
+continuation drops everything before it:
+
+```markdown
+  3. A new idea, alone in the popover.
+     - Clear: true
+```
+
+Accumulation resumes from there: a beat after the cleared one adds below it. A
+bare `- Clear:` counts as true (it is a marker, not a setting); `Clear: false`
+is not a clear.
+
+Each beat may carry its own `Anchor:`, `Action:`, `Change:` and `Clear:` as
+indented `- Field: value` lines. Note these are **plain, not bold** — that is
+what keeps a beat's own fields distinguishable from the entry fields that
+follow the block. A beat that omits `Anchor:` or `Action:` inherits the step's.
+
+> **What this replaced.** Beats used to REPLACE the body with each beat's text.
+> That forced an author to repeat the description in beat one or watch it
+> vanish the moment the step advanced — `relationship-kinds` did exactly that,
+> and the note beside it asked whether the repetition "reads as a stutter". It
+> was not a stutter to fix; it was a beat that only existed to work around the
+> model. Siggie, 2026-08-28: *"the stuff outside the Beats section is actually
+> the first beat / by default, the beat text is additive on top of that / in
+> order to clear previous text add a 'clear' marker or field."*
 
 A step with no `Beats:` is exactly one beat, so steps written before beats
 existed still parse and behave identically. `next` advances beat by beat, then
@@ -492,18 +530,16 @@ What this app is and how to move around it.
 - **Tour:** Walkthrough
 - **Description:** While the relationship between an entity and its enumerations and raw data attributes is direct (e.g., `MeasurementObservation.observation_type` → `MeasurementObservationTypeEnum`, or `MeasurementObservation.age_at_observation` → `integer`), it can be related to other entities in more complex ways.
 - **Action:** Selected MeasurementObservation for you, and highlighted its `observation_type` attribute.
-- **Anchor:** none
+- **Anchor:** slot-row:MeasurementObservation.observation_type
 - **Change:** sel=MeasurementObservation
 - **Beats:**
-  1. While the relationship between an entity and its enumerations and raw data attributes is direct, it can be related to other entities in more complex ways.
-     - Anchor: slot-row:MeasurementObservation.observation_type
-  2. **Inheritance**, known in modeling parlance as IS_A relationships — e.g. `MeasurementObservation.is_a` → `Observation`.
+  1. **Inheritance**, known in modeling parlance as IS_A relationships — e.g. `MeasurementObservation.is_a` → `Observation`.
      - Anchor: node-box:MeasurementObservation
-  3. **Association / ownership / containment**, known in modeling parlance as HAS_A relationships — e.g. `Visit.associated_participant` → `Participant`.
+  2. **Association / ownership / containment**, known in modeling parlance as HAS_A relationships — e.g. `Visit.associated_participant` → `Participant`.
      - Anchor: node-box:MeasurementObservation
-  4. A primary goal
+  3. A primary goal
      - Anchor: none
-  5. Entities can be related to each other through
+  4. Entities can be related to each other through
      - Anchor: none
 
 <!--
@@ -516,9 +552,11 @@ What this app is and how to move around it.
 
   TODO(siggie): this step is where you asked "can we animate this so that
   step 4 keeps this popover but shows the next bullet, etc?" Beats are the
-  answer: one popover, `next` reveals the following beat. Beat 1 repeats
-  the Description because a step's Description shows before its beats do;
-  if that reads as a stutter, cut one of them.
+  answer, and as of 2026-08-28 they ADD rather than replace, which is what
+  you actually asked for: the Description stays on screen and each beat
+  appears below it, earlier ones dimmed. The old beat 1 existed only to
+  repeat the Description so it would not vanish -- deleted, with its
+  `slot-row` anchor moved up to the entry where the step now starts.
 
   TODO(siggie): your draft numbers this "3" and puts "select
   MeasurementObservation and highlight observation_type" in the step title.

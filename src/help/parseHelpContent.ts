@@ -32,6 +32,17 @@ export type HelpAnchor =
 export interface TourBeat {
   /** Markdown shown for this beat. */
   text: string;
+  /**
+   * Start this beat's popover from empty: drop the step's description and
+   * every earlier beat instead of adding to them.
+   *
+   * Beats ACCUMULATE by default (2026-08-28) -- the step's own text is beat
+   * one, and each beat adds below what is already showing. That is what a
+   * reveal-the-next-bullet step wants, and it is why beat one no longer has to
+   * repeat the description. `Clear:` is the escape hatch for a step whose
+   * later beat is a fresh thought rather than a continuation.
+   */
+  clear?: boolean;
   /** Overrides the step's anchor while this beat is showing. */
   anchor?: HelpAnchor;
   /** What the tour DID on entering this beat; rendered in its own band. */
@@ -143,7 +154,21 @@ export interface TourPosition {
   beatIndex: number;
   /** The beat itself, if this step has any. */
   beat?: TourBeat;
-  /** Beat text if there is one, else the step's description. */
+  /**
+   * Everything showing at this position, oldest first: the step's description
+   * followed by each beat revealed so far. The LAST block is the one that just
+   * appeared; the popover renders the earlier ones dimmed, so a reveal reads as
+   * "and now this" rather than as a page of equal-weight prose.
+   *
+   * A step with no beats has exactly one block. A beat with `Clear: true`
+   * starts the list over at itself.
+   */
+  blocks: string[];
+  /**
+   * `blocks` joined, which is what a consumer that just wants the text of this
+   * position should read. Kept because it is the older shape and because
+   * nothing outside the popover needs to know about the reveal.
+   */
   text: string;
   /** Beat's anchor if it overrides, else the step's. */
   anchor: HelpAnchor;
@@ -325,6 +350,9 @@ function extractBeats(lines: string[], entryId: string): TourBeat[] | undefined 
       if (key === 'anchor') current.anchor = parseAnchor(value, entryId);
       else if (key === 'action') current.action = value.trim();
       else if (key === 'change') current.change = value.trim();
+      // `- Clear: true`. A bare `- Clear:` counts too: it is a marker, and an
+      // author who writes it without a value plainly means it.
+      else if (key === 'clear') current.clear = value.trim() !== 'false';
       continue;
     }
 
@@ -453,6 +481,7 @@ export function tourPositions(content: HelpContent, tour?: string): TourPosition
     if (!entry.beats || entry.beats.length === 0) {
       positions.push({
         entry, step, beatIndex: 0,
+        blocks: [entry.description],
         text: entry.description,
         anchor: entry.anchor,
         action: entry.action,
@@ -460,10 +489,26 @@ export function tourPositions(content: HelpContent, tour?: string): TourPosition
       });
       return;
     }
+    /*
+     * The step's own text IS the first beat, and beats ADD to what is showing
+     * rather than replacing it (Siggie, 2026-08-28: "the stuff outside the
+     * Beats section is actually the first beat / by default, the beat text is
+     * additive on top of that").
+     *
+     * The old model replaced the body with each beat's text, which forced the
+     * author to repeat the description in beat one to avoid it vanishing --
+     * `relationship-kinds` does exactly that, and the note beside it asks
+     * whether the repetition "reads as a stutter". Under this model it is not
+     * a stutter to fix, it is a beat to delete.
+     */
+    let showing = entry.description ? [entry.description] : [];
     entry.beats.forEach((beat, beatIndex) => {
+      // `Clear: true` starts the popover over at this beat.
+      showing = beat.clear ? [beat.text] : [...showing, beat.text];
       positions.push({
         entry, step, beatIndex, beat,
-        text: beat.text,
+        blocks: showing,
+        text: showing.join('\n\n'),
         anchor: beat.anchor ?? entry.anchor,
         action: beat.action ?? (beatIndex === 0 ? entry.action : undefined),
         /*

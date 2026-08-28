@@ -7,6 +7,70 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-28 (beats) — beats ADD instead of replacing; `Clear:` to start over
+
+Siggie's TODO bullet: *"I don't like the way beats work. This is what i want to
+try: the stuff outside the Beats section is actually the first beat / by
+default, the beat text is additive on top of that / in order to clear previous
+text add a 'clear' marker or field."*
+
+### The old model forced a workaround into the content, and it was visible
+
+Beats REPLACED the popover body with each beat's text. So a step's
+`Description:` showed, and the moment you pressed `next` it vanished — meaning
+an author who wanted the setup to stay had to **repeat it in beat one**.
+`relationship-kinds` did exactly that, and the note beside it asked whether the
+repetition *"reads as a stutter... if that reads as a stutter, cut one of
+them"*.
+
+That note was the bug reporting itself and being mistaken for a copy problem.
+Under the additive model beat 1 is not a stutter to cut, it is a beat that only
+ever existed to work around the model. Deleted it; moved its `slot-row` anchor
+up to the entry, which is where the step now starts. **The step got shorter and
+gained nothing to explain**, which is the tell that the model was wrong rather
+than the copy.
+
+### Shape of the change
+
+`TourPosition.text` became `blocks: string[]` — everything revealed so far,
+oldest first — with `text` kept as the joined form so the one existing consumer
+and any future one need not know about the reveal. `tourPositions` folds the
+beats: `showing = beat.clear ? [beat.text] : [...showing, beat.text]`, seeded
+with the description.
+
+**Dimming rather than concatenation was Siggie's choice** when asked. The
+popover renders each block in its own div and marks all but the last
+`.help-beat-past` (opacity 0.55). Opacity rather than a colour so it dims
+links, bold and code with the prose, and works in both themes untouched.
+
+`Clear: true` on a beat starts the popover over at that beat; accumulation
+resumes from there. A bare `- Clear:` counts as true, since it is a marker and
+writing it without a value plainly means it; `Clear: false` does not.
+
+### Siggie's own edits, committed for them
+
+New standing loop (recorded in memory): they edit `help-content.md`, then the
+session commits their changes, implements the top TODO bullets, and commits.
+Two things came out of their first pass:
+
+- **They deleted the `## TODO` heading** and asked me to check it. It is fine,
+  and it works for a *different reason* than before: with no `##` at all the
+  block never reaches the `PROSE_SECTIONS` check, because
+  `if (!block.match(/^## /m)) continue` skips it first.
+- **My own `every section is wrapped` test was too strict** — it demanded an
+  exact match between `##` headings and `<summary>` texts, which their nested
+  `<details>` and deleted heading both violated legitimately. Relaxed to a
+  containment check. Worth remembering: when their edit turns a test red, check
+  whether the test or the content is wrong.
+
+Left alone at their instruction: two live tour steps both titled "Entities", a
+half-written `entities` entry. *"don't worry about it unless it's breaking
+anything. i'm trying to author stuff but need to get beats working right so i
+can see what i'm doing as i go along."* Only the one thing that broke the build
+was touched — `entities` had no `Anchor:` and so defaulted to an untagged
+`help-id:entities`.
+
+---
 ## 2026-08-28 (tour format, second pass) — `<details>` folds, and the two parser bugs it exposed
 
 Siggie's two remaining TODO items: wrap every `##` section in a collapsed

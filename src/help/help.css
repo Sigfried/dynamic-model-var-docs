@@ -102,6 +102,16 @@ body.help-mode {
   font-size: 12px;
 }
 
+/* A beat that has already been revealed. Beats accumulate, so a step's earlier
+   text stays on screen while the newest block sits at full strength below it --
+   dimming is what tells the reader which part just appeared. Opacity rather
+   than a fixed colour so it dims links, bold and code along with the prose, and
+   so it works unchanged in both themes. */
+.help-popover-body .help-beat-past {
+  opacity: 0.55;
+  transition: opacity 160ms ease;
+}
+
 /* Links. react-markdown has always rendered `[text](url)` as a real `<a>`, but
    nothing here styled one, so it inherited the popover's body colour with no
    underline and read as plain text -- Siggie, 2026-08-28: "links in `app-title`

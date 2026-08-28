@@ -339,6 +339,147 @@ describe('multi-line Description:', () => {
   });
 });
 
+describe('beats accumulate', () => {
+  /*
+   * Siggie, 2026-08-28: "the stuff outside the Beats section is actually the
+   * first beat / by default, the beat text is additive on top of that / in
+   * order to clear previous text add a 'clear' marker or field."
+   *
+   * The old model REPLACED the body with each beat's text, which forced an
+   * author to repeat the description in beat one or watch it vanish.
+   */
+  const md = parseHelpContent(`
+## Bits
+
+### step
+
+- **Title:** T
+- **Tour:** Walkthrough
+- **Description:** The intro.
+- **Anchor:** none
+- **Beats:**
+  1. First reveal.
+  2. Second reveal.
+`);
+  const pos = tourPositions(md);
+
+  test("the step's own text is the first block", () => {
+    expect(pos[0].blocks[0]).toBe('The intro.');
+  });
+
+  test('each beat adds to what is already showing', () => {
+    expect(pos[0].blocks).toEqual(['The intro.', 'First reveal.']);
+    expect(pos[1].blocks).toEqual(['The intro.', 'First reveal.', 'Second reveal.']);
+  });
+
+  test('the last block is the one that just appeared', () => {
+    // What the popover renders at full strength; everything before it dims.
+    expect(pos[1].blocks[pos[1].blocks.length - 1]).toBe('Second reveal.');
+  });
+
+  test('text is the blocks joined, for consumers that want one string', () => {
+    expect(pos[1].text).toBe('The intro.\n\nFirst reveal.\n\nSecond reveal.');
+  });
+
+  test('a step with no beats is a single block', () => {
+    const plain = parseHelpContent(`
+## Bits
+
+### step
+
+- **Title:** T
+- **Tour:** Walkthrough
+- **Description:** Just this.
+- **Anchor:** none
+`);
+    const p = tourPositions(plain)[0];
+    expect(p.blocks).toEqual(['Just this.']);
+    expect(p.text).toBe('Just this.');
+  });
+
+  test('a step with an empty description starts from the first beat', () => {
+    const noDesc = parseHelpContent(`
+## Bits
+
+### step
+
+- **Title:** T
+- **Tour:** Walkthrough
+- **Description:**
+- **Anchor:** none
+- **Beats:**
+  1. Only this.
+`);
+    expect(tourPositions(noDesc)[0].blocks).toEqual(['Only this.']);
+  });
+});
+
+describe('Clear: on a beat', () => {
+  const md = parseHelpContent(`
+## Bits
+
+### step
+
+- **Title:** T
+- **Tour:** Walkthrough
+- **Description:** The intro.
+- **Anchor:** none
+- **Beats:**
+  1. Adds to the intro.
+  2. Fresh thought.
+     - Clear: true
+  3. Adds to the fresh thought.
+`);
+  const pos = tourPositions(md);
+
+  test('a cleared beat shows alone', () => {
+    expect(pos[1].blocks).toEqual(['Fresh thought.']);
+  });
+
+  test('accumulation resumes from the cleared beat', () => {
+    expect(pos[2].blocks).toEqual(['Fresh thought.', 'Adds to the fresh thought.']);
+  });
+
+  test('beats before the clear are unaffected', () => {
+    expect(pos[0].blocks).toEqual(['The intro.', 'Adds to the intro.']);
+  });
+
+  test('a bare `- Clear:` counts as true', () => {
+    // It is a marker; writing it without a value plainly means it.
+    const bare = parseHelpContent(`
+## Bits
+
+### step
+
+- **Title:** T
+- **Tour:** Walkthrough
+- **Description:** Intro.
+- **Anchor:** none
+- **Beats:**
+  1. Alone.
+     - Clear:
+`);
+    expect(tourPositions(bare)[0].blocks).toEqual(['Alone.']);
+  });
+
+  test('`Clear: false` is not a clear', () => {
+    const off = parseHelpContent(`
+## Bits
+
+### step
+
+- **Title:** T
+- **Tour:** Walkthrough
+- **Description:** Intro.
+- **Anchor:** none
+- **Beats:**
+  1. Adds.
+     - Clear: false
+`);
+    expect(tourPositions(off)[0].blocks).toEqual(['Intro.', 'Adds.']);
+  });
+});
+
 describe('<details> section wrappers', () => {
   /*
    * Each `## Section` is wrapped in `<details>` so the file folds on GitHub.

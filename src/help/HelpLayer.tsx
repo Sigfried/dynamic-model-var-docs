@@ -243,15 +243,26 @@ export default function HelpLayer() {
             )}
 
             {/*
-              In a tour the BODY is the position's text -- a beat's own text
-              when the step has beats, the step's description otherwise. Outside
-              a tour it is the entry's description, unchanged.
+              In a tour the BODY is everything the position has revealed so far:
+              the step's description, then each beat, oldest first. Beats ADD
+              rather than replace (2026-08-28), so the earlier blocks stay on
+              screen -- dimmed, with only the block that just appeared at full
+              strength, which is what makes a reveal read as "and now this".
+
+              Outside a tour it is the entry's description, unchanged: one
+              block, nothing dimmed.
             */}
-            {(inTour ? position?.text : entry.description) && (
+            {(inTour ? position?.blocks.some(Boolean) : entry.description) && (
               <div className="help-popover-body">
-                <Markdown components={MARKDOWN_COMPONENTS}>
-                  {(inTour ? position!.text : entry.description)}
-                </Markdown>
+                {(inTour ? position!.blocks : [entry.description])
+                  .map((block, i, all) => (
+                    <div
+                      key={i}
+                      className={i === all.length - 1 ? undefined : 'help-beat-past'}
+                    >
+                      <Markdown components={MARKDOWN_COMPONENTS}>{block}</Markdown>
+                    </div>
+                  ))}
               </div>
             )}
 
