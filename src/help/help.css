@@ -149,6 +149,52 @@ body.help-mode {
   line-height: 1.45;
 }
 
+/* The ALERT: something the reader needs to know, written as a markdown `>`
+   blockquote in any description or beat.
+
+   Deliberately a sibling of the action band above and deliberately not the
+   same colour. Two bands that look alike would collapse back into the single
+   undifferentiated paragraph the action band exists to break up: blue-and-✓
+   is "the tour did this to your app", amber-and-! is "read this". */
+.help-popover-alert {
+  display: flex;
+  gap: 7px;
+  margin: 8px 0;
+  padding: 6px 8px;
+  border-left: 3px solid #d97706;
+  border-radius: 0 5px 5px 0;
+  background: #fffbeb;
+  font-size: 12px;
+  color: #92400e;
+}
+.help-popover-alert p { margin: 0; }
+.help-popover-alert p + p { margin-top: 4px; }
+.help-popover-alert-mark {
+  flex: none;
+  font-weight: 700;
+  line-height: 1.45;
+}
+.help-popover-alert kbd {
+  padding: 1px 5px;
+  border: 1px solid #fcd34d;
+  border-radius: 4px;
+  background: #fef3c7;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+}
+/* The `Once:` opt-out. Quieter than the note it sits under -- it is the
+   footnote to the alert, not a second thing to read. */
+.help-popover-alert-once {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 11px;
+  opacity: 0.85;
+  cursor: pointer;
+}
+.help-popover-alert-once input { margin: 0; cursor: pointer; }
+
 .help-popover-interactions {
   margin: 6px 0;
   /* Same preflight reset as the body's lists -- these have been rendering as
@@ -241,6 +287,15 @@ body.help-mode {
   .help-popover-action {
     background: #082f49;
     color: #bae6fd;
+  }
+  .help-popover-alert {
+    border-left-color: #f59e0b;
+    background: #38230a;
+    color: #fde68a;
+  }
+  .help-popover-alert kbd {
+    border-color: #78350f;
+    background: #451a03;
   }
   .help-popover-context,
   .help-tour-nav { border-top-color: #1e293b; }

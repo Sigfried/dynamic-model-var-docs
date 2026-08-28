@@ -5,6 +5,7 @@ import {
   parseHelpContent, tourSteps, tourPositions, tourNames, parseAnchor,
   DEFAULT_TOUR,
 } from '../help/parseHelpContent';
+import { stripAlerts } from '../help/HelpLayer';
 
 /**
  * The help content is authored as markdown and parsed into typed data, so a
@@ -253,11 +254,118 @@ describe('the spec section', () => {
     // can be read as markdown. Its ### sub-headings are prose; if the skip
     // broke, "Anchors" and "Beats" would show up as help entries.
     expect(content.sections.map(s => s.title)).not.toContain('Format');
-    for (const stray of ['Structure', 'Anchors', 'Beats', 'Actions', 'Change']) {
+    for (const stray of ['Structure', 'Anchors', 'Beats', 'Actions', 'Alerts', 'Change']) {
       expect(
         [...content.entries.keys()],
         `spec sub-heading "${stray}" leaked in as an entry`,
       ).not.toContain(stray);
+    }
+  });
+});
+
+describe('alerts and Once:', () => {
+  /**
+   * An alert is a markdown blockquote, so nothing in the PARSER knows about
+   * it -- these tests pin the authoring contract that the renderer depends on,
+   * plus the one field that does exist.
+   */
+
+  test('Once: parses, and is absent when not written', () => {
+    const parsed = parseHelpContent(`
+## Bits
+
+### noted
+
+- **Title:** T
+- **Description:** D
+
+  > Heed this.
+- **Once:** intro
+- **Anchor:** none
+
+### plain
+
+- **Title:** T
+- **Description:** D
+- **Anchor:** none
+`);
+    expect(parsed.entries.get('noted')!.once).toBe('intro');
+    expect(parsed.entries.get('plain')!.once).toBeUndefined();
+  });
+
+  test('an alert stays inside the description block', () => {
+    // The block reader runs to the next `- **Field:**`, and a blockquote is
+    // neither that nor a terminator. If this regressed, the alert would be
+    // silently dropped from the description rather than fail loudly.
+    const e = parseHelpContent(`
+## Bits
+
+### noted
+
+- **Title:** T
+- **Description:** Before.
+
+  > Heed this.
+
+  After.
+- **Anchor:** none
+`).entries.get('noted')!;
+    expect(e.description).toContain('> Heed this.');
+    expect(e.description).toContain('After.');
+  });
+
+  test('stripAlerts removes a whole alert and nothing else', () => {
+    const block = 'Before.\n\n> Line one.\n> Line two.\n\nAfter.';
+    expect(stripAlerts(block)).toBe('Before.\n\nAfter.');
+  });
+
+  test('stripAlerts empties a block that was only an alert', () => {
+    // The renderer filters these out; a block left as whitespace would render
+    // as a dimmed blank gap where the note used to be.
+    expect(stripAlerts('> Just the note.')).toBe('');
+  });
+
+  test('every authored alert prefixes all of its lines', () => {
+    /*
+     * The one authoring trap in the format. Markdown's lazy continuation makes
+     * an unprefixed second line part of the quote when RENDERING, but
+     * `stripAlerts` works line by line, so that line survives a dismissal and
+     * is left stranded outside the note that explained it.
+     */
+    const stranded: string[] = [];
+    for (const entry of content.entries.values()) {
+      const blocks = [entry.description, ...(entry.beats ?? []).map(b => b.text)];
+      for (const block of blocks) {
+        const lines = block.split('\n');
+        lines.forEach((line, i) => {
+          const prev = lines[i - 1];
+          if (prev === undefined || !/^\s{0,3}>/.test(prev)) return;
+          if (/^\s{0,3}>/.test(line) || line.trim() === '') return;
+          stranded.push(`${entry.id}: "${line.trim()}"`);
+        });
+      }
+    }
+    expect(
+      stranded,
+      `Alert continuation lines missing their "> ": ${stranded.join('; ')}`,
+    ).toEqual([]);
+  });
+
+  test('an alert that can be dismissed says so with Once:', () => {
+    /*
+     * Not the reverse rule -- an entry may carry `Once:` before its alert is
+     * written. This one catches the real slip: authoring the intro note and
+     * forgetting the field, so the viewer meets it on every visit forever.
+     * Only checked for the FIRST tour step, since that is the orientation
+     * case; a mid-tour caution is meant to be permanent.
+     */
+    const first = steps[0];
+    if (!first) return;
+    if (first.description.includes('\n> ') || first.description.startsWith('> ')) {
+      expect(
+        first.once,
+        `tour step 1 (${first.id}) has an alert but no Once: to dismiss it`,
+      ).toBeTruthy();
     }
   });
 });

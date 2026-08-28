@@ -72,6 +72,21 @@ export interface HelpEntry {
    */
   action?: string;
   /**
+   * Storage key under which this entry's ALERTS may be dismissed for good.
+   *
+   * Only alerts, and only when the author asks for it: a `> blockquote` in an
+   * entry with no `Once:` is permanent, which is what you want for a caution
+   * that is true every time you read the step. `Once:` is for the other kind
+   * — the orientation note a first-time visitor needs and a returning one
+   * should not have to dismiss again.
+   *
+   * The KEY is authored rather than derived from the entry id so that the same
+   * "you can leave with Escape" note can be written into several entries and
+   * silenced by all of them at once, and so renaming an entry does not
+   * resurrect a note the viewer already put away.
+   */
+  once?: string;
+  /**
    * What this step ADDS to the app state, as a URL query in the same
    * vocabulary as a share link (e.g. `sel=BodySite~Person`).
    *
@@ -392,6 +407,7 @@ function parseEntry(block: string, order: number): HelpEntry | null {
   const context = extractField(lines, 'Context');
   const anchor = parseAnchor(extractField(lines, 'Anchor'), id);
   const action = extractField(lines, 'Action');
+  const once = extractField(lines, 'Once');
   const change = extractField(lines, 'Change');
   const beats = extractBeats(lines, id);
   const tourRaw = extractField(lines, 'Tour');
@@ -403,7 +419,7 @@ function parseEntry(block: string, order: number): HelpEntry | null {
 
   return {
     id, title, description, interactions, shortcut, context,
-    anchor, action, change, tour, order, beats,
+    anchor, action, once, change, tour, order, beats,
   };
 }
 

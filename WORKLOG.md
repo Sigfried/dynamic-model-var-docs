@@ -7,6 +7,87 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-28 (alerts, `Once:`, and the tour button)
+
+Three TODO bullets from Siggie. All three had a "what shape should this be"
+decision in them that is worth recording, because in each case the obvious
+implementation was the wrong one.
+
+### `take the tour` was invisible because it looked like everything else
+
+The bullet said "make the take the tour link more prominent". The reason it
+was not prominent turned out to be structural rather than a matter of degree:
+it was the third of **five** identically styled links in the header bar
+(`copy link`, `take the tour`, `example cases`, and two more), all
+`text-sm underline text-blue-100`. Bumping its weight or colour would have
+produced a slightly louder member of the same set. Made it a filled white pill
+instead — the one thing in the bar that is not an underlined blue link.
+
+**Deliberately did NOT do the "or open the app at the start of the tour" half.**
+Auto-firing the tour is not a styling change: it fires on every visit including
+Siggie's own, and on every share link someone opens, which is the case the tour
+was written for (`app-title`'s section notes the "arrives from a link with no
+one explaining it" visitor). Left in *Still open* for their call.
+
+### Alerts are a blockquote, not an `Alert:` field
+
+The natural-looking move was a new entry field beside `Action:` and `Context:`,
+which already render as their own bands. Rejected: **an alert is part of a
+step's prose, not a property of the step.** It has to be placeable before the
+text, after it, or as the whole block, and a field can only ever sit in the one
+slot the renderer puts it in. Worse, beats would each have needed their own
+copy of the field to say anything urgent.
+
+A markdown `>` costs the author one character, works in every block the popover
+renders (`Description:` and every beat), and needs **no parser change at all** —
+it is a `blockquote` override in `MARKDOWN_COMPONENTS`.
+
+Styled amber-with-`!` specifically to NOT match the `Action:` band's
+blue-with-`✓`, reusing that band's own rationale (help.css:121-126): two bands
+that look alike collapse back into the single undifferentiated paragraph the
+action band exists to break up. Blue-✓ is "the tour did this to your app";
+amber-! is "read this".
+
+### `Once:` — explicit checkbox over a silent show-once counter
+
+Siggie offered both ("either a 'Do not show again' or localStorage to only show
+once?"). Took the checkbox. A silent counter fails in **both** directions: a
+reader who wanted the note back cannot get it, and a reader who never looked at
+it has already spent their single showing. A checkbox states what is about to
+happen and leaves the choice with the reader.
+
+Three things about the design that are not obvious from the code:
+
+- **The key is authored (`- **Once:** intro`), not derived from the entry id.**
+  So the same "you can leave with Escape" note can be written into several
+  entries and silenced by all of them at once, and renaming an entry does not
+  resurrect a note the viewer already put away.
+- **Dismissal strips the alert from the TEXT** (`stripAlerts`), rather than
+  having the `blockquote` component render null. Rendering null still leaves
+  react-markdown having parsed the quote, so the surrounding paragraphs keep
+  the alert's blank-line separators around a hole. Removing the lines first
+  leaves a block that reads as though the alert had never been written. A block
+  that was nothing *but* the alert is then empty, and is filtered out — else it
+  renders as a dimmed blank gap.
+- **`stripAlerts` is line-based, so lazy continuation is a real trap.** Markdown
+  lets a blockquote's second line drop its `>`; the renderer still quotes it,
+  but the stripper leaves it stranded outside the note that explained it. There
+  is a test over the real content file that catches this, and the spec says
+  "prefix every line".
+
+`lsGet`/`lsSet` are duplicated into `HelpLayer.tsx` rather than imported from
+`explore/exploreState.ts` — `src/help/` is meant to be liftable into its own
+package (which is also why `help.css` is plain CSS), and a two-line helper is a
+cheaper dependency to keep than a cross-package import.
+
+### One fix to Siggie's own edits
+
+Their new `selection-tree` beat 2 carried `Change: sel=Person` with no
+`Action:`, tripping the "a position that changes something says what it did"
+test. Per the standing instruction, fixed only what was red, minimally: a
+one-line beat `Action:`. Beat text left as their `bla blah blah` placeholder.
+
+---
 ## 2026-08-28 (beats, follow-up) — the opening position, and why the counter got dots
 
 Two things from Siggie's screenshot of the `selection-tree` step.

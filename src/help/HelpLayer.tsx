@@ -31,7 +31,7 @@
  * for top-layer rendering, which is the part that removes the portal.
  */
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
 import { useHelp } from './helpContext';
 import type { HelpAnchor } from './parseHelpContent';
@@ -50,7 +50,114 @@ const MARKDOWN_COMPONENTS = {
   a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
     <a href={href} target="_blank" rel="noreferrer">{children}</a>
   ),
+  /**
+   * A markdown blockquote is the popover's ALERT.
+   *
+   * Chosen over a new `Alert:` entry field on purpose: an alert is a bit of a
+   * step's prose, not a property of the step, so it has to be placeable
+   * *within* a description or a beat -- before the text, after it, or as the
+   * whole of it. A field can only ever sit in one fixed slot, and every beat
+   * would have needed its own copy of the field to say anything urgent.
+   * `>` costs the author one character and works in every markdown block the
+   * popover renders.
+   *
+   * Styled unlike the `Action:` band, which is also a tinted rule-left box:
+   * that one is the tour reporting what it just did to the app, this one is
+   * the tour telling you something you need to know. Amber vs. blue, and a
+   * `!` rather than a `✓`.
+   */
+  blockquote: ({ children }: { children?: React.ReactNode }) => (
+    <div className="help-popover-alert" role="note">
+      <span className="help-popover-alert-mark" aria-hidden="true">!</span>
+      <div>{children}</div>
+    </div>
+  ),
 };
+
+/**
+ * localStorage, defensively.
+ *
+ * Duplicated from `explore/exploreState.ts` rather than imported: `src/help/`
+ * is written to be liftable into its own package (see the header of
+ * `help.css`, which is plain CSS for the same reason), and a two-line helper
+ * is a cheaper dependency to keep than a cross-package import. It can throw in
+ * private mode or with site data disabled, and a dismissed-note preference is
+ * never worth breaking a popover over.
+ */
+function lsGet(key: string): string | null {
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+function lsSet(key: string, value: string): void {
+  try { localStorage.setItem(key, value); } catch { /* best-effort */ }
+}
+
+/** Namespace for `Once:` keys, so a help preference is identifiable in a
+ *  storage inspector and cannot collide with the app's own `bdchm-*`. */
+const ONCE_PREFIX = 'help-once-';
+
+/**
+ * Drop every blockquote line from a markdown block.
+ *
+ * How a dismissed `Once:` alert stops appearing. Done on the TEXT rather than
+ * by rendering nothing from the `blockquote` component, because react-markdown
+ * would still have parsed the quote and the surrounding paragraphs would be
+ * left with the alert's blank-line separators around a hole. Removing the
+ * lines first leaves a block that reads as though the alert had never been
+ * written.
+ *
+ * Blockquote continuation ("lazy") lines are NOT handled: a quote whose second
+ * line omits its `>` would leave that line behind. The spec tells authors to
+ * prefix every line, and the test pins that.
+ */
+export function stripAlerts(block: string): string {
+  return block
+    .split('\n')
+    .filter(line => !/^\s{0,3}>/.test(line))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+export function isDismissedOnce(key: string): boolean {
+  return lsGet(ONCE_PREFIX + key) === '1';
+}
+export function dismissOnce(key: string): void {
+  lsSet(ONCE_PREFIX + key, '1');
+}
+
+/**
+ * The markdown component table for an entry that carries `Once:`.
+ *
+ * Same as the default, except every alert grows a "Don't show this again"
+ * checkbox. Built per entry rather than at module scope because the storage
+ * key and the dismiss callback are both per entry — the alternative was a
+ * context just to thread two values through react-markdown, which is more
+ * machinery than one `useMemo`.
+ */
+function markdownComponentsWithOnce(onDismiss: () => void) {
+  return {
+    ...MARKDOWN_COMPONENTS,
+    blockquote: ({ children }: { children?: React.ReactNode }) => (
+      <div className="help-popover-alert" role="note">
+        <span className="help-popover-alert-mark" aria-hidden="true">!</span>
+        <div>
+          {children}
+          {/*
+            An explicit control, not a silent show-once counter. Silent is
+            worse in both directions: a viewer who wanted to reread the note
+            cannot get it back, and one who never read it has already spent
+            their single showing. A checkbox says what is about to happen and
+            leaves the choice with them.
+          */}
+          <label className="help-popover-alert-once">
+            <input type="checkbox" onChange={onDismiss} />
+            Don't show this again
+          </label>
+        </div>
+      </div>
+    ),
+  };
+}
 
 export default function HelpLayer() {
   const {
@@ -119,6 +226,27 @@ export default function HelpLayer() {
   /** A hovered entry is transient; a clicked one stays until dismissed. */
   const [pinned, setPinned] = useState(false);
   const popRef = useRef<HTMLDivElement>(null);
+
+  /*
+   * `Once:` — an entry whose alerts the viewer may put away for good.
+   *
+   * Read at render, not once at mount, because the key is the entry's and the
+   * entry changes as the tour moves. The counter is the re-render trigger: the
+   * checkbox writes to localStorage, which React cannot observe, so ticking it
+   * has to bump something for the alert to actually disappear.
+   */
+  const [onceTick, setOnceTick] = useState(0);
+  const onceKey = entry?.once;
+  const onceDone = onceKey !== undefined && isDismissedOnce(onceKey);
+  const markdownComponents = useMemo(
+    () => (onceKey === undefined ? MARKDOWN_COMPONENTS : markdownComponentsWithOnce(() => {
+      dismissOnce(onceKey);
+      setOnceTick(n => n + 1);
+    })),
+    // onceTick is a dependency in spirit: after a dismissal the table is dead
+    // anyway, since `onceDone` strips the alert before it can render.
+    [onceKey],
+  );
 
   /*
    * Scroll the anchor into view BEFORE measuring, or the popover lands where
@@ -276,12 +404,17 @@ export default function HelpLayer() {
             {(inTour ? position?.blocks.some(Boolean) : entry.description) && (
               <div className="help-popover-body">
                 {(inTour ? position!.blocks : [entry.description])
+                  .map(b => (onceDone ? stripAlerts(b) : b))
+                  /* A block that was NOTHING BUT a dismissed alert is now
+                     empty; rendering it would leave a dimmed blank gap where
+                     the note used to be. */
+                  .filter(Boolean)
                   .map((block, i, all) => (
                     <div
                       key={i}
                       className={i === all.length - 1 ? undefined : 'help-beat-past'}
                     >
-                      <Markdown components={MARKDOWN_COMPONENTS}>{block}</Markdown>
+                      <Markdown components={markdownComponents}>{block}</Markdown>
                     </div>
                   ))}
               </div>

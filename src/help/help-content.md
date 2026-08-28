@@ -10,13 +10,39 @@ Package-level design lives in [docs/HELP_PACKAGE_PLAN.md](../../docs/HELP_PACKAG
 <details>
 <summary><b>TODO</b></summary>
 
-- make the take the tour link more prominent; or open the app
-  at the start of the tour
-- i want a way to format alert text in popovers, for something
-  like "This tour will introduce you to all of BDCHM Explorer's
-  major features. Click the X or hit ESCAPE any time to exit"
-- and either a "Do not show again" or localStorage to only show
-  once?
+### Done
+
+- **`take the tour` is a filled white pill now**, not a sixth blue underlined
+  link. That was the actual reason it read as chrome: nothing distinguished it
+  from `copy link` / `example cases` / the rest, so there was no visual reason
+  for a first-time visitor to pick it. Did NOT auto-open the tour — that is the
+  other half of your bullet and it is a real decision (it fires on every visit,
+  including yours, and on every share link), so say the word if you want it.
+- **Alerts: write a markdown `>` blockquote** in any `Description:` or beat and
+  it renders as an amber ruled-left band with a `!`. Deliberately not an
+  `Alert:` field — an alert is part of the prose, so it has to be placeable
+  before it, after it, or as the whole block, and a field can only sit in one
+  slot. Amber-and-`!` vs. the action band's blue-and-`✓`: "read this" vs. "the
+  tour did this to your app". Your intro text is authored on step 1.
+- **`Once:` gives an alert a "Don't show this again" checkbox**, stored as
+  `help-once-<key>`; on a later visit the alert is stripped from the entry
+  before it renders. Chose the explicit checkbox over the silent show-once
+  counter you offered as the alternative: with a counter a reader who wanted
+  the note back cannot get it, and one who never looked has already spent their
+  single showing. Step 1 carries `- **Once:** intro`.
+  - The key is authored, not derived from the entry id, so two entries can
+    share one and renaming an entry does not resurrect a dismissed note.
+  - **To see the note again** after ticking it: clear `help-once-intro` from
+    localStorage (devtools → Application → Local Storage).
+- **One fix to your own edits** to keep the build green: `selection-tree` beat 2
+  carried `Change: sel=Person` with no `Action:`, which trips the "a position
+  that changes something says what it did" test. Added a one-line beat
+  `Action:`; the beat text is still your placeholder.
+
+### Still open
+
+- **open the app at the start of the tour** — the other half of bullet one, left
+  alone pending your call on whether it should auto-fire.
 
 <details>
 <summary><b>Original unfinished draft text</b></summary>
@@ -160,6 +186,7 @@ does not get swallowed into that entry's `Description:`.
 | `Context:` | smaller footnote text |
 | `Anchor:` | what to point at — see [Anchors](#anchors) |
 | `Action:` | one sentence saying what the tour just DID — see [Actions](#actions) |
+| `Once:` | storage key letting this entry's alerts be dismissed for good — see [Alerts](#alerts) |
 | `Change:` | what this step ADDS to the app state, as a URL query — see [Change](#change) |
 | `Tour:` | which tour this is a step of, e.g. `Walkthrough`; omit for help-only |
 | `Beats:` | ordered sub-steps that ADD to the description — see [Beats](#beats) |
@@ -326,6 +353,55 @@ from the description.
 **Rule of thumb:** if the step carries a `Change:` that actually changes
 something, it needs an `Action:`. A test enforces this.
 
+### Alerts
+
+**A markdown blockquote is an alert.** Write `>` in any `Description:` or beat
+and it renders as an amber, ruled-left band with a `!` — for the thing a reader
+has to notice rather than read past:
+
+```markdown
+- **Description:** Ordinary prose.
+
+  > This tour will introduce you to all of the Explorer's major features.
+  > Click the ✕ or hit **Esc** any time to leave.
+```
+
+An alert is part of a step's prose, not a property of the step, which is why it
+is markdown rather than an `Alert:` field. A field can sit in only one place;
+`>` goes wherever the sentence belongs — before the text, after it, or as the
+whole block — and works in every beat without each one declaring a field.
+
+**Prefix every line with `>`.** Markdown's lazy continuation would let you drop
+it on later lines, but a dismissed alert is removed line by line, so an
+unprefixed line stays behind after the rest of the note has gone.
+
+Don't confuse it with the `Action:` band, which is also tinted and ruled. Blue
+and `✓` is the tour reporting what it just did to your app; amber and `!` is
+the tour telling you something. Two different sentences, two different bands.
+
+#### `Once:` — an alert you can put away
+
+An alert is permanent by default, which is right for a caution that is true
+every time you read the step. For the other kind — the orientation note a
+first-time visitor needs and a returning one should not have to dismiss again —
+give the entry a `Once:`:
+
+```markdown
+- **Once:** intro
+```
+
+Every alert in that entry then carries a **Don't show this again** checkbox,
+and ticking it stores `help-once-intro` in `localStorage`; on the next visit
+those alerts are stripped from the entry before it renders.
+
+An explicit checkbox rather than a silent show-once counter, deliberately: with
+a counter a reader who wanted the note back cannot get it, and a reader who
+never looked has already spent their one showing.
+
+**The key is authored, not derived from the entry id.** Two entries can share a
+key so that one tick silences the same note in both, and renaming an entry does
+not resurrect a note the viewer already put away.
+
 ### Change
 
 `Change:` is a **delta**, in the same vocabulary as a share link: it says what
@@ -484,7 +560,11 @@ What this app is and how to move around it.
 
   Pick some entities on the left and the diagram shows how they fit together.
   Click the title to clear everything and start over.
+
+  > This tour will introduce you to all of BDCHM Explorer's major features.
+  > Click the ✕ or hit **Esc** any time to exit.
 - **Anchor:** app-title
+- **Once:** intro
 - **Change:**
 
 ### selection-tree

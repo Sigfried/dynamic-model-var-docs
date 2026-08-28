@@ -490,9 +490,16 @@ function HelpButton() {
   const { helpMode, toggleHelpMode, startTour } = useHelp();
   return (
     <span className="flex items-center gap-2" data-help-id="help-button">
+      {/*
+        NOT another underlined blue link. It was one of five identical ones in
+        this header, which is the whole reason it read as chrome rather than as
+        the way in: a first-time viewer has no reason to pick it out of `copy
+        link`, `example cases` and the rest. A filled pill is the one thing in
+        the bar that does not look like the others.
+      */}
       <button
         onClick={startTour}
-        className="text-sm underline text-blue-100 hover:text-white"
+        className="text-sm font-semibold px-2.5 py-1 rounded-full bg-white/95 text-blue-700 shadow-sm hover:bg-white hover:shadow"
         title="A short guided walk through the app"
       >
         take the tour
