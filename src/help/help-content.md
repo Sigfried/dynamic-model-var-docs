@@ -170,7 +170,10 @@ does not get swallowed into that entry's `Description:`.
 | `Tour:` | which tour this is a step of, e.g. `Walkthrough`; omit for help-only |
 | `Beats:` | ordered sub-steps, each REPLACING the last — see [Beats](#beats) |
 
-Written as `- **Field:** value`. Only `Title` and `Description` are required.
+Written as `- **Field:** value`. The `**` is optional and field names are
+case-insensitive, so `- width: 500` works as well as `- **Width:** 500` — a
+field copied from a beat is not silently dropped. Only `Title` and
+`Description` are required.
 An entry with no `Tour:` is help-only: reachable in help mode, never visited by
 a tour.
 
@@ -635,6 +638,7 @@ What this app is and how to move around it.
 - **Anchor:** none
 - **Once:** intro
 - **Change:**
+- **Width:** 500
 
 ### selection-tree
 

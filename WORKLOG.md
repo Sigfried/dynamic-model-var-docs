@@ -7,6 +7,50 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-28 (field syntax: `**` optional, names case-insensitive)
+
+`Width:` shipped broken. Siggie authored `- Width: 500` on the intro step —
+BEAT syntax, in an entry's field list — and `extractField` matched only
+`- **Width:** 500`, so it parsed as nothing. No error, no warning: the step
+rendered exactly as if the field were absent, which is why it survived a commit
+and a look at the running app.
+
+First fix was a test that FAILED on an entry field written the beat way. Siggie
+rejected the premise: *"the parser should just strip ** from the field lines
+(can't imagine needing them for something else)"* — right call. The two
+spellings sit inches apart in the same file and mean the same thing to a
+reader; making one an error is enforcing a distinction with no purpose.
+
+Then, on the follow-up: *"what about case sensitivity for field names."* The
+BEAT reader already lower-cased its keys, so requiring capitals at entry level
+was an inconsistency nobody had chosen, not a rule. Both readers now normalise
+the same way through one `fieldOf` helper: strip `**`, lower-case the name.
+
+### What the bold markers were secretly doing
+
+They were separating entry fields from beat fields BY ACCIDENT: a beat's
+`- Change: x` could not match an entry's `- **Change:**`. Making the markers
+optional without noticing that made a beat's `Change:` read as the entry's, so
+a step pushed its change twice. The existing "pushes its change exactly once"
+test caught it immediately — worth noting as a case where a test written for an
+unrelated invariant paid for itself.
+
+`extractField` now stops at the `Beats:` header instead, which states the rule
+directly rather than relying on a spelling difference. `extractBeats` likewise
+ends its block on INDENT (an entry field sits at the margin; a beat's fields are
+indented under their beat) rather than on `- **`, which would no longer have
+closed the block.
+
+`_Tour:` parking is unaffected: the underscore is part of the name, and `_tour`
+is not `tour` under any spelling or casing.
+
+### Guard kept
+
+`fieldOf` requires a field name to be a single word, so a description's bullet
+list — which routinely contains colons — cannot be misread as a field. Tested,
+because that is the failure mode this relaxation could plausibly introduce.
+
+---
 ## 2026-08-28 (`?tour=1`, and a URL-timing trap worth remembering)
 
 Siggie wanted a link that drops someone straight into the tour. (Auto-opening

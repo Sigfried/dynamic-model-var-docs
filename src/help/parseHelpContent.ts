@@ -405,14 +405,62 @@ const SECTION_MARKUP = /^<\/?(?:details|summary)\b[^>]*>$/i;
  * leaving it available as help, which is how a step that is written but not
  * ready stays in the file without appearing.
  */
+/**
+ * `- Field: value`, tolerantly.
+ *
+ * The line is normalised before anything is compared: `**` stripped, name
+ * lower-cased. Two spellings of the same field used to mean two different
+ * outcomes -- entries required `- **Width:** 500`, beats required
+ * `- Width: 500`, and an entry field written the beat way parsed as NOTHING:
+ * no error, the step simply rendered as if it were absent. That is how
+ * `Width:` shipped broken on the intro step. Siggie: "the parser should just
+ * strip ** from the field lines (can't imagine needing them for something
+ * else)", and then, on case: the beat reader already lower-cased its field
+ * names, so requiring capitals here was an inconsistency rather than a rule.
+ *
+ * `_Tour:` still parks a field: the underscore is part of the NAME, and
+ * `_tour` is not `tour` however it is spelled or cased.
+ */
 function extractField(lines: string[], label: string): string | undefined {
-  // `- **_Tour:**` simply does not match `- **Tour:**`, so parking a field is
-  // just a non-match. Spelled out because it looks like an omission otherwise.
-  const prefix = `- **${label}:**`;
-  const idx = lines.findIndex(l => l.trimStart().startsWith(prefix));
-  if (idx === -1) return undefined;
-  return lines[idx].trimStart().slice(prefix.length).trim();
+  /*
+   * Searched only ABOVE `- **Beats:**`, which is what now keeps an entry's
+   * fields apart from its beats'. The bold markers used to do that job by
+   * accident -- a beat's `- Change: x` could not match an entry's
+   * `- **Change:**` -- so dropping the distinction without scoping the search
+   * made a beat's `Change:` read as the entry's and the step push it twice
+   * (caught by "pushes its change exactly once").
+   *
+   * Beats are always last in an entry, so everything above the header is the
+   * entry's own field list.
+   */
+  const key = label.toLowerCase();
+  for (const line of lines) {
+    const field = fieldOf(line);
+    if (!field) continue;
+    if (field.name === 'beats' && key !== 'beats') return undefined;
+    if (field.name === key) return field.value;
+  }
+  return undefined;
 }
+
+/**
+ * Split `- **Field:** value` into a lower-cased name and its value, with the
+ * `**` gone. Returns undefined for any line that is not a field bullet --
+ * ordinary prose bullets inside a `Description:` block included.
+ */
+function fieldOf(line: string): { name: string; value: string } | undefined {
+  const m = line.trimStart().match(/^-\s+(.*)$/);
+  if (!m) return undefined;
+  const rest = m[1].replace(/\*\*/g, '');
+  const colon = rest.indexOf(':');
+  if (colon === -1) return undefined;
+  const name = rest.slice(0, colon).trim();
+  // A field name is a single word; anything else is prose that has a colon in
+  // it, which is common in a description's bullet list.
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) return undefined;
+  return { name: name.toLowerCase(), value: rest.slice(colon + 1).trim() };
+}
+
 
 /**
  * Extract a field as a multi-line MARKDOWN BLOCK: the text after the colon,
@@ -491,7 +539,8 @@ function extractBulletList(lines: string[], label: string): string[] {
  * apart from the entry fields that follow the block.
  */
 function extractBeats(lines: string[], entryId: string): TourBeat[] | undefined {
-  const headerIdx = lines.findIndex(l => l.trimStart().startsWith('- **Beats:**'));
+  // `- Beats:` and `- **Beats:**` both open the block; see `fieldOf`.
+  const headerIdx = lines.findIndex(l => fieldOf(l)?.name === 'beats');
   if (headerIdx === -1) return undefined;
 
   const beats: TourBeat[] = [];
@@ -500,8 +549,15 @@ function extractBeats(lines: string[], entryId: string): TourBeat[] | undefined 
 
   for (let i = headerIdx + 1; i < lines.length; i++) {
     const trimmed = lines[i].trimStart();
-    // An entry-level field ends the block; blank lines are allowed inside it.
-    if (trimmed.startsWith('- **')) break;
+    /*
+     * An entry-level field ends the block; blank lines are allowed inside it.
+     *
+     * Distinguished by INDENT, not by the bold markers. `- **` was the test
+     * until the markers became optional, at which point an unbolded entry
+     * field after a beats block would no longer have closed it. A beat's own
+     * fields are indented under their beat; an entry's sit at the margin.
+     */
+    if (lines[i].length > 0 && !/^\s/.test(lines[i]) && fieldOf(lines[i])) break;
     if (trimmed === '') continue;
 
     const numbered = trimmed.match(/^(\d+)\.\s+(.*)$/);

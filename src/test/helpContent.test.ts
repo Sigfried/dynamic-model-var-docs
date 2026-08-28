@@ -112,6 +112,100 @@ describe('help content', () => {
     }
   });
 
+  test('an entry field parses with or without the bold markers', () => {
+    /*
+     * `- Width: 500` and `- **Width:** 500` both work.
+     *
+     * They did not always: `extractField` matched only the bold form, so a
+     * field written the way BEAT fields are written parsed as nothing at all --
+     * no error, the step just rendered as though it were absent. That is how
+     * `Width:` shipped broken on the intro step. Siggie: "the parser should
+     * just strip ** from the field lines (can't imagine needing them for
+     * something else)".
+     */
+    const withBold = parseHelpContent(`
+## S
+
+### e
+
+- **Title:** T
+- **Width:** 500
+- **Description:** D
+`).entries.get('e')!;
+    const without = parseHelpContent(`
+## S
+
+### e
+
+- Title: T
+- Width: 500
+- Description: D
+`).entries.get('e')!;
+    expect(without.width).toBe(withBold.width);
+    expect(without.title).toBe(withBold.title);
+    expect(without.width).toBe(500);
+  });
+
+  test('field names are case-insensitive, like beat fields already were', () => {
+    // The beat reader lower-cased its field names from the start, so requiring
+    // capitals at entry level was an inconsistency rather than a rule
+    // (Siggie, 2026-08-28: "what about case sensitivity for field names").
+    const e = parseHelpContent(`
+## S
+
+### e
+
+- title: T
+- WIDTH: 500
+- **Description:** D
+`).entries.get('e')!;
+    expect(e.title).toBe('T');
+    expect(e.width).toBe(500);
+    expect(e.description).toBe('D');
+  });
+
+  test('a prose bullet with a colon is not read as a field', () => {
+    // `fieldOf` requires the name to be a single word, so a description's
+    // bullet list -- which routinely contains colons -- cannot be misread.
+    const e = parseHelpContent(`
+## S
+
+### e
+
+- **Title:** T
+- **Description:** D
+  - one thing: with a colon in it
+  - another: here
+`).entries.get('e')!;
+    expect(e.description).toContain('one thing: with a colon in it');
+  });
+
+  test("a beat's field is not mistaken for its step's", () => {
+    /*
+     * The bold markers used to be what kept these apart. With both spellings
+     * accepted, `extractField` searches only ABOVE `- **Beats:**` instead --
+     * without that, a beat's `Change:` read as the entry's and the step pushed
+     * it twice.
+     */
+    const md = parseHelpContent(`
+## S
+
+### e
+
+- **Title:** T
+- **Tour:** Walkthrough
+- **Description:** D
+- **Beats:**
+  1. one
+     - Change: sel=Person
+     - Anchor: none
+`);
+    const entry = md.entries.get('e')!;
+    expect(entry.change).toBeUndefined();
+    expect(entry.anchor.kind).toBe('help-id');   // the default, not the beat's
+    expect(entry.beats?.[0].change).toBe('sel=Person');
+  });
+
   test('every anchor names a known kind', () => {
     const bad: string[] = [];
     for (const e of content.entries.values()) {
