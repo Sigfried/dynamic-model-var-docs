@@ -27,7 +27,7 @@ import { HelpProvider } from '../help/HelpProvider';
 import { useHelp, HELP_MODE_ENABLED } from '../help/helpContext';
 import HelpLayer from '../help/HelpLayer';
 import { helpResolvers } from './helpResolvers';
-import helpMarkdown from '../help/help-content.md?raw';
+import helpMarkdown from './help-content.md?raw';
 
 import {
   readExploreState, writeExploreState, buildShareURL, readTourRequest,

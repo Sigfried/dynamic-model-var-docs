@@ -73,7 +73,8 @@ see the chip-strip work first; scroll may not be the answer.
 
 ### Format pass done 2026-08-28 — what changed, and what is left
 
-Siggie wrote a `## TODO` section into `src/help/help-content.md` listing five
+Siggie wrote a `## TODO` section into the help content file (then
+`src/help/help-content.md`, now `src/explore/help-content.md`) listing five
 complaints and asked for a discussion first (*"i have to deliver in four hours
 and still have a tour to author"*). Done in that session:
 
@@ -621,8 +622,10 @@ the geometry gets wrong.
 
 Where things live: `src/help/` — `HelpProvider.tsx` (modes, keyboard),
 `helpContext.ts`, `HelpLayer.tsx` (all rendering + positioning),
-`parseHelpContent.ts` (ported from icd11), `help-content.md` (the content),
-`help.css`. Tests in `src/test/helpContent.test.ts` check the content parses,
+`parseHelpContent.ts` (ported from icd11), `FORMAT.md` (the authoring spec),
+`help.css`. The CONTENT is app-specific and lives at
+`src/explore/help-content.md` (moved there 2026-08-29). Tests in
+`src/test/helpContent.test.ts` check the content parses,
 the tour is numbered 1..n, and every entry id is actually tagged in the app.
 
 ---

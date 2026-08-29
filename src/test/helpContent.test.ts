@@ -18,7 +18,7 @@ import { stripAlerts } from '../help/HelpLayer';
  * stakeholder who will see this unattended.
  */
 const markdown = readFileSync(
-  resolve(__dirname, '../help/help-content.md'), 'utf8',
+  resolve(__dirname, '../explore/help-content.md'), 'utf8',
 );
 const content = parseHelpContent(markdown);
 const steps = tourSteps(content);

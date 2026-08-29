@@ -1,86 +1,19 @@
-# Explorer help
+# Tour and help authoring format
 
-Help + tour content for the dmvd Explorer. The **Format** section below is the
-spec; everything from *Getting started* onward is the content itself.
+The spec for the content file this package parses. It lives here, beside
+`parseHelpContent.ts`, because it describes the **package**, not any one app's
+content: every field, anchor kind and beat rule below is implemented by the
+parser and the layer in this directory, and none of it knows what a BDCHM
+entity is.
 
-Parsed by `parseHelpContent.ts`; pinned by `src/test/helpContent.test.ts`.
-Package-level design lives in [docs/HELP_PACKAGE_PLAN.md](../../docs/HELP_PACKAGE_PLAN.md).
+The content it specifies lives with the app that authors it — dmvd's is
+[`src/explore/help-content.md`](../explore/help-content.md), handed to the
+parser by `ExploreApp.tsx`. A second app writes its own file against this same
+spec.
 
----
-<details>
-<summary><b>TODO</b></summary>
+Keep this current when the format changes; `src/test/helpContent.test.ts` pins
+the behaviour it describes.
 
-- next step is to split the (to be) reusable help package material from
-  the app-specific stuff. put the package in a new dir (siggies-tour-and-help-pkg
-  or something?) and put the help-content.md format section there, but
-  keep the rest of this doc (with a link to the format doc) here.
-
-<details>
-<summary><b>Original unfinished draft text</b></summary>
-
-3. select MeasurementObservation and highlight observation_type. text:
-   - While the relationship between an entity and its enumerations and raw
-     data attributes is direct (e.g.,
-     `MeasurementObservation.observation_type` ==> `MeasurementObservationTypeEnum`
-     or `MeasurementObservation.age_at_observation` ==> `integer`), it can be
-     related to other entities in more complex ways
-     [can we animate this so that step 4 keeps this popover but shows the next bullet, etc?
-     not sure best way to represent this in my outline...well, we're going to need a reasonably
-     human-readable/writable format for the full tour specs anyway]
-     - inheritance, known in modeling parlance as IS_A relationships,
-       e.g., `MeasurementObservation.is_a` ==> `Observation`, or
-     - association / ownership / containment, known in modeling parlance as HAS_A relationships,
-       e.g., `Visit.associated_participant` ==> `Participant`.
-     A primary goal 
-   - Entities can be related to each other through
-4. goal is to show all the relationship types. if there are any entities
-   that use all four, select one of those, otherwise will have to select
-   one that has most and then select another that has the others. steps:
-   1. **Selecting an entity** Select an entity by clicking its checkbox;
-      the entity will appear in the main panel along with directly related
-      entities. There are five ways an entity can be related to another.
-   2. highlight row
-   3. click checkbox.
-</details>
-
-
-### following steps not finished yet. ignore
-- **Make better Change, Action, Beat implementation**
-  - When relationship-kinds (Tour 3.1) pops up the action has already
-    occurred and the Action: text does not make the step more legible.
-    A better sequence of events would be:
-    - anchor on unchecked MeasurementObservation selection row
-    - actually would be better if this were not 
-- **Change: allow add, remove, clear.** The authoring
-  format has an additive `Change:` and no remove verb. Consequence
-  today: tour step 4 ADDS to step 3's canvas instead of replacing it,
-  so the canvas is cumulative where the copy reads as if it were
-  showing a clean two-box example. Notes about this also in
-  `help-content.md`
-- **Tour authoring notes + draft preview** — `Note:` / `Draft:`
-  / `ForClaude:` fields, and a way to view a tour *including* its
-  parked and unfinished steps. deferred 2026-08-27 for time
-- **Multi-line for the OTHER fields** (`Context:`, `Action:`, beat text).
-  Deliberately not done: you said "1 for now; may need 2 soon". The block
-  reader (`extractBlockField`) is written generically, so each field is a
-  one-line change when you want it.
-- **Multi-line for the OTHER fields** (`Context:`, `Action:`, beat text) —
-  still parked at your "1 for now". Also listed below.
-
-
-</details>
-
----
-
-<details>
-<summary><b>Format</b></summary>
-
-## Format
-
-> This section is the spec, and it is deliberately part of the document so it
-> renders wherever the file is read. The parser skips it by name — see
-> `SPEC_SECTION` in `parseHelpContent.ts`. Keep it current when the format
-> changes.
 
 ### Structure
 
@@ -108,17 +41,23 @@ legibly in this file, and the `---` separators between them are what the
 parser splits on. `HelpSection.body` is parsed and available if a future help
 mode wants to show section intros — it is unused, not unsupported.
 
-**Each section is wrapped in `<details>` so the file folds when read on
-GitHub**, which is what makes a 600-line document navigable. Two things about
+**Wrap each section in `<details>` so the content file folds when read on
+GitHub**, which is what keeps a long content file navigable. Two things about
 that wrapper are deliberate:
 
 - **The `<summary>` repeats the `## Heading` below it.** That looks redundant
   and is load-bearing: the parser identifies a section by `^## ` and matches
   `PROSE_SECTIONS` on that text, so deleting the heading in favour of the
   summary makes the section invisible to the parser.
-- **The content sections are `<details open>`; `Format` and `TODO` are not.**
-  Collapsing the tour while you are editing it would hide the work; the long
+- **Content sections are `<details open>`; a prose section is not.**
+  Collapsing the tour while you are editing it would hide the work; long
   reference material is what benefits from folding.
+
+**A prose section is a `## ` section the parser skips by name**, for notes that
+belong beside the content rather than in it — dmvd's content file carries a
+`## TODO` scratchpad. Its `###` sub-headings would otherwise parse as entries
+pointing at nothing. Add one by name to `PROSE_SECTIONS` in
+`parseHelpContent.ts`.
 
 A multi-line field stops at `<details>`, `</details>` or `<summary>` as well as
 at the next `- **Field:**`, so the closing tag after a section's last entry
@@ -427,6 +366,24 @@ Values under 240 are ignored (the prose becomes a column of single words), and
 the width is capped to the viewport, so a wide popover still fits on a small
 screen.
 
+**Font size is CSS, not a field.** There is no `FontSize:`, because text size
+is a property of the whole popover rather than of one step. Everything inside
+the popover is sized in `em` off `--help-font-size`, so one value scales the
+title, prose, action band, alert, context and tour nav together.
+
+**Set it in the HOST's stylesheet, not in `help.css`.** The package default is
+`13px`; an app's preferred reading size is the app's, and this file ships to
+every host:
+
+```css
+/* in the host's own CSS, loaded after help.css */
+.help-popover { --help-font-size: 15px; }
+```
+
+dmvd does this in [`src/explore/helpTheme.css`](../explore/helpTheme.css),
+imported by `ExploreApp.tsx` *after* the `HelpLayer` import that pulls in
+`help.css` — same specificity, so source order decides.
+
 Both `Position:` and `OffsetX:` are clamped to the viewport. An override can
 pick a bad side; it cannot push the popover off-screen.
 
@@ -434,12 +391,20 @@ pick a bad side; it cannot push the popover off-screen.
 so a long step stays centred rather than sitting low. One taller than the
 screen scrolls its body and keeps the back/next row in view.
 
-Horizontally it centres on the **region the host names**, not the whole window:
-dmvd passes `centerOn="graph-canvas"`, so an unanchored step sits over the
-diagram and clear of the left panel, which is usually what such a step is
-talking about. Vertically it stays on the viewport's midline — the popover's
-height is not known at placement time, which is what centring on the real
-height buys, so a region-relative vertical centre could not be kept on screen.
+Horizontally it can centre on a **region the host names** rather than the whole
+window, via `<HelpProvider centerOn="…">` — so an unanchored step can be kept
+clear of a panel it is describing. Vertically it always stays on the viewport's
+midline: the popover's height is not known at placement time, which is what
+centring on the real height buys, so a region-relative vertical centre could
+not be kept on screen.
+
+**That asymmetry is the reason to think twice before naming a region.** A
+region-centred popover is off-centre on one axis and centred on the other, and
+the mismatch reads worse than the overlap it fixes — dmvd used
+`centerOn="graph-canvas"` until 2026-08-29 and dropped it for exactly that
+(Siggie: *"the off-window-center placement is bugging me more"*). The prop is
+still here and still works; it is dmvd that declines to pass it.
+
 An app that names no region, or names one that is not mounted, gets the
 viewport both ways.
 
@@ -586,262 +551,3 @@ mixes them cannot be read, which is what was wrong with the old `2.1 / 6`
 Someone who arrives from a **link** with no one explaining it — the program
 manager case. So step 1 assumes nothing, and any step that needs a selection
 brings its own via `Change:` rather than asking the visitor to click first.
-
-</details>
----
-<details open>
-<summary><b>Getting started</b></summary>
-
-## Getting started
-
-What this app is and how to move around it.
-
-### intro
-
-- **Title:** BDCHM Explorer
-- **Tour:** Walkthrough
-- **Description:** 
-  BioData Catalyst ([BDC](https://biodatacatalyst.nhlbi.nih.gov/))
-  is a cloud-based ecosystem where researchers can find and work with
-  [NHLBI](https://www.nhlbi.nih.gov/) data resources. Studies arrive with
-  their own terminologies, units and file structures, which are
-  transformed by the Data Model-Based Ingestion Pipeline
-  ([dm-bip](https://linkml.io/dm-bip/)) into a common **BDC Harmonized
-  Model (BDCHM)** schema. Nine priority [TOPMed](https://topmed.nhlbi.nih.gov/)
-  cohorts (e.g., the Framingham Heart Study and Women's Health Initiative)
-  and the [INCLUDE Data Hub](https://portal.includedcc.org/) have been
-  harmonized to it so far with more on their way.
-
-  BDCHM and the ingestion pipeline are built using [LinkML](https://linkml.io/).
-  Neither the raw LinkML [YAML file](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/blob/main/src/bdchm/schema/bdchm.yaml)
-  nor the LinkML [generated documentation](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/)
-  are easy to grasp given that BDCHM's over 4,000-line schema includes around
-  225 total attributes, 55 distinct class entities, 50 permissible value sets,
-  7 primitive data types, and 80 relationships between class entities. 
-  Yet doing almost anything involving BDCHM would require a basic, overall
-  understanding of its structure. You may want to use BDCHM:
-  - to analyze data harmonized to it (using [BDC's tools](https://biodatacatalyst.nhlbi.nih.gov/use-bdc/analyze-data/)
-    or otherwise);
-  - to harmonize your own data to it;
-  - design new studies pre-harmonized to it; or
-  - use it for ideas or inspiration in designing your own data models.
-
-  The **BDCHM Explorer** provides a single-page, highly interactive interface
-  allowing you to easily see details of and relationships between specific
-  entities or neighborhoods around entities you select.
-
-  > This tour will introduce you to all of BDCHM Explorer's major features.
-  > - Click the ✕ or hit **Esc** any time to exit.
-  > - Use arrow keys or next/back buttons to navigate.
-- **Anchor:** none
-- **Once:** intro
-- **Change:**
-- **Width:** 500
-
-### selection-tree
-
-- **Title:** Entities
-- **Tour:** Walkthrough
-- **Anchor:** selection-tree
-- **Description:** A LinkML schema defines classes representing a data model's
-  entities. The left panel lists them, grouped into categories for convenience,
-  though these categories are not actually part of the schema.
-- **Beats:** <!-- these are just copied from below, need to get beats working
-              right before authoring -->
-  1. In order to select an entity for display, click its checkbox
-     - Anchor: entity-row:Person
-  2. The Person box shows the entity name, a dismiss (x) icon, a menu
-     for displaying boxes for related entities, and a list of this entity's
-     attributes.
-     - Anchor: node-box:Person
-     - Change: sel=Person
-     - Action: I clicked the Person checkbox and the Person entity appeared in the viewing panel.
-  3. Hover over the yellow `☰ 2 related · 0 shown ▾` button to reveal a cascading
-     menu allowing you to display entities related to this one.
-     - Anchor: node-box:Person
-     - Highlight: none
-
-### entities
-
-- **Title:** Entities
-- **Tour:** Walkthrough
-- **Anchor:** selection-tree
-- **Description:** A LinkML schema defines classes representing a data model's
-  entities. A class defines a set of slots or attributes (like columns in
-  a database table) which can hold
-  - other entities,
-  - permissible value sets (enumerations),
-  - or raw data types (strings, integers, etc.)
-
-<!--
-  TODO(siggie): translated faithfully, but note what this replaced. The
-  entry that used to sit at tour position 2 was different copy entirely
-  ("Choosing what to look at" — ownership nesting, what the checkbox vs the
-  arrow vs the name each do, and a Context about an entity appearing in
-  more than one place). Your draft's step 2 does not cover any of that.
-  It is preserved verbatim as `selection-tree-mechanics` below, help-only,
-  so nothing is lost. Decide whether your step 2 should absorb it.
--->
-
-### relationship-kinds
-
-- **Title:** How entities relate
-- **Tour:** Walkthrough
-- **Description:** While the relationship between an entity and its enumerations and raw data attributes is direct (e.g., `MeasurementObservation.observation_type` → `MeasurementObservationTypeEnum`, or `MeasurementObservation.age_at_observation` → `integer`), it can be related to other entities in more complex ways.
-- **Action:** Selected MeasurementObservation for you, and highlighted its `observation_type` attribute.
-- **Anchor:** slot-row:MeasurementObservation.observation_type
-- **Change:** sel=MeasurementObservation
-- **Beats:**
-  1. **Inheritance**, known in modeling parlance as IS_A relationships — e.g. `MeasurementObservation.is_a` → `Observation`.
-     - Anchor: node-box:MeasurementObservation
-  2. **Association / ownership / containment**, known in modeling parlance as HAS_A relationships — e.g. `Visit.associated_participant` → `Participant`.
-     - Anchor: node-box:MeasurementObservation
-  3. A primary goal
-     - Anchor: none
-  4. Entities can be related to each other through
-     - Anchor: none
-
-<!--
-  TODO(siggie): beats 4 and 5 are your two truncated sentences, carried
-  over exactly as they trail off. Nothing invented. They will render as
-  broken fragments in the tour until you finish them — that is deliberate,
-  so they cannot ship unnoticed.
-
-  [sg] the "solutions" below are not good
-
-  TODO(siggie): this step is where you asked "can we animate this so that
-  step 4 keeps this popover but shows the next bullet, etc?" Beats are the
-  answer, and as of 2026-08-28 they ADD rather than replace, which is what
-  you actually asked for: the Description stays on screen and each beat
-  appears below it, earlier ones dimmed. The old beat 1 existed only to
-  repeat the Description so it would not vanish -- deleted, with its
-  `slot-row` anchor moved up to the entry where the step now starts.
-
-  TODO(siggie): your draft numbers this "3" and puts "select
-  MeasurementObservation and highlight observation_type" in the step title.
-  The Action: field now says that out loud, which is the fix for the bug
-  where a step changed the app silently.
--->
-
-### selection-tree-mechanics
-
-- **Title:** Choosing what to look at
-- **Description:** Entities are arranged by **ownership**: an entity is nested under whatever owns it. Tick a checkbox to put an entity on the diagram. The checkbox is the only thing that selects — clicking the row or the arrow just opens and closes the tree.
-- **Interactions:**
-  - Checkbox — add or remove that entity from the diagram.
-  - Arrow — expand or collapse, without changing the selection.
-  - Name — open the details panel without changing the selection.
-- **Context:** An entity can sit in more than one place in the tree, because things can be owned by more than one kind of thing. The widget marks the duplicates for you.
-- **Anchor:** selection-tree
-
-</details>
----
-<details open>
-<summary><b>Reading the diagram</b></summary>
-
-## Reading the diagram
-
-What the boxes and lines mean.
-
-### graph-canvas
-
-- **Title:** Selecting an entity
-- **Tour:** Walkthrough
-- **Description:** Select an entity by clicking its checkbox and it appears in the main panel. Only what you select is drawn — related entities are reached from the box's relation menu. There are five ways an entity can be related to another.
-- **Action:** Added Participant and BodySite to what is already on the diagram. You would normally do this by ticking them in the tree on the left.
-- **Change:** sel=BodySite~Participant
-- **Beats:**
-  1. Select an entity by clicking its checkbox and it appears in the main panel. Only what you select is drawn. There are five ways an entity can be related to another.
-     - Anchor: selection-tree
-  2. This is the entity's row in the selection panel.
-     - Anchor: entity-row:Participant
-  3. Clicking the checkbox is what puts it on the diagram.
-     - Anchor: entity-checkbox:Participant
-
-<!--
-  TODO(siggie): your draft's step 4 says "goal is to show all the
-  relationship types. if there are any entities that use all four, select
-  one of those, otherwise will have to select one that has most and then
-  select another that has the others." That is an instruction to yourself,
-  not copy — it is NOT translated into a beat. The `Change:` above still
-  carries the old `sel=BodySite~Participant`; pick the entity or entities
-  that actually demonstrate all five once you have checked which do.
-
-  Note this step now ADDS to the diagram rather than replacing it, so
-  MeasurementObservation from step 3 is still drawn beside Participant and
-  BodySite. The Action: says so. If the step wants a clean two-box diagram
-  instead, the format has no "remove" verb — say so and it can gain one.
-
-  Note the count: your draft says "five ways" here and you confirmed five
-  is right (four ownership kinds + associations). The stale "four" note is
-  gone.
-
-  TODO(siggie): this entry kept the id `graph-canvas` so its help-only
-  content is not orphaned, but your draft's step 4 is about the SELECTION
-  panel, not the canvas. The old canvas copy is preserved as
-  `graph-canvas-reading` below. Consider renaming this entry.
--->
-
-### graph-canvas-reading
-
-- **Title:** The diagram
-- **Description:** Each box is an entity; each row inside it is one of that entity's attributes. Lines run from an owner to the thing it owns, so reading left to right is reading "contains".
-- **Interactions:**
-  - Click a box to open its details.
-  - Drag a box to move it; drag the background to pan.
-  - Click an attribute row that names an entity to pull that entity onto the diagram.
-- **Anchor:** graph-canvas
-
-### relation-menu
-
-- **Title:** The relation menu
-- **Description:** Every entity related to this one, grouped by how it is related. The trigger says how many there are and how many are already on the diagram; opening it branches into the five kinds of relationship, and each branch lists the entities in it.
-- **Interactions:**
-  - Hover **☰ N related · M shown** to open the menu, then a branch to list its entities.
-  - Click an entity to put it on the diagram — which also ticks its checkbox on the left. Click it again — or its ✕ — to take it off; entities already drawn are greyed out.
-  - "add all N" / "hide all N" at the top of a branch — draw or clear the whole branch at once. Both counts are shown before you click. "hide all" removes every entity in the branch, including ones you had selected yourself.
-  - **ⓘ** opens an entity's details without adding it to the diagram.
-- **Context:** From one entity's point of view there are five ways to be related. Four are ownership, and each names which side declares the attribute that creates it. Running *outward*: things that **belong to me by my attribute** (this entity declares the slot) and things that **belong to me by their attribute** (they declare it, pointing back here). Organization is entirely the second kind — it owns thirteen kinds of thing and declares no slot for any of them. Running *inward*, the same split: entities **I belong to, by my attribute** and entities **I belong to, by their attribute**. Fifth are **associations**, where neither entity owns the other.
-
-### node-dismiss
-
-- **Title:** Closing a box
-- **Description:** Removes this entity from the diagram and unticks its checkbox on the left. A merged box removes every entity in it at once.
-
-### toolbar-siblings
-
-- **Title:** Merged inheritance boxes
-- **Description:** When several entities on the diagram share a parent, they collapse into one box titled by that parent. Rows the parent defines come first, then a coloured header per child followed by the rows that child adds.
-- **Interactions:**
-  - Toggle off to draw each entity as its own separate box.
-- **Context:** Lines leaving a child's rows take that child's colour, so you can trace a line back to the block it came from.
-
-</details>
----
-<details open>
-<summary><b>Sharing what you see</b></summary>
-
-## Sharing what you see
-
-### copy-link
-
-- **Title:** Copy link
-- **Tour:** Walkthrough
-- **Description:** Copies a link that reproduces **exactly** this view — the selection and the toolbar settings. Anyone opening it sees what you see.
-- **Interactions:**
-  - Click to copy; the URL bar always holds the same link.
-- **Context:** Settings travel in the link, so a diagram you set up deliberately does not get redrawn with someone else's preferences.
-- **Change:**
-
-### example-cases
-
-- **Title:** Example cases
-- **Description:** Named selections that show particular routing and inheritance situations. Useful for seeing what the diagram does with the awkward cases.
-
-### help-button
-
-- **Title:** Help and tour
-- **Description:** **Take the tour** for a short guided walk through the app. Press `?` anywhere to start it, and again (or `Esc`) to leave.
-- **Shortcut:** ?
-
-</details>

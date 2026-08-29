@@ -7,8 +7,10 @@
  * everything else is unchanged. Kept dependency-free so it can move into the
  * shared help package without edits (docs/HELP_PACKAGE_PLAN.md).
  *
- * The authoring format is specified in the header comment of help-content.md
- * — that comment is the spec. This file is its implementation.
+ * The authoring format is specified in FORMAT.md, beside this file — that doc
+ * is the spec, this file is its implementation. The CONTENT written against it
+ * belongs to the app, not to this package: dmvd's is
+ * `src/explore/help-content.md`.
  */
 
 /**
@@ -365,10 +367,11 @@ export function parseAnchor(raw: string | undefined, fallbackId: string): HelpAn
 }
 
 /**
- * The spec lives in the document as a rendered `## Format` section rather than
- * an HTML comment, so it can be read as markdown wherever the file is opened.
- * Its `###` sub-headings are prose, not entries, so the section is skipped by
- * name. Renaming the section in the markdown means renaming it here.
+ * dmvd's spec now lives in its own FORMAT.md (2026-08-29), so no content file
+ * in this repo carries a `## Format` section any more. The name stays skipped
+ * anyway: an app is free to keep its spec inline in the content file — which
+ * is where it lived here until the split — and its `###` sub-headings would
+ * otherwise parse as entries pointing at nothing.
  */
 const SPEC_SECTION = 'Format';
 
@@ -381,8 +384,10 @@ export const DEFAULT_TOUR = 'Walkthrough';
 
 /**
  * Sections whose `###` headings are prose, not entries, and so are skipped by
- * name. `Format` is the spec; `TODO` is the authoring scratchpad at the top of
- * the file. Without this a heading like `### Original unfinished draft text`
+ * name. `Format` is an inline spec (see above); `TODO` is the authoring
+ * scratchpad at the top of dmvd's content file. An app adding a prose section
+ * of its own adds its name here. Without this a heading like
+ * `### Original unfinished draft text`
  * parses as an entry with an anchor pointing at nothing — which is exactly
  * what happened when the TODO section was added (Siggie, 2026-08-28: "Not sure
  * if parser will complain about it").
