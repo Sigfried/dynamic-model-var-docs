@@ -2,8 +2,45 @@
 
 **Status:** decided 2026-08-26; **STARTED, not extracted.** The help system is
 implemented in-app under `src/help/` (`HelpProvider.tsx`, `helpContext.ts`,
-`HelpLayer.tsx`, `parseHelpContent.ts`, `help-content.md`, `help.css`) on branch
+`HelpLayer.tsx`, `parseHelpContent.ts`, `FORMAT.md`, `help.css`) on branch
 `tweaking-expand-prune`. It has NOT been extracted into a standalone package.
+
+### Package/app doc split — 2026-08-29
+
+`src/help/` is now **only package material**. What was app-specific moved out:
+
+| Was | Is | Why |
+|---|---|---|
+| `src/help/help-content.md` `## Format` section | `src/help/FORMAT.md` | Describes the parser, not BDCHM — package material |
+| the rest of `src/help/help-content.md` | `src/explore/help-content.md` | dmvd's authored content, beside the equally app-specific `helpResolvers.ts` |
+| dmvd's popover font size | `src/explore/helpTheme.css` | App taste, not package behaviour — see below |
+
+**`src/explore/helpTheme.css` is where dmvd's help STYLING overrides go.**
+`help.css` holds package defaults and ships to every host; a value tuned for
+one app does not belong in it. The seam is CSS custom properties: the package
+sizes everything in `em` off `--help-font-size` (default `13px`) and the host
+overrides that one value (dmvd: `14px`). `ExploreApp.tsx` imports the override
+sheet *after* the `HelpLayer` import that pulls in `help.css` — the rules have
+equal specificity, so source order is what decides, and the import comment says
+so. Siggie, 2026-08-29: *"you can't put this in /src/help — that's for the
+whole package. i want to change for this dmvd only."*
+
+**Done the opposite way round from the note that asked for it.** Siggie's TODO
+said to move the package into a new dir and put the spec there. Siggie,
+2026-08-29: *"to avoid the churn but still get separation between app-specific
+and packageable material, how about moving help-content.md elsewhere and
+leaving code in place for now?"* — so the content moved and the code did not.
+Nothing was renamed, two import paths changed, and a parity check confirmed the
+parsed entries and tour positions are byte-identical across the split.
+
+**Still to do, when it is a better time:** move `src/help/` to
+`packages/tour-help/`. Siggie picked that name over `siggies-tour-and-help-pkg`
+and over leaving it in place. The extraction prerequisites in this doc (notably
+the CSS anchor-positioning migration, TASKS item 6) are unchanged by the split.
+
+`SPEC_SECTION = 'Format'` stays in the parser even though no content file in
+this repo now carries that section: an app may keep its spec inline, which is
+what dmvd did until this split.
 
 **Two deliberate departures from the plan below** — recorded so they are not
 re-litigated:
@@ -46,10 +83,12 @@ a whole world; see the `Change` section of `help-content.md` and
 `src/explore/tourStateStack.ts`. **Still open:** popover dragging, wanted as an
 escape hatch (task 8).
 
-**Authoring format extended 2026-08-27 (S3a). The format spec is the header
-comment of [`src/help/help-content.md`](../src/help/help-content.md)** — keep it
-there, and keep it current. The format now expresses what the gaps above need,
-though the mechanism acting on it is still S3b's work:
+**Authoring format extended 2026-08-27 (S3a). The format spec is
+[`src/help/FORMAT.md`](../src/help/FORMAT.md)** — keep it there, beside the
+parser that implements it, and keep it current. It was a `## Format` section
+inside the content file until 2026-08-29; see *Package/app doc split* below.
+The format now expresses what the gaps above need, though the mechanism acting
+on it is still S3b's work:
 
 - **`Anchor:` separates identity from DOM target.** `### <id>` is identity
   only; `Anchor:` says what to point at. Omitting it means
@@ -61,7 +100,12 @@ though the mechanism acting on it is still S3b's work:
   same resolvers — so it can point at a host-registered kind, not just a
   `data-help-id`. Another extraction constraint: the package must not learn
   that a graph canvas is the thing to sit over. Omitted, it centres on the
-  viewport as before.
+  viewport as before — **which is what dmvd does as of 2026-08-29.** It passed
+  `centerOn="graph-canvas"` until then; centring is horizontal-only (the
+  popover's height is unknown at placement time), and an unanchored popover
+  off-centre on one axis and centred on the other read worse than the panel
+  overlap it was fixing. The prop and its tests stay: dmvd declines to use a
+  package capability, which is not the same as the capability going away.
 - **Anchor kinds are host-registered, not parser-known.** The parser splits
   `kind:argument` and stops there — resolving `entity-row:Participant` means
   knowing what a dmvd entity row is, which this package must not.
@@ -380,7 +424,7 @@ The dmvd Explorer tour is roughly:
 4. Open example cases, click one or two
 
 **Superseded 2026-08-27:** this four-step sketch is no longer the tour. Siggie
-is authoring the real thing in `help-content.md`; their draft is longer, uses
+is authoring the real thing in `src/explore/help-content.md`; their draft is longer, uses
 nested beats, and highlights individual rows. Treat the sketch as history — the
 authored content is the source of truth for what the tour contains.
 

@@ -7,7 +7,185 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
-## 2026-08-29 (intro copy from the pipeline paper; unanchored popovers centre on a named region)
+## 2026-08-29 (intro copy from the pipeline paper; unanchored popovers centre on a named region; package/app doc split)
+
+### Popover font size: `em` in the package, the VALUE in the app
+
+Siggie asked how to change the popover base font size. The answer was worse
+than expected: `.help-popover` set `font-size: 13px`, but all twelve children
+re-declared absolute px, so the "base" moved the body prose and nothing else.
+The sizes were RELATIVE in intent — 12px meaning "chrome, one step down", 11px
+"two steps down" — but written absolutely, so the relationship lived only in
+whoever wrote them. Converted to `em` off a `--help-font-size` custom property.
+
+**The `em` nesting trap, which the obvious conversion walks straight into.**
+`em` multiplies the PARENT's computed size, not the popover base. Three rules
+sit inside 0.92em parents — `.help-popover-alert kbd`,
+`.help-popover-shortcut kbd`, `.help-popover-alert-once`. Converting their 11px
+to `0.85em` (11/13, the right answer for a direct child) compounds to
+0.92 × 0.85 = 0.78em ≈ 10.2px and silently shrinks them. They carry `0.92em`
+instead (11/12), landing back on exactly 11px. Verified with a throwaway test
+computing all eleven sizes against their originals — max drift 0.04px — rather
+than trusting the arithmetic. `.help-hint` stays px on purpose: it is a
+fixed-position dot outside the popover, not popover text.
+
+**Then the correction that matters.** I put the retuned value in `help.css` and
+told Siggie to override it from dmvd's stylesheet — backwards, and they said
+so: *"you can't put this in /src/help — that's for the whole package. i want to
+change for this dmvd only."* `src/help/` ships to every host; an app's
+preferred reading size is the app's.
+
+So: the `em` conversion and the `13px` DEFAULT stay in the package (that work
+is what makes the popover scalable at all, and is a prerequisite for any host
+override), and dmvd's value moved to a new `src/explore/helpTheme.css`. Same
+split as `helpResolvers.ts`. Siggie then set it to 16px, which is the point —
+one line, in dmvd's file.
+
+**The fragile part is source order, not specificity.** Both rules are a bare
+`.help-popover`, so the tie is broken only by which sheet loads last, and that
+is an unremarkable-looking import line in `ExploreApp.tsx` that an editor's
+organise-imports would happily move. `helpPlacement.test.ts` pins it: the
+`helpTheme.css` import must come after the `HelpLayer` import that pulls in
+`help.css`. Verified by moving it up and watching the test fail.
+
+**Two of those new tests failed on first run, both my fault and both the same
+mistake:** matching CSS text without stripping comments, in files whose comments
+explain the px sizes they replaced and show an example `15px` override. A third
+matched `--help-font-size: 13px` as though the custom property were a child
+opting out of `em`. The assertions now decomment first and use `(?<!-)` to skip
+the custom property. Worth noting because the naive "grep the CSS" test is
+tempting and reliably wrong on a file that documents itself.
+
+### `centerOn` reverted at the CALL SITE, not removed
+
+Shipped yesterday, dropped today, and the reason is worth keeping because the
+feature itself is fine.
+
+`centerOn="graph-canvas"` was added because a wide unanchored intro popover,
+centred on the window, sat half over the left panel it was describing.
+It fixed that. What it traded for: **centring can only be horizontal.**
+`popoverPosition` does not know the popover's height at placement time — that is
+the whole reason the vertical stays a `-50%` translate off the viewport midline
+— so a region-centred popover is off-centre on one axis and centred on the
+other. Siggie, 2026-08-29: *"i think the off-window-center placement is bugging
+me more"*, and then the disposition: *"vertical should center on the viewport
+also, but i don't care if it centers on the graph panel"* — i.e. make both axes
+agree, and viewport is the axis that cannot move.
+
+**The fix was deleting one prop from `ExploreApp.tsx`.** Nothing in `src/help/`
+changed: `HelpProvider` already treats a missing `centerOn` as "no region", and
+`popoverPosition(…, null)` was already the viewport-both-ways path with tests
+on it. The seam did its job.
+
+**The prop, its resolution path and its four tests all stay**, on Siggie's
+explicit instruction — *"preferably without removing possibly useful
+functionality from the help package code."* This is a host declining to pass an
+option, not a capability being withdrawn, and the distinction matters for a
+directory whose whole point is to be extractable. `helpPlacement.test.ts` now
+says in its header that dmvd exercises only the no-region case, so a later
+reader does not delete the region tests as dead.
+
+**The asymmetry is now written down in `FORMAT.md`** as the reason to think
+twice before naming a region, rather than left as a trap for the next host that
+reaches for it.
+
+### The empty rectangle: an author `display` beat the UA's popover hide
+
+Siggie, on a screenshot of the empty canvas: *"what's that rectangle doing
+there?"* — a bordered, rounded, soft-shadowed box floating above-left of the
+"Select entities on the left" text, on page load, before touching anything.
+
+It was the **help popover**, open and empty. The give-away was matching the
+screenshot against `.help-popover`: `1px solid #cbd5e1`, `border-radius: 8px`,
+`box-shadow: 0 8px 28px`. All three matched exactly.
+
+**Cause.** The Popover API hides a closed popover through the UA stylesheet:
+`[popover]:not(:popover-open) { display: none }`. Author styles beat the UA
+stylesheet, so `.help-popover { display: flex }` — added for the
+scroll-the-body-keep-the-nav-row layout — silently cancelled that hide. The
+shell then painted at all times. It looked EMPTY rather than broken because
+`HelpLayer` renders the shell unconditionally and gates every child on
+`{entry && ...}`, so with no entry you get the chrome and nothing in it.
+
+Fix: move only the `display` to `.help-popover:popover-open`. Everything else
+stays on the bare class — a closed popover is `display: none`, so its other
+properties cost nothing.
+
+**Two things this rules out**, both of which looked likelier at first and were
+checked before the CSS:
+
+- **Not the show/hide effect.** `HelpLayer.tsx:359` is already correct
+  (`if (entry && ready) showPopover() else hidePopover()`). It was calling
+  `hidePopover()` exactly as intended; the CSS was overriding the result.
+- **Not `useZoomPan`'s popover measurement.** `fitViewport` already gates on
+  `:popover-open`, so it read the closed popover as absent and was never
+  confused — which is also why this never showed up as a layout bug, only as a
+  visual one.
+
+**The regression test asserts against the CSS TEXT, not a render.** jsdom does
+not implement the Popover API's UA rules, so a mounted-component test passes
+whether or not the bug is present — it would have been theatre. `helpPlacement.test.ts`
+now parses `help.css` and asserts the bare class declares no `display` and the
+`:popover-open` rule declares `display: flex`. Verified by reintroducing the
+bug and watching the first assertion fail, then restoring.
+
+### Package/app split: the content moved, not the code
+
+The top TODO bullet in the help content file asked for the reverse of what got
+done, so the reasoning matters more than the diff. The note said: put the
+package in a new dir (`siggies-tour-and-help-pkg` or something) and move the
+`## Format` spec section there, keeping the content where it was.
+
+I did not just do that, because two things about it were worth checking first
+and they pointed opposite ways:
+
+- The **doc** half was safe. `src/help/` already had a clean dependency
+  boundary (nothing under it names a dmvd concept; resolvers come in via the
+  `<HelpProvider resolvers={...}>` prop), so splitting spec from content was
+  pure documentation work.
+- The **code** half was not. `HELP_PACKAGE_PLAN.md` says extraction is
+  deliberately deferred until the CSS anchor-positioning migration (TASKS item
+  6) lands, precisely so anchor-name assignment is not designed twice. Moving
+  the directory now would churn imports, the Vite `?raw` import, the test
+  paths and the CSS, against a plan that says wait.
+
+So I asked rather than picking. Siggie's answer was a third option neither of
+mine covered: *"to avoid the churn but still get separation between
+app-specific and packageable material, how about moving help-content.md
+elsewhere and leaving code in place for now?"* — **invert it.** The package is
+the thing that stays put; the app content is the thing that moves out. That
+gets the separation for free, because `src/help/` was already package-shaped
+and the only app-specific file in it was the content.
+
+Result: `src/help/FORMAT.md` (spec, beside the parser that implements it) and
+`src/explore/help-content.md` (dmvd's content, beside the equally app-specific
+`helpResolvers.ts`). Two import paths changed; nothing renamed. `packages/tour-help/`
+is still the eventual home for the code — Siggie picked that name over the
+working name in the TODO — *"when it's a better time."*
+
+**Verified with a throwaway parity test**, not by eyeballing: parse the
+pre-split file from `git show HEAD:` and the post-split file, and assert the
+entry maps and `tourPositions()` are byte-identical. They were. Deleted after
+it passed — worth doing for a file split, not worth keeping. Full suite 443
+passed, `npm run build` clean.
+
+**Two things in the spec text went stale on the move and were fixed**, both
+because the spec used to be *inside* the file it describes:
+
+- The `<details>` paragraph said "each section is wrapped so **the file** folds
+  … `Format` and `TODO` are not `open`" — self-reference that is now false.
+  Rewritten as instructions to the content author, plus a short paragraph
+  explaining what a prose section is (the TODO scratchpad is the live example).
+- The opening blockquote ("this section is deliberately part of the document")
+  argued for a placement that no longer holds. Deleted; the new preamble says
+  why the spec sits with the parser instead.
+
+**`SPEC_SECTION = 'Format'` was kept in the parser though nothing in this repo
+now has such a section.** Deleting it looked like obvious dead-code cleanup and
+is not: an app is free to keep its spec inline in its content file, which is
+exactly what dmvd did until today, and without the skip its `###` sub-headings
+parse as entries anchored at nothing. Comment updated to say so, so the next
+session does not "clean it up".
 
 ### The ~150 was VARIABLES, not relationships
 

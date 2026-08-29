@@ -28,6 +28,10 @@ import { useHelp, HELP_MODE_ENABLED } from '../help/helpContext';
 import HelpLayer from '../help/HelpLayer';
 import { helpResolvers } from './helpResolvers';
 import helpMarkdown from './help-content.md?raw';
+/* dmvd's popover overrides. MUST come after the HelpLayer import above, which
+   is what pulls in the package's `help.css` — these rules have the same
+   specificity, so source order is what decides. */
+import './helpTheme.css';
 
 import {
   readExploreState, writeExploreState, buildShareURL, readTourRequest,

@@ -58,6 +58,30 @@ body.help-mode {
 /* The popover itself. `position: fixed` + the Popover API's top layer, so no
    z-index or overflow:hidden ancestor can clip it. */
 .help-popover {
+  /* THE PACKAGE'S DEFAULT SIZE, and the hook a host resizes it through.
+     Every size inside the popover is `em` off this, so overriding it in the
+     HOST's own stylesheet scales the whole thing — prose, title, action band,
+     alert, context, tour nav — with one value:
+
+       .help-popover { --help-font-size: 15px; }   <- in the host's CSS
+
+     13px stays the package default. Do not retune it here for one app: this
+     file ships to every host, and an app's preferred reading size is the
+     app's, not the package's. dmvd's lives in `explore/helpTheme.css`.
+
+     Why `em` at all: each child used to re-declare an absolute px size, so the
+     `font-size` on this rule moved the body prose and nothing else. The sizes
+     were RELATIVE in intent (12px = chrome, one step down; 11px = two steps
+     down) but written absolutely, so the relationship existed only in
+     someone's head.
+
+     Careful with `em` on a nested element: it multiplies its PARENT's size,
+     not this base. `.help-popover-alert kbd` and `.help-popover-shortcut kbd`
+     sit inside 0.92em parents, so they carry 0.92em to land back on the same
+     11px, not the 0.85em their old px value suggests. Same for
+     `.help-popover-alert-once`. Each is commented at its rule. */
+  --help-font-size: 13px;
+
   position: fixed;
   margin: 0;
   padding: 12px 14px;
@@ -65,15 +89,27 @@ body.help-mode {
   border-radius: 8px;
   background: #fff;
   color: #0f172a;
-  font-size: 13px;
+  font-size: var(--help-font-size);
   line-height: 1.45;
   box-shadow: 0 8px 28px rgb(15 23 42 / 18%);
   overflow: visible;
-  /* Column so a popover taller than the viewport scrolls its BODY and keeps
-     the nav row (back / next / ✕) reachable, rather than pushing it off the
-     bottom. `maxHeight` is set inline by `popoverPosition`. */
-  display: flex;
   flex-direction: column;
+}
+
+/* The `display` MUST stay scoped to `:popover-open`.
+   The UA stylesheet hides a closed popover with
+   `[popover]:not(:popover-open) { display: none }`, and an author `display`
+   on the bare class beats it — so a plain `.help-popover { display: flex }`
+   leaves the shell PAINTED at all times. Since the shell renders
+   unconditionally and its contents are gated on `entry`, that showed as an
+   empty bordered rectangle over the canvas on every page load, before any
+   entry existed (Siggie, 2026-08-29: "what's that rectangle doing there?").
+
+   Column so a popover taller than the viewport scrolls its BODY and keeps the
+   nav row (back / next / ✕) reachable, rather than pushing it off the bottom.
+   `maxHeight` is set inline by `popoverPosition`. */
+.help-popover:popover-open {
+  display: flex;
 }
 
 /* Only the prose scrolls; the title and the nav row hold their place. */
@@ -84,7 +120,7 @@ body.help-mode {
 
 .help-popover-title {
   margin: 0 0 6px;
-  font-size: 13px;
+  font-size: 1em;
   font-weight: 700;
 }
 
@@ -118,7 +154,7 @@ body.help-mode {
   padding: 1px 4px;
   border-radius: 3px;
   background: #f1f5f9;
-  font-size: 12px;
+  font-size: 0.92em;
 }
 
 /* A block kept from an earlier beat.
@@ -168,7 +204,7 @@ body.help-mode {
   border-left: 3px solid #0284c7;
   border-radius: 0 5px 5px 0;
   background: #f0f9ff;
-  font-size: 12px;
+  font-size: 0.92em;
   color: #075985;
 }
 .help-popover-action p { margin: 0; }
@@ -194,7 +230,7 @@ body.help-mode {
   border-left: 3px solid #d97706;
   border-radius: 0 5px 5px 0;
   background: #fffbeb;
-  font-size: 12px;
+  font-size: 0.92em;
   color: #92400e;
 }
 .help-popover-alert p { margin: 0; }
@@ -210,7 +246,8 @@ body.help-mode {
   border-radius: 4px;
   background: #fef3c7;
   font-family: ui-monospace, monospace;
-  font-size: 11px;
+  /* 0.92em of the 0.92em alert, NOT of the base: lands on 11px. */
+  font-size: 0.92em;
 }
 /* The `Once:` opt-out. Quieter than the note it sits under -- it is the
    footnote to the alert, not a second thing to read. */
@@ -219,7 +256,8 @@ body.help-mode {
   gap: 5px;
   align-items: center;
   margin-top: 6px;
-  font-size: 11px;
+  /* Nested in the 0.92em alert -- 0.92em of that is 11px. */
+  font-size: 0.92em;
   opacity: 0.85;
   cursor: pointer;
 }
@@ -237,7 +275,7 @@ body.help-mode {
 
 .help-popover-shortcut {
   margin: 6px 0 0;
-  font-size: 12px;
+  font-size: 0.92em;
   color: #475569;
 }
 .help-popover-shortcut kbd {
@@ -246,14 +284,15 @@ body.help-mode {
   border-radius: 4px;
   background: #f1f5f9;
   font-family: ui-monospace, monospace;
-  font-size: 11px;
+  /* 0.92em of the 0.92em shortcut line, NOT of the base: lands on 11px. */
+  font-size: 0.92em;
 }
 
 .help-popover-context {
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid #e2e8f0;
-  font-size: 12px;
+  font-size: 0.92em;
   color: #475569;
 }
 
@@ -266,7 +305,7 @@ body.help-mode {
   border-top: 1px solid #e2e8f0;
 }
 .help-tour-spacer { flex: 1; }
-.help-tour-count { font-size: 11px; color: #64748b; }
+.help-tour-count { font-size: 0.85em; color: #64748b; }
 
 /* Reveal dots: progress through one step's beats, beside the step counter.
    A SECOND widget rather than a second number, because the fraction counts
@@ -292,7 +331,7 @@ body.help-mode {
   border: 1px solid #cbd5e1;
   border-radius: 5px;
   background: #f8fafc;
-  font-size: 12px;
+  font-size: 0.92em;
   cursor: pointer;
 }
 .help-tour-nav button:hover:not(:disabled) { background: #e2e8f0; }

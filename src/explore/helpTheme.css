@@ -1,0 +1,18 @@
+/* dmvd's overrides for the help/tour popover.
+ *
+ * `src/help/` is the extractable package and ships to every host, so its
+ * `help.css` holds the package DEFAULTS. Anything that is dmvd's taste rather
+ * than the package's behaviour belongs here — the same split as
+ * `helpResolvers.ts` (dmvd knows what an entity row is; the package must not).
+ *
+ * Loaded after `help.css` (HelpLayer imports that at module scope, ExploreApp
+ * imports this), so equal-specificity rules here win.
+ */
+
+.help-popover {
+  /* Base size for the whole popover. Everything inside is `em` off this, so
+     one value moves prose, title, action band, alert, context and tour nav
+     together. Package default is 13px; see the comment on `.help-popover` in
+     `../help/help.css` for the em-nesting caveat if you touch the children. */
+  --help-font-size: 16px;
+}
