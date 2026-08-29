@@ -55,6 +55,13 @@ though the mechanism acting on it is still S3b's work:
   only; `Anchor:` says what to point at. Omitting it means
   `help-id:<the entry id>`, so every entry written before this parses
   unchanged. `Anchor: none` centres the popover and rings nothing.
+- **Where an unanchored popover centres is host configuration, not a constant.**
+  `<HelpProvider centerOn="graph-canvas">` names the region to centre over,
+  written in the same `kind:arg` grammar as `Anchor:` and resolved through the
+  same resolvers — so it can point at a host-registered kind, not just a
+  `data-help-id`. Another extraction constraint: the package must not learn
+  that a graph canvas is the thing to sit over. Omitted, it centres on the
+  viewport as before.
 - **Anchor kinds are host-registered, not parser-known.** The parser splits
   `kind:argument` and stops there — resolving `entity-row:Participant` means
   knowing what a dmvd entity row is, which this package must not.

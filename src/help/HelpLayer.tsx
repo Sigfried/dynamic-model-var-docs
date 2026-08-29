@@ -162,7 +162,7 @@ function markdownComponentsWithOnce(onDismiss: () => void) {
 export default function HelpLayer() {
   const {
     helpMode, tourIndex, position, positions, stepCount, content, activeId,
-    dismissEntry, nextStep, prevStep, endTour, showEntry, resolveAnchor,
+    dismissEntry, nextStep, prevStep, endTour, showEntry, resolveAnchor, centerRect,
   } = useHelp();
 
   const inTour = tourIndex !== null;
@@ -427,7 +427,8 @@ export default function HelpLayer() {
         className="help-popover"
         style={popoverPosition(rect, inTour ? position?.position : undefined,
                                inTour ? position?.offsetX : undefined,
-                               inTour ? position?.width : undefined)}
+                               inTour ? position?.width : undefined,
+                               rect ? null : centerRect())}
       >
         {entry && (
           <>
@@ -566,11 +567,12 @@ export default function HelpLayer() {
 /** Default popover width; `Width:` overrides it per step. */
 const POPOVER_W = 320;
 
-function popoverPosition(
+export function popoverPosition(
   r: DOMRect | null,
   side?: PopoverSide,
   offsetX?: Offset,
   width?: number,
+  region?: DOMRect | null,
 ): React.CSSProperties {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
@@ -586,14 +588,37 @@ function popoverPosition(
    * which is only correct for a popover that happens to be 260px tall. The
    * tour's intro step is nearer 670 and sat visibly low (Siggie, 2026-08-28).
    *
-   * `top: 50%` with a `-50%` translate centres on the popover's REAL height,
-   * which the browser knows and this function does not — no measurement, no
-   * re-render, exact at any height. `maxHeight` keeps a very tall one on
-   * screen, and the body scrolls inside it.
+   * A `-50%` translate centres on the popover's REAL height, which the browser
+   * knows and this function does not — no measurement, no re-render, exact at
+   * any height. `maxHeight` keeps a very tall one on screen, and the body
+   * scrolls inside it.
+   *
+   * Centred on the HOST'S REGION when it named one (`centerOn`), not the
+   * viewport: an unanchored step centred on the whole window sits half over
+   * the left panel, which is usually what the step is talking about. Falls
+   * back to the viewport when no region is named or it is not mounted.
    */
   if (!r) {
+    const box = region ?? new DOMRect(0, 0, vw, vh);
+    /*
+     * Clamped to the VIEWPORT, not to the region. A narrow region would
+     * otherwise push a wide popover off-screen, and a popover taller than the
+     * region should overflow it rather than be squeezed — the region says
+     * where to centre, not how big the popover may be.
+     */
+    const cx = box.left + box.width / 2;
+    /*
+     * Vertically the region is IGNORED and the viewport's midline used.
+     *
+     * The popover's height is unknown here — that is what the `-50%` translate
+     * buys — so a centre near the top or bottom of a short region cannot be
+     * clamped without it. The viewport midline is the one line that is safe at
+     * every height, and the panels this centres over are full-height anyway,
+     * so their midline IS the viewport's. Horizontal is where the difference
+     * actually lay.
+     */
     return {
-      left: Math.max(8, (vw - W) / 2),
+      left: Math.max(8, Math.min(cx - W / 2, vw - W - 8)),
       top: '50%',
       transform: 'translateY(-50%)',
       maxHeight: `${vh - 16}px`,

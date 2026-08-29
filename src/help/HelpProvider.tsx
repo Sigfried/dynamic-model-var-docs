@@ -29,7 +29,7 @@
 import {
   useCallback, useEffect, useMemo, useRef, useState, type ReactNode,
 } from 'react';
-import { parseHelpContent, tourPositions, tourSteps } from './parseHelpContent';
+import { parseAnchor, parseHelpContent, tourPositions, tourSteps } from './parseHelpContent';
 import type { HelpAnchor } from './parseHelpContent';
 import {
   HelpContext, HELP_MODE_ENABLED, type AnchorResolver, type HelpApi,
@@ -44,7 +44,7 @@ function isInputFocused(): boolean {
 }
 
 export function HelpProvider({
-  markdown, onPushChange, onPopChange, resolvers, children,
+  markdown, onPushChange, onPopChange, resolvers, centerOn, children,
 }: {
   markdown: string;
   /**
@@ -72,6 +72,21 @@ export function HelpProvider({
    * rather than throwing.
    */
   resolvers?: Record<string, AnchorResolver>;
+  /**
+   * Where an UNANCHORED popover (`Anchor: none`, or an anchor that did not
+   * resolve) is centred. Written in the same `kind:arg` grammar as `Anchor:`,
+   * so `graph-canvas` means the element tagged `data-help-id="graph-canvas"`.
+   *
+   * Centring on the whole viewport puts the popover half over the left panel,
+   * which the tour is usually talking ABOUT — the reader cannot see what the
+   * step refers to. Naming the region the app wants a popover to sit over
+   * keeps that decision on the host's side of the seam; the package still
+   * knows nothing about what a graph canvas is.
+   *
+   * Omitted, or resolving to null (region not mounted yet), falls back to the
+   * viewport — the previous behaviour exactly.
+   */
+  centerOn?: string;
   children: ReactNode;
 }) {
   const content = useMemo(() => parseHelpContent(markdown), [markdown]);
@@ -289,15 +304,28 @@ export function HelpProvider({
   }, [helpMode, tourIndex, activeId, toggleHelpMode, dismissEntry, endTour,
       startTour, nextStep, prevStep]);
 
+  /**
+   * The centring region's rect, measured NOW.
+   *
+   * A function rather than a captured element for the same reason the anchor
+   * resolvers are queried live: the region can mount after the tour starts,
+   * and it resizes when the window does or the left panel is collapsed. A
+   * value read once would centre on a stale box.
+   */
+  const centerRect = useCallback((): DOMRect | null => {
+    if (!centerOn) return null;
+    return resolveAnchor(parseAnchor(centerOn, centerOn))?.getBoundingClientRect() ?? null;
+  }, [centerOn, resolveAnchor]);
+
   const api = useMemo<HelpApi>(() => ({
     helpMode, toggleHelpMode, exitHelpMode,
     tourIndex, startTour, endTour, nextStep, prevStep,
     positions, position: tourIndex === null ? undefined : positions[tourIndex],
     stepCount,
-    content, activeId, showEntry, dismissEntry, resolveAnchor,
+    content, activeId, showEntry, dismissEntry, resolveAnchor, centerRect,
   }), [helpMode, toggleHelpMode, exitHelpMode, tourIndex, startTour, endTour,
        nextStep, prevStep, positions, stepCount,
-       content, activeId, showEntry, dismissEntry, resolveAnchor]);
+       content, activeId, showEntry, dismissEntry, resolveAnchor, centerRect]);
 
   return <HelpContext.Provider value={api}>{children}</HelpContext.Provider>;
 }

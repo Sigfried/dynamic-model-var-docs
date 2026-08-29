@@ -7,6 +7,86 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-29 (intro copy from the pipeline paper; unanchored popovers centre on a named region)
+
+### The ~150 was VARIABLES, not relationships
+
+Siggie was writing schema counts into the intro step and remembered "like 150
+relationships." It is a real number in this repo, but it counts something else:
+`public/source_data/HV/variable-specs-S1.tsv` has 155 lines → **154 harmonized
+variables**, and `docs/archive/progress.md:9` records "151 variables" at an
+earlier schema version. **"Variables" in this app means MAPPED STUDY VARIABLES**
+— source-data fields curators mapped onto BDCHM, loaded from a separate file,
+each tied to a class by a `BDCHM Element` column. They are a different axis from
+the schema's own structure, which is why the app gives them their own section
+(`appConfig.ts`, tooltip "Mapped study variables"). Expect this confusion to
+recur; the schema has no ~150 of anything.
+
+Counts as of this session, from `public/source_data/HM/bdchm.yaml` (4,169 lines,
+so "almost 5,000-line" was an overshoot and is now "over 4,000"): 54 classes,
+52 enums holding 854 permissible values, 226 attribute declarations (182
+distinct names) breaking down as 100 primitive-typed / 79 class-to-class / 47
+enum-typed, and 7 primitive types.
+
+**Inheritance was deliberately excluded from the "relationships" figure.** 53 of
+54 classes have an `is_a`, but 37 of those are just `is_a: Entity` — a base
+class, not a modeled relationship — so counting them would have inflated ~80 to
+132 with noise. Also note `bdchm.processed.json` reports `slots: 337`, which is
+the app's INTERNAL qualified-id count (see `docs/ARCHITECTURE.md:119`), not a
+user-facing number; don't put it in copy.
+
+The intro's framing came from `temp/IngestPipelinePaper.pdf` (gitignored draft):
+studies arrive heterogeneous, dm-bip harmonizes them onto a target model, and
+"The BDC target model was the BDC Harmonized Model (BDCHM)." That is where the
+Explorer fits — you read the target before you can map onto it. INCLUDE is named
+in the intro as a harmonization destination but harmonizes to its OWN target,
+not to BDCHM; the nine TOPMed cohorts are the BDC side. The paper is a draft
+full of `xxxx` placeholders and `(REF)` gaps, so only stable framing was taken
+from it, nothing citable.
+
+### `centerOn`, and why vertical centring ignores it
+
+Siggie: *"can you make anchor: none popovers center on the graph panel area
+instead of the whole viewport?"* — a wide intro popover centred on the window
+sits half over the left panel, which is what several unanchored steps are
+describing.
+
+The fix is **not** a `graph-canvas` selector inside `src/help/`. That package is
+slated for extraction (`docs/HELP_PACKAGE_PLAN.md`, and now Siggie's top TODO in
+`help-content.md`), and its standing constraint is that it must not know what a
+dmvd graph canvas is. So `<HelpProvider centerOn>` takes a string in the same
+`kind:arg` grammar as `Anchor:` and resolves it through the existing
+`parseAnchor` + `resolveAnchor` — meaning it can point at a host-registered
+resolver kind, not only a `data-help-id`. dmvd passes `centerOn="graph-canvas"`.
+
+`centerRect` is a **function** on `HelpApi`, not a captured element, for the same
+reason the anchor resolvers are queried live: the canvas mounts after the tour
+can start and resizes with the window. A value read once centres on a stale box.
+
+**Only the horizontal centring uses the region.** Two intermediate attempts at a
+region-relative vertical centre were written and thrown away — the second
+reduced to clamping `cy` to `[8, vh-8]`, which does not prevent overflow at all,
+since the popover extends half its unknown height either way. That unknown is
+the point: the `-50%` translate is what centres on the popover's REAL height
+without measuring it (the fix for the old hardcoded `EST_H = 260`), so the code
+cannot clamp a region-relative vertical position. The viewport midline is the
+one line safe at every height, and since these panels are full-height their
+midline IS the viewport's — so this costs nothing today. It would need real
+measurement to centre on a SHORT region.
+
+`popoverPosition` was exported to make this testable; `src/test/helpPlacement.test.ts`
+pins that the region drives horizontal placement, that a popover wider than its
+region stays on screen, and that a real anchor ignores the region entirely.
+
+### Process notes
+
+- `npm run typecheck` (`tsc -b --noEmit`) is the project's check; bare
+  `tsc --noEmit` is weaker. I ran the bare one first out of habit — the worklog
+  entry below already says not to. Both were clean.
+- `pdftotext -layout` reads a PDF far more cheaply than the Read tool's image
+  path, and `pdfinfo`/`pdftotext` are both installed here.
+
+---
 ## 2026-08-28 (field syntax: `**` optional, names case-insensitive)
 
 `Width:` shipped broken. Siggie authored `- Width: 500` on the intro step —

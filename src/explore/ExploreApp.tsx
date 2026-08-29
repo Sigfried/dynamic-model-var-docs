@@ -475,6 +475,10 @@ export default function ExploreApp() {
          src/help/, because knowing what a dmvd entity row is is exactly what
          the extractable package must not know. */
       resolvers={helpResolvers}
+      /* Unanchored steps centre over the diagram, not the whole window.
+         Centred on the viewport, the intro popover sits half over the left
+         panel — the thing several of those steps are describing. */
+      centerOn="graph-canvas"
     >
       <ExploreAppInner />
       <HelpLayer />

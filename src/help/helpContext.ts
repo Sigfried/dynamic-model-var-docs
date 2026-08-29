@@ -68,6 +68,11 @@ export interface HelpApi {
   dismissEntry: () => void;
   /** Resolve an anchor to its element, using the host's resolvers. */
   resolveAnchor: (anchor: HelpAnchor | undefined) => Element | null;
+  /**
+   * Rect of the region an UNANCHORED popover centres on, measured now, or null
+   * to centre on the viewport. Set by `<HelpProvider centerOn={...}>`.
+   */
+  centerRect: () => DOMRect | null;
 }
 
 export const HelpContext = createContext<HelpApi | null>(null);
