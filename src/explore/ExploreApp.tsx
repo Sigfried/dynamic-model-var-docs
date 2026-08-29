@@ -475,10 +475,19 @@ export default function ExploreApp() {
          src/help/, because knowing what a dmvd entity row is is exactly what
          the extractable package must not know. */
       resolvers={helpResolvers}
-      /* Unanchored steps centre over the diagram, not the whole window.
-         Centred on the viewport, the intro popover sits half over the left
-         panel — the thing several of those steps are describing. */
-      centerOn="graph-canvas"
+      /* NO `centerOn`: unanchored steps centre on the VIEWPORT, both axes.
+         It was `centerOn="graph-canvas"` — the intro popover, centred on the
+         window, sat half over the left panel it was describing. That fixed
+         the overlap and traded it for a worse one: `popoverPosition` can only
+         centre HORIZONTALLY on a region (the popover's height is unknown at
+         placement time, so the vertical stays on the viewport midline), so a
+         region-centred popover is off-centre on one axis and not the other.
+         Siggie, 2026-08-29: "i think the off-window-center placement is
+         bugging me more ... vertical should center on the viewport also, but
+         i don't care if it centers on the graph panel."
+
+         The PROP STAYS in the package — this is dmvd declining to use it, not
+         the capability going away. Pass a region name here to get it back. */
     >
       <ExploreAppInner />
       <HelpLayer />
