@@ -10,11 +10,10 @@ Package-level design lives in [docs/HELP_PACKAGE_PLAN.md](../../docs/HELP_PACKAG
 <details>
 <summary><b>TODO</b></summary>
 
-- next step is to help me authoring the tour. and first step of that is
-  an introduction to the app and what it's for. this has been started in
-  [intro](#intro). i'm going to put notes there inside code blocks about
-  what i want
-
+- next step is to split the (to be) reusable help package material from
+  the app-specific stuff. put the package in a new dir (siggies-tour-and-help-pkg
+  or something?) and put the help-content.md format section there, but
+  keep the rest of this doc (with a link to the format doc) here.
 
 <details>
 <summary><b>Original unfinished draft text</b></summary>
@@ -431,9 +430,18 @@ screen.
 Both `Position:` and `OffsetX:` are clamped to the viewport. An override can
 pick a bad side; it cannot push the popover off-screen.
 
-**With no anchor** (`Anchor: none`) the popover is centred both ways, on its
-real height — so a long step stays centred rather than sitting low. One taller
-than the screen scrolls its body and keeps the back/next row in view.
+**With no anchor** (`Anchor: none`) the popover is centred on its real height —
+so a long step stays centred rather than sitting low. One taller than the
+screen scrolls its body and keeps the back/next row in view.
+
+Horizontally it centres on the **region the host names**, not the whole window:
+dmvd passes `centerOn="graph-canvas"`, so an unanchored step sits over the
+diagram and clear of the left panel, which is usually what such a step is
+talking about. Vertically it stays on the viewport's midline — the popover's
+height is not known at placement time, which is what centring on the real
+height buys, so a region-relative vertical centre could not be kept on screen.
+An app that names no region, or names one that is not mounted, gets the
+viewport both ways.
 
 A beat inherits its step's `Position:`, `OffsetX:` and `Width:` and can override
 each independently, the same way it inherits `Anchor:`.
@@ -594,35 +602,33 @@ What this app is and how to move around it.
 - **Tour:** Walkthrough
 - **Description:** 
   BioData Catalyst ([BDC](https://biodatacatalyst.nhlbi.nih.gov/))
-  is a cloud-based ecosystem where researchers can find, access, share,
-  store, and analyze heart, lung, blood, and sleep data resources. 
-  ```
-  read this draft paper about the whole project: temp/IngestPipelinePaper.pdf
+  is a cloud-based ecosystem where researchers can find and work with
+  [NHLBI](https://www.nhlbi.nih.gov/) data resources. Studies arrive with
+  their own terminologies, units and file structures, which are
+  transformed by the Data Model-Based Ingestion Pipeline
+  ([dm-bip](https://linkml.io/dm-bip/)) into a common **BDC Harmonized
+  Model (BDCHM)** schema. Nine priority [TOPMed](https://topmed.nhlbi.nih.gov/)
+  cohorts (e.g., the Framingham Heart Study and Women's Health Initiative)
+  and the [INCLUDE Data Hub](https://portal.includedcc.org/) have been
+  harmonized to it so far with more on their way.
 
-  we just want like two sentences explaining where BDCHM Explorer fits. Which
-  is as a tool to introduce and aid researchers using the whole project and
-  the model. 
+  BDCHM and the ingestion pipeline are built using [LinkML](https://linkml.io/).
+  Neither the raw LinkML [YAML file](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/blob/main/src/bdchm/schema/bdchm.yaml)
+  nor the LinkML [generated documentation](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/)
+  are easy to grasp given that BDCHM's over 4,000-line schema includes around
+  225 total attributes, 55 distinct class entities, 50 permissible value sets,
+  7 primitive data types, and 80 relationships between class entities. 
+  Yet doing almost anything involving BDCHM would require a basic, overall
+  understanding of its structure. You may want to use BDCHM:
+  - to analyze data harmonized to it (using [BDC's tools](https://biodatacatalyst.nhlbi.nih.gov/use-bdc/analyze-data/)
+    or otherwise);
+  - to harmonize your own data to it;
+  - design new studies pre-harmonized to it; or
+  - use it for ideas or inspiration in designing your own data models.
 
-  you try cleaning up this section. i've committed it so don't worry about
-  preserving what's here. 
-  ```
-
-  ...**BDCHM** 
-
-  ...An interactive map of the **BioData Catalyst Harmonized Model**
-  — the ~55 entities defined by its [LinkML](https://linkml.io/) schema and how
-  they relate to each other. You can use it to more quickly and thoroughly
-  understand the relationships than with the static
-  [LinkML documentation](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/).
-  It is meant to help researchers who:
-
-  - Have access to data in BDCHM format and want to understand its structure;
-  - Have data that they want to harmonize to BDCHM format; or
-  - Are designing studies and want to model them using BDCHM or want to use
-    BDCHM for ideas or inspiration for their own efforts.
-
-  Pick some entities on the left and the diagram shows how they fit together.
-  Click the title to clear everything and start over.
+  The **BDCHM Explorer** provides a single-page, highly interactive interface
+  allowing you to easily see details of and relationships between specific
+  entities or neighborhoods around entities you select.
 
   > This tour will introduce you to all of BDCHM Explorer's major features.
   > - Click the ✕ or hit **Esc** any time to exit.
@@ -630,7 +636,7 @@ What this app is and how to move around it.
 - **Anchor:** none
 - **Once:** intro
 - **Change:**
-- **Width:** 900
+- **Width:** 500
 
 ### selection-tree
 
