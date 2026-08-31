@@ -816,7 +816,7 @@ function fanSpread(total: number, limit: number): number {
  * fanned, so edges land on the entity name rather than beside an unrelated
  * attribute row.
  */
-function buildSpec(vm: ViewModel, direction: Direction): GraphSpec {
+export function buildSpec(vm: ViewModel, direction: Direction): GraphSpec {
   const portsByNode = new Map<string, GraphSpecPort[]>();
   const addPort = (node: NodeVM, id: string, x: number, y: number): string => {
     const ports = portsByNode.get(node.id) ?? [];
@@ -870,8 +870,20 @@ function buildSpec(vm: ViewModel, direction: Direction): GraphSpec {
     if (!host || !free) throw new Error(`Edge ${e.id} endpoint missing from subgraph`);
     const flipped = e.storageDirection === 'flipped';
     const y = rowY(host, e.slotName, anchorOf(e));
+    /**
+     * The port id must key on the same (anchor class, slot) pair `rowY`
+     * resolves by. Keyed on the slot NAME alone, a merged box holding several
+     * rows with one name — the parent's plus each child's override — gave
+     * every one of those edges the SAME port id, and `addPort` keeps the
+     * first registration per id. The correctly-computed y of every later edge
+     * was silently discarded, so all of them left whichever row happened to be
+     * enumerated first: with Observation selected they all left the parent's
+     * `observations` row, without it they all left DimensionalObservationSet's.
+     * Same bug `rowY`'s own comment warns about, missed one line later.
+     */
     const rowPort = addPort(
-      host, `${host.id}::row:${e.slotName}`, flipped ? 0 : NODE_W, y,
+      host, `${host.id}::row:${anchorOf(e)}|${e.slotName}`,
+      flipped ? 0 : NODE_W, y,
     );
     const freeIsSource = free.id === e.source;
     const side = `${free.id}|${freeIsSource ? 'out' : 'in'}`;

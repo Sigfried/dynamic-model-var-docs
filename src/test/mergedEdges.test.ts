@@ -2,7 +2,7 @@ import { describe, test, expect, beforeAll } from 'vitest';
 import { loadModelData } from '../utils/dataLoader';
 import { DataService, SKIP_SUBCLASS_EXPANSION } from '../services/DataService';
 import type { AttributeSummary } from '../services/DataService';
-import { buildViewModel, mergeSiblings } from '../explore/OwnershipGraphView';
+import { buildViewModel, mergeSiblings, buildSpec } from '../explore/OwnershipGraphView';
 import { isMergedId } from '../explore/siblingMerge';
 
 /**
@@ -124,6 +124,47 @@ describe('merged-box edges', () => {
     for (const slot of ['range_low', 'range_high', 'body_position', 'qualifier']) {
       expect(shown.some(r => r.slot === slot), `missing ${slot}`).toBe(true);
     }
+  });
+
+  test('edges anchored on different rows get different PORTS', () => {
+    /**
+     * The anchor test above passed all along while the bug was live: the view
+     * model was right and the failure was one step later, in buildSpec. The
+     * row port id was keyed on `${host}::row:${slot}` — the slot NAME alone —
+     * so a merged box's parent row and its children's overrides all claimed
+     * one id. addPort keeps the first registration per id, so every later
+     * edge silently inherited the first one's y and left the wrong row.
+     *
+     * Visible as: all three coloured `observations` edges leaving one row
+     * instead of their own. Which row won depended only on enumeration order
+     * (the parent's when Observation was selected, DimensionalObservationSet's
+     * when it was not), which is why it looked like two different bugs.
+     *
+     * Assert on the ports, not the anchors — that is the layer that broke.
+     */
+    const vm = merged([
+      'ObservationSet', 'MeasurementObservationSet', 'SdohObservationSet',
+      'DimensionalObservationSet',
+      'Observation', 'MeasurementObservation', 'SdohObservation',
+      'DimensionalObservation',
+    ]);
+    const box = vm.nodes.find(n => isMergedId(n.id) && n.label === 'ObservationSet')!;
+    const spec = buildSpec(vm, 'RIGHT');
+    const obs = vm.edges.filter(e =>
+      e.slotName === 'observations' && e.source === box.id);
+    expect(obs.length).toBeGreaterThan(1);
+
+    const specById = new Map(spec.edges.map(e => [e.id, e]));
+    const ports = obs.map(e => specById.get(e.id)?.sourcePort);
+    expect(ports.every(p => p !== undefined)).toBe(true);
+    // One distinct port per edge: this is the assertion the old id failed.
+    expect(new Set(ports).size).toBe(obs.length);
+
+    // And each port sits at a distinct y — the symptom users actually saw.
+    const boxPorts = new Map(
+      (spec.nodes.find(n => n.id === box.id)?.ports ?? []).map(p => [p.id, p.y]));
+    const ys = ports.map(p => boxPorts.get(p!));
+    expect(new Set(ys).size).toBe(obs.length);
   });
 
   test('every edge anchor resolves to a displayed row', () => {
