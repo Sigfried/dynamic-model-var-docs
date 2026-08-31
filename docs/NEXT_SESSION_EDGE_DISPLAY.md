@@ -9,6 +9,13 @@ This file is a briefing, not the plan. It records what Siggie asked for, what is
 already true in the code, and the questions that need answers. Delete it once the
 planning session has folded its content into the real docs.
 
+[sg] when i wrote the prompt that generated this file and i referred to
+'here' and 'this doc' (like with 'author the text here first') 
+i meant OWNERSHIP_CLASSIFICATION.md. it's not clear to me if you would interpret
+that as meaning this document (NEXT_SESSION_EDGE_DISPLAY.md). fine either way
+as long as this file disappears when we're done and the content ends up where
+it's supposed to
+
 ---
 
 ## 1. What Siggie asked for
@@ -42,6 +49,9 @@ Today `ExampleCasesPane.tsx` is a floating pane with **two tabs**, `cases` and
   part of this effort. (Long-standing: the legend is meant to be **permanent**;
   example cases are temporary. They should not be tabs of one pane. See
   `docs/TASKS.md` and the memory `project_ownership_legend`.)
+  **[sg] some example cases will be helpful to end users. just get rid of**
+  the ones that are just for my debugging and exploration work. and there
+  are so many right now that i seldom check any of them.
 - **Example cases** — also needs work; **could be significantly shorter**. Could
   absorb **"Biggest fans"**, which does not belong in the ownership legend — *if*
   we decide that section is still useful at all.
@@ -81,7 +91,11 @@ structured_pattern
 
 Several are already surfaced somewhere; several are not surfaced at all. The
 task is to work out which have an explanation worth showing a user, and where it
-goes. Low priority, but cheap while the labeling machinery is open.
+goes. Low priority, but cheap while the labeling machinery is open. **[sg] most**
+probably don't appear in bdchm.yaml at all, so are meaningless for current
+end users; but if this app is ever ported for use with other schemas, could be
+useful. -- don't spend more than a minute on this. probably just leave a note in
+code or somewhere for far-future reference.
 
 ---
 
@@ -120,6 +134,21 @@ facing vocabulary is already settled and shipped
 **Decision needed:** does `OWNERSHIP_CLASSIFICATION.md` lead with the 3 (it is a
 classification doc) and treat the 5 as a presentation concern, or does it present
 both as one table? The 5 are the ones help/tour must teach.
+
+**[sg] we should discuss if this distinction is needed as-is.**
+- should OwnershipVerdict be preserved? not worth too much time on this right
+  now, but maybe edges should always be thought of/described from the point
+  of view of a specific entity regardless of where they are defined, which could
+  lead to using RelationPosition for edge formatting beyond the new labels
+  we're adding
+- well, if no entity is hovered then i guess formatting has to be based on
+  OwnershipVerdict because neither entity is clearly the one owning PoV.
+  Which means that using RelationPosition for label text also wouldn't work
+  -- unless we use different labels depending on whether hover sits near
+  one entity or the other (might want three labels? left PoV, right PoV,
+  and neutral?)
+- in any case, documentation should be concise; doesn't need two tables.
+  explain both in the same place
 
 ### 2.2 Edge labels have never been rendered
 
@@ -162,10 +191,15 @@ For edges into a **merged sibling box**: should the entity end land on the
 load-bearing for port fan-out (`freeEndTotal`/`freeEndSlot`), convergence
 merging, and the single shared arrowhead — all three would need to handle both.
 
+- **[sg] i don't quite understand this. which is the free end again? what**
+  are the both -- Total/Slot? what do those mean for edges?
+
 **The question to settle first (from `TASKS.md`):** does *every* edge into a
 merged box target the child header matching its range, or only a
 `slot_usage`-narrowed one? First is one rule; second means the entity end means
 different things on different edges.
+
+- **[sg] I need examples of each to examine in order to decide**
 
 Machinery already in place: rows carry `declaringClass`, header rows are real
 rows with a y-position, and `rowY(node, slot, declaringClass)` resolves an
@@ -191,6 +225,13 @@ the single `Entity` edge.
 
 Full write-up: `OWNERSHIP_CLASSIFICATION.md` §`any_of`.
 
+- **[sg] Assay already/still appears under Lab/Biospecimen category in**
+  selection panel, so it is reachable for display, just not through an
+  edge.
+  - maybe it should have a note about what attaches to it and why that
+    edge isn't appearing now
+  - are roots used for anything user-facing at this point?
+
 ---
 
 ## 3. "Edge display: what exists" — park this in OWNERSHIP_CLASSIFICATION.md
@@ -201,10 +242,13 @@ Four things are on the books, in descending order of how settled they are.
    re-verbed label on flipped edges. No edge-layer `<text>` exists; the intent
    survives only as a comment in `ownershipSubgraph.ts`. The *wording* is solved
    (`RELATION_POSITION_LABEL`); only rendering is missing.
+   - [sg] more compicated than i thought. see my notes above
 2. **Endpoints — one genuinely open design question** (§2.4), Siggie's to call.
+   - [sg] what is this about? where do these paragraph numbers appear?
 3. **Colors — partly settled, partly owed.** Palette shipped (§2.3). Owed from
    Siggie's own upcoming-thoughts #1: the legend "should also explain all toolbar
    buttons, colors, dashed edges" — the *explanation*, not the palette.
+   - [sg] ditto
 4. **Adjacent, mostly resolved.** Curved edges removed; one-arrowhead-per-
    convergence and thinner strokes shipped; bare-diagonal root cause found
    (`bend` mode degenerates on corner-less routes). Dragging still lacks
@@ -216,18 +260,28 @@ Four things are on the books, in descending order of how settled they are.
 
 1. **Which taxonomy leads** in `OWNERSHIP_CLASSIFICATION.md` — 3 verdicts, 5
    positions, or both (§2.1)?
+   - [sg] answered above
 2. **Popovers vs. title text, generally.** Siggie raised this for `any_of` and
    immediately generalized it. Decide once, for all title-text items, rather
    than per-item (§1.4).
+   - [sg] discuss, but i'm inclined toward popovers
 3. **Is "Biggest fans" still useful?** It moves to example cases if kept, is
    dropped if not (§1.2).
+   - [sg] keep in example cases for now
 4. **Merged-box endpoint rule** — every edge, or only `slot_usage`-narrowed
    (§2.4)?
+   - [sg] answered above
 5. **⚠️ Standing unanswered question:** `TASKS.md` records that Siggie asked to
    **"fix the ownership legend"** (2026-08-25) *without saying what is wrong*,
    with an explicit note to **ask first**. That is squarely inside this session's
    scope. **Ask before guessing.**
+   - [sg] probably going to change it to single-entity-PoV, but need to
+     consider after figuring out edge classification/formatting/label
+     questions above. regardless, though the breakdowns by reason are
+     important and should exist somewhere, they seem like too much for
+     here
 6. Which `_ATTR_FIELDS` have explanations worth surfacing, and where (§1.4)?
+   - [sg] sort of answered above
 
 ---
 
