@@ -1,0 +1,33 @@
+# Code owners — GitHub auto-requests review from these owners when a PR
+# touches a matching path.
+#
+# The main reason this file exists: the schema-sync Action opens a PR whenever
+# the upstream BDCHM schema moves (see README, "Keeping the model in sync with
+# upstream"). Nothing pushes to main and nothing warns if that PR is ignored —
+# the app just keeps serving an older schema. Naming an owner for the schema
+# paths means the right person is asked, rather than everyone assuming someone
+# else saw it.
+#
+# WHEN HANDING OFF THIS PROJECT: replace @Sigfried below with whoever becomes
+# responsible for updating the model. That is the single edit needed to
+# redirect sync notifications.
+#
+# Syntax: <path pattern>  <owner> [more owners]
+# Later matching lines win, so the specific rules below override the catch-all.
+# Owners must have write access to the repo or the request is silently dropped.
+
+# Catch-all
+*                                   @Sigfried
+
+# Upstream-derived data. These change only via the schema-sync Action.
+/public/source_data/                @Sigfried
+/scripts/                           @Sigfried
+
+# The sync pipeline itself.
+/.github/workflows/schema-sync.yml  @Sigfried
+
+# Ownership classification: hand-curated sets keyed on schema slot names, so an
+# upstream rename can change the rendered graph without failing a test.
+/src/models/containmentGraph.ts     @Sigfried
+/src/config/entityCategories.ts     @Sigfried
+/docs/OWNERSHIP_CLASSIFICATION.md   @Sigfried

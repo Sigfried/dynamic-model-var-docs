@@ -12,12 +12,23 @@
 
 **NEVER run commands that could lose uncommitted changes:**
 - ❌ `git restore <file>`, `git checkout <file>`, `git reset --hard`, `git clean -fd`
+- ❌ `git merge`, `git merge --abort`, `git rebase`, `git cherry-pick`, `git stash`
 
 **Instead:**
 1. Run `git status` and `git diff` to see what would be lost
 2. Tell the user what you found
 3. Suggest commands for them to run
 4. Let the user decide and run the commands themselves
+
+### 🚨 A QUESTION IS NOT AN INSTRUCTION 🚨
+
+**"thoughts?" · "is that right?" · "what's going on with X?" · "I'm thinking the
+best approach might be…" · "should I…" — these ask for ANALYSIS. Answer, then
+STOP.**
+
+When the user describes *their* plan, they are thinking out loud and inviting
+critique — **not delegating it**. Doing the work they just said they wanted to do
+takes the task away from them.
 
 ---
 

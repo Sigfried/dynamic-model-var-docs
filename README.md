@@ -84,10 +84,62 @@ Most of the feature description below refers to the previous app.
 
 ### Data Sources
 
-- **Model Schema**: [bdchm.yaml](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/blob/main/src/bdchm/schema/bdchm.yaml) → processed into `bdchm.metadata.json`
+- **Model Schema**: [bdchm.yaml](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/blob/main/src/bdchm/schema/bdchm.yaml) → processed into `public/source_data/HM/bdchm.processed.json`
 - **Variable Specs**: [Table S1 (Google Sheet)](https://docs.google.com/spreadsheets/d/1PDaX266_H0haa0aabMYQ6UNtEKT5-ClMarP0FvNntN8/edit?gid=0#gid=0) → `variable-specs-S1.tsv`
 
-**To update data**: `npm run download-data`
+**To update data manually**: `npm run download-data`
+
+The schema is read straight from `bdchm.yaml` by `scripts/transform_schema.py`
+via LinkML's `SchemaView` (`scripts/induced_schema.py`), which resolves imports
+and merges inherited slots. There is no intermediate expanded-JSON artifact.
+
+### Keeping the model in sync with upstream (maintainers)
+
+**This is largely automatic — but it needs a human to merge.**
+
+A GitHub Action (`.github/workflows/schema-sync.yml`) checks the upstream BDCHM
+schema **daily at 07:00 UTC**, and can also be run on demand from the Actions
+tab. When upstream `main` has moved past the commit pinned in
+`scripts/download_source_data.py`, it bumps the pin, re-downloads, regenerates
+`bdchm.processed.json`, and **opens a pull request** on the branch
+`schema-sync/upstream-update`.
+
+It never pushes to `main`. If nobody merges the PR, the app keeps serving the
+older schema indefinitely and nothing breaks or warns — so **the PR is the
+thing to watch.** `CODEOWNERS` requests review automatically; check open PRs
+with `gh pr list` if you are unsure.
+
+**To review and merge one:**
+
+```bash
+gh pr list                      # find the sync PR
+gh pr diff <n> -- scripts/download_source_data.py   # see just the pin bump
+gh pr checkout <n>              # test locally before merging
+npm run build && npx vitest run
+gh pr merge <n> --delete-branch
+```
+
+The Action **force-pushes** its branch on every run, so if a newer sync lands
+while you are testing, re-run `gh pr checkout <n>` rather than `git pull` — a
+pull on a force-pushed branch will try to merge the old and new versions
+together.
+
+**What to check before merging** (the PR body repeats this):
+
+- The `bdchm.processed.json` diff looks like intended schema changes.
+- `npm run build` and `npx vitest run` pass. `entityCategories.test.ts` in
+  particular catches classes that upstream added but nobody categorised — an
+  uncategorised class renders **nowhere** in the UI, silently.
+- Ownership-classification edge cases still hold. Several hand-curated sets in
+  `src/models/containmentGraph.ts` are keyed on schema **slot names**, so an
+  upstream rename can silently change how edges are drawn without failing any
+  test. See [docs/OWNERSHIP_CLASSIFICATION.md](docs/OWNERSHIP_CLASSIFICATION.md).
+
+A real example of that last point: the 2026-08 sync renamed
+`associated_assay` → `associated_artifact` and widened its range, which left the
+`Assay` class with no inbound edges at all. Nothing failed; the diagram just
+quietly got worse. **Look at the rendered ownership graph after a sync**, not
+only at the test output.
 
 ### Getting Started
 
