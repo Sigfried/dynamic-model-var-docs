@@ -1248,6 +1248,49 @@ export default function OwnershipGraphView({
    * Keyed the same way buildSpec keys its fan, so a group merges iff ELK fanned
    * it. Only ENTITY-end arrivals merge — the attribute end is anchored at its
    * slot's own row and must stay there.
+   *
+   * ---------------------------------------------------------------------
+   * NOT DONE, and cheap under the CURRENT schema: targeting child header rows
+   *
+   * Wanted: an edge from a slot_usage-narrowed slot should point at the CHILD
+   * header matching its range, not at the box header. Today all three
+   * `…ObservationSet.observations` edges land on the merged Observation box's
+   * header, which hides the entire point of the narrowing — each set holds its
+   * OWN kind of observation. Landing them on the DimensionalObservation /
+   * MeasurementObservation / SdohObservation header rows would show it, and the
+   * sibling colours already match at both ends, so the extra crossings stay
+   * legible (Siggie, 2026-08-31).
+   *
+   * Only narrowed slots can want this. Without slot_usage a child's slot is
+   * identical to the inherited one, so it merges onto the PARENT's row and
+   * there is no child-specific row to anchor on. The old "every edge, or only
+   * slot_usage-narrowed?" framing was a false choice — only the narrowed ones
+   * can pose the question at all.
+   *
+   * Why it is cheap RIGHT NOW: measured 2026-08-31, no member or parent of any
+   * multi-child family has more than ONE inbound edge. Under the change the
+   * ObservationSet case spreads over FOUR arrival rows — the three children
+   * plus Observation itself, which carries ObservationSet.observations on the
+   * parent row — with exactly one edge each. So convergence merging is a no-op
+   * for these rows: a row-targeted edge can simply OPT OUT of this map and draw
+   * its own arrowhead at its own port. Nothing here needs to become row-aware,
+   * and the HEADER_H/2 geometry below stays as-is for box-header arrivals.
+   *
+   * Sketch: in buildSpec, when the free node is a merged box holding a member
+   * matching the edge's range, resolve that member's header row with rowY and
+   * use it as the port (put the member in the port id — see the bug fixed at
+   * the row port, same lesson). Such edges must also be skipped by BOTH fan
+   * passes, or the fan reserves lanes for edges that no longer use it and
+   * mis-centres the rest. Fall back to today's behaviour when the range names
+   * no member.
+   *
+   * The guard this needs: assert over the VIEW MODEL that no two edges resolve
+   * to the same child-header arrival row. If that ever fails, it does not mean
+   * the code broke — it means the schema grew a second slot narrowing to the
+   * same child, the no-merge shortcut no longer holds, and this map must become
+   * row-aware after all (key on arrival row, position from the row's y instead
+   * of HEADER_H/2). Do not just delete the assertion.
+   * ---------------------------------------------------------------------
    */
   const mergeTargets = useMemo(() => {
     const byKey = new Map<string, MergeTarget>();
