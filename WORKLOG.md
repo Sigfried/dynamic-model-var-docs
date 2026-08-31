@@ -7,6 +7,100 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-08-31 (merged-box edges left the wrong row; the target-row question was a false choice)
+
+### The port id dropped the anchor class — one bug that looked like two
+
+Siggie reported the coloured `observations` edges all leaving one row of the
+merged ObservationSet box. Two screenshots seemed to show different bugs: with
+`Observation` selected every edge left the PARENT's `observations` row; without
+it, every edge left `DimensionalObservationSet`'s. Same bug — the winner was
+just whichever edge was enumerated first.
+
+I misread the screenshots twice before probing. First I claimed the three
+coloured edges left three different child rows (they left one); then I attributed
+the colours to source rows when they identify the declaring class. **Reading the
+render and reasoning backwards produced two wrong diagnoses in a row.** A
+throwaway probe dumping the view model settled it in one run — the same lesson
+already recorded in `feedback_probe_before_diagnosing`.
+
+What the probe showed: the view model was **correct**. Three edges, three
+distinct `anchorClass` values, three right colours, and `rowY` returning four
+distinct y values (142/242/282/322). The failure was one step later, in
+`buildSpec`: the row port id was `${host.id}::row:${slot}` — the slot NAME alone
+— while `rowY` resolves rows by `(declaringClass, slot)`. `addPort` keeps the
+first registration per id, so all four edges shared one port and the correctly
+computed y values of the last three were discarded.
+
+Fixed by putting the anchor class in the port id (`4bd5755`). This is precisely
+the failure `rowY`'s own doc comment warns about ("Matching on the name alone
+anchored every child's edge on the parent's row") — fixed there, missed one line
+later.
+
+**Why 449 green tests missed it.** `mergedEdges.test.ts` already asserted
+distinct `anchorClass` per edge, and that assertion was true the whole time. The
+break was downstream of everything the suite looked at. The new test asserts on
+`buildSpec`'s ports and their y values, and I verified it FAILS on the old code
+(`expected 1 to be 4`) before keeping it — an untested regression test is
+decoration. `buildSpec` was exported for it.
+
+### "Every edge, or only slot_usage-narrowed?" was never a real question
+
+`TASKS.md` and the briefing both carried this as an open design question about
+edge TARGETS. Siggie collapsed it: without `slot_usage`, a child's slot is
+identical to the inherited one, so it merges onto the PARENT's row — there is no
+child-specific row to anchor on. **Only narrowed slots can pose the question.**
+Both docs were updated; do not reopen it.
+
+### The target-row change is cheap, and the reason it is cheap will expire
+
+Earlier docs said pointing edges at child headers was "not a tweak" because the
+fan, convergence merging and the shared arrowhead all assume the entity end
+carries no row meaning. Measuring changed the estimate: **no member or parent of
+any multi-child family has more than one inbound edge.** The ObservationSet case
+spreads over FOUR arrival rows (three children plus Observation itself, which
+carries `ObservationSet.observations` on the parent row) with one edge each — so
+convergence merging is a no-op there and a row-targeted edge can just opt out of
+`mergeTargets`. The arrowhead layer needs no change at all.
+
+I checked this only because Siggie set a stop condition ("if #2 starts turning a
+few lines into 40, STOP and tell me"). Reading `mergeTargets` first showed it
+keys on `(node, side)` and hardcodes `node.y + HEADER_H / 2`, and that both
+consumers geometrically rewrite edge endpoints to that point — so routing an edge
+to a child header without touching this layer would have been invisible. The
+one-edge-per-row property is what makes that moot.
+
+**That property is schema-dependent**, so the note lives in the `mergeTargets`
+doc comment (`8f367da`) rather than in a doc, next to the code that relies on it.
+It names the guard test and says explicitly that a failure means "the schema
+grew a second narrowing, go build the row-aware version" — not "delete the
+assertion".
+
+### "N related" going DOWN when you select more is correct
+
+Siggie noticed ObservationSet reads "6 related" with `Observation` unchecked and
+"5 related" with it checked. `countsOf` counts distinct related class NAMES, and
+`notSelfOrMember` excludes anything folded into the same box. Unchecked,
+`Observation` is not a member of the box that bears its name — nothing absorbed
+it — so it counts as an outside class. Checked, it is absorbed and drops out.
+Correct, but counter-intuitive enough that help should state it.
+
+### Terminology: "merged" is overloaded and has cost real time
+
+Siggie: *"i was misunderstanding your use of term 'merged' — this has been
+continually confusing to me."* It means both "class + descendants in one box"
+(`mergeSiblings`, `merged::`) and "several edges sharing one arrowhead"
+(`mergeTargets`). Renaming the first is open (§0 of the briefing); it should
+cover identifiers, not just prose.
+
+### Process note
+
+Siggie asked "can you fix it easily now?" and I did the fix instead of answering
+the question. Their CLAUDE.md is explicit that a question is not an instruction.
+The cost is small here because the fix was wanted, but the pattern takes the
+decision away from them.
+
+---
 ## 2026-08-29 (intro copy from the pipeline paper; unanchored popovers centre on a named region; package/app doc split)
 
 ### Popover font size: `em` in the package, the VALUE in the app

@@ -203,7 +203,26 @@ Options if this gets picked up, cheapest first:
 
 ---
 
-### Edge rendering — the fan from `ObservationSet.observations`
+### ✅ MOSTLY DONE — Edge rendering — the fan from `ObservationSet.observations`
+
+> **The source-row half shipped 2026-08-31 (`4bd5755`).** The rule below —
+> one edge per declaring class, coloured by that class — is what the fix
+> delivers: each `…ObservationSet.observations` edge now leaves its OWN row
+> instead of all of them sharing one.
+>
+> The cause was not the merge logic. The view model was always right; the row
+> port id in `buildSpec` was keyed on the slot NAME alone, so the parent row and
+> every child override claimed one port and `addPort` kept only the first — every
+> later edge silently inherited the first one's y. Which row won depended on
+> enumeration order, so it looked like two different bugs. Regression test in
+> `src/test/mergedEdges.test.ts` asserts on the PORTS, since the pre-existing
+> anchor assertion passed throughout the bug's life.
+>
+> **Still open here:** the parent's own edge renders in the shared channel
+> colour, not black as specified below. Confirm whether black is still wanted.
+>
+> **The target half is separate and still open** — see the narrowed-edge section
+> below, whose design question is now void.
 
 img-3 shows ~5 colored edges leaving one source row and landing on one target
 header. Siggie's three options were: one black edge / colored edges to child
@@ -371,23 +390,45 @@ ends are merged boxes. The edge leaves the `MeasurementObservationSet` block
 of one box and should ARRIVE at the `MeasurementObservation` header inside the
 other — today it lands on the target box's header band like every other edge.
 
-**Why this is not a tweak.** The entity end has never carried row meaning. From
-the file header: *"the ENTITY END attaches to a header-level port on the target
+**Why the entity end is different.** It has never carried row meaning. From the
+file header: *"the ENTITY END attaches to a header-level port on the target
 class, which has no corresponding row, so edges point at the entity name."*
-That assumption is load-bearing for the fan (`freeEndTotal`/`freeEndSlot`
-spread ports across the header band), for convergence merging, and for the
-single shared arrowhead. Pointing at a child header means the entity end
-sometimes anchors on a ROW, so all three need to handle both.
+That assumption is load-bearing for the fan (`freeEndTotal`/`freeEndSlot` spread
+ports across the header band). Pointing at a child header means the entity end
+sometimes anchors on a ROW.
 
-**Design question to settle first:** does EVERY edge into a merged box target
-the child header matching its range, or only a `slot_usage`-narrowed one? The
-first is one rule; the second leaves existing edges untouched but means the
-entity end means different things on different edges. Siggie has not chosen.
+> **~~Design question to settle first: every edge, or only `slot_usage`-narrowed?~~
+> VOID (Siggie, 2026-08-31) — it was a false choice.** Without `slot_usage` a
+> child's slot is identical to the inherited one, so it merges onto the PARENT's
+> row and there is no child-specific row to anchor on. **Only narrowed slots can
+> pose the question at all.** Do not reopen.
+
+> **Cost was OVERSTATED.** This section used to say convergence merging and the
+> single shared arrowhead both had to learn about row anchors. Measured
+> 2026-08-31: **no member or parent of any multi-child family has more than one
+> inbound edge.** The ObservationSet case spreads over FOUR arrival rows — the
+> three children plus `Observation` itself, which carries
+> `ObservationSet.observations` on the parent row — with exactly one edge each.
+> So convergence merging is a **no-op** for those rows: a row-targeted edge can
+> simply opt out of `mergeTargets` and draw its own arrowhead. `mergeTargets`
+> needs no change and its `HEADER_H / 2` geometry is untouched. The fan passes
+> DO still need to skip row-targeted edges, or the fan reserves lanes for edges
+> no longer using it and mis-centres the rest.
+>
+> **That property is schema-dependent.** The implementation sketch and the guard
+> test it needs live in the `mergeTargets` doc comment in
+> `OwnershipGraphView.tsx` (`8f367da`), next to the code that relies on it. A
+> guard failure means the schema grew a second narrowing to the same child and
+> the shortcut is void — not that the assertion should be deleted.
+
+**Siggie, 2026-08-31: worth doing, but LATER.** Crossings will increase, but
+*"the colors would make them legible"* — the sibling colours already match at
+both ends.
 
 Note the row machinery is already in place: rows carry `declaringClass`, header
 rows are real rows with a y-position, and `rowY(node, slot, declaringClass)`
 resolves an anchor. What is missing is a port on the entity side that targets
-a header row, and the fan/merge rules knowing about it.
+a header row, and the fan rules knowing about it.
 
 ---
 
