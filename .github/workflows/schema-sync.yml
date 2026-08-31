@@ -2,8 +2,8 @@ name: Schema sync
 
 # Watches the upstream BDCHM schema (RTIInternational/NHLBI-BDC-DMC-HM,
 # src/bdchm/schema/bdchm.yaml). When the pinned commit is behind main, pulls the
-# new schema, regenerates the downstream artifacts (bdchm.expanded.json →
-# bdchm.processed.json — what the app loads), and opens a PR with the diff.
+# new schema, regenerates the downstream artifact (bdchm.processed.json — what
+# the app loads), and opens a PR with the diff.
 #
 # The pipeline lives in scripts/download_source_data.py:
 #   --check   exit 1 if the pinned commit is behind upstream main, 0 if current
@@ -66,7 +66,7 @@ jobs:
             `scripts/download_source_data.py --update` detected a newer commit of
             `RTIInternational/NHLBI-BDC-DMC-HM/src/bdchm/schema/bdchm.yaml`,
             pulled it, bumped the pinned commit in the script, and regenerated
-            the downstream artifacts (`bdchm.expanded.json` → `bdchm.processed.json`).
+            `bdchm.processed.json`.
 
             **Review checklist**
             - [ ] Diff in `bdchm.processed.json` looks like intended schema changes

@@ -28,7 +28,7 @@ import { initializeModelData } from '../models/Element';
 
 /**
  * Load bdchm.processed.json which includes:
- * - All classes, enums, slots, types from bdchm.yaml (via gen-linkml + transform_schema.py)
+ * - All classes, enums, slots, types from bdchm.yaml (via transform_schema.py)
  * - Slots consolidated: global, inline, and override slots all in slots section
  * - Class.slots contains references only (data lives in slots section)
  * - Computed inherited_from in slot references

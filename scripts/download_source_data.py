@@ -7,9 +7,10 @@ Saves to {local_source_dir}/{dependency_name}/{file_name}
 Handles errors if files don't exist
 Prints what it's fetching
 
-After downloading bdchm.yaml, runs data pipeline:
-1. gen-linkml: Generates bdchm.expanded.json (includes all types from linkml:types, expands inherited slots)
-2. transform_schema.py: Transforms to bdchm.processed.json (computes inherited_from, creates slot instances)
+After downloading bdchm.yaml, runs transform_schema.py to produce
+bdchm.processed.json. That reads bdchm.yaml directly through LinkML's SchemaView
+(see induced_schema.py), which resolves imports and merges inherited slots
+itself — so there is no gen-linkml step and no bdchm.expanded.json artifact.
 
 Usage:
   python download_source_data.py              # Download all files and run full pipeline
@@ -158,63 +159,13 @@ def download_file(url: str, output_path: Path, normalize_line_endings: bool = Fa
         return False
 
 
-def generate_expanded_schema(yaml_path: Path, output_path: Path) -> bool:
+def transform_schema(yaml_path: Path, processed_path: Path) -> bool:
     """
-    Generate expanded schema using gen-linkml.
-    Resolves imports (like linkml:types) and expands inherited slots.
-    Outputs JSON format (gen-linkml default) which includes inherited_from metadata.
-
-    Args:
-        yaml_path: Path to bdchm.yaml
-        output_path: Path to save bdchm.expanded.json
-
-    Returns:
-        True if successful, False otherwise
-    """
-    import subprocess
-    try:
-        print(f"Generating expanded schema from {yaml_path.name}...")
-
-        # Run gen-linkml to expand imports (merges imports like linkml:types)
-        # Default output format is JSON, which includes inherited_from in attributes
-        result = subprocess.run(
-            [
-                'gen-linkml',
-                str(yaml_path),
-                '--output', str(output_path)
-            ],
-            capture_output=True,
-            text=True
-        )
-
-        if result.returncode != 0:
-            print(f"  ✗ gen-linkml error: {result.stderr}", file=sys.stderr)
-            return False
-
-        if not output_path.exists():
-            print(f"  ✗ gen-linkml did not create output file", file=sys.stderr)
-            return False
-
-        file_size = output_path.stat().st_size
-        print(f"  ✓ Generated expanded schema ({file_size:,} bytes)")
-        print(f"  ✓ Saved to {output_path}")
-        return True
-
-    except FileNotFoundError:
-        print(f"  ✗ gen-linkml not found. Install with: pip install linkml", file=sys.stderr)
-        return False
-    except Exception as e:
-        print(f"  ✗ Error generating expanded schema: {e}", file=sys.stderr)
-        return False
-
-
-def transform_schema(expanded_path: Path, processed_path: Path) -> bool:
-    """
-    Transform bdchm.expanded.json to optimized bdchm.processed.json.
+    Transform bdchm.yaml to optimized bdchm.processed.json.
     Computes inherited_from fields and creates slot instances for slot_usage overrides.
 
     Args:
-        expanded_path: Path to bdchm.expanded.json
+        yaml_path: Path to bdchm.yaml
         processed_path: Path to save bdchm.processed.json
 
     Returns:
@@ -228,9 +179,9 @@ def transform_schema(expanded_path: Path, processed_path: Path) -> bool:
         script_path = Path(__file__).parent / "transform_schema.py"
         result = subprocess.run(
             [
-                'python3',
+                sys.executable,
                 str(script_path),
-                '--input', str(expanded_path),
+                '--input', str(yaml_path),
                 '--output', str(processed_path)
             ],
             capture_output=True,
@@ -274,7 +225,7 @@ Examples:
     parser.add_argument(
         '--metadata-only',
         action='store_true',
-        help='Skip downloads and only regenerate schemas (bdchm.expanded.json → bdchm.processed.json) from existing bdchm.yaml'
+        help='Skip downloads and only regenerate bdchm.processed.json from existing bdchm.yaml'
     )
     parser.add_argument(
         '--check',
@@ -392,20 +343,12 @@ Examples:
                     print(f"  ✗ Invalid Google Sheets URL format: {sheet_url}", file=sys.stderr)
                     fail_count += 1
 
-    # Generate expanded schema from YAML if available
+    # Regenerate the processed schema from YAML if available. SchemaView reads
+    # bdchm.yaml directly, so this is a single step.
     if yaml_path and yaml_path.exists():
-        # Generate expanded schema with imports resolved (includes linkml:types)
-        # Using JSON format (gen-linkml default)
-        expanded_path = yaml_path.parent / "bdchm.expanded.json"
-        if generate_expanded_schema(yaml_path, expanded_path):
+        processed_path = yaml_path.parent / "bdchm.processed.json"
+        if transform_schema(yaml_path, processed_path):
             success_count += 1
-
-            # Transform expanded schema to optimized format
-            processed_path = yaml_path.parent / "bdchm.processed.json"
-            if transform_schema(expanded_path, processed_path):
-                success_count += 1
-            else:
-                fail_count += 1
         else:
             fail_count += 1
 
