@@ -47,16 +47,17 @@ This principle guides the UX design:
 
 ## Data Flow Overview
 
-> **Note**: The Python transform step is planned to change — we intend to use
-> LinkML's `SchemaView` / `induced_slot()` from Python `linkml-runtime` to
-> correctly resolve per-class slot definitions. See [TASKS.md](../TASKS.md).
+> **Shipped `e8b8bd0`**: the transform reads `bdchm.yaml` directly through
+> LinkML's `SchemaView` / `induced_class()` (`scripts/induced_schema.py`), which
+> resolves imports and merges inherited slots itself. The old `gen-linkml` step
+> and its `bdchm.expanded.json` artifact are **gone** — the file was deleted
+> 2026-08-31. Earlier notes describing a two-step expand-then-transform pipeline
+> are stale.
 
 ```mermaid
 graph TD
     YAML["bdchm.yaml<br/>(LinkML schema)"]
-    EXPAND["linkml expand<br/>(LinkML CLI)"]
-    EXPANDED["bdchm.expanded.json<br/>(all inheritance merged)"]
-    TRANSFORM["transform_schema.py"]
+    TRANSFORM["transform_schema.py<br/>+ induced_schema.py (SchemaView)"]
     PROCESSED["bdchm.processed.json<br/>(app-ready format)"]
     TSV["variable-specs-S1.tsv"]
     LOADER["dataLoader.ts<br/>(DTOs → SchemaData)"]
@@ -64,7 +65,7 @@ graph TD
     SERVICE["DataService"]
     UI["UI Components"]
 
-    YAML --> EXPAND --> EXPANDED --> TRANSFORM --> PROCESSED
+    YAML --> TRANSFORM --> PROCESSED
     PROCESSED --> LOADER
     TSV --> LOADER
     LOADER --> GRAPH --> SERVICE --> UI
@@ -74,7 +75,9 @@ graph TD
 
 | File | Role |
 |------|------|
-| `scripts/transform_schema.py` | Transforms expanded LinkML JSON into app-specific format |
+| `scripts/transform_schema.py` | Transforms `bdchm.yaml` into the app-specific format |
+| `scripts/induced_schema.py` | Wraps LinkML `SchemaView.induced_class()`; supplies the merged per-class slot definitions the transform consumes |
+| `scripts/download_source_data.py` | Pulls upstream sources and drives the transform (the GitHub Action's entry point) |
 | `src/input_types.ts` | TypeScript DTOs matching the processed JSON shape |
 | `src/utils/dataLoader.ts` | Loads JSON/TSV, transforms DTOs → domain types (`SchemaData`) |
 | `src/models/SchemaTypes.ts` | Domain types used after transformation (`SlotData`, `ClassData`, etc.) |

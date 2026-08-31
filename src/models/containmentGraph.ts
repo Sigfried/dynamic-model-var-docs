@@ -63,8 +63,9 @@ export const SINGLE_VALUE_OWNER_TARGETS = new Set<string>([
 // two genuinely-multivalued associations remain.
 //
 // To restore the 8-slot behaviour, add back: originating_site,
-// associated_assay, transport_origin, transport_destination,
-// related_questionnaire_item, has_questionnaire_item.
+// associated_artifact (was associated_assay until upstream 28007df),
+// transport_origin, transport_destination, related_questionnaire_item,
+// has_questionnaire_item.
 export const ASSOCIATION_SLOTS = new Set<string>([
   'related_document',
   'container',                          // storage activity uses containers
