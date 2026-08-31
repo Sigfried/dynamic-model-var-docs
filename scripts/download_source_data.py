@@ -37,7 +37,7 @@ local_source_dir = "public/source_data"
 repo_sources = {
     "HM": {         # dependency_name
         "repo": "RTIInternational/NHLBI-BDC-DMC-HM",
-        "commit": "65012a6",
+        "commit": "28007df",
         "file_paths": [
           "src/bdchm/schema/bdchm.yaml"
         ],

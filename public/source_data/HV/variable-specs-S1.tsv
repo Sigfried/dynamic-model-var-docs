@@ -119,7 +119,7 @@ MeasurementObservation	Sodium in blood	sodium_blood		decimal	mmol/L	OBA:VT000177
 MeasurementObservation	Sodium intake	sodium_intak		decimal	mg/d		OMOP:606729		Mass of sodium consumed by an individual per day
 MeasurementObservation	SpO2	spo2		decimal	%	OBA:2045443	OMOP:4020553		Percentage of oxygen-carrying hemoglobin in the blood compared to the total amount of hemoglobin. Also known as oxygen saturation.
 Condition	Stroke status	stroke		Uriorcurie			OMOP:4212690		
-MeasurementObservation	Systolic blood pressure	bp_systolic		integer			OMOP:4152194		Measurement of pressure in your arteries when your heart pumps blood, the top number in a blood pressure reading
+MeasurementObservation	Systolic blood pressure	bp_systolic		integer			OMOP:3003205	OMOP:4152194	Measurement of pressure in your arteries when your heart pumps blood, the top number in a blood pressure reading
 DrugExposure	Taking ACE inhibitors	tak_aceinhib		Uriorcurie					
 DrugExposure	Taking aldosterone receptor blockers	tak_aldorecepblk		Uriorcurie					
 DrugExposure	Taking alpha blockers	tak_alphablk		Uriorcurie					
