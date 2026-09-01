@@ -94,7 +94,10 @@ describe('relation menu groups', () => {
    *  selected too. */
   const groupsFor = (id: string, ...also: string[]) => {
     const sub = ds.getOwnershipSubgraph([id, ...also]);
-    const vm = buildViewModel(sub, new Set(), c => ds.getClassSummary(c)?.slots ?? []);
+    const vm = buildViewModel(
+      sub, new Set(), c => ds.getClassSummary(c)?.slots ?? [],
+      r => ds.getRangeColor(r),
+    );
     return vm.nodes.find(n => n.id === id)!;
   };
 

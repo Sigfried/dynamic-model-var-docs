@@ -22,6 +22,7 @@
 
 import { useMemo, useState } from 'react';
 import type { DataService, OwnershipPairGroup } from '../services/DataService';
+import { EDGE_COLORS, RANGE_COLORS } from '../config/appConfig';
 
 interface OwnershipLegendProps {
   dataService: DataService;
@@ -29,20 +30,21 @@ interface OwnershipLegendProps {
   onSelect: (classIds: string[]) => void;
 }
 
-/** Short label + colour per verdict. Amber is ownership, matching the canvas. */
-const VERDICT_LABEL: Record<string, { text: string; cls: string }> = {
-  'own-fwd': {
-    text: 'owns (forward)',
-    cls: 'text-amber-700 dark:text-amber-400 border-amber-400',
-  },
-  'own-bkwd': {
-    text: 'belongs to (backward)',
-    cls: 'text-amber-800 dark:text-amber-300 border-amber-600',
-  },
-  'association': {
-    text: 'association (no ownership)',
-    cls: 'text-slate-600 dark:text-slate-300 border-slate-500',
-  },
+/**
+ * Short label + colour per verdict.
+ *
+ * The three live verdicts take P2's Blues ramp — the SAME hex values the
+ * canvas strokes, not a Tailwind approximation of them, so the legend and the
+ * thing it explains cannot drift apart. `own-fwd` and `own-bkwd` sit one step
+ * apart because they are the same relation seen from two ends.
+ *
+ * `excluded` is not a relation kind and stays outside the ramp: it names an
+ * edge that is NOT drawn, so giving it a stroke colour would be a lie.
+ */
+const VERDICT_LABEL: Record<string, { text: string; color?: string; cls?: string }> = {
+  'own-fwd': { text: 'owns (forward)', color: EDGE_COLORS.ownFwd },
+  'own-bkwd': { text: 'belongs to (backward)', color: EDGE_COLORS.ownBkwd },
+  'association': { text: 'association (no ownership)', color: EDGE_COLORS.association },
   'excluded': {
     text: 'dropped',
     cls: 'text-gray-400 dark:text-gray-500 border-gray-300',
@@ -140,7 +142,10 @@ export default function OwnershipLegend({ dataService, onSelect }: OwnershipLege
                   onClick={() => setOpen(isOpen ? null : key)}
                   className="w-full text-left"
                 >
-                  <span className={`inline-block px-1 rounded border text-[10px] ${v.cls}`}>
+                  <span
+                    className={`inline-block px-1 rounded border text-[10px] ${v.cls ?? ''}`}
+                    style={v.color ? { color: v.color, borderColor: v.color } : undefined}
+                  >
                     {v.text}
                   </span>
                   <span className="ml-1.5 font-medium">{g.rule}</span>
@@ -160,7 +165,9 @@ export default function OwnershipLegend({ dataService, onSelect }: OwnershipLege
                           {p.multivalued ? '↠' : '→'}
                         </span>
                         {classLink(p.range)}
-                        {p.isLoop && <span className="ml-1 text-amber-600">loop</span>}
+                        {p.isLoop && (
+                          <span className="ml-1" style={{ color: RANGE_COLORS.entity }}>loop</span>
+                        )}
                         {(g.verdict === 'own-bkwd' || g.verdict === 'association') && (
                           <span className="ml-1 text-gray-400">
                             (owner: {p.owner})

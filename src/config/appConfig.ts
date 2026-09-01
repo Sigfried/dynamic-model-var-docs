@@ -212,6 +212,30 @@ export const VOCAB = {
 export const ACTIVE_VOCAB = VOCAB[defaultVocab];
 const V = ACTIVE_VOCAB;
 
+// ---------------------------------------------------------------------------
+// P1 — range kind. ColorBrewer Set1, entity = blue.
+// ---------------------------------------------------------------------------
+
+/**
+ * What kind of thing a slot's range is. Qualitative and unordered: Set1 is
+ * chosen for maximum mutual separation, because these categories have no
+ * order and no one of them is "more" than another.
+ *
+ * This is the SAME set of things the Kitchen Sink calls element types and the
+ * Explorer detail panel puts in badges, so it is one palette serving both —
+ * see APP_CONFIG.elementTypes, whose `hex` values are these.
+ *
+ * `slot` is not a range kind. It is here because the Kitchen Sink still needs
+ * a colour for slots as ELEMENTS; nothing in the graph uses it.
+ */
+export const RANGE_COLORS = {
+  entity: '#377eb8',    // Set1 blue   — a class
+  enum: '#984ea3',      // Set1 purple — a value set
+  dataType: '#4daf4a',  // Set1 green  — a primitive
+  variable: '#ff7f00',  // Set1 orange — a mapped study variable
+  slot: '#a65628',      // Set1 brown  — Kitchen Sink only (not a range kind)
+} as const;
+
 // ============================================================================
 // Configuration
 // ============================================================================
@@ -226,7 +250,7 @@ export const APP_CONFIG = {
       icon: V.concept.entity.abbr,
       color: {
         name: 'blue',
-        hex: '#3b82f6',  // blue-500
+        hex: RANGE_COLORS.entity,  // P1 Set1 blue
         link: 'text-blue-600 dark:text-blue-400',
         linkTooltip: 'text-blue-300',
         toggleActive: 'bg-blue-500',
@@ -246,7 +270,7 @@ export const APP_CONFIG = {
       icon: V.concept.valueSet.abbr,
       color: {
         name: 'purple',
-        hex: '#a855f7',  // purple-500
+        hex: RANGE_COLORS.enum,  // P1 Set1 purple
         link: 'text-purple-600 dark:text-purple-400',
         linkTooltip: 'text-purple-300',
         toggleActive: 'bg-purple-500',
@@ -264,12 +288,35 @@ export const APP_CONFIG = {
       label: V.concept.attribute.singular,
       pluralLabel: V.concept.attribute.plural,
       icon: V.concept.attribute.abbr,
+      // Amber approximates P1's Set1 brown, which Tailwind has no scale for.
+      // `slot` is NOT a range kind — it is here because the Kitchen Sink still
+      // shows slots as elements and needs a colour for them.
+      color: {
+        name: 'amber',
+        hex: RANGE_COLORS.slot,  // P1 Set1 brown
+        link: 'text-amber-700 dark:text-amber-400',
+        linkTooltip: 'text-amber-300',
+        toggleActive: 'bg-amber-600',
+        toggleInactive: 'bg-gray-300 dark:bg-gray-600',
+        headerBg: 'bg-amber-800 dark:bg-amber-800',
+        headerText: 'text-white',
+        headerBorder: 'border-amber-900 dark:border-amber-700',
+        selectionBg: 'bg-amber-100 dark:bg-amber-900',
+        badgeBg: 'bg-amber-200 dark:bg-amber-800',
+        badgeText: 'text-amber-800 dark:text-amber-300'
+      }
+    },
+    type: {
+      id: 'type' as const,
+      label: V.concept.dataType.singular,
+      pluralLabel: V.concept.dataType.plural,
+      icon: V.concept.dataType.abbr,
       color: {
         name: 'green',
-        hex: '#10b981',  // green-500
-        link: 'text-green-600 dark:text-green-400',
+        hex: RANGE_COLORS.dataType,  // P1 Set1 green
+        link: 'text-green-700 dark:text-green-400',
         linkTooltip: 'text-green-300',
-        toggleActive: 'bg-green-500',
+        toggleActive: 'bg-green-600',
         toggleInactive: 'bg-gray-300 dark:bg-gray-600',
         headerBg: 'bg-green-700 dark:bg-green-700',
         headerText: 'text-white',
@@ -279,26 +326,6 @@ export const APP_CONFIG = {
         badgeText: 'text-green-700 dark:text-green-300'
       }
     },
-    type: {
-      id: 'type' as const,
-      label: V.concept.dataType.singular,
-      pluralLabel: V.concept.dataType.plural,
-      icon: V.concept.dataType.abbr,
-      color: {
-        name: 'cyan',
-        hex: '#06b6d4',  // cyan-500
-        link: 'text-cyan-600 dark:text-cyan-400',
-        linkTooltip: 'text-cyan-300',
-        toggleActive: 'bg-cyan-500',
-        toggleInactive: 'bg-gray-300 dark:bg-gray-600',
-        headerBg: 'bg-cyan-700 dark:bg-cyan-700',
-        headerText: 'text-white',
-        headerBorder: 'border-cyan-800 dark:border-cyan-600',
-        selectionBg: 'bg-cyan-100 dark:bg-cyan-900',
-        badgeBg: 'bg-cyan-200 dark:bg-cyan-800',
-        badgeText: 'text-cyan-700 dark:text-cyan-300'
-      }
-    },
     variable: {
       id: 'variable' as const,
       label: V.concept.variable.singular,
@@ -306,7 +333,7 @@ export const APP_CONFIG = {
       icon: V.concept.variable.abbr,
       color: {
         name: 'orange',
-        hex: '#f97316',  // orange-500
+        hex: RANGE_COLORS.variable,  // P1 Set1 orange
         link: 'text-orange-600 dark:text-orange-400',
         linkTooltip: 'text-orange-300',
         toggleActive: 'bg-orange-500',
@@ -459,45 +486,113 @@ export function getFloatSettings(groupId: FloatGroupId): FloatSettings {
 // ============================================================================
 
 /**
- * Colours for the ownership graph. Kept here with the rest of the app's
- * palette rather than inline in the view: every colour the app draws is
- * configurable in one place, and a literal buried in a `stroke=` is the thing
- * that makes a palette impossible to change.
+ * The three palettes.
  *
- * Values are Tailwind's scale (named in comments) so they sit beside the
- * element-type colours above without introducing a second colour vocabulary.
+ * Every colour the app draws comes from here. A literal buried in a `stroke=`
+ * is the thing that makes a palette impossible to change, so there are none.
+ *
+ * The system answers three different questions, and deliberately uses three
+ * different KINDS of palette so the answers cannot be confused for one another:
+ *
+ *   P1 RANGE      what kind of thing is this?      ColorBrewer Set1 (qualitative)
+ *   P2 EDGE KIND  what kind of relation is this?   ColorBrewer Blues (sequential)
+ *   P3 SIBLINGS   which class does this belong to? ColorBrewer Pastel1 (pastel)
+ *
+ * P2 is not independent: it is a sequential ramp of P1's ENTITY hue, so every
+ * edge still reads as "entity relationship" before it reads as any particular
+ * kind of one. P3 does not need separation from P1 because the two never share
+ * a position — P3 lands on slot names and box headers, P1 on row dots and range
+ * labels.
  */
-export const GRAPH_COLORS = {
-  /** Ownership edges and their arrowheads. */
-  ownership: '#d97706',   // amber-600
-  /** Reference / association edges — deliberately quieter than ownership. */
-  reference: '#64748b',   // slate-500
 
-  /**
-   * One colour per child in a merged sibling box: its header, its rows, and
-   * the edges leaving them. Twelve because a merged box takes as many children
-   * as the schema gives it (Observation has 5 today, and nothing caps it), and
-   * a palette that runs out silently recycles a colour onto two children in
-   * the SAME box — the one place the colours must stay distinct.
-   *
-   * Ordered so adjacent entries contrast: children are assigned in sequence,
-   * and a box with three children should not get three neighbouring hues.
-   */
-  siblings: [
-    '#2563eb',  // blue-600
-    '#16a34a',  // green-600
-    '#db2777',  // pink-600
-    '#9333ea',  // purple-600
-    '#0891b2',  // cyan-600
-    '#ca8a04',  // yellow-600
-    '#dc2626',  // red-600
-    '#4f46e5',  // indigo-600
-    '#059669',  // emerald-600
-    '#c026d3',  // fuchsia-600
-    '#0284c7',  // sky-600
-    '#ea580c',  // orange-600
-  ],
+// ---------------------------------------------------------------------------
+// P2 — edge kind. ColorBrewer Blues, a ramp of P1's entity hue.
+// ---------------------------------------------------------------------------
+
+/**
+ * The three relation kinds as the GRAPH draws them, with nothing hovered.
+ *
+ * Named for the classifier's verdicts (`OwnershipVerdict` in containmentGraph)
+ * rather than for a direction. "Outgoing"/"incoming" would be wrong here:
+ * they imply a point of view, and with nothing hovered the canvas has none —
+ * an edge is only outgoing RELATIVE to an entity the reader has picked out.
+ * Perspective, if it ever gets a colour, is a hover-time concern and a
+ * different palette.
+ *
+ * `ownFwd` and `ownBkwd` are the same relation seen from two ends, so they sit
+ * CLOSE on the ramp (Blues 7 / Blues 6) — distinguishable, not dramatically
+ * different. That one-step gap is why strokes got thicker (see STROKE_OWN):
+ * a hairline cannot carry it.
+ *
+ * `association` is INSIDE the ramp at a value that stays clearly visible. The
+ * dash pattern carries the distinction, not faintness — the old slate-500 said
+ * "association" by being hard to see, which is not a thing a reader can learn.
+ */
+export const EDGE_COLORS = {
+  ownFwd: '#2171b5',       // Blues 7 — owner declares the slot
+  ownBkwd: '#4292c6',      // Blues 6 — the owned thing stores the FK
+  association: '#6baed6',  // Blues 5 — no ownership claim; drawn dashed
 } as const;
+
+/** The relation menu's chip takes the main entity colour: the menu is about
+ *  entity relationships in general, not about any one of the three kinds. */
+export const RELATION_CHIP_COLOR = RANGE_COLORS.entity;
+
+// ---------------------------------------------------------------------------
+// P3 — siblings. ColorBrewer Pastel1, plus a dark entity-blue default.
+// ---------------------------------------------------------------------------
+
+/**
+ * A P3 entry needs TWO steps, not one.
+ *
+ * A box header is a filled band with white text on it, so it needs a colour
+ * dark enough to carry white. A slot name is small text on a light background,
+ * so it needs a colour dark enough to READ — but not so dark that every entry
+ * converges on near-black and the whole point of colouring siblings is lost.
+ * One value cannot do both jobs.
+ */
+export interface SiblingColor {
+  /** Header band fill. White text sits on this. */
+  fill: string;
+  /** Slot-name text on the box's light background. */
+  text: string;
+}
+
+/**
+ * Index 0 is the DEFAULT: parent-declared slots, and every box that is not an
+ * inheritance-merged box.
+ *
+ * It is a significantly darkened form of P1's entity colour, NOT a neutral
+ * gray — a box header is an entity, so its header and its own slot names carry
+ * the entity identity, and sibling colours read as departures from it. No
+ * other neutral is needed anywhere in the system.
+ *
+ * Entries 1+ are Pastel1, darkened per channel. Pastel1's low saturation is
+ * what keeps sibling colouring quiet enough to sit under P1 without competing
+ * with it; the raw pastels are far too pale for either job here, so each is
+ * darkened — enough for white text (fill) or for legibility on white (text) —
+ * while keeping the hue that makes them mutually distinct.
+ *
+ * Five real siblings covers the schema's largest group today (Observation, 5
+ * children); six are listed so a sixth child does not immediately wrap onto
+ * the default and read as a parent row.
+ */
+export const SIBLING_COLORS: readonly SiblingColor[] = [
+  // 0 — default: dark entity blue.
+  { fill: '#0b3a5d', text: '#1a5a8a' },
+  // 1+ — Pastel1 hues, darkened for each channel.
+  { fill: '#8c2f22', text: '#b3452f' },  // Pastel1 red
+  { fill: '#1f4f7a', text: '#2f74ad' },  // Pastel1 blue
+  { fill: '#2f6b30', text: '#458f42' },  // Pastel1 green
+  { fill: '#5c3b73', text: '#7d5199' },  // Pastel1 purple
+  { fill: '#8a5a12', text: '#b3781c' },  // Pastel1 orange
+] as const;
+
+// `GRAPH_COLORS` is gone. It held an amber `ownership` and a slate
+// `reference`, and that pair was the whole old system: one colour meaning
+// "relationship" and one meaning "not quite a relationship". P2 replaces it
+// with three named kinds, and P1 took over the row dots the amber also
+// coloured. Nothing should reintroduce a single "the graph colour".
 
 // ============================================================================
 // Legacy Exports (for backward compatibility during migration)

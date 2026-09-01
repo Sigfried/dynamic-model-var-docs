@@ -40,6 +40,7 @@ describe('collapsed boxes show a budget of rows, not just connected ones', () =>
     const vm = buildViewModel(
       ds.getOwnershipSubgraph(sel), new Set(),
       c => ds.getClassSummary(c)?.slots ?? [],
+      r => ds.getRangeColor(r),
     );
     const node = vm.nodes.find(n => n.id === id);
     if (!node) throw new Error(`${id} not in its own subgraph`);

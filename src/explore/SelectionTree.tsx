@@ -36,6 +36,7 @@ import { DagBrowser } from 'dag-browser-widget';
 import 'dag-browser-widget/styles.css';
 import './selectionTree.css';
 import type { DataService } from '../services/DataService';
+import { RANGE_COLORS } from '../config/appConfig';
 
 interface SelectionTreeProps {
   dataService: DataService;
@@ -74,8 +75,10 @@ export default function SelectionTree({
         </span>
         <span className="flex items-center gap-1 text-[10px] uppercase tracking-wide shrink-0">
           <span className="text-gray-500" title={col.props.tip}>{col.props.header}</span>
-          <span className="text-blue-500" title={col.cls.tip}>{col.cls.header}</span>
-          <span className="text-amber-600" title={col.vars.tip}>{col.vars.header}</span>
+          {/* P1: these columns count things BY RANGE KIND, so they take the
+              range palette rather than colours of their own. */}
+          <span style={{ color: RANGE_COLORS.entity }} title={col.cls.tip}>{col.cls.header}</span>
+          <span style={{ color: RANGE_COLORS.variable }} title={col.vars.tip}>{col.vars.header}</span>
         </span>
       </div>
 
@@ -118,8 +121,8 @@ export default function SelectionTree({
               {c && (
                 <span className="flex items-center gap-1 shrink-0 tabular-nums">
                   <CountBadge n={c.props} title={col.props.tip} className="text-gray-500" />
-                  <CountBadge n={c.cls} title={col.cls.tip} className="text-blue-500" />
-                  <CountBadge n={c.vars} title={col.vars.tip} className="text-amber-600" />
+                  <CountBadge n={c.cls} title={col.cls.tip} color={RANGE_COLORS.entity} />
+                  <CountBadge n={c.vars} title={col.vars.tip} color={RANGE_COLORS.variable} />
                 </span>
               )}
             </span>
@@ -134,14 +137,22 @@ export default function SelectionTree({
  * One count cell. Zero renders as a muted dash rather than "0" so the eye
  * lands on entities that actually have something of that kind.
  */
-function CountBadge({ n, title, className }: { n: number; title: string; className: string }) {
+function CountBadge(
+  { n, title, className, color }:
+  { n: number; title: string; className?: string; color?: string },
+) {
+  // A zero is muted whatever the column's colour: "nothing of this kind" is
+  // the same statement in every column, so it should not be said in four
+  // different colours.
+  const zero = n === 0;
   return (
     <span
       title={title}
       data-count-badge=""
-      className={`w-5 text-right text-[11px] ${n === 0 ? 'text-gray-300 dark:text-slate-600' : className}`}
+      className={`w-5 text-right text-[11px] ${zero ? 'text-gray-300 dark:text-slate-600' : className ?? ''}`}
+      style={!zero && color ? { color } : undefined}
     >
-      {n === 0 ? '·' : n}
+      {zero ? '·' : n}
     </span>
   );
 }

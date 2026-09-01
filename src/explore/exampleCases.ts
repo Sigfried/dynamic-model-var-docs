@@ -52,8 +52,11 @@ export const EXAMPLE_CASES: ExampleCaseGroup[] = [
       {
         name: '1. One box',
         note: 'A single class. Rows are its attributes: name, then range and '
-          + 'cardinality on the right. Filled amber dots are attributes that '
-          + 'draw an edge; hollow grey dots are scalars and enums, which never do.',
+          + 'cardinality on the right. The dot and the range label share a '
+          + 'colour that says what KIND of thing the attribute points at — '
+          + 'blue for an entity, purple for a permissible value set, green '
+          + 'for a data type. A filled dot draws an edge; a hollow one does '
+          + 'not, because nothing it could point at is on the canvas.',
         sel: ['Organization'],
       },
       {

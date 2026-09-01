@@ -34,6 +34,7 @@ import {
 } from '../config/entityCategories';
 import {
   buildContainmentGraph, classifySlotEdgeExplained, OWNERSHIP_RULE_TEXT,
+  SKIP_SUBCLASS_EXPANSION,
 } from '../models/containmentGraph';
 import type {
   ContainmentGraph, OwnershipVerdict, OwnershipRule,
@@ -45,7 +46,7 @@ import type {
 } from '../models/ownershipSubgraph';
 // Re-export so UI components (which must not import from config/ or models/) can
 // reference section identities without depending on display strings.
-export { SectionId, GRAPH_COLORS } from '../config/appConfig';
+export { SectionId } from '../config/appConfig';
 const {elementTypes, } = APP_CONFIG;
 
 // Re-export UI types for UI components
@@ -174,9 +175,67 @@ export interface ConvergenceInfo {
 export class DataService {
   private modelData: ModelData;
 
+  /**
+   * class id → its P3 sibling colour index. Built once, from the WHOLE schema.
+   *
+   * See `siblingColorIndexOf` for why this cannot be computed on the canvas.
+   */
+  private readonly siblingColorIndex: Map<string, number>;
+
   constructor(modelData: ModelData) {
     this.modelData = modelData;
     this.warnOnUncategorizedClasses();
+    this.siblingColorIndex = this.buildSiblingColorIndex();
+  }
+
+  /**
+   * Index every class by its position among ALL its schema siblings.
+   *
+   * The colour a class gets must not depend on what else is selected. The
+   * scheme this replaces indexed by position among the siblings currently on
+   * the canvas, so unselecting one shifted every later sibling's colour — the
+   * box recoloured itself for a reason outside any of the classes in it.
+   *
+   * Sorted by id, so a class keeps its index as the schema grows around it in
+   * ways that do not touch its own family, and as the canvas changes not at
+   * all. Index 0 is reserved for the PARENT, which takes the default; children
+   * start at 1. That is what makes "the default" mean "this row is the box's
+   * own, not any one child's" rather than "this child happened to sort first".
+   *
+   * Colours are per-group by design: two classes at index 1 in DIFFERENT
+   * groups share a colour, and that is the container/contents pairing the
+   * slot-name rule below depends on, not a collision.
+   */
+  private buildSiblingColorIndex(): Map<string, number> {
+    const index = new Map<string, number>();
+    const classes = this.modelData.collections.get('class');
+    if (!classes) return index;
+    const ids = classes.getAllElements().map(el => el.name).sort();
+    const byParent = new Map<string, string[]>();
+    for (const id of ids) {
+      const parent = this.getIsaParent(id);
+      // A class whose parent is excluded from merging (Entity) is top-level and
+      // forms no merged box, so it has no sibling position to hold.
+      if (!parent || SKIP_SUBCLASS_EXPANSION.has(parent)) continue;
+      byParent.set(parent, [...(byParent.get(parent) ?? []), id]);
+    }
+    for (const [parent, children] of byParent) {
+      index.set(parent, 0);
+      children.forEach((id, i) => index.set(id, i + 1));
+    }
+    return index;
+  }
+
+  /**
+   * The P3 colour index for a class: 0 (the default) unless it is a child in a
+   * mergeable family, in which case its stable position among ALL its schema
+   * siblings.
+   *
+   * Whole-schema and canvas-independent on purpose — see
+   * `buildSiblingColorIndex`.
+   */
+  siblingColorIndexOf(classId: string): number {
+    return this.siblingColorIndex.get(classId) ?? 0;
   }
 
   /**
@@ -577,6 +636,26 @@ export class DataService {
   getColorForItemType(typeId: string): string {
     const metadata = elementTypes[typeId as ElementTypeId];
     return metadata?.color.hex ?? '#6b7280'; // gray-500 fallback
+  }
+
+  /**
+   * What KIND of thing a slot's range is — the P1 question.
+   *
+   * A range is a bare name in the schema, so the kind has to be looked up
+   * rather than read off the slot. Falls back to `type` for a range the graph
+   * does not carry a node for: bdchm's primitives (`string`, `integer`,
+   * `date`) are not always materialised as elements, and they are data types,
+   * not an error.
+   */
+  getRangeKind(range: string): ElementTypeId {
+    if (!range || !this.modelData.graph.hasNode(range)) return 'type';
+    const t = this.modelData.graph.getNodeAttributes(range)?.type;
+    return (t as ElementTypeId) ?? 'type';
+  }
+
+  /** The P1 colour for a slot's range kind. */
+  getRangeColor(range: string): string {
+    return elementTypes[this.getRangeKind(range)].color.hex;
   }
 
   /**

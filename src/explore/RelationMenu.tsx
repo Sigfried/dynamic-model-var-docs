@@ -190,11 +190,11 @@ export function RelationMenu({
         onClick={toggle}
         className={`flex items-center gap-1 text-[9px] leading-none px-1.5 py-0.5
                     rounded border
-                    border-amber-300 dark:border-amber-700
-                    bg-amber-50 dark:bg-amber-950/40
-                    text-amber-900 dark:text-amber-200
-                    hover:bg-amber-200 dark:hover:bg-amber-800
-                    ${anchor ? 'bg-amber-200 dark:bg-amber-800' : ''}`}
+                    border-sky-300 dark:border-sky-700
+                    bg-sky-50 dark:bg-sky-950/40
+                    text-sky-900 dark:text-sky-200
+                    hover:bg-sky-200 dark:hover:bg-sky-800
+                    ${anchor ? 'bg-sky-200 dark:bg-sky-800' : ''}`}
       >
         {/* A bare count read as a static badge rather than an opener (Siggie:
             "doesn't look like beginning of a cascading menu"). The stacked-bars
@@ -268,8 +268,8 @@ function MenuPanel({
             setOpenGroup(openGroup === g.position ? null : g.position);
           }}
           className={`flex w-full items-center gap-2 px-2 py-1 text-left
-                      hover:bg-amber-50 dark:hover:bg-amber-900/40
-                      ${openGroup === g.position ? 'bg-amber-50 dark:bg-amber-900/40' : ''}`}
+                      hover:bg-sky-50 dark:hover:bg-sky-900/40
+                      ${openGroup === g.position ? 'bg-sky-50 dark:bg-sky-900/40' : ''}`}
         >
           <span className="tabular-nums font-semibold shrink-0">{g.items.length}</span>
           <span className="flex-1 truncate">{g.label}</span>
@@ -393,8 +393,8 @@ function Submenu({
             <button
               data-relation-add-all={group.position}
               onClick={ev => { ev.stopPropagation(); addable.forEach(i => onAdd(i.other)); }}
-              className="underline text-amber-800 dark:text-amber-300
-                         hover:text-amber-950 dark:hover:text-amber-100"
+              className="underline text-sky-800 dark:text-sky-300
+                         hover:text-sky-950 dark:hover:text-sky-100"
             >
               add all {addable.length}
             </button>
@@ -416,7 +416,7 @@ function Submenu({
           key={item.other}
           data-relation-item={item.other}
           data-relation-drawn={item.drawn ? '' : undefined}
-          className="flex items-center gap-1 px-2 py-0.5 hover:bg-amber-50 dark:hover:bg-amber-900/40"
+          className="flex items-center gap-1 px-2 py-0.5 hover:bg-sky-50 dark:hover:bg-sky-900/40"
         >
           <button
             title={item.drawn

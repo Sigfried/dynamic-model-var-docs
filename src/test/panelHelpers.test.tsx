@@ -74,12 +74,15 @@ describe('getHeaderColor', () => {
     expect(color).toContain('dark:border-purple-600');
   });
 
-  it('returns green color for slot type', () => {
+  it('returns amber color for slot type', () => {
+    // Amber since the P1 palette landed: `slot` is not a range kind, so it
+    // took Set1's brown (which Tailwind has no scale for) rather than a colour
+    // one of the four real range kinds needed. Green went to `type`.
     const color = getHeaderColor('slot');
-    expect(color).toContain('bg-green-700');
-    expect(color).toContain('border-green-800');
-    expect(color).toContain('dark:bg-green-700');
-    expect(color).toContain('dark:border-green-600');
+    expect(color).toContain('bg-amber-800');
+    expect(color).toContain('border-amber-900');
+    expect(color).toContain('dark:bg-amber-800');
+    expect(color).toContain('dark:border-amber-700');
   });
 
   it('returns orange color for variable type', () => {

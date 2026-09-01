@@ -27,7 +27,9 @@ describe('merged-box edges', () => {
     const sub = ds.getOwnershipSubgraph(sel);
     const plain = new Map(sub.nodes.map(n =>
       [n.id, ds.getClassSummary(n.id)?.slots ?? []] as const));
-    const base = buildViewModel(sub, new Set(), id => plain.get(id) ?? []);
+    const base = buildViewModel(
+      sub, new Set(), id => plain.get(id) ?? [], r => ds.getRangeColor(r),
+    );
     const sameDef = (a: AttributeSummary, b: AttributeSummary) =>
       a.range === b.range && a.multivalued === b.multivalued;
     return mergeSiblings(
@@ -51,7 +53,7 @@ describe('merged-box edges', () => {
           .findIndex(a => a.name === slot) ?? -1;
         return i < 0 ? Number.MAX_SAFE_INTEGER : i;
       },
-      new Set(),
+      id => ds.siblingColorIndexOf(id),
     );
   };
 

@@ -5,6 +5,14 @@ import {
   groupSiblings, mergedIdFor, siblingColor, withChildHeaders,
 } from '../explore/siblingMerge';
 import type { MergedMember } from '../explore/siblingMerge';
+import { SIBLING_COLORS } from '../config/appConfig';
+
+/** Rough relative luminance, enough to assert "darker than". */
+function luminance(hex: string): number {
+  const n = parseInt(hex.slice(1), 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
 
 /**
  * Sibling merging renders inheritance as adjacency rather than as edges
@@ -60,17 +68,78 @@ describe('siblingMerge', () => {
     const a = groupSiblings(pair, parentOf, mergeable).get(parent)!;
     const b = groupSiblings([...pair].reverse(), parentOf, mergeable).get(parent)!;
     expect(a).toEqual(b);
-    expect(siblingColor(0)).not.toBe(siblingColor(1));
+    expect(siblingColor(0).fill).not.toBe(siblingColor(1).fill);
   });
 
   test('the palette is long enough for the biggest real group, with no repeat', () => {
     const groups = groupSiblings(classIds, parentOf, mergeable);
     const biggest = Math.max(...[...groups.values()].map(m => m.length));
-    const colors = Array.from({ length: biggest }, (_, i) => siblingColor(i));
+    // Children start at index 1: index 0 is the parent's default, and a child
+    // wearing it would read as a shared row rather than as its own.
+    const colors = Array.from({ length: biggest }, (_, i) => siblingColor(i + 1).fill);
     // A recycled colour inside ONE box is the failure that matters: two
     // children would share a header colour and their edges would be
     // indistinguishable.
     expect(new Set(colors).size).toBe(biggest);
+  });
+
+  test('the default is index 0, and no child ever wraps back onto it', () => {
+    // Wrapping past the end of the palette must skip the default: a child that
+    // landed on index 0 would be drawn exactly like a parent-declared row.
+    const dflt = siblingColor(0).fill;
+    for (let i = 1; i < 40; i++) {
+      expect(siblingColor(i).fill).not.toBe(dflt);
+    }
+  });
+
+  test('each entry has two steps: a fill dark enough for white text, a lighter text step', () => {
+    // One value cannot do both jobs — a colour dark enough to carry white text
+    // in a header band is too dark to tell apart from its neighbours as small
+    // text on white, which is what the sibling colours exist to do.
+    for (const c of SIBLING_COLORS) {
+      expect(c.fill).not.toBe(c.text);
+      expect(luminance(c.fill)).toBeLessThan(luminance(c.text));
+    }
+  });
+
+  test('sibling colours are stable when a MIDDLE sibling is unselected', () => {
+    /*
+     * The bug this replaces. Colours used to be assigned by position among the
+     * SELECTED siblings, so dropping one shifted every later sibling's colour
+     * and the box recoloured itself for a reason outside any class in it.
+     *
+     * The old test only checked a FIXED member set, which is exactly why the
+     * bug shipped: the stability it asserted was stability under reordering,
+     * not under removal.
+     */
+    const groups = groupSiblings(classIds, parentOf, mergeable);
+    const [, members] = [...groups].find(([, m]) => m.length >= 3)!;
+    const before = new Map(members.map(id => [id, ds.siblingColorIndexOf(id)]));
+    // Drop a middle sibling and re-derive from the smaller selection.
+    const without = members.filter((_, i) => i !== 1);
+    for (const id of without) {
+      expect(ds.siblingColorIndexOf(id)).toBe(before.get(id));
+    }
+  });
+
+  test('the index is whole-schema, so it does not depend on the canvas at all', () => {
+    // The strongest form of the above: the index comes from the schema, so a
+    // class not on the canvas at all still has the same one.
+    const groups = groupSiblings(classIds, parentOf, mergeable);
+    const [, members] = [...groups].find(([, m]) => m.length >= 2)!;
+    const solo = groupSiblings([members[1]], parentOf, mergeable);
+    expect(solo.size).toBe(1);
+    // Its index is its position among ALL siblings (2nd child -> 2), not its
+    // position in this one-element selection (which would be 1).
+    expect(ds.siblingColorIndexOf(members[1])).toBe(2);
+  });
+
+  test('a parent takes the default; its children never do', () => {
+    const groups = groupSiblings(classIds, parentOf, mergeable);
+    for (const [parent, members] of groups) {
+      expect(ds.siblingColorIndexOf(parent)).toBe(0);
+      for (const m of members) expect(ds.siblingColorIndexOf(m)).toBeGreaterThan(0);
+    }
   });
 
   test('merged ids cannot collide with a class id', () => {
@@ -90,8 +159,8 @@ describe('siblingMerge', () => {
   });
 
   describe('withChildHeaders', () => {
-    const a: MergedMember = { id: 'A', label: 'A', color: 'red' };
-    const b: MergedMember = { id: 'B', label: 'B', color: 'blue' };
+    const a: MergedMember = { id: 'A', label: 'A', color: siblingColor(1) };
+    const b: MergedMember = { id: 'B', label: 'B', color: siblingColor(2) };
     const hdr = (c: MergedMember) => ({ id: `hdr:${c.id}`, header: c });
     const row = (id: string, owners?: MergedMember[]) => ({ id, ...(owners ? { owners } : {}) });
 
