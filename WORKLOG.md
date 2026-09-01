@@ -7,6 +7,98 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-01 (colour system: three palettes, and a simpler sibling-colour rule)
+
+### Why three palettes and not one
+
+The app coded "relationship" as amber everywhere — edges, the dots beside
+attributes that get edges, the show/hide menu chip. Siggie's observation that
+undid this: **edges in the ownership graph are only ever entity→entity.** The
+right panel already colours related entities blue, enums purple, data types
+green, but the enum and data-type relationships never appear in the graph at
+all. Each row in a box is one of those three (four with variables) target kinds,
+so rows should carry the range colour and edges should read as entity-coloured.
+Amber was encoding "this is a relationship" in a graph where every edge is the
+same kind of relationship — a constant occupying a colour channel.
+
+I raised a three-way contest for the edge stroke (range kind vs. direction vs.
+sibling identity). Siggie dissolved it: only one range kind draws edges, so range
+contributes no variation; and the sibling-coloured edges are few enough that
+overriding the default is fine. Two encodings, one of them sparse.
+
+### The row split
+
+Siggie's, and better than what a prior session had proposed (which put both dot
+and slot name on the range colour, spending two channels on one fact):
+
+- dot + range label → what the slot points at (P1)
+- slot name → which class declares it (P3)
+
+This is also what lets P3 be pastel. P3 does not need hue distance from P1
+because they never share a position. I twice argued P3 needed separation from
+P1 on hue grounds; position separation makes that unnecessary.
+
+### P2 as a ramp, not a palette
+
+Direction is not an independent palette — it is a sequential ramp of P1's entity
+hue, so edges still read as "entity relationship". Out and in sit CLOSE on the
+ramp (Siggie: they "are not that different, they just need to be
+distinguishable"), with thicker strokes making a small gap legible. I had
+proposed a wide gap; a wide gap overstates the difference between the same
+relation seen from two ends, and the pale end reads as "less important" rather
+than "other direction". Association is inside the ramp at a visible value, with
+the dash carrying the distinction.
+
+### P3 index 0 is dark entity blue, not a neutral gray
+
+Siggie: the box header IS an entity, so header and default slot name should
+carry the entity identity, darkened. I pushed back thinking it meant light blue
+text everywhere; the proposal was the DARK end, where the objection does not
+apply. This is better than a neutral because it makes sibling colours read as
+departures from the box's own identity, and it removes the need for a second
+neutral. Header fill and slot-name text likely need two steps of that dark end —
+a fill dark enough for white text is too dark for small text on light ground.
+
+### The sibling algorithm: Siggie's three steps replace the two-pass version
+
+`NEXT_SESSION_SIBLING_COLORS.md` (a prior session, no code run) proposed part 1
+pass 1 (stable per-group index) + pass 2 (propagate a target's colour onto the
+container that narrows a slot to it) + part 2 (colour by target, not owner).
+
+Siggie's version: colour all classes stably; colour slot names by
+`colorIndex[slot.range]`; if a slot name got a non-default colour and its owner
+is a subclass, give the owner that colour. **Pass 2 is unnecessary — step 3
+subsumes it**, and states the coupling in the direction that is easier to
+describe (the container borrows its contents' colour).
+
+Verified against the schema (54 classes, `parent` field — NOT `is_a`, which is
+absent from `bdchm.processed.json`): all three `*ObservationSet.observations`
+pairs match, `ObservationSet.observations → Observation` is default/default, and
+Specimen's three measure slots take their targets' colours. Worth knowing: the
+`*Set` families match under pass-1 indexing ALONE, because both groups sort by
+id and the `Set` suffix preserves order — but that is coincidence, and step 3 is
+what makes it robust (rename a sibling and pass-1-only breaks).
+
+Two things I got wrong here and Siggie corrected. I claimed a collision between
+`Specimen.dimensional_measures` and `DimensionalObservation` because both showed
+index 0 — but index 0 in the ObservationSet group and index 0 in the Observation
+group ARE the paired container and contents; same colour is the intent. And I
+claimed step 3 failed to cover `ImagingFile.derived_from`; `ImagingFile` has no
+`slot_usage` override, so there is no child-specific row to colour and the case
+does not arise.
+
+### Doc consolidation
+
+`NEXT_SESSION_EDGE_DISPLAY.md` rewritten around the colour spec (426 → ~250
+lines); `NEXT_SESSION_SIBLING_COLORS.md` absorbed into it and deleted. Siggie,
+on writing it up: prevent mistakes "by being clear about the actual plan, not by
+warning against ways that you happened to misinterpret it originally" — so the
+briefing states the spec and this file keeps the reasoning.
+
+Still open there: mine/theirs vs. left/right for the three perspectives (§3.1),
+which blocks edge labels (§3.2) and the legend (§3.3).
+
+---
 ## 2026-08-31 (merged-box edges left the wrong row; the target-row question was a false choice)
 
 ### The port id dropped the anchor class — one bug that looked like two

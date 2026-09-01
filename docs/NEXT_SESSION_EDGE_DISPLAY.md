@@ -1,131 +1,199 @@
-# Next session — edge classification & display: docs/help consolidation
+# Next session — edge display: color system, then docs/help
 
-**Scope of the next session: DOC AND HELP CHANGES.** Consolidate, update, and
-improve the help and documentation about edge classification and edge
-styling/labeling. Implementation of UI beyond that comes later.
+Two bodies of work, in order. **The color system is a design spec ready to
+implement.** The docs/help consolidation follows it, because what the legend and
+help text describe depends on the colors being settled.
 
-This file is a briefing, not the plan. It records what Siggie asked for, what is
-already true in the code, and the questions that still need answers.
-**Delete it once the work has folded its content into the real docs.**
-
-**Where content lands.** When Siggie's original prompt said "here" / "this doc",
-it meant **`OWNERSHIP_CLASSIFICATION.md`**, not this briefing.
-
-| content | destination |
-|---|---|
-| technical detail, counts, rule order, gotchas | `OWNERSHIP_CLASSIFICATION.md` |
-| user-facing explanation | help / tour / legend |
-| reasoning, abandoned approaches, corrections | `WORKLOG.md` |
-| items needing Siggie | `TASKS.md` or chat |
-
-> **`§`-numbers in this file are local to this file.** They are not anchors in
-> the app or in any other doc and will not survive its deletion. Rewrite every
-> such reference to the destination doc's own headings when content moves.
+Delete this file once both are done and their content lives in
+`OWNERSHIP_CLASSIFICATION.md`, help, and the tour.
 
 ---
 
-## 0. Terminology — fix this before writing user-facing text
+## 1. The color system
 
-**"Merged" is overloaded and has already caused a real misreading** (Siggie,
-2026-08-31: *"this has been continually confusing to me"*). It currently means
-two unrelated things:
+### 1.1 Three palettes
 
-| current usage | means | suggested |
-|---|---|---|
-| `mergeSiblings`, `merged::…`, "merged box" | a class **and its descendants** drawn as one box | **merged-inheritance box**, or `class+descendants` |
-| convergence merging, `mergeTargets`, "merged edges" | several edges **sharing one arrowhead** | leave as edge convergence |
-
-No single word covers the first. `class+descendants` is accurate;
-`merged-inheritance` is shorter. **Siggie has not picked one.** Whatever is
-chosen should be applied to identifiers (`mergeSiblings`, `isMergedId`,
-`merged::`) as well as prose, so the docs and the code agree.
-
----
-
-## 1. What Siggie asked for
-
-### 1.1 `OWNERSHIP_CLASSIFICATION.md` — restructure
-
-- **Strip the historical material.** Keep only what is current or planned. The
-  doc has accumulated decision archaeology ("DECIDED 2026-08-26…", "an earlier
-  draft said…", superseded counts). History belongs in `WORKLOG.md`.
-- **Lead with one concise explanation of both taxonomies**, not two parallel
-  tables — see §2.1. There are 3 verdicts and 5 relation positions; explain both
-  **in the same place**.
-- **Minimize redundancy with help/tour/other docs.** Prefer a link plus a
-  one-line summary over repeating text. Caveat: it may make sense to **author
-  the prose in `OWNERSHIP_CLASSIFICATION.md` first**, then deploy it into
-  help/tour — so that doc can be the drafting surface.
-- **This doc is where non-user-facing technical material lives.**
-- **Park the "Edge display: what exists" survey there** (§3 below).
-
-### 1.2 Fix "example cases" → a cascading top-level **Help** menu
-
-Today `ExampleCasesPane.tsx` is a floating pane with **two tabs**, `cases` and
-`legend` (`ExampleCasesPane.tsx:48`). Siggie wants a cascading top menu named
-**Help** containing:
-
-- **Ownership legend** — permanent. Needs work; see §4.3 for what "fix the
-  legend" means. The legend and example cases differ in kind and **should not be
-  tabs of one pane** (`docs/TASKS.md`, memory `project_ownership_legend`).
-- **Example cases** — **keep, but cull hard.** Some are genuinely useful to end
-  users; the ones to delete are those that only served Siggie's own debugging and
-  exploration. The real problem is **volume** — with ~34 cases in
-  `exampleCases.ts` Siggie seldom checks any of them.
-  - **"Biggest fans" → keep, in example cases.** It does not belong in the
-    ownership legend, but it is worth retaining.
-- **Help-mode sections**, if any are worth showing now. **Do not reinstate help
-  mode**; this is only about surfacing sections that already earn their place.
-
-### 1.3 Tour items stepping through edge features
-
-Add tour steps walking through the edge features specifically. Format and traps:
-the `project_tour_format` memory and `src/explore/help-content.md` (`Tour:`
-blocks, `tourStateStack.ts`, `helpResolvers.ts`).
-
-### 1.4 Interim `any_of` solution — label, not a new edge type
-
-Instead of the polymorphic edge type (option 3 in the doc's `any_of` section):
-
-> The edge still points at `Entity`, but its **label explains what `any_of`
-> means** — i.e. that this slot may point at an `Assay`, a `File`, or a
-> `QuestionnaireResponse`.
-
-**Popover vs. title text — leaning popover**, still open. Decide **once, for all
-title-text items**, not per-item. Take an inventory of current `title=` usages
-before committing.
-
-*Concrete instance of the problem:* the relation-menu trigger's `title` tooltip
-covers the menu's own options when the menu is open (Siggie, 2026-08-31). Worth
-citing as the motivating case — but it belongs to the popover task, **not** to
-the edge work.
-
-**Other `_ATTR_FIELDS` — timeboxed to a minute.** Most of the fields in
-`induced_schema.py: _ATTR_FIELDS` **never appear in `bdchm.yaml`**, so they are
-meaningless to current users and matter only if the app is ported to another
-schema. Leave a code note for far-future reference; build no UI for them.
-
----
-
-## 2. Findings the next session should not have to rediscover
-
-### 2.1 3 verdicts vs. 5 relation positions — and whether both should survive
-
-| taxonomy | values | where | what it drives |
+| | palette | entries | what carries it |
 |---|---|---|---|
-| `OwnershipVerdict` (**3**) | `own-fwd`, `own-bkwd`, `association` | `containmentGraph.ts` | layering, stroke, arrowheads |
-| `RelationPosition` (**5**) | `owns-mine`, `owns-theirs`, `owned-mine`, `owned-theirs`, `association` | `ownershipSubgraph.ts:66` | what the **reader** sees in the RelationMenu |
+| **P1 — range** | ColorBrewer **Set1**, entity = blue | 4–5 | row dot, row range label, detail-panel badges |
+| **P2 — direction** | ColorBrewer **Blues** | 3 | edge stroke, relation menu chip |
+| **P3 — siblings** | ColorBrewer **Pastel1** | 5–6 | slot name, merged-box header |
 
-The 5 are the 3 crossed with **who declares the slot** (`association` does not
-split):
+**P1** is the range palette: entity, enum, data type, variable, and possibly a
+fifth for "any range". Qualitative and unordered — Set1 gives maximum mutual
+separation. It replaces both the Kitchen Sink element-type colors and the
+Explorer detail-panel badge colors; **these are the same set of things and get
+the same colors.** (`slot` was an element type in Kitchen Sink only; that idea
+is abandoned; no other view needs a color for it.)
+
+**P2** is not independent — it is a sequential ramp *of P1's entity hue*, so
+every edge still reads as "entity relationship". Outgoing and incoming are the
+same relation seen from two ends, so they sit **close on the ramp** (about
+Blues 7 / 6): distinguishable, not dramatically different. **Edge strokes get a
+little thicker** so a one-step gap stays legible. Association is **inside the
+ramp** at a value that stays clearly visible — the dash pattern carries the
+distinction, not faintness. The relation menu chip takes the main entity color.
+
+**P3** distinguishes siblings from each other and supports eye-tracking between
+a slot row and its target box. It does **not** need separation from P1, because
+the two never share a position (P3 on slot names and headers, P1 on dots and
+range labels). Pastel1's low saturation is what keeps it quiet. Five to six
+entries covers today's largest group (`Observation`, 5 children); the palette
+wraps if a group ever exceeds it.
+
+**Index 0 of P3 is the default**, used for parent-declared slots and for every
+box that is not an inheritance-merged box. It is **a significantly darkened form
+of P1's entity color**, not a neutral gray: a box header is an entity, so its
+header and its own slot names carry the entity identity, and sibling colors
+read as departures from it. Header fill and slot-name text likely need two
+different steps of that dark end — a fill dark enough for white text is too dark
+for small text on a light background.
+
+No other neutral is needed.
+
+### 1.2 What each channel encodes
+
+Per row in a box:
+
+| channel | encodes | palette |
+|---|---|---|
+| row dot | the slot's range kind | P1 |
+| row range label | the slot's range kind | P1 |
+| slot name | which class declares it | P3 |
+| box header | the class | P3 (default = the box's own) |
+| edge stroke | direction | P2, overridden by P3 where colored |
+
+Only **entity** ranges draw edges, so range kind contributes no variation to the
+stroke — direction is the stroke's default encoding. The few edges whose
+endpoint is a merged-box member override that with the P3 color; there are not
+many, and the override is fine.
+
+### 1.3 Sibling color assignment
+
+Replaces the current scheme, which indexes by position among **selected**
+siblings, so unselecting one shifts every later sibling's color
+(`OwnershipGraphView.tsx:461-467`, inside `mergeSiblings`).
+
+Three steps:
+
+1. **color every class stably.** For each parent with subclasses, index its
+   children by position among **all** schema siblings sorted by id — not just
+   the ones on canvas. The parent takes the default (P3 index 0). Build this
+   once in `DataService`, which already does a whole-schema constructor pass
+   (`ExploreApp.tsx:53-55`).
+2. **color slot names by target:** `colorIndex[slot.range]`.
+3. **If a slot name got a non-default color and its owner is a subclass, give
+   the owner the same color.** The container borrows its contents' color.
+
+`mergeSiblings` then reads `siblingColor(colorIndex[mid])` instead of the loop
+index. `dataService` is already in that `useMemo`'s dep list
+(`OwnershipGraphView.tsx:1100`).
+
+Step 3 is what keeps a container matched to what it contains. Verified against
+the schema: the three `*ObservationSet.observations` rows match their targets,
+`ObservationSet.observations → Observation` is default/default, and Specimen's
+three measure slots take their targets' colors (Specimen is in no merged box,
+so its own slot names would otherwise have none).
+
+Slots inherited without a `slot_usage` override merge onto the parent's row and
+have no child-specific row to color — `ImagingFile.derived_from` is the case to
+check a rule against.
+
+Classes whose parent is `Entity` are top-level and form no merged box.
+
+**Where colors live:** `GRAPH_COLORS` in `appConfig.ts:470-500` (currently
+`ownership` amber, `reference` slate, and a 12-entry `siblings` list) and
+`APP_CONFIG.elementTypes` (`appConfig.ts:221-321`). All three palettes replace
+these. The amber that currently codes "relationship" across edges, dots and the
+menu chip is retired — that role moves to P2.
+
+**Tests:** `src/test/siblingMerge.test.ts:53-74` checks stability for a *fixed*
+member set, which is why the current bug shipped. Add a case that unselects a
+middle sibling and asserts the rest keep their colors. Note that colors are
+per-group, so two classes at index 0 in different groups share a color by
+design — that is the container/contents pairing, not a collision.
+
+Also test adding a subclass that sorts in between paired container/contained
+subclass names (like 'Foo': `DimensionalObs < Foo < MeasurementObs`). Add it
+to one (e.g., ObservationSet) and not the other (Observation), and then vice 
+versa, to assure that pairs still have matched colors (e.g.,
+SdohObservationSet.color == SdohObservation.color).
+
+---
+
+## 2. Docs and help consolidation
+
+### 2.1 `OWNERSHIP_CLASSIFICATION.md` — restructure
+
+- **Strip historical material.** Keep what is current or planned; decision
+  archaeology moves to `WORKLOG.md`.
+- **Explain the relation vocabulary once, concisely** (see §3.1) — not as two
+  parallel tables.
+- **Minimize redundancy with help/tour.** Prefer a link plus a one-line summary.
+  It is fine to draft prose here first and deploy it into help/tour after.
+- **This is where non-user-facing technical material lives**, including the
+  color system above once implemented and the edge-display survey (§4).
+
+### 2.2 "Example cases" → a cascading **Help** menu
+
+`ExampleCasesPane.tsx` is today a floating pane with two tabs, `cases` and
+`legend` (`:48`). These differ in kind and should not be tabs of one pane.
+Replace with a top-level **Help** menu containing:
+
+- **Ownership legend** — permanent. See §3.3.
+- **Example cases** — keep, but **cull hard**. ~34 cases in `exampleCases.ts` is
+  enough volume that Siggie checks none of them. Delete the ones that only served
+  debugging; keep the ones useful to end users. **"Biggest fans" stays here**, not
+  in the legend.
+- **Help-mode sections** worth surfacing. Do **not** reinstate help mode.
+
+### 2.3 Tour steps for edge features
+
+Add tour steps walking through the edge features. Format and traps: the
+`project_tour_format` memory and `src/explore/help-content.md` (`Tour:` blocks,
+`tourStateStack.ts`, `helpResolvers.ts`).
+
+[sg] I don't understand what the previous session meant by this at all
+
+### 2.4 `any_of` — a label, not a new edge type
+
+One slot uses `any_of`: `MeasurementObservation.associated_artifact`
+(`range: Entity`, `any_of: [Assay, File, QuestionnaireResponse]`). The verdict is
+correct and the edge still points at `Entity`; the **label explains what `any_of`
+means** — that this slot may point at an `Assay`, a `File`, or a
+`QuestionnaireResponse`.
+
+`Assay` has zero inbound edges as a result, so it is unreachable by following an
+edge (it is still selectable and displayable). **Preferred fix: a note on `Assay`
+explaining what attaches to it.** An explanation problem, not a graph-
+completeness problem. If reachability turns out to matter, fan out `any_of` for
+reachability only while still drawing the single `Entity` edge.
+
+Background: `OWNERSHIP_CLASSIFICATION.md` §`any_of`.
+
+---
+
+## 3. Open questions
+
+### 3.1 The relation vocabulary — reframe (settled in shape, needs writing)
+
+Not "3 verdicts vs 5 positions" but **three relation kinds, two of which can be
+seen from three perspectives**:
 
 ```
-ownershipSubgraph.ts:162   declaredBy === owner  ? 'owns-mine'  : 'owns-theirs'
-ownershipSubgraph.ts:167   declaredBy === member ? 'owned-mine' : 'owned-theirs'
+2 (fwd, bkwd) × 3 (perspectives) + 1 (association) = 7
 ```
 
-User-facing vocabulary, settled and shipped (`RELATION_POSITION_LABEL`, wording
-chosen by Siggie 2026-08-27):
+**Open: are the three perspectives `mine`/`theirs`/neutral, or left-PoV/
+right-PoV/neutral?** Decide which reads better in help text, and whether it
+should drive variable names.
+
+In the code today: `OwnershipVerdict` (3: `own-fwd`, `own-bkwd`, `association`,
+in `containmentGraph.ts`) drives layering, stroke and arrowheads;
+`RelationPosition` (5, `ownershipSubgraph.ts:66`) drives what the reader sees in
+the RelationMenu, and is the 3 crossed with who declares the slot
+(`ownershipSubgraph.ts:162,167`). Shipped user-facing labels
+(`RELATION_POSITION_LABEL`):
 
 | position | label |
 |---|---|
@@ -135,275 +203,122 @@ chosen by Siggie 2026-08-27):
 | `owned-theirs` | I belong to, by their attribute |
 | `association` | associated with |
 
-**Documentation decision (settled):** explain both **in one place, concisely**.
+**color does not encode the perspective split** — with nothing hovered there is
+no point of view, so P2 carries only the three kinds. The split belongs to
+hover behaviour and label text.
 
-**Design question (open — the session's main unresolved item):** *should
-`OwnershipVerdict` survive at all?*
-
-The case for dropping it: an edge might always be better described **from the
-point of view of a specific entity**, regardless of which class declares the
-slot — extending `RelationPosition` past labels into edge **formatting**.
-
-What blocks it: **with nothing hovered there is no point of view.** Neither
-endpoint is the obvious owner, so formatting falls back on `OwnershipVerdict` —
-and the same gap defeats PoV-dependent label *text*, which would have no correct
-value in the neutral state.
-
-Shape worth exploring: **three labels per edge** — left-PoV, right-PoV, neutral —
-chosen by whether the pointer is near one endpoint, the other, or neither.
-Untested.
-
-**This blocks §2.2 and §4.3.** It decides whether an edge carries one label or
-three, which changes the label renderer's data model, and it decides what the
-legend is describing.
-
-### 2.2 Edge labels have never been rendered
+### 3.2 Edge labels — specified, never built
 
 There is **no `<text>` on the edge layer at all**. `EXPLORE_VIZ.md` item 5
-specifies a **re-verbed label** on flipped edges ("has members — via
+specifies a **re-verbed** label on flipped edges ("has members — via
 `member_of_research_study`") rather than a bare slot name pointing the wrong way;
-`TASKS.md` flags item 5 as a doc bug because it asserts this as shipped.
+`TASKS.md` flags item 5 as a doc bug for asserting this as shipped. Today a
+flipped edge is marked only by a back-pointing arrowhead (`arrow-own-back`).
 
-So the `any_of` label in §1.4 is **not a tweak to existing label rendering —
-there is none.** Whatever gets built for `any_of` is the first edge-label
-mechanism and should be designed with the re-verbed requirement in mind.
+Whatever gets built for the `any_of` label is the **first** edge-label mechanism
+and should be designed with the re-verbed requirement in mind. §3.1 decides
+whether an edge carries one label or three (left-PoV, right-PoV, neutral, chosen
+by pointer proximity) — settle it first.
 
-**More is unresolved than "only rendering is missing."** The vocabulary exists,
-but §2.1 may make label text point-of-view dependent, and the shipped
-`RELATION_POSITION_LABEL` strings assume a fixed PoV. **Settle §2.1 first.**
+### 3.3 What the ownership legend should be
 
-Today a flipped edge is marked by a back-pointing arrowhead (`arrow-own-back`),
-not a label.
+**Likely direction: single-entity point of view**, consistent with §3.1. Settle
+§3.1 first, since it determines what the legend describes. The legend should also
+explain the toolbar buttons, the colors, and dashed edges.
 
-### 2.3 Current styling, as shipped
+The by-reason breakdowns matter and must exist somewhere, but are too much for
+the legend — put them in `OWNERSHIP_CLASSIFICATION.md` or a culled example case.
 
-| what | value |
-|---|---|
-| ownership (`own-fwd`, `own-bkwd`) | amber solid `#d97706`, one arrowhead at target |
-| association | slate dashed `#64748b`, dash `5 4`, **both ends** arrowed |
-| flipped marker | `arrow-own-back` (back-pointing arrowhead) |
-| self-loops | `⟲` marker on the slot's own row, not a routed edge |
-| child rows in a merged-inheritance box | edges drawn in that child's colour |
+### 3.4 Popovers vs. title text
 
-Slate replaced `#9ca3af`, too faint against either background. Curved edges
-removed 2026-08-19. One-arrowhead-per-convergence and thinner strokes shipped.
-Markers use `markerUnits="userSpaceOnUse"` so they do not scale with
-`strokeWidth`; one marker serves both ends via `orient="auto-start-reverse"`.
+Leaning **popover**. Decide **once, globally**, for all current `title=` usages —
+take an inventory first. Motivating case: the relation-menu trigger's `title`
+tooltip covers the menu's own options when the menu is open. **This belongs to a
+popover task, not to the edge work.**
 
-### 2.4 Edge SOURCE rows — bug, FIXED 2026-08-31 (`4bd5755`)
+### 3.5 Terminology: "merged"
 
-**Symptom.** Every `observations` edge left a single row of the merged
-`ObservationSet` box instead of its own. Which row won depended only on
-enumeration order — the parent's `observations` row when `Observation` was
-selected, `DimensionalObservationSet`'s when it was not — which made one bug look
-like two unrelated ones.
+**Settled: "merged-inheritance".** A class and its descendants drawn as one box
+is a **merged-inheritance box**. Edge convergence (several edges sharing one
+arrowhead) keeps the word "merge" in `mergeTargets` and is a different thing.
+Apply to identifiers (`mergeSiblings`, `isMergedId`, `merged::`) as well as prose.
 
-**Cause.** A merged-inheritance box can hold several rows sharing one slot name:
-the parent's, plus each child's `slot_usage` override. `rowY` resolves them by
-`(declaringClass, slot)` and returned the correct distinct y for each. But
-`buildSpec` built the row port id from the slot **name alone**
-(`${host.id}::row:${slot}`), and `addPort` keeps the first registration per id —
-so all those edges shared one port and every later edge silently inherited the
-first one's y. The correct positions were computed and discarded. This is exactly
-the failure `rowY`'s own doc comment warns about, missed one line later.
+### 3.6 Should the parent's own edge be black?
 
-**Fix.** Key the port id on the same `(anchorClass, slot)` pair `rowY` resolves
-by. One line.
+`TASKS.md` specifies black for the parent's slot in the `ObservationSet.observations`
+fan; it currently renders in the shared channel color. Under §1.2 the parent's
+row takes the P3 default (dark entity blue), which supersedes "black" — confirm
+that reading.
 
-**Why the suite did not catch it.** An existing test asserted distinct
-`anchorClass` values per edge and passed throughout — the view model was always
-right; the break was downstream in `buildSpec`. The new test asserts on the
-**ports and their y values**, verified to fail without the fix (`expected 1 to
-be 4`). Lesson for similar work: assert at the layer that actually renders.
+### 3.7 "N related" counts distinct OUTSIDE classes
 
-**This satisfies the rule `TASKS.md` already specified** under "Edge rendering —
-the fan from `ObservationSet.observations`": *one edge per DECLARING class,
-coloured by that class*, black for the parent's own slot. **That `TASKS.md`
-section needs updating to record the rule as delivered** — with one caveat: the
-parent's edge currently renders in the shared channel colour, not black. Confirm
-whether black is still wanted.
+`countsOf` counts distinct related class names, and a merged-inheritance box
+excludes anything folded into itself (`notSelfOrMember`,
+`OwnershipGraphView.tsx:573`). So **selecting more can make the number go down**:
+with `Observation` unchecked it is not a member of the box named after it, so
+`ObservationSet`'s relation to it counts as outside (6); check it and the count
+falls to 5.
 
-### 2.5 Edge TARGET rows — open, and cheaper than previously documented
-
-Wanted: a `slot_usage`-narrowed edge should point at the **child header** matching
-its range, not the box header. Today all three `…ObservationSet.observations`
-edges land on the merged `Observation` box header, hiding the point of the
-narrowing — each set holds its **own** kind of observation.
-
-**Siggie's position (2026-08-31):** worth doing, but **later** — not part of the
-current doc work. Crossings will increase, but *"the colors would make them
-legible."*
-
-**The old "every edge, or only `slot_usage`-narrowed?" question is DEAD — it was
-a false choice.** Without `slot_usage`, a child's slot is identical to the
-inherited one, so it merges onto the **parent's** row and there is no
-child-specific row to anchor on. **Only narrowed slots can pose the question at
-all.** Delete this question wherever it appears — it is currently open in
-`TASKS.md` under "▶️ OPEN — a narrowed edge should point at the CHILD's header",
-and that section also repeats the stale "not a tweak" framing below.
-
-**It is cheap under the current schema.** Measured 2026-08-31: no member or
-parent of any multi-child family has more than **one** inbound edge. Under the
-change the `ObservationSet` case spreads over **four** arrival rows — the three
-children plus `Observation` itself, which carries `ObservationSet.observations`
-on the parent row — with exactly one edge each. So **convergence merging is a
-no-op for these rows**: a row-targeted edge can simply opt out of `mergeTargets`
-and draw its own arrowhead at its own port. `mergeTargets` does **not** need to
-become row-aware, and its `HEADER_H / 2` geometry stays as-is for box-header
-arrivals.
-
-This is why the earlier "not a tweak — the fan, convergence merging and the
-shared arrowhead all need to handle both" framing **overstated the cost**. It is
-still true that the fan passes must skip row-targeted edges (or the fan reserves
-lanes for edges no longer using it and mis-centres the rest), but the arrowhead
-layer is untouched *as long as the one-edge-per-row property holds*.
-
-**Full implementation sketch and the guard test it needs** are recorded in the
-`mergeTargets` doc comment in `OwnershipGraphView.tsx` (commit `8f367da`) —
-next to the code that depends on the property, so it cannot be missed. **If that
-guard ever fails it does not mean the code broke**: it means the schema grew a
-second slot narrowing to the same child, the no-merge shortcut is void, and
-`mergeTargets` must become row-aware after all. Do not delete the assertion.
-
-### 2.6 `any_of` background
-
-One slot uses it: `MeasurementObservation.associated_artifact` (`range: Entity`,
-`any_of: [Assay, File, QuestionnaireResponse]`), from the `28007df` sync. The app
-ignores `any_of` entirely.
-
-The verdict is still **correct** (declared range is `Entity`, so `entity-ranged`
-fires and draws forward). But `associated_assay` was the **only** slot ranging on
-`Assay`, so `Assay` now has zero inbound edges. It keeps 3 outbound edges, so it
-is not pruned.
-
-**"False root" overstated it.** `Assay` still appears under Lab/Biospecimen in
-the selection panel and can be selected and displayed. What is missing is
-reachability *by following an edge*.
-
-- **Preferred fix (Siggie):** a note on `Assay` explaining what attaches to it
-  and why that edge is not drawn. An explanation problem, not a graph-
-  completeness problem.
-- **Roots are user-facing**, so this was worth checking: `roots` is the **"⇱
-  roots" toolbar toggle** (`OwnershipGraphView.tsx:1577`), URL-persisted and
-  settable from tours and example cases; it toggles `pathToRoot`, which pulls in
-  every owner up to the root (defaults off). `buildOwnershipDag` /
-  `computeSunkLayers` also use DAG roots for layering. Nothing surfaces
-  *root-ness* as a visible property of a class. **Siggie, 2026-08-31: this is
-  fine as is — no action.**
-
-An `any_of` label improves *explanation*; it does not restore edge-reachability.
-If that turns out to matter, the cheap fix is fanning out `any_of` **for
-reachability only** while still drawing the single `Entity` edge.
-
-Full write-up: `OWNERSHIP_CLASSIFICATION.md` §`any_of`.
-
-### 2.7 "N related" counts distinct OUTSIDE classes
-
-Siggie, 2026-08-31: *"weird — I get '5 related' with Observation checked and '6
-related' with it unchecked."* Not a bug, but it reads backwards and help should
-say so.
-
-`countsOf` counts **distinct related class names**, and a merged-inheritance box
-excludes anything folded **into itself** — `notSelfOrMember`
-(`OwnershipGraphView.tsx:573`): those are *inside* the box, not related to it.
-
-With `Observation` unchecked, the three children merge into a box labelled
-`Observation`, but the parent class `Observation` is **not a member** of it —
-nothing absorbed it, since it was not selected. So `ObservationSet`'s relation to
-`Observation` still counts as a relation to an outside class: **6**. Check
-`Observation` and it is absorbed into that box, `notSelfOrMember` drops it, and
-the count falls to **5**.
-
-**Selecting more therefore makes the number go down**, which is correct but
-counter-intuitive — worth an explicit line in the legend/help: *"N related"
-counts distinct classes **outside** this box, and merging changes what counts as
-outside.*
+Correct but counter-intuitive, and **more confusing still across combinations of
+several checkboxes.** Not being fixed now. Leave a clear explanation in
+`OWNERSHIP_CLASSIFICATION.md`.
 
 ---
 
-## 3. "Edge display: what exists" — park this in OWNERSHIP_CLASSIFICATION.md
+## 4. Edge display — current state
 
-1. **Labels — specified, never built.** `EXPLORE_VIZ.md` item 5 specifies a
-   re-verbed label on flipped edges; no edge-layer `<text>` exists. Blocked on
-   the point-of-view question (§2.1), which decides whether an edge carries one
-   label or three.
-2. **Endpoints.** Source rows: **fixed** (§2.4). Target rows: **open, deferred by
-   Siggie, cheap under the current schema** (§2.5).
-3. **Colors — partly settled, partly owed.** Palette shipped (§2.3). Owed: the
-   legend "should also explain all toolbar buttons, colors, dashed edges" — the
-   *explanation*, not the palette.
-4. **Adjacent, mostly resolved.** Curved edges removed; one-arrowhead-per-
-   convergence and thinner strokes shipped; bare-diagonal root cause found
-   (`bend` mode degenerates on corner-less routes). Dragging still lacks
-   obstacle-aware routing and URL persistence.
+Park this survey in `OWNERSHIP_CLASSIFICATION.md`.
 
----
-
-## 4. Remaining open questions
-
-### 4.1 Should `OwnershipVerdict` survive? (§2.1)
-
-The documentation question is settled; the **design** question is not. Can
-`RelationPosition` take over edge formatting, or does the no-hover neutral state
-force `OwnershipVerdict` to stay? Three labels per edge is the shape to think
-through. **Blocks §2.2 and §4.3.**
-
-### 4.2 Popovers vs. title text (§1.4)
-
-Leaning **popover**. Still to decide: does it apply to *all* current title-text
-items, and what is the inventory? Decide once, globally. Motivating case: the
-relation-menu tooltip covering its own options.
-
-### 4.3 What is wrong with the ownership legend? (partly answered)
-
-`TASKS.md` recorded this ask from 2026-08-25 with no detail and a note to **ask
-first**. Siggie's answer:
-
-- **Likely direction: single-entity point of view**, consistent with §2.1. But
-  **do not settle it until the classification/formatting/label questions land**,
-  since they determine what the legend describes.
-- **The by-reason breakdowns matter and must exist somewhere**, but are **too
-  much for the legend**. Plausible homes: `OWNERSHIP_CLASSIFICATION.md`
-  (technical) or a culled example case.
-
-**Depends on §4.1.**
-
-### 4.4 Terminology for "merged" (§0)
-
-`merged-inheritance box` vs `class+descendants` vs something else. Siggie has not
-picked. Applies to identifiers as well as prose.
-
-### 4.5 Should the parent's own edge be black? (§2.4)
-
-`TASKS.md` specifies black for the parent's slot; it currently renders in the
-shared channel colour. Confirm.
+1. **Labels** — specified, never built (§3.2).
+2. **Source rows** — fixed (`4bd5755`). One edge per declaring class, leaving
+   that class's own row. The port id is keyed on `(anchorClass, slot)`, the same
+   pair `rowY` resolves by; keyed on slot name alone, every edge in a merged box
+   shared one port. `TASKS.md`'s "Edge rendering — the fan from
+   `ObservationSet.observations`" section **needs updating to record this as
+   delivered.**
+3. **Target rows** — open, deferred. A `slot_usage`-narrowed edge should point at
+   the **child header** matching its range, not the box header. Worth doing,
+   later; crossings will increase but the colors keep them legible. Cheap under
+   the current schema: no member or parent of any multi-child family has more
+   than one inbound edge, so a row-targeted edge can opt out of `mergeTargets`
+   and draw its own arrowhead. The fan passes must skip row-targeted edges. Full
+   sketch and the guard test it needs are in the `mergeTargets` doc comment in
+   `OwnershipGraphView.tsx` (`8f367da`); if that guard fails it means the schema
+   grew a second slot narrowing to the same child and `mergeTargets` must become
+   row-aware. **`TASKS.md`'s "▶️ OPEN — a narrowed edge should point at the
+   CHILD's header" section needs updating**: only narrowed slots have a
+   child-specific row at all, so its "every edge, or only narrowed?" question does
+   not arise, and its cost framing is stale.
+4. **colors** — being replaced wholesale (§1).
+5. **Adjacent** — curved edges removed 2026-08-19; one-arrowhead-per-convergence
+   and thinner strokes shipped. Markers use `markerUnits="userSpaceOnUse"` so
+   they do not scale with `strokeWidth`; one marker serves both ends via
+   `orient="auto-start-reverse"`. Dragging still lacks obstacle-aware routing and
+   URL persistence.
 
 ---
 
 ## 5. Pointers
 
 - `docs/OWNERSHIP_CLASSIFICATION.md` — rules, measured counts (149 edges as of
-  `28007df`), the `any_of` section. Counts measured 2026-08-31.
-- `docs/EXPLORE_VIZ.md` — visual-design conclusions. **~20–25% stale**, audited
-  2026-08-24; `TASKS.md` lists which items are wrong. Item 1 is current; items 2,
-  3, 5, 6 are not — do not cite without checking that audit.
-- `docs/TASKS.md` — the edge-display cluster. **Two sections need updating from
-  this work:** "Edge rendering — the fan from `ObservationSet.observations`"
-  (rule now delivered, §2.4) and "▶️ OPEN — a narrowed edge should point at the
-  CHILD's header" (its design question is void, and its cost framing is stale —
-  §2.5).
+  `28007df`, measured 2026-08-31), the `any_of` section.
+- `docs/EXPLORE_VIZ.md` — visual-design conclusions. **~20–25% stale** as audited
+  2026-08-24; item 1 is current, items 2, 3, 5, 6 are not. Check `TASKS.md`'s
+  audit before citing.
+- `docs/TASKS.md` — the edge-display cluster; two sections need updating (§4).
+- `src/config/appConfig.ts` — `GRAPH_COLORS`, `APP_CONFIG.elementTypes`.
 - `src/models/containmentGraph.ts` — `classifySlotEdgeExplained`, rule sets,
   `OWNERSHIP_RULE_TEXT`.
 - `src/models/ownershipSubgraph.ts` — `RelationPosition`,
   `RELATION_POSITION_LABEL`, `buildOwnershipDag`, `computeSunkLayers`.
-- `src/explore/OwnershipGraphView.tsx` — `mergeSiblings`, `countsOf` and
-  `notSelfOrMember` (§2.7), the free-end fan, `rowY`, and the `mergeTargets`
-  doc comment carrying the §2.5 implementation sketch.
-- `src/test/mergedEdges.test.ts` — the merge/edge harness, including the port
-  regression test from §2.4.
+- `src/explore/OwnershipGraphView.tsx` — `mergeSiblings`, `countsOf`,
+  `notSelfOrMember`, the free-end fan, `rowY`, `mergeTargets`.
+- `src/explore/siblingMerge.ts` — `groupSiblings`, `siblingColor`,
+  `MergedMember`.
+- `src/test/siblingMerge.test.ts`, `src/test/mergedEdges.test.ts`.
 - `src/explore/OwnershipLegend.tsx`, `ExampleCasesPane.tsx`, `exampleCases.ts`,
   `RelationMenu.tsx`, `help-content.md`, `tourStateStack.ts`.
 
-**Verification in this repo:** `npm run build` (~2s; `npx tsc --noEmit` is too
-weak and has let breakage through) and `npx vitest run`. Never run `npm run dev`
-— Siggie keeps one running.
+**Verification:** `npm run build` (~2s; `npx tsc --noEmit` is too weak and has let
+breakage through) and `npx vitest run`. Never run `npm run dev` — Siggie keeps one
+running.
