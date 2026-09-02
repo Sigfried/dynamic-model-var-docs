@@ -141,10 +141,14 @@ SdohObservationSet.color == SdohObservation.color).
 Replace with a top-level **Help** menu containing:
 
 - **Ownership legend** — permanent. See §3.3.
-- **Example cases** — keep, but **cull hard**. ~34 cases in `exampleCases.ts` is
-  enough volume that Siggie checks none of them. Delete the ones that only served
-  debugging; keep the ones useful to end users. **"Biggest fans" stays here**, not
-  in the legend.
+- **Example cases** — keep, but **cull**. ~34 cases in `exampleCases.ts` is enough
+  volume that there is no obvious place to start debugging from. Keep a case if it
+  either **(a)** shows off a feature, or sets up a state that is interesting for a
+  user to play with, or **(b)** covers a distinct semantic area of the model, so the
+  set as a whole gives a feel for what the model spans. Debugging cases are not
+  disqualified — many will pass (a). What goes is the first group of simple,
+  user-directed cases: those predate the tour, which now does that job better.
+  **"Biggest fans" stays here**, not in the legend.
 - **Help-mode sections** worth surfacing. Do **not** reinstate help mode.
 
 ### 2.3 Tour steps for edge features
@@ -153,7 +157,10 @@ Add tour steps walking through the edge features. Format and traps: the
 `project_tour_format` memory and `src/explore/help-content.md` (`Tour:` blocks,
 `tourStateStack.ts`, `helpResolvers.ts`).
 
-[sg] I don't understand what the previous session meant by this at all. can you figure it out?
+Which edge features the tour should cover is not yet decided — candidates are
+the P1/P2/P3 color encodings, arrowhead direction, dashed association edges,
+and a narrowed edge pointing at a child header. Settle the step list first.
+**This is the highest-priority remaining item.**
 
 ### 2.4 `any_of` — a label, not a new edge type
 
@@ -200,36 +207,61 @@ the RelationMenu, and is the 3 crossed with who declares the slot
 no point of view, so P2 carries only the three kinds. The split belongs to
 hover behaviour and label text.
 
-### 3.2 Edge labels — specified, never built
+### 3.2 Edge labels — settled: one label, on hover
 
-There is **no `<text>` on the edge layer at all**. 
-`TASKS.md` flags item 5 as a doc bug for asserting this as shipped. Today a
-flipped edge is marked only by a back-pointing arrowhead (`arrow-own-back`).
+There is **no `<text>` on the edge layer at all**, and after this decision there
+still won't be. `TASKS.md` flags item 5 as a doc bug for asserting labels as
+shipped. Today a flipped edge is marked only by a back-pointing arrowhead
+(`arrow-own-back`).
 
-Whatever gets built for the `any_of` label is the **first** edge-label mechanism
-and should be designed with the re-verbed requirement in mind.
-whether an edge carries one label or three (mine, theirs, neutral, chosen
-by pointer proximity) — settle it first.
+**Decision (2026-09-02): no persistent edge labels. One label, shown on edge
+hover, in a chip near the cursor, with its point of view chosen by which
+endpoint the pointer is closer to.**
 
-[sg]
+Why *always-on* is off the table — read off the rendered graph: edges are long
+orthogonal runs with multiple bends, routed through the gaps between columns,
+and they bundle where they arrive (the group entering `Entity`, the four
+converging on `Observation`'s child headers). There is no dependable midpoint —
+`Document.focus → Entity` has its midpoint in open space far from either end,
+while `Condition.affected_body_site → BodySite` is a short hop with no room at
+all. A label on the line collides with its neighbours in exactly the dense
+regions where it would be most wanted.
 
-The position/label table above is current source for cascading menu items.
-Edge labels can't use these UNLESS a specific entity is hovered, which then
-provides a point of view. In the table below, the middle label (neutral
-position) would be the label when there's no hover to establish a point of view.
-With PoV, we could have a label at each end and in the middle ... this would
-be way too crowded and probably all the work i did on the two tables below
-was a waste -- well, maybe not, it could at least help for help text. The
-question about edge labels is when to display them: only on edge-hover? always?
-on entity-hover?
+Once always-on is gone, the close/middle/far geometry collapses. Hovering an
+edge **is** a point of view — supplied by pointer proximity — so the neutral
+middle label has no occasion to render, and one chip replaces three. The
+existing 11px transparent hit path already provides the trigger.
 
-some initial thoughts:
-- with short edges there's barely room for a label anywhere
-- never mind, i've spent too much time on this and don't have a clear direction
-  for edge labels. 
+Also settled: **entity hover does not label all of that entity's edges.**
+`Observation` would sprout a dozen chips. Entity hover keeps its highlight;
+the words stay in the RelationMenu, which already spells out the five positions.
 
-but for both technical docs and user docs, the table below might help in
-understanding the different relationships...
+Consequences for neighbouring items:
+
+- **`any_of` (§2.4) does not need this mechanism.** One slot pointing at
+  `Entity` and needing to say "may be an `Assay`, a `File`, or a
+  `QuestionnaireResponse`" is a footnote on the **row**, not a label on the
+  edge — a marker on `associated_artifact`, explained in the detail panel, plus
+  the note on `Assay`. It is no longer the "first edge-label mechanism."
+- **Rows are the other half of this.** A row already carries slot name, target
+  and cardinality; the edge only has to say *where it goes*. Hovering the row
+  and hovering the line leaving it are the same question asked from the same
+  end, so they should share one component and one vocabulary — with the row
+  version always taking the near/"mine" point of view. Deferred with §3.4.
+
+Both tables below stay: they are the clearest statement of the relation
+vocabulary anywhere in the repo, and they remain the source for cascading-menu
+items, help text and the legend, whether or not a label ever renders. The
+`close`/`far` columns are now reference material rather than a render spec.
+
+To be precise about what proximity does: it selects the **row** — that is, the
+point of view — and the `close` label is then what renders, at the near end.
+It does not choose between the `close` and `far` columns; those are the same
+relationship described from its two ends, not alternatives. Showing the `far`
+label simultaneously at the other end, so the user reads the relationship from
+both points of view at once, is possible but judged **excessive**: it doubles
+the ink for something the reader gets by hovering the other end. The `middle`
+column records the neutral phrasing for prose where no point of view exists.
 
 
   | from PoV | position | edge type   | position type | other box pos | close label                      | middle label    | far label                        |
@@ -297,7 +329,19 @@ the legend — put them in `OWNERSHIP_CLASSIFICATION.md` or a culled example cas
 ### 3.4 Popovers vs. title text
 
 The relation-menu trigger's `title` tooltip covers the menu's own options when
-the menu is open. Might want to do popovers for other titles later.
+the menu is open. Fix that one on its own — likely by moving the text into the
+menu as a header line rather than adding another floating layer.
+
+**No new popovers for now** (settled 2026-09-02). Entity-title and row popovers
+were considered and deferred: what they would carry is part of a larger pass on
+getting all the detail into one place — several things still require going back
+to an earlier view — and that pass comes *after* the tour is authored. The
+detail panel stays as-is until then; whether a row popover would duplicate or
+replace its slot content is deferred with it.
+
+Whenever popovers do land, they want to be **one primitive** (positioning,
+delay, dismissal, z-order above both the SVG and the node divs) with different
+content per trigger, or the entity-title and row versions will drift apart.
 
 ### 3.5 Terminology: "merged"
 
