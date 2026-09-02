@@ -126,7 +126,10 @@ describe('Data Completeness', () => {
     );
 
     // 3. Check Variable Specs
-    const classColumnIdx = tsvHeaders.indexOf('Class');  // Use capital C to match TSV
+    // The column is 'BDCHM Element'. This looked for 'Class', found -1, and
+    // silently skipped the whole section -- reporting "0 variables" against a
+    // 154-row TSV, so a mapping failure could never have shown up here.
+    const classColumnIdx = tsvHeaders.indexOf('BDCHM Element');
     if (classColumnIdx !== -1) {
       const tsvVariables = tsvLines.slice(1).map(line => {
         const cols = line.split('\t');
@@ -189,7 +192,40 @@ describe('Data Completeness', () => {
 
     console.log('\n=== END REPORT ===\n');
 
-    // Always pass - this is informational only
-    expect(true).toBe(true);
+    // Section 2 assertions. These were `expect(true).toBe(true)` with a note
+    // saying the test was informational -- so a class silently vanishing from
+    // ModelData produced a console warning inside a green run, which is how
+    // nobody would ever see it. The three lists are empty today, so asserting
+    // costs nothing and turns a silent regression into a failure.
+    expect(
+      report.metadataToModelData.missingClasses,
+      'Classes in processed.json that never reached ModelData',
+    ).toEqual([]);
+    expect(
+      report.metadataToModelData.missingEnums,
+      'Enums in processed.json that never reached ModelData',
+    ).toEqual([]);
+    expect(
+      report.metadataToModelData.missingSlots,
+      'Slots in processed.json that never reached ModelData',
+    ).toEqual([]);
+
+    // Section 3: every TSV row should become a variable unless it is marked
+    // status=ignore. Asserting on the raw count would be wrong -- 6 rows are
+    // deliberately ignored upstream (all "Spirometry metadata"), which is
+    // exactly the 155 vs 149 gap.
+    const ignoredRows = tsvLines.slice(1).filter(line => {
+      const statusIdx = tsvHeaders.indexOf('status');
+      return statusIdx !== -1 && (line.split('\t')[statusIdx] || '').trim() === 'ignore';
+    }).length;
+    expect(
+      report.variableSpecs.mappedVariables,
+      `Expected ${report.variableSpecs.totalVariables} TSV rows minus ${ignoredRows} ` +
+        'marked status=ignore to reach ModelData',
+    ).toBe(report.variableSpecs.totalVariables - ignoredRows);
+
+    // Section 1 stays informational: those top-level fields are genuinely not
+    // carried into processed.json by design, and asserting would just freeze
+    // the current shape of the transform.
   });
 });
