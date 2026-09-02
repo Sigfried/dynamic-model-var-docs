@@ -1,5 +1,7 @@
 # EXPLORE_VIZ.md — Subgraph-viz SPA (design spec)
 
+[sg] this is stale and overly verbose
+
 > **Status**: Design approved 2026-07-13; **built and running** — this is the
 > default app (`index.html`). Build steps 1, 2, 4 done; step 5 outstanding.
 > Step 3's is-a treatment shipped 2026-08-25 as **merged sibling boxes**, NOT
@@ -35,7 +37,7 @@ Terminology: we say **ownership** (has-a), not "containment," from here on.
    schema states "X belongs to Y" both ways (`ObservationSet.observations`
    is stored owner-side; `Observation.associated_participant` member-side).
    The FK-flip heuristic already normalizes; the viz renders its verdict.
-2. **Direction is encoded by vertical position** (owners above members), not
+2. **Direction is encoded by vertical position (in TB, horizontal in LR)** (owners above members), not
    by arrowheads alone. Layered DAG: poly-parent nodes get multiple in-edges;
    no node duplication — this eliminates the "★ also under" problem, which
    is intrinsic to nesting/outline techniques, not a widget bug.
@@ -70,9 +72,10 @@ Terminology: we say **ownership** (has-a), not "containment," from here on.
 
    Merged boxes show every row; the "+N more" collapse applies only to ordinary
    boxes. Toggleable in the toolbar (`⑃ siblings`); off restores the is-a chips.
-4. **Relation channels**: ownership = amber solid, drawn normalized;
+
+4. [superseded] **Relation channels**: ownership = amber solid, drawn normalized;
    references = gray dashed, drawn in FK direction; is-a = the merged box.
-5. **Label convention**: an ownership edge drawn *flipped* from its storage
+5. [superseded] **Label convention**: an ownership edge drawn *flipped* from its storage
    direction gets a re-verbed label ("has members — via
    `member_of_research_study`"), never the bare slot name pointing the wrong
    way. Unflipped edges and references keep plain slot-name labels.
@@ -155,12 +158,12 @@ getOwnershipSubgraph(selectedIds, expansions, options?) -> {
   // NB 'isa' edges are never ROUTED. The view consumes them into node
   // metadata (isaParents/subclassCount) and, when ⑃ siblings is on, into the
   // merged-box grouping — see §3.
-  hiddenOwners: Map<classId, ownerId[]>,   // direct owners NOT drawn
-  hiddenOwned: Map<classId, memberId[]>,   // what it owns, NOT drawn
+  hiddenOwners: Map<classId, ownerId[]>,   // owners NOT drawn → chips
 }
 
 options = {
   pathToRoot?: boolean,   // default false — transitive ancestors (⇱ roots)
+  ownerCap?: number,      // default 8 — draw direct owners up to this many
 }
 ```
 
@@ -171,9 +174,8 @@ the style of the containment property tests.
 and installed (2026-07-28); the graphology fallback is dead. Implementation:
 `src/models/ownershipSubgraph.ts` builds the full ownership DAG once via
 `fromEdges` (self-loops skipped, parallel edges collapsed), uses
-`parents` to report the one-hop owners (`ancestors()` only under
-`pathToRoot`, the sole thing that draws an unselected node) and **sunk layers**
-over the FULL DAG as the
+`parents` for the one-hop owner walk (`ancestors()` only under
+`pathToRoot`) and **sunk layers** over the FULL DAG as the
 layer assignment (owners sink to one above their topmost owning child; leaf
 classes dangle below their deepest owner — see `computeSunkLayers`), so a
 node keeps its layer as the selection changes and roots aren't stranded far
@@ -250,15 +252,12 @@ New dependency: `elkjs` only (skip NodeLinkView's d3-force mode in v1).
    member — `computeSunkLayers`), hover emphasis (entity → neighborhood,
    edge → isolate; RAF direct-DOM), expanded rows include plain scalar/enum
    attributes (hollow dot), SVG self-loop icon, LR/TB toggle.
-   **Expand-on-demand DONE** 2026-08-12, **and expanding became selecting**
-   2026-08-27: clicking a dimmed entity row adds its range to `?sel=` and
-   ticks its checkbox. It used to add a dimmer `?exp=` context node instead,
-   so a class could be on the canvas for three different reasons (selected,
-   expanded, or drawn by the owner cap) and every removal path had to try all
-   three; now the checkboxes are the single record of what is drawn. Rows
-   pointing at on-canvas entities, plain scalar/enum rows, and self-loops are
-   not expandable. The relation menu reaches the same classes from the owner
-   side, and is the only route to owners that declare the slot themselves.
+   **Expand-on-demand DONE** 2026-08-12: clicking a dimmed entity row adds
+   its range as a context node (`?exp=`, state in ExploreApp beside
+   selection); expanded nodes carry an ✕ to dismiss, path-to-root context
+   does not. Rows pointing at on-canvas entities, plain scalar/enum rows,
+   and self-loops are not expandable. Owner chips (above the cap) are the
+   same affordance reached from the owner side.
 
    **Edge port fan-out DONE** 2026-08-19. Every incoming edge previously
    shared one `::hdr:in` port, so N edges converging on a node landed on a

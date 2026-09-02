@@ -153,21 +153,19 @@ Add tour steps walking through the edge features. Format and traps: the
 `project_tour_format` memory and `src/explore/help-content.md` (`Tour:` blocks,
 `tourStateStack.ts`, `helpResolvers.ts`).
 
-[sg] I don't understand what the previous session meant by this at all
+[sg] I don't understand what the previous session meant by this at all. can you figure it out?
 
 ### 2.4 `any_of` — a label, not a new edge type
 
 One slot uses `any_of`: `MeasurementObservation.associated_artifact`
 (`range: Entity`, `any_of: [Assay, File, QuestionnaireResponse]`). The verdict is
-correct and the edge still points at `Entity`; the **label explains what `any_of`
+correct and the edge still points at `Entity`; the **label will explain what `any_of`
 means** — that this slot may point at an `Assay`, a `File`, or a
 `QuestionnaireResponse`.
 
 `Assay` has zero inbound edges as a result, so it is unreachable by following an
-edge (it is still selectable and displayable). **Preferred fix: a note on `Assay`
-explaining what attaches to it.** An explanation problem, not a graph-
-completeness problem. If reachability turns out to matter, fan out `any_of` for
-reachability only while still drawing the single `Entity` edge.
+edge (it is still selectable and displayable). **Preferred temporary fix: a note on `Assay`
+explaining what attaches to it.**
 
 Background: `OWNERSHIP_CLASSIFICATION.md` §`any_of`.
 
@@ -183,11 +181,6 @@ seen from three perspectives**:
 ```
 2 (fwd, bkwd) × 3 (perspectives) + 1 (association) = 7
 ```
-
-**Open: are the three perspectives `mine`/`theirs`/neutral, or left-PoV/
-right-PoV/neutral?** Decide which reads better in help text, and whether it
-should drive variable names.
-
 In the code today: `OwnershipVerdict` (3: `own-fwd`, `own-bkwd`, `association`,
 in `containmentGraph.ts`) drives layering, stroke and arrowheads;
 `RelationPosition` (5, `ownershipSubgraph.ts:66`) drives what the reader sees in
@@ -195,13 +188,13 @@ the RelationMenu, and is the 3 crossed with who declares the slot
 (`ownershipSubgraph.ts:162,167`). Shipped user-facing labels
 (`RELATION_POSITION_LABEL`):
 
-| position | label |
-|---|---|
-| `owns-mine` | belong to me by my attribute |
-| `owns-theirs` | belong to me by their attribute |
-| `owned-mine` | I belong to, by my attribute |
-| `owned-theirs` | I belong to, by their attribute |
-| `association` | associated with |
+ | position     | label                           |
+ |--------------|---------------------------------|
+ | `owns-mine`    | belong to me by my attribute    |
+ | `owns-theirs`  | belong to me by their attribute |
+ | `owned-mine`   | I belong to, by my attribute    |
+ | `owned-theirs` | I belong to, by their attribute |
+ | `association`  | associated with                 |
 
 **color does not encode the perspective split** — with nothing hovered there is
 no point of view, so P2 carries only the three kinds. The split belongs to
@@ -209,32 +202,102 @@ hover behaviour and label text.
 
 ### 3.2 Edge labels — specified, never built
 
-There is **no `<text>` on the edge layer at all**. `EXPLORE_VIZ.md` item 5
-specifies a **re-verbed** label on flipped edges ("has members — via
-`member_of_research_study`") rather than a bare slot name pointing the wrong way;
+There is **no `<text>` on the edge layer at all**. 
 `TASKS.md` flags item 5 as a doc bug for asserting this as shipped. Today a
 flipped edge is marked only by a back-pointing arrowhead (`arrow-own-back`).
 
 Whatever gets built for the `any_of` label is the **first** edge-label mechanism
-and should be designed with the re-verbed requirement in mind. §3.1 decides
-whether an edge carries one label or three (left-PoV, right-PoV, neutral, chosen
+and should be designed with the re-verbed requirement in mind.
+whether an edge carries one label or three (mine, theirs, neutral, chosen
 by pointer proximity) — settle it first.
+
+[sg]
+
+The position/label table above is current source for cascading menu items.
+Edge labels can't use these UNLESS a specific entity is hovered, which then
+provides a point of view. In the table below, the middle label (neutral
+position) would be the label when there's no hover to establish a point of view.
+With PoV, we could have a label at each end and in the middle ... this would
+be way too crowded and probably all the work i did on the two tables below
+was a waste -- well, maybe not, it could at least help for help text. The
+question about edge labels is when to display them: only on edge-hover? always?
+on entity-hover?
+
+some initial thoughts:
+- with short edges there's barely room for a label anywhere
+- never mind, i've spent too much time on this and don't have a clear direction
+  for edge labels. 
+
+but for both technical docs and user docs, the table below might help in
+understanding the different relationships...
+
+
+  | from PoV | position | edge type   | position type | other box pos | close label                      | middle label    | far label                        |
+  |----------|----------|-------------|---------------|---------------|----------------------------------|-----------------|----------------------------------|
+  | yes      | mine     | own-fwd     | owns-mine     | right         | belongs to me by my attribute    | contains        | I belong to by their attribute   |
+  | yes      | mine     | own-bkwd    | owned-mine    | left          | I belong to by my attribute      | contained by    | belongs to me by their attribute |
+  | yes      | theirs   | own-fwd     | owns-theirs   | left          | I belong to by their attribute   | contains        | belongs to me by my attribute    |
+  | yes      | theirs   | own-bkwd    | owned-theirs  | right         | belongs to me by their attribute | contained by    | I belong to by my attribute      |
+  | no       | neutral  | own-fwd     | owns          | right         |                                  | contains        |                                  |
+  | no       | neutral  | own-bkwd    | owned         | left          |                                  | contained by    |                                  |
+  | any      | any      | association | association   | left          |                                  | associated with |                                  |
+
+
+other label possibilities
+
+ | personal language label (current) | shorter personal label | objective language label |
+ |-----------------------------------|------------------------|--------------------------|
+ | belongs to me by my attribute     | I contain it           | self contains            |
+ | I belong to by my attribute       | I belong to it         | self contained by        |
+ | I belong to by their attribute    | It contains me         | contained by other       |
+ | belongs to me by their attribute  | It belongs to me       | other contained by       |
 
 ### 3.3 What the ownership legend should be
 
-**Likely direction: single-entity point of view**, consistent with §3.1. Settle
-§3.1 first, since it determines what the legend describes. The legend should also
-explain the toolbar buttons, the colors, and dashed edges.
+An entity can be related to others in the following ways:
+
+- Through inheritance, that is, IS-A relationships:
+  - ObservationSet has subclasses: DimensionalObservationSet, MeasurementObservationSet, SdohObservationSet.
+    These are set in the schema like, `MeasurementObservationSet.is_a = ObservationSet`.
+  - Attributes on a subclass sometimes override attributes on the parent. So
+    `ObservationSet.observations.range = Observation` but 
+    `MeasurementObservationSet.observations.range = MeasurementObservation`.
+- Through attributes with a class/entity range, i.e., HAS-A relationships:
+  - Through attributes on the entity itself, in one of two ways:
+    - "Containing" the other:
+      - `MeasurementObservation.body_site` can optionally (0..1) connect
+        to a BodySite -- the BodySite "belongs to" the MeasurementObservation
+      - `ObservationSet.observations` contains one or more Observations
+    - Being "contained by" the other:
+      - ...
+  - Through attributes on another entity:
+    - ...
+
+I was imagining this being easier to comprehend with pictures (NOT ascii,
+looking like the app)
+
+```
+                                                                                                                  
+                                             __________________________________________ 
+                                            | Condition                                |
+                                            |------------------------------------------|
+                                            | ...                                      |
+  _______ It belongs to me   I belong to it | affected_visit              Visit (0..1) |
+ | Visit | -------------------------------< | ...                                      | I contain it     It contains me __________ 
+ |-------|                                  | body_site                BodySite (0..1) |  ----------------------------> | BodySite |
+ | ...   |                                  | ...                                      |                                |----------|
+ |_______|                                  |__________________________________________|                                | ...      |
+                                                                                                                        |__________|
+```
+The legend should also explain the toolbar buttons, the colors, and dashed edges.
 
 The by-reason breakdowns matter and must exist somewhere, but are too much for
 the legend — put them in `OWNERSHIP_CLASSIFICATION.md` or a culled example case.
 
 ### 3.4 Popovers vs. title text
 
-Leaning **popover**. Decide **once, globally**, for all current `title=` usages —
-take an inventory first. Motivating case: the relation-menu trigger's `title`
-tooltip covers the menu's own options when the menu is open. **This belongs to a
-popover task, not to the edge work.**
+The relation-menu trigger's `title` tooltip covers the menu's own options when
+the menu is open. Might want to do popovers for other titles later.
 
 ### 3.5 Terminology: "merged"
 
@@ -243,14 +306,7 @@ is a **merged-inheritance box**. Edge convergence (several edges sharing one
 arrowhead) keeps the word "merge" in `mergeTargets` and is a different thing.
 Apply to identifiers (`mergeSiblings`, `isMergedId`, `merged::`) as well as prose.
 
-### 3.6 Should the parent's own edge be black?
-
-`TASKS.md` specifies black for the parent's slot in the `ObservationSet.observations`
-fan; it currently renders in the shared channel color. Under §1.2 the parent's
-row takes the P3 default (dark entity blue), which supersedes "black" — confirm
-that reading.
-
-### 3.7 "N related" counts distinct OUTSIDE classes
+### 3.6 "N related" counts distinct OUTSIDE classes
 
 `countsOf` counts distinct related class names, and a merged-inheritance box
 excludes anything folded into itself (`notSelfOrMember`,
