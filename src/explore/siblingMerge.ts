@@ -8,11 +8,11 @@
  * by their parent, in which
  *
  *   - rows the parent declares are shared by every sibling and read as the
- *     box's own, in the default colour;
- *   - rows a sibling declares itself are set in the colour of the class the
+ *     box's own, in the default color;
+ *   - rows a sibling declares itself are set in the color of the class the
  *     row POINTS AT, and a header names the sibling above its block — so
  *     "which slot belongs to whom" is answered in place rather than by a line
- *     leaving the box, and "where does it go" is answered by matching colour.
+ *     leaving the box, and "where does it go" is answered by matching color.
  *
  * `Entity` is never a merge parent — SKIP_SUBCLASS_EXPANSION excludes it from
  * is-a edges for the same reason it is useless here: a box titled "Entity"
@@ -30,8 +30,8 @@ import { SIBLING_COLORS, type SiblingColor } from '../config/appConfig';
 export type { SiblingColor };
 
 /**
- * The P3 colour at a stable sibling index. The palette itself lives in
- * appConfig (SIBLING_COLORS) — never inline a colour here.
+ * The P3 color at a stable sibling index. The palette itself lives in
+ * appConfig (SIBLING_COLORS) — never inline a color here.
  *
  * The index is a class's position among ALL its schema siblings, not among the
  * ones on canvas — see DataService.buildSiblingColorIndex. Index 0 is the
@@ -40,11 +40,11 @@ export type { SiblingColor };
  *
  * Two steps, not one: `fill` carries white text in a header band, `text` is
  * small text on the box's light background. A single value legible as both
- * ends up so dark that the sibling colours stop being distinguishable, which
- * defeats the point of colouring them.
+ * ends up so dark that the sibling colors stop being distinguishable, which
+ * defeats the point of coloring them.
  *
  * Wraps rather than throwing when a family has more children than the palette:
- * a recycled colour is a legibility problem, a crash is a broken canvas. Note
+ * a recycled color is a legibility problem, a crash is a broken canvas. Note
  * that wrapping must not land a child back on index 0 — that would make it
  * read as a parent row — so wrapping skips the default.
  */
@@ -76,10 +76,10 @@ export interface MergedMember {
  * is also what makes slot order stable: shared rows come first in the parent's
  * declared order, then each child's own rows in theirs.
  *
- * Sorted by id so member ORDER is stable. Colour no longer rides on this
+ * Sorted by id so member ORDER is stable. Color no longer rides on this
  * order — it comes from a whole-schema index (DataService.siblingColorIndexOf),
  * precisely because position among the SELECTED siblings shifted every later
- * sibling's colour when one was unselected.
+ * sibling's color when one was unselected.
  */
 export function groupSiblings(
   ids: string[],

@@ -20,8 +20,8 @@
  *    direction. The dashes carry the distinction, not faintness.
  *  - is-a: never an arrow in the ownership plane. Rendered as ADJACENCY —
  *    siblings sharing a parent collapse into one box titled by that parent,
- *    parent rows in the default colour and bolder, each sibling's own rows in
- *    the colour of what they point at (see siblingMerge.ts). Toggleable; off
+ *    parent rows in the default color and bolder, each sibling's own rows in
+ *    the color of what they point at (see siblingMerge.ts). Toggleable; off
  *    leaves the is-a chips.
  *  - self-loops: ⟲ marker on the slot's own row, not a routed edge.
  *
@@ -43,7 +43,7 @@ import {
   cardinalityLabel, SKIP_SUBCLASS_EXPANSION,
   relationPositionLabel, RELATION_POSITION_ORDER,
 } from '../services/DataService';
-import { EDGE_COLORS, RANGE_COLORS } from '../config/appConfig';
+import { EDGE_COLORS, RANGE_COLORS, SIBLING_HEADER_TEXT } from '../config/appConfig';
 import {
   useGraphLayout, useZoomPan, roundedPath, sectionPoints, mergeTail,
   smoothStepPath,
@@ -125,14 +125,26 @@ export interface RowVM {
    */
   declaringClass?: string;
   /**
-   * P1: the colour of the row's RANGE KIND — entity, value set, data type.
+   * P1: the color of the row's RANGE KIND — entity, value set, data type.
    *
-   * The dot and the range label both carry it, and they are the only two
-   * channels that do: it answers "what kind of thing is at the other end?",
-   * which is a different question from whose slot this is (P3, on the slot
-   * name) or what kind of relation it is (P2, on the edge).
+   * The dot and the range label both carry it. It answers "what KIND of thing
+   * is at the other end?", which is a different question from WHICH thing is
+   * at the other end (P3, on the slot name) or what kind of relation it is
+   * (P2, on the edge).
    */
   rangeColor: string;
+  /**
+   * P3: the ink of the class this row POINTS AT, when that class has a sibling
+   * color of its own. Undefined for a plain row, and for a row whose target
+   * takes the default — there is nothing to track TO in either case.
+   *
+   * Set on EVERY box, not only merged ones. Specimen is in no merged box, but
+   * its `quality_measure` row still points at SpecimenQualityObservation, and
+   * drawing that row in that class's color is the whole point: it is how the
+   * eye gets from a row to the box it means. Restricting this to merged boxes
+   * made two rules out of one and left every unmerged box's rows uniform.
+   */
+  targetColor?: SiblingColor;
 }
 
 /** One related class as the menu shows it: name, why, and whether it is drawn. */
@@ -272,8 +284,10 @@ export function buildViewModel(
   sub: OwnershipSubgraph,
   expandedNodes: Set<string>,
   plainSlotsFor: (id: string) => AttributeSummary[],
-  /** P1: the colour for a range's KIND. See RowVM.rangeColor. */
+  /** P1: the color for a range's KIND. See RowVM.rangeColor. */
   rangeColorOf: (range: string) => string,
+  /** P3: the ink of a class the row points at. See RowVM.targetColor. */
+  targetColorOf: (range: string) => SiblingColor | undefined,
 ): ViewModel {
   const isaParents = new Map<string, string[]>();
   const subclassCount = new Map<string, number>();
@@ -313,6 +327,7 @@ export function buildViewModel(
       ...s,
       connected: s.isLoop || drawn.has(`${n.id}|${s.slot}`),
       rangeColor: rangeColorOf(s.range),
+      targetColor: targetColorOf(s.range),
     })).sort(bySchema);
     const entityNames = new Set(entityRows.map(r => r.slot));
     // Scalar/enum-valued attributes: everything getClassSummary lists that
@@ -433,8 +448,8 @@ function nodeHeight(
  * Fold sibling classes into one box per shared parent.
  *
  * Row policy inside a merged box, in display order:
- *   1. rows the PARENT declares (the default colour — shared by every sibling);
- *   2. rows a SIBLING declares itself, coloured by what the row POINTS AT.
+ *   1. rows the PARENT declares (the default color — shared by every sibling);
+ *   2. rows a SIBLING declares itself, colored by what the row POINTS AT.
  * A row several siblings declare independently is drawn once and lists its
  * other owners in the tooltip rather than being duplicated: it is one
  * attribute name at one anchor point, and duplicating it would give rowY two
@@ -463,12 +478,12 @@ export function mergeSiblings(
    *  when the class does not list it, so unknowns sort last rather than first. */
   schemaIndexOf: (classId: string, slot: string) => number,
   /**
-   * A class's stable P3 colour index — its position among ALL its schema
+   * A class's stable P3 color index — its position among ALL its schema
    * siblings, 0 for a parent or a class in no mergeable family.
    *
    * Whole-schema rather than per-canvas, and that is the whole point: indexing
    * by position among the SELECTED siblings meant unselecting one shifted
-   * every later sibling's colour.
+   * every later sibling's color.
    */
   colorIndexOf: (classId: string) => number,
 ): ViewModel {
@@ -482,13 +497,13 @@ export function mergeSiblings(
   /** member class id → merged box id */
   const absorbed = new Map<string, string>();
   const merged: NodeVM[] = [];
-  /** `${mergedId}|${declaringClass}|${slot}` → the row's P3 colour. */
+  /** `${mergedId}|${declaringClass}|${slot}` → the row's P3 color. */
   const slotColor = new Map<string, SiblingColor>();
 
   for (const [parent, memberIds] of groups) {
     const id = mergedIdFor(parent);
     // Position among ALL schema siblings, not among the ones on canvas: an
-    // unselected sibling must not shift the colours of the ones that remain.
+    // unselected sibling must not shift the colors of the ones that remain.
     const members: MergedMember[] = memberIds.map((mid) => ({
       id: mid,
       label: byId.get(mid)?.label ?? mid,
@@ -555,40 +570,40 @@ export function mergeSiblings(
       }
     }
     /**
-     * A row's colour is its TARGET's, not its declarer's.
+     * A row's color is its TARGET's, not its declarer's.
      *
      * This is what lets the eye track from a slot row to the box it points at:
-     * `SdohObservationSet.observations` is drawn in the colour `SdohObservation`
+     * `SdohObservationSet.observations` is drawn in the color `SdohObservation`
      * wears in its own box, so the row and its destination are visibly the same
-     * thing seen twice. Colouring by declarer instead only restated what the
+     * thing seen twice. Coloring by declarer instead only restated what the
      * child header above the row already says.
      *
      * A row whose target is in no mergeable family (or is a parent) gets index
      * 0, the default — correct, because there is nothing to track TO: the
      * target's box is not a merged box and wears the default itself.
      */
-    const rowColorIndex = (r: RowVM) =>
-      r.channel === 'plain' ? 0 : colorIndexOf(r.range);
     /**
-     * A container borrows its contents' colour.
+     * A container borrows its contents' color.
      *
      * `SdohObservationSet` is the box that holds `SdohObservation`s, so it
-     * should be the same colour as them — otherwise the pair that most needs
-     * to read as a pair is the one place the colour system says nothing. When
-     * a child's own row points at a coloured target, that colour becomes the
+     * should be the same color as them — otherwise the pair that most needs
+     * to read as a pair is the one place the color system says nothing. When
+     * a child's own row points at a colored target, that color becomes the
      * child's, overriding its position-derived one.
      *
      * Only a child's OWN rows can do this. A row inherited from the parent is
-     * shared by every sibling, so letting it recolour one of them would hand
-     * that sibling a colour on the strength of something it does not uniquely
+     * shared by every sibling, so letting it recolor one of them would hand
+     * that sibling a color on the strength of something it does not uniquely
      * have.
+     *
+     * `targetColor` is already on the row (buildViewModel sets it for every
+     * box); this only has to decide who borrows from whom.
      */
     const borrowed = new Map<string, SiblingColor>();
     for (const r of rows.values()) {
-      const idx = rowColorIndex(r);
-      if (!idx) continue;
+      if (!r.targetColor) continue;
       for (const o of r.owners ?? []) {
-        if (!borrowed.has(o.id)) borrowed.set(o.id, siblingColor(idx));
+        if (!borrowed.has(o.id)) borrowed.set(o.id, r.targetColor);
       }
     }
     for (const m of members) {
@@ -597,8 +612,7 @@ export function mergeSiblings(
     }
     for (const [key, r] of rows) {
       // `key` is already `declaringClass|slot`, the same pair edges resolve by.
-      const idx = rowColorIndex(r);
-      if (idx) slotColor.set(`${id}|${key}`, siblingColor(idx));
+      if (r.targetColor) slotColor.set(`${id}|${key}`, r.targetColor);
     }
     const all = [...rows.values()];
     /**
@@ -637,7 +651,7 @@ export function mergeSiblings(
       (child): RowVM => ({
         slot: `::hdr:${child.id}`, range: '', channel: 'plain',
         flipped: false, cardinality: '', isLoop: false, connected: false,
-        // A header row has no range, so no P1 colour; it never draws a dot.
+        // A header row has no range, so no P1 color; it never draws a dot.
         rangeColor: '',
         header: child,
       }),
@@ -838,14 +852,14 @@ const REF_SCALE = 0.85;
  *  Thicker than the 0.8/0.54 these replace. P2 separates own-fwd from own-bkwd
  *  by ONE step on the Blues ramp — deliberately, since they are the same
  *  relation seen from two ends — and a hairline cannot carry a one-step
- *  difference. The stroke has to be wide enough to read as a colour. */
+ *  difference. The stroke has to be wide enough to read as a color. */
 const STROKE_OWN = 1.4;
 const STROKE_OWN_HOVER = 2.6;
 const STROKE_REF = STROKE_OWN * 0.75;
 const STROKE_REF_HOVER = STROKE_OWN_HOVER * 0.75;
 
 /**
- * The P2 colour for an edge: what KIND of relation it is.
+ * The P2 color for an edge: what KIND of relation it is.
  *
  * Three kinds, named for the classifier's verdicts rather than for a
  * direction. "Outgoing"/"incoming" would be wrong: they imply a point of view,
@@ -1115,6 +1129,7 @@ export default function OwnershipGraphView({
     () => buildViewModel(
       subgraph, expandedNodes, id => plainSlots.get(id) ?? [],
       range => dataService.getRangeColor(range),
+      range => dataService.getTargetColor(range),
     ),
     [subgraph, expandedNodes, plainSlots, dataService],
   );
@@ -1557,7 +1572,7 @@ export default function OwnershipGraphView({
       MergeTarget & {
         isOwn: boolean; dimmed: boolean; edgeIds: string[];
         /** Set only when EVERY edge merging into this head shares one child's
-         *  P3 colour. A head serving several children has no honest colour and
+         *  P3 color. A head serving several children has no honest color and
          *  falls back to the edge kind's. */
         color?: SiblingColor;
       }
@@ -1582,7 +1597,7 @@ export default function OwnershipGraphView({
             isOwn: prev.isOwn || isOwn,
             dimmed: prev.dimmed && dimmed,
             edgeIds: [...prev.edgeIds, e.id],
-            ...(prev.color?.fill === color?.fill ? {} : { color: undefined }),
+            ...(prev.color?.text === color?.text ? {} : { color: undefined }),
           }
         : { ...t, isOwn, dimmed, edgeIds: [e.id], ...(color ? { color } : {}) });
     }
@@ -1854,7 +1869,7 @@ export default function OwnershipGraphView({
                         d={arrowPath(a.base, a.dir, ARROW_SPAN, ARROW_LEN)}
                         /* Flipped edges never converge (they end at their own
                            attribute row), so a shared head is always forward. */
-                        fill={a.color?.fill ?? edgeKindColor(a.isOwn, false)}
+                        fill={a.color?.text ?? edgeKindColor(a.isOwn, false)}
                         opacity={a.dimmed ? 0.4 : 1}
                         style={{ transition: 'opacity 120ms' }}
                       />
@@ -1915,11 +1930,11 @@ export default function OwnershipGraphView({
                             d={d}
                             fill="none"
                             opacity={dimmed ? 0.4 : 1}
-                            /* P3 overrides P2 on the few edges anchored in a
-                               merged-box child's block, so the line can be
-                               traced back to the block it leaves. Its `fill`
-                               step is the one that carries at stroke width. */
-                            stroke={vm.edgeColors.get(e.id)?.fill
+                            /* P3 overrides P2 on edges whose row is colored,
+                               so the line can be traced back to the block it
+                               leaves. The `text` step, not `fill`: a stroke is
+                               ink, and a pale band tint vanishes at 1.4px. */
+                            stroke={vm.edgeColors.get(e.id)?.text
                               ?? edgeKindColor(isOwn, flipped)}
                             strokeWidth={isOwn ? STROKE_OWN : STROKE_REF}
                             strokeDasharray={isOwn ? undefined : '5 4'}
@@ -2102,10 +2117,11 @@ export default function OwnershipGraphView({
                                      cursor-pointer hover:brightness-110"
                           style={{
                             height: ROW_H,
-                            // `fill`, not `text`: this is a filled band with
-                            // white text on it. See SiblingColor.
+                            // `fill` is the band; its text is dark, because
+                            // every fill is a pale Pastel1 tint. See
+                            // SiblingColor.
                             background: r.header.color.fill,
-                            color: '#fff',
+                            color: SIBLING_HEADER_TEXT,
                           }}
                         >
                           <span className="truncate">{r.header.label}</span>
@@ -2130,7 +2146,7 @@ export default function OwnershipGraphView({
                               (isExpandable(r) ? ` — click to add ${r.range}` : ''))
                             // A slot several children declare independently is
                             // drawn once, in the first one's colour; the rest
-                            // are named here rather than by a second colour.
+                            // are named here rather than by a second color.
                             + ((r.owners?.length ?? 0) > 1
                               ? `\nalso declared by ${r.owners!.slice(1).map(o => o.label).join(', ')}`
                               : '')}
@@ -2138,24 +2154,35 @@ export default function OwnershipGraphView({
                             ? ev => { ev.stopPropagation(); onAdd?.(r.range); }
                             : undefined}
                           className={`flex items-center gap-1.5 px-2 text-[11px] ${
-                            r.owners?.length ? '' : r.connected
+                            r.targetColor ? '' : r.connected
                               ? 'text-gray-700 dark:text-gray-300'
                               : 'text-gray-400 dark:text-gray-500'} ${isExpandable(r)
                               ? 'cursor-pointer hover:bg-sky-50 dark:hover:bg-sky-900/30 hover:text-sky-700 dark:hover:text-sky-300'
                               : ''}`}
                           style={{
                             height: ROW_H,
-                            // A child's rows are set in its own colour, which
-                            // is the header's background and the colour its
-                            // edges are drawn in — so the block, its label and
-                            // its lines are one thing. Unconnected rows fade,
-                            // matching what the gray classes do.
-                            // `text`, not `fill`: small text on the box's
-                            // light background. The header band above uses the
-                            // darker `fill` step of the SAME entry.
-                            ...(r.owners?.length
-                              ? { color: r.owners[0].color.text,
-                                  opacity: r.connected ? 1 : 0.55 }
+                            /*
+                              A colored row is set in the ink of the class it
+                              POINTS AT, which is also the color of that
+                              class's header band and of the edge between them
+                              — so the row, its destination and the line are
+                              one thing.
+
+                              `text`, not `fill`: this is ink on the box's
+                              light background. The header band uses the pale
+                              `fill` step of the same entry.
+
+                              No opacity fade for unconnected rows. It was
+                              0.55, and against the FULL-strength gray of the
+                              plain rows beside them the colored ones read as
+                              broken rather than as secondary — most of a
+                              merged box's rows are unconnected, so most of its
+                              color was washed out. The hollow dot already says
+                              "no edge drawn", and says it without making the
+                              row harder to read.
+                            */
+                            ...(r.targetColor
+                              ? { color: r.targetColor.text }
                               : {}),
                           }}
                         >
@@ -2164,7 +2191,7 @@ export default function OwnershipGraphView({
                             data type — not the channel. The channel (ownership
                             vs association) is the EDGE's business and is
                             already said in P2 on the line itself; saying it
-                            again here spent the row's one colour slot on a
+                            again here spent the row's one color slot on a
                             fact the reader can already see, and left "what
                             kind of thing is this?" unanswered.
 
@@ -2181,14 +2208,18 @@ export default function OwnershipGraphView({
                             }}
                           />
                           <span className={`truncate ${
+                            // Shared (parent) rows in a merged box are bolded
+                            // to read as the box's own. The gray goes with it
+                            // ONLY when the row has no target color of its
+                            // own, or it would override the inline color.
                             n.members.length && !r.owners?.length
-                              ? 'font-semibold text-gray-900 dark:text-gray-100'
+                              ? `font-semibold ${r.targetColor ? '' : 'text-gray-900 dark:text-gray-100'}`
                               : ''}`}>{r.slot}</span>
                           {r.isLoop && (
                             <LoopIcon title={`self-referential: a ${r.range} can own another ${r.range} via ${r.slot}`} />
                           )}
                           {/* P1 again: the range label names the thing the dot
-                              colours, so the two agree. Cardinality is not a
+                              colors, so the two agree. Cardinality is not a
                               range kind and stays neutral. */}
                           <span className="ml-auto text-[9px] truncate max-w-[90px]">
                             <span style={{ color: r.rangeColor }}>{r.range}</span>

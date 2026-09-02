@@ -31,7 +31,7 @@ interface OwnershipLegendProps {
 }
 
 /**
- * Short label + colour per verdict.
+ * Short label + color per verdict.
  *
  * The three live verdicts take P2's Blues ramp — the SAME hex values the
  * canvas strokes, not a Tailwind approximation of them, so the legend and the
@@ -39,7 +39,7 @@ interface OwnershipLegendProps {
  * apart because they are the same relation seen from two ends.
  *
  * `excluded` is not a relation kind and stays outside the ramp: it names an
- * edge that is NOT drawn, so giving it a stroke colour would be a lie.
+ * edge that is NOT drawn, so giving it a stroke color would be a lie.
  */
 const VERDICT_LABEL: Record<string, { text: string; color?: string; cls?: string }> = {
   'own-fwd': { text: 'owns (forward)', color: EDGE_COLORS.ownFwd },

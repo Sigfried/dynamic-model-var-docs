@@ -96,7 +96,7 @@ describe('relation menu groups', () => {
     const sub = ds.getOwnershipSubgraph([id, ...also]);
     const vm = buildViewModel(
       sub, new Set(), c => ds.getClassSummary(c)?.slots ?? [],
-      r => ds.getRangeColor(r),
+      r => ds.getRangeColor(r), r => ds.getTargetColor(r),
     );
     return vm.nodes.find(n => n.id === id)!;
   };

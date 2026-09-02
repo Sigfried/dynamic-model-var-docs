@@ -76,7 +76,7 @@ export default function SelectionTree({
         <span className="flex items-center gap-1 text-[10px] uppercase tracking-wide shrink-0">
           <span className="text-gray-500" title={col.props.tip}>{col.props.header}</span>
           {/* P1: these columns count things BY RANGE KIND, so they take the
-              range palette rather than colours of their own. */}
+              range palette rather than colors of their own. */}
           <span style={{ color: RANGE_COLORS.entity }} title={col.cls.tip}>{col.cls.header}</span>
           <span style={{ color: RANGE_COLORS.variable }} title={col.vars.tip}>{col.vars.header}</span>
         </span>
@@ -141,9 +141,9 @@ function CountBadge(
   { n, title, className, color }:
   { n: number; title: string; className?: string; color?: string },
 ) {
-  // A zero is muted whatever the column's colour: "nothing of this kind" is
+  // A zero is muted whatever the column's color: "nothing of this kind" is
   // the same statement in every column, so it should not be said in four
-  // different colours.
+  // different colors.
   const zero = n === 0;
   return (
     <span

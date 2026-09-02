@@ -40,6 +40,8 @@ import type {
   ContainmentGraph, OwnershipVerdict, OwnershipRule,
 } from '../models/containmentGraph';
 import { getSlotEdgesForClass, getParentClass } from '../models/Graph';
+import { siblingColor } from '../explore/siblingMerge';
+import type { SiblingColor } from '../explore/siblingMerge';
 import { buildOwnershipDag, buildOwnershipSubgraph } from '../models/ownershipSubgraph';
 import type {
   OwnershipDag, OwnershipSubgraph, OwnershipSubgraphOptions,
@@ -176,7 +178,7 @@ export class DataService {
   private modelData: ModelData;
 
   /**
-   * class id → its P3 sibling colour index. Built once, from the WHOLE schema.
+   * class id → its P3 sibling color index. Built once, from the WHOLE schema.
    *
    * See `siblingColorIndexOf` for why this cannot be computed on the canvas.
    */
@@ -191,10 +193,10 @@ export class DataService {
   /**
    * Index every class by its position among ALL its schema siblings.
    *
-   * The colour a class gets must not depend on what else is selected. The
+   * The color a class gets must not depend on what else is selected. The
    * scheme this replaces indexed by position among the siblings currently on
-   * the canvas, so unselecting one shifted every later sibling's colour — the
-   * box recoloured itself for a reason outside any of the classes in it.
+   * the canvas, so unselecting one shifted every later sibling's color — the
+   * box recolored itself for a reason outside any of the classes in it.
    *
    * Sorted by id, so a class keeps its index as the schema grows around it in
    * ways that do not touch its own family, and as the canvas changes not at
@@ -202,8 +204,8 @@ export class DataService {
    * start at 1. That is what makes "the default" mean "this row is the box's
    * own, not any one child's" rather than "this child happened to sort first".
    *
-   * Colours are per-group by design: two classes at index 1 in DIFFERENT
-   * groups share a colour, and that is the container/contents pairing the
+   * Colors are per-group by design: two classes at index 1 in DIFFERENT
+   * groups share a color, and that is the container/contents pairing the
    * slot-name rule below depends on, not a collision.
    */
   private buildSiblingColorIndex(): Map<string, number> {
@@ -227,7 +229,7 @@ export class DataService {
   }
 
   /**
-   * The P3 colour index for a class: 0 (the default) unless it is a child in a
+   * The P3 color index for a class: 0 (the default) unless it is a child in a
    * mergeable family, in which case its stable position among ALL its schema
    * siblings.
    *
@@ -653,9 +655,25 @@ export class DataService {
     return (t as ElementTypeId) ?? 'type';
   }
 
-  /** The P1 colour for a slot's range kind. */
+  /** The P1 color for a slot's range kind. */
   getRangeColor(range: string): string {
     return elementTypes[this.getRangeKind(range)].color.hex;
+  }
+
+  /**
+   * The P3 color of a class a row points at, or undefined when there is
+   * nothing to point out: a non-class range, or a class that takes the default
+   * (a merge parent, or one in no mergeable family).
+   *
+   * Undefined rather than the default entry on purpose — the caller needs to
+   * tell "this row tracks to a specific colored box" from "this row's target
+   * has no color of its own", and the default is what an uncolored row already
+   * looks like.
+   */
+  getTargetColor(range: string): SiblingColor | undefined {
+    if (this.getRangeKind(range) !== 'class') return undefined;
+    const i = this.siblingColorIndexOf(range);
+    return i ? siblingColor(i) : undefined;
   }
 
   /**

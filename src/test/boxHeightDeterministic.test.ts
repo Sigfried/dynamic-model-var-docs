@@ -27,7 +27,7 @@ describe('deterministic box height', () => {
     buildViewModel(
       ds.getOwnershipSubgraph(sel), new Set(),
       c => ds.getClassSummary(c)?.slots ?? [],
-      r => ds.getRangeColor(r),
+      r => ds.getRangeColor(r), r => ds.getTargetColor(r),
     );
 
   /** Boxes alike in every input to the height formula except their relations. */

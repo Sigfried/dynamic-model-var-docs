@@ -226,7 +226,7 @@ const V = ACTIVE_VOCAB;
  * see APP_CONFIG.elementTypes, whose `hex` values are these.
  *
  * `slot` is not a range kind. It is here because the Kitchen Sink still needs
- * a colour for slots as ELEMENTS; nothing in the graph uses it.
+ * a color for slots as ELEMENTS; nothing in the graph uses it.
  */
 export const RANGE_COLORS = {
   entity: '#377eb8',    // Set1 blue   — a class
@@ -290,7 +290,7 @@ export const APP_CONFIG = {
       icon: V.concept.attribute.abbr,
       // Amber approximates P1's Set1 brown, which Tailwind has no scale for.
       // `slot` is NOT a range kind — it is here because the Kitchen Sink still
-      // shows slots as elements and needs a colour for them.
+      // shows slots as elements and needs a color for them.
       color: {
         name: 'amber',
         hex: RANGE_COLORS.slot,  // P1 Set1 brown
@@ -488,7 +488,7 @@ export function getFloatSettings(groupId: FloatGroupId): FloatSettings {
 /**
  * The three palettes.
  *
- * Every colour the app draws comes from here. A literal buried in a `stroke=`
+ * Every color the app draws comes from here. A literal buried in a `stroke=`
  * is the thing that makes a palette impossible to change, so there are none.
  *
  * The system answers three different questions, and deliberately uses three
@@ -516,7 +516,7 @@ export function getFloatSettings(groupId: FloatGroupId): FloatSettings {
  * rather than for a direction. "Outgoing"/"incoming" would be wrong here:
  * they imply a point of view, and with nothing hovered the canvas has none —
  * an edge is only outgoing RELATIVE to an entity the reader has picked out.
- * Perspective, if it ever gets a colour, is a hover-time concern and a
+ * Perspective, if it ever gets a color, is a hover-time concern and a
  * different palette.
  *
  * `ownFwd` and `ownBkwd` are the same relation seen from two ends, so they sit
@@ -534,7 +534,7 @@ export const EDGE_COLORS = {
   association: '#6baed6',  // Blues 5 — no ownership claim; drawn dashed
 } as const;
 
-/** The relation menu's chip takes the main entity colour: the menu is about
+/** The relation menu's chip takes the main entity color: the menu is about
  *  entity relationships in general, not about any one of the three kinds. */
 export const RELATION_CHIP_COLOR = RANGE_COLORS.entity;
 
@@ -545,54 +545,63 @@ export const RELATION_CHIP_COLOR = RANGE_COLORS.entity;
 /**
  * A P3 entry needs TWO steps, not one.
  *
- * A box header is a filled band with white text on it, so it needs a colour
- * dark enough to carry white. A slot name is small text on a light background,
- * so it needs a colour dark enough to READ — but not so dark that every entry
- * converges on near-black and the whole point of colouring siblings is lost.
- * One value cannot do both jobs.
+ * A header band is a filled swatch, so its color has to work as a BACKGROUND.
+ * A slot name is small text on the box's light background, so its color has
+ * to work as INK. Pastel1 is a background palette — pale by design — and pale
+ * ink on white is unreadable, so one value cannot do both jobs.
+ *
+ * The pastel goes on the band, at full Pastel1 strength, with DARK text on it.
+ * Darkening the band to carry white text instead was tried and reverted: it
+ * turned quiet header strips into saturated bars that shouted louder than the
+ * box's own header, which is the exact thing choosing a pastel palette was
+ * meant to avoid.
  */
 export interface SiblingColor {
-  /** Header band fill. White text sits on this. */
+  /** Header band fill — a pale Pastel1 tint, carrying DARK text. */
   fill: string;
-  /** Slot-name text on the box's light background. */
+  /** Slot-name ink on the box's light background: the same hue, saturated
+   *  enough to clear 4.5:1 on white. */
   text: string;
 }
+
+/** Text color for a header band. Dark, because every `fill` is a pale tint —
+ *  see SiblingColor. */
+export const SIBLING_HEADER_TEXT = '#1f2937';  // gray-800
 
 /**
  * Index 0 is the DEFAULT: parent-declared slots, and every box that is not an
  * inheritance-merged box.
  *
- * It is a significantly darkened form of P1's entity colour, NOT a neutral
- * gray — a box header is an entity, so its header and its own slot names carry
- * the entity identity, and sibling colours read as departures from it. No
- * other neutral is needed anywhere in the system.
+ * It is a tint of P1's entity color, NOT a neutral gray — a box header is an
+ * entity, so its header and its own slot names carry the entity identity, and
+ * sibling colors read as departures from it. No other neutral is needed
+ * anywhere in the system.
  *
- * Entries 1+ are Pastel1, darkened per channel. Pastel1's low saturation is
- * what keeps sibling colouring quiet enough to sit under P1 without competing
- * with it; the raw pastels are far too pale for either job here, so each is
- * darkened — enough for white text (fill) or for legibility on white (text) —
- * while keeping the hue that makes them mutually distinct.
+ * Entries 1+ are Pastel1 at full strength for the band, each paired with a
+ * saturated version of the SAME hue for ink. The two steps are the same color
+ * seen as background and as foreground, which is what makes a slot name and
+ * the header above it read as one thing.
  *
  * Five real siblings covers the schema's largest group today (Observation, 5
  * children); six are listed so a sixth child does not immediately wrap onto
  * the default and read as a parent row.
  */
 export const SIBLING_COLORS: readonly SiblingColor[] = [
-  // 0 — default: dark entity blue.
-  { fill: '#0b3a5d', text: '#1a5a8a' },
-  // 1+ — Pastel1 hues, darkened for each channel.
-  { fill: '#8c2f22', text: '#b3452f' },  // Pastel1 red
-  { fill: '#1f4f7a', text: '#2f74ad' },  // Pastel1 blue
-  { fill: '#2f6b30', text: '#458f42' },  // Pastel1 green
-  { fill: '#5c3b73', text: '#7d5199' },  // Pastel1 purple
-  { fill: '#8a5a12', text: '#b3781c' },  // Pastel1 orange
+  // 0 — default: a pale entity blue, with entity blue as its ink.
+  { fill: '#cfe0ee', text: '#1a5a8a' },
+  // 1+ — Pastel1 bands, each with a saturated same-hue ink.
+  { fill: '#fbb4ae', text: '#c0392b' },  // Pastel1 red
+  { fill: '#b3cde3', text: '#2f74ad' },  // Pastel1 blue
+  { fill: '#ccebc5', text: '#3f7f3f' },  // Pastel1 green
+  { fill: '#decbe4', text: '#8e5aa8' },  // Pastel1 purple
+  { fill: '#fed9a6', text: '#9a6410' },  // Pastel1 orange
 ] as const;
 
 // `GRAPH_COLORS` is gone. It held an amber `ownership` and a slate
-// `reference`, and that pair was the whole old system: one colour meaning
+// `reference`, and that pair was the whole old system: one color meaning
 // "relationship" and one meaning "not quite a relationship". P2 replaces it
 // with three named kinds, and P1 took over the row dots the amber also
-// coloured. Nothing should reintroduce a single "the graph colour".
+// colored. Nothing should reintroduce a single "the graph color".
 
 // ============================================================================
 // Legacy Exports (for backward compatibility during migration)

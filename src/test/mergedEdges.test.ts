@@ -28,7 +28,7 @@ describe('merged-box edges', () => {
     const plain = new Map(sub.nodes.map(n =>
       [n.id, ds.getClassSummary(n.id)?.slots ?? []] as const));
     const base = buildViewModel(
-      sub, new Set(), id => plain.get(id) ?? [], r => ds.getRangeColor(r),
+      sub, new Set(), id => plain.get(id) ?? [], r => ds.getRangeColor(r), r => ds.getTargetColor(r),
     );
     const sameDef = (a: AttributeSummary, b: AttributeSummary) =>
       a.range === b.range && a.multivalued === b.multivalued;

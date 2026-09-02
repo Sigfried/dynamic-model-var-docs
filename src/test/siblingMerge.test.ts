@@ -5,20 +5,23 @@ import {
   groupSiblings, mergedIdFor, siblingColor, withChildHeaders,
 } from '../explore/siblingMerge';
 import type { MergedMember } from '../explore/siblingMerge';
-import { SIBLING_COLORS } from '../config/appConfig';
+import { SIBLING_COLORS, SIBLING_HEADER_TEXT } from '../config/appConfig';
 
-/** Rough relative luminance, enough to assert "darker than". */
+/** WCAG relative luminance. */
 function luminance(hex: string): number {
   const n = parseInt(hex.slice(1), 16);
-  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+    .map(v => v / 255)
+    .map(v => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+    .reduce((acc, v, i) => acc + [0.2126, 0.7152, 0.0722][i] * v, 0);
 }
 
-/**
- * Sibling merging renders inheritance as adjacency rather than as edges
- * (docs/EXPLORE_VIZ.md). Asserted against the live schema, like the other
- * graph tests, so a legitimate schema edit does not need a fixture rewrite.
- */
+/** WCAG contrast ratio between two hex colors. */
+function contrast(a: string, b: string): number {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
 describe('siblingMerge', () => {
   let ds: DataService;
   let classIds: string[];
@@ -58,11 +61,11 @@ describe('siblingMerge', () => {
     expect(groupSiblings(['Participant'], parentOf, mergeable).size).toBe(0);
   });
 
-  test('member order (and so colour) is stable as the canvas changes', () => {
+  test('member order (and so color) is stable as the canvas changes', () => {
     const groups = groupSiblings(classIds, parentOf, mergeable);
     const [parent, members] = [...groups].find(([, m]) => m.length >= 2)!;
     // The same two members, reached via a differently-ordered selection, keep
-    // their colours — otherwise a box recolours itself when an unrelated class
+    // their colors — otherwise a box recolors itself when an unrelated class
     // is added elsewhere on the canvas.
     const pair = [members[0], members[1]];
     const a = groupSiblings(pair, parentOf, mergeable).get(parent)!;
@@ -77,8 +80,8 @@ describe('siblingMerge', () => {
     // Children start at index 1: index 0 is the parent's default, and a child
     // wearing it would read as a shared row rather than as its own.
     const colors = Array.from({ length: biggest }, (_, i) => siblingColor(i + 1).fill);
-    // A recycled colour inside ONE box is the failure that matters: two
-    // children would share a header colour and their edges would be
+    // A recycled color inside ONE box is the failure that matters: two
+    // children would share a header color and their edges would be
     // indistinguishable.
     expect(new Set(colors).size).toBe(biggest);
   });
@@ -92,21 +95,37 @@ describe('siblingMerge', () => {
     }
   });
 
-  test('each entry has two steps: a fill dark enough for white text, a lighter text step', () => {
-    // One value cannot do both jobs — a colour dark enough to carry white text
-    // in a header band is too dark to tell apart from its neighbours as small
-    // text on white, which is what the sibling colours exist to do.
+  test('each entry works as BOTH a band and ink: pale fill, legible text', () => {
+    // The two steps are the same hue used two ways, and each has to clear a
+    // real contrast threshold in its own role. Asserting a luminance ORDER
+    // instead was the earlier version of this test, and it encoded the
+    // darkened-band palette that got reverted: it would pass a palette whose
+    // bands are too dark to be pastel at all.
     for (const c of SIBLING_COLORS) {
       expect(c.fill).not.toBe(c.text);
-      expect(luminance(c.fill)).toBeLessThan(luminance(c.text));
+      // A band carries dark text, so it must stay pale.
+      expect(contrast(c.fill, SIBLING_HEADER_TEXT)).toBeGreaterThanOrEqual(4.5);
+      // Ink sits on the box's white background.
+      expect(contrast(c.text, '#ffffff')).toBeGreaterThanOrEqual(4.5);
     }
   });
 
-  test('sibling colours are stable when a MIDDLE sibling is unselected', () => {
+  test('the bands stay PASTEL — none is dark enough to carry white text', () => {
+    // The guard on the reverted mistake. Darkening the bands so white text
+    // would work turned quiet header strips into saturated bars that shouted
+    // louder than the box's own header, which is the thing a pastel palette
+    // exists to avoid. If a band ever clears 4.5:1 against white, it is no
+    // longer a pastel.
+    for (const c of SIBLING_COLORS) {
+      expect(contrast(c.fill, '#ffffff')).toBeLessThan(4.5);
+    }
+  });
+
+  test('sibling colors are stable when a MIDDLE sibling is unselected', () => {
     /*
-     * The bug this replaces. Colours used to be assigned by position among the
-     * SELECTED siblings, so dropping one shifted every later sibling's colour
-     * and the box recoloured itself for a reason outside any class in it.
+     * The bug this replaces. Colors used to be assigned by position among the
+     * SELECTED siblings, so dropping one shifted every later sibling's color
+     * and the box recolored itself for a reason outside any class in it.
      *
      * The old test only checked a FIXED member set, which is exactly why the
      * bug shipped: the stability it asserted was stability under reordering,

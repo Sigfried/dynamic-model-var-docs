@@ -25,6 +25,7 @@ the archive along with the S3a/S3b briefs and the 2026-08-26 planning round.
   | 5 | **Drag the tour popover.** [sg] apparently popover gets repositioned every 250ms, so dragging won't work. think about this more later.                                                                                                                                                                                                          | ~0.5 day | ⬜                      | [§](#tour-and-help)                                                                           |
   | 6 | **Migrate positioning to CSS anchor positioning** — deletes the 250ms poll, the flip/clamp, and the `EST_H` guess. **UNBLOCKED: S3b's resolvers landed.** Note `slot-row` selects on a PAIR of attributes, which no single `anchor-name` rule expresses                                                                                         | ~0.5 day | ⬜ ready                | [HelpLayer.tsx header](../src/help/HelpLayer.tsx) · [HELP_PACKAGE_PLAN](HELP_PACKAGE_PLAN.md) |
   | 7 | **`goTo` fails silently when the tour has no positions** — `startTour()` before the content is ready does nothing at all, with no error. Not currently reachable; a landmine for the next programmatic caller                                                                                                                                     | ~15 min  | ⬜ ready                | [§](#gotos-silent-no-op)                                                                       |
+  | 8 | **Palettes that only half-exist** — `elementTypes` carries a `hex` from the palette AND eleven hand-picked Tailwind literals per type. Every color is defined twice, in two incompatible forms                                                                                                                                                | ~unknown | ⬜                      | [§](#palettes-that-only-half-exist)                                                            |
 
 ---
 
@@ -561,6 +562,46 @@ before — read it before designing anything.
   **Carry-forward #3: they want this DESCRIBED to them before deciding.** Deferred;
   they were *"too tired to work it all out."* Note the legend is separately
   postponed (item H).
+
+---
+
+### Palettes that only half-exist
+
+Raised by Siggie 2026-09-01, looking at `APP_CONFIG.elementTypes.type` right
+after the three-palette system landed:
+
+> *what's the point of even using palettes if the color is hard-coded all
+> around it anyway.*
+
+The entry reads `hex: RANGE_COLORS.dataType` — the palette — and then eleven
+hand-picked Tailwind literals beside it (`bg-green-700`, `text-green-700
+dark:text-green-400`, `border-green-800 dark:border-green-600`, …). So each
+element type's color exists **twice**, in two forms that cannot be derived from
+one another, and only one of them is the palette. Changing `RANGE_COLORS` moves
+the SVG hex and nothing else; the panels, badges, links and toggles keep
+whatever Tailwind family someone typed. That is the opposite of a single source
+of truth, and it is why the P1 swap needed a by-hand rewrite of two whole color
+blocks (`type` cyan→green, `slot` green→amber) instead of an edit to one array.
+
+The trap: `ElementTypeMetadata.color` is shaped for Tailwind class strings, and
+Tailwind v4 only emits classes it finds **literally** in the source, so the
+strings cannot be built at runtime from a hex. Any fix has to pick a lane:
+
+- **generate the CSS from the palette** — emit CSS custom properties (one per
+  role per type) from `RANGE_COLORS` and have components read `var(--…)`
+  instead of Tailwind color utilities. Kills the duplication outright; costs a
+  pass over every consumer of `color.link` / `.headerBg` / `.badgeBg` / etc.
+- **keep Tailwind, derive the hex from it** — invert the dependency so the
+  Tailwind family is the source and `hex` is looked up from it. Cheaper, but
+  leaves the palette named after ColorBrewer while actually being Tailwind's
+  approximation of it, which is its own lie.
+- **narrow what the config carries** — most of the eleven roles may not be
+  needed. Worth counting real usages before designing anything.
+
+Not urgent, and deliberately not fixed while landing the palettes — but the
+duplication is now load-bearing in a way it was not before, since the palettes
+document an intent (`Set1`, `Blues`, `Pastel1`) that the Tailwind half quietly
+does not honor.
 
 ---
 

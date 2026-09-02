@@ -76,7 +76,7 @@ describe('getHeaderColor', () => {
 
   it('returns amber color for slot type', () => {
     // Amber since the P1 palette landed: `slot` is not a range kind, so it
-    // took Set1's brown (which Tailwind has no scale for) rather than a colour
+    // took Set1's brown (which Tailwind has no scale for) rather than a color
     // one of the four real range kinds needed. Green went to `type`.
     const color = getHeaderColor('slot');
     expect(color).toContain('bg-amber-800');

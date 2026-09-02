@@ -7,26 +7,26 @@ import { siblingColor } from '../explore/siblingMerge';
 import type { SiblingColor } from '../explore/siblingMerge';
 
 /**
- * P3 sibling colour ASSIGNMENT — which class and which row wear which colour.
+ * P3 sibling color ASSIGNMENT — which class and which row wear which color.
  *
  * Distinct from siblingMerge.test.ts, which covers the palette itself and the
  * whole-schema index. What is tested here is the three-step rule that turns
- * that index into the colours actually drawn:
+ * that index into the colors actually drawn:
  *
- *   1. every class is coloured stably, from its position among ALL its schema
+ *   1. every class is colored stably, from its position among ALL its schema
  *      siblings (DataService.siblingColorIndexOf);
- *   2. a slot row takes its TARGET's colour, not its declarer's;
- *   3. a child whose own row got a colour takes that colour too — the
+ *   2. a slot row takes its TARGET's color, not its declarer's;
+ *   3. a child whose own row got a color takes that color too — the
  *      container borrows its contents'.
  *
  * Step 3 is the one that needs guarding. Today the pairs it exists for line up
  * by accident: `SdohObservationSet` and `SdohObservation` are both the third
  * child of their families because the names happen to sort the same way. That
  * coincidence is one upstream class away from breaking, and when it breaks the
- * failure is silent — a container drawn in one colour holding contents drawn
+ * failure is silent — a container drawn in one color holding contents drawn
  * in another, with nothing to say they belong together.
  */
-describe('sibling colour assignment', () => {
+describe('sibling color assignment', () => {
   let ds: DataService;
 
   beforeAll(async () => { ds = new DataService(await loadModelData()); });
@@ -35,15 +35,23 @@ describe('sibling colour assignment', () => {
     a.range === b.range && a.multivalued === b.multivalued;
 
   /**
-   * The view's own pipeline, with the colour index injectable so a schema edit
+   * The view's own pipeline, with the color index injectable so a schema edit
    * can be simulated without editing the schema.
    */
   const merged = (sel: string[], colorIndexOf = (id: string) => ds.siblingColorIndexOf(id)) => {
     const sub = ds.getOwnershipSubgraph(sel);
     const plain = new Map(sub.nodes.map(n =>
       [n.id, ds.getClassSummary(n.id)?.slots ?? []] as const));
+    // targetColorOf must go through the SAME injected index, or a simulated
+    // schema edit would move the members while the rows kept the real colors.
+    const targetColorOf = (range: string) => {
+      if (ds.getRangeKind(range) !== 'class') return undefined;
+      const i = colorIndexOf(range);
+      return i ? siblingColor(i) : undefined;
+    };
     const base = buildViewModel(
-      sub, new Set(), id => plain.get(id) ?? [], r => ds.getRangeColor(r),
+      sub, new Set(), id => plain.get(id) ?? [],
+      r => ds.getRangeColor(r), targetColorOf,
     );
     return mergeSiblings(
       base,
@@ -70,20 +78,20 @@ describe('sibling colour assignment', () => {
     );
   };
 
-  /** The colour a class wears as a member of whatever merged box holds it. */
+  /** The color a class wears as a member of whatever merged box holds it. */
   const memberColor = (
     vm: ReturnType<typeof merged>, id: string,
   ): SiblingColor | undefined =>
     vm.nodes.flatMap(n => n.members).find(m => m.id === id)?.color;
 
-  /** The colour of one row, addressed the way edges address it. */
+  /** The color of one row, addressed the way edges address it. */
   const rowColor = (
     vm: ReturnType<typeof merged>, declaringClass: string, slot: string,
   ): SiblingColor | undefined => {
     for (const n of vm.nodes) {
       const r = n.rows.find(x =>
         x.slot === slot && (x.declaringClass ?? n.id) === declaringClass);
-      if (r) return r.owners?.[0]?.color;
+      if (r) return r.targetColor;
     }
     return undefined;
   };
@@ -99,11 +107,11 @@ describe('sibling colour assignment', () => {
     ...PAIRS.flat(),
   ];
 
-  test('a slot row takes its TARGET\'s colour, not its declarer\'s', () => {
+  test('a slot row takes its TARGET\'s color, not its declarer\'s', () => {
     const vm = merged(ALL);
     for (const [set, obs] of PAIRS) {
       // `<X>ObservationSet.observations` points at `<X>Observation`, so the row
-      // is drawn in the colour that class wears in its own box. That is what
+      // is drawn in the color that class wears in its own box. That is what
       // lets the eye follow the row to the box it means.
       expect(rowColor(vm, set, 'observations')).toEqual(memberColor(vm, obs));
     }
@@ -112,11 +120,11 @@ describe('sibling colour assignment', () => {
   test('the parent\'s own row is the default — it belongs to no one child', () => {
     const vm = merged(ALL);
     // `ObservationSet.observations → Observation`, and Observation is a merge
-    // PARENT, so it takes index 0. A shared row carries no owner colour at all.
+    // PARENT, so it takes index 0. A shared row carries no owner color at all.
     expect(rowColor(vm, 'ObservationSet', 'observations')).toBeUndefined();
   });
 
-  test('a container borrows its contents\' colour', () => {
+  test('a container borrows its contents\' color', () => {
     const vm = merged(ALL);
     for (const [set, obs] of PAIRS) {
       expect(memberColor(vm, set)).toEqual(memberColor(vm, obs));
@@ -133,7 +141,7 @@ describe('sibling colour assignment', () => {
      * Simulate `Foo`, added under Observation only (not ObservationSet), where
      * `DimensionalObs < Foo < MeasurementObs`: every Observation child from
      * Measurement onward shifts by one and the position-matching breaks. The
-     * colours must still pair, because step 3 derives the container's colour
+     * colors must still pair, because step 3 derives the container's color
      * from what it CONTAINS rather than from where its name sorts.
      */
     const shifted = (id: string) => {
@@ -164,12 +172,12 @@ describe('sibling colour assignment', () => {
     }
   });
 
-  test('a class in no merged box still colours its rows by target', () => {
+  test('a class in no merged box still colors its rows by target', () => {
     /*
      * Specimen is a direct child of Entity, so it is in no merged box and has
-     * no sibling colour of its own. Its three measure slots still point at
-     * classes that DO have one, and the rows take those colours — which is the
-     * whole reason to colour by target rather than by declarer.
+     * no sibling color of its own. Its three measure slots still point at
+     * classes that DO have one, and the rows take those colors — which is the
+     * whole reason to color by target rather than by declarer.
      */
     const vm = merged([...ALL, 'Specimen', 'SpecimenQuantityObservation',
       'SpecimenQualityObservation']);
@@ -177,8 +185,8 @@ describe('sibling colour assignment', () => {
     expect(specimen).toBeDefined();
     const row = (slot: string) =>
       specimen!.rows.find(r => r.slot === slot);
-    // An unmerged box has no `owners` on its rows, so the colour it draws is
-    // the default. Recorded rather than asserted-away: if row colouring is ever
+    // An unmerged box has no `owners` on its rows, so the color it draws is
+    // the default. Recorded rather than asserted-away: if row coloring is ever
     // extended to unmerged boxes, this is the test that should be revisited.
     expect(row('dimensional_measures')).toBeDefined();
     expect(row('dimensional_measures')!.owners).toBeUndefined();
