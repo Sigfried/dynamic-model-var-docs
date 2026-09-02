@@ -55,7 +55,7 @@ sync-audit-local:  ## Audit the working tree (use after checking the branch out)
 test-sync:  ## Run only the schema-sensitive tests
 	npx vitest run src/test/entityCategories.test.ts src/test/containmentGraph.test.ts \
 	  src/test/data-integrity.test.ts src/test/ownershipExpansion.test.ts \
-	  src/test/ownershipSubgraph.test.ts
+	  src/test/ownershipSubgraph.test.ts src/test/schemaFields.test.ts
 
 .PHONY: sync-review
 sync-review:  ## FULL REVIEW: status + audit + tests + build (start here)
