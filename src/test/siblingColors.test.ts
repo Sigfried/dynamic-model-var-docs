@@ -172,6 +172,29 @@ describe('sibling color assignment', () => {
     }
   });
 
+  test('an edge is drawn in the same color as the row it leaves', () => {
+    /*
+     * The row and its line must agree, or the color says two different things
+     * about one relationship. This regressed once: edge colors were written
+     * ONLY by mergeSiblings, whose map is per-merged-box, so every edge
+     * leaving an unmerged box fell through to the P2 kind color — Specimen's
+     * three measure rows drew red/purple/orange with three blue lines.
+     */
+    const vm = merged([...ALL, 'Specimen', 'SpecimenQuantityObservation',
+      'SpecimenQualityObservation', 'DimensionalObservationSet']);
+    const specimen = vm.nodes.find(n => n.id === 'Specimen')!;
+    let checked = 0;
+    for (const e of vm.edges) {
+      if (e.source !== 'Specimen' && e.target !== 'Specimen') continue;
+      const row = specimen.rows.find(r => r.slot === e.slotName);
+      if (!row?.targetColor) continue;
+      expect(vm.edgeColors.get(e.id)).toEqual(row.targetColor);
+      checked++;
+    }
+    // Guard the guard: Specimen must actually HAVE colored measure edges here.
+    expect(checked).toBeGreaterThanOrEqual(3);
+  });
+
   test('a class in no merged box still colors its rows by target', () => {
     /*
      * Specimen is a direct child of Entity, so it is in no merged box and has

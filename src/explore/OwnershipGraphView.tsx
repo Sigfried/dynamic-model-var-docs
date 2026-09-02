@@ -400,7 +400,27 @@ export function buildViewModel(
     };
   });
 
-  return { nodes, edges, edgeColors: new Map() };
+  /*
+   * An edge takes the color of the class it POINTS AT — the same rule, and the
+   * same color, as the row it leaves (RowVM.targetColor). That is what makes
+   * a row, its line and the box at the far end read as one thing.
+   *
+   * Done here rather than only in mergeSiblings, which used to be the only
+   * writer: its map is per-merged-box, so every edge leaving an UNMERGED box
+   * fell through to the P2 kind color. Specimen's three measure rows were
+   * drawn red/purple/orange while the lines leaving them were all blue.
+   *
+   * The entity end is the one that is not the host: the host is where the
+   * slot is stored, so the other end is what the slot names.
+   */
+  const edgeColors = new Map<string, SiblingColor>();
+  for (const e of edges) {
+    const entity = hostOf(e) === e.source ? e.target : e.source;
+    const c = targetColorOf(entity);
+    if (c) edgeColors.set(e.id, c);
+  }
+
+  return { nodes, edges, edgeColors };
 }
 
 /**
@@ -765,10 +785,16 @@ export function mergeSiblings(
     // Both ends in the same box: the relationship is inside the box now.
     .filter(e => e.source !== e.target);
 
-  // An edge takes its colour from the child whose block holds its anchor row.
-  // Shared (parent) rows have no owner and keep the channel colour, which is
-  // right: the relationship belongs to every child equally.
-  const edgeColors = new Map<string, SiblingColor>();
+  /*
+   * Merging can move an edge's anchor, so re-resolve the ones it touched. The
+   * base map (buildViewModel) already colored every edge by the class it
+   * points at; this only corrects edges whose anchor row is now inside a
+   * merged box, where `slotColor` knows the row's own color.
+   *
+   * Edges the merge did not touch keep their base color — that is what stops
+   * unmerged boxes falling back to the P2 kind color.
+   */
+  const edgeColors = new Map<string, SiblingColor>(vm.edgeColors);
   for (const e of edges) {
     const c = slotColor.get(`${hostOf(e)}|${anchorOf(e)}|${e.slotName}`);
     if (c) edgeColors.set(e.id, c);
