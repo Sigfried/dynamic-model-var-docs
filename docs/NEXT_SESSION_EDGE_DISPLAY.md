@@ -276,19 +276,13 @@ Park this survey in `OWNERSHIP_CLASSIFICATION.md`.
    shared one port. `TASKS.md`'s "Edge rendering — the fan from
    `ObservationSet.observations`" section **needs updating to record this as
    delivered.**
-3. **Target rows** — open, deferred. A `slot_usage`-narrowed edge should point at
-   the **child header** matching its range, not the box header. Worth doing,
-   later; crossings will increase but the colors keep them legible. Cheap under
-   the current schema: no member or parent of any multi-child family has more
-   than one inbound edge, so a row-targeted edge can opt out of `mergeTargets`
-   and draw its own arrowhead. The fan passes must skip row-targeted edges. Full
-   sketch and the guard test it needs are in the `mergeTargets` doc comment in
-   `OwnershipGraphView.tsx` (`8f367da`); if that guard fails it means the schema
-   grew a second slot narrowing to the same child and `mergeTargets` must become
-   row-aware. **`TASKS.md`'s "▶️ OPEN — a narrowed edge should point at the
-   CHILD's header" section needs updating**: only narrowed slots have a
-   child-specific row at all, so its "every edge, or only narrowed?" question does
-   not arise, and its cost framing is stale.
+3. **Target rows** — **DONE 2026-09-02.** A `slot_usage`-narrowed edge points at
+   the child header matching its range, not the box header. Row-targeted edges
+   opt out of `mergeTargets` and draw their own arrowhead; both fan passes skip
+   them. The no-merge shortcut rests on a schema property (no family member has
+   more than one inbound edge) that `mergedEdges.test.ts` now guards — a
+   failure there means the schema changed, not the code. Full record in
+   `TASKS.md`, "✅ DONE — a narrowed edge points at the CHILD's header".
 4. **colors** — being replaced wholesale (§1).
 5. **Adjacent** — curved edges removed 2026-08-19; one-arrowhead-per-convergence
    and thinner strokes shipped. Markers use `markerUnits="userSpaceOnUse"` so

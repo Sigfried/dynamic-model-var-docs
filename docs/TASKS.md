@@ -374,62 +374,65 @@ agree about distinguishing selection from expansion. But let's see where we end
 up with chip strip replacement before implementing."* **Deferred deliberately:
 the redesign may dissolve the question.**
 
-### ▶️ OPEN — a narrowed edge should point at the CHILD's header, not the box
+### ✅ DONE — a narrowed edge points at the CHILD's header, not the box
 
-> Restored 2026-08-26 — deleted in `0c9db03` while NEXT UP still pointed
-> at it, same as the multi-category write-up below. Original:
-> `git show 4f33c23:docs/TASKS.md` lines 69–99.
-
-Siggie, 2026-08-25, deferred deliberately: *"IF the container is also a merged
+**Shipped 2026-09-02.** Siggie, 2026-08-25: *"IF the container is also a merged
 box (e.g., ObservationSet, MeasurementObservationSet), then the edge points at
 the appropriate header."*
 
 **The case.** `MeasurementObservationSet.observations` narrows its range from
-`Observation` to `MeasurementObservation` (verified: all three ObservationSet
-children narrow `observations` to their matching Observation subtype). Both
-ends are merged boxes. The edge leaves the `MeasurementObservationSet` block
-of one box and should ARRIVE at the `MeasurementObservation` header inside the
-other — today it lands on the target box's header band like every other edge.
+`Observation` to `MeasurementObservation` (all three ObservationSet children
+narrow `observations` to their matching Observation subtype). Both ends are
+merged boxes, and the edge now leaves the `MeasurementObservationSet` block of
+one and arrives at the `MeasurementObservation` header inside the other.
+Verified: the four `observations` arrivals resolve to four distinct ports —
+`hdr:in:0` for the un-narrowed parent edge, and `mhdr:in:<member>` for each of
+the three narrowed ones.
 
-**Why the entity end is different.** It has never carried row meaning. From the
-file header: *"the ENTITY END attaches to a header-level port on the target
-class, which has no corresponding row, so edges point at the entity name."*
-That assumption is load-bearing for the fan (`freeEndTotal`/`freeEndSlot` spread
-ports across the header band). Pointing at a child header means the entity end
-sometimes anchors on a ROW.
+**What changed** (`OwnershipGraphView.tsx`):
 
-> **~~Design question to settle first: every edge, or only `slot_usage`-narrowed?~~
-> VOID (Siggie, 2026-08-31) — it was a false choice.** Without `slot_usage` a
-> child's slot is identical to the inherited one, so it merges onto the PARENT's
-> row and there is no child-specific row to anchor on. **Only narrowed slots can
-> pose the question at all.** Do not reopen.
+- `childHeaderTarget(edge, freeNode)` — the rule. Reads `entityMember`, which
+  `mergeSiblings` records BEFORE rewriting an endpoint to a merged box id;
+  once rewritten, the class the slot actually named is unrecoverable.
+- `headerRowY(node, member)` — resolves a header row by member id. Separate
+  from `rowY`, which skips headers by design (`!r.header`): a header carries no
+  slot name, so nothing resolving by slot can want one.
+- `rowTargetedEdges` — ONE memoized id set, three consumers (`mergeTargets`,
+  the arrowhead pass, the render). Convergence is keyed by ENTITY, and a
+  row-targeted edge shares that key with its box-header siblings, so the skip
+  has to be asked per EDGE, not per key.
+- Both fan passes (`freeEndTotal`, `freeEndSlot`) skip these edges.
 
-> **Cost was OVERSTATED.** This section used to say convergence merging and the
-> single shared arrowhead both had to learn about row anchors. Measured
-> 2026-08-31: **no member or parent of any multi-child family has more than one
-> inbound edge.** The ObservationSet case spreads over FOUR arrival rows — the
-> three children plus `Observation` itself, which carries
-> `ObservationSet.observations` on the parent row — with exactly one edge each.
-> So convergence merging is a **no-op** for those rows: a row-targeted edge can
-> simply opt out of `mergeTargets` and draw its own arrowhead. `mergeTargets`
-> needs no change and its `HEADER_H / 2` geometry is untouched. The fan passes
-> DO still need to skip row-targeted edges, or the fan reserves lanes for edges
-> no longer using it and mis-centres the rest.
+**Why the entity end was different.** It had never carried row meaning — the
+fan spreads ports across the header band on that assumption. Pointing at a
+child header means the entity end sometimes anchors on a ROW.
+
+> **~~Design question: every edge, or only `slot_usage`-narrowed?~~ VOID**
+> (Siggie, 2026-08-31) — a false choice. Without `slot_usage` a child's slot is
+> identical to the inherited one, so it merges onto the PARENT's row and there
+> is no child-specific row to anchor on. Only narrowed slots can pose the
+> question. Do not reopen.
+
+> **The no-merge shortcut is SCHEMA-DEPENDENT.** Measured 2026-08-31 and
+> re-measured 2026-09-02: no member or parent of any multi-child family has
+> more than one inbound edge. So a row-targeted edge opts out of `mergeTargets`
+> and draws its own arrowhead, and `mergeTargets` needed no change — its
+> `HEADER_H / 2` geometry is untouched and now applies only to box-header
+> arrivals.
 >
-> **That property is schema-dependent.** The implementation sketch and the guard
-> test it needs live in the `mergeTargets` doc comment in
-> `OwnershipGraphView.tsx` (`8f367da`), next to the code that relies on it. A
-> guard failure means the schema grew a second narrowing to the same child and
-> the shortcut is void — not that the assertion should be deleted.
+> `mergedEdges.test.ts` carries the guard: **GUARD: no two edges arrive at the
+> same child-header row.** A failure there means the schema grew a second slot
+> narrowing to the same child, the shortcut is void, and `mergeTargets` must
+> become row-aware (key on arrival row, y from the row instead of `HEADER_H/2`).
+> It does not mean the assertion should be deleted.
 
-**Siggie, 2026-08-31: worth doing, but LATER.** Crossings will increase, but
-*"the colors would make them legible"* — the sibling colours already match at
-both ends.
+Three tests, each verified to fail when the feature is disabled: the child
+arrival itself, the guard above, and *a child-header edge takes no fan lane*
+(which catches the two fan passes disagreeing — counting an edge without
+assigning it a slot reserves a lane nothing uses and mis-centres the rest).
 
-Note the row machinery is already in place: rows carry `declaringClass`, header
-rows are real rows with a y-position, and `rowY(node, slot, declaringClass)`
-resolves an anchor. What is missing is a port on the entity side that targets
-a header row, and the fan rules knowing about it.
+Crossings do increase, as expected; the sibling colors match at both ends,
+which is what keeps them traceable.
 
 ---
 

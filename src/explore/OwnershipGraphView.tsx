@@ -7,8 +7,12 @@
  * another class AS A WHOLE, so its two ends are not alike:
  *  - the ATTRIBUTE END attaches to a fixed-position ELK port at its slot's own
  *    row, and is the only end that names a slot;
- *  - the ENTITY END attaches to a header-level port on the target class, which
- *    has no corresponding row, so edges "point at the entity name".
+ *  - the ENTITY END attaches to a header-level port on the target class, so
+ *    edges "point at the entity name". ONE exception since 2026-09-02: a
+ *    slot_usage-narrowed edge arriving at a merged box lands on the CHILD
+ *    HEADER row matching its range, because pointing at the box header would
+ *    say only "an Observation" — the one thing the narrowing refines. See
+ *    childHeaderTarget.
  * Routing therefore sees the real attach points.
  *
  * Channel rules:
@@ -269,7 +273,16 @@ function hostOf(e: OwnershipSubgraphEdge): string {
  * An edge inside a merged box, tagged with the class whose row it anchors on.
  * Only edges rewritten by `mergeSiblings` carry the tag.
  */
-type AnchoredEdge = OwnershipSubgraphEdge & { anchorClass?: string };
+type AnchoredEdge = OwnershipSubgraphEdge & {
+  anchorClass?: string;
+  /**
+   * The class at the ENTITY end before merging rewrote the endpoint to a box
+   * id. Set only when that class was absorbed into a merged box, which is
+   * exactly when an edge can be pointed at a child header instead of the box
+   * header (see childHeaderTarget).
+   */
+  entityMember?: string;
+};
 
 /**
  * The class whose ROW an edge attaches to. For an ordinary node this is just
@@ -766,6 +779,14 @@ export function mergeSiblings(
       ...e,
       source: absorbed.get(e.source) ?? e.source,
       target: absorbed.get(e.target) ?? e.target,
+      // The class at the ENTITY end, captured BEFORE the rewrite above loses
+      // it. Only set when that class was absorbed — i.e. when the box it
+      // arrives at holds it as a member, which is what lets the edge land on
+      // that member's header row instead of the box header.
+      entityMember: (() => {
+        const entity = hostOf(e) === e.source ? e.target : e.source;
+        return absorbed.has(entity) ? entity : undefined;
+      })(),
       // Which row inside the box this edge anchors on. A merged box can hold
       // several rows with one slot name (the parent's, plus each child's
       // override), so the slot name alone is not a unique anchor.
@@ -838,6 +859,48 @@ function rowY(node: NodeVM, slot: string, declaringClass?: string): number {
     && (!declaringClass || !r.declaringClass || r.declaringClass === declaringClass));
   if (idx < 0) throw new Error(`No displayed row for ${slot} on ${node.id}`);
   return rowsTop(node) + idx * ROW_H + ROW_H / 2;
+}
+
+/**
+ * y-center of the CHILD HEADER row naming `member` inside a merged box, or
+ * undefined when the box has no such header.
+ *
+ * Separate from `rowY`, which skips headers by design (`!r.header`): a header
+ * carries no slot name, so nothing that resolves by slot can ever want one.
+ * This resolves by member id instead — the only thing a header has.
+ */
+function headerRowY(node: NodeVM, member: string): number | undefined {
+  const idx = node.rows.findIndex(r => r.header?.id === member);
+  if (idx < 0) return undefined;
+  return rowsTop(node) + idx * ROW_H + ROW_H / 2;
+}
+
+/**
+ * The merged-box member an edge should land ON, rather than on the box header.
+ *
+ * An edge earns this when the class it POINTS AT was absorbed into the box it
+ * now arrives at: `MeasurementObservationSet.observations` is narrowed by
+ * `slot_usage` to `MeasurementObservation`, so landing it on the box's own
+ * header says only "an Observation", which is the one thing the narrowing
+ * exists to refine.
+ *
+ * Only a narrowed slot can pose the question. Without `slot_usage` a child's
+ * slot is identical to the inherited one, so it merges onto the PARENT's row
+ * and there is no child-specific edge to redirect.
+ *
+ * The member is read off `entityMember`, which mergeSiblings records before
+ * rewriting the endpoint: once the endpoint is the merged box id, the class
+ * the slot actually named is no longer recoverable from the edge.
+ *
+ * Undefined for a flipped edge — those end at their own attribute row, which
+ * already carries the row meaning this is trying to add.
+ */
+function childHeaderTarget(
+  e: AnchoredEdge, free: NodeVM,
+): string | undefined {
+  if (e.storageDirection === 'flipped' || !free.members.length) return undefined;
+  const m = e.entityMember;
+  return m && free.members.some(x => x.id === m) ? m : undefined;
 }
 
 /** Gap between adjacent entity-end ports (px). Small on purpose: the fan is a
@@ -972,8 +1035,20 @@ export function buildSpec(vm: ViewModel, direction: Direction): GraphSpec {
    * falsely implied "this edge is about that row". Only the ATTRIBUTE end
    * carries row meaning; the entity end points at the class as a whole.
    */
+  /**
+   * An edge landing on a CHILD HEADER row takes no fan lane: it has its own
+   * arrival point further down the box, so counting it here would reserve a
+   * lane nothing uses and mis-centre every edge that does. Both passes —
+   * this count and the slot assignment below — must agree on the exclusion.
+   */
+  const rowTargeted = (e: AnchoredEdge) => {
+    const free = nodeById.get(hostOf(e) === e.source ? e.target : e.source);
+    return !!free && childHeaderTarget(e, free) !== undefined;
+  };
+
   const freeEndTotal = new Map<string, number>();
   for (const e of vm.edges) {
+    if (rowTargeted(e)) continue;
     const freeId = hostOf(e) === e.source ? e.target : e.source;
     const side = `${freeId}|${freeId === e.source ? 'out' : 'in'}`;
     freeEndTotal.set(side, (freeEndTotal.get(side) ?? 0) + 1);
@@ -1017,19 +1092,45 @@ export function buildSpec(vm: ViewModel, direction: Direction): GraphSpec {
     );
     const freeIsSource = free.id === e.source;
     const side = `${free.id}|${freeIsSource ? 'out' : 'in'}`;
-    const total = freeEndTotal.get(side) ?? 1;
-    const idx = freeEndSlot.get(side) ?? 0;
-    freeEndSlot.set(side, idx + 1);
-    // Tight fan centred on the header: just enough separation for ELK to route
-    // each approach in its own lane, never spilling past the header band.
-    const spread = fanSpread(total, HEADER_H - 4);
-    const offset = HEADER_H / 2 + (idx - (total - 1) / 2) * spread;
-    const headerPort = direction === 'RIGHT'
-      ? addPort(free, `${free.id}::hdr:${freeIsSource ? 'out' : 'in'}:${idx}`,
-          freeIsSource ? NODE_W : 0, offset)
-      : addPort(free, `${free.id}::hdr:${freeIsSource ? 'out' : 'in'}:${idx}`,
-          NODE_W / 2 + (idx - (total - 1) / 2) * fanSpread(total, NODE_W / 2),
-          freeIsSource ? free.height : 0);
+    /*
+     * A narrowed edge lands on the CHILD HEADER matching its range, not on the
+     * box header: all three `…ObservationSet.observations` edges otherwise
+     * arrive at the merged Observation box's header, which hides the entire
+     * point of the narrowing — each set holds its OWN kind of observation.
+     *
+     * The port id carries the MEMBER, for the same reason the row port carries
+     * the anchor class: `addPort` keeps the first registration per id, so two
+     * edges sharing an id would silently share one y.
+     *
+     * These edges take no fan lane (see rowTargeted) and draw their own
+     * arrowhead — under the current schema no member has more than one inbound
+     * edge, so there is nothing for them to converge with. The guard test in
+     * mergedEdges.test.ts is what detects that changing.
+     */
+    const member = childHeaderTarget(e, free);
+    const memberY = member !== undefined ? headerRowY(free, member) : undefined;
+    let headerPort: string;
+    if (member !== undefined && memberY !== undefined) {
+      headerPort = addPort(
+        free, `${free.id}::mhdr:${freeIsSource ? 'out' : 'in'}:${member}`,
+        direction === 'RIGHT' ? (freeIsSource ? NODE_W : 0) : NODE_W / 2,
+        direction === 'RIGHT' ? memberY : (freeIsSource ? free.height : 0),
+      );
+    } else {
+      const total = freeEndTotal.get(side) ?? 1;
+      const idx = freeEndSlot.get(side) ?? 0;
+      freeEndSlot.set(side, idx + 1);
+      // Tight fan centred on the header: just enough separation for ELK to route
+      // each approach in its own lane, never spilling past the header band.
+      const spread = fanSpread(total, HEADER_H - 4);
+      const offset = HEADER_H / 2 + (idx - (total - 1) / 2) * spread;
+      headerPort = direction === 'RIGHT'
+        ? addPort(free, `${free.id}::hdr:${freeIsSource ? 'out' : 'in'}:${idx}`,
+            freeIsSource ? NODE_W : 0, offset)
+        : addPort(free, `${free.id}::hdr:${freeIsSource ? 'out' : 'in'}:${idx}`,
+            NODE_W / 2 + (idx - (total - 1) / 2) * fanSpread(total, NODE_W / 2),
+            freeIsSource ? free.height : 0);
+    }
     return {
       id: e.id,
       source: e.source,
@@ -1385,48 +1486,46 @@ export default function OwnershipGraphView({
    * slot's own row and must stay there.
    *
    * ---------------------------------------------------------------------
-   * NOT DONE, and cheap under the CURRENT schema: targeting child header rows
+   * Child-header arrivals do NOT merge.
    *
-   * Wanted: an edge from a slot_usage-narrowed slot should point at the CHILD
-   * header matching its range, not at the box header. Today all three
-   * `…ObservationSet.observations` edges land on the merged Observation box's
-   * header, which hides the entire point of the narrowing — each set holds its
-   * OWN kind of observation. Landing them on the DimensionalObservation /
-   * MeasurementObservation / SdohObservation header rows would show it, and the
-   * sibling colours already match at both ends, so the extra crossings stay
-   * legible (Siggie, 2026-08-31).
+   * An edge from a slot_usage-narrowed slot lands on the CHILD header matching
+   * its range rather than on the box header (see childHeaderTarget). Those
+   * arrivals are skipped here entirely and draw their own arrowhead at their
+   * own port: the ObservationSet case spreads over FOUR arrival rows — the
+   * three children plus Observation itself, which carries
+   * ObservationSet.observations on the parent row — with exactly one edge
+   * each, so there is nothing to converge.
    *
-   * Only narrowed slots can want this. Without slot_usage a child's slot is
-   * identical to the inherited one, so it merges onto the PARENT's row and
-   * there is no child-specific row to anchor on. The old "every edge, or only
-   * slot_usage-narrowed?" framing was a false choice — only the narrowed ones
-   * can pose the question at all.
+   * That is a fact about the CURRENT schema, not an invariant: measured
+   * 2026-08-31 and re-measured 2026-09-02, no member or parent of any
+   * multi-child family has more than one inbound edge. `mergedEdges.test.ts`
+   * asserts it. If that guard ever fails it does NOT mean the code broke — it
+   * means the schema grew a second slot narrowing to the same child, the
+   * no-merge shortcut no longer holds, and this map must become row-aware
+   * (key on arrival row, position from the row's y instead of HEADER_H/2).
+   * Do not just delete the assertion.
    *
-   * Why it is cheap RIGHT NOW: measured 2026-08-31, no member or parent of any
-   * multi-child family has more than ONE inbound edge. Under the change the
-   * ObservationSet case spreads over FOUR arrival rows — the three children
-   * plus Observation itself, which carries ObservationSet.observations on the
-   * parent row — with exactly one edge each. So convergence merging is a no-op
-   * for these rows: a row-targeted edge can simply OPT OUT of this map and draw
-   * its own arrowhead at its own port. Nothing here needs to become row-aware,
-   * and the HEADER_H/2 geometry below stays as-is for box-header arrivals.
-   *
-   * Sketch: in buildSpec, when the free node is a merged box holding a member
-   * matching the edge's range, resolve that member's header row with rowY and
-   * use it as the port (put the member in the port id — see the bug fixed at
-   * the row port, same lesson). Such edges must also be skipped by BOTH fan
-   * passes, or the fan reserves lanes for edges that no longer use it and
-   * mis-centres the rest. Fall back to today's behaviour when the range names
-   * no member.
-   *
-   * The guard this needs: assert over the VIEW MODEL that no two edges resolve
-   * to the same child-header arrival row. If that ever fails, it does not mean
-   * the code broke — it means the schema grew a second slot narrowing to the
-   * same child, the no-merge shortcut no longer holds, and this map must become
-   * row-aware after all (key on arrival row, position from the row's y instead
-   * of HEADER_H/2). Do not just delete the assertion.
+   * The HEADER_H/2 geometry below therefore still applies only to box-header
+   * arrivals, which is all that reaches it.
    * ---------------------------------------------------------------------
    */
+  /**
+   * Edge ids that land on a CHILD HEADER row rather than the box header.
+   *
+   * One set, three consumers — `mergeTargets` (must not register one), the
+   * arrowhead pass and the render (must not let one JOIN a convergence). They
+   * key convergence by entity, and a row-targeted edge shares that key with
+   * its box-header siblings, so "skip it" has to be asked per EDGE, not per
+   * key. Re-deriving the predicate at each site is how they drift apart.
+   */
+  const rowTargetedEdges = useMemo(() => {
+    const byId = new Map(vm.nodes.map(n => [n.id, n]));
+    return new Set(vm.edges.filter(e => {
+      const free = byId.get(hostOf(e) === e.source ? e.target : e.source);
+      return !!free && childHeaderTarget(e, free) !== undefined;
+    }).map(e => e.id));
+  }, [vm]);
+
   const mergeTargets = useMemo(() => {
     const byKey = new Map<string, MergeTarget>();
     if (!layout) return byKey;
@@ -1434,6 +1533,9 @@ export default function OwnershipGraphView({
       const entityId = hostOf(e) === e.source ? e.target : e.source;
       const node = placed.get(entityId);
       if (!node) continue;
+      // Child-header arrivals draw their own head at their own row; they must
+      // not register a box-header convergence point.
+      if (rowTargetedEdges.has(e.id)) continue;
       const entityIsSource = entityId === e.source;
       const key = `${entityId}|${entityIsSource ? 'out' : 'in'}`;
       if (byKey.has(key)) continue;
@@ -1468,7 +1570,7 @@ export default function OwnershipGraphView({
           });
     }
     return byKey;
-  }, [vm, placed, layout, direction]);
+  }, [vm, placed, layout, direction, rowTargetedEdges]);
 
   /**
    * Synthesised routes for edges touching a nudged node, id → points.
@@ -1607,6 +1709,7 @@ export default function OwnershipGraphView({
     for (const e of layout.edges) {
       const spec = edgeById.get(e.id);
       if (!spec || spec.storageDirection === 'flipped') continue;
+      if (rowTargetedEdges.has(e.id)) continue;
       if (mergeDistFor(mergeMode, sectionPoints(e.sections)) <= 0) continue;
       const entityId = hostOf(spec) === spec.source ? spec.target : spec.source;
       const key = `${entityId}|${entityId === spec.source ? 'out' : 'in'}`;
@@ -1628,7 +1731,7 @@ export default function OwnershipGraphView({
         : { ...t, isOwn, dimmed, edgeIds: [e.id], ...(color ? { color } : {}) });
     }
     return heads;
-  }, [layout, edgeById, mergeTargets, mergeMode, roles, vm]);
+  }, [layout, edgeById, mergeTargets, mergeMode, roles, vm, rowTargetedEdges]);
 
   /**
    * A row is an expand-on-demand affordance when it points at an entity that
@@ -1908,7 +2011,7 @@ export default function OwnershipGraphView({
                       // arrival point (see mergeTargets). Flipped edges end at
                       // an attribute row, which must keep its own anchor.
                       const entityId = hostOf(spec) === spec.source ? spec.target : spec.source;
-                      const target = flipped
+                      const target = flipped || rowTargetedEdges.has(e.id)
                         ? undefined
                         : mergeTargets.get(`${entityId}|${entityId === spec.source ? 'out' : 'in'}`);
                       // A merging edge stops at the shared arrowhead's BASE and

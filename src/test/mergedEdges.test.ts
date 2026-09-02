@@ -169,6 +169,114 @@ describe('merged-box edges', () => {
     expect(new Set(ys).size).toBe(obs.length);
   });
 
+  const OBS_ALL = [
+    'ObservationSet', 'MeasurementObservationSet', 'SdohObservationSet',
+    'DimensionalObservationSet',
+    'Observation', 'MeasurementObservation', 'SdohObservation',
+    'DimensionalObservation',
+  ];
+
+  test('a narrowed edge lands on its CHILD header, not the box header', () => {
+    /*
+     * `<X>ObservationSet.observations` is narrowed by slot_usage to
+     * `<X>Observation`. Landing all of them on the merged Observation box's
+     * header says only "an Observation", which is the one thing the narrowing
+     * exists to refine — each set holds its OWN kind.
+     *
+     * Four arrival rows expected: the three children, plus Observation itself
+     * carrying the un-narrowed `ObservationSet.observations` on the parent row.
+     */
+    const vm = merged(OBS_ALL);
+    const spec = buildSpec(vm, 'RIGHT');
+    const target = vm.nodes.find(n => isMergedId(n.id) && n.label === 'Observation')!;
+    const specById = new Map(spec.edges.map(e => [e.id, e]));
+    const arriving = vm.edges.filter(e => e.target === target.id);
+    expect(arriving.length).toBe(4);
+
+    const onChild = arriving.filter(e =>
+      specById.get(e.id)?.targetPort?.includes('::mhdr:'));
+    // Three narrowed, one un-narrowed on the box header.
+    expect(onChild.length).toBe(3);
+    expect(arriving.length - onChild.length).toBe(1);
+
+    // Each child-header port sits at the y of that member's header ROW, which
+    // is below the box header band — the visible point of the whole change.
+    const ports = new Map(
+      (spec.nodes.find(n => n.id === target.id)?.ports ?? []).map(p => [p.id, p.y]));
+    const headerBandY = Math.min(...arriving
+      .map(e => specById.get(e.id)!.targetPort!)
+      .filter(p => !p.includes('::mhdr:'))
+      .map(p => ports.get(p)!));
+    for (const e of onChild) {
+      expect(ports.get(specById.get(e.id)!.targetPort!)!)
+        .toBeGreaterThan(headerBandY);
+    }
+  });
+
+  test('GUARD: no two edges arrive at the same child-header row', () => {
+    /*
+     * This is a SCHEMA assertion wearing a test's clothing, and a failure here
+     * does NOT mean the code broke.
+     *
+     * Child-header arrivals skip convergence merging entirely and draw their
+     * own arrowhead, which is only safe because no member of a multi-child
+     * family currently has more than one inbound edge (measured 2026-08-31,
+     * re-measured 2026-09-02). If this fails, the schema grew a second slot
+     * narrowing to the same child: the shortcut no longer holds and
+     * `mergeTargets` must become row-aware — key on arrival row, take the
+     * position from the row's y instead of HEADER_H/2.
+     *
+     * Do not "fix" this by deleting the assertion.
+     */
+    const vm = merged(OBS_ALL);
+    const spec = buildSpec(vm, 'RIGHT');
+    const seen = new Map<string, number>();
+    for (const e of spec.edges) {
+      const p = e.targetPort;
+      if (!p?.includes('::mhdr:')) continue;
+      seen.set(p, (seen.get(p) ?? 0) + 1);
+    }
+    expect(seen.size).toBeGreaterThan(0);        // the case must be exercised
+    for (const [port, n] of seen) {
+      expect(`${port} carries ${n}`).toBe(`${port} carries 1`);
+    }
+  });
+
+  test('a child-header edge takes no fan lane', () => {
+    /*
+     * Both fan passes must agree on the exclusion. Counting a row-targeted
+     * edge in `freeEndTotal` but not assigning it a slot (or the reverse)
+     * reserves a lane nothing uses and mis-centres every edge that does.
+     *
+     * Observable as: the box-header ports on the merged Observation box are
+     * centred on the header band. With one un-narrowed arrival, that single
+     * lane must sit exactly at the band's midpoint.
+     */
+    const vm = merged(OBS_ALL);
+    const spec = buildSpec(vm, 'RIGHT');
+    const target = vm.nodes.find(n => isMergedId(n.id) && n.label === 'Observation')!;
+    const boxPorts = (spec.nodes.find(n => n.id === target.id)?.ports ?? [])
+      .filter(p => p.id.includes('::hdr:in:'));
+    expect(boxPorts.length).toBe(1);
+    /*
+     * A lone lane is centred on the header band. Had the three narrowed edges
+     * been counted by `freeEndTotal` without taking a slot, this port would be
+     * one of four lanes and sit ABOVE centre.
+     *
+     * Asserted against the same box WITHOUT its narrowed arrivals rather than
+     * against HEADER_H, which is a private layout constant: selecting only the
+     * parent pair leaves exactly one box-header arrival, and a correct
+     * exclusion puts both at the identical y.
+     */
+    const solo = buildSpec(merged(['ObservationSet', 'Observation']), 'RIGHT');
+    const soloTarget = solo.nodes.find(n =>
+      n.id.endsWith('::Observation') || n.id === 'Observation')!;
+    const soloPort = (soloTarget.ports ?? [])
+      .find(p => p.id.includes('::hdr:in:'))!;
+    expect(soloPort).toBeDefined();
+    expect(boxPorts[0].y).toBe(soloPort.y);
+  });
+
   test('every edge anchor resolves to a displayed row', () => {
     // rowY throws when an edge names a row the box does not show; that throw
     // blanks the canvas, so it is worth asserting directly.
