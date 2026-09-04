@@ -208,7 +208,7 @@ upstream schema sync — see [OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICAT
 that was not selected** — the selection and the edges among them, full stop
 (Siggie, 2026-08-27; ticking one checkbox has to draw one box). Each node's
 direct owners are reported in `hiddenOwners`, and what it owns in
-`hiddenOwned`, for the relation menu to offer. `pathToRoot: true` is the one
+`hiddenOwned`, for the relation bar to offer. `pathToRoot: true` is the one
 exception, restoring transitive ancestors-to-root; it is off by default because
 it is a reverse-reachability closure — see EXPLORE_VIZ.md §6 for the
 measurements.

@@ -39,7 +39,7 @@ The kind is a property of the edge. The perspective is a property of the
 *reader* — which end they are looking from — and exists only once they have
 picked an entity out. With nothing hovered or selected there is no point of
 view, so **the three kinds are all the canvas encodes**; perspective belongs to
-hover behaviour and to the words in the relation menu.
+hover behaviour and to the words in the relation bar.
 
 ### The three kinds
 
@@ -612,18 +612,22 @@ the old handoff doc recorded for the cascading menu's trigger, reproduced in
 the new bar within minutes of it shipping. The popover header carries the text
 instead; `aria-label` keeps it available to screen readers.
 
-### Why "N related" can go DOWN as you select more
+### Why a bar count can go DOWN as you select more
 
-`countsOf` counts **distinct related classes outside the box**, and a
+The bar counts **distinct classes outside the box** on each side, and a
 merged-inheritance box excludes anything folded into itself (`notSelfOrMember`,
-`OwnershipGraphView.tsx`). So selecting more can make the number fall: with
+`OwnershipGraphView.tsx`). So selecting more can make a number fall: with
 `Observation` unchecked it is not a member of the box named after it, so
-`ObservationSet`'s relation to it counts as outside (6); check `Observation` and
-the count drops to 5.
+`ObservationSet`'s relation to it counts as outside; check `Observation` and the
+count drops.
 
 Correct, but counter-intuitive — and more confusing still across combinations of
 several checkboxes. **Not being fixed**; recorded here so the next person to
 notice it does not treat it as a bug.
+
+(The old single "N related" chip counted the same way through `countsOf`. That
+function and the `relatedCount`/`shownCount` fields it fills are now **dead** —
+the bar counts its own rows. See `docs/TASKS.md`.)
 
 ---
 
