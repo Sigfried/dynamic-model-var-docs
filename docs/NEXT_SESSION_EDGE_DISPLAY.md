@@ -267,7 +267,7 @@ seen from three perspectives**:
 In the code today: `OwnershipVerdict` (3: `own-fwd`, `own-bkwd`, `association`,
 in `containmentGraph.ts`) drives layering, stroke and arrowheads;
 `RelationPosition` (5, `ownershipSubgraph.ts:66`) drives what the reader sees in
-the RelationMenu, and is the 3 crossed with who declares the slot
+the relation bar's popovers, and is the 3 crossed with who declares the slot
 (`ownershipSubgraph.ts:162,167`). Shipped user-facing labels
 (`RELATION_POSITION_LABEL`):
 
@@ -310,7 +310,7 @@ existing 11px transparent hit path already provides the trigger.
 
 Also settled: **entity hover does not label all of that entity's edges.**
 `Observation` would sprout a dozen chips. Entity hover keeps its highlight;
-the words stay in the RelationMenu, which already spells out the five positions.
+the words stay in the relation bar, which already spells out the relationships.
 
 Consequences for neighbouring items:
 
@@ -490,7 +490,7 @@ Park this survey in `OWNERSHIP_CLASSIFICATION.md`.
   `MergedMember`.
 - `src/test/siblingMerge.test.ts`, `src/test/mergedEdges.test.ts`.
 - `src/explore/OwnershipLegend.tsx`, `ExampleCasesPane.tsx`, `exampleCases.ts`,
-  `RelationMenu.tsx`, `help-content.md`, `tourStateStack.ts`.
+  `RelationBar.tsx`, `help-content.md`, `tourStateStack.ts`.
 
 **Verification:** `npm run build` (~2s; `npx tsc --noEmit` is too weak and has let
 breakage through) and `npx vitest run`. Never run `npm run dev` — Siggie keeps one

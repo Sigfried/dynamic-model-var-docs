@@ -17,17 +17,17 @@
  * mode used to make. Help MODE stays off (HELP_MODE_ENABLED) — this reaches
  * individual entries without reinstating the mode around them.
  *
- * Hover-to-open with a close grace period, matching RelationMenu, which is the
- * app's other cascading menu. The two do not share code: RelationMenu portals
- * out of a zoom/pan transform and coordinates "at most one open" across dozens
- * of instances. This one is a singleton in normal document flow, and inheriting
- * that machinery would cost more than the ~40 lines it saves.
+ * Hover-to-open with a close grace period, matching RelationBar's popovers.
+ * The two do not share code: RelationBar portals out of a zoom/pan transform
+ * and coordinates "at most one open" across dozens of instances. This one is a
+ * singleton in normal document flow, and inheriting that machinery would cost
+ * more than the ~40 lines it saves.
  */
 
 import { useEffect, useRef, useState } from 'react';
 import { useHelp } from '../help/helpContext';
 
-/** Matches RelationMenu's CLOSE_DELAY_MS: the pointer has to cross a gap
+/** Matches RelationBar's CLOSE_DELAY_MS: the pointer has to cross a gap
  *  between trigger and panel, and between panel and submenu. */
 const CLOSE_DELAY_MS = 300;
 
@@ -50,7 +50,7 @@ export interface HelpMenuProps {
  */
 const HELP_ENTRIES: ReadonlyArray<{ id: string; label: string }> = [
   { id: 'graph-canvas-reading', label: 'Reading the diagram' },
-  { id: 'relation-menu', label: 'The relation menu' },
+  { id: 'relation-bar', label: 'The relation bar' },
   { id: 'toolbar-siblings', label: 'Inheritance and merged boxes' },
   { id: 'copy-link', label: 'Sharing what you see' },
 ];
@@ -75,7 +75,7 @@ export default function HelpMenu({
   useEffect(() => cancelClose, []);
 
   // Escape closes, and so does a click anywhere outside the tree. Capture
-  // phase for the same reason RelationMenu uses it: the canvas stops
+  // phase for the same reason RelationBar uses it: the canvas stops
   // propagation on its own handlers.
   useEffect(() => {
     if (!open) return;

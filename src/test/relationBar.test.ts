@@ -109,6 +109,25 @@ describe('relation bar axes', () => {
     expect(rowsFor('Specimen').some(r => r.other === 'Specimen')).toBe(false);
   });
 
+  test('the OWNER is the left-hand end on both sides — column order follows SIDE', () => {
+    /*
+     * The popover puts owner-left / owned-right, matching the canvas. That is
+     * decided by which side the popover is (left = the other class owns me),
+     * NOT by the edge's kind — keying it on kind was wrong for exactly the
+     * rows where the two disagree, e.g. `ObservationSet.observations`, which
+     * is own-fwd but sits under `← N` because ObservationSet owns Observation.
+     */
+    const left = side(rowsFor('Observation'), 'left');
+    const byOwnFwd = left.filter(r => AXIS[r.position].kind === 'own-fwd');
+    const byOwnBkwd = left.filter(r => AXIS[r.position].kind === 'own-bkwd');
+    // Both kinds really are present on this side, or the test proves nothing.
+    expect(byOwnFwd.length).toBeGreaterThan(0);
+    expect(byOwnBkwd.length).toBeGreaterThan(0);
+    // ...and every one of them names an owner of Observation, so all of them
+    // render with `other` on the LEFT and `this` on the right.
+    expect(byOwnFwd.map(r => r.other)).toContain('ObservationSet');
+  });
+
   test('every position maps to a side and a kind', () => {
     // A new RelationPosition must be placed deliberately, not defaulted.
     const ds = new Set<string>();

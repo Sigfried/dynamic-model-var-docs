@@ -55,6 +55,7 @@ const {elementTypes, } = APP_CONFIG;
 export type { EdgeInfo, ItemInfo };
 // Re-exported so UI components get it from DataService, never from models/.
 export type { AttributeSummary } from '../models/Element';
+export type { SiblingColor } from '../explore/siblingMerge';
 export type {
   ContainmentGraph, ContainmentNode, ContainmentEdge, OwnershipVerdict,
 } from '../models/containmentGraph';

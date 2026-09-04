@@ -2,8 +2,8 @@
  * RelationBar — the `←─ N     M ─→` chip on each entity box, and the two
  * popovers behind it.
  *
- * Replaces the cascading RelationMenu (Siggie, 2026-09-04: "i hate the
- * cascading menu for related entities"). That menu made you traverse five
+ * Replaces the cascading relation menu, deleted 2026-09-04 (Siggie: "i hate
+ * the cascading menu for related entities"). That menu made you traverse five
  * branches to find one class, and the branch labels ("belong to me by their
  * attribute") were the only place the vocabulary appeared, so reading them was
  * mandatory. Here the split is spatial and needs no vocabulary at all.
@@ -48,7 +48,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import EdgeSample, { type DrawnKind } from './EdgeSample';
-import type { RelationPosition } from '../services/DataService';
+import type { RelationPosition, SiblingColor } from '../services/DataService';
 
 /** Which side of the box a position sits on, and how its edge is drawn. */
 const POSITION_AXIS: Record<RelationPosition, { side: 'left' | 'right'; kind: DrawnKind }> = {
@@ -90,6 +90,9 @@ export interface RelationRowVM {
   drawn: boolean;
 }
 
+/** P3 colour for a class, or undefined when it has none of its own. */
+export type ColorOf = (classId: string) => SiblingColor | undefined;
+
 export interface RelationBarProps {
   /** The class this bar belongs to — named in the popover header. */
   label: string;
@@ -97,11 +100,15 @@ export interface RelationBarProps {
   onAdd: (classId: string) => void;
   onRemove: (classId: string) => void;
   onInspect?: (classId: string) => void;
+  /** P3 colour per class, so each end of a row wears its own box's colour. */
+  colorOf?: ColorOf;
 }
 
 type Side = 'left' | 'right';
 
-export function RelationBar({ label, rows, onAdd, onRemove, onInspect }: RelationBarProps) {
+export function RelationBar({
+  label, rows, onAdd, onRemove, onInspect, colorOf,
+}: RelationBarProps) {
   const [open, setOpenSide] = useState<Side | null>(null);
   const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
   const leftRef = useRef<HTMLButtonElement>(null);
@@ -215,6 +222,7 @@ export function RelationBar({ label, rows, onAdd, onRemove, onInspect }: Relatio
           onAdd={onAdd}
           onRemove={onRemove}
           onInspect={onInspect}
+          colorOf={colorOf}
         />,
         document.body,
       )}
@@ -241,7 +249,7 @@ function useClamped(anchor: { x: number; y: number }) {
 }
 
 function RelationPopover({
-  anchor, side, label, rows, onAdd, onRemove, onInspect,
+  anchor, side, label, rows, onAdd, onRemove, onInspect, colorOf,
 }: {
   anchor: { x: number; y: number };
   side: Side;
@@ -250,6 +258,7 @@ function RelationPopover({
   onAdd: (id: string) => void;
   onRemove: (id: string) => void;
   onInspect?: (id: string) => void;
+  colorOf?: ColorOf;
 }) {
   const { ref, pos } = useClamped(anchor);
 
@@ -268,19 +277,21 @@ function RelationPopover({
       onMouseEnter={cancelClose}
       onMouseLeave={scheduleClose}
       style={{ left: pos.x, top: pos.y }}
-      className="fixed z-50 max-w-[34rem] max-h-[60vh] overflow-y-auto py-1
+      /* overflow-y only: rows are narrow now that `this` is an icon, so a
+         horizontal scrollbar means something is wrong rather than something
+         being usefully reachable by scrolling. */
+      className="fixed z-50 max-w-[34rem] max-h-[60vh] overflow-y-auto overflow-x-hidden py-1
                  rounded-md border border-gray-300 dark:border-slate-600
                  bg-white dark:bg-slate-800 shadow-xl
                  text-gray-900 dark:text-gray-100"
     >
+      {/* No "drawn to its left" subtitle — the rows are IN diagram order, so
+          the layout says it (Siggie, 2026-09-04). */}
       <div className="px-3 py-1 border-b border-gray-200 dark:border-slate-700">
         <div className="text-[11px] font-semibold">
           {side === 'left'
             ? <><b>{label}</b> belongs to {distinct.length}</>
             : <><b>{label}</b> owns {distinct.length}</>}
-        </div>
-        <div className="text-[10px] text-gray-400 dark:text-slate-500">
-          {side === 'left' ? 'drawn to its left' : 'drawn to its right'}
         </div>
       </div>
 
@@ -297,6 +308,21 @@ function RelationPopover({
         <tbody>
           {sorted.map(r => {
             const kind = POSITION_AXIS[r.position].kind;
+            /*
+             * DIAGRAM ORDER, always: owner on the left, owned on the right —
+             * the same order the canvas lays boxes out, so a row and the line
+             * it describes read the same way round. The popover's SIDE decides
+             * which of the two ends is this box (left side ⇒ the other class
+             * owns me), never the edge's kind.
+             *
+             * Each end is written as `Class.slot` when that class DECLARES the
+             * slot, and as a bare class name otherwise. So `performed_by` is
+             * `Organization ──< Observation.performed_by` and `observations`
+             * is `MeasurementObservationSet.observations ──> MeasurementObs`:
+             * the qualified half is always the end that holds the attribute.
+             */
+            const owner = side === 'left' ? r.other : label;
+            const owned = side === 'left' ? label : r.other;
             return (
               <tr
                 key={`${r.declaredBy}.${r.slot}->${r.other}`}
@@ -304,21 +330,18 @@ function RelationPopover({
                 className={`cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700
                             ${r.drawn ? 'opacity-55' : ''}`}
               >
-                {/* Qualified slot name: the prefix is what says which class
-                    declares the relationship, so the glyph does not have to. */}
-                <td className="pl-3 pr-2 py-0.5 font-mono whitespace-nowrap">
-                  <span className="text-gray-400 dark:text-slate-500">{r.declaredBy}.</span>
-                  <span>{r.slot}</span>
+                <td className="pl-3 pr-2 py-0.5 text-right whitespace-nowrap">
+                  <End cls={owner} row={r} colorOf={colorOf} />
                 </td>
-                <td className="px-1 py-0.5 align-middle">
-                  <EdgeSample kind={kind} width={38} />
-                </td>
-                <td className="px-2 py-0.5 font-mono text-gray-500 dark:text-slate-400
-                               whitespace-nowrap tabular-nums">
+                <td className="px-2 py-0.5 font-mono text-gray-400 dark:text-slate-500
+                               whitespace-nowrap tabular-nums text-right">
                   {r.cardinality}
                 </td>
+                <td className="px-1 py-0.5 align-middle">
+                  <EdgeSample kind={kind} width={30} />
+                </td>
                 <td className="pr-2 py-0.5 whitespace-nowrap">
-                  <span className="text-blue-600 dark:text-blue-400">{r.other}</span>
+                  <End cls={owned} row={r} colorOf={colorOf} />
                 </td>
                 <td className="pr-3 py-0.5 text-right">
                   {onInspect && (
@@ -338,5 +361,42 @@ function RelationPopover({
         </tbody>
       </table>
     </div>
+  );
+}
+
+/**
+ * One end of a row: a class name, qualified with its slot when that class is
+ * the one declaring the relationship.
+ *
+ * Colour is the class's OWN P3 sibling colour — the same one its box header
+ * and its rows wear on the canvas, so `MeasurementObservation` is the same
+ * blue here as it is there, and rows belonging to the parent stay in the
+ * default ink. That is what makes a row scannable against the diagram
+ * (Siggie, 2026-09-04: "blue because it's a blue child class on both sides").
+ *
+ * Replaces a `this` icon that stood in for the box's own name. It saved width
+ * but cost more than it saved: the box's name is exactly what you are trying
+ * to match against the canvas, and an icon cannot carry the class's colour.
+ */
+function End({ cls, row, colorOf }: {
+  cls: string;
+  row: RelationRowVM;
+  colorOf?: ColorOf;
+}) {
+  const color = colorOf?.(cls);
+  // The declaring end shows `Class.slot`; the other end is a bare class name.
+  const qualified = cls === row.declaredBy;
+  return (
+    <span
+      className="font-mono"
+      style={color ? { color: color.text } : undefined}
+    >
+      {cls}
+      {qualified && (
+        <span className={color ? 'opacity-80' : 'text-gray-500 dark:text-slate-400'}>
+          .{row.slot}
+        </span>
+      )}
+    </span>
   );
 }

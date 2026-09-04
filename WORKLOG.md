@@ -112,14 +112,61 @@ version.
   and the popover header carries it visually. **Native tooltips are unusable on
   anything that opens a hover panel** — that is now the standing rule.
 
-### RelationMenu is dead but not deleted
+### The row layout took three passes, and the arrowhead two
 
-`RelationMenu.tsx` has no app callers, and its two test files still pass. Left
-in place: this is a detour Siggie may want to reverse, and deleting ~200 lines
-of tested code on that basis is not mine to decide. If the bar sticks, delete
-the component, `RelationMenu.test.tsx`, `RelationMenuPlacement.test.tsx`, and
-the `docs/TESTING.md` section that uses the latter as its worked example for
-stubbing layout.
+The bar shipped with rows reading `slot ──▶ other`, always in that order. Wrong
+twice over, and Siggie caught both by looking at the screen:
+
+1. **The head pointed the right way but the ENDS were in the wrong order.** For
+   `own-bkwd` the other class is the OWNER, so the diagram draws it on the left
+   — but the row put it on the right, under a left-pointing arrow. Read
+   literally that says "Participant points at Visit" when the schema says the
+   reverse. My first instinct was to move the arrowhead; Siggie: *"it was the
+   wrong arrow before, but it pointed in the correct direction. the problem is
+   really that the order of items on the row doesn't match the order on the
+   diagram."* **Fix the columns, not the marker.**
+2. **Then I keyed the column order on the edge's KIND**, which is wrong for
+   exactly one row in four: `ObservationSet.observations` is `own-fwd` yet sits
+   under `← N`, because ObservationSet owns Observation. Rendering it
+   `this ──▶ ObservationSet` claimed the reverse. **The SIDE decides the order**
+   — on the left side the other class is the owner whatever the verdict.
+   `relationBar.test.ts` now pins this with the case that broke.
+3. **`this` as an icon was a bad trade.** Introduced to keep rows narrow (the
+   box's own name repeats on every row and pushed the popover into a horizontal
+   scrollbar). Siggie: *"not sure `this` is working."* Right — the box's name is
+   precisely what you match against the canvas, and an icon cannot carry the
+   class's P3 colour. The real width saving was elsewhere: `EdgeSample` shrank
+   to 30px and the cardinality column tightened.
+
+The colour is the part worth keeping in mind: **each end wears its own class's
+sibling colour**, so a row belonging to a merged child is coloured at both ends
+while a parent-level row is not. Siggie stated it as *"blue because it's a blue
+child class on both sides. the other properties are on the parent so they get
+that color (black or something close to it)"* — which is exactly
+`getTargetColor`, already used by the canvas rows, so nothing new was computed.
+
+Also removed: the popover's "drawn to its left" subtitle. Once the rows are in
+diagram order the layout says it, and a caption restating the layout is the kind
+of text that goes stale when the layout changes.
+
+### RelationMenu, deleted
+
+Deleted on Siggie's instruction once the bar was working, along with
+`RelationMenu.test.tsx` and `RelationMenuPlacement.test.tsx` (15 tests).
+
+**The placement test was ported, not dropped.** `docs/TESTING.md` used it as the
+worked example for stubbing layout in jsdom, and the hazard it teaches outlived
+the component — `RelationBar`'s `useClamped` measures the panel exactly the way
+the menu's flip logic did. `RelationBarPlacement.test.tsx` covers it now.
+
+Porting it reproduced the very failure that section warns about, which is worth
+recording: my stub identified the panel by `el.style.position !== ''`, since the
+popover is `fixed`. It is — from a Tailwind CLASS, not an inline style. The
+branch never matched, every rect came back 0×0, `useClamped`'s `r.width` was 0,
+the clamp became a no-op, and its output then agreed with an unclamped
+expectation. A layout stub must identify elements by something structural (tag
+name, data attribute), never by a style the framework may set another way. That
+lesson is now in `TESTING.md` alongside the original one.
 
 `buildRelationGroups` also survives, still feeding `countsOf`. The bar needs one
 row per EDGE (it shows declaring class and cardinality) where the menu deduped

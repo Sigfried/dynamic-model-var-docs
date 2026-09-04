@@ -551,9 +551,37 @@ the four labels differ only where the facts do.
 
 Each box carries a `← N   M →` bar (`RelationBar.tsx`): **N** classes it
 belongs to, drawn to its left; **M** it owns, drawn to its right. Hovering
-either count opens a flat list of the relationships on that side — qualified
-slot name, a **sample of the edge as the canvas draws it**, cardinality, and
-the class at the other end. Clicking a row adds or removes that class.
+either count opens a list of the relationships on that side. Clicking a row
+adds or removes that class.
+
+**A row is written in diagram order** — owner on the left, owned on the right,
+the same order the canvas lays boxes out, so a row and the line it describes
+read the same way round:
+
+```
+Organization                            0..1  ──<  Observation.performed_by
+Visit                                   0..1  ──<  Observation.associated_visit
+Participant                             1..1  ──<  Observation.associated_participant
+MeasurementObservationSet.observations  1..*  ──>  MeasurementObservation
+```
+
+Three things are encoded independently:
+
+- **Which end is qualified** (`Class.slot` rather than a bare name) says which
+  class **declares** the attribute. It is not always this box: row 4 is
+  `MeasurementObservationSet`'s slot, which is why that class owns this one.
+- **The arrow** is the edge as the canvas draws it, so its direction says which
+  end carries the arrowhead. Both kinds occur on both sides.
+- **The colour** of each end is that class's own P3 sibling colour — the same
+  one its header and rows wear on the canvas. Row 4 is coloured at *both* ends
+  because both are children of merged boxes; rows 1–3 name parent-level classes
+  on the left, which have no colour of their own.
+
+The order is what carries "drawn to its left", so the popover does not say it.
+
+An earlier version put an icon reading `this` where the box's own name goes, to
+save width. It was removed: the box's name is exactly what a reader matches
+against the canvas, and an icon cannot carry the class's colour.
 
 It replaced a cascading five-branch menu, which made you traverse the position
 vocabulary to find one class. The bar's split is spatial and needs no

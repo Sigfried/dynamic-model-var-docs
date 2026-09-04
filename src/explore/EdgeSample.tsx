@@ -57,13 +57,28 @@ export default function EdgeSample({ kind, width = 44, className }: EdgeSamplePr
     ? EDGE_COLORS.association
     : kind === 'own-bkwd' ? EDGE_COLORS.ownBkwd : EDGE_COLORS.ownFwd;
 
-  const headAtStart = kind === 'own-bkwd';
+  const bkwd = kind === 'own-bkwd';
   const bothEnds = kind === 'association';
   const head = `es-${uid}`;
 
-  // Leave room for whichever ends carry a head, so the glyph is not clipped.
-  const x1 = headAtStart || bothEnds ? 6 : 1;
-  const x2 = headAtStart ? width - 1 : width - 6;
+  /*
+   * BOTH heads sit at the RIGHT end of the sample; only the direction differs.
+   *
+   *   own-fwd   this  ──▶  other      this owns it
+   *   own-bkwd  other ◀──  this       the other owns this
+   *
+   * The right end is where the row's own class sits, and the arrow points away
+   * from or back at it. What makes this readable is that the CALLER reverses
+   * the columns to match: for own-bkwd the other class moves to the LEFT,
+   * because that is the side the diagram draws it on.
+   *
+   * Getting the two out of step is the bug this shipped with: a left-pointing
+   * head with the other class still on the right reads as "Participant points
+   * at Visit" when the schema says the reverse (Siggie, screenshot
+   * 2026-09-04). Head placement and column order are one decision.
+   */
+  const x1 = bothEnds ? 6 : 1;
+  const x2 = width - 6;
 
   return (
     <svg
@@ -71,22 +86,29 @@ export default function EdgeSample({ kind, width = 44, className }: EdgeSamplePr
       className={`shrink-0 ${className ?? ''}`} aria-hidden
     >
       <defs>
-        {/* orient="auto-start-reverse" is what lets ONE marker serve either
-            end: on markerStart it turns 180°, so a forward-pointing glyph
-            points back out of the line. Same trick the canvas uses. */}
+        {/*
+          Two glyphs, not one turned around.
+
+          `orient="auto-start-reverse"` only flips a marker placed at
+          markerSTART — which is what association uses to arrow both ends from
+          a single def. It cannot help own-bkwd, whose head is at markerEND,
+          the same end as own-fwd's, but points the other way. So the backward
+          head is drawn mirrored (tip at x=0), with refX moved to that tip.
+        */}
         <marker
-          id={head} markerWidth="5" markerHeight="5" refX="4.5" refY="2.5"
+          id={head} markerWidth="5" markerHeight="5"
+          refX={bkwd ? 0.5 : 4.5} refY="2.5"
           orient="auto-start-reverse" markerUnits="userSpaceOnUse"
         >
-          <path d="M0,0 L5,2.5 L0,5 z" fill={color} />
+          <path d={bkwd ? 'M5,0 L0,2.5 L5,5 z' : 'M0,0 L5,2.5 L0,5 z'} fill={color} />
         </marker>
       </defs>
       <line
         x1={x1} y1="7" x2={x2} y2="7"
         stroke={color} strokeWidth={SAMPLE_STROKE}
         strokeDasharray={kind === 'association' ? '5 4' : undefined}
-        markerStart={headAtStart || bothEnds ? `url(#${head})` : undefined}
-        markerEnd={headAtStart ? undefined : `url(#${head})`}
+        markerStart={bothEnds ? `url(#${head})` : undefined}
+        markerEnd={`url(#${head})`}
       />
     </svg>
   );

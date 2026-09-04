@@ -1298,6 +1298,13 @@ export default function OwnershipGraphView({
     () => dataService.getOwnershipSubgraph([...selectedIds].sort(), { pathToRoot }),
     [dataService, selectedIds, pathToRoot],
   );
+  /* Each end of a relation row wears its own class's P3 colour — the same one
+     that class's header and rows wear on the canvas, so a row can be matched
+     to a box by colour. Same accessor the rows themselves use. */
+  const targetColorOf = useCallback(
+    (classId: string) => dataService.getTargetColor(classId),
+    [dataService],
+  );
   const plainSlots = useMemo(
     () => new Map(subgraph.nodes.map(n =>
       [n.id, dataService.getClassSummary(n.id)?.slots ?? []] as const)),
@@ -2267,7 +2274,7 @@ export default function OwnershipGraphView({
                       */}
                       {n.relationGroups.length > 0 && (
                         <div
-                          data-help-id="relation-menu"
+                          data-help-id="relation-bar"
                           className="flex items-center gap-1 px-2 border-b overflow-hidden
                                      border-gray-200 dark:border-slate-600
                                      bg-sky-50/60 dark:bg-sky-950/30"
@@ -2279,6 +2286,7 @@ export default function OwnershipGraphView({
                             onAdd={id => onAdd?.(id)}
                             onRemove={id => onRemove?.(id)}
                             onInspect={onNodeClick}
+                            colorOf={targetColorOf}
                           />
                         </div>
                       )}

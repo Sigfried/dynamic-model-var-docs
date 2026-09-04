@@ -440,10 +440,21 @@ reporting on the harness, not the code.
 one.** Before trusting a layout measurement in a test, check what the component
 actually touches — `getBoundingClientRect` is rarely the only one.
 
-`src/test/RelationMenuPlacement.test.tsx` is the worked example: it stubs
-`getBoundingClientRect`, `offsetParent`, `offsetWidth`, `window.innerWidth` and
-`window.innerHeight`, using the component's own Tailwind widths as the numbers
-so the fake geometry stays honest.
+`src/test/RelationBarPlacement.test.tsx` is the worked example: it stubs
+`getBoundingClientRect`, `window.innerWidth` and `window.innerHeight`, using the
+component's own Tailwind widths as the numbers so the fake geometry stays
+honest. (It was ported from a placement test for the cascading relation menu
+that this replaced; that version also stubbed `offsetParent` and `offsetWidth`,
+which the flip logic read and this clamp does not. Stub what the code reads —
+no more, and never less.)
+
+**A second way to pass vacuously, hit while porting it:** the stub branched on
+`el.style.position !== ''`, on the reasoning that the popover is `fixed`. It
+is — from a Tailwind CLASS, not an inline style. The branch never matched, every
+rect came back 0×0, the clamp computed against a zero width and became a no-op,
+and its result then agreed with an unclamped expectation. **Identify elements in
+a layout stub by something structural** — a tag name or a data attribute — never
+by a style the framework might be setting a different way.
 
 Two conventions from that file worth copying:
 
@@ -466,7 +477,7 @@ pixels, test it there instead — `relationPositions.test.ts` covers what the me
 placement test between them: `FloatingBoxGroup`, `Tooltip`, `LayoutManager`,
 `LinkOverlay`, and `help/HelpLayer`. Any positioning bug in those is currently
 found by looking at the screen. Not a call to go write five test files — but if
-one of them misbehaves, this section plus `RelationMenuPlacement.test.tsx` is
+one of them misbehaves, this section plus `RelationBarPlacement.test.tsx` is
 the pattern to reach for rather than re-deriving it.
 
 ---

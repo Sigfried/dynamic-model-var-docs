@@ -283,7 +283,7 @@ What the boxes and lines mean.
   - Click an attribute row that names an entity to pull that entity onto the diagram.
 - **Anchor:** graph-canvas
 
-### relation-menu
+### relation-bar
 
 - **Title:** The relation bar
 - **Description:** Every entity related to this one, split by which side of the diagram it sits on. **← N** counts the entities this one belongs to, drawn to its left; **M →** counts the ones it owns, drawn to its right. Hovering either opens the list.

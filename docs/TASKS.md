@@ -897,17 +897,19 @@ Landed with it:
 
 **Follow-ups:**
 
-1. **`RelationMenu.tsx` is dead code** — no app callers, but
-   `RelationMenu.test.tsx` and `RelationMenuPlacement.test.tsx` still exercise
-   it. Left in place in case the bar gets reversed. If it sticks, delete all
-   three plus the `docs/TESTING.md` section that uses the placement test as its
-   worked example for stubbing layout.
-2. **The `relation-menu` help id now anchors the bar.** The entry has been
-   rewritten but keeps its old id; renaming it means touching
-   `helpContent.test.ts`'s anchor check.
-3. **`buildRelationGroups` survives** feeding `countsOf`, alongside the new
-   `buildRelationRows`. Two shapes because the popover needs one row per edge
-   where the menu deduped per class — worth revisiting if the old menu goes.
+1. ~~`RelationMenu.tsx` is dead code~~ **Deleted**, with
+   `RelationMenu.test.tsx` and `RelationMenuPlacement.test.tsx`. The placement
+   test was **ported** rather than dropped — `RelationBarPlacement.test.tsx`
+   covers the bar's `useClamped`, so `docs/TESTING.md`'s worked example for
+   stubbing layout still points at live code.
+2. ~~The `relation-menu` help id~~ **Renamed** to `relation-bar`, along with the
+   `data-help-id` and `HelpMenu`'s entry list.
+3. **`buildRelationGroups` still survives**, feeding `countsOf` for `NodeVM`'s
+   `relatedCount`/`shownCount`. **Nothing renders those two fields any more** —
+   the bar computes its own counts — so this is a second layer of dead code
+   inside a live file. Removing it means touching `NodeVM`, both node-VM
+   construction sites, and `RelationGroupVM`/`RelationItemVM`. Deliberately not
+   done in the same pass as the UI change.
 
 ---
 
