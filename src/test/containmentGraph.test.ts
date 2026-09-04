@@ -42,9 +42,9 @@ describe('getContainmentGraph', () => {
         if (!nodeIds.has(rng)) continue;
         const verdict = classifySlotEdge(slot.slotName, rng, slot.multivalued);
         if (verdict === 'excluded') continue;
-        const card = slot.multivalued
-          ? (slot.required ? '+' : '*')
-          : (slot.required ? '1' : '0..1');
+        // Deliberately NOT cardinalityLabel(): this test exists to check the
+        // builder against an independent derivation, so it spells the rule out.
+        const card = `${slot.required ? 1 : 0}..${slot.multivalued ? '*' : 1}`;
         const flip = verdict === 'own-bkwd' || verdict === 'association';
         const [source, target] = flip ? [rng, cname] : [cname, rng];
         expected.set([source, target, slot.slotName].join('|'), {

@@ -58,7 +58,7 @@ import {
   groupSiblings, isMergedId, mergedIdFor, siblingColor, withChildHeaders,
 } from './siblingMerge';
 import type { MergedMember, SiblingColor } from './siblingMerge';
-import { RelationMenu } from './RelationMenu';
+import { RelationBar, type RelationRowVM } from './RelationBar';
 import {
   rememberPreference,
   type Direction, type MergeMode,
@@ -209,6 +209,45 @@ export function buildRelationGroups(
     });
 }
 
+/**
+ * Flatten a node's relations into one row per EDGE, for the RelationBar
+ * popovers.
+ *
+ * Deliberately not a reshaping of `buildRelationGroups`: that dedupes to one
+ * item per (position, class) and keeps only the slot NAMES, because the
+ * cascading menu listed classes. The popover lists relationships — it shows
+ * the declaring class and the cardinality per row — so it needs the entries
+ * themselves. Two consumers, two shapes, one source.
+ *
+ * `exclude` drops self-loops and, on a merged box, anything folded into it,
+ * matching the grouped builder.
+ */
+export function buildRelationRows(
+  relations: readonly RelationEntry[],
+  visible: (id: string) => boolean,
+  exclude: (id: string) => boolean = () => false,
+): RelationRowVM[] {
+  const seen = new Set<string>();
+  const out: RelationRowVM[] = [];
+  for (const r of relations) {
+    if (exclude(r.other)) continue;
+    // One class can reach another through the same slot twice once a merged
+    // box unions its members' relations; the popover should show it once.
+    const key = `${r.declaredBy}.${r.slot}->${r.other}:${r.position}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      other: r.other,
+      position: r.position,
+      slot: r.slot,
+      declaredBy: r.declaredBy,
+      cardinality: r.cardinality,
+      drawn: visible(r.other),
+    });
+  }
+  return out;
+}
+
 export interface NodeVM extends OwnershipSubgraphNode {
   isaParents: string[];
   subclassCount: number;
@@ -232,6 +271,8 @@ export interface NodeVM extends OwnershipSubgraphNode {
    * box height non-deterministic; see RELATIONS_BAND_H.
    */
   relationGroups: RelationGroupVM[];
+  /** The same relations, one row per edge — what the RelationBar popovers show. */
+  relationRows: RelationRowVM[];
   /** Distinct related classes across every group — the "N related" count. */
   relatedCount: number;
   /** How many of those are on the canvas — the trigger's "M shown". */
@@ -392,6 +433,9 @@ export function buildViewModel(
     const relationGroups = buildRelationGroups(
       n.relations, id => visible.has(id), id => id === n.id,
     );
+    const relationRows = buildRelationRows(
+      n.relations, id => visible.has(id), id => id === n.id,
+    );
     return {
       ...n,
       isaParents: isaParents.get(n.id) ?? [],
@@ -400,6 +444,7 @@ export function buildViewModel(
       hiddenOwners: owners,
       hiddenOwned: owned,
       relationGroups,
+      relationRows,
       ...countsOf(relationGroups),
       rows,
       allRows: [...connected, ...hidden],
@@ -704,6 +749,11 @@ export function mergeSiblings(
       id => vmVisible.has(id),
       id => !notSelfOrMember(id),
     );
+    const mergedRelationRows = buildRelationRows(
+      sources.flatMap(mid => byId.get(mid)?.relations ?? []),
+      id => vmVisible.has(id),
+      id => !notSelfOrMember(id),
+    );
     const first = byId.get(memberIds[0]);
     // The box IS the parent, so its identity — name, description, abstractness
     // — must be the parent's. Spreading a member and forgetting to override
@@ -739,6 +789,7 @@ export function mergeSiblings(
        * when the class is on the canvas in any form, merged or not.
        */
       relationGroups: mergedRelations,
+      relationRows: mergedRelationRows,
       ...countsOf(mergedRelations),
       rows: rowList,
       allRows: all,
@@ -938,10 +989,10 @@ const REF_SCALE = 0.85;
  *  the default — as literals the two silently drift apart. References stay
  *  proportionally lighter than ownership.
  *
- *  Thicker than the 0.8/0.54 these replace. P2 separates own-fwd from own-bkwd
- *  by ONE step on the Blues ramp — deliberately, since they are the same
- *  relation seen from two ends — and a hairline cannot carry a one-step
- *  difference. The stroke has to be wide enough to read as a color. */
+ *  Thicker than the 0.8/0.54 these replace: a hairline cannot carry a color at
+ *  all, whatever the palette. This was originally justified by P2's one-step
+ *  Blues gap, which 2026-09-04 replaced with three distinct hues — the width
+ *  still earns its keep, since the point is that the stroke reads AS a color. */
 const STROKE_OWN = 1.4;
 const STROKE_OWN_HOVER = 2.6;
 const STROKE_REF = STROKE_OWN * 0.75;
@@ -2222,11 +2273,9 @@ export default function OwnershipGraphView({
                                      bg-sky-50/60 dark:bg-sky-950/30"
                           style={{ height: RELATIONS_BAND_H }}
                         >
-                          <RelationMenu
+                          <RelationBar
                             label={n.label}
-                            groups={n.relationGroups}
-                            relatedCount={n.relatedCount}
-                            shownCount={n.shownCount}
+                            rows={n.relationRows}
                             onAdd={id => onAdd?.(id)}
                             onRemove={id => onRemove?.(id)}
                             onInspect={onNodeClick}

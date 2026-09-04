@@ -28,17 +28,17 @@ describe('attribute cardinality', () => {
   };
 
   test('cardinalityLabel covers the four LinkML combinations', () => {
-    expect(cardinalityLabel(true, true)).toBe('+');
-    expect(cardinalityLabel(false, true)).toBe('*');
-    expect(cardinalityLabel(true, false)).toBe('1');
+    expect(cardinalityLabel(true, true)).toBe('1..*');
+    expect(cardinalityLabel(false, true)).toBe('0..*');
+    expect(cardinalityLabel(true, false)).toBe('1..1');
     expect(cardinalityLabel(false, false)).toBe('0..1');
   });
 
   test('scalar-ranged attributes have a cardinality, not a blank', () => {
     // Never drawn as edges, so these are exactly the rows that used to be blank.
-    expect(label('Document', 'url')).toBe('+');          // required + multivalued
-    expect(label('Document', 'identity')).toBe('*');
-    expect(label('Document', 'id')).toBe('1');
+    expect(label('Document', 'url')).toBe('1..*');       // required + multivalued
+    expect(label('Document', 'identity')).toBe('0..*');
+    expect(label('Document', 'id')).toBe('1..1');
     expect(label('Document', 'document_type')).toBe('0..1');
   });
 
@@ -47,7 +47,7 @@ describe('attribute cardinality', () => {
     // cardinality must not depend on that — and must survive the exclusion
     // being lifted by the ownership-classification work.
     expect(label('Document', 'focus')).toBe('0..1');
-    expect(label('ObservationSet', 'focus')).toBe('*');
+    expect(label('ObservationSet', 'focus')).toBe('0..*');
   });
 
   /**
@@ -76,7 +76,7 @@ describe('attribute cardinality', () => {
   });
 
   test('every attribute of every class yields a cardinality', () => {
-    const valid = new Set(['+', '*', '1', '0..1']);
+    const valid = new Set(['1..*', '0..*', '1..1', '0..1']);
     let checked = 0;
     for (const classId of ds.getItemNamesForType('class')) {
       for (const s of ds.getClassSummary(classId)?.slots ?? []) {

@@ -603,8 +603,8 @@ strings cannot be built at runtime from a hex. Any fix has to pick a lane:
 
 Not urgent, and deliberately not fixed while landing the palettes — but the
 duplication is now load-bearing in a way it was not before, since the palettes
-document an intent (`Set1`, `Blues`, `Pastel1`) that the Tailwind half quietly
-does not honor.
+document an intent (`Set1`, `Pastel1`, and P2's three hues) that the Tailwind
+half quietly does not honor.
 
 ---
 
@@ -875,6 +875,39 @@ UOM, VBO, bdchm, linkml, ncbitaxon, rxnorm, schema.
 
 **Do not fold this into the induced-slots migration** — it is orthogonal to
 where slot definitions are stored.
+
+---
+
+### ✅ DONE 2026-09-04 — the cascading relation menu is gone
+
+Siggie: *"i hate the cascading menu for related entities."* Replaced by the
+**relation bar** — `← N   M →` on each box, N being what it belongs to (drawn
+left) and M what it owns (drawn right), each opening a flat popover of
+qualified slot name, an edge sample, cardinality and target.
+`RelationBar.tsx`; reasoning in `WORKLOG.md`.
+
+Landed with it:
+
+- **P2 left the Blues ramp** for three hues. The one-step gap measured 1.50:1
+  and was invisible at 1.4px — a sequential palette encoding a nominal
+  variable. See `OWNERSHIP_CLASSIFICATION.md`, "The color system".
+- **Cardinality is one notation**: `0..1` / `1..1` / `0..*` / `1..*`.
+- **`EdgeSample.tsx`** is shared by the legend and the popovers, fixing a
+  legend bug where all three kinds drew a right-pointing head.
+
+**Follow-ups:**
+
+1. **`RelationMenu.tsx` is dead code** — no app callers, but
+   `RelationMenu.test.tsx` and `RelationMenuPlacement.test.tsx` still exercise
+   it. Left in place in case the bar gets reversed. If it sticks, delete all
+   three plus the `docs/TESTING.md` section that uses the placement test as its
+   worked example for stubbing layout.
+2. **The `relation-menu` help id now anchors the bar.** The entry has been
+   rewritten but keeps its old id; renaming it means touching
+   `helpContent.test.ts`'s anchor check.
+3. **`buildRelationGroups` survives** feeding `countsOf`, alongside the new
+   `buildRelationRows`. Two shapes because the popover needs one row per edge
+   where the menu deduped per class — worth revisiting if the old menu goes.
 
 ---
 

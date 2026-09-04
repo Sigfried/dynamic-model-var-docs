@@ -215,12 +215,24 @@ export interface ClassMeta {
   description: string;
 }
 
-/** LinkML cardinality label from required/multivalued.
- *  Exported so unconnected (scalar-ranged) rows in the ownership view label
- *  cardinality the same way drawn edges do, rather than reimplementing it. */
+/**
+ * LinkML cardinality label from required/multivalued: `0..1`, `1..1`, `0..*`,
+ * `1..*`.
+ *
+ * Exported so unconnected (scalar-ranged) rows in the ownership view label
+ * cardinality the same way drawn edges do, rather than reimplementing it.
+ *
+ * **One notation, not two (Siggie, 2026-09-04.)** These used to be `0..1` /
+ * `1` / `*` / `+` — a UML-style range for the optional-single case and
+ * regex-style quantifiers for the rest. Each pair was self-consistent and the
+ * four together were not, which raised the fair question of why a required
+ * single-valued slot showed `1` while a required multivalued one showed `+`
+ * when both are simply required. Writing the bounds out makes required-ness
+ * the left digit in every case and multivalued-ness the right, so the four
+ * labels differ only where the facts do.
+ */
 export function cardinalityLabel(required: boolean, multivalued: boolean): string {
-  if (multivalued) return required ? '+' : '*';
-  return required ? '1' : '0..1';
+  return `${required ? 1 : 0}..${multivalued ? '*' : 1}`;
 }
 
 /**

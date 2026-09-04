@@ -69,11 +69,11 @@ language for both directions.
 both order the target first — but that is geometry, not meaning, and the two
 claims are not interchangeable.
 
-### The five positions the reader sees
+### The five positions, and the two axes they decompose onto
 
 `RelationPosition` (`src/models/ownershipSubgraph.ts`) is the three kinds
-crossed with **who declares the slot**, which is what the relation menu offers.
-`association` does not split, because neither end declares ownership:
+crossed with **who declares the slot**. `association` does not split, because
+neither end declares ownership:
 
 | position | label (`RELATION_POSITION_LABEL`) |
 |---|---|
@@ -82,6 +82,35 @@ crossed with **who declares the slot**, which is what the relation menu offers.
 | `owned-mine` | I belong to, by my attribute |
 | `owned-theirs` | I belong to, by their attribute |
 | `association` | associated with |
+
+**Two independent facts are folded into those five names**, and the UI reads
+them separately. Keeping them apart is the thing to get right here — they were
+conflated repeatedly while the relation bar was designed (2026-09-04), in both
+directions:
+
+- **SIDE** — where the class sits on the canvas. Layout is owner-first, so
+  everything that **owns me** is drawn to my **left** and everything **I own**
+  to my **right**.
+- **KIND** — the edge's verdict: which end carries the arrowhead, and therefore
+  which class declares the slot.
+
+| position | side | kind | glyph |
+|---|---|---|---|
+| `owned-mine` | left | `own-bkwd` | `--<` |
+| `owned-theirs` | left | `own-fwd` | `-->` |
+| `owns-mine` | right | `own-fwd` | `-->` |
+| `owns-theirs` | right | `own-bkwd` | `--<` |
+| `association` | left | `association` | `<-->` |
+
+**Both kinds appear on both sides**, which is why they are independent rather
+than two names for one thing. Of the four classes that own `Observation`, three
+do so because Observation points at them (`own-bkwd`) and one because
+`ObservationSet` collects it (`own-fwd`). A reader cannot infer the kind from
+the side, nor the side from the kind. `src/test/relationBar.test.ts` asserts
+exactly this, against the real schema.
+
+`association` sits on the left because the layout orders its target first,
+exactly as `own-bkwd` does — geometry, not an ownership claim.
 
 The same relationship described from its two ends is one relationship, not two
 alternatives. A hovered edge shows **one** label, at the end the pointer is
@@ -370,7 +399,7 @@ questions they answer cannot be confused for one another. Values live in
 | | palette | entries | what carries it |
 |---|---|---|---|
 | **P1 — range** | ColorBrewer **Set1**, entity = blue | 4–5 | row dot, row range label, detail-panel badges |
-| **P2 — kind** | ColorBrewer **Blues** | 3 | edge stroke, relation menu chip |
+| **P2 — kind** | three **hues** (blue / teal / slate) | 3 | edge stroke, relation popover samples |
 | **P3 — siblings** | ColorBrewer **Pastel1** | 6 | slot name, merged-box header |
 
 **P1 answers "what kind of thing is this?"** — entity, enum, data type,
@@ -379,15 +408,30 @@ separation. It is one set of colors for one set of things: the Kitchen Sink
 element types and the Explorer's detail-panel badges are the same distinctions
 and take the same colors.
 
-**P2 answers "what kind of relation is this?"** and is *not* independent — it is
-a sequential ramp of P1's entity hue, so every edge reads as "entity
-relationship" before it reads as any particular kind of one. `own-fwd` and
-`own-bkwd` are the same relation seen from two ends, so they sit **close on the
-ramp** (Blues 7 / Blues 6): distinguishable, not dramatically different. That
-one-step gap is why **strokes got thicker** — a hairline cannot carry it.
-`association` is **inside** the ramp at a value that stays clearly visible; the
-**dash pattern** carries the distinction, not faintness. (The old slate-500 said
-"association" by being hard to see, which is not something a reader can learn.)
+**P2 answers "what kind of relation is this?"** — three distinct hues:
+`own-fwd` blue `#1d4ed8`, `own-bkwd` teal `#0e7490`, `association` slate
+`#64748b`. Association is also **dashed** and **arrowed at both ends**, so it
+has two channels beyond color; the dash carries the distinction, not faintness.
+
+**P2 was a Blues ramp and is not any more (2026-09-04).** The original premise
+was that `own-fwd` and `own-bkwd` are the same relation seen from two ends, so
+they should sit one step apart and read as "different in direction, not in
+kind". Measured, that step is **1.50:1**, and on a 1.4px stroke it is not a
+difference at all — Siggie could not tell the two apart on the canvas. Widening
+the ramp does not rescue it: separating the pair pushes `association` toward
+white, and a pale dashed hairline is the least visible thing the diagram can
+draw.
+
+The mistake was using a **sequential** palette for a **nominal** variable.
+Adjacent steps on a sequential ramp are built to read as *ordered*, which is
+the wrong property — these three are categories, not magnitudes. Hue carries
+three categories at equal, readable lightness; lightness alone cannot. The
+"every edge is an entity relationship" idea that motivated the ramp is real but
+was never worth an unreadable distinction, and the arrowhead already says
+direction unambiguously.
+
+Strokes are still thicker than the 0.8/0.54 they replaced: a hairline cannot
+carry *any* color, whatever the palette.
 
 **P3 answers "which class does this belong to?"** — it separates siblings from
 each other and lets the eye track between a slot row and its target box. It does
@@ -481,7 +525,7 @@ identifiers as well as prose.
 
 | | |
 |---|---|
-| **Labels** | None on the edge layer. A flipped edge is marked by a back-pointing arrowhead (`arrow-own-back`). **Settled 2026-09-02: no persistent edge labels** — one label, on edge hover, in a chip near the cursor, with its point of view chosen by which endpoint the pointer is nearer. Not yet built. Entity hover deliberately does *not* label all of that entity's edges (`Observation` would sprout a dozen chips); it keeps its highlight, and the words stay in the relation menu. |
+| **Labels** | None on the edge layer. A flipped edge is marked by a back-pointing arrowhead (`arrow-own-back`). **Settled 2026-09-02: no persistent edge labels** — one label, on edge hover, in a chip near the cursor, with its point of view chosen by which endpoint the pointer is nearer. Not yet built. Entity hover deliberately does *not* label all of that entity's edges (`Observation` would sprout a dozen chips); it keeps its highlight, and the words stay in the relation bar's popovers. |
 | **Source rows** | One edge per declaring class, leaving that class's own row. The port id is keyed on `(anchorClass, slot)` — the same pair `rowY` resolves by. Keyed on slot name alone, every edge in a merged-inheritance box shared one port. |
 | **Target rows** | A `slot_usage`-narrowed edge points at the **child header** matching its range, not the box header. Row-targeted edges opt out of `mergeTargets` and draw their own arrowhead; both fan passes skip them. The no-merge shortcut rests on a schema property — no family member has more than one inbound edge — which `src/test/mergedEdges.test.ts` guards, so a failure there means the schema changed, not the code. |
 | **Colors** | See the color system above. |
@@ -489,6 +533,37 @@ identifiers as well as prose.
 
 Still missing on dragging: obstacle-aware routing, and URL persistence. See
 `docs/TASKS.md`.
+
+### Cardinality notation
+
+`0..1`, `1..1`, `0..*`, `1..*` — one notation, bounds written out
+(`cardinalityLabel`, `containmentGraph.ts`).
+
+These were `0..1` / `1` / `*` / `+` until 2026-09-04: a UML-style range for the
+optional-single case and regex-style quantifiers for the rest. Each pair was
+self-consistent and the four together were not, which raised the fair question
+of why a required single-valued slot showed `1` while a required multivalued
+one showed `+` when both are simply required. Writing the bounds out makes
+required-ness the left digit in every case and multivalued-ness the right, so
+the four labels differ only where the facts do.
+
+### The relation bar
+
+Each box carries a `← N   M →` bar (`RelationBar.tsx`): **N** classes it
+belongs to, drawn to its left; **M** it owns, drawn to its right. Hovering
+either count opens a flat list of the relationships on that side — qualified
+slot name, a **sample of the edge as the canvas draws it**, cardinality, and
+the class at the other end. Clicking a row adds or removes that class.
+
+It replaced a cascading five-branch menu, which made you traverse the position
+vocabulary to find one class. The bar's split is spatial and needs no
+vocabulary; the position table above is now read by the code, not the user.
+
+**No `title` tooltips anywhere in it.** A native tooltip renders above the
+popover the same hover opened, covering its first rows — the failure §3.4 of
+the old handoff doc recorded for the cascading menu's trigger, reproduced in
+the new bar within minutes of it shipping. The popover header carries the text
+instead; `aria-label` keeps it available to screen readers.
 
 ### Why "N related" can go DOWN as you select more
 
@@ -614,6 +689,9 @@ These sets are hand-curated and **go stale silently on every schema sync**. See
 | `src/models/ownershipSubgraph.ts` | `RelationPosition`, `RELATION_POSITION_LABEL`, `buildOwnershipDag`, `computeSunkLayers` |
 | `src/services/DataService.ts` | `getOwnershipPairGroups`, `getConvergenceRanking`, `getDivergenceRanking`, `getContainmentGraph`, `getTargetColor` |
 | `src/config/appConfig.ts` | the three palettes (P1 `RANGE_COLORS`, P2 `EDGE_COLORS`, P3 `SIBLING_COLORS`) |
+| `src/explore/RelationBar.tsx` | the `← N   M →` bar and its popovers; `POSITION_AXIS` is the side/kind table |
+| `src/explore/EdgeSample.tsx` | one edge drawn as the canvas draws it; shared by the legend and the popovers |
+| `src/test/relationBar.test.ts` | pins the two axes — both kinds on both sides |
 | `src/explore/OwnershipGraphView.tsx` | edge stroke/marker selection, `mergeSiblings`, `countsOf`, `rowY`, `mergeTargets` |
 | `src/explore/siblingMerge.ts` | `groupSiblings`, `siblingColor`, `buildSiblingColorIndex` |
 | `src/explore/OwnershipLegend.tsx` | renders every slot grouped by rule |

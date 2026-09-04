@@ -55,7 +55,9 @@ const {elementTypes, } = APP_CONFIG;
 export type { EdgeInfo, ItemInfo };
 // Re-exported so UI components get it from DataService, never from models/.
 export type { AttributeSummary } from '../models/Element';
-export type { ContainmentGraph, ContainmentNode, ContainmentEdge } from '../models/containmentGraph';
+export type {
+  ContainmentGraph, ContainmentNode, ContainmentEdge, OwnershipVerdict,
+} from '../models/containmentGraph';
 export { cardinalityLabel, SKIP_SUBCLASS_EXPANSION } from '../models/containmentGraph';
 export {
   RELATION_POSITION_LABEL, RELATION_POSITION_ORDER,

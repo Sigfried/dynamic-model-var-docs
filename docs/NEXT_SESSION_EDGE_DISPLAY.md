@@ -19,6 +19,17 @@
 > - **§3.2 (edge labels)** SETTLED — one label, on hover. **§3.4 (popovers)**
 >   deferred deliberately. Both summarised in the doc.
 >
+> **⚠️ §1's palette table is SUPERSEDED (2026-09-04).** P2 is no longer a Blues
+> ramp — the one-step gap it describes measured 1.50:1 and was invisible on a
+> 1.4px stroke. It is three hues now; see `OWNERSHIP_CLASSIFICATION.md` and
+> `WORKLOG.md`. The reasoning below is kept as the record of why the ramp was
+> tried, not as a description of what ships.
+>
+> **§3.4's tooltip complaint is FIXED** — and it was re-introduced in new code
+> before being fixed, which is the point of the note: native `title` tooltips
+> render above the panel a hover opens. The cascading menu it describes has
+> also been replaced by the relation bar (`← N   M →`).
+>
 > **▶️ THE REMAINING WORK IS §2.3 — tour steps.** Start at
 > `docs/TOUR_SOURCE_MATERIAL.md`, which is four steps in draft plus a list of
 > what is still uncovered. §3.3 below (what the legend should be) is the other
@@ -393,9 +404,12 @@ the legend — put them in `OWNERSHIP_CLASSIFICATION.md` or a culled example cas
 
 ### 3.4 Popovers vs. title text
 
-The relation-menu trigger's `title` tooltip covers the menu's own options when
-the menu is open. Fix that one on its own — likely by moving the text into the
-menu as a header line rather than adding another floating layer.
+~~The relation-menu trigger's `title` tooltip covers the menu's own options when
+the menu is open.~~ **FIXED 2026-09-04**, by the predicted route: the text moved
+into the panel as a header line. Worth keeping because it recurred — the same
+mistake was made again in the relation bar that replaced the menu, minutes after
+it shipped. **Standing rule: no native `title` on anything that opens a hover
+panel**; use `aria-label` and put the words in the panel.
 
 **No new popovers for now** (settled 2026-09-02). Entity-title and row popovers
 were considered and deferred: what they would carry is part of a larger pass on

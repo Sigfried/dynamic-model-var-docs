@@ -74,10 +74,20 @@ read the schema. Throws in a self-loop for free.
 > Compare own-bkwd against association here — they layer identically and differ
 > only in ink.
 
-`SpecimenContainer` really does carry exactly one of each of the three verdicts,
-which is why this case exists at all. Note the original text said association is
-"slate" — it is now inside the P2 Blues ramp; the dash carries the distinction,
-not faintness. **Fix that word when the step is written.**
+⚠️ **Two corrections before this becomes tour copy** (2026-09-04):
+
+1. **`contained_in` is declared on `Specimen`, not on `SpecimenContainer`** —
+   `Specimen.contained_in → SpecimenContainer`. The verdict (`own-bkwd`) and the
+   point of the case are unaffected, but the sentence as written names the wrong
+   declaring class. Verified against `bdchm.yaml` and the live classifier.
+2. Association is **slate** again after the palette change (P2 is three hues,
+   not a Blues ramp) — but say the **dash and the two arrowheads** carry the
+   distinction, not faintness.
+
+The case itself still holds: these three slots are one of each verdict, which is
+why it exists. Note the three are not all declared on the same class, which is
+worth saying out loud rather than glossing — it is exactly the distinction the
+relation bar's row glyphs encode.
 
 ---
 
@@ -125,4 +135,4 @@ anchoring, direction, and the three kinds. Not yet covered anywhere:
 - **A narrowed edge pointing at a child header** — `slot_usage` narrowing, shipped
   2026-09-02. `MeasurementObservationSet.observations` → the
   `MeasurementObservation` header inside the Observation box.
-- **The relation menu** as the way to grow the canvas.
+- **The relation bar** (`← N   M →`) as the way to grow the canvas.

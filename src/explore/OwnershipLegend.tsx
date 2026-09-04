@@ -30,6 +30,7 @@ import { useMemo, useState } from 'react';
 import type { DataService, OwnershipPairGroup } from '../services/DataService';
 import { EDGE_COLORS, RANGE_COLORS, SIBLING_COLORS } from '../config/appConfig';
 import HelpPanel from './HelpPanel';
+import EdgeSample, { type DrawnKind } from './EdgeSample';
 
 interface OwnershipLegendProps {
   dataService: DataService;
@@ -68,10 +69,10 @@ const VERDICT_LABEL: Record<string, { text: string; color?: string; cls?: string
  * second person.
  */
 const EDGE_KINDS: ReadonlyArray<{
-  color: string; dashed?: boolean; bothEnds?: boolean;
-  title: string; body: string;
+  kind: DrawnKind; color: string; title: string; body: string;
 }> = [
   {
+    kind: 'own-fwd',
     color: EDGE_COLORS.ownFwd,
     title: 'A owns B',
     body: 'The arrow runs from the owner to what it holds. A owns B when the '
@@ -79,6 +80,7 @@ const EDGE_KINDS: ReadonlyArray<{
       + 'existence — a Quantity of 5 mg is not something you look up.',
   },
   {
+    kind: 'own-bkwd',
     color: EDGE_COLORS.ownBkwd,
     title: 'A belongs to B',
     body: 'The same relationship stored at the other end: A carries a pointer '
@@ -87,9 +89,8 @@ const EDGE_KINDS: ReadonlyArray<{
       + 'not any observation points at it.',
   },
   {
+    kind: 'association',
     color: EDGE_COLORS.association,
-    dashed: true,
-    bothEnds: true,
     title: 'A and B are associated',
     body: 'Neither owns the other. Dashed, with arrowheads at both ends. Only '
       + 'two edges in the schema are this — a slot the ownership rules would '
@@ -104,6 +105,14 @@ const TOOLBAR: ReadonlyArray<{ glyph: string; what: string }> = [
   { glyph: 'LR / TB', what: 'Lay the diagram out left-to-right or top-down.' },
   { glyph: '⋙ ⋙⋙ ⌙ ≡', what: 'Where converging edges join before their shared arrowhead — near the box, early, at the last corner, or not at all. Temporary, for picking one by eye.' },
   { glyph: '+ − 1:1 ⛶', what: 'Zoom in, out, reset, fit to view.' },
+];
+
+/** Cardinality, as it appears at the right of every attribute row. */
+const CARDINALITY: ReadonlyArray<[string, string]> = [
+  ['0..1', 'optional, at most one'],
+  ['1..1', 'required, exactly one'],
+  ['0..*', 'optional, any number'],
+  ['1..*', 'required, one or more'],
 ];
 
 export default function OwnershipLegend({
@@ -142,7 +151,7 @@ export default function OwnershipLegend({
           <ul className="space-y-2">
             {EDGE_KINDS.map(k => (
               <li key={k.title} className="flex gap-2">
-                <EdgeSample {...k} />
+                <EdgeSample kind={k.kind} className="mt-0.5" />
                 <div className="min-w-0">
                   <div className="font-medium" style={{ color: k.color }}>{k.title}</div>
                   <p className="text-[11px] leading-snug text-gray-600 dark:text-gray-400">
@@ -156,6 +165,13 @@ export default function OwnershipLegend({
             An edge leaves the <b>attribute's row</b>, not the box — that is how
             you tell which attribute made it. A <b>⟲</b> on a row is a slot
             pointing back at its own class.
+          </p>
+          <p className="text-[11px] leading-snug text-gray-500 dark:text-gray-400 mt-2">
+            Owners are drawn first, so a box's <b>← N</b> counts what it belongs
+            to (on its left) and <b>M →</b> what it owns (on its right). Hover
+            either to list them. The little edge on each row is the one above:
+            it says which end holds the arrowhead, and so which entity declares
+            the attribute — and <i>both</i> kinds turn up on <i>both</i> sides.
           </p>
         </Section>
 
@@ -182,6 +198,17 @@ export default function OwnershipLegend({
               label: i === 0 ? 'the parent' : `child ${i}`,
             }))}
           />
+        </Section>
+
+        <Section title="Cardinality">
+          <ul className="flex flex-wrap gap-x-4 gap-y-1">
+            {CARDINALITY.map(([g, w]) => (
+              <li key={g} className="flex items-center gap-1.5">
+                <span className="font-mono text-[11px] text-gray-700 dark:text-gray-300">{g}</span>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400">{w}</span>
+              </li>
+            ))}
+          </ul>
         </Section>
 
         <Section title="The toolbar">
@@ -265,40 +292,6 @@ export default function OwnershipLegend({
         </p>
       </div>
     </HelpPanel>
-  );
-}
-
-/**
- * One drawn edge.
- *
- * The COLOR and the dash pattern come from the same constants the canvas
- * strokes, because those are what the legend claims to explain. The stroke
- * WIDTH does not: the canvas's is tuned for long routed runs at whatever zoom
- * the reader is at, and reproducing 1.4px in a 44px sample makes the three
- * kinds harder to tell apart, not easier. This is a diagram of an edge, not a
- * measurement of one.
- */
-const SAMPLE_STROKE = 2;
-
-function EdgeSample({ color, dashed, bothEnds }: {
-  color: string; dashed?: boolean; bothEnds?: boolean;
-}) {
-  return (
-    <svg width="44" height="16" className="shrink-0 mt-0.5" aria-hidden>
-      <defs>
-        <marker id={`lg-head-${color.slice(1)}`} markerWidth="5" markerHeight="5"
-          refX="4" refY="2.5" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
-          <path d="M0,0 L5,2.5 L0,5 z" fill={color} />
-        </marker>
-      </defs>
-      <line
-        x1={bothEnds ? 6 : 2} y1="8" x2="38" y2="8"
-        stroke={color} strokeWidth={SAMPLE_STROKE}
-        strokeDasharray={dashed ? '5 4' : undefined}
-        markerEnd={`url(#lg-head-${color.slice(1)})`}
-        markerStart={bothEnds ? `url(#lg-head-${color.slice(1)})` : undefined}
-      />
-    </svg>
   );
 }
 

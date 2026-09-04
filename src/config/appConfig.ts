@@ -506,7 +506,7 @@ export function getFloatSettings(groupId: FloatGroupId): FloatSettings {
  */
 
 // ---------------------------------------------------------------------------
-// P2 — edge kind. ColorBrewer Blues, a ramp of P1's entity hue.
+// P2 — edge kind. Three hues, NOT a lightness ramp. See below.
 // ---------------------------------------------------------------------------
 
 /**
@@ -519,19 +519,29 @@ export function getFloatSettings(groupId: FloatGroupId): FloatSettings {
  * Perspective, if it ever gets a color, is a hover-time concern and a
  * different palette.
  *
- * `ownFwd` and `ownBkwd` are the same relation seen from two ends, so they sit
- * CLOSE on the ramp (Blues 7 / Blues 6) — distinguishable, not dramatically
- * different. That one-step gap is why strokes got thicker (see STROKE_OWN):
- * a hairline cannot carry it.
+ * **These were a Blues ramp (8/7/6) and are not any more (Siggie, 2026-09-04).**
+ * The premise was that `ownFwd` and `ownBkwd` are the same relation seen from
+ * two ends, so they should sit CLOSE — one step apart — reading as "different
+ * in direction, not in kind". Measured, that step is **1.50:1**, and on a 1.4px
+ * stroke it is not a difference at all: Siggie could not tell the two apart on
+ * the canvas. Widening the ramp does not rescue it either, because separating
+ * the pair pushes `association` toward white, and association is the one kind
+ * ALSO carrying a dash — a pale dashed hairline is the least visible thing the
+ * diagram can draw.
  *
- * `association` is INSIDE the ramp at a value that stays clearly visible. The
- * dash pattern carries the distinction, not faintness — the old slate-500 said
- * "association" by being hard to see, which is not a thing a reader can learn.
+ * The mistake was using a SEQUENTIAL palette for a NOMINAL variable. Adjacent
+ * steps on a sequential ramp are built to read as ordered, which is the wrong
+ * property: these three are categories, not magnitudes. Hue carries three
+ * categories at equal, readable lightness; lightness alone cannot.
+ *
+ * So: blue / teal / slate, all dark enough to read on white at 1.4px.
+ * `association` keeps its dash and its two arrowheads, and is now the only one
+ * that is also desaturated — which is the right signal for "no claim".
  */
 export const EDGE_COLORS = {
-  ownFwd: '#2171b5',       // Blues 7 — owner declares the slot
-  ownBkwd: '#4292c6',      // Blues 6 — the owned thing stores the FK
-  association: '#6baed6',  // Blues 5 — no ownership claim; drawn dashed
+  ownFwd: '#1d4ed8',       // blue  — owner declares the slot
+  ownBkwd: '#0e7490',      // teal  — the owned thing stores the FK
+  association: '#64748b',  // slate — no ownership claim; drawn dashed
 } as const;
 
 /** The relation menu's chip takes the main entity color: the menu is about

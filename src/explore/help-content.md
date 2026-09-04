@@ -147,8 +147,8 @@ What this app is and how to move around it.
      - Anchor: node-box:Person
      - Change: sel=Person
      - Action: I clicked the Person checkbox and the Person entity appeared in the viewing panel.
-  3. Hover over the `☰ 2 related · 0 shown ▾` button to reveal a cascading
-     menu allowing you to display entities related to this one.
+  3. Hover over the `← 2` or `1 →` counts to list the entities related to this
+     one, and click any of them to display it.
      - Anchor: node-box:Person
      - Highlight: none
 
@@ -238,7 +238,7 @@ What the boxes and lines mean.
 
 - **Title:** Selecting an entity
 - **Tour:** Walkthrough
-- **Description:** Select an entity by clicking its checkbox and it appears in the main panel. Only what you select is drawn — related entities are reached from the box's relation menu. There are five ways an entity can be related to another.
+- **Description:** Select an entity by clicking its checkbox and it appears in the main panel. Only what you select is drawn — related entities are reached from the box's relation bar. There are five ways an entity can be related to another.
 - **Action:** Added Participant and BodySite to what is already on the diagram. You would normally do this by ticking them in the tree on the left.
 - **Change:** sel=BodySite~Participant
 - **Beats:**
@@ -285,14 +285,15 @@ What the boxes and lines mean.
 
 ### relation-menu
 
-- **Title:** The relation menu
-- **Description:** Every entity related to this one, grouped by how it is related. The trigger says how many there are and how many are already on the diagram; opening it branches into the five kinds of relationship, and each branch lists the entities in it.
+- **Title:** The relation bar
+- **Description:** Every entity related to this one, split by which side of the diagram it sits on. **← N** counts the entities this one belongs to, drawn to its left; **M →** counts the ones it owns, drawn to its right. Hovering either opens the list.
 - **Interactions:**
-  - Hover **☰ N related · M shown** to open the menu, then a branch to list its entities.
-  - Click an entity to put it on the diagram — which also ticks its checkbox on the left. Click it again — or its ✕ — to take it off; entities already drawn are greyed out.
-  - "add all N" / "hide all N" at the top of a branch — draw or clear the whole branch at once. Both counts are shown before you click. "hide all" removes every entity in the branch, including ones you had selected yourself.
+  - Hover **← N** or **M →** to list the relationships on that side.
+  - Each row names the attribute that creates the relationship, draws the edge the way the diagram draws it, and gives the cardinality and the entity at the other end.
+  - Click a row to put that entity on the diagram — which also ticks its checkbox on the left. Click it again to take it off; entities already drawn are dimmed.
+  - "add all N" / "hide all N" draws or clears the whole side at once. "hide all" removes every entity on that side, including ones you had selected yourself.
   - **ⓘ** opens an entity's details without adding it to the diagram.
-- **Context:** From one entity's point of view there are five ways to be related. Four are ownership, and each names which side declares the attribute that creates it. Running *outward*: things that **belong to me by my attribute** (this entity declares the slot) and things that **belong to me by their attribute** (they declare it, pointing back here). Organization is entirely the second kind — it owns thirteen kinds of thing and declares no slot for any of them. Running *inward*, the same split: entities **I belong to, by my attribute** and entities **I belong to, by their attribute**. Fifth are **associations**, where neither entity owns the other.
+- **Context:** Entities are laid out so that owners come first, so everything that owns this one is to its left and everything it owns is to its right — that is all the two counts mean. The little edge on each row says something different: **which end carries the arrowhead**, and so which entity declares the attribute. Both kinds turn up on both sides. Of the four entities that own an Observation, three do because Observation points at them, and one because ObservationSet collects it. Organization is the extreme case: it owns thirteen kinds of thing and declares no attribute for any of them, so every row on its owned side points back at it.
 
 ### node-dismiss
 

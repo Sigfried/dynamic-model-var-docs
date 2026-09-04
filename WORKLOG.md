@@ -7,6 +7,125 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-04 (detour: relation bar replaces the cascading menu; P2 leaves the Blues ramp)
+
+Siggie: *"i hate the cascading menu for related entities. let's try a different
+approach."* Not planned work — a detour taken mid-way through the §2.3 tour
+authoring, and worth recording because three separate things were wrong and one
+of them had been wrong in writing for a week.
+
+### P2 was a sequential palette doing a nominal job
+
+Siggie, in passing: *"own-bkwds edges are supposed a different color -- P2[1] --
+but the colors are too close for me to distinguish right now."*
+
+Measured, `ownFwd` (#2171b5) against `ownBkwd` (#4292c6) is **1.50:1**. On a
+1.4px stroke that is not a distinction. The doc, committed hours earlier, said
+the one-step gap was legible *because* strokes had been thickened — they had,
+and it was not.
+
+The deeper error: **a sequential ramp encodes ORDER, and these three are
+categories.** Adjacent ColorBrewer steps are designed to read as "more" and
+"less", which is precisely the property that makes them hard to tell apart as
+nominal classes. Widening the ramp does not fix it either — pushing the pair
+apart drives `association` toward white, and association is the one kind that
+is ALSO dashed, so a pale dash is the least visible mark the diagram can make.
+
+Options were rendered as real edges at canvas geometry rather than argued from
+contrast tables (artifact, 2026-09-04) — Siggie picked **hue shift**: blue
+`#1d4ed8` / teal `#0e7490` / slate `#64748b`.
+
+One option deliberately included and not chosen, worth remembering because it
+questions the premise: **two colors, with the arrowhead carrying direction.**
+The arrowhead already encodes fwd/bkwd unambiguously; asking a near-identical
+blue to say the same thing again is what created the problem. If the three hues
+ever feel like too much ink, that is the fallback, not a narrower ramp.
+
+### The cardinality notation was two notations
+
+Siggie: *"`Observation.associated_participant` and
+`MeasurementObservationSet.observations` are both required. Why does one have
+cardinality `1` and the other `+`?"*
+
+Because `cardinalityLabel` mapped `(required, multivalued)` onto `0..1` / `1` /
+`*` / `+` — a UML range for one case and regex quantifiers for the other three.
+Each pair self-consistent, the four together not. Now `0..1` / `1..1` / `0..*` /
+`1..*`: required-ness is always the left digit, multivalued-ness always the
+right, so the labels differ exactly where the facts do.
+
+### The two axes, and four rounds of me getting them wrong
+
+This is the part worth reading. The bar shows `← N   M →`; the popover rows show
+a little edge each. **Those are two different facts** and I collapsed them
+repeatedly:
+
+- **SIDE** (the chip arrows): which way the class sits. Layout is owner-first,
+  so owners are to my left, things I own to my right.
+- **KIND** (the row glyph): the verdict — which end of the line carries the
+  arrowhead, hence which class declares the slot.
+
+My errors, in order, because the pattern matters more than any one of them:
+
+1. Asked what N and M should count while conflating "owns" with "points at" —
+   Siggie: *"your first question was weird. what's common between the 4 is they
+   own Observation, but only `observations` points in."*
+2. Offered "declaring side" vs "drawn direction" as options with no examples.
+   Siggie: *"i don't understand these how these are different. i need
+   examples."* Fair; they are indistinguishable on the class I had used.
+3. **Invented a false example.** Claimed `SpecimenContainer.contained_in` — it
+   is `Specimen.contained_in`. Siggie sent the YAML: *"do you know how to read?"*
+   The probe I had already run showed the correct fact; I described the
+   screenshot from memory instead of reading my own output.
+4. Concluded the group heading and row glyph were redundant — true only under
+   the wrong reading of the chip arrows. Siggie: *"OHHH -- I get your confusion
+   now… Those arrows are just saying 'to the left of me' / 'to the right of me',
+   they have nothing to do with own-fwd / own-bkwd."*
+
+That last one is the resolution. **Both kinds appear on both sides**, which is
+what makes the row glyph informative rather than decorative. Of the four classes
+that own `Observation`, three do because Observation points at them
+(`own-bkwd`) and one because `ObservationSet` collects it (`own-fwd`).
+
+`src/test/relationBar.test.ts` asserts this directly, and deliberately keeps its
+own copy of the side/kind table so editing the component's table forces editing
+the test. The lesson generalising past this feature: **when a distinction has
+been misread more than once, pin it with a test that names the confusion**, not
+just one that happens to cover the code.
+
+Siggie's read on the whole exchange, before the resolution: *"sounds like you
+answered your own question on the direction thing. your explanation still makes
+no sense to me and i wonder if there's some misunderstanding you have that will
+get us into trouble later."* It would have — I was about to build the redundant
+version.
+
+### Two bugs the detour surfaced
+
+- **The legend's edge samples all pointed right.** `EdgeSample` set `markerEnd`
+  unconditionally, so "A belongs to B" rendered `-->` where the canvas draws
+  `--<`. Siggie caught it by eye in the shipped legend. Now one shared
+  `EdgeSample.tsx` serves the legend and the popovers, with head placement per
+  kind — the two cannot disagree, which is the actual fix.
+- **`title` tooltips covered the popover they opened.** Reintroduced in brand
+  new code *after* `NEXT_SESSION_EDGE_DISPLAY` §3.4 had recorded exactly this
+  failure for the old menu's trigger. Siggie: *"get rid of title text."* All
+  three removed (chip, row, ⓘ); `aria-label` keeps the text for screen readers,
+  and the popover header carries it visually. **Native tooltips are unusable on
+  anything that opens a hover panel** — that is now the standing rule.
+
+### RelationMenu is dead but not deleted
+
+`RelationMenu.tsx` has no app callers, and its two test files still pass. Left
+in place: this is a detour Siggie may want to reverse, and deleting ~200 lines
+of tested code on that basis is not mine to decide. If the bar sticks, delete
+the component, `RelationMenu.test.tsx`, `RelationMenuPlacement.test.tsx`, and
+the `docs/TESTING.md` section that uses the latter as its worked example for
+stubbing layout.
+
+`buildRelationGroups` also survives, still feeding `countsOf`. The bar needs one
+row per EDGE (it shows declaring class and cardinality) where the menu deduped
+to one item per (position, class) — hence `buildRelationRows` alongside it
+rather than a reshaping of it. Two consumers, two shapes, one source.
+---
 ## 2026-09-04 (docs: OWNERSHIP_CLASSIFICATION restructured; Help menu replaces the two-tab pane)
 
 `NEXT_SESSION_EDGE_DISPLAY.md` §2.1 and §2.2. §1 (the colour system) and §4
