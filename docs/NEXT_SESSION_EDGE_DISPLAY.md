@@ -1,15 +1,32 @@
 # Next session — edge display: color system, then docs/help
 
-Two bodies of work, in order. **The color system is a design spec ready to
-implement.** The docs/help consolidation follows it, because what the legend and
-help text describe depends on the colors being settled.
+> ## ⚠️ STATUS, 2026-09-04 — read before doing anything here
+>
+> **§1 (the colour system) is SHIPPED.** So is **§4.3** (a narrowed edge points
+> at the child header). §1 is written in the imperative — "build this", "then
+> reads" — but it describes work that is DONE; verified against the code
+> 2026-09-04, not just the commit log. Do not re-implement it. It is kept only
+> because it is the sole written record of WHY the palettes are what they are,
+> and it has not yet been moved into `OWNERSHIP_CLASSIFICATION.md`.
+>
+> **§3.2 (edge labels) is SETTLED** — one label, on hover; see the section.
+> **§3.4 (popovers) is deferred** deliberately.
+>
+> **The remaining work is §2, and §2.3 (tour steps) is the priority.**
+>
+> Moving §1 + §4 into `OWNERSHIP_CLASSIFICATION.md` is the precondition for
+> deleting this file.
+
+Two bodies of work. The colour system came first and is done; the docs/help
+consolidation follows it, because what the legend and help text describe
+depends on the colours being settled.
 
 Delete this file once both are done and their content lives in
 `OWNERSHIP_CLASSIFICATION.md`, help, and the tour.
 
 ---
 
-## 1. The color system
+## 1. The color system — ✅ SHIPPED (verified 2026-09-04)
 
 ### 1.1 Three palettes
 
@@ -68,11 +85,13 @@ stroke — direction is the stroke's default encoding. The few edges whose
 endpoint is a merged-box member override that with the P3 color; there are not
 many, and the override is fine.
 
-### 1.3 Sibling color assignment
+### 1.3 Sibling color assignment — ✅ SHIPPED
 
-Replaces the current scheme, which indexes by position among **selected**
-siblings, so unselecting one shifts every later sibling's color
-(`OwnershipGraphView.tsx:461-467`, inside `mergeSiblings`).
+*(Historical framing — "the current scheme" below is the one this REPLACED, and
+it is long gone. Line numbers throughout §1 are pre-implementation and stale.)*
+
+Replaces the scheme that indexed by position among **selected** siblings, so
+unselecting one shifted every later sibling's color.
 
 Three steps:
 
@@ -122,15 +141,19 @@ check a rule against.
 
 Classes whose parent is `Entity` are top-level and form no merged box.
 
-**Where colors live:** `GRAPH_COLORS` in `appConfig.ts:470-500` (currently
-`ownership` amber, `reference` slate, and a 12-entry `siblings` list) and
-`APP_CONFIG.elementTypes` (`appConfig.ts:221-321`). All three palettes replace
-these. The amber that currently codes "relationship" across edges, dots and the
-menu chip is retired — that role moves to P2.
+**Where colors live:** ✅ done. `GRAPH_COLORS` is **gone** — it held the amber
+`ownership` and slate `reference` this section planned to retire, and
+`appConfig.ts` records its removal at the point where it used to sit. The three
+palettes now live in `appConfig.ts` under the P1/P2/P3 headings, alongside
+`APP_CONFIG.elementTypes`. The one surviving amber is the `slot` element type,
+which approximates P1's Set1 brown for the Kitchen Sink — a loose end, since
+this section declares that idea abandoned.
 
-**Tests:** `src/test/siblingMerge.test.ts:53-74` checks stability for a *fixed*
-member set, which is why the current bug shipped. Add a case that unselects a
-middle sibling and asserts the rest keep their colors. Note that colors are
+**Tests:** ✅ the middle-sibling case asked for below now exists
+(`siblingMerge.test.ts`, "sibling colors are stable when a MIDDLE sibling is
+unselected"), along with whole-schema independence, step-2 and step-3 coverage.
+Original note kept for its reasoning: the old test checked stability for a
+*fixed* member set, which is why the bug shipped. Note that colors are
 per-group, so two classes at index 0 in different groups share a color by
 design — that is **palette reuse**, not a collision (and not the pairing
 mechanism; see the note under step 3).
@@ -156,7 +179,7 @@ automated form.
 
 ---
 
-## 2. Docs and help consolidation
+## 2. Docs and help consolidation — ▶️ THE REMAINING WORK
 
 ### 2.1 `OWNERSHIP_CLASSIFICATION.md` — restructure
 
@@ -418,7 +441,7 @@ Park this survey in `OWNERSHIP_CLASSIFICATION.md`.
    more than one inbound edge) that `mergedEdges.test.ts` now guards — a
    failure there means the schema changed, not the code. Full record in
    `TASKS.md`, "✅ DONE — a narrowed edge points at the CHILD's header".
-4. **colors** — being replaced wholesale (§1).
+4. **colors** — ✅ replaced wholesale; see §1.
 5. **Adjacent** — curved edges removed 2026-08-19; one-arrowhead-per-convergence
    and thinner strokes shipped. Markers use `markerUnits="userSpaceOnUse"` so
    they do not scale with `strokeWidth`; one marker serves both ends via
