@@ -158,9 +158,14 @@ describe('Data Completeness', () => {
     // TSV rows upstream marked status=ignore. Section 3 subtracts these, and
     // the assertion below uses the same number.
     const statusIdx = tsvHeaders.indexOf('status');
-    const ignoredRows = tsvLines.slice(1).filter(
+    const labelIdx = tsvHeaders.indexOf('Variable Label');
+    const ignoredLines = tsvLines.slice(1).filter(
       line => statusIdx !== -1 && (line.split('\t')[statusIdx] || '').trim() === 'ignore',
-    ).length;
+    );
+    const ignoredRows = ignoredLines.length;
+    const ignoredLabels = ignoredLines.map(
+      line => (labelIdx === -1 ? '(unlabelled)' : line.split('\t')[labelIdx] || '(blank)'),
+    );
 
     console.log('\n=== DATA COMPLETENESS REPORT ===\n');
 
@@ -206,6 +211,16 @@ describe('Data Completeness', () => {
     console.log(`   Actually in ModelData:  ${report.variableSpecs.mappedVariables}`);
     if (report.variableSpecs.mappedVariables === report.variableSpecs.totalVariables - ignoredRows) {
       console.log('   ✓ Accounted for (the gap is the ignored rows, not a mapping failure)');
+    }
+    if (ignoredRows > 0) {
+      const labels = [...new Set(ignoredLabels)].join(', ');
+      console.log('');
+      console.log(`   The ignored rows carry status=ignore in the source sheet`);
+      console.log(`   (variable-specs-S1.tsv, exported from the HV Google Sheet in`);
+      console.log(`   scripts/download_source_data.py). They are placeholders the`);
+      console.log(`   sheet keeps but consumers skip -- duplicate labels would`);
+      console.log(`   collide as variable node ids. Filtered in dataLoader.ts.`);
+      console.log(`   Currently: ${labels}`);
     }
     if (report.variableSpecs.unmappedVariables.length > 0) {
       console.log(`   ⚠️  Sample unmapped variables (first 10): ${report.variableSpecs.unmappedVariables.join(', ')}`);

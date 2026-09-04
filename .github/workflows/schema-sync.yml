@@ -68,11 +68,24 @@ jobs:
             pulled it, bumped the pinned commit in the script, and regenerated
             `bdchm.processed.json`.
 
-            **Review checklist**
-            - [ ] Diff in `bdchm.processed.json` looks like intended schema changes
-            - [ ] `npm run typecheck` / `npx vitest run` pass against the new model
-            - [ ] No heuristic-sensitive slots changed (containment FK-flip — see
-                  `src/models/containmentGraph.ts` `NO_FLIP_SLOTS` / `VALUE_OBJECTS`)
+            **How to review this**
+
+            ```
+            make sync-review
+            ```
+
+            That runs the audit, the schema-sensitive tests and the build, then
+            says what to do about anything it flags.
+
+            The audit reports what the diff above cannot show you: classes that
+            lost every inbound reference (a class silently becoming a false
+            root), ownership verdicts that flipped because a slot's range or
+            cardinality changed, and members of the hand-curated override sets
+            in `src/models/containmentGraph.ts` that no longer exist. New
+            classes need categorizing in `src/config/entityCategories.ts`.
+
+            Ownership verdicts are a judgment call — see
+            `docs/OWNERSHIP_CLASSIFICATION.md` rather than just editing a set.
           labels: |
             schema-sync
             automated
