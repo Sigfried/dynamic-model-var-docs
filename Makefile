@@ -75,12 +75,32 @@ sync-review:  ## FULL REVIEW: status + audit + tests + build (start here)
 	 echo "=============================================================="; \
 	 npm run build || exit 1; \
 	 echo ""; \
+	 echo "=============================================================="; \
+	 echo " WHAT TO DO NEXT"; \
+	 echo "=============================================================="; \
 	 if [ $$audit -ne 0 ]; then \
-	   echo ">> Audit flagged items above. Ownership verdicts are YOUR call:"; \
-	   echo "   surface the reasoning, don't just edit the override set."; \
-	   echo "   docs/OWNERSHIP_CLASSIFICATION.md"; \
+	   echo "The audit flagged items (the [!] sections above). For each one:"; \
+	   echo ""; \
+	   echo "  New class            -> add it to a category in"; \
+	   echo "                          src/config/entityCategories.ts"; \
+	   echo "  Stale override       -> the slot was renamed or removed; update"; \
+	   echo "                          the set in src/models/containmentGraph.ts"; \
+	   echo "  Ownership flip       -> decide whether the new direction is right."; \
+	   echo "                          This one is a judgment call, not a lookup:"; \
+	   echo "                          see docs/OWNERSHIP_CLASSIFICATION.md"; \
+	   echo "  Lost inbound edge    -> the class now draws as a root with nothing"; \
+	   echo "                          pointing at it. Usually a range widened to"; \
+	   echo "                          Entity. Decide if that is acceptable."; \
+	   echo ""; \
+	   echo "Then: make sync-checkout, fix on the branch, re-run make sync-review."; \
 	 else \
-	   echo ">> Nothing flagged. Tests and build pass. Safe to merge."; \
+	   echo "Nothing flagged. Tests and build pass."; \
+	   echo ""; \
+	   echo "To merge:  gh pr merge $(SYNC_BRANCH) --squash"; \
+	   echo "       or: git checkout main && git merge $(SYNC_BRANCH)"; \
+	   echo ""; \
+	   echo "Note this only merges the schema data. Nothing is pushed or"; \
+	   echo "deployed -- run npm run deploy separately when you want it live."; \
 	 fi
 
 # --------------------------------------------------------------------------

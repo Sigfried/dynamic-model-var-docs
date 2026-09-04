@@ -293,6 +293,11 @@ export async function loadRawData(): Promise<SchemaData> {
 
   const slots = new Map<string, SlotData>();
   Object.entries(processedSchema.slots || {}).forEach(([name, input]) => {
+    // The slots section carries a `_comment` string documenting that it is a
+    // derived index. Object.keys() on a string yields its character indices,
+    // so passing it to validateDTO reported 371 "unexpected fields" named
+    // 0..370 on every load -- the wall of noise in every test run.
+    if (name.startsWith('_') || typeof input !== 'object' || input === null) return;
     slots.set(name, transformSlot(input));
   });
 

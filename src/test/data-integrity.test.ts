@@ -10,14 +10,14 @@ import type { ClassInput } from '../input_types';
  *
  * This test verifies that all information from source files makes it through
  * the data pipeline:
- * 1. bdchm.yaml → bdchm.metadata.json (Python preprocessing)
- * 2. bdchm.metadata.json + variable-specs-S1.tsv → ModelData (TypeScript loadModelData)
+ * 1. bdchm.yaml → bdchm.processed.json (Python preprocessing)
+ * 2. bdchm.processed.json + variable-specs-S1.tsv → ModelData (TypeScript loadModelData)
  *
  * Reports missing fields but does NOT fail the test - this is for visibility only.
  */
 
 interface CompletenessReport {
-  yamlToMetadata: {
+  yamlToProcessed: {
     topLevelFields: string[];
     prefixes: boolean;
     imports: boolean;
@@ -37,7 +37,7 @@ interface CompletenessReport {
 describe('Data Completeness', () => {
   test('should report completeness of data pipeline', async () => {
     const report: CompletenessReport = {
-      yamlToMetadata: {
+      yamlToProcessed: {
         topLevelFields: [],
         prefixes: false,
         imports: false,
@@ -89,9 +89,9 @@ describe('Data Completeness', () => {
     const missingTopLevelFields = yamlTopLevelFields.filter(
       field => field in yamlData && !(field in processedJson)
     );
-    report.yamlToMetadata.topLevelFields = missingTopLevelFields;
-    report.yamlToMetadata.prefixes = 'prefixes' in yamlData && !('prefixes' in processedJson);
-    report.yamlToMetadata.imports = 'imports' in yamlData && !('imports' in processedJson);
+    report.yamlToProcessed.topLevelFields = missingTopLevelFields;
+    report.yamlToProcessed.prefixes = 'prefixes' in yamlData && !('prefixes' in processedJson);
+    report.yamlToProcessed.imports = 'imports' in yamlData && !('imports' in processedJson);
 
     // 2. Check Processed JSON → ModelData
     const metadataClassNames = Object.keys(processedJson.classes || {});
@@ -119,7 +119,11 @@ describe('Data Completeness', () => {
       name => !modelDataEnumNames.has(name)
     );
 
-    const metadataSlotNames = Object.keys(processedJson.slots || {});
+    // `_comment` is documentation embedded in the slots section, not a slot;
+    // dataLoader skips underscore-prefixed keys, so it is not "missing".
+    const metadataSlotNames = Object.keys(processedJson.slots || {}).filter(
+      name => !name.startsWith('_'),
+    );
     const modelDataSlotNames = new Set(slots.keys());
     report.metadataToModelData.missingSlots = metadataSlotNames.filter(
       name => !modelDataSlotNames.has(name)
@@ -151,22 +155,34 @@ describe('Data Completeness', () => {
     }
 
     // Print report (not fail)
+    // TSV rows upstream marked status=ignore. Section 3 subtracts these, and
+    // the assertion below uses the same number.
+    const statusIdx = tsvHeaders.indexOf('status');
+    const ignoredRows = tsvLines.slice(1).filter(
+      line => statusIdx !== -1 && (line.split('\t')[statusIdx] || '').trim() === 'ignore',
+    ).length;
+
     console.log('\n=== DATA COMPLETENESS REPORT ===\n');
 
-    console.log('1. YAML → Metadata.json:');
-    if (report.yamlToMetadata.topLevelFields.length > 0) {
-      console.log(`   ⚠️  Missing top-level fields: ${report.yamlToMetadata.topLevelFields.join(', ')}`);
+    console.log('1. bdchm.yaml -> bdchm.processed.json:');
+    if (report.yamlToProcessed.topLevelFields.length > 0) {
+      console.log(`   ℹ️  Schema-level fields not carried into processed.json (by design --`);
+      console.log(`      the app reads classes/slots/enums/types, not schema metadata):`);
+      console.log(`      ${report.yamlToProcessed.topLevelFields.join(', ')}`);
     } else {
       console.log('   ✓ All top-level fields present');
     }
-    if (report.yamlToMetadata.prefixes) {
-      console.log('   ⚠️  Prefixes missing from metadata.json');
-    }
-    if (report.yamlToMetadata.imports) {
-      console.log('   ⚠️  Imports missing from metadata.json');
+    // prefixes IS carried into processed.json; imports is not, because the
+    // transform resolves `linkml:types` rather than passing it along. Both are
+    // expected, so neither gets a warning -- only a change would matter, and
+    // the field list above already reports that.
+    if (!report.yamlToProcessed.prefixes) {
+      console.log('   ✓ prefixes carried through');
+    } else {
+      console.log('   ⚠️  prefixes no longer carried into processed.json');
     }
 
-    console.log('\n2. Metadata.json → ModelData:');
+    console.log('\n2. bdchm.processed.json -> ModelData:');
     if (report.metadataToModelData.missingClasses.length > 0) {
       console.log(`   ⚠️  Missing classes: ${report.metadataToModelData.missingClasses.join(', ')}`);
     } else {
@@ -184,8 +200,13 @@ describe('Data Completeness', () => {
     }
 
     console.log('\n3. Variable Specs:');
-    console.log(`   Total variables in TSV: ${report.variableSpecs.totalVariables}`);
-    console.log(`   Variables in ModelData: ${report.variableSpecs.mappedVariables}`);
+    console.log(`   Rows in TSV:            ${report.variableSpecs.totalVariables}`);
+    console.log(`   Marked status=ignore:  -${ignoredRows}`);
+    console.log(`   Expected in ModelData:  ${report.variableSpecs.totalVariables - ignoredRows}`);
+    console.log(`   Actually in ModelData:  ${report.variableSpecs.mappedVariables}`);
+    if (report.variableSpecs.mappedVariables === report.variableSpecs.totalVariables - ignoredRows) {
+      console.log('   ✓ Accounted for (the gap is the ignored rows, not a mapping failure)');
+    }
     if (report.variableSpecs.unmappedVariables.length > 0) {
       console.log(`   ⚠️  Sample unmapped variables (first 10): ${report.variableSpecs.unmappedVariables.join(', ')}`);
     }
@@ -214,10 +235,6 @@ describe('Data Completeness', () => {
     // status=ignore. Asserting on the raw count would be wrong -- 6 rows are
     // deliberately ignored upstream (all "Spirometry metadata"), which is
     // exactly the 155 vs 149 gap.
-    const ignoredRows = tsvLines.slice(1).filter(line => {
-      const statusIdx = tsvHeaders.indexOf('status');
-      return statusIdx !== -1 && (line.split('\t')[statusIdx] || '').trim() === 'ignore';
-    }).length;
     expect(
       report.variableSpecs.mappedVariables,
       `Expected ${report.variableSpecs.totalVariables} TSV rows minus ${ignoredRows} ` +
