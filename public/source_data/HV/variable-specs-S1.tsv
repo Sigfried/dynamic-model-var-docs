@@ -16,7 +16,7 @@ MeasurementObservation	Basophils Count	basophil_ncnc_bld		decimal	10*3/uL	OBA:VT
 MeasurementObservation	Bilirubin Conjugated Direct	bilirubin_con		decimal	mg/dL		OMOP:44805650		Concentration of conjugated (or direct) bilirubin in blood, typically measured in serum or plasma
 MeasurementObservation	Bilirubin Total	bilirubin_tot		decimal	mg/dL		OMOP:4230543		Concentration of total bilirubin in blood, typically measured in serum or plasma
 MeasurementObservation	BMI	bmi		decimal	kg/m2	OBA:2045455	OMOP:3038553		Also known as body mass index: ratio of a person's weight in kilos to the square of their height in meters
-MeasurementObservation	BNP	bnp		decimal	pg/mL	OBA:2045303	OMOP:4307029		Concentration of BNP in blood, typically measured in plasma or whole blood. Also known as B-type natriuretic peptide, a hormone.
+MeasurementObservation	BNP	bnp		decimal	pg/mL	OBA:2100274	OMOP:3031569		Concentration of BNP in blood, typically measured in plasma or whole blood. Also known as B-type natriuretic peptide, a hormone.
 MeasurementObservation	Body weight	bdy_wgt		decimal	kg	OBA:VT0001259	OMOP:4099154		Mass of a person or other organism
 MeasurementObservation	BUN	bun		decimal	mg/dL	OBA:VT0005265	OMOP:4017361		Concentration of blood urea nitrogen in blood, typically measured in serum or plasma
 MeasurementObservation	BUN Creatinine ratio	bun_creatinine		decimal	{ratio}	OBA:2100054	OMOP:4112223		Ratio of blood urea nitrogen (BUN) to creatinine in blood, typically measured in serum or plasma
