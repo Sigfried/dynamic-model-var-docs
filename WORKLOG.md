@@ -153,6 +153,29 @@ Two more, from the screenshot after that:
    by `NodeVM.allRows`, with relationships declared elsewhere (which have no row
    on this box) falling to the end.
 
+6. **The row was the only affordance**, doing double duty as "toggle this
+   entity" — so there was no way to open a detail panel from the popover, a
+   redundant ⓘ button sat at the end of every row, and drawn rows had to be
+   washed out purely to say "clicking me removes it". Split into two targets:
+   `+`/`−` toggles, the class NAME opens details, the row itself does nothing.
+   Every row now renders at full contrast.
+7. **"add all 4" next to seven rows.** Correct but opaque: four distinct
+   entities reached through seven attributes. The header says both numbers now.
+   Siggie explicitly ruled out going further — Observation owns Quantity via
+   `value_quantity` while the rest belong to MeasurementObservation, and "let's
+   not try to convey that level of detail" in a header.
+8. **The popover was too narrow** and truncated qualified slot names, hiding the
+   half of the row that says who declares the relationship. Sized to content
+   (`w-max`) with a viewport cap, rather than a guessed fixed width.
+
+One thing that looked like a bug and was not: `Observation.value_quantity`
+appeared to be missing from a merged box's popover. It is not — with only
+`MeasurementObservation` selected, its `value_quantity` OVERRIDES the parent's,
+so there is one row and one relation. I had started widening the merged box's
+relation sources before Siggie caught it ("ok, so it's not a bug"); reverted.
+Worth remembering that the merged box's `sources` deliberately excludes an
+unselected parent, and that this is correct.
+
 The colour is the part worth keeping in mind: **each end wears its own class's
 sibling colour**, so a row belonging to a merged child is coloured at both ends
 while a parent-level row is not. Siggie stated it as *"blue because it's a blue

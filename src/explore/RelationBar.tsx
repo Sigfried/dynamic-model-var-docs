@@ -301,10 +301,13 @@ function RelationPopover({
       onMouseEnter={cancelClose}
       onMouseLeave={scheduleClose}
       style={{ left: pos.x, top: pos.y }}
-      /* overflow-y only: rows are narrow now that `this` is an icon, so a
-         horizontal scrollbar means something is wrong rather than something
-         being usefully reachable by scrolling. */
-      className="fixed z-50 max-w-[34rem] max-h-[60vh] overflow-y-auto overflow-x-hidden py-1
+      /* Sized to the CONTENT, not to a guessed width: qualified slot names run
+         long (`MeasurementObservationSet.observations`) and truncating them
+         hides the half of the row that says who declares the relationship.
+         `w-max` lets the table set the width; the viewport cap is what stops
+         it running off-screen, and useClamped keeps it in view. */
+      className="fixed z-50 w-max max-w-[min(46rem,calc(100vw-2rem))] max-h-[60vh]
+                 overflow-y-auto overflow-x-hidden py-1
                  rounded-md border border-gray-300 dark:border-slate-600
                  bg-white dark:bg-slate-800 shadow-xl
                  text-gray-900 dark:text-gray-100"
@@ -312,10 +315,23 @@ function RelationPopover({
       {/* No "drawn to its left" subtitle — the rows are IN diagram order, so
           the layout says it (Siggie, 2026-09-04). */}
       <div className="px-3 py-1 border-b border-gray-200 dark:border-slate-700">
+        {/*
+          Counts BOTH numbers, because they differ and the difference confused
+          the reader: "add all 4 is correct but confusing because there are more
+          than four rows" (Siggie, 2026-09-04). Four distinct entities reached
+          through seven attributes — one entity can be reached by several slots.
+          Deliberately NOT explaining which class declares which; that detail is
+          in the rows.
+        */}
         <div className="text-[11px] font-semibold">
-          {side === 'left'
-            ? <><b>{label}</b> belongs to {distinct.length}</>
-            : <><b>{label}</b> owns {distinct.length}</>}
+          <b>{label}</b>{' '}
+          {side === 'left' ? 'belongs to' : 'owns'}{' '}
+          {distinct.length} {distinct.length === 1 ? 'entity' : 'distinct entities'}
+          {sorted.length !== distinct.length && (
+            <span className="font-normal text-gray-500 dark:text-slate-400">
+              {' '}through {sorted.length} attributes
+            </span>
+          )}
         </div>
       </div>
 
@@ -325,7 +341,11 @@ function RelationPopover({
                    text-blue-600 dark:text-blue-400
                    hover:bg-gray-100 dark:hover:bg-slate-700"
       >
-        {allDrawn ? `hide all ${distinct.length}` : `add all ${distinct.length}`}
+        {/* "entities", matching the header — the bare number read as a row
+            count, which it is not. */}
+        {allDrawn
+          ? `hide all ${distinct.length} entities`
+          : `add all ${distinct.length} entities`}
       </button>
 
       <table className="w-full text-[11px]">
@@ -340,18 +360,10 @@ function RelationPopover({
              * owns me), never the edge's kind.
              *
              * Each end is written as `Class.slot` when that class DECLARES the
-             * slot, and as a bare class name otherwise. So `performed_by` is
-             * `Organization ──< Observation.performed_by` and `observations`
-             * is `MeasurementObservationSet.observations ──> MeasurementObs`:
-             * the qualified half is always the end that holds the attribute.
-             */
-            /*
-             * THIS box's end is named by whichever class actually declares the
-             * slot when that is this box's own side — on a merged box the
-             * declarer is a CHILD (`MeasurementObservation`), not the box's
-             * title (`Observation`), and naming it by the title made the slot
-             * disappear: `End` only qualifies the end whose class matches
-             * `declaredBy` (Siggie, screenshot 2026-09-04).
+             * slot, and as a bare class name otherwise, so the qualified half
+             * is always the end that holds the attribute. On a merged box the
+             * declarer is often a CHILD rather than the box's title, which is
+             * why this end is named by `declaredBy` and not by `label`.
              */
             const mine = r.declaredBy === r.other ? label : r.declaredBy;
             const owner = side === 'left' ? r.other : mine;
@@ -359,12 +371,35 @@ function RelationPopover({
             return (
               <tr
                 key={`${r.declaredBy}.${r.slot}->${r.other}`}
-                onClick={() => (r.drawn ? onRemove(r.other) : onAdd(r.other))}
-                className={`cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700
-                            ${r.drawn ? 'opacity-55' : ''}`}
+                className="hover:bg-gray-100 dark:hover:bg-slate-700"
               >
-                <td className="pl-3 pr-2 py-0.5 text-right whitespace-nowrap">
-                  <End cls={owner} row={r} colorOf={colorOf} />
+                {/*
+                  Show/hide is its OWN control (Siggie, 2026-09-04). Clicking
+                  the row used to toggle the entity, which left no way to open
+                  a detail panel from here and forced drawn rows to be washed
+                  out just to say "clicking me removes it". Now the button
+                  carries that state and the row stays at full contrast.
+                */}
+                <td className="pl-2 pr-1 py-0.5">
+                  <button
+                    onClick={ev => {
+                      ev.stopPropagation();
+                      (r.drawn ? onRemove : onAdd)(r.other);
+                    }}
+                    aria-label={r.drawn
+                      ? `Remove ${r.other} from the diagram`
+                      : `Add ${r.other} to the diagram`}
+                    className={`w-4 h-4 rounded-sm leading-none text-[11px]
+                                flex items-center justify-center border
+                                ${r.drawn
+                                  ? 'border-sky-300 bg-sky-50 text-sky-700 hover:bg-sky-200 dark:border-sky-700 dark:bg-sky-950 dark:text-sky-300'
+                                  : 'border-gray-300 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:border-slate-600 dark:hover:bg-slate-600'}`}
+                  >
+                    {r.drawn ? '−' : '+'}
+                  </button>
+                </td>
+                <td className="pl-1 pr-2 py-0.5 text-right whitespace-nowrap">
+                  <End cls={owner} row={r} colorOf={colorOf} onInspect={onInspect} />
                 </td>
                 <td className="px-2 py-0.5 font-mono text-gray-400 dark:text-slate-500
                                whitespace-nowrap tabular-nums text-right">
@@ -373,20 +408,8 @@ function RelationPopover({
                 <td className="px-1 py-0.5 align-middle">
                   <EdgeSample kind={kind} width={30} />
                 </td>
-                <td className="pr-2 py-0.5 whitespace-nowrap">
-                  <End cls={owned} row={r} colorOf={colorOf} />
-                </td>
-                <td className="pr-3 py-0.5 text-right">
-                  {onInspect && (
-                    <button
-                      onClick={ev => { ev.stopPropagation(); onInspect(r.other); }}
-                      aria-label={`Open ${r.other}'s details`}
-                      className="text-gray-300 hover:text-gray-600 dark:text-slate-600
-                                 dark:hover:text-slate-300"
-                    >
-                      ⓘ
-                    </button>
-                  )}
+                <td className="pr-3 py-0.5 whitespace-nowrap">
+                  <End cls={owned} row={r} colorOf={colorOf} onInspect={onInspect} />
                 </td>
               </tr>
             );
@@ -407,27 +430,43 @@ function RelationPopover({
  * default ink. That is what makes a row scannable against the diagram
  * (Siggie, 2026-09-04: "blue because it's a blue child class on both sides").
  *
- * Replaces a `this` icon that stood in for the box's own name. It saved width
- * but cost more than it saved: the box's name is exactly what you are trying
- * to match against the canvas, and an icon cannot carry the class's colour.
+ * **The class NAME is what opens details** — not the whole row, and not a
+ * separate ⓘ button, which was redundant with it (Siggie, 2026-09-04). Adding
+ * and hiding is the `+`/`−` control instead, so the two actions a row offers
+ * are on two different targets rather than competing for one click.
+ *
+ * The slot suffix is not a click target: it names an attribute, and there is
+ * nothing to open for one here.
  */
-function End({ cls, row, colorOf }: {
+function End({ cls, row, colorOf, onInspect }: {
   cls: string;
   row: RelationRowVM;
   colorOf?: ColorOf;
+  onInspect?: (id: string) => void;
 }) {
   const color = colorOf?.(cls);
   // The declaring end shows `Class.slot`; the other end is a bare class name.
   const qualified = cls === row.declaredBy;
-
+  const style = color ? { color: color.text } : undefined;
   return (
-    <span
-      className="font-mono"
-      style={color ? { color: color.text } : undefined}
-    >
-      {cls}
+    <span className="font-mono">
+      {onInspect ? (
+        <button
+          onClick={ev => { ev.stopPropagation(); onInspect(cls); }}
+          title={`Open ${cls}'s details`}
+          className="hover:underline"
+          style={style}
+        >
+          {cls}
+        </button>
+      ) : (
+        <span style={style}>{cls}</span>
+      )}
       {qualified && (
-        <span className={color ? 'opacity-80' : 'text-gray-500 dark:text-slate-400'}>
+        <span
+          className={color ? 'opacity-80' : 'text-gray-500 dark:text-slate-400'}
+          style={style}
+        >
           .{row.slot}
         </span>
       )}

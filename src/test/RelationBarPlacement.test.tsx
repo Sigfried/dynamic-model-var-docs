@@ -140,6 +140,76 @@ describe('RelationBar row rendering', () => {
   });
 });
 
+describe('RelationBar row controls', () => {
+  afterEach(() => {
+    cleanup();
+    Element.prototype.getBoundingClientRect = origRect;
+  });
+
+  const DRAWN: RelationRowVM[] = [
+    { other: 'Quantity', position: 'owns-mine', slot: 'value_quantity',
+      declaredBy: 'Observation', cardinality: '0..1', drawn: true },
+    { other: 'Context', position: 'owns-mine', slot: 'context',
+      declaredBy: 'Observation', cardinality: '0..*', drawn: false },
+  ];
+
+  function open(onAdd = () => {}, onRemove = () => {}, onInspect = () => {}) {
+    stubLayout(1400, 300);
+    render(
+      <RelationBar label="Observation" rows={DRAWN}
+        onAdd={onAdd} onRemove={onRemove} onInspect={onInspect} />,
+    );
+    fireEvent.mouseEnter(screen.getByLabelText(/classes Observation owns/));
+  }
+
+  test('add/hide is a per-row button, not a click on the row', () => {
+    /*
+     * The row used to be the toggle, which left nowhere to click for detail
+     * and forced drawn rows to be dimmed just to signal "clicking me removes
+     * it" (Siggie, 2026-09-04). Two actions, two targets.
+     */
+    const removed: string[] = [];
+    const added: string[] = [];
+    open(id => added.push(id), id => removed.push(id));
+
+    fireEvent.click(screen.getByLabelText('Remove Quantity from the diagram'));
+    expect(removed).toEqual(['Quantity']);
+
+    fireEvent.click(screen.getByLabelText('Add Context to the diagram'));
+    expect(added).toEqual(['Context']);
+
+    // And a drawn row is NOT washed out any more — the button carries the state.
+    expect(document.querySelectorAll('tr.opacity-55')).toHaveLength(0);
+  });
+
+  test('the class name opens details; the slot suffix is not a target', () => {
+    const inspected: string[] = [];
+    open(() => {}, () => {}, id => inspected.push(id));
+    fireEvent.click(screen.getByTitle("Open Quantity's details"));
+    expect(inspected).toEqual(['Quantity']);
+  });
+
+  test('the header counts entities AND attributes when they differ', () => {
+    // "add all 4 is correct but confusing because there are more than four
+    // rows" — one entity can be reached through several attributes.
+    stubLayout(1400, 300);
+    const rows: RelationRowVM[] = [
+      { other: 'Quantity', position: 'owns-mine', slot: 'range_low',
+        declaredBy: 'Observation', cardinality: '0..1', drawn: false },
+      { other: 'Quantity', position: 'owns-mine', slot: 'range_high',
+        declaredBy: 'Observation', cardinality: '0..1', drawn: false },
+    ];
+    render(
+      <RelationBar label="Observation" rows={rows}
+        onAdd={() => {}} onRemove={() => {}} />,
+    );
+    fireEvent.mouseEnter(screen.getByLabelText(/classes Observation owns/));
+    const header = document.querySelector('div[data-relation-bar] div div')!;
+    expect(header.textContent).toContain('1 entity');
+    expect(header.textContent).toContain('through 2 attributes');
+  });
+});
+
 describe('RelationBar popover placement', () => {
   afterEach(() => {
     cleanup();

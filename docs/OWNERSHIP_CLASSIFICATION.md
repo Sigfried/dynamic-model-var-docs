@@ -551,8 +551,19 @@ the four labels differ only where the facts do.
 
 Each box carries a `← N   M →` bar (`RelationBar.tsx`): **N** classes it
 belongs to, drawn to its left; **M** it owns, drawn to its right. Hovering
-either count opens a list of the relationships on that side. Clicking a row
-adds or removes that class.
+either count opens a list of the relationships on that side.
+
+**Two counts, because they differ**: the header reads "Observation owns 4
+distinct entities through 7 attributes" — one entity can be reached by several
+slots, so a row count and an entity count are not the same number, and "add all
+4" beside seven rows is otherwise a puzzle.
+
+**A row offers two actions on two targets.** The `+`/`−` button adds or removes
+the entity; the **class name** opens its details. Clicking the row itself does
+nothing. An earlier version made the whole row the toggle, which left nowhere to
+click for detail and forced drawn rows to be dimmed just to signal that clicking
+would remove them — the button carries that state now, so every row stays at
+full contrast.
 
 **A row is written in diagram order** — owner on the left, owned on the right,
 the same order the canvas lays boxes out, so a row and the line it describes
