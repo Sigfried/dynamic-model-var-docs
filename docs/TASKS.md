@@ -48,7 +48,7 @@ quick win's clothes.
 ### Explicitly NOT this week
 
 Panel resizing/detaching · categories in the tree (design question, not a bug) ·
-the ownership legend (postponed by Siggie) · multi-category membership ·
+the ownership legend (postponed by Siggie) ·
 CURIE links · the bare diagonal · dragging polish · example-cases restructuring.
 These keep their write-ups below so nothing is lost.
 
@@ -721,7 +721,48 @@ the tour is numbered 1..n, and every entry id is actually tagged in the app.
 
 *Explicitly not this week; each keeps its full write-up.*
 
-### ▶️ OPEN — a class should appear in SEVERAL CATEGORIES
+### ✅ DONE — a class should appear in SEVERAL CATEGORIES
+
+**Shipped 2026-09-04** (`d009836`), for the two classes Siggie named.
+`SpecimenQualityObservation` and `SpecimenQuantityObservation` are now listed
+under **both** `observation` and `lab`. Siggie: *"all five Obs subclasses should
+appear in the selection pane; either twice — under Observation as well as under
+Lab/BioSpecimen — or just under Observation"*, then *"let's try 1 first"*, and
+after seeing it: *"seems to be working fine."*
+
+The audit below is kept as the record of what was fixed and what was left.
+Everything under "What breaks under dual-listing" was real; both `real` rows
+were repaired in the same commit.
+
+**What changed:**
+
+- `entityCategories.ts` — the two ids added to `observation`; header comment
+  rewritten (it asserted single membership as an enforced invariant).
+- `entityCategories.test.ts` — *"no class is listed in two categories"* retired
+  deliberately, as this write-up required, and replaced by a `DUAL_LISTED`
+  allowlist plus a test that an allowlisted class really is listed twice, so
+  the list cannot outlive the listing.
+- `DataService.getCategorySelectorSection` — counts DISTINCT classes (was
+  summing group lengths) and emits `category::class` item ids (were bare class
+  ids, i.e. two items sharing an id). Selection/hover still key off
+  `hoverData.name`, the bare class id, so both rows toggle together.
+- `SelectionTable.test.tsx` — helpers made multi-row aware; the cross-category
+  test rewrote to assert the new split behaviour.
+
+**Nesting needed no change.** `getCategoryTrees` already decides per category
+from its own membership, so the `observation` listing nests under `Observation`
+and the `lab` listing stays a root carrying the "↳ Observation" hint.
+
+**Still open, deliberately.** The two design questions below (marking a
+secondary listing; which other classes deserve one) were not decided — the
+recommendation to do exactly the two named classes was followed. The reverse
+lookup (class → its categories) still does not exist, so a future
+`ENTITY_CATEGORIES.find(...)` silently picks one category; the `latent` row
+below is still latent. Closing it properly means adding a
+`categoriesOf(classId): string[]` to `DataService` and using it at that site.
+
+<details>
+<summary>Original write-up and audit (2026-08-26)</summary>
 
 Restored 2026-08-26. This write-up was deleted in `0c9db03` while the NEXT UP
 pointer to it survived, leaving item 3 dangling. Original text is at
@@ -790,6 +831,8 @@ predicted this from the other direction: *"with whole graph populated, a lot
 more duplicates will appear, across categories."* If categories become a
 dag-browser layer, that widget needs a class-appears-N-times story regardless.
 These two items should be designed together, or item 9 will re-solve it.
+
+</details>
 
 ---
 
