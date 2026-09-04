@@ -808,7 +808,11 @@ export class DataService {
    */
   getCategorySelectorSection(): SectionData {
     const groups = this.getCategoryGroups();
-    const totalClasses = groups.reduce((n, g) => n + g.classIds.length, 0);
+    // DISTINCT classes: a class may be listed in more than one category (see
+    // EntityCategory.classIds), and summing the group lengths would count it
+    // once per listing. The per-group `(N)` below is deliberately the group's
+    // own length — that IS how many rows the group shows.
+    const totalClasses = new Set(groups.flatMap(g => g.classIds)).size;
 
     return {
       id: 'focus-categories',
@@ -832,7 +836,12 @@ export class DataService {
             for (const classId of group.classIds) {
               const counts = this.getRelationshipCounts(classId);
               items.push({
-                id: classId,
+                // Qualified by category: a dual-listed class emits one item
+                // per listing, and two items sharing an id is the bug that
+                // broke LinkOverlay. Selection and hover both key off
+                // `hoverData.name`, which stays the bare class id, so the two
+                // rows toggle together and read as one class.
+                id: `${group.id}::${classId}`,
                 displayName: classId,
                 level: 1,
                 isClickable: true,

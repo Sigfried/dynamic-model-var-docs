@@ -3,18 +3,25 @@
  *
  * Categories are hand-curated groupings of BDCHM classes.
  *
- * **A class appears in exactly ONE category today.** This comment used to say
- * an entity could appear in several, citing "Condition appears in both Pinned
- * and Clinical" — but `Pinned` is the special DYNAMIC category populated from
- * user pin state, not a static listing. Measured 2026-08-26: 53 classes, 53
- * memberships, zero duplicates. Single membership is ENFORCED by
- * `entityCategories.test.ts` ("no class is listed in two categories").
+ * **A class MAY appear in more than one category** (since 2026-09-04).
+ * Categories don't live in the schema — they are imposed to make the app
+ * easier to navigate — so a second listing is a navigation aid, NOT a second
+ * superclass and not sibling merging.
  *
- * Siggie has asked for genuine multi-membership — SpecimenQuality/
- * QuantityObservation should appear under BOTH Observations/Measurements and
- * Laboratory/Biospecimen. That is an open task, not current behaviour; see
- * "a class should appear in SEVERAL CATEGORIES" in docs/TASKS.md for the
- * audit of what breaks. Retire that test deliberately when implementing.
+ * Today exactly two classes are dual-listed: `SpecimenQualityObservation` and
+ * `SpecimenQuantityObservation`, under both `observation` and `lab`. Without
+ * the `observation` listing the only route to them was clicking a Specimen row
+ * on the canvas, which left the Observation hierarchy looking like it had
+ * three children instead of five.
+ *
+ * Dual-listing is an ALLOWLIST, not a free-for-all: `entityCategories.test.ts`
+ * fails on an undeclared duplicate, and on an allowlisted class that is not
+ * actually listed twice. Add to `DUAL_LISTED` there when adding a listing.
+ *
+ * Consumers walk categories → classes; the reverse (class → its categories)
+ * exists nowhere. `getCategorySelectorSection` counts DISTINCT classes and
+ * qualifies its item ids by category so two listings do not collide, while
+ * selection keys off the bare class id so both rows toggle together.
  */
 
 export interface EntityCategory {
@@ -125,6 +132,14 @@ export const ENTITY_CATEGORIES: EntityCategory[] = [
       'MeasurementObservation',
       'SdohObservation',
       'DimensionalObservation',
+      // Also listed under `lab`, which is where someone browsing specimen
+      // concepts looks for them. They are here too because this is the only
+      // place the Observation hierarchy is shown WHOLE — without them, the
+      // only route to these two is clicking a Specimen row on the canvas.
+      // First deliberate multi-category membership; see the note on
+      // EntityCategory.classIds.
+      'SpecimenQualityObservation',
+      'SpecimenQuantityObservation',
       'ObservationSet',
       'MeasurementObservationSet',
       'SdohObservationSet',

@@ -101,14 +101,25 @@ describe('SelectionTable', () => {
    * and toggling a parent must not touch its subclasses.
    */
   describe('is-a nesting', () => {
-    const rowOf = (classId: string) =>
-      document.querySelector(`[data-class-row="${classId}"]`) as HTMLElement;
+    /*
+     * A class may be listed in more than one category (entityCategories.ts),
+     * so it can have SEVERAL rows. `rowOf` keeps returning the first, which is
+     * what tests about a single-listed class want; `rowsOf` and `depthIn` are
+     * for the dual-listed ones, where "the" row is ambiguous.
+     */
+    const rowsOf = (classId: string) =>
+      [...document.querySelectorAll(`[data-class-row="${classId}"]`)] as HTMLElement[];
+
+    const rowOf = (classId: string) => rowsOf(classId)[0];
 
     /** Left padding encodes depth (0.75rem + 1rem per level). */
-    const depthOf = (classId: string) => {
-      const px = rowOf(classId).style.paddingLeft;
-      return Math.round((parseFloat(px) - 0.75) / 1);
-    };
+    const depthOfRow = (row: HTMLElement) =>
+      Math.round((parseFloat(row.style.paddingLeft) - 0.75) / 1);
+
+    const depthOf = (classId: string) => depthOfRow(rowOf(classId));
+
+    /** Every depth this class renders at, one per listing, ascending. */
+    const depthsOf = (classId: string) => rowsOf(classId).map(depthOfRow).sort();
 
     test('subclasses nest under an is-a parent in the same category', () => {
       renderTable();
@@ -128,23 +139,44 @@ describe('SelectionTable', () => {
     test('nesting matches the schema graph, not a hand-curated map', () => {
       renderTable();
       const trees = ds.getCategoryTrees();
+      /*
+       * Nesting is decided PER LISTING: the same class nests in a category
+       * that holds its parent and stays a root in one that does not. So
+       * collect the depth each category implies and compare against the set of
+       * depths actually rendered, rather than asking for "the" depth.
+       */
+      const expected = new Map<string, number[]>();
       for (const group of trees) {
         const inCategory = new Set(group.classIds);
         for (const id of group.classIds) {
           const parent = ds.getIsaParent(id);
           const nested = parent !== null && inCategory.has(parent);
-          expect(depthOf(id), `${id} depth`).toBe(nested ? 1 : 0);
+          expected.set(id, [...(expected.get(id) ?? []), nested ? 1 : 0]);
         }
+      }
+      for (const [id, depths] of expected) {
+        expect(depthsOf(id), `${id} depths, one per listing`).toEqual([...depths].sort());
       }
     });
 
-    test('a class whose is-a parent is in another category stays a root and says so', () => {
+    test('a dual-listed class nests beside its parent and stays a root elsewhere', () => {
       renderTable();
-      // Both are in `lab`; their parent Observation is in `observation`.
+      /*
+       * These two used to be in `lab` ONLY, which made them unreachable from
+       * the Observation hierarchy — the only route was clicking a Specimen row
+       * on the canvas, and Observation looked like it had three children
+       * instead of five. Since 2026-09-04 they are listed in `observation` too.
+       *
+       * The two listings behave differently BY DESIGN: under `observation` the
+       * parent is present, so the row nests; under `lab` it is not, so the row
+       * stays a root and keeps the "↳ Observation" hint saying what it extends.
+       */
       for (const id of ['SpecimenQualityObservation', 'SpecimenQuantityObservation']) {
         expect(ds.getIsaParent(id)).toBe('Observation');
-        expect(depthOf(id), `${id} cannot nest across categories`).toBe(0);
-        expect(rowOf(id).textContent, `${id} shows what it extends`).toContain('Observation');
+        expect(depthsOf(id), `${id} is listed twice`).toEqual([0, 1]);
+        const root = rowsOf(id).find(r => depthOfRow(r) === 0)!;
+        expect(root.textContent, `${id}'s root listing says what it extends`)
+          .toContain('Observation');
       }
     });
 

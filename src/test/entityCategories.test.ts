@@ -57,17 +57,42 @@ describe('entityCategories config vs. live schema', () => {
     }
   });
 
-  test('no class is listed in two categories', () => {
+  /*
+   * Was "no class is listed in two categories", which forbade exactly the
+   * change made 2026-09-04. Retired deliberately, per the audit in TASKS.md
+   * ("a class should appear in SEVERAL CATEGORIES"): categories are an imposed
+   * navigation aid, not a second superclass, so a class CAN belong to more
+   * than one.
+   *
+   * Kept as an allowlist rather than dropped: dual-listing costs a row in two
+   * places and has to be a decision, not a paste error. Add an id here when
+   * adding one to a second category.
+   */
+  const DUAL_LISTED = new Set([
+    'SpecimenQualityObservation',
+    'SpecimenQuantityObservation',
+  ]);
+
+  test('only deliberately dual-listed classes appear in two categories', () => {
     const seen = new Map<string, string>();
     const dupes: string[] = [];
     for (const cat of ENTITY_CATEGORIES) {
       for (const id of cat.classIds) {
         const prev = seen.get(id);
-        if (prev) dupes.push(`${id} (${prev} + ${cat.id})`);
-        else seen.set(id, cat.id);
+        if (prev && !DUAL_LISTED.has(id)) dupes.push(`${id} (${prev} + ${cat.id})`);
+        else if (!prev) seen.set(id, cat.id);
       }
     }
-    expect(dupes, `Classes in multiple categories: ${dupes.join(', ')}`).toEqual([]);
+    expect(dupes, `Undeclared multi-category classes: ${dupes.join(', ')}`).toEqual([]);
+  });
+
+  test('every DUAL_LISTED class really is in two categories', () => {
+    // The allowlist must not outlive the listing it documents.
+    for (const id of DUAL_LISTED) {
+      const cats = ENTITY_CATEGORIES.filter(c => c.classIds.includes(id)).map(c => c.id);
+      expect(cats.length, `${id} is allowlisted but listed in ${cats.join(', ') || 'none'}`)
+        .toBeGreaterThan(1);
+    }
   });
 
   test('SUBCLASS_OF pairs are real classes and match the schema is_a', async () => {
