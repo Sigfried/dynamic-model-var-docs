@@ -1211,10 +1211,10 @@
           "id": "dimensional_measures"
         },
         {
-          "id": "quantity_measure"
+          "id": "quality_measure"
         },
         {
-          "id": "quality_measure"
+          "id": "quantity_measure"
         },
         {
           "id": "cellular_composition_type"
@@ -4081,18 +4081,6 @@
       ],
       "alias": "dimensional_measures"
     },
-    "quantity_measure": {
-      "id": "quantity_measure",
-      "name": "quantity_measure",
-      "range": "SpecimenQuantityObservation",
-      "description": "An observation related to the present quantity of a specimen - e.g. its weight, volume, or analyte concentration.",
-      "required": false,
-      "multivalued": true,
-      "comments": [
-        "Observations are flexible containers for capturing a specific type of observation/measurement data about an object, along with metadata about how it was generated. The specific type of observation made is captured as data in the Observation object."
-      ],
-      "alias": "quantity_measure"
-    },
     "quality_measure": {
       "id": "quality_measure",
       "name": "quality_measure",
@@ -4104,6 +4092,18 @@
         "Observations are flexible containers for capturing a specific type of observation/measurement data about an object, along with metadata about how it was generated. The specific type of observation made is captured as data in the Observation object."
       ],
       "alias": "quality_measure"
+    },
+    "quantity_measure": {
+      "id": "quantity_measure",
+      "name": "quantity_measure",
+      "range": "SpecimenQuantityObservation",
+      "description": "An observation related to the present quantity of a specimen - e.g. its weight, volume, or analyte concentration.",
+      "required": false,
+      "multivalued": true,
+      "comments": [
+        "Observations are flexible containers for capturing a specific type of observation/measurement data about an object, along with metadata about how it was generated. The specific type of observation made is captured as data in the Observation object."
+      ],
+      "alias": "quantity_measure"
     },
     "cellular_composition_type": {
       "id": "cellular_composition_type",
