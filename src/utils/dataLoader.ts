@@ -145,7 +145,7 @@ function transformWithMapping<T>(
 
 // Expected fields for each type - fields we handle OR intentionally ignore
 // Unexpected fields trigger warnings until we incorporate or explicitly ignore them
-const EXPECTED_SLOT_FIELDS = [
+export const EXPECTED_SLOT_FIELDS = [
   // Used in UI
   'id', 'name', 'range', 'description', 'slot_uri', 'slot_url', 'identifier', 'required', 'multivalued',
   // Used internally
@@ -154,17 +154,22 @@ const EXPECTED_SLOT_FIELDS = [
   'alias', 'from_schema', 'designates_type', 'domain_of', 'owner',
   // TODO: implement display for these
   'comments', 'examples', 'inlined', 'inlined_as_list', 'unit',
+  // Known unhandled: LinkML any_of (a union range). N=1 today
+  // (associated_artifact). The app takes `range` alone, so a union renders as
+  // whichever branch upstream put there. Listed to keep schemaFields.test.ts
+  // green; remove this entry when any_of is actually handled.
+  'any_of',
 ];
-const EXPECTED_ENUM_FIELDS = [
+export const EXPECTED_ENUM_FIELDS = [
   'id', 'name', 'description', 'permissible_values',
   // TODO: implement display for these
   'comments', 'inherits', 'include', 'parent', 'reachable_from', 'see_also',
 ];
-const EXPECTED_TYPE_FIELDS = [
+export const EXPECTED_TYPE_FIELDS = [
   'id', 'name', 'uri', 'uri_url', 'base', 'description', 'exact_mappings', 'close_mappings', 'broad_mappings',
   'exact_mappings_urls',  // transformed from exact_mappings CURIEs
 ];
-const EXPECTED_CLASS_FIELDS = [
+export const EXPECTED_CLASS_FIELDS = [
   'id', 'name', 'description', 'parent', 'abstract', 'slots',
   'class_url',  // transformed from class_uri
 ];
@@ -288,6 +293,11 @@ export async function loadRawData(): Promise<SchemaData> {
 
   const slots = new Map<string, SlotData>();
   Object.entries(processedSchema.slots || {}).forEach(([name, input]) => {
+    // The slots section carries a `_comment` string documenting that it is a
+    // derived index. Object.keys() on a string yields its character indices,
+    // so passing it to validateDTO reported 371 "unexpected fields" named
+    // 0..370 on every load -- the wall of noise in every test run.
+    if (name.startsWith('_') || typeof input !== 'object' || input === null) return;
     slots.set(name, transformSlot(input));
   });
 

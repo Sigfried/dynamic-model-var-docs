@@ -10,14 +10,14 @@ import type { ClassInput } from '../input_types';
  *
  * This test verifies that all information from source files makes it through
  * the data pipeline:
- * 1. bdchm.yaml → bdchm.metadata.json (Python preprocessing)
- * 2. bdchm.metadata.json + variable-specs-S1.tsv → ModelData (TypeScript loadModelData)
+ * 1. bdchm.yaml → bdchm.processed.json (Python preprocessing)
+ * 2. bdchm.processed.json + variable-specs-S1.tsv → ModelData (TypeScript loadModelData)
  *
  * Reports missing fields but does NOT fail the test - this is for visibility only.
  */
 
 interface CompletenessReport {
-  yamlToMetadata: {
+  yamlToProcessed: {
     topLevelFields: string[];
     prefixes: boolean;
     imports: boolean;
@@ -37,7 +37,7 @@ interface CompletenessReport {
 describe('Data Completeness', () => {
   test('should report completeness of data pipeline', async () => {
     const report: CompletenessReport = {
-      yamlToMetadata: {
+      yamlToProcessed: {
         topLevelFields: [],
         prefixes: false,
         imports: false,
@@ -89,9 +89,9 @@ describe('Data Completeness', () => {
     const missingTopLevelFields = yamlTopLevelFields.filter(
       field => field in yamlData && !(field in processedJson)
     );
-    report.yamlToMetadata.topLevelFields = missingTopLevelFields;
-    report.yamlToMetadata.prefixes = 'prefixes' in yamlData && !('prefixes' in processedJson);
-    report.yamlToMetadata.imports = 'imports' in yamlData && !('imports' in processedJson);
+    report.yamlToProcessed.topLevelFields = missingTopLevelFields;
+    report.yamlToProcessed.prefixes = 'prefixes' in yamlData && !('prefixes' in processedJson);
+    report.yamlToProcessed.imports = 'imports' in yamlData && !('imports' in processedJson);
 
     // 2. Check Processed JSON → ModelData
     const metadataClassNames = Object.keys(processedJson.classes || {});
@@ -119,14 +119,21 @@ describe('Data Completeness', () => {
       name => !modelDataEnumNames.has(name)
     );
 
-    const metadataSlotNames = Object.keys(processedJson.slots || {});
+    // `_comment` is documentation embedded in the slots section, not a slot;
+    // dataLoader skips underscore-prefixed keys, so it is not "missing".
+    const metadataSlotNames = Object.keys(processedJson.slots || {}).filter(
+      name => !name.startsWith('_'),
+    );
     const modelDataSlotNames = new Set(slots.keys());
     report.metadataToModelData.missingSlots = metadataSlotNames.filter(
       name => !modelDataSlotNames.has(name)
     );
 
     // 3. Check Variable Specs
-    const classColumnIdx = tsvHeaders.indexOf('Class');  // Use capital C to match TSV
+    // The column is 'BDCHM Element'. This looked for 'Class', found -1, and
+    // silently skipped the whole section -- reporting "0 variables" against a
+    // 154-row TSV, so a mapping failure could never have shown up here.
+    const classColumnIdx = tsvHeaders.indexOf('BDCHM Element');
     if (classColumnIdx !== -1) {
       const tsvVariables = tsvLines.slice(1).map(line => {
         const cols = line.split('\t');
@@ -148,22 +155,39 @@ describe('Data Completeness', () => {
     }
 
     // Print report (not fail)
+    // TSV rows upstream marked status=ignore. Section 3 subtracts these, and
+    // the assertion below uses the same number.
+    const statusIdx = tsvHeaders.indexOf('status');
+    const labelIdx = tsvHeaders.indexOf('Variable Label');
+    const ignoredLines = tsvLines.slice(1).filter(
+      line => statusIdx !== -1 && (line.split('\t')[statusIdx] || '').trim() === 'ignore',
+    );
+    const ignoredRows = ignoredLines.length;
+    const ignoredLabels = ignoredLines.map(
+      line => (labelIdx === -1 ? '(unlabelled)' : line.split('\t')[labelIdx] || '(blank)'),
+    );
+
     console.log('\n=== DATA COMPLETENESS REPORT ===\n');
 
-    console.log('1. YAML → Metadata.json:');
-    if (report.yamlToMetadata.topLevelFields.length > 0) {
-      console.log(`   ⚠️  Missing top-level fields: ${report.yamlToMetadata.topLevelFields.join(', ')}`);
+    console.log('1. bdchm.yaml -> bdchm.processed.json:');
+    if (report.yamlToProcessed.topLevelFields.length > 0) {
+      console.log(`   ℹ️  Schema-level fields not carried into processed.json (by design --`);
+      console.log(`      the app reads classes/slots/enums/types, not schema metadata):`);
+      console.log(`      ${report.yamlToProcessed.topLevelFields.join(', ')}`);
     } else {
       console.log('   ✓ All top-level fields present');
     }
-    if (report.yamlToMetadata.prefixes) {
-      console.log('   ⚠️  Prefixes missing from metadata.json');
-    }
-    if (report.yamlToMetadata.imports) {
-      console.log('   ⚠️  Imports missing from metadata.json');
+    // prefixes IS carried into processed.json; imports is not, because the
+    // transform resolves `linkml:types` rather than passing it along. Both are
+    // expected, so neither gets a warning -- only a change would matter, and
+    // the field list above already reports that.
+    if (!report.yamlToProcessed.prefixes) {
+      console.log('   ✓ prefixes carried through');
+    } else {
+      console.log('   ⚠️  prefixes no longer carried into processed.json');
     }
 
-    console.log('\n2. Metadata.json → ModelData:');
+    console.log('\n2. bdchm.processed.json -> ModelData:');
     if (report.metadataToModelData.missingClasses.length > 0) {
       console.log(`   ⚠️  Missing classes: ${report.metadataToModelData.missingClasses.join(', ')}`);
     } else {
@@ -181,15 +205,59 @@ describe('Data Completeness', () => {
     }
 
     console.log('\n3. Variable Specs:');
-    console.log(`   Total variables in TSV: ${report.variableSpecs.totalVariables}`);
-    console.log(`   Variables in ModelData: ${report.variableSpecs.mappedVariables}`);
+    console.log(`   Rows in TSV:            ${report.variableSpecs.totalVariables}`);
+    console.log(`   Marked status=ignore:  -${ignoredRows}`);
+    console.log(`   Expected in ModelData:  ${report.variableSpecs.totalVariables - ignoredRows}`);
+    console.log(`   Actually in ModelData:  ${report.variableSpecs.mappedVariables}`);
+    if (report.variableSpecs.mappedVariables === report.variableSpecs.totalVariables - ignoredRows) {
+      console.log('   ✓ Accounted for (the gap is the ignored rows, not a mapping failure)');
+    }
+    if (ignoredRows > 0) {
+      const labels = [...new Set(ignoredLabels)].join(', ');
+      console.log('');
+      console.log(`   The ignored rows carry status=ignore in the source sheet`);
+      console.log(`   (variable-specs-S1.tsv, exported from the HV Google Sheet in`);
+      console.log(`   scripts/download_source_data.py). They are placeholders the`);
+      console.log(`   sheet keeps but consumers skip -- duplicate labels would`);
+      console.log(`   collide as variable node ids. Filtered in dataLoader.ts.`);
+      console.log(`   Currently: ${labels}`);
+    }
     if (report.variableSpecs.unmappedVariables.length > 0) {
       console.log(`   ⚠️  Sample unmapped variables (first 10): ${report.variableSpecs.unmappedVariables.join(', ')}`);
     }
 
     console.log('\n=== END REPORT ===\n');
 
-    // Always pass - this is informational only
-    expect(true).toBe(true);
+    // Section 2 assertions. These were `expect(true).toBe(true)` with a note
+    // saying the test was informational -- so a class silently vanishing from
+    // ModelData produced a console warning inside a green run, which is how
+    // nobody would ever see it. The three lists are empty today, so asserting
+    // costs nothing and turns a silent regression into a failure.
+    expect(
+      report.metadataToModelData.missingClasses,
+      'Classes in processed.json that never reached ModelData',
+    ).toEqual([]);
+    expect(
+      report.metadataToModelData.missingEnums,
+      'Enums in processed.json that never reached ModelData',
+    ).toEqual([]);
+    expect(
+      report.metadataToModelData.missingSlots,
+      'Slots in processed.json that never reached ModelData',
+    ).toEqual([]);
+
+    // Section 3: every TSV row should become a variable unless it is marked
+    // status=ignore. Asserting on the raw count would be wrong -- 6 rows are
+    // deliberately ignored upstream (all "Spirometry metadata"), which is
+    // exactly the 155 vs 149 gap.
+    expect(
+      report.variableSpecs.mappedVariables,
+      `Expected ${report.variableSpecs.totalVariables} TSV rows minus ${ignoredRows} ` +
+        'marked status=ignore to reach ModelData',
+    ).toBe(report.variableSpecs.totalVariables - ignoredRows);
+
+    // Section 1 stays informational: those top-level fields are genuinely not
+    // carried into processed.json by design, and asserting would just freeze
+    // the current shape of the transform.
   });
 });
