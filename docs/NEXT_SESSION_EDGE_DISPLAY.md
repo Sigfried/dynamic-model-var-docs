@@ -85,6 +85,27 @@ Three steps:
 3. **If a slot name got a non-default color and its owner is a subclass, give
    the owner the same color.** The container borrows its contents' color.
 
+> **All three steps shipped, and step 3 is the load-bearing one.** SG's
+> statement of the algorithm (2026-09-04) is the one to keep:
+>
+> 1. all child headers coloured by palette ordering
+>    (`buildSiblingColorIndex` → `siblingColor`);
+> 2. slot rows pointing at child headers re-coloured by their target
+>    (`DataService.getTargetColor`);
+> 3. re-coloured slot rows re-colour the child headers they belong to
+>    (the `borrowed` map in `mergeSiblings`, `OwnershipGraphView.tsx`).
+>
+> Step 3 applies only from a child's OWN rows: an inherited row is shared by
+> every sibling, so letting it recolour one would hand that sibling a colour on
+> the strength of something it does not uniquely have.
+>
+> Step 3 is what pairs a container with its contents. Sort order decides only
+> WHICH colour a class wears, never WHETHER a pair matches — the two families
+> sorting alike is a correspondence that exists today and is not used. Verified
+> by hand (SG, 2026-09-04) by renaming `MeasurementObservationSet` and
+> `SpecimenQualityObservation` so the families sort differently: colours moved,
+> pairs held.
+
 `mergeSiblings` then reads `siblingColor(colorIndex[mid])` instead of the loop
 index. `dataService` is already in that `useMemo`'s dep list
 (`OwnershipGraphView.tsx:1100`).
@@ -111,13 +132,27 @@ menu chip is retired — that role moves to P2.
 member set, which is why the current bug shipped. Add a case that unselects a
 middle sibling and asserts the rest keep their colors. Note that colors are
 per-group, so two classes at index 0 in different groups share a color by
-design — that is the container/contents pairing, not a collision.
+design — that is **palette reuse**, not a collision (and not the pairing
+mechanism; see the note under step 3).
 
-Also test adding a subclass that sorts in between paired container/contained
-subclass names (like 'Foo': `DimensionalObs < Foo < MeasurementObs`). Add it
-to one (e.g., ObservationSet) and not the other (Observation), and then vice 
-versa, to assure that pairs still have matched colors (e.g.,
-SdohObservationSet.color == SdohObservation.color).
+The question worth testing is the one this paragraph originally asked — *do
+paired container/contents still have matched colors?* — but **not** by way of
+sort positions. Assert the mechanism directly: **a row's color equals its
+target's color**, swept over the real schema. That is
+`getTargetColor(range)` against the target's own
+`siblingColor(siblingColorIndexOf(range))`, and no sort-order coincidence can
+make it pass falsely.
+
+⚠️ Do **not** write the test this paragraph used to describe — inserting a
+'Foo' that sorts between paired names, added to one family and not the other,
+then asserting the pairing survives. It was tried on 2026-09-04 and is wrong
+twice over: it tests a sort-position correspondence the pairing never uses,
+and (because `buildSiblingColorIndex` is private and schema-driven) it can
+only be written by reimplementing the sort rule in the test, which then
+asserts the reimplementation rather than the app. SG's hand experiment —
+renaming two classes so the families sort differently, and seeing the pairing
+hold — is the real check, and the row-equals-target test above is its
+automated form.
 
 ---
 

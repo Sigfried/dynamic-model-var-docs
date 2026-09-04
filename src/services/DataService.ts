@@ -204,9 +204,29 @@ export class DataService {
    * start at 1. That is what makes "the default" mean "this row is the box's
    * own, not any one child's" rather than "this child happened to sort first".
    *
-   * Colors are per-group by design: two classes at index 1 in DIFFERENT
-   * groups share a color, and that is the container/contents pairing the
-   * slot-name rule below depends on, not a collision.
+   * Colors are per-group by design: two classes at index 1 in DIFFERENT groups
+   * share a color. That is palette reuse, not a collision — the palette is
+   * finite and a group is the only scope in which colors must be distinct.
+   *
+   * It is NOT how container/contents pairing works, and reading it that way
+   * has misled at least one session (2026-09-04).
+   *
+   * The whole colouring algorithm is three steps, and this function is only
+   * the first:
+   *
+   *   1. every child header takes its palette position — HERE.
+   *   2. a slot row is recoloured by its TARGET (`getTargetColor` below).
+   *   3. a recoloured row then recolours the child header it BELONGS to
+   *      (`borrowed` in mergeSiblings, OwnershipGraphView.tsx) — but only from
+   *      a child's OWN rows, since an inherited row is shared by every sibling.
+   *
+   * Step 3 is what pairs a container with its contents: SdohObservationSet's
+   * header is the colour it is because its own `observations` row points at
+   * SdohObservation and borrowed it — NOT because the two families sort into
+   * matching positions. That correspondence exists today and is not used.
+   * Verified by hand 2026-09-04 (SG): renaming MeasurementObservationSet and
+   * SpecimenQualityObservation so the families sort differently changed which
+   * colours were worn; every pair stayed matched.
    */
   private buildSiblingColorIndex(): Map<string, number> {
     const index = new Map<string, number>();

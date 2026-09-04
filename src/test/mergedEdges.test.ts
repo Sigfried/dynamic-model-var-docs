@@ -3,7 +3,7 @@ import { loadModelData } from '../utils/dataLoader';
 import { DataService, SKIP_SUBCLASS_EXPANSION } from '../services/DataService';
 import type { AttributeSummary } from '../services/DataService';
 import { buildViewModel, mergeSiblings, buildSpec } from '../explore/OwnershipGraphView';
-import { isMergedId } from '../explore/siblingMerge';
+import { isMergedId, siblingColor } from '../explore/siblingMerge';
 
 /**
  * Edges surviving the sibling merge.
@@ -22,8 +22,14 @@ describe('merged-box edges', () => {
     ds = new DataService(await loadModelData());
   });
 
-  /** The view's own pipeline: subgraph → view model → merge. */
-  const merged = (sel: string[]) => {
+  /** The view's own pipeline: subgraph → view model → merge.
+   *
+   *  `colorIndexOf` is injectable so a test can make the palette index and the
+   *  borrowed colour DISAGREE. On the real schema they agree by coincidence —
+   *  the ObservationSet children and the Observation children sort into
+   *  matching positions — which makes step 3 of the colouring algorithm
+   *  invisible to any test that uses the default. */
+  const merged = (sel: string[], colorIndexOf?: (id: string) => number) => {
     const sub = ds.getOwnershipSubgraph(sel);
     const plain = new Map(sub.nodes.map(n =>
       [n.id, ds.getClassSummary(n.id)?.slots ?? []] as const));
@@ -53,7 +59,7 @@ describe('merged-box edges', () => {
           .findIndex(a => a.name === slot) ?? -1;
         return i < 0 ? Number.MAX_SAFE_INTEGER : i;
       },
-      id => ds.siblingColorIndexOf(id),
+      colorIndexOf ?? (id => ds.siblingColorIndexOf(id)),
     );
   };
 
@@ -275,6 +281,94 @@ describe('merged-box edges', () => {
       .find(p => p.id.includes('::hdr:in:'))!;
     expect(soloPort).toBeDefined();
     expect(boxPorts[0].y).toBe(soloPort.y);
+  });
+
+  /*
+   * Step 3 of the colouring algorithm (SG, 2026-09-04):
+   *
+   *   1. child headers take their palette position;
+   *   2. slot rows are re-coloured by their TARGET;
+   *   3. a re-coloured row re-colours the child header it belongs to.
+   *
+   * Step 3 is what pairs a container with its contents, and nothing covered
+   * it. A 2026-09-04 session assumed the pairing came from the two families
+   * sorting into matching positions and wrote a test asserting that; it is not
+   * the mechanism. Sort order decides only WHICH colour a class wears.
+   *
+   * Selections are derived from the schema rather than named, so a rename that
+   * reorders a family exercises this test instead of breaking it.
+   */
+  test('a container child header borrows the colour of what it contains', () => {
+    const kidsOf = (parent: string) => ds.getContainmentGraph().nodes
+      .map(n => n.id)
+      .filter(id => ds.getClassSummary(id)?.parentId === parent);
+    const setKids = kidsOf('ObservationSet');
+    const obsKids = kidsOf('Observation');
+    expect(setKids.length, 'ObservationSet has children').toBeGreaterThan(0);
+
+    /*
+     * The palette index is DELIBERATELY skewed so it cannot agree with the
+     * borrowed colour by accident: every ObservationSet child is pushed past
+     * the Observation children's indices. On the real schema the two families
+     * sort into matching positions, so with the default index this test would
+     * pass whether or not step 3 runs at all — verified 2026-09-04 by
+     * disabling the borrow and watching it still pass.
+     */
+    const skew = (id: string) => setKids.includes(id)
+      // +1, not +obsKids.length: siblingColor cycles the palette with a
+      // modulo, and an offset that is a multiple of the cycle length lands
+      // back on the same colour — a no-op skew that made this test pass while
+      // proving nothing (caught 2026-09-04).
+      ? ds.siblingColorIndexOf(id) + 1
+      : ds.siblingColorIndexOf(id);
+
+    const sel = ['ObservationSet', ...setKids, 'Observation', ...obsKids];
+    const vm = merged(sel, skew);
+    const box = (label: string) =>
+      vm.nodes.find(n => isMergedId(n.id) && n.label === label)!;
+    const colorOf = (node: typeof vm.nodes[number], id: string) =>
+      node.members.find(m => m.id === id)?.color;
+
+    let diverged = 0;
+    for (const set of setKids) {
+      // slot_usage narrows `observations` to this set's own Observation kind.
+      const range = ds.getClassSummary(set)?.slots
+        .find(s => s.name === 'observations')?.range;
+      expect(range, `${set} declares observations`).toBeDefined();
+      const contained = colorOf(box('Observation'), range!);
+      expect(contained, `${range} is a member of the Observation box`).toBeDefined();
+      expect(colorOf(box('ObservationSet'), set), `${set} borrows from ${range}`)
+        .toEqual(contained);
+      // The borrowed colour is NOT what the skewed index would have given.
+      if (contained?.fill !== siblingColor(skew(set)).fill) diverged++;
+    }
+    expect(diverged, 'the skew actually made index and borrow disagree')
+      .toBe(setKids.length);
+  });
+
+  test('an inherited row never recolours the sibling that merely inherits it', () => {
+    /*
+     * The restriction on step 3: only a child's OWN rows may recolour it. A row
+     * inherited from the parent is shared by every sibling, so borrowing from
+     * it would hand one sibling a colour on the strength of something it does
+     * not uniquely have — and whichever sibling happened to be visited first
+     * would win, making the result iteration-order dependent.
+     */
+    const obsKids = ds.getContainmentGraph().nodes.map(n => n.id)
+      .filter(id => ds.getClassSummary(id)?.parentId === 'Observation');
+    const vm = merged(['Observation', ...obsKids]);
+    const box = vm.nodes.find(n => isMergedId(n.id) && n.label === 'Observation')!;
+    // Rows the box shows that belong to no child (shared/parent rows) must
+    // carry no owner, so the borrow loop cannot reach a member through them.
+    for (const r of box.rows) {
+      if (r.header || r.owners?.length) continue;
+      expect(r.owners ?? [], `shared row ${r.slot} has no owner`).toEqual([]);
+    }
+    // And every member still has a colour: either its palette one or a borrowed
+    // one, never undefined.
+    for (const m of box.members) {
+      expect(m.color, `${m.id} has a colour`).toBeDefined();
+    }
   });
 
   test('every edge anchor resolves to a displayed row', () => {

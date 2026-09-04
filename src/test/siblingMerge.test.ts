@@ -161,6 +161,56 @@ describe('siblingMerge', () => {
     }
   });
 
+  /*
+   * The container/contents pairing, tested at the MECHANISM rather than
+   * through sort positions.
+   *
+   * A row is colored by the class its RANGE names, so a container's row wears
+   * its contents' color for one reason only: it is the same lookup on the same
+   * class. Nothing here depends on two families sorting into matching
+   * positions — that correspondence exists in today's schema but the pairing
+   * does not use it, and a rename that reorders one family must be free to
+   * change WHICH color a class wears without unpairing anything.
+   *
+   * A previous attempt (2026-09-04) tested the sort correspondence instead and
+   * asserted a false invariant; see the ⚠️ note in NEXT_SESSION_EDGE_DISPLAY.md
+   * §1.3 before writing anything in this area.
+   */
+  test('a row wears its TARGET class color, whatever the target is', () => {
+    let checked = 0;
+    for (const id of classIds) {
+      for (const slot of ds.getClassSummary(id)?.slots ?? []) {
+        const target = ds.getTargetColor(slot.range);
+        if (!target) continue;  // non-class range, or a target with no color
+        // The color the target class wears in its OWN box, derived
+        // independently of the row.
+        expect(target, `${id}.${slot.name} -> ${slot.range}`)
+          .toEqual(siblingColor(ds.siblingColorIndexOf(slot.range)));
+        checked++;
+      }
+    }
+    // Guard against the sweep silently matching nothing.
+    expect(checked, 'no colored rows found to check').toBeGreaterThan(0);
+  });
+
+  test('sort position decides WHICH color, never WHETHER a pair matches', () => {
+    /*
+     * The two ObservationSet/Observation pairs are the case SG checked by hand
+     * (renaming classes so the families sort differently — the pairing held).
+     * Stated as a property: whatever index each class lands on, the container's
+     * `observations` row and the class it points at resolve to one color.
+     */
+    const sets = classIds.filter(id => parentOf(id) === 'ObservationSet');
+    expect(sets.length, 'ObservationSet has subclasses to check').toBeGreaterThan(0);
+    for (const set of sets) {
+      // slot_usage narrows `observations` to the matching Observation subtype.
+      const obs = ds.getClassSummary(set)?.slots.find(s => s.name === 'observations');
+      expect(obs, `${set} declares observations`).toBeDefined();
+      expect(ds.getTargetColor(obs!.range), `${set} pairs with ${obs!.range}`)
+        .toEqual(siblingColor(ds.siblingColorIndexOf(obs!.range)));
+    }
+  });
+
   test('merged ids cannot collide with a class id', () => {
     for (const id of classIds) expect(mergedIdFor('Entity')).not.toBe(id);
   });
