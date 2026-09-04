@@ -878,26 +878,32 @@ where slot definitions are stored.
 
 ---
 
-### ▶️ OPEN — example-cases pane needs restructuring
+### ▶️ MOSTLY DONE — example-cases pane restructuring
 
-Siggie, 2026-08-21. **Items 3 and 4 are done as of `a18d78b`** — the cases were
-reordered simple→complex, edge-type cases were added, and the rule text was
-rewritten (`OWNERSHIP_RULE_TEXT` in `containmentGraph.ts`). What remains:
+Siggie, 2026-08-21. Items 3 and 4 landed in `a18d78b` (cases reordered
+simple→complex, edge-type cases added, rule text rewritten as
+`OWNERSHIP_RULE_TEXT`).
 
-1. **Reuse the DetailDrawer panel** rather than the floating box, for
-   consistency. (First thought was draggable/resizable; Siggie revised to
-   "just use the same panel as the details drawer".)
-2. **Un-nest the legend from cases.** The **Ownership legend is meant to be
-   permanent**; example cases serve a different purpose and may not be. Using
-   the legend to find routing cases was a *temporary* use, not its reason to
-   exist. They should not be tabs of one pane.
-3. **BIGGEST FANS belongs with example cases**, not the legend — it serves the
-   case-finding purpose.
+**Done 2026-09-04** (`NEXT_SESSION_EDGE_DISPLAY` §2.2):
 
-Still owed from upcoming-thoughts #1: toolbar buttons, colours, dashed edges.
+- ✅ **Legend un-nested from cases.** The tabs are gone. A top-level **Help**
+  menu (`HelpMenu.tsx`) opens each as its own panel, so either closes without
+  the other. Shared chrome is `HelpPanel.tsx`.
+- ✅ **BIGGEST FANS moved to the example cases**, where case-finding belongs.
+- ✅ **Toolbar buttons, colours and dashed edges explained** in the legend —
+  the last of upcoming-thoughts #1.
+- ✅ **Introductory case group culled.** Six cases the tour now supersedes.
+  Their prose is `docs/TOUR_SOURCE_MATERIAL.md`, held for §2.3 — Siggie:
+  *"group 1 items 1-4 are good material for the tour."* **Do not re-add them
+  to the pane.**
 
-> ⚠️ Siggie has asked for **"fix the ownership legend"** (2026-08-25) without
-> saying what is wrong. It may or may not mean the items above. **Ask first.**
+**Still open:**
+
+1. **Reuse the DetailDrawer panel** rather than a floating box. (First thought
+   was draggable/resizable; Siggie revised to "just use the same panel as the
+   details drawer".) Not done with the above, and it is a bigger change than it
+   looks: the drawer is driven by `detailId` and shows one class, so this means
+   giving it a second mode. `HelpPanel` is where that would land.
 
 ---
 

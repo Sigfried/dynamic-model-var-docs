@@ -7,6 +7,117 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-04 (docs: OWNERSHIP_CLASSIFICATION restructured; Help menu replaces the two-tab pane)
+
+`NEXT_SESSION_EDGE_DISPLAY.md` §2.1 and §2.2. §1 (the colour system) and §4
+(the edge-display survey) moved out of that handoff file and into
+`OWNERSHIP_CLASSIFICATION.md`, which is the precondition for deleting it.
+
+### What left OWNERSHIP_CLASSIFICATION.md, and why it is here instead
+
+The doc had accumulated resolution notes written *in place* — `> **RESOLVED**`
+blocks, "this section used to describe…", "an earlier draft split it across two
+headings". Each was true and each was addressed to a reader who had seen the
+previous version. Nobody has, now. Moved here:
+
+- **The six single-valued slots dropped from `ASSOCIATION_SLOTS`**
+  (2026-08-25): `originating_site`, `associated_assay` (now
+  `associated_artifact`), `transport_origin`, `transport_destination`,
+  `related_questionnaire_item`, `has_questionnaire_item`. The challenge was
+  upheld. Rule 2 already sends them to `own-bkwd`, which layers identically, and
+  none ranges on a value object, so Exception 2a did not intercept them —
+  membership changed only their rendering. What survives in the doc is the
+  *criterion* that dropped them: association is for slots where **Rule 1 would
+  claim ownership and be wrong**, not for slots arguing "it's a role, not
+  membership", which is what "belongs to" already says. An earlier draft also
+  split association across two headings, one under each rule, so each rule's
+  exception list looked complete; that made one concept read as two.
+- **`EXCLUDE_HAS_A_TARGETS` removal** (2026-08-25). Predicted to be sufficient
+  on its own, and it was: the edges classify, `Entity` touches them,
+  `pruneIsolated` keeps it, and it appears as a node with no node-set change
+  needed. The doc keeps the three-way distinction (parent / range / node) that
+  the removal turned on, because that is what keeps getting re-conflated; the
+  play-by-play of removing it is here.
+- **The `focus` cardinality bug**, fixed by the induced-slots migration
+  (`e8b8bd0`, verified 2026-08-31). The doc now states the current shape (11
+  per-class `focus-*` entries) rather than narrating the fix. Worth remembering:
+  the verdicts never depended on it, because `entity-ranged` fires before the
+  multivalued test — the bug was real and the diagram was immune.
+- **Pre-rewrite classifier symbols.** `OWNERSHIP_OVERRIDES`,
+  `EXCLUDE_HAS_A_TARGETS`, `VALUE_OBJECTS`, the `own-flip` verdict, the `ref`
+  channel. **None of these exist.** A note mentioning them predates the
+  2026-08-24 rewrite. This is the one item worth keeping findable, since old
+  notes elsewhere still name them.
+- **The three irreconcilable edge counts** — 153 (every class-ranged slot in the
+  processed JSON), 141 (what the builder emitted while `EXCLUDE_HAS_A_TARGETS`
+  dropped the Entity edges), 151 (the target once they were drawn). The doc keeps
+  the rule that came out of it: *say which denominator you mean and how you
+  measured*.
+- **What the `28007df` sync changed.** Structurally near-inert — 54 classes, 52
+  enums, 337 slots, none added or removed — but three edges moved:
+  `associated_assay` → `associated_artifact` with range `Assay` → `Entity`
+  (`fk-inversion` → `entity-ranged`, so it now draws forward), and
+  `ResearchStudy.date_started`/`date_ended` → `year_range` (2 value-object edges
+  become 1). Net 150 → 149. **No hand-curated set went stale** — `associated_assay`
+  survived only in prose. The side effect is the one that mattered: it was the
+  only slot ranging on `Assay`, so `Assay` lost its last inbound edge and became
+  a false root. That is now the live `any_of` section's problem, not a sync note.
+- **`getSubclasses` has no callers.** Still true, and it is why the planned
+  single-inheritance-accessor change is pure placement today: `getParentClass`
+  has exactly one caller (the containment builder), so routing changes no
+  behaviour until the Explorer grows an inheritance view.
+
+### What did NOT leave
+
+Two things read like history and are not:
+
+- **Exception 2a's "cannot be derived" list** (`identifier`, `inlined`,
+  `required`, "no class-ranged slots of its own"). Each entry is a candidate
+  someone will propose again. It is a live justification for a hand-typed set.
+- **Exception 2b's rejected structural test.** Same reason: "class whose only
+  class-ranged slot is one multivalued collection" also catches `Person`,
+  `Questionnaire`, `ResearchStudyCollection`. Without it the two asserted
+  entries look like laziness.
+
+The dividing line used throughout: **archaeology is a claim about a previous
+version of the document or code; justification is a claim about an alternative
+someone might still choose.** Justification stays.
+
+### §2.2 — why a menu and not a second pane
+
+`ExampleCasesPane` had two tabs, `cases` and `legend`. They are not two views of
+one thing: the legend is a permanent feature deriving every slot classification
+live from the classifier, and the example cases are a working set that will keep
+shrinking. Tabbing them together said they were peers.
+
+Siggie chose the cascading-menu shape (2026-09-04) over stacking them as
+sections in one panel, and over TASKS' older "reuse the DetailDrawer panel"
+item. The menu is a **top-level Help**, so the three things a lost reader might
+want — the tour, the legend, an example — are one hover apart, and the legend
+and cases open as independent panels that can be closed separately.
+
+The drawer idea is not dead, just not this change: the drawer is driven by
+`detailId` and shows one class, so putting help in it means giving it a second
+mode. Noted in TASKS.
+
+### The cull, and the thing that nearly got thrown away
+
+§2.2 said to cut the first group of example cases — "simple, user-directed
+cases: those predate the tour, which now does that job better." Applied
+literally that deletes six cases.
+
+**Siggie stopped it:** *"group 1 items 1-4 are good material for the tour."*
+They are — case 1 explains what a row is, 2 what an edge anchor means, 3 owns
+vs. belongs-to, 4 all three edge types on one class (`SpecimenContainer`, which
+really does have exactly one of each). §2.3 is the *next* item of work and is
+blocked on deciding a step list; those four notes are a step list in draft.
+
+So the cases came out of the pane and their prose went into
+`docs/TOUR_SOURCE_MATERIAL.md` verbatim, keyed by the selection each describes.
+The general lesson: **a handoff doc saying "cull X" is describing a UI, not
+granting permission to destroy the writing in X.** Check what the text is doing
+before deleting the thing that holds it.
+---
 ## 2026-09-01 (colour system: three palettes, and a simpler sibling-colour rule)
 
 ### Why three palettes and not one

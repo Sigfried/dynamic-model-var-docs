@@ -1,11 +1,21 @@
 /**
  * Example cases — a curated set of selections, ordered simple to complex.
  *
- * ORDERING IS THE POINT. The first group explains the app to someone seeing it
- * for the first time: one edge, then one of each edge type, then a small real
- * neighbourhood. Later groups get progressively denser and end at the routing
+ * ORDERING IS THE POINT: groups get progressively denser and end at the routing
  * stress cases, which are for debugging rather than explaining. When adding a
  * case, put it where its complexity belongs, not at the end.
+ *
+ * A case earns its place by either (a) showing off a feature or setting up a
+ * state worth playing with, or (b) covering a distinct semantic area of the
+ * model, so the set as a whole gives a feel for what the model spans. A
+ * debugging case usually passes (a) as well.
+ *
+ * **The introductory group is gone (2026-09-04).** Six cases explained the app
+ * to a first-time reader — what a row is, what an edge anchor means, owns vs.
+ * belongs-to, the three edge types on one class. The guided tour does that job
+ * now, and doing it twice in two voices is how the two drift apart. Their prose
+ * was not thrown away: it is `docs/TOUR_SOURCE_MATERIAL.md`, waiting to become
+ * tour steps (NEXT_SESSION_EDGE_DISPLAY §2.3). Do not re-add them here.
  *
  * Why the later groups exist: the merge-mode buttons (⋙ ⋙⋙ ⌙ ≡) and the routing
  * constants can only be judged by looking at real convergences, and
@@ -46,70 +56,6 @@ export interface ExampleCaseGroup {
 }
 
 export const EXAMPLE_CASES: ExampleCaseGroup[] = [
-  {
-    heading: 'Start here — what the diagram says',
-    cases: [
-      {
-        name: '1. One box',
-        note: 'A single class. Rows are its attributes: name, then range and '
-          + 'cardinality on the right. The dot and the range label share a '
-          + 'color that says what KIND of thing the attribute points at — '
-          + 'blue for an entity, purple for a permissible value set, green '
-          + 'for a data type. A filled dot draws an edge; a hollow one does '
-          + 'not, because nothing it could point at is on the canvas.',
-        sel: ['Organization'],
-      },
-      {
-        name: '2. One edge — A owns B',
-        note: 'Visit owns TimePeriod. The edge leaves the `year_range` ROW, not '
-          + 'the box, and the arrowhead lands on the owned class. This anchoring '
-          + 'is the whole idea: an edge tells you WHICH attribute made it.',
-        sel: ['Visit', 'TimePeriod'],
-      },
-      {
-        name: '3. Owns vs. belongs-to',
-        note: 'Opposite directions. Specimen OWNS its creation activity (forward). '
-          + 'Specimen BELONGS TO a Participant — declared as `source_participant` '
-          + 'on Specimen, but drawn Participant → Specimen, because a '
-          + 'single-valued pointer at an entity is a foreign key. '
-          + '`parent_specimen` is also here as a self-loop.',
-        sel: ['Specimen', 'Participant', 'SpecimenCreationActivity'],
-      },
-      {
-        name: '4. All three edge types at once',
-        note: 'THE DECISION CASE. SpecimenContainer has exactly one of each: '
-          + '`additive` → Substance is own-fwd; `contained_in` → Specimen is '
-          + 'own-bkwd; `container` → SpecimenStorageActivity is an association '
-          + '(slate, dashed, arrowed BOTH ends). Compare own-bkwd against '
-          + 'association here — they layer identically and differ only in ink.',
-        sel: ['SpecimenContainer', 'Specimen', 'Substance',
-          'SpecimenStorageActivity'],
-      },
-      {
-        name: '5. Both associations, under crowding',
-        note: 'The schema has exactly TWO association edges and both are here: '
-          + '`Specimen.related_document` → Document and '
-          + '`SpecimenStorageActivity.container` → SpecimenContainer. Case 4 '
-          + 'shows the three verdicts isolated; this shows them competing for '
-          + 'the same borders. Watch SpecimenContainer\'s right side, where an '
-          + 'association and an own-bkwd edge arrive together — both leave a '
-          + 'slot row on the right and point back left, so they are the pair '
-          + 'that header-side merging has to keep distinguishable. '
-          + '`Participant.originating_site` → Organization is the other thing '
-          + 'to look at: own-bkwd today, arguably an association.',
-        sel: ['Document', 'Organization', 'Participant', 'Specimen',
-          'SpecimenContainer', 'SpecimenStorageActivity'],
-      },
-      {
-        name: '6. A small real neighbourhood',
-        note: 'BodySite and its six owners — the smallest convergence that still '
-          + 'looks like a real diagram. Six edges arriving on one box, each from a '
-          + 'different attribute row.',
-        sel: ['BodySite', 'Condition', 'ImagingFile', 'ImagingStudy',
-          'MeasurementObservation', 'Procedure', 'SpecimenCreationActivity'],
-      },
-    ],
-  },
   {
     heading: 'One rule at a time',
     cases: [

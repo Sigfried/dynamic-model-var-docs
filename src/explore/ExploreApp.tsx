@@ -22,6 +22,8 @@ import SelectionTree from './SelectionTree';
 import OwnershipGraphView from './OwnershipGraphView';
 import DetailDrawer from './DetailDrawer';
 import ExampleCasesPane from './ExampleCasesPane';
+import OwnershipLegend from './OwnershipLegend';
+import HelpMenu from './HelpMenu';
 import type { ExampleCase } from './exampleCases';
 import { HelpProvider } from '../help/HelpProvider';
 import { useHelp, HELP_MODE_ENABLED } from '../help/helpContext';
@@ -79,7 +81,14 @@ function ExploreAppInner() {
   const [mergeSibs, setMergeSibs] = useState<boolean>(initial.sibs);
   const [direction, setDirection] = useState<Direction>(initial.dir);
   const [mergeMode, setMergeMode] = useState<MergeMode>(initial.merge);
+  /*
+   * The two help panels, independently open (2026-09-04). They used to be tabs
+   * of one pane, which meant closing the legend closed the cases with it — the
+   * concrete cost of treating a permanent feature and a working set as peers.
+   * Both are opened from HelpMenu.
+   */
   const [casesOpen, setCasesOpen] = useState(false);
+  const [legendOpen, setLegendOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
   /*
@@ -230,14 +239,12 @@ function ExploreAppInner() {
         </div>
         <div className="flex items-center gap-4">
         <HelpButton />
-        <button
-          data-help-id="example-cases"
-          onClick={() => setCasesOpen(v => !v)}
-          className={`text-sm underline hover:text-white ${casesOpen ? 'text-white' : 'text-blue-100'}`}
-          title="Named selections for comparing edge routing"
-        >
-          example cases
-        </button>
+        <HelpMenu
+          onOpenLegend={() => setLegendOpen(v => !v)}
+          onOpenCases={() => setCasesOpen(v => !v)}
+          legendOpen={legendOpen}
+          casesOpen={casesOpen}
+        />
         <button
           onClick={async () => {
             const url = buildShareURL({
@@ -271,12 +278,20 @@ function ExploreAppInner() {
         </div>
       </header>
 
+      {legendOpen && (
+        <OwnershipLegend
+          onClose={() => setLegendOpen(false)}
+          onSelect={ids => applyCase({ name: 'ad hoc', note: '', sel: ids })}
+          dataService={dataService}
+        />
+      )}
       {casesOpen && (
         <ExampleCasesPane
           onClose={() => setCasesOpen(false)}
           onApply={applyCase}
           selectedIds={selectedIds}
           dataService={dataService}
+          offset={legendOpen}
         />
       )}
 

@@ -1,28 +1,35 @@
 # Next session — edge display: color system, then docs/help
 
-> ## ⚠️ STATUS, 2026-09-04 — read before doing anything here
+> ## ⚠️ STATUS, 2026-09-04 (second pass) — read before doing anything here
 >
-> **§1 (the colour system) is SHIPPED.** So is **§4.3** (a narrowed edge points
-> at the child header). §1 is written in the imperative — "build this", "then
-> reads" — but it describes work that is DONE; verified against the code
-> 2026-09-04, not just the commit log. Do not re-implement it. It is kept only
-> because it is the sole written record of WHY the palettes are what they are,
-> and it has not yet been moved into `OWNERSHIP_CLASSIFICATION.md`.
+> **Only §2.3 is left.** Everything else here is either shipped or has moved:
 >
-> **§3.2 (edge labels) is SETTLED** — one label, on hover; see the section.
-> **§3.4 (popovers) is deferred** deliberately.
+> - **§1 (colour system)** and **§4 (edge display survey)** — shipped, and their
+>   text now lives in `OWNERSHIP_CLASSIFICATION.md` ("The color system", "How
+>   edges are drawn"). The copies below are superseded; read the doc.
+> - **§2.1 (doc restructure)** — done. Archaeology moved to `WORKLOG.md`; the
+>   relation vocabulary is stated once; §3.5 (merged-inheritance) and §3.6
+>   ("N related" counts) folded in.
+> - **§2.2 (Help menu)** — done. `HelpMenu.tsx` + `HelpPanel.tsx`; legend and
+>   cases are separate panels; Biggest fans moved to the cases; the
+>   introductory case group is culled, its prose held in
+>   `docs/TOUR_SOURCE_MATERIAL.md`.
+> - **§2.4 (`any_of`)** — the decision and both follow-ups (a row marker, a note
+>   on `Assay`) are recorded in `OWNERSHIP_CLASSIFICATION.md`. Neither is built.
+> - **§3.2 (edge labels)** SETTLED — one label, on hover. **§3.4 (popovers)**
+>   deferred deliberately. Both summarised in the doc.
 >
-> **The remaining work is §2, and §2.3 (tour steps) is the priority.**
+> **▶️ THE REMAINING WORK IS §2.3 — tour steps.** Start at
+> `docs/TOUR_SOURCE_MATERIAL.md`, which is four steps in draft plus a list of
+> what is still uncovered. §3.3 below (what the legend should be) is the other
+> thing worth reading: the legend now exists and covers colours, toolbar and
+> dashed edges, but **not** the picture Siggie sketched there.
 >
-> Moving §1 + §4 into `OWNERSHIP_CLASSIFICATION.md` is the precondition for
-> deleting this file.
+> Delete this file once §2.3 is authored.
 
-Two bodies of work. The colour system came first and is done; the docs/help
-consolidation follows it, because what the legend and help text describe
-depends on the colours being settled.
-
-Delete this file once both are done and their content lives in
-`OWNERSHIP_CLASSIFICATION.md`, help, and the tour.
+Everything below this line is kept for the reasoning it records, not as a plan.
+Where it conflicts with `OWNERSHIP_CLASSIFICATION.md`, the doc is right — it was
+written from this file and then corrected against the code.
 
 ---
 

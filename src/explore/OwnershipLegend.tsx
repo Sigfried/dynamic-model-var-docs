@@ -1,42 +1,51 @@
 /**
- * OwnershipLegend — every ownership pair in the schema, grouped by the rule
- * that classified it (TASKS "upcoming thoughts" #1).
+ * OwnershipLegend — what the diagram's ink means, then every ownership pair in
+ * the schema grouped by the rule that classified it.
  *
- * The point is finding cases the curated example set missed. It already did
- * that once: the example set was built off the CONVERGENCE ranking, which
- * hides FK hubs because flipped edges reverse direction — so Participant's
- * 22-edge outbound fan, the largest in the schema, was absent until this
- * listing showed 43 `own-bkwd / fk-inversion` pairs sitting in one group.
+ * A PERMANENT feature, and its own panel since 2026-09-04. It used to be a tab
+ * of the example-cases pane, which said the two were peers; they are not. The
+ * cases are a working set that keeps shrinking. This explains the diagram.
  *
- * Everything here is derived live from `classifySlotEdgeExplained` via
- * DataService — the same call the graph builder makes. Nothing is restated.
- * That is deliberate and load-bearing: ASSOCIATION_SLOTS and SINGLE_VALUE_OWNER_TARGETS
- * are hand-curated and go stale silently on every schema sync, so a legend
- * built from a second copy of the rules would conceal the drift it exists to
- * reveal. If a pair looks wrong here, the classification is wrong, not the
- * legend.
+ * Everything in the pair listing is derived live from `classifySlotEdgeExplained`
+ * via DataService — the same call the graph builder makes. Nothing is restated.
+ * That is deliberate and load-bearing: ASSOCIATION_SLOTS and
+ * SINGLE_VALUE_OWNER_TARGETS are hand-curated and go stale silently on every
+ * schema sync, so a legend built from a second copy of the rules would conceal
+ * the drift it exists to reveal. If a pair looks wrong here, the classification
+ * is wrong, not the legend.
  *
- * Clicking any class name selects it, so the legend doubles as a way to build
- * an ad-hoc case from whatever the listing turned up.
+ * The colors are read from the SAME constants the canvas strokes, never a
+ * Tailwind approximation of them, for the same reason: a legend that can drift
+ * from the thing it explains is worse than none.
+ *
+ * "Biggest fans" moved OUT of here and into the example cases (TASKS,
+ * "example-cases pane needs restructuring", item 3). It ranks convergences so
+ * one can be loaded as a selection, which is case-finding, not legend.
+ *
+ * Clicking any class name selects it, so the listing doubles as a way to build
+ * an ad-hoc case from whatever it turned up.
  */
 
 import { useMemo, useState } from 'react';
 import type { DataService, OwnershipPairGroup } from '../services/DataService';
-import { EDGE_COLORS, RANGE_COLORS } from '../config/appConfig';
+import { EDGE_COLORS, RANGE_COLORS, SIBLING_COLORS } from '../config/appConfig';
+import HelpPanel from './HelpPanel';
 
 interface OwnershipLegendProps {
   dataService: DataService;
+  onClose: () => void;
   /** Select a set of classes — used to jump from a listed pair to the canvas. */
   onSelect: (classIds: string[]) => void;
+  /** Step aside for the example-cases panel when both are open. */
+  offset?: boolean;
 }
 
 /**
  * Short label + color per verdict.
  *
- * The three live verdicts take P2's Blues ramp — the SAME hex values the
- * canvas strokes, not a Tailwind approximation of them, so the legend and the
- * thing it explains cannot drift apart. `own-fwd` and `own-bkwd` sit one step
- * apart because they are the same relation seen from two ends.
+ * The three live verdicts take P2's Blues ramp — the SAME hex values the canvas
+ * strokes. `own-fwd` and `own-bkwd` sit one step apart because they are the
+ * same relation seen from two ends.
  *
  * `excluded` is not a relation kind and stays outside the ramp: it names an
  * edge that is NOT drawn, so giving it a stroke color would be a lie.
@@ -51,17 +60,57 @@ const VERDICT_LABEL: Record<string, { text: string; color?: string; cls?: string
   },
 };
 
-export default function OwnershipLegend({ dataService, onSelect }: OwnershipLegendProps) {
+/**
+ * The three relation kinds as prose, paired with a drawn sample of the edge.
+ *
+ * "Owns" and "belongs to" are different claims, not synonyms — see
+ * docs/OWNERSHIP_CLASSIFICATION.md. The wording here is that doc's, in the
+ * second person.
+ */
+const EDGE_KINDS: ReadonlyArray<{
+  color: string; dashed?: boolean; bothEnds?: boolean;
+  title: string; body: string;
+}> = [
+  {
+    color: EDGE_COLORS.ownFwd,
+    title: 'A owns B',
+    body: 'The arrow runs from the owner to what it holds. A owns B when the '
+      + 'schema puts the collection on A, or when B has no independent '
+      + 'existence — a Quantity of 5 mg is not something you look up.',
+  },
+  {
+    color: EDGE_COLORS.ownBkwd,
+    title: 'A belongs to B',
+    body: 'The same relationship stored at the other end: A carries a pointer '
+      + 'to one B that exists without it. Drawn B → A, so you still read '
+      + '"start at B to find A". A Participant carries on existing whether or '
+      + 'not any observation points at it.',
+  },
+  {
+    color: EDGE_COLORS.association,
+    dashed: true,
+    bothEnds: true,
+    title: 'A and B are associated',
+    body: 'Neither owns the other. Dashed, with arrowheads at both ends. Only '
+      + 'two edges in the schema are this — a slot the ownership rules would '
+      + 'otherwise claim, wrongly.',
+  },
+];
+
+/** Toolbar buttons, in the order the toolbar shows them. */
+const TOOLBAR: ReadonlyArray<{ glyph: string; what: string }> = [
+  { glyph: '⇱ roots', what: 'Also draw everything on the path up to a root.' },
+  { glyph: '⑃ siblings', what: 'Draw classes that share a parent as one merged box.' },
+  { glyph: 'LR / TB', what: 'Lay the diagram out left-to-right or top-down.' },
+  { glyph: '⋙ ⋙⋙ ⌙ ≡', what: 'Where converging edges join before their shared arrowhead — near the box, early, at the last corner, or not at all. Temporary, for picking one by eye.' },
+  { glyph: '+ − 1:1 ⛶', what: 'Zoom in, out, reset, fit to view.' },
+];
+
+export default function OwnershipLegend({
+  dataService, onClose, onSelect, offset,
+}: OwnershipLegendProps) {
   const groups: OwnershipPairGroup[] = useMemo(
     () => dataService.getOwnershipPairGroups(),
-    [dataService],
-  );
-  const convergences = useMemo(
-    () => dataService.getConvergenceRanking(),
-    [dataService],
-  );
-  const divergences = useMemo(
-    () => dataService.getDivergenceRanking(),
     [dataService],
   );
   const [open, setOpen] = useState<string | null>(null);
@@ -77,111 +126,216 @@ export default function OwnershipLegend({ dataService, onSelect }: OwnershipLege
   );
 
   return (
-    <div className="text-xs">
-      {/* Rankings first: these are what a case is chosen from. */}
-      <section className="mb-4">
-        <h3 className="text-[11px] font-semibold uppercase tracking-wider
-                       text-gray-400 dark:text-gray-500 mb-1">
-          Biggest fans
-        </h3>
-        <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-1.5">
-          Counted in slot-edges, not classes: one class owning a target through
-          two slots crowds the corridor twice. Click a row to load just that fan.
-        </p>
-        <div className="grid grid-cols-2 gap-3">
-          {([
-            ['Converging (in)', convergences.slice(0, 6).map(c =>
-              ({ entity: c.entity, n: c.edgeCount, peers: c.owners, flipped: 0 }))],
-            ['Diverging (out)', divergences.slice(0, 6).map(d =>
-              ({ entity: d.entity, n: d.edgeCount, peers: d.owned, flipped: d.flippedCount }))],
-          ] as const).map(([heading, rows]) => (
-            <div key={heading}>
-              <h4 className="text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-0.5">
-                {heading}
-              </h4>
-              <ul className="space-y-0.5">
-                {rows.map(r => (
-                  <li key={r.entity}>
-                    <button
-                      onClick={() => onSelect([r.entity, ...r.peers])}
-                      title={`Select ${r.entity} and all ${r.peers.length} peers`}
-                      className="w-full text-left hover:bg-gray-50 dark:hover:bg-slate-700 rounded px-1"
-                    >
-                      <span className="text-blue-600 dark:text-blue-400">{r.entity}</span>
-                      <span className="text-gray-400 ml-1">
-                        {r.n}
-                        {r.flipped > 0 ? ` (${r.flipped} flipped)` : ''}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <h3 className="text-[11px] font-semibold uppercase tracking-wider
-                       text-gray-400 dark:text-gray-500 mb-1">
-          Every ownership pair, by rule
-        </h3>
-        <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-1.5">
-          Derived live from the classifier the graph itself uses, so this cannot
-          drift from what is drawn. Overrides and value-object membership are
-          hand-curated — if a pair looks wrong, the classification is.
-        </p>
-        <ul className="space-y-1">
-          {groups.map(g => {
-            const key = `${g.verdict}/${g.rule}`;
-            const v = VERDICT_LABEL[g.verdict] ?? VERDICT_LABEL.ref;
-            const isOpen = open === key;
-            return (
-              <li key={key} className="border-l-2 pl-2 border-gray-200 dark:border-slate-600">
-                <button
-                  onClick={() => setOpen(isOpen ? null : key)}
-                  className="w-full text-left"
-                >
-                  <span
-                    className={`inline-block px-1 rounded border text-[10px] ${v.cls ?? ''}`}
-                    style={v.color ? { color: v.color, borderColor: v.color } : undefined}
-                  >
-                    {v.text}
-                  </span>
-                  <span className="ml-1.5 font-medium">{g.rule}</span>
-                  <span className="ml-1 text-gray-400">{g.pairs.length}</span>
-                  <span className="ml-1 text-gray-400">{isOpen ? '▾' : '▸'}</span>
-                </button>
-                <p className="text-[11px] leading-snug text-gray-600 dark:text-gray-400 mt-0.5">
-                  {g.ruleText}
-                </p>
-                {isOpen && (
-                  <ul className="mt-1 mb-1.5 space-y-0.5 font-mono text-[10px]">
-                    {g.pairs.map(p => (
-                      <li key={`${p.declaredOn}.${p.slotName}`} className="text-gray-600 dark:text-gray-400">
-                        {classLink(p.declaredOn)}
-                        <span className="text-gray-400">.{p.slotName}</span>
-                        <span className="mx-1 text-gray-400">
-                          {p.multivalued ? '↠' : '→'}
-                        </span>
-                        {classLink(p.range)}
-                        {p.isLoop && (
-                          <span className="ml-1" style={{ color: RANGE_COLORS.entity }}>loop</span>
-                        )}
-                        {(g.verdict === 'own-bkwd' || g.verdict === 'association') && (
-                          <span className="ml-1 text-gray-400">
-                            (owner: {p.owner})
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
+    <HelpPanel
+      title="Ownership legend"
+      subtitle="What the diagram's arrows, colors and buttons mean."
+      onClose={onClose}
+      offset={offset}
+    >
+      <div className="text-xs">
+        <Section title="The three kinds of relationship">
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">
+            Every edge is a class-valued attribute. Classes are placed so that
+            if <b>A</b> is drawn before <b>B</b>, you reach <b>B</b> through{' '}
+            <b>A</b> — so an edge always tells you where to start.
+          </p>
+          <ul className="space-y-2">
+            {EDGE_KINDS.map(k => (
+              <li key={k.title} className="flex gap-2">
+                <EdgeSample {...k} />
+                <div className="min-w-0">
+                  <div className="font-medium" style={{ color: k.color }}>{k.title}</div>
+                  <p className="text-[11px] leading-snug text-gray-600 dark:text-gray-400">
+                    {k.body}
+                  </p>
+                </div>
               </li>
-            );
-          })}
-        </ul>
-      </section>
+            ))}
+          </ul>
+          <p className="text-[11px] leading-snug text-gray-500 dark:text-gray-400 mt-2">
+            An edge leaves the <b>attribute's row</b>, not the box — that is how
+            you tell which attribute made it. A <b>⟲</b> on a row is a slot
+            pointing back at its own class.
+          </p>
+        </Section>
+
+        <Section title="Colors">
+          <Swatches
+            caption="A row's dot and its range label say what KIND of thing the attribute points at."
+            items={[
+              { color: RANGE_COLORS.entity, label: 'another entity' },
+              { color: RANGE_COLORS.enum, label: 'a value set' },
+              { color: RANGE_COLORS.dataType, label: 'a data type' },
+            ]}
+          />
+          <p className="text-[11px] leading-snug text-gray-600 dark:text-gray-400 mt-2">
+            A <b>filled</b> dot draws an edge; a <b>hollow</b> one does not,
+            because what it points at is not on the canvas. Only entity ranges
+            can draw edges at all.
+          </p>
+          <Swatches
+            className="mt-3"
+            caption="Inside a merged box, a color says which class an attribute belongs to."
+            items={SIBLING_COLORS.slice(0, 4).map((c, i) => ({
+              color: c.text,
+              swatch: c.fill,
+              label: i === 0 ? 'the parent' : `child ${i}`,
+            }))}
+          />
+        </Section>
+
+        <Section title="The toolbar">
+          <ul className="space-y-1">
+            {TOOLBAR.map(t => (
+              <li key={t.glyph} className="flex gap-2">
+                <span className="shrink-0 font-mono text-[11px] text-gray-700 dark:text-gray-300 w-20">
+                  {t.glyph}
+                </span>
+                <span className="text-[11px] leading-snug text-gray-600 dark:text-gray-400">
+                  {t.what}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Section>
+
+        <Section title="Every relationship, by rule">
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-1.5">
+            Derived live from the classifier the graph itself uses, so this
+            cannot drift from what is drawn. Overrides and value-object
+            membership are hand-curated — if a pair looks wrong, the
+            classification is. Click any class to select it.
+          </p>
+          <ul className="space-y-1">
+            {groups.map(g => {
+              const key = `${g.verdict}/${g.rule}`;
+              const v = VERDICT_LABEL[g.verdict] ?? VERDICT_LABEL.excluded;
+              const isOpen = open === key;
+              return (
+                <li key={key} className="border-l-2 pl-2 border-gray-200 dark:border-slate-600">
+                  <button
+                    onClick={() => setOpen(isOpen ? null : key)}
+                    className="w-full text-left"
+                  >
+                    <span
+                      className={`inline-block px-1 rounded border text-[10px] ${v.cls ?? ''}`}
+                      style={v.color ? { color: v.color, borderColor: v.color } : undefined}
+                    >
+                      {v.text}
+                    </span>
+                    <span className="ml-1.5 font-medium">{g.rule}</span>
+                    <span className="ml-1 text-gray-400">{g.pairs.length}</span>
+                    <span className="ml-1 text-gray-400">{isOpen ? '▾' : '▸'}</span>
+                  </button>
+                  <p className="text-[11px] leading-snug text-gray-600 dark:text-gray-400 mt-0.5">
+                    {g.ruleText}
+                  </p>
+                  {isOpen && (
+                    <ul className="mt-1 mb-1.5 space-y-0.5 font-mono text-[10px]">
+                      {g.pairs.map(p => (
+                        <li key={`${p.declaredOn}.${p.slotName}`} className="text-gray-600 dark:text-gray-400">
+                          {classLink(p.declaredOn)}
+                          <span className="text-gray-400">.{p.slotName}</span>
+                          <span className="mx-1 text-gray-400">
+                            {p.multivalued ? '↠' : '→'}
+                          </span>
+                          {classLink(p.range)}
+                          {p.isLoop && (
+                            <span className="ml-1" style={{ color: RANGE_COLORS.entity }}>loop</span>
+                          )}
+                          {(g.verdict === 'own-bkwd' || g.verdict === 'association') && (
+                            <span className="ml-1 text-gray-400">
+                              (owner: {p.owner})
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </Section>
+
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-3">
+          A box's <b>“N related”</b> count is of distinct classes{' '}
+          <i>outside</i> it, so selecting a class that folds into a merged box
+          can make the number go <i>down</i>. Correct, if counter-intuitive.
+        </p>
+      </div>
+    </HelpPanel>
+  );
+}
+
+/**
+ * One drawn edge.
+ *
+ * The COLOR and the dash pattern come from the same constants the canvas
+ * strokes, because those are what the legend claims to explain. The stroke
+ * WIDTH does not: the canvas's is tuned for long routed runs at whatever zoom
+ * the reader is at, and reproducing 1.4px in a 44px sample makes the three
+ * kinds harder to tell apart, not easier. This is a diagram of an edge, not a
+ * measurement of one.
+ */
+const SAMPLE_STROKE = 2;
+
+function EdgeSample({ color, dashed, bothEnds }: {
+  color: string; dashed?: boolean; bothEnds?: boolean;
+}) {
+  return (
+    <svg width="44" height="16" className="shrink-0 mt-0.5" aria-hidden>
+      <defs>
+        <marker id={`lg-head-${color.slice(1)}`} markerWidth="5" markerHeight="5"
+          refX="4" refY="2.5" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+          <path d="M0,0 L5,2.5 L0,5 z" fill={color} />
+        </marker>
+      </defs>
+      <line
+        x1={bothEnds ? 6 : 2} y1="8" x2="38" y2="8"
+        stroke={color} strokeWidth={SAMPLE_STROKE}
+        strokeDasharray={dashed ? '5 4' : undefined}
+        markerEnd={`url(#lg-head-${color.slice(1)})`}
+        markerStart={bothEnds ? `url(#lg-head-${color.slice(1)})` : undefined}
+      />
+    </svg>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="mb-4 last:mb-1">
+      <h3 className="text-[11px] font-semibold uppercase tracking-wider
+                     text-gray-400 dark:text-gray-500 mb-1">
+        {title}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+function Swatches({ caption, items, className }: {
+  caption: string;
+  items: ReadonlyArray<{ color: string; swatch?: string; label: string }>;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">{caption}</p>
+      <ul className="flex flex-wrap gap-x-3 gap-y-1">
+        {items.map(it => (
+          <li key={it.label} className="flex items-center gap-1">
+            <span
+              className="inline-block w-3 h-3 rounded-sm border"
+              style={{
+                background: it.swatch ?? it.color,
+                borderColor: it.color,
+              }}
+            />
+            <span className="text-[11px]" style={{ color: it.color }}>{it.label}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

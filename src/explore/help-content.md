@@ -147,7 +147,7 @@ What this app is and how to move around it.
      - Anchor: node-box:Person
      - Change: sel=Person
      - Action: I clicked the Person checkbox and the Person entity appeared in the viewing panel.
-  3. Hover over the yellow `☰ 2 related · 0 shown ▾` button to reveal a cascading
+  3. Hover over the `☰ 2 related · 0 shown ▾` button to reveal a cascading
      menu allowing you to display entities related to this one.
      - Anchor: node-box:Person
      - Highlight: none
@@ -324,10 +324,14 @@ What the boxes and lines mean.
 - **Context:** Settings travel in the link, so a diagram you set up deliberately does not get redrawn with someone else's preferences.
 - **Change:**
 
-### example-cases
+### help-menu
 
-- **Title:** Example cases
-- **Description:** Named selections that show particular routing and inheritance situations. Useful for seeing what the diagram does with the awkward cases.
+- **Title:** Help
+- **Description:** Everything explaining the diagram, in one menu.
+  - **Ownership legend** — what the arrows, colors and toolbar buttons mean, and every relationship in the schema grouped by the rule that classified it.
+  - **Example cases** — named selections that show particular routing and inheritance situations. Useful for seeing what the diagram does with the awkward cases.
+
+  The two open as separate panels, so you can keep the legend up while you flip through cases.
 
 ### help-button
 
