@@ -138,6 +138,21 @@ twice over, and Siggie caught both by looking at the screen:
    class's P3 colour. The real width saving was elsewhere: `EdgeSample` shrank
    to 30px and the cardinality column tightened.
 
+Two more, from the screenshot after that:
+
+4. **Every slot name vanished on a merged box.** `End` prints `Class.slot` only
+   for the end whose class matches `declaredBy`, and this box's end was being
+   named by the box TITLE. On a merged box the title is the parent
+   (`Observation`) while the declarer is a child
+   (`MeasurementObservation`), so the test never matched and all four rows read
+   `Organization ──< Observation`. Name that end by the declarer.
+5. **Row order was alphabetical**, where Siggie's sketch was ordering by the
+   box's own attribute rows: *"my row order was based on the slot row order in
+   the entity."* Obvious in hindsight — the popover is read against the box
+   right above it, so re-sorting makes the reader find each row twice. Now sorted
+   by `NodeVM.allRows`, with relationships declared elsewhere (which have no row
+   on this box) falling to the end.
+
 The colour is the part worth keeping in mind: **each end wears its own class's
 sibling colour**, so a row belonging to a merged child is coloured at both ends
 while a parent-level row is not. Siggie stated it as *"blue because it's a blue

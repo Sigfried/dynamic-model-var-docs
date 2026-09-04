@@ -2287,6 +2287,7 @@ export default function OwnershipGraphView({
                             onRemove={id => onRemove?.(id)}
                             onInspect={onNodeClick}
                             colorOf={targetColorOf}
+                            slotOrder={n.allRows.map(row => row.slot)}
                           />
                         </div>
                       )}

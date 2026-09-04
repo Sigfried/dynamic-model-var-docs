@@ -83,6 +83,63 @@ function openLeft() {
   fireEvent.mouseEnter(screen.getByLabelText(/classes Observation belongs to/));
 }
 
+describe('RelationBar row rendering', () => {
+  afterEach(() => {
+    cleanup();
+    Element.prototype.getBoundingClientRect = origRect;
+  });
+
+  /** Text of each row, cells joined — enough to see order and qualification. */
+  function rowTexts(): string[] {
+    return [...document.querySelectorAll('table tr')].map(tr =>
+      [...tr.querySelectorAll('td')]
+        .map(td => (td.textContent || '').trim())
+        .filter(Boolean)
+        .join(' '));
+  }
+
+  test('the declaring end keeps its slot name on a MERGED box', () => {
+    /*
+     * The box is titled `Observation` but its rows are declared by
+     * `MeasurementObservation`. Naming this end by the box TITLE made `End`
+     * fail its `cls === declaredBy` test, so every slot name vanished and the
+     * rows read `Organization ──< Observation` (Siggie, screenshot
+     * 2026-09-04). The end has to be named by the DECLARER.
+     */
+    stubLayout(1400, 300);
+    render(
+      <RelationBar
+        label="Observation"
+        rows={[{
+          other: 'Organization', position: 'owned-mine', slot: 'performed_by',
+          declaredBy: 'MeasurementObservation', cardinality: '0..1', drawn: false,
+        }]}
+        onAdd={() => {}} onRemove={() => {}}
+      />,
+    );
+    fireEvent.mouseEnter(screen.getByLabelText(/classes Observation belongs to/));
+    expect(rowTexts()[0]).toContain('MeasurementObservation.performed_by');
+  });
+
+  test('rows follow the BOX\'s slot order, with declared-elsewhere rows last', () => {
+    stubLayout(1400, 300);
+    render(
+      <RelationBar
+        label="Observation"
+        rows={ROWS}
+        slotOrder={['associated_participant', 'performed_by']}
+        onAdd={() => {}} onRemove={() => {}}
+      />,
+    );
+    fireEvent.mouseEnter(screen.getByLabelText(/classes Observation belongs to/));
+    const texts = rowTexts();
+    // `associated_participant` is first in slotOrder; `observations` is
+    // declared by ObservationSet, has no row on this box, and sorts last.
+    expect(texts[0]).toContain('associated_participant');
+    expect(texts[texts.length - 1]).toContain('observations');
+  });
+});
+
 describe('RelationBar popover placement', () => {
   afterEach(() => {
     cleanup();

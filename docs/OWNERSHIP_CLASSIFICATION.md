@@ -559,17 +559,25 @@ the same order the canvas lays boxes out, so a row and the line it describes
 read the same way round:
 
 ```
-Organization                            0..1  ──<  Observation.performed_by
-Visit                                   0..1  ──<  Observation.associated_visit
-Participant                             1..1  ──<  Observation.associated_participant
-MeasurementObservationSet.observations  1..*  ──>  MeasurementObservation
+Organization                      0..1  ──<  Observation.performed_by
+Visit                             0..1  ──<  Observation.associated_visit
+Participant                       1..1  ──<  Observation.associated_participant
+ObservationSet.observations       1..*  ──>  Observation
 ```
+
+**Rows follow the box's own slot order**, so scanning from an attribute row to
+the same relationship in the popover does not mean re-finding it in a different
+order. A relationship declared by another class has no row on this box, so it
+sorts last — which is why `observations` is at the bottom.
 
 Three things are encoded independently:
 
 - **Which end is qualified** (`Class.slot` rather than a bare name) says which
   class **declares** the attribute. It is not always this box: row 4 is
-  `MeasurementObservationSet`'s slot, which is why that class owns this one.
+  `ObservationSet`'s slot, which is why that class owns this one. On a
+  merged-inheritance box the declarer is often a **child** rather than the box's
+  title — `MeasurementObservation.performed_by` inside a box titled
+  `Observation` — so the end is named by the declarer, never by the title.
 - **The arrow** is the edge as the canvas draws it, so its direction says which
   end carries the arrowhead. Both kinds occur on both sides.
 - **The colour** of each end is that class's own P3 sibling colour — the same

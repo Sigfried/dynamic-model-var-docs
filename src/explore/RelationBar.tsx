@@ -102,12 +102,22 @@ export interface RelationBarProps {
   onInspect?: (classId: string) => void;
   /** P3 colour per class, so each end of a row wears its own box's colour. */
   colorOf?: ColorOf;
+  /**
+   * The box's own attribute rows, in the order the box lists them.
+   *
+   * The popover sorts to match (Siggie, 2026-09-04: "my row order was based on
+   * the slot row order in the entity"), so scanning from a box row to the same
+   * relationship in the popover does not mean re-finding it in a different
+   * order. Relations whose slot is declared elsewhere have no row here and sort
+   * to the end.
+   */
+  slotOrder?: readonly string[];
 }
 
 type Side = 'left' | 'right';
 
 export function RelationBar({
-  label, rows, onAdd, onRemove, onInspect, colorOf,
+  label, rows, onAdd, onRemove, onInspect, colorOf, slotOrder,
 }: RelationBarProps) {
   const [open, setOpenSide] = useState<Side | null>(null);
   const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
@@ -223,6 +233,7 @@ export function RelationBar({
           onRemove={onRemove}
           onInspect={onInspect}
           colorOf={colorOf}
+          slotOrder={slotOrder}
         />,
         document.body,
       )}
@@ -249,7 +260,7 @@ function useClamped(anchor: { x: number; y: number }) {
 }
 
 function RelationPopover({
-  anchor, side, label, rows, onAdd, onRemove, onInspect, colorOf,
+  anchor, side, label, rows, onAdd, onRemove, onInspect, colorOf, slotOrder,
 }: {
   anchor: { x: number; y: number };
   side: Side;
@@ -259,13 +270,26 @@ function RelationPopover({
   onRemove: (id: string) => void;
   onInspect?: (id: string) => void;
   colorOf?: ColorOf;
+  slotOrder?: readonly string[];
 }) {
   const { ref, pos } = useClamped(anchor);
 
-  /* Sorted by the class at the other end, so the popover reads as a list of
-     CLASSES with their attributes, not a list of attributes. */
+  /*
+   * Ordered by the BOX's own attribute rows, so the popover lists relationships
+   * in the order you already see them on the box rather than alphabetically.
+   *
+   * A relation declared by some other class (`ObservationSet.observations`
+   * reaching in) has no row of its own here, so it sorts after everything that
+   * does, then alphabetically among its peers.
+   */
+  const rank = (r: RelationRowVM) => {
+    const i = slotOrder?.indexOf(r.slot) ?? -1;
+    return i === -1 ? Number.MAX_SAFE_INTEGER : i;
+  };
   const sorted = [...rows].sort((a, b) =>
-    a.other.localeCompare(b.other) || a.slot.localeCompare(b.slot));
+    rank(a) - rank(b)
+    || a.other.localeCompare(b.other)
+    || a.slot.localeCompare(b.slot));
 
   const allDrawn = sorted.every(r => r.drawn);
   const distinct = [...new Set(sorted.map(r => r.other))];
@@ -321,8 +345,17 @@ function RelationPopover({
              * is `MeasurementObservationSet.observations ──> MeasurementObs`:
              * the qualified half is always the end that holds the attribute.
              */
-            const owner = side === 'left' ? r.other : label;
-            const owned = side === 'left' ? label : r.other;
+            /*
+             * THIS box's end is named by whichever class actually declares the
+             * slot when that is this box's own side — on a merged box the
+             * declarer is a CHILD (`MeasurementObservation`), not the box's
+             * title (`Observation`), and naming it by the title made the slot
+             * disappear: `End` only qualifies the end whose class matches
+             * `declaredBy` (Siggie, screenshot 2026-09-04).
+             */
+            const mine = r.declaredBy === r.other ? label : r.declaredBy;
+            const owner = side === 'left' ? r.other : mine;
+            const owned = side === 'left' ? mine : r.other;
             return (
               <tr
                 key={`${r.declaredBy}.${r.slot}->${r.other}`}
@@ -386,6 +419,7 @@ function End({ cls, row, colorOf }: {
   const color = colorOf?.(cls);
   // The declaring end shows `Class.slot`; the other end is a bare class name.
   const qualified = cls === row.declaredBy;
+
   return (
     <span
       className="font-mono"
