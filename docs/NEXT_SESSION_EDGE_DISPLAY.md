@@ -32,7 +32,9 @@
 >
 > **▶️ THE REMAINING WORK IS §2.3 — tour steps, and it has MOVED.** The plan
 > now lives in **`docs/TOURS_AND_CONTENT.md`**: five tours, a restructured Help
-> menu, and per-category content views on a ▶ button. Read that, not §2.3
+> menu, and per-category content views (**shipped 2026-09-04**, on a `⊞`
+> button — the plan's drafted `▶` collided with the collapse chevron already on
+> that row). Read that, not §2.3
 > below, which records only the state before the 2026-09-04 planning session —
 > in particular its "settle the step list first" blocker is resolved, and
 > Siggie's `[sg]` override under §2.2 is superseded by the new doc.

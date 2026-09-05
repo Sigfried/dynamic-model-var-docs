@@ -101,11 +101,11 @@ reimplementation. It reuses `LayoutManager`'s primitives (`ItemsPanel`,
   contained entities are ALSO roots. Render via the widget's poly-parent /
   "★ also under" handling; do NOT imply mandatory containment.
 - Derived live from `DataService.getContainmentGraph()` → the FK-inversion
-  heuristic in `src/models/containmentGraph.ts` (ported from
-  `scripts/extract_containment_tree.py`). Edge `source→target` = "source contains
-  target", so `target.parentIds` includes `source` for the widget.
-- The override sets (`VALUE_OBJECTS`, `NO_FLIP_SLOTS`, …) are hand-curated and
-  fragile. A de-fragility refactor (LinkML `annotations: { containment_direction:
+  heuristic in `src/models/containmentGraph.ts`. Edge `source→target` = "source
+  contains target", so `target.parentIds` includes `source` for the widget.
+- The override sets (`SINGLE_VALUE_OWNER_TARGETS`, `ASSOCIATION_SLOTS`,
+  `CARDINALITY_SPLIT_OWN_FWD`, …) are hand-curated and fragile — see
+  `TASKS.md` §"hand-curated config rot" for the full list. A de-fragility refactor (LinkML `annotations: { containment_direction:
   contains | contained_by | ? }` per slot, auto-generated then human-reviewed) is
   PARKED until the demo proves value. `owns`/`owned_by` was floated as broader
   vocabulary for the `performed_by` family.

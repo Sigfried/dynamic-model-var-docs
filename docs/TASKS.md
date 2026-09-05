@@ -981,6 +981,95 @@ Missing:
 
 ## 📄 DOCS
 
+### ⚠️ OPEN — hand-curated config rot
+
+Two docs already link here by this name (`OWNERSHIP_CLASSIFICATION.md`, twice)
+and the section did not exist — written 2026-09-04 to make those pointers land
+somewhere.
+
+**The problem.** Several config sets are curated by hand against the schema,
+and an upstream sync can invalidate any of them **silently**. It has happened:
+the 2026-08-12 sync (`778afca`) added `Context` and `Activity`, which then
+appeared nowhere in the UI until someone noticed `Context` missing from the
+entity list. The schema sync is automated now (`.github/workflows/schema-sync.yml`),
+so this is a live risk on every run, not a one-off.
+
+**The sets, and what each fails like:**
+
+| set | file | how a stale entry shows |
+|---|---|---|
+| `ENTITY_CATEGORIES[].classIds` | `config/entityCategories.ts` | class vanishes from the UI — **tested** (`findUncategorizedClasses`) |
+| `ENTITY_CATEGORIES[].pins` | `config/entityCategories.ts` | one extra/missing box in a content view — **invisible**; partly tested (real classes, no self-pins, no value types) |
+| `SUBCLASS_OF` | `config/entityCategories.ts` | wrong indentation — **tested** against schema `is_a` |
+| `DEFAULT_PINS` | `config/entityCategories.ts` | first-visit canvas is wrong — **tested** |
+| `SINGLE_VALUE_OWNER_TARGETS` (14), `ASSOCIATION_SLOTS` (2), `CARDINALITY_SPLIT_OWN_FWD` (2), `BACKWARD_DESPITE_MULTIVALUED` (1), `SKIP_SUBCLASS_EXPANSION` (1) | `models/containmentGraph.ts` | an edge points the wrong way — **invisible** |
+
+Those five are the complete list as of 2026-09-05, verified against
+`containmentGraph.ts` (`grep 'export const'`). The classifier was rewritten
+once and the sets renamed with it, so **a set name in an older doc may not
+exist** — check the file before hunting for one.
+
+The TypeScript is now the **only** copy. Two Python prototypes carried an
+older fork of this heuristic with its own pre-rewrite set names; they and their
+generated JSON were deleted 2026-09-05 (see §"public/ cleanup" below), so a
+grep for a set name no longer turns up a second, divergent answer.
+
+**The one with teeth.** The `containmentGraph` override sets are keyed by SLOT
+NAME, not `(class, slot)`. Every member happens to occur at exactly one class
+— **luck, not design**, and exactly how `performed_by` (11 sites) did damage
+when it sat in the old override list. A sync check should assert each still has
+one site. Not built.
+
+**What to do after a sync:** run the suite first (it catches the tested rows),
+then re-read `docs/TOURS_AND_CONTENT.md` §1.1 for pins and
+`OWNERSHIP_CLASSIFICATION.md` for the override sets. The untested rows need a
+reading, not a query — the criteria are editorial ("does this category make
+sense without it"), which is why they are hand-curated in the first place.
+**Ownership classification is Siggie's call, not a mechanical one.**
+
+### ✅ DONE 2026-09-05 — public/ cleanup
+
+Siggie: *"everything in public/ except source_data/ is totally out of date."*
+Confirmed by reading each one, and deleted — six files, all shipping to the
+live GitHub Pages site (`gh-pages -d dist` copies `public/` verbatim) while
+being reachable only by typing their URL:
+
+| deleted | what it was |
+|---|---|
+| `overview.html` | June status page — "What's Shipped / What's Next / Open Design Questions", superseded by this file. Linked from nowhere. |
+| `containment-tree-mockup.html` + `containment-tree.json` | April prototype; its only entry point was `overview.html` |
+| `has-a-mockup.html` + `has-a-graph.json` | same, April |
+| `containment-graph.json` | April hand-tuned target. Its only mention was a test comment explaining why it is **not** used as a fixture |
+
+Plus the two Python generators, `scripts/extract_containment_tree.py` and
+`extract_has_a_graph.py` — nothing imported or invoked them (the sync pipeline
+runs `download_source_data.py` → `transform_schema.py` only), and they were the
+last home of the pre-rewrite override-set names.
+
+`public/explore.html` went too — an Aug 12 redirect stub for previously shared
+`explore.html` links. Kept in the first pass on the theory that those links
+still mattered; Siggie: *"whenever i sent those links, i doubt anyone will use
+them again at this point."* **`public/` is now `source_data/` and nothing
+else.**
+
+Checked before deleting: nothing in `src/`, `scripts/`, the build or CI reads
+any of it. The design questions in `overview.html` either shipped (pin-a-subset
+became the selection model), were settled (terminology — `ownership`, not
+"containment"), or are recorded here.
+
+**Two docs went with them:**
+
+- `DEMO_SCRIPT.md` — self-identified as STALE since 2026-08-19 (it described
+  the Entity Explorer as the default view, which stopped being true at the
+  2026-08-12 app split) and nothing referenced it.
+- `LINKML_INTEGRATION.md` — an options doc for a decision since taken and
+  shipped: `induced_class()` via LinkML's own `SchemaView`, in
+  `scripts/induced_schema.py`. It said so itself ("read the Options as a
+  decision already taken rather than an open menu") and its pointer to a
+  TASKS.md section had already gone dead. Its one live remainder — whether a
+  runtime JS `SchemaView` could retire `graphology` — moved into
+  `ARCHITECTURE.md` § "DTOs vs Domain Models vs DataService".
+
 ### 📄 OPEN — EXPLORE_VIZ.md is ~20–25% stale (audited 2026-08-24)
 
 The doc's own rule is "where this document and the code disagree, the code wins

@@ -11,13 +11,9 @@ import { getSlotEdgesForClass } from '../models/Graph';
 /**
  * getContainmentGraph() derives the has-a / containment graph live from the
  * schema graph. We test the HEURISTIC against the same live slot data (so the
- * test stays correct as the schema evolves), plus structural invariants.
- *
- * Note: public/containment-graph.json was the original hand-tuned target, but
- * it is a snapshot of an older bdchm.yaml — the schema has since drifted (slot
- * ranges/cardinalities changed). The heuristic logic was verified against it;
- * pinning to it as a fixture would break on every legitimate schema edit, so
- * we assert properties instead.
+ * test stays correct as the schema evolves), plus structural invariants —
+ * never against a golden file, which would break on every legitimate schema
+ * edit.
  */
 describe('getContainmentGraph', () => {
   let ds: DataService;

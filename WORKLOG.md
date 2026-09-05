@@ -7,6 +7,154 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-05 (emptied public/ except source_data; deleted 2 scripts, 2 docs)
+
+Started as "is `extract_containment_tree.py` dead?" and ended as a real
+cleanup. Siggie: *"everything in public/ except source_data/ is totally out of
+date."*
+
+### How the question got asked
+
+I had written into TASKS.md that the Python script "carries its own, older copy
+of this heuristic" — presenting it as a live divergence to be careful of.
+Siggie's question ("if it's not part of the pipeline, when would it ever get
+used?") was the right one, and the honest answer was: never. Tracing it:
+
+`extract_containment_tree.py` → writes `public/containment-tree.json` →
+`containment-tree-mockup.html` fetches it → `overview.html` links to that →
+**nothing links to `overview.html`.** An orphan chain four deep, frozen since
+April/June while the real pipeline was touched in September.
+
+Worth remembering as a pattern: I described the divergence as a hazard without
+first checking whether anything could reach it. "Two copies exist" and "two
+copies matter" are different claims, and I made the second from evidence for
+the first.
+
+### What went, and the one that stayed
+
+Six files from `public/`, plus both Python prototypes
+(`extract_containment_tree.py`, `extract_has_a_graph.py`). All six were
+**shipping to the live GitHub Pages site** — `gh-pages -d dist`, and Vite
+copies `public/` verbatim — reachable only by typing the URL. `dist/` is now
+just the three real entry points plus `source_data`.
+
+`public/explore.html` — an Aug 12 redirect stub for previously shared links —
+I kept in the first pass, on the theory that breaking old URLs was a real cost.
+Siggie overruled: *"i doubt anyone will use them again at this point."* Only
+Siggie could know that; it was the right thing to raise and the wrong thing to
+decide alone. **`public/` is now `source_data/` and nothing else.**
+
+`public/containment-graph.json` was the interesting delete: its ONLY mention
+anywhere was a test comment explaining why it is *not* used as a fixture. I
+first rewrote that comment to preserve the warning; Siggie said the note was
+unnecessary, and they were right — the paragraph above it already says the
+tests run against live slot data "so the test stays correct as the schema
+evolves". The warning survives as a clause there. Deleted files should not
+leave monuments.
+
+### DEMO_SCRIPT.md
+
+I had just patched two of its pointers at the deleted mockups when Siggie said
+the whole file was obsolete. Deleted it instead — which is the better outcome:
+it self-identified as STALE at the top since 2026-08-19 ("describes the Entity
+Explorer as the default view", which stopped being true at the 2026-08-12 app
+split), and nothing referenced it.
+
+The near-miss is the lesson: I was carefully repairing links inside a document
+that should not exist. Before fixing references INTO a stale doc, ask whether
+the doc survives.
+
+### LINKML_INTEGRATION.md
+
+Flagged it as zero-inbound-reference without deleting, since low reference
+count is not obsolescence. Siggie: *"i believe it may be obsolete. you can
+check."* It was, and the doc said so in its own header — *"read the Options as
+a decision already taken rather than an open menu"* (2026-08-25). The decision
+shipped as `scripts/induced_schema.py`, which uses LinkML's real
+`SchemaView.induced_class()`, and the doc's pointer to a TASKS.md section had
+gone dead like the others.
+
+Before deleting I checked its two residual questions rather than assuming they
+were dead with the options:
+
+- **Variable specs come from a TSV, not LinkML** — still true, and covered by
+  ARCHITECTURE.
+- **Could `SchemaView` at runtime retire `graphology`?** — genuinely open,
+  `graphology` is still all over `src/models/`. That paragraph was the one
+  thing worth keeping, so it moved into ARCHITECTURE's "DTOs vs Domain Models"
+  note, which already gestured at it via a link that pointed nowhere.
+
+**The pattern across all four deletions:** each dead doc was ALSO holding a
+dangling pointer (LINKML → a gone TASKS section, OWNERSHIP_CLASSIFICATION → a
+never-written one, DEMO_SCRIPT → deleted mockups, ARCHITECTURE → `../TASKS.md`
+plus a renamed constant). A doc nobody reads is a doc nobody repairs, so
+staleness and broken links accumulate in the same places. Checking inbound
+reference counts (`for f in docs/*.md; grep -rl`) surfaced them fast and is
+worth repeating.
+
+---
+## 2026-09-04 (doc sweep after §1: a dangling pointer, and three dead set names)
+
+Checked what §1 had made stale. Less than expected in the docs it touched, but
+the sweep turned up a pre-existing knot worth recording.
+
+`TOURS_AND_CONTENT.md` is NOT deletable yet — its header says to delete it once
+the tours ship, and only §1 has. Same for `NEXT_SESSION_EDGE_DISPLAY.md`, whose
+condition is the tours plus a home for its §3.3 sketch. Both stay.
+
+### The dangling pointer
+
+`OWNERSHIP_CLASSIFICATION.md` linked to `TASKS.md` §"hand-curated config rot"
+**twice**, and no such section existed. Wrote it, rather than removing the
+links: config rot has bitten this repo for real (the 2026-08-12 sync hid
+`Context` and `Activity` until someone noticed), the sync is automated now so
+it is a live risk on every run, and `pins` had just joined the list of sets it
+threatens. The new section tables every hand-curated set with **how a stale
+entry shows** — the useful axis, because half of them fail invisibly and the
+tested half do not need a human at all.
+
+### Three set names gone from the TS, purged from the live docs
+
+Writing that table, I copied `VALUE_OBJECTS` and `NO_FLIP_SLOTS` out of
+`FOCUS_VIEW.md` and neither is in `containmentGraph.ts`.
+`docs/archive/tasks-2026-08.md` records that they and `OWNERSHIP_OVERRIDES`
+were renamed or deleted in the classifier rewrite — so two live docs had been
+citing dead identifiers for weeks, and the archive knew.
+
+Real sets today, verified by `grep 'export const'`:
+`SINGLE_VALUE_OWNER_TARGETS` (14), `ASSOCIATION_SLOTS` (2),
+`CARDINALITY_SPLIT_OWN_FWD` (2), `BACKWARD_DESPITE_MULTIVALUED` (1),
+`SKIP_SUBCLASS_EXPANSION` (1). **Five, not four** — my first pass at the
+TASKS.md table missed `ASSOCIATION_SLOTS` because I was working from the stale
+doc rather than the file.
+
+Siggie then asked for the dead names to be removed outright rather than
+annotated, so the live docs no longer mention them at all. `WORKLOG.md` and
+`docs/archive/` keep theirs deliberately: they record *that the rename
+happened*, which is the only trace of why the names vanished.
+
+**`own-flip` was dead too**, and in the same `ARCHITECTURE.md` paragraph — it
+left the `OwnershipVerdict` union in the same rewrite. Rewrote the sentence in
+current vocabulary and checked it against the rule table in
+`containmentGraph.ts`: Rule 2 (single-valued → entity) is `own-bkwd`, and
+Exception 2a lifts a value-object target to `own-fwd`, which is exactly what
+`SINGLE_VALUE_OWNER_TARGETS` does for `Activity`. The worked example survived
+the rename intact — `Activity` still carries a comment dated 2026-08-19, the
+date the doc cites — so the paragraph needed renaming, not deleting.
+
+**The names are NOT dead everywhere.** `scripts/extract_containment_tree.py`
+still has its own `VALUE_OBJECTS` and `NO_FLIP_SLOTS`: it is the Python the TS
+was ported from, standalone, runnable, and it never tracked the rewrite.
+Nothing in the build runs it. Flagged in the config-rot section, because a grep
+for a set name finds that file and it is easy to conclude the TS names are
+merely inconsistent rather than that a second divergent copy exists.
+
+**The general lesson:** a renamed constant leaves no trace in the docs that
+named it — nothing fails, nothing greps. The archive recorded the rename and
+the live docs did not get updated. When renaming an exported set, grep `docs/`
+for the old name.
+
+---
 ## 2026-09-04 (the back button for category views, §1.3)
 
 Finishes §1. The mechanism turned out smaller than the plan implied, and the

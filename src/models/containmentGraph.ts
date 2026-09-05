@@ -3,8 +3,10 @@
  * retains its historical "containment" naming until a broader rename).
  *
  * Produces the flat {nodes, edges} graph the ownership diagram consumes,
- * derived from the live SchemaGraph. Originally a TypeScript port of the
- * heuristic in scripts/extract_containment_tree.py + extract_has_a_graph.py.
+ * derived from the live SchemaGraph. Originally a TypeScript port of a pair of
+ * Python prototypes (`scripts/extract_containment_tree.py` and
+ * `extract_has_a_graph.py`, deleted 2026-09-05 — see git history); the rules
+ * here have since been rewritten and are the only live implementation.
  *
  * Every class-ranged slot is classified with an OwnershipVerdict
  * (see classifySlotEdge). Three categories: 'own-fwd' (owns), 'own-bkwd'
@@ -263,8 +265,8 @@ export function buildContainmentGraph(
   };
 
   // Ownership + reference edges, per classifySlotEdge. Iterate every class's
-  // slot edges (own + inherited), matching extract_has_a_graph.py which keeps
-  // inherited edges.
+  // slot edges, INCLUDING inherited ones — a subclass's diagram has to show
+  // what it inherits, not only what it declares.
   for (const cname of classIds) {
     for (const slot of getSlotEdgesForClass(graph, cname)) {
       const rng = slot.range;

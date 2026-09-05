@@ -191,17 +191,20 @@ the 3-panel shape). The shared floating-box orchestration is being extracted int
 **Ownership graph** (called "containment" in code; the rename is pending).
 `DataService.getContainmentGraph(classIds?)` derives a directed (possibly
 cyclic) graph live from the schema graph via the FK-inversion heuristic in
-`src/models/containmentGraph.ts` (TS port of
-`scripts/extract_containment_tree.py`). `getContainmentNodes()` adapts it to the
-`dag-browser-widget` `Node[]` shape. This replaces the static
-`public/*-graph.json` mockup data (which had drifted from the schema).
+`src/models/containmentGraph.ts`. `getContainmentNodes()` adapts it to the
+`dag-browser-widget` `Node[]` shape. This replaced the static
+`public/*-graph.json` mockup data, which had drifted from the schema; that
+data and the Python prototypes that generated it were **deleted 2026-09-05**,
+so the TS heuristic is now the only implementation.
 
 **The heuristic's default is a guess, and it misfires.** Single-valued slot to
-an entity range ⇒ `own-flip` ("the target owns the source"), which is right for
-real FKs and wrong for identity-less value objects. `Activity` was misclassified
-exactly this way and had to be adjudicated onto `VALUE_OBJECTS` (2026-08-19).
-Expect to re-check `VALUE_OBJECTS` and `OWNERSHIP_OVERRIDES` after every
-upstream schema sync — see [OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md).
+an entity range ⇒ `own-bkwd` ("the source belongs to the target"), which is
+right for real foreign keys and wrong for identity-less value objects.
+`Activity` was misclassified exactly this way and had to be adjudicated onto
+`SINGLE_VALUE_OWNER_TARGETS` (2026-08-19). Expect to re-check it and the other
+override sets after every upstream schema sync — see
+[OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md) and `TASKS.md`
+§"hand-curated config rot", which lists all of them.
 
 **`DataService.getOwnershipSubgraph(selected, options)`**
 (`src/models/ownershipSubgraph.ts`) is what the Explore canvas draws: **nothing
@@ -241,8 +244,16 @@ measurements.
 
 ## DTOs vs Domain Models vs DataService
 
-> **Note**: This layering is likely to simplify as we integrate `linkml-runtime`.
-> See [TASKS.md](../TASKS.md).
+> **Note**: This layering is likely to simplify as `linkml-runtime` takes on
+> more. The Python side already uses it (`scripts/induced_schema.py`, see Data
+> Flow above); the open question is whether a runtime JS `SchemaView` could
+> answer the relationship queries `graphology` handles today —
+> `classAncestors`, `classInducedSlots`, "which classes use this enum" — and
+> how much of `transform_schema.py` and `dataLoader.ts` that would retire.
+> Link visualization is spatial and would still need its own structure.
+> Prototype before committing. (This paragraph absorbs the live remainder of
+> `LINKML_INTEGRATION.md`, deleted 2026-09-05 once its options had been decided
+> and shipped.)
 
 **Current layers:**
 - **DTOs** (`input_types.ts`): Raw data shapes matching JSON/TSV files
