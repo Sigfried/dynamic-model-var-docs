@@ -21,8 +21,13 @@ spec sheet, and move whenever the schema sync lands — see *Keeping the model i
 sync* below.
 
 **Model shape**:
-- `Entity` is a range node, not a common superclass — the class hierarchy has
-  several roots
+- **`Entity` is the universal root** — every one of the other 53 classes
+  descends from it (37 directly). The app **suppresses those `is_a` edges**:
+  drawing 53 of them is clutter with no explanatory value. So the hierarchy
+  *reads* as several roots even though it has one. `Entity` still appears as a
+  slot **range**, where a polymorphic pointer means something — a distinction
+  worth keeping straight
+  ([OWNERSHIP_CLASSIFICATION.md](docs/OWNERSHIP_CLASSIFICATION.md#entity-is-the-universal-root-and-we-draw-it-only-as-a-range))
 - 69% of variables (107 of 155) map to `MeasurementObservation`
 - Most relationships are **ownership** edges derived from slot ranges; the rules
   for deriving them are the app's central idea, and are not in the schema

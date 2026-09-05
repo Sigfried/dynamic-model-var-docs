@@ -304,14 +304,22 @@ thing that turns a readable diagram into a hairball.
 They must not be dropped. `focus` carries real meaning — "this observation is
 about *something*" — and deleting it silently removes information.
 
-### `Entity` is a range node but not an inheritance parent
+### `Entity` is the universal root, and we draw it only as a range
+
+⚠️ **`Entity` IS a common superclass.** Every one of the other 53 classes
+descends from it — 37 directly, the rest through a parent. It is `abstract:
+true`, and there are no exceptions. What follows is about what the app *draws*,
+not about what the schema *says*; an earlier heading here ("a range node but not
+an inheritance parent") compressed that into something false, and it misled a
+reader into repeating it as fact.
 
 **This is the distinction the whole `Entity` problem turns on**, and it keeps
 getting re-conflated:
 
 - **As an inheritance parent** — every class `is_a Entity`, so drawing those
-  edges adds a fan of pure noise. Suppressed by `SKIP_SUBCLASS_EXPANSION`. This
-  holds for any future inheritance view too.
+  edges adds a fan of pure noise. **Suppressed for clutter, not because the
+  relationship is not real.** `SKIP_SUBCLASS_EXPANSION` does it, and it holds
+  for any future inheritance view too.
 - **As a slot range** — a deliberate polymorphic pointer that means something.
   Entity-ranged edges classify normally (rule `entity-ranged`, always forward).
 - **As a node** — `Entity` is in `classIds` and, now that its inbound range
