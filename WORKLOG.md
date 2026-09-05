@@ -7,6 +7,66 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-04 (the back button for category views, §1.3)
+
+Finishes §1. The mechanism turned out smaller than the plan implied, and the
+testing turned out harder.
+
+### It reused a path that was already there
+
+The plan described this as new work in two parts: a `pushState` at the ⊞ click
+and a `popstate` handler that "reads state back out of the URL". The second
+part already existed under another name — `apply`, inside the
+`explore:state-from-url` effect, written for the tour so a step's `State:`
+query goes through the same parser a shared link does. A `popstate` means
+exactly the same thing ("the address bar holds a state this app wrote"), so it
+is a third caller of that function, not a new implementation. One added line.
+
+### Why the flag is a ref rather than a push at the click
+
+The obvious shape — `pushState` inside `showCategoryView` — is wrong, because
+the write effect fires immediately after and `replaceState`s over it. So the
+push has to happen AT the write, and the click's only job is to mark the next
+write. That is `pushNextWrite`, a ref: state would re-render, and the render it
+triggers is the very effect that reads it.
+
+It is **consumed**, not read. Leaving it set would make the viewer's next
+checkbox click a history stop — the exact failure the whole
+"replaceState-by-default" rule exists to prevent.
+
+### Three edge cases, two of them found by thinking and one by testing
+
+1. **The restore's own write.** `apply` sets state → the write effect runs →
+   the URL is written again. That write MUST be a replace: pushing while
+   restoring grows the stack on every back press and back never reaches the
+   start. Falls out of the default being replace, but it is the kind of thing
+   that gets "fixed" into a push by someone making pushes more general.
+2. **Re-drawing the view already on screen.** `setSelectedIds(new Set(ids))`
+   always has a new identity, so the effect always runs and would push a second
+   identical entry — back would then need two presses and look broken on the
+   first. `showCategoryView` compares against `prev` and bails.
+3. **StrictMode runs state updaters twice**, and the flag is now set inside
+   one. Idempotent, so safe; commented so it stays that way.
+
+### The tests were green for the wrong reason
+
+Sabotaged the two mechanisms to check the tests could actually fail. Deleting
+the push flag failed 5 of 6. Deleting the `popstate` listener failed **1 of
+6** — nearly useless.
+
+The cause: jsdom's `history.back()` updates `window.location` whether or not
+anything listens, and every assertion but one was reading `?sel` out of the
+URL. So the tests were watching the transport rather than the app. Rewrote them
+to read the ticked checkboxes — what the viewer actually sees — and both
+sabotages then fail 5 of 6.
+
+Worth generalising: **in this app a URL assertion is not evidence that the app
+reacted**, because the URL is written by the app and moved by jsdom
+independently. Any future history/navigation test should assert on rendered
+state. Noted as a ⚠️ in TOURS_AND_CONTENT §1.3 too, since that is where someone
+would go looking.
+
+---
 ## 2026-09-04 (implementing: category content views, §1 of TOURS_AND_CONTENT)
 
 Built §1 of the plan written earlier the same day — `pins` on the categories,

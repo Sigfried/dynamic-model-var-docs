@@ -1,6 +1,6 @@
-import { describe, test, expect, beforeEach } from 'vitest';
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
-  readExploreState, buildShareURL, DEFAULTS, rememberPreference,
+  readExploreState, writeExploreState, buildShareURL, DEFAULTS, rememberPreference,
   type ExploreState,
 } from '../explore/exploreState';
 
@@ -103,5 +103,61 @@ describe('explore state', () => {
     rememberPreference('dir', 'DOWN');
     read('?dir=RIGHT');
     expect(localStorage.getItem('explore-nl-dir')).toBe('DOWN');
+  });
+
+  /**
+   * Which writes become back-button stops (TOURS_AND_CONTENT.md §1.3).
+   *
+   * The default has to stay `replaceState`: if an ordinary write pushed, back
+   * would replay the session one checkbox at a time and never leave the page.
+   */
+  describe('history entries', () => {
+    let pushed: number;
+    let replaced: number;
+
+    beforeEach(() => {
+      pushed = 0;
+      replaced = 0;
+      vi.spyOn(window.history, 'pushState').mockImplementation(() => { pushed++; });
+      vi.spyOn(window.history, 'replaceState').mockImplementation(() => { replaced++; });
+    });
+
+    afterEach(() => vi.restoreAllMocks());
+
+    test('an ordinary write replaces, and never pushes', () => {
+      writeExploreState({ ...DEFAULTS, sel: ['Person'] });
+      expect(pushed).toBe(0);
+      expect(replaced).toBe(1);
+    });
+
+    test('push: true pushes instead of replacing', () => {
+      writeExploreState({ ...DEFAULTS, sel: ['Person'] }, { push: true });
+      expect(pushed).toBe(1);
+      expect(replaced).toBe(0);
+    });
+
+    test('push: false is the same as saying nothing', () => {
+      writeExploreState({ ...DEFAULTS, sel: ['Person'] }, { push: false });
+      expect(pushed).toBe(0);
+      expect(replaced).toBe(1);
+    });
+
+    test('a pushed write carries the same params a replaced one would', () => {
+      // The flag chooses the history verb and nothing else — a pushed entry
+      // that dropped or added a param would make back restore a state the app
+      // never showed.
+      const state: ExploreState = {
+        ...DEFAULTS, sel: ['Visit', 'Person'], roots: true, dir: 'DOWN',
+      };
+      const urlFor = (opts?: { push: boolean }) => {
+        let seen = '';
+        const capture = (_s: unknown, _t: unknown, u?: string | URL) => { seen = String(u); };
+        vi.spyOn(window.history, 'pushState').mockImplementation(capture);
+        vi.spyOn(window.history, 'replaceState').mockImplementation(capture);
+        writeExploreState(state, opts);
+        return seen;
+      };
+      expect(urlFor({ push: true })).toBe(urlFor());
+    });
   });
 });

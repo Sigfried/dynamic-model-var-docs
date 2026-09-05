@@ -14,7 +14,7 @@
  * imports (the future package-extraction boundary).
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useModelData } from '../hooks/useModelData';
 import { DataService } from '../services/DataService';
 import SelectionTable from './SelectionTable';
@@ -65,6 +65,13 @@ function ExploreAppInner() {
   const [detailId, setDetailId] = useState<string | null>(initial.detail);
   const [tableCollapsed, setTableCollapsed] = useState(false);
   /**
+   * Marks the NEXT URL write as a back-button stop (`pushState`), for an
+   * action that jumps to a whole new canvas rather than adjusting the current
+   * one. Set at the click; consumed by the write effect. See that effect and
+   * `writeExploreState`'s `push` option.
+   */
+  const pushNextWrite = useRef(false);
+  /**
    * 'list' is the default selector: the category list, nested by inheritance.
    * 'tree' is the dag-browser, kept reachable but no longer default — Siggie
    * 2026-08-27 deferred fixing it (it needs horizontal scroll and panel resize
@@ -113,6 +120,18 @@ function ExploreAppInner() {
    * A tour step writes its `State:` query to the URL and fires this event;
    * we re-read it through the SAME parser a link uses. One code path for
    * "put the app into this state", whether it came from a link or a step.
+   *
+   * **The browser's back button is a third caller of that same path.** A
+   * `popstate` means the address bar now holds a state this app wrote earlier,
+   * which is exactly the situation `apply` exists for — so back and forward
+   * cost one listener rather than a parallel implementation.
+   *
+   * The write effect below reacts to the setState calls `apply` makes and
+   * writes the URL again. That write is a `replaceState` of the entry the
+   * browser just navigated TO, with the state it already holds, so it is a
+   * no-op in content and leaves the history stack alone. It must NOT be a
+   * push: pushing while restoring would grow the stack on every back press
+   * and the button would never reach the start.
    */
   useEffect(() => {
     const apply = () => {
@@ -124,8 +143,12 @@ function ExploreAppInner() {
       setDirection(next.dir);
       setMergeMode(next.merge);
     };
+    window.addEventListener('popstate', apply);
     window.addEventListener('explore:state-from-url', apply);
-    return () => window.removeEventListener('explore:state-from-url', apply);
+    return () => {
+      window.removeEventListener('popstate', apply);
+      window.removeEventListener('explore:state-from-url', apply);
+    };
   }, []);
 
   /*
@@ -148,7 +171,17 @@ function ExploreAppInner() {
       sel: [...selectedIds], detail: detailId, roots: pathToRoot,
       sibs: mergeSibs, dir: direction, merge: mergeMode,
     };
-    writeExploreState(state);
+    /*
+     * The flag is CONSUMED here, not read: it marks one write, and this is the
+     * write it marked. Leaving it set would turn the next unrelated checkbox
+     * click into a history entry too.
+     *
+     * A ref rather than state because setting it must not itself trigger a
+     * render — the render it would trigger is this very effect.
+     */
+    const push = pushNextWrite.current;
+    pushNextWrite.current = false;
+    writeExploreState(state, { push });
     // Only unticks are detectable here; ticks announce themselves through
     // `claimForViewer` at the click, for the reason given there.
     setTourStack(reconcile(state, tourStack, {}).stack);
@@ -210,14 +243,30 @@ function ExploreAppInner() {
    * so the write effect cannot detect it. The unticks — everything the replace
    * dropped — that effect does see on its own.
    *
-   * NOT wired to the browser back button yet. `docs/TOURS_AND_CONTENT.md` §1.3
-   * calls for a `pushState` here and a `popstate` handler to match; today
-   * every state write goes through `replaceState` (exploreState.ts) and there
-   * is no `popstate` listener, so back leaves this view the way it leaves any
-   * other selection change.
+   * **This is the one action that creates a history entry.** Replacing the
+   * whole canvas is the only thing the viewer does that they would expect
+   * `back` to undo in one press — every other change adjusts the canvas in
+   * front of them, and making those history stops would mean pressing back
+   * once per checkbox. The flag is consumed by the write effect.
    */
   const showCategoryView = useCallback((classIds: string[]) => {
-    setSelectedIds(new Set(classIds));
+    setSelectedIds(prev => {
+      /*
+       * Re-drawing the view already on screen must not push a SECOND identical
+       * entry — back would then need two presses to go anywhere and would look
+       * broken on the first. Returning `prev` also skips the effect entirely,
+       * so the flag must not be set in that case: it would survive to make the
+       * viewer's next checkbox click a history stop.
+       *
+       * Writing the ref inside an updater is a side effect in a function
+       * StrictMode deliberately runs twice (main.tsx). Safe only because it is
+       * idempotent — `true` twice is `true`, and the early return writes
+       * nothing — so keep it that way if this grows.
+       */
+      if (prev.size === classIds.length && classIds.every(id => prev.has(id))) return prev;
+      pushNextWrite.current = true;
+      return new Set(classIds);
+    });
     tourStack = reconcile(
       readExploreState(), tourStack, { ticked: classIds },
     ).stack;

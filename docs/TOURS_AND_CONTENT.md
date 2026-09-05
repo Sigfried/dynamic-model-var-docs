@@ -32,8 +32,8 @@ the skeleton for the fix.
 
 ## 1. Category content views (the ⊞ button)
 
-✅ **§1.1 and §1.2 shipped.** §1.3's back button and §1.4's crowding question
-are still open; see those sections.
+✅ **§1 is shipped** — pins, the ⊞ control, replace-not-add, and the back
+button. §1.4's crowding question is the one thing still open here.
 
 **Decision:** each category header in the left panel gets a small display
 control that draws that category's content view on the canvas.
@@ -156,7 +156,7 @@ them can catch a pin that is merely *unhelpful*; that stays a reading.
 `clinical` and `lab` and a pin of `observation`), and a duplicate id in the
 selection would toggle two rows for one class.
 
-### 1.3 Replace ✅, and the back button (open)
+### 1.3 Replace, and the back button ✅
 
 **Clicking ⊞ replaces the canvas**, it does not add to it — shipped, as
 `showCategoryView` in `ExploreApp.tsx`. Cumulative state makes the picture stop
@@ -170,17 +170,37 @@ Every drawn id is reported to `reconcile` as a viewer *tick*, for the reason
 trace in the resulting state, so the write effect cannot detect it. The unticks
 — everything the replace dropped — that effect sees on its own.
 
-**The browser back button must return to the previous canvas.** Still to do.
-This is new work, not a free consequence:
+**The browser back button returns to the previous canvas.** Three pieces:
 
-- `exploreState.ts:224` calls **`window.history.replaceState`** for every state
-  write, so nothing in the app creates a history entry today.
-- There is **no `popstate` listener** anywhere in `src/explore/`.
+- `writeExploreState(state, { push })` chooses the history verb.
+  **`replaceState` stays the default**, deliberately: if ordinary writes
+  pushed, back would replay the session one checkbox at a time and never leave
+  the page. Only a whole-canvas jump passes `push` — today ⊞ alone.
+- `pushNextWrite`, a ref in `ExploreApp`, marks *one* write. Set at the click,
+  **consumed** by the write effect — left set, it would turn the viewer's next
+  unrelated click into a history stop.
+- `popstate` is a third caller of the existing `apply`, the function the tour's
+  `explore:state-from-url` event already used to put the app into a state read
+  from the URL. Back and forward cost one listener, not a parallel path.
 
-So ⊞ needs to `pushState` one entry, and the app needs a `popstate` handler that
-reads state back out of the URL. Note the deliberate consequence to preserve:
-ordinary actions (ticking a checkbox, toggling the toolbar) must keep using
-`replaceState`, or back would replay every individual click.
+Three consequences worth keeping:
+
+1. **The restore's own write must not push.** `apply` sets state, which runs
+   the write effect, which writes the URL again — a `replaceState` of the entry
+   just navigated to, with the state it already holds. Harmless. A push there
+   would grow the stack on every back press and the button would never reach
+   the start.
+2. **Re-drawing the view already on screen pushes nothing.** `showCategoryView`
+   compares against the live selection and bails early; without that, back
+   needs two presses to go anywhere and looks broken on the first.
+3. **The flag is set inside a state updater**, which StrictMode runs twice. Safe
+   only because it is idempotent — keep it that way.
+
+⚠️ **Test the checkboxes, not just `sel`.** jsdom's `history.back()` moves
+`window.location` whether or not anything reacts, so URL-only assertions pass
+with the `popstate` listener deleted — measured: five of six such tests stayed
+green under that sabotage. `categoryViewHistory.test.tsx` reads the ticked rows
+instead, and both sabotages then fail five of six.
 
 ### 1.4 Open: Observations is crowded
 

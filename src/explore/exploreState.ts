@@ -181,8 +181,20 @@ export function readExploreState(search = window.location.search): ExploreState 
  * Write the whole state to the URL in one pass. Single writer, so no two
  * effects can clobber each other's params — the failure mode when each piece
  * of state wrote its own.
+ *
+ * **`push` decides whether this write becomes a back-button stop.** Almost
+ * every write must NOT: ticking a checkbox, toggling the toolbar, opening the
+ * drawer and each individual step of a tour are all `replaceState`, or `back`
+ * would replay the session one click at a time and never leave the page. Only
+ * a deliberate jump between whole canvases passes `push` — today that is the
+ * category content view (⊞) alone.
+ *
+ * The pushed entry holds the NEW state, and the entry it pushes on top of
+ * already holds the old one, put there by the previous write. So the history
+ * stack stays "one entry per canvas the viewer chose" with no bookkeeping
+ * beyond this flag.
  */
-export function writeExploreState(state: ExploreState): void {
+export function writeExploreState(state: ExploreState, { push = false } = {}): void {
   const url = new URL(window.location.href);
   const q = url.searchParams;
 
@@ -221,7 +233,12 @@ export function writeExploreState(state: ExploreState): void {
   setIf('dir', state.dir, state.dir === DEFAULTS.dir);
   setIf('merge', state.merge, state.merge === DEFAULTS.merge);
 
-  window.history.replaceState(null, '', url);
+  /*
+   * `pushState` does not fire `popstate` — only a real back/forward does — so
+   * pushing here cannot loop back into the app's own popstate handler.
+   */
+  if (push) window.history.pushState(null, '', url);
+  else window.history.replaceState(null, '', url);
 }
 
 /**
