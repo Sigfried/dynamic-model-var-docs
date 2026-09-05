@@ -13,6 +13,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { loadModelData } from '../utils/dataLoader';
 import { DataService } from '../services/DataService';
 import SelectionTable from '../explore/SelectionTable';
+import { categoryView } from '../config/categoryView';
 
 describe('SelectionTable', () => {
   let ds: DataService;
@@ -23,14 +24,16 @@ describe('SelectionTable', () => {
 
   const renderTable = (selected: string[] = []) => {
     const onToggle = vi.fn();
+    const onShowCategory = vi.fn();
     const result = render(
       <SelectionTable
         dataService={ds}
         selectedIds={new Set(selected)}
         onToggle={onToggle}
+        onShowCategory={onShowCategory}
       />,
     );
-    return { onToggle, ...result };
+    return { onToggle, onShowCategory, ...result };
   };
 
   test('renders every categorized class with a checkbox', () => {
@@ -93,6 +96,91 @@ describe('SelectionTable', () => {
     expect(screen.queryAllByText('Context').length).toBeGreaterThan(0);
     fireEvent.click(header);
     expect(screen.queryByText('Context')).toBeNull();
+  });
+
+  /**
+   * The content-view control (docs/TOURS_AND_CONTENT.md §1): one per category
+   * header, replacing the canvas with that category's members plus its pins.
+   */
+  describe('content view control', () => {
+    const controlFor = (categoryId: string) =>
+      document.querySelector(`[data-show-category="${categoryId}"]`) as HTMLElement;
+
+    test('every category header carries one', () => {
+      renderTable();
+      for (const g of ds.getCategoryGroups()) {
+        expect(controlFor(g.id), `${g.id} needs a content-view control`).not.toBeNull();
+      }
+      expect(document.querySelectorAll('[data-show-category]').length)
+        .toBe(ds.getCategoryGroups().length);
+    });
+
+    test('clicking it asks for the members plus the pins', () => {
+      const { onShowCategory } = renderTable();
+      const clinical = ds.getCategoryGroups().find(g => g.id === 'clinical')!;
+      fireEvent.click(controlFor('clinical'));
+
+      const drawn: string[] = onShowCategory.mock.calls[0][0];
+      // Members are all there...
+      for (const id of clinical.classIds) expect(drawn).toContain(id);
+      // ...and so is the context the category does not make sense without.
+      for (const id of ['Participant', 'Visit', 'Person']) expect(drawn).toContain(id);
+      // But not the value types the mechanical rule would have swept in.
+      expect(drawn).not.toContain('TimePoint');
+      expect(drawn).not.toContain('Quantity');
+    });
+
+    test('a category with no pins asks for exactly its members', () => {
+      const { onShowCategory } = renderTable();
+      const survey = ds.getCategoryGroups().find(g => g.id === 'survey')!;
+      expect(survey.pins).toEqual([]);
+      fireEvent.click(controlFor('survey'));
+      expect(onShowCategory.mock.calls[0][0]).toEqual(survey.classIds);
+    });
+
+    test('it does not toggle the category collapse', () => {
+      // Two controls on one row: the draw click must not reach the header
+      // button behind it and fold the category away.
+      renderTable();
+      expect(screen.queryAllByText('Context').length).toBeGreaterThan(0);
+      fireEvent.click(controlFor('observation'));
+      expect(screen.queryAllByText('Context').length).toBeGreaterThan(0);
+    });
+
+    test('it does not select anything on its own', () => {
+      // Drawing a view is not ticking 12 checkboxes one at a time; the host
+      // replaces the whole selection in one move.
+      const { onToggle } = renderTable();
+      fireEvent.click(controlFor('lab'));
+      expect(onToggle).not.toHaveBeenCalled();
+    });
+
+    test('the control is absent when the host offers no canvas', () => {
+      render(
+        <SelectionTable dataService={ds} selectedIds={new Set()} onToggle={vi.fn()} />,
+      );
+      expect(document.querySelectorAll('[data-show-category]').length).toBe(0);
+    });
+  });
+
+  describe('categoryView', () => {
+    test('members first, then pins', () => {
+      expect(categoryView({ classIds: ['A', 'B'], pins: ['C'] })).toEqual(['A', 'B', 'C']);
+    });
+
+    test('dedupes a pin that is also a member', () => {
+      // A duplicate id in the selection would toggle two rows for one class.
+      // Reachable in practice: BodySite is a member of clinical and lab, and
+      // a pin of observation.
+      expect(categoryView({ classIds: ['A', 'B'], pins: ['B', 'C'] })).toEqual(['A', 'B', 'C']);
+    });
+
+    test('every real category view is duplicate-free', () => {
+      for (const g of ds.getCategoryTrees()) {
+        const view = categoryView(g);
+        expect(new Set(view).size, `${g.id} draws a class twice`).toBe(view.length);
+      }
+    });
   });
 
   /**

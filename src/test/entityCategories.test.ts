@@ -149,6 +149,63 @@ describe('entityCategories config vs. live schema', () => {
     expect(problems, problems.join('; ')).toEqual([]);
   });
 
+  /*
+   * `pins` (content-view context classes) is unrelated to `DEFAULT_PINS`
+   * (first-visit canvas selection) below, despite the shared word.
+   *
+   * A stale pin is INVISIBLE at runtime — it just draws one extra box, or
+   * silently drops out of getCategoryGroups' itemExists filter — so these are
+   * the only thing that will notice a sync breaking one.
+   */
+  test('pins reference real classes', () => {
+    const known = new Set(classIds);
+    const bad = ENTITY_CATEGORIES.flatMap(cat =>
+      cat.pins.filter(id => !known.has(id)).map(id => `${cat.id}:${id}`),
+    );
+    expect(bad, `Pinned classes absent from the schema: ${bad.join(', ')}`).toEqual([]);
+  });
+
+  test('a category never pins one of its own members', () => {
+    // A member is already drawn; pinning it says "this category needs an
+    // outside class" about a class that is not outside. Cheap to write by
+    // accident once BodySite is a member of two categories and a pin of a
+    // third.
+    const bad = ENTITY_CATEGORIES.flatMap(cat =>
+      cat.pins.filter(id => cat.classIds.includes(id)).map(id => `${cat.id}:${id}`),
+    );
+    expect(bad, `Categories pinning their own members: ${bad.join(', ')}`).toEqual([]);
+  });
+
+  test('pins are unique within a category', () => {
+    const bad = ENTITY_CATEGORIES
+      .filter(cat => new Set(cat.pins).size !== cat.pins.length)
+      .map(cat => cat.id);
+    expect(bad, `Duplicate pins in: ${bad.join(', ')}`).toEqual([]);
+  });
+
+  /*
+   * The curatorial rule from docs/TOURS_AND_CONTENT.md §1.1, asserted rather
+   * than merely written down: value types are NOT pinned. Siggie rejected the
+   * mechanically derived pin set for exactly this — "Do NOT pin
+   * TimePoint/TimePeriod to Admin. It clutters up the diagram and gives it no
+   * additional explanatory value."
+   *
+   * BodySite is deliberately absent from this list: it LOOKS like a value type
+   * but carries domain content (site: AnatomicSiteEnum), and "where on the
+   * body" is part of what a measurement is. Size is not the test.
+   */
+  test('value types are never pinned', () => {
+    const VALUE_TYPES = ['TimePoint', 'TimePeriod', 'Quantity', 'Context'];
+    const bad = ENTITY_CATEGORIES.flatMap(cat =>
+      cat.pins.filter(id => VALUE_TYPES.includes(id)).map(id => `${cat.id}:${id}`),
+    );
+    expect(
+      bad,
+      `Value types pinned (see TOURS_AND_CONTENT.md §1.1 — reopen the ` +
+        `decision there before deleting this test): ${bad.join(', ')}`,
+    ).toEqual([]);
+  });
+
   test('DEFAULT_PINS reference real, categorized classes', () => {
     const known = new Set(classIds);
     const categorized = new Set(ENTITY_CATEGORIES.flatMap(cat => cat.classIds));

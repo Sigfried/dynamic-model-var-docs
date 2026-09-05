@@ -76,6 +76,12 @@ export interface CategoryGroup {
   id: string;
   label: string;
   classIds: string[];
+  /**
+   * Classes from other categories that this one's content view draws
+   * alongside its members — see `EntityCategory.pins`. Curatorial, not
+   * derived: it answers "what does this category not make sense without".
+   */
+  pins: string[];
 }
 
 /**
@@ -107,6 +113,8 @@ export interface CategoryTree {
   roots: CategoryTreeNode[];
   /** Every class in the category, flat — same set getCategoryGroups() returns. */
   classIds: string[];
+  /** Outside classes the content view pins; see CategoryGroup.pins. */
+  pins: string[];
 }
 
 /** Node shape for the containment tree/DAG widget (structurally matches
@@ -763,6 +771,9 @@ export class DataService {
         id: cat.id,
         label: cat.label,
         classIds: cat.classIds.filter(id => this.itemExists(id)),
+        // Filtered like classIds: a pin naming a class an upstream sync
+        // removed must drop out rather than reach the canvas as a phantom id.
+        pins: cat.pins.filter(id => this.itemExists(id)),
       }))
       .filter(cat => cat.classIds.length > 0);
   }
@@ -818,7 +829,10 @@ export class DataService {
         }
       }
 
-      return { id: group.id, label: group.label, roots, classIds: group.classIds };
+      return {
+        id: group.id, label: group.label, roots,
+        classIds: group.classIds, pins: group.pins,
+      };
     });
   }
 

@@ -196,6 +196,33 @@ function ExploreAppInner() {
     [],
   );
 
+  /**
+   * Draw a category's content view — its members plus its pins.
+   *
+   * **Replaces the canvas; does not add to it.** Cumulative state makes the
+   * picture stop matching the label, which is the failure the tour's `Change:`
+   * verb already has (help-content.md TODO: step 4 adds to step 3's canvas, so
+   * the copy reads as if it were showing a clean two-box example when it is
+   * not). A view named "Clinical" has to BE Clinical.
+   *
+   * Every id counts as a viewer tick, for the reason `claimForViewer` gives:
+   * a tick of something a tour step also pushed leaves no trace in the state,
+   * so the write effect cannot detect it. The unticks — everything the replace
+   * dropped — that effect does see on its own.
+   *
+   * NOT wired to the browser back button yet. `docs/TOURS_AND_CONTENT.md` §1.3
+   * calls for a `pushState` here and a `popstate` handler to match; today
+   * every state write goes through `replaceState` (exploreState.ts) and there
+   * is no `popstate` listener, so back leaves this view the way it leaves any
+   * other selection change.
+   */
+  const showCategoryView = useCallback((classIds: string[]) => {
+    setSelectedIds(new Set(classIds));
+    tourStack = reconcile(
+      readExploreState(), tourStack, { ticked: classIds },
+    ).stack;
+  }, []);
+
   // Clicking the app title clears everything back to the empty canvas, matching
   // the previous app's title-click reset. Every piece of shareable state goes:
   // selection, expansions, and the open drawer (the URL follows via the write
@@ -330,6 +357,7 @@ function ExploreAppInner() {
                   dataService={dataService}
                   selectedIds={selectedIds}
                   onToggle={toggleSelect}
+                  onShowCategory={showCategoryView}
                 />
               )}
             </div>

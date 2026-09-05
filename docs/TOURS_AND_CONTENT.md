@@ -30,10 +30,27 @@ the skeleton for the fix.
 
 ---
 
-## 1. Category content views (the ▶ button)
+## 1. Category content views (the ⊞ button)
+
+✅ **§1.1 and §1.2 shipped.** §1.3's back button and §1.4's crowding question
+are still open; see those sections.
 
 **Decision:** each category header in the left panel gets a small display
-control (▶ or similar) that draws that category's content view on the canvas.
+control that draws that category's content view on the canvas.
+
+**The glyph is `⊞`, not `▶`.** The draft said "▶ or similar" without knowing
+that the panel it lands in — `SelectionTable`, the *list* selector, not the
+`SelectionTree` DAG the plan seems to have pictured — already spends `▶` on the
+collapsed-category chevron one column to the left, and spends it again on the
+collapsed-panel expand button. Three meanings for one glyph in one panel. `⊞`
+is unused and reads as "put this on the canvas".
+
+⚠️ **The control is on `SelectionTable` only.** The left panel has two modes
+(`selectorMode` in `ExploreApp.tsx`); the list is the default and the DAG tree
+sits behind a switch, deferred rather than dropped (2026-08-27). The tree has
+no category headers at all — it is the whole containment graph — so there is
+nowhere to hang this. If the tree ever becomes the default, the content views
+need a different home and this section needs rewriting, not porting.
 
 This replaces an earlier plan to add six "content" example cases. Putting the
 control on the category header puts the content one click from where the reader
@@ -109,47 +126,74 @@ members (`classes[c].slots` is a list of `{id}`; ranges live in the flat
 `s.slots` index of `public/source_data/HM/bdchm.processed.json`), group by
 target, drop `Entity` and the category's own members, and count.
 
-### 1.2 Where pin sets live
+### 1.2 Where pin sets live ✅
 
-Add a `pins` field to `EntityCategory` in `src/config/entityCategories.ts`,
-beside the `classIds` it belongs to. Most sets are one or two classes and two
-are empty, so this is small — but it cannot be computed, since the criterion is
-"does the category make sense without it" (§1.1). Storing it beside the category
+`pins` is a field on `EntityCategory` in `src/config/entityCategories.ts`,
+beside the `classIds` it belongs to, and threaded through `CategoryGroup` →
+`CategoryTree` in `DataService` (filtered by `itemExists` like `classIds`, so a
+pin naming a class an upstream sync removed drops out instead of reaching the
+canvas as a phantom id). It cannot be computed, since the criterion is "does
+the category make sense without it" (§1.1); storing it beside the category
 keeps the judgement next to the thing judged.
+
+⚠️ **Do not confuse `pins` with `DEFAULT_PINS`** in the same file. Same word,
+unrelated features: `DEFAULT_PINS` is the first-visit canvas selection.
 
 ⚠️ Pins are hand-curated and will rot on an upstream schema sync, exactly like
 `classIds` and the `containmentGraph` override sets already do — and unlike
 those, a stale pin set is invisible, because a wrong pin just draws an extra box.
 Re-read this section after a sync rather than re-running a query.
 
-### 1.3 Replace, and the back button
+Four guards in `entityCategories.test.ts` catch what is catchable: pins name
+real classes, a category never pins its own members, pins are unique, and **no
+value type is ever pinned** (`TimePoint`, `TimePeriod`, `Quantity`, `Context`)
+— that last one asserts the §1.1 rule rather than merely writing it down, so
+reinstating the rejected mechanical derivation turns the suite red. None of
+them can catch a pin that is merely *unhelpful*; that stays a reading.
 
-**Clicking ▶ replaces the canvas**, it does not add to it. Cumulative state
-makes the picture stop matching the label — the same failure the tour's
-`Change:` verb already has (`help-content.md` TODO: "tour step 4 ADDS to step
-3's canvas instead of replacing it, so the canvas is cumulative where the copy
-reads as if it were showing a clean two-box example").
+`categoryView()` in `src/config/categoryView.ts` composes members-then-pins and dedupes
+— a pin can also be a member of another category (`BodySite` is a member of
+`clinical` and `lab` and a pin of `observation`), and a duplicate id in the
+selection would toggle two rows for one class.
 
-**The browser back button must return to the previous canvas.** This is new
-work, not a free consequence:
+### 1.3 Replace ✅, and the back button (open)
+
+**Clicking ⊞ replaces the canvas**, it does not add to it — shipped, as
+`showCategoryView` in `ExploreApp.tsx`. Cumulative state makes the picture stop
+matching the label — the same failure the tour's `Change:` verb already has
+(`help-content.md` TODO: "tour step 4 ADDS to step 3's canvas instead of
+replacing it, so the canvas is cumulative where the copy reads as if it were
+showing a clean two-box example").
+
+Every drawn id is reported to `reconcile` as a viewer *tick*, for the reason
+`claimForViewer` gives: a tick of something a tour step also pushed leaves no
+trace in the resulting state, so the write effect cannot detect it. The unticks
+— everything the replace dropped — that effect sees on its own.
+
+**The browser back button must return to the previous canvas.** Still to do.
+This is new work, not a free consequence:
 
 - `exploreState.ts:224` calls **`window.history.replaceState`** for every state
   write, so nothing in the app creates a history entry today.
 - There is **no `popstate` listener** anywhere in `src/explore/`.
 
-So ▶ needs to `pushState` one entry, and the app needs a `popstate` handler that
+So ⊞ needs to `pushState` one entry, and the app needs a `popstate` handler that
 reads state back out of the URL. Note the deliberate consequence to preserve:
 ordinary actions (ticking a checkbox, toggling the toolbar) must keep using
 `replaceState`, or back would replay every individual click.
 
 ### 1.4 Open: Observations is crowded
 
-Siggie, on the Observations screenshot: *"img1 is pretty crowded."* 13 members,
-with `Observation` merging five children and `ObservationSet` three.
+Siggie, on the Observations screenshot: *"img1 is pretty crowded."* 12 members
+(the screenshot predates `Quantity` moving to Other), with `Observation`
+merging five children and `ObservationSet` three. As shipped the view draws
+those 12 plus three pins.
 
-The pin rule in §1.1 already helps — dropping `Quantity`, `BodySite` and
-`Context` as value types removes three boxes the earlier mechanical rule would
-have added. What remains undecided:
+The pin rule in §1.1 already helps — not pinning `Quantity`, `Organization` or
+`TimePoint` keeps out boxes the earlier mechanical rule would have added.
+(An earlier version of this paragraph also listed `BodySite` as excluded; §1.1
+pins it, and §1.1 is the later decision — an observation is often *somewhere on
+a body*. `Context` is a member, not a candidate pin.) What remains undecided:
 
 - ~~**`Organization`**~~ — settled: NOT pinned. Ten `performed_by` slots point
   at it, but who performed an observation is bookkeeping, not what the category
@@ -209,7 +253,7 @@ Order is fixed: **complexity rising, each tour using what the last established.*
 most to the target reader.*
 
 Two halves. **The spine first**, grown one hop at a time — never more than five
-boxes on screen — then **a step per category**, using the ▶ views, with beats
+boxes on screen — then **a step per category**, using the ⊞ views, with beats
 for progressive reveal.
 
 Siggie named the spine: `Person → Participant → Visit → Observation →
@@ -235,7 +279,7 @@ Spine steps: `Person, Participant` → `+ Visit` → `+ Observation` (the merged
 appears; note there are five kinds) → `+ Quantity` (a value and a unit; sixteen
 classes point at it).
 
-Category steps: one per category, each loading its ▶ view, with beats revealing
+Category steps: one per category, each loading its ⊞ view, with beats revealing
 the story rather than the whole canvas at once. Survey's step gets to say the
 thing the numbers show — it is a self-contained subtree that barely touches the
 rest of the model.
@@ -354,7 +398,7 @@ siblings toggle)" case group:
 - **A narrowed edge pointing at a child header** —
   `MeasurementObservationSet.observations` → the `MeasurementObservation`
   header. Shipped 2026-09-02, on §2.3's uncovered list, and visible for free in
-  the Observations ▶ view.
+  the Observations ⊞ view.
 
 ---
 

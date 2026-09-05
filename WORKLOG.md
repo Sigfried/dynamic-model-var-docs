@@ -7,6 +7,95 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-04 (implementing: category content views, §1 of TOURS_AND_CONTENT)
+
+Built §1 of the plan written earlier the same day — `pins` on the categories,
+and the header control that draws a category's content view. Siggie chose this
+slice explicitly over the back-button work (§1.3) and the Help restructure
+(§2), so those stay open.
+
+### The plan described a panel that does not exist
+
+§1 said "each category header in the left panel gets a small display control
+(▶ or similar)". The left panel has TWO modes:
+
+- `SelectionTable` — category headers + checkbox rows. **The default.**
+- `SelectionTree` — the whole containment DAG through `dag-browser-widget`.
+  Behind a switch, deferred-not-dropped since 2026-08-27.
+
+The tree has **no category headers at all** — categories are not part of a
+containment graph — so there is exactly one place this can live, and if the
+tree ever becomes the default the feature needs redesigning rather than
+porting. Recorded as a ⚠️ in §1 so the next reader does not go looking for a
+tree-side implementation that was never possible.
+
+### Why the glyph is ⊞ and not ▶
+
+The draft's "▶ or similar" was written without the panel in front of it.
+`SelectionTable` already spends `▶` on the collapsed-category chevron **one
+column to the left of where the new control goes**, and `ExploreApp` spends it
+again on the collapsed-panel expand button. A third meaning on the same row
+would have been unreadable. `⊞` was free in the app's glyph vocabulary
+(surveyed: ⑃ ▶ ▼ ◀ ★ ⟲ ⓘ ↳ ☰ ·) and reads as "put this on the canvas".
+
+Cheap-looking decision, but it is the kind that gets silently "fixed" back to
+the drafted glyph by someone reading only the plan — hence the note in §1.
+
+### The header had to stop being one button
+
+It was a single `<button>` wrapping chevron + label + count. A control cannot
+nest inside it (invalid HTML, and the inner click would have to fight the
+outer handler). Restructured into a flex row holding two sibling buttons, each
+owning only what it is for. `closest('button')` in the existing header tests
+still resolves to the label button, so they passed unchanged — checked rather
+than assumed.
+
+### Two "pins" in one file
+
+`entityCategories.ts` already had `DEFAULT_PINS` (the first-visit canvas
+selection). The plan's new concept is also called pins. Kept the plan's name —
+it is the right word for what it does and the plan is written in it — and put
+a loud "Not `DEFAULT_PINS`" in both doc comments instead of inventing a third
+term nobody would recognise from the plan.
+
+### What the tests can and cannot hold
+
+The value of `pins` is entirely in the judgement, and judgement is not
+testable. What IS testable got tests: pins name real classes, a category never
+pins its own member, pins are unique, and **no value type is ever pinned**.
+That last one is the §1.1 rule turned into an assertion — the rejected
+mechanical derivation would sweep in `TimePoint`/`Quantity`/`Context`, so
+reinstating it turns the suite red instead of quietly producing the cluttered
+diagram Siggie already rejected once. A pin that is merely *unhelpful* still
+gets through; nothing can catch that but a reading.
+
+`getCategoryGroups` filters `pins` through `itemExists` exactly like
+`classIds`, so a pin naming a class an upstream sync deleted drops out rather
+than reaching the canvas as a phantom id.
+
+### Tour-stack reconciliation for a bulk replace
+
+`showCategoryView` replaces the whole selection, which is a viewer action mid
+-tour like any other. It reports **every** drawn id to `reconcile` as `ticked`,
+following `claimForViewer`'s reasoning: a tick of something a tour step also
+pushed leaves no trace in the resulting state, so the write effect cannot see
+it. The unticks — everything the replace dropped — that effect detects on its
+own from the composed state, so they are not passed.
+
+### Doc slips found while checking the plan against the code
+
+Verified every count in the §1.1 table against `entityCategories.ts`: members
+8/8/12/12/10/6 and all six pin sets match exactly. Two things did not:
+
+- §1.4 said Observations has "13 members". It has 12 — the screenshot it
+  quotes predates `Quantity` moving to Other, which happened later in the same
+  session that wrote the number.
+- §1.4 listed `BodySite` among the boxes the pin rule *excludes*, while §1.1's
+  table **pins** it to Observations. §1.1 is the later decision and the
+  reasoned one ("an observation is often somewhere on a body"); §1.4 was
+  written against the earlier value-type-only sketch. Fixed §1.4, left §1.1.
+
+---
 ## 2026-09-04 (planning: content tours, category views; ROW_BUDGET off)
 
 An interactive planning session, not an implementation one. Siggie's framing,

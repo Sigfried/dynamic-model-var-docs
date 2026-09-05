@@ -28,6 +28,38 @@ export interface EntityCategory {
   readonly id: string;
   readonly label: string;
   readonly classIds: string[];
+  /**
+   * Classes from OTHER categories drawn alongside the members in this
+   * category's content view (the ▶ control on the category header).
+   *
+   * **Not `DEFAULT_PINS`.** That constant, below, is the unrelated
+   * first-visit canvas selection. Same word, different feature.
+   *
+   * **The test for a pin is explanatory, not structural** (Siggie,
+   * 2026-09-04). An earlier draft derived pins mechanically — every outside
+   * class a member's slot points at, so no row was left drawing a hollow dot
+   * — and it was rejected:
+   *
+   *   "I 'pinned' Person, Participant, Visit to Clinical because that
+   *    category doesn't make sense without them. Do NOT pin
+   *    TimePoint/TimePeriod to Admin. It clutters up the diagram and gives it
+   *    no additional explanatory value."
+   *
+   * A hollow dot is an acceptable outcome, not a defect: the row still reads
+   * `→ TimePoint 0..1`, which says everything the drawn edge would. The rule
+   * of thumb: **value types are not pinned** (TimePoint, TimePeriod,
+   * Quantity, Context are things attributes hold); **actors and contexts are**
+   * (Participant, Visit, Person) when the records are records OF them.
+   * `BodySite` is the near-miss — it looks like a value type but carries
+   * domain content, and "where on the body" is part of what a measurement IS
+   * — so it is pinned where used. Size is not the test.
+   *
+   * ⚠️ Hand-curated, and it rots on an upstream schema sync exactly like
+   * `classIds` and the `containmentGraph` override sets — but INVISIBLY,
+   * since a stale pin just draws one extra box rather than failing. Re-read
+   * `docs/TOURS_AND_CONTENT.md` §1.1 after a sync; do not re-derive by query.
+   */
+  readonly pins: string[];
   readonly defaultExpanded: boolean;
 }
 
@@ -114,6 +146,10 @@ export const ENTITY_CATEGORIES: EntityCategory[] = [
       // "Files / Other" it read as a leftover.
       'Organization',
     ],
+    // The category the others pin, so it pins nothing itself. It reaches
+    // outward only at TimePoint (3 slots), TimePeriod (2) and CauseOfDeath
+    // (1) — all value-ish, none explanatory. Draw it alone.
+    pins: [],
     defaultExpanded: false,
   },
   {
@@ -135,6 +171,12 @@ export const ENTITY_CATEGORIES: EntityCategory[] = [
       // entityCategories.test.ts alongside this.
       'BodySite',
     ],
+    // The reference case for the whole feature (Siggie's screenshot): these
+    // records are OF a participant, AT a visit — take them away and the
+    // category is a pile of disconnected records. Person completes the pair
+    // Participant belongs to, and Person.cause_of_death points back in at
+    // Clinical's CauseOfDeath. Quantity is deliberately NOT pinned.
+    pins: ['Participant', 'Visit', 'Person'],
     defaultExpanded: false,
   },
   {
@@ -164,6 +206,12 @@ export const ENTITY_CATEGORIES: EntityCategory[] = [
       'Context',
       'Activity',
     ],
+    // An observation is of someone, at an encounter, and often somewhere on a
+    // body. Organization is NOT pinned despite 10 `performed_by` slots
+    // pointing at it — who performed an observation is bookkeeping, not what
+    // the category is about (Siggie, 2026-09-04, by the same argument that
+    // kept TimePoint out of Admin). Context is a member here, not a pin.
+    pins: ['Participant', 'Visit', 'BodySite'],
     defaultExpanded: false,
   },
   {
@@ -183,6 +231,12 @@ export const ENTITY_CATEGORIES: EntityCategory[] = [
       'SpecimenQuantityObservation',
       'BodySite',
     ],
+    // A specimen comes FROM someone; that is the one outside fact the
+    // category needs. Everything else it reaches — Quantity (8), TimePoint
+    // (8), Organization (5), Visit (2), Document (1) — is measurement and
+    // bookkeeping, and pinning all of it is what made the mechanically
+    // derived version of this row unreadable.
+    pins: ['Participant'],
     defaultExpanded: false,
   },
   {
@@ -200,6 +254,10 @@ export const ENTITY_CATEGORIES: EntityCategory[] = [
       'QuestionnaireResponseValueTimePoint',
       'QuestionnaireResponseValueString',
     ],
+    // Ten classes, two outward references. Genuinely self-contained — a real
+    // content fact the tour gets to state, rather than something to paper
+    // over with pins.
+    pins: [],
     defaultExpanded: false,
   },
   {
@@ -219,6 +277,9 @@ export const ENTITY_CATEGORIES: EntityCategory[] = [
       // 9 classes), which is the same kind of thing and already lives here.
       'Quantity',
     ],
+    // Files are associated with a participant. BodySite and ImagingStudy are
+    // one slot each and not what the category is about.
+    pins: ['Participant'],
     defaultExpanded: false,
   },
 ];
