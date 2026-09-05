@@ -187,6 +187,36 @@ if (!element) {
   One such mistake put ~1128 lines of two sessions' implementation inside
   `b17db08`, a commit whose message claims it is docs-only.
 
+### Docs carry what a reader needs NOW, not answers to the past
+
+**A live doc states what is true. It does not argue with what someone used to
+think.** Text that exists only to refute an earlier mistake, correct a previous
+draft, or defend a wording against an objection nobody will raise again is
+noise: the reader did not hold that belief and now has to load it to read past
+it. That history goes in [WORKLOG.md](../WORKLOG.md), which exists for exactly
+this.
+
+Signs a paragraph is arguing with the past rather than informing:
+
+- emphasis defending a fact nobody disputes ("`Entity` **IS** a common
+  superclass")
+- "an earlier draft/version/objection…", "did not survive checking", "this
+  keeps getting re-conflated", "do not restore it"
+- a correction with no reader-facing consequence — if the fix already landed in
+  the text, the record of the fix belongs in WORKLOG
+
+**The test:** would a reader who has never seen the old version need this
+sentence? If not, cut it or move it.
+
+**What legitimately stays**, because it changes what someone would do:
+
+- a **decision** that would otherwise be reopened — state the decision and who
+  made it, not the misunderstanding it corrected
+- a **trap** that recurs — e.g. why numbers in older notes do not reconcile, or
+  why a native `title` must not go on a hover panel
+- **design rationale** a reader would actively wonder about ("why isn't the
+  whole row clickable?")
+
 ### Doc references are links, and links are checked
 
 **Every reference to a file — code included — is a markdown link**, not a bare

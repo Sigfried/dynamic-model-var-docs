@@ -21,12 +21,10 @@ spec sheet, and move whenever the schema sync lands — see *Keeping the model i
 sync* below.
 
 **Model shape**:
-- **`Entity` is the universal root** — every one of the other 53 classes
-  descends from it (37 directly). The app **suppresses those `is_a` edges**:
-  drawing 53 of them is clutter with no explanatory value. So the hierarchy
-  *reads* as several roots even though it has one. `Entity` still appears as a
-  slot **range**, where a polymorphic pointer means something — a distinction
-  worth keeping straight
+- **`Entity` is the universal root** — all 53 other classes descend from it.
+  The diagram **suppresses those `is_a` edges**, since drawing 53 of them is
+  clutter, so the hierarchy *reads* as several roots. `Entity` still appears
+  where a slot's **range** is a deliberate polymorphic pointer
   ([OWNERSHIP_CLASSIFICATION.md](docs/OWNERSHIP_CLASSIFICATION.md#entity-is-the-universal-root-and-we-draw-it-only-as-a-range))
 - 69% of variables (107 of 155) map to `MeasurementObservation`
 - **The schema does not say what belongs to what.** It expresses has-a

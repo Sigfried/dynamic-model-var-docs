@@ -7,6 +7,59 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-05c (stop arguing with the past in live docs)
+
+Siggie, on a line I had just written — "⚠️ **`Entity` IS a common superclass**":
+
+> *"emphasis as if someone said it wasn't a common superclass; which is true,
+> you said it earlier, but no one cares about that going forward. there's a lot
+> of material here and i'm sure elsewhere that is only there to respond to the
+> past… the docs should only have information that is CURRENTLY necessary for
+> human comprehension."*
+
+Correct, and it was a pattern rather than one line. Having been told the claim
+was wrong, I wrote the *correction* into the doc — including a paragraph
+explaining that an earlier heading had misled a reader. No reader holds that
+belief; they now have to load a position they never had in order to read past
+it. The doc had become a transcript of my corrections.
+
+### Where it had spread
+
+- `OWNERSHIP_CLASSIFICATION.md` §Entity — the ⚠️ defending an undisputed fact,
+  plus "an earlier heading here… misled a reader into repeating it as fact" and
+  "keeps getting re-conflated". Now just states the three roles.
+- `README.md` — same defensive framing, shortened to the fact.
+- `HELP_PACKAGE_PLAN.md` — "An earlier objection… did **not** survive checking"
+  (now: no per-anchor scripting is needed) and "it did not survive Siggie's
+  first review" (now: ⚠️ do not just flip the flag, and why).
+- `BACKLOG.md` — "A premise that was wrong, corrected — do not restore it" was
+  framed around the correction; the load-bearing part is the *decision*, so it
+  now leads with "ObservationSet.observations is drawn, not suppressed (Siggie,
+  2026-08-27)" and gives the reason.
+
+### The test, and what survives it
+
+*Would a reader who never saw the old version need this sentence?* If not, cut
+it or move it here.
+
+Not everything historical goes. Three kinds stay, because they change what
+someone would **do**:
+
+- a **decision** that would otherwise be reopened — but stated as the decision,
+  not as the misunderstanding it corrected
+- a **recurring trap** — e.g. why the 153/141/151 edge counts in older notes do
+  not reconcile, or why a native `title` must not sit on a hover panel
+- **design rationale** a reader would actively wonder about — "why isn't the
+  whole row clickable?"
+
+Kept on those grounds: the three-denominators note, the whole-row-toggle
+rationale, the `this`-icon removal, and the no-native-`title` rule.
+
+Written into `docs/CLAUDE.md` as a standing rule with the tells, and saved as a
+memory, since it is the same instinct as over-correcting in conversation and
+will otherwise come back.
+
+---
 ## 2026-09-05b (TOURS_AND_CONTENT §1 and §5 cut; category detail moved to the code)
 
 Siggie, after the consolidation commit: *"is there a reason you left completed

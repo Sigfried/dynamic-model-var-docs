@@ -32,9 +32,8 @@ dots go stale because *React* owns their repositioning and only does it on
 re-render. Hand that to the browser and a dot tracks its anchor through scrolls
 and relayouts with no measurement and no re-render.
 
-An earlier objection — "CSS anchoring needs a property set on each anchor" — did
-**not** survive checking: one blanket rule keyed on `[data-help-id]` assigns
-anchor names for every tagged element with no script at all.
+No per-anchor scripting is needed: one blanket rule keyed on `[data-help-id]`
+assigns anchor names for every tagged element.
 
 ⚠️ **The one piece of real design work** is that the blanket rule does not reach
 the **resolver-backed** anchor kinds (`entity-row`, `slot-row`, `node-box`,
@@ -91,12 +90,14 @@ package concern.
 
 ## 3. Help mode: bring it back, in this order
 
-`HELP_MODE_ENABLED` in [`src/help/helpContext.ts`](../src/help/helpContext.ts) is `false`, which hides the
-toggle and disables the `?` shortcut — the only two ways in. **Nothing is
-deleted**; entries, anchors, resolvers, hints and the popover all still work and
-the tour drives the same registry. Flipping the flag restores it exactly as it
-was, which is the problem: it did not survive Siggie's first review
-(2026-08-27), and the defects are a cluster, several structural.
+`HELP_MODE_ENABLED` in [`src/help/helpContext.ts`](../src/help/helpContext.ts)
+is `false`, which hides the toggle and disables the `?` shortcut — the only two
+ways in. **Nothing is deleted**; entries, anchors, resolvers, hints and the
+popover all still work, and the tour drives the same registry.
+
+⚠️ **Do not just flip the flag.** That restores help mode exactly as it was,
+and it has the six defects below — several structural, and the first one traps
+the viewer with no visible way out.
 
 **Fix them in this order — the first one deletes the worst of the rest:**
 

@@ -105,11 +105,10 @@ blanket rule: **one black edge for everything** — `observations` is narrowed p
 subclass, so one black edge drops the fact that each set holds its own kind.
 That is real information loss.
 
-⚠️ **A premise that was wrong, corrected — do not restore it.** The idea that
-`ObservationSet` could be suppressed rested on it being abstract. **It is not.**
-Measured against `bdchm.yaml`: no `abstract: true`; it is `is_a: Entity`, it
-declares `observations`, and the subclasses narrow it. Asked again with the
-corrected premise, Siggie said **don't suppress**.
+⚠️ **`ObservationSet.observations` is drawn, not suppressed** (Siggie,
+2026-08-27). `ObservationSet` is a concrete class — no `abstract: true` — that
+declares `observations` and has subclasses narrowing it, so its edge represents
+a real slot on an instantiable class.
 
 **⬜ Still open:** the parent's own edge renders in the shared channel colour,
 not black as specified. **Confirm whether black is still wanted.**
