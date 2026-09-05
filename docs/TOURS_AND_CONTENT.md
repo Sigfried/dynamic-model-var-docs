@@ -29,179 +29,37 @@ the skeleton for the fix.
 
 ---
 
-## 1. Category content views (the ⊞ button)
+## 1. Category content views (the ⊞ button) — ✅ SHIPPED
 
-✅ **§1 is shipped** — pins, the ⊞ control, replace-not-add, and the back
-button. Nothing in §1 is open.
+Each category header in the left panel carries a `⊞` control that draws that
+category's content view — its **members plus its pins** — replacing the canvas,
+with the browser back button returning to the previous one.
 
-**Decision:** each category header in the left panel gets a small display
-control that draws that category's content view on the canvas.
+**All of this shipped 2026-09-04.** It is described here only because §3 builds
+on it: the category steps of the "What BDCHM covers" tour load these views, and
+the Inheritance tour uses the Observations one.
 
-**The glyph is `⊞`, not `▶`.** The draft said "▶ or similar" without knowing
-that the panel it lands in — `SelectionTable`, the *list* selector, not the
-`SelectionTree` DAG the plan seems to have pictured — already spends `▶` on the
-collapsed-category chevron one column to the left, and spends it again on the
-collapsed-panel expand button. Three meanings for one glyph in one panel. `⊞`
-is unused and reads as "put this on the canvas".
+**Where the live detail is now:**
 
-⚠️ **The control is on `SelectionTable` only.** The left panel has two modes
-(`selectorMode` in `ExploreApp.tsx`); the list is the default and the DAG tree
-sits behind a switch, deferred rather than dropped (2026-08-27). The tree has
-no category headers at all — it is the whole containment graph — so there is
-nowhere to hang this. If the tree ever becomes the default, the content views
-need a different home and this section needs rewriting, not porting.
+| what | where |
+|---|---|
+| Which classes each category holds, which it pins, and **why** | `src/config/entityCategories.ts` — the judgement is recorded beside the data it judges |
+| The pin criterion, and the value-type rule it rests on | same file, the `pins` field doc comment; asserted by four guards in `entityCategories.test.ts` |
+| Composition (members-then-pins, deduped) | `src/config/categoryView.ts` |
+| The `⊞` glyph, and why not `▶` | `src/explore/SelectionTable.tsx` |
+| Replace-not-add, and the back button | `ExploreApp.tsx` (`showCategoryView`, `pushNextWrite`); mechanics in `WORKLOG.md` |
 
-This replaces an earlier plan to add six "content" example cases. Putting the
-control on the category header puts the content one click from where the reader
-is already looking, instead of Help → Example cases → scroll → find
-"Laboratory". The cases pane then stays what its own header comment says it is:
-routing and inheritance situations for judging the diagram.
+⚠️ **The pin sets are hand-curated and rot invisibly on an upstream schema
+sync** — a wrong pin just draws an extra box, and no test can catch a pin that
+is merely unhelpful. Re-read `entityCategories.ts` after a sync rather than
+re-running a query; the criterion is editorial ("does this category make sense
+without it"), not mechanical. See
+[BACKLOG § hand-curated config rot](BACKLOG.md#hand-curated-config-rot).
 
-### 1.1 What a content view contains
-
-**Category members plus pins.**
-
-- A **member** is a class the category lists in `entityCategories.ts`. It is
-  drawn because it belongs there.
-- A **pin** is a class from *another* category, drawn alongside the members
-  **because the category does not make sense without it.**
-
-⚠️ **The test for a pin is explanatory, not structural.** An earlier draft of
-this section derived pins mechanically — every outside class a member's slot
-points at, so that no row was left drawing a hollow dot. **That rule is wrong**
-and produced a table Siggie rejected (2026-09-04):
-
-> *"I 'pinned' Person, Participant, Visit to Clinical because that category
-> doesn't make sense without them. Do NOT pin TimePoint/TimePeriod to Admin. It
-> clutters up the diagram and gives it no additional explanatory value."*
-
-Clinical needs Participant and Visit because a condition is a condition **of
-someone**, recorded at **some encounter** — take them away and the category is
-a pile of disconnected records. Admin does not need TimePoint, even though
-`Consent.valid_from`, `Consent.valid_to` and `ResearchStudy.associated_timepoint`
-all point at it: a consent having a validity date explains nothing about study
-administration, and the two extra boxes are clutter.
-
-**A hollow dot is an acceptable outcome, not a defect to be fixed.** The row
-still reads `→ TimePoint 0..1`, which tells the reader everything the drawn
-edge would have. Completeness is not the goal; the goal is a picture that says
-what the category *is*.
-
-The rule of thumb this suggests: **value types are not pinned.** `TimePoint`,
-`TimePeriod`, `Quantity` and `Context` are things attributes hold, not things a
-category is about. **Actors and contexts are pinned** — `Participant`, `Visit`,
-`Person` — when the category's records are records *of* or *about* them.
-
-`BodySite` is the informative near-miss. It looks like a value type (small,
-leaf-ish, held by an attribute) but it is a **domain concept with content** —
-`site: AnatomicSiteEnum`, plus a qualifier — and "where on the body" is part of
-what a measurement or a condition *is*, not bookkeeping about it. So it is
-pinned where it is used. Size is not the test; whether the category's story
-needs it is.
-
-| Category | Members | Pins | Why those, and nothing else |
-|---|---|---|---|
-| **Admin / Study** | 8 | *(none)* | The category the others pin. It reaches outward only at `TimePoint` (3 slots), `TimePeriod` (2) and `CauseOfDeath` (1) — all value-ish, none explanatory. Draw it alone. |
-| **Clinical** | 8 | `Participant`, `Visit`, `Person` | Siggie's screenshot, and the reference for the whole feature: these records are *of* a participant, *at* a visit. `Person` completes the pair Participant belongs to (and `Person.cause_of_death` points in at Clinical's `CauseOfDeath`). `BodySite` is a **member** now, dual-listed with Laboratory. `Quantity` is deliberately not pinned. |
-| **Observations** | 12 | `Participant`, `Visit`, `BodySite` | An observation is of someone, at an encounter, and often *somewhere on a body*. `Organization` is NOT pinned despite 10 `performed_by` slots — who performed it is bookkeeping (Siggie, 2026-09-04, by the same argument that unpinned TimePoint from Admin). `Quantity` and `Context` stay unpinned as value types. `Quantity` is no longer a member either — moved to Other. |
-| **Laboratory** | 12 | `Participant` | A specimen comes *from* someone; that is the one outside fact the category needs. Everything else it reaches (`Quantity` 8, `TimePoint` 8, `Organization` 5, `Visit` 2, `Document` 1) is measurement and bookkeeping — which is why the old mechanical rule made this row unreadable. `BodySite` stays a member here (dual-listed) for `SpecimenCreationActivity.collection_site`. |
-| **Survey** | 10 | *(none)* | Ten classes, two outward references. Genuinely self-contained — a real content fact worth stating in the tour rather than papering over with pins. |
-| **Files / Other** | 6 | `Participant` | Files are associated with a participant. `BodySite` and `ImagingStudy` are one slot each and not what the category is about. Now also holds `Quantity` — see below. |
-
-**The shape is what matters, not exact category membership** (Siggie): a view may
-pin whatever makes it read, and need not correspond one-to-one with the category
-listing. Pins are a curatorial judgement about what a category *means* — they
-cannot be derived, which is why §1.2 stores them rather than computing them.
-
-**`Participant`, `Visit` and `Organization` are the model's universal joints** —
-they are the outside classes categories actually depend on, and the
-"Flipped divergences" debugging group was measuring exactly this (Participant
-22-way, Visit 19-way, Organization 11) without framing it as content.
-
-**Slot counts** cited above are the number of member attributes ranging on that
-class, and are evidence *for the discussion*, not the pin rule. To recompute
-after a schema sync: for each category, take the entity-ranged slots of its
-members (`classes[c].slots` is a list of `{id}`; ranges live in the flat
-`s.slots` index of `public/source_data/HM/bdchm.processed.json`), group by
-target, drop `Entity` and the category's own members, and count.
-
-### 1.2 Where pin sets live ✅
-
-`pins` is a field on `EntityCategory` in `src/config/entityCategories.ts`,
-beside the `classIds` it belongs to, and threaded through `CategoryGroup` →
-`CategoryTree` in `DataService` (filtered by `itemExists` like `classIds`, so a
-pin naming a class an upstream sync removed drops out instead of reaching the
-canvas as a phantom id). It cannot be computed, since the criterion is "does
-the category make sense without it" (§1.1); storing it beside the category
-keeps the judgement next to the thing judged.
-
-⚠️ **Do not confuse `pins` with `DEFAULT_PINS`** in the same file. Same word,
-unrelated features: `DEFAULT_PINS` is the first-visit canvas selection.
-
-⚠️ Pins are hand-curated and will rot on an upstream schema sync, exactly like
-`classIds` and the `containmentGraph` override sets already do — and unlike
-those, a stale pin set is invisible, because a wrong pin just draws an extra box.
-Re-read this section after a sync rather than re-running a query.
-
-Four guards in `entityCategories.test.ts` catch what is catchable: pins name
-real classes, a category never pins its own members, pins are unique, and **no
-value type is ever pinned** (`TimePoint`, `TimePeriod`, `Quantity`, `Context`)
-— that last one asserts the §1.1 rule rather than merely writing it down, so
-reinstating the rejected mechanical derivation turns the suite red. None of
-them can catch a pin that is merely *unhelpful*; that stays a reading.
-
-`categoryView()` in `src/config/categoryView.ts` composes members-then-pins and dedupes
-— a pin can also be a member of another category (`BodySite` is a member of
-`clinical` and `lab` and a pin of `observation`), and a duplicate id in the
-selection would toggle two rows for one class.
-
-### 1.3 Replace, and the back button ✅
-
-**Clicking ⊞ replaces the canvas**, it does not add to it — shipped, as
-`showCategoryView` in `ExploreApp.tsx`. Cumulative state makes the picture stop
-matching the label — the same failure the tour's `Change:` verb already has
-(`help-content.md` TODO: "tour step 4 ADDS to step 3's canvas instead of
-replacing it, so the canvas is cumulative where the copy reads as if it were
-showing a clean two-box example").
-
-Every drawn id is reported to `reconcile` as a viewer *tick*, for the reason
-`claimForViewer` gives: a tick of something a tour step also pushed leaves no
-trace in the resulting state, so the write effect cannot detect it. The unticks
-— everything the replace dropped — that effect sees on its own.
-
-**The browser back button returns to the previous canvas.** Three pieces:
-
-- `writeExploreState(state, { push })` chooses the history verb.
-  **`replaceState` stays the default**, deliberately: if ordinary writes
-  pushed, back would replay the session one checkbox at a time and never leave
-  the page. Only a whole-canvas jump passes `push` — today ⊞ alone.
-- `pushNextWrite`, a ref in `ExploreApp`, marks *one* write. Set at the click,
-  **consumed** by the write effect — left set, it would turn the viewer's next
-  unrelated click into a history stop.
-- `popstate` is a third caller of the existing `apply`, the function the tour's
-  `explore:state-from-url` event already used to put the app into a state read
-  from the URL. Back and forward cost one listener, not a parallel path.
-
-Three consequences worth keeping:
-
-1. **The restore's own write must not push.** `apply` sets state, which runs
-   the write effect, which writes the URL again — a `replaceState` of the entry
-   just navigated to, with the state it already holds. Harmless. A push there
-   would grow the stack on every back press and the button would never reach
-   the start.
-2. **Re-drawing the view already on screen pushes nothing.** `showCategoryView`
-   compares against the live selection and bails early; without that, back
-   needs two presses to go anywhere and looks broken on the first.
-3. **The flag is set inside a state updater**, which StrictMode runs twice. Safe
-   only because it is idempotent — keep it that way.
-
-⚠️ **Test the checkboxes, not just `sel`.** jsdom's `history.back()` moves
-`window.location` whether or not anything reacts, so URL-only assertions pass
-with the `popstate` listener deleted — measured: five of six such tests stayed
-green under that sabotage. `categoryViewHistory.test.tsx` reads the ticked rows
-instead, and both sabotages then fail five of six.
-
----
+⚠️ **The control is on `SelectionTable` only.** The left panel has two modes;
+the list is the default and the DAG tree sits behind a switch. The tree has no
+category headers at all, so there is nowhere to hang this. If the tree ever
+becomes the default, the content views need a different home.
 
 ## 2. The Help menu
 
@@ -413,26 +271,3 @@ completeness in the diagram tours.
 footer never renders. The budget machinery is intact for the intended end state:
 a preference like "Default to show top [6] attributes" that puts the footer
 back. See `OwnershipGraphView.tsx` and `rowBudget.test.ts`.
-
----
-
-## 5. Shipped in this session
-
-- **`ROW_BUDGET = Infinity`** — every box shows every attribute; no footer.
-  `rowBudget.test.ts` updated (it deliberately hardcodes the numbers so a budget
-  change fails loudly, and it did).
-- **`Organization` moved from `other` to `admin`** — it is a study
-  administration concept, not a file: it is what `performed_by`,
-  `originating_site` and the transport endpoints point at, from Observations,
-  Laboratory and Admin alike.
-- **`Quantity` moved from `observation` to `other`** — a generic value type,
-  not an observation concept. 16 slots across 13 classes in four categories,
-  including `Substance.substance_quantity`, `Assay.lower_limit_of_detection`
-  and `SpecimenProcessingActivity.duration`, none of them observations. It now
-  sits beside `TimePoint` (15 slots, 9 classes), which is the same kind of
-  thing.
-- **`BodySite` dual-listed into `clinical`**, keeping its `lab` listing. Usage
-  is 3 clinical (`Condition`, `Procedure`, `ImagingStudy`) against 1 lab
-  (`SpecimenCreationActivity.collection_site`), but anatomy belongs to both.
-  Third entry in `DUAL_LISTED` (`entityCategories.test.ts`), which the test
-  requires and which is why the allowlist exists.

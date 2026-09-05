@@ -184,7 +184,8 @@ describe('entityCategories config vs. live schema', () => {
   });
 
   /*
-   * The curatorial rule from docs/TOURS_AND_CONTENT.md §1.1, asserted rather
+   * The curatorial rule from the `pins` doc comment in entityCategories.ts,
+   * asserted rather
    * than merely written down: value types are NOT pinned. Siggie rejected the
    * mechanically derived pin set for exactly this — "Do NOT pin
    * TimePoint/TimePeriod to Admin. It clutters up the diagram and gives it no
@@ -201,7 +202,7 @@ describe('entityCategories config vs. live schema', () => {
     );
     expect(
       bad,
-      `Value types pinned (see TOURS_AND_CONTENT.md §1.1 — reopen the ` +
+      `Value types pinned (see the pins doc comment in entityCategories.ts — reopen the ` +
         `decision there before deleting this test): ${bad.join(', ')}`,
     ).toEqual([]);
   });

@@ -8,11 +8,16 @@
  * easier to navigate — so a second listing is a navigation aid, NOT a second
  * superclass and not sibling merging.
  *
- * Today exactly two classes are dual-listed: `SpecimenQualityObservation` and
- * `SpecimenQuantityObservation`, under both `observation` and `lab`. Without
- * the `observation` listing the only route to them was clicking a Specimen row
- * on the canvas, which left the Observation hierarchy looking like it had
- * three children instead of five.
+ * Three classes are dual-listed today. `SpecimenQualityObservation` and
+ * `SpecimenQuantityObservation` sit under both `observation` and `lab`:
+ * without the `observation` listing the only route to them was clicking a
+ * Specimen row on the canvas, which left the Observation hierarchy looking
+ * like it had three children instead of five. `BodySite` sits under both
+ * `clinical` and `lab` — anatomy belongs to both (3 clinical uses against 1
+ * lab, but usage counts are not the test).
+ *
+ * `DUAL_LISTED` in `entityCategories.test.ts` is the live list; trust it over
+ * this comment.
  *
  * Dual-listing is an ALLOWLIST, not a free-for-all: `entityCategories.test.ts`
  * fails on an undeclared duplicate, and on an allowlisted class that is not
@@ -30,7 +35,8 @@ export interface EntityCategory {
   readonly classIds: string[];
   /**
    * Classes from OTHER categories drawn alongside the members in this
-   * category's content view (the ▶ control on the category header).
+   * category's content view (the `⊞` control on the category header).
+   * (`▶` was the drafted glyph; it collided — see `SelectionTable.tsx`.)
    *
    * **Not `DEFAULT_PINS`.** That constant, below, is the unrelated
    * first-visit canvas selection. Same word, different feature.
@@ -57,7 +63,7 @@ export interface EntityCategory {
    * ⚠️ Hand-curated, and it rots on an upstream schema sync exactly like
    * `classIds` and the `containmentGraph` override sets — but INVISIBLY,
    * since a stale pin just draws one extra box rather than failing. Re-read
-   * `docs/TOURS_AND_CONTENT.md` §1.1 after a sync; do not re-derive by query.
+   * this comment after a sync; do not re-derive by query.
    */
   readonly pins: string[];
   readonly defaultExpanded: boolean;

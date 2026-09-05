@@ -7,6 +7,74 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-05b (TOURS_AND_CONTENT §1 and §5 cut; category detail moved to the code)
+
+Siggie, after the consolidation commit: *"is there a reason you left completed
+stuff in docs/TOURS_AND_CONTENT.md?"* No good one. I had treated that file as
+"the active plan, don't touch" and only repaired its links, while applying the
+strip-the-history rule to every other doc. Same rule applies.
+
+### What was cut, and the test used
+
+§1 (category content views, 174 lines) and §5 ("Shipped in this session", a
+changelog) were both entirely shipped. The question for each paragraph was
+**"would someone re-read this, or did it only matter while the feature was being
+built?"** That splits the material three ways:
+
+- **Implementation narrative** — how `pushNextWrite` is consumed, the three
+  back-button pieces, the `reconcile`-tick reasoning. Shipped mechanics; this
+  file's job, not a plan's. Already recorded in the 2026-09-04 entry below.
+- **Durable warnings** — `pins` vs `DEFAULT_PINS`, pins rot invisibly on sync,
+  test the checkboxes not `sel`. These keep mattering, so the question is
+  *where*, not *whether*.
+- **Live reference** — the pin criterion and the category/pin table, which get
+  re-judged after every schema sync.
+
+### The warnings were already in better places
+
+Checked before deleting rather than after, and every one was already sited where
+someone would actually hit it:
+
+- The pin criterion, the value-type rule, the `DEFAULT_PINS` confusion and the
+  rot warning are all in the `pins` doc comment in `entityCategories.ts` —
+  beside the data they judge.
+- The jsdom trap (`history.back()` moves `window.location` whether or not
+  anything reacts, so five of six URL-only tests stayed green with the
+  `popstate` listener deleted) is in `categoryViewHistory.test.tsx`'s header,
+  which is where someone editing those tests reads.
+- The `⊞`-not-`▶` reasoning is in `SelectionTable.tsx` at the control itself.
+- The Organization/Quantity/BodySite category moves are recorded inline at each
+  class in `entityCategories.ts` with their reasoning.
+
+So §1 collapsed to a short pointer table plus the two warnings that have no
+better home, and §5 was deleted outright as pure duplication. 438 → 273 lines.
+
+### Two pieces of drift the cut exposed
+
+Reading the code to confirm the warnings had landed turned up two comments the
+doc had outlived:
+
+- `entityCategories.ts` still said "the ▶ control on the category header". The
+  glyph is `⊞`; `▶` was the *drafted* glyph and it collided with the collapse
+  chevron — which is exactly what the doc recorded and the code did not.
+- Its header said "exactly two classes are dual-listed". `BodySite` made three
+  on 2026-09-04. Rewritten to name all three and to point at `DUAL_LISTED` in
+  the test as the live list, since that is what actually fails when it drifts.
+
+**This is the argument for moving detail into the code rather than deleting
+it.** Both errors existed because the doc and the code said the same thing
+twice; the copy nobody edits is the one that goes stale.
+
+### Eight references repointed
+
+Six code comments and one BACKLOG line pointed at `TOURS_AND_CONTENT.md` §1.1 /
+§1.3. Since the content moved *into the code*, they now point at the code —
+`entityCategories.ts`'s pins comment, `showCategoryView` in `ExploreApp.tsx`,
+`categoryViewHistory.test.tsx`'s header — rather than at a doc section that no
+longer exists. A pointer into a doc from a test is a smell when the doc is
+describing that test's subject.
+
+---
 ## 2026-09-05 (doc consolidation: 13 docs → 9; TASKS split into TASKS + BACKLOG)
 
 Siggie: *"there are way too many docs"* · *"get rid of historical information

@@ -106,7 +106,8 @@ describe('explore state', () => {
   });
 
   /**
-   * Which writes become back-button stops (TOURS_AND_CONTENT.md §1.3).
+   * Which writes become back-button stops (see `showCategoryView` /
+   * `pushNextWrite` in ExploreApp.tsx; reasoning in WORKLOG.md 2026-09-04).
    *
    * The default has to stay `replaceState`: if an ordinary write pushed, back
    * would replay the session one checkbox at a time and never leave the page.

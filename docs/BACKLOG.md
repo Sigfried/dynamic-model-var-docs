@@ -359,7 +359,7 @@ it sat in the old override list. **A sync check should assert each still has one
 site. Not built.**
 
 **What to do after a sync:** run the suite first (it catches the tested rows),
-then re-read [TOURS_AND_CONTENT.md §1.1](TOURS_AND_CONTENT.md) for pins and
+then re-read `src/config/entityCategories.ts` for categories and pins, and
 [OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md) for the override sets.
 The untested rows need a **reading**, not a query — the criteria are editorial,
 which is why they are hand-curated. **Ownership classification is Siggie's call,

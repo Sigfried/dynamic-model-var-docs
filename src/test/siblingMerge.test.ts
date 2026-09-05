@@ -174,7 +174,8 @@ describe('siblingMerge', () => {
    *
    * A previous attempt (2026-09-04) tested the sort correspondence instead and
    * asserted a false invariant; see the ⚠️ note in docs/OWNERSHIP_CLASSIFICATION.md
-   * §1.3 before writing anything in this area.
+   * the header comment on categoryViewHistory.test.tsx before writing
+   * anything in this area.
    */
   test('a row wears its TARGET class color, whatever the target is', () => {
     let checked = 0;

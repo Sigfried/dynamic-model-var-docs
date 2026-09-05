@@ -1,5 +1,6 @@
 /**
- * The back button and the category content view (TOURS_AND_CONTENT.md §1.3).
+ * The back button and the category content view (`showCategoryView` in
+ * ExploreApp.tsx; reasoning in WORKLOG.md 2026-09-04).
  *
  * Driven through the real app rather than unit-tested, because the thing that
  * can break is the SEQUENCE: a click sets a ref, an effect consumes it and
