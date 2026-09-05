@@ -7,6 +7,109 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-04 (planning: content tours, category views; ROW_BUDGET off)
+
+An interactive planning session, not an implementation one. Siggie's framing,
+which reset the whole direction of the tour work:
+
+> *"All the cases and tour steps are currently just about app features. Most
+> visitors will want to understand these, but the target users (researchers)
+> will probably be most interested in understanding what the model contains,
+> not how it's structured."*
+
+That is true of everything shipped: four of the six example-case groups are
+named after rendering behaviour ("The bare diagonal", "Pathological
+convergences", …). They are debugging cases. Nothing in the app answered "where
+do specimens live in this model, and what hangs off them."
+
+Output is `docs/TOURS_AND_CONTENT.md` (five tours + a Help restructure +
+per-category content views). It **replaces** `TOUR_SOURCE_MATERIAL.md`, deleted
+— Siggie: *"there are already way too many documents. Always be looking for
+opportunities to get rid of documents, not add more."* Net −1 doc.
+
+### The pin rule, got wrong once
+
+A "pin" is an out-of-category class drawn alongside a category's members. My
+first rule was mechanical: pin every outside class a member's slot targets, so
+no row is left drawing a hollow dot. That produced a table Siggie rejected:
+
+> *"I 'pinned' Person, Participant, Visit to Clinical because that category
+> doesn't make sense without them. Do NOT pin TimePoint/TimePeriod to Admin. It
+> clutters up the diagram and gives it no additional explanatory value."*
+
+The criterion is **explanatory, not structural** — does the category make sense
+without it — and a hollow dot is an acceptable outcome, not a defect: the row
+already reads `→ TimePoint 0..1`, which carries what the edge would have said.
+Rewriting on that basis cut Laboratory from six pins to one.
+
+The generalisation (value types are not pinned; actors and contexts are) has an
+informative near-miss: `BodySite` **is** pinned, despite being small and
+leaf-ish, because it has real content (`site: AnatomicSiteEnum`) and "where on
+the body" is part of what a measurement *is*. Size is not the test.
+
+Corollary worth keeping: pins **cannot be derived**. Siggie's `Person` pin on
+Clinical is inbound — no Clinical slot points at Person; `Person.cause_of_death`
+points *in* at Clinical's `CauseOfDeath`. No computation produces that.
+
+### Category moves, decided from slot counts rather than feel
+
+- **`Organization` → `admin`.** It is what `performed_by`, `originating_site`
+  and the transport endpoints point at, from three categories. In "Files /
+  Other" it read as a leftover.
+- **`Quantity` → `other`.** Siggie proposed it; the data backed it hard. 16
+  slots over 13 classes in four categories, including
+  `Substance.substance_quantity`, `Assay.lower_limit_of_detection` and
+  `SpecimenProcessingActivity.duration` — none observations. It belongs beside
+  `TimePoint` (15 slots, 9 classes).
+- **`BodySite` dual-listed `clinical` + `lab`.** Siggie proposed moving it to
+  `other` in the same breath as Quantity; the data said no. 6 slots, and 5 of 6
+  are anatomy-of-a-clinical-or-specimen-event. It is a domain concept, not a
+  generic value type. Usage splits 3 clinical / 1 lab, so dual-listing rather
+  than a move — third entry in `DUAL_LISTED`.
+
+Two small classes proposed together, and the numbers separated them. Worth
+checking usage before agreeing that two things are alike.
+
+### ROW_BUDGET = Infinity
+
+Siggie, on seeing `Specimen` hide 11 of 19 attributes: *"just show all without
+that link for now."* Set to `Infinity` rather than deleting the machinery — the
+intended end state is a preference ("Default to show top [6] attributes") that
+restores the footer.
+
+`rowBudget.test.ts` failed exactly as its own comment predicted: it deliberately
+hardcodes `6` instead of importing the constant, *so that* a budget change fails
+and asks whether it was intended. It worked. Rewrote the first test to sweep the
+whole schema, and kept the short-box test naming a short class so a future
+finite budget still finds that case pinned.
+
+### Salvage before deletion
+
+Siggie, before agreeing to let `NEXT_SESSION_EDGE_DISPLAY.md` go: *"I want to
+know if the section 3.2 tables got saved somewhere."* They had not — and
+`OWNERSHIP_CLASSIFICATION.md` pointed at **`WORKLOG.md`** for them, where they
+had never been written. Both tables (close/middle/far phrasings; the three
+candidate wordings) are now in `OWNERSHIP_CLASSIFICATION.md` where that pointer
+was.
+
+Lesson: a doc pointer is not evidence the content moved. Grep for the content
+before trusting a "see X" line — this one was wrong from the day it was written.
+
+Still only in `NEXT_SESSION_EDGE_DISPLAY.md`: §3.3's ASCII legend sketch. The
+file's banner now carries a pre-deletion checklist naming it.
+
+### Still open
+
+- Observations may still be crowded at 12 members + 3 pins (Quantity and
+  Organization both came out; Siggie has not re-looked).
+- The category ▶ button needs `pushState` + a `popstate` handler: today
+  `exploreState.ts` only ever calls `replaceState` and nothing listens, so back
+  does not work. Ordinary clicks must keep replacing, or back would replay every
+  checkbox.
+- Enums and entity details are deliberately out of scope until a working tour
+  exists.
+
+---
 ## 2026-09-04 (detour: relation bar replaces the cascading menu; P2 leaves the Blues ramp)
 
 Siggie: *"i hate the cascading menu for related entities. let's try a different
@@ -318,6 +421,8 @@ blocked on deciding a step list; those four notes are a step list in draft.
 
 So the cases came out of the pane and their prose went into
 `docs/TOUR_SOURCE_MATERIAL.md` verbatim, keyed by the selection each describes.
+(That file was folded into `docs/TOURS_AND_CONTENT.md` and deleted, 2026-09-04 —
+the prose now sits at the tour steps that use it.)
 The general lesson: **a handoff doc saying "cull X" is describing a UI, not
 granting permission to destroy the writing in X.** Check what the text is doing
 before deleting the thing that holds it.

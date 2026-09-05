@@ -928,7 +928,7 @@ simple→complex, edge-type cases added, rule text rewritten as
 - ✅ **Toolbar buttons, colours and dashed edges explained** in the legend —
   the last of upcoming-thoughts #1.
 - ✅ **Introductory case group culled.** Six cases the tour now supersedes.
-  Their prose is `docs/TOUR_SOURCE_MATERIAL.md`, held for §2.3 — Siggie:
+  Their prose is in `docs/TOURS_AND_CONTENT.md`, held for §2.3 — Siggie:
   *"group 1 items 1-4 are good material for the tour."* **Do not re-add them
   to the pane.**
 

@@ -12,8 +12,8 @@
 >   ("N related" counts) folded in.
 > - **§2.2 (Help menu)** — done. `HelpMenu.tsx` + `HelpPanel.tsx`; legend and
 >   cases are separate panels; Biggest fans moved to the cases; the
->   introductory case group is culled, its prose held in
->   `docs/TOUR_SOURCE_MATERIAL.md`.
+>   introductory case group is culled, its prose now inlined in
+>   `docs/TOURS_AND_CONTENT.md`.
 > - **§2.4 (`any_of`)** — the decision and both follow-ups (a row marker, a note
 >   on `Assay`) are recorded in `OWNERSHIP_CLASSIFICATION.md`. Neither is built.
 > - **§3.2 (edge labels)** SETTLED — one label, on hover. **§3.4 (popovers)**
@@ -30,13 +30,28 @@
 > render above the panel a hover opens. The cascading menu it describes has
 > also been replaced by the relation bar (`← N   M →`).
 >
-> **▶️ THE REMAINING WORK IS §2.3 — tour steps.** Start at
-> `docs/TOUR_SOURCE_MATERIAL.md`, which is four steps in draft plus a list of
-> what is still uncovered. §3.3 below (what the legend should be) is the other
-> thing worth reading: the legend now exists and covers colours, toolbar and
-> dashed edges, but **not** the picture Siggie sketched there.
+> **▶️ THE REMAINING WORK IS §2.3 — tour steps, and it has MOVED.** The plan
+> now lives in **`docs/TOURS_AND_CONTENT.md`**: five tours, a restructured Help
+> menu, and per-category content views on a ▶ button. Read that, not §2.3
+> below, which records only the state before the 2026-09-04 planning session —
+> in particular its "settle the step list first" blocker is resolved, and
+> Siggie's `[sg]` override under §2.2 is superseded by the new doc.
+> `TOUR_SOURCE_MATERIAL.md` is deleted; its prose is inlined there at the steps
+> that use it.
 >
-> Delete this file once §2.3 is authored.
+> §3.3 below (what the legend should be) is the other thing worth reading: the
+> legend now exists and covers colours, toolbar and dashed edges, but **not**
+> the picture Siggie sketched there.
+>
+> **⚠️ BEFORE DELETING THIS FILE, check what exists ONLY here.** Audited
+> 2026-09-04:
+> - §3.2's two phrasing tables — **✅ moved** to `OWNERSHIP_CLASSIFICATION.md`.
+> - §3.3's ASCII legend sketch (the Visit / Condition / BodySite picture with
+>   "It belongs to me" / "I belong to it" on the edges) — **❌ still only here**,
+>   and still unbuilt. Move it before deleting, or build it.
+>
+> Delete this file once the tours in `TOURS_AND_CONTENT.md` are authored **and**
+> §3.3's sketch has a home.
 
 Everything below this line is kept for the reasoning it records, not as a plan.
 Where it conflicts with `OWNERSHIP_CLASSIFICATION.md`, the doc is right — it was
@@ -210,6 +225,18 @@ automated form.
 - **This is where non-user-facing technical material lives**, including the
   color system above once implemented and the edge-display survey (§4).
 
+### [sg] overrides 2.2 and 2.3
+
+next session should be interactive discussion stepping through
+the existing tour and existing example cases. there's more good
+stuff in the example cases than what got saved into TOUR_SOURCE_MATERIAL.md
+and it could be used for the tour. sometimes the steps would be
+the same but the text in the cases is often better. we might
+possibly want more than one tour; not sure yet, but, if so the
+'take the tour' pill and Help menu item could be combined.
+
+
+
 ### 2.2 "Example cases" → a cascading **Help** menu
 
 `ExampleCasesPane.tsx` is today a floating pane with two tabs, `cases` and
@@ -324,6 +351,14 @@ Consequences for neighbouring items:
   and hovering the line leaving it are the same question asked from the same
   end, so they should share one component and one vocabulary — with the row
   version always taking the near/"mine" point of view. Deferred with §3.4.
+
+> **✅ BOTH TABLES HAVE BEEN MOVED (2026-09-04)** — they now live in
+> `OWNERSHIP_CLASSIFICATION.md`, under "The phrasing table" and "Wordings
+> considered and rejected", so deleting this file loses nothing. They were the
+> clearest statement of the relation vocabulary in the repo and existed
+> **only here**: `OWNERSHIP_CLASSIFICATION.md` pointed at `WORKLOG.md` for
+> them, and they had never been written there. The copies below are the
+> originals, retained only until this file goes.
 
 Both tables below stay: they are the clearest statement of the relation
 vocabulary anywhere in the repo, and they remain the source for cascading-menu

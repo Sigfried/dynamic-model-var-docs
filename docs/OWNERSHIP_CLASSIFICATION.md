@@ -117,8 +117,56 @@ alternatives. A hovered edge shows **one** label, at the end the pointer is
 nearer; the neutral phrasing ("contains", "contained by", "associated with") is
 for prose, where no reader has a position.
 
-Full close/middle/far phrasings, and the reasoning that ruled out persistent
-on-edge labels, are in `WORKLOG.md` (2026-09-02).
+The reasoning that ruled out persistent on-edge labels is in `WORKLOG.md`
+(2026-09-02). The full phrasings are below — moved here 2026-09-04 from
+`NEXT_SESSION_EDGE_DISPLAY.md` §3.2 before that file is deleted. (The pointer
+this replaces sent readers to `WORKLOG.md` for the tables; they were never
+written there.)
+
+### The phrasing table
+
+Not a render spec — one label renders, at the near end (above). This is the
+**source for hover-label copy** when that is built, and the clearest statement
+of the relation vocabulary in the repo.
+
+`close` and `far` are the same relationship described from its two ends, not
+alternatives between which something chooses. Pointer proximity selects the
+**row** — the point of view — and the `close` label is what renders. Showing
+`far` simultaneously at the other end was considered and judged **excessive**:
+it doubles the ink for something the reader gets by hovering the other end.
+`middle` is the neutral phrasing, for prose where no reader has a position.
+
+| from PoV | position | edge type | position type | other box pos | close label | middle label | far label |
+|---|---|---|---|---|---|---|---|
+| yes | mine | own-fwd | `owns-mine` | right | belongs to me by my attribute | contains | I belong to by their attribute |
+| yes | mine | own-bkwd | `owned-mine` | left | I belong to by my attribute | contained by | belongs to me by their attribute |
+| yes | theirs | own-fwd | `owns-theirs` | left | I belong to by their attribute | contains | belongs to me by my attribute |
+| yes | theirs | own-bkwd | `owned-theirs` | right | belongs to me by their attribute | contained by | I belong to by my attribute |
+| no | neutral | own-fwd | `owns` | right | | contains | |
+| no | neutral | own-bkwd | `owned` | left | | contained by | |
+| any | any | association | `association` | left | | associated with | |
+
+The `close` column is what shipped, as `RELATION_POSITION_LABEL`
+(`ownershipSubgraph.ts`) — plural there, with singular forms for the two
+`owns-*` rows, since only those have a subject that inflects.
+
+### Wordings considered and rejected
+
+Kept so the choice is not re-litigated. Siggie picked the personal language
+(2026-08-27) because all four name the declaring side the same way — "by my
+attribute" / "by their attribute" — so they read as one paradigm rather than
+two unrelated pairs.
+
+| personal language (SHIPPED) | shorter personal | objective language |
+|---|---|---|
+| belongs to me by my attribute | I contain it | self contains |
+| I belong to by my attribute | I belong to it | self contained by |
+| I belong to by their attribute | It contains me | contained by other |
+| belongs to me by their attribute | It belongs to me | other contained by |
+
+The shorter forms lose the declaring-side distinction entirely — "I contain it"
+cannot say *whose attribute* creates the relationship, which is the one thing
+the relation bar exists to show.
 
 ---
 
