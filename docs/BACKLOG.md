@@ -215,7 +215,7 @@ Missing:
    geometry, testable in `paths.ts`. **Not scoped — needs Siggie's go-ahead.**
 2. **No URL persistence.** Moves live in `OwnershipGraphView` and vanish on
    reload. Siggie wants dragging permanent, so they should lift to `ExploreApp`
-   and encode alongside `?sel=`/`?exp=`. Note coordinates are layout-dependent —
+   and encode alongside `?sel=`. Note coordinates are layout-dependent —
    a move saved against one selection may land oddly in another.
 
 ### dag-browser

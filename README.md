@@ -11,65 +11,66 @@ Interactive documentation browser for the [BioData Catalyst Harmonized Model (BD
 ### What is BDCHM?
 
 The BioData Catalyst Harmonized Model (BDCHM) is a LinkML schema that defines:
-- **47 classes** organized by inheritance (e.g., `MeasurementObservation is_a Observation`)
-- **40 enums** (constrained value sets like condition types, specimen types)
-- **7 slots** (reusable attribute definitions shared across classes)
-- **151 variables** (specific measurements/observations mapped to classes)
+- **54 classes** organized by inheritance (e.g., `MeasurementObservation is_a Observation`)
+- **52 enums** (constrained value sets like condition types, specimen types)
+- **337 induced slots** (attributes, resolved per class through the inheritance chain)
+- **155 variables** (specific measurements/observations mapped to classes)
 
-**Model Statistics**:
-- Multiple root classes (no single "Entity" superclass)
-- 68% of variables (103) map to MeasurementObservation class
-- Rich graph structure with multiple relationship types
+Counts are from `public/source_data/HM/bdchm.processed.json` and the variable
+spec sheet, and move whenever the schema sync lands — see *Keeping the model in
+sync* below.
+
+**Model shape**:
+- `Entity` is a range node, not a common superclass — the class hierarchy has
+  several roots
+- 69% of variables (107 of 155) map to `MeasurementObservation`
+- Most relationships are **ownership** edges derived from slot ranges; the rules
+  for deriving them are the app's central idea, and are not in the schema
+  ([OWNERSHIP_CLASSIFICATION.md](docs/OWNERSHIP_CLASSIFICATION.md))
 
 ### Two apps
 
-Since 2026-08-12 the repo builds **two entry points**:
+The repo builds **two entry points**:
 
-- **`index.html` (default)** — the **Explore SPA**: pick entities from a
-  selection table and see them as a layered ownership diagram with a detail
-  drawer. Design notes: `docs/EXPLORE_VIZ.md`.
+- **`index.html` (default)** — the **Explore SPA**, described below.
 - **`previous.html`** — the previous app, holding the Entity Explorer, Kitchen
-  Sink, and Focus views. Linked from the Explore header and vice versa.
+  Sink and Focus views. Linked from the Explore header and vice versa. It is
+  kept because it still shows things Explore does not (enum contents, per-entity
+  detail).
 
-Most of the feature description below refers to the previous app.
+### The Explore SPA
 
-### What You Can Explore
+**Pick entities, and see how they fit together.** Tick classes in the left
+panel — as a category list or as an ownership tree — and they are drawn on the
+canvas as a layered diagram, owners to the left of what they own.
 
-**Browse relationships**:
-- Inheritance chains (which classes extend which)
-- Class→Enum usage (which classes use which value sets)
-- Class→Class associations (participant relationships, specimen lineage, activity workflows)
-- Slot definitions shared across multiple classes
+- **Rows are attributes.** Each box lists its class's attributes with range and
+  cardinality. A coloured dot says what KIND of thing the attribute points at
+  (entity, value set, data type); a filled dot means that target is drawn, a
+  hollow one means it is not.
+- **Edges leave the ROW, not the box**, so an edge tells you *which attribute*
+  made it.
+- **Ownership is derived, not declared.** The schema does not say what owns
+  what; the app works it out from cardinality, range and a small set of curated
+  overrides. Three edge kinds — owns, belongs-to, and association (dashed,
+  arrowed both ends).
+- **A class and its subclasses draw as one merged box**, with a header per
+  child, so the Observation family is one box rather than six.
+- **The relation bar** (`← N   M →`) on each box counts what it belongs to and
+  what it owns, and opens a list of each — the way to navigate outward from
+  what is already on screen.
+- **Category views.** The `⊞` on a category header draws that whole content
+  area at once.
+- **A guided tour and a legend**, under Help.
+- **Shareable URLs.** The whole canvas is one `?sel=` list, so a view can be
+  sent to someone; the browser back button steps through canvases.
 
-**Investigate specific elements**:
-- Which variables map to which classes (e.g., 103 variables map to MeasurementObservation)
-- Class attributes and their value ranges (primitives, enums, or other classes)
-- Full variable specifications (data type, units, CURIE identifiers)
-- Inheritance chains with attribute overrides
+### The previous app (`previous.html`)
 
-### Features
-
-**Dual Panel Layout**:
-- Show different sections (Classes, Enums, Slots, Variables) side-by-side
-- Each panel independently configurable
-- SVG links visualize relationships between elements across panels
-- Multiple preset layouts for common exploration tasks
-
-**Interactive Navigation**:
-- Click any class, enum, or slot to open its detail view
-- Multiple detail dialogs can be open simultaneously
-- Drag and resize dialogs for custom layouts
-- Bidirectional "used by" lists (e.g., which classes use this enum?)
-
-**State Persistence**:
-- Shareable URLs preserve panel layout, open dialogs, and expansion state
-- Browser localStorage saves your last session
-- Copy URL to share exact view with collaborators
-
-**Responsive Design**:
-- Wide screens: Stacked detail panels on right side
-- Narrow screens: Draggable/resizable dialogs
-- Responsive tables split into columns for easier viewing
+Three views over the same data: the **Entity Explorer** (dual panels of
+Classes / Enums / Slots / Variables with SVG links drawn between them, and
+draggable detail dialogs), the **Kitchen Sink**, and **Focus**. State persists
+in the URL and in localStorage.
 
 ---
 
@@ -176,25 +177,29 @@ npm run deploy
 
 ### Testing
 
-The project has 500 tests across 40 test files covering:
-- Data loading & processing
-- Element relationships & SVG links
-- Adaptive layout logic
-- Duplicate detection
-- Panel helpers & styling
-- Component rendering
+The project has 500 tests across 40 test files, covering schema loading and
+transformation, ownership classification, the subgraph and merged-box view
+models, edge routing and ports, help/tour content, and component rendering.
 
-See [TESTING.md](docs/TESTING.md) for complete documentation on testing philosophy, strategies, and how to write tests.
+Several are **regression tests guarding bugs that shipped for months** — they
+pin behaviour that no earlier test asserted, so a failure there usually means
+the schema changed rather than the code broke. `mergedEdges.test.ts` says which.
+
+See [TESTING.md](docs/TESTING.md) for testing philosophy and how to write tests.
+
+⚠️ `npx vitest` needs **node 22+**; the default `node` is v16 and fails with a
+`node:fs/promises` error that looks like a broken setup but is not.
 
 ### Contributing
 
-When adding new features:
 1. Extract testable logic into utility functions
 2. Write tests for data transformations and calculations
-3. Run full test suite before committing: `npm test -- --run`
-4. Run type checking: `npm run typecheck`
+3. **Verify with `npm run build`** — `npx tsc --noEmit` is too weak and has let
+   breakage through
+4. Run the suite: `npx vitest run`
 
-See [Developer Documentation](#developer-documentation) above for links to all docs.
+More rules, and the traps worth knowing before you run anything, are in
+[docs/CLAUDE.md](docs/CLAUDE.md).
 
 ---
 
