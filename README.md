@@ -17,8 +17,8 @@ The BioData Catalyst Harmonized Model (BDCHM) is a LinkML schema that defines:
 - **155 variables** (specific measurements/observations mapped to classes)
 
 Counts are from [`public/source_data/HM/bdchm.processed.json`](public/source_data/HM/bdchm.processed.json) and the variable
-spec sheet, and move whenever the schema sync lands — see *Keeping the model in
-sync* below.
+spec sheet, and move whenever the schema sync lands — see *[Keeping the model in
+sync](#keeping-the-model-in-sync-with-upstream-maintainers)* below.
 
 **Model shape**:
 - **`Entity` is the universal root** — all 53 other classes descend from it.

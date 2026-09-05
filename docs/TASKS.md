@@ -66,6 +66,7 @@ unmeasured causes. The standing rule is measure before proposing one.
   | 12 | **One inheritance accessor, with a required argument.** Inheritance is derived two independent ways today and neither calls the other. Decided 2026-08-24.                                                                                                      | [OWNERSHIP_CLASSIFICATION §PLANNED](OWNERSHIP_CLASSIFICATION.md#️-planned--one-inheritance-accessor-with-a-required-argument) |
   | 13 | **Fix `EXPLORE_VIZ.md`** — audited ~20–25% stale, and the staleness is *concentrated*: the "Core visual-design conclusions" list is the worst section and reads as settled design law. **Fix the numbered list and the two `ownerCap` mentions first.**         | [BACKLOG §EXPLORE_VIZ](BACKLOG.md#explore_vizmd-is-2025-stale-1)                                                             |
   | 14 | **A sync check that each `containmentGraph` override slot name still has exactly one site.** The sets are keyed by SLOT NAME, not `(class, slot)`, and every member happening to occur at one class is **luck, not design**.                                    | [BACKLOG §Config rot](BACKLOG.md#hand-curated-config-rot)                                                                    |
+   | 15 | Improve intros to both README and first tour; they might share some text. README:Model shape doesn't actually describe the model shape but how the app adjusts it for user comprehension.                                                                       ||
 
 ---
 
