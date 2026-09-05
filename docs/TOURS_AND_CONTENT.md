@@ -204,24 +204,7 @@ instead, and both sabotages then fail five of six.
 
 ### 1.4 Open: Observations is crowded
 
-Siggie, on the Observations screenshot: *"img1 is pretty crowded."* 12 members
-(the screenshot predates `Quantity` moving to Other), with `Observation`
-merging five children and `ObservationSet` three. As shipped the view draws
-those 12 plus three pins.
-
-The pin rule in §1.1 already helps — not pinning `Quantity`, `Organization` or
-`TimePoint` keeps out boxes the earlier mechanical rule would have added.
-(An earlier version of this paragraph also listed `BodySite` as excluded; §1.1
-pins it, and §1.1 is the later decision — an observation is often *somewhere on
-a body*. `Context` is a member, not a candidate pin.) What remains undecided:
-
-- ~~**`Organization`**~~ — settled: NOT pinned. Ten `performed_by` slots point
-  at it, but who performed an observation is bookkeeping, not what the category
-  is about (Siggie, 2026-09-04).
-- drop the `ObservationSet` family from the view, leaving the `Observation`
-  hierarchy alone;
-- accept it, on the grounds that this category genuinely is the dense part of
-  the model and the tour's beats can walk it.
+[sg] deleted this section, already settled; but keeping this note in case it's helpful:
 
 Note the same view is the best merged-inheritance picture in the app, and shows
 a `slot_usage`-narrowed edge arriving at a child header for free — both wanted
