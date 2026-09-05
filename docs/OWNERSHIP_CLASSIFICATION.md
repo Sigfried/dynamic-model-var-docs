@@ -80,13 +80,9 @@ definitely doesn't own a participant, etc. probably need to completely
 rewrite this whole section from scratch. the five positions use "belong"
 language for both directions.
 
-`association` makes **no ownership claim in either direction**.
-
-**`own-bkwd` and `association` are separate categories and stay that way**
-(settled by Siggie 2026-08-26; closed, do not reopen). `own-bkwd` asserts
-"belongs to"; `association` asserts nothing. They happen to *layer* identically —
-both order the target first — but that is geometry, not meaning, and the two
-claims are not interchangeable.
+`association` makes **no ownership claim in either direction**. It layers the
+same way `own-bkwd` does — target first — but that is geometry, not meaning:
+`own-bkwd` asserts "belongs to" and `association` asserts nothing.
 
 ### The five positions, and the two axes they decompose onto
 
@@ -171,10 +167,9 @@ The `close` column is what shipped, as `RELATION_POSITION_LABEL`
 
 ### Wordings considered and rejected
 
-Kept so the choice is not re-litigated. Siggie picked the personal language
-(2026-08-27) because all four name the declaring side the same way — "by my
-attribute" / "by their attribute" — so they read as one paradigm rather than
-two unrelated pairs.
+Siggie picked the personal language (2026-08-27) because all four name the
+declaring side the same way — "by my attribute" / "by their attribute" — so
+they read as one paradigm rather than two unrelated pairs.
 
 | personal language (SHIPPED) | shorter personal | objective language |
 |---|---|---|
@@ -342,7 +337,7 @@ they need keeping apart:
 "Parent class: Entity" is true and useful; `LinkOverlay` rendering every
 `is_a Entity` link, and the containment graph fanning 53 of them, is the noise.
 
-### ▶️ PLANNED — one inheritance accessor, with a required argument
+### PLANNED — one inheritance accessor, with a required argument
 
 Inheritance is derived two independent ways today, and neither calls the other:
 
@@ -829,6 +824,6 @@ the rules above.
 - `WORKLOG.md` — decision history: what was tried, rejected, and why.
 - `docs/TASKS.md` — open work; hand-curated config rot.
 - `src/explore/help-content.md` — the user-facing wording and the guided tour.
-- [EXPLORE_VIZ.md](EXPLORE_VIZ.md) §"Core visual-design conclusions" **item 1** —
-  the owner-side/member-side normalization. Cite that item only: audited
-  2026-08-24, items 2, 3, 5 and 6 are stale.
+- [EXPLORE_VIZ.md](EXPLORE_VIZ.md) §"Core visual-design conclusions" — the
+  visual-design reasoning, including item 1's owner-side/member-side
+  normalization.

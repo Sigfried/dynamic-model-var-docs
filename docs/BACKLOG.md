@@ -368,119 +368,24 @@ not a mechanical one.**
 
 ## Docs
 
-### `EXPLORE_VIZ.md` is ~20–25% stale
+### `EXPLORE_VIZ.md` — what still needs fixing
 
-Audited claim-by-claim 2026-08-24. The doc's own rule is "where this document
-and the code disagree, the code wins and the doc is the bug." Staleness is
-**concentrated, not spread** — Architecture, Data layer, Renderer and Build order
-are in good shape.
-
-**Cluster 1 — the "Core visual-design conclusions" list is the worst section**,
-and the most damaging, because it reads as settled design law in the present
-indicative. 3 of 7 items are wrong:
-
-- **Item 2** — "direction is encoded by vertical position (owners above
-  members)". The default is LR; owners are to the **left**. (TB is a toggle.)
-- **Item 3** — is-a as an "expandable stack (▸ 3 subclasses)". Ships as header
-  chips `⊳ {parent}` / `▷ {n}`.
-- **Item 5** — flipped edges get a "re-verbed label". **Never built.** No SVG
-  text exists on the edge layer at all; the intent survives only as a comment in
-  [`ownershipSubgraph.ts`](../src/models/ownershipSubgraph.ts). What marks a flipped edge is the back-pointing
-  arrowhead.
-- **Item 1** (owner-side/member-side normalization) is CURRENT — it is the one
-  `OWNERSHIP_CLASSIFICATION.md` builds Rule 2 on.
-
-**The doc contradicts itself twice**: items 3 and 5 assert as fact what lines 230
-and 232 correctly list as still-wanted. A reader who stops after the numbered
-list comes away materially wrong.
-
-**Cluster 2 — the owner cap 8→5 change was never propagated.** Wrong at lines 55
-and 118. `DEFAULT_OWNER_CAP = 5`, locked by [`ownershipSubgraph.test.ts`](../src/test/ownershipSubgraph.test.ts). Knock-on:
-the doc's flagship BodySite example now demonstrates the **opposite** of what
-ships — 6 > 5, so BodySite falls back to chips.
+Audited claim-by-claim 2026-08-24; Clusters 1 and 2 fixed 2026-09-05. The doc's
+own rule is "where this document and the code disagree, the code wins and the
+doc is the bug." Architecture, Data layer, Renderer and Build order are in good
+shape.
 
 **Cluster 3 — vertical language survived a horizontal default.** The *algorithm*
 is current (`computeSunkLayers`); only the orientation words are wrong. **Not
-doc-only rot** — the same idiom is in the code's own comment, so a rename should
-cover both. Line 205 ("owners sit *beside* their topmost member") survives LR and
-is the better wording.
+doc-only rot** — the same idiom is in the code's own comment
+([`ownershipSubgraph.ts`](../src/models/ownershipSubgraph.ts)), so a rename
+should cover both. The doc's own line 205, "owners sit *beside* their topmost
+member", survives LR and is the better wording.
 
-**Largest gap is omission:** node dragging + edge re-routing, merge-mode routing
-probes, the example-cases pane, the ownership legend,
-one-arrowhead-per-convergence and thinner strokes are absent entirely. Also
-`exploreReset.test.ts` is actually `.tsx`, and five Explore-relevant tests are
-unlisted.
-
-**Fix the numbered list and the two `ownerCap` mentions first** — by the doc's
-own rule those are the bugs.
-
-### Tour authoring notes + draft preview
-
-Four distinct needs, all currently served by HTML comments:
-
-| Want | Sketched as | Renders? |
-|---|---|---|
-| Notes to self | `- **Note:** …` | never |
-| Half-written copy | `- **Draft:** …` | yes, marked loudly as unfinished |
-| Instructions to Claude | `- **ForClaude:** …` | never |
-| A step written but not ready | `- **_Tour:** 4` | **shipped** |
-
-**The parking half is already done** — prefixing any field with `_` drops an
-entry out of the tour while keeping it as help.
-
-**The interesting part is the draft preview**, and it is why this is a task
-rather than three fields: viewing a tour *including* its parked steps and
-unfinished `Draft:` text means a **second rendering mode**, not just a parser
-change. Worth designing rather than bolting on.
-
-Also parked: **multi-line for `Context:` / `Action:` / beat text** — deliberately
-not done, *"1 for now; may need 2 soon"*. `extractBlockField` is generic, so each
-is a one-line change.
-
-Until then: HTML comments work, never render, and are what the S3a translation
-already uses.
-
-### CURIE → external definition links
-
-**The goal:** every CURIE in the schema should link to its external source
-definition. Raised because [`transform_schema.py`](../scripts/transform_schema.py) looked like it expanded only
-`id`/`identity`. **It doesn't** — that impression was wrong. `expand_uri()` has 8
-call sites. It only *looks* id-only because of what the source schema contains:
-
-| location | CURIEs present |
-|---|---|
-| enum `permissible_values.meaning` | **611** |
-| attribute `slot_uri` | 71 — every one `schema:identifier` |
-| class `class_uri` | 1 |
-| `*_mappings`, `see_also` | **0** |
-
-**So the real questions are not "which fields get expanded":**
-
-1. The 611 expanded enum-value URLs are the bulk of the external references. Are
-   they **reaching the UI as clickable links**, or only stored? That is the
-   user-facing win.
-2. Slots carry no external mappings at all. If slots should link out, the
-   `*_mappings` fields must be populated **upstream** in [`bdchm.yaml`](../public/source_data/HM/bdchm.yaml); no
-   transform change can invent them.
-3. `expand_uri` does a live HTTP `HEAD` per prefix (`validate=True`) — network
-   I/O in CI on every sync run. `sv.expand_curie` would drop the hand-rolled
-   prefix walk; decide separately whether to keep validation, and if so cache it.
-
-**Do not fold this into the induced-slots migration** — it is orthogonal.
-
-### Example-cases pane — the last item
-
-Items 3 and 4 landed in `a18d78b`; the legend un-nesting, Biggest fans, toolbar
-explanations and the introductory-group cull all shipped 2026-09-04.
-
-**Still open:** **reuse the DetailDrawer panel** rather than a floating box.
-(First thought was draggable/resizable; Siggie revised to "just use the same
-panel as the details drawer".) Bigger than it looks — the drawer is driven by
-`detailId` and shows one class, so this means giving it a second mode.
-`HelpPanel` is where that would land.
-
-⚠️ The culled introductory cases' prose lives in
-[TOURS_AND_CONTENT.md](TOURS_AND_CONTENT.md). **Do not re-add them to the pane.**
+**The larger gap is omission.** Absent entirely: node dragging and edge
+re-routing, merge-mode routing probes, the example-cases pane, the ownership
+legend, one-arrowhead-per-convergence, and thinner strokes. Five
+Explore-relevant tests are unlisted.
 
 ---
 

@@ -153,20 +153,18 @@ the viewer with no visible way out.
 
 ---
 
-## 4. Deliberate departures — do not re-litigate
+## 4. Settled decisions
 
-- **No native-`title` swapping.** The whole mechanism existed because there was
-  no visible way to see which elements have help; **hints replace that job**. It
-  was the most intricate code in icd11's `useHelpMode` (SVG `<title>` injection,
-  restore-on-exit React race) and dropping it was the point.
-- **Standing rule: no native `title` on anything that opens a hover panel.**
-  Native tooltips render above the panel. Use `aria-label` and put the words in
-  the panel. This recurred — it was reintroduced in the relation bar minutes
-  after that bar shipped.
+- **No native-`title` swapping.** That mechanism exists to show which elements
+  have help; **hints do that job**, and it was the most intricate code in
+  icd11's `useHelpMode` (SVG `<title>` injection, restore-on-exit React race).
+- ⚠️ **No native `title` on anything that opens a hover panel** — native
+  tooltips render *above* the panel, covering it. Use `aria-label` and put the
+  words in the panel. **This one keeps coming back**; it was reintroduced in the
+  relation bar minutes after that bar shipped.
 - **No new popovers for now** (settled 2026-09-02). Entity-title and row
-  popovers were considered and deferred: what they would carry belongs to a
-  larger pass on getting all the detail into one place, and that pass comes
-  *after* the tour is authored. Whenever they do land they want to be **one
+  popovers belong to a larger pass on getting all the detail into one place,
+  which comes *after* the tour is authored. Whenever they do land they want to be **one
   primitive** (positioning, delay, dismissal, z-order above both the SVG and the
   node divs) with different content per trigger, or the two will drift apart.
 

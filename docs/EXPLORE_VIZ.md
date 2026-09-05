@@ -2,16 +2,16 @@
 
 [sg] this is stale and overly verbose
 
-> **Status**: Design approved 2026-07-13; **built and running** — this is the
-> default app (`index.html`). Build steps 1, 2, 4 done; step 5 outstanding.
-> Step 3's is-a treatment shipped 2026-08-25 as **merged sibling boxes**, NOT
-> the side-stack this document originally specified — see §3 below. Where this
-> document and the code disagree, the code wins and the doc is the bug — the
-> content policy below (§6) has already been rewritten once for that reason.
+> **Status**: **built and running** — this is the default app (`index.html`).
+> Build steps 1, 2, 4 done; step 5 outstanding.
 >
-> Supersedes parts of [FOCUS_VIEW.md](FOCUS_VIEW.md) (the three-panel Focus
-> layout and its LinkOverlay work continue to exist but are no longer the
-> primary direction).
+> ⚠️ **Where this document and the code disagree, the code wins and the doc is
+> the bug.** This is a design spec that the implementation has moved past in
+> places; see [BACKLOG.md](BACKLOG.md#explore_vizmd--what-still-needs-fixing) for what is
+> known to still need fixing.
+>
+> The three-panel Focus layout in [FOCUS_VIEW.md](FOCUS_VIEW.md) still exists
+> but is no longer the primary direction.
 >
 > Companion artifact: visual survey of has-a/is-a techniques rendered on a
 > BDCHM subset — https://claude.ai/code/artifact/ab245ee1-eca7-4efe-9c46-65b5d2f6ee6a
@@ -37,10 +37,11 @@ Terminology: we say **ownership** (has-a), not "containment," from here on.
    schema states "X belongs to Y" both ways (`ObservationSet.observations`
    is stored owner-side; `Observation.associated_participant` member-side).
    The FK-flip heuristic already normalizes; the viz renders its verdict.
-2. **Direction is encoded by vertical position (in TB, horizontal in LR)** (owners above members), not
-   by arrowheads alone. Layered DAG: poly-parent nodes get multiple in-edges;
-   no node duplication — this eliminates the "★ also under" problem, which
-   is intrinsic to nesting/outline techniques, not a widget bug.
+2. **Direction is encoded by position, not by arrowheads alone.** The default
+   is left-to-right, so **owners sit to the left** of what they own; the `TB`
+   toggle turns that into owners-above. Layered DAG: poly-parent nodes get
+   multiple in-edges; no node duplication — this eliminates the "★ also under"
+   problem, which is intrinsic to nesting/outline techniques, not a widget bug.
 3. **is-a never shares the ownership plane — it is ADJACENCY, not a line.**
    *(Revised 2026-08-25. The original spec here was an expandable side-stack
    attached to the parent node, "▸ 3 subclasses". That was never built; the
@@ -73,12 +74,15 @@ Terminology: we say **ownership** (has-a), not "containment," from here on.
    Merged boxes show every row; the "+N more" collapse applies only to ordinary
    boxes. Toggleable in the toolbar (`⑃ siblings`); off restores the is-a chips.
 
-4. [superseded] **Relation channels**: ownership = amber solid, drawn normalized;
-   references = gray dashed, drawn in FK direction; is-a = the merged box.
-5. [superseded] **Label convention**: an ownership edge drawn *flipped* from its storage
-   direction gets a re-verbed label ("has members — via
-   `member_of_research_study`"), never the bare slot name pointing the wrong
-   way. Unflipped edges and references keep plain slot-name labels.
+4. **Relation channels**: three edge kinds, distinguished by **hue**, not by
+   one solid/dashed pair — `own-fwd` blue, `own-bkwd` teal, `association`
+   slate, with association also dashed and arrowed at both ends. is-a is the
+   merged box, not an edge. See `OWNERSHIP_CLASSIFICATION.md`, "The color
+   system", for why a sequential ramp was the wrong encoding here.
+5. **Labels**: there are none on the edge layer, and that is settled
+   (2026-09-02). A flipped edge is marked by a back-pointing arrowhead
+   (`arrow-own-back`), not by re-verbed text. The intended replacement is one
+   label on **edge hover**, in a chip near the cursor — specified, not built.
 6. **Content policy** — *revised 2026-08-19; the original spec is recorded at
    the end of this list because the revision is the interesting part.*
    The diagram shows the selected entities, edges among them, and each
@@ -96,13 +100,13 @@ Terminology: we say **ownership** (has-a), not "containment," from here on.
    assumes a small canvas you grow deliberately. Transitive paths-to-root
    survives as an opt-in toggle (`⇱ roots`, `?roots=1`).
 
-   A first revision summarized owners as clickable chips instead of drawing
-   them. That was also wrong, and for an instructive reason: a value object's
-   owners *are* the answer to "what is this" — `BodySite`'s six owners are the
-   content of the diagram, not a footnote to expand one chip at a time.
-   Drawing them is the right default; chips are the fallback above the cap
-   (`Quantity`: 16 owners), where every owner is listed and clickable with an
-   "add all", never silently truncated.
+   ⚠️ **Since 2026-08-27 nothing is drawn that was not selected.** Ticking one
+   checkbox draws one box: `getOwnershipSubgraph(['BodySite'])` returns
+   `['BodySite']` and nothing else, pinned by *"NOTHING is drawn that was not
+   selected"* in [`ownershipSubgraph.test.ts`](../src/test/ownershipSubgraph.test.ts).
+   Owners are still **reported** (`hiddenOwners`), so the relation bar can
+   offer them, but they arrive only when asked for. The owner cap that used to
+   govern how many appeared unasked no longer applies to anything.
 7. Self-loops (ResearchStudy `part_of` ResearchStudy) draw as a loop badge on
    the node, not a layer violation.
 
@@ -164,7 +168,7 @@ getOwnershipSubgraph(selectedIds, expansions, options?) -> {
 
 options = {
   pathToRoot?: boolean,   // default false — transitive ancestors (⇱ roots)
-  ownerCap?: number,      // default 8 — draw direct owners up to this many
+  ownerCap?: number,      // vestigial — nothing is drawn unasked since 2026-08-27
 }
 ```
 

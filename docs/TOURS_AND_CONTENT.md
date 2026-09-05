@@ -1,12 +1,10 @@
 # Tours, the Help menu, and category content views
 
-**Replaces `TOUR_SOURCE_MATERIAL.md`** (deleted; its drafted prose is inlined
-below, at the steps that use it) and `NEXT_SESSION_EDGE_DISPLAY.md` §2.3 (that
-file is archived). **Delete this one once the tours ship.**
+The plan for the five tours, the Help menu they hang off, and the category
+content views they use. Drafted prose is inlined at the steps that use it.
+Decisions here are Siggie's, 2026-09-04.
 
-Decisions here are Siggie's, 2026-09-04, in an interactive session. Where a
-decision reversed something already written down, the reversal is noted so the
-old text is not restored by someone reading the older doc.
+**Delete this file once the tours ship.**
 
 ---
 
@@ -208,22 +206,15 @@ self-loop for free.
 > `Specimen.contained_in` → SpecimenContainer is own-bkwd; `container` →
 > SpecimenStorageActivity is an association (dashed, arrowed BOTH ends).
 > Compare own-bkwd against association here — they layer identically and differ
-> only in ink.
+> only in ink: association is **slate, dashed, and arrowed at both ends**.
 
-⚠️ Two corrections already applied above, both verified 2026-09-04 — do not
-reintroduce them from an older draft:
+Two things to get right when writing this step, both verified against
+[`bdchm.yaml`](../public/source_data/HM/bdchm.yaml) and the live classifier:
 
-1. **`contained_in` is declared on `Specimen`, not `SpecimenContainer`.**
-   Verified against [`bdchm.yaml`](../public/source_data/HM/bdchm.yaml) and the live classifier. The verdict and the
-   point of the case are unaffected; the earlier sentence named the wrong
-   declaring class.
-2. **Association is slate**, not a faint blue — P2 is three hues, not a Blues
-   ramp. Say the **dash and the two arrowheads** carry the distinction, not
-   faintness.
-
-The three slots are not all declared on the same class, which is worth saying
-out loud rather than glossing — it is exactly the distinction the relation
-bar's row glyphs encode.
+- **`contained_in` is declared on `Specimen`**, not on `SpecimenContainer`.
+- **The three slots are not all declared on the same class**, which is worth
+  saying out loud rather than glossing — it is exactly the distinction the
+  relation bar's row glyphs encode.
 
 Remaining material: the "One rule at a time" case group, reframed for a reader
 rather than a debugger — why `Quantity` draws forward despite being

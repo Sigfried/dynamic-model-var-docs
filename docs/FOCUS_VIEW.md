@@ -47,8 +47,7 @@ reimplementation. It reuses `LayoutManager`'s primitives (`ItemsPanel`,
    scoped to the selected subset. Shares selection with the top selector.
 3. **Middle panel: the Kitchen Sink `slot` section, scoped to the subset.** One
    flat Attributes section listing the slots the selected entities declare —
-   *not* a section per entity (that was the earlier plan; it was the bespoke
-   reimplementation we backed out of). Rendered through the elements' own
+   **not** a section per entity. Rendered through the elements' own
    `getSectionItemData` so rows match the Kitchen Sink.
 4. **Right panel: the Kitchen Sink `class`/`enum`/`type` sections (Ent/PVS/DT),
    scoped to the subset.** Three flat sections holding the range targets the

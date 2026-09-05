@@ -1,11 +1,6 @@
 # Testing Documentation
 
-> **Comprehensive guide to the test suite for BDCHM Interactive Documentation**
->
-> An older Phase-6.4-era companion is archived at
-> `docs/archive/TESTING.root-snapshot-2025-11-03.md`. Its mock-element examples
-> are **stale** — `ClassElement` now takes `(data, slotCollection)`, `parentName`
-> is `parentId`, `attributes` is `slotRefs` — so read it for history only.
+> Testing philosophy, patterns, and how to write tests for this project.
 
 ## Quick Start
 
@@ -72,12 +67,6 @@ npm test:coverage
 **Total: 500 tests + 3 skipped, across 40 test files** (all passing ✅,
 verified 2026-09-05 — run `npx vitest run` for the live figure).
 
-> ⚠️ **The per-file inventory below is stale and is not maintained.** It
-> describes 8 files totalling 134 tests; four of those files
-> (`ClassSection`, `linkLogic`, `linkHelpers`, `adaptiveLayout`) no longer
-> exist, and a dozen files since added are missing from it. Trust `src/test/`
-> and the test runner, not this list. Kept because the per-file *purpose*
-> descriptions still explain intent well for the files that remain.
 
 ### Regression tests added 2026-08-24/25
 
@@ -111,7 +100,10 @@ failed proves nothing — see "Aim for regression prevention" above.
 > own module — which is what the lint rule is pointing at. Verified the gap is
 > real: reverting the view line leaves the suite green.
 
-### Test Files
+### Some test files, and what each is for
+
+Not a complete list — `src/test/` holds 40 files. These four are described
+because their *purpose* is not obvious from the filename.
 
 #### 1. **data-integrity.test.ts** (1 test)
 **Purpose**: Data pipeline completeness reporting
@@ -123,7 +115,7 @@ Reports on the health of the data pipeline without failing tests:
 
 **Run**: `npm test -- data-integrity`
 
-#### 2. **dataLoader.test.ts** (9 tests)
+#### 2. **dataLoader.test.ts** (10 tests)
 **Purpose**: Core data loading and processing
 
 Tests:
@@ -137,67 +129,7 @@ Tests:
 
 **Run**: `npm test -- dataLoader`
 
-#### 3. **ClassSection.test.tsx** (4 tests)
-**Purpose**: Component rendering verification
-
-Tests:
-- Class hierarchy rendering with nested structure
-- Selected class highlighting
-- Data attributes for element identification (used for SVG links)
-- Empty state handling
-
-**Run**: `npm test -- ClassSection`
-
-#### 4. **linkLogic.test.ts** (26 tests)
-**Purpose**: Element relationship detection
-
-Tests all element types for relationship discovery:
-- **ClassElement**: inheritance, enum properties, class references, self-references
-- **SlotElement**: range detection for enums and classes
-- **VariableElement**: class mapping
-- **EnumElement**: no outgoing relationships (as expected)
-- **Filtering**: by type, target type, visibility, self-refs
-- **Combined filtering**: multiple criteria simultaneously
-
-**Run**: `npm test -- linkLogic`
-
-#### 5. **linkHelpers.test.ts** (27 tests)
-**Purpose**: SVG link rendering utilities
-
-Tests:
-- **Relationship filtering**: showInheritance, showProperties, onlyEnums, onlyClasses, visibility
-- **Link building**: converting relationships to renderable link objects
-- **Geometric calculations**: center points, anchor point selection, edge detection
-- **SVG path generation**: bezier curves, self-referential loops
-- **Visual styling**: color mapping, stroke width by relationship type
-
-**Run**: `npm test -- linkHelpers`
-
-#### 6. **adaptiveLayout.test.ts** (23 tests)
-**Purpose**: Adaptive detail panel display logic
-
-Tests:
-- **Space calculation**: remaining space with various panel configurations
-- **Mode determination**: 'stacked' vs 'dialog' based on available space
-- **Edge cases**: empty panels, exact threshold, negative space
-- **Real-world scenarios**: common screen sizes (desktop 1920px, laptop 1366px, tablet 1024px, 4K 3840px)
-
-**Example test:**
-```typescript
-it('typical desktop monitor (1920x1080) with both panels should use stacked mode', () => {
-  const result = calculateDisplayMode(1920, 1, 1);
-  expect(result.mode).toBe('stacked'); // 860px remaining > 600px threshold
-});
-
-it('laptop screen (1366x768) with both panels should use dialog mode', () => {
-  const result = calculateDisplayMode(1366, 1, 1);
-  expect(result.mode).toBe('dialog'); // 140px remaining < 600px threshold
-});
-```
-
-**Run**: `npm test -- adaptiveLayout`
-
-#### 7. **duplicateDetection.test.ts** (28 tests)
+#### 3. **duplicateDetection.test.ts** (24 tests)
 **Purpose**: Entity duplicate prevention
 
 Tests:
@@ -224,7 +156,7 @@ it('distinguishes same name across different entity types', () => {
 
 **Run**: `npm test -- duplicateDetection`
 
-#### 8. **panelHelpers.test.tsx** (16 tests)
+#### 4. **panelHelpers.test.tsx** (16 tests)
 **Purpose**: Panel title and header color utilities
 
 Tests:
@@ -319,73 +251,18 @@ describe('MyComponent', () => {
 
 ---
 
-## Testing Strategy by Phase
+## Gaps worth filling
 
-### Phase 3d: SVG Link Visualization (53 tests)
+No end-to-end tests exist. Everything runs in jsdom, which has **no layout
+engine**, so nothing verifies that the diagram actually renders correctly in a
+browser — the edge-routing and merged-box tests assert on the view model and
+the computed ports, not on pixels. That is a deliberate trade (see *Testing code
+that measures layout* below), but it means a whole class of visual regression
+is uncaught.
 
-**Approach**: Test-driven development (TDD)
-1. Created `linkLogic.test.ts` first with relationship detection tests
-2. Implemented Element classes to pass tests
-3. Created `linkHelpers.test.ts` for SVG rendering utilities
-4. Implemented rendering logic to pass tests
+Also untested: state persistence round-trips (save → reload from URL → verify),
+and full navigation flows across panels.
 
-**Result**: All link logic fully tested before visual implementation
-
-### Phase 3e: Adaptive Detail Panel Display (67 tests)
-
-**Approach**: Extract and test
-1. Identified testable logic embedded in components
-2. Extracted pure functions to utility files
-3. Wrote comprehensive tests (23 + 28 + 16 = 67 tests)
-4. Refactored components to use tested utilities
-
-**Result**: Doubled test suite size (67 → 134), improved code quality
-
----
-
-## Future Testing Priorities
-
-### Optional (Next Steps)
-
-**DetailPanelStack rendering tests**
-- Test panels render in reversed order (newest first)
-- Verify correct props passed to DetailPanel
-- Test close button functionality
-- Mock DetailPanel to isolate testing
-
-**DetailDialog interaction tests**
-- Drag and resize functionality
-- Escape key closes oldest dialog
-- Dialog stacking order (z-index)
-
-### Future Enhancements
-
-**State persistence round-trip tests**
-- Save state → load from URL → verify match
-- Dialog positions preserved correctly
-- Panel configurations restored
-
-**Search and filter tests** (when implemented)
-- Full-text search across entities
-- Faceted filtering logic
-- Search result highlighting
-
-**Integration tests**
-- Full navigation flows (click class → dialog opens → links appear)
-- Cross-panel navigation
-- State transitions
-
-**E2E tests** (Playwright or Cypress)
-- Full user workflows
-- Multi-step interactions
-- Visual regression testing
-
-**Performance tests**
-- Large model handling (many classes, variables)
-- Rendering speed with many links/dialogs
-- Memory usage tracking
-
----
 
 ## Troubleshooting
 

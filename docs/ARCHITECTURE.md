@@ -47,12 +47,12 @@ This principle guides the UX design:
 
 ## Data Flow Overview
 
-> **Shipped `e8b8bd0`**: the transform reads [`bdchm.yaml`](../public/source_data/HM/bdchm.yaml) directly through
-> LinkML's `SchemaView` / `induced_class()` ([`scripts/induced_schema.py`](../scripts/induced_schema.py)), which
-> resolves imports and merges inherited slots itself. The old `gen-linkml` step
-> and its `bdchm.expanded.json` artifact are **gone** — the file was deleted
-> 2026-08-31. Earlier notes describing a two-step expand-then-transform pipeline
-> are stale.
+The transform reads [`bdchm.yaml`](../public/source_data/HM/bdchm.yaml) directly
+through LinkML's `SchemaView` / `induced_class()`
+([`scripts/induced_schema.py`](../scripts/induced_schema.py)), which resolves
+imports and merges inherited slots itself. There is **no intermediate expanded
+JSON** — a note or comment elsewhere describing a two-step
+expand-then-transform pipeline, or a `bdchm.expanded.json`, is out of date.
 
 ```mermaid
 graph TD
@@ -117,7 +117,7 @@ All LinkML generators (JSON Schema, Python, Pydantic) use `class_induced_slots()
 
 `resolve_slot_ids()` now decides the id for every `(class, attribute)` site up front. **One rule: if two sites disagree on a load-bearing field, they are not the same slot**, so every site of that name gets its own `{slot}-{Class}` id and none keeps the bare name. A name whose sites all agree keeps its bare id.
 
-Load-bearing means `range`, `multivalued`, `required` — and only those, with `None` normalized to `False`. Disagreement on `description` or `owner` is not a conflict. This is deliberate: a Dec 2025 attempt compared nearly every field, qualified ~109 of 260 slots, and was abandoned.
+Load-bearing means `range`, `multivalued`, `required` — and only those, with `None` normalized to `False`. Disagreement on `description` or `owner` is **not** a conflict, deliberately: comparing more fields than these qualifies a large fraction of all slots and buys nothing.
 
 Of 46 attribute names declared on more than one class, **18 conflict**; 165 sites are qualified, giving 337 slot ids. The larger id set is internal — `SlotElement.displayName` renders the bare name, so qualified ids never reach the UI.
 
@@ -126,7 +126,7 @@ Two invariants this rests on, both easy to break:
 - **`transform_classes` and `transform_slots` must consume the same decision.** They previously derived slot ids independently; disagreement leaves a class referencing an id with no entry in `slots`.
 - **Global-slot metadata is keyed by NAME, not by the bare id** (which conflicting global slots no longer have). `global` and `slot_url` apply to every site; the canonical `range`/`required`/`multivalued` restore applies **only** to an unqualified entry, since writing it onto a qualified entry would overwrite the per-class definition that entry exists to record.
 
-**This machinery is expected to be removed.** Siggie's direction (2026-08-25) is to move induced slot definitions onto the class definitions, built with `SchemaView.induced_class()`. Verified: it produces every one of the per-class definitions above natively, so there is no shared slot entry for declarations to collide in and the conflict detection, the qualified ids and the tie rules all stop being necessary. See [TASKS.md](TASKS.md) § "move slot storage into the class definitions" for the verified details and the open questions (Kitchen Sink still needs a slot-oriented view; `domain_of` is not `inherited_from`).
+⚠️ **This machinery is meant to go.** Siggie's direction (2026-08-25) is to move induced slot definitions onto the class definitions, built with `SchemaView.induced_class()` — which produces every per-class definition above natively, leaving no shared slot entry for declarations to collide in, so the conflict detection, the qualified ids and the tie rules all stop being necessary. **Not done**: `bdchm.processed.json` still carries a flat 337-entry `slots` index that classes reference by id. Two things to settle when it is: the Kitchen Sink needs a slot-oriented view from somewhere, and `domain_of` is not `inherited_from`.
 
 ---
 
@@ -251,9 +251,7 @@ measurements.
 > `classAncestors`, `classInducedSlots`, "which classes use this enum" — and
 > how much of [`transform_schema.py`](../scripts/transform_schema.py) and [`dataLoader.ts`](../src/utils/dataLoader.ts) that would retire.
 > Link visualization is spatial and would still need its own structure.
-> Prototype before committing. (This paragraph absorbs the live remainder of
-> `LINKML_INTEGRATION.md`, deleted 2026-09-05 once its options had been decided
-> and shipped.)
+> Prototype before committing.
 
 **Current layers:**
 - **DTOs** ([`input_types.ts`](../src/input_types.ts)): Raw data shapes matching JSON/TSV files

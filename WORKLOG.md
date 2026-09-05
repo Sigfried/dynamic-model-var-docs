@@ -7,6 +7,81 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-05d (swept the rest; fixed the staleness the warnings were guarding)
+
+Two questions from Siggie while the past-arguing sweep was running.
+
+### "when are we going to fix these?" — the staleness warnings
+
+Fair: a ⚠️ saying "this section is stale" is a warning about the doc's own
+reliability, which is honest but is not a fix, and I had been treating them as
+acceptable furniture. Counted them — only three were real, and two were cheap.
+
+**`TESTING.md`.** Two warnings, both removable by doing the thing:
+- The per-file inventory warned that four of its eight entries described
+  deleted files. Checked each against `src/test/`: `ClassSection`, `linkLogic`,
+  `linkHelpers` and `adaptiveLayout` are gone; the other four exist. Deleted
+  the dead entries, re-ran each survivor for its real count (`dataLoader` was 9,
+  is 10; `duplicateDetection` was 28, is 24), renumbered, and retitled the
+  section "Some test files, and what each is for" — because it never was
+  complete and pretending otherwise is what made it rot.
+- "Testing Strategy by Phase" was a history of how two *deleted* test files came
+  to be written. Cut. "Future Testing Priorities" was a backlog of previous-app
+  work (DetailPanelStack, DetailDialog) plus generic wishes; replaced with a
+  short honest "Gaps worth filling" naming the real one — **no end-to-end tests
+  exist**, everything runs in jsdom, so nothing verifies the diagram actually
+  renders. 620 → 392 lines.
+
+**`EXPLORE_VIZ.md`** (TASKS item 13). Did the concrete half rather than the whole
+audit, since Siggie is about to work and a full rewrite would collide.
+
+The audit had said the owner cap was stale (8 → 5). **It was worse than that:
+the cap is vestigial.** `ownershipSubgraph.test.ts` carries *"NOTHING is drawn
+that was not selected"* — since 2026-08-27 ticking one checkbox draws one box,
+so no owners arrive unasked at any cap value. My first edit changed `default 8`
+to `default 5` and was itself wrong; reading the test rather than the constant
+is what caught it. The doc's flagship BodySite example had been *arguing for*
+drawing owners by default, which stopped being the behaviour entirely.
+
+Also fixed items 2, 4 and 5 of the conclusions list (LR-and-owners-left; three
+hues rather than amber/gray; no edge labels, settled 2026-09-02). Item 3 turned
+out already repaired. Remaining and left as item 13: Cluster 3's vertical
+language — which is **not doc-only**, the same idiom is in
+`ownershipSubgraph.ts`'s own comment — and the omissions.
+
+**Left alone deliberately:** `docs/CLAUDE.md`'s note that supergroup's README is
+outdated (an external repo, not ours), and Siggie's own `[sg] this is stale and
+overly verbose` at the top of EXPLORE_VIZ — their annotation, and the "overly
+verbose" half is still true.
+
+### "why would the merge thing ever get relitigated?"
+
+> *"i'm not going to bring it up again. i regret that i ever did — it keeps
+> haunting me."*
+
+I had kept `own-bkwd`/`association` — **"settled by Siggie 2026-08-26; closed,
+do not reopen"** — under the rule that a decision someone would re-raise earns
+its place. Wrong on the facts: the only person who would re-raise it is Siggie,
+who is telling me they will not. So the note was not protecting a decision, it
+was re-litigating one *at* them every time they opened the file.
+
+**A "don't reopen this" note IS raising it.** That is the sharper form of the
+rule from the entry below, and the one I missed: the test is not only "would a
+reader need this?" but "does this make the reader relive something?"
+
+The distinction between the two kinds is real and stays, stated flatly with no
+provenance and no history. The don't-raise-it instruction moved to memory, where
+it is addressed to me instead of to Siggie.
+
+### Also
+
+The link checker was reporting three false positives because my slug function
+stripped underscores where GitHub keeps them. Fixed in `docs/CLAUDE.md`'s copy
+(`[^\w\s-]` with `re.UNICODE`), and dropped a decorative `▶️` from one heading
+so its anchor is typable. The checker now runs clean, which is the point of
+having one.
+
+---
 ## 2026-09-05c (stop arguing with the past in live docs)
 
 Siggie, on a line I had just written — "⚠️ **`Entity` IS a common superclass**":

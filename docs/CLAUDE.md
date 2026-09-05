@@ -234,14 +234,31 @@ To check after editing docs:
 ```bash
 python3 - <<'EOF'
 import re, os, glob
-bad=[]
-for f in ['README.md']+glob.glob('docs/*.md'):
-    d=os.path.dirname(f) or '.'
-    for m in re.finditer(r'\[[^\]]*\]\(([^)#]+?)(#[^)]*)?\)', open(f,encoding='utf-8').read()):
-        t=m.group(1)
-        if t.startswith(('http','mailto:')): continue
-        if not os.path.exists(os.path.normpath(os.path.join(d,t))): bad.append(f'{f} -> {t}')
-print('\n'.join(bad) if bad else 'ALL LINKS RESOLVE')
+def slugs(p):                                    # GitHub-style heading anchors
+    out = set()
+    for l in open(p, encoding='utf-8'):
+        if l.startswith('#'):
+            t = l.lstrip('#').strip().lower()
+            t = re.sub(r'[^\w\s-]', '', t, flags=re.UNICODE)   # keeps _ and unicode
+            out.add(t.strip().replace(' ', '-'))
+    return out
+bad = []
+for f in ['README.md'] + glob.glob('docs/*.md'):
+    d = os.path.dirname(f) or '.'
+    txt = open(f, encoding='utf-8').read()
+    for m in re.finditer(r'\[[^\]]*\]\(([^)#]+?)(#[^)]*)?\)', txt):
+        t = m.group(1)
+        if t.startswith(('http', 'mailto:')):
+            continue
+        if not os.path.exists(os.path.normpath(os.path.join(d, t))):
+            bad.append(f'LINK   {f} -> {t}')
+    for m in re.finditer(r'\]\(([^)#]*)#([^)]+)\)', txt):
+        tgt = os.path.normpath(os.path.join(d, m.group(1))) if m.group(1) else f
+        if not os.path.exists(tgt) or not tgt.endswith('.md'):
+            continue
+        if m.group(2).lower() not in slugs(tgt):
+            bad.append(f'ANCHOR {f} -> {m.group(1)}#{m.group(2)}')
+print('\n'.join(bad) if bad else 'ALL LINKS AND ANCHORS RESOLVE')
 EOF
 ```
 
