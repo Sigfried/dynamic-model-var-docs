@@ -59,6 +59,8 @@ export interface TourBeat {
   action?: string;
   /** What this beat ADDS to the app state, as a URL query. See `HelpEntry.change`. */
   change?: string;
+  /** True when the beat's change came from `Only:`. See `HelpEntry.replace`. */
+  replace?: boolean;
   /** Overrides the step's `Highlight:` for this beat. */
   highlight?: Highlight;
   /** Overrides the step's `Width:` for this beat. */
@@ -116,8 +118,37 @@ export interface HelpEntry {
    * This was `state`, a full absolute query, until 2026-08-27. The rename is
    * load-bearing: the values look identical either way, and reading an old one
    * as a delta inverts its meaning (docs/TASKS.md item 2).
+   *
+   * Also set by `Only:`, which carries the same query but replaces rather than
+   * adds — see `replace`.
    */
   change?: string;
+  /**
+   * True when this step's `change` was authored as `Only:` rather than
+   * `Change:`: the named selection REPLACES the canvas instead of adding to it.
+   *
+   * **One field, two verbs, rather than two fields.** `change` is threaded as a
+   * bare query string from the parser through `TourPosition` to the host's
+   * push handler; a parallel `only?: string` would double every one of those
+   * sites and let a step declare both at once. A mode flag beside the query
+   * cannot express that contradiction.
+   *
+   * **Why it exists.** `Change:` is additive by design, which is right for a
+   * step that grows a picture one box at a time. It is wrong for a step whose
+   * copy describes a specific small canvas — the category content views (8-14
+   * classes each) and the two/three-box examples in the Ownership tour. Those
+   * accumulated into each other, so by the last category step the canvas was
+   * most of the schema while the popover still named one category. Same
+   * failure `showCategoryView` already fixed for the ⊞ control, with the same
+   * reasoning: a view named "Clinical" has to BE Clinical.
+   *
+   * **Scalars are unaffected.** `Only: sel=A~B&dir=DOWN` replaces the
+   * SELECTION and sets `dir` exactly as `Change:` would. Replacing means
+   * "these are the classes on the canvas", not "reset the whole app" — that
+   * absolute-state model is the one deliberately removed on 2026-08-27, and
+   * nothing here brings it back.
+   */
+  replace?: boolean;
   /**
    * Which SIDE of the anchor the popover goes on: `left`, `right`, `top` or
    * `bottom`. Authored as `Position: bottom`.
@@ -270,6 +301,12 @@ export interface TourPosition {
    * step's, but only on its first beat — see `tourPositions`.
    */
   change?: string;
+  /**
+   * Whether this position's `change` REPLACES the selection rather than adding
+   * to it (`Only:` rather than `Change:`). Travels with `change` and is
+   * meaningless without it.
+   */
+  replace?: boolean;
 }
 
 /**
@@ -580,6 +617,10 @@ function extractBeats(lines: string[], entryId: string): TourBeat[] | undefined 
       if (key === 'anchor') current.anchor = parseAnchor(value, entryId);
       else if (key === 'action') current.action = value.trim();
       else if (key === 'change') current.change = value.trim();
+      // `Only:` is `Change:` with the replace flag set. Both write the same
+      // field, so a beat declaring both keeps whichever came last rather than
+      // pushing two frames.
+      else if (key === 'only') { current.change = value.trim(); current.replace = true; }
       else if (key === 'highlight') current.highlight = parseHighlight(value);
       else if (key === 'width') current.width = parseWidth(value);
       else if (key === 'position') current.position = parsePosition(value);
@@ -618,7 +659,16 @@ function parseEntry(block: string, order: number): HelpEntry | null {
   const anchor = parseAnchor(extractField(lines, 'Anchor'), id);
   const action = extractField(lines, 'Action');
   const once = extractField(lines, 'Once');
-  const change = extractField(lines, 'Change');
+  /*
+   * `Only:` is `Change:` carrying a replace flag, so the two share one field.
+   * `Change:` wins when both are written: an empty `Change:` is meaningful
+   * (push an empty frame), so "which did the author write" cannot be decided
+   * by truthiness — only by which field is PRESENT.
+   */
+  const onlyRaw = extractField(lines, 'Only');
+  const changeRaw = extractField(lines, 'Change');
+  const change = changeRaw ?? onlyRaw;
+  const replace = changeRaw === undefined && onlyRaw !== undefined ? true : undefined;
   const highlight = parseHighlight(extractField(lines, 'Highlight'));
   const width = parseWidth(extractField(lines, 'Width'));
   const position = parsePosition(extractField(lines, 'Position'));
@@ -633,7 +683,7 @@ function parseEntry(block: string, order: number): HelpEntry | null {
 
   return {
     id, title, description, interactions, shortcut, context,
-    anchor, action, once, change, highlight, width, position, offsetX, tour, order, beats,
+    anchor, action, once, change, replace, highlight, width, position, offsetX, tour, order, beats,
   };
 }
 
@@ -725,6 +775,7 @@ export function tourPositions(content: HelpContent, tour?: string): TourPosition
         anchor: entry.anchor,
         action: entry.action,
         change: entry.change,
+        replace: entry.replace,
         highlight: entry.highlight,
         width: entry.width,
         position: entry.position,
@@ -766,6 +817,7 @@ export function tourPositions(content: HelpContent, tour?: string): TourPosition
         action: entry.action,
         // The step's own change belongs to the position that opens it.
         change: entry.change,
+        replace: entry.replace,
         highlight: entry.highlight,
         width: entry.width,
         position: entry.position,
@@ -802,6 +854,7 @@ export function tourPositions(content: HelpContent, tour?: string): TourPosition
          * 0 also push it would double-count the very thing this guards.
          */
         change: beat.change,
+        replace: beat.replace,
       });
     });
   });

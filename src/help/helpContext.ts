@@ -47,8 +47,18 @@ export interface HelpApi {
    * six positions. The displayed counter comes from `position.step`.
    */
   tourIndex: number | null;
-  startTour: () => void;
+  /**
+   * Start a tour by name; no name runs the first one in the file.
+   *
+   * The name is one of `tours`. An unknown name yields an empty tour and so
+   * starts nothing — it cannot half-enter.
+   */
+  startTour: (tour?: string) => void;
   endTour: () => void;
+  /** Every tour in the content file, in file order. The Help menu lists these. */
+  tours: string[];
+  /** Which tour is running, or undefined for the file's first. */
+  tourName: string | undefined;
   nextStep: () => void;
   prevStep: () => void;
   /**

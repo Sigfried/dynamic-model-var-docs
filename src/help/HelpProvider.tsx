@@ -29,7 +29,7 @@
 import {
   useCallback, useEffect, useMemo, useRef, useState, type ReactNode,
 } from 'react';
-import { parseAnchor, parseHelpContent, tourPositions, tourSteps } from './parseHelpContent';
+import { parseAnchor, parseHelpContent, tourNames, tourPositions, tourSteps } from './parseHelpContent';
 import type { HelpAnchor } from './parseHelpContent';
 import {
   HelpContext, HELP_MODE_ENABLED, type AnchorResolver, type HelpApi,
@@ -54,8 +54,13 @@ export function HelpProvider({
    * stack it does not need to know what a push MEANS either — it counts
    * frames and the host composes them. Without this, steps that need a
    * selection simply show their popover against whatever is on screen.
+   *
+   * `replace` distinguishes a position authored with `Only:` from one authored
+   * with `Change:`: the query is the same shape either way, and the flag says
+   * whether it ADDS to the selection or IS the selection. Interpreting it is
+   * the host's job — the provider still just counts frames.
    */
-  onPushChange?: (query: string) => void;
+  onPushChange?: (query: string, replace?: boolean) => void;
   /**
    * Pop one frame off the host's stack. Called once per `back`, and once per
    * remaining frame when the tour ends.
@@ -90,11 +95,27 @@ export function HelpProvider({
   children: ReactNode;
 }) {
   const content = useMemo(() => parseHelpContent(markdown), [markdown]);
-  const positions = useMemo(() => tourPositions(content), [content]);
-  const stepCount = useMemo(() => tourSteps(content).length, [content]);
 
   const [helpMode, setHelpMode] = useState(false);
   const [tourIndex, setTourIndex] = useState<number | null>(null);
+  /**
+   * Which tour is running, or about to. `undefined` means the first one in the
+   * file, which is what `tourSteps`/`tourPositions` already fall back to.
+   *
+   * **The provider used to have no such state**, so it always navigated
+   * `tourPositions(content)` with no name — the first tour in the file, and
+   * only ever that one. The parser has supported named tours since 2026-08-28;
+   * nothing could select one, so a second `Tour:` name parsed cleanly, passed
+   * every test, and was unreachable. Held here rather than passed to
+   * `startTour` alone because the positions the whole provider navigates have
+   * to follow it.
+   */
+  const [tourName, setTourName] = useState<string | undefined>(undefined);
+
+  /** Every tour the content file declares, in file order. Drives the Help menu. */
+  const tours = useMemo(() => tourNames(content), [content]);
+  const positions = useMemo(() => tourPositions(content, tourName), [content, tourName]);
+  const stepCount = useMemo(() => tourSteps(content, tourName).length, [content, tourName]);
   const [activeId, setActiveId] = useState<string | null>(null);
 
   /**
@@ -136,7 +157,7 @@ export function HelpProvider({
     setTourIndex(i);
     setActiveId(pos.entry.id);
     if (pos.change != null && onPushChange) {
-      onPushChange(pos.change);
+      onPushChange(pos.change, pos.replace);
       depth.current += 1;
     }
   }, [positions, onPushChange]);
@@ -161,13 +182,37 @@ export function HelpProvider({
     setActiveId(pos.entry.id);
   }, [positions, onPopChange]);
 
-  const startTour = useCallback(() => {
+  /**
+   * Start a tour, by name. No name runs the first tour in the file.
+   *
+   * **It does not call `goTo(0)`.** `goTo` reads the `positions` memo through
+   * its closure, and when this call is also CHANGING which tour is running,
+   * that memo still holds the outgoing tour's positions — React has not
+   * re-rendered yet. Routing the opening step through it would push the wrong
+   * tour's first `Change:` and open on the wrong entry. So the first position
+   * is computed here, from the name being switched to, and `goTo` is left for
+   * the moves that happen once `positions` is settled.
+   *
+   * An empty tour (a name with no steps, or a content file with none) sets the
+   * name and stops, with `startTour` a visible no-op rather than a half-entered
+   * tour. See docs/TASKS.md item 7 for the silent-`goTo` case this deliberately
+   * does not paper over.
+   */
+  const startTour = useCallback((name?: string) => {
     setHelpMode(false);
+    setTourName(name);
     // No entry snapshot: the tour composes on top of the viewer's state instead
     // of replacing it, so there is nothing to record and nothing to restore.
     depth.current = 0;
-    goTo(0);
-  }, [goTo]);
+    const first = tourPositions(content, name)[0];
+    if (!first) return;
+    setTourIndex(0);
+    setActiveId(first.entry.id);
+    if (first.change != null && onPushChange) {
+      onPushChange(first.change, first.replace);
+      depth.current += 1;
+    }
+  }, [content, onPushChange]);
 
   /**
    * Ending the tour unwinds every frame it still has pushed.
@@ -321,10 +366,10 @@ export function HelpProvider({
     helpMode, toggleHelpMode, exitHelpMode,
     tourIndex, startTour, endTour, nextStep, prevStep,
     positions, position: tourIndex === null ? undefined : positions[tourIndex],
-    stepCount,
+    stepCount, tours, tourName,
     content, activeId, showEntry, dismissEntry, resolveAnchor, centerRect,
   }), [helpMode, toggleHelpMode, exitHelpMode, tourIndex, startTour, endTour,
-       nextStep, prevStep, positions, stepCount,
+       nextStep, prevStep, positions, stepCount, tours, tourName,
        content, activeId, showEntry, dismissEntry, resolveAnchor, centerRect]);
 
   return <HelpContext.Provider value={api}>{children}</HelpContext.Provider>;

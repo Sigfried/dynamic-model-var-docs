@@ -76,6 +76,7 @@ does not get swallowed into that entry's `Description:`.
 | `Action:` | one sentence saying what the tour just DID — see [Actions](#actions) |
 | `Once:` | storage key letting this entry's alerts be dismissed for good — see [Alerts](#alerts) |
 | `Change:` | what this step ADDS to the app state, as a URL query — see [Change](#change) |
+| `Only:` | the same query, but it REPLACES the selection instead of adding — see [Change](#change) |
 | `Highlight:` | how hard to point at the anchor: `ring`, `dim`, `none` — see [Highlight](#highlight) |
 | `Width:` | popover width in pixels, default 320 — see [Placement](#placement) |
 | `Position:` | force the popover to a side: `left`, `right`, `top`, `bottom` — see [Placement](#placement) |
@@ -142,6 +143,20 @@ different walks: `Tour: Walkthrough` and `Tour: Deep dive` interleave freely in
 the file and each tour sees only its own steps, in file order. One entry belongs
 to at most one tour; a topic two tours both want is written twice, or written
 once as a help-only entry that both link to.
+
+**The host picks which tour runs**, by passing a name to `startTour(name)`; no
+name runs the FIRST tour in the file. `tourNames(content)` lists them in file
+order, which is what a host builds a tour chooser from — dmvd's is the `Tours`
+submenu in `HelpMenu.tsx`. An unknown name yields an empty tour, so a typo
+starts nothing rather than silently running whichever tour is first.
+
+> **This half was missing until 2026-09-05.** The parser had supported named
+> tours since 2026-08-28, but `HelpProvider` called `tourPositions(content)`
+> with no name and `startTour` took no argument — so only the first tour in the
+> file could ever run. A second `Tour:` name parsed cleanly, passed every test,
+> and was unreachable. If you are adding a tour, that is the failure to check
+> for: the content tests cannot see it, because nothing is wrong with the
+> content.
 
 > **What this replaced.** `Tour:` was a 1-based number until 2026-08-28.
 > Inserting a step between 3 and 4 meant renumbering every step after it, and a
@@ -449,9 +464,45 @@ than overlooked — Siggie, 2026-08-27: *"if scalar settings clobber user action
 don't worry about it. easy enough for the user to reclick the button."* Only
 `sel` is refcounted, because only `sel` has room to hold two copies.
 
-**There is no "remove" verb.** A step can add a class to the diagram; it cannot
-take one away. If a step needs a clean diagram rather than a cumulative one,
-that is a format addition, not something to fake with the fields that exist.
+#### `Only:` — a step that names the whole canvas
+
+`Change:` adds. `Only:` **replaces**: the selection becomes exactly what the
+query names, whatever was drawn before.
+
+```markdown
+- **Change:** sel=TimePeriod     <- TimePeriod joins what is already there
+- **Only:**   sel=Visit~TimePeriod   <- the canvas IS Visit and TimePeriod
+```
+
+Use it for a step whose copy describes a specific picture — "this is the
+Clinical category", "here are two boxes and one edge". Under an additive
+`Change:` those steps piled onto each other, so a step captioned *Clinical*
+drew Clinical on top of everything before it, and a two-box example was a
+two-box caption over a twelve-box diagram.
+
+Three things bound what it replaces, so it is not the absolute `State:` model
+coming back:
+
+- **It replaces the SELECTION only.** `Only: sel=A&dir=DOWN` sets `dir` exactly
+  as `Change:` would, and a scalar set by an earlier step stays set. Nothing a
+  step does not name snaps back to a default — that was the bug `State:` had.
+- **It hides rather than deletes.** The steps below it are still on the stack;
+  `back` restores what the replace displaced, including the viewer's own
+  selection, so the two directions are still inverses.
+- **It gives up its claim like any other frame.** A class the viewer unticks
+  during a replaced step is theirs, and the pop does not hand it back.
+
+A following `Change:` adds to the replaced canvas rather than reviving what was
+displaced — which is how a step names a clean picture and its next beat grows
+it.
+
+**`Only:` needs an `Action:`** for the same reason `Change:` does, and the same
+test enforces it. A step that silently swaps the whole canvas is worse than one
+that silently adds to it.
+
+Writing both fields on one entry keeps the `Change:` — decided by which field is
+PRESENT, not by which value is non-empty, since an empty `Change:` is
+meaningful.
 
 **Beats: only the first pushes the step's change.** Under the old model every
 beat re-applied its step's full state, which was harmless because re-applying

@@ -17,15 +17,19 @@ The active work. The plan is [TOURS_AND_CONTENT.md](TOURS_AND_CONTENT.md); §1
 
 | # | Task | Where |
 |---|---|---|
-| 1 | **Author the five tours.** Order is fixed, complexity rising: *What BDCHM covers* → *Getting oriented* → *Reading the diagram* → *Ownership* → *Inheritance*. Steps are drafted in prose; they need writing as content. | [§3](TOURS_AND_CONTENT.md#3-the-five-tours) |
-| 2 | **Restructure the Help menu** and delete the `take the tour` pill — two entry points to one thing drift apart. Decide whether Help → Tours opens a chooser or the first tour. | [§2](TOURS_AND_CONTENT.md#2-the-help-menu) |
-| 3 | **`Change:` needs a remove/clear verb.** The authoring format is additive-only, so tour step 4 ADDS to step 3's canvas where the copy reads as a clean two-box example. | `help-content.md` TODO |
+| 1 | **Author the five tours.** Order is fixed, complexity rising: *What BDCHM covers* → *Getting oriented* → *Reading the diagram* → *Ownership* → *Inheritance*. Steps are drafted in prose; they need writing as content. **Both blockers are gone** (2026-09-05): a named tour can now be started, so all five are reachable rather than only the file's first, and `Only:` gives a step a clean canvas — which the category steps and the two/three-box examples both need. | [§3](TOURS_AND_CONTENT.md#3-the-five-tours) |
+| ~~2~~ | ~~**Restructure the Help menu** and delete the `take the tour` pill.~~ **DONE 2026-09-05.** Help ▾ → Tours is a submenu listing every tour the content file declares; the pill is gone. This also fixed the half nobody had noticed: `startTour` took no argument and the provider navigated `tourPositions(content)` with no name, so **only the first tour in the file could ever run**. `node-dismiss` was genuinely unreachable (help mode is off, so its `data-help-id` opened nothing) and is now listed in the menu. | [§2](TOURS_AND_CONTENT.md#2-the-help-menu) |
+| ~~3~~ | ~~**`Change:` needs a remove/clear verb.**~~ **DONE 2026-09-05.** The verb is `Only:`, which replaces the selection where `Change:` adds. Scoped to `sel` — scalars still merge, so it is not the old absolute `State:` returning — and it records what it displaced so `back` stays exact. [Spec](../src/help/FORMAT.md#only--a-step-that-names-the-whole-canvas). **Existing steps are not rewritten to use it**; `graph-canvas` still adds to `relationship-kinds`' canvas. | `help-content.md` TODO |
 | 4 | **Pictures for the legend and the Ownership/Inheritance tours.** The edge kinds need a diagram, not prose — "NOT ascii, looking like the app". The vocabulary is settled ([the five positions](OWNERSHIP_CLASSIFICATION.md#the-five-positions-and-the-two-axes-they-decompose-onto), [the phrasing table](OWNERSHIP_CLASSIFICATION.md#the-phrasing-table)); what is missing is the picture. A sketch of one is in [archive/NEXT_SESSION_EDGE_DISPLAY.md](archive/NEXT_SESSION_EDGE_DISPLAY.md) §3.3. | — |
 
-**Before deleting menu items in #2:** `node-dismiss`, `toolbar-siblings`,
-`relation-bar` and `graph-canvas-reading` are help-only entries surfaced
-contextually. Confirm they stay reachable, or dropping them from the menu makes
-them *unreachable* rather than merely unlisted.
+⚠️ **The menu is the ONLY way into a help-only entry.** The other route was help
+mode's `?` hints, and `HELP_MODE_ENABLED` is false — `HelpLayer` renders them
+only `if (helpMode && !inTour)`, so a `data-help-id` tag anchors and rings but
+opens nothing when clicked. Checked while doing #2: `toolbar-siblings`,
+`relation-bar` and `graph-canvas-reading` were listed and fine; `node-dismiss`
+was tagged in `OwnershipGraphView` and reachable from nowhere, and is listed
+now. Anything dropped from `HELP_ENTRIES` in `HelpMenu.tsx` is unreachable, not
+merely unlisted.
 
 **Editing tour content is safe** — `npx vitest run src/test/helpContent.test.ts`
 (~700ms) catches typo'd anchor kinds, un-`Action:`ed state changes, untagged

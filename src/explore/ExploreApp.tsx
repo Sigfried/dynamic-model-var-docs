@@ -40,8 +40,8 @@ import {
   type Direction, type ExploreState, type MergeMode,
 } from './exploreState';
 import {
-  parseTourChange, pushFrame, popFrame, composeState, viewerState, reconcile,
-  EMPTY_STACK, type TourStack,
+  parseTourChange, pushFrame, popFrame, pendingRestore, composeState, viewerState,
+  reconcile, EMPTY_STACK, type TourStack,
 } from './tourStateStack';
 
 /**
@@ -537,13 +537,18 @@ function publish(state: ExploreState): void {
  * every step with a `State:` silently reset it, because no step wrote that
  * param.
  */
-function pushTourChange(query: string): void {
+function pushTourChange(query: string, replace = false): void {
   // Split the viewer's half off against the stack as it stands BEFORE the
   // push. Doing it after would subtract the ids this very step is adding, so a
   // class the viewer already had ticked would be counted as the tour's — the
   // exact ownership confusion the duplicate push exists to prevent.
-  const viewer = viewerState(readExploreState(), tourStack);
-  tourStack = pushFrame(tourStack, parseTourChange(query));
+  const live = readExploreState();
+  const viewer = viewerState(live, tourStack);
+  // A REPLACING step is handed what is on the canvas right now, so the frame
+  // can record what it is about to hide and give it back when it pops. Read
+  // from the live state rather than the viewer's half: a replace hides the
+  // tour's own earlier frames as well as the viewer's ticks.
+  tourStack = pushFrame(tourStack, parseTourChange(query, replace), live.sel);
   publish(composeState(viewer, tourStack));
 }
 
@@ -557,8 +562,20 @@ function pushTourChange(query: string): void {
  */
 function popTourChange(): void {
   const viewer = viewerState(readExploreState(), tourStack);
+  /*
+   * Anything the frame being popped displaced rejoins the VIEWER's half, not
+   * the tour's. Those ids were on the canvas before the replace hid them —
+   * some the viewer's own ticks, some lower frames' — and handing them to the
+   * tour's refcount would mean the next pop took them away a second time.
+   *
+   * Read before the pop, since the frame that knows them is the one going.
+   */
+  const restored = pendingRestore(tourStack);
   tourStack = popFrame(tourStack);
-  publish(composeState(viewer, tourStack));
+  const composed = composeState(viewer, tourStack);
+  publish(restored.length === 0
+    ? composed
+    : { ...composed, sel: [...new Set([...composed.sel, ...restored])] });
 }
 
 export default function ExploreApp() {
@@ -625,19 +642,17 @@ function HelpButton() {
   return (
     <span className="flex items-center gap-2" data-help-id="help-button">
       {/*
-        NOT another underlined blue link. It was one of five identical ones in
-        this header, which is the whole reason it read as chrome rather than as
-        the way in: a first-time viewer has no reason to pick it out of `copy
-        link`, `example cases` and the rest. A filled pill is the one thing in
-        the bar that does not look like the others.
+        THE `take the tour` PILL IS GONE (docs/tasks.md item 2). It was a second
+        entry point to the same thing as Help ▾ → Tours, and two of those drift
+        apart — the pill could only ever start the FIRST tour, so once there
+        were several it was quietly the wrong way in.
+
+        What the pill was solving is still real: it was deliberately not
+        another underlined blue link, because as one of five identical ones in
+        this header it read as chrome rather than as the way in. That job now
+        belongs to the Help menu's own styling; if the menu stops being
+        findable, make IT prominent rather than adding a second door.
       */}
-      <button
-        onClick={startTour}
-        className="text-sm font-semibold px-2.5 py-1 rounded-full bg-white/95 text-blue-700 shadow-sm hover:bg-white hover:shadow"
-        title="A short guided walk through the app (press ? anywhere)"
-      >
-        take the tour
-      </button>
       {/*
         The help-mode toggle is hidden while HELP_MODE_ENABLED is false — it
         was the only way in, and the mode is off pending the fixes listed in

@@ -47,19 +47,36 @@ export interface HelpMenuProps {
  * Ids are `### ` entry ids in help-content.md. Kept to entries that stand on
  * their own out of tour order — a step whose text says "now click the checkbox"
  * is meaningless here.
+ *
+ * **This list is the ONLY way into a help-only entry today.** The other route
+ * was help mode's `?` hints, and `HELP_MODE_ENABLED` is false — `HelpLayer`
+ * renders those hints only `if (helpMode && !inTour)`, so a `data-help-id` tag
+ * anchors and rings but opens nothing when clicked. So an entry missing from
+ * here is unreachable rather than merely unlisted, which is what
+ * docs/tasks.md's caution about deleting menu items is pointing at.
+ *
+ * `node-dismiss` was in exactly that position — tagged in
+ * `OwnershipGraphView` and reachable from nowhere — and is listed now.
  */
 const HELP_ENTRIES: ReadonlyArray<{ id: string; label: string }> = [
   { id: 'graph-canvas-reading', label: 'Reading the diagram' },
   { id: 'relation-bar', label: 'The relation bar' },
   { id: 'toolbar-siblings', label: 'Inheritance and merged boxes' },
+  { id: 'node-dismiss', label: 'Closing a box' },
   { id: 'copy-link', label: 'Sharing what you see' },
 ];
 
 export default function HelpMenu({
   onOpenLegend, onOpenCases, legendOpen, casesOpen,
 }: HelpMenuProps) {
-  const { startTour, showEntry } = useHelp();
+  const { startTour, showEntry, tours } = useHelp();
   const [open, setOpen] = useState(false);
+  /**
+   * Which submenu is open, by name. One slot rather than a boolean per
+   * submenu: only one can be open, and a second flag could contradict the
+   * first.
+   */
+  const [submenu, setSubmenu] = useState<string | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const cancelClose = () => {
@@ -70,7 +87,7 @@ export default function HelpMenu({
   };
   const scheduleClose = () => {
     cancelClose();
-    closeTimer.current = setTimeout(() => setOpen(false), CLOSE_DELAY_MS);
+    closeTimer.current = setTimeout(() => { setOpen(false); setSubmenu(null); }, CLOSE_DELAY_MS);
   };
   useEffect(() => cancelClose, []);
 
@@ -83,9 +100,14 @@ export default function HelpMenu({
       const t = ev.target as HTMLElement | null;
       if (t?.closest('[data-help-menu]')) return;
       setOpen(false);
+      setSubmenu(null);
     };
     const onKey = (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape') setOpen(false);
+      // Escape closes the submenu first if one is open, then the menu — the
+      // same two-stage unwind the tour's Escape does.
+      if (ev.key !== 'Escape') return;
+      if (submenu) setSubmenu(null);
+      else setOpen(false);
     };
     document.addEventListener('mousedown', onDown, true);
     document.addEventListener('keydown', onKey);
@@ -93,11 +115,11 @@ export default function HelpMenu({
       document.removeEventListener('mousedown', onDown, true);
       document.removeEventListener('keydown', onKey);
     };
-  }, [open]);
+  }, [open, submenu]);
 
   /** Every item closes the menu: each one either opens a panel, starts the
    *  tour, or shows a popover, and none of them is a thing you do twice. */
-  const pick = (fn: () => void) => () => { setOpen(false); fn(); };
+  const pick = (fn: () => void) => () => { setOpen(false); setSubmenu(null); fn(); };
 
   return (
     <span
@@ -121,10 +143,53 @@ export default function HelpMenu({
                      bg-white dark:bg-slate-800 shadow-xl
                      text-gray-900 dark:text-gray-100"
         >
-          <MenuItem onClick={pick(startTour)}>
-            Take the tour
-            <Hint>a short guided walk</Hint>
-          </MenuItem>
+          {/*
+            * Tours as a SUBMENU, not a single "take the tour" item.
+            *
+            * There are several tours now, in rising complexity, and a reader
+            * who wants "Inheritance" should not have to walk "What BDCHM
+            * covers" to reach it. A flat list would put five items above the
+            * legend and stop the tours reading as one group.
+            *
+            * The submenu renders only when the content file declares more than
+            * one tour: with a single tour a submenu is a hover in front of the
+            * only thing behind it.
+            */}
+          {tours.length > 1 ? (
+            <div
+              className="relative"
+              onMouseEnter={() => { cancelClose(); setSubmenu('tours'); }}
+            >
+              <MenuItem onClick={() => setSubmenu(v => (v === 'tours' ? null : 'tours'))}>
+                <span className="flex items-center justify-between">
+                  Tours
+                  <span aria-hidden className="opacity-60">▸</span>
+                </span>
+                <Hint>guided walks, simplest first</Hint>
+              </MenuItem>
+              {submenu === 'tours' && (
+                /* Opens to the LEFT: the Help menu is already flush with the
+                   right edge of the header, so a submenu to the right would
+                   run off screen. */
+                <div
+                  className="absolute right-full top-0 mr-1 z-50 w-56 py-1
+                             rounded-md border border-gray-300 dark:border-slate-600
+                             bg-white dark:bg-slate-800 shadow-xl"
+                >
+                  {tours.map(name => (
+                    <MenuItem key={name} onClick={pick(() => startTour(name))}>
+                      {name}
+                    </MenuItem>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <MenuItem onClick={pick(() => startTour())}>
+              Take the tour
+              <Hint>a short guided walk</Hint>
+            </MenuItem>
+          )}
 
           <Separator />
 

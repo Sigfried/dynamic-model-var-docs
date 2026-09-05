@@ -7,6 +7,111 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-05f (tasks 2 and 3: named tours, and `Only:`)
+
+Siggie: *"just do tasks 2 and 3 while i work on the tour content a bit."*
+Task 1 (authoring the five tours) stayed Siggie's; these two were its blockers.
+
+### The blocker that was not in the task list
+
+Task 1 read as pure authoring. It was not: **only the first tour in the file
+could ever run.** `HelpProvider` called `tourPositions(content)` and
+`tourSteps(content)` with no tour name, both of which fall back to
+`tourNames(content)[0]`, and `startTour()` took no argument. The parser has
+supported `Tour: <name>` since 2026-08-28, so a second tour parsed cleanly,
+passed every content test, and was unreachable.
+
+That is the failure mode to remember: **the content tests cannot see it,
+because nothing is wrong with the content.** Writing the five tours first would
+have produced four dead ones and a green suite.
+
+Fixed by giving the provider a `tourName` state, threading it into both memos,
+and taking a name on `startTour`. One trap: `startTour` must NOT call `goTo(0)`
+when it is also switching tours — `goTo` reads `positions` through its closure,
+which still holds the OUTGOING tour's positions until React re-renders, so it
+would push the wrong tour's first `Change:`. It computes the opening position
+itself from the name being switched to.
+
+### `Only:` — why a flag and not a second field
+
+Three shapes were put to Siggie; they picked replace-with-restore. The two
+rejected:
+
+- **`Change: sel=-Person`** (a `-` prefix). Stays a pure delta with no restore
+  data. Rejected because every category step would have to name all ~10 ids of
+  the PREVIOUS step to clear them — each step encoding its predecessor's
+  contents, which breaks the moment steps are reordered. File order being cheap
+  to reorder is the whole point of the 2026-08-28 `Tour:` change.
+- **`Clear:` marker plus additive `Change:`.** Same mechanism as `Only:` with a
+  two-field spelling; no advantage, one more field.
+
+Implemented as ONE field (`change`) plus a `replace` flag rather than a parallel
+`only?: string`. `change` is threaded as a bare query string from the parser
+through `TourPosition` to the host's push handler; a second string would double
+every one of those sites AND let a step declare both at once, which a mode flag
+cannot express.
+
+`Change:` wins when both are written, decided by **which field is present**, not
+by which value is truthy — an empty `Change:` is meaningful (it pushes an empty
+frame), so truthiness would read `- **Change:**` as absent.
+
+### The refactor `Only:` forced, and the silent bug it would have caused
+
+`TourStack.counts` used to be maintained INCREMENTALLY beside `frames` —
+`bump(+1)` on push, `bump(-1)` on pop. That was exactly equivalent to the
+multiset union of every `frames[*].sel` while all frames were additive.
+
+A replacing frame breaks the equivalence: it hides the frames below it, so the
+union of all frames is no longer what the tour is showing. Keeping the two
+agreeing by hand would have failed silently and specifically — **`reconcile`
+reads `counts` and treats a counted id missing from `sel` as a viewer untick.**
+Every id a replace displaced looks exactly like that. The tour would have
+permanently dropped its claim on ids it had merely hidden, and the pop would
+never restore them.
+
+So `counts` is now DERIVED from `frames` (`countsOf`, via `visibleFrames`), and
+every stack is built through `restack`. The disagreement is unrepresentable
+rather than merely tested for. `bump` is gone.
+
+### The double-restore, caught by writing the test
+
+First cut had `pushFrame` record every visible id as `displaced`. Wrong for ids
+held by a LOWER TOUR FRAME: that frame comes back above the horizon when the
+replace pops, and `composeState` re-adds its `sel` unaided — so recording it as
+displaced too restores a second copy, and that copy is in the viewer's half and
+outlives the tour. `pushFrame` now filters against `stack.counts`, so only the
+viewer's own ids are recorded.
+
+Both this and the horizon were mutation-tested: disabling `horizon` fails 4
+tests, removing the `!held.has(id)` guard fails 1. Neither passes vacuously.
+
+### What `Only:` deliberately does NOT do
+
+It replaces `sel` and nothing else. Scalars still merge down the whole stack, so
+a step that set `dir=DOWN` three steps ago is still setting it. This matters
+because the model removed on 2026-08-27 was exactly "any field a step did not
+name snaps back to its default", and a replace that reset scalars would be that
+bug wearing a new field name.
+
+### Task 2's caution, checked rather than assumed
+
+tasks.md warned that `node-dismiss`, `toolbar-siblings`, `relation-bar` and
+`graph-canvas-reading` are surfaced contextually and might become unreachable if
+dropped from the menu. Checking found the caution understated: **help mode's `?`
+hints are the only contextual route and `HELP_MODE_ENABLED` is false**
+(`HelpLayer` renders them `if (helpMode && !inTour)`), so `HELP_ENTRIES` in
+`HelpMenu.tsx` is the ONLY door. Three of the four were listed; `node-dismiss`
+was not, and had been unreachable since help mode was switched off — before this
+change, not because of it. Added.
+
+### Not done, deliberately
+
+**Existing tour steps were not rewritten to use `Only:`.** Siggie was editing
+tour content in parallel; rewriting the same file would collide. `graph-canvas`
+still adds to `relationship-kinds`' canvas — the exact cumulative case the
+original TODO complained about — and the note in `help-content.md` says so.
+
+---
 ## 2026-09-05e (EXPLORE_VIZ merged into ARCHITECTURE; details-collapsed)
 
 Siggie: *"what is EXPLORE_VIZ for anyway? why wouldn't it be combined with

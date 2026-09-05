@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'vitest';
 import {
-  parseTourChange, pushFrame, popFrame, clearStack, composeState, viewerState,
-  reconcile, EMPTY_STACK, type TourStack,
+  parseTourChange, pushFrame, popFrame, pendingRestore, clearStack, composeState,
+  viewerState, reconcile, EMPTY_STACK, type TourStack,
 } from '../explore/tourStateStack';
 import { DEFAULTS, type ExploreState } from '../explore/exploreState';
 
@@ -214,5 +214,123 @@ describe('reconcile — the viewer overrules the tour', () => {
     const { stack: next } = reconcile(edited, stack, {});
     expect(next).toEqual(stack);
     expect(viewerState(edited, next).sel).toEqual(['Visit']);
+  });
+});
+
+/**
+ * `Only:` — the replacing frame (docs/tasks.md item 3).
+ *
+ * `Change:` is additive, which is right for a step that grows a picture one
+ * box at a time and wrong for one whose copy names a SPECIFIC canvas: the
+ * category content views, and the two/three-box examples in the Ownership
+ * tour. Those accumulated into each other, so a step captioned "Clinical"
+ * drew Clinical on top of everything before it.
+ *
+ * A replacing frame is a HORIZON — nothing beneath it shows while it stands —
+ * and it records what it hid so its own pop puts that back.
+ */
+describe('Only: replaces the canvas', () => {
+  /** Walk forward, marking which queries were authored as `Only:`. */
+  const only = (q: string) => ({ q, replace: true });
+  const add = (q: string) => ({ q, replace: false });
+  function walkMixed(
+    viewer: ExploreState, ...steps: Array<{ q: string; replace: boolean }>
+  ): TourStack {
+    return steps.reduce((s, { q, replace }) => {
+      const live = composeState(viewer, s);
+      return pushFrame(s, parseTourChange(q, replace), live.sel);
+    }, EMPTY_STACK);
+  }
+
+  test('a replacing step draws exactly what it names', () => {
+    const stack = walkMixed(base(), add('sel=Person~Participant'), only('sel=Visit'));
+    expect(composeState(base(), stack).sel).toEqual(['Visit']);
+  });
+
+  test("it hides the viewer's own selection too", () => {
+    const viewer = base({ sel: ['Specimen'] });
+    const stack = walkMixed(viewer, only('sel=Visit~TimePeriod'));
+    expect(composeState(viewer, stack).sel).toEqual(['Visit', 'TimePeriod']);
+  });
+
+  test('popping it restores what it displaced', () => {
+    // The property that makes `back` exact. The old absolute model got this by
+    // snapshotting the whole world on tour entry; this remembers one frame's
+    // worth and throws it away with the frame.
+    const viewer = base({ sel: ['Specimen'] });
+    const stack = walkMixed(viewer, only('sel=Visit'));
+    const popped = popFrame(stack);
+    const restored = [...new Set([
+      ...composeState(viewerState(composeState(viewer, stack), stack), popped).sel,
+      ...pendingRestore(stack),
+    ])];
+    expect(restored.sort()).toEqual(['Specimen']);
+  });
+
+  test('a lower frame comes back on its own, and is not double-restored', () => {
+    // A tour frame beneath the horizon is already written down: popping the
+    // replace puts it back above the horizon and `composeState` re-adds it.
+    // Recording it as displaced as well would restore a second copy that
+    // outlived the tour.
+    const stack = walkMixed(base(), add('sel=Person'), only('sel=Visit'));
+    expect(stack.frames[1].displaced).toEqual([]);
+    expect(composeState(base(), popFrame(stack)).sel).toEqual(['Person']);
+  });
+
+  test('a later Change: adds to the replaced canvas rather than reviving the old one', () => {
+    // What lets a step name a clean canvas and a following beat grow it.
+    const stack = walkMixed(
+      base({ sel: ['Specimen'] }), only('sel=Visit'), add('sel=TimePeriod'),
+    );
+    expect(composeState(base({ sel: ['Specimen'] }), stack).sel)
+      .toEqual(['Visit', 'TimePeriod']);
+  });
+
+  test('a second Only: moves the horizon up', () => {
+    const stack = walkMixed(base(), only('sel=Person~Participant'), only('sel=Specimen'));
+    expect(composeState(base(), stack).sel).toEqual(['Specimen']);
+    // ...and popping it lands back on the first replace, not on the empty canvas.
+    expect(composeState(base(), popFrame(stack)).sel).toEqual(['Person', 'Participant']);
+  });
+
+  test('scalars still merge across the horizon', () => {
+    // `Only:` replaces the SELECTION, not the app. A step that set the
+    // direction three steps ago is still setting it — reinstating the absolute
+    // model's "any field a step did not name snaps back" is the thing to avoid.
+    const stack = walkMixed(base(), add('dir=DOWN'), only('sel=Visit'));
+    const composed = composeState(base(), stack);
+    expect(composed.dir).toBe('DOWN');
+    expect(composed.sel).toEqual(['Visit']);
+  });
+
+  test('an id the replace also names is not treated as displaced', () => {
+    // It never left the canvas, so restoring it on the pop would add a copy
+    // that was never taken away.
+    const viewer = base({ sel: ['Visit', 'Specimen'] });
+    const stack = walkMixed(viewer, only('sel=Visit'));
+    expect(stack.frames[0].displaced).toEqual(['Specimen']);
+  });
+
+  test('a class hidden by a replace is not mistaken for a viewer untick', () => {
+    // `reconcile` reads absence as an overrule. A replace makes ids absent
+    // without the viewer touching anything, so it must read the DERIVED counts
+    // (frames above the horizon) rather than every frame ever pushed.
+    const stack = walkMixed(base(), add('sel=Person'), only('sel=Visit'));
+    const composed = composeState(base(), stack);
+    const { stack: next } = reconcile(composed, stack, {});
+    expect(next.frames[0].sel).toEqual(['Person']);
+    expect(composeState(base(), popFrame(next)).sel).toEqual(['Person']);
+  });
+
+  test('a viewer claim survives the restore', () => {
+    // They unticked something the replace was holding for them; the pop must
+    // not hand it back.
+    const viewer = base({ sel: ['Specimen'] });
+    const stack = walkMixed(viewer, only('sel=Visit'));
+    // The viewer unticks Visit, which the tour is showing.
+    const composed = composeState(viewer, stack);
+    const unticked = { ...composed, sel: composed.sel.filter(id => id !== 'Visit') };
+    const { stack: next } = reconcile(unticked, stack, {});
+    expect(next.counts.has('Visit')).toBe(false);
   });
 });

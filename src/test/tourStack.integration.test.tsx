@@ -56,11 +56,33 @@ describe('tour state stack, end to end', () => {
     resetTourRequest();
   });
 
-  /** Render, then walk the tour to the first step that puts something on the canvas. */
+  /**
+   * Render, then walk the tour to the first step that puts something on the
+   * canvas.
+   *
+   * Goes in through Help ▾, which is the only door now: the `take the tour`
+   * pill was deleted with docs/tasks.md item 2, because a second entry point
+   * to the same thing drifts from the first — and being argument-less, the
+   * pill could only ever start the tour that happens to be first in the file.
+   *
+   * With one tour declared the menu shows a plain `Take the tour` item; with
+   * several it shows a `Tours` submenu. Both are handled so this helper does
+   * not have to change again when the content file grows its other tours.
+   */
   const startTour = async () => {
     render(<ExploreApp />);
     await screen.findByRole('heading', { name: /BDCHM Explorer/i });
-    fireEvent.click(button(/take the tour/i));
+    fireEvent.click(button(/^help/i));
+    const submenu = screen.queryByRole('button', { name: /^tours/i, hidden: true });
+    if (submenu) {
+      fireEvent.click(submenu);
+      // The first tour in the file: the one the pill used to start.
+      const [first] = screen.getAllByRole('button', { hidden: true })
+        .filter(el => el.textContent && /walkthrough/i.test(el.textContent));
+      fireEvent.click(first);
+    } else {
+      fireEvent.click(button(/take the tour/i));
+    }
     await screen.findByRole('button', { name: /next/i, hidden: true });
   };
 

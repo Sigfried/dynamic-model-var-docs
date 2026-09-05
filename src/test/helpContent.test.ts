@@ -1111,3 +1111,123 @@ ${fields}
     expect(second.offsetX).toEqual({ of: 'width', times: 1.3 });
   });
 });
+
+/**
+ * `Only:` — the replacing change verb (docs/tasks.md item 3).
+ *
+ * The parser's half: `Only:` and `Change:` write the SAME field, and the
+ * difference is a flag beside it. One field rather than two because `change`
+ * is threaded as a bare query string from here to the host's push handler, and
+ * a second parallel string would double every one of those sites and let a
+ * step declare both at once.
+ */
+describe('Only:', () => {
+  const one = (body: string) =>
+    parseHelpContent(`\n## S\n\n### e\n\n- **Title:** T\n- **Description:** D\n${body}`)
+      .entries.get('e')!;
+
+  test('it carries the query and marks it as replacing', () => {
+    const e = one('- **Only:** sel=Visit~TimePeriod\n');
+    expect(e.change).toBe('sel=Visit~TimePeriod');
+    expect(e.replace).toBe(true);
+  });
+
+  test('a plain Change: is not marked', () => {
+    // `replace` stays undefined rather than false, so an additive entry is
+    // shaped exactly as it was before this field existed.
+    const e = one('- **Change:** sel=Visit\n');
+    expect(e.change).toBe('sel=Visit');
+    expect(e.replace).toBeUndefined();
+  });
+
+  test('Change: wins when both are written, by PRESENCE not truthiness', () => {
+    // An empty `Change:` is meaningful — it pushes an empty frame — so
+    // "which did the author write" cannot be decided by which value is truthy.
+    const e = one('- **Change:**\n- **Only:** sel=Visit\n');
+    expect(e.change).toBe('');
+    expect(e.replace).toBeUndefined();
+  });
+
+  test('a beat can replace on its own', () => {
+    const e = one('- **Beats:**\n  1. one\n     - Only: sel=Specimen\n');
+    expect(e.beats?.[0].change).toBe('sel=Specimen');
+    expect(e.beats?.[0].replace).toBe(true);
+  });
+
+  test('the flag reaches the positions the tour navigates', () => {
+    // The seam: `tourPositions` is what the mechanism walks, so a flag the
+    // parser sets and the position drops would be silently additive.
+    const c = parseHelpContent(
+      '\n## S\n\n### e\n\n- **Title:** T\n- **Tour:** W\n- **Description:** D\n'
+      + '- **Only:** sel=Visit\n- **Action:** Drew Visit.\n',
+    );
+    expect(tourPositions(c)[0].replace).toBe(true);
+  });
+
+  test('a replacing step still has to say what it did', () => {
+    // The `Action:` rule covers it because `Only:` writes `change` — a step
+    // that silently swaps the canvas is worse than one that silently adds.
+    for (const p of positions) {
+      if (p.replace) expect(p.action, `${p.entry.id} replaces without an Action:`).toBeTruthy();
+    }
+  });
+});
+
+/**
+ * Named tours (docs/tasks.md item 2).
+ *
+ * The parser has supported `Tour: <name>` since 2026-08-28, but nothing could
+ * SELECT one: `HelpProvider` called `tourPositions(content)` with no name, so
+ * only the first tour in the file was ever runnable and a second one parsed
+ * cleanly, passed every test, and was unreachable.
+ */
+describe('tour selection', () => {
+  const two = parseHelpContent(`
+## S
+
+### a
+
+- **Title:** A
+- **Tour:** First
+- **Description:** D
+
+### b
+
+- **Title:** B
+- **Tour:** Second
+- **Description:** D
+
+### c
+
+- **Title:** C
+- **Tour:** First
+- **Description:** D
+`);
+
+  test('every tour in the file is listed, in file order', () => {
+    expect(tourNames(two)).toEqual(['First', 'Second']);
+  });
+
+  test('a named tour sees only its own steps', () => {
+    expect(tourSteps(two, 'First').map(e => e.id)).toEqual(['a', 'c']);
+    expect(tourSteps(two, 'Second').map(e => e.id)).toEqual(['b']);
+  });
+
+  test('no name means the FIRST tour, not every step', () => {
+    expect(tourSteps(two).map(e => e.id)).toEqual(['a', 'c']);
+  });
+
+  test('step numbers are per-tour, so each one counts from 1', () => {
+    // The counter's denominator comes from `tourSteps(content, name).length`;
+    // numbering across tours would show "2 / 1" on a one-step tour.
+    expect(tourPositions(two, 'First').map(p => p.step)).toEqual([1, 2]);
+    expect(tourPositions(two, 'Second').map(p => p.step)).toEqual([1]);
+  });
+
+  test('an unknown tour name yields no steps rather than falling back', () => {
+    // What makes `startTour('typo')` a visible no-op instead of silently
+    // running whichever tour happens to be first.
+    expect(tourSteps(two, 'Nope')).toEqual([]);
+    expect(tourPositions(two, 'Nope')).toEqual([]);
+  });
+});

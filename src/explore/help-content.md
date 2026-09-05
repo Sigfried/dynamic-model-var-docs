@@ -51,7 +51,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
       entities. There are five ways an entity can be related to another.
    2. highlight row
    3. click checkbox.
-</details>
+</details><!-- end of draft text -->
 
 
 ### following steps not finished yet. ignore
@@ -61,12 +61,14 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
     A better sequence of events would be:
     - anchor on unchecked MeasurementObservation selection row
     - actually would be better if this were not 
-- **Change: allow add, remove, clear.** The authoring
-  format has an additive `Change:` and no remove verb. Consequence
-  today: tour step 4 ADDS to step 3's canvas instead of replacing it,
-  so the canvas is cumulative where the copy reads as if it were
-  showing a clean two-box example.
-  Tracked as [TASKS.md](../../docs/TASKS.md) item 3.
+- ~~**Change: allow add, remove, clear.**~~ **DONE 2026-09-05** — the verb is
+  `Only:`, which replaces the selection where `Change:` adds to it. So a step
+  that wants a clean two-box example writes `Only: sel=Visit~TimePeriod` and
+  gets exactly that, and `back` still restores what it displaced. Spec:
+  [FORMAT.md](../help/FORMAT.md#only--a-step-that-names-the-whole-canvas).
+  The steps below have NOT been rewritten to use it — `graph-canvas` still
+  adds to `relationship-kinds`' canvas, which is the cumulative case the
+  original note was about.
 - **Tour authoring notes + draft preview** — `Note:` / `Draft:`
   / `ForClaude:` fields, and a way to view a tour *including* its
   parked and unfinished steps. deferred 2026-08-27 for time.
@@ -75,21 +77,24 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
   Deliberately not done: you said "1 for now; may need 2 soon". The block
   reader (`extractBlockField`) is written generically, so each field is a
   one-line change when you want it.
+</details><!-- end of todo -->
 
-
-</details>
 ---
 <details open>
-<summary><b>Getting started</b></summary>
+<summary><b>Tours</b></summary>
 
-## Getting started
+<div style="margin-left: 40px">
+<details open>
+<summary><b>The BioData Catalyst Harmonized Model</b></summary>
 
-What this app is and how to move around it.
+## The BioData Catalyst Harmonized Model
+- **TourMetadata:** The BioData Catalyst Harmonized Model
+- **Description:** Introduction to the model: what it contains and what it's for
 
-### intro
+### bdchm
 
-- **Title:** BDCHM Explorer
-- **Tour:** Walkthrough
+- **Title:** The BioData Catalyst Harmonized Model
+- **Tour:** The BioData Catalyst Harmonized Model
 - **Description:** 
   BioData Catalyst ([BDC](https://biodatacatalyst.nhlbi.nih.gov/))
   is a cloud-based ecosystem where researchers can find and work with
@@ -101,7 +106,23 @@ What this app is and how to move around it.
   cohorts (e.g., the Framingham Heart Study and Women's Health Initiative)
   and the [INCLUDE Data Hub](https://portal.includedcc.org/) have been
   harmonized to it so far with more on their way.
+</details><!-- end of BDCHM tour -->
+</div>
 
+---
+<div style="margin-left: 40px">
+<details>
+<summary><b>Walkthrough (old -- needs replacing)</b></summary>
+
+## Walkthrough
+- **TourMetadata:** Walkthrough
+- **Description:** The original tour. Parts will be used for specific tours now.
+
+### intro
+
+- **Title:** BDCHM Explorer
+- **Tour:** Walkthrough
+- **Description:** 
   BDCHM and the ingestion pipeline are built using [LinkML](https://linkml.io/).
   Neither the raw LinkML [YAML file](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/blob/main/src/bdchm/schema/bdchm.yaml)
   nor the LinkML [generated documentation](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/)
@@ -224,9 +245,11 @@ What this app is and how to move around it.
 - **Context:** An entity can sit in more than one place in the tree, because things can be owned by more than one kind of thing. The widget marks the duplicates for you.
 - **Anchor:** selection-tree
 
-</details>
+</details><!-- end of Walkthrough tour -->
+</div>
+
 ---
-<details open>
+<details>
 <summary><b>Reading the diagram</b></summary>
 
 ## Reading the diagram
@@ -271,6 +294,11 @@ What the boxes and lines mean.
   panel, not the canvas. The old canvas copy is preserved as
   `graph-canvas-reading` below. Consider renaming this entry.
 -->
+</details><!-- end of Reading the diagram -->
+</details><!-- end of Tours -->
+
+<details>
+<summary><b>Non-tour help items</b></summary>
 
 ### graph-canvas-reading
 
@@ -308,8 +336,9 @@ What the boxes and lines mean.
 - **Context:** Lines leaving a child's rows take that child's colour, so you can trace a line back to the block it came from.
 
 </details>
+
 ---
-<details open>
+<details>
 <summary><b>Sharing what you see</b></summary>
 
 ## Sharing what you see
@@ -324,19 +353,22 @@ What the boxes and lines mean.
 - **Context:** Settings travel in the link, so a diagram you set up deliberately does not get redrawn with someone else's preferences.
 - **Change:**
 
+<!--  probably not necessary; you'd already be there by the time you can display them, right?
 ### help-menu
 
 - **Title:** Help
 - **Description:** Everything explaining the diagram, in one menu.
+  - **Tours** — guided walks, simplest first. Start anywhere: each one stands on its own, and you can leave with **Esc**.
   - **Ownership legend** — what the arrows, colors and toolbar buttons mean, and every relationship in the schema grouped by the rule that classified it.
   - **Example cases** — named selections that show particular routing and inheritance situations. Useful for seeing what the diagram does with the awkward cases.
 
-  The two open as separate panels, so you can keep the legend up while you flip through cases.
+  The legend and the cases open as separate panels, so you can keep the legend up while you flip through cases.
 
 ### help-button
 
 - **Title:** Help and tour
 - **Description:** **Take the tour** for a short guided walk through the app. Press `?` anywhere to start it, and again (or `Esc`) to leave.
 - **Shortcut:** ?
+-->
 
 </details>
