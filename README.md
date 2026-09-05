@@ -29,8 +29,16 @@ sync* below.
   worth keeping straight
   ([OWNERSHIP_CLASSIFICATION.md](docs/OWNERSHIP_CLASSIFICATION.md#entity-is-the-universal-root-and-we-draw-it-only-as-a-range))
 - 69% of variables (107 of 155) map to `MeasurementObservation`
-- Most relationships are **ownership** edges derived from slot ranges; the rules
-  for deriving them are the app's central idea, and are not in the schema
+- **The schema does not say what belongs to what.** It expresses has-a
+  relationships several different ways, following no strict rule — sometimes
+  the collection sits on the owner, sometimes the pointer sits on the owned
+  thing, and cardinality does not settle it. To make the model legible we had
+  to **invent** rules for reading ownership out of that, plus a set of
+  exceptions where the rules give the wrong answer. Those rules and their
+  exceptions are what the diagram draws, and they are a curated reading of the
+  schema, not something you can look up in it. In practice: **two rules** keyed
+  on `multivalued` and `range`, plus about 19 hand-curated exceptions, covering
+  149 edges
   ([OWNERSHIP_CLASSIFICATION.md](docs/OWNERSHIP_CLASSIFICATION.md))
 
 ### Two apps

@@ -17,13 +17,32 @@ conclude **`B` is reached through `A`** — `A` is where you start if you want t
 find `B`. (The layout runs left-to-right by default, so "before" usually means
 to the left.)
 
-The schema states these relationships **both ways round**. `ObservationSet`
-stores its `observations` **owner-side** — the owner holds a collection.
-`Observation.associated_participant` stores the same kind of relationship
-**member-side** — the member holds a pointer to what it belongs to. Both say
-"X belongs to Y"; they differ only in which end the schema put the slot on.
-**Storage direction is normalized before drawing**, or every observation,
+## Why there are rules at all
+
+**The schema does not say what belongs to what.** It expresses has-a
+relationships several different ways, following no strict rule, so ownership
+cannot be looked up — it has to be *read out*. These rules are **invented** for
+that purpose: they are a curated interpretation imposed on the schema to convey
+what logically belongs to what, and the exceptions exist because the rules
+themselves give the wrong answer in specific places.
+
+That matters for how to treat this file. A rule here is not a fact about
+BDCHM that a test could confirm against the source; it is a judgement that has
+to keep earning its place, and **the override sets are editorial** — which is
+why a schema sync can silently invalidate one and why classification calls are
+Siggie's, not mechanical. Where a reading turns out wrong, the fix is to change
+the rule or add an exception, not to look for what the schema "really" meant.
+
+The clearest instance is that the schema states these relationships **both ways
+round**. `ObservationSet` stores its `observations` **owner-side** — the owner
+holds a collection. `Observation.associated_participant` stores the same kind of
+relationship **member-side** — the member holds a pointer to what it belongs to.
+Both say "X belongs to Y"; they differ only in which end the schema put the slot
+on. **Storage direction is normalized before drawing**, or every observation,
 exposure and procedure lands before the Participant it describes.
+
+Cardinality does not settle it either, which is why Rule 2 needs two exceptions
+of its own — see the rules below.
 
 ---
 
