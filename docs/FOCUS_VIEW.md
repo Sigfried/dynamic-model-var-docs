@@ -41,7 +41,7 @@ reimplementation. It reuses `LayoutManager`'s primitives (`ItemsPanel`,
 `Section`, `LinkOverlay`, floating boxes). The ONLY intended differences:
 
 1. **Left panel (top): category-grouped class list + multi-select.** Categories
-   (from `entityCategories.ts` via `DataService.getCategoryGroups()`) as an extra
+   (from [`entityCategories.ts`](../src/config/entityCategories.ts) via `DataService.getCategoryGroups()`) as an extra
    tree layer above classes. Multi-select checkboxes. Starts all-collapsed.
 2. **Left panel (bottom): containment digraph widget** (`dag-browser-widget`),
    scoped to the selected subset. Shares selection with the top selector.
@@ -101,7 +101,7 @@ reimplementation. It reuses `LayoutManager`'s primitives (`ItemsPanel`,
   contained entities are ALSO roots. Render via the widget's poly-parent /
   "★ also under" handling; do NOT imply mandatory containment.
 - Derived live from `DataService.getContainmentGraph()` → the FK-inversion
-  heuristic in `src/models/containmentGraph.ts`. Edge `source→target` = "source
+  heuristic in [`src/models/containmentGraph.ts`](../src/models/containmentGraph.ts). Edge `source→target` = "source
   contains target", so `target.parentIds` includes `source` for the widget.
 - The override sets (`SINGLE_VALUE_OWNER_TARGETS`, `ASSOCIATION_SLOTS`,
   `CARDINALITY_SPLIT_OWN_FWD`, …) are hand-curated and fragile — see
@@ -127,7 +127,7 @@ reimplementation. It reuses `LayoutManager`'s primitives (`ItemsPanel`,
 
 ## What shipped vs. what remains
 **Shipped:**
-- Foundation (`c76fdcf`): `containmentGraph.ts`, `getContainmentGraph()`,
+- Foundation (`c76fdcf`): [`containmentGraph.ts`](../src/models/containmentGraph.ts), `getContainmentGraph()`,
   `getCategoryGroups()`, 10 property tests.
 - Schema-sync GitHub Action (`8adb971`).
 - Focus scaffold + category selector + containment widget + scroll fix (`d9f4cc8`).

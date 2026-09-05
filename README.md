@@ -16,7 +16,7 @@ The BioData Catalyst Harmonized Model (BDCHM) is a LinkML schema that defines:
 - **337 induced slots** (attributes, resolved per class through the inheritance chain)
 - **155 variables** (specific measurements/observations mapped to classes)
 
-Counts are from `public/source_data/HM/bdchm.processed.json` and the variable
+Counts are from [`public/source_data/HM/bdchm.processed.json`](public/source_data/HM/bdchm.processed.json) and the variable
 spec sheet, and move whenever the schema sync lands — see *Keeping the model in
 sync* below.
 
@@ -106,24 +106,24 @@ Design and reference docs: [OWNERSHIP_CLASSIFICATION.md](docs/OWNERSHIP_CLASSIFI
 
 ### Data Sources
 
-- **Model Schema**: [bdchm.yaml](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/blob/main/src/bdchm/schema/bdchm.yaml) → processed into `public/source_data/HM/bdchm.processed.json`
+- **Model Schema**: [bdchm.yaml](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/blob/main/src/bdchm/schema/bdchm.yaml) → processed into [`public/source_data/HM/bdchm.processed.json`](public/source_data/HM/bdchm.processed.json)
 - **Variable Specs**: [Table S1 (Google Sheet)](https://docs.google.com/spreadsheets/d/1PDaX266_H0haa0aabMYQ6UNtEKT5-ClMarP0FvNntN8/edit?gid=0#gid=0) → `variable-specs-S1.tsv`
 
 **To update data manually**: `npm run download-data`
 
-The schema is read straight from `bdchm.yaml` by `scripts/transform_schema.py`
-via LinkML's `SchemaView` (`scripts/induced_schema.py`), which resolves imports
+The schema is read straight from [`bdchm.yaml`](public/source_data/HM/bdchm.yaml) by [`scripts/transform_schema.py`](scripts/transform_schema.py)
+via LinkML's `SchemaView` ([`scripts/induced_schema.py`](scripts/induced_schema.py)), which resolves imports
 and merges inherited slots. There is no intermediate expanded-JSON artifact.
 
 ### Keeping the model in sync with upstream (maintainers)
 
 **This is largely automatic — but it needs a human to merge.**
 
-A GitHub Action (`.github/workflows/schema-sync.yml`) checks the upstream BDCHM
+A GitHub Action ([`.github/workflows/schema-sync.yml`](.github/workflows/schema-sync.yml)) checks the upstream BDCHM
 schema **daily at 07:00 UTC**, and can also be run on demand from the Actions
 tab. When upstream `main` has moved past the commit pinned in
-`scripts/download_source_data.py`, it bumps the pin, re-downloads, regenerates
-`bdchm.processed.json`, and **opens a pull request** on the branch
+[`scripts/download_source_data.py`](scripts/download_source_data.py), it bumps the pin, re-downloads, regenerates
+[`bdchm.processed.json`](public/source_data/HM/bdchm.processed.json), and **opens a pull request** on the branch
 `schema-sync/upstream-update`.
 
 It never pushes to `main`. If nobody merges the PR, the app keeps serving the
@@ -148,12 +148,12 @@ together.
 
 **What to check before merging** (the PR body repeats this):
 
-- The `bdchm.processed.json` diff looks like intended schema changes.
-- `npm run build` and `npx vitest run` pass. `entityCategories.test.ts` in
+- The [`bdchm.processed.json`](public/source_data/HM/bdchm.processed.json) diff looks like intended schema changes.
+- `npm run build` and `npx vitest run` pass. [`entityCategories.test.ts`](src/test/entityCategories.test.ts) in
   particular catches classes that upstream added but nobody categorised — an
   uncategorised class renders **nowhere** in the UI, silently.
 - Ownership-classification edge cases still hold. Several hand-curated sets in
-  `src/models/containmentGraph.ts` are keyed on schema **slot names**, so an
+  [`src/models/containmentGraph.ts`](src/models/containmentGraph.ts) are keyed on schema **slot names**, so an
   upstream rename can silently change how edges are drawn without failing any
   test. See [docs/OWNERSHIP_CLASSIFICATION.md](docs/OWNERSHIP_CLASSIFICATION.md).
 
@@ -196,7 +196,7 @@ models, edge routing and ports, help/tour content, and component rendering.
 
 Several are **regression tests guarding bugs that shipped for months** — they
 pin behaviour that no earlier test asserted, so a failure there usually means
-the schema changed rather than the code broke. `mergedEdges.test.ts` says which.
+the schema changed rather than the code broke. [`mergedEdges.test.ts`](src/test/mergedEdges.test.ts) says which.
 
 See [TESTING.md](docs/TESTING.md) for testing philosophy and how to write tests.
 

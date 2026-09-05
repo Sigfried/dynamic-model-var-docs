@@ -83,17 +83,17 @@ verified 2026-09-05 — run `npx vitest run` for the live figure).
 
 Three files worth knowing about, because each guards a bug that shipped for months:
 
-- **`slotDisplayName.test.ts`** — a slot's `.name` is its (possibly qualified)
+- **[`slotDisplayName.test.ts`](../src/test/slotDisplayName.test.ts)** — a slot's `.name` is its (possibly qualified)
   identity and `.displayName` is the bare name the user reads. The key assertion
   is that **the attributes-table Name column equals the graph's edge label**;
   no such check existed, which is why qualified ids rendered on screen from Dec
   2025 to Aug 2026.
-- **`slotConflictResolution.test.ts`** — conflicting slot declarations must not
+- **[`slotConflictResolution.test.ts`](../src/test/slotConflictResolution.test.ts)** — conflicting slot declarations must not
   collapse. Pins the two edges that were drawn wrong (`items`, `part_of`), the
   `focus` multivalued distinction, and a structural guard that every class
   slot-reference resolves to a slot element.
 
-- **`attributeCardinality.test.ts`** — every attribute row carries a
+- **[`attributeCardinality.test.ts`](../src/test/attributeCardinality.test.ts)** — every attribute row carries a
   cardinality, whether or not it is drawn as an edge. The label used to come
   from the edge, so scalar-ranged rows (never drawn) showed a blank and
   `Document.url` read as having no cardinality when it is `1..*`.
@@ -442,7 +442,7 @@ reporting on the harness, not the code.
 one.** Before trusting a layout measurement in a test, check what the component
 actually touches — `getBoundingClientRect` is rarely the only one.
 
-`src/test/RelationBarPlacement.test.tsx` is the worked example: it stubs
+[`src/test/RelationBarPlacement.test.tsx`](../src/test/RelationBarPlacement.test.tsx) is the worked example: it stubs
 `getBoundingClientRect`, `window.innerWidth` and `window.innerHeight`, using the
 component's own Tailwind widths as the numbers so the fake geometry stays
 honest. (It was ported from a placement test for the cascading relation menu
@@ -472,14 +472,14 @@ Two conventions from that file worth copying:
 
 **When *not* to reach for this.** Faking geometry is a lot of scaffolding and it
 can drift from the real CSS. If the behaviour is decidable from data rather than
-pixels, test it there instead — `relationPositions.test.ts` covers what the menu
+pixels, test it there instead — [`relationPositions.test.ts`](../src/test/relationPositions.test.ts) covers what the menu
 *contains* with no layout at all, and only *where it opens* needed the stubs.
 
 **Known gap (2026-08-27).** Five other components measure layout and have no
 placement test between them: `FloatingBoxGroup`, `Tooltip`, `LayoutManager`,
 `LinkOverlay`, and `help/HelpLayer`. Any positioning bug in those is currently
 found by looking at the screen. Not a call to go write five test files — but if
-one of them misbehaves, this section plus `RelationBarPlacement.test.tsx` is
+one of them misbehaves, this section plus [`RelationBarPlacement.test.tsx`](../src/test/RelationBarPlacement.test.tsx) is
 the pattern to reach for rather than re-deriving it.
 
 ---

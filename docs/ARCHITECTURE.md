@@ -47,8 +47,8 @@ This principle guides the UX design:
 
 ## Data Flow Overview
 
-> **Shipped `e8b8bd0`**: the transform reads `bdchm.yaml` directly through
-> LinkML's `SchemaView` / `induced_class()` (`scripts/induced_schema.py`), which
+> **Shipped `e8b8bd0`**: the transform reads [`bdchm.yaml`](../public/source_data/HM/bdchm.yaml) directly through
+> LinkML's `SchemaView` / `induced_class()` ([`scripts/induced_schema.py`](../scripts/induced_schema.py)), which
 > resolves imports and merges inherited slots itself. The old `gen-linkml` step
 > and its `bdchm.expanded.json` artifact are **gone** — the file was deleted
 > 2026-08-31. Earlier notes describing a two-step expand-then-transform pipeline
@@ -75,14 +75,14 @@ graph TD
 
 | File | Role |
 |------|------|
-| `scripts/transform_schema.py` | Transforms `bdchm.yaml` into the app-specific format |
-| `scripts/induced_schema.py` | Wraps LinkML `SchemaView.induced_class()`; supplies the merged per-class slot definitions the transform consumes |
-| `scripts/download_source_data.py` | Pulls upstream sources and drives the transform (the GitHub Action's entry point) |
-| `src/input_types.ts` | TypeScript DTOs matching the processed JSON shape |
-| `src/utils/dataLoader.ts` | Loads JSON/TSV, transforms DTOs → domain types (`SchemaData`) |
-| `src/models/SchemaTypes.ts` | Domain types used after transformation (`SlotData`, `ClassData`, etc.) |
-| `src/models/Element.ts` | Domain model classes (`ClassElement`, `SlotElement`, etc.) |
-| `src/services/DataService.ts` | API layer between model and UI |
+| [`scripts/transform_schema.py`](../scripts/transform_schema.py) | Transforms [`bdchm.yaml`](../public/source_data/HM/bdchm.yaml) into the app-specific format |
+| [`scripts/induced_schema.py`](../scripts/induced_schema.py) | Wraps LinkML `SchemaView.induced_class()`; supplies the merged per-class slot definitions the transform consumes |
+| [`scripts/download_source_data.py`](../scripts/download_source_data.py) | Pulls upstream sources and drives the transform (the GitHub Action's entry point) |
+| [`src/input_types.ts`](../src/input_types.ts) | TypeScript DTOs matching the processed JSON shape |
+| [`src/utils/dataLoader.ts`](../src/utils/dataLoader.ts) | Loads JSON/TSV, transforms DTOs → domain types (`SchemaData`) |
+| [`src/models/SchemaTypes.ts`](../src/models/SchemaTypes.ts) | Domain types used after transformation (`SlotData`, `ClassData`, etc.) |
+| [`src/models/Element.ts`](../src/models/Element.ts) | Domain model classes (`ClassElement`, `SlotElement`, etc.) |
+| [`src/services/DataService.ts`](../src/services/DataService.ts) | API layer between model and UI |
 | `src/components/` | React components (must only use `Element` and `DataService`) |
 
 ---
@@ -113,7 +113,7 @@ All LinkML generators (JSON Schema, Python, Pydantic) use `class_induced_slots()
 
 ### Conflicting Inline Attributes (fixed 2026-08-24)
 
-`transform_schema.py` used to create one slot entry per unique name: when several classes declared the same attribute name differently, the **first class encountered won** — first being dict iteration order — and the rest were silently dropped behind a stderr warning. Two edges in the shipped diagram were wrong as a result (`items` and `part_of`).
+[`transform_schema.py`](../scripts/transform_schema.py) used to create one slot entry per unique name: when several classes declared the same attribute name differently, the **first class encountered won** — first being dict iteration order — and the rest were silently dropped behind a stderr warning. Two edges in the shipped diagram were wrong as a result (`items` and `part_of`).
 
 `resolve_slot_ids()` now decides the id for every `(class, attribute)` site up front. **One rule: if two sites disagree on a load-bearing field, they are not the same slot**, so every site of that name gets its own `{slot}-{Class}` id and none keeps the bare name. A name whose sites all agree keeps its bare id.
 
@@ -165,9 +165,9 @@ Since 2026-08-12 there are **two Vite entry points**:
   Selection table + layered ownership DAG + detail drawer. See
   **[EXPLORE_VIZ.md](EXPLORE_VIZ.md)**. State (`?sel=`, `?detail=`, `?roots=`,
   `?sibs=`, `?dir=`, `?merge=`) is URL-encoded through a single writer in
-  `ExploreApp.tsx`. `?sel=` is the whole content of the canvas: adding a class
+  [`ExploreApp.tsx`](../src/explore/ExploreApp.tsx). `?sel=` is the whole content of the canvas: adding a class
   from the diagram selects it, so there is no separate `?exp=`.
-- **`previous.html` → `src/App.tsx`** — the previous app, holding the three
+- **`previous.html` → [`src/App.tsx`](../src/App.tsx)** — the previous app, holding the three
   older views below, linked each way from the header.
 
 `src/explore/graph-core/` is the layout/zoom engine (ELK in a worker, pan/zoom,
@@ -191,7 +191,7 @@ the 3-panel shape). The shared floating-box orchestration is being extracted int
 **Ownership graph** (called "containment" in code; the rename is pending).
 `DataService.getContainmentGraph(classIds?)` derives a directed (possibly
 cyclic) graph live from the schema graph via the FK-inversion heuristic in
-`src/models/containmentGraph.ts`. `getContainmentNodes()` adapts it to the
+[`src/models/containmentGraph.ts`](../src/models/containmentGraph.ts). `getContainmentNodes()` adapts it to the
 `dag-browser-widget` `Node[]` shape. This replaced the static
 `public/*-graph.json` mockup data, which had drifted from the schema; that
 data and the Python prototypes that generated it were **deleted 2026-09-05**,
@@ -207,7 +207,7 @@ override sets after every upstream schema sync — see
 §"hand-curated config rot", which lists all of them.
 
 **`DataService.getOwnershipSubgraph(selected, options)`**
-(`src/models/ownershipSubgraph.ts`) is what the Explore canvas draws: **nothing
+([`src/models/ownershipSubgraph.ts`](../src/models/ownershipSubgraph.ts)) is what the Explore canvas draws: **nothing
 that was not selected** — the selection and the edges among them, full stop
 (Siggie, 2026-08-27; ticking one checkbox has to draw one box). Each node's
 direct owners are reported in `hiddenOwners`, and what it owns in
@@ -245,28 +245,28 @@ measurements.
 ## DTOs vs Domain Models vs DataService
 
 > **Note**: This layering is likely to simplify as `linkml-runtime` takes on
-> more. The Python side already uses it (`scripts/induced_schema.py`, see Data
+> more. The Python side already uses it ([`scripts/induced_schema.py`](../scripts/induced_schema.py), see Data
 > Flow above); the open question is whether a runtime JS `SchemaView` could
 > answer the relationship queries `graphology` handles today —
 > `classAncestors`, `classInducedSlots`, "which classes use this enum" — and
-> how much of `transform_schema.py` and `dataLoader.ts` that would retire.
+> how much of [`transform_schema.py`](../scripts/transform_schema.py) and [`dataLoader.ts`](../src/utils/dataLoader.ts) that would retire.
 > Link visualization is spatial and would still need its own structure.
 > Prototype before committing. (This paragraph absorbs the live remainder of
 > `LINKML_INTEGRATION.md`, deleted 2026-09-05 once its options had been decided
 > and shipped.)
 
 **Current layers:**
-- **DTOs** (`input_types.ts`): Raw data shapes matching JSON/TSV files
-- **Domain types** (`models/SchemaTypes.ts`): Transformed types (`SlotData`, `ClassData`, etc.)
-- **Domain models** (`models/Element.ts`): Classes with behavior (`ClassElement`, `SlotElement`, etc.)
-- **DataService** (`services/DataService.ts`): API layer between models and UI
+- **DTOs** ([`input_types.ts`](../src/input_types.ts)): Raw data shapes matching JSON/TSV files
+- **Domain types** ([`models/SchemaTypes.ts`](../src/models/SchemaTypes.ts)): Transformed types (`SlotData`, `ClassData`, etc.)
+- **Domain models** ([`models/Element.ts`](../src/models/Element.ts)): Classes with behavior (`ClassElement`, `SlotElement`, etc.)
+- **DataService** ([`services/DataService.ts`](../src/services/DataService.ts)): API layer between models and UI
 
 **Flow**: DTOs → dataLoader transforms → domain types → Element instances → DataService → UI
 
 **Completed refactoring:**
-- `types.ts` → `input_types.ts` (clarify as DTOs)
-- UI types (`ItemInfo`, `EdgeInfo`, `DetailSection`) → `ComponentData.ts`
-- `import_types.ts` imported only by dataLoader, Element, SchemaTypes, and tests
+- [`types.ts`](../src/explore/graph-core/types.ts) → [`input_types.ts`](../src/input_types.ts) (clarify as DTOs)
+- UI types (`ItemInfo`, `EdgeInfo`, `DetailSection`) → [`ComponentData.ts`](../src/contracts/ComponentData.ts)
+- [`input_types.ts`](../src/input_types.ts) imported only by dataLoader, Element, SchemaTypes, and tests
 
 ### Element Identity: .displayName vs .name / getId()
 
@@ -290,7 +290,7 @@ sorting slots by `.name` files `value-QuestionnaireResponseValueBoolean` under
 its class suffix instead of beside the other `value` slots.
 
 Rendering `.name` for a slot is the bug that shipped from Dec 2025 to Aug 2026
-(qualified ids on screen). `src/test/slotDisplayName.test.ts` guards it by
+(qualified ids on screen). [`src/test/slotDisplayName.test.ts`](../src/test/slotDisplayName.test.ts) guards it by
 asserting the attributes-table Name column equals the graph's edge label.
 
 ### Attributes as data: `getAttributeSummaries()`

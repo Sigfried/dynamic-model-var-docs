@@ -49,7 +49,7 @@ Components must ONLY use abstract `Element` and `ElementCollection` classes. The
 The project includes ESLint rules that prevent architectural violations in components:
 
 **Rule 1: Ban DTO imports in components/**
-- **Banned imports**: `ClassNode`, `EnumDefinition`, `SlotDefinition`, `SelectedElement` from `types.ts`
+- **Banned imports**: `ClassNode`, `EnumDefinition`, `SlotDefinition`, `SelectedElement` from [`types.ts`](../src/explore/graph-core/types.ts)
 - **Scope**: `src/components/**/*.{ts,tsx}` only
 - **Why**: Components must use Element classes, not raw DTOs
 - **Error message**: "Components must not import DTOs. Use Element classes from models/Element instead."
@@ -106,10 +106,10 @@ For architecture details, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 UI components (in `src/components/` and `src/hooks/`) must:
 - ✅ Import from `services/DataService` (functions, types, interfaces)
-- ✅ Import from other UI components (e.g., `Section.tsx`)
+- ✅ Import from other UI components (e.g., [`Section.tsx`](../src/components/Section.tsx))
 - ✅ Import from `utils/` (helper functions)
 - ❌ **NEVER** import from `models/` (not even types — DataService re-exports needed types)
-- ❌ **NEVER** import DTOs from `input_types.ts`
+- ❌ **NEVER** import DTOs from [`input_types.ts`](../src/input_types.ts)
 
 ### Error Handling: Fail Loudly in Development
 
@@ -187,6 +187,34 @@ if (!element) {
   One such mistake put ~1128 lines of two sessions' implementation inside
   `b17db08`, a commit whose message claims it is docs-only.
 
+### Doc references are links, and links are checked
+
+**Every reference to a file — code included — is a markdown link**, not a bare
+backticked name. A link can be verified; a backticked name cannot, which is how
+`import_types.ts` (a typo for `input_types.ts`) sat one line under the rename it
+was describing until a link pass found it.
+
+Two exceptions, both deliberate: a ref carrying a **line number**
+(`ExploreApp.tsx:301`) stays plain, because the line drifts and a link implies a
+precision the ref does not have; and a ref to a file that **does not exist** —
+one named as deleted, renamed, or living in another repo — obviously stays plain.
+
+To check after editing docs:
+
+```bash
+python3 - <<'EOF'
+import re, os, glob
+bad=[]
+for f in ['README.md']+glob.glob('docs/*.md'):
+    d=os.path.dirname(f) or '.'
+    for m in re.finditer(r'\[[^\]]*\]\(([^)#]+?)(#[^)]*)?\)', open(f,encoding='utf-8').read()):
+        t=m.group(1)
+        if t.startswith(('http','mailto:')): continue
+        if not os.path.exists(os.path.normpath(os.path.join(d,t))): bad.append(f'{f} -> {t}')
+print('\n'.join(bad) if bad else 'ALL LINKS RESOLVE')
+EOF
+```
+
 ### Measure before diagnosing
 
 **When a render looks wrong, write a probe test that prints the actual view
@@ -198,7 +226,7 @@ narrows observation_type" (it does not).
 
 The pipeline is `getOwnershipSubgraph → buildViewModel → mergeSiblings`, and all
 three are exported specifically so a probe can call them. See
-`src/test/mergedEdges.test.ts`, which is that pattern made permanent.
+[`src/test/mergedEdges.test.ts`](../src/test/mergedEdges.test.ts), which is that pattern made permanent.
 
 ---
 

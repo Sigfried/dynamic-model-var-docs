@@ -90,7 +90,7 @@ claims are not interchangeable.
 
 ### The five positions, and the two axes they decompose onto
 
-`RelationPosition` (`src/models/ownershipSubgraph.ts`) is the three kinds
+`RelationPosition` ([`src/models/ownershipSubgraph.ts`](../src/models/ownershipSubgraph.ts)) is the three kinds
 crossed with **who declares the slot**. `association` does not split, because
 neither end declares ownership:
 
@@ -125,7 +125,7 @@ directions:
 than two names for one thing. Of the four classes that own `Observation`, three
 do so because Observation points at them (`own-bkwd`) and one because
 `ObservationSet` collects it (`own-fwd`). A reader cannot infer the kind from
-the side, nor the side from the kind. `src/test/relationBar.test.ts` asserts
+the side, nor the side from the kind. [`src/test/relationBar.test.ts`](../src/test/relationBar.test.ts) asserts
 exactly this, against the real schema.
 
 `association` sits on the left because the layout orders its target first,
@@ -166,7 +166,7 @@ it doubles the ink for something the reader gets by hovering the other end.
 | any | any | association | `association` | left | | associated with | |
 
 The `close` column is what shipped, as `RELATION_POSITION_LABEL`
-(`ownershipSubgraph.ts`) — plural there, with singular forms for the two
+([`ownershipSubgraph.ts`](../src/models/ownershipSubgraph.ts)) — plural there, with singular forms for the two
 `owns-*` rows, since only those have a subject that inflects.
 
 ### Wordings considered and rejected
@@ -354,8 +354,8 @@ Inheritance is derived two independent ways today, and neither calls the other:
 
 | path | used by |
 |---|---|
-| `getParentClass` / `getSubclasses` (`Graph.ts`) | only `buildContainmentGraph`. `getSubclasses` has **no callers at all**. |
-| `DataService.getEdgesForItem(...)` filtered on `EDGE_TYPES.INHERITANCE` | `RelationshipInfoBox.tsx`, `LinkOverlay.tsx` |
+| `getParentClass` / `getSubclasses` ([`Graph.ts`](../src/models/Graph.ts)) | only `buildContainmentGraph`. `getSubclasses` has **no callers at all**. |
+| `DataService.getEdgesForItem(...)` filtered on `EDGE_TYPES.INHERITANCE` | [`RelationshipInfoBox.tsx`](../src/components/RelationshipInfoBox.tsx), [`LinkOverlay.tsx`](../src/components/LinkOverlay.tsx) |
 
 **Decided 2026-08-24: route all inheritance derivation through one accessor
 that takes a required parameter saying whether `Entity` inheritance is
@@ -387,7 +387,7 @@ filtering *is* the second derivation path.
 ### `focus` carries per-class cardinality
 
 The source YAML declares `focus` on many classes with differing cardinality.
-`bdchm.processed.json` used to collapse all of them into one slot keyed `focus`,
+[`bdchm.processed.json`](../public/source_data/HM/bdchm.processed.json) used to collapse all of them into one slot keyed `focus`,
 with `multivalued: false` and an owner that was none of the declaring classes.
 **The induced-slots migration fixed this**: there is no bare `focus` key any
 more, only 11 per-class entries (`focus-Document`, `focus-ObservationSet`,
@@ -469,7 +469,7 @@ would catch it cheaply.
 
 Three palettes, deliberately of three different **kinds**, so the three
 questions they answer cannot be confused for one another. Values live in
-`src/config/appConfig.ts`; this section is why they are what they are.
+[`src/config/appConfig.ts`](../src/config/appConfig.ts); this section is why they are what they are.
 
 | | palette | entries | what carries it |
 |---|---|---|---|
@@ -556,7 +556,7 @@ what is on canvas.
    names (`DataService.getTargetColor`).
 3. **A re-colored slot row re-colors the child header it belongs to** — the
    container borrows its contents' color (the `borrowed` map in `mergeSiblings`,
-   `OwnershipGraphView.tsx`).
+   [`OwnershipGraphView.tsx`](../src/explore/OwnershipGraphView.tsx)).
 
 **Step 3 is the load-bearing one**: it is what pairs a container with its
 contents, so `MeasurementObservationSet` and the `MeasurementObservation` it
@@ -572,7 +572,7 @@ that sibling a color on the strength of something it does not uniquely have.
 >
 > The test that proves the pairing is therefore **"a row's color equals its
 > target's color"**, swept over the real schema — not anything phrased in terms
-> of sort positions. See `src/test/siblingMerge.test.ts`, and `WORKLOG.md`
+> of sort positions. See [`src/test/siblingMerge.test.ts`](../src/test/siblingMerge.test.ts), and `WORKLOG.md`
 > (2026-09-04) for the sort-position test that was tried and is wrong twice
 > over.
 
@@ -602,7 +602,7 @@ identifiers as well as prose.
 |---|---|
 | **Labels** | None on the edge layer. A flipped edge is marked by a back-pointing arrowhead (`arrow-own-back`). **Settled 2026-09-02: no persistent edge labels** — one label, on edge hover, in a chip near the cursor, with its point of view chosen by which endpoint the pointer is nearer. Not yet built. Entity hover deliberately does *not* label all of that entity's edges (`Observation` would sprout a dozen chips); it keeps its highlight, and the words stay in the relation bar's popovers. |
 | **Source rows** | One edge per declaring class, leaving that class's own row. The port id is keyed on `(anchorClass, slot)` — the same pair `rowY` resolves by. Keyed on slot name alone, every edge in a merged-inheritance box shared one port. |
-| **Target rows** | A `slot_usage`-narrowed edge points at the **child header** matching its range, not the box header. Row-targeted edges opt out of `mergeTargets` and draw their own arrowhead; both fan passes skip them. The no-merge shortcut rests on a schema property — no family member has more than one inbound edge — which `src/test/mergedEdges.test.ts` guards, so a failure there means the schema changed, not the code. |
+| **Target rows** | A `slot_usage`-narrowed edge points at the **child header** matching its range, not the box header. Row-targeted edges opt out of `mergeTargets` and draw their own arrowhead; both fan passes skip them. The no-merge shortcut rests on a schema property — no family member has more than one inbound edge — which [`src/test/mergedEdges.test.ts`](../src/test/mergedEdges.test.ts) guards, so a failure there means the schema changed, not the code. |
 | **Colors** | See the color system above. |
 | **Adjacency** | Curved edges are gone; one arrowhead per convergence, thinner strokes. Markers use `markerUnits="userSpaceOnUse"` so they do not scale with `strokeWidth`; one marker serves both ends via `orient="auto-start-reverse"`. |
 
@@ -612,7 +612,7 @@ Still missing on dragging: obstacle-aware routing, and URL persistence. See
 ### Cardinality notation
 
 `0..1`, `1..1`, `0..*`, `1..*` — one notation, bounds written out
-(`cardinalityLabel`, `containmentGraph.ts`).
+(`cardinalityLabel`, [`containmentGraph.ts`](../src/models/containmentGraph.ts)).
 
 These were `0..1` / `1` / `*` / `+` until 2026-09-04: a UML-style range for the
 optional-single case and regex-style quantifiers for the rest. Each pair was
@@ -624,7 +624,7 @@ the four labels differ only where the facts do.
 
 ### The relation bar
 
-Each box carries a `← N   M →` bar (`RelationBar.tsx`): **N** classes it
+Each box carries a `← N   M →` bar ([`RelationBar.tsx`](../src/explore/RelationBar.tsx)): **N** classes it
 belongs to, drawn to its left; **M** it owns, drawn to its right. Hovering
 either count opens a list of the relationships on that side.
 
@@ -691,7 +691,7 @@ instead; `aria-label` keeps it available to screen readers.
 
 The bar counts **distinct classes outside the box** on each side, and a
 merged-inheritance box excludes anything folded into itself (`notSelfOrMember`,
-`OwnershipGraphView.tsx`). So selecting more can make a number fall: with
+[`OwnershipGraphView.tsx`](../src/explore/OwnershipGraphView.tsx)). So selecting more can make a number fall: with
 `Observation` unchecked it is not a member of the box named after it, so
 `ObservationSet`'s relation to it counts as outside; check `Observation` and the
 count drops.
@@ -709,7 +709,7 @@ the bar counts its own rows. See `docs/TASKS.md`.)
 ## Summary
 
 Counts measured 2026-08-31 by running the live `classifySlotEdgeExplained` rules
-over `bdchm.processed.json`, after the upstream sync to `28007df`.
+over [`bdchm.processed.json`](../public/source_data/HM/bdchm.processed.json), after the upstream sync to `28007df`.
 
 | category | rule | edges | drawn |
 |---|---|---|---|
@@ -761,14 +761,14 @@ Measured 2026-08-31 at `28007df`:
   did not.
 
 Two properties worth preserving as tests, neither asserted in
-`src/test/containmentGraph.test.ts` today: the self-loop count, and that
+[`src/test/containmentGraph.test.ts`](../src/test/containmentGraph.test.ts) today: the self-loop count, and that
 `SpecimenStorageActivity.container` as `own-fwd` reintroduces the one non-self
 cycle. Both numbers are otherwise re-derived by hand every time someone wonders,
 which is how the self-loop count drifted once already.
 
 ### What the code does today
 
-`classifySlotEdgeExplained` in `src/models/containmentGraph.ts`, in order:
+`classifySlotEdgeExplained` in [`src/models/containmentGraph.ts`](../src/models/containmentGraph.ts), in order:
 
 ```
 1. slot ∈ ASSOCIATION_SLOTS            → association          (2 entries)
@@ -811,18 +811,18 @@ These sets are hand-curated and **go stale silently on every schema sync**. See
 
 | file | what |
 |---|---|
-| `src/models/containmentGraph.ts` | `classifySlotEdge`, `classifySlotEdgeExplained`, `OWNERSHIP_RULE_TEXT`, the override sets |
-| `src/models/ownershipSubgraph.ts` | `RelationPosition`, `RELATION_POSITION_LABEL`, `buildOwnershipDag`, `computeSunkLayers` |
-| `src/services/DataService.ts` | `getOwnershipPairGroups`, `getConvergenceRanking`, `getDivergenceRanking`, `getContainmentGraph`, `getTargetColor` |
-| `src/config/appConfig.ts` | the three palettes (P1 `RANGE_COLORS`, P2 `EDGE_COLORS`, P3 `SIBLING_COLORS`) |
-| `src/explore/RelationBar.tsx` | the `← N   M →` bar and its popovers; `POSITION_AXIS` is the side/kind table |
-| `src/explore/EdgeSample.tsx` | one edge drawn as the canvas draws it; shared by the legend and the popovers |
-| `src/test/relationBar.test.ts` | pins the two axes — both kinds on both sides |
-| `src/explore/OwnershipGraphView.tsx` | edge stroke/marker selection, `mergeSiblings`, `countsOf`, `rowY`, `mergeTargets` |
-| `src/explore/siblingMerge.ts` | `groupSiblings`, `siblingColor`, `buildSiblingColorIndex` |
-| `src/explore/OwnershipLegend.tsx` | renders every slot grouped by rule |
-| `src/test/ownershipLegend.test.ts` | asserts the legend cannot drift from the graph's actual edges |
-| `src/test/siblingMerge.test.ts`, `src/test/mergedEdges.test.ts` | color stability, merged-box edge targeting |
+| [`src/models/containmentGraph.ts`](../src/models/containmentGraph.ts) | `classifySlotEdge`, `classifySlotEdgeExplained`, `OWNERSHIP_RULE_TEXT`, the override sets |
+| [`src/models/ownershipSubgraph.ts`](../src/models/ownershipSubgraph.ts) | `RelationPosition`, `RELATION_POSITION_LABEL`, `buildOwnershipDag`, `computeSunkLayers` |
+| [`src/services/DataService.ts`](../src/services/DataService.ts) | `getOwnershipPairGroups`, `getConvergenceRanking`, `getDivergenceRanking`, `getContainmentGraph`, `getTargetColor` |
+| [`src/config/appConfig.ts`](../src/config/appConfig.ts) | the three palettes (P1 `RANGE_COLORS`, P2 `EDGE_COLORS`, P3 `SIBLING_COLORS`) |
+| [`src/explore/RelationBar.tsx`](../src/explore/RelationBar.tsx) | the `← N   M →` bar and its popovers; `POSITION_AXIS` is the side/kind table |
+| [`src/explore/EdgeSample.tsx`](../src/explore/EdgeSample.tsx) | one edge drawn as the canvas draws it; shared by the legend and the popovers |
+| [`src/test/relationBar.test.ts`](../src/test/relationBar.test.ts) | pins the two axes — both kinds on both sides |
+| [`src/explore/OwnershipGraphView.tsx`](../src/explore/OwnershipGraphView.tsx) | edge stroke/marker selection, `mergeSiblings`, `countsOf`, `rowY`, `mergeTargets` |
+| [`src/explore/siblingMerge.ts`](../src/explore/siblingMerge.ts) | `groupSiblings`, `siblingColor`, `buildSiblingColorIndex` |
+| [`src/explore/OwnershipLegend.tsx`](../src/explore/OwnershipLegend.tsx) | renders every slot grouped by rule |
+| [`src/test/ownershipLegend.test.ts`](../src/test/ownershipLegend.test.ts) | asserts the legend cannot drift from the graph's actual edges |
+| [`src/test/siblingMerge.test.ts`](../src/test/siblingMerge.test.ts), [`src/test/mergedEdges.test.ts`](../src/test/mergedEdges.test.ts) | color stability, merged-box edge targeting |
 
 **Do not start implementation from this appendix or from the code.** Both are the
 accumulated result of decisions whose reasoning is in `WORKLOG.md`. Start from

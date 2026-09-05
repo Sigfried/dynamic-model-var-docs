@@ -88,7 +88,7 @@ The cause was not the merge logic. The view model was always right; the row port
 id in `buildSpec` was keyed on the slot NAME alone, so the parent row and every
 child override claimed one port and `addPort` kept only the first — every later
 edge silently inherited the first one's y. Which row won depended on enumeration
-order, so it looked like two different bugs. `src/test/mergedEdges.test.ts`
+order, so it looked like two different bugs. [`src/test/mergedEdges.test.ts`](../src/test/mergedEdges.test.ts)
 asserts on the PORTS, since the pre-existing anchor assertion passed throughout
 the bug's life.
 
@@ -144,7 +144,7 @@ perspective — the distinction Siggie insisted on, correctly:
 | **it owns me** | own-bkwd (my FK) | own-fwd (their attribute) |
 
 ⚠️ **Implementation consequence:** the DAG **flips `own-bkwd` at graph-build
-time** (`containmentGraph.ts`), so by the time you hold `parents`/`children` the
+time** ([`containmentGraph.ts`](../src/models/containmentGraph.ts)), so by the time you hold `parents`/`children` the
 declaring side has been erased. Recovering it means **carrying the verdict
 through the DAG**, not just the direction.
 
@@ -164,7 +164,7 @@ below are unaddressed by it.)*
 #### Fan-out — why `add all` is dangerous
 
 MEASURED. `expand` adds exactly one id, so the extra boxes are not the click —
-they come from `ownershipSubgraph.ts`, where **one-hop-up is applied to every
+they come from [`ownershipSubgraph.ts`](../src/models/ownershipSubgraph.ts), where **one-hop-up is applied to every
 core node including newly expanded ones**, capped at 5.
 
 Probe: Participant alone → 4 boxes. Expanding DimensionalObservation → **7
@@ -212,7 +212,7 @@ Missing:
    would have routed around. **ELK cannot fix this** — see WORKLOG for why
    `noLayout`, `Fixed Layout`, INTERACTIVE and libavoid are all dead ends. The
    real fix is an orthogonal obstacle router (A*/visibility graph), pure
-   geometry, testable in `paths.ts`. **Not scoped — needs Siggie's go-ahead.**
+   geometry, testable in [`paths.ts`](../src/explore/graph-core/paths.ts). **Not scoped — needs Siggie's go-ahead.**
 2. **No URL persistence.** Moves live in `OwnershipGraphView` and vanish on
    reload. Siggie wants dragging permanent, so they should lift to `ExploreApp`
    and encode alongside `?sel=`. Note coordinates are layout-dependent —
@@ -234,7 +234,7 @@ visually.** If it does not hold, the honest options are patching the widget
 upstream (npm dep at `^0.2.0`; no local copy) or dropping its default row chrome.
 
 **No horizontal scroll in the tree — MEASURED**, and re-verified 2026-08-28:
-`selectionTree.css` puts `overflow-x: auto` on `.dbw-root`, but `ExploreApp.tsx`
+[`selectionTree.css`](../src/explore/selectionTree.css) puts `overflow-x: auto` on `.dbw-root`, but [`ExploreApp.tsx`](../src/explore/ExploreApp.tsx)
 wraps it in `<div className="flex-1 overflow-y-auto min-h-0">` — **that**
 ancestor is sized to the fixed `w-96` panel, so it clips first and the inner
 scroll container never has anything to scroll. Fix belongs on the ancestor — but
@@ -312,7 +312,7 @@ the UI change.
 
 ### `goTo`'s silent no-op
 
-`HelpProvider.tsx`, in `goTo`: `const pos = positions[i]; if (!pos) return;`
+[`HelpProvider.tsx`](../src/help/HelpProvider.tsx), in `goTo`: `const pos = positions[i]; if (!pos) return;`
 
 `startTour()` calls `goTo(0)`. When `positions` is empty the call **does nothing
 and says nothing** — no error, no warning, no retry when positions arrive.
@@ -336,16 +336,16 @@ the same day; it was never committed, so it would have to be written again.)
 Several config sets are curated by hand against the schema, and an upstream sync
 can invalidate any of them **silently**. It has happened: the 2026-08-12 sync
 added `Context` and `Activity`, which then appeared nowhere in the UI. The sync
-is automated now (`.github/workflows/schema-sync.yml`), so this is a live risk on
+is automated now ([`.github/workflows/schema-sync.yml`](../.github/workflows/schema-sync.yml)), so this is a live risk on
 every run.
 
 | set | file | how a stale entry shows |
 |---|---|---|
-| `ENTITY_CATEGORIES[].classIds` | `config/entityCategories.ts` | class vanishes from the UI — **tested** |
-| `ENTITY_CATEGORIES[].pins` | `config/entityCategories.ts` | an extra box in a content view — **invisible**; partly tested |
-| `SUBCLASS_OF` | `config/entityCategories.ts` | wrong indentation — **tested** |
-| `DEFAULT_PINS` | `config/entityCategories.ts` | first-visit canvas is wrong — **tested** |
-| `SINGLE_VALUE_OWNER_TARGETS` (14), `ASSOCIATION_SLOTS` (2), `CARDINALITY_SPLIT_OWN_FWD` (2), `BACKWARD_DESPITE_MULTIVALUED` (1), `SKIP_SUBCLASS_EXPANSION` (1) | `models/containmentGraph.ts` | an edge points the wrong way — **invisible** |
+| `ENTITY_CATEGORIES[].classIds` | [`config/entityCategories.ts`](../src/config/entityCategories.ts) | class vanishes from the UI — **tested** |
+| `ENTITY_CATEGORIES[].pins` | [`config/entityCategories.ts`](../src/config/entityCategories.ts) | an extra box in a content view — **invisible**; partly tested |
+| `SUBCLASS_OF` | [`config/entityCategories.ts`](../src/config/entityCategories.ts) | wrong indentation — **tested** |
+| `DEFAULT_PINS` | [`config/entityCategories.ts`](../src/config/entityCategories.ts) | first-visit canvas is wrong — **tested** |
+| `SINGLE_VALUE_OWNER_TARGETS` (14), `ASSOCIATION_SLOTS` (2), `CARDINALITY_SPLIT_OWN_FWD` (2), `BACKWARD_DESPITE_MULTIVALUED` (1), `SKIP_SUBCLASS_EXPANSION` (1) | [`models/containmentGraph.ts`](../src/models/containmentGraph.ts) | an edge points the wrong way — **invisible** |
 
 Those five are complete as of 2026-09-05. The classifier was rewritten once and
 the sets renamed with it, so **a set name in an older doc may not exist** — check
@@ -359,7 +359,7 @@ it sat in the old override list. **A sync check should assert each still has one
 site. Not built.**
 
 **What to do after a sync:** run the suite first (it catches the tested rows),
-then re-read `src/config/entityCategories.ts` for categories and pins, and
+then re-read [`src/config/entityCategories.ts`](../src/config/entityCategories.ts) for categories and pins, and
 [OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md) for the override sets.
 The untested rows need a **reading**, not a query — the criteria are editorial,
 which is why they are hand-curated. **Ownership classification is Siggie's call,
@@ -386,7 +386,7 @@ indicative. 3 of 7 items are wrong:
   chips `⊳ {parent}` / `▷ {n}`.
 - **Item 5** — flipped edges get a "re-verbed label". **Never built.** No SVG
   text exists on the edge layer at all; the intent survives only as a comment in
-  `ownershipSubgraph.ts`. What marks a flipped edge is the back-pointing
+  [`ownershipSubgraph.ts`](../src/models/ownershipSubgraph.ts). What marks a flipped edge is the back-pointing
   arrowhead.
 - **Item 1** (owner-side/member-side normalization) is CURRENT — it is the one
   `OWNERSHIP_CLASSIFICATION.md` builds Rule 2 on.
@@ -396,7 +396,7 @@ and 232 correctly list as still-wanted. A reader who stops after the numbered
 list comes away materially wrong.
 
 **Cluster 2 — the owner cap 8→5 change was never propagated.** Wrong at lines 55
-and 118. `DEFAULT_OWNER_CAP = 5`, locked by `ownershipSubgraph.test.ts`. Knock-on:
+and 118. `DEFAULT_OWNER_CAP = 5`, locked by [`ownershipSubgraph.test.ts`](../src/test/ownershipSubgraph.test.ts). Knock-on:
 the doc's flagship BodySite example now demonstrates the **opposite** of what
 ships — 6 > 5, so BodySite falls back to chips.
 
@@ -444,7 +444,7 @@ already uses.
 ### CURIE → external definition links
 
 **The goal:** every CURIE in the schema should link to its external source
-definition. Raised because `transform_schema.py` looked like it expanded only
+definition. Raised because [`transform_schema.py`](../scripts/transform_schema.py) looked like it expanded only
 `id`/`identity`. **It doesn't** — that impression was wrong. `expand_uri()` has 8
 call sites. It only *looks* id-only because of what the source schema contains:
 
@@ -461,7 +461,7 @@ call sites. It only *looks* id-only because of what the source schema contains:
    they **reaching the UI as clickable links**, or only stored? That is the
    user-facing win.
 2. Slots carry no external mappings at all. If slots should link out, the
-   `*_mappings` fields must be populated **upstream** in `bdchm.yaml`; no
+   `*_mappings` fields must be populated **upstream** in [`bdchm.yaml`](../public/source_data/HM/bdchm.yaml); no
    transform change can invent them.
 3. `expand_uri` does a live HTTP `HEAD` per prefix (`validate=True`) — network
    I/O in CI on every sync run. `sv.expand_curie` would drop the hand-rolled
@@ -491,7 +491,7 @@ panel as the details drawer".) Bigger than it looks — the drawer is driven by
    overrides for assigning them, and the `entity.slot → entity` pairs for each.
    *(Partly shipped — the legend now covers toolbar buttons, colors and dashed
    edges. The by-reason breakdown is not built.)*
-2. `OwnershipGraphView.tsx` ended up with everything that should be a constant
-   hardcoded, instead of living somewhere like `appConfig.ts` — *"I want to be
+2. [`OwnershipGraphView.tsx`](../src/explore/OwnershipGraphView.tsx) ended up with everything that should be a constant
+   hardcoded, instead of living somewhere like [`appConfig.ts`](../src/config/appConfig.ts) — *"I want to be
    able to change the dim-other-while-something-is-highlighted opacity but don't
    know where to find it."*

@@ -43,15 +43,15 @@ the Inheritance tour uses the Observations one.
 
 | what | where |
 |---|---|
-| Which classes each category holds, which it pins, and **why** | `src/config/entityCategories.ts` — the judgement is recorded beside the data it judges |
-| The pin criterion, and the value-type rule it rests on | same file, the `pins` field doc comment; asserted by four guards in `entityCategories.test.ts` |
-| Composition (members-then-pins, deduped) | `src/config/categoryView.ts` |
-| The `⊞` glyph, and why not `▶` | `src/explore/SelectionTable.tsx` |
-| Replace-not-add, and the back button | `ExploreApp.tsx` (`showCategoryView`, `pushNextWrite`); mechanics in `WORKLOG.md` |
+| Which classes each category holds, which it pins, and **why** | [`src/config/entityCategories.ts`](../src/config/entityCategories.ts) — the judgement is recorded beside the data it judges |
+| The pin criterion, and the value-type rule it rests on | same file, the `pins` field doc comment; asserted by four guards in [`entityCategories.test.ts`](../src/test/entityCategories.test.ts) |
+| Composition (members-then-pins, deduped) | [`src/config/categoryView.ts`](../src/config/categoryView.ts) |
+| The `⊞` glyph, and why not `▶` | [`src/explore/SelectionTable.tsx`](../src/explore/SelectionTable.tsx) |
+| Replace-not-add, and the back button | [`ExploreApp.tsx`](../src/explore/ExploreApp.tsx) (`showCategoryView`, `pushNextWrite`); mechanics in `WORKLOG.md` |
 
 ⚠️ **The pin sets are hand-curated and rot invisibly on an upstream schema
 sync** — a wrong pin just draws an extra box, and no test can catch a pin that
-is merely unhelpful. Re-read `entityCategories.ts` after a sync rather than
+is merely unhelpful. Re-read [`entityCategories.ts`](../src/config/entityCategories.ts) after a sync rather than
 re-running a query; the criterion is editorial ("does this category make sense
 without it"), not mechanical. See
 [BACKLOG § hand-curated config rot](BACKLOG.md#hand-curated-config-rot).
@@ -214,7 +214,7 @@ self-loop for free.
 reintroduce them from an older draft:
 
 1. **`contained_in` is declared on `Specimen`, not `SpecimenContainer`.**
-   Verified against `bdchm.yaml` and the live classifier. The verdict and the
+   Verified against [`bdchm.yaml`](../public/source_data/HM/bdchm.yaml) and the live classifier. The verdict and the
    point of the case are unaffected; the earlier sentence named the wrong
    declaring class.
 2. **Association is slate**, not a faint blue — P2 is three hues, not a Blues
@@ -270,4 +270,4 @@ completeness in the diagram tours.
 2026-09-04, so every box shows every attribute and the `+ N more` / `− fewer`
 footer never renders. The budget machinery is intact for the intended end state:
 a preference like "Default to show top [6] attributes" that puts the footer
-back. See `OwnershipGraphView.tsx` and `rowBudget.test.ts`.
+back. See [`OwnershipGraphView.tsx`](../src/explore/OwnershipGraphView.tsx) and [`rowBudget.test.ts`](../src/test/rowBudget.test.ts).

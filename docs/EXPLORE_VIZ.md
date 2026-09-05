@@ -173,7 +173,7 @@ the style of the containment property tests.
 
 **Backbone: `supergroup/dag` v2** — published as `supergroup@2.0.0` on npm
 and installed (2026-07-28); the graphology fallback is dead. Implementation:
-`src/models/ownershipSubgraph.ts` builds the full ownership DAG once via
+[`src/models/ownershipSubgraph.ts`](../src/models/ownershipSubgraph.ts) builds the full ownership DAG once via
 `fromEdges` (self-loops skipped, parallel edges collapsed), uses
 `parents` for the one-hop owner walk (`ancestors()` only under
 `pathToRoot`) and **sunk layers** over the FULL DAG as the
@@ -191,7 +191,7 @@ Whether a member→owner FK is *ownership* (flip) or a *reference* (leave) is a
 classification decision, not a drawing decision. First build step: enumerate
 every inter-entity slot with the heuristic's current verdict; Siggie
 adjudicates the list; decisions are encoded in the override sets
-(`src/models/containmentGraph.ts`). The LinkML `containment_direction`
+([`src/models/containmentGraph.ts`](../src/models/containmentGraph.ts)). The LinkML `containment_direction`
 annotation migration stays parked (TASKS.md), but this reviewed list becomes
 its seed.
 
@@ -236,13 +236,13 @@ New dependency: `elkjs` only (skip NodeLinkView's d3-force mode in v1).
 1. ~~`getOwnershipSubgraph` + **ownership classification review** (gate:
    Siggie adjudicates the slot list) + unit tests.~~ **DONE** — classification
    2026-07-13 (`16da5f1`); `getOwnershipSubgraph` on supergroup/dag
-   2026-07-28 (`src/models/ownershipSubgraph.ts` + property tests).
+   2026-07-28 ([`src/models/ownershipSubgraph.ts`](../src/models/ownershipSubgraph.ts) + property tests).
 2. ~~Shell entry + selection table (basic), selection in URL.~~ **DONE**
    2026-07-13 (`028e3a0`).
 3. Renderer port: **mostly DONE** 2026-07-28. `src/explore/graph-core/`
    (ELK-worker layout + cancellation, partition-constrained layers,
    fixed-position ports, RAF zoom/pan — zero app imports; d3 and force mode
-   dropped in the port) + `src/explore/OwnershipGraphView.tsx` bindings:
+   dropped in the port) + [`src/explore/OwnershipGraphView.tsx`](../src/explore/OwnershipGraphView.tsx) bindings:
    HTML attribute-row nodes over an SVG edge layer; edges attach to ELK
    ports at their slot row (the ATTRIBUTE END) and at a header port on the
    target class (the ENTITY END, which names no slot), rendered from ELK's
@@ -287,7 +287,7 @@ New dependency: `elkjs` only (skip NodeLinkView's d3-force mode in v1).
    cardinality when it is `1..*`. Rows now derive it from the model
    (`getAttributeSummaries`) via the same `cardinalityLabel` the edges use.
 4. ~~Detail drawer (Explorer card reuse + the two fixes).~~ **DONE**
-   2026-08-12. `src/explore/DetailDrawer.tsx` opens on node click, reusing
+   2026-08-12. [`src/explore/DetailDrawer.tsx`](../src/explore/DetailDrawer.tsx) opens on node click, reusing
    `getClassSummary` (the Explorer card's data path) rather than
    `ClassDetailCard` itself — that card is sized to sit inline between table
    rows, hence its 8-slot cap and `max-w-[250px] truncate` descriptions. Both
@@ -309,9 +309,9 @@ New dependency: `elkjs` only (skip NodeLinkView's d3-force mode in v1).
   by Siggie against the dev server. Two bugs that shipped — pan not working at
   all, and a crash on uncheck — were both invisible to the test suite and
   found by looking at the page.
-- Regression tests worth knowing about: `useGraphLayout.test.ts` (async
-  layout staleness), `exploreReset.test.ts` (title-click reset),
-  `ownershipSubgraph.test.ts` (owner-cap and chip/node invariants).
+- Regression tests worth knowing about: [`useGraphLayout.test.ts`](../src/test/useGraphLayout.test.ts) (async
+  layout staleness), [`exploreReset.test.tsx`](../src/test/exploreReset.test.tsx) (title-click reset),
+  [`ownershipSubgraph.test.ts`](../src/test/ownershipSubgraph.test.ts) (owner-cap and chip/node invariants).
 
 ## Explicitly out of v1
 

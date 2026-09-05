@@ -16,7 +16,7 @@ BDCHM). Tasks are indexed in [TASKS.md](TASKS.md) and [BACKLOG.md](BACKLOG.md).
 **The single highest-value item here**, and it is unblocked — S3b's resolvers
 landed 2026-08-27.
 
-Placement is measured today (`getBoundingClientRect` in `HelpLayer.tsx`).
+Placement is measured today (`getBoundingClientRect` in [`HelpLayer.tsx`](../src/help/HelpLayer.tsx)).
 Migrating to `anchor-name` / `position-anchor` **deletes**:
 
 - the `resize` and capture-phase `scroll` listeners,
@@ -73,7 +73,7 @@ package must not learn what a BDCHM entity row is.
 |---|---|
 | `resolvers` prop | Anchor kinds are **host-registered, not parser-known**. The parser splits `kind:argument` and stops. dmvd's kinds: `help-id`, `entity-row`, `entity-checkbox`, `slot-row`, `node-box`. **Do not fold resolution back into the parser.** |
 | `centerOn` prop | Where an unanchored popover centres is host configuration. dmvd currently passes nothing (viewport-centred) — a host **declining** a capability is not the capability going away. |
-| `--help-font-size` | The package sizes everything in `em` off one custom property; hosts override that one value. dmvd's override is `src/explore/helpTheme.css`, imported *after* `HelpLayer` so source order decides. |
+| `--help-font-size` | The package sizes everything in `em` off one custom property; hosts override that one value. dmvd's override is [`src/explore/helpTheme.css`](../src/explore/helpTheme.css), imported *after* `HelpLayer` so source order decides. |
 | `onApplyState` / `onReadState` | Two host callbacks, not one. dmvd implements both against the URL, so the tour never learns what a selection is. |
 | `SPEC_SECTION = 'Format'` | Stays in the parser even though no file here uses it — an app may keep its spec inline. |
 
@@ -91,7 +91,7 @@ package concern.
 
 ## 3. Help mode: bring it back, in this order
 
-`HELP_MODE_ENABLED` in `src/help/helpContext.ts` is `false`, which hides the
+`HELP_MODE_ENABLED` in [`src/help/helpContext.ts`](../src/help/helpContext.ts) is `false`, which hides the
 toggle and disables the `?` shortcut — the only two ways in. **Nothing is
 deleted**; entries, anchors, resolvers, hints and the popover all still work and
 the tour drives the same registry. Flipping the flag restores it exactly as it
