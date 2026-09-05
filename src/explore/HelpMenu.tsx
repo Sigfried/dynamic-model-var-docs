@@ -2,7 +2,7 @@
  * HelpMenu — the header's cascading Help menu.
  *
  * Replaces the `example cases` header link and the two-tab pane behind it
- * (NEXT_SESSION_EDGE_DISPLAY §2.2). Those tabs put the ownership legend and the
+ * (docs/archive/NEXT_SESSION_EDGE_DISPLAY.md §2.2). Those tabs put the legend and the
  * example cases side by side as peers, which they are not: the legend is a
  * permanent feature deriving every slot classification live from the
  * classifier, and the cases are a working set that keeps shrinking. Tabbing

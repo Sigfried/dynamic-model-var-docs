@@ -119,9 +119,9 @@ for prose, where no reader has a position.
 
 The reasoning that ruled out persistent on-edge labels is in `WORKLOG.md`
 (2026-09-02). The full phrasings are below — moved here 2026-09-04 from
-`NEXT_SESSION_EDGE_DISPLAY.md` §3.2 before that file is deleted. (The pointer
-this replaces sent readers to `WORKLOG.md` for the tables; they were never
-written there.)
+`NEXT_SESSION_EDGE_DISPLAY.md` §3.2, now in `docs/archive/`. (The pointer this
+replaces sent readers to `WORKLOG.md` for the tables; they were never written
+there.)
 
 ### The phrasing table
 

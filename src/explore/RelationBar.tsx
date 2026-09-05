@@ -175,7 +175,7 @@ export function RelationBar({
   /*
    * NO `title` ON THE CHIP. A native tooltip appears ON TOP of the popover the
    * same hover just opened, covering its first rows — the exact failure
-   * NEXT_SESSION_EDGE_DISPLAY §3.4 records for the old relation-menu trigger,
+   * docs/HELP_PACKAGE_PLAN.md §4 records for the old relation-menu trigger,
    * reproduced here within minutes of the bar shipping (Siggie, screenshot
    * 2026-09-04). The popover's own header says what the chip would have said,
    * so the tooltip was never carrying anything unique.

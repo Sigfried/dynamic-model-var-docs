@@ -65,17 +65,16 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
   format has an additive `Change:` and no remove verb. Consequence
   today: tour step 4 ADDS to step 3's canvas instead of replacing it,
   so the canvas is cumulative where the copy reads as if it were
-  showing a clean two-box example. Notes about this also in
-  `help-content.md`
+  showing a clean two-box example.
+  Tracked as [TASKS.md](../../docs/TASKS.md) item 3.
 - **Tour authoring notes + draft preview** — `Note:` / `Draft:`
   / `ForClaude:` fields, and a way to view a tour *including* its
-  parked and unfinished steps. deferred 2026-08-27 for time
+  parked and unfinished steps. deferred 2026-08-27 for time.
+  Write-up: [BACKLOG.md](../../docs/BACKLOG.md#tour-authoring-notes--draft-preview)
 - **Multi-line for the OTHER fields** (`Context:`, `Action:`, beat text).
   Deliberately not done: you said "1 for now; may need 2 soon". The block
   reader (`extractBlockField`) is written generically, so each field is a
   one-line change when you want it.
-- **Multi-line for the OTHER fields** (`Context:`, `Action:`, beat text) —
-  still parked at your "1 for now". Also listed below.
 
 
 </details>

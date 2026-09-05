@@ -2,7 +2,7 @@
  * HelpPanel — the floating shell the ownership legend and the example cases
  * each open into.
  *
- * Extracted when the two-tab pane was split (NEXT_SESSION_EDGE_DISPLAY §2.2).
+ * Extracted when the two-tab pane was split (docs/archive/NEXT_SESSION_EDGE_DISPLAY.md §2.2).
  * They are separate panels now precisely so either can be closed without the
  * other, but they still want identical chrome, and two copies of a sticky
  * header with a close button is how they start to drift.

@@ -3,8 +3,8 @@
 > **⚠️ READ THIS FILE BEFORE STARTING ANY WORK ⚠️**
 >
 > This file contains critical development rules that must be followed.
-> For architecture and data flow, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-> For tasks and implementation details, see [TASKS.md](TASKS.md).
+> For architecture and data flow, see [ARCHITECTURE.md](ARCHITECTURE.md).
+> For tasks, see [TASKS.md](TASKS.md) and [BACKLOG.md](BACKLOG.md).
 
 ---
 
@@ -102,7 +102,7 @@ const info = element.getDisplayInfo();
 
 ### UI Import Rules
 
-For architecture details, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+For architecture details, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 UI components (in `src/components/` and `src/hooks/`) must:
 - ✅ Import from `services/DataService` (functions, types, interfaces)
@@ -153,7 +153,7 @@ if (!element) {
 ## 📦 Related local library
 
 **supergroup v2**: grouping + DAG library, the backbone of
-`getOwnershipSubgraph` (see docs/EXPLORE_VIZ.md). Published as
+`getOwnershipSubgraph` (see [EXPLORE_VIZ.md](EXPLORE_VIZ.md)). Published as
 `supergroup@2.0.0` on npm and installed as a dependency. Source repo:
 `~/github-repos/personal/supergroup` (spec in its
 `docs/specs/2026-07-13-supergroup-v2-design.md`; README is outdated — trust
@@ -161,10 +161,48 @@ if (!element) {
 
 ---
 
+## 🚧 GOTCHAS — read before running anything
+
+- **`npx vitest` needs node 22+.** The default `node` is v16 and fails with a
+  `node:fs/promises` export error that looks like a broken test setup but is
+  not. Use `export PATH="$HOME/.nvm/versions/node/v22.20.0/bin:$PATH"`.
+- **Never run `npm run dev`** — Siggie keeps the app running themselves.
+- **Verify with `npm run build`** (~2s). `npx tsc --noEmit` is too weak and has
+  let breakage through; `npm run typecheck` is `tsc -b --noEmit`, which caught
+  four real errors in one session that the bare form did not. (In a sandbox
+  `tsc -b` fails EPERM on `node_modules/.tmp`; the workaround is
+  `npx tsc --noEmit -p tsconfig.app.json --tsBuildInfoFile "$TMPDIR/app.tsbuildinfo"`.)
+- **`tsc` will NOT catch a stale union comparison.** When `'own-flip'` left the
+  `OwnershipVerdict` union, every surviving `x === 'own-flip'` narrowed to
+  `never` instead of erroring — so the typecheck stayed green while two live
+  sites silently stopped matching. **Grep for the old literal; do not trust tsc
+  for this.** Hit again later with `MergeMode` (`'bend'`, not `'full'`).
+- **`console.log` is swallowed in vitest here.** To surface a value, assert it
+  against a sentinel string and read the diff.
+- **Lint baseline is 20 errors**, all pre-existing. Compare against the baseline
+  rather than expecting zero.
+- **jsdom does not do layout** — see [TESTING.md](TESTING.md) before writing a
+  test that measures element positions.
+- **NEVER `git add -A`, `git add .`, or `git commit -a`.** Stage explicit paths.
+  One such mistake put ~1128 lines of two sessions' implementation inside
+  `b17db08`, a commit whose message claims it is docs-only.
+
+### Measure before diagnosing
+
+**When a render looks wrong, write a probe test that prints the actual view
+model before proposing a cause.** Four bugs in one session came from reasoning
+about the render instead of measuring the data, and each was settled in ~30
+seconds by a throwaway probe once someone bothered. Wrong guesses included
+"context nodes shouldn't merge" (they should) and "DimensionalObservation
+narrows observation_type" (it does not).
+
+The pipeline is `getOwnershipSubgraph → buildViewModel → mergeSiblings`, and all
+three are exported specifically so a probe can call them. See
+`src/test/mergedEdges.test.ts`, which is that pattern made permanent.
+
+---
+
 ## 📋 CURRENT TASK
 
-See **[TASKS.md](TASKS.md)** for:
-- Current Bugs
-- Upcoming Work (ordered list)
-- Future Ideas (unprioritized)
-- Pending Decisions
+See **[TASKS.md](TASKS.md)** for what is next, and
+**[BACKLOG.md](BACKLOG.md)** for deferred work with its full write-up.

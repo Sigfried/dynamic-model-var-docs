@@ -7,6 +7,132 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-05 (doc consolidation: 13 docs → 9; TASKS split into TASKS + BACKLOG)
+
+Siggie: *"there are way too many docs"* · *"get rid of historical information
+except from worklog and docs/archive"* · *"TASKS.md is huge and not really
+readable at this point."*
+
+### The audit method, and why it mattered here
+
+Counted inbound references per doc first (`for f in docs/*.md; do grep -rl
+$(basename $f) ...`), then read the zero- and one-reference ones. Same pattern
+as the previous session. But the load-bearing rule this time was the one Siggie
+stated directly: **do not archive a file on the strength of its own header.**
+
+`NEXT_SESSION_EDGE_DISPLAY.md` carried a confident status block saying "only
+§2.3 is left" and listing where everything else had gone. I had proposed
+archiving it on that basis. Siggie: *"review content to make sure it's either
+complete or exists elsewhere rather than just believing that everything but 3.3
+can be tossed."* Checked all twelve sections against
+`OWNERSHIP_CLASSIFICATION.md` and the code. **The header was right** — but two
+things only showed up because of the check:
+
+1. §1's colour spec had been carried over **and corrected** in the destination
+   (P2 is three hues, not the Blues ramp §1 describes). Archiving without
+   reading would have left the wrong version as the only searchable copy of a
+   spec that reads as authoritative.
+2. The transfer note in `OWNERSHIP_CLASSIFICATION.md` said the tables moved
+   "before that file is deleted" — a pointer that would have gone stale in the
+   opposite direction. Repointed at `docs/archive/`.
+
+The per-section audit is written into the archived file's header so nobody
+re-does it.
+
+### §3.3 resolved to a task, not a doc
+
+§3.3 (the ownership legend) was the one section flagged as existing only there.
+It was **not** a missing doc. Siggie: `OWNERSHIP_CLASSIFICATION` already covers
+its content via the phrasing table and the five positions; what §3.3 actually
+asks for is that **the legend and the Ownership/Inheritance tours need
+pictures** — the ASCII was a sketch of one, explicitly *"NOT ascii, looking like
+the app"*. So it became TASKS item 4, and the sketch stays in the archive as
+the reference for whoever draws it.
+
+**The general shape:** an "unbuilt idea" trapped in a doc is usually a task
+wearing a doc's clothes. Archiving it loses it; promoting it to TASKS with a
+pointer back to the sketch does not.
+
+### TASKS.md: 1186 → 92 lines, split at "is this scheduled?"
+
+The file called itself "open work only" and contained six ✅ DONE sections, a
+completed-cleanup log, and ~700 lines of write-ups for work explicitly deferred.
+Everything read at the same volume, so nothing was findable.
+
+Siggie chose the split (option 3 of three offered): **TASKS.md = what is
+actually next, ~14 items, priority-ordered, one row each; BACKLOG.md =
+everything deferred, with its full write-up.** Rejected alternatives were a thin
+index with detail pushed out to topic docs (too many hops) and keeping detail
+inline (still one long file).
+
+What went where, and why:
+
+- **Process notes and gotchas → `docs/CLAUDE.md`.** They were in TASKS.md
+  under "PROCESS — read before running anything", which is exactly what
+  CLAUDE.md is for and where someone would actually look. The node-22
+  requirement, the `tsc`-won't-catch-a-stale-union trap, the never-`git add -A`
+  rule and the measure-before-diagnosing rule all moved.
+- **DONE sections → deleted** (they are in git and summarised in this file).
+- **Scattered task lists → pointed at, not moved.** `help-content.md`'s TODO
+  block is Siggie's authoring space and stays; its two live items now link to
+  the tasks that track them. Note it is a `<details>` block starting at line 14
+  with no `###` heading — an `awk '/^## TODO/'` search finds nothing.
+
+### `HELP_PACKAGE_PLAN.md`: 494 → 176
+
+Roughly 80% was shipped history written in the present tense — the S3a/S3b
+mechanism, the package/app split, the format extensions. Kept: the CSS
+anchor-positioning migration (with the *measured* list of what it deletes), the
+extraction seams that must survive the move, the help-mode defect list with its
+ordered fix sequence, and the deliberate departures.
+
+The seams table is the part worth keeping verbatim. Each row exists because the
+package must not learn what a BDCHM entity row is, and each is the kind of thing
+a future simplification pass would helpfully undo.
+
+### Small findings
+
+- **`docs/README.md` was a symlink** to `../README.md`, not a duplicate. I
+  initially reported it as a copy with broken links; it had neither problem.
+  Siggie deleted it.
+- **`TESTING.root-snapshot-2025-11-03.md` was not a duplicate either** —
+  TESTING.md's own header called it a "diverged version" and I repeated that
+  without checking. It is a different document (mock-element construction
+  patterns). Archived on the real grounds: **every code example in it is
+  stale** — `ClassElement` now takes `(data, slotCollection)`, `parentName` is
+  `parentId`, `attributes` is `slotRefs`.
+- **`DOC_CONVENTIONS.md`** mandated a doc system that no longer exists
+  (`PROGRESS.md` is gone; the CLAUDE.md structure it specifies matches nothing).
+  Zero inbound references. Archived.
+- **Four code comments** pointed at `NEXT_SESSION_EDGE_DISPLAY` and were
+  repointed (`siblingMerge.test.ts`, `RelationBar.tsx`, `HelpPanel.tsx`,
+  `HelpMenu.tsx`).
+- **Pre-existing broken links found and fixed** in `README.md`
+  (`CLAUDE.md`/`TASKS.md` linked as if at repo root), `docs/CLAUDE.md` and
+  `docs/ARCHITECTURE.md` (`docs/`-prefixed links from inside `docs/`). All
+  links and heading anchors across every live doc now resolve — checked by
+  script, not by eye.
+- **Test counts were stale everywhere**: README said 160 across 9 files,
+  TESTING.md said 235 across 21. Actual: **500 across 40**.
+
+### An open item nobody had listed
+
+`OWNERSHIP_CLASSIFICATION.md`'s "The three kinds" carries an inline
+**`[sg] this is wrong`** note — the owns/belongs-to passage needs rewriting from
+scratch, because the five positions use "belong" language in both directions.
+It was sitting mid-paragraph in a reference doc with no task pointing at it. Now
+TASKS item 6.
+
+### §1.4 of TOURS_AND_CONTENT
+
+Siggie had deleted the section's content but kept a note *"in case it's
+helpful"*. Its surviving fact — the Observations ⊞ view is the best
+merged-inheritance picture in the app and shows a narrowed child-header edge for
+free — is **tour material**, so it moved into §3.5 (Inheritance) as the
+instruction to load that view for the tour. Section deleted; the two pointers to
+§1.4 elsewhere in the file were fixed.
+
+---
 ## 2026-09-05 (emptied public/ except source_data; deleted 2 scripts, 2 docs)
 
 Started as "is `extract_containment_tree.py` dead?" and ended as a real

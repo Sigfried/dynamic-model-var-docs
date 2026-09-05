@@ -55,6 +55,34 @@
 > Delete this file once the tours in `TOURS_AND_CONTENT.md` are authored **and**
 > §3.3's sketch has a home.
 
+> ## 📦 ARCHIVED 2026-09-05 — audited section by section first
+>
+> Not archived on the strength of its own header. Every section was checked
+> against `OWNERSHIP_CLASSIFICATION.md` and the code:
+>
+> | § | where it lives now |
+> |---|---|
+> | §1 colour system | `OWNERSHIP_CLASSIFICATION.md` "The color system" — carried over **and corrected**: P2 is three hues, not a Blues ramp, and the wrong-test warning survived |
+> | §2.1 doc restructure | done |
+> | §2.2 Help menu | shipped (`HelpMenu.tsx`, `HelpPanel.tsx`) |
+> | §2.3 tour steps | superseded by `TOURS_AND_CONTENT.md` §3 |
+> | §2.4 `any_of` | `OWNERSHIP_CLASSIFICATION.md` "The decision (option 1, taken)" |
+> | §3.1 relation vocabulary | `OWNERSHIP_CLASSIFICATION.md` "The relation vocabulary" |
+> | §3.2 edge labels + both tables | `OWNERSHIP_CLASSIFICATION.md` "The phrasing table" / "Wordings considered and rejected" |
+> | §3.3 legend sketch | see below |
+> | §3.4 popovers | summarised in the doc; the standing no-native-`title` rule with it |
+> | §3.5 "merged" | `OWNERSHIP_CLASSIFICATION.md` "Terminology" |
+> | §3.6 counts going down | `OWNERSHIP_CLASSIFICATION.md` "Why a bar count can go DOWN" |
+> | §4 edge display survey | `OWNERSHIP_CLASSIFICATION.md` "Current state" |
+>
+> **§3.3 was the one open question, and it resolved to a task, not a doc.**
+> Siggie, 2026-09-05: its *content* is already covered by the phrasing table and
+> the five positions; what it actually asks for is that **the legend and the
+> Ownership and Inheritance tours need pictures** to explain the edge kinds —
+> the ASCII was a suggestion of one, "NOT ascii, looking like the app". That is
+> now a task in `docs/TASKS.md`, and the sketch stays here as the reference for
+> whoever draws it.
+
 Everything below this line is kept for the reasoning it records, not as a plan.
 Where it conflicts with `OWNERSHIP_CLASSIFICATION.md`, the doc is right — it was
 written from this file and then corrected against the code.

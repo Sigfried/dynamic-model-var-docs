@@ -77,10 +77,18 @@ Most of the feature description below refers to the previous app.
 
 ### Developer Documentation
 
-- **[CLAUDE.md](CLAUDE.md)** — Development principles and architectural rules
+- **[docs/CLAUDE.md](docs/CLAUDE.md)** — Development principles, architectural rules, and the gotchas to read before running anything
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — Technical architecture, data flow, design patterns
-- **[TASKS.md](TASKS.md)** — Current work, upcoming tasks, and roadmap
+- **[docs/TASKS.md](docs/TASKS.md)** — What is next, in priority order
+- **[docs/BACKLOG.md](docs/BACKLOG.md)** — Deferred work, with full write-ups
 - **[docs/TESTING.md](docs/TESTING.md)** — Testing strategy and documentation
+
+Design and reference docs: [OWNERSHIP_CLASSIFICATION.md](docs/OWNERSHIP_CLASSIFICATION.md)
+(the ownership rules, the colour system, how edges are drawn) ·
+[TOURS_AND_CONTENT.md](docs/TOURS_AND_CONTENT.md) (the tour plan) ·
+[EXPLORE_VIZ.md](docs/EXPLORE_VIZ.md) (Explore SPA design) ·
+[HELP_PACKAGE_PLAN.md](docs/HELP_PACKAGE_PLAN.md) ·
+[FOCUS_VIEW.md](docs/FOCUS_VIEW.md)
 
 ### Data Sources
 
@@ -168,7 +176,7 @@ npm run deploy
 
 ### Testing
 
-The project has 160 tests across 9 test files covering:
+The project has 500 tests across 40 test files covering:
 - Data loading & processing
 - Element relationships & SVG links
 - Adaptive layout logic

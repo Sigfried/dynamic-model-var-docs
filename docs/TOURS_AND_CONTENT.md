@@ -1,9 +1,8 @@
 # Tours, the Help menu, and category content views
 
 **Replaces `TOUR_SOURCE_MATERIAL.md`** (deleted; its drafted prose is inlined
-below, at the steps that use it). This is the plan for the remaining item of
-`NEXT_SESSION_EDGE_DISPLAY.md` §2.3 — delete *that* file once the tours here are
-authored, and delete this one once they ship.
+below, at the steps that use it) and `NEXT_SESSION_EDGE_DISPLAY.md` §2.3 (that
+file is archived). **Delete this one once the tours ship.**
 
 Decisions here are Siggie's, 2026-09-04, in an interactive session. Where a
 decision reversed something already written down, the reversal is noted so the
@@ -33,7 +32,7 @@ the skeleton for the fix.
 ## 1. Category content views (the ⊞ button)
 
 ✅ **§1 is shipped** — pins, the ⊞ control, replace-not-add, and the back
-button. §1.4's crowding question is the one thing still open here.
+button. Nothing in §1 is open.
 
 **Decision:** each category header in the left panel gets a small display
 control that draws that category's content view on the canvas.
@@ -201,14 +200,6 @@ Three consequences worth keeping:
 with the `popstate` listener deleted — measured: five of six such tests stayed
 green under that sabotage. `categoryViewHistory.test.tsx` reads the ticked rows
 instead, and both sabotages then fail five of six.
-
-### 1.4 Open: Observations is crowded
-
-[sg] deleted this section, already settled; but keeping this note in case it's helpful:
-
-Note the same view is the best merged-inheritance picture in the app, and shows
-a `slot_usage`-narrowed edge arriving at a child header for free — both wanted
-by the Inheritance tour.
 
 ---
 
@@ -400,8 +391,12 @@ siblings toggle)" case group:
 - **The full Observation family** — one box where there would be six.
 - **A narrowed edge pointing at a child header** —
   `MeasurementObservationSet.observations` → the `MeasurementObservation`
-  header. Shipped 2026-09-02, on §2.3's uncovered list, and visible for free in
-  the Observations ⊞ view.
+  header. Shipped 2026-09-02.
+
+**Load the Observations ⊞ view for this tour.** It is the best
+merged-inheritance picture in the app and it shows the narrowed child-header
+edge for free, so both of the ideas above are on screen without building a
+selection by hand.
 
 ---
 
