@@ -13,16 +13,20 @@ import { buildViewModel } from '../explore/OwnershipGraphView';
  * names (Siggie, screenshot). Collapsing exists to cap TALL boxes, so it should
  * cap them and leave short ones alone.
  *
- * The rule now is a row budget, filled connected-first. These tests pin the
- * three things that can go wrong with that: a short box getting a footer it
- * does not need, a long box not being capped, and a connected row being cut —
- * which matters beyond looks, because an edge that arrives at a row the box is
- * not drawing has no anchor to point at.
+ * **As of 2026-09-04 the budget is `Infinity`** — every box shows every
+ * attribute and the footer never renders (Siggie: "just show all without that
+ * link for now"). The budget code stays in place for the planned user
+ * preference ("Default to show top [6] attributes"), so these tests keep
+ * guarding it: a short box getting a footer it does not need, a long box not
+ * being capped, and a connected row being cut — which matters beyond looks,
+ * because an edge that arrives at a row the box is not drawing has no anchor
+ * to point at.
  *
  * Deliberately NOT importing ROW_BUDGET: a test that reads the constant it is
  * checking passes for any value of it, including a wrong one. The numbers here
  * are written out, so changing the budget makes a test fail and asks whether
- * the new value is intended.
+ * the new value is intended — which is exactly what happened when the budget
+ * went to Infinity.
  */
 describe('collapsed boxes show a budget of rows, not just connected ones', () => {
   let ds: DataService;
@@ -47,14 +51,20 @@ describe('collapsed boxes show a budget of rows, not just connected ones', () =>
     return node;
   };
 
-  test('Person shows six rows collapsed, not the one that has an edge', () => {
-    // The reported case. One connected attribute used to mean one visible row.
-    const person = collapsed('Person');
-    expect(person.rows.length).toBe(6);
-    expect(person.expanded).toBe(false);
-    // It is capped, so it still offers the footer.
-    expect(person.hiddenCount).toBe(person.allRows.length - 6);
-    expect(person.hiddenCount).toBeGreaterThan(0);
+  test('every box shows every attribute and offers no footer', () => {
+    // ROW_BUDGET is Infinity as of 2026-09-04, so nothing is ever hidden and
+    // the `+ N more` / `− fewer` footer never renders. Swept over the whole
+    // schema rather than one class, because the claim is universal now.
+    for (const c of ds.getContainmentGraph().nodes) {
+      const n = collapsed(c.id);
+      expect(n.rows.length, `${c.id} hides rows`).toBe(n.allRows.length);
+      expect(n.hiddenCount, `${c.id} offers a footer`).toBe(0);
+      expect(n.expanded, `${c.id} is not force-expanded`).toBe(true);
+    }
+    // The class that prompted the 2026-08-28 budget in the first place: Person
+    // has nine attributes and one edge. Under connected-only it drew one row;
+    // under the budget, six; now all nine.
+    expect(collapsed('Person').rows.length).toBe(9);
   });
 
   test('a connected row is never cut, and comes first', () => {
@@ -75,7 +85,9 @@ describe('collapsed boxes show a budget of rows, not just connected ones', () =>
   test('a box that fits the budget is force-expanded with no footer', () => {
     // Subsumes the old all-scalars case: BodySite is force-expanded now because
     // it is short, not because it has no edges. A footer here would be a
-    // control that does nothing.
+    // control that does nothing. With ROW_BUDGET at Infinity EVERY box takes
+    // this path — kept, and kept naming a short class, so that restoring a
+    // finite budget still finds the short-box case pinned.
     const short = ds.getContainmentGraph().nodes
       .map(n => collapsed(n.id))
       .find(n => n.allRows.length > 0 && n.allRows.length <= 6);

@@ -75,15 +75,25 @@ const ROW_H = 20;
 /**
  * How many attribute rows a COLLAPSED box shows before it offers a footer.
  *
- * Replaces "show only the connected rows" (Siggie, 2026-08-28), which hid too
- * much: Person has one connected attribute, so a collapsed Person was a single
- * row plus `+ 8 more attributes`. The point of collapsing is to cap tall boxes
- * like Observation, not to reduce every box to its edges.
+ * **`Infinity` since 2026-09-04 — every box shows every attribute, and the
+ * `+ N more` / `− fewer` footer never renders** (Siggie: "just show all without
+ * that link for now"). The content tours being written are about what the model
+ * CONTAINS, and a Specimen hiding 11 of its 19 attributes works against exactly
+ * that. The budget machinery below is left intact rather than deleted: the
+ * intended end state is a user preference ("Default to show top [6]
+ * attributes") that puts the footer back, at which point this becomes that
+ * setting's default instead of a constant.
+ *
+ * History, for whoever restores a finite value: this replaced "show only the
+ * connected rows" (Siggie, 2026-08-28), which hid too much — Person has one
+ * connected attribute, so a collapsed Person was a single row plus
+ * `+ 8 more attributes`. Collapsing exists to cap tall boxes like Observation,
+ * not to reduce every box to its edges.
  *
  * Connected rows are never cut even when they alone exceed this — see the note
  * at the call site.
  */
-const ROW_BUDGET = 6;
+const ROW_BUDGET = Infinity;
 /**
  * The relation-menu trigger band: ONE line, always, on any box with relations.
  *

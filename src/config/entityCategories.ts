@@ -107,6 +107,12 @@ export const ENTITY_CATEGORIES: EntityCategory[] = [
       'Consent',
       'ResearchStudy',
       'ResearchStudyCollection',
+      // Moved here from `other` (2026-09-04, Siggie). Organization is a study
+      // administration concept, not a file: it is what `performed_by`,
+      // `originating_site` and the transport endpoints point at, and those
+      // arrive from Observations, Laboratory and Admin alike. Sitting in
+      // "Files / Other" it read as a leftover.
+      'Organization',
     ],
     defaultExpanded: false,
   },
@@ -121,6 +127,13 @@ export const ENTITY_CATEGORIES: EntityCategory[] = [
       'DeviceExposure',
       'CauseOfDeath',
       'ImagingStudy',
+      // Dual-listed with `lab` (2026-09-04, Siggie). Usage is mostly clinical
+      // -- Condition.affected_body_site, Procedure.affected_body_site and
+      // ImagingStudy.body_part_examined against a single lab use
+      // (SpecimenCreationActivity.collection_site) -- but anatomy genuinely
+      // belongs to both, so neither listing is dropped. Add to DUAL_LISTED in
+      // entityCategories.test.ts alongside this.
+      'BodySite',
     ],
     defaultExpanded: false,
   },
@@ -144,7 +157,6 @@ export const ENTITY_CATEGORIES: EntityCategory[] = [
       'MeasurementObservationSet',
       'SdohObservationSet',
       'DimensionalObservationSet',
-      'Quantity',
       // Added by the 2026-08-12 upstream sync (778afca). Observation.context
       // is multivalued → Context, and Context.activity → Activity; both are
       // small helper classes describing the circumstances of an observation,
@@ -197,9 +209,15 @@ export const ENTITY_CATEGORIES: EntityCategory[] = [
       'File',
       'ImagingFile',
       'Document',
-      'Organization',
       'TimePoint',
       'TimePeriod',
+      // Moved here from `observation` (2026-09-04, Siggie). Quantity is a
+      // generic value type, not an observation concept: 16 slots across 13
+      // classes in four categories, including Substance.substance_quantity,
+      // Assay.lower_limit_of_detection and SpecimenProcessingActivity.duration,
+      // none of which are observations. It belongs beside TimePoint (15 slots,
+      // 9 classes), which is the same kind of thing and already lives here.
+      'Quantity',
     ],
     defaultExpanded: false,
   },

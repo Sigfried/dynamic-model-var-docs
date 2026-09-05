@@ -71,6 +71,10 @@ describe('entityCategories config vs. live schema', () => {
   const DUAL_LISTED = new Set([
     'SpecimenQualityObservation',
     'SpecimenQuantityObservation',
+    // Anatomy is both clinical and specimen-related: Condition, Procedure and
+    // ImagingStudy name a body site, and so does
+    // SpecimenCreationActivity.collection_site (2026-09-04).
+    'BodySite',
   ]);
 
   test('only deliberately dual-listed classes appear in two categories', () => {
