@@ -824,6 +824,6 @@ the rules above.
 - `WORKLOG.md` — decision history: what was tried, rejected, and why.
 - `docs/TASKS.md` — open work; hand-curated config rot.
 - `src/explore/help-content.md` — the user-facing wording and the guided tour.
-- [EXPLORE_VIZ.md](EXPLORE_VIZ.md) §"Core visual-design conclusions" — the
-  visual-design reasoning, including item 1's owner-side/member-side
+- [ARCHITECTURE.md](ARCHITECTURE.md) §"Why the diagram looks like it does" —
+  the visual-design reasoning, including item 1's owner-side/member-side
   normalization.

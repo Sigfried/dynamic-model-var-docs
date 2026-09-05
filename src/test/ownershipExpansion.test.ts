@@ -1,5 +1,5 @@
 /**
- * Adding a class from the diagram (docs/EXPLORE_VIZ.md build step 3 remainder).
+ * Adding a class from the diagram (docs/ARCHITECTURE.md).
  *
  * The content policy since 2026-08-27: the diagram shows exactly what is
  * selected, plus the opt-in ownership paths to root. Everything else arrives by

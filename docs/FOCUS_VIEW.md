@@ -1,7 +1,7 @@
 # Focus View — Design & Working Spec
 
 > **⚠️ PARTLY SUPERSEDED (2026-07-13)** by the subgraph-viz SPA experiment —
-> see [EXPLORE_VIZ.md](EXPLORE_VIZ.md). The Focus view still exists and its
+> see [ARCHITECTURE.md](ARCHITECTURE.md). The Focus view still exists and its
 > shipped work stands, but the three-panel + LinkOverlay direction is no
 > longer the primary path; remaining Focus items in TASKS.md are re-tagged
 > [LATER].

@@ -1,6 +1,6 @@
 /**
  * SelectionTable — the Explore SPA's left-hand entity multi-select
- * (docs/EXPLORE_VIZ.md, "Layout" region 1).
+ * (docs/ARCHITECTURE.md, "Layout: three regions" — region 1).
  *
  * The count-badge columns were removed on 2026-08-27 to give the name column
  * back its width, so the badge-parity test that used to live here is gone

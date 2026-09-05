@@ -153,7 +153,7 @@ if (!element) {
 ## 📦 Related local library
 
 **supergroup v2**: grouping + DAG library, the backbone of
-`getOwnershipSubgraph` (see [EXPLORE_VIZ.md](EXPLORE_VIZ.md)). Published as
+`getOwnershipSubgraph` (see [ARCHITECTURE.md](ARCHITECTURE.md)). Published as
 `supergroup@2.0.0` on npm and installed as a dependency. Source repo:
 `~/github-repos/personal/supergroup` (spec in its
 `docs/specs/2026-07-13-supergroup-v2-design.md`; README is outdated — trust

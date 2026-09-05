@@ -5,7 +5,7 @@ import type { OwnershipSubgraph } from '../services/DataService';
 import { buildOwnershipDag } from '../models/ownershipSubgraph';
 
 /**
- * getOwnershipSubgraph() drives the Explore viz (docs/EXPLORE_VIZ.md). Like
+ * getOwnershipSubgraph() drives the Explore viz (docs/ARCHITECTURE.md). Like
  * the containment tests, we assert properties against the live schema rather
  * than pinning fixtures, so the suite survives legitimate schema edits.
  */

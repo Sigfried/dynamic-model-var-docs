@@ -368,26 +368,6 @@ not a mechanical one.**
 
 ## Docs
 
-### `EXPLORE_VIZ.md` — what still needs fixing
-
-Audited claim-by-claim 2026-08-24; Clusters 1 and 2 fixed 2026-09-05. The doc's
-own rule is "where this document and the code disagree, the code wins and the
-doc is the bug." Architecture, Data layer, Renderer and Build order are in good
-shape.
-
-**Cluster 3 — vertical language survived a horizontal default.** The *algorithm*
-is current (`computeSunkLayers`); only the orientation words are wrong. **Not
-doc-only rot** — the same idiom is in the code's own comment
-([`ownershipSubgraph.ts`](../src/models/ownershipSubgraph.ts)), so a rename
-should cover both. The doc's own line 205, "owners sit *beside* their topmost
-member", survives LR and is the better wording.
-
-**The larger gap is omission.** Absent entirely: node dragging and edge
-re-routing, merge-mode routing probes, the example-cases pane, the ownership
-legend, one-arrowhead-per-convergence, and thinner strokes. Five
-Explore-relevant tests are unlisted.
-
----
 
 ## Siggie's upcoming thoughts
 

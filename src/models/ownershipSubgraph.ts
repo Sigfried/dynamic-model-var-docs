@@ -1,5 +1,5 @@
 /**
- * Ownership subgraph for the Explore viz (docs/EXPLORE_VIZ.md, data layer).
+ * Ownership subgraph for the Explore viz (docs/ARCHITECTURE.md, data layer).
  *
  * Takes the full classified ownership graph (models/containmentGraph) and a
  * selection, and returns the drawable subgraph per the content policy:
@@ -303,12 +303,16 @@ export function buildOwnershipDag(full: ContainmentGraph): OwnershipDag {
 
 /**
  * Layer assignment: "sunk" layers. The DAG's internal structure (nodes that
- * own something) defines the layering: every owner sinks to exactly one
- * layer above its topmost owning child, so Organization/Person don't strand
- * at the root layer just because they're roots. Leaf classes (own nothing —
- * mostly value objects) don't anchor their owners; they dangle one layer
- * below their deepest owner. Preserves layer(owner) < layer(member)
- * everywhere and is selection-independent.
+ * own something) defines the layering: every owner sits exactly one layer
+ * BEFORE its nearest owning child, so Organization/Person don't strand at
+ * layer 0 just because they're roots. Leaf classes (own nothing — mostly
+ * value objects) don't anchor their owners; they sit one layer AFTER their
+ * furthest owner. Preserves layer(owner) < layer(member) everywhere and is
+ * selection-independent.
+ *
+ * "Before/after", not "above/below": the default orientation is
+ * left-to-right, so a lower layer is drawn to the LEFT. `dir=DOWN` turns the
+ * same layering into owners-above.
  */
 export function computeSunkLayers(dag: OwnershipDag): Map<string, number> {
   const layers = new Map<string, number>();

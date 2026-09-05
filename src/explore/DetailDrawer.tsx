@@ -1,6 +1,6 @@
 /**
  * DetailDrawer — right-hand entity detail panel for the Explore SPA
- * (docs/EXPLORE_VIZ.md, "Layout" region 3 / build step 4).
+ * (docs/ARCHITECTURE.md, "Layout: three regions" — region 3).
  *
  * Opens on node click in the ownership graph. It reuses the Explorer card's
  * data path (DataService.getClassSummary) rather than the ClassDetailCard

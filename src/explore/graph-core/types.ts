@@ -4,7 +4,7 @@
  * graph-core is the layout/zoom engine extracted from icd11-playground's
  * NodeLinkView. It knows nothing about the app: no DataService, no stores,
  * no model types — nodes are opaque {id, width, height} boxes. This is the
- * future package-extraction boundary (see docs/EXPLORE_VIZ.md, Renderer).
+ * future package-extraction boundary (see docs/ARCHITECTURE.md, Renderer).
  */
 
 export interface Point {

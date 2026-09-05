@@ -97,7 +97,7 @@ Help ▾
 
 Order is fixed: **complexity rising, each tour using what the last established.**
 
-### 3.1 What BDCHM covers — ⚠️ needs a better title
+### 3.1 What BDCHM covers (needs a better title)
 
 *Content only. No app mechanics. The tour that does not exist today and matters
 most to the target reader.*

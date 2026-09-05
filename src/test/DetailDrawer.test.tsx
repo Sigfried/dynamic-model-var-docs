@@ -1,6 +1,6 @@
 /**
  * DetailDrawer — the Explore SPA's right-hand entity panel
- * (docs/EXPLORE_VIZ.md build step 4).
+ * (docs/ARCHITECTURE.md, "Layout: three regions" — region 3).
  *
  * Runs against the real loaded model rather than mocks, so the two fixes the
  * spec calls for are asserted against actual schema content: "Referenced by"

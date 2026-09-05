@@ -7,6 +7,67 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-05e (EXPLORE_VIZ merged into ARCHITECTURE; details-collapsed)
+
+Siggie: *"what is EXPLORE_VIZ for anyway? why wouldn't it be combined with
+ARCHITECTURE? we don't need Architecture Philosophy section anymore. if we do
+combine them, might be good to put their parts in collapsed details sections."*
+
+### What EXPLORE_VIZ was for, which is the answer
+
+It was a **design spec written before the thing was built** — a proposal to be
+approved, with a build order to work through. That is why it had its own
+Architecture / Data layer / Renderer sections: they were the *plan*, not a
+description. Once the app shipped, every one of those became either a
+description of live code (which belongs with the rest of the architecture) or a
+changelog of how it got built (which is this file's job). ARCHITECTURE had
+already started summarising the Explore data layer and cross-referencing back,
+so the two were describing one system in two places.
+
+### What did not survive the merge
+
+- **Build order** (~70 lines) — a strikethrough changelog. Cut. It also carried
+  the stalest claims in the repo: `?exp=` as live state, the owner cap, and
+  "is-a side-stacks are the next piece of work" written after merged boxes
+  shipped.
+- **Explicitly out of v1 / Open questions** — v1 shipped; the questions are
+  answered or live in BACKLOG.
+- **Architecture Philosophy (Shneiderman's Mantra)** — Siggie's call. It was
+  aspirational UX framing whose "future enhancements" (search, faceted
+  filtering, k-hop) were never built and are not planned.
+
+### Structure
+
+Siggie picked collapsing the reference-heavy sections only. So three sections
+stay open — Tech Stack, the two apps, and *Why the diagram looks like it does* —
+and seven `<details>` hold the lookup material. The open part is what someone
+reads to orient; the collapsed part is what they open when they need it.
+
+### Corrections made while merging
+
+Two things surfaced because merging forces you to read both texts against each
+other:
+
+- **The content policy was stated twice and disagreed with itself.** ARCHITECTURE
+  said "nothing that was not selected"; EXPLORE_VIZ's conclusion 6 still
+  described one-hop owners capped at 8, then corrected itself twice in
+  following paragraphs. Rewritten once, stating what is true, with the
+  paths-to-root measurements kept as the reason it is opt-in.
+- **Cluster 3 is fixed, so TASKS 13 is gone.** The vertical language ("owners
+  sink to one layer *above*") was in both the doc and
+  `ownershipSubgraph.ts`'s own comment. Both now say *before/after* with an
+  explicit note that lower layer = drawn LEFT under the default orientation.
+  The invariant itself, `layer(owner) < layer(member)`, was always
+  orientation-neutral — only the prose was wrong.
+
+13 code comments pointing at `docs/EXPLORE_VIZ.md` were repointed, several of
+which named build steps that no longer exist ("build step 4", "build step 3
+remainder") and now name the section instead.
+
+`docs/` is 8 files. Also folded in Siggie's new TASKS item (README and first-tour
+intros; *Model shape* describes how the app adjusts the model, not the model).
+
+---
 ## 2026-09-05d (swept the rest; fixed the staleness the warnings were guarding)
 
 Two questions from Siggie while the past-arguing sweep was running.

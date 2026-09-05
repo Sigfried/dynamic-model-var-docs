@@ -1,5 +1,5 @@
 /**
- * ExploreApp — shell for the Explorer SPA (docs/EXPLORE_VIZ.md), the default
+ * ExploreApp — shell for the Explorer SPA (docs/ARCHITECTURE.md), the default
  * app (index.html entry). The previous app lives at previous.html.
  *
  * Three regions: selection table (left, collapsible), viz canvas (main), and

@@ -1055,7 +1055,7 @@ export class DataService {
   }
 
   /**
-   * Drawable ownership subgraph for the Explore viz (docs/EXPLORE_VIZ.md):
+   * Drawable ownership subgraph for the Explore viz (docs/ARCHITECTURE.md):
    * exactly the selected nodes and the edges among them, plus the opt-in
    * pathToRoot ancestors as dimmed context. Node.layer (maxDepth in the full
    * ownership DAG) is stable across selection changes.

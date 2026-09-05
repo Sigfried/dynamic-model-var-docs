@@ -1,5 +1,5 @@
 /**
- * OwnershipGraphView — the layered ownership DAG (docs/EXPLORE_VIZ.md).
+ * OwnershipGraphView — the layered ownership DAG (docs/ARCHITECTURE.md).
  *
  * Bindings over graph-core: HTML entity nodes (title + attribute rows) are
  * absolutely positioned over an SVG edge layer. Layout and edge routing are
@@ -1285,8 +1285,8 @@ export default function OwnershipGraphView({
   mergeMode: MergeMode;
   setMergeMode: (m: MergeMode) => void;
   /**
-   * Merge sibling classes into one box per shared parent (docs/EXPLORE_VIZ.md
-   * "inheritance as adjacency"). On by default: with it off, inheritance is
+   * Merge sibling classes into one box per shared parent (docs/ARCHITECTURE.md,
+   * "is-a never shares the ownership plane"). On by default: with it off, inheritance is
    * invisible in the diagram entirely.
    */
   mergeSibs: boolean;
