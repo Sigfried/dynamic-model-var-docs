@@ -5,6 +5,16 @@ session. It **replaces the state-stack half** of commit `458c10d` — the `Only:
 authoring field, the tour chooser, `TourMetadata:` and the content work all
 stay; only `src/explore/tourStateStack.ts` and its callers change.
 
+> **`Only:` already works.** It shipped in `458c10d` and this rewrite does not
+> change its behaviour — only how it is implemented. To see it: **Guided tours →
+> Walkthrough → step 5 of 6** ("Selecting an entity"), where the canvas goes
+> from `MeasurementObservation, Person` to exactly `BodySite, Participant`, and
+> `back` restores them. Note it is step **5**, and roughly the 11th `next`
+> press: the Walkthrough's steps carry beats, so there are ~12 positions across
+> its 6 steps. An earlier version of this note said "step 4", which is a
+> position that has not reached the replace yet and looks like the feature
+> failing.
+
 **Delete this file once the rewrite ships.** Its reasoning belongs in
 `tourStateStack.ts`'s header and in WORKLOG; this exists so the next session can
 start from a settled design rather than re-deriving one.

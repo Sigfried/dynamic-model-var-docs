@@ -83,6 +83,46 @@ Nothing blocking. Two implementation-time questions are listed at the end of the
 design note (whether `region` is a counter or a stack depth; whether `held` needs
 to exist before the first replace).
 
+### Postscript: `Only:` was reported not working, and is fine
+
+Siggie tried the testing steps and found the canvas not clearing, asking whether
+that was current behaviour or something 3b would fix. Neither — **the testing
+instructions were wrong.** Probed by walking the real app in a throwaway test
+and printing `sel` at every position:
+
+```
+pos  5: sel=Person                            counter=3 / 6
+pos  6: sel=MeasurementObservation~Person     counter=4 / 6
+...
+pos 11: sel=BodySite~Participant              counter=5 / 6   <- the replace
+```
+
+`Only:` clears exactly as designed. The replace is at step **5 of 6**, about the
+11th `next` press — the Walkthrough's steps carry beats, so 6 steps are ~12
+positions. I had written "step 4", which is a position that has not reached the
+replace and looks precisely like the feature failing.
+
+Worth keeping as a habit: **give tour testing instructions by step COUNTER
+(`5 / 6`) and by what the canvas should show, not by press count.** Beats make
+the two diverge, and the divergence reads as a bug.
+
+The design note now carries the corrected steps at the top, since it is the
+document the next session opens.
+
+### A real bug found while checking it
+
+The popover renders with its bottom cut off when it is tall and the canvas
+already has boxes on it (Siggie's screenshot). Cause: `EST_H = 260` in
+`HelpLayer.tsx` is a hardcoded GUESS at popover height, used by the flip/clamp
+arithmetic — anything taller is positioned as though it were 260px and hangs off
+the bottom. The `maxHeight`/scroll path handles real height correctly; the clamp
+does not.
+
+Filed on TASKS item 8 (the CSS anchor-positioning migration), which already
+lists deleting `EST_H` as one of its goals — it now has a live symptom rather
+than only a code smell, and can be fixed on its own if that migration stays
+parked.
+
 ---
 ## 2026-09-05g (tour chooser, TourMetadata, and `Only:` in the content)
 
