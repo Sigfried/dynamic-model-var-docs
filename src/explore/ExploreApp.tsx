@@ -24,6 +24,7 @@ import DetailDrawer from './DetailDrawer';
 import ExampleCasesPane from './ExampleCasesPane';
 import OwnershipLegend from './OwnershipLegend';
 import HelpMenu from './HelpMenu';
+import TourChooser from './TourChooser';
 import type { ExampleCase } from './exampleCases';
 import { HelpProvider } from '../help/HelpProvider';
 import { useHelp, HELP_MODE_ENABLED } from '../help/helpContext';
@@ -315,6 +316,7 @@ function ExploreAppInner() {
         </div>
         <div className="flex items-center gap-4">
         <HelpButton />
+        <TourChooser />
         <HelpMenu
           onOpenLegend={() => setLegendOpen(v => !v)}
           onOpenCases={() => setCasesOpen(v => !v)}

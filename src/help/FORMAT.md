@@ -24,22 +24,25 @@ the behaviour it describes.
 
 Sections are separated by `---` lines.
 
-**Sections organise the source file; they do not appear in the app.** Neither
-a section's title nor its body text is rendered anywhere today — the popover
-shows one entry at a time, and both the tour and help mode reach entries
-through the flat registry, never through sections. So:
+**Sections organise the source file; almost nothing about them appears in the
+app.** The popover shows one entry at a time, and both the tour and help mode
+reach entries through the flat registry, never through sections. The ONE
+exception is a `TourMetadata:` block in a section's body, which names and
+describes a tour for the chooser — see
+[TourMetadata](#tourmetadata--describing-a-tour-not-a-step). So:
 
-- **Prose written as section body text is invisible to the reader.** If you
-  want it in the tour, it belongs in an entry's `Description:`.
+- **Prose written as section body text is invisible to the reader**, unless it
+  is a `TourMetadata:` block. If you want it in the tour, it belongs in an
+  entry's `Description:`.
 - **Section boundaries do not constrain tour order, but file order IS tour
   order.** A tour's steps run in the order they appear in this file, counting
   across sections — so consecutive steps may sit in different sections, and
   moving a step means moving its block.
 
-They are still doing two jobs, so do not remove them: they group entries
-legibly in this file, and the `---` separators between them are what the
-parser splits on. `HelpSection.body` is parsed and available if a future help
-mode wants to show section intros — it is unused, not unsupported.
+They are doing three jobs now, so do not remove them: they group entries legibly
+in this file, the `---` separators between them are what the parser splits on,
+and a section body is where a tour's metadata is written. `HelpSection.body` is
+also kept whole, for a future help mode that wants to show section intros.
 
 **Wrap each section in `<details>` so the content file folds when read on
 GitHub**, which is what keeps a long content file navigable. Two things about
@@ -82,6 +85,7 @@ does not get swallowed into that entry's `Description:`.
 | `Position:` | force the popover to a side: `left`, `right`, `top`, `bottom` — see [Placement](#placement) |
 | `OffsetX:` | nudge it horizontally — see [Placement](#placement) |
 | `Tour:` | which tour this is a step of, e.g. `Walkthrough`; omit for help-only |
+| `TourMetadata:` | **section-body field**: marks the section as describing a tour — see [TourMetadata](#tourmetadata--describing-a-tour-not-a-step) |
 | `Beats:` | ordered sub-steps, each REPLACING the last — see [Beats](#beats) |
 
 Written as `- **Field:** value`. The `**` is optional and field names are
@@ -143,6 +147,40 @@ different walks: `Tour: Walkthrough` and `Tour: Deep dive` interleave freely in
 the file and each tour sees only its own steps, in file order. One entry belongs
 to at most one tour; a topic two tours both want is written twice, or written
 once as a help-only entry that both link to.
+
+#### `TourMetadata:` — describing a tour, not a step
+
+A tour needs a name and a sentence saying what it is, for a chooser offering
+several. That belongs to the tour as a whole, and a tour has no entry of its
+own — its steps are entries — so it is written in the **section body**, between
+the `## ` heading and the first `### ` entry:
+
+```markdown
+## Ownership
+- **TourMetadata:**
+- **Description:** What the arrows mean, and why the diagram is laid out this way
+
+### owns-vs-belongs-to
+...
+```
+
+**Leave `TourMetadata:` empty and the section's `## ` heading is the name.**
+Write a value only when the tour's name differs from its heading. The name would
+otherwise appear three times per tour — in the `<summary>`, the `## ` heading
+and here — all of which have to agree; the first two are already pinned to each
+other, so the bare form removes the copy that nothing checked.
+
+`Description:` is a block, like an entry's, so it can run to a paragraph.
+
+The name ties the description to the walk: it must match the `Tour:` field on
+the steps. **A test enforces both directions** — metadata naming a tour with no
+steps, and a tour with steps and no metadata. Without it a renamed tour parses
+cleanly and the chooser silently shows no description, which is the same shape
+of failure as the unreachable second tour below.
+
+A section with no `TourMetadata:` is an ordinary grouping section.
+
+#### Selecting a tour
 
 **The host picks which tour runs**, by passing a name to `startTour(name)`; no
 name runs the FIRST tour in the file. `tourNames(content)` lists them in file

@@ -5,7 +5,7 @@
  */
 
 import { createContext, useContext } from 'react';
-import type { HelpAnchor, HelpContent, TourPosition } from './parseHelpContent';
+import type { HelpAnchor, HelpContent, TourMeta, TourPosition } from './parseHelpContent';
 
 /**
  * Resolves a host-specific anchor kind to the element it names.
@@ -57,6 +57,12 @@ export interface HelpApi {
   endTour: () => void;
   /** Every tour in the content file, in file order. The Help menu lists these. */
   tours: string[];
+  /**
+   * A one-line description per tour, from the `TourMetadata:` block in the
+   * section that declares it. Missing for a tour whose section carries none —
+   * the chooser then shows the name alone.
+   */
+  tourMeta: Map<string, TourMeta>;
   /** Which tour is running, or undefined for the file's first. */
   tourName: string | undefined;
   nextStep: () => void;

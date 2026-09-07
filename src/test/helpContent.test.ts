@@ -1231,3 +1231,66 @@ describe('tour selection', () => {
     expect(tourPositions(two, 'Nope')).toEqual([]);
   });
 });
+
+/**
+ * `TourMetadata:` — what a tour IS, as opposed to what its steps say.
+ *
+ * Authored in a section's BODY (between the `## ` heading and the first `### `
+ * entry) rather than on an entry, because it describes the tour as a whole and
+ * a tour has no entry of its own — its steps are entries.
+ */
+describe('TourMetadata', () => {
+  const meta = (body: string) =>
+    parseHelpContent(`\n## A Tour\n${body}\n\n### e\n\n- **Title:** T\n- **Description:** D`);
+
+  test('it names the tour and carries a description', () => {
+    const c = meta('- **TourMetadata:** A Tour\n- **Description:** What it covers');
+    expect(c.tourMeta.get('A Tour')?.description).toBe('What it covers');
+  });
+
+  test('a bare TourMetadata: takes the section heading as the name', () => {
+    // Removes the third copy of the name. `<summary>` and `## heading` are
+    // already pinned to each other by the fold test; this one was pinned to
+    // nothing, so a typo silently produced metadata for a tour that does not
+    // exist.
+    const c = meta('- **TourMetadata:**\n- **Description:** What it covers');
+    expect(c.tourMeta.get('A Tour')?.description).toBe('What it covers');
+  });
+
+  test('a section without it declares no tour metadata', () => {
+    expect(meta('Just some prose.').tourMeta.size).toBe(0);
+  });
+
+  test('the description may run to a paragraph', () => {
+    const c = meta(
+      '- **TourMetadata:**\n- **Description:** One sentence.\n\n  And another.',
+    );
+    expect(c.tourMeta.get('A Tour')?.description).toContain('And another');
+  });
+
+  /**
+   * THE GUARD. Metadata is matched to steps by NAME, and nothing else checks
+   * that the two agree: a tour whose `TourMetadata:` says one thing and whose
+   * steps' `Tour:` says another parses cleanly, and the chooser silently shows
+   * no description — the same shape of silent failure as the unreachable
+   * second tour this whole change fixed.
+   */
+  test('every declared tour has steps, and every tour with steps is declared', () => {
+    const declared = [...content.tourMeta.keys()];
+    const walked = tourNames(content);
+
+    const orphaned = declared.filter(n => !walked.includes(n));
+    expect(
+      orphaned,
+      `TourMetadata for tours with no steps (name does not match any `
+      + `\`Tour:\` field): ${orphaned.join(', ')}`,
+    ).toEqual([]);
+
+    const undescribed = walked.filter(n => !declared.includes(n));
+    expect(
+      undescribed,
+      `Tours with steps but no TourMetadata block, so the chooser shows no `
+      + `description: ${undescribed.join(', ')}`,
+    ).toEqual([]);
+  });
+});

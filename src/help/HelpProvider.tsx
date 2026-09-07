@@ -366,7 +366,7 @@ export function HelpProvider({
     helpMode, toggleHelpMode, exitHelpMode,
     tourIndex, startTour, endTour, nextStep, prevStep,
     positions, position: tourIndex === null ? undefined : positions[tourIndex],
-    stepCount, tours, tourName,
+    stepCount, tours, tourName, tourMeta: content.tourMeta,
     content, activeId, showEntry, dismissEntry, resolveAnchor, centerRect,
   }), [helpMode, toggleHelpMode, exitHelpMode, tourIndex, startTour, endTour,
        nextStep, prevStep, positions, stepCount, tours, tourName,

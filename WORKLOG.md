@@ -7,6 +7,170 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-07 (designing the tour state away, without writing it)
+
+No implementation. Siggie probed the `Only:` mechanism from 2026-09-05f and the
+probing produced a better model, written up in
+[docs/TOUR_STATE_REDESIGN.md](docs/TOUR_STATE_REDESIGN.md) for a fresh session.
+Recording how it got there, because the wrong turns are instructive and two of
+them were mine repeated.
+
+### The question that started it
+
+*"the counts can only be 0, 1, or 2 -- right? ... rather than maintaining
+counts, wouldn't it be easier to record user `sel`s and tour `sel`s?"*
+
+Checking rather than answering: every use of `counts` is `counts.has(id)`.
+**Nothing reads the number.** So it was already a Set wearing a Map's clothes —
+a vestige of the incremental `bump(+1)/bump(-1)` scheme, kept through the
+refactor that made it derived without anyone noticing it had stopped counting
+for a reason.
+
+### Where `displaced` actually came from
+
+`displaced` exists because the viewer's selection was DERIVED (whatever is
+selected, minus what the tour holds) rather than stored. A replace had to
+snapshot what it hid, because nothing else recorded it. Store the viewer's half
+outright — Siggie's `held`/`temp_held` — and the snapshot has nothing to do.
+
+That is the same lesson as the `counts` refactor two days earlier, arrived at
+from the other end: **do not store two views of one fact.** Both bugs in this
+area were exactly that.
+
+### Three wrong turns, all mine
+
+1. **"`-1` is the index of the last replacing frame."** Siggie: *"why -1? ...
+   wouldn't its index be -2 or -3?"* It is `indexOf`'s not-found sentinel, not a
+   position. I had written it as though it were a position.
+
+2. **Arguing for deltas over cumulative frames.** I claimed a cumulative frame
+   captures the viewer's ticks and so goes stale, reinstating a tick they had
+   since removed — the defect the absolute `State:` model had. Wrong here,
+   because **a frame never holds the viewer's half**: `held`/`temp_held` sit
+   outside the frames and compose in at read time. Siggie said *"i don't quite
+   understand why ... but i'll take your word for it"*, which was the wrong
+   thing for me to have asked for; the objection did not survive their asking
+   again.
+
+3. **Inventing frame surgery that the algorithm does for free.** I simulated the
+   worked example, got `C` reappearing at `back to 1-1`, and concluded the
+   untick must reach back through the region's frames to strip it. Then edited
+   the note to say so — *against* Siggie's trace, which had the right rows.
+   Siggie: *"frame 1-1, step 7 has no C in it. why would C ever return there?
+   ... it shouldn't be an exception to handle, it should be what the simpler
+   algorithm does, right?"*
+
+   Right. I was treating a frame as the AUTHORED TEXT of its step (`Only: C,W,X`
+   plus `Y` = `C,W,X,Y`) rather than as a record of what was DRAWN. Frames are
+   computed forward from live state, so the untick at state 6 means step 7
+   records `[W,X,Y]` and `C` was never in it. Nothing to strip, no exception.
+
+   **The general shape: when a model needs a special rule to produce the
+   expected output, check whether the model is being read wrong before adding
+   the rule.** Twice here the "exception" was me mis-simulating.
+
+### What the simulations were worth
+
+Each round was checked by running the trace as a script rather than reading it.
+That caught real arithmetic errors in both directions — Siggie's tables had a
+few, and it is what exposed my invented surgery. Worth doing again during
+implementation: the model is small enough to simulate in ~20 lines, and every
+disagreement in this conversation was settled by running it.
+
+### Not decided
+
+Nothing blocking. Two implementation-time questions are listed at the end of the
+design note (whether `region` is a counter or a stack depth; whether `held` needs
+to exist before the first replace).
+
+---
+## 2026-09-05g (tour chooser, TourMetadata, and `Only:` in the content)
+
+Follow-up to 2026-09-05f, same day, after Siggie tried it.
+
+### The Tours submenu lasted one commit
+
+*"It's too hard to get to tours now."* Help ▾ → Tours put the tours two hovers
+deep, inside a menu whose other items are reference material, for the thing a
+first-time visitor most needs. Replaced by a `Guided tours` button on the header
+line opening a chooser popover (`TourChooser.tsx`).
+
+**This is not the `take the tour` pill coming back.** The pill was
+argument-less, so it could only ever start the file's first tour — the exact
+thing that broke once there were several. The chooser lists them and starts the
+one you pick. It keeps the pill's *styling* (a filled pill rather than a fifth
+underlined blue link) for the reason the pill had it.
+
+A popover rather than a menu because each row carries a sentence as well as a
+name, and a hover menu is the wrong shape for text you are meant to read before
+choosing.
+
+### `TourMetadata:` — Siggie's idea, plus two changes
+
+Siggie added `- **TourMetadata:** <name>` / `- **Description:** <sentence>` to
+section BODIES, which is the right home: the metadata describes a tour as a
+whole, and a tour has no entry of its own — its steps are entries. The body was
+already parsed and kept as `HelpSection.body`, unused, so this cost no new
+syntax.
+
+Two changes on top of it, invited (*"feel free to improve on my metadata section
+idea"*):
+
+- **The value is now optional; bare `- **TourMetadata:**` takes the section's
+  `## ` heading as the name.** The name was being written THREE times per tour
+  — `<summary>`, `## heading`, `TourMetadata:` — all of which have to agree. The
+  first two are already pinned to each other by the fold test; the third was
+  pinned to nothing, so a typo produced metadata for a tour that does not exist
+  and the chooser silently showed no description.
+- **A test enforces both directions**: metadata naming a tour with no steps, and
+  a tour with steps and no metadata. Mutation-tested — renaming one
+  `TourMetadata:` and not its steps' `Tour:` fields fails it with the offending
+  name in the message. This is the same SHAPE of silent failure as the
+  unreachable second tour from 2026-09-05f: parses clean, tests green, feature
+  quietly absent.
+
+### Two content failures the tests caught
+
+Siggie's in-progress content had `bdchm` with no `Anchor:` (so it defaulted to
+`help-id:bdchm`, which nothing tags) and a `<summary>` reading `Walkthrough (old
+-- needs replacing)` against a `## Walkthrough` heading.
+
+**I first "fixed" the second by loosening the test's regex** to match the bold
+name wherever it sat. Siggie: *"get rid of my parenthetical, don't change the
+rules."* Reverted. The annotation was information, not decoration — but it
+survives in the tour's own `Description:` ("The original tour. Parts will be
+used for specific tours now."), which is content rather than structure, so
+nothing was lost by taking it out of the summary.
+
+Worth remembering as a general move: when in-progress content fails a
+structural test, the content is usually what is wrong, and relaxing the rule
+trades a permanent guard for a temporary convenience.
+
+### `Only:` is now exercised by real content
+
+`graph-canvas` was the entry the original TODO complained about — it ADDED to
+the previous step's canvas where its copy read as a clean two-box example. It is
+`Only: sel=BodySite~Participant` now, and its `Action:` says "Cleared the
+diagram and drew just...". That is the step to watch when testing the verb.
+
+### "Reading the diagram" section removed
+
+Siggie: *"it was weird already because its only item was in the Walkthrough
+tour."* Correct — a section holding one entry that belongs to another section's
+tour. The entry (`graph-canvas`) moved into the Walkthrough fold, which is also
+where file order wants it, since file order IS tour order.
+
+### Test fallout worth knowing about
+
+The integration tests drove the tour by clicking `take the tour`, then the
+submenu, and now the chooser. Two of them also asserted "a tour is running" by
+looking for a `next` button — which broke once the file's FIRST tour became a
+one-step introduction whose only forward control says `done`. They match
+`next|done` now. `startTour` in that file runs the Walkthrough BY NAME rather
+than whichever tour is listed first, so adding a tour cannot silently retarget
+the stack tests.
+
+---
 ## 2026-09-05f (tasks 2 and 3: named tours, and `Only:`)
 
 Siggie: *"just do tasks 2 and 3 while i work on the tour content a bit."*

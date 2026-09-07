@@ -88,13 +88,14 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 <summary><b>The BioData Catalyst Harmonized Model</b></summary>
 
 ## The BioData Catalyst Harmonized Model
-- **TourMetadata:** The BioData Catalyst Harmonized Model
+- **TourMetadata:**
 - **Description:** Introduction to the model: what it contains and what it's for
 
 ### bdchm
 
 - **Title:** The BioData Catalyst Harmonized Model
 - **Tour:** The BioData Catalyst Harmonized Model
+- **Anchor:** none
 - **Description:** 
   BioData Catalyst ([BDC](https://biodatacatalyst.nhlbi.nih.gov/))
   is a cloud-based ecosystem where researchers can find and work with
@@ -112,10 +113,10 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 ---
 <div style="margin-left: 40px">
 <details>
-<summary><b>Walkthrough (old -- needs replacing)</b></summary>
+<summary><b>Walkthrough</b></summary>
 
 ## Walkthrough
-- **TourMetadata:** Walkthrough
+- **TourMetadata:**
 - **Description:** The original tour. Parts will be used for specific tours now.
 
 ### intro
@@ -245,24 +246,13 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 - **Context:** An entity can sit in more than one place in the tree, because things can be owned by more than one kind of thing. The widget marks the duplicates for you.
 - **Anchor:** selection-tree
 
-</details><!-- end of Walkthrough tour -->
-</div>
-
----
-<details>
-<summary><b>Reading the diagram</b></summary>
-
-## Reading the diagram
-
-What the boxes and lines mean.
-
 ### graph-canvas
 
 - **Title:** Selecting an entity
 - **Tour:** Walkthrough
 - **Description:** Select an entity by clicking its checkbox and it appears in the main panel. Only what you select is drawn — related entities are reached from the box's relation bar. There are five ways an entity can be related to another.
-- **Action:** Added Participant and BodySite to what is already on the diagram. You would normally do this by ticking them in the tree on the left.
-- **Change:** sel=BodySite~Participant
+- **Action:** Cleared the diagram and drew just Participant and BodySite. You would normally do this by ticking them in the tree on the left.
+- **Only:** sel=BodySite~Participant
 - **Beats:**
   1. Select an entity by clicking its checkbox and it appears in the main panel. Only what you select is drawn. There are five ways an entity can be related to another.
      - Anchor: selection-tree
@@ -280,10 +270,10 @@ What the boxes and lines mean.
   carries the old `sel=BodySite~Participant`; pick the entity or entities
   that actually demonstrate all five once you have checked which do.
 
-  Note this step now ADDS to the diagram rather than replacing it, so
-  MeasurementObservation from step 3 is still drawn beside Participant and
-  BodySite. The Action: says so. If the step wants a clean two-box diagram
-  instead, the format has no "remove" verb — say so and it can gain one.
+  This step now REPLACES the diagram (`Only:` rather than `Change:`, added
+  2026-09-05), so MeasurementObservation from the previous step is gone and
+  the canvas is the clean two-box example the copy reads as. Stepping BACK
+  restores it.
 
   Note the count: your draft says "five ways" here and you confirmed five
   is right (four ownership kinds + associations). The stale "four" note is
@@ -294,7 +284,10 @@ What the boxes and lines mean.
   panel, not the canvas. The old canvas copy is preserved as
   `graph-canvas-reading` below. Consider renaming this entry.
 -->
-</details><!-- end of Reading the diagram -->
+
+</details><!-- end of Walkthrough tour -->
+</div>
+
 </details><!-- end of Tours -->
 
 <details>

@@ -235,11 +235,50 @@ export interface HelpSection {
   /** Text between the `##` heading and the first `###` entry. Rendered nowhere. */
   body: string;
   entries: HelpEntry[];
+  /**
+   * The tour this section describes, when its body carries a
+   * `- **TourMetadata:**` line. See `TourMeta`.
+   */
+  tourMeta?: TourMeta;
+}
+
+/**
+ * What a tour IS, as opposed to what its steps say — the name and a sentence
+ * describing it, for a chooser that offers several tours.
+ *
+ * **Authored in a section's body, not on an entry**, because it belongs to the
+ * tour as a whole and a tour has no entry of its own; its steps are entries.
+ * Written between the `## ` heading and the first `### ` entry:
+ *
+ * ```markdown
+ * ## The BioData Catalyst Harmonized Model
+ * - **TourMetadata:** The BioData Catalyst Harmonized Model
+ * - **Description:** Introduction to the model: what it contains and what it's for
+ * ```
+ *
+ * `TourMetadata:` names the tour, and the name must match the `Tour:` field on
+ * the steps — that is what ties the description to the walk. A section with no
+ * `TourMetadata:` is an ordinary grouping section and gets none of this.
+ *
+ * A tour with steps but no metadata still runs; the chooser falls back to its
+ * name and shows no description. Metadata naming a tour with no steps is the
+ * error worth catching, and a test does.
+ */
+export interface TourMeta {
+  /** The tour's name, matching the `Tour:` field on its steps. */
+  name: string;
+  /** One sentence for the chooser. Markdown allowed. */
+  description: string;
 }
 
 export interface HelpContent {
   sections: HelpSection[];
   entries: Map<string, HelpEntry>;
+  /**
+   * Tour descriptions, keyed by tour name, gathered from every section that
+   * carries a `TourMetadata:` block. What a tour chooser reads.
+   */
+  tourMeta: Map<string, TourMeta>;
 }
 
 /**
@@ -713,6 +752,25 @@ function parseSection(block: string, nextOrder: () => number): HelpSection {
   }
   const body = bodyLines.join('\n').trim();
 
+  /*
+   * A section whose body names a tour describes that tour, for the chooser.
+   * Reuses the entry field readers on the body's lines: the syntax is the same
+   * `- **Field:** value`, so a section's metadata is authored exactly like an
+   * entry's fields rather than in a second spelling.
+   *
+   * `Description:` is read as a BLOCK, so a tour description can run to a
+   * paragraph the way a step's can.
+   */
+  const declared = extractField(bodyLines, 'TourMetadata');
+  const tourMeta: TourMeta | undefined = declared === undefined
+    ? undefined
+    // A BARE `- **TourMetadata:**` takes the section's `## ` heading as the
+    // tour name. The name would otherwise be written three times per tour --
+    // `<summary>`, `## heading`, `TourMetadata:` -- all of which have to agree,
+    // with only the first two checked. Omitting the value removes the copy
+    // that nothing else pins.
+    : { name: declared || title, description: extractBlockField(bodyLines, 'Description')?.trim() ?? '' };
+
   // Split remaining into ### entry blocks
   const entries: HelpEntry[] = [];
   const entryBlocks = block.split(/(?=^### )/m);
@@ -722,7 +780,7 @@ function parseSection(block: string, nextOrder: () => number): HelpSection {
     if (entry) entries.push(entry);
   }
 
-  return { id, title, body, entries };
+  return { id, title, body, entries, tourMeta };
 }
 
 /**
@@ -889,5 +947,12 @@ export function parseHelpContent(markdown: string): HelpContent {
     }
   }
 
-  return { sections, entries };
+  // Tour descriptions, gathered across sections and keyed by the tour they
+  // name — so a chooser looks a tour up by name rather than walking sections.
+  const tourMeta = new Map<string, TourMeta>();
+  for (const section of sections) {
+    if (section.tourMeta) tourMeta.set(section.tourMeta.name, section.tourMeta);
+  }
+
+  return { sections, entries, tourMeta };
 }

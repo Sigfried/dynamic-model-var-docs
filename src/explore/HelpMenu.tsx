@@ -69,14 +69,8 @@ const HELP_ENTRIES: ReadonlyArray<{ id: string; label: string }> = [
 export default function HelpMenu({
   onOpenLegend, onOpenCases, legendOpen, casesOpen,
 }: HelpMenuProps) {
-  const { startTour, showEntry, tours } = useHelp();
+  const { showEntry } = useHelp();
   const [open, setOpen] = useState(false);
-  /**
-   * Which submenu is open, by name. One slot rather than a boolean per
-   * submenu: only one can be open, and a second flag could contradict the
-   * first.
-   */
-  const [submenu, setSubmenu] = useState<string | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const cancelClose = () => {
@@ -87,7 +81,7 @@ export default function HelpMenu({
   };
   const scheduleClose = () => {
     cancelClose();
-    closeTimer.current = setTimeout(() => { setOpen(false); setSubmenu(null); }, CLOSE_DELAY_MS);
+    closeTimer.current = setTimeout(() => setOpen(false), CLOSE_DELAY_MS);
   };
   useEffect(() => cancelClose, []);
 
@@ -100,14 +94,9 @@ export default function HelpMenu({
       const t = ev.target as HTMLElement | null;
       if (t?.closest('[data-help-menu]')) return;
       setOpen(false);
-      setSubmenu(null);
     };
     const onKey = (ev: KeyboardEvent) => {
-      // Escape closes the submenu first if one is open, then the menu — the
-      // same two-stage unwind the tour's Escape does.
-      if (ev.key !== 'Escape') return;
-      if (submenu) setSubmenu(null);
-      else setOpen(false);
+      if (ev.key === 'Escape') setOpen(false);
     };
     document.addEventListener('mousedown', onDown, true);
     document.addEventListener('keydown', onKey);
@@ -115,11 +104,11 @@ export default function HelpMenu({
       document.removeEventListener('mousedown', onDown, true);
       document.removeEventListener('keydown', onKey);
     };
-  }, [open, submenu]);
+  }, [open]);
 
   /** Every item closes the menu: each one either opens a panel, starts the
    *  tour, or shows a popover, and none of them is a thing you do twice. */
-  const pick = (fn: () => void) => () => { setOpen(false); setSubmenu(null); fn(); };
+  const pick = (fn: () => void) => () => { setOpen(false); fn(); };
 
   return (
     <span
@@ -144,55 +133,16 @@ export default function HelpMenu({
                      text-gray-900 dark:text-gray-100"
         >
           {/*
-            * Tours as a SUBMENU, not a single "take the tour" item.
+            * NO tours here. They were a cascading `Tours ▸` submenu until
+            * 2026-09-05 — Siggie: *"It's too hard to get to tours now"*. Two
+            * hovers deep, inside a menu of reference material, was the wrong
+            * place for the thing a first-time visitor most needs, so the tours
+            * moved to their own `Guided tours` button on the header line
+            * (`TourChooser.tsx`), which can also show each tour's description.
             *
-            * There are several tours now, in rising complexity, and a reader
-            * who wants "Inheritance" should not have to walk "What BDCHM
-            * covers" to reach it. A flat list would put five items above the
-            * legend and stop the tours reading as one group.
-            *
-            * The submenu renders only when the content file declares more than
-            * one tour: with a single tour a submenu is a hover in front of the
-            * only thing behind it.
+            * The submenu state and the left-opening panel went with it. If
+            * something else ever needs a submenu here, that is in git.
             */}
-          {tours.length > 1 ? (
-            <div
-              className="relative"
-              onMouseEnter={() => { cancelClose(); setSubmenu('tours'); }}
-            >
-              <MenuItem onClick={() => setSubmenu(v => (v === 'tours' ? null : 'tours'))}>
-                <span className="flex items-center justify-between">
-                  Tours
-                  <span aria-hidden className="opacity-60">▸</span>
-                </span>
-                <Hint>guided walks, simplest first</Hint>
-              </MenuItem>
-              {submenu === 'tours' && (
-                /* Opens to the LEFT: the Help menu is already flush with the
-                   right edge of the header, so a submenu to the right would
-                   run off screen. */
-                <div
-                  className="absolute right-full top-0 mr-1 z-50 w-56 py-1
-                             rounded-md border border-gray-300 dark:border-slate-600
-                             bg-white dark:bg-slate-800 shadow-xl"
-                >
-                  {tours.map(name => (
-                    <MenuItem key={name} onClick={pick(() => startTour(name))}>
-                      {name}
-                    </MenuItem>
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : (
-            <MenuItem onClick={pick(() => startTour())}>
-              Take the tour
-              <Hint>a short guided walk</Hint>
-            </MenuItem>
-          )}
-
-          <Separator />
-
           <MenuItem onClick={pick(onOpenLegend)}>
             {legendOpen ? 'Hide ownership legend' : 'Ownership legend'}
             <Hint>every relationship in the schema, by rule</Hint>

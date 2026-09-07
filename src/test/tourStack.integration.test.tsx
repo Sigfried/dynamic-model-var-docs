@@ -60,29 +60,27 @@ describe('tour state stack, end to end', () => {
    * Render, then walk the tour to the first step that puts something on the
    * canvas.
    *
-   * Goes in through Help ▾, which is the only door now: the `take the tour`
-   * pill was deleted with docs/tasks.md item 2, because a second entry point
-   * to the same thing drifts from the first — and being argument-less, the
-   * pill could only ever start the tour that happens to be first in the file.
+   * Goes in through the `Guided tours` button, which is the only door: the
+   * `take the tour` pill was deleted with docs/tasks.md item 2 (two entry
+   * points to one thing drift apart, and being argument-less it could only
+   * ever start the file's first tour), and the Help ▾ → Tours submenu that
+   * briefly replaced it was itself replaced by the chooser — two hovers deep
+   * was too far (Siggie, 2026-09-05).
    *
-   * With one tour declared the menu shows a plain `Take the tour` item; with
-   * several it shows a `Tours` submenu. Both are handled so this helper does
-   * not have to change again when the content file grows its other tours.
+   * Runs the WALKTHROUGH by name, not whichever tour is listed first. These
+   * tests are about the state stack — they need several steps that push and
+   * pop — and the file's first tour is a one-step introduction whose only
+   * button says "done". Naming the tour also means adding one to the content
+   * file cannot silently retarget them.
    */
   const startTour = async () => {
     render(<ExploreApp />);
     await screen.findByRole('heading', { name: /BDCHM Explorer/i });
-    fireEvent.click(button(/^help/i));
-    const submenu = screen.queryByRole('button', { name: /^tours/i, hidden: true });
-    if (submenu) {
-      fireEvent.click(submenu);
-      // The first tour in the file: the one the pill used to start.
-      const [first] = screen.getAllByRole('button', { hidden: true })
-        .filter(el => el.textContent && /walkthrough/i.test(el.textContent));
-      fireEvent.click(first);
-    } else {
-      fireEvent.click(button(/take the tour/i));
-    }
+    fireEvent.click(button(/guided tours/i));
+    const chooser = await screen.findByRole('dialog', { name: /guided tours/i });
+    const walkthrough = [...chooser.querySelectorAll('button')]
+      .find(b => /^walkthrough/i.test(b.textContent ?? ''))!;
+    fireEvent.click(walkthrough);
     await screen.findByRole('button', { name: /next/i, hidden: true });
   };
 
@@ -106,7 +104,9 @@ describe('tour state stack, end to end', () => {
      */
     window.history.replaceState(null, '', '/dynamic-model-var-docs/?tour=1&sel=Person');
     render(<ExploreApp />);
-    await screen.findByRole('button', { name: /next/i, hidden: true });
+    // `next|done`: the link starts the file's FIRST tour, which is today a
+    // one-step introduction whose only forward control says "done".
+    await screen.findByRole('button', { name: /next|done/i, hidden: true });
     // Consumed...
     expect(params().get('tour')).toBeNull();
     // ...without disturbing the view state alongside it.
@@ -137,11 +137,17 @@ describe('tour state stack, end to end', () => {
     expect(screen.queryByRole('button', { name: /next/i, hidden: true })).toBeNull();
 
     fireEvent.keyDown(document, { key: '?' });
-    await screen.findByRole('button', { name: /next/i, hidden: true });
+    /*
+     * `next|done`, not `next`. `?` starts the tour with no name, so it runs the
+     * FIRST tour in the content file — today a one-step introduction, whose
+     * only forward control says "done" because there is no step after it.
+     * Asserting on `next` alone would read that as "no tour started".
+     */
+    await screen.findByRole('button', { name: /next|done/i, hidden: true });
 
     fireEvent.keyDown(document, { key: '?' });
     await waitFor(() =>
-      expect(screen.queryByRole('button', { name: /next/i, hidden: true })).toBeNull());
+      expect(screen.queryByRole('button', { name: /next|done/i, hidden: true })).toBeNull());
   });
 
   test('? is ignored while typing, so it can be typed into a field', async () => {
