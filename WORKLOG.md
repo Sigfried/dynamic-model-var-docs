@@ -7,6 +7,108 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-07, later (the `held`-editable correction, and a rejected alternative)
+
+Still no implementation — started one, threw it away. The session opened on
+TASKS 3b, read the design note, and got most of the way through rewriting
+`tourStateStack.ts` before hitting a case the note did not cover. Recording the
+case, the fix, and the alternative that looked better and was not.
+
+### The gap: an untick of a class only in `held`
+
+The note said `held` was frozen and an untick of a `held`-only class did
+nothing. But at region 0 `held` is DISPLAYED, so the viewer can untick one — and
+if the untick does nothing, the next compose puts it straight back. The
+checkbox refuses to stay off.
+
+The first worked example never reached this: its only untick hit a class `tour`
+was also holding, so `tour` gave it up and `held` keeping it was invisible.
+
+Siggie's fix, which is better than either option I offered: **`held` is
+editable, and `temp_held` does not exist until after a replace.** Before the
+first `Only:`, viewer ticks land in `held`, so region 0 is just "the viewer's
+selection" — the pre-`Only:` model unchanged. `temp_held` exists only to hold
+ticks made while `held` is suppressed. That also settles the note's open
+question about whether `held` needs to exist before the first replace: the
+question dissolves, because there is one viewer set until a replace creates the
+second.
+
+### My wrong turn, the same shape as last time
+
+I read Siggie's revised table, found rows 6 and 11 disagreeing with the
+crossing row, and called it a typo — twice, across two messages, proposing
+"fixes" to a table that was internally consistent. It wasn't a typo: a class
+ticked before AND during a replace has two records, one per set, and the untick
+removes only the displayed one. Two ticks, two facts.
+
+**Same failure as wrong turn 3 in the entry below**: when the model produced an
+output I did not expect, I assumed the model was wrong instead of checking
+whether I had read it wrong. Siggie: *"it wasn't a mistake on my part unless
+i'm misunderstanding something."* They weren't.
+
+I also asserted twice that a tick of an already-`held` id would not show on
+screen under the compose formula. That was true of the alternative I was
+arguing for, not of Siggie's model, and I stated it flat instead of scoped.
+
+### The rejected alternative: move instead of copy
+
+Worth recording so it is not re-derived. Make a tick during a replace MOVE the
+id out of `held` into `temp_held` rather than copying it. Every class then has
+exactly one record, every untick reaches it, and the one-sentence summary of
+tour behaviour becomes clean — which is why I pushed it.
+
+**It breaks the cancelling pair.** `+A` then `−A` during a replace takes `A`
+out of `held`, puts it in `temp_held`, removes it from there, and `A` is gone
+at the crossing and at exit — destroyed by two clicks that cancel, on a class
+the viewer never saw on screen (it was suppressed throughout). Verified by
+simulation, both rules side by side.
+
+A cancelling pair must be a no-op. That is a harder constraint than "an untick
+of a doubly-ticked class should stick", and the copying rule satisfies it for
+free. Alternative dead; do not reopen.
+
+The near-miss worth naming: I was optimising the EXPLANATION and lost an
+invariant. The tidier rule was tidier because it discarded information.
+
+### `−A` is not reachable anyway
+
+While building the case I added a `user −A` step to the trace and had to remove
+it: at region 1, `A` is suppressed, so its checkbox reads unchecked and the only
+click available on it is a TICK. The left panel lists every class regardless of
+what is drawn (`SelectionTable.tsx`, `ClassRows`), with `checked` reading from
+the composed selection. Siggie caught this before I did.
+
+### Simulations again
+
+Every disagreement was settled by running the trace as a script, and one of my
+simulations was itself wrong: I mutated frames in place on an untick, which
+made `back` show the post-untick state and contradicted the note's "no frame is
+rewritten". The fix is that `tour` is LIVE and frames are written only at push
+time — the untick edits the live set, and frames recorded earlier keep what
+they had. Worth re-reading before implementing, since it is exactly the
+distinction the whole no-frame-surgery argument rests on.
+
+### Also settled
+
+**`region` rides on the frame** rather than being a counter beside the stack —
+back across a replace is then a read, not a decrement, and there is no second
+view of a fact the frames already hold.
+
+**The provider needs an explicit tour-start signal.** It has
+`onPushChange`/`onPopChange` and nothing else, and a tour whose opening
+position carries no `Change:` pushes no frame — the FIRST tour in the content
+file is exactly that. So "the stack is non-empty" ≠ "a tour is running", and
+`held` cannot be frozen at first push. Add `onTourStart`/`onTourEnd`.
+
+### State at the end of the session
+
+`docs/TOUR_STATE_REDESIGN.md` is corrected and internally consistent; the
+worked example is Siggie's, verified by simulation row by row.
+`src/explore/tourStateStack.ts` was left with an uncommitted half-rewrite
+against the SUPERSEDED (frozen-`held`) model — to be discarded, not built on.
+Implementation starts fresh from the shipped file plus the corrected note.
+
+---
 ## 2026-09-07 (designing the tour state away, without writing it)
 
 No implementation. Siggie probed the `Only:` mechanism from 2026-09-05f and the
@@ -81,7 +183,8 @@ disagreement in this conversation was settled by running it.
 
 Nothing blocking. Two implementation-time questions are listed at the end of the
 design note (whether `region` is a counter or a stack depth; whether `held` needs
-to exist before the first replace).
+to exist before the first replace). **Both settled later the same day — see the
+entry above.**
 
 ### Postscript: `Only:` was reported not working, and is fine
 
