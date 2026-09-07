@@ -7,6 +7,136 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-07, later still (the rewrite shipped, and the one case the note missed)
+
+TASKS 3b implemented. `docs/TOUR_STATE_REDESIGN.md` is deleted per its own
+instruction; its model now lives in `tourStateStack.ts`'s header, and what
+follows is the part that does not belong in a live doc.
+
+### The note's shorthand for the untick rule, and where it runs out
+
+**The note's stated rule is correct and is what shipped.** What needed care is
+its SHORTHAND, which is only equivalent to the stated rule on the cases the
+worked example happens to contain.
+
+The note gives the rule twice. Stated: "remove it from whichever set is
+currently DISPLAYING the class". Written as an if/else chain:
+
+```
+in `tour`           -> remove it from `tour`
+else in `temp_held` -> remove it from `temp_held`
+else in `held`      -> remove it from `held`
+```
+
+The chain stops at the first match, which is right whenever exactly one set is
+displaying — true of every untick in the worked example, so the table never
+distinguishes them. It is wrong when TWO sets display the same class, and that
+happens only at region 0, where nothing is suppressed:
+
+```
+start [Participant]     held=[Participant]  tour=[]             shown: Participant
+tour  +Participant      held=[Participant]  tour=[Participant]  shown: Participant
+user  −Participant   <- region 0: `tour` AND `held` are both displaying it
+```
+
+The chain drops the `tour` copy and stops; `held` is not suppressed, so the next
+compose puts `Participant` straight back and the checkbox bounces. Same failure
+the note already names for `−B` at step 4 ("an untick here has to stick, or the
+checkbox bounces back") — it just never pairs that condition with a class the
+tour is also drawing.
+
+**Step 7 is NOT this case and does not change.** `−C` happens at region 1, where
+`held` is suppressed and therefore not displaying, so `tour` is the only set the
+untick reaches and `held` rightly keeps its copy for the crossing. The
+discriminator is suppressed-vs-displaying, not which set is checked first:
+
+| | region | in `tour` | in `held` | `held` displaying? | untick reaches |
+|---|---|---|---|---|---|
+| step 7, `−C` | 1 | yes | yes | no (suppressed) | `tour` only |
+| the gap | 0 | yes | yes | **yes** | `tour` **and** `held` |
+
+So `untick` drops the id from `tour` and `temp_held` always, and from `held`
+only when `region === 0`. Both rows are pinned by name in
+`tourStateStack.test.ts`, the second one specifically so nobody "simplifies" the
+guard away and silently restores step 7's behaviour at region 0.
+
+Found by writing the test first and getting a failure I had expected to pass.
+Worth noting given the last two sessions' pattern of assuming the model was
+wrong when output surprised me: here the model was *nearly* right, the
+divergence was real, and the way to tell the difference was to check which of
+the note's two formulations the example actually constrained. It constrained
+neither over the other.
+
+### Deriving the untick direction, and where that bit
+
+`reconcile` is gone, and with it the trick of INFERRING unticks from the
+resulting state: an id the tour held that had gone missing was an untick, so
+only ticks needed announcing. That inference cannot survive `held`/`temp_held`,
+because a class can sit in two sets at once and the composed `sel` cannot say
+which one the viewer spoke to. So both directions are now reported at the click
+through `reportViewerEdit`, and three call sites that previously said nothing
+had to start: `removeFromCanvas`, `resetApp`, and `showCategoryView`'s implicit
+unticks (it replaces the canvas, so everything it drops is an untick).
+
+Missing any one of those is silent: the tour keeps a record of a class the
+viewer removed, and it reappears on the next step.
+
+### `reportViewerEdit` cannot go inside a setState updater
+
+First attempt put the call inside `setSelectedIds(prev => ...)`, to read the
+before-state without making the callback depend on `selectedIds` (which would
+rebuild it, and every row taking it, on every selection change). Wrong:
+StrictMode double-invokes updaters (`main.tsx`), and **`untick` is not
+idempotent** — a second call takes the class out of the NEXT set holding it,
+which is a record the viewer never touched. `tick` happens to be idempotent,
+which is what made this easy to miss.
+
+Fixed by reading the direction from the URL (`readExploreState().sel`) before
+the setState, outside the updater. The same idempotence question is why
+`showCategoryView`'s existing `pushNextWrite.current = true` inside an updater
+carries its own note — that one IS idempotent, and the comment there says so.
+
+### `onTourStart`/`onTourEnd` replaced the depth count
+
+The provider used to keep a `depth` ref and unwind by calling `onPopChange`
+once per pushed frame. Gone: the host is told when the tour ends and restores
+the viewer's canvas in one read of `held ∪ temp_held`. That removes the last
+place the provider kept a second view of the host's state — the same rule that
+killed `counts` and `displaced`.
+
+`onTourEnd` is guarded with `if (!tourState.inTour) return` even though all
+four exit paths check `tourIndex !== null` first. Deliberate: without it a
+spurious call publishes `NO_TOUR`'s empty `held` over the canvas and wipes the
+viewer's selection. One line against a bad failure, and against the guard in
+the caller quietly rotting.
+
+### Verifying the tests have teeth
+
+The new integration test ("a class ticked mid-tour is still there after the
+tour ends") was checked by deliberately breaking `onTourStart` to record an
+empty selection: 3 tests failed, including that one. Restored afterwards. The
+old integration suite passed unchanged against the new bridge, which is the
+useful signal — the rewrite changed the mechanism and not the behaviour a
+viewer walking a tour forward sees.
+
+### Naming
+
+`frames` became `tourStates` (Siggie): one entry per tour POSITION, not per
+`Only:` and not per user click — the worked example's user-tick rows push
+nothing, which is why `back` skips them. An earlier suggestion to call them
+`replacements`/`onlyRegions` came from reading them as one-per-`Only:`; they
+are not, and `region` stays a number recorded on each entry.
+
+### Next
+
+Siggie: **tour step numbering needs work** — "there needs to be an easy way to
+find a given tour step/beat as shown in the app in the help-content." The
+worked example's `region-step` labels and the app's own step counter and the
+positions-vs-steps distinction are three different numbering schemes over the
+same walk, and the design note had to spend a paragraph warning that its
+example was at "step 5 of 6, roughly the 11th `next` press". Filed as TASKS 3c.
+
+---
 ## 2026-09-07, later (the `held`-editable correction, and a rejected alternative)
 
 Still no implementation — started one, threw it away. The session opened on
@@ -113,7 +243,8 @@ Implementation starts fresh from the shipped file plus the corrected note.
 
 No implementation. Siggie probed the `Only:` mechanism from 2026-09-05f and the
 probing produced a better model, written up in
-[docs/TOUR_STATE_REDESIGN.md](docs/TOUR_STATE_REDESIGN.md) for a fresh session.
+`docs/TOUR_STATE_REDESIGN.md` for a fresh session (since deleted; the model
+lives in `tourStateStack.ts`'s header).
 Recording how it got there, because the wrong turns are instructive and two of
 them were mine repeated.
 

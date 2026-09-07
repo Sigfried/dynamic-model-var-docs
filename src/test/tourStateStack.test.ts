@@ -1,40 +1,56 @@
 import { describe, test, expect } from 'vitest';
 import {
-  parseTourChange, pushFrame, popFrame, pendingRestore, clearStack, composeState,
-  viewerState, reconcile, EMPTY_STACK, type TourStack,
+  parseTourChange, pushStep, popStep, compose, tick, untick,
+  startTour, endTour, survivingSelection, NO_TOUR, type TourState,
 } from '../explore/tourStateStack';
 import { DEFAULTS, type ExploreState } from '../explore/exploreState';
 
 /**
- * The tour's state stack (docs/TASKS.md item 2, Siggie 2026-08-27).
+ * Tour state on the `held`/`temp_held` model (Siggie 2026-09-07). The model is
+ * documented in `tourStateStack.ts`'s header; how it was arrived at, and the one
+ * case its design note got wrong, are in WORKLOG 2026-09-07.
  *
- * The model being replaced: every step carried a FULL absolute query, applied
- * with `url.search = query`. So the tour had to snapshot and restore the
- * viewer's state, a mid-tour edit was clobbered, and any field a step did not
- * name snapped back to its default. Under the stack a step declares only what
- * it ADDS, `back` pops, and exit unwinds.
+ * Two models preceded it. The first made every step a FULL absolute query
+ * applied with `url.search = query`, so the tour had to snapshot and restore
+ * the viewer's state, a mid-tour edit was clobbered, and any field a step did
+ * not name snapped back to its default. The second made steps additive deltas
+ * on a refcounted stack, which fixed all three but derived the viewer's half
+ * (selection minus what the tour holds) instead of storing it — and so needed a
+ * per-frame `displaced` snapshot and whole-stack surgery on an untick.
+ *
+ * Here both halves are stored. The tests below are organised around the four
+ * things that buys: the composition, viewer edits landing in a named set,
+ * `back` as a plain read, and exit as a read of the viewer's half.
  */
 
 const base = (over: Partial<ExploreState> = {}): ExploreState => ({ ...DEFAULTS, ...over });
 
-/** Push a sequence of `Change:` queries, as walking forward through a tour. */
-function walk(...queries: string[]): TourStack {
-  return queries.reduce((s, q) => pushFrame(s, parseTourChange(q)), EMPTY_STACK);
+/** The composed selection, sorted — these tests are about membership, not order. */
+const shown = (state: TourState, viewer = base()) =>
+  [...compose(viewer, state).sel].sort();
+
+/** Walk forward through a tour, `Change:` unless the query is wrapped in `only()`. */
+const only = (q: string) => ({ q, replace: true });
+function walk(from: TourState, ...steps: Array<string | { q: string; replace: boolean }>) {
+  return steps.reduce((s, step) => {
+    const { q, replace } = typeof step === 'string' ? { q: step, replace: false } : step;
+    return pushStep(s, parseTourChange(q, replace));
+  }, from);
 }
 
 describe('parseTourChange', () => {
   test('an absent field means "leave it alone", not "use the default"', () => {
     // THE inversion. Under absolute state, `sel=X` also meant sibs/dir/merge
-    // back to their defaults; under the stack it means only "add X".
-    const frame = parseTourChange('sel=MeasurementObservation');
-    expect(frame.sel).toEqual(['MeasurementObservation']);
-    expect(frame.scalars).toEqual({});
+    // back to their defaults; here it means only "add X".
+    const change = parseTourChange('sel=MeasurementObservation');
+    expect(change.sel).toEqual(['MeasurementObservation']);
+    expect(change.scalars).toEqual({});
   });
 
   test('an empty change touches nothing at all', () => {
     // Under absolute state an empty `State:` was a REAL state — the default
-    // view, everything cleared. Under the stack it is a step that changes
-    // nothing, which is what an exposition step actually wants.
+    // view, everything cleared. Here it is a step that changes nothing, which
+    // is what an exposition step actually wants.
     expect(parseTourChange('')).toEqual({ sel: [], scalars: {} });
   });
 
@@ -53,284 +69,382 @@ describe('parseTourChange', () => {
     expect(parseTourChange('dir=SIDEWAYS').scalars).toEqual({});
     expect(parseTourChange('merge=nope').scalars).toEqual({});
   });
+
+  test('an Only: query parses identically except for the flag', () => {
+    // Same text, same shape; the authoring field is the only difference, and
+    // interpreting it is this module's job rather than the parser's.
+    expect(parseTourChange('sel=Visit', true))
+      .toEqual({ sel: ['Visit'], scalars: {}, replace: true });
+  });
 });
 
-describe('push and pop', () => {
+describe('outside a tour nothing composes', () => {
+  test('compose is the identity', () => {
+    const viewer = base({ sel: ['Visit'], dir: 'DOWN' });
+    expect(compose(viewer, NO_TOUR)).toEqual(viewer);
+  });
+
+  test('a viewer edit is not recorded', () => {
+    // The click handlers call unconditionally, so this has to be a no-op rather
+    // than quietly filling `held` for a tour that is not running.
+    expect(tick(NO_TOUR, 'Visit')).toEqual(NO_TOUR);
+    expect(untick(NO_TOUR, 'Visit')).toEqual(NO_TOUR);
+  });
+});
+
+describe('the tour draws on top of the viewer', () => {
   test('a step adds its ids to whatever the viewer had', () => {
-    const stack = walk('sel=Participant');
-    expect(composeState(base({ sel: ['Visit'] }), stack).sel.sort())
-      .toEqual(['Participant', 'Visit']);
+    const state = walk(startTour(['Visit']), 'sel=Participant');
+    expect(shown(state)).toEqual(['Participant', 'Visit']);
   });
 
   test('back removes only what that step added', () => {
-    const stack = walk('sel=Participant', 'sel=BodySite');
-    const after = popFrame(stack);
-    expect(composeState(base({ sel: ['Visit'] }), after).sel.sort())
-      .toEqual(['Participant', 'Visit']);
+    const state = walk(startTour(['Visit']), 'sel=Participant', 'sel=BodySite');
+    expect(shown(popStep(state))).toEqual(['Participant', 'Visit']);
   });
 
   test('a step that changes nothing leaves the view exactly as it was', () => {
-    // The exposition step. Under absolute state this was the case that
-    // required an empty `State:` and cleared the canvas.
-    const viewer = base({ sel: ['Visit'], dir: 'DOWN' });
-    const stack = walk('sel=Participant', '');
-    expect(composeState(viewer, stack).sel.sort()).toEqual(['Participant', 'Visit']);
-    expect(composeState(viewer, stack).dir).toBe('DOWN');
-  });
-});
-
-describe('the duplicate push is a reference count', () => {
-  test("popping the tour's copy leaves the viewer's selection standing", () => {
-    // Siggie's core case: "if the new piece of state is already in the state,
-    // add it a second time, so back can just pop off the stack and the user's
-    // actions remain untouched."
-    const viewer = base({ sel: ['Participant'] });
-    const stack = walk('sel=Participant');
-    expect(composeState(viewer, stack).sel).toEqual(['Participant']);
-    expect(composeState(viewer, popFrame(stack)).sel).toEqual(['Participant']);
+    // The exposition step. Under absolute state this was the case that required
+    // an empty `State:` and cleared the canvas.
+    const state = walk(startTour(['Visit']), 'sel=Participant', '');
+    expect(shown(state)).toEqual(['Participant', 'Visit']);
   });
 
-  test('two steps wanting the same class both have to pop before it goes', () => {
-    const stack = walk('sel=Participant', 'sel=Participant~BodySite');
-    const once = popFrame(stack);
-    expect(composeState(base(), once).sel).toEqual(['Participant']);
-    expect(composeState(base(), popFrame(once)).sel).toEqual([]);
+  test("a class in both halves survives the tour's own pop", () => {
+    /*
+     * What the refcount used to be for. `sel` is a set and cannot hold the
+     * tour's copy beside the viewer's — so the two are not in one set at all
+     * any more. `held` keeps its record whatever the tour does with `tour`.
+     */
+    const state = walk(startTour(['Participant']), 'sel=Participant');
+    expect(shown(state)).toEqual(['Participant']);
+    expect(shown(popStep(state))).toEqual(['Participant']);
   });
 
-  test('a class the tour pushed goes when the tour is done with it', () => {
-    const stack = walk('sel=Participant');
-    expect(composeState(base(), popFrame(stack)).sel).toEqual([]);
+  test('a class only the tour drew goes when the tour is done with it', () => {
+    const state = walk(startTour([]), 'sel=Participant');
+    expect(shown(popStep(state))).toEqual([]);
+  });
+
+  test('popping past the bottom is a no-op, so exit paths can just unwind', () => {
+    const state = startTour(['Visit']);
+    expect(popStep(state)).toEqual(state);
   });
 });
 
 describe('scalars overwrite and do not restore', () => {
-  test('a step sets a scalar over the viewer\'s value', () => {
-    const stack = walk('dir=DOWN');
-    expect(composeState(base({ dir: 'RIGHT' }), stack).dir).toBe('DOWN');
+  test("a step sets a scalar over the viewer's value", () => {
+    const state = walk(startTour([]), 'dir=DOWN');
+    expect(compose(base({ dir: 'RIGHT' }), state).dir).toBe('DOWN');
   });
 
-  test('popping does NOT put the viewer\'s scalar back', () => {
+  test("popping does NOT put the viewer's scalar back", () => {
     /*
-     * Deliberate, and decided rather than overlooked. Siggie: "you're
-     * overcomplicating for the sake of probably rare edge cases. just do the
-     * stack. if scalar settings clobber user actions, don't worry about it.
-     * easy enough for the user to reclick the button." Carrying a second frame
-     * type for the five scalars costs more than the click it saves.
+     * Deliberate, and decided rather than overlooked. Siggie, 2026-08-27:
+     * "you're overcomplicating for the sake of probably rare edge cases. just
+     * do the stack. if scalar settings clobber user actions, don't worry about
+     * it. easy enough for the user to reclick the button."
      */
-    const stack = walk('dir=DOWN');
-    expect(composeState(base({ dir: 'RIGHT' }), popFrame(stack)).dir).toBe('RIGHT');
+    const state = walk(startTour([]), 'dir=DOWN');
+    expect(compose(base({ dir: 'RIGHT' }), popStep(state)).dir).toBe('DOWN');
   });
 
-  test('the topmost frame naming a scalar wins', () => {
-    const stack = walk('dir=DOWN', 'dir=RIGHT');
-    expect(composeState(base(), stack).dir).toBe('RIGHT');
-    // ...and popping that one exposes the frame beneath, not the default.
-    expect(composeState(base(), popFrame(stack)).dir).toBe('DOWN');
+  test('the most recent step naming a scalar wins', () => {
+    const state = walk(startTour([]), 'dir=DOWN', 'dir=RIGHT');
+    expect(compose(base(), state).dir).toBe('RIGHT');
   });
 
   test('a step that never names a field never touches it', () => {
-    // The live bug this design fixes: Siggie had a non-default setting and
-    // every step carrying a `State:` reset it, because no step wrote that
-    // param. Nothing warned; the canvas just changed mid-tour.
+    // The live bug this whole area exists to fix: Siggie had a non-default
+    // setting and every step carrying a `State:` reset it, because no step
+    // wrote that param. Nothing warned; the canvas just changed mid-tour.
     const viewer = base({ sibs: false, merge: 'far', roots: true });
-    const composed = composeState(viewer, walk('sel=Participant'));
+    const composed = compose(viewer, walk(startTour([]), 'sel=Participant'));
     expect(composed.sibs).toBe(false);
     expect(composed.merge).toBe('far');
     expect(composed.roots).toBe(true);
   });
 });
 
+describe('viewer edits land in a named set', () => {
+  test('a tick outside a replace goes to held and survives the tour', () => {
+    let state = walk(startTour(['Visit']), 'sel=Participant');
+    state = tick(state, 'Specimen');
+    expect(shown(state)).toEqual(['Participant', 'Specimen', 'Visit']);
+    expect(survivingSelection(state).sort()).toEqual(['Specimen', 'Visit']);
+  });
+
+  test('unticking a class the tour drew takes it from the tour, not the viewer', () => {
+    // Without this the next compose would put it straight back and the checkbox
+    // would refuse to stay off.
+    let state = walk(startTour([]), 'sel=Participant~BodySite');
+    state = untick(state, 'Participant');
+    expect(shown(state)).toEqual(['BodySite']);
+  });
+
+  test('unticking a class only the viewer had takes it from held, and it sticks', () => {
+    /*
+     * The case that makes `held` EDITABLE rather than frozen, and the gap in
+     * the first draft of the design note: at region 0 `held` is displayed, so
+     * the viewer can untick one of its classes — and if the untick did nothing,
+     * the next compose would put it back.
+     */
+    let state = walk(startTour(['Visit', 'Specimen']), 'sel=Participant');
+    state = untick(state, 'Visit');
+    expect(shown(state)).toEqual(['Participant', 'Specimen']);
+    // Gone for the rest of the tour, and absent at exit.
+    expect(shown(walk(state, 'sel=BodySite'))).toEqual(['BodySite', 'Participant', 'Specimen']);
+    expect(survivingSelection(state)).toEqual(['Specimen']);
+  });
+
+  test('at region 0, an untick reaches BOTH tour and held', () => {
+    /*
+     * The only shape where two sets display one class, and so the only place
+     * the "remove from the first set holding it" shorthand differs from the
+     * rule ("remove from every set DISPLAYING it"). Nothing is suppressed at
+     * region 0, so stopping at `tour` leaves `held` holding Participant and the
+     * next compose puts it back — the checkbox bounces, which is the exact
+     * failure that made `held` editable in the first place.
+     *
+     * Paired with the test below: same two sets, but at region 1, where the
+     * answer is the opposite because `held` is suppressed. Neither test alone
+     * pins the guard — one of them passes under the wrong rule.
+     */
+    let state = walk(startTour(['Participant']), 'sel=Participant');
+    state = untick(state, 'Participant');
+    expect(shown(state)).toEqual([]);
+    expect(survivingSelection(state)).toEqual([]);
+  });
+
+  test('...but a SUPPRESSED held is not reached, which is what the note turns on', () => {
+    // Inside a replace `held` is off screen, so the untick has not spoken to
+    // it: worked-example state 7, where `−C` takes C from `tour` and `held`
+    // keeps its copy for the crossing back to region 0.
+    let state = walk(startTour(['C']), only('sel=C~W'));
+    state = untick(state, 'C');
+    expect(shown(state)).toEqual(['W']);
+    expect(state.held).toEqual(['C']);
+    expect(shown(popStep(state))).toEqual(['C']);
+  });
+
+  test('a re-tick of a class the tour is drawing records it as the viewer\'s', () => {
+    // The old refcount from the other end: without a record of their own, the
+    // pop would take the class away under them.
+    let state = walk(startTour([]), 'sel=Participant');
+    state = tick(state, 'Participant');
+    expect(shown(popStep(state))).toEqual(['Participant']);
+  });
+
+  test('an untick of a class nobody is holding changes nothing', () => {
+    const state = walk(startTour(['Visit']), 'sel=Participant');
+    expect(untick(state, 'Nowhere')).toEqual(state);
+  });
+});
+
+describe('Only: replaces the canvas', () => {
+  /*
+   * `Change:` is additive, which is right for a step that grows a picture one
+   * box at a time and wrong for one whose copy names a SPECIFIC canvas: the
+   * category content views, and the two/three-box examples in the Ownership
+   * tour. Those accumulated into each other, so a step captioned "Clinical"
+   * drew Clinical on top of everything before it.
+   *
+   * A replace SUPPRESSES the viewer's selection rather than deleting it. It
+   * cannot delete: `back` could not restore it and exiting would have eaten it.
+   */
+  test('a replacing step draws exactly what it names', () => {
+    const state = walk(startTour([]), 'sel=Person~Participant', only('sel=Visit'));
+    expect(shown(state)).toEqual(['Visit']);
+  });
+
+  test("it hides the viewer's own selection too", () => {
+    const state = walk(startTour(['Specimen']), only('sel=Visit~TimePeriod'));
+    expect(shown(state)).toEqual(['TimePeriod', 'Visit']);
+  });
+
+  test('...but hiding is not deleting: held is intact and comes back', () => {
+    const state = walk(startTour(['Specimen']), only('sel=Visit'));
+    expect(state.held).toEqual(['Specimen']);
+    expect(shown(popStep(state))).toEqual(['Specimen']);
+  });
+
+  test('a later Change: adds to the replaced canvas rather than reviving the old one', () => {
+    // What lets a step name a clean picture and its next beat grow it.
+    const state = walk(startTour(['Specimen']), only('sel=Visit'), 'sel=TimePeriod');
+    expect(shown(state)).toEqual(['TimePeriod', 'Visit']);
+  });
+
+  test('a second Only: replaces again, and back lands on the first', () => {
+    const state = walk(startTour([]), only('sel=Person~Participant'), only('sel=Specimen'));
+    expect(shown(state)).toEqual(['Specimen']);
+    expect(shown(popStep(state))).toEqual(['Participant', 'Person']);
+  });
+
+  test('scalars still merge across a replace', () => {
+    // `Only:` replaces the SELECTION, not the app. Reinstating the absolute
+    // model's "any field a step did not name snaps back" is the thing to avoid.
+    const state = walk(startTour([]), 'dir=DOWN', only('sel=Visit'));
+    expect(compose(base(), state).dir).toBe('DOWN');
+    expect(shown(state)).toEqual(['Visit']);
+  });
+
+  test('a tick during a replace goes to temp_held and shows immediately', () => {
+    // `temp_held` is NOT suppressed: `Only:` clears the canvas the tour built,
+    // it does not fight the viewer while they use it.
+    let state = walk(startTour([]), only('sel=Visit'));
+    state = tick(state, 'Specimen');
+    expect(shown(state)).toEqual(['Specimen', 'Visit']);
+    expect(state.tempHeld).toEqual(['Specimen']);
+  });
+
+  test('held returns at the crossing back to region 0, not at exit', () => {
+    /*
+     * The rule is "back into a step shows what that step showed". Going forward
+     * the region-0 step displayed `held`, so stepping back into it without
+     * `held` would show a step something it never showed — and region 0 would
+     * be the one region whose suppression a pop does not lift.
+     */
+    const state = walk(startTour(['Specimen']), 'sel=Person', only('sel=Visit'));
+    expect(shown(state)).toEqual(['Visit']);
+    expect(shown(popStep(state))).toEqual(['Person', 'Specimen']);
+  });
+
+  test('a cancelling pair of clicks during a replace is a no-op', () => {
+    /*
+     * The constraint that killed the tidier alternative. Making the tick MOVE a
+     * suppressed class out of `held` into `temp_held` gives every class exactly
+     * one record — but `+A` then `−A` then DESTROYS `A`, on a class that was
+     * suppressed throughout and never appeared on screen. Copying gives the
+     * no-op for free. (WORKLOG 2026-09-07; do not reopen.)
+     */
+    const start = walk(startTour(['Specimen']), only('sel=Visit'));
+    const after = untick(tick(start, 'Specimen'), 'Specimen');
+    expect(after.held).toEqual(['Specimen']);
+    expect(shown(popStep(after))).toEqual(['Specimen']);
+    expect(survivingSelection(after)).toEqual(['Specimen']);
+  });
+});
+
 describe('leaving the tour', () => {
-  test('exit unwinds everything the tour added and nothing else', () => {
-    // Replaces the entry snapshot AND the restore-on-exit: there is nothing to
-    // restore, because the viewer's state was never overwritten.
-    const viewer = base({ sel: ['Visit'], dir: 'DOWN' });
-    const stack = walk('sel=Participant', 'sel=BodySite');
-    expect(composeState(viewer, clearStack()).sel).toEqual(['Visit']);
-    expect(composeState(viewer, clearStack()).dir).toBe('DOWN');
-    expect(stack.frames).toHaveLength(2); // unchanged; clearStack is not a mutation
+  test('exit keeps what the viewer ticked and drops what the tour drew', () => {
+    // Replaces both the entry snapshot and the restore-on-exit: nothing was
+    // overwritten, so there is nothing to restore.
+    const state = walk(startTour(['Visit']), 'sel=Participant', 'sel=BodySite');
+    expect(survivingSelection(state)).toEqual(['Visit']);
+    expect(endTour()).toEqual(NO_TOUR);
   });
 
   test('an edit made mid-tour survives the exit', () => {
     // Under absolute state this was the "your changes will be discarded"
     // warning. Now there is nothing to warn about.
-    const stack = walk('sel=Participant');
-    const composed = composeState(base(), stack);
-    const edited = { ...composed, sel: [...composed.sel, 'Visit'] };
-    const viewer = viewerState(edited, stack);
-    expect(composeState(viewer, clearStack()).sel).toEqual(['Visit']);
-  });
-});
-
-describe('viewerState — splitting a composed state back apart', () => {
-  test("what the tour is holding is not the viewer's", () => {
-    const stack = walk('sel=Participant');
-    const composed = composeState(base({ sel: ['Visit'] }), stack);
-    expect(viewerState(composed, stack).sel).toEqual(['Visit']);
+    let state = walk(startTour([]), 'sel=Participant');
+    state = tick(state, 'Visit');
+    expect(survivingSelection(state)).toEqual(['Visit']);
   });
 
-  test('a mid-tour tick of a class the tour also pushed becomes the viewer\'s', () => {
-    /*
-     * The refcount from the other end. The tour pushed Participant; the viewer
-     * then ticks it too. `sel` is a set and cannot hold two copies, so the
-     * second copy is recorded by `reconcile` promoting the id — otherwise the
-     * next pop would take it away under them.
-     */
-    const stack = walk('sel=Participant');
-    const composed = composeState(base(), stack);
-    // The viewer's click is a no-op on the set; reconcile is what notices.
-    const { stack: next } = reconcile(composed, stack, { ticked: ['Participant'] });
-    expect(composeState(viewerState(composed, next), popFrame(next)).sel)
-      .toEqual(['Participant']);
-  });
-});
-
-describe('reconcile — the viewer overrules the tour', () => {
-  test('unticking a class the tour pushed keeps it gone across the next pop', () => {
-    // Without this the stack would still be holding the id and the next
-    // compose would put it straight back, so the checkbox would not stay off.
-    const stack = walk('sel=Participant', 'sel=BodySite');
-    const composed = composeState(base(), stack);
-    const unticked = { ...composed, sel: composed.sel.filter(id => id !== 'Participant') };
-    const { stack: next } = reconcile(unticked, stack, {});
-    expect(composeState(viewerState(unticked, next), next).sel).toEqual(['BodySite']);
-    expect(composeState(viewerState(unticked, next), popFrame(next)).sel).toEqual([]);
+  test('a tick made during a replace survives too', () => {
+    let state = walk(startTour(['Specimen']), only('sel=Visit'));
+    state = tick(state, 'TimePeriod');
+    expect(survivingSelection(state).sort()).toEqual(['Specimen', 'TimePeriod']);
   });
 
-  test('unticking drops every tour copy, not just the top one', () => {
-    // Two steps wanted it; the viewer said no. One click should mean no, not
-    // "no until the older frame pops".
-    const stack = walk('sel=Participant', 'sel=Participant');
-    const composed = composeState(base(), stack);
-    const unticked = { ...composed, sel: [] };
-    const { stack: next } = reconcile(unticked, stack, {});
-    expect(next.counts.has('Participant')).toBe(false);
-  });
-
-  test('a viewer tick of an unrelated class does not disturb the stack', () => {
-    const stack = walk('sel=Participant');
-    const composed = composeState(base(), stack);
-    const edited = { ...composed, sel: [...composed.sel, 'Visit'] };
-    const { stack: next } = reconcile(edited, stack, {});
-    expect(next).toEqual(stack);
-    expect(viewerState(edited, next).sel).toEqual(['Visit']);
+  test('exit does not need the tour unwound first', () => {
+    // The provider used to pop once per pushed frame, which meant keeping a
+    // depth count of the host's state. The viewer's half is stored, so exit
+    // reads it whatever the tour left on screen.
+    const deep = walk(startTour(['Visit']), only('sel=A'), 'sel=B', only('sel=C'));
+    expect(survivingSelection(deep)).toEqual(['Visit']);
   });
 });
 
 /**
- * `Only:` — the replacing frame (docs/tasks.md item 3).
+ * The worked example, row by row. The table it encodes is in
+ * `tourStateStack.ts`'s header; this is what stops the two drifting apart.
  *
- * `Change:` is additive, which is right for a step that grows a picture one
- * box at a time and wrong for one whose copy names a SPECIFIC canvas: the
- * category content views, and the two/three-box examples in the Ownership
- * tour. Those accumulated into each other, so a step captioned "Clinical"
- * drew Clinical on top of everything before it.
- *
- * A replacing frame is a HORIZON — nothing beneath it shows while it stands —
- * and it records what it hid so its own pop puts that back.
+ * It is the one place every rule meets: a replace, ticks on both sides of it, a
+ * class with two records, unticks against all three sets, and a `back` walk
+ * that crosses the region boundary. Siggie built and verified it by simulation;
+ * this pins it so the implementation cannot drift from the note.
  */
-describe('Only: replaces the canvas', () => {
-  /** Walk forward, marking which queries were authored as `Only:`. */
-  const only = (q: string) => ({ q, replace: true });
-  const add = (q: string) => ({ q, replace: false });
-  function walkMixed(
-    viewer: ExploreState, ...steps: Array<{ q: string; replace: boolean }>
-  ): TourStack {
-    return steps.reduce((s, { q, replace }) => {
-      const live = composeState(viewer, s);
-      return pushFrame(s, parseTourChange(q, replace), live.sel);
-    }, EMPTY_STACK);
+describe('worked example', () => {
+  /** Every state the forward walk passes through, indexed by the note's row. */
+  function forward() {
+    const s: TourState[] = [];
+    s[0] = startTour(['A', 'B', 'C']);
+    s[1] = pushStep(s[0], parseTourChange('sel=U'));            // tour +U
+    s[2] = pushStep(s[1], parseTourChange('sel=V'));            // tour +V
+    s[3] = tick(tick(s[2], 'D'), 'E');                          // user +D,+E
+    s[4] = untick(s[3], 'B');                                   // user -B
+    s[5] = pushStep(s[4], parseTourChange('sel=C~W~X', true));  // Only: C,W,X
+    s[6] = tick(tick(tick(s[5], 'D'), 'E'), 'F');               // user +D,+E,+F
+    s[7] = untick(s[6], 'C');                                   // user -C
+    s[8] = pushStep(s[7], parseTourChange('sel=Y'));            // tour +Y
+    s[9] = untick(s[8], 'W');                                   // user -W
+    s[10] = pushStep(s[9], parseTourChange('sel=Z'));           // tour +Z
+    s[11] = untick(s[10], 'E');                                 // user -E
+    return s;
   }
 
-  test('a replacing step draws exactly what it names', () => {
-    const stack = walkMixed(base(), add('sel=Person~Participant'), only('sel=Visit'));
-    expect(composeState(base(), stack).sel).toEqual(['Visit']);
+  test('the forward walk shows what the note says it shows', () => {
+    const s = forward();
+    expect(shown(s[1])).toEqual(['A', 'B', 'C', 'U']);
+    expect(shown(s[2])).toEqual(['A', 'B', 'C', 'U', 'V']);
+    expect(shown(s[3])).toEqual(['A', 'B', 'C', 'D', 'E', 'U', 'V']);
+    expect(shown(s[4])).toEqual(['A', 'C', 'D', 'E', 'U', 'V']);
+    // The replace: `held` is suppressed, so D and E leave with A and C.
+    expect(shown(s[5])).toEqual(['C', 'W', 'X']);
+    expect(shown(s[6])).toEqual(['C', 'D', 'E', 'F', 'W', 'X']);
+    // −C hits `tour` (which is displaying it), not the `held` copy.
+    expect(shown(s[7])).toEqual(['D', 'E', 'F', 'W', 'X']);
+    expect(shown(s[8])).toEqual(['D', 'E', 'F', 'W', 'X', 'Y']);
+    expect(shown(s[9])).toEqual(['D', 'E', 'F', 'X', 'Y']);
+    expect(shown(s[10])).toEqual(['D', 'E', 'F', 'X', 'Y', 'Z']);
+    // −E hits `temp_held`; the suppressed `held` copy is untouched.
+    expect(shown(s[11])).toEqual(['D', 'F', 'X', 'Y', 'Z']);
   });
 
-  test("it hides the viewer's own selection too", () => {
-    const viewer = base({ sel: ['Specimen'] });
-    const stack = walkMixed(viewer, only('sel=Visit~TimePeriod'));
-    expect(composeState(viewer, stack).sel).toEqual(['Visit', 'TimePeriod']);
+  test('the two records of D and E are two facts, not one stored twice', () => {
+    const s = forward();
+    expect([...s[6].held].sort()).toEqual(['A', 'C', 'D', 'E']);
+    expect([...s[6].tempHeld].sort()).toEqual(['D', 'E', 'F']);
   });
 
-  test('popping it restores what it displaced', () => {
-    // The property that makes `back` exact. The old absolute model got this by
-    // snapshotting the whole world on tour entry; this remembers one frame's
-    // worth and throws it away with the frame.
-    const viewer = base({ sel: ['Specimen'] });
-    const stack = walkMixed(viewer, only('sel=Visit'));
-    const popped = popFrame(stack);
-    const restored = [...new Set([
-      ...composeState(viewerState(composeState(viewer, stack), stack), popped).sel,
-      ...pendingRestore(stack),
-    ])];
-    expect(restored.sort()).toEqual(['Specimen']);
+  test('back walks out through the tourStates the note lists', () => {
+    /*
+     * The whole point of tourStates holding only the tour's half. Each `back` shows
+     * the tour set as it stood when that step was RECORDED — so W and C come
+     * back, having been unticked after their tourStates were written — while the
+     * viewer's half stays current, so the −E from state 11 is still in force.
+     */
+    const s = forward();
+    const b1 = popStep(s[11]);          // back to frame 1-1
+    expect(shown(b1)).toEqual(['D', 'F', 'W', 'X', 'Y']);
+    const b2 = popStep(b1);             // back to frame 1-0
+    expect(shown(b2)).toEqual(['C', 'D', 'F', 'W', 'X']);
+    const b3 = popStep(b2);             // the crossing: region 0, `held` back
+    expect(shown(b3)).toEqual(['A', 'C', 'D', 'E', 'F', 'U', 'V']);
+    const b4 = popStep(b3);
+    expect(shown(b4)).toEqual(['A', 'C', 'D', 'E', 'F', 'U']);
   });
 
-  test('a lower frame comes back on its own, and is not double-restored', () => {
-    // A tour frame beneath the horizon is already written down: popping the
-    // replace puts it back above the horizon and `composeState` re-adds it.
-    // Recording it as displaced as well would restore a second copy that
-    // outlived the tour.
-    const stack = walkMixed(base(), add('sel=Person'), only('sel=Visit'));
-    expect(stack.frames[1].displaced).toEqual([]);
-    expect(composeState(base(), popFrame(stack)).sel).toEqual(['Person']);
+  test('exit keeps held ∪ temp_held and nothing the tour drew', () => {
+    const s = forward();
+    expect(survivingSelection(s[11]).sort()).toEqual(['A', 'C', 'D', 'E', 'F']);
   });
 
-  test('a later Change: adds to the replaced canvas rather than reviving the old one', () => {
-    // What lets a step name a clean canvas and a following beat grow it.
-    const stack = walkMixed(
-      base({ sel: ['Specimen'] }), only('sel=Visit'), add('sel=TimePeriod'),
-    );
-    expect(composeState(base({ sel: ['Specimen'] }), stack).sel)
-      .toEqual(['Visit', 'TimePeriod']);
+  test('an untick rewrites no frame — the ones recorded before it keep the class', () => {
+    // The property the whole no-frame-surgery argument rests on: `tour` is
+    // LIVE, tourStates are written only at push time. The version this replaced
+    // made an untick permanent by rewriting every frame, and `back` then showed
+    // the post-untick state rather than what the step had shown.
+    const s = forward();
+    expect(s[11].tourStates.map(f => [...f.sel])).toEqual([
+      ['U'], ['U', 'V'], ['C', 'W', 'X'], ['W', 'X', 'Y'], ['X', 'Y', 'Z'],
+    ]);
   });
 
-  test('a second Only: moves the horizon up', () => {
-    const stack = walkMixed(base(), only('sel=Person~Participant'), only('sel=Specimen'));
-    expect(composeState(base(), stack).sel).toEqual(['Specimen']);
-    // ...and popping it lands back on the first replace, not on the empty canvas.
-    expect(composeState(base(), popFrame(stack)).sel).toEqual(['Person', 'Participant']);
-  });
-
-  test('scalars still merge across the horizon', () => {
-    // `Only:` replaces the SELECTION, not the app. A step that set the
-    // direction three steps ago is still setting it — reinstating the absolute
-    // model's "any field a step did not name snaps back" is the thing to avoid.
-    const stack = walkMixed(base(), add('dir=DOWN'), only('sel=Visit'));
-    const composed = composeState(base(), stack);
-    expect(composed.dir).toBe('DOWN');
-    expect(composed.sel).toEqual(['Visit']);
-  });
-
-  test('an id the replace also names is not treated as displaced', () => {
-    // It never left the canvas, so restoring it on the pop would add a copy
-    // that was never taken away.
-    const viewer = base({ sel: ['Visit', 'Specimen'] });
-    const stack = walkMixed(viewer, only('sel=Visit'));
-    expect(stack.frames[0].displaced).toEqual(['Specimen']);
-  });
-
-  test('a class hidden by a replace is not mistaken for a viewer untick', () => {
-    // `reconcile` reads absence as an overrule. A replace makes ids absent
-    // without the viewer touching anything, so it must read the DERIVED counts
-    // (frames above the horizon) rather than every frame ever pushed.
-    const stack = walkMixed(base(), add('sel=Person'), only('sel=Visit'));
-    const composed = composeState(base(), stack);
-    const { stack: next } = reconcile(composed, stack, {});
-    expect(next.frames[0].sel).toEqual(['Person']);
-    expect(composeState(base(), popFrame(next)).sel).toEqual(['Person']);
-  });
-
-  test('a viewer claim survives the restore', () => {
-    // They unticked something the replace was holding for them; the pop must
-    // not hand it back.
-    const viewer = base({ sel: ['Specimen'] });
-    const stack = walkMixed(viewer, only('sel=Visit'));
-    // The viewer unticks Visit, which the tour is showing.
-    const composed = composeState(viewer, stack);
-    const unticked = { ...composed, sel: composed.sel.filter(id => id !== 'Visit') };
-    const { stack: next } = reconcile(unticked, stack, {});
-    expect(next.counts.has('Visit')).toBe(false);
+  test('the region rides on the frame, so crossing back is a read', () => {
+    const s = forward();
+    expect(s[11].tourStates.map(f => f.region)).toEqual([0, 0, 1, 1, 1]);
   });
 });

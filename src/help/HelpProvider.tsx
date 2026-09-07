@@ -27,7 +27,7 @@
  */
 
 import {
-  useCallback, useEffect, useMemo, useRef, useState, type ReactNode,
+  useCallback, useEffect, useMemo, useState, type ReactNode,
 } from 'react';
 import { parseAnchor, parseHelpContent, tourNames, tourPositions, tourSteps } from './parseHelpContent';
 import type { HelpAnchor } from './parseHelpContent';
@@ -44,7 +44,8 @@ function isInputFocused(): boolean {
 }
 
 export function HelpProvider({
-  markdown, onPushChange, onPopChange, resolvers, centerOn, children,
+  markdown, onPushChange, onPopChange, onTourStart, onTourEnd,
+  resolvers, centerOn, children,
 }: {
   markdown: string;
   /**
@@ -62,14 +63,35 @@ export function HelpProvider({
    */
   onPushChange?: (query: string, replace?: boolean) => void;
   /**
-   * Pop one frame off the host's stack. Called once per `back`, and once per
-   * remaining frame when the tour ends.
+   * Step the host back one position, undoing whatever the position being LEFT
+   * contributed. Called once per `back`, and not on exit — `onTourEnd` does
+   * that in one move.
    *
    * This pair REPLACED an apply/read pair that made every step absolute. The
    * provider used to snapshot the viewer's state on entry and feed it back on
    * exit; there is nothing to restore now, because nothing was overwritten.
    */
   onPopChange?: () => void;
+  /**
+   * A tour is beginning: whatever is on screen belongs to the viewer.
+   *
+   * The provider has to say this out loud rather than let the host infer it
+   * from the first push, because a tour whose opening position carries no
+   * `Change:` pushes nothing — the first tour in dmvd's content file is exactly
+   * that — so "something has been pushed" is not the same question as "a tour
+   * is running", and a viewer edit during those opening steps would be filed as
+   * nobody's.
+   */
+  onTourStart?: () => void;
+  /**
+   * A tour is over, by any exit (done, ✕, Escape, `?`). The host restores the
+   * viewer's canvas in one move.
+   *
+   * This REPLACED unwinding by calling `onPopChange` once per pushed frame,
+   * which required the provider to keep a depth count of the host's state — a
+   * second view of a fact the host already had.
+   */
+  onTourEnd?: () => void;
   /**
    * Resolvers for the host's own anchor kinds. `help-id` and `none` are built
    * in; everything else in an `Anchor:` field is looked up here. An
@@ -118,18 +140,14 @@ export function HelpProvider({
   const stepCount = useMemo(() => tourSteps(content, tourName).length, [content, tourName]);
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  /**
-   * How many frames the tour has pushed and not yet popped.
-   *
-   * The provider's whole share of the stack: it counts, the host composes. A
-   * ref rather than state — nothing renders from it, and as a dependency of the
-   * navigation callbacks it would rebuild every one of them on every move.
-   *
-   * Kept even though the host also knows its own depth, because the provider is
-   * the one that decides when to unwind: `endTour` fires from four different
-   * exits and must not leave a frame behind on any of them.
+  /*
+   * The provider used to keep a `depth` ref — how many frames it had pushed and
+   * not popped — so that `endTour` could unwind by calling `onPopChange` that
+   * many times. It is gone: the host is told when the tour ENDS and restores
+   * the viewer's canvas in one move, so the provider no longer keeps a count of
+   * the host's own state. (Second view of one fact; see
+   * `tourStateStack.ts`'s header.)
    */
-  const depth = useRef(0);
 
   const exitHelpMode = useCallback(() => {
     setHelpMode(false);
@@ -156,10 +174,7 @@ export function HelpProvider({
     if (!pos) return;
     setTourIndex(i);
     setActiveId(pos.entry.id);
-    if (pos.change != null && onPushChange) {
-      onPushChange(pos.change, pos.replace);
-      depth.current += 1;
-    }
+    if (pos.change != null && onPushChange) onPushChange(pos.change, pos.replace);
   }, [positions, onPushChange]);
 
   /**
@@ -172,10 +187,7 @@ export function HelpProvider({
    */
   const goBack = useCallback((i: number) => {
     const leaving = positions[i + 1];
-    if (leaving?.change != null && onPopChange && depth.current > 0) {
-      onPopChange();
-      depth.current -= 1;
-    }
+    if (leaving?.change != null && onPopChange) onPopChange();
     const pos = positions[i];
     if (!pos) return;
     setTourIndex(i);
@@ -201,18 +213,20 @@ export function HelpProvider({
   const startTour = useCallback((name?: string) => {
     setHelpMode(false);
     setTourName(name);
-    // No entry snapshot: the tour composes on top of the viewer's state instead
-    // of replacing it, so there is nothing to record and nothing to restore.
-    depth.current = 0;
     const first = tourPositions(content, name)[0];
     if (!first) return;
+    /*
+     * Announced BEFORE the first push, and unconditionally: what is on the
+     * canvas at this instant is the viewer's, and the host has to have that
+     * recorded before a step adds to it. Not an entry snapshot in the old sense
+     * — nothing is restored from it on exit; it is simply the host learning
+     * which half of the selection is whose.
+     */
+    onTourStart?.();
     setTourIndex(0);
     setActiveId(first.entry.id);
-    if (first.change != null && onPushChange) {
-      onPushChange(first.change, first.replace);
-      depth.current += 1;
-    }
-  }, [content, onPushChange]);
+    if (first.change != null && onPushChange) onPushChange(first.change, first.replace);
+  }, [content, onPushChange, onTourStart]);
 
   /**
    * Ending the tour unwinds every frame it still has pushed.
@@ -230,9 +244,8 @@ export function HelpProvider({
   const endTour = useCallback(() => {
     setTourIndex(null);
     setActiveId(null);
-    if (onPopChange) for (let i = 0; i < depth.current; i++) onPopChange();
-    depth.current = 0;
-  }, [onPopChange]);
+    onTourEnd?.();
+  }, [onTourEnd]);
 
   const nextStep = useCallback(() => {
     if (tourIndex === null) return;

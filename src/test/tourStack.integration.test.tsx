@@ -236,6 +236,37 @@ describe('tour state stack, end to end', () => {
     await waitFor(() => expect(sel()?.split('~') ?? []).not.toContain(pushed));
   });
 
+  test('a class ticked mid-tour is still there after the tour ends', async () => {
+    /*
+     * The exit path, which changed shape with the `held`/`temp_held` rewrite
+     * (WORKLOG 2026-09-07). Ending used to unwind by popping once per
+     * pushed frame, so what the viewer kept was whatever the pops left behind.
+     * Now the viewer's half is STORED, and `onTourEnd` publishes it in one
+     * move — so this pins the thing that would break if the tour-start signal
+     * never arrived, or if a mid-tour tick landed in the wrong set: the class
+     * would be composed away as the tour's and vanish at the exit.
+     */
+    window.history.replaceState(null, '', '/dynamic-model-var-docs/?sel=Visit');
+    await startTour();
+
+    // Walk to a step that draws something, so the tick happens over a canvas
+    // the tour is contributing to rather than an empty one.
+    for (let i = 0; i < 12 && !sel(); i++) next();
+    await waitFor(() => expect(sel()).toBeTruthy());
+
+    const box = () => document.querySelector<HTMLInputElement>(
+      '[data-class-row="Specimen"] input[type="checkbox"]',
+    );
+    await waitFor(() => expect(box()).toBeTruthy());
+    fireEvent.click(box()!);
+    await waitFor(() => expect(sel()?.split('~') ?? []).toContain('Specimen'));
+
+    fireEvent.click(button('✕'));
+    // Both survive: `Visit` was theirs before the tour, `Specimen` during it.
+    await waitFor(() =>
+      expect((sel()?.split('~') ?? []).sort()).toEqual(['Specimen', 'Visit']));
+  });
+
   test('leaving mid-tour unwinds what the tour added, and only that', async () => {
     window.history.replaceState(null, '', '/dynamic-model-var-docs/?sel=Visit');
     await startTour();

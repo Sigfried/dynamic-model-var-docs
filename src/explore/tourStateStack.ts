@@ -1,61 +1,147 @@
 /**
- * The tour's state stack: how a tour position contributes to the app's state
- * without owning it.
+ * Tour state: who put what on the canvas.
  *
- * **Why this exists.** A tour step used to carry a FULL absolute query and
- * `applyExploreQuery` did `url.search = query`, replacing everything. Three
- * consequences, all fixed here: the tour had to snapshot the viewer's state on
- * entry and restore it on exit; a mid-tour viewer edit was clobbered (hence
- * the yellow "your changes will be discarded" warning); and **any field a step
- * did not name snapped back to its default** — invisible from a default view,
- * baffling from any other.
+ * **The problem.** The app has ONE selection — a set of class ids. Two parties
+ * write to it: the viewer (ticking checkboxes) and the tour (steps that need
+ * something drawn). A set cannot remember who put what in it, so when a step's
+ * contribution is taken back, something has to stop it taking a class the
+ * viewer ticked themselves.
  *
- * **The model (Siggie, 2026-08-27).** A step declares only what it ADDS, as a
- * `Change:` delta. Each position PUSHES a frame; `back` POPS one; leaving the
- * tour by any exit unwinds whatever is left. **A value already present is
- * pushed anyway** — that second copy is a reference count, so popping removes
- * only the tour's copy and the viewer's own selection survives untouched.
+ * **The model (Siggie, 2026-09-07).** Store both halves outright rather than
+ * deriving either:
  *
- * **Every field pushes and pops the same way.** I proposed a hybrid —
- * refcounted pushes for the set-like `sel` plus previous-value frames for the
- * five scalars — and Siggie rejected it: *"you're overcomplicating for the sake
- * of probably rare edge cases. just do the stack. if scalar settings clobber
- * user actions, don't worry about it. easy enough for the user to reclick the
- * button."* So a scalar push overwrites and a scalar pop restores nothing; only
- * `sel` is refcounted, because only `sel` has room to hold two copies.
+ *  - `held` — the viewer's selection, as the tour found it and as they edit it.
+ *  - `tempHeld` — classes the viewer ticked while a replace was suppressing
+ *    `held`. Empty until the first `Only:`.
+ *  - `tour` — what the current step draws, cumulative, computed FORWARD.
+ *  - `region` — how many `Only:` steps are in force; 0 outside any replace.
  *
- * **Where the second copy actually lives.** Not in `sel` — that is a set, and a
- * set cannot hold two copies of anything, which is the trap this file exists to
- * avoid. The tour's contribution is kept HERE as a counted multiset
- * (`TourStack.counts`) and the app's selection is composed as *viewer ∪ tour*.
- * So an id the viewer ticked AND a step pushed is count 1 in the tour and 1 in
- * the viewer's set; the pop takes the tour's and the viewer's tick is still
- * standing. That is the whole mechanism.
+ * ```
+ * displayed = tour ∪ tempHeld ∪ (region === 0 ? held : ∅)
+ * ```
  *
- * **`Only:` — the one frame that subtracts.** Added for the tours, where most
- * steps describe a SPECIFIC small canvas: a category content view, or a
- * two-box example. Additive frames made those cumulative, so a step captioned
- * "Clinical" drew Clinical on top of everything before it. A replacing frame
- * is a HORIZON: while it is on the stack, nothing selected beneath it shows,
- * and it records what it hid in `displaced` so its own pop puts that back.
+ * **`Only:` — the one thing that subtracts.** Everything else adds. A replace
+ * cannot DELETE the viewer's selection (`back` could not restore it, and
+ * exiting would have eaten it), so it SUPPRESSES: `held` stops contributing
+ * while `region > 0` and is otherwise untouched. `tempHeld` is NOT suppressed
+ * — a class ticked during a replaced step stays on screen; `Only:` is about
+ * clearing the canvas the tour built, not about fighting the viewer.
  *
- * Three properties keep this from being the absolute-state model in disguise:
+ * **`held` returns at the crossing back to region 0, not at exit.** The rule is
+ * *back into a step shows what that step showed*, and going forward a region-0
+ * step displayed `held`. Waiting until exit would make region 0 the one region
+ * whose suppression a pop does not lift.
  *
- *  - **It is scoped to `sel`.** Scalars still merge down the whole stack, so a
- *    replace does not reset the viewer's direction or merge mode.
- *  - **It hides rather than deletes.** The frames below stay on the stack and
- *    come back as it pops, so `back` is still exact.
- *  - **It remembers one frame's worth, not the world.** The old model
- *    snapshotted everything on tour ENTRY and restored it on exit, which is
- *    what discarded mid-tour edits. `displaced` is per-frame and dies with it,
- *    and `reconcile` strips from it anything the viewer has since claimed.
+ * **Viewer edits.** A tick goes to whichever set is the viewer's right now:
+ * `held` at region 0, `tempHeld` while a replace is in force. So a class ticked
+ * both before and during a replace has TWO records, one in each — two ticks,
+ * two facts, undone separately. (The tidier alternative, MOVING the id into
+ * `tempHeld`, was rejected: `+A` then `−A` during a replace would then destroy
+ * a class that was never on screen, and a cancelling pair of clicks must be a
+ * no-op. See WORKLOG 2026-09-07.)
+ *
+ * An untick edits EVERY set currently DISPLAYING the class — usually just one,
+ * but `tour` and `held` both display at region 0. Every set is editable, so an
+ * untick always lands somewhere and the checkbox always stays off. What it does
+ * NOT do is reach into a SUPPRESSED set: inside a replace `held` is off screen,
+ * so an untick has not spoken to it and it returns at the crossing. See
+ * `untick` for why "the first set holding it" is not the same rule.
+ *
+ * **A recorded step holds only the tour's half, and is cumulative.** It is a
+ * snapshot of `tour` at the moment the step was pushed. The usual objection
+ * to cumulative state — that a snapshot captures the viewer's selection too, so
+ * `back` reinstates a tick they have since removed — does not apply, because
+ * `held`/`tempHeld` live OUTSIDE the recorded steps and are composed in at read
+ * time. That is what makes the untick rule free: an untick edits the live
+ * `tour` and rewrites nothing, so a step recorded before it still shows what
+ * it showed.
+ *
+ * `region` rides on the recorded step rather than being counted beside them, so
+ * stepping back across a replace is a read (the previous step's region IS the
+ * region to return to) rather than a decrement to get wrong.
+ *
+ * **What this replaced, and why.** The previous version kept `counts` (a
+ * refcount whose number nothing ever read — every use was `counts.has(id)`) and
+ * `displaced` (a per-frame snapshot of what a replace hid), and `reconcile`
+ * rewrote every frame on a viewer untick to make it permanent. `displaced`
+ * existed only because the viewer's half was DERIVED (selection minus what the
+ * tour holds) rather than stored; storing it removes the snapshot's reason to
+ * exist. The lesson worth keeping: **do not store two views of one fact** —
+ * both bugs in this area were exactly that.
+ *
+ * ---
+ *
+ * **Worked example.** Siggie's trace, and the one place every rule meets: a
+ * replace, ticks on both sides of it, a class with two records, unticks against
+ * all three sets, and a `back` walk that crosses the region boundary. `Only:`
+ * at state 5; viewer edits at 3, 4, 6, 7, 9, 11. The `t-step` column is the
+ * recorded step (`region-step`) that the `back` rows read — note that the
+ * viewer rows have none, because a viewer edit records nothing, which is why
+ * `back` skips over them.
+ *
+ * ```
+ * state_step         mode     region  t-step  held         temp_held  tour           displayed
+ * 0.  start [A,B,C]  regular  -       -       —            —                         [A,B,C                           ]
+ * 1.  tour +U        tour     0       0       [A,B,C]      -          [U          ]  [A,B,C,       U                  ]
+ * 2.  tour +V        tour     0       1       "            -          [U,V        ]  [A,B,C,       U,V                ]
+ * 3.  user +D,+E     tour     0               [A,B,C,D,E]  -          [U,V        ]  [A,B,C,D,E,   U,V,               ]
+ * 4.  user -B        tour     0               [A,  C,D,E]  -          [U,V        ]  [A,  C,D,E,   U,V,               ]
+ * 5.  Only: C,W,X    tour     1       0       "            -          [  C,W,X    ]  [               C,W,X            ]
+ * 6.  user +D,+E,+F  tour     1               "            [D,E,F]    [  C,W,X    ]  [               C,W,X,      D,E,F]
+ * 7.  user −C        tour     1               "            "          [    W,X    ]  [                 W,X,      D,E,F]
+ * 8.  tour +Y        tour     1       1       "            "          [    W,X,Y  ]  [                 W,X,Y,    D,E,F]
+ * 9.  user −W        tour     1               "            "          [      X,Y  ]  [                   X,Y,    D,E,F]
+ * 10. tour +Z        tour     1       2       "            "          [      X,Y,Z]  [                   X,Y,Z,  D,E,F]
+ * 11. user −E        tour     1               "            [D,  F]    [      X,Y,Z]  [                   X,Y,Z,  D,  F]
+ *
+ * 8.  back to 1-1    tour     1       1       "            "          [    W,X,Y  ]  [                 W,X,Y,    D,  F]  ← W returns
+ * 5.  back to 1-0    tour     1       0       "            "          [  C,W,X    ]  [               C,W,X,      D,  F]  ← C returns
+ * 2.  back to 0-1    tour     0       1       "            "          [U,V        ]  [A,  C,D,E,  F, U,V,             ]  ← crossing: held back
+ * 1.  back to 0-0    tour     0       0       "            "          [U          ]  [A,  C,D,E,  F, U                ]
+ * 0.  exit           regular  -       -       —            —          —              [A,  C,D,E,F                     ]  # held ∪ temp_held
+ * ```
+ *
+ * The recorded steps, which is what the `back` rows read:
+ *
+ * ```
+ * 0-0: U          0-1: U,V
+ * 1-0: C,W,X      1-1: W,X,Y      1-2: X,Y,Z
+ * ```
+ *
+ * `1-0` holds `C` and `1-1` does not, without anything having removed it: `1-0`
+ * was recorded at state 5 and `1-1` at state 8, with the untick at state 7 in
+ * between. Likewise `W` survives in `1-1` and is absent from `1-2`. That is the
+ * whole of why an untick needs no surgery on the recorded steps.
+ *
+ * Four rows to read against the untick rule:
+ *
+ *  - **4, `−B`** — `B` is in `held` at region 0, where `held` is displayed, so
+ *    `held` gives it up. This is the case that makes `held` EDITABLE rather
+ *    than frozen: the untick has to stick, or the checkbox bounces back.
+ *  - **6, `+D,+E,+F`** — a tick during a replace goes to `temp_held`. `D` and
+ *    `E` are ALSO in `held`, and the second record is deliberate.
+ *  - **7, `−C`** — `C` is in `tour` and in `held`, but `held` is SUPPRESSED
+ *    here, so only `tour` gives it up and `held` keeps its copy for the
+ *    crossing.
+ *  - **11, `−E`** — `E` is in `temp_held` and in `held`; `temp_held` is the one
+ *    displaying it. So `E` is on screen again at `back to 0-1` and survives to
+ *    exit. This is the only row where `back` reaches past the tour's own
+ *    contribution into the viewer's, and it follows from the same rule: back
+ *    into a step shows what that step showed, and `0-1` genuinely showed `E`.
+ *
+ * The table is pinned row by row in `tourStateStack.test.ts`, so it cannot
+ * drift from the code. **One case it does not exercise**: every untick above
+ * has exactly one DISPLAYING set, so none of them distinguishes "remove from
+ * the first set holding it" from "remove from every set displaying it". Those
+ * differ only at region 0, where `held` is not suppressed and a class can be
+ * displayed by `tour` and `held` at once. See `untick`.
  */
 
 import { type Direction, type ExploreState, type MergeMode } from './exploreState';
 
 /** One position's contribution, parsed out of its `Change:` or `Only:` query. */
-export interface TourFrame {
-  /** Ids this position adds to the selection. */
+export interface TourChange {
+  /** Ids this position adds to the selection, or IS the selection when `replace`. */
   sel: string[];
   /**
    * Scalars this position sets. Only fields the delta actually named appear; a
@@ -64,89 +150,49 @@ export interface TourFrame {
    */
   scalars: Partial<Omit<ExploreState, 'sel'>>;
   /**
-   * `Only:` rather than `Change:` — `sel` is the WHOLE canvas for as long as
-   * this frame is on the stack, not an addition to what was already there.
+   * `Only:` rather than `Change:` — `sel` is the WHOLE canvas from here, not an
+   * addition to what was already there.
    *
    * Applies to the selection alone. The scalars in the same query still merge
-   * exactly as an additive frame's do.
+   * exactly as an additive change's do.
    */
   replace?: boolean;
-  /**
-   * What this frame's replace pushed out of view, so that popping can put it
-   * back. Empty or absent on an additive frame, which displaces nothing.
-   *
-   * **This is the only place the stack remembers state rather than deriving
-   * it, and the narrowness is deliberate.** The model this file replaced
-   * snapshotted the ENTIRE app state on tour entry and restored it on exit,
-   * which is what discarded a viewer's mid-tour edits (see the header). A
-   * replace has to record something — the ids it hid are not recoverable from
-   * anything else once they are off the canvas — but it records only those
-   * ids, only for one frame, and only until that frame pops. No scalar, no
-   * other frame's contribution, and nothing the viewer does afterwards.
-   *
-   * Filled in by `pushFrame`, which is the only caller that can see the
-   * viewer's selection at the moment of the push. Authors never write it.
-   */
-  displaced?: string[];
 }
 
 /**
- * The tour's live contribution to the app state.
+ * One recorded step: what the tour was drawing when the step was pushed, and
+ * which region it was pushed in.
  *
- * `frames` is the stack proper (what to undo, and in what order); `counts` is
- * its selection contribution flattened into a refcount, so callers do not have
- * to re-walk every frame to ask "is the tour holding this id".
- *
- * **`counts` is DERIVED from `frames`, not maintained beside it.** It used to
- * be incremented on push and decremented on pop, which was exactly equivalent
- * while every frame was additive. `Only:` broke that equivalence: a replacing
- * frame hides the frames below it, so the multiset union of every
- * `frames[*].sel` is no longer what the tour is showing. Two sources of truth
- * that agreed by construction would then have had to be kept agreeing by hand,
- * and the failure would have been silent — `reconcile` reads `counts` and
- * would have taken every displaced id for a viewer untick, dropping the tour's
- * claim on ids it had merely hidden. Deriving both from `frames` makes the
- * disagreement unrepresentable.
+ * `sel` is CUMULATIVE — the whole of `tour` at that moment, not the delta the
+ * step declared. That is what lets `back` be a plain read.
  */
-export interface TourStack {
-  frames: TourFrame[];
-  counts: ReadonlyMap<string, number>;
+export interface TourStep {
+  sel: readonly string[];
+  scalars: TourChange['scalars'];
+  region: number;
 }
 
-export const EMPTY_STACK: TourStack = { frames: [], counts: new Map() };
-
-/**
- * Index of the last REPLACING frame — the horizon below which nothing shows.
- * -1 when the stack is all additive, which is the whole-stack case.
- */
-function horizon(frames: readonly TourFrame[]): number {
-  for (let i = frames.length - 1; i >= 0; i--) if (frames[i].replace) return i;
-  return -1;
+/** The whole of the tour's state. Immutable; every operation returns a new one. */
+export interface TourState {
+  /** False outside a tour, when every set is empty and nothing composes. */
+  inTour: boolean;
+  /** The viewer's selection. Suppressed while `region > 0`, never emptied. */
+  held: readonly string[];
+  /** Viewer ticks made while `held` was suppressed. Empty until the first `Only:`. */
+  tempHeld: readonly string[];
+  /** What the tour is drawing right now, cumulative. */
+  tour: readonly string[];
+  /** How many `Only:` steps are in force. */
+  region: number;
+  /** Recorded steps, oldest first. `back` reads the previous one. */
+  tourStates: TourStep[];
+  /** Merged scalars, last-write-wins in push order. */
+  scalars: TourChange['scalars'];
 }
 
-/**
- * The frames that currently contribute: everything from the last replace up.
- * Frames below it are still on the stack — they are what `back` unwinds into —
- * but they contribute nothing while the replace stands.
- */
-function visibleFrames(frames: readonly TourFrame[]): readonly TourFrame[] {
-  const cut = horizon(frames);
-  return cut === -1 ? frames : frames.slice(cut);
-}
-
-/** The tour's live selection contribution, refcounted, as a function of `frames`. */
-function countsOf(frames: readonly TourFrame[]): Map<string, number> {
-  const counts = new Map<string, number>();
-  for (const frame of visibleFrames(frames)) {
-    for (const id of frame.sel) counts.set(id, (counts.get(id) ?? 0) + 1);
-  }
-  return counts;
-}
-
-/** Rebuild a stack's derived half. The only way a `TourStack` is constructed. */
-function restack(frames: readonly TourFrame[]): TourStack {
-  return { frames: [...frames], counts: countsOf(frames) };
-}
+export const NO_TOUR: TourState = {
+  inTour: false, held: [], tempHeld: [], tour: [], region: 0, tourStates: [], scalars: {},
+};
 
 const IDS_SEP = '~';
 
@@ -155,7 +201,7 @@ function oneOf<T extends string>(value: string | null, allowed: readonly T[]): T
 }
 
 /**
- * Parse a step's `Change:` query into a frame.
+ * Parse a step's `Change:` (or `Only:`) query into a change.
  *
  * Same vocabulary as a share link — one set of param names for links and for
  * the tour — but read as a DELTA: a param that is absent means "leave it
@@ -167,9 +213,9 @@ function oneOf<T extends string>(value: string | null, allowed: readonly T[]): T
  * Values are validated against their allowed sets, so an authoring typo
  * (`dir=SIDEWAYS`) is dropped rather than pushed into the renderer.
  */
-export function parseTourChange(query: string, replace = false): TourFrame {
+export function parseTourChange(query: string, replace = false): TourChange {
   const p = new URLSearchParams(query);
-  const scalars: TourFrame['scalars'] = {};
+  const scalars: TourChange['scalars'] = {};
 
   if (p.has('detail')) scalars.detail = p.get('detail') || null;
   if (p.has('roots')) scalars.roots = p.get('roots') === '1';
@@ -182,176 +228,173 @@ export function parseTourChange(query: string, replace = false): TourFrame {
   const raw = p.get('sel');
   const sel = raw ? raw.split(IDS_SEP).filter(Boolean) : [];
   // `replace: undefined` rather than `false` on the common path, so an additive
-  // frame serialises and compares the way it always did.
+  // change serialises and compares the way it always did.
   return replace ? { sel, scalars, replace: true } : { sel, scalars };
 }
 
-/**
- * Push a frame. The duplicate-push rule is just `by: 1` with no membership test.
- *
- * A REPLACING frame additionally records what it pushed off the canvas, in
- * `displaced`, so that popping it can restore exactly that. `visible` is the
- * selection as the viewer sees it right now — everything the replace is about
- * to hide, whether the viewer ticked it or an earlier frame pushed it.
- *
- * The ids the frame itself draws are excluded: a class that is on the canvas
- * before the replace AND named by it never leaves, so restoring it on the pop
- * would add a copy that was never taken away.
- */
-export function pushFrame(
-  stack: TourStack, frame: TourFrame, visible: readonly string[] = [],
-): TourStack {
-  if (!frame.replace) return restack([...stack.frames, frame]);
-  /*
-   * Only the VIEWER's ids are recorded. An id a lower frame is holding is
-   * already written down — that frame comes back above the horizon when this
-   * one pops, and `composeState` re-adds its `sel` unaided. Recording it here
-   * as well would restore it twice: once as the tour's, once as the viewer's,
-   * and the second copy would outlive the tour.
-   */
-  const held = stack.counts;
-  const displaced = visible.filter(id => !held.has(id) && !frame.sel.includes(id));
-  return restack([...stack.frames, { ...frame, displaced }]);
+/** Union preserving insertion order, so the canvas does not reshuffle on a push. */
+function union(a: readonly string[], b: readonly string[]): string[] {
+  return [...new Set([...a, ...b])];
 }
 
 /**
- * Pop the top frame. A no-op on an empty stack, so exit paths can just unwind.
+ * Begin a tour. `selection` is what is on the canvas right now — the viewer's,
+ * by definition, since the tour has drawn nothing yet.
  *
- * A replacing frame's `displaced` ids come back as part of the pop. They are
- * returned rather than folded into `counts`, because they are not the tour's
- * to hold: they were the VIEWER's selection (or a lower frame's) before the
- * replace hid them, and putting them into the tour's refcount would mean the
- * next pop took them away again.
+ * The host must call this, because "the stack is non-empty" is NOT the same
+ * question as "a tour is running": a tour whose opening position carries no
+ * `Change:` records nothing (the first tour in the content file is exactly
+ * that), and a viewer tick during those opening steps has to land in `held`.
  */
-export function popFrame(stack: TourStack): TourStack {
-  if (stack.frames.length === 0) return stack;
-  return restack(stack.frames.slice(0, -1));
+export function startTour(selection: readonly string[]): TourState {
+  return { ...NO_TOUR, inTour: true, held: [...selection] };
 }
 
 /**
- * The ids the top frame will restore when popped — its `displaced` set, empty
- * for an additive frame.
- *
- * Read by the host BEFORE calling `popFrame`, and unioned back into the
- * viewer's half. Separate from `popFrame` so the stack stays a pure function of
- * itself and the caller decides where the restored ids land.
+ * End a tour. The selection the viewer is left with is `held ∪ tempHeld` —
+ * everything they ticked, before or during, minus anything they unticked, and
+ * none of what the tour drew.
  */
-export function pendingRestore(stack: TourStack): readonly string[] {
-  return stack.frames[stack.frames.length - 1]?.displaced ?? [];
+export function endTour(): TourState {
+  return NO_TOUR;
 }
 
-/** Unwind the whole stack at once — every tour exit (done, ✕, Escape, `?`). */
-export function clearStack(): TourStack {
-  return EMPTY_STACK;
+/** What the viewer keeps when the tour ends. Read before `endTour` resets. */
+export function survivingSelection(state: TourState): string[] {
+  return union(state.held, state.tempHeld);
 }
 
 /**
- * The app state the viewer should see: their own state with the tour's
- * contribution composed on top.
+ * Record a step.
  *
- * `sel` unions the tour's refcounted ids into the viewer's set — a count of 2
- * and a count of 1 both mean "on the canvas", since the count only decides what
- * survives a pop. Scalars are last-write-wins down the stack, which is the same
- * "the tour's copy sits on top of the viewer's" rule for a field with one slot.
+ * An additive change grows `tour`; a replace makes `tour` exactly what the step
+ * names and pushes the region up one. Either way the resulting `tour` is
+ * recorded as a step, so `back` is a read.
  */
-export function composeState(viewer: ExploreState, stack: TourStack): ExploreState {
-  /*
-   * A REPLACING frame is a horizon: nothing selected before it shows while it
-   * is on the stack. So the composition starts at the LAST replace rather than
-   * at the viewer's set — everything below is hidden, not lost, and comes back
-   * as each replace pops and restores its `displaced`.
-   *
-   * Frames pushed AFTER a replace still add to it. That is what lets a step
-   * name a clean canvas with `Only:` and a following beat grow it with
-   * `Change:`, which is the shape the spine steps want.
-   */
-  const cut = horizon(stack.frames);
-  const sel = cut === -1 ? new Set(viewer.sel) : new Set<string>();
-  for (const frame of visibleFrames(stack.frames)) {
-    for (const id of frame.sel) sel.add(id);
-  }
-  /*
-   * Scalars are NOT cut off at the horizon: `Only:` replaces the selection, not
-   * the whole app state. A step that set `dir=DOWN` three steps ago is still
-   * setting it, exactly as it would be under an additive frame.
-   */
-  let scalars: TourFrame['scalars'] = {};
-  for (const frame of stack.frames) scalars = { ...scalars, ...frame.scalars };
-  return { ...viewer, ...scalars, sel: [...sel] };
-}
-
-/**
- * Split a composed state back into the viewer's half — the inverse of
- * `composeState` for `sel`, and the identity for everything else.
- *
- * Needed because the app holds ONE state (the composed one) and that is what
- * the viewer edits. Anything selected that the tour is not holding is theirs,
- * whether they ticked it before the tour started or during it.
- *
- * The scalars are NOT split back out, per the decision above: once a step sets
- * `dir`, that value is simply the state's, and popping does not restore the
- * viewer's.
- */
-export function viewerState(composed: ExploreState, stack: TourStack): ExploreState {
-  return { ...composed, sel: composed.sel.filter(id => !stack.counts.has(id)) };
-}
-
-/**
- * Fold a viewer's mid-tour edit into the stack, so that their intent outlives
- * the next pop.
- *
- * **Why the stack has to change at all.** `sel` is a set: it cannot hold the
- * tour's copy and the viewer's copy of the same id side by side, which is
- * exactly what the duplicate push assumes. So when the two collide, the tour
- * yields its claim and the id becomes plainly the viewer's. Both collisions
- * reduce to the same move — *drop every tour copy of an id the viewer acted
- * on* — but for opposite-looking reasons:
- *
- *  - **They unticked something a step pushed.** They have overruled the tour.
- *    Without dropping the claim the very next compose would put it back and
- *    the checkbox would refuse to stay off.
- *  - **They ticked something a step had already pushed.** Their tick is a
- *    second copy that the set silently swallowed. Dropping the tour's claim
- *    makes the surviving copy theirs, so the pop cannot take it from under
- *    them.
- *
- * `ticked` is supplied by the caller because a tick of an already-selected id
- * is invisible in the resulting state — nothing about `composed` records that
- * it happened. An untick needs no such help: the id's absence is the evidence.
- *
- * **An id hidden by a replace is not an untick.** "Absence is evidence" holds
- * only for ids the tour is actually showing, which is why this reads `counts`
- * (derived from the frames above the last `Only:`) rather than walking every
- * frame. A class a replace pushed off the canvas is absent from `composed.sel`
- * without the viewer having touched it; counting that as an overrule would
- * drop the tour's claim on ids it means to restore when the replace pops.
- *
- * Returns the state unchanged; only the stack moves. It is returned alongside
- * so callers read one result rather than pairing two calls in the right order.
- */
-export function reconcile(
-  composed: ExploreState, stack: TourStack, edit: { ticked?: readonly string[] },
-): { state: ExploreState; stack: TourStack } {
-  const selected = new Set(composed.sel);
-  const yielded = new Set<string>();
-  for (const id of stack.counts.keys()) {
-    if (!selected.has(id)) yielded.add(id);              // overruled by an untick
-  }
-  for (const id of edit.ticked ?? []) {
-    if (stack.counts.has(id)) yielded.add(id);           // claimed by a tick
-  }
-  if (yielded.size === 0) return { state: composed, stack };
-
+export function pushStep(state: TourState, change: TourChange): TourState {
+  const region = change.replace ? state.region + 1 : state.region;
+  const tour = change.replace ? [...change.sel] : union(state.tour, change.sel);
+  const scalars = { ...state.scalars, ...change.scalars };
   return {
-    state: composed,
-    // The frames keep their text — they are still the tour's record of what
-    // each step declared — but they no longer hold these ids, so neither a pop
-    // nor the final unwind can act on them. `displaced` is filtered too: an id
-    // the viewer has spoken for must not be restored by a later pop either.
-    stack: restack(stack.frames.map(f => ({
-      ...f,
-      sel: f.sel.filter(id => !yielded.has(id)),
-      ...(f.displaced ? { displaced: f.displaced.filter(id => !yielded.has(id)) } : {}),
-    }))),
+    ...state,
+    tour,
+    region,
+    scalars,
+    tourStates: [...state.tourStates, { sel: tour, scalars, region }],
   };
+}
+
+/**
+ * Step back: drop the last recorded step and return to what the one before it
+ * recorded.
+ *
+ * `tour` and `region` both come from that previous step, which is why crossing
+ * out of a replace needs no decrement — it simply says which region it was in.
+ * With no earlier step, the tour is back to having drawn
+ * nothing, at region 0.
+ *
+ * Scalars are NOT restored, per the standing decision: a step overwrites them
+ * and a pop leaves them (Siggie, 2026-08-27 — *"easy enough for the user to
+ * reclick the button"*).
+ */
+export function popStep(state: TourState): TourState {
+  if (state.tourStates.length === 0) return state;
+  const tourStates = state.tourStates.slice(0, -1);
+  const prev = tourStates[tourStates.length - 1];
+  return {
+    ...state,
+    tourStates,
+    tour: prev ? prev.sel : [],
+    region: prev ? prev.region : 0,
+  };
+}
+
+/** True while `held` is suppressed — i.e. inside a replace. */
+function suppressed(state: TourState): boolean {
+  return state.region > 0;
+}
+
+/**
+ * The viewer ticked a class on.
+ *
+ * It goes to whichever set is the viewer's right now: `held` at region 0,
+ * `tempHeld` inside a replace. A class already in that set is left alone, so a
+ * tick of something the tour is also drawing is recorded once and survives the
+ * pop that takes the tour's copy away.
+ */
+export function tick(state: TourState, id: string): TourState {
+  if (!state.inTour) return state;
+  const key = suppressed(state) ? 'tempHeld' : 'held';
+  if (state[key].includes(id)) return state;
+  return { ...state, [key]: [...state[key], id] };
+}
+
+/**
+ * The viewer ticked a class off.
+ *
+ * It is removed from every set that is currently DISPLAYING it, and from no
+ * other. A SUPPRESSED set keeps its record: inside a replace, `held` is not on
+ * screen, so an untick has not spoken to it and it returns at the crossing back
+ * to region 0.
+ *
+ * **Every displaying set, not the first one.** The rule is often written as an
+ * if/else chain — `tour`, else `tempHeld`, else `held` — which stops at the
+ * first match. That is equivalent only while ONE set is displaying, which is
+ * true of every untick in the worked example above. Two sets display the same
+ * class only at region 0, where nothing is suppressed:
+ *
+ * ```
+ * start [P]      held=[P]  tour=[ ]   shown: P
+ * tour  +P       held=[P]  tour=[P]   shown: P
+ * user  −P    <- region 0: `tour` and `held` are BOTH displaying it
+ * ```
+ *
+ * Stopping at `tour` leaves `held` holding `P`, and since `held` is not
+ * suppressed the next compose puts it straight back — the checkbox bounces,
+ * which is the exact failure that made `held` editable in the first place.
+ *
+ * **Worked-example state 7 is not this case.** `−C` happens at region 1, where
+ * `held` IS suppressed and so is not displaying; `tour` is the only set the
+ * untick reaches, and `held` rightly keeps its copy for the crossing. The
+ * discriminator is suppressed-vs-displaying, never which set is checked first
+ * — which is why the `held` guard below is on `suppressed()` and not on
+ * whether an earlier set already matched.
+ *
+ * Nothing else moves: no recorded step is rewritten, in this region or any
+ * other. A step recorded BEFORE the untick still holds the class and shows it
+ * again on `back` — which is what back means everywhere else. (The version this
+ * replaced made an untick permanent for the whole tour by rewriting every
+ * frame; that was a policy choice, not a requirement, and dropping it dropped
+ * the code.)
+ */
+export function untick(state: TourState, id: string): TourState {
+  if (!state.inTour) return state;
+  const drop = (set: readonly string[]) => set.filter(x => x !== id);
+  return {
+    ...state,
+    tour: drop(state.tour),
+    tempHeld: drop(state.tempHeld),
+    // Suppressed inside a replace, so an untick there has not reached it.
+    held: suppressed(state) ? state.held : drop(state.held),
+  };
+}
+
+/**
+ * The app state the viewer should see.
+ *
+ * `sel` is the composition: what the tour draws, plus what the viewer ticked
+ * during a replace, plus — only outside a replace — their own selection.
+ *
+ * Scalars are last-write-wins across every step so far. They are NOT cut off by
+ * a replace: `Only:` replaces the selection, not the app. A step that set
+ * `dir=DOWN` three steps ago is still setting it, exactly as it would be under
+ * an additive change; reinstating the absolute model's "any field a step did
+ * not name snaps back" is the thing to avoid.
+ */
+export function compose(viewer: ExploreState, state: TourState): ExploreState {
+  if (!state.inTour) return viewer;
+  const sel = suppressed(state)
+    ? union(state.tour, state.tempHeld)
+    : union(union(state.tour, state.tempHeld), state.held);
+  return { ...viewer, ...state.scalars, sel };
 }
