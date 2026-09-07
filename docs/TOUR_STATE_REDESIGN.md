@@ -155,24 +155,25 @@ Back into a step shows what that step showed; no exception, no rule.
 `Only:` at state 4; viewer edits at 3, 5, 6, 8, 10.
 
 ```
-state              region  step  held     temp_held  tour         displayed
-0.  start [A,B,C]  -       -     —        —          —            A,B,C
-1.  tour +U        0       0     A,B,C    ∅          U            A,B,C,U
-2.  tour +V        0       1     "        ∅          U,V          A,B,C,U,V
-3.  user +D,+E     0       -     "        D,E        U,V          A,B,C,U,V,D,E
-4.  Only: C,W,X    1       0     "        "          C,W,X        C,W,X,D,E
-5.  user +F        1       -     "        D,E,F      C,W,X        C,W,X,D,E,F
-6.  user −C        1       -     "        "          W,X          W,X,D,E,F
-7.  tour +Y        1       1     "        "          W,X,Y        W,X,Y,D,E,F
-8.  user −W        1       -     "        "          X,Y          X,Y,D,E,F
-9.  tour +Z        1       2     "        "          X,Y,Z        X,Y,Z,D,E,F
-10. user −E        1       -     "        D,F        X,Y,Z        X,Y,Z,D,F
-
-back to 1-1        1       1     "        "          W,X,Y        W,X,Y,D,F   ← W returns
-back to 1-0        1       0     "        "          C,W,X        C,W,X,D,F   ← C returns
-back to 0-1        0       1     "        "          U,V          A,B,C,U,V,D,F   ← crossing: held back
-back to 0-0        0       0     "        "          U            A,B,C,U,D,F
-exit               -       -     —        —          —            A,B,C,D,F
+state_step         mode     region  t-step  held           temp_held  tour             displayed = [prev displayed + tour added + temp_held
+0.  start [A,B,C]  regular  -       -       —              —                           [A,B,C                             ]
+1.  tour +U        tour     0       0       [A,B,C]        -          [U            ]  [A,B,C,       U                    ]
+2.  tour +V        tour     0       1       "              -          [U,V          ]  [A,B,C,       U,V                  ]
+3.  user +D,+E     tour     0               [A,B,C,D,E]    -          [U,V          ]  [A,B,C,D,E,   U,V,                 ]
+4.  user -B        tour     0               [A,  C,D,E]    -          [U,V          ]  [A,  C,D,E,   U,V,                 ]
+5.  Only: C,W,X    tour     1       0       "              -          [    C,W,X    ]  [                 C,W,X            ]
+6.  user +D,+E,+F  tour     1               "              [D,E,F]    [    C,W,X    ]  [                 C,W,X,      D,E,F]
+7.  user −C        tour     1               "              "          [      W,X    ]  [                   W,X,      D,E,F]
+8.  tour +Y        tour     1       1       "              "          [      W,X,Y  ]  [                   W,X,Y,    D,E,F]
+9.  user −W        tour     1               "              "          [        X,Y  ]  [                     X,Y,    D,E,F]
+10. tour +Z        tour     1       2       "              "          [        X,Y,Z]  [                     X,Y,Z,  D,E,F]
+11. user −E        tour     1               "              [D,  F]    [        X,Y,Z]  [                     X,Y,Z,  D,  F]
+                                                                                                    
+8.  back to 1-1    tour     1       1       "              "          [      W,X,Y  ]  [                   W,X,Y,    D,  F]  ← W returns               
+5.  back to 1-0    tour     1       0       "              "          [    C,W,X    ]  [                 C,W,X,      D,  F]  ← C returns               
+2.  back to 0-1    tour     0       1       "              "          [U,V          ]  [A,  C,D,E,  F, U,V,               ]  ← crossing: held back 
+1.  back to 0-0    tour     0       0       "              "          [U            ]  [A,  C,D,E,  F, U                  ]
+0.  exit           regular  -       -       —              —           —               [A,  C,D,E,F                       ]  # held + temp_held
 ```
 
 Read the three viewer edits against the untick rule:
