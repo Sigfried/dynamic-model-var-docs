@@ -4,6 +4,8 @@ import {
   startTour, endTour, survivingSelection, NO_TOUR, type TourState,
 } from '../explore/tourStateStack';
 import { DEFAULTS, type ExploreState } from '../explore/exploreState';
+import { ENTITY_CATEGORIES } from '../config/entityCategories';
+import { categoryView } from '../config/categoryView';
 
 /**
  * Tour state on the `held`/`temp_held` model (Siggie 2026-09-07). The model is
@@ -446,5 +448,55 @@ describe('worked example', () => {
   test('the region rides on the frame, so crossing back is a read', () => {
     const s = forward();
     expect(s[11].tourStates.map(f => f.region)).toEqual([0, 0, 1, 1, 1]);
+  });
+});
+
+/**
+ * `cat=<id>` in a step's `Change:`/`Only:` query.
+ *
+ * REGRESSION. `cat` first shipped understood only by `readExploreState`, which
+ * reads the URL at startup — but a tour step's query goes through
+ * `parseTourChange` instead, and that had its own `sel` reader. So
+ * `Only: cat=admin` parsed to an EMPTY selection and, `Only:` being a replace,
+ * cleared the canvas rather than filling it: the step rendered a correctly
+ * ringed category header beside a blank diagram.
+ *
+ * Both readers now share one expansion. These pin the parser that was missing
+ * it.
+ */
+describe('cat= in a tour change', () => {
+  const admin = ENTITY_CATEGORIES.find(c => c.id === 'admin')!;
+
+  test('Only: cat=<id> selects the whole category', () => {
+    expect(parseTourChange('cat=admin', true).sel).toEqual(categoryView(admin));
+  });
+
+  test('Change: cat=<id> adds the whole category', () => {
+    expect(parseTourChange('cat=admin').sel).toEqual(categoryView(admin));
+  });
+
+  test('it draws what the ⊞ button draws, for every category', () => {
+    // The same equivalence `exploreState.test.ts` pins for the URL reader —
+    // asserted here too, because the whole bug was these two disagreeing.
+    for (const cat of ENTITY_CATEGORIES) {
+      expect(parseTourChange(`cat=${cat.id}`, true).sel, `category ${cat.id}`)
+        .toEqual(categoryView(cat));
+    }
+  });
+
+  test('an explicit sel still wins', () => {
+    expect(parseTourChange('cat=admin&sel=Visit', true).sel).toEqual(['Visit']);
+  });
+
+  test('an unknown category selects nothing', () => {
+    expect(parseTourChange('cat=nosuch', true).sel).toEqual([]);
+  });
+
+  test('it composes onto the canvas like any other change', () => {
+    // End to end: the step's query, pushed, composed into the state the app
+    // renders. This is the assertion closest to what the screenshot showed.
+    const state = pushStep(startTour([]), parseTourChange('cat=admin', true));
+    const composed = compose({ ...DEFAULTS }, state);
+    expect(composed.sel).toEqual(categoryView(admin));
   });
 });

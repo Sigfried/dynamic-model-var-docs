@@ -1,8 +1,11 @@
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   readExploreState, writeExploreState, buildShareURL, DEFAULTS, rememberPreference,
+  INSTRUCTION_PARAMS,
   type ExploreState,
 } from '../explore/exploreState';
+import { ENTITY_CATEGORIES } from '../config/entityCategories';
+import { categoryView } from '../config/categoryView';
 
 /**
  * Shareable state. The bug this prevents: a link reproduced the SELECTION but
@@ -186,5 +189,67 @@ describe('explore state', () => {
       };
       expect(urlFor({ push: true })).toBe(urlFor());
     });
+  });
+});
+
+/**
+ * `cat=<id>` — the ⊞ control, as a tour instruction.
+ *
+ * Siggie, 2026-09-08: "it would be nice to have a shortcut for selecting all
+ * the entities in a category, same as you'd get clicking ⊞". "Same as" is the
+ * requirement, so the test that matters is the one comparing the two.
+ */
+describe('the cat shorthand', () => {
+  test('draws exactly what the ⊞ button draws', () => {
+    /*
+     * Both sides go through `categoryView`, so this is really pinning that
+     * nobody reimplements one of them later. The failure it guards is a
+     * `cat=` that expands to `classIds` alone: it would look right until a
+     * category grew a pin, then quietly differ from the button.
+     */
+    for (const cat of ENTITY_CATEGORIES) {
+      expect(readExploreState(`?cat=${cat.id}`).sel, `category ${cat.id}`)
+        .toEqual(categoryView(cat));
+    }
+  });
+
+  test('includes pins, not just members', () => {
+    // The half of "same as ⊞" that a naive implementation gets wrong. Skips if
+    // no category has pins, so it fails loudly rather than passing vacuously.
+    const pinned = ENTITY_CATEGORIES.find(c => c.pins.length > 0);
+    expect(pinned, 'no category has pins; this test has stopped proving anything')
+      .toBeDefined();
+    const sel = readExploreState(`?cat=${pinned!.id}`).sel;
+    for (const pin of pinned!.pins) expect(sel).toContain(pin);
+  });
+
+  test('accepts several categories, by comma or by the sel separator', () => {
+    const both = [...new Set([
+      ...categoryView(ENTITY_CATEGORIES[0]), ...categoryView(ENTITY_CATEGORIES[1]),
+    ])];
+    const a = ENTITY_CATEGORIES[0].id;
+    const b = ENTITY_CATEGORIES[1].id;
+    expect(readExploreState(`?cat=${a},${b}`).sel).toEqual(both);
+    expect(readExploreState(`?cat=${a}~${b}`).sel).toEqual(both);
+  });
+
+  test('expands an unknown category to nothing rather than throwing', () => {
+    // A stale link draws an empty canvas; it does not break the app.
+    expect(readExploreState('?cat=nosuchcategory').sel).toEqual([]);
+  });
+
+  test('yields to an explicit sel', () => {
+    // Same precedence as `panels=0&legend=1`: name the sweep, then the
+    // exception.
+    expect(readExploreState('?cat=admin&sel=Visit').sel).toEqual(['Visit']);
+  });
+
+  test('is an instruction param, so it never survives into a shared link', () => {
+    /*
+     * The reason it is stripped: it has already been resolved into `sel`, so
+     * what a viewer copies names the classes. Left in the URL it would
+     * re-expand on every reload, over whatever selection they had since made.
+     */
+    expect(INSTRUCTION_PARAMS).toContain('cat');
   });
 });

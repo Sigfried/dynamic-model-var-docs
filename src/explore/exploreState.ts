@@ -41,6 +41,9 @@
  * long-lived.
  */
 
+import { ENTITY_CATEGORIES } from '../config/entityCategories';
+import { categoryView } from '../config/categoryView';
+
 export type Direction = 'RIGHT' | 'DOWN';
 export type MergeMode = 'near' | 'far' | 'bend' | 'off';
 
@@ -88,7 +91,7 @@ export const DEFAULTS: ExploreState = {
  * for both halves instead of keeping its own copy — a hand-kept list is what
  * let `panels` be valid everywhere except the content test.
  */
-export const INSTRUCTION_PARAMS = ['tour', 'panels'] as const;
+export const INSTRUCTION_PARAMS = ['tour', 'panels', 'cat'] as const;
 
 export const PANEL_KEYS = ['legend', 'cases'] as const;
 export type PanelKey = typeof PANEL_KEYS[number];
@@ -178,6 +181,50 @@ function readIds(params: URLSearchParams, key: string): string[] {
   return raw ? raw.split(IDS_SEP).filter(Boolean) : [];
 }
 
+/**
+ * `cat=<id>` — every entity in a category, exactly what the ⊞ control draws.
+ *
+ * Shared by BOTH readers of the vocabulary: the URL read here, and
+ * `parseTourChange` in `tourStateStack.ts`, which parses a step's `Change:`/
+ * `Only:` query. Exported for exactly that reason — `cat` first shipped
+ * understood only here, so `Only: cat=admin` parsed to an EMPTY `sel` and, an
+ * `Only:` being a replace, cleared the canvas instead of filling it. One
+ * expansion, two callers.
+ *
+ * An INSTRUCTION param like `panels=0`: resolved on read, never written back.
+ * The canonical state is still the `sel` list it expands to, so a link the
+ * viewer copies afterwards names the classes and does not depend on the
+ * category still meaning what it meant.
+ *
+ * **It expands to members PLUS PINS**, through the same `categoryView` the
+ * button uses, rather than to `classIds` alone. A tour step that says "show me
+ * this category" and a viewer who presses ⊞ have to land on the same canvas —
+ * two definitions of "the category's view" would drift the moment a pin was
+ * added, and the pins are exactly the borrowed context that makes the view
+ * make sense.
+ *
+ * Unknown category ids expand to nothing rather than throwing: a stale link is
+ * a link that draws nothing, not a broken app.
+ *
+ * More than one category can be named, separated by a comma or by the `~` that
+ * `sel` uses (`cat=lab,survey`). BOTH are accepted because this param is hand-
+ * written in tour content and in shared links, where a comma is what anyone
+ * reaches for — splitting only on `~` silently yielded an EMPTY canvas for
+ * `cat=lab,survey`, which looked like the category was missing rather than
+ * like the separator was wrong. Members are deduped, in order.
+ */
+export function readCategoryParam(params: URLSearchParams): string[] {
+  const raw = params.get('cat');
+  if (!raw) return [];
+  const wanted = raw.split(new RegExp(`[,${IDS_SEP}]`)).filter(Boolean);
+  return [...new Set(
+    wanted.flatMap(id => {
+      const cat = ENTITY_CATEGORIES.find(c => c.id === id);
+      return cat ? categoryView(cat) : [];
+    }),
+  )];
+}
+
 /** localStorage can throw (private mode, disabled site data), so never let a
  *  preference read break the app — fall through to the default instead. */
 function lsGet(key: string): string | null {
@@ -223,6 +270,8 @@ export function readExploreState(search = window.location.search): ExploreState 
       ? lsGet(LS_KEYS.sibs) !== '0'
       : DEFAULTS.sibs;
 
+  const sel = readIds(p, 'sel');
+
   // Sweep first, then let explicit keys override it — `panels=0&legend=1`
   // means "clear the screen, then open the legend".
   const panels = applyPanelsParam(p, {
@@ -235,7 +284,9 @@ export function readExploreState(search = window.location.search): ExploreState 
   if (p.has('detail')) panels.detail = p.get('detail') || null;
 
   return {
-    sel: readIds(p, 'sel'),
+    /* Explicit `sel` wins over the `cat` shorthand, matching how `panels=0`
+       yields to an explicit panel key: name the sweep, then the exception. */
+    sel: sel.length ? sel : readCategoryParam(p),
     detail: panels.detail,
     roots: p.get('roots') === '1',
     sibs,
@@ -311,6 +362,14 @@ export function writeExploreState(state: ExploreState, { push = false } = {}): v
    * idempotent and needs no latching — deleting it here is enough.
    */
   q.delete('panels');
+  /*
+   * `cat` is the same shape: it has already been expanded into `sel`, which is
+   * written above, so what a viewer copies afterwards names the classes. That
+   * is the point — the link stays right even if the category is later
+   * redefined, and it does not silently re-expand on reload over a selection
+   * the viewer has since changed.
+   */
+  q.delete('cat');
 
   /*
    * `pushState` does not fire `popstate` — only a real back/forward does — so

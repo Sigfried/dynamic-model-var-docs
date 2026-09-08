@@ -137,7 +137,9 @@
  * displayed by `tour` and `held` at once. See `untick`.
  */
 
-import { type Direction, type ExploreState, type MergeMode, PANEL_KEYS } from './exploreState';
+import {
+  type Direction, type ExploreState, type MergeMode, PANEL_KEYS, readCategoryParam,
+} from './exploreState';
 
 /** One position's contribution, parsed out of its `Change:` or `Only:` query. */
 export interface TourChange {
@@ -243,8 +245,20 @@ export function parseTourChange(query: string, replace = false): TourChange {
   const merge = oneOf<MergeMode>(p.get('merge'), ['near', 'far', 'bend', 'off']);
   if (merge) scalars.merge = merge;
 
+  /*
+   * `sel` names classes; `cat` names a whole category and expands to the same
+   * list the ⊞ button draws. Explicit `sel` wins, matching how an explicit
+   * panel key wins over `panels=0`.
+   *
+   * The expansion is IMPORTED rather than repeated: this parser and
+   * `readExploreState` are two readers of one vocabulary, and `cat` shipped
+   * understood by only the other one — so `Only: cat=admin` parsed to an empty
+   * `sel` and wiped the canvas instead of filling it.
+   */
   const raw = p.get('sel');
-  const sel = raw ? raw.split(IDS_SEP).filter(Boolean) : [];
+  const sel = raw
+    ? raw.split(IDS_SEP).filter(Boolean)
+    : readCategoryParam(p);
   // `replace: undefined` rather than `false` on the common path, so an additive
   // change serialises and compares the way it always did.
   return replace ? { sel, scalars, replace: true } : { sel, scalars };
