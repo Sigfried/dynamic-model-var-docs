@@ -9,7 +9,6 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 `src/test/helpContent.test.ts`. Package-level design lives in
 [docs/HELP_PACKAGE_PLAN.md](../../docs/HELP_PACKAGE_PLAN.md).
 
----
 <details>
 <summary><b>TODO</b></summary>
 
@@ -65,7 +64,6 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
   one-line change when you want it.
 </details><!-- end of todo -->
 
----
 <details open>
 <summary><b>Tours</b></summary>
 
@@ -87,9 +85,6 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 > gets to say the thing the numbers show — it is a self-contained subtree
 > that barely touches the rest of the model.
 
-[sg] current bdchm tour starts wth brief intro to BDC and the overall
-context.
-
 - **Title:** The BioData Catalyst Harmonized Model (BDCHM)
 - **Tour:** The BioData Catalyst Harmonized Model
 - Only: panels=0
@@ -97,58 +92,74 @@ context.
 - **Highlight:** selection-tree
 - **Width:** 800
 - **Description:** 
-  **Context:** BioData Catalyst ([BDC](https://biodatacatalyst.nhlbi.nih.gov/))
+  ### Context
+  BioData Catalyst ([BDC](https://biodatacatalyst.nhlbi.nih.gov/))
   is a cloud-based ecosystem where researchers can find and work with
   [NHLBI](https://www.nhlbi.nih.gov/) data resources. Studies arrive with
   their own terminologies, units, and file structures, which are
   transformed by the Data Model-Based Ingestion Pipeline
   ([dm-bip](https://linkml.io/dm-bip/)) into a common, harmonized
   [LinkML schema](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/).
-
-  **Sources:** Nine priority [TOPMed](https://topmed.nhlbi.nih.gov/)
-  cohorts (e.g., the Framingham Heart Study and Women's Health Initiative)
-  and the [INCLUDE Data Hub](https://portal.includedcc.org/) have been
-  harmonized to it so far with more on their way.
-
-  **Contents:** The model includes 56 entity classes (left panel)
-  - ~340 total attributes including
-    - 
-  - 52 enums (constrained value sets like condition types, specimen types)
-  - 155 variables (specific measurements/observations mapped to classes)
-
-  These cohorts contain a variety of patient data
 - **Beats:**
-  1. selection
-     - Description: The left panel lists every class in the model.
-     - Anchor: entity-row:Person
-     - Width: 300
-  2. display
+  1. sources
      - Keep: true
-     - Description: Ticking one draws it. Person is now on the canvas.
-     - Change: sel=Person
-     - Anchor: node-box:Person
-  3. relationships
      - Description:
-       Entities can be related to each other in a variety of ways (see Tour 2).
-     - Change: sel=Participant~Visit~Observation
-     - Anchor: node-box:Observation
+       ##### Sources
+       Nine priority [TOPMed](https://topmed.nhlbi.nih.gov/)
+       cohorts (e.g., the Framingham Heart Study and Women's Health Initiative)
+       and the [INCLUDE Data Hub](https://portal.includedcc.org/) have been
+       harmonized to it so far with more on their way.
+  2. contents
+     - Keep: true
+     - Description:
+       ##### Contents
+       The model includes 56 entity classes (left panel) with ~340 total attributes
+       falling into one of three attribute types:
+       - primitive data values (e.g., strings, integers)
+       - 52 permissible value sets (e.g., visit categories, units of
+         measure, condition codes)
+       - about 80 links to other entities indicating ownership or
+         containment relationships (e.g., multiple Participant entities
+         can "belong" to a single Person entity)
 
-</details><!-- end of BDCHM tour -->
-</div>
 
----
-<div style="margin-left: 40px">
-<details>
-<summary><b>Walkthrough</b></summary>
+### app-model-mods
 
-## Walkthrough
-- **TourMetadata:**
-- **Description:** The original tour. Parts will be used for specific tours now.
+- **Title:** What's in the model?
+- **Tour:** The BioData Catalyst Harmonized Model
+- **Description:** 
+  The BDCHM schema provides a flexible, general purpose structure
+  for storing clinical trials data. This Explorer categorizes the
+  entities specified in the model into six areas to make it easier
+  to browse and comprehend. This tour will walk you through each
+  category.
+- **Anchor:** category-row:admin
 
-### intro
+
+### admin-study
+
+- **Title:** Category: Admin / Study
+- **Tour:** The BioData Catalyst Harmonized Model
+- **Description:** [text here about admin category]
+- **Anchor:** category-row:admin
+- Only: cat=admin
+- Beats:
+  1. ResearchStudyCollection
+     - Description:
+       ##### ResearchStudyCollection
+       {{model-description:ResearchStudyCollection}}
+     - Anchor: node-box:ResearchStudyCollection
+  2. ResearchStudy
+     - Description:
+       ##### ResearchStudy
+       {{model-description:ResearchStudy}}
+     - Anchor: node-box:ResearchStudy
+
+
+### why
 
 - **Title:** BDCHM Explorer
-- **Tour:** Walkthrough
+- **Tour:** The BioData Catalyst Harmonized Model
 - **Description:** 
   BDCHM and the ingestion pipeline are built using [LinkML](https://linkml.io/).
   Neither the raw LinkML [YAML file](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/blob/main/src/bdchm/schema/bdchm.yaml)
@@ -175,6 +186,53 @@ context.
 - **Once:** intro
 - **Change:**
 - **Width:** 700
+
+</details><!-- end of BDCHM tour -->
+</div>
+
+<div style="margin-left: 40px">
+<details open>
+<summary><b>Getting oriented</b></summary>
+
+## Getting oriented
+- **TourMetadata:**
+- **Description:** How to use the BDCHM Explorer
+
+### bdchm-entities
+
+- **Title:** Model entities
+- **Tour:** Getting oriented
+- Only: panels=0
+- **Anchor:** none
+- **Highlight:** selection-tree
+- **Width:** 800
+- **Description:** [put some intro text here]
+- **Beats:**
+  1. selection
+     - Description: The left panel lists every class in the model.
+     - Anchor: entity-row:Person
+     - Width: 300
+  2. display
+     - Keep: true
+     - Description: Ticking one draws it. Person is now on the canvas.
+     - Change: sel=Person
+     - Anchor: node-box:Person
+  3. relationships
+     - Description:
+       Entities can be related to each other in a variety of ways.
+     - Change: sel=Participant~Visit~Observation
+     - Anchor: node-box:Observation
+
+</details><!-- end of Getting oriented tour -->
+</div>
+
+<div style="margin-left: 40px">
+<details>
+<summary><b>Walkthrough</b></summary>
+
+## Walkthrough
+- **TourMetadata:**
+- **Description:** The original tour. Parts will be used for specific tours now.
 
 ### selection-tree
 
@@ -376,7 +434,6 @@ context.
 
 </details>
 
----
 <details>
 <summary><b>Sharing what you see</b></summary>
 
