@@ -7,6 +7,93 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-07, later (TASKS 3c: the address is the slug, not a number)
+
+3c asked for "an easy way to find a given tour step/beat as shown in the app in
+the help-content". The framing in TASKS made it sound like a numbering problem —
+three schemes describing one walk — so the obvious move was to pick one and
+show it. That would have been wrong.
+
+### Why not a number
+
+Explicit `Tour: 3` numbers were deleted on 2026-08-28 because inserting a step
+renumbered every step after it, and a gap or duplicate silently reordered the
+tour. Any address that is a POSITION — step index, position index, `4.2` —
+brings that straight back: it names a rank, and a rank moves when something
+above it moves. An address whose meaning changes when you paste a block above it
+is not an address.
+
+The `### ` slug was already sitting there being unique, required, stable under
+reordering, and already the thing you would grep for. Nothing needed inventing;
+it just was not on screen. So the whole feature is a derived `address` field on
+`TourPosition` plus a place to show it.
+
+### What was rejected, and by whom
+
+**Always-visible chip in the nav row** (my first proposal, option (a)) — Siggie:
+*"(a) would be too noisy and confusing."* Right: the popover is viewer-facing
+and this is authoring furniture. It went dev-only instead, which is also why the
+Help menu item is gated on `import.meta.env.DEV` rather than merely tucked under
+a separator — the deployed build should not carry a switch for it at all.
+
+**A copyable search string instead of a beat ordinal.** A beat has no anchor in
+the file — it is a markdown list item — so `▸2` is a count, not something you
+can search for. I proposed copying the beat's own first line of text instead,
+which is greppable. Siggie cut it off: *"just give me the beat number. it's easy
+enough to count the beat bullets by eye."* Correct, and the rejected version had
+two real problems it took writing out to see: truncation length is a guess, and
+a short beat (`3. A primary goal`) is not unique anyway. The ordinal has neither
+failure mode. **Do not re-propose the clever payload.**
+
+What the tag copies is nonetheless NOT the string it shows. Siggie, on review:
+*"what you should copy to clipboard, say for id==entities is `### entities`"*.
+Shown and copied are different jobs — the shown string carries the beat ordinal
+because that is what tells you where you are, and the copied one is the
+markdown header because that is what matches exactly one line in a search. A
+bare `entities` also hits every prose mention of the word; `entities \u25b82`
+matches nothing. Hence two fields on `TourPosition`, `address` and `searchFor`,
+rather than one string doing both badly. A test pins `searchFor` against the
+real content file, so a change of heading style cannot quietly break the paste.
+
+**Changing the counter or the beat dots.** Never on the table. `4 / 6` plus dots
+was settled with Siggie on 2026-08-28 after `2.1 / 2` was rejected — *"neither
+of those are very clear"* — and the address is a fourth thing beside them, not a
+replacement for them. The counter answers "how far in am I", the address answers
+"where is this written". Different questions, different widgets.
+
+### The vacuous test, caught by breaking it
+
+The first version of the address test looped over `tourPositions(content)` and
+passed with `addressOf` gutted to `return entryId`. Cause: no tour name means
+the FIRST tour in the file, which today is the one-step BDCHM intro — beatless,
+so only the bare-slug half was ever exercised. Beats live in the Walkthrough.
+
+Fixed by flattening every tour (`tourNames(content).flatMap(...)`) and asserting
+`positions.some(p => p.beatCount > 0)` so the beat half cannot silently vanish
+again. **The general trap**: `tourPositions(content)` with no argument is not
+"the content", it is one tour, and which tour depends on file order. Both new
+tests were then re-verified by deliberately breaking them, per this suite's
+convention.
+
+### A silent bug found on the way
+
+`content.entries` is a `Map` built with `entries.set(entry.id, entry)`, so two
+`### ` blocks with the same slug means the second OVERWRITES the first —
+popover, Help menu item and every `Anchor:` aimed at it all resolve to whichever
+came last, with no error anywhere. Harmless-ish while ids were internal;
+actively wrong now that an id is an address an author reads off the screen and
+searches for. Pinned by a new test that compares against `content.sections`,
+which keeps every entry parsed.
+
+### Persistence is not gold-plating
+
+`showAddresses` is in `localStorage` because editing `help-content.md`
+hot-reloads the provider, and a flag that reset on every save would be off for
+most of the only kind of session it exists for. `?ids=1` seeds it too. Both
+reads are in try/catch — blocked site data should not take the app down for an
+authoring convenience.
+
+---
 ## 2026-09-07, later still (the rewrite shipped, and the one case the note missed)
 
 TASKS 3b implemented. `docs/TOUR_STATE_REDESIGN.md` is deleted per its own

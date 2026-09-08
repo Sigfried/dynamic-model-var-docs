@@ -32,8 +32,12 @@ import {
 import { parseAnchor, parseHelpContent, tourNames, tourPositions, tourSteps } from './parseHelpContent';
 import type { HelpAnchor } from './parseHelpContent';
 import {
-  HelpContext, HELP_MODE_ENABLED, type AnchorResolver, type HelpApi,
+  HelpContext, HELP_MODE_ENABLED, ADDRESS_TOGGLE_ENABLED,
+  type AnchorResolver, type HelpApi,
 } from './helpContext';
+
+/** Where the TEMPORARY address toggle remembers itself. See `showAddresses`. */
+const ADDRESS_KEY = 'dmvd.help.showAddresses';
 
 /** True when focus is in a text field, so `?` types instead of toggling. */
 function isInputFocused(): boolean {
@@ -139,6 +143,39 @@ export function HelpProvider({
   const positions = useMemo(() => tourPositions(content, tourName), [content, tourName]);
   const stepCount = useMemo(() => tourSteps(content, tourName).length, [content, tourName]);
   const [activeId, setActiveId] = useState<string | null>(null);
+
+  /*
+   * TEMPORARY authoring aid (docs/TASKS.md item 3c). See
+   * `ADDRESS_TOGGLE_ENABLED` in helpContext.ts for what this is and when to
+   * delete it.
+   *
+   * Persisted because editing help-content.md hot-reloads this provider, and a
+   * flag that reset on every save would be off for most of an authoring
+   * session -- which is the only session it exists for. `?ids=1` seeds it too,
+   * so a link can arrive with ids already showing.
+   *
+   * Both reads are guarded: `localStorage` throws in a browser set to block
+   * site data, and this is an authoring convenience, not something worth
+   * taking the app down for.
+   */
+  const [showAddresses, setShowAddresses] = useState(() => {
+    if (!ADDRESS_TOGGLE_ENABLED) return false;
+    try {
+      if (new URLSearchParams(window.location.search).get('ids') === '1') return true;
+      return window.localStorage.getItem(ADDRESS_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const toggleAddresses = useCallback(() => {
+    setShowAddresses(v => {
+      const next = !v;
+      try {
+        window.localStorage.setItem(ADDRESS_KEY, next ? '1' : '0');
+      } catch { /* blocked site data: the toggle still works for this session */ }
+      return next;
+    });
+  }, []);
 
   /*
    * The provider used to keep a `depth` ref — how many frames it had pushed and
@@ -380,9 +417,11 @@ export function HelpProvider({
     tourIndex, startTour, endTour, nextStep, prevStep,
     positions, position: tourIndex === null ? undefined : positions[tourIndex],
     stepCount, tours, tourName, tourMeta: content.tourMeta,
+    showAddresses, toggleAddresses,
     content, activeId, showEntry, dismissEntry, resolveAnchor, centerRect,
   }), [helpMode, toggleHelpMode, exitHelpMode, tourIndex, startTour, endTour,
        nextStep, prevStep, positions, stepCount, tours, tourName,
+       showAddresses, toggleAddresses,
        content, activeId, showEntry, dismissEntry, resolveAnchor, centerRect]);
 
   return <HelpContext.Provider value={api}>{children}</HelpContext.Provider>;

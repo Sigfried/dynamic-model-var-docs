@@ -37,6 +37,22 @@ export type AnchorResolver = (arg: string) => Element | null;
  */
 export const HELP_MODE_ENABLED = false;
 
+/**
+ * TEMPORARY authoring aid (2026-09-07, docs/TASKS.md item 3c).
+ *
+ * Siggie: *"there needs to be an easy way to find a given tour step/beat as
+ * shown in the app in the help-content."* With it on, every popover shows the
+ * `###` slug it was authored under, click-to-copy.
+ *
+ * Gated on `import.meta.env.DEV` at its one entry point (the Help menu item in
+ * `HelpMenu.tsx`), so the deployed build has no way to switch it on and the
+ * viewer-facing menu does not carry an authoring switch. `?ids=1` seeds it in
+ * dev too, for a link that arrives with ids already showing.
+ *
+ * Delete this and everything referencing it once the five tours are written.
+ */
+export const ADDRESS_TOGGLE_ENABLED = import.meta.env.DEV;
+
 export interface HelpApi {
   helpMode: boolean;
   toggleHelpMode: () => void;
@@ -78,6 +94,13 @@ export interface HelpApi {
   position: TourPosition | undefined;
   /** Total number of tour STEPS, for the `4.2 / 6` counter's denominator. */
   stepCount: number;
+  /**
+   * Whether popovers show their content-file address. TEMPORARY — see
+   * `ADDRESS_TOGGLE_ENABLED`. Always false in a production build.
+   */
+  showAddresses: boolean;
+  /** Flip `showAddresses` and remember it. TEMPORARY. */
+  toggleAddresses: () => void;
   content: HelpContent;
   activeId: string | null;
   showEntry: (id: string) => void;

@@ -330,6 +330,39 @@ export interface TourPosition {
    * nothing outside the popover needs to know about the reveal.
    */
   text: string;
+  /**
+   * Where this position is WRITTEN, for finding it in the content file:
+   * the entry's `###` slug, plus the 1-based beat ordinal when a beat is
+   * showing (`relationship-kinds \u25b82`). Shown only by the authoring
+   * toggle -- see `showAddresses` in `HelpApi`.
+   *
+   * The slug is the address because it is the one identifier here that is
+   * already unique, already required, and already survives reordering.
+   * Explicit `Tour: 3` numbers were removed on 2026-08-28 precisely because
+   * inserting a step renumbered every step after it; a derived address must
+   * not reintroduce that.
+   *
+   * Beats get an ordinal and nothing more. They have no anchor of their own
+   * in the file -- a beat is a markdown list item -- so there is nothing
+   * finer to point at, and Siggie's call (2026-09-07) is that counting the
+   * bullets by eye is easier than any string a beat could offer.
+   */
+  address: string;
+  /**
+   * What clicking the address copies: the entry's markdown HEADER, `### id`.
+   *
+   * Not the same string as `address`, deliberately. `address` is for READING
+   * on screen, where the beat ordinal is the useful half; this is for PASTING
+   * into a file search, where `### entities` lands on the one heading and a
+   * bare `entities` also hits every prose mention of the word. Siggie,
+   * 2026-09-07: *"what you should copy to clipboard, say for id==entities is
+   * `### entities`"*.
+   *
+   * The beat ordinal is deliberately NOT in here — it is a count you read off
+   * the bullets once the search has taken you to the header, and appending it
+   * would break the match.
+   */
+  searchFor: string;
   /** Beat's anchor if it overrides, else the step's. */
   anchor: HelpAnchor;
   /** Beat's action if it has one, else the step's. */
@@ -820,6 +853,25 @@ export function tourSteps(content: HelpContent, tour?: string): HelpEntry[] {
  * popping the `change` the position being LEFT pushed, so the two directions
  * are inverses rather than both being an absolute apply.
  */
+/**
+ * A position's address: the entry slug, plus `\u25b8N` for the Nth beat.
+ *
+ * `beatIndex` is -1 at a step's OPENING position, which addresses as the bare
+ * slug -- the opening is the step's own text, so the step's own id names it.
+ * Beats are 1-based here to match the ordered list they are authored as.
+ */
+function addressOf(entryId: string, beatIndex: number): string {
+  return beatIndex < 0 ? entryId : `${entryId} \u25b8${beatIndex + 1}`;
+}
+
+/**
+ * The markdown header that declares an entry, which is what the address tag
+ * copies: a string that finds exactly one line in the content file.
+ */
+function searchForEntry(entryId: string): string {
+  return `### ${entryId}`;
+}
+
 export function tourPositions(content: HelpContent, tour?: string): TourPosition[] {
   const positions: TourPosition[] = [];
   tourSteps(content, tour).forEach((entry, i) => {
@@ -828,6 +880,8 @@ export function tourPositions(content: HelpContent, tour?: string): TourPosition
     if (!entry.beats || entry.beats.length === 0) {
       positions.push({
         entry, step, beatIndex: 0, beatCount: 0,
+        address: addressOf(entry.id, -1),
+        searchFor: searchForEntry(entry.id),
         blocks: [entry.description],
         text: entry.description,
         anchor: entry.anchor,
@@ -869,6 +923,8 @@ export function tourPositions(content: HelpContent, tour?: string): TourPosition
     if (showing.length > 0) {
       positions.push({
         entry, step, beatIndex: -1, beatCount: entry.beats!.length,
+        address: addressOf(entry.id, -1),
+        searchFor: searchForEntry(entry.id),
         blocks: showing,
         text: showing.join('\n\n'),
         anchor: entry.anchor,
@@ -888,6 +944,8 @@ export function tourPositions(content: HelpContent, tour?: string): TourPosition
       showing = beat.keep ? [...showing, beat.text] : [beat.text];
       positions.push({
         entry, step, beatIndex, beat, beatCount: entry.beats!.length,
+        address: addressOf(entry.id, beatIndex),
+        searchFor: searchForEntry(entry.id),
         blocks: showing,
         text: showing.join('\n\n'),
         anchor: beat.anchor ?? entry.anchor,

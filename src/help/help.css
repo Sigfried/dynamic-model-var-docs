@@ -326,6 +326,26 @@ body.help-mode {
 }
 .help-dot-on { background: #0284c7; }
 
+/* TEMPORARY authoring aid (docs/TASKS.md item 3c): the popover's address in
+   help-content.md, click-to-copy. Deliberately the quietest thing in the
+   popover -- it is for whoever is editing the content, not for a viewer, and
+   the Help menu item that turns it on only exists in a dev build. Monospace
+   because it is a file identifier and reads as one. Delete with the toggle. */
+.help-popover-address {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72em;
+  color: #94a3b8;
+  text-align: right;
+  cursor: pointer;
+}
+.help-popover-address:hover { color: #0284c7; }
+
 .help-tour-nav button {
   padding: 3px 9px;
   border: 1px solid #cbd5e1;
@@ -391,6 +411,8 @@ body.help-mode {
   .help-hint { box-shadow: 0 0 0 2px #0f172a; }
   .help-dot { background: #334155; }
   .help-dot-on { background: #38bdf8; }
+  .help-popover-address { color: #64748b; }
+  .help-popover-address:hover { color: #38bdf8; }
   /* #0369a1 on the dark card fails contrast; the lighter end of the same
      ramp keeps links reading as links in both themes. */
   .help-popover a { color: #7dd3fc; }

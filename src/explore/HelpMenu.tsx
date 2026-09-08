@@ -25,7 +25,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { useHelp } from '../help/helpContext';
+import { useHelp, ADDRESS_TOGGLE_ENABLED } from '../help/helpContext';
 
 /** Matches RelationBar's CLOSE_DELAY_MS: the pointer has to cross a gap
  *  between trigger and panel, and between panel and submenu. */
@@ -69,7 +69,7 @@ const HELP_ENTRIES: ReadonlyArray<{ id: string; label: string }> = [
 export default function HelpMenu({
   onOpenLegend, onOpenCases, legendOpen, casesOpen,
 }: HelpMenuProps) {
-  const { showEntry } = useHelp();
+  const { showEntry, showAddresses, toggleAddresses } = useHelp();
   const [open, setOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -159,6 +159,32 @@ export default function HelpMenu({
               {e.label}
             </MenuItem>
           ))}
+
+          {/*
+            * TEMPORARY authoring aid (docs/TASKS.md item 3c). Every other item
+            * in this menu is for a reader; this one is for whoever is editing
+            * help-content.md, which is why it is gated on
+            * `ADDRESS_TOGGLE_ENABLED` (`import.meta.env.DEV`) and sits below a
+            * separator rather than among the reference topics. The deployed
+            * build has no way to switch it on.
+            *
+            * Unlike every other item this one does NOT close the menu: you
+            * turn ids on in order to look at a popover, and closing the menu
+            * to do that is the same click either way -- but leaving it open
+            * lets you flip it back off without re-navigating.
+            *
+            * Delete this block, and the rest of the toggle, once the five
+            * tours are written.
+            */}
+          {ADDRESS_TOGGLE_ENABLED && (
+            <>
+              <Separator />
+              <MenuItem onClick={toggleAddresses}>
+                {showAddresses ? '\u2713 ' : ''}Show content ids
+                <Hint>where each popover is written in help-content.md</Hint>
+              </MenuItem>
+            </>
+          )}
         </div>
       )}
     </span>

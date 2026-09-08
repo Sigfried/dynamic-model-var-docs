@@ -163,6 +163,7 @@ export default function HelpLayer() {
   const {
     helpMode, tourIndex, position, positions, stepCount, content, activeId,
     dismissEntry, nextStep, prevStep, endTour, showEntry, resolveAnchor, centerRect,
+    showAddresses,
   } = useHelp();
 
   const inTour = tourIndex !== null;
@@ -549,10 +550,80 @@ export default function HelpLayer() {
                 <button onClick={() => { setPinned(false); dismissEntry(); }}>close</button>
               </div>
             )}
+
+            {/*
+              TEMPORARY authoring aid (docs/TASKS.md item 3c) -- where this
+              popover is WRITTEN, so an author who sees something wrong on
+              screen can find the block that produced it. Off unless the Help
+              menu's `Show content ids` is on, and that item only exists in a
+              dev build (`ADDRESS_TOGGLE_ENABLED`).
+
+              Outside a tour the address is just the entry's own id: a
+              help-only entry is one `###` block with no beats.
+
+              Delete this along with the rest of the toggle once the tours are
+              written.
+            */}
+            {showAddresses && (
+              <AddressTag
+                address={inTour ? position?.address : entry.id}
+                searchFor={inTour ? position?.searchFor : `### ${entry.id}`}
+              />
+            )}
           </>
         )}
       </div>
     </>
+  );
+}
+
+/**
+ * TEMPORARY authoring aid (docs/TASKS.md item 3c): the popover's address in
+ * help-content.md, click-to-copy.
+ *
+ * It SHOWS the address (`relationship-kinds \u25b82`) and COPIES the markdown
+ * header (`### relationship-kinds`) -- different strings for different jobs.
+ * The shown one carries the beat ordinal, which is what tells you where you
+ * are; the copied one is what pastes into a file search and matches exactly
+ * one line. A bare `relationship-kinds` would also hit every prose mention of
+ * it, and appending the ordinal would match nothing at all.
+ *
+ * Siggie, 2026-09-07, on both halves: *"just give me the beat number. it's
+ * easy enough to count the beat bullets by eye"*, and *"what you should copy
+ * to clipboard, say for id==entities is `### entities`"*.
+ *
+ * `navigator.clipboard` is absent on an insecure origin and can reject when
+ * the document is not focused, so the failure is swallowed and the tag simply
+ * does not confirm. Selecting the text by hand still works either way.
+ *
+ * Delete this with the rest of the toggle once the tours are written.
+ */
+function AddressTag({ address, searchFor }: {
+  address: string | undefined;
+  searchFor: string | undefined;
+}) {
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const t = setTimeout(() => setCopied(false), 1200);
+    return () => clearTimeout(t);
+  }, [copied]);
+
+  if (!address || !searchFor) return null;
+  return (
+    <button
+      type="button"
+      className="help-popover-address"
+      title={`Copy \u201c${searchFor}\u201d \u2014 search help-content.md for it`}
+      onClick={() => {
+        navigator.clipboard?.writeText(searchFor).then(
+          () => setCopied(true),
+          () => { /* insecure origin or unfocused document: no confirmation */ },
+        );
+      }}
+    >
+      {address}{copied ? ' \u2713' : ''}
+    </button>
   );
 }
 

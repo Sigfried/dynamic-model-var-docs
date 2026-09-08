@@ -48,6 +48,68 @@ describe('help content', () => {
     expect(thin, `Entries missing title/description: ${thin.join(', ')}`).toEqual([]);
   });
 
+  test('every entry id is unique', () => {
+    /*
+     * Pinned 2026-09-07, when the `###` slug became an ADDRESS a popover shows
+     * (docs/TASKS.md item 3c): an author reads an id off the screen and
+     * searches for it, so two blocks answering to one id is now a wrong
+     * answer, not just untidy.
+     *
+     * It fails silently otherwise. `content.entries` is a Map built with
+     * `entries.set(entry.id, entry)`, so a duplicate `### ` slug OVERWRITES
+     * the earlier entry -- the popover, the Help menu and every `Anchor:`
+     * pointing at it all quietly resolve to the last one in the file.
+     * Compares against the section list, which keeps every entry parsed.
+     */
+    const all = content.sections.flatMap(s => s.entries).map(e => e.id);
+    const dupes = all.filter((id, i) => all.indexOf(id) !== i);
+    expect(dupes, `Duplicate entry ids: ${[...new Set(dupes)].join(', ')}`)
+      .toEqual([]);
+  });
+
+  test('a position address names its entry, and its beat when it has one', () => {
+    // The address is what item 3c put on screen: the entry slug, plus the
+    // 1-based beat ordinal for a beat. A step's OPENING position (beatIndex
+    // -1) addresses as the bare slug -- it is the step's own text.
+    /*
+     * ACROSS EVERY TOUR, not just the default one. `tourPositions(content)`
+     * with no name runs the FIRST tour in the file, which today is the
+     * one-step BDCHM intro -- no beats, so it exercises only the bare-slug
+     * half and this test passed with the beat half deleted. Beats live in the
+     * Walkthrough.
+     */
+    const positions = tourNames(content).flatMap(t => tourPositions(content, t));
+    expect(positions.length).toBeGreaterThan(0);
+    // The beat half has to be reachable or the assertion below is vacuous.
+    expect(positions.some(p => p.beatCount > 0)).toBe(true);
+    for (const p of positions) {
+      const expected = p.beatIndex > 0 || (p.beatIndex === 0 && p.beatCount > 0)
+        ? `${p.entry.id} \u25b8${p.beatIndex + 1}`
+        : p.entry.id;
+      expect(p.address, `address for ${p.entry.id} beat ${p.beatIndex}`)
+        .toBe(expected);
+      /*
+       * What the tag COPIES is the markdown header, not the address: it has to
+       * paste into a file search and match one line. A bare id also matches
+       * every prose mention of the word, and an id carrying the beat ordinal
+       * matches nothing.
+       */
+      expect(p.searchFor, `searchFor ${p.entry.id}`).toBe(`### ${p.entry.id}`);
+    }
+  });
+
+  test("every entry's searchFor actually finds its header in the file", () => {
+    // The point of the string is that it can be pasted into a search, so pin
+    // that against the real file rather than against the parser's own idea of
+    // it: a heading style change here would otherwise pass silently.
+    const positions = tourNames(content).flatMap(t => tourPositions(content, t));
+    for (const p of positions) {
+      const hits = markdown.split('\n').filter(l => l.trimEnd() === p.searchFor);
+      expect(hits.length, `"${p.searchFor}" should match exactly one line`)
+        .toBe(1);
+    }
+  });
+
   test('the tour has steps, in file order', () => {
     // Ordering is by position in the file (2026-08-28), which replaced the
     // authored 1..n numbering: a number made inserting a step a renumbering of

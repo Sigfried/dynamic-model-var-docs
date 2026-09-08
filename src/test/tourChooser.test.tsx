@@ -45,6 +45,8 @@ function api(over: Partial<HelpApi>): HelpApi {
     dismissEntry: () => {},
     resolveAnchor: () => null,
     centerRect: () => null,
+    showAddresses: false,
+    toggleAddresses: () => {},
     ...over,
   };
 }
@@ -168,5 +170,27 @@ describe('the Help menu', () => {
     }
     fireEvent.click(screen.getByRole('button', { name: /closing a box/i }));
     expect(showEntry).toHaveBeenCalledWith('node-dismiss');
+  });
+
+  /*
+   * TEMPORARY (docs/TASKS.md item 3c) — delete with the toggle.
+   *
+   * Vitest runs with `import.meta.env.DEV` true, which is what
+   * `ADDRESS_TOGGLE_ENABLED` reads, so the item is present here. That is also
+   * the limit of what this can pin: it cannot prove the item is ABSENT from a
+   * production build, because the flag is resolved at build time and this
+   * process is not that build.
+   */
+  test('the authoring toggle is offered, and flips the flag', () => {
+    const toggleAddresses = vi.fn();
+    openMenu({ tours: TOURS, toggleAddresses });
+    fireEvent.click(screen.getByRole('button', { name: /show content ids/i }));
+    expect(toggleAddresses).toHaveBeenCalled();
+  });
+
+  test('the toggle shows a check when addresses are on', () => {
+    openMenu({ tours: TOURS, showAddresses: true });
+    const item = screen.getByRole('button', { name: /show content ids/i });
+    expect(item.textContent).toContain('\u2713');
   });
 });

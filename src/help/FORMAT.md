@@ -142,6 +142,39 @@ bottom in the order their entries appear here. So:
 
 The counter the viewer sees (`4.2 / 6`) is computed from rank at parse time.
 
+#### Finding a step you can see on screen
+
+The counter is a viewer's progress bar, not an address: `4 / 6` moves when you
+insert a step above it, so it cannot be used to say *which block produced this
+popover*. The **entry id** can — it is unique, required, and unaffected by
+reordering.
+
+So every popover can show where it is written, as its `### ` slug plus the
+1-based beat ordinal when a beat is showing:
+
+```
+relationship-kinds        <- the step's own text (its opening position)
+relationship-kinds ▸2     <- the second item under that step's `Beats:`
+```
+
+**Clicking the tag copies `### relationship-kinds`** — the markdown header, not
+the address as shown. That is the string that pastes into a file search and
+matches exactly one line: a bare `relationship-kinds` also hits every prose
+mention of it, and one carrying the beat ordinal matches nothing. So: paste,
+then count two bullets down.
+
+This is **off by default and dev-only**: turn it on with `Show content ids` at
+the bottom of the app's Help menu, or with `?ids=1`. The menu item is gated on
+`import.meta.env.DEV`, so a deployed build has no way to show it. Both the tag
+and the toggle are a temporary authoring aid (docs/TASKS.md item 3c) and are
+meant to be deleted once the tours are written.
+
+> ⚠️ **Two entries with the same `### ` id is a silent bug**, and now a wrong
+> address as well. Entries are stored in a Map keyed by id, so the second one
+> OVERWRITES the first — its popover, its menu item and every `Anchor:` aimed
+> at it all resolve to whichever came last. `helpContent.test.ts` fails on a
+> duplicate.
+
 **Several tours can share this file.** Entries with different `Tour:` names are
 different walks: `Tour: Walkthrough` and `Tour: Deep dive` interleave freely in
 the file and each tour sees only its own steps, in file order. One entry belongs
