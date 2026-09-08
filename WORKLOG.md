@@ -7,6 +7,119 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-08 (panels as state; beats get a Description:)
+
+### `Only:` did not need fixing, and a latch was the wrong fix
+
+`?tour=1&sel=Person` lost `Person`, and the first diagnosis was a race:
+`onTourStart` re-reads `sel` from the URL, and both the mount effect consuming
+`tour=1` and the first step write that URL. So a module-level latch was built to
+capture the selection before any step could run.
+
+Siggie's reply — *"a simpler approach would be for `tour=1` to start the tour
+without modifying the url"* — prompted actually TRACING the writes instead of
+reasoning about them, which showed `HelpProvider` already calls `onTourStart()`
+before `onPushChange` (HelpProvider.tsx). There was no race. The latch was
+removed and the one-line `beginTour(readExploreState().sel)` restored.
+
+**The behaviour was correct the whole time.** A probe confirmed an empty `Only:`
+yields `held: ['Person'], tour: [], region: 1` — suppressed, not eaten, exactly
+as the held/temp_held model specifies. What was wrong was a TEST asserting the
+selection stayed visible, written when the first tour's opening step drew
+nothing. **Measure before diagnosing applies to state as much as to renders.**
+
+### The `Action:` requirement is a warning now
+
+Siggie: *"I never liked the `Action:` requirement anyway."* The rule is real — a
+step that alters the canvas silently is the bug the format exists to fix — but
+as a test failure it blocked authoring on a judgement the author is better
+placed to make, and the honest remedy is sometimes to SHOW the change rather
+than narrate it.
+
+So it warns rather than fails, and the enforcement moved into the app: the
+popover carries the warning on the step that has the problem, gated on the
+dev-only `showAddresses` switch. Siggie's own framing of why that is better:
+*"will the developer ever see it? — Oh! we already have dev mode stuff."* A
+test tells you at commit time, away from the step; the popover tells you while
+you are looking at it.
+
+An empty `Only:` is exempt from the rule entirely: it draws nothing, so there is
+no transition to narrate. That was already the documented reasoning for an empty
+`Change:`; the rule just never accounted for the replace form.
+
+### Beats: the numbered line was the text, and could only ever be one line
+
+A beat's prose was its numbered line. A continuation line was joined to it; a
+`- ` bullet under it was **discarded silently**. So a beat could not hold a
+paragraph or a list, and an author writing the obvious thing got the label and
+no error.
+
+First attempt: make `- ` bullets parse as prose. Siggie rejected it — *"that
+problem was my misunderstanding… but it does bring up: before this there was no
+way to let beat text be anything other than a single line"* — and proposed the
+right fix instead: beats take a `Description:`, the block field steps already
+have.
+
+**The decision that mattered was what happens to the numbered line.** Rendering
+it as a subtitle was considered and rejected: it gives one string two audiences,
+so a label useful for finding a beat in the file is wrong in front of a viewer.
+It is now an authoring label, never rendered.
+
+**No fallback to the label.** An early version rendered the label when a beat
+had no `Description:`, so an unconverted beat would degrade visibly rather than
+go blank. Siggie: *"I can imagine wanting a beat with no text."* Right — a beat
+that only moves the anchor or pushes a `Change:` is a real thing to author, and
+a fallback leaves no way to suppress the label. Empty means empty.
+
+⚠️ **The beat count was misreported as 3 and is 13.** The probe used
+`tourPositions`, which excludes help-only entries, so `selection-tree`,
+`relationship-kinds` and `graph-canvas` were invisible to it — ten beats
+carrying real prose. Siggie caught it. **`tourPositions` is tour-only; walk
+`content.entries` to see everything in the file.**
+
+### Panels are shareable state now
+
+`legend` and `cases` joined `ExploreState`, so a tour step can open and close
+them like any other scalar, plus a `panels=0` sweep that closes every overlay
+including the detail drawer. The sweep applies first and explicit keys override
+it, so `panels=0&legend=1` means "clear the screen, then open the legend".
+
+This contradicts the module's own doctrine, which filed "which panel is
+collapsed" as personal preference rather than shareable. The distinction that
+survives: these overlays carry CONTENT — the legend explains the very edges a
+link is trying to show — so "here is the diagram, with the key open" says
+something a collapsed side panel does not.
+
+Three bugs found while doing it, all worth remembering as shapes:
+
+- **The write effect's dependency array** omitted the new state, so opening a
+  panel wrote nothing and the param appeared only when the NEXT unrelated change
+  ran the effect. Siggie found it as *"opening cases or legend when nothing else
+  is in the querystring doesn't put them there"*.
+- **A hand-kept list of valid params** in `helpContent.test.ts` rejected
+  `panels` while it worked everywhere else. Now derived from `DEFAULTS` plus
+  `INSTRUCTION_PARAMS`. Same config-rot shape the docs already warn about.
+- **`tsc` did not catch** two missing fields in a test literal typed
+  `ExploreState`; only running the tests did. The never-narrowing trap again.
+
+### Smaller things
+
+- **Escape did not close a plain popover.** The handler required `helpMode ||
+  tourIndex !== null`; help mode is off, so a Help-menu popover — the only way
+  most entries are reachable — had none.
+- **`Width:` is sticky across beats**, per Siggie: a width belongs to the
+  picture a run of beats is building. Only `Width:`; anchors still inherit from
+  the step, because a stale anchor strands a popover pointing at nothing.
+- **Title vs `**bold**` were literally identical** (both `1em/700`), so a bolded
+  phrase opening a description read as a second title. Title is `1.15em` now,
+  and `###` in a description renders as a subtitle. Every heading level collapses
+  to one style: a popover is a few paragraphs, not a document.
+- **Popovers cannot be dragged** because `setInterval(measure, 250)` overwrites
+  any dragged position four times a second. That poll is what the CSS
+  anchor-positioning migration deletes, which is why the overlay work is
+  sequenced after it.
+
+---
 ## 2026-09-07, later still (docs: cut what shipped)
 
 A sweep for obsolete doc content, following 26b275e's pass. That pass removed

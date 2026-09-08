@@ -309,6 +309,76 @@ live file. Removing it means touching `NodeVM`, both node-VM construction sites,
 and `RelationGroupVM`/`RelationItemVM`. Deliberately not done in the same pass as
 the UI change.
 
+### Overlays: one model, draggable and resizable
+
+**The symptom** (Siggie, 2026-09-08): *"open legend, open detail panel, detail
+appears underneath legend."*
+
+Not a z-index fix. `DetailDrawer` is an **in-flow flex column** (`w-96
+shrink-0`) in the main row, while the legend and example-cases panes float over
+it — two different layout models, so the legend covers the drawer by
+construction rather than by ordering.
+
+**Decision (Siggie):** the drawer becomes an overlay, and the overlays become
+**draggable and resizable**. Checked: `DetailDrawer` is the only drawer in the
+app, rendered at exactly one call site (`ExploreApp.tsx`), so there is no second
+one to keep consistent with.
+
+⚠️ **Sequence this AFTER the CSS anchor-positioning migration.** Dragging is
+impossible while `HelpLayer`'s `setInterval(measure, 250)` is alive — it
+re-measures four times a second and overwrites any dragged position. That poll
+is exactly what the migration deletes, and it is why popovers are not draggable
+today. Doing overlays first means building against a timer that is about to be
+removed.
+
+Rough estimate, both together: **~1 day** — half for the migration (see
+HELP_PACKAGE_PLAN §1; the awkward part is the resolver-backed anchor kinds,
+whose elements the diagram destroys on relayout, and `slot-row` selecting on a
+PAIR of attributes that no single `anchor-name` rule expresses), half for
+drag/resize on top.
+
+---
+
+### Show the change instead of narrating it
+
+**The complaint** (Siggie, 2026-09-08): *"When, e.g., relationship-kinds pops
+up the action has already occurred and the `Action:` text does not make the
+step more legible."*
+
+`Action:` renders as a past-tense receipt (`✓ ticked Participant`). That reads
+well when the VIEWER did the thing — it confirms their click — and badly when
+the tour did it off-screen, because it narrates a transition nobody watched.
+
+**The sequence Siggie wants**, per step that adds an entity:
+
+1. anchor on the unchecked selection row
+2. check the box
+3. anchor on the entity that just appeared
+
+Authored by hand today: three beats where there was one, which is the cost
+Siggie named — *"that makes a lot more steps"*. The first tour's opening step
+is written this way as a trial (2026-09-08); reverse it if it reads worse.
+
+**The feature** is deriving that from one authored beat: a `Change:` naming
+entities not yet drawn expands into the two-phase move automatically, with the
+anchor following. `Action:` then becomes derivable rather than hand-written,
+which is what makes the receipt honest.
+
+**Why it needs design, not just code.** The change is applied in one shot
+today; splitting it means the popover repositions BETWEEN phases, so the step
+needs a notion of "before" and "after" that the position model does not have.
+It also collides with `back`: a half-applied step is a state the stack cannot
+currently name. Animation was floated and explicitly deprioritised — *"i don't
+want to get bogged down in that if it isn't easy to implement"*.
+
+⚠️ **The `Action:` requirement is a WARNING now, not an error** (2026-09-08),
+in both the content test and the app (dev-only, on the `showAddresses` switch).
+That was a precondition for trying the hand-authored version, since the honest
+remedy is sometimes to show the change rather than describe it. If this feature
+lands, revisit whether the rule should bite again.
+
+---
+
 ### Tour authoring notes + draft preview
 
 Four distinct needs, all currently served by HTML comments:
