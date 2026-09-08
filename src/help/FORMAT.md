@@ -898,6 +898,14 @@ one per beat, filled as they appear. Two scales, two widgets: a fraction that
 mixes them cannot be read, which is what was wrong with the old `2.1 / 6`
 (`2.1` is not a position out of 6). A step with no beats shows no dots.
 
+⚠️ **"Beat" is authoring vocabulary and never appears in the UI.** Siggie,
+2026-09-08: *"don't use the term 'beats' in the title text"*. It is this file's
+field name — the right word here, in the parser and in a comment — but a viewer
+has no reason to meet it, so the dots' tooltip and the tour map's badge both
+say **screens** instead, and both COUNT the step's opening position: a step
+with two beats is three screens. Keep the two vocabularies apart rather than
+reconciling them.
+
 ### Who the tour is for
 
 Someone who arrives from a **link** with no one explaining it — the program

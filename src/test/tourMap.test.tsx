@@ -120,13 +120,65 @@ describe('the tour map', () => {
     expect(here[0].textContent).toContain('The first step');
   });
 
-  test('a step shows its beat count, and a beatless one shows none', () => {
+  test('a multi-screen step shows how many, a single-screen one shows none', () => {
     // The count is the honest warning that a row is not one screenful — the
     // thing that makes a ten-beat category step legible in the outline.
+    //
+    // It counts SCREENS, so a step with 2 beats reads `3`: the opening
+    // position (the description alone) is one of them. "beats" is the content
+    // file's field name and is deliberately not shown to a viewer — Siggie,
+    // 2026-09-08. A step with no beats has one screen and shows no badge,
+    // since a badge reading `1` is noise.
     renderMap('tour');
     const rows = [...document.querySelectorAll('.help-map-step')];
-    expect(rows[0].querySelector('.help-map-beats')?.textContent).toBe('2');
+    expect(rows[0].querySelector('.help-map-beats')?.textContent).toBe('3');
     expect(rows[1].querySelector('.help-map-beats')).toBeNull();
+  });
+
+  test('no viewer-facing text says "beat"', () => {
+    // Siggie, 2026-09-08: "don't use the term 'beats' in the title text". It
+    // is the authoring format's field name; a viewer has no reason to meet it.
+    // Checks `title` attributes too, which is where it actually leaked.
+    renderMap('tour');
+    const panel = document.querySelector('.help-map')!;
+    expect(panel.textContent?.toLowerCase()).not.toContain('beat');
+    for (const el of panel.querySelectorAll('[title]')) {
+      expect(el.getAttribute('title')?.toLowerCase()).not.toContain('beat');
+    }
+  });
+
+  test('it renders outside whatever mounted it', () => {
+    /*
+     * The bug Siggie hit, 2026-09-08: *"i clicked overview, overview appeared;
+     * Guided tours menu disappeared; when i mouseover the overview the Guided
+     * tour menu reappears. And when i click on a step, it persists."*
+     *
+     * The chooser mounts the map from inside its own `[data-tour-chooser]`
+     * span, which carries `onMouseEnter` to open the menu and is what its
+     * click-outside handler treats as "inside". As a DOM child the map
+     * therefore reopened the menu on hover and kept it open on click. It is
+     * portalled to `document.body` now, so mounting it from anywhere leaves
+     * it outside that subtree.
+     */
+    const onClose = vi.fn();
+    render(
+      <HelpContext.Provider value={api({})}>
+        <div data-mounted-here>
+          <TourMap scope="tour" onClose={onClose} />
+        </div>
+      </HelpContext.Provider>,
+    );
+    const panel = document.querySelector('.help-map')!;
+    expect(panel).toBeTruthy();
+    expect(panel.closest('[data-mounted-here]')).toBeNull();
+  });
+
+  test('clicking the backdrop closes it, clicking the panel does not', () => {
+    const onClose = renderMap('tour');
+    fireEvent.mouseDown(document.querySelector('.help-map')!);
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.mouseDown(document.querySelector('.help-map-backdrop')!);
+    expect(onClose).toHaveBeenCalled();
   });
 
   test('the overview scope lists every tour, from the content', () => {

@@ -218,10 +218,14 @@ export default function HelpLayer() {
     if (!position || position.beatCount === 0) return null;
     // beatIndex -1 is the opening position: nothing revealed yet.
     const revealed = position.beatIndex + 1;
+    /* "beat" is the content file's FIELD NAME, not a word to put in front of a
+       viewer (Siggie, 2026-09-08: "don't use the term 'beats'"). The dots
+       count screens within the step, and the opening position is one of them
+       -- hence the +1, which also makes this agree with the map's badge. */
     return (
       <span
         className="help-tour-dots"
-        title={`Beat ${revealed} of ${position.beatCount} in this step`}
+        title={`Screen ${revealed + 1} of ${position.beatCount + 1} in this step`}
       >
         {Array.from({ length: position.beatCount }, (_, i) => (
           <span

@@ -36,6 +36,7 @@
  */
 
 import { useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useHelp } from './helpContext';
 import { tourPositions } from './parseHelpContent';
 
@@ -123,78 +124,102 @@ export default function TourMap({ scope, onClose }: TourMapProps) {
     >
       <span className="help-map-num">{r.step}</span>
       <span className="help-map-title">{r.title}</span>
-      {/* Beats are what makes a step long, so the count is the honest warning
-          that this row is not one screenful. Hidden when there are none. */}
+      {/* How many screens this step runs to. A step with several is the
+          thing that makes a tour feel longer than its step count suggests,
+          so the number is the honest warning.
+
+          "beats" is AUTHORING vocabulary (it is the content file's field
+          name) and does not belong in front of a viewer -- Siggie,
+          2026-09-08: "don't use the term 'beats' in the title text". */}
       {r.beatCount > 0 && (
-        <span className="help-map-beats" title={`${r.beatCount} beats`}>
-          {r.beatCount}
+        <span
+          className="help-map-beats"
+          title={`${r.beatCount + 1} screens in this step`}
+        >
+          {r.beatCount + 1}
         </span>
       )}
     </button>
   );
 
-  return (
-    <div
-      role="dialog"
-      aria-label={scope === 'all' ? 'All tours' : 'Tour outline'}
-      className="help-map"
-    >
-      <div className="help-map-head">
-        <div>
-          <h2>{scope === 'all' ? 'Tours' : (tourName ?? 'This tour')}</h2>
-          <p>
-            {scope === 'all'
-              ? 'Every guided walk, and what is in it. Click any step to start there.'
-              : 'Click any step to jump to it.'}
-          </p>
+  /*
+   * Portalled to `document.body`, and NOT rendered where it is called from.
+   *
+   * The chooser mounts this from inside its own `[data-tour-chooser]` span,
+   * which carries `onMouseEnter` to open the menu and is what its
+   * click-outside handler treats as "inside". As a child, the map therefore
+   * REOPENED the menu on hover and kept it open on click — both reported by
+   * Siggie, 2026-09-08, from a screenshot. A fixed-position panel has no
+   * business being a descendant of the button that opened it.
+   */
+  return createPortal(
+    <div className="help-map-backdrop" onMouseDown={onClose}>
+      <div
+        role="dialog"
+        aria-label={scope === 'all' ? 'All tours' : 'Tour outline'}
+        className="help-map"
+        /* The backdrop closes on mousedown; the panel must not, or every click
+           inside it would close the thing being clicked. */
+        onMouseDown={e => e.stopPropagation()}
+      >
+        <div className="help-map-head">
+          <div>
+            <h2>{scope === 'all' ? 'Tours' : (tourName ?? 'This tour')}</h2>
+            <p>
+              {scope === 'all'
+                ? 'Every guided walk, and what is in it. Click any step to start there.'
+                : 'Click any step to jump to it.'}
+            </p>
+          </div>
+          <button onClick={onClose} title="Close (Esc)" className="help-map-close">✕</button>
         </div>
-        <button onClick={onClose} title="Close (Esc)" className="help-map-close">✕</button>
-      </div>
 
-      <div className="help-map-body">
-        {scope === 'tour'
-          ? rowsFor(positions).map(r => stepButton(
-            r,
-            r.step === here,
-            () => { goToStep(r.index); onClose(); },
-          ))
-          : allRows.map(({ name, rows }) => (
-            <section key={name} className="help-map-tour">
-              <button
-                className="help-map-tourname"
-                onClick={() => { startTour(name); onClose(); }}
-              >
-                {name}
-              </button>
-              {tourMeta.get(name)?.description && (
-                <p className="help-map-blurb">{tourMeta.get(name)!.description}</p>
-              )}
-              {rows.map(r => stepButton(
-                r,
-                name === tourName && r.step === here,
-                /*
-                 * Starting a tour and then jumping is two moves, not one:
-                 * `startTour` computes its own first position (it cannot go
-                 * through `goTo`, whose `positions` memo still holds the
-                 * OUTGOING tour — see HelpProvider), so a jump issued in the
-                 * same tick would read that stale list too. Deferring to the
-                 * next frame lets the memo settle.
-                 *
-                 * Already running: no restart, just the jump — restarting
-                 * would throw away the frames the viewer walked in.
-                 */
-                () => {
-                  if (name === tourName) goToStep(r.index);
-                  else {
-                    startTour(name);
-                    if (r.index > 0) requestAnimationFrame(() => goToStep(r.index));
-                  }
-                  onClose();
-                },
-              ))}
-            </section>
-          ))}
+        <div className="help-map-body">
+          {scope === 'tour'
+            ? rowsFor(positions).map(r => stepButton(
+              r,
+              r.step === here,
+              () => { goToStep(r.index); onClose(); },
+            ))
+            : allRows.map(({ name, rows }) => (
+              <section key={name} className="help-map-tour">
+                <button
+                  className="help-map-tourname"
+                  onClick={() => { startTour(name); onClose(); }}
+                >
+                  {name}
+                </button>
+                {tourMeta.get(name)?.description && (
+                  <p className="help-map-blurb">{tourMeta.get(name)!.description}</p>
+                )}
+                {rows.map(r => stepButton(
+                  r,
+                  name === tourName && r.step === here,
+                  /*
+                   * Starting a tour and then jumping is two moves, not one:
+                   * `startTour` computes its own first position (it cannot go
+                   * through `goTo`, whose `positions` memo still holds the
+                   * OUTGOING tour — see HelpProvider), so a jump issued in the
+                   * same tick would read that stale list too. Deferring to the
+                   * next frame lets the memo settle.
+                   *
+                   * Already running: no restart, just the jump — restarting
+                   * would throw away the frames the viewer walked in.
+                   */
+                  () => {
+                    if (name === tourName) goToStep(r.index);
+                    else {
+                      startTour(name);
+                      if (r.index > 0) requestAnimationFrame(() => goToStep(r.index));
+                    }
+                    onClose();
+                  },
+                ))}
+              </section>
+            ))}
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

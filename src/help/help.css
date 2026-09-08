@@ -471,31 +471,39 @@ body.help-mode {
    chooser's Overview row. See TourMap.tsx for why it is a panel and not an
    expansion of the popover.
 
-   Fixed rather than absolute: it is a sibling of the popover, which renders
-   in the top layer, and a map positioned relative to a scrolled ancestor
-   would drift away from the button that opened it. Left, because the popover
-   tends right and the counter is on the popover's left. */
-.help-map {
+   CENTRED on a dimmed backdrop rather than tucked into a corner. It was a
+   20rem panel pinned bottom-left; Siggie, 2026-09-08: "I was imagining these
+   bigger and more centered". It is a thing you stop and read, like the
+   chooser, not a inspector you keep open beside your work -- and it closes
+   as soon as you pick a step, so it is never in the way of the diagram. */
+.help-map-backdrop {
   position: fixed;
-  left: 16px;
-  bottom: 16px;
+  inset: 0;
   z-index: 2147483646;   /* under the popover, over the app */
-  width: 20rem;
-  max-height: 70vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgb(15 23 42 / 0.28);
+}
+.help-map {
+  /* The same knob the popover uses, and for the same reason: the map is
+     help-package UI, so the host's one font-size override has to move it too.
+     Declared here rather than inherited because the panel is portalled to
+     `document.body` and so is not inside `.help-popover`, where the property
+     is set. A host that overrides it for `.help-popover` alone would
+     otherwise leave the map at the package default. */
+  --help-font-size: 13px;
+  font-size: var(--help-font-size);
+
+  width: min(34rem, 100%);
+  max-height: min(46rem, 100%);
   display: flex;
   flex-direction: column;
   border: 1px solid #cbd5e1;
-  border-radius: 8px;
+  border-radius: 10px;
   background: #fff;
-  box-shadow: 0 10px 30px rgb(15 23 42 / 0.18);
-  /* The same knob the popover uses, and for the same reason: the map is
-     help-package UI, so the host's one font-size override has to move it too.
-     Declared here rather than inherited because the panel is `fixed` and so
-     is not inside `.help-popover`, where the property is set. A host that
-     overrides it for `.help-popover` alone (as dmvd's helpTheme.css did until
-     this landed) would otherwise leave the map at the package default. */
-  --help-font-size: 13px;
-  font-size: var(--help-font-size);
+  box-shadow: 0 20px 50px rgb(15 23 42 / 0.3);
   color: #0f172a;
 }
 .help-map-head {
@@ -503,32 +511,32 @@ body.help-mode {
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 14px 18px 10px;
   border-bottom: 1px solid #e2e8f0;
 }
-.help-map-head h2 { margin: 0; font-size: 0.95em; font-weight: 600; }
-.help-map-head p { margin: 2px 0 0; font-size: 0.8em; color: #64748b; }
+.help-map-head h2 { margin: 0; font-size: 1.3em; font-weight: 600; }
+.help-map-head p { margin: 3px 0 0; font-size: 0.92em; color: #64748b; }
 .help-map-close {
   border: 0;
   background: none;
-  font-size: 1.05em;
+  font-size: 1.2em;
   line-height: 1;
   color: #94a3b8;
   cursor: pointer;
 }
 .help-map-close:hover { color: #334155; }
-.help-map-body { overflow-y: auto; padding: 4px; }
+.help-map-body { overflow-y: auto; padding: 8px; }
 
 .help-map-step {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: baseline;
   width: 100%;
-  padding: 5px 8px;
+  padding: 7px 10px;
   border: 0;
-  border-radius: 5px;
+  border-radius: 6px;
   background: none;
-  font-size: 1em;
+  font-size: 1.05em;
   text-align: left;
   color: inherit;
   cursor: pointer;
@@ -543,36 +551,36 @@ body.help-mode {
 }
 .help-map-num {
   flex: none;
-  min-width: 1.2em;
+  min-width: 1.4em;
   font-variant-numeric: tabular-nums;
   color: #94a3b8;
-  font-size: 0.85em;
+  font-size: 0.9em;
 }
 .help-map-step-here .help-map-num { color: #0284c7; }
 .help-map-title { flex: 1; }
-/* The beat count, right-aligned and quiet. It is a length warning, not a
-   number anyone needs to read precisely. */
+/* How many screens the step runs to, right-aligned and quiet. A length
+   warning, not a number anyone needs to read precisely. */
 .help-map-beats {
   flex: none;
-  padding: 0 5px;
-  border-radius: 8px;
+  padding: 1px 7px;
+  border-radius: 9px;
   background: #f1f5f9;
   color: #94a3b8;
-  font-size: 0.75em;
+  font-size: 0.8em;
 }
 
-.help-map-tour { margin-bottom: 6px; }
+.help-map-tour { margin-bottom: 10px; }
 .help-map-tour + .help-map-tour {
-  padding-top: 6px;
+  padding-top: 10px;
   border-top: 1px solid #f1f5f9;
 }
 .help-map-tourname {
   display: block;
   width: 100%;
-  padding: 4px 8px 1px;
+  padding: 5px 10px 2px;
   border: 0;
   background: none;
-  font-size: 0.95em;
+  font-size: 1.1em;
   font-weight: 600;
   text-align: left;
   color: inherit;
@@ -580,9 +588,9 @@ body.help-mode {
 }
 .help-map-tourname:hover { color: #0284c7; }
 .help-map-blurb {
-  margin: 0 0 3px;
-  padding: 0 8px;
-  font-size: 0.8em;
+  margin: 0 0 5px;
+  padding: 0 10px;
+  font-size: 0.9em;
   color: #64748b;
 }
 

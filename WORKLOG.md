@@ -7,6 +7,60 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-08, evening (map fixes from Siggie's first look)
+
+Three reports from screenshots of the map as shipped in `ece5e56`.
+
+### The chooser menu came back on hover, and stuck on click
+
+Siggie: *"i clicked overview, overview appeared; Guided tours menu disappeared;
+when i mouseover the overview the Guided tour menu reappears. And when i click
+on a step, it persists."*
+
+One cause, two symptoms. `TourChooser` rendered `<TourMap>` inside its own
+`[data-tour-chooser]` span — the span that carries the new `onMouseEnter`, and
+the one its click-outside handler checks with `closest()`. So the map was
+*inside* the chooser by both tests: hovering it reopened the menu, and clicking
+it counted as clicking inside.
+
+Fixed by portalling the map to `document.body`. **The map portals itself**
+rather than each caller remembering to — it is always a fixed-position panel,
+so there is no caller for whom being a child is right.
+
+**The general shape, worth keeping**: a `position: fixed` element is visually
+independent of its parent but still a DOM descendant, so every ancestor's
+pointer handler and every `closest()` check still sees it. Two of the three
+existing overlays already portal (`RelationBar`, `Tooltip`); this one did not,
+and the mismatch was invisible until an ancestor grew a hover handler in the
+same commit.
+
+### Too small, wrong place
+
+Siggie: *"I was imagining these bigger and more centered."* It was a 20rem
+panel pinned bottom-left, styled as an inspector you keep open beside your
+work. It is not that — it is a thing you stop and read and then dismiss, and it
+closes as soon as you pick a step. Now `min(34rem, 100%)` centred on a dimmed
+backdrop, with the backdrop closing it on mousedown (and the panel stopping
+propagation, or every click inside would close it).
+
+### "Beats" leaked into the UI
+
+Siggie: *"don't use the term 'beats' in the title text."* It is the content
+file's FIELD NAME — correct in FORMAT.md, in the parser, and in comments — but
+it had reached two viewer-facing tooltips: the reveal dots' (`Beat 2 of 3 in
+this step`) and the map's badge.
+
+Both say **screens** now, and both COUNT THE OPENING POSITION, so a step with
+two beats reads `3`. That is not just a rename: `beatCount` excludes the
+opening position, so showing it raw would have said `2` for a step the viewer
+pages through three times. FORMAT.md now records the two-vocabulary split
+explicitly so it does not get "corrected" back.
+
+`tourMap.test.ts` asserts no viewer-facing text or `title` attribute in the
+panel contains "beat" — cheaper than remembering.
+
+
+---
 ## 2026-09-08, evening (the tour map, and a constraint I got wrong)
 
 Siggie: tour 1 has grown long and *"the user is not going to have any real
