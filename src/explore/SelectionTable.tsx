@@ -73,6 +73,14 @@ export default function SelectionTable({
               what it is for.
             */}
             <div
+              /* Names the header for the tour (`category-row:<id>`). On the
+                 whole bar rather than the label button, so the ring includes
+                 the ⊞ content-view control — a step pointing at a category is
+                 usually about to tell you to press it. Categories exist only
+                 in this mode; the tree is the ownership DAG and has none, so
+                 the resolver returns null there and the popover simply goes
+                 unringed. */
+              data-category-row={group.id}
               className="w-full flex items-stretch font-medium
                          bg-gray-50 dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700"
             >

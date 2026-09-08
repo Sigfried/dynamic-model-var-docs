@@ -7,12 +7,13 @@
  * package (docs/HELP_PACKAGE_PLAN.md). These live on the dmvd side of that
  * seam and are handed to `<HelpProvider resolvers={...}>`.
  *
- * The four kinds, and where their markup is:
+ * The kinds, and where their markup is:
  *
  * | Kind | Element | Marked at |
  * |---|---|---|
  * | `entity-row:<E>` | that class's row in the left panel | `SelectionTable.tsx` (`data-class-row`), `SelectionTree.tsx` (`data-entity-row`) |
  * | `entity-checkbox:<E>` | the checkbox in that row | found within the row |
+ * | `category-row:<id>` | a category's header bar (LIST MODE ONLY) | `SelectionTable.tsx` (`data-category-row`) |
  * | `slot-row:<E>.<slot>` | one attribute row in a diagram box | `OwnershipGraphView.tsx` (`data-row` + `data-declaring-class`) |
  * | `node-box:<E>` | a whole entity box | `OwnershipGraphView.tsx` (`data-node-id`) |
  *
@@ -73,6 +74,22 @@ function entityCheckbox(entity: string): Element | null {
 }
 
 /**
+ * A category's header bar in the left panel, from its id (`clinical`, `lab`
+ * — the short slugs in `config/entityCategories.ts`, not the display labels,
+ * which are prose and change).
+ *
+ * **Resolves in LIST MODE ONLY, by nature.** Categories are a structure the
+ * flat table imposes; the tree renders the ownership DAG, where every row is a
+ * class and no category exists to ring. So this returns null in tree mode —
+ * the ordinary "anchor did not resolve" path, which degrades to an unringed
+ * popover. A step that must point at a category should either say so in its
+ * text or be authored for the mode it belongs to.
+ */
+function categoryRow(category: string): Element | null {
+  return selectionPanel()?.querySelector(attrIs('data-category-row', category)) ?? null;
+}
+
+/**
  * A whole entity box on the diagram.
  *
  * Sibling merge complicates identity: merged siblings share one box whose id
@@ -127,6 +144,7 @@ function slotRow(arg: string): Element | null {
 export const helpResolvers = {
   'entity-row': entityRow,
   'entity-checkbox': entityCheckbox,
+  'category-row': categoryRow,
   'slot-row': slotRow,
   'node-box': nodeBox,
 };

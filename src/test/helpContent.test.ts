@@ -7,6 +7,7 @@ import {
 } from '../help/parseHelpContent';
 import { stripAlerts } from '../help/HelpLayer';
 import { DEFAULTS, INSTRUCTION_PARAMS } from '../explore/exploreState';
+import { helpResolvers } from '../explore/helpResolvers';
 
 /**
  * The help content is authored as markdown and parsed into typed data, so a
@@ -26,15 +27,16 @@ const steps = tourSteps(content);
 const positions = tourPositions(content);
 
 /**
- * Anchor kinds the dmvd app knows how to resolve. `help-id` is the built-in;
- * the rest are dmvd-specific resolvers registered by the host in
- * `explore/helpResolvers.ts` (and tested in `helpResolvers.test.ts`). Listed
- * here so a typo like `entity_row:` fails the build rather than silently
- * anchoring nothing.
+ * Anchor kinds the dmvd app knows how to resolve, so a typo like `entity_row:`
+ * fails the build rather than silently anchoring nothing.
+ *
+ * Derived from the real resolver table rather than retyped: this list WAS a
+ * hand-maintained copy, and adding `category-row` broke it — the resolver
+ * existed, the content used it, and the only thing that failed was this
+ * duplicate. `help-id` and `none` are built into the provider and registered
+ * by nobody, so they are added here.
  */
-const ANCHOR_KINDS = new Set([
-  'help-id', 'entity-row', 'entity-checkbox', 'slot-row', 'node-box',
-]);
+const ANCHOR_KINDS = new Set(['help-id', ...Object.keys(helpResolvers)]);
 
 describe('help content', () => {
   test('parses into sections and entries', () => {

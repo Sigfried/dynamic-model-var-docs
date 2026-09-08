@@ -14,6 +14,7 @@ import { helpResolvers } from '../explore/helpResolvers';
  */
 
 const { 'entity-row': entityRow, 'entity-checkbox': entityCheckbox,
+  'category-row': categoryRow,
   'slot-row': slotRow, 'node-box': nodeBox } = helpResolvers;
 
 beforeEach(() => { document.body.innerHTML = ''; });
@@ -188,10 +189,66 @@ describe('slot-row', () => {
 });
 
 describe('every anchor kind the content uses has a resolver', () => {
-  test('the table covers the four dmvd kinds', () => {
+  test('the table covers every dmvd kind', () => {
     // `help-id` and `none` are built into the provider, not registered here.
     expect(Object.keys(helpResolvers).sort()).toEqual(
-      ['entity-checkbox', 'entity-row', 'node-box', 'slot-row'],
+      ['category-row', 'entity-checkbox', 'entity-row', 'node-box', 'slot-row'],
     );
+  });
+});
+
+/**
+ * Category headers — `SelectionTable.tsx`'s `<div data-category-row>`.
+ *
+ * These exist in LIST MODE ONLY: the tree renders the ownership DAG, where
+ * every row is a class and there is no category to ring. The null case below
+ * is that fact, not a bug.
+ */
+describe('category-row', () => {
+  /** The header bar, as SelectionTable renders it: label button plus ⊞. */
+  function mountCategories(...ids: string[]) {
+    document.body.innerHTML = `
+      <div data-help-id="selection-tree">
+        ${ids.map(id => `
+          <div data-category-row="${id}">
+            <button>Label for ${id}</button>
+            <button data-show-category="${id}">⊞</button>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  test('finds a category header by its id', () => {
+    mountCategories('admin', 'clinical');
+    expect(categoryRow('clinical')?.getAttribute('data-category-row')).toBe('clinical');
+  });
+
+  test('rings the whole bar, including the content-view button', () => {
+    // A step pointing at a category is usually about to say "press ⊞", so the
+    // ring has to include it -- that is why the mark is on the bar and not on
+    // the label button.
+    mountCategories('admin');
+    expect(categoryRow('admin')?.querySelector('[data-show-category]')).not.toBeNull();
+  });
+
+  test('is null in tree mode, where categories do not exist', () => {
+    document.body.innerHTML = `
+      <div data-help-id="selection-tree">
+        <div class="dbw-row"><span data-entity-row="Participant">Participant</span></div>
+      </div>`;
+    expect(categoryRow('admin')).toBeNull();
+  });
+
+  test('is null for an id no category has', () => {
+    mountCategories('admin');
+    // `admin-study` is the slugified LABEL ("Admin / Study"); the anchor takes
+    // the id. Pinned because it is the mistake the format invites.
+    expect(categoryRow('admin-study')).toBeNull();
+  });
+
+  test('is scoped to the left panel', () => {
+    document.body.innerHTML = `
+      <div data-category-row="admin">an impostor outside the panel</div>
+      <div data-help-id="selection-tree"></div>`;
+    expect(categoryRow('admin')).toBeNull();
   });
 });
