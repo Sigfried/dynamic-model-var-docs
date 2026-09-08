@@ -54,9 +54,18 @@ So 44 of 48 resolve to ONE element that already carries `data-node-id={n.id}`
 at a single render site in `OwnershipGraphView.tsx`. One `anchor-name` there
 covers 92% of the anchors in the app. And `slot-row` — the kind whose
 `(data-row, data-declaring-class)` PAIR no single `anchor-name` rule can
-express — is used by nothing. It is a real constraint on the DESIGN of that
-kind, not a blocker on the migration; solve it if and when a step needs it (the
-flattened-string form under BACKLOG § "Anchor kinds" is one way).
+express — is used by nothing today. It is a real constraint on the DESIGN of
+that kind, not a blocker on the migration.
+
+⚠️ **Do not read "0 uses" as "delete it" or "it will never be wanted."**
+Siggie, 2026-09-08: *"don't assume we'll never want `slot-row:` but don't block
+on it not working now."* Row anchoring is the most load-bearing idea in the
+diagram, and TOURS_AND_CONTENT §3 has a drafted step built on it, so a tour
+will very likely want this kind back. The instruction is only to stop letting an
+unused kind gate the migration: ship it with `slot-row` however it lands, and
+give it a real anchor name when a step needs one. The flattened-string form
+under BACKLOG § "Anchor kinds" is one way, and it suits `anchor-name` precisely
+because it collapses the pair into a single string.
 
 ### The principle this serves
 
@@ -71,6 +80,59 @@ arithmetic that all exists to guess values the browser already has: `EST_H`,
 `estHeight`, `CHAR_W`/`LINE_H`, the flip/clamp, the poll. They are not five
 problems. They are one.
 
+### What goes, what stays — drawn before starting
+
+The item is "stop measuring one element to place another". Not everything
+numeric in `HelpLayer.tsx` is that, and conflating them would either
+over-promise or delete something load-bearing.
+
+**Goes** — all of it measure-then-position:
+
+| thing | why it exists today |
+|---|---|
+| `setInterval(measure, 250)` | re-asks where the anchor is |
+| `resize` + capture-phase `scroll` listeners | same question, event-driven |
+| `rect` state and the re-render it forces | carries the answer to the styles |
+| the flip/clamp arithmetic | reimplements `position-try` |
+| `EST_H = 260` | guesses the popover's own height to clamp with |
+| `estHeight(text, width)` | guesses it harder, from character counts |
+| the smooth-scroll settling race | a consequence of measuring during a scroll |
+| the `WAIT_MS = 600` hold | only needed because a rect arrives late |
+| the drag blocker (BACKLOG § Overlays) | falls out: nothing recomputes the position |
+
+**Stays** — these are about the popover's OWN size, which no amount of CSS
+anchoring answers:
+
+- **`autoWidth`** picks a width so prose does not become a tall thin column.
+  That is a deliberate design lever with a documented rationale (area, not
+  length buckets), not a measurement of anything on screen. `CHAR_W`/`LINE_H`
+  stay with it.
+- **`navMinWidth`** floors the width at what the nav row needs. Same category.
+- **`maxHeight`** and the internal scroll stay; they are what let the browser
+  size the box.
+
+⚠️ So "three hardcoded estimates of rendered text" (TASKS item 8) is really
+**one that goes and two that stay**. `EST_H`/`estHeight` are guesses standing
+in for a measurement the browser can do; `autoWidth`/`navMinWidth` are choices
+that would still be choices with perfect information. Do not delete the second
+pair in the name of this item.
+
+### Start here
+
+1. `anchor-name` on the ten `[data-help-id]` elements via one blanket rule in
+   `help.css`, and on the node box (`data-node-id`, one render site in
+   `OwnershipGraphView.tsx`) — that is 44 of 48 live anchors.
+2. `position-anchor` + `position-area` + `position-try-fallbacks` on
+   `.help-popover`, replacing the anchored branch of `popoverPosition`. The
+   UNANCHORED branch already needs no measurement and is the model to copy.
+3. The `.help-spotlight` ring: it needs to track its anchor continuously, which
+   is what the poll was really keeping alive. `anchor-name` + `anchor()` sizing.
+4. Hint dots (`help-hint`) last — the stale-hint bug dies with them.
+
+`entity-row` and `entity-checkbox` (4 uses between them) and `slot-row` (0) can
+be left on the measured path in an intermediate commit; they must not gate the
+rest.
+
 ### Browser support — re-checked 2026-09-08
 
 MDN: **Baseline "newly available", January 2026** — NOT "widely available".
@@ -78,13 +140,17 @@ Chrome/Edge 125+, Safari 18.2+ (`@position-try` flipping wants 18.4+), and
 Firefox only by default in **147** (2026-01-13), which is what sets the
 Baseline date. Roughly 91% of global traffic.
 
-A previous note here said "Baseline 2026" without the newly/widely distinction;
-that mattered, because "newly available" means current versions only, and this
-app's audience includes institutional browsers that lag. Vite has no
-`browserslist` configured here, so the default target does not decide it for us.
-`@supports (anchor-name: --x)` with the existing measured path as the fallback
-is the honest shape, and Floating UI is already a dependency if the fallback
-needs to be better than what is there now.
+**Decided (Siggie, 2026-09-08): current browsers only.** *"i'm fine only
+supporting current browsers."* So NO `@supports` guard, no retained measured
+fallback, and no Floating UI rescue path — the measured code is DELETED, not
+demoted. That decision is what makes this a simplification rather than a second
+implementation living beside the first, and it is most of why the item is worth
+doing. Do not reintroduce a fallback branch "just in case": if support turns out
+to be a real problem that is a new decision with new evidence, not a hedge to
+build in now.
+
+(The support numbers above are recorded so a future reader knows what was
+knowingly given up — not as a caution against the decision.)
 
 Two further platform features land on the rest of it: **`popover="hint"`** (hint
 popovers do not close other popovers the way `auto` does) and **interest

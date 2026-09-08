@@ -7,6 +7,47 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-08, end of session (decisions locked before starting task 8)
+
+Three calls from Siggie, recorded so the next session does not re-open them.
+
+**Current browsers only.** *"i'm fine only supporting current browsers."* So no
+`@supports` guard, no retained measured fallback, no Floating UI rescue path —
+the measured code gets DELETED, not demoted. This is the decision that makes
+task 8 a simplification instead of a second implementation living beside the
+first. The support numbers stay in HELP_PACKAGE_PLAN §1 to record what was
+knowingly given up, not as a caution against it. A future session that
+reintroduces a fallback "to be safe" has undone the point of the task.
+
+**`slot-row` is not dead, it is just not blocking.** *"don't assume we'll never
+want `slot-row:` but don't block on it not working now."* I had counted its
+zero live uses as evidence it did not matter; that was the wrong inference.
+Row anchoring is the most load-bearing idea in the diagram and
+TOURS_AND_CONTENT §3 has a drafted step built on it. The instruction is only
+that an unused kind must not gate the migration.
+
+**Task 8 next, in a fresh session.**
+
+### One correction I made to my own framing
+
+I had been repeating TASKS' line that there are "three hardcoded estimates of
+rendered text" and that the migration fixes all three. Read them properly:
+
+- `EST_H` / `estHeight` guess the popover's own height *in order to clamp
+  position with it*. Pure measure-then-position. They go.
+- `autoWidth` (`CHAR_W`/`LINE_H`) picks a width so prose does not become a tall
+  thin column. That is a DESIGN LEVER with a documented rationale — area rather
+  than length buckets — and it would still be a choice with perfect
+  information. It stays.
+- `navMinWidth` floors the width at what the nav row needs. Same category.
+  Stays.
+
+So it is one that goes and two that stay. Deleting `autoWidth` in the name of
+"removing the estimates" would remove a feature and be a real regression.
+Written into HELP_PACKAGE_PLAN §1 as a goes/stays table, with a start order,
+since that is what the next session needs first.
+
+---
 ## 2026-09-08, later (Siggie's principle reframes the positioning work)
 
 Siggie, after being shown the "split the two `rect` consumers so dragging lands
