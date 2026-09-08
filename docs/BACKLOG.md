@@ -347,9 +347,28 @@ those two consumers is the actual unit of work:
   wants CSS anchor positioning (or a `ResizeObserver`/`MutationObserver` on the
   canvas as the cheaper interim).
 
-So the order is: split the two consumers → drag works → migrate the ring at
-leisure. Rough estimate unchanged overall (**~1 day**), but the drag half is
-reachable first rather than last.
+So the two consumers CAN be split, and that is what makes dragging reachable
+without the migration.
+
+⚠️ **But do not read that as a recommendation to split them instead.** Siggie,
+2026-09-08, on being shown that plan: *"i generally think that finding the
+screen position of one thing and then using that to set the position of another
+thing is kludgy and css should make it so we don't have to do that."* That is
+right, and it makes the split a WORSE deal than it looks: it keeps the measure
+→ set-position machinery alive, and pays for the drag by adding one more piece
+of state to it. The migration deletes the machinery, and dragging then falls out
+for free — a popover the browser is not repositioning has nothing to stomp a
+dragged position.
+
+The counting that makes this cheap is in HELP_PACKAGE_PLAN §1: **44 of the 48
+resolver anchors in the live content are `node-box:`**, which is one
+`anchor-name` at one render site, and `slot-row` — the awkward attribute-pair
+case — is used by nothing. The migration is not the big-bang it has been
+treated as.
+
+Rough estimate unchanged overall (**~1 day**). Take the split only if the
+migration is blocked on browser support (§1 has the numbers: Baseline *newly*
+available, Jan 2026, ~91% traffic), not to get dragging sooner.
 
 ⚠️ **"Apply the change before anchoring" does not work as a fix**, considered
 and rejected 2026-09-08. There is no synchronous moment when a step's `Change:`

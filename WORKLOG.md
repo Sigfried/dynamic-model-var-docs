@@ -7,6 +7,66 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-08, later (Siggie's principle reframes the positioning work)
+
+Siggie, after being shown the "split the two `rect` consumers so dragging lands
+first" plan: *"i generally think that finding the screen position of one thing
+and then using that to set the position of another thing is kludgy and css
+should make it so we don't have to do that."*
+
+That is right and it **invalidates the plan I had just written into BACKLOG an
+hour earlier**. The split works, but it pays for dragging by keeping the
+measure-then-position machinery alive and adding one more piece of state to it.
+Recorded here rather than silently reversed, because the split is a reasonable
+idea that will occur to the next reader too, and the reason to reject it is not
+in the code.
+
+### Reading `popoverPosition` with the principle in mind
+
+The function argues Siggie's case by itself. Its UNANCHORED branch is three
+lines — `top: 50%`, `translateY(-50%)`, `maxHeight` — and its own comment says
+why: *"the browser knows and this function does not — no measurement, no
+re-render, exact at any height."* Its ANCHORED branch is 100+ lines of
+arithmetic that exists solely to guess what the browser already knows:
+`EST_H = 260`, `estHeight(text, W)`, `CHAR_W`/`LINE_H`, the flip/clamp, and the
+250ms poll feeding it. TASKS has been carrying those as three or four separate
+grievances. They are one.
+
+### The migration is much smaller than the docs implied
+
+Counted the live content rather than reasoning from the plan's warnings:
+
+    node-box:         44
+    entity-row:        3
+    entity-checkbox:   1
+    slot-row:          0
+
+44 of 48 resolve to one element that already carries `data-node-id={n.id}` at a
+single render site — one `anchor-name` covers 92% of the app's anchors. And
+`slot-row`, the kind HELP_PACKAGE_PLAN flagged as the hard case because it
+selects on a PAIR of attributes no `anchor-name` can express, is used by
+nothing at all. That warning has been sitting in the plan as if it were a
+blocker on the migration; it is a constraint on the design of one unused anchor
+kind.
+
+### Browser support — the doc was optimistic in a way that matters
+
+The plan said "CSS anchor positioning (Baseline 2026), verified on MDN
+2026-08-26". Re-checked: MDN says Baseline **NEWLY** available, January 2026.
+Newly ≠ widely — it means current versions only. Chrome/Edge 125+, Safari 18.2+
+(`@position-try` flipping wants 18.4+), and Firefox only by default in **147**
+(2026-01-13), which is what sets the Baseline date. ~91% of global traffic.
+
+Search results disagreed with each other on Firefox — one said 132+, another
+147. The 147 figure matches MDN's Baseline date exactly, so it is the one to
+trust; 132 is probably the behind-a-flag release. Worth knowing before someone
+re-checks and gets the other number.
+
+Vite has no `browserslist` configured here, so nothing decides the target for
+us. `@supports (anchor-name: --x)` with the existing measured path as fallback
+is the honest shape.
+
+---
 ## 2026-09-08, later (anchors, the poll, and what actually blocks dragging)
 
 Exploration with Siggie, no behaviour changed. Four findings worth not

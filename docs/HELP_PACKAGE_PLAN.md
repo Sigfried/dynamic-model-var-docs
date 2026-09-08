@@ -35,21 +35,61 @@ and relayouts with no measurement and no re-render.
 No per-anchor scripting is needed: one blanket rule keyed on `[data-help-id]`
 assigns anchor names for every tagged element.
 
-⚠️ **The one piece of real design work** is that the blanket rule does not reach
-the **resolver-backed** anchor kinds (`entity-row`, `slot-row`, `node-box`,
-`entity-checkbox`), whose elements the diagram creates and destroys as it
-relayouts. Those need anchor names assigned where the rows render.
+⚠️ The blanket rule does not reach the **resolver-backed** anchor kinds
+(`entity-row`, `slot-row`, `node-box`, `entity-checkbox`), whose elements the
+diagram creates and destroys as it relayouts. Those need anchor names assigned
+where the rows render.
 
-⚠️ `slot-row` selects on a **pair** of attributes, which no single `anchor-name`
-rule expresses.
+**That is much smaller than it reads** — counted 2026-09-08 against the live
+content file:
 
-Two platform features land on the rest of it: **`popover="hint"`** (hint
+| kind | uses in `help-content.md` |
+|---|---|
+| `node-box:` | 44 |
+| `entity-row:` | 3 |
+| `entity-checkbox:` | 1 |
+| `slot-row:` | **0** |
+
+So 44 of 48 resolve to ONE element that already carries `data-node-id={n.id}`
+at a single render site in `OwnershipGraphView.tsx`. One `anchor-name` there
+covers 92% of the anchors in the app. And `slot-row` — the kind whose
+`(data-row, data-declaring-class)` PAIR no single `anchor-name` rule can
+express — is used by nothing. It is a real constraint on the DESIGN of that
+kind, not a blocker on the migration; solve it if and when a step needs it (the
+flattened-string form under BACKLOG § "Anchor kinds" is one way).
+
+### The principle this serves
+
+Siggie, 2026-09-08: *"i generally think that finding the screen position of one
+thing and then using that to set the position of another thing is kludgy and
+css should make it so we don't have to do that."* That is the whole item, and
+it is worth reading `popoverPosition` with it in mind — the UNANCHORED branch is
+already clean (`top: 50%` + `translateY(-50%)` + `maxHeight`, whose own comment
+says *"the browser knows and this function does not — no measurement, no
+re-render, exact at any height"*), while the anchored branch is 100+ lines of
+arithmetic that all exists to guess values the browser already has: `EST_H`,
+`estHeight`, `CHAR_W`/`LINE_H`, the flip/clamp, the poll. They are not five
+problems. They are one.
+
+### Browser support — re-checked 2026-09-08
+
+MDN: **Baseline "newly available", January 2026** — NOT "widely available".
+Chrome/Edge 125+, Safari 18.2+ (`@position-try` flipping wants 18.4+), and
+Firefox only by default in **147** (2026-01-13), which is what sets the
+Baseline date. Roughly 91% of global traffic.
+
+A previous note here said "Baseline 2026" without the newly/widely distinction;
+that mattered, because "newly available" means current versions only, and this
+app's audience includes institutional browsers that lag. Vite has no
+`browserslist` configured here, so the default target does not decide it for us.
+`@supports (anchor-name: --x)` with the existing measured path as the fallback
+is the honest shape, and Floating UI is already a dependency if the fallback
+needs to be better than what is there now.
+
+Two further platform features land on the rest of it: **`popover="hint"`** (hint
 popovers do not close other popovers the way `auto` does) and **interest
 invokers (`interestfor`)**, which is most of the current
-`onMouseEnter`/`onMouseLeave`/`pinned` logic, declaratively. Both the Popover
-API (Baseline 2025) and CSS anchor positioning (Baseline 2026) were verified on
-MDN 2026-08-26. Low-risk path: CSS anchoring first, fall back to Floating UI
-(already a dep) only where support gaps show.
+`onMouseEnter`/`onMouseLeave`/`pinned` logic, declaratively.
 
 ---
 
