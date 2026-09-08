@@ -45,8 +45,33 @@ than re-running a query; the criterion is editorial, not mechanical. See
 
 ### 1. The BioData Catalyst Harmonized Model
 
-*Content only. No app mechanics. The tour that does not exist today and matters
-most to the target reader.*
+[sg] moved text into help-content note
+
+
+### 2. Getting oriented
+
+*The app, minimally.* 
+- Entity select panel
+- Entity selection with checkbox
+- Canvas
+- Add entities from attribute rows
+- Click entity for detail panel [weirdly you can click
+  anywhere except an entity attribute row for this. need
+  to make this make more sense]
+- Related bar
+  - Brief explanation and reference to Ownership tour
+  - Add entities from bar
+- Can drag boxes around but edges get messed up (for now)
+- Zoom and pan
+
+This is where today's tour steps 2, 3 and 5 collapse into two or three, and
+where the duplicate "Entities" title dies (`selection-tree` and `entities` share
+it). **The relation bar belongs here**, not in "Reading the diagram": it is how
+you *navigate*, not how you *read*.
+
+[sg] not sure about all that. you wrote it; i'm not sure what's in steps 2,3,5.
+     you also had the spine stuff as part of tour 1, but i think it belongs
+     here.
 
 Two halves. **The spine first**, grown one hop at a time — never more than five
 boxes on screen — then **a step per category**, using the ⊞ views, with beats
@@ -74,20 +99,6 @@ a step of its own.
 Spine steps: `Person, Participant` → `+ Visit` → `+ Observation` (the merged box
 appears; note there are five kinds) → `+ Quantity` (a value and a unit; sixteen
 classes point at it).
-
-Category steps: one per category, each loading its ⊞ view, with beats revealing
-the story rather than the whole canvas at once. Survey's step gets to say the
-thing the numbers show — it is a self-contained subtree that barely touches the
-rest of the model.
-
-### 2. Getting oriented
-
-*The app, minimally.* Tree → checkbox → canvas → relation bar → copy link.
-
-This is where today's tour steps 2, 3 and 5 collapse into two or three, and
-where the duplicate "Entities" title dies (`selection-tree` and `entities` share
-it). **The relation bar belongs here**, not in "Reading the diagram": it is how
-you *navigate*, not how you *read*.
 
 ### 3. Reading the diagram
 

@@ -43,20 +43,22 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 
 
 ### following steps not finished yet. ignore
-- **Make better Change, Action, Beat implementation**
-  - When relationship-kinds (Tour 3.1) pops up the action has already
-    occurred and the Action: text does not make the step more legible.
-    A better sequence of events would be:
-    - anchor on unchecked MeasurementObservation selection row
-    - actually would be better if this were not 
 - **Rewrite existing steps to use `Only:`.** The verb exists
   ([FORMAT.md](../help/FORMAT.md#only--a-step-that-names-the-whole-canvas))
   but the steps below still use `Change:`, so `graph-canvas` adds to
   `relationship-kinds`' canvas instead of naming its own.
-- **Tour authoring notes + draft preview** — `Note:` / `Draft:`
-  / `ForClaude:` fields, and a way to view a tour *including* its
-  parked and unfinished steps. deferred 2026-08-27 for time.
-  Write-up: [BACKLOG.md](../../docs/BACKLOG.md#tour-authoring-notes--draft-preview)
+- **Make better Change, Action, Beat implementation**
+  - When, e.g., relationship-kinds (Tour 4.1) pops up the action has already
+    occurred and the Action: text does not make the step more legible.
+    A better sequence of events would be:
+    - anchor on unchecked MeasurementObservation selection row
+    - check the box
+    - anchor on the newly shown entity
+    - i had been thinking this could be automated for Change/Beat
+      steps that show a new entity. maybe should just be authored
+      as separate steps? but that makes a lot more steps. animating
+      it would be nice, but i don't want to get bogged down in that
+      if it isn't easy to implement
 - **Multi-line for the OTHER fields** (`Context:`, `Action:`, beat text).
   Deliberately not done: you said "1 for now; may need 2 soon". The block
   reader (`extractBlockField`) is written generically, so each field is a
@@ -77,20 +79,49 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 
 ### bdchm
 
-- **Title:** The BioData Catalyst Harmonized Model
+> *Introduces the BDCHM, its general context, and the types of data it
+> holds. Content only. No app mechanics. adf*
+>
+> Category steps: one per category, each loading its ⊞ view, with beats
+> revealing the story rather than the whole canvas at once. Survey's step
+> gets to say the thing the numbers show — it is a self-contained subtree
+> that barely touches the rest of the model.
+
+[sg] current bdchm tour starts wth brief intro to BDC and the overall
+context.
+
+- **Title:** The BioData Catalyst Harmonized Model (BDCHM)
 - **Tour:** The BioData Catalyst Harmonized Model
+- Only:
 - **Anchor:** none
+- **Highlight:** selection-tree
+- **Width:** 800
 - **Description:** 
-  BioData Catalyst ([BDC](https://biodatacatalyst.nhlbi.nih.gov/))
+  **Context:** BioData Catalyst ([BDC](https://biodatacatalyst.nhlbi.nih.gov/))
   is a cloud-based ecosystem where researchers can find and work with
   [NHLBI](https://www.nhlbi.nih.gov/) data resources. Studies arrive with
-  their own terminologies, units and file structures, which are
+  their own terminologies, units, and file structures, which are
   transformed by the Data Model-Based Ingestion Pipeline
-  ([dm-bip](https://linkml.io/dm-bip/)) into a common **BDC Harmonized
-  Model (BDCHM)** schema. Nine priority [TOPMed](https://topmed.nhlbi.nih.gov/)
+  ([dm-bip](https://linkml.io/dm-bip/)) into a common, harmonized
+  [LinkML schema](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/).
+
+  **Sources:** Nine priority [TOPMed](https://topmed.nhlbi.nih.gov/)
   cohorts (e.g., the Framingham Heart Study and Women's Health Initiative)
   and the [INCLUDE Data Hub](https://portal.includedcc.org/) have been
   harmonized to it so far with more on their way.
+
+  **Contents:** The model includes 56 entity classes (left panel)
+  - ~340 total attributes including
+    - 
+  - 52 enums (constrained value sets like condition types, specimen types)
+  - 155 variables (specific measurements/observations mapped to classes)
+
+  These cohorts contain a variety of patient data
+- **Beats:**
+  1. Entities
+     - Change: sel=Person~Participant~Visit~Observation
+     - Anchor: node-box:Person
+
 </details><!-- end of BDCHM tour -->
 </div>
 
@@ -183,7 +214,15 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 
 - **Title:** How entities relate
 - **Tour:** Walkthrough
-- **Description:** While the relationship between an entity and its enumerations and raw data attributes is direct (e.g., `MeasurementObservation.observation_type` → `MeasurementObservationTypeEnum`, or `MeasurementObservation.age_at_observation` → `integer`), it can be related to other entities in more complex ways.
+- **Description:** 
+  **[sg] this text is terrible. do we have something better?**
+  While the relationship between an entity and its
+  enumerations and raw data attributes is direct (e.g.,
+  `MeasurementObservation.observation_type`
+  → `MeasurementObservationTypeEnum`, or
+  `MeasurementObservation.age_at_observation` → `integer`), it can be
+  related to other entities in more complex ways.
+ 
 - **Action:** Selected MeasurementObservation for you, and highlighted its `observation_type` attribute.
 - **Anchor:** slot-row:MeasurementObservation.observation_type
 - **Change:** sel=MeasurementObservation
