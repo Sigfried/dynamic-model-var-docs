@@ -279,7 +279,11 @@ export default function HelpLayer() {
    * a deliberate statement about the picture the step is building (and is
    * sticky across beats), so it is never second-guessed here.
    */
-  const width = (inTour ? position?.width : undefined) ?? autoWidth(bodyBlocks.join('\n\n'));
+  const width = (inTour ? position?.width : undefined)
+    ?? Math.max(
+      autoWidth(bodyBlocks.join('\n\n')),
+      inTour ? navMinWidth() : 0,
+    );
 
   /*
    * Scroll the anchor into view BEFORE measuring, or the popover lands where
@@ -787,6 +791,47 @@ export function autoWidth(text: string): number {
   return Math.round(
     Math.min(AUTO_MAX, Math.max(AUTO_MIN, Math.sqrt(chars * CHAR_W * LINE_H * ASPECT))),
   );
+}
+
+/**
+ * The width the tour's nav ROW needs, which is not a function of the text.
+ *
+ * `autoWidth` sizes the popover from its prose and can legitimately land on
+ * the 320 floor for a one-line beat. The row underneath carries a fixed set of
+ * controls — counter, reveal dots, the map ⊞, back, next, ✕ — that do not
+ * shrink with the text, and at 320 it mangled: Siggie, 2026-09-08, of the
+ * 11-screen `admin-study` step, *"too narrow popover mangling the status
+ * line"*.
+ *
+ * Measured at dmvd's 16px base, the CONTROLS come to roughly 295px — they
+ * just fit at 320. **It was the dots that broke it**, and that is what decides
+ * the design here: the dots are the one elastic part, they WRAP
+ * (`.help-tour-dots` in help.css), and the popover is not widened to keep them
+ * on one line. A progress hint must not drive the layout — Siggie, same day:
+ * *"i don't know about limiting the dot number. better might be to allow the
+ * dots to wrap"*.
+ *
+ * So the floor buys the controls their room plus a short first run of dots,
+ * and anything past that wraps onto a second line:
+ *
+ * | part | px |
+ * |---|---|
+ * | counter, ⊞, three buttons, gaps | 295 |
+ * | popover horizontal padding | 28 |
+ * | room for a first line of dots | 70 |
+ *
+ * (A first version added ~8px of floor per dot and capped the total at twelve.
+ * Two mechanisms for one job: wrapping already handles any count, so the
+ * per-dot floor only widened popovers that did not need it and the cap was an
+ * arbitrary number covering for it.)
+ *
+ * Deliberately an ESTIMATE in the same spirit as `CHAR_W` — the real fix for
+ * both is measuring, which costs a second layout pass per position. Being a
+ * little generous is cheap: it only ever raises a floor, and a step whose
+ * prose already wants more is untouched.
+ */
+export function navMinWidth(): number {
+  return 295 + 28 + 70;
 }
 
 /**

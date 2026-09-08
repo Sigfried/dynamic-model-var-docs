@@ -347,6 +347,15 @@ body.help-mode {
   padding-top: 8px;
   border-top: 1px solid #e2e8f0;
 }
+/* The row is a flex line of fixed-size controls, so at a narrow width it used
+   to squash the buttons and overrun the card -- Siggie, 2026-09-08: "too
+   narrow popover mangling the status line". `navMinWidth` in HelpLayer.tsx
+   floors the popover at what the CONTROLS need; these rules settle who gives
+   way when the dots make the row longer than that: the buttons and the
+   counter refuse to shrink, and the dots wrap onto a second line. A progress
+   hint yields to a control, and never widens the popover. */
+.help-tour-nav button,
+.help-tour-count { flex: none; }
 .help-tour-spacer { flex: 1; }
 .help-tour-count { font-size: 0.85em; color: #64748b; }
 
@@ -356,9 +365,14 @@ body.help-mode {
    position out of 6. Hidden entirely on a step with no beats. */
 .help-tour-dots {
   display: inline-flex;
+  flex-wrap: wrap;
   gap: 3px;
   align-items: center;
   margin-left: 6px;
+  /* Shrinkable, and the only thing in the row that is. A step with twenty
+     screens shows two short rows of dots rather than forcing a wider popover
+     (Siggie, 2026-09-08: "better might be to allow the dots to wrap"). */
+  min-width: 0;
 }
 .help-dot {
   width: 5px;

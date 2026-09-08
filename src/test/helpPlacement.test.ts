@@ -14,7 +14,7 @@
 import { describe, it, expect, beforeAll, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { autoWidth, popoverPosition } from '../help/HelpLayer';
+import { autoWidth, navMinWidth, popoverPosition } from '../help/HelpLayer';
 
 const VW = 1400;
 const VH = 900;
@@ -219,6 +219,49 @@ describe('autoWidth', () => {
 
   it('ignores surrounding whitespace', () => {
     expect(autoWidth('  \n\n  hello  \n ')).toBe(autoWidth('hello'));
+  });
+});
+
+/**
+ * `navMinWidth` — the floor the tour's NAV ROW imposes, independent of text.
+ *
+ * `autoWidth` legitimately puts a one-line beat on the 320 floor, but the row
+ * under it carries a fixed set of controls plus one reveal dot per beat, does
+ * not wrap, and overflowed: Siggie, 2026-09-08, of the 11-screen `admin-study`
+ * step -- "too narrow popover mangling the status line". The popover takes the
+ * larger of the two.
+ *
+ * Pins the SHAPE, not the pixels: the constants are an estimate in the same
+ * spirit as `CHAR_W` and should be free to retune.
+ */
+describe('navMinWidth', () => {
+  it('is what actually rescues the case that was mangling', () => {
+    // A 75-character beat -- `admin-study`'s ResearchStudy beat, the one in
+    // Siggie's screenshot. The text alone asks for the 320 floor; the row's
+    // controls need more, and the larger of the two is what ships.
+    const text = 'a'.repeat(75);
+    expect(autoWidth(text)).toBe(320);
+    expect(navMinWidth()).toBeGreaterThan(autoWidth(text));
+  });
+
+  it('does not depend on how many screens the step has', () => {
+    /*
+     * The dots are excluded from the floor ON PURPOSE: they wrap, so a long
+     * step uses a second short row rather than forcing a wider popover. A
+     * first version added per-dot width and capped it at twelve, which was
+     * two mechanisms for one job (Siggie, 2026-09-08: "i don't know about
+     * limiting the dot number. better might be to allow the dots to wrap").
+     *
+     * This takes no argument now, so the guarantee is structural rather than
+     * asserted -- what this test pins is that the CSS keeps its half of the
+     * bargain.
+     */
+    const css = readFileSync(resolve(__dirname, '../help/help.css'), 'utf8');
+    const dots = css.match(/\.help-tour-dots\s*\{([^}]*)\}/)?.[1] ?? '';
+    expect(dots).toMatch(/flex-wrap:\s*wrap/);
+    // ...and the controls beside them must NOT wrap or shrink, or the row
+    // would break up instead of the dots giving way.
+    expect(css).toMatch(/\.help-tour-nav button,\s*\n\.help-tour-count\s*\{\s*flex:\s*none/);
   });
 
   it('keeps a long popover from running absurdly tall', () => {

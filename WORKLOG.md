@@ -7,6 +7,60 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-08, evening (the nav row's own width floor)
+
+Siggie: *"too narrow popover mangling the status line"*, with a screenshot of
+`admin-study`'s ResearchStudyCollection beat — 75 characters of text, an
+11-dot reveal strip, and the counter, ⊞, back, next and ✕ all fighting for a
+320px row.
+
+**The cause.** `autoWidth` sizes the popover from its PROSE alone, and 75
+characters lands on the 320 floor. But the nav row underneath is a flex line of
+fixed-size controls that do not shrink with the text. Nothing had ever
+connected the two, and it only became visible once a step had ten beats: at
+three or four dots the row still just fit.
+
+So an unauthored width is now `max(autoWidth(text), navMinWidth())`. 20 of 35
+tour positions are raised to 393px; nothing already wider moves.
+
+### The wrong first fix, and Siggie's correction
+
+The first version made the floor a FUNCTION of beat count — ~8px per dot —
+capped at twelve dots, with the comment claiming that past the cap "the dots
+wrap instead". Siggie: *"i don't know about limiting the dot number. better
+might be to allow the dots to wrap"*.
+
+Right, and the comment was also **false**: wrapping was never conditional on
+the cap, so the dots wrapped at any count and the per-dot floor was a second
+mechanism doing the same job badly — widening popovers that did not need it,
+with an arbitrary constant covering for it.
+
+**What measuring showed.** With the dots removed from the sum entirely, the
+floor came to 312 — just UNDER the 320 text floor, so it never bound and the
+test went red. That is the useful number: **the controls alone just fit at
+320; it was the dots that broke it.** So the floor is a constant that buys the
+controls their room plus a short first run of dots (~70px), and everything
+past that wraps. One mechanism, no cap.
+
+The lesson worth keeping is not about dots: **when a "simplification" makes the
+effect vanish entirely, the thing you removed was load-bearing** — measure what
+it was contributing before deciding how much of it to put back.
+
+### Not fixed, and adjacent
+
+`EST_H` (docs/TASKS.md item 8) is the same class of bug in the other axis — a
+hardcoded 260px guess at popover HEIGHT used for clamping, so a tall popover
+runs off the bottom. This change makes `navMinWidth` a third such estimate
+beside `CHAR_W` and `EST_H`. All three would be fixed properly by measuring,
+which costs a layout pass per position; all three are commented as estimates so
+the next reader does not mistake them for measurements.
+
+Also: `FORMAT.md` now warns that an authored `Width:` under ~400 on a tour step
+will mangle its own nav row, since authored widths are deliberately not
+second-guessed.
+
+
+---
 ## 2026-09-08, evening (map fixes from Siggie's first look)
 
 Three reports from screenshots of the map as shipped in `ece5e56`.

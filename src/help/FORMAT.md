@@ -765,6 +765,18 @@ never enters this rule — every position simply gets the automatic width for
 whatever it is showing. But once any beat sets one, it sticks, and later beats
 stop being sized from their text until another `Width:` releases it.
 
+**The automatic width has a second floor: the nav row.** A one-line beat wants
+the 320 minimum, but the row under it carries the counter, the reveal dots, the
+map ⊞ and three buttons, none of which shrink with the text. So an unauthored
+width is the LARGER of what the prose wants and what that row needs — about
+390px — however short the beat is.
+
+The floor is a constant, not a per-beat sum: the dots **wrap**, so a step with
+twenty of them shows two short rows rather than a wider popover. Authored
+`Width:` is not second-guessed, so **a `Width:` well under 400 on a step in a
+tour will mangle its own nav row** — that was the bug this floor fixed
+(2026-09-08).
+
 #### `Only:` — a step that names the whole canvas
 
 `Change:` adds. `Only:` **replaces**: the selection becomes exactly what the
