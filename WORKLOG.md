@@ -7,6 +7,80 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-07, later still (docs: cut what shipped)
+
+A sweep for obsolete doc content, following 26b275e's pass. That pass removed
+text that argued with the past; this one removed text describing work that has
+since shipped. Different failure, same file set.
+
+### What made something obsolete
+
+The test used throughout: does a reader who has never seen the old version need
+this? Four struck-through DONE rows in TASKS failed it outright — the file's own
+header says *"Everything here is open."* So did TOURS_AND_CONTENT §1 and §2,
+both marked SHIPPED, and §2 doubly so: it specifies a `Help ▾ / Tours →`
+submenu that shipped and was **replaced the same day** by the `Guided tours`
+chooser, so it documented a design that never survived a day in the app.
+
+Deleting a shipped section is not free, though, and that is the part worth
+recording. Each carried live constraints that had nothing to do with the shipped
+work and would have died with it:
+
+- §1's pin-set rot warning — a trap, not a status note.
+- Row 3's "existing steps are NOT rewritten to use `Only:`" — still true, and
+  the tour author hits it immediately.
+- Row 3c's "delete the address readout once the tours are written" — an
+  instruction with no other home.
+
+These moved to where the person who needs them will be standing (TASKS item 1
+and the new 1b), rather than being preserved in place by keeping the section.
+**When cutting a shipped section, read it for constraints before deleting it**;
+the shipped narrative and the live constraint are usually interleaved.
+
+### Archive or delete?
+
+Siggie left the call to me: *"worklog and archive are for you."* Chose delete.
+WORKLOG already narrates all four rows at length, `docs/archive/` holds whole
+superseded *documents* rather than row fragments, and a fifth copy is a fifth
+thing to go stale. Archiving would have been hedging.
+
+### The draft text stays, and why
+
+I proposed deleting help-content.md's "Original unfinished draft text" — a
+pre-format outline whose relationship-kinds material is superseded twice over
+(by TOURS_AND_CONTENT §3 and by the live `relationship-kinds` entry). Siggie
+declined: *"i'll want to check it again after stuff is authored to make sure
+everything i intended got done."* It is not documentation, it is an authoring
+checklist, and its value arrives only after the tours exist. **Do not re-propose
+cutting it until the five tours are authored and Siggie has checked them off
+against it.** Same reasoning protects the seven `TODO(siggie):` notes at
+help-content.md:189–283 — those are unanswered questions addressed to Siggie,
+not stale prose.
+
+### A dangling anchor, and what it was hiding
+
+The repo's link checker caught `help-content.md` pointing at
+`BACKLOG.md#tour-authoring-notes--draft-preview`, a section 26b275e had removed.
+Worth checking before assuming a broken link is just a broken link: the target
+was a genuine deferred task carrying a finding — a draft preview needs a
+**second rendering mode**, not a parser change, which is why it is a task and
+not three fields. Restored from `26b275e^`.
+
+The general lesson: that cleanup pass deleted a section without checking who
+pointed at it. **Run the link checker after removing a section, not only after
+editing prose** — it is the only thing that catches a deletion severing a
+reference from another file.
+
+### Incidental finding
+
+The content defines **two** tours (`The BioData Catalyst Harmonized Model` and
+`Walkthrough`), against a plan for five. `Walkthrough`'s own description says
+*"The original tour. Parts will be used for specific tours now."* So authoring
+the middle four is largely a SPLIT, not new writing — noted in TASKS item 1 and
+the TOURS_AND_CONTENT intro, because neither said it and it changes how the work
+is sized.
+
+---
 ## 2026-09-07, later (TASKS 3c: the address is the slug, not a number)
 
 3c asked for "an easy way to find a given tour step/beat as shown in the app in
