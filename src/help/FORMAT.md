@@ -82,7 +82,7 @@ does not get swallowed into that entry's `Description:`.
 | `Only:` | the same query, but it REPLACES the selection instead of adding — see [Change](#change) |
 | | *(both take the same params — see [the params you can set](#the-params-you-can-set))* |
 | `Highlight:` | how hard to point at the anchor: `ring`, `dim`, `none` — see [Highlight](#highlight) |
-| `Width:` | popover width in pixels, default 320; STICKY across beats — see [Placement](#placement) |
+| `Width:` | popover width in pixels; defaults to a width picked from the text (320–800); STICKY across beats — see [Placement](#placement) |
 | `Position:` | force the popover to a side: `left`, `right`, `top`, `bottom` — see [Placement](#placement) |
 | `OffsetX:` | nudge it horizontally — see [Placement](#placement) |
 | `Tour:` | which tour this is a step of, e.g. `Walkthrough`; omit for help-only |
@@ -120,6 +120,45 @@ Because the description can carry its own bullets, `Interactions:` and
 `Context:` are now optional structure rather than the only way to get a second
 paragraph. Use them when you want a step's furniture set apart from its prose;
 put the prose in `Description:`.
+
+#### Pulling text from the model — `{{kind:arg}}`
+
+Prose fields can quote the underlying data instead of restating it. A
+`{{kind:arg}}` placeholder is replaced with whatever the host looks up for that
+kind:
+
+```markdown
+- **Description:** The model's own words for this entity:
+
+  {{model-description:Participant}}
+```
+
+| Kind | Fills with |
+|---|---|
+| `{{model-description:<Class>}}` | that class's `description` from the schema |
+| `{{enum-description:<Enum>}}` | that enumeration's `description` |
+| `{{category-label:<id>}}` | a category's display label (`admin` → "Admin / Study") |
+
+Like anchor kinds, these are **registered by the host, not known to the
+parser** — dmvd's live in `src/explore/helpTextResolvers.ts` and are handed in
+as `<HelpProvider textResolvers={...}>`. Substitution happens once, after
+parsing, so everything downstream sees finished prose.
+
+Three things to know:
+
+- **It composes.** The placeholder is replaced in place, so a step can frame
+  the model's words with its own — a sentence of setup, then the description,
+  then a point about it. This is why the format is a placeholder rather than a
+  field that replaces the whole description.
+- **An unresolved name stays visible.** `{{model-description:Gone}}` renders as
+  those literal characters rather than as nothing, so a class renamed by an
+  upstream schema sync names itself on screen instead of silently leaving a
+  hole. `helpTextResolvers.test.ts` asserts every placeholder in the content
+  file resolves, so drift fails a test first.
+- **Substituted text is markdown**, and it counts toward the automatic width
+  and height ([Placement](#placement)) like any other prose — a step that pulls
+  in a long class description gets a wider popover, and one placed beside a
+  low anchor slides up to fit rather than running off the bottom.
 
 ### Tours and order
 
@@ -288,6 +327,7 @@ answers it at the moment the popover is placed.
 | `help-id:<id>` | the element tagged `data-help-id="<id>"` |
 | `entity-row:<Entity>` | that entity's row in the selection panel |
 | `entity-checkbox:<Entity>` | that row's checkbox |
+| `category-row:<id>` | a category's header bar in the selection panel |
 | `slot-row:<Entity>.<slot>` | one attribute row inside a diagram box |
 | `node-box:<Entity>` | a whole entity box on the diagram |
 
@@ -318,6 +358,13 @@ Two kinds have an edge worth knowing when you author:
   `Change:` that selects the entity, or anchor it at the diagram instead.
 - **`slot-row:<E>.<slot>`** splits on the LAST dot. Inside a merged sibling box
   several rows can share a slot name, and `<E>` is what picks between them.
+- **`category-row:<id>`** takes the category's **id**, not its label:
+  `category-row:admin`, not `category-row:admin-study` for "Admin / Study". The
+  ids are the short slugs in `config/entityCategories.ts` (`admin`, `clinical`,
+  `observation`, `lab`, `survey`, `other`). It also resolves in LIST MODE ONLY
+  — the tree renders the ownership DAG, where every row is a class and no
+  category exists to ring — so in tree mode such a step shows an unringed
+  popover.
 
 ### Actions
 
@@ -441,9 +488,9 @@ for a box the step is about to add — and it stays right if the box width
 changes. It is a closed grammar, not an expression: `anchor.width + 10` and
 `anchor.left` do not parse.
 
-`Width:` sets the popover's width in pixels for one step; the default is 320,
-sized for a step's worth of prose. A step carrying real exposition — the intro,
-which explains what the app is — reads badly in a narrow column, so:
+`Width:` sets the popover's width in pixels for one step. A step carrying real
+exposition — the intro, which explains what the app is — reads badly in a
+narrow column, so:
 
 ```
 - **Width:** 480
@@ -451,7 +498,40 @@ which explains what the app is — reads badly in a narrow column, so:
 
 Values under 240 are ignored (the prose becomes a column of single words), and
 the width is capped to the viewport, so a wide popover still fits on a small
-screen.
+screen. Note that an ignored value is not a fallback to some fixed default —
+it means the step never set a width at all, so it gets the automatic one below.
+
+#### The default width is automatic
+
+A step with no `Width:` is sized from how much text it is showing. Short steps
+get 320 — the flat default this replaced, so an ordinary one- or two-sentence
+beat looks exactly as it always did — and longer ones widen from there, up to
+800.
+
+The reasoning is that the popover's real failure mode is HEIGHT: text that
+overflows either scrolls inside a clamped box or shoves the popover away from
+the thing it is pointing at. Width is the only lever that trades height away.
+So the width is picked from the AREA the text needs rather than from its length
+in buckets, which keeps the growth smooth — one character more never jumps the
+width 150px the way a threshold would.
+
+Two consequences worth knowing:
+
+- **Beats can change the width mid-step.** Because a `Keep:` beat adds to what
+  is showing, the text grows and the popover may widen as the beats reveal.
+  This is deliberate for now; if it reads as jumpy the fix is to size the whole
+  step by its widest position rather than to go back to a fixed default.
+- **Author a `Width:` whenever the width is making a point.** The automatic
+  width only knows how much text there is, not what the step is doing. A step
+  that wants to be a wide slab despite saying very little — or a narrow one
+  pointing at a single checkbox despite saying a lot — has to say so. Several
+  steps in dmvd's content do exactly this, which is why `Width:` stays.
+
+The same text estimate also decides **placement**: how tall the popover is
+likely to be governs whether it fits below a diagram box or has to go beside
+it, and how far up it slides when its anchor sits low. Every anchored popover
+is capped to the room below its top edge, so one that is genuinely too tall for
+any position scrolls inside itself rather than off the screen.
 
 **Font size is CSS, not a field.** There is no `FontSize:`, because text size
 is a property of the whole popover rather than of one step. Everything inside
@@ -552,9 +632,34 @@ settable from a step.
 | `legend` | `1` / `0` | the ownership legend panel |
 | `cases` | `1` / `0` | the example-cases panel |
 | `panels` | `0` only | **closes every overlay** — see below |
+| `cat` | a category id | **a whole category on the canvas** — see below |
 
 An invalid value is dropped rather than applied, so an authoring typo
 (`dir=SIDEWAYS`) leaves the setting alone instead of reaching the renderer.
+
+#### `cat=<id>` — a whole category, like the ⊞ button
+
+`cat=admin` puts every entity in a category on the canvas: exactly what
+pressing that category's ⊞ control draws, which is its members **plus its
+pins** — the borrowed classes that make the view make sense.
+
+```markdown
+- **Only:** cat=admin
+```
+
+Pair it with `Only:` rather than `Change:` unless you mean to add a category to
+what is already drawn: ⊞ replaces the canvas, so `Only:` is the verb that
+matches it.
+
+- Takes the category's **id**, not its label: `admin`, `clinical`,
+  `observation`, `lab`, `survey`, `other` (see `config/entityCategories.ts`).
+- Name several with a comma or a `~`: `cat=lab,survey`.
+- An explicit `sel` wins over it, the way `legend=1` wins over `panels=0`.
+- Like `panels`, it is an INSTRUCTION: it expands into `sel` on read and is
+  stripped from the URL, so a link the viewer copies afterwards names the
+  classes. That keeps an old link right even if the category is later
+  redefined.
+- An unknown id draws nothing rather than failing.
 
 #### `panels=0` — clear the screen
 
@@ -654,6 +759,11 @@ run of beats is building, so a step that narrows to point at a checkbox and
 keeps narrating that checkbox should not snap back on the next beat. An anchor
 belongs to ONE popover, so a stale one would strand it pointing at something the
 beat is no longer about.
+
+Stickiness governs AUTHORED widths only. A step where nobody writes `Width:`
+never enters this rule — every position simply gets the automatic width for
+whatever it is showing. But once any beat sets one, it sticks, and later beats
+stop being sized from their text until another `Width:` releases it.
 
 #### `Only:` — a step that names the whole canvas
 
