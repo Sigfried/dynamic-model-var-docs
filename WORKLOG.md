@@ -7,6 +7,79 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-08, later (anchors, the poll, and what actually blocks dragging)
+
+Exploration with Siggie, no behaviour changed. Four findings worth not
+re-deriving.
+
+### `slot-row` on a merged box: it works, and here is the proof
+
+Siggie asked whether `slot-row:MeasurementObservationSet.observations` and
+`slot-row:ObservationSet.observations` land where expected. Probed the real
+merged view model (reusing `siblingColors.test.ts`'s harness, which already
+builds `buildViewModel` + `mergeSiblings` against live data). The merged
+`ObservationSet` box holds **four** rows named `observations`:
+
+    declaringClass=ObservationSet            range=Observation
+    declaringClass=DimensionalObservationSet range=DimensionalObservation
+    declaringClass=MeasurementObservationSet range=MeasurementObservation
+    declaringClass=SdohObservationSet        range=SdohObservation
+
+Both anchors resolve correctly — the resolver queries `data-row` and
+`data-declaring-class` TOGETHER, and `declaringClassOf` accounts for
+`slot_usage`, so a child that narrows an inherited slot keeps its own row.
+Written into FORMAT.md so the next author does not have to re-probe it.
+
+### `node-box:<MergedChild>` is unsound, and Siggie spotted it
+
+The same probe showed `SpecimenQualityObservation` has a child header and
+**zero rows of its own**. So `node-box:SpecimenQualityObservation` has no row
+for the resolver's third fallback to find, while
+`node-box:MeasurementObservation` does — the same anchor kind means different
+things for different subclasses, silently. Siggie's `child-header:` proposal is
+the fix; backlogged with the `sibs=0` removal that makes it unambiguous.
+
+### "Apply the change before anchoring" — considered, rejected
+
+Siggie's first suggestion. It cannot work: there is no synchronous moment when
+a `Change:` is done. Push change → React re-render → new graph spec → **ELK
+lays out in a WORKER** → async result → boxes render. Nothing can order itself
+behind an off-thread layout. Their second suggestion (centre, poll briefly,
+stop when found) is right, and is already half-built — `WAIT_MS = 600` with
+`ready = changeSettled || rect !== null` is exactly that shape for the
+show/hide gate. What is missing is only that resolving does not STOP the poll.
+
+### What actually blocks dragging — the old sequencing was wrong
+
+BACKLOG said do the CSS anchor-positioning migration BEFORE overlays, because
+"dragging is impossible while the 250ms poll is alive". Half right, and the
+half that is wrong matters:
+
+`rect` has TWO consumers with opposite needs. `popoverPosition` is called
+inline in the render and returns a fresh style every tick, so a dragged
+`left`/`top` is stomped — that is the drag blocker, and the fix is a "viewer
+moved this" flag making the computed style an INITIAL value. Small, and
+independent of CSS anchoring. The `.help-spotlight` ring is the other consumer,
+and it must keep tracking through a drag or a relayout or a dragged box slides
+out from under its own highlight — THAT is what genuinely wants CSS anchor
+positioning (or a ResizeObserver as the cheap interim).
+
+So: split the consumers → dragging works → migrate the ring at leisure.
+Corrected in BACKLOG and TASKS 8b.
+
+### The tag-vs-resolver question is free
+
+Siggie asked why not just put `data-help-id="node-box:Participant"` on the box.
+It would work, and for `slot-row` it would even SOLVE the pair problem by
+flattening two attributes into one string — which is the shape CSS
+`anchor-name` needs, so it is a point in its favour for the migration. What it
+does NOT buy is the typo check: the help-id test greps for a literal, and an
+interpolated tag greps as the template. The schema-based check added earlier
+today covers that identically either way. Recorded because the obvious
+assumption ("tags are checkable, resolvers aren't, so tags win") is wrong here
+and would otherwise get re-litigated.
+
+---
 ## 2026-09-08, later (the tour map drew UNDER the popover — top layer, not z-index)
 
 Siggie, from a screenshot: *"whoops: clicking tour outline put it underneath the

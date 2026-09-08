@@ -324,18 +324,41 @@ construction rather than by ordering.
 app, rendered at exactly one call site (`ExploreApp.tsx`), so there is no second
 one to keep consistent with.
 
-⚠️ **Sequence this AFTER the CSS anchor-positioning migration.** Dragging is
-impossible while `HelpLayer`'s `setInterval(measure, 250)` is alive — it
-re-measures four times a second and overwrites any dragged position. That poll
-is exactly what the migration deletes, and it is why popovers are not draggable
-today. Doing overlays first means building against a timer that is about to be
-removed.
+⚠️ **Dragging is blocked by the poll, but NOT by the whole migration** —
+re-examined 2026-09-08, and the earlier "sequence this after §1" was too
+pessimistic. `popoverPosition` is called inline in the render and returns a
+fresh `style` every time, so any dragged `left`/`top` is stomped on the next
+tick of `setInterval(measure, 250)`. What dragging needs is for the popover's
+position to be computed ONCE and then left alone — a "the viewer has moved
+this" flag that turns the computed style into an initial value instead of a
+per-render assertion. That is a small change and it does not require CSS
+anchor positioning.
 
-Rough estimate, both together: **~1 day** — half for the migration (see
-HELP_PACKAGE_PLAN §1; the awkward part is the resolver-backed anchor kinds,
-whose elements the diagram destroys on relayout, and `slot-row` selecting on a
-PAIR of attributes that no single `anchor-name` rule expresses), half for
-drag/resize on top.
+**What the poll is actually keeping alive is the RING, not the popover.**
+`rect` drives both (`HelpLayer.tsx`: the `.help-spotlight` overlay and
+`popoverPosition`), and they want opposite things — the popover should stay
+where it was put, while the ring must track its anchor through a drag or a
+relayout, or a dragged box slides out from under its own highlight. Splitting
+those two consumers is the actual unit of work:
+
+- **the popover** — poll only until the anchor first resolves, then stop.
+  `resize` and `scroll` stay; they are events, not a timer.
+- **the ring** — needs continuous tracking, so it is the piece that genuinely
+  wants CSS anchor positioning (or a `ResizeObserver`/`MutationObserver` on the
+  canvas as the cheaper interim).
+
+So the order is: split the two consumers → drag works → migrate the ring at
+leisure. Rough estimate unchanged overall (**~1 day**), but the drag half is
+reachable first rather than last.
+
+⚠️ **"Apply the change before anchoring" does not work as a fix**, considered
+and rejected 2026-09-08. There is no synchronous moment when a step's `Change:`
+is "done": the chain is push change → React re-render → new graph spec → **ELK
+lays out in a worker** → async result → boxes render. The layout is genuinely
+off-thread, so nothing can order itself behind it. The existing 600ms
+`WAIT_MS` cap (hold the popover hidden until `rect` arrives, then give up and
+centre) is already the right shape for that problem; what is missing is only
+that finding the anchor does not STOP the poll.
 
 ---
 
@@ -404,6 +427,64 @@ is a one-line change.
 
 Until then: HTML comments work, never render, and are what the S3a translation
 already uses.
+
+---
+
+### Anchor kinds: three that name real things, and drop `sibs=0`
+
+Raised by Siggie, 2026-09-08: *"maybe anchoring on
+`node-box:MeasurementObservation` shouldn't be allowed anyway since it's not a
+node box"*. It should not, and the probe agrees.
+
+**What `node-box:` does today.** `helpResolvers.ts` tries three things in
+order: the box's own `data-node-id`, then `merged::<parent>`, then a row
+carrying `data-declaring-class=<entity>` and the box that contains it. The
+third case exists because a merged CHILD has no box — its rows live inside the
+parent's.
+
+**Why that third case is unsound.** Probed the live merged
+`ObservationSet`/`Observation` boxes: `SpecimenQualityObservation` has a child
+header and **zero rows of its own** — every attribute it has is inherited
+unchanged. So `node-box:SpecimenQualityObservation` has no row to find, and
+what it resolves to depends on whether that subclass happens to narrow
+anything. The same anchor means different things for different subclasses, and
+it fails silently either way.
+
+**The proposal — three kinds, each naming something that exists on screen:**
+
+| kind | points at | exists because |
+|---|---|---|
+| `node-box:<Class>` | a whole box | a box is drawn |
+| `child-header:<Class>` | the coloured header strip inside a merged box | a merged child IS drawn, as a header |
+| `slot-row:<Class>.<slot>` | one attribute row | unchanged |
+
+`child-header:` needs a `data-` attribute on the header div, which it does not
+carry today (`OwnershipGraphView.tsx` renders it with a label and a fill
+colour and nothing addressable). With it, `node-box:` on a merged child can
+fail LOUDLY instead of resolving to whatever is nearby.
+
+**`sibs=0` goes.** Siggie, 2026-09-08: *"let's just get rid of sibs=0. i never
+use it anyway and it really crowds the canvas."* That is what makes the table
+above unambiguous — while the toggle exists, `MeasurementObservation` IS a real
+box in one mode and a header in another, so an anchor's meaning depends on a
+display setting. Removing it is its own piece of work and touches more than the
+anchors: a URL param and its `DEFAULTS`/`toQuery` handling
+(`exploreState.ts`), a localStorage key (`LS_KEYS.sibs`), the tour state stack
+(`tourStateStack.ts`), the toolbar toggle and `rememberPreference`
+(`OwnershipGraphView.tsx`), `ExploreApp`'s `mergeSibs` state, and the unmerged
+render path itself. `FORMAT.md`'s param table lists it too.
+
+**What this does NOT buy: dropping resolvers for tags.** Siggie asked whether
+`data-help-id="node-box:Participant"` on the box would let the tag mechanism
+replace the resolver. It would — the interpolation is one line at each render
+site, and for `slot-row` it actually SOLVES the pair problem by flattening
+`(data-row, data-declaring-class)` into one string, which is exactly the shape
+CSS `anchor-name` needs. But it does not buy the typo check: the existing
+help-id test greps the source for a literal, and a `data-help-id` built by
+interpolation greps as the template, not as any class name. The schema-based check added
+2026-09-08 is what covers that, and it covers it identically either way. So the
+tag-vs-resolver choice is free to be made on design grounds — which is the
+point Siggie was making.
 
 ---
 

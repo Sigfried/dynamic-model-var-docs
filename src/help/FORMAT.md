@@ -357,7 +357,14 @@ Two kinds have an edge worth knowing when you author:
   row may not exist in the DOM when the step fires; give such a step a
   `Change:` that selects the entity, or anchor it at the diagram instead.
 - **`slot-row:<E>.<slot>`** splits on the LAST dot. Inside a merged sibling box
-  several rows can share a slot name, and `<E>` is what picks between them.
+  several rows can share a slot name, and `<E>` is what picks between them —
+  `<E>` is the class that DECLARES the row, which for a child that narrows an
+  inherited slot is the child, not the parent. Verified against the live merged
+  `ObservationSet` box, which holds four rows named `observations`:
+  `slot-row:ObservationSet.observations` finds the shared one (→ `Observation`)
+  and `slot-row:MeasurementObservationSet.observations` the child's override
+  (→ `MeasurementObservation`). The resolver queries `data-row` and
+  `data-declaring-class` together, which is what makes the pair unique.
 - **`category-row:<id>`** takes the category's **id**, not its label:
   `category-row:admin`, not `category-row:admin-study` for "Admin / Study". The
   ids are the short slugs in `config/entityCategories.ts` (`admin`, `clinical`,
