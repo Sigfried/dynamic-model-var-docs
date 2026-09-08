@@ -117,6 +117,32 @@ in for a measurement the browser can do; `autoWidth`/`navMinWidth` are choices
 that would still be choices with perfect information. Do not delete the second
 pair in the name of this item.
 
+### The one design question to settle first
+
+`position-anchor` names ONE anchor. The step's anchor is dynamic — whichever
+element `resolveAnchor` returns for the current position. So "a blanket rule
+keyed on `[data-help-id]`" (written above, and true as far as it goes) gives
+every tagged element AN anchor name; it does not say which one the popover
+should use. Two shapes, and this is the first thing to decide:
+
+- **A single well-known name, moved.** Everything keeps a per-element
+  `anchor-name` only if needed; the ACTIVE element additionally gets
+  `anchor-name: --help-anchor` — set by toggling one attribute/class on it as
+  the step changes (`document.querySelector` once per step, not per frame), and
+  `.help-popover`/`.help-spotlight` both say
+  `position-anchor: --help-anchor`. Simple, and one line of imperative code
+  survives — but it is a WRITE to one element per step, not a per-frame read of
+  positions, so it does not reintroduce what this task deletes.
+- **A per-element name, referenced dynamically.** Each element gets its own
+  `anchor-name: --help-<id>` and the popover's `position-anchor` is set inline
+  from the current step. Needs a CSS custom property (`position-anchor` takes a
+  `<dashed-ident>`, so check whether `var()` is permitted there before
+  committing to this) and generated names for the runtime-resolved kinds.
+
+The first is almost certainly right; it is written down because the second is
+the one that looks more "pure CSS" and is the tempting wrong turn. Settle it
+before writing any CSS, since everything below depends on it.
+
 ### Start here
 
 1. `anchor-name` on the ten `[data-help-id]` elements via one blanket rule in
