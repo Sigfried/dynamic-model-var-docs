@@ -7,6 +7,80 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-08, evening (the tour map, and a constraint I got wrong)
+
+Siggie: tour 1 has grown long and *"the user is not going to have any real
+sense of where they are in it or what's coming up"*; separately, tours are
+*"sort of hidden behind the Guided tours button"*. Built an outline panel that
+serves both.
+
+### The wrong constraint, and what caused it
+
+I first told Siggie that arbitrary jumps were **not currently possible** and
+would need either replaying every intermediate step or restarting the tour —
+"a real piece of work, not a display change". Siggie pushed back: *"does it
+really need to be this difficult? there will be no user clicking during a
+navigation event. held and tempHeld remain what they are. why would you need to
+step the UI through all the steps? just append to the frame stack in one step."*
+
+They were right. `pushStep` and `popStep` are pure `TourState -> TourState`
+with no rendering coupling, so a jump is a FOLD:
+
+```
+forward:  positions.slice(from+1, to+1).reduce(pushStep, state)
+backward: popStep, (to - from) times
+```
+
+One `setState` at the end. `held` and `tempHeld` are written only by
+`tick`/`untick`, and a viewer cannot click mid-jump, so nothing can drift.
+
+**What caused the error.** I read `goTo`'s doc comment — *"Forward only — `back`
+is `prevStep`, which pops instead. The asymmetry with `goTo` is the point of the
+whole design"* — and generalised a statement about the NAVIGATION API into a
+statement about the STATE MODEL. The asymmetry is real and is about how
+`positions` is walked; it says nothing about whether `TourState` can be folded.
+**A comment describing one layer's design is not evidence about the layer
+below it.**
+
+### The beatless-step bug, caught by a fixture
+
+`rowsFor` first filtered `positions` on `beatIndex === -1` to find each step's
+opening position. **Wrong: only a step WITH beats has a position at -1.** A
+beatless step has exactly one position, numbered 0, so the filter dropped every
+beatless step from the map — silently, since the surviving rows all look right.
+
+Measured on the live content before fixing: **4 of 10 steps would have been
+missing**, including tour 1's `app-model-mods` and `why`. Now "first position
+per step", and `tourMap.test.ts`'s fixture deliberately mixes a step with beats
+and one without, so the filter cannot regress to the tidier-looking version.
+
+This is the second time this session that probing the real parse corrected a
+plausible assumption (the first: `attributes` vs top-level `slots` in the admin
+beats). Both would have shipped looking fine.
+
+### Two tests that had to change, and why neither was wrong
+
+- **`helpPlacement`: "puts dmvd's value in the app sheet, not the package"**
+  asserted `--help-font-size` appears EXACTLY ONCE in `help.css`. The map is
+  `position: fixed`, so it cannot inherit the property from `.help-popover` and
+  needs its own declaration — a second legitimate DEFAULT, not an app value
+  creeping in. The count was a proxy that happened to hold while there was one
+  surface. Rewritten to check the real rule: every declaration in the package
+  is the package default (13px).
+- **`tourChooser`: the row list** now includes the `Overview` row. Excluded
+  structurally via `data-tour-overview` rather than by matching the text
+  "Overview", so a tour actually NAMED Overview would still be counted.
+
+### What is not built
+
+The Overview panel's CONTENT. It lists tours and their step titles, which is
+the structural half; the prose that would make it a landing surface is the
+`why` discussion, parked in BACKLOG. The map is also a THIRD floating overlay
+beside the legend and the cases, so it inherits their unfixed overlap problem
+(BACKLOG § Overlays) — one instance more expensive to keep ignoring.
+
+
+---
 ## 2026-09-08, later still (admin-study beats)
 
 Finished the `admin-study` step's beats — the inline `<!-- Claude: finish the

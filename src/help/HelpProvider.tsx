@@ -100,7 +100,7 @@ function resolveText(
 }
 
 export function HelpProvider({
-  markdown, onPushChange, onPopChange, onTourStart, onTourEnd,
+  markdown, onPushChange, onPopChange, onJumpChanges, onTourStart, onTourEnd,
   resolvers, textResolvers, centerOn, children,
 }: {
   markdown: string;
@@ -128,6 +128,20 @@ export function HelpProvider({
    * exit; there is nothing to restore now, because nothing was overwritten.
    */
   onPopChange?: () => void;
+  /**
+   * Move the host several positions at once, in ONE update.
+   *
+   * What the tour map needs: jumping from step 2 to step 7 is five pushes, and
+   * driving them through `onPushChange` one at a time would make the host
+   * publish five times, churning the canvas through four selections nobody
+   * asked to see. `pops` first, then `changes` — a jump is only ever one
+   * direction, so exactly one of them is non-empty.
+   *
+   * Optional like the rest: a host that does not implement it simply has no
+   * jumping, and `goToStep` falls back to nothing rather than to a loop of
+   * single steps that would churn.
+   */
+  onJumpChanges?: (changes: { query: string; replace?: boolean }[], pops: number) => void;
   /**
    * A tour is beginning: whatever is on screen belongs to the viewer.
    *
@@ -327,6 +341,47 @@ export function HelpProvider({
   }, [positions, onPopChange]);
 
   /**
+   * Jump to any position in the running tour, in one move. What the map does.
+   *
+   * **Why this is not `goTo` in a loop.** `goTo` pushes one change and renders;
+   * looping it walks the canvas through every intermediate selection. The host
+   * gets the whole run instead and applies it as one update.
+   *
+   * Direction decides the shape. Forward, the positions BETWEEN here and there
+   * contribute their changes — a position with no `Change:` contributes
+   * nothing, which is inheritance working exactly as it does one step at a
+   * time. Backward, the positions being LEFT are popped, on the same rule
+   * `goBack` uses: a position that pushed nothing pops nothing.
+   *
+   * Landing on the target's own position is a push like any other, so the
+   * forward run INCLUDES it and the backward run does not pop it.
+   */
+  const goToStep = useCallback((i: number) => {
+    if (tourIndex === null || i === tourIndex) return;
+    const pos = positions[i];
+    if (!pos) return;
+    /*
+     * No host handler, no jump — deliberately, rather than moving the popover
+     * anyway. A tour is the popover and the canvas together; advancing one
+     * without the other lands on a step whose copy describes a diagram that
+     * was never drawn, which is worse than the button doing nothing.
+     */
+    if (!onJumpChanges) return;
+    if (i > tourIndex) {
+      const changes = positions.slice(tourIndex + 1, i + 1)
+        .filter(p => p.change != null)
+        .map(p => ({ query: p.change!, replace: p.replace }));
+      onJumpChanges(changes, 0);
+    } else {
+      const pops = positions.slice(i + 1, tourIndex + 1)
+        .filter(p => p.change != null).length;
+      onJumpChanges([], pops);
+    }
+    setTourIndex(i);
+    setActiveId(pos.entry.id);
+  }, [tourIndex, positions, onJumpChanges]);
+
+  /**
    * Start a tour, by name. No name runs the first tour in the file.
    *
    * **It does not call `goTo(0)`.** `goTo` reads the `positions` memo through
@@ -516,13 +571,13 @@ export function HelpProvider({
   const api = useMemo<HelpApi>(() => ({
     setTextResolvers: setRegistered,
     helpMode, toggleHelpMode, exitHelpMode,
-    tourIndex, startTour, endTour, nextStep, prevStep,
+    tourIndex, startTour, endTour, nextStep, prevStep, goToStep,
     positions, position: tourIndex === null ? undefined : positions[tourIndex],
     stepCount, tours, tourName, tourMeta: content.tourMeta,
     showAddresses, toggleAddresses,
     content, activeId, showEntry, dismissEntry, resolveAnchor, centerRect,
   }), [helpMode, toggleHelpMode, exitHelpMode, tourIndex, startTour, endTour,
-       nextStep, prevStep, positions, stepCount, tours, tourName,
+       nextStep, prevStep, goToStep, positions, stepCount, tours, tourName,
        showAddresses, toggleAddresses,
        content, activeId, showEntry, dismissEntry, resolveAnchor, centerRect]);
   /* `setRegistered` is a useState setter: React guarantees it stable, so it is

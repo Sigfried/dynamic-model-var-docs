@@ -146,9 +146,21 @@ describe('dmvd overrides the popover font size without touching the package', ()
 
   it("puts dmvd's value in the app sheet, not the package", () => {
     expect(app).toMatch(/--help-font-size:\s*\d+px/);
-    // Exactly one declaration in the package: the default. A second would mean
-    // an app value had crept back in.
-    expect(pkg.match(/--help-font-size:\s*\d+px/g)).toHaveLength(1);
+    /*
+     * Every declaration in the PACKAGE is the package default, whichever
+     * surface it is on. There are two now — `.help-popover` and `.help-map`,
+     * which is `fixed` and so cannot inherit the popover's — and there will be
+     * one per surface that needs the knob.
+     *
+     * This asserted `toHaveLength(1)` until the map landed. That was a proxy
+     * for the real rule ("no dmvd value in the package") that happened to hold
+     * while there was one surface, and it failed on a second legitimate
+     * DEFAULT. The rule is checked directly now, so adding a surface does not
+     * fail and an app value creeping back in still does.
+     */
+    const inPackage = pkg.match(/--help-font-size:\s*(\d+)px/g) ?? [];
+    expect(inPackage.length).toBeGreaterThan(0);
+    for (const decl of inPackage) expect(decl).toMatch(/13px/);
   });
 
   it('imports the override sheet after the package CSS', () => {

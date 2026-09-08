@@ -464,6 +464,96 @@ not a mechanical one.**
 
 ---
 
+## Tours and content
+
+### The `why` argument — two audiences, one step
+
+Parked 2026-09-08, mid-discussion. The `why` entry closes tour 1 and is meant
+to answer *why use the Explorer*. It does not currently work, and the reason is
+that **two different readers need two different arguments**, which one step
+cannot carry.
+
+**The researcher** needs *what is in this model and how do I find my way
+around it*. For them the provenance chain below is background they will never
+need. Note their entry point: the `You may want to use BDCHM:` list (analyze
+harmonized data / harmonize your own / design pre-harmonized studies / take
+ideas for your own model) reads as unconvincing BEFORE you know what the model
+is — Siggie's own objection. It probably belongs after the category walk, not
+before it.
+
+⚠️ **That list is the most important thing for the stakeholders** — their
+priority is getting this to researchers — even though it is not what a
+first-time researcher needs first. Worth a session of its own: three of the
+four uses (analyze, harmonize, design) suggest genuinely different ENTRY
+POINTS into the same data, which is a larger idea than a tour step.
+
+**The LinkML-aware reader** needs *why prefer this to the generated docs or to
+reading the YAML*. This argument is **absent from the app entirely** and is the
+one with money attached: Siggie has had significant interest from the LinkML
+community on earlier versions that never got off the ground, and the outcome
+worth optimising for is someone finding it compelling enough to fund
+generalizing it beyond BDCHM. For this reader the provenance chain is not
+background, it is the CREDENTIAL — dm-bip being a LinkML package is what makes
+the app generalizable rather than bespoke.
+
+**The provenance chain**, which Siggie listed and was unsure how to structure:
+
+- BDCHM's place in BDC
+- its place in the data ingest / harmonization pipeline
+- the pipeline's place in LinkML (dm-bip is a LinkML package)
+- the Explorer's place in all of that
+
+It is a **nesting, so it is a picture, not prose** — four consecutive "X's
+place in Y" sentences read as an org chart. Same request as
+[TASKS.md](TASKS.md) item 4's diagrams ("NOT ascii, looking like the app"). One
+diagram with the Explorer highlighted serves both audiences: the researcher
+skims it, the LinkML reader reads it as positioning.
+
+**Where it probably lives.** Not as a tour step. Someone evaluating whether to
+fund this will not click through a guided walk to find the pitch. It wants the
+surface you land on BEFORE choosing a tour — which is the Overview panel (see
+the tour map, below). Whether `why` is then deleted from tour 1 or kept as a
+closing step with the panel carrying the longer argument is **undecided and is
+Siggie's call.**
+
+Already done: the `Once: intro` key and its alert are gone from the entry — the
+alert said *"This tour will introduce you to all of BDCHM Explorer's major
+features"*, which was an OPENING line sitting at the end and was inaccurate
+besides, since tour 1 is about the model and tours 2-5 are the features.
+
+---
+
+### The tour map and the Overview panel
+
+Siggie, 2026-09-08: tour 1 is going to be long and *"the user is not going to
+have any real sense of where they are in it or what's coming up"*; separately,
+tours are *"sort of hidden behind the Guided tours button"*.
+
+Two needs, same data at two zoom levels, so one component:
+
+- **In-tour**: where am I, what is coming, let me jump. Wants step titles.
+- **Before a tour**: what is in each one. The chooser shows one sentence per
+  tour and nothing about contents.
+
+**Decided and built** (see WORKLOG): an icon on the popover's counter line
+opening its OWN floating panel — not an expansion of the popover, which would
+be cramped, and not its own chrome line. The all-tours view is the same panel
+unfiltered, reached from an **Overview** row at the top of the chooser rather
+than by nesting a step list under each tour, which would crowd the menu.
+
+**Still open:**
+
+- The chooser button should open on **hover**, not only click. Not done.
+- The panel is a third floating overlay beside the legend and the cases, so it
+  inherits [Overlays: one model](#overlays-one-model-draggable-and-resizable) —
+  the legend covers the drawer by construction. Not a blocker, but the map is
+  now a third instance of the same unfixed problem.
+- **Overview CONTENT is unwritten.** What ships is structural: the tour list
+  with step titles. The prose that would make it a landing surface is the
+  `why` discussion above.
+
+---
+
 ## Siggie's upcoming thoughts
 
 1. A help or legend listing **every type of ownership pair**, the rules and

@@ -35,6 +35,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import Markdown from 'react-markdown';
 import { useHelp } from './helpContext';
 import type { HelpAnchor, Offset, PopoverSide } from './parseHelpContent';
+import TourMap from './TourMap';
 import './help.css';
 
 /**
@@ -165,6 +166,8 @@ export default function HelpLayer() {
     dismissEntry, nextStep, prevStep, endTour, showEntry, resolveAnchor, centerRect,
     showAddresses,
   } = useHelp();
+
+  const [mapOpen, setMapOpen] = useState(false);
 
   const inTour = tourIndex !== null;
   const entry = activeId ? content.entries.get(activeId) : undefined;
@@ -571,6 +574,18 @@ export default function HelpLayer() {
                   {position?.step} / {stepCount}
                 </span>
                 {beatDots()}
+                {/*
+                  The way OUT of the tour's linear path: where am I, what is
+                  coming, let me skip ahead. On the counter line because it is
+                  a bigger version of the counter, and quiet because it is not
+                  a step in the walk.
+                */}
+                <button
+                  className="help-tour-map-btn"
+                  onClick={() => setMapOpen(v => !v)}
+                  aria-expanded={mapOpen}
+                  title="Show the tour outline"
+                >⊞</button>
                 <span className="help-tour-spacer" />
                 {/*
                   The keyboard bindings are announced HERE because nothing else
@@ -618,6 +633,10 @@ export default function HelpLayer() {
           </>
         )}
       </div>
+      {/* Rendered beside the popover rather than inside it: it is a panel, and
+          nesting it in the card is exactly the cramped thing it exists to
+          avoid. Only in a tour — outside one there is no outline to show. */}
+      {mapOpen && inTour && <TourMap scope="tour" onClose={() => setMapOpen(false)} />}
     </>
   );
 }

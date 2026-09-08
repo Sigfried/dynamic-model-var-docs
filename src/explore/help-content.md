@@ -140,8 +140,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 
 - **Title:** Category: Admin / Study
 - **Tour:** The BioData Catalyst Harmonized Model
-- **Description:** [text here about admin category]
-
+- **Description:**
   Eight classes answer *who was studied, by whom, and under what agreement*.
   Nothing here is a measurement — these are the records every other category
   hangs off. Read the diagram left to right: the study comes first, the
@@ -189,10 +188,10 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
        ##### One person, several participants
        Person and Participant are the first genuinely modelling-flavoured
        distinction in the schema, and it is worth slowing down for. A
-       **Person** is a human being. A **Participant** is that person's role in
+       **Person** is generally a human being. A **Participant** is that person's role in
        one study, and `associated_person` is the link. The same person enrolled
-       in three studies is three Participants — usually deliberately
-       untraceable back to the person, which is how privacy is kept.
+       in three studies is three Participants — usually de-identified and
+       deliberately untraceable back to the actual person.
      - Anchor: node-box:Participant
   7. Consent
      - Description:
@@ -250,12 +249,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
   The **BDCHM Explorer** provides a single-page, highly interactive interface
   allowing you to easily see details of and relationships between specific
   entities or neighborhoods around entities you select.
-
-  > This tour will introduce you to all of BDCHM Explorer's major features.
-  > - Click the ✕ or hit **Esc** any time to exit.
-  > - Use arrow keys or next/back buttons to navigate.
 - **Anchor:** none
-- **Once:** intro
 - **Change:**
 - **Width:** 700
 

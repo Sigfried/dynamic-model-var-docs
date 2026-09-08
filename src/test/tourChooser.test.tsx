@@ -36,6 +36,7 @@ function api(over: Partial<HelpApi>): HelpApi {
     tourMeta: new Map<string, TourMeta>(),
     nextStep: () => {},
     prevStep: () => {},
+    goToStep: () => {},
     positions: [],
     position: undefined,
     stepCount: 0,
@@ -71,8 +72,17 @@ function openChooser(over: Partial<HelpApi>) {
   return screen.getByRole('dialog', { name: /guided tours/i });
 }
 
+/**
+ * The TOUR rows, which is what every assertion below is about.
+ *
+ * The chooser's first row is `Overview` — it opens the all-tours map rather
+ * than starting anything, so it is chrome, not a tour, and counting it would
+ * make "every tour the content declares is listed" fail on a row that
+ * declares no tour.
+ */
 const rows = (box: HTMLElement) =>
-  [...box.querySelectorAll('button')].map(b => b.textContent ?? '');
+  [...box.querySelectorAll('button:not([data-tour-overview])')]
+    .map(b => b.textContent ?? '');
 
 describe('Guided tours chooser', () => {
   test('every tour the content declares is listed, in order', () => {

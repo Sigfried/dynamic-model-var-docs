@@ -9,7 +9,12 @@
  * imports this), so equal-specificity rules here win.
  */
 
-.help-popover {
+/* The tour map is listed beside the popover, not nested in it: it is a
+   `fixed` sibling panel, so it cannot inherit a property set on
+   `.help-popover`. Both surfaces are the same package's UI and want to move
+   together under one knob, so both are named here. */
+.help-popover,
+.help-map {
   /* Base size for the whole popover. Everything inside is `em` off this, so
      one value moves prose, title, action band, alert, context and tour nav
      together. Package default is 13px; see the comment on `.help-popover` in

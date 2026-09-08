@@ -20,10 +20,22 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useHelp } from '../help/helpContext';
+import TourMap from '../help/TourMap';
 
 export default function TourChooser() {
   const { tours, tourMeta, startTour } = useHelp();
   const [open, setOpen] = useState(false);
+  /*
+   * The overview panel: every tour with its steps.
+   *
+   * A row here rather than a step list nested under each tour, which is what
+   * this was first drafted as. Siggie, 2026-09-08: *"maybe the first item
+   * should be 'Overview' or something instead of the first tour, and this
+   * could also bring up a popover. don't want to crowd everything under the
+   * menu"*. So the chooser stays a short list of names and the detail is one
+   * click away.
+   */
+  const [overview, setOverview] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
 
   // Escape closes, and so does a click outside. Capture phase for the same
@@ -50,7 +62,19 @@ export default function TourChooser() {
   if (tours.length === 0) return null;
 
   return (
-    <span data-tour-chooser data-help-id="tour-chooser" className="relative">
+    <span
+      data-tour-chooser
+      data-help-id="tour-chooser"
+      className="relative"
+      /*
+       * Opens on HOVER as well as click. Siggie, 2026-09-08: the tours are
+       * "already hard to get to; at bare minimum it should appear on hover,
+       * not just click". Only opening — leaving does not close, or the list
+       * would vanish while you were reaching for a row below the button.
+       * Closing stays with the click-outside and Escape handlers.
+       */
+      onMouseEnter={() => setOpen(true)}
+    >
       <button
         onClick={() => setOpen(v => !v)}
         title="Guided walks through the app and the model"
@@ -75,6 +99,20 @@ export default function TourChooser() {
           <p className="px-3 pt-2 pb-1 text-[11px] text-gray-500 dark:text-gray-400">
             Each one stands on its own. Leave any tour with <kbd>Esc</kbd>.
           </p>
+          <button
+            data-tour-overview
+            onClick={() => { setOpen(false); setOverview(true); }}
+            className="block w-full text-left px-3 py-2 rounded
+                       hover:bg-gray-100 dark:hover:bg-slate-700"
+          >
+            <span className="block text-xs font-semibold">Overview</span>
+            <span className="block text-[11px] text-gray-500 dark:text-gray-400">
+              {/* Counted, not written: "all five" would go stale the next
+                  time a tour is split. */}
+              All {tours.length} tours and every step in them — start anywhere.
+            </span>
+          </button>
+          <div className="my-1 border-t border-gray-200 dark:border-slate-700" />
           {tours.map(name => (
             <button
               key={name}
@@ -94,6 +132,7 @@ export default function TourChooser() {
           ))}
         </div>
       )}
+      {overview && <TourMap scope="all" onClose={() => setOverview(false)} />}
     </span>
   );
 }

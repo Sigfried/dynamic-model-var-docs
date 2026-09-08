@@ -649,12 +649,41 @@ function popTourChange(): void {
   publish(compose(readExploreState(), tourState));
 }
 
+/**
+ * Jump several positions at once, publishing ONCE at the end.
+ *
+ * The tour map lets a viewer skip from step 2 to step 7, which is `pushStep`
+ * five times — but going through `pushTourChange` five times would publish
+ * five times, so the canvas would visibly churn through four intermediate
+ * selections nobody asked to see.
+ *
+ * **Why a fold is correct and not a shortcut.** `pushStep` and `popStep` are
+ * pure `TourState -> TourState`; the only other writers are `tick`/`untick`,
+ * and a viewer cannot click mid-jump. So folding N pushes is exactly N
+ * sequential pushes with the renders in between elided — `tour`, `region` and
+ * `tourStates` all land where stepping would have put them, and `held` and
+ * `tempHeld` are untouched by both functions and so cannot drift.
+ *
+ * ⚠️ **Backward jumps do not restore scalars**, because `popStep` does not
+ * (standing decision, 2026-08-27: *"easy enough for the user to reclick the
+ * button"*). Unchanged by this, but a jump crosses more steps than a `back`
+ * does, so a `dir=DOWN` set six steps ago is more visibly still set.
+ */
+function jumpTourChanges(changes: { query: string; replace?: boolean }[], pops: number): void {
+  for (let i = 0; i < pops; i++) tourState = popStep(tourState);
+  for (const c of changes) {
+    tourState = pushStep(tourState, parseTourChange(c.query, c.replace));
+  }
+  publish(compose(readExploreState(), tourState));
+}
+
 export default function ExploreApp() {
   return (
     <HelpProvider
       markdown={helpMarkdown}
       onPushChange={pushTourChange}
       onPopChange={popTourChange}
+      onJumpChanges={jumpTourChanges}
       onTourStart={onTourStart}
       onTourEnd={onTourEnd}
       /* Resolvers for the row-level anchor kinds. They live here, not in

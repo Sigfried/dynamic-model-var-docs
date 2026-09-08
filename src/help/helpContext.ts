@@ -100,6 +100,15 @@ export interface HelpApi {
   nextStep: () => void;
   prevStep: () => void;
   /**
+   * Jump to any position in the running tour, in one move — what the tour map
+   * clicks. Index into `positions`, like `tourIndex`.
+   *
+   * A no-op outside a tour, and for a host that did not pass `onJumpChanges`
+   * (the popover moves but the canvas would not follow, so it does not move
+   * either).
+   */
+  goToStep: (i: number) => void;
+  /**
    * Every navigable position in the tour, flattened by the parser. The
    * mechanism navigates this list and never handles nesting; `back` is
    * `positions[i - 1]`, reached by POPPING what the position being left
