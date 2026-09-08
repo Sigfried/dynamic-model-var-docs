@@ -409,13 +409,27 @@ already uses.
 
 ### `goTo`'s silent no-op
 
-[`HelpProvider.tsx`](../src/help/HelpProvider.tsx), in `goTo`: `const pos = positions[i]; if (!pos) return;`
+[`HelpProvider.tsx`](../src/help/HelpProvider.tsx): `goTo`, `goToStep` and
+`startTour` each bail on a bad index or an empty tour with a bare `return` —
+no error, no warning, no retry.
 
-`startTour()` calls `goTo(0)`. When `positions` is empty the call **does nothing
-and says nothing** — no error, no warning, no retry when positions arrive.
+⚠️ **This stopped being hypothetical on 2026-09-08.** The write-up below was
+about a race that cannot happen; the silence is what actually cost time, twice
+in one session, and both times the code was *reached* with state that made it
+return:
 
-**Not a live bug today.** `positions` comes from a STATIC markdown import, so it
-is populated on the first render and no caller can lose the race.
+- `goToStep` returns on `tourIndex === null`. The tour map called it after
+  `endTour` had left `tourName` set, so every click did nothing.
+- The same guard swallowed the deep-link jump deferred into a
+  `requestAnimationFrame` whose closure predated `startTour`.
+
+Both are fixed at their own root, but neither would have taken more than a
+minute to find if the guard had said anything. **A guard that returns silently
+turns a wrong caller into a dead UI, and a dead UI reads as "weird state"** —
+which is exactly how Siggie reported them.
+
+**Not a race, though.** `positions` comes from a STATIC markdown import, so it
+is populated on the first render and no caller can lose that race.
 
 **Why it is still worth fixing.** It is a trap sized for the next person who
 calls `startTour()` from somewhere new. It cost real time on 2026-08-28: `?tour=1`
@@ -423,10 +437,11 @@ was not working, this looked like a satisfying explanation, and a deferral was
 built for it before instrumentation showed the actual cause was URL timing. **A
 silent failure that *looks* like the answer is worse than one that does not.**
 
-**Loud is probably the right call** — a `console.warn` on the empty case. The
-deferral version adds real state for a case that cannot currently happen, and
-the complaint is the silence, not the behaviour. (It was written and reverted
-the same day; it was never committed, so it would have to be written again.)
+**Loud is the right call** — a `console.warn` on each bail, naming which guard
+and what it was asked for. The deferral version adds real state for a case that
+cannot currently happen, and the complaint is the silence, not the behaviour.
+(It was written and reverted the same day; never committed, so it would have to
+be written again.)
 
 ### Hand-curated config rot
 
@@ -454,6 +469,13 @@ NAME, not `(class, slot)`. Every member happens to occur at exactly one class �
 **luck, not design**, and exactly how `performed_by` (11 sites) did damage when
 it sat in the old override list. **A sync check should assert each still has one
 site. Not built.**
+
+⚠️ **The COMMENTS rot too, and nothing tests them.** Found 2026-09-08 while
+writing tour content off them: `entityCategories.ts` says Quantity has "16
+slots across 13 classes" (live: 11 across 9) and that Survey has "two outward
+references" (live: one). Both were true when written. Counts in those comments
+are prose, not assertions — **probe before quoting one into user-facing text**,
+which is exactly the mistake that nearly shipped in the `admin-study` beats.
 
 **What to do after a sync:** run the suite first (it catches the tested rows),
 then re-read [`src/config/entityCategories.ts`](../src/config/entityCategories.ts) for categories and pins, and
@@ -523,34 +545,27 @@ besides, since tour 1 is about the model and tours 2-5 are the features.
 
 ---
 
-### The tour map and the Overview panel
+### The Overview panel's content
 
-Siggie, 2026-09-08: tour 1 is going to be long and *"the user is not going to
-have any real sense of where they are in it or what's coming up"*; separately,
-tours are *"sort of hidden behind the Guided tours button"*.
+**The map itself SHIPPED** 2026-09-08 (`ece5e56`, `b0829d6`, `d0519dc`):
+`src/help/TourMap.tsx`, one component at two scopes — the running tour's steps
+behind the ⊞ on the popover's counter line, and every tour behind the chooser's
+**Overview** row. Clicking a step jumps to it, or starts that tour there.
 
-Two needs, same data at two zoom levels, so one component:
+What is left is **content, not structure.** The panel lists tour names, their
+`TourMetadata:` blurbs and their step titles. That makes it navigable; it does
+not make it the landing surface the argument above calls for. Writing that is
+the `why` discussion — the two are the same task and the same surface, which is
+why they sit together here.
 
-- **In-tour**: where am I, what is coming, let me jump. Wants step titles.
-- **Before a tour**: what is in each one. The chooser shows one sentence per
-  tour and nothing about contents.
+Still open beside it:
 
-**Decided and built** (see WORKLOG): an icon on the popover's counter line
-opening its OWN floating panel — not an expansion of the popover, which would
-be cramped, and not its own chrome line. The all-tours view is the same panel
-unfiltered, reached from an **Overview** row at the top of the chooser rather
-than by nesting a step list under each tour, which would crowd the menu.
-
-**Still open:**
-
-- The chooser button should open on **hover**, not only click. Not done.
-- The panel is a third floating overlay beside the legend and the cases, so it
-  inherits [Overlays: one model](#overlays-one-model-draggable-and-resizable) —
-  the legend covers the drawer by construction. Not a blocker, but the map is
-  now a third instance of the same unfixed problem.
-- **Overview CONTENT is unwritten.** What ships is structural: the tour list
-  with step titles. The prose that would make it a landing surface is the
-  `why` discussion above.
+- The map is a third floating overlay beside the legend and the cases, so it
+  inherits [Overlays: one model](#overlays-one-model-draggable-and-resizable).
+  Not a blocker; one instance more expensive to keep ignoring.
+- Step numbering restarts per tour in the Overview, so the same number appears
+  under several headings. Fine as it stands — the headings disambiguate — and
+  noted only so it is not "fixed" without a reason.
 
 ---
 

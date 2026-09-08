@@ -12,6 +12,19 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 <details>
 <summary><b>TODO</b></summary>
 
+> **Where the work actually is: [docs/TASKS.md](../../docs/TASKS.md) item 1** —
+> tour 1 needs a category step for `clinical`, `observation`, `lab`, `survey`
+> and `other`, modelled on `admin-study`. `app-model-mods` promises a walk
+> through each category and only `admin` exists.
+>
+> Everything below is Siggie's scratchpad, kept because it is theirs to cut.
+> Two of its bullets have since been filed properly and are tracked there, not
+> here: **"Make better Change, Action, Beat"** is TASKS item 3, and
+> **multi-line for the other fields** is in
+> [BACKLOG § Tour authoring notes](../../docs/BACKLOG.md#tour-authoring-notes--draft-preview).
+> The "Original unfinished draft text" fold is fully translated into the
+> entries below it.
+
 <details>
 <summary><b>Original unfinished draft text</b></summary>
 

@@ -32,10 +32,11 @@ the skeleton for the fix.
 
 Order is fixed: **complexity rising, each tour using what the last established.**
 
-Today's content defines **two** tours: `The BioData Catalyst Harmonized Model`
-and `Walkthrough`, whose own description says *"The original tour. Parts will be
-used for specific tours now."* Authoring these five is largely **splitting
-`Walkthrough`** into the middle four, not writing from nothing.
+Today's content defines **three**: `The BioData Catalyst Harmonized Model`
+(4 steps), `Getting oriented` (1 step) and `Walkthrough` (5 steps), whose own
+description says *"The original tour. Parts will be used for specific tours
+now."* So the middle tours come largely out of **splitting `Walkthrough`**,
+not writing from nothing.
 
 The category ⊞ views the steps below load shipped 2026-09-04. ⚠️ Their pin sets
 are hand-curated and rot invisibly on an upstream schema sync — re-read
@@ -45,7 +46,49 @@ than re-running a query; the criterion is editorial, not mechanical. See
 
 ### 1. The BioData Catalyst Harmonized Model
 
-[sg] moved text into help-content note
+Prose lives in the content file now, not here. What remains is the SHAPE:
+
+| # | entry | state |
+|---|---|---|
+| 1 | `bdchm` | done — context, sources, contents |
+| 2 | `app-model-mods` | done — promises a walk through each category |
+| 3 | `admin-study` | done 2026-09-08, 10 beats |
+| — | `clinical`, `observation`, `lab`, `survey`, `other` | **not written — this is the work** |
+| 4 | `why` | written, but its placement is unsettled ([TASKS 3b](TASKS.md)) |
+
+**The recipe, from `admin-study`.** Per category: `Only: cat=<id>` and an
+`Action:` saying it drew the category; then one beat per class, a `#####`
+subtitle with the class name and `{{model-description:X}}` beneath it, anchored
+`node-box:<Class>`. Frame with a sentence of your own where the schema's
+description does not stand alone, and close with a beat that says what the
+category is FOR rather than what is in it.
+
+⚠️ **Order the beats by the DRAWN layout, left to right, not by `classIds`.**
+The canvas is layered by ownership, so config order jumps around the screen.
+Get the order by probing the containment graph — **not by reading the YAML**,
+which misses the top-level `slots` (`associated_participant`,
+`associated_visit`, `associated_person`) that carry most of the structure. That
+mistake nearly shipped a false claim in `admin-study`; see WORKLOG 2026-09-08.
+
+Category members and pins are in
+[`entityCategories.ts`](../src/config/entityCategories.ts). `cat=<id>` draws
+members **plus pins**, so a pinned outside class is on the canvas and can be
+anchored — `clinical`, `observation`, `lab` and `other` all pin `Participant`.
+
+Content each step gets to state, already checked:
+
+- **Survey** is genuinely self-contained — ten classes, ONE outward reference
+  (`QuestionnaireResponse.associated_visit`). The config comment says two; the
+  live count is one, so say "almost none" rather than a number.
+- **`other`** is the value types (TimePoint, TimePeriod, Quantity) plus files
+  (File, ImagingFile, Document). Quantity is pointed at from all over the
+  model — measurements, substances, assay limits, durations — which is the
+  point worth making. ⚠️ **Do not copy a count out of
+  [`entityCategories.ts`](../src/config/entityCategories.ts)'s comments**: its
+  "16 slots across 13 classes" is stale (live: 11 across 9), and its Survey
+  count is stale the other way. Probe, or say it without a number.
+- **`observation`** is where the inheritance story lives, but that is tour 5;
+  here it is enough that the hierarchy exists.
 
 
 ### 2. Getting oriented

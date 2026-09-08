@@ -7,6 +7,65 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-08, end of session (doc pass before a fresh session)
+
+Siggie is starting a new session to finish tour 1. This pass is about what the
+next reader finds, not new work.
+
+### What was actually stale
+
+Probed the content file rather than trusting the docs, and the docs were behind
+in three places:
+
+- **TASKS item 1 said "author the five tours"** as one undifferentiated job,
+  and claimed the file defines TWO tours. It defines three
+  (`The BioData Catalyst Harmonized Model` 4 steps, `Getting oriented` 1,
+  `Walkthrough` 5). Split into item 1 (finish tour 1's five remaining category
+  steps — the concrete next thing) and 1b (the other four tours).
+- **TOURS_AND_CONTENT §1 was empty** — just "[sg] moved text into help-content
+  note" — and TASKS item 1 linked to it. Now carries the step table, the
+  `admin-study` recipe, and the beat-ordering warning.
+- **The BACKLOG map entry read as a plan** for something already shipped.
+  Rewritten as "the panel's CONTENT is what is left", per the CLAUDE.md rule
+  that live docs state current state.
+
+### A stale number that nearly shipped twice
+
+Writing the plan doc, I copied "Quantity: 16 slots across 13 classes" out of
+`entityCategories.ts`'s comments. Live count is **11 across 9**. Survey's
+"two outward references" in the same file is also stale (live: one).
+
+Both comments were true when written and nothing tests them. They read as
+authoritative and are the obvious source for a sentence in tour content — which
+is exactly where they were headed. **Counts in config comments are prose, not
+assertions.** Noted in BACKLOG § config rot and in the config-rot memory, since
+the existing note covered the SETS rotting and not the comments.
+
+This is the same failure as the `attributes`-without-`slots` mistake earlier
+today: a plausible-looking source, not checked against the live schema.
+
+### `goTo`'s silent no-op stopped being hypothetical
+
+The BACKLOG entry argued it was a landmine for a future caller and not a live
+bug. It became one twice today — both tour-map dead-clicks were swallowed by
+`goToStep`'s `tourIndex === null` guard, and both took far longer to find than
+they should have. Entry and TASKS item 7 rewritten with that evidence; the
+estimate is unchanged (~15 min, a `console.warn` per bail).
+
+### Memory fixes
+
+Two memories pointed at `src/help/help-content.md`, which does not exist — the
+content moved to `src/explore/` and the spec became `src/help/FORMAT.md`. A
+next session following that path finds nothing. Also `RelationMenu.tsx` →
+`RelationBar.tsx`. Checked every `src/...` path cited across the memory
+directory; those were the only real misses.
+
+**Worth repeating: verify a path before citing it, and re-verify old memories'
+paths rather than trusting them.** A memory is a point-in-time note, and file
+moves are exactly what invalidates one silently.
+
+
+---
 ## 2026-09-08, evening (two dead-click bugs in the map, one root shape)
 
 Siggie: *"sometimes these maps get in a weird state and clicks don't work or
