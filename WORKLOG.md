@@ -7,6 +7,63 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-08, later (sections split on `## `)
+
+Siggie asked what `---` separators are really for — *"the separation between
+Tours 1 and 2 seems fine without one"* — which turned out to be two questions
+with different answers, and I got the second one wrong before getting it right.
+
+**The mechanism.** `parseHelpContent` split the file on `^---$`, so a `## `
+heading with no separator above it was absorbed into the preceding section.
+
+**The consequence, and this is the part worth keeping.** Almost nothing breaks.
+Entries still parse, and their tours still appear in the chooser, because
+`tourNames` derives tours from each entry's `Tour:` field rather than from
+sections. The only casualty is the absorbed section's own `TourMetadata:`
+description — a tour silently loses its subtitle. **Sections and tours are
+independent; do not reason about one from the other.**
+
+### The wrong diagnosis, and what caused it
+
+I demonstrated the mechanism on a synthetic two-tour fixture, then asserted that
+`Getting oriented` was in exactly that state in the real file and had lost its
+description. Siggie posted a screenshot of three tours in the chooser: *"i think
+you're wrong"*.
+
+They were right. The real file has a `---` before that section — just above its
+`<div>` wrapper rather than immediately above the `## ` — so it parsed correctly
+all along. What I had done was grep for `^---$` adjacent to `^## ` lines, see
+none, and generalise from the fixture instead of parsing the actual file. The
+fix took thirty seconds once I ran the real content through the parser and
+printed `sections`, `tourNames` and `tourMeta` side by side.
+
+**Measure before diagnosing applies to content as much as to renders.** A
+fixture proves a mechanism exists; it says nothing about whether the file in
+front of you is affected by it.
+
+### Why the change was made anyway
+
+The split is now `(?=^## )`, matching how entries already split on `^### `. The
+argument is not that it fixes a live bug — it does not — but that a separator is
+invisible in rendered markdown and easy to omit, and the failure it causes is
+cosmetic enough to survive review. A heading cannot be omitted, because it is
+the thing being written. That converts a catchable bug into an impossible one.
+
+Two tests pin it: a section boundary works with and without `---` (asserting
+`tourMeta` specifically, since the description is the half that used to vanish),
+and a stray `---` neither creates an empty section nor shifts entry `order`,
+which is what sequences a tour.
+
+### An unrelated failure found on the way
+
+`helpContent.test.ts` fails on `bdchm-entities: missing title/description`.
+Verified by stashing the parser change and re-running: it fails identically
+without it, so it predates this work — the entry has an empty `- **Description:**`
+from mid-authoring. Left for Siggie. **Stash and re-run before attributing a
+test failure to your own change**; this is the second time this session that
+check changed the answer.
+
+---
 ## 2026-09-08 (panels as state; beats get a Description:)
 
 ### `Only:` did not need fixing, and a latch was the wrong fix
