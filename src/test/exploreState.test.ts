@@ -72,6 +72,7 @@ describe('explore state', () => {
     const state: ExploreState = {
       sel: ['Specimen'], detail: null,
       roots: true, sibs: false, dir: 'DOWN', merge: 'bend',
+      legend: true, cases: true,
     };
     const back = read(new URL(buildShareURL(state, 'https://x.test/')).search);
     expect(back).toEqual(state);
@@ -81,8 +82,33 @@ describe('explore state', () => {
     const url = buildShareURL({ ...DEFAULTS, sel: ['Person'] }, 'https://x.test/');
     const q = new URL(url).searchParams;
     expect(q.get('sel')).toBe('Person');
-    for (const k of ['sibs', 'dir', 'merge', 'roots', 'detail']) {
+    for (const k of ['sibs', 'dir', 'merge', 'roots', 'detail', 'legend', 'cases']) {
       expect(q.has(k), `${k} should be omitted at its default`).toBe(false);
+    }
+  });
+
+  test('`panels=0` closes every overlay, and never survives into a link', () => {
+    /*
+     * The sweep is an INSTRUCTION, like `tour=1`: it is resolved into the
+     * individual keys on read. Left in the URL it would re-close the panels on
+     * every reload and be copied into whatever the visitor shared next.
+     */
+    const back = read('?sel=Person&panels=0');
+    expect(back.legend).toBe(false);
+    expect(back.cases).toBe(false);
+    expect(back.detail).toBeNull();
+    // The selection is untouched: the sweep is about overlays, not the canvas.
+    expect(back.sel).toEqual(['Person']);
+    expect(new URL(buildShareURL(back, 'https://x.test/')).searchParams.has('panels')).toBe(false);
+  });
+
+  test('an explicit key beats the sweep, whatever the order', () => {
+    // "Clear the screen, then open the legend" — how a step names a clean
+    // picture with one thing left up.
+    for (const q of ['?panels=0&legend=1', '?legend=1&panels=0']) {
+      const back = read(q);
+      expect(back.legend, q).toBe(true);
+      expect(back.cases, q).toBe(false);
     }
   });
 

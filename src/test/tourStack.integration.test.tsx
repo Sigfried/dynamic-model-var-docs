@@ -109,8 +109,38 @@ describe('tour state stack, end to end', () => {
     await screen.findByRole('button', { name: /next|done/i, hidden: true });
     // Consumed...
     expect(params().get('tour')).toBeNull();
-    // ...without disturbing the view state alongside it.
-    expect(sel()).toBe('Person');
+    /*
+     * ...and the viewer's selection is SUPPRESSED, not destroyed.
+     *
+     * This used to assert `sel()` was still `Person`, which held only while
+     * the first tour's opening step drew nothing. That step carries an empty
+     * `Only:` now, so it enters region 1 and `held` stops contributing —
+     * exactly what a replace is supposed to do. `Person` is off screen and
+     * still in `held`, and the next test walks it back.
+     */
+    expect(sel()).toBeNull();
+  });
+
+  test('an empty `Only:` suppresses the entry selection rather than eating it', async () => {
+    /*
+     * The guarantee a replace rests on: `Only:` can hide the viewer's
+     * selection but must never be able to delete it, because `back` has to be
+     * able to restore it and leaving the tour has to hand it back.
+     *
+     * The regression this pins: `onTourStart` used to re-read `sel` from the
+     * URL at call time, and a `?tour=1&sel=X` link is a race — the mount
+     * effect consuming `tour=1` and the first step both write the URL first.
+     * `held` started empty, so the replace swept a selection it should have
+     * suppressed and `X` was gone for good.
+     */
+    window.history.replaceState(null, '', '/dynamic-model-var-docs/?tour=1&sel=Person');
+    render(<ExploreApp />);
+    await screen.findByRole('button', { name: /next|done/i, hidden: true });
+    // Suppressed by the opening step's empty `Only:`.
+    expect(sel()).toBeNull();
+    // Leaving the tour hands the viewer back what was theirs all along.
+    fireEvent.click(button(/done|✕|close/i));
+    await waitFor(() => expect(sel()).toBe('Person'));
   });
 
   test('an ordinary visit does not open the tour', async () => {

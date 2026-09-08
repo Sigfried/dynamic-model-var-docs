@@ -13,10 +13,16 @@
  *  - **Shareable** — anything that changes WHAT the diagram says: the
  *    selection, sibling merge, path-to-root, layout direction, edge merge
  *    mode, the open drawer.
- *  - **Personal preference** — zoom, pan, pins, drags, which panel is
+ *  - **Personal preference** — zoom, pan, pins, drags, which side panel is
  *    collapsed. These describe how one person is looking at the diagram, not
  *    what it shows, and pinning them into a link would fight the recipient's
  *    window size.
+ *
+ * The legend and example-cases OVERLAYS are shareable (Siggie, 2026-09-08),
+ * which looks like an exception to that rule and is not: they carry content —
+ * the legend explains the very edges a link is trying to show — so "here is
+ * the diagram, with the key open" is a different thing to say than "here is
+ * the diagram". A collapsed side panel says nothing.
  *
  * Layout direction is a borderline case, filed as shareable: LR vs TB changes
  * how the diagram reads, and a tour step that depends on the shape would break
@@ -52,11 +58,61 @@ export interface ExploreState {
   sibs: boolean;
   dir: Direction;
   merge: MergeMode;
+  legend: boolean;
+  cases: boolean;
 }
 
 export const DEFAULTS: ExploreState = {
   sel: [], detail: null, roots: false, sibs: true, dir: 'RIGHT', merge: 'near',
+  legend: false, cases: false,
 };
+
+/**
+ * The overlay panels, as one list.
+ *
+ * Exists so `panels=0` (close everything) and any future "all panels" operation
+ * enumerate themselves instead of being hand-maintained in several places. A
+ * panel added here is picked up by the shorthand automatically — the failure
+ * this avoids is the one the docs call config rot: a key whose meaning silently
+ * stops covering everything it claims to.
+ *
+ * `detail` is deliberately NOT here. It is a drawer showing one named element,
+ * so it is addressed by that name (`detail=Specimen`), and a boolean list is
+ * the wrong shape for it. `panels=0` closes it anyway — see `applyPanelsParam`.
+ */
+/**
+ * Params that are INSTRUCTIONS rather than state: they are resolved on read and
+ * never written back. `tour=1` starts the tour; `panels=0` sweeps the overlays.
+ *
+ * Kept beside `DEFAULTS` so anything validating "is this a real param" can ask
+ * for both halves instead of keeping its own copy — a hand-kept list is what
+ * let `panels` be valid everywhere except the content test.
+ */
+export const INSTRUCTION_PARAMS = ['tour', 'panels'] as const;
+
+export const PANEL_KEYS = ['legend', 'cases'] as const;
+export type PanelKey = typeof PANEL_KEYS[number];
+
+/**
+ * Apply the `panels` shorthand to an already-parsed set of panel values.
+ *
+ * `panels=0` closes every overlay, INCLUDING the `detail` drawer, because a
+ * step that says "clear the panels" means the screen, not a subset of it that
+ * happens to be booleans.
+ *
+ * Explicit keys win over the shorthand, so `panels=0&legend=1` closes
+ * everything and then opens the legend. That ordering is what makes the
+ * shorthand useful in a tour step: name the sweep, then name the exception.
+ * The caller applies its explicit keys AFTER calling this.
+ */
+export function applyPanelsParam<T extends { legend?: boolean; cases?: boolean; detail?: string | null }>(
+  params: URLSearchParams, into: T,
+): T {
+  if (params.get('panels') !== '0') return into;
+  for (const k of PANEL_KEYS) into[k] = false as T[PanelKey];
+  into.detail = null as T['detail'];
+  return into;
+}
 
 /** localStorage keys, unchanged so existing preferences survive the move. */
 const LS_KEYS = {
@@ -167,13 +223,26 @@ export function readExploreState(search = window.location.search): ExploreState 
       ? lsGet(LS_KEYS.sibs) !== '0'
       : DEFAULTS.sibs;
 
+  // Sweep first, then let explicit keys override it — `panels=0&legend=1`
+  // means "clear the screen, then open the legend".
+  const panels = applyPanelsParam(p, {
+    legend: p.get('legend') === '1',
+    cases: p.get('cases') === '1',
+    detail: p.get('detail') || null,
+  });
+  if (p.has('legend')) panels.legend = p.get('legend') === '1';
+  if (p.has('cases')) panels.cases = p.get('cases') === '1';
+  if (p.has('detail')) panels.detail = p.get('detail') || null;
+
   return {
     sel: readIds(p, 'sel'),
-    detail: p.get('detail') || null,
+    detail: panels.detail,
     roots: p.get('roots') === '1',
     sibs,
     dir,
     merge,
+    legend: panels.legend,
+    cases: panels.cases,
   };
 }
 
@@ -232,6 +301,16 @@ export function writeExploreState(state: ExploreState, { push = false } = {}): v
   setIf('sibs', state.sibs ? '1' : '0', state.sibs === DEFAULTS.sibs);
   setIf('dir', state.dir, state.dir === DEFAULTS.dir);
   setIf('merge', state.merge, state.merge === DEFAULTS.merge);
+  setIf('legend', '1', state.legend === DEFAULTS.legend);
+  setIf('cases', '1', state.cases === DEFAULTS.cases);
+  /*
+   * `panels` is an INSTRUCTION, like `tour`, not a reflection of state: it has
+   * already been resolved into the individual keys by the time anything writes.
+   * Left in the URL it would re-close the panels on every reload and be copied
+   * into every shared link. It is not in ONE_SHOT_PARAMS because it is
+   * idempotent and needs no latching — deleting it here is enough.
+   */
+  q.delete('panels');
 
   /*
    * `pushState` does not fire `popstate` — only a real back/forward does — so
@@ -267,6 +346,8 @@ export function buildShareURL(state: ExploreState, base = window.location.href):
   if (state.sibs !== DEFAULTS.sibs) set('sibs', state.sibs ? '1' : '0');
   if (state.dir !== DEFAULTS.dir) set('dir', state.dir);
   if (state.merge !== DEFAULTS.merge) set('merge', state.merge);
+  if (state.legend !== DEFAULTS.legend) set('legend', '1');
+  if (state.cases !== DEFAULTS.cases) set('cases', '1');
   url.search = keep.toString();
   return url.toString();
 }

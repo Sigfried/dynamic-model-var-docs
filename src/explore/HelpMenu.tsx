@@ -36,6 +36,10 @@ export interface HelpMenuProps {
   onOpenLegend: () => void;
   /** Open the example-cases panel. */
   onOpenCases: () => void;
+  /** Close every overlay — the two panels and the detail drawer. */
+  onClosePanels: () => void;
+  /** Whether anything is open, so the close item can hide when it is a no-op. */
+  anyPanelOpen: boolean;
   /** Whether each panel is already showing, so the item can say "close". */
   legendOpen: boolean;
   casesOpen: boolean;
@@ -67,7 +71,7 @@ const HELP_ENTRIES: ReadonlyArray<{ id: string; label: string }> = [
 ];
 
 export default function HelpMenu({
-  onOpenLegend, onOpenCases, legendOpen, casesOpen,
+  onOpenLegend, onOpenCases, legendOpen, casesOpen, onClosePanels, anyPanelOpen,
 }: HelpMenuProps) {
   const { showEntry, showAddresses, toggleAddresses } = useHelp();
   const [open, setOpen] = useState(false);
@@ -151,6 +155,18 @@ export default function HelpMenu({
             {casesOpen ? 'Hide example cases' : 'Example cases'}
             <Hint>selections worth looking at</Hint>
           </MenuItem>
+          {/*
+            * Only rendered when something is actually open. The two items above
+            * already close what they opened, so this earns its place solely by
+            * clearing SEVERAL things at once — offered when it is a no-op it
+            * would be a third way to do what they do.
+            */}
+          {anyPanelOpen && (
+            <MenuItem onClick={pick(onClosePanels)}>
+              Close all panels
+              <Hint>legend, cases and the detail drawer</Hint>
+            </MenuItem>
+          )}
 
           <Separator />
 

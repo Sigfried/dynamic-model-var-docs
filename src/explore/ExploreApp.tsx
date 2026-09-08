@@ -63,6 +63,7 @@ function ExploreAppInner() {
   // piece of shareable state, so no two useStates can disagree about it.
   const initial = useMemo(() => readExploreState(), []);
 
+
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set(initial.sel));
   const [detailId, setDetailId] = useState<string | null>(initial.detail);
   const [tableCollapsed, setTableCollapsed] = useState(false);
@@ -96,8 +97,8 @@ function ExploreAppInner() {
    * concrete cost of treating a permanent feature and a working set as peers.
    * Both are opened from HelpMenu.
    */
-  const [casesOpen, setCasesOpen] = useState(false);
-  const [legendOpen, setLegendOpen] = useState(false);
+  const [casesOpen, setCasesOpen] = useState(initial.cases);
+  const [legendOpen, setLegendOpen] = useState(initial.legend);
   const [copied, setCopied] = useState(false);
 
   /*
@@ -144,6 +145,10 @@ function ExploreAppInner() {
       setMergeSibs(next.sibs);
       setDirection(next.dir);
       setMergeMode(next.merge);
+      // The overlays are shareable state too, so back/forward, a shared link
+      // and a tour step's `legend=1` all reach them through this one path.
+      setLegendOpen(next.legend);
+      setCasesOpen(next.cases);
     };
     window.addEventListener('popstate', apply);
     window.addEventListener('explore:state-from-url', apply);
@@ -167,6 +172,7 @@ function ExploreAppInner() {
     const state: ExploreState = {
       sel: [...selectedIds], detail: detailId, roots: pathToRoot,
       sibs: mergeSibs, dir: direction, merge: mergeMode,
+      legend: legendOpen, cases: casesOpen,
     };
     /*
      * The flag is CONSUMED here, not read: it marks one write, and this is the
@@ -179,7 +185,11 @@ function ExploreAppInner() {
     const push = pushNextWrite.current;
     pushNextWrite.current = false;
     writeExploreState(state, { push });
-  }, [selectedIds, detailId, pathToRoot, mergeSibs, direction, mergeMode]);
+    // `legendOpen`/`casesOpen` belong here like every other piece of state the
+    // write reflects. Left out, opening a panel wrote nothing and the param
+    // appeared only when the NEXT unrelated change happened to run the effect.
+  }, [selectedIds, detailId, pathToRoot, mergeSibs, direction, mergeMode,
+      legendOpen, casesOpen]);
 
   const toggleSelect = useCallback((id: string) => {
     /*
@@ -331,12 +341,19 @@ function ExploreAppInner() {
           onOpenCases={() => setCasesOpen(v => !v)}
           legendOpen={legendOpen}
           casesOpen={casesOpen}
+          anyPanelOpen={legendOpen || casesOpen || detailId !== null}
+          onClosePanels={() => {
+            setLegendOpen(false);
+            setCasesOpen(false);
+            setDetailId(null);
+          }}
         />
         <button
           onClick={async () => {
             const url = buildShareURL({
               sel: [...selectedIds], detail: detailId, roots: pathToRoot,
               sibs: mergeSibs, dir: direction, merge: mergeMode,
+              legend: legendOpen, cases: casesOpen,
             });
             try {
               await navigator.clipboard.writeText(url);
@@ -361,6 +378,21 @@ function ExploreAppInner() {
           className="text-sm underline text-blue-100 hover:text-white"
         >
           previous views
+        </a>
+        {/* Leaves the site, unlike the other header links, hence target/rel.
+            The mark is an inline SVG rather than a glyph because Unicode has
+            no GitHub logo — the rest of the app's icons are glyphs. */}
+        <a
+          href="https://github.com/Sigfried/dynamic-model-var-docs"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-100 hover:text-white"
+          title="Source code on GitHub"
+          aria-label="Source code on GitHub"
+        >
+          <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden>
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
+          </svg>
         </a>
         </div>
       </header>

@@ -137,7 +137,7 @@
  * displayed by `tour` and `held` at once. See `untick`.
  */
 
-import { type Direction, type ExploreState, type MergeMode } from './exploreState';
+import { type Direction, type ExploreState, type MergeMode, PANEL_KEYS } from './exploreState';
 
 /** One position's contribution, parsed out of its `Change:` or `Only:` query. */
 export interface TourChange {
@@ -217,9 +217,27 @@ export function parseTourChange(query: string, replace = false): TourChange {
   const p = new URLSearchParams(query);
   const scalars: TourChange['scalars'] = {};
 
+  /*
+   * `panels=0` closes every overlay. It is a SWEEP, so it is applied before
+   * the explicit keys below and they overwrite it: `panels=0&legend=1` clears
+   * the screen and then opens the legend, which is how a step names a clean
+   * picture with one thing left up.
+   *
+   * Unlike every other param here, absent does not mean "leave it alone" —
+   * present means "set all of these to false". That is safe because it can
+   * only ever CLOSE things, so a step that sweeps and a step that says nothing
+   * are still both deltas, never a snap-back to defaults.
+   */
+  if (p.get('panels') === '0') {
+    for (const k of PANEL_KEYS) scalars[k] = false;
+    scalars.detail = null;
+  }
+
   if (p.has('detail')) scalars.detail = p.get('detail') || null;
   if (p.has('roots')) scalars.roots = p.get('roots') === '1';
   if (p.has('sibs')) scalars.sibs = p.get('sibs') === '1';
+  if (p.has('legend')) scalars.legend = p.get('legend') === '1';
+  if (p.has('cases')) scalars.cases = p.get('cases') === '1';
   const dir = oneOf<Direction>(p.get('dir'), ['RIGHT', 'DOWN']);
   if (dir) scalars.dir = dir;
   const merge = oneOf<MergeMode>(p.get('merge'), ['near', 'far', 'bend', 'off']);
