@@ -135,9 +135,11 @@ reimplementation. It reuses `LayoutManager`'s primitives (`ItemsPanel`,
   the subset** (`getFocusSubsetSections`); bespoke `getFocusPanelSections` deleted.
   Select/unselect removed from middle/right. Per-entity nesting deferred.
 
+- Inter-panel gutters + `<LinkOverlay>` (`45d9a35`). ⚠️ **Layout is imperfect** —
+  the commit shipped it knowingly unfinished.
+
 **Remaining (see TASKS.md for ordered steps):**
 - **Per-entity nesting** in the right panel (deferred above).
-- **Restore gutters + add `<LinkOverlay>`** to FocusView.
 - **Extract `useFloatingBoxes`**, wire detail/relationship boxes into Focus.
 - **Widget select/unselect** shared with the selector (bidirectional).
 - **Widget "show all entities"** option (full graph, not just subset).

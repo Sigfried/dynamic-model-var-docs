@@ -13,18 +13,6 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 <details>
 <summary><b>TODO</b></summary>
 
-- ~~i asked to have anchor: none content centered horizontally in the graph panel
-  because the "Select entities on the left to build the ownership subgraph."
-  message was sticking out annoyingly, but i think the off-window-center
-  placement is bugging me more. don't necessarily undo the controls for it,
-  but i think there should be a place to control this in the dmvd (not
-  tour-help) code, right?~~
-  **DONE 2026-08-29** — and yes, that place already existed: `centerOn` is a
-  prop, so it was always dmvd's call. `ExploreApp.tsx` no longer passes it, so
-  unanchored steps centre on the viewport both ways. The prop and its tests
-  stay in the package. Why it can only ever centre horizontally is now written
-  up in [FORMAT.md](../help/FORMAT.md#placement).
-
 <details>
 <summary><b>Original unfinished draft text</b></summary>
 
@@ -61,14 +49,10 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
     A better sequence of events would be:
     - anchor on unchecked MeasurementObservation selection row
     - actually would be better if this were not 
-- ~~**Change: allow add, remove, clear.**~~ **DONE 2026-09-05** — the verb is
-  `Only:`, which replaces the selection where `Change:` adds to it. So a step
-  that wants a clean two-box example writes `Only: sel=Visit~TimePeriod` and
-  gets exactly that, and `back` still restores what it displaced. Spec:
-  [FORMAT.md](../help/FORMAT.md#only--a-step-that-names-the-whole-canvas).
-  The steps below have NOT been rewritten to use it — `graph-canvas` still
-  adds to `relationship-kinds`' canvas, which is the cumulative case the
-  original note was about.
+- **Rewrite existing steps to use `Only:`.** The verb exists
+  ([FORMAT.md](../help/FORMAT.md#only--a-step-that-names-the-whole-canvas))
+  but the steps below still use `Change:`, so `graph-canvas` adds to
+  `relationship-kinds`' canvas instead of naming its own.
 - **Tour authoring notes + draft preview** — `Note:` / `Draft:`
   / `ForClaude:` fields, and a way to view a tour *including* its
   parked and unfinished steps. deferred 2026-08-27 for time.

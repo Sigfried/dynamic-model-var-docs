@@ -1,8 +1,9 @@
-# Tours, the Help menu, and category content views
+# The five tours
 
-The plan for the five tours, the Help menu they hang off, and the category
-content views they use. Drafted prose is inlined at the steps that use it.
-Decisions here are Siggie's, 2026-09-04.
+The plan for the five tours. Drafted prose is inlined at the steps that use it.
+Decisions here are Siggie's, 2026-09-04. The content they get written into is
+[`src/explore/help-content.md`](../src/explore/help-content.md); the authoring
+format is [`src/help/FORMAT.md`](../src/help/FORMAT.md).
 
 **Delete this file once the tours ship.**
 
@@ -27,77 +28,22 @@ the skeleton for the fix.
 
 ---
 
-## 1. Category content views (the ⊞ button) — ✅ SHIPPED
-
-Each category header in the left panel carries a `⊞` control that draws that
-category's content view — its **members plus its pins** — replacing the canvas,
-with the browser back button returning to the previous one.
-
-**All of this shipped 2026-09-04.** It is described here only because §3 builds
-on it: the category steps of the "What BDCHM covers" tour load these views, and
-the Inheritance tour uses the Observations one.
-
-**Where the live detail is now:**
-
-| what | where |
-|---|---|
-| Which classes each category holds, which it pins, and **why** | [`src/config/entityCategories.ts`](../src/config/entityCategories.ts) — the judgement is recorded beside the data it judges |
-| The pin criterion, and the value-type rule it rests on | same file, the `pins` field doc comment; asserted by four guards in [`entityCategories.test.ts`](../src/test/entityCategories.test.ts) |
-| Composition (members-then-pins, deduped) | [`src/config/categoryView.ts`](../src/config/categoryView.ts) |
-| The `⊞` glyph, and why not `▶` | [`src/explore/SelectionTable.tsx`](../src/explore/SelectionTable.tsx) |
-| Replace-not-add, and the back button | [`ExploreApp.tsx`](../src/explore/ExploreApp.tsx) (`showCategoryView`, `pushNextWrite`); mechanics in `WORKLOG.md` |
-
-⚠️ **The pin sets are hand-curated and rot invisibly on an upstream schema
-sync** — a wrong pin just draws an extra box, and no test can catch a pin that
-is merely unhelpful. Re-read [`entityCategories.ts`](../src/config/entityCategories.ts) after a sync rather than
-re-running a query; the criterion is editorial ("does this category make sense
-without it"), not mechanical. See
-[BACKLOG § hand-curated config rot](BACKLOG.md#hand-curated-config-rot).
-
-⚠️ **The control is on `SelectionTable` only.** The left panel has two modes;
-the list is the default and the DAG tree sits behind a switch. The tree has no
-category headers at all, so there is nowhere to hang this. If the tree ever
-becomes the default, the content views need a different home.
-
-## 2. The Help menu
-
-**Decision:** make Help prominent (roughly as the "take the tour" pill is now)
-and **delete the pill**. Two entry points to the same thing drift apart.
-
-```
-Help ▾
-  Tours →
-    What BDCHM covers          (needs a better title)
-    Getting oriented
-    Reading the diagram
-    Ownership
-    Inheritance
-  Legend
-  Example cases
-```
-
-- **The other menu items are dropped.** The tours cover them now.
-  ⚠️ Before deleting: `node-dismiss`, `toolbar-siblings`, `relation-bar` and
-  `graph-canvas-reading` are help-only entries surfaced contextually (ⓘ /
-  hover). Confirm they stay reachable in context, or dropping them from the
-  menu makes them unreachable rather than merely unlisted.
-- **Legend and Example cases are mutually exclusive.** Best framed as *one panel
-  slot with two possible contents* rather than "opening one closes the other" —
-  no half-open state, no z-order question.
-  ⚠️ The shipped `help-menu` help text promises the opposite ("The two open as
-  separate panels, so you can keep the legend up while you flip through
-  cases"). Rewrite it.
-- **Entry point:** with the pill gone, decide whether Help → Tours opens a
-  chooser or the first tour. A returning reader who wants "Inheritance" should
-  not have to walk "What BDCHM covers".
-
----
-
-## 3. The five tours
+## The five tours
 
 Order is fixed: **complexity rising, each tour using what the last established.**
 
-### 3.1 The BioData Catalyst Harmonized Model
+Today's content defines **two** tours: `The BioData Catalyst Harmonized Model`
+and `Walkthrough`, whose own description says *"The original tour. Parts will be
+used for specific tours now."* Authoring these five is largely **splitting
+`Walkthrough`** into the middle four, not writing from nothing.
+
+The category ⊞ views the steps below load shipped 2026-09-04. ⚠️ Their pin sets
+are hand-curated and rot invisibly on an upstream schema sync — re-read
+[`entityCategories.ts`](../src/config/entityCategories.ts) after a sync rather
+than re-running a query; the criterion is editorial, not mechanical. See
+[BACKLOG § hand-curated config rot](BACKLOG.md#hand-curated-config-rot).
+
+### 1. The BioData Catalyst Harmonized Model
 
 *Content only. No app mechanics. The tour that does not exist today and matters
 most to the target reader.*
@@ -134,7 +80,7 @@ the story rather than the whole canvas at once. Survey's step gets to say the
 thing the numbers show — it is a self-contained subtree that barely touches the
 rest of the model.
 
-### 3.2 Getting oriented
+### 2. Getting oriented
 
 *The app, minimally.* Tree → checkbox → canvas → relation bar → copy link.
 
@@ -143,7 +89,7 @@ where the duplicate "Entities" title dies (`selection-tree` and `entities` share
 it). **The relation bar belongs here**, not in "Reading the diagram": it is how
 you *navigate*, not how you *read*.
 
-### 3.3 Reading the diagram
+### 3. Reading the diagram
 
 *Rows, dots, and row anchoring.* Two steps, both drafted:
 
@@ -169,10 +115,10 @@ Row anchoring is the most load-bearing idea in the diagram and the cheapest to
 show — one edge, two boxes, nothing else on canvas.
 
 ⚠️ **This tour may be too thin to stand alone.** Its other two drafted steps are
-ownership content and have moved to §3.4. If two steps is not a tour, merge
+ownership content and have moved to §4. If two steps is not a tour, merge
 these into "Getting oriented" and drop this entry.
 
-### 3.4 Ownership
+### 4. Ownership
 
 *Siggie's case for why this tour exists, and it is the strongest in the set:*
 
@@ -185,7 +131,7 @@ the relation bar's two sides do not parse without it. Hence **before**
 Inheritance, whose merged boxes anchor edges on child rows and child headers —
 unreadable until you know what an edge anchor means.
 
-Two drafted steps, moved here from §3.3:
+Two drafted steps, moved here from §3:
 
 **Owns vs. belongs-to.** Selection: `Specimen`, `Participant`,
 `SpecimenCreationActivity`.
@@ -221,7 +167,7 @@ rather than a debugger — why `Quantity` draws forward despite being
 single-valued (no independent existence), what an association is and why the
 schema has exactly two.
 
-### 3.5 Inheritance
+### 5. Inheritance
 
 *Last, because it is the most complicated part of the diagram (Siggie) and
 because it depends on ownership's edge-anchor vocabulary.*
@@ -249,7 +195,7 @@ selection by hand.
 
 ---
 
-## 4. Not in scope, deliberately
+## Not in scope, deliberately
 
 **Enums and entity details.** There is material in previous views (enum
 contents, per-entity detail) that researchers would want and that the Explorer

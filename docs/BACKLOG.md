@@ -309,6 +309,34 @@ live file. Removing it means touching `NodeVM`, both node-VM construction sites,
 and `RelationGroupVM`/`RelationItemVM`. Deliberately not done in the same pass as
 the UI change.
 
+### Tour authoring notes + draft preview
+
+Four distinct needs, all currently served by HTML comments:
+
+| Want | Sketched as | Renders? |
+|---|---|---|
+| Notes to self | `- **Note:** …` | never |
+| Half-written copy | `- **Draft:** …` | yes, marked loudly as unfinished |
+| Instructions to Claude | `- **ForClaude:** …` | never |
+| A step written but not ready | `- **_Tour:** 4` | **shipped** |
+
+**The parking half is already done** — prefixing any field with `_` drops an
+entry out of the tour while keeping it as help.
+
+**The interesting part is the draft preview**, and it is why this is a task
+rather than three fields: viewing a tour *including* its parked steps and
+unfinished `Draft:` text means a **second rendering mode**, not just a parser
+change. Worth designing rather than bolting on.
+
+Also parked: **multi-line for `Context:` / `Action:` / beat text** — deliberately
+not done, *"1 for now; may need 2 soon"*. `extractBlockField` is generic, so each
+is a one-line change.
+
+Until then: HTML comments work, never render, and are what the S3a translation
+already uses.
+
+---
+
 ### `goTo`'s silent no-op
 
 [`HelpProvider.tsx`](../src/help/HelpProvider.tsx), in `goTo`: `const pos = positions[i]; if (!pos) return;`
@@ -365,9 +393,6 @@ which is why they are hand-curated. **Ownership classification is Siggie's call,
 not a mechanical one.**
 
 ---
-
-## Docs
-
 
 ## Siggie's upcoming thoughts
 
