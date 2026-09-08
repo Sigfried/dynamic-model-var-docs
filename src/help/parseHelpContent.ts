@@ -1054,8 +1054,23 @@ export function parseHelpContent(markdown: string): HelpContent {
   // TODO(siggie) notes left beside entries during translation).
   const cleaned = markdown.replace(/<!--[\s\S]*?-->/g, '').trim();
 
-  // Split on --- separators (section boundaries)
-  const sectionBlocks = cleaned.split(/^---$/m).map(b => b.trim()).filter(Boolean);
+  /*
+   * Sections are split on their own `## ` heading, the way entries split on
+   * `### ` — the heading IS the boundary.
+   *
+   * It used to split on `^---$`, so a `## ` heading with no separator above it
+   * was absorbed into the section before it. Nothing failed loudly: its entries
+   * still parsed and their tours still appeared (tours come from each entry's
+   * `Tour:` field, not from sections), but the section's own `TourMetadata:`
+   * description was silently dropped, so a tour lost its subtitle in the
+   * chooser. `Getting oriented` was in exactly that state (2026-09-08).
+   *
+   * A separator is invisible in rendered markdown and easy to leave out, and
+   * the failure was cosmetic enough to survive review. The heading cannot be
+   * left out — it is the thing being written — so this makes that class of bug
+   * impossible rather than catchable. `---` is now decorative everywhere.
+   */
+  const sectionBlocks = cleaned.split(/(?=^## )/m).map(b => b.trim()).filter(Boolean);
 
   const sections: HelpSection[] = [];
   const entries = new Map<string, HelpEntry>();

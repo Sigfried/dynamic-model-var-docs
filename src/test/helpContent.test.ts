@@ -1259,6 +1259,66 @@ describe('Only:', () => {
     expect(tourPositions(c)[0].replace).toBe(true);
   });
 
+  test('a `## ` heading starts a section with or without a `---`', () => {
+    /*
+     * The heading IS the boundary. Splitting on `^---$` meant a heading with no
+     * separator above it was absorbed into the section before it, and nothing
+     * failed loudly: the entries still parsed and their tours still appeared,
+     * because tours come from each entry's `Tour:` field rather than from
+     * sections. What vanished was the absorbed section's own `TourMetadata:`
+     * description — a tour silently lost its subtitle in the chooser.
+     */
+    const body = (sep: string) => [
+      '# Title', '',
+      '## Tour A',
+      '- **TourMetadata:**',
+      '- **Description:** first',
+      '',
+      '### a',
+      '- **Title:** A',
+      '- **Tour:** Tour A',
+      '- **Description:** d',
+      '',
+      sep,
+      '## Tour B',
+      '- **TourMetadata:**',
+      '- **Description:** second',
+      '',
+      '### b',
+      '- **Title:** B',
+      '- **Tour:** Tour B',
+      '- **Description:** d',
+    ].filter(l => l !== null).join('\n');
+
+    for (const sep of ['---', '']) {
+      const c = parseHelpContent(body(sep));
+      const label = sep ? 'with ---' : 'without ---';
+      expect(c.sections.map(x => x.title), label).toEqual(['Tour A', 'Tour B']);
+      // The description is the half that used to disappear.
+      expect([...c.tourMeta.keys()], label).toEqual(['Tour A', 'Tour B']);
+      expect(c.tourMeta.get('Tour B')?.description, label).toBe('second');
+      expect([...c.entries.keys()], label).toEqual(['a', 'b']);
+    }
+  });
+
+  test('`---` between sections is decorative, not a second boundary', () => {
+    // It must not produce an empty section or shift entry order.
+    const c = parseHelpContent([
+      '# T', '', '---', '',
+      '## One',
+      '', '### a',
+      '- **Title:** A',
+      '- **Description:** d',
+      '', '---', '',
+      '## Two',
+      '', '### b',
+      '- **Title:** B',
+      '- **Description:** d',
+    ].join('\n'));
+    expect(c.sections.map(x => x.title)).toEqual(['One', 'Two']);
+    expect([...c.entries.values()].map(e => e.order)).toEqual([0, 1]);
+  });
+
   test('a beat with no Description: shows no text at all', () => {
     /*
      * A beat that only moves the anchor or pushes a `Change:` is a real thing
