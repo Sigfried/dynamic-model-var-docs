@@ -258,6 +258,23 @@ export default function HelpLayer() {
   );
 
   /*
+   * The blocks the body will render, resolved ONCE so the width and the render
+   * cannot disagree about what is showing. A dismissed `Once:` alert is
+   * stripped here as it is there — a step whose text is mostly a note the
+   * reader has already dismissed should not keep that note's width.
+   */
+  const bodyBlocks = (inTour ? position?.blocks ?? [] : [entry?.description ?? ''])
+    .map(b => (onceDone ? stripAlerts(b) : b))
+    .filter(Boolean);
+
+  /*
+   * `Width:` wins; otherwise the width follows the text. An authored width is
+   * a deliberate statement about the picture the step is building (and is
+   * sticky across beats), so it is never second-guessed here.
+   */
+  const width = (inTour ? position?.width : undefined) ?? autoWidth(bodyBlocks.join('\n\n'));
+
+  /*
    * Scroll the anchor into view BEFORE measuring, or the popover lands where
    * the element used to be.
    *
@@ -426,10 +443,14 @@ export default function HelpLayer() {
         popover="manual"
         data-help-popover=""
         className="help-popover"
+        /* `bodyBlocks` feeds BOTH the width and the height estimate: they are
+           the same question asked twice, and answering them from different
+           text would place the popover for a size it never has. */
         style={popoverPosition(rect, inTour ? position?.position : undefined,
                                inTour ? position?.offsetX : undefined,
-                               inTour ? position?.width : undefined,
-                               rect ? null : centerRect())}
+                               width,
+                               rect ? null : centerRect(),
+                               bodyBlocks.join('\n\n'))}
       >
         {entry && (
           <>
@@ -486,14 +507,14 @@ export default function HelpLayer() {
               Outside a tour it is the entry's description, unchanged: one
               block, nothing dimmed.
             */}
-            {(inTour ? position?.blocks.some(Boolean) : entry.description) && (
+            {bodyBlocks.length > 0 && (
               <div className="help-popover-body">
-                {(inTour ? position!.blocks : [entry.description])
-                  .map(b => (onceDone ? stripAlerts(b) : b))
-                  /* A block that was NOTHING BUT a dismissed alert is now
-                     empty; rendering it would leave a dimmed blank gap where
-                     the note used to be. */
-                  .filter(Boolean)
+                {/* Resolved above, next to the width that was measured from it:
+                    alerts already stripped if `Once:` was dismissed, and empty
+                    blocks already dropped — a block that was NOTHING BUT a
+                    dismissed alert would otherwise leave a dimmed blank gap
+                    where the note used to be. */}
+                {bodyBlocks
                   /*
                    * Beats REPLACE by default, so `all` is usually one block
                    * and nothing is dimmed. Only a `Keep: true` beat produces
@@ -659,8 +680,111 @@ function AddressTag({ address, searchFor }: {
  * A null rect means the anchor is `none` or did not resolve; the popover is
  * centred instead, which is what `Anchor: none` is authored to mean.
  */
-/** Default popover width; `Width:` overrides it per step. */
+/**
+ * Default popover width, used only when nothing better can be worked out —
+ * a step with no text at all. `Width:` overrides it, and so does `autoWidth`.
+ */
 const POPOVER_W = 320;
+
+/**
+ * The band `autoWidth` picks from.
+ *
+ * The floor is the OLD flat default, deliberately: auto width replaces a
+ * constant 320, and a step that used to get 320 must not come out narrower
+ * than it was. 800 is the widest any authored step asks for.
+ *
+ * (300 was tried as the floor first. Every existing unauthored step is short
+ * enough to land on the floor, so it just narrowed all fifteen of them —
+ * a change with no upside.)
+ */
+const AUTO_MIN = 320;
+const AUTO_MAX = 800;
+
+/**
+ * Rough px of horizontal room one character of body text occupies, and the
+ * line height that goes with it.
+ *
+ * Sized for the ~16px body dmvd actually renders (`--help-font-size` in
+ * `explore/helpTheme.css`), not the package's 13px default: a lowercase
+ * average runs a bit over half the em. A host that sets a very different
+ * font size gets a proportionally wrong estimate — acceptable, because these
+ * only ever feed a CLAMPED square root, so being off by a fifth moves the
+ * result by a tenth and the floor and ceiling absorb the rest. Measuring the
+ * real text would mean rendering it twice and a layout pass per beat.
+ */
+const CHAR_W = 8;
+const LINE_H = 24;
+/**
+ * Wideness knob: how much wider than tall the text block is aimed to be.
+ *
+ * Tuned against the resulting HEIGHT rather than by eye, since height is the
+ * thing that actually goes wrong, and then against LINE COUNT once real model
+ * descriptions started arriving.
+ *
+ * Raised from 2.0 to 3.0 on 2026-09-08 (Siggie, of a 435-character class
+ * description: "i think that popover should have been wider anyway"). At 2.0
+ * that paragraph got a 409px column and ran to ten lines — a narrow, tall
+ * block for one paragraph of prose. At 3.0 it is 501px and eight lines, while
+ * the short authored beats are untouched: they were already sitting on the 320
+ * floor and stay there (17 of the 33 real blocks measured, against 20 at 2.0).
+ *
+ * 1.2 was the first attempt and far too timid; 4.0+ starts widening text short
+ * enough not to need it.
+ */
+const ASPECT = 3.0;
+
+/**
+ * Pick a width from how much text there is.
+ *
+ * **Why area rather than length buckets.** The popover's real problem is
+ * HEIGHT: text that overflows gets clamped by `maxHeight` and scrolls, or
+ * shoves the popover away from the thing it is pointing at. Width is the only
+ * lever that trades height away. So the question is not "is this text long"
+ * but "how wide must this be to stay under a sane height", which is an area
+ * problem: `chars × CHAR_W × LINE_H` is roughly the area the text needs, and
+ * for a box of that area with aspect ratio `ASPECT` the width is its square
+ * root. That is smooth — one character more never jumps the width 150px the
+ * way a bucket boundary does — and it has one tunable instead of three
+ * thresholds.
+ *
+ * **Markdown is counted, not stripped.** Syntax characters (`**`, `- `, `|`)
+ * cost width in a table or a list even though they are not rendered as text,
+ * so counting them is closer to right than not, and stripping markdown here
+ * would mean parsing it twice.
+ *
+ * **Beats are not smoothed.** With `Keep:` the blocks grow as beats reveal, so
+ * this recomputes and the popover can widen mid-step. Deliberate for now
+ * (Siggie, 2026-09-08: "let's see how it works without worrying about width
+ * changes across beats"); if it reads as jumpy the fix is to take the max over
+ * the step's positions rather than to reintroduce buckets.
+ */
+export function autoWidth(text: string): number {
+  const chars = text.trim().length;
+  if (chars === 0) return POPOVER_W;
+  return Math.round(
+    Math.min(AUTO_MAX, Math.max(AUTO_MIN, Math.sqrt(chars * CHAR_W * LINE_H * ASPECT))),
+  );
+}
+
+/**
+ * Roughly how tall the popover will be, at a given width.
+ *
+ * Used ONLY to decide placement — whether there is room below a box, and how
+ * far up a low-anchored popover has to slide to fit. The browser still does
+ * the real layout, and `maxHeight` still catches whatever this gets wrong.
+ *
+ * The same character metrics as `autoWidth`, plus a fixed allowance for the
+ * furniture every popover carries whatever its text: title, the tour's
+ * back/next row, and the padding around both. Without it a one-line step
+ * estimates at ~24px and reads as fitting anywhere.
+ */
+const CHROME_H = 130;
+
+export function estHeight(text: string, width: number): number {
+  const chars = text.trim().length;
+  const lines = Math.ceil((chars * CHAR_W) / Math.max(1, width - 40));
+  return CHROME_H + lines * LINE_H;
+}
 
 export function popoverPosition(
   r: DOMRect | null,
@@ -668,6 +792,8 @@ export function popoverPosition(
   offsetX?: Offset,
   width?: number,
   region?: DOMRect | null,
+  /** The text the popover will show, for estimating its height. See `onScreen`. */
+  text = '',
 ): React.CSSProperties {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
@@ -732,7 +858,66 @@ export function popoverPosition(
    * empty half of the screen, which is where it belongs regardless of which
    * side the anchor is on.
    */
+  /*
+   * A GUESS at the popover's height, used only to CHOOSE between placements —
+   * "is there room below this box", "roughly centre on the anchor". It is not
+   * a promise about the height, and nothing may clamp to it as though it were:
+   * that was the bug (Siggie, 2026-09-08, "popover getting cut off again").
+   *
+   * A step whose text comes from the model can be far taller than any constant
+   * — `{{model-description:ResearchStudy}}` alone is a 400-character paragraph
+   * — and clamping `top` to `vh - EST_H` reserved 260px for a popover needing
+   * 500, so the rest hung off the bottom of the screen with no `maxHeight` to
+   * stop it. The unanchored branch above never had this problem because it
+   * sets `maxHeight` and lets the browser size the box.
+   */
   const EST_H = 260;
+
+  /*
+   * What this particular popover is likely to need, rather than the constant.
+   * Falls back to `EST_H` when the caller passes no text — every existing
+   * caller in a test does, and their expectations should not move.
+   */
+  const wantH = text ? estHeight(text, W) : EST_H;
+
+  /**
+   * Finish an anchored placement: keep it on screen vertically, and CAP its
+   * height so a tall popover scrolls inside itself instead of off the bottom.
+   *
+   * The height is genuinely unknown here — that is the whole reason `EST_H` is
+   * a guess — so rather than clamp against a made-up number this gives the
+   * popover all the room between its top and the bottom margin. The browser
+   * then sizes it: short popovers are unaffected, and only one that really is
+   * too tall starts scrolling.
+   *
+   * `top` is still pulled up when it sits below the fold, so a popover anchored
+   * to something near the bottom does not start at `vh - 8` with 8px to live
+   * in. `MIN_H` is the least it may be squeezed to before it is moved up
+   * instead.
+   */
+  const onScreen = (
+    style: { left: number; top: number; width: number },
+    /*
+     * Roughly how tall this popover wants to be. Estimated from the TEXT, the
+     * same way `autoWidth` picks the width, because the two questions are the
+     * same one asked twice: at width `W`, this much text takes about this many
+     * lines. Still an estimate — the browser does the real layout — but an
+     * estimate that TRACKS the content instead of a constant that does not.
+     */
+    wantH = EST_H,
+  ) => {
+    /*
+     * Move it UP to fit before squeezing it.
+     *
+     * Clamping alone put a 500px popover at `top: 712` in a 900px viewport and
+     * capped it to 180px — a sliver, with two thirds of the screen empty above
+     * it. A tall popover anchored low should slide up the screen; only one
+     * that cannot fit anywhere gets capped.
+     */
+    const room = vh - 16;
+    const top = Math.max(8, Math.min(style.top, vh - Math.min(wantH, room) - 8));
+    return { ...style, top, maxHeight: `${vh - top - 8}px` };
+  };
 
   /*
    * Prefer the axis the DIAGRAM DOES NOT GROW ALONG (Siggie, 2026-08-28).
@@ -763,11 +948,11 @@ export function popoverPosition(
       bottom: { left: r.left, top: r.bottom + GAP },
       top: { left: r.left, top: r.top - EST_H - GAP },
     }[side];
-    return withOffset({
+    return withOffset(onScreen({
       left: Math.max(8, Math.min(place.left, vw - W - 8)),
-      top: Math.max(8, Math.min(place.top, vh - EST_H)),
+      top: place.top,
       width: W,
-    }, r, offsetX, vw);
+    }, wantH), r, offsetX, vw);
   }
 
   const canvas = document.querySelector('[data-graph-direction]');
@@ -778,12 +963,12 @@ export function popoverPosition(
     // Below the box, left-aligned with it, both clamped on screen.
     const below = r.bottom + GAP;
     // No room underneath (a box near the bottom) — fall through to beside.
-    if (below + EST_H <= vh - 8) {
-      return withOffset({
+    if (below + wantH <= vh - 8) {
+      return withOffset(onScreen({
         left: Math.max(8, Math.min(r.left, vw - W - 8)),
         top: below,
         width: W,
-      }, r, offsetX, vw);
+      }, wantH), r, offsetX, vw);
     }
   }
 
@@ -796,8 +981,8 @@ export function popoverPosition(
   // Vertically: centre on the anchor where possible, so a short anchor does
   // not get a popover hanging far below it. Height is unknown before render,
   // so this uses a generous estimate rather than measuring and re-rendering.
-  const top = Math.max(8, Math.min(r.top + r.height / 2 - EST_H / 3, vh - EST_H));
-  return withOffset({ left: Math.max(8, left), top, width: W }, r, offsetX, vw);
+  const top = r.top + r.height / 2 - EST_H / 3;
+  return withOffset(onScreen({ left: Math.max(8, left), top, width: W }, wantH), r, offsetX, vw);
 }
 
 /**

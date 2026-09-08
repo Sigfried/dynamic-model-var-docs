@@ -11,10 +11,10 @@
  * capability is the package's, not dmvd's: the region path is still supported
  * and still has to keep working for the next host that wants it.
  */
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { popoverPosition } from '../help/HelpLayer';
+import { autoWidth, popoverPosition } from '../help/HelpLayer';
 
 const VW = 1400;
 const VH = 900;
@@ -159,5 +159,163 @@ describe('dmvd overrides the popover font size without touching the package', ()
     expect(helpLayer, 'HelpLayer import not found').toBeGreaterThan(-1);
     expect(theme, 'helpTheme.css import not found').toBeGreaterThan(-1);
     expect(theme).toBeGreaterThan(helpLayer);
+  });
+});
+
+/**
+ * `autoWidth` — the width a step gets when it authors no `Width:`.
+ *
+ * These pin the SHAPE of the curve (monotonic, clamped, floored at the old
+ * flat default) rather than exact pixel values, which are tuning and should be
+ * free to move. The one place a number is asserted is the floor, because
+ * that is a compatibility promise: auto width replaced a constant 320, and
+ * every existing unauthored step is short enough to sit on it.
+ */
+describe('autoWidth', () => {
+  it('never goes below the old flat default', () => {
+    for (const text of ['', 'short', 'a'.repeat(200)]) {
+      expect(autoWidth(text)).toBeGreaterThanOrEqual(320);
+    }
+  });
+
+  it('leaves a typical short step exactly where it was', () => {
+    /*
+     * Most authored beats are one or two sentences, and those must come out at
+     * the old flat 320 rather than being nudged a few px for no visible reason.
+     *
+     * 150 chars is comfortably inside the floor region and stays there across
+     * retunings; the exact length at which the curve leaves 320 is TUNING
+     * (it has already moved once, from ~270 to ~180 when ASPECT went 2.0→3.0)
+     * and pinning it would make this test fail for the wrong reason.
+     */
+    expect(autoWidth('a'.repeat(150))).toBe(320);
+  });
+
+  it('never exceeds the widest width an author asks for', () => {
+    expect(autoWidth('a'.repeat(100_000))).toBeLessThanOrEqual(800);
+  });
+
+  it('grows with the amount of text', () => {
+    const widths = [400, 800, 1600, 3200].map(n => autoWidth('a'.repeat(n)));
+    for (let i = 1; i < widths.length; i++) {
+      expect(widths[i]).toBeGreaterThanOrEqual(widths[i - 1]);
+    }
+    // ...and actually grows somewhere in that range, rather than being pinned
+    // flat at a clamp the whole way.
+    expect(widths.at(-1)!).toBeGreaterThan(widths[0]);
+  });
+
+  it('ignores surrounding whitespace', () => {
+    expect(autoWidth('  \n\n  hello  \n ')).toBe(autoWidth('hello'));
+  });
+
+  it('keeps a long popover from running absurdly tall', () => {
+    /*
+     * The property the tuning actually exists to hold: at the chosen width,
+     * text should not need a wildly out-of-band number of lines. Checked as a
+     * height estimate rather than by asserting a width, so retuning CHAR_W /
+     * LINE_H / ASPECT together does not break the test for the wrong reason.
+     */
+    const chars = 1500;
+    const w = autoWidth('a'.repeat(chars));
+    const estHeight = (chars * 8 / w) * 24;
+    expect(estHeight).toBeLessThan(600);
+  });
+});
+
+/**
+ * A TALL popover stays on screen.
+ *
+ * REGRESSION (2026-09-08, "popover getting cut off again"). Every anchored
+ * placement clamped and chose against `EST_H = 260`, a constant guess at the
+ * popover's height, and set no `maxHeight` at all — so a step whose text comes
+ * from the model, and which is nearer 400px tall, was placed with 260px of
+ * room and simply hung off the bottom of the screen.
+ *
+ * The constant did TWO jobs badly. It also gated the LR "put it below the box"
+ * rule, so a popover that could not fit below still went below instead of
+ * falling through to the beside-with-more-room rule.
+ */
+describe('a tall popover is kept on screen', () => {
+  /** ~435 characters: a real BDCHM class description. */
+  const LONG = 'x'.repeat(435);
+
+  it('never extends past the bottom of the viewport', () => {
+    // Anchored low, which is where the clipping showed up.
+    const anchor = new DOMRect(110, 550, 350, 560);
+    const s = popoverPosition(anchor, undefined, undefined, 500, null, LONG);
+    const top = s.top as number;
+    const maxH = parseInt(String(s.maxHeight), 10);
+    expect(top + maxH).toBeLessThanOrEqual(VH);
+  });
+
+  it('always caps its height, at every anchored placement', () => {
+    /*
+     * The bug was an ABSENT maxHeight, so pin that every branch sets one:
+     * authored side, beside-the-anchor, and the canvas rule below.
+     */
+    const anchor = new DOMRect(110, 550, 350, 560);
+    for (const side of [undefined, 'left', 'right', 'top', 'bottom'] as const) {
+      const s = popoverPosition(anchor, side, undefined, 500, null, LONG);
+      expect(s.maxHeight, `side=${side}`).toBeDefined();
+      const top = s.top as number;
+      expect(top + parseInt(String(s.maxHeight), 10), `side=${side}`)
+        .toBeLessThanOrEqual(VH);
+    }
+  });
+
+  it('slides UP to fit rather than being squeezed to a sliver', () => {
+    /*
+     * Clamping alone put a 500px popover at top 712 in a 900px viewport and
+     * capped it to 180px — a sliver with two thirds of the screen empty above
+     * it. A tall popover anchored low should move up the screen.
+     */
+    const anchor = new DOMRect(110, 700, 350, 150);
+    const s = popoverPosition(anchor, undefined, undefined, 500, null, LONG);
+    expect(parseInt(String(s.maxHeight), 10)).toBeGreaterThan(300);
+  });
+
+  it('leaves a short popover where it was', () => {
+    // The fix must not move the steps that were already placed correctly.
+    const anchor = new DOMRect(110, 200, 350, 40);
+    const short = popoverPosition(anchor, undefined, undefined, 320, null, 'A short beat.');
+    expect(short.top as number).toBeGreaterThan(8);
+    expect(short.top as number).toBeLessThan(VH / 2);
+  });
+});
+
+/**
+ * Choosing a SIDE. Siggie, 2026-09-08: "it would have been nice if it had
+ * figured out to anchor right instead of bottom. that's entirely manual right
+ * now, right?" — it is not; the automatic rule was just deciding on the wrong
+ * number.
+ */
+describe('the LR below-the-box rule yields when there is no room', () => {
+  const canvas = () => {
+    document.body.innerHTML = '<div data-graph-direction="RIGHT"></div>';
+    const c = document.querySelector('[data-graph-direction]')!;
+    c.getBoundingClientRect = () => new DOMRect(0, 100, VW, VH - 100);
+    return c;
+  };
+
+  afterEach(() => { document.body.innerHTML = ''; });
+
+  it('goes BESIDE a low box when the popover is too tall to fit below', () => {
+    canvas();
+    // A tall box low on the canvas: 560 tall starting at 550, so "below" is
+    // off-screen for anything but a very short popover.
+    const anchor = new DOMRect(110, 550, 350, 560);
+    const s = popoverPosition(anchor, undefined, undefined, 500, null, 'x'.repeat(435));
+    // Beside means to the RIGHT of the box here, since that is the empty half.
+    expect(s.left as number).toBeGreaterThanOrEqual(anchor.right);
+  });
+
+  it('still goes below a box with room under it', () => {
+    // The rule exists so the popover does not stand where ELK lays out the
+    // next box; it must keep working when it can.
+    canvas();
+    const anchor = new DOMRect(110, 150, 350, 80);
+    const s = popoverPosition(anchor, undefined, undefined, 320, null, 'A short beat.');
+    expect(s.top as number).toBeGreaterThanOrEqual(anchor.bottom);
   });
 });
