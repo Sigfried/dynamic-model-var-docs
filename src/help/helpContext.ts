@@ -5,7 +5,7 @@
  */
 
 import { createContext, useContext } from 'react';
-import type { HelpAnchor, HelpContent, TourMeta, TourPosition } from './parseHelpContent';
+import type { HelpAnchor, HelpContent, TextResolver, TourMeta, TourPosition } from './parseHelpContent';
 
 /**
  * Resolves a host-specific anchor kind to the element it names.
@@ -54,6 +54,22 @@ export const HELP_MODE_ENABLED = false;
 export const ADDRESS_TOGGLE_ENABLED = import.meta.env.DEV;
 
 export interface HelpApi {
+  /**
+   * Register the host's `{{kind:arg}}` text resolvers once it can answer them.
+   *
+   * A prop would be simpler, and `textResolvers` on `<HelpProvider>` is still
+   * the way for a host that has its data up front. dmvd does not: the provider
+   * WRAPS the component that loads the model, so at the point the prop would
+   * be passed there is nothing to resolve against yet. Rather than move the
+   * provider inside (it also owns the tour, which outlives any one view) or
+   * load the model twice, the host calls this when its data arrives and the
+   * content is refilled.
+   *
+   * Pass a STABLE object — the content is reparsed and refilled whenever this
+   * identity changes, so a fresh object every render would reparse the help
+   * file every render.
+   */
+  setTextResolvers: (resolvers: Record<string, TextResolver> | undefined) => void;
   helpMode: boolean;
   toggleHelpMode: () => void;
   exitHelpMode: () => void;

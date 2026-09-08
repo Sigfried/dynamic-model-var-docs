@@ -30,6 +30,7 @@ import { HelpProvider } from '../help/HelpProvider';
 import { useHelp, HELP_MODE_ENABLED } from '../help/helpContext';
 import HelpLayer from '../help/HelpLayer';
 import { helpResolvers } from './helpResolvers';
+import { helpTextResolvers } from './helpTextResolvers';
 import helpMarkdown from './help-content.md?raw';
 /* dmvd's popover overrides. MUST come after the HelpLayer import above, which
    is what pulls in the package's `help.css` — these rules have the same
@@ -58,6 +59,25 @@ function ExploreAppInner() {
     () => (modelData ? new DataService(modelData) : null),
     [modelData],
   );
+
+  /*
+   * What `{{model-description:Participant}}` and friends fill with.
+   *
+   * REGISTERED rather than passed as a prop, because the provider wraps this
+   * component: at the point the prop would be set the model has not loaded and
+   * there is nothing to resolve against. Memoised on the service, since the
+   * provider refills the whole content whenever this identity changes — a new
+   * object every render would reparse the help file every render.
+   *
+   * Until the model loads this stays undefined, so a placeholder renders as
+   * written instead of being filled with a wrong empty string.
+   */
+  const { setTextResolvers } = useHelp();
+  const textResolvers = useMemo(
+    () => (dataService ? helpTextResolvers(dataService) : undefined),
+    [dataService],
+  );
+  useEffect(() => setTextResolvers(textResolvers), [textResolvers, setTextResolvers]);
 
   // One read at mount resolves URL > stored preference > default for every
   // piece of shareable state, so no two useStates can disagree about it.

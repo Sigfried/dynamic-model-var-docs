@@ -1101,3 +1101,61 @@ export function parseHelpContent(markdown: string): HelpContent {
 
   return { sections, entries, tourMeta };
 }
+
+/**
+ * Fills a `{{kind:arg}}` placeholder with text the HOST looks up.
+ *
+ * Returning `undefined` means "I do not handle this kind" and leaves the
+ * placeholder standing, visibly, in the popover — see `fillPlaceholders`.
+ */
+export type TextResolver = (arg: string) => string | undefined;
+
+/**
+ * `{{kind:arg}}`. The arg runs to the closing brace, so it may contain dots
+ * and colons (`{{model-description:Participant}}`, and a hypothetical
+ * `{{slot-description:Visit.associated_participant}}` alike); only the FIRST
+ * colon separates kind from arg. Whitespace inside the braces is tolerated
+ * because it is invisible in a markdown file and would otherwise fail
+ * mysteriously.
+ */
+const PLACEHOLDER = /\{\{\s*([a-z][a-z0-9-]*)\s*:\s*([^}]*?)\s*\}\}/gi;
+
+/**
+ * Substitute `{{kind:arg}}` placeholders in one markdown block.
+ *
+ * **Explicit, not implicit** (Siggie, 2026-09-08: "i prefer explicit"). The
+ * alternative considered was deriving the text from the step's `Anchor:` — a
+ * step anchored at `entity-row:Participant` silently gaining that class's
+ * description. Less to type, but the author cannot see in the file that the
+ * text comes from elsewhere, and a step with no anchor would have no rule.
+ * A placeholder says where the text came from, at the place it lands, and
+ * composes with authored prose around it — which the whole-field alternative
+ * could not do.
+ *
+ * **An unresolved placeholder is left as written**, deliberately, rather than
+ * being blanked. A class renamed by an upstream schema sync is exactly the
+ * failure this has to survive (the hand-curated config rot problem), and a
+ * silent empty popover hides it while a literal `{{model-description:Gone}}`
+ * on screen names the missing thing. A test can assert every placeholder in
+ * the content file resolves, which turns schema drift into a red test rather
+ * than a hole in a tour.
+ */
+export function fillPlaceholders(
+  block: string,
+  resolvers: Record<string, TextResolver> | undefined,
+): string {
+  if (!resolvers || !block.includes('{{')) return block;
+  return block.replace(PLACEHOLDER, (whole, kind: string, arg: string) => {
+    const text = resolvers[kind.toLowerCase()]?.(arg);
+    return text ?? whole;
+  });
+}
+
+/**
+ * Every `{{kind:arg}}` in a block, as `[kind, arg]` pairs. For tests that want
+ * to assert the content file's placeholders all resolve against the live
+ * schema; not used by the rendering path.
+ */
+export function placeholdersIn(block: string): Array<[string, string]> {
+  return [...block.matchAll(PLACEHOLDER)].map(m => [m[1].toLowerCase(), m[2]]);
+}

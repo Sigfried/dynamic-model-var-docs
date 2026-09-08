@@ -29,8 +29,10 @@
 import {
   useCallback, useEffect, useMemo, useState, type ReactNode,
 } from 'react';
-import { parseAnchor, parseHelpContent, tourNames, tourPositions, tourSteps } from './parseHelpContent';
-import type { HelpAnchor } from './parseHelpContent';
+import {
+  fillPlaceholders, parseAnchor, parseHelpContent, tourNames, tourPositions, tourSteps,
+} from './parseHelpContent';
+import type { HelpAnchor, HelpContent, TextResolver } from './parseHelpContent';
 import {
   HelpContext, HELP_MODE_ENABLED, ADDRESS_TOGGLE_ENABLED,
   type AnchorResolver, type HelpApi,
@@ -47,9 +49,59 @@ function isInputFocused(): boolean {
     || el?.getAttribute('contenteditable') === 'true';
 }
 
+/**
+ * Fill `{{kind:arg}}` placeholders everywhere PROSE can appear in the content.
+ *
+ * Which fields those are is a judgement, not "all strings": the viewer-facing
+ * text (descriptions, beat text, the action band, context, interactions, tour
+ * blurbs) is filled, while ids, titles, anchors and queries are not. A
+ * placeholder in a `Change:` query would be substituting into a URL, and one
+ * in an id would break the address tags — neither is a thing to support by
+ * accident.
+ *
+ * Returns the content UNCHANGED when there are no resolvers, so a host that
+ * passes none pays nothing and behaves exactly as before.
+ */
+function resolveText(
+  content: HelpContent,
+  textResolvers: Record<string, TextResolver> | undefined,
+): HelpContent {
+  if (!textResolvers) return content;
+  const fill = (s: string) => fillPlaceholders(s, textResolvers);
+  const fillOpt = (s: string | undefined) => (s === undefined ? undefined : fill(s));
+
+  const entries = new Map(
+    [...content.entries].map(([id, e]) => [id, {
+      ...e,
+      description: fill(e.description),
+      interactions: e.interactions.map(fill),
+      action: fillOpt(e.action),
+      context: fillOpt(e.context),
+      beats: e.beats?.map(b => ({ ...b, description: fillOpt(b.description), action: fillOpt(b.action) })),
+    }]),
+  );
+
+  return {
+    // Sections hold the SAME entry objects as the map, so they are rebuilt
+    // from it rather than filled a second time — otherwise a step reached
+    // through a section would be a different object from the one the map
+    // returns, and identity comparisons between them would silently stop
+    // holding.
+    sections: content.sections.map(s => ({
+      ...s,
+      entries: s.entries.map(e => entries.get(e.id) ?? e),
+      tourMeta: s.tourMeta && { ...s.tourMeta, description: fill(s.tourMeta.description) },
+    })),
+    entries,
+    tourMeta: new Map(
+      [...content.tourMeta].map(([name, m]) => [name, { ...m, description: fill(m.description) }]),
+    ),
+  };
+}
+
 export function HelpProvider({
   markdown, onPushChange, onPopChange, onTourStart, onTourEnd,
-  resolvers, centerOn, children,
+  resolvers, textResolvers, centerOn, children,
 }: {
   markdown: string;
   /**
@@ -104,6 +156,16 @@ export function HelpProvider({
    */
   resolvers?: Record<string, AnchorResolver>;
   /**
+   * Resolvers for the host's own TEXT kinds: what a `{{kind:arg}}` placeholder
+   * in a description is replaced with. The same seam as `resolvers` and for
+   * the same reason — `{{model-description:Participant}}` means knowing what a
+   * class is, which this package must not.
+   *
+   * An unregistered kind, or one returning undefined, leaves the placeholder
+   * visible rather than blanking it; see `fillPlaceholders`.
+   */
+  textResolvers?: Record<string, TextResolver>;
+  /**
    * Where an UNANCHORED popover (`Anchor: none`, or an anchor that did not
    * resolve) is centred. Written in the same `kind:arg` grammar as `Anchor:`,
    * so `graph-canvas` means the element tagged `data-help-id="graph-canvas"`.
@@ -120,7 +182,33 @@ export function HelpProvider({
   centerOn?: string;
   children: ReactNode;
 }) {
-  const content = useMemo(() => parseHelpContent(markdown), [markdown]);
+  /*
+   * Text resolvers can arrive either way: as a PROP, for a host whose data is
+   * ready before the provider mounts, or through `setTextResolvers` once it
+   * loads. dmvd needs the second — the provider wraps the component that loads
+   * the model — and the prop is kept because it is the simpler path and the
+   * one a test or a smaller host wants.
+   *
+   * The registered set wins when both are present, since it is by definition
+   * the later news.
+   */
+  const [registered, setRegistered] = useState<Record<string, TextResolver>>();
+  const activeResolvers = registered ?? textResolvers;
+
+  /*
+   * Parsed, then FILLED — `{{kind:arg}}` placeholders replaced with whatever
+   * the resolvers return.
+   *
+   * Done here, once, rather than at render: everything downstream (the
+   * popover, the tour positions, the address tag that copies a step's text)
+   * then sees finished prose and none of it has to know placeholders exist.
+   * The parser stays pure — it never calls a resolver — so its tests keep
+   * pinning the format rather than the host's data.
+   */
+  const content = useMemo(
+    () => resolveText(parseHelpContent(markdown), activeResolvers),
+    [markdown, activeResolvers],
+  );
 
   const [helpMode, setHelpMode] = useState(false);
   const [tourIndex, setTourIndex] = useState<number | null>(null);
@@ -426,6 +514,7 @@ export function HelpProvider({
   }, [centerOn, resolveAnchor]);
 
   const api = useMemo<HelpApi>(() => ({
+    setTextResolvers: setRegistered,
     helpMode, toggleHelpMode, exitHelpMode,
     tourIndex, startTour, endTour, nextStep, prevStep,
     positions, position: tourIndex === null ? undefined : positions[tourIndex],
@@ -436,6 +525,8 @@ export function HelpProvider({
        nextStep, prevStep, positions, stepCount, tours, tourName,
        showAddresses, toggleAddresses,
        content, activeId, showEntry, dismissEntry, resolveAnchor, centerRect]);
+  /* `setRegistered` is a useState setter: React guarantees it stable, so it is
+     deliberately absent from the dependency list above. */
 
   return <HelpContext.Provider value={api}>{children}</HelpContext.Provider>;
 }
