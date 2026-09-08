@@ -343,9 +343,12 @@ those two consumers is the actual unit of work:
 
 - **the popover** — poll only until the anchor first resolves, then stop.
   `resize` and `scroll` stay; they are events, not a timer.
-- **the ring** — needs continuous tracking, so it is the piece that genuinely
-  wants CSS anchor positioning (or a `ResizeObserver`/`MutationObserver` on the
-  canvas as the cheaper interim).
+- **the ring** — needs continuous tracking, so under a split it is the awkward
+  leftover, wanting a `ResizeObserver`/`MutationObserver` on the canvas to
+  replace the timer for that one job. Under the MIGRATION it is not awkward at
+  all: `anchor()`/`anchor-size()` size a box to its anchor in four `calc()`s
+  (HELP_PACKAGE_PLAN §1, step 3). Its awkwardness is an artefact of splitting,
+  not a property of the ring.
 
 So the two consumers CAN be split, and that is what makes dragging reachable
 without the migration.

@@ -125,8 +125,28 @@ pair in the name of this item.
 2. `position-anchor` + `position-area` + `position-try-fallbacks` on
    `.help-popover`, replacing the anchored branch of `popoverPosition`. The
    UNANCHORED branch already needs no measurement and is the model to copy.
-3. The `.help-spotlight` ring: it needs to track its anchor continuously, which
-   is what the poll was really keeping alive. `anchor-name` + `anchor()` sizing.
+3. The `.help-spotlight` ring — the EASIEST of the three, not the fiddly one.
+   It has to match its anchor's box, which is what `anchor()`/`anchor-size()`
+   are for, and it is the only consumer of `rect` besides `popoverPosition`:
+
+   ```css
+   .help-spotlight {
+     position: fixed;
+     position-anchor: --help-anchor;
+     left:   calc(anchor(left) - 4px);
+     top:    calc(anchor(top)  - 4px);
+     width:  calc(anchor-size(width)  + 8px);
+     height: calc(anchor-size(height) + 8px);
+   }
+   ```
+
+   No inline style, no `rect`, no re-render, and it tracks through drags and
+   relayouts natively. The `0 0 0 9999px` scrim needs nothing: it is painted
+   relative to the ring's own box, so it follows for free. The `transition` on
+   `left/top/width/height` keeps working.
+
+   With this and step 2 done, `rect`, `setRect`, the `measure` effect and its
+   three triggers all delete — those two are its ONLY readers.
 4. Hint dots (`help-hint`) last — the stale-hint bug dies with them.
 
 `entity-row` and `entity-checkbox` (4 uses between them) and `slot-row` (0) can
