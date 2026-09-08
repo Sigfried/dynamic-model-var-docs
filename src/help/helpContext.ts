@@ -84,8 +84,14 @@ export interface HelpApi {
    *
    * The name is one of `tours`. An unknown name yields an empty tour and so
    * starts nothing — it cannot half-enter.
+   *
+   * `at` deep-links to a position other than the opening one, replaying every
+   * change up to it — what the Overview map's "start this tour there" needs.
+   * It belongs here rather than in a `startTour` + `goToStep` pair because
+   * everything outside this call reads a `positions` memo that still holds the
+   * OUTGOING tour until React re-renders. Out of range clamps to the opening.
    */
-  startTour: (tour?: string) => void;
+  startTour: (tour?: string, at?: number) => void;
   endTour: () => void;
   /** Every tour in the content file, in file order. The Help menu lists these. */
   tours: string[];

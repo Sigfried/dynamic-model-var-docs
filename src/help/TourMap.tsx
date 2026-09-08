@@ -90,7 +90,8 @@ function rowsFor(positions: ReturnType<typeof tourPositions>): Row[] {
 
 export default function TourMap({ scope, onClose }: TourMapProps) {
   const {
-    content, tours, tourMeta, tourName, positions, position, goToStep, startTour,
+    content, tours, tourMeta, tourName, tourIndex, positions, position,
+    goToStep, startTour,
   } = useHelp();
 
   // Escape closes, matching every other panel and the popover itself.
@@ -114,6 +115,18 @@ export default function TourMap({ scope, onClose }: TourMapProps) {
   );
 
   const here = position?.step;
+
+  /*
+   * The tour actually RUNNING, which is not the same question as `tourName`.
+   *
+   * `tourName` is the last tour started; `tourIndex === null` means none is
+   * running now. Reading the name alone sent a click on a finished tour's
+   * step down the "already running, just jump" path and into a `goToStep`
+   * that no-ops on a null index -- the map closed and nothing started
+   * (Siggie, 2026-09-08). `endTour` clears the name now, so this is belt and
+   * braces; it is kept because the failure is silent and the check is free.
+   */
+  const running = tourIndex === null ? undefined : tourName;
 
   const stepButton = (r: Row, current: boolean, onClick: () => void) => (
     <button
@@ -164,7 +177,7 @@ export default function TourMap({ scope, onClose }: TourMapProps) {
       >
         <div className="help-map-head">
           <div>
-            <h2>{scope === 'all' ? 'Tours' : (tourName ?? 'This tour')}</h2>
+            <h2>{scope === 'all' ? 'Tours' : (running ?? 'This tour')}</h2>
             <p>
               {scope === 'all'
                 ? 'Every guided walk, and what is in it. Click any step to start there.'
@@ -194,24 +207,23 @@ export default function TourMap({ scope, onClose }: TourMapProps) {
                 )}
                 {rows.map(r => stepButton(
                   r,
-                  name === tourName && r.step === here,
+                  running === name && r.step === here,
                   /*
-                   * Starting a tour and then jumping is two moves, not one:
-                   * `startTour` computes its own first position (it cannot go
-                   * through `goTo`, whose `positions` memo still holds the
-                   * OUTGOING tour — see HelpProvider), so a jump issued in the
-                   * same tick would read that stale list too. Deferring to the
-                   * next frame lets the memo settle.
+                   * A tour already running is a JUMP -- no restart, which
+                   * would throw away the frames the viewer walked in. Any
+                   * other tour is started AT the step, in one call.
                    *
-                   * Already running: no restart, just the jump — restarting
-                   * would throw away the frames the viewer walked in.
+                   * That second argument exists because doing it in two here
+                   * did not work: `startTour(name)` then
+                   * `requestAnimationFrame(() => goToStep(i))` deferred into a
+                   * closure holding the PRE-start `goToStep`, whose
+                   * `tourIndex` was still null, so the jump hit that guard and
+                   * vanished. The provider settles both moves against the same
+                   * freshly computed positions instead.
                    */
                   () => {
-                    if (name === tourName) goToStep(r.index);
-                    else {
-                      startTour(name);
-                      if (r.index > 0) requestAnimationFrame(() => goToStep(r.index));
-                    }
+                    if (running === name) goToStep(r.index);
+                    else startTour(name, r.index);
                     onClose();
                   },
                 ))}

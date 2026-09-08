@@ -397,10 +397,27 @@ export function HelpProvider({
    * tour. See docs/TASKS.md item 7 for the silent-`goTo` case this deliberately
    * does not paper over.
    */
-  const startTour = useCallback((name?: string) => {
+  const startTour = useCallback((name?: string, at = 0) => {
     setHelpMode(false);
     setTourName(name);
-    const first = tourPositions(content, name)[0];
+    const all = tourPositions(content, name);
+    /*
+     * `at` deep-links to a later step, for the Overview map's "start this tour
+     * THERE". It is applied here, for exactly the reason the opening position
+     * is: everything downstream of this call reads the `positions` memo, which
+     * still holds the OUTGOING tour until React re-renders.
+     *
+     * The first attempt lived in the map and deferred with
+     * `requestAnimationFrame(() => goToStep(i))` after `startTour`. That never
+     * worked: the deferred closure captured the PRE-start `goToStep`, whose
+     * `tourIndex` was still null, so it returned at its own guard and the jump
+     * vanished silently. Found 2026-09-08 while tracing a different dead-click.
+     *
+     * Out of range clamps to the opening rather than refusing: a stale deep
+     * link should start the tour, not nothing.
+     */
+    const start = Math.min(Math.max(at, 0), Math.max(all.length - 1, 0));
+    const first = all[start];
     if (!first) return;
     /*
      * Announced BEFORE the first push, and unconditionally: what is on the
@@ -410,10 +427,20 @@ export function HelpProvider({
      * which half of the selection is whose.
      */
     onTourStart?.();
-    setTourIndex(0);
+    setTourIndex(start);
     setActiveId(first.entry.id);
-    if (first.change != null && onPushChange) onPushChange(first.change, first.replace);
-  }, [content, onPushChange, onTourStart]);
+    /*
+     * Deep-linking replays every change up to the target, not just its own:
+     * a step's canvas is what the steps before it built, and a step whose own
+     * `Change:` is absent inherits entirely. Same fold `goToStep` uses, and
+     * the host applies it as one update.
+     */
+    const changes = all.slice(0, start + 1)
+      .filter(p => p.change != null)
+      .map(p => ({ query: p.change!, replace: p.replace }));
+    if (start > 0 && onJumpChanges) onJumpChanges(changes, 0);
+    else if (first.change != null && onPushChange) onPushChange(first.change, first.replace);
+  }, [content, onPushChange, onJumpChanges, onTourStart]);
 
   /**
    * Ending the tour unwinds every frame it still has pushed.
@@ -431,6 +458,19 @@ export function HelpProvider({
   const endTour = useCallback(() => {
     setTourIndex(null);
     setActiveId(null);
+    /*
+     * The NAME goes too, or "which tour is running" answers a tour that ended.
+     *
+     * It survived every exit until 2026-09-08, harmlessly while the only
+     * reader was the popover (which does not render outside a tour anyway).
+     * The tour map reads it to decide whether a clicked step needs
+     * `startTour` first or is a jump within the running tour — so a stale
+     * name sent every step of the last tour down the jump path, into a
+     * `goToStep` that returns immediately on `tourIndex === null`. The map
+     * closed and no tour began: Siggie, *"clicking a step just dismisses the
+     * overview map but brings up no tour"*.
+     */
+    setTourName(undefined);
     onTourEnd?.();
   }, [onTourEnd]);
 

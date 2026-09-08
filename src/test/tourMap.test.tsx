@@ -190,15 +190,58 @@ describe('the tour map', () => {
     expect(stepTitles()).toHaveLength(2);
   });
 
-  test('the overview starts a tour that is not running before jumping', () => {
+  test('the overview starts a tour that is not running, AT the clicked step', () => {
+    /*
+     * One call, not `startTour` then a deferred `goToStep`. That pair was the
+     * first implementation and never worked: the deferred closure captured the
+     * PRE-start `goToStep`, whose `tourIndex` was still null, so it returned at
+     * its own guard and the jump vanished. Deep-linking to any step but the
+     * first silently opened the tour at step 1.
+     */
     const startTour = vi.fn();
     const goToStep = vi.fn();
     renderMap('all', {
       tourName: undefined, tourIndex: null, position: undefined, startTour, goToStep,
     });
-    fireEvent.click([...document.querySelectorAll('.help-map-step')][0]);
-    expect(startTour).toHaveBeenCalledWith('Demo');
-    // Step 1 is position 0, which `startTour` already opens on — so no jump.
+    // Step 2's POSITION index is 3, not 1: step 1 contributes an opening
+    // position plus its two beats. Same off-by-beats trap the jump test pins.
+    fireEvent.click([...document.querySelectorAll('.help-map-step')][1]);
+    expect(startTour).toHaveBeenCalledWith('Demo', 3);
     expect(goToStep).not.toHaveBeenCalled();
+  });
+
+  test('a FINISHED tour is restarted, not treated as still running', () => {
+    /*
+     * The dead-click Siggie hit, 2026-09-08: *"clicking a step just dismisses
+     * the overview map but brings up no tour"*.
+     *
+     * `tourName` was never cleared on exit, so after running a tour and
+     * leaving it, every step of THAT tour took the "already running, just
+     * jump" branch -- into a `goToStep` that returns immediately on a null
+     * `tourIndex`. The map closed and nothing began.
+     *
+     * `endTour` clears the name now; the map also derives "running" from
+     * `tourIndex` rather than from the name, because the failure is silent.
+     */
+    const startTour = vi.fn();
+    const goToStep = vi.fn();
+    renderMap('all', {
+      // The post-endTour state as it USED to be: index cleared, name lingering.
+      tourName: 'Demo', tourIndex: null, position: undefined, startTour, goToStep,
+    });
+    fireEvent.click([...document.querySelectorAll('.help-map-step')][1]);
+    expect(startTour).toHaveBeenCalledWith('Demo', 3);
+    expect(goToStep).not.toHaveBeenCalled();
+  });
+
+  test('a step of the RUNNING tour jumps rather than restarting', () => {
+    // The other side of the same branch: restarting would throw away the
+    // frames the viewer already walked in.
+    const startTour = vi.fn();
+    const goToStep = vi.fn();
+    renderMap('all', { startTour, goToStep });
+    fireEvent.click([...document.querySelectorAll('.help-map-step')][1]);
+    expect(goToStep).toHaveBeenCalledWith(3);
+    expect(startTour).not.toHaveBeenCalled();
   });
 });

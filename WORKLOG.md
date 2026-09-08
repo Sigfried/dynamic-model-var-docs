@@ -7,6 +7,74 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-08, evening (two dead-click bugs in the map, one root shape)
+
+Siggie: *"sometimes these maps get in a weird state and clicks don't work or
+they don't work right ... clicking a step just dismisses the overview map but
+brings up no tour"*, with the URL
+`?sel=Consent~Demography~Organization~Participant~Person~ResearchStudy~ResearchStudyCollection~Visit`.
+
+**The URL was the clue and it should be reusable.** Full admin selection, no
+`tour=` param: a tour had run and ENDED, leaving its selection behind. That
+narrowed it to "what does the map do after a tour finishes" in one read.
+
+Two bugs, both the same shape — **state that outlives the thing it describes,
+read by a new caller that had every reason to trust it.**
+
+### 1. `tourName` was never cleared
+
+`setTourName` was called only in `startTour`. `endTour` cleared `tourIndex` and
+`activeId` and left the name set forever.
+
+Harmless for as long as the only reader was the popover, which does not render
+outside a tour anyway. The map is the first caller to ask *which tour is
+running* while none is — it uses the answer to choose between `startTour` and
+`goToStep` — and a stale name sent every step of the last-run tour down the
+jump path, into `goToStep`'s own `tourIndex === null` guard. Map closed, no
+tour, no error.
+
+Fixed in `endTour`. The map ALSO derives `running` from `tourIndex` rather than
+from the name, kept as belt and braces because the failure is silent and the
+check is free.
+
+### 2. Deep-linking never worked at all
+
+The Overview's "start this tour at step N" was written as `startTour(name)`
+then `requestAnimationFrame(() => goToStep(r.index))`, with a comment
+explaining that deferring lets the `positions` memo settle.
+
+**The comment described a real problem and the fix did not solve it.** The
+deferred closure captures the `goToStep` from the render BEFORE `startTour` —
+whose `tourIndex` is still null — so it returned at its guard and the jump
+vanished. Every deep link silently opened the tour at step 1. Found while
+tracing bug 1; Siggie had reported it as part of the same "don't work right".
+
+Now `startTour(name, at)`. It belongs in the provider for exactly the reason
+`startTour` already computes its own first position: everything outside that
+call reads a memo still holding the OUTGOING tour. It replays every change up
+to the target (a step's canvas is what the steps before it built, and a step
+with no `Change:` inherits entirely), through the same `onJumpChanges` fold, so
+the host applies it as one update. Out of range clamps to the opening — a stale
+deep link should start the tour, not nothing.
+
+**Worth generalising**: `requestAnimationFrame(() => useCallbackFn())` after a
+state change is almost always wrong. The deferral gives React time to
+re-render, but the closure still holds the OLD callback. Either the two moves
+belong in one call (what happened here) or the follow-up belongs in an effect
+keyed on the new state.
+
+### Not done, parked
+
+The nav-row floor added earlier today makes `navMinWidth` a THIRD hardcoded
+estimate of rendered text beside `EST_H` and `CHAR_W`/`LINE_H`. All three are
+tuned for dmvd's 16px base, so a host with a different font size gets all three
+wrong together, and all three have the same proper fix: measure the rendered
+popover rather than predicting it. Folded into TASKS item 8 rather than left
+as three separate comments, since doing it once for three beats doing it three
+times.
+
+
+---
 ## 2026-09-08, evening (the nav row's own width floor)
 
 Siggie: *"too narrow popover mangling the status line"*, with a screenshot of
