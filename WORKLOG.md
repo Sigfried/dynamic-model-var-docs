@@ -7,6 +7,69 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-08, later still (admin-study beats)
+
+Finished the `admin-study` step's beats — the inline `<!-- Claude: finish the
+beats for this step -->` in Siggie's uncommitted edit. Two beats existed
+(ResearchStudyCollection, ResearchStudy); there are eight classes in `admin`.
+
+**The beat order is the DRAWN order, not the config order.** `cat=admin`
+expands to `categoryView`, and admin has no pins, so the canvas is exactly the
+eight `classIds`. But the layout is layered by ownership, and the ownership
+edges among those eight (probed, not guessed) are:
+
+    ResearchStudyCollection -> ResearchStudy   entries        own-fwd
+    ResearchStudy           -> ResearchStudy   part_of        own-bkwd, LOOP
+    ResearchStudy           -> Participant     member_of_...  own-bkwd
+    Organization            -> Participant     originating_site
+    Person                  -> Participant     associated_person
+    Participant             -> Consent         consents       own-fwd
+    ResearchStudy           -> Consent         consents       own-fwd
+    Participant             -> Visit           associated_participant
+    Participant             -> Demography      associated_participant
+    Visit                   -> Demography      associated_visit
+
+So the beats walk left to right: Collection, Study, Organization, Person,
+Participant, Consent, Visit, Demography. A beat sequence that followed
+`classIds` order would jump around the canvas.
+
+### What the probe corrected
+
+Three claims I would have written wrong from the YAML alone:
+
+- **`attributes` is not the whole story.** Person/Participant/Demography/Visit
+  connect through TOP-LEVEL `slots` (`associated_person`,
+  `associated_participant`, `associated_visit`), not through `attributes`. A
+  first pass over `attributes` only showed Person, Demography and Visit as
+  totally unconnected to Participant, which would have been a striking and
+  false thing to put in a tour. Read `classes[C].slots` against `schema.slots`
+  as well as `classes[C].attributes`.
+- **`performed_by` is declared on THREE classes** (Observation, ObservationSet,
+  SpecimenCreationActivity), not ten. The ten edges in the graph are
+  subclasses inheriting it. Draft copy said "ten classes"; corrected to name
+  the three declarers and say the subclasses inherit. Cf.
+  [[reference-linkml-domain-of]] — same shape of error.
+- **Survey's self-containment is real and even stronger than the config
+  comment.** `entityCategories.ts` says "two outward references"; the live
+  count is one (`QuestionnaireResponse.associated_visit`). The tour says
+  "almost no outward references" rather than a number, so it cannot rot.
+
+### `Action:` added
+
+`Only: cat=admin` had no `Action:`, so the step was in the
+`replacing steps without an Action:` console warning. Added one. Both Action
+rules are WARNINGS not failures (changed 2026-09-08), so a green test run does
+not mean the step has its receipt — read the warnings.
+
+### Left alone deliberately
+
+The step's `Description:` still opens with Siggie's `[text here about admin
+category]` placeholder; the framing paragraph was added BELOW it rather than
+replacing it. Per [[feedback-help-content-todo-loop]], their half-finished
+authoring is not mine to tidy — and the bracket is how they find the spot.
+
+
+---
 ## 2026-09-08, later (sections split on `## `)
 
 Siggie asked what `---` separators are really for — *"the separation between

@@ -141,8 +141,14 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 - **Title:** Category: Admin / Study
 - **Tour:** The BioData Catalyst Harmonized Model
 - **Description:** [text here about admin category]
+
+  Eight classes answer *who was studied, by whom, and under what agreement*.
+  Nothing here is a measurement — these are the records every other category
+  hangs off. Read the diagram left to right: the study comes first, the
+  individual next, and what happened to them last.
 - **Anchor:** category-row:admin
 - Only: cat=admin
+- **Action:** Drew the whole Admin / Study category, the same as pressing its ⊞ button.
 - Beats:
   1. ResearchStudyCollection
      - Description:
@@ -153,7 +159,73 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
      - Description:
        ##### ResearchStudy
        {{model-description:ResearchStudy}}
+
+       `part_of` points at ResearchStudy itself — the loop on this box — so a
+       study can be a sub-study of another.
      - Anchor: node-box:ResearchStudy
+  3. Organization
+     - Description:
+       ##### Organization
+       {{model-description:Organization}}
+
+       It declares no attribute pointing at anything here. Everything that
+       names an Organization — `Participant.originating_site`, and the
+       `performed_by` that Observation, ObservationSet and
+       SpecimenCreationActivity declare and their subclasses inherit — is
+       declared elsewhere and drawn back at it.
+     - Anchor: node-box:Organization
+  4. Person
+     - Description:
+       ##### Person
+       {{model-description:Person}}
+     - Anchor: node-box:Person
+  5. Participant
+     - Description:
+       ##### Participant
+       {{model-description:Participant}}
+     - Anchor: node-box:Participant
+  6. person vs participant
+     - Description:
+       ##### One person, several participants
+       Person and Participant are the first genuinely modelling-flavoured
+       distinction in the schema, and it is worth slowing down for. A
+       **Person** is a human being. A **Participant** is that person's role in
+       one study, and `associated_person` is the link. The same person enrolled
+       in three studies is three Participants — usually deliberately
+       untraceable back to the person, which is how privacy is kept.
+     - Anchor: node-box:Participant
+  7. Consent
+     - Description:
+       ##### Consent
+       {{model-description:Consent}}
+
+       Both Participant and ResearchStudy own a list of them, so consent is
+       recorded per person and per study.
+     - Anchor: node-box:Consent
+  8. Visit
+     - Description:
+       ##### Visit
+       {{model-description:Visit}}
+     - Anchor: node-box:Visit
+  9. Demography
+     - Description:
+       ##### Demography
+       {{model-description:Demography}}
+
+       Sex, ethnicity and race sit here rather than on Person. Demography
+       points at a Participant, and optionally at the Visit it was recorded
+       at — so it is a record ABOUT a participant, not a fixed property of the
+       human being.
+     - Anchor: node-box:Demography
+  10. the spine
+     - Description:
+       ##### The spine
+       Person → Participant → Visit is the path the rest of the model hangs
+       off. Clinical, Observations, Laboratory and Files all point back at a
+       Participant, a Visit, or both — which is why those categories borrow
+       Participant and Visit into their own views. Survey is the exception:
+       ten classes and almost no outward references, a self-contained subtree.
+     - Anchor: none
 
 
 ### why
