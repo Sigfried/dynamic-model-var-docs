@@ -12,21 +12,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 <details>
 <summary><b>TODO</b></summary>
 
-> **Where the work actually is: [docs/TASKS.md](../../docs/TASKS.md) item 1** —
-> tour 1 needs a category step for `clinical`, `observation`, `lab`, `survey`
-> and `other`, modelled on `admin-study`. `app-model-mods` promises a walk
-> through each category and only `admin` exists.
->
-> Everything below is Siggie's scratchpad, kept because it is theirs to cut.
-> Two of its bullets have since been filed properly and are tracked there, not
-> here: **"Make better Change, Action, Beat"** is TASKS item 3, and
-> **multi-line for the other fields** is in
-> [BACKLOG § Tour authoring notes](../../docs/BACKLOG.md#tour-authoring-notes--draft-preview).
-> The "Original unfinished draft text" fold is fully translated into the
-> entries below it.
-
-<details>
-<summary><b>Original unfinished draft text</b></summary>
+> Check old draft text and make sure it all got included
 
 3. select MeasurementObservation and highlight observation_type. text:
    - While the relationship between an entity and its enumerations and raw
@@ -51,30 +37,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
       entities. There are five ways an entity can be related to another.
    2. highlight row
    3. click checkbox.
-</details><!-- end of draft text -->
 
-
-### following steps not finished yet. ignore
-- **Rewrite existing steps to use `Only:`.** The verb exists
-  ([FORMAT.md](../help/FORMAT.md#only--a-step-that-names-the-whole-canvas))
-  but the steps below still use `Change:`, so `graph-canvas` adds to
-  `relationship-kinds`' canvas instead of naming its own.
-- **Make better Change, Action, Beat implementation**
-  - When, e.g., relationship-kinds (Tour 4.1) pops up the action has already
-    occurred and the Action: text does not make the step more legible.
-    A better sequence of events would be:
-    - anchor on unchecked MeasurementObservation selection row
-    - check the box
-    - anchor on the newly shown entity
-    - i had been thinking this could be automated for Change/Beat
-      steps that show a new entity. maybe should just be authored
-      as separate steps? but that makes a lot more steps. animating
-      it would be nice, but i don't want to get bogged down in that
-      if it isn't easy to implement
-- **Multi-line for the OTHER fields** (`Context:`, `Action:`, beat text).
-  Deliberately not done: you said "1 for now; may need 2 soon". The block
-  reader (`extractBlockField`) is written generically, so each field is a
-  one-line change when you want it.
 </details><!-- end of todo -->
 
 <details open>
