@@ -16,7 +16,7 @@ The active work. The plan is [TOURS_AND_CONTENT.md](TOURS_AND_CONTENT.md).
 
 | # | Task | Where |
 |---|---|---|
-| 1 | **Finish tour 1 — the five remaining category steps.** `The BioData Catalyst Harmonized Model` has 4 steps: `bdchm`, `app-model-mods`, `admin-study` (10 beats, done 2026-09-08), `why`. **`app-model-mods` promises "This tour will walk you through each category" and only `admin` exists** — so `clinical`, `observation`, `lab`, `survey` and `other` are the work, one step each, modelled on `admin-study`. Recipe that worked: `Only: cat=<id>` + an `Action:`, one beat per class quoting `{{model-description:X}}` with a `node-box:` anchor, **beats ordered by the DRAWN left-to-right layout, not by `classIds`** — probe the containment graph, do not read the YAML (see [WORKLOG](../WORKLOG.md) 2026-09-08). Survey's step gets to say it is a self-contained subtree. ⚠️ `why`'s placement is item 3b and is Siggie's call — do not move it while authoring. | [TOURS_AND_CONTENT](TOURS_AND_CONTENT.md#1-the-biodata-catalyst-harmonized-model) |
+| 1 | ~~Finish tour 1 — the five remaining category steps.~~ **Done 2026-09-08.** `clinical-records` (8), `observation-measurement` (6), `lab-biospecimen` (8), `survey-questionnaire` (7) and `other-files` (6) are written, so `app-model-mods`'s promise of a walk through each category is kept. ⚠️ `why`'s placement is still item 3b and still Siggie's call. | [TOURS_AND_CONTENT](TOURS_AND_CONTENT.md#1-the-biodata-catalyst-harmonized-model) |
 | 1b | **Then the other four tours.** Order fixed, complexity rising: *Getting oriented* → *Reading the diagram* → *Ownership* → *Inheritance*. `Getting oriented` exists with ONE step (`bdchm-entities`); `Walkthrough` still holds 5 steps whose own description says *"Parts will be used for specific tours now"* — so the middle tours come mostly out of **splitting `Walkthrough`**, not writing from nothing. Carry in: `help-content.md` holds unanswered `TODO(siggie):` notes on specific steps, and beats are written label-then-`Description:` (see [FORMAT](../src/help/FORMAT.md#a-beats-numbered-line-is-a-label-not-its-text)). | [TOURS_AND_CONTENT](TOURS_AND_CONTENT.md#the-five-tours) |
 | 2 | **Delete the tour-address readout** once the five tours are written. A dev-only `Show content ids` item at the foot of the Help menu, gated on `import.meta.env.DEV`; it exists to make a popover on screen findable in the content file. | [FORMAT.md](../src/help/FORMAT.md#finding-a-step-you-can-see-on-screen) |
 | 3 | **Show the change instead of narrating it.** `Action:` is a past-tense receipt, which reads well when the VIEWER clicked and badly when the tour did it off-screen. Siggie's sequence: anchor the unchecked row → check it → anchor the entity that appeared. Hand-authored as a trial in tour 1 (2026-09-08) at the cost of three beats where there was one; **reverse it if it reads worse**. The feature is deriving that from one beat. Needs design: the popover must reposition BETWEEN phases, which the position model has no notion of, and a half-applied step is a state `back` cannot name. [sg] what i wanted was for one change step to be animated so it's clear to user what's going on. maybe the popover doesn't need to move? stow it on the right somewhere and go to its anchor only when the change is complete. but what the user would probably need to see is the cursor moving to the checkbox (or relation menu or attribute row). | [BACKLOG §Show the change](BACKLOG.md#show-the-change-instead-of-narrating-it) |
@@ -39,11 +39,14 @@ params. Each failure was verified by deliberately breaking the content. A green
 run means the content is structurally sound and says nothing about whether the
 copy reads well.
 
-⚠️ **Resolver anchors are the exception.** `entity-row`, `slot-row`,
-`entity-checkbox` and `node-box` are checked for *known kind* but cannot be
-checked for *actually resolving* — a typo in the ARGUMENT
-(`entity-row:Participnt`) passes every test and degrades silently to an
-unringed popover. Those need the browser.
+⚠️ **Resolver anchors are half-covered.** `entity-row`, `slot-row`,
+`entity-checkbox` and `node-box` are checked for *known kind*, and since
+2026-09-08 their ARGUMENT is checked too — against the live schema and the
+category config — so `entity-row:Participnt` and a `node-box:` naming a class
+its own `cat=` step does not draw both fail the build instead of degrading to
+an unringed popover. What still needs the browser is whether the element is
+actually IN THE DOM at that moment: a collapsed tree row or a virtualised list
+resolves to nothing for reasons no test can distinguish from a real bug.
 
 ---
 

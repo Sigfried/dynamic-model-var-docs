@@ -7,6 +7,88 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-08, later (the five remaining category steps — TASKS item 1)
+
+Wrote `clinical-records`, `observation-measurement`, `lab-biospecimen`,
+`survey-questionnaire` and `other-files` — 35 beats — following the
+`admin-study` recipe. Tour 1 now keeps `app-model-mods`'s promise to walk
+through each category.
+
+### The probe, and what it changed
+
+Ran the same containment-graph probe `admin-study` used (throwaway test files,
+deleted after; `console.log` is swallowed by this vitest config, so they wrote
+to a file instead). It produced the drawn left-to-right layering per category,
+which the beats follow:
+
+    clinical     Person | CauseOfDeath Participant | Visit | Condition
+                 Procedure Exposure ImagingStudy | BodySite Drug/DeviceExposure
+    observation  Participant | Visit | ObservationSet | Observation + the sets
+                 | the observation subclasses | Context BodySite | Activity
+    lab          Assay Participant SpecimenContainer | Specimen | the four
+                 activities, the two specimen observations, BiologicProduct
+                 | Substance BodySite
+    survey       Questionnaire QuestionnaireResponse | QuestionnaireItem
+                 | QuestionnaireResponseItem | QuestionnaireResponseValue
+                 | the five typed subclasses
+    other        Document Participant Quantity TimePeriod | TimePoint;
+                 File | ImagingFile  (Document and Quantity isolated)
+
+Four claims the probe corrected before they shipped:
+
+- **Descriptions repeat.** MeasurementObservation, SdohObservation and
+  ObservationSet's three subclasses carry their PARENT's description verbatim
+  in the schema. A beat per class — the `admin-study` recipe — would have
+  printed the same paragraph three times running. Those steps name the
+  subclasses inside one framing beat instead. Same for the five
+  `QuestionnaireResponseValue*` classes ("Single-valued X answer to the
+  question"), which are distinct but too thin to carry a beat each.
+- **Merged boxes make per-subclass beats pointless anyway.** `node-box:<Sub>`
+  falls back to `closest('[data-node-id]')` on a row carrying that declaring
+  class, so anchoring a merged sibling rings the box it was merged INTO —
+  five beats would ring one box five times.
+- **Three classes are dual-listed, not one.** A draft BodySite beat called it
+  "the one class this Explorer files in two categories";
+  `entityCategories.test.ts`'s `DUAL_LISTED` has BodySite plus
+  SpecimenQuality/QuantityObservation. Rephrased without the count.
+- **Observation has four `value_` slots, not one.** Draft said
+  `observation_type` + `value_quantity`; there are also `value_string`,
+  `value_boolean` and `value_enum`.
+- **`ImagingStudy → ImagingFile` is not on the `other` canvas.** A draft beat
+  described that edge; ImagingStudy is a `clinical` member and `other` does not
+  pin it, so the edge would have been described where it is not drawn. The beat
+  now says the study is off this canvas.
+
+### The silent-degradation gap, closed
+
+TASKS said resolver-anchor ARGUMENTS "need the browser" — `node-box:Participnt`
+passes every test and degrades to an unringed centred popover. That is only
+true of *is the element in the DOM right now*. The arguments themselves are
+class ids and category ids, both checkable against the live schema, so two
+tests went into `helpContent.test.ts`:
+
+1. every `node-box`/`entity-row`/`entity-checkbox`/`slot-row` argument names a
+   real class, and every `category-row` argument a real category id;
+2. a step carrying `cat=<id>` anchors `node-box:` only at classes that
+   category's view actually draws (members **plus** pins).
+
+The second catches the failure the first cannot: a correctly-spelled class that
+is simply not on that step's canvas. Both were verified by deliberately
+breaking the content — `node-box:Substanc` in `lab-biospecimen` and a real
+`node-box:Specimen` in `survey-questionnaire` — and both failed with the
+offending step named. Restored after.
+
+What is still browser-only: a resolver returning null for a legitimate reason
+(collapsed tree row, virtualised list). No test can tell that from a bug.
+
+### Not done
+
+`why`'s placement is untouched — TASKS 3b, Siggie's call, and the plan says not
+to move it while authoring. `app-model-mods`'s `[text here...]`-style
+half-finished authoring elsewhere in the file was likewise left alone, per
+[[feedback-help-content-todo-loop]].
+
+---
 ## 2026-09-08, end of session (doc pass before a fresh session)
 
 Siggie is starting a new session to finish tour 1. This pass is about what the

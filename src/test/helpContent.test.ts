@@ -8,6 +8,9 @@ import {
 import { stripAlerts } from '../help/HelpLayer';
 import { DEFAULTS, INSTRUCTION_PARAMS } from '../explore/exploreState';
 import { helpResolvers } from '../explore/helpResolvers';
+import { loadModelData } from '../utils/dataLoader';
+import { DataService } from '../services/DataService';
+import { ENTITY_CATEGORIES } from '../config/entityCategories';
 
 /**
  * The help content is authored as markdown and parsed into typed data, so a
@@ -324,6 +327,74 @@ describe('help content', () => {
       untagged,
       `Anchors with no data-help-id in the app: ${untagged.join(', ')}`,
     ).toEqual([]);
+  });
+
+  /**
+   * The gap the `help-id` test above cannot cover.
+   *
+   * A resolver anchor names a QUESTION for the host to answer at runtime, so
+   * grepping the source proves nothing about it. Its KIND is checked; its
+   * ARGUMENT was not, and `node-box:Participnt` therefore passed every test
+   * and degraded to an unringed, centred popover with nothing to say it had
+   * gone wrong (docs/TASKS.md flagged this as needing the browser). It does
+   * not: the arguments are class ids and category ids, both of which this
+   * suite can check against the live schema and config.
+   *
+   * Deliberately NOT a check that the element is in the DOM -- that would need
+   * the browser and would fail for legitimate reasons (a collapsed tree row, a
+   * virtualised list). This catches the typo, which is the failure that ships.
+   */
+  test('every resolver anchor argument names something that exists', async () => {
+    const ds = new DataService(await loadModelData());
+    const classes = new Set(ds.getContainmentGraph().nodes.map(n => n.id));
+    const catIds = new Set(ENTITY_CATEGORIES.map(c => c.id));
+
+    const bad: string[] = [];
+    for (const e of content.entries.values()) {
+      for (const a of [e.anchor, ...(e.beats ?? []).map(b => b.anchor)]) {
+        if (!a) continue;
+        const known =
+          a.kind === 'category-row' ? catIds.has(a.arg)
+          : ['node-box', 'entity-row', 'entity-checkbox'].includes(a.kind) ? classes.has(a.arg)
+          // `slot-row:<Class>.<slot>` splits on the LAST dot (FORMAT.md).
+          : a.kind === 'slot-row' ? classes.has(a.arg.slice(0, a.arg.lastIndexOf('.')))
+          : true;
+        if (!known) bad.push(`${e.id}: ${a.kind}:${a.arg}`);
+      }
+    }
+    expect(bad, `Anchor arguments naming nothing in the schema or the category `
+      + `config, which degrade to an unringed popover: ${bad.join(', ')}`).toEqual([]);
+  });
+
+  /**
+   * A step that draws one category and then points at a class that category
+   * does not draw. Same silent degradation as a typo, but from a correct
+   * class id -- so the test above cannot see it.
+   *
+   * `cat=<id>` draws the category's members PLUS its pins, which is why the
+   * expected set is built from both. Only `node-box` is checked: `entity-row`
+   * anchors point into the selection panel, which lists every class whatever
+   * is drawn.
+   */
+  test('a cat= step anchors only at boxes that category actually draws', async () => {
+    const ds = new DataService(await loadModelData());
+    const bad: string[] = [];
+    for (const e of content.entries.values()) {
+      const cat = ENTITY_CATEGORIES.find(
+        c => new RegExp(`(?:^|&)cat=${c.id}(?:&|$)`).test(e.change ?? ''),
+      );
+      if (!cat) continue;
+      const drawn = new Set(ds.getContainmentGraph(
+        [...new Set([...cat.classIds, ...cat.pins])],
+      ).nodes.map(n => n.id));
+      for (const a of [e.anchor, ...(e.beats ?? []).map(b => b.anchor)]) {
+        if (a?.kind === 'node-box' && !drawn.has(a.arg)) {
+          bad.push(`${e.id}: node-box:${a.arg} is not on the cat=${cat.id} canvas`);
+        }
+      }
+    }
+    expect(bad, `Anchors pointing off their own step's canvas: ${bad.join(', ')}`)
+      .toEqual([]);
   });
 
   test('entry ids are unique', () => {

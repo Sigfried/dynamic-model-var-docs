@@ -203,6 +203,379 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
      - Anchor: none
 
 
+### clinical-records
+
+- **Title:** Category: Clinical
+- **Tour:** The BioData Catalyst Harmonized Model
+- **Description:**
+  Eight classes record *what happened to a participant medically*. Every one of
+  them is a record OF someone, usually AT an encounter — which is why Person,
+  Participant and Visit are drawn here too even though they belong to Admin.
+  Take them away and Clinical is a pile of disconnected records.
+- **Anchor:** category-row:clinical
+- Only: cat=clinical
+- **Action:** Drew the whole Clinical category, the same as pressing its ⊞ button.
+- Beats:
+  1. the borrowed spine
+     - Description:
+       ##### Three boxes on loan
+       Person, Participant and Visit are Admin classes, pinned into this view
+       because the category does not mean anything without them. Read the rest
+       of the diagram as hanging off Participant: everything to its right is a
+       record about that participant.
+     - Anchor: node-box:Participant
+  2. CauseOfDeath
+     - Description:
+       ##### CauseOfDeath
+       {{model-description:CauseOfDeath}}
+
+       It hangs off Person rather than Participant — the one clinical fact
+       recorded about the human being rather than about a study role.
+     - Anchor: node-box:CauseOfDeath
+  3. Condition
+     - Description:
+       ##### Condition
+       {{model-description:Condition}}
+     - Anchor: node-box:Condition
+  4. Procedure
+     - Description:
+       ##### Procedure
+       {{model-description:Procedure}}
+     - Anchor: node-box:Procedure
+  5. Exposure
+     - Description:
+       ##### Exposure
+       {{model-description:Exposure}}
+
+       DrugExposure and DeviceExposure are its subclasses — a medication and a
+       foreign object respectively — and the diagram draws them merged into
+       Exposure's box rather than as three separate boxes joined by edges.
+     - Anchor: node-box:Exposure
+  6. ImagingStudy
+     - Description:
+       ##### ImagingStudy
+       {{model-description:ImagingStudy}}
+     - Anchor: node-box:ImagingStudy
+  7. BodySite
+     - Description:
+       ##### BodySite
+       {{model-description:BodySite}}
+
+       Condition, Procedure and ImagingStudy all point at it — *where* is part
+       of what those records are. Anatomy belongs to Laboratory too, where a
+       specimen's collection site names one, so the Explorer lists BodySite in
+       both categories rather than choosing.
+     - Anchor: node-box:BodySite
+  8. what the category is for
+     - Description:
+       ##### What this category is for
+       Clinical is the participant's medical history: diagnoses, procedures,
+       exposures and imaging, each anchored to a person, a study role, and
+       usually a point of contact with the health system. It says what was
+       *found* or *done*. What was *measured* is the next category.
+     - Anchor: none
+
+
+### observation-measurement
+
+- **Title:** Category: Observations / Measurements
+- **Tour:** The BioData Catalyst Harmonized Model
+- **Description:**
+  This is where the numbers live. Twelve classes, but only four ideas: an
+  **Observation** (one measured thing), an **ObservationSet** (a group of them
+  taken together, like a blood panel), and the **Context** an observation was
+  made in. Participant, Visit and BodySite are borrowed from elsewhere, because
+  an observation is *of* someone, *at* an encounter, and often *somewhere* on a
+  body.
+- **Anchor:** category-row:observation
+- Only: cat=observation
+- **Action:** Drew the whole Observations / Measurements category, the same as pressing its ⊞ button.
+- Beats:
+  1. ObservationSet
+     - Description:
+       ##### ObservationSet
+       {{model-description:ObservationSet}}
+
+       A complete blood count is one ObservationSet holding a dozen
+       Observations. `observations` is the attribute that owns them, which is
+       the edge running rightward out of this box.
+     - Anchor: node-box:ObservationSet
+  2. Observation
+     - Description:
+       ##### Observation
+       {{model-description:Observation}}
+
+       Key and value: `observation_type` says *what was measured*, and one of
+       four `value_` attributes holds the answer — `value_quantity` for a number
+       with a unit, plus string, boolean and coded forms. Nearly every measured
+       fact in BDCHM is one of these.
+     - Anchor: node-box:Observation
+  3. the five kinds
+     - Description:
+       ##### Five kinds of observation
+       Observation has five subclasses, and the diagram merges them into one
+       box rather than drawing five: **MeasurementObservation** (a clinical
+       measurement), **SdohObservation** (social determinants of health),
+       **DimensionalObservation** (length, width, area), and
+       **SpecimenQualityObservation** and **SpecimenQuantityObservation**,
+       which describe a specimen rather than a person. The last two are also
+       listed under Laboratory.
+     - Anchor: node-box:Observation
+  4. sets mirror observations
+     - Description:
+       ##### The sets mirror them
+       ObservationSet has its own subclasses — MeasurementObservationSet,
+       SdohObservationSet, DimensionalObservationSet — one per kind of thing
+       being grouped. Each owns observations of its matching type. The two
+       hierarchies run in parallel, which is why the left of this diagram is
+       two stacked merged boxes rather than one.
+     - Anchor: node-box:ObservationSet
+  5. Context and Activity
+     - Description:
+       ##### Context and Activity
+       {{model-description:Context}} {{model-description:Activity}}
+
+       Every kind of observation can carry a list of Contexts, and a Context
+       points at the Activity that produced it — fasting, exercise, a dose
+       administered. These are the circumstances that make a number
+       interpretable.
+     - Anchor: node-box:Context
+  6. what the category is for
+     - Description:
+       ##### What this category is for
+       Observations are the measured facts a researcher actually analyses.
+       Everything else in the model exists to say *whose* they are, *when* they
+       were taken, and *what they mean*. The subclass hierarchy here is the
+       largest in BDCHM, and how the diagram draws inheritance gets a tour of
+       its own.
+     - Anchor: none
+
+
+### lab-biospecimen
+
+- **Title:** Category: Laboratory / Biospecimen
+- **Tour:** The BioData Catalyst Harmonized Model
+- **Description:**
+  Twelve classes about *physical material* — what was collected from a
+  participant, what was done to it, and what was measured on it. Specimen sits
+  in the middle and almost everything here is attached to it. Participant is
+  the one borrowed class: a specimen comes FROM someone, and that is the only
+  outside fact the category needs.
+- **Anchor:** category-row:lab
+- Only: cat=lab
+- **Action:** Drew the whole Laboratory / Biospecimen category, the same as pressing its ⊞ button.
+- Beats:
+  1. Specimen
+     - Description:
+       ##### Specimen
+       {{model-description:Specimen}}
+
+       `parent_specimen` points back at Specimen itself — the loop on this box
+       — because an aliquot or a portion is a specimen derived from another
+       specimen.
+     - Anchor: node-box:Specimen
+  2. SpecimenContainer
+     - Description:
+       ##### SpecimenContainer
+       {{model-description:SpecimenContainer}}
+
+       It nests the same way specimens do: `parent_container` is a loop, so a
+       well sits in a plate.
+     - Anchor: node-box:SpecimenContainer
+  3. Assay
+     - Description:
+       ##### Assay
+       {{model-description:Assay}}
+     - Anchor: node-box:Assay
+  4. the four activities
+     - Description:
+       ##### Four activities
+       A specimen owns a history, and each stage is its own class:
+       **SpecimenCreationActivity** (collected or derived),
+       **SpecimenProcessingActivity** (changed without becoming something new),
+       **SpecimenStorageActivity** (kept somewhere) and
+       **SpecimenTransportActivity** (moved between places). Four edges leave
+       Specimen for them, one per stage.
+     - Anchor: node-box:SpecimenCreationActivity
+  5. BiologicProduct
+     - Description:
+       ##### BiologicProduct
+       {{model-description:BiologicProduct}}
+
+       `derived_product` makes it something a specimen produced — a culture
+       grown from a sample rather than the sample itself.
+     - Anchor: node-box:BiologicProduct
+  6. the specimen observations
+     - Description:
+       ##### Measuring the specimen
+       SpecimenQualityObservation and SpecimenQuantityObservation hang off
+       Specimen through `quality_measure` and `quantity_measure`. They are
+       Observations — the same class you just met — pointed at material rather
+       than at a person, which is why they are listed in both categories.
+     - Anchor: node-box:SpecimenQualityObservation
+  7. Substance
+     - Description:
+       ##### Substance
+       {{model-description:Substance}}
+
+       Three different things reach it: an Assay's reagent, a container's
+       additive, and an additive used during collection or processing.
+     - Anchor: node-box:Substance
+  8. what the category is for
+     - Description:
+       ##### What this category is for
+       Laboratory is the chain of custody: material comes off a participant,
+       gets created, processed, stored and transported, and has assays and
+       quality measures recorded against it. It is the only category that is
+       mostly about *things* rather than about records.
+     - Anchor: none
+
+
+### survey-questionnaire
+
+- **Title:** Category: Survey / Questionnaire
+- **Tour:** The BioData Catalyst Harmonized Model
+- **Description:**
+  Ten classes, and almost no connection to the rest of the model. This is the
+  one category you can read entirely on its own — nothing outside it needs to
+  be borrowed in, and only a couple of attributes reach out. It is two mirrored
+  halves: the **questions** on the left, the **answers** on the right.
+- **Anchor:** category-row:survey
+- Only: cat=survey
+- **Action:** Drew the whole Survey / Questionnaire category, the same as pressing its ⊞ button.
+- Beats:
+  1. Questionnaire
+     - Description:
+       ##### Questionnaire
+       {{model-description:Questionnaire}}
+     - Anchor: node-box:Questionnaire
+  2. QuestionnaireItem
+     - Description:
+       ##### QuestionnaireItem
+       {{model-description:QuestionnaireItem}}
+
+       `part_of` is a loop on this box, which is how a questionnaire nests
+       sections inside sections: an item can be a group holding other items.
+     - Anchor: node-box:QuestionnaireItem
+  3. QuestionnaireResponse
+     - Description:
+       ##### QuestionnaireResponse
+       {{model-description:QuestionnaireResponse}}
+
+       It is the mirror of Questionnaire — one filled-in form against one
+       blank one.
+     - Anchor: node-box:QuestionnaireResponse
+  4. QuestionnaireResponseItem
+     - Description:
+       ##### QuestionnaireResponseItem
+       {{model-description:QuestionnaireResponseItem}}
+
+       And this mirrors QuestionnaireItem. `has_questionnaire_item` is the edge
+       joining the two halves: an answer knows which question it answers.
+     - Anchor: node-box:QuestionnaireResponseItem
+  5. the typed values
+     - Description:
+       ##### One answer, five types
+       QuestionnaireResponseValue is a *single-valued answer*, and it has five
+       subclasses — one each for a decimal, a boolean, an integer, a TimePoint
+       and a string. The diagram merges them into one box. A model can either
+       carry one loosely-typed value column or a class per type; BDCHM chose
+       the second.
+     - Anchor: node-box:QuestionnaireResponseValue
+  6. self-contained
+     - Description:
+       ##### A subtree of its own
+       Look at how few edges leave this picture. Almost the only thing Survey
+       reaches outward for is the TimePoint a timed answer holds, and the Visit
+       a response was collected at. Everywhere else in BDCHM, drawing a
+       category means borrowing Participant and Visit to make it legible; here
+       it does not.
+     - Anchor: none
+  7. what the category is for
+     - Description:
+       ##### What this category is for
+       Survey holds instruments and their responses: the form as designed, and
+       the form as filled in, kept deliberately apart so the same questionnaire
+       can be answered many times. Its shape is borrowed from
+       [FHIR](https://www.hl7.org/fhir/questionnaire.html), which is why it
+       reads differently from the rest of the model.
+     - Anchor: none
+
+
+### other-files
+
+- **Title:** Category: Files / Other
+- **Tour:** The BioData Catalyst Harmonized Model
+- **Description:**
+  The leftovers, and they are leftovers of two quite different kinds: **files**
+  attached to a participant, and **value types** — the small structured classes
+  that other classes use to hold a number or a date. Both were pulled out here
+  because they belong to no one category; they are used by all of them.
+- **Anchor:** category-row:other
+- Only: cat=other
+- **Action:** Drew the whole Files / Other category, the same as pressing its ⊞ button.
+- Beats:
+  1. File
+     - Description:
+       ##### File
+       {{model-description:File}}
+
+       `derived_from` is a loop: a converted or processed file remembers the
+       one it came from.
+     - Anchor: node-box:File
+  2. ImagingFile
+     - Description:
+       ##### ImagingFile
+       {{model-description:ImagingFile}}
+
+       It is File's only subclass today, so the diagram merges it into File's
+       box rather than drawing two. Its extra rows — modality, series, an
+       anatomical site — are the DICOM metadata a plain file has no room for,
+       and `related_imaging_study` ties it back to Clinical's ImagingStudy,
+       which is off this canvas.
+     - Anchor: node-box:File
+  3. Document
+     - Description:
+       ##### Document
+       {{model-description:Document}}
+
+       It stands alone on this canvas. Its `focus` attribute points at the
+       universal root class, which the Explorer does not draw, and
+       `related_document` reaches it from Specimen — so both of its edges land
+       outside this category.
+     - Anchor: node-box:Document
+  4. Quantity
+     - Description:
+       ##### Quantity
+       {{model-description:Quantity}}
+
+       This is the most reused class in BDCHM. Observations of every kind hold
+       their value in one; so do an assay's detection limits, a substance's
+       amount, a procedure's quantity and a processing step's duration. It has
+       no edges here because everything that points at it lives in another
+       category.
+     - Anchor: node-box:Quantity
+  5. TimePoint and TimePeriod
+     - Description:
+       ##### TimePoint and TimePeriod
+       {{model-description:TimePoint}}
+
+       A TimePeriod is just a start and an end, both TimePoints — the two edges
+       between those boxes. And `index_time_point` is a loop on TimePoint,
+       which is what makes "six months after enrolment" expressible without
+       knowing the calendar date.
+     - Anchor: node-box:TimePoint
+  6. what the category is for
+     - Description:
+       ##### What this category is for
+       Nothing here is a subject of study. These are the building blocks
+       everything else is made of — a number with a unit, a moment in time, a
+       file on disk. A researcher reading the model meets them constantly and
+       rarely needs to think about them, which is exactly why they were given
+       their own corner rather than left scattered through the other five.
+     - Anchor: none
+
+
 ### why
 
 - **Title:** BDCHM Explorer
