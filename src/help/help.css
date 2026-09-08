@@ -493,12 +493,29 @@ body.help-mode {
 .help-map-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 2147483646;   /* under the popover, over the app */
+  /* The map is a `popover="manual"` element in the TOP LAYER (see TourMap.tsx),
+     which is what actually puts it above the step popover -- no z-index can,
+     since the top layer outranks every one of them. This value only orders it
+     against the app for the moment before `showPopover()` runs. */
+  z-index: 2147483646;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
   background: rgb(15 23 42 / 0.28);
+
+  /* Undo the UA stylesheet's defaults for `[popover]`, which would otherwise
+     shrink the full-screen backdrop to a bordered box in the middle of the
+     viewport: `inset: 0` above is overridden by the UA's `inset: auto`, and
+     `width/height: fit-content` collapses it around the panel. */
+  margin: 0;
+  max-width: none;
+  max-height: none;
+  width: auto;
+  height: auto;
+  border: none;
+  overflow: visible;
+  color: inherit;
 }
 .help-map {
   /* The same knob the popover uses, and for the same reason: the map is

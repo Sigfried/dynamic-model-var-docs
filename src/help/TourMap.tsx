@@ -30,12 +30,18 @@
  * model, draggable and resizable". It does not make that worse, but it does
  * make it one instance more expensive to keep ignoring.
  *
+ * ⚠️ It is also the only one of the three in the TOP LAYER, because it is the
+ * only one that has to sit above the step popover. Any future "one overlay
+ * model" has to account for that: a z-index scheme covering the legend and the
+ * example cases cannot place this one, since no z-index outranks the top
+ * layer. See the `showPopover` effect below.
+ *
  * It lives in `src/help/` rather than beside the app's panels because a tour
  * outline is a fact about TOURS, which is this package's subject. It knows
  * nothing about BDCHM and would move with the package.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useHelp } from './helpContext';
 import { tourPositions } from './parseHelpContent';
@@ -102,6 +108,36 @@ export default function TourMap({ scope, onClose }: TourMapProps) {
   }, [onClose]);
 
   /*
+   * The map has to be in the TOP LAYER, not merely at a high z-index.
+   *
+   * The step popover is `popover="manual"` and calls `showPopover()`, which
+   * promotes it to the browser's top layer -- above every z-index there is.
+   * So the map's `z-index: 2147483646`, commented "under the popover, over the
+   * app", could not do the first half of that job: opening the outline from
+   * the ⊞ drew it BEHIND the popover it was launched from (Siggie,
+   * 2026-09-08, from a screenshot). No z-index value can win against the top
+   * layer; the map has to join it.
+   *
+   * Within the top layer, elements stack in ORDER OF PROMOTION -- last shown
+   * is on top. The map is always opened while the popover is already showing,
+   * so it lands above it, which is what we want. It is `manual` rather than
+   * `auto` for the same reason the popover is: `auto` popovers close each
+   * other via light dismiss, so an `auto` map would hide the very popover it
+   * is an outline of.
+   */
+  const backdropRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = backdropRef.current;
+    // Feature-detected: jsdom implements no part of the Popover API, and a
+    // browser without it still renders the map correctly on the z-index above
+    // -- just underneath the step popover, which is the bug this fixes and not
+    // a crash. Calling it unguarded took all twelve tourMap tests down.
+    if (!el || typeof el.showPopover !== 'function') return;
+    el.showPopover();
+    return () => { if (el.matches(':popover-open')) el.hidePopover(); };
+  }, []);
+
+  /*
    * In `all` scope every tour's rows are computed from the CONTENT, not from
    * `positions` — `positions` holds only the running tour, and the overview
    * has to describe tours that are not running (usually all of them, since it
@@ -166,7 +202,12 @@ export default function TourMap({ scope, onClose }: TourMapProps) {
    * business being a descendant of the button that opened it.
    */
   return createPortal(
-    <div className="help-map-backdrop" onMouseDown={onClose}>
+    <div
+      ref={backdropRef}
+      popover="manual"
+      className="help-map-backdrop"
+      onMouseDown={onClose}
+    >
       <div
         role="dialog"
         aria-label={scope === 'all' ? 'All tours' : 'Tour outline'}

@@ -7,6 +7,56 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-08, later (the tour map drew UNDER the popover — top layer, not z-index)
+
+Siggie, from a screenshot: *"whoops: clicking tour outline put it underneath the
+tour step"*. Opening the ⊞ outline while a step is showing drew the map behind
+the popover.
+
+**The map was fighting the top layer with a z-index, which cannot be won.** The
+step popover is `popover="manual"` and calls `showPopover()`, which promotes it
+to the browser's TOP LAYER — a stacking context above every z-index that exists.
+`help.css` gave the map backdrop `z-index: 2147483646` with the comment *"under
+the popover, over the app"*; the second half worked and the first half was
+never achievable by that mechanism. Raising the number would have done nothing,
+which is the trap worth naming: the comment reads like the two halves are the
+same kind of claim, and they are not.
+
+Fix: the map backdrop is `popover="manual"` too, and `showPopover()`s on mount.
+Within the top layer, elements stack by ORDER OF PROMOTION — last shown wins —
+and the map is always opened while the popover is already up, so it lands above
+it. `manual` and not `auto` for the same reason the popover is: `auto` popovers
+light-dismiss each other, so an `auto` map would close the very popover it is an
+outline of.
+
+### Two things that bit on the way
+
+- **The UA stylesheet restyles `[popover]`.** `inset: auto`, `width/height:
+  fit-content`, a border, `margin: auto` — enough to collapse a full-screen
+  flex backdrop into a bordered box floating mid-viewport. `help.css` now
+  explicitly undoes each one. The `inset: 0` already there is NOT enough; it is
+  overridden by the UA rule.
+- **jsdom implements no part of the Popover API**, so an unguarded
+  `el.showPopover()` threw in the mount effect and took all twelve existing
+  tourMap tests down. The call is feature-detected now. That is not just a test
+  accommodation: a browser without the API still renders the map fine on the
+  z-index, just underneath the popover — the original bug rather than a crash.
+
+The existing per-file stubs (`tourStack.integration`, `categoryViewHistory`)
+were deliberately NOT moved into `setup.ts` — a global no-op `showPopover`
+leaves popover content at the UA's `display: none`, which is why those files
+query with `hidden: true`. Making it global would have forced that on every
+suite.
+
+### Test
+
+`the backdrop is a popover, so it joins the top layer` asserts the ATTRIBUTE,
+not the stacking — jsdom has no top layer to observe, and the attribute is what
+earns the promotion and what a refactor would drop. Verified by removing
+`popover="manual"`: fails. A second test pins that the map still mounts without
+the API at all.
+
+---
 ## 2026-09-08, later (the five remaining category steps — TASKS item 1)
 
 Wrote `clinical-records`, `observation-measurement`, `lab-biospecimen`,

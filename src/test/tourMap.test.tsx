@@ -173,6 +173,44 @@ describe('the tour map', () => {
     expect(panel.closest('[data-mounted-here]')).toBeNull();
   });
 
+  test('the backdrop is a popover, so it joins the top layer', () => {
+    /*
+     * The bug Siggie hit, 2026-09-08: *"clicking tour outline put it underneath
+     * the tour step"*.
+     *
+     * The step popover is `popover="manual"` and calls `showPopover()`, which
+     * promotes it to the browser's TOP LAYER. The top layer sits above every
+     * z-index there is, so the map's `z-index: 2147483646` -- commented "under
+     * the popover, over the app" -- could never do the first half of that. The
+     * map has to be in the top layer too; within it, elements stack by order of
+     * promotion, and the map is always opened while the popover already shows.
+     *
+     * This asserts the ATTRIBUTE rather than the stacking, because jsdom
+     * implements no part of the Popover API and so has no top layer to
+     * observe. The attribute is what earns the promotion, and it is the thing
+     * a refactor would drop.
+     */
+    render(
+      <HelpContext.Provider value={api({})}>
+        <TourMap scope="tour" onClose={vi.fn()} />
+      </HelpContext.Provider>,
+    );
+    const backdrop = document.querySelector('.help-map-backdrop')!;
+    expect(backdrop.getAttribute('popover')).toBe('manual');
+  });
+
+  test('the map survives a browser with no Popover API', () => {
+    // jsdom IS that browser, so this passes only because the `showPopover`
+    // call is feature-detected. Unguarded it threw during the mount effect and
+    // took every test in this file down with it.
+    expect(() => render(
+      <HelpContext.Provider value={api({})}>
+        <TourMap scope="tour" onClose={vi.fn()} />
+      </HelpContext.Provider>,
+    )).not.toThrow();
+    expect(document.querySelector('.help-map')).toBeTruthy();
+  });
+
   test('clicking the backdrop closes it, clicking the panel does not', () => {
     const onClose = renderMap('tour');
     fireEvent.mouseDown(document.querySelector('.help-map')!);
