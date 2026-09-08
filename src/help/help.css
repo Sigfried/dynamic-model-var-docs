@@ -120,9 +120,52 @@ body.help-mode {
 
 .help-popover-title {
   margin: 0 0 6px;
-  font-size: 1em;
+  /* Larger than body text so the step title is not mistaken for `**bold**`
+     inside a description -- they were both 1em/700 and read as the same
+     thing (Siggie, 2026-09-08). The title is the reader's anchor across a
+     run of beats, so it should outrank anything the prose can produce. */
+  font-size: 1.15em;
   font-weight: 700;
+  line-height: 1.25;
 }
+
+/* SUBTITLE inside a description: write `### text` in the markdown.
+   *
+   Every heading level collapses to one style deliberately. The popover is a
+   few short paragraphs, not a document -- a real heading hierarchy inside it
+   would be a second outline competing with the tour's own, and an author
+   picking between `###` and `####` is choosing something the reader cannot
+   see. So any heading is "a subtitle", and the level is just how it reads in
+   the file.
+
+   Below the title, above `**bold**`: smaller and lighter than the title so it
+   cannot be confused with it, but set apart from the body by weight and
+   colour so it does not read as another bold run. */
+.help-popover-body h1,
+.help-popover-body h2,
+.help-popover-body h3,
+.help-popover-body h4,
+.help-popover-body h5,
+.help-popover-body h6 {
+  margin: 10px 0 4px;
+  font-size: 1em;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #334155;
+}
+/* A subtitle opening the block has no preceding text to separate from. */
+.help-popover-body > :first-child h1,
+.help-popover-body > :first-child h2,
+.help-popover-body > :first-child h3,
+.help-popover-body > :first-child h4,
+.help-popover-body > :first-child h5,
+.help-popover-body > :first-child h6,
+.help-popover-body > h1:first-child,
+.help-popover-body > h2:first-child,
+.help-popover-body > h3:first-child,
+.help-popover-body > h4:first-child,
+.help-popover-body > h5:first-child,
+.help-popover-body > h6:first-child { margin-top: 0; }
 
 .help-popover-body p,
 .help-popover-context p { margin: 0 0 6px; }

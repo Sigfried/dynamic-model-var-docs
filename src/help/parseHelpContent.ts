@@ -33,7 +33,14 @@ export type HelpAnchor =
  */
 export interface TourBeat {
   /** Markdown shown for this beat. */
+  /**
+   * The numbered line. An AUTHORING LABEL — it names the beat in the file and
+   * is NOT rendered (2026-09-08). Free to be terse or repetitive; write for
+   * whoever is editing, not for a viewer.
+   */
   text: string;
+  /** The beat's viewer-facing prose. Multi-line. This is what renders. */
+  description?: string;
   /**
    * Keep what is already showing and add this beat below it, instead of
    * replacing the popover's contents with this beat alone.
@@ -672,6 +679,14 @@ function extractBeats(lines: string[], entryId: string): TourBeat[] | undefined 
      * fields are indented under their beat; an entry's sit at the margin.
      */
     if (lines[i].length > 0 && !/^\s/.test(lines[i]) && fieldOf(lines[i])) break;
+    /*
+     * Raw HTML at the margin ends the block too. `help-content.md` wraps its
+     * tours in `<details>`/`<div>` for readability in an editor, and those
+     * closing tags sit after the last beat with nothing between them — so
+     * without this they were swallowed as that beat's prose and rendered as
+     * literal `</details> </div>` in the popover.
+     */
+    if (lines[i].length > 0 && !/^\s/.test(lines[i]) && /^<\/?[a-z]/i.test(trimmed)) break;
     if (trimmed === '') continue;
 
     const numbered = trimmed.match(/^(\d+)\.\s+(.*)$/);
@@ -686,6 +701,36 @@ function extractBeats(lines: string[], entryId: string): TourBeat[] | undefined 
     if (field && current) {
       const [, name, value] = field;
       const key = name.toLowerCase();
+      /*
+       * `Description:` is the beat's viewer-facing prose, and the ONLY field
+       * here that runs to more than one line — a beat used to be its numbered
+       * line and nothing else, so it could not hold a paragraph or a list.
+       * Continuation is by indent, like the entry-level block fields: every
+       * following line indented deeper than this `-` belongs to it.
+       */
+      if (key === 'description') {
+        const bulletIndent = lines[i].length - lines[i].trimStart().length;
+        const body: string[] = [];
+        let j = i + 1;
+        for (; j < lines.length; j++) {
+          if (lines[j].trim() === '') { body.push(''); continue; }
+          const ind = lines[j].length - lines[j].trimStart().length;
+          if (ind <= bulletIndent) break;
+          body.push(lines[j]);
+        }
+        while (body.length && body[body.length - 1].trim() === '') body.pop();
+        if (body.length) {
+          const indents = body.filter(l => l.trim() !== '')
+            .map(l => l.length - l.trimStart().length);
+          const dedent = Math.min(...indents);
+          const rest = body.map(l => l.slice(dedent)).join('\n');
+          current.description = value ? `${value}\n${rest}` : rest;
+        } else {
+          current.description = value;
+        }
+        i = j - 1;
+        continue;
+      }
       if (key === 'anchor') current.anchor = parseAnchor(value, entryId);
       else if (key === 'action') current.action = value.trim();
       else if (key === 'change') current.change = value.trim();
@@ -939,9 +984,36 @@ export function tourPositions(content: HelpContent, tour?: string): TourPosition
       });
     }
 
+    /*
+     * `Width:` is STICKY across beats (Siggie, 2026-09-08): a beat that sets it
+     * governs every later beat until another one changes it, rather than each
+     * beat falling back to the step's width.
+     *
+     * The reasoning is that a width is a property of the PICTURE a run of beats
+     * is building, not of one popover — a step that narrows to show a checkbox
+     * and then keeps narrating that checkbox should not snap back to 800 on the
+     * next beat. Only `Width:` is sticky; `Anchor:`, `Position:` and `OffsetX:`
+     * still inherit from the step, because those say WHERE this one popover
+     * goes and a stale one strands it away from what it points at.
+     */
+    let stickyWidth = entry.width;
+
     entry.beats.forEach((beat, beatIndex) => {
       // A beat REPLACES what is showing unless it asks to `Keep:` it.
-      showing = beat.keep ? [...showing, beat.text] : [beat.text];
+      /*
+       * The DESCRIPTION is what renders; the numbered line is a label and is
+       * never shown.
+       *
+       * No fallback to the label: a beat with no `Description:` renders NO
+       * text, which is a shape worth having (Siggie, 2026-09-08) — a beat that
+       * only moves the anchor or pushes a `Change:` is a real thing to author,
+       * and a fallback would leak the label to the viewer with no way to
+       * suppress it. An empty block is filtered out downstream, so such a beat
+       * shows its title and whatever the previous beat kept.
+       */
+      const shown = beat.description ?? '';
+      showing = beat.keep ? [...showing, shown] : [shown];
+      if (beat.width !== undefined) stickyWidth = beat.width;
       positions.push({
         entry, step, beatIndex, beat, beatCount: entry.beats!.length,
         address: addressOf(entry.id, beatIndex),
@@ -953,7 +1025,7 @@ export function tourPositions(content: HelpContent, tour?: string): TourPosition
         // Inherited like `anchor`: a beat that does not move the popover keeps
         // the step's placement rather than snapping back to automatic.
         highlight: beat.highlight ?? entry.highlight,
-        width: beat.width ?? entry.width,
+        width: stickyWidth,
         position: beat.position ?? entry.position,
         offsetX: beat.offsetX ?? entry.offsetX,
         /*

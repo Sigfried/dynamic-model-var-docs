@@ -162,9 +162,16 @@ export function HelpProvider({
     if (!ADDRESS_TOGGLE_ENABLED) return false;
     try {
       if (new URLSearchParams(window.location.search).get('ids') === '1') return true;
-      return window.localStorage.getItem(ADDRESS_KEY) === '1';
+      if (new URLSearchParams(window.location.search).get('ids') === '0') return false;
+      /*
+       * ON by default in dev (Siggie, 2026-09-08). The only reason to turn it
+       * off is to see exactly what a popover looks like without the authoring
+       * furniture, which is the rarer need — so an unset key means on, and
+       * only an explicit '0' means off.
+       */
+      return window.localStorage.getItem(ADDRESS_KEY) !== '0';
     } catch {
-      return false;
+      return ADDRESS_TOGGLE_ENABLED;
     }
   });
   const toggleAddresses = useCallback(() => {
@@ -380,7 +387,13 @@ export function HelpProvider({
         if (tourIndex === null) startTour(); else endTour();
         return;
       }
-      if (e.key === 'Escape' && (helpMode || tourIndex !== null)) {
+      /*
+       * `activeId` is in the condition because a popover opened from the Help
+       * MENU is neither help mode nor a tour — with help mode off that is the
+       * only way most entries are reachable, so Escape did nothing for the
+       * commonest popover in the app.
+       */
+      if (e.key === 'Escape' && (helpMode || tourIndex !== null || activeId)) {
         e.preventDefault();
         e.stopPropagation();
         // Two-stage: close the popover first, leave the mode only if there is

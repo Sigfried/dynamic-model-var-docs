@@ -80,8 +80,9 @@ does not get swallowed into that entry's `Description:`.
 | `Once:` | storage key letting this entry's alerts be dismissed for good — see [Alerts](#alerts) |
 | `Change:` | what this step ADDS to the app state, as a URL query — see [Change](#change) |
 | `Only:` | the same query, but it REPLACES the selection instead of adding — see [Change](#change) |
+| | *(both take the same params — see [the params you can set](#the-params-you-can-set))* |
 | `Highlight:` | how hard to point at the anchor: `ring`, `dim`, `none` — see [Highlight](#highlight) |
-| `Width:` | popover width in pixels, default 320 — see [Placement](#placement) |
+| `Width:` | popover width in pixels, default 320; STICKY across beats — see [Placement](#placement) |
 | `Position:` | force the popover to a side: `left`, `right`, `top`, `bottom` — see [Placement](#placement) |
 | `OffsetX:` | nudge it horizontally — see [Placement](#placement) |
 | `Tour:` | which tour this is a step of, e.g. `Walkthrough`; omit for help-only |
@@ -534,6 +535,125 @@ viewer's `dir=RIGHT` keeps `DOWN` after the pop. Deliberate, and decided rather
 than overlooked — Siggie, 2026-08-27: *"if scalar settings clobber user actions,
 don't worry about it. easy enough for the user to reclick the button."* Only
 `sel` is refcounted, because only `sel` has room to hold two copies.
+
+#### The params you can set
+
+The full vocabulary, shared with share links. Anything not listed is not
+settable from a step.
+
+| Param | Values | Sets |
+|---|---|---|
+| `sel` | ids joined by `~` | what is on the canvas |
+| `detail` | an id, or empty to close | the detail drawer |
+| `roots` | `1` / `0` | path-to-root |
+| `sibs` | `1` / `0` | sibling merge |
+| `dir` | `RIGHT` / `DOWN` | layout direction |
+| `merge` | `near` / `far` / `bend` / `off` | edge merge mode |
+| `legend` | `1` / `0` | the ownership legend panel |
+| `cases` | `1` / `0` | the example-cases panel |
+| `panels` | `0` only | **closes every overlay** — see below |
+
+An invalid value is dropped rather than applied, so an authoring typo
+(`dir=SIDEWAYS`) leaves the setting alone instead of reaching the renderer.
+
+#### `panels=0` — clear the screen
+
+`panels=0` closes the legend, the example cases and the detail drawer together.
+It is the one param that is not a delta: every other absent param means "leave
+it alone", and `panels` has no form that opens anything.
+
+```markdown
+- **Only:** sel=Visit~TimePeriod&panels=0        <- two boxes, nothing else up
+- **Change:** panels=0&legend=1                  <- clear, then open the legend
+```
+
+**The sweep runs first, so explicit keys override it.** That ordering is the
+point: name the sweep, then name the exception. Writing `legend=1&panels=0`
+means the same thing as the second line above — the position in the query does
+not matter, only that `panels` is a sweep and the named keys are exceptions.
+
+It is safe as a delta because it can only ever CLOSE things. A step that sweeps
+and a step that says nothing are both still deltas; neither snaps a setting back
+to a default, which is the trap that killed the old absolute `State:` field.
+
+⚠️ **`panels=0` is not restored by `back`,** because it sets scalars and scalars
+are not refcounted (above). Stepping back into a step that cleared the panels
+leaves them cleared. Author around it rather than relying on the pop.
+
+#### A beat's numbered line is a label, not its text
+
+```markdown
+- **Beats:**
+  1. tick a checkbox
+     - Description: In order to select an entity, click its checkbox.
+     - Anchor: entity-row:Person
+  2. the box that appears
+     - Description:
+       The box shows the entity name, a dismiss (x) icon, and its attributes.
+     - Anchor: node-box:Person
+     - Change: sel=Person
+```
+
+The numbered line names the beat **in the file** and is never rendered. Write it
+for whoever is editing: terse, repetitive, whatever helps you find the beat.
+Everything the viewer reads goes in `Description:`, which may run to several
+lines — continuation is by indent, so a beat can hold paragraphs and lists.
+
+**A beat with no `Description:` shows no text**, which is the point: a beat that
+only moves the anchor or pushes a `Change:` is a legitimate step in a sequence,
+and the label does not leak in to fill the gap.
+
+⚠️ Before 2026-09-08 the numbered line WAS the beat's text and a beat could only
+be one line — a `- ` bullet written under it was silently discarded. Beats
+written that way show nothing until their prose moves into `Description:`.
+
+#### Subtitles inside a description
+
+Write `### text` in a `Description:` (a step's or a beat's) and it renders as a
+**subtitle** — set apart from the body, and clearly below the popover's own
+title.
+
+```markdown
+- **Description:**
+  ### What you are looking at
+  Rows are attributes. The dot says what KIND of thing the attribute points at.
+```
+
+Use it to break a long description into named parts. For emphasis inside a
+sentence, `**bold**` is still the right tool — a subtitle is a heading, not a
+loud run of text.
+
+**Every heading level renders identically.** `###` and `######` look the same,
+so pick whichever reads best in the file. The popover is a few short paragraphs,
+not a document: a real heading hierarchy inside it would compete with the tour's
+own structure, and a level the reader cannot see is a distinction not worth
+authoring.
+
+⚠️ **The step title is bigger than any subtitle, and `**bold**` is smaller than
+both.** Before 2026-09-08 the title and body `**bold**` were the same size and
+weight, so a bolded phrase opening a description read as a second title.
+
+#### `Width:` is sticky across beats
+
+A beat that sets `Width:` governs every LATER beat too, until one changes it
+again. Only `Width:` behaves this way; `Anchor:`, `Position:` and `OffsetX:`
+inherit from the step whenever a beat does not set them.
+
+```markdown
+- **Width:** 800
+- **Beats:**
+  1. …            <- 800, from the step
+     - Width: 300
+  2. …            <- still 300, NOT back to 800
+  3. …
+     - Width: 800 <- back to 800 from here on
+```
+
+The difference is what each field describes. A width belongs to the PICTURE a
+run of beats is building, so a step that narrows to point at a checkbox and
+keeps narrating that checkbox should not snap back on the next beat. An anchor
+belongs to ONE popover, so a stale one would strand it pointing at something the
+beat is no longer about.
 
 #### `Only:` — a step that names the whole canvas
 

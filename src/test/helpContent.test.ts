@@ -6,6 +6,7 @@ import {
   DEFAULT_TOUR,
 } from '../help/parseHelpContent';
 import { stripAlerts } from '../help/HelpLayer';
+import { DEFAULTS, INSTRUCTION_PARAMS } from '../explore/exploreState';
 
 /**
  * The help content is authored as markdown and parsed into typed data, so a
@@ -150,7 +151,13 @@ describe('help content', () => {
     // The live field list, not a historical one: `exp`, `hidden` and `owners`
     // went with task 1 (expanding became selecting), and a step still naming
     // one would push a frame that composes to nothing.
-    const known = new Set(['sel', 'detail', 'roots', 'sibs', 'dir', 'merge']);
+    /*
+     * Derived from `DEFAULTS` plus the instruction params, rather than typed
+     * out: a hand-kept copy of this list goes stale the moment a param is
+     * added, and it did — `panels` was rejected here while working correctly
+     * everywhere else.
+     */
+    const known = new Set([...Object.keys(DEFAULTS), ...INSTRUCTION_PARAMS]);
     const bad: string[] = [];
     // Checks beats too -- a beat can carry its own Change:.
     for (const p of positions) {
@@ -393,13 +400,30 @@ describe('help content', () => {
     // bug: an empty `Change:` means "change nothing", so it needs no Action:.
     // An empty `State:` meant the DEFAULT view — clearing the diagram — which
     // very much did.
+    //
+    // An empty `Only:` is the same exemption for the same reason. It draws
+    // nothing; it only declines to inherit, which is what an opening step
+    // wants — there is no transition to narrate, and a `✓` receipt for one
+    // would be the noise this rule exists to prevent.
     const silent = positions
       .filter(p => p.change && !p.action)
       .map(p => `${p.entry.id}#${p.beatIndex}`);
-    expect(
-      silent,
-      `Tour positions that change the app without saying so: ${silent.join(', ')}`,
-    ).toEqual([]);
+    /*
+     * A WARNING, not a failure (Siggie, 2026-09-08). The rule is real — a step
+     * that alters the canvas silently is the bug the format exists to fix —
+     * but as an error it blocked authoring on a judgement the author is better
+     * placed to make, and the honest remedy is sometimes to show the change
+     * rather than narrate it (see the `Action:` TODO in help-content.md).
+     *
+     * The enforcement that matters now lives in the APP: the popover shows
+     * this same warning while the author is looking at the step, gated on the
+     * dev-only `showAddresses` switch. See `HelpLayer.tsx`.
+     */
+    if (silent.length) {
+      console.warn(
+        `[help-content] positions that change the app without an Action:: ${silent.join(', ')}`,
+      );
+    }
   });
 
 });
@@ -656,8 +680,10 @@ describe('beats replace by default', () => {
 - **Description:** The intro.
 - **Anchor:** none
 - **Beats:**
-  1. First reveal.
-  2. Second reveal.
+  1. one
+     - Description: First reveal.
+  2. two
+     - Description: Second reveal.
 `);
   const pos = tourPositions(md);
 
@@ -723,7 +749,8 @@ describe('beats replace by default', () => {
 - **Description:**
 - **Anchor:** none
 - **Beats:**
-  1. Only this.
+  1. one
+     - Description: Only this.
 `);
     // With nothing to show before the first beat there is no opening
     // position -- the step starts on beat 1 because that is all it has.
@@ -744,10 +771,13 @@ describe('Keep: on a beat', () => {
 - **Description:** The intro.
 - **Anchor:** none
 - **Beats:**
-  1. Keeps the intro.
+  1. one
+     - Description: Keeps the intro.
      - Keep: true
-  2. Fresh thought.
-  3. Keeps the fresh thought.
+  2. two
+     - Description: Fresh thought.
+  3. three
+     - Description: Keeps the fresh thought.
      - Keep: true
 `);
   const pos = tourPositions(md);
@@ -781,7 +811,8 @@ describe('Keep: on a beat', () => {
 - **Description:** Intro.
 - **Anchor:** none
 - **Beats:**
-  1. Added.
+  1. one
+     - Description: Added.
      - Keep:
 `);
     expect(tourPositions(bare)[1].blocks).toEqual(['Intro.', 'Added.']);
@@ -798,7 +829,8 @@ describe('Keep: on a beat', () => {
 - **Description:** Intro.
 - **Anchor:** none
 - **Beats:**
-  1. Replaces.
+  1. one
+     - Description: Replaces.
      - Keep: false
 `);
     expect(tourPositions(off)[1].blocks).toEqual(['Replaces.']);
@@ -839,7 +871,8 @@ describe('Keep: on a beat', () => {
 - **Description:** Intro.
 - **Anchor:** none
 - **Beats:**
-  1. Fresh.
+  1. one
+     - Description: Fresh.
      - Clear: true
 `);
     expect(tourPositions(stale)[1].blocks).toEqual(['Fresh.']);
@@ -1226,11 +1259,92 @@ describe('Only:', () => {
     expect(tourPositions(c)[0].replace).toBe(true);
   });
 
-  test('a replacing step still has to say what it did', () => {
-    // The `Action:` rule covers it because `Only:` writes `change` — a step
-    // that silently swaps the canvas is worse than one that silently adds.
-    for (const p of positions) {
-      if (p.replace) expect(p.action, `${p.entry.id} replaces without an Action:`).toBeTruthy();
+  test('a beat with no Description: shows no text at all', () => {
+    /*
+     * A beat that only moves the anchor or pushes a `Change:` is a real thing
+     * to author (Siggie, 2026-09-08), so the numbered line must NOT leak in as
+     * a fallback — there would be no way to suppress it.
+     */
+    const c = parseHelpContent([
+      '## S', '',
+      '### n',
+      '- **Title:** N',
+      '- **Tour:** T',
+      '- **Description:** intro',
+      '- **Beats:**',
+      '  1. just moves the anchor',
+      '     - Anchor: none',
+      '  2. says something',
+      '     - Description: Here is the text.',
+    ].join('\n'));
+    const beats = tourPositions(c).filter(p => p.entry.id === 'n' && p.beatIndex >= 0);
+    expect(beats[0].blocks.filter(Boolean)).toEqual([]);
+    expect(beats[0].text).toBe('');
+    // The label is still there for the author, just not for the viewer.
+    expect(beats[0].beat!.text).toBe('just moves the anchor');
+    expect(beats[1].blocks).toEqual(['Here is the text.']);
+  });
+
+  test('a beat Description: can run to several lines', () => {
+    const c = parseHelpContent([
+      '## S', '',
+      '### d',
+      '- **Title:** D',
+      '- **Tour:** T',
+      '- **Description:** d',
+      '- **Beats:**',
+      '  1. label',
+      '     - Description:',
+      '       First line.',
+      '       - a bullet',
+      '       - another',
+      '     - Anchor: none',
+    ].join('\n'));
+    const beat = c.entries.get('d')!.beats![0];
+    expect(beat.text).toBe('label');
+    expect(beat.description).toBe('First line.\n- a bullet\n- another');
+    // The field after the block still parses — the indent ended it, not a guess.
+    expect(beat.anchor?.kind).toBe('none');
+  });
+
+  test('`Width:` is sticky across beats, and only Width', () => {
+    const c = parseHelpContent([
+      '## S',
+      '',
+      '### w',
+      '- **Title:** W',
+      '- **Tour:** T',
+      '- **Description:** d',
+      '- **Width:** 800',
+      '- **Anchor:** help-id:x',
+      '- **Beats:**',
+      '  1. one',
+      '     - Width: 300',
+      '  2. two',
+      '  3. three',
+      '     - Width: 500',
+      '  4. four',
+    ].join('\n'));
+    const w = tourPositions(c).filter(p => p.entry.id === 'w' && p.beatIndex >= 0);
+    expect(w.map(p => p.width)).toEqual([300, 300, 500, 500]);
+    // The anchor still inherits from the step rather than sticking.
+    expect(w.every(p => p.anchor?.kind === 'help-id')).toBe(true);
+  });
+
+  test('a replacing step that draws something has to say what it did', () => {
+    // A step that silently SWAPS the canvas is worse than one that silently
+    // adds, so a replace naming classes needs an `Action:`.
+    //
+    // An empty `Only:` is exempt: it swaps nothing, because the tour has drawn
+    // nothing yet. It says "start clean", which the viewer sees rather than
+    // needs told. Requiring a receipt there forced authors to write a sentence
+    // describing a no-op — the `bdchm` opening step is exactly this case.
+    const silent = positions
+      .filter(p => p.replace && p.change && !p.action)
+      .map(p => p.entry.id);
+    // Warning, not failure — same reasoning as the rule above.
+    if (silent.length) {
+      console.warn(`[help-content] replacing steps without an Action:: ${silent.join(', ')}`);
     }
   });
 });

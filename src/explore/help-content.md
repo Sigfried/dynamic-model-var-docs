@@ -92,7 +92,7 @@ context.
 
 - **Title:** The BioData Catalyst Harmonized Model (BDCHM)
 - **Tour:** The BioData Catalyst Harmonized Model
-- Only:
+- Only: panels=0
 - **Anchor:** none
 - **Highlight:** selection-tree
 - **Width:** 800
@@ -118,9 +118,20 @@ context.
 
   These cohorts contain a variety of patient data
 - **Beats:**
-  1. Entities
-     - Change: sel=Person~Participant~Visit~Observation
+  1. selection
+     - Description: The left panel lists every class in the model.
+     - Anchor: entity-row:Person
+     - Width: 300
+  2. display
+     - Keep: true
+     - Description: Ticking one draws it. Person is now on the canvas.
+     - Change: sel=Person
      - Anchor: node-box:Person
+  3. relationships
+     - Description:
+       Entities can be related to each other in a variety of ways (see Tour 2).
+     - Change: sel=Participant~Visit~Observation
+     - Anchor: node-box:Observation
 
 </details><!-- end of BDCHM tour -->
 </div>
@@ -175,16 +186,21 @@ context.
   though these categories are not actually part of the schema.
 - **Beats:** <!-- these are just copied from below, need to get beats working
               right before authoring -->
-  1. In order to select an entity for display, click its checkbox
+  1. tick a checkbox
+     - Description: In order to select an entity for display, click its checkbox
      - Anchor: entity-row:Person
-  2. The Person box shows the entity name, a dismiss (x) icon, a menu
-     for displaying boxes for related entities, and a list of this entity's
-     attributes.
+  2. the box that appears
+     - Description:
+       The Person box shows the entity name, a dismiss (x) icon, a menu
+       for displaying boxes for related entities, and a list of this entity's
+       attributes.
      - Anchor: node-box:Person
      - Change: sel=Person
      - Action: I clicked the Person checkbox and the Person entity appeared in the viewing panel.
-  3. Hover over the `← 2` or `1 →` counts to list the entities related to this
-     one, and click any of them to display it.
+  3. the related counts
+     - Description:
+       Hover over the `← 2` or `1 →` counts to list the entities related to this
+       one, and click any of them to display it.
      - Anchor: node-box:Person
      - Highlight: none
 
@@ -227,13 +243,17 @@ context.
 - **Anchor:** slot-row:MeasurementObservation.observation_type
 - **Change:** sel=MeasurementObservation
 - **Beats:**
-  1. **Inheritance**, known in modeling parlance as IS_A relationships — e.g. `MeasurementObservation.is_a` → `Observation`.
+  1. inheritance
+     - Description: **Inheritance**, known in modeling parlance as IS_A relationships — e.g. `MeasurementObservation.is_a` → `Observation`.
      - Anchor: node-box:MeasurementObservation
-  2. **Association / ownership / containment**, known in modeling parlance as HAS_A relationships — e.g. `Visit.associated_participant` → `Participant`.
+  2. has-a
+     - Description: **Association / ownership / containment**, known in modeling parlance as HAS_A relationships — e.g. `Visit.associated_participant` → `Participant`.
      - Anchor: node-box:MeasurementObservation
-  3. A primary goal
+  3. UNFINISHED
+     - Description: A primary goal
      - Anchor: none
-  4. Entities can be related to each other through
+  4. UNFINISHED
+     - Description: Entities can be related to each other through
      - Anchor: none
 
 <!--
@@ -277,11 +297,14 @@ context.
 - **Action:** Cleared the diagram and drew just Participant and BodySite. You would normally do this by ticking them in the tree on the left.
 - **Only:** sel=BodySite~Participant
 - **Beats:**
-  1. Select an entity by clicking its checkbox and it appears in the main panel. Only what you select is drawn. There are five ways an entity can be related to another.
+  1. only what you select
+     - Description: Select an entity by clicking its checkbox and it appears in the main panel. Only what you select is drawn. There are five ways an entity can be related to another.
      - Anchor: selection-tree
-  2. This is the entity's row in the selection panel.
+  2. the row
+     - Description: This is the entity's row in the selection panel.
      - Anchor: entity-row:Participant
-  3. Clicking the checkbox is what puts it on the diagram.
+  3. the checkbox
+     - Description: Clicking the checkbox is what puts it on the diagram.
      - Anchor: entity-checkbox:Participant
 
 <!--

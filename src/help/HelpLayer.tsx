@@ -453,6 +453,30 @@ export default function HelpLayer() {
             )}
 
             {/*
+              AUTHORING WARNING, dev-only, shown on the same switch as the
+              content ids (`showAddresses`).
+              *
+              A step that changes the canvas without an `Action:` is the bug
+              this format exists to fix, but it used to be enforced ONLY by a
+              test — so an author working in the app hit it at commit time,
+              away from the step they were writing. Here it is attached to the
+              popover that has the problem, while they are looking at it.
+              *
+              An EMPTY change is exempt: it draws nothing, so there is no
+              transition to narrate. See `helpContent.test.ts`, which encodes
+              the same rule, and delete both together if the rule goes.
+            */}
+            {inTour && showAddresses && position?.change && !position.action && (
+              <div className="help-popover-action" style={{ opacity: 0.85 }}>
+                <span className="help-popover-action-mark" aria-hidden="true">⚠</span>
+                <div>
+                  <em>Authoring:</em> this position changes the app
+                  (<code>{position.change}</code>) but has no <code>Action:</code>.
+                </div>
+              </div>
+            )}
+
+            {/*
               In a tour the BODY is everything the position has revealed so far:
               the step's description, then each beat, oldest first. Beats ADD
               rather than replace (2026-08-28), so the earlier blocks stay on
