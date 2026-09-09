@@ -637,6 +637,11 @@ export default function HelpLayer() {
         ref={popRef}
         popover="manual"
         data-help-popover=""
+        /* Scopes the anchor machinery in `help.css` -- `position-anchor` and
+           `position-try-fallbacks` apply ONLY here. An unanchored step is placed
+           by the inline style below, and a `--help-shift` fallback would beat
+           that inline style outright. See the rule's own comment. */
+        data-anchored={anchored ? '' : undefined}
         className="help-popover"
         style={{
           ...popoverPosition(anchored, inTour ? position?.position : undefined,

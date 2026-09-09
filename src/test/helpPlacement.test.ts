@@ -321,6 +321,15 @@ describe('a tall popover is kept on screen', () => {
   const css = readFileSync(resolve(__dirname, '../help/help.css'), 'utf8')
     .replace(/\/\*[\s\S]*?\*\//g, '');
   const popover = css.match(/\n\.help-popover\s*\{([\s\S]*?)\n\}/)?.[1] ?? '';
+  /*
+   * The ANCHORED rule, separate since 2026-09-09: `position-anchor` and
+   * `position-try-fallbacks` had to come off the bare class, because on an
+   * UNANCHORED step they resolved against no anchor and the `--help-shift`
+   * fallback then overrode that step's inline centring — position-try beats
+   * inline. See `helpAnchorScoping.test.ts`, which pins the split itself.
+   */
+  const anchoredRule =
+    css.match(/\.help-popover\[data-anchored\]\s*\{([\s\S]*?)\n\}/)?.[1] ?? '';
 
   it('caps the popover at the viewport height, unconditionally', () => {
     expect(popover).toMatch(/max-height:\s*calc\(100vh/);
@@ -335,9 +344,10 @@ describe('a tall popover is kept on screen', () => {
 
   it('flips out of a side that does not fit instead of hanging off it', () => {
     // What replaced the flip/clamp arithmetic. Both axes, plus a last-resort
-    // fallback for an anchor too close to a corner for either flip.
-    expect(popover).toMatch(/position-try-fallbacks:[^;]*flip-block/);
-    expect(popover).toMatch(/position-try-fallbacks:[^;]*flip-inline/);
+    // fallback for an anchor too close to a corner for either flip. On the
+    // ANCHORED rule: there is no side to flip out of without an anchor.
+    expect(anchoredRule).toMatch(/position-try-fallbacks:[^;]*flip-block/);
+    expect(anchoredRule).toMatch(/position-try-fallbacks:[^;]*flip-inline/);
     expect(css).toMatch(/@position-try\s+--help-shift\s*\{/);
   });
 

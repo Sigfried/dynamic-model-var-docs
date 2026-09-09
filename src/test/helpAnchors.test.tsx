@@ -115,6 +115,29 @@ describe('the left panel tags its rows with their whole anchor', () => {
     expect(missing, `Untagged: ${missing.join(', ')}`).toEqual([]);
   });
 
+  test('a class listed in two categories yields two rows, and that is allowed', () => {
+    /*
+     * REGRESSION (2026-09-09). Flat tags are not unique: `BodySite`,
+     * `SpecimenQualityObservation` and `SpecimenQuantityObservation` are listed
+     * in two categories each, so each renders TWICE. `resolveAnchor` used
+     * `querySelector` and took the first in document order — which, if that
+     * copy sits in a collapsed category, is a zero-height element the popover
+     * then anchors to. It prefers the first VISIBLE match now.
+     *
+     * Pinned as a fact about the app, not a defect: dual listing is deliberate
+     * (see DUAL_LISTED in entityCategories.test.ts). What must not regress is
+     * the resolver silently assuming one match.
+     */
+    const { container } = renderTable();
+    const counts = new Map<string, number>();
+    for (const el of container.querySelectorAll('[data-help-id]')) {
+      const tag = el.getAttribute('data-help-id')!;
+      counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+    expect(counts.get(entityRowTag('BodySite'))).toBe(2);
+    expect(counts.get(entityCheckboxTag('BodySite'))).toBe(2);
+  });
+
   test('the checkbox tag is on the input, not on the row', () => {
     // Tagged rather than derived as "the input inside the row": deriving it
     // would put kind INTERPRETATION in package code, which the §2 seam forbids.

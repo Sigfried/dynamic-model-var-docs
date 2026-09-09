@@ -516,7 +516,25 @@ export function HelpProvider({
     if (kind === 'none') return null;
     const { arg } = anchor as { kind: string; arg: string };
     const tag = kind === 'help-id' ? arg : `${kind}:${arg}`;
-    return document.querySelector(`[data-help-id="${CSS.escape(tag)}"]`);
+    const found = document.querySelectorAll(`[data-help-id="${CSS.escape(tag)}"]`);
+    /*
+     * `querySelectorAll`, not `querySelector`, because a tag is NOT unique.
+     *
+     * A host may legitimately render one thing twice: dmvd lists three classes
+     * in two categories each (`BodySite`, `SpecimenQualityObservation`,
+     * `SpecimenQuantityObservation`), so `entity-row:BodySite` matches two rows.
+     * Taking the first in document order picks whichever category sorts first,
+     * and if THAT one is inside a collapsed section it is a zero-height element
+     * -- the popover then anchors to a line with no height at an arbitrary place.
+     *
+     * So: the first match that is actually showing, falling back to the first
+     * match at all (every copy collapsed is still a better answer than null).
+     * The resolver this replaced did exactly this for its tree rows; flattening
+     * the tags dropped it, which was a regression, not a simplification.
+     */
+    if (found.length < 2) return found[0] ?? null;
+    return [...found].find(el => el.getBoundingClientRect().height > 0)
+      ?? found[0];
   }, []);
 
   // Cursor affordance; also what the hint dots key off in CSS.

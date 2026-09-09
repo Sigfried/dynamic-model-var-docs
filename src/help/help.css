@@ -119,7 +119,6 @@ body.help-mode {
    of its own: it is painted relative to this box, so it follows for free. */
 .help-spotlight {
   position: fixed;
-  position-anchor: --help-anchor;
   left: calc(anchor(left) - 4px);
   top: calc(anchor(top) - 4px);
   width: calc(anchor-size(width) + 8px);
@@ -168,7 +167,6 @@ body.help-mode {
   --help-font-size: 13px;
 
   position: fixed;
-  position-anchor: --help-anchor;
 
   /* The gap between the popover and its anchor, on whichever side it lands —
      stated once, and still right after a fallback flips it to another side.
@@ -179,16 +177,6 @@ body.help-mode {
      chosen to replace. */
   margin: 12px;
 
-  /* Flip out of the preferred side rather than hang off the screen, against
-     the popover's REAL height. `flip-block` and `flip-inline` cover a popover
-     placed beside or below its anchor; `--help-shift` is the last resort when
-     neither flip has room.
-
-     `position-visibility: no-overflow` is deliberately NOT set: a popover
-     whose anchor scrolls out of the viewport should stay readable, not vanish
-     mid-sentence. The tour scrolls the anchor into view when the step opens,
-     and the reader is free to scroll away from it afterwards. */
-  position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline, --help-shift;
 
   /* Never taller than the viewport; the BODY scrolls inside it (see the
      `:popover-open` rule below). Unconditional, so no placement can be missing
@@ -232,6 +220,40 @@ body.help-mode {
   position-area: none;
   inset: 8px auto auto 8px;
   margin: 0;
+}
+
+/* THE ANCHOR MACHINERY IS SCOPED TO AN ANCHORED STEP, and must stay scoped.
+   `HelpLayer` sets `data-anchored` when the step's anchor actually resolved.
+
+   ⚠️ These were once on the bare `.help-popover`, and that was the bug behind
+   "the popover ends up in the same wrong place from here on, forwards and
+   backwards" (Siggie, 2026-09-09). An UNANCHORED step is centred by an inline
+   `left`/`top`/`transform` from `popoverPosition` — but `position-anchor` still
+   named `--help-anchor`, which for that step resolves to NOTHING. With no anchor
+   the default `position-area` cannot resolve, so the browser walked the fallback
+   list to `--help-shift`, whose `inset: 8px auto auto 8px` then **beat the inline
+   style**: position-try declarations override inline, which is the whole point of
+   position-try and the one way an inline `top` can lose. So the popover pinned to
+   the top-left corner, and the tallest one (`why`) ran off the bottom and looked
+   invisible.
+
+   It stuck across steps because it is a property of the ELEMENT's placement
+   state, not of the step — hence "every popover after that", in both directions.
+
+   Do not move either declaration back onto the bare class "so the anchored case
+   is simpler". An unanchored popover must have no anchor machinery on it at all.
+
+   `position-visibility: no-overflow` is deliberately NOT set: a popover whose
+   anchor scrolls out of the viewport should stay readable, not vanish
+   mid-sentence. The tour scrolls the anchor into view when the step opens, and
+   the reader is free to scroll away from it afterwards. */
+.help-popover[data-anchored] {
+  position-anchor: --help-anchor;
+  /* Flip out of the preferred side rather than hang off the screen, against the
+     popover's REAL height. `flip-block` and `flip-inline` cover a popover placed
+     beside or below its anchor; `--help-shift` is the last resort when neither
+     flip has room. */
+  position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline, --help-shift;
 }
 
 .help-popover:popover-open {
