@@ -76,6 +76,14 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
   transformed by the Data Model-Based Ingestion Pipeline
   ([dm-bip](https://linkml.io/dm-bip/)) into a common, harmonized
   [LinkML schema](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/).
+  <!-- 
+  should BDC and LinkML and pipeline details be put elsewhere so we can get
+  to model content quicker and provide a bit deeper treatment of the context
+  on request?
+
+  used to have this in the BDC context part of Walkthrough:
+  (using [BDC's tools](https://biodatacatalyst.nhlbi.nih.gov/use-bdc/analyze-data/) or otherwise);
+  -->
 - **Beats:**
   1. sources
      - Keep: true
@@ -581,12 +589,50 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 - **Title:** BDCHM Explorer
 - **Tour:** The BioData Catalyst Harmonized Model
 - **Description:** 
+  > Salvaged 2026-09-09 from the stash: this is your shortened `why`. The
+  > LinkML half moved to `linkml-context`, the first step of Getting
+  > oriented, and your comment there says the two still overlap. TASKS 3b.
+
+  You may want to use BDCHM:
+  - to analyze data harmonized to it;
+  - to harmonize your own data to it;
+  - design new studies pre-harmonized to it; or
+  - use it for ideas or inspiration in designing your own data models.
+
+  Doing almost anything involving BDCHM requires a basic, overall
+  understanding of its structure. The **BDCHM Explorer** provides
+  a single-page, highly interactive interface allowing you to easily see
+  details of and relationships between specific entities or neighborhoods
+  around entities you select.
+- **Anchor:** none
+- **Change:**
+
+</details><!-- end of BDCHM tour -->
+</div>
+
+<div style="margin-left: 40px">
+<details open>
+<summary><b>Getting oriented</b></summary>
+
+## Getting oriented
+- **TourMetadata:**
+- **Description:** How to use the BDCHM Explorer: the panel, the boxes, and how to grow a diagram
+
+### linkml-context
+- **Title:** BDCHM Explorer
+- **Tour:** Getting oriented
+- **Description:** <!-- redundant with `why` above. fix: figure out what goes where -->
+  > Salvaged 2026-09-09 from the stash, where you had made this the first
+  > step of Getting oriented. It repeats most of `why` at the end of tour 1.
+  > Decide what goes where (TASKS 3b), then delete this note.
+
   BDCHM and the ingestion pipeline are built using [LinkML](https://linkml.io/).
   Neither the raw LinkML [YAML file](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/blob/main/src/bdchm/schema/bdchm.yaml)
   nor the LinkML [generated documentation](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/)
   are easy to grasp given that BDCHM's over 4,000-line schema includes around
   225 total attributes, 55 distinct class entities, 50 permissible value sets,
   7 primitive data types, and 80 relationships between class entities. 
+
   Yet doing almost anything involving BDCHM would require a basic, overall
   understanding of its structure. You may want to use BDCHM:
   - to analyze data harmonized to it (using [BDC's tools](https://biodatacatalyst.nhlbi.nih.gov/use-bdc/analyze-data/)
@@ -601,17 +647,6 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 - **Anchor:** none
 - **Change:**
 - **Width:** 700
-
-</details><!-- end of BDCHM tour -->
-</div>
-
-<div style="margin-left: 40px">
-<details open>
-<summary><b>Getting oriented</b></summary>
-
-## Getting oriented
-- **TourMetadata:**
-- **Description:** How to use the BDCHM Explorer: the panel, the boxes, and how to grow a diagram
 
 ### bdchm-entities
 
@@ -641,6 +676,65 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
      - Change: sel=Person
      - Action: Ticked Person for you.
      - Anchor: node-box:Person
+  <!-- maybe next step should replace this one? -->
+
+
+### selection-tree
+
+- **Title:** Entities
+- **Tour:** Getting oriented
+- **Anchor:** selection-tree
+- **Description:**
+  > Salvaged 2026-09-09 from the stash: your step, kept whole. It overlaps
+  > the step before it (tick a checkbox, a box appears) and the step after
+  > (what a box shows). Yours starts on Participant; the spine below starts
+  > on Person. Integrate, then delete this note.
+
+  A LinkML schema defines classes representing a data model's
+  entities. The left panel lists them, grouped into categories for convenience,
+  though these categories are not actually part of the schema.
+- **Beats:** <!-- these are just copied from below, need to get beats working
+              right before authoring -->
+  1. tick a checkbox
+     - Description: In order to select an entity for display, click its checkbox
+     - Anchor: entity-row:Participant
+  2. the box that appears
+     - Description:
+       The Participant box shows the entity name, a dismiss (x) icon, a menu
+       for displaying boxes for related entities, and a list of this entity's
+       attributes.
+     - Anchor: node-box:Participant
+     - Change: sel=Participant
+     - Action: I clicked the Participant checkbox and the Participant entity appeared in the viewing panel.
+  3. the related counts
+     - Description:
+       Hover over the `← 3` or `22 →` counts to list the entities related to this
+       one, and click any of them to display it.
+     - Anchor: node-box:Participant
+     - Highlight: none
+
+
+### selection-tree-mechanics
+
+- **Title:** Choosing what to look at
+- **Tour:** Getting oriented
+- **Description:**
+  > Salvaged 2026-09-09 from the stash, where you had made this help-only
+  > entry a tour step. It describes the panel's TREE mode (arrows, nesting by
+  > ownership); the default is list mode, and `entity-row` anchors only
+  > resolve there. Integrate with `selection-tree` above, then delete this
+  > note.
+
+  Entities are arranged by **ownership**: an entity is nested under
+  whatever owns it. Tick a checkbox to put an entity on the diagram. The
+  checkbox is the only thing that selects — clicking the row or the arrow
+  just opens and closes the tree.
+- **Interactions:**
+  - Checkbox — add or remove that entity from the diagram.
+  - Arrow — expand or collapse, without changing the selection.
+  - Name — open the details panel without changing the selection.
+- **Context:** An entity can sit in more than one place in the tree, because things can be owned by more than one kind of thing. The widget marks the duplicates for you.
+- **Anchor:** selection-tree
 
 
 ### entity-box
@@ -1300,17 +1394,6 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 
 <details>
 <summary><b>Non-tour help items</b></summary>
-
-### selection-tree-mechanics
-
-- **Title:** Choosing what to look at
-- **Description:** Entities are arranged by **ownership**: an entity is nested under whatever owns it. Tick a checkbox to put an entity on the diagram. The checkbox is the only thing that selects — clicking the row or the arrow just opens and closes the tree.
-- **Interactions:**
-  - Checkbox — add or remove that entity from the diagram.
-  - Arrow — expand or collapse, without changing the selection.
-  - Name — open the details panel without changing the selection.
-- **Context:** An entity can sit in more than one place in the tree, because things can be owned by more than one kind of thing. The widget marks the duplicates for you.
-- **Anchor:** selection-tree
 
 ### graph-canvas-reading
 

@@ -103,6 +103,37 @@ NOT draw a class its step explicitly names.
 - `docs/TOURS_AND_CONTENT.md` says to delete it once the tours ship. Left,
   with a status line: written is not reviewed.
 
+### Later the same evening — a forgotten stash, salvaged whole
+
+Siggie had stashed tour edits this morning (`stash@{0}`, on `de6666f`,
+09:12) and found them after the four tours were written. Read with
+`git diff de6666f stash@{0}`; never applied, because it rewrote the same
+region of `help-content.md` as the day's work and would have conflicted
+line for line. Siggie: *"salvage everything from the stash... interleave
+the steps i had with whatever's most similar... add alert text to call my
+attention to the need to integrate them."* So every change was transplanted
+by hand and each transplanted STEP opens with a `>` alert saying where it
+came from and what it overlaps:
+
+- `why` shortened to Siggie's version; its LinkML half became
+  `linkml-context`, now the FIRST step of Getting oriented, carrying their
+  own comment that the two overlap (TASKS 3b, still theirs).
+- `selection-tree` (their Participant version, `← 3` / `22 →`) sits between
+  `bdchm-entities` and `entity-box`, whole. It duplicates both neighbours,
+  and starts on Participant where the spine starts on Person — that is the
+  objection they have to Getting oriented as written, not yet spelled out.
+- `selection-tree-mechanics` became a tour step beside it (the stash gave
+  it `Tour: Walkthrough`; Walkthrough is gone) and left the non-tour items.
+- Two comments (`bdchm`: push the context out?; `bdchm-entities`: "maybe
+  next step should replace this one?") and TASKS 1b/1c (Guided-tours click
+  opens the overview; a `TourAbbr:` field so a step says which tour it is
+  in) — both tasks existed nowhere else.
+
+The stash's other three entries are old and not tour work (schema fields,
+Graph.ts planning, an Element pre-refactor snapshot); untouched. The
+Walkthrough entries the stash left unchanged are the ones deleted earlier
+today; they are in `de6666f` if wanted.
+
 ---
 ## 2026-09-09 (night) — boxes on motion/react; edges deferred
 
