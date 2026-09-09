@@ -40,75 +40,30 @@ export interface ZoomPan {
 }
 
 
-/**
- * The width/height a fit should actually aim at — the container, minus any
- * part of it the tour popover is sitting on.
+/*
+ * FITTING NO LONGER DODGES THE TOUR POPOVER, deliberately (2026-09-09).
  *
- * The popover is rendered in the browser's TOP LAYER (Popover API, no
- * z-index), so nothing in the canvas can be stacked above it and no amount of
- * repositioning boxes will reveal what it covers. Fitting the diagram to the
- * full container therefore lays boxes out underneath it: Siggie clicked
- * `cause_of_death` on tour step 2 and the box it added landed behind the
- * popover (screenshot 2026-08-28).
+ * There used to be a `fitViewport` here that shrank the fit by the popover's
+ * horizontal overlap with the canvas. It was added because the popover is in the
+ * browser's TOP LAYER — nothing in the canvas can stack above it — so a fit
+ * aimed at the full container lays boxes out underneath it and they are simply
+ * invisible (Siggie, 2026-08-28: a box added on tour step 2 landed behind the
+ * popover).
  *
- * This is the cheap half of the fix. It does NOT reposition the popover or
- * reserve space for it in general — it just stops the fit from aiming at
- * pixels that are known to be covered right now. Only the horizontal overlap
- * is deducted; deducting its height would throw away a full-width band for no
- * reason.
+ * It never worked, and produced two bugs of its own: it could fit the diagram
+ * into a sliver, and because `zoomToFit` scrolled to the origin it parked the
+ * diagram right back under the popover it had just made room around. Siggie,
+ * 2026-09-09: *"why don't you just remove any attempt for zoom to account for
+ * popovers?"*
  *
- * ⚠️ **`freeLeft` is half the answer, and the half that was missing.**
- * Narrowing the fit only helps if the diagram is then PUT in the space that was
- * left. `zoomToFit` scrolled to `0,0` unconditionally, so a popover covering the
- * canvas's LEFT side made the fit narrower and then parked the diagram right
- * back underneath it — smaller, and still hidden (Siggie, 2026-09-09: the ⊞
- * category button "does not fit to the canvas"). So this reports which edge the
- * free space is against, and the caller scrolls to it.
+ * The right fix is that the popover should not sit over the canvas in the first
+ * place — a placement problem, in HelpLayer, where the popover's position is
+ * actually decided. Compensating for it here meant this file tracking a rect it
+ * does not own, guessing which side was free, and getting both wrong.
  *
- * An earlier version of this comment called the popover "a fixed 320px-wide
- * column", which was never quite true and is now plainly wrong: a step can
- * author `Width: 800`, and a wide one sits mid-canvas rather than at an edge.
- * That assumption is what made scrolling to the origin look safe.
- *
- * Reads the live rect rather than taking tour state as a prop, because the
- * popover's position is decided by `popoverPosition` in HelpLayer and mirrored
- * state would just be a second thing to keep in sync. No popover open (the
- * normal case) → the container's own size, i.e. exactly the old behaviour.
+ * So: a fit fits the container. Do not reintroduce popover-awareness here.
  */
-export function fitViewport(container: HTMLElement):
-    { w: number; h: number; freeLeft: number } {
-  const w = container.clientWidth;
-  const h = container.clientHeight;
-  const pop = document.querySelector('[data-help-popover]');
-  if (!pop || !(pop as HTMLElement).matches(':popover-open')) {
-    return { w, h, freeLeft: 0 };
-  }
-  const p = pop.getBoundingClientRect();
-  const c = container.getBoundingClientRect();
-  const overlap = Math.min(p.right, c.right) - Math.max(p.left, c.left);
-  if (overlap <= 0) return { w, h, freeLeft: 0 };
-  // Never fit into a sliver: if the popover covers most of the canvas, the
-  // old full-width fit is the lesser evil.
-  const MIN_FRACTION = 0.4;
-  /*
-   * Which SIDE the free space is on, as an offset from the container's left
-   * edge. The popover splits the canvas into a strip on each side of it; the
-   * diagram goes in the wider one.
-   *
-   * `gapLeft` / `gapRight` are those strips, clamped so a popover overhanging an
-   * edge does not produce a negative one. When the right strip wins, the
-   * diagram starts where the popover ends; when the left strip wins, 0 is
-   * already correct and the caller scrolls nowhere — which is every ordinary
-   * case, including no popover at all.
-   */
-  const gapLeft = Math.max(0, p.left - c.left);
-  const gapRight = Math.max(0, c.right - p.right);
-  return {
-    w: Math.max(w - overlap, w * MIN_FRACTION),
-    h,
-    freeLeft: gapRight > gapLeft ? Math.max(0, p.right - c.left) : 0,
-  };
-}
+
 
 export function useZoomPan(opts: { min?: number; max?: number } = {}): ZoomPan {
   const { min = 0.2, max = 2 } = opts;
@@ -176,17 +131,10 @@ export function useZoomPan(opts: { min?: number; max?: number } = {}): ZoomPan {
     const { w, h } = sizeRef.current;
     if (!container || !w || !h) return;
     autoFitRef.current = true;
-    const avail = fitViewport(container);
-    setZoom(Math.min(avail.w / w, avail.h / h, 1));
+    setZoom(Math.min(container.clientWidth / w, container.clientHeight / h, 1));
     syncSpacer();
     requestAnimationFrame(() => {
-      /*
-       * To the free side, not to the origin. `freeLeft` is 0 in every ordinary
-       * case (no popover, or one that leaves the left edge clear), which is the
-       * old behaviour exactly; it is non-zero only when the popover covers the
-       * canvas's left, and then scrolling to 0 would undo the narrowing above.
-       */
-      container.scrollLeft = avail.freeLeft;
+      container.scrollLeft = 0;
       container.scrollTop = 0;
     });
   }, [setZoom, syncSpacer]);

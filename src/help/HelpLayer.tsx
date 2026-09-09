@@ -383,9 +383,14 @@ export default function HelpLayer() {
    *    applies its `State:` and the row it points at is created by the render
    *    that state causes, so tagging once and giving up left row anchors
    *    untagged and, on a long tree, off screen;
-   *  - the diagram DESTROYS AND REBUILDS boxes as it relayouts. A tag written
-   *    on the old element goes with it, and the ring and popover would be
-   *    anchored to a node that is no longer in the document.
+   *  - a box LEAVES the document when the selection changes under the step, and
+   *    a tag written on it goes with it.
+   *
+   * ⚠️ It was long claimed here that "the diagram destroys and rebuilds boxes as
+   * it relayouts". That is WRONG (measured 2026-09-09): node boxes are
+   * `key={n.id}` with a CSS transform transition, so React reconciles them by id
+   * and a relayout MOVES the same DOM element. Do not reintroduce polling or
+   * re-tagging on the strength of that claim.
    *
    * A `MutationObserver` rather than the timer this replaced, because the
    * question is now "has the element been replaced" -- an event the DOM
@@ -407,11 +412,17 @@ export default function HelpLayer() {
        *
        * It asks "is this element inside an LR canvas", which is a question about
        * the element -- so it has to be answered whenever the element is, and the
-       * element often does not exist yet (the box arrives with the render the
-       * step's `Change:` causes) or has just been replaced (ELK rebuilds boxes
-       * on every relayout). A `useMemo` keyed on the STEP ran once, usually too
-       * early, got null, and left the side undefined for that step and every
+       * element often does not exist yet: the box arrives with the render the
+       * step's `Change:` causes. A `useMemo` keyed on the STEP ran once, usually
+       * too early, got null, and left the side undefined for that step and every
        * later one that reused the value.
+       *
+       * ⚠️ NOT because "ELK destroys and rebuilds boxes" -- that claim is in
+       * several comments here and it is WRONG (measured 2026-09-09). Node boxes
+       * are `key={n.id}` with a CSS transform transition; React reconciles them
+       * by id, so a relayout that keeps the same nodes reuses the same DOM
+       * elements and merely moves them. The only `childList` event for a box is
+       * its first insertion or its removal from the selection.
        *
        * That is what "misplaced from 3.2 onwards, forwards and backwards"
        * was (Siggie, 2026-09-09): with no side, an LR step preferred BESIDE the
