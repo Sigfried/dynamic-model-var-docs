@@ -7,6 +7,76 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-09 (evening) — docs caught up; timing data read; task 5 closed; d3 closed
+
+A doc pass before starting task 5b, prompted by Siggie reading BACKLOG, TASKS
+and this file and finding them behind the code.
+
+### Task 5 is closed, and the BACKLOG section is gone
+
+The canvas half was `3c5e2f1`. The panel half — four unmeasured React-churn
+suspects (`ExploreApp` owning the toolbar state, the nine-dependency
+`writeExploreState` effect, `HelpProvider`'s wide `useMemo`, `SelectionTree`'s
+`counts`) — was never measured and Siggie now reports *"i'm not seeing
+re-render behavior anymore."* Closed on that basis, not on a measurement. If it
+returns, the suspects are here; measure before believing any of them.
+
+The `layout: null` reasoning stayed in the code (`useGraphLayout.ts` and its
+test), not in BACKLOG. Siggie asked what it is for, and the answer is worth
+keeping short: ELK is async, so on the click render `state.layout` still holds
+the OLD spec's result; handing that back would join old ids against the new
+`vm` — a deselected class's edge is gone from `edgeById` and the edge loop
+throws. Null means "current generation or nothing". The INVARIANT is still
+needed; the null is one encoding of it, and now that `previous` is exposed on a
+second channel the hook returns the same state object two ways. A
+`{ spec, layout }` result checked at the one site that cares (the edge loop)
+would be simpler — noted in CANVAS_TRANSITIONS.md as a 5b refactor, not done.
+
+### The timing data, read at last — and it measured the wrong thing
+
+`temp/elk-timings.jsonl`, 347 runs after a dev-server restart: min 103ms, p50
+153, p90 322, p95 379, max 855 (the two startup runs). 26% exceed
+`SPINNER_DELAY_MS = 200`. Max graph was 37 nodes.
+
+**Every row was `cold: true`.** The hook's effect cleanup calls
+`engine.cancel()` on every spec change, and `cancel()` terminates the worker
+unconditionally — so a completed layout's worker is killed the moment the next
+spec arrives, and every run pays worker startup. That is why the floor is
+~100ms for a 2-node graph and why time barely tracks size (6–15 nodes p50 134;
+26+ nodes p50 188). The instrumentation was built to find out whether ELK is
+ever slow, and what it found is that ELK is never the slow part.
+
+So the knob was NOT settled from these numbers. TASKS 5c is now: terminate only
+when a run is actually in flight, then delete the instrumentation. Oddity not
+chased: 1–5-node graphs had p50 315ms, slower than anything bigger — most
+likely a second engine (another canvas) starting concurrently and sharing the
+CPU; two rows 89ms apart at startup (10 nodes, then 2) fit that.
+
+### d3 is closed, all of it
+
+BACKLOG had kept `d3-interpolate` "worth considering" for edge geometry, as the
+one module that does not own DOM nodes. Siggie: *"we're done considering d3."*
+Removed from BACKLOG and TASKS 5b. Point interpolation is a few lines and needs
+no library.
+
+### New doc: CANVAS_TRANSITIONS.md
+
+5b's design now has a home instead of living in a TASKS cell and this file.
+Two ideas from Siggie recorded there before any code: an INTERMEDIATE ELK
+layout (old ∪ new nodes) as a waypoint so departing boxes are not driven
+through; and STAGING without a second layout (exit in place → move → enter). I
+argued for trying staging first — no extra ELK run, survivors move once, and
+ELK's layout of the union can resemble neither endpoint — and Siggie's own
+framing of the intermediate layout was already *"maybe it's worth a try"*.
+Both are recorded; neither is decided by a browser yet. Siggie also has
+motion/react code and edge-transition ideas from an outside session, plus a
+bezier-during-transition idea for edges; the doc has a section waiting for
+them.
+
+The two "already fixed" items under the previous entry's *What was actually
+wrong* were reading as present tense; retitled and stamped with their commits.
+
+---
 ## 2026-09-09 (later) — canvas transitions: what landed, and why the exit half is being redone
 
 **Read this before touching canvas animation.** The zoom/movement half is done
@@ -14,20 +84,23 @@ and good. The enter/exit half is hand-rolled scaffolding that does not fully
 work, and the next session is replacing it with `motion/react` rather than
 finishing it. Do not invest in repairing what is described under "the kludge".
 
-### What was actually wrong, measured
+### What was wrong going in, and what fixed it
 
-Two separate causes, and only the first was suspected going in.
+Both of these are PAST TENSE — the state before this session, recorded because
+the symptoms ("the animation isn't happening", "total repaint on every click")
+were misattributed for a long time. Both are fixed; the commits are named.
 
-**1. Zoom was never animated.** `useZoomPan` set the wrapper's `scale()`
-imperatively in a rAF with no transition, and the spacer resize trailed it by a
-100ms debounce. The node boxes DID transition — they always had — but inside a
-container that snapped. An untransitioned rescale of the frame swamps a
-transition of its contents, which is why it read as "no animation".
+**1. Zoom was not animated** (fixed in `a7edb6d`). `useZoomPan` set the
+wrapper's `scale()` imperatively in a rAF with no transition, and the spacer
+resize trailed it by a 100ms debounce. The node boxes DID transition — they
+always had — but inside a container that snapped. An untransitioned rescale of
+the frame swamps a transition of its contents, which is why it read as "no
+animation".
 
-**2. Every box unmounted on every click.** `useGraphLayout` returns
-`layout: null` on the render a new spec arrives, and the canvas rendered inside
-`{layout && ...}`. So a selection change unmounted the entire canvas and
-remounted it when ELK returned. This is the "total repaint" from task 5, and it
+**2. Every box unmounted on every click** (fixed in `3c5e2f1`). `useGraphLayout`
+returns `layout: null` on the render a new spec arrives, and the canvas rendered
+inside `{layout && ...}`. So a selection change unmounted the entire canvas and
+remounted it when ELK returned. This was the "total repaint" from task 5, and it
 also explains why boxes could not animate even after the zoom was fixed: a
 freshly-mounted element has no previous transform to ease from.
 

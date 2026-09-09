@@ -12,74 +12,12 @@
 
 ## Investigations
 
-### Re-render regression — canvas cause found, panel cause still open
-
-> *"Most clicks (chip, selection, +N attributes, etc.) cause at least the main
-> panel to refresh. Didn't used to do that I don't think."*
-
-A **regression report that has never been investigated**, and the most serious
-open item: it affects every interaction, where everything else is a visual
-defect in one feature. It was deferred by a planning session, not dropped.
-
-**One cause is now measured, and it is the canvas half of the report.**
-`useGraphLayout` returns `layout: null` on the very render a new spec arrives
-(`const fresh = state && state.spec === spec ? state.layout : null`), and
-`OwnershipGraphView` renders the canvas inside `{layout && ...}`. So every node
-box **unmounts synchronously on the click** and remounts when ELK returns —
-which is both the flash and the reason box transitions do not animate (a
-freshly-mounted box has no prior transform to ease from). The
-`Computing layout…` overlay whitewashes the canvas over the same gap.
-
-The null is a deliberate correctness guard, not timidity about slow layouts:
-the render joins ELK's coordinates against `vm`'s labels/rows/heights, and
-joining across generations yields boxes titled with the wrong class. The fix is
-to render the last-good layout *paired with the vm it was computed against*, so
-there is no cross-generation join — not to drop the guard. See TASKS item 5.
-
-The suspects below remain unmeasured and concern the **panel** half of the
-report, which the above does not explain. **Measure before believing any of
-them**:
-
-1. `ExploreApp` now owns the four toolbar settings (`82039a6`). Each is a
-   `useState` in the top-level component, so any change re-renders the whole
-   tree including `OwnershipGraphView`.
-2. The `writeExploreState` effect depends on nine values instead of four.
-3. `HelpProvider` wraps the app and its `api` useMemo depends on ~13 values, so
-   it may invalidate on every render.
-4. `SelectionTree` recomputes `counts` over all 54 classes via `useMemo` keyed
-   on `[nodes, dataService]` — should be stable, but verify.
-
-**Do not fix by guessing.** Add a render counter or use the React DevTools
-profiler and find out which component re-renders and why.
-
 ### Animating edge geometry
 
-Deferred from the 2026-09-09 transition work, which animates BOXES only.
-Edges are SVG `d` attributes recomputed per layout, so they snap while the
-boxes ease. The interim treatment is a fade out/in at ~10% of the box
-duration, which is honest (an edge is never drawn against positions it was
-not computed for) but leaves the canvas edgeless for most of a transition.
-
-**Siggie's approach, and it is the right one:** ELK gives us the endpoints and
-corner points of both the old and the new route, so a real animation is just
-interpolating each point from its old position to its new one — no path
-guessing required.
-
-The one hard case is **a route whose corner count changes** between layouts,
-where the points do not pair up 1:1. Siggie has ideas here if the answer is
-not obvious; do not invent a scheme without asking. Two standard options to
-put on the table when it comes up:
-
-- Resample both routes to a common point count before interpolating (loses
-  exact orthogonality mid-flight, which may not matter at these durations).
-- Pad the shorter route with degenerate points collapsed onto a real corner,
-  so the extra corners "grow" out of an existing one.
-
-⚠️ **`d3-interpolate` is worth considering for this specific piece** — it is the
-one place d3 would genuinely earn its inclusion. Note this is the *interpolation*
-module only, NOT `d3-transition`/`d3-selection`: those own the DOM nodes they
-animate, which conflicts with React owning the same nodes. That conflict is why
-the canvas uses CSS transitions everywhere else, and it is not up for revisiting.
+Now part of the active canvas-transition work — see
+[CANVAS_TRANSITIONS.md §Edges](CANVAS_TRANSITIONS.md#edges), which carries the
+approach (interpolate ELK's route points), the hard case (a route whose corner
+count changes), and the alternatives.
 
 ### Edge crossings
 
