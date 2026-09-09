@@ -183,6 +183,19 @@ decisions. So the table path (list mode, the default, where all four
 tree path degrades to "anchor did not resolve", which is already the documented
 normal case.
 
+### Finish with these
+
+- **`HelpLayer`'s `MutationObserver`** is `childList`-only, with a comment
+  saying an `attributeFilter` would mean naming dmvd's attributes in package
+  code. One universal `data-help-id` removes that objection: add the filter and
+  rewrite the comment.
+- **[`FORMAT.md`](../src/help/FORMAT.md)**: add `child-header:` to the kind
+  table, correct the `node-box:` row, and fix the `slot-row` paragraph that
+  currently explains the resolver querying two attributes together.
+- **Verify `help-content.md:716`** — `slot-row:MeasurementObservation.observation_type`,
+  the one live `slot-row` anchor and a merged child, i.e. exactly the case this
+  changes — still resolves.
+
 ### Not doing: drop `sibs=0`
 
 BACKLOG § "Anchor kinds" pairs the `child-header:` vocabulary with removing the
@@ -192,6 +205,25 @@ two kinds name different things in either mode, so the vocabulary is unambiguous
 without it. Removing `sibs=0` touches a URL param, a localStorage key, the tour
 state stack, the toolbar, and the unmerged render path; it stays filed as its
 own work.
+
+---
+
+## 1b. Dragging — the cheap half of the overlay item
+
+**Decided 2026-09-08, not yet built.** Scoped down from BACKLOG § "Overlays"
+(Siggie: *"don't do any heavy lifting for the overlays"*). **No state
+persistence** — a dragged position lasts as long as the panel is open.
+
+| surface | do it? | how |
+|---|---|---|
+| legend, example cases | **yes, together** | both render into ONE frame, [`HelpPanel.tsx`](../src/explore/HelpPanel.tsx) — an `absolute top-14 right-4 w-[26rem]` div. A drag handle on its header covers both, and CSS `resize: both` + `overflow: auto` is a free native resizer. The `offset` prop that staggers the second panel becomes redundant but harmless. |
+| step popover | **yes** | §1 removed everything that recomputed its position, so a dragged `left`/`top` survives. Needs a "the viewer moved this" flag that drops `position-area` for inline coordinates. |
+| `TourMap` | **no** | a centred modal over a dimmed backdrop that closes as soon as you pick a step. Its own CSS calls it *"a chooser, not an inspector you keep open beside your work"*. |
+| detail drawer | **no** | in-flow `w-96 shrink-0` flex column. Dragging it means making it an overlay first, which IS the layout change BACKLOG § "Overlays" is about. |
+
+⚠️ **This does not fix the symptom that opened the overlay item** — the legend
+still covers the drawer, because the drawer is still in flow. What it buys is
+that you can drag the legend off it.
 
 ---
 
