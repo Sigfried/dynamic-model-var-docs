@@ -324,6 +324,20 @@ construction rather than by ordering.
 app, rendered at exactly one call site (`ExploreApp.tsx`), so there is no second
 one to keep consistent with.
 
+⚠️ **Scoped down 2026-09-08** — Siggie: *"don't do any heavy lifting for the
+overlays."* What is being built now (TASKS 8a/8b) is only the cheap part:
+
+| surface | draggable now? | why |
+|---|---|---|
+| legend, example cases | **yes**, together | both render into ONE frame, [`HelpPanel.tsx`](../src/explore/HelpPanel.tsx) — an `absolute top-14 right-4 w-[26rem]` div. A handle on its header does both, and CSS `resize: both` is a free native resizer. |
+| step popover | **yes** | §1 removed everything that recomputed its position, so a dragged `left`/`top` survives. |
+| `TourMap` | no, and should not | a centred modal over a dimmed backdrop that closes as soon as you pick a step. Its own CSS calls it *"a chooser, not an inspector you keep open beside your work"*. |
+| detail drawer | **no** — this is the deferred part | in-flow `w-96 shrink-0` flex column. Dragging it requires making it an overlay first, which IS the layout change this item is about. |
+
+So the **symptom above is not fixed** by 8b: the legend still covers the drawer,
+because the drawer is still in flow. What 8b buys is that you can now drag the
+legend off it.
+
 ✅ **Dragging is unblocked** — the positioning migration (HELP_PACKAGE_PLAN §1)
 shipped 2026-09-08, and it was the right way round. `popoverPosition` no longer
 returns a computed `left`/`top` at all, so there is nothing to stomp a dragged
@@ -424,61 +438,25 @@ already uses.
 
 ---
 
-### Anchor kinds: three that name real things, and drop `sibs=0`
+### Drop `sibs=0`
 
-Raised by Siggie, 2026-09-08: *"maybe anchoring on
-`node-box:MeasurementObservation` shouldn't be allowed anyway since it's not a
-node box"*. It should not, and the probe agrees.
+Siggie, 2026-09-08: *"let's just get rid of sibs=0. i never use it anyway and it
+really crowds the canvas."*
 
-**What `node-box:` does today.** `helpResolvers.ts` tries three things in
-order: the box's own `data-node-id`, then `merged::<parent>`, then a row
-carrying `data-declaring-class=<entity>` and the box that contains it. The
-third case exists because a merged CHILD has no box — its rows live inside the
-parent's.
+⚠️ **The anchor-kind half of this item has moved** to
+[HELP_PACKAGE_PLAN §1a](HELP_PACKAGE_PLAN.md#1a-flat-anchor-tags--delete-the-resolvers),
+which is decided and scoped: flat `data-help-id` tags, `child-header:` for a
+merged child, and `node-box:` on a merged child simply not resolving. **§1a does
+not depend on removing `sibs=0`** — `child-header:` and `node-box:` name
+different things in either mode, so the vocabulary is unambiguous with the
+toggle still there.
 
-**Why that third case is unsound.** Probed the live merged
-`ObservationSet`/`Observation` boxes: `SpecimenQualityObservation` has a child
-header and **zero rows of its own** — every attribute it has is inherited
-unchanged. So `node-box:SpecimenQualityObservation` has no row to find, and
-what it resolves to depends on whether that subclass happens to narrow
-anything. The same anchor means different things for different subclasses, and
-it fails silently either way.
-
-**The proposal — three kinds, each naming something that exists on screen:**
-
-| kind | points at | exists because |
-|---|---|---|
-| `node-box:<Class>` | a whole box | a box is drawn |
-| `child-header:<Class>` | the coloured header strip inside a merged box | a merged child IS drawn, as a header |
-| `slot-row:<Class>.<slot>` | one attribute row | unchanged |
-
-`child-header:` needs a `data-` attribute on the header div, which it does not
-carry today (`OwnershipGraphView.tsx` renders it with a label and a fill
-colour and nothing addressable). With it, `node-box:` on a merged child can
-fail LOUDLY instead of resolving to whatever is nearby.
-
-**`sibs=0` goes.** Siggie, 2026-09-08: *"let's just get rid of sibs=0. i never
-use it anyway and it really crowds the canvas."* That is what makes the table
-above unambiguous — while the toggle exists, `MeasurementObservation` IS a real
-box in one mode and a header in another, so an anchor's meaning depends on a
-display setting. Removing it is its own piece of work and touches more than the
-anchors: a URL param and its `DEFAULTS`/`toQuery` handling
+**Why it is its own piece of work.** It touches more than the anchors: a URL param and its `DEFAULTS`/`toQuery` handling
 (`exploreState.ts`), a localStorage key (`LS_KEYS.sibs`), the tour state stack
 (`tourStateStack.ts`), the toolbar toggle and `rememberPreference`
 (`OwnershipGraphView.tsx`), `ExploreApp`'s `mergeSibs` state, and the unmerged
 render path itself. `FORMAT.md`'s param table lists it too.
 
-**What this does NOT buy: dropping resolvers for tags.** Siggie asked whether
-`data-help-id="node-box:Participant"` on the box would let the tag mechanism
-replace the resolver. It would — the interpolation is one line at each render
-site, and for `slot-row` it actually SOLVES the pair problem by flattening
-`(data-row, data-declaring-class)` into one string, which is exactly the shape
-CSS `anchor-name` needs. But it does not buy the typo check: the existing
-help-id test greps the source for a literal, and a `data-help-id` built by
-interpolation greps as the template, not as any class name. The schema-based check added
-2026-09-08 is what covers that, and it covers it identically either way. So the
-tag-vs-resolver choice is free to be made on design grounds — which is the
-point Siggie was making.
 
 ---
 

@@ -35,14 +35,14 @@ That is a write to one element per step, not a per-frame read of positions.
 ⚠️ **There are deliberately NO per-kind `anchor-name` rules** — no
 `[data-help-id]` blanket rule, no `[data-node-id]` rule. This was the plan's
 open design question and it resolved better than either sketched option: the
-element arrives from the HOST's resolver, so tagging it covers every kind at
-once. `src/help/` still names none of dmvd's kinds, which is the §2 seam intact.
+element is looked up once per step and tagged, so one rule covers every kind at
+once, and `src/help/` names none of dmvd's kinds.
 
-**`slot-row` therefore works, and was never a special case.** The kind whose
-`(data-row, data-declaring-class)` PAIR no single `anchor-name` rule can
-express does not need one: its resolver already returns the element, and the
-tag goes on whatever comes back. The flattened-string form drafted under
-BACKLOG § "Anchor kinds" is not needed for this.
+**`slot-row` works here**, because the lookup returns the element and the tag
+goes on whatever comes back — so its `(data-row, data-declaring-class)` PAIR
+never has to be expressed as a selector. §1a removes the pair at the source
+instead, which is better still; this section only records that positioning does
+not depend on that happening first.
 
 **Hint dots are the exception**, and take the other shape: many are on screen at
 once pointing at different elements, so each gets its own `--help-hint-<n>`,
@@ -111,10 +111,96 @@ with new evidence.
 
 ---
 
+## 1a. Flat anchor tags — delete the resolvers
+
+**Decided 2026-09-08, not yet built.** Every anchorable element carries its
+whole anchor string in one attribute:
+
+```jsx
+data-help-id={`node-box:${stripMerged(n.id)}`}
+data-help-id={`slot-row:${r.declaringClass}.${r.slot}`}
+```
+
+and the package finds it with a single `querySelector`. `helpResolvers.ts`, the
+`resolvers` prop and `resolveAnchor`'s host branch all go — about 140 lines and
+one prop.
+
+### Why this is worth doing
+
+- **It solves the `slot-row` pair problem at the source.** `slot-row` picks a
+  row by the PAIR `(data-row, data-declaring-class)`, which no single selector
+  expresses; today a resolver does it in two steps. Flattened into one string
+  the pair disappears. This is live, not hypothetical:
+  `slot-row:MeasurementObservation.observation_type` is used at
+  `help-content.md:716`.
+- **Uniform shape across all kinds** makes one schema-driven test able to check
+  every anchor argument, instead of a check per kind.
+- **The package can watch its own attribute.** `HelpLayer`'s `MutationObserver`
+  is currently `childList`-only, because filtering on attribute changes would
+  mean naming dmvd's `data-node-id` / `data-class-row` in package code. With one
+  universal `data-help-id` that objection goes away.
+- Four downstream consumers (icd11-playground, vs-hub, lifeflow) stop having to
+  register anything.
+
+⚠️ **This does NOT breach the §2 seam.** See the seam table: the parser still
+splits `kind:arg` and stops, and the host still decides what each kind means —
+by choosing what to interpolate. The package matches a string it never
+interprets.
+
+### What changes at the render sites
+
+| site | tag |
+|---|---|
+| `OwnershipGraphView` node box | `node-box:<Class>` — **strips the `merged::` prefix**, so a merged parent's box is `node-box:ObservationSet` |
+| `OwnershipGraphView` child header | `child-header:<Class>` — **new**, the header strip has no addressable attribute today |
+| `OwnershipGraphView` slot row | `slot-row:<DeclaringClass>.<slot>` |
+| `SelectionTable` class row | `entity-row:<Class>` |
+| `SelectionTable` category row | `category-row:<id>` |
+
+`entity-checkbox:<E>` stays derived (the input inside that row); neither panel
+mode marks the input itself, and "the checkbox of the row we would have rung" is
+the right definition anyway.
+
+### Two deliberate behaviour changes
+
+**`node-box:` on a merged CHILD stops resolving, and that is the point.**
+Siggie, 2026-09-08: *"it's not a nodeBox, there's no reason to try to look for
+it as if it were."* Today `nodeBox()` falls back to finding a row that declares
+the class and returning **the containing box** — i.e. the merged PARENT's box,
+silently mislabelled. For a subclass that narrows nothing
+(`SpecimenQualityObservation`, which has no rows of its own) it returns null
+instead. Same anchor, different meanings, failing silently either way. With flat
+tags there is no fallback chain: the box tags itself, the header tags itself,
+and an anchor either matches or it does not. A merged child is addressed as
+`child-header:`.
+
+**Tree-mode `entity-row` stops resolving.** The tree path walks up to
+`.dbw-row`, an element inside the third-party DagBrowser widget that dmvd does
+not render and cannot tag. Siggie, 2026-09-08: DagBrowser *"is totally useless
+right now — everything appears a million times"*, and is not to drive design
+decisions. So the table path (list mode, the default, where all four
+`entity-row`/`entity-checkbox` anchors actually resolve) gets a flat tag and the
+tree path degrades to "anchor did not resolve", which is already the documented
+normal case.
+
+### Not doing: drop `sibs=0`
+
+BACKLOG § "Anchor kinds" pairs the `child-header:` vocabulary with removing the
+`sibs=0` toggle, on the grounds that while it exists a merged child is a box in
+one mode and a header in the other. **`child-header:` does not need that** — the
+two kinds name different things in either mode, so the vocabulary is unambiguous
+without it. Removing `sibs=0` touches a URL param, a localStorage key, the tour
+state stack, the toolbar, and the unmerged render path; it stays filed as its
+own work.
+
+---
+
 ## 2. Extract `src/help/` → `packages/tour-help/`
 
 Siggie picked that name over `siggies-tour-and-help-pkg` and over leaving it in
-place. **Do §1 first** — the plan's own prerequisite.
+place. **Do §1 and §1a first** — §1 is done; §1a deletes a prop and a whole file
+from the package's surface, so extracting before it would move code that is
+about to go.
 
 The package/app split is **already done on the content side** (2026-08-29):
 `src/help/` is package material only; dmvd's content, resolvers and styling
@@ -128,7 +214,7 @@ package must not learn what a BDCHM entity row is.
 
 | seam | contract |
 |---|---|
-| `resolvers` prop | Anchor kinds are **host-registered, not parser-known**. The parser splits `kind:argument` and stops. dmvd's kinds: `help-id`, `entity-row`, `entity-checkbox`, `slot-row`, `node-box`. **Do not fold resolution back into the parser.** |
+| anchor **kinds** | Kinds are **host-defined, not parser-known**. The parser splits `kind:argument` and stops; it never learns what a BDCHM entity row is. dmvd's kinds: `help-id`, `entity-row`, `entity-checkbox`, `category-row`, `slot-row`, `node-box`, `child-header`. **Do not fold resolution back into the parser** — i.e. do not give the parser a table of kinds or any code that interprets one. ⚠️ Writing the whole `kind:arg` string into a `data-help-id` at the host's render sites does NOT breach this, and is the plan (§1a): the package matches a string it never interprets, and the host still decides what every kind means. The seam is about *who knows what a kind means*, not about *how the element is found*. |
 | `centerOn` prop | Where an unanchored popover centres is host configuration. dmvd currently passes nothing (viewport-centred) — a host **declining** a capability is not the capability going away. |
 | `--help-font-size` | The package sizes everything in `em` off one custom property; hosts override that one value. dmvd's override is [`src/explore/helpTheme.css`](../src/explore/helpTheme.css), imported *after* `HelpLayer` so source order decides. |
 | `onApplyState` / `onReadState` | Two host callbacks, not one. dmvd implements both against the URL, so the tour never learns what a selection is. |

@@ -7,6 +7,81 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-08, later — the flat-tag idea got lost, and how
+
+Siggie, after task 8 shipped: *"i had been hoping we were getting rid of
+resolvers altogether... in that last session we came up with a way to flatten
+and put `data-help-id` on everything when it gets rendered, even slot-rows."*
+
+That recollection is exactly right, and the idea was written down. It was
+written down **under a heading that read as a rejection**, in BACKLOG § "Anchor
+kinds":
+
+> **What this does NOT buy: dropping resolvers for tags.** Siggie asked whether
+> `data-help-id="node-box:Participant"` on the box would let the tag mechanism
+> replace the resolver. **It would** — the interpolation is one line at each
+> render site, and for `slot-row` it actually SOLVES the pair problem by
+> flattening `(data-row, data-declaring-class)` into one string, which is
+> exactly the shape CSS `anchor-name` needs. But it does not buy the typo
+> check... So the tag-vs-resolver choice is free to be made on design grounds.
+
+The paragraph answers a NARROW question — does tagging also buy the typo check?
+— and correctly says no. The heading generalises that "no" to the whole idea.
+Everything after the first sentence says the idea WORKS and is the right shape
+for CSS anchoring; the heading says it does not buy anything.
+
+**The result:** neither TASKS 8 nor HELP_PACKAGE_PLAN §1 mentioned flat tags
+again. §1 instead spent five paragraphs treating the resolver-backed kinds as
+the hard part of the migration, with `slot-row`'s attribute pair as an unsolved
+constraint on that kind's DESIGN — while the solution sat two documents away
+under "does not buy". Task 8 was then prompted, planned and executed without it.
+
+**Two compounding errors, worth separating:**
+
+1. *The heading.* "What this does NOT buy" for a paragraph whose content is
+   "this works and here is what it solves". A live doc's heading has to survive
+   being read alone.
+2. *The inference from it.* "Free to be made on design grounds" is an OPEN
+   question. It got filed as settled — as "not part of task 8" — because it
+   appeared under a negative heading in a backlog file. Nothing recorded that a
+   decision was still owed.
+
+**Also mis-cited afterwards.** When Siggie asked about dropping resolvers, the
+first answer cited HELP_PACKAGE_PLAN §2's seam — *"Do not fold resolution back
+into the parser"* — as an argument against. It is not one. The seam is about who
+knows what a kind MEANS: the parser splits `kind:arg` and stops. A host writing
+the whole string into `data-help-id` keeps that exactly — the package matches a
+string it never interprets. The seam table now says so explicitly, because
+reading it as "resolvers are load-bearing" is evidently easy.
+
+**What changed in the docs as a result** (this pass, no code):
+
+- HELP_PACKAGE_PLAN gains **§1a**, the flat-tag work, decided and scoped.
+- The §2 seam row is rewritten from "`resolvers` prop" to "anchor **kinds**",
+  with the ⚠️ that flat tags do not breach it.
+- §1's "`slot-row` was never a special case" is softened: true for POSITIONING,
+  but §1a removes the pair at the source, which is better.
+- BACKLOG § "Anchor kinds" becomes § "Drop `sibs=0`" — the vocabulary half moved
+  into §1a, and the "does NOT buy" paragraph is deleted rather than relocated.
+- TASKS 8c splits into **8a** (flat tags) and **8d** (`sibs=0`), which were only
+  ever bundled because `sibs=0` was thought to be what made the vocabulary
+  unambiguous. It is not: `child-header:` and `node-box:` name different things
+  in either mode.
+
+**One factual correction while doing this:** `slot-row` has **1 live use**
+(`help-content.md:716`,
+`slot-row:MeasurementObservation.observation_type`), not 0. The count of 0 is in
+the task 8 planning docs and the end-of-session WORKLOG note below, and drove
+the "it is a real constraint on the DESIGN of that kind, not a blocker" framing.
+It is a live anchor pointing at a merged child — the exact case 8a changes.
+
+**Not a mistake, recorded so it is not re-litigated:** task 8 itself was not
+wasted by any of this. Flat tags change WHICH ELEMENT the layer tags; they do
+not change that it tags one and lets CSS place things off it. §1a is a smaller
+change now than it would have been before §1, because the resolvers are already
+reduced to answering "which element" and never "where".
+
+---
 ## 2026-09-08, task 8 — CSS anchor positioning, shipped
 
 The migration in HELP_PACKAGE_PLAN §1. What the live docs now say is the end
@@ -31,10 +106,10 @@ Three consequences the plan did not anticipate:
 - **`slot-row` stopped being a special case.** The plan treated its
   `(data-row, data-declaring-class)` attribute PAIR as a real constraint on the
   design of that kind — true for a CSS selector, irrelevant when the resolver
-  hands you the element. It works today, with no flattened-string form and no
-  BACKLOG § "Anchor kinds" work needed first. It has 0 live uses, so this is
-  untested by anything but construction; the point is only that nothing about
-  it is now awkward.
+  hands you the element. It works today, with no flattened-string form needed
+  first. (Also claimed "0 live uses, so this is untested by anything but
+  construction" — **wrong on the count**: there is one, at
+  `help-content.md:716`. See the entry above.)
 - **`src/help/` names none of dmvd's kinds**, which the blanket-rule version
   would have broken — `help.css` ships to every host, and a rule keyed on
   `data-node-id` is dmvd knowledge in package code. §2's seam survived by
