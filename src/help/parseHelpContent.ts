@@ -15,15 +15,15 @@
 
 /**
  * What a step points at. The parser deliberately does NOT interpret the
- * `kind:argument` form: resolving `entity-row:Participant` to an element needs
- * to know what a dmvd entity row IS, and this file has to stay host-agnostic
- * for the package extraction. The host registers resolvers; see
- * `HelpEntry.anchor`.
+ * `kind:argument` form: knowing what an `entity-row` IS belongs to the host, and
+ * this file has to stay host-agnostic for the package extraction. It splits the
+ * pair and stops; the host decides what each kind means by choosing which
+ * elements to tag with it. See `HelpEntry.anchor`.
  */
 export type HelpAnchor =
   /** No anchor: centre the popover, ring nothing. Authored as `Anchor: none`. */
   | { kind: 'none' }
-  /** `kind:argument`, resolved by a host-registered resolver at runtime. */
+  /** `kind:argument`, matched at runtime against a host-written `data-help-id`. */
   | { kind: string; arg: string };
 
 /**

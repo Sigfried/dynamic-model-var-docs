@@ -7,6 +7,116 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-08, tasks 8a + 8b — flat tags, and dragging
+
+Both shipped. What the plan had right, what it had wrong, and the things a future
+session should not re-derive.
+
+### 8a: what the plan got wrong, and it mattered
+
+**`entity-checkbox` cannot stay derived.** The plan said it would: *"stays
+derived (the input inside that row); neither panel mode marks the input itself,
+and 'the checkbox of the row we would have rung' is the right definition
+anyway."* That reasoning was sound **while a host FUNCTION did the deriving** — a
+resolver could call `entityRow(x).querySelector('input')` because it lived on
+dmvd's side. With the resolvers gone the only place left to derive it is the
+package, and `[data-help-id="entity-row:X"] input` is package code knowing that
+`entity-checkbox` MEANS an input nested in an `entity-row`. That is precisely the
+kind interpretation §2's seam forbids. So the input is tagged at the render site.
+
+The general lesson, worth keeping: **"the host derives it" and "it is derived"
+are different claims**, and deleting the host's function turns the first into the
+second. Anywhere the plan says a capability "stays" while the mechanism under it
+is being replaced, check which side of the seam it lands on afterwards.
+
+**`ANCHOR_KINDS` had no home, and I put it in the wrong one twice.** The
+vocabulary was derived from `Object.keys(helpResolvers)` — deliberately, because
+it had been a hand-maintained copy that went stale (adding `category-row` broke
+only the copy). Deleting the resolvers deleted that derivation. First attempt:
+grep the render sites for `` data-help-id={`kind: `` — which worked until the very
+next refactor pulled the tags behind builder functions and the regex silently
+matched nothing (the test failed loudly, so no harm, but it would not have if the
+kinds had merely SHRUNK). Second and current: `helpAnchors.ts` exports the list
+next to the builders, and `helpAnchors.test.tsx` pins the two against each other
+in both directions. A vocabulary derived by REGEX from source text is a copy
+wearing a derivation's clothes.
+
+### 8a: three live anchors were broken, and the plan undercounted them
+
+§1a asked to *"verify `help-content.md:716`"* — the one `slot-row` anchor. That
+one was fine (it is a merged child's narrowed row, which is exactly what flat
+tags fix). The anchors that actually broke were `node-box:` ones, and the plan
+named the two failure MODES without checking how many live anchors were in them.
+
+Found by probe, not by reading: run the real `buildViewModel → mergeSiblings` for
+each entry's own `Change:` and diff its emitted tags against the entry's anchors.
+
+- `relationship-kinds`, 2 beats — `node-box:MeasurementObservation`, which had
+  been silently ringing the merged `Observation` box under the child's name
+- `lab-biospecimen`, 1 beat — `node-box:SpecimenQualityObservation`, which
+  resolved to nothing (it declares no rows, so the resolver's row-based fallback
+  had nothing to find)
+
+All three are `child-header:` now, and that probe is a permanent test
+(`helpAnchors.test.tsx`). **This is the standing "measure before diagnosing" rule
+paying off on a docs claim rather than a render bug** — the plan's count came from
+reading, and reading is what got the `slot-row` count wrong the first time too
+(see the entry below: "0 live uses" was wrong; there is 1).
+
+### 8a: what replaced `helpResolvers.test.ts`, and why the old shape was weak
+
+The old file tested five lookup functions against a **hand-copied DOM**. Its own
+header said the point was *"so a markup change fails here instead of in front of
+a stakeholder"* — but the fixture was a copy, so renaming an attribute in the app
+and leaving the copy alone kept every test green. Flat tags remove the copy: the
+render site emits the whole string, so the test can compare the app's own output
+to the content file's own anchors. `helpAnchors.test.tsx` does that in two halves
+because the two panels are reachable differently under jsdom — the left panel
+renders for real, the diagram goes through the pipeline (no ELK in jsdom).
+
+### 8b: two traps, one of which cost a wrong clamp
+
+**`position-area` has to be cleared when inline coordinates arrive**, along with
+`margin` and `transform`. Left set, the browser keeps aligning the popover within
+its anchor CELL, so an inline `left` is measured from the cell and not the
+viewport — the popover lands somewhere other than where it was dropped. Not
+verified in a browser (see below), but it is the documented behaviour and the
+three properties are all offsets from a placement the box no longer has.
+
+**The off-screen clamp was wrong and a test caught it.** I wrote
+`Math.max(base.left + dx, 8 - box.width + 40)` meaning "keep 40px on screen".
+With jsdom's zero-width rect that lower bound is +48, so dragging left CLAMPED
+RIGHTWARD and the test failed with `48,0` where `0,0` was expected. The
+arithmetic was simply wrong (`KEEP - width` is the bound; the `8` was a stray).
+Worth recording because the failure looked like a jsdom artifact and the first
+instinct was to relax the assertion — the artifact (a 0×0 box) is what EXPOSED
+the bug rather than causing it. The fix was both: correct arithmetic, and a fake
+`getBoundingClientRect` so the clamps are computed against a plausible 416×300
+panel instead of a 0×0 one. A clamp tested against a zero-size box tests nothing.
+
+### 8b: what is NOT verified, and cannot be here
+
+Whether the dragged popover **lands where it was dropped** needs a browser. jsdom
+does no layout, so the tests pin arithmetic and the click contract and say
+nothing about placement. Same for `resize: both` on the panel. Siggie has the app
+running and has not looked at either yet.
+
+### Not a mistake, recorded so it is not re-litigated
+
+**Deleting `data-row`, `data-declaring-class`, `data-category-row` and
+`data-entity-row` was in scope.** §1a does not list them, but each was written
+only for the resolver that read it, and the flat tag carries the same information.
+`data-class-row` STAYED — three non-help test files use it as a hook, so it is
+independently live. `data-node-id` stayed too: the drag/pan code at
+`OwnershipGraphView.tsx` reads it.
+
+**Moving `nodeBoxAnchor` / `slotRowAnchor` out of `OwnershipGraphView.tsx` was
+lint feedback, not taste.** Exporting them from a component file added two
+`react-refresh/only-export-components` errors. They live in `helpAnchors.ts` now
+with an `import type` for `NodeVM`/`RowVM`, which is erased and so not a cycle.
+Net lint delta for both tasks: **zero**.
+
+---
 ## 2026-09-08, later — the flat-tag idea got lost, and how
 
 Siggie, after task 8 shipped: *"i had been hoping we were getting rid of

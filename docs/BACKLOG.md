@@ -324,19 +324,19 @@ construction rather than by ordering.
 app, rendered at exactly one call site (`ExploreApp.tsx`), so there is no second
 one to keep consistent with.
 
-⚠️ **Scoped down 2026-09-08** — Siggie: *"don't do any heavy lifting for the
-overlays."* What is being built now (TASKS 8a/8b) is only the cheap part:
+⚠️ **Scoped down 2026-09-08**, and the cheap half **shipped the same day** as
+HELP_PACKAGE_PLAN §1b — Siggie: *"don't do any heavy lifting for the overlays."*
 
 | surface | draggable now? | why |
 |---|---|---|
-| legend, example cases | **yes**, together | both render into ONE frame, [`HelpPanel.tsx`](../src/explore/HelpPanel.tsx) — an `absolute top-14 right-4 w-[26rem]` div. A handle on its header does both, and CSS `resize: both` is a free native resizer. |
-| step popover | **yes** | §1 removed everything that recomputed its position, so a dragged `left`/`top` survives. |
+| legend, example cases | **yes**, together | both render into ONE frame, [`HelpPanel.tsx`](../src/explore/HelpPanel.tsx). The handle is its header, and CSS `resize: both` is a free native resizer. |
+| step popover | **yes** | handle is its title. §1 removed everything that recomputed its position, so a dragged `left`/`top` survives; it resets on each step change. |
 | `TourMap` | no, and should not | a centred modal over a dimmed backdrop that closes as soon as you pick a step. Its own CSS calls it *"a chooser, not an inspector you keep open beside your work"*. |
-| detail drawer | **no** — this is the deferred part | in-flow `w-96 shrink-0` flex column. Dragging it requires making it an overlay first, which IS the layout change this item is about. |
+| detail drawer | **no** — this is what remains of this item | in-flow `w-96 shrink-0` flex column. Dragging it requires making it an overlay first, which IS the layout change this item is about. |
 
-So the **symptom above is not fixed** by 8b: the legend still covers the drawer,
-because the drawer is still in flow. What 8b buys is that you can now drag the
-legend off it.
+So the **symptom above is still not fixed**: the legend still covers the drawer,
+because the drawer is still in flow. What shipped buys is that you can now drag
+the legend off it.
 
 ✅ **Dragging is unblocked** — the positioning migration (HELP_PACKAGE_PLAN §1)
 shipped 2026-09-08, and it was the right way round. `popoverPosition` no longer
@@ -354,9 +354,10 @@ is kludgy and css should make it so we don't have to do that."* That made the
 split the worse deal: it would have kept the measure-then-position machinery
 alive and paid for the drag by adding one more piece of state to it.
 
-Rough estimate unchanged overall (**~1 day**), and what remains of it is the
-DRAWER: making it an overlay like the others, and giving the three of them one
-drag/resize model.
+What remains of this item is the DRAWER: making it an overlay like the others,
+and giving the three of them one drag/resize model. The drag mechanism itself is
+built and shared — [`useDragged.ts`](../src/help/useDragged.ts) — so the work left
+is the layout change, not the interaction.
 
 ⚠️ **"Apply the change before anchoring" does not work as a fix**, considered
 and rejected 2026-09-08. There is no synchronous moment when a step's `Change:`
@@ -443,15 +444,14 @@ already uses.
 Siggie, 2026-09-08: *"let's just get rid of sibs=0. i never use it anyway and it
 really crowds the canvas."*
 
-⚠️ **The anchor-kind half of this item has moved** to
-[HELP_PACKAGE_PLAN §1a](HELP_PACKAGE_PLAN.md#1a-flat-anchor-tags--delete-the-resolvers),
-which is decided and scoped: flat `data-help-id` tags, `child-header:` for a
-merged child, and `node-box:` on a merged child simply not resolving. **§1a does
-not depend on removing `sibs=0`** — `child-header:` and `node-box:` name
-different things in either mode, so the vocabulary is unambiguous with the
-toggle still there.
+The anchor-kind half of this item **shipped separately** as
+[HELP_PACKAGE_PLAN §1a](HELP_PACKAGE_PLAN.md#1a-flat-anchor-tags--shipped-2026-09-08):
+flat `data-help-id` tags, `child-header:` for a merged child, and `node-box:` on a
+merged child simply not resolving. That did not need `sibs=0` removed —
+`child-header:` and `node-box:` name different things in either mode, so the
+vocabulary is unambiguous with the toggle still there.
 
-**Why it is its own piece of work.** It touches more than the anchors: a URL param and its `DEFAULTS`/`toQuery` handling
+**Why this is its own piece of work.** It touches more than the anchors: a URL param and its `DEFAULTS`/`toQuery` handling
 (`exploreState.ts`), a localStorage key (`LS_KEYS.sibs`), the tour state stack
 (`tourStateStack.ts`), the toolbar toggle and `rememberPreference`
 (`OwnershipGraphView.tsx`), `ExploreApp`'s `mergeSibs` state, and the unmerged

@@ -15,10 +15,9 @@
    `--help-anchor` is ONE name that MOVES. HelpLayer puts `data-help-anchor` on
    whichever element the current step resolves to, so the popover and the ring
    can name a single anchor while the step's anchor is dynamic. It is deliberate
-   that no rule here keys on `[data-help-id]` or `[data-node-id]`: the element
-   arrives from the HOST's resolver, which is what lets `slot-row` — picked by a
-   PAIR of attributes that no selector expresses — and any kind a host adds
-   later work without this file naming any of them. */
+   that no rule here keys on `[data-help-id]` itself: the element is looked up by
+   its own tag and then MARKED, so one rule covers every kind at once and this
+   file names none of the host's. */
 [data-help-anchor] {
   anchor-name: --help-anchor;
 }

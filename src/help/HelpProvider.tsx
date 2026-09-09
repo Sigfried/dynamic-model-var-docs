@@ -35,7 +35,7 @@ import {
 import type { HelpAnchor, HelpContent, TextResolver } from './parseHelpContent';
 import {
   HelpContext, HELP_MODE_ENABLED, ADDRESS_TOGGLE_ENABLED,
-  type AnchorResolver, type HelpApi,
+  type HelpApi,
 } from './helpContext';
 
 /** Where the TEMPORARY address toggle remembers itself. See `showAddresses`. */
@@ -101,7 +101,7 @@ function resolveText(
 
 export function HelpProvider({
   markdown, onPushChange, onPopChange, onJumpChanges, onTourStart, onTourEnd,
-  resolvers, textResolvers, centerOn, children,
+  textResolvers, centerOn, children,
 }: {
   markdown: string;
   /**
@@ -163,17 +163,10 @@ export function HelpProvider({
    */
   onTourEnd?: () => void;
   /**
-   * Resolvers for the host's own anchor kinds. `help-id` and `none` are built
-   * in; everything else in an `Anchor:` field is looked up here. An
-   * unregistered kind resolves to null, which degrades to an unringed popover
-   * rather than throwing.
-   */
-  resolvers?: Record<string, AnchorResolver>;
-  /**
    * Resolvers for the host's own TEXT kinds: what a `{{kind:arg}}` placeholder
-   * in a description is replaced with. The same seam as `resolvers` and for
-   * the same reason — `{{model-description:Participant}}` means knowing what a
-   * class is, which this package must not.
+   * in a description is replaced with. The same seam as the anchor kinds and
+   * for the same reason — `{{model-description:Participant}}` means knowing what
+   * a class is, which this package must not.
    *
    * An unregistered kind, or one returning undefined, leaves the placeholder
    * visible rather than blanking it; see `fillPlaceholders`.
@@ -495,8 +488,24 @@ export function HelpProvider({
   }, [tourIndex, endTour]);
 
   /**
-   * Resolve an anchor to its element. `none` points at nothing by definition;
-   * `help-id` is the built-in; everything else is the host's.
+   * Resolve an anchor to its element: ONE `querySelector` for the whole anchor
+   * string, whatever kind it names.
+   *
+   * Every anchorable element carries its own anchor in `data-help-id` --
+   * `node-box:Participant`, `slot-row:MeasurementObservation.observation_type`
+   * -- written by the host at its render site. This REPLACED a table of host
+   * `resolvers`, one function per kind, and it keeps the seam exactly: the
+   * parser still splits `kind:arg` and stops, the host still decides what every
+   * kind means (by choosing what to interpolate), and this matches a string it
+   * never interprets. `help-id:<id>` is the degenerate case where the kind
+   * prefix is the anchor -- hence the shape below.
+   *
+   * Returning null is normal, not an error: the row may be collapsed, the box on
+   * a diagram the current selection does not include, or the element simply not
+   * rendered yet. The layer degrades to an unringed popover; nothing throws.
+   *
+   * `CSS.escape` because a hand-authored anchor is arbitrary text and must not
+   * be able to break out of the selector.
    */
   const resolveAnchor = useCallback((anchor: HelpAnchor | undefined): Element | null => {
     // Destructured rather than narrowed on `anchor.kind`: the union's second
@@ -506,11 +515,9 @@ export function HelpProvider({
     const { kind } = anchor;
     if (kind === 'none') return null;
     const { arg } = anchor as { kind: string; arg: string };
-    if (kind === 'help-id') {
-      return document.querySelector(`[data-help-id="${CSS.escape(arg)}"]`);
-    }
-    return resolvers?.[kind]?.(arg) ?? null;
-  }, [resolvers]);
+    const tag = kind === 'help-id' ? arg : `${kind}:${arg}`;
+    return document.querySelector(`[data-help-id="${CSS.escape(tag)}"]`);
+  }, []);
 
   // Cursor affordance; also what the hint dots key off in CSS.
   useEffect(() => {
@@ -598,10 +605,10 @@ export function HelpProvider({
   /**
    * The centring region's rect, measured NOW.
    *
-   * A function rather than a captured element for the same reason the anchor
-   * resolvers are queried live: the region can mount after the tour starts,
-   * and it resizes when the window does or the left panel is collapsed. A
-   * value read once would centre on a stale box.
+   * A function rather than a captured element for the same reason anchors are
+   * looked up live: the region can mount after the tour starts, and it resizes
+   * when the window does or the left panel is collapsed. A value read once would
+   * centre on a stale box.
    */
   const centerRect = useCallback((): DOMRect | null => {
     if (!centerOn) return null;

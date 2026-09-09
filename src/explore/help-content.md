@@ -412,7 +412,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
        Specimen through `quality_measure` and `quantity_measure`. They are
        Observations — the same class you just met — pointed at material rather
        than at a person, which is why they are listed in both categories.
-     - Anchor: node-box:SpecimenQualityObservation
+     - Anchor: child-header:SpecimenQualityObservation
   7. Substance
      - Description:
        ##### Substance
@@ -718,10 +718,10 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 - **Beats:**
   1. inheritance
      - Description: **Inheritance**, known in modeling parlance as IS_A relationships — e.g. `MeasurementObservation.is_a` → `Observation`.
-     - Anchor: node-box:MeasurementObservation
+     - Anchor: child-header:MeasurementObservation
   2. has-a
      - Description: **Association / ownership / containment**, known in modeling parlance as HAS_A relationships — e.g. `Visit.associated_participant` → `Participant`.
-     - Anchor: node-box:MeasurementObservation
+     - Anchor: child-header:MeasurementObservation
   3. UNFINISHED
      - Description: A primary goal
      - Anchor: none

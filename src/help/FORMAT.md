@@ -308,18 +308,18 @@ opens that element's entry, so the tag is what makes a region clickable-for-help
 in the first place. Anchoring reuses it. Grep for `data-help-id=` to see every
 one.
 
-**Runtime lookups — `<kind>:<argument>`.** A diagram row or tree row cannot
-carry a stable tag: the diagram destroys and rebuilds its boxes on every
-relayout, and one class can be drawn in several places. So instead of naming an
-element the anchor names a **question** — `entity-row:Participant` means "ask
-the host where Participant's row is, right now" — and a resolver function
-answers it at the moment the popover is placed.
+**Generated tags — `<kind>:<argument>`.** A diagram row or a panel row is not
+worth hand-writing a tag for: there are hundreds, and the diagram destroys and
+rebuilds its boxes on every relayout. So the host INTERPOLATES the tag at the
+render site — `data-help-id={`node-box:${classId}`}` — and the anchor is matched
+against it with the same one `querySelector`. `entity-row:Participant` finds
+whatever is wearing exactly that string, right now.
 
 | Form | Meaning |
 |---|---|
 | *(omitted)* | `help-id:<the entry id>` — the common case, when the entry explains a tagged element and shares its name |
 | `<bare-id>` | `help-id:<bare-id>` — for an entry pointing at a tagged element under some other name |
-| `<kind>:<argument>` | run the host's `<kind>` resolver on `<argument>` |
+| `<kind>:<argument>` | the element tagged `data-help-id="<kind>:<argument>"` |
 | `none` | point at nothing; the popover is centred and nothing is ringed |
 
 | Kind | Points at |
@@ -328,14 +328,15 @@ answers it at the moment the popover is placed.
 | `entity-row:<Entity>` | that entity's row in the selection panel |
 | `entity-checkbox:<Entity>` | that row's checkbox |
 | `category-row:<id>` | a category's header bar in the selection panel |
-| `slot-row:<Entity>.<slot>` | one attribute row inside a diagram box |
-| `node-box:<Entity>` | a whole entity box on the diagram |
+| `slot-row:<DeclaringClass>.<slot>` | one attribute row inside a diagram box |
+| `node-box:<Entity>` | a whole entity box on the diagram — **not** a merged child |
+| `child-header:<Entity>` | a merged child's header strip inside its parent's box |
 
-Only `help-id` and `none` are built in. **The other kinds are registered by the
-host app, not known to the parser**, which splits `kind:argument` and stops:
-resolving "entity row" means knowing what a dmvd entity row is, which the help
-package must not. They are handed in as `<HelpProvider resolvers={...}>`; dmvd's
-live in `src/explore/helpResolvers.ts`.
+Only `help-id` and `none` are built in. **The other kinds belong to the host app
+and are unknown to the parser**, which splits `kind:argument` and stops: knowing
+what an entity row IS means knowing what a dmvd entity is, which the help package
+must not. The host decides what each kind means by choosing which elements to tag
+with it; dmvd's tags are built in `src/explore/helpAnchors.ts`.
 
 **Why an attribute rather than a CSS selector or a plain `id`.** A selector
 anchor (`.left-panel > div:nth-child(2)`) would resolve fine — `help-id` is a
@@ -349,22 +350,27 @@ An anchor whose element is not on screen — a collapsed tree row, a box the
 current selection does not include — degrades to an unringed, centred popover
 rather than failing.
 
-Two kinds have an edge worth knowing when you author:
+Some kinds have an edge worth knowing when you author:
 
 
-- **`entity-row` / `entity-checkbox`** work in both left-panel modes (table and
-  tree). In tree mode everything starts collapsed, so a deeply nested entity's
-  row may not exist in the DOM when the step fires; give such a step a
-  `Change:` that selects the entity, or anchor it at the diagram instead.
-- **`slot-row:<E>.<slot>`** splits on the LAST dot. Inside a merged sibling box
-  several rows can share a slot name, and `<E>` is what picks between them —
-  `<E>` is the class that DECLARES the row, which for a child that narrows an
-  inherited slot is the child, not the parent. Verified against the live merged
-  `ObservationSet` box, which holds four rows named `observations`:
+- **`entity-row` / `entity-checkbox`** resolve in the panel's **list mode only**,
+  which is the default. Tree mode hands its rows to the DagBrowser widget, and
+  the full-width row rect there is the widget's own element, which dmvd does not
+  render and cannot tag — so a step anchored this way shows an unringed popover in
+  tree mode.
+- **`node-box:<E>` does NOT resolve for a merged child.** Merged siblings share
+  one box, titled by their parent, and a child has no box of its own — only a
+  header strip inside the parent's. Address it `child-header:<E>` instead. (There
+  is deliberately no fallback: one used to return the PARENT's box under the
+  child's name, which looked like it worked.)
+- **`slot-row:<E>.<slot>`** splits on the LAST dot, and `<E>` is the class that
+  DECLARES the row — for a child that narrows an inherited slot, the child, not
+  the parent. That is what picks between the several rows a merged box can hold
+  under one slot name. Verified against the live merged `ObservationSet` box,
+  which holds four rows named `observations`:
   `slot-row:ObservationSet.observations` finds the shared one (→ `Observation`)
   and `slot-row:MeasurementObservationSet.observations` the child's override
-  (→ `MeasurementObservation`). The resolver queries `data-row` and
-  `data-declaring-class` together, which is what makes the pair unique.
+  (→ `MeasurementObservation`).
 - **`category-row:<id>`** takes the category's **id**, not its label:
   `category-row:admin`, not `category-row:admin-study` for "Admin / Study". The
   ids are the short slugs in `config/entityCategories.ts` (`admin`, `clinical`,

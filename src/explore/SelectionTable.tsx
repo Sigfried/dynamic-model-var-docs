@@ -24,6 +24,7 @@
 import { useMemo, useState } from 'react';
 import type { CategoryTreeNode, DataService } from '../services/DataService';
 import { categoryView } from '../config/categoryView';
+import { categoryRowTag, entityCheckboxTag, entityRowTag } from './helpAnchors';
 
 interface SelectionTableProps {
   dataService: DataService;
@@ -77,10 +78,10 @@ export default function SelectionTable({
                  whole bar rather than the label button, so the ring includes
                  the ⊞ content-view control — a step pointing at a category is
                  usually about to tell you to press it. Categories exist only
-                 in this mode; the tree is the ownership DAG and has none, so
-                 the resolver returns null there and the popover simply goes
+                 in this mode; the tree is the ownership DAG and has none, so in
+                 tree mode nothing carries this tag and the popover simply goes
                  unringed. */
-              data-category-row={group.id}
+              data-help-id={categoryRowTag(group.id)}
               className="w-full flex items-stretch font-medium
                          bg-gray-50 dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700"
             >
@@ -166,6 +167,13 @@ function ClassRows({
     <>
       <label
         data-class-row={classId}
+        /* The tour's anchor, written whole (docs/HELP_PACKAGE_PLAN.md §1a). This
+           is the LIST-mode row; the tree hands its rows to DagBrowser, whose
+           row wrapper dmvd does not render and cannot tag, so `entity-row` in
+           tree mode degrades to "anchor did not resolve" — the documented
+           normal case, and every live `entity-row` anchor is authored for this
+           mode. */
+        data-help-id={entityRowTag(classId)}
         className={`flex items-center gap-2 pr-3 py-1 cursor-pointer
                     hover:bg-blue-50 dark:hover:bg-slate-800
                     ${selectedIds.has(classId) ? 'bg-blue-50 dark:bg-slate-800' : ''}`}
@@ -173,6 +181,13 @@ function ClassRows({
       >
         <input
           type="checkbox"
+          /* Tagged here rather than derived as "the input inside the row".
+             Deriving it would mean the help package knowing that
+             `entity-checkbox` is an input nested in an `entity-row` — kind
+             INTERPRETATION in package code, which is the one thing the §2 seam
+             forbids. One interpolation at the render site keeps the package
+             matching a string it never reads. */
+          data-help-id={entityCheckboxTag(classId)}
           checked={selectedIds.has(classId)}
           onChange={() => onToggle(classId)}
         />

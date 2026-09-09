@@ -29,7 +29,6 @@ import type { ExampleCase } from './exampleCases';
 import { HelpProvider } from '../help/HelpProvider';
 import { useHelp, HELP_MODE_ENABLED } from '../help/helpContext';
 import HelpLayer from '../help/HelpLayer';
-import { helpResolvers } from './helpResolvers';
 import { helpTextResolvers } from './helpTextResolvers';
 import helpMarkdown from './help-content.md?raw';
 /* dmvd's popover overrides. MUST come after the HelpLayer import above, which
@@ -686,10 +685,6 @@ export default function ExploreApp() {
       onJumpChanges={jumpTourChanges}
       onTourStart={onTourStart}
       onTourEnd={onTourEnd}
-      /* Resolvers for the row-level anchor kinds. They live here, not in
-         src/help/, because knowing what a dmvd entity row is is exactly what
-         the extractable package must not know. */
-      resolvers={helpResolvers}
       /* NO `centerOn`: unanchored steps centre on the VIEWPORT, both axes.
          It was `centerOn="graph-canvas"` — the intro popover, centred on the
          window, sat half over the left panel it was describing. That fixed

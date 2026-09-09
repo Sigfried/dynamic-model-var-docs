@@ -58,6 +58,7 @@ import {
   groupSiblings, isMergedId, mergedIdFor, siblingColor, withChildHeaders,
 } from './siblingMerge';
 import type { MergedMember, SiblingColor } from './siblingMerge';
+import { childHeaderTag, nodeBoxAnchor, slotRowAnchor } from './helpAnchors';
 import { RelationBar, type RelationRowVM } from './RelationBar';
 import {
   rememberPreference,
@@ -899,6 +900,7 @@ function LoopIcon({ title }: { title: string }) {
     </svg>
   );
 }
+
 
 /** Top of the row list: below the header, and below the owners strip if shown.
  *  A merged box needs no extra band — its children are introduced by header
@@ -2163,6 +2165,8 @@ export default function OwnershipGraphView({
                     <div
                       key={n.id}
                       data-node-id={n.id}
+                      /* The tour's anchor, written whole — see `anchorTags`. */
+                      data-help-id={nodeBoxAnchor(n)}
                       data-pan-ignore
                       data-pinned={pins.has(n.id) ? '' : undefined}
                       onPointerDown={ev => startDrag(n.id, ev)}
@@ -2308,6 +2312,9 @@ export default function OwnershipGraphView({
                         <div
                           key={r.slot}
                           data-no-drag
+                          /* A merged child's only addressable element: it has
+                             no box of its own. See `anchorTags`. */
+                          data-help-id={childHeaderTag(r.header.id)}
                           title={`${r.header.label} — is a ${n.label}; click for details`}
                           onClick={ev => { ev.stopPropagation(); onNodeClick?.(r.header!.id); }}
                           className="flex items-center px-2 text-[10px] font-semibold
@@ -2326,15 +2333,11 @@ export default function OwnershipGraphView({
                       ) : (
                         <div
                           key={r.declaringClass ? `${r.declaringClass}|${r.slot}` : r.slot}
-                          data-row={r.slot}
-                          /* A merged box holds several rows with the same slot
-                             name — the parent's and each child's override — so
-                             `data-row` alone is not unique there. The declaring
-                             class is what `slot-row:<Entity>.<slot>` resolves
-                             against, and it is the same pair edges anchor by
-                             (see `rowY`). Absent on an unmerged box, where the
-                             box's own `data-node-id` already says it. */
-                          data-declaring-class={r.declaringClass}
+                          /* REPLACED a `data-row` + `data-declaring-class` pair
+                             that was unique only when read TOGETHER, which no
+                             single selector expresses; flattened into one string
+                             it is just an attribute value. See `anchorTags`. */
+                          data-help-id={slotRowAnchor(n, r)}
                           data-expandable={isExpandable(r) ? '' : undefined}
                           data-no-drag={isExpandable(r) ? '' : undefined}
                           title={(r.channel === 'plain'

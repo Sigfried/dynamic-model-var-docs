@@ -7,10 +7,10 @@ import {
 } from '../help/parseHelpContent';
 import { stripAlerts } from '../help/HelpLayer';
 import { DEFAULTS, INSTRUCTION_PARAMS } from '../explore/exploreState';
-import { helpResolvers } from '../explore/helpResolvers';
 import { loadModelData } from '../utils/dataLoader';
 import { DataService } from '../services/DataService';
 import { ENTITY_CATEGORIES } from '../config/entityCategories';
+import { ANCHOR_KINDS } from '../explore/helpAnchors';
 
 /**
  * The help content is authored as markdown and parsed into typed data, so a
@@ -30,16 +30,28 @@ const steps = tourSteps(content);
 const positions = tourPositions(content);
 
 /**
- * Anchor kinds the dmvd app knows how to resolve, so a typo like `entity_row:`
- * fails the build rather than silently anchoring nothing.
- *
- * Derived from the real resolver table rather than retyped: this list WAS a
- * hand-maintained copy, and adding `category-row` broke it — the resolver
- * existed, the content used it, and the only thing that failed was this
- * duplicate. `help-id` and `none` are built into the provider and registered
- * by nobody, so they are added here.
+ * Every `.tsx`/`.ts` source file the app tags elements in, concatenated. Read by
+ * the `help-id` test below, which greps for a literal `data-help-id="<id>"`.
  */
-const ANCHOR_KINDS = new Set(['help-id', ...Object.keys(helpResolvers)]);
+const src = ['explore', 'help', 'components'].flatMap(dir => {
+  const base = resolve(__dirname, `../${dir}`);
+  return readdirSync(base, { recursive: true })
+    .filter((f): f is string => typeof f === 'string' && /\.tsx?$/.test(f))
+    .map(f => readFileSync(resolve(base, f), 'utf8'));
+}).join('\n');
+
+/**
+ * Anchor kinds the app actually tags, so a typo like `entity_row:` fails the
+ * build rather than silently anchoring nothing.
+ *
+ * Imported from the one module that BUILDS the tags (`helpAnchors.ts`), never
+ * retyped: this list was a hand-maintained copy once and adding `category-row`
+ * broke it — the kind worked, the content used it, and the only thing that
+ * failed was the duplicate. `help-id` is the package's own kind, tagged as a
+ * bare literal, so it is added here; `none` names nothing and is excluded at
+ * every use below.
+ */
+const KNOWN_KINDS = new Set<string>(['help-id', ...ANCHOR_KINDS]);
 
 describe('help content', () => {
   test('parses into sections and entries', () => {
@@ -283,11 +295,11 @@ describe('help content', () => {
   test('every anchor names a known kind', () => {
     const bad: string[] = [];
     for (const e of content.entries.values()) {
-      if (e.anchor.kind !== 'none' && !ANCHOR_KINDS.has(e.anchor.kind)) {
+      if (e.anchor.kind !== 'none' && !KNOWN_KINDS.has(e.anchor.kind)) {
         bad.push(`${e.id}: unknown anchor kind "${e.anchor.kind}"`);
       }
       for (const b of e.beats ?? []) {
-        if (b.anchor && b.anchor.kind !== 'none' && !ANCHOR_KINDS.has(b.anchor.kind)) {
+        if (b.anchor && b.anchor.kind !== 'none' && !KNOWN_KINDS.has(b.anchor.kind)) {
           bad.push(`${e.id} beat: unknown anchor kind "${b.anchor.kind}"`);
         }
       }
@@ -304,15 +316,10 @@ describe('help content', () => {
     // against the DOM, which forced an entry's identity to double as its
     // selector -- the constraint that made two steps unable to point at the
     // same element. Now identity is free and only ANCHORS must resolve.
-    // Non-`help-id` kinds are resolved at runtime by host-registered
-    // resolvers, so they cannot be checked by grepping for an attribute.
-    const src = ['explore', 'help', 'components'].flatMap(dir => {
-      const base = resolve(__dirname, `../${dir}`);
-      return readdirSync(base, { recursive: true })
-        .filter((f): f is string => typeof f === 'string' && /\.tsx?$/.test(f))
-        .map(f => readFileSync(resolve(base, f), 'utf8'));
-    }).join('\n');
-
+    // Only `help-id` anchors, whose tag is a literal string. The other kinds
+    // interpolate their argument at the render site, so the grep can prove the
+    // KIND is tagged (see `ANCHOR_KINDS`) but not the argument -- that is the
+    // schema check below.
     const wanted = new Set<string>();
     for (const e of content.entries.values()) {
       if (e.anchor.kind === 'help-id') wanted.add(e.anchor.arg);
@@ -332,8 +339,8 @@ describe('help content', () => {
   /**
    * The gap the `help-id` test above cannot cover.
    *
-   * A resolver anchor names a QUESTION for the host to answer at runtime, so
-   * grepping the source proves nothing about it. Its KIND is checked; its
+   * A `kind:argument` anchor has its argument INTERPOLATED at the render site,
+   * so grepping the source proves nothing about it. Its KIND is checked; its
    * ARGUMENT was not, and `node-box:Participnt` therefore passed every test
    * and degraded to an unringed, centred popover with nothing to say it had
    * gone wrong (docs/TASKS.md flagged this as needing the browser). It does
@@ -342,9 +349,10 @@ describe('help content', () => {
    *
    * Deliberately NOT a check that the element is in the DOM -- that would need
    * the browser and would fail for legitimate reasons (a collapsed tree row, a
-   * virtualised list). This catches the typo, which is the failure that ships.
+   * class the current selection does not draw). This catches the typo, which is
+   * the failure that ships.
    */
-  test('every resolver anchor argument names something that exists', async () => {
+  test('every anchor argument names something that exists', async () => {
     const ds = new DataService(await loadModelData());
     const classes = new Set(ds.getContainmentGraph().nodes.map(n => n.id));
     const catIds = new Set(ENTITY_CATEGORIES.map(c => c.id));
@@ -355,7 +363,8 @@ describe('help content', () => {
         if (!a) continue;
         const known =
           a.kind === 'category-row' ? catIds.has(a.arg)
-          : ['node-box', 'entity-row', 'entity-checkbox'].includes(a.kind) ? classes.has(a.arg)
+          : ['node-box', 'child-header', 'entity-row', 'entity-checkbox']
+              .includes(a.kind) ? classes.has(a.arg)
           // `slot-row:<Class>.<slot>` splits on the LAST dot (FORMAT.md).
           : a.kind === 'slot-row' ? classes.has(a.arg.slice(0, a.arg.lastIndexOf('.')))
           : true;

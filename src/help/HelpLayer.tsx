@@ -18,10 +18,10 @@
  *
  * That is a WRITE to one element per step, not a per-frame read of positions,
  * which is why it does not reintroduce what this replaced. It is also why there
- * are no per-kind `anchor-name` rules: the element comes from the resolver, so
- * `help-id`, `node-box`, `slot-row` — whose (`data-row`, `data-declaring-class`)
- * PAIR no single CSS selector expresses — and any kind a future host registers
- * all work the same way, and `src/help/` still knows none of their names.
+ * are no per-kind `anchor-name` rules: the element is looked up once per step by
+ * its `data-help-id` and then tagged, so `help-id`, `node-box`, `slot-row` and
+ * any kind a future host invents all work the same way, and `src/help/` knows
+ * none of their names.
  *
  * Hint dots are the exception, and need per-element names: many are on screen at
  * once, each anchored to a different element. They get `--help-hint-<n>`, from
@@ -41,6 +41,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
 import { useHelp } from './helpContext';
+import { useDragged } from './useDragged';
 import type { Offset, PopoverSide } from './parseHelpContent';
 import TourMap from './TourMap';
 import './help.css';
@@ -112,7 +113,7 @@ const ONCE_PREFIX = 'help-once-';
  * dynamic, so something has to say WHICH element is the current one; moving a
  * well-known name is one attribute write per step. The alternative -- a
  * generated `--help-<id>` on every taggable element, with the popover's
- * `position-anchor` set inline -- needs a name for elements the resolvers find
+ * `position-anchor` set inline -- needs a name for elements that are looked up
  * at runtime and would put the whole scheme behind whether `position-anchor`
  * accepts `var()`. Nothing needs two popovers anchored at once, so the extra
  * generality buys nothing. (Hint dots DO need many at once; see `HINT_NAME`.)
@@ -211,11 +212,23 @@ export default function HelpLayer() {
   const entry = activeId ? content.entries.get(activeId) : undefined;
 
   /**
+   * The popover is draggable by its title (§1b of docs/HELP_PACKAGE_PLAN.md),
+   * which §1 is what made possible: nothing recomputes its position any more, so
+   * a dragged coordinate has nothing to stomp it.
+   *
+   * RESET on every step and entry change, below. A dragged position is an answer
+   * to "this one is covering the thing I want to see", and the next step points
+   * somewhere else -- carrying the coordinate over would strand the popover
+   * across the screen from its own anchor, with no visible cause.
+   */
+  const drag = useDragged();
+
+  /**
    * Resolve an anchor to its element.
    *
-   * Resolution itself lives in the provider, which holds the host's resolver
-   * table -- `help-id` is built in, `entity-row` and friends are dmvd's. The
-   * layer only tags what comes back; where it SITS is the browser's problem.
+   * Resolution itself lives in the provider, which is one `querySelector` for
+   * the anchor's `data-help-id`. The layer only tags what comes back; where it
+   * SITS is the browser's problem.
    */
   const elementFor = resolveAnchor;
 
@@ -334,6 +347,17 @@ export default function HelpLayer() {
   const scrolled = useRef(false);
   useEffect(() => { scrolled.current = false; }, [activeId, anchor]);
 
+  /* A dragged popover goes back to its anchor when the step or entry changes.
+   * Keyed on the STEP, not on `anchor` like the scroll above: a relayout can
+   * hand back a new anchor object for the same step, and snapping the popover
+   * home under the reader's cursor mid-drag is exactly what that would do.
+   *
+   * `resetDrag` is pulled out because it is the only part of `drag` this
+   * depends on -- it is a `useCallback([])`, so it never changes, while `drag`
+   * itself is a new object every render. */
+  const resetDrag = drag.reset;
+  useEffect(() => { resetDrag(); }, [activeId, tourIndex, resetDrag]);
+
   /*
    * Tag the step's element as THE anchor, and scroll it into view.
    *
@@ -344,15 +368,13 @@ export default function HelpLayer() {
    * and canvas relayouts on their own.
    *
    * Doing it by ATTRIBUTE rather than by per-kind `anchor-name` rules in the
-   * stylesheet is what keeps the package seam intact. The element arrives from
-   * the host's resolver, so this works identically for `help-id`, `node-box`,
-   * `slot-row` -- whose (`data-row`, `data-declaring-class`) pair no single CSS
-   * selector can express -- and any kind a host registers later, without
-   * `src/help/` learning one of their names.
+   * stylesheet is what keeps the package seam intact. The element is whatever
+   * carries the anchor's own `data-help-id`, so this works identically for every
+   * kind -- including any a host invents later -- without `src/help/` learning
+   * one of their names.
    *
    * RE-RESOLVED as the DOM changes, not tagged once. Two things make that
-   * necessary, and they are the same two the resolvers' own docs give for
-   * being queried live rather than captured:
+   * necessary:
    *
    *  - the element often does not exist yet when this first runs. A step
    *    applies its `State:` and the row it points at is created by the render
@@ -394,17 +416,25 @@ export default function HelpLayer() {
     sync();
     const obs = new MutationObserver(sync);
     /*
-     * `childList` only, deliberately -- NOT `attributes`.
+     * `childList` plus `data-help-id` ONLY.
      *
-     * Both cases that matter are node insertions and removals: the row that
-     * did not exist yet, and the box ELK replaced. Watching attributes as well
-     * would mean either waking on this effect's OWN tag write (harmless, since
-     * `el === tagged` short-circuits, but pointless) or naming the attributes
-     * the resolvers select on in order to filter -- and those are dmvd's, which
-     * package code must not know (see §2's seam). A row that gains a marking
-     * attribute without any node being inserted is not a case this app produces.
+     * The two cases that matter are node insertions and removals: the row that
+     * did not exist yet, and the box ELK replaced. The attribute filter is the
+     * third: an element that stays put and RETAGS itself -- a box whose class
+     * changes under it -- which `childList` alone cannot see.
+     *
+     * The filter is possible now because there is one universal attribute to
+     * name. It used to be `childList` only, since filtering meant naming dmvd's
+     * `data-node-id` / `data-class-row` in package code (see §2's seam);
+     * `data-help-id` is the package's own attribute, so naming it costs nothing.
+     * `ANCHOR_ATTR` is deliberately NOT in the filter -- this effect's own tag
+     * write would otherwise wake it, harmless (`el === tagged` short-circuits)
+     * but pointless.
      */
-    obs.observe(document.body, { childList: true, subtree: true });
+    obs.observe(document.body, {
+      childList: true, subtree: true,
+      attributes: true, attributeFilter: ['data-help-id'],
+    });
     return () => {
       obs.disconnect();
       tagged?.removeAttribute(ANCHOR_ATTR);
@@ -497,8 +527,8 @@ export default function HelpLayer() {
    * across a single pass. `help.css` declares a fixed run of them, which is
    * what caps the dot count -- see `HINT_MAX` there.
    *
-   * Recomputed on every render of a help-mode pass, as before. That is a
-   * resolver query per entry, not a measurement: it asks whether the element
+   * Recomputed on every render of a help-mode pass, as before. That is one
+   * `querySelector` per entry, not a measurement: it asks whether the element
    * EXISTS, and the browser places the dot on it from there.
    */
   const hints = useMemo(
@@ -608,15 +638,47 @@ export default function HelpLayer() {
         popover="manual"
         data-help-popover=""
         className="help-popover"
-        style={popoverPosition(anchored, inTour ? position?.position : undefined,
-                               inTour ? position?.offsetX : undefined,
-                               width,
-                               anchored ? null : centerRect(),
-                               anchorSide)}
+        style={{
+          ...popoverPosition(anchored, inTour ? position?.position : undefined,
+                             inTour ? position?.offsetX : undefined,
+                             width,
+                             anchored ? null : centerRect(),
+                             anchorSide),
+          /*
+           * DRAGGED: viewport coordinates ON TOP of the ordinary placement, so
+           * the width, `maxHeight` and everything else that placement decided
+           * still apply -- only WHERE it sits changes.
+           *
+           * `positionArea: 'none'` has to go with them. Left set, the browser
+           * keeps aligning the box within its anchor cell, so an explicit `left`
+           * is measured from that cell and not from the viewport: the popover
+           * lands somewhere other than where it was dropped. `margin: 0` and
+           * `transform: none` for the same reason -- the 12px anchor gap and the
+           * unanchored branch's centring translate are both offsets from a
+           * placement this box no longer has.
+           */
+          ...(drag.offset ? {
+            positionArea: 'none',
+            left: drag.offset.left,
+            top: drag.offset.top,
+            right: 'auto',
+            bottom: 'auto',
+            margin: 0,
+            transform: 'none',
+          } : {}),
+        }}
       >
         {entry && (
           <>
-            <h4 className="help-popover-title">{entry.title}</h4>
+            {/* The title is the drag handle (§1b). It is the one element that is
+                always there, always at the top, and carries no control of its
+                own — and the reader's eye is already on it. */}
+            <h4
+              className="help-popover-title"
+              onPointerDown={drag.onPointerDown}
+              style={{ cursor: drag.offset ? 'grabbing' : 'grab', userSelect: 'none' }}
+              title="Drag to move"
+            >{entry.title}</h4>
 
             {/*
               The ACTION band: what the tour just did, in its own voice.

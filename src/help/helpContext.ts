@@ -8,20 +8,6 @@ import { createContext, useContext } from 'react';
 import type { HelpAnchor, HelpContent, TextResolver, TourMeta, TourPosition } from './parseHelpContent';
 
 /**
- * Resolves a host-specific anchor kind to the element it names.
- *
- * The parser splits `entity-row:Participant` into `{ kind, arg }` and stops
- * there; knowing what a dmvd entity row IS belongs to the host app, not to
- * the help package (docs/HELP_PACKAGE_PLAN.md). The host passes a table of
- * these to `<HelpProvider resolvers={...}>`; `help-id` and `none` are built in
- * and need no resolver.
- *
- * Returning null is normal, not an error: the anchor's element may simply not
- * be on screen yet. The layer degrades to an unringed popover.
- */
-export type AnchorResolver = (arg: string) => Element | null;
-
-/**
  * Help MODE is off; the tour is not.
  *
  * Turned off 2026-08-27 after Siggie reviewed it (the whole help system was
@@ -29,8 +15,8 @@ export type AnchorResolver = (arg: string) => Element | null;
  * cluster, several of them structural — see the "Help mode: switched off"
  * section of docs/HELP_PACKAGE_PLAN.md for the full list and the fix plan.
  *
- * NOTHING is deleted: every entry, anchor, resolver and popover still works,
- * and the tour reads the same registry. This flag only removes the way IN to
+ * NOTHING is deleted: every entry, anchor and popover still works, and the
+ * tour reads the same registry. This flag only removes the way IN to
  * help mode — the `help mode` toggle and the `?` shortcut. Set it back to
  * true to get the mode back exactly as it was, which is the point: the fixes
  * are worth doing, just not before the tour ships.
@@ -136,7 +122,10 @@ export interface HelpApi {
   activeId: string | null;
   showEntry: (id: string) => void;
   dismissEntry: () => void;
-  /** Resolve an anchor to its element, using the host's resolvers. */
+  /**
+   * Resolve an anchor to the element it names: one `querySelector` for the
+   * `data-help-id` the host wrote at its own render site.
+   */
   resolveAnchor: (anchor: HelpAnchor | undefined) => Element | null;
   /**
    * Rect of the region an UNANCHORED popover centres on, measured now, or null

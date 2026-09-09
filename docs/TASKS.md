@@ -39,14 +39,16 @@ params. Each failure was verified by deliberately breaking the content. A green
 run means the content is structurally sound and says nothing about whether the
 copy reads well.
 
-⚠️ **Resolver anchors are half-covered.** `entity-row`, `slot-row`,
-`entity-checkbox` and `node-box` are checked for *known kind*, and since
-2026-09-08 their ARGUMENT is checked too — against the live schema and the
-category config — so `entity-row:Participnt` and a `node-box:` naming a class
-its own `cat=` step does not draw both fail the build instead of degrading to
-an unringed popover. What still needs the browser is whether the element is
-actually IN THE DOM at that moment: a collapsed tree row or a virtualised list
-resolves to nothing for reasons no test can distinguish from a real bug.
+⚠️ **What the anchor tests do and do not cover.** Kind and ARGUMENT are both
+checked against the live schema and the category config, so `entity-row:Participnt`
+fails the build rather than degrading to an unringed popover. Since 8a
+([`helpAnchors.test.tsx`](../src/test/helpAnchors.test.tsx)) every DIAGRAM anchor
+is also run against the tags its own step's `Change:` would emit — which is how
+three live `node-box:` anchors on merged children were caught. **The remaining gap
+needs the browser**, and is two things: a step with NO `Change:` inherits whatever
+selection is on screen, so there is no canvas to check it against; and whether an
+element is actually in the DOM at that moment (a collapsed row, a panel in tree
+mode) resolves to nothing for reasons no test can distinguish from a real bug.
 
 ---
 
@@ -57,9 +59,7 @@ resolves to nothing for reasons no test can distinguish from a real bug.
 | 5 | **Re-render regression** — *"most clicks cause at least the main panel to refresh; didn't used to."* The most serious open item: it affects every interaction, where everything else is one feature's visual defect. **Still uninvestigated.** | ? | [BACKLOG §Re-render](BACKLOG.md#re-render-regression--still-uninvestigated) |
 | 6 | **Rewrite the "owns vs belongs to" passage.** Siggie's note in the doc: *"this is wrong — observation definitely doesn't own a participant. Probably need to completely rewrite this whole section from scratch. The five positions use 'belong' language for both directions."* | small | [OWNERSHIP_CLASSIFICATION §The three kinds](OWNERSHIP_CLASSIFICATION.md#the-three-kinds) |
 | 7 | **The tour's navigation guards fail silently.** `goTo`, `goToStep` and `startTour` each bail with a bare `return`. ⚠️ **No longer hypothetical** — this swallowed BOTH tour-map dead-click bugs on 2026-09-08 (`d0519dc`); each took far longer to find than it should have, and a dead UI is what Siggie reported as *"weird state"*. Both root causes are fixed; the silence is not. **Loud is the right call** — a `console.warn` per bail naming the guard and what it was asked for, not the reverted deferral machinery. | 15 min | [BACKLOG §goTo](BACKLOG.md#gotos-silent-no-op) |
-| 8a | **Flat anchor tags: delete the resolvers.** Every anchorable element carries its whole anchor string in one `data-help-id` (`node-box:Person`, `slot-row:MeasurementObservation.observation_type`), so the package finds it with one `querySelector` and `helpResolvers.ts` + the `resolvers` prop go — ~140 lines. **Solves the `slot-row` pair problem at the source** (live at `help-content.md:716`, so not hypothetical). Adds `child-header:<Class>` for a merged child, and `node-box:` on a merged child stops resolving instead of silently returning the PARENT's box — Siggie, 2026-09-08: *"it's not a nodeBox, there's no reason to try to look for it as if it were."* Tree-mode `entity-row` degrades to not-resolving (it walks up into DagBrowser, which is not to drive decisions). ⚠️ Does NOT breach the §2 seam — the parser still splits `kind:arg` and stops. | ~0.5 day | [HELP_PACKAGE_PLAN §1a](HELP_PACKAGE_PLAN.md#1a-flat-anchor-tags--delete-the-resolvers) |
-| 8b | **Draggable panels and popover.** Scoped down 2026-09-08 (Siggie: *"don't do any heavy lifting for the overlays"*) to the cheap half: `HelpPanel.tsx` — one shared frame, so the legend and the example-cases pane become draggable and resizable together — and the step popover, which task 8 unblocked. No state persistence. **Excluded:** the detail drawer (needs the layout change this item was originally about) and `TourMap` (a centred modal). ⚠️ Does not fix the legend-covers-drawer symptom; it lets you drag the legend off it. | ~0.5 day | [HELP_PACKAGE_PLAN §1b](HELP_PACKAGE_PLAN.md#1b-dragging--the-cheap-half-of-the-overlay-item) |
-| 8d | **Drop `sibs=0`.** Siggie: *"i never use it anyway and it really crowds the canvas."* Independent of 8a — the anchor vocabulary is unambiguous with the toggle still there. Touches a URL param, a localStorage key, the tour state stack, the toolbar and the unmerged render path. | ? | [BACKLOG §Drop sibs=0](BACKLOG.md#drop-sibs0) |
+| 8d | **Drop `sibs=0`.** Siggie: *"i never use it anyway and it really crowds the canvas."* The anchor vocabulary does not need it — `child-header:` and `node-box:` name different things in either mode. Touches a URL param, a localStorage key, the tour state stack, the toolbar and the unmerged render path. | ? | [BACKLOG §Drop sibs=0](BACKLOG.md#drop-sibs0) |
 | 9 | **Edge crossings.** *"A lot of unnecessary edge crossings."* Cause **unmeasured** — do not speculate. Layout is `useGraphLayout`. | ? | — |
 | 10 | **Dead code: `buildRelationGroups`.** It feeds `countsOf` for `NodeVM`'s `relatedCount`/`shownCount`, and **nothing renders those any more** — the relation bar counts its own rows. A second layer of dead code inside a live file. | small | [BACKLOG §Dead code](BACKLOG.md#dead-code-left-by-the-relation-bar) |
 
