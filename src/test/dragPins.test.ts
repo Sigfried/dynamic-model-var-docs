@@ -50,9 +50,18 @@ describe('drag pins', () => {
   });
 
   test('the in-flight transition is keyed on nudges, not pins', () => {
-    // A box must follow the cursor without a 300ms lag WHILE dragging, and
+    // A box must follow the cursor without an ANIM_MS lag WHILE dragging, and
     // animate normally otherwise. Keying this on `pins` would leave a dropped
     // box permanently unanimated.
-    expect(src).toMatch(/nudges\.has\(n\.id\) \? '' : '\[transition:transform_300ms/);
+    const ternary = /transition: nudges\.has\(n\.id\)\s*\?\s*([^\n]*)\s*:\s*([^\n]*)/
+      .exec(src);
+    expect(ternary, 'transition ternary not found — this test needs rewriting')
+      .not.toBeNull();
+    // Dragging: no `transform` transition at all (the opacity fade may stay,
+    // it has nothing to do with position).
+    expect(ternary![1]).not.toMatch(/transform/);
+    // Not dragging: transform eases, on the shared constant rather than a
+    // literal, so the boxes cannot drift out of step with the canvas zoom.
+    expect(ternary![2]).toMatch(/transform \$\{animMs\(\)\}ms/);
   });
 });

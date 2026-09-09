@@ -51,7 +51,7 @@ import { EDGE_COLORS, RANGE_COLORS, SIBLING_HEADER_TEXT } from '../config/appCon
 import {
   useGraphLayout, useZoomPan, roundedPath, sectionPoints, mergeTail,
   smoothStepPath,
-  arrowPath,
+  arrowPath, animMs,
 } from './graph-core';
 import type { EdgeSection, GraphSpec, GraphSpecPort, PlacedNode, Point } from './graph-core';
 import {
@@ -2208,9 +2208,7 @@ export default function OwnershipGraphView({
                       }}
                       onMouseEnter={() => applyHover({ kind: 'node', id: n.id })}
                       onMouseLeave={() => applyHover(null)}
-                      className={`absolute rounded-md text-xs bg-white dark:bg-slate-800 ${
-                        nudges.has(n.id) ? '' : '[transition:transform_300ms,opacity_120ms]'
-                      } cursor-pointer ${context
+                      className={`absolute rounded-md text-xs bg-white dark:bg-slate-800 cursor-pointer ${context
                         ? 'opacity-60 border border-dashed border-gray-400 dark:border-slate-500'
                         : pins.has(n.id)
                           ? 'border-2 border-amber-500 dark:border-amber-400 shadow-md'
@@ -2219,6 +2217,16 @@ export default function OwnershipGraphView({
                         width: NODE_W,
                         height: n.height,
                         transform: `translate(${p.x + PAD}px, ${p.y + PAD}px)`,
+                        // A node under the pointer must track it exactly, so a
+                        // drag drops the transform transition (the opacity fade
+                        // is unrelated to position and stays). Inline rather
+                        // than a Tailwind arbitrary value because the duration
+                        // comes from ANIM_MS, which the canvas zoom shares —
+                        // they have to agree or the boxes slide inside a frame
+                        // that is still moving.
+                        transition: nudges.has(n.id)
+                          ? 'opacity 120ms'
+                          : `transform ${animMs()}ms, opacity 120ms`,
                       }}
                     >
                       <div

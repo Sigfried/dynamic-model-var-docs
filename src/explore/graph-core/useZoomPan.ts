@@ -4,11 +4,22 @@
  * Structure: a scroll container holds a spacer div (sized to zoomed content,
  * so native scrollbars provide panning) which holds a wrapper div that gets
  * a GPU-composited CSS scale transform. Zoom bypasses React entirely: the
- * transform is applied in a requestAnimationFrame, and the spacer resize
- * (which triggers layout reflow) is debounced to ~100ms.
+ * transform is applied in a requestAnimationFrame.
  *
  * Ctrl/Cmd+wheel (and trackpad pinch, which browsers report as ctrl+wheel)
  * zooms; plain wheel scrolls natively.
+ *
+ * TWO ZOOM PATHS, and the difference is animation (see ./anim.ts):
+ *
+ * - DISCRETE (`zoomToFit`, the +/−/1:1 buttons): one step to a known level, so
+ *   the wrapper transitions over `animMs()` in step with the node boxes and
+ *   the spacer, and the scroll reset is smooth. Without this the boxes slide
+ *   to their new ELK positions inside a frame that snapped instantly, which
+ *   is why selection changes read as unanimated.
+ * - LIVE (ctrl+wheel / pinch): a stream of levels, one per event. A transition
+ *   here would leave the wrapper permanently `animMs()` behind the fingers
+ *   driving it, so this path stays instant and the spacer resize (a layout
+ *   reflow) is debounced ~100ms so it does not run per wheel tick.
  *
  * Panning is drag-to-pan on the background (mouse or touch), implemented by
  * moving the container's scroll offsets. Scrollbars alone were not enough:
@@ -19,6 +30,7 @@
  */
 
 import { useCallback, useEffect, useRef } from 'react';
+import { animMs } from './anim';
 
 export interface ZoomPan {
   /** Attach to the overflow-auto scroll container. */
@@ -27,8 +39,11 @@ export interface ZoomPan {
   spacerRef: React.RefObject<HTMLDivElement | null>;
   /** Attach to the transformed wrapper (direct child of spacer). */
   wrapperRef: React.RefObject<HTMLDivElement | null>;
-  /** Set absolute zoom level (clamped). */
-  applyZoom: (level: number) => void;
+  /**
+   * Set absolute zoom level (clamped). Eases by default; pass `animate: false`
+   * for a live, per-event zoom (see the two-paths note above).
+   */
+  applyZoom: (level: number, animate?: boolean) => void;
   /** Multiply current zoom. */
   zoomBy: (factor: number) => void;
   zoomToFit: () => void;
@@ -77,34 +92,54 @@ export function useZoomPan(opts: { min?: number; max?: number } = {}): ZoomPan {
   // Cleared the first time the user zooms deliberately, so a re-layout stops
   // re-fitting under them and respects the zoom level they chose.
   const autoFitRef = useRef(true);
+  // Cleared by the first fit, which is the one that must not animate.
+  const firstFitRef = useRef(true);
 
-  const syncSpacer = useCallback(() => {
+  const syncSpacer = useCallback((ms: number) => {
     const spacer = spacerRef.current;
     if (spacer) {
+      spacer.style.transition = ms ? `width ${ms}ms, height ${ms}ms` : '';
       spacer.style.width = `${sizeRef.current.w * zoomRef.current}px`;
       spacer.style.height = `${sizeRef.current.h * zoomRef.current}px`;
     }
   }, []);
 
-  const setZoom = useCallback((level: number) => {
+  const setZoom = useCallback((level: number, animate: boolean) => {
     zoomRef.current = Math.min(max, Math.max(min, level));
+    const ms = animate ? animMs() : 0;
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(() => {
       rafRef.current = null;
       const wrapper = wrapperRef.current;
-      if (wrapper) wrapper.style.transform = `scale(${zoomRef.current})`;
+      if (!wrapper) return;
+      // Set per zoom, not once at mount: the same wrapper serves both paths,
+      // and a live wheel zoom must clear a transition a previous fit left on.
+      wrapper.style.transition = ms ? `transform ${ms}ms` : '';
+      wrapper.style.transform = `scale(${zoomRef.current})`;
     });
-    if (spacerTimerRef.current) clearTimeout(spacerTimerRef.current);
-    spacerTimerRef.current = setTimeout(() => {
+
+    if (spacerTimerRef.current) {
+      clearTimeout(spacerTimerRef.current);
       spacerTimerRef.current = null;
-      syncSpacer();
-    }, 100);
+    }
+    if (ms) {
+      // In step with the transform, not 100ms behind it: the spacer is the
+      // scrollable extent, so resizing it late re-clamps scroll offsets
+      // mid-animation and jerks the whole canvas.
+      syncSpacer(ms);
+    } else {
+      spacerTimerRef.current = setTimeout(() => {
+        spacerTimerRef.current = null;
+        syncSpacer(0);
+      }, 100);
+    }
   }, [min, max, syncSpacer]);
 
   // Public entry point: any caller-driven zoom is a deliberate user action.
-  const applyZoom = useCallback((level: number) => {
+  // `animate` defaults on — the wheel handler is the one caller that opts out.
+  const applyZoom = useCallback((level: number, animate = true) => {
     autoFitRef.current = false;
-    setZoom(level);
+    setZoom(level, animate);
   }, [setZoom]);
 
   const zoomBy = useCallback(
@@ -116,12 +151,17 @@ export function useZoomPan(opts: { min?: number; max?: number } = {}): ZoomPan {
     sizeRef.current = { w: width, h: height };
     const wrapper = wrapperRef.current;
     if (wrapper) {
+      // The wrapper's own width/height are the UNSCALED content box, which
+      // changes only when ELK produces a differently-sized graph. Never
+      // transitioned: that is the drawing surface resizing, not a zoom, and
+      // animating it would clip or reveal boxes mid-flight.
       wrapper.style.width = `${width}px`;
       wrapper.style.height = `${height}px`;
       wrapper.style.transformOrigin = '0 0';
       wrapper.style.transform = `scale(${zoomRef.current})`;
     }
-    syncSpacer();
+    // Zoom is unchanged here, so the spacer only tracks the new content box.
+    syncSpacer(0);
   }, [syncSpacer]);
 
   // Fitting does NOT count as taking manual control — it is what auto-fit
@@ -131,13 +171,25 @@ export function useZoomPan(opts: { min?: number; max?: number } = {}): ZoomPan {
     const { w, h } = sizeRef.current;
     if (!container || !w || !h) return;
     autoFitRef.current = true;
-    setZoom(Math.min(container.clientWidth / w, container.clientHeight / h, 1));
-    syncSpacer();
+    // The FIRST fit has nothing to animate from — the graph has just appeared,
+    // and easing it from an arbitrary scale 1 reads as a gratuitous zoom-in
+    // on load rather than as a response to anything the user did.
+    const animate = !firstFitRef.current;
+    firstFitRef.current = false;
+    setZoom(Math.min(container.clientWidth / w, container.clientHeight / h, 1), animate);
     requestAnimationFrame(() => {
-      container.scrollLeft = 0;
-      container.scrollTop = 0;
+      // `scrollTo` with `behavior` so the scroll eases alongside the scale
+      // instead of teleporting the diagram out from under it. `behavior` is
+      // not honoured everywhere (and jsdom has no scrollTo at all), so fall
+      // back to the assignments this replaced.
+      if (typeof container.scrollTo === 'function') {
+        container.scrollTo({ left: 0, top: 0, behavior: animate ? 'smooth' : 'auto' });
+      } else {
+        container.scrollLeft = 0;
+        container.scrollTop = 0;
+      }
     });
-  }, [setZoom, syncSpacer]);
+  }, [setZoom]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -145,7 +197,9 @@ export function useZoomPan(opts: { min?: number; max?: number } = {}): ZoomPan {
     const onWheel = (e: WheelEvent) => {
       if (!e.ctrlKey && !e.metaKey) return;
       e.preventDefault();
-      applyZoom(zoomRef.current * (1 - e.deltaY * 0.005));
+      // `false`: the LIVE path. One level per wheel event, so a transition
+      // would just lag the fingers driving it.
+      applyZoom(zoomRef.current * (1 - e.deltaY * 0.005), false);
     };
     container.addEventListener('wheel', onWheel, { passive: false });
     return () => container.removeEventListener('wheel', onWheel);
