@@ -2302,7 +2302,7 @@ export default function OwnershipGraphView({
                   user messes with it, that's their problem."*). It is also
                   the first stage of the choreography for free — a departure
                   starts at the click, while the survivors cannot move until
-                  ELK lands (docs/CANVAS_TRANSITIONS.md §A).
+                  ELK lands, and arrivals wait ENTER_DELAY_MS on top of that.
 
                   A node that arrived in `vm` but has no position yet (its
                   layout is still pending) renders nothing until it does, then

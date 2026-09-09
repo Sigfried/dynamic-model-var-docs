@@ -10,9 +10,11 @@ Newest first.
 ## 2026-09-09 (night) — boxes on motion/react; edges deferred
 
 The box half of 5b shipped and Siggie checked it in the browser. Edges are
-deferred by Siggie's choice, not because they were hard. Read
-docs/CANVAS_TRANSITIONS.md for the design; this records what the design did
-not predict.
+deferred by Siggie's choice, not because they were hard. The design lived in
+docs/CANVAS_TRANSITIONS.md for one evening; with the boxes done Siggie had it
+folded away — the edge design went to BACKLOG (the intermediate-layout idea
+was dropped outright: *"never coming back to it"*), the settled rules to ARCHITECTURE's renderer section, and the rest
+was already in code comments. This records what the design did not predict.
 
 ### The outside-session sketch glossed the generation problem
 
@@ -115,7 +117,7 @@ one module that does not own DOM nodes. Siggie: *"we're done considering d3."*
 Removed from BACKLOG and TASKS 5b. Point interpolation is a few lines and needs
 no library.
 
-### New doc: CANVAS_TRANSITIONS.md
+### New doc: CANVAS_TRANSITIONS.md (deleted later the same night — see the entry above)
 
 5b's design now has a home instead of living in a TASKS cell and this file.
 Two ideas from Siggie recorded there before any code: an INTERMEDIATE ELK

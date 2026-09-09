@@ -14,10 +14,38 @@
 
 ### Animating edge geometry
 
-Now part of the active canvas-transition work — see
-[CANVAS_TRANSITIONS.md §Edges](CANVAS_TRANSITIONS.md#edges), which carries the
-approach (interpolate ELK's route points), the hard case (a route whose corner
-count changes), and the alternatives.
+Deferred by Siggie 2026-09-09, after the boxes moved to `motion/react`. Edges
+are SVG `d` attributes recomputed per layout, so they snap; today they fade
+out on the click and back in `EDGE_ARRIVE_MS` after the new layout lands
+(immediately on a fresh draw). Everything below is design, none of it built.
+
+**Approach:** ELK gives the endpoints and corner points of both the old and the
+new route, so animate by interpolating each point from its old position to its
+new one — no path guessing, no library. With `motion.path`, that is
+`animate={{ d }}`: motion interpolates a `d` string by pairing up its numbers.
+
+**The hard case:** a route whose corner count changes between layouts. Motion
+snaps when the number counts differ, so every route must be handed over with
+the same point count N. **Chosen:** keep ELK's original vertices and **pad
+extra points along the existing segments** up to N. The at-rest path is then
+exact (even resampling would lose the corners), and the structure is always N
+points. Fallbacks if that looks bad mid-flight: resample both routes evenly
+(loses orthogonality in flight); or Siggie's **bezier idea** — draw a curve
+between the moving endpoints *during* the transition, which needs no corner
+pairing at all, and hand back to the orthogonal route when the move lands.
+Siggie has ideas beyond these; do not invent a scheme without asking.
+
+**Do first: stable edge keys.** Edge ids are `edge-${idx}`, assigned by
+iteration order in [`containmentGraph.ts`](../src/models/containmentGraph.ts),
+so the same relationship gets a different id after a selection change and
+`edge-3` can name two different edges across layouts. `<AnimatePresence>`
+keyed on those would morph one relationship into another. Key on
+`(source, slot, target)`.
+
+Also in play: the `opacity={dimmed ? 0.4 : 1}` attribute on context edges
+would be overridden by motion's inline opacity — move it to `filter`, as the
+hover dimming already was. `pathLength` on `motion.path` gives draw-in edges on
+enter for one extra prop, if wanted.
 
 ### Edge crossings
 

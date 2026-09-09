@@ -75,10 +75,7 @@ look up). A class *belongs to* something that exists independently of it: an
 `Organization`, a `Participant`, a `Visit` carry on existing whether or not any
 particular observation points at them, so saying the observation *owns* them
 overclaims. **"Belongs to" is the correct verb for `own-bkwd`** wherever it
-appears in the legend or an edge label. **[sg] this is wrong** -- observation
-definitely doesn't own a participant, etc. probably need to completely
-rewrite this whole section from scratch. the five positions use "belong"
-language for both directions.
+appears in the legend or an edge label.
 
 `association` makes **no ownership claim in either direction**. It layers the
 same way `own-bkwd` does — target first — but that is geometry, not meaning:

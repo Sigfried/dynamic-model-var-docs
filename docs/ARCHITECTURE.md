@@ -410,7 +410,23 @@ state inversion) against only ~1.5 real consumers, under the release clock.
 The core/bindings split costs ~half a day and keeps extraction mechanical
 later.
 
-New dependency: `elkjs` only (skip NodeLinkView's d3-force mode in v1).
+Dependencies: `elkjs` and `motion` (2026-09-09).
+
+**Canvas animation** (settled 2026-09-09; the reasoning is in WORKLOG):
+- Every duration is a knob in [`anim.ts`](../src/explore/graph-core/anim.ts);
+  none is inline and none is a fraction of another. The three MOVEMENT
+  durations (boxes, wrapper rescale, fit scroll) share `ANIM_MS` because they
+  must agree.
+- Boxes enter/leave through `motion/react`'s `<AnimatePresence>`; a departing
+  box is the real box, fading where it stood. Zoom is a CSS transition on the
+  wrapper. d3 is rejected outright, `d3-interpolate` included.
+- **Hover never writes `opacity`** — motion owns it. Hover dims through
+  `filter: opacity()`.
+- ELK owns placement on every relayout; a drag is a local override that drops
+  on the next layout.
+- Edges do not move yet: they fade out and back in after `EDGE_ARRIVE_MS`. The
+  design for animating them is in
+  [BACKLOG §Animating edge geometry](BACKLOG.md#animating-edge-geometry).
 
 </details>
 
