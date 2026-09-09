@@ -18,6 +18,8 @@ export { useGraphLayout } from './useGraphLayout';
 export { useZoomPan } from './useZoomPan';
 export type { ZoomPan } from './useZoomPan';
 export {
-  ANIM_MS, FADE_FRACTION, ENTER_DELAY_FRACTION, SPINNER_DELAY_MS,
-  animMs, prefersReducedMotion,
+  ANIM_MS, BOX_FADE_MS, ENTER_DELAY_MS, EDGE_FADE_MS, EDGE_ARRIVE_MS,
+  HOVER_MS, SPINNER_DELAY_MS, FADE_RETIRE_SLACK_MS,
+  animMs, fadeMs, enterDelayMs, edgeFadeMs, edgeArriveMs, hoverMs,
+  prefersReducedMotion,
 } from './anim';

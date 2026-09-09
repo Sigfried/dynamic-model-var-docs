@@ -51,7 +51,8 @@ import { EDGE_COLORS, RANGE_COLORS, SIBLING_HEADER_TEXT } from '../config/appCon
 import {
   useGraphLayout, useZoomPan, roundedPath, sectionPoints, mergeTail,
   smoothStepPath,
-  arrowPath, animMs, FADE_FRACTION, ENTER_DELAY_FRACTION, SPINNER_DELAY_MS,
+  arrowPath, animMs, fadeMs, enterDelayMs, edgeFadeMs, edgeArriveMs, hoverMs,
+  SPINNER_DELAY_MS, FADE_RETIRE_SLACK_MS,
 } from './graph-core';
 import type { EdgeSection, GraphSpec, GraphSpecPort, PlacedNode, Point } from './graph-core';
 import {
@@ -902,44 +903,6 @@ function LoopIcon({ title }: { title: string }) {
 }
 
 
-/**
- * A box on its way off the canvas: an inert silhouette that fades where the
- * real box stood.
- *
- * Mounts OPAQUE and flips to transparent on the next frame. Mounting it at
- * `opacity: 0` outright would not animate at all — there is no starting value
- * for the transition to run from, so the browser simply paints it invisible.
- * The double rAF is the reliable form of "after the browser has painted the
- * first state": one frame to get the element committed with opacity 1, the
- * next to change it.
- */
-function LeavingBox({ node }: { node: PlacedNode }) {
-  const [gone, setGone] = useState(false);
-  useEffect(() => {
-    let inner = 0;
-    const outer = requestAnimationFrame(() => {
-      inner = requestAnimationFrame(() => setGone(true));
-    });
-    return () => { cancelAnimationFrame(outer); cancelAnimationFrame(inner); };
-  }, []);
-  return (
-    <div
-      aria-hidden
-      data-leaving={node.id}
-      className="absolute rounded-md border-2 border-slate-500 dark:border-slate-400
-                 bg-white dark:bg-slate-800 shadow-md pointer-events-none"
-      style={{
-        width: NODE_W,
-        height: node.height,
-        transform: `translate(${node.x + PAD}px, ${node.y + PAD}px)`,
-        opacity: gone ? 0 : 1,
-        transition: `opacity ${Math.round(animMs() * FADE_FRACTION)}ms`,
-      }}
-    />
-  );
-}
-
-
 /** Top of the row list: below the header, and below the owners strip if shown.
  *  A merged box needs no extra band — its children are introduced by header
  *  ROWS inside the list, which are ordinary rows as far as geometry cares. */
@@ -1523,6 +1486,159 @@ export default function OwnershipGraphView({
   useEffect(() => setNudges(new Map()), [layout]);
   useEffect(() => setPins(new Map()), [layout]);
 
+  /*
+   * ENTER / UPDATE / EXIT, by id, across the two generations.
+   *
+   * `previous` from the hook covers only the gap while ELK runs; it is null
+   * again the instant the new layout lands, which is when the animation
+   * actually plays. So the outgoing generation is retained HERE — animation
+   * bookkeeping the layout hook has no business owning.
+   *
+   *   entering — in the new layout, absent from the outgoing one. No position
+   *              to slide from, so it fades in after the movers have settled.
+   *   leaving  — in the outgoing generation, absent from the current view
+   *              model. Its own `vm` entry is gone, so BOTH its NodeVM and its
+   *              position are retained; it renders as an ordinary box that
+   *              happens to be fading. (Siggie, 2026-09-09, on the inert
+   *              silhouette this replaces: *"i don't like the inert
+   *              silhouette. just put the real box back. if user messes with
+   *              it, that's their problem."*)
+   *
+   * In the steady state both are empty and every box simply stays.
+   */
+  /*
+   * The vm that produced the CURRENTLY DISPLAYED layout, one render behind the
+   * live `vm`. A departing node is by definition absent from the live one, so
+   * its NodeVM has to be captured before it goes — this holds the last vm that
+   * was actually on screen, which is where it still exists.
+   */
+  const shownVmRef = useRef<NodeVM[]>([]);
+  useEffect(() => { if (layout) shownVmRef.current = vm.nodes; }, [layout, vm]);
+
+  /*
+   * ⚠️ Captured ONCE PER TRANSITION, keyed on the outgoing spec — NOT on every
+   * render where `previous` happens to be set.
+   *
+   * Rebuilding it per render was a real bug (2026-09-09): a new object each
+   * render gave `leaving` a new identity, which restarted the retirement timer
+   * before it could fire and re-ran the fade effect, so a departing box faded
+   * for a moment and then snapped back to full opacity — and never left.
+   * `setRetired` made it self-sustaining, since the re-render it triggers was
+   * itself enough to reset everything.
+   */
+  const outgoingRef = useRef<{
+    key: GraphSpec | null;
+    pos: Map<string, PlacedNode>;
+    vms: Map<string, NodeVM>;
+  }>({ key: null, pos: new Map(), vms: new Map() });
+  if (previous && outgoingRef.current.key !== previous.spec) {
+    outgoingRef.current = {
+      key: previous.spec,
+      pos: new Map(previous.layout.nodes.map(n => [n.id, n])),
+      vms: new Map(shownVmRef.current.map(n => [n.id, n])),
+    };
+  }
+  const outgoing = outgoingRef.current;
+
+  const entering = useMemo(() => {
+    // Nothing "enters" on the very first layout: the whole diagram is new, and
+    // fading all of it in reads as a load, not a transition.
+    if (!layout || outgoing.pos.size === 0) return new Set<string>();
+    return new Set(layout.nodes.filter(n => !outgoing.pos.has(n.id)).map(n => n.id));
+  }, [layout, outgoing]);
+
+  /**
+   * Departing boxes, as real NodeVMs paired with the position they last held.
+   * Rendered by the same loop as everything else, so they keep their rows,
+   * their relation bar and their handlers while they fade.
+   */
+  const leaving = useMemo(() => {
+    const live = new Set(vm.nodes.map(n => n.id));
+    return [...outgoing.vms.values()]
+      .filter(n => !live.has(n.id) && outgoing.pos.has(n.id));
+  }, [outgoing, vm]);
+
+  /*
+   * Arrivals mount at opacity 0 and flip opaque one painted frame later;
+   * departures do the reverse. Both need a starting value the browser has
+   * actually painted, or the transition just snaps — hence the double rAF,
+   * which is the reliable form of "after the first paint".
+   */
+  const [arrived, setArrived] = useState<Set<string>>(new Set());
+  const [departing, setDeparting] = useState<Set<string>>(new Set());
+  const enteringKey = [...entering].sort().join();
+  const leavingKey = leaving.map(n => n.id).sort().join();
+  useEffect(() => {
+    if (entering.size === 0 && leaving.length === 0) return;
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => {
+        setArrived(new Set(entering));
+        setDeparting(new Set(leaving.map(n => n.id)));
+      });
+    });
+    return () => { cancelAnimationFrame(outer); cancelAnimationFrame(inner); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on ids, not identity
+  }, [`${enteringKey}|${leavingKey}`]);
+
+  /*
+   * ⚠️ A DEPARTED BOX MUST BE RETIRED, or it never leaves.
+   *
+   * It fades to `opacity: 0` and then just sits there: `leaving` is derived
+   * from the retained outgoing generation, which only changes when a NEW
+   * transition starts, so nothing ever unmounts it. Siggie saw the result as
+   * boxes stacked on top of each other — an invisible corpse at the old
+   * position under every subsequent layout, still catching clicks.
+   *
+   * So the ids are dropped from the retained set once the fade has run.
+   */
+  useEffect(() => {
+    if (leaving.length === 0) return;
+    const ids = leaving.map(n => n.id);
+    const t = setTimeout(() => {
+      for (const id of ids) {
+        outgoingRef.current.vms.delete(id);
+        outgoingRef.current.pos.delete(id);
+      }
+      setDeparting(prev => {
+        const next = new Set(prev);
+        for (const id of ids) next.delete(id);
+        return next;
+      });
+      // The retained set is a ref, so nothing re-renders on its own; this is
+      // the nudge that drops the boxes from the tree.
+      setRetired(n => n + 1);
+    }, fadeMs() + FADE_RETIRE_SLACK_MS);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on ids, not identity
+  }, [leavingKey]);
+  const [, setRetired] = useState(0);
+
+  /*
+   * When edges appear, relative to the boxes moving.
+   *
+   * An edge cannot slide — it is an SVG `d` recomputed per layout, so it can
+   * only snap (BACKLOG "Animating edge geometry" is the real fix). Showing it
+   * while the boxes are still in transit draws final-geometry routes against
+   * boxes that are not there yet, which is what read as *"edges arrive before
+   * boxes do"* on a full selection replacement.
+   *
+   * ⚠️ NOT gated on the box animation finishing. Siggie, 2026-09-09: *"i don't
+   * want that. i want to control when they arrive."* So this is its own delay
+   * (EDGE_ARRIVE_MS), independent of ANIM_MS — raising the move duration for
+   * debugging must not drag the edges out with it.
+   *
+   * Hiding stays immediate: a stale route is worse than no route.
+   */
+  const [edgesSettled, setEdgesSettled] = useState(false);
+  useEffect(() => {
+    if (!layout) { setEdgesSettled(false); return; }
+    const wait = edgeArriveMs();
+    if (wait === 0) { setEdgesSettled(true); return; }
+    const t = setTimeout(() => setEdgesSettled(true), wait);
+    return () => clearTimeout(t);
+  }, [layout]);
+
   const placedRef = useRef<Map<string, PlacedNode>>(new Map());
   // Set when a drag actually moved something, so the click that ends the drag
   // does not also open the drawer (dragging a node popped it up in the detail
@@ -1544,6 +1660,9 @@ export default function OwnershipGraphView({
      */
     const src = layout?.nodes ?? previous?.layout.nodes ?? [];
     const m = new Map(src.map(n => [n.id, n]));
+    // Departing boxes keep the position they last held, so they fade where
+    // they stood rather than jumping. They are not in the new layout at all.
+    for (const [id, n] of outgoingRef.current.pos) if (!m.has(id)) m.set(id, n);
     // A dropped pin and an in-flight drag are the same kind of offset; the
     // live one wins while the pointer is down.
     const offsets = new Map(pins);
@@ -1572,58 +1691,6 @@ export default function OwnershipGraphView({
     const t = setTimeout(() => setShowSpinner(true), SPINNER_DELAY_MS);
     return () => clearTimeout(t);
   }, [inProgress]);
-
-  /*
-   * ENTER / UPDATE / EXIT, by id, across the two generations.
-   *
-   * `previous` from the hook covers only the gap while ELK runs; it is null
-   * again the instant the new layout lands, which is when the animation
-   * actually plays. So the outgoing positions are retained HERE, in a ref
-   * updated during the gap and read after it — animation bookkeeping the
-   * layout hook has no business owning.
-   *
-   *   entering — in the new layout, absent from the outgoing one. No position
-   *              to slide from, so it fades in after the movers have settled.
-   *   leaving  — in the outgoing layout, absent from the current view model.
-   *              Cannot be rendered from `vm` (it is not there any more), so it
-   *              is drawn as an inert ghost from coordinates alone.
-   *
-   * In the steady state both are empty and every box simply stays.
-   */
-  const outgoingRef = useRef<Map<string, PlacedNode>>(new Map());
-  if (previous) {
-    outgoingRef.current = new Map(previous.layout.nodes.map(n => [n.id, n]));
-  }
-  const outgoing = outgoingRef.current;
-
-  const entering = useMemo(() => {
-    // Nothing "enters" on the very first layout: the whole diagram is new, and
-    // fading all of it in reads as a load, not a transition.
-    if (!layout || outgoing.size === 0) return new Set<string>();
-    return new Set(layout.nodes.filter(n => !outgoing.has(n.id)).map(n => n.id));
-  }, [layout, outgoing]);
-
-  const leaving = useMemo(() => {
-    const live = new Set(vm.nodes.map(n => n.id));
-    return [...outgoing.values()].filter(n => !live.has(n.id));
-  }, [outgoing, vm]);
-
-  /*
-   * Arrivals mount at opacity 0 and flip opaque one painted frame later, for
-   * the same reason `LeavingBox` does it in reverse: a transition needs a
-   * starting value the browser has actually painted, or it just snaps.
-   * `arrived` is the set that has had its flip, so a re-render mid-fade does
-   * not reset one back to transparent.
-   */
-  const [arrived, setArrived] = useState<Set<string>>(new Set());
-  useEffect(() => {
-    if (entering.size === 0) return;
-    let inner = 0;
-    const outer = requestAnimationFrame(() => {
-      inner = requestAnimationFrame(() => setArrived(new Set(entering)));
-    });
-    return () => { cancelAnimationFrame(outer); cancelAnimationFrame(inner); };
-  }, [entering]);
 
   const startDrag = useCallback((id: string, ev: React.PointerEvent) => {
     if (ev.button !== 0) return;
@@ -2219,8 +2286,15 @@ export default function OwnershipGraphView({
                   */}
                   <g transform={`translate(${PAD}, ${PAD})`}
                      style={{
-                       opacity: layout ? 1 : 0,
-                       transition: `opacity ${Math.round(animMs() * FADE_FRACTION)}ms`,
+                       // Edges follow the boxes, they do not lead them. Going
+                       // opaque the instant `layout` lands drew final-geometry
+                       // routes against boxes still sliding toward them — and
+                       // on a full selection replacement, against boxes that
+                       // had not faded in yet. `edgesSettled` gates the fade-in
+                       // on the movers arriving; the fade-OUT is immediate,
+                       // since a stale route is worse than no route.
+                       opacity: edgesSettled ? 1 : 0,
+                       transition: `opacity ${edgeFadeMs()}ms`,
                      }}>
                     {/* The one arrowhead per convergence. Drawn before the edges
                         so a stroke that overshoots its base by a fraction of a
@@ -2234,7 +2308,7 @@ export default function OwnershipGraphView({
                            attribute row), so a shared head is always forward. */
                         fill={a.color?.text ?? edgeKindColor(a.isOwn, false)}
                         opacity={a.dimmed ? 0.4 : 1}
-                        style={{ transition: 'opacity 120ms' }}
+                        style={{ transition: `opacity ${hoverMs()}ms` }}
                       />
                     ))}
                     {/* `layout`, never `geom`: an edge is looked up in the
@@ -2308,7 +2382,7 @@ export default function OwnershipGraphView({
                             strokeDasharray={isOwn ? undefined : '5 4'}
                             markerEnd={marker ? `url(#${markerId(marker)})` : undefined}
                             markerStart={!isOwn && !willMerge ? `url(#${markerId('arrow-assoc')})` : undefined}
-                            style={{ transition: 'opacity 120ms, stroke-width 120ms' }}
+                            style={{ transition: `opacity ${hoverMs()}ms, stroke-width ${hoverMs()}ms` }}
                           />
                           {/* invisible fat hit area for edge hover */}
                           <path
@@ -2326,7 +2400,10 @@ export default function OwnershipGraphView({
                   </g>
                 </svg>
 
-                {vm.nodes.map(n => {
+                {/* Departing boxes render through this same loop, as real
+                    boxes with their rows and handlers intact — they are just
+                    fading. `leaving` is empty except during a transition. */}
+                {[...vm.nodes, ...leaving].map(n => {
                   const p = placed.get(n.id);
                   if (!p) return null;
                   const context = n.role === 'context';
@@ -2376,20 +2453,17 @@ export default function OwnershipGraphView({
                         // they have to agree or the boxes slide inside a frame
                         // that is still moving.
                         transition: nudges.has(n.id)
-                          ? 'opacity 120ms'
-                          : `transform ${animMs()}ms, opacity ${
-                              Math.round(animMs() * FADE_FRACTION)}ms ${
-                              // An ARRIVING box waits for the movers to settle:
-                              // fading in where another box is still sliding
-                              // through reads as a collision.
-                              entering.has(n.id)
-                                ? Math.round(animMs() * ENTER_DELAY_FRACTION)
-                                : 0}ms`,
-                        // Arrivals start transparent; everything else is opaque
-                        // and stays that way (the dashed context styling below
-                        // does its own dimming via a class).
-                        ...(entering.has(n.id) && !arrived.has(n.id)
-                          ? { opacity: 0 } : {}),
+                          ? `opacity ${hoverMs()}ms`
+                          // An ARRIVING box waits for the movers to settle:
+                          // fading in where another box is still sliding
+                          // through reads as a collision.
+                          : `transform ${animMs()}ms, opacity ${fadeMs()}ms ${
+                              entering.has(n.id) ? enterDelayMs() : 0}ms`,
+                        // Arrivals start transparent and flip opaque; departures
+                        // do the reverse. Everything else is left alone, so the
+                        // dashed context styling keeps its own class dimming.
+                        ...(entering.has(n.id) && !arrived.has(n.id) ? { opacity: 0 }
+                          : departing.has(n.id) ? { opacity: 0 } : {}),
                       }}
                     >
                       <div
@@ -2633,18 +2707,6 @@ export default function OwnershipGraphView({
                   );
                 })}
 
-                {/*
-                  Departing boxes: inert ghosts, fading where they stood.
-
-                  Rendered from coordinates alone rather than from the box JSX
-                  above, for two reasons. Their `vm` entry is GONE — that is
-                  what makes them departing — so there is nothing to render the
-                  real box from. And a live box here would be wrong even if we
-                  could: its ✕ would call `onRemove` for a class already
-                  removed, and its drag handler would pin a node the next
-                  layout knows nothing about. A ghost has no handlers at all.
-                */}
-                {leaving.map(n => <LeavingBox key={`leaving-${n.id}`} node={n} />)}
               </>
             )}
           </div>

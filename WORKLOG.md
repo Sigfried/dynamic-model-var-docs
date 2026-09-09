@@ -7,6 +7,142 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-09 (later) — canvas transitions: what landed, and why the exit half is being redone
+
+**Read this before touching canvas animation.** The zoom/movement half is done
+and good. The enter/exit half is hand-rolled scaffolding that does not fully
+work, and the next session is replacing it with `motion/react` rather than
+finishing it. Do not invest in repairing what is described under "the kludge".
+
+### What was actually wrong, measured
+
+Two separate causes, and only the first was suspected going in.
+
+**1. Zoom was never animated.** `useZoomPan` set the wrapper's `scale()`
+imperatively in a rAF with no transition, and the spacer resize trailed it by a
+100ms debounce. The node boxes DID transition — they always had — but inside a
+container that snapped. An untransitioned rescale of the frame swamps a
+transition of its contents, which is why it read as "no animation".
+
+**2. Every box unmounted on every click.** `useGraphLayout` returns
+`layout: null` on the render a new spec arrives, and the canvas rendered inside
+`{layout && ...}`. So a selection change unmounted the entire canvas and
+remounted it when ELK returned. This is the "total repaint" from task 5, and it
+also explains why boxes could not animate even after the zoom was fixed: a
+freshly-mounted element has no previous transform to ease from.
+
+Confirmed with a throwaway probe on the hook (deleted after) rather than by
+reading — `layout` is null with `inProgress: true` on the very render the spec
+changes. **The standing "measure before diagnosing" rule paid off again**: the
+BACKLOG's four suspects for task 5 are all React-re-render churn, and none of
+them is this.
+
+The null is NOT timidity about slow layouts. It is a correctness guard: the
+render joins ELK's ids against `vm`'s labels/rows, and serving a superseded
+layout crashed with *"Routed edge edge-80 missing from view model"*
+(`useGraphLayout.test.ts` pins it). So the guard stays; what changed is that the
+superseded result is exposed on a SEPARATE `previous` channel, paired with the
+spec it came from, and **only coordinates fall back to it — never content**.
+`tsc` caught the one place that nearly broke this (the edge loop needed
+`layout?.edges` where the surrounding gate had become `geom`), which is a good
+sign the seam is in the right place.
+
+### The kludge, and why it is being thrown away
+
+Keeping a DEPARTING box on screen is the hard part, and everything ugly in
+`OwnershipGraphView` comes from it: `outgoingRef`, `shownVmRef`, `departing`,
+`arrived`, `setRetired`, a capture key on the outgoing spec, and a retirement
+timer. All of that exists to keep alive a thing React wants to unmount, because
+the node's `vm` entry is gone — that is what makes it departing.
+
+Two bugs came out of it, both from **rebuilding the retained object on every
+render** instead of once per transition. `leaving` is a `useMemo` keyed on that
+object's identity, so a fresh object per render handed back a new array, which
+(a) restarted the fade — the box mounted opaque again, Siggie: *"it only fades
+for like 100ms then comes back full opacity"* — and (b) cancelled the retirement
+timer before it could fire, so the box never left. `setRetired` made it
+self-sustaining: the re-render it triggers was itself enough to reset
+everything. Symptom Siggie saw: boxes stacked on top of each other, and a class
+deselected out of the URL still occupying the canvas.
+
+Capturing once per transition (keyed on `previous.spec`) is committed and fixes
+the identity churn. **It is not confirmed to fix the visible symptom** — that
+was not verified in the browser before the session ended. Assume it is still
+broken.
+
+### Why `motion/react`, and why not the alternatives
+
+The realisation worth carrying: d3's enter/update/exit is not valuable here for
+its *set arithmetic* (that is ten lines and was right the first time). It is
+valuable for its **lifecycle** — d3 owns the DOM, so an exiting node simply
+stays in the document until its transition finishes and removes itself. There is
+no retained generation, no capture key, no retirement timer, because the DOM IS
+the retention. Every kludge above is that one thing, hand-rolled inside React
+where the DOM is derived from state.
+
+So the need is a transition group, not d3. Options weighed:
+
+- **`motion/react`** (Framer Motion's current package). `<AnimatePresence>` is
+  exactly the keep-it-alive-while-it-leaves primitive; `layout`/`layoutId`
+  animate position changes automatically, which is most of what was hand-rolled
+  here. Siggie's direction, from an outside session. **This is the plan.**
+- **A hand-written `useEnterExit` hook** (~25 lines). Was recommended in-session
+  and Siggie declined it: *"I don't really understand A or know if i should
+  trust it."* A fair call — it is the same scaffolding, just tidier and in one
+  file.
+- **`react-transition-group`.** Works, older API, wants refs on each child.
+- **d3-transition / d3-selection.** REJECTED, and not on taste: they own the DOM
+  nodes they animate, which conflicts with React owning the same nodes. Do not
+  reopen. `d3-interpolate` (the interpolation module ALONE, no DOM) remains a
+  live option for edge geometry — see BACKLOG "Animating edge geometry".
+
+### Corrections made to my own claims this session
+
+- I wrote in `anim.ts` that *"fades … are deliberately NOT on this knob"*. False
+  — they were `FADE_FRACTION * ANIM_MS`, i.e. entirely on it. Siggie caught it.
+  The consequence was real: raising `ANIM_MS` to 3000 to watch the movement
+  silently stretched every fade with it, so a fade could never be judged against
+  a move. **A duration must never be expressed as a fraction of another
+  duration**, and `anim.ts` now says so at the top.
+- I proposed an inert silhouette for departing boxes, reasoning that a live box
+  would be wrong (its ✕ would call `onRemove` for a class already gone). Siggie:
+  *"i don't like the inert silhouette. just put the real box back. if user
+  messes with it, that's their problem."* Correct call — the failure mode I was
+  protecting against is a shrug, and the silhouette looked wrong.
+- I gated edge arrival on the box animation finishing. Siggie: *"i don't want
+  that. i want to control when they arrive -- not gated on box animation
+  finishing."* Now its own knob, `EDGE_ARRIVE_MS`.
+- I wrote a test (`leavingRetire.test.tsx`) whose negative control did not
+  actually reproduce the bug — it passed with the fix reverted. Caught by
+  deliberately re-introducing the bug, which is the only reason it was caught.
+  **A regression test that has not been seen to FAIL is not evidence.** Deleted
+  with the rest of the kludge's tests rather than repaired.
+
+### Two constants files, and neither said so
+
+`src/config/appConfig.ts` has a `timing` block that the Explorer **does not
+read** — it belongs to the PREVIOUS app (`previous.html`), via
+`src/components/*`. The Explorer's canvas timings are in
+`src/explore/graph-core/anim.ts`. `opacityTransition` was dead everywhere and is
+deleted; both files now point at each other. Siggie: *"either all the settings
+should live in appConfig or at least appConfig should have pointers to them."*
+Pointers were the cheaper half and are done; consolidating is not.
+
+### Left running: ELK timing instrumentation
+
+`scripts/elkTimingPlugin.ts` + `src/explore/graph-core/elkTiming.ts` log every
+ELK run to `temp/elk-timings.jsonl` (dev server only; verified 0 occurrences in
+the production bundle). It exists to settle `SPINNER_DELAY_MS` from data instead
+of guesswork, and **has not been read yet** — it needs a dev-server restart to
+load the vite plugin, and Siggie runs the only dev server. Delete both files
+once the number is settled.
+
+The full-canvas "Computing layout…" sheet is already gone, replaced by a corner
+spinner delayed by `SPINNER_DELAY_MS`. The sheet made sense when a pending
+layout meant a blank canvas; now that boxes stay up and animate, covering them
+defeats the animation.
+
+---
 ## 2026-09-09 — the popover misplacement, and three wrong diagnoses on the way
 
 One bug took four attempts. The fix is two lines of CSS. This entry is mostly

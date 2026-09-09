@@ -57,13 +57,36 @@ describe('layout transition', () => {
     expect(hookSrc).toMatch(/const previous = state && state\.spec !== spec \? state : null/);
   });
 
-  test('departing boxes are inert', () => {
-    // A live box for a removed class would call onRemove for something already
-    // gone, and its drag handler would pin a node the next layout has never
-    // heard of.
-    const leaving = /function LeavingBox[\s\S]*?\n}/.exec(src);
-    expect(leaving, 'LeavingBox not found — this test needs rewriting').not.toBeNull();
-    expect(leaving![0]).toContain('pointer-events-none');
-    expect(leaving![0]).not.toMatch(/onClick|onPointerDown|onRemove/);
+  test('departing boxes render through the normal box loop', () => {
+    // They were briefly inert silhouettes drawn from coordinates alone. Siggie,
+    // 2026-09-09: *"i don't like the inert silhouette. just put the real box
+    // back. if user messes with it, that's their problem."* So a departing box
+    // keeps its rows, relation bar and handlers — it is only fading.
+    expect(src).toContain('[...vm.nodes, ...leaving].map(n => {');
+    expect(src).not.toContain('function LeavingBox');
+    // Which requires its NodeVM, not just its position, to be retained.
+    expect(src).toMatch(/vms: new Map\(shownVmRef\.current\.map/);
+  });
+
+  test('a departed box is RETIRED, not merely faded', () => {
+    /*
+     * The bug this pins: a leaving box faded to opacity 0 and then stayed
+     * mounted forever. `leaving` derives from the retained outgoing
+     * generation, which only changes when a NEW transition starts, so nothing
+     * ever unmounted it — Siggie saw boxes stacked on each other, and a class
+     * deselected out of the URL still occupying the canvas.
+     */
+    expect(src).toMatch(/outgoingRef\.current\.vms\.delete\(id\)/);
+    expect(src).toMatch(/outgoingRef\.current\.pos\.delete\(id\)/);
+    // The retained set is a ref, so a re-render has to be forced explicitly or
+    // the deletes are invisible to the tree.
+    expect(src).toMatch(/setRetired/);
+  });
+
+  test('edge arrival is its own knob, not the box animation', () => {
+    // Siggie, 2026-09-09: "i want to control when they arrive -- not gated on
+    // box animation finishing."
+    expect(src).toContain('const wait = edgeArriveMs();');
+    expect(src).not.toMatch(/wait = animMs\(\)/);
   });
 });

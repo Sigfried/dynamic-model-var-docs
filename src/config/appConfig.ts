@@ -356,10 +356,19 @@ export const APP_CONFIG = {
     inheritedSuffix: 'from',   // e.g., "Global (from Entity)"
   },
 
-  // Timing constants
+  /*
+   * Timing constants — FOR THE PREVIOUS APP ONLY (previous.html: Nested
+   * Tabular / Kitchen Sink / Focus). Read by src/components/*, which the
+   * Explorer never imports.
+   *
+   * ⚠️ The EXPLORER's canvas animation lives in
+   * `src/explore/graph-core/anim.ts` and does NOT read these. Two apps share
+   * this repo and src/, but not their animation timing; changing a value here
+   * has no effect on the ownership graph, and vice versa. Nothing said so
+   * until 2026-09-09, when the split cost a round of confusion.
+   */
   timing: {
     boxTransition: 300,        // Animation duration for box position/size changes (ms)
-    opacityTransition: 200,    // Animation duration for opacity changes (ms)
     tooltipDelay: 200,         // Delay before showing tooltips (ms) - browser default is ~500-1000ms
   },
 
