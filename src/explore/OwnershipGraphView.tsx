@@ -1458,11 +1458,29 @@ export default function OwnershipGraphView({
    * is the point (it is exactly what ELK decided, unsmoothed).
    */
 
-  // The in-flight delta is spent once it becomes a pin; pins themselves
-  // survive re-layouts of the same selection.
+  /*
+   * BOTH drop on every new layout. A pin is an offset from where ELK put a
+   * box, so it is meaningful only against the arrangement it was measured in;
+   * once ELK re-runs, the same dx/dy displaces the box from a position that no
+   * longer exists.
+   *
+   * Siggie's rule, 2026-09-09: *"other than zoom/pan and dragging other boxes,
+   * i can't think of any canvas change that should hold on to pins."* Both of
+   * those leave `layout` alone — zoom is a wrapper transform that bypasses
+   * React entirely, and a drag feeds `placed`, never `spec` — so keying on
+   * `layout` says exactly that and nothing more.
+   *
+   * ⚠️ `pins` used to clear on `subgraph` (i.e. selection) instead, which held
+   * them across every OTHER relayout cause: LR↔TB, the siblings toggle,
+   * expand/collapse, merge mode. Those move every box wholesale, and the
+   * siblings toggle can leave the pinned node with no box of its own at all —
+   * so a surviving pin offset the box from an unrelated ELK position.
+   *
+   * Safe to key on `layout` because nothing about a drag feeds back into it:
+   * pins and nudges are consumed by `placed`, which is render-only.
+   */
   useEffect(() => setNudges(new Map()), [layout]);
-  // Selection changes invalidate pins: the node may not even be on canvas.
-  useEffect(() => setPins(new Map()), [subgraph]);
+  useEffect(() => setPins(new Map()), [layout]);
 
   const placedRef = useRef<Map<string, PlacedNode>>(new Map());
   // Set when a drag actually moved something, so the click that ends the drag

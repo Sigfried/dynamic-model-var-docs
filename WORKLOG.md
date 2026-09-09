@@ -117,10 +117,26 @@ Not fixed, and not investigated beyond this — but measured in passing:
   That is what reads as *"total repaint on every select/deselect"* — the boxes
   underneath really are transitioning, but an untransitioned rescale of their
   container swamps it. This is the concrete lead for task 5.
-- **`nudges` is already cleared on every layout**; only `pins` survive, and only
-  within one selection (`setPins(new Map())` on `subgraph` change). So boxes DO
-  return to ELK's placement on relayout — the thing Siggie wanted is mostly
-  already true.
+- **`nudges` was already cleared on every layout; `pins` was not** — it cleared
+  on `subgraph`, i.e. selection only. I initially reported this to Siggie as
+  "boxes DO return to ELK's placement on relayout, so what you want is mostly
+  already true", which was **wrong**: `layout` and `subgraph` have different
+  triggers. A relayout also happens on LR↔TB, the siblings toggle,
+  expand/collapse and merge mode, none of which touch `selectedIds` — and all of
+  which move every box wholesale, so a surviving pin offset its box from an ELK
+  position that no longer existed. The siblings toggle could even leave the
+  pinned node with no box of its own.
+
+  Siggie's rule, which is now the code: *"other than zoom/pan and dragging other
+  boxes, i can't think of any canvas change that should hold on to pins."* Both
+  exceptions leave `layout` alone (zoom is a wrapper transform that bypasses
+  React; a drag feeds `placed`, never `spec`), so keying both clears on `layout`
+  states the rule exactly.
+
+  Safe because nothing about a drag feeds back into the layout — otherwise a drop
+  would wipe the pin it had just created. `dragPins.test.ts` pins that
+  independence, structurally: reaching this through a render would need ELK,
+  which does not run in jsdom.
 
 ### Corrections made to my own claims in this session, so they are not re-cited
 
