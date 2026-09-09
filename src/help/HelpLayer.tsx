@@ -295,6 +295,9 @@ export default function HelpLayer() {
    * pointing. A boolean, not a rect, because nothing here needs the numbers.
    */
   const [anchored, setAnchored] = useState(false);
+  /** Preferred side for an anchored popover: `'below'` in an LR diagram, where
+   *  the graph grows rightwards. Published by the tagging effect. */
+  const [anchorSide, setAnchorSide] = useState<'below' | undefined>(undefined);
   /** A hovered entry is transient; a clicked one stays until dismissed. */
   const [pinned, setPinned] = useState(false);
   const popRef = useRef<HTMLDivElement>(null);
@@ -391,7 +394,7 @@ export default function HelpLayer() {
    * the difference from a poll that had to run whether or not anything moved.
    */
   useLayoutEffect(() => {
-    if (!activeId) { setAnchored(false); return; }
+    if (!activeId) { setAnchored(false); setAnchorSide(undefined); return; }
     let tagged: Element | null = null;
     const sync = () => {
       const el = elementFor(anchor);
@@ -399,6 +402,26 @@ export default function HelpLayer() {
       tagged?.removeAttribute(ANCHOR_ATTR);
       tagged = el;
       setAnchored(!!el);
+      /*
+       * The PREFERRED SIDE is published from here, not computed in a memo.
+       *
+       * It asks "is this element inside an LR canvas", which is a question about
+       * the element -- so it has to be answered whenever the element is, and the
+       * element often does not exist yet (the box arrives with the render the
+       * step's `Change:` causes) or has just been replaced (ELK rebuilds boxes
+       * on every relayout). A `useMemo` keyed on the STEP ran once, usually too
+       * early, got null, and left the side undefined for that step and every
+       * later one that reused the value.
+       *
+       * That is what "misplaced from 3.2 onwards, forwards and backwards"
+       * was (Siggie, 2026-09-09): with no side, an LR step preferred BESIDE the
+       * box, found no room, flipped twice and fell through to `--help-shift`,
+       * which pins to the top-left corner. Which step it first bit depended on
+       * relayout timing, hence incognito breaking at 8.2 and a warm profile
+       * at 3.2.
+       */
+      setAnchorSide(el?.closest('[data-graph-direction]')
+        ?.getAttribute('data-graph-direction') === 'RIGHT' ? 'below' : undefined);
       if (!el) return;
       el.setAttribute(ANCHOR_ATTR, '');
       /*
@@ -439,6 +462,7 @@ export default function HelpLayer() {
       obs.disconnect();
       tagged?.removeAttribute(ANCHOR_ATTR);
       setAnchored(false);
+      setAnchorSide(undefined);
     };
   }, [activeId, anchor, elementFor]);
 
@@ -557,11 +581,7 @@ export default function HelpLayer() {
    * `closest()` answers that from the tree -- no rects, and correct for a box
    * scrolled out of view, which the overlap test got wrong.
    */
-  const anchorSide = useMemo(() => {
-    if (!anchored) return undefined;
-    const canvas = elementFor(anchor)?.closest('[data-graph-direction]');
-    return canvas?.getAttribute('data-graph-direction') === 'RIGHT' ? 'below' : undefined;
-  }, [anchored, anchor, elementFor]);
+  /* Set by the tagging effect above, which re-resolves as the DOM changes. */
 
   /*
    * Tag each hinted element with its dot's anchor name. Same shape as the

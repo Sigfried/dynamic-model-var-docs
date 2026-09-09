@@ -60,6 +60,32 @@ describe('the anchor machinery is scoped to an anchored step', () => {
     expect(m![1]).toMatch(/position-area:\s*none/);
   });
 
+  test('the preferred SIDE re-resolves with the element, not once per step', () => {
+    /*
+     * THE BUG (Siggie, 2026-09-09): *"still getting misplacement at 3.2 and
+     * forwards/backwards from there"*, at a step that differed between a warm
+     * profile (3.2) and incognito (8.2).
+     *
+     * `anchorSide` asks "is this element inside an LR canvas" -- a question
+     * about the ELEMENT, which often does not exist when the step opens (the box
+     * arrives with the render the `Change:` causes) and is destroyed and rebuilt
+     * on every ELK relayout. It was a `useMemo` keyed on the step, so it ran
+     * once, usually too early, got null, and left the side undefined for that
+     * step and every later one.
+     *
+     * With no side an LR step prefers BESIDE the box, finds no room, flips twice
+     * and falls through to `--help-shift` -- the top-left corner. Relayout
+     * timing is why the first bitten step moved around.
+     *
+     * Pinned structurally: the value must be published from the tagging effect,
+     * which the MutationObserver re-runs, and must NOT be a `useMemo` again.
+     */
+    const tsx = readFileSync(resolve(__dirname, '../help/HelpLayer.tsx'), 'utf8');
+    expect(tsx).toMatch(/setAnchorSide\(el\?\.closest\('\[data-graph-direction\]'\)/);
+    expect(tsx, 'anchorSide must not go back to a step-keyed useMemo')
+      .not.toMatch(/const anchorSide = useMemo/);
+  });
+
   test('HelpLayer sets the attribute the rule keys on', () => {
     // The CSS and the component have to agree on the name, and nothing else
     // would catch them drifting apart.
