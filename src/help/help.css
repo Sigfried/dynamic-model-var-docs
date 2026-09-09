@@ -208,18 +208,33 @@ body.help-mode {
    Column so a popover taller than the viewport scrolls its BODY and keeps the
    nav row (back / next / ✕) reachable, rather than pushing it off the bottom.
    `maxHeight` is set inline by `popoverPosition`. */
-/* Last-resort fallback: an anchor so close to a corner that neither flip has
-   room. Drops the `position-area` entirely and pins the popover to the
-   viewport's start edges with the same 8px margin the old clamps used, which
-   is worse placement than any flip and better than being off-screen.
+/* Last-resort fallback: an anchor with no room on any of the four sides.
+   SPANS the whole viewport across the anchor rather than picking a side, so the
+   popover still sits in the anchor's row/column and the anchor stays visible
+   beside it.
 
-   `position-area: none` matters: without it the area still constrains the
-   inset-modified containing block and these insets have nothing to resolve
-   against. */
+   ⚠️ This used to be `position-area: none; inset: 8px auto auto 8px`, which
+   ABANDONED the anchor and pinned the popover to the viewport's top-left corner.
+   That is the one placement that can cover the very element the step is pointing
+   at, and it is what "misplacement at 3.2 / 8.2, persisting forwards and
+   backwards" was (Siggie, 2026-09-09). A tall box in an LR diagram leaves no room
+   on any side, every flip fails, and the popover landed on the corner — over the
+   header, over the panel, over its own anchor.
+
+   Siggie, on what this actually has to guarantee: *"all it really needs to do
+   (since we're not going to succeed at getting the popover to avoid everything)
+   is not go on top of what it's anchored on."* `position-area` gives exactly
+   that for free — as long as an area stays in effect. So the last resort keeps
+   one. Do not reintroduce a fallback that drops the anchor. */
 @position-try --help-shift {
-  position-area: none;
-  inset: 8px auto auto 8px;
-  margin: 0;
+  position-area: inline-end span-all;
+}
+
+/* And if even that has no room: the other side, still spanning. Two spanning
+   fallbacks cover a narrow viewport where the anchor is hard against one edge,
+   without either of them giving up the anchor. */
+@position-try --help-shift-start {
+  position-area: inline-start span-all;
 }
 
 /* THE ANCHOR MACHINERY IS SCOPED TO AN ANCHORED STEP, and must stay scoped.
@@ -253,7 +268,8 @@ body.help-mode {
      popover's REAL height. `flip-block` and `flip-inline` cover a popover placed
      beside or below its anchor; `--help-shift` is the last resort when neither
      flip has room. */
-  position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline, --help-shift;
+  position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline,
+                          --help-shift, --help-shift-start;
 }
 
 .help-popover:popover-open {

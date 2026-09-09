@@ -53,11 +53,40 @@ describe('the anchor machinery is scoped to an anchored step', () => {
     expect(m![1]).toMatch(/position-try-fallbacks:/);
   });
 
-  test('the `--help-shift` fallback still clears the area it overrides', () => {
-    // Without `position-area: none` its insets have nothing to resolve against.
-    const m = /@position-try --help-shift\s*\{([\s\S]*?)\n\}/.exec(css);
-    expect(m, '@position-try --help-shift is missing').not.toBeNull();
-    expect(m![1]).toMatch(/position-area:\s*none/);
+  test('NO fallback abandons the anchor', () => {
+    /*
+     * The guarantee the whole placement scheme rests on. Siggie, 2026-09-09:
+     * *"all it really needs to do (since we're not going to succeed at getting
+     * the popover to avoid everything) is not go on top of what it's anchored
+     * on."* `position-area` gives that for free — but only while an area is in
+     * effect.
+     *
+     * `--help-shift` used to be `position-area: none; inset: 8px auto auto 8px`,
+     * pinning the popover to the viewport's top-left corner. That is the one
+     * placement that can cover the element the step points at, and it fired
+     * whenever a tall box left no room on any side — the misplacement at 3.2 and
+     * 8.2 that persisted forwards and backwards.
+     *
+     * So: every `@position-try` block here must name a real area, and none may
+     * set `position-area: none` or drive placement with raw `inset`.
+     */
+    const blocks = [...css.matchAll(/@position-try\s+(--[\w-]+)\s*\{([\s\S]*?)\n\}/g)];
+    expect(blocks.length, 'no @position-try blocks found').toBeGreaterThan(0);
+    for (const [, name, body] of blocks) {
+      expect(body, `${name} drops the anchor`).not.toMatch(/position-area:\s*none/);
+      expect(body, `${name} places by raw inset`).not.toMatch(/^\s*inset:/m);
+      expect(body, `${name} names no area`).toMatch(/position-area:\s*\S/);
+    }
+  });
+
+  test('every named fallback is actually listed in position-try-fallbacks', () => {
+    // A block nothing references is dead, and a name in the list with no block
+    // is silently skipped — both leave the last resort weaker than it reads.
+    const declared = [...css.matchAll(/@position-try\s+(--[\w-]+)/g)].map(m => m[1]);
+    const listed = /position-try-fallbacks:([\s\S]*?);/.exec(css)?.[1] ?? '';
+    for (const name of declared) {
+      expect(listed, `${name} is declared but never used`).toContain(name);
+    }
   });
 
   test('the preferred SIDE re-resolves with the element, not once per step', () => {
