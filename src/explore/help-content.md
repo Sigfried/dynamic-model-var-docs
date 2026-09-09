@@ -611,7 +611,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 
 ## Getting oriented
 - **TourMetadata:**
-- **Description:** How to use the BDCHM Explorer
+- **Description:** How to use the BDCHM Explorer: the panel, the boxes, and how to grow a diagram
 
 ### bdchm-entities
 
@@ -622,134 +622,684 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 - **Highlight:** selection-tree
 - **Width:** 800
 - **Description:** [put some intro text here]
+
+  This tour is about the app rather than the model: how to put classes on
+  the canvas, what a box shows, and how to move from one class to the ones
+  it is connected to. It grows one small diagram a step at a time, from a
+  person in a study to a number you would analyse.
 - **Beats:**
   1. selection
-     - Description: The left panel lists every class in the model.
+     - Description:
+       The left panel lists every class in the model, grouped into the six
+       categories the first tour walked through. The grouping is the
+       Explorer's, not the schema's.
      - Anchor: entity-row:Person
-     - Width: 300
+     - Width: 420
   2. display
      - Keep: true
      - Description: Ticking one draws it. Person is now on the canvas.
      - Change: sel=Person
+     - Action: Ticked Person for you.
      - Anchor: node-box:Person
-  3. relationships
+
+
+### entity-box
+
+- **Title:** What a box shows
+- **Tour:** Getting oriented
+- **Only:** sel=Person
+- **Action:** Drew just Person, so there is one box to read.
+- **Anchor:** node-box:Person
+- **Description:**
+  A box is one class. Its header carries the class name and, at the far
+  right, a ✕ that takes it off the canvas again. Below the header there is
+  one row per attribute.
+- **Beats:**
+  1. a row
      - Description:
-       Entities can be related to each other in a variety of ways.
-     - Change: sel=Participant~Visit~Observation
-     - Anchor: node-box:Observation
+       ##### Attributes
+       Each row is an attribute: its name on the left, and on the right what
+       it holds and how many — `0..1` for optional and single, `0..*` for a
+       list. Most rows hold a plain value or a code from a value set.
+     - Anchor: slot-row:Person.year_of_birth
+  2. an entity row
+     - Description:
+       ##### Rows that name other classes
+       `cause_of_death` holds another class rather than a value. Rows like
+       this are where the lines come from: when CauseOfDeath is on the
+       canvas, a line runs from this row to it. Clicking the row puts it
+       there. The dot is hollow because CauseOfDeath is not drawn yet; the
+       next tour, *Reading the diagram*, is about the dots and colours.
+     - Anchor: slot-row:Person.cause_of_death
+  3. the relation bar
+     - Description:
+       ##### The relation bar
+       The two counts in the header are the relation bar. **← N** is how many
+       classes this one belongs to, which the layout draws to its left;
+       **M →** how many it owns, drawn to its right. Hover either count for
+       the list. This is how you reach a class that has no row here:
+       Participant is connected to Person, but the attribute connecting them
+       is declared on Participant, so it shows up in Person's bar and not in
+       Person's rows.
+     - Anchor: relation-bar
+
+
+### grow-participant
+
+- **Title:** Adding a related class
+- **Tour:** Getting oriented
+- **Only:** sel=Person~Participant
+- **Action:** Added Participant, the same as clicking it in Person's → list.
+- **Anchor:** node-box:Participant
+- **Description:**
+  Participant landed to the RIGHT of Person, and a line joins them. The
+  canvas is laid out by ownership, owners on the left, so where a box lands
+  already says something about it.
+
+  A **Person** is a human being; a **Participant** is that person's role in
+  one study, and the same person in three studies is three Participants.
+- **Beats:**
+  1. the row that made the line
+     - Description:
+       ##### The row that made the line
+       The line comes from Participant's `associated_person` row. Every line
+       on the canvas leaves an attribute row on one box and lands on the
+       class that row names, so you can always see WHICH attribute connects
+       two classes.
+     - Anchor: slot-row:Participant.associated_person
+  2. the second way
+     - Description:
+       ##### Two ways to grow a diagram
+       Participant's own rows name classes that are not on the canvas yet —
+       a ResearchStudy, an Organization, Consents. Clicking any of those rows
+       adds that class. Rows and the relation bar are the two ways to grow a
+       diagram without going back to the panel; both also tick the checkbox
+       on the left.
+     - Anchor: slot-row:Participant.member_of_research_study
+
+
+### grow-visit
+
+- **Title:** A visit
+- **Tour:** Getting oriented
+- **Only:** sel=Person~Participant~Visit
+- **Action:** Added Visit from Participant's → list.
+- **Anchor:** node-box:Visit
+- **Description:**
+  A Visit is an encounter with the healthcare system, and most of what is
+  recorded about a participant is recorded at one. It belongs to a
+  Participant the same way Participant belongs to a Person: through an
+  `associated_participant` attribute declared on Visit, drawn as one more
+  hop to the right.
+
+
+### grow-observation
+
+- **Title:** An observation
+- **Tour:** Getting oriented
+- **Only:** sel=Person~Participant~Visit~Observation
+- **Action:** Added Observation from Visit's → list.
+- **Anchor:** node-box:Observation
+- **Description:**
+  {{model-description:Observation}}
+
+  Two lines arrive here, because an Observation names both the Participant
+  it is about and the Visit it was made at. It has five subclasses, which
+  the *Inheritance* tour draws; on its own it is just this box.
+- **Beats:**
+  1. the value
+     - Description:
+       ##### The value
+       `observation_type` says what was measured, and `value_quantity` is
+       where a numeric answer goes. Its dot is hollow: Quantity is not on the
+       canvas. Clicking the row would add it.
+     - Anchor: slot-row:Observation.value_quantity
+
+
+### grow-quantity
+
+- **Title:** The spine
+- **Tour:** Getting oriented
+- **Only:** sel=Person~Participant~Visit~Observation~Quantity
+- **Action:** Added Quantity, the same as clicking the `value_quantity` row.
+- **Anchor:** node-box:Quantity
+- **Description:**
+  {{model-description:Quantity}}
+
+  Five boxes, and they are the spine of the model: Person → Participant →
+  Visit → Observation → Quantity is the path from a human being to a number
+  you would analyse, and four of the six categories hang off it. The
+  `value_quantity` dot is filled now that its line is drawn.
+
+
+### detail-panel
+
+- **Title:** Details
+- **Tour:** Getting oriented
+- **Change:** detail=Observation
+- **Action:** Opened the details panel for Observation, the same as clicking its box header.
+- **Anchor:** none
+- **Description:**
+  Clicking a box — its header, or any row that is not itself clickable —
+  opens the class's details: its description, every attribute with its
+  type, and the classes that refer to it. Class names inside the panel are
+  links, so you can follow references without changing what is drawn. The
+  **ⓘ** beside a row in the relation bar opens the same panel for that
+  class. Close it with its ✕.
+
+
+### moving-around
+
+- **Title:** Moving around
+- **Tour:** Getting oriented
+- **Change:** panels=0
+- **Action:** Closed the details panel.
+- **Anchor:** graph-canvas
+- **Highlight:** ring
+- **Description:**
+  Drag the background to pan. Zoom with Ctrl+wheel (⌘+wheel on a Mac, or a
+  pinch), or with the `+` `−` `1:1` `⛶` buttons at the top right; `⛶` fits
+  the whole diagram in the window, and `LR` / `TB` lay it out left to right
+  or top down. Hover a box and everything not connected to it fades.
+
+  You can drag a box out of the way, too. Its lines follow but are not
+  re-routed around anything, and the next change to the selection lays
+  everything out afresh.
+
+
+### where-next
+
+- **Title:** Where to go from here
+- **Tour:** Getting oriented
+- **Anchor:** none
+- **Description:**
+  That is the whole mechanism: tick, click a row or a bar entry, read the
+  box. Three more things are worth knowing.
+- **Beats:**
+  1. category views
+     - Description:
+       ##### A category at once
+       The ⊞ on a category header draws every class in that category, plus
+       the two or three outside classes that make it legible. It replaces
+       whatever was on the canvas.
+     - Anchor: category-row:admin
+  2. copy link
+     - Description:
+       ##### Sharing a view
+       **Copy link** copies a URL that reproduces exactly this canvas —
+       selection and settings — for anyone who opens it.
+     - Anchor: copy-link
+  3. the other tours
+     - Description:
+       ##### The other tours
+       *Reading the diagram* explains the dots, colours and where a line
+       attaches; *Ownership* explains why boxes land where they do and what
+       the three kinds of line mean; *Inheritance* explains the boxes that
+       hold several classes at once.
+     - Anchor: tour-chooser
 
 </details><!-- end of Getting oriented tour -->
 </div>
 
 <div style="margin-left: 40px">
-<details>
-<summary><b>Walkthrough</b></summary>
+<details open>
+<summary><b>Reading the diagram</b></summary>
 
-## Walkthrough
+## Reading the diagram
 - **TourMetadata:**
-- **Description:** The original tour. Parts will be used for specific tours now.
+- **Description:** Rows, dots and colours, and where a line attaches
 
-### selection-tree
+### rows-and-dots
 
-- **Title:** Entities
-- **Tour:** Walkthrough
-- **Anchor:** selection-tree
-- **Description:** A LinkML schema defines classes representing a data model's
-  entities. The left panel lists them, grouped into categories for convenience,
-  though these categories are not actually part of the schema.
-- **Beats:** <!-- these are just copied from below, need to get beats working
-              right before authoring -->
-  1. tick a checkbox
-     - Description: In order to select an entity for display, click its checkbox
-     - Anchor: entity-row:Person
-  2. the box that appears
-     - Description:
-       The Person box shows the entity name, a dismiss (x) icon, a menu
-       for displaying boxes for related entities, and a list of this entity's
-       attributes.
-     - Anchor: node-box:Person
-     - Change: sel=Person
-     - Action: I clicked the Person checkbox and the Person entity appeared in the viewing panel.
-  3. the related counts
-     - Description:
-       Hover over the `← 2` or `1 →` counts to list the entities related to this
-       one, and click any of them to display it.
-     - Anchor: node-box:Person
-     - Highlight: none
-
-### entities
-
-- **Title:** Entities
-- **Tour:** Walkthrough
-- **Anchor:** selection-tree
-- **Description:** A LinkML schema defines classes representing a data model's
-  entities. A class defines a set of slots or attributes (like columns in
-  a database table) which can hold
-  - other entities,
-  - permissible value sets (enumerations),
-  - or raw data types (strings, integers, etc.)
-
-<!--
-  TODO(siggie): translated faithfully, but note what this replaced. The
-  entry that used to sit at tour position 2 was different copy entirely
-  ("Choosing what to look at" — ownership nesting, what the checkbox vs the
-  arrow vs the name each do, and a Context about an entity appearing in
-  more than one place). Your draft's step 2 does not cover any of that.
-  It is preserved verbatim as `selection-tree-mechanics` below, help-only,
-  so nothing is lost. Decide whether your step 2 should absorb it.
--->
-
-### relationship-kinds
-
-- **Title:** How entities relate
-- **Tour:** Walkthrough
-- **Description:** 
-  **[sg] this text is terrible. do we have something better?**
-  While the relationship between an entity and its
-  enumerations and raw data attributes is direct (e.g.,
-  `MeasurementObservation.observation_type`
-  → `MeasurementObservationTypeEnum`, or
-  `MeasurementObservation.age_at_observation` → `integer`), it can be
-  related to other entities in more complex ways.
- 
-- **Action:** Selected MeasurementObservation for you, and highlighted its `observation_type` attribute.
-- **Anchor:** slot-row:MeasurementObservation.observation_type
-- **Change:** sel=MeasurementObservation
+- **Title:** Rows and dots
+- **Tour:** Reading the diagram
+- **Only:** sel=Visit&panels=0
+- **Action:** Drew Visit on its own.
+- **Anchor:** node-box:Visit
+- **Description:**
+  One class, no lines. Every row is an attribute, and the dot at its left
+  and the label at its right share a colour that says what KIND of thing
+  the attribute holds.
 - **Beats:**
-  1. inheritance
-     - Description: **Inheritance**, known in modeling parlance as IS_A relationships — e.g. `MeasurementObservation.is_a` → `Observation`.
+  1. a data type
+     - Description:
+       ##### Green: a data value
+       `age_at_visit_start` is an integer. Green rows hold plain data —
+       strings, numbers, dates — and never draw a line.
+     - Anchor: slot-row:Visit.age_at_visit_start
+  2. a value set
+     - Description:
+       ##### Purple: a value set
+       `visit_category` holds one code from a permissible value set, an
+       enumeration. Purple rows never draw a line either.
+     - Anchor: slot-row:Visit.visit_category
+  3. an entity
+     - Description:
+       ##### Blue: another class
+       `year_range` holds a TimePeriod, another class in the model. Blue rows
+       are the only ones that draw lines, and this dot is hollow because
+       TimePeriod is not on the canvas. A hollow dot is an invitation: click
+       the row.
+     - Anchor: slot-row:Visit.year_range
+  4. cardinality
+     - Description:
+       ##### How many
+       The small grey figure after the type is the cardinality: `1..1`
+       exactly one, `0..1` at most one, `0..*` any number, `1..*` at least
+       one. The left digit says whether the attribute is required, the right
+       whether it is a list.
+     - Anchor: slot-row:Visit.visit_provenance
+
+
+### one-edge
+
+- **Title:** One line
+- **Tour:** Reading the diagram
+- **Only:** sel=Visit~TimePeriod
+- **Action:** Added TimePeriod.
+- **Anchor:** slot-row:Visit.year_range
+- **Description:**
+  Now the `year_range` dot is filled and a line leaves it. This is the one
+  idea the whole diagram rests on: **a line leaves the attribute row that
+  creates it**, not the box, so you can always see which attribute connects
+  two classes. The arrowhead lands on the class the row names.
+- **Beats:**
+  1. the far end
+     - Description:
+       ##### The far end
+       At the other end the line points at TimePeriod as a whole, not at one
+       of its rows: the attribute is Visit's, and TimePeriod is only what it
+       holds. TimePeriod's own two blue rows are hollow, because TimePoint is
+       not drawn.
+     - Anchor: node-box:TimePeriod
+
+
+### which-way
+
+- **Title:** Which way a line runs
+- **Tour:** Reading the diagram
+- **Only:** sel=Participant~Visit~TimePeriod
+- **Action:** Added Participant.
+- **Anchor:** slot-row:Visit.associated_participant
+- **Description:**
+  Participant landed on the LEFT, and the line from Visit's
+  `associated_participant` row runs backwards to it, arrowhead at
+  Participant. Same rule for both lines: the line leaves the row, and the
+  arrowhead lands on the class the row names. What differs is which side
+  the named class is drawn on, and that is decided by **ownership**: a
+  Visit belongs to its Participant, so Participant is drawn first; a Visit
+  owns its TimePeriod, so TimePeriod is drawn after. How the Explorer decides
+  which is which is the *Ownership* tour.
+- **Beats:**
+  1. left to right
+     - Description:
+       ##### Reading left to right
+       So the canvas reads left to right as "contains": everything that owns
+       a class is to its left, everything it owns is to its right. Hover a
+       box and everything not connected to it fades.
+     - Anchor: node-box:Participant
+
+
+### loops
+
+- **Title:** A class that names itself
+- **Tour:** Reading the diagram
+- **Only:** sel=ResearchStudy
+- **Action:** Drew ResearchStudy on its own.
+- **Anchor:** slot-row:ResearchStudy.part_of
+- **Description:**
+  `part_of` holds a ResearchStudy, so a study can be a sub-study of another.
+  A line from a box to itself would only be noise, so the row carries a loop
+  mark instead. Studies, specimens, containers, questionnaire items, files
+  and time points all nest this way.
+
+</details><!-- end of Reading the diagram tour -->
+</div>
+
+<div style="margin-left: 40px">
+<details open>
+<summary><b>Ownership</b></summary>
+
+## Ownership
+- **TourMetadata:**
+- **Description:** Why boxes land where they do, and what the three kinds of line mean
+
+### why-ownership
+
+- **Title:** Ownership
+- **Tour:** Ownership
+- **Only:** panels=0
+- **Anchor:** none
+- **Width:** 560
+- **Description:**
+  The canvas is laid out by **ownership**: a class is drawn to the right of
+  whatever owns it. That one idea is what the whole diagram is about, and it
+  is not in the schema. A LinkML schema says that Visit has an attribute
+  holding a Participant; it does not say which of the two contains the
+  other, and the generated documentation cannot show it either.
+
+  So the Explorer decides, with a few rules, and draws the result. This
+  tour shows the rules on real cases. There are three kinds of line:
+
+  - **owns** — the line runs from the owner's row to the class it holds;
+  - **belongs to** — the line runs from the member's row BACK to the class
+    it belongs to;
+  - **associated with** — dashed, arrowed at both ends, and no claim either
+    way.
+
+
+### owns-forward
+
+- **Title:** Owns: a list of things
+- **Tour:** Ownership
+- **Only:** sel=Questionnaire~QuestionnaireItem
+- **Action:** Drew Questionnaire and QuestionnaireItem.
+- **Anchor:** slot-row:Questionnaire.items
+- **Description:**
+  The easy case. `items` holds a LIST of QuestionnaireItems (`1..*`), and a
+  class that holds a list of things owns them: the items are part of the
+  questionnaire. The line runs from the owner's row rightward to the owned
+  class. **Rule 1: a list-valued attribute owns its class.**
+
+
+### belongs-backward
+
+- **Title:** Belongs to: a pointer at something bigger
+- **Tour:** Ownership
+- **Only:** sel=Participant~Specimen~SpecimenCreationActivity
+- **Action:** Drew Specimen with its Participant and its creation activity.
+- **Anchor:** node-box:Specimen
+- **Description:**
+  Specimen has lines in both directions, and they mean opposite things.
+- **Beats:**
+  1. belongs to
+     - Description:
+       ##### Belongs to
+       `source_participant` holds ONE Participant, and a Participant exists
+       whether or not any specimen points at it. A single-valued pointer at
+       something with a life of its own is a foreign key: the specimen
+       belongs to the participant, not the other way round. So Participant is
+       drawn on the left and the line runs from this row back to it.
+       **Rule 2: a single-valued attribute belongs to its class.**
+     - Anchor: slot-row:Specimen.source_participant
+  2. owns
+     - Description:
+       ##### Owns
+       `creation_activity` is also single-valued, yet the activity is drawn
+       on the right, owned. A specimen's creation, processing, storage and
+       transport activities are one family, three of them lists, and
+       splitting the family on cardinality alone would be wrong — so the
+       Explorer says so explicitly. The rules have exceptions, and every one
+       is listed rather than guessed.
+     - Anchor: slot-row:Specimen.creation_activity
+  3. the loop
+     - Description:
+       ##### And itself
+       `parent_specimen` names Specimen: an aliquot or a section is a specimen
+       derived from another one. It is drawn as a loop mark on the row rather
+       than as a line.
+     - Anchor: slot-row:Specimen.parent_specimen
+
+
+### values-forward
+
+- **Title:** Owns: a value with no life of its own
+- **Tour:** Ownership
+- **Only:** sel=Observation~Quantity
+- **Action:** Drew Observation and Quantity.
+- **Anchor:** slot-row:Observation.value_quantity
+- **Description:**
+  `value_quantity` is single-valued, so Rule 2 would say the observation
+  belongs to its Quantity — and a reader would conclude that to find an
+  observation you start from a number. But a Quantity is a value, `5 mg`,
+  not something you look up; it belongs to whoever holds it. So it is owned,
+  and drawn on the right. The same goes for TimePoint, TimePeriod, BodySite
+  and a few more: **a class with no independent existence is owned even by
+  a single-valued attribute.** Which classes those are is a decision
+  recorded in the Explorer, not something the schema can tell it.
+
+
+### three-kinds
+
+- **Title:** All three kinds at once
+- **Tour:** Ownership
+- **Only:** sel=SpecimenContainer~Specimen~Substance~SpecimenStorageActivity
+- **Action:** Drew SpecimenContainer, Specimen, Substance and SpecimenStorageActivity.
+- **Anchor:** node-box:SpecimenContainer
+- **Width:** 520
+- **Description:**
+  Four classes, and every kind of line. Read them one at a time, and notice
+  that the three attributes are declared on three different classes.
+- **Beats:**
+  1. owns
+     - Description:
+       ##### Owns
+       `SpecimenContainer.additive` — a list of Substances. Rule 1: the
+       container owns them. The line runs rightward, arrowhead on Substance.
+     - Anchor: slot-row:SpecimenContainer.additive
+  2. belongs to
+     - Description:
+       ##### Belongs to
+       `Specimen.contained_in` — one container, which exists with or without
+       this specimen. Rule 2: the specimen belongs to it. The container is
+       drawn on the left and the line runs from this row back to it.
+     - Anchor: slot-row:Specimen.contained_in
+  3. association
+     - Description:
+       ##### Associated with
+       `SpecimenStorageActivity.container` — a list of containers, so Rule 1
+       would say the storage activity OWNS them. It does not: a container
+       outlives the activity and holds specimens on its own. This is an
+       **association**: no ownership claim either way, drawn slate, dashed
+       and arrowed at both ends. The model has exactly two; the other is a
+       specimen's `related_document`.
+     - Anchor: slot-row:SpecimenStorageActivity.container
+  4. why it matters
+     - Description:
+       ##### Why it matters
+       Without the association this picture would be a cycle: the specimen
+       owns its storage activity, which would own the container, which owns
+       the specimen. Calling one of the three an association is what lets
+       the canvas be read left to right at all.
+     - Anchor: node-box:Specimen
+
+
+### bar-sides
+
+- **Title:** The relation bar, revisited
+- **Tour:** Ownership
+- **Only:** sel=Observation~ObservationSet~Participant~Visit~Organization
+- **Action:** Drew Observation with the four classes that own it.
+- **Anchor:** node-box:Observation
+- **Highlight:** ring
+- **Description:**
+  Every class that owns Observation is to its left — that is all the bar's
+  **←** count means. But they own it for two different reasons: Participant,
+  Visit and Organization because Observation POINTS at them (it belongs to
+  each), and ObservationSet because its `observations` list collects
+  Observations (it owns them). Both kinds turn up on both sides of a bar.
+
+  Hover the **←** count. Each row is written in canvas order, owner on the
+  left, and names the attribute at the end that declares it — so
+  `Observation.performed_by` and `ObservationSet.observations` sit at
+  opposite ends of their rows even though both are on this side. The little
+  line on each row is drawn the way the canvas draws it.
+
+
+### legend-pointer
+
+- **Title:** Every rule, every line
+- **Tour:** Ownership
+- **Anchor:** help-menu
+- **Highlight:** ring
+- **Description:**
+  The **Ownership legend** in the Help menu lists every rule with the lines
+  it produced, computed from the schema each time it opens, so it cannot go
+  stale. When a line looks wrong, that is where to check which rule put it
+  there. The exceptions are exactly the places where the Explorer had to
+  make a call; if you think a call is wrong, the legend is where to have the
+  argument.
+
+</details><!-- end of Ownership tour -->
+</div>
+
+<div style="margin-left: 40px">
+<details open>
+<summary><b>Inheritance</b></summary>
+
+## Inheritance
+- **TourMetadata:**
+- **Description:** Subclasses, and the boxes that hold several classes at once
+
+### one-child
+
+- **Title:** A class and its parent, one box
+- **Tour:** Inheritance
+- **Only:** sel=MeasurementObservation&panels=0
+- **Action:** Drew MeasurementObservation on its own.
+- **Anchor:** node-box:Observation
+- **Description:**
+  You asked for MeasurementObservation and the box is titled
+  **Observation**. MeasurementObservation is a subclass — an Observation
+  with a few extra attributes — and the Explorer draws a subclass INSIDE its
+  parent's box rather than as a second box joined by a line. The `⑃ 1` in
+  the header says one subclass is merged in.
+- **Beats:**
+  1. inherited rows
+     - Description:
+       ##### What it inherits
+       The bold rows at the top are Observation's: the four `value_`
+       attributes, who performed it, the participant and the visit.
+       MeasurementObservation has all of them.
+     - Anchor: slot-row:Observation.associated_participant
+  2. the child's header
+     - Description:
+       ##### What it adds
+       Below them a coloured header names the subclass, and the rows under
+       it are the ones it adds: a normal range, a body site, the instrument.
+       Everything under this header is MeasurementObservation's alone.
      - Anchor: child-header:MeasurementObservation
-  2. has-a
-     - Description: **Association / ownership / containment**, known in modeling parlance as HAS_A relationships — e.g. `Visit.associated_participant` → `Participant`.
+  3. one is enough
+     - Description:
+       ##### Merged even alone
+       This happens with a single subclass, not only when siblings are drawn
+       together. A class should not change shape depending on what else you
+       happen to have selected.
+     - Anchor: node-box:Observation
+
+
+### add-nothing
+
+- **Title:** Subclasses that add nothing
+- **Tour:** Inheritance
+- **Only:** sel=SpecimenQualityObservation~SpecimenQuantityObservation
+- **Action:** Drew the two specimen observations.
+- **Anchor:** child-header:SpecimenQualityObservation
+- **Description:**
+  Two subclasses of Observation, and neither declares a single attribute of
+  its own: two headers with nothing under them. That is not a gap. "An
+  Observation made about a specimen rather than a person, adding nothing"
+  is the whole definition of these classes, and an empty header is the
+  honest picture of it.
+
+
+### narrowing
+
+- **Title:** Same attribute, narrower type
+- **Tour:** Inheritance
+- **Only:** sel=QuestionnaireResponseValueBoolean~QuestionnaireResponseValueDecimal~QuestionnaireResponseValueInteger~QuestionnaireResponseValueString~QuestionnaireResponseValueTimePoint
+- **Action:** Drew the five typed questionnaire answers.
+- **Anchor:** slot-row:QuestionnaireResponseValue.value
+- **Description:**
+  A QuestionnaireResponseValue has a `value`, declared as a string. Its five
+  subclasses exist for one reason each: to say that `value` is a boolean, a
+  decimal, an integer, a string or a TimePoint. LinkML calls this narrowing
+  `slot_usage`.
+- **Beats:**
+  1. a narrowed row
+     - Description:
+       ##### The child's own row
+       So each child keeps its OWN `value` row under its header, with the
+       narrower type, instead of sharing the parent's — the one case where a
+       shared row would be a lie.
+     - Anchor: slot-row:QuestionnaireResponseValueBoolean.value
+  2. the one that doesn't
+     - Description:
+       ##### The one that adds nothing
+       The String child's `value` is a string, exactly as the parent declared
+       it, so it has no row of its own: the header alone. Compare its
+       TimePoint sibling, whose `value` is another class and gets a blue dot.
+     - Anchor: child-header:QuestionnaireResponseValueString
+
+
+### full-family
+
+- **Title:** The whole family
+- **Tour:** Inheritance
+- **Only:** cat=observation
+- **Action:** Drew the Observations / Measurements category, the same as pressing its ⊞ button.
+- **Anchor:** node-box:Observation
+- **Width:** 520
+- **Description:**
+  The largest hierarchy in the model, and the best picture of what merging
+  buys. One box holds Observation and all five subclasses; the rows they
+  share are stated once, at the top, and each subclass adds its own beneath
+  its coloured header. Drawn as six separate boxes, the shared rows would be
+  repeated six times.
+- **Beats:**
+  1. colours
+     - Description:
+       ##### Colours
+       Each subclass has a colour, worn by its header and by any line leaving
+       one of its rows, so a line can be traced back to the subclass that
+       declares it. A line from a shared row is drawn once, not once per
+       subclass.
      - Anchor: child-header:MeasurementObservation
-  3. UNFINISHED
-     - Description: A primary goal
-     - Anchor: none
-  4. UNFINISHED
-     - Description: Entities can be related to each other through
-     - Anchor: none
+  2. the sets
+     - Description:
+       ##### The sets mirror them
+       ObservationSet has the same shape: three subclasses in one box, one
+       per kind of observation being grouped.
+     - Anchor: node-box:ObservationSet
+  3. a narrowed line
+     - Description:
+       ##### A line that lands on a header
+       `MeasurementObservationSet.observations` is a narrowed `observations`:
+       a measurement set holds MeasurementObservations specifically, not
+       Observations in general. So its line does not land on the Observation
+       box as a whole but on the **MeasurementObservation header** inside
+       it, in that subclass's colour.
+     - Anchor: slot-row:MeasurementObservationSet.observations
+  4. the landing
+     - Description:
+       ##### Where it lands
+       Here. The plain `ObservationSet.observations` line, one row up in the
+       other box, lands on this box's header as usual.
+     - Anchor: child-header:MeasurementObservation
 
-<!--
-  TODO(siggie): beats 4 and 5 are your two truncated sentences, carried
-  over exactly as they trail off. Nothing invented. They will render as
-  broken fragments in the tour until you finish them — that is deliberate,
-  so they cannot ship unnoticed.
 
-  [sg] the "solutions" below are not good
+### families
 
-  TODO(siggie): this step is where you asked "can we animate this so that
-  step 4 keeps this popover but shows the next bullet, etc?" Beats are the
-  answer, and as of 2026-08-28 they ADD rather than replace, which is what
-  you actually asked for: the Description stays on screen and each beat
-  appears below it, earlier ones dimmed. The old beat 1 existed only to
-  repeat the Description so it would not vanish -- deleted, with its
-  `slot-row` anchor moved up to the entry where the step now starts.
+- **Title:** Where inheritance lives in the model
+- **Tour:** Inheritance
+- **Anchor:** none
+- **Description:**
+  BDCHM uses inheritance in five places, and you have now seen the two big
+  ones: Observation with five subclasses and ObservationSet with three. The
+  others are Exposure (a drug or a device), File (an imaging file), and the
+  five typed questionnaire answers. Everywhere else, a class stands on its
+  own.
 
-  TODO(siggie): your draft numbers this "3" and puts "select
-  MeasurementObservation and highlight observation_type" in the step title.
-  The Action: field now says that out loud, which is the fix for the bug
-  where a step changed the app silently.
--->
+  The categories in the left panel are not inheritance: a category is a
+  browsing aid, and a class listed in two of them is one class, not two.
+
+</details><!-- end of Inheritance tour -->
+</div>
+
+</details><!-- end of Tours -->
+
+<details>
+<summary><b>Non-tour help items</b></summary>
 
 ### selection-tree-mechanics
 
@@ -761,56 +1311,6 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
   - Name — open the details panel without changing the selection.
 - **Context:** An entity can sit in more than one place in the tree, because things can be owned by more than one kind of thing. The widget marks the duplicates for you.
 - **Anchor:** selection-tree
-
-### graph-canvas
-
-- **Title:** Selecting an entity
-- **Tour:** Walkthrough
-- **Description:** Select an entity by clicking its checkbox and it appears in the main panel. Only what you select is drawn — related entities are reached from the box's relation bar. There are five ways an entity can be related to another.
-- **Action:** Cleared the diagram and drew just Participant and BodySite. You would normally do this by ticking them in the tree on the left.
-- **Only:** sel=BodySite~Participant
-- **Beats:**
-  1. only what you select
-     - Description: Select an entity by clicking its checkbox and it appears in the main panel. Only what you select is drawn. There are five ways an entity can be related to another.
-     - Anchor: selection-tree
-  2. the row
-     - Description: This is the entity's row in the selection panel.
-     - Anchor: entity-row:Participant
-  3. the checkbox
-     - Description: Clicking the checkbox is what puts it on the diagram.
-     - Anchor: entity-checkbox:Participant
-
-<!--
-  TODO(siggie): your draft's step 4 says "goal is to show all the
-  relationship types. if there are any entities that use all four, select
-  one of those, otherwise will have to select one that has most and then
-  select another that has the others." That is an instruction to yourself,
-  not copy — it is NOT translated into a beat. The `Change:` above still
-  carries the old `sel=BodySite~Participant`; pick the entity or entities
-  that actually demonstrate all five once you have checked which do.
-
-  This step now REPLACES the diagram (`Only:` rather than `Change:`, added
-  2026-09-05), so MeasurementObservation from the previous step is gone and
-  the canvas is the clean two-box example the copy reads as. Stepping BACK
-  restores it.
-
-  Note the count: your draft says "five ways" here and you confirmed five
-  is right (four ownership kinds + associations). The stale "four" note is
-  gone.
-
-  TODO(siggie): this entry kept the id `graph-canvas` so its help-only
-  content is not orphaned, but your draft's step 4 is about the SELECTION
-  panel, not the canvas. The old canvas copy is preserved as
-  `graph-canvas-reading` below. Consider renaming this entry.
--->
-
-</details><!-- end of Walkthrough tour -->
-</div>
-
-</details><!-- end of Tours -->
-
-<details>
-<summary><b>Non-tour help items</b></summary>
 
 ### graph-canvas-reading
 
@@ -857,7 +1357,6 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 ### copy-link
 
 - **Title:** Copy link
-- **Tour:** Walkthrough
 - **Description:** Copies a link that reproduces **exactly** this view — the selection and the toolbar settings. Anyone opening it sees what you see.
 - **Interactions:**
   - Click to copy; the URL bar always holds the same link.

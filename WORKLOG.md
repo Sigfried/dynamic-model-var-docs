@@ -7,6 +7,103 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-09 (late) — the four app tours written; Walkthrough dissolved (TASKS item 1)
+
+Wrote `Getting oriented` (9 steps), `Reading the diagram` (4), `Ownership`
+(7) and `Inheritance` (5) into `help-content.md`, and deleted the
+`Walkthrough` section they were meant to be split out of. Not yet read in a
+browser by Siggie — the plan doc and TASKS say so.
+
+### What the probe changed, before anything shipped
+
+Same throwaway-test probe as the category steps (deleted after): every
+selection the tours use, run through `getOwnershipSubgraph → buildViewModel
+→ mergeSiblings`, with layers, edges, verdicts and every merged box's rows
+written to a file. It overturned four things the plan or the example-case
+notes said:
+
+- **Organization is a bad "rows and dots" example.** The plan drafted the
+  palette step on it; it has no entity-ranged and no enum-ranged rows at all,
+  so nothing on it is blue or purple. `Visit` alone has green, purple and blue
+  rows, all hollow, and adding `TimePeriod` fills exactly one — so *Reading
+  the diagram* opens on Visit and grows it.
+- **`container` is declared on `SpecimenStorageActivity`**, not on
+  `SpecimenContainer` as `exampleCases.ts`'s association note says. The tour
+  names the declarer; the example note is still wrong and was left alone (it
+  is a debugging pane, not content).
+- **`Specimen.creation_activity` is single-valued and draws forward.** The
+  plan's draft called it plain "owns"; it is Exception 2b (a family split by
+  cardinality). The beat says so in the reader's terms rather than glossing.
+- **There are six self-loops, not five.** `QuestionnaireItem.part_of` is one
+  too; the example-case note counts five. The `loops` step names the classes
+  and gives no number.
+
+Also confirmed rather than assumed: `QuestionnaireResponseValueString` gets an
+EMPTY child header in the five-answers box, because its `value` is the same
+`string` as the parent's — which made a better beat than the plan had.
+
+### The spine is steps, not beats, and each step is a cumulative `Only:`
+
+`helpAnchors.test.tsx` checks a step's diagram anchors against the selection
+its ENTRY-level `Change:`/`Only:` names, and skips entries with none. A beat
+that adds `Visit` and anchors `node-box:Visit` therefore fails on a step whose
+own query never named Visit. So each hop of the spine is its own entry, and
+each names the whole picture (`Only: sel=Person~Participant~Visit`) rather
+than adding one class. That also keeps `back` exact and makes every step a
+clean caption of what is drawn.
+
+### Reading the diagram is four steps, not two
+
+The plan flagged it as possibly too thin to stand alone and offered merging
+it into Getting oriented. Kept, because the task text fixes the order of four
+tours by name, and two more steps came for free once the probe had run: the
+backwards line (`which-way`, which is the hand-off to Ownership) and the loop
+mark. It still has no picture of the edge kinds — that is TASKS 4.
+
+### Getting oriented follows Siggie's bullet list, not my earlier outline
+
+Siggie's `[sg]` note under §2 of the plan rejected the "steps 2, 3 and 5
+collapse" outline and moved the spine here from tour 1. So the tour is their
+list — panel, checkbox, canvas, rows, detail panel, relation bar, drag, zoom —
+with the spine as the diagram it grows. Detail panel opens through
+`Change: detail=Observation`, and the next step closes it with `panels=0`,
+because scalars are not popped.
+
+`bdchm-entities` kept Siggie's `[put some intro text here]` placeholder with
+the intro added below it (the `admin-study` precedent). Its beat 1 `Width:
+300` became 420: under ~390 an authored width mangles the nav row (FORMAT.md,
+2026-09-08), and it was set before that floor existed.
+
+### Walkthrough: what was dropped
+
+`selection-tree`, `entities`, `relationship-kinds` and `graph-canvas`, with
+their `TODO(siggie)` comments — every one of those comments was about copy
+that no longer exists (truncated sentences, "pick the entity that shows all
+five", a rename of `graph-canvas`). `selection-tree-mechanics` was the one
+help-only entry in the section and moved to *Non-tour help items*; it is
+still reachable from nowhere (not in `HELP_ENTRIES`), as before. `copy-link`
+lost its `Tour: Walkthrough` and is help-only, which is how the Help menu
+already reached it. Nothing in `HELP_ENTRIES` was touched.
+
+`tourStack.integration.test.tsx` started `Walkthrough` by name and had to be
+retargeted. **Ownership, not Getting oriented**: the untick test removes the
+first class a step pushes and walks on, asserting it stays gone. Ownership's
+later steps each replace the canvas with a different selection, so that holds
+for the same reason it held before; Getting oriented's spine steps re-name
+`Person` on every hop, and the test would have been asserting the tour must
+NOT draw a class its step explicitly names.
+
+### Deliberately not done
+
+- `sibs=0` is not used anywhere in the tours (TASKS 8d wants it gone), and
+  the Inheritance tour does not mention the ⑃ toggle for the same reason.
+- No step opens the ownership legend; `legend=1` is a scalar and would stay
+  open after the tour. The last Ownership step points at the Help menu.
+- The top-of-file `TODO` fold and `why`'s placement (TASKS 3b) untouched.
+- `docs/TOURS_AND_CONTENT.md` says to delete it once the tours ship. Left,
+  with a status line: written is not reviewed.
+
+---
 ## 2026-09-09 (night) — boxes on motion/react; edges deferred
 
 The box half of 5b shipped and Siggie checked it in the browser. Edges are

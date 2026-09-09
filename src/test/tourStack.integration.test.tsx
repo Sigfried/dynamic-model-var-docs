@@ -67,20 +67,23 @@ describe('tour state stack, end to end', () => {
    * briefly replaced it was itself replaced by the chooser — two hovers deep
    * was too far (Siggie, 2026-09-05).
    *
-   * Runs the WALKTHROUGH by name, not whichever tour is listed first. These
-   * tests are about the state stack — they need several steps that push and
-   * pop — and the file's first tour is a one-step introduction whose only
-   * button says "done". Naming the tour also means adding one to the content
-   * file cannot silently retarget them.
+   * Runs the OWNERSHIP tour by name, not whichever tour is listed first. These
+   * tests are about the state stack — they need an exposition opener that
+   * draws nothing, then several steps that each push a DIFFERENT selection —
+   * and the file's first tour is a category walk whose steps all draw. Naming
+   * the tour also means adding one to the content file cannot silently
+   * retarget them. (It was `Walkthrough` until that tour was split into the
+   * four app tours on 2026-09-09; `Getting oriented` would not do, because its
+   * spine steps re-push the class the untick test below removes.)
    */
   const startTour = async () => {
     render(<ExploreApp />);
     await screen.findByRole('heading', { name: /BDCHM Explorer/i });
     fireEvent.click(button(/guided tours/i));
     const chooser = await screen.findByRole('dialog', { name: /guided tours/i });
-    const walkthrough = [...chooser.querySelectorAll('button')]
-      .find(b => /^walkthrough/i.test(b.textContent ?? ''))!;
-    fireEvent.click(walkthrough);
+    const ownership = [...chooser.querySelectorAll('button')]
+      .find(b => /^ownership/i.test(b.textContent ?? ''))!;
+    fireEvent.click(ownership);
     await screen.findByRole('button', { name: /next/i, hidden: true });
   };
 
@@ -241,10 +244,10 @@ describe('tour state stack, end to end', () => {
      * The viewer overrules the tour, end to end.
      *
      * Scope note, so this test is not read as more than it is: it walks the
-     * tour FORWARD, and the shipping tour's remaining moves are between beats
-     * of one step, which push nothing. So it pins the compose path — an
-     * unticked class does not creep back on subsequent positions — and not the
-     * pop path. **The pop path is where `reconcile` earns its keep** (a stack
+     * tour FORWARD, and every later step of the shipping tour replaces the
+     * canvas with a selection that does not name the unticked class again. So
+     * it pins the compose path — an unticked class does not creep back on
+     * subsequent positions — and not the pop path. **The pop path is where `reconcile` earns its keep** (a stack
      * still holding the id re-adds it when the frame that pushed it is
      * examined), and it is pinned directly, and adversarially, in
      * `tourStateStack.test.ts` — "unticking a class the tour pushed keeps it

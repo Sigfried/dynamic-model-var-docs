@@ -5,7 +5,10 @@ Decisions here are Siggie's, 2026-09-04. The content they get written into is
 [`src/explore/help-content.md`](../src/explore/help-content.md); the authoring
 format is [`src/help/FORMAT.md`](../src/help/FORMAT.md).
 
-**Delete this file once the tours ship.**
+**Delete this file once the tours ship.** Status 2026-09-09: all five are
+written in the content file and pass the tests; Siggie has not yet read the
+four app tours in the browser (TASKS item 1). Until then this file is the
+record of what each tour was meant to do.
 
 ---
 
