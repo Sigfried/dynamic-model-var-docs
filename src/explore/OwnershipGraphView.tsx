@@ -38,6 +38,7 @@
  */
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import type {
   AttributeSummary,
   DataService, OwnershipSubgraph, OwnershipSubgraphEdge, OwnershipSubgraphNode,
@@ -52,7 +53,7 @@ import {
   useGraphLayout, useZoomPan, roundedPath, sectionPoints, mergeTail,
   smoothStepPath,
   arrowPath, animMs, fadeMs, enterDelayMs, edgeFadeMs, edgeArriveMs, hoverMs,
-  SPINNER_DELAY_MS, FADE_RETIRE_SLACK_MS,
+  SPINNER_DELAY_MS, ANIM_EASE, sec,
 } from './graph-core';
 import type { EdgeSection, GraphSpec, GraphSpecPort, PlacedNode, Point } from './graph-core';
 import {
@@ -73,6 +74,8 @@ type MergeTarget = { base: Point; dir: Point };
 
 const NODE_W = 240;
 const HEADER_H = 30;
+/** A context box (dashed, not selected) is dimmed to this. */
+const CONTEXT_OPACITY = 0.6;
 const ROW_H = 20;
 /**
  * How many attribute rows a COLLAPSED box shows before it offers a footer.
@@ -1423,7 +1426,7 @@ export default function OwnershipGraphView({
 
   const spec = useMemo(() => buildSpec(vm, direction), [vm, direction]);
 
-  const { layout, inProgress, previous } = useGraphLayout(spec, {
+  const { latest, inProgress } = useGraphLayout(spec, {
     direction,
     usePartitions: true,
     nodeSpacing: 28,
@@ -1435,11 +1438,19 @@ export default function OwnershipGraphView({
       'elk.layered.spacing.edgeEdgeBetweenLayers': '10',
     },
   });
+  /*
+   * `layout` is the CURRENT generation only: null while a new spec is being
+   * laid out. Everything that joins ELK's ids against `vm` (the edge loop, the
+   * merge and drag routing) reads this one, because the superseded result's
+   * ids are not in the current view model (see useGraphLayout). `geom` is
+   * whatever layout exists, current or superseded — coordinates only, so the
+   * boxes have somewhere to sit and the canvas keeps its extent through the
+   * gap.
+   */
+  const layout = latest?.spec === spec ? latest.layout : null;
+  const geom = latest?.layout ?? null;
 
   const zp = useZoomPan();
-  // Fall back to the previous generation's extent while a layout is pending,
-  // so the canvas does not collapse to nothing under the boxes still showing.
-  const geom = layout ?? previous?.layout ?? null;
   const contentW = (geom?.width ?? 0) + PAD * 2;
   const contentH = (geom?.height ?? 0) + PAD * 2;
   useEffect(() => {
@@ -1486,133 +1497,6 @@ export default function OwnershipGraphView({
   useEffect(() => setNudges(new Map()), [layout]);
   useEffect(() => setPins(new Map()), [layout]);
 
-  /*
-   * ENTER / UPDATE / EXIT, by id, across the two generations.
-   *
-   * `previous` from the hook covers only the gap while ELK runs; it is null
-   * again the instant the new layout lands, which is when the animation
-   * actually plays. So the outgoing generation is retained HERE — animation
-   * bookkeeping the layout hook has no business owning.
-   *
-   *   entering — in the new layout, absent from the outgoing one. No position
-   *              to slide from, so it fades in after the movers have settled.
-   *   leaving  — in the outgoing generation, absent from the current view
-   *              model. Its own `vm` entry is gone, so BOTH its NodeVM and its
-   *              position are retained; it renders as an ordinary box that
-   *              happens to be fading. (Siggie, 2026-09-09, on the inert
-   *              silhouette this replaces: *"i don't like the inert
-   *              silhouette. just put the real box back. if user messes with
-   *              it, that's their problem."*)
-   *
-   * In the steady state both are empty and every box simply stays.
-   */
-  /*
-   * The vm that produced the CURRENTLY DISPLAYED layout, one render behind the
-   * live `vm`. A departing node is by definition absent from the live one, so
-   * its NodeVM has to be captured before it goes — this holds the last vm that
-   * was actually on screen, which is where it still exists.
-   */
-  const shownVmRef = useRef<NodeVM[]>([]);
-  useEffect(() => { if (layout) shownVmRef.current = vm.nodes; }, [layout, vm]);
-
-  /*
-   * ⚠️ Captured ONCE PER TRANSITION, keyed on the outgoing spec — NOT on every
-   * render where `previous` happens to be set.
-   *
-   * Rebuilding it per render was a real bug (2026-09-09): a new object each
-   * render gave `leaving` a new identity, which restarted the retirement timer
-   * before it could fire and re-ran the fade effect, so a departing box faded
-   * for a moment and then snapped back to full opacity — and never left.
-   * `setRetired` made it self-sustaining, since the re-render it triggers was
-   * itself enough to reset everything.
-   */
-  const outgoingRef = useRef<{
-    key: GraphSpec | null;
-    pos: Map<string, PlacedNode>;
-    vms: Map<string, NodeVM>;
-  }>({ key: null, pos: new Map(), vms: new Map() });
-  if (previous && outgoingRef.current.key !== previous.spec) {
-    outgoingRef.current = {
-      key: previous.spec,
-      pos: new Map(previous.layout.nodes.map(n => [n.id, n])),
-      vms: new Map(shownVmRef.current.map(n => [n.id, n])),
-    };
-  }
-  const outgoing = outgoingRef.current;
-
-  const entering = useMemo(() => {
-    // Nothing "enters" on the very first layout: the whole diagram is new, and
-    // fading all of it in reads as a load, not a transition.
-    if (!layout || outgoing.pos.size === 0) return new Set<string>();
-    return new Set(layout.nodes.filter(n => !outgoing.pos.has(n.id)).map(n => n.id));
-  }, [layout, outgoing]);
-
-  /**
-   * Departing boxes, as real NodeVMs paired with the position they last held.
-   * Rendered by the same loop as everything else, so they keep their rows,
-   * their relation bar and their handlers while they fade.
-   */
-  const leaving = useMemo(() => {
-    const live = new Set(vm.nodes.map(n => n.id));
-    return [...outgoing.vms.values()]
-      .filter(n => !live.has(n.id) && outgoing.pos.has(n.id));
-  }, [outgoing, vm]);
-
-  /*
-   * Arrivals mount at opacity 0 and flip opaque one painted frame later;
-   * departures do the reverse. Both need a starting value the browser has
-   * actually painted, or the transition just snaps — hence the double rAF,
-   * which is the reliable form of "after the first paint".
-   */
-  const [arrived, setArrived] = useState<Set<string>>(new Set());
-  const [departing, setDeparting] = useState<Set<string>>(new Set());
-  const enteringKey = [...entering].sort().join();
-  const leavingKey = leaving.map(n => n.id).sort().join();
-  useEffect(() => {
-    if (entering.size === 0 && leaving.length === 0) return;
-    let inner = 0;
-    const outer = requestAnimationFrame(() => {
-      inner = requestAnimationFrame(() => {
-        setArrived(new Set(entering));
-        setDeparting(new Set(leaving.map(n => n.id)));
-      });
-    });
-    return () => { cancelAnimationFrame(outer); cancelAnimationFrame(inner); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on ids, not identity
-  }, [`${enteringKey}|${leavingKey}`]);
-
-  /*
-   * ⚠️ A DEPARTED BOX MUST BE RETIRED, or it never leaves.
-   *
-   * It fades to `opacity: 0` and then just sits there: `leaving` is derived
-   * from the retained outgoing generation, which only changes when a NEW
-   * transition starts, so nothing ever unmounts it. Siggie saw the result as
-   * boxes stacked on top of each other — an invisible corpse at the old
-   * position under every subsequent layout, still catching clicks.
-   *
-   * So the ids are dropped from the retained set once the fade has run.
-   */
-  useEffect(() => {
-    if (leaving.length === 0) return;
-    const ids = leaving.map(n => n.id);
-    const t = setTimeout(() => {
-      for (const id of ids) {
-        outgoingRef.current.vms.delete(id);
-        outgoingRef.current.pos.delete(id);
-      }
-      setDeparting(prev => {
-        const next = new Set(prev);
-        for (const id of ids) next.delete(id);
-        return next;
-      });
-      // The retained set is a ref, so nothing re-renders on its own; this is
-      // the nudge that drops the boxes from the tree.
-      setRetired(n => n + 1);
-    }, fadeMs() + FADE_RETIRE_SLACK_MS);
-    return () => clearTimeout(t);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on ids, not identity
-  }, [leavingKey]);
-  const [, setRetired] = useState(0);
 
   /*
    * When edges appear, relative to the boxes moving.
@@ -1631,13 +1515,22 @@ export default function OwnershipGraphView({
    * Hiding stays immediate: a stale route is worse than no route.
    */
   const [edgesSettled, setEdgesSettled] = useState(false);
+  // True until a layout is drawn on an EMPTY canvas: that is a load, not a
+  // transition — no box is in motion for the edges to wait on, and making
+  // them wait anyway read as *"edges arrive late"* on every page reload.
+  const freshDrawRef = useRef(true);
   useEffect(() => {
-    if (!layout) { setEdgesSettled(false); return; }
-    const wait = edgeArriveMs();
+    if (!layout) {
+      setEdgesSettled(false);
+      if (!geom) freshDrawRef.current = true;
+      return;
+    }
+    const wait = freshDrawRef.current ? 0 : edgeArriveMs();
+    freshDrawRef.current = false;
     if (wait === 0) { setEdgesSettled(true); return; }
     const t = setTimeout(() => setEdgesSettled(true), wait);
     return () => clearTimeout(t);
-  }, [layout]);
+  }, [layout, geom]);
 
   const placedRef = useRef<Map<string, PlacedNode>>(new Map());
   // Set when a drag actually moved something, so the click that ends the drag
@@ -1648,21 +1541,13 @@ export default function OwnershipGraphView({
   nudgesRef.current = nudges;
   const placed = useMemo(() => {
     /*
-     * While a new layout is being computed, `layout` is null (the staleness
-     * guard — see useGraphLayout) and boxes would have nowhere to sit. Falling
-     * back to the PREVIOUS generation's coordinates is what keeps them mounted
-     * and on screen through the gap; when ELK lands, `layout` takes over and
-     * the same DOM elements transition to their new positions.
-     *
-     * Only COORDINATES come from `previous`, never content: everything drawn
-     * inside a box comes from the current `vm`, so there is no cross-generation
-     * join here. A node the new spec dropped is handled separately (`leaving`).
+     * Coordinates from whatever layout exists, current OR superseded (`geom`),
+     * so the boxes stay mounted at their old positions while ELK computes the
+     * new ones; when it lands, the same elements animate to the new positions.
+     * Only COORDINATES come from a superseded layout, never content —
+     * everything drawn inside a box comes from the current `vm`.
      */
-    const src = layout?.nodes ?? previous?.layout.nodes ?? [];
-    const m = new Map(src.map(n => [n.id, n]));
-    // Departing boxes keep the position they last held, so they fade where
-    // they stood rather than jumping. They are not in the new layout at all.
-    for (const [id, n] of outgoingRef.current.pos) if (!m.has(id)) m.set(id, n);
+    const m = new Map((geom?.nodes ?? []).map(n => [n.id, n]));
     // A dropped pin and an in-flight drag are the same kind of offset; the
     // live one wins while the pointer is down.
     const offsets = new Map(pins);
@@ -1673,7 +1558,7 @@ export default function OwnershipGraphView({
     }
     placedRef.current = m;
     return m;
-  }, [layout, previous, nudges, pins]);
+  }, [geom, nudges, pins]);
 
   /**
    * Drag a node box. Pointer capture keeps the drag alive when the cursor
@@ -2063,34 +1948,38 @@ export default function OwnershipGraphView({
         }
       }
 
+      /*
+       * ⚠️ Hover dims through `filter: opacity()`, NEVER through `opacity`.
+       * `opacity` belongs to motion: it is what a box fades in and out on,
+       * and an arriving box sits at opacity 0 through its enter delay. This
+       * runs on every vm/layout change (below) and on every pointer move,
+       * and writing `style.opacity = ''` here wiped motion's value — context
+       * boxes lost their dimming and arrivals popped in opaque (2026-09-09).
+       * `filter` is a separate property, so the two compose (multiplicatively)
+       * instead of colliding.
+       */
+      const dim = (el: HTMLElement | SVGElement, lit: boolean | null, amount: number) => {
+        el.style.filter = lit === null || lit ? '' : `opacity(${amount})`;
+      };
       svg.querySelectorAll<SVGPathElement>('path[data-edge-id]').forEach(p => {
         const id = p.dataset.edgeId ?? '';
-        if (!edgeSet) {
-          p.style.opacity = '';
-          p.style.strokeWidth = '';
-        } else if (edgeSet.has(id)) {
-          p.style.opacity = '1';
-          // Thicken relative to this edge's own channel, so a hovered dashed
-          // reference doesn't jump to ownership weight.
-          p.style.strokeWidth = String(
-            p.dataset.channel === 'reference' ? STROKE_REF_HOVER : STROKE_OWN_HOVER,
-          );
-        } else {
-          p.style.opacity = '0.38'; // [sg] changed this...needs to live in config
-          p.style.strokeWidth = '';
-        }
+        const lit = edgeSet ? edgeSet.has(id) : null;
+        dim(p, lit, 0.38); // [sg] changed this...needs to live in config
+        // Thicken relative to this edge's own channel, so a hovered dashed
+        // reference doesn't jump to ownership weight.
+        p.style.strokeWidth = lit
+          ? String(p.dataset.channel === 'reference' ? STROKE_REF_HOVER : STROKE_OWN_HOVER)
+          : '';
       });
       // A convergence arrowhead belongs to a GROUP of edges, so it stays lit
       // while any one of them is highlighted and dims only when none is —
       // otherwise hovering one edge of a merge left its head greyed out.
       svg.querySelectorAll<SVGPathElement>('path[data-arrowhead]').forEach(p => {
         const ids = (p.dataset.arrowhead ?? '').split(' ');
-        if (!edgeSet) p.style.opacity = '';
-        else p.style.opacity = ids.some(id => edgeSet.has(id)) ? '1' : '0.08';
+        dim(p, edgeSet ? ids.some(id => edgeSet.has(id)) : null, 0.08);
       });
       wrapper.querySelectorAll<HTMLElement>('[data-node-id]').forEach(el => {
-        const id = el.dataset.nodeId ?? '';
-        el.style.opacity = !nodeSet ? '' : nodeSet.has(id) ? '1' : '0.25';
+        dim(el, nodeSet ? nodeSet.has(el.dataset.nodeId ?? '') : null, 0.25);
       });
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps -- zp.wrapperRef is a stable ref
@@ -2129,8 +2018,31 @@ export default function OwnershipGraphView({
 
   return (
     <div className="relative w-full h-full">
-      {/* Toolbar */}
+      {/* Toolbar. Floated over the canvas rather than taking a strip of it;
+          a box the fit lands under it can be panned clear, because the scroll
+          area carries slack around the content (see useZoomPan). */}
       <div data-pan-ignore className="absolute top-2 right-2 z-10 flex gap-1 items-center">
+        {/*
+          A corner spinner, not the full-canvas sheet this replaces.
+
+          The sheet was reasonable when a pending layout meant a BLANK canvas —
+          there was nothing to obscure. Now the boxes stay up and animate
+          through the gap, so covering them defeats the animation entirely.
+          And it only appears after SPINNER_DELAY_MS, because on a fast
+          machine ELK finishes well inside that and a flicker of "computing"
+          is worse than silence; the delay is what keeps it useful on a slow
+          one without being noise on a fast one.
+        */}
+        {showSpinner && (
+          <div className="mr-2 flex items-center gap-2 rounded px-2 py-1
+                          text-xs text-gray-500 dark:text-gray-400
+                          bg-white/80 dark:bg-slate-900/80 shadow-sm">
+            <span className="inline-block h-3 w-3 animate-spin rounded-full
+                             border-2 border-gray-300 border-t-gray-600
+                             dark:border-slate-600 dark:border-t-slate-300" />
+            Computing layout…
+          </div>
+        )}
         {onTogglePathToRoot && (
           <>
             <button
@@ -2182,28 +2094,6 @@ export default function OwnershipGraphView({
           </button>
         ))}
       </div>
-
-      {/*
-        A corner spinner, not the full-canvas sheet this replaces.
-
-        The sheet was reasonable when a pending layout meant a BLANK canvas —
-        there was nothing to obscure. Now the boxes stay up and animate through
-        the gap, so covering them defeats the animation entirely. And it only
-        appears after SPINNER_DELAY_MS, because on a fast machine ELK finishes
-        well inside that and a flicker of "computing" is worse than silence;
-        the delay is what keeps it useful on a slow one without being noise on
-        a fast one.
-      */}
-      {showSpinner && (
-        <div className="absolute top-2 right-2 z-10 flex items-center gap-2 rounded px-2 py-1
-                        text-xs text-gray-500 dark:text-gray-400
-                        bg-white/80 dark:bg-slate-900/80 shadow-sm">
-          <span className="inline-block h-3 w-3 animate-spin rounded-full
-                           border-2 border-gray-300 border-t-gray-600
-                           dark:border-slate-600 dark:border-t-slate-300" />
-          Computing layout…
-        </div>
-      )}
 
       {/* Direction is published on the DOM so the help package can place the
           tour popover on the axis the diagram does NOT grow along (LR grows
@@ -2308,7 +2198,7 @@ export default function OwnershipGraphView({
                            attribute row), so a shared head is always forward. */
                         fill={a.color?.text ?? edgeKindColor(a.isOwn, false)}
                         opacity={a.dimmed ? 0.4 : 1}
-                        style={{ transition: `opacity ${hoverMs()}ms` }}
+                        style={{ transition: `filter ${hoverMs()}ms` }}
                       />
                     ))}
                     {/* `layout`, never `geom`: an edge is looked up in the
@@ -2382,7 +2272,7 @@ export default function OwnershipGraphView({
                             strokeDasharray={isOwn ? undefined : '5 4'}
                             markerEnd={marker ? `url(#${markerId(marker)})` : undefined}
                             markerStart={!isOwn && !willMerge ? `url(#${markerId('arrow-assoc')})` : undefined}
-                            style={{ transition: `opacity ${hoverMs()}ms, stroke-width ${hoverMs()}ms` }}
+                            style={{ transition: `filter ${hoverMs()}ms, stroke-width ${hoverMs()}ms` }}
                           />
                           {/* invisible fat hit area for edge hover */}
                           <path
@@ -2400,33 +2290,61 @@ export default function OwnershipGraphView({
                   </g>
                 </svg>
 
-                {/* Departing boxes render through this same loop, as real
-                    boxes with their rows and handlers intact — they are just
-                    fading. `leaving` is empty except during a transition. */}
-                {[...vm.nodes, ...leaving].map(n => {
+                {/*
+                  ENTER / UPDATE / EXIT, by key, handled by AnimatePresence.
+
+                  A node the spec dropped leaves `vm` on the click render, and
+                  AnimatePresence keeps its LAST RENDERED element mounted —
+                  content, position, handlers and all — until `exit` finishes,
+                  then unmounts it. That is the whole of departure: the real
+                  box fades where it stood (Siggie, 2026-09-09, on the inert
+                  silhouette this replaced: *"just put the real box back. if
+                  user messes with it, that's their problem."*). It is also
+                  the first stage of the choreography for free — a departure
+                  starts at the click, while the survivors cannot move until
+                  ELK lands (docs/CANVAS_TRANSITIONS.md §A).
+
+                  A node that arrived in `vm` but has no position yet (its
+                  layout is still pending) renders nothing until it does, then
+                  mounts at `initial` and fades in after the enter delay.
+
+                  initial={false}: the first layout is a load, not a
+                  transition, so nothing fades in.
+                */}
+                <AnimatePresence initial={false}>
+                {vm.nodes.map(n => {
                   const p = placed.get(n.id);
                   if (!p) return null;
                   const context = n.role === 'context';
+                  const x = p.x + PAD, y = p.y + PAD;
+                  // A node under the pointer must track it exactly, so a drag
+                  // drops the movement duration to zero (the opacity fade is
+                  // unrelated to position and stays).
+                  const move = { duration: sec(nudges.has(n.id) ? 0 : animMs()), ease: ANIM_EASE };
                   return (
-                    <div
+                    <motion.div
                       key={n.id}
+                      initial={{ opacity: 0, x, y }}
+                      // Context boxes are dimmed by design; the target has to
+                      // say so, because an inline opacity beats the class.
+                      animate={{ opacity: context ? CONTEXT_OPACITY : 1, x, y }}
+                      exit={{ opacity: 0, transition: { duration: sec(fadeMs()) } }}
+                      transition={{
+                        x: move,
+                        y: move,
+                        // An ARRIVING box waits for the movers to settle:
+                        // fading in where another box is still sliding
+                        // through reads as a collision. The delay only bites
+                        // on arrival — afterwards the opacity target is
+                        // constant, so nothing is waiting on it.
+                        opacity: { duration: sec(fadeMs()), delay: sec(enterDelayMs()) },
+                      }}
                       data-node-id={n.id}
                       /* The tour's anchor, written whole — see `anchorTags`. */
                       data-help-id={nodeBoxAnchor(n)}
                       data-pan-ignore
                       data-pinned={pins.has(n.id) ? '' : undefined}
                       onPointerDown={ev => startDrag(n.id, ev)}
-                      onDoubleClick={ev => {
-                        // Double-click releases a pin, so a drag is undoable
-                        // without clearing the whole selection.
-                        if (!pins.has(n.id)) return;
-                        ev.stopPropagation();
-                        setPins(prev => {
-                          const next = new Map(prev);
-                          next.delete(n.id);
-                          return next;
-                        });
-                      }}
                       onClick={() => {
                         if (draggedRef.current) { draggedRef.current = false; return; }
                         // A merged box has a synthetic id; the class it stands
@@ -2437,34 +2355,11 @@ export default function OwnershipGraphView({
                       onMouseEnter={() => applyHover({ kind: 'node', id: n.id })}
                       onMouseLeave={() => applyHover(null)}
                       className={`absolute rounded-md text-xs bg-white dark:bg-slate-800 cursor-pointer ${context
-                        ? 'opacity-60 border border-dashed border-gray-400 dark:border-slate-500'
+                        ? 'border border-dashed border-gray-400 dark:border-slate-500'
                         : pins.has(n.id)
                           ? 'border-2 border-amber-500 dark:border-amber-400 shadow-md'
                           : 'border-2 border-slate-500 dark:border-slate-400 shadow-md'}`}
-                      style={{
-                        width: NODE_W,
-                        height: n.height,
-                        transform: `translate(${p.x + PAD}px, ${p.y + PAD}px)`,
-                        // A node under the pointer must track it exactly, so a
-                        // drag drops the transform transition (the opacity fade
-                        // is unrelated to position and stays). Inline rather
-                        // than a Tailwind arbitrary value because the duration
-                        // comes from ANIM_MS, which the canvas zoom shares —
-                        // they have to agree or the boxes slide inside a frame
-                        // that is still moving.
-                        transition: nudges.has(n.id)
-                          ? `opacity ${hoverMs()}ms`
-                          // An ARRIVING box waits for the movers to settle:
-                          // fading in where another box is still sliding
-                          // through reads as a collision.
-                          : `transform ${animMs()}ms, opacity ${fadeMs()}ms ${
-                              entering.has(n.id) ? enterDelayMs() : 0}ms`,
-                        // Arrivals start transparent and flip opaque; departures
-                        // do the reverse. Everything else is left alone, so the
-                        // dashed context styling keeps its own class dimming.
-                        ...(entering.has(n.id) && !arrived.has(n.id) ? { opacity: 0 }
-                          : departing.has(n.id) ? { opacity: 0 } : {}),
-                      }}
+                      style={{ width: NODE_W, height: n.height, transition: `filter ${hoverMs()}ms` }}
                     >
                       <div
                         className="flex items-center gap-1 px-2 rounded-t-[4px] bg-slate-700 dark:bg-slate-700 text-white border-b border-slate-800 dark:border-slate-600"
@@ -2703,10 +2598,10 @@ export default function OwnershipGraphView({
                           {n.expanded ? `− fewer ${attributesWord}` : `+ ${n.hiddenCount} more ${attributesWord}`}
                         </button>
                       )}
-                    </div>
+                    </motion.div>
                   );
                 })}
-
+                </AnimatePresence>
               </>
             )}
           </div>

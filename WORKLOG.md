@@ -7,6 +7,62 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-09 (night) — boxes on motion/react; edges deferred
+
+The box half of 5b shipped and Siggie checked it in the browser. Edges are
+deferred by Siggie's choice, not because they were hard. Read
+docs/CANVAS_TRANSITIONS.md for the design; this records what the design did
+not predict.
+
+### The outside-session sketch glossed the generation problem
+
+The pasted `motion` sketch maps `layout.nodes` straight into
+`<AnimatePresence>`. On the click render there is no current layout, so that
+either blanks the canvas (the original unmount bug) or joins stale ids. The
+shape that works: iterate `vm.nodes` (content, always current), look up each
+position in whatever layout exists, render nothing for a node with no
+position yet. The hook lost its two channels for one `latest: { spec, layout }`,
+and the view derives `layout` (current only) and `geom` (any) from it.
+
+### Hover and motion fought over `opacity`, and hover won
+
+Siggie: *"they don't look dimmed"* — context boxes at full opacity. Not a
+motion problem: `applyHover(null)` runs as an effect on every vm/layout change
+and wrote `style.opacity = ''` on every box, wiping the inline value motion had
+just set. It also meant an arriving box popped in opaque during its enter
+delay. Fix was separation, not ordering: hover dims through `filter: opacity()`,
+which motion never writes, so the two compose. A lit context box now stays at
+0.6 rather than lifting to 1 on hover; nobody has minded.
+
+### Toolbar overlap: tried a strip, went with slack
+
+Siggie's screenshot had Observation's header under the floating toolbar with
+no way to pan it clear — a fitted diagram has nothing to scroll. First fix put
+the toolbar in normal flow above the canvas. Siggie, rightly: that loses ~44px
+of fitting height always, for an overlap that happens only when a tall column
+lands top-right, and it does nothing for *"if i drag a box off the screen to
+the top i can never get it back again"*. Reverted, and `useZoomPan` got
+PAN_SLACK instead: half a viewport of padding on every side of the content, so
+there is always room to pan, and the fit scrolls to the padding's inner corner.
+Both complaints are the same missing slack.
+
+### Edges arrived late on page load
+
+`EDGE_ARRIVE_MS` waited on every layout, including the first — where no box is
+in motion. `freshDrawRef` skips the wait when a layout lands on an empty
+canvas.
+
+### Small things
+
+- Double-click-to-unpin removed at Siggie's request: *"a totally non-obvious
+  and not-particularly-useful affordance."* Pins drop on the next relayout.
+- `dragPins.test.ts` pinned the old CSS `transition:` ternary; it pins the
+  `move` duration ternary now, same intent.
+- `npm install` cannot run in the sandbox (npm's cache dir is not writable);
+  Siggie ran it.
+- The knob values in `anim.ts` are Siggie's, set by eye after the change.
+
+---
 ## 2026-09-09 (evening) — docs caught up; timing data read; task 5 closed; d3 closed
 
 A doc pass before starting task 5b, prompted by Siggie reading BACKLOG, TASKS

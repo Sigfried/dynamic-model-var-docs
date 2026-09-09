@@ -53,18 +53,13 @@ describe('drag pins', () => {
     // A box must follow the cursor without an ANIM_MS lag WHILE dragging, and
     // animate normally otherwise. Keying this on `pins` would leave a dropped
     // box permanently unanimated.
-    // Comments may sit between the ? and : arms, so match across lines and
-    // strip them before asserting on the arms themselves.
-    const ternary = /transition: nudges\.has\(n\.id\)([\s\S]*?),\n/.exec(src);
-    expect(ternary, 'transition ternary not found — this test needs rewriting')
-      .not.toBeNull();
-    const body = ternary![1].replace(/\/\/[^\n]*/g, '');
-    const [dragArm, restArm] = body.split(':');
-    // Dragging: no `transform` transition at all (the opacity fade may stay,
-    // it has nothing to do with position).
-    expect(dragArm).not.toMatch(/transform/);
-    // Not dragging: transform eases, on the shared constant rather than a
-    // literal, so the boxes cannot drift out of step with the canvas zoom.
-    expect(restArm).toMatch(/transform \$\{animMs\(\)\}ms/);
+    // The movement duration is a ternary on `nudges`: zero while dragging,
+    // the shared constant otherwise (never a literal, so the boxes cannot
+    // drift out of step with the canvas zoom).
+    const move = /const move = \{ duration: sec\(nudges\.has\(n\.id\) \? 0 : animMs\(\)\)/;
+    expect(src, 'move transition not found — this test needs rewriting').toMatch(move);
+    expect(src).not.toMatch(/pins\.has\(n\.id\) \? 0/);
+    // And it is what both axes animate on.
+    expect(src).toMatch(/x: move,\s*y: move,/);
   });
 });

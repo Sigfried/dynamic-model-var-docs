@@ -14,9 +14,9 @@
 | Zoom (discrete steps, fit) | **Done.** Animated, on `ANIM_MS`. |
 | Boxes moving to new positions | **Done.** Same DOM elements ease to ELK's new coordinates; they stay mounted across the layout gap. |
 | Boxes entering | Works; fades in after `ENTER_DELAY_MS`. |
-| Boxes leaving | **Broken — assume so.** Hand-rolled retention (`outgoingRef`, `shownVmRef`, `departing`, `arrived`, `setRetired`, a retirement timer) in [OwnershipGraphView.tsx](../src/explore/OwnershipGraphView.tsx). To be ripped out, not repaired. |
-| Edges | Fade out, snap to the new route, fade in after `EDGE_ARRIVE_MS`. No movement. |
-| Choreography (what moves when) | Open — see below. |
+| Boxes leaving | **Done.** `<AnimatePresence>` keeps the real box mounted while it fades where it stood, then unmounts it. |
+| Edges | **Deferred (Siggie, 2026-09-09).** Fade out, snap to the new route, fade in after `EDGE_ARRIVE_MS` — except on a fresh draw, where they appear with the boxes. No movement. |
+| Choreography (what moves when) | A (staged) is what shipped, since it falls out of the timeline; B untried. |
 
 All durations are in [anim.ts](../src/explore/graph-core/anim.ts).
 
@@ -39,7 +39,12 @@ Decided in the 2026-09-09 sessions; do not reopen without Siggie.
 - **`motion/react`** for enter/exit. `<AnimatePresence>` keeps a removed
   child mounted until its exit animation finishes, which is the one thing React
   alone cannot do and the reason every piece of the hand-rolled retention
-  exists. Not yet installed.
+  existed.
+- **Hover never touches `opacity`.** Motion owns a box's `opacity` (fades,
+  and the 0 an arrival sits at through its enter delay); hover dims through
+  `filter: opacity()`, a separate property, so the two compose instead of
+  colliding. The `applyHover(null)` reset runs on every vm/layout change and
+  wiped motion's value when it wrote `opacity`.
 - **ELK owns placement on every relayout.** Drag is a local override between
   relayouts; pins clear on `layout`. Not an animation question but easy to
   trip over while touching this code.
@@ -56,13 +61,11 @@ encodes this by returning `layout: null` until the result matches the current
 spec, and exposing the superseded result separately as `previous` so the view
 can keep boxes at their old coordinates.
 
-**For 5b:** keep the invariant, consider simplifying the encoding. The hook
-now returns one state object on two channels and the view reassembles it
-(`geom = layout ?? previous?.layout`). A single `{ spec, layout }` result,
-with `result.spec === spec` checked at the one site that joins ids (the edge
-loop), would carry the same guarantee. Content always comes from `vm`;
-positions from whatever layout exists; routed edges only from a layout that
-matches the current spec.
+**Done 2026-09-09:** the hook returns one `latest: { spec, layout }`; the
+view derives `layout` (current generation only — `latest.spec === spec`) for
+everything that joins ids, and `geom` (any generation) for coordinates and
+extent. Content always comes from `vm`; positions from whatever layout exists;
+routed edges only from a layout that matches the current spec.
 
 ## Choreography: what moves when
 
@@ -77,6 +80,13 @@ fade in. No second layout. `ENTER_DELAY_MS` already does the last half.
   `<AnimatePresence>` (its exit phase *is* the first stage).
 - Con: arrivals can still land on a path a survivor is sliding through; the
   enter delay is the only defence.
+
+The stages fall out of the timeline almost by themselves: a departing node
+leaves `vm` on the click render, so its exit starts at the click; survivors
+cannot move until ELK returns, so the move starts when the layout lands; and
+arrivals wait `ENTER_DELAY_MS` on top of that. With `motion`, the delays are
+per-element `transition.delay` values — `mode="wait"` is for single-child
+swaps and does not apply to a list.
 
 ### B. Intermediate layout: old ∪ new as a waypoint
 
@@ -105,19 +115,31 @@ new route, so animate by interpolating each point from its old position to its
 new one — no path guessing. A few lines; no library.
 
 **The hard case:** a route whose corner count changes between layouts, where
-the points do not pair up 1:1. Options:
+the points do not pair up 1:1. `motion` interpolates a `d` string by pairing
+its numbers and snaps when the counts differ, so every route must be handed
+over with the same point count N.
 
-- Resample both routes to a common point count before interpolating (loses
-  exact orthogonality mid-flight, which may not matter at these durations).
-- Pad the shorter route with degenerate points collapsed onto a real corner,
-  so extra corners grow out of an existing one.
+**Chosen:** keep ELK's original vertices and **pad extra points along the
+existing segments** up to N. The at-rest path is then exact (no even
+resampling that loses the corners), the structure is always N points, and
+`motion.path` interpolates `d` directly. From the outside-session notes below.
+
+Fallbacks, only if the padded interpolation looks bad mid-flight:
+
+- Resample both routes evenly to N (loses exact orthogonality in flight).
 - **Siggie's bezier idea** (quarter-baked, their words): draw the edge as a
   bezier *during* the transition — a curve between the moving endpoints that
   needs no corner pairing at all — and hand back to the orthogonal route when
-  the move lands. Sidesteps the pairing problem entirely, at the cost of the
-  edge briefly not looking like an ELK edge.
+  the move lands. Sidesteps pairing entirely, at the cost of the edge briefly
+  not looking like an ELK edge.
 
 Siggie has ideas here beyond these; do not invent a scheme without asking.
+
+**Before any of it: stable edge keys.** Edge ids are `edge-${idx}`, assigned
+by iteration order in `containmentGraph.ts`, so the same relationship gets a
+different id after a selection change and `edge-3` can name two different
+edges across layouts. `<AnimatePresence>` keyed on those would morph one
+relationship into another. Key on `(source, slot, target)` instead.
 
 ## Notes from the outside session
 

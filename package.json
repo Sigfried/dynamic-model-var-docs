@@ -24,6 +24,7 @@
     "elkjs": "^0.12.0",
     "graphology": "^0.26.0",
     "graphology-types": "^0.24.8",
+    "motion": "^13.2.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-markdown": "^10.1.0",

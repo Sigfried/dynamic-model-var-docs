@@ -185,8 +185,9 @@ deliberate; (3) have `hide all` offer to drop the boxes it just orphaned.
 
 ### Dragging is unfinished
 
-Works: drag, drop-in-place, edges re-routed, amber border, double-click to
-release, drawer no longer pops open mid-drag.
+Works: drag, drop-in-place, edges re-routed, amber border, drawer no longer
+pops open mid-drag. (Double-click-to-release was removed 2026-09-09 as an
+undiscoverable affordance; pins drop on the next relayout anyway.)
 
 Missing:
 

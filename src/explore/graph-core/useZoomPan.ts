@@ -27,10 +27,25 @@
  * there was no way to pan a fitted graph at all. Drags starting on an
  * interactive element (a node, a button) are ignored so clicking a node still
  * opens the drawer.
+ *
+ * PAN SLACK: the spacer carries padding of PAN_SLACK × the container's size on
+ * every side, so there is always room to pan — a fitted diagram included.
+ * Without it a box the fit placed under the floating toolbar could not be
+ * moved out from under it, and a box dragged above the content's top edge
+ * left the scrollable area for good (Siggie, 2026-09-09: *"if i drag a box
+ * off the screen to the top i can never get it back again"*). The fit scrolls
+ * to the padding's inner corner, so a fitted diagram still sits where it did.
  */
 
 import { useCallback, useEffect, useRef } from 'react';
 import { animMs } from './anim';
+
+/**
+ * Room to pan beyond the content, as a fraction of the container's size on
+ * EACH side. Half a viewport: enough to clear anything floated over the
+ * canvas, without the scrollable area dwarfing the diagram.
+ */
+export const PAN_SLACK = 0.5;
 
 export interface ZoomPan {
   /** Attach to the overflow-auto scroll container. */
@@ -95,14 +110,26 @@ export function useZoomPan(opts: { min?: number; max?: number } = {}): ZoomPan {
   // Cleared by the first fit, which is the one that must not animate.
   const firstFitRef = useRef(true);
 
+  // The slack in px, from the container's current size.
+  const slack = useCallback(() => {
+    const c = containerRef.current;
+    return c
+      ? { x: c.clientWidth * PAN_SLACK, y: c.clientHeight * PAN_SLACK }
+      : { x: 0, y: 0 };
+  }, []);
+
   const syncSpacer = useCallback((ms: number) => {
     const spacer = spacerRef.current;
     if (spacer) {
+      const { x, y } = slack();
       spacer.style.transition = ms ? `width ${ms}ms, height ${ms}ms` : '';
-      spacer.style.width = `${sizeRef.current.w * zoomRef.current}px`;
-      spacer.style.height = `${sizeRef.current.h * zoomRef.current}px`;
+      // border-box (Tailwind's preflight), so the padding is inside the
+      // width: the content box is exactly the zoomed content.
+      spacer.style.padding = `${y}px ${x}px`;
+      spacer.style.width = `${sizeRef.current.w * zoomRef.current + 2 * x}px`;
+      spacer.style.height = `${sizeRef.current.h * zoomRef.current + 2 * y}px`;
     }
-  }, []);
+  }, [slack]);
 
   const setZoom = useCallback((level: number, animate: boolean) => {
     zoomRef.current = Math.min(max, Math.max(min, level));
@@ -178,18 +205,21 @@ export function useZoomPan(opts: { min?: number; max?: number } = {}): ZoomPan {
     firstFitRef.current = false;
     setZoom(Math.min(container.clientWidth / w, container.clientHeight / h, 1), animate);
     requestAnimationFrame(() => {
+      // To the content's origin, i.e. just past the slack. Always reachable:
+      // the spacer is never narrower than twice the slack.
+      const { x, y } = slack();
       // `scrollTo` with `behavior` so the scroll eases alongside the scale
       // instead of teleporting the diagram out from under it. `behavior` is
       // not honoured everywhere (and jsdom has no scrollTo at all), so fall
       // back to the assignments this replaced.
       if (typeof container.scrollTo === 'function') {
-        container.scrollTo({ left: 0, top: 0, behavior: animate ? 'smooth' : 'auto' });
+        container.scrollTo({ left: x, top: y, behavior: animate ? 'smooth' : 'auto' });
       } else {
-        container.scrollLeft = 0;
-        container.scrollTop = 0;
+        container.scrollLeft = x;
+        container.scrollTop = y;
       }
     });
-  }, [setZoom]);
+  }, [setZoom, slack]);
 
   useEffect(() => {
     const container = containerRef.current;

@@ -45,10 +45,10 @@
  */
 
 /** Boxes sliding to new positions; the wrapper rescale and fit scroll match. */
-export const ANIM_MS = 3000;
+export const ANIM_MS = 300;
 
 /** A box fading in on arrival or out on departure. */
-export const BOX_FADE_MS = 1000;
+export const BOX_FADE_MS = 100;
 
 /**
  * How long an arriving box waits before it starts fading in.
@@ -57,10 +57,10 @@ export const BOX_FADE_MS = 1000;
  * so arrivals can wait for the space to be vacated. How much of the movement
  * should finish first is a judgement call to tune by eye.
  */
-export const ENTER_DELAY_MS = 500;
+export const ENTER_DELAY_MS = 200;
 
 /** An edge fading in or out. Independent of the box fade. */
-export const EDGE_FADE_MS = 1000;
+export const EDGE_FADE_MS = 75;
 
 /**
  * How long after a new layout lands before the edges start arriving.
@@ -70,7 +70,7 @@ export const EDGE_FADE_MS = 1000;
  * animation finishing."* Edges cannot slide (an edge is a `d` recomputed per
  * layout, so it snaps), so this only decides WHEN the snap is revealed.
  */
-export const EDGE_ARRIVE_MS = 600;
+export const EDGE_ARRIVE_MS = 250;
 
 /**
  * Hover feedback: dimming a box, thickening an edge under the cursor.
@@ -93,13 +93,18 @@ export const HOVER_MS = 120;
 export const SPINNER_DELAY_MS = 200;
 
 /**
- * Grace period before a faded-out box is unmounted, on top of its fade.
- *
- * A timer and a CSS transition are not the same clock; retiring the box at
- * exactly BOX_FADE_MS can cut the last frame. Not a knob worth tuning — it
- * just needs to be non-zero.
+ * Easing for the box movement, as a cubic bezier (ease-in-out cubic). The
+ * wrapper rescale and fit scroll are CSS-driven and keep CSS `ease`; the two
+ * are close enough that they read as one motion.
  */
-export const FADE_RETIRE_SLACK_MS = 50;
+export const ANIM_EASE: [number, number, number, number] = [0.65, 0, 0.35, 1];
+
+/**
+ * `motion` takes durations in SECONDS; every knob here is in milliseconds so
+ * it can be compared with the CSS transitions elsewhere on the canvas. Convert
+ * at the call site with this, never by hand.
+ */
+export const sec = (ms: number): number => ms / 1000;
 
 /**
  * True when the OS asks for reduced motion (macOS Accessibility → Display →
