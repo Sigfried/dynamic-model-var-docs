@@ -90,6 +90,42 @@ describe('useGraphLayout staleness', () => {
     expect(result.current.layout!.nodes).toHaveLength(2);
   });
 
+  /*
+   * `previous` is what lets the caller animate boxes out of their old
+   * positions rather than unmounting them. It is deliberately a SEPARATE
+   * channel from `layout`: the staleness guard above must keep holding, so
+   * the superseded result is never served as if it were current.
+   */
+  it('exposes the superseded layout as `previous`, paired with its own spec', async () => {
+    deferrals.length = 0;
+    const wide = specOf(['Person', 'Participant', 'Observation']);
+    const narrow = specOf(['Person']);
+
+    const { result, rerender } = renderHook(
+      ({ spec }) => useGraphLayout(spec),
+      { initialProps: { spec: wide } },
+    );
+    await act(async () => { deferrals[0](resultFor(wide)); });
+    await waitFor(() => expect(result.current.layout).not.toBeNull());
+    // Nothing is superseded while the current spec's own layout is showing.
+    expect(result.current.previous).toBeNull();
+
+    rerender({ spec: narrow });
+    // The guard still holds — `layout` is null, NOT the wide result...
+    expect(result.current.layout).toBeNull();
+    // ...but the wide result is still reachable for the animation, and it
+    // carries the spec it was computed from so it cannot be mistaken for
+    // something joinable against the caller's current view model.
+    expect(result.current.previous!.spec).toBe(wide);
+    expect(result.current.previous!.layout.nodes.map(n => n.id))
+      .toEqual(['Person', 'Participant', 'Observation']);
+
+    // Once the new generation lands it is no longer "previous".
+    await act(async () => { deferrals[1](resultFor(narrow)); });
+    await waitFor(() => expect(result.current.layout).not.toBeNull());
+    expect(result.current.previous).toBeNull();
+  });
+
   it('clears the layout when the spec empties out (last entity unchecked)', async () => {
     deferrals.length = 0;
     const spec = specOf(['Person']);

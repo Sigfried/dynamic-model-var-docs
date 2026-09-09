@@ -13,6 +13,7 @@ import elkWorkerUrl from 'elkjs/lib/elk-worker.min.js?url';
 import type {
   GraphSpec, LayoutEngineOptions, LayoutResult, PlacedNode, RoutedEdge, EdgeSection,
 } from './types';
+import { recordElkTiming } from './elkTiming';
 
 export class ElkLayoutEngine {
   private elk: ElkInstance | null = null;
@@ -71,7 +72,19 @@ export class ElkLayoutEngine {
     };
 
     const specEdgeById = new Map(spec.edges.map(e => [e.id, e]));
+    // TEMPORARY instrumentation — see ./elkTiming.ts. `cold` matters: cancel()
+    // kills the worker, so the next layout pays worker startup, and that is
+    // the run most likely to be slow.
+    const cold = !this.elk;
+    const t0 = performance.now();
     const out = await this.ensure().layout(root);
+    recordElkTiming({
+      ms: performance.now() - t0,
+      nodes: spec.nodes.length,
+      edges: spec.edges.length,
+      direction,
+      cold,
+    });
 
     const nodes: PlacedNode[] = (out.children ?? []).map(n => ({
       id: n.id,

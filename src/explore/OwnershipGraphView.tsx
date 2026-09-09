@@ -51,7 +51,7 @@ import { EDGE_COLORS, RANGE_COLORS, SIBLING_HEADER_TEXT } from '../config/appCon
 import {
   useGraphLayout, useZoomPan, roundedPath, sectionPoints, mergeTail,
   smoothStepPath,
-  arrowPath, animMs,
+  arrowPath, animMs, FADE_FRACTION, ENTER_DELAY_FRACTION, SPINNER_DELAY_MS,
 } from './graph-core';
 import type { EdgeSection, GraphSpec, GraphSpecPort, PlacedNode, Point } from './graph-core';
 import {
@@ -902,6 +902,44 @@ function LoopIcon({ title }: { title: string }) {
 }
 
 
+/**
+ * A box on its way off the canvas: an inert silhouette that fades where the
+ * real box stood.
+ *
+ * Mounts OPAQUE and flips to transparent on the next frame. Mounting it at
+ * `opacity: 0` outright would not animate at all — there is no starting value
+ * for the transition to run from, so the browser simply paints it invisible.
+ * The double rAF is the reliable form of "after the browser has painted the
+ * first state": one frame to get the element committed with opacity 1, the
+ * next to change it.
+ */
+function LeavingBox({ node }: { node: PlacedNode }) {
+  const [gone, setGone] = useState(false);
+  useEffect(() => {
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => setGone(true));
+    });
+    return () => { cancelAnimationFrame(outer); cancelAnimationFrame(inner); };
+  }, []);
+  return (
+    <div
+      aria-hidden
+      data-leaving={node.id}
+      className="absolute rounded-md border-2 border-slate-500 dark:border-slate-400
+                 bg-white dark:bg-slate-800 shadow-md pointer-events-none"
+      style={{
+        width: NODE_W,
+        height: node.height,
+        transform: `translate(${node.x + PAD}px, ${node.y + PAD}px)`,
+        opacity: gone ? 0 : 1,
+        transition: `opacity ${Math.round(animMs() * FADE_FRACTION)}ms`,
+      }}
+    />
+  );
+}
+
+
 /** Top of the row list: below the header, and below the owners strip if shown.
  *  A merged box needs no extra band — its children are introduced by header
  *  ROWS inside the list, which are ordinary rows as far as geometry cares. */
@@ -1422,7 +1460,7 @@ export default function OwnershipGraphView({
 
   const spec = useMemo(() => buildSpec(vm, direction), [vm, direction]);
 
-  const { layout, inProgress } = useGraphLayout(spec, {
+  const { layout, inProgress, previous } = useGraphLayout(spec, {
     direction,
     usePartitions: true,
     nodeSpacing: 28,
@@ -1436,8 +1474,11 @@ export default function OwnershipGraphView({
   });
 
   const zp = useZoomPan();
-  const contentW = (layout?.width ?? 0) + PAD * 2;
-  const contentH = (layout?.height ?? 0) + PAD * 2;
+  // Fall back to the previous generation's extent while a layout is pending,
+  // so the canvas does not collapse to nothing under the boxes still showing.
+  const geom = layout ?? previous?.layout ?? null;
+  const contentW = (geom?.width ?? 0) + PAD * 2;
+  const contentH = (geom?.height ?? 0) + PAD * 2;
   useEffect(() => {
     if (!layout) return;
     zp.setContentSize(contentW, contentH);
@@ -1490,7 +1531,19 @@ export default function OwnershipGraphView({
   const nudgesRef = useRef(nudges);
   nudgesRef.current = nudges;
   const placed = useMemo(() => {
-    const m = new Map((layout?.nodes ?? []).map(n => [n.id, n]));
+    /*
+     * While a new layout is being computed, `layout` is null (the staleness
+     * guard — see useGraphLayout) and boxes would have nowhere to sit. Falling
+     * back to the PREVIOUS generation's coordinates is what keeps them mounted
+     * and on screen through the gap; when ELK lands, `layout` takes over and
+     * the same DOM elements transition to their new positions.
+     *
+     * Only COORDINATES come from `previous`, never content: everything drawn
+     * inside a box comes from the current `vm`, so there is no cross-generation
+     * join here. A node the new spec dropped is handled separately (`leaving`).
+     */
+    const src = layout?.nodes ?? previous?.layout.nodes ?? [];
+    const m = new Map(src.map(n => [n.id, n]));
     // A dropped pin and an in-flight drag are the same kind of offset; the
     // live one wins while the pointer is down.
     const offsets = new Map(pins);
@@ -1501,13 +1554,77 @@ export default function OwnershipGraphView({
     }
     placedRef.current = m;
     return m;
-  }, [layout, nudges, pins]);
+  }, [layout, previous, nudges, pins]);
 
   /**
    * Drag a node box. Pointer capture keeps the drag alive when the cursor
    * leaves the box; the delta is divided by zoom so a drag tracks the cursor
    * at any zoom level.
    */
+  /*
+   * The spinner appears only if a layout is STILL pending after
+   * SPINNER_DELAY_MS. Rendering it immediately would flash it on every click
+   * on a fast machine, which is the noise the old full-canvas overlay made.
+   */
+  const [showSpinner, setShowSpinner] = useState(false);
+  useEffect(() => {
+    if (!inProgress) { setShowSpinner(false); return; }
+    const t = setTimeout(() => setShowSpinner(true), SPINNER_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [inProgress]);
+
+  /*
+   * ENTER / UPDATE / EXIT, by id, across the two generations.
+   *
+   * `previous` from the hook covers only the gap while ELK runs; it is null
+   * again the instant the new layout lands, which is when the animation
+   * actually plays. So the outgoing positions are retained HERE, in a ref
+   * updated during the gap and read after it — animation bookkeeping the
+   * layout hook has no business owning.
+   *
+   *   entering — in the new layout, absent from the outgoing one. No position
+   *              to slide from, so it fades in after the movers have settled.
+   *   leaving  — in the outgoing layout, absent from the current view model.
+   *              Cannot be rendered from `vm` (it is not there any more), so it
+   *              is drawn as an inert ghost from coordinates alone.
+   *
+   * In the steady state both are empty and every box simply stays.
+   */
+  const outgoingRef = useRef<Map<string, PlacedNode>>(new Map());
+  if (previous) {
+    outgoingRef.current = new Map(previous.layout.nodes.map(n => [n.id, n]));
+  }
+  const outgoing = outgoingRef.current;
+
+  const entering = useMemo(() => {
+    // Nothing "enters" on the very first layout: the whole diagram is new, and
+    // fading all of it in reads as a load, not a transition.
+    if (!layout || outgoing.size === 0) return new Set<string>();
+    return new Set(layout.nodes.filter(n => !outgoing.has(n.id)).map(n => n.id));
+  }, [layout, outgoing]);
+
+  const leaving = useMemo(() => {
+    const live = new Set(vm.nodes.map(n => n.id));
+    return [...outgoing.values()].filter(n => !live.has(n.id));
+  }, [outgoing, vm]);
+
+  /*
+   * Arrivals mount at opacity 0 and flip opaque one painted frame later, for
+   * the same reason `LeavingBox` does it in reverse: a transition needs a
+   * starting value the browser has actually painted, or it just snaps.
+   * `arrived` is the set that has had its flip, so a re-render mid-fade does
+   * not reset one back to transparent.
+   */
+  const [arrived, setArrived] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (entering.size === 0) return;
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => setArrived(new Set(entering)));
+    });
+    return () => { cancelAnimationFrame(outer); cancelAnimationFrame(inner); };
+  }, [entering]);
+
   const startDrag = useCallback((id: string, ev: React.PointerEvent) => {
     if (ev.button !== 0) return;
     // Only drag from inert parts of the box. Starting a drag on a chip, an
@@ -1999,8 +2116,24 @@ export default function OwnershipGraphView({
         ))}
       </div>
 
-      {inProgress && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center text-sm text-gray-400 bg-white/50 dark:bg-slate-900/50">
+      {/*
+        A corner spinner, not the full-canvas sheet this replaces.
+
+        The sheet was reasonable when a pending layout meant a BLANK canvas —
+        there was nothing to obscure. Now the boxes stay up and animate through
+        the gap, so covering them defeats the animation entirely. And it only
+        appears after SPINNER_DELAY_MS, because on a fast machine ELK finishes
+        well inside that and a flicker of "computing" is worse than silence;
+        the delay is what keeps it useful on a slow one without being noise on
+        a fast one.
+      */}
+      {showSpinner && (
+        <div className="absolute top-2 right-2 z-10 flex items-center gap-2 rounded px-2 py-1
+                        text-xs text-gray-500 dark:text-gray-400
+                        bg-white/80 dark:bg-slate-900/80 shadow-sm">
+          <span className="inline-block h-3 w-3 animate-spin rounded-full
+                           border-2 border-gray-300 border-t-gray-600
+                           dark:border-slate-600 dark:border-t-slate-300" />
           Computing layout…
         </div>
       )}
@@ -2015,7 +2148,7 @@ export default function OwnershipGraphView({
            className="w-full h-full overflow-auto cursor-grab">
         <div ref={zp.spacerRef}>
           <div ref={zp.wrapperRef} className="relative">
-            {layout && (
+            {geom && (
               <>
                 <svg
                   ref={svgRef}
@@ -2075,7 +2208,20 @@ export default function OwnershipGraphView({
                       <path d="M0,0L10,3.5L0,7Z" fill={EDGE_COLORS.association} />
                     </marker>
                   </defs>
-                  <g transform={`translate(${PAD}, ${PAD})`}>
+                  {/*
+                    Edges fade out while a new layout is pending and back in
+                    when it lands. They are SVG `d` attributes recomputed per
+                    layout, so unlike the boxes they cannot slide from old
+                    geometry to new — and drawing a route against positions it
+                    was not computed for is worse than briefly not drawing it.
+                    Fading is the interim treatment; interpolating the corner
+                    points is the real fix (BACKLOG "Animating edge geometry").
+                  */}
+                  <g transform={`translate(${PAD}, ${PAD})`}
+                     style={{
+                       opacity: layout ? 1 : 0,
+                       transition: `opacity ${Math.round(animMs() * FADE_FRACTION)}ms`,
+                     }}>
                     {/* The one arrowhead per convergence. Drawn before the edges
                         so a stroke that overshoots its base by a fraction of a
                         px is covered by the head rather than crossing it. */}
@@ -2091,7 +2237,12 @@ export default function OwnershipGraphView({
                         style={{ transition: 'opacity 120ms' }}
                       />
                     ))}
-                    {layout.edges.map(e => {
+                    {/* `layout`, never `geom`: an edge is looked up in the
+                        current view model (it throws otherwise, by design —
+                        see useGraphLayout.test.ts), so it must come from the
+                        CURRENT generation. During the gap there are no edges,
+                        which is what the fade above covers. */}
+                    {(layout?.edges ?? []).map(e => {
                       const spec = edgeById.get(e.id);
                       if (!spec) throw new Error(`Routed edge ${e.id} missing from view model`);
                       const flipped = spec.storageDirection === 'flipped';
@@ -2226,7 +2377,19 @@ export default function OwnershipGraphView({
                         // that is still moving.
                         transition: nudges.has(n.id)
                           ? 'opacity 120ms'
-                          : `transform ${animMs()}ms, opacity 120ms`,
+                          : `transform ${animMs()}ms, opacity ${
+                              Math.round(animMs() * FADE_FRACTION)}ms ${
+                              // An ARRIVING box waits for the movers to settle:
+                              // fading in where another box is still sliding
+                              // through reads as a collision.
+                              entering.has(n.id)
+                                ? Math.round(animMs() * ENTER_DELAY_FRACTION)
+                                : 0}ms`,
+                        // Arrivals start transparent; everything else is opaque
+                        // and stays that way (the dashed context styling below
+                        // does its own dimming via a class).
+                        ...(entering.has(n.id) && !arrived.has(n.id)
+                          ? { opacity: 0 } : {}),
                       }}
                     >
                       <div
@@ -2469,6 +2632,19 @@ export default function OwnershipGraphView({
                     </div>
                   );
                 })}
+
+                {/*
+                  Departing boxes: inert ghosts, fading where they stood.
+
+                  Rendered from coordinates alone rather than from the box JSX
+                  above, for two reasons. Their `vm` entry is GONE — that is
+                  what makes them departing — so there is nothing to render the
+                  real box from. And a live box here would be wrong even if we
+                  could: its ✕ would call `onRemove` for a class already
+                  removed, and its drag handler would pin a node the next
+                  layout knows nothing about. A ghost has no handlers at all.
+                */}
+                {leaving.map(n => <LeavingBox key={`leaving-${n.id}`} node={n} />)}
               </>
             )}
           </div>

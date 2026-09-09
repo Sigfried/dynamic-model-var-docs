@@ -17,4 +17,7 @@ export type { AnchorDir } from './paths';
 export { useGraphLayout } from './useGraphLayout';
 export { useZoomPan } from './useZoomPan';
 export type { ZoomPan } from './useZoomPan';
-export { ANIM_MS, animMs, prefersReducedMotion } from './anim';
+export {
+  ANIM_MS, FADE_FRACTION, ENTER_DELAY_FRACTION, SPINNER_DELAY_MS,
+  animMs, prefersReducedMotion,
+} from './anim';

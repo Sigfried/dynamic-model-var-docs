@@ -8,10 +8,26 @@ import { useEffect, useRef, useState } from 'react';
 import { ElkLayoutEngine } from './elkLayout';
 import type { GraphSpec, LayoutEngineOptions, LayoutResult } from './types';
 
+/**
+ * The previous generation's layout, kept alive so a caller can animate out of
+ * it. NOT joinable against the caller's current view model — that is the whole
+ * point of the staleness guard — so it carries the spec it was computed from
+ * and is only safe to render as a SNAPSHOT (positions and ids, nothing looked
+ * up elsewhere).
+ */
+export interface PreviousLayout {
+  spec: GraphSpec;
+  layout: LayoutResult;
+}
+
 export function useGraphLayout(
   spec: GraphSpec | null,
   opts: LayoutEngineOptions = {},
-): { layout: LayoutResult | null; inProgress: boolean } {
+): {
+  layout: LayoutResult | null;
+  inProgress: boolean;
+  previous: PreviousLayout | null;
+} {
   const engineRef = useRef<ElkLayoutEngine | null>(null);
   if (!engineRef.current) engineRef.current = new ElkLayoutEngine();
 
@@ -53,13 +69,31 @@ export function useGraphLayout(
 
   useEffect(() => () => engineRef.current?.dispose(), []);
 
-  // Hand back nothing while a new spec is still being laid out, rather than
-  // the previous spec's result: a stale layout references node/edge ids the
-  // caller's current view model no longer contains.
+  // `layout` is CURRENT-GENERATION ONLY, and null while a new spec is still
+  // being laid out. Handing back the previous spec's result here caused a real
+  // crash ("Routed edge edge-80 missing from view model", see
+  // useGraphLayout.test.ts): the caller joins these ids against a view model
+  // that no longer contains them.
   //
   // An empty spec is not pending — the effect above short-circuits it without
   // ever calling the engine, so it must not read as perpetually in progress.
   const pending = !!spec && spec.nodes.length > 0;
   const fresh = state && state.spec === spec ? state.layout : null;
-  return { layout: fresh, inProgress: (inProgress || !fresh) && pending };
+
+  /*
+   * The superseded result, exposed SEPARATELY so the caller can keep boxes on
+   * screen at their old positions instead of unmounting them (which is what
+   * made every selection change flash). Bundled with its own spec precisely so
+   * it cannot be mistaken for something joinable against the current view
+   * model.
+   *
+   * Non-null only while ELK is running, i.e. exactly the gap it exists to
+   * cover. A caller that needs the outgoing generation AFTER the new layout
+   * lands (to tell an arriving box from one that merely moved) must retain it
+   * itself — that is animation bookkeeping, and this hook owns layout, not
+   * animation.
+   */
+  const previous = state && state.spec !== spec ? state : null;
+
+  return { layout: fresh, inProgress: (inProgress || !fresh) && pending, previous };
 }
