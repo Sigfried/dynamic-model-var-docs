@@ -7,6 +7,141 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-09 — the popover misplacement, and three wrong diagnoses on the way
+
+One bug took four attempts. The fix is two lines of CSS. This entry is mostly
+about why the first three attempts were wrong, because each was wrong in a way
+that will recur.
+
+### The bug
+
+`@position-try --help-shift`, the last-resort placement fallback, was:
+
+```css
+position-area: none;          /* abandons the anchor */
+inset: 8px auto auto 8px;     /* pins to the viewport's top-left */
+```
+
+`position-area: none` drops the anchor relationship entirely, so the popover
+lands on the viewport corner — over the header, over the left panel, and over
+**its own anchor**. A tall box in an LR diagram leaves no room on any side, so
+every flip fails and this fires. Replaced with two SPANNING fallbacks
+(`inline-end span-all`, `inline-start span-all`) that keep the anchor.
+
+**What actually solved it was Siggie's reframing**, not analysis. I had been
+saying the popover "shouldn't sit over the canvas", which is wrong — the canvas
+is where the room is. Siggie: *"all it really needs to do (since we're not going
+to succeed at getting the popover to avoid everything) is not go on top of what
+it's anchored on."* Stated that way it takes one grep to find the one rule that
+violates it. **Ask what the invariant is before asking what the mechanism is.**
+
+### The three wrong diagnoses, and what each teaches
+
+**1. "My `attributeFilter` caused a mutation storm."** 8a put `data-help-id` on
+hundreds of elements and added `attributeFilter: ['data-help-id']` to the
+observer; I reasoned that React re-rendering the panel would fire it constantly.
+Probed it: **React does not rewrite an unchanged attribute**, so a re-render
+fires nothing. (Worth keeping: `setAttribute` with an UNCHANGED value *does*
+still produce a mutation record. React just doesn't call it.)
+
+**2. "A render-ordering race between `showPopover()` and `data-anchored`."**
+Checked: `setState` inside `useLayoutEffect` flushes before paint, and
+`showPopover` is a plain `useEffect` that runs after. No race.
+
+**3. "`anchorSide` is a memo that runs before the box exists."** This one was a
+REAL latent defect and the fix stands — but it was not this bug. The tell I
+ignored: `anchorSide` only picks a *preference* between sides. Nothing downstream
+depends on it being right, because the fallbacks are supposed to handle a bad
+preference. **A wrong preference cannot be the cause when the failure is in what
+happens after every preference is exhausted.**
+
+The pattern across all three: I inferred from unit probes in jsdom, which cannot
+do layout or anchor positioning at all, about a bug that is entirely about
+layout. The evidence that finally mattered came from Siggie's screenshots —
+specifically an inline style reading `left: 375px; top: 50%` on an element
+rendering somewhere else. **Inline styles lose to exactly one thing:
+`@position-try`.** That should have been the first question asked.
+
+### `--help-shift` was doing real damage twice, in different ways
+
+Before this session it also applied to UNANCHORED steps, because
+`position-anchor` and `position-try-fallbacks` sat on the bare `.help-popover`.
+An `Anchor: none` step resolves to no anchor, the default area cannot resolve,
+the fallback list runs, and `--help-shift`'s `inset` **beat the step's inline
+centring** — position-try overriding inline is the whole point of position-try.
+That is fixed separately, by scoping both declarations to
+`.help-popover[data-anchored]`.
+
+Diagnostic that settled it: the positions Siggie reported as CORRECT (3.10, 4.8,
+5.6, 6.8) were exactly the parsed `Anchor: none` beats. Mapping a symptom list
+onto parsed tour positions was the single most useful probe of the session.
+
+### `fitViewport` — built up, then deleted
+
+`useZoomPan` had a `fitViewport` that shrank the fit by the popover's overlap
+with the canvas. I extended it (adding a `freeLeft` so the caller could scroll
+past the popover) and wrote 8 tests, and then Siggie said: *"why don't you just
+remove any attempt for zoom to account for popovers?"* — and was right. It was
+compensating in the zoom code for a placement problem that belongs in
+`HelpLayer`, which meant tracking a rect it does not own and guessing which side
+was free. It got that wrong twice: it could fit into a sliver, and
+`zoomToFit`'s scroll-to-origin parked the diagram back under the popover it had
+just made room around. Deleted.
+
+Its own comment claimed "the popover is a fixed 320px-wide column" — false; a
+step can author `Width: 800`. That stale assumption is what made scroll-to-origin
+look safe.
+
+### A false claim that was load-bearing: "ELK destroys and rebuilds boxes"
+
+This sat in three comments and in HELP_PACKAGE_PLAN, and it is **wrong**.
+Siggie: *"my understanding is that ELK doesn't touch boxes, just calculates
+layout."* Correct — node boxes are `key={n.id}` with a CSS transform transition,
+so React reconciles them by id and a relayout MOVES the same DOM element.
+Measured with a probe.
+
+It mattered: it was the stated justification for the tagging effect's
+re-resolution, and the reason I believed publishing `anchorSide` from that effect
+would fix step 3.2. A box's only `childList` events are its first insertion and
+its removal from the selection. **A claim repeated in four places is not
+evidence; it is one claim.**
+
+### Findings for the re-render work (task 5)
+
+Not fixed, and not investigated beyond this — but measured in passing:
+
+- **`zoomToFit()` runs on EVERY new layout**
+  (`OwnershipGraphView.tsx`, the `[layout, contentW, contentH]` effect), and
+  `useZoomPan` sets the wrapper's `scale()` **imperatively in a rAF with no
+  transition**. So every select/deselect instantly rescales the whole canvas.
+  That is what reads as *"total repaint on every select/deselect"* — the boxes
+  underneath really are transitioning, but an untransitioned rescale of their
+  container swamps it. This is the concrete lead for task 5.
+- **`nudges` is already cleared on every layout**; only `pins` survive, and only
+  within one selection (`setPins(new Map())` on `subgraph` change). So boxes DO
+  return to ELK's placement on relayout — the thing Siggie wanted is mostly
+  already true.
+
+### Corrections made to my own claims in this session, so they are not re-cited
+
+- I told Siggie edges breaking on drag was **deliberate**, quoting a comment
+  saying *"edges keep ELK's original routing… that mismatch is the point"*
+  (`dragRoutes`, the "only edges with a nudged endpoint are rerouted" block).
+  That comment is STALE and I should not have cited it as design intent.
+  `dragRoutes` DOES reroute the edges of moved nodes.
+
+  Siggie's description of the real behaviour: edges do move on drag, *"but they
+  don't avoid other boxes. and sometimes parts of them get hidden somehow."* So
+  the reroute is naive geometry with no obstacle awareness, plus some clipping.
+  A genuine open bug (see BACKLOG § "Dragging is unfinished"), not a choice.
+
+  ⚠️ And the division of labour is NOT in question: Siggie, same message,
+  *"letting ELK control relayout when entities are added/removed is still
+  correct."* Drag is a local override between relayouts. Do not reopen that.
+- I committed a comment attributing the 3.2/8.2 fix to `anchorSide`. It was
+  wrong and is removed; the `anchorSide` change itself stays on its own merits.
+
+---
 ## 2026-09-08, tasks 8a + 8b — flat tags, and dragging
 
 Both shipped. What the plan had right, what it had wrong, and the things a future
