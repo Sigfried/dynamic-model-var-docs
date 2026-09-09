@@ -386,11 +386,8 @@ export default function HelpLayer() {
    *  - a box LEAVES the document when the selection changes under the step, and
    *    a tag written on it goes with it.
    *
-   * ⚠️ It was long claimed here that "the diagram destroys and rebuilds boxes as
-   * it relayouts". That is WRONG (measured 2026-09-09): node boxes are
-   * `key={n.id}` with a CSS transform transition, so React reconciles them by id
-   * and a relayout MOVES the same DOM element. Do not reintroduce polling or
-   * re-tagging on the strength of that claim.
+   * A relayout alone does NOT need re-tagging: boxes are `key={n.id}`, so React
+   * moves the same element rather than replacing it.
    *
    * A `MutationObserver` rather than the timer this replaced, because the
    * question is now "has the element been replaced" -- an event the DOM
@@ -408,28 +405,15 @@ export default function HelpLayer() {
       tagged = el;
       setAnchored(!!el);
       /*
-       * The PREFERRED SIDE is published from here, not computed in a memo.
+       * The preferred side is published from here rather than computed in a
+       * memo, because it asks "is this element inside an LR canvas" -- a
+       * question about the ELEMENT, which does not exist when a step opens: the
+       * box arrives with the render the step's `Change:` causes. A memo keyed on
+       * the step answered it too early and cached `undefined`.
        *
-       * It asks "is this element inside an LR canvas", which is a question about
-       * the element -- so it has to be answered whenever the element is, and the
-       * element often does not exist yet: the box arrives with the render the
-       * step's `Change:` causes. A `useMemo` keyed on the STEP ran once, usually
-       * too early, got null, and left the side undefined for that step and every
-       * later one that reused the value.
-       *
-       * ⚠️ NOT because "ELK destroys and rebuilds boxes" -- that claim is in
-       * several comments here and it is WRONG (measured 2026-09-09). Node boxes
-       * are `key={n.id}` with a CSS transform transition; React reconciles them
-       * by id, so a relayout that keeps the same nodes reuses the same DOM
-       * elements and merely moves them. The only `childList` event for a box is
-       * its first insertion or its removal from the selection.
-       *
-       * That is what "misplaced from 3.2 onwards, forwards and backwards"
-       * was (Siggie, 2026-09-09): with no side, an LR step preferred BESIDE the
-       * box, found no room, flipped twice and fell through to `--help-shift`,
-       * which pins to the top-left corner. Which step it first bit depended on
-       * relayout timing, hence incognito breaking at 8.2 and a warm profile
-       * at 3.2.
+       * It is only a PREFERENCE. Nothing depends on it being right; see
+       * `help.css` for the fallbacks, which is where placement is actually
+       * guaranteed.
        */
       setAnchorSide(el?.closest('[data-graph-direction]')
         ?.getAttribute('data-graph-direction') === 'RIGHT' ? 'below' : undefined);

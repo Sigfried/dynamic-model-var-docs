@@ -77,10 +77,8 @@ re-resolution necessary:
 - the element often does not exist when the step opens (a step applies its
   `State:` and the row it points at is created by the render that state causes);
 - **a box leaves the document when the selection changes under a step**, so a
-  tag written on it goes with it. (It was long claimed here that ELK "destroys
-  and rebuilds boxes as it relayouts" — that is wrong, measured 2026-09-09:
-  boxes are `key={n.id}` with a transform transition, so a relayout MOVES the
-  same element.)
+  tag written on it goes with it. A relayout alone does not: boxes are
+  `key={n.id}`, so React moves the same element rather than replacing it.
 
 The difference from the poll it replaced is that "has the element been replaced"
 is an event the DOM announces, while "where is it now" was only answerable by
