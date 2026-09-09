@@ -324,63 +324,35 @@ construction rather than by ordering.
 app, rendered at exactly one call site (`ExploreApp.tsx`), so there is no second
 one to keep consistent with.
 
-⚠️ **Dragging is blocked by the poll, but NOT by the whole migration** —
-re-examined 2026-09-08, and the earlier "sequence this after §1" was too
-pessimistic. `popoverPosition` is called inline in the render and returns a
-fresh `style` every time, so any dragged `left`/`top` is stomped on the next
-tick of `setInterval(measure, 250)`. What dragging needs is for the popover's
-position to be computed ONCE and then left alone — a "the viewer has moved
-this" flag that turns the computed style into an initial value instead of a
-per-render assertion. That is a small change and it does not require CSS
-anchor positioning.
+✅ **Dragging is unblocked** — the positioning migration (HELP_PACKAGE_PLAN §1)
+shipped 2026-09-08, and it was the right way round. `popoverPosition` no longer
+returns a computed `left`/`top` at all, so there is nothing to stomp a dragged
+one: a popover the browser is not repositioning simply stays where it was put.
+The RING, which is the consumer that genuinely needs continuous tracking (a
+dragged box must not slide out from under its own highlight), gets it from
+`anchor()`/`anchor-size()` for free.
 
-**What the poll is actually keeping alive is the RING, not the popover.**
-`rect` drives both (`HelpLayer.tsx`: the `.help-spotlight` overlay and
-`popoverPosition`), and they want opposite things — the popover should stay
-where it was put, while the ring must track its anchor through a drag or a
-relayout, or a dragged box slides out from under its own highlight. Splitting
-those two consumers is the actual unit of work:
+The alternative considered and not taken was to split the two consumers — poll
+for the popover only until its anchor first resolved, and give the ring a
+`ResizeObserver`. Siggie, 2026-09-08: *"i generally think that finding the screen
+position of one thing and then using that to set the position of another thing
+is kludgy and css should make it so we don't have to do that."* That made the
+split the worse deal: it would have kept the measure-then-position machinery
+alive and paid for the drag by adding one more piece of state to it.
 
-- **the popover** — poll only until the anchor first resolves, then stop.
-  `resize` and `scroll` stay; they are events, not a timer.
-- **the ring** — needs continuous tracking, so under a split it is the awkward
-  leftover, wanting a `ResizeObserver`/`MutationObserver` on the canvas to
-  replace the timer for that one job. Under the MIGRATION it is not awkward at
-  all: `anchor()`/`anchor-size()` size a box to its anchor in four `calc()`s
-  (HELP_PACKAGE_PLAN §1, step 3). Its awkwardness is an artefact of splitting,
-  not a property of the ring.
-
-So the two consumers CAN be split, and that is what makes dragging reachable
-without the migration.
-
-⚠️ **But do not read that as a recommendation to split them instead.** Siggie,
-2026-09-08, on being shown that plan: *"i generally think that finding the
-screen position of one thing and then using that to set the position of another
-thing is kludgy and css should make it so we don't have to do that."* That is
-right, and it makes the split a WORSE deal than it looks: it keeps the measure
-→ set-position machinery alive, and pays for the drag by adding one more piece
-of state to it. The migration deletes the machinery, and dragging then falls out
-for free — a popover the browser is not repositioning has nothing to stomp a
-dragged position.
-
-The counting that makes this cheap is in HELP_PACKAGE_PLAN §1: **44 of the 48
-resolver anchors in the live content are `node-box:`**, which is one
-`anchor-name` at one render site, and `slot-row` — the awkward attribute-pair
-case — is used by nothing. The migration is not the big-bang it has been
-treated as.
-
-Rough estimate unchanged overall (**~1 day**). Take the split only if the
-migration is blocked on browser support (§1 has the numbers: Baseline *newly*
-available, Jan 2026, ~91% traffic), not to get dragging sooner.
+Rough estimate unchanged overall (**~1 day**), and what remains of it is the
+DRAWER: making it an overlay like the others, and giving the three of them one
+drag/resize model.
 
 ⚠️ **"Apply the change before anchoring" does not work as a fix**, considered
 and rejected 2026-09-08. There is no synchronous moment when a step's `Change:`
 is "done": the chain is push change → React re-render → new graph spec → **ELK
 lays out in a worker** → async result → boxes render. The layout is genuinely
 off-thread, so nothing can order itself behind it. The existing 600ms
-`WAIT_MS` cap (hold the popover hidden until `rect` arrives, then give up and
-centre) is already the right shape for that problem; what is missing is only
-that finding the anchor does not STOP the poll.
+`WAIT_MS` cap — hold the popover hidden until the anchor resolves, then give up
+and centre — is the right shape for that problem, and it survived the
+positioning migration for exactly that reason: "has the element appeared yet" is
+a different question from "where is it", and only the second one went away.
 
 ---
 

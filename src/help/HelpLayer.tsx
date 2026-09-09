@@ -2,39 +2,46 @@
  * Everything the help/tour system draws: hint dots, the popover, and the tour's
  * prev/next chrome.
  *
- * Positioning is done with `getBoundingClientRect` against the live anchor
- * rather than CSS anchor positioning (`anchor-name` / `position-anchor`,
- * Baseline 2026). CSS anchoring remains the right end state and would delete
- * real code: the resize/scroll listeners AND the 250ms polling interval below,
- * the flip/clamp in `placePopover`, its `EST_H` *estimate* of the popover's own
- * height, and the smooth-scroll settling race.
+ * **Positioning is CSS anchor positioning** (`anchor-name` / `position-anchor`,
+ * Baseline January 2026). Nothing here reads a screen position to set another
+ * element's: the browser holds the anchor relationship and keeps it true through
+ * scrolls, resizes and canvas relayouts, with no listener, no timer and no
+ * re-render. Siggie, 2026-09-08, on why: *"finding the screen position of one
+ * thing and then using that to set the position of another thing is kludgy and
+ * css should make it so we don't have to do that."*
  *
- * It is deferred for a SEQUENCING reason, not a technical one (2026-08-27,
- * revised): the resolvers for `entity-row`, `slot-row` and friends point at
- * rows created and destroyed as the diagram redraws, and those elements do not
- * carry `data-help-id` — so a blanket `[data-help-id] { anchor-name: ... }`
- * rule would not cover them, and migrating before the anchor model settled
- * meant doing it twice.
+ * **How the active anchor is named.** `position-anchor` names ONE anchor, but a
+ * step's anchor is dynamic — whichever element `resolveAnchor` returns. So the
+ * ACTIVE element is tagged `data-help-anchor` as the step changes, and one rule
+ * in `help.css` gives that attribute `anchor-name: --help-anchor`; the popover
+ * and the spotlight both point at `--help-anchor`.
  *
- * The previously recorded reason — "assigning per-anchor `anchor-name` from
- * script is not obviously simpler than measuring" — was weaker than it looked:
- * a single CSS rule can assign anchor names for the tagged case without any
- * script. That is not the blocker; the resolver-backed anchors are.
+ * That is a WRITE to one element per step, not a per-frame read of positions,
+ * which is why it does not reintroduce what this replaced. It is also why there
+ * are no per-kind `anchor-name` rules: the element comes from the resolver, so
+ * `help-id`, `node-box`, `slot-row` — whose (`data-row`, `data-declaring-class`)
+ * PAIR no single CSS selector expresses — and any kind a future host registers
+ * all work the same way, and `src/help/` still knows none of their names.
  *
- * **Those resolvers now exist** (S3b, 2026-08-27; `explore/helpResolvers.ts`),
- * so the sequencing reason is discharged and the migration is unblocked — it
- * is task 11 in docs/TASKS.md. What it must handle: the rows the resolvers
- * find are marked with `data-class-row` / `data-entity-row` / `data-row` /
- * `data-node-id`, so it needs anchor-name rules per attribute rather than one,
- * and `slot-row` picks its element by a PAIR of attributes, which no single
- * `anchor-name` rule expresses. The popover already uses the **Popover API**
- * for top-layer rendering, which is the part that removes the portal.
+ * Hint dots are the exception, and need per-element names: many are on screen at
+ * once, each anchored to a different element. They get `--help-hint-<n>`, from
+ * the same one write per element.
+ *
+ * What stays numeric here is the popover's OWN size — `autoWidth`, `navMinWidth`
+ * and the `CHAR_W`/`LINE_H` metrics they share. Those are choices about how wide
+ * prose should be, not measurements of anything on screen, and CSS anchoring
+ * does not answer them. (`EST_H`/`estHeight`, which guessed the popover's own
+ * height in order to place it, are gone: `position-try-fallbacks` and
+ * `position-area` use the real one.)
+ *
+ * The popover also uses the **Popover API** for top-layer rendering, which is
+ * what removes the portal.
  */
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
 import { useHelp } from './helpContext';
-import type { HelpAnchor, Offset, PopoverSide } from './parseHelpContent';
+import type { Offset, PopoverSide } from './parseHelpContent';
 import TourMap from './TourMap';
 import './help.css';
 
@@ -95,6 +102,37 @@ function lsSet(key: string, value: string): void {
 /** Namespace for `Once:` keys, so a help preference is identifiable in a
  *  storage inspector and cannot collide with the app's own `bdchm-*`. */
 const ONCE_PREFIX = 'help-once-';
+
+/**
+ * The attribute that marks the CURRENT anchor, and the anchor name `help.css`
+ * gives it. Paired here so the two cannot drift apart.
+ *
+ * One name, moved from element to element, rather than a name per element.
+ * `position-anchor` takes a single `<dashed-ident>` and the step's anchor is
+ * dynamic, so something has to say WHICH element is the current one; moving a
+ * well-known name is one attribute write per step. The alternative -- a
+ * generated `--help-<id>` on every taggable element, with the popover's
+ * `position-anchor` set inline -- needs a name for elements the resolvers find
+ * at runtime and would put the whole scheme behind whether `position-anchor`
+ * accepts `var()`. Nothing needs two popovers anchored at once, so the extra
+ * generality buys nothing. (Hint dots DO need many at once; see `HINT_NAME`.)
+ */
+const ANCHOR_ATTR = 'data-help-anchor';
+
+/**
+ * Hint dots need the OTHER shape: a name per element, because every dot is on
+ * screen at once pointing somewhere different, so there is nothing to move.
+ *
+ * The attribute carries the name (`data-help-hint="--help-hint-3"`) and
+ * `help.css` declares one `anchor-name` rule per index. A fixed run of rules is
+ * the price of `anchor-name` being a CSS value rather than something an
+ * attribute can supply -- `attr()` is not usable here -- and `HINT_MAX` is that
+ * run's length. It is generous: help mode shows one dot per help ENTRY whose
+ * element is on screen, which is a dozen or so in practice.
+ */
+const HINT_ATTR = 'data-help-hint';
+const HINT_NAME = '--help-hint';
+const HINT_MAX = 40;
 
 /**
  * Drop every blockquote line from a markdown block.
@@ -173,17 +211,13 @@ export default function HelpLayer() {
   const entry = activeId ? content.entries.get(activeId) : undefined;
 
   /**
-   * Resolve an anchor to its element and to where it currently sits.
+   * Resolve an anchor to its element.
    *
    * Resolution itself lives in the provider, which holds the host's resolver
    * table -- `help-id` is built in, `entity-row` and friends are dmvd's. The
-   * layer only measures what comes back.
+   * layer only tags what comes back; where it SITS is the browser's problem.
    */
   const elementFor = resolveAnchor;
-  const rectOf = useCallback(
-    (a: HelpAnchor | undefined) => elementFor(a)?.getBoundingClientRect() ?? null,
-    [elementFor],
-  );
 
   /**
    * What the popover points at. During a tour this is the POSITION's anchor,
@@ -237,7 +271,17 @@ export default function HelpLayer() {
     );
   };
 
-  const [rect, setRect] = useState<DOMRect | null>(null);
+  /*
+   * Whether the step's anchor RESOLVED -- the one bit of the old `rect` state
+   * that is still anyone's business.
+   *
+   * `rect` carried two things: where the anchor is (now the browser's, via
+   * `--help-anchor`) and whether there is one at all. Only the second is a
+   * decision this component makes: an unresolved anchor means `Anchor: none`
+   * or a row that is not on screen, and the popover centres instead of
+   * pointing. A boolean, not a rect, because nothing here needs the numbers.
+   */
+  const [anchored, setAnchored] = useState(false);
   /** A hovered entry is transient; a clicked one stays until dismissed. */
   const [pinned, setPinned] = useState(false);
   const popRef = useRef<HTMLDivElement>(null);
@@ -285,42 +329,86 @@ export default function HelpLayer() {
       inTour ? navMinWidth() : 0,
     );
 
-  /*
-   * Scroll the anchor into view BEFORE measuring, or the popover lands where
-   * the element used to be.
-   *
-   * Retried until the element turns up, not done once: a step applies its
-   * `State:` and the row it points at is created by the render that state
-   * causes, so at the moment this effect first runs the element frequently
-   * does not exist yet. Scrolling once and giving up left row anchors
-   * unscrolled and, on a long tree, off screen. Scrolls only the FIRST time
-   * an anchor resolves, so the poll below cannot keep yanking the view back
-   * while the viewer is reading.
-   */
-  const scrolledFor = useRef<Element | null>(null);
-  useEffect(() => { scrolledFor.current = null; }, [activeId, anchor]);
+  /** Whether this step has already scrolled its anchor into view. Reset when
+   *  the step (or its anchor) changes, so each one scrolls exactly once. */
+  const scrolled = useRef(false);
+  useEffect(() => { scrolled.current = false; }, [activeId, anchor]);
 
+  /*
+   * Tag the step's element as THE anchor, and scroll it into view.
+   *
+   * This is the one imperative line the migration keeps, and it is a WRITE to
+   * one element when the step changes -- not a read of anything's position, and
+   * not per frame. From here the browser owns the relationship: the popover and
+   * the ring name `--help-anchor` in CSS and track it through scrolls, resizes
+   * and canvas relayouts on their own.
+   *
+   * Doing it by ATTRIBUTE rather than by per-kind `anchor-name` rules in the
+   * stylesheet is what keeps the package seam intact. The element arrives from
+   * the host's resolver, so this works identically for `help-id`, `node-box`,
+   * `slot-row` -- whose (`data-row`, `data-declaring-class`) pair no single CSS
+   * selector can express -- and any kind a host registers later, without
+   * `src/help/` learning one of their names.
+   *
+   * RE-RESOLVED as the DOM changes, not tagged once. Two things make that
+   * necessary, and they are the same two the resolvers' own docs give for
+   * being queried live rather than captured:
+   *
+   *  - the element often does not exist yet when this first runs. A step
+   *    applies its `State:` and the row it points at is created by the render
+   *    that state causes, so tagging once and giving up left row anchors
+   *    untagged and, on a long tree, off screen;
+   *  - the diagram DESTROYS AND REBUILDS boxes as it relayouts. A tag written
+   *    on the old element goes with it, and the ring and popover would be
+   *    anchored to a node that is no longer in the document.
+   *
+   * A `MutationObserver` rather than the timer this replaced, because the
+   * question is now "has the element been replaced" -- an event the DOM
+   * announces -- and not "where is it now", which was only ever answerable by
+   * asking again and again. Between mutations there is nothing to do, which is
+   * the difference from a poll that had to run whether or not anything moved.
+   */
   useLayoutEffect(() => {
-    if (!activeId) { setRect(null); return; }
-    const measure = () => {
+    if (!activeId) { setAnchored(false); return; }
+    let tagged: Element | null = null;
+    const sync = () => {
       const el = elementFor(anchor);
-      if (el && scrolledFor.current !== el) {
-        scrolledFor.current = el;
+      if (el === tagged) return;
+      tagged?.removeAttribute(ANCHOR_ATTR);
+      tagged = el;
+      setAnchored(!!el);
+      if (!el) return;
+      el.setAttribute(ANCHOR_ATTR, '');
+      /*
+       * Scrolled into view only the FIRST time an anchor resolves, so a
+       * relayout that swaps the box out cannot keep yanking the view back
+       * while the viewer is reading. Nothing waits on the scroll settling any
+       * more -- the popover is attached to the element, so it travels with it
+       * rather than being placed where it used to be.
+       */
+      if (!scrolled.current) {
+        scrolled.current = true;
         el.scrollIntoView({ block: 'center', behavior: 'smooth' });
       }
-      setRect(el?.getBoundingClientRect() ?? null);
     };
-    measure();
-    // The anchor moves when the canvas relayouts, the window resizes, or a
-    // smooth scroll settles. Re-measuring on all three is cheaper than trying
-    // to predict which one applies.
-    window.addEventListener('resize', measure);
-    window.addEventListener('scroll', measure, true);
-    const t = window.setInterval(measure, 250);
+    sync();
+    const obs = new MutationObserver(sync);
+    /*
+     * `childList` only, deliberately -- NOT `attributes`.
+     *
+     * Both cases that matter are node insertions and removals: the row that
+     * did not exist yet, and the box ELK replaced. Watching attributes as well
+     * would mean either waking on this effect's OWN tag write (harmless, since
+     * `el === tagged` short-circuits, but pointless) or naming the attributes
+     * the resolvers select on in order to filter -- and those are dmvd's, which
+     * package code must not know (see §2's seam). A row that gains a marking
+     * attribute without any node being inserted is not a case this app produces.
+     */
+    obs.observe(document.body, { childList: true, subtree: true });
     return () => {
-      window.removeEventListener('resize', measure);
-      window.removeEventListener('scroll', measure, true);
-      window.clearInterval(t);
+      obs.disconnect();
+      tagged?.removeAttribute(ANCHOR_ATTR);
+      setAnchored(false);
     };
   }, [activeId, anchor, elementFor]);
 
@@ -333,12 +421,12 @@ export default function HelpLayer() {
    * the box. Three separate movements for one `next`.
    *
    * The cause is the order the effects run in: `showPopover` is gated on
-   * `entry`, which is set the instant the position changes, while `rect` is
-   * only filled in once the anchor element EXISTS, which takes the app a
-   * render (or a canvas relayout) after the change is pushed. So the popover
-   * necessarily rendered against a stale measurement.
+   * `entry`, which is set the instant the position changes, while the anchor
+   * element only EXISTS a render (or a canvas relayout) after the change is
+   * pushed. So the popover necessarily appeared before there was anything to
+   * attach it to.
    *
-   * Held hidden here until `rect` arrives, which collapses that to one
+   * Held hidden here until the anchor resolves, which collapses that to one
    * movement: the app changes, then the popover appears where it belongs.
    *
    * **Narrowly scoped, on purpose.** Only a position that both pushes a
@@ -362,7 +450,7 @@ export default function HelpLayer() {
     if (!waitsForChange) { setChangeSettled(true); return; }
     setChangeSettled(false);
     /*
-     * A cap, not just a rect check. An anchor whose ARGUMENT is wrong
+     * A cap, not just a did-it-resolve check. An anchor whose ARGUMENT is wrong
      * (`entity-row:Participnt`) resolves to null forever -- the known
      * untestable failure in this format -- and without the timeout that step
      * would show no popover at all, which is far worse than showing it
@@ -371,7 +459,7 @@ export default function HelpLayer() {
     const t = window.setTimeout(() => setChangeSettled(true), WAIT_MS);
     return () => window.clearTimeout(t);
   }, [waitsForChange, tourIndex]);
-  const ready = changeSettled || rect !== null;
+  const ready = changeSettled || anchored;
 
   /*
    * Popover API: showPopover puts it in the top layer, above every z-index and
@@ -379,7 +467,7 @@ export default function HelpLayer() {
    *
    * Shown whenever there is an entry to show, NOT only when its anchor
    * resolved. `Anchor: none` is a deliberate authoring choice -- step 1 uses
-   * it -- and gating on `rect` made those steps show nothing at all. An
+   * it -- and gating on a resolved anchor made those steps show nothing. An
    * unresolved anchor centres the popover instead; see `popoverPosition`.
    */
   useEffect(() => {
@@ -398,12 +486,75 @@ export default function HelpLayer() {
     if (!helpMode || inTour) setPinned(false);
   }, [helpMode, inTour]);
 
-  // One hint per entry whose anchor is currently on screen. Keyed by entry id
-  // but resolved through the anchor, so an entry pointing at another element
-  // still gets its dot -- and an anchorless one correctly gets none.
-  const hintIds = helpMode && !inTour
-    ? [...content.entries.values()].filter(e => rectOf(e.anchor)).map(e => e.id)
-    : [];
+  /*
+   * One hint per entry whose anchor is currently on screen, and a per-element
+   * anchor NAME for each -- the one place a single moved name will not do,
+   * since every dot is on screen at once pointing somewhere different.
+   *
+   * The names are positional (`--help-hint-0`, `--help-hint-1`, ...) rather
+   * than derived from the entry id: `anchor-name` takes a `<dashed-ident>`, so
+   * an id would have to be sanitised into one, and the index is already unique
+   * across a single pass. `help.css` declares a fixed run of them, which is
+   * what caps the dot count -- see `HINT_MAX` there.
+   *
+   * Recomputed on every render of a help-mode pass, as before. That is a
+   * resolver query per entry, not a measurement: it asks whether the element
+   * EXISTS, and the browser places the dot on it from there.
+   */
+  const hints = useMemo(
+    () => (helpMode && !inTour
+      ? [...content.entries.values()]
+        .filter(e => elementFor(e.anchor))
+        .slice(0, HINT_MAX)
+        .map((e, i) => ({ id: e.id, title: e.title, name: `${HINT_NAME}-${i}` }))
+      : []),
+    [helpMode, inTour, content, elementFor],
+  );
+
+  /*
+   * Is this step's anchor a box inside the canvas, and which way does the
+   * diagram grow? The one input `popoverPosition` still needs about the app.
+   *
+   * Siggie, 2026-08-28: prefer the axis the DIAGRAM DOES NOT GROW ALONG.
+   * Beside-the-anchor is the wrong default for a node box -- in LR the graph
+   * grows rightwards, so a popover on the right stands exactly where the next
+   * box will be laid out. Clicking `cause_of_death` on step 2 put the new box
+   * under it twice running.
+   *
+   * Note what this is NOT: it used to ask whether the anchor's rect OVERLAPPED
+   * the canvas's, which is a measurement of two elements to decide about a
+   * third. The question was only ever "is this element in the canvas", and
+   * `closest()` answers that from the tree -- no rects, and correct for a box
+   * scrolled out of view, which the overlap test got wrong.
+   */
+  const anchorSide = useMemo(() => {
+    if (!anchored) return undefined;
+    const canvas = elementFor(anchor)?.closest('[data-graph-direction]');
+    return canvas?.getAttribute('data-graph-direction') === 'RIGHT' ? 'below' : undefined;
+  }, [anchored, anchor, elementFor]);
+
+  /*
+   * Tag each hinted element with its dot's anchor name. Same shape as the
+   * active-anchor effect above and for the same reason: a write per element
+   * when the set changes, after which the browser keeps every dot on its own
+   * element with no further involvement from here.
+   *
+   * This is what kills the STALE HINT bug rather than patching it. Dots went
+   * stale because React owned their repositioning and only did it on re-render,
+   * so a dot sat where its element used to be until something else re-rendered
+   * the layer. A dot that is anchored does not have a position of its own to go
+   * stale.
+   */
+  useLayoutEffect(() => {
+    const tagged = hints
+      .map(h => {
+        const el = elementFor(content.entries.get(h.id)?.anchor);
+        el?.setAttribute(HINT_ATTR, h.name);
+        return el;
+      })
+      .filter(Boolean) as Element[];
+    return () => tagged.forEach(el => el.removeAttribute(HINT_ATTR));
+  }, [hints, content, elementFor]);
 
   return (
     <>
@@ -412,28 +563,30 @@ export default function HelpLayer() {
         appearing in space -- Siggie: "getting no highlighting or indication of
         what's going on between steps". Drawn as a fixed overlay rather than by
         restyling the anchor, so it cannot disturb the app's own layout.
+
+        Its whole geometry is four `anchor()`/`anchor-size()` calls in
+        `help.css` -- no inline style, and nothing here to recompute. The 9999px
+        scrim needs nothing either: it is painted relative to the ring's own
+        box, so it follows for free.
       */}
-      {rect && activeId && highlight !== 'none' && (
+      {anchored && activeId && highlight !== 'none' && (
         <div
           className={`help-spotlight${highlight === 'ring' ? ' help-spotlight-ring' : ''}`}
-          style={{
-            left: rect.left - 4, top: rect.top - 4,
-            width: rect.width + 8, height: rect.height + 8,
-          }}
         />
       )}
 
       {/* Hints: one dot per tagged element, so help mode SHOWS what is
           helpable instead of relying on swapped native tooltips. */}
-      {hintIds.map(id => {
-        const r = rectOf(content.entries.get(id)?.anchor);
-        if (!r) return null;
+      {hints.map(({ id, title, name }) => {
         return (
           <button
             key={id}
             className="help-hint"
-            title={content.entries.get(id)?.title ?? id}
-            style={{ left: r.right - 6, top: r.top - 6 }}
+            title={title ?? id}
+            /* The ONE thing the dot must say for itself: which of the declared
+               hint anchors is its own. Everything else about its placement is
+               in `help.css`, off this name. */
+            style={{ positionAnchor: name } as React.CSSProperties}
             /*
              * Hover previews, click pins (Siggie: "when hovering over ? icons
              * would be nice to show popover, then click to make it stay").
@@ -449,19 +602,17 @@ export default function HelpLayer() {
         );
       })}
 
+
       <div
         ref={popRef}
         popover="manual"
         data-help-popover=""
         className="help-popover"
-        /* `bodyBlocks` feeds BOTH the width and the height estimate: they are
-           the same question asked twice, and answering them from different
-           text would place the popover for a size it never has. */
-        style={popoverPosition(rect, inTour ? position?.position : undefined,
+        style={popoverPosition(anchored, inTour ? position?.position : undefined,
                                inTour ? position?.offsetX : undefined,
                                width,
-                               rect ? null : centerRect(),
-                               bodyBlocks.join('\n\n'))}
+                               anchored ? null : centerRect(),
+                               anchorSide)}
       >
         {entry && (
           <>
@@ -700,14 +851,6 @@ function AddressTag({ address, searchFor }: {
 }
 
 /**
- * Place the popover beside its anchor, flipping and clamping to stay on
- * screen. Fixed positioning, so these are viewport coordinates — the same
- * frame `getBoundingClientRect` reports in.
- *
- * A null rect means the anchor is `none` or did not resolve; the popover is
- * centred instead, which is what `Anchor: none` is authored to mean.
- */
-/**
  * Default popover width, used only when nothing better can be worked out —
  * a step with no text at all. `Width:` overrides it, and so does `autoWidth`.
  */
@@ -835,40 +978,36 @@ export function navMinWidth(): number {
 }
 
 /**
- * Roughly how tall the popover will be, at a given width.
+ * The popover's style: its WIDTH, and either "centre it here" or "let CSS
+ * anchor it".
  *
- * Used ONLY to decide placement — whether there is room below a box, and how
- * far up a low-anchored popover has to slide to fit. The browser still does
- * the real layout, and `maxHeight` still catches whatever this gets wrong.
+ * There is no arithmetic about the anchor left in here, because there is no
+ * anchor rect to do arithmetic with. When the step has an anchor, everything
+ * about where the popover goes -- which side, flipping when that side does not
+ * fit, staying on screen, tracking the element through scrolls and relayouts --
+ * is `position-anchor` / `position-area` / `position-try-fallbacks` in
+ * `help.css`, and all this returns is the couple of values CSS cannot know:
+ * how wide the author wants the box, and which side to prefer.
  *
- * The same character metrics as `autoWidth`, plus a fixed allowance for the
- * furniture every popover carries whatever its text: title, the tour's
- * back/next row, and the padding around both. Without it a one-line step
- * estimates at ~24px and reads as fitting anywhere.
+ * The two branches are more alike than they look, and the UNANCHORED one is
+ * the model: `top: 50%` plus a `-50%` translate centres on the popover's real
+ * height, which the browser knows and this function does not. The anchored
+ * branch now says the same kind of thing about both axes at once.
  */
-const CHROME_H = 130;
-
-export function estHeight(text: string, width: number): number {
-  const chars = text.trim().length;
-  const lines = Math.ceil((chars * CHAR_W) / Math.max(1, width - 40));
-  return CHROME_H + lines * LINE_H;
-}
-
 export function popoverPosition(
-  r: DOMRect | null,
+  anchored: boolean,
   side?: PopoverSide,
   offsetX?: Offset,
   width?: number,
   region?: DOMRect | null,
-  /** The text the popover will show, for estimating its height. See `onScreen`. */
-  text = '',
+  /** `'below'` when the anchor is a box in an LR diagram; see `anchorSide`. */
+  growth?: 'below',
 ): React.CSSProperties {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   // An authored width is capped to the viewport: a step should be able to ask
   // for a wide popover, not for one that does not fit on the screen.
   const W = Math.min(width ?? POPOVER_W, vw - 16);
-  const GAP = 12;
 
   /*
    * No anchor: centre it, BOTH ways.
@@ -887,7 +1026,7 @@ export function popoverPosition(
    * the left panel, which is usually what the step is talking about. Falls
    * back to the viewport when no region is named or it is not mounted.
    */
-  if (!r) {
+  if (!anchored) {
     const box = region ?? new DOMRect(0, 0, vw, vh);
     /*
      * Clamped to the VIEWPORT, not to the region. A narrow region would
@@ -916,165 +1055,60 @@ export function popoverPosition(
   }
 
   /*
-   * Pick the side with more room, rather than defaulting to the right and
-   * flipping only when it would overflow. A tall anchor on the LEFT of the
-   * screen (the selection tree) left just enough room on the right for the
-   * popover to fit while still covering the diagram it was describing --
-   * Siggie: "in img-2 it should be on right".
+   * Anchored. `position-area` picks the side; the rest is in `help.css`.
    *
-   * Measuring both gaps and taking the larger one puts the popover in the
-   * empty half of the screen, which is where it belongs regardless of which
-   * side the anchor is on.
-   */
-  /*
-   * A GUESS at the popover's height, used only to CHOOSE between placements —
-   * "is there room below this box", "roughly centre on the anchor". It is not
-   * a promise about the height, and nothing may clamp to it as though it were:
-   * that was the bug (Siggie, 2026-09-08, "popover getting cut off again").
+   * An authored `Position:` beats the automatic rule (Siggie, 2026-08-28): the
+   * automatic rule knows about the diagram's growth axis, and cannot know that
+   * a step is about to open a menu into the space it just chose. It is still
+   * only a PREFERENCE -- `position-try-fallbacks` will flip out of it rather
+   * than let the popover hang off the screen, which is the same "an override
+   * should be able to pick a bad side, not push it off-screen" the clamp used
+   * to enforce by hand.
    *
-   * A step whose text comes from the model can be far taller than any constant
-   * — `{{model-description:ResearchStudy}}` alone is a 400-character paragraph
-   * — and clamping `top` to `vh - EST_H` reserved 260px for a popover needing
-   * 500, so the rest hung off the bottom of the screen with no `maxHeight` to
-   * stop it. The unanchored branch above never had this problem because it
-   * sets `maxHeight` and lets the browser size the box.
+   * `span-*` on the cross axis rather than plain `block-start` etc: it lets the
+   * popover extend along the anchor from wherever it is aligned, instead of
+   * being confined to the one cell beside it.
    */
-  const EST_H = 260;
-
-  /*
-   * What this particular popover is likely to need, rather than the constant.
-   * Falls back to `EST_H` when the caller passes no text — every existing
-   * caller in a test does, and their expectations should not move.
-   */
-  const wantH = text ? estHeight(text, W) : EST_H;
-
-  /**
-   * Finish an anchored placement: keep it on screen vertically, and CAP its
-   * height so a tall popover scrolls inside itself instead of off the bottom.
-   *
-   * The height is genuinely unknown here — that is the whole reason `EST_H` is
-   * a guess — so rather than clamp against a made-up number this gives the
-   * popover all the room between its top and the bottom margin. The browser
-   * then sizes it: short popovers are unaffected, and only one that really is
-   * too tall starts scrolling.
-   *
-   * `top` is still pulled up when it sits below the fold, so a popover anchored
-   * to something near the bottom does not start at `vh - 8` with 8px to live
-   * in. `MIN_H` is the least it may be squeezed to before it is moved up
-   * instead.
-   */
-  const onScreen = (
-    style: { left: number; top: number; width: number },
+  const area = side
+    ? {
+      right: 'inline-end span-block-end',
+      left: 'inline-start span-block-end',
+      top: 'block-start span-inline-end',
+      bottom: 'block-end span-inline-end',
+    }[side]
     /*
-     * Roughly how tall this popover wants to be. Estimated from the TEXT, the
-     * same way `autoWidth` picks the width, because the two questions are the
-     * same one asked twice: at width `W`, this much text takes about this many
-     * lines. Still an estimate — the browser does the real layout — but an
-     * estimate that TRACKS the content instead of a constant that does not.
+     * No authored side. In LR the diagram grows rightwards, so go BELOW the
+     * box; otherwise beside it. `position-try-fallbacks` supplies the "and if
+     * there is no room there" half that used to be an explicit `below + wantH
+     * <= vh - 8` test.
      */
-    wantH = EST_H,
-  ) => {
-    /*
-     * Move it UP to fit before squeezing it.
-     *
-     * Clamping alone put a 500px popover at `top: 712` in a 900px viewport and
-     * capped it to 180px — a sliver, with two thirds of the screen empty above
-     * it. A tall popover anchored low should slide up the screen; only one
-     * that cannot fit anywhere gets capped.
-     */
-    const room = vh - 16;
-    const top = Math.max(8, Math.min(style.top, vh - Math.min(wantH, room) - 8));
-    return { ...style, top, maxHeight: `${vh - top - 8}px` };
-  };
+    : growth === 'below' ? 'block-end span-inline-end' : 'inline-end span-block-end';
 
-  /*
-   * Prefer the axis the DIAGRAM DOES NOT GROW ALONG (Siggie, 2026-08-28).
-   *
-   * Beside-the-anchor is the wrong default when the anchor is a node box: in
-   * LR the graph grows rightwards, so the popover sitting on the right is
-   * standing exactly where the next box will be laid out. Clicking
-   * `cause_of_death` on step 2 put the new box under it twice running, once
-   * from a clean start.
-   *
-   * So in LR the popover goes BELOW the box and in TB it goes BESIDE it —
-   * across the growth axis either way. This only applies when the anchor is
-   * inside the canvas; the selection tree and toolbar are not laid out by ELK
-   * and keep the beside-with-more-room rule that was chosen for them.
-   */
-  /*
-   * An authored `Position:` beats every automatic rule below (Siggie,
-   * 2026-08-28). The automatic rules are about the diagram's growth axis and
-   * the emptier half of the viewport; neither can know that a step is about to
-   * open a menu into the space it just chose. This is the escape hatch for
-   * that, and it is still CLAMPED to the viewport -- an override should be
-   * able to pick a bad side, not push the popover off-screen.
-   */
-  if (side) {
-    const place = {
-      right: { left: r.right + GAP, top: r.top },
-      left: { left: r.left - W - GAP, top: r.top },
-      bottom: { left: r.left, top: r.bottom + GAP },
-      top: { left: r.left, top: r.top - EST_H - GAP },
-    }[side];
-    return withOffset(onScreen({
-      left: Math.max(8, Math.min(place.left, vw - W - 8)),
-      top: place.top,
-      width: W,
-    }, wantH), r, offsetX, vw);
-  }
-
-  const canvas = document.querySelector('[data-graph-direction]');
-  const dir = canvas?.getAttribute('data-graph-direction');
-  const inCanvas = !!canvas && overlaps(r, canvas.getBoundingClientRect());
-
-  if (inCanvas && dir === 'RIGHT') {
-    // Below the box, left-aligned with it, both clamped on screen.
-    const below = r.bottom + GAP;
-    // No room underneath (a box near the bottom) — fall through to beside.
-    if (below + wantH <= vh - 8) {
-      return withOffset(onScreen({
-        left: Math.max(8, Math.min(r.left, vw - W - 8)),
-        top: below,
-        width: W,
-      }, wantH), r, offsetX, vw);
-    }
-  }
-
-  const roomRight = vw - r.right - GAP;
-  const roomLeft = r.left - GAP;
-  const left = roomRight >= roomLeft
-    ? Math.min(r.right + GAP, vw - W - 8)
-    : Math.max(8, r.left - W - GAP);
-
-  // Vertically: centre on the anchor where possible, so a short anchor does
-  // not get a popover hanging far below it. Height is unknown before render,
-  // so this uses a generous estimate rather than measuring and re-rendering.
-  const top = r.top + r.height / 2 - EST_H / 3;
-  return withOffset(onScreen({ left: Math.max(8, left), top, width: W }, wantH), r, offsetX, vw);
+  return {
+    positionArea: area,
+    width: W,
+    ...offsetStyle(offsetX),
+  } as React.CSSProperties;
 }
 
 /**
- * Apply an authored `OffsetX:` to a placement, re-clamping afterwards.
+ * An authored `OffsetX:`, as a margin.
  *
  * `anchor.width * 1.3` is the form Siggie asked for and the reason the offset
  * is relative rather than a constant: every entity box is the same width, so
  * that clears one box plus a gutter and leaves room for the box the step is
  * about to add -- and it stays correct if NODE_W changes.
+ *
+ * `anchor-size()` states that relationship directly, where the old code had to
+ * read `r.width` off a measurement to multiply it. A margin rather than an
+ * adjusted `left`, because the popover no longer HAS a `left` to adjust: it is
+ * placed by `position-area`, and a margin nudges it within that placement --
+ * and, unlike the old code, keeps working when a fallback flips it.
  */
-function withOffset(
-  style: { left: number; top: number; width: number },
-  r: DOMRect,
-  offsetX: Offset | undefined,
-  vw: number,
-): React.CSSProperties {
-  if (!offsetX) return style;
+function offsetStyle(offsetX: Offset | undefined): React.CSSProperties {
+  if (!offsetX) return {};
   const dx = 'px' in offsetX
-    ? offsetX.px
-    : (offsetX.of === 'width' ? r.width : r.height) * offsetX.times;
-  return { ...style, left: Math.max(8, Math.min(style.left + dx, vw - style.width - 8)) };
-}
-
-/** Do two viewport rects intersect at all? */
-function overlaps(a: DOMRect, b: DOMRect): boolean {
-  return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+    ? `${offsetX.px}px`
+    : `calc(anchor-size(${offsetX.of}) * ${offsetX.times})`;
+  return { marginLeft: dx };
 }

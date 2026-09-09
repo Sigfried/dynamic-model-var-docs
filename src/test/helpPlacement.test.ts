@@ -33,30 +33,30 @@ const centreOf = (style: React.CSSProperties, width: number) =>
 
 describe('unanchored popover placement', () => {
   it('centres on the viewport when no region is given', () => {
-    const s = popoverPosition(null, undefined, undefined, 320);
+    const s = popoverPosition(false, undefined, undefined, 320);
     expect(centreOf(s, 320)).toBe(VW / 2);
   });
 
   it('centres on the viewport when the region is not mounted', () => {
-    const s = popoverPosition(null, undefined, undefined, 320, null);
+    const s = popoverPosition(false, undefined, undefined, 320, null);
     expect(centreOf(s, 320)).toBe(VW / 2);
   });
 
   it('centres on the region when one is given', () => {
-    const s = popoverPosition(null, undefined, undefined, 320, CANVAS);
+    const s = popoverPosition(false, undefined, undefined, 320, CANVAS);
     expect(centreOf(s, 320)).toBe(CANVAS.left + CANVAS.width / 2);
   });
 
   it('sits clear of the panel the region excludes', () => {
     // The whole point: a popover centred over the canvas must not overlap the
     // left panel that the step is talking about.
-    const s = popoverPosition(null, undefined, undefined, 480, CANVAS);
+    const s = popoverPosition(false, undefined, undefined, 480, CANVAS);
     expect(s.left as number).toBeGreaterThanOrEqual(CANVAS.left);
   });
 
   it('stays on screen when the popover is wider than the region', () => {
     const narrow = new DOMRect(VW - 200, 0, 200, VH);
-    const s = popoverPosition(null, undefined, undefined, 900, narrow);
+    const s = popoverPosition(false, undefined, undefined, 900, narrow);
     expect(s.left as number).toBeGreaterThanOrEqual(8);
     expect((s.left as number) + 900).toBeLessThanOrEqual(VW - 8);
   });
@@ -64,16 +64,28 @@ describe('unanchored popover placement', () => {
   it('keeps centring vertically on the viewport midline', () => {
     // The popover's height is unknown at placement time, so vertical centring
     // stays a `-50%` translate off the viewport midline regardless of region.
-    const s = popoverPosition(null, undefined, undefined, 320, CANVAS);
+    const s = popoverPosition(false, undefined, undefined, 320, CANVAS);
     expect(s.top).toBe('50%');
     expect(s.transform).toBe('translateY(-50%)');
   });
 
   it('ignores the region once there is a real anchor', () => {
-    const anchor = new DOMRect(400, 300, 120, 40);
-    const withRegion = popoverPosition(anchor, undefined, undefined, 320, CANVAS);
-    const without = popoverPosition(anchor, undefined, undefined, 320, null);
+    const withRegion = popoverPosition(true, undefined, undefined, 320, CANVAS);
+    const without = popoverPosition(true, undefined, undefined, 320, null);
     expect(withRegion).toEqual(without);
+  });
+
+  it('hands an anchored popover to CSS instead of placing it', () => {
+    /*
+     * The migration's central claim, as an assertion: with an anchor there is
+     * no computed geometry at all. Anything that reintroduced a measured
+     * `left`/`top` here would be the kludge coming back.
+     */
+    const s = popoverPosition(true, undefined, undefined, 320, null);
+    expect(s.positionArea).toBeDefined();
+    expect(s.left).toBeUndefined();
+    expect(s.top).toBeUndefined();
+    expect(s.maxHeight).toBeUndefined();
   });
 });
 
@@ -287,90 +299,107 @@ describe('navMinWidth', () => {
  * from the model, and which is nearer 400px tall, was placed with 260px of
  * room and simply hung off the bottom of the screen.
  *
- * The constant did TWO jobs badly. It also gated the LR "put it below the box"
- * rule, so a popover that could not fit below still went below instead of
- * falling through to the beside-with-more-room rule.
+ * **The shape of this test changed with the anchor-positioning migration**
+ * (task 8), and deliberately so. The bug was an `maxHeight` that some BRANCH
+ * forgot, and it was checked by walking every branch and asserting the number
+ * each one computed. There are no branches now and no numbers: `max-height` is
+ * one unconditional declaration in `help.css`, and staying on screen is
+ * `position-try-fallbacks` working against the popover's real height rather
+ * than arithmetic working against a guess at it.
+ *
+ * So this pins the CSS, the way the dots-wrap test above already does. That is
+ * a WEAKER assertion than the old one and the right one: what it can still
+ * catch is someone deleting the declaration that makes the guarantee, and the
+ * class of bug it used to catch — one branch out of five forgetting — cannot
+ * happen to a rule that has no branches.
  */
 describe('a tall popover is kept on screen', () => {
-  /** ~435 characters: a real BDCHM class description. */
-  const LONG = 'x'.repeat(435);
+  /* Comments stripped first, as in the font-size block below: this rule
+     EXPLAINS at length what each declaration replaced, so matching raw text
+     finds prose rather than declarations — including a comment that names
+     `position-visibility` in order to say it is deliberately absent. */
+  const css = readFileSync(resolve(__dirname, '../help/help.css'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  const popover = css.match(/\n\.help-popover\s*\{([\s\S]*?)\n\}/)?.[1] ?? '';
 
-  it('never extends past the bottom of the viewport', () => {
-    // Anchored low, which is where the clipping showed up.
-    const anchor = new DOMRect(110, 550, 350, 560);
-    const s = popoverPosition(anchor, undefined, undefined, 500, null, LONG);
-    const top = s.top as number;
-    const maxH = parseInt(String(s.maxHeight), 10);
-    expect(top + maxH).toBeLessThanOrEqual(VH);
+  it('caps the popover at the viewport height, unconditionally', () => {
+    expect(popover).toMatch(/max-height:\s*calc\(100vh/);
   });
 
-  it('always caps its height, at every anchored placement', () => {
+  it('scrolls the BODY rather than growing past that cap', () => {
+    // The cap is only survivable because the prose scrolls inside it and the
+    // nav row keeps its place; a cap with no scroll just clips the text.
+    expect(css).toMatch(/\.help-popover-body\s*\{[^}]*overflow-y:\s*auto/);
+    expect(css).toMatch(/\.help-popover:popover-open\s*\{[^}]*display:\s*flex/);
+  });
+
+  it('flips out of a side that does not fit instead of hanging off it', () => {
+    // What replaced the flip/clamp arithmetic. Both axes, plus a last-resort
+    // fallback for an anchor too close to a corner for either flip.
+    expect(popover).toMatch(/position-try-fallbacks:[^;]*flip-block/);
+    expect(popover).toMatch(/position-try-fallbacks:[^;]*flip-inline/);
+    expect(css).toMatch(/@position-try\s+--help-shift\s*\{/);
+  });
+
+  it('does not hide itself when the anchor scrolls away', () => {
     /*
-     * The bug was an ABSENT maxHeight, so pin that every branch sets one:
-     * authored side, beside-the-anchor, and the canvas rule below.
+     * `position-visibility: no-overflow` would make a popover vanish
+     * mid-sentence when the reader scrolls away from its anchor. Recorded as a
+     * decision rather than an oversight: the tour scrolls the anchor into view
+     * when the step opens, and the reader is free to scroll off it afterwards.
      */
-    const anchor = new DOMRect(110, 550, 350, 560);
-    for (const side of [undefined, 'left', 'right', 'top', 'bottom'] as const) {
-      const s = popoverPosition(anchor, side, undefined, 500, null, LONG);
-      expect(s.maxHeight, `side=${side}`).toBeDefined();
-      const top = s.top as number;
-      expect(top + parseInt(String(s.maxHeight), 10), `side=${side}`)
-        .toBeLessThanOrEqual(VH);
-    }
-  });
-
-  it('slides UP to fit rather than being squeezed to a sliver', () => {
-    /*
-     * Clamping alone put a 500px popover at top 712 in a 900px viewport and
-     * capped it to 180px — a sliver with two thirds of the screen empty above
-     * it. A tall popover anchored low should move up the screen.
-     */
-    const anchor = new DOMRect(110, 700, 350, 150);
-    const s = popoverPosition(anchor, undefined, undefined, 500, null, LONG);
-    expect(parseInt(String(s.maxHeight), 10)).toBeGreaterThan(300);
-  });
-
-  it('leaves a short popover where it was', () => {
-    // The fix must not move the steps that were already placed correctly.
-    const anchor = new DOMRect(110, 200, 350, 40);
-    const short = popoverPosition(anchor, undefined, undefined, 320, null, 'A short beat.');
-    expect(short.top as number).toBeGreaterThan(8);
-    expect(short.top as number).toBeLessThan(VH / 2);
+    expect(popover).not.toMatch(/position-visibility/);
   });
 });
 
 /**
  * Choosing a SIDE. Siggie, 2026-09-08: "it would have been nice if it had
  * figured out to anchor right instead of bottom. that's entirely manual right
- * now, right?" — it is not; the automatic rule was just deciding on the wrong
- * number.
+ * now, right?" — it is not.
+ *
+ * The RULE survives the migration; the way it is expressed does not. It used
+ * to be "below the box if `below + wantH <= vh - 8`, otherwise beside", which
+ * asked whether the popover fit — and got it wrong, because `wantH` was a
+ * guess. Now the growth axis picks a PREFERRED side and
+ * `position-try-fallbacks` supplies the "and if there is no room there" half
+ * against the real size. So what is testable here is the preference, and the
+ * fallback is pinned above.
  */
-describe('the LR below-the-box rule yields when there is no room', () => {
-  const canvas = () => {
-    document.body.innerHTML = '<div data-graph-direction="RIGHT"></div>';
-    const c = document.querySelector('[data-graph-direction]')!;
-    c.getBoundingClientRect = () => new DOMRect(0, 100, VW, VH - 100);
-    return c;
-  };
-
-  afterEach(() => { document.body.innerHTML = ''; });
-
-  it('goes BESIDE a low box when the popover is too tall to fit below', () => {
-    canvas();
-    // A tall box low on the canvas: 560 tall starting at 550, so "below" is
-    // off-screen for anything but a very short popover.
-    const anchor = new DOMRect(110, 550, 350, 560);
-    const s = popoverPosition(anchor, undefined, undefined, 500, null, 'x'.repeat(435));
-    // Beside means to the RIGHT of the box here, since that is the empty half.
-    expect(s.left as number).toBeGreaterThanOrEqual(anchor.right);
+describe('the popover prefers the axis the diagram does not grow along', () => {
+  it('goes BELOW a box in an LR diagram', () => {
+    /*
+     * Siggie, 2026-08-28: in LR the graph grows rightwards, so a popover on
+     * the right stands exactly where ELK will lay out the next box. Clicking
+     * `cause_of_death` on step 2 put the new box under it twice running.
+     */
+    const s = popoverPosition(true, undefined, undefined, 320, null, 'below');
+    expect(String(s.positionArea)).toMatch(/^block-end/);
   });
 
-  it('still goes below a box with room under it', () => {
-    // The rule exists so the popover does not stand where ELK lays out the
-    // next box; it must keep working when it can.
-    canvas();
-    const anchor = new DOMRect(110, 150, 350, 80);
-    const s = popoverPosition(anchor, undefined, undefined, 320, null, 'A short beat.');
-    expect(s.top as number).toBeGreaterThanOrEqual(anchor.bottom);
+  it('goes BESIDE a box otherwise', () => {
+    const s = popoverPosition(true, undefined, undefined, 320, null);
+    expect(String(s.positionArea)).toMatch(/^inline-end/);
+  });
+
+  it('lets an authored Position: beat the automatic rule', () => {
+    // Siggie, 2026-08-28: the automatic rule cannot know that a step is about
+    // to open a menu into the space it just chose.
+    const s = popoverPosition(true, 'left', undefined, 320, null, 'below');
+    expect(String(s.positionArea)).toMatch(/^inline-start/);
+  });
+
+  it('states an OffsetX against the anchor rather than a measured width', () => {
+    /*
+     * `OffsetX: anchor.width * 1.3` clears one entity box plus a gutter, and
+     * is relative precisely so it stays correct if NODE_W changes. It used to
+     * need a measured `r.width` to multiply; `anchor-size()` says it directly.
+     */
+    const s = popoverPosition(true, undefined, { of: 'width', times: 1.3 }, 320, null);
+    expect(s.marginLeft).toBe('calc(anchor-size(width) * 1.3)');
+  });
+
+  it('still takes a plain pixel OffsetX', () => {
+    const s = popoverPosition(true, undefined, { px: 260 }, 320, null);
+    expect(s.marginLeft).toBe('260px');
   });
 });

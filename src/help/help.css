@@ -1,14 +1,90 @@
 /* Help mode + tour chrome. Plain CSS (not Tailwind) so the whole src/help
    directory can move into a standalone package without a build dependency. */
 
+/* ── CSS anchor positioning ────────────────────────────────────────────────
+   Where everything in this file is placed. Nothing in HelpLayer.tsx reads a
+   screen position any more: it tags an element, and these rules do the rest.
+
+   Baseline "newly available", January 2026, and used unguarded — no `@supports`
+   and no measured fallback (Siggie, 2026-09-08: "i'm fine only supporting
+   current browsers"). That decision is what made the migration a simplification
+   instead of a second implementation living beside the first. Do NOT add a
+   fallback branch back "just in case": if support turns out to be a real
+   problem, that is a new decision with new evidence.
+
+   `--help-anchor` is ONE name that MOVES. HelpLayer puts `data-help-anchor` on
+   whichever element the current step resolves to, so the popover and the ring
+   can name a single anchor while the step's anchor is dynamic. It is deliberate
+   that no rule here keys on `[data-help-id]` or `[data-node-id]`: the element
+   arrives from the HOST's resolver, which is what lets `slot-row` — picked by a
+   PAIR of attributes that no selector expresses — and any kind a host adds
+   later work without this file naming any of them. */
+[data-help-anchor] {
+  anchor-name: --help-anchor;
+}
+
 body.help-mode {
   cursor: help;
 }
+
+/* Hint dots take the other shape: a name PER element, since they are all on
+   screen at once pointing at different things. HelpLayer writes the name it
+   picked into `data-help-hint`, and one rule per index reads it back — a fixed
+   run because `anchor-name` needs a literal `<dashed-ident>` and cannot be fed
+   from an attribute. `HINT_MAX` in HelpLayer.tsx is this run's length; the two
+   must agree, and it caps the dots rather than letting an unmatched one fall
+   back to some other element's anchor. */
+[data-help-hint="--help-hint-0"] { anchor-name: --help-hint-0; }
+[data-help-hint="--help-hint-1"] { anchor-name: --help-hint-1; }
+[data-help-hint="--help-hint-2"] { anchor-name: --help-hint-2; }
+[data-help-hint="--help-hint-3"] { anchor-name: --help-hint-3; }
+[data-help-hint="--help-hint-4"] { anchor-name: --help-hint-4; }
+[data-help-hint="--help-hint-5"] { anchor-name: --help-hint-5; }
+[data-help-hint="--help-hint-6"] { anchor-name: --help-hint-6; }
+[data-help-hint="--help-hint-7"] { anchor-name: --help-hint-7; }
+[data-help-hint="--help-hint-8"] { anchor-name: --help-hint-8; }
+[data-help-hint="--help-hint-9"] { anchor-name: --help-hint-9; }
+[data-help-hint="--help-hint-10"] { anchor-name: --help-hint-10; }
+[data-help-hint="--help-hint-11"] { anchor-name: --help-hint-11; }
+[data-help-hint="--help-hint-12"] { anchor-name: --help-hint-12; }
+[data-help-hint="--help-hint-13"] { anchor-name: --help-hint-13; }
+[data-help-hint="--help-hint-14"] { anchor-name: --help-hint-14; }
+[data-help-hint="--help-hint-15"] { anchor-name: --help-hint-15; }
+[data-help-hint="--help-hint-16"] { anchor-name: --help-hint-16; }
+[data-help-hint="--help-hint-17"] { anchor-name: --help-hint-17; }
+[data-help-hint="--help-hint-18"] { anchor-name: --help-hint-18; }
+[data-help-hint="--help-hint-19"] { anchor-name: --help-hint-19; }
+[data-help-hint="--help-hint-20"] { anchor-name: --help-hint-20; }
+[data-help-hint="--help-hint-21"] { anchor-name: --help-hint-21; }
+[data-help-hint="--help-hint-22"] { anchor-name: --help-hint-22; }
+[data-help-hint="--help-hint-23"] { anchor-name: --help-hint-23; }
+[data-help-hint="--help-hint-24"] { anchor-name: --help-hint-24; }
+[data-help-hint="--help-hint-25"] { anchor-name: --help-hint-25; }
+[data-help-hint="--help-hint-26"] { anchor-name: --help-hint-26; }
+[data-help-hint="--help-hint-27"] { anchor-name: --help-hint-27; }
+[data-help-hint="--help-hint-28"] { anchor-name: --help-hint-28; }
+[data-help-hint="--help-hint-29"] { anchor-name: --help-hint-29; }
+[data-help-hint="--help-hint-30"] { anchor-name: --help-hint-30; }
+[data-help-hint="--help-hint-31"] { anchor-name: --help-hint-31; }
+[data-help-hint="--help-hint-32"] { anchor-name: --help-hint-32; }
+[data-help-hint="--help-hint-33"] { anchor-name: --help-hint-33; }
+[data-help-hint="--help-hint-34"] { anchor-name: --help-hint-34; }
+[data-help-hint="--help-hint-35"] { anchor-name: --help-hint-35; }
+[data-help-hint="--help-hint-36"] { anchor-name: --help-hint-36; }
+[data-help-hint="--help-hint-37"] { anchor-name: --help-hint-37; }
+[data-help-hint="--help-hint-38"] { anchor-name: --help-hint-38; }
+[data-help-hint="--help-hint-39"] { anchor-name: --help-hint-39; }
 
 /* Hint dot: one per helpable element, so help mode SHOWS what is helpable
    instead of relying on swapped native tooltips (see HelpProvider). */
 .help-hint {
   position: fixed;
+  /* At its element's top-right corner, overlapping it by 6px. Said once as a
+     relationship, so a dot cannot go stale while its element moves.
+     `position-anchor` is the one thing the dot sets for itself, inline, since
+     that is what names WHICH element it belongs to. */
+  left: calc(anchor(right) - 6px);
+  top: calc(anchor(top) - 6px);
   z-index: 2147483000;
   width: 14px;
   height: 14px;
@@ -36,9 +112,19 @@ body.help-mode {
 }
 
 /* Ring around the element the current step is about. `pointer-events: none`
-   so it never intercepts a click meant for the app underneath. */
+   so it never intercepts a click meant for the app underneath.
+
+   Four calcs, and the ring tracks its anchor natively — which matters more
+   here than for the popover: a box dragged or relaid out must not slide out
+   from under its own highlight. The `0 0 0 9999px` scrim below needs nothing
+   of its own: it is painted relative to this box, so it follows for free. */
 .help-spotlight {
   position: fixed;
+  position-anchor: --help-anchor;
+  left: calc(anchor(left) - 4px);
+  top: calc(anchor(top) - 4px);
+  width: calc(anchor-size(width) + 8px);
+  height: calc(anchor-size(height) + 8px);
   z-index: 2147482999;
   border: 2px solid #0284c7;
   border-radius: 6px;
@@ -83,7 +169,34 @@ body.help-mode {
   --help-font-size: 13px;
 
   position: fixed;
-  margin: 0;
+  position-anchor: --help-anchor;
+
+  /* The gap between the popover and its anchor, on whichever side it lands —
+     stated once, and still right after a fallback flips it to another side.
+
+     An authored `OffsetX:` arrives as an inline `margin-left` and OVERRIDES
+     this on that one side, which is the right reading of the field: it is a
+     nudge along the inline axis, and the gap it displaces is the gap it was
+     chosen to replace. */
+  margin: 12px;
+
+  /* Flip out of the preferred side rather than hang off the screen, against
+     the popover's REAL height. `flip-block` and `flip-inline` cover a popover
+     placed beside or below its anchor; `--help-shift` is the last resort when
+     neither flip has room.
+
+     `position-visibility: no-overflow` is deliberately NOT set: a popover
+     whose anchor scrolls out of the viewport should stay readable, not vanish
+     mid-sentence. The tour scrolls the anchor into view when the step opens,
+     and the reader is free to scroll away from it afterwards. */
+  position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline, --help-shift;
+
+  /* Never taller than the viewport; the BODY scrolls inside it (see the
+     `:popover-open` rule below). Unconditional, so no placement can be missing
+     it — which is the failure mode this guards (Siggie, 2026-09-08: "popover
+     getting cut off again"). */
+  max-height: calc(100vh - 16px);
+
   padding: 12px 14px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
@@ -108,6 +221,20 @@ body.help-mode {
    Column so a popover taller than the viewport scrolls its BODY and keeps the
    nav row (back / next / ✕) reachable, rather than pushing it off the bottom.
    `maxHeight` is set inline by `popoverPosition`. */
+/* Last-resort fallback: an anchor so close to a corner that neither flip has
+   room. Drops the `position-area` entirely and pins the popover to the
+   viewport's start edges with the same 8px margin the old clamps used, which
+   is worse placement than any flip and better than being off-screen.
+
+   `position-area: none` matters: without it the area still constrains the
+   inset-modified containing block and these insets have nothing to resolve
+   against. */
+@position-try --help-shift {
+  position-area: none;
+  inset: 8px auto auto 8px;
+  margin: 0;
+}
+
 .help-popover:popover-open {
   display: flex;
 }

@@ -11,197 +11,103 @@ BDCHM). Tasks are indexed in [TASKS.md](TASKS.md) and [BACKLOG.md](BACKLOG.md).
 
 ---
 
-## 1. Migrate positioning to CSS anchor positioning
+## 1. Positioning — CSS anchor positioning ✅ SHIPPED 2026-09-08
 
-**The single highest-value item here**, and it is unblocked — S3b's resolvers
-landed 2026-08-27.
+**Done.** `HelpLayer.tsx` no longer reads any element's screen position. The
+popover, the spotlight ring and the hint dots are placed by `anchor-name` /
+`position-anchor` / `position-area` / `position-try-fallbacks` in
+[`help.css`](../src/help/help.css), and the browser keeps them true through
+scrolls, resizes and canvas relayouts.
 
-Placement is measured today (`getBoundingClientRect` in [`HelpLayer.tsx`](../src/help/HelpLayer.tsx)).
-Migrating to `anchor-name` / `position-anchor` **deletes**:
+Siggie, 2026-09-08, on why it was worth doing: *"i generally think that finding
+the screen position of one thing and then using that to set the position of
+another thing is kludgy and css should make it so we don't have to do that."*
+
+### How the active anchor is named
+
+`position-anchor` names ONE anchor, but a step's anchor is dynamic — whichever
+element `resolveAnchor` returns. **The active element is tagged
+`data-help-anchor` as the step changes**, and one rule gives that attribute
+`anchor-name: --help-anchor`; the popover and the ring both point at it.
+
+That is a write to one element per step, not a per-frame read of positions.
+
+⚠️ **There are deliberately NO per-kind `anchor-name` rules** — no
+`[data-help-id]` blanket rule, no `[data-node-id]` rule. This was the plan's
+open design question and it resolved better than either sketched option: the
+element arrives from the HOST's resolver, so tagging it covers every kind at
+once. `src/help/` still names none of dmvd's kinds, which is the §2 seam intact.
+
+**`slot-row` therefore works, and was never a special case.** The kind whose
+`(data-row, data-declaring-class)` PAIR no single `anchor-name` rule can
+express does not need one: its resolver already returns the element, and the
+tag goes on whatever comes back. The flattened-string form drafted under
+BACKLOG § "Anchor kinds" is not needed for this.
+
+**Hint dots are the exception**, and take the other shape: many are on screen at
+once pointing at different elements, so each gets its own `--help-hint-<n>`,
+written into `data-help-hint` and read back by a fixed run of rules (`HINT_MAX`
+in `HelpLayer.tsx` is that run's length — the two must agree).
+
+### What went
 
 - the `resize` and capture-phase `scroll` listeners,
-- the **250ms `setInterval` that polls while any popover is open** — it
-  re-renders on a timer whether or not anything moved,
-- the flip/clamp arithmetic in `placePopover`,
-- its `EST_H` *estimate* of the popover's own height (`position-try` uses the
-  real one),
-- the smooth-scroll settling race.
+- the 250ms `setInterval` that polled while any popover was open,
+- `rect` state and the re-render it forced,
+- the flip/clamp arithmetic in `popoverPosition` (now `position-try-fallbacks`,
+  working against the popover's REAL height),
+- `EST_H = 260` and `estHeight` — the guesses at that height,
+- the `overlaps()` rect test against the canvas. The question was only ever "is
+  this element in the canvas", which `closest()` answers from the tree — and
+  answers correctly for a box scrolled out of view, which the overlap test did
+  not.
+- the smooth-scroll settling race and the `WAIT_MS = 600` hold's reason for
+  existing. (The hold itself stays: it waits for a step's `Change:` to produce
+  the element, which is a different question from where the element is.)
 
-It also **deletes the stale-hint bug outright** rather than patching it: hint
-dots go stale because *React* owns their repositioning and only does it on
-re-render. Hand that to the browser and a dot tracks its anchor through scrolls
-and relayouts with no measurement and no re-render.
+### What stayed
 
-No per-anchor scripting is needed: one blanket rule keyed on `[data-help-id]`
-assigns anchor names for every tagged element.
+**`autoWidth`, `navMinWidth`, `CHAR_W`/`LINE_H`.** They size the popover itself
+— a deliberate design lever (pick a width so prose is not a tall thin column),
+not a measurement of anything on screen — and anchoring does not answer them.
 
-⚠️ The blanket rule does not reach the **resolver-backed** anchor kinds
-(`entity-row`, `slot-row`, `node-box`, `entity-checkbox`), whose elements the
-diagram creates and destroys as it relayouts. Those need anchor names assigned
-where the rows render.
+### Re-resolution, and why it is not a poll
 
-**That is much smaller than it reads** — counted 2026-09-08 against the live
-content file:
+The tagging effect uses a `MutationObserver`, not a timer. Two things make
+re-resolution necessary, and they are the same two the resolvers' own docs give
+for being queried live:
 
-| kind | uses in `help-content.md` |
-|---|---|
-| `node-box:` | 44 |
-| `entity-row:` | 3 |
-| `entity-checkbox:` | 1 |
-| `slot-row:` | **0** |
+- the element often does not exist when the step opens (a step applies its
+  `State:` and the row it points at is created by the render that state causes);
+- **the diagram destroys and rebuilds boxes as it relayouts**, so a tag written
+  on the old element goes with it.
 
-So 44 of 48 resolve to ONE element that already carries `data-node-id={n.id}`
-at a single render site in `OwnershipGraphView.tsx`. One `anchor-name` there
-covers 92% of the anchors in the app. And `slot-row` — the kind whose
-`(data-row, data-declaring-class)` PAIR no single `anchor-name` rule can
-express — is used by nothing today. It is a real constraint on the DESIGN of
-that kind, not a blocker on the migration.
+The difference from the poll it replaced is that "has the element been replaced"
+is an event the DOM announces, while "where is it now" was only answerable by
+asking again and again.
 
-⚠️ **Do not read "0 uses" as "delete it" or "it will never be wanted."**
-Siggie, 2026-09-08: *"don't assume we'll never want `slot-row:` but don't block
-on it not working now."* Row anchoring is the most load-bearing idea in the
-diagram, and TOURS_AND_CONTENT §3 has a drafted step built on it, so a tour
-will very likely want this kind back. The instruction is only to stop letting an
-unused kind gate the migration: ship it with `slot-row` however it lands, and
-give it a real anchor name when a step needs one. The flattened-string form
-under BACKLOG § "Anchor kinds" is one way, and it suits `anchor-name` precisely
-because it collapses the pair into a single string.
+### Browser support — the decision, recorded
 
-### The principle this serves
-
-Siggie, 2026-09-08: *"i generally think that finding the screen position of one
-thing and then using that to set the position of another thing is kludgy and
-css should make it so we don't have to do that."* That is the whole item, and
-it is worth reading `popoverPosition` with it in mind — the UNANCHORED branch is
-already clean (`top: 50%` + `translateY(-50%)` + `maxHeight`, whose own comment
-says *"the browser knows and this function does not — no measurement, no
-re-render, exact at any height"*), while the anchored branch is 100+ lines of
-arithmetic that all exists to guess values the browser already has: `EST_H`,
-`estHeight`, `CHAR_W`/`LINE_H`, the flip/clamp, the poll. They are not five
-problems. They are one.
-
-### What goes, what stays — drawn before starting
-
-The item is "stop measuring one element to place another". Not everything
-numeric in `HelpLayer.tsx` is that, and conflating them would either
-over-promise or delete something load-bearing.
-
-**Goes** — all of it measure-then-position:
-
-| thing | why it exists today |
-|---|---|
-| `setInterval(measure, 250)` | re-asks where the anchor is |
-| `resize` + capture-phase `scroll` listeners | same question, event-driven |
-| `rect` state and the re-render it forces | carries the answer to the styles |
-| the flip/clamp arithmetic | reimplements `position-try` |
-| `EST_H = 260` | guesses the popover's own height to clamp with |
-| `estHeight(text, width)` | guesses it harder, from character counts |
-| the smooth-scroll settling race | a consequence of measuring during a scroll |
-| the `WAIT_MS = 600` hold | only needed because a rect arrives late |
-| the drag blocker (BACKLOG § Overlays) | falls out: nothing recomputes the position |
-
-**Stays** — these are about the popover's OWN size, which no amount of CSS
-anchoring answers:
-
-- **`autoWidth`** picks a width so prose does not become a tall thin column.
-  That is a deliberate design lever with a documented rationale (area, not
-  length buckets), not a measurement of anything on screen. `CHAR_W`/`LINE_H`
-  stay with it.
-- **`navMinWidth`** floors the width at what the nav row needs. Same category.
-- **`maxHeight`** and the internal scroll stay; they are what let the browser
-  size the box.
-
-⚠️ So "three hardcoded estimates of rendered text" (TASKS item 8) is really
-**one that goes and two that stay**. `EST_H`/`estHeight` are guesses standing
-in for a measurement the browser can do; `autoWidth`/`navMinWidth` are choices
-that would still be choices with perfect information. Do not delete the second
-pair in the name of this item.
-
-### The one design question to settle first
-
-`position-anchor` names ONE anchor. The step's anchor is dynamic — whichever
-element `resolveAnchor` returns for the current position. So "a blanket rule
-keyed on `[data-help-id]`" (written above, and true as far as it goes) gives
-every tagged element AN anchor name; it does not say which one the popover
-should use. Two shapes, and this is the first thing to decide:
-
-- **A single well-known name, moved.** Everything keeps a per-element
-  `anchor-name` only if needed; the ACTIVE element additionally gets
-  `anchor-name: --help-anchor` — set by toggling one attribute/class on it as
-  the step changes (`document.querySelector` once per step, not per frame), and
-  `.help-popover`/`.help-spotlight` both say
-  `position-anchor: --help-anchor`. Simple, and one line of imperative code
-  survives — but it is a WRITE to one element per step, not a per-frame read of
-  positions, so it does not reintroduce what this task deletes.
-- **A per-element name, referenced dynamically.** Each element gets its own
-  `anchor-name: --help-<id>` and the popover's `position-anchor` is set inline
-  from the current step. Needs a CSS custom property (`position-anchor` takes a
-  `<dashed-ident>`, so check whether `var()` is permitted there before
-  committing to this) and generated names for the runtime-resolved kinds.
-
-The first is almost certainly right; it is written down because the second is
-the one that looks more "pure CSS" and is the tempting wrong turn. Settle it
-before writing any CSS, since everything below depends on it.
-
-### Start here
-
-1. `anchor-name` on the ten `[data-help-id]` elements via one blanket rule in
-   `help.css`, and on the node box (`data-node-id`, one render site in
-   `OwnershipGraphView.tsx`) — that is 44 of 48 live anchors.
-2. `position-anchor` + `position-area` + `position-try-fallbacks` on
-   `.help-popover`, replacing the anchored branch of `popoverPosition`. The
-   UNANCHORED branch already needs no measurement and is the model to copy.
-3. The `.help-spotlight` ring — the EASIEST of the three, not the fiddly one.
-   It has to match its anchor's box, which is what `anchor()`/`anchor-size()`
-   are for, and it is the only consumer of `rect` besides `popoverPosition`:
-
-   ```css
-   .help-spotlight {
-     position: fixed;
-     position-anchor: --help-anchor;
-     left:   calc(anchor(left) - 4px);
-     top:    calc(anchor(top)  - 4px);
-     width:  calc(anchor-size(width)  + 8px);
-     height: calc(anchor-size(height) + 8px);
-   }
-   ```
-
-   No inline style, no `rect`, no re-render, and it tracks through drags and
-   relayouts natively. The `0 0 0 9999px` scrim needs nothing: it is painted
-   relative to the ring's own box, so it follows for free. The `transition` on
-   `left/top/width/height` keeps working.
-
-   With this and step 2 done, `rect`, `setRect`, the `measure` effect and its
-   three triggers all delete — those two are its ONLY readers.
-4. Hint dots (`help-hint`) last — the stale-hint bug dies with them.
-
-`entity-row` and `entity-checkbox` (4 uses between them) and `slot-row` (0) can
-be left on the measured path in an intermediate commit; they must not gate the
-rest.
-
-### Browser support — re-checked 2026-09-08
-
-MDN: **Baseline "newly available", January 2026** — NOT "widely available".
-Chrome/Edge 125+, Safari 18.2+ (`@position-try` flipping wants 18.4+), and
-Firefox only by default in **147** (2026-01-13), which is what sets the
-Baseline date. Roughly 91% of global traffic.
+MDN: Baseline **"newly available", January 2026** — not "widely available".
+Chrome/Edge 125+, Safari 18.2+, Firefox 147+. Roughly 91% of global traffic.
 
 **Decided (Siggie, 2026-09-08): current browsers only.** *"i'm fine only
-supporting current browsers."* So NO `@supports` guard, no retained measured
-fallback, and no Floating UI rescue path — the measured code is DELETED, not
-demoted. That decision is what makes this a simplification rather than a second
-implementation living beside the first, and it is most of why the item is worth
-doing. Do not reintroduce a fallback branch "just in case": if support turns out
-to be a real problem that is a new decision with new evidence, not a hedge to
-build in now.
+supporting current browsers."* So there is no `@supports` guard, no retained
+measured fallback and no Floating UI path — the measured code was deleted, not
+demoted, which is what made this a simplification rather than a second
+implementation living beside the first. Do not reintroduce a fallback branch
+"just in case": if support turns out to be a real problem that is a new decision
+with new evidence.
 
-(The support numbers above are recorded so a future reader knows what was
-knowingly given up — not as a caution against the decision.)
+### Still open, downstream of this
 
-Two further platform features land on the rest of it: **`popover="hint"`** (hint
-popovers do not close other popovers the way `auto` does) and **interest
-invokers (`interestfor`)**, which is most of the current
-`onMouseEnter`/`onMouseLeave`/`pinned` logic, declaratively.
+- **Dragging** (BACKLOG § Overlays) is now unblocked: nothing recomputes the
+  popover's position, so a dragged `left`/`top` has nothing to stomp it, and the
+  ring follows a dragged box on its own.
+- Two further platform features land on the rest of the help system:
+  **`popover="hint"`** (hint popovers do not close other popovers the way `auto`
+  does) and **interest invokers (`interestfor`)**, which is most of the current
+  `onMouseEnter`/`onMouseLeave`/`pinned` logic, declaratively.
 
 ---
 
@@ -292,14 +198,14 @@ the viewer with no visible way out.
    nothing for attribute rows or edge types — and no help for *reading* the
    diagram, which is what a newcomer most needs. Nobody has walked the UI asking
    "what does a first-timer need explained here?"
-5. **Hints are misplaced until hovered.** Two defects: **stale positions**
-   (`hintIds` and each dot's `left/top` are computed during render, and the
-   250ms re-measure only runs while `activeId` is set — so with no popover open
-   dots are placed once and never updated, which is why *"it moves when i hover
-   over it"*); and **no viewport test** (`rectOf` only checks the element
-   EXISTS, so an entry anchored at a `node-box` scrolled off-canvas still gets a
-   dot at those off-screen coordinates — this is why dots pile onto the first
-   entity drawn).
+5. **Hints have no viewport test.** The dot is drawn wherever its element is,
+   and the check is only that the element EXISTS — so an entry anchored at a
+   `node-box` scrolled off-canvas still gets a dot, which is why dots pile onto
+   the first entity drawn.
+
+   The other half of this — **stale positions**, *"it moves when i hover over
+   it"* — is FIXED by §1: a dot is anchored to its element in CSS and has no
+   position of its own to go stale.
 6. **`?` is overloaded three ways** — hint glyph, keyboard shortcut, and the `?`
    on the help/tour buttons. Fixed by item 3 above.
 

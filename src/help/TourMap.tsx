@@ -16,10 +16,9 @@
  *
  * **Why a panel and not an expansion of the popover.** It was drafted as a
  * collapsible outline inside the popover; Siggie: *"if it's hanging off the
- * popover it's going to be cramped and awkward"*. The popover is already
- * short of room — `EST_H` mis-clamps tall ones (docs/TASKS.md item 8) — and an
- * outline of a twenty-position tour is not a thing to nest inside a card that
- * is itself trying to point at something.
+ * popover it's going to be cramped and awkward"*. An outline of a
+ * twenty-position tour is not a thing to nest inside a card that is itself
+ * trying to point at something.
  *
  * **Why the ⊞ is on the counter line and not its own line.** Also Siggie:
  * *"i don't think it needs its own line"*. It sits with the position readout

@@ -7,6 +7,105 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-08, task 8 — CSS anchor positioning, shipped
+
+The migration in HELP_PACKAGE_PLAN §1. What the live docs now say is the end
+state; this is what was decided along the way and what the plan had wrong.
+
+**The design question resolved better than either option written down.** The
+plan named one thing to settle first: `position-anchor` takes ONE anchor name,
+but a step's anchor is dynamic, so which element gets the name? The two shapes
+sketched were (A) a well-known name moved between elements, with blanket
+`anchor-name` rules on `[data-help-id]` / `[data-node-id]` underneath, and (B)
+a generated name per element with `position-anchor` set inline.
+
+Took A, but **without the blanket rules** — and dropping them is what made the
+whole thing smaller than the plan estimated. The plan's step 1 was "assign
+anchor names via one rule keyed on `[data-help-id]`, plus one on the node box";
+that is a second mechanism (CSS selectors that must know dmvd's attributes) on
+top of the one that actually decides which element is active. Tagging the
+element `resolveAnchor` ALREADY returns needs no selectors at all.
+
+Three consequences the plan did not anticipate:
+
+- **`slot-row` stopped being a special case.** The plan treated its
+  `(data-row, data-declaring-class)` attribute PAIR as a real constraint on the
+  design of that kind — true for a CSS selector, irrelevant when the resolver
+  hands you the element. It works today, with no flattened-string form and no
+  BACKLOG § "Anchor kinds" work needed first. It has 0 live uses, so this is
+  untested by anything but construction; the point is only that nothing about
+  it is now awkward.
+- **`src/help/` names none of dmvd's kinds**, which the blanket-rule version
+  would have broken — `help.css` ships to every host, and a rule keyed on
+  `data-node-id` is dmvd knowledge in package code. §2's seam survived by
+  accident of doing the simpler thing.
+- The "44 of 48 anchors are `node-box:`, so one `anchor-name` at one render
+  site covers 92%" counting, which is what made the task look cheap, turned out
+  not to be load-bearing: no render site was touched at all.
+
+**Option B was not just more complex, it may not work.** `position-anchor`
+takes a `<dashed-ident>`; whether `var()` is permitted there is the thing the
+plan flagged to check before committing. Never had to check it — A does not
+need it.
+
+**Rejected: keeping the retry as a timer.** The first version of the tagging
+effect polled at 100ms until the element appeared, then stopped. That is much
+better than the 250ms forever-poll it replaced, but it is still wrong: the
+resolvers' own docs say the diagram *destroys and rebuilds boxes as it
+relayouts*, so a tag written on the old element goes with it and the ring ends
+up anchored to a detached node. Replaced with a `MutationObserver`. The general
+point, which is the reason the task existed: "has this element been replaced" is
+an event the DOM announces, while "where is it now" was only ever answerable by
+asking over and over.
+
+The observer watches `childList` only. Watching `attributes` too was written
+and backed out: to avoid waking on the effect's own tag write it needs an
+`attributeFilter`, and the attributes worth filtering on are the ones the
+RESOLVERS select on — `data-class-row`, `data-node-id`, `data-declaring-class`
+— which are dmvd's, in package code, which is the seam §2 exists to protect.
+Node insertion and removal covers both cases that actually occur.
+
+**`overlaps()` was a measurement standing in for a tree question.** The LR
+"put the popover below the box" rule asked whether the anchor's rect intersected
+the canvas's. It only ever meant "is this element in the canvas", which
+`closest('[data-graph-direction]')` answers with no rects — and answers
+*correctly* for a box scrolled out of view, which the overlap test got wrong.
+Not something the plan listed; it fell out of having no rects left to compare.
+
+**What the tests had to become, and why that is a real loss.** Six tests in
+`helpPlacement.test.ts` asserted numbers the code no longer computes. Four were
+the "a tall popover is kept on screen" regression suite from earlier the same
+day, which walked every placement branch asserting each one set a `maxHeight`.
+There are no branches now — `max-height` is one unconditional CSS declaration —
+so they became a CSS-text assertion, the way the dots-wrap test already was.
+That is a **weaker** test, and worth naming as such: it catches someone deleting
+the declaration, not a subtle miscalculation. The trade is that the class of bug
+it originally caught (one branch of five forgetting) cannot happen to a rule
+with no branches. Two more became assertions about which `position-area` is
+chosen, which is the part of the LR rule that survives.
+
+**`EST_H` had a live symptom and it is gone with it.** TASKS item 8 flagged a
+tall popover rendering with its bottom cut off (Siggie, 2026-09-07, and again
+2026-09-08: "popover getting cut off again"), because `EST_H = 260` clamped a
+500px popover as though it were 260. Not fixed by a better estimate —
+`position-try-fallbacks` works against the real height, so there is no estimate.
+
+**Kept, against the temptation to tidy:** `autoWidth`, `navMinWidth`,
+`CHAR_W`/`LINE_H`. The plan warned about this specifically and it was right to
+— they look like the same kind of hardcoded guess as `EST_H` and are not. They
+choose how wide prose should be; `EST_H` guessed a value the browser already
+had. Also kept: the `WAIT_MS = 600` hold. The plan listed it under "goes", on
+the grounds that it exists "only because a rect arrives late". That is half
+right — it waits for the ELEMENT to appear after a step's `Change:`, which is a
+different question from where the element is, and ELK laying out in a worker
+means nothing can order itself behind it. Removing it would bring back the
+three-movement flicker from 2026-08-28.
+
+**Not done:** `position-visibility: no-overflow` is deliberately not set, so a
+popover whose anchor scrolls out of view stays readable rather than vanishing
+mid-sentence. Recorded in `help.css` so it does not get "fixed".
+
+---
 ## 2026-09-08, end of session (decisions locked before starting task 8)
 
 Three calls from Siggie, recorded so the next session does not re-open them.
