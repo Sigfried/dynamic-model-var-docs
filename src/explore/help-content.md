@@ -73,60 +73,25 @@ introduced and then use one word.
 - **Title:** The BioData Catalyst Harmonized Model (BDCHM)
 - **Tour:** The BioData Catalyst Harmonized Model
 - Only: panels=0
+- **Description:** 
+  BioData Catalyst ([BDC](https://biodatacatalyst.nhlbi.nih.gov/))
+  is a cloud-based ecosystem where researchers can find and work with
+  [NHLBI](https://www.nhlbi.nih.gov/) data resources.
+  **BDCHM** currently harmonizes nine priority [TOPMed](https://topmed.nhlbi.nih.gov/)
+  cohorts (e.g., the Framingham Heart Study and Women's Health Initiative)
+  and the [INCLUDE Data Hub](https://portal.includedcc.org/), with more on their way.
 - **Anchor:** none
 - **Highlight:** selection-tree
 - **Width:** 800
-- **Description:** 
-  ### Context
-  BioData Catalyst ([BDC](https://biodatacatalyst.nhlbi.nih.gov/))
-  is a cloud-based ecosystem where researchers can find and work with
-  [NHLBI](https://www.nhlbi.nih.gov/) data resources. Studies arrive with
-  their own terminologies, units, and file structures, which are
-  transformed by the Data Model-Based Ingestion Pipeline
-  ([dm-bip](https://linkml.io/dm-bip/)) into a common, harmonized
-  [LinkML schema](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/).
-  <!-- 
-  should BDC and LinkML and pipeline details be put elsewhere so we can get
-  to model content quicker and provide a bit deeper treatment of the context
-  on request?
-
-  used to have this in the BDC context part of Walkthrough:
-  (using [BDC's tools](https://biodatacatalyst.nhlbi.nih.gov/use-bdc/analyze-data/) or otherwise);
-  -->
-- **Beats:**
-  1. sources
-     - Keep: true
-     - Description:
-       ##### Sources
-       Nine priority [TOPMed](https://topmed.nhlbi.nih.gov/)
-       cohorts (e.g., the Framingham Heart Study and Women's Health Initiative)
-       and the [INCLUDE Data Hub](https://portal.includedcc.org/) have been
-       harmonized to it so far with more on their way.
-  2. contents
-     - Keep: true
-     - Description:
-       ##### Contents
-       The model includes 56 entities (LinkML calls them classes; the left panel lists them) with ~340 total attributes
-       falling into one of three attribute types:
-       - primitive data values (e.g., strings, integers)
-       - 52 permissible value sets (e.g., visit categories, units of
-         measure, condition codes)
-       - about 80 links to other entities indicating ownership or
-         containment relationships (e.g., multiple Participant entities
-         can "belong" to a single Person entity)
-
-
-### app-model-mods
-
-- **Title:** What's in the model?
-- **Tour:** The BioData Catalyst Harmonized Model
-- **Description:** 
-  The BDCHM schema provides a flexible, general purpose structure
-  for storing clinical trials data. This Explorer categorizes the
-  entities specified in the model into six areas to make it easier
-  to browse and comprehend. This tour will walk you through each
-  category.
-- **Anchor:** category-row:admin
+- Beats:
+  1. What's in the model?
+     - **Description:** 
+       The BDCHM schema provides a flexible, general purpose structure
+       for storing clinical trials data. This Explorer categorizes the
+       entities specified in the model into six areas to make it easier
+       to browse and comprehend. This tour will walk you through each
+       category.
+     - **Anchor:** selection-tree
 
 
 ### admin-study
@@ -587,16 +552,6 @@ introduced and then use one word.
        which is what makes "six months after enrolment" expressible without
        knowing the calendar date.
      - Anchor: node-box:TimePoint
-  6. what the category is for
-     - Description:
-       ##### What this category is for
-       Nothing here is a subject of study. These are the building blocks
-       everything else is made of — a number with a unit, a moment in time, a
-       file on disk. A researcher reading the model meets them constantly and
-       rarely needs to think about them, which is exactly why they were given
-       their own corner rather than left scattered through the other five.
-     - Anchor: none
-
 
 ### why
 
@@ -658,9 +613,38 @@ introduced and then use one word.
   The **BDCHM Explorer** provides a single-page, highly interactive interface
   allowing you to easily see details of and relationships between specific
   entities or neighborhoods around entities you select.
+  > taken from Tour 1. needs editing:
+
+  Studies arrive with
+  their own terminologies, units, and file structures, which are
+  transformed by the Data Model-Based Ingestion Pipeline
+  ([dm-bip](https://linkml.io/dm-bip/)) into a common, harmonized
+  [LinkML schema](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/).
+  <!-- 
+  should BDC and LinkML and pipeline details be put elsewhere so we can get
+  to model content quicker and provide a bit deeper treatment of the context
+  on request?
+
+  used to have this in the BDC context part of Walkthrough:
+  (using [BDC's tools](https://biodatacatalyst.nhlbi.nih.gov/use-bdc/analyze-data/) or otherwise);
+  -->
 - **Anchor:** none
 - **Change:**
 - **Width:** 700
+- **Beats:**
+  1. contents
+     - Keep: true
+     - Description:
+       > redundant with above
+       ##### Contents
+       The model includes 56 entities (LinkML calls them classes; the left panel lists them) with ~340 total attributes
+       falling into one of three attribute types:
+       - primitive data values (e.g., strings, integers)
+       - 52 permissible value sets (e.g., visit categories, units of
+         measure, condition codes)
+       - about 80 links to other entities indicating ownership or
+         containment relationships (e.g., multiple Participant entities
+         can "belong" to a single Person entity)
 
 ### bdchm-entities
 
