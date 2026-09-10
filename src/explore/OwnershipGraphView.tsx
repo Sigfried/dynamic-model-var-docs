@@ -2458,6 +2458,7 @@ export default function OwnershipGraphView({
                             onInspect={onNodeClick}
                             colorOf={targetColorOf}
                             slotOrder={n.allRows.map(row => row.slot)}
+                            parentOf={id => summaries.get(id)?.parentId}
                           />
                         </div>
                       )}

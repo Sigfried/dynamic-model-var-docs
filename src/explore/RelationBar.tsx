@@ -112,12 +112,20 @@ export interface RelationBarProps {
    * to the end.
    */
   slotOrder?: readonly string[];
+  /**
+   * Is-a parent of a class, so rows can be grouped by family: a row whose
+   * class's parent has a row for the SAME slot on the same side is listed
+   * under that row, marked, instead of alphabetically among strangers.
+   * Siggie, 2026-09-10: Participant's 22 owned entities read as 22 unrelated
+   * things when most of them are one Observation family.
+   */
+  parentOf?: (classId: string) => string | undefined;
 }
 
 type Side = 'left' | 'right';
 
 export function RelationBar({
-  label, rows, onAdd, onRemove, onInspect, colorOf, slotOrder,
+  label, rows, onAdd, onRemove, onInspect, colorOf, slotOrder, parentOf,
 }: RelationBarProps) {
   const [open, setOpenSide] = useState<Side | null>(null);
   const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
@@ -234,6 +242,7 @@ export function RelationBar({
           onInspect={onInspect}
           colorOf={colorOf}
           slotOrder={slotOrder}
+          parentOf={parentOf}
         />,
         document.body,
       )}
@@ -260,7 +269,7 @@ function useClamped(anchor: { x: number; y: number }) {
 }
 
 function RelationPopover({
-  anchor, side, label, rows, onAdd, onRemove, onInspect, colorOf, slotOrder,
+  anchor, side, label, rows, onAdd, onRemove, onInspect, colorOf, slotOrder, parentOf,
 }: {
   anchor: { x: number; y: number };
   side: Side;
@@ -271,6 +280,7 @@ function RelationPopover({
   onInspect?: (id: string) => void;
   colorOf?: ColorOf;
   slotOrder?: readonly string[];
+  parentOf?: (classId: string) => string | undefined;
 }) {
   const { ref, pos } = useClamped(anchor);
 
@@ -290,6 +300,36 @@ function RelationPopover({
     rank(a) - rank(b)
     || a.other.localeCompare(b.other)
     || a.slot.localeCompare(b.slot));
+
+  /*
+   * Then grouped by FAMILY: a row whose class's is-a parent has a row for the
+   * same slot follows that row, marked as a child, instead of sitting
+   * alphabetically among unrelated classes. Participant owns Observation and
+   * its five subclasses through `associated_participant`; listed flat, the
+   * six were scattered across 22 rows and read as 22 unrelated things. Rule 3
+   * makes the forward side the same shape (ObservationSet.observations → each
+   * child), so both sides need it. Recursive, so a grandchild nests too; a
+   * child whose parent has no row here stays flat.
+   */
+  const rowsOfParent = new Map<string, RelationRowVM[]>();
+  const isChild = new Set<RelationRowVM>();
+  if (parentOf) {
+    const bySlotAndClass = new Map(sorted.map(r => [`${r.slot}|${r.other}`, r]));
+    for (const r of sorted) {
+      const p = parentOf(r.other);
+      const parentRow = p === undefined ? undefined : bySlotAndClass.get(`${r.slot}|${p}`);
+      if (!parentRow || parentRow === r) continue;
+      isChild.add(r);
+      const key = `${r.slot}|${p}`;
+      rowsOfParent.set(key, [...(rowsOfParent.get(key) ?? []), r]);
+    }
+  }
+  const ordered: { row: RelationRowVM; depth: number }[] = [];
+  const emit = (r: RelationRowVM, depth: number) => {
+    ordered.push({ row: r, depth });
+    for (const c of rowsOfParent.get(`${r.slot}|${r.other}`) ?? []) emit(c, depth + 1);
+  };
+  for (const r of sorted) if (!isChild.has(r)) emit(r, 0);
 
   const allDrawn = sorted.every(r => r.drawn);
   const distinct = [...new Set(sorted.map(r => r.other))];
@@ -350,8 +390,13 @@ function RelationPopover({
 
       <table className="w-full text-[11px]">
         <tbody>
-          {sorted.map(r => {
+          {ordered.map(({ row: r, depth }) => {
             const kind = POSITION_AXIS[r.position].kind;
+            // The family child's marker goes on the end that names the child.
+            const kid = depth > 0 && (
+              <span aria-hidden className="text-gray-400 dark:text-slate-500 select-none"
+                style={{ paddingLeft: `${(depth - 1) * 0.75}rem` }}>↳ </span>
+            );
             /*
              * DIAGRAM ORDER, always: owner on the left, owned on the right —
              * the same order the canvas lays boxes out, so a row and the line
@@ -371,6 +416,7 @@ function RelationPopover({
             return (
               <tr
                 key={`${r.declaredBy}.${r.slot}->${r.other}`}
+                data-family-depth={depth}
                 className="hover:bg-gray-100 dark:hover:bg-slate-700"
               >
                 {/*
@@ -399,6 +445,7 @@ function RelationPopover({
                   </button>
                 </td>
                 <td className="pl-1 pr-2 py-0.5 text-right whitespace-nowrap">
+                  {side === 'left' && kid}
                   <End cls={owner} row={r} colorOf={colorOf} onInspect={onInspect} />
                 </td>
                 <td className="px-2 py-0.5 font-mono text-gray-400 dark:text-slate-500
@@ -409,6 +456,7 @@ function RelationPopover({
                   <EdgeSample kind={kind} width={30} />
                 </td>
                 <td className="pr-3 py-0.5 whitespace-nowrap">
+                  {side === 'right' && kid}
                   <End cls={owned} row={r} colorOf={colorOf} onInspect={onInspect} />
                 </td>
               </tr>
