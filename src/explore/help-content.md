@@ -134,6 +134,11 @@ introduced and then use one word.
 - **Title:** Category: Admin / Study
 - **Tour:** The BioData Catalyst Harmonized Model
 - **Description:**
+  These are the entities around which study data — describing
+  clinical events and observations, specimens, surveys —
+  are organized.
+  > i'm in the middle of editing this
+
   Eight entities answer *who was studied, by whom, and under what agreement*.
   Nothing here is a measurement — these are the records every other category
   hangs off. Read the diagram left to right: the study comes first, the
