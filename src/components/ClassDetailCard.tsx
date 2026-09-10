@@ -53,7 +53,7 @@ export function ClassDetailCard({ classId, dataService, onClose, onNavigate }: C
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 text-sm px-1"
-            title="Close class detail"
+            title="Close entity detail"
           >
             ✕
           </button>

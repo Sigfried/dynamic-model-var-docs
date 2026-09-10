@@ -88,7 +88,10 @@ only because each page is one focal class with a small UML-ish diagram — they
 cannot show many classes at once. Explore tests whether a **selection-driven
 subgraph** can be as readable as those pages while showing N entities at once.
 
-Terminology: we say **ownership** (has-a), not "containment".
+Terminology: we say **ownership** (has-a), not "containment"; and **entity**, not
+"class", for the things in the boxes — "class" is reserved for LinkML itself and
+for inheritance words (subclass, parent class). Reader-facing wording rules live
+at the top of `src/explore/help-content.md`.
 
 Seven conclusions came out of the technique survey, and they are why the
 diagram is shaped as it is:

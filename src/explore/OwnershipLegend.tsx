@@ -191,7 +191,7 @@ export default function OwnershipLegend({
           </p>
           <Swatches
             className="mt-3"
-            caption="Inside a merged box, a color says which class an attribute belongs to."
+            caption="Inside a merged box, a color says which entity an attribute belongs to."
             items={SIBLING_COLORS.slice(0, 4).map((c, i) => ({
               color: c.text,
               swatch: c.fill,

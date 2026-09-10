@@ -9,6 +9,14 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 `src/test/helpContent.test.ts`. Package-level design lives in
 [docs/HELP_PACKAGE_PLAN.md](../../docs/HELP_PACKAGE_PLAN.md).
 
+**Terminology.** The things in the boxes are **entities**, and their rows are
+**attributes**. Say "class" only when talking about LinkML itself or about
+inheritance (subclass, parent class), where the word is the signal that we
+mean is-a and not ownership — "parent" alone is ambiguous in an app whose
+left panel nests entities under their owners. Ownership is owner/owned. No
+hybrids ("entity class"): state the LinkML equivalence once where the term is
+introduced and then use one word.
+
 <details>
 <summary><b>TODO</b></summary>
 
@@ -98,7 +106,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
      - Keep: true
      - Description:
        ##### Contents
-       The model includes 56 entity classes (left panel) with ~340 total attributes
+       The model includes 56 entities (LinkML calls them classes; the left panel lists them) with ~340 total attributes
        falling into one of three attribute types:
        - primitive data values (e.g., strings, integers)
        - 52 permissible value sets (e.g., visit categories, units of
@@ -126,7 +134,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 - **Title:** Category: Admin / Study
 - **Tour:** The BioData Catalyst Harmonized Model
 - **Description:**
-  Eight classes answer *who was studied, by whom, and under what agreement*.
+  Eight entities answer *who was studied, by whom, and under what agreement*.
   Nothing here is a measurement — these are the records every other category
   hangs off. Read the diagram left to right: the study comes first, the
   individual next, and what happened to them last.
@@ -208,7 +216,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
        off. Clinical, Observations, Laboratory and Files all point back at a
        Participant, a Visit, or both — which is why those categories borrow
        Participant and Visit into their own views. Survey is the exception:
-       ten classes and almost no outward references, a self-contained subtree.
+       ten entities and almost no outward references, a self-contained subtree.
      - Anchor: none
 
 
@@ -217,7 +225,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 - **Title:** Category: Clinical
 - **Tour:** The BioData Catalyst Harmonized Model
 - **Description:**
-  Eight classes record *what happened to a participant medically*. Every one of
+  Eight entities record *what happened to a participant medically*. Every one of
   them is a record OF someone, usually AT an encounter — which is why Person,
   Participant and Visit are drawn here too even though they belong to Admin.
   Take them away and Clinical is a pile of disconnected records.
@@ -228,7 +236,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
   1. the borrowed spine
      - Description:
        ##### Three boxes on loan
-       Person, Participant and Visit are Admin classes, pinned into this view
+       Person, Participant and Visit are Admin entities, pinned into this view
        because the category does not mean anything without them. Read the rest
        of the diagram as hanging off Participant: everything to its right is a
        record about that participant.
@@ -290,7 +298,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 - **Title:** Category: Observations / Measurements
 - **Tour:** The BioData Catalyst Harmonized Model
 - **Description:**
-  This is where the numbers live. Twelve classes, but only four ideas: an
+  This is where the numbers live. Twelve entities, but only four ideas: an
   **Observation** (one measured thing), an **ObservationSet** (a group of them
   taken together, like a blood panel), and the **Context** an observation was
   made in. Participant, Visit and BodySite are borrowed from elsewhere, because
@@ -365,10 +373,10 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 - **Title:** Category: Laboratory / Biospecimen
 - **Tour:** The BioData Catalyst Harmonized Model
 - **Description:**
-  Twelve classes about *physical material* — what was collected from a
+  Twelve entities about *physical material* — what was collected from a
   participant, what was done to it, and what was measured on it. Specimen sits
   in the middle and almost everything here is attached to it. Participant is
-  the one borrowed class: a specimen comes FROM someone, and that is the only
+  the one borrowed entity: a specimen comes FROM someone, and that is the only
   outside fact the category needs.
 - **Anchor:** category-row:lab
 - Only: cat=lab
@@ -399,7 +407,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
   4. the four activities
      - Description:
        ##### Four activities
-       A specimen owns a history, and each stage is its own class:
+       A specimen owns a history, and each stage is its own entity:
        **SpecimenCreationActivity** (collected or derived),
        **SpecimenProcessingActivity** (changed without becoming something new),
        **SpecimenStorageActivity** (kept somewhere) and
@@ -419,7 +427,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
        ##### Measuring the specimen
        SpecimenQualityObservation and SpecimenQuantityObservation hang off
        Specimen through `quality_measure` and `quantity_measure`. They are
-       Observations — the same class you just met — pointed at material rather
+       Observations — the same entity you just met — pointed at material rather
        than at a person, which is why they are listed in both categories.
      - Anchor: child-header:SpecimenQualityObservation
   7. Substance
@@ -445,7 +453,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 - **Title:** Category: Survey / Questionnaire
 - **Tour:** The BioData Catalyst Harmonized Model
 - **Description:**
-  Ten classes, and almost no connection to the rest of the model. This is the
+  Ten entities, and almost no connection to the rest of the model. This is the
   one category you can read entirely on its own — nothing outside it needs to
   be borrowed in, and only a couple of attributes reach out. It is two mirrored
   halves: the **questions** on the left, the **answers** on the right.
@@ -488,7 +496,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
        QuestionnaireResponseValue is a *single-valued answer*, and it has five
        subclasses — one each for a decimal, a boolean, an integer, a TimePoint
        and a string. The diagram merges them into one box. A model can either
-       carry one loosely-typed value column or a class per type; BDCHM chose
+       carry one loosely-typed value column or an entity per type; BDCHM chose
        the second.
      - Anchor: node-box:QuestionnaireResponseValue
   6. self-contained
@@ -517,8 +525,8 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 - **Tour:** The BioData Catalyst Harmonized Model
 - **Description:**
   The leftovers, and they are leftovers of two quite different kinds: **files**
-  attached to a participant, and **value types** — the small structured classes
-  that other classes use to hold a number or a date. Both were pulled out here
+  attached to a participant, and **value types** — the small structured entities
+  that other entities use to hold a number or a date. Both were pulled out here
   because they belong to no one category; they are used by all of them.
 - **Anchor:** category-row:other
 - Only: cat=other
@@ -549,7 +557,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
        {{model-description:Document}}
 
        It stands alone on this canvas. Its `focus` attribute points at the
-       universal root class, which the Explorer does not draw, and
+       root of the whole model, a class named Entity that the Explorer does not draw, and
        `related_document` reaches it from Specimen — so both of its edges land
        outside this category.
      - Anchor: node-box:Document
@@ -558,7 +566,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
        ##### Quantity
        {{model-description:Quantity}}
 
-       This is the most reused class in BDCHM. Observations of every kind hold
+       This is the most reused entity in BDCHM. Observations of every kind hold
        their value in one; so do an assay's detection limits, a substance's
        amount, a procedure's quantity and a processing step's duration. It has
        no edges here because everything that points at it lives in another
@@ -631,8 +639,8 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
   Neither the raw LinkML [YAML file](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/blob/main/src/bdchm/schema/bdchm.yaml)
   nor the LinkML [generated documentation](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/)
   are easy to grasp given that BDCHM's over 4,000-line schema includes around
-  225 total attributes, 55 distinct class entities, 50 permissible value sets,
-  7 primitive data types, and 80 relationships between class entities. 
+  225 total attributes, 56 distinct entities, 50 permissible value sets,
+  7 primitive data types, and 80 relationships between entities. 
 
   Yet doing almost anything involving BDCHM would require a basic, overall
   understanding of its structure. You may want to use BDCHM:
@@ -659,14 +667,14 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 - **Width:** 800
 - **Description:** [put some intro text here]
 
-  This tour is about the app rather than the model: how to put classes on
-  the canvas, what a box shows, and how to move from one class to the ones
+  This tour is about the app rather than the model: how to put entities on
+  the canvas, what a box shows, and how to move from one entity to the ones
   it is connected to. It grows one small diagram a step at a time, from a
   person in a study to a number you would analyse.
 - **Beats:**
   1. selection
      - Description:
-       The left panel lists every class in the model, grouped into the six
+       The left panel lists every entity in the model, grouped into the six
        categories the first tour walked through. The grouping is the
        Explorer's, not the schema's.
      - Anchor: entity-row:Person
@@ -746,7 +754,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 - **Action:** Drew just Person, so there is one box to read.
 - **Anchor:** node-box:Person
 - **Description:**
-  A box is one class. Its header carries the class name and, at the far
+  A box is one entity. Its header carries the entity name and, at the far
   right, a ✕ that takes it off the canvas again. Below the header there is
   one row per attribute.
 - **Beats:**
@@ -759,8 +767,8 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
      - Anchor: slot-row:Person.year_of_birth
   2. an entity row
      - Description:
-       ##### Rows that name other classes
-       `cause_of_death` holds another class rather than a value. Rows like
+       ##### Rows that name other entities
+       `cause_of_death` holds another entity rather than a value. Rows like
        this are where the lines come from: when CauseOfDeath is on the
        canvas, a line runs from this row to it. Clicking the row puts it
        there. The dot is hollow because CauseOfDeath is not drawn yet; the
@@ -770,9 +778,9 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
      - Description:
        ##### The relation bar
        The two counts in the header are the relation bar. **← N** is how many
-       classes this one belongs to, which the layout draws to its left;
+       entities this one belongs to, which the layout draws to its left;
        **M →** how many it owns, drawn to its right. Hover either count for
-       the list. This is how you reach a class that has no row here:
+       the list. This is how you reach an entity that has no row here:
        Participant is connected to Person, but the attribute connecting them
        is declared on Participant, so it shows up in Person's bar and not in
        Person's rows.
@@ -781,7 +789,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 
 ### grow-participant
 
-- **Title:** Adding a related class
+- **Title:** Adding a related entity
 - **Tour:** Getting oriented
 - **Only:** sel=Person~Participant
 - **Action:** Added Participant, the same as clicking it in Person's → list.
@@ -799,15 +807,15 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
        ##### The row that made the line
        The line comes from Participant's `associated_person` row. Every line
        on the canvas leaves an attribute row on one box and lands on the
-       class that row names, so you can always see WHICH attribute connects
-       two classes.
+       entity that row names, so you can always see WHICH attribute connects
+       two entities.
      - Anchor: slot-row:Participant.associated_person
   2. the second way
      - Description:
        ##### Two ways to grow a diagram
-       Participant's own rows name classes that are not on the canvas yet —
+       Participant's own rows name entities that are not on the canvas yet —
        a ResearchStudy, an Organization, Consents. Clicking any of those rows
-       adds that class. Rows and the relation bar are the two ways to grow a
+       adds that entity. Rows and the relation bar are the two ways to grow a
        diagram without going back to the panel; both also tick the checkbox
        on the left.
      - Anchor: slot-row:Participant.member_of_research_study
@@ -876,11 +884,11 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 - **Anchor:** none
 - **Description:**
   Clicking a box — its header, or any row that is not itself clickable —
-  opens the class's details: its description, every attribute with its
-  type, and the classes that refer to it. Class names inside the panel are
+  opens the entity's details: its description, every attribute with its
+  type, and the entities that refer to it. Entity names inside the panel are
   links, so you can follow references without changing what is drawn. The
   **ⓘ** beside a row in the relation bar opens the same panel for that
-  class. Close it with its ✕.
+  entity. Close it with its ✕.
 
 
 ### moving-around
@@ -914,8 +922,8 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
   1. category views
      - Description:
        ##### A category at once
-       The ⊞ on a category header draws every class in that category, plus
-       the two or three outside classes that make it legible. It replaces
+       The ⊞ on a category header draws every entity in that category, plus
+       the two or three outside entities that make it legible. It replaces
        whatever was on the canvas.
      - Anchor: category-row:admin
   2. copy link
@@ -930,7 +938,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
        *Reading the diagram* explains the dots, colours and where a line
        attaches; *Ownership* explains why boxes land where they do and what
        the three kinds of line mean; *Inheritance* explains the boxes that
-       hold several classes at once.
+       hold several entities at once.
      - Anchor: tour-chooser
 
 </details><!-- end of Getting oriented tour -->
@@ -952,7 +960,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 - **Action:** Drew Visit on its own.
 - **Anchor:** node-box:Visit
 - **Description:**
-  One class, no lines. Every row is an attribute, and the dot at its left
+  One entity, no lines. Every row is an attribute, and the dot at its left
   and the label at its right share a colour that says what KIND of thing
   the attribute holds.
 - **Beats:**
@@ -970,8 +978,8 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
      - Anchor: slot-row:Visit.visit_category
   3. an entity
      - Description:
-       ##### Blue: another class
-       `year_range` holds a TimePeriod, another class in the model. Blue rows
+       ##### Blue: another entity
+       `year_range` holds a TimePeriod, another entity in the model. Blue rows
        are the only ones that draw lines, and this dot is hollow because
        TimePeriod is not on the canvas. A hollow dot is an invitation: click
        the row.
@@ -997,7 +1005,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
   Now the `year_range` dot is filled and a line leaves it. This is the one
   idea the whole diagram rests on: **a line leaves the attribute row that
   creates it**, not the box, so you can always see which attribute connects
-  two classes. The arrowhead lands on the class the row names.
+  two entities. The arrowhead lands on the entity the row names.
 - **Beats:**
   1. the far end
      - Description:
@@ -1020,8 +1028,8 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
   Participant landed on the LEFT, and the line from Visit's
   `associated_participant` row runs backwards to it, arrowhead at
   Participant. Same rule for both lines: the line leaves the row, and the
-  arrowhead lands on the class the row names. What differs is which side
-  the named class is drawn on, and that is decided by **ownership**: a
+  arrowhead lands on the entity the row names. What differs is which side
+  the named entity is drawn on, and that is decided by **ownership**: a
   Visit belongs to its Participant, so Participant is drawn first; a Visit
   owns its TimePeriod, so TimePeriod is drawn after. How the Explorer decides
   which is which is the *Ownership* tour.
@@ -1030,14 +1038,14 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
      - Description:
        ##### Reading left to right
        So the canvas reads left to right as "contains": everything that owns
-       a class is to its left, everything it owns is to its right. Hover a
+       an entity is to its left, everything it owns is to its right. Hover a
        box and everything not connected to it fades.
      - Anchor: node-box:Participant
 
 
 ### loops
 
-- **Title:** A class that names itself
+- **Title:** An entity that names itself
 - **Tour:** Reading the diagram
 - **Only:** sel=ResearchStudy
 - **Action:** Drew ResearchStudy on its own.
@@ -1067,7 +1075,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 - **Anchor:** none
 - **Width:** 560
 - **Description:**
-  The canvas is laid out by **ownership**: a class is drawn to the right of
+  The canvas is laid out by **ownership**: an entity is drawn to the right of
   whatever owns it. That one idea is what the whole diagram is about, and it
   is not in the schema. A LinkML schema says that Visit has an attribute
   holding a Participant; it does not say which of the two contains the
@@ -1076,8 +1084,8 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
   So the Explorer decides, with a few rules, and draws the result. This
   tour shows the rules on real cases. There are three kinds of line:
 
-  - **owns** — the line runs from the owner's row to the class it holds;
-  - **belongs to** — the line runs from the member's row BACK to the class
+  - **owns** — the line runs from the owner's row to the entity it holds;
+  - **belongs to** — the line runs from the member's row BACK to the entity
     it belongs to;
   - **associated with** — dashed, arrowed at both ends, and no claim either
     way.
@@ -1092,9 +1100,9 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 - **Anchor:** slot-row:Questionnaire.items
 - **Description:**
   The easy case. `items` holds a LIST of QuestionnaireItems (`1..*`), and a
-  class that holds a list of things owns them: the items are part of the
+  entity that holds a list of things owns them: the items are part of the
   questionnaire. The line runs from the owner's row rightward to the owned
-  class. **Rule 1: a list-valued attribute owns its class.**
+  entity. **Rule 1: a list-valued attribute owns its entity.**
 
 
 ### belongs-backward
@@ -1115,7 +1123,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
        something with a life of its own is a foreign key: the specimen
        belongs to the participant, not the other way round. So Participant is
        drawn on the left and the line runs from this row back to it.
-       **Rule 2: a single-valued attribute belongs to its class.**
+       **Rule 2: a single-valued attribute belongs to its entity.**
      - Anchor: slot-row:Specimen.source_participant
   2. owns
      - Description:
@@ -1149,8 +1157,8 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
   observation you start from a number. But a Quantity is a value, `5 mg`,
   not something you look up; it belongs to whoever holds it. So it is owned,
   and drawn on the right. The same goes for TimePoint, TimePeriod, BodySite
-  and a few more: **a class with no independent existence is owned even by
-  a single-valued attribute.** Which classes those are is a decision
+  and a few more: **an entity with no independent existence is owned even by
+  a single-valued attribute.** Which entities those are is a decision
   recorded in the Explorer, not something the schema can tell it.
 
 
@@ -1163,8 +1171,8 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 - **Anchor:** node-box:SpecimenContainer
 - **Width:** 520
 - **Description:**
-  Four classes, and every kind of line. Read them one at a time, and notice
-  that the three attributes are declared on three different classes.
+  Four entities, and every kind of line. Read them one at a time, and notice
+  that the three attributes are declared on three different entities.
 - **Beats:**
   1. owns
      - Description:
@@ -1204,11 +1212,11 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 - **Title:** The relation bar, revisited
 - **Tour:** Ownership
 - **Only:** sel=Observation~ObservationSet~Participant~Visit~Organization
-- **Action:** Drew Observation with the four classes that own it.
+- **Action:** Drew Observation with the four entities that own it.
 - **Anchor:** node-box:Observation
 - **Highlight:** ring
 - **Description:**
-  Every class that owns Observation is to its left — that is all the bar's
+  Every entity that owns Observation is to its left — that is all the bar's
   **←** count means. But they own it for two different reasons: Participant,
   Visit and Organization because Observation POINTS at them (it belongs to
   each), and ObservationSet because its `observations` list collects
@@ -1244,11 +1252,11 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 
 ## Inheritance
 - **TourMetadata:**
-- **Description:** Subclasses, and the boxes that hold several classes at once
+- **Description:** Subclasses, and the boxes that hold several entities at once
 
 ### one-child
 
-- **Title:** A class and its parent, one box
+- **Title:** An entity and its parent class, one box
 - **Tour:** Inheritance
 - **Only:** sel=MeasurementObservation&panels=0
 - **Action:** Drew MeasurementObservation on its own.
@@ -1278,7 +1286,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
      - Description:
        ##### Merged even alone
        This happens with a single subclass, not only when siblings are drawn
-       together. A class should not change shape depending on what else you
+       together. An entity should not change shape depending on what else you
        happen to have selected.
      - Anchor: node-box:Observation
 
@@ -1294,7 +1302,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
   Two subclasses of Observation, and neither declares a single attribute of
   its own: two headers with nothing under them. That is not a gap. "An
   Observation made about a specimen rather than a person, adding nothing"
-  is the whole definition of these classes, and an empty header is the
+  is the whole definition of these subclasses, and an empty header is the
   honest picture of it.
 
 
@@ -1323,7 +1331,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
        ##### The one that adds nothing
        The String child's `value` is a string, exactly as the parent declared
        it, so it has no row of its own: the header alone. Compare its
-       TimePoint sibling, whose `value` is another class and gets a blue dot.
+       TimePoint sibling, whose `value` is another entity and gets a blue dot.
      - Anchor: child-header:QuestionnaireResponseValueString
 
 
@@ -1382,11 +1390,11 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
   BDCHM uses inheritance in five places, and you have now seen the two big
   ones: Observation with five subclasses and ObservationSet with three. The
   others are Exposure (a drug or a device), File (an imaging file), and the
-  five typed questionnaire answers. Everywhere else, a class stands on its
+  five typed questionnaire answers. Everywhere else, an entity stands on its
   own.
 
   The categories in the left panel are not inheritance: a category is a
-  browsing aid, and a class listed in two of them is one class, not two.
+  browsing aid, and an entity listed in two of them is one entity, not two.
 
 </details><!-- end of Inheritance tour -->
 </div>
@@ -1426,7 +1434,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 ### toolbar-siblings
 
 - **Title:** Merged inheritance boxes
-- **Description:** When several entities on the diagram share a parent, they collapse into one box titled by that parent. Rows the parent defines come first, then a coloured header per child followed by the rows that child adds.
+- **Description:** When several entities on the diagram share a parent class, they collapse into one box titled by that parent. Rows the parent defines come first, then a coloured header per child followed by the rows that child adds.
 - **Interactions:**
   - Toggle off to draw each entity as its own separate box.
 - **Context:** Lines leaving a child's rows take that child's colour, so you can trace a line back to the block it came from.
