@@ -94,12 +94,14 @@ function ExploreAppInner() {
    */
   const pushNextWrite = useRef(false);
   /**
-   * 'list' is the default selector: the category list, nested by inheritance.
-   * 'tree' is the dag-browser, kept reachable but no longer default — Siggie
-   * 2026-08-27 deferred fixing it (it needs horizontal scroll and panel resize
-   * before it can even be evaluated) rather than dropping it.
+   * 'list' is the selector: the category list, nested by inheritance. 'tree'
+   * is the dag-browser, which Siggie 2026-08-27 deferred fixing (it needs
+   * horizontal scroll and panel resize before it can even be evaluated)
+   * rather than dropping. Its switch at the foot of the panel was removed
+   * 2026-09-10 ("remove the tree toggle for now"); the branch and
+   * `SelectionTree` stay so flipping this constant brings it back.
    */
-  const [selectorMode, setSelectorMode] = useState<'tree' | 'list'>('list');
+  const selectorMode = 'list' as 'tree' | 'list';
   const [pathToRoot, setPathToRoot] = useState<boolean>(initial.roots);
   /**
    * Toolbar settings, lifted out of OwnershipGraphView. They used to live in
@@ -473,21 +475,11 @@ function ExploreAppInner() {
               )}
             </div>
             {/*
-              The category list is now the default; the DAG tree stays behind
-              this switch for after the deadline. Reversed 2026-08-27: the
-              tree was going to replace the list, but it needs horizontal
-              scroll + panel resize before it can be judged, and there is no
-              runway for that. Do not delete the tree -- the decision is
+              The ⑃ tree / ☰ flat list switch used to sit here. Removed
+              2026-09-10 at Siggie's request; `selectorMode` above says how to
+              bring the tree back. Do not delete the tree -- the decision is
               "deferred", not "dropped".
             */}
-            <button
-              onClick={() => setSelectorMode(m => (m === 'tree' ? 'list' : 'tree'))}
-              title="Switch between the ownership tree and the flat category list"
-              className="shrink-0 px-3 py-1 text-xs text-gray-400 border-t border-gray-200
-                         dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 text-left"
-            >
-              {selectorMode === 'tree' ? '☰ flat list' : '⑃ tree'}
-            </button>
             <button
               onClick={() => setTableCollapsed(true)}
               title="Hide entity selection"

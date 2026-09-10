@@ -261,8 +261,10 @@ roots. It has **nothing to do with `ENTITY_CATEGORIES`**. Categories did not
 break; they were never in the tree. Options: categories as an expanded TOP LAYER
 above the ownership roots (Siggie's own earlier idea — they predicted *"a lot
 more duplicates will appear, across categories"*); two separate trees; or keep
-the flat list as the primary selector. The flat list is still behind the
-`☰ flat list` / `⑃ tree` toggle, so this is comparable side by side right now.
+the flat list as the primary selector. The `☰ flat list` / `⑃ tree` toggle
+was removed from the panel 2026-09-10 (Siggie: "for now"); the tree is one
+constant away in `ExploreApp.tsx` (`selectorMode`), so it is still comparable
+side by side when wanted.
 
 **Panel resizing / detaching: NOT attempted.** Resizing is small; detaching is
 not, and `dockview-poc` (an old branch, 153 behind) suggests this was explored
