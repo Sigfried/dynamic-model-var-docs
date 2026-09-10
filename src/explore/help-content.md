@@ -98,25 +98,26 @@ introduced and then use one word.
 
 - **Title:** Category: Admin / Study
 - **Tour:** The BioData Catalyst Harmonized Model
+- **Anchor:** category-row:admin
 - **Description:**
   These are the entities around which study data — describing
   clinical events and observations, specimens, surveys —
   are organized.
 
   ###### Clicking the **⊞** button by the category title draws the whole category on the canvas.
-
-  We will now walk through each entity in the category. If you would like to skip
-  to another category, click ⊞ below.
-- **Anchor:** category-row:admin
-- Only: cat=admin
 <!-- - **Action:** Drew the whole Admin / Study category, the same as pressing its ⊞ button.-->
 - Beats:
-  1. ResearchStudyCollection
+  1. Walk through
+     - Description:
+       We will now walk through each entity in the category. If you would like to skip
+       to another category, click ⊞ below.
+     - Only: cat=admin
+  2. ResearchStudyCollection
      - Description:
        A **ResearchStudyCollection** contains a list of **ResearchStudies**
        {{model-description:ResearchStudyCollection}}
      - Anchor: node-box:ResearchStudyCollection
-  2. ResearchStudy
+  3. ResearchStudy
      - Description:
        ##### ResearchStudy
        {{model-description:ResearchStudy}}
@@ -124,7 +125,7 @@ introduced and then use one word.
        `part_of` points at ResearchStudy itself — the loop on this box — so a
        study can be a sub-study of another.
      - Anchor: node-box:ResearchStudy
-  3. Organization
+  4. Organization
      - Description:
        ##### Organization
        {{model-description:Organization}}
@@ -135,17 +136,17 @@ introduced and then use one word.
        SpecimenCreationActivity declare and their subclasses inherit — is
        declared elsewhere and drawn back at it.
      - Anchor: node-box:Organization
-  4. Person
+  5. Person
      - Description:
        ##### Person
        {{model-description:Person}}
      - Anchor: node-box:Person
-  5. Participant
+  6. Participant
      - Description:
        ##### Participant
        {{model-description:Participant}}
      - Anchor: node-box:Participant
-  6. person vs participant
+  7. person vs participant
      - Description:
        ##### One person, several participants
        Person and Participant are the first genuinely modelling-flavoured
@@ -155,7 +156,7 @@ introduced and then use one word.
        in three studies is three Participants — usually de-identified and
        deliberately untraceable back to the actual person.
      - Anchor: node-box:Participant
-  7. Consent
+  8. Consent
      - Description:
        ##### Consent
        {{model-description:Consent}}
@@ -163,12 +164,12 @@ introduced and then use one word.
        Both Participant and ResearchStudy own a list of them, so consent is
        recorded per person and per study.
      - Anchor: node-box:Consent
-  8. Visit
+  9. Visit
      - Description:
        ##### Visit
        {{model-description:Visit}}
      - Anchor: node-box:Visit
-  9. Demography
+  10. Demography
      - Description:
        ##### Demography
        {{model-description:Demography}}
@@ -178,7 +179,7 @@ introduced and then use one word.
        at — so it is a record ABOUT a participant, not a fixed property of the
        human being.
      - Anchor: node-box:Demography
-  10. what the other categories borrow
+  11. what the other categories borrow
      - Description:
        ##### What the other categories borrow
        Participant and Visit are what the rest of the model hangs off.
