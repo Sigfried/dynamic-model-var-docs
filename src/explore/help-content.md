@@ -49,6 +49,7 @@ Parsed by [`parseHelpContent.ts`](../help/parseHelpContent.ts); pinned by
 
 ## The BioData Catalyst Harmonized Model
 - **TourMetadata:**
+- **TourAbbr:** BDCHM
 - **Description:** Introduction to the model: what it contains and what it's for
 
 ### bdchm

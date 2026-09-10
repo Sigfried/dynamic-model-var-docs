@@ -276,6 +276,14 @@ export interface TourMeta {
   name: string;
   /** One sentence for the chooser. Markdown allowed. */
   description: string;
+  /**
+   * A short form of the name for the popover, which prefixes every step's
+   * title with the tour it belongs to (TASKS 1c, Siggie 2026-09-09: *"Tour
+   * steps don't tell you what tour you're on"*). Absent, the full name is
+   * used -- so a tour only authors one when its name is too long to sit in
+   * front of a title.
+   */
+  abbr?: string;
 }
 
 export interface HelpContent {
@@ -847,7 +855,11 @@ function parseSection(block: string, nextOrder: () => number): HelpSection {
     // `<summary>`, `## heading`, `TourMetadata:` -- all of which have to agree,
     // with only the first two checked. Omitting the value removes the copy
     // that nothing else pins.
-    : { name: declared || title, description: extractBlockField(bodyLines, 'Description')?.trim() ?? '' };
+    : {
+      name: declared || title,
+      description: extractBlockField(bodyLines, 'Description')?.trim() ?? '',
+      abbr: extractField(bodyLines, 'TourAbbr')?.trim() || undefined,
+    };
 
   // Split remaining into ### entry blocks
   const entries: HelpEntry[] = [];

@@ -134,6 +134,28 @@ Graph.ts planning, an Element pre-refactor snapshot); untouched. The
 Walkthrough entries the stash left unchanged are the ones deleted earlier
 today; they are in `de6666f` if wanted.
 
+### Later still — TASKS 1b and 1c, both from the salvaged stash
+
+**1b, click opens the overview.** `TourChooser`'s button opened the list on
+hover AND on click. Click now opens the overview map and hover keeps the
+list, so a click reaches the thing that had no direct route. Two tests
+opened the chooser by click and now hover (`fireEvent.mouseEnter` on the
+button reaches the wrapping span's `onMouseEnter` through React's
+enter/leave synthesis). The new test queries the map by class: it is a
+`popover="manual"` element jsdom leaves display-none, invisible to role
+queries — same reason `tourMap.test.tsx` does.
+
+**1c, the popover names its tour.** Siggie's wording: *"Tour steps don't
+tell you what tour you're on. And tour name before `Title:`. Add new field
+`TourAbbr:` and use that instead of title if it exists."* Read as: a label
+ABOVE the step title carrying the tour name, with `TourAbbr:` (a section-body
+field beside `TourMetadata:`) replacing the name when authored. Not "instead
+of the step title" — that would lose the one thing the title is for. The
+label is small caps, muted, and only in a tour (`inTour`), so help-only
+popovers are unchanged. Only the BDCHM tour authors an abbreviation
+(`BDCHM`); the other four names are short. A test caps abbreviations at 16
+characters so the field cannot quietly become a second name.
+
 ---
 ## 2026-09-09 (night) — boxes on motion/react; edges deferred
 

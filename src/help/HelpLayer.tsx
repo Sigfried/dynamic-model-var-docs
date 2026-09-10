@@ -203,8 +203,17 @@ export default function HelpLayer() {
   const {
     helpMode, tourIndex, position, positions, stepCount, content, activeId,
     dismissEntry, nextStep, prevStep, endTour, showEntry, resolveAnchor, centerRect,
-    showAddresses,
+    showAddresses, tourName, tourMeta,
   } = useHelp();
+
+  /*
+   * The tour a step belongs to, shown before its title (TASKS 1c). Siggie,
+   * 2026-09-09: *"Tour steps don't tell you what tour you're on."* `TourAbbr:`
+   * in the tour's metadata replaces the full name when one is authored.
+   */
+  const tourLabel = tourName === undefined
+    ? undefined
+    : tourMeta.get(tourName)?.abbr ?? tourName;
 
   const [mapOpen, setMapOpen] = useState(false);
 
@@ -698,7 +707,12 @@ export default function HelpLayer() {
               onPointerDown={drag.onPointerDown}
               style={{ cursor: drag.offset ? 'grabbing' : 'grab', userSelect: 'none' }}
               title="Drag to move"
-            >{entry.title}</h4>
+            >
+              {inTour && tourLabel && (
+                <span className="help-popover-tour">{tourLabel}</span>
+              )}
+              {entry.title}
+            </h4>
 
             {/*
               The ACTION band: what the tour just did, in its own voice.

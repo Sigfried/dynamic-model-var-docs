@@ -1579,6 +1579,23 @@ describe('TourMetadata', () => {
     expect(meta('Just some prose.').tourMeta.size).toBe(0);
   });
 
+  test('TourAbbr: is read, and absent when not written', () => {
+    // TASKS 1c: a short form of the name for the popover's title prefix.
+    const c = meta('- **TourMetadata:**\n- **TourAbbr:** AT\n- **Description:** D');
+    expect(c.tourMeta.get('A Tour')?.abbr).toBe('AT');
+    const bare = meta('- **TourMetadata:**\n- **Description:** D');
+    expect(bare.tourMeta.get('A Tour')?.abbr).toBeUndefined();
+  });
+
+  test('every authored TourAbbr is actually short', () => {
+    // The field exists to fit in front of a step title; one as long as the
+    // name it replaces defeats it.
+    const long = [...content.tourMeta.values()]
+      .filter(m => m.abbr && m.abbr.length > 16)
+      .map(m => `${m.name}: "${m.abbr}"`);
+    expect(long, `TourAbbr longer than 16 chars: ${long.join(', ')}`).toEqual([]);
+  });
+
   test('the description may run to a paragraph', () => {
     const c = meta(
       '- **TourMetadata:**\n- **Description:** One sentence.\n\n  And another.',

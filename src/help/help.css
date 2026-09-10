@@ -293,6 +293,19 @@ body.help-mode {
   line-height: 1.25;
 }
 
+/* Which tour the step belongs to, in front of its title (TASKS 1c). Quieter
+   than the title on every axis -- size, weight, colour -- so it reads as a
+   label on the title rather than as a second title. */
+.help-popover-tour {
+  display: block;
+  font-size: 0.7em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--help-muted, #6b7280);
+  margin-bottom: 2px;
+}
+
 /* SUBTITLE inside a description: write `### text` in the markdown.
    *
    Every heading level collapses to one style deliberately. The popover is a

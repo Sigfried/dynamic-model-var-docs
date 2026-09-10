@@ -87,6 +87,7 @@ does not get swallowed into that entry's `Description:`.
 | `OffsetX:` | nudge it horizontally — see [Placement](#placement) |
 | `Tour:` | which tour this is a step of, e.g. `Walkthrough`; omit for help-only |
 | `TourMetadata:` | **section-body field**: marks the section as describing a tour — see [TourMetadata](#tourmetadata--describing-a-tour-not-a-step) |
+| `TourAbbr:` | **section-body field**: a short form of the tour's name for the popover's title prefix — see [TourMetadata](#tourmetadata--describing-a-tour-not-a-step) |
 | `Beats:` | ordered sub-steps, each REPLACING the last — see [Beats](#beats) |
 
 Written as `- **Field:** value`. The `**` is optional and field names are
@@ -244,6 +245,20 @@ and here — all of which have to agree; the first two are already pinned to eac
 other, so the bare form removes the copy that nothing checked.
 
 `Description:` is a block, like an entry's, so it can run to a paragraph.
+
+**Every step's popover names its tour above the title**, so a reader who
+arrived by link knows which walk they are on. `TourAbbr:` in the same block
+replaces the full name there when the name is too long to sit over a title:
+
+```markdown
+## The BioData Catalyst Harmonized Model
+- **TourMetadata:**
+- **TourAbbr:** BDCHM
+- **Description:** Introduction to the model: what it contains and what it's for
+```
+
+It is a label, not a second name: the chooser and the map still show the full
+name. A test keeps it under 16 characters.
 
 The name ties the description to the walk: it must match the `Tour:` field on
 the steps. **A test enforces both directions** — metadata naming a tour with no
