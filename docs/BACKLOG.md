@@ -469,6 +469,12 @@ merged child simply not resolving. That did not need `sibs=0` removed —
 `child-header:` and `node-box:` name different things in either mode, so the
 vocabulary is unambiguous with the toggle still there.
 
+**Half done 2026-09-10.** The `⑃ siblings` button and the `if (!mergeSibs)
+return baseVm` branch are gone, so siblings always merge; the help entry that
+anchored on the button is now `merged-boxes` with no anchor. Removing the button
+was folded into the Rule 3 (induced ownership) work because always-merged is
+what makes induced edges collapse onto one line. The rest is still plumbing.
+
 **Why this is its own piece of work.** It touches more than the anchors: a URL param and its `DEFAULTS`/`toQuery` handling
 (`exploreState.ts`), a localStorage key (`LS_KEYS.sibs`), the tour state stack
 (`tourStateStack.ts`), the toolbar toggle and `rememberPreference`

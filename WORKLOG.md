@@ -7,6 +7,64 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-10 — Rule 3: a forward-owned range includes its subtree; siblings toggle removed
+
+**The report** was a screenshot: the Survey ⊞ canvas with the merged
+`QuestionnaireResponseValue` box at the far LEFT, and `QuestionnaireResponseItem.
+response_value` looping back across the whole canvas to reach it. Probed rather
+than reasoned (the standing rule): the five subclasses were layer 0 and the
+parent layer 6, and `mergeSiblings` takes the MIN of its members' layers.
+
+**Diagnosis went one level too shallow first.** I proposed fixing the layering
+pass (an unowned subclass takes its parent's layer) and keeping the merge rule.
+Siggie pushed back — *"merging should be a model as well as a view concept …
+maybe by saying that a class owning a parent necessarily owns all its children
+as well?"* — and that is the right level: the subclasses were not mis-layered,
+they were UNOWNED. Nothing in the graph said `QuestionnaireResponseItem` owns
+`QuestionnaireResponseValueString`, which LinkML range polymorphism says it
+does. The layer fix would have moved the box and left it unconnected, with the
+item still "owning 1 entity" — the second screenshot showed exactly that
+(hover-fading the box as unconnected).
+
+**Why it is the forward dual of something already there.** Inherited slots are
+flattened upstream (`induced_schema.py`), so every subclass carries its parent's
+`associated_participant` and Participant already owned each Observation child
+through the child's own copy. Forward ownership had no such mechanism. Rule 3
+adds it as induced edges marked `inducedFrom`, never as a merged node kind in
+the model — the 2026-08-25 reasoning for keeping merge a ViewModel pass still
+holds; what changed is that the model now states the FACT the merge renders.
+
+**Measured before building:** 3 declared forward edges with subclassed ranges,
+0 backward ones, 10 induced edges (ImagingFile's would be a self-loop). So the
+"backward direction" and "cycles" questions are moot today and documented as
+scope, not decided.
+
+**Two things I got wrong in the discussion, both from the same stale model of
+the app.** I twice described the canvas as "pulling in" one-hop context boxes.
+It does not, and has not since 2026-08-27 — everything faded in a screenshot is
+hover-dimming or a merged parent header. Siggie: *"this has been an ongoing
+source of confusion."* Memory note written. The other: I said induced rows in
+the relation bar would puzzle a reader because the slot is declared against the
+parent; the bar already shows inherited slots as `Child.slot` with no "via", so
+the convention was settled and I should have checked it first.
+
+**Dedup in `mergeSiblings` had a hole the induced edges would have fallen
+through**: it only ran when the HOST side was merged, so five induced edges from
+an unmerged owner into a merged box would all have survived. The key is now
+`source|target|anchorClass|slot|direction` whenever either end is merged, and
+induced edges get no `entityMember` so they land on the box header, not a child's.
+
+**Siblings toggle removed** (button + the `if (!mergeSibs) return baseVm`
+branch) as part of this: always-merged is what makes the induced edges collapse
+to one line, so the "edge inflation when merge is off" objection disappears
+instead of needing an answer. The `sibs` param plumbing stays for TASKS 8d. The
+`toolbar-siblings` help entry became `merged-boxes` with no anchor.
+
+**Open, asked by Siggie:** relation-bar rows grouped by is-a family (parent row,
+children indented) — the flat list hides that Participant's 22 owned entities
+are mostly one family. Not started.
+
+---
 ## 2026-09-09 (late) — the four app tours written; Walkthrough dissolved (TASKS item 1)
 
 Wrote `Getting oriented` (9 steps), `Reading the diagram` (4), `Ownership`

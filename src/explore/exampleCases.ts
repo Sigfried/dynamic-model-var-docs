@@ -116,7 +116,7 @@ export const EXAMPLE_CASES: ExampleCaseGroup[] = [
     ],
   },
   {
-    heading: 'Inheritance (the ⑃ siblings toggle)',
+    heading: 'Inheritance (merged sibling boxes)',
     cases: [
       {
         name: 'One child, merged with its parent',
@@ -150,8 +150,8 @@ export const EXAMPLE_CASES: ExampleCaseGroup[] = [
       {
         name: 'The full Observation family',
         note: 'All five Observation subclasses plus the parent. One box where '
-          + 'there would be six, and the shared rows are stated once. Turn ⑃ '
-          + 'siblings off to see what it replaces. Note each edge leaves in the '
+          + 'there would be six, and the shared rows are stated once. '
+          + 'Note each edge leaves in the '
           + "colour of the child that owns its row; inherited slots' edges are "
           + "the parent's and are drawn once, not once per child.",
         sel: ['Observation', 'MeasurementObservation', 'SdohObservation',

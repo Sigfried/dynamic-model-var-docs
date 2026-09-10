@@ -47,11 +47,19 @@ describe('ownership legend', () => {
       expect(g.pairs.length).toBeGreaterThan(0);
       expect(g.ruleText).toBeTruthy();
       for (const p of g.pairs) {
+        // A Rule 3 pair is induced from a declared forward pair: the slot
+        // classifies against the DECLARED range, and that must come out
+        // forward, or there was nothing to induce from.
         const { verdict, rule } = classifySlotEdgeExplained(
-          p.slotName, p.range, p.multivalued,
+          p.slotName, p.inducedFrom ?? p.range, p.multivalued,
         );
         expect(verdict).toBe(g.verdict);
-        expect(rule).toBe(g.rule);
+        if (p.inducedFrom !== undefined) {
+          expect(g.rule).toBe('range-subtree');
+          expect(verdict).toBe('own-fwd');
+        } else {
+          expect(rule).toBe(g.rule);
+        }
       }
     }
   });

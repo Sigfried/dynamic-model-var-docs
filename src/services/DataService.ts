@@ -34,7 +34,7 @@ import {
 } from '../config/entityCategories';
 import {
   buildContainmentGraph, classifySlotEdgeExplained, OWNERSHIP_RULE_TEXT,
-  SKIP_SUBCLASS_EXPANSION,
+  SKIP_SUBCLASS_EXPANSION, ENTITY_ROOT, subtreeOf,
 } from '../models/containmentGraph';
 import type {
   ContainmentGraph, OwnershipVerdict, OwnershipRule,
@@ -157,6 +157,8 @@ export interface OwnershipPair {
   owner: string;
   owned: string;
   isLoop: boolean;
+  /** Rule 3: the declared range this pair was induced from; `range` is then the subclass. */
+  inducedFrom?: string;
 }
 
 /** All pairs sharing one verdict + the rule that produced it. */
@@ -967,6 +969,34 @@ export class DataService {
         });
       }
     }
+
+    /*
+     * Rule 3 pairs, induced from every forward pair whose range has subclasses
+     * — the same walk `buildContainmentGraph` does, so the legend and the
+     * graph enumerate the same edges (pinned by ownershipLegend.test).
+     */
+    const induced: OwnershipPairGroup = {
+      verdict: 'own-fwd', rule: 'range-subtree',
+      ruleText: OWNERSHIP_RULE_TEXT['range-subtree'], pairs: [],
+    };
+    const have = new Set<string>();
+    for (const g of groups.values()) {
+      for (const p of g.pairs) have.add(`${p.owner}|${p.owned}|${p.slotName}`);
+    }
+    for (const g of groups.values()) {
+      if (g.verdict !== 'own-fwd') continue;
+      for (const p of g.pairs) {
+        if (p.isLoop || p.range === ENTITY_ROOT) continue;
+        for (const child of subtreeOf(this.modelData.graph, p.range)) {
+          if (!known.has(child) || child === p.owner) continue;
+          const key = `${p.owner}|${child}|${p.slotName}`;
+          if (have.has(key)) continue;
+          have.add(key);
+          induced.pairs.push({ ...p, range: child, owned: child, inducedFrom: p.range });
+        }
+      }
+    }
+    if (induced.pairs.length) groups.set('own-fwd/range-subtree', induced);
 
     for (const g of groups.values()) {
       g.pairs.sort((a, b) =>

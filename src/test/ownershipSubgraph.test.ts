@@ -132,6 +132,25 @@ describe('getOwnershipSubgraph', () => {
     expect(person.layer).toBe(participant.layer - 1);
   });
 
+  test('Rule 3: a subclass nothing names directly sits in its parent\'s layer, not layer 0', () => {
+    // QuestionnaireResponseValueString is owned only through the induced
+    // `response_value` edge from QuestionnaireResponseItem, so it lands one
+    // layer after the item — where its parent is — instead of being a root.
+    const g = ds.getOwnershipSubgraph([
+      'QuestionnaireResponseItem', 'QuestionnaireResponseValue', 'QuestionnaireResponseValueString',
+    ]);
+    const item = nodeById(g, 'QuestionnaireResponseItem')!;
+    const parent = nodeById(g, 'QuestionnaireResponseValue')!;
+    const child = nodeById(g, 'QuestionnaireResponseValueString')!;
+    expect(child.layer).toBe(parent.layer);
+    expect(child.layer).toBe(item.layer + 1);
+    const induced = g.edges.filter(e => e.inducedFrom !== undefined);
+    expect(induced.map(e => `${e.source}->${e.target}`)).toEqual([
+      'QuestionnaireResponseItem->QuestionnaireResponseValueString',
+    ]);
+    expect(induced[0].inducedFrom).toBe('QuestionnaireResponseValue');
+  });
+
   test('layers are stable across selections (maxDepth over the full DAG)', () => {
     const a = ds.getOwnershipSubgraph(['MeasurementObservation']);
     const b = ds.getOwnershipSubgraph(['MeasurementObservation', 'Specimen', 'Condition']);

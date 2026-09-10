@@ -76,6 +76,32 @@ describe('merged-box edges', () => {
     expect(stranded).toEqual([]);
   });
 
+  test('Rule 3: the owner of a parent reaches a merged box of its children by ONE line, at the header', () => {
+    /*
+     * Siggie's screenshot, 2026-09-10: the five QuestionnaireResponseValue
+     * subclasses ticked, the parent not, QuestionnaireResponseItem ticked.
+     * Before Rule 3 nothing owned the children, so the merged box sat in
+     * layer 0 at the far left, unconnected, and the item "owned 1 entity".
+     * Now each child is owned through the induced `response_value` edges, and
+     * the five of them collapse onto the box as one line landing on the box
+     * header — the relationship is with the family, not with one child.
+     */
+    const vm = merged([
+      'QuestionnaireResponseItem',
+      'QuestionnaireResponseValueDecimal', 'QuestionnaireResponseValueBoolean',
+      'QuestionnaireResponseValueInteger', 'QuestionnaireResponseValueTimePoint',
+      'QuestionnaireResponseValueString',
+    ]);
+    const box = vm.nodes.find(n => isMergedId(n.id) && n.label === 'QuestionnaireResponseValue')!;
+    expect(box).toBeDefined();
+    const into = vm.edges.filter(e => e.target === box.id);
+    expect(into.map(e => `${e.source}.${e.slotName}`)).toEqual(['QuestionnaireResponseItem.response_value']);
+    expect(into[0].entityMember).toBeUndefined();
+    // And the box sits AFTER its owner, not in layer 0.
+    const item = vm.nodes.find(n => n.id === 'QuestionnaireResponseItem')!;
+    expect(box.layer).toBe(item.layer + 1);
+  });
+
   test('an inherited slot draws ONE edge per box, not one per child', () => {
     // All five children inherit associated_visit unchanged. Before merging
     // that is five edges into what becomes a single anchor row. Visit is

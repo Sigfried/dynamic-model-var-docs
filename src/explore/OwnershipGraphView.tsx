@@ -834,10 +834,17 @@ export function mergeSiblings(
    * unconnected boxes: their edges were the parent's, and no parent was there
    * to contribute them.
    *
-   * So: keep the FIRST edge per (box, anchor row, other end, direction) and
-   * drop the rest. A child's genuine override anchors on its own row, so it
-   * has a different key and always survives — the case dedup-by-value would
-   * have got wrong.
+   * So: keep the FIRST edge per (anchor row, both ends, direction) and drop
+   * the rest. A child's genuine override anchors on its own row, so it has a
+   * different key and always survives — the case dedup-by-value would have
+   * got wrong.
+   *
+   * The same key handles the OTHER end being the box (2026-09-10): Rule 3
+   * induces `ObservationSet.observations → MeasurementObservation` beside the
+   * declared `→ Observation`, one per child, and all of them rewrite to the
+   * merged box. They share ObservationSet's one `observations` row, so one
+   * line is right — and the induced ones land on the box HEADER rather than a
+   * child's, because the relationship is with the family, not the child.
    */
   const seenEdge = new Set<string>();
   const edges = vm.edges
@@ -848,8 +855,10 @@ export function mergeSiblings(
       // The class at the ENTITY end, captured BEFORE the rewrite above loses
       // it. Only set when that class was absorbed — i.e. when the box it
       // arrives at holds it as a member, which is what lets the edge land on
-      // that member's header row instead of the box header.
+      // that member's header row instead of the box header. Never for an
+      // induced edge: see above.
       entityMember: (() => {
+        if (e.inducedFrom !== undefined) return undefined;
         const entity = hostOf(e) === e.source ? e.target : e.source;
         return absorbed.has(entity) ? entity : undefined;
       })(),
@@ -861,10 +870,8 @@ export function mergeSiblings(
         : hostOf(e),
     }))
     .filter(e => {
-      const host = hostOf(e);
-      if (!isMergedId(host)) return true;          // untouched by merging
-      const other = host === e.source ? e.target : e.source;
-      const key = `${host}|${e.anchorClass}|${e.slotName}|${other}|${e.storageDirection}`;
+      if (!isMergedId(e.source) && !isMergedId(e.target)) return true; // untouched by merging
+      const key = `${e.source}|${e.target}|${e.anchorClass}|${e.slotName}|${e.storageDirection}`;
       if (seenEdge.has(key)) return false;
       seenEdge.add(key);
       return true;
@@ -1268,8 +1275,6 @@ export default function OwnershipGraphView({
   setDirection,
   mergeMode,
   setMergeMode,
-  mergeSibs,
-  setMergeSibs,
 }: {
   dataService: DataService;
   selectedIds: Set<string>;
@@ -1294,6 +1299,11 @@ export default function OwnershipGraphView({
    * Merge sibling classes into one box per shared parent (docs/ARCHITECTURE.md,
    * "is-a never shares the ownership plane"). On by default: with it off, inheritance is
    * invisible in the diagram entirely.
+   */
+  /**
+   * Inert since 2026-09-10: the ⑃ siblings toggle is gone and siblings always
+   * merge. The prop, its URL param and localStorage key are still plumbed
+   * through ExploreApp until TASKS 8d removes `sibs` end to end.
    */
   mergeSibs: boolean;
   setMergeSibs: (v: boolean) => void;
@@ -1345,7 +1355,6 @@ export default function OwnershipGraphView({
     [dataService, subgraph],
   );
   const vm = useMemo(() => {
-    if (!mergeSibs) return baseVm;
     const parentOf = (id: string) => summaries.get(id)?.parentId;
     // `Entity` is excluded for the same reason it carries no is-a edges: a box
     // holding 37 classes is the crowding it was supposed to remove.
@@ -1407,7 +1416,7 @@ export default function OwnershipGraphView({
       schemaIndexOf,
       id => dataService.siblingColorIndexOf(id),
     );
-  }, [baseVm, summaries, mergeSibs, dataService]);
+  }, [baseVm, summaries, dataService]);
   const [nudges, setNudges] = useState<Map<string, { dx: number; dy: number }>>(new Map());
   /**
    * Nodes moved by a completed drag, id → offset from ELK's placement. The
@@ -2004,10 +2013,6 @@ export default function OwnershipGraphView({
    */
   const setDir = (d: Direction) => { rememberPreference('dir', d); setDirection(d); };
   const setMerge = (m: MergeMode) => { rememberPreference('merge', m); setMergeMode(m); };
-  const toggleSibs = () => {
-    rememberPreference('sibs', !mergeSibs);
-    setMergeSibs(!mergeSibs);
-  };
 
   const attributesWord = dataService.getConceptLabel('attribute', true).toLowerCase();
 
@@ -2057,13 +2062,6 @@ export default function OwnershipGraphView({
             <span className="w-px h-4 bg-gray-300 dark:bg-slate-600 mx-1" />
           </>
         )}
-        <button className={toolBtn(mergeSibs)}
-          data-help-id="toolbar-siblings"
-          title={mergeSibs
-            ? 'Siblings merged: classes sharing a parent share one box'
-            : 'Siblings separate: no inheritance shown'}
-          onClick={toggleSibs}>⑃ siblings</button>
-        <span className="w-px h-4 bg-gray-300 dark:bg-slate-600 mx-1" />
         <button className={toolBtn(direction === 'RIGHT')} title="Layout left to right"
           onClick={() => setDir('RIGHT')}>LR</button>
         <button className={toolBtn(direction === 'DOWN')} title="Layout top down"

@@ -4,7 +4,7 @@ import { DataService } from '../services/DataService';
 import type { ContainmentGraph } from '../services/DataService';
 import {
   SINGLE_VALUE_OWNER_TARGETS, ASSOCIATION_SLOTS, BACKWARD_DESPITE_MULTIVALUED,
-  SKIP_SUBCLASS_EXPANSION, classifySlotEdge,
+  SKIP_SUBCLASS_EXPANSION, classifySlotEdge, subtreeOf, ENTITY_ROOT,
 } from '../models/containmentGraph';
 import { getSlotEdgesForClass } from '../models/Graph';
 
@@ -50,7 +50,10 @@ describe('getContainmentGraph', () => {
       }
     }
 
-    for (const e of graph.edges.filter(e => e.kind !== 'subclass')) {
+    // Rule 3 edges have no slot of their own to recompute from; the next test
+    // derives them independently.
+    const declared = graph.edges.filter(e => e.kind !== 'subclass' && e.inducedFrom === undefined);
+    for (const e of declared) {
       const exp = expected.get([e.source, e.target, e.label].join('|'));
       expect(exp, `unexpected edge ${e.source}->${e.target} via ${e.label}`).toBeDefined();
       expect(e.flipped, `flip for ${e.label}`).toBe(exp!.flipped);
@@ -58,10 +61,55 @@ describe('getContainmentGraph', () => {
       expect(e.kind, `kind for ${e.label}`).toBe(exp!.kind);
     }
     // and every expected edge was produced
-    const produced = new Set(graph.edges.filter(e => e.kind !== 'subclass').map(e => [e.source, e.target, e.label].join('|')));
+    const produced = new Set(declared.map(e => [e.source, e.target, e.label].join('|')));
     for (const k of expected.keys()) {
       expect(produced.has(k), `missing expected edge ${k}`).toBe(true);
     }
+  });
+
+  test('Rule 3: a forward-owned range includes its subtree, as induced edges', async () => {
+    /*
+     * Siggie, 2026-09-10: "a class owning a parent necessarily owns all its
+     * children as well". A slot ranged on a parent accepts any subclass, so
+     * ObservationSet.observations holds MeasurementObservations too. Without
+     * these edges a subclass nothing names directly is a root in the DAG and
+     * lands in layer 0, dragging its merged box to the far left.
+     *
+     * Derived independently of the builder: from every declared forward edge,
+     * walk the range's subclasses. Backward edges are deliberately NOT
+     * induced (no own-bkwd range has subclasses today), nor is Entity.
+     */
+    const data = await loadModelData();
+    const nodeIds = new Set(graph.nodes.map(n => n.id));
+    const declaredKeys = new Set(graph.edges
+      .filter(e => e.kind !== 'subclass' && e.inducedFrom === undefined)
+      .map(e => [e.source, e.target, e.label].join('|')));
+    const expected = new Map<string, string>();
+    for (const e of graph.edges) {
+      if (e.kind !== 'has-a' || e.flipped || e.isLoop || e.inducedFrom !== undefined) continue;
+      if (e.target === ENTITY_ROOT) continue;
+      for (const child of subtreeOf(data.graph, e.target)) {
+        if (!nodeIds.has(child) || child === e.source) continue;
+        const key = [e.source, child, e.label].join('|');
+        if (!declaredKeys.has(key)) expected.set(key, e.target);
+      }
+    }
+    const induced = graph.edges.filter(e => e.inducedFrom !== undefined);
+    expect(new Map(induced.map(e => [[e.source, e.target, e.label].join('|'), e.inducedFrom!])))
+      .toEqual(expected);
+    for (const e of induced) {
+      expect(e.kind).toBe('has-a');
+      expect(e.flipped).toBe(false);
+      expect(e.isLoop).toBe(false);
+    }
+    // Measured 2026-09-10: 3 declared edges induce 10 — Observation's and
+    // QuestionnaireResponseValue's five children each, and none from
+    // ImagingFile.derived_from → File, whose only subclass is ImagingFile
+    // itself (a self-loop, skipped). A change here is a schema change (a new
+    // subclass or a new parent-ranged slot), not a bug.
+    expect(induced.length).toBe(10);
+    expect(new Set(induced.map(e => e.inducedFrom))).toEqual(
+      new Set(['Observation', 'QuestionnaireResponseValue']));
   });
 
   test('association slots produce association edges, ordered like own-bkwd', () => {

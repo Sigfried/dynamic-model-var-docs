@@ -32,7 +32,7 @@
  */
 
 import type { SchemaGraph } from './SchemaTypes';
-import { getSlotEdgesForClass, getParentClass } from './Graph';
+import { getSlotEdgesForClass, getParentClass, getSubclasses } from './Graph';
 
 export type OwnershipVerdict = 'own-fwd' | 'own-bkwd' | 'association' | 'excluded';
 
@@ -113,7 +113,8 @@ export type OwnershipRule =
   | 'cardinality-split'     // slot in CARDINALITY_SPLIT_OWN_FWD (Exception 2b)
   | 'multivalued'           // Rule 1: multi-valued slot → class
   | 'value-object'          // Exception 2a: single-valued → no independent existence
-  | 'fk-inversion';         // Rule 2: single-valued slot → other entity
+  | 'fk-inversion'          // Rule 2: single-valued slot → other entity
+  | 'range-subtree';        // Rule 3: an own-fwd slot's range includes its subclasses
 
 /** Human-readable statement of each rule, for the legend. */
 export const OWNERSHIP_RULE_TEXT: Record<OwnershipRule, string> = {
@@ -128,6 +129,9 @@ export const OWNERSHIP_RULE_TEXT: Record<OwnershipRule, string> = {
   'cardinality-split': 'Cardinality splits a family. These are single-valued but have '
     + 'multivalued siblings that are forward-owned, so they are forced forward to keep the '
     + 'family consistent (Exception 2b).',
+  'range-subtree': 'A slot whose range is a parent class accepts any of its subclasses, so '
+    + 'whatever owns the parent through that slot owns each subclass too (Rule 3). These '
+    + 'edges are induced from the declared one, not read from a slot of their own.',
   'multivalued': 'A multi-valued slot pointing at a class means the owner has-a collection '
     + 'of them, so ownership runs forward: owner → range.',
   'value-object': 'A single-valued slot pointing at a target with NO INDEPENDENT EXISTENCE '
@@ -184,6 +188,20 @@ export const SKIP_SUBCLASS_EXPANSION = new Set<string>([
   'Entity',
 ]);
 
+/**
+ * Every is-a descendant of `classId`, transitively, in discovery order.
+ * Rule 3's "the range includes its subtree"; also what the legend enumerates
+ * so its pairs and the graph's induced edges cannot disagree.
+ */
+export function subtreeOf(graph: SchemaGraph, classId: string): string[] {
+  const out: string[] = [];
+  const walk = (c: string) => {
+    for (const s of getSubclasses(graph, c)) { out.push(s); walk(s); }
+  };
+  walk(classId);
+  return out;
+}
+
 export interface ContainmentNode {
   id: string;
   label: string;
@@ -203,6 +221,14 @@ export interface ContainmentEdge {
   kind: ContainmentEdgeKind;
   /** The rule verdict this edge came from; absent on subclass edges. */
   verdict?: OwnershipVerdict;
+  /**
+   * Rule 3: set when this edge was INDUCED from a declared one whose range is
+   * this target's ancestor — the value is that declared range. The slot named
+   * by `label` is declared on `source` with range `inducedFrom`, not with
+   * range `target`; anything that recomputes edges from slot data has to
+   * skip these or derive them the same way (`subtreeOf`).
+   */
+  inducedFrom?: string;
   isLoop: boolean;
 }
 
@@ -290,6 +316,33 @@ export function buildContainmentGraph(
         kind: verdict === 'association' ? 'association' : 'has-a',
         verdict,
       });
+    }
+  }
+
+  /*
+   * Rule 3 — a forward-owned range includes its subtree. `ObservationSet.
+   * observations: Observation[]` holds MeasurementObservations as readily as
+   * Observations, so ObservationSet owns every Observation subclass, and the
+   * induced edges say so. Without them a subclass nothing names directly has
+   * no owner at all: it is a root in the DAG, lands in layer 0, and drags the
+   * merged box it shares with its parent to the far left of the canvas —
+   * disconnected from the box that owns the family (Siggie, 2026-09-10, on
+   * QuestionnaireResponseValue). Inherited slots already give the BACKWARD
+   * direction for free — a subclass carries its parent's `associated_
+   * participant`, so Participant owns each child — and this is the forward
+   * dual of that.
+   *
+   * Forward edges only: no own-bkwd edge in the schema has a range with
+   * subclasses (measured 2026-09-10), and Entity is skipped for the reason
+   * SKIP_SUBCLASS_EXPANSION exists — its subtree is every class.
+   */
+  for (const e of [...edges]) {
+    if (e.kind !== 'has-a' || e.flipped || e.isLoop || e.target === ENTITY_ROOT) continue;
+    for (const child of subtreeOf(graph, e.target)) {
+      if (!included.has(child) || child === e.source) continue;
+      if (edges.some(x => x.source === e.source && x.target === child && x.label === e.label)) continue;
+      const { id: _id, isLoop: _loop, ...rest } = e;
+      pushEdge({ ...rest, target: child, inducedFrom: e.target });
     }
   }
 

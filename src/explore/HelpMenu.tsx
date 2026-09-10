@@ -65,7 +65,7 @@ export interface HelpMenuProps {
 const HELP_ENTRIES: ReadonlyArray<{ id: string; label: string }> = [
   { id: 'graph-canvas-reading', label: 'Reading the diagram' },
   { id: 'relation-bar', label: 'The relation bar' },
-  { id: 'toolbar-siblings', label: 'Inheritance and merged boxes' },
+  { id: 'merged-boxes', label: 'Inheritance and merged boxes' },
   { id: 'node-dismiss', label: 'Closing a box' },
   { id: 'copy-link', label: 'Sharing what you see' },
 ];

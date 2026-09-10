@@ -223,6 +223,8 @@ export interface OwnershipSubgraphEdge {
   /** 'flipped' ownership edges need a re-verbed label, never the bare slot name. */
   storageDirection: 'forward' | 'flipped';
   cardinality: string;
+  /** Rule 3: the declared range this edge was induced from (see ContainmentEdge). */
+  inducedFrom?: string;
   isLoop: boolean;
 }
 
@@ -437,6 +439,7 @@ export function buildOwnershipSubgraph(
       slotName: e.kind === 'subclass' ? '' : e.label,
       storageDirection: (e.flipped ? 'flipped' : 'forward') as 'forward' | 'flipped',
       cardinality: e.cardinality,
+      ...(e.inducedFrom !== undefined ? { inducedFrom: e.inducedFrom } : {}),
       isLoop: e.isLoop,
     }));
 

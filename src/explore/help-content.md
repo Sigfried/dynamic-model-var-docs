@@ -1420,12 +1420,11 @@ introduced and then use one word.
 - **Title:** Closing a box
 - **Description:** Removes this entity from the diagram and unticks its checkbox on the left. A merged box removes every entity in it at once.
 
-### toolbar-siblings
+### merged-boxes
 
 - **Title:** Merged inheritance boxes
-- **Description:** When several entities on the diagram share a parent class, they collapse into one box titled by that parent. Rows the parent defines come first, then a coloured header per child followed by the rows that child adds.
-- **Interactions:**
-  - Toggle off to draw each entity as its own separate box.
+- **Anchor:** none
+- **Description:** When several entities on the diagram share a parent class, they collapse into one box titled by that parent. Rows the parent defines come first, then a coloured header per child followed by the rows that child adds. Whatever owns the parent owns every child too, so a line into the box header is a line to the whole family.
 - **Context:** Lines leaving a child's rows take that child's colour, so you can trace a line back to the block it came from.
 
 </details>

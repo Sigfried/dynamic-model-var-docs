@@ -101,7 +101,6 @@ const EDGE_KINDS: ReadonlyArray<{
 /** Toolbar buttons, in the order the toolbar shows them. */
 const TOOLBAR: ReadonlyArray<{ glyph: string; what: string }> = [
   { glyph: '⇱ roots', what: 'Also draw everything on the path up to a root.' },
-  { glyph: '⑃ siblings', what: 'Draw classes that share a parent as one merged box.' },
   { glyph: 'LR / TB', what: 'Lay the diagram out left-to-right or top-down.' },
   { glyph: '⋙ ⋙⋙ ⌙ ≡', what: 'Where converging edges join before their shared arrowhead — near the box, early, at the last corner, or not at all. Temporary, for picking one by eye.' },
   { glyph: '+ − 1:1 ⛶', what: 'Zoom in, out, reset, fit to view.' },

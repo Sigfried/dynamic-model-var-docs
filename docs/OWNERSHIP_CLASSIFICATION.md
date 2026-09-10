@@ -277,6 +277,48 @@ is more honest than a rule that looks derived and is not.
 
 ---
 
+## Rule 3 — A forward-owned range includes its subtree (10 induced edges)
+
+`A.things: P[]` where `P` has subclasses. In LinkML a slot ranged on `P`
+accepts an instance of any subclass of `P`, so the collection holds `C`s as
+readily as `P`s, and **A owns every subclass of P** through the same slot. The
+graph carries one **induced** edge per subclass, `A → C`, labelled with the
+same slot and marked `inducedFrom: P`. Draw A before C.
+
+This is the forward dual of slot inheritance, which the graph already had: a
+subclass inherits `associated_participant`, so Participant owns each
+Observation subclass through the child's own copy of the slot. Without Rule 3
+the two directions were asymmetric, and a subclass that no slot names directly
+— `QuestionnaireResponseValueString`, every `Observation` child on a canvas
+without a Participant — had **no owner at all**: a root in the DAG, layer 0,
+dragging the merged box it shares with its parent to the far left of the
+canvas, unconnected to the class that owns the family (Siggie, 2026-09-10).
+
+**10 edges** (measured 2026-09-10), from three declared ones:
+`ObservationSet.observations → Observation` (5), `QuestionnaireResponseItem.
+response_value → QuestionnaireResponseValue` (5), and none from
+`ImagingFile.derived_from → File`, whose only subclass is ImagingFile itself.
+
+Scope, deliberately:
+
+- **Forward edges only.** No `own-bkwd` edge in the schema has a range with
+  subclasses, so the backward case is undefined rather than decided.
+- **`Entity` is skipped**, for the reason `SKIP_SUBCLASS_EXPANSION` exists:
+  its subtree is every class.
+- **A merged box collapses them.** Induced edges rewrite to the merged box like
+  any member edge and dedupe against the declared one on the same anchor row,
+  so the canvas shows ONE line into the box, landing on its header — the
+  relationship is with the family, not with a child.
+- **The relation bar shows them.** `QuestionnaireResponseItem` owns six
+  entities, one row per subclass, each row in the subclass's sibling colour,
+  exactly as inherited-slot rows already read.
+
+Anything that recomputes edges from slot data must skip `inducedFrom` edges or
+derive them the same way (`subtreeOf`); `containmentGraph.test.ts` does the
+latter.
+
+---
+
 ## `association` — 2 edges
 
 Neither class owns the other. Drawn dashed with **arrowheads at both ends**,
@@ -769,6 +811,12 @@ which is how the self-loop count drifted once already.
 Every branch returns the rule that fired alongside the verdict, so the legend and
 the graph cannot disagree about *why* an edge was drawn. `classifySlotEdge`
 delegates here and discards the rule.
+
+Rule 3 is not a branch of the classifier: `buildContainmentGraph` runs it as a
+second pass over the forward edges the classifier produced, walking
+`subtreeOf(range)` and pushing one `inducedFrom`-marked copy per subclass.
+`getOwnershipPairGroups` does the same walk for the legend's `range-subtree`
+group, and `ownershipLegend.test.ts` pins the two enumerations equal.
 
 **Keep `classifySlotEdgeExplained`.** Having the classifier report which rule
 fired — and the legend render pairs grouped by rule — is what made the original
