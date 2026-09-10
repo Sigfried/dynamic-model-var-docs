@@ -2458,7 +2458,10 @@ export default function OwnershipGraphView({
                             onInspect={onNodeClick}
                             colorOf={targetColorOf}
                             slotOrder={n.allRows.map(row => row.slot)}
-                            parentOf={id => summaries.get(id)?.parentId}
+                            // NOT `summaries`: that map covers only the classes
+                            // on the canvas, and most rows here name classes
+                            // that are not (which is why they are listed).
+                            parentOf={id => dataService.getClassSummary(id)?.parentId}
                           />
                         </div>
                       )}

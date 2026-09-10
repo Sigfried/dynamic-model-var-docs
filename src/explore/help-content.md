@@ -117,12 +117,12 @@ introduced and then use one word.
        A **ResearchStudyCollection** contains a list of **ResearchStudies**
        and, through them, owns every other entity in the model.
 
-       {{model-description:ResearchStudyCollection}}
+       *{{model-description:ResearchStudyCollection}}*
      - Anchor: node-box:ResearchStudyCollection
   3. ResearchStudy
      - Description:
        ##### ResearchStudy
-       {{model-description:ResearchStudy}}
+       *{{model-description:ResearchStudy}}*
 
        `part_of` points at ResearchStudy itself — the loop on this box — so a
        study can be a sub-study of another.
@@ -141,12 +141,12 @@ introduced and then use one word.
   5. Person
      - Description:
        ##### Person
-       {{model-description:Person}}
+       *{{model-description:Person}}*
      - Anchor: node-box:Person
   6. Participant
      - Description:
        ##### Participant
-       {{model-description:Participant}}
+       *{{model-description:Participant}}*
      - Anchor: node-box:Participant
   7. person vs participant
      - Description:
@@ -161,7 +161,7 @@ introduced and then use one word.
   8. Consent
      - Description:
        ##### Consent
-       {{model-description:Consent}}
+       *{{model-description:Consent}}*
 
        Both Participant and ResearchStudy own a list of them, so consent is
        recorded per person and per study.
@@ -169,12 +169,12 @@ introduced and then use one word.
   9. Visit
      - Description:
        ##### Visit
-       {{model-description:Visit}}
+       *{{model-description:Visit}}*
      - Anchor: node-box:Visit
   10. Demography
      - Description:
        ##### Demography
-       {{model-description:Demography}}
+       *{{model-description:Demography}}*
 
        Sex, ethnicity and race sit here rather than on Person. Demography
        points at a Participant, and optionally at the Visit it was recorded
@@ -216,7 +216,7 @@ introduced and then use one word.
   2. CauseOfDeath
      - Description:
        ##### CauseOfDeath
-       {{model-description:CauseOfDeath}}
+       *{{model-description:CauseOfDeath}}*
 
        It belongs to Person rather than to Participant — the one clinical
        fact recorded about the human being rather than about a study role,
@@ -225,17 +225,17 @@ introduced and then use one word.
   3. Condition
      - Description:
        ##### Condition
-       {{model-description:Condition}}
+       *{{model-description:Condition}}*
      - Anchor: node-box:Condition
   4. Procedure
      - Description:
        ##### Procedure
-       {{model-description:Procedure}}
+       *{{model-description:Procedure}}*
      - Anchor: node-box:Procedure
   5. Exposure
      - Description:
        ##### Exposure
-       {{model-description:Exposure}}
+       *{{model-description:Exposure}}*
 
        DrugExposure and DeviceExposure are its subclasses — a medication and a
        foreign object respectively — and the diagram draws them merged into
@@ -244,12 +244,12 @@ introduced and then use one word.
   6. ImagingStudy
      - Description:
        ##### ImagingStudy
-       {{model-description:ImagingStudy}}
+       *{{model-description:ImagingStudy}}*
      - Anchor: node-box:ImagingStudy
   7. BodySite
      - Description:
        ##### BodySite
-       {{model-description:BodySite}}
+       *{{model-description:BodySite}}*
 
        Condition, Procedure and ImagingStudy all point at it — *where* is part
        of what those records are. Anatomy belongs to Laboratory too, where a
@@ -284,7 +284,7 @@ introduced and then use one word.
   1. ObservationSet
      - Description:
        ##### ObservationSet
-       {{model-description:ObservationSet}}
+       *{{model-description:ObservationSet}}*
 
        A complete blood count is one ObservationSet holding a dozen
        Observations. `observations` is the attribute that owns them, which is
@@ -293,7 +293,7 @@ introduced and then use one word.
   2. Observation
      - Description:
        ##### Observation
-       {{model-description:Observation}}
+       *{{model-description:Observation}}*
 
        Key and value: `observation_type` says *what was measured*, and one of
        four `value_` attributes holds the answer — `value_quantity` for a number
@@ -323,7 +323,7 @@ introduced and then use one word.
   5. Context and Activity
      - Description:
        ##### Context and Activity
-       {{model-description:Context}} {{model-description:Activity}}
+       *{{model-description:Context}}* {{model-description:Activity}}
 
        Every kind of observation can carry a list of Contexts, and a Context
        points at the Activity that produced it — fasting, exercise, a dose
@@ -358,7 +358,7 @@ introduced and then use one word.
   1. Specimen
      - Description:
        ##### Specimen
-       {{model-description:Specimen}}
+       *{{model-description:Specimen}}*
 
        `parent_specimen` points back at Specimen itself — the loop on this box
        — because an aliquot or a portion is a specimen derived from another
@@ -367,7 +367,7 @@ introduced and then use one word.
   2. SpecimenContainer
      - Description:
        ##### SpecimenContainer
-       {{model-description:SpecimenContainer}}
+       *{{model-description:SpecimenContainer}}*
 
        It nests the same way specimens do: `parent_container` is a loop, so a
        well sits in a plate.
@@ -375,7 +375,7 @@ introduced and then use one word.
   3. Assay
      - Description:
        ##### Assay
-       {{model-description:Assay}}
+       *{{model-description:Assay}}*
      - Anchor: node-box:Assay
   4. the four activities
      - Description:
@@ -390,7 +390,7 @@ introduced and then use one word.
   5. BiologicProduct
      - Description:
        ##### BiologicProduct
-       {{model-description:BiologicProduct}}
+       *{{model-description:BiologicProduct}}*
 
        `derived_product` makes it something a specimen produced — a culture
        grown from a sample rather than the sample itself.
@@ -406,7 +406,7 @@ introduced and then use one word.
   7. Substance
      - Description:
        ##### Substance
-       {{model-description:Substance}}
+       *{{model-description:Substance}}*
 
        Three different things reach it: an Assay's reagent, a container's
        additive, and an additive used during collection or processing.
@@ -437,12 +437,12 @@ introduced and then use one word.
   1. Questionnaire
      - Description:
        ##### Questionnaire
-       {{model-description:Questionnaire}}
+       *{{model-description:Questionnaire}}*
      - Anchor: node-box:Questionnaire
   2. QuestionnaireItem
      - Description:
        ##### QuestionnaireItem
-       {{model-description:QuestionnaireItem}}
+       *{{model-description:QuestionnaireItem}}*
 
        `part_of` is a loop on this box, which is how a questionnaire nests
        sections inside sections: an item can be a group holding other items.
@@ -450,7 +450,7 @@ introduced and then use one word.
   3. QuestionnaireResponse
      - Description:
        ##### QuestionnaireResponse
-       {{model-description:QuestionnaireResponse}}
+       *{{model-description:QuestionnaireResponse}}*
 
        It is the mirror of Questionnaire — one filled-in form against one
        blank one.
@@ -458,7 +458,7 @@ introduced and then use one word.
   4. QuestionnaireResponseItem
      - Description:
        ##### QuestionnaireResponseItem
-       {{model-description:QuestionnaireResponseItem}}
+       *{{model-description:QuestionnaireResponseItem}}*
 
        And this mirrors QuestionnaireItem. `has_questionnaire_item` is the edge
        joining the two halves: an answer knows which question it answers.
@@ -508,7 +508,7 @@ introduced and then use one word.
   1. Document
      - Description:
        ##### Document
-       {{model-description:Document}}
+       *{{model-description:Document}}*
 
        It stands alone on this canvas. Its `focus` attribute points at the
        root of the whole model, a class named Entity that the Explorer does not draw, and
@@ -518,7 +518,7 @@ introduced and then use one word.
   2. File
      - Description:
        ##### File
-       {{model-description:File}}
+       *{{model-description:File}}*
 
        `derived_from` is a loop: a converted or processed file remembers the
        one it came from.
@@ -526,7 +526,7 @@ introduced and then use one word.
   3. ImagingFile
      - Description:
        ##### ImagingFile
-       {{model-description:ImagingFile}}
+       *{{model-description:ImagingFile}}*
 
        It is File's only subclass today, so the diagram merges it into File's
        box rather than drawing two. Its extra rows — modality, series, an
@@ -537,7 +537,7 @@ introduced and then use one word.
   4. Quantity
      - Description:
        ##### Quantity
-       {{model-description:Quantity}}
+       *{{model-description:Quantity}}*
 
        This is the most reused entity in BDCHM. Observations of every kind hold
        their value in one; so do an assay's detection limits, a substance's
@@ -548,7 +548,7 @@ introduced and then use one word.
   5. TimePoint and TimePeriod
      - Description:
        ##### TimePoint and TimePeriod
-       {{model-description:TimePoint}}
+       *{{model-description:TimePoint}}*
 
        A TimePeriod is just a start and an end, both TimePoints — the two edges
        between those boxes. And `index_time_point` is a loop on TimePoint,
@@ -836,7 +836,7 @@ introduced and then use one word.
 - **Action:** Added Observation from Visit's → list.
 - **Anchor:** node-box:Observation
 - **Description:**
-  {{model-description:Observation}}
+  *{{model-description:Observation}}*
 
   Two lines arrive here, because an Observation names both the Participant
   it is about and the Visit it was made at. It has five subclasses, which
@@ -859,7 +859,7 @@ introduced and then use one word.
 - **Action:** Added Quantity, the same as clicking the `value_quantity` row.
 - **Anchor:** node-box:Quantity
 - **Description:**
-  {{model-description:Quantity}}
+  *{{model-description:Quantity}}*
 
   Five boxes: Person → Participant → Visit → Observation → Quantity is the
   path from a human being to a number you would analyse, and four of the six
@@ -1152,6 +1152,23 @@ introduced and then use one word.
   and a few more: **an entity with no independent existence is owned even by
   a single-valued attribute.** Which entities those are is a decision
   recorded in the Explorer, not something the schema can tell it.
+
+
+### owns-family
+
+- **Title:** Owns: the whole family
+- **Tour:** Ownership
+- **Only:** sel=ObservationSet~Observation~MeasurementObservation~SdohObservation
+- **Action:** Drew ObservationSet, Observation and two of its subclasses.
+- **Anchor:** slot-row:ObservationSet.observations
+- **Description:**
+  `observations` holds a list of Observations, so Rule 1 says the set owns
+  them. But an item in that list can just as well be a MeasurementObservation
+  or an SdohObservation — an attribute whose type is a parent class accepts
+  any of its subclasses — so ObservationSet owns each of those too.
+  **Rule 3: whatever owns a parent owns its children.** That is why the one
+  line from this row lands on the merged box's header rather than on any one
+  child, and why the set's **→** count takes in the whole family.
 
 
 ### three-kinds
