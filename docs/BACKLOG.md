@@ -638,6 +638,34 @@ Still open beside it:
 
 ---
 
+### Spacebar to advance a tour
+
+Parked 2026-09-10, low priority. Siggie: *"i thought it would be super simple
+but it requires more thought."* `→` / `←` / `Esc` / `?` are handled in
+`HelpProvider.tsx`'s keydown listener; space is not. Binding it is three lines,
+but the naive binding misfires in two ways, and each needs a guard:
+
+- **Space on a focused control fires the control.** After clicking `next →`
+  the button keeps focus, so space would click it AND advance — two steps for
+  one press. A focused checkbox in the left panel would toggle and advance.
+  `isInputFocused` only covers inputs, textareas and contenteditable; it would
+  have to widen to buttons, links, checkboxes and selects, and bail on those.
+- **Space is scroll.** The popover body (`.help-popover-body`) scrolls when a
+  step's text is taller than the viewport allows, and that is exactly when a
+  reader presses space hoping to scroll. Advancing would skip the text. The
+  guard: advance only when the body has no hidden overflow or is already at the
+  bottom; otherwise let the browser scroll.
+
+Shift+space should go back, matching slide tools; not toggle end. Enter is a
+worse fit than space (it also clicks focused buttons, and means "search" in
+the filter field), so leave it unbound.
+
+Observed alongside, and **not worth preventing**: with no tour running and no
+control focused, space scrolls the canvas into empty space below the boxes,
+since the canvas is a scroll container. Slightly odd; harmless.
+
+---
+
 ## Siggie's upcoming thoughts
 
 1. A help or legend listing **every type of ownership pair**, the rules and
