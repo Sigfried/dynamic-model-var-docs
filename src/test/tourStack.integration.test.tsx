@@ -221,6 +221,52 @@ describe('tour state stack, end to end', () => {
     expect(screen.queryByRole('dialog', { name: 'Tour outline', hidden: true })).toBeNull();
   });
 
+  test('a dragged popover drops the anchor machinery, and the next step gets it back', async () => {
+    /*
+     * Siggie, 2026-09-10: after a step flips from bottom to top, dragging the
+     * popover "moves in the opposite direction to my cursor". The drag sets
+     * `position-area: none` inline, but an active position-try fallback's
+     * declarations override inline style, so the flipped area stayed in
+     * charge and the dragged coordinates were read inside the anchor's cell.
+     * `data-anchored` is what scopes `position-anchor` and the fallbacks
+     * (help.css), so a dragged popover must not carry it. jsdom cannot show
+     * the misplacement itself; it can show the attribute.
+     */
+    Object.assign(Element.prototype, { setPointerCapture() {}, releasePointerCapture() {} });
+    // `Getting oriented`, not Ownership: its opening steps anchor on the
+    // selection panel, which exists in jsdom. A diagram anchor needs the ELK
+    // layout, which does not run here, so it would never resolve.
+    render(<ExploreApp />);
+    await screen.findByRole('heading', { name: /BDCHM Explorer/i });
+    fireEvent.mouseEnter(button(/guided tours/i));
+    const chooser = await screen.findByRole('dialog', { name: /guided tours/i });
+    fireEvent.click([...chooser.querySelectorAll('button')]
+      .find(b => /^getting oriented/i.test(b.textContent ?? ''))!);
+    await screen.findByRole('button', { name: /next/i, hidden: true });
+    const popover = () => document.querySelector('[data-help-popover]')!;
+    // Its first two steps are `Anchor: none`; the third anchors on the panel.
+    const untilAnchored = async () => {
+      for (let i = 0; i < 8 && !popover().hasAttribute('data-anchored'); i++) {
+        next();
+        await new Promise(r => setTimeout(r, 0));
+      }
+      await waitFor(() => expect(popover().hasAttribute('data-anchored')).toBe(true));
+    };
+    await untilAnchored();
+
+    const handle = popover().querySelector('.help-popover-title')!;
+    fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 100, clientY: 100 });
+    fireEvent.pointerMove(handle, { pointerId: 1, clientX: 160, clientY: 150 });
+    fireEvent.pointerUp(handle, { pointerId: 1, clientX: 160, clientY: 150 });
+    expect(popover().hasAttribute('data-anchored')).toBe(false);
+    expect((popover() as HTMLElement).style.positionArea).toBe('none');
+
+    // The drag is an answer to THIS step's placement; the next anchored step
+    // gets the machinery back.
+    next();
+    await untilAnchored();
+  });
+
   test('? is ignored while typing, so it can be typed into a field', async () => {
     // Guarded by `isInputFocused`: the shortcut must not swallow a question
     // mark someone is writing.

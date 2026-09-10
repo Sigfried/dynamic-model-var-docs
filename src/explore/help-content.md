@@ -1072,11 +1072,15 @@ I want to restructure this
 - **Anchor:** none
 - **Width:** 560
 - **Description:**
-  The canvas is laid out by **ownership**: an entity is drawn to the right of
-  whatever owns it. That one idea is what the whole diagram is about, and it
-  is not in the schema. A LinkML schema says that Visit has an attribute
-  holding a Participant; it does not say which of the two contains the
-  other, and the generated documentation cannot show it either.
+  The canvas is laid out by **ownership** (aka, containment or has-a
+  relationships): an entity is drawn to the right of whatever owns it. That one
+  idea is what the whole diagram is about, but the schema doesn't specify
+  these relationships. 
+  
+  and it is not in the schema.
+  A LinkML schema says that Visit has an attribute holding a Participant; it
+  does not say which of the two contains the other, and the generated
+  documentation cannot show it either.
 
   So the Explorer decides, with a few rules and a number of exceptions, 
   <!-- where do these live in code? ideally it would be in a declarative
@@ -1362,7 +1366,7 @@ I want to restructure this
 - **Only:** cat=observation
 - **Action:** Drew the Observations / Measurements category, the same as pressing its ⊞ button.
 - **Anchor:** node-box:Observation
-- **Position:** right  <!-- doesn't work because it thinks there isn't enough room on the right -->
+- **Position:** right
 - **Description:**
   The largest hierarchy in the model, and the best picture of what merging
   buys. One box holds Observation and all five subclasses; the rows they

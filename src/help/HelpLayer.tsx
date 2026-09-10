@@ -690,8 +690,18 @@ export default function HelpLayer() {
         /* Scopes the anchor machinery in `help.css` -- `position-anchor` and
            `position-try-fallbacks` apply ONLY here. An unanchored step is placed
            by the inline style below, and a `--help-shift` fallback would beat
-           that inline style outright. See the rule's own comment. */
-        data-anchored={anchored ? '' : undefined}
+           that inline style outright. See the rule's own comment.
+
+           A DRAGGED popover is unanchored too, for the same reason. The drag
+           branch below sets `positionArea: 'none'` inline, but while a
+           position-try fallback is in effect its declarations override inline
+           style, so the flipped `position-area` stayed in charge and the
+           dragged `left`/`top` were read inside the anchor's cell rather than
+           the viewport. Siggie, 2026-09-10: after a step flips from bottom to
+           top, dragging the popover "moves in the opposite direction to my
+           cursor". Undragged steps never showed it because the inline
+           `position-area` is what the fallback flips FROM. */
+        data-anchored={anchored && !drag.offset ? '' : undefined}
         className="help-popover"
         style={{
           ...popoverPosition(anchored, inTour ? position?.position : undefined,
