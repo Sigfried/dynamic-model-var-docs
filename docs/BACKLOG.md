@@ -604,7 +604,7 @@ the app generalizable rather than bespoke.
 
 It is a **nesting, so it is a picture, not prose** — four consecutive "X's
 place in Y" sentences read as an org chart. Same request as
-[TASKS.md](TASKS.md) item 4's diagrams ("NOT ascii, looking like the app"). One
+[TASKS.md](TASKS.md) `pictures`' diagrams ("NOT ascii, looking like the app"). One
 diagram with the Explorer highlighted serves both audiences: the researcher
 skims it, the LinkML reader reads it as positioning.
 

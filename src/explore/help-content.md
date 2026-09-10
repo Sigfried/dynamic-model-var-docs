@@ -563,7 +563,7 @@ introduced and then use one word.
 - **Description:** 
   > Salvaged 2026-09-09 from the stash: this is your shortened `why`. The
   > LinkML half moved to `linkml-context`, the first step of Getting
-  > oriented, and your comment there says the two still overlap. TASKS 3b.
+  > oriented, and your comment there says the two still overlap. TASKS `why-argument`.
 
   You may want to use BDCHM:
   - to analyze data harmonized to it;
@@ -596,7 +596,7 @@ introduced and then use one word.
 - **Description:** <!-- redundant with `why` above. fix: figure out what goes where -->
   > Salvaged 2026-09-09 from the stash, where you had made this the first
   > step of Getting oriented. It repeats most of `why` at the end of tour 1.
-  > Decide what goes where (TASKS 3b), then delete this note.
+  > Decide what goes where (TASKS `why-argument`), then delete this note.
 
   BDCHM and the ingestion pipeline are built using [LinkML](https://linkml.io/).
   Neither the raw LinkML [YAML file](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/blob/main/src/bdchm/schema/bdchm.yaml)
@@ -1059,6 +1059,11 @@ introduced and then use one word.
 - **TourMetadata:**
 - **Description:** Why boxes land where they do, and what the three kinds of line mean
 
+<!--
+
+I want to restructure this
+
+-->
 ### why-ownership
 
 - **Title:** Ownership

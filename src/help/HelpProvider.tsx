@@ -387,7 +387,7 @@ export function HelpProvider({
    *
    * An empty tour (a name with no steps, or a content file with none) sets the
    * name and stops, with `startTour` a visible no-op rather than a half-entered
-   * tour. See docs/TASKS.md item 7 for the silent-`goTo` case this deliberately
+   * tour. See TASKS `nav-guards` for the silent-`goTo` case this deliberately
    * does not paper over.
    */
   const startTour = useCallback((name = tourNames(content)[0], at = 0) => {

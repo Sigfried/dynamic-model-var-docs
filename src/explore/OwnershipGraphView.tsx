@@ -1303,7 +1303,7 @@ export default function OwnershipGraphView({
   /**
    * Inert since 2026-09-10: the ⑃ siblings toggle is gone and siblings always
    * merge. The prop, its URL param and localStorage key are still plumbed
-   * through ExploreApp until TASKS 8d removes `sibs` end to end.
+   * through ExploreApp until TASKS `drop-sibs` removes `sibs` end to end.
    */
   mergeSibs: boolean;
   setMergeSibs: (v: boolean) => void;

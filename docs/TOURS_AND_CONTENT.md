@@ -7,7 +7,7 @@ format is [`src/help/FORMAT.md`](../src/help/FORMAT.md).
 
 **Delete this file once the tours ship.** Status 2026-09-09: all five are
 written in the content file and pass the tests; Siggie has not yet read the
-four app tours in the browser (TASKS item 1). Until then this file is the
+four app tours in the browser (TASKS `read-tours`). Until then this file is the
 record of what each tour was meant to do.
 
 ---
@@ -61,7 +61,7 @@ Prose lives in the content file now, not here. What remains is the SHAPE:
 | 6 | `lab-biospecimen` | done 2026-09-08, 8 beats |
 | 7 | `survey-questionnaire` | done 2026-09-08, 7 beats |
 | 8 | `other-files` | done 2026-09-08, 6 beats |
-| 9 | `why` | written, but its placement is unsettled ([TASKS 3b](TASKS.md)) |
+| 9 | `why` | written, but its placement is unsettled ([TASKS `why-argument`](TASKS.md)) |
 
 **The recipe the six category steps are built on**, should a seventh category
 ever want one: `Only: cat=<id>` and an `Action:` saying it drew the category;

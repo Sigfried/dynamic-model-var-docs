@@ -132,7 +132,7 @@ diagram is shaped as it is:
 
    Merged boxes show every row; the "+N more" collapse applies only to ordinary
    boxes. Siblings always merge: the `⑃ siblings` toggle was removed 2026-09-10
-   (its `sibs` URL param is still parsed until TASKS 8d removes it). Whatever
+   (its `sibs` URL param is still parsed until TASKS `drop-sibs` removes it). Whatever
    owns the parent owns every child too (OWNERSHIP_CLASSIFICATION Rule 3), so
    a line into the merged box lands on its header and stands for the family.
 

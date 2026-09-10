@@ -654,7 +654,7 @@ settable from a step.
 | `sel` | ids joined by `~` | what is on the canvas |
 | `detail` | an id, or empty to close | the detail drawer |
 | `roots` | `1` / `0` | path-to-root |
-| `sibs` | `1` / `0` | sibling merge — still parsed, but there is no UI for it since 2026-09-10 and siblings always merge; pending removal (TASKS 8d) |
+| `sibs` | `1` / `0` | sibling merge — still parsed, but there is no UI for it since 2026-09-10 and siblings always merge; pending removal (TASKS `drop-sibs`) |
 | `dir` | `RIGHT` / `DOWN` | layout direction |
 | `merge` | `near` / `far` / `bend` / `off` | edge merge mode |
 | `legend` | `1` / `0` | the ownership legend panel |
