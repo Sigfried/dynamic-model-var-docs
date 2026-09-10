@@ -53,6 +53,25 @@ describe('the anchor machinery is scoped to an anchored step', () => {
     expect(m![1]).toMatch(/position-try-fallbacks:/);
   });
 
+  test('the spotlight still names its anchor', () => {
+    /*
+     * The collateral loss of the split above. The commit that scoped the
+     * popover's `position-anchor` (4cd814d) also deleted it from
+     * `.help-spotlight`, whose four `anchor()` calls then had no default anchor
+     * and were invalid: the ring collapsed to a 4px box at the page origin and
+     * its 9999px shadow dimmed the whole viewport with no hole in it. No test
+     * mentioned the spotlight, so it shipped (Siggie, 2026-09-09: *"why am i
+     * not seeing highlighting in the tour?"*).
+     *
+     * The scoping argument does not apply here: the spotlight is rendered only
+     * when the anchor resolved, so its name never points at nothing.
+     */
+    const m = /\n\.help-spotlight\s*\{([\s\S]*?)\n\}/.exec(css);
+    expect(m, '.help-spotlight rule is missing').not.toBeNull();
+    expect(m![1]).toMatch(/position-anchor:\s*--help-anchor/);
+    expect(m![1]).toMatch(/anchor\(left\)/);
+  });
+
   test('NO fallback abandons the anchor', () => {
     /*
      * The guarantee the whole placement scheme rests on. Siggie, 2026-09-09:

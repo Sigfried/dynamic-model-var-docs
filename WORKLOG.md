@@ -156,6 +156,33 @@ popovers are unchanged. Only the BDCHM tour authors an abbreviation
 (`BDCHM`); the other four names are short. A test caps abbreviations at 16
 characters so the field cannot quietly become a second name.
 
+### Later — no ring on any tour step since yesterday morning
+
+Siggie's screenshot: popover placed correctly under the Organization box,
+nothing ringed, nothing dimmed. DevTools settled it in one exchange: the box
+carried `data-help-anchor`, the popover `data-anchored`, and
+`div.help-spotlight` was in the DOM at **4 × 4 px** at the page origin. So
+its four `anchor()` calls were invalid and every inset fell back to `auto`;
+the 9999px box-shadow still painted, which is why the whole viewport was
+faintly dimmed with no hole in it. Panel-row steps were equally ringless,
+which ruled out the transform hypothesis I had raised first (boxes are placed
+by `translate()`, and I was not sure anchor() ignores transforms — it was
+never the question).
+
+Cause: `4cd814d` (yesterday, "the popover ends up in the same wrong place")
+moved `position-anchor` from the bare popover class to
+`.help-popover[data-anchored]`, and deleted it from `.help-spotlight` in the
+same edit. Nothing pinned the spotlight's declaration, so a one-line
+collateral loss shipped. Restored, with a comment saying why the scoping
+argument does not apply to the spotlight (it is only rendered when
+`anchored`).
+
+Siggie asked why not "dim the whole viewport and lighten the anchor div"
+instead. Answered in chat and worth keeping: the anchor sits inside the zoom
+wrapper's transform and the scroll container, both stacking contexts, so it
+cannot be raised above a scrim outside them. The cutout shadow is the one
+element that does both jobs without that fight.
+
 ---
 ## 2026-09-09 (night) — boxes on motion/react; edges deferred
 

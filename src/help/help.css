@@ -119,6 +119,14 @@ body.help-mode {
    of its own: it is painted relative to this box, so it follows for free. */
 .help-spotlight {
   position: fixed;
+  /* The default anchor for the four anchor() calls below. Without it they are
+     invalid, every inset falls back to auto, and the ring collapses to a 4px
+     box at the page origin whose 9999px shadow dims the whole viewport with no
+     hole in it — which is what shipped between 4cd814d and 2026-09-09 evening.
+     That commit scoped the POPOVER's `position-anchor` to `[data-anchored]`
+     and took this one with it. The scoping is not needed here: the spotlight
+     is only rendered when the anchor resolved (`anchored &&` in HelpLayer). */
+  position-anchor: --help-anchor;
   left: calc(anchor(left) - 4px);
   top: calc(anchor(top) - 4px);
   width: calc(anchor-size(width) + 8px);
