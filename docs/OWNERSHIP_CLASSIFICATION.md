@@ -684,6 +684,14 @@ the same relationship in the popover does not mean re-finding it in a different
 order. A relationship declared by another class has no row on this box, so it
 sorts last — which is why `observations` is at the bottom.
 
+**Then rows are grouped by is-a family** (2026-09-10): a row whose class's
+parent has a row for the same slot follows that row, marked `↳`, recursively.
+Participant's 22 owned entities are mostly one Observation family and one
+ObservationSet family, which a flat alphabetical list hid. A child whose parent
+has no row for that slot stays where the sort put it. The parent lookup goes to
+`DataService.getClassSummary`, not to the canvas — most rows name classes that
+are not drawn.
+
 Three things are encoded independently:
 
 - **Which end is qualified** (`Class.slot` rather than a bare name) says which

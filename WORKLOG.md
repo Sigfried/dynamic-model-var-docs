@@ -60,9 +60,43 @@ to one line, so the "edge inflation when merge is off" objection disappears
 instead of needing an answer. The `sibs` param plumbing stays for TASKS 8d. The
 `toolbar-siblings` help entry became `merged-boxes` with no anchor.
 
-**Open, asked by Siggie:** relation-bar rows grouped by is-a family (parent row,
-children indented) — the flat list hides that Participant's 22 owned entities
-are mostly one family. Not started.
+**Relation-bar rows grouped by is-a family** shipped the same day, and its
+first version did nothing in the app while its own render test passed. I wired
+`parentOf` to the view's `summaries` map, which is built from the SUBGRAPH's
+nodes — the classes on the canvas — and nearly every popover row names a class
+that is not on the canvas, which is why it is a row. So every lookup returned
+undefined and the flat order stood. `DataService.getClassSummary` directly is
+right. The pattern to remember: a map keyed by drawn nodes is the wrong source
+for anything the popover says about UNDRAWN classes.
+
+**Smaller items from the same session, for the record:**
+
+- *Help content says entity, not class.* Sixty-odd "class"es in the tours were
+  my default, not a choice. Rule written at the top of `help-content.md`:
+  entity for the thing, owner/owned for ownership, subclass / parent class for
+  is-a, where "class" is the signal that we do not mean the ownership tree —
+  Siggie's point that bare "parent" is ambiguous in an app whose left panel
+  nests entities under owners. No "entity class" hybrids: a compound noun
+  implies a distinction rather than stating an equivalence.
+- *`?` lost the tour label.* `startTour()` with no name left `tourName`
+  undefined; the steps were right (parser default) but everything keyed on the
+  name was blank. Default resolved as a parameter default, so it is in state.
+- *Parser: one field rule everywhere.* When `**` became optional only `fieldOf`
+  learned it; `extractBlockField`, `extractBulletList` and the beat reader kept
+  the old literal tests, so an unbolded `- Beats:` was swallowed into the
+  description above it and a bolded beat `Description:` was ignored. All
+  blocks now end at `isEntryField`: a field bullet AT THE MARGIN, bold or not.
+  Indent is the only thing separating a beat's fields from an entry's.
+- *Escape and the tour map.* The provider's Escape is a document-CAPTURE
+  listener that stops propagation; the map's was a window BUBBLE listener, so
+  it never ran and `mapOpen` survived into the next tour. Window capture is
+  the one phase that runs first. The layer also resets `mapOpen` when no tour
+  is running.
+- *Spacebar to advance* parked in BACKLOG with its two guards (focused control
+  double-fires; space is scroll inside a tall popover body).
+- *Person stays pinned in Clinical* — it owns CauseOfDeath. I unpinned it on a
+  misreading and reversed it; Person was never pinned anywhere else, only
+  named in the "spine" text, which is what read as over-use.
 
 ---
 ## 2026-09-09 (late) — the four app tours written; Walkthrough dissolved (TASKS item 1)

@@ -234,8 +234,8 @@ schema has exactly two.
 *Last, because it is the most complicated part of the diagram (Siggie) and
 because it depends on ownership's edge-anchor vocabulary.*
 
-Material, largely unharvested and good as written, from the "Inheritance (the ⑃
-siblings toggle)" case group:
+Material, largely unharvested and good as written, from the "Inheritance (merged
+sibling boxes)" case group (named for the toggle until it was removed 2026-09-10):
 
 - **One child, merged with its parent** (`MeasurementObservation` alone) — it
   still merges; merging does not wait for a second sibling, because a class must

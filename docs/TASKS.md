@@ -29,7 +29,8 @@ The active work. The plan is [TOURS_AND_CONTENT.md](TOURS_AND_CONTENT.md).
 ⚠️ **The menu is the ONLY way into a help-only entry.** The other route was help
 mode's `?` hints, and `HELP_MODE_ENABLED` is false — `HelpLayer` renders them
 only `if (helpMode && !inTour)`, so a `data-help-id` tag anchors and rings but
-opens nothing when clicked. Checked 2026-09-05: `toolbar-siblings`,
+opens nothing when clicked. Checked 2026-09-05: `toolbar-siblings` (now
+`merged-boxes`, unanchored since the toggle went 2026-09-10),
 `relation-bar` and `graph-canvas-reading` were listed and fine; `node-dismiss`
 was tagged in `OwnershipGraphView` and reachable from nowhere, and is listed
 now. Anything dropped from `HELP_ENTRIES` in `HelpMenu.tsx` is unreachable, not

@@ -212,7 +212,8 @@ one mode and a header in the other. **`child-header:` does not need that** — t
 two kinds name different things in either mode, so the vocabulary is unambiguous
 without it. Removing `sibs=0` touches a URL param, a localStorage key, the tour
 state stack, the toolbar, and the unmerged render path; it stays filed as its
-own work.
+own work. (The toolbar button and the unmerged path went 2026-09-10 with the
+Rule 3 ownership work; the plumbing is still TASKS 8d.)
 
 ---
 
