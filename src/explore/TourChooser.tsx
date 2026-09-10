@@ -76,8 +76,15 @@ export default function TourChooser() {
       onMouseEnter={() => setOpen(true)}
     >
       <button
-        onClick={() => setOpen(v => !v)}
-        title="Guided walks through the app and the model"
+        /*
+         * CLICK opens the overview, not the list (TASKS 1b, Siggie 2026-09-09).
+         * Hover already opens the list, so a click on the same button was a
+         * second way to do the same thing; the overview -- every tour with
+         * every step -- is the thing a click had no route to except through
+         * the list's first row.
+         */
+        onClick={() => { setOpen(false); setOverview(true); }}
+        title="Guided walks through the app and the model; click for the overview"
         /* A filled pill, for the reason the old `take the tour` pill was one:
            as another underlined blue link it would read as chrome among the
            four already in this header. */

@@ -68,7 +68,9 @@ function openChooser(over: Partial<HelpApi>) {
       <TourChooser />
     </HelpContext.Provider>,
   );
-  fireEvent.click(screen.getByRole('button', { name: /guided tours/i }));
+  // HOVER opens the list; a click on the button opens the overview instead
+  // (TASKS 1b, 2026-09-09).
+  fireEvent.mouseEnter(screen.getByRole('button', { name: /guided tours/i }));
   return screen.getByRole('dialog', { name: /guided tours/i });
 }
 
@@ -124,6 +126,23 @@ describe('Guided tours chooser', () => {
     // edit to help-content.md and nothing else.
     const box = openChooser({ tours: ['Only one thing', 'And another'] });
     expect(rows(box)).toEqual(['Only one thing', 'And another']);
+  });
+
+  test('clicking the button opens the overview, not the list', () => {
+    // TASKS 1b (Siggie, 2026-09-09). Hover was already the way into the list,
+    // so the click was a duplicate; the overview had no direct route.
+    render(
+      <HelpContext.Provider value={api({ tours: TOURS })}>
+        <TourChooser />
+      </HelpContext.Provider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /guided tours/i }));
+    // The map is a `popover="manual"` element jsdom leaves display-none, so it
+    // is invisible to role queries; the TourMap tests query it by class too.
+    const map = document.querySelector('.help-map')!;
+    expect(map).toBeTruthy();
+    expect(map.getAttribute('aria-label')).toBe('All tours');
+    expect(screen.queryByRole('dialog', { name: /guided tours/i })).toBeNull();
   });
 
   test('no tours means no button, rather than one opening an empty box', () => {

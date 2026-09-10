@@ -79,7 +79,8 @@ describe('tour state stack, end to end', () => {
   const startTour = async () => {
     render(<ExploreApp />);
     await screen.findByRole('heading', { name: /BDCHM Explorer/i });
-    fireEvent.click(button(/guided tours/i));
+    // Hover opens the list; a click opens the overview instead (TASKS 1b).
+    fireEvent.mouseEnter(button(/guided tours/i));
     const chooser = await screen.findByRole('dialog', { name: /guided tours/i });
     const ownership = [...chooser.querySelectorAll('button')]
       .find(b => /^ownership/i.test(b.textContent ?? ''))!;
