@@ -390,8 +390,18 @@ export function HelpProvider({
    * tour. See docs/TASKS.md item 7 for the silent-`goTo` case this deliberately
    * does not paper over.
    */
-  const startTour = useCallback((name?: string, at = 0) => {
+  const startTour = useCallback((name = tourNames(content)[0], at = 0) => {
     setHelpMode(false);
+    /*
+     * The default is resolved HERE, not left for `tourSteps` to fall back on.
+     * It used to be passed through as `undefined`: the steps still came out
+     * right (the parser defaults to the first tour), but `tourName` stayed
+     * undefined for the whole run, so anything keyed on it — the tour label
+     * above the popover title, the map's "current tour" — went missing for
+     * exactly the two ways a reader starts the first tour: `?` and `?tour=`.
+     * Noticed 2026-09-10: "when i invoke tour 1 using `?`, i don't get the
+     * abbreviation titles at top".
+     */
     setTourName(name);
     const all = tourPositions(content, name);
     /*

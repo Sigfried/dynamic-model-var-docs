@@ -130,6 +130,20 @@ describe('startTour with a position', () => {
     expect(read('index')).not.toBe('(null)');
     expect(read('title')).toBe('Third');
   });
+
+  test('`?` names the tour it starts', () => {
+    /*
+     * `?` calls `startTour()` with no name. The steps always came out right,
+     * because the parser falls back to the first tour, but `tourName` stayed
+     * undefined for the whole run and the label above the popover title went
+     * missing (2026-09-10). The default has to be resolved into the state, not
+     * left implicit.
+     */
+    setup();
+    fireEvent.keyDown(document, { key: '?' });
+    expect(read('index')).toBe('0');
+    expect(read('name')).toBe('Demo');
+  });
 });
 
 describe('endTour', () => {
