@@ -526,6 +526,23 @@ export default function HelpLayer() {
   const ready = changeSettled || anchored;
 
   /*
+   * One popover ELEMENT per position, not one for the whole tour.
+   *
+   * CSS anchor positioning remembers an element's last successful
+   * `position-try` fallback and keeps applying it while it still fits, before
+   * it reconsiders the base `position-area`. Reusing one element across steps
+   * therefore let step N's flipped placement override step N+1's authored
+   * `Position:` — "if i come to this step from the step before the position
+   * doesn't work, but if i navigate straight to it, it does" (Siggie,
+   * 2026-09-10; same for `bottom`). The help.css note on `--help-shift`
+   * records the same stickiness: it is a property of the element's placement
+   * state, not of the step. Keying the element by position starts every step
+   * with no remembered fallback. The drag offset resets per step for the same
+   * reason, by other means.
+   */
+  const popoverKey = inTour ? (position?.address ?? 'tour') : (activeId ?? 'none');
+
+  /*
    * Popover API: showPopover puts it in the top layer, above every z-index and
    * overflow:hidden ancestor.
    *
@@ -542,7 +559,9 @@ export default function HelpLayer() {
     } else if (el.matches(':popover-open')) {
       el.hidePopover();
     }
-  }, [entry, ready]);
+    // `popoverKey`: a remounted element starts closed, even when the entry is
+    // the same one (a beat within a step), so it has to be shown again.
+  }, [entry, ready, popoverKey]);
 
   // Leaving help mode, or starting a tour, drops any pin -- otherwise a
   // previously pinned popover outlives the mode that produced it.
@@ -664,6 +683,7 @@ export default function HelpLayer() {
 
 
       <div
+        key={popoverKey}
         ref={popRef}
         popover="manual"
         data-help-popover=""

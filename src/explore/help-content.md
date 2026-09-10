@@ -1362,7 +1362,7 @@ I want to restructure this
 - **Only:** cat=observation
 - **Action:** Drew the Observations / Measurements category, the same as pressing its ⊞ button.
 - **Anchor:** node-box:Observation
-- **Width:** 520
+- **Position:** right  <!-- doesn't work because it thinks there isn't enough room on the right -->
 - **Description:**
   The largest hierarchy in the model, and the best picture of what merging
   buys. One box holds Observation and all five subclasses; the rows they
