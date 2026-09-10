@@ -115,6 +115,8 @@ introduced and then use one word.
   2. ResearchStudyCollection
      - Description:
        A **ResearchStudyCollection** contains a list of **ResearchStudies**
+       and, through them, owns every other entity in the model.
+
        {{model-description:ResearchStudyCollection}}
      - Anchor: node-box:ResearchStudyCollection
   3. ResearchStudy
@@ -128,7 +130,7 @@ introduced and then use one word.
   4. Organization
      - Description:
        ##### Organization
-       {{model-description:Organization}}
+       *{{model-description:Organization}}*
 
        It declares no attribute pointing at anything here. Everything that
        names an Organization — `Participant.originating_site`, and the
