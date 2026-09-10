@@ -119,6 +119,8 @@ const ONCE_PREFIX = 'help-once-';
  * generality buys nothing. (Hint dots DO need many at once; see `HINT_NAME`.)
  */
 const ANCHOR_ATTR = 'data-help-anchor';
+/** Written on the `Spotlight:` element; `help.css` names it `--help-spotlight`. */
+const SPOTLIGHT_ATTR = 'data-help-spotlight';
 
 /**
  * Hint dots need the OTHER shape: a name per element, because every dot is on
@@ -254,6 +256,8 @@ export default function HelpLayer() {
    * the pre-S3a behaviour exactly.
    */
   const anchor = inTour ? position?.anchor : entry?.anchor;
+  /** `Spotlight:` -- ring THIS element instead of the anchor, if it resolves. */
+  const spotlight = inTour ? position?.spotlight : entry?.spotlight;
   /*
    * `Highlight: none` still RESOLVES the anchor -- it only stops it being
    * drawn. That is the point of the field: the anchor keeps positioning the
@@ -310,6 +314,8 @@ export default function HelpLayer() {
    * pointing. A boolean, not a rect, because nothing here needs the numbers.
    */
   const [anchored, setAnchored] = useState(false);
+  /** The `Spotlight:` element resolved, so the ring goes there, not on the anchor. */
+  const [spotlit, setSpotlit] = useState(false);
   /** Preferred side for an anchored popover: `'below'` in an LR diagram, where
    *  the graph grows rightwards. Published by the tagging effect. */
   const [anchorSide, setAnchorSide] = useState<'below' | undefined>(undefined);
@@ -475,6 +481,38 @@ export default function HelpLayer() {
       setAnchorSide(undefined);
     };
   }, [activeId, anchor, elementFor]);
+
+  /*
+   * The `Spotlight:` element, tagged `data-help-spotlight` the same way the
+   * anchor is tagged, for the same reasons (it may not exist yet; it may be
+   * replaced under the step). `help.css` gives that attribute
+   * `anchor-name: --help-spotlight`, and the ring points at it whenever it
+   * resolved -- falling back to the anchor when the step names no spotlight
+   * or the element is not there.
+   */
+  useLayoutEffect(() => {
+    if (!activeId || !spotlight) { setSpotlit(false); return; }
+    let tagged: Element | null = null;
+    const sync = () => {
+      const el = elementFor(spotlight);
+      if (el === tagged) return;
+      tagged?.removeAttribute(SPOTLIGHT_ATTR);
+      tagged = el;
+      setSpotlit(!!el);
+      el?.setAttribute(SPOTLIGHT_ATTR, '');
+    };
+    sync();
+    const obs = new MutationObserver(sync);
+    obs.observe(document.body, {
+      childList: true, subtree: true,
+      attributes: true, attributeFilter: ['data-help-id'],
+    });
+    return () => {
+      obs.disconnect();
+      tagged?.removeAttribute(SPOTLIGHT_ATTR);
+      setSpotlit(false);
+    };
+  }, [activeId, spotlight, elementFor]);
 
   /*
    * Wait for a step's `Change:` to land before showing the popover.
@@ -648,9 +686,11 @@ export default function HelpLayer() {
         scrim needs nothing either: it is painted relative to the ring's own
         box, so it follows for free.
       */}
-      {anchored && activeId && highlight !== 'none' && (
+      {(spotlit || anchored) && activeId && highlight !== 'none' && (
         <div
           className={`help-spotlight${highlight === 'ring' ? ' help-spotlight-ring' : ''}`}
+          /* On the `Spotlight:` element when one resolved; else on the anchor. */
+          data-on-spotlight={spotlit ? '' : undefined}
         />
       )}
 

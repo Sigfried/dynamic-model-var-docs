@@ -254,8 +254,11 @@ describe('the diagram tags its boxes and rows with their whole anchor', () => {
 test('every diagram anchor in the content file matches a tag its step emits', () => {
   const bad: string[] = [];
   for (const e of content.entries.values()) {
-    const anchors = [e.anchor, ...(e.beats ?? []).map(b => b.anchor)]
-      .filter(a => a && ['node-box', 'child-header', 'slot-row'].includes(a.kind));
+    // Spotlights are anchors too: same grammar, same tags, same failure mode.
+    const anchors = [
+      e.anchor, e.spotlight,
+      ...(e.beats ?? []).flatMap(b => [b.anchor, b.spotlight]),
+    ].filter(a => a && ['node-box', 'child-header', 'slot-row'].includes(a.kind));
     if (!anchors.length) continue;
 
     const change = e.change ?? '';

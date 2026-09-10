@@ -351,16 +351,72 @@ describe('help content', () => {
     expect(entry.beats?.[0].change).toBe('sel=Person');
   });
 
+  test('Spotlight: rings another element, inherits like Anchor, and a beat overrides it', () => {
+    /*
+     * Siggie, 2026-09-10: "i want to highlight the affected_body_site row
+     * while staying anchored on Condition". `Anchor:` places the popover;
+     * `Spotlight:` says where the ring goes. Same grammar, same inheritance.
+     */
+    const e = parseHelpContent(`
+## S
+
+### e
+
+- Title: T
+- Anchor: node-box:Condition
+- Spotlight: slot-row:Condition.affected_body_site
+- Description: D
+- Beats:
+  1. one
+     - Description: inherits
+  2. two
+     - Spotlight: slot-row:Condition.associated_visit
+     - Description: overrides
+`).entries.get('e')!;
+    expect(e.anchor).toEqual({ kind: 'node-box', arg: 'Condition' });
+    expect(e.spotlight).toEqual({ kind: 'slot-row', arg: 'Condition.affected_body_site' });
+    const pos = tourPositions(parseHelpContent(`
+## S
+
+### e
+
+- Title: T
+- Tour: Demo
+- Anchor: node-box:Condition
+- Spotlight: slot-row:Condition.affected_body_site
+- Description: D
+- Beats:
+  1. one
+     - Description: inherits
+  2. two
+     - Spotlight: slot-row:Condition.associated_visit
+     - Description: overrides
+`), 'Demo');
+    expect(pos.map(p => p.spotlight?.arg)).toEqual([
+      'Condition.affected_body_site',   // the step's own position
+      'Condition.affected_body_site',   // beat 1 inherits
+      'Condition.associated_visit',     // beat 2 overrides
+    ]);
+    // Every position still anchors on the box: the spotlight never moves the popover.
+    expect(new Set(pos.map(p => p.anchor.arg))).toEqual(new Set(['Condition']));
+    // A step with no Spotlight: has none, rather than an undefined-kind anchor.
+    const plain = parseHelpContent('## S\n\n### p\n\n- Title: T\n- Description: D\n').entries.get('p')!;
+    expect(plain.spotlight).toBeUndefined();
+  });
+
   test('every anchor names a known kind', () => {
     const bad: string[] = [];
-    for (const e of content.entries.values()) {
-      if (e.anchor.kind !== 'none' && !KNOWN_KINDS.has(e.anchor.kind)) {
-        bad.push(`${e.id}: unknown anchor kind "${e.anchor.kind}"`);
+    const check = (where: string, a: { kind: string } | undefined) => {
+      if (a && a.kind !== 'none' && !KNOWN_KINDS.has(a.kind)) {
+        bad.push(`${where}: unknown anchor kind "${a.kind}"`);
       }
+    };
+    for (const e of content.entries.values()) {
+      check(e.id, e.anchor);
+      check(`${e.id} spotlight`, e.spotlight);
       for (const b of e.beats ?? []) {
-        if (b.anchor && b.anchor.kind !== 'none' && !KNOWN_KINDS.has(b.anchor.kind)) {
-          bad.push(`${e.id} beat: unknown anchor kind "${b.anchor.kind}"`);
-        }
+        check(`${e.id} beat`, b.anchor);
+        check(`${e.id} beat spotlight`, b.spotlight);
       }
     }
     expect(bad, bad.join('; ')).toEqual([]);

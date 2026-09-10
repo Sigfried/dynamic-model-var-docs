@@ -282,12 +282,13 @@ describe('tour state stack, end to end', () => {
 
   test('a step adds its own selection and back takes it away again', async () => {
     await startTour();
-    expect(sel()).toBeNull();          // steps 1-2 are exposition: they add nothing
-
-    // Walk forward until a step actually selects something.
-    for (let i = 0; i < 12 && !sel(); i++) next();
-    await waitFor(() => expect(sel()).toBeTruthy());
-    const added = sel()!;
+    // The opening step may itself select (Ownership's does, since Siggie's
+    // 2026-09-10 rewrite), so the property is "the NEXT selecting step changes
+    // it, and back changes it back" — not "the tour starts empty".
+    const first = sel();
+    for (let i = 0; i < 12 && sel() === first; i++) next();
+    await waitFor(() => expect(sel()).not.toBe(first));
+    const added = sel();
 
     back();
     await waitFor(() => expect(sel()).not.toBe(added));

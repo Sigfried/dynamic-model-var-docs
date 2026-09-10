@@ -62,6 +62,8 @@ export interface TourBeat {
   keep?: boolean;
   /** Overrides the step's anchor while this beat is showing. */
   anchor?: HelpAnchor;
+  /** Overrides the step's `Spotlight:` while this beat is showing. */
+  spotlight?: HelpAnchor;
   /** What the tour DID on entering this beat; rendered in its own band. */
   action?: string;
   /** What this beat ADDS to the app state, as a URL query. See `HelpEntry.change`. */
@@ -176,6 +178,15 @@ export interface HelpEntry {
    * able to ask for one without the other (Siggie, 2026-08-28).
    */
   highlight?: Highlight;
+  /**
+   * `Spotlight: slot-row:Condition.affected_body_site` — the element the ring
+   * is drawn around, when that is NOT the anchor. `Anchor:` keeps placing the
+   * popover; this only moves the emphasis (Siggie, 2026-09-10: "highlight the
+   * affected_body_site row while staying anchored on Condition"). Same
+   * grammar as `Anchor:`; `Highlight:` still says how hard to draw it, so
+   * `Highlight: none` draws nothing here either.
+   */
+  spotlight?: HelpAnchor;
   /**
    * How wide the popover is for this step, in CSS pixels. `Width: 480`.
    *
@@ -321,6 +332,8 @@ export interface TourPosition {
   beatCount: number;
   /** The beat itself, if this step has any. */
   beat?: TourBeat;
+  /** Element to ring INSTEAD of the anchor; a beat's wins over its step's. */
+  spotlight?: HelpAnchor;
   /** Emphasis for this position; a beat's wins over its step's. */
   highlight?: Highlight;
   /** Popover width for this position; a beat's wins over its step's. */
@@ -749,6 +762,7 @@ function extractBeats(lines: string[], entryId: string): TourBeat[] | undefined 
         continue;
       }
       if (key === 'anchor') current.anchor = parseAnchor(value, entryId);
+      else if (key === 'spotlight') current.spotlight = parseAnchor(value, entryId);
       else if (key === 'action') current.action = value.trim();
       else if (key === 'change') current.change = value.trim();
       // `Only:` is `Change:` with the replace flag set. Both write the same
@@ -791,6 +805,8 @@ function parseEntry(block: string, order: number): HelpEntry | null {
   const shortcut = extractField(lines, 'Shortcut');
   const context = extractField(lines, 'Context');
   const anchor = parseAnchor(extractField(lines, 'Anchor'), id);
+  const spotlightRaw = extractField(lines, 'Spotlight');
+  const spotlight = spotlightRaw === undefined ? undefined : parseAnchor(spotlightRaw, id);
   const action = extractField(lines, 'Action');
   const once = extractField(lines, 'Once');
   /*
@@ -818,6 +834,7 @@ function parseEntry(block: string, order: number): HelpEntry | null {
   return {
     id, title, description, interactions, shortcut, context,
     anchor, action, once, change, replace, highlight, width, position, offsetX, tour, order, beats,
+    ...(spotlight ? { spotlight } : {}),
   };
 }
 
@@ -951,6 +968,7 @@ export function tourPositions(content: HelpContent, tour?: string): TourPosition
         blocks: [entry.description],
         text: entry.description,
         anchor: entry.anchor,
+        ...(entry.spotlight ? { spotlight: entry.spotlight } : {}),
         action: entry.action,
         change: entry.change,
         replace: entry.replace,
@@ -994,6 +1012,7 @@ export function tourPositions(content: HelpContent, tour?: string): TourPosition
         blocks: showing,
         text: showing.join('\n\n'),
         anchor: entry.anchor,
+        ...(entry.spotlight ? { spotlight: entry.spotlight } : {}),
         action: entry.action,
         // The step's own change belongs to the position that opens it.
         change: entry.change,
@@ -1042,6 +1061,8 @@ export function tourPositions(content: HelpContent, tour?: string): TourPosition
         blocks: showing,
         text: showing.join('\n\n'),
         anchor: beat.anchor ?? entry.anchor,
+        ...((beat.spotlight ?? entry.spotlight)
+          ? { spotlight: (beat.spotlight ?? entry.spotlight)! } : {}),
         action: beat.action,
         // Inherited like `anchor`: a beat that does not move the popover keeps
         // the step's placement rather than snapping back to automatic.

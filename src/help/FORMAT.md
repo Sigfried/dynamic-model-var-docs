@@ -82,6 +82,7 @@ does not get swallowed into that entry's `Description:`.
 | `Only:` | the same query, but it REPLACES the selection instead of adding — see [Change](#change) |
 | | *(both take the same params — see [the params you can set](#the-params-you-can-set))* |
 | `Highlight:` | how hard to point at the anchor: `ring`, `dim`, `none` — see [Highlight](#highlight) |
+| `Spotlight:` | ring a DIFFERENT element than the anchor, same grammar as `Anchor:` — see [Highlight](#highlight) |
 | `Width:` | popover width in pixels; defaults to a width picked from the text (320–800); STICKY across beats — see [Placement](#placement) |
 | `Position:` | force the popover to a side: `left`, `right`, `top`, `bottom` — see [Placement](#placement) |
 | `OffsetX:` | nudge it horizontally — see [Placement](#placement) |
@@ -474,6 +475,26 @@ everything else. `Highlight:` changes that:
 | `dim` | the same, written out |
 | `ring` | the ring alone, nothing dimmed |
 | `none` | draw nothing |
+
+**`Spotlight:` moves the ring without moving the popover.** By default the
+ring surrounds the anchor. A step or beat that wants the popover to stay on one
+element while the emphasis goes to another names the second one:
+
+```
+- **Anchor:** node-box:Condition
+- Beats:
+  1. Attributes
+     - Highlight: ring
+     - Spotlight: slot-row:Condition.affected_body_site
+```
+
+The popover stays attached to the Condition box; the ring surrounds its
+`affected_body_site` row. Same grammar as `Anchor:`, and the same anchor tests
+check it. A beat's `Spotlight:` overrides its step's and is inherited by later
+beats like `Anchor:`. If the spotlit element is not on screen the ring falls
+back to the anchor. `Highlight:` still decides how hard to draw it — a step
+with `Highlight: none` draws no ring anywhere, so a beat that adds a
+`Spotlight:` under such a step also sets `Highlight: ring` or `dim`.
 
 Use `ring` when the anchor is one control among several the reader is meant to
 compare — dimming the rest hides the context the step is talking about.

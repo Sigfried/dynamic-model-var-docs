@@ -93,6 +93,35 @@ introduced and then use one word.
        category.
      - **Anchor:** selection-tree
 
+<!-- 
+### test
+- Title: test
+- **Tour:** The BioData Catalyst Harmonized Model
+- Change: sel=Observation
+- Anchor: slot-row:Observation.age_at_observation
+- Position: top
+- Description:
+  blah blah blah blah blah blah blah blah blah blah 
+  blah blah blah blah blah blah blah blah blah blah 
+  blah blah blah blah blah blah blah blah blah blah 
+  blah blah blah blah blah blah blah blah blah blah 
+  blah blah blah blah blah blah blah blah blah blah 
+  blah blah blah blah blah blah blah blah blah blah 
+  blah blah blah blah blah blah blah blah blah blah 
+  blah blah blah blah blah blah blah blah blah blah 
+  blah blah blah blah blah blah blah blah blah blah 
+  blah blah blah blah blah blah blah blah blah blah 
+  blah blah blah blah blah blah blah blah blah blah 
+  blah blah blah blah blah blah blah blah blah blah 
+  blah blah blah blah blah blah blah blah blah blah 
+  blah blah blah blah blah blah blah blah blah blah 
+  blah blah blah blah blah blah blah blah blah blah 
+  blah blah blah blah blah blah blah blah blah blah 
+  blah blah blah blah blah blah blah blah blah blah 
+
+- Anchor: slot row:Observation.associated_participant
+- **Anchor:** node-box:Observation
+-->
 
 ### admin-study
 
@@ -1066,17 +1095,29 @@ I want to restructure this
 -->
 ### why-ownership
 
-- **Title:** Ownership
+- **Title:** Relationships between entities
 - **Tour:** Ownership
-- **Only:** panels=0
-- **Anchor:** none
+- Only: sel=Participant~Condition~BodySite
+- **Anchor:** node-box:Condition
+- Position: bottom
+- Highlight: none
 - **Width:** 560
 - **Description:**
   The canvas is laid out by **ownership** (aka, containment or has-a
   relationships): an entity is drawn to the right of whatever owns it. That one
   idea is what the whole diagram is about, but the schema doesn't specify
   these relationships. 
-  
+- Beats:
+  1. Attributes
+     - Keep: true
+     - Highlight: ring
+     - Spotlight: slot-row:Condition.affected_body_site
+     - Description:
+       For instance, **Condition** has an `affected_body_site` attribute
+       pointing at **BodySite**.
+<!--  
+     - Only: sel=Participant~Condition~BodySite
+     -
   and it is not in the schema.
   A LinkML schema says that Visit has an attribute holding a Participant; it
   does not say which of the two contains the other, and the generated
@@ -1084,7 +1125,7 @@ I want to restructure this
 
   So the Explorer decides, with a few rules and a number of exceptions, 
   <!-- where do these live in code? ideally it would be in a declarative
-       config file for both the rules and exceptions -->
+       config file for both the rules and exceptions - ->
   and draws the result. This
   tour shows the rules on real cases.
 
@@ -1095,7 +1136,7 @@ I want to restructure this
     it belongs to;
   - **associated with** — dashed, arrowed at both ends, and no claim either
     way.
-
+-->
 
 ### owns-forward
 
