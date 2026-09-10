@@ -137,20 +137,23 @@ export const ENTITY_CATEGORIES: EntityCategory[] = [
   {
     id: 'admin',
     label: 'Admin / Study',
+    // Order is display order (Siggie, 2026-09-10): the study first, then who
+    // ran it, then the individual, then what was agreed and what happened.
+    // The tour's Admin / Study beats walk the same order.
     classIds: [
-      'Person',
-      'Participant',
-      'Demography',
-      'Visit',
-      'Consent',
-      'ResearchStudy',
       'ResearchStudyCollection',
+      'ResearchStudy',
       // Moved here from `other` (2026-09-04, Siggie). Organization is a study
       // administration concept, not a file: it is what `performed_by`,
       // `originating_site` and the transport endpoints point at, and those
       // arrive from Observations, Laboratory and Admin alike. Sitting in
       // "Files / Other" it read as a leftover.
       'Organization',
+      'Person',
+      'Participant',
+      'Consent',
+      'Visit',
+      'Demography',
     ],
     // The category the others pin, so it pins nothing itself. It reaches
     // outward only at TimePoint (3 slots), TimePeriod (2) and CauseOfDeath
@@ -270,9 +273,9 @@ export const ENTITY_CATEGORIES: EntityCategory[] = [
     id: 'other',
     label: 'Files / Other',
     classIds: [
+      'Document',
       'File',
       'ImagingFile',
-      'Document',
       'TimePoint',
       'TimePeriod',
       // Moved here from `observation` (2026-09-04, Siggie). Quantity is a

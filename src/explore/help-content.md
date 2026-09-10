@@ -537,7 +537,17 @@ introduced and then use one word.
 - Only: cat=other
 - **Action:** Drew the whole Files / Other category, the same as pressing its ⊞ button.
 - Beats:
-  1. File
+  1. Document
+     - Description:
+       ##### Document
+       {{model-description:Document}}
+
+       It stands alone on this canvas. Its `focus` attribute points at the
+       root of the whole model, a class named Entity that the Explorer does not draw, and
+       `related_document` reaches it from Specimen — so both of its edges land
+       outside this category.
+     - Anchor: node-box:Document
+  2. File
      - Description:
        ##### File
        {{model-description:File}}
@@ -545,7 +555,7 @@ introduced and then use one word.
        `derived_from` is a loop: a converted or processed file remembers the
        one it came from.
      - Anchor: node-box:File
-  2. ImagingFile
+  3. ImagingFile
      - Description:
        ##### ImagingFile
        {{model-description:ImagingFile}}
@@ -556,16 +566,6 @@ introduced and then use one word.
        and `related_imaging_study` ties it back to Clinical's ImagingStudy,
        which is off this canvas.
      - Anchor: node-box:File
-  3. Document
-     - Description:
-       ##### Document
-       {{model-description:Document}}
-
-       It stands alone on this canvas. Its `focus` attribute points at the
-       root of the whole model, a class named Entity that the Explorer does not draw, and
-       `related_document` reaches it from Specimen — so both of its edges land
-       outside this category.
-     - Anchor: node-box:Document
   4. Quantity
      - Description:
        ##### Quantity
