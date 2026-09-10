@@ -73,6 +73,9 @@ introduced and then use one word.
 - **Title:** The BioData Catalyst Harmonized Model (BDCHM)
 - **Tour:** The BioData Catalyst Harmonized Model
 - Only: panels=0
+- **Anchor:** none
+- **Highlight:** selection-tree
+- **Width:** 800
 - **Description:** 
   BioData Catalyst ([BDC](https://biodatacatalyst.nhlbi.nih.gov/))
   is a cloud-based ecosystem where researchers can find and work with
@@ -80,14 +83,11 @@ introduced and then use one word.
   **BDCHM** currently harmonizes nine priority [TOPMed](https://topmed.nhlbi.nih.gov/)
   cohorts (e.g., the Framingham Heart Study and Women's Health Initiative)
   and the [INCLUDE Data Hub](https://portal.includedcc.org/), with more on their way.
-- **Anchor:** none
-- **Highlight:** selection-tree
-- **Width:** 800
 - Beats:
   1. What's in the model?
      - **Description:** 
        The BDCHM schema provides a flexible, general purpose structure
-       for storing clinical trials data. This Explorer categorizes the
+       for storing clinical trials data. BDCHM Explorer categorizes the
        entities specified in the model into six areas to make it easier
        to browse and comprehend. This tour will walk you through each
        category.
@@ -102,19 +102,18 @@ introduced and then use one word.
   These are the entities around which study data — describing
   clinical events and observations, specimens, surveys —
   are organized.
-  > i'm in the middle of editing this
 
-  Eight entities answer *who was studied, by whom, and under what agreement*.
-  Nothing here is a measurement — these are the records every other category
-  hangs off. Read the diagram left to right: the study comes first, the
-  individual next, and what happened to them last.
+  ###### Clicking the **⊞** button by the category title draws the whole category on the canvas.
+
+  We will now walk through each entity in the category. If you would like to skip
+  to another category, click ⊞ below.
 - **Anchor:** category-row:admin
 - Only: cat=admin
-- **Action:** Drew the whole Admin / Study category, the same as pressing its ⊞ button.
+<!-- - **Action:** Drew the whole Admin / Study category, the same as pressing its ⊞ button.-->
 - Beats:
   1. ResearchStudyCollection
      - Description:
-       ##### ResearchStudyCollection
+       A **ResearchStudyCollection** contains a list of **ResearchStudies**
        {{model-description:ResearchStudyCollection}}
      - Anchor: node-box:ResearchStudyCollection
   2. ResearchStudy
@@ -201,7 +200,7 @@ introduced and then use one word.
   Take them away and Clinical is a pile of disconnected records.
 - **Anchor:** category-row:clinical
 - Only: cat=clinical
-- **Action:** Drew the whole Clinical category, the same as pressing its ⊞ button.
+<!-- - **Action:** Drew the whole Clinical category, the same as pressing its ⊞ button. -->
 - Beats:
   1. the borrowed spine
      - Description:
@@ -276,7 +275,7 @@ introduced and then use one word.
   body.
 - **Anchor:** category-row:observation
 - Only: cat=observation
-- **Action:** Drew the whole Observations / Measurements category, the same as pressing its ⊞ button.
+<!-- - **Action:** Drew the whole Observations / Measurements category, the same as pressing its ⊞ button. -->
 - Beats:
   1. ObservationSet
      - Description:
@@ -350,7 +349,7 @@ introduced and then use one word.
   outside fact the category needs.
 - **Anchor:** category-row:lab
 - Only: cat=lab
-- **Action:** Drew the whole Laboratory / Biospecimen category, the same as pressing its ⊞ button.
+<!-- - **Action:** Drew the whole Laboratory / Biospecimen category, the same as pressing its ⊞ button. -->
 - Beats:
   1. Specimen
      - Description:
@@ -429,7 +428,7 @@ introduced and then use one word.
   halves: the **questions** on the left, the **answers** on the right.
 - **Anchor:** category-row:survey
 - Only: cat=survey
-- **Action:** Drew the whole Survey / Questionnaire category, the same as pressing its ⊞ button.
+<!-- - **Action:** Drew the whole Survey / Questionnaire category, the same as pressing its ⊞ button. -->
 - Beats:
   1. Questionnaire
      - Description:
@@ -500,7 +499,7 @@ introduced and then use one word.
   because they belong to no one category; they are used by all of them.
 - **Anchor:** category-row:other
 - Only: cat=other
-- **Action:** Drew the whole Files / Other category, the same as pressing its ⊞ button.
+<!-- - **Action:** Drew the whole Files / Other category, the same as pressing its ⊞ button. -->
 - Beats:
   1. Document
      - Description:
