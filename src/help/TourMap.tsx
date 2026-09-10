@@ -99,11 +99,25 @@ export default function TourMap({ scope, onClose }: TourMapProps) {
     goToStep, startTour,
   } = useHelp();
 
-  // Escape closes, matching every other panel and the popover itself.
+  /*
+   * Escape closes the MAP, and only the map. Capture phase on window, and
+   * the event is stopped, because the provider's Escape handler is a capture
+   * listener on document that ends the whole tour and stops propagation
+   * itself. Registered as a plain bubble listener (until 2026-09-10) this
+   * never ran: Escape closed the tour and the map together, and `mapOpen`
+   * in the layer stayed true, so the next tour opened with the map already
+   * up. Siggie: *"ESC should close the map, 2nd ESC close the tour."*
+   * Window capture is the one phase that runs before document capture.
+   */
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      e.preventDefault();
+      onClose();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
   }, [onClose]);
 
   /*

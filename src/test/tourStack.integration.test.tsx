@@ -184,6 +184,43 @@ describe('tour state stack, end to end', () => {
       expect(screen.queryByRole('button', { name: /next|done/i, hidden: true })).toBeNull());
   });
 
+  test('Escape closes an open map first, and the tour only on the second press', async () => {
+    /*
+     * Siggie, 2026-09-10: "ESC should close the map, 2nd ESC close the tour."
+     * Before: the provider's document-capture Escape ended the tour and
+     * stopped propagation, so the map's own listener never ran and `mapOpen`
+     * survived into the next tour, which opened with the map already up.
+     */
+    render(<ExploreApp />);
+    await screen.findByRole('heading', { name: /BDCHM Explorer/i });
+    fireEvent.keyDown(document, { key: '?' });
+    await screen.findByRole('button', { name: /next|done/i, hidden: true });
+
+    fireEvent.click(screen.getByTitle('Show the tour outline'));
+    expect(screen.getByRole('dialog', { name: 'Tour outline', hidden: true })).toBeTruthy();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Tour outline', hidden: true })).toBeNull());
+    // The tour is still running.
+    expect(screen.getByRole('button', { name: /next|done/i, hidden: true })).toBeTruthy();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /next|done/i, hidden: true })).toBeNull());
+
+    // And a map left open at exit does not come back with the next tour.
+    fireEvent.keyDown(document, { key: '?' });
+    await screen.findByRole('button', { name: /next|done/i, hidden: true });
+    fireEvent.click(screen.getByTitle('Show the tour outline'));
+    fireEvent.keyDown(document, { key: '?' }); // leaves the tour, map still up
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /next|done/i, hidden: true })).toBeNull());
+    fireEvent.keyDown(document, { key: '?' });
+    await screen.findByRole('button', { name: /next|done/i, hidden: true });
+    expect(screen.queryByRole('dialog', { name: 'Tour outline', hidden: true })).toBeNull();
+  });
+
   test('? is ignored while typing, so it can be typed into a field', async () => {
     // Guarded by `isInputFocused`: the shortcut must not swallow a question
     // mark someone is writing.

@@ -218,6 +218,12 @@ export default function HelpLayer() {
   const [mapOpen, setMapOpen] = useState(false);
 
   const inTour = tourIndex !== null;
+  /*
+   * The map does not outlive the tour it maps. The layer stays mounted across
+   * tours, so without this a map left open at exit (the ✕, `?`, "done") came
+   * back up with the next tour (Siggie, 2026-09-10).
+   */
+  useEffect(() => { if (!inTour) setMapOpen(false); }, [inTour]);
   const entry = activeId ? content.entries.get(activeId) : undefined;
 
   /**
