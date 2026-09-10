@@ -124,10 +124,13 @@ describe('SelectionTable', () => {
       // Members are all there...
       for (const id of clinical.classIds) expect(drawn).toContain(id);
       // ...and so is the context the category does not make sense without.
-      for (const id of ['Participant', 'Visit', 'Person']) expect(drawn).toContain(id);
-      // But not the value types the mechanical rule would have swept in.
+      for (const id of ['Participant', 'Visit']) expect(drawn).toContain(id);
+      // But not the value types the mechanical rule would have swept in, nor
+      // Person: two connections in the whole model, dropped 2026-09-10 as a
+      // waste of space (Siggie).
       expect(drawn).not.toContain('TimePoint');
       expect(drawn).not.toContain('Quantity');
+      expect(drawn).not.toContain('Person');
     });
 
     test('a category with no pins asks for exactly its members', () => {
