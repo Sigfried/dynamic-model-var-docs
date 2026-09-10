@@ -232,6 +232,65 @@ describe('help content', () => {
     expect(without.width).toBe(500);
   });
 
+  test('an unbolded field ends the Description block above it', () => {
+    /*
+     * Siggie, 2026-09-10, from a screenshot: "when there are no fields
+     * between Description: and Beats:, beats becomes part of description".
+     * `extractBlockField` ended a block only at `- **`, so once the bold
+     * markers became optional an unbolded `- Beats:` (or any unbolded field)
+     * right after a description was swallowed into it and rendered as prose.
+     * The rule is the one `extractBeats` already used: a field bullet AT THE
+     * MARGIN ends the block; an indented prose bullet with a colon does not.
+     */
+    const e = parseHelpContent(`
+## S
+
+### e
+
+- Title: T
+- Description:
+  Prose.
+  - Note: an indented bullet with a colon is still prose
+- Beats:
+  1. one
+     - Description: Beat one.
+`).entries.get('e')!;
+    expect(e.description).toBe('Prose.\n- Note: an indented bullet with a colon is still prose');
+    expect(e.beats?.length).toBe(1);
+  });
+
+  test('beat fields parse with or without the bold markers, like entry fields', () => {
+    // Siggie, 2026-09-10: "when Beats has **Description:** instead of
+    // Description:, it's ignored. I thought the field name rules ignored
+    // placement of ** and :. Beat field names should use the same rules".
+    const bold = parseHelpContent(`
+## S
+
+### e
+
+- Title: T
+- Description: D
+- Beats:
+  1. one
+     - **Description:** Beat one.
+     - **Anchor:** none
+`).entries.get('e')!;
+    const plain = parseHelpContent(`
+## S
+
+### e
+
+- Title: T
+- Description: D
+- Beats:
+  1. one
+     - Description: Beat one.
+     - Anchor: none
+`).entries.get('e')!;
+    expect(bold.beats?.[0].description).toBe('Beat one.');
+    expect(bold.beats?.[0]).toEqual(plain.beats?.[0]);
+  });
+
   test('field names are case-insensitive, like beat fields already were', () => {
     // The beat reader lower-cased its field names from the start, so requiring
     // capitals at entry level was an inconsistency rather than a rule

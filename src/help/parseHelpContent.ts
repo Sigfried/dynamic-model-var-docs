@@ -590,6 +590,21 @@ function fieldOf(line: string): { name: string; value: string } | undefined {
   return { name: name.toLowerCase(), value: rest.slice(colon + 1).trim() };
 }
 
+/**
+ * Is this line an ENTRY-level field — one that ends whatever block is open?
+ *
+ * Decided by INDENT, not by the bold markers: an entry's fields sit at the
+ * margin, while a block's continuation lines, a beat's own fields and a prose
+ * bullet inside a description are all indented. `- **` was the test until the
+ * markers became optional, at which point an unbolded `- Beats:` straight
+ * after a `Description:` was swallowed into it and rendered as prose
+ * (Siggie, 2026-09-10, from a screenshot). Every block extractor shares this
+ * one rule so the same line cannot end one kind of block and not another.
+ */
+function isEntryField(line: string): boolean {
+  return line.length > 0 && !/^\s/.test(line) && fieldOf(line) !== undefined;
+}
+
 
 /**
  * Extract a field as a multi-line MARKDOWN BLOCK: the text after the colon,
@@ -608,17 +623,17 @@ function fieldOf(line: string): { name: string; value: string } | undefined {
  * markdown.
  */
 function extractBlockField(lines: string[], label: string): string | undefined {
-  const prefix = `- **${label}:**`;
-  const idx = lines.findIndex(l => l.trimStart().startsWith(prefix));
+  const key = label.toLowerCase();
+  const idx = lines.findIndex(l => fieldOf(l)?.name === key);
   if (idx === -1) return undefined;
 
-  const first = lines[idx].trimStart().slice(prefix.length).trim();
+  const first = fieldOf(lines[idx])!.value;
   const rest: string[] = [];
   for (let i = idx + 1; i < lines.length; i++) {
     // Any entry-level field ends the block. A blank line does NOT: a field can
     // hold two paragraphs, and stopping at the blank would silently drop the
     // second.
-    if (lines[i].trimStart().startsWith('- **')) break;
+    if (isEntryField(lines[i])) break;
     // So does the structural markup around a section. `## Section` blocks are
     // wrapped in `<details>` so the file folds when read on GitHub, which puts
     // a `</details>` after the LAST entry of each section -- inside that
@@ -643,15 +658,15 @@ function extractBlockField(lines: string[], label: string): string | undefined {
 
 /** Extract bullet list items under a field header like "- **Interactions:**" */
 function extractBulletList(lines: string[], label: string): string[] {
-  const prefix = `- **${label}:**`;
-  const headerIdx = lines.findIndex(l => l.trimStart().startsWith(prefix));
+  const key = label.toLowerCase();
+  const headerIdx = lines.findIndex(l => fieldOf(l)?.name === key);
   if (headerIdx === -1) return [];
 
   const results: string[] = [];
   for (let i = headerIdx + 1; i < lines.length; i++) {
     const trimmed = lines[i].trimStart();
-    // Stop at next field or blank line or non-indented content
-    if (trimmed.startsWith('- **') || trimmed === '') break;
+    // Stop at the next entry-level field or a blank line.
+    if (isEntryField(lines[i]) || trimmed === '') break;
     if (trimmed.startsWith('- ')) {
       results.push(trimmed.slice(2).trim());
     }
@@ -663,9 +678,11 @@ function extractBulletList(lines: string[], label: string): string[] {
  * Parse the `- **Beats:**` block: an ordered list, each item optionally
  * followed by indented `- Field: value` lines.
  *
- * Beat fields are plain (`- Anchor: x`), not bold (`- **Anchor:** x`), which
- * is what lets `extractBulletList`-style scanning tell a beat's own fields
- * apart from the entry fields that follow the block.
+ * Beat fields follow the same spelling rules as entry fields (`fieldOf`):
+ * bold optional, case-insensitive. What tells a beat's fields apart from the
+ * entry fields after the block is indent alone — see `isEntryField`. Until
+ * 2026-09-10 a beat's `- **Description:**` was silently ignored because this
+ * reader matched the plain form only.
  */
 function extractBeats(lines: string[], entryId: string): TourBeat[] | undefined {
   // `- Beats:` and `- **Beats:**` both open the block; see `fieldOf`.
@@ -678,15 +695,8 @@ function extractBeats(lines: string[], entryId: string): TourBeat[] | undefined 
 
   for (let i = headerIdx + 1; i < lines.length; i++) {
     const trimmed = lines[i].trimStart();
-    /*
-     * An entry-level field ends the block; blank lines are allowed inside it.
-     *
-     * Distinguished by INDENT, not by the bold markers. `- **` was the test
-     * until the markers became optional, at which point an unbolded entry
-     * field after a beats block would no longer have closed it. A beat's own
-     * fields are indented under their beat; an entry's sit at the margin.
-     */
-    if (lines[i].length > 0 && !/^\s/.test(lines[i]) && fieldOf(lines[i])) break;
+    // An entry-level field ends the block; blank lines are allowed inside it.
+    if (isEntryField(lines[i])) break;
     /*
      * Raw HTML at the margin ends the block too. `help-content.md` wraps its
      * tours in `<details>`/`<div>` for readability in an editor, and those
@@ -704,11 +714,10 @@ function extractBeats(lines: string[], entryId: string): TourBeat[] | undefined 
       continue;
     }
 
-    // `- Field: value` attached to the beat above it.
-    const field = trimmed.match(/^-\s+([A-Za-z]+):\s*(.*)$/);
+    // `- Field: value` attached to the beat above it, bold or not.
+    const field = fieldOf(trimmed);
     if (field && current) {
-      const [, name, value] = field;
-      const key = name.toLowerCase();
+      const { name: key, value } = field;
       /*
        * `Description:` is the beat's viewer-facing prose, and the ONLY field
        * here that runs to more than one line — a beat used to be its numbered

@@ -904,9 +904,12 @@ arrived. Use it for a genuine reveal-the-list step; the next beat without a
 marker, not a setting); `Keep: false` is not a keep.
 
 Each beat may carry its own `Anchor:`, `Action:`, `Change:` and `Keep:` as
-indented `- Field: value` lines. Note these are **plain, not bold** — that is
-what keeps a beat's own fields distinguishable from the entry fields that
-follow the block. A beat that omits `Anchor:` or `Action:` inherits the step's.
+indented `- Field: value` lines. They follow the same spelling rules as entry
+fields: `**` optional, case-insensitive. What keeps a beat's fields apart from
+the entry fields after the block is **indent** — a beat's are indented under
+their beat, an entry's sit at the margin, and a field at the margin ends any
+open block (a `Description:` included). A beat that omits `Anchor:` or
+`Action:` inherits the step's.
 
 > **This default has been both ways; here is why it settled here.** Beats first
 > REPLACED, which forced an author to repeat the description in beat one or
