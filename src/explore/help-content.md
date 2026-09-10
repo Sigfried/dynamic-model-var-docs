@@ -1078,8 +1078,13 @@ I want to restructure this
   holding a Participant; it does not say which of the two contains the
   other, and the generated documentation cannot show it either.
 
-  So the Explorer decides, with a few rules, and draws the result. This
-  tour shows the rules on real cases. There are three kinds of line:
+  So the Explorer decides, with a few rules and a number of exceptions, 
+  <!-- where do these live in code? ideally it would be in a declarative
+       config file for both the rules and exceptions -->
+  and draws the result. This
+  tour shows the rules on real cases.
+
+  There are three kinds of edges (lines) between entities on the diagram:
 
   - **owns** — the line runs from the owner's row to the entity it holds;
   - **belongs to** — the line runs from the member's row BACK to the entity
@@ -1327,6 +1332,7 @@ I want to restructure this
 - **Only:** sel=QuestionnaireResponseValueBoolean~QuestionnaireResponseValueDecimal~QuestionnaireResponseValueInteger~QuestionnaireResponseValueString~QuestionnaireResponseValueTimePoint
 - **Action:** Drew the five typed questionnaire answers.
 - **Anchor:** slot-row:QuestionnaireResponseValue.value
+- **Position:** right
 - **Description:**
   A QuestionnaireResponseValue has a `value`, declared as a string. Its five
   subclasses exist for one reason each: to say that `value` is a boolean, a
@@ -1467,23 +1473,5 @@ I want to restructure this
   - Click to copy; the URL bar always holds the same link.
 - **Context:** Settings travel in the link, so a diagram you set up deliberately does not get redrawn with someone else's preferences.
 - **Change:**
-
-<!--  probably not necessary; you'd already be there by the time you can display them, right?
-### help-menu
-
-- **Title:** Help
-- **Description:** Everything explaining the diagram, in one menu.
-  - **Tours** — guided walks, simplest first. Start anywhere: each one stands on its own, and you can leave with **Esc**.
-  - **Ownership legend** — what the arrows, colors and toolbar buttons mean, and every relationship in the schema grouped by the rule that classified it.
-  - **Example cases** — named selections that show particular routing and inheritance situations. Useful for seeing what the diagram does with the awkward cases.
-
-  The legend and the cases open as separate panels, so you can keep the legend up while you flip through cases.
-
-### help-button
-
-- **Title:** Help and tour
-- **Description:** **Take the tour** for a short guided walk through the app. Press `?` anywhere to start it, and again (or `Esc`) to leave.
-- **Shortcut:** ?
--->
 
 </details>
