@@ -195,17 +195,17 @@ introduced and then use one word.
 - **Tour:** The BioData Catalyst Harmonized Model
 - **Description:**
   Eight entities record *what happened to a participant medically*. Every one of
-  them is a record OF someone, usually AT an encounter — which is why
+  them is a record OF someone, usually AT an encounter — which is why Person,
   Participant and Visit are drawn here too even though they belong to Admin.
   Take them away and Clinical is a pile of disconnected records.
 - **Anchor:** category-row:clinical
 - Only: cat=clinical
 <!-- - **Action:** Drew the whole Clinical category, the same as pressing its ⊞ button. -->
 - Beats:
-  1. two boxes on loan
+  1. three boxes on loan
      - Description:
-       ##### Two boxes on loan
-       Participant and Visit are Admin entities, pinned into this view
+       ##### Three boxes on loan
+       Person, Participant and Visit are Admin entities, pinned into this view
        because the category does not mean anything without them. Read the rest
        of the diagram as hanging off Participant: everything to its right is a
        record about that participant.
@@ -216,8 +216,8 @@ introduced and then use one word.
        {{model-description:CauseOfDeath}}
 
        It belongs to Person rather than to Participant — the one clinical
-       fact recorded about the human being rather than about a study role.
-       Person is not drawn here, which is why this box has no line.
+       fact recorded about the human being rather than about a study role,
+       and the reason Person is drawn on this canvas at all.
      - Anchor: node-box:CauseOfDeath
   3. Condition
      - Description:

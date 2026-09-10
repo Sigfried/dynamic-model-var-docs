@@ -182,13 +182,12 @@ export const ENTITY_CATEGORIES: EntityCategory[] = [
     ],
     // The reference case for the whole feature (Siggie's screenshot): these
     // records are OF a participant, AT a visit — take them away and the
-    // category is a pile of disconnected records. Person was pinned too until
-    // 2026-09-10 (it completes the pair Participant belongs to, and
-    // Person.cause_of_death points in at CauseOfDeath); Siggie dropped it as
-    // a waste of space — Person connects to only two entities — at the cost
-    // of CauseOfDeath having no line on this canvas. Quantity is deliberately
-    // NOT pinned.
-    pins: ['Participant', 'Visit'],
+    // category is a pile of disconnected records. Person is pinned for ONE
+    // reason: it owns CauseOfDeath (Person.cause_of_death), which otherwise
+    // sits here with no line. It is not pinned anywhere else — two
+    // connections in the whole model (Siggie, 2026-09-10). Quantity is
+    // deliberately NOT pinned.
+    pins: ['Participant', 'Visit', 'Person'],
     defaultExpanded: false,
   },
   {
