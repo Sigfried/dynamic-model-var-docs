@@ -232,6 +232,7 @@ export function HelpProvider({
    * to follow it.
    */
   const [tourName, setTourName] = useState<string | undefined>(undefined);
+  const [overviewOpen, setOverviewOpen] = useState(false);
 
   /** Every tour the content file declares, in file order. Drives the Help menu. */
   const tours = useMemo(() => tourNames(content), [content]);
@@ -588,21 +589,22 @@ export function HelpProvider({
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       /*
-       * `?` starts the tour (Siggie, 2026-08-28).
+       * `?` opens the tours Overview (Siggie, 2026-09-10: "instead of having
+       * ? bring up tour 1 have it bring up the tour overview"); a second `?`
+       * closes it. Until then it started the first tour (2026-08-28), which
+       * was right when there was one tour and wrong once there were five: the
+       * reader pressing `?` wants to see what walks exist, not be dropped
+       * into whichever is first in the file.
        *
-       * It used to toggle HELP MODE, which has been disabled
-       * (`HELP_MODE_ENABLED === false`), so the key did nothing at all — the
-       * most discoverable shortcut on the page bound to the one feature that
-       * is turned off. The tour is what a reader pressing `?` wants.
+       * Before that it toggled HELP MODE, which is disabled
+       * (`HELP_MODE_ENABLED === false`), so the key did nothing at all.
        *
-       * A TOGGLE rather than a plain start: `startTour` resets to step 0, so
-       * binding it raw would make a second `?` silently restart a tour in
-       * progress. Ending on the second press matches Escape, which already
-       * ends the tour.
+       * During a tour `?` still ENDS it, matching Escape — a toggle, so the
+       * key never restarts a tour in progress.
        */
       if (e.key === '?' && !isInputFocused()) {
         e.preventDefault();
-        if (tourIndex === null) startTour(); else endTour();
+        if (tourIndex === null) setOverviewOpen(v => !v); else endTour();
         return;
       }
       /*
@@ -628,7 +630,7 @@ export function HelpProvider({
     document.addEventListener('keydown', onKeyDown, true);
     return () => document.removeEventListener('keydown', onKeyDown, true);
   }, [helpMode, tourIndex, activeId, toggleHelpMode, dismissEntry, endTour,
-      startTour, nextStep, prevStep]);
+      nextStep, prevStep]);
 
   /**
    * The centring region's rect, measured NOW.
@@ -649,11 +651,12 @@ export function HelpProvider({
     tourIndex, startTour, endTour, nextStep, prevStep, goToStep,
     positions, position: tourIndex === null ? undefined : positions[tourIndex],
     stepCount, tours, tourName, tourMeta: content.tourMeta,
+    overviewOpen, setOverviewOpen,
     showAddresses, toggleAddresses,
     content, activeId, showEntry, dismissEntry, resolveAnchor, centerRect,
   }), [helpMode, toggleHelpMode, exitHelpMode, tourIndex, startTour, endTour,
        nextStep, prevStep, goToStep, positions, stepCount, tours, tourName,
-       showAddresses, toggleAddresses,
+       overviewOpen, showAddresses, toggleAddresses,
        content, activeId, showEntry, dismissEntry, resolveAnchor, centerRect]);
   /* `setRegistered` is a useState setter: React guarantees it stable, so it is
      deliberately absent from the dependency list above. */

@@ -35,7 +35,8 @@ export default function TourChooser() {
    * menu"*. So the chooser stays a short list of names and the detail is one
    * click away.
    */
-  const [overview, setOverview] = useState(false);
+  // Provider state, not local: `?` opens the same Overview (2026-09-10).
+  const { overviewOpen: overview, setOverviewOpen: setOverview } = useHelp();
   const boxRef = useRef<HTMLDivElement>(null);
 
   // Escape closes, and so does a click outside. Capture phase for the same

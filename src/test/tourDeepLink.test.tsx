@@ -62,6 +62,7 @@ function Probe() {
       <span data-index>{tourIndex === null ? '(null)' : String(tourIndex)}</span>
       <span data-title>{position?.entry.title ?? '(none)'}</span>
       <button onClick={() => startTour('Demo')}>start</button>
+      <button onClick={() => startTour()}>start default</button>
       <button onClick={() => startTour('Demo', 3)}>start at 3</button>
       <button onClick={() => startTour('Demo', 99)}>start out of range</button>
       <button onClick={endTour}>end</button>
@@ -131,16 +132,17 @@ describe('startTour with a position', () => {
     expect(read('title')).toBe('Third');
   });
 
-  test('`?` names the tour it starts', () => {
+  test('startTour() with no name names the first tour', () => {
     /*
-     * `?` calls `startTour()` with no name. The steps always came out right,
-     * because the parser falls back to the first tour, but `tourName` stayed
-     * undefined for the whole run and the label above the popover title went
-     * missing (2026-09-10). The default has to be resolved into the state, not
-     * left implicit.
+     * `?tour=` arrives with no name (and `?` did too, until it started opening
+     * the Overview instead). The steps always came out right, because the
+     * parser falls back to the first tour, but `tourName` stayed undefined for
+     * the whole run and the label above the popover title went missing
+     * (2026-09-10). The default has to be resolved into the state, not left
+     * implicit.
      */
     setup();
-    fireEvent.keyDown(document, { key: '?' });
+    click('start default');
     expect(read('index')).toBe('0');
     expect(read('name')).toBe('Demo');
   });

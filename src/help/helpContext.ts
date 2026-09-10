@@ -89,6 +89,13 @@ export interface HelpApi {
   tourMeta: Map<string, TourMeta>;
   /** Which tour is running, or undefined for the file's first. */
   tourName: string | undefined;
+  /**
+   * The all-tours Overview (TourMap scope "all"). Held here rather than in the
+   * chooser so the `?` shortcut can open it (Siggie, 2026-09-10: "instead of
+   * having ? bring up tour 1 have it bring up the tour overview").
+   */
+  overviewOpen: boolean;
+  setOverviewOpen: (open: boolean) => void;
   nextStep: () => void;
   prevStep: () => void;
   /**

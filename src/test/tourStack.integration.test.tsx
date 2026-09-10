@@ -156,33 +156,36 @@ describe('tour state stack, end to end', () => {
     expect(screen.queryByRole('button', { name: /next/i, hidden: true })).toBeNull();
   });
 
-  test('? starts the tour, and a second ? leaves it', async () => {
+  test('? opens the tours Overview, and a second ? closes it; no tour starts', async () => {
     /*
-     * `?` used to toggle HELP MODE, which is disabled (HELP_MODE_ENABLED is
-     * false), so the key did nothing at all — the most guessable shortcut on
-     * the page bound to the one feature that is off (Siggie, 2026-08-28).
+     * Siggie, 2026-09-10: "instead of having ? bring up tour 1 have it bring
+     * up the tour overview". Starting the first tour was the 2026-08-28
+     * binding, right with one tour and wrong with five. Before that `?`
+     * toggled HELP MODE, which is disabled, so the key did nothing at all.
      *
-     * A toggle rather than a plain start: `startTour` resets to step 0, so
-     * binding it raw would make a second `?` silently restart a tour in
-     * progress instead of leaving it.
+     * A toggle, so a second press closes what the first opened.
      */
     render(<ExploreApp />);
     await screen.findByRole('heading', { name: /BDCHM Explorer/i });
-    expect(screen.queryByRole('button', { name: /next/i, hidden: true })).toBeNull();
 
     fireEvent.keyDown(document, { key: '?' });
-    /*
-     * `next|done`, not `next`. `?` starts the tour with no name, so it runs the
-     * FIRST tour in the content file — today a one-step introduction, whose
-     * only forward control says "done" because there is no step after it.
-     * Asserting on `next` alone would read that as "no tour started".
-     */
-    await screen.findByRole('button', { name: /next|done/i, hidden: true });
+    await screen.findByRole('dialog', { name: 'All tours', hidden: true });
+    expect(screen.queryByRole('button', { name: /next|done/i, hidden: true })).toBeNull();
 
     fireEvent.keyDown(document, { key: '?' });
     await waitFor(() =>
-      expect(screen.queryByRole('button', { name: /next|done/i, hidden: true })).toBeNull());
+      expect(screen.queryByRole('dialog', { name: 'All tours', hidden: true })).toBeNull());
   });
+
+  /** `?` opens the Overview; the first tour's name in it starts that tour. */
+  const startFirstTourFromOverview = async () => {
+    fireEvent.keyDown(document, { key: '?' });
+    await screen.findByRole('dialog', { name: 'All tours', hidden: true });
+    const first = [...document.querySelectorAll('.help-map-tourname')]
+      .find(b => /BioData Catalyst/.test(b.textContent ?? ''))!;
+    fireEvent.click(first);
+    await screen.findByRole('button', { name: /next|done/i, hidden: true });
+  };
 
   test('Escape closes an open map first, and the tour only on the second press', async () => {
     /*
@@ -193,8 +196,7 @@ describe('tour state stack, end to end', () => {
      */
     render(<ExploreApp />);
     await screen.findByRole('heading', { name: /BDCHM Explorer/i });
-    fireEvent.keyDown(document, { key: '?' });
-    await screen.findByRole('button', { name: /next|done/i, hidden: true });
+    await startFirstTourFromOverview();
 
     fireEvent.click(screen.getByTitle('Show the tour outline'));
     expect(screen.getByRole('dialog', { name: 'Tour outline', hidden: true })).toBeTruthy();
@@ -210,14 +212,12 @@ describe('tour state stack, end to end', () => {
       expect(screen.queryByRole('button', { name: /next|done/i, hidden: true })).toBeNull());
 
     // And a map left open at exit does not come back with the next tour.
-    fireEvent.keyDown(document, { key: '?' });
-    await screen.findByRole('button', { name: /next|done/i, hidden: true });
+    await startFirstTourFromOverview();
     fireEvent.click(screen.getByTitle('Show the tour outline'));
-    fireEvent.keyDown(document, { key: '?' }); // leaves the tour, map still up
+    fireEvent.keyDown(document, { key: '?' }); // in a tour, ? still ends it; map still up
     await waitFor(() =>
       expect(screen.queryByRole('button', { name: /next|done/i, hidden: true })).toBeNull());
-    fireEvent.keyDown(document, { key: '?' });
-    await screen.findByRole('button', { name: /next|done/i, hidden: true });
+    await startFirstTourFromOverview();
     expect(screen.queryByRole('dialog', { name: 'Tour outline', hidden: true })).toBeNull();
   });
 
@@ -230,7 +230,7 @@ describe('tour state stack, end to end', () => {
     document.body.appendChild(input);
     input.focus();
     fireEvent.keyDown(document, { key: '?' });
-    expect(screen.queryByRole('button', { name: /next/i, hidden: true })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'All tours', hidden: true })).toBeNull();
     input.remove();
   });
 

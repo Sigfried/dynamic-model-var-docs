@@ -15,6 +15,7 @@
  *     only route to one.
  */
 
+import { useState } from 'react';
 import { describe, test, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import HelpMenu from '../explore/HelpMenu';
@@ -34,6 +35,8 @@ function api(over: Partial<HelpApi>): HelpApi {
     tours: [],
     tourName: undefined,
     tourMeta: new Map<string, TourMeta>(),
+    overviewOpen: false,
+    setOverviewOpen: () => {},
     nextStep: () => {},
     prevStep: () => {},
     goToStep: () => {},
@@ -131,11 +134,18 @@ describe('Guided tours chooser', () => {
   test('clicking the button opens the overview, not the list', () => {
     // TASKS 1b (Siggie, 2026-09-09). Hover was already the way into the list,
     // so the click was a duplicate; the overview had no direct route.
-    render(
-      <HelpContext.Provider value={api({ tours: TOURS })}>
-        <TourChooser />
-      </HelpContext.Provider>,
-    );
+    //
+    // The open/closed state lives in the provider since 2026-09-10 (so `?`
+    // can open the same Overview), so the stub has to hold it for real.
+    function Stateful() {
+      const [overviewOpen, setOverviewOpen] = useState(false);
+      return (
+        <HelpContext.Provider value={api({ tours: TOURS, overviewOpen, setOverviewOpen })}>
+          <TourChooser />
+        </HelpContext.Provider>
+      );
+    }
+    render(<Stateful />);
     fireEvent.click(screen.getByRole('button', { name: /guided tours/i }));
     // The map is a `popover="manual"` element jsdom leaves display-none, so it
     // is invisible to role queries; the TourMap tests query it by class too.
