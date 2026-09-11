@@ -104,7 +104,7 @@ export function ClassDetailCard({ classId, dataService, onClose, onNavigate }: C
                   <tr key={i} className="border-b border-gray-50">
                     <td className="px-2 py-0.5">{s.name}</td>
                     <td className="px-2 py-0.5">
-                      <RangeBadgeMini range={s.range} />
+                      <RangeBadgeMini range={s.range} dataService={dataService} />
                     </td>
                     <td className="px-2 py-0.5 text-gray-400 max-w-[250px] truncate">{s.description}</td>
                   </tr>
@@ -125,16 +125,15 @@ export function ClassDetailCard({ classId, dataService, onClose, onNavigate }: C
   );
 }
 
-function RangeBadgeMini({ range }: { range: string }) {
-  const primitives = new Set([
-    'string', 'integer', 'boolean', 'float', 'double', 'decimal',
-    'date', 'datetime', 'time', 'uri', 'uriorcurie', 'ncname',
-  ]);
+function RangeBadgeMini({ range, dataService }: { range: string; dataService: DataService }) {
+  // ASK the model what kind of thing the range is; never infer it from the
+  // name. See DetailDrawer's RangeBadge for the case that made this necessary.
+  const kind = dataService.getRangeKind(range);
 
   let colorClass: string;
-  if (primitives.has(range.toLowerCase())) {
+  if (kind === 'type') {
     colorClass = 'bg-green-100 text-green-700';
-  } else if (range.endsWith('Enum')) {
+  } else if (kind === 'enum') {
     colorClass = 'bg-purple-100 text-purple-700';
   } else {
     colorClass = 'bg-blue-100 text-blue-700';

@@ -45,9 +45,13 @@ export function SlotDrilldown({ classId, dataService, onClose, depth = 0 }: Slot
       setOpenCard(null);
       return;
     }
-    if (range.endsWith('Enum')) {
+    // ASK the model, never infer from the name: SpecimenCollectionMethodType
+    // is an enum that does not end in `Enum`, and a suffix test opened it as a
+    // CLASS card (fixed 2026-09-11).
+    const kind = dataService.getRangeKind(range);
+    if (kind === 'enum') {
       setOpenCard({ type: 'enum', id: range, afterRow: rowIndex });
-    } else if (dataService.itemExists(range)) {
+    } else if (kind === 'class' && dataService.itemExists(range)) {
       setOpenCard({ type: 'class', id: range, afterRow: rowIndex });
     }
   };
@@ -130,6 +134,7 @@ export function SlotDrilldown({ classId, dataService, onClose, depth = 0 }: Slot
           <VariableTable
             headings={variablesSection.tableHeadings ?? []}
             rows={variablesSection.tableContent as string[][]}
+            dataService={dataService}
           />
         )}
         {activeTab === 'slots' && !slotsSection?.tableContent && (
@@ -164,17 +169,18 @@ function TabButton({ label, count, active, onClick, activeColor }: {
 }
 
 
-function RangeBadge({ range, onClick }: { range: string; onClick?: () => void }) {
-  const primitives = new Set([
-    'string', 'integer', 'boolean', 'float', 'double', 'decimal',
-    'date', 'datetime', 'time', 'uri', 'uriorcurie', 'ncname',
-  ]);
+function RangeBadge({ range, onClick, dataService }: {
+  range: string; onClick?: () => void; dataService: DataService;
+}) {
+  // ASK the model what kind of thing the range is; never infer it from the
+  // name. See handleRangeClick above for the case that made this necessary.
+  const kind = dataService.getRangeKind(range);
 
   let colorClass: string;
-  const isClickable = !primitives.has(range.toLowerCase());
-  if (primitives.has(range.toLowerCase())) {
+  const isClickable = kind !== 'type';
+  if (kind === 'type') {
     colorClass = 'bg-green-100 text-green-700';
-  } else if (range.endsWith('Enum')) {
+  } else if (kind === 'enum') {
     colorClass = 'bg-purple-100 text-purple-700';
   } else {
     colorClass = 'bg-blue-100 text-blue-700';
@@ -254,7 +260,7 @@ function SlotRowWithCard({ row, rowIndex, openCard, onRangeClick, onCloseCard, d
         {row.map((cell, ci) => (
           <td key={ci} className={`px-2 py-1 ${ci === row.length - 1 ? 'text-gray-400 max-w-[300px] truncate' : ''}`}>
             {ci === 2 && cell ? (
-              <RangeBadge range={cell} onClick={() => onRangeClick(cell, rowIndex)} />
+              <RangeBadge range={cell} onClick={() => onRangeClick(cell, rowIndex)} dataService={dataService} />
             ) : ci === 1 && cell.includes('Inherited') ? (
               <span className="text-gray-400">{cell}</span>
             ) : (
@@ -289,7 +295,9 @@ function SlotRowWithCard({ row, rowIndex, openCard, onRangeClick, onCloseCard, d
 }
 
 
-function VariableTable({ headings, rows }: { headings: string[]; rows: string[][] }) {
+function VariableTable({ headings, rows, dataService }: {
+  headings: string[]; rows: string[][]; dataService: DataService;
+}) {
   return (
     <table className="w-full text-xs">
       <thead>
@@ -306,7 +314,7 @@ function VariableTable({ headings, rows }: { headings: string[]; rows: string[][
           <tr key={ri} className="border-b border-gray-100/50 hover:bg-amber-50/30">
             {row.map((cell, ci) => (
               <td key={ci} className={`px-2 py-1 ${ci === row.length - 1 ? 'text-gray-400 max-w-[300px] truncate' : ''} ${ci === 3 ? 'font-mono text-xs text-blue-600' : ''}`}>
-                {ci === 1 && cell ? <RangeBadge range={cell} /> : cell}
+                {ci === 1 && cell ? <RangeBadge range={cell} dataService={dataService} /> : cell}
               </td>
             ))}
           </tr>

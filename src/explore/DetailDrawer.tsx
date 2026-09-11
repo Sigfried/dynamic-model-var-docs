@@ -214,15 +214,16 @@ function RangeBadge({
   onNavigate: (id: string) => void;
   dataService: DataService;
 }) {
-  const isEntity = dataService.itemExists(range) && !range.endsWith('Enum');
-  const primitives = new Set([
-    'string', 'integer', 'boolean', 'float', 'double', 'decimal',
-    'date', 'datetime', 'time', 'uri', 'uriorcurie', 'ncname',
-  ]);
+  // ASK the model what kind of thing the range is; never infer it from the
+  // name. `SpecimenCollectionMethodType` is an enum whose name does not end in
+  // `Enum` — the only one of 52 — so a suffix test drew it as a class: blue,
+  // and clickable as if it were navigable (fixed 2026-09-11).
+  const kind = dataService.getRangeKind(range);
+  const isEntity = kind === 'class' && dataService.itemExists(range);
 
-  const color = primitives.has(range.toLowerCase())
+  const color = kind === 'type'
     ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
-    : range.endsWith('Enum')
+    : kind === 'enum'
       ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'
       : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300';
 

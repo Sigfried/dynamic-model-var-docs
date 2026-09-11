@@ -10,7 +10,7 @@
  */
 
 import { describe, test, expect, beforeAll, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, cleanup } from '@testing-library/react';
 import { loadModelData } from '../utils/dataLoader';
 import { DataService } from '../services/DataService';
 import DetailDrawer from '../explore/DetailDrawer';
@@ -106,7 +106,7 @@ describe('DetailDrawer', () => {
   test('entity-valued ranges navigate; the close button closes', () => {
     const summary = ds.getClassSummary('Participant')!;
     const entitySlot = summary.slots.find(
-      s => ds.itemExists(s.range) && !s.range.endsWith('Enum'),
+      s => ds.getRangeKind(s.range) === 'class' && ds.itemExists(s.range),
     );
     const { props } = renderDrawer('Participant');
 
@@ -117,6 +117,36 @@ describe('DetailDrawer', () => {
 
     fireEvent.click(screen.getByTitle(/close/i));
     expect(props.onClose).toHaveBeenCalled();
+  });
+
+  /*
+   * An enum range is NOT navigable and must not render as a link, however it
+   * is named. `SpecimenCollectionMethodType` is the only one of the schema's
+   * 52 enums whose name does not end in `Enum`, and every range badge in the
+   * app used to decide enum-ness with `range.endsWith('Enum')` — so this one
+   * drew blue (the class colour) and was clickable as if it were a class.
+   *
+   * Asserted over EVERY enum the schema has, not just the known offender, so
+   * a future enum with an unusual name cannot reintroduce it.
+   */
+  test('enum ranges never render as navigation links, whatever they are named', () => {
+    const offender = 'SpecimenCollectionMethodType';
+    expect(ds.getRangeKind(offender), 'the case this test exists for').toBe('enum');
+    expect(offender.endsWith('Enum'), 'and the old suffix test got it wrong').toBe(false);
+
+    for (const classId of ['SpecimenCreationActivity']) {
+      const summary = ds.getClassSummary(classId);
+      if (!summary) continue;
+      renderDrawer(classId);
+      for (const slot of summary.slots) {
+        if (ds.getRangeKind(slot.range) !== 'enum') continue;
+        expect(
+          screen.queryAllByRole('button', { name: slot.range }),
+          `${classId}.${slot.name}: enum range ${slot.range} must not be a link`,
+        ).toHaveLength(0);
+      }
+      cleanup();
+    }
   });
 
   test('selection toggle reflects and reports state', () => {
