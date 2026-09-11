@@ -39,8 +39,8 @@
  */
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import Markdown from 'react-markdown';
-import { useHelp } from './helpContext';
+import Markdown, { defaultUrlTransform } from 'react-markdown';
+import { useHelp, type WidgetRenderer } from './helpContext';
 import { useDragged } from './useDragged';
 import type { Offset, PopoverSide } from './parseHelpContent';
 import TourMap from './TourMap';
@@ -82,6 +82,41 @@ const MARKDOWN_COMPONENTS = {
     </div>
   ),
 };
+
+/** The URL scheme an inline widget image uses: `widget:<name>:<arg>`. */
+const WIDGET_SCHEME = 'widget:';
+
+/**
+ * `react-markdown` drops URLs whose scheme it does not know, `widget:` among
+ * them; ordinary images and links keep the default (safe) treatment.
+ */
+const urlTransform = (url: string) =>
+  url.startsWith(WIDGET_SCHEME) ? url : defaultUrlTransform(url);
+
+/**
+ * The `img` component: a `widget:` image is drawn by the host's widget of that
+ * name, or falls back to its alt text when the host has none; anything else is
+ * an ordinary image.
+ *
+ * This is how prose gets an arrow drawn the way the canvas draws it
+ * (`{{edge:own-fwd}}` → `![A owns B](widget:edge:own-fwd)` → EdgeSample),
+ * without `react-markdown` having to render raw HTML and without the package
+ * knowing what an edge is (Siggie, 2026-09-10: "I would like to be able to
+ * use the arrow images in the tour").
+ */
+function widgetImg(widgets: Record<string, WidgetRenderer> | undefined) {
+  return function Img({ src, alt }: { src?: string; alt?: string }) {
+    if (src?.startsWith(WIDGET_SCHEME)) {
+      const rest = src.slice(WIDGET_SCHEME.length);
+      const colon = rest.indexOf(':');
+      const name = colon === -1 ? rest : rest.slice(0, colon);
+      const arg = colon === -1 ? '' : rest.slice(colon + 1);
+      const drawn = widgets?.[name]?.(arg);
+      return drawn ?? <span>{alt}</span>;
+    }
+    return <img src={src} alt={alt} />;
+  };
+}
 
 /**
  * localStorage, defensively.
@@ -205,7 +240,7 @@ export default function HelpLayer() {
   const {
     helpMode, tourIndex, position, positions, stepCount, content, activeId,
     dismissEntry, nextStep, prevStep, endTour, showEntry, resolveAnchor, centerRect,
-    showAddresses, tourName, tourMeta,
+    showAddresses, tourName, tourMeta, widgets,
   } = useHelp();
 
   /*
@@ -336,13 +371,16 @@ export default function HelpLayer() {
   const onceKey = entry?.once;
   const onceDone = onceKey !== undefined && isDismissedOnce(onceKey);
   const markdownComponents = useMemo(
-    () => (onceKey === undefined ? MARKDOWN_COMPONENTS : markdownComponentsWithOnce(() => {
-      dismissOnce(onceKey);
-      setOnceTick(n => n + 1);
-    })),
+    () => ({
+      ...(onceKey === undefined ? MARKDOWN_COMPONENTS : markdownComponentsWithOnce(() => {
+        dismissOnce(onceKey);
+        setOnceTick(n => n + 1);
+      })),
+      img: widgetImg(widgets),
+    }),
     // onceTick is a dependency in spirit: after a dismissal the table is dead
     // anyway, since `onceDone` strips the alert before it can render.
-    [onceKey],
+    [onceKey, widgets],
   );
 
   /*
@@ -860,7 +898,7 @@ export default function HelpLayer() {
                       key={i}
                       className={i === all.length - 1 ? undefined : 'help-beat-past'}
                     >
-                      <Markdown components={markdownComponents}>{block}</Markdown>
+                      <Markdown components={markdownComponents} urlTransform={urlTransform}>{block}</Markdown>
                     </div>
                   ))}
               </div>

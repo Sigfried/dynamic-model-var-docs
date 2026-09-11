@@ -34,6 +34,8 @@
 
 import type { DataService } from '../services/DataService';
 import { ENTITY_CATEGORIES } from '../config/entityCategories';
+import EdgeSample from './EdgeSample';
+import { EDGE_STYLE, type DrawnKind } from './edgeStyle';
 
 /**
  * An empty description is a MISS, not a hit.
@@ -62,5 +64,29 @@ export function helpTextResolvers(dataService: DataService) {
        are all missing — the label is a fact about the config either way. */
     'category-label': (id: string) =>
       nonEmpty(ENTITY_CATEGORIES.find(c => c.id === id)?.label),
+
+    /*
+     * `{{edge:own-fwd}}` — the arrow as the canvas draws it, inline in prose.
+     * Resolves to a markdown image whose URL names a WIDGET; the help layer
+     * hands `widget:` images to the host's widget map (see `helpWidgets`),
+     * which draws an `EdgeSample`. The alt text is the legend's label, so a
+     * reader without the widget still gets "A owns B". An unknown kind stays
+     * a visible placeholder, like every other resolver here.
+     */
+    'edge': (kind: string) =>
+      kind in EDGE_STYLE.kinds
+        ? `![${EDGE_STYLE.kinds[kind as DrawnKind].label}](widget:edge:${kind})`
+        : undefined,
   };
 }
+
+/**
+ * Inline widgets the tour's markdown can embed as `![alt](widget:<name>:<arg>)`.
+ * The `edge` resolver above writes that URL; this is what draws it.
+ */
+export const helpWidgets = {
+  edge: (kind: string) =>
+    kind in EDGE_STYLE.kinds
+      ? <EdgeSample kind={kind as DrawnKind} width={40} className="help-inline-widget" />
+      : null,
+};

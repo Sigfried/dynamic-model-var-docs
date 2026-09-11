@@ -120,9 +120,11 @@ describe('tour state stack, end to end', () => {
      * the first tour's opening step drew nothing. That step carries an empty
      * `Only:` now, so it enters region 1 and `held` stops contributing —
      * exactly what a replace is supposed to do. `Person` is off screen and
-     * still in `held`, and the next test walks it back.
+     * still in `held`, and the next test walks it back. Since 2026-09-10 the
+     * first tour is Ownership, whose opening step selects three classes, so
+     * "suppressed" reads as "Person is not among what is drawn".
      */
-    expect(sel()).toBeNull();
+    expect(sel()?.split('~') ?? []).not.toContain('Person');
   });
 
   test('an empty `Only:` suppresses the entry selection rather than eating it', async () => {
@@ -140,8 +142,10 @@ describe('tour state stack, end to end', () => {
     window.history.replaceState(null, '', '/dynamic-model-var-docs/?tour=1&sel=Person');
     render(<ExploreApp />);
     await screen.findByRole('button', { name: /next|done/i, hidden: true });
-    // Suppressed by the opening step's empty `Only:`.
-    expect(sel()).toBeNull();
+    // Suppressed by the opening step's `Only:` — whatever that step selects,
+    // the viewer's Person is not among it. (The first tour's opening step
+    // used to carry an EMPTY `Only:`, so this used to be `toBeNull()`.)
+    expect(sel()?.split('~') ?? []).not.toContain('Person');
     // Leaving the tour hands the viewer back what was theirs all along.
     fireEvent.click(button(/done|✕|close/i));
     await waitFor(() => expect(sel()).toBe('Person'));
@@ -319,8 +323,11 @@ describe('tour state stack, end to end', () => {
     window.history.replaceState(null, '', '/dynamic-model-var-docs/?sel=Visit');
     await startTour();
 
-    // All the way to the end, so the final `done` unwinds the stack too.
-    for (let i = 0; i < 20 && next(); i++) { /* walk */ }
+    // All the way to the end, so the final `done` unwinds the stack too. A
+    // tick between clicks: the popover element is remounted per position
+    // (see HelpLayer's `popoverKey`), so the next button has to be re-found
+    // after each step lands rather than clicked twenty times where it stood.
+    for (let i = 0; i < 80 && next(); i++) await new Promise(r => setTimeout(r, 0));
     await waitFor(() => expect(sel()).toBe('Visit'));
   });
 

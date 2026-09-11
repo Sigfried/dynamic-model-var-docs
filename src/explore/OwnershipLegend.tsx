@@ -31,6 +31,7 @@ import type { DataService, OwnershipPairGroup } from '../services/DataService';
 import { EDGE_COLORS, RANGE_COLORS, SIBLING_COLORS } from '../config/appConfig';
 import HelpPanel from './HelpPanel';
 import EdgeSample, { type DrawnKind } from './EdgeSample';
+import { EDGE_STYLE } from './edgeStyle';
 
 interface OwnershipLegendProps {
   dataService: DataService;
@@ -74,7 +75,7 @@ const EDGE_KINDS: ReadonlyArray<{
   {
     kind: 'own-fwd',
     color: EDGE_COLORS.ownFwd,
-    title: 'A owns B',
+    title: EDGE_STYLE.kinds['own-fwd'].label,
     body: 'The arrow runs from the owner to what it holds. A owns B when the '
       + 'schema puts the collection on A, or when B has no independent '
       + 'existence — a Quantity of 5 mg is not something you look up.',
@@ -82,7 +83,7 @@ const EDGE_KINDS: ReadonlyArray<{
   {
     kind: 'own-bkwd',
     color: EDGE_COLORS.ownBkwd,
-    title: 'A belongs to B',
+    title: EDGE_STYLE.kinds['own-bkwd'].label,
     body: 'The same relationship stored at the other end: A carries a pointer '
       + 'to one B that exists without it. Drawn B → A, so you still read '
       + '"start at B to find A". A Participant carries on existing whether or '
@@ -91,7 +92,7 @@ const EDGE_KINDS: ReadonlyArray<{
   {
     kind: 'association',
     color: EDGE_COLORS.association,
-    title: 'A and B are associated',
+    title: EDGE_STYLE.kinds.association.label,
     body: 'Neither owns the other. Dashed, with arrowheads at both ends. Only '
       + 'two edges in the schema are this — a slot the ownership rules would '
       + 'otherwise claim, wrongly.',

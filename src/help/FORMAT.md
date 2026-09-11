@@ -140,9 +140,10 @@ kind:
 | `{{model-description:<Class>}}` | that class's `description` from the schema |
 | `{{enum-description:<Enum>}}` | that enumeration's `description` |
 | `{{category-label:<id>}}` | a category's display label (`admin` → "Admin / Study") |
+| `{{edge:<kind>}}` | the arrow for `own-fwd`, `own-bkwd` or `association`, drawn inline exactly as the canvas and legend draw it — see [Inline widgets](#inline-widgets) |
 
 Like anchor kinds, these are **registered by the host, not known to the
-parser** — dmvd's live in `src/explore/helpTextResolvers.ts` and are handed in
+parser** — dmvd's live in `src/explore/helpTextResolvers.tsx` and are handed in
 as `<HelpProvider textResolvers={...}>`. Substitution happens once, after
 parsing, so everything downstream sees finished prose.
 
@@ -306,6 +307,24 @@ treated as absent:
 Use it for a step that is written but not ready to appear. The step simply
 drops out of the sequence — parking one of six leaves a working 5-step tour,
 and since order comes from the file there is nothing to renumber.
+
+#### Inline widgets
+
+A markdown image whose URL is `widget:<name>:<arg>` is drawn by the host's
+widget of that name instead of loading a picture:
+
+```markdown
+A owns B ![A owns B](widget:edge:own-fwd) when the schema puts the list on A.
+```
+
+dmvd registers one widget, `edge`, which draws an `EdgeSample` — the same
+component the legend and the relation popover use, from the same `edgeStyle.ts`
+config the canvas draws from, so the arrow in the prose cannot drift from the
+arrow on the canvas. Authors normally write `{{edge:own-fwd}}` and let the
+resolver produce the image; the alt text is the legend's label, which is what a
+reader sees if a host has no such widget. Widgets are handed to
+`<HelpProvider widgets={...}>`; the package knows the URL shape and nothing
+about what any widget draws.
 
 ### Anchors
 

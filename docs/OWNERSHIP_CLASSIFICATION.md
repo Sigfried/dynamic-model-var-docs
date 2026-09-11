@@ -858,7 +858,8 @@ These sets are hand-curated and **go stale silently on every schema sync**. See
 | [`src/services/DataService.ts`](../src/services/DataService.ts) | `getOwnershipPairGroups`, `getConvergenceRanking`, `getDivergenceRanking`, `getContainmentGraph`, `getTargetColor` |
 | [`src/config/appConfig.ts`](../src/config/appConfig.ts) | the three palettes (P1 `RANGE_COLORS`, P2 `EDGE_COLORS`, P3 `SIBLING_COLORS`) |
 | [`src/explore/RelationBar.tsx`](../src/explore/RelationBar.tsx) | the `← N   M →` bar and its popovers; `POSITION_AXIS` is the side/kind table |
-| [`src/explore/EdgeSample.tsx`](../src/explore/EdgeSample.tsx) | one edge drawn as the canvas draws it; shared by the legend and the popovers |
+| [`src/explore/edgeStyle.ts`](../src/explore/edgeStyle.ts) | **how an edge looks, in one place**: head geometry (one size for every head, both directions), dash, stroke widths, per-kind labels; the canvas, `EdgeSample` and the tour's `{{edge:…}}` widget all draw from it (2026-09-10) |
+| [`src/explore/EdgeSample.tsx`](../src/explore/EdgeSample.tsx) | one edge drawn as the canvas draws it, scaled from `edgeStyle`; shared by the legend, the popovers and the tour |
 | [`src/test/relationBar.test.ts`](../src/test/relationBar.test.ts) | pins the two axes — both kinds on both sides |
 | [`src/explore/OwnershipGraphView.tsx`](../src/explore/OwnershipGraphView.tsx) | edge stroke/marker selection, `mergeSiblings`, `countsOf`, `rowY`, `mergeTargets` |
 | [`src/explore/siblingMerge.ts`](../src/explore/siblingMerge.ts) | `groupSiblings`, `siblingColor`, `buildSiblingColorIndex` |

@@ -53,6 +53,296 @@ introduced and then use one word.
 
 <div style="margin-left: 40px">
 <details open>
+<summary><b>Ownership</b></summary>
+
+## Ownership
+- **TourMetadata:**
+- **Description:** Why boxes land where they do, and what the three kinds of line mean
+
+<!--
+
+I want to restructure this
+
+-->
+### why-ownership
+
+- **Title:** Relationships between entities
+- **Tour:** Ownership
+- Only: sel=Participant~Condition~BodySite
+- **Anchor:** node-box:Condition
+- Position: bottom
+- Highlight: none
+- **Width:** 560
+- **Description:**
+  The canvas is laid out by **ownership** (aka, containment or has-a
+  relationships): an entity is drawn to the right of whatever owns it. That one
+  idea is what the whole diagram is about, but the schema doesn't specify
+  these relationships. 
+- Beats:
+  1. own-fwd
+     - Title: none
+     - Keep: true
+     - Highlight: dim
+     - Spotlight: slot-row:Condition.affected_body_site
+     - Description:
+       For instance, **Condition** has an optional (0..1) `affected_body_site` attribute
+       pointing at **BodySite**, as some conditions can occurr at
+       specific body sites.
+  2. own-bkwd
+     - Title: none
+     - Keep: true
+     - Highlight: dim
+     - Spotlight: slot-row:Condition.associated_participant
+     - Description:
+       It also has a required (1..1) `associated_participant` attribute
+       pointing at **Participant**, as condition records must belong to someone
+       in a study.
+  3. - two-edge-types
+     - Title: none
+     - Description:
+       The LinkML schema does specify **is-a** relationships (see the
+       Inheritance tour), and, from a pure data modeling point of view,
+       these two attributes define **has-a** relationships. That is, a
+       Condition entity *has a* Participant entity and it *has a*
+       BodySite entity. But from a how-it-makes-sense-to-think-about-it
+       point of view — or which database records depend on others —
+       the condition belongs to the participant, not the other way around.
+
+       The schema makes `associated_participant` a required attribute
+       because it would make no sense to have a Condition record without
+       a Participant.
+  4. - optional-owners
+     - Title: none
+     - Change: sel=Visit
+     - Anchor: node-box:Visit
+     - Description:
+       **Visit**, however, is not required in the model (though it may be
+       required in the source data). The BDCHM Explorer represents
+       Visit as owning Condition because, when an `associated_visit`
+       is present, the condition was observed or recorded during the
+       visit.
+
+### edge-types
+
+- **Title:** Edge types
+- **Tour:** Ownership
+- **Only:** sel=Participant~Specimen~SpecimenCreationActivity
+- **Action:** Drew Specimen with its Participant and its creation activity.
+- **Anchor:** node-box:Specimen
+- **Description:**
+  Specimen has lines in both directions, and they mean opposite things.
+- **Beats:**
+  1. belongs to
+     - Description:
+       ##### Belongs to
+       `source_participant` holds ONE Participant, and a Participant exists
+       whether or not any specimen points at it. A single-valued pointer at
+       something with a life of its own is a foreign key: the specimen
+       belongs to the participant, not the other way round. So Participant is
+       drawn on the left and the line runs from this row back to it.
+       **Rule 2: a single-valued attribute belongs to its entity.**
+     - Anchor: slot-row:Specimen.source_participant
+<!--  
+     - Only: sel=Participant~Condition~BodySite
+     -
+  and it is not in the schema.
+  A LinkML schema says that Visit has an attribute holding a Participant; it
+  does not say which of the two contains the other, and the generated
+  documentation cannot show it either.
+
+  So the Explorer decides, with a few rules and a number of exceptions, 
+  <!-- where do these live in code? ideally it would be in a declarative
+       config file for both the rules and exceptions - ->
+  and draws the result. This
+  tour shows the rules on real cases.
+
+  There are three kinds of edges (lines) between entities on the diagram:
+  3. - two-edge-types
+     - Description:
+       ###### Two main edge types
+       So we have edges pointing forward, to the right
+
+  - **owns** — the line runs from the owner's row to the entity it holds;
+  - **belongs to** — the line runs from the member's row BACK to the entity
+    it belongs to;
+  - **associated with** — dashed, arrowed at both ends, and no claim either
+    way.
+-->
+
+### owns-forward
+
+- **Title:** Owns: a list of things
+- **Tour:** Ownership
+- **Only:** sel=Questionnaire~QuestionnaireItem
+- **Action:** Drew Questionnaire and QuestionnaireItem.
+- **Anchor:** slot-row:Questionnaire.items
+- **Description:**
+  The easy case. `items` holds a LIST of QuestionnaireItems (`1..*`), and a
+  entity that holds a list of things owns them: the items are part of the
+  questionnaire. The line runs from the owner's row rightward to the owned
+  entity. **Rule 1: a list-valued attribute owns its entity.**
+
+
+### belongs-backward
+
+- **Title:** Belongs to: a pointer at something bigger
+- **Tour:** Ownership
+- **Only:** sel=Participant~Specimen~SpecimenCreationActivity
+- **Action:** Drew Specimen with its Participant and its creation activity.
+- **Anchor:** node-box:Specimen
+- **Description:**
+  Specimen has lines in both directions, and they mean opposite things.
+- **Beats:**
+  1. belongs to
+     - Description:
+       ##### Belongs to
+       `source_participant` holds ONE Participant, and a Participant exists
+       whether or not any specimen points at it. A single-valued pointer at
+       something with a life of its own is a foreign key: the specimen
+       belongs to the participant, not the other way round. So Participant is
+       drawn on the left and the line runs from this row back to it.
+       **Rule 2: a single-valued attribute belongs to its entity.**
+     - Anchor: slot-row:Specimen.source_participant
+  2. owns
+     - Description:
+       ##### Owns
+       `creation_activity` is also single-valued, yet the activity is drawn
+       on the right, owned. A specimen's creation, processing, storage and
+       transport activities are one family, three of them lists, and
+       splitting the family on cardinality alone would be wrong — so the
+       Explorer says so explicitly. The rules have exceptions, and every one
+       is listed rather than guessed.
+     - Anchor: slot-row:Specimen.creation_activity
+  3. the loop
+     - Description:
+       ##### And itself
+       `parent_specimen` names Specimen: an aliquot or a section is a specimen
+       derived from another one. It is drawn as a loop mark on the row rather
+       than as a line.
+     - Anchor: slot-row:Specimen.parent_specimen
+
+
+### values-forward
+
+- **Title:** Owns: a value with no life of its own
+- **Tour:** Ownership
+- **Only:** sel=Observation~Quantity
+- **Action:** Drew Observation and Quantity.
+- **Anchor:** slot-row:Observation.value_quantity
+- **Description:**
+  `value_quantity` is single-valued, so Rule 2 would say the observation
+  belongs to its Quantity — and a reader would conclude that to find an
+  observation you start from a number. But a Quantity is a value, `5 mg`,
+  not something you look up; it belongs to whoever holds it. So it is owned,
+  and drawn on the right. The same goes for TimePoint, TimePeriod, BodySite
+  and a few more: **an entity with no independent existence is owned even by
+  a single-valued attribute.** Which entities those are is a decision
+  recorded in the Explorer, not something the schema can tell it.
+
+
+### owns-family
+
+- **Title:** Owns: the whole family
+- **Tour:** Ownership
+- **Only:** sel=ObservationSet~Observation~MeasurementObservation~SdohObservation
+- **Action:** Drew ObservationSet, Observation and two of its subclasses.
+- **Anchor:** slot-row:ObservationSet.observations
+- **Description:**
+  `observations` holds a list of Observations, so Rule 1 says the set owns
+  them. But an item in that list can just as well be a MeasurementObservation
+  or an SdohObservation — an attribute whose type is a parent class accepts
+  any of its subclasses — so ObservationSet owns each of those too.
+  **Rule 3: whatever owns a parent owns its children.** That is why the one
+  line from this row lands on the merged box's header rather than on any one
+  child, and why the set's **→** count takes in the whole family.
+
+
+### three-kinds
+
+- **Title:** All three kinds at once
+- **Tour:** Ownership
+- **Only:** sel=SpecimenContainer~Specimen~Substance~SpecimenStorageActivity
+- **Action:** Drew SpecimenContainer, Specimen, Substance and SpecimenStorageActivity.
+- **Anchor:** node-box:SpecimenContainer
+- **Width:** 520
+- **Description:**
+  Four entities, and every kind of line. Read them one at a time, and notice
+  that the three attributes are declared on three different entities.
+- **Beats:**
+  1. owns
+     - Description:
+       ##### Owns
+       `SpecimenContainer.additive` — a list of Substances. Rule 1: the
+       container owns them. The line runs rightward, arrowhead on Substance.
+     - Anchor: slot-row:SpecimenContainer.additive
+  2. belongs to
+     - Description:
+       ##### Belongs to
+       `Specimen.contained_in` — one container, which exists with or without
+       this specimen. Rule 2: the specimen belongs to it. The container is
+       drawn on the left and the line runs from this row back to it.
+     - Anchor: slot-row:Specimen.contained_in
+  3. association
+     - Description:
+       ##### Associated with
+       `SpecimenStorageActivity.container` — a list of containers, so Rule 1
+       would say the storage activity OWNS them. It does not: a container
+       outlives the activity and holds specimens on its own. This is an
+       **association**: no ownership claim either way, drawn slate, dashed
+       and arrowed at both ends. The model has exactly two; the other is a
+       specimen's `related_document`.
+     - Anchor: slot-row:SpecimenStorageActivity.container
+  4. why it matters
+     - Description:
+       ##### Why it matters
+       Without the association this picture would be a cycle: the specimen
+       owns its storage activity, which would own the container, which owns
+       the specimen. Calling one of the three an association is what lets
+       the canvas be read left to right at all.
+     - Anchor: node-box:Specimen
+
+
+### bar-sides
+
+- **Title:** The relation bar, revisited
+- **Tour:** Ownership
+- **Only:** sel=Observation~ObservationSet~Participant~Visit~Organization
+- **Action:** Drew Observation with the four entities that own it.
+- **Anchor:** node-box:Observation
+- **Highlight:** ring
+- **Description:**
+  Every entity that owns Observation is to its left — that is all the bar's
+  **←** count means. But they own it for two different reasons: Participant,
+  Visit and Organization because Observation POINTS at them (it belongs to
+  each), and ObservationSet because its `observations` list collects
+  Observations (it owns them). Both kinds turn up on both sides of a bar.
+
+  Hover the **←** count. Each row is written in canvas order, owner on the
+  left, and names the attribute at the end that declares it — so
+  `Observation.performed_by` and `ObservationSet.observations` sit at
+  opposite ends of their rows even though both are on this side. The little
+  line on each row is drawn the way the canvas draws it.
+
+
+### legend-pointer
+
+- **Title:** Every rule, every line
+- **Tour:** Ownership
+- **Anchor:** help-menu
+- **Highlight:** ring
+- **Description:**
+  The **Ownership legend** in the Help menu lists every rule with the lines
+  it produced, computed from the schema each time it opens, so it cannot go
+  stale. When a line looks wrong, that is where to check which rule put it
+  there. The exceptions are exactly the places where the Explorer had to
+  make a call; if you think a call is wrong, the legend is where to have the
+  argument.
+
+</details><!-- end of Ownership tour -->
+</div>
+
+<div style="margin-left: 40px">
+<details open>
 <summary><b>The BioData Catalyst Harmonized Model</b></summary>
 
 ## The BioData Catalyst Harmonized Model
@@ -1078,236 +1368,6 @@ introduced and then use one word.
   and time points all nest this way.
 
 </details><!-- end of Reading the diagram tour -->
-</div>
-
-<div style="margin-left: 40px">
-<details open>
-<summary><b>Ownership</b></summary>
-
-## Ownership
-- **TourMetadata:**
-- **Description:** Why boxes land where they do, and what the three kinds of line mean
-
-<!--
-
-I want to restructure this
-
--->
-### why-ownership
-
-- **Title:** Relationships between entities
-- **Tour:** Ownership
-- Only: sel=Participant~Condition~BodySite
-- **Anchor:** node-box:Condition
-- Position: bottom
-- Highlight: none
-- **Width:** 560
-- **Description:**
-  The canvas is laid out by **ownership** (aka, containment or has-a
-  relationships): an entity is drawn to the right of whatever owns it. That one
-  idea is what the whole diagram is about, but the schema doesn't specify
-  these relationships. 
-- Beats:
-  1. Attributes
-     - Keep: true
-     - Highlight: ring
-     - Spotlight: slot-row:Condition.affected_body_site
-     - Description:
-       For instance, **Condition** has an `affected_body_site` attribute
-       pointing at **BodySite**.
-<!--  
-     - Only: sel=Participant~Condition~BodySite
-     -
-  and it is not in the schema.
-  A LinkML schema says that Visit has an attribute holding a Participant; it
-  does not say which of the two contains the other, and the generated
-  documentation cannot show it either.
-
-  So the Explorer decides, with a few rules and a number of exceptions, 
-  <!-- where do these live in code? ideally it would be in a declarative
-       config file for both the rules and exceptions - ->
-  and draws the result. This
-  tour shows the rules on real cases.
-
-  There are three kinds of edges (lines) between entities on the diagram:
-
-  - **owns** — the line runs from the owner's row to the entity it holds;
-  - **belongs to** — the line runs from the member's row BACK to the entity
-    it belongs to;
-  - **associated with** — dashed, arrowed at both ends, and no claim either
-    way.
--->
-
-### owns-forward
-
-- **Title:** Owns: a list of things
-- **Tour:** Ownership
-- **Only:** sel=Questionnaire~QuestionnaireItem
-- **Action:** Drew Questionnaire and QuestionnaireItem.
-- **Anchor:** slot-row:Questionnaire.items
-- **Description:**
-  The easy case. `items` holds a LIST of QuestionnaireItems (`1..*`), and a
-  entity that holds a list of things owns them: the items are part of the
-  questionnaire. The line runs from the owner's row rightward to the owned
-  entity. **Rule 1: a list-valued attribute owns its entity.**
-
-
-### belongs-backward
-
-- **Title:** Belongs to: a pointer at something bigger
-- **Tour:** Ownership
-- **Only:** sel=Participant~Specimen~SpecimenCreationActivity
-- **Action:** Drew Specimen with its Participant and its creation activity.
-- **Anchor:** node-box:Specimen
-- **Description:**
-  Specimen has lines in both directions, and they mean opposite things.
-- **Beats:**
-  1. belongs to
-     - Description:
-       ##### Belongs to
-       `source_participant` holds ONE Participant, and a Participant exists
-       whether or not any specimen points at it. A single-valued pointer at
-       something with a life of its own is a foreign key: the specimen
-       belongs to the participant, not the other way round. So Participant is
-       drawn on the left and the line runs from this row back to it.
-       **Rule 2: a single-valued attribute belongs to its entity.**
-     - Anchor: slot-row:Specimen.source_participant
-  2. owns
-     - Description:
-       ##### Owns
-       `creation_activity` is also single-valued, yet the activity is drawn
-       on the right, owned. A specimen's creation, processing, storage and
-       transport activities are one family, three of them lists, and
-       splitting the family on cardinality alone would be wrong — so the
-       Explorer says so explicitly. The rules have exceptions, and every one
-       is listed rather than guessed.
-     - Anchor: slot-row:Specimen.creation_activity
-  3. the loop
-     - Description:
-       ##### And itself
-       `parent_specimen` names Specimen: an aliquot or a section is a specimen
-       derived from another one. It is drawn as a loop mark on the row rather
-       than as a line.
-     - Anchor: slot-row:Specimen.parent_specimen
-
-
-### values-forward
-
-- **Title:** Owns: a value with no life of its own
-- **Tour:** Ownership
-- **Only:** sel=Observation~Quantity
-- **Action:** Drew Observation and Quantity.
-- **Anchor:** slot-row:Observation.value_quantity
-- **Description:**
-  `value_quantity` is single-valued, so Rule 2 would say the observation
-  belongs to its Quantity — and a reader would conclude that to find an
-  observation you start from a number. But a Quantity is a value, `5 mg`,
-  not something you look up; it belongs to whoever holds it. So it is owned,
-  and drawn on the right. The same goes for TimePoint, TimePeriod, BodySite
-  and a few more: **an entity with no independent existence is owned even by
-  a single-valued attribute.** Which entities those are is a decision
-  recorded in the Explorer, not something the schema can tell it.
-
-
-### owns-family
-
-- **Title:** Owns: the whole family
-- **Tour:** Ownership
-- **Only:** sel=ObservationSet~Observation~MeasurementObservation~SdohObservation
-- **Action:** Drew ObservationSet, Observation and two of its subclasses.
-- **Anchor:** slot-row:ObservationSet.observations
-- **Description:**
-  `observations` holds a list of Observations, so Rule 1 says the set owns
-  them. But an item in that list can just as well be a MeasurementObservation
-  or an SdohObservation — an attribute whose type is a parent class accepts
-  any of its subclasses — so ObservationSet owns each of those too.
-  **Rule 3: whatever owns a parent owns its children.** That is why the one
-  line from this row lands on the merged box's header rather than on any one
-  child, and why the set's **→** count takes in the whole family.
-
-
-### three-kinds
-
-- **Title:** All three kinds at once
-- **Tour:** Ownership
-- **Only:** sel=SpecimenContainer~Specimen~Substance~SpecimenStorageActivity
-- **Action:** Drew SpecimenContainer, Specimen, Substance and SpecimenStorageActivity.
-- **Anchor:** node-box:SpecimenContainer
-- **Width:** 520
-- **Description:**
-  Four entities, and every kind of line. Read them one at a time, and notice
-  that the three attributes are declared on three different entities.
-- **Beats:**
-  1. owns
-     - Description:
-       ##### Owns
-       `SpecimenContainer.additive` — a list of Substances. Rule 1: the
-       container owns them. The line runs rightward, arrowhead on Substance.
-     - Anchor: slot-row:SpecimenContainer.additive
-  2. belongs to
-     - Description:
-       ##### Belongs to
-       `Specimen.contained_in` — one container, which exists with or without
-       this specimen. Rule 2: the specimen belongs to it. The container is
-       drawn on the left and the line runs from this row back to it.
-     - Anchor: slot-row:Specimen.contained_in
-  3. association
-     - Description:
-       ##### Associated with
-       `SpecimenStorageActivity.container` — a list of containers, so Rule 1
-       would say the storage activity OWNS them. It does not: a container
-       outlives the activity and holds specimens on its own. This is an
-       **association**: no ownership claim either way, drawn slate, dashed
-       and arrowed at both ends. The model has exactly two; the other is a
-       specimen's `related_document`.
-     - Anchor: slot-row:SpecimenStorageActivity.container
-  4. why it matters
-     - Description:
-       ##### Why it matters
-       Without the association this picture would be a cycle: the specimen
-       owns its storage activity, which would own the container, which owns
-       the specimen. Calling one of the three an association is what lets
-       the canvas be read left to right at all.
-     - Anchor: node-box:Specimen
-
-
-### bar-sides
-
-- **Title:** The relation bar, revisited
-- **Tour:** Ownership
-- **Only:** sel=Observation~ObservationSet~Participant~Visit~Organization
-- **Action:** Drew Observation with the four entities that own it.
-- **Anchor:** node-box:Observation
-- **Highlight:** ring
-- **Description:**
-  Every entity that owns Observation is to its left — that is all the bar's
-  **←** count means. But they own it for two different reasons: Participant,
-  Visit and Organization because Observation POINTS at them (it belongs to
-  each), and ObservationSet because its `observations` list collects
-  Observations (it owns them). Both kinds turn up on both sides of a bar.
-
-  Hover the **←** count. Each row is written in canvas order, owner on the
-  left, and names the attribute at the end that declares it — so
-  `Observation.performed_by` and `ObservationSet.observations` sit at
-  opposite ends of their rows even though both are on this side. The little
-  line on each row is drawn the way the canvas draws it.
-
-
-### legend-pointer
-
-- **Title:** Every rule, every line
-- **Tour:** Ownership
-- **Anchor:** help-menu
-- **Highlight:** ring
-- **Description:**
-  The **Ownership legend** in the Help menu lists every rule with the lines
-  it produced, computed from the schema each time it opens, so it cannot go
-  stale. When a line looks wrong, that is where to check which rule put it
-  there. The exceptions are exactly the places where the Explorer had to
-  make a call; if you think a call is wrong, the legend is where to have the
-  argument.
-
-</details><!-- end of Ownership tour -->
 </div>
 
 <div style="margin-left: 40px">

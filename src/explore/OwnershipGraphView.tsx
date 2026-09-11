@@ -49,6 +49,7 @@ import {
   relationPositionLabel, RELATION_POSITION_ORDER,
 } from '../services/DataService';
 import { EDGE_COLORS, RANGE_COLORS, SIBLING_HEADER_TEXT } from '../config/appConfig';
+import { EDGE_STYLE, headMarker, headTrim } from './edgeStyle';
 import {
   useGraphLayout, useZoomPan, roundedPath, sectionPoints, mergeTail,
   smoothStepPath,
@@ -986,25 +987,15 @@ const ENTITY_FAN_GAP = 4;
  *  right angles; 0 would render exactly like the old square-cornered mode. */
 const CORNER_R = 10;
 
-/** Entity title font size (px). The node body is Tailwind `text-xs`, and the
- *  title span inherits it, so 1em at the title is 12px. The single convergence
- *  arrowhead is sized off this so it reads as belonging to the name it points
- *  at, rather than to an arbitrary px scale. */
-const TITLE_EM = 12;
-
-/** The one arrowhead per convergence, sized off the title text: ~1em across the
- *  BASE, ~1.5em from base to point. In LR the arrow points along x, so the base
- *  is vertical (span = height, len = along x); for TB the arrow points down and
- *  the two swap — handled at draw time, not here. */
-const ARROW_SPAN = TITLE_EM;        // base width, ~1em
-const ARROW_LEN = TITLE_EM * 1.5;   // base → point, ~1.5em
-
-/** Gap between a node's border and the arrowhead TIP, so the whole head is
- *  visible against the canvas rather than half-buried in the border. */
-const ARROW_GAP = 0;
-
-/** Reference edges are secondary; their heads are a touch smaller. */
-const REF_SCALE = 0.85;
+/** Head geometry comes from `edgeStyle.ts`, shared with the legend's samples
+ *  and the tour's inline arrows: ~1em across the BASE, ~1.5em base → point,
+ *  for EVERY head — the convergence head and the per-edge markers alike. In LR
+ *  the arrow points along x, so the base is vertical (span = height, len =
+ *  along x); for TB the two swap — handled at draw time, not here. */
+const ARROW_SPAN = EDGE_STYLE.head.span;
+const ARROW_LEN = EDGE_STYLE.head.len;
+const ARROW_GAP = EDGE_STYLE.gap;
+const REF_SCALE = EDGE_STYLE.secondaryScale;
 
 
 /** Edge stroke widths. Kept here rather than inline because the hover value is
@@ -1016,10 +1007,10 @@ const REF_SCALE = 0.85;
  *  all, whatever the palette. This was originally justified by P2's one-step
  *  Blues gap, which 2026-09-04 replaced with three distinct hues — the width
  *  still earns its keep, since the point is that the stroke reads AS a color. */
-const STROKE_OWN = 1.4;
-const STROKE_OWN_HOVER = 2.6;
-const STROKE_REF = STROKE_OWN * 0.75;
-const STROKE_REF_HOVER = STROKE_OWN_HOVER * 0.75;
+const STROKE_OWN = EDGE_STYLE.stroke.own;
+const STROKE_OWN_HOVER = EDGE_STYLE.stroke.ownHover;
+const STROKE_REF = STROKE_OWN * EDGE_STYLE.stroke.refFactor;
+const STROKE_REF_HOVER = STROKE_OWN_HOVER * EDGE_STYLE.stroke.refFactor;
 
 /**
  * The P2 color for an edge: what KIND of relation it is.
@@ -2125,19 +2116,32 @@ export default function OwnershipGraphView({
                   <defs>
                     {/* An edge that does NOT converge (merge off, or the only
                         edge of its group) still needs a head of its own. */}
-                    <marker id={markerId('arrow-own')} viewBox="0 0 10 7" refX="0" refY="3.5"
-                      markerWidth={ARROW_SPAN} markerHeight={ARROW_SPAN * 0.75}
-                      markerUnits="userSpaceOnUse" orient="auto-start-reverse">
-                      <path d="M0,0L10,3.5L0,7Z" fill={EDGE_COLORS.ownFwd} />
-                    </marker>
+                    {/* Geometry from `headMarker` (edgeStyle.ts): the same
+                        head the convergence path and the legend draw, so a
+                        lone forward head and a backward head are the same
+                        size as a shared one. */}
+                    {(() => {
+                      const fwd = headMarker('forward');
+                      const { d: dF, ...mF } = fwd;
+                      return (
+                        <marker id={markerId('arrow-own')} {...mF}>
+                          <path d={dF} fill={EDGE_COLORS.ownFwd} />
+                        </marker>
+                      );
+                    })()}
                     {/* flipped storage: the head sits at the ATTRIBUTE end (its
                         own row, never merged) and points BACK toward the owner,
-                        because the member stores the FK. */}
-                    <marker id={markerId('arrow-own-back')} viewBox="0 0 10 7" refX="10" refY="3.5"
-                      markerWidth={ARROW_SPAN} markerHeight={ARROW_SPAN * 0.75}
-                      markerUnits="userSpaceOnUse" orient="auto-start-reverse">
-                      <path d="M10,0L0,3.5L10,7Z" fill={EDGE_COLORS.ownBkwd} />
-                    </marker>
+                        because the member stores the FK. Its TIP sits on the
+                        path's end and its base reaches the row, so the line
+                        stops at the head instead of running under it. */}
+                    {(() => {
+                      const { d: dB, ...mB } = headMarker('backward');
+                      return (
+                        <marker id={markerId('arrow-own-back')} {...mB}>
+                          <path d={dB} fill={EDGE_COLORS.ownBkwd} />
+                        </marker>
+                      );
+                    })()}
                     {/* association: no ownership claim, so BOTH ends are
                         arrowed, each head pointing INTO the entity it sits next
                         to. Slate rather than the old #9ca3af, which was too
@@ -2157,11 +2161,14 @@ export default function OwnershipGraphView({
                         marker by auto-start-reverse AND the glyph by drawing
                         the tip at x=0 - so the two cancelled and the start head
                         pointed back down the edge instead of into its node. */}
-                    <marker id={markerId('arrow-assoc')} viewBox="0 0 10 7" refX="0" refY="3.5"
-                      markerWidth={ARROW_SPAN * REF_SCALE} markerHeight={ARROW_SPAN * 0.75 * REF_SCALE}
-                      markerUnits="userSpaceOnUse" orient="auto-start-reverse">
-                      <path d="M0,0L10,3.5L0,7Z" fill={EDGE_COLORS.association} />
-                    </marker>
+                    {(() => {
+                      const { d: dA, ...mA } = headMarker('forward', REF_SCALE);
+                      return (
+                        <marker id={markerId('arrow-assoc')} {...mA}>
+                          <path d={dA} fill={EDGE_COLORS.association} />
+                        </marker>
+                      );
+                    })()}
                   </defs>
                   {/*
                     Edges fade out while a new layout is pending and back in
@@ -2226,15 +2233,16 @@ export default function OwnershipGraphView({
                       const willMerge = !!target
                         && mergeDistFor(mergeMode, dragged ?? sectionPoints(e.sections)) > 0;
                       const isAssoc = spec.type !== 'ownership';
+                      // Trimmed by the head's LENGTH: the head lies beyond the
+                      // path's end (forward: base on the end; backward: tip on
+                      // the end), so this is what puts its far edge on the box.
                       const trimmedEnd = willMerge
                         ? e.sections
-                        : trimSectionsEnd(
-                            e.sections, ARROW_SPAN + ARROW_GAP + (flipped ? 2 : 0),
-                          );
+                        : trimSectionsEnd(e.sections, headTrim(isAssoc ? 'association' : 'own-fwd'));
                       // Associations are arrowed at BOTH ends, so both ends
                       // need clearance from the opaque node box.
                       const sections = isAssoc
-                        ? trimSectionsStart(trimmedEnd, ARROW_LEN + ARROW_GAP)
+                        ? trimSectionsStart(trimmedEnd, headTrim('association'))
                         : trimmedEnd;
                       const pts = dragged ?? sectionPoints(sections);
                       const render = (p: Point[]) => roundedPath(p, CORNER_R);
@@ -2267,7 +2275,7 @@ export default function OwnershipGraphView({
                             stroke={vm.edgeColors.get(e.id)?.text
                               ?? edgeKindColor(isOwn, flipped)}
                             strokeWidth={isOwn ? STROKE_OWN : STROKE_REF}
-                            strokeDasharray={isOwn ? undefined : '5 4'}
+                            strokeDasharray={isOwn ? undefined : EDGE_STYLE.dash}
                             markerEnd={marker ? `url(#${markerId(marker)})` : undefined}
                             markerStart={!isOwn && !willMerge ? `url(#${markerId('arrow-assoc')})` : undefined}
                             style={{ transition: `filter ${hoverMs()}ms, stroke-width ${hoverMs()}ms` }}

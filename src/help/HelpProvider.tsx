@@ -35,7 +35,7 @@ import {
 import type { HelpAnchor, HelpContent, TextResolver } from './parseHelpContent';
 import {
   HelpContext, HELP_MODE_ENABLED, ADDRESS_TOGGLE_ENABLED,
-  type HelpApi,
+  type HelpApi, type WidgetRenderer,
 } from './helpContext';
 
 /** Where the TEMPORARY address toggle remembers itself. See `showAddresses`. */
@@ -101,9 +101,11 @@ function resolveText(
 
 export function HelpProvider({
   markdown, onPushChange, onPopChange, onJumpChanges, onTourStart, onTourEnd,
-  textResolvers, centerOn, children,
+  textResolvers, widgets, centerOn, children,
 }: {
   markdown: string;
+  /** Inline widgets for `![alt](widget:<name>:<arg>)` images in content. */
+  widgets?: Record<string, WidgetRenderer>;
   /**
    * Push a position's `Change:` query onto the host's state stack.
    *
@@ -652,11 +654,12 @@ export function HelpProvider({
     positions, position: tourIndex === null ? undefined : positions[tourIndex],
     stepCount, tours, tourName, tourMeta: content.tourMeta,
     overviewOpen, setOverviewOpen,
+    ...(widgets ? { widgets } : {}),
     showAddresses, toggleAddresses,
     content, activeId, showEntry, dismissEntry, resolveAnchor, centerRect,
   }), [helpMode, toggleHelpMode, exitHelpMode, tourIndex, startTour, endTour,
        nextStep, prevStep, goToStep, positions, stepCount, tours, tourName,
-       overviewOpen, showAddresses, toggleAddresses,
+       overviewOpen, widgets, showAddresses, toggleAddresses,
        content, activeId, showEntry, dismissEntry, resolveAnchor, centerRect]);
   /* `setRegistered` is a useState setter: React guarantees it stable, so it is
      deliberately absent from the dependency list above. */

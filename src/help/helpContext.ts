@@ -4,8 +4,16 @@
  * mixes components with other exports.
  */
 
-import { createContext, useContext } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import type { HelpAnchor, HelpContent, TextResolver, TourMeta, TourPosition } from './parseHelpContent';
+
+/**
+ * Draws an inline widget the content embeds as `![alt](widget:<name>:<arg>)`.
+ * Returning null falls back to the image's alt text. The package knows the
+ * URL shape and nothing about what a widget draws — the same seam as text
+ * resolvers and anchor kinds.
+ */
+export type WidgetRenderer = (arg: string) => ReactNode;
 
 /**
  * Help MODE is off; the tour is not.
@@ -56,6 +64,8 @@ export interface HelpApi {
    * file every render.
    */
   setTextResolvers: (resolvers: Record<string, TextResolver> | undefined) => void;
+  /** Host-provided inline widgets, by name. */
+  widgets?: Record<string, WidgetRenderer>;
   helpMode: boolean;
   toggleHelpMode: () => void;
   exitHelpMode: () => void;

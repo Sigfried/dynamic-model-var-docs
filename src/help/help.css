@@ -296,6 +296,14 @@ body.help-mode {
   display: flex;
 }
 
+/* An inline widget (`![alt](widget:...)`) sits in the line of prose like a
+   word: an arrow sample mid-sentence, aligned to the text's middle. */
+.help-inline-widget {
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0 0.15em;
+}
+
 /* Only the prose scrolls; the title and the nav row hold their place. */
 .help-popover-body {
   min-height: 0;
