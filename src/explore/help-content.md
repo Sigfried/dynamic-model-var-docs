@@ -66,7 +66,13 @@ I want to restructure something like this:
 - explain ownership, why it's needed, the two edge types (getting rid of
   association i hope)
 - explain the four perspectives
-- explain the rules and exceptions
+- explain the rules and exceptions, in this order:
+  - Rule 1, Multivalued owns -- multivalue-owns-fwd
+    - currently no exceptions
+  - Rule 2, Single value -- single-value-belongs-to-bkwd
+    - Exceptions: Single value owns -- single-value-owns-fwd
+  - Rule 3, Children follow their parents -- child-following-parent
+
 -->
 ### why-ownership
 

@@ -1,358 +1,177 @@
-# One declaration for rules and edge kinds
+# Ownership rules: simplify, then document
 
-The plan for TASKS [`drop-association`](TASKS.md) and
-[`ownership-rules-declarative`](TASKS.md). Decisions here are Siggie's,
-2026-09-11.
+Implementation plan for TASKS `ownership-rules` — the merged task covering what
+were `drop-association`, `ownership-rules-declarative` and
+`ownership-doc-cleanup`. Decisions are Siggie's, 2026-09-11.
 
-**Delete this file when both tasks close.** The durable content — what the
-rules are and why — belongs in
-[OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md); this file is the
-sequencing argument and the design sketch, which stop being interesting once
-the work is done.
+**Delete this file when the task closes.** Everything here that should outlive
+it belongs in [OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md), which
+is rewritten as part of the same work.
 
 ---
 
-## The two tasks are one task
+## Already done
 
-They arrived as separate rows and they are not separable, because of a
-constraint that only became visible once the goal for `association` was stated:
+Two commits, both reviewed 2026-09-11:
 
-> **If association comes back, it comes back from a specification — not from
-> git history.** Ideally by adding configuration to the rules and edge types,
-> not by restoring a code path. (Siggie, 2026-09-11.)
+- `6531af5` — `ASSOCIATION_SLOTS` emptied. `related_document` and `container`
+  became Rule 1 forward; `SpecimenContainer` joined
+  `SINGLE_VALUE_OWNER_TARGETS`, flipping `Specimen.contained_in` forward.
+- `16234a0` — the declaration exists:
+  [`src/models/ownershipRules.ts`](../src/models/ownershipRules.ts) holds
+  `OWNERSHIP_RULES` (ordered, each entry carrying predicate + verdict + text)
+  and `OWNERSHIP_VERDICTS` (how each verdict is drawn). `OWNERSHIP_RULE_TEXT`
+  and `EDGE_STYLE.kinds` are projections of it.
 
-That makes `association` the **only live test case** for the declarative
-design. Ownership has exactly two other edge kinds, `own-fwd` and `own-bkwd`,
-and they differ only in direction. A configuration system generalised over
-those two alone would almost certainly be unable to express association — a
-third kind that is dashed, arrowed at *both* ends, makes no ownership claim,
-and yet layers like `own-bkwd`. Nothing would have forced the design to handle
-any of that.
-
-So the ordering is: **keep association alive as the reference case while the
-declaration is designed, and delete it afterwards.**
-
-### What that ordering costs
-
-Removing the machinery first would make the config work marginally easier —
-fewer branches to carry while restructuring (Siggie raised this, and it is
-real, not a phantom). The judgement is that the cost is small: the association
-branches are shallow (one `if` in the classifier, one entry in each of four
-tables) and deleting them saves less than having a worked example is worth.
-Recorded here so it is a decision rather than an oversight.
+What follows is the simplification that review produced.
 
 ---
 
-## Sequence
+## 1 — Collapse seven classifier rules to three
 
-| step | what | status | unblocks |
-|---|---|---|---|
-| **1** | **Classification only.** Flip the three slots so the schema has **zero** association edges. Machinery stays, unexercised. | **done** 2026-09-11 | The Ownership tour — one fewer edge kind to explain |
-| **2** | **The declaration.** Rules and edge kinds in one table. Acceptance criterion: *it can express association as configuration.* | **done** 2026-09-11, unreviewed | — |
-| **3** | **Deletion.** Remove the association machinery. The restore recipe is the config block's own documentation. | not started — **needs Siggie's sign-off on step 2 first** | `ownership-doc-cleanup` |
-
-> **Steps 1 and 2 were implemented before Siggie read this plan** (2026-09-11,
-> at their request, on the understanding that either may be reversed). They are
-> separate commits for exactly that reason: step 2 can be reverted without
-> disturbing step 1, and step 1 without disturbing the tour work that depends
-> on it. Step 3 deliberately waits.
-
-Step 1 is well-specified and its outcome is already measured (below). Step 2 is
-the one that needs a plausibility decision before it starts. Step 3 is
-mechanical once step 2 exists.
-
----
-
-## Step 1 — the classification flip
-
-Three slots change verdict. Two are the `ASSOCIATION_SLOTS` members; the third
-is the one that makes the result clean.
-
-| slot | today | becomes | why |
-|---|---|---|---|
-| `Specimen.related_document` | `association` | `own-fwd`, Rule 1 | Document connects to nothing but Specimen and its own `focus`, so a document belongs to its specimen |
-| `SpecimenStorageActivity.container` | `association` | `own-fwd`, Rule 1 | No clear direction between container and activity, but not important enough for a whole edge type |
-| `Specimen.contained_in` | `own-bkwd`, Rule 2 | `own-fwd`, Exception 2a | A container has no independent existence from its specimen: it is an Exception 2a **target**, not an owner |
-
-The third is not optional cosmetics. Measured against live schema data
-(throwaway probe, 2026-09-11):
-
-| variant | self-loops | layering edges | non-self cycles |
-|---|---|---|---|
-| all three flipped | 6 | 153 | **0** |
-| association dropped, `contained_in` left backward | 6 | 153 | **1** |
-
-The surviving cycle in the second row is exactly the one association existed to
-break: `Specimen → SpecimenStorageActivity → SpecimenContainer → Specimen`, via
-`Specimen.contained_in`. Flipping `contained_in` forward is what dissolves it,
-and it is independently justified by Exception 2a — the two arguments happen to
-agree.
-
-Siggie's position is that **a cycle would not have been a blocker** even if one
-survived (2026-09-11). Recorded because it changes what a future reader should
-conclude if the count moves: a cycle appearing here is information, not an
-emergency, and the layering code tolerates it.
-
-### How the flip is spelled
-
-`contained_in` is handled by adding **`SpecimenContainer` to
-`SINGLE_VALUE_OWNER_TARGETS`** — a *range*-keyed entry, not a slot-keyed one.
-That catches every single-valued slot ranging on `SpecimenContainer`, which is
-`contained_in` and `parent_container`. `parent_container` is a self-loop and
-renders as a `⟲` marker on its own row, so nothing about it changes. No
-collateral.
-
-The other two need only `ASSOCIATION_SLOTS` to empty; Rule 1 already claims
-them once nothing intercepts it.
-
-### What else the probe established
-
-- Only `Specimen.related_document` ranges on `Document`, and `Document`'s only
-  outgoing class edge is `focus → Entity`. The Rule 1 argument holds with
-  nothing else attached to it.
-- Three slots range on `SpecimenContainer`: `Specimen.contained_in` (single),
-  `SpecimenContainer.parent_container` (single, self-loop),
-  `SpecimenStorageActivity.container` (multivalued).
-- The self-loop count stays **6**, matching the 2026-08-31 measurement.
-
-### Tests this step needs
-
-`docs/OWNERSHIP_CLASSIFICATION.md` §Layering already names two properties worth
-pinning and not pinned anywhere. Step 1 is the moment to add them, because it
-is the step that changes both numbers:
-
-- the self-loop count (6), which has drifted once already;
-- that `SpecimenStorageActivity.container` as `own-fwd` **with `contained_in`
-  left backward** reintroduces the one non-self cycle — i.e. a test that
-  records *why* the third flip is part of the set, so a later session cannot
-  quietly revert it.
-
-Both belong in `src/test/containmentGraph.test.ts`.
-
----
-
-## Step 2 — the declaration
-
-### What is wrong now
-
-[OWNERSHIP_CLASSIFICATION §Where it lives](OWNERSHIP_CLASSIFICATION.md#where-it-lives)
-lists the problem: one rule's definition is spread across four unrelated
-places.
-
-| the fact | where it lives today |
+| rule id today | becomes |
 |---|---|
-| the predicate that fires the rule | a branch in `classifySlotEdgeExplained` |
-| which slots/ranges are exceptions | five hand-curated `Set`s in `containmentGraph.ts` |
-| the human sentence explaining it | `OWNERSHIP_RULE_TEXT`, a separate `Record` |
-| how the resulting edge is drawn | `EDGE_STYLE.kinds` in `edgeStyle.ts` + `EDGE_COLORS` in `appConfig.ts` |
-| where it sits in the relation bar | `POSITION_AXIS` in `RelationBar.tsx` |
-| how the legend groups it | `getOwnershipPairGroups`, keyed `verdict/rule` |
+| `multivalued` | `multivalue-owns-fwd` |
+| `fk-inversion` | `single-value-belongs-to-bkwd` |
+| `value-object` | `single-value-owns-fwd` |
+| `range-subtree` | `child-following-parent` |
+| `entity-ranged` | **deleted** — `Entity` joins `SINGLE_VALUE_OWNER_TARGETS` |
+| `cardinality-split` | **deleted** — its two ranges join `SINGLE_VALUE_OWNER_TARGETS` |
+| `backward-multivalued` | **deleted** — see below |
+| `association` | unchanged: empty, category retained |
 
-Adding a rule means editing five files and hoping. Adding an *edge kind* — what
-restoring association would be — means editing more.
+Names are Siggie's, from the `why-ownership` comment in
+[help-content.md](../src/explore/help-content.md).
 
-### The shape
+**Why each deletion is safe** (all measured against live schema data,
+2026-09-11):
 
-One ordered array. Each entry carries everything about one rule, including the
-appearance of the edge it produces.
+- **`entity-ranged`.** Only three slots range on `Entity`: `focus` (11 sites,
+  mixed cardinality), `associated_evidence` (multivalued),
+  `associated_artifact` (single). The multivalued ones are already Rule 1, so
+  the rule exists solely to catch the single-valued sites — which putting
+  `Entity` in `SINGLE_VALUE_OWNER_TARGETS` does.
+- **`cardinality-split`.** `SpecimenCreationActivity` and
+  `DimensionalObservationSet` are each referenced by exactly one slot — the one
+  in question. Nothing else points at them, so they are value-object targets by
+  the ordinary test. Range-keyed entries replace a slot-keyed rule.
+- **`backward-multivalued`.** Its only member, `Specimen.parent_specimen`, is a
+  **self-loop** — rendered as a `⟲` marker on its own row and never emitted as
+  a layering edge. Its verdict is unobservable, so the rule earns nothing.
 
-```ts
-// Order IS the classifier: the first entry whose `when` matches decides.
-const OWNERSHIP_RULES = [
-  {
-    id: 'backward-multivalued',
-    when: bySlot('parent_specimen'),
-    verdict: 'own-bkwd',
-    text: 'Multivalued, but pointing UP rather than down: …',
-  },
-  {
-    id: 'cardinality-split',
-    when: bySlot('creation_activity', 'dimensional_measures'),
-    verdict: 'own-fwd',
-    text: 'Cardinality splits a family. …',
-  },
-  {
-    id: 'entity-ranged',
-    when: byRange(ENTITY_ROOT),
-    verdict: 'own-fwd',
-    text: 'The range is Entity, the universal root. …',
-  },
-  { id: 'multivalued',  when: isMultivalued, verdict: 'own-fwd', text: '…' },
-  { id: 'value-object', when: byRange(...VALUE_OBJECTS), verdict: 'own-fwd', text: '…' },
-  { id: 'fk-inversion', when: always, verdict: 'own-bkwd', text: '…' },
-] as const;
-```
+**Delete these two categories outright**, sets and all. Only `ASSOCIATION_SLOTS`
+stays as an empty set, because it is still the worked example proving edge kinds
+are expressible as configuration (see step 4).
 
-and, in the same file, the verdicts themselves as data:
-
-```ts
-const OWNERSHIP_VERDICTS = {
-  'own-fwd': {
-    layering: 'source-first', claimsOwnership: true,
-    color: EDGE_COLORS.ownFwd, heads: 'end', headDirection: 'forward',
-    dashed: false, secondary: false, label: 'A owns B',
-  },
-  'own-bkwd': {
-    layering: 'target-first', claimsOwnership: true,
-    color: EDGE_COLORS.ownBkwd, heads: 'end', headDirection: 'backward',
-    dashed: false, secondary: false, label: 'A belongs to B',
-  },
-};
-```
-
-The style fields are `EdgeKindStyle` as it already exists in `edgeStyle.ts` —
-this merges that record into the verdict rather than inventing a new shape.
-`layering` and `claimsOwnership` are the two new ones, and they are new
-precisely because association is what separates them.
-
-### What derives from it
-
-Everything that is a separate copy today:
-
-- `classifySlotEdgeExplained` — a fold over the array; returns `{verdict, rule}`
-  exactly as now. **`classifySlotEdgeExplained` stays** (the doc is emphatic
-  about this, and rightly: the classifier reporting *which* rule fired is what
-  made the original incoherence visible).
-- `OWNERSHIP_RULE_TEXT` — a projection of `.text`.
-- `EDGE_STYLE.kinds` / `EDGE_COLORS` — projections of `OWNERSHIP_VERDICTS`.
-- `POSITION_AXIS` — **partly.** It is keyed on `RelationPosition`, which
-  decomposes onto two axes (mine/theirs × owns/owned), so it is not a
-  projection of the verdict table. What it needs from the declaration is the
-  `kind` column — which `DrawnKind` each position draws with — and, for a
-  non-owning kind, the fact that it is a **fifth position** rather than a cell
-  in the 2×2. Keep `POSITION_AXIS` hand-written; derive its `kind` values and
-  let the extra row appear from the verdict table. (See
-  [§The five positions](OWNERSHIP_CLASSIFICATION.md#the-five-positions-and-the-two-axes-they-decompose-onto)
-  for why the 2×2 is the right model and association sits outside it.)
-- The legend's grouping — already keyed `verdict/rule`, so it needs the array
-  only for ordering and text.
-- **The rule tables in `OWNERSHIP_CLASSIFICATION.md`** — candidates for
-  generation, or at minimum for a test that pins the doc's counts against the
-  live array. Worth deciding, not worth blocking on.
-
-### The acceptance criterion
-
-**The design is done when restoring `association` is a diff that adds one
-entry to `OWNERSHIP_VERDICTS` and one to `OWNERSHIP_RULES`, and touches no
-other file.**
-
-That is the whole point of the ordering, and it is checkable: write the
-association entry against the design *before* step 3 deletes it, confirm the
-app renders identically, then delete. The check is the deletion's own
-justification.
-
-Association's requirements, as the thing the design must express:
-
-| requirement | what the config needs |
-|---|---|
-| no ownership claim | `verdict` and `layering` must be separable — association layers like `own-bkwd` but owns nothing |
-| dashed stroke | `dash: true` |
-| arrowheads at **both** ends | `heads: 'both'` |
-| its own hue | `color` |
-| appears in the relation bar as a fifth position | `POSITION_AXIS` derived, not hand-written |
-| a legend row | already data-driven |
-
-The `verdict`/`layering` separation is the non-obvious one, and it is exactly
-the thing a two-kind design would have collapsed.
-
-### Rules this cannot swallow
-
-Honest scope, so the sketch is not read as more than it is:
-
-- **Rule 3 (range-subtree) is not a classifier branch** and should not become
-  one. It is a second pass in `buildContainmentGraph` over the forward edges
-  the classifier produced, plus the matching walk in `getOwnershipPairGroups`.
-  It can carry an entry in the array **for its text and its legend group**, with
-  its `when` marked as not-classifier-evaluated — but folding it into the
-  predicate chain would be wrong, and the two enumerations must stay pinned
-  equal by `ownershipLegend.test.ts`.
-- **`SKIP_SUBCLASS_EXPANSION`** is about the inheritance tree, not about
-  classification. It stays where it is. Conflating it with the classification
-  sets is what went wrong with `EXCLUDE_HAS_A_TARGETS` (2026-08-25).
-
-### Cost
-
-Moderate, and mostly mechanical. The predicates already exist as `if` bodies;
-the texts already exist as strings; the styles already exist as objects. The
-work is establishing the array, writing the projections, and deleting the
-originals — with the type system catching the misses, since every consumer is
-typed on `OwnershipRule` / `DrawnKind`.
-
-The risk is **ordering**. The current classifier's correctness depends on its
-branch order (association before `multivalued`, because it exists to defeat it;
-`entity-ranged` before both). Making order into array position makes it
-visible, which is an improvement, but it also makes it silently reorderable.
-The array needs a comment saying order is semantic, and the existing
-classification tests — which sweep the live schema — are what would catch a bad
-reorder.
-
-### Not in scope
-
-`ownership-rules-declarative` is about **where the rules live**, not about
-whether the hand-curated memberships can be derived. Those are different
-problems:
-
-- The memberships **cannot** be derived from the schema. This was verified
-  2026-08-21, exhaustively, and is written up in
-  [Exception 2a](OWNERSHIP_CLASSIFICATION.md#exception-2a--targets-with-no-independent-existence--own-fwd-41-edges).
-  Do not re-litigate it.
-- They **go stale silently on every schema sync** — that is
-  [BACKLOG §Config rot](BACKLOG.md#hand-curated-config-rot) and TASKS
-  `override-site-check`, and the fix is a sync check, not a declaration.
-
-The declaration helps those tasks by giving the sync check **one place to look**
-instead of five. It does not solve them. A plausible follow-on, once the array
-exists, is moving the memberships to a LinkML overlay (`annotations:
-is_value_object`) so they review as a schema-shaped diff — but that is a
-separate decision and it is cheaper *after* this work, not instead of it.
+After this, **`SINGLE_VALUE_OWNER_TARGETS` is the only set with members.**
 
 ---
 
-## Step 3 — deletion
+## 2 — Regroup `SINGLE_VALUE_OWNER_TARGETS`
 
-Mechanical once step 2 lands, and gated on the acceptance check above.
+Range-keyed throughout. Three groups, each with a comment giving that group's
+shared reason:
 
-What goes: the `association` entries in `OWNERSHIP_VERDICTS` and
-`OWNERSHIP_RULES`, the `ContainmentEdgeKind` member, the `RelationPosition`
-member, the `{{edge:association}}` widget's kind, the tour beat in
-`help-content.md`, FORMAT.md's edge-table row, and the test assertions in the
-seven files that name it.
+1. **Value leaves, widely reused** — `Quantity` (16 referrers), `TimePoint`
+   (15), `BodySite` (6). No outgoing class edges.
+2. **Value leaves, single referrer** — `CauseOfDeath`, `BiologicProduct`,
+   `QuestionnaireResponseValue` + its 5 typed subclasses.
+3. **Holds other value objects** — `Substance`, `TimePeriod`, `Activity`,
+   `SpecimenContainer`, plus the new arrivals `Entity`,
+   `SpecimenCreationActivity`, `DimensionalObservationSet`.
 
-What stays: **the specification.** `OWNERSHIP_CLASSIFICATION.md`
-[§association](OWNERSHIP_CLASSIFICATION.md#association--0-edges) is rewritten
-from "here are the two edges" into "here is what an association edge is, what
-it must be able to express, and the config entry that would restore it."
-That section becomes the restore recipe — which is the whole reason the
-deletion waits for step 2.
+**Rename the criterion.** "NO INDEPENDENT EXISTENCE" over-claims for group 3.
+Use something the whole list satisfies — *the holder is where this is found*.
 
-Note for whoever writes it: the section's current argument is worth keeping.
-The justification for the category was never "these two slots are special" but
-**"Rule 1 would claim ownership here, and it is wrong"** — and the companion
-observation that a slot whose argument is instead "it's a role, not membership"
-belongs in `own-bkwd`. Six single-valued slots were dropped on exactly that
-reasoning (WORKLOG, 2026-08-25). A future schema that needs association back
-will need that test, not the two slot names.
+**Move per-member decision history to WORKLOG**, including the long `Activity`
+comment. Group comments state the current reason; they do not re-argue past
+decisions.
+
+### `SpecimenContainer` — settled, do not reopen
+
+It stays in the list. Siggie's argument, which replaces the old
+container-reuse hedge:
+
+> A container has no reason to exist without its specimen. Even if containers
+> are physically reused, this schema gives no way to track that — no identity
+> beyond `id`, no history, nothing linking a container across specimens. A
+> model that tracked reusable labware would look different.
+
+By the criterion that matters it is an ordinary member of group 3: it points
+only at `Substance` (itself a value object) and itself (self-loop, `⟲`, never a
+layering edge) — the same shape as `TimePeriod` and `Substance`.
+
+**Rejected:** flipping `SpecimenStorageActivity.container` backward so
+`SpecimenContainer` could leave the list. That slot is *multivalued*, so the
+flip asserts "many containers own one storage activity", which reads wrong; and
+it would revive `BACKWARD_DESPITE_MULTIVALUED` plus add a second slot-name
+override. It is acyclic — the cycle is not the objection — but it costs two
+overrides to save one.
 
 ---
 
-## Downstream
+## 3 — Legend: nested, in teaching order
 
-- **`help-finish-authoring/ownership`** unblocks after step 1: the Ownership
-  tour then explains two edge kinds, not three. The tour beat at
-  `help-content.md` that walks the Specimen/container/activity triangle is
-  rewritten — and it gets *simpler*, since the triangle is no longer an
-  exception to anything.
-- **`ownership-doc-cleanup`** waits for step 3, as its row already says.
-- **`override-site-check`** and **config rot** get a smaller surface after step
-  2, but are not closed by it.
+Order is **Rule 1 → Rule 2 → its exception → Rule 3**, and the exception renders
+**indented beneath** `single-value-belongs-to-bkwd`, not as a peer.
+
+Needs a `parentRule` field on `RuleSpec` and layout work in
+[OwnershipLegend.tsx](../src/explore/OwnershipLegend.tsx).
+
+**Classifier order is precedence, not pedagogy.** They are different orders for
+different purposes and must not be conflated — say so in a code comment where
+`OWNERSHIP_RULES` is declared.
 
 ---
 
-## See also
+## 4 — Rewrite OWNERSHIP_CLASSIFICATION.md
 
-- [OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md) — the rules
-  themselves, and the appendix mapping them to code.
-- [TASKS.md](TASKS.md) — `drop-association`, `ownership-rules-declarative`,
-  `ownership-doc-cleanup`.
-- `WORKLOG.md` — why the association set shrank from 8 to 2 (2026-08-25), and
-  the P2 palette change that gave the three kinds distinct hues (2026-09-04).
+Do this **with** the code changes, not after. The doc currently documents seven
+rules, five sets and a rule-numbering scheme that steps 1–3 make obsolete;
+rewriting it separately means rewriting it twice.
+
+What must survive the rewrite:
+
+- **What an association edge is and what it must be able to express** — the
+  test is *"Rule 1 would claim ownership here, and it is wrong"*, not the two
+  slot names. A future schema needs the test.
+- **That the memberships cannot be derived from the schema.** Verified
+  exhaustively 2026-08-21; every candidate discriminator failed. Do not
+  re-litigate.
+- **Why `Entity` is drawn as a range but excluded from the inheritance tree** —
+  `SKIP_SUBCLASS_EXPANSION` is a *separate concern* from classification and
+  stays in `containmentGraph.ts`. Conflating the two is what went wrong with
+  `EXCLUDE_HAS_A_TARGETS`.
+- **Rule 3 is not a classifier branch.** It is a second pass in
+  `buildContainmentGraph` over the forward edges, with a matching walk in
+  `getOwnershipPairGroups`; `ownershipLegend.test.ts` pins the two equal.
+
+Counts must be **re-measured** after the changes, not adjusted by hand. The
+current table (159 total) is measured from `getOwnershipPairGroups`.
+
+---
+
+## 5 — `required` on `SlotFacts`
+
+Add it. It is already carried on every slot edge, so the cost is a field.
+
+**Open question, deliberately unresolved:** Siggie recalls a case where
+`required` indicated ownership direction but cannot place it. Sweeping this
+schema found **no slot whose verdict `required` would change** — so nothing
+here motivates a rule today. Add the field as available-and-unused, documented
+as such, so the case can be recognised if it resurfaces.
+
+Full inventory of slot properties the schema actually uses, for anyone looking
+for other signal: `range` 225, `description` 223, `required` 220, `multivalued`
+104, `comments` 39, `name` 23, `examples` 20, `unit` 12, `inlined_as_list` 8,
+`inlined` 1, `any_of` 1. `inlined`/`inlined_as_list` were investigated and
+rejected 2026-08-21 (inconsistent with ownership); `unit` is presentational.
+
+---
+
+## What this closes
+
+`override-site-check` dissolves: it exists because the override sets are keyed
+by slot name and every member having exactly one site is luck. After step 1 the
+only set left is range-keyed, so there are no slot-name overrides to check.
+Close it as part of this work, noting why.
