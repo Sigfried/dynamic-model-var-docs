@@ -342,13 +342,25 @@ as configuration. Deleting it is step 3 of that work; see
 
 ### What the category is for
 
-**The test is: Rule 1 would claim ownership here, and it is wrong.** A slot
-whose argument is instead "it's a role, not membership" belongs in `own-bkwd`,
-which is what "belongs to" already says — six single-valued slots were dropped
-from this set on exactly that reasoning (`WORKLOG.md`, 2026-08-25).
+Rules 1 and 2 between them classify every slot: one of the two ends owns the
+other. Association exists for the case where **both answers are wrong** — the
+ordinary rules produce an ownership claim, and there is no ownership to claim.
 
-That test, not the slot names, is what a future schema needs in order to decide
-whether it wants associations back.
+**The test: would Rule 1 (or Rule 2) claim ownership here, and is that claim
+wrong?** Both of the slots below were multivalued, so Rule 1 said "the holder
+owns these" — and a document a specimen merely references, or a container an
+activity merely uses, is not owned by it.
+
+**The limit, which keeps the test from over-firing:** if the objection is
+*"it's a role, not membership"*, that is **not** association. `own-bkwd`
+already says "belongs to", which covers roles perfectly well. Association is
+only for when *neither* direction of ownership is right. Six single-valued
+slots were dropped from this set on exactly that distinction (`WORKLOG.md`,
+2026-08-25).
+
+**That test, not the slot names, is what a future schema needs**, since the two
+members below are gone and a schema that needs associations back will have
+entirely different slots.
 
 ### The two edges that used to be here
 

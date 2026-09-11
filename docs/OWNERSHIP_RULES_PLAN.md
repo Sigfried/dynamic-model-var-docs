@@ -132,9 +132,21 @@ rewriting it separately means rewriting it twice.
 
 What must survive the rewrite:
 
-- **What an association edge is and what it must be able to express** — the
-  test is *"Rule 1 would claim ownership here, and it is wrong"*, not the two
-  slot names. A future schema needs the test.
+- **When a schema needs an association edge at all.** The doc must record the
+  *condition*, because step 1 deleted the two slots that used to illustrate it,
+  and a list of slot names is no use to a schema that has neither.
+
+  The condition: **a slot where the ordinary rules produce ownership, and
+  ownership is the wrong claim.** Both former members were multivalued, so Rule
+  1 said "the holder owns these" — and for a document a specimen merely
+  references, or a container an activity merely uses, that was wrong, with no
+  other rule giving a better answer.
+
+  And the limit that keeps it from over-firing: if the objection is *"it's a
+  role, not membership"*, that is **not** association — `own-bkwd` already says
+  "belongs to", which covers roles. Association is only for when *neither*
+  direction of ownership is right. Six slots were dropped from the set on
+  exactly this distinction (WORKLOG, 2026-08-25).
 - **That the memberships cannot be derived from the schema.** Verified
   exhaustively 2026-08-21; every candidate discriminator failed. Do not
   re-litigate.
