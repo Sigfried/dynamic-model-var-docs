@@ -27,10 +27,11 @@ spec.
      Put a new section in the part it belongs to rather than at the end. -->
 
 - [The content file](#the-content-file)
-  - [Structure](#structure) — `## ` sections, `### ` entries, `---` separators, `<details>` folding, prose sections
-  - [Entry fields](#entry-fields) — the field table; `Description:` is a multi-line block, everything else one line
+  - [Structure](#structure) — `## ` sections, `### ` entries, `<details>` folding, prose sections
+  - [Entry fields](#entry-fields) — the field table and how a field is spelled
   - [Disabling a field](#disabling-a-field) — prefix a field with `_` to park it
 - [Prose inside a field](#prose-inside-a-field)
+  - [`Description:` — the multi-line markdown block](#description--the-multi-line-markdown-block) — the one field that spans lines; what ends it
   - [Pulling text from the model — `{{kind:arg}}`](#pulling-text-from-the-model--kindarg) — placeholders filled by host-registered resolvers
   - [Inline widgets](#inline-widgets) — `![alt](widget:name:arg)` drawn by a host widget
   - [Styling a span or a block — `:s[…]{…}`](#styling-a-span-or-a-block--s) — the `s` directive and its closed attribute list
@@ -46,7 +47,8 @@ spec.
   - [Finding a step you can see on screen](#finding-a-step-you-can-see-on-screen) — the dev-only content-id readout; duplicate ids
 - [Pointing at the screen](#pointing-at-the-screen)
   - [Anchors](#anchors) — `Anchor:` grammar: tagged landmarks vs. generated element kinds
-  - [Highlight](#highlight) — `ring`, `dim`, `none`; `Spotlight:` rings something other than the anchor
+  - [Highlight](#highlight) — `ring`, `dim`, `none`: how hard to point at the anchor
+    - [Spotlight](#spotlight) — `Spotlight:` rings something other than the anchor without moving the popover
   - [Placement](#placement) — where the popover goes; `Position:`, `OffsetX:`, centring with no anchor, `Width:`
     - [The default width is automatic](#the-default-width-is-automatic) — sized from text area, 320–800, floored by the nav row
 - [Changing the app](#changing-the-app)
@@ -70,7 +72,8 @@ spec.
 ### entry-id              — one entry: a help topic and/or a tour step
 ```
 
-Sections are separated by `---` lines.
+A section runs from its `## ` heading to the next one; the heading is the
+boundary. A `---` line is decorative and means nothing to the parser.
 
 **Sections organise the source file; almost nothing about them appears in the
 app.** The popover shows one entry at a time, and both the tour and help mode
@@ -88,8 +91,8 @@ describes a tour for the chooser — see
   moving a step means moving its block.
 
 They are doing three jobs now, so do not remove them: they group entries legibly
-in this file, the `---` separators between them are what the parser splits on,
-and a section body is where a tour's metadata is written. `HelpSection.body` is
+in this file, their `## ` headings are what the parser splits on, and a section
+body is where a tour's metadata is written. `HelpSection.body` is
 also kept whole, for a future help mode that wants to show section intros.
 
 **Wrap each section in `<details>` so the content file folds when read on
@@ -119,7 +122,7 @@ does not get swallowed into that entry's `Description:`.
 | Field | Meaning |
 |---|---|
 | `Title:` | short name shown as the popover heading |
-| `Description:` | one or two sentences; markdown allowed |
+| `Description:` | the step's prose; a multi-line markdown block — see [`Description:`](#description--the-multi-line-markdown-block) |
 | `Interactions:` | bullet list of what you can do |
 | `Shortcut:` | key hint, rendered as a `<kbd>` |
 | `Context:` | smaller footnote text |
@@ -146,6 +149,29 @@ field copied from a beat is not silently dropped. Only `Title` and
 An entry with no `Tour:` is help-only: reachable in help mode, never visited by
 a tour.
 
+Every field is one line except `Description:`, which is a multi-line markdown
+block — see [`Description:`](#description--the-multi-line-markdown-block) and
+the rest of [Prose inside a field](#prose-inside-a-field) for what can go in
+it.
+
+### Disabling a field
+
+**Prefix any field name with `_` to park it.** The field is still parsed, but
+treated as absent:
+
+```markdown
+- **_Tour:** Walkthrough  <- entry drops out of the tour, stays as help
+- **_Change:** sel=X      <- change not pushed
+```
+
+Use it for a step that is written but not ready to appear. The step simply
+drops out of the sequence — parking one of six leaves a working 5-step tour,
+and since order comes from the file there is nothing to renumber.
+
+## Prose inside a field
+
+### `Description:` — the multi-line markdown block
+
 **`Description:` is a multi-line markdown block; every other field is one
 line.** The description runs from the colon to the next `- **Field:**`, so it
 can hold paragraphs, bullet lists and links — write the step's prose the way
@@ -164,28 +190,20 @@ you want it read, in the order you want it read:
 
 Continuation lines are indented to show they belong to the field; the indent is
 stripped before the markdown is rendered. **Blank lines do not end the block** —
-only the next `- **Field:**` does.
+only the next `- **Field:**` does (or the structural markup listed under
+[Structure](#structure)).
 
 Because the description can carry its own bullets, `Interactions:` and
 `Context:` are now optional structure rather than the only way to get a second
 paragraph. Use them when you want a step's furniture set apart from its prose;
 put the prose in `Description:`.
 
-### Disabling a field
-
-**Prefix any field name with `_` to park it.** The field is still parsed, but
-treated as absent:
-
-```markdown
-- **_Tour:** Walkthrough  <- entry drops out of the tour, stays as help
-- **_Change:** sel=X      <- change not pushed
-```
-
-Use it for a step that is written but not ready to appear. The step simply
-drops out of the sequence — parking one of six leaves a working 5-step tour,
-and since order comes from the file there is nothing to renumber.
-
-## Prose inside a field
+The rest of this part is what can go in that block beyond plain markdown: text
+[pulled from the model](#pulling-text-from-the-model--kindarg),
+[inline widgets](#inline-widgets), [styled spans and blocks](#styling-a-span-or-a-block--s),
+[subtitles](#subtitles-inside-a-description) and [alerts](#alerts). A beat's
+`Description:` takes all of the same — see
+[Beats](#a-beats-numbered-line-is-a-label-not-its-text).
 
 ### Pulling text from the model — `{{kind:arg}}`
 
@@ -272,7 +290,7 @@ their own is a block (a `<div>` around everything between). Attributes are
  | `bg`      | `background-color`                                                                                  |
  | `opacity` | `opacity`                                                                                           |
  | `nowrap`  | `white-space: nowrap`                                                                               |
- | `center`  | `text-align: center`, plus `display: block` so that on a span the text becomes its own centred line |
+ | `center`  | `text-align: center` — **block form only**; on `:s[…]` it is dropped, since an inline span has no line of its own to centre within, and forcing one would stop the span sharing a line with other text |
 
 That list is the whole of it, on purpose: any other attribute, and any value
 with characters outside the plain CSS value set, is dropped, so the content
@@ -622,6 +640,8 @@ everything else. `Highlight:` changes that:
 | `dim` | the same, written out |
 | `ring` | the ring alone, nothing dimmed |
 | `none` | draw nothing |
+
+#### Spotlight
 
 **`Spotlight:` moves the ring without moving the popover.** By default the
 ring surrounds the anchor. A step or beat that wants the popover to stay on one

@@ -244,8 +244,9 @@ export interface HelpEntry {
  *
  * **`body` is unused, not unsupported.** It is parsed and kept for a help mode
  * that wants section intros. Do not conclude from "nothing reads it" that
- * sections can be flattened away: their `---` separators are what
- * `parseHelpContent` splits on, and they keep the content file legible.
+ * sections can be flattened away: their `## ` headings are what
+ * `parseHelpContent` splits on, a section body is where `TourMetadata:`
+ * lives, and they keep the content file legible.
  */
 export interface HelpSection {
   id: string;
