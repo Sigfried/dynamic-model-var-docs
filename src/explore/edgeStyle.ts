@@ -13,11 +13,26 @@
  *
  * Colours stay in `appConfig.EDGE_COLORS` (P2 of the three palettes) and are
  * re-exported through `kinds` so a consumer needs only this module.
+ *
+ * **Per-kind appearance is NOT declared here.** It comes from
+ * `OWNERSHIP_VERDICTS` (src/models/ownershipRules.ts, reached through
+ * DataService), the one declaration that also holds each rule's predicate,
+ * verdict and human text — so adding an edge kind is one entry there rather
+ * than an edit in five files. What stays here is the geometry every kind
+ * shares: head size, stroke widths, the dash pattern, the marker glyphs.
  */
 
 import { EDGE_COLORS } from '../config/appConfig';
+import { OWNERSHIP_VERDICTS } from '../services/DataService';
 
-/** The three verdicts that draw. `excluded` never becomes an edge. */
+/**
+ * The verdicts that draw. `excluded` never becomes an edge.
+ *
+ * `association` is listed explicitly because no slot classifies as it since
+ * 2026-09-11, so it is absent from OWNERSHIP_VERDICTS and its style is
+ * supplied below. Deleting it is step 3 of TASKS
+ * `ownership-rules-declarative`; see docs/OWNERSHIP_RULES_PLAN.md.
+ */
 export type DrawnKind = 'own-fwd' | 'own-bkwd' | 'association';
 
 /** Which way a head points relative to the path's own direction. */
@@ -50,14 +65,18 @@ export const EDGE_STYLE = {
   stroke: { own: 1.4, ownHover: 2.6, refFactor: 0.75 },
   dash: '5 4',
   kinds: {
-    'own-fwd': {
-      color: EDGE_COLORS.ownFwd, heads: 'end', headDirection: 'forward',
-      dashed: false, secondary: false, label: 'A owns B',
-    },
-    'own-bkwd': {
-      color: EDGE_COLORS.ownBkwd, heads: 'end', headDirection: 'backward',
-      dashed: false, secondary: false, label: 'A belongs to B',
-    },
+    'own-fwd': OWNERSHIP_VERDICTS['own-fwd'],
+    'own-bkwd': OWNERSHIP_VERDICTS['own-bkwd'],
+    /*
+     * No live example since ASSOCIATION_SLOTS emptied (2026-09-11), so this is
+     * the only kind still declared here rather than in OWNERSHIP_VERDICTS.
+     *
+     * It is ALSO the acceptance criterion for the declaration: an edge kind
+     * that is dashed, arrowed at BOTH ends, claims no ownership and yet layers
+     * like own-bkwd must be expressible by moving this object into
+     * OWNERSHIP_VERDICTS and adding one rule entry — nothing else.
+     * `ownershipRules.test.ts` proves that.
+     */
     'association': {
       color: EDGE_COLORS.association, heads: 'both', headDirection: 'forward',
       dashed: true, secondary: true, label: 'A and B are associated',

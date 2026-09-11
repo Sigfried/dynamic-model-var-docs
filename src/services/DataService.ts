@@ -60,6 +60,17 @@ export type {
   ContainmentGraph, ContainmentNode, ContainmentEdge, OwnershipVerdict,
 } from '../models/containmentGraph';
 export { cardinalityLabel, SKIP_SUBCLASS_EXPANSION } from '../models/containmentGraph';
+/*
+ * The ownership rule/verdict declaration, re-exported so the view layer can
+ * reach it without importing from `models/` directly (see docs/CLAUDE.md, "UI
+ * Import Rules"). `edgeStyle.ts` builds its `kinds` table from
+ * OWNERSHIP_VERDICTS rather than keeping a second copy of the same colours,
+ * dashes and head geometry.
+ */
+export { OWNERSHIP_VERDICTS, OWNERSHIP_RULES, OWNERSHIP_RULE_TEXT } from '../models/containmentGraph';
+export type {
+  VerdictSpec, DrawnVerdict, Layering, HeadPlacement, HeadDirection, OwnershipRule,
+} from '../models/containmentGraph';
 export {
   RELATION_POSITION_LABEL, RELATION_POSITION_ORDER,
   relationPositionLabel,

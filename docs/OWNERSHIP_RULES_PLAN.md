@@ -45,11 +45,17 @@ Recorded here so it is a decision rather than an oversight.
 
 ## Sequence
 
-| step | what | unblocks |
-|---|---|---|
-| **1** | **Classification only.** Flip the three slots so the schema has **zero** association edges. Machinery stays, unexercised. | The Ownership tour — one fewer edge kind to explain |
-| **2** | **The declaration.** Rules and edge kinds in one table. Acceptance criterion: *it can express association as configuration.* | — |
-| **3** | **Deletion.** Remove the association machinery. The restore recipe is the config block's own documentation. | `ownership-doc-cleanup` |
+| step | what | status | unblocks |
+|---|---|---|---|
+| **1** | **Classification only.** Flip the three slots so the schema has **zero** association edges. Machinery stays, unexercised. | **done** 2026-09-11 | The Ownership tour — one fewer edge kind to explain |
+| **2** | **The declaration.** Rules and edge kinds in one table. Acceptance criterion: *it can express association as configuration.* | **done** 2026-09-11, unreviewed | — |
+| **3** | **Deletion.** Remove the association machinery. The restore recipe is the config block's own documentation. | not started — **needs Siggie's sign-off on step 2 first** | `ownership-doc-cleanup` |
+
+> **Steps 1 and 2 were implemented before Siggie read this plan** (2026-09-11,
+> at their request, on the understanding that either may be reversed). They are
+> separate commits for exactly that reason: step 2 can be reverted without
+> disturbing step 1, and step 1 without disturbing the tour work that depends
+> on it. Step 3 deliberately waits.
 
 Step 1 is well-specified and its outcome is already measured (below). Step 2 is
 the one that needs a plausibility decision before it starts. Step 3 is

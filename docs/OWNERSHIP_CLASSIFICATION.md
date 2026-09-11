@@ -842,7 +842,23 @@ every time someone wondered, which is how the self-loop count drifted once.
 
 ### What the code does today
 
-`classifySlotEdgeExplained` in [`src/models/containmentGraph.ts`](../src/models/containmentGraph.ts), in order:
+**The rules are one declaration.** [`src/models/ownershipRules.ts`](../src/models/ownershipRules.ts)
+holds `OWNERSHIP_RULES` — an ordered array where each entry carries its
+predicate, verdict, human text and rule id — and `OWNERSHIP_VERDICTS`, which
+carries how each verdict is DRAWN (colour, heads, dash, layering). Everything
+that used to be a separate copy is now a projection: `OWNERSHIP_RULE_TEXT`,
+`EDGE_STYLE.kinds`, the legend's grouping. `classifySlotEdgeExplained` in
+[`src/models/containmentGraph.ts`](../src/models/containmentGraph.ts) is a fold
+over the array, and the module re-exports the declaration so existing import
+paths still work.
+
+**Order in that array is semantic** — the first entry whose `when` matches
+decides — and `tsc` cannot catch a reorder. The schema-sweeping tests in
+[`src/test/containmentGraph.test.ts`](../src/test/containmentGraph.test.ts) can,
+and [`src/test/ownershipRules.test.ts`](../src/test/ownershipRules.test.ts)
+asserts each override still beats the cardinality rule it overrides.
+
+The order, as declared:
 
 ```
 1. slot ∈ ASSOCIATION_SLOTS            → association          (0 entries)
@@ -869,7 +885,9 @@ fired — and the legend render pairs grouped by rule — is what made the origi
 incoherence visible. Whatever the rules become, the classifier must explain
 itself.
 
-The current sets, all in `containmentGraph.ts`:
+The current sets, all in [`ownershipRules.ts`](../src/models/ownershipRules.ts)
+(`SKIP_SUBCLASS_EXPANSION` excepted — it is about the inheritance tree, not
+classification, and stays in `containmentGraph.ts`):
 
 | set | members |
 |---|---|
@@ -879,10 +897,12 @@ The current sets, all in `containmentGraph.ts`:
 | `SINGLE_VALUE_OWNER_TARGETS` (15) | `Quantity`, `TimePoint`, `TimePeriod`, `BodySite`, `CauseOfDeath`, `Substance`, `BiologicProduct`, `Activity`, `SpecimenContainer`, `QuestionnaireResponseValue` + its 5 typed subclasses |
 | `SKIP_SUBCLASS_EXPANSION` (1) | `Entity` — inheritance only, **not** ranges |
 
-**Still keyed by slot name, not `(class, slot)` pair.** All five members of the
-two override sets happen to occur at exactly one class each — **luck, not
-design.** It is exactly how `performed_by` (11 sites) did damage when it sat in
-the old override list. A sync check should assert each still has one site.
+**Still keyed by slot name, not `(class, slot)` pair.** Every member of the
+override sets happens to occur at exactly one class — **luck, not design.** It
+is exactly how `performed_by` (11 sites) did damage when it sat in the old
+override list. A sync check should assert each still has one site; collecting
+the sets into one module gives that check one place to look instead of five,
+which is all the declaration claims to do about the problem.
 
 These sets are hand-curated and **go stale silently on every schema sync**. See
 `docs/TASKS.md`, "hand-curated config rot".
@@ -891,7 +911,9 @@ These sets are hand-curated and **go stale silently on every schema sync**. See
 
 | file | what |
 |---|---|
-| [`src/models/containmentGraph.ts`](../src/models/containmentGraph.ts) | `classifySlotEdge`, `classifySlotEdgeExplained`, `OWNERSHIP_RULE_TEXT`, the override sets |
+| [`src/models/ownershipRules.ts`](../src/models/ownershipRules.ts) | **the one declaration**: `OWNERSHIP_RULES`, `OWNERSHIP_VERDICTS`, `classify`, the override sets, `OWNERSHIP_RULE_TEXT` (a projection) |
+| [`src/models/containmentGraph.ts`](../src/models/containmentGraph.ts) | `classifySlotEdge`, `classifySlotEdgeExplained`, `buildContainmentGraph`, `subtreeOf`, `SKIP_SUBCLASS_EXPANSION`; re-exports the declaration |
+| [`src/test/ownershipRules.test.ts`](../src/test/ownershipRules.test.ts) | the table is well-formed, order is honoured, and **association is expressible as configuration** — the acceptance criterion for `ownership-rules-declarative` |
 | [`src/models/ownershipSubgraph.ts`](../src/models/ownershipSubgraph.ts) | `RelationPosition`, `RELATION_POSITION_LABEL`, `buildOwnershipDag`, `computeSunkLayers` |
 | [`src/services/DataService.ts`](../src/services/DataService.ts) | `getOwnershipPairGroups`, `getConvergenceRanking`, `getDivergenceRanking`, `getContainmentGraph`, `getTargetColor` |
 | [`src/config/appConfig.ts`](../src/config/appConfig.ts) | the three palettes (P1 `RANGE_COLORS`, P2 `EDGE_COLORS`, P3 `SIBLING_COLORS`) |
