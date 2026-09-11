@@ -126,11 +126,27 @@ I want to restructure this
 
 - **Title:** Edge types
 - **Tour:** Ownership
-- **Only:** sel=Participant~Specimen~SpecimenCreationActivity
-- **Action:** Drew Specimen with its Participant and its creation activity.
-- **Anchor:** node-box:Specimen
+- Only: sel=Participant~Condition~BodySite
+- Spotlight: slot-row:Condition.affected_body_site
+- **Anchor:** node-box:Condition
+- **Width:** 550
 - **Description:**
-  Specimen has lines in both directions, and they mean opposite things.
+  So, when the Explorer has configured an attribute target as
+  *belonging to* its defining entity, it places the target to the right and
+  draws a forward-pointing arrow.
+
+  `Condition.affected_body_site` {{edge:own-fwd}}&nbsp;`BodySite`
+- Beats:
+  1. backwards
+     - Keep: true
+     - Spotlight: slot-row:Condition.associated_participant
+     - Description:
+       When the target is considered to be *owned by*
+       the defining entity, it places the target to the left
+       and draws a backward-pointing arrow {{edge:own-bkwd}}
+
+
+       or {{edge:association}}
 - **Beats:**
   1. belongs to
      - Description:
