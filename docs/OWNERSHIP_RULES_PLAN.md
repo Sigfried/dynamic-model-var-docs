@@ -17,7 +17,14 @@ it belongs in OWNERSHIP_CLASSIFICATION.md.
 
 ## Already done
 
-Two commits, both reviewed 2026-09-11:
+**Steps 1, 2, 3 and 5 shipped 2026-09-11** — see WORKLOG for the measurements
+and the before/after verdict diff that proved the collapse behaviour-preserving
+(exactly one verdict changed, `Specimen.parent_specimen`, a self-loop whose
+direction is never drawn). **Step 4 is not started**, deliberately: Siggie wants
+to be asked about each chunk considered for KEEPING, and wants a draft of the
+Ownership tour past `why-ownership`/`edge-types` before the doc overhaul.
+
+Earlier, two commits, both reviewed 2026-09-11:
 
 - `6531af5` — `ASSOCIATION_SLOTS` emptied. `related_document` and `container`
   became Rule 1 forward; `SpecimenContainer` joined

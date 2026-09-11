@@ -7,6 +7,113 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-11 — seven ownership rules down to three (plan steps 1–3, and 5)
+
+Siggie asked for plan steps 1–3 and a stop before step 4 (the
+OWNERSHIP_CLASSIFICATION.md cut). Step 5 (`required` on `SlotFacts`) came along
+because it is a field and a sentence and touching the same file twice for it
+would have been silly. Step 4 is explicitly not started.
+
+**Everything the plan asserted about the schema was re-measured before
+deleting anything**, with a throwaway probe test (deleted after) rather than by
+reading the rules and reasoning — per the standing "probe before diagnosing"
+correction. The measurements, 2026-09-11, 54 classes and 149 class-to-class
+slot-edges:
+
+- `Entity` is the range of 13 slot-edges, not the 12 an older count said: 9
+  `focus` sites (the plan says 11), `Condition.associated_evidence`,
+  `MeasurementObservation.associated_artifact`, and three more `focus` on the
+  `*Set` classes. The discrepancy changes nothing — the multivalued ones were
+  already Rule 1 — but the plan's "11 sites" should not be quoted again.
+- `SpecimenCreationActivity` and `DimensionalObservationSet` each have exactly
+  ONE referrer, the slot in question. So they are ordinary value targets by the
+  ordinary test and the slot-keyed `cardinality-split` rule bought nothing.
+- `Specimen.parent_specimen` is the only member of
+  `BACKWARD_DESPITE_MULTIVALUED` and is a self-loop.
+
+**Verdict-level proof the collapse is behaviour-preserving.** Rather than trust
+the argument, the classifier's output for all 149 slot-edges was dumped before
+and after (git stash, re-run, diff). **Exactly one verdict changed:**
+`Specimen.parent_specimen` went `own-bkwd` → `own-fwd`. That is the predicted
+one, and it is unobservable: `ownershipSubgraph.ts` skips `isLoop` edges at
+both :146 and :297 before ever reading direction, and the view renders a loop
+as a ⟲ marker on its own row rather than a routed edge. Every other verdict is
+byte-identical; only the RULE LABELS moved. That diff is the reason to believe
+the seven-to-three collapse, and it is worth re-running the same way if anyone
+touches the table again.
+
+**Group counts after: 38 + 60 + 51 + 10 = 159**, matching the count the plan
+recorded — so the legend enumerates the same pairs it did before, redistributed
+across fewer rules.
+
+### Two orders over one table, and why `parentRule` is presentation-only
+
+The legend wants Rule 1 → Rule 2 → its exception → Rule 3. The classifier needs
+the exception to come BEFORE the rule it defeats, or it never fires. These are
+genuinely opposite for the one exception that exists, so they cannot be the
+same array. Rejected: a second hand-written list of ids in teaching order —
+it is the fifth copy of the rules that `ownershipRules.ts` exists to abolish.
+Built instead: `OWNERSHIP_RULES_TEACHING_ORDER` derives the teaching sequence
+from `parentRule` by lifting exceptions out and re-inserting them after their
+parent, so a rule added to the table appears in both orders with nothing to
+keep in step. `ownershipRules.test.ts` pins both directions — that an exception
+ranks directly after its parent when taught, and strictly before it when
+applied.
+
+`getOwnershipPairGroups` stopped sorting biggest-group-first. That sort had a
+reason (the legend is read to find crowded routing cases) but it put Rule 2's
+exception above Rule 2 and Rule 3 in the middle, so the listing taught the
+rules in an order no explanation of them uses. Finding a case is served by the
+per-group count, which is displayed either way.
+
+### `required`: plumbed, unread, and tested to stay unread
+
+Added to `SlotFacts` and passed through `classifySlotEdge`/`Explained` as an
+optional 4th argument, so no call site had to change. No rule reads it. A test
+asserts that toggling it changes no verdict — so if a future rule starts
+reading `required`, that test fails and whoever added the rule has to say so
+out loud rather than having it slip in. Siggie recalls a case where `required`
+indicated ownership direction but could not place it; sweeping this schema
+found no slot whose verdict it would change, so there is nothing here to build
+a rule on today.
+
+### Per-member history moved out of the code, as the plan asked
+
+The long `Activity` comment and the `SpecimenContainer` note were adjudications,
+not current reasons, and they are recorded in the 2026-08-19 and 2026-09-11
+entries below. `SINGLE_VALUE_OWNER_TARGETS` now carries three GROUP comments
+giving each group's shared reason and nothing else.
+
+**The criterion was renamed.** "NO INDEPENDENT EXISTENCE" over-claimed for group
+3 — `Substance`, `TimePeriod`, `Activity`, `SpecimenContainer` do hold other
+things. What every member actually satisfies is weaker and true: *the holder is
+where this is found*. You get to one of these by starting at its holder, which
+is exactly what "drawn first" means, so the criterion now says the thing the
+layout depends on rather than a stronger claim that happens to fail for a third
+of the list.
+
+### `override-site-check` is closed, not done
+
+It existed because the override sets were keyed by SLOT NAME, so a member
+occurring at exactly one class was luck — the `performed_by` (11 sites) failure
+mode. Both slot-keyed sets are gone; `SINGLE_VALUE_OWNER_TARGETS` is keyed by
+RANGE, where the hazard cannot arise because the range IS the thing being
+classified. Removed from TASKS and the BACKLOG "one with teeth" paragraph
+rewritten, since it now describes a risk that does not exist. What still rots
+there is editorial — whether a newly synced range belongs in the set — and that
+is a reading, not a check.
+
+### Not touched
+
+`OWNERSHIP_CLASSIFICATION.md` is untouched and is now wrong in the specific,
+predictable ways step 4 will fix: it documents seven rules, five sets, and the
+Rule/Exception numbering. That is deliberate — Siggie wants to be consulted
+about each chunk considered for KEEPING rather than shown a list of cuts, and
+wants a draft of the Ownership tour past `why-ownership`/`edge-types` first.
+`src/explore/help-content.md` was also left alone: Siggie has it half-edited in
+the working tree.
+
+---
 ## 2026-09-11 — drop-association and the declarative rules, built unreviewed
 
 Siggie asked for a planning doc covering `drop-association` and

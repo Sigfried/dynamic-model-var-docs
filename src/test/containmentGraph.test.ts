@@ -3,7 +3,7 @@ import { loadModelData } from '../utils/dataLoader';
 import { DataService } from '../services/DataService';
 import type { ContainmentGraph } from '../services/DataService';
 import {
-  SINGLE_VALUE_OWNER_TARGETS, ASSOCIATION_SLOTS, BACKWARD_DESPITE_MULTIVALUED,
+  SINGLE_VALUE_OWNER_TARGETS, ASSOCIATION_SLOTS,
   SKIP_SUBCLASS_EXPANSION, classifySlotEdge, subtreeOf, ENTITY_ROOT,
 } from '../models/containmentGraph';
 import { getSlotEdgesForClass } from '../models/Graph';
@@ -234,7 +234,7 @@ describe('getContainmentGraph', () => {
     expect(loops.length).toBe(6);        // part_of occurs twice
   });
 
-  test('value-object ranges are never flipped (forward ownership)', () => {
+  test('SINGLE_VALUE_OWNER_TARGETS ranges are never flipped (forward ownership)', () => {
     for (const e of graph.edges.filter(e => e.kind === 'has-a')) {
       // an unflipped edge's range is its target; a flipped edge's range is its source
       const range = e.flipped ? e.source : e.target;
@@ -242,11 +242,21 @@ describe('getContainmentGraph', () => {
     }
   });
 
-  test('multivalued slots run forward unless explicitly listed as backward', () => {
-    for (const e of graph.edges.filter(e => e.kind === 'has-a' && (e.cardinality === '*' || e.cardinality === '+'))) {
-      const expectFlip = BACKWARD_DESPITE_MULTIVALUED.has(e.label);
-      expect(e.flipped, `${e.label} (${e.cardinality})`).toBe(expectFlip);
-    }
+  /*
+   * Rule 1 now has NO exceptions, so every multivalued slot runs forward.
+   *
+   * `BACKWARD_DESPITE_MULTIVALUED` held exactly one member —
+   * `Specimen.parent_specimen`, a SELF-LOOP. A self-loop is rendered as a ⟲
+   * marker on its own row and never emitted as a layering edge, so its
+   * direction is unobservable and the rule bought nothing. Deleted 2026-09-11
+   * with TASKS `ownership-rules`; the edge is now forward, and `parent_specimen`
+   * is still in the pinned self-loop set below, where its visible behaviour is.
+   */
+  test('Rule 1 has no exceptions: every multivalued slot runs forward', () => {
+    const mv = graph.edges.filter(
+      e => e.kind === 'has-a' && e.cardinality.endsWith('..*'));
+    expect(mv.length).toBeGreaterThan(20);
+    for (const e of mv) expect(e.flipped, `${e.label} (${e.cardinality})`).toBe(false);
   });
 
   test('Entity is now a drawn range node; skipped subclass roots stay out of is-a', () => {

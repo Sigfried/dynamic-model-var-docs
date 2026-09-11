@@ -55,7 +55,7 @@ describe('ownership legend', () => {
         );
         expect(verdict).toBe(g.verdict);
         if (p.inducedFrom !== undefined) {
-          expect(g.rule).toBe('range-subtree');
+          expect(g.rule).toBe('child-following-parent');
           expect(verdict).toBe('own-fwd');
         } else {
           expect(rule).toBe(g.rule);

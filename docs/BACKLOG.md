@@ -534,18 +534,25 @@ every run.
 | `ENTITY_CATEGORIES[].pins` | [`config/entityCategories.ts`](../src/config/entityCategories.ts) | an extra box in a content view — **invisible**; partly tested |
 | `SUBCLASS_OF` | [`config/entityCategories.ts`](../src/config/entityCategories.ts) | wrong indentation — **tested** |
 | `DEFAULT_PINS` | [`config/entityCategories.ts`](../src/config/entityCategories.ts) | first-visit canvas is wrong — **tested** |
-| `SINGLE_VALUE_OWNER_TARGETS` (14), `ASSOCIATION_SLOTS` (2), `CARDINALITY_SPLIT_OWN_FWD` (2), `BACKWARD_DESPITE_MULTIVALUED` (1), `SKIP_SUBCLASS_EXPANSION` (1) | [`models/containmentGraph.ts`](../src/models/containmentGraph.ts) | an edge points the wrong way — **invisible** |
+| `SINGLE_VALUE_OWNER_TARGETS` (19), `ASSOCIATION_SLOTS` (0), `SKIP_SUBCLASS_EXPANSION` (1) | [`models/ownershipRules.ts`](../src/models/ownershipRules.ts) | an edge points the wrong way — **invisible** |
 
 Those five are complete as of 2026-09-05. The classifier was rewritten once and
 the sets renamed with it, so **a set name in an older doc may not exist** — check
 the file before hunting for one. The TypeScript is now the only copy; the two
 Python prototypes that carried a divergent fork were deleted 2026-09-05.
 
-**The one with teeth.** The `containmentGraph` override sets are keyed by SLOT
-NAME, not `(class, slot)`. Every member happens to occur at exactly one class —
-**luck, not design**, and exactly how `performed_by` (11 sites) did damage when
-it sat in the old override list. **A sync check should assert each still has one
-site. Not built.**
+**This no longer has teeth, and that was the point of the change.** The override
+sets used to be keyed by SLOT NAME, not `(class, slot)`, so a member happening to
+occur at exactly one class was luck — exactly how `performed_by` (11 sites) did
+damage when it sat in the old override list. TASKS `ownership-rules` (2026-09-11)
+deleted both slot-keyed sets; `SINGLE_VALUE_OWNER_TARGETS` is keyed by RANGE,
+where there is no such hazard because the range IS the thing being classified.
+The `override-site-check` task dissolved with it, unbuilt and no longer needed.
+
+What still rots here is EDITORIAL: whether a range newly added by a sync belongs
+in `SINGLE_VALUE_OWNER_TARGETS` is a judgement nothing can derive — verified
+exhaustively 2026-08-21, every candidate discriminator failed. That is a reading,
+and it is Siggie's call.
 
 ⚠️ **The COMMENTS rot too, and nothing tests them.** Found 2026-09-08 while
 writing tour content off them: `entityCategories.ts` says Quantity has "16

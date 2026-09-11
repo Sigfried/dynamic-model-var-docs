@@ -102,8 +102,9 @@ reimplementation. It reuses `LayoutManager`'s primitives (`ItemsPanel`,
 - Derived live from `DataService.getContainmentGraph()` → the FK-inversion
   heuristic in [`src/models/containmentGraph.ts`](../src/models/containmentGraph.ts). Edge `source→target` = "source
   contains target", so `target.parentIds` includes `source` for the widget.
-- The override sets (`SINGLE_VALUE_OWNER_TARGETS`, `ASSOCIATION_SLOTS`,
-  `CARDINALITY_SPLIT_OWN_FWD`, …) are hand-curated and fragile — see
+- `SINGLE_VALUE_OWNER_TARGETS` (in
+  [`models/ownershipRules.ts`](../src/models/ownershipRules.ts)) is hand-curated
+  and goes stale on a schema sync — see
   `TASKS.md` §"hand-curated config rot" for the full list. A de-fragility refactor (LinkML `annotations: { containment_direction:
   contains | contained_by | ? }` per slot, auto-generated then human-reviewed) is
   PARKED until the demo proves value. `owns`/`owned_by` was floated as broader

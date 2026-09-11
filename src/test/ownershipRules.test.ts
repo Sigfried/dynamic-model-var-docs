@@ -1,8 +1,8 @@
 import { describe, test, expect } from 'vitest';
 import {
   OWNERSHIP_RULES, OWNERSHIP_VERDICTS, OWNERSHIP_RULE_TEXT,
-  classify, ASSOCIATION_SLOTS, SINGLE_VALUE_OWNER_TARGETS,
-  CARDINALITY_SPLIT_OWN_FWD, BACKWARD_DESPITE_MULTIVALUED, ENTITY_ROOT,
+  OWNERSHIP_RULES_TEACHING_ORDER, teachingRank, parentRuleOf,
+  classify, ASSOCIATION_SLOTS, SINGLE_VALUE_OWNER_TARGETS, ENTITY_ROOT,
   type RuleSpec, type VerdictSpec, type SlotFacts, type OwnershipRule,
 } from '../models/ownershipRules';
 import { EDGE_STYLE } from '../explore/edgeStyle';
@@ -34,60 +34,136 @@ describe('the ownership rule declaration', () => {
   test('the last classifier rule is total, so classify() always resolves', () => {
     const evaluated = (OWNERSHIP_RULES as readonly RuleSpec[]).filter(r => r.when);
     const last = evaluated[evaluated.length - 1];
-    expect(last.id).toBe('fk-inversion');
+    expect(last.id).toBe('single-value-belongs-to-bkwd');
     // Whatever it is handed, it fires.
     expect(last.when!({ slotName: 'zzz', range: 'Nothing', multivalued: false })).toBe(true);
     expect(last.when!({ slotName: 'zzz', range: 'Nothing', multivalued: true })).toBe(true);
   });
 
-  test('range-subtree carries text but is NOT evaluated by the classifier', () => {
+  test('child-following-parent carries text but is NOT evaluated by the classifier', () => {
     // Rule 3 is a second pass in buildContainmentGraph, not a branch. If it
     // ever gained a `when`, it would start intercepting declared slots and
     // silently change classification.
-    const r = (OWNERSHIP_RULES as readonly RuleSpec[]).find(x => x.id === 'range-subtree')!;
+    const r = (OWNERSHIP_RULES as readonly RuleSpec[])
+      .find(x => x.id === 'child-following-parent')!;
     expect(r.when).toBeUndefined();
     expect(r.text).toContain('Rule 3');
   });
 
   /*
-   * Order is semantic: each of these overrides fires only because it precedes
-   * the cardinality rule that would otherwise claim the slot. A reorder would
-   * pass every other test in this file.
+   * Three classifier rules, down from seven (TASKS `ownership-rules`,
+   * 2026-09-11). `entity-ranged`, `cardinality-split` and
+   * `backward-multivalued` were deleted: the first two because putting their
+   * ranges in SINGLE_VALUE_OWNER_TARGETS gives the identical verdict, and the
+   * third because its only member is a self-loop, whose verdict is never
+   * observable. See docs/OWNERSHIP_CLASSIFICATION.md.
+   */
+  test('there are three classifier rules plus association and Rule 3', () => {
+    expect(OWNERSHIP_RULES.map(r => r.id)).toEqual([
+      'association',
+      'multivalue-owns-fwd',
+      'single-value-owns-fwd',
+      'single-value-belongs-to-bkwd',
+      'child-following-parent',
+    ]);
+  });
+
+  /*
+   * Order is semantic: the exception fires only because it precedes the rule
+   * that would otherwise claim the slot. A reorder would pass every other test
+   * in this file.
    */
   describe('order is honoured', () => {
     const facts = (o: Partial<SlotFacts>): SlotFacts =>
       ({ slotName: 'x', range: 'SomeClass', multivalued: false, ...o });
 
-    test('backward-multivalued beats Rule 1', () => {
-      const slotName = [...BACKWARD_DESPITE_MULTIVALUED][0];
-      expect(classify(facts({ slotName, multivalued: true })))
-        .toEqual({ verdict: 'own-bkwd', rule: 'backward-multivalued' });
-    });
-
-    test('cardinality-split beats Rule 2', () => {
-      const slotName = [...CARDINALITY_SPLIT_OWN_FWD][0];
-      expect(classify(facts({ slotName, multivalued: false })))
-        .toEqual({ verdict: 'own-fwd', rule: 'cardinality-split' });
-    });
-
-    test('entity-ranged beats BOTH cardinality rules', () => {
-      // Single-valued would be fk-inversion; multivalued would be Rule 1.
-      // Entity must win either way, or Entity is drawn as an owner.
-      expect(classify(facts({ range: ENTITY_ROOT, multivalued: false })))
-        .toEqual({ verdict: 'own-fwd', rule: 'entity-ranged' });
-      expect(classify(facts({ range: ENTITY_ROOT, multivalued: true })))
-        .toEqual({ verdict: 'own-fwd', rule: 'entity-ranged' });
-    });
-
-    test('Rule 1 beats the value-object exception', () => {
+    test('Rule 1 beats the single-value exception', () => {
       const range = [...SINGLE_VALUE_OWNER_TARGETS][0];
-      expect(classify(facts({ range, multivalued: true })).rule).toBe('multivalued');
-      expect(classify(facts({ range, multivalued: false })).rule).toBe('value-object');
+      expect(classify(facts({ range, multivalued: true })).rule).toBe('multivalue-owns-fwd');
+      expect(classify(facts({ range, multivalued: false })).rule).toBe('single-value-owns-fwd');
     });
 
     test('an ordinary single-valued class slot falls through to Rule 2', () => {
       expect(classify(facts({})))
-        .toEqual({ verdict: 'own-bkwd', rule: 'fk-inversion' });
+        .toEqual({ verdict: 'own-bkwd', rule: 'single-value-belongs-to-bkwd' });
+    });
+
+    /*
+     * What the deleted `entity-ranged` rule bought, now bought by a range
+     * membership instead. Both cardinalities must come out forward, or Entity
+     * — the universal root — is drawn as the owner of Document and Observation.
+     */
+    test('Entity is forward at BOTH cardinalities, via the range set', () => {
+      expect(SINGLE_VALUE_OWNER_TARGETS.has(ENTITY_ROOT)).toBe(true);
+      expect(classify(facts({ range: ENTITY_ROOT, multivalued: false })))
+        .toEqual({ verdict: 'own-fwd', rule: 'single-value-owns-fwd' });
+      expect(classify(facts({ range: ENTITY_ROOT, multivalued: true })))
+        .toEqual({ verdict: 'own-fwd', rule: 'multivalue-owns-fwd' });
+    });
+
+    /*
+     * `required` is carried on SlotFacts but read by no rule (step 5 of the
+     * plan). If a rule ever starts reading it, this fails and whoever added it
+     * gets to say so out loud.
+     */
+    test('required changes no verdict', () => {
+      for (const range of ['SomeClass', ENTITY_ROOT, [...SINGLE_VALUE_OWNER_TARGETS][0]]) {
+        for (const multivalued of [true, false]) {
+          expect(classify(facts({ range, multivalued, required: true })))
+            .toEqual(classify(facts({ range, multivalued, required: false })));
+        }
+      }
+    });
+  });
+
+  /*
+   * Two orders over one table, and conflating them is the trap: precedence
+   * needs the exception FIRST so it can fire; teaching needs the default first
+   * so a reader meets the ordinary case before the one that breaks it.
+   */
+  describe('teaching order is not precedence order', () => {
+    test('the exception moves after its parent, and only there', () => {
+      expect(OWNERSHIP_RULES_TEACHING_ORDER.map(r => r.id)).toEqual([
+        'association',
+        'multivalue-owns-fwd',
+        'single-value-belongs-to-bkwd',
+        'single-value-owns-fwd',        // the exception, now BELOW its parent
+        'child-following-parent',
+      ]);
+      // ...and the two orders genuinely differ, so this is not a no-op.
+      expect(OWNERSHIP_RULES_TEACHING_ORDER.map(r => r.id))
+        .not.toEqual(OWNERSHIP_RULES.map(r => r.id));
+    });
+
+    test('every rule appears exactly once, exception or not', () => {
+      expect(OWNERSHIP_RULES_TEACHING_ORDER.length).toBe(OWNERSHIP_RULES.length);
+      expect(new Set(OWNERSHIP_RULES_TEACHING_ORDER.map(r => r.id)).size)
+        .toBe(OWNERSHIP_RULES.length);
+    });
+
+    test('an exception ranks directly after the rule it names', () => {
+      for (const r of OWNERSHIP_RULES_TEACHING_ORDER) {
+        const parent = parentRuleOf(r.id);
+        if (parent === undefined) continue;
+        expect(teachingRank(r.id)).toBe(teachingRank(parent) + 1);
+      }
+    });
+
+    test('a parentRule always names a rule that exists, and never itself', () => {
+      const ids = new Set(OWNERSHIP_RULES.map(r => r.id as OwnershipRule));
+      for (const r of OWNERSHIP_RULES as readonly RuleSpec[]) {
+        if (r.parentRule === undefined) continue;
+        expect(ids.has(r.parentRule)).toBe(true);
+        expect(r.parentRule).not.toBe(r.id);
+      }
+    });
+
+    test('an exception PRECEDES its parent in the classifier, or it never fires', () => {
+      const rank = new Map(OWNERSHIP_RULES.map((r, i) => [r.id as OwnershipRule, i]));
+      for (const r of OWNERSHIP_RULES as readonly RuleSpec[]) {
+        if (r.parentRule === undefined) continue;
+        expect(rank.get(r.id)!).toBeLessThan(rank.get(r.parentRule)!);
+      }
     });
   });
 
@@ -199,7 +275,7 @@ describe('the ownership rule declaration', () => {
       }
       // And with the rule absent (today), Rule 1 does claim them.
       expect(classify({ slotName: 'related_document', range: 'Document', multivalued: true }))
-        .toEqual({ verdict: 'own-fwd', rule: 'multivalued' });
+        .toEqual({ verdict: 'own-fwd', rule: 'multivalue-owns-fwd' });
     });
 
     test('today the set is empty, so nothing classifies as association', () => {

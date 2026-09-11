@@ -15,8 +15,9 @@
  * graph. `is_a` relationships are emitted separately, as kind:"subclass" edges.
  *
  * `ASSOCIATION_SLOTS` is empty as of 2026-09-11, so no association edge is
- * produced from this schema. The category and its rendering are kept while
- * TASKS `ownership-rules` finishes; see docs/OWNERSHIP_RULES_PLAN.md.
+ * produced from this schema. The category and its rendering are kept
+ * deliberately — they are the worked example proving an edge kind is
+ * expressible as configuration; see ownershipRules.ts's header.
  *
  * See docs/OWNERSHIP_CLASSIFICATION.md for every edge + rationale.
  *
@@ -43,8 +44,8 @@ export type {
 } from './ownershipRules';
 export {
   OWNERSHIP_RULES, OWNERSHIP_VERDICTS, OWNERSHIP_RULE_TEXT, ENTITY_ROOT,
-  ASSOCIATION_SLOTS, BACKWARD_DESPITE_MULTIVALUED, CARDINALITY_SPLIT_OWN_FWD,
-  SINGLE_VALUE_OWNER_TARGETS,
+  ASSOCIATION_SLOTS, SINGLE_VALUE_OWNER_TARGETS,
+  OWNERSHIP_RULES_TEACHING_ORDER, teachingRank, parentRuleOf,
 } from './ownershipRules';
 
 import {
@@ -61,8 +62,9 @@ export function classifySlotEdge(
   slotName: string,
   range: string,
   multivalued: boolean,
+  required?: boolean,
 ): OwnershipVerdict {
-  return classifySlotEdgeExplained(slotName, range, multivalued).verdict;
+  return classifySlotEdgeExplained(slotName, range, multivalued, required).verdict;
 }
 
 /**
@@ -72,13 +74,18 @@ export function classifySlotEdge(
  * disagree about why an edge was classified the way it was. **Keep this
  * shape** — the classifier explaining itself is what made the original
  * incoherence visible.
+ *
+ * `required` is optional because no rule reads it (see `SlotFacts.required`).
+ * It is passed where it is to hand, so a future rule that wants it finds the
+ * plumbing already there rather than a signature to thread.
  */
 export function classifySlotEdgeExplained(
   slotName: string,
   range: string,
   multivalued: boolean,
+  required?: boolean,
 ): { verdict: OwnershipVerdict; rule: OwnershipRule } {
-  return classify({ slotName, range, multivalued });
+  return classify({ slotName, range, multivalued, required });
 }
 
 // NOTE: EXCLUDE_HAS_A_TARGETS is gone (2026-08-25). It dropped every
@@ -207,7 +214,7 @@ export function buildContainmentGraph(
       const rng = slot.range;
       if (!included.has(rng)) continue;           // range not a class in scope
 
-      const verdict = classifySlotEdge(slot.slotName, rng, slot.multivalued);
+      const verdict = classifySlotEdge(slot.slotName, rng, slot.multivalued, slot.required);
       if (verdict === 'excluded') continue;
 
       const card = cardinalityLabel(slot.required, slot.multivalued);

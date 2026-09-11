@@ -34,7 +34,7 @@ import {
 } from '../config/entityCategories';
 import {
   buildContainmentGraph, classifySlotEdgeExplained, OWNERSHIP_RULE_TEXT,
-  SKIP_SUBCLASS_EXPANSION, ENTITY_ROOT, subtreeOf,
+  SKIP_SUBCLASS_EXPANSION, ENTITY_ROOT, subtreeOf, teachingRank,
 } from '../models/containmentGraph';
 import type {
   ContainmentGraph, OwnershipVerdict, OwnershipRule,
@@ -67,7 +67,10 @@ export { cardinalityLabel, SKIP_SUBCLASS_EXPANSION } from '../models/containment
  * OWNERSHIP_VERDICTS rather than keeping a second copy of the same colours,
  * dashes and head geometry.
  */
-export { OWNERSHIP_VERDICTS, OWNERSHIP_RULES, OWNERSHIP_RULE_TEXT } from '../models/containmentGraph';
+export {
+  OWNERSHIP_VERDICTS, OWNERSHIP_RULES, OWNERSHIP_RULE_TEXT,
+  OWNERSHIP_RULES_TEACHING_ORDER, teachingRank, parentRuleOf,
+} from '../models/containmentGraph';
 export type {
   VerdictSpec, DrawnVerdict, Layering, HeadPlacement, HeadDirection, OwnershipRule,
 } from '../models/containmentGraph';
@@ -938,16 +941,15 @@ export class DataService {
    *
    * Backs the ownership legend. Derived from `classifySlotEdgeExplained` — the
    * same call the graph builder makes — so the legend cannot drift from what is
-   * actually drawn. That matters more than usual here: ASSOCIATION_SLOTS and
-   * SINGLE_VALUE_OWNER_TARGETS are hand-curated and go stale silently on every sync,
-   * and a legend built from a second copy of the rules would hide exactly the
-   * rot it is supposed to expose.
+   * actually drawn. That matters more than usual here: SINGLE_VALUE_OWNER_TARGETS
+   * is hand-curated and goes stale silently on every sync, and a legend built
+   * from a second copy of the rules would hide exactly the rot it is supposed
+   * to expose.
    *
-   * Groups are keyed `verdict/rule` because the two are not one-to-one: an
-   * override can produce any verdict, and 'own-fwd' arrives by three different
-   * routes. `pairs` is sorted, and `owner`/`owned` are the ownership direction
-   * as DRAWN (reversed for own-bkwd and association), not the slot's
-   * declaration direction.
+   * Groups are keyed `verdict/rule` because the two are not one-to-one:
+   * 'own-fwd' arrives by three different routes. `pairs` is sorted, and
+   * `owner`/`owned` are the ownership direction as DRAWN (reversed for
+   * own-bkwd and association), not the slot's declaration direction.
    */
   getOwnershipPairGroups(): OwnershipPairGroup[] {
     const collection = this.modelData.collections.get('class' as ElementTypeId);
@@ -960,7 +962,7 @@ export class DataService {
         const rng = slot.range;
         if (!known.has(rng)) continue;          // enum/type range: not a class pair
         const { verdict, rule } = classifySlotEdgeExplained(
-          slot.slotName, rng, slot.multivalued,
+          slot.slotName, rng, slot.multivalued, slot.required,
         );
         const key = `${verdict}/${rule}`;
         let g = groups.get(key);
@@ -987,8 +989,8 @@ export class DataService {
      * graph enumerate the same edges (pinned by ownershipLegend.test).
      */
     const induced: OwnershipPairGroup = {
-      verdict: 'own-fwd', rule: 'range-subtree',
-      ruleText: OWNERSHIP_RULE_TEXT['range-subtree'], pairs: [],
+      verdict: 'own-fwd', rule: 'child-following-parent',
+      ruleText: OWNERSHIP_RULE_TEXT['child-following-parent'], pairs: [],
     };
     const have = new Set<string>();
     for (const g of groups.values()) {
@@ -1007,15 +1009,24 @@ export class DataService {
         }
       }
     }
-    if (induced.pairs.length) groups.set('own-fwd/range-subtree', induced);
+    if (induced.pairs.length) groups.set('own-fwd/child-following-parent', induced);
 
     for (const g of groups.values()) {
       g.pairs.sort((a, b) =>
         a.declaredOn.localeCompare(b.declaredOn) || a.slotName.localeCompare(b.slotName));
     }
-    // Biggest groups first: the legend is read to find cases, and the crowded
-    // classifications are where the interesting ones are.
-    return [...groups.values()].sort((a, b) => b.pairs.length - a.pairs.length);
+    /*
+     * TEACHING order — each default followed by its exceptions — not the
+     * classifier's precedence order, and not biggest-group-first.
+     *
+     * It used to be biggest-first, on the reasoning that the legend is read to
+     * find routing cases. But that put Rule 2's exception above Rule 2 and
+     * Rule 3 in the middle, so the listing presented the rules in an order no
+     * explanation of them uses. Finding a case is served by the group's own
+     * count, which is shown either way.
+     */
+    return [...groups.values()].sort(
+      (a, b) => teachingRank(a.rule) - teachingRank(b.rule));
   }
 
   /**

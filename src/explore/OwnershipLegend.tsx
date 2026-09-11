@@ -8,11 +8,10 @@
  *
  * Everything in the pair listing is derived live from `classifySlotEdgeExplained`
  * via DataService — the same call the graph builder makes. Nothing is restated.
- * That is deliberate and load-bearing: ASSOCIATION_SLOTS and
- * SINGLE_VALUE_OWNER_TARGETS are hand-curated and go stale silently on every
- * schema sync, so a legend built from a second copy of the rules would conceal
- * the drift it exists to reveal. If a pair looks wrong here, the classification
- * is wrong, not the legend.
+ * That is deliberate and load-bearing: SINGLE_VALUE_OWNER_TARGETS is
+ * hand-curated and goes stale silently on every schema sync, so a legend built
+ * from a second copy of the rules would conceal the drift it exists to reveal.
+ * If a pair looks wrong here, the classification is wrong, not the legend.
  *
  * The colors are read from the SAME constants the canvas strokes, never a
  * Tailwind approximation of them, for the same reason: a legend that can drift
@@ -27,6 +26,7 @@
  */
 
 import { useMemo, useState } from 'react';
+import { parentRuleOf } from '../services/DataService';
 import type { DataService, OwnershipPairGroup } from '../services/DataService';
 import { EDGE_COLORS, RANGE_COLORS, SIBLING_COLORS } from '../config/appConfig';
 import HelpPanel from './HelpPanel';
@@ -93,9 +93,9 @@ const EDGE_KINDS: ReadonlyArray<{
     kind: 'association',
     color: EDGE_COLORS.association,
     title: EDGE_STYLE.kinds.association.label,
-    body: 'Neither owns the other. Dashed, with arrowheads at both ends. Only '
-      + 'two edges in the schema are this — a slot the ownership rules would '
-      + 'otherwise claim, wrongly.',
+    body: 'Neither owns the other. Dashed, with arrowheads at both ends. No '
+      + 'slot in this schema is one — the kind is here for a schema that '
+      + 'relates two things without either holding the other.',
   },
 ];
 
@@ -229,8 +229,9 @@ export default function OwnershipLegend({
         <Section title="Every relationship, by rule">
           <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-1.5">
             Derived live from the classifier the graph itself uses, so this
-            cannot drift from what is drawn. Overrides and value-object
-            membership are hand-curated — if a pair looks wrong, the
+            cannot drift from what is drawn. In teaching order: each rule,
+            then the exception to it, indented. Which ranges count as
+            value objects is hand-curated — if a pair looks wrong, the
             classification is. Click any class to select it.
           </p>
           <ul className="space-y-1">
@@ -238,8 +239,17 @@ export default function OwnershipLegend({
               const key = `${g.verdict}/${g.rule}`;
               const v = VERDICT_LABEL[g.verdict] ?? VERDICT_LABEL.excluded;
               const isOpen = open === key;
+              // An exception renders BENEATH the rule it defeats, not beside
+              // it: the groups arrive in teaching order, so the parent is
+              // always the entry above. Nesting is the only thing that says
+              // these two are a rule and its exception rather than peers.
+              const isException = parentRuleOf(g.rule) !== undefined;
               return (
-                <li key={key} className="border-l-2 pl-2 border-gray-200 dark:border-slate-600">
+                <li
+                  key={key}
+                  className={`border-l-2 pl-2 border-gray-200 dark:border-slate-600${
+                    isException ? ' ml-4' : ''}`}
+                >
                   <button
                     onClick={() => setOpen(isOpen ? null : key)}
                     className="w-full text-left"
