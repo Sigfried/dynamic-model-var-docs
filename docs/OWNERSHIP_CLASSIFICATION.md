@@ -193,11 +193,13 @@ otherwise; it reads the storage direction the schema chose. (Exception 2a below
 reaches the same verdict by a different route: targets that exist only as part
 of their holder.)
 
-**30 edges** (measured 2026-08-31). Examples: `ObservationSet.observations`,
+**32 edges** (measured 2026-09-11). Examples: `ObservationSet.observations`,
 `Questionnaire.items`, `Participant.consents`, `Specimen.processing_activity`.
 
-Two multivalued slots are **not** `own-fwd` — `Specimen.related_document` and
-`SpecimenStorageActivity.container` are association; see that table.
+**Every multivalued class-ranged slot is now `own-fwd`** except
+`Specimen.parent_specimen` (see below). `Specimen.related_document` and
+`SpecimenStorageActivity.container` were the two exceptions until 2026-09-11,
+when they stopped being association.
 
 `Specimen.parent_specimen` is multivalued, so Rule 1 would make Specimen own its
 parents, pointing up the derivation tree. It is a **self-loop, rendered as a `⟲`
@@ -215,7 +217,7 @@ member-side. **A belongs to B.** Draw B before A.
 `associated_visit` and `performed_by` account for most of them, so any change to
 this rule reshapes most of the diagram.
 
-### Exception 2a — targets with no independent existence ⇒ `own-fwd` (39 edges)
+### Exception 2a — targets with no independent existence ⇒ `own-fwd` (41 edges)
 
 Rule 2's premise fails when the target is not something you can navigate to. The
 pointer is containment expressed as a pointer, and the value belongs to whoever
@@ -233,11 +235,17 @@ Without this exception `Quantity` would acquire 13 owned classes and `TimePoint`
 | TimePeriod | `Visit.year_range` |
 | Activity | `Context.activity` |
 | QuestionnaireResponseValue | `QuestionnaireResponseItem.response_value` |
+| SpecimenContainer | `Specimen.contained_in`, `SpecimenContainer.parent_container` (self-loop) |
 
-Membership is `SINGLE_VALUE_OWNER_TARGETS` — 14 classes: `Quantity`,
+Membership is `SINGLE_VALUE_OWNER_TARGETS` — 15 classes: `Quantity`,
 `TimePoint`, `TimePeriod`, `BodySite`, `CauseOfDeath`, `Substance`,
-`BiologicProduct`, `Activity`, `QuestionnaireResponseValue` + its 5 typed
-subclasses.
+`BiologicProduct`, `Activity`, `SpecimenContainer`,
+`QuestionnaireResponseValue` + its 5 typed subclasses.
+
+`SpecimenContainer` joined 2026-09-11 with `drop-association`: a container has
+no existence apart from the specimen in it, so `Specimen.contained_in` is a
+target rather than an owner. It is also what keeps the graph acyclic once
+association is gone — see [§association](#association--0-edges).
 
 **This list cannot be derived from the schema.** Verified 2026-08-21 — every
 candidate discriminator fails:
@@ -319,26 +327,45 @@ latter.
 
 ---
 
-## `association` — 2 edges
+## `association` — 0 edges
 
-Neither class owns the other. Drawn dashed with **arrowheads at both ends**,
-target ordered first (same layering as `own-bkwd`, no ownership claim).
+**No slot in this schema classifies as `association` (2026-09-11).** The
+category and its rendering still exist; `ASSOCIATION_SLOTS` is empty.
 
-| source | slot | target | why not ownership |
+An association edge makes **no ownership claim in either direction**. It is
+drawn dashed with **arrowheads at both ends**, and layers like `own-bkwd`
+(target ordered first). That combination — no ownership claim, yet ordered as
+if there were one — is why the category is kept: it is the worked example for
+TASKS `ownership-rules-declarative`, which has to make edge kinds expressible
+as configuration. Deleting it is step 3 of that work; see
+[OWNERSHIP_RULES_PLAN.md](OWNERSHIP_RULES_PLAN.md).
+
+### What the category is for
+
+**The test is: Rule 1 would claim ownership here, and it is wrong.** A slot
+whose argument is instead "it's a role, not membership" belongs in `own-bkwd`,
+which is what "belongs to" already says — six single-valued slots were dropped
+from this set on exactly that reasoning (`WORKLOG.md`, 2026-08-25).
+
+That test, not the slot names, is what a future schema needs in order to decide
+whether it wants associations back.
+
+### The two edges that used to be here
+
+Both were multivalued, so Rule 1 now claims them as forward ownership.
+
+| source | slot | target | the association argument, and why it lost |
 |---|---|---|---|
-| Specimen | `related_document` | Document[] | Multivalued, so Rule 1 would claim the Specimen *owns* the document — but a document a specimen references is not part of it, and other classes may reference the same one. |
-| SpecimenStorageActivity | `container` | SpecimenContainer[] | Multivalued, so Rule 1 would claim the activity owns the containers. It doesn't: a container outlives the activity and holds specimens independently of it. Ownership here also creates the graph's only non-self cycle — `Specimen → SpecimenStorageActivity → SpecimenContainer → Specimen` — which association breaks. |
+| Specimen | `related_document` | Document[] | Was: a document a specimen references is not part of it, and other classes may reference the same one. In this schema no other class does — `Document` connects to nothing but `Specimen` and its own `focus` — so the document belongs to its specimen. |
+| SpecimenStorageActivity | `container` | SpecimenContainer[] | Was: a container outlives the activity and holds specimens independently of it. True, but there is no clear ownership direction either way, and the distinction did not earn a whole edge kind. |
 
-Both arguments have the same shape, and it is the shape that justifies the
-category: **Rule 1 would claim ownership here, and it is wrong.** A slot whose
-argument is instead "it's a role, not membership" belongs in `own-bkwd`, which
-is what "belongs to" already says — six single-valued slots were dropped from
-this set on exactly that reasoning (`WORKLOG.md`, 2026-08-25).
-
-**The set is enumerated by slot name, not by (class, slot) pair** —
-`ASSOCIATION_SLOTS.has(slotName)`, so listing `container` catches every site of
-`container`. Both members happen to occur at exactly one class each; see the
-appendix for why that is luck rather than design.
+Dropping them alone would have left the graph's only non-self cycle,
+`Specimen → SpecimenStorageActivity → SpecimenContainer → Specimen`, which
+association had been breaking. **`Specimen.contained_in` flipped forward in the
+same change** — `SpecimenContainer` joined the Exception 2a targets, since a
+container has no existence apart from the specimen in it — and that dissolves
+the cycle. Pinned by `containmentGraph.test.ts`, "contained_in must stay
+forward", which recomputes both variants and fails if the flip is reverted.
 
 ---
 
@@ -749,18 +776,28 @@ over [`bdchm.processed.json`](../public/source_data/HM/bdchm.processed.json), af
 
 | category | rule | edges | drawn |
 |---|---|---|---|
-| `own-fwd` | Rule 1 (multivalued) | 30 | forward |
-| `own-fwd` | Exception 2a (value object) | 39 | forward |
+| `own-fwd` | Rule 1 (multivalued) | 32 | forward |
+| `own-fwd` | Exception 2a (value object) | 41 | forward |
 | `own-fwd` | Exception 2b (cardinality split) | 2 | forward |
 | `own-fwd` | `Entity`-ranged | 13 | forward |
-| `own-bkwd` | Rule 2 (fk-inversion) | 62 | back |
+| `own-fwd` | Rule 3 (range subtree, induced) | 10 | forward |
+| `own-bkwd` | Rule 2 (fk-inversion) | 60 | back |
 | `own-bkwd` | `backward-multivalued` (`parent_specimen`) | 1 | back |
-| `association` | enumerated | 2 | back, dashed, both ends arrowed |
-| **total** | | **149** | |
+| `association` | enumerated | 0 | back, dashed, both ends arrowed |
+| **total** | | **159** | |
 
-Two rules, one asserted list of 14 class names, and three small enumerated slot
-sets (2 association, 2 cardinality-split, 1 backward-multivalued). Everything
-else reads directly from the schema's `multivalued` flag and `range`.
+**Re-measured 2026-09-11** from `getOwnershipPairGroups`, after
+`drop-association` step 1. The moves from the 2026-08-31 figures: Rule 1 gained
+the two former associations (30→32); Exception 2a gained `Specimen.contained_in`
+and `SpecimenContainer.parent_container`, both now ranging on a value-object
+target (39→41); Rule 2 lost those two (62→60). Rule 3's 10 induced edges were
+missing from the older table rather than newly added, which is most of the
+149→159 difference.
+
+Two rules, one asserted list of 15 class names, and two small enumerated slot
+sets (2 cardinality-split, 1 backward-multivalued; association is empty).
+Everything else reads directly from the schema's `multivalued` flag and
+`range`.
 
 **Any future count should say which denominator it means and how it was
 obtained** — earlier drafts used three different ones (153 = every class-ranged
@@ -794,25 +831,26 @@ Measured 2026-08-31 at `28007df`:
   `TimePoint.index_time_point`, `QuestionnaireItem.part_of`.
 - **Zero non-self cycles.** This was the open risk — `Entity` became a live range
   target with 13 inbound edges, exactly the shape that could introduce one. It
-  did not.
+  did not. Still zero after `drop-association` (re-measured 2026-09-11).
 
-Two properties worth preserving as tests, neither asserted in
-[`src/test/containmentGraph.test.ts`](../src/test/containmentGraph.test.ts) today: the self-loop count, and that
-`SpecimenStorageActivity.container` as `own-fwd` reintroduces the one non-self
-cycle. Both numbers are otherwise re-derived by hand every time someone wonders,
-which is how the self-loop count drifted once already.
+Both properties are now asserted in
+[`src/test/containmentGraph.test.ts`](../src/test/containmentGraph.test.ts): the
+self-loop count ("self-loop count is stable"), and that reverting
+`Specimen.contained_in` to `own-bkwd` reintroduces the one non-self cycle
+("contained_in must stay forward"). They were previously re-derived by hand
+every time someone wondered, which is how the self-loop count drifted once.
 
 ### What the code does today
 
 `classifySlotEdgeExplained` in [`src/models/containmentGraph.ts`](../src/models/containmentGraph.ts), in order:
 
 ```
-1. slot ∈ ASSOCIATION_SLOTS            → association          (2 entries)
+1. slot ∈ ASSOCIATION_SLOTS            → association          (0 entries)
 2. slot ∈ BACKWARD_DESPITE_MULTIVALUED → own-bkwd             (1 entry)
 3. slot ∈ CARDINALITY_SPLIT_OWN_FWD    → own-fwd, Exc. 2b     (2 entries)
 4. range === ENTITY_ROOT               → own-fwd
 5. multivalued                         → own-fwd, Rule 1
-6. range ∈ SINGLE_VALUE_OWNER_TARGETS  → own-fwd, Exc. 2a    (14 entries)
+6. range ∈ SINGLE_VALUE_OWNER_TARGETS  → own-fwd, Exc. 2a    (15 entries)
 7. otherwise                           → own-bkwd, Rule 2
 ```
 
@@ -835,10 +873,10 @@ The current sets, all in `containmentGraph.ts`:
 
 | set | members |
 |---|---|
-| `ASSOCIATION_SLOTS` (2) | `related_document`, `container` |
+| `ASSOCIATION_SLOTS` (0) | — emptied 2026-09-11; kept as the worked example for `ownership-rules-declarative` |
 | `BACKWARD_DESPITE_MULTIVALUED` (1) | `parent_specimen` |
 | `CARDINALITY_SPLIT_OWN_FWD` (2) | `creation_activity`, `dimensional_measures` |
-| `SINGLE_VALUE_OWNER_TARGETS` (14) | `Quantity`, `TimePoint`, `TimePeriod`, `BodySite`, `CauseOfDeath`, `Substance`, `BiologicProduct`, `Activity`, `QuestionnaireResponseValue` + its 5 typed subclasses |
+| `SINGLE_VALUE_OWNER_TARGETS` (15) | `Quantity`, `TimePoint`, `TimePeriod`, `BodySite`, `CauseOfDeath`, `Substance`, `BiologicProduct`, `Activity`, `SpecimenContainer`, `QuestionnaireResponseValue` + its 5 typed subclasses |
 | `SKIP_SUBCLASS_EXPANSION` (1) | `Entity` — inheritance only, **not** ranges |
 
 **Still keyed by slot name, not `(class, slot)` pair.** All five members of the

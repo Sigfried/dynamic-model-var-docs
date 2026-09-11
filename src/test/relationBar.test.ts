@@ -71,10 +71,16 @@ describe('relation bar axes', () => {
     expect(kindsOn(rowsFor('Observation'), 'left'))
       .toEqual(new Set(['own-bkwd', 'own-fwd']));
 
-    // And symmetrically on a right side: SpecimenContainer owns Specimen
-    // (which points AT it, own-bkwd) and Substance (which it collects,
-    // own-fwd).
-    expect(kindsOn(rowsFor('SpecimenContainer'), 'right'))
+    // And symmetrically on a right side: Person owns Participant (which
+    // points AT it via associated_person, own-bkwd) and CauseOfDeath (a value
+    // object it holds, own-fwd).
+    //
+    // This used to use SpecimenContainer's right side, which mixed kinds only
+    // because Specimen.contained_in was own-bkwd. That edge flipped forward
+    // 2026-09-11 (TASKS `drop-association`), so the container's right side is
+    // now uniformly own-fwd and no longer demonstrates anything. Person is the
+    // replacement, picked by sweeping the schema for a two-row mixed side.
+    expect(kindsOn(rowsFor('Person'), 'right'))
       .toEqual(new Set(['own-bkwd', 'own-fwd']));
   });
 
@@ -97,11 +103,25 @@ describe('relation bar axes', () => {
     });
   });
 
-  test('association sits on the left: it is laid out target-first, like own-bkwd', () => {
-    // Not an ownership claim — geometry. Specimen.related_document is the case.
-    const left = side(rowsFor('Specimen'), 'left');
-    const assoc = left.find(r => r.other === 'Document');
-    expect(assoc?.position).toBe('association');
+  /*
+   * `association` has no live example since ASSOCIATION_SLOTS emptied
+   * 2026-09-11 (TASKS `drop-association`) — Specimen.related_document, the
+   * case this used to use, is now owns-mine and sits on the RIGHT.
+   *
+   * The axis entry is still asserted, from the table rather than from schema
+   * data, because the position remains a valid one and `POSITION_AXIS` must
+   * stay total over RelationPosition. This is the assertion that would catch
+   * someone deleting the association row while step 2 still needs it as the
+   * worked example (docs/OWNERSHIP_RULES_PLAN.md).
+   */
+  test('association still maps to the left: laid out target-first, like own-bkwd', () => {
+    expect(AXIS['association']).toEqual({ side: 'left', kind: 'association' });
+  });
+
+  test('the former association is now ownership, on the right', () => {
+    const right = side(rowsFor('Specimen'), 'right');
+    expect(right.find(r => r.other === 'Document')?.position).toBe('owns-mine');
+    expect(rowsFor('Specimen').some(r => r.position === 'association')).toBe(false);
   });
 
   test('self-loops are excluded — they render as ⟲ row markers, not relations', () => {

@@ -60,12 +60,24 @@ describe('relation positions', () => {
     expect(othersIn('Observation', 'owned-theirs')).toEqual(['ObservationSet']);
   });
 
-  test('associations are surfaced — they appeared in NEITHER chip strip', () => {
-    // Siggie: "there are only two association edges currently. but they
-    // shouldn't be hidden from user." ASSOCIATION_SLOTS = related_document,
-    // container. Both ends see the association, since neither owns the other.
-    expect(othersIn('Specimen', 'association')).toContain('Document');
-    expect(othersIn('Document', 'association')).toContain('Specimen');
+  /*
+   * Was "associations are surfaced — they appeared in NEITHER chip strip"
+   * (Siggie: "there are only two association edges currently. but they
+   * shouldn't be hidden from user"). ASSOCIATION_SLOTS emptied 2026-09-11
+   * (TASKS `drop-association`), so the pair is now ordinary forward ownership.
+   *
+   * The property under test is unchanged and is the reason the original was
+   * written: the Specimen/Document relationship must still reach the user from
+   * BOTH ends. Only the position it arrives in has changed.
+   */
+  test('the former association is still surfaced, now as ownership', () => {
+    expect(othersIn('Specimen', 'association')).toEqual([]);
+    expect(othersIn('Document', 'association')).toEqual([]);
+    // Specimen.related_document is declared on Specimen: Specimen owns it
+    // "because my attribute says so" -> owns-mine, and Document sees the
+    // matching owned-theirs.
+    expect(othersIn('Specimen', 'owns-mine')).toContain('Document');
+    expect(othersIn('Document', 'owned-theirs')).toContain('Specimen');
   });
 
   test('self-loops are not relations — they render as ⟲ row markers', () => {

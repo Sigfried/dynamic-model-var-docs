@@ -288,7 +288,7 @@ problems:
 
 - The memberships **cannot** be derived from the schema. This was verified
   2026-08-21, exhaustively, and is written up in
-  [Exception 2a](OWNERSHIP_CLASSIFICATION.md#exception-2a--targets-with-no-independent-existence--own-fwd-39-edges).
+  [Exception 2a](OWNERSHIP_CLASSIFICATION.md#exception-2a--targets-with-no-independent-existence--own-fwd-41-edges).
   Do not re-litigate it.
 - They **go stale silently on every schema sync** — that is
   [BACKLOG §Config rot](BACKLOG.md#hand-curated-config-rot) and TASKS
@@ -313,7 +313,7 @@ member, the `{{edge:association}}` widget's kind, the tour beat in
 seven files that name it.
 
 What stays: **the specification.** `OWNERSHIP_CLASSIFICATION.md`
-[§association](OWNERSHIP_CLASSIFICATION.md#association--2-edges) is rewritten
+[§association](OWNERSHIP_CLASSIFICATION.md#association--0-edges) is rewritten
 from "here are the two edges" into "here is what an association edge is, what
 it must be able to express, and the config entry that would restore it."
 That section becomes the restore recipe — which is the whole reason the

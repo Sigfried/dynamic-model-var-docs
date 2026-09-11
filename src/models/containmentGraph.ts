@@ -11,10 +11,15 @@
  * Every class-ranged slot is classified with an OwnershipVerdict
  * (see classifySlotEdge). Three categories: 'own-fwd' (owns), 'own-bkwd'
  * (belongs to), 'association' (no ownership claim, both ends arrowed, but
- * still ordered like own-bkwd). Rules, in the order they are tried:
+ * still ordered like own-bkwd). **ASSOCIATION_SLOTS is empty as of
+ * 2026-09-11**, so no association edge is produced from this schema; the
+ * category and its rendering are kept while `ownership-rules-declarative` is
+ * designed (see the set's comment, and docs/OWNERSHIP_RULES_PLAN.md).
+ * Rules, in the order they are tried:
  *
  *   - slot in ASSOCIATION_SLOTS              : 'association'  (tested first —
- *                                              these exist to defeat Rule 1)
+ *                                              these exist to defeat Rule 1;
+ *                                              currently empty)
  *   - slot in BACKWARD_DESPITE_MULTIVALUED   : 'own-bkwd'
  *   - slot in CARDINALITY_SPLIT_OWN_FWD      : 'own-fwd'      (Exception 2b)
  *   - Rule 1: multi-valued slot → class      : 'own-fwd'      (owner has-a
@@ -52,26 +57,53 @@ export const SINGLE_VALUE_OWNER_TARGETS = new Set<string>([
   // Context"), stranding Activity at layer 0 as a false root while Context
   // sank to layer 6. Forward now: Context -> Activity, Activity at layer 7.
   'Activity',
+  // Added 2026-09-11 with TASKS `drop-association` step 1. A container has no
+  // independent existence from the specimen in it, so `Specimen.contained_in`
+  // is an Exception 2a target rather than an owner: the specimen owns its
+  // container, not the reverse.
+  //
+  // Keyed by RANGE, so it catches both single-valued slots ranging here —
+  // `Specimen.contained_in` and `SpecimenContainer.parent_container`. The
+  // latter is a self-loop, drawn as a ⟲ marker on its own row, so nothing
+  // about it changes.
+  //
+  // This is also what keeps the graph acyclic once ASSOCIATION_SLOTS is empty.
+  // Leaving contained_in backward while `container` goes forward reinstates
+  // the graph's only non-self cycle, Specimen → SpecimenStorageActivity →
+  // SpecimenContainer → Specimen — the one association existed to break.
+  // Pinned by containmentGraph.test.ts, "contained_in must stay forward".
+  'SpecimenContainer',
 ]);
 
 // Slots that make no ownership claim: both ends arrowed, ordered like
 // own-bkwd but rendered distinctly. These exist specifically to defeat Rule 1
 // (multivalued would otherwise read as forward ownership).
 //
-// Settled 2026-08-25: the six single-valued members of the old 8-slot set were
-// dropped. Rule 2 already sends them to own-bkwd, which layers identically, so
-// membership changed only their rendering — and none ranges on a
-// single-value-owner target, so Exception 2a does not intercept them. Only the
-// two genuinely-multivalued associations remain.
+// EMPTY since 2026-09-11 (TASKS `drop-association`, step 1). The two remaining
+// members became ordinary Rule 1 forward ownership:
+//   - related_document: a Document connects to nothing but its Specimen and
+//     its own `focus`, so it belongs to that specimen.
+//   - container: no clear direction between container and storage activity,
+//     but not important enough to justify a whole edge kind.
+// `Specimen.contained_in` flipped forward in the same change, via
+// SpecimenContainer joining SINGLE_VALUE_OWNER_TARGETS below — that is what
+// keeps the graph acyclic without this set. See containmentGraph.test.ts,
+// "contained_in must stay forward".
 //
-// To restore the 8-slot behaviour, add back: originating_site,
+// The machinery this set feeds (the `association` DrawnKind, its EDGE_COLORS
+// entry, the RelationPosition, the legend row, {{edge:association}}) is
+// deliberately still in place while TASKS `ownership-rules-declarative` is
+// designed: association is the only worked example of an edge kind that is
+// dashed, arrowed at BOTH ends, claims no ownership, and yet layers like
+// own-bkwd, so it is the test case for making edge kinds configurable.
+// Deletion is step 3, after the declaration can express it as config.
+// Full rationale: docs/OWNERSHIP_RULES_PLAN.md.
+//
+// Historical: the pre-2026-08-25 8-slot set also held originating_site,
 // associated_artifact (was associated_assay until upstream 28007df),
 // transport_origin, transport_destination, related_questionnaire_item,
 // has_questionnaire_item.
-export const ASSOCIATION_SLOTS = new Set<string>([
-  'related_document',
-  'container',                          // storage activity uses containers
-]);
+export const ASSOCIATION_SLOTS = new Set<string>([]);
 
 // Exception 2b: cardinality splits a family. Both have multivalued siblings
 // that are own-fwd; dimensional_measures also ranges on a *Set. Asserted, not

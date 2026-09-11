@@ -112,17 +112,126 @@ describe('getContainmentGraph', () => {
       new Set(['Observation', 'QuestionnaireResponseValue']));
   });
 
-  test('association slots produce association edges, ordered like own-bkwd', () => {
-    let seen = 0;
+  /*
+   * ASSOCIATION_SLOTS is empty as of 2026-09-11 (TASKS `drop-association`
+   * step 1), so this schema produces no association edge. The classifier
+   * branch and the rendering it feeds are still present on purpose — see the
+   * set's comment in containmentGraph.ts.
+   *
+   * Both shapes are asserted: that nothing is classified association today,
+   * and that anything which WERE would still be ordered target-first. The
+   * second half is what a restored association has to keep satisfying.
+   */
+  test('no association edges: the set is empty', () => {
+    expect(ASSOCIATION_SLOTS.size).toBe(0);
+    expect(graph.edges.filter(e => e.kind === 'association')).toEqual([]);
+  });
+
+  test('any association edge would still be ordered like own-bkwd', () => {
     for (const e of graph.edges) {
-      if (ASSOCIATION_SLOTS.has(e.label)) {
-        seen++;
-        expect(e.kind, e.label).toBe('association');
-        // association layers identically to own-bkwd: target-first ordering.
-        expect(e.flipped, e.label).toBe(true);
+      if (e.kind !== 'association') continue;
+      expect(e.flipped, e.label).toBe(true);
+    }
+  });
+
+  /*
+   * The two slots that used to be association are now plain Rule 1 forward
+   * ownership. Named explicitly rather than swept, because the point is that
+   * these specific verdicts changed and should not drift back silently.
+   */
+  test('the former association slots are forward ownership', () => {
+    for (const slot of ['related_document', 'container'] as const) {
+      const edges = graph.edges.filter(e => e.label === slot);
+      expect(edges.length, slot).toBeGreaterThan(0);
+      for (const e of edges) {
+        expect(e.kind, slot).toBe('has-a');
+        expect(e.verdict, slot).toBe('own-fwd');
+        expect(e.flipped, slot).toBe(false);
       }
     }
-    expect(seen).toBeGreaterThan(0);
+  });
+
+  /*
+   * Why `Specimen.contained_in` is part of drop-association rather than a
+   * separate cosmetic choice: it is the flip that keeps the graph acyclic.
+   *
+   * With `container` forward (Rule 1) and `contained_in` left backward
+   * (Rule 2), the layering graph regains its only non-self cycle —
+   * Specimen → SpecimenStorageActivity → SpecimenContainer → Specimen — which
+   * is precisely what the association kind was introduced to break. Flipping
+   * contained_in forward dissolves it, and Exception 2a justifies the flip
+   * independently (a container has no existence apart from its specimen).
+   *
+   * This test recomputes BOTH variants from live slot data so it cannot go
+   * stale against the schema, and fails if someone drops SpecimenContainer
+   * from SINGLE_VALUE_OWNER_TARGETS without understanding the consequence.
+   *
+   * A cycle here is information rather than an emergency — the layering code
+   * tolerates one (Siggie, 2026-09-11) — but it should never reappear by
+   * accident.
+   */
+  test('contained_in must stay forward: reverting it reinstates the cycle', async () => {
+    const data = await loadModelData();
+    const nodeIds = new Set(graph.nodes.map(n => n.id));
+
+    /** Layering edges (source drawn before target) under a given classifier. */
+    const layeringEdges = (treatContainerAsValueObject: boolean) => {
+      const out: Array<{ s: string; t: string; via: string }> = [];
+      for (const cname of nodeIds) {
+        for (const slot of getSlotEdgesForClass(data.graph, cname)) {
+          if (!nodeIds.has(slot.range)) continue;
+          let verdict = classifySlotEdge(slot.slotName, slot.range, slot.multivalued);
+          if (!treatContainerAsValueObject && slot.range === 'SpecimenContainer'
+              && !slot.multivalued) {
+            verdict = 'own-bkwd';               // the pre-2026-09-11 verdict
+          }
+          const [s, t] = verdict === 'own-fwd'
+            ? [cname, slot.range] : [slot.range, cname];
+          if (s !== t) out.push({ s, t, via: `${cname}.${slot.slotName}` });
+        }
+      }
+      return out;
+    };
+
+    const hasCycle = (edges: Array<{ s: string; t: string }>) => {
+      const adj = new Map<string, string[]>();
+      for (const e of edges) {
+        if (!adj.has(e.s)) adj.set(e.s, []);
+        adj.get(e.s)!.push(e.t);
+      }
+      const state = new Map<string, number>();     // 0 unseen, 1 on stack, 2 done
+      let found = false;
+      const visit = (n: string) => {
+        state.set(n, 1);
+        for (const next of adj.get(n) ?? []) {
+          const st = state.get(next) ?? 0;
+          if (st === 1) found = true;
+          else if (st === 0) visit(next);
+        }
+        state.set(n, 2);
+      };
+      for (const n of nodeIds) if ((state.get(n) ?? 0) === 0) visit(n);
+      return found;
+    };
+
+    expect(hasCycle(layeringEdges(true)), 'as shipped: acyclic').toBe(false);
+    expect(hasCycle(layeringEdges(false)), 'contained_in reverted: cycle returns').toBe(true);
+  });
+
+  /*
+   * Self-loops are rendered as a ⟲ marker on the slot's own row, never as a
+   * routed edge, so they are invisible to layering. The count is pinned
+   * because it has drifted once already and was otherwise re-derived by hand
+   * every time someone wondered. 6 as measured 2026-08-31 and unchanged by
+   * drop-association. A change here is a schema change, not a bug.
+   */
+  test('self-loop count is stable', () => {
+    const loops = graph.edges.filter(e => e.isLoop);
+    expect(new Set(loops.map(e => e.label))).toEqual(new Set([
+      'derived_from', 'part_of', 'parent_specimen',
+      'parent_container', 'index_time_point',
+    ]));
+    expect(loops.length).toBe(6);        // part_of occurs twice
   });
 
   test('value-object ranges are never flipped (forward ownership)', () => {
