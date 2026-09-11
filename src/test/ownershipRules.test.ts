@@ -9,7 +9,7 @@ import { EDGE_STYLE } from '../explore/edgeStyle';
 
 /**
  * The declaration that replaced five hand-maintained copies of the same rule
- * (TASKS `ownership-rules-declarative`). See docs/OWNERSHIP_RULES_PLAN.md.
+ * (TASKS `ownership-rules`). See docs/OWNERSHIP_RULES_PLAN.md.
  *
  * These tests are about the TABLE — that it is well-formed, that order is
  * honoured, and above all that it can express an edge kind it does not
@@ -112,7 +112,7 @@ describe('the ownership rule declaration', () => {
 
   /*
    * ===================================================================
-   * THE ACCEPTANCE CRITERION for TASKS `ownership-rules-declarative`.
+   * THE ACCEPTANCE CRITERION for TASKS `ownership-rules`.
    * ===================================================================
    *
    * `association` is the one edge kind this schema no longer produces
@@ -123,7 +123,7 @@ describe('the ownership rule declaration', () => {
    *
    * This test builds those two entries and checks they work. It is what makes
    * "restore from the spec rather than from git history" a checkable claim
-   * instead of an intention — and it is why step 3 (deleting the association
+   * instead of an intention — and it is why deleting the association
    * machinery) is allowed to proceed.
    *
    * If you are restoring association for real: copy the two objects below into

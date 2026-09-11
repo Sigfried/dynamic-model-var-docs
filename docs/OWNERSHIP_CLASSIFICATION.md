@@ -242,7 +242,7 @@ Membership is `SINGLE_VALUE_OWNER_TARGETS` — 15 classes: `Quantity`,
 `BiologicProduct`, `Activity`, `SpecimenContainer`,
 `QuestionnaireResponseValue` + its 5 typed subclasses.
 
-`SpecimenContainer` joined 2026-09-11 with `drop-association`: a container has
+`SpecimenContainer` joined 2026-09-11 with `ownership-rules`: a container has
 no existence apart from the specimen in it, so `Specimen.contained_in` is a
 target rather than an owner. It is also what keeps the graph acyclic once
 association is gone — see [§association](#association--0-edges).
@@ -334,33 +334,21 @@ category and its rendering still exist; `ASSOCIATION_SLOTS` is empty.
 
 An association edge makes **no ownership claim in either direction**. It is
 drawn dashed with **arrowheads at both ends**, and layers like `own-bkwd`
-(target ordered first). That combination — no ownership claim, yet ordered as
-if there were one — is why the category is kept: it is the worked example for
-TASKS `ownership-rules-declarative`, which has to make edge kinds expressible
-as configuration. Deleting it is step 3 of that work; see
-[OWNERSHIP_RULES_PLAN.md](OWNERSHIP_RULES_PLAN.md).
+(target ordered first) — no ownership claim, yet ordered as if there were one.
+That combination is why the category is kept while TASKS
+[`ownership-rules`](TASKS.md) makes edge kinds expressible as configuration:
+nothing else exercises it.
 
-### What the category is for
+### When a schema needs it
 
-Rules 1 and 2 between them classify every slot: one of the two ends owns the
-other. Association exists for the case where **both answers are wrong** — the
-ordinary rules produce an ownership claim, and there is no ownership to claim.
+**Use association when no ownership claim is right in either direction** — not
+when one particular rule's claim is wrong. A slot whose objection is "it's a
+role, not membership" is `own-bkwd`, which already says only "belongs to".
 
-**The test: would Rule 1 (or Rule 2) claim ownership here, and is that claim
-wrong?** Both of the slots below were multivalued, so Rule 1 said "the holder
-owns these" — and a document a specimen merely references, or a container an
-activity merely uses, is not owned by it.
-
-**The limit, which keeps the test from over-firing:** if the objection is
-*"it's a role, not membership"*, that is **not** association. `own-bkwd`
-already says "belongs to", which covers roles perfectly well. Association is
-only for when *neither* direction of ownership is right. Six single-valued
-slots were dropped from this set on exactly that distinction (`WORKLOG.md`,
-2026-08-25).
-
-**That test, not the slot names, is what a future schema needs**, since the two
-members below are gone and a schema that needs associations back will have
-entirely different slots.
+Both departed members were multivalued, so it has only ever overridden Rule 1.
+Nothing about the category is limited to Rule 1; `single-value-owns-fwd` also
+claims ownership, and a target that should not be owned would need association
+to override that instead.
 
 ### The two edges that used to be here
 
@@ -799,7 +787,7 @@ over [`bdchm.processed.json`](../public/source_data/HM/bdchm.processed.json), af
 | **total** | | **159** | |
 
 **Re-measured 2026-09-11** from `getOwnershipPairGroups`, after
-`drop-association` step 1. The moves from the 2026-08-31 figures: Rule 1 gained
+`ownership-rules`. The moves from the 2026-08-31 figures: Rule 1 gained
 the two former associations (30→32); Exception 2a gained `Specimen.contained_in`
 and `SpecimenContainer.parent_container`, both now ranging on a value-object
 target (39→41); Rule 2 lost those two (62→60). Rule 3's 10 induced edges were
@@ -843,7 +831,7 @@ Measured 2026-08-31 at `28007df`:
   `TimePoint.index_time_point`, `QuestionnaireItem.part_of`.
 - **Zero non-self cycles.** This was the open risk — `Entity` became a live range
   target with 13 inbound edges, exactly the shape that could introduce one. It
-  did not. Still zero after `drop-association` (re-measured 2026-09-11).
+  did not. Still zero after `ownership-rules` (re-measured 2026-09-11).
 
 Both properties are now asserted in
 [`src/test/containmentGraph.test.ts`](../src/test/containmentGraph.test.ts): the
@@ -903,7 +891,7 @@ classification, and stays in `containmentGraph.ts`):
 
 | set | members |
 |---|---|
-| `ASSOCIATION_SLOTS` (0) | — emptied 2026-09-11; kept as the worked example for `ownership-rules-declarative` |
+| `ASSOCIATION_SLOTS` (0) | — emptied 2026-09-11; kept as the worked example for `ownership-rules` |
 | `BACKWARD_DESPITE_MULTIVALUED` (1) | `parent_specimen` |
 | `CARDINALITY_SPLIT_OWN_FWD` (2) | `creation_activity`, `dimensional_measures` |
 | `SINGLE_VALUE_OWNER_TARGETS` (15) | `Quantity`, `TimePoint`, `TimePeriod`, `BodySite`, `CauseOfDeath`, `Substance`, `BiologicProduct`, `Activity`, `SpecimenContainer`, `QuestionnaireResponseValue` + its 5 typed subclasses |
@@ -925,7 +913,7 @@ These sets are hand-curated and **go stale silently on every schema sync**. See
 |---|---|
 | [`src/models/ownershipRules.ts`](../src/models/ownershipRules.ts) | **the one declaration**: `OWNERSHIP_RULES`, `OWNERSHIP_VERDICTS`, `classify`, the override sets, `OWNERSHIP_RULE_TEXT` (a projection) |
 | [`src/models/containmentGraph.ts`](../src/models/containmentGraph.ts) | `classifySlotEdge`, `classifySlotEdgeExplained`, `buildContainmentGraph`, `subtreeOf`, `SKIP_SUBCLASS_EXPANSION`; re-exports the declaration |
-| [`src/test/ownershipRules.test.ts`](../src/test/ownershipRules.test.ts) | the table is well-formed, order is honoured, and **association is expressible as configuration** — the acceptance criterion for `ownership-rules-declarative` |
+| [`src/test/ownershipRules.test.ts`](../src/test/ownershipRules.test.ts) | the table is well-formed, order is honoured, and **association is expressible as configuration** — the acceptance criterion for `ownership-rules` |
 | [`src/models/ownershipSubgraph.ts`](../src/models/ownershipSubgraph.ts) | `RelationPosition`, `RELATION_POSITION_LABEL`, `buildOwnershipDag`, `computeSunkLayers` |
 | [`src/services/DataService.ts`](../src/services/DataService.ts) | `getOwnershipPairGroups`, `getConvergenceRanking`, `getDivergenceRanking`, `getContainmentGraph`, `getTargetColor` |
 | [`src/config/appConfig.ts`](../src/config/appConfig.ts) | the three palettes (P1 `RANGE_COLORS`, P2 `EDGE_COLORS`, P3 `SIBLING_COLORS`) |

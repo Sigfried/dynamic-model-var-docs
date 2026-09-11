@@ -30,8 +30,8 @@ import { OWNERSHIP_VERDICTS } from '../services/DataService';
  *
  * `association` is listed explicitly because no slot classifies as it since
  * 2026-09-11, so it is absent from OWNERSHIP_VERDICTS and its style is
- * supplied below. Deleting it is step 3 of TASKS
- * `ownership-rules-declarative`; see docs/OWNERSHIP_RULES_PLAN.md.
+ * supplied below. Deleting it is the last step of TASKS `ownership-rules`;
+ * see docs/OWNERSHIP_RULES_PLAN.md.
  */
 export type DrawnKind = 'own-fwd' | 'own-bkwd' | 'association';
 

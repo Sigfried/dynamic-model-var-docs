@@ -164,7 +164,7 @@ export interface RuleSpec {
  * `performed_by` (11 sites) did damage when it sat in the old override list.
  */
 
-// Empty since 2026-09-11 (TASKS `drop-association` step 1). See the
+// Empty since 2026-09-11 (TASKS `ownership-rules`). See the
 // module header for why the category is kept, and OWNERSHIP_CLASSIFICATION.md
 // "association — 0 edges" for what it is for.
 export const ASSOCIATION_SLOTS = new Set<string>([]);
@@ -198,7 +198,7 @@ export const SINGLE_VALUE_OWNER_TARGETS = new Set<string>([
   // Context"), stranding Activity at layer 0 as a false root while Context
   // sank to layer 6. Forward now: Context -> Activity, Activity at layer 7.
   'Activity',
-  // Added 2026-09-11 with TASKS `drop-association`. A container has no
+  // Added 2026-09-11 with TASKS `ownership-rules`. A container has no
   // independent existence from the specimen in it, so `Specimen.contained_in`
   // is an Exception 2a target rather than an owner. Keyed by RANGE, so it also
   // catches `SpecimenContainer.parent_container` — a self-loop, drawn as a ⟲
@@ -230,8 +230,8 @@ export const OWNERSHIP_RULES = [
     when: ({ slotName }) => ASSOCIATION_SLOTS.has(slotName),
     verdict: 'association',
     text: 'A named association: the slot connects two things without either owning '
-      + 'the other. Both ends are arrowed. These are listed explicitly because they are '
-      + 'multivalued, so Rule 1 would otherwise read them as forward ownership.',
+      + 'the other. Both ends are arrowed. Listed explicitly, because every other rule '
+      + 'would read it as ownership.',
   },
   {
     id: 'backward-multivalued',

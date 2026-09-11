@@ -4,9 +4,14 @@ Implementation plan for TASKS `ownership-rules` — the merged task covering wha
 were `drop-association`, `ownership-rules-declarative` and
 `ownership-doc-cleanup`. Decisions are Siggie's, 2026-09-11.
 
+**Two goals, and the second is not a tidy-up.** Simplify the rules (steps 1–3),
+then use that simplification to make
+[OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md) **much shorter and
+easier to follow** (step 4). It is 943 lines, of which the three rules that are
+its subject occupy 146. Cutting it is the point, not a consequence.
+
 **Delete this file when the task closes.** Everything here that should outlive
-it belongs in [OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md), which
-is rewritten as part of the same work.
+it belongs in OWNERSHIP_CLASSIFICATION.md.
 
 ---
 
@@ -124,29 +129,39 @@ different purposes and must not be conflated — say so in a code comment where
 
 ---
 
-## 4 — Rewrite OWNERSHIP_CLASSIFICATION.md
+## 4 — Cut OWNERSHIP_CLASSIFICATION.md down
 
-Do this **with** the code changes, not after. The doc currently documents seven
-rules, five sets and a rule-numbering scheme that steps 1–3 make obsolete;
-rewriting it separately means rewriting it twice.
+**The goal is a much shorter, much easier doc — not an updated one.** At 943
+lines it is the biggest obstacle to understanding the rules it documents, and
+steps 1–3 are what make cutting it possible: seven rules become three, five sets
+become one, and the Rule/Exception numbering goes away.
 
-What must survive the rewrite:
+Do this **with** the code changes, not after, or it gets rewritten twice.
 
-- **When a schema needs an association edge at all.** The doc must record the
-  *condition*, because step 1 deleted the two slots that used to illustrate it,
-  and a list of slot names is no use to a schema that has neither.
+Where the bulk actually is, measured 2026-09-11:
 
-  The condition: **a slot where the ordinary rules produce ownership, and
-  ownership is the wrong claim.** Both former members were multivalued, so Rule
-  1 said "the holder owns these" — and for a document a specimen merely
-  references, or a container an activity merely uses, that was wrong, with no
-  other rule giving a better answer.
+| lines | section | what to do |
+|---|---|---|
+| 135 | The relation vocabulary | Three kinds, five positions, a phrasing table and a rejected-wordings list. Keep the kinds and the two axes; the phrasing table is copy for a feature that does not exist yet, and the rejected wordings are WORKLOG material. |
+| 127 | How edges are drawn | Rendering, not classification. Much of it belongs with the code it describes. |
+| 126 | Appendix — implementation notes | Already says "do not start implementation from this appendix." Cut hard; the declaration is now self-describing. |
+| 122 | The color system | Its own subject. Strong candidate to become its own file. |
+| 86 | `Entity`-ranged slots | **Step 1 deletes this rule.** Keep only why `Entity` is drawn as a range but skipped in the inheritance tree. |
+| 77 | Rule 2 + exceptions | Exception 2b disappears (step 1); 2a is renamed and regrouped (step 2). |
+| 65 | `any_of` — not handled | N=1, low priority, decided. A short note, not a section. |
+| 146 | Rules 1–3 combined | **This is the actual subject and it is a sixth of the file.** |
 
-  And the limit that keeps it from over-firing: if the objection is *"it's a
-  role, not membership"*, that is **not** association — `own-bkwd` already says
-  "belongs to", which covers roles. Association is only for when *neither*
-  direction of ownership is right. Six slots were dropped from the set on
-  exactly this distinction (WORKLOG, 2026-08-25).
+A reader wanting "how does a slot become an edge" should find it in the first
+screen or two. Aim to at least halve the file; anything that survives should be
+there because a reader needs it *now*, not because it records a decision —
+that goes to WORKLOG, per [CLAUDE.md](CLAUDE.md).
+
+What must survive the cut:
+
+- **When a schema needs an association edge** — the *condition*, not the two
+  slot names, which step 1 deleted. Already written:
+  [§When a schema needs it](OWNERSHIP_CLASSIFICATION.md#when-a-schema-needs-it).
+  Keep it symmetric: association is not a Rule 1 override.
 - **That the memberships cannot be derived from the schema.** Verified
   exhaustively 2026-08-21; every candidate discriminator failed. Do not
   re-litigate.

@@ -16,7 +16,7 @@
  *
  * `ASSOCIATION_SLOTS` is empty as of 2026-09-11, so no association edge is
  * produced from this schema. The category and its rendering are kept while
- * TASKS `ownership-rules-declarative` finishes; see docs/OWNERSHIP_RULES_PLAN.md.
+ * TASKS `ownership-rules` finishes; see docs/OWNERSHIP_RULES_PLAN.md.
  *
  * See docs/OWNERSHIP_CLASSIFICATION.md for every edge + rationale.
  *
@@ -30,7 +30,7 @@ import { getSlotEdgesForClass, getParentClass, getSubclasses } from './Graph';
 /*
  * The rules themselves now live in ONE declaration, `./ownershipRules` — the
  * predicate, the verdict, the human text and the drawn appearance of every
- * rule in a single table (TASKS `ownership-rules-declarative`). They are
+ * rule in a single table (TASKS `ownership-rules`). They are
  * re-exported here because this module's path is what the rest of the app,
  * and a good deal of prose, already points at.
  *
