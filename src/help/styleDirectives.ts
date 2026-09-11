@@ -11,7 +11,7 @@
  * 2026-09-11: "that one seems much better".
  *
  * Attributes are a short whitelist — `size`, `color`, `bg`, `opacity`,
- * `nowrap` — mapped to one CSS declaration each. Anything else, and any value
+ * `nowrap`, `center` — mapped to a fixed CSS declaration or two each. Anything else, and any value
  * with characters outside the plain CSS value set, is dropped, so the content
  * file cannot become a general CSS surface. A directive of another name is
  * rendered as plain content, so a typo loses the styling and not the text.
@@ -23,6 +23,9 @@ const PROPS: Record<string, (v: string) => string> = {
   bg: v => `background-color:${v}`,
   opacity: v => `opacity:${v}`,
   nowrap: () => 'white-space:nowrap',
+  // `display:block` so it works on a span too: an inline element cannot
+  // centre its own text, so a centred span becomes a centred line.
+  center: () => 'display:block;text-align:center',
 };
 
 /** The directive name this plugin gives meaning to. */

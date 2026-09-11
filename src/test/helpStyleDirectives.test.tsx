@@ -37,6 +37,7 @@ describe('styleOf', () => {
     expect(styleOf({ size: '.7em', bg: 'pink', opacity: '.4' }))
       .toBe('font-size:.7em;background-color:pink;opacity:.4');
     expect(styleOf({ nowrap: '', color: 'blue' })).toBe('white-space:nowrap;color:blue');
+    expect(styleOf({ center: '' })).toBe('display:block;text-align:center');
     expect(styleOf({ size: '.7em', position: 'fixed', color: 'url(x)' })).toBe('font-size:.7em');
     expect(styleOf(null)).toBe('');
   });
@@ -65,6 +66,14 @@ describe('style directives in help markdown', () => {
     expect([...div.querySelectorAll('p')].map(p => p.textContent)).toEqual(['One.', 'Two.']);
     expect([...body().querySelectorAll('p')].map(p => p.textContent))
       .toEqual(['Before.', 'One.', 'Two.', 'After.']);
+  });
+
+  test('center: a span becomes its own centred line, a block centres its paragraphs', () => {
+    setup('  Before :s[middle]{center} after.\n\n  :::s{center}\n  One.\n  :::');
+    const span = body().querySelector('span.help-styled')!;
+    expect(span.getAttribute('style')).toMatch(/display:\s*block/);
+    expect(span.getAttribute('style')).toMatch(/text-align:\s*center/);
+    expect(body().querySelector('div.help-styled')!.getAttribute('style')).toMatch(/text-align:\s*center/);
   });
 
   test('a directive of another name, or with no usable attributes, keeps its text unstyled', () => {

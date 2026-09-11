@@ -11,9 +11,43 @@ The content it specifies lives with the app that authors it — dmvd's is
 parser by `ExploreApp.tsx`. A second app writes its own file against this same
 spec.
 
-Keep this current when the format changes; `src/test/helpContent.test.ts` pins
-the behaviour it describes.
+<!-- Keep this current when the format changes — the prose AND the table of
+     contents just below, which lists every `###`/`####` heading in the file;
+     `src/test/helpContent.test.ts` pins the behaviour it describes. `make
+     test-help-content` runs the tests that check `help-content.md` against it.
 
+     Table of contents: one line per ###/#### heading, in file order. When you
+     add, rename, move or remove a heading, change its line here too. Links
+     are GitHub heading slugs: lowercase, punctuation dropped, spaces to
+     hyphens. -->
+
+- [Structure](#structure) — `## ` sections, `### ` entries, `---` separators, `<details>` folding, prose sections
+- [Entry fields](#entry-fields) — the field table; `Description:` is a multi-line block, everything else one line
+  - [Pulling text from the model — `{{kind:arg}}`](#pulling-text-from-the-model--kindarg) — placeholders filled by host-registered resolvers
+- [Tours and order](#tours-and-order) — `Tour:` names the tour; order comes from the file, not a number
+  - [Finding a step you can see on screen](#finding-a-step-you-can-see-on-screen) — the dev-only content-id readout
+  - [`TourMetadata:` — describing a tour, not a step](#tourmetadata--describing-a-tour-not-a-step) — a section-body block naming and describing a tour; `TourAbbr:`
+  - [Selecting a tour](#selecting-a-tour) — `startTour(name)`, `tourNames()`, and the once-unreachable second tour
+- [Disabling a field](#disabling-a-field) — prefix a field with `_` to park it
+  - [Inline widgets](#inline-widgets) — `![alt](widget:name:arg)` drawn by a host widget
+  - [Styling a span or a block — `:s[…]{…}`](#styling-a-span-or-a-block--s) — the `s` directive and its closed attribute list
+- [Anchors](#anchors) — `Anchor:` grammar: tagged landmarks vs. generated element kinds
+- [Actions](#actions) — `Action:` says what the step just did; required with a real `Change:`
+- [Alerts](#alerts) — a `>` blockquote is an amber alert band
+  - [`Once:` — an alert you can put away](#once--an-alert-you-can-put-away) — an authored storage key for dismiss-for-good
+- [Highlight](#highlight) — `ring`, `dim`, `none`; `Spotlight:` rings something other than the anchor
+- [Placement](#placement) — where the popover goes; `Position:`, `OffsetX:`, `Width:`
+  - [The default width is automatic](#the-default-width-is-automatic) — sized from text area, 320–800
+- [Change](#change) — `Change:` is a delta in share-link vocabulary; entering pushes, `back` pops
+  - [The params you can set](#the-params-you-can-set) — the full param table
+  - [`cat=<id>` — a whole category, like the ⊞ button](#catid--a-whole-category-like-the--button)
+  - [`panels=0` — clear the screen](#panels0--clear-the-screen) — the one param that is not a delta
+  - [A beat's numbered line is a label, not its text](#a-beats-numbered-line-is-a-label-not-its-text)
+  - [Subtitles inside a description](#subtitles-inside-a-description) — `### text` in a description renders as a subtitle
+  - [`Width:` is sticky across beats](#width-is-sticky-across-beats)
+  - [`Only:` — a step that names the whole canvas](#only--a-step-that-names-the-whole-canvas) — replaces the selection instead of adding
+- [Beats](#beats) — sub-steps of one popover; each beat replaces the last unless `Keep:`
+- [Who the tour is for](#who-the-tour-is-for) — the arrive-by-link reader
 
 ### Structure
 
@@ -346,13 +380,14 @@ Still blue.
 their own is a block (a `<div>` around everything between). Attributes are
 `name=value`, space-separated; a bare name (`nowrap`) needs no value.
 
-| attribute | becomes |
-|---|---|
-| `size` | `font-size` |
-| `color` | `color` |
-| `bg` | `background-color` |
-| `opacity` | `opacity` |
-| `nowrap` | `white-space: nowrap` |
+ | attribute | becomes                                                                                             |
+ |-----------|-----------------------------------------------------------------------------------------------------|
+ | `size`    | `font-size`                                                                                         |
+ | `color`   | `color`                                                                                             |
+ | `bg`      | `background-color`                                                                                  |
+ | `opacity` | `opacity`                                                                                           |
+ | `nowrap`  | `white-space: nowrap`                                                                               |
+ | `center`  | `text-align: center`, plus `display: block` so that on a span the text becomes its own centred line |
 
 That list is the whole of it, on purpose: any other attribute, and any value
 with characters outside the plain CSS value set, is dropped, so the content

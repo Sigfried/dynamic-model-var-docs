@@ -1,10 +1,15 @@
-# Schema sync workflow.
+# Tests, and the schema sync workflow.
 #
-# The daily GitHub Action (.github/workflows/schema-sync.yml) bumps the pinned
-# upstream commit and opens a PR on branch schema-sync/upstream-update. main is
-# untouched, so a clean `git pull` on main is expected, not a failed sync.
+# Tests: `make test` runs everything once; `make test-help-content` runs only
+# the tests that check src/explore/help-content.md against the authoring
+# format in src/help/FORMAT.md (unknown fields, duplicate ids, anchors that
+# resolve to nothing, unresolved {{placeholders}}, tour metadata, ...).
 #
-# Start with `make sync-review`. It prints what to look at and why.
+# Schema sync: the daily GitHub Action (.github/workflows/schema-sync.yml)
+# bumps the pinned upstream commit and opens a PR on branch
+# schema-sync/upstream-update. main is untouched, so a clean `git pull` on main
+# is expected, not a failed sync. Start with `make sync-review`. It prints what
+# to look at and why.
 
 SYNC_BRANCH := schema-sync/upstream-update
 PY          := python3
@@ -13,11 +18,24 @@ PY          := python3
 
 .PHONY: help
 help:  ## Show this help
-	@echo "Schema sync:"
+	@echo "Targets:"
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) \
-	  | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
+	  | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
 	@echo ""
-	@echo "Typical run:  make sync-review   (then act on what it flags)"
+	@echo "Typical sync run:  make sync-review   (then act on what it flags)"
+
+# --------------------------------------------------------------------------
+# tests
+# --------------------------------------------------------------------------
+
+.PHONY: test
+test:  ## Run the whole test suite once (no watch)
+	npx vitest run
+
+.PHONY: test-help-content
+test-help-content:  ## Check help-content.md against FORMAT.md (fields, ids, anchors, placeholders)
+	npx vitest run src/test/helpContent.test.ts src/test/helpAnchors.test.tsx \
+	  src/test/helpTextResolvers.test.ts
 
 # --------------------------------------------------------------------------
 # review
