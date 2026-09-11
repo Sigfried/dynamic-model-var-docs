@@ -60,9 +60,13 @@ introduced and then use one word.
 - **Description:** Why boxes land where they do, and what the three kinds of line mean
 
 <!--
+I've moved this section to the top just while i'm working actively on it.
 
-I want to restructure this
-
+I want to restructure something like this:
+- explain ownership, why it's needed, the two edge types (getting rid of
+  association i hope)
+- explain the four perspectives
+- explain the rules and exceptions
 -->
 ### why-ownership
 
