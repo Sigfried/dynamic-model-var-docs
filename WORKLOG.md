@@ -7,6 +7,104 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-11 — drop-association and the declarative rules, built unreviewed
+
+Siggie asked for a planning doc covering `drop-association` and
+`ownership-rules-declarative`, then left, asking for step 1 and as much of step
+2 as possible — explicitly noting they had not read the plan and might want it
+reversed. So: three commits, each independently revertible, and the plan doc
+says so at the top.
+
+**The two tasks are one task, and the ordering is the opposite of what the rows
+imply.** The rows read as independent. They are not, because of a constraint
+that only appeared once Siggie said what they wanted from `association`:
+restoring it should come from a *specification* — ideally as configuration
+added to the rules and edge types — not from git archaeology. That makes
+association the only live test case for the declarative design. `own-fwd` and
+`own-bkwd` differ only in direction; a config generalised over those two would
+have nothing forcing it to express a kind that is dashed, double-arrowed,
+claims no ownership, and still layers like `own-bkwd`. Design it against two
+kinds and it would very likely turn out unable to express the third.
+
+Hence: classify now, design against association, delete last. Siggie's
+counter-argument — that removing the machinery *first* would simplify the
+config work — is real and is recorded in the plan as a cost traded away, not
+dismissed. The branches are shallow (one `if`, four table entries); having a
+worked example was judged worth more.
+
+**The cycle is not the reason `contained_in` flips, but it is the evidence.**
+Mid-session Siggie said "i don't think the cycle matters if it does exist."
+Fair, and the plan records it so a future reader treats a moving cycle count as
+information rather than an emergency. But the probe had already measured both
+variants, and the result is worth keeping: flipping only the two association
+slots leaves exactly one non-self cycle (`Specimen →
+SpecimenStorageActivity → SpecimenContainer → Specimen`), which is precisely
+what association had been breaking. Flipping `Specimen.contained_in` forward
+dissolves it *and* is independently justified by Exception 2a. Two arguments,
+same verdict — so the third flip went in as part of the set rather than as a
+separate judgement call. `containmentGraph.test.ts` now recomputes both
+variants from live slot data, so reverting the flip fails loudly with the
+reason attached.
+
+`SpecimenContainer` went into `SINGLE_VALUE_OWNER_TARGETS` (range-keyed) rather
+than a slot-keyed set. That also catches `parent_container`, which is a
+self-loop and renders as `⟲`, so there is no collateral.
+
+**A test lost its subject and had to be re-found, not deleted.**
+`relationBar.test.ts` asserted "both edge kinds appear on the SAME side" using
+`SpecimenContainer`'s right side — which mixed kinds *only* because
+`contained_in` was `own-bkwd`. The flip made that side uniformly `own-fwd`, so
+the assertion broke. The property is still real and still worth pinning, so the
+fix was to sweep the schema for another class with a mixed side and use it:
+`Person` (Participant own-bkwd, CauseOfDeath own-fwd), picked for being exactly
+two rows. Deleting the test would have quietly dropped real coverage. Same
+approach for the two `relationPositions`/`relationBar` association assertions —
+each rewritten to assert the new verdict while keeping the property it was
+protecting, rather than removed.
+
+**`as const satisfies` is what makes the id-union guard real.** The declaration
+carries a compile-time assertion that `OwnershipRule` and the array's ids stay
+in step. Written first against `readonly RuleSpec[]`, it was *decorative* —
+deliberately deleting a rule entry produced no error, because the annotation
+erased the literal ids. Verified by breaking it on purpose, which is the only
+way to know a type-level guard works. `as const satisfies readonly RuleSpec[]`
+preserves the literals and the guard fires. Worth remembering: a type assertion
+nobody has seen fail is not known to work.
+
+That change also surfaced a real error tsc had been hiding — with literals
+preserved, the `range-subtree` entry genuinely has no `when`, so `rule.when?.()`
+stopped typechecking. Widening at the loop (`as readonly RuleSpec[]`) is the
+fix; the narrow type is what the guard needs, the wide one is what iteration
+needs.
+
+**Rule 3 stays out of the classifier.** It has an entry in `OWNERSHIP_RULES`
+for its text and legend group, with `when` deliberately absent, and a test
+asserts it stays absent. Giving it a predicate would make it intercept declared
+slots and silently change classification. Same reasoning kept
+`SKIP_SUBCLASS_EXPANSION` in `containmentGraph.ts`: it is about the inheritance
+tree, not classification, and conflating those two is what went wrong with
+`EXCLUDE_HAS_A_TARGETS` in August.
+
+**`edgeStyle.ts` reaches the declaration through DataService**, not by
+importing `models/` directly. The ESLint rule only scopes `src/components/`,
+but no `src/explore/` file imports models directly today and starting here
+seemed like the wrong place to break the convention.
+
+**Counts were re-measured, not recalculated.** Rule 1 30→32, Exception 2a
+39→41, Rule 2 62→60, association 2→0. The summary table's total moved 149→159,
+but most of that is Rule 3's 10 induced edges, which were *missing* from the
+older table rather than newly added — worth knowing before anyone tries to
+reconcile the two numbers.
+
+**Noticed, not fixed:** the lint baseline is 30 errors, not the 20
+`docs/CLAUDE.md` records. All pre-existing; none from this work.
+
+**Still open:** step 3 (deleting the association machinery) waits on Siggie
+signing off on step 2. The acceptance test is what would justify it — it builds
+the association config entries and proves they classify and draw correctly, so
+the deletion's safety is demonstrated rather than asserted.
+
+---
 ## 2026-09-10 (late) → 2026-09-11 — authoring tools for the tours, and what they displaced
 
 Siggie was writing the Ownership tour live, and each request below came from a
