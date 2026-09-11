@@ -34,6 +34,7 @@
 
 import type { DataService } from '../services/DataService';
 import { ENTITY_CATEGORIES } from '../config/entityCategories';
+import { RANGE_COLORS, SIBLING_COLORS } from '../config/appConfig';
 import EdgeSample from './EdgeSample';
 import { EDGE_STYLE, type DrawnKind } from './edgeStyle';
 
@@ -118,4 +119,30 @@ export const helpWidgets = {
       </span>
     ) : null;
   },
+};
+
+/**
+ * Colour names the tour's markdown can use in `:s[…]{color=<name>}` and
+ * `{bg=<name>}` — handed to `<HelpProvider colors={...}>`, so prose about an
+ * edge or a range kind can wear the colour the canvas and legend draw it in,
+ * and follow the palette when it changes (Siggie, 2026-09-11).
+ *
+ * | Name | From |
+ * |---|---|
+ * | `own-fwd`, `own-bkwd`, `association` | `EDGE_STYLE.kinds` (= `EDGE_COLORS`) |
+ * | `entity`, `enum`, `data-type`, `variable`, `slot` | `RANGE_COLORS` |
+ * | `sibling-<n>`, `sibling-<n>-fill` | `SIBLING_COLORS[n]` ink and band, n from 0 |
+ */
+export const helpColors: Record<string, string> = {
+  ...Object.fromEntries(
+    Object.entries(EDGE_STYLE.kinds).map(([kind, k]) => [kind, k.color])),
+  entity: RANGE_COLORS.entity,
+  enum: RANGE_COLORS.enum,
+  'data-type': RANGE_COLORS.dataType,
+  variable: RANGE_COLORS.variable,
+  slot: RANGE_COLORS.slot,
+  ...Object.fromEntries(SIBLING_COLORS.flatMap((c, i) => [
+    [`sibling-${i}`, c.text],
+    [`sibling-${i}-fill`, c.fill],
+  ])),
 };

@@ -29,7 +29,7 @@ import type { ExampleCase } from './exampleCases';
 import { HelpProvider } from '../help/HelpProvider';
 import { useHelp, HELP_MODE_ENABLED } from '../help/helpContext';
 import HelpLayer from '../help/HelpLayer';
-import { helpTextResolvers, helpWidgets } from './helpTextResolvers';
+import { helpTextResolvers, helpWidgets, helpColors } from './helpTextResolvers';
 import helpMarkdown from './help-content.md?raw';
 /* dmvd's popover overrides. MUST come after the HelpLayer import above, which
    is what pulls in the package's `help.css` — these rules have the same
@@ -673,6 +673,7 @@ export default function ExploreApp() {
     <HelpProvider
       markdown={helpMarkdown}
       widgets={helpWidgets}
+      colors={helpColors}
       onPushChange={pushTourChange}
       onPopChange={popTourChange}
       onJumpChanges={jumpTourChanges}

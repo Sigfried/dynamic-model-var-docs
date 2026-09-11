@@ -101,11 +101,18 @@ function resolveText(
 
 export function HelpProvider({
   markdown, onPushChange, onPopChange, onJumpChanges, onTourStart, onTourEnd,
-  textResolvers, widgets, centerOn, children,
+  textResolvers, widgets, colors, centerOn, children,
 }: {
   markdown: string;
   /** Inline widgets for `![alt](widget:<name>:<arg>)` images in content. */
   widgets?: Record<string, WidgetRenderer>;
+  /**
+   * Colour names content may use in `:s[…]{color=<name>}` / `{bg=<name>}`,
+   * as `{name: css colour}`. The host's palette, so prose can wear the same
+   * colours the app draws with. Pass a STABLE object; a fresh one every
+   * render rebuilds the markdown plugin list every render.
+   */
+  colors?: Record<string, string>;
   /**
    * Push a position's `Change:` query onto the host's state stack.
    *
@@ -655,11 +662,12 @@ export function HelpProvider({
     stepCount, tours, tourName, tourMeta: content.tourMeta,
     overviewOpen, setOverviewOpen,
     ...(widgets ? { widgets } : {}),
+    ...(colors ? { colors } : {}),
     showAddresses, toggleAddresses,
     content, activeId, showEntry, dismissEntry, resolveAnchor, centerRect,
   }), [helpMode, toggleHelpMode, exitHelpMode, tourIndex, startTour, endTour,
        nextStep, prevStep, goToStep, positions, stepCount, tours, tourName,
-       overviewOpen, widgets, showAddresses, toggleAddresses,
+       overviewOpen, widgets, colors, showAddresses, toggleAddresses,
        content, activeId, showEntry, dismissEntry, resolveAnchor, centerRect]);
   /* `setRegistered` is a useState setter: React guarantees it stable, so it is
      deliberately absent from the dependency list above. */

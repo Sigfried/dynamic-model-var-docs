@@ -22,9 +22,9 @@ function Open() {
 
 const body = () => document.querySelector('[data-help-popover] .help-popover-body')!;
 
-const setup = (description: string) => {
+const setup = (description: string, colors?: Record<string, string>) => {
   render(
-    <HelpProvider markdown={`\n## S\n\n### e\n\n- Title: T\n- Description:\n${description}\n`}>
+    <HelpProvider markdown={`\n## S\n\n### e\n\n- Title: T\n- Description:\n${description}\n`} colors={colors}>
       <Open />
       <HelpLayer />
     </HelpProvider>,
@@ -42,6 +42,14 @@ describe('styleOf', () => {
     expect(styleOf({ center: '', color: 'teal' }, true)).toBe('color:teal');
     expect(styleOf({ size: '.7em', position: 'fixed', color: 'url(x)' })).toBe('font-size:.7em');
     expect(styleOf(null)).toBe('');
+  });
+
+  test('color/bg values may name a host colour; unknown names pass through as CSS', () => {
+    const colors = { 'own-fwd': '#1d4ed8', entity: '#377eb8' };
+    expect(styleOf({ color: 'own-fwd', bg: 'entity' }, false, colors))
+      .toBe('color:#1d4ed8;background-color:#377eb8');
+    expect(styleOf({ color: 'blue', size: 'entity' }, false, colors)).toBe('color:blue;font-size:entity');
+    expect(styleOf({ color: 'own-fwd' })).toBe('color:own-fwd');
   });
 });
 
@@ -76,6 +84,13 @@ describe('style directives in help markdown', () => {
     expect(span.getAttribute('style')).toMatch(/color:\s*teal/);
     expect(span.getAttribute('style')).not.toMatch(/text-align|display/);
     expect(body().querySelector('div.help-styled')!.getAttribute('style')).toMatch(/text-align:\s*center/);
+  });
+
+  test('a host colour name reaches the rendered style through <HelpProvider colors>', () => {
+    setup('  An :s[owner]{color=own-fwd} here.', { 'own-fwd': '#1d4ed8' });
+    const span = body().querySelector('span.help-styled')!;
+    // React serialises the hex as rgb().
+    expect(span.getAttribute('style')).toMatch(/color:\s*(#1d4ed8|rgb\(29,\s*78,\s*216\))/);
   });
 
   test('a directive of another name, or with no usable attributes, keeps its text unstyled', () => {

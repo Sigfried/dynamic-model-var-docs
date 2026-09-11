@@ -42,12 +42,15 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Markdown, { defaultUrlTransform } from 'react-markdown';
 import { useHelp, type WidgetRenderer } from './helpContext';
 import remarkDirective from 'remark-directive';
+import type { PluggableList } from 'unified';
 import { remarkStyleDirectives } from './styleDirectives';
 import { useDragged } from './useDragged';
 
-/** Module-level so the array identity is stable across renders. Order matters:
- *  `remark-directive` parses `:s[…]{…}`; the second gives `s` its meaning. */
-const REMARK_PLUGINS = [remarkDirective, remarkStyleDirectives];
+/** Order matters: `remark-directive` parses `:s[…]{…}`; the second gives `s`
+ *  its meaning, with the host's colour names. Memoised per `colors` identity
+ *  below so the array is stable across renders. */
+const remarkPluginsFor = (colors: Record<string, string> | undefined): PluggableList =>
+  [remarkDirective, [remarkStyleDirectives, { colors }]];
 import type { Offset, PopoverSide } from './parseHelpContent';
 import TourMap from './TourMap';
 import './help.css';
@@ -246,8 +249,9 @@ export default function HelpLayer() {
   const {
     helpMode, tourIndex, position, positions, stepCount, content, activeId,
     dismissEntry, nextStep, prevStep, endTour, showEntry, resolveAnchor, centerRect,
-    showAddresses, tourName, tourMeta, widgets,
+    showAddresses, tourName, tourMeta, widgets, colors,
   } = useHelp();
+  const remarkPlugins = useMemo(() => remarkPluginsFor(colors), [colors]);
 
   /*
    * The tour a step belongs to, shown before its title (TASKS 1c). Siggie,
@@ -907,7 +911,7 @@ export default function HelpLayer() {
                       <Markdown
                         components={markdownComponents}
                         urlTransform={urlTransform}
-                        remarkPlugins={REMARK_PLUGINS}
+                        remarkPlugins={remarkPlugins}
                       >{block}</Markdown>
                     </div>
                   ))}

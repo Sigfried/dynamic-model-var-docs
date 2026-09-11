@@ -34,7 +34,7 @@ spec.
   - [`Description:` — the multi-line markdown block](#description--the-multi-line-markdown-block) — the one field that spans lines; what ends it
   - [Pulling text from the model — `{{kind:arg}}`](#pulling-text-from-the-model--kindarg) — placeholders filled by host-registered resolvers
   - [Inline widgets](#inline-widgets) — `![alt](widget:name:arg)` drawn by a host widget
-  - [Styling a span or a block — `:s[…]{…}`](#styling-a-span-or-a-block--s) — the `s` directive and its closed attribute list
+  - [Styling a span or a block — `:s[…]{…}`](#styling-a-span-or-a-block--s) — the `s` directive, its closed attribute list, and the host's colour names
   - [Subtitles inside a description](#subtitles-inside-a-description) — `### text` in a description renders as a subtitle; every level looks the same
   - [Alerts](#alerts) — a `>` blockquote is an amber alert band
     - [`Once:` — an alert you can put away](#once--an-alert-you-can-put-away) — an authored storage key for dismiss-for-good
@@ -291,6 +291,23 @@ their own is a block (a `<div>` around everything between). Attributes are
  | `opacity` | `opacity`                                                                                           |
  | `nowrap`  | `white-space: nowrap`                                                                               |
  | `center`  | `text-align: center` — **block form only**; on `:s[…]` it is dropped, since an inline span has no line of its own to centre within, and forcing one would stop the span sharing a line with other text |
+
+**`color` and `bg` take a name from the host's palette as well as a CSS
+colour.** The host hands `<HelpProvider colors={{name: css}}>` the colours it
+draws with, so prose about an edge or a range kind can wear the same colour
+the canvas and legend use, and follows the palette when it changes. A name not
+in the map is passed through as CSS, so `color=blue` still works. dmvd
+registers these in `src/explore/helpTextResolvers.tsx`:
+
+| name | colour of |
+|---|---|
+| `own-fwd`, `own-bkwd`, `association` | the three edge kinds, as the canvas draws them (`EDGE_COLORS`) |
+| `entity`, `enum`, `data-type`, `variable`, `slot` | the range kinds (`RANGE_COLORS`) |
+| `sibling-<n>`, `sibling-<n>-fill` | a merged sibling's ink and band, `n` from 0 (`SIBLING_COLORS`) |
+
+```markdown
+An :s[owner]{color=own-fwd} declares the slot; the :s[owned]{color=own-bkwd} thing stores the key.
+```
 
 That list is the whole of it, on purpose: any other attribute, and any value
 with characters outside the plain CSS value set, is dropped, so the content

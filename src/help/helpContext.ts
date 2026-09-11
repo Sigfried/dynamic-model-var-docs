@@ -66,6 +66,8 @@ export interface HelpApi {
   setTextResolvers: (resolvers: Record<string, TextResolver> | undefined) => void;
   /** Host-provided inline widgets, by name. */
   widgets?: Record<string, WidgetRenderer>;
+  /** Host-provided colour names for `:s[…]{color=…}` / `{bg=…}`. */
+  colors?: Record<string, string>;
   helpMode: boolean;
   toggleHelpMode: () => void;
   exitHelpMode: () => void;
