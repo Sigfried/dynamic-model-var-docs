@@ -271,6 +271,13 @@ test('every diagram anchor in the content file matches a tag its step emits', ()
       // `cat=` draws the category's members PLUS its pins.
       if (group) selection = [...new Set([...group.classIds, ...group.pins])];
     }
+    // A beat's own `Change:` ADDS to the canvas (`Only:` on a beat replaces,
+    // but the anchors checked here are the step's whole set, so the union is
+    // the generous reading): a beat anchored on the box it just added is fine.
+    for (const b of e.beats ?? []) {
+      const bsel = /(?:^|&)sel=([^&]*)/.exec(b.change ?? '');
+      if (bsel) selection.push(...decodeURIComponent(bsel[1]).split('~').filter(Boolean));
+    }
     if (!selection.length) continue;
 
     const tags = diagramTags(selection);

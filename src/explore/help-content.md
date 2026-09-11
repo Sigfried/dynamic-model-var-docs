@@ -129,13 +129,25 @@ I want to restructure this
 - Only: sel=Participant~Condition~BodySite
 - Spotlight: slot-row:Condition.affected_body_site
 - **Anchor:** node-box:Condition
-- **Width:** 350
 - **Description:**
+  ### heading 3
+  #### heading 4
+  ##### heading 5
+  ###### heading 6
   So, when the Explorer has configured an attribute target as
   *belonging to* its defining entity, it places the target to the right and
   draws a forward-pointing arrow.
 
   `Condition.affected_body_site` {{edge:own-fwd}} `BodySite`
+
+  hello?
+  {{relation:own-fwd:Condition.affected_body_site:BodySite}}
+
+  :s[`Condition.affected_body_site`]{size=.7em bg=pink opacity=.4}
+
+  :::s{size=.8em color=blue}
+  A whole paragraph, with **bold** and `code` still working.
+  :::
 - Beats:
   1. backwards
      - Keep: true

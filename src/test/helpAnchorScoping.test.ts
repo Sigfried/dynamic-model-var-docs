@@ -138,6 +138,7 @@ describe('the anchor machinery is scoped to an anchored step', () => {
     // The CSS and the component have to agree on the name, and nothing else
     // would catch them drifting apart.
     const tsx = readFileSync(resolve(__dirname, '../help/HelpLayer.tsx'), 'utf8');
-    expect(tsx).toMatch(/data-anchored=\{anchored \? '' : undefined\}/);
+    // `&& !drag.offset`: a dragged popover drops the machinery too (2026-09-10).
+    expect(tsx).toMatch(/data-anchored=\{anchored && !drag\.offset \? '' : undefined\}/);
   });
 });

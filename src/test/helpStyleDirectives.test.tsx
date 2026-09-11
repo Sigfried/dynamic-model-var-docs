@@ -3,13 +3,12 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { HelpProvider } from '../help/HelpProvider';
 import HelpLayer from '../help/HelpLayer';
 import { useHelp } from '../help/helpContext';
-import { styleOf } from '../help/styleRanges';
+import { styleOf } from '../help/styleDirectives';
 
 /**
- * `{{size:.7em; bg:pink}} … {{size:clear}}` styles a span or a block of help
- * prose, with the prose between still rendered as markdown (Siggie,
- * 2026-09-11). Placeholders whose kind no resolver claims reach the markdown
- * intact, and the remark plugin wraps what lies between them.
+ * `:s[text]{size=.7em bg=pink}` styles a span, `:::s{color=blue} … :::` a
+ * block, with the markdown inside intact (Siggie, 2026-09-11). Parsed by
+ * remark-directive; `styleDirectives` gives `s` its meaning.
  */
 
 beforeAll(() => {
@@ -34,24 +33,20 @@ const setup = (description: string) => {
 };
 
 describe('styleOf', () => {
-  test('the first declaration takes its property from the kind; the rest are prop:value', () => {
-    expect(styleOf('size', '.7em; bg-color:pink; opacity:.4'))
+  test('whitelisted attributes become declarations; others are dropped', () => {
+    expect(styleOf({ size: '.7em', bg: 'pink', opacity: '.4' }))
       .toBe('font-size:.7em;background-color:pink;opacity:.4');
-    expect(styleOf('style', 'color:blue; nowrap:1')).toBe('color:blue;white-space:nowrap');
-  });
-
-  test('unknown properties and unsafe values are dropped, not passed through', () => {
-    expect(styleOf('size', '.7em; position:fixed; color:url(x)')).toBe('font-size:.7em');
-    // The junk declaration is dropped; the sound one before it survives.
-    expect(styleOf('size', 'red; }evil{')).toBe('font-size:red');
+    expect(styleOf({ nowrap: '', color: 'blue' })).toBe('white-space:nowrap;color:blue');
+    expect(styleOf({ size: '.7em', position: 'fixed', color: 'url(x)' })).toBe('font-size:.7em');
+    expect(styleOf(null)).toBe('');
   });
 });
 
-describe('style ranges in help markdown', () => {
+describe('style directives in help markdown', () => {
   afterEach(cleanup);
 
-  test('inline: a span around the range, markdown inside intact', () => {
-    setup('  Plain {{size:.7em; bg:pink}}small **bold** `code`{{size:clear}} plain again.');
+  test('inline: :s[…]{…} is a styled span with its markdown intact', () => {
+    setup('  Plain :s[small **bold** `code`]{size=.7em bg=pink} plain again.');
     const span = body().querySelector('span.help-styled')!;
     expect(span).toBeTruthy();
     // React re-serialises the style: `0.7em`, spaces after colons.
@@ -59,25 +54,22 @@ describe('style ranges in help markdown', () => {
     expect(span.getAttribute('style')).toMatch(/background-color:\s*pink/);
     expect(span.querySelector('strong')?.textContent).toBe('bold');
     expect(span.querySelector('code')?.textContent).toBe('code');
-    // Markers are gone; the text around the range is untouched.
     expect(body().textContent).toBe('Plain small bold code plain again.');
   });
 
-  test('block: markers on their own lines wrap the paragraphs between in a div', () => {
-    setup('  Before.\n\n  {{color:blue}}\n\n  One.\n\n  Two.\n\n  {{color:clear}}\n\n  After.');
+  test('block: :::s{…} … ::: wraps the paragraphs between in a styled div', () => {
+    setup('  Before.\n\n  :::s{color=blue}\n  One.\n\n  Two.\n  :::\n\n  After.');
     const div = body().querySelector('div.help-styled')!;
     expect(div).toBeTruthy();
     expect(div.getAttribute('style')).toMatch(/color:\s*blue/);
     expect([...div.querySelectorAll('p')].map(p => p.textContent)).toEqual(['One.', 'Two.']);
-    // Everything else is still there, in order, outside the div.
     expect([...body().querySelectorAll('p')].map(p => p.textContent))
       .toEqual(['Before.', 'One.', 'Two.', 'After.']);
   });
 
-  test('an unclosed range runs to the end of its paragraph; a stray clear is dropped', () => {
-    setup('  A {{nowrap:1}}b c d\n\n  {{size:clear}} e');
-    const span = body().querySelector('span.help-styled')!;
-    expect(span.textContent).toBe('b c d');
-    expect(body().textContent?.replace(/\s+/g, ' ').trim()).toBe('A b c d e');
+  test('a directive of another name, or with no usable attributes, keeps its text unstyled', () => {
+    setup('  A :typo[kept]{size=.5em} and :s[plain]{position=fixed} here.');
+    expect(body().querySelector('.help-styled')).toBeNull();
+    expect(body().textContent).toBe('A kept and plain here.');
   });
 });

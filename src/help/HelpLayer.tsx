@@ -41,11 +41,13 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Markdown, { defaultUrlTransform } from 'react-markdown';
 import { useHelp, type WidgetRenderer } from './helpContext';
-import { remarkStyleRanges } from './styleRanges';
+import remarkDirective from 'remark-directive';
+import { remarkStyleDirectives } from './styleDirectives';
 import { useDragged } from './useDragged';
 
-/** Module-level so the array identity is stable across renders. */
-const REMARK_PLUGINS = [remarkStyleRanges];
+/** Module-level so the array identity is stable across renders. Order matters:
+ *  `remark-directive` parses `:s[…]{…}`; the second gives `s` its meaning. */
+const REMARK_PLUGINS = [remarkDirective, remarkStyleDirectives];
 import type { Offset, PopoverSide } from './parseHelpContent';
 import TourMap from './TourMap';
 import './help.css';
