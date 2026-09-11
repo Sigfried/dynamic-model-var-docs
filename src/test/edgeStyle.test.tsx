@@ -66,4 +66,18 @@ describe('edgeStyle is the single source for how an edge looks', () => {
     expect(container.querySelector('svg.help-inline-widget')).toBeTruthy();
     expect(helpWidgets.edge('nonsense')).toBeNull();
   });
+
+  test('{{relation:kind:Left:Right}} is one unwrappable row: code, arrow, code', () => {
+    const r = helpTextResolvers({} as unknown as DataService);
+    const arg = 'own-fwd:Condition.affected_body_site:BodySite';
+    expect(r.relation(arg)).toBe(`![Condition.affected_body_site BodySite](widget:relation:${arg})`);
+    expect(r.relation('own-fwd:only-one-end')).toBeUndefined();
+    expect(r.relation('nonsense:A:B')).toBeUndefined();
+    const { container } = render(<>{helpWidgets.relation(arg)}</>);
+    const row = container.querySelector('.help-inline-relation')!;
+    expect(row).toBeTruthy();
+    expect([...row.querySelectorAll('code')].map(c => c.textContent))
+      .toEqual(['Condition.affected_body_site', 'BodySite']);
+    expect(row.querySelector('svg')).toBeTruthy();
+  });
 });

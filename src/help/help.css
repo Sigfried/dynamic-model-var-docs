@@ -304,6 +304,15 @@ body.help-mode {
   margin: 0 0.15em;
 }
 
+/* `{{relation:kind:Left:Right}}`: a relation written like a popover row —
+   code, arrow, code — as ONE unit that never breaks across lines, a little
+   smaller than the prose so a long qualified name fits. */
+.help-inline-relation {
+  display: inline-block;
+  white-space: nowrap;
+  font-size: 0.85em;
+}
+
 /* Only the prose scrolls; the title and the nav row hold their place. */
 .help-popover-body {
   min-height: 0;

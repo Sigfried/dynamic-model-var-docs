@@ -141,6 +141,7 @@ kind:
 | `{{enum-description:<Enum>}}` | that enumeration's `description` |
 | `{{category-label:<id>}}` | a category's display label (`admin` → "Admin / Study") |
 | `{{edge:<kind>}}` | the arrow for `own-fwd`, `own-bkwd` or `association`, drawn inline exactly as the canvas and legend draw it — see [Inline widgets](#inline-widgets) |
+| `{{relation:<kind>:<Left>:<Right>}}` | a whole relation on one line, as the relation popover writes a row: `` `Left` `` arrow `` `Right` ``, never wrapped, slightly smaller — e.g. `{{relation:own-fwd:Condition.affected_body_site:BodySite}}` |
 
 Like anchor kinds, these are **registered by the host, not known to the
 parser** — dmvd's live in `src/explore/helpTextResolvers.tsx` and are handed in

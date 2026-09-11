@@ -77,7 +77,26 @@ export function helpTextResolvers(dataService: DataService) {
       kind in EDGE_STYLE.kinds
         ? `![${EDGE_STYLE.kinds[kind as DrawnKind].label}](widget:edge:${kind})`
         : undefined,
+
+    /*
+     * `{{relation:own-fwd:Condition.affected_body_site:BodySite}}` — a whole
+     * relation on ONE line, the way the relation popover writes a row: the
+     * declaring end in code, the arrow, the other end in code, never wrapped.
+     * Siggie, 2026-09-11: the same thing written as three markdown pieces
+     * broke across lines at the popover's width.
+     */
+    'relation': (arg: string) => {
+      const r = parseRelationArg(arg);
+      return r ? `![${r.left} ${r.right}](widget:relation:${arg})` : undefined;
+    },
   };
+}
+
+function parseRelationArg(arg: string) {
+  const [kind, left, right] = arg.split(':');
+  return kind && kind in EDGE_STYLE.kinds && left && right
+    ? { kind: kind as DrawnKind, left, right }
+    : undefined;
 }
 
 /**
@@ -89,4 +108,14 @@ export const helpWidgets = {
     kind in EDGE_STYLE.kinds
       ? <EdgeSample kind={kind as DrawnKind} width={40} className="help-inline-widget" />
       : null,
+  relation: (arg: string) => {
+    const r = parseRelationArg(arg);
+    return r ? (
+      <span className="help-inline-relation">
+        <code>{r.left}</code>
+        <EdgeSample kind={r.kind} width={40} className="help-inline-widget" />
+        <code>{r.right}</code>
+      </span>
+    ) : null;
+  },
 };
