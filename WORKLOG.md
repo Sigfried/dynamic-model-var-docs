@@ -76,6 +76,27 @@ Installed it, rebuilt on it, deleted (2) — one syntax, and nothing had used it
 Lesson for me: a mid-turn message that reads as a decision may be a
 continuation; when it reverses a recommendation I just made, ask.
 
+**FORMAT.md rearranged into six `##` parts** (2026-09-11, later). Siggie
+suspected sections had "landed somewhat randomly", and they had: "Inline
+widgets" and "Styling" were `####` under "Disabling a field" only because that
+was the last short section before "Anchors" when each was appended; four
+`####`s about beats and subtitles sat under "Change" between `panels=0` and
+`Only:`; the `State:`-replacement note and "only the first beat pushes" had
+drifted to the tail of `Only:`; font size interrupted Placement between the
+width rules and the clamping/centring paragraphs; the nav-row width floor was
+under "sticky width" though it is about the automatic width. The parts run
+from the file outward (file → prose in a field → tours → screen → app → beats),
+which is the order a new author needs things. `##` parts rather than reshuffled
+`###`s so the ToC shows the grouping; every existing slug is unchanged, since
+levels do not affect GitHub slugs and no heading was renamed. The one bit of
+new text is the "Font size" heading, which was a bold lead-in before. Done with
+a line-range script rather than by hand, with a check that every old line
+survives verbatim. Also: `center` was added to the `s` directive as
+`display:block;text-align:center`, because `text-align` on an inline span does
+nothing and Siggie's first attempt (`{text-align: center}` on a span wrapping a
+`{{relation:…}}`) would otherwise have silently done nothing twice over — the
+attribute name is not whitelisted, and the property would not apply.
+
 **Left open, recorded in BACKLOG:** the intermittent map-jump-does-not-clear
 (`map-jump-canvas`), and `tour-menus` with the open/hold/close design sketch.
 

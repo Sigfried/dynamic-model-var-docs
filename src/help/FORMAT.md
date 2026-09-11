@@ -12,42 +12,56 @@ parser by `ExploreApp.tsx`. A second app writes its own file against this same
 spec.
 
 <!-- Keep this current when the format changes — the prose AND the table of
-     contents just below, which lists every `###`/`####` heading in the file;
+     contents just below, which lists every heading in the file;
      `src/test/helpContent.test.ts` pins the behaviour it describes. `make
      test-help-content` runs the tests that check `help-content.md` against it.
 
-     Table of contents: one line per ###/#### heading, in file order. When you
-     add, rename, move or remove a heading, change its line here too. Links
-     are GitHub heading slugs: lowercase, punctuation dropped, spaces to
-     hyphens. -->
+     Table of contents: one line per ##/###/#### heading, in file order,
+     nested as the headings are. When you add, rename, move or remove a
+     heading, change its line here too. Links are GitHub heading slugs:
+     lowercase, punctuation dropped, spaces to hyphens.
 
-- [Structure](#structure) — `## ` sections, `### ` entries, `---` separators, `<details>` folding, prose sections
-- [Entry fields](#entry-fields) — the field table; `Description:` is a multi-line block, everything else one line
+     The parts run from the file outward: what the file looks like, what can
+     go inside a field, how entries become tours, what a step does to the
+     screen, what it does to the app, and how one step spans several screens.
+     Put a new section in the part it belongs to rather than at the end. -->
+
+- [The content file](#the-content-file)
+  - [Structure](#structure) — `## ` sections, `### ` entries, `---` separators, `<details>` folding, prose sections
+  - [Entry fields](#entry-fields) — the field table; `Description:` is a multi-line block, everything else one line
+  - [Disabling a field](#disabling-a-field) — prefix a field with `_` to park it
+- [Prose inside a field](#prose-inside-a-field)
   - [Pulling text from the model — `{{kind:arg}}`](#pulling-text-from-the-model--kindarg) — placeholders filled by host-registered resolvers
-- [Tours and order](#tours-and-order) — `Tour:` names the tour; order comes from the file, not a number
-  - [Finding a step you can see on screen](#finding-a-step-you-can-see-on-screen) — the dev-only content-id readout
-  - [`TourMetadata:` — describing a tour, not a step](#tourmetadata--describing-a-tour-not-a-step) — a section-body block naming and describing a tour; `TourAbbr:`
-  - [Selecting a tour](#selecting-a-tour) — `startTour(name)`, `tourNames()`, and the once-unreachable second tour
-- [Disabling a field](#disabling-a-field) — prefix a field with `_` to park it
   - [Inline widgets](#inline-widgets) — `![alt](widget:name:arg)` drawn by a host widget
   - [Styling a span or a block — `:s[…]{…}`](#styling-a-span-or-a-block--s) — the `s` directive and its closed attribute list
-- [Anchors](#anchors) — `Anchor:` grammar: tagged landmarks vs. generated element kinds
-- [Actions](#actions) — `Action:` says what the step just did; required with a real `Change:`
-- [Alerts](#alerts) — a `>` blockquote is an amber alert band
-  - [`Once:` — an alert you can put away](#once--an-alert-you-can-put-away) — an authored storage key for dismiss-for-good
-- [Highlight](#highlight) — `ring`, `dim`, `none`; `Spotlight:` rings something other than the anchor
-- [Placement](#placement) — where the popover goes; `Position:`, `OffsetX:`, `Width:`
-  - [The default width is automatic](#the-default-width-is-automatic) — sized from text area, 320–800
-- [Change](#change) — `Change:` is a delta in share-link vocabulary; entering pushes, `back` pops
-  - [The params you can set](#the-params-you-can-set) — the full param table
-  - [`cat=<id>` — a whole category, like the ⊞ button](#catid--a-whole-category-like-the--button)
-  - [`panels=0` — clear the screen](#panels0--clear-the-screen) — the one param that is not a delta
-  - [A beat's numbered line is a label, not its text](#a-beats-numbered-line-is-a-label-not-its-text)
-  - [Subtitles inside a description](#subtitles-inside-a-description) — `### text` in a description renders as a subtitle
-  - [`Width:` is sticky across beats](#width-is-sticky-across-beats)
+  - [Subtitles inside a description](#subtitles-inside-a-description) — `### text` in a description renders as a subtitle; every level looks the same
+  - [Alerts](#alerts) — a `>` blockquote is an amber alert band
+    - [`Once:` — an alert you can put away](#once--an-alert-you-can-put-away) — an authored storage key for dismiss-for-good
+  - [Font size is CSS, not a field](#font-size-is-css-not-a-field) — `--help-font-size`, set in the host's stylesheet
+- [Tours](#tours)
+  - [Who the tour is for](#who-the-tour-is-for) — the arrive-by-link reader
+  - [Tours and order](#tours-and-order) — `Tour:` names the tour; order comes from the file, not a number; several tours per file
+  - [`TourMetadata:` — describing a tour, not a step](#tourmetadata--describing-a-tour-not-a-step) — a section-body block naming and describing a tour; `TourAbbr:`
+  - [Selecting a tour](#selecting-a-tour) — `startTour(name)`, `tourNames()`, and the once-unreachable second tour
+  - [Finding a step you can see on screen](#finding-a-step-you-can-see-on-screen) — the dev-only content-id readout; duplicate ids
+- [Pointing at the screen](#pointing-at-the-screen)
+  - [Anchors](#anchors) — `Anchor:` grammar: tagged landmarks vs. generated element kinds
+  - [Highlight](#highlight) — `ring`, `dim`, `none`; `Spotlight:` rings something other than the anchor
+  - [Placement](#placement) — where the popover goes; `Position:`, `OffsetX:`, centring with no anchor, `Width:`
+    - [The default width is automatic](#the-default-width-is-automatic) — sized from text area, 320–800, floored by the nav row
+- [Changing the app](#changing-the-app)
+  - [Change](#change) — `Change:` is a delta in share-link vocabulary; entering pushes, `back` pops; what `State:` was
+    - [The params you can set](#the-params-you-can-set) — the full param table
+    - [`cat=<id>` — a whole category, like the ⊞ button](#catid--a-whole-category-like-the--button)
+    - [`panels=0` — clear the screen](#panels0--clear-the-screen) — the one param that is not a delta
   - [`Only:` — a step that names the whole canvas](#only--a-step-that-names-the-whole-canvas) — replaces the selection instead of adding
-- [Beats](#beats) — sub-steps of one popover; each beat replaces the last unless `Keep:`
-- [Who the tour is for](#who-the-tour-is-for) — the arrive-by-link reader
+  - [Actions](#actions) — `Action:` says what the step just did; required with a real `Change:` or `Only:`
+- [Steps with several screens](#steps-with-several-screens)
+  - [Beats](#beats) — sub-steps of one popover; each beat replaces the last unless `Keep:`
+  - [A beat's numbered line is a label, not its text](#a-beats-numbered-line-is-a-label-not-its-text)
+  - [`Width:` is sticky across beats](#width-is-sticky-across-beats)
+
+## The content file
 
 ### Structure
 
@@ -157,7 +171,23 @@ Because the description can carry its own bullets, `Interactions:` and
 paragraph. Use them when you want a step's furniture set apart from its prose;
 put the prose in `Description:`.
 
-#### Pulling text from the model — `{{kind:arg}}`
+### Disabling a field
+
+**Prefix any field name with `_` to park it.** The field is still parsed, but
+treated as absent:
+
+```markdown
+- **_Tour:** Walkthrough  <- entry drops out of the tour, stays as help
+- **_Change:** sel=X      <- change not pushed
+```
+
+Use it for a step that is written but not ready to appear. The step simply
+drops out of the sequence — parking one of six leaves a working 5-step tour,
+and since order comes from the file there is nothing to renumber.
+
+## Prose inside a field
+
+### Pulling text from the model — `{{kind:arg}}`
 
 Prose fields can quote the underlying data instead of restating it. A
 `{{kind:arg}}` placeholder is replaced with whatever the host looks up for that
@@ -198,6 +228,165 @@ Three things to know:
   in a long class description gets a wider popover, and one placed beside a
   low anchor slides up to fit rather than running off the bottom.
 
+### Inline widgets
+
+A markdown image whose URL is `widget:<name>:<arg>` is drawn by the host's
+widget of that name instead of loading a picture:
+
+```markdown
+A owns B ![A owns B](widget:edge:own-fwd) when the schema puts the list on A.
+```
+
+dmvd registers one widget, `edge`, which draws an `EdgeSample` — the same
+component the legend and the relation popover use, from the same `edgeStyle.ts`
+config the canvas draws from, so the arrow in the prose cannot drift from the
+arrow on the canvas. Authors normally write `{{edge:own-fwd}}` and let the
+resolver produce the image; the alt text is the legend's label, which is what a
+reader sees if a host has no such widget. Widgets are handed to
+`<HelpProvider widgets={...}>`; the package knows the URL shape and nothing
+about what any widget draws.
+
+### Styling a span or a block — `:s[…]{…}`
+
+Markdown directives (`remark-directive`) style a run of prose or a block of it,
+with the markdown inside still working:
+
+```markdown
+Plain, then :s[small, **bold**, `code`]{size=.7em bg=pink opacity=.4} plain again.
+
+:::s{color=blue}
+A whole paragraph, or several, in blue.
+
+Still blue.
+:::
+```
+
+`:s[content]{attrs}` is inline (a `<span>`); `:::s{attrs}` … `:::` on lines of
+their own is a block (a `<div>` around everything between). Attributes are
+`name=value`, space-separated; a bare name (`nowrap`) needs no value.
+
+ | attribute | becomes                                                                                             |
+ |-----------|-----------------------------------------------------------------------------------------------------|
+ | `size`    | `font-size`                                                                                         |
+ | `color`   | `color`                                                                                             |
+ | `bg`      | `background-color`                                                                                  |
+ | `opacity` | `opacity`                                                                                           |
+ | `nowrap`  | `white-space: nowrap`                                                                               |
+ | `center`  | `text-align: center`, plus `display: block` so that on a span the text becomes its own centred line |
+
+That list is the whole of it, on purpose: any other attribute, and any value
+with characters outside the plain CSS value set, is dropped, so the content
+file does not become a general CSS surface. A directive of another name renders
+as plain content, so a typo loses the styling and not the text. Heading levels
+do NOT size text — every level renders as the one subtitle style; see
+[Subtitles](#subtitles-inside-a-description). The `s` directive gets its meaning
+in [`styleDirectives.ts`](styleDirectives.ts); a text resolver could not do this,
+since it runs before markdown and could neither wrap formatted text nor know
+where a range ends.
+
+### Subtitles inside a description
+
+Write `### text` in a `Description:` (a step's or a beat's) and it renders as a
+**subtitle** — set apart from the body, and clearly below the popover's own
+title.
+
+```markdown
+- **Description:**
+  ### What you are looking at
+  Rows are attributes. The dot says what KIND of thing the attribute points at.
+```
+
+Use it to break a long description into named parts. For emphasis inside a
+sentence, `**bold**` is still the right tool — a subtitle is a heading, not a
+loud run of text.
+
+**Every heading level renders identically.** `###` and `######` look the same,
+so pick whichever reads best in the file. The popover is a few short paragraphs,
+not a document: a real heading hierarchy inside it would compete with the tour's
+own structure, and a level the reader cannot see is a distinction not worth
+authoring.
+
+⚠️ **The step title is bigger than any subtitle, and `**bold**` is smaller than
+both.** Before 2026-09-08 the title and body `**bold**` were the same size and
+weight, so a bolded phrase opening a description read as a second title.
+
+### Alerts
+
+**A markdown blockquote is an alert.** Write `>` in any `Description:` or beat
+and it renders as an amber, ruled-left band with a `!` — for the thing a reader
+has to notice rather than read past:
+
+```markdown
+- **Description:** Ordinary prose.
+
+  > This tour will introduce you to all of the Explorer's major features.
+  > Click the ✕ or hit **Esc** any time to leave.
+```
+
+An alert is part of a step's prose, not a property of the step, which is why it
+is markdown rather than an `Alert:` field. A field can sit in only one place;
+`>` goes wherever the sentence belongs — before the text, after it, or as the
+whole block — and works in every beat without each one declaring a field.
+
+**Prefix every line with `>`.** Markdown's lazy continuation would let you drop
+it on later lines, but a dismissed alert is removed line by line, so an
+unprefixed line stays behind after the rest of the note has gone.
+
+Don't confuse it with the `Action:` band, which is also tinted and ruled. Blue
+and `✓` is the tour reporting what it just did to your app; amber and `!` is
+the tour telling you something. Two different sentences, two different bands.
+
+#### `Once:` — an alert you can put away
+
+An alert is permanent by default, which is right for a caution that is true
+every time you read the step. For the other kind — the orientation note a
+first-time visitor needs and a returning one should not have to dismiss again —
+give the entry a `Once:`:
+
+```markdown
+- **Once:** intro
+```
+
+Every alert in that entry then carries a **Don't show this again** checkbox,
+and ticking it stores `help-once-intro` in `localStorage`; on the next visit
+those alerts are stripped from the entry before it renders.
+
+An explicit checkbox rather than a silent show-once counter, deliberately: with
+a counter a reader who wanted the note back cannot get it, and a reader who
+never looked has already spent their one showing.
+
+**The key is authored, not derived from the entry id.** Two entries can share a
+key so that one tick silences the same note in both, and renaming an entry does
+not resurrect a note the viewer already put away.
+
+### Font size is CSS, not a field
+
+There is no `FontSize:` field, because text size is a property of the whole
+popover rather than of one step. Everything inside the popover is sized in `em`
+off `--help-font-size`, so one value scales the title, prose, action band,
+alert, context and tour nav together.
+
+**Set it in the HOST's stylesheet, not in `help.css`.** The package default is
+`13px`; an app's preferred reading size is the app's, and this file ships to
+every host:
+
+```css
+/* in the host's own CSS, loaded after help.css */
+.help-popover { --help-font-size: 15px; }
+```
+
+dmvd does this in [`src/explore/helpTheme.css`](../explore/helpTheme.css),
+imported by `ExploreApp.tsx` *after* the `HelpLayer` import that pulls in
+`help.css` — same specificity, so source order decides.
+
+## Tours
+
+### Who the tour is for
+
+Someone who arrives from a **link** with no one explaining it — the program
+manager case. So step 1 assumes nothing, and any step that needs a selection
+brings its own via `Change:` rather than asking the visitor to click first.
+
 ### Tours and order
 
 `Tour:` does two jobs: it marks an entry as a step, and it names **which tour**
@@ -218,40 +407,7 @@ bottom in the order their entries appear here. So:
 - **There is no number to get wrong** — no duplicates, no gaps, no renumbering
   a tail of steps because one went in the middle.
 
-The counter the viewer sees (`4.2 / 6`) is computed from rank at parse time.
-
-#### Finding a step you can see on screen
-
-The counter is a viewer's progress bar, not an address: `4 / 6` moves when you
-insert a step above it, so it cannot be used to say *which block produced this
-popover*. The **entry id** can — it is unique, required, and unaffected by
-reordering.
-
-So every popover can show where it is written, as its `### ` slug plus the
-1-based beat ordinal when a beat is showing:
-
-```
-relationship-kinds        <- the step's own text (its opening position)
-relationship-kinds ▸2     <- the second item under that step's `Beats:`
-```
-
-**Clicking the tag copies `### relationship-kinds`** — the markdown header, not
-the address as shown. That is the string that pastes into a file search and
-matches exactly one line: a bare `relationship-kinds` also hits every prose
-mention of it, and one carrying the beat ordinal matches nothing. So: paste,
-then count two bullets down.
-
-This is **off by default and dev-only**: turn it on with `Show content ids` at
-the bottom of the app's Help menu, or with `?ids=1`. The menu item is gated on
-`import.meta.env.DEV`, so a deployed build has no way to show it. Both the tag
-and the toggle are a temporary authoring aid (docs/TASKS.md item 3c) and are
-meant to be deleted once the tours are written.
-
-> ⚠️ **Two entries with the same `### ` id is a silent bug**, and now a wrong
-> address as well. Entries are stored in a Map keyed by id, so the second one
-> OVERWRITES the first — its popover, its menu item and every `Anchor:` aimed
-> at it all resolve to whichever came last. `helpContent.test.ts` fails on a
-> duplicate.
+The counter the viewer sees (`4 / 6`) is computed from rank at parse time.
 
 **Several tours can share this file.** Entries with different `Tour:` names are
 different walks: `Tour: Walkthrough` and `Tour: Deep dive` interleave freely in
@@ -259,7 +415,15 @@ the file and each tour sees only its own steps, in file order. One entry belongs
 to at most one tour; a topic two tours both want is written twice, or written
 once as a help-only entry that both link to.
 
-#### `TourMetadata:` — describing a tour, not a step
+> **What this replaced.** `Tour:` was a 1-based number until 2026-08-28.
+> Inserting a step between 3 and 4 meant renumbering every step after it, and a
+> duplicate or a gap silently reordered the tour rather than failing. Siggie,
+> 2026-08-28: *"make it easy to add/move steps without having to renumber
+> everything."* Note the two forms are distinguishable on sight — `Tour: 3` is
+> not a tour name — so an unmigrated entry is visible rather than silently
+> wrong, unlike the `State:`/`Change:` rename.
+
+### `TourMetadata:` — describing a tour, not a step
 
 A tour needs a name and a sentence saying what it is, for a chooser offering
 several. That belongs to the tour as a whole, and a tour has no entry of its
@@ -305,7 +469,7 @@ of failure as the unreachable second tour below.
 
 A section with no `TourMetadata:` is an ordinary grouping section.
 
-#### Selecting a tour
+### Selecting a tour
 
 **The host picks which tour runs**, by passing a name to `startTour(name)`; no
 name runs the FIRST tour in the file. `tourNames(content)` lists them in file
@@ -321,83 +485,40 @@ starts nothing rather than silently running whichever tour is first.
 > for: the content tests cannot see it, because nothing is wrong with the
 > content.
 
-> **What this replaced.** `Tour:` was a 1-based number until 2026-08-28.
-> Inserting a step between 3 and 4 meant renumbering every step after it, and a
-> duplicate or a gap silently reordered the tour rather than failing. Siggie,
-> 2026-08-28: *"make it easy to add/move steps without having to renumber
-> everything."* Note the two forms are distinguishable on sight — `Tour: 3` is
-> not a tour name — so an unmigrated entry is visible rather than silently
-> wrong, unlike the `State:`/`Change:` rename.
+### Finding a step you can see on screen
 
-### Disabling a field
+The counter is a viewer's progress bar, not an address: `4 / 6` moves when you
+insert a step above it, so it cannot be used to say *which block produced this
+popover*. The **entry id** can — it is unique, required, and unaffected by
+reordering.
 
-**Prefix any field name with `_` to park it.** The field is still parsed, but
-treated as absent:
+So every popover can show where it is written, as its `### ` slug plus the
+1-based beat ordinal when a beat is showing:
 
-```markdown
-- **_Tour:** Walkthrough  <- entry drops out of the tour, stays as help
-- **_Change:** sel=X      <- change not pushed
+```
+relationship-kinds        <- the step's own text (its opening position)
+relationship-kinds ▸2     <- the second item under that step's `Beats:`
 ```
 
-Use it for a step that is written but not ready to appear. The step simply
-drops out of the sequence — parking one of six leaves a working 5-step tour,
-and since order comes from the file there is nothing to renumber.
+**Clicking the tag copies `### relationship-kinds`** — the markdown header, not
+the address as shown. That is the string that pastes into a file search and
+matches exactly one line: a bare `relationship-kinds` also hits every prose
+mention of it, and one carrying the beat ordinal matches nothing. So: paste,
+then count two bullets down.
 
-#### Inline widgets
+This is **off by default and dev-only**: turn it on with `Show content ids` at
+the bottom of the app's Help menu, or with `?ids=1`. The menu item is gated on
+`import.meta.env.DEV`, so a deployed build has no way to show it. Both the tag
+and the toggle are a temporary authoring aid (docs/TASKS.md item 3c) and are
+meant to be deleted once the tours are written.
 
-A markdown image whose URL is `widget:<name>:<arg>` is drawn by the host's
-widget of that name instead of loading a picture:
+> ⚠️ **Two entries with the same `### ` id is a silent bug**, and now a wrong
+> address as well. Entries are stored in a Map keyed by id, so the second one
+> OVERWRITES the first — its popover, its menu item and every `Anchor:` aimed
+> at it all resolve to whichever came last. `helpContent.test.ts` fails on a
+> duplicate.
 
-```markdown
-A owns B ![A owns B](widget:edge:own-fwd) when the schema puts the list on A.
-```
-
-dmvd registers one widget, `edge`, which draws an `EdgeSample` — the same
-component the legend and the relation popover use, from the same `edgeStyle.ts`
-config the canvas draws from, so the arrow in the prose cannot drift from the
-arrow on the canvas. Authors normally write `{{edge:own-fwd}}` and let the
-resolver produce the image; the alt text is the legend's label, which is what a
-reader sees if a host has no such widget. Widgets are handed to
-`<HelpProvider widgets={...}>`; the package knows the URL shape and nothing
-about what any widget draws.
-
-#### Styling a span or a block — `:s[…]{…}`
-
-Markdown directives (`remark-directive`) style a run of prose or a block of it,
-with the markdown inside still working:
-
-```markdown
-Plain, then :s[small, **bold**, `code`]{size=.7em bg=pink opacity=.4} plain again.
-
-:::s{color=blue}
-A whole paragraph, or several, in blue.
-
-Still blue.
-:::
-```
-
-`:s[content]{attrs}` is inline (a `<span>`); `:::s{attrs}` … `:::` on lines of
-their own is a block (a `<div>` around everything between). Attributes are
-`name=value`, space-separated; a bare name (`nowrap`) needs no value.
-
- | attribute | becomes                                                                                             |
- |-----------|-----------------------------------------------------------------------------------------------------|
- | `size`    | `font-size`                                                                                         |
- | `color`   | `color`                                                                                             |
- | `bg`      | `background-color`                                                                                  |
- | `opacity` | `opacity`                                                                                           |
- | `nowrap`  | `white-space: nowrap`                                                                               |
- | `center`  | `text-align: center`, plus `display: block` so that on a span the text becomes its own centred line |
-
-That list is the whole of it, on purpose: any other attribute, and any value
-with characters outside the plain CSS value set, is dropped, so the content
-file does not become a general CSS surface. A directive of another name renders
-as plain content, so a typo loses the styling and not the text. Heading levels
-do NOT size text — every level renders as the one subtitle style; see
-[Subtitles](#subtitles-inside-a-description). The `s` directive gets its meaning
-in [`styleDirectives.ts`](styleDirectives.ts); a text resolver could not do this,
-since it runs before markdown and could neither wrap formatted text nor know
-where a range ends.
+## Pointing at the screen
 
 ### Anchors
 
@@ -460,7 +581,6 @@ rather than failing.
 
 Some kinds have an edge worth knowing when you author:
 
-
 - **`entity-row` / `entity-checkbox`** resolve in the panel's **list mode only**,
   which is the default. Tree mode hands its rows to the DagBrowser widget, and
   the full-width row rect there is the widget's own element, which dmvd does not
@@ -486,71 +606,6 @@ Some kinds have an edge worth knowing when you author:
   — the tree renders the ownership DAG, where every row is a class and no
   category exists to ring — so in tree mode such a step shows an unringed
   popover.
-
-### Actions
-
-When a step changes the app for the viewer, it **must** say so:
-
-```markdown
-- **Action:** Ticked MeasurementObservation for you in the panel on the left.
-```
-
-Write it as a plain sentence in the tour's own voice. This exists because a step
-that silently changes the diagram reads as a description of whatever just
-appeared. The popover renders `Action:` text in its own band, visually distinct
-from the description.
-
-**Rule of thumb:** if the step carries a `Change:` that actually changes
-something, it needs an `Action:`. A test enforces this.
-
-### Alerts
-
-**A markdown blockquote is an alert.** Write `>` in any `Description:` or beat
-and it renders as an amber, ruled-left band with a `!` — for the thing a reader
-has to notice rather than read past:
-
-```markdown
-- **Description:** Ordinary prose.
-
-  > This tour will introduce you to all of the Explorer's major features.
-  > Click the ✕ or hit **Esc** any time to leave.
-```
-
-An alert is part of a step's prose, not a property of the step, which is why it
-is markdown rather than an `Alert:` field. A field can sit in only one place;
-`>` goes wherever the sentence belongs — before the text, after it, or as the
-whole block — and works in every beat without each one declaring a field.
-
-**Prefix every line with `>`.** Markdown's lazy continuation would let you drop
-it on later lines, but a dismissed alert is removed line by line, so an
-unprefixed line stays behind after the rest of the note has gone.
-
-Don't confuse it with the `Action:` band, which is also tinted and ruled. Blue
-and `✓` is the tour reporting what it just did to your app; amber and `!` is
-the tour telling you something. Two different sentences, two different bands.
-
-#### `Once:` — an alert you can put away
-
-An alert is permanent by default, which is right for a caution that is true
-every time you read the step. For the other kind — the orientation note a
-first-time visitor needs and a returning one should not have to dismiss again —
-give the entry a `Once:`:
-
-```markdown
-- **Once:** intro
-```
-
-Every alert in that entry then carries a **Don't show this again** checkbox,
-and ticking it stores `help-once-intro` in `localStorage`; on the next visit
-those alerts are stripped from the entry before it renders.
-
-An explicit checkbox rather than a silent show-once counter, deliberately: with
-a counter a reader who wanted the note back cannot get it, and a reader who
-never looked has already spent their one showing.
-
-**The key is authored, not derived from the entry id.** Two entries can share a
-key so that one tick silences the same note in both, and renaming an entry does
-not resurrect a note the viewer already put away.
 
 ### Highlight
 
@@ -629,6 +684,33 @@ for a box the step is about to add — and it stays right if the box width
 changes. It is a closed grammar, not an expression: `anchor.width + 10` and
 `anchor.left` do not parse.
 
+Both `Position:` and `OffsetX:` are clamped to the viewport. An override can
+pick a bad side; it cannot push the popover off-screen.
+
+A beat inherits its step's `Position:`, `OffsetX:` and `Width:` and can override
+each independently, the same way it inherits `Anchor:`.
+
+**With no anchor** (`Anchor: none`) the popover is centred on its real height —
+so a long step stays centred rather than sitting low. One taller than the
+screen scrolls its body and keeps the back/next row in view.
+
+Horizontally it can centre on a **region the host names** rather than the whole
+window, via `<HelpProvider centerOn="…">` — so an unanchored step can be kept
+clear of a panel it is describing. Vertically it always stays on the viewport's
+midline: the popover's height is not known at placement time, which is what
+centring on the real height buys, so a region-relative vertical centre could
+not be kept on screen.
+
+**That asymmetry is the reason to think twice before naming a region.** A
+region-centred popover is off-centre on one axis and centred on the other, and
+the mismatch reads worse than the overlap it fixes — dmvd used
+`centerOn="graph-canvas"` until 2026-08-29 and dropped it for exactly that
+(Siggie: *"the off-window-center placement is bugging me more"*). The prop is
+still here and still works; it is dmvd that declines to pass it.
+
+An app that names no region, or names one that is not mounted, gets the
+viewport both ways.
+
 `Width:` sets the popover's width in pixels for one step. A step carrying real
 exposition — the intro, which explains what the app is — reads badly in a
 narrow column, so:
@@ -674,50 +756,19 @@ it, and how far up it slides when its anchor sits low. Every anchored popover
 is capped to the room below its top edge, so one that is genuinely too tall for
 any position scrolls inside itself rather than off the screen.
 
-**Font size is CSS, not a field.** There is no `FontSize:`, because text size
-is a property of the whole popover rather than of one step. Everything inside
-the popover is sized in `em` off `--help-font-size`, so one value scales the
-title, prose, action band, alert, context and tour nav together.
+**The automatic width has a second floor: the nav row.** A one-line beat wants
+the 320 minimum, but the row under it carries the counter, the reveal dots, the
+map ⊞ and three buttons, none of which shrink with the text. So an unauthored
+width is the LARGER of what the prose wants and what that row needs — about
+390px — however short the beat is.
 
-**Set it in the HOST's stylesheet, not in `help.css`.** The package default is
-`13px`; an app's preferred reading size is the app's, and this file ships to
-every host:
+The floor is a constant, not a per-beat sum: the dots **wrap**, so a step with
+twenty of them shows two short rows rather than a wider popover. Authored
+`Width:` is not second-guessed, so **a `Width:` well under 400 on a step in a
+tour will mangle its own nav row** — that was the bug this floor fixed
+(2026-09-08).
 
-```css
-/* in the host's own CSS, loaded after help.css */
-.help-popover { --help-font-size: 15px; }
-```
-
-dmvd does this in [`src/explore/helpTheme.css`](../explore/helpTheme.css),
-imported by `ExploreApp.tsx` *after* the `HelpLayer` import that pulls in
-`help.css` — same specificity, so source order decides.
-
-Both `Position:` and `OffsetX:` are clamped to the viewport. An override can
-pick a bad side; it cannot push the popover off-screen.
-
-**With no anchor** (`Anchor: none`) the popover is centred on its real height —
-so a long step stays centred rather than sitting low. One taller than the
-screen scrolls its body and keeps the back/next row in view.
-
-Horizontally it can centre on a **region the host names** rather than the whole
-window, via `<HelpProvider centerOn="…">` — so an unanchored step can be kept
-clear of a panel it is describing. Vertically it always stays on the viewport's
-midline: the popover's height is not known at placement time, which is what
-centring on the real height buys, so a region-relative vertical centre could
-not be kept on screen.
-
-**That asymmetry is the reason to think twice before naming a region.** A
-region-centred popover is off-centre on one axis and centred on the other, and
-the mismatch reads worse than the overlap it fixes — dmvd used
-`centerOn="graph-canvas"` until 2026-08-29 and dropped it for exactly that
-(Siggie: *"the off-window-center placement is bugging me more"*). The prop is
-still here and still works; it is dmvd that declines to pass it.
-
-An app that names no region, or names one that is not mounted, gets the
-viewport both ways.
-
-A beat inherits its step's `Position:`, `OffsetX:` and `Width:` and can override
-each independently, the same way it inherits `Anchor:`.
+## Changing the app
 
 ### Change
 
@@ -756,6 +807,23 @@ viewer's `dir=RIGHT` keeps `DOWN` after the pop. Deliberate, and decided rather
 than overlooked — Siggie, 2026-08-27: *"if scalar settings clobber user actions,
 don't worry about it. easy enough for the user to reclick the button."* Only
 `sel` is refcounted, because only `sel` has room to hold two copies.
+
+**Beats: only the first pushes the step's change.** Under the old model every
+beat re-applied its step's full state, which was harmless because re-applying
+the same absolute state twice does nothing. Pushing the same delta once per beat
+is not: a four-beat step would stack four frames and `back` would crawl out of
+them one useless pop at a time. So a step's `Change:` belongs to its first beat,
+and a later beat pushes only a change it declares itself.
+
+> **What this replaced.** `State:` was a **full, absolute** query, applied with
+> `url.search = query`. So the tour had to snapshot the viewer's state on entry
+> and restore it on exit; a mid-tour edit was clobbered, which is what the
+> yellow *"your changes will be discarded"* warning was for; and **any field a
+> step did not name snapped back to its default** — Siggie had a non-default
+> setting and every step with a `State:` silently reset it, because no step
+> wrote that param. All three are gone. Note the two forms look identical in the
+> file: `State: sel=X` and `Change: sel=X` are the same text meaning opposite
+> things, so an old value cannot be migrated by leaving it alone.
 
 #### The params you can set
 
@@ -826,99 +894,7 @@ to a default, which is the trap that killed the old absolute `State:` field.
 are not refcounted (above). Stepping back into a step that cleared the panels
 leaves them cleared. Author around it rather than relying on the pop.
 
-#### A beat's numbered line is a label, not its text
-
-```markdown
-- **Beats:**
-  1. tick a checkbox
-     - Description: In order to select an entity, click its checkbox.
-     - Anchor: entity-row:Person
-  2. the box that appears
-     - Description:
-       The box shows the entity name, a dismiss (x) icon, and its attributes.
-     - Anchor: node-box:Person
-     - Change: sel=Person
-```
-
-The numbered line names the beat **in the file** and is never rendered. Write it
-for whoever is editing: terse, repetitive, whatever helps you find the beat.
-Everything the viewer reads goes in `Description:`, which may run to several
-lines — continuation is by indent, so a beat can hold paragraphs and lists.
-
-**A beat with no `Description:` shows no text**, which is the point: a beat that
-only moves the anchor or pushes a `Change:` is a legitimate step in a sequence,
-and the label does not leak in to fill the gap.
-
-⚠️ Before 2026-09-08 the numbered line WAS the beat's text and a beat could only
-be one line — a `- ` bullet written under it was silently discarded. Beats
-written that way show nothing until their prose moves into `Description:`.
-
-#### Subtitles inside a description
-
-Write `### text` in a `Description:` (a step's or a beat's) and it renders as a
-**subtitle** — set apart from the body, and clearly below the popover's own
-title.
-
-```markdown
-- **Description:**
-  ### What you are looking at
-  Rows are attributes. The dot says what KIND of thing the attribute points at.
-```
-
-Use it to break a long description into named parts. For emphasis inside a
-sentence, `**bold**` is still the right tool — a subtitle is a heading, not a
-loud run of text.
-
-**Every heading level renders identically.** `###` and `######` look the same,
-so pick whichever reads best in the file. The popover is a few short paragraphs,
-not a document: a real heading hierarchy inside it would compete with the tour's
-own structure, and a level the reader cannot see is a distinction not worth
-authoring.
-
-⚠️ **The step title is bigger than any subtitle, and `**bold**` is smaller than
-both.** Before 2026-09-08 the title and body `**bold**` were the same size and
-weight, so a bolded phrase opening a description read as a second title.
-
-#### `Width:` is sticky across beats
-
-A beat that sets `Width:` governs every LATER beat too, until one changes it
-again. Only `Width:` behaves this way; `Anchor:`, `Position:` and `OffsetX:`
-inherit from the step whenever a beat does not set them.
-
-```markdown
-- **Width:** 800
-- **Beats:**
-  1. …            <- 800, from the step
-     - Width: 300
-  2. …            <- still 300, NOT back to 800
-  3. …
-     - Width: 800 <- back to 800 from here on
-```
-
-The difference is what each field describes. A width belongs to the PICTURE a
-run of beats is building, so a step that narrows to point at a checkbox and
-keeps narrating that checkbox should not snap back on the next beat. An anchor
-belongs to ONE popover, so a stale one would strand it pointing at something the
-beat is no longer about.
-
-Stickiness governs AUTHORED widths only. A step where nobody writes `Width:`
-never enters this rule — every position simply gets the automatic width for
-whatever it is showing. But once any beat sets one, it sticks, and later beats
-stop being sized from their text until another `Width:` releases it.
-
-**The automatic width has a second floor: the nav row.** A one-line beat wants
-the 320 minimum, but the row under it carries the counter, the reveal dots, the
-map ⊞ and three buttons, none of which shrink with the text. So an unauthored
-width is the LARGER of what the prose wants and what that row needs — about
-390px — however short the beat is.
-
-The floor is a constant, not a per-beat sum: the dots **wrap**, so a step with
-twenty of them shows two short rows rather than a wider popover. Authored
-`Width:` is not second-guessed, so **a `Width:` well under 400 on a step in a
-tour will mangle its own nav row** — that was the bug this floor fixed
-(2026-09-08).
-
-#### `Only:` — a step that names the whole canvas
+### `Only:` — a step that names the whole canvas
 
 `Change:` adds. `Only:` **replaces**: the selection becomes exactly what the
 query names, whatever was drawn before.
@@ -958,22 +934,23 @@ Writing both fields on one entry keeps the `Change:` — decided by which field 
 PRESENT, not by which value is non-empty, since an empty `Change:` is
 meaningful.
 
-**Beats: only the first pushes the step's change.** Under the old model every
-beat re-applied its step's full state, which was harmless because re-applying
-the same absolute state twice does nothing. Pushing the same delta once per beat
-is not: a four-beat step would stack four frames and `back` would crawl out of
-them one useless pop at a time. So a step's `Change:` belongs to its first beat,
-and a later beat pushes only a change it declares itself.
+### Actions
 
-> **What this replaced.** `State:` was a **full, absolute** query, applied with
-> `url.search = query`. So the tour had to snapshot the viewer's state on entry
-> and restore it on exit; a mid-tour edit was clobbered, which is what the
-> yellow *"your changes will be discarded"* warning was for; and **any field a
-> step did not name snapped back to its default** — Siggie had a non-default
-> setting and every step with a `State:` silently reset it, because no step
-> wrote that param. All three are gone. Note the two forms look identical in the
-> file: `State: sel=X` and `Change: sel=X` are the same text meaning opposite
-> things, so an old value cannot be migrated by leaving it alone.
+When a step changes the app for the viewer, it **must** say so:
+
+```markdown
+- **Action:** Ticked MeasurementObservation for you in the panel on the left.
+```
+
+Write it as a plain sentence in the tour's own voice. This exists because a step
+that silently changes the diagram reads as a description of whatever just
+appeared. The popover renders `Action:` text in its own band, visually distinct
+from the description.
+
+**Rule of thumb:** if the step carries a `Change:` that actually changes
+something, it needs an `Action:`. A test enforces this.
+
+## Steps with several screens
 
 ### Beats
 
@@ -1062,8 +1039,56 @@ say **screens** instead, and both COUNT the step's opening position: a step
 with two beats is three screens. Keep the two vocabularies apart rather than
 reconciling them.
 
-### Who the tour is for
+### A beat's numbered line is a label, not its text
 
-Someone who arrives from a **link** with no one explaining it — the program
-manager case. So step 1 assumes nothing, and any step that needs a selection
-brings its own via `Change:` rather than asking the visitor to click first.
+```markdown
+- **Beats:**
+  1. tick a checkbox
+     - Description: In order to select an entity, click its checkbox.
+     - Anchor: entity-row:Person
+  2. the box that appears
+     - Description:
+       The box shows the entity name, a dismiss (x) icon, and its attributes.
+     - Anchor: node-box:Person
+     - Change: sel=Person
+```
+
+The numbered line names the beat **in the file** and is never rendered. Write it
+for whoever is editing: terse, repetitive, whatever helps you find the beat.
+Everything the viewer reads goes in `Description:`, which may run to several
+lines — continuation is by indent, so a beat can hold paragraphs and lists.
+
+**A beat with no `Description:` shows no text**, which is the point: a beat that
+only moves the anchor or pushes a `Change:` is a legitimate step in a sequence,
+and the label does not leak in to fill the gap.
+
+⚠️ Before 2026-09-08 the numbered line WAS the beat's text and a beat could only
+be one line — a `- ` bullet written under it was silently discarded. Beats
+written that way show nothing until their prose moves into `Description:`.
+
+### `Width:` is sticky across beats
+
+A beat that sets `Width:` governs every LATER beat too, until one changes it
+again. Only `Width:` behaves this way; `Anchor:`, `Position:` and `OffsetX:`
+inherit from the step whenever a beat does not set them.
+
+```markdown
+- **Width:** 800
+- **Beats:**
+  1. …            <- 800, from the step
+     - Width: 300
+  2. …            <- still 300, NOT back to 800
+  3. …
+     - Width: 800 <- back to 800 from here on
+```
+
+The difference is what each field describes. A width belongs to the PICTURE a
+run of beats is building, so a step that narrows to point at a checkbox and
+keeps narrating that checkbox should not snap back on the next beat. An anchor
+belongs to ONE popover, so a stale one would strand it pointing at something the
+beat is no longer about.
+
+Stickiness governs AUTHORED widths only. A step where nobody writes `Width:`
+never enters this rule — every position simply gets the automatic width for
+whatever it is showing. But once any beat sets one, it sticks, and later beats
+stop being sized from their text until another `Width:` releases it.

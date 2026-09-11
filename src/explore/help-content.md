@@ -134,16 +134,7 @@ I want to restructure this
   *belonging to* its defining entity, it places the target to the right and
   draws a forward-pointing arrow.
 
-  `Condition.affected_body_site` {{edge:own-fwd}} `BodySite`
-
-  hello?
-  {{relation:own-fwd:Condition.affected_body_site:BodySite}}
-
-  :s[`Condition.affected_body_site`]{size=.7em bg=pink opacity=.4}
-
-  :::s{size=.8em color=blue}
-  A whole paragraph, with **bold** and `code` still working.
-  :::
+  :s[{{relation:own-fwd:Condition.affected_body_site:BodySite}}]{center}
 - Beats:
   1. backwards
      - Keep: true
@@ -152,6 +143,7 @@ I want to restructure this
        When the target is considered to be *owned by*
        the defining entity, it places the target to the left
        and draws a backward-pointing arrow {{edge:own-bkwd}}
+       :s[{{relation:own-bkwd:Condition.associated_participant:Participant}}]{center}
 
 
        or {{edge:association}}
