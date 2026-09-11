@@ -29,7 +29,7 @@ spec.
 - [The content file](#the-content-file)
   - [Structure](#structure) — `## ` sections, `### ` entries, `<details>` folding, prose sections
   - [Entry fields](#entry-fields) — the field table and how a field is spelled
-  - [Disabling a field](#disabling-a-field) — prefix a field with `_` to park it
+  - [Disabling a field](#disabling-a-field) — strike a field through to park it; unknown field names are reported
 - [Prose inside a field](#prose-inside-a-field)
   - [`Description:` — the multi-line markdown block](#description--the-multi-line-markdown-block) — the one field that spans lines; what ends it
   - [Pulling text from the model — `{{kind:arg}}`](#pulling-text-from-the-model--kindarg) — placeholders filled by host-registered resolvers
@@ -145,7 +145,8 @@ does not get swallowed into that entry's `Description:`.
 Written as `- **Field:** value`. The `**` is optional and field names are
 case-insensitive, so `- width: 500` works as well as `- **Width:** 500` — a
 field copied from a beat is not silently dropped. Only `Title` and
-`Description` are required.
+`Description` are required. A name that is none of the above is reported as a
+misspelling — see [Disabling a field](#disabling-a-field).
 An entry with no `Tour:` is help-only: reachable in help mode, never visited by
 a tour.
 
@@ -156,17 +157,33 @@ it.
 
 ### Disabling a field
 
-**Prefix any field name with `_` to park it.** The field is still parsed, but
-treated as absent:
+**Strike a field through to park it.** The field is still parsed, but treated
+as absent. Any of these spellings works, with the bold inside or outside the
+tildes:
 
 ```markdown
-- **_Tour:** Walkthrough  <- entry drops out of the tour, stays as help
-- **_Change:** sel=X      <- change not pushed
+- ~~**Tour:**~~ Walkthrough   <- entry drops out of the tour, stays as help
+- **~~Change~~:** sel=X       <- change not pushed
+- ~~**Width:** 500~~          <- the whole line after the bullet
 ```
 
 Use it for a step that is written but not ready to appear. The step simply
 drops out of the sequence — parking one of six leaves a working 5-step tour,
-and since order comes from the file there is nothing to renumber.
+and since order comes from the file there is nothing to renumber. A parked
+`Beats:` takes its beats with it, and a beat's own field can be parked the
+same way.
+
+Strikethrough rather than a prefix because it renders as what it means — a
+markdown editor read the earlier `_Tour:` as the start of italics. `_Tour:` is
+now reported as a misspelling like any other unknown name (below).
+
+**A field name the format does not know is reported, not ignored.** `- Anchr:
+none` used to parse as nothing, silently, which made a typo look exactly like
+a parked field. Now every `- Name: value` line at entry level, beat level or in
+a section body whose name is not a field of that level lands in
+`HelpContent.problems`, the parser logs them, and `helpContent.test.ts` fails
+on any. A prose bullet inside a `Description:` block is indented, so it is not
+a field line and is never checked.
 
 ## Prose inside a field
 

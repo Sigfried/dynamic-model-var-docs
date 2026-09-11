@@ -306,6 +306,12 @@ export interface HelpContent {
    * carries a `TourMetadata:` block. What a tour chooser reads.
    */
   tourMeta: Map<string, TourMeta>;
+  /**
+   * What the parser could read but not accept: a field line whose name is
+   * not one the file's format knows at that level (`- Anchr: x`). Empty for
+   * a clean file. Optional so a test can build a content literal without it.
+   */
+  problems?: string[];
 }
 
 /**
@@ -543,10 +549,12 @@ const SECTION_MARKUP = /^<\/?(?:details|summary)\b[^>]*>$/i;
 /**
  * Extract a field value like "**Title:** ..." from the lines.
  *
- * A field whose name is prefixed with `_` is PARKED: still written down, but
- * treated as absent. `- **_Tour:** 4` drops the entry out of the tour while
- * leaving it available as help, which is how a step that is written but not
- * ready stays in the file without appearing.
+ * A field struck through is PARKED: still written down, but treated as absent.
+ * `- ~~**Tour:** Walkthrough~~` drops the entry out of the tour while leaving
+ * it available as help, which is how a step that is written but not ready
+ * stays in the file without appearing. Strikethrough rather than the earlier
+ * `_` prefix because a markdown editor reads `_Tour` as the start of italics
+ * (Siggie, 2026-09-11); `~~` renders as exactly what it means.
  */
 /**
  * `- Field: value`, tolerantly.
@@ -561,8 +569,9 @@ const SECTION_MARKUP = /^<\/?(?:details|summary)\b[^>]*>$/i;
  * else)", and then, on case: the beat reader already lower-cased its field
  * names, so requiring capitals here was an inconsistency rather than a rule.
  *
- * `_Tour:` still parks a field: the underscore is part of the NAME, and
- * `_tour` is not `tour` however it is spelled or cased.
+ * A struck-through field (`~~Tour:~~ x`, `~~Tour~~: x`, `~~Tour: x~~`) is
+ * parked: `fieldOf` still reads its name, so it ends a block like any field
+ * and is not reported as a misspelling, but no lookup matches it.
  */
 function extractField(lines: string[], label: string): string | undefined {
   /*
@@ -580,28 +589,80 @@ function extractField(lines: string[], label: string): string | undefined {
   for (const line of lines) {
     const field = fieldOf(line);
     if (!field) continue;
+    // The beats header ends the entry's own field list, parked or not: the
+    // indented beat fields below it must not read as the entry's.
     if (field.name === 'beats' && key !== 'beats') return undefined;
-    if (field.name === key) return field.value;
+    if (field.name === key && !field.parked) return field.value;
   }
   return undefined;
 }
+
+interface Field { name: string; value: string; parked: boolean }
 
 /**
  * Split `- **Field:** value` into a lower-cased name and its value, with the
  * `**` gone. Returns undefined for any line that is not a field bullet --
  * ordinary prose bullets inside a `Description:` block included.
+ *
+ * Strikethrough marks the field PARKED. Three spellings, all read the same:
+ * `~~Field:~~ value`, `~~Field~~: value`, and the whole line after the bullet
+ * `~~Field: value~~`. Bold may sit inside or outside the tildes.
  */
-function fieldOf(line: string): { name: string; value: string } | undefined {
+function fieldOf(line: string): Field | undefined {
   const m = line.trimStart().match(/^-\s+(.*)$/);
   if (!m) return undefined;
-  const rest = m[1].replace(/\*\*/g, '');
+  let rest = m[1].replace(/\*\*/g, '').trim();
+  let parked = false;
+  if (rest.startsWith('~~')) {
+    const close = rest.indexOf('~~', 2);
+    if (close === -1) return undefined;
+    parked = true;
+    rest = close === rest.length - 2
+      ? rest.slice(2, close)                                    // ~~Field: value~~
+      : `${rest.slice(2, close)}${rest.slice(close + 2)}`;     // ~~Field:~~ value, ~~Field~~: value
+  }
   const colon = rest.indexOf(':');
   if (colon === -1) return undefined;
   const name = rest.slice(0, colon).trim();
   // A field name is a single word; anything else is prose that has a colon in
   // it, which is common in a description's bullet list.
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) return undefined;
-  return { name: name.toLowerCase(), value: rest.slice(colon + 1).trim() };
+  return { name: name.toLowerCase(), value: rest.slice(colon + 1).trim(), parked };
+}
+
+/** The name of a LIVE (not parked) field on this line, for lookups by name. */
+const liveName = (line: string): string | undefined => {
+  const f = fieldOf(line);
+  return f && !f.parked ? f.name : undefined;
+};
+
+/**
+ * Field names each level of the file may carry. A `- Name: value` line at
+ * that level whose name is in none of these is a misspelling (`Anchr:`), and
+ * until 2026-09-11 it was silently ignored, indistinguishable from a field
+ * deliberately parked. `parseHelpContent` reports every such line in
+ * `HelpContent.problems`, and the content test fails on any.
+ */
+const ENTRY_FIELDS = new Set([
+  'title', 'description', 'interactions', 'shortcut', 'context', 'anchor',
+  'spotlight', 'action', 'once', 'change', 'only', 'highlight', 'width',
+  'position', 'offsetx', 'tour', 'beats',
+]);
+const BEAT_FIELDS = new Set([
+  'description', 'anchor', 'spotlight', 'action', 'change', 'only',
+  'highlight', 'width', 'position', 'offsetx', 'keep',
+]);
+const SECTION_FIELDS = new Set(['tourmetadata', 'tourabbr', 'description']);
+
+/** Report every margin-level field line in `lines` whose name is not known. */
+function checkFieldNames(lines: string[], known: Set<string>, where: string, problems: string[]): void {
+  for (const line of lines) {
+    if (!isEntryField(line)) continue;
+    const f = fieldOf(line)!;
+    if (!f.parked && !known.has(f.name)) {
+      problems.push(`${where}: unknown field "${f.name}" (a misspelling? to park a field, strike it through: ~~${f.name}:~~)`);
+    }
+  }
 }
 
 /**
@@ -638,7 +699,7 @@ function isEntryField(line: string): boolean {
  */
 function extractBlockField(lines: string[], label: string): string | undefined {
   const key = label.toLowerCase();
-  const idx = lines.findIndex(l => fieldOf(l)?.name === key);
+  const idx = lines.findIndex(l => liveName(l) === key);
   if (idx === -1) return undefined;
 
   const first = fieldOf(lines[idx])!.value;
@@ -673,7 +734,7 @@ function extractBlockField(lines: string[], label: string): string | undefined {
 /** Extract bullet list items under a field header like "- **Interactions:**" */
 function extractBulletList(lines: string[], label: string): string[] {
   const key = label.toLowerCase();
-  const headerIdx = lines.findIndex(l => fieldOf(l)?.name === key);
+  const headerIdx = lines.findIndex(l => liveName(l) === key);
   if (headerIdx === -1) return [];
 
   const results: string[] = [];
@@ -698,9 +759,10 @@ function extractBulletList(lines: string[], label: string): string[] {
  * 2026-09-10 a beat's `- **Description:**` was silently ignored because this
  * reader matched the plain form only.
  */
-function extractBeats(lines: string[], entryId: string): TourBeat[] | undefined {
-  // `- Beats:` and `- **Beats:**` both open the block; see `fieldOf`.
-  const headerIdx = lines.findIndex(l => fieldOf(l)?.name === 'beats');
+function extractBeats(lines: string[], entryId: string, problems: string[]): TourBeat[] | undefined {
+  // `- Beats:` and `- **Beats:**` both open the block; see `fieldOf`. A
+  // parked `~~Beats:~~` opens nothing, so its beats drop out with it.
+  const headerIdx = lines.findIndex(l => liveName(l) === 'beats');
   if (headerIdx === -1) return undefined;
 
   const beats: TourBeat[] = [];
@@ -728,10 +790,16 @@ function extractBeats(lines: string[], entryId: string): TourBeat[] | undefined 
       continue;
     }
 
-    // `- Field: value` attached to the beat above it, bold or not.
+    // `- Field: value` attached to the beat above it, bold or not. A parked
+    // one is skipped; an unknown one is reported.
     const field = fieldOf(trimmed);
+    if (field?.parked) continue;
     if (field && current) {
       const { name: key, value } = field;
+      if (!BEAT_FIELDS.has(key)) {
+        problems.push(`${entryId} beat ${beats.length + 1}: unknown field "${key}" (a misspelling? to park a field, strike it through: ~~${key}:~~)`);
+        continue;
+      }
       /*
        * `Description:` is the beat's viewer-facing prose, and the ONLY field
        * here that runs to more than one line — a beat used to be its numbered
@@ -790,13 +858,14 @@ function extractBeats(lines: string[], entryId: string): TourBeat[] | undefined 
   return beats.length > 0 ? beats : undefined;
 }
 
-function parseEntry(block: string, order: number): HelpEntry | null {
+function parseEntry(block: string, order: number, problems: string[]): HelpEntry | null {
   const lines = block.split('\n');
   const headerLine = lines[0];
   const match = headerLine.match(/^###\s+(.+)$/);
   if (!match) return null;
 
   const id = match[1].trim();
+  checkFieldNames(lines, ENTRY_FIELDS, id, problems);
   const title = extractField(lines, 'Title') ?? id;
   // Description is the one field read as a multi-line block, so a step can
   // hold the prose as drafted. The rest stay single-line by design — see
@@ -824,11 +893,11 @@ function parseEntry(block: string, order: number): HelpEntry | null {
   const width = parseWidth(extractField(lines, 'Width'));
   const position = parsePosition(extractField(lines, 'Position'));
   const offsetX = parseOffset(extractField(lines, 'OffsetX'));
-  const beats = extractBeats(lines, id);
+  const beats = extractBeats(lines, id, problems);
   const tourRaw = extractField(lines, 'Tour');
   // `Tour:` names a tour; a bare `- **Tour:**` with no value joins the default
   // one, so a file with a single tour never has to write its name. A parked
-  // `_Tour:` does not match at all and leaves this undefined, which is what
+  // `~~Tour:~~` does not match at all and leaves this undefined, which is what
   // drops the entry out of the tour while keeping it as help.
   const tour = tourRaw === undefined ? undefined : (tourRaw || DEFAULT_TOUR);
 
@@ -844,7 +913,7 @@ function parseEntry(block: string, order: number): HelpEntry | null {
  *                   it has to keep counting ACROSS sections rather than
  *                   restarting per block.
  */
-function parseSection(block: string, nextOrder: () => number): HelpSection {
+function parseSection(block: string, nextOrder: () => number, problems: string[]): HelpSection {
   const lines = block.split('\n');
   // FIND the heading rather than assuming line 0. Each section is wrapped in
   // `<details>`/`<summary>` so the file folds on GitHub, which puts two lines
@@ -874,6 +943,7 @@ function parseSection(block: string, nextOrder: () => number): HelpSection {
    * `Description:` is read as a BLOCK, so a tour description can run to a
    * paragraph the way a step's can.
    */
+  checkFieldNames(bodyLines, SECTION_FIELDS, `section "${title}"`, problems);
   const declared = extractField(bodyLines, 'TourMetadata');
   const tourMeta: TourMeta | undefined = declared === undefined
     ? undefined
@@ -893,7 +963,7 @@ function parseSection(block: string, nextOrder: () => number): HelpSection {
   const entryBlocks = block.split(/(?=^### )/m);
   for (const entryBlock of entryBlocks) {
     if (!entryBlock.startsWith('### ')) continue;
-    const entry = parseEntry(entryBlock.trim(), nextOrder());
+    const entry = parseEntry(entryBlock.trim(), nextOrder(), problems);
     if (entry) entries.push(entry);
   }
 
@@ -1117,6 +1187,7 @@ export function parseHelpContent(markdown: string): HelpContent {
 
   const sections: HelpSection[] = [];
   const entries = new Map<string, HelpEntry>();
+  const problems: string[] = [];
   // File order, counted across sections — it is what orders the tour.
   let order = 0;
 
@@ -1128,7 +1199,7 @@ export function parseHelpContent(markdown: string): HelpContent {
     const heading = block.match(/^##\s+(.+)$/m)?.[1].trim();
     if (heading && PROSE_SECTIONS.has(heading)) continue;
 
-    const section = parseSection(block, () => order++);
+    const section = parseSection(block, () => order++, problems);
     sections.push(section);
     for (const entry of section.entries) {
       entries.set(entry.id, entry);
@@ -1142,7 +1213,10 @@ export function parseHelpContent(markdown: string): HelpContent {
     if (section.tourMeta) tourMeta.set(section.tourMeta.name, section.tourMeta);
   }
 
-  return { sections, entries, tourMeta };
+  // Loud in the console while authoring, red in the content test.
+  if (problems.length) console.warn(`[help-content] ${problems.length} problem(s):\n  ${problems.join('\n  ')}`);
+
+  return { sections, entries, tourMeta, problems };
 }
 
 /**

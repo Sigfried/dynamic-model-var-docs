@@ -747,7 +747,9 @@ describe('alerts and Once:', () => {
   });
 });
 
-describe('parking a field with _', () => {
+describe('parking a field with ~~strikethrough~~', () => {
+  // Three spellings, one meaning: tildes around the name, around the name and
+  // its colon, or around the whole line after the bullet. Bold inside or out.
   const parked = parseHelpContent(`
 ## Bits
 
@@ -755,15 +757,60 @@ describe('parking a field with _', () => {
 
 - **Title:** T
 - **Description:** D
-- **_Tour:** Walkthrough
-- **_Change:** sel=Nope
+- ~~**Tour:**~~ Walkthrough
+- **~~Change~~:** sel=Nope
+- ~~**Width:** 500~~
 - **Anchor:** none
 `);
 
-  test('a parked field reads as absent', () => {
+  test('a parked field reads as absent, in any of the three spellings', () => {
     const e = parked.entries.get('thing')!;
     expect(e.tour).toBeUndefined();
     expect(e.change).toBeUndefined();
+    expect(e.width).toBeUndefined();
+    expect(parked.problems).toEqual([]);
+  });
+
+  test('a parked field still ends the Description: block above it', () => {
+    const c = parseHelpContent(`
+## Bits
+
+### thing
+
+- **Title:** T
+- **Description:** D
+  more D
+- ~~Tour: Walkthrough~~
+- **Anchor:** none
+`);
+    expect(c.entries.get('thing')!.description).toBe('D\nmore D');
+  });
+
+  test('a parked Beats: takes its beats with it; a parked beat field is skipped', () => {
+    const c = parseHelpContent(`
+## Bits
+
+### a
+
+- **Title:** T
+- **Description:** D
+- ~~Beats:~~
+  1. one
+     - Anchor: none
+
+### b
+
+- **Title:** T
+- **Description:** D
+- **Beats:**
+  1. one
+     - ~~Change:~~ sel=Nope
+     - Anchor: none
+`);
+    expect(c.entries.get('a')!.beats).toBeUndefined();
+    expect(c.entries.get('b')!.beats![0].change).toBeUndefined();
+    expect(c.entries.get('b')!.beats![0].anchor).toEqual({ kind: 'none' });
+    expect(c.problems).toEqual([]);
   });
 
   test('the entry survives as help-only', () => {
@@ -783,12 +830,53 @@ describe('parking a field with _', () => {
 
 - **Title:** T
 - **Description:** D
-- **_Tour:** Walkthrough
+- ~~**Tour:**~~ Walkthrough
 - **Change:** sel=Yes
 `);
     const e = mixed.entries.get('thing')!;
     expect(e.tour).toBeUndefined();
     expect(e.change).toBe('sel=Yes');
+  });
+});
+
+describe('misspelled field names are reported', () => {
+  /*
+   * An unknown field name used to be ignored silently, which made a typo
+   * (`Anchr:`) indistinguishable from a deliberately parked field — and the
+   * old `_Tour:` convention is now exactly such a typo. Reported per level,
+   * with the strikethrough hint, and the content file must report none.
+   */
+  const c = parseHelpContent(`
+## Bits
+- **TourMetadata:**
+- **Descripton:** oops
+
+### thing
+
+- **Title:** T
+- **Description:** D
+  - Not a field: this is a prose bullet inside the block
+- **Anchr:** none
+- **_Tour:** Walkthrough
+- **Beats:**
+  1. one
+     - Achor: none
+     - Description: fine
+       - also: prose, inside the beat's block
+`);
+
+  test('entry, beat and section-body fields are each checked', () => {
+    expect(c.problems).toEqual([
+      expect.stringContaining('section "Bits": unknown field "descripton"'),
+      expect.stringContaining('thing: unknown field "anchr"'),
+      expect.stringContaining('thing: unknown field "_tour"'),
+      expect.stringContaining('thing beat 1: unknown field "achor"'),
+    ]);
+    expect(c.problems![1]).toContain('~~anchr:~~');
+  });
+
+  test('help-content.md has no unknown field names', () => {
+    expect(content.problems).toEqual([]);
   });
 });
 

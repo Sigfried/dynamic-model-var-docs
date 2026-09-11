@@ -97,6 +97,23 @@ nothing and Siggie's first attempt (`{text-align: center}` on a span wrapping a
 `{{relation:…}}`) would otherwise have silently done nothing twice over — the
 attribute name is not whitelisted, and the property would not apply.
 
+**`~~Field:~~` replaces `_Field:` for parking; unknown names now reported.**
+Siggie's markdown editor read `_Tour` as opening italics. The `_` had never
+been special in the parser — an unrecognised name was simply ignored — so
+"parked" and "misspelled" were the same thing, which is why the two changes
+went in together: `fieldOf` now reads `~~` (around the name, the name and
+colon, or the whole line after the bullet) as a parked flag, and every
+margin-level field line is checked against the field set for its level
+(entry, beat, section body) with the results in `HelpContent.problems` and a
+content test that fails on any. The check immediately found four `- Title:
+none` lines under beats in committed content: a beat field that does not
+exist yet (TASKS `beats-in-map` plans a `Subtitle:`). I did not whitelist it —
+a known-but-inert name recreates the silent-ignore problem — and Siggie struck
+them through instead. Also `:s[…]{color=own-fwd}`: colour names from the
+host's palettes, passed as `<HelpProvider colors>` like widgets, looked up
+before the CSS-value filter; and `center` became block-only after
+`display:block` stopped a span sharing a line.
+
 **Left open, recorded in BACKLOG:** the intermittent map-jump-does-not-clear
 (`map-jump-canvas`), and `tour-menus` with the open/hold/close design sketch.
 

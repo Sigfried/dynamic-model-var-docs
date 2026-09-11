@@ -80,7 +80,7 @@ I want to restructure this
   these relationships. 
 - Beats:
   1. own-fwd
-     - Title: none
+     - ~~Title: none~~
      - Keep: true
      - Highlight: dim
      - Spotlight: slot-row:Condition.affected_body_site
@@ -89,7 +89,7 @@ I want to restructure this
        pointing at **BodySite**, as some conditions can occurr at
        specific body sites.
   2. own-bkwd
-     - Title: none
+     - ~~Title: none~~
      - Keep: true
      - Highlight: dim
      - Spotlight: slot-row:Condition.associated_participant
@@ -98,7 +98,7 @@ I want to restructure this
        pointing at **Participant**, as condition records must belong to someone
        in a study.
   3. - two-edge-types
-     - Title: none
+     - ~~Title: none~~
      - Description:
        The LinkML schema does specify **is-a** relationships (see the
        Inheritance tour), and, from a pure data modeling point of view,
@@ -112,7 +112,7 @@ I want to restructure this
        because it would make no sense to have a Condition record without
        a Participant.
   4. - optional-owners
-     - Title: none
+     - ~~Title: none~~
      - Change: sel=Visit
      - Anchor: node-box:Visit
      - Description:
@@ -129,22 +129,39 @@ I want to restructure this
 - Only: sel=Participant~Condition~BodySite
 - Spotlight: slot-row:Condition.affected_body_site
 - **Anchor:** node-box:Condition
+- Width: 600
 - **Description:**
   So, when the Explorer has configured an attribute target as
-  *belonging to* its defining entity, it places the target to the right and
+  :s[owning]{color=own-fwd} its target, it places the target to the right and
   draws a forward-pointing arrow.
-
-  :s[{{relation:own-fwd:Condition.affected_body_site:BodySite}}]{center}
+  :::s{center color=entity}
+    {{relation:own-fwd:Condition.affected_body_site:BodySite}}
+  :::
 - Beats:
   1. backwards
      - Keep: true
      - Spotlight: slot-row:Condition.associated_participant
      - Description:
-       When the target is considered to be *owned by*
-       the defining entity, it places the target to the left
-       and draws a backward-pointing arrow {{edge:own-bkwd}}
-       :s[{{relation:own-bkwd:Condition.associated_participant:Participant}}]{center}
-
+       When the target is considered to be by* :s[owned by]{color=own-bkwd} its
+       target, it places the target to the left and draws a backward-pointing
+       arrow {{edge:own-bkwd}}
+       :::s{center color=entity}
+         {{relation:own-bkwd:Condition.associated_participant:Participant}}
+       :::
+  1. association
+     - Spotlight: slot-row:Condition.associated_participant
+     - Only: sel=Document~Specimen~SpecimenContainer~SpecimenStorageActivity
+     - Anchor: node-box:SpecimenContainer
+     - ~~Position:~~ right
+     - Description:
+       The model currently has two attributes for which ownership didn't
+       make sense in either direction
+       When the target is considered to be by* :s[owned by]{color=own-bkwd} its
+       target, it places the target to the left and draws a backward-pointing
+       arrow {{edge:association}}
+       :::s{center color=entity}
+         {{relation:association:SpecimenStorageActivity.container:SpecimenContainer}}
+       :::
 
        or {{edge:association}}
 - **Beats:**
