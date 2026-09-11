@@ -130,10 +130,6 @@ I want to restructure this
 - Spotlight: slot-row:Condition.affected_body_site
 - **Anchor:** node-box:Condition
 - **Description:**
-  ### heading 3
-  #### heading 4
-  ##### heading 5
-  ###### heading 6
   So, when the Explorer has configured an attribute target as
   *belonging to* its defining entity, it places the target to the right and
   draws a forward-pointing arrow.

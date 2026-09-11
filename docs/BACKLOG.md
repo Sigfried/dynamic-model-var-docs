@@ -674,6 +674,51 @@ since the canvas is a scroll container. Slightly odd; harmless.
 
 ---
 
+### Jumping to a step from the map does not always clear the canvas
+
+Siggie, 2026-09-10, then withdrawn as intermittent: *"jumping to `bdchm`
+using the map doesn't clear the panel again … wait, sometimes it does … i'll
+get back to you"*. Unreproduced; nothing was changed for it. The step in
+question carried `Only: panels=0` at the time, so the expected result of a
+jump was an empty selection. Suspects, in order of cheapness to check: the jump
+fold in `tourStateStack.ts` when the viewer's own selection is non-empty (the
+`held` half of a replace); the map's `startTour(name, at)` path versus
+`goToStep` within a running tour, which are different code paths; and a race
+with the ELK layout landing after the state did. Measure before guessing — a
+probe that runs the fold with a non-empty viewer selection is the first thing
+to write.
+
+---
+
+### `tour-menus` — a tour step that opens a relation menu
+
+Siggie, 2026-09-10: *"i'd like it to convey to the user that Condition has
+attributes pointing at entities on the right, then select one of them, then
+the same on left."* Then: *"this is sounding like a lot of work. i really need
+to get this tour authored"* — so parked, with the design as far as it got.
+
+What exists: the relation bar's open/close are module-level functions in
+`RelationBar.tsx` (`setOpen(id)` broadcasts to every bar; `scheduleClose()`
+runs the 300ms grace), while the per-instance `show(side, el)` needs the chip
+element for coordinates, and the outside-mousedown and Escape closers live in
+an effect. Nothing on the bar carries a help id.
+
+The sketch, in two independent pieces:
+
+- **Tag the chips**: a `relation-count:<Class>:left|right` anchor kind on the
+  two count buttons. An hour; useful alone (a beat can ring the `22 →` chip).
+- **Open from a step**: register each bar under its class id rather than a
+  random one, add `openRelationMenu(classId, side, { hold })` and
+  `closeRelationMenu()`, where `hold` makes the instance ignore mouse-leave
+  and outside clicks until released. Drive it from a tour-only field —
+  `Show: relations:Condition:right`, applied on step entry and withdrawn on
+  exit — NOT a URL param: a menu is not shareable state. Then a
+  `relation-menu:<Class>` anchor lets a beat's popover sit beside the rows.
+  The family grouping (2026-09-10) means a beat about "the Observation
+  family" wants the menu open on Participant's right side.
+
+---
+
 ## Siggie's upcoming thoughts
 
 1. A help or legend listing **every type of ownership pair**, the rules and

@@ -7,6 +7,79 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-10 (late) → 2026-09-11 — authoring tools for the tours, and what they displaced
+
+Siggie was writing the Ownership tour live, and each request below came from a
+specific screen. The pattern of the session: build the small thing, and record
+the design question it exposed rather than build the big thing.
+
+**Task numbers → permanent slug tags.** The row numbers had already collided
+(two 5s, 7s and 8s across the Now and Next tables), and ~85 references in code
+and docs named tables of their own date. Slugs (`drop-sibs`, `tour-links`)
+rather than serial IDs: readable in a comment, no counter to remember, and they
+follow the row into the archive. Only references to still-OPEN tasks were
+converted; dated historical ones stay, since renumbering them would be
+rewriting history. Rule in the TASKS preamble.
+
+**`?` opens the Overview, not tour 1.** The overview's open state moved from
+the chooser into the provider so the shortcut and the button share one switch.
+Right with one tour, wrong with five — the reader pressing `?` wants to see
+what exists.
+
+**`Position:` existed and nobody had used it.** First authored use on the
+Inheritance narrowing step. Then the real bug: it worked on a direct jump and
+not when arriving from the previous step. CSS anchor positioning remembers an
+element's last successful `position-try` fallback and reuses it while it fits,
+BEFORE reconsidering the base `position-area` — and the tour used one popover
+element for every step, so step N's flip beat step N+1's authored side. Fixed
+by keying the element per position. The help.css note on `--help-shift` had
+already named this class of stickiness ("a property of the element's placement
+state, not of the step"); it just had not been connected to `Position:`.
+
+**Dragging a flipped popover moved it against the cursor.** Same trap from the
+other side: an active fallback's declarations override inline style, so the
+drag's inline `position-area: none` lost and the dragged coordinates were read
+inside the anchor's cell. `data-anchored` now comes off while dragged. jsdom
+cannot show either misplacement; both tests pin the attribute instead.
+
+**`Spotlight:`** — ring one element while the popover stays on another —
+because "highlight the row while staying anchored on Condition" was the
+natural thing to want and `Highlight:` only ever said how hard, never where.
+Mirrors `Anchor:` in every respect (grammar, inheritance, tests, tagging).
+Siggie's draft wrote the row as `slot-row:Condition:affected_body_site` — a
+colon where the grammar wants a dot; the anchor test catches it.
+
+**One edge style.** Siggie: "i've never really liked the forward arrowhead
+being bigger than the backward arrowhead". Probing the canvas found the cause
+was not the sample at all: the convergence head was 12×18 and the per-edge
+markers 9×12, and forward edges mostly converge while backward ones never do.
+A second, smaller cause: the backward head's BASE sat on the path end, so the
+line ran under the whole head and it read as a barb. `edgeStyle.ts` is now the
+single declarative source (head geometry, dash, strokes, colours, labels) for
+the canvas, `EdgeSample` and the tour. "Automatic" reflection is just that
+there is nothing else to update.
+
+**Arrows in prose: `{{edge:kind}}` and `{{relation:kind:Left:Right}}`.**
+react-markdown strips raw HTML, so an inline `<svg>` string was out. The route:
+a markdown image with a `widget:` URL, which the help layer hands to a
+host-registered widget map. The package knows the URL shape only. `relation`
+came an hour later when the three-piece version wrapped at the popover's width.
+
+**Styling prose, three drafts in one evening.** (1) I said heading levels size
+text — wrong; FORMAT documents every level rendering identically, on purpose,
+and I had not checked. (2) Siggie spitballed `{{size:.7em; …}}` … `{{size:clear}}`;
+I built it as a remark plugin that finds the paired placeholders in the tree
+(a text resolver cannot wrap formatted text or know where a range ends). (3)
+Siggie's message had actually been finishing the PREVIOUS thought; they
+preferred the `remark-directive` `:s[…]{…}` / `:::s` syntax I had recommended.
+Installed it, rebuilt on it, deleted (2) — one syntax, and nothing had used it.
+Lesson for me: a mid-turn message that reads as a decision may be a
+continuation; when it reverses a recommendation I just made, ask.
+
+**Left open, recorded in BACKLOG:** the intermittent map-jump-does-not-clear
+(`map-jump-canvas`), and `tour-menus` with the open/hold/close design sketch.
+
+---
 ## 2026-09-10 — Rule 3: a forward-owned range includes its subtree; siblings toggle removed
 
 **The report** was a screenshot: the Survey ⊞ canvas with the merged
