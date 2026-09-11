@@ -129,13 +129,13 @@ I want to restructure this
 - Only: sel=Participant~Condition~BodySite
 - Spotlight: slot-row:Condition.affected_body_site
 - **Anchor:** node-box:Condition
-- **Width:** 550
+- **Width:** 350
 - **Description:**
   So, when the Explorer has configured an attribute target as
   *belonging to* its defining entity, it places the target to the right and
   draws a forward-pointing arrow.
 
-  `Condition.affected_body_site` {{edge:own-fwd}}&nbsp;`BodySite`
+  `Condition.affected_body_site` {{edge:own-fwd}} `BodySite`
 - Beats:
   1. backwards
      - Keep: true

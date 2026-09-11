@@ -41,7 +41,11 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Markdown, { defaultUrlTransform } from 'react-markdown';
 import { useHelp, type WidgetRenderer } from './helpContext';
+import { remarkStyleRanges } from './styleRanges';
 import { useDragged } from './useDragged';
+
+/** Module-level so the array identity is stable across renders. */
+const REMARK_PLUGINS = [remarkStyleRanges];
 import type { Offset, PopoverSide } from './parseHelpContent';
 import TourMap from './TourMap';
 import './help.css';
@@ -898,7 +902,11 @@ export default function HelpLayer() {
                       key={i}
                       className={i === all.length - 1 ? undefined : 'help-beat-past'}
                     >
-                      <Markdown components={markdownComponents} urlTransform={urlTransform}>{block}</Markdown>
+                      <Markdown
+                        components={markdownComponents}
+                        urlTransform={urlTransform}
+                        remarkPlugins={REMARK_PLUGINS}
+                      >{block}</Markdown>
                     </div>
                   ))}
               </div>

@@ -327,6 +327,44 @@ reader sees if a host has no such widget. Widgets are handed to
 `<HelpProvider widgets={...}>`; the package knows the URL shape and nothing
 about what any widget draws.
 
+#### Styling a span or a block
+
+A placeholder whose kind is a **style property** opens a styled range, and
+`clear` closes it; the prose between is still markdown:
+
+```markdown
+Plain, then {{size:.7em; bg:pink; opacity:.4}}small, **bold**, `code`{{size:clear}} plain again.
+
+{{color:blue}}
+
+A whole paragraph, or several, in blue.
+
+{{color:clear}}
+```
+
+The first declaration takes its property from the kind (`{{size:.7em}}`); any
+further ones are `prop:value` pairs; `{{style:color:blue; size:.9em}}` is the
+same thing with no shorthand. Inline when the open and close share a paragraph
+(a `<span>`); a block when the open is a paragraph of its own (a `<div>` around
+the paragraphs up to the closing one). An unclosed range runs to the end of its
+container; a stray `clear` is dropped.
+
+| property | becomes |
+|---|---|
+| `size` | `font-size` |
+| `color` | `color` |
+| `bg`, `bg-color`, `background` | `background-color` |
+| `opacity` | `opacity` |
+| `nowrap` | `white-space: nowrap` (value ignored) |
+
+That list is the whole of it, on purpose: anything else, and any value with
+characters outside the plain CSS value set, is dropped, so the content file
+does not become a general CSS surface. Heading levels (`####`, `#####`, …)
+remain the way to size a whole line. Implemented as a remark plugin in
+[`styleRanges.ts`](styleRanges.ts), not as a text resolver — a resolver runs
+before markdown and could neither wrap formatted text nor know where a range
+ends.
+
 ### Anchors
 
 `Anchor:` says which element on screen the popover points at and rings. It is
