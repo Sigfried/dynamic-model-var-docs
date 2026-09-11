@@ -567,6 +567,14 @@ not a mechanical one.**
 
 ### The `why` argument — two audiences, one step
 
+**Resolved 2026-09-11: one audience, researchers.** Siggie is not going to
+think about different audiences any time soon. The detail stays, because a
+researcher (or anyone) who needs to get into the weeds, author their own
+schema or harmonize to this one needs the full explanations. The
+LinkML-community argument below is not being written for now. What is left —
+overlapping text between the `why` and `linkml-context` entries — is
+`TASKS help-finish-authoring/why-overlap`. The discussion is kept as it was.
+
 Parked 2026-09-08, mid-discussion. The `why` entry closes tour 1 and is meant
 to answer *why use the Explorer*. It does not currently work, and the reason is
 that **two different readers need two different arguments**, which one step

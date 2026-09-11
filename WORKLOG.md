@@ -114,6 +114,21 @@ host's palettes, passed as `<HelpProvider colors>` like widgets, looked up
 before the CSS-value filter; and `center` became block-only after
 `display:block` stopped a span sharing a line.
 
+**TASKS reshaped around finishing the authoring (2026-09-11, end of session).**
+`pictures` is DROPPED: the edge widget, the `{{relation:…}}` line, the palette
+colours in prose and the legend's `EdgeSample` now draw the real edges
+inline, which is what the row was asking for. `why-argument` is gone as a
+task: Siggie settled the audience question (researchers only, detail kept)
+and what remains is prose overlap, now a subtask. `read-tours` was rewritten:
+it had been read as "write the tours" and it is Siggie's own browser pass;
+the history in it went. `schema-includes` is untouched — nothing sets an
+include off from our prose yet. New: `help-finish-authoring` on top with two
+subtasks, `drop-association`, `ownership-rules-declarative`,
+`ownership-doc-cleanup`; subtask tags are `parent/child`. Siggie thought they
+had asked for the declarative rules before; I searched WORKLOG, BACKLOG and
+OWNERSHIP_CLASSIFICATION and found nothing beyond `override-site-check`.
+`tour-links` deferred to a fresh session — this one was long.
+
 **Left open, recorded in BACKLOG:** the intermittent map-jump-does-not-clear
 (`map-jump-canvas`), and `tour-menus` with the open/hold/close design sketch.
 
