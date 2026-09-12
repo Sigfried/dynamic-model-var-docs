@@ -7,6 +7,102 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-11 (later still) — the Ownership tour past `edge-types`
+
+Step 4 of OWNERSHIP_RULES_PLAN says to draft the tour BEFORE cutting
+OWNERSHIP_CLASSIFICATION.md, because the tour is where the explanation gets
+worked out at a length a reader tolerates. This is that draft (`3c461da`),
+covering the three rules; `why-ownership` and `edge-types` are Siggie's and
+were left alone apart from the beat work below.
+
+**Every example was re-derived from a probe of the live classifier, not from
+the old text**, and that mattered: the four Claude-authored steps it replaced
+asserted things the rule collapse had already made false. `three-kinds`
+described association edges and said "the model has exactly two" — there are
+none, `ASSOCIATION_SLOTS` has been empty since earlier the same day.
+`belongs-backward` explained `Specimen.creation_activity` by the
+cardinality-split rule, which is deleted. Counts are 38 / 60 / 51 / 10 and
+should be re-probed after a schema sync rather than adjusted by hand.
+
+**Association is parked as a comment, not written.** Siggie's call, in their
+own edit to the outline: *"can be explained in a commented-out appendix, or
+not."* With no slot classifying as one there is nothing on the canvas to point
+at, so a step would be describing a line the reader can never see.
+
+**Perspectives are dropped entirely.** The plan's step 4 listed "explain the
+four perspectives" as part of the target structure, and the doc says three
+(2 kinds x 3 perspectives + association). Siggie, when asked which: *"that
+whole perspectives thing is too pedantic. just forget about it."* Do not
+reintroduce it into the tour; whether it survives in the doc is a separate
+question for the doc cut.
+
+### Two authoring traps, both silent
+
+- **`Only:` and `Change:` on one entry keeps the `Change:`** — decided by which
+  field is PRESENT, not by which is non-empty. `the-legend` had both, so its
+  selection would never have been set and nothing would have said so. Merged
+  into one `Only: sel=...&legend=1`.
+- **`legend=1` persists forward and comes back on a back-step.** Scalars are
+  not refcounted, so an earlier step's open panel covers every later canvas,
+  and stepping back from `rules-recap` re-opens it over the rule steps. Every
+  step after `the-legend` now sets `legend=0` explicitly. The same hazard
+  applies to any panel param a future step opens.
+
+### What the anchor test caught
+
+`slot-row:MeasurementObservation.value_quantity` does not exist. `value_quantity`
+is declared on `Observation` and inherited, so selecting the child merges it
+into an `Observation` box and the row is tagged with the DECLARING class.
+The step uses plain `Observation` now, which also let the criterion beat
+contrast the exception against Rule 2 on one canvas (`value_quantity` vs
+`associated_participant`) instead of needing a second range.
+
+Also rejected: `help-id:relation-bar` as an anchor. It is tagged on every box
+that has relations, so it is ambiguous — the resolver takes the first visible
+match, which need not be the box the step is about. The beat inherits its
+step's `node-box:` anchor instead.
+
+`Spotlight: none` is not a thing either. Spotlight takes an anchor; an
+unrecognised value is ignored, which means it silently INHERITS the previous
+beat's spotlight rather than clearing it.
+
+### Rule 3's example changed on review
+
+`ObservationSet.observations` was the obvious choice and is the one the old
+text used, but `QuestionnaireResponseItem.response_value` is better: five
+subclasses that are plainly type-variants (Decimal/Boolean/Integer/TimePoint/
+String) on a two-box canvas, versus a merged Observation box carrying the
+whole observation family. Siggie suggested the Questionnaire family; probing
+confirmed the five collapse to `child-header`s inside one
+`node-box:QuestionnaireResponseValue`, so the step's claim that they merge into
+one box and that the single line lands on its header is literally true.
+
+Note the step reaches Rule 3 through the single-valued EXCEPTION, not Rule 1 —
+`response_value` is single-valued. An earlier draft said "which the earlier
+rules say the item owns", which was vague; Siggie asked for "the multivalued
+rule", which would have been wrong for this example.
+
+### `why-ownership` beats 1-2
+
+Left Siggie's steps alone except here. The two `Keep:` beats accumulate into
+one popover with everything but the newest dimmed, and they were prose of
+different shapes ("For instance, Condition has an optional (0..1)..." / "It
+also has a required (1..1)..."), so the eye could not find what changed. They
+are now a parallel list — attribute, arrow, target, cardinality, then one
+sentence of why — which is the shape `Keep:` exists for.
+
+Beat 3 was long enough to hold the step's whole conceptual payload on one
+screen. Of three alternatives offered, Siggie chose cutting the
+modeling-parlance framing (has-a/is-a) rather than splitting the beat, noting
+the is-a aside was *"in the way"* of the parallelism with beat 4's Visit.
+
+### Still open
+
+The legend panel carries no `data-help-id`, so `the-legend` can OPEN it but
+cannot point at it — the popover centres. Adding one to `HelpPanel` is a
+one-line code change, deliberately not made here: this commit is content only.
+
+---
 ## 2026-09-11 (later) — one order, because an exception can just reclassify
 
 Siggie, reviewing the commit above: *"I've just been accepting this, but would
