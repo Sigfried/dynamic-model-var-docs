@@ -63,8 +63,8 @@ introduced and then use one word.
 I've moved this section to the top just while i'm working actively on it.
 
 I want to restructure something like this:
-- explain ownership, why it's needed, the two edge types (getting rid of
-  association i hope)
+- explain ownership, why it's needed, the two edge types
+  - (association edges can be explained in an appendix)
 - explain the four perspectives
 - explain the rules and exceptions, in this order:
   - Rule 1, Multivalued owns -- multivalue-owns-fwd
@@ -158,60 +158,10 @@ I want to restructure something like this:
        :::s{center color=entity}
          {{relation:own-bkwd:Condition.associated_participant:Participant}}
        :::
-  1. association
-     - Spotlight: slot-row:Condition.associated_participant
-     - Only: sel=Document~Specimen~SpecimenContainer~SpecimenStorageActivity
-     - Anchor: node-box:SpecimenContainer
-     - ~~Position:~~ right
-     - Description:
-       The model currently has two attributes for which ownership didn't
-       make sense in either direction
-       When the target is considered to be by* :s[owned by]{color=own-bkwd} its
-       target, it places the target to the left and draws a backward-pointing
-       arrow {{edge:association}}
-       :::s{center color=entity}
-         {{relation:association:SpecimenStorageActivity.container:SpecimenContainer}}
-       :::
 
-       or {{edge:association}}
-- **Beats:**
-  1. belongs to
-     - Description:
-       ##### Belongs to
-       `source_participant` holds ONE Participant, and a Participant exists
-       whether or not any specimen points at it. A single-valued pointer at
-       something with a life of its own is a foreign key: the specimen
-       belongs to the participant, not the other way round. So Participant is
-       drawn on the left and the line runs from this row back to it.
-       **Rule 2: a single-valued attribute belongs to its entity.**
-     - Anchor: slot-row:Specimen.source_participant
-<!--  
-     - Only: sel=Participant~Condition~BodySite
-     -
-  and it is not in the schema.
-  A LinkML schema says that Visit has an attribute holding a Participant; it
-  does not say which of the two contains the other, and the generated
-  documentation cannot show it either.
-
-  So the Explorer decides, with a few rules and a number of exceptions, 
-  <!-- where do these live in code? ideally it would be in a declarative
-       config file for both the rules and exceptions - ->
-  and draws the result. This
-  tour shows the rules on real cases.
-
-  There are three kinds of edges (lines) between entities on the diagram:
-  3. - two-edge-types
-     - Description:
-       ###### Two main edge types
-       So we have edges pointing forward, to the right
-
-  - **owns** — the line runs from the owner's row to the entity it holds;
-  - **belongs to** — the line runs from the member's row BACK to the entity
-    it belongs to;
-  - **associated with** — dashed, arrowed at both ends, and no claim either
-    way.
--->
-
+<!-- the rest of the tour from here is claude-authored and i'm
+     only keeping it as possible source material for continuing
+     the better way of presenting stuff above -->
 ### owns-forward
 
 - **Title:** Owns: a list of things
