@@ -323,6 +323,10 @@ function ExploreAppInner() {
     setDetailId(null);
     setTableCollapsed(false);
     setPathToRoot(false);
+    // The overlays are part of the view being cleared, not a reading
+    // preference: leaving `legend=1` set meant a reset link still carried it.
+    setLegendOpen(false);
+    setCasesOpen(false);
     // Toolbar settings are deliberately NOT reset: they are how this user
     // prefers to read the diagram, not part of the view being cleared.
   }, []);

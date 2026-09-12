@@ -67,6 +67,27 @@ describe('Explore title-click reset', () => {
     });
   });
 
+  test('closes the legend and example-cases overlays, and drops them from the URL', async () => {
+    // REGRESSION (2026-09-12). `resetApp` cleared the selection and the drawer
+    // but left the overlays open, so a title click produced a "reset" link that
+    // still carried ?legend=1 — and the panel stayed on screen over an empty
+    // canvas. The overlays are part of the view being cleared, unlike the
+    // toolbar settings, which are a reading preference and stay put.
+    window.history.replaceState(
+      null, '', '/dynamic-model-var-docs/?sel=Person&legend=1&cases=1',
+    );
+    await renderApp();
+
+    await waitFor(() => expect(params().get('legend')).toBe('1'));
+
+    fireEvent.click(screen.getByRole('heading', { name: /BDCHM Explorer/i }));
+
+    await waitFor(() => {
+      expect(params().get('legend')).toBeNull();
+      expect(params().get('cases')).toBeNull();
+    });
+  });
+
   test('re-opens the selection table if it was collapsed', async () => {
     window.history.replaceState(null, '', '/dynamic-model-var-docs/?sel=Person');
     await renderApp();

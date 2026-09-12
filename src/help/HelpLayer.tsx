@@ -856,28 +856,17 @@ export default function HelpLayer() {
             )}
 
             {/*
-              AUTHORING WARNING, dev-only, shown on the same switch as the
-              content ids (`showAddresses`).
+              The in-app AUTHORING WARNING for a `Change:` without an `Action:`
+              used to render here, on the same switch as the content ids
+              (`showAddresses`). REMOVED 2026-09-12: Siggie authors with the ids
+              on all the time, so the banner was permanent furniture over the
+              steps being written rather than a notice.
               *
-              A step that changes the canvas without an `Action:` is the bug
-              this format exists to fix, but it used to be enforced ONLY by a
-              test — so an author working in the app hit it at commit time,
-              away from the step they were writing. Here it is attached to the
-              popover that has the problem, while they are looking at it.
-              *
-              An EMPTY change is exempt: it draws nothing, so there is no
-              transition to narrate. See `helpContent.test.ts`, which encodes
-              the same rule, and delete both together if the rule goes.
+              The RULE is unchanged and still enforced by `helpContent.test.ts`,
+              which is where it was enforced before this banner existed. Do not
+              restore this without separating it from `showAddresses` — the ids
+              are wanted; the warning is not.
             */}
-            {inTour && showAddresses && position?.change && !position.action && (
-              <div className="help-popover-action" style={{ opacity: 0.85 }}>
-                <span className="help-popover-action-mark" aria-hidden="true">⚠</span>
-                <div>
-                  <em>Authoring:</em> this position changes the app
-                  (<code>{position.change}</code>) but has no <code>Action:</code>.
-                </div>
-              </div>
-            )}
 
             {/*
               In a tour the BODY is everything the position has revealed so far:
