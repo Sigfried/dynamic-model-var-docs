@@ -137,9 +137,9 @@ classifier say one thing; if a label changes there, change it here.
 - **Title:** Edge types
 - **Tour:** Ownership
 - Only: sel=Participant~Condition~BodySite
+- **Anchor:** node-box:BodySite
+- Position: bottom
 - Spotlight: slot-row:Condition.affected_body_site
-- **Anchor:** node-box:Condition
-- Width: 600
 - **Description:**
   So, when the Explorer has configured an attribute target as
   :s[owning]{color=own-fwd} its target, it places the target to the right and
@@ -150,6 +150,7 @@ classifier say one thing; if a label changes there, change it here.
 - Beats:
   1. backwards
      - Keep: true
+     - **Anchor:** node-box:Participant
      - Spotlight: slot-row:Condition.associated_participant
      - Description:
        When the target is considered to be by* :s[owned by]{color=own-bkwd} its
@@ -164,7 +165,9 @@ classifier say one thing; if a label changes there, change it here.
 - **Title:** Three rules, and where they live
 - **Tour:** Ownership
 - Only: sel=Participant~Condition~BodySite&legend=1
-- **Action:** Opened the Legend panel — it is always in the Help menu.
+- **Anchor:** node-box:Participant
+- Highlight: none
+- ~~**Action:** Opened the Legend panel — it is always in the Help menu.~~
 - **Anchor:** none
 - **Width:** 560
 - **Description:**
@@ -173,21 +176,21 @@ classifier say one thing; if a label changes there, change it here.
   now and always available from the Help menu.
 
   Each rule shows the count of attributes it decided, and clicking one lists
-  them. So when a line looks wrong, that is where to find out which rule put it
-  there.
-
+  them.
 
 ### multivalue-owns-fwd
 
 - **Title:** Owns because multivalued
 - **Tour:** Ownership
-- **Only:** sel=Questionnaire~QuestionnaireItem&legend=0
+- **Only:** sel=Questionnaire~QuestionnaireItem
 - **Action:** Drew Questionnaire and the items it holds.
-- **Anchor:** slot-row:Questionnaire.items
+- **Anchor:** node-box:Questionnaire
+- **Spotlight:** slot-row:Questionnaire.items
+- Highlight: ring
 - **Width:** 560
 - **Description:**
-  **Rule 1 — :s[owns because multivalued]{color=own-fwd}.** The easy case, and
-  the most common one: 38 of the attributes in this model.
+  **Rule 1 — :s[owns because multivalued]{color=own-fwd}.** 38 attributes.
+  <!-- low priority: have the 38 calculated from schema like legend does it -->
 
   `items` holds a LIST of QuestionnaireItems (`1..*`), and an entity that holds
   a list of things owns them. So the target is drawn to the right and the arrow
@@ -203,13 +206,16 @@ classifier say one thing; if a label changes there, change it here.
 
 - **Title:** Belongs to because single-valued
 - **Tour:** Ownership
-- **Only:** sel=Participant~Specimen&legend=0
+- **Only:** sel=Participant~Specimen
 - **Action:** Drew Specimen and the Participant it came from.
-- **Anchor:** slot-row:Specimen.source_participant
+- **Anchor:** node-box:Participant
+- **Spotlight:** slot-row:Specimen.source_participant
+- Highlight: ring
+- Position: bottom
 - **Width:** 560
 - **Description:**
-  **Rule 2 — :s[belongs to because single-valued]{color=own-bkwd}.** The
-  other big group: 60 attributes.
+  **Rule 2 — :s[belongs to because single-valued]{color=own-bkwd}.**
+  60 attributes.
 
   `source_participant` holds ONE Participant, and that Participant exists
   whether or not any specimen points at it. A single-valued pointer at
@@ -241,29 +247,22 @@ classifier say one thing; if a label changes there, change it here.
 - **Spotlight:** slot-row:Observation.value_quantity
 - **Width:** 600
 - **Description:**
-  **The exception to Rule 2 — :s[owns despite being single-valued]{color=own-fwd}.**
+  **Exceptions to Rule 2 — :s[owns despite being single-valued]{color=own-fwd}.**
   51 attributes.
 
   `value_quantity` is single-valued, so **Rule 2** would say the observation
-  **belongs to** its Quantity. But a Quantity is a value, `5 mg` — you find it
-  by way of whatever holds it.
+  **belongs to** its Quantity, which would be absurd. A Quantity is just
+  a fact about the entity that holds it.
 - Beats:
   1. the criterion
      - Description:
-       So the test isn't "does this have independent existence?" — it is
-       narrower and easier to check:
+       The exceptions to Rule 2 are entities that...
 
-       **the holder is where this is found.**
-
-       Quantity, TimePoint, BodySite, TimePeriod, Substance and a dozen more
-       pass it. A Participant or an Organization does not: you can find those
-       on their own — which is why `associated_participant`, further down,
-       still flips backward under **Rule 2**.
+       Quantity, TimePoint, BodySite, TimePeriod, Substance...
 
        The schema can't tell us this: the list is recorded in the Explorer by
        hand, and these decisions could be debated.
      - Spotlight: slot-row:Observation.associated_participant
-
 
 ### child-following-parent
 

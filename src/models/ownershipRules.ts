@@ -246,6 +246,11 @@ export const SINGLE_VALUE_OWNER_TARGETS = new Set<string>([
   // thing without a second way to spell an override.
   'SpecimenCreationActivity',           // Specimen.creation_activity
   'DimensionalObservationSet',          // Specimen.dimensional_measures
+  // DimensionalObservationSet needs to be on this list because
+  //   - it is different from SpecimenQualityObservation and SpecimenQuantityObservation
+  //     by being 0..1 instead of 0..*
+  //   - and it is different from the other ObservationSets by being the only one
+  //     referenced by another slot
 ]);
 
 /**
