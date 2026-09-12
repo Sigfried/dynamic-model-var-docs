@@ -70,16 +70,29 @@ export default function HelpPanel({
 
          `resize: both` is the free native resizer the plan wanted, and it needs
          a non-`visible` overflow to appear — which `overflow-y-auto` already
-         gives. It only offers the corner grip; nothing here implements one. */
+         gives. It only offers the corner grip; nothing here implements one.
+
+         The height cap is a `maxHeight` here rather than `max-h-[80vh]` in the
+         classes because a CSS max ALSO caps the native resizer: dragging the
+         corner down simply stopped at 80vh, which read as the grip breaking
+         (Siggie, 2026-09-11). It is now measured from the panel's own top so
+         the default reaches the bottom of the viewport instead of stopping a
+         fifth short, and `resize` may still be dragged past it. */
       style={{
         resize: 'both',
         width: `${widthRem}rem`,
         maxWidth: 'calc(100vw - 2rem)',
+        /* `top-14` is 3.5rem; leave the same 1rem margin at the bottom that
+           `right-4` leaves at the side. A dragged panel is positioned from the
+           viewport top, so its room is measured from wherever it landed. */
+        maxHeight: drag.offset
+          ? `calc(100vh - ${drag.offset.top}px - 1rem)`
+          : 'calc(100vh - 4.5rem)',
         ...(drag.offset
           ? { position: 'fixed', ...drag.offset, right: 'auto' }
           : !moved && offset ? { right: `${OFFSET_RIGHT_REM}rem` } : {}),
       }}
-      className={`z-30 max-h-[80vh] overflow-y-auto
+      className={`z-30 overflow-y-auto
                   rounded-lg border border-gray-300 dark:border-slate-600
                   bg-white dark:bg-slate-800 shadow-xl
                   text-gray-900 dark:text-gray-100

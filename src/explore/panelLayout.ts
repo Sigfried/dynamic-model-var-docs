@@ -16,14 +16,18 @@
 /** Default panel widths, in rem. Both panels stay resizable by their corner. */
 export const PANEL_WIDTH_REM = {
   /*
-   * The legend lists `Class.slot → Range (owner: X)` rows in 10px monospace.
-   * Measured 2026-09-11 over all 159: median 52 characters, p90 76, max 95
-   * (`QuestionnaireResponseItem.has_questionnaire_item → QuestionnaireItem
-   * (owner: QuestionnaireItem)`). At ~6px per character plus the panel's
-   * padding, 36rem clears p90 with room and wraps only the longest handful —
-   * sizing for the max would mean a ~40rem panel for one row.
+   * The legend lists `Class.slot → Range` rows in 10px monospace. Measured
+   * 2026-09-11 over all 159: median 46 characters, p95 64, max 78 (the five
+   * `QuestionnaireResponseItem.response_value → QuestionnaireResponseValue*`
+   * rows). At ~6px per character plus the panel's chrome, 30rem clears p95
+   * and wraps only those five; sizing for the max would cost 32rem+ to save
+   * one wrapped line each.
+   *
+   * It was 36rem for a few minutes, when the rows still carried a redundant
+   * `(owner: X)` suffix that pushed the max to 95. Dropping the suffix was the
+   * better half of the same fix.
    */
-  legend: 36,
+  legend: 30,
   cases: 26,
 } as const;
 

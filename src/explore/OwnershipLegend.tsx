@@ -196,6 +196,11 @@ export default function OwnershipLegend({
                     {g.ruleText}
                   </p>
                   {isOpen && (
+                    /* `Class.slot → Range`, always in DECLARATION order —
+                       which end owns is what the rule above says, so the
+                       per-row `(owner: X)` that used to sit here only ever
+                       repeated the range printed two tokens earlier (checked
+                       across all 60 backward pairs, 2026-09-11). */
                     <ul className="mt-1 mb-1.5 space-y-0.5 font-mono text-[10px]">
                       {g.pairs.map(p => (
                         <li key={`${p.declaredOn}.${p.slotName}`} className="text-gray-600 dark:text-gray-400">
@@ -207,11 +212,6 @@ export default function OwnershipLegend({
                           {classLink(p.range)}
                           {p.isLoop && (
                             <span className="ml-1" style={{ color: RANGE_COLORS.entity }}>loop</span>
-                          )}
-                          {g.verdict === 'own-bkwd' && (
-                            <span className="ml-1 text-gray-400">
-                              (owner: {p.owner})
-                            </span>
                           )}
                         </li>
                       ))}

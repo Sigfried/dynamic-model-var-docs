@@ -146,23 +146,74 @@ is what the legend shows. See WORKLOG.
 
 **The goal is a much shorter, much easier doc — not an updated one.** At 943
 lines it is the biggest obstacle to understanding the rules it documents, and
-steps 1–3 are what make cutting it possible: seven rules become three, five sets
-become one, and the Rule/Exception numbering goes away.
+steps 1–3 are what made cutting it possible: seven rules became three, five sets
+became one, and the Rule/Exception numbering is gone.
 
-Do this **with** the code changes, not after, or it gets rewritten twice.
+**START HERE — this is all that is left of the task, and it is a fresh
+session's job.** The code shipped 2026-09-11 (`432abca`, `ca7e310`), so the
+"do it alongside the code" warning above no longer applies; what it was
+guarding against — writing the doc against rules that then changed — cannot
+happen now that they have settled.
 
-Where the bulk actually is, measured 2026-09-11:
+**Two process requirements, both Siggie's, both easy to get wrong:**
 
-| lines | section | what to do |
+1. **Ask about each chunk you would KEEP, not each chunk you would cut.**
+   Siggie does not trust the line-count table below, and much of the file is
+   out of date though parts were updated recently. The default is that material
+   goes; a chunk earns its place by your making the case for it and Siggie
+   agreeing.
+2. **Draft the rest of the Ownership tour FIRST**, past `why-ownership` and
+   `edge-types`, and go back and forth on it with Siggie before the big
+   rewrite. The tour is where the explanation gets worked out at the length a
+   reader will tolerate; the doc is then the same shape with more technical
+   detail. Siggie's target structure, from their tour notes:
+
+   - explain ownership, why it is needed, the two edge types
+     (association edges can go in an appendix)
+   - explain the four perspectives
+   - explain the rules and exceptions, in this order:
+     - Rule 1, `multivalue-owns-fwd` — currently no exceptions
+     - Rule 2, `single-value-belongs-to-bkwd`
+       - exception: `single-value-owns-fwd`
+     - Rule 3, `child-following-parent`
+
+   That order is now the code's order too (`OWNERSHIP_RULES` is in teaching
+   order), and the legend already lists it that way, so the doc, the tour, the
+   legend and the classifier can all agree.
+
+Where the bulk actually is. **Re-measured after the code shipped** — the
+earlier table in this file was by eye and Siggie was right not to trust it.
+943 lines total; every section over 25 lines, longest first:
+
+| lines | section | note |
 |---|---|---|
-| 135 | The relation vocabulary | Three kinds, five positions, a phrasing table and a rejected-wordings list. Keep the kinds and the two axes; the phrasing table is copy for a feature that does not exist yet, and the rejected wordings are WORKLOG material. |
-| 127 | How edges are drawn | Rendering, not classification. Much of it belongs with the code it describes. |
-| 126 | Appendix — implementation notes | Already says "do not start implementation from this appendix." Cut hard; the declaration is now self-describing. |
-| 122 | The color system | Its own subject. Strong candidate to become its own file. |
-| 86 | `Entity`-ranged slots | **Step 1 deletes this rule.** Keep only why `Entity` is drawn as a range but skipped in the inheritance tree. |
-| 77 | Rule 2 + exceptions | Exception 2b disappears (step 1); 2a is renamed and regrouped (step 2). |
-| 65 | `any_of` — not handled | N=1, low priority, decided. A short note, not a section. |
-| 146 | Rules 1–3 combined | **This is the actual subject and it is a sixth of the file.** |
+| 73 | `### The relation bar` | Rendering, not classification. |
+| 67 | `### What the code does today` | In the appendix that already says not to implement from it. **Now describes seven rules and five sets that no longer exist.** |
+| 61 | `## The color system` | Its own subject; strong candidate for its own file. |
+| 54 | `### The five positions, and the two axes` | Keep the kinds and the two axes. |
+| 49 | `### Exception 2a` | **Renamed** `single-value-owns-fwd`, and regrouped into three groups with a new criterion. |
+| 45 | `### Sibling color assignment` | With the color system. |
+| 42 | `## Rule 3` | **Renamed** `child-following-parent`. |
+| 38 | `## Summary` | Counts are stale; re-derive, do not adjust. |
+| 38 | `### The decision (option 1, taken)` | `any_of`, N=1, decided. A note, not a section. |
+| 36 | `### PLANNED — one inheritance accessor` | Its own TASKS row (`inheritance-accessor`); does not belong here. |
+| 29 | `### Layering and cycles` | |
+| 29 | `## Why there are rules at all` | The one section a reader needs FIRST. |
+| 27 | `## Rule 1` | **Renamed** `multivalue-owns-fwd`. |
+| 27 | `### The phrasing table` | Copy for a feature that does not exist. |
+| 26 | `### Where it lives` | |
+
+**Sections the code changes made wrong, not merely long:**
+
+- `### Exception 2b — cardinality splits a family` (19) — **the rule is
+  deleted.** Its two ranges are ordinary `SINGLE_VALUE_OWNER_TARGETS` members.
+- `## `Entity`-ranged slots ⇒ `own-fwd`` (15 + 19 + 16) — **the rule is
+  deleted.** `Entity` is a range-set member now. Keep only why it is drawn as a
+  range while staying out of the inheritance tree.
+- `### The two edges that used to be here` (19) — association history; WORKLOG.
+- Every "Rule N" / "Exception Na" number, everywhere — the numbering is gone in
+  favour of names.
+- `### Wordings considered and rejected` (19) — WORKLOG by CLAUDE.md's rule.
 
 A reader wanting "how does a slot become an edge" should find it in the first
 screen or two. Aim to at least halve the file; anything that survives should be

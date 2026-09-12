@@ -23,8 +23,10 @@ import { useDragged } from '../help/useDragged';
 
 const VW = 1400;
 const VH = 900;
-/** Where the overlay sits before anything is dragged: a 416px panel (`w-[26rem]`)
- *  at the layout's top right, which is HelpPanel's real `top-14 right-4`. */
+/** Where the overlay sits before anything is dragged: a 416px panel at the
+ *  layout's top right, which is HelpPanel's real `top-14 right-4`. The width is
+ *  just a fixture — this tests the drag hook, not the panel, whose width has
+ *  been a `panelLayout.ts` constant rather than a class since 2026-09-11. */
 const FRAME = { left: VW - 416 - 16, top: 56, width: 416, height: 300 };
 
 beforeAll(() => {

@@ -127,12 +127,24 @@ OwnershipGraphView). `helpPanelWidth.test.tsx` pins the arithmetic.
 p90 76, max 95. At ~6px per character in 10px monospace, 36rem clears p90 and
 wraps only the longest handful — the max would want ~40rem for one row.
 
-**Noticed but NOT changed, because it is Siggie's call:** `(owner: X)` on a
-backward row is *always* the range, verified across all 60 own-bkwd pairs. It
-restates the word printed two tokens earlier and is what pushes the longest rows
-past 90 characters — the same redundancy the verdict badge had. Dropping it
-would take the max to 78 and make 36rem generous rather than tight. Left alone:
-the ask was width, not a content cut.
+**`(owner: X)` is gone** — Siggie: "I'd been forgetting to ask you to get rid
+of [it]." It was always the range, verified across all 60 own-bkwd pairs, so it
+restated the word printed two tokens earlier; which end owns is what the RULE
+above the list says, not a per-row fact. With it gone the rows re-measure to
+median 46, p95 64, max 78 (the five `QuestionnaireResponseItem.response_value →
+QuestionnaireResponseValue*` rows), and the panel came back down to **30rem**.
+It was 36rem for about ten minutes. Dropping the suffix was the better half of
+the same fix, and doing it first would have saved the wider panel.
+
+**The panel's height cap was a `max-h-[80vh]` class, and a CSS max also caps
+`resize: both`** — so dragging the corner down simply stopped, which reads as
+the grip being broken rather than as a limit (Siggie: "the resize on that panel
+has a height maximum that's only about 3/4 of the viewport"). Now an inline
+`maxHeight` measured from the panel's own top (`calc(100vh - 4.5rem)`, matching
+`top-14` plus the 1rem margin `right-4` leaves at the side), recomputed from
+`drag.offset.top` once dragged. Default reaches the viewport bottom, and the
+resizer can still be pulled past it. `helpPanelWidth.test.tsx` asserts there is
+no `max-h-*` class, because that is the form the bug takes if it returns.
 
 **Rejected:** reusing `.help-inline-widget`, the class the tour styles its
 `{{edge:…}}` widgets with. It looks like the obvious shared thing, but

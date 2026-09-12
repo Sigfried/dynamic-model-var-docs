@@ -46,6 +46,22 @@ describe('HelpPanel width and offset', () => {
     expect(on.className).toContain('right-4');
   });
 
+  /*
+   * The height cap has to be an inline `maxHeight`, never a `max-h-*` class.
+   * A CSS max also caps `resize: both`, so dragging the corner down just
+   * stopped — which reads as the grip being broken rather than as a limit
+   * (Siggie, 2026-09-11). `max-h-[80vh]` also left a fifth of the viewport
+   * unused by default.
+   */
+  test('the height cap leaves no room-to-grow on the table', () => {
+    const el = panelOf(render(
+      <HelpPanel title="h" onClose={() => {}}>x</HelpPanel>,
+    ).container);
+    expect(el.className).not.toMatch(/\bmax-h-/);
+    expect(el.style.maxHeight).toBe('calc(100vh - 4.5rem)');
+    expect(el.style.resize).toBe('both');
+  });
+
   test('a wide panel still fits a narrow viewport', () => {
     const el = panelOf(render(
       <HelpPanel title="m" onClose={() => {}} widthRem={99}>x</HelpPanel>,
