@@ -33,8 +33,9 @@ import {
   ENTITY_CATEGORIES, findUncategorizedClasses, UNCATEGORIZED_BY_DESIGN,
 } from '../config/entityCategories';
 import {
-  buildContainmentGraph, classifySlotEdgeExplained, OWNERSHIP_RULE_TEXT,
-  SKIP_SUBCLASS_EXPANSION, ENTITY_ROOT, subtreeOf, teachingRank,
+  buildContainmentGraph, classifySlotEdgeExplained,
+  OWNERSHIP_RULE_TEXT, OWNERSHIP_RULE_LABEL,
+  SKIP_SUBCLASS_EXPANSION, ENTITY_ROOT, subtreeOf, ruleRank,
 } from '../models/containmentGraph';
 import type {
   ContainmentGraph, OwnershipVerdict, OwnershipRule,
@@ -69,7 +70,7 @@ export { cardinalityLabel, SKIP_SUBCLASS_EXPANSION } from '../models/containment
  */
 export {
   OWNERSHIP_VERDICTS, OWNERSHIP_RULES, OWNERSHIP_RULE_TEXT,
-  OWNERSHIP_RULES_TEACHING_ORDER, teachingRank, parentRuleOf,
+  OWNERSHIP_RULE_LABEL, ruleRank, parentRuleOf,
 } from '../models/containmentGraph';
 export type {
   VerdictSpec, DrawnVerdict, Layering, HeadPlacement, HeadDirection, OwnershipRule,
@@ -179,6 +180,8 @@ export interface OwnershipPair {
 export interface OwnershipPairGroup {
   verdict: OwnershipVerdict;
   rule: OwnershipRule;
+  /** The rule's NAME, as the legend and the tour say it. */
+  ruleLabel: string;
   /** Plain-language statement of the rule. */
   ruleText: string;
   pairs: OwnershipPair[];
@@ -967,7 +970,12 @@ export class DataService {
         const key = `${verdict}/${rule}`;
         let g = groups.get(key);
         if (!g) {
-          g = { verdict, rule, ruleText: OWNERSHIP_RULE_TEXT[rule], pairs: [] };
+          g = {
+            verdict, rule,
+            ruleLabel: OWNERSHIP_RULE_LABEL[rule],
+            ruleText: OWNERSHIP_RULE_TEXT[rule],
+            pairs: [],
+          };
           groups.set(key, g);
         }
         const flipped = verdict === 'own-bkwd' || verdict === 'association';
@@ -990,6 +998,7 @@ export class DataService {
      */
     const induced: OwnershipPairGroup = {
       verdict: 'own-fwd', rule: 'child-following-parent',
+      ruleLabel: OWNERSHIP_RULE_LABEL['child-following-parent'],
       ruleText: OWNERSHIP_RULE_TEXT['child-following-parent'], pairs: [],
     };
     const have = new Set<string>();
@@ -1016,17 +1025,16 @@ export class DataService {
         a.declaredOn.localeCompare(b.declaredOn) || a.slotName.localeCompare(b.slotName));
     }
     /*
-     * TEACHING order — each default followed by its exceptions — not the
-     * classifier's precedence order, and not biggest-group-first.
+     * The order the rules are DECLARED in, which is the order they are taught.
      *
-     * It used to be biggest-first, on the reasoning that the legend is read to
-     * find routing cases. But that put Rule 2's exception above Rule 2 and
-     * Rule 3 in the middle, so the listing presented the rules in an order no
-     * explanation of them uses. Finding a case is served by the group's own
+     * It used to be biggest-group-first, on the reasoning that the legend is
+     * read to find routing cases. But that put Rule 2's exception above Rule 2
+     * and Rule 3 in the middle, so the listing presented the rules in an order
+     * no explanation of them uses. Finding a case is served by the group's own
      * count, which is shown either way.
      */
     return [...groups.values()].sort(
-      (a, b) => teachingRank(a.rule) - teachingRank(b.rule));
+      (a, b) => ruleRank(a.rule) - ruleRank(b.rule));
   }
 
   /**

@@ -23,8 +23,11 @@
  * `association` — an edge kind that is dashed, arrowed at BOTH ends, claims no
  * ownership, and yet layers exactly like `own-bkwd` — must be expressible by
  * adding one entry to `OWNERSHIP_VERDICTS` and one to `OWNERSHIP_RULES`, and
- * touching nothing else. That is what makes the current (empty) association
- * category restorable from a specification rather than from git history.
+ * touching nothing else. That is what makes it restorable from a specification
+ * rather than from git history. Its rule entry is COMMENTED OUT at the foot of
+ * `OWNERSHIP_RULES` rather than deleted; restoring it means uncommenting it
+ * AND moving it to the front, because unlike an exception it defeats Rule 1
+ * outright and so has to be reached first.
  *
  * It is the reason `claimsOwnership` and `layering` are separate fields: for
  * the two live kinds they are perfectly correlated, and a design that had only
@@ -84,6 +87,8 @@ export interface VerdictSpec {
  * `association` is absent because no slot classifies as it (2026-09-11). The
  * kind survives in `edgeStyle.ts` and its restoration entry is written out in
  * `ownershipRules.test.ts`, which is what proves this table can express it.
+ * Note it is still an `OwnershipVerdict` and an edge kind — only the RULE of
+ * that name is gone, so `verdict === 'association'` comparisons stay live.
  */
 export const OWNERSHIP_VERDICTS = {
   'own-fwd': {
@@ -121,11 +126,14 @@ export type DrawnVerdict = keyof typeof OWNERSHIP_VERDICTS;
  * against. `RULE_IDS_MATCH_UNION` below fails the build if the two drift.
  */
 export type OwnershipRule =
-  | 'association'                 // slot in ASSOCIATION_SLOTS (empty since 2026-09-11)
   | 'multivalue-owns-fwd'         // Rule 1: multi-valued slot → class
-  | 'single-value-owns-fwd'       // Rule 2's exception: range is where the value lives
   | 'single-value-belongs-to-bkwd' // Rule 2: single-valued slot → other entity
+  | 'single-value-owns-fwd'       // Rule 2's exception: range is where the value lives
   | 'child-following-parent';     // Rule 3: an own-fwd slot's range includes its subclasses
+// `association` is NOT here: the rule is commented out in OWNERSHIP_RULES
+// (2026-09-11) because no slot classifies as it. The VERDICT of the same name
+// survives on `OwnershipVerdict`, which is a different thing — `=== 'association'`
+// comparisons against a verdict or an edge kind are still live and correct.
 
 /** What the classifier knows about one slot. */
 export interface SlotFacts {
@@ -148,6 +156,8 @@ export interface SlotFacts {
 
 export interface RuleSpec {
   id: OwnershipRule;
+  /** The rule's name, as the legend and the tour say it. */
+  label: string;
   /**
    * Fires when this returns true. `undefined` means the rule is not evaluated
    * by the classifier at all — see `child-following-parent`, a second pass in
@@ -159,12 +169,14 @@ export interface RuleSpec {
   /** Human-readable statement of the rule, for the legend. */
   text: string;
   /**
-   * The rule this one is an EXCEPTION to. Presentation only — the legend
-   * renders it indented beneath its parent, so a reader meets the default
-   * before the case that defeats it.
+   * The rule this one is an EXCEPTION to: it REVISES that rule's verdict for
+   * the slots it matches, rather than competing for them.
    *
-   * It has no effect on classification: array order alone decides that, and an
-   * exception necessarily precedes the rule it names here.
+   * Both structural and presentational, and the two agree because they are the
+   * same claim. `classify` applies an exception only to a slot its parent
+   * already claimed, so a rule can be stated plainly and refined afterwards;
+   * the legend indents on the same field, so what a reader sees nested is
+   * exactly what the classifier treats as a refinement.
    */
   parentRule?: OwnershipRule;
 }
@@ -237,55 +249,54 @@ export const SINGLE_VALUE_OWNER_TARGETS = new Set<string>([
 ]);
 
 /**
- * **ORDER IS SEMANTIC, AND IT IS PRECEDENCE — NOT PEDAGOGY.** The first entry
- * whose `when` returns true decides.
+ * **ONE ORDER, AND IT IS THE ORDER YOU WOULD TEACH THEM IN.** Rule 1, then
+ * Rule 2, then Rule 2's exception, then Rule 3.
  *
- * These are two different orders for two different purposes and must not be
- * conflated. Here, an exception has to come BEFORE the rule it defeats or it
- * never fires. Taught, the default comes first and the exception second, so a
- * reader meets the ordinary case before the one that breaks it — that order is
- * the legend's, reconstructed from `parentRule`.
+ * This is the order the tour uses, the order the legend lists, and the order
+ * `classify` applies — deliberately, because there used to be two. An
+ * exception used to have to jump the queue and run BEFORE the rule it defeats,
+ * which forced the array into precedence order and left the legend
+ * reconstructing a teaching order from `parentRule`. Siggie, 2026-09-11: run
+ * them in pedagogy order and let the exception reclassify instead. It does not
+ * complicate `classify` — it simplifies it, because an exception was never
+ * really competing for the slot. It revises the verdict its parent already
+ * reached.
  *
- * What precedence encodes:
- *   - `association` precedes Rule 1 because it exists to DEFEAT it.
- *   - `single-value-owns-fwd` precedes `single-value-belongs-to-bkwd` for the
- *     same reason: it is that rule's exception.
- *   - `single-value-belongs-to-bkwd` is last and total: it is the default.
+ * So: the first rule WITHOUT a `parentRule` whose `when` fires gives the
+ * verdict, and then that rule's exceptions get a chance to revise it. The
+ * default (`single-value-belongs-to-bkwd`) is total and can sit in the middle
+ * where it is taught rather than last where precedence would have wanted it.
  *
- * Reordering entries silently changes classification. `tsc` cannot catch that;
- * the schema-sweeping tests in `containmentGraph.test.ts` can, and do.
+ * Reordering the entries still changes classification — two unrelated rules
+ * can both match a slot. `tsc` cannot catch that; the schema-sweeping tests in
+ * `containmentGraph.test.ts` can, and do.
  */
 export const OWNERSHIP_RULES = [
   {
-    id: 'association',
-    when: ({ slotName }) => ASSOCIATION_SLOTS.has(slotName),
-    verdict: 'association',
-    text: 'A named association: the slot connects two things without either owning '
-      + 'the other. Both ends are arrowed. Listed explicitly, because every other rule '
-      + 'would read it as ownership.',
-  },
-  {
     id: 'multivalue-owns-fwd',
+    label: 'Owns because multivalued',
     when: ({ multivalued }) => multivalued,
     verdict: 'own-fwd',
     text: 'Rule 1: a multi-valued slot pointing at a class means the owner has-a '
       + 'collection of them, so ownership runs forward: owner → range.',
   },
   {
+    id: 'single-value-belongs-to-bkwd',
+    label: 'Belongs to because single-valued',
+    when: () => true,                   // the default: total, so it matches anything
+    verdict: 'own-bkwd',
+    text: 'Rule 2: a single-valued slot pointing at another ENTITY reads as a foreign key, '
+      + 'so ownership runs BACKWARD: the target owns the source, not the other way round.',
+  },
+  {
     id: 'single-value-owns-fwd',
+    label: 'Owns despite being single-valued',
     when: ({ range }) => SINGLE_VALUE_OWNER_TARGETS.has(range),
     verdict: 'own-fwd',
     parentRule: 'single-value-belongs-to-bkwd',
     text: 'Exception to Rule 2: a single-valued slot pointing at a range that is found '
       + 'only by way of its holder (Quantity, TimePoint, and the like) is forward ownership '
       + '— the holder is where the value lives, so it is not a pointer out to something else.',
-  },
-  {
-    id: 'single-value-belongs-to-bkwd',
-    when: () => true,                   // the default; must stay last
-    verdict: 'own-bkwd',
-    text: 'Rule 2: a single-valued slot pointing at another ENTITY reads as a foreign key, '
-      + 'so ownership runs BACKWARD: the target owns the source, not the other way round.',
   },
   {
     /*
@@ -296,30 +307,58 @@ export const OWNERSHIP_RULES = [
      * `when` is deliberately absent — see RuleSpec.
      */
     id: 'child-following-parent',
+    label: 'Owns the children because it owns the parent',
     verdict: 'own-fwd',
     text: 'Rule 3: a slot whose range is a parent class accepts any of its subclasses, so '
       + 'whatever owns the parent through that slot owns each subclass too. These '
       + 'edges are induced from the declared one, not read from a slot of their own.',
   },
+  /* {
+    id: 'association',
+    label: 'Neither owns the other',
+    when: ({ slotName }) => ASSOCIATION_SLOTS.has(slotName),
+    verdict: 'association',
+    text: 'A named association: the slot connects two things without either owning '
+      + 'the other. Both ends are arrowed. Listed explicitly, because every other rule '
+      + 'would read it as ownership.',
+  }, */
 ] as const satisfies readonly RuleSpec[];
 
 /**
  * Classify one slot, reporting which rule fired.
  *
- * A fold over `OWNERSHIP_RULES`. **The classifier must always explain itself**
- * — having it report which rule fired, and the legend render pairs grouped by
- * rule, is what made the original incoherence visible in the first place.
+ * **Match a rule, then let that rule's exceptions revise it.** Two passes, and
+ * they are the two halves of how the rules are stated: a rule says what is
+ * ordinarily true, an exception says when it is not. Running them that way is
+ * what lets `OWNERSHIP_RULES` be in the order the rules are TAUGHT rather than
+ * an order contrived so that exceptions get first refusal (Siggie, 2026-09-11).
+ *
+ * An exception is only ever offered a slot its parent already claimed, so it
+ * does not need to restate its parent's condition — `single-value-owns-fwd`
+ * tests the RANGE and says nothing about cardinality, because by the time it
+ * runs, "single-valued" is established.
+ *
+ * **The classifier must always explain itself** — having it report which rule
+ * fired, and the legend render pairs grouped by rule, is what made the original
+ * incoherence visible in the first place. An exception reports ITSELF, not its
+ * parent: the legend groups by the rule that settled the verdict.
  */
 export function classify(facts: SlotFacts): { verdict: OwnershipVerdict; rule: OwnershipRule } {
-  for (const rule of OWNERSHIP_RULES as readonly RuleSpec[]) {
-    if (rule.when?.(facts)) return { verdict: rule.verdict, rule: rule.id };
+  const rules = OWNERSHIP_RULES as readonly RuleSpec[];
+  for (const rule of rules) {
+    if (rule.parentRule !== undefined) continue;      // offered only via its parent
+    if (!rule.when?.(facts)) continue;
+    const exception = rules.find(r => r.parentRule === rule.id && r.when?.(facts));
+    return exception
+      ? { verdict: exception.verdict, rule: exception.id }
+      : { verdict: rule.verdict, rule: rule.id };
   }
   // Unreachable: `single-value-belongs-to-bkwd` matches everything. Thrown
   // rather than defaulted, per CLAUDE.md "fail loudly" — a miss here means
-  // someone removed or reordered the total rule.
+  // someone removed the total rule or gave it a `parentRule`.
   throw new Error(
     `No ownership rule matched ${facts.slotName}: ${facts.range}`
-    + ` (multivalued=${facts.multivalued}). The last rule must be total.`,
+    + ` (multivalued=${facts.multivalued}). One rule must be total.`,
   );
 }
 
@@ -328,38 +367,18 @@ export const OWNERSHIP_RULE_TEXT = Object.fromEntries(
   OWNERSHIP_RULES.map(r => [r.id, r.text]),
 ) as Record<OwnershipRule, string>;
 
-/**
- * The rules in TEACHING order: each default followed by its exceptions.
- *
- * The other projection of the same table, and the counterpart to the array's
- * own order. `OWNERSHIP_RULES` is PRECEDENCE — an exception has to come before
- * the rule it defeats or it never fires. A reader wants the opposite: the
- * ordinary case, then the case that breaks it. So:
- *
- *   precedence  association, Rule 1, Rule 2's exception, Rule 2, Rule 3
- *   teaching    association, Rule 1, Rule 2, its exception, Rule 3
- *
- * Derived rather than written out, so a rule added to the table appears here
- * without a second list to keep in step. Exceptions are lifted out and
- * re-inserted after their `parentRule`; anything without one keeps its
- * relative position.
- */
-export const OWNERSHIP_RULES_TEACHING_ORDER: readonly RuleSpec[] = (() => {
-  const all = OWNERSHIP_RULES as readonly RuleSpec[];
-  const out: RuleSpec[] = [];
-  for (const r of all.filter(x => x.parentRule === undefined)) {
-    out.push(r, ...all.filter(x => x.parentRule === r.id));
-  }
-  return out;
-})();
+/** Each rule's name, for the legend. A projection. */
+export const OWNERSHIP_RULE_LABEL = Object.fromEntries(
+  OWNERSHIP_RULES.map(r => [r.id, r.label]),
+) as Record<OwnershipRule, string>;
 
 /**
- * Where a rule sits when the rules are TAUGHT rather than applied. Backs the
- * legend's ordering; see `OWNERSHIP_RULES_TEACHING_ORDER`.
+ * Where a rule sits in the listing — which is just where it sits in the table,
+ * now that there is only one order (see `OWNERSHIP_RULES`).
  */
-export function teachingRank(rule: OwnershipRule): number {
-  const i = OWNERSHIP_RULES_TEACHING_ORDER.findIndex(r => r.id === rule);
-  return i < 0 ? OWNERSHIP_RULES_TEACHING_ORDER.length : i;
+export function ruleRank(rule: OwnershipRule): number {
+  const i = (OWNERSHIP_RULES as readonly RuleSpec[]).findIndex(r => r.id === rule);
+  return i < 0 ? OWNERSHIP_RULES.length : i;
 }
 
 /** The rule an entry is an exception TO, if any. Backs the legend's indent. */

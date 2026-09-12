@@ -45,7 +45,7 @@ export type {
 export {
   OWNERSHIP_RULES, OWNERSHIP_VERDICTS, OWNERSHIP_RULE_TEXT, ENTITY_ROOT,
   ASSOCIATION_SLOTS, SINGLE_VALUE_OWNER_TARGETS,
-  OWNERSHIP_RULES_TEACHING_ORDER, teachingRank, parentRuleOf,
+  OWNERSHIP_RULE_LABEL, ruleRank, parentRuleOf,
 } from './ownershipRules';
 
 import {

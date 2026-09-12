@@ -30,6 +30,7 @@ import { parentRuleOf } from '../services/DataService';
 import type { DataService, OwnershipPairGroup } from '../services/DataService';
 import { EDGE_COLORS, RANGE_COLORS, SIBLING_COLORS } from '../config/appConfig';
 import HelpPanel from './HelpPanel';
+import { PANEL_WIDTH_REM } from './panelLayout';
 import EdgeSample, { type DrawnKind } from './EdgeSample';
 import { EDGE_STYLE } from './edgeStyle';
 
@@ -43,61 +44,51 @@ interface OwnershipLegendProps {
 }
 
 /**
- * Short label + color per verdict.
+ * The panel's body-text class, used by every explanatory paragraph here.
  *
- * The three live verdicts take P2's Blues ramp — the SAME hex values the canvas
- * strokes. `own-fwd` and `own-bkwd` sit one step apart because they are the
- * same relation seen from two ends.
- *
- * `excluded` is not a relation kind and stays outside the ramp: it names an
- * edge that is NOT drawn, so giving it a stroke color would be a lie.
+ * Siggie, 2026-09-11: "styling should occur in css and config files, not
+ * inline." One constant is the smaller half of that — it stops the same
+ * `text-[11px] text-gray-500 …` string being retyped at a dozen call sites and
+ * gives a real move to CSS one place to start from.
  */
-const VERDICT_LABEL: Record<string, { text: string; color?: string; cls?: string }> = {
-  'own-fwd': { text: 'owns (forward)', color: EDGE_COLORS.ownFwd },
-  'own-bkwd': { text: 'belongs to (backward)', color: EDGE_COLORS.ownBkwd },
-  'association': { text: 'association (no ownership)', color: EDGE_COLORS.association },
-  'excluded': {
-    text: 'dropped',
-    cls: 'text-gray-400 dark:text-gray-500 border-gray-300',
-  },
-};
+const NOTE = 'text-[11px] leading-snug text-gray-500 dark:text-gray-400 mb-2';
 
 /**
- * The three relation kinds as prose, paired with a drawn sample of the edge.
+ * One drawn edge on its OWN line, captioned with what it means — the shape the
+ * tour uses for `{{edge:own-fwd}}`, indented so it reads as an example
+ * interrupting the sentence rather than a word inside it.
  *
- * "Owns" and "belongs to" are different claims, not synonyms — see
- * docs/OWNERSHIP_CLASSIFICATION.md. The wording here is that doc's, in the
- * second person.
+ * The caption is `EDGE_STYLE`'s own label ("A owns B"), never a second copy of
+ * it, so a legend example cannot say something different from what the canvas
+ * draws.
  */
-const EDGE_KINDS: ReadonlyArray<{
-  kind: DrawnKind; color: string; title: string; body: string;
-}> = [
-  {
-    kind: 'own-fwd',
-    color: EDGE_COLORS.ownFwd,
-    title: EDGE_STYLE.kinds['own-fwd'].label,
-    body: 'The arrow runs from the owner to what it holds. A owns B when the '
-      + 'schema puts the collection on A, or when B has no independent '
-      + 'existence — a Quantity of 5 mg is not something you look up.',
-  },
-  {
-    kind: 'own-bkwd',
-    color: EDGE_COLORS.ownBkwd,
-    title: EDGE_STYLE.kinds['own-bkwd'].label,
-    body: 'The same relationship stored at the other end: A carries a pointer '
-      + 'to one B that exists without it. Drawn B → A, so you still read '
-      + '"start at B to find A". A Participant carries on existing whether or '
-      + 'not any observation points at it.',
-  },
-  {
-    kind: 'association',
-    color: EDGE_COLORS.association,
-    title: EDGE_STYLE.kinds.association.label,
-    body: 'Neither owns the other. Dashed, with arrowheads at both ends. No '
-      + 'slot in this schema is one — the kind is here for a schema that '
-      + 'relates two things without either holding the other.',
-  },
-];
+function EdgeExample({ kind }: { kind: DrawnKind }) {
+  const style = EDGE_STYLE.kinds[kind];
+  return (
+    <span className="flex items-center gap-1.5 my-1 ml-4">
+      <EdgeSample kind={kind} width={56} />
+      <span className="font-medium" style={{ color: style.color }}>{style.label}</span>
+    </span>
+  );
+}
+
+/**
+ * The colour a rule's name is written in: the verdict it produces, in the SAME
+ * hex the canvas strokes. `own-fwd` and `own-bkwd` sit one step apart on P2's
+ * Blues ramp because they are the same relation seen from two ends.
+ *
+ * The rule's NAME now carries what the verdict is ("Owns because multivalued"),
+ * so the badge that used to spell it out again alongside is gone (Siggie,
+ * 2026-09-11) and only the colour is left to say it.
+ *
+ * `excluded` names an edge that is NOT drawn, so it takes grey rather than a
+ * stroke colour it does not have.
+ */
+const VERDICT_COLOR: Record<string, string | undefined> = {
+  'own-fwd': EDGE_COLORS.ownFwd,
+  'own-bkwd': EDGE_COLORS.ownBkwd,
+  'excluded': undefined,
+};
 
 /** Toolbar buttons, in the order the toolbar shows them. */
 const TOOLBAR: ReadonlyArray<{ glyph: string; what: string }> = [
@@ -127,7 +118,7 @@ export default function OwnershipLegend({
   const classLink = (id: string) => (
     <button
       onClick={() => onSelect([id])}
-      className="hover:underline text-blue-600 dark:text-blue-400"
+      className="cursor-pointer hover:underline text-blue-600 dark:text-blue-400"
       title={`Select ${id}`}
     >
       {id}
@@ -136,43 +127,111 @@ export default function OwnershipLegend({
 
   return (
     <HelpPanel
-      title="Ownership legend"
+      title="Legend"
       subtitle="What the diagram's arrows, colors and buttons mean."
       onClose={onClose}
       offset={offset}
+      widthRem={PANEL_WIDTH_REM.legend}
     >
       <div className="text-xs">
-        <Section title="The three kinds of relationship">
-          <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">
-            Every edge is a class-valued attribute. Classes are placed so that
-            if <b>A</b> is drawn before <b>B</b>, you reach <b>B</b> through{' '}
-            <b>A</b> — so an edge always tells you where to start.
+        <Section title="Arrow direction and ownership">
+          <p className={NOTE}>
+            Edges connect entities in ownership (i.e., containment or has-a)
+            relationships. They start at attribute rows that point to other
+            entities and end at the header of the target entity's box.
           </p>
-          <ul className="space-y-2">
-            {EDGE_KINDS.map(k => (
-              <li key={k.title} className="flex gap-2">
-                <EdgeSample kind={k.kind} className="mt-0.5" />
-                <div className="min-w-0">
-                  <div className="font-medium" style={{ color: k.color }}>{k.title}</div>
-                  <p className="text-[11px] leading-snug text-gray-600 dark:text-gray-400">
-                    {k.body}
+          <p className={NOTE}>
+            An attribute can target an entity that it <b>owns</b>
+            <EdgeExample kind="own-fwd" />
+            in which case, B appears to the right of A and the edge points forward.
+          </p>
+          <p className={NOTE}>
+            Or it can target an entity that it <b>belongs to</b>
+            <EdgeExample kind="own-bkwd" />
+            in which case, B appears to the left of A and the edge points backward.
+          </p>
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-1.5">
+            Ownership direction is governed by three rules and one set of exceptions.
+            Click any rule to view the attributes it applies to.
+          </p>
+          <ul className="space-y-1">
+            {groups.map(g => {
+              const key = `${g.verdict}/${g.rule}`;
+              const color = VERDICT_COLOR[g.verdict];
+              const isOpen = open === key;
+              // An exception renders BENEATH the rule it revises, not beside
+              // it: the groups arrive in the rules' own order, so the parent is
+              // always the entry above. Nesting is the only thing that says
+              // these two are a rule and its exception rather than peers.
+              const isException = parentRuleOf(g.rule) !== undefined;
+              return (
+                <li
+                  key={key}
+                  className={`border-l-2 pl-2 border-gray-200 dark:border-slate-600${
+                    isException ? ' ml-4' : ''}`}
+                >
+                  <button
+                    onClick={() => setOpen(isOpen ? null : key)}
+                    aria-expanded={isOpen}
+                    title={isOpen ? 'Hide these attributes' : 'List the attributes this rule applies to'}
+                    className="group w-full text-left cursor-pointer rounded px-1 -mx-1
+                               hover:bg-gray-100 dark:hover:bg-slate-700"
+                  >
+                    <span
+                      className={color ? 'font-medium' : 'font-medium text-gray-400'}
+                      style={color ? { color } : undefined}
+                    >
+                      {g.ruleLabel}
+                    </span>
+                    <span className="ml-1 text-gray-400">{g.pairs.length}</span>
+                    {/* The chevron darkens too: the row tint is deliberately
+                        faint, and on a wide panel the pointer is often nowhere
+                        near it when the row lights up. */}
+                    <span className="ml-1 text-gray-400 group-hover:text-gray-700
+                                     dark:group-hover:text-gray-200">
+                      {isOpen ? '▾' : '▸'}
+                    </span>
+                  </button>
+                  <p className="text-[11px] leading-snug text-gray-600 dark:text-gray-400 mt-0.5">
+                    {g.ruleText}
                   </p>
-                </div>
+                  {isOpen && (
+                    <ul className="mt-1 mb-1.5 space-y-0.5 font-mono text-[10px]">
+                      {g.pairs.map(p => (
+                        <li key={`${p.declaredOn}.${p.slotName}`} className="text-gray-600 dark:text-gray-400">
+                          {classLink(p.declaredOn)}
+                          <span className="text-gray-400">.{p.slotName}</span>
+                          <span className="mx-1 text-gray-400">
+                            {p.multivalued ? '↠' : '→'}
+                          </span>
+                          {classLink(p.range)}
+                          {p.isLoop && (
+                            <span className="ml-1" style={{ color: RANGE_COLORS.entity }}>loop</span>
+                          )}
+                          {g.verdict === 'own-bkwd' && (
+                            <span className="ml-1 text-gray-400">
+                              (owner: {p.owner})
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </Section>
+
+        <Section title="Cardinality">
+          <ul className="flex flex-wrap gap-x-4 gap-y-1">
+            {CARDINALITY.map(([g, w]) => (
+              <li key={g} className="flex items-center gap-1.5">
+                <span className="font-mono text-[11px] text-gray-700 dark:text-gray-300">{g}</span>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400">{w}</span>
               </li>
             ))}
           </ul>
-          <p className="text-[11px] leading-snug text-gray-500 dark:text-gray-400 mt-2">
-            An edge leaves the <b>attribute's row</b>, not the box — that is how
-            you tell which attribute made it. A <b>⟲</b> on a row is a slot
-            pointing back at its own class.
-          </p>
-          <p className="text-[11px] leading-snug text-gray-500 dark:text-gray-400 mt-2">
-            Owners are drawn first, so a box's <b>← N</b> counts what it belongs
-            to (on its left) and <b>M →</b> what it owns (on its right). Hover
-            either to list them. The little edge on each row is the one above:
-            it says which end holds the arrowhead, and so which entity declares
-            the attribute — and <i>both</i> kinds turn up on <i>both</i> sides.
-          </p>
         </Section>
 
         <Section title="Colors">
@@ -200,17 +259,6 @@ export default function OwnershipLegend({
           />
         </Section>
 
-        <Section title="Cardinality">
-          <ul className="flex flex-wrap gap-x-4 gap-y-1">
-            {CARDINALITY.map(([g, w]) => (
-              <li key={g} className="flex items-center gap-1.5">
-                <span className="font-mono text-[11px] text-gray-700 dark:text-gray-300">{g}</span>
-                <span className="text-[11px] text-gray-500 dark:text-gray-400">{w}</span>
-              </li>
-            ))}
-          </ul>
-        </Section>
-
         <Section title="The toolbar">
           <ul className="space-y-1">
             {TOOLBAR.map(t => (
@@ -226,81 +274,12 @@ export default function OwnershipLegend({
           </ul>
         </Section>
 
-        <Section title="Every relationship, by rule">
-          <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-1.5">
-            Derived live from the classifier the graph itself uses, so this
-            cannot drift from what is drawn. In teaching order: each rule,
-            then the exception to it, indented. Which ranges count as
-            value objects is hand-curated — if a pair looks wrong, the
-            classification is. Click any class to select it.
-          </p>
-          <ul className="space-y-1">
-            {groups.map(g => {
-              const key = `${g.verdict}/${g.rule}`;
-              const v = VERDICT_LABEL[g.verdict] ?? VERDICT_LABEL.excluded;
-              const isOpen = open === key;
-              // An exception renders BENEATH the rule it defeats, not beside
-              // it: the groups arrive in teaching order, so the parent is
-              // always the entry above. Nesting is the only thing that says
-              // these two are a rule and its exception rather than peers.
-              const isException = parentRuleOf(g.rule) !== undefined;
-              return (
-                <li
-                  key={key}
-                  className={`border-l-2 pl-2 border-gray-200 dark:border-slate-600${
-                    isException ? ' ml-4' : ''}`}
-                >
-                  <button
-                    onClick={() => setOpen(isOpen ? null : key)}
-                    className="w-full text-left"
-                  >
-                    <span
-                      className={`inline-block px-1 rounded border text-[10px] ${v.cls ?? ''}`}
-                      style={v.color ? { color: v.color, borderColor: v.color } : undefined}
-                    >
-                      {v.text}
-                    </span>
-                    <span className="ml-1.5 font-medium">{g.rule}</span>
-                    <span className="ml-1 text-gray-400">{g.pairs.length}</span>
-                    <span className="ml-1 text-gray-400">{isOpen ? '▾' : '▸'}</span>
-                  </button>
-                  <p className="text-[11px] leading-snug text-gray-600 dark:text-gray-400 mt-0.5">
-                    {g.ruleText}
-                  </p>
-                  {isOpen && (
-                    <ul className="mt-1 mb-1.5 space-y-0.5 font-mono text-[10px]">
-                      {g.pairs.map(p => (
-                        <li key={`${p.declaredOn}.${p.slotName}`} className="text-gray-600 dark:text-gray-400">
-                          {classLink(p.declaredOn)}
-                          <span className="text-gray-400">.{p.slotName}</span>
-                          <span className="mx-1 text-gray-400">
-                            {p.multivalued ? '↠' : '→'}
-                          </span>
-                          {classLink(p.range)}
-                          {p.isLoop && (
-                            <span className="ml-1" style={{ color: RANGE_COLORS.entity }}>loop</span>
-                          )}
-                          {(g.verdict === 'own-bkwd' || g.verdict === 'association') && (
-                            <span className="ml-1 text-gray-400">
-                              (owner: {p.owner})
-                            </span>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </Section>
-
-        <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-3">
-          A box's <b>“N related”</b> count is of distinct classes{' '}
-          <i>outside</i> it, so selecting a class that folds into a merged box
-          can make the number go <i>down</i>. Correct, if counter-intuitive.
-        </p>
       </div>
+      <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-3">
+        A box's <b>“N related”</b> count is of distinct classes{' '}
+        <i>outside</i> it, so selecting a class that folds into a merged box
+        can make the number go <i>down</i>. Correct, if counter-intuitive.
+      </p>
     </HelpPanel>
   );
 }

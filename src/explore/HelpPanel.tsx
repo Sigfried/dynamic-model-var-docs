@@ -24,6 +24,7 @@
 
 import { useEffect, type ReactNode } from 'react';
 import { useDragged } from '../help/useDragged';
+import { PANEL_WIDTH_REM, OFFSET_RIGHT_REM } from './panelLayout';
 
 export interface HelpPanelProps {
   title: string;
@@ -32,11 +33,13 @@ export interface HelpPanelProps {
   onClose: () => void;
   /** Steps the panel right, so a second one does not cover the first. */
   offset?: boolean;
+  /** Default width in rem. The user can still drag the resize corner. */
+  widthRem?: number;
   children: ReactNode;
 }
 
 export default function HelpPanel({
-  title, subtitle, onClose, offset, children,
+  title, subtitle, onClose, offset, widthRem = PANEL_WIDTH_REM.cases, children,
 }: HelpPanelProps) {
   const drag = useDragged();
 
@@ -58,18 +61,29 @@ export default function HelpPanel({
          viewport coordinates. `absolute`/`right-*` and an explicit `left` cannot
          both drive it, so the classes go when the inline style arrives.
 
+         Width and the offset are inline for a different reason: both come from
+         PANEL_WIDTH_REM, and Tailwind cannot emit a class for a value it only
+         sees at runtime. They were `w-[26rem]` and `right-[27rem]` literals in
+         two files, which is precisely how a wider panel would have slid under
+         the one it is supposed to sit beside. `maxWidth` keeps a wide panel off
+         a narrow viewport.
+
          `resize: both` is the free native resizer the plan wanted, and it needs
          a non-`visible` overflow to appear — which `overflow-y-auto` already
          gives. It only offers the corner grip; nothing here implements one. */
       style={{
         resize: 'both',
-        ...(drag.offset ? { position: 'fixed', ...drag.offset, right: 'auto' } : {}),
+        width: `${widthRem}rem`,
+        maxWidth: 'calc(100vw - 2rem)',
+        ...(drag.offset
+          ? { position: 'fixed', ...drag.offset, right: 'auto' }
+          : !moved && offset ? { right: `${OFFSET_RIGHT_REM}rem` } : {}),
       }}
-      className={`z-30 w-[26rem] max-h-[80vh] overflow-y-auto
+      className={`z-30 max-h-[80vh] overflow-y-auto
                   rounded-lg border border-gray-300 dark:border-slate-600
                   bg-white dark:bg-slate-800 shadow-xl
                   text-gray-900 dark:text-gray-100
-                  ${moved ? '' : `absolute top-14 ${offset ? 'right-[27rem]' : 'right-4'}`}`}
+                  ${moved ? '' : `absolute top-14 ${offset ? '' : 'right-4'}`}`}
     >
       <div
         onPointerDown={drag.onPointerDown}

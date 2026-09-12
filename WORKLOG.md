@@ -7,6 +7,139 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-11 (later) — one order, because an exception can just reclassify
+
+Siggie, reviewing the commit above: *"I've just been accepting this, but would
+it complicate the algorithm much to just run the rules in pedagogy order and on
+the rule 2 exceptions just reclassify?"* — and, of the derived teaching order,
+*"yeah, that seems kind of kludgy."* Both correct.
+
+**It does not complicate `classify`; it simplifies it.** The premise the earlier
+entry never questioned was that an exception COMPETES with its parent for the
+slot, which forces first-match-wins and therefore forces the exception to come
+first. It does not compete. `single-value-owns-fwd` and
+`single-value-belongs-to-bkwd` look at the same single-valued slot and disagree
+only about direction, so the exception is a REVISION of a verdict its parent
+already reached. Written that way — match a parentless rule, then let that
+rule's exceptions revise — the ordering constraint disappears and the array can
+simply be in the order the rules are taught.
+
+What that deleted: `OWNERSHIP_RULES_TEACHING_ORDER`, `teachingRank`, and the
+whole "two orders over one table" apparatus, including four tests asserting the
+two orders differ in the right way. `parentRule` survives but changes character:
+it was presentation-only (where to indent), and is now structural (what gates an
+exception) with the indent falling out of the same fact. That is strictly better
+— a reader sees nested exactly what the classifier treats as a refinement,
+rather than two things that happen to agree.
+
+**One property is worth knowing about.** An exception is only ever offered a
+slot its parent already claimed, so it need not restate its parent's condition:
+`single-value-owns-fwd` tests the RANGE and says nothing about cardinality,
+because "single-valued" is established by the time it runs. That is load-bearing
+and easy to break by moving the entry out from under its parent, so
+`ownershipRules.test.ts` pins it with a multivalued value-object range, which
+must come out Rule 1.
+
+**Association is the one thing placement still matters for.** It is NOT an
+exception — it does not refine Rule 1's verdict, it defeats Rule 1 outright for
+its slots — so it carries no `parentRule` and must be placed FIRST. Siggie
+commented the entry out at the FOOT of the table, so restoring it means moving
+it as well as uncommenting it. The acceptance test now asserts both halves:
+restored at the front it classifies its two slots; restored at the back it
+silently never fires. That second test is the caveat made executable.
+
+`'association'` also left the `OwnershipRule` union, since no entry declares it.
+The VERDICT of the same name stays on `OwnershipVerdict` — `=== 'association'`
+comparisons against a verdict or an edge kind are still live and correct, and
+CLAUDE.md's never-narrowing trap makes that distinction worth stating rather
+than leaving to inference.
+
+**Verified behaviour-preserving the same way as before**: all 149 slot-edge
+verdicts dumped and diffed against the pre-refactor commit. Byte-identical this
+time — not just the verdicts but every rule attribution, so nothing moved
+between groups either.
+
+### The legend
+
+Siggie added a `label` to each rule ("Owns because multivalued", "Owns despite
+being single-valued") and rearranged the panel; this finished that. The rule
+listing shows the label instead of the kebab-case id, exceptions indent under
+their parent, and `ruleLabel` rides on `OwnershipPairGroup` so the view never
+has to look a rule up.
+
+Association is gone as an edge type here: the three-kinds list, its
+`VERDICT_LABEL` entry, and the `|| g.verdict === 'association'` arm in the pair
+listing. Siggie's placeholders for `----> A owns B` / `----< A belongs to B` are
+filled with inline `<EdgeSample>`, which is the same component the removed list
+used — the samples moved into the prose rather than being recreated.
+
+**Styling note, partially addressed.** Siggie's comment: *"styling should occur
+in css and config files, not inline."* The repeated
+`text-[11px] text-gray-500 …` is now one `NOTE` constant rather than a dozen
+retyped strings. That is the smaller half; a real move into CSS is a separate
+change and deliberately not smuggled in here.
+
+**The verdict badge is gone**, resolving what the first draft flagged as open.
+It restated the rule name — "owns (forward)" next to "Owns because
+multivalued" — and Siggie's labels already lead with the verdict, so the badge
+said nothing new. What survives of it is the COLOUR: the rule's name is written
+in its verdict's stroke hex, which is the part that was never redundant.
+`VERDICT_LABEL` shrank to `VERDICT_COLOR` accordingly.
+
+**The inline edge samples were wrong, and the fix is a captioned block.** I read
+Siggie's `----> A owns B` placeholders as an arrow to drop mid-sentence, and
+built that. What was wanted is the tour's shape: the arrow on its OWN line with
+its label beside it, interrupting the sentence rather than sitting inside it —
+
+```
+An attribute can target an entity that it owns
+    ----> A owns B
+in which case, B appears to the right of A ...
+```
+
+Now an `EdgeExample` component: a `flex` span (so it breaks its own line inside
+the `<p>`), indented, captioning the sample with `EDGE_STYLE.kinds[kind].label`
+— the canvas's own name for the edge, never a second copy of it, so a legend
+example cannot claim something the canvas does not draw.
+
+**The rule rows now say they are clickable.** They had no hover state at all —
+a `<button>` with no affordance beyond a chevron that reads as decoration.
+`hover:bg-gray-100 dark:hover:bg-slate-700` is this app's existing idiom for a
+clickable row (RelationBar uses it in three places), so that rather than
+something new, plus `cursor-pointer`, a `title`, and `aria-expanded` since the
+thing is a disclosure. The chevron also darkens on `group-hover`: the row tint
+is deliberately faint and on a wide panel the pointer is usually nowhere near
+the chevron when the row lights up. Verified in the BUILT css, not just the
+class attribute — a Tailwind v4 variant that nothing else uses can be purged,
+and `group-hover` was the one at risk.
+
+**The legend panel is 36rem, and the offset now derives from that.** Siggie
+asked for width so the pair rows stop wrapping. The trap: `w-[26rem]` lived in
+`HelpPanel` and the stagger for a second open panel was `right-[27rem]` — two
+Tailwind literals in two files that have to agree, so widening the legend would
+have slid the example-cases pane underneath it with nothing failing and no test
+covering it. Both now come from `PANEL_WIDTH_REM` in a new `panelLayout.ts`
+(its own module because a component file exporting constants trips
+`react-refresh/only-export-components`, which already fires ten times in
+OwnershipGraphView). `helpPanelWidth.test.tsx` pins the arithmetic.
+
+36rem rather than a guess: measuring all 159 rows gave median 52 characters,
+p90 76, max 95. At ~6px per character in 10px monospace, 36rem clears p90 and
+wraps only the longest handful — the max would want ~40rem for one row.
+
+**Noticed but NOT changed, because it is Siggie's call:** `(owner: X)` on a
+backward row is *always* the range, verified across all 60 own-bkwd pairs. It
+restates the word printed two tokens earlier and is what pushes the longest rows
+past 90 characters — the same redundancy the verdict badge had. Dropping it
+would take the max to 78 and make 36rem generous rather than tight. Left alone:
+the ask was width, not a content cut.
+
+**Rejected:** reusing `.help-inline-widget`, the class the tour styles its
+`{{edge:…}}` widgets with. It looks like the obvious shared thing, but
+`help.css` is imported by `HelpLayer` rather than globally, so the legend panel
+cannot count on the class existing. Utilities here instead.
+
+---
 ## 2026-09-11 — seven ownership rules down to three (plan steps 1–3, and 5)
 
 Siggie asked for plan steps 1–3 and a stop before step 4 (the

@@ -1,9 +1,10 @@
 import { describe, test, expect } from 'vitest';
 import {
   OWNERSHIP_RULES, OWNERSHIP_VERDICTS, OWNERSHIP_RULE_TEXT,
-  OWNERSHIP_RULES_TEACHING_ORDER, teachingRank, parentRuleOf,
+  OWNERSHIP_RULE_LABEL, parentRuleOf,
   classify, ASSOCIATION_SLOTS, SINGLE_VALUE_OWNER_TARGETS, ENTITY_ROOT,
   type RuleSpec, type VerdictSpec, type SlotFacts, type OwnershipRule,
+  type OwnershipVerdict,
 } from '../models/ownershipRules';
 import { EDGE_STYLE } from '../explore/edgeStyle';
 
@@ -31,13 +32,16 @@ describe('the ownership rule declaration', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  test('the last classifier rule is total, so classify() always resolves', () => {
-    const evaluated = (OWNERSHIP_RULES as readonly RuleSpec[]).filter(r => r.when);
-    const last = evaluated[evaluated.length - 1];
-    expect(last.id).toBe('single-value-belongs-to-bkwd');
-    // Whatever it is handed, it fires.
-    expect(last.when!({ slotName: 'zzz', range: 'Nothing', multivalued: false })).toBe(true);
-    expect(last.when!({ slotName: 'zzz', range: 'Nothing', multivalued: true })).toBe(true);
+  test('classify() always resolves, whatever it is handed', () => {
+    // There is a total rule, so the throw at the end of classify() is dead.
+    // It no longer has to be LAST: since 2026-09-11 the table is in teaching
+    // order and Rule 2 sits in the middle, ahead of its own exception.
+    for (const multivalued of [true, false]) {
+      expect(() => classify({ slotName: 'zzz', range: 'Nothing', multivalued }))
+        .not.toThrow();
+    }
+    expect(classify({ slotName: 'zzz', range: 'Nothing', multivalued: false }).rule)
+      .toBe('single-value-belongs-to-bkwd');
   });
 
   test('child-following-parent carries text but is NOT evaluated by the classifier', () => {
@@ -58,22 +62,20 @@ describe('the ownership rule declaration', () => {
    * third because its only member is a self-loop, whose verdict is never
    * observable. See docs/OWNERSHIP_CLASSIFICATION.md.
    */
-  test('there are three classifier rules plus association and Rule 3', () => {
+  test('three classifier rules plus Rule 3, in the order they are taught', () => {
     expect(OWNERSHIP_RULES.map(r => r.id)).toEqual([
-      'association',
       'multivalue-owns-fwd',
-      'single-value-owns-fwd',
       'single-value-belongs-to-bkwd',
+      'single-value-owns-fwd',          // its exception, indented in the legend
       'child-following-parent',
     ]);
   });
 
   /*
-   * Order is semantic: the exception fires only because it precedes the rule
-   * that would otherwise claim the slot. A reorder would pass every other test
-   * in this file.
+   * What each rule actually classifies. The ORDER these depend on is asserted
+   * separately, below.
    */
-  describe('order is honoured', () => {
+  describe('the rules classify what they say they do', () => {
     const facts = (o: Partial<SlotFacts>): SlotFacts =>
       ({ slotName: 'x', range: 'SomeClass', multivalued: false, ...o });
 
@@ -117,36 +119,36 @@ describe('the ownership rule declaration', () => {
   });
 
   /*
-   * Two orders over one table, and conflating them is the trap: precedence
-   * needs the exception FIRST so it can fire; teaching needs the default first
-   * so a reader meets the ordinary case before the one that breaks it.
+   * ONE order now (Siggie, 2026-09-11). The table is in the order the rules are
+   * TAUGHT, and `classify` matches a rule then lets that rule's exceptions
+   * revise the verdict — so an exception no longer has to jump the queue, and
+   * there is no second order to derive.
    */
-  describe('teaching order is not precedence order', () => {
-    test('the exception moves after its parent, and only there', () => {
-      expect(OWNERSHIP_RULES_TEACHING_ORDER.map(r => r.id)).toEqual([
-        'association',
-        'multivalue-owns-fwd',
-        'single-value-belongs-to-bkwd',
-        'single-value-owns-fwd',        // the exception, now BELOW its parent
-        'child-following-parent',
-      ]);
-      // ...and the two orders genuinely differ, so this is not a no-op.
-      expect(OWNERSHIP_RULES_TEACHING_ORDER.map(r => r.id))
-        .not.toEqual(OWNERSHIP_RULES.map(r => r.id));
+  describe('an exception revises its parent rather than preceding it', () => {
+    test('the table is in teaching order, exception BELOW its parent', () => {
+      const ids = OWNERSHIP_RULES.map(r => r.id);
+      expect(ids.indexOf('single-value-owns-fwd'))
+        .toBeGreaterThan(ids.indexOf('single-value-belongs-to-bkwd'));
     });
 
-    test('every rule appears exactly once, exception or not', () => {
-      expect(OWNERSHIP_RULES_TEACHING_ORDER.length).toBe(OWNERSHIP_RULES.length);
-      expect(new Set(OWNERSHIP_RULES_TEACHING_ORDER.map(r => r.id)).size)
-        .toBe(OWNERSHIP_RULES.length);
+    test('the exception still wins, even though it runs later', () => {
+      // The whole point: ordering it after Rule 2 must not cost it the slot.
+      const range = [...SINGLE_VALUE_OWNER_TARGETS][0];
+      expect(classify({ slotName: 'x', range, multivalued: false }))
+        .toEqual({ verdict: 'own-fwd', rule: 'single-value-owns-fwd' });
     });
 
-    test('an exception ranks directly after the rule it names', () => {
-      for (const r of OWNERSHIP_RULES_TEACHING_ORDER) {
-        const parent = parentRuleOf(r.id);
-        if (parent === undefined) continue;
-        expect(teachingRank(r.id)).toBe(teachingRank(parent) + 1);
-      }
+    test('an exception is never offered a slot its parent did not claim', () => {
+      /*
+       * `single-value-owns-fwd` tests only the RANGE — it says nothing about
+       * cardinality, because by the time it runs "single-valued" is already
+       * established. That is only safe while exceptions are gated on their
+       * parent, so a multivalued slot with a value-object range must come out
+       * Rule 1, not the exception.
+       */
+      const range = [...SINGLE_VALUE_OWNER_TARGETS][0];
+      expect(classify({ slotName: 'x', range, multivalued: true }))
+        .toEqual({ verdict: 'own-fwd', rule: 'multivalue-owns-fwd' });
     });
 
     test('a parentRule always names a rule that exists, and never itself', () => {
@@ -155,15 +157,41 @@ describe('the ownership rule declaration', () => {
         if (r.parentRule === undefined) continue;
         expect(ids.has(r.parentRule)).toBe(true);
         expect(r.parentRule).not.toBe(r.id);
+        // The accessor the legend indents on must agree with the table.
+        expect(parentRuleOf(r.id)).toBe(r.parentRule);
+      }
+      // ...and reports nothing for a rule that is not an exception.
+      expect(parentRuleOf('multivalue-owns-fwd')).toBeUndefined();
+    });
+
+    test('an exception never nests under another exception', () => {
+      // classify() offers exceptions one level deep. A chain would silently
+      // stop firing rather than fail, so it is refused here instead.
+      const byId = new Map(OWNERSHIP_RULES.map(r => [r.id as OwnershipRule, r]));
+      for (const r of OWNERSHIP_RULES as readonly RuleSpec[]) {
+        if (r.parentRule === undefined) continue;
+        expect(byId.get(r.parentRule)!.parentRule, r.id).toBeUndefined();
       }
     });
 
-    test('an exception PRECEDES its parent in the classifier, or it never fires', () => {
-      const rank = new Map(OWNERSHIP_RULES.map((r, i) => [r.id as OwnershipRule, i]));
-      for (const r of OWNERSHIP_RULES as readonly RuleSpec[]) {
-        if (r.parentRule === undefined) continue;
-        expect(rank.get(r.id)!).toBeLessThan(rank.get(r.parentRule)!);
+    test('exactly one rule is total, and it is not an exception', () => {
+      const total = (OWNERSHIP_RULES as readonly RuleSpec[]).filter(
+        r => r.when?.({ slotName: 'zzz', range: 'Nothing', multivalued: false })
+          && r.when?.({ slotName: 'zzz', range: 'Nothing', multivalued: true }));
+      expect(total.map(r => r.id)).toEqual(['single-value-belongs-to-bkwd']);
+      expect(total[0].parentRule).toBeUndefined();
+    });
+  });
+
+  describe('every rule has a human-readable name', () => {
+    test('each label is prose, unique, and matches the projection', () => {
+      const labels = OWNERSHIP_RULES.map(r => r.label);
+      for (const r of OWNERSHIP_RULES) {
+        expect(r.label, r.id).toMatch(/^[A-Z]/);       // a name, not an id
+        expect(r.label, r.id).toContain(' ');
+        expect(OWNERSHIP_RULE_LABEL[r.id], r.id).toBe(r.label);
       }
+      expect(new Set(labels).size).toBe(labels.length);
     });
   });
 
@@ -191,22 +219,29 @@ describe('the ownership rule declaration', () => {
    * THE ACCEPTANCE CRITERION for TASKS `ownership-rules`.
    * ===================================================================
    *
-   * `association` is the one edge kind this schema no longer produces
-   * (ASSOCIATION_SLOTS emptied 2026-09-11) and the one a future schema is most
-   * likely to want back. The whole point of the declaration is that restoring
-   * it is DATA, not a code path: one entry in OWNERSHIP_VERDICTS, one in
-   * OWNERSHIP_RULES, nothing else.
+   * `association` is the one edge kind this schema no longer produces and the
+   * one a future schema is most likely to want back. Its rule entry is
+   * COMMENTED OUT at the foot of OWNERSHIP_RULES (Siggie, 2026-09-11) rather
+   * than deleted, so restoring it is: uncomment, move it above Rule 1, refill
+   * ASSOCIATION_SLOTS, add one entry to OWNERSHIP_VERDICTS, put `association`
+   * back on the OwnershipRule union. No new code path.
    *
-   * This test builds those two entries and checks they work. It is what makes
-   * "restore from the spec rather than from git history" a checkable claim
-   * instead of an intention — and it is why deleting the association
-   * machinery) is allowed to proceed.
+   * These tests build the two objects that restoration needs and check they
+   * work, which is what makes "restore from the spec rather than from git
+   * history" a checkable claim instead of an intention.
    *
-   * If you are restoring association for real: copy the two objects below into
-   * ownershipRules.ts, refill ASSOCIATION_SLOTS, and delete this test's
-   * scaffolding. Nothing else should need to change.
+   * NOTE ON ORDER: association is NOT an exception — it does not refine
+   * another rule's verdict, it defeats Rule 1 outright for its slots. So it
+   * carries no `parentRule` and must simply be placed FIRST in the table. That
+   * is the one thing the reclassify-exceptions design did not make automatic,
+   * and the last test here is what says so.
    */
   describe('acceptance: association is expressible as configuration', () => {
+    /** The rule ids plus the one this schema does not currently produce. */
+    type RestorableRule = OwnershipRule | 'association';
+    type RestorableSpec = Omit<RuleSpec, 'id' | 'verdict'>
+      & { id: RestorableRule; verdict: OwnershipVerdict };
+
     const ASSOCIATION_VERDICT: VerdictSpec = {
       // The load-bearing pair: claims nothing, yet layers like own-bkwd.
       claimsOwnership: false,
@@ -220,12 +255,15 @@ describe('the ownership rule declaration', () => {
       relationLabel: 'associated with',
     };
 
-    const ASSOCIATION_RULE: RuleSpec = {
+    /* Kept in step with the commented-out entry in ownershipRules.ts. */
+    const ASSOCIATION_RULE: RestorableSpec = {
       id: 'association',
-      // Must precede `multivalued`, which it exists to defeat.
+      label: 'Neither owns the other',
       when: ({ slotName }) => new Set(['related_document', 'container']).has(slotName),
       verdict: 'association',
-      text: OWNERSHIP_RULE_TEXT['association'],
+      text: 'A named association: the slot connects two things without either owning '
+        + 'the other. Both ends are arrowed. Listed explicitly, because every other rule '
+        + 'would read it as ownership.',
     };
 
     test('the verdict spec is a well-formed VerdictSpec', () => {
@@ -257,16 +295,27 @@ describe('the ownership rule declaration', () => {
       expect(live.label).toBe(ASSOCIATION_VERDICT.label);
     });
 
-    test('inserting the rule ahead of Rule 1 classifies the two slots', () => {
-      // Simulate the restored table: association first, then the live rules.
-      const restored: readonly RuleSpec[] =
-        [ASSOCIATION_RULE, ...(OWNERSHIP_RULES as readonly RuleSpec[]).filter(
-          r => r.id !== 'association')];
+    /**
+     * `classify`, reimplemented over an arbitrary table: match a rule, then
+     * let that rule's exceptions revise it. Deliberately a COPY of the live
+     * fold rather than a call to it, because what is under test is a table the
+     * live one does not contain.
+     */
+    const classifyWith = (rules: readonly RestorableSpec[], facts: SlotFacts) => {
+      for (const rule of rules) {
+        if (rule.parentRule !== undefined) continue;
+        if (!rule.when?.(facts)) continue;
+        const exc = rules.find(r => r.parentRule === rule.id && r.when?.(facts));
+        return exc
+          ? { verdict: exc.verdict, rule: exc.id }
+          : { verdict: rule.verdict, rule: rule.id };
+      }
+      throw new Error('no rule matched');
+    };
 
-      const classifyWith = (rules: readonly RuleSpec[], facts: SlotFacts) => {
-        for (const r of rules) if (r.when?.(facts)) return { verdict: r.verdict, rule: r.id };
-        throw new Error('no rule matched');
-      };
+    test('restored at the FRONT of the table, it classifies its two slots', () => {
+      const restored: readonly RestorableSpec[] =
+        [ASSOCIATION_RULE, ...(OWNERSHIP_RULES as readonly RuleSpec[])];
 
       // Both are multivalued, so Rule 1 would claim them — association wins.
       for (const slotName of ['related_document', 'container']) {
@@ -278,13 +327,24 @@ describe('the ownership rule declaration', () => {
         .toEqual({ verdict: 'own-fwd', rule: 'multivalue-owns-fwd' });
     });
 
+    test('restored at the BACK it would never fire — so placement is not free', () => {
+      /*
+       * The caveat that has to be written down somewhere. Exceptions revise
+       * their parent and so can go anywhere; association DEFEATS Rule 1 and so
+       * must precede it. Whoever restores the rule has to move it, not just
+       * uncomment it — the commented entry sits at the foot of the table.
+       */
+      const misplaced: readonly RestorableSpec[] =
+        [...(OWNERSHIP_RULES as readonly RuleSpec[]), ASSOCIATION_RULE];
+      expect(classifyWith(misplaced, {
+        slotName: 'related_document', range: 'Document', multivalued: true,
+      })).toEqual({ verdict: 'own-fwd', rule: 'multivalue-owns-fwd' });
+    });
+
     test('today the set is empty, so nothing classifies as association', () => {
       expect(ASSOCIATION_SLOTS.size).toBe(0);
-      const ids: OwnershipRule[] = ['association'];
-      // The rule entry still exists (it carries the text the legend would
-      // use); it simply never fires.
-      expect(OWNERSHIP_RULES.map(r => r.id)).toEqual(expect.arrayContaining(ids));
-      expect(classify({ slotName: 'related_document', range: 'Document', multivalued: true }).rule)
+      expect(OWNERSHIP_RULES.map(r => r.id as string)).not.toContain('association');
+      expect(classify({ slotName: 'related_document', range: 'Document', multivalued: true }).verdict)
         .not.toBe('association');
     });
   });

@@ -130,9 +130,15 @@ Order is **Rule 1 → Rule 2 → its exception → Rule 3**, and the exception r
 Needs a `parentRule` field on `RuleSpec` and layout work in
 [OwnershipLegend.tsx](../src/explore/OwnershipLegend.tsx).
 
-**Classifier order is precedence, not pedagogy.** They are different orders for
-different purposes and must not be conflated — say so in a code comment where
-`OWNERSHIP_RULES` is declared.
+~~**Classifier order is precedence, not pedagogy.**~~ **Superseded the same
+day.** There is only ONE order now. `classify` matches a rule and then lets
+that rule's exceptions revise the verdict, so an exception no longer has to run
+before the rule it modifies, and `OWNERSHIP_RULES` is simply in the order the
+rules are taught (Siggie: "would it complicate the algorithm much to just run
+the rules in pedagogy order and on the rule 2 exceptions just reclassify?" — it
+does not; it simplifies it). `parentRule` became structural rather than
+presentational as a result. Rules also gained a human-readable `label`, which
+is what the legend shows. See WORKLOG.
 
 ---
 
