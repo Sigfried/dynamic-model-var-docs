@@ -113,6 +113,9 @@ const CARDINALITY: ReadonlyArray<[string, string]> = [
   ['1..*', 'required, one or more'],
 ];
 
+/** Which depth of a rule's one list is open, if either. */
+type Depth = 'entities' | 'attributes';
+
 /**
  * One rule's pairs, grouped by the TARGET entity — the range, which is the end
  * the rule is about — and sorted by name.
@@ -157,18 +160,25 @@ function CountToggle({ n, noun, open, onClick }: {
 }
 
 /**
- * The attribute listing, nested under its target entity.
+ * The one list both counts open, at two depths.
+ *
+ * `N entities` and `M attributes` are not two listings — they are the SAME
+ * rows, collapsed and expanded (Siggie, 2026-09-13). Each row is a target
+ * entity carrying its own `M attributes` badge; `showAttributes` decides
+ * whether the attributes under it are revealed. Rendering two different lists
+ * here was the thing that made one look like a list that would not close, and
+ * it also cost the entity view the per-entity counts that are its point.
  *
  * **A single attribute sits on the entity's own line** — `Entity: Class.slot`
- * — and only a genuine list indents (Siggie, 2026-09-13). Most entities here
- * are named by exactly one attribute, so giving every one of them a heading
- * plus an indented row of its own doubled the height of the list to say
- * nothing: the reader scans a column of headings that each govern one item.
+ * — and only a genuine list indents. Most entities here are named by exactly
+ * one attribute, so a heading plus one indented row doubled the height of the
+ * list to say nothing.
  *
- * `Class.slot` only, never the range — that is the heading it sits under.
+ * `Class.slot` only, never the range: that is the row it sits under.
  */
-function PairsByEntity({ entities, classLink }: {
+function EntityRows({ entities, showAttributes, classLink }: {
   entities: ReadonlyArray<{ entity: string; pairs: OwnershipPair[] }>;
+  showAttributes: boolean;
   classLink: (id: string) => React.ReactNode;
 }) {
   const attr = (p: OwnershipPair) => (
@@ -184,42 +194,35 @@ function PairsByEntity({ entities, classLink }: {
   return (
     <ul className="mt-1 mb-1.5 space-y-0.5 font-mono text-[10px]
                    text-gray-600 dark:text-gray-400">
-      {entities.map(e => (
-        <li key={e.entity}>
-          <span className="text-gray-500 dark:text-gray-400">{classLink(e.entity)}</span>
-          {e.pairs.length === 1 ? (
-            <>
-              <span className="text-gray-400">: </span>
-              {attr(e.pairs[0])}
-            </>
-          ) : (
-            <ul className="ml-3">
-              {e.pairs.map(p => (
-                <li key={`${p.declaredOn}.${p.slotName}`}>{attr(p)}</li>
-              ))}
-            </ul>
-          )}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-/**
- * The entity listing: names only, no counts.
- *
- * The per-entity attribute count lived here briefly and came out — it is the
- * other disclosure's content, and printing it twice invited the reader to
- * reconcile two lists that say the same thing.
- */
-function EntityList({ entities, classLink }: {
-  entities: ReadonlyArray<{ entity: string }>;
-  classLink: (id: string) => React.ReactNode;
-}) {
-  return (
-    <ul className="mt-1 mb-1.5 space-y-0.5 font-mono text-[10px]
-                   text-gray-600 dark:text-gray-400">
-      {entities.map(e => <li key={e.entity}>{classLink(e.entity)}</li>)}
+      {entities.map(e => {
+        const inline = showAttributes && e.pairs.length === 1;
+        return (
+          <li key={e.entity}>
+            <span className="text-gray-500 dark:text-gray-400">{classLink(e.entity)}</span>
+            {inline && (
+              <>
+                <span className="text-gray-400">: </span>
+                {attr(e.pairs[0])}
+              </>
+            )}
+            {/* The badge is the row's own count, and it is what makes the
+                collapsed view worth reading. Suppressed where the single
+                attribute is already printed inline beside it. */}
+            {!inline && (
+              <span className="ml-1.5 text-[9px] text-gray-400">
+                &nbsp;{e.pairs.length}&nbsp;{e.pairs.length === 1 ? 'attribute' : 'attributes'}
+              </span>
+            )}
+            {showAttributes && !inline && (
+              <ul className="ml-3">
+                {e.pairs.map(p => (
+                  <li key={`${p.declaredOn}.${p.slotName}`}>{attr(p)}</li>
+                ))}
+              </ul>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -257,10 +260,16 @@ export default function OwnershipLegend({
    * name the same entities, so two open lists look like one that would not
    * close.
    */
-  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
-  const toggle = (k: string) => setOpen(prev => {
-    const next = new Set(prev);
-    if (!next.delete(k)) next.add(k);
+  const [open, setOpen] = useState<ReadonlyMap<string, Depth>>(() => new Map());
+  /*
+   * Opening one count closes the other on the SAME rule: they are two depths
+   * of one list, so holding both would be holding one list in two states.
+   * Across rules they stay independent — comparing entity counts is exactly
+   * what the collapsed view is for.
+   */
+  const setDepth = (group: string, depth: Depth) => setOpen(prev => {
+    const next = new Map(prev);
+    if (next.get(group) === depth) next.delete(group); else next.set(group, depth);
     return next;
   });
 
@@ -329,24 +338,25 @@ export default function OwnershipLegend({
                     <CountToggle
                       n={entities.length}
                       noun="entities"
-                      open={open.has(`${key}:entities`)}
-                      onClick={() => toggle(`${key}:entities`)}
+                      open={open.get(key) === 'entities'}
+                      onClick={() => setDepth(key, 'entities')}
                     />
                     <CountToggle
                       n={g.pairs.length}
                       noun="attributes"
-                      open={open.has(`${key}:attributes`)}
-                      onClick={() => toggle(`${key}:attributes`)}
+                      open={open.get(key) === 'attributes'}
+                      onClick={() => setDepth(key, 'attributes')}
                     />
                   </div>
                   <p className="text-[11px] leading-snug text-gray-600 dark:text-gray-400 mt-0.5">
                     {g.ruleText}
                   </p>
-                  {open.has(`${key}:entities`) && (
-                    <EntityList entities={entities} classLink={classLink} />
-                  )}
-                  {open.has(`${key}:attributes`) && (
-                    <PairsByEntity entities={entities} classLink={classLink} />
+                  {open.has(key) && (
+                    <EntityRows
+                      entities={entities}
+                      showAttributes={open.get(key) === 'attributes'}
+                      classLink={classLink}
+                    />
                   )}
                 </li>
               );
@@ -367,21 +377,22 @@ export default function OwnershipLegend({
               <CountToggle
                 n={inducedEntities.length}
                 noun="entities"
-                open={open.has('induced:entities')}
-                onClick={() => toggle('induced:entities')}
+                open={open.get('induced') === 'entities'}
+                onClick={() => setDepth('induced', 'entities')}
               />
               <CountToggle
                 n={induced.pairs.length}
                 noun="attributes"
-                open={open.has('induced:attributes')}
-                onClick={() => toggle('induced:attributes')}
+                open={open.get('induced') === 'attributes'}
+                onClick={() => setDepth('induced', 'attributes')}
               />
             </div>
-            {open.has('induced:entities') && (
-              <EntityList entities={inducedEntities} classLink={classLink} />
-            )}
-            {open.has('induced:attributes') && (
-              <PairsByEntity entities={inducedEntities} classLink={classLink} />
+            {open.has('induced') && (
+              <EntityRows
+                entities={inducedEntities}
+                showAttributes={open.get('induced') === 'attributes'}
+                classLink={classLink}
+              />
             )}
           </Section>
         )}

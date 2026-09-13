@@ -43,14 +43,58 @@ describe('ownership legend disclosures', () => {
     expect(rows()).toBe(0);                   // the reported bug: it must go away
   });
 
-  test('the two counts on one rule are independent', async () => {
+  /*
+   * The two counts are two DEPTHS of one list, so opening one closes the other
+   * on that rule — holding both would be holding one list in two states.
+   */
+  test('opening one count closes the other on the same rule', async () => {
     const { counts } = await setup();
     const find = (re: RegExp) => counts().find(b => re.test(b.textContent ?? ''))!;
     fireEvent.click(find(/30\s*entities/));
     expect(find(/30\s*entities/).getAttribute('aria-expanded')).toBe('true');
     expect(find(/89\s*attributes/).getAttribute('aria-expanded')).toBe('false');
+
     fireEvent.click(find(/89\s*attributes/));
+    expect(find(/89\s*attributes/).getAttribute('aria-expanded')).toBe('true');
+    expect(find(/30\s*entities/).getAttribute('aria-expanded')).toBe('false');
+  });
+
+  test('rules stay independent of each other', async () => {
+    const { counts } = await setup();
+    const find = (re: RegExp) => counts().find(b => re.test(b.textContent ?? ''))!;
+    fireEvent.click(find(/30\s*entities/));
+    fireEvent.click(find(/5\s*entities/));    // the range-keyed exception
     expect(find(/30\s*entities/).getAttribute('aria-expanded')).toBe('true');
+    expect(find(/5\s*entities/).getAttribute('aria-expanded')).toBe('true');
+  });
+
+  /*
+   * Both depths render the SAME rows. This is the one that would have caught
+   * the 2026-09-13 misreading, where the two counts rendered two different
+   * listings and the entity view lost its per-entity counts.
+   */
+  test('both depths list the same entities', async () => {
+    const { counts } = await setup();
+    const find = (re: RegExp) => counts().find(b => re.test(b.textContent ?? ''))!;
+    const topRows = () => Array.from(document.querySelectorAll('ul.font-mono > li'))
+      .map(li => li.textContent!.match(/^[A-Za-z]+/)![0]);
+
+    fireEvent.click(find(/30\s*entities/));
+    const collapsed = topRows();
+    fireEvent.click(find(/89\s*attributes/));
+    expect(topRows()).toEqual(collapsed);
+    expect(collapsed.length).toBe(30);
+  });
+
+  test('the collapsed view carries a per-entity attribute count', async () => {
+    const { counts } = await setup();
+    fireEvent.click(counts().find(b => /30\s*entities/.test(b.textContent ?? ''))!);
+    // \u00a0 throughout: the badge uses &nbsp; so a count never wraps away
+    // from its noun, or from the entity name it belongs to.
+    const rows = Array.from(document.querySelectorAll('ul.font-mono > li'))
+      .map(li => li.textContent!.trim().replace(/\u00a0/g, ' '));
+    expect(rows).toContain('BodySite 6 attributes');
+    expect(rows).toContain('Activity 1 attribute');       // singular
   });
 
   /*
@@ -63,6 +107,7 @@ describe('ownership legend disclosures', () => {
     fireEvent.click(counts().find(b => /89\s*attributes/.test(b.textContent ?? ''))!);
     const items = Array.from(document.querySelectorAll('ul.font-mono > li'));
     const activity = items.find(li => li.textContent?.startsWith('Activity'))!;
+    // Inline, and the badge is suppressed: the one attribute is already there.
     expect(activity.textContent).toBe('Activity: Context.activity');
     expect(activity.querySelector('ul')).toBeNull();
 
