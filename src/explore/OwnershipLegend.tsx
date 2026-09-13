@@ -159,37 +159,67 @@ function CountToggle({ n, noun, open, onClick }: {
 /**
  * The attribute listing, nested under its target entity.
  *
- * `Class.slot` only — the range is the heading it sits under, so printing it
- * on every row would repeat the word directly above it. (The older flat
- * listing printed `Class.slot → Range` for the same reason it printed an
- * `(owner: X)` before that: without a grouping there was nowhere else to say
- * which entity the row was about.)
+ * **A single attribute sits on the entity's own line** — `Entity: Class.slot`
+ * — and only a genuine list indents (Siggie, 2026-09-13). Most entities here
+ * are named by exactly one attribute, so giving every one of them a heading
+ * plus an indented row of its own doubled the height of the list to say
+ * nothing: the reader scans a column of headings that each govern one item.
+ *
+ * `Class.slot` only, never the range — that is the heading it sits under.
  */
 function PairsByEntity({ entities, classLink }: {
   entities: ReadonlyArray<{ entity: string; pairs: OwnershipPair[] }>;
   classLink: (id: string) => React.ReactNode;
 }) {
+  const attr = (p: OwnershipPair) => (
+    <>
+      {classLink(p.declaredOn)}
+      <span className="text-gray-400">.{p.slotName}</span>
+      {p.multivalued && <span className="ml-1 text-gray-400" title="multivalued">↠</span>}
+      {p.isLoop && (
+        <span className="ml-1" style={{ color: RANGE_COLORS.entity }}>loop</span>
+      )}
+    </>
+  );
   return (
-    <ul className="mt-1 mb-1.5 space-y-1 text-[10px]">
+    <ul className="mt-1 mb-1.5 space-y-0.5 font-mono text-[10px]
+                   text-gray-600 dark:text-gray-400">
       {entities.map(e => (
         <li key={e.entity}>
-          <div className="font-mono text-gray-500 dark:text-gray-400">
-            {classLink(e.entity)}
-          </div>
-          <ul className="ml-3 font-mono text-gray-600 dark:text-gray-400">
-            {e.pairs.map(p => (
-              <li key={`${p.declaredOn}.${p.slotName}`}>
-                {classLink(p.declaredOn)}
-                <span className="text-gray-400">.{p.slotName}</span>
-                {p.multivalued && <span className="ml-1 text-gray-400" title="multivalued">↠</span>}
-                {p.isLoop && (
-                  <span className="ml-1" style={{ color: RANGE_COLORS.entity }}>loop</span>
-                )}
-              </li>
-            ))}
-          </ul>
+          <span className="text-gray-500 dark:text-gray-400">{classLink(e.entity)}</span>
+          {e.pairs.length === 1 ? (
+            <>
+              <span className="text-gray-400">: </span>
+              {attr(e.pairs[0])}
+            </>
+          ) : (
+            <ul className="ml-3">
+              {e.pairs.map(p => (
+                <li key={`${p.declaredOn}.${p.slotName}`}>{attr(p)}</li>
+              ))}
+            </ul>
+          )}
         </li>
       ))}
+    </ul>
+  );
+}
+
+/**
+ * The entity listing: names only, no counts.
+ *
+ * The per-entity attribute count lived here briefly and came out — it is the
+ * other disclosure's content, and printing it twice invited the reader to
+ * reconcile two lists that say the same thing.
+ */
+function EntityList({ entities, classLink }: {
+  entities: ReadonlyArray<{ entity: string }>;
+  classLink: (id: string) => React.ReactNode;
+}) {
+  return (
+    <ul className="mt-1 mb-1.5 space-y-0.5 font-mono text-[10px]
+                   text-gray-600 dark:text-gray-400">
+      {entities.map(e => <li key={e.entity}>{classLink(e.entity)}</li>)}
     </ul>
   );
 }
@@ -214,19 +244,20 @@ export default function OwnershipLegend({
    */
   const slotRules = groups.filter(g => g.rule !== 'child-following-parent');
   const induced = groups.find(g => g.rule === 'child-following-parent');
+  const inducedEntities = induced ? byTargetEntity(induced.pairs) : [];
   /*
    * Which disclosures are open, keyed `${group}:${which}`. A SET, not a single
-   * key: each rule now has two independent counts (TASKS `legend-two-counts`),
-   * and they are genuinely independent — a reader comparing entity counts
-   * across rules wants several open at once.
+   * key: each rule has two independent counts (TASKS `legend-two-counts`), and
+   * a reader comparing entity counts across rules wants several open at once.
    *
-   * The attribute lists start OPEN and the entity lists start closed: the
-   * attribute listing is what the panel was already for, and collapsing it by
-   * default would hide the thing the legend exists to expose.
+   * **Everything starts collapsed** (Siggie, 2026-09-13). The panel opens as
+   * four rules and their counts, which is the summary; opening a list is the
+   * reader asking a question. An attribute list open by default also read as a
+   * collapse FAILURE when the entity list was opened above it — both lists
+   * name the same entities, so two open lists look like one that would not
+   * close.
    */
-  const [open, setOpen] = useState<ReadonlySet<string>>(
-    () => new Set(groups.map(g => `${g.verdict}/${g.rule}:attributes`)),
-  );
+  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
   const toggle = (k: string) => setOpen(prev => {
     const next = new Set(prev);
     if (!next.delete(k)) next.add(k);
@@ -312,14 +343,7 @@ export default function OwnershipLegend({
                     {g.ruleText}
                   </p>
                   {open.has(`${key}:entities`) && (
-                    <ul className="mt-1 mb-1.5 flex flex-wrap gap-x-2 gap-y-0.5 font-mono text-[10px]">
-                      {entities.map(e => (
-                        <li key={e.entity} className="text-gray-600 dark:text-gray-400">
-                          {classLink(e.entity)}
-                          <span className="text-gray-400">&nbsp;{e.pairs.length}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    <EntityList entities={entities} classLink={classLink} />
                   )}
                   {open.has(`${key}:attributes`) && (
                     <PairsByEntity entities={entities} classLink={classLink} />
@@ -341,7 +365,7 @@ export default function OwnershipLegend({
             </p>
             <div className="flex gap-3">
               <CountToggle
-                n={byTargetEntity(induced.pairs).length}
+                n={inducedEntities.length}
                 noun="entities"
                 open={open.has('induced:entities')}
                 onClick={() => toggle('induced:entities')}
@@ -354,17 +378,10 @@ export default function OwnershipLegend({
               />
             </div>
             {open.has('induced:entities') && (
-              <ul className="mt-1 mb-1.5 flex flex-wrap gap-x-2 gap-y-0.5 font-mono text-[10px]">
-                {byTargetEntity(induced.pairs).map(e => (
-                  <li key={e.entity} className="text-gray-600 dark:text-gray-400">
-                    {classLink(e.entity)}
-                    <span className="text-gray-400">&nbsp;{e.pairs.length}</span>
-                  </li>
-                ))}
-              </ul>
+              <EntityList entities={inducedEntities} classLink={classLink} />
             )}
             {open.has('induced:attributes') && (
-              <PairsByEntity entities={byTargetEntity(induced.pairs)} classLink={classLink} />
+              <PairsByEntity entities={inducedEntities} classLink={classLink} />
             )}
           </Section>
         )}
