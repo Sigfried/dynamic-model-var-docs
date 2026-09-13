@@ -126,10 +126,10 @@ export type DrawnVerdict = keyof typeof OWNERSHIP_VERDICTS;
  * against. `RULE_IDS_MATCH_UNION` below fails the build if the two drift.
  */
 export type OwnershipRule =
-  | 'multivalue-owns-fwd'         // Rule 1: multi-valued slot → class
-  | 'single-value-belongs-to-bkwd' // Rule 2: single-valued slot → other entity
-  | 'single-value-owns-fwd'       // Rule 2's exception: range is where the value lives
-  | 'child-following-parent';     // Rule 3: an own-fwd slot's range includes its subclasses
+  | 'owns-target-forward-by-entity'            // the default: an attribute owns what it points at
+  | 'belongs-to-target-backward-by-entity'     // exception, keyed by RANGE: referred-to entities
+  | 'belongs-to-target-backward-by-attribute'  // exception, keyed by CLASS.SLOT: named back-pointers
+  | 'child-following-parent';     // induced, not a slot rule: a range includes its subtree
 // `association` is NOT here: the rule is commented out in OWNERSHIP_RULES
 // (2026-09-11) because no slot classifies as it. The VERDICT of the same name
 // survives on `OwnershipVerdict`, which is a different thing — `=== 'association'`
@@ -139,6 +139,27 @@ export type OwnershipRule =
 export interface SlotFacts {
   slotName: string;
   range: string;
+  /**
+   * The class the slot is DECLARED on. Required, because
+   * `belongs-to-target-backward-by-attribute` is keyed `Class.slot`: a bare slot name would
+   * apply at every class declaring it, which is the hazard that made the old
+   * slot-name overrides dangerous (`performed_by`, 11 sites). Two of the five
+   * back-pointers are named `part_of`, so this is load-bearing today, not a
+   * precaution — keying on the name alone would flip a future `Visit.part_of`
+   * silently.
+   */
+  declaredOn: string;
+  /**
+   * Whether the slot is multi-valued.
+   *
+   * **Available and deliberately unused, since 2026-09-13.** Cardinality used
+   * to BE the rule — multi-valued meant forward, single-valued meant backward,
+   * and 51 of the 60 single-valued sites then had to be flipped back by an
+   * exception list. Dropping it changed no edge on this schema (149 declared,
+   * 10 induced, verified both ways), so what it was really encoding was a
+   * correlation, not the ownership itself. Carried for the same reason as
+   * `required`: a future rule that wants it finds the plumbing here.
+   */
   multivalued: boolean;
   /**
    * Whether the schema marks the slot required.
@@ -180,7 +201,6 @@ export interface RuleSpec {
    */
   parentRule?: OwnershipRule;
 }
-
 /*
  * The hand-curated memberships. These CANNOT be derived from the schema —
  * verified exhaustively 2026-08-21; every candidate discriminator failed. See
@@ -189,12 +209,13 @@ export interface RuleSpec {
  * sync check ONE place to look, which is all this module claims to do about
  * the problem.
  *
- * Two sets, and only one has members. Both are keyed by RANGE — the class
- * being pointed AT — not by slot name. That is the whole reason TASKS
- * `override-site-check` dissolved with this work: a slot-name key silently
- * applies at every class declaring that slot, which is how `performed_by`
- * (11 sites) did damage when it sat in the old override list. A range key has
- * no such hazard: the range IS the thing being classified.
+ * **Two exception sets, keyed differently on purpose**, and the difference is
+ * the whole reason there are two rules rather than one list of ten. A RANGE
+ * key says "this entity is always referred to, wherever it is pointed at". A
+ * `Class.slot` key says "this one attribute is a back-pointer", and says
+ * nothing about its range — which matters, because both ranges in the second
+ * set are OWNED by some other attribute (see that set's comment). Merging them
+ * would need the entity key to carry an exception of its own.
  */
 
 // Empty since 2026-09-11 (TASKS `ownership-rules`). Kept as the worked example
@@ -203,105 +224,107 @@ export interface RuleSpec {
 export const ASSOCIATION_SLOTS = new Set<string>([]);
 
 /**
- * Ranges whose instances live INSIDE whatever holds them: **the holder is
- * where this is found.** A single-valued slot pointing at one of these is
- * forward ownership, never flipped into a foreign key.
+ * **Entities that are referred to rather than contained.** Pointing at one of
+ * these never means owning it: they are the shared, independently-existing
+ * things of this model, looked up rather than held. 55 attributes point at the
+ * five of them.
  *
- * The criterion is deliberately not "no independent existence" — that
- * over-claims for group 3, whose members do hold other things. What every
- * member satisfies is the weaker, truer statement: you find one of these by
- * starting at its holder, so the holder is drawn first.
+ * Keyed by RANGE, so the claim is about the ENTITY and holds at every site.
+ * That is the safe key — it cannot silently capture an unrelated slot the way
+ * a bare slot name can.
  *
- * Per-member decision history lives in WORKLOG. The group comments below say
- * why each group is here NOW; they do not re-argue what was settled.
+ * All five are leaf classes (no subclasses), which is what keeps the induced
+ * rule forward-only: there is no subtree under a referred-to entity for
+ * ownership to be induced across. Re-check that after a schema sync — a
+ * subclass added under any of these is the one change that would invalidate
+ * `child-following-parent`'s restriction.
  */
-export const SINGLE_VALUE_OWNER_TARGETS = new Set<string>([
-  // 1. Value leaves, widely reused. No outgoing class edges at all: a Quantity
-  //    of 5 mg is not something you look up, it is part of its holder.
-  'Quantity',                           // 16 referrers
-  'TimePoint',                          // 15
-  'BodySite',                           // 6
-
-  // 2. Value leaves, single referrer. Same shape as group 1, but named by
-  //    exactly one slot, so they could never be shared even in principle.
-  'CauseOfDeath', 'BiologicProduct',
-  'QuestionnaireResponseValue',
-  'QuestionnaireResponseValueDecimal', 'QuestionnaireResponseValueBoolean',
-  'QuestionnaireResponseValueInteger', 'QuestionnaireResponseValueTimePoint',
-  'QuestionnaireResponseValueString',
-
-  // 3. Holds other value objects. Not leaves — these point at further value
-  //    objects, and at themselves (self-loops, drawn as ⟲, never layered) —
-  //    but still found only by way of their holder.
-  'Substance', 'TimePeriod', 'Activity', 'SpecimenContainer',
-  // `Entity` is the universal root, so a slot pointing AT it is never a
-  // foreign key back to an owner; without this, Rule 2 would reverse the
-  // single-valued `focus`/`associated_artifact` sites and draw Entity as the
-  // owner of Document and Observation, which is backwards. Its multivalued
-  // sites are Rule 1 already, which is why this replaced a rule of its own.
-  'Entity',
-  // Each named by exactly one slot and referenced by nothing else, so they are
-  // group-2 value targets by the ordinary test. They were a slot-keyed rule
-  // ("cardinality splits a family") until 2026-09-11; range keys say the same
-  // thing without a second way to spell an override.
-  'SpecimenCreationActivity',           // Specimen.creation_activity
-  'DimensionalObservationSet',          // Specimen.dimensional_measures
-  // DimensionalObservationSet needs to be on this list because
-  //   - it is different from SpecimenQualityObservation and SpecimenQuantityObservation
-  //     by being 0..1 instead of 0..*
-  //   - and it is different from the other ObservationSets by being the only one
-  //     referenced by another slot
+export const REFERRED_TO_ENTITIES = new Set<string>([
+  'Participant',      // 21 attributes point at it
+  'Visit',            // 18
+  'Organization',     // 14
+  'ImagingStudy',     // 1
+  'Person',           // 1
 ]);
 
 /**
- * **ONE ORDER, AND IT IS THE ORDER YOU WOULD TEACH THEM IN.** Rule 1, then
- * Rule 2, then Rule 2's exception, then Rule 3.
+ * **Individual attributes that point back at an owner.** Five named
+ * back-pointers: the attribute refers, and the entity it is declared on is the
+ * one being owned.
  *
- * This is the order the tour uses, the order the legend lists, and the order
- * `classify` applies — deliberately, because there used to be two. An
- * exception used to have to jump the queue and run BEFORE the rule it defeats,
- * which forced the array into precedence order and left the legend
- * reconstructing a teaching order from `parentRule`. Siggie, 2026-09-11: run
- * them in pedagogy order and let the exception reclassify instead. It does not
- * complicate `classify` — it simplifies it, because an exception was never
- * really competing for the slot. It revises the verdict its parent already
- * reached.
+ * Keyed `Class.slot` and NOT by range, because these ranges are not
+ * referred-to entities — each is genuinely owned, by exactly one other
+ * attribute:
  *
- * So: the first rule WITHOUT a `parentRule` whose `when` fires gives the
- * verdict, and then that rule's exceptions get a chance to revise it. The
- * default (`single-value-belongs-to-bkwd`) is total and can sit in the middle
- * where it is taught rather than last where precedence would have wanted it.
+ *   - `QuestionnaireItem`  is owned by `Questionnaire.items`, and referred to
+ *     by the three entries below.
+ *   - `ResearchStudy`      is owned by `ResearchStudyCollection.entries`, and
+ *     referred to by the two entries below.
  *
- * Reordering the entries still changes classification — two unrelated rules
- * can both match a slot. `tsc` cannot catch that; the schema-sweeping tests in
- * `containmentGraph.test.ts` can, and do.
+ * So a range key would be wrong here, not merely risky: it would strip those
+ * two entities of the ownership they do have. The fully-qualified key is also
+ * what keeps `part_of` honest — two different classes declare one, and a bare
+ * `part_of` would flip any future third site silently.
+ */
+export const NAMED_BACK_POINTERS = new Set<string>([
+  'QuestionnaireItem.part_of',                        // → QuestionnaireItem (self)
+  'QuestionnaireResponseItem.has_questionnaire_item', // → QuestionnaireItem
+  'SdohObservation.related_questionnaire_item',       // → QuestionnaireItem
+  'ResearchStudy.part_of',                            // → ResearchStudy (self)
+  'Participant.member_of_research_study',             // → ResearchStudy
+]);
+
+/**
+ * **One rule, two exceptions, and an induced pass that is not a slot rule.**
+ *
+ * The order is the order you would teach them in, which is also the order
+ * `classify` applies: state the rule, then say when it does not hold. An
+ * exception is only ever offered a slot its parent already claimed, so it does
+ * not restate the parent's condition — it revises the verdict already reached
+ * (Siggie, 2026-09-11).
+ *
+ * **The rules are not numbered.** They were, when cardinality decided ownership
+ * and the numbers encoded which test ran first. Now the default is total and
+ * the two exceptions never compete with each other, so there is no precedence
+ * for a number to carry — and `child-following-parent` is not a slot rule at
+ * all, so numbering three of four sections would invite the reader to look for
+ * a fourth. The legend and the tour quote `label` instead, which stays correct
+ * if the order ever changes again.
+ *
+ * Reordering the entries still changes classification — `tsc` cannot catch
+ * that; the schema-sweeping tests in `containmentGraph.test.ts` can, and do.
  */
 export const OWNERSHIP_RULES = [
   {
-    id: 'multivalue-owns-fwd',
-    label: 'Owns because multivalued',
-    when: ({ multivalued }) => multivalued,
-    verdict: 'own-fwd',
-    text: 'Rule 1: a multi-valued slot pointing at a class means the owner has-a '
-      + 'collection of them, so ownership runs forward: owner → range.',
-  },
-  {
-    id: 'single-value-belongs-to-bkwd',
-    label: 'Belongs to because single-valued',
+    id: 'owns-target-forward-by-entity',
+    label: 'Owns target entity',
     when: () => true,                   // the default: total, so it matches anything
-    verdict: 'own-bkwd',
-    text: 'Rule 2: a single-valued slot pointing at another ENTITY reads as a foreign key, '
-      + 'so ownership runs BACKWARD: the target owns the source, not the other way round.',
+    verdict: 'own-fwd',
+    text: 'An attribute owns the entity it points at: the thing it points at is part of '
+      + 'it, so ownership runs forward, from the entity declaring the attribute to its '
+      + 'target.',
   },
   {
-    id: 'single-value-owns-fwd',
-    label: 'Owns despite being single-valued',
-    when: ({ range }) => SINGLE_VALUE_OWNER_TARGETS.has(range),
-    verdict: 'own-fwd',
-    parentRule: 'single-value-belongs-to-bkwd',
-    text: 'Exception to Rule 2: a single-valued slot pointing at a range that is found '
-      + 'only by way of its holder (Quantity, TimePoint, and the like) is forward ownership '
-      + '— the holder is where the value lives, so it is not a pointer out to something else.',
+    id: 'belongs-to-target-backward-by-entity',
+    label: 'Owned by target entity (referred-to entities)',
+    when: ({ range }) => REFERRED_TO_ENTITIES.has(range),
+    verdict: 'own-bkwd',
+    parentRule: 'owns-target-forward-by-entity',
+    text: 'Referred-to entities are pointed at rather than contained — a Participant or a '
+      + 'Visit exists in its own right and is looked up, not held. Pointing at one means '
+      + 'belonging to it, so ownership runs backward. This is said about the ENTITY, so it '
+      + 'holds wherever that entity is pointed at.',
+  },
+  {
+    id: 'belongs-to-target-backward-by-attribute',
+    label: 'Owned by target entity (named back-pointers)',
+    when: ({ declaredOn, slotName }) => NAMED_BACK_POINTERS.has(`${declaredOn}.${slotName}`),
+    verdict: 'own-bkwd',
+    parentRule: 'owns-target-forward-by-entity',
+    text: 'Named back-pointers are individual attributes that point back at an owner rather '
+      + 'than down at something owned. This is said about the ATTRIBUTE, not its target: '
+      + 'these targets are themselves owned, each by one other attribute, so the same entity '
+      + 'is both owned and referred to depending on which attribute you arrive by.',
   },
   {
     /*
@@ -314,9 +337,10 @@ export const OWNERSHIP_RULES = [
     id: 'child-following-parent',
     label: 'Owns the children because it owns the parent',
     verdict: 'own-fwd',
-    text: 'Rule 3: a slot whose range is a parent class accepts any of its subclasses, so '
-      + 'whatever owns the parent through that slot owns each subclass too. These '
-      + 'edges are induced from the declared one, not read from a slot of their own.',
+    text: 'An attribute whose target has subclasses accepts any of them, so whatever owns '
+      + 'the target owns each subclass too. These edges are induced from a declared one '
+      + 'rather than read from an attribute of their own, which is why they appear on the '
+      + 'diagram with no attribute behind them.',
   },
   /* {
     id: 'association',
@@ -339,9 +363,9 @@ export const OWNERSHIP_RULES = [
  * an order contrived so that exceptions get first refusal (Siggie, 2026-09-11).
  *
  * An exception is only ever offered a slot its parent already claimed, so it
- * does not need to restate its parent's condition — `single-value-owns-fwd`
- * tests the RANGE and says nothing about cardinality, because by the time it
- * runs, "single-valued" is established.
+ * does not need to restate its parent's condition. The two exceptions are
+ * checked together rather than first-match, so a future overlap between them
+ * fails loudly instead of resolving to whichever was declared first.
  *
  * **The classifier must always explain itself** — having it report which rule
  * fired, and the legend render pairs grouped by rule, is what made the original
@@ -353,17 +377,34 @@ export function classify(facts: SlotFacts): { verdict: OwnershipVerdict; rule: O
   for (const rule of rules) {
     if (rule.parentRule !== undefined) continue;      // offered only via its parent
     if (!rule.when?.(facts)) continue;
-    const exception = rules.find(r => r.parentRule === rule.id && r.when?.(facts));
+    /*
+     * ALL matching exceptions, not the first — there are two now, and they are
+     * keyed differently (by range, by `Class.slot`). They are disjoint on this
+     * schema, but nothing structural makes them so: adding a referred-to
+     * ENTITY that some ATTRIBUTE entry also names would make both fire, and a
+     * `find()` would pick one silently and report the wrong rule to the legend.
+     * The verdict would happen to be right, which is what makes it the kind of
+     * bug that survives. Fail instead.
+     */
+    const hits = rules.filter(r => r.parentRule === rule.id && r.when?.(facts));
+    if (hits.length > 1) {
+      throw new Error(
+        `${facts.declaredOn}.${facts.slotName} → ${facts.range} matches `
+        + `${hits.length} exceptions to ${rule.id} (${hits.map(h => h.id).join(', ')}). `
+        + 'Exceptions to one rule must be disjoint; drop the redundant entry.',
+      );
+    }
+    const [exception] = hits;
     return exception
       ? { verdict: exception.verdict, rule: exception.id }
       : { verdict: rule.verdict, rule: rule.id };
   }
-  // Unreachable: `single-value-belongs-to-bkwd` matches everything. Thrown
-  // rather than defaulted, per CLAUDE.md "fail loudly" — a miss here means
-  // someone removed the total rule or gave it a `parentRule`.
+  // Unreachable: `owns-target-forward-by-entity` matches everything. Thrown rather than
+  // defaulted, per CLAUDE.md "fail loudly" — a miss here means someone removed
+  // the total rule or gave it a `parentRule`.
   throw new Error(
-    `No ownership rule matched ${facts.slotName}: ${facts.range}`
-    + ` (multivalued=${facts.multivalued}). One rule must be total.`,
+    `No ownership rule matched ${facts.declaredOn}.${facts.slotName}: ${facts.range}.`
+    + ' One rule must be total.',
   );
 }
 

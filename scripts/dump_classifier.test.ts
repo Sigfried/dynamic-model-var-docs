@@ -22,7 +22,8 @@ import {
   classifySlotEdgeExplained,
   ENTITY_ROOT,
   SKIP_SUBCLASS_EXPANSION,
-  SINGLE_VALUE_OWNER_TARGETS,
+  REFERRED_TO_ENTITIES,
+  NAMED_BACK_POINTERS,
   ASSOCIATION_SLOTS,
 } from '../src/models/containmentGraph';
 
@@ -65,7 +66,7 @@ test.skipIf(!input || !output)('dump classifier verdicts', () => {
       const range = defn.range ?? '';
       const multivalued = Boolean(defn.multivalued);
       if (!classNames.has(range)) return [];
-      const { verdict, rule } = classifySlotEdgeExplained(slotName, range, multivalued);
+      const { verdict, rule } = classifySlotEdgeExplained(className, slotName, range, multivalued);
       return [{ class: className, slot: slotName, range, multivalued, verdict, rule }];
     }),
   );
@@ -78,7 +79,8 @@ test.skipIf(!input || !output)('dump classifier verdicts', () => {
         // The audit reports stale members of these, so it reads them from here
         // rather than regexing the TS source.
         sets: {
-          SINGLE_VALUE_OWNER_TARGETS: [...SINGLE_VALUE_OWNER_TARGETS],
+          REFERRED_TO_ENTITIES: [...REFERRED_TO_ENTITIES],
+          NAMED_BACK_POINTERS: [...NAMED_BACK_POINTERS],
           ASSOCIATION_SLOTS: [...ASSOCIATION_SLOTS],
           SKIP_SUBCLASS_EXPANSION: [...SKIP_SUBCLASS_EXPANSION],
         },

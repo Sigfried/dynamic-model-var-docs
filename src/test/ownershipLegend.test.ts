@@ -30,9 +30,9 @@ describe('ownership legend', () => {
     let checked = 0;
     for (const cname of classIds) {
       for (const slot of getSlotEdgesForClass(data.graph, cname)) {
-        const plain = classifySlotEdge(slot.slotName, slot.range, slot.multivalued);
+        const plain = classifySlotEdge(cname, slot.slotName, slot.range, slot.multivalued);
         const { verdict } = classifySlotEdgeExplained(
-          slot.slotName, slot.range, slot.multivalued,
+          cname, slot.slotName, slot.range, slot.multivalued,
         );
         expect(verdict).toBe(plain);
         checked++;
@@ -47,11 +47,15 @@ describe('ownership legend', () => {
       expect(g.pairs.length).toBeGreaterThan(0);
       expect(g.ruleText).toBeTruthy();
       for (const p of g.pairs) {
-        // A Rule 3 pair is induced from a declared forward pair: the slot
+        // An induced pair comes from a declared forward pair: the attribute
         // classifies against the DECLARED range, and that must come out
         // forward, or there was nothing to induce from.
+        //
+        // `p.declaredOn` is not optional here — `belongs-to-target-backward-by-attribute` is
+        // keyed `Class.slot`, so dropping the class would silently stop that
+        // exception firing and the pairs would compare equal by luck.
         const { verdict, rule } = classifySlotEdgeExplained(
-          p.slotName, p.inducedFrom ?? p.range, p.multivalued,
+          p.declaredOn, p.slotName, p.inducedFrom ?? p.range, p.multivalued,
         );
         expect(verdict).toBe(g.verdict);
         if (p.inducedFrom !== undefined) {

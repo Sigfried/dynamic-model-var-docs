@@ -8,9 +8,16 @@ entries. This script covers what nothing else does:
   2. Hand-curated override sets in src/models/containmentGraph.ts whose members
      no longer exist in the schema (they are keyed by slot NAME, and a rename
      removes them silently -- no error, no test failure).
-  3. Slots whose range or multivalued flag changed, since both are inputs to
-     the ownership classifier: the same slot can flip own-fwd <-> own-bkwd
-     without the slot itself appearing in any diff you'd think to read.
+  3. Slots whose range or multivalued flag changed. RANGE is a classifier
+     input -- the same slot can flip own-fwd <-> own-bkwd without appearing in
+     any diff you'd think to read. `multivalued` no longer decides ownership
+     (2026-09-13, TASKS `one-rule-ownership`) but is still reported: it changes
+     the cardinality label, and a slot going 0..1 -> 0..* is worth a look.
+
+     A NEW RANGE now defaults to owned, since the rule is "an attribute owns
+     what it points at" and only listed exceptions flip. So a sync that
+     introduces a referred-to entity needs it added to REFERRED_TO_ENTITIES by
+     hand -- see "Classes added" above; nothing here can infer it.
   4. Classes with zero inbound ownership edges ("false roots"). This is the
      2026-08-31 failure mode: widening associated_artifact's range to Entity
      stranded Assay as a root. No config was stale and no test went red; the
@@ -46,8 +53,15 @@ PROCESSED = "public/source_data/HM/bdchm.processed.json"
 # exported `const` identifiers in containmentGraph.ts; a set that gets renamed
 # there shows up here as "not found in containmentGraph.ts" rather than being
 # skipped silently.
+#
+# The kind says how a member is KEYED, which is what a stale check must compare
+# against: "class" against class names, "slot" against bare slot names, and
+# "qualified" against `Class.slot` sites. Getting this wrong does not fail --
+# it reports every member as stale, which is noise that trains you to ignore
+# the section.
 OVERRIDE_SETS = [
-    ("SINGLE_VALUE_OWNER_TARGETS", "class"),
+    ("REFERRED_TO_ENTITIES", "class"),
+    ("NAMED_BACK_POINTERS", "qualified"),
     ("ASSOCIATION_SLOTS", "slot"),
     ("SKIP_SUBCLASS_EXPANSION", "class"),
 ]
@@ -293,7 +307,13 @@ def main() -> int:
         if members is None:
             lines.append(f"{name}: NOT FOUND in containmentGraph.ts (renamed? update OVERRIDE_SETS here)")
             continue
-        known = new_cls if kind == "class" else {s for _, s in new_sites}
+        if kind == "class":
+            known = new_cls
+        elif kind == "qualified":
+            # keyed `Class.slot`, so the site itself is what must still exist
+            known = {f"{c}.{sl}" for c, sl in new_sites}
+        else:
+            known = {sl for _, sl in new_sites}
         for m in sorted(members - known):
             lines.append(f"{name}: '{m}' no longer exists in the schema -- stale override")
     if lines:
@@ -313,7 +333,7 @@ def main() -> int:
             if len(sites) > 1:
                 lines.append(f"{name}: '{m}' now occurs at {len(sites)} classes ({', '.join(sorted(sites))})")
     if lines:
-        lines.append("-> override sets are keyed by slot NAME, so this applies at every site")
+        lines.append("-> these sets are keyed by slot NAME, so this applies at every site")
     rep.add("Override slots that now occur at multiple classes", lines)
 
     # 4. classifier-relevant changes ---------------------------------------

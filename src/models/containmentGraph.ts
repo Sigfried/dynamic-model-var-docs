@@ -44,7 +44,7 @@ export type {
 } from './ownershipRules';
 export {
   OWNERSHIP_RULES, OWNERSHIP_VERDICTS, OWNERSHIP_RULE_TEXT, ENTITY_ROOT,
-  ASSOCIATION_SLOTS, SINGLE_VALUE_OWNER_TARGETS,
+  ASSOCIATION_SLOTS, REFERRED_TO_ENTITIES, NAMED_BACK_POINTERS,
   OWNERSHIP_RULE_LABEL, ruleRank, parentRuleOf,
 } from './ownershipRules';
 
@@ -59,12 +59,13 @@ import {
  * Delegates to `classifySlotEdgeExplained` and discards the rule.
  */
 export function classifySlotEdge(
+  declaredOn: string,
   slotName: string,
   range: string,
   multivalued: boolean,
   required?: boolean,
 ): OwnershipVerdict {
-  return classifySlotEdgeExplained(slotName, range, multivalued, required).verdict;
+  return classifySlotEdgeExplained(declaredOn, slotName, range, multivalued, required).verdict;
 }
 
 /**
@@ -80,12 +81,13 @@ export function classifySlotEdge(
  * plumbing already there rather than a signature to thread.
  */
 export function classifySlotEdgeExplained(
+  declaredOn: string,
   slotName: string,
   range: string,
   multivalued: boolean,
   required?: boolean,
 ): { verdict: OwnershipVerdict; rule: OwnershipRule } {
-  return classify({ slotName, range, multivalued, required });
+  return classify({ declaredOn, slotName, range, multivalued, required });
 }
 
 // NOTE: EXCLUDE_HAS_A_TARGETS is gone (2026-08-25). It dropped every
@@ -214,7 +216,7 @@ export function buildContainmentGraph(
       const rng = slot.range;
       if (!included.has(rng)) continue;           // range not a class in scope
 
-      const verdict = classifySlotEdge(slot.slotName, rng, slot.multivalued, slot.required);
+      const verdict = classifySlotEdge(cname, slot.slotName, rng, slot.multivalued, slot.required);
       if (verdict === 'excluded') continue;
 
       const card = cardinalityLabel(slot.required, slot.multivalued);

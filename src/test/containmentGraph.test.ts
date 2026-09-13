@@ -3,7 +3,7 @@ import { loadModelData } from '../utils/dataLoader';
 import { DataService } from '../services/DataService';
 import type { ContainmentGraph } from '../services/DataService';
 import {
-  SINGLE_VALUE_OWNER_TARGETS, ASSOCIATION_SLOTS,
+  REFERRED_TO_ENTITIES, NAMED_BACK_POINTERS, ASSOCIATION_SLOTS,
   SKIP_SUBCLASS_EXPANSION, classifySlotEdge, subtreeOf, ENTITY_ROOT,
 } from '../models/containmentGraph';
 import { getSlotEdgesForClass } from '../models/Graph';
@@ -36,7 +36,7 @@ describe('getContainmentGraph', () => {
       for (const slot of getSlotEdgesForClass(data.graph, cname)) {
         const rng = slot.range;
         if (!nodeIds.has(rng)) continue;
-        const verdict = classifySlotEdge(slot.slotName, rng, slot.multivalued);
+        const verdict = classifySlotEdge(cname, slot.slotName, rng, slot.multivalued);
         if (verdict === 'excluded') continue;
         // Deliberately NOT cardinalityLabel(): this test exists to check the
         // builder against an independent derivation, so it spells the rule out.
@@ -180,7 +180,7 @@ describe('getContainmentGraph', () => {
       for (const cname of nodeIds) {
         for (const slot of getSlotEdgesForClass(data.graph, cname)) {
           if (!nodeIds.has(slot.range)) continue;
-          let verdict = classifySlotEdge(slot.slotName, slot.range, slot.multivalued);
+          let verdict = classifySlotEdge(cname, slot.slotName, slot.range, slot.multivalued);
           if (!treatContainerAsValueObject && slot.range === 'SpecimenContainer'
               && !slot.multivalued) {
             verdict = 'own-bkwd';               // the pre-2026-09-11 verdict
@@ -234,12 +234,26 @@ describe('getContainmentGraph', () => {
     expect(loops.length).toBe(6);        // part_of occurs twice
   });
 
-  test('SINGLE_VALUE_OWNER_TARGETS ranges are never flipped (forward ownership)', () => {
+  /*
+   * The inverse of the pre-2026-09-13 invariant, and the same claim: a
+   * referred-to entity is ALWAYS pointed at backward, at every site, because
+   * the exception is keyed by range and so cannot miss one.
+   *
+   * `NAMED_BACK_POINTERS` gets no companion test here on purpose — it is
+   * keyed `Class.slot`, so "every edge into this range is flipped" is exactly
+   * what is NOT true of it (both its ranges are owned by one other attribute).
+   * That asymmetry is checked directly in ownershipRules.test.ts instead.
+   */
+  test('REFERRED_TO_ENTITIES are always flipped (backward ownership)', () => {
+    let checked = 0;
     for (const e of graph.edges.filter(e => e.kind === 'has-a')) {
       // an unflipped edge's range is its target; a flipped edge's range is its source
       const range = e.flipped ? e.source : e.target;
-      if (SINGLE_VALUE_OWNER_TARGETS.has(range)) expect(e.flipped, `${e.label}->${range}`).toBe(false);
+      if (!REFERRED_TO_ENTITIES.has(range)) continue;
+      expect(e.flipped, `${e.label}->${range}`).toBe(true);
+      checked++;
     }
+    expect(checked).toBeGreaterThan(50);          // 55 sites as of 2026-09-13
   });
 
   /*

@@ -965,7 +965,7 @@ export class DataService {
         const rng = slot.range;
         if (!known.has(rng)) continue;          // enum/type range: not a class pair
         const { verdict, rule } = classifySlotEdgeExplained(
-          slot.slotName, rng, slot.multivalued, slot.required,
+          cname, slot.slotName, rng, slot.multivalued, slot.required,
         );
         const key = `${verdict}/${rule}`;
         let g = groups.get(key);
