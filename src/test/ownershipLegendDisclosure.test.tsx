@@ -12,9 +12,9 @@ import OwnershipLegend from '../explore/OwnershipLegend';
  * names reading as one. Both were reported on 2026-09-13, so both are pinned.
  */
 describe('ownership legend disclosures', () => {
-  const setup = async () => {
+  const setup = async (onSelect: (ids: string[]) => void = () => {}) => {
     const ds = new DataService(await loadModelData());
-    render(<OwnershipLegend dataService={ds} onClose={() => {}} onSelect={() => {}} />);
+    render(<OwnershipLegend dataService={ds} onClose={() => {}} onSelect={onSelect} />);
     const counts = () => screen.getAllByRole('button')
       .filter(b => /\d+\s*(entities|attributes)/.test(b.textContent ?? ''));
     return { counts };
@@ -171,5 +171,28 @@ describe('ownership legend disclosures', () => {
     const bodySite = items.find(li => li.textContent?.startsWith('BodySite'))!;
     expect(bodySite.querySelector('ul')).not.toBeNull();
     expect(bodySite.querySelectorAll('ul > li').length).toBe(6);
+  });
+
+  /*
+   * A name in the legend ADDS to the canvas. It used to run `applyCase`, which
+   * clears the selection first, so following a name out of the legend wiped
+   * the diagram the reader had the legend open to understand (Siggie,
+   * 2026-09-13). The legend lists pairs, and a pair is worth seeing next to
+   * what is already drawn.
+   *
+   * The component only reports WHICH ids were clicked — that it adds rather
+   * than replaces is ExploreApp's wiring (`addToCanvas`, not `applyCase`), so
+   * what is pinned here is that one click names exactly one class.
+   */
+  test('clicking a name reports exactly that one class', async () => {
+    const picked: string[][] = [];
+    const { counts } = await setup(ids => picked.push(ids));
+    fireEvent.click(counts().find(b => /30\s*entities/.test(b.textContent ?? ''))!);
+
+    const row = Array.from(document.querySelectorAll('ul.font-mono > li'))
+      .find(li => li.textContent!.startsWith('BodySite'))!;
+    fireEvent.click(row.querySelector('button')!);      // the entity name link
+
+    expect(picked).toEqual([['BodySite']]);
   });
 });

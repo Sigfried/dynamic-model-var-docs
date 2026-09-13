@@ -425,7 +425,14 @@ function ExploreAppInner() {
       {legendOpen && (
         <OwnershipLegend
           onClose={() => setLegendOpen(false)}
-          onSelect={ids => applyCase({ name: 'ad hoc', note: '', sel: ids })}
+          /*
+           * ADDS to the canvas; it does not replace it (Siggie, 2026-09-13).
+           * This used to run `applyCase`, which clears the selection first, so
+           * following a name out of the legend wiped the diagram you were
+           * reading the legend to understand. The legend lists pairs, and a
+           * pair is worth seeing NEXT TO what is already drawn.
+           */
+          onSelect={ids => ids.forEach(addToCanvas)}
           dataService={dataService}
         />
       )}
