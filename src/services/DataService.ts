@@ -168,6 +168,13 @@ export interface OwnershipPair {
   /** The slot's declared range class. */
   range: string;
   multivalued: boolean;
+  /**
+   * Whether the schema marks the slot required. Carried for display only —
+   * with `multivalued` it gives the `0..1`/`1..*` label the legend shows, the
+   * same notation the diagram's own attribute rows use. No ownership rule
+   * reads either one (see SlotFacts).
+   */
+  required: boolean;
   /** Ownership direction as drawn — swapped from declaredOn/range when flipped. */
   owner: string;
   owned: string;
@@ -984,6 +991,7 @@ export class DataService {
           slotName: slot.slotName,
           range: rng,
           multivalued: slot.multivalued,
+          required: Boolean(slot.required),
           owner: flipped ? rng : cname,
           owned: flipped ? cname : rng,
           isLoop: cname === rng,

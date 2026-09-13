@@ -34,6 +34,7 @@
 
 import { useMemo, useState } from 'react';
 import { parentRuleOf } from '../services/DataService';
+import { cardinalityLabel } from '../models/containmentGraph';
 import type { DataService, OwnershipPair, OwnershipPairGroup } from '../services/DataService';
 import { EDGE_COLORS, RANGE_COLORS, SIBLING_COLORS } from '../config/appConfig';
 import HelpPanel from './HelpPanel';
@@ -176,16 +177,30 @@ function CountToggle({ n, noun, open, onClick }: {
  *
  * `Class.slot` only, never the range: that is the row it sits under.
  */
-function EntityRows({ entities, showAttributes, classLink }: {
+function EntityRows({ entities, showAttributes, openRows, onToggleRow, classLink }: {
   entities: ReadonlyArray<{ entity: string; pairs: OwnershipPair[] }>;
   showAttributes: boolean;
+  /** Entities whose own state differs from the rule-level depth. */
+  openRows: ReadonlySet<string>;
+  onToggleRow: (entity: string) => void;
   classLink: (id: string) => React.ReactNode;
 }) {
+  /*
+   * Cardinality on EVERY attribute, in the `0..1` notation the Cardinality
+   * section below defines and the diagram's own attribute rows use (Siggie,
+   * 2026-09-13).
+   *
+   * It replaced a lone `↠` on multivalued rows, which marked half the rows
+   * with a glyph nothing else on the panel explained — and which read as
+   * arbitrary now that the plain `→` it used to contrast against is gone with
+   * the range. Cardinality decides no ownership any more, so it is shown as
+   * what it is: a fact about the attribute, spelled the one way.
+   */
   const attr = (p: OwnershipPair) => (
     <>
       {classLink(p.declaredOn)}
       <span className="text-gray-400">.{p.slotName}</span>
-      {p.multivalued && <span className="ml-1 text-gray-400" title="multivalued">↠</span>}
+      <span className="ml-1.5 text-gray-400">&nbsp;{cardinalityLabel(p.required, p.multivalued)}</span>
       {p.isLoop && (
         <span className="ml-1" style={{ color: RANGE_COLORS.entity }}>loop</span>
       )}
@@ -195,7 +210,15 @@ function EntityRows({ entities, showAttributes, classLink }: {
     <ul className="mt-1 mb-1.5 space-y-0.5 font-mono text-[10px]
                    text-gray-600 dark:text-gray-400">
       {entities.map(e => {
-        const inline = showAttributes && e.pairs.length === 1;
+        /*
+         * A row's own state is an OVERRIDE of the rule-level depth, not a
+         * separate switch: `openRows` holds the rows that differ. So the two
+         * counts still set every row at once — which is what they are for —
+         * and a row the reader has opened or closed by hand keeps that state
+         * until the next time they click a count.
+         */
+        const open = openRows.has(e.entity) ? !showAttributes : showAttributes;
+        const inline = open && e.pairs.length === 1;
         return (
           <li key={e.entity}>
             <span className="text-gray-500 dark:text-gray-400">{classLink(e.entity)}</span>
@@ -205,15 +228,24 @@ function EntityRows({ entities, showAttributes, classLink }: {
                 {attr(e.pairs[0])}
               </>
             )}
-            {/* The badge is the row's own count, and it is what makes the
-                collapsed view worth reading. Suppressed where the single
-                attribute is already printed inline beside it. */}
+            {/* The badge is the row's own count AND its disclosure. It is what
+                makes the collapsed view worth reading, and clicking the entity
+                name itself cannot serve: that selects the class on the canvas. */}
             {!inline && (
-              <span className="ml-1.5 text-[9px] text-gray-400">
+              <button
+                onClick={() => onToggleRow(e.entity)}
+                aria-expanded={open}
+                title={open ? `Hide ${e.entity}'s attributes` : `List ${e.entity}'s attributes`}
+                className="group cursor-pointer rounded px-1 -mx-0.5 text-[9px] text-gray-400
+                           hover:bg-gray-100 dark:hover:bg-slate-700"
+              >
                 &nbsp;{e.pairs.length}&nbsp;{e.pairs.length === 1 ? 'attribute' : 'attributes'}
-              </span>
+                <span className="ml-0.5 group-hover:text-gray-700 dark:group-hover:text-gray-200">
+                  {open ? '⌃' : '⌄'}
+                </span>
+              </button>
             )}
-            {showAttributes && !inline && (
+            {open && !inline && (
               <ul className="ml-3">
                 {e.pairs.map(p => (
                   <li key={`${p.declaredOn}.${p.slotName}`}>{attr(p)}</li>
@@ -267,11 +299,33 @@ export default function OwnershipLegend({
    * Across rules they stay independent — comparing entity counts is exactly
    * what the collapsed view is for.
    */
-  const setDepth = (group: string, depth: Depth) => setOpen(prev => {
+  /** Per rule, the entity rows whose state differs from the rule's depth. */
+  const [rowOverrides, setRowOverrides] =
+    useState<ReadonlyMap<string, ReadonlySet<string>>>(() => new Map());
+  const toggleRow = (group: string, entity: string) => setRowOverrides(prev => {
     const next = new Map(prev);
-    if (next.get(group) === depth) next.delete(group); else next.set(group, depth);
+    const rows = new Set(next.get(group) ?? []);
+    if (!rows.delete(entity)) rows.add(entity);
+    next.set(group, rows);
     return next;
   });
+  const NO_ROWS: ReadonlySet<string> = new Set();
+
+  const setDepth = (group: string, depth: Depth) => {
+    setOpen(prev => {
+      const next = new Map(prev);
+      if (next.get(group) === depth) next.delete(group); else next.set(group, depth);
+      return next;
+    });
+    // A count sets every row in its rule, so per-row overrides are cleared:
+    // otherwise "show me all the attributes" would leave some rows shut.
+    setRowOverrides(prev => {
+      const next = new Map(prev);
+      next.delete(group);
+      return next;
+    });
+  };
+
 
   const classLink = (id: string) => (
     <button
@@ -355,6 +409,8 @@ export default function OwnershipLegend({
                     <EntityRows
                       entities={entities}
                       showAttributes={open.get(key) === 'attributes'}
+                      openRows={rowOverrides.get(key) ?? NO_ROWS}
+                      onToggleRow={entity => toggleRow(key, entity)}
                       classLink={classLink}
                     />
                   )}
@@ -391,6 +447,8 @@ export default function OwnershipLegend({
               <EntityRows
                 entities={inducedEntities}
                 showAttributes={open.get('induced') === 'attributes'}
+                openRows={rowOverrides.get('induced') ?? NO_ROWS}
+                onToggleRow={entity => toggleRow('induced', entity)}
                 classLink={classLink}
               />
             )}

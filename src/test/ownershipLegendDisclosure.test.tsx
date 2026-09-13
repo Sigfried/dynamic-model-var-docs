@@ -91,8 +91,9 @@ describe('ownership legend disclosures', () => {
     fireEvent.click(counts().find(b => /30\s*entities/.test(b.textContent ?? ''))!);
     // \u00a0 throughout: the badge uses &nbsp; so a count never wraps away
     // from its noun, or from the entity name it belongs to.
+    // The badge is also the row's disclosure, so it carries a chevron.
     const rows = Array.from(document.querySelectorAll('ul.font-mono > li'))
-      .map(li => li.textContent!.trim().replace(/\u00a0/g, ' '));
+      .map(li => li.textContent!.trim().replace(/\u00a0/g, ' ').replace(/[⌄⌃]/g, ''));
     expect(rows).toContain('BodySite 6 attributes');
     expect(rows).toContain('Activity 1 attribute');       // singular
   });
@@ -102,13 +103,69 @@ describe('ownership legend disclosures', () => {
    * own line, and only a genuine list indents. Most entities are single, so
    * this is most of the panel's height.
    */
+  /*
+   * Each entity row opens on its own. The two counts set every row in a rule
+   * at once; nothing but this toggles ONE, and the entity name cannot serve
+   * because clicking it selects the class on the canvas.
+   */
+  describe('per-entity rows', () => {
+    const rowText = () => Array.from(document.querySelectorAll('ul.font-mono > li'))
+      .map(li => li.textContent!.replace(/\u00a0/g, ' '));
+
+    test('a row opens without opening its neighbours', async () => {
+      const { counts } = await setup();
+      fireEvent.click(counts().find(b => /30\s*entities/.test(b.textContent ?? ''))!);
+      expect(rowText().some(r => r.includes('Condition.affected_body_site'))).toBe(false);
+
+      const badge = screen.getAllByRole('button')
+        .find(b => /6\s*attributes/.test(b.textContent ?? ''))!;   // BodySite's own
+      fireEvent.click(badge);
+
+      const rows = rowText();
+      expect(rows.find(r => r.startsWith('BodySite'))).toContain('Condition.affected_body_site');
+      expect(rows.find(r => r.startsWith('CauseOfDeath'))).not.toContain('.');
+    });
+
+    test('clicking a rule count clears per-row overrides', async () => {
+      const { counts } = await setup();
+      fireEvent.click(counts().find(b => /30\s*entities/.test(b.textContent ?? ''))!);
+      fireEvent.click(screen.getAllByRole('button')
+        .find(b => /6\s*attributes/.test(b.textContent ?? ''))!);
+      // "show me all the attributes" must not leave hand-opened rows shut.
+      fireEvent.click(counts().find(b => /89\s*attributes/.test(b.textContent ?? ''))!);
+      const rows = rowText();
+      expect(rows.find(r => r.startsWith('CauseOfDeath'))).toContain('Person.cause_of_death');
+      expect(rows.find(r => r.startsWith('BodySite'))).toContain('Condition.affected_body_site');
+    });
+  });
+
+  /*
+   * Cardinality on every attribute row, in the notation the Cardinality
+   * section defines. It replaced a `↠` that appeared on multivalued rows only
+   * and so read as arbitrary — and which could not distinguish `0..1` from
+   * `1..1` at all, since both were simply unmarked.
+   */
+  test('every attribute row carries a cardinality label', async () => {
+    const { counts } = await setup();
+    fireEvent.click(counts().find(b => /89\s*attributes/.test(b.textContent ?? ''))!);
+    const rows = Array.from(document.querySelectorAll('ul.font-mono li'))
+      .map(li => li.textContent!.replace(/\u00a0/g, ' '))
+      .filter(t => t.includes('.') && !/\battributes$/.test(t));
+    expect(rows.length).toBeGreaterThan(50);
+    expect(rows.filter(r => !/\d\.\.[1*]/.test(r))).toEqual([]);
+    // The distinction the old marker could not make: both were unmarked.
+    expect(rows.some(r => r.endsWith('1..1'))).toBe(true);
+    expect(rows.some(r => r.endsWith('0..1'))).toBe(true);
+  });
+
   test('a lone attribute is inline; several nest', async () => {
     const { counts } = await setup();
     fireEvent.click(counts().find(b => /89\s*attributes/.test(b.textContent ?? ''))!);
     const items = Array.from(document.querySelectorAll('ul.font-mono > li'));
     const activity = items.find(li => li.textContent?.startsWith('Activity'))!;
     // Inline, and the badge is suppressed: the one attribute is already there.
-    expect(activity.textContent).toBe('Activity: Context.activity');
+    expect(activity.textContent!.replace(/\u00a0/g, ' '))
+      .toBe('Activity: Context.activity 1..1');
     expect(activity.querySelector('ul')).toBeNull();
 
     const bodySite = items.find(li => li.textContent?.startsWith('BodySite'))!;
