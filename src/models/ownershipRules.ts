@@ -297,7 +297,7 @@ export const NAMED_BACK_POINTERS = new Set<string>([
 export const OWNERSHIP_RULES = [
   {
     id: 'owns-target-forward-by-entity',
-    label: 'Owns target entity',
+    label: 'Owns target / forward arrow / by entity',
     when: () => true,                   // the default: total, so it matches anything
     verdict: 'own-fwd',
     text: 'An attribute owns the entity it points at: the thing it points at is part of '
@@ -306,7 +306,7 @@ export const OWNERSHIP_RULES = [
   },
   {
     id: 'belongs-to-target-backward-by-entity',
-    label: 'Owned by target entity (referred-to entities)',
+    label: 'Belongs to target / backward arrow / by entity',
     when: ({ range }) => REFERRED_TO_ENTITIES.has(range),
     verdict: 'own-bkwd',
     parentRule: 'owns-target-forward-by-entity',
@@ -317,7 +317,7 @@ export const OWNERSHIP_RULES = [
   },
   {
     id: 'belongs-to-target-backward-by-attribute',
-    label: 'Owned by target entity (named back-pointers)',
+    label: 'Belongs to target / backward arrow / by attribute',
     when: ({ declaredOn, slotName }) => NAMED_BACK_POINTERS.has(`${declaredOn}.${slotName}`),
     verdict: 'own-bkwd',
     parentRule: 'owns-target-forward-by-entity',
@@ -335,7 +335,7 @@ export const OWNERSHIP_RULES = [
      * `when` is deliberately absent — see RuleSpec.
      */
     id: 'child-following-parent',
-    label: 'Owns the children because it owns the parent',
+    label: 'Owns target / forward arrow / induced',
     verdict: 'own-fwd',
     text: 'An attribute whose target has subclasses accepts any of them, so whatever owns '
       + 'the target owns each subclass too. These edges are induced from a declared one '

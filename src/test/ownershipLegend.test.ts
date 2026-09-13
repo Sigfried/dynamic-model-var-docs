@@ -116,6 +116,69 @@ describe('ownership legend', () => {
     // No self-loops in the ranking — a loop is a marker, not an approach.
     for (const r of ranking) expect(r.owners).not.toContain(r.entity);
   });
+  /*
+   * The two counts (TASKS `legend-two-counts`). The legend derives both from
+   * one grouping, so what is worth pinning is the relationship between them
+   * and the pairs — a second count computed a second way is how they come to
+   * disagree.
+   */
+  describe('two counts per rule', () => {
+    const byTargetEntity = (pairs: OwnershipPairGroup['pairs']) => {
+      const m = new Map<string, typeof pairs>();
+      for (const p of pairs) {
+        const l = m.get(p.range);
+        if (l) l.push(p); else m.set(p.range, [p]);
+      }
+      return m;
+    };
+
+    test('attributes sum to the pair count, and entities are distinct ranges', () => {
+      for (const g of groups) {
+        const m = byTargetEntity(g.pairs);
+        expect([...m.values()].reduce((n, ps) => n + ps.length, 0), g.rule)
+          .toBe(g.pairs.length);
+        expect(m.size, g.rule).toBe(new Set(g.pairs.map(p => p.range)).size);
+        // Entities never outnumber attributes: every entity has >=1 attribute.
+        expect(m.size, g.rule).toBeLessThanOrEqual(g.pairs.length);
+      }
+    });
+
+    /*
+     * The shape that motivated grouping by target at all. A range-keyed rule
+     * is a SHORT list of entities against a long list of attributes; an
+     * attribute-keyed one is not. If these ever converge, the legend's two
+     * counts have stopped telling the reader anything the one count did not.
+     */
+    test('the range-keyed exception is few entities over many attributes', () => {
+      const byEntity = groups.find(g => g.rule === 'belongs-to-target-backward-by-entity')!;
+      const byAttr = groups.find(g => g.rule === 'belongs-to-target-backward-by-attribute')!;
+
+      expect(byTargetEntity(byEntity.pairs).size).toBe(5);
+      expect(byEntity.pairs.length).toBeGreaterThan(40);
+
+      // The attribute-keyed one is the opposite shape: its 5 attributes land
+      // on only 2 entities, and BOTH are owned by some other attribute — which
+      // is exactly why it cannot be keyed by range. See ownershipRules.ts.
+      expect(byTargetEntity(byAttr.pairs).size).toBe(2);
+      const fwd = groups.find(g => g.rule === 'owns-target-forward-by-entity')!;
+      for (const range of byTargetEntity(byAttr.pairs).keys()) {
+        expect(fwd.pairs.some(p => p.range === range), `${range} is owned by something`)
+          .toBe(true);
+      }
+    });
+
+    test('the induced group is separated from the slot rules', () => {
+      // It is rendered in its own section, not as a fourth rule, so the split
+      // the legend makes must actually be available in the data.
+      const slotRules = groups.filter(g => g.rule !== 'child-following-parent');
+      const induced = groups.filter(g => g.rule === 'child-following-parent');
+      expect(slotRules.length).toBe(3);
+      expect(induced.length).toBe(1);
+      expect(induced[0].pairs.every(p => p.inducedFrom !== undefined)).toBe(true);
+      expect(slotRules.every(g => g.pairs.every(p => p.inducedFrom === undefined))).toBe(true);
+    });
+  });
+
 });
 
 /**

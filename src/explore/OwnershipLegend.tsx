@@ -8,10 +8,17 @@
  *
  * Everything in the pair listing is derived live from `classifySlotEdgeExplained`
  * via DataService — the same call the graph builder makes. Nothing is restated.
- * That is deliberate and load-bearing: SINGLE_VALUE_OWNER_TARGETS is
- * hand-curated and goes stale silently on every schema sync, so a legend built
- * from a second copy of the rules would conceal the drift it exists to reveal.
- * If a pair looks wrong here, the classification is wrong, not the legend.
+ * That is deliberate and load-bearing: `REFERRED_TO_ENTITIES` and
+ * `NAMED_BACK_POINTERS` are hand-curated and go stale silently on every schema
+ * sync, so a legend built from a second copy of the rules would conceal the
+ * drift it exists to reveal. If a pair looks wrong here, the classification is
+ * wrong, not the legend.
+ *
+ * **Two counts per rule, over one grouping** (TASKS `legend-two-counts`):
+ * `N entities` and `M attributes` both read off `byTargetEntity`, so they
+ * cannot disagree. Grouping by the TARGET is what makes the exception lists
+ * legible — a rule keyed by range is a list of five entities, and a flat
+ * listing of its 55 attributes buries that.
  *
  * The colors are read from the SAME constants the canvas strokes, never a
  * Tailwind approximation of them, for the same reason: a legend that can drift
@@ -27,7 +34,7 @@
 
 import { useMemo, useState } from 'react';
 import { parentRuleOf } from '../services/DataService';
-import type { DataService, OwnershipPairGroup } from '../services/DataService';
+import type { DataService, OwnershipPair, OwnershipPairGroup } from '../services/DataService';
 import { EDGE_COLORS, RANGE_COLORS, SIBLING_COLORS } from '../config/appConfig';
 import HelpPanel from './HelpPanel';
 import { PANEL_WIDTH_REM } from './panelLayout';
@@ -106,6 +113,87 @@ const CARDINALITY: ReadonlyArray<[string, string]> = [
   ['1..*', 'required, one or more'],
 ];
 
+/**
+ * One rule's pairs, grouped by the TARGET entity — the range, which is the end
+ * the rule is about — and sorted by name.
+ *
+ * Both of a rule's counts read off this one structure: `N entities` is its
+ * size, `M attributes` the total of its values. Deriving them together is the
+ * point; two independent counts computed two ways is how they come to disagree.
+ */
+function byTargetEntity(pairs: readonly OwnershipPair[]) {
+  const m = new Map<string, OwnershipPair[]>();
+  for (const p of pairs) {
+    const list = m.get(p.range);
+    if (list) list.push(p); else m.set(p.range, [p]);
+  }
+  return [...m.entries()]
+    .map(([entity, ps]) => ({ entity, pairs: ps }))
+    .sort((a, b) => a.entity.localeCompare(b.entity));
+}
+
+/** One count with its own disclosure triangle: `N entities ⌄`. */
+function CountToggle({ n, noun, open, onClick }: {
+  n: number; noun: string; open: boolean; onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      aria-expanded={open}
+      title={open ? `Hide these ${noun}` : `List these ${noun}`}
+      className="group cursor-pointer rounded px-1 -mx-1 text-[11px]
+                 hover:bg-gray-100 dark:hover:bg-slate-700"
+    >
+      <span className="text-gray-600 dark:text-gray-300">{n}</span>
+      <span className="ml-1 text-gray-500 dark:text-gray-400">&nbsp;{noun}</span>
+      {/* The chevron darkens on hover too: the row tint is deliberately faint,
+          and on a wide panel the pointer is often nowhere near it. */}
+      <span className="ml-0.5 text-gray-400 group-hover:text-gray-700
+                       dark:group-hover:text-gray-200">
+        {open ? '⌃' : '⌄'}
+      </span>
+    </button>
+  );
+}
+
+/**
+ * The attribute listing, nested under its target entity.
+ *
+ * `Class.slot` only — the range is the heading it sits under, so printing it
+ * on every row would repeat the word directly above it. (The older flat
+ * listing printed `Class.slot → Range` for the same reason it printed an
+ * `(owner: X)` before that: without a grouping there was nowhere else to say
+ * which entity the row was about.)
+ */
+function PairsByEntity({ entities, classLink }: {
+  entities: ReadonlyArray<{ entity: string; pairs: OwnershipPair[] }>;
+  classLink: (id: string) => React.ReactNode;
+}) {
+  return (
+    <ul className="mt-1 mb-1.5 space-y-1 text-[10px]">
+      {entities.map(e => (
+        <li key={e.entity}>
+          <div className="font-mono text-gray-500 dark:text-gray-400">
+            {classLink(e.entity)}
+          </div>
+          <ul className="ml-3 font-mono text-gray-600 dark:text-gray-400">
+            {e.pairs.map(p => (
+              <li key={`${p.declaredOn}.${p.slotName}`}>
+                {classLink(p.declaredOn)}
+                <span className="text-gray-400">.{p.slotName}</span>
+                {p.multivalued && <span className="ml-1 text-gray-400" title="multivalued">↠</span>}
+                {p.isLoop && (
+                  <span className="ml-1" style={{ color: RANGE_COLORS.entity }}>loop</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export default function OwnershipLegend({
   dataService, onClose, onSelect, offset,
 }: OwnershipLegendProps) {
@@ -113,7 +201,37 @@ export default function OwnershipLegend({
     () => dataService.getOwnershipPairGroups(),
     [dataService],
   );
-  const [open, setOpen] = useState<string | null>(null);
+  /*
+   * The induced pass is NOT a slot rule and is no longer listed as one
+   * (Siggie, 2026-09-13). It reads no attribute — it walks the subclasses of a
+   * range something already owns — so a reader who found it beside two rules
+   * about attributes would look for the attribute behind it and find none.
+   *
+   * It keeps its listing, in its own section below: those edges are on the
+   * canvas, they are derived live like everything else here, and this is the
+   * only place their pairs can be seen. Explaining what they ARE is the tour's
+   * job; showing WHICH ones is still the legend's.
+   */
+  const slotRules = groups.filter(g => g.rule !== 'child-following-parent');
+  const induced = groups.find(g => g.rule === 'child-following-parent');
+  /*
+   * Which disclosures are open, keyed `${group}:${which}`. A SET, not a single
+   * key: each rule now has two independent counts (TASKS `legend-two-counts`),
+   * and they are genuinely independent — a reader comparing entity counts
+   * across rules wants several open at once.
+   *
+   * The attribute lists start OPEN and the entity lists start closed: the
+   * attribute listing is what the panel was already for, and collapsing it by
+   * default would hide the thing the legend exists to expose.
+   */
+  const [open, setOpen] = useState<ReadonlySet<string>>(
+    () => new Set(groups.map(g => `${g.verdict}/${g.rule}:attributes`)),
+  );
+  const toggle = (k: string) => setOpen(prev => {
+    const next = new Set(prev);
+    if (!next.delete(k)) next.add(k);
+    return next;
+  });
 
   const classLink = (id: string) => (
     <button
@@ -151,14 +269,14 @@ export default function OwnershipLegend({
             in which case, B appears to the left of A and the edge points backward.
           </p>
           <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-1.5">
-            Ownership direction is governed by three rules and one set of exceptions.
-            Click any rule to view the attributes it applies to.
+            An attribute owns the entity it points at, with two kinds of exception.
+            Click a count to list what the rule applies to.
           </p>
           <ul className="space-y-1">
-            {groups.map(g => {
+            {slotRules.map(g => {
               const key = `${g.verdict}/${g.rule}`;
               const color = VERDICT_COLOR[g.verdict];
-              const isOpen = open === key;
+              const entities = byTargetEntity(g.pairs);
               // An exception renders BENEATH the rule it revises, not beside
               // it: the groups arrive in the rules' own order, so the parent is
               // always the entry above. Nesting is the only thing that says
@@ -170,58 +288,86 @@ export default function OwnershipLegend({
                   className={`border-l-2 pl-2 border-gray-200 dark:border-slate-600${
                     isException ? ' ml-4' : ''}`}
                 >
-                  <button
-                    onClick={() => setOpen(isOpen ? null : key)}
-                    aria-expanded={isOpen}
-                    title={isOpen ? 'Hide these attributes' : 'List the attributes this rule applies to'}
-                    className="group w-full text-left cursor-pointer rounded px-1 -mx-1
-                               hover:bg-gray-100 dark:hover:bg-slate-700"
+                  <div
+                    className={color ? 'font-medium' : 'font-medium text-gray-400'}
+                    style={color ? { color } : undefined}
                   >
-                    <span
-                      className={color ? 'font-medium' : 'font-medium text-gray-400'}
-                      style={color ? { color } : undefined}
-                    >
-                      {g.ruleLabel}
-                    </span>
-                    <span className="ml-1 text-gray-400">{g.pairs.length}</span>
-                    {/* The chevron darkens too: the row tint is deliberately
-                        faint, and on a wide panel the pointer is often nowhere
-                        near it when the row lights up. */}
-                    <span className="ml-1 text-gray-400 group-hover:text-gray-700
-                                     dark:group-hover:text-gray-200">
-                      {isOpen ? '▾' : '▸'}
-                    </span>
-                  </button>
+                    {g.ruleLabel}
+                  </div>
+                  <div className="flex gap-3 mt-0.5">
+                    <CountToggle
+                      n={entities.length}
+                      noun="entities"
+                      open={open.has(`${key}:entities`)}
+                      onClick={() => toggle(`${key}:entities`)}
+                    />
+                    <CountToggle
+                      n={g.pairs.length}
+                      noun="attributes"
+                      open={open.has(`${key}:attributes`)}
+                      onClick={() => toggle(`${key}:attributes`)}
+                    />
+                  </div>
                   <p className="text-[11px] leading-snug text-gray-600 dark:text-gray-400 mt-0.5">
                     {g.ruleText}
                   </p>
-                  {isOpen && (
-                    /* `Class.slot → Range`, always in DECLARATION order —
-                       which end owns is what the rule above says, so the
-                       per-row `(owner: X)` that used to sit here only ever
-                       repeated the range printed two tokens earlier (checked
-                       across all 60 backward pairs, 2026-09-11). */
-                    <ul className="mt-1 mb-1.5 space-y-0.5 font-mono text-[10px]">
-                      {g.pairs.map(p => (
-                        <li key={`${p.declaredOn}.${p.slotName}`} className="text-gray-600 dark:text-gray-400">
-                          {classLink(p.declaredOn)}
-                          <span className="text-gray-400">.{p.slotName}</span>
-                          <span className="mx-1 text-gray-400">
-                            {p.multivalued ? '↠' : '→'}
-                          </span>
-                          {classLink(p.range)}
-                          {p.isLoop && (
-                            <span className="ml-1" style={{ color: RANGE_COLORS.entity }}>loop</span>
-                          )}
+                  {open.has(`${key}:entities`) && (
+                    <ul className="mt-1 mb-1.5 flex flex-wrap gap-x-2 gap-y-0.5 font-mono text-[10px]">
+                      {entities.map(e => (
+                        <li key={e.entity} className="text-gray-600 dark:text-gray-400">
+                          {classLink(e.entity)}
+                          <span className="text-gray-400">&nbsp;{e.pairs.length}</span>
                         </li>
                       ))}
                     </ul>
+                  )}
+                  {open.has(`${key}:attributes`) && (
+                    <PairsByEntity entities={entities} classLink={classLink} />
                   )}
                 </li>
               );
             })}
           </ul>
         </Section>
+
+        {induced && (
+          <Section title="Edges with no attribute behind them">
+            <p className={NOTE}>
+              An attribute whose target has subclasses accepts any of them, so
+              whatever owns the target owns each subclass too. These edges are
+              induced from a declared one rather than read from an attribute of
+              their own — which is why you can see an edge on the diagram that
+              no attribute row points at.
+            </p>
+            <div className="flex gap-3">
+              <CountToggle
+                n={byTargetEntity(induced.pairs).length}
+                noun="entities"
+                open={open.has('induced:entities')}
+                onClick={() => toggle('induced:entities')}
+              />
+              <CountToggle
+                n={induced.pairs.length}
+                noun="attributes"
+                open={open.has('induced:attributes')}
+                onClick={() => toggle('induced:attributes')}
+              />
+            </div>
+            {open.has('induced:entities') && (
+              <ul className="mt-1 mb-1.5 flex flex-wrap gap-x-2 gap-y-0.5 font-mono text-[10px]">
+                {byTargetEntity(induced.pairs).map(e => (
+                  <li key={e.entity} className="text-gray-600 dark:text-gray-400">
+                    {classLink(e.entity)}
+                    <span className="text-gray-400">&nbsp;{e.pairs.length}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {open.has('induced:attributes') && (
+              <PairsByEntity entities={byTargetEntity(induced.pairs)} classLink={classLink} />
+            )}
+          </Section>
+        )}
 
         <Section title="Cardinality">
           <ul className="flex flex-wrap gap-x-4 gap-y-1">
