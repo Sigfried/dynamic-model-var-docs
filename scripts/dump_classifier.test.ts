@@ -24,8 +24,6 @@ import {
   SKIP_SUBCLASS_EXPANSION,
   SINGLE_VALUE_OWNER_TARGETS,
   ASSOCIATION_SLOTS,
-  CARDINALITY_SPLIT_OWN_FWD,
-  BACKWARD_DESPITE_MULTIVALUED,
 } from '../src/models/containmentGraph';
 
 interface SlotDef {
@@ -82,8 +80,6 @@ test.skipIf(!input || !output)('dump classifier verdicts', () => {
         sets: {
           SINGLE_VALUE_OWNER_TARGETS: [...SINGLE_VALUE_OWNER_TARGETS],
           ASSOCIATION_SLOTS: [...ASSOCIATION_SLOTS],
-          CARDINALITY_SPLIT_OWN_FWD: [...CARDINALITY_SPLIT_OWN_FWD],
-          BACKWARD_DESPITE_MULTIVALUED: [...BACKWARD_DESPITE_MULTIVALUED],
           SKIP_SUBCLASS_EXPANSION: [...SKIP_SUBCLASS_EXPANSION],
         },
         entityRoot: ENTITY_ROOT,

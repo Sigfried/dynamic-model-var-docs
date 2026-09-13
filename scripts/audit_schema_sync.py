@@ -49,8 +49,6 @@ PROCESSED = "public/source_data/HM/bdchm.processed.json"
 OVERRIDE_SETS = [
     ("SINGLE_VALUE_OWNER_TARGETS", "class"),
     ("ASSOCIATION_SLOTS", "slot"),
-    ("CARDINALITY_SPLIT_OWN_FWD", "slot"),
-    ("BACKWARD_DESPITE_MULTIVALUED", "slot"),
     ("SKIP_SUBCLASS_EXPANSION", "class"),
 ]
 
