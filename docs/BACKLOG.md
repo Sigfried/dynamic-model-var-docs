@@ -472,7 +472,7 @@ vocabulary is unambiguous with the toggle still there.
 **Half done 2026-09-10.** The `⑃ siblings` button and the `if (!mergeSibs)
 return baseVm` branch are gone, so siblings always merge; the help entry that
 anchored on the button is now `merged-boxes` with no anchor. Removing the button
-was folded into the Rule 3 (induced ownership) work because always-merged is
+was folded into the induced-ownership work (`child-following-parent`) because always-merged is
 what makes induced edges collapse onto one line. The rest is still plumbing.
 
 **Why this is its own piece of work.** It touches more than the anchors: a URL param and its `DEFAULTS`/`toQuery` handling
@@ -534,7 +534,7 @@ every run.
 | `ENTITY_CATEGORIES[].pins` | [`config/entityCategories.ts`](../src/config/entityCategories.ts) | an extra box in a content view — **invisible**; partly tested |
 | `SUBCLASS_OF` | [`config/entityCategories.ts`](../src/config/entityCategories.ts) | wrong indentation — **tested** |
 | `DEFAULT_PINS` | [`config/entityCategories.ts`](../src/config/entityCategories.ts) | first-visit canvas is wrong — **tested** |
-| `SINGLE_VALUE_OWNER_TARGETS` (19), `ASSOCIATION_SLOTS` (0), `SKIP_SUBCLASS_EXPANSION` (1) | [`models/ownershipRules.ts`](../src/models/ownershipRules.ts) | an edge points the wrong way — **invisible** |
+| `REFERRED_TO_ENTITIES` (5), `NAMED_BACK_POINTERS` (5), `ASSOCIATION_SLOTS` (0), `SKIP_SUBCLASS_EXPANSION` (1) | [`models/ownershipRules.ts`](../src/models/ownershipRules.ts) | an edge points the wrong way — **invisible** |
 
 Those five are complete as of 2026-09-05. The classifier was rewritten once and
 the sets renamed with it, so **a set name in an older doc may not exist** — check
@@ -545,12 +545,14 @@ Python prototypes that carried a divergent fork were deleted 2026-09-05.
 sets used to be keyed by SLOT NAME, not `(class, slot)`, so a member happening to
 occur at exactly one class was luck — exactly how `performed_by` (11 sites) did
 damage when it sat in the old override list. TASKS `ownership-rules` (2026-09-11)
-deleted both slot-keyed sets; `SINGLE_VALUE_OWNER_TARGETS` is keyed by RANGE,
-where there is no such hazard because the range IS the thing being classified.
-The `override-site-check` task dissolved with it, unbuilt and no longer needed.
+deleted both slot-keyed sets. `REFERRED_TO_ENTITIES` is keyed by RANGE, where
+there is no such hazard because the range IS the thing being classified;
+`NAMED_BACK_POINTERS` is keyed `Class.slot`, which is qualified and so carries
+the hazard no further than the one site it names. The `override-site-check` task
+dissolved with it, unbuilt and no longer needed.
 
-What still rots here is EDITORIAL: whether a range newly added by a sync belongs
-in `SINGLE_VALUE_OWNER_TARGETS` is a judgement nothing can derive — verified
+What still rots here is EDITORIAL: whether an entity newly added by a sync belongs
+in `REFERRED_TO_ENTITIES` is a judgement nothing can derive — verified
 exhaustively 2026-08-21, every candidate discriminator failed. That is a reading,
 and it is Siggie's call.
 

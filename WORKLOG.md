@@ -6,6 +6,109 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 
 Newest first.
 
+
+---
+## 2026-09-13 (later) — the Ownership tour rewritten; `by-entity` was lying
+
+TASKS `ownership-doc-rewrite` pieces (a) and (c), plus
+`help-finish-authoring/ownership`. Piece (b), the 943-line cut, is NOT started.
+
+### Counts were re-probed, not copied
+
+89 / 55 / 5 / 10 induced, via a throwaway probe over `getOwnershipPairGroups`.
+Matched the task row, which is not a reason to have skipped it — the previous
+round found three stale numbers for one set in the docs about stale numbers.
+⚠️ `console.log` is swallowed in vitest here; the probe wrote to a file named by
+an env var. Costs one extra minute and is the only way to get a dump out.
+
+### `by-entity` on the default rule named something that does not exist
+
+The id was `owns-target-forward-by-entity`, and Siggie asked whether the wart
+was real. It was, but not for the reason first given. `by-entity` was trying to
+carry two claims:
+
+- *this set is keyed by entity* — true of `belongs-to-target-backward-by-entity`
+- *the claim holds at every site where that entity is targeted* — true of the
+  backward rule, FALSE of the default
+
+Siggie spotted the second half. But the decisive problem is a third thing: the
+default rule **has no set at all** (`when: () => true`). So a reader meeting
+three ids, two saying `by-entity` and one `by-attribute`, concludes there are
+three keyed lists. There are two; the default is their absence. Now
+`owns-target-forward-by-default`, label `Owns target / forward arrow / by
+default`. The asymmetry is explained in the `OWNERSHIP_RULES` header so it does
+not get "fixed" back into parallel form.
+
+### Tour step ids now mirror the rule ids exactly
+
+They are two namespaces — `OwnershipRule` ids in code, help-entry ids in
+`help-content.md` — and the 2026-09-13 rename only touched the first. The old
+step ids (`multivalue-owns-fwd`, `single-value-belongs-to-bkwd`,
+`single-value-owns-fwd`) encoded cardinality and had to go regardless. They were
+first replaced with short names (`owns-forward`, `referred-to-entities`,
+`named-back-pointers`), which Siggie caught as a gratuitous second vocabulary.
+Now identical to the rule ids. `child-following-parent` already matched.
+
+### Cardinality did not "turn out to be false"
+
+Correcting a framing this session produced. It turned out to be a **correlation
+needing 51 exceptions** — dropping it changed no edge. The one-rule structure
+won on explainability, not because the old rule was wrong. Worth keeping
+straight, because "the old rule was false" invites re-deriving something that
+was merely inconvenient.
+
+### The argument for keeping "referred to" is weaker than it was stated
+
+Pressed on whether to purge reference-language, the claim made here was that
+*referred to* is a PREMISE (looked up rather than held) and not a synonym for
+*belongs to*, so it cannot be collapsed. Siggie's counter, from the rendered
+canvas: `QuestionnaireItem` is owned by `Questionnaire.items` and **referenced
+by** the other three attributes pointing at it — so the term describes **how you
+arrived**, not what the thing is. That is exactly what `NAMED_BACK_POINTERS`
+encodes. `REFERRED_TO_ENTITIES` gets away with entity-level phrasing only
+because none of its five is ever owned, which is a contingent fact about this
+schema, not a property of the vocabulary.
+
+Unresolved, and now part of TASKS `legend-list-orientation`. Do not re-assert
+the premise/synonym argument without answering the QuestionnaireItem case.
+
+### The legend's lists are named for the wrong level (found, not fixed)
+
+Siggie, reading the rendered panel: *"the legend dropdowns are just really
+incomprehensible."* A rule's heading names what the ATTRIBUTE does; the list
+under it is grouped by TARGET ENTITY. So under *Owns target / forward arrow*,
+`BodySite` heads a group and is the thing **owned**; under *Belongs to target /
+backward arrow*, `Participant` heads a group and is the **owner**. Same visual
+level, opposite roles, no cue. The rows the heading actually describes are
+nested one level down.
+
+Filed as TASKS `legend-list-orientation` rather than fixed: the fix is language
+or organization, it decides which end every rule is spoken from, and it
+therefore gates the doc rewrite's phrasing. Session was too long to settle it
+well — Siggie's call.
+
+### `'reference'` as an edge channel is gone
+
+`OwnershipEdgeType = 'ownership' | 'reference' | 'isa'`, where `'reference'` was
+set only for `kind === 'association'` — an edge kind no slot has produced since
+2026-09-11. So the codebase used "reference" to mean *neither end owns the
+other*, which is close to the OPPOSITE of Siggie's "referred to". Renamed to
+`'association'`, which is what it means. Lossless for association's possible
+return: the restoration path re-derives the channel from `kind`, and never
+depended on the word.
+
+**`EDGE_STYLE.stroke.refFactor` / `STROKE_REF` were left alone** — a third
+sense, the `VerdictSpec.secondary` thinner-stroke multiplier. It genuinely is
+about reference edges and renaming it is a cosmetic sweep through live drawing
+code.
+
+### Anchor test caught a real error
+
+A beat anchored `slot-row:MeasurementObservation.value_quantity`.
+MeasurementObservation merges into the Observation family box, so that row is
+not individually tagged and the popover would have degraded to unringed.
+`helpAnchors.test.tsx` fails the build on it. Moved to `Observation`. This is
+the third time that test has caught a merged-child anchor.
 ---
 ## 2026-09-13 — one rule and two exceptions; the legend grew two counts
 

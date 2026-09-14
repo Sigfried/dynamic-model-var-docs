@@ -63,14 +63,14 @@ cyclic) graph live from the schema graph via the FK-inversion heuristic in
 data and the Python prototypes that generated it were **deleted 2026-09-05**,
 so the TS heuristic is now the only implementation.
 
-**The heuristic's default is a guess, and it misfires.** Single-valued slot to
-an entity range ⇒ `own-bkwd` ("the source belongs to the target"), which is
-right for real foreign keys and wrong for identity-less value objects.
-`Activity` was misclassified exactly this way and had to be adjudicated onto
-`SINGLE_VALUE_OWNER_TARGETS` (2026-08-19). Expect to re-check it and the other
-override sets after every upstream schema sync — see
-[OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md) and `TASKS.md`
-§"hand-curated config rot", which lists all of them.
+**The default is total, and the exceptions are hand-curated.** An attribute
+owns the entity it points at (`own-fwd`), except for two named sets:
+`REFERRED_TO_ENTITIES`, keyed by range, and `NAMED_BACK_POINTERS`, keyed
+`Class.slot`. Cardinality decides nothing — it used to be the rule, and
+dropping it changed no edge on this schema (2026-09-13). Neither exception set
+can be derived from the schema, so expect to re-check both after every upstream
+schema sync — see [OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md)
+and `TASKS.md` §"hand-curated config rot", which lists all of them.
 
 **`DataService.getOwnershipSubgraph(selected, options)`**
 ([`src/models/ownershipSubgraph.ts`](../src/models/ownershipSubgraph.ts)) is
@@ -133,7 +133,8 @@ diagram is shaped as it is:
    Merged boxes show every row; the "+N more" collapse applies only to ordinary
    boxes. Siblings always merge: the `⑃ siblings` toggle was removed 2026-09-10
    (its `sibs` URL param is still parsed until TASKS `drop-sibs` removes it). Whatever
-   owns the parent owns every child too (OWNERSHIP_CLASSIFICATION Rule 3), so
+   owns the parent owns every child too (the induced pass,
+`child-following-parent`), so
    a line into the merged box lands on its header and stands for the family.
 
 4. **Relation channels**: three edge kinds, distinguished by **hue**, not by
@@ -338,7 +339,7 @@ getOwnershipSubgraph(selectedIds, expansions, options?) -> {
             slotName, storageDirection, cardinality }],
   // NB 'isa' edges are never ROUTED. The view consumes them into node
   // metadata (isaParents/subclassCount) and into the merged-box grouping —
-  // see §3. Ownership edges may carry `inducedFrom` (Rule 3).
+  // see §3. Ownership edges may carry `inducedFrom` (the induced pass).
   hiddenOwners: Map<classId, ownerId[]>,   // owners NOT drawn → chips
 }
 
