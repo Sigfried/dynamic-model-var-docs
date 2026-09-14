@@ -10,8 +10,7 @@ import {
 import { EDGE_STYLE } from '../explore/edgeStyle';
 
 /**
- * The declaration that replaced five hand-maintained copies of the same rule
- * (TASKS `ownership-rules`). See docs/OWNERSHIP_RULES_PLAN.md.
+ * The declaration that replaced five hand-maintained copies of the same rule.
  *
  * These tests are about the TABLE — that it is well-formed, that order is
  * honoured, and above all that it can express an edge kind it does not

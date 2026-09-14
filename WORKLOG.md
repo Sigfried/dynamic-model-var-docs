@@ -7,6 +7,120 @@ was tried and rejected. Read this when a doc or convention looks arbitrary.
 Newest first.
 
 ---
+## 2026-09-13 — one rule and two exceptions; the legend grew two counts
+
+TASKS `one-rule-ownership`, plus `legend-two-counts` merged into it. Branch
+`one-rule-ownership`. Rules: an attribute owns what it points at, except five
+referred-to entities (by range) and five named back-pointers (by `Class.slot`).
+
+### The sequencing in the task row was backwards, and Siggie said so
+
+The row said to do this AFTER `ownership-rules` step 4 (the 943-line doc cut)
+and after the tour settled, on the grounds that otherwise the tour gets
+rewritten twice. Siggie: *"there should be less rewriting doing the
+one-rule-ownership task first because it totally changes what belongs in
+OWNERSHIP_CLASSIFICATION, legend, and tours."* That is right and the row was
+wrong: cutting the doc first means curating passages the rule change then
+deletes outright. **Do the thing that changes what the doc is ABOUT before
+cutting the doc.**
+
+### The measurement was re-done, not trusted
+
+The row claimed output-identity. It was verified twice before anything was
+written on top of it — once with a throwaway probe reimplementing the proposed
+scheme independently, then again by diffing the old and new classifier dumps
+site by site. 149 sites, **zero verdict differences**, 89 own-fwd / 60 own-bkwd,
+10 induced. All ten exception entries are load-bearing (none unused) and all
+five exception ranges are leaf classes, so the induced pass stays forward-only.
+
+The row's own numbers were off: `SINGLE_VALUE_OWNER_TARGETS` had **18**
+members, not 21. OWNERSHIP_CLASSIFICATION said 15 and BACKLOG said 19 — three
+stale numbers for one set, in the docs about hand-curated config rot.
+
+### Why two exception sets and not one list of ten
+
+The obvious simplification — one list, ten entries — is wrong, and the reason
+is worth keeping. A RANGE key says "this entity is referred to wherever it is
+pointed at". A `Class.slot` key says "this attribute is a back-pointer" and
+says nothing about its range. The second set's two ranges are **genuinely
+owned**, each by exactly one other attribute (`QuestionnaireItem` by
+`Questionnaire.items`, `ResearchStudy` by `ResearchStudyCollection.entries`),
+so a range key would strip them of the ownership they have. Merging the sets
+would need the entity key to carry an exception of its own.
+
+`part_of` is declared at two classes, both listed, which is why the key must be
+qualified — a bare name would flip a future third site silently.
+
+### classify() collects all matching exceptions
+
+With two exceptions under one parent, `find()` would pick one silently and
+report the WRONG RULE to the legend while still producing the right verdict.
+Wrongness that survives review. It throws instead. They are disjoint today and
+nothing structural keeps them so.
+
+### The legend: two counts turned out to be two DEPTHS of one list
+
+Siggie's spec said "N and M both expand into the same list grouped by target
+entity; N starts fully collapsed, M starts fully expanded." I read that as two
+different listings and built two. That was the misreading behind the bug report
+*"collapsing doesn't actually collapse"* — the toggle was fine; what was on
+screen was both lists of one rule open at once, naming the same entities, so it
+looked like one list that would not close.
+
+It is ONE list of entity rows. `N entities` shows them collapsed, `M
+attributes` shows the same rows expanded, and opening one closes the other on
+that rule.
+
+Three things followed from Siggie's read of the rendered panel:
+
+- **Per-entity rows were never wired.** The counts set every row at once and
+  nothing toggled one. The entity NAME cannot be the control — it selects the
+  class on the canvas — so the row's `N attributes` badge became its
+  disclosure. A row's state is an override of the rule-level depth, and
+  clicking a count clears the overrides.
+- **`↠` replaced by `0..1`/`1..*` on every attribute.** The glyph marked
+  multivalued rows only, nothing on the panel explained it, and it read as
+  arbitrary once the plain `→` it contrasted against went with the range. It
+  also could not distinguish `0..1` from `1..1`.
+- **Clicking a name ADDS to the canvas.** It ran `applyCase`, which clears the
+  selection first — so following a name out of the legend wiped the diagram the
+  reader had the legend open to understand. Now `addToCanvas`. The example-cases
+  pane keeps `applyCase` and should: a case IS a whole canvas.
+
+The additive fix is tested through the real `ExploreApp`, and the test was
+checked against the old wiring first — a test of `OwnershipLegend`'s own
+`onSelect` passes either way, because the bug was entirely in the wiring.
+
+### Rules are not numbered any more
+
+The default is total, the two exceptions never compete with each other, and the
+induced pass is not a slot rule — so there is no precedence for a number to
+carry, and numbering three of four legend sections invites "where is 4?".
+Labels are slash-delimited to mirror the ids (`Owns target / forward arrow / by
+entity`), Siggie's phrasing, so verdict, direction and keying read as three
+facets of one frame.
+
+### The induced pass left the rules list
+
+Siggie: it should be explained somewhere in case a user is confused by edges
+with no attribute behind them, *"but maybe as a tour step?"* It is not a slot
+rule — it reads no attribute — so listing it beside rules about attributes sent
+a reader looking for the attribute behind it. It keeps its LISTING, in its own
+section: those edges are on the canvas and this is the only place their pairs
+can be seen. Explaining what they are is the tour's job.
+
+### Side cleanups
+
+`scripts/dump_classifier.test.ts` had been importing two sets deleted in the
+2026-09-11 rule collapse, so it failed to import and — being `test.skipIf`'d on
+its env vars — was **silently skipped in every suite run** rather than
+reported. The sync audit had therefore not actually run since then. Siggie
+asked for those two sets to go; removing them unbroke it.
+
+`NAMED_BACK_POINTERS` needed a new `"qualified"` key kind in
+`audit_schema_sync.py`, or every member would report as stale on every run —
+noise that trains you to skip the section.
+
 ## 2026-09-11 (later still) — the Ownership tour past `edge-types`
 
 Step 4 of OWNERSHIP_RULES_PLAN says to draft the tour BEFORE cutting

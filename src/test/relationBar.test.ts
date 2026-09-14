@@ -111,8 +111,9 @@ describe('relation bar axes', () => {
    * The axis entry is still asserted, from the table rather than from schema
    * data, because the position remains a valid one and `POSITION_AXIS` must
    * stay total over RelationPosition. This is the assertion that would catch
-   * someone deleting the association row while step 2 still needs it as the
-   * worked example (docs/OWNERSHIP_RULES_PLAN.md).
+   * someone deleting the association row while it is still the worked example
+   * proving an edge kind is expressible as configuration — see the acceptance
+   * criterion in `ownershipRules.ts` and `ownershipRules.test.ts`.
    */
   test('association still maps to the left: laid out target-first, like own-bkwd', () => {
     expect(AXIS['association']).toEqual({ side: 'left', kind: 'association' });

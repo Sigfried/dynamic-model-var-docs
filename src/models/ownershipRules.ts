@@ -12,9 +12,10 @@
  * `OWNERSHIP_VERDICTS`. The old exports are projections of these, so nothing
  * downstream had to change.
  *
- * See docs/OWNERSHIP_RULES_PLAN.md for the design and its acceptance
- * criterion; docs/OWNERSHIP_CLASSIFICATION.md for what the rules MEAN, which
- * is the thing to read first.
+ * The acceptance criterion is below and pinned by `ownershipRules.test.ts`;
+ * see docs/OWNERSHIP_CLASSIFICATION.md for what the rules MEAN, which is the
+ * thing to read first. (⚠️ that doc still describes the pre-2026-09-13 scheme
+ * — rewriting it is TASKS `ownership-doc-rewrite`.)
  *
  * ---
  *
