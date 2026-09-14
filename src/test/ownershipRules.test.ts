@@ -43,7 +43,7 @@ describe('the ownership rule declaration', () => {
     }
     expect(classify({
       declaredOn: 'Whatever', slotName: 'zzz', range: 'Nothing', multivalued: false,
-    }).rule).toBe('owns-target-forward-by-entity');
+    }).rule).toBe('owns-target-forward-by-default');
   });
 
   test('child-following-parent carries text but is NOT evaluated by the classifier', () => {
@@ -69,7 +69,7 @@ describe('the ownership rule declaration', () => {
    */
   test('one rule, two exceptions, plus the induced pass, in teaching order', () => {
     expect(OWNERSHIP_RULES.map(r => r.id)).toEqual([
-      'owns-target-forward-by-entity',
+      'owns-target-forward-by-default',
       'belongs-to-target-backward-by-entity',             // exception, indented in the legend
       'belongs-to-target-backward-by-attribute',          // exception, indented in the legend
       'child-following-parent',         // not a slot rule; its own legend section
@@ -87,7 +87,7 @@ describe('the ownership rule declaration', () => {
 
     test('an ordinary attribute owns what it points at', () => {
       expect(classify(facts({})))
-        .toEqual({ verdict: 'own-fwd', rule: 'owns-target-forward-by-entity' });
+        .toEqual({ verdict: 'own-fwd', rule: 'owns-target-forward-by-default' });
     });
 
     test('pointing at a referred-to entity is backward, at any cardinality', () => {
@@ -114,7 +114,7 @@ describe('the ownership rule declaration', () => {
       // using it here would prove nothing about the attribute key — the range
       // exception would fire first.
       expect(classify(facts({ declaredOn: 'Cohort', slotName: 'part_of', range: 'Cohort' })))
-        .toEqual({ verdict: 'own-fwd', rule: 'owns-target-forward-by-entity' });
+        .toEqual({ verdict: 'own-fwd', rule: 'owns-target-forward-by-default' });
     });
 
     /*
@@ -127,7 +127,7 @@ describe('the ownership rule declaration', () => {
       expect(REFERRED_TO_ENTITIES.has('ResearchStudy')).toBe(false);
       expect(classify(facts({
         declaredOn: 'ResearchStudyCollection', slotName: 'entries', range: 'ResearchStudy',
-      }))).toEqual({ verdict: 'own-fwd', rule: 'owns-target-forward-by-entity' });
+      }))).toEqual({ verdict: 'own-fwd', rule: 'owns-target-forward-by-default' });
     });
 
     /*
@@ -141,7 +141,7 @@ describe('the ownership rule declaration', () => {
       expect(REFERRED_TO_ENTITIES.has(ENTITY_ROOT)).toBe(false);
       for (const multivalued of [true, false]) {
         expect(classify(facts({ range: ENTITY_ROOT, multivalued })))
-          .toEqual({ verdict: 'own-fwd', rule: 'owns-target-forward-by-entity' });
+          .toEqual({ verdict: 'own-fwd', rule: 'owns-target-forward-by-default' });
       }
     });
 
@@ -170,7 +170,7 @@ describe('the ownership rule declaration', () => {
     test('the table is in teaching order, exceptions BELOW their parent', () => {
       const ids = OWNERSHIP_RULES.map(r => r.id);
       for (const e of ['belongs-to-target-backward-by-entity', 'belongs-to-target-backward-by-attribute']) {
-        expect(ids.indexOf(e), e).toBeGreaterThan(ids.indexOf('owns-target-forward-by-entity'));
+        expect(ids.indexOf(e), e).toBeGreaterThan(ids.indexOf('owns-target-forward-by-default'));
       }
     });
 
@@ -191,11 +191,11 @@ describe('the ownership rule declaration', () => {
      */
     test('two exceptions matching one slot is an error, not a silent pick', () => {
       const clash: RuleSpec[] = [
-        { id: 'owns-target-forward-by-entity', label: 'Owns', when: () => true, verdict: 'own-fwd', text: 'x' },
+        { id: 'owns-target-forward-by-default', label: 'Owns', when: () => true, verdict: 'own-fwd', text: 'x' },
         { id: 'belongs-to-target-backward-by-entity', label: 'A', when: () => true, verdict: 'own-bkwd',
-          text: 'x', parentRule: 'owns-target-forward-by-entity' },
+          text: 'x', parentRule: 'owns-target-forward-by-default' },
         { id: 'belongs-to-target-backward-by-attribute', label: 'B', when: () => true, verdict: 'own-bkwd',
-          text: 'x', parentRule: 'owns-target-forward-by-entity' },
+          text: 'x', parentRule: 'owns-target-forward-by-default' },
       ];
       // Same shape classify() walks, so the guard is exercised as written.
       const run = (facts: SlotFacts) => {
@@ -223,7 +223,7 @@ describe('the ownership rule declaration', () => {
         expect(parentRuleOf(r.id)).toBe(r.parentRule);
       }
       // ...and reports nothing for a rule that is not an exception.
-      expect(parentRuleOf('owns-target-forward-by-entity')).toBeUndefined();
+      expect(parentRuleOf('owns-target-forward-by-default')).toBeUndefined();
     });
 
     test('an exception never nests under another exception', () => {
@@ -241,7 +241,7 @@ describe('the ownership rule declaration', () => {
         ({ declaredOn: 'Whatever', slotName: 'zzz', range: 'Nothing', multivalued });
       const total = (OWNERSHIP_RULES as readonly RuleSpec[]).filter(
         r => r.when?.(probe(false)) && r.when?.(probe(true)));
-      expect(total.map(r => r.id)).toEqual(['owns-target-forward-by-entity']);
+      expect(total.map(r => r.id)).toEqual(['owns-target-forward-by-default']);
       expect(total[0].parentRule).toBeUndefined();
     });
   });
@@ -285,7 +285,7 @@ describe('the ownership rule declaration', () => {
    * `association` is the one edge kind this schema no longer produces and the
    * one a future schema is most likely to want back. Its rule entry is
    * COMMENTED OUT at the foot of OWNERSHIP_RULES (Siggie, 2026-09-11) rather
-   * than deleted, so restoring it is: uncomment, move it above `owns-target-forward-by-entity`, refill
+   * than deleted, so restoring it is: uncomment, move it above `owns-target-forward-by-default`, refill
    * ASSOCIATION_SLOTS, add one entry to OWNERSHIP_VERDICTS, put `association`
    * back on the OwnershipRule union. No new code path.
    *
@@ -391,7 +391,7 @@ describe('the ownership rule declaration', () => {
       // And with the rule absent (today), the default does claim them.
       expect(classify({
         declaredOn: 'Specimen', slotName: 'related_document', range: 'Document', multivalued: true,
-      })).toEqual({ verdict: 'own-fwd', rule: 'owns-target-forward-by-entity' });
+      })).toEqual({ verdict: 'own-fwd', rule: 'owns-target-forward-by-default' });
     });
 
     test('restored at the BACK it would never fire — so placement is not free', () => {
@@ -405,7 +405,7 @@ describe('the ownership rule declaration', () => {
         [...(OWNERSHIP_RULES as readonly RuleSpec[]), ASSOCIATION_RULE];
       expect(classifyWith(misplaced, {
         declaredOn: 'Specimen', slotName: 'related_document', range: 'Document', multivalued: true,
-      })).toEqual({ verdict: 'own-fwd', rule: 'owns-target-forward-by-entity' });
+      })).toEqual({ verdict: 'own-fwd', rule: 'owns-target-forward-by-default' });
     });
 
     test('today the set is empty, so nothing classifies as association', () => {

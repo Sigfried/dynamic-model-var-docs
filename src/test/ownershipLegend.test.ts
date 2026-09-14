@@ -160,7 +160,7 @@ describe('ownership legend', () => {
       // on only 2 entities, and BOTH are owned by some other attribute — which
       // is exactly why it cannot be keyed by range. See ownershipRules.ts.
       expect(byTargetEntity(byAttr.pairs).size).toBe(2);
-      const fwd = groups.find(g => g.rule === 'owns-target-forward-by-entity')!;
+      const fwd = groups.find(g => g.rule === 'owns-target-forward-by-default')!;
       for (const range of byTargetEntity(byAttr.pairs).keys()) {
         expect(fwd.pairs.some(p => p.range === range), `${range} is owned by something`)
           .toBe(true);

@@ -44,7 +44,7 @@ import type { Supergroup } from 'supergroup';
 import type { ContainmentGraph } from './containmentGraph';
 
 export type OwnershipNodeRole = 'selected' | 'context';
-export type OwnershipEdgeType = 'ownership' | 'reference' | 'isa';
+export type OwnershipEdgeType = 'ownership' | 'association' | 'isa';
 
 /**
  * Where another class sits relative to THIS one, from this class's point of
@@ -176,7 +176,7 @@ export interface OwnershipNodeSlot {
   slot: string;
   /** The class this slot points at (the storage-direction range). */
   range: string;
-  channel: 'ownership' | 'reference';
+  channel: 'ownership' | 'association';
   /** Flipped ownership: this class is the member; range is its owner. */
   flipped: boolean;
   cardinality: string;
@@ -272,7 +272,7 @@ export function collectNodeSlots(full: ContainmentGraph): Map<string, OwnershipN
       slots.push({
         slot: e.label,
         range,
-        channel: e.kind === 'association' ? 'reference' : 'ownership',
+        channel: e.kind === 'association' ? 'association' : 'ownership',
         flipped: e.flipped,
         cardinality: e.cardinality,
         isLoop: e.isLoop,
@@ -342,7 +342,7 @@ export function computeSunkLayers(dag: OwnershipDag): Map<string, number> {
  * Extract the drawable subgraph for a selection.
  *
  * Edge policy: ownership edges are emitted whenever both endpoints are
- * visible (they form the paths-to-root); reference and isa edges when both
+ * visible (they form the paths-to-root); association and isa edges when both
  * endpoints are visible AND at least one was explicitly asked for (selected
  * or expanded) — pure path-context nodes contribute their ownership
  * structure and their direct relationships to the nodes you asked about,
@@ -435,7 +435,7 @@ export function buildOwnershipSubgraph(
       source: e.source,
       target: e.target,
       type: (e.kind === 'has-a' ? 'ownership'
-        : e.kind === 'association' ? 'reference' : 'isa') as OwnershipEdgeType,
+        : e.kind === 'association' ? 'association' : 'isa') as OwnershipEdgeType,
       slotName: e.kind === 'subclass' ? '' : e.label,
       storageDirection: (e.flipped ? 'flipped' : 'forward') as 'forward' | 'flipped',
       cardinality: e.cardinality,

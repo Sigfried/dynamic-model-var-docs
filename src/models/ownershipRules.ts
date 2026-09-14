@@ -127,7 +127,7 @@ export type DrawnVerdict = keyof typeof OWNERSHIP_VERDICTS;
  * against. `RULE_IDS_MATCH_UNION` below fails the build if the two drift.
  */
 export type OwnershipRule =
-  | 'owns-target-forward-by-entity'            // the default: an attribute owns what it points at
+  | 'owns-target-forward-by-default'           // the default: total, keyed by nothing
   | 'belongs-to-target-backward-by-entity'     // exception, keyed by RANGE: referred-to entities
   | 'belongs-to-target-backward-by-attribute'  // exception, keyed by CLASS.SLOT: named back-pointers
   | 'child-following-parent';     // induced, not a slot rule: a range includes its subtree
@@ -292,13 +292,20 @@ export const NAMED_BACK_POINTERS = new Set<string>([
  * a fourth. The legend and the tour quote `label` instead, which stays correct
  * if the order ever changes again.
  *
+ * **The three `by-…` suffixes name the KEY, and the default's key is nothing.**
+ * `by-entity` and `by-attribute` distinguish the two exception sets, which are
+ * keyed by range and by `Class.slot` — a real contrast, and the subtlest thing
+ * in the scheme. The default is `by-default` because it has no set at all
+ * (`when: () => true`); it was `by-entity` until 2026-09-13, which read as a
+ * third keyed list and invited the reader to look for one.
+ *
  * Reordering the entries still changes classification — `tsc` cannot catch
  * that; the schema-sweeping tests in `containmentGraph.test.ts` can, and do.
  */
 export const OWNERSHIP_RULES = [
   {
-    id: 'owns-target-forward-by-entity',
-    label: 'Owns target / forward arrow / by entity',
+    id: 'owns-target-forward-by-default',
+    label: 'Owns target / forward arrow / by default',
     when: () => true,                   // the default: total, so it matches anything
     verdict: 'own-fwd',
     text: 'An attribute owns the entity it points at: the thing it points at is part of '
@@ -310,7 +317,7 @@ export const OWNERSHIP_RULES = [
     label: 'Belongs to target / backward arrow / by entity',
     when: ({ range }) => REFERRED_TO_ENTITIES.has(range),
     verdict: 'own-bkwd',
-    parentRule: 'owns-target-forward-by-entity',
+    parentRule: 'owns-target-forward-by-default',
     text: 'Referred-to entities are pointed at rather than contained — a Participant or a '
       + 'Visit exists in its own right and is looked up, not held. Pointing at one means '
       + 'belonging to it, so ownership runs backward. This is said about the ENTITY, so it '
@@ -321,7 +328,7 @@ export const OWNERSHIP_RULES = [
     label: 'Belongs to target / backward arrow / by attribute',
     when: ({ declaredOn, slotName }) => NAMED_BACK_POINTERS.has(`${declaredOn}.${slotName}`),
     verdict: 'own-bkwd',
-    parentRule: 'owns-target-forward-by-entity',
+    parentRule: 'owns-target-forward-by-default',
     text: 'Named back-pointers are individual attributes that point back at an owner rather '
       + 'than down at something owned. This is said about the ATTRIBUTE, not its target: '
       + 'these targets are themselves owned, each by one other attribute, so the same entity '
@@ -400,7 +407,7 @@ export function classify(facts: SlotFacts): { verdict: OwnershipVerdict; rule: O
       ? { verdict: exception.verdict, rule: exception.id }
       : { verdict: rule.verdict, rule: rule.id };
   }
-  // Unreachable: `owns-target-forward-by-entity` matches everything. Thrown rather than
+  // Unreachable: `owns-target-forward-by-default` matches everything. Thrown rather than
   // defaulted, per CLAUDE.md "fail loudly" — a miss here means someone removed
   // the total rule or gave it a `parentRule`.
   throw new Error(

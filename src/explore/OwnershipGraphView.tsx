@@ -119,7 +119,7 @@ export interface RowVM {
   slot: string;
   range: string;
   /** 'plain' = scalar/enum-valued attribute — listed when expanded, never an edge. */
-  channel: 'ownership' | 'reference' | 'plain';
+  channel: 'ownership' | 'association' | 'plain';
   flipped: boolean;
   cardinality: string;
   isLoop: boolean;
@@ -1968,7 +1968,7 @@ export default function OwnershipGraphView({
         // Thicken relative to this edge's own channel, so a hovered dashed
         // reference doesn't jump to ownership weight.
         p.style.strokeWidth = lit
-          ? String(p.dataset.channel === 'reference' ? STROKE_REF_HOVER : STROKE_OWN_HOVER)
+          ? String(p.dataset.channel === 'association' ? STROKE_REF_HOVER : STROKE_OWN_HOVER)
           : '';
       });
       // A convergence arrowhead belongs to a GROUP of edges, so it stays lit
@@ -2264,7 +2264,7 @@ export default function OwnershipGraphView({
                         <g key={e.id}>
                           <path
                             data-edge-id={e.id}
-                            data-channel={isOwn ? 'ownership' : 'reference'}
+                            data-channel={isOwn ? 'ownership' : 'association'}
                             d={d}
                             fill="none"
                             opacity={dimmed ? 0.4 : 1}
