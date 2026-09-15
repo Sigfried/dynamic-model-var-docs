@@ -267,18 +267,14 @@ export default function OwnershipLegend({
     [dataService],
   );
   /*
-   * The induced pass is NOT a slot rule and is not shown at all (Siggie,
-   * 2026-09-15). It reads no attribute — it walks the subclasses of a range
-   * something already owns — so a reader who found it beside rules about
-   * attributes would look for the attribute behind it and find none.
+   * The induced pass is NOT a slot rule and is not shown at all. It reads no
+   * attribute — it walks the subclasses of a range something already owns — so
+   * a reader who found it beside rules about attributes would look for the
+   * attribute behind it and find none. Those edges serve LAYOUT only, which
+   * leaves a reader nothing to do with a list of them.
    *
-   * It had its own section here until the relation bar stopped listing induced
-   * edges (TASKS `induced-clutter`). Once they serve LAYOUT only — placing a
-   * subclass after the attribute that reaches its parent — there is nothing
-   * for a reader to do with a list of them, and the section was explaining a
-   * mechanism rather than the model. `getOwnershipPairGroups` still builds the
-   * group; what it means is recorded in OWNERSHIP_CLASSIFICATION.md and in
-   * `OWNERSHIP_RULES`, which is where a maintainer looks.
+   * `getOwnershipPairGroups` still builds the group; what it means is recorded
+   * in OWNERSHIP_CLASSIFICATION.md §Rule 3 and in `OWNERSHIP_RULES`.
    */
   const slotRules = groups.filter(g => g.rule !== 'child-following-parent');
   /*

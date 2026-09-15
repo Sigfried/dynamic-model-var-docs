@@ -71,11 +71,9 @@ The structure, which the steps below now follow:
     - Exception, by attribute: named back-pointers -- belongs-to-target-backward-by-attribute
 
 The induced pass (`child-following-parent`) is deliberately NOT a step here,
-and is not in the legend either (2026-09-15). Once induced edges came out of
-the relation bar they serve LAYOUT only -- placing a subclass after the
-attribute that reaches its parent -- so there is nothing for a reader to do
-with them, and the step explained a mechanism rather than the model. They
-remain documented in OWNERSHIP_CLASSIFICATION.md for maintainers.
+and is not in the legend either: induced edges serve LAYOUT only, so there is
+nothing for a reader to do with them. Documented for maintainers in
+OWNERSHIP_CLASSIFICATION.md.
 
 The rule steps below are drafted against the LIVE classifier (re-probed
 2026-09-13): 89 forward, 55 by-entity exception, 5 by-attribute exception.
