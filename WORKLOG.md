@@ -8,6 +8,90 @@ Newest first.
 
 
 ---
+## 2026-09-14 — the legend's lists; ownership order, found by looking
+
+TASKS `legend-list-orientation`, settled and written up as
+[LEGEND_ORIENTATION.md](docs/LEGEND_ORIENTATION.md). No code changed.
+
+### The numeric analysis reached the wrong answer; the pictures corrected it
+
+Started by measuring what the legend's one grouping (`byTargetEntity`, keyed on
+`p.range`) produces per section, and proposed: keep each section's grouping,
+add a caption naming what its rows are. That proposal was WRONG, and so was the
+reasoning behind an alternative I floated next — "group by declaring class
+everywhere."
+
+What killed both: Siggie exported the 149 declared attributes to CSV and ran
+them through `treelike`, an old tool of theirs for exploring tabular data as
+trees with a per-column merge toggle. Roughly fifteen arrangements, compared by
+eye. See [docs/images/treelike/](docs/images/treelike/README.md) — the
+screenshots were pasted into the session and are gone, but each arrangement and
+what it showed is recorded there.
+
+Source-first is unreadable on the backward rule: 25 rows of declaring classes
+whose middle column says `associated_participant → Participant` twenty times.
+Target-first is unreadable on the forward rule: `Entity (13)` and `Quantity
+(16)` as undifferentiated fans, which is what the legend does TODAY.
+
+### The finding
+
+The arrangement that wins on forward (`source → attribute → target`) and the
+one that wins on backward (`target → attribute → source`) are the SAME
+arrangement: **owner → attribute → owned**. Forward the source owns, backward
+the target owns. The range/declaring-class distinction — which the whole
+numeric analysis was conducted in terms of — was never what mattered.
+
+Grouping by ROLE rather than by structural position makes the top-level row
+mean one thing in every section, so the captions I proposed become unnecessary.
+`owner`/`owned` are already on every `OwnershipPair` and were unused.
+
+Second finding, also only visible: **a merged column must be adjacent to what
+it groups.** Merging the attribute column when it sits LAST drags its edges
+backward across its neighbour into a hairball. I stated a "merge only the
+terminal column" rule from the forward batch and it was wrong in both
+directions.
+
+### Corrections made along the way
+
+- I claimed grouping by owner would wreck the forward section into 38
+  meaningless rows. It does produce 38 rows, and they are fine — informative
+  fans with the terminal column merged.
+- The `by-attribute` section's 2 range-rows I first called "matching nothing."
+  Under owner-first they are correct: those two entities ARE the owners.
+- A probe printed that section as `5 owners / 2 owned`. It is **2 owners, 5
+  owned** — the script's labels were swapped, not the scheme.
+
+### The wording question, settled
+
+*Referred to* names a property of an ARRIVAL, not of an entity.
+`QuestionnaireItem` is owned by `Questionnaire.items` and referred to by three
+other attributes; on the entity reading that is a contradiction, and it is not
+one. `REFERRED_TO_ENTITIES` survives only as *entities every arrival at which
+is a reference* — a contingent fact about this schema. Do not re-open without
+answering the QuestionnaireItem case.
+
+### Left open deliberately
+
+- The `attrs` pivot is strong on backward (9 names over 55) and weak on forward
+  (52 over 89, 39 singletons). Settled as: keep the count everywhere, drop the
+  EXPANSION on the owns side, where it would duplicate the `attrs` tree.
+- Siggie will decide about dropping the rule indent after seeing it rendered.
+  The indent is the only signal that the backward rules are exceptions rather
+  than peers; the new intro prose is meant to carry that instead.
+
+### Process
+
+This session ran under plan mode for its first half, which fought the work —
+the task was divergent exploration, not converging on a plan, and plan mode
+blocks the throwaway artifacts (CSV, probes) that exploration needs. Switched
+to brainstorming and classified it a spike. **A "help me think about X" task
+where the output is a decision is a spike; do not enter plan mode for it.**
+
+Also: nothing was written to this file until Siggie pointed out the omission at
+the start of the NEXT session, which had to rediscover the context. The
+findings above were live in conversation for hours with no durable record.
+
+---
 ## 2026-09-13 (later) — the Ownership tour rewritten; `by-entity` was lying
 
 TASKS `ownership-doc-rewrite` pieces (a) and (c), plus

@@ -59,8 +59,11 @@ Each rule's heading is followed by one line of counts, each of which is a
 
 ```
 Belongs to target / backward arrow / by entity
-  5 owner entities⌄ — 9 attribute names⌄ — 25 owned entities⌄ — 55 attributes⌄
+  5 owners⌄ — 9 attrs⌄ — 25 owned⌄ — 55 total
 ```
+
+The labels are settled in §The pivot labels below; the long forms in the
+[sg] block that follows were the working draft that led to them.
 ### [sg] we did not discuss how the pivots would work now
 
 first, we're already not going to be able to fit that whole thing on one line.
@@ -124,8 +127,10 @@ derivation is needed.
 - **The by-attribute section stops matching nothing.** Its 2 range-rows looked
   arbitrary; under owner-first those two entities ARE the owners, and the
   section reads `2 owner entities — 5 owned entities` consistently with the rest.
-- **`inducedFrom` gets a use.** Induced pairs carry the declared range they were
-  induced from and it is rendered nowhere today.
+- **`inducedFrom` gets a use** in the legend's induced section, which lists the
+  10 induced edges separately from the three slot rules. ⚠️ This is NOT an
+  argument for surfacing induced edges elsewhere — TASKS `induced-clutter`
+  (2026-09-14) takes them OUT of the relation bar and its counts.
 
 ### The attribute-name pivot is not uniformly useful
 
@@ -134,18 +139,31 @@ that no other view in the app offers. On forward, 52 names cover 89 attributes
 and 39 appear exactly once — clicking it yields a list nearly 1:1 with the
 attributes, which is a re-sort, not a grouping.
 
-**Decision: show all four pivots in every section anyway.** The number is
-informative even where the pivot is weak — "52 names for 89 attributes" says
-the forward rule is mostly one-off naming; "9 names for 55" says the backward
-rule is a few repeated patterns. Suppressing a pivot per section would also
-reintroduce per-section shape differences, which is the class of inconsistency
-this task exists to remove.
+**Decision: show all four COUNTS everywhere, but `total` gets no dropdown on
+the owns side** (Siggie, 2026-09-14) — expanding it there would reproduce the
+`attrs` tree exactly, since `src.attr` always wants a name above it. So the
+weak pivot costs a number, not a redundant expansion.
+
+The number stays informative even where the expansion is dropped: "52 names for
+89 attributes" says the forward rule is mostly one-off naming; "9 names for 55"
+says the backward rule is a few repeated patterns. That contrast is real content
+and is invisible today. Suppressing a whole COUNT per section would reintroduce
+per-section shape differences, which is the class of inconsistency this task
+exists to remove — which is why only the expansion is dropped, never the count.
 
 The 13 repeated forward names are concentrated in two families: the observation
 attributes (`focus` 11, `context` 6, `value_quantity` 6, `observations` 4) and
 the specimen-activity ones (`date_started` 4, `date_ended` 4, `additive` 3).
 
 ## Consequences for wording
+
+*[sg] i'm not sure i understand what's being said here but it was motivated
+by a general complaint on my part: i think 'reference' language tends to be
+confusing and can ideally be retired -- relationships between attribute source and
+target already have a lot of terms:*
+- *owns / owned / owned by / belongs to*
+- *source / target*
+- *forward / backward**
 
 *Referred to* names a property of an ARRIVAL, not of an entity. Siggie's
 counter-example settles it: `QuestionnaireItem` is owned by `Questionnaire.items`
