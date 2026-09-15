@@ -87,13 +87,13 @@ expandable tree order, with the arrow each line carries:
       - attr ----> tgt
   - attribute names:  (start collapsed)
     - attr
-      - src.attr ----> tgt
+      - src ----> tgt
   - owned:
     - ----> tgt          (label right-aligned; the arrow points AT it)
       - src.attr
   - attributes: (start expanded)
     - attr
-      - src.attr ----> tgt
+      - src ----> tgt
 - belongs to (own-bkwd, ----<):
   - owner/target entities:
     - tgt ----<
@@ -117,10 +117,19 @@ lookup rather than a second spec — `headers` in `SHAPES`:
 
 | pivot | owns | belongs to |
 |---|---|---|
-| source/owner entities | Source entity · Attribute name · Target entity | Target entity · Attribute name · Source.attribute |
-| attribute names | Attribute name · Source.attribute · Target entity | Attribute name · Target entity · Source.attribute |
+| source/owner entities | Source entity · Attribute name · Target entity | Target entity · Attribute name · Source entity |
+| attribute names | Attribute name · Source entity · Target entity | Attribute name · Target entity · Source.attribute |
 | owned | Source.attribute · Target entity | Source entity · Attribute name · Target entity |
-| attributes (total) | Attribute name · Source.attribute · Target entity | Attribute name · Target entity · Source.attribute |
+| attributes (total) | Attribute name · Source entity · Target entity | Attribute name · Target entity · Source.attribute |
+
+**A leaf never repeats what its immediate parent said.** That is the whole rule
+behind `src` vs `src.attr`: a leaf under an `attr` level is the bare source
+class, and one under an `entity` level keeps the qualified `src.attr`, because
+the attribute name has not been said there.
+
+⚠️ `belongs to: attribute names` looks like an exception and is not. Its levels
+are `attr → tgt`, so the attribute is TWO levels up with the target in between,
+and the leaf has to name it again.
 
 ⚠️ `owns: owned` is the one layout that does not read owner-first down the
 page: it groups by the OWNED end. Its label is right-aligned into the last

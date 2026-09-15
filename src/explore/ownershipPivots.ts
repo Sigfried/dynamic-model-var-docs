@@ -97,7 +97,14 @@ const TOP_KEY: Record<Pivot, (p: OwnershipPair) => string> = {
  * misread out of the spec first time round.
  *
  * `source` is the declaring class alone (`Condition`), for a leaf whose
- * attribute name is already on the level above it.
+ * attribute name is already on the level DIRECTLY above it.
+ *
+ * **The rule:** a leaf never repeats what its immediate parent said. So a leaf
+ * under an `attr` level is `source`, and one under an `entity` level keeps
+ * `srcAttr` — the attribute name has not been said there. `belongs to: attrs`
+ * is the case that looks like an exception and is not: its levels are
+ * `attr → entity`, so the attribute is two levels up with the target between,
+ * and the leaf has to name it again.
  */
 export type Field = 'entity' | 'attr' | 'srcAttr' | 'source' | 'target';
 
@@ -179,8 +186,10 @@ const SHAPES: Record<Pivot, { fwd: PivotShape; bkwd: PivotShape }> = {
             headers: [ENTITY, ATTR, SOURCE] },
   },
   attrs: {
-    fwd: { levels: ['attr'], leaf: ['srcAttr', 'target'], arrow: 'leaf',
-           headers: [ATTR, SRC_ATTR, ENTITY] },
+    /* Bare `source`: the attribute name is the level directly above, so
+       `Context.activity` under `activity` repeated it on every leaf. */
+    fwd: { levels: ['attr'], leaf: ['source', 'target'], arrow: 'leaf',
+           headers: [ATTR, SOURCE, ENTITY] },
     bkwd: { levels: ['attr', 'entity'], leaf: ['srcAttr'], arrow: 'label:1',
             headers: [ATTR, ENTITY, SRC_ATTR] },
   },
@@ -206,8 +215,9 @@ const SHAPES: Record<Pivot, { fwd: PivotShape; bkwd: PivotShape }> = {
    * *"it's supposed to be the same as attribute names, just expanded"*).
    */
   total: {
-    fwd: { levels: ['attr'], leaf: ['srcAttr', 'target'], arrow: 'leaf',
-           headers: [ATTR, SRC_ATTR, ENTITY] },
+    /* Same tree as `attrs`, so the same bare `source` leaf. */
+    fwd: { levels: ['attr'], leaf: ['source', 'target'], arrow: 'leaf',
+           headers: [ATTR, SOURCE, ENTITY] },
     bkwd: { levels: ['attr', 'entity'], leaf: ['srcAttr'], arrow: 'label:1',
             headers: [ATTR, ENTITY, SRC_ATTR] },
   },

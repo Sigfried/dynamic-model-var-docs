@@ -139,6 +139,32 @@ lines now say the whole shape and `headers` in `SHAPES` is a lookup.
 
 Verified `SHAPES` against the rewritten spec line by line; all twelve match.
 
+### A leaf never repeats what its immediate parent said
+
+Siggie's rule, arrived at in two steps. First for `belongs to: owners`, where
+the spec said `src` and I had transcribed `src.attr` — eleven copies of
+`.performed_by` under a heading that already said it. Then Siggie spotted the
+same repetition in `owns: attrs` and `owns: total`.
+
+Stated generally: a leaf under an `attr` LEVEL shows the bare source class; a
+leaf under an `entity` level keeps `srcAttr`, because the attribute has not
+been named above it. Three shapes governed, and `belongs to: attrs` is the one
+that looks like an exception and is not — its levels are `attr → entity`, so
+the attribute is two levels up with the target between.
+
+⚠️ **My first test for this passed against a deliberately broken shape.** It
+looped over `SHAPES` and asserted inside an `if`, so a shape that failed the
+condition was silently skipped and the whole test could assert nothing.
+Rewritten to collect the governed shapes and assert the LIST first
+(`['owns/attrs', 'owns/total', 'belongs to/owners']`), so it cannot pass by
+finding nothing to check — then verified by breaking a shape and watching it
+fail. A conditional assertion inside a loop is a vacuous test waiting to happen.
+
+⚠️ **I then ran `git checkout` on the file to undo the deliberate break**, which
+also reverted the real edits in it, and they had to be redone. Undo a scratch
+edit with a file copy (`cp` to `$TMPDIR` first); never with a git command that
+discards uncommitted work.
+
 ### `belongs to / attributes` was a transcription error
 
 Siggie spotted it in the spec: `total` is `attrs` already expanded — the SAME

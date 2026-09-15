@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { loadModelData } from '../utils/dataLoader';
 import { DataService } from '../services/DataService';
 import OwnershipLegend from '../explore/OwnershipLegend';
+import { PIVOTS, shapeOf } from '../explore/ownershipPivots';
 
 /**
  * The legend's pivots (TASKS `legend-list-orientation`).
@@ -289,6 +290,36 @@ describe('ownership legend pivots', () => {
       fireEvent.click(find(/9\s*attrs/));
       expect(document.querySelector('.lt-leaf .lt-c1')!.textContent)
         .toMatch(/^\w+\.\w+/);
+    });
+
+    test('no leaf repeats what its immediate parent said', async () => {
+      /*
+       * The rule behind `src` vs `src.attr` (Siggie, 2026-09-15). A leaf whose
+       * parent level is the ATTRIBUTE NAME shows the bare source class —
+       * `additive → SpecimenContainer`, not `SpecimenContainer.additive`
+       * eleven times over. A leaf under an ENTITY level keeps the qualified
+       * form, because the attribute has not been named above it.
+       *
+       * Asserted over the SHAPES table rather than one rendering, so a new
+       * pivot cannot quietly reintroduce the repetition.
+       */
+      const offenders: string[] = [];
+      const checked: string[] = [];
+      for (const fwd of [true, false]) {
+        for (const pv of PIVOTS) {
+          const shape = shapeOf(pv, fwd);
+          if (shape.levels[shape.levels.length - 1] !== 'attr') continue;
+          const what = `${fwd ? 'owns' : 'belongs to'}/${pv}`;
+          checked.push(what);
+          if (shape.leaf.includes('srcAttr')) offenders.push(what);
+        }
+      }
+      // The shapes this rule actually governs, so the assertion below cannot
+      // pass by finding nothing to check.
+      expect(checked).toEqual([
+        'owns/attrs', 'owns/total', 'belongs to/owners',
+      ]);
+      expect(offenders).toEqual([]);
     });
 
     test('each pivot carries a header naming its columns', async () => {
