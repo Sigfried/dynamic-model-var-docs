@@ -127,10 +127,13 @@ derivation is needed.
 - **The by-attribute section stops matching nothing.** Its 2 range-rows looked
   arbitrary; under owner-first those two entities ARE the owners, and the
   section reads `2 owner entities — 5 owned entities` consistently with the rest.
-- **`inducedFrom` gets a use** in the legend's induced section, which lists the
-  10 induced edges separately from the three slot rules. ⚠️ This is NOT an
-  argument for surfacing induced edges elsewhere — TASKS `induced-clutter`
-  (2026-09-14) takes them OUT of the relation bar and its counts.
+- ~~**`inducedFrom` gets a use** in the legend's induced section.~~
+  **Superseded 2026-09-15.** There is no induced section any more. Implementing
+  `induced-clutter` showed the edges are an inference rather than a
+  declaration, so they came out of the relation bar, the legend and the tour
+  together; they now serve layout only. See OWNERSHIP_CLASSIFICATION §Rule 3.
+  The legend has **three** sections, not four — the row counts in the table
+  below were already only the three slot rules, so nothing else here moves.
 
 ### The attribute-name pivot is not uniformly useful
 

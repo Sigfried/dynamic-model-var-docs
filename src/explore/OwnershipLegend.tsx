@@ -267,26 +267,27 @@ export default function OwnershipLegend({
     [dataService],
   );
   /*
-   * The induced pass is NOT a slot rule and is no longer listed as one
-   * (Siggie, 2026-09-13). It reads no attribute — it walks the subclasses of a
-   * range something already owns — so a reader who found it beside two rules
-   * about attributes would look for the attribute behind it and find none.
+   * The induced pass is NOT a slot rule and is not shown at all (Siggie,
+   * 2026-09-15). It reads no attribute — it walks the subclasses of a range
+   * something already owns — so a reader who found it beside rules about
+   * attributes would look for the attribute behind it and find none.
    *
-   * It keeps its listing, in its own section below: those edges are on the
-   * canvas, they are derived live like everything else here, and this is the
-   * only place their pairs can be seen. Explaining what they ARE is the tour's
-   * job; showing WHICH ones is still the legend's.
+   * It had its own section here until the relation bar stopped listing induced
+   * edges (TASKS `induced-clutter`). Once they serve LAYOUT only — placing a
+   * subclass after the attribute that reaches its parent — there is nothing
+   * for a reader to do with a list of them, and the section was explaining a
+   * mechanism rather than the model. `getOwnershipPairGroups` still builds the
+   * group; what it means is recorded in OWNERSHIP_CLASSIFICATION.md and in
+   * `OWNERSHIP_RULES`, which is where a maintainer looks.
    */
   const slotRules = groups.filter(g => g.rule !== 'child-following-parent');
-  const induced = groups.find(g => g.rule === 'child-following-parent');
-  const inducedEntities = induced ? byTargetEntity(induced.pairs) : [];
   /*
    * Which disclosures are open, keyed `${group}:${which}`. A SET, not a single
    * key: each rule has two independent counts (TASKS `legend-two-counts`), and
    * a reader comparing entity counts across rules wants several open at once.
    *
    * **Everything starts collapsed** (Siggie, 2026-09-13). The panel opens as
-   * four rules and their counts, which is the summary; opening a list is the
+   * three rules and their counts, which is the summary; opening a list is the
    * reader asking a question. An attribute list open by default also read as a
    * collapse FAILURE when the entity list was opened above it — both lists
    * name the same entities, so two open lists look like one that would not
@@ -419,41 +420,6 @@ export default function OwnershipLegend({
             })}
           </ul>
         </Section>
-
-        {induced && (
-          <Section title="Edges with no attribute behind them">
-            <p className={NOTE}>
-              An attribute whose target has subclasses accepts any of them, so
-              whatever owns the target owns each subclass too. These edges are
-              induced from a declared one rather than read from an attribute of
-              their own — which is why you can see an edge on the diagram that
-              no attribute row points at.
-            </p>
-            <div className="flex gap-3">
-              <CountToggle
-                n={inducedEntities.length}
-                noun="entities"
-                open={open.get('induced') === 'entities'}
-                onClick={() => setDepth('induced', 'entities')}
-              />
-              <CountToggle
-                n={induced.pairs.length}
-                noun="attributes"
-                open={open.get('induced') === 'attributes'}
-                onClick={() => setDepth('induced', 'attributes')}
-              />
-            </div>
-            {open.has('induced') && (
-              <EntityRows
-                entities={inducedEntities}
-                showAttributes={open.get('induced') === 'attributes'}
-                openRows={rowOverrides.get('induced') ?? NO_ROWS}
-                onToggleRow={entity => toggleRow('induced', entity)}
-                classLink={classLink}
-              />
-            )}
-          </Section>
-        )}
 
         <Section title="Cardinality">
           <ul className="flex flex-wrap gap-x-4 gap-y-1">

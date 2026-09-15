@@ -317,13 +317,37 @@ Scope, deliberately:
   any member edge and dedupe against the declared one on the same anchor row,
   so the canvas shows ONE line into the box, landing on its header — the
   relationship is with the family, not with a child.
-- **The relation bar shows them.** `QuestionnaireResponseItem` owns six
-  entities, one row per subclass, each row in the subclass's sibling colour,
-  exactly as inherited-slot rows already read.
 
 Anything that recomputes edges from slot data must skip `inducedFrom` edges or
 derive them the same way (`subtreeOf`); `containmentGraph.test.ts` does the
 latter.
+
+### They serve layout only, and are invisible in the UI
+
+Since 2026-09-15 (TASKS `induced-clutter`) nothing user-facing lists an induced
+edge. `collectRelations` filters them, so they are out of the relation bar's
+rows AND its counts; the legend's "Edges with no attribute behind them" section
+is gone, and so is the Ownership tour's `child-following-parent` step.
+
+The reason is that an induced edge is an **inference, not a declaration**.
+`response_value → QuestionnaireResponseValueBoolean` says a subclass *may* fill
+the slot; no attribute anywhere says it does. Listed beside declared relations
+it asserted relationships the schema does not contain —
+`QuestionnaireResponseItem` read *"owns 6 distinct entities"* off one real
+attribute (Siggie, 2026-09-14). Their whole purpose is the layering above: put
+a subclass after the attribute that reaches its parent. Having served it, they
+have nothing to tell a reader.
+
+⚠️ Do not confuse this with LinkML's `inherited_from`, which is a different
+mechanism with an opposite character: `SchemaView.induced_class()` copies a
+parent's slot onto each subclass of the **declaring** class, and those
+subclasses genuinely hold it. Those rows are REDUNDANT (the same fact twice),
+where induced edges are SPECULATIVE. The relation bar collapses the first and
+drops the second, for those different reasons — see `buildRelationRows`.
+
+`OWNERSHIP_RULES` keeps its `child-following-parent` entry, and
+`getOwnershipPairGroups` still builds the group, so the pairs remain derivable
+for anyone who needs them. Nothing renders them.
 
 ---
 

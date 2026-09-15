@@ -69,12 +69,18 @@ The structure, which the steps below now follow:
   - the default: an attribute owns what it points at -- owns-target-forward-by-default
     - Exception, by entity: referred-to entities -- belongs-to-target-backward-by-entity
     - Exception, by attribute: named back-pointers -- belongs-to-target-backward-by-attribute
-  - the induced pass, which is not a slot rule -- child-following-parent
+
+The induced pass (`child-following-parent`) is deliberately NOT a step here,
+and is not in the legend either (2026-09-15). Once induced edges came out of
+the relation bar they serve LAYOUT only -- placing a subclass after the
+attribute that reaches its parent -- so there is nothing for a reader to do
+with them, and the step explained a mechanism rather than the model. They
+remain documented in OWNERSHIP_CLASSIFICATION.md for maintainers.
 
 The rule steps below are drafted against the LIVE classifier (re-probed
-2026-09-13): 89 forward, 55 by-entity exception, 5 by-attribute exception, 10
-induced. They use the legend's own `label` strings from `OWNERSHIP_RULES`, so
-tour, legend and classifier say one thing; if a label changes there, change it
+2026-09-13): 89 forward, 55 by-entity exception, 5 by-attribute exception.
+They use the legend's own `label` strings from `OWNERSHIP_RULES`, so tour,
+legend and classifier say one thing; if a label changes there, change it
 here. ⚠️ The counts are hand-copied and a schema sync falsifies them silently —
 TASKS `markdown-everywhere` (c) is the fix.
 -->
@@ -290,38 +296,6 @@ TASKS `markdown-everywhere` (c) is the fix.
        These five are named as `Entity.attribute` pairs for the same reason:
        two of them are called `part_of`, declared on different entities, and a
        bare attribute name would flip any future third one silently.
-
-### child-following-parent
-
-- **Title:** Edges with no attribute behind them
-- **Tour:** Ownership
-- **Only:** sel=QuestionnaireResponseItem~QuestionnaireResponseValue&legend=0
-- **Action:** Drew QuestionnaireResponseItem and the value it holds.
-- **Anchor:** node-box:QuestionnaireResponseValue
-- **Spotlight:** slot-row:QuestionnaireResponseItem.response_value
-- **Width:** 600
-- **Description:**
-  **:s[Owns target / forward arrow / induced]{color=own-fwd}** — 10 edges, and
-  not a rule about attributes at all.
-
-  `response_value` points at QuestionnaireResponseValue, which the rule above
-  says the item owns. But an attribute whose target has **subclasses** accepts
-  any of them too — and this one has five.
-- Beats:
-  1. draw the children
-     - Change: sel=QuestionnaireResponseValueDecimal~QuestionnaireResponseValueBoolean~QuestionnaireResponseValueInteger~QuestionnaireResponseValueTimePoint~QuestionnaireResponseValueString
-     - Action: Added the five subclasses of QuestionnaireResponseValue.
-     - Anchor: node-box:QuestionnaireResponseValue
-     - Highlight: ring
-     - Description:
-       A response value can be a decimal, a boolean, an integer, a timepoint or
-       a string. They merge into one box, and the item owns each of them —
-       through that same one attribute.
-
-       Those edges are **induced** from the declared one: no attribute of their
-       own says so. That is why the single line lands on the box's **header**
-       rather than on any one child, and why the Legend lists them separately
-       from the three rules.
 
 ### bar-sides
 

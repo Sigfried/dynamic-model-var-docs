@@ -159,3 +159,106 @@ describe('relation bar axes', () => {
     for (const p of ds) expect(AXIS[p as RelationPosition]).toBeDefined();
   });
 });
+
+/**
+ * Two kinds of derived attribute reach the bar, and they are NOT the same
+ * mechanism. Confusing them is what made TASKS `induced-clutter` name the
+ * wrong fix (2026-09-15), so both are pinned here with the case that
+ * distinguishes them.
+ *
+ *   inducedFrom   — OURS. containmentGraph Rule 3 retargets a forward-owned
+ *                   edge at each subclass of its RANGE. Nothing declares the
+ *                   slot; it is an inference about what may fill it.
+ *   inherited_from — LINKML's. `induced_class()` copies a parent's slot onto
+ *                   each subclass of the DECLARING class, so all of them do
+ *                   genuinely hold it.
+ */
+describe('derived attributes do not clutter the bar', () => {
+  let ds: DataService;
+  let all: ReturnType<typeof collectRelations>;
+
+  beforeAll(async () => {
+    ds = new DataService(await loadModelData());
+    all = collectRelations(ds.getContainmentGraph());
+  });
+
+  const parentOf = (id: string) => ds.getClassSummary(id)?.parentId;
+  const rowsOf = (members: string[], withParent = false) => {
+    const absorbed = new Set(members);
+    return buildRelationRows(
+      members.flatMap(m => all.get(m) ?? []),
+      () => false,
+      id => absorbed.has(id),
+      withParent ? parentOf : undefined,
+    );
+  };
+  const owns = (rows: RelationRowVM[]) =>
+    rows.filter(r => r.position === 'owns-mine' || r.position === 'owns-theirs');
+  const belongsTo = (rows: RelationRowVM[]) =>
+    rows.filter(r => !(r.position === 'owns-mine' || r.position === 'owns-theirs'));
+
+  test('Rule 3 induced edges are absent — one real attribute, not six', () => {
+    /*
+     * `QuestionnaireResponseItem.response_value: QuestionnaireResponseValue`
+     * is one slot. Rule 3 adds five more edges, one per value subclass, and
+     * the popover read "owns 6 distinct entities" off them (Siggie's
+     * screenshot, 2026-09-14). No subclass declares `response_value`.
+     */
+    const rows = owns(rowsOf(['QuestionnaireResponseItem']));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      other: 'QuestionnaireResponseValue',
+      declaredBy: 'QuestionnaireResponseItem',
+      slot: 'response_value',
+    });
+    // The edges still exist upstream — layering and drawing need them.
+    const induced = ds.getContainmentGraph().edges
+      .filter(e => e.inducedFrom !== undefined && e.source === 'QuestionnaireResponseItem');
+    expect(induced).toHaveLength(5);
+  });
+
+  test('a merged box collapses inherited repeats onto the declaring ancestor', () => {
+    /*
+     * `performed_by`, `associated_visit` and `associated_participant` are
+     * declared once, on ObservationSet; LinkML copies each onto the three
+     * subclasses. The merged box unions all four members, so the popover read
+     * "4 distinct entities through 13 attributes" over 4 real attributes.
+     */
+    const family = ['ObservationSet', 'DimensionalObservationSet',
+                    'MeasurementObservationSet', 'SdohObservationSet'];
+    const before = belongsTo(rowsOf(family));
+    expect(before).toHaveLength(13);
+
+    const after = belongsTo(rowsOf(family, true));
+    expect(after).toHaveLength(4);
+    // Every survivor is declared by the ancestor, never by a subclass...
+    expect(after.map(r => `${r.declaredBy}.${r.slot}`).sort()).toEqual([
+      'ObservationSet.associated_participant',
+      'ObservationSet.associated_visit',
+      'ObservationSet.performed_by',
+      'Specimen.dimensional_measures',
+    ]);
+    // ...and the entity count, which was already right, does not move.
+    expect(new Set(after.map(r => r.other)).size)
+      .toBe(new Set(before.map(r => r.other)).size);
+  });
+
+  test('a subclass that RE-declares a slot keeps its own row', () => {
+    /*
+     * The case that stops the collapse from being keyed on `inheritedFrom`.
+     * Each ObservationSet subclass narrows `observations` via slot_usage
+     * (DimensionalObservationSet.observations -> DimensionalObservation), so
+     * those rows state different facts and must all survive even though the
+     * slot NAME is shared with the ancestor's row.
+     */
+    const family = ['ObservationSet', 'DimensionalObservationSet',
+                    'MeasurementObservationSet', 'SdohObservationSet'];
+    const rows = owns(rowsOf(family, true))
+      .filter(r => r.slot === 'observations');
+    expect(rows).toHaveLength(4);
+    expect(new Set(rows.map(r => r.other))).toEqual(new Set([
+      'Observation', 'DimensionalObservation',
+      'MeasurementObservation', 'SdohObservation',
+    ]));
+  });
+});

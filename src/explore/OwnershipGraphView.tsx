@@ -237,11 +237,32 @@ export function buildRelationGroups(
  *
  * `exclude` drops self-loops and, on a merged box, anything folded into it,
  * matching the grouped builder.
+ *
+ * ## Inherited repeats collapse to the class that declared the slot
+ *
+ * LinkML's `induced_class()` copies a parent's slot onto every subclass, so
+ * `performed_by` is genuinely present on ObservationSet AND its three
+ * subclasses — four edges from Organization. A merged box unions its members'
+ * relations, so all four land in one popover, differing only in the declaring
+ * class: "4 distinct entities through 13 attributes" over 4 real attributes
+ * (Siggie, 2026-09-14).
+ *
+ * `parentOf` lets those collapse onto the ancestor's row. A row is a repeat
+ * when another row has the same (other, position, slot) and is declared by an
+ * ANCESTOR of this row's declarer — the subclass added nothing, so the two
+ * state one fact twice. Without `parentOf` every row is kept, which is what
+ * the unmerged case wants anyway (no member union, so no repeats to find).
+ *
+ * Deliberately not keyed on `inheritedFrom` from the schema: a subclass may
+ * re-declare a slot via `slot_usage` with a narrower range, and that row is a
+ * different fact that must survive. Comparing the ROWS catches exactly the
+ * ones that agree on every field this popover shows.
  */
 export function buildRelationRows(
   relations: readonly RelationEntry[],
   visible: (id: string) => boolean,
   exclude: (id: string) => boolean = () => false,
+  parentOf?: (id: string) => string | undefined,
 ): RelationRowVM[] {
   const seen = new Set<string>();
   const out: RelationRowVM[] = [];
@@ -261,7 +282,21 @@ export function buildRelationRows(
       drawn: visible(r.other),
     });
   }
-  return out;
+  if (!parentOf) return out;
+
+  /* Walk each row's ancestors: if any of them declares the same relationship,
+     this row restates it. Guarded against a cycle in the is-a chain, which
+     would otherwise spin here rather than in the layout code that usually
+     finds one. */
+  const declared = new Set(out.map(r => `${r.declaredBy}.${r.slot}->${r.other}:${r.position}`));
+  return out.filter(r => {
+    const chain = new Set<string>([r.declaredBy]);
+    for (let a = parentOf(r.declaredBy); a && !chain.has(a); a = parentOf(a)) {
+      if (declared.has(`${a}.${r.slot}->${r.other}:${r.position}`)) return false;
+      chain.add(a);
+    }
+    return true;
+  });
 }
 
 export interface NodeVM extends OwnershipSubgraphNode {
@@ -765,10 +800,14 @@ export function mergeSiblings(
       id => vmVisible.has(id),
       id => !notSelfOrMember(id),
     );
+    /* `parentOf` only here, not on the unmerged build: collapsing inherited
+       repeats needs a member union to have produced any, and an ordinary box
+       carries one class's relations. */
     const mergedRelationRows = buildRelationRows(
       sources.flatMap(mid => byId.get(mid)?.relations ?? []),
       id => vmVisible.has(id),
       id => !notSelfOrMember(id),
+      parentOf,
     );
     const first = byId.get(memberIds[0]);
     // The box IS the parent, so its identity — name, description, abstractness

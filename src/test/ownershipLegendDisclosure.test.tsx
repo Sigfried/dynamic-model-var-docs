@@ -22,7 +22,10 @@ describe('ownership legend disclosures', () => {
 
   test('every disclosure starts collapsed', async () => {
     const { counts } = await setup();
-    expect(counts().length).toBe(8);          // 3 slot rules + induced, x2
+    // 3 slot rules x2. Was 8 until 2026-09-15, when the induced section was
+    // removed: those edges serve layout only and are no longer shown anywhere
+    // (TASKS `induced-clutter`, OWNERSHIP_CLASSIFICATION §Rule 3).
+    expect(counts().length).toBe(6);
     for (const b of counts()) {
       expect(b.getAttribute('aria-expanded'), b.textContent ?? '').toBe('false');
     }

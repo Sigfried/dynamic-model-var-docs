@@ -8,6 +8,111 @@ Newest first.
 
 
 ---
+## 2026-09-15 — "induced" meant two different things, and the task row named the wrong one
+
+TASKS `induced-clutter`, done — but not the fix the row described. Induced
+edges then came out of the legend and the tour as well.
+
+### The row's diagnosis was wrong, and probing is what caught it
+
+The row said: 10 induced edges are listed like declared ones in the relation
+bar, ObservationSet reads "4 distinct entities through 13 attributes" when only
+4 attributes are real, and **the fix is one filter in `RelationBar.tsx`**.
+
+Two things were wrong with that. `RelationEntry` carries no `inducedFrom` at
+all, so no filter in that file was possible. And, more importantly, the 9
+extras Siggie was looking at are **not induced edges**. I printed the rows
+before touching anything; every one of the 13 was a declared slot:
+
+    Organization  ObservationSet.performed_by              real
+    Visit         ObservationSet.associated_visit          real
+    Participant   ObservationSet.associated_participant    real
+    Specimen      Specimen.dimensional_measures            real
+    Visit         DimensionalObservationSet.associated_visit    ┐ the same three
+    Participant   DimensionalObservationSet.associated_...      │ slots, once per
+    ... x3 members ...                                          ┘ merged member
+
+The `←N/M→` header numbers matched Siggie's complaint exactly, which is what
+made the wrong mechanism look confirmed. **Two different things are called
+"induced" and they had been conflated in the task row, probably when it was
+written from a screenshot rather than from data.**
+
+### The two mechanisms
+
+| | LinkML inherited | Rule 3 induced |
+|---|---|---|
+| copies along | is-a of the **declaring** class | is-a of the **range** |
+| who does it | `SchemaView.induced_class()`, `scripts/induced_schema.py` | us, `containmentGraph.ts` |
+| tag | `inherited_from` in the processed JSON | `inducedFrom` on the edge |
+| character | **redundant** — same fact twice | **speculative** — an inference |
+
+Siggie asked why LinkML induces forward but not backward. It doesn't do
+either: it propagates *inheritance down the class hierarchy*, full stop. It
+only looks directional here because of where the slots sit. `performed_by` is
+stored on ObservationSet and points at Organization (own-bkwd, owner is the
+target), so copying it down to three subclasses yields three more edges from
+the same owner. `response_value` points at something it owns, and the
+subclasses that would matter are subclasses of the **range** — which
+inheritance has no reason to touch. Rule 3 exists precisely to fill that gap.
+
+Asked whether Rule 3 should move into `induced_schema.py`: no, and for the
+reason the table above gives. Written into the processed JSON it would become
+indistinguishable from a declaration — a slot the schema does not have, in the
+file that says what the schema is. It also needs `included`, `subtreeOf` and
+the existing edge set, none of which exist there. If subclass-fill ever wants
+to be a schema-level claim, the honest form is `any_of` on the range (TASKS
+`any_of-unhandled`), not a relocation.
+
+### What shipped
+
+- `collectRelations` skips `inducedFrom` edges. Chosen over either builder
+  because it is the single source for the bar's lists AND its counts, and its
+  only consumers are the bar. Layering and drawing are upstream, untouched.
+- `buildRelationRows` takes an optional `parentOf` and drops a row whose
+  declarer is a descendant of another row's declarer. Passed only from
+  `mergeSiblings` — an unmerged box has one class's relations and no repeats.
+
+**Keyed on the ROWS, not on `inheritedFrom`** — this is the part worth
+remembering. Keying on the schema flag looks equivalent and is not: each
+ObservationSet subclass re-declares `observations` via `slot_usage` with a
+narrower range (`DimensionalObservationSet.observations →
+DimensionalObservation`), so those rows are inherited AND different facts.
+Comparing the rows keeps them; comparing the flag would have silently eaten
+four correct rows on the same box whose left side I was fixing. There is a
+test for exactly this.
+
+Result: left 13 attrs → 4 (entity count unchanged at 4), right keeps all 4
+`observations` rows, QuestionnaireResponseItem 6 → 1.
+
+### Then: induced edges left the UI entirely
+
+I had drafted a `mark-derived-edges` task — show them in a distinct style
+rather than merely hiding them — on the reasoning that suppressing something
+the app knows is a loss. Siggie rejected it and went further: now that induced
+edges serve nothing but layout, take them out of the legend and the tour too,
+keeping a technical note where maintainers look.
+
+That is the better call and the reasoning is worth keeping: an induced edge is
+an inference the layout consumes and then has no further use for. The legend
+section and the tour step were both explaining a **mechanism** rather than the
+model — and the tour step in particular taught the reader to look for a fourth
+rule that was never a rule. Removed: the legend's "Edges with no attribute
+behind them" section, the tour's `child-following-parent` step. Kept: the
+`OWNERSHIP_RULES` entry, `getOwnershipPairGroups`'s group (so the pairs stay
+derivable), and a new §Rule 3 subsection in OWNERSHIP_CLASSIFICATION recording
+all of the above.
+
+`ownershipLegendDisclosure.test.ts` asserted 8 disclosures (3 rules + induced,
+×2). Now 6, updated deliberately.
+
+### Note for the legend work
+
+LEGEND_ORIENTATION's "what this fixes for free" claimed `inducedFrom` finally
+gets a use in the legend's induced section. That bullet is struck — there is no
+such section. Nothing else in that design moves: its count table was always
+only the three slot rules.
+
+---
 ## 2026-09-14 — the legend's lists; ownership order, found by looking
 
 TASKS `legend-list-orientation`, settled and written up as

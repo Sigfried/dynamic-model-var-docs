@@ -130,6 +130,26 @@ export interface RelationEntry {
  * A pair can occupy more than one position at once (two classes can each
  * declare a slot pointing at the other), so entries are per EDGE, not per
  * class; the UI dedupes within a position.
+ *
+ * ## Induced edges are excluded
+ *
+ * `inducedFrom` edges (containmentGraph's Rule 3: a forward-owned range
+ * includes its subtree) exist to make LAYOUT place a subclass after the
+ * attribute that reaches its parent. They are an INFERENCE about what may
+ * fill a slot, not something the schema declares — no class named here has
+ * the slot. Listing them beside declared relations asserts relationships the
+ * model does not contain: QuestionnaireResponseItem read "owns 6 distinct
+ * entities" off one real `response_value` (Siggie, 2026-09-14).
+ *
+ * Their two legitimate consumers are untouched, both upstream of here:
+ * layering in `buildContainmentGraph`'s second pass, and drawing, where
+ * OwnershipGraphView suppresses `entityMember` so the line lands on the box
+ * header. This function feeds only the relation bar — its lists AND its
+ * counts, which is why the filter sits here rather than in either builder.
+ *
+ * NOT the same thing as LinkML's `inherited_from`, which copies a parent's
+ * slot onto each subclass and so is genuinely declared on both. Those repeats
+ * are collapsed in `buildRelationRows` instead.
  */
 export function collectRelations(full: ContainmentGraph): Map<string, RelationEntry[]> {
   const byNode = new Map<string, RelationEntry[]>();
@@ -143,7 +163,7 @@ export function collectRelations(full: ContainmentGraph): Map<string, RelationEn
     }
   };
   for (const e of full.edges) {
-    if (e.kind === 'subclass' || e.isLoop) continue;
+    if (e.kind === 'subclass' || e.isLoop || e.inducedFrom !== undefined) continue;
     // Edges are normalized owner → member, with `flipped` recording that the
     // slot is stored on the member (the target) rather than the source.
     const declaredBy = e.flipped ? e.target : e.source;
