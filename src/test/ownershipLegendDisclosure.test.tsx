@@ -202,12 +202,45 @@ describe('ownership legend pivots', () => {
       expect(leaf.querySelector('.lt-c2')!.textContent).toBe('BodySite');
     });
 
-    test('a backward leaf points the other way', async () => {
-      // Same edge geometry, mirrored: `attribute ◀—— target`.
+    test('a leaf arrow is NEVER mirrored — the verdict supplies the direction', () => {
+      /*
+       * `own-fwd` draws `——▶` and `own-bkwd` draws `——◀` natively
+       * (`headDirection` in OWNERSHIP_VERDICTS), so a leaf takes the verdict's
+       * own arrow and reads left-to-right in both.
+       *
+       * ⚠️ Mirroring on `!forward` is the bug Siggie caught 2026-09-15: it
+       * flipped all four backward tables into `◀——` while the rule line above
+       * them still read `——◀`.
+       */
+      return setup().then(({ find }) => {
+        for (const re of [/25\s*owned/, /38\s*owners/]) {
+          fireEvent.click(find(re));
+          for (const svg of document.querySelectorAll('.lt-leaf .lt-arrow svg')) {
+            expect(svg.getAttribute('style') ?? '').not.toContain('scaleX(-1)');
+          }
+          fireEvent.click(find(re));
+        }
+      });
+    });
+
+    test('only `owns: owned` mirrors its LABEL arrow', async () => {
+      /*
+       * A label arrow points AT its label, because the label is the owner and
+       * arrows arrive at owners. The backward rules get that free from
+       * `own-bkwd`; `owns: owned` is the exception — its label is the OWNED
+       * entity and `own-fwd` points away from it, so that one turns round.
+       * (Siggie: "those were supposed to be flipped. they currently point
+       * forward from owned to owner".)
+       */
       const { find } = await setup();
-      fireEvent.click(find(/25\s*owned/));
-      const svg = document.querySelector('.lt-leaf .lt-arrow svg')!;
+      fireEvent.click(find(/30\s*owned/));
+      const svg = document.querySelector('.lt > .lt-node .lt-label .lt-arrow svg')!;
       expect(svg.getAttribute('style')).toContain('scaleX(-1)');
+
+      fireEvent.click(find(/30\s*owned/));
+      fireEvent.click(find(/5\s*owners/));
+      const bkwd = document.querySelector('.lt > .lt-node .lt-label .lt-arrow svg')!;
+      expect(bkwd.getAttribute('style') ?? '').not.toContain('scaleX(-1)');
     });
 
     test('a pivot with no target column omits the arrow cell', async () => {

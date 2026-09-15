@@ -79,6 +79,37 @@ dashed or double-headed kind mirrors for free.
 Three positions: forward leaf `attr ——▶ target`, backward leaf
 `attr ◀—— target`, and on a node LABEL `Entity ——◀`, meaning arrows arrive here.
 
+### Two bugs Siggie found in the rendered panel, and the arrow rule they settled
+
+**Header alignment.** The arrow column's header was placed at `levels + 1`, the
+same track as the first leaf field, so it sat on top of the attribute-name
+caption and shifted every caption after it one track left. It belongs at
+`levels + 2`. Column placement now lives in `headerColumn()` rather than an
+inline expression at the render site.
+
+**Arrow direction, which I got wrong in both directions before getting it
+right.** The rule, now in `PivotShape.flipArrow`:
+
+- a LEAF arrow reads left-to-right (`field ——▶ target`) and is NEVER mirrored;
+  the verdict supplies the direction, since `own-fwd` is `headDirection:
+  'forward'` and `own-bkwd` is `'backward'`
+- a LABEL arrow points AT its label, because the label is the owner and arrows
+  arrive at owners
+
+Only `owns: owned` needs mirroring: its label is the OWNED entity, and
+`own-fwd` points away from it. The two backward label arrows get it free.
+
+First cut derived the flip from `forward`, which mirrored all four backward
+tables into `◀——` while the rule line above them still read `——◀`. Told about
+that, I removed the flip outright — which left `owns: owned` pointing forward,
+away from its label, and Siggie caught that too: *"those were supposed to be
+flipped."* **Whether to mirror is a per-SHAPE fact, not a per-direction one**,
+which is why it is a field on `PivotShape` and not an expression.
+
+The test that had pinned this asserted a backward leaf IS mirrored — it encoded
+the bug. Replaced with one asserting no leaf arrow is ever mirrored, and one
+asserting `owns: owned` is the only mirrored label.
+
 ### Panel 30rem → 34rem, measured
 
 A column-aligned row does not wrap — it widens the table and the panel clips it,

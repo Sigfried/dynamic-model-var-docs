@@ -218,12 +218,12 @@ function PivotToggle({ n, pivot, forward, open, onClick }: {
  * shape. Shorter than the intro's 56px: it sits in a 34px column between two
  * text columns.
  *
- * Three positions, two geometries:
- * - a FORWARD leaf reads `attribute ——▶ target`
- * - a BACKWARD leaf reads `attribute ◀—— target` (`flip`)
- * - a node LABEL reads `Entity ——◀`, meaning arrows arrive here, i.e. it owns
- *   — which is the same flipped sample, sitting after a name rather than
- *   between two columns.
+ * ⚠️ **Whether to mirror is `PivotShape.flipArrow`, never `forward`.** The
+ * verdict's own geometry usually gets it right — `own-fwd` draws `——▶`,
+ * `own-bkwd` draws `——◀` — so only `owns: owned` needs mirroring, because its
+ * label is the owned end. Deriving it from `forward` instead flipped all four
+ * backward tables against the rule line above them; removing the flip outright
+ * then left `owns: owned` pointing away from its label. See `flipArrow`.
  */
 const ARROW_W = 30;
 function TableArrow({ kind, flip }: { kind: DrawnKind; flip?: boolean }) {
@@ -244,6 +244,22 @@ function tracksFor(shape: PivotShape): string {
   // The arrow track fits the EdgeSample (30px) plus a little breathing room.
   const leaf = shape.leaf.length > 1 ? 'max-content 38px max-content' : 'max-content';
   return `${indents} ${leaf}`;
+}
+
+/**
+ * Which grid track a header caption sits in.
+ *
+ * A LEVEL's caption spans from its own indent track to the end, because the
+ * rows it describes are nested under it. A LEAF column sits in exactly one
+ * track, and the leaf's tracks start after the indents — with the arrow
+ * occupying the one between a two-field leaf's halves.
+ */
+function headerColumn(shape: PivotShape, i: number): string {
+  const lvl = shape.levels.length;
+  if (i < lvl) return `${i + 1} / -1`;
+  const nth = i - lvl;                    // 0 = first leaf field, 1 = the target
+  // Track lvl+1 is the leaf's first field; lvl+2 is the arrow; lvl+3 the target.
+  return String(nth === 0 ? lvl + 1 : lvl + 3);
 }
 
 /**
@@ -293,7 +309,7 @@ function PivotTable({ nodes, shape, forward, isOpen: nodeOpen, onToggle, path = 
                   name is not a thing the canvas can draw. */}
               {shape.levels[depth] === 'entity' ? classLink(n.key) : n.key}
               {labelArrow && (
-                <span className="lt-arrow">&nbsp;<TableArrow kind={kind} flip /></span>
+                <span className="lt-arrow">&nbsp;<TableArrow kind={kind} flip={shape.flipArrow} /></span>
               )}
               {n.pairs.length > 1 && <span className="lt-count">{n.pairs.length}</span>}
             </div>
@@ -318,7 +334,11 @@ function PivotTable({ nodes, shape, forward, isOpen: nodeOpen, onToggle, path = 
                       </span>
                       {shape.leaf.length > 1 && (
                         <>
-                          <span className="lt-arrow"><TableArrow kind={kind} flip={!forward} /></span>
+                          {/* A leaf reads left-to-right, `field ——▶ target`,
+                              so its arrow takes the verdict's own direction
+                              and is never mirrored — unlike a LABEL arrow,
+                              which points back at the name it follows. */}
+                          <span className="lt-arrow"><TableArrow kind={kind} /></span>
                           <span className="lt-c2">{cell(p, shape.leaf[1])}</span>
                         </>
                       )}
@@ -546,30 +566,31 @@ export default function OwnershipLegend({
                             subgrid chain in `legendTable.css` keeps true at
                             every depth. */}
                         <div className="lt-head">
-                          {shape.headers.map((h, i) => {
-                            const last = i === shape.headers.length - 1;
-                            const lvl = shape.levels.length;
-                            /* A level's caption spans from its own indent
-                               track to the end; a leaf column sits in one. */
-                            const col = i < lvl ? `${i + 1} / -1`
-                              : shape.leaf.length > 1 && last ? `${lvl + 2}`
-                              : `${lvl + 1}`;
-                            return (
-                              <div key={h} className="lt-h" style={{ gridColumn: col }}>
-                                {h}
-                                {shape.arrow === `label:${i}` && (
-                                  <span className="lt-arrow">
-                                    &nbsp;<TableArrow kind={verdict} flip />
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })}
+                          {shape.headers.map((h, i) => (
+                            <div
+                              key={h}
+                              className="lt-h"
+                              style={{ gridColumn: headerColumn(shape, i) }}
+                            >
+                              {h}
+                              {shape.arrow === `label:${i}` && (
+                                <span className="lt-arrow">
+                                  &nbsp;<TableArrow kind={verdict} flip={shape.flipArrow} />
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                          {/* The arrow column's own header, in the track the
+                              leaves put their arrow in — `levels + 2`, NOT
+                              `levels + 1`: the leaf's first field takes that
+                              one. Getting this wrong put the arrow on top of
+                              the attribute-name caption and shifted every
+                              caption after it one track left. */}
                           {shape.leaf.length > 1 && (
                             <div
                               className="lt-h lt-h-arrow lt-arrow"
-                              style={{ gridColumn: shape.levels.length + 1 }}
-                            ><TableArrow kind={verdict} flip={!forward} /></div>
+                              style={{ gridColumn: shape.levels.length + 2 }}
+                            ><TableArrow kind={verdict} /></div>
                           )}
                         </div>
                         <PivotTable

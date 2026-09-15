@@ -115,10 +115,26 @@ export interface PivotShape {
   headers: string[];
   /**
    * Where the direction arrow goes.
-   * - `leaf`: its own column between the leaf's two fields (`—▶` / `◀—`)
-   * - `label:<n>`: glued to level n's label, meaning "arrows arrive here" (`—◀`)
+   * - `leaf`: its own column between the leaf's two fields
+   * - `label:<n>`: glued to level n's label, meaning "arrows ARRIVE here"
    */
   arrow: 'leaf' | `label:${number}`;
+  /**
+   * Mirror the arrow, because the verdict's native direction is wrong for THIS
+   * layout.
+   *
+   * A label arrow always points AT its label — the label is the owner, and
+   * arrows arrive at owners. `own-bkwd` draws `——◀` natively, so the two
+   * backward shapes need nothing. `owns: owned` is the exception: its label is
+   * the OWNED entity and `own-fwd` draws `——▶`, pointing away from it, so that
+   * one is mirrored to `◀——`.
+   *
+   * ⚠️ This is a per-SHAPE fact, not a per-direction one. Deriving it from
+   * `forward` flipped all four backward tables into `◀——` while the rule line
+   * above them still read `——◀`; deleting the flip outright then left
+   * `owns: owned` pointing forward, away from its label. Siggie caught both.
+   */
+  flipArrow?: boolean;
 }
 
 const ENTITY = 'Target entity', SOURCE = 'Source entity';
@@ -159,8 +175,10 @@ const SHAPES: Record<Pivot, { fwd: PivotShape; bkwd: PivotShape }> = {
    * the declaring class, so the leaf regains attr + target.
    */
   owned: {
+    /* The one mirrored arrow: the label is the OWNED entity, so `own-fwd`'s
+       native `——▶` has to turn round and point back at it. */
     fwd: { levels: ['entity'], leaf: ['srcAttr'], arrow: 'label:0',
-           headers: [ENTITY, SRC_ATTR] },
+           flipArrow: true, headers: [ENTITY, SRC_ATTR] },
     bkwd: { levels: ['entity'], leaf: ['attr', 'target'], arrow: 'leaf',
             headers: [SOURCE, ATTR, ENTITY] },
   },
