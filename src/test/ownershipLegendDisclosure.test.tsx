@@ -266,18 +266,29 @@ describe('ownership legend pivots', () => {
       expect(label.querySelector('.lt-toggle')).not.toBeNull();
     });
 
-    test('a pivot whose label already names the target omits the target cell', async () => {
+    test('a leaf drops what the levels above it already said', async () => {
       /*
        * `belongs to: owners` nests target → attribute → source, so by the time
-       * a leaf renders, two levels above have named the target. It shows the
-       * qualified source attribute alone — the bare name would not say which
-       * class declares it.
+       * a leaf renders, the target AND the attribute name are both above it.
+       * The leaf is therefore the bare SOURCE class — no target column, and no
+       * `Class.slot` repeating the attribute down the whole group (Siggie,
+       * 2026-09-15: "i did mean src, not src.attr because attr is right above
+       * it … gets rid of a lot of repetition").
+       *
+       * ⚠️ `attrs` keeps the QUALIFIED form: there the attribute name is two
+       * levels up with the target in between, so the leaf has to say it.
        */
       const { find } = await setup();
       fireEvent.click(find(/5\s*owners/));
       const leaf = document.querySelector('.lt-leaf')!;
       expect(leaf.querySelector('.lt-c2')).toBeNull();
-      expect(leaf.querySelector('.lt-c1')!.textContent).toMatch(/^\w+\.\w+/);
+      expect(leaf.querySelector('.lt-c1')!.textContent).toMatch(/^\w+\s*\d/);
+      expect(leaf.querySelector('.lt-c1')!.textContent).not.toMatch(/\w\.\w/);
+
+      fireEvent.click(find(/5\s*owners/));
+      fireEvent.click(find(/9\s*attrs/));
+      expect(document.querySelector('.lt-leaf .lt-c1')!.textContent)
+        .toMatch(/^\w+\.\w+/);
     });
 
     test('each pivot carries a header naming its columns', async () => {

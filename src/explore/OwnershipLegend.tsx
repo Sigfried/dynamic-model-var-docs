@@ -306,9 +306,17 @@ function PivotTable({ nodes, shape, forward, isOpen: nodeOpen, onToggle, path = 
   classLink: (id: string) => React.ReactNode;
 }) {
   const kind = (forward ? 'own-fwd' : 'own-bkwd') as DrawnKind;
+  /*
+   * A leaf cell. Every one that names a CLASS is clickable; `attr` is a slot
+   * name, which the canvas cannot draw, so it is plain text.
+   *
+   * ⚠️ `source` and `target` are different classes — a fall-through `else`
+   * that rendered `p.range` for both would silently show the wrong end.
+   */
   const cell = (p: OwnershipPair, f: Field) =>
     f === 'srcAttr' ? <>{classLink(p.declaredOn)}<span>.{p.slotName}</span></>
     : f === 'attr' ? p.slotName
+    : f === 'source' ? classLink(p.declaredOn)
     : classLink(p.range);
 
   return (
@@ -335,7 +343,8 @@ function PivotTable({ nodes, shape, forward, isOpen: nodeOpen, onToggle, path = 
                   line. Everywhere else it follows the name (`Organization ——◀`),
                   where it means "arrows arrive here". */}
               {labelArrow && shape.rightAlignLabel && (
-                <span className="lt-arrow"><TableArrow kind={kind} />&nbsp;</span>
+                /* No spacer: `.lt-label-right` is a flex row with a gap. */
+                <span className="lt-arrow"><TableArrow kind={kind} /></span>
               )}
               {/* Only an ENTITY label is a class you can select; an attribute
                   name is not a thing the canvas can draw. */}

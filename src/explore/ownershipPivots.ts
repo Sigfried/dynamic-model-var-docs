@@ -95,8 +95,11 @@ const TOP_KEY: Record<Pivot, (p: OwnershipPair) => string> = {
  * qualified one (`Condition.affected_body_site`). They are different
  * renderings of the same slot, not the same string — which is the thing I
  * misread out of the spec first time round.
+ *
+ * `source` is the declaring class alone (`Condition`), for a leaf whose
+ * attribute name is already on the level above it.
  */
-export type Field = 'entity' | 'attr' | 'srcAttr' | 'target';
+export type Field = 'entity' | 'attr' | 'srcAttr' | 'source' | 'target';
 
 /**
  * The shape one pivot renders: what its header says, what each level shows,
@@ -167,8 +170,13 @@ const SHAPES: Record<Pivot, { fwd: PivotShape; bkwd: PivotShape }> = {
   owners: {
     fwd: { levels: ['entity'], leaf: ['attr', 'target'], arrow: 'leaf',
            headers: [SOURCE, ATTR, ENTITY] },
-    bkwd: { levels: ['entity', 'attr'], leaf: ['srcAttr'], arrow: 'label:0',
-            headers: [ENTITY, ATTR, SRC_ATTR] },
+    /* The leaf is the bare SOURCE entity, not `Class.slot`: the attribute name
+       is the level immediately above it, so qualifying every leaf repeated it
+       down the whole group (Siggie, 2026-09-15). `attrs` below keeps the
+       qualified form — there the attribute is two levels up, with the target
+       in between. */
+    bkwd: { levels: ['entity', 'attr'], leaf: ['source'], arrow: 'label:0',
+            headers: [ENTITY, ATTR, SOURCE] },
   },
   attrs: {
     fwd: { levels: ['attr'], leaf: ['srcAttr', 'target'], arrow: 'leaf',
@@ -235,6 +243,7 @@ const FIELD: Record<Field, (p: OwnershipPair) => string> = {
   entity: p => p.owner,                                 // overridden per level below
   attr: p => p.slotName,
   srcAttr: p => `${p.declaredOn}.${p.slotName}`,
+  source: p => p.declaredOn,
   target: p => p.range,
 };
 

@@ -86,7 +86,19 @@
  * first and pointing away from it. See `PivotShape.rightAlignLabel`.
  */
 .lt-label-right {
-  text-align: right;
+  /*
+   * A FLEX row, not `text-align: right`.
+   *
+   * The arrow and the name are inline siblings, so text alignment lays the
+   * 14px-tall SVG on the 10px text's BASELINE — which sits it visibly high
+   * (Siggie, 2026-09-15: "the arrows are not vertically centered with the
+   * target"). `align-items: center` on the row centres the two against each
+   * other instead, and `justify-content: flex-end` does the right-aligning.
+   */
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
   padding-right: 6px;
 }
 /*
