@@ -29,15 +29,22 @@ describe('legend selection adds to the canvas', () => {
     await screen.findByRole('heading', { name: /BDCHM Explorer/i });
     await waitFor(() => expect(sel()).toBe('Person'));
 
-    // Open a rule's entity list, then follow one of its names.
+    /*
+     * Open the forward rule's `owned` pivot, then follow one of its names.
+     * Any pivot listing BodySite at the top level would do — this test is
+     * about ExploreApp's wiring (`addToCanvas`, not `applyCase`), not about
+     * the grouping, which `ownershipLegendDisclosure` pins.
+     */
     const counts = () => screen.getAllByRole('button')
-      .filter(b => /\d+\s*entities/.test(b.textContent ?? ''));
+      .filter(b => /\d+\s*owned/.test(b.textContent ?? ''));
     await waitFor(() => expect(counts().length).toBeGreaterThan(0));
     fireEvent.click(counts()[0]);
 
-    const row = Array.from(document.querySelectorAll('ul.font-mono > li'))
-      .find(li => li.textContent!.startsWith('BodySite'))!;
-    fireEvent.click(row.querySelector('button')!);
+    /* The outermost node rows only: `PivotTable` is recursive and a nested
+       level is also `.lt-node`. The class link, not the disclosure triangle. */
+    const row = Array.from(document.querySelectorAll('.lt > .lt-node'))
+      .find(n => n.querySelector('.lt-label')!.textContent!.includes('BodySite'))!;
+    fireEvent.click(row.querySelector('.lt-label button:not(.lt-toggle)')!);
 
     // Person is still there; BodySite joined it.
     await waitFor(() => {

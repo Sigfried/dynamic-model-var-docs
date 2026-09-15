@@ -1,0 +1,152 @@
+/*
+ * The ownership legend's pivot expansions: a nested tree that is ALSO a table
+ * with aligned columns and a header.
+ *
+ * Plain CSS rather than Tailwind utilities, for the reason `help.css` is:
+ * a subgrid chain is a relationship BETWEEN nested elements, and utilities can
+ * only say things about one element at a time. Written against Siggie's
+ * reference render, `temp/legend-tables-reference.html`, which shows all twelve
+ * pivots from real data. ⚠️ `temp/` is gitignored, so that file is not in the
+ * repo; this comment and docs/LEGEND_ORIENTATION.md carry what it settled.
+ *
+ * ## How the alignment works
+ *
+ * ONE grid on `.lt` owns the track list: one 16px indent track per nesting
+ * level, then the content-sized leaf columns (name | arrow | target). Every
+ * nested level is itself a grid with `grid-template-columns: subgrid`, placed
+ * from track 2 onward (`grid-column: 2 / -1`) — so each level consumes exactly
+ * one indent track and the leaf cells always land in the LAST tracks, aligned
+ * with the header no matter how deep they sit.
+ *
+ * The track list differs per pivot (depth 1 vs 2, one vs two leaf fields), so
+ * each table is as narrow as its own content. `OwnershipLegend` writes it as an
+ * inline `grid-template-columns`.
+ *
+ * ⚠️ **Not `<details>`/`<summary>`.** Its shadow slot breaks the subgrid chain,
+ * so children stop aligning with the header. Disclosure is a `data-open`
+ * attribute on `.lt-node` and a button in the label.
+ *
+ * ⚠️ **`width: max-content` with `max-width: 100%`.** The table is sized by its
+ * widest row, and the PANEL constrains it — which is why the legend panel had
+ * to get wider rather than this getting cleverer about wrapping.
+ */
+
+.lt {
+  display: grid;
+  width: max-content;
+  max-width: 100%;
+  margin: 4px 0 2px;
+  padding: 0 4px 3px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 10px;
+  color: #374151;
+}
+
+/* The header row: one cell per level, then one per leaf column. Spans the
+   whole track list so its cells sit in the same tracks the rows land in. */
+.lt-head {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  row-gap: 2px;
+  padding: 5px 0 4px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 9px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+.lt-head .lt-h:not(:first-child) { padding-left: 6px; }
+.lt-head .lt-h-arrow { padding-left: 0; text-align: center; }
+
+.lt-node {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+}
+
+/* A node's label spans every track: it names the group, and the columns below
+   it belong to its children. */
+.lt-label {
+  grid-column: 1 / -1;
+  position: relative;
+  padding: 2px 0 1px 6px;
+  font-weight: 600;
+}
+.lt > .lt-node > .lt-label { padding-left: 0; }
+
+/* The disclosure triangle sits in the indent track to the LEFT of the label,
+   so it never pushes the label out of alignment with its siblings. */
+.lt-toggle {
+  position: absolute;
+  left: -13px;
+  top: 2px;
+  width: 11px;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: #6b7280;
+  font-size: 10px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.lt-toggle:hover { color: #1f2937; }
+
+/* Children consume one indent track (`2 / -1`) and inherit the rest. The
+   shadow is the tree's guide rule — a real border would take layout space and
+   shift the columns. */
+.lt-kids {
+  display: grid;
+  grid-column: 2 / -1;
+  grid-template-columns: subgrid;
+  box-shadow: -1px 0 0 #e5e7eb;
+  padding-bottom: 2px;
+}
+.lt-node:not([data-open]) > .lt-kids { display: none; }
+
+.lt-leaf {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  padding: 1px 0;
+}
+.lt-leaf:hover { background: #f3f6fb; }
+.lt-leaf > .lt-c1 { grid-column: 1; padding-left: 6px; }
+.lt-leaf > .lt-arrow { grid-column: 2; text-align: center; }
+.lt-leaf > .lt-c2 { grid-column: 3; padding-left: 6px; }
+
+/* The arrow column holds a real `EdgeSample` SVG, not a glyph, so it cannot
+   disagree with the ink the canvas strokes. `inline-flex` centres the 14px-tall
+   sample against the 10px text on either side of it. */
+.lt-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.lt-edge { vertical-align: middle; }
+
+/* A class name is clickable: it selects that class on the canvas. Kept as a
+   plain button so the row's own padding/alignment is unaffected. */
+.lt-pick {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: #1d4ed8;
+  cursor: pointer;
+}
+.lt-pick:hover { text-decoration: underline; }
+
+/* The cardinality suffix on a leaf: present on every attribute row, in the
+   notation the panel's Cardinality section defines. */
+.lt-card { color: #9ca3af; padding-left: 6px; }
+
+/* A node's own pair count, shown only when it groups more than one. */
+.lt-count {
+  color: #9ca3af;
+  font-size: 9px;
+  font-weight: 400;
+  padding-left: 4px;
+}

@@ -22,10 +22,21 @@ export interface EdgeSampleProps {
   kind: DrawnKind;
   /** Overall width; the line spans it minus room for the heads. */
   width?: number;
+  /**
+   * Mirror the sample horizontally, so a single-headed edge points LEFT.
+   *
+   * The legend's pivot tables need both: a forward leaf reads
+   * `attribute ——▶ target`, a backward one `attribute ◀—— target`, and the
+   * same edge kind draws both — what changes is which column is the source.
+   * A transform rather than a second marker so the geometry stays one
+   * definition (`edgeStyle.ts`) and a dashed or double-headed kind mirrors
+   * correctly for free.
+   */
+  flip?: boolean;
   className?: string;
 }
 
-export default function EdgeSample({ kind, width = 44, className }: EdgeSampleProps) {
+export default function EdgeSample({ kind, width = 44, flip, className }: EdgeSampleProps) {
   // useId: several samples share a page, and duplicate marker ids would make
   // every one of them adopt the first one's fill.
   const uid = useId().replace(/:/g, '');
@@ -44,6 +55,7 @@ export default function EdgeSample({ kind, width = 44, className }: EdgeSamplePr
     <svg
       width={width} height="14" viewBox={`0 0 ${width} 14`}
       className={`shrink-0 ${className ?? ''}`} aria-hidden
+      style={flip ? { transform: 'scaleX(-1)' } : undefined}
     >
       <defs>
         <marker id={head} {...marker}>

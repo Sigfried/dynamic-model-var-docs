@@ -76,33 +76,66 @@ Belongs to target / backward arrow / by entity (+ by attribute)
   5 owner (target) entities⌄ — 9 attribute names⌄ — 25 owned (source) entities⌄ — 55 attributes⌄
 ```
 
+- where only one row in expansion, goes on same line
+  - comment this feature out until we get columns / headers worked out
+
 expandable tree order:
-- owns
+```
+- owns (all arrows point at the target):
   - source entities:
     - src
-      - attr | tgt  (where only one row in expansion, goes on same line)
-  - attribute names:
+      - attr | tgt
+    - header layout:
+        Source entity
+          Attribute name ---> Target entity
+  - attribute names:  (start collapsed)
     - attr
-      - src.attr (entity included) | tgt
+      - src.attr | tgt
+    - header layout:
+        Attribute name
+          Source.attribute ---> Target entity
   - owned:
     - tgt
       - src.attr
-  - attributes: no dropdown (would be same as attribute names)
-- belongs to:
+    - header layout:
+        Target entity <----
+          Source.attribute
+  - attributes: (start expanded)
+    - attr
+      - src.attr ----> tgt
+    - header layout:
+        Attribute name
+          Source.attribute ---> Target entity
+- belongs to (all arrows point back from source):
   - owner/target entities:
     - tgt
       - attr
         - src.attr
+    - header layout:
+        Target entity ----<
+          Attribute name
+            Source.attribute
   - attribute names:
     - attr
       - tgt
         - src.attr
+    - header layout:
+        Attribute name
+          Target entity ----<
+            Source.attribute 
   - owned:
     - src
       - attr | tgt
+    - header layout:
+        Source entity
+          Attribute name ----< Target entity
   - attributes:
     - attr
       - src.attr | tgt
+    - header layout:
+        Attribute name
+          Source.attribute ----< Target entity
+```
 
 ### end of [sg] section
 

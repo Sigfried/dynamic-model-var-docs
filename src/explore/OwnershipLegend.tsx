@@ -14,11 +14,14 @@
  * drift it exists to reveal. If a pair looks wrong here, the classification is
  * wrong, not the legend.
  *
- * **Two counts per rule, over one grouping** (TASKS `legend-two-counts`):
- * `N entities` and `M attributes` both read off `byTargetEntity`, so they
- * cannot disagree. Grouping by the TARGET is what makes the exception lists
- * legible — a rule keyed by range is a list of five entities, and a flat
- * listing of its 55 attributes buries that.
+ * **Four pivots per rule, over one set of pairs** (docs/LEGEND_ORIENTATION.md).
+ * Every count and the tree it opens read off the same key function
+ * (`ownershipPivots.ts`), so a number cannot disagree with its own list.
+ *
+ * Every section groups **owner → attribute → owned**, so the top-level row
+ * means the owner everywhere. It used to group on `p.range` in every section —
+ * but `own-bkwd` flips ownership, so one key landed on opposite roles depending
+ * on the section, at the same visual level with no cue.
  *
  * The colors are read from the SAME constants the canvas strokes, never a
  * Tailwind approximation of them, for the same reason: a legend that can drift
@@ -33,10 +36,17 @@
  */
 
 import { useMemo, useState } from 'react';
-import { parentRuleOf } from '../services/DataService';
 import { cardinalityLabel } from '../models/containmentGraph';
+import {
+  PIVOTS, PIVOT_LABEL, STARTS_OPEN, pivotCount, pivotTree, shapeOf,
+  type Field, type Pivot, type PivotNode, type PivotShape,
+} from './ownershipPivots';
+import './legendTable.css';
 import type { DataService, OwnershipPair, OwnershipPairGroup } from '../services/DataService';
 import { EDGE_COLORS, RANGE_COLORS, SIBLING_COLORS } from '../config/appConfig';
+import HelpMarkdown from '../help/HelpMarkdown';
+import { fillPlaceholders } from '../help/parseHelpContent';
+import { helpTextResolvers } from './helpTextResolvers';
 import HelpPanel from './HelpPanel';
 import { PANEL_WIDTH_REM } from './panelLayout';
 import EdgeSample, { type DrawnKind } from './EdgeSample';
@@ -62,6 +72,42 @@ interface OwnershipLegendProps {
 const NOTE = 'text-[11px] leading-snug text-gray-500 dark:text-gray-400 mb-2';
 
 /**
+ * The panel's opening accounting, as markdown so its counts can be LIVE.
+ *
+ * Authored here rather than in `ownershipRules.ts` because it is about the rule
+ * SET — how 149 splits three ways — and no single rule owns that sentence.
+ * (TASKS `markdown-everywhere` item (b) would move all of this to a content
+ * file; until then this is the one place it lives.)
+ *
+ * ⚠️ **Do not hand-type a number into this string.** Every count resolves
+ * through `{{ownership-count:…}}` off `getOwnershipCounts()`. That is the whole
+ * point of item (c): the tour's hand-copied "38 of the attributes in this
+ * model" was falsified by a rule change and nothing caught it.
+ *
+ * **Resolved HERE, against this panel's own `dataService`, rather than left to
+ * the provider's resolvers.** The legend already holds the data these counts
+ * come from, and its own numbers should not depend on a tour being mounted —
+ * rendered without a `<HelpProvider>` (as the tests do) the placeholders would
+ * otherwise stand visibly, which is the right behaviour for a NAME the schema
+ * lost and the wrong one for a number this component can answer itself.
+ */
+const INTRO = `
+Of the {{ownership-count:declared}} attributes in the schema that point from one
+entity to another,
+
+- **{{ownership-count:forward}} point forward**, from owner to owned — the default, and
+- **{{ownership-count:backward}} point backward**, from owned to owner — in two lists:
+  - **{{ownership-count:belongs-to-target-backward-by-entity.total}}** whose target is one of
+    **{{ownership-count:belongs-to-target-backward-by-entity.owners}} entities** that are only ever belonged to
+  - **{{ownership-count:belongs-to-target-backward-by-attribute.total}}** named individually, because their
+    targets are owned by some *other* attribute
+
+Each rule below counts the same pairs four ways. Click a count to group them by
+it — always **owner → attribute → owned**, so the top row means the owner in
+every list.
+`.trim();
+
+/**
  * One drawn edge on its OWN line, captioned with what it means — the shape the
  * tour uses for `{{edge:own-fwd}}`, indented so it reads as an example
  * interrupting the sentence rather than a word inside it.
@@ -70,13 +116,24 @@ const NOTE = 'text-[11px] leading-snug text-gray-500 dark:text-gray-400 mb-2';
  * it, so a legend example cannot say something different from what the canvas
  * draws.
  */
-function EdgeExample({ kind }: { kind: DrawnKind }) {
+function EdgeExample({ kind, example }: { kind: DrawnKind; example?: string }) {
   const style = EDGE_STYLE.kinds[kind];
   return (
-    <span className="flex items-center gap-1.5 my-1 ml-4">
-      <EdgeSample kind={kind} width={56} />
-      <span className="font-medium" style={{ color: style.color }}>{style.label}</span>
-    </span>
+    <>
+      <span className="flex items-center gap-1.5 my-1 ml-4">
+        <EdgeSample kind={kind} width={56} />
+        <span className="font-medium" style={{ color: style.color }}>{style.label}</span>
+      </span>
+      {/* A REAL attribute from the schema beneath the abstract A/B, formatted
+          like the listing rows below so the two read as the same kind of thing
+          (Siggie, 2026-09-14). The abstract sample says what the ink means; the
+          example says where to go look at one. */}
+      {example && (
+        <span className="block ml-4 font-mono text-[10px] text-gray-400">
+          e.g. {example}
+        </span>
+      )}
+    </>
   );
 }
 
@@ -114,42 +171,34 @@ const CARDINALITY: ReadonlyArray<[string, string]> = [
   ['1..*', 'required, one or more'],
 ];
 
-/** Which depth of a rule's one list is open, if either. */
-type Depth = 'entities' | 'attributes';
-
 /**
- * One rule's pairs, grouped by the TARGET entity — the range, which is the end
- * the rule is about — and sorted by name.
+ * One pivot on the count line: `5 owners⌄`.
  *
- * Both of a rule's counts read off this one structure: `N entities` is its
- * size, `M attributes` the total of its values. Deriving them together is the
- * point; two independent counts computed two ways is how they come to disagree.
+ * The short label is what fits — the full phrasing is in the `title`, because
+ * four counts with their long forms do not come close to one panel width
+ * (Siggie: *"we're already not going to be able to fit that whole thing on one
+ * line"*).
+ *
+ * All four expand. `total` briefly had no dropdown on the owns side, on the
+ * grounds that it duplicates `attrs`; reversed 2026-09-15 — the two ARE the
+ * same list, and what distinguishes them is that `total` opens expanded
+ * (`STARTS_OPEN`).
  */
-function byTargetEntity(pairs: readonly OwnershipPair[]) {
-  const m = new Map<string, OwnershipPair[]>();
-  for (const p of pairs) {
-    const list = m.get(p.range);
-    if (list) list.push(p); else m.set(p.range, [p]);
-  }
-  return [...m.entries()]
-    .map(([entity, ps]) => ({ entity, pairs: ps }))
-    .sort((a, b) => a.entity.localeCompare(b.entity));
-}
-
-/** One count with its own disclosure triangle: `N entities ⌄`. */
-function CountToggle({ n, noun, open, onClick }: {
-  n: number; noun: string; open: boolean; onClick: () => void;
+function PivotToggle({ n, pivot, forward, open, onClick }: {
+  n: number; pivot: Pivot; forward: boolean; open: boolean; onClick: () => void;
 }) {
+  const { short, long } = PIVOT_LABEL[pivot];
+  const label = `${n} ${long(forward)}`;
   return (
     <button
       onClick={onClick}
       aria-expanded={open}
-      title={open ? `Hide these ${noun}` : `List these ${noun}`}
+      title={open ? `Hide these ${label}` : `List these ${label}`}
       className="group cursor-pointer rounded px-1 -mx-1 text-[11px]
                  hover:bg-gray-100 dark:hover:bg-slate-700"
     >
       <span className="text-gray-600 dark:text-gray-300">{n}</span>
-      <span className="ml-1 text-gray-500 dark:text-gray-400">&nbsp;{noun}</span>
+      <span className="ml-1 text-gray-500 dark:text-gray-400">&nbsp;{short}</span>
       {/* The chevron darkens on hover too: the row tint is deliberately faint,
           and on a wide panel the pointer is often nowhere near it. */}
       <span className="ml-0.5 text-gray-400 group-hover:text-gray-700
@@ -161,101 +210,125 @@ function CountToggle({ n, noun, open, onClick }: {
 }
 
 /**
- * The one list both counts open, at two depths.
+ * The arrow in a pivot table, drawn the way the canvas draws it.
  *
- * `N entities` and `M attributes` are not two listings — they are the SAME
- * rows, collapsed and expanded (Siggie, 2026-09-13). Each row is a target
- * entity carrying its own `M attributes` badge; `showAttributes` decides
- * whether the attributes under it are revealed. Rendering two different lists
- * here was the thing that made one look like a list that would not close, and
- * it also cost the entity view the per-entity counts that are its point.
+ * The SAME `EdgeSample` the intro examples and the tour use, not a text glyph
+ * (Siggie, 2026-09-15) — a legend that can drift from the thing it explains is
+ * worse than none, and a `—▶` cannot carry a verdict's colour, dash or head
+ * shape. Shorter than the intro's 56px: it sits in a 34px column between two
+ * text columns.
  *
- * **A single attribute sits on the entity's own line** — `Entity: Class.slot`
- * — and only a genuine list indents. Most entities here are named by exactly
- * one attribute, so a heading plus one indented row doubled the height of the
- * list to say nothing.
- *
- * `Class.slot` only, never the range: that is the row it sits under.
+ * Three positions, two geometries:
+ * - a FORWARD leaf reads `attribute ——▶ target`
+ * - a BACKWARD leaf reads `attribute ◀—— target` (`flip`)
+ * - a node LABEL reads `Entity ——◀`, meaning arrows arrive here, i.e. it owns
+ *   — which is the same flipped sample, sitting after a name rather than
+ *   between two columns.
  */
-function EntityRows({ entities, showAttributes, openRows, onToggleRow, classLink }: {
-  entities: ReadonlyArray<{ entity: string; pairs: OwnershipPair[] }>;
-  showAttributes: boolean;
-  /** Entities whose own state differs from the rule-level depth. */
-  openRows: ReadonlySet<string>;
-  onToggleRow: (entity: string) => void;
+const ARROW_W = 30;
+function TableArrow({ kind, flip }: { kind: DrawnKind; flip?: boolean }) {
+  return <EdgeSample kind={kind} width={ARROW_W} flip={flip} className="lt-edge" />;
+}
+
+/**
+ * The CSS grid track list for one pivot — one 16px indent per nesting level,
+ * then the content-sized leaf columns.
+ *
+ * Written inline because it varies per pivot and `legendTable.css` cannot know
+ * the shape; everything else about the alignment lives there. See that file's
+ * header for how the subgrid chain works.
+ */
+function tracksFor(shape: PivotShape): string {
+  const indents = shape.levels.map(() => '16px').join(' ');
+  // A leaf with a target column needs name | arrow | target; otherwise one cell.
+  // The arrow track fits the EdgeSample (30px) plus a little breathing room.
+  const leaf = shape.leaf.length > 1 ? 'max-content 38px max-content' : 'max-content';
+  return `${indents} ${leaf}`;
+}
+
+/**
+ * One pivot's expansion: a nested tree that is also an aligned table.
+ *
+ * Recursive, because a shape is 1 or 2 levels deep and the difference is data
+ * (`PivotShape.levels`) rather than two layouts. Each level renders as a
+ * subgrid so its leaf cells land in the same tracks as the header's.
+ */
+function PivotTable({ nodes, shape, forward, isOpen: nodeOpen, onToggle, path = '', classLink }: {
+  nodes: readonly PivotNode[];
+  shape: PivotShape;
+  forward: boolean;
+  /** Node paths the viewer has flipped away from the pivot's default state. */
+  /** Is this node path open? Prefixing is the caller's business. */
+  isOpen: (path: string) => boolean;
+  onToggle: (path: string) => void;
+  path?: string;
   classLink: (id: string) => React.ReactNode;
 }) {
-  /*
-   * Cardinality on EVERY attribute, in the `0..1` notation the Cardinality
-   * section below defines and the diagram's own attribute rows use (Siggie,
-   * 2026-09-13).
-   *
-   * It replaced a lone `↠` on multivalued rows, which marked half the rows
-   * with a glyph nothing else on the panel explained — and which read as
-   * arbitrary now that the plain `→` it used to contrast against is gone with
-   * the range. Cardinality decides no ownership any more, so it is shown as
-   * what it is: a fact about the attribute, spelled the one way.
-   */
-  const attr = (p: OwnershipPair) => (
-    <>
-      {classLink(p.declaredOn)}
-      <span className="text-gray-400">.{p.slotName}</span>
-      <span className="ml-1.5 text-gray-400">&nbsp;{cardinalityLabel(p.required, p.multivalued)}</span>
-      {p.isLoop && (
-        <span className="ml-1" style={{ color: RANGE_COLORS.entity }}>loop</span>
-      )}
-    </>
-  );
+  const kind = (forward ? 'own-fwd' : 'own-bkwd') as DrawnKind;
+  const cell = (p: OwnershipPair, f: Field) =>
+    f === 'srcAttr' ? <>{classLink(p.declaredOn)}<span>.{p.slotName}</span></>
+    : f === 'attr' ? p.slotName
+    : classLink(p.range);
+
   return (
-    <ul className="mt-1 mb-1.5 space-y-0.5 font-mono text-[10px]
-                   text-gray-600 dark:text-gray-400">
-      {entities.map(e => {
-        /*
-         * A row's own state is an OVERRIDE of the rule-level depth, not a
-         * separate switch: `openRows` holds the rows that differ. So the two
-         * counts still set every row at once — which is what they are for —
-         * and a row the reader has opened or closed by hand keeps that state
-         * until the next time they click a count.
-         */
-        const open = openRows.has(e.entity) ? !showAttributes : showAttributes;
-        const inline = open && e.pairs.length === 1;
+    <>
+      {nodes.map(n => {
+        const key = path ? `${path}/${n.key}` : n.key;
+        // A node's state is an OVERRIDE of the pivot's default (`STARTS_OPEN`),
+        // so opening a pivot still sets every row at once — which is what the
+        // count line is for — and a row the reader flipped keeps that state.
+        const isOpen = nodeOpen(key);
+        const depth = path.split('/').filter(Boolean).length;
+        const labelArrow = shape.arrow === `label:${depth}`;
         return (
-          <li key={e.entity}>
-            <span className="text-gray-500 dark:text-gray-400">{classLink(e.entity)}</span>
-            {inline && (
-              <>
-                <span className="text-gray-400">: </span>
-                {attr(e.pairs[0])}
-              </>
-            )}
-            {/* The badge is the row's own count AND its disclosure. It is what
-                makes the collapsed view worth reading, and clicking the entity
-                name itself cannot serve: that selects the class on the canvas. */}
-            {!inline && (
+          <div key={key} className="lt-node" {...(isOpen ? { 'data-open': '1' } : {})}>
+            <div className="lt-label">
               <button
-                onClick={() => onToggleRow(e.entity)}
-                aria-expanded={open}
-                title={open ? `Hide ${e.entity}'s attributes` : `List ${e.entity}'s attributes`}
-                className="group cursor-pointer rounded px-1 -mx-0.5 text-[9px] text-gray-400
-                           hover:bg-gray-100 dark:hover:bg-slate-700"
-              >
-                &nbsp;{e.pairs.length}&nbsp;{e.pairs.length === 1 ? 'attribute' : 'attributes'}
-                <span className="ml-0.5 group-hover:text-gray-700 dark:group-hover:text-gray-200">
-                  {open ? '⌃' : '⌄'}
-                </span>
-              </button>
-            )}
-            {open && !inline && (
-              <ul className="ml-3">
-                {e.pairs.map(p => (
-                  <li key={`${p.declaredOn}.${p.slotName}`}>{attr(p)}</li>
-                ))}
-              </ul>
-            )}
-          </li>
+                className="lt-toggle"
+                onClick={() => onToggle(key)}
+                aria-expanded={isOpen}
+                aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${n.key}`}
+              >{isOpen ? '▾' : '▸'}</button>
+              {/* Only an ENTITY label is a class you can select; an attribute
+                  name is not a thing the canvas can draw. */}
+              {shape.levels[depth] === 'entity' ? classLink(n.key) : n.key}
+              {labelArrow && (
+                <span className="lt-arrow">&nbsp;<TableArrow kind={kind} flip /></span>
+              )}
+              {n.pairs.length > 1 && <span className="lt-count">{n.pairs.length}</span>}
+            </div>
+            <div className="lt-kids">
+              {n.children
+                ? <PivotTable
+                    nodes={n.children} shape={shape} forward={forward}
+                    isOpen={nodeOpen} onToggle={onToggle} path={key} classLink={classLink}
+                  />
+                : n.pairs.map(p => (
+                    <div key={`${p.declaredOn}.${p.slotName}`} className="lt-leaf">
+                      <span className="lt-c1">
+                        {cell(p, shape.leaf[0])}
+                        <span className="lt-card">
+                          {cardinalityLabel(p.required, p.multivalued)}
+                        </span>
+                        {p.isLoop && (
+                          <span className="lt-card" style={{ color: RANGE_COLORS.entity }}>
+                            &nbsp;loop
+                          </span>
+                        )}
+                      </span>
+                      {shape.leaf.length > 1 && (
+                        <>
+                          <span className="lt-arrow"><TableArrow kind={kind} flip={!forward} /></span>
+                          <span className="lt-c2">{cell(p, shape.leaf[1])}</span>
+                        </>
+                      )}
+                    </div>
+                  ))}
+            </div>
+          </div>
         );
       })}
-    </ul>
+    </>
   );
 }
 
@@ -277,52 +350,76 @@ export default function OwnershipLegend({
    * in OWNERSHIP_CLASSIFICATION.md §Rule 3 and in `OWNERSHIP_RULES`.
    */
   const slotRules = groups.filter(g => g.rule !== 'child-following-parent');
+  /* The intro's counts, filled from this panel's own data — see `INTRO`. */
+  const intro = useMemo(
+    () => fillPlaceholders(INTRO, helpTextResolvers(dataService)),
+    [dataService],
+  );
   /*
-   * Which disclosures are open, keyed `${group}:${which}`. A SET, not a single
-   * key: each rule has two independent counts (TASKS `legend-two-counts`), and
-   * a reader comparing entity counts across rules wants several open at once.
+   * Which pivot is open per rule, if any. `undefined` means collapsed.
+   *
+   * **Opening a pivot REPLACES the previous expansion** — one grouping at a
+   * time (Siggie, 2026-09-14). Two simultaneous expansions of the same pairs
+   * would rebuild exactly the ambiguity this rewrite removes: the reader would
+   * again be looking at two lists of the same things, keyed differently, at the
+   * same visual level.
+   *
+   * Across RULES they stay independent — comparing one rule's shape against
+   * another's is what the collapsed count line is for.
    *
    * **Everything starts collapsed** (Siggie, 2026-09-13). The panel opens as
    * three rules and their counts, which is the summary; opening a list is the
-   * reader asking a question. An attribute list open by default also read as a
-   * collapse FAILURE when the entity list was opened above it — both lists
-   * name the same entities, so two open lists look like one that would not
-   * close.
+   * reader asking a question.
    */
-  const [open, setOpen] = useState<ReadonlyMap<string, Depth>>(() => new Map());
+  const [open, setOpen] = useState<ReadonlyMap<string, Pivot>>(() => new Map());
   /*
-   * Opening one count closes the other on the SAME rule: they are two depths
-   * of one list, so holding both would be holding one list in two states.
-   * Across rules they stay independent — comparing entity counts is exactly
-   * what the collapsed view is for.
+   * Per-node disclosure, keyed `${rule}:${pivot}:${node/path}`.
+   *
+   * Every node in a nested list opens and closes on its own (Siggie,
+   * 2026-09-15) — which is what makes `STARTS_OPEN` meaningful as a DEFAULT
+   * rather than a fixed state. The set holds the nodes currently open; opening
+   * a pivot seeds it from that pivot's default, so `total` lands expanded and
+   * `attrs` — the identical tree — lands collapsed.
    */
-  /** Per rule, the entity rows whose state differs from the rule's depth. */
-  const [rowOverrides, setRowOverrides] =
-    useState<ReadonlyMap<string, ReadonlySet<string>>>(() => new Map());
-  const toggleRow = (group: string, entity: string) => setRowOverrides(prev => {
-    const next = new Map(prev);
-    const rows = new Set(next.get(group) ?? []);
-    if (!rows.delete(entity)) rows.add(entity);
-    next.set(group, rows);
-    return next;
-  });
-  const NO_ROWS: ReadonlySet<string> = new Set();
+  const [openNodes, setOpenNodes] = useState<ReadonlySet<string>>(() => new Set());
 
-  const setDepth = (group: string, depth: Depth) => {
+  const togglePivot = (group: string, pivot: Pivot, nodes: readonly PivotNode[]) => {
+    const closing = open.get(group) === pivot;
     setOpen(prev => {
       const next = new Map(prev);
-      if (next.get(group) === depth) next.delete(group); else next.set(group, depth);
+      if (closing) next.delete(group); else next.set(group, pivot);
       return next;
     });
-    // A count sets every row in its rule, so per-row overrides are cleared:
-    // otherwise "show me all the attributes" would leave some rows shut.
-    setRowOverrides(prev => {
-      const next = new Map(prev);
-      next.delete(group);
+    /*
+     * Seed this pivot's rows at its default state, at EVERY depth — a two-level
+     * pivot seeded only at the top still made the reader click into each owner
+     * to reach the attribute names beneath it.
+     *
+     * Done on OPEN rather than at render so a viewer's per-row choices survive
+     * until they switch pivots.
+     */
+    setOpenNodes(prev => {
+      const next = new Set([...prev].filter(k => !k.startsWith(`${group}:`)));
+      if (!closing && STARTS_OPEN[pivot]) {
+        const seed = (ns: readonly PivotNode[], path: string) => {
+          for (const n of ns) {
+            const key = path ? `${path}/${n.key}` : n.key;
+            next.add(`${group}:${pivot}:${key}`);
+            if (n.children) seed(n.children, key);
+          }
+        };
+        seed(nodes, '');
+      }
       return next;
     });
   };
-
+  const toggleNode = (group: string, pivot: Pivot, path: string) =>
+    setOpenNodes(prev => {
+      const next = new Set(prev);
+      const k = `${group}:${pivot}:${path}`;
+      if (!next.delete(k)) next.add(k);
+      return next;
+    });
 
   const classLink = (id: string) => (
     <button
@@ -351,66 +448,141 @@ export default function OwnershipLegend({
           </p>
           <p className={NOTE}>
             An attribute can target an entity that it <b>owns</b>
-            <EdgeExample kind="own-fwd" />
+            <EdgeExample kind="own-fwd" example="Condition.affected_body_site" />
             in which case, B appears to the right of A and the edge points forward.
           </p>
           <p className={NOTE}>
             Or it can target an entity that it <b>belongs to</b>
-            <EdgeExample kind="own-bkwd" />
+            <EdgeExample kind="own-bkwd" example="Condition.associated_participant" />
             in which case, B appears to the left of A and the edge points backward.
           </p>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-1.5">
-            An attribute owns the entity it points at, with two kinds of exception.
-            Click a count to list what the rule applies to.
-          </p>
-          <ul className="space-y-1">
+          {/*
+            The accounting that makes 149 the anchor, and so makes `total`
+            legible as the fourth pivot. It REPLACED a "two kinds of exception"
+            paragraph that named no numbers.
+            Every count is LIVE (`{{ownership-count:…}}`, TASKS
+            `markdown-everywhere` item (c)) — hand-copied counts in help text
+            have already gone stale twice, and this panel now quotes nine of
+            them.
+            ⚠️ The two backward numbers count DIFFERENT KINDS of thing and must
+            not be given parallel phrasing: the first list is keyed by 5
+            ENTITIES covering 55 attributes, the second is 5 ATTRIBUTES over 2
+            entities. An earlier draft read "55 owner entities / 5 source
+            attributes", which reads as one kind.
+            ⚠️ What distinguishes the by-attribute five is NOT that their
+            sources point both ways — `SdohObservation` does too and is not in
+            the list. It is that their TARGETS are themselves owned by another
+            attribute, which is why the key is `Class.slot`.
+            This prose also carries what the dropped rule indent used to say:
+            that the two backward rules are EXCEPTIONS, not peers of the first.
+          */}
+          <div className="help-prose text-[11px] leading-snug text-gray-500 dark:text-gray-400 mb-2">
+            <HelpMarkdown>{intro}</HelpMarkdown>
+          </div>
+          <ul className="space-y-2.5">
             {slotRules.map(g => {
               const key = `${g.verdict}/${g.rule}`;
               const color = VERDICT_COLOR[g.verdict];
-              const entities = byTargetEntity(g.pairs);
-              // An exception renders BENEATH the rule it revises, not beside
-              // it: the groups arrive in the rules' own order, so the parent is
-              // always the entry above. Nesting is the only thing that says
-              // these two are a rule and its exception rather than peers.
-              const isException = parentRuleOf(g.rule) !== undefined;
+              const pivot = open.get(key);
+              // Which structural end plays the owner. Drives the pivot popovers
+              // (`(target)` vs `(source)`) and which levels a tree nests.
+              const forward = g.verdict === 'own-fwd';
               return (
-                <li
-                  key={key}
-                  className={`border-l-2 pl-2 border-gray-200 dark:border-slate-600${
-                    isException ? ' ml-4' : ''}`}
-                >
-                  <div
-                    className={color ? 'font-medium' : 'font-medium text-gray-400'}
-                    style={color ? { color } : undefined}
-                  >
-                    {g.ruleLabel}
+                /*
+                 * NO INDENT on the exceptions (2026-09-14). `parentRule` used
+                 * to push the two backward rules right, which was the only
+                 * visual signal that they revise the first rather than sit
+                 * beside it — the new intro prose carries that in words
+                 * instead. The rules are now three peers on the page and a
+                 * rule-and-its-exceptions in the prose above.
+                 */
+                <li key={key} className="border-l-2 pl-2 border-gray-200 dark:border-slate-600">
+                  <div className="flex items-baseline gap-1.5">
+                    <div
+                      className={color ? 'font-medium' : 'font-medium text-gray-400'}
+                      style={color ? { color } : undefined}
+                    >
+                      {g.ruleLabel}
+                    </div>
+                    {/* The arrow on the rule line itself, in the verdict's own
+                        colour — so the heading shows the ink it is about
+                        without the reader carrying it down from the samples
+                        above (Siggie, 2026-09-14). */}
+                    {color && <EdgeSample kind={g.verdict as DrawnKind} width={34} />}
                   </div>
-                  <div className="flex gap-3 mt-0.5">
-                    <CountToggle
-                      n={entities.length}
-                      noun="entities"
-                      open={open.get(key) === 'entities'}
-                      onClick={() => setDepth(key, 'entities')}
-                    />
-                    <CountToggle
-                      n={g.pairs.length}
-                      noun="attributes"
-                      open={open.get(key) === 'attributes'}
-                      onClick={() => setDepth(key, 'attributes')}
-                    />
+                  <div className="flex flex-wrap items-baseline gap-x-1 mt-0.5">
+                    {PIVOTS.map((pv, i) => (
+                      <span key={pv} className="flex items-baseline">
+                        {/* Spaces around the separator, not just a margin: the
+                            count and its label are one token to the eye, and
+                            `38 owners⌄—52 attrs⌄` runs them together. */}
+                        {i > 0 && <span className="text-gray-300 mx-1">&nbsp;—&nbsp;</span>}
+                        <PivotToggle
+                          n={pivotCount(g.pairs, pv)}
+                          pivot={pv}
+                          forward={forward}
+                          open={pivot === pv}
+                          onClick={() => togglePivot(
+                            key, pv, pivotTree(g.pairs, pv, forward))}
+                        />
+                      </span>
+                    ))}
                   </div>
-                  <p className="text-[11px] leading-snug text-gray-600 dark:text-gray-400 mt-0.5">
-                    {g.ruleText}
-                  </p>
-                  {open.has(key) && (
-                    <EntityRows
-                      entities={entities}
-                      showAttributes={open.get(key) === 'attributes'}
-                      openRows={rowOverrides.get(key) ?? NO_ROWS}
-                      onToggleRow={entity => toggleRow(key, entity)}
-                      classLink={classLink}
-                    />
-                  )}
+                  {/* MARKDOWN, not a plain string (TASKS `markdown-everywhere`
+                      item (a)): the rule text is prose about edges sitting
+                      beside drawn edge samples, and until now it was the one
+                      body of help prose in the app that could not say
+                      `{{edge:own-fwd}}` or wear a verdict's colour. */}
+                  <div className="help-prose text-[11px] leading-snug text-gray-600 dark:text-gray-400 mt-0.5">
+                    <HelpMarkdown>{g.ruleText}</HelpMarkdown>
+                  </div>
+                  {pivot && (() => {
+                    const shape = shapeOf(pivot, forward);
+                    const verdict = g.verdict as DrawnKind;
+                    return (
+                      <div className="lt" style={{ gridTemplateColumns: tracksFor(shape) }}>
+                        {/* The header names the columns the rows land in. Its
+                            cells span the same tracks, which is what the
+                            subgrid chain in `legendTable.css` keeps true at
+                            every depth. */}
+                        <div className="lt-head">
+                          {shape.headers.map((h, i) => {
+                            const last = i === shape.headers.length - 1;
+                            const lvl = shape.levels.length;
+                            /* A level's caption spans from its own indent
+                               track to the end; a leaf column sits in one. */
+                            const col = i < lvl ? `${i + 1} / -1`
+                              : shape.leaf.length > 1 && last ? `${lvl + 2}`
+                              : `${lvl + 1}`;
+                            return (
+                              <div key={h} className="lt-h" style={{ gridColumn: col }}>
+                                {h}
+                                {shape.arrow === `label:${i}` && (
+                                  <span className="lt-arrow">
+                                    &nbsp;<TableArrow kind={verdict} flip />
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {shape.leaf.length > 1 && (
+                            <div
+                              className="lt-h lt-h-arrow lt-arrow"
+                              style={{ gridColumn: shape.levels.length + 1 }}
+                            ><TableArrow kind={verdict} flip={!forward} /></div>
+                          )}
+                        </div>
+                        <PivotTable
+                          nodes={pivotTree(g.pairs, pivot, forward)}
+                          shape={shape}
+                          forward={forward}
+                          isOpen={path => openNodes.has(`${key}:${pivot}:${path}`)}
+                          onToggle={path => toggleNode(key, pivot, path)}
+                          classLink={classLink}
+                        />
+                      </div>
+                    );
+                  })()}
                 </li>
               );
             })}

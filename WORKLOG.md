@@ -8,6 +8,216 @@ Newest first.
 
 
 ---
+## 2026-09-15 (later still²) — the legend's pivots, then its columns
+
+TASKS `legend-list-orientation`. Implements docs/LEGEND_ORIENTATION.md, which
+settled the design 2026-09-14 and wrote no code. Two rounds: the pivots, then
+Siggie's review turned it into an aligned table.
+
+### Round 1: the grouping
+
+`ownershipPivots.ts` — `PIVOTS`, `pivotCount`, `pivotTree`. Its own module for
+two reasons, one forced: `react-refresh/only-export-components` fires if
+`OwnershipLegend.tsx` exports the helpers the tests need alongside the
+component. The other is that the trees became assertable directly rather than
+through the DOM, which is how the single-child bug got diagnosed in one probe.
+
+`ownershipLegend.test.ts:126` did NOT fail, though the task row warned it would.
+It re-implements `byTargetEntity` LOCALLY against `p.range` and asserts facts
+about the data (attributes sum to pairs, the range-keyed exception is
+few-over-many), none of which the panel's grouping change touches.
+
+What did need deliberate rewriting was `ownershipLegendDisclosure.test.tsx` —
+all 11 tests pinned the RENDERED two-counts design end to end.
+
+### Round 2: two things I misread in the spec
+
+Siggie reviewed the rendered panel and the first cut was wrong in ways the spec
+had already said:
+
+- **`| tgt` is a same-line COLUMN, not "collapse a single child."** I read it as
+  an inline-when-one-row rule. It means the target entity sits on the same line
+  as what precedes it, always, as a third column, and those are always 1:1.
+- **`attr` vs `src.attr` are different RENDERINGS.** `attr` is the bare
+  attribute name, `src.attr` the qualified one. I rendered `Class.slot`
+  everywhere. Which appears depends on the level — where the column above
+  already named the class, the bare name is what belongs.
+
+Siggie then added a `header layout` section to LEGEND_ORIENTATION and generated
+`temp/legend-tables-reference.html` (via Claude Design), showing all twelve
+pivots from real data. ⚠️ `temp/` is gitignored, so that file is not in the
+repo — LEGEND_ORIENTATION §header layout is the durable copy of what it settled. That settled the remaining questions — alignment, width,
+header placement — so the four I was about to ask went unasked.
+
+**The expansion is now a table**: nested CSS subgrid, so leaf cells land in the
+same tracks as a header row no matter how deep they sit. Technique documented in
+`legendTable.css`. ⚠️ Not `<details>`/`<summary>` — its shadow slot breaks the
+subgrid chain and children stop aligning.
+
+Twelve pivots, but only three column SHAPES; `PivotShape` in
+`ownershipPivots.ts` is the whole table.
+
+### `total` got its dropdown back
+
+It was suppressed on the owns side on the grounds that it duplicates `attrs`.
+Reversed: the two ARE the identical tree, and what distinguishes them is the
+state they OPEN in — `total` expanded, `attrs` collapsed (`STARTS_OPEN`). So the
+rightmost count doubles as "just show me the attributes." That only means
+anything because every node now opens and closes on its own.
+
+Single-child collapsing is COMMENTED OUT of the spec until the columns settle: a
+folded row does not line up with the header its siblings align to.
+
+### The arrows are `EdgeSample`, and needed a new direction
+
+The reference uses text glyphs (`—▶`, `◀—`, `—◀`); Siggie asked for the real
+SVG. `EdgeSample` could only draw a head at the END (`markerEnd`), so a backward
+leaf was undrawable. Added a `flip` prop — a `scaleX(-1)` transform rather than a
+second marker, so the geometry stays one definition in `edgeStyle.ts` and a
+dashed or double-headed kind mirrors for free.
+
+Three positions: forward leaf `attr ——▶ target`, backward leaf
+`attr ◀—— target`, and on a node LABEL `Entity ——◀`, meaning arrows arrive here.
+
+### Panel 30rem → 34rem, measured
+
+A column-aligned row does not wrap — it widens the table and the panel clips it,
+which is why the old 30rem (sized for a flat wrapping list) had to go. Measured
+over all twelve pivots: median ~392px, max ~506px
+(`QuestionnaireResponseItem.response_value → QuestionnaireResponseValue`, worst
+in three pivots at once). 34rem = 544px clears it with room for padding.
+
+### I read the reference through a broken parser
+
+I reported a contradiction in it — `by-attribute / owners` looking half depth-2
+and half flat, with `part_of` as a top-level row. **There was no contradiction.**
+My extraction regex used a non-greedy `.*?` for a node's closing `</div>`, so on
+a depth-2 node it stopped at the INNER close and reported the second child as a
+sibling. Siggie's screenshot showed the correct render.
+
+Re-extracted with jsdom and everything matched. ⚠️ jsdom does not resolve from
+`$TMPDIR`; the script has to run from the project root.
+
+**Third time this session a bad selector made correct code look wrong**
+(`ul.font-mono > li` matching nested rows; the `.*?` here; `topRows` mapping raw
+`textContent` so every label read `Condition2`). When counts look wrong, suspect
+the query before the code.
+
+### Showing Siggie a UI change: use their dev server
+
+I rendered the panel to a static HTML file, twice, and both were useless — the
+panels stacked in one corner (`HelpPanel` is `absolute top-14 right-4`, so
+several in one page all anchor to the same spot) and nothing was clickable,
+since no React is attached. Siggie: *"no collapse/expand, no drag."*
+
+The app already has shareable URL state for exactly this. The right move is a
+link into the server Siggie already runs on :5173, e.g.
+`?sel=BodySite~Condition&legend=1`. Recorded in memory.
+
+### Still open
+
+Siggie approved the dropped rule indent ("looks fine to me"). The count labels
+at panel width are superseded by the column work and want another look.
+
+## 2026-09-15 (later still) — the markdown-everywhere prelude; a placeholder bug nobody had seen
+
+TASKS `markdown-everywhere` items (a) and (c), pulled forward as the prelude to
+`legend-list-orientation`. Siggie asked for a plan before implementing; the
+plan was (a) + (c), not (b), and that is what shipped.
+
+### Why (a) and (c) and not (b)
+
+(a) FIRST because the legend rewrite rewrites the whole rule block. Rendering
+`ruleText` as a plain string now and as markdown a day later means authoring
+that block twice. (c) because LEGEND_ORIENTATION's new intro prose quotes
+149/89/60/55/5 and each rule line quotes four more — hand-typing them would add
+a fifth copy of numbers that have gone stale twice already.
+
+(b) — rule text becomes an authored markdown file — deliberately NOT done. It
+wants a design note first and it means `ownershipRules.ts` stops being the
+single declaration it was built as. Nothing in the legend work is harder for
+deferring it: once `ruleText` goes through `<HelpMarkdown>`, changing WHERE the
+string comes from is invisible to the legend. (a) is what creates that seam.
+
+### The extraction was smaller than the task row implies
+
+The task row frames (a) as needing a new capability. It did not: the whole
+pipeline — `MARKDOWN_COMPONENTS`, `widgetImg`, `urlTransform`, `remarkPluginsFor`
+— was already written and sitting as private module constants in
+`HelpLayer.tsx`. Moving them to `HelpMarkdown.tsx` and adding a component around
+them was most of the work.
+
+`HelpLayer` still drives `<Markdown>` directly rather than using the new
+component, for two reasons worth not re-litigating: its content arrives already
+placeholder-filled from the provider (so filling again at render is waste), and
+a `Once:` entry needs a per-entry component table.
+
+**Two files, not one.** The parts live in `markdownParts.tsx` and only the
+component in `HelpMarkdown.tsx`, because `react-refresh/only-export-components`
+fires on a file that exports both — the component stops hot-reloading. Lint
+caught it; the rule was right, and the split took the repo from 34 errors to 32
+by carrying off two pre-existing `HelpLayer` violations as well.
+
+### `useHelpIfAny`, and why HelpMarkdown does not throw
+
+First cut called `useHelp`, which throws outside a provider. That broke
+`ownershipLegendDisclosure.test.tsx`, which renders the legend bare — and the
+test was right. `<HelpMarkdown>` is not a tour control: every host-supplied
+piece is an ENRICHMENT, and without them the markdown still renders, with
+placeholders visible and widgets falling back to alt text. Throwing would make
+any component that renders prose untestable without standing up a tour.
+
+### The bug: `remark-directive` was eating placeholder arguments
+
+Found by writing the no-provider test, not by reading anything. An unresolved
+`{{model-description:Gone}}` rendered as `{{model-description}}` — `:Gone}` parses
+as a childless directive and became an empty span.
+
+**Not legend-specific and not new.** Every placeholder in every tour had it
+since the directive plugin landed. It silently broke the contract the whole
+design leans on: `fillPlaceholders` leaves an unresolved placeholder visible SO
+THAT drift names itself on screen, and naming the kind while dropping the class
+is the half that does not help anyone find it. `styleDirectives.ts`'s own
+comment claimed "a typo loses the styling and not the text", which is true for
+`:x[text]` and false for the childless case.
+
+Fixed in `styleDirectives.ts` (`literalize`): a directive that is not `s` AND
+has no children is put back as literal text. Only the childless case — for
+`:x[text]{a=1}` the author's content is in the brackets and was never at risk,
+so that keeps its existing behaviour.
+
+⚠️ Confirmed with a probe (render the same string with and without the plugin)
+before proposing the cause. Reasoning from the symptom would have pointed at
+`fillPlaceholders`, which is not where the loss happens.
+
+### The counts were re-probed, not copied
+
+Every number in LEGEND_ORIENTATION's table verified live: 38/52/30/89,
+5/9/25/55, 2/4/5/5, 149 declared. They match. Probing anyway is the standing
+rule — the previous round found three stale numbers in the docs about stale
+numbers.
+
+`getOwnershipCounts()` on DataService is the one derivation; the resolver and
+(next) the legend's pivot lines both read it. `declared` excludes induced pairs:
+Rule 3 reads no attribute, so counting its edges among "the attributes in the
+schema" would inflate a number the schema can be checked against.
+
+**The resolver's tests deliberately pin no VALUES** — only the grammar and the
+invariants (forward + backward = declared; the three slot rules sum to declared;
+distinct counts never exceed their total). Asserting `declared === 149` there
+would recreate the hand-copied constant the resolver exists to remove, in the
+file meant to prove it unnecessary.
+
+### CSS
+
+`.help-prose` is paired with `.help-popover-body` in every selector that styles
+markdown OUTPUT, rather than defined as a second block — one definition, so the
+two cannot disagree. The popover's own chrome (scrolling, the dimmed past beat)
+stays on `.help-popover-body` alone: those are about the popover, not markdown.
+`.help-popover a` was popover-scoped too, so a link in legend prose would have
+rendered unstyled; paired as well.
+
+---
 ## 2026-09-15 (later) — CLAUDE.md split global/local; the Write tool is not sandboxed
 
 No app code. Docs and configuration only.

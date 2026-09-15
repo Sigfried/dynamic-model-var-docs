@@ -16,18 +16,20 @@
 /** Default panel widths, in rem. Both panels stay resizable by their corner. */
 export const PANEL_WIDTH_REM = {
   /*
-   * The legend lists `Class.slot → Range` rows in 10px monospace. Measured
-   * 2026-09-11 over all 159: median 46 characters, p95 64, max 78 (the five
-   * `QuestionnaireResponseItem.response_value → QuestionnaireResponseValue*`
-   * rows). At ~6px per character plus the panel's chrome, 30rem clears p95
-   * and wraps only those five; sizing for the max would cost 32rem+ to save
-   * one wrapped line each.
+   * The legend's pivot tables are column-aligned (`legendTable.css`), so a row
+   * that does not fit does not wrap — it widens the table, and the panel clips
+   * it. Measured 2026-09-15 over all twelve pivots with the leaf rendered as
+   * `name + cardinality | arrow | target`: median ~392px, max ~506px (the
+   * `QuestionnaireResponseItem.response_value → QuestionnaireResponseValue`
+   * row, which is worst in three pivots at once). 34rem = 544px clears the max
+   * with room for the panel's own padding.
    *
-   * It was 36rem for a few minutes, when the rows still carried a redundant
-   * `(owner: X)` suffix that pushed the max to 95. Dropping the suffix was the
-   * better half of the same fix.
+   * It was 30rem until then, sized for a FLAT list of `Class.slot` rows with
+   * no target column — that listing wrapped gracefully and this one cannot.
+   * It was briefly 36rem in 2026-09-11, when the rows carried a redundant
+   * `(owner: X)` suffix; dropping the suffix was the better half of that fix.
    */
-  legend: 30,
+  legend: 34,
   cases: 26,
 } as const;
 
