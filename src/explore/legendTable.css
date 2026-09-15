@@ -77,6 +77,21 @@
 }
 .lt > .lt-node > .lt-label { padding-left: 0; }
 
+/*
+ * `owns: owned` groups by the OWNED end, so its label is the thing every arrow
+ * points at. Right-aligning it into the last track puts the owned entity back
+ * at the end of the line, so the group reads
+ * `Condition.affected_body_site ——▶ BodySite` rather than naming the target
+ * first and pointing away from it. See `PivotShape.rightAlignLabel`.
+ */
+.lt-label-right {
+  text-align: right;
+  padding-right: 6px;
+}
+/* The triangle stays on the left, where every other row's is — right-aligning
+   the text must not move the control that opens it. */
+.lt-label-right > .lt-toggle { text-align: left; }
+
 /* The disclosure triangle sits in the indent track to the LEFT of the label,
    so it never pushes the label out of alignment with its siblings. */
 .lt-toggle {

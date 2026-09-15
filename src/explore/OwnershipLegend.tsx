@@ -218,16 +218,20 @@ function PivotToggle({ n, pivot, forward, open, onClick }: {
  * shape. Shorter than the intro's 56px: it sits in a 34px column between two
  * text columns.
  *
- * ⚠️ **Whether to mirror is `PivotShape.flipArrow`, never `forward`.** The
- * verdict's own geometry usually gets it right — `own-fwd` draws `——▶`,
- * `own-bkwd` draws `——◀` — so only `owns: owned` needs mirroring, because its
- * label is the owned end. Deriving it from `forward` instead flipped all four
- * backward tables against the rule line above them; removing the flip outright
- * then left `owns: owned` pointing away from its label. See `flipArrow`.
+ * ⚠️ **Never mirrored.** Siggie's rule, 2026-09-15, and it is the whole rule:
+ * *owns points forward `———▶`, belongs to points back `———◀`.* That is exactly
+ * the verdict's own geometry (`headDirection` in `OWNERSHIP_VERDICTS`), so the
+ * same call draws the right arrow everywhere and `EdgeSample`'s `flip` is not
+ * wanted here.
+ *
+ * Two earlier cuts mirrored it — first on `!forward`, then per shape — to make
+ * `owns: owned` read right. Both were treating a column-ORDER problem as an
+ * arrow problem: that pivot groups by the owned end, so the fix is
+ * `rightAlignLabel`, not a backwards arrow on a forward edge.
  */
 const ARROW_W = 30;
-function TableArrow({ kind, flip }: { kind: DrawnKind; flip?: boolean }) {
-  return <EdgeSample kind={kind} width={ARROW_W} flip={flip} className="lt-edge" />;
+function TableArrow({ kind }: { kind: DrawnKind }) {
+  return <EdgeSample kind={kind} width={ARROW_W} className="lt-edge" />;
 }
 
 /**
@@ -242,7 +246,11 @@ function tracksFor(shape: PivotShape): string {
   const indents = shape.levels.map(() => '16px').join(' ');
   // A leaf with a target column needs name | arrow | target; otherwise one cell.
   // The arrow track fits the EdgeSample (30px) plus a little breathing room.
-  const leaf = shape.leaf.length > 1 ? 'max-content 38px max-content' : 'max-content';
+  // A right-aligned-label shape has a one-field leaf but still needs the arrow
+  // and the label columns — the label IS the third track, shared by the group.
+  const leaf = shape.leaf.length > 1 || shape.rightAlignLabel
+    ? 'max-content 38px max-content'
+    : 'max-content';
   return `${indents} ${leaf}`;
 }
 
@@ -256,6 +264,13 @@ function tracksFor(shape: PivotShape): string {
  */
 function headerColumn(shape: PivotShape, i: number): string {
   const lvl = shape.levels.length;
+  /*
+   * A right-aligned-label shape inverts the usual reading: its LEVEL caption
+   * describes the last track (the shared label) and its leaf field the first,
+   * so the two captions are authored in that order — `[SRC_ATTR, ENTITY]` —
+   * and land in tracks lvl+1 and lvl+3.
+   */
+  if (shape.rightAlignLabel) return String(i === 0 ? lvl + 1 : lvl + 3);
   if (i < lvl) return `${i + 1} / -1`;
   const nth = i - lvl;                    // 0 = first leaf field, 1 = the target
   // Track lvl+1 is the leaf's first field; lvl+2 is the arrow; lvl+3 the target.
@@ -298,7 +313,7 @@ function PivotTable({ nodes, shape, forward, isOpen: nodeOpen, onToggle, path = 
         const labelArrow = shape.arrow === `label:${depth}`;
         return (
           <div key={key} className="lt-node" {...(isOpen ? { 'data-open': '1' } : {})}>
-            <div className="lt-label">
+            <div className={`lt-label${shape.rightAlignLabel ? ' lt-label-right' : ''}`}>
               <button
                 className="lt-toggle"
                 onClick={() => onToggle(key)}
@@ -309,7 +324,7 @@ function PivotTable({ nodes, shape, forward, isOpen: nodeOpen, onToggle, path = 
                   name is not a thing the canvas can draw. */}
               {shape.levels[depth] === 'entity' ? classLink(n.key) : n.key}
               {labelArrow && (
-                <span className="lt-arrow">&nbsp;<TableArrow kind={kind} flip={shape.flipArrow} /></span>
+                <span className="lt-arrow">&nbsp;<TableArrow kind={kind} /></span>
               )}
               {n.pairs.length > 1 && <span className="lt-count">{n.pairs.length}</span>}
             </div>
@@ -332,15 +347,15 @@ function PivotTable({ nodes, shape, forward, isOpen: nodeOpen, onToggle, path = 
                           </span>
                         )}
                       </span>
+                      {/* The arrow, in its own track. A two-field leaf puts the
+                          target after it; a right-aligned-label shape leaves
+                          that track to the group's shared label above. Either
+                          way the row reads `field ——▶ entity` left to right. */}
+                      {(shape.leaf.length > 1 || shape.rightAlignLabel) && (
+                        <span className="lt-arrow"><TableArrow kind={kind} /></span>
+                      )}
                       {shape.leaf.length > 1 && (
-                        <>
-                          {/* A leaf reads left-to-right, `field ——▶ target`,
-                              so its arrow takes the verdict's own direction
-                              and is never mirrored — unlike a LABEL arrow,
-                              which points back at the name it follows. */}
-                          <span className="lt-arrow"><TableArrow kind={kind} /></span>
-                          <span className="lt-c2">{cell(p, shape.leaf[1])}</span>
-                        </>
+                        <span className="lt-c2">{cell(p, shape.leaf[1])}</span>
                       )}
                     </div>
                   ))}
@@ -575,7 +590,7 @@ export default function OwnershipLegend({
                               {h}
                               {shape.arrow === `label:${i}` && (
                                 <span className="lt-arrow">
-                                  &nbsp;<TableArrow kind={verdict} flip={shape.flipArrow} />
+                                  &nbsp;<TableArrow kind={verdict} />
                                 </span>
                               )}
                             </div>

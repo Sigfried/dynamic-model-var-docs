@@ -223,37 +223,38 @@ describe('ownership legend pivots', () => {
       });
     });
 
-    test('only `owns: owned` mirrors its LABEL arrow', async () => {
+    test('`owns: owned` right-aligns its label so the row reads owner-last', async () => {
       /*
-       * A label arrow points AT its label, because the label is the owner and
-       * arrows arrive at owners. The backward rules get that free from
-       * `own-bkwd`; `owns: owned` is the exception — its label is the OWNED
-       * entity and `own-fwd` points away from it, so that one turns round.
-       * (Siggie: "those were supposed to be flipped. they currently point
-       * forward from owned to owner".)
+       * That pivot groups by the OWNED end, so the entity every arrow points at
+       * would otherwise sit above the attributes pointing at it — the one place
+       * `owner → attribute → owned` runs backwards.
+       *
+       * The fix is the LAYOUT, not the arrow (Siggie, 2026-09-15: "it breaks
+       * the owner → attr → owned pattern; can we figure out a way to fix
+       * that?"). The label is right-aligned into the last track and every leaf
+       * carries its own forward arrow, so the group reads
+       * `Condition.affected_body_site ——▶ BodySite`.
        */
       const { find } = await setup();
       fireEvent.click(find(/30\s*owned/));
-      const svg = document.querySelector('.lt > .lt-node .lt-label .lt-arrow svg')!;
-      expect(svg.getAttribute('style')).toContain('scaleX(-1)');
-
-      fireEvent.click(find(/30\s*owned/));
-      fireEvent.click(find(/5\s*owners/));
-      const bkwd = document.querySelector('.lt > .lt-node .lt-label .lt-arrow svg')!;
-      expect(bkwd.getAttribute('style') ?? '').not.toContain('scaleX(-1)');
+      const node = document.querySelector('.lt > .lt-node')!;
+      expect(node.querySelector('.lt-label')!.className).toContain('lt-label-right');
+      // The arrow moved to the leaves; the label carries none of its own.
+      expect(node.querySelector('.lt-label .lt-arrow')).toBeNull();
+      expect(node.querySelector('.lt-leaf .lt-arrow svg')).not.toBeNull();
     });
 
-    test('a pivot with no target column omits the arrow cell', async () => {
+    test('a pivot whose label already names the target omits the target cell', async () => {
       /*
-       * `owned` forward: the top label IS the target, so a target column would
-       * repeat it on every row. One cell, no arrow.
+       * `belongs to: owners` nests target → attribute → source, so by the time
+       * a leaf renders, two levels above have named the target. It shows the
+       * qualified source attribute alone — the bare name would not say which
+       * class declares it.
        */
       const { find } = await setup();
-      fireEvent.click(find(/30\s*owned/));
+      fireEvent.click(find(/5\s*owners/));
       const leaf = document.querySelector('.lt-leaf')!;
       expect(leaf.querySelector('.lt-c2')).toBeNull();
-      expect(leaf.querySelector('.lt-arrow')).toBeNull();
-      // Qualified here, since the bare name would not say which class declares it.
       expect(leaf.querySelector('.lt-c1')!.textContent).toMatch(/^\w+\.\w+/);
     });
 

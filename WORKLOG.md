@@ -87,28 +87,46 @@ caption and shifted every caption after it one track left. It belongs at
 `levels + 2`. Column placement now lives in `headerColumn()` rather than an
 inline expression at the render site.
 
-**Arrow direction, which I got wrong in both directions before getting it
-right.** The rule, now in `PivotShape.flipArrow`:
+**Arrow direction: three cuts, and the third is Siggie's, which is the simple
+one.** The rule is just:
 
-- a LEAF arrow reads left-to-right (`field ——▶ target`) and is NEVER mirrored;
-  the verdict supplies the direction, since `own-fwd` is `headDirection:
-  'forward'` and `own-bkwd` is `'backward'`
-- a LABEL arrow points AT its label, because the label is the owner and arrows
-  arrive at owners
+> owns points forward `———▶`, belongs to points back `———◀`
 
-Only `owns: owned` needs mirroring: its label is the OWNED entity, and
-`own-fwd` points away from it. The two backward label arrows get it free.
+That is exactly the verdict's own geometry (`headDirection` in
+`OWNERSHIP_VERDICTS`), so **no arrow is ever mirrored** and `EdgeSample`'s
+`flip` is unused here.
 
-First cut derived the flip from `forward`, which mirrored all four backward
-tables into `◀——` while the rule line above them still read `——◀`. Told about
-that, I removed the flip outright — which left `owns: owned` pointing forward,
-away from its label, and Siggie caught that too: *"those were supposed to be
-flipped."* **Whether to mirror is a per-SHAPE fact, not a per-direction one**,
-which is why it is a field on `PivotShape` and not an expression.
+My first two cuts both mirrored something. Cut 1 derived the flip from
+`forward`, which turned all four backward tables into `◀——` while the rule line
+above them still read `——◀`. Told that, I deleted the flip outright — cut 2 —
+which left `owns: owned` pointing away from its own label. I then invented a
+per-shape `flipArrow` to patch that, and Siggie rejected the whole framing:
 
-The test that had pinned this asserted a backward leaf IS mirrored — it encoded
-the bug. Replaced with one asserting no leaf arrow is ever mirrored, and one
-asserting `owns: owned` is the only mirrored label.
+> in the legend owns: owned is weird because it starts from owned, which the
+> arrow points to … it breaks the owner → attr → owned pattern; can we figure
+> out a way to fix that?
+
+**That is the actual defect, and it is a column-ORDER problem, not an arrow
+problem.** `owns: owned` groups by the owned end, so the entity every arrow
+points at sits above the attributes pointing at it. Mirroring the arrow drew a
+backwards arrow on a forward edge to disguise the layout.
+
+Fixed as `PivotShape.rightAlignLabel`: the label moves to the last track and
+every leaf takes its own forward arrow, so the group reads
+`Condition.affected_body_site ——▶ BodySite` with the entity shared on the
+right. Siggie chose this over putting the arrow before the label.
+
+⚠️ `headerColumn` needs a branch for it — a right-aligned shape authors its
+captions leaf-field-first (`[SRC_ATTR, ENTITY]`), the reverse of every other.
+
+Both tests covering this encoded the bug (one asserted a backward leaf IS
+mirrored; one asserted `owns: owned` has no arrow at all). Replaced.
+
+### `belongs to / attributes` was a transcription error
+
+Siggie spotted it in the spec: `total` is `attrs` already expanded — the SAME
+tree — so its backward shape nests target under attribute name. I had
+transcribed a flat `attr → src.attr | tgt`. Fixed in `SHAPES`.
 
 ### Panel 30rem → 34rem, measured
 

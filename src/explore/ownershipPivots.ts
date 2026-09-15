@@ -120,21 +120,29 @@ export interface PivotShape {
    */
   arrow: 'leaf' | `label:${number}`;
   /**
-   * Mirror the arrow, because the verdict's native direction is wrong for THIS
-   * layout.
+   * Push the node label to the RIGHT edge, and give every leaf its own arrow.
    *
-   * A label arrow always points AT its label — the label is the owner, and
-   * arrows arrive at owners. `own-bkwd` draws `——◀` natively, so the two
-   * backward shapes need nothing. `owns: owned` is the exception: its label is
-   * the OWNED entity and `own-fwd` draws `——▶`, pointing away from it, so that
-   * one is mirrored to `◀——`.
+   * For `owns: owned` only, and it is a LAYOUT fix, not an arrow fix. That
+   * pivot groups by the owned end, so the entity that every arrow points AT
+   * sits above the attributes pointing at it — the one place the panel's
+   * `owner → attribute → owned` reading runs backwards.
    *
-   * ⚠️ This is a per-SHAPE fact, not a per-direction one. Deriving it from
-   * `forward` flipped all four backward tables into `◀——` while the rule line
-   * above them still read `——◀`; deleting the flip outright then left
-   * `owns: owned` pointing forward, away from its label. Siggie caught both.
+   * Right-aligning the label puts the owned entity last on the line again, so
+   * each row reads `Condition.affected_body_site ——▶ BodySite` across the
+   * group, with the label as a shared right-hand column:
+   *
+   * ```
+   *                                BodySite
+   *   Condition.affected_body_site ——▶
+   *   ImagingFile.anatomical_site  ——▶
+   * ```
+   *
+   * ⚠️ **This replaced mirroring the arrow**, which was wrong twice over: it
+   * drew `◀——` for an `own-fwd` edge, and it papered over a column-ORDER
+   * problem with an arrow change. Siggie, 2026-09-15: *"it breaks the
+   * owner → attr → owned pattern; can we figure out a way to fix that?"*
    */
-  flipArrow?: boolean;
+  rightAlignLabel?: boolean;
 }
 
 const ENTITY = 'Target entity', SOURCE = 'Source entity';
@@ -175,20 +183,25 @@ const SHAPES: Record<Pivot, { fwd: PivotShape; bkwd: PivotShape }> = {
    * the declaring class, so the leaf regains attr + target.
    */
   owned: {
-    /* The one mirrored arrow: the label is the OWNED entity, so `own-fwd`'s
-       native `——▶` has to turn round and point back at it. */
-    fwd: { levels: ['entity'], leaf: ['srcAttr'], arrow: 'label:0',
-           flipArrow: true, headers: [ENTITY, SRC_ATTR] },
+    /* The label is the OWNED entity, so it is right-aligned and every leaf
+       carries its own arrow pointing at it — see `rightAlignLabel`. */
+    fwd: { levels: ['entity'], leaf: ['srcAttr'], arrow: 'leaf',
+           rightAlignLabel: true, headers: [SRC_ATTR, ENTITY] },
     bkwd: { levels: ['entity'], leaf: ['attr', 'target'], arrow: 'leaf',
             headers: [SOURCE, ATTR, ENTITY] },
   },
-  /* Identical to `attrs` in the forward case and flattened in the backward one
-     — `total` is the attribute list, so it never nests past its name. */
+  /*
+   * `total` is `attrs` already expanded — the SAME tree, differing only in the
+   * state it opens in (`STARTS_OPEN`). So its backward shape nests the target
+   * under the attribute name exactly as `attrs` does; a flat
+   * `attr → src.attr | tgt` was a transcription error (Siggie, 2026-09-15:
+   * *"it's supposed to be the same as attribute names, just expanded"*).
+   */
   total: {
     fwd: { levels: ['attr'], leaf: ['srcAttr', 'target'], arrow: 'leaf',
            headers: [ATTR, SRC_ATTR, ENTITY] },
-    bkwd: { levels: ['attr'], leaf: ['srcAttr', 'target'], arrow: 'leaf',
-            headers: [ATTR, SRC_ATTR, ENTITY] },
+    bkwd: { levels: ['attr', 'entity'], leaf: ['srcAttr'], arrow: 'label:1',
+            headers: [ATTR, ENTITY, SRC_ATTR] },
   },
 };
 
