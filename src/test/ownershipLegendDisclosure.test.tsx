@@ -6,7 +6,8 @@ import OwnershipLegend from '../explore/OwnershipLegend';
 import { PIVOTS, shapeOf } from '../explore/ownershipPivots';
 
 /**
- * The legend's pivots (TASKS `legend-list-orientation`).
+ * The legend's pivots (`legend-list-orientation`, shipped 2026-09-15;
+ * docs/LEGEND_ORIENTATION.md is the spec `SHAPES` transcribes).
  *
  * **Rewritten 2026-09-15 from the two-counts version**, deliberately and not as
  * a regression. The old file pinned `N entities` / `M attributes` as two depths
