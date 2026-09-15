@@ -243,7 +243,17 @@ function TableArrow({ kind }: { kind: DrawnKind }) {
  * header for how the subgrid chain works.
  */
 function tracksFor(shape: PivotShape): string {
-  const indents = shape.levels.map(() => '16px').join(' ');
+  /*
+   * One indent track per level — the track a nested `.lt-kids` consumes, and
+   * where an ordinary row's disclosure triangle sits.
+   *
+   * A right-aligned-label shape needs it only for the subgrid chain: its
+   * triangle moved to the RIGHT edge with the label, so a 16px track there is
+   * empty space down the whole table (Siggie, 2026-09-15: "can reclaim the
+   * white space on the left now"). Zero-width keeps the chain and reclaims it.
+   */
+  const indent = shape.rightAlignLabel ? '0' : '16px';
+  const indents = shape.levels.map(() => indent).join(' ');
   // A leaf with a target column needs name | arrow | target; otherwise one cell.
   // The arrow track fits the EdgeSample (30px) plus a little breathing room.
   // A right-aligned-label shape has a one-field leaf but still needs the arrow

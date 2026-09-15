@@ -36,6 +36,7 @@
   width: max-content;
   max-width: 100%;
   margin: 4px 0 2px;
+  /* The 14px left padding is the gutter the disclosure triangles hang into. */
   padding: 0 4px 3px 14px;
   border: 1px solid #e5e7eb;
   border-radius: 4px;
@@ -100,11 +101,15 @@
  */
 .lt-label-right > .lt-toggle {
   left: auto;
-  right: -12px;
+  /* Inside the row, just left of the table's border — hanging it outside put
+     the chevron on the border itself (Siggie, 2026-09-15). */
+  right: 0;
   text-align: left;
 }
-/* Room for it, so the triangle does not overhang the table's padding. */
-.lt-label-right { padding-right: 14px; }
+/* Room for the triangle at the end of the name. */
+.lt-label-right { padding-right: 15px; }
+/* No triangles hang left on such a table, so its gutter is dead space. */
+.lt:has(.lt-label-right) { padding-left: 4px; }
 
 /* The disclosure triangle sits in the indent track to the LEFT of the label,
    so it never pushes the label out of alignment with its siblings. */
