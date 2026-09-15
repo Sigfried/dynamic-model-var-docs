@@ -8,6 +8,80 @@ Newest first.
 
 
 ---
+## 2026-09-15 (later) — CLAUDE.md split global/local; the Write tool is not sandboxed
+
+No app code. Docs and configuration only.
+
+### The redundancy
+
+`docs/CLAUDE.md` and `~/.claude/CLAUDE.md` had drifted into carrying the same
+rules twice — §A QUESTION IS NOT AN INSTRUCTION and §Docs carry what a reader
+needs NOW were duplicated verbatim, and the typecheck rule was stated twice
+within the local file alone, with different workarounds.
+
+Settled shape: **global carries how a session is run, local carries what is true
+of this repo.** Moved up to global: never-destroy-uncommitted-work, the
+stale-union trap (a TypeScript fact, not a repo fact), §Doc references are links
+(the prose rule; the checker script is repo-shaped and stayed). Local keeps a
+banner that names the global sections by title rather than restating them.
+
+Siggie edits global themselves, so those went over as a full drafted file rather
+than as patches.
+
+### The Write tool is not inside the sandbox
+
+Found while trying to pin down a pattern Siggie remembered but could not name:
+*"you try to write to a file somewhere, get blocked, and then switch to another
+method and it works."*
+
+Tested it. Bash writes are confined by an OS-level Seatbelt profile to the
+allow-list (project dir, `$TMPDIR`, a few caches). **The Write and Edit tools
+are not** — they are governed by `permissions` in settings.json, which at the
+time had seven deny rules, all of them `Read(...)`. Nothing constrained Write
+anywhere on disk. It wrote to `~/`, which Bash is refused for, and then Bash
+could not delete what Write had created.
+
+So the remembered pattern is real, and it is a hole rather than a technique.
+Two consequences:
+
+- **My own "don't use heredocs, use the Write tool" line had been quietly
+  steering toward the tool with fewer guardrails.** Demoted in the global draft
+  to what it actually is — a readability preference about parseable Bash — with
+  an explicit note that it is never a reason to route a refused write through
+  Write.
+- New global rule: a Bash write the sandbox refused is a real refusal; do not
+  retry it through Write.
+
+Siggie added `Write`/`Edit` deny rules plus an `ask` fallback. Retested:
+`~/.ssh/**` and `~/Library/**` now hard-deny; `Write(~/*)` prompts. **Still
+looser than Bash in two ways**, left unresolved because Siggie called time:
+Bash gets no prompt at all where Write gets a bypassable one, and Bash is
+deny-by-default (enumerate what is allowed) where Write is allow-by-default
+(enumerate what is forbidden), so every path nobody thought to list is open.
+The closest matching shape would be a broad `Write(~/**)` deny with carve-outs
+for the project and `$TMPDIR` — untested, and a wrong guess there blocks
+ordinary work in every repo.
+
+⚠️ **I cannot see permission prompts or their answers.** I reported "no prompt
+fired" when what I had actually observed was "the write succeeded" — Siggie had
+been asked and clicked allow. From this side those two are indistinguishable;
+say the second.
+
+### Cleanup pass
+
+Ran §Docs carry what a reader needs NOW over the day's own output, which failed
+its own test in four places — the `induced-clutter` row had become a 20-line
+narration of my correction ("but it was two bugs, and this row named the
+wrong one"), LEGEND_ORIENTATION had a struck-through bullet arguing with a
+superseded draft, and two more. All trimmed to the decision plus the one
+recurring trap (inherited vs. induced), with the story left here where it
+belongs.
+
+Worth noticing that the failing text was written *the same day* as the rule was
+being consolidated. Writing up a correction and arguing with the past feel
+identical from the inside while the correction is fresh.
+
+---
 ## 2026-09-15 — "induced" meant two different things, and the task row named the wrong one
 
 TASKS `induced-clutter`, done — but not the fix the row described. Induced

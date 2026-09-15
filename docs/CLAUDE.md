@@ -1,34 +1,18 @@
 # CLAUDE.md - Development Principles
 
-> **⚠️ READ THIS FILE BEFORE STARTING ANY WORK ⚠️**
+> **⚠️ READ `~/.claude/CLAUDE.md` FIRST — it is not optional, and it is not
+> duplicated here. ⚠️**
 >
-> This file contains critical development rules that must be followed.
+> The global file carries the rules that govern how a session is *run*: questions
+> are not instructions, never destroy uncommitted work, when a sandbox refusal is
+> real, how to write WORKLOG, and — most relevant to finishing work —
+> **§Docs carry what a reader needs NOW** and **§Doc references are links**,
+> which together are the standing rule for documentation and end-of-session
+> cleanup. THIS file adds only what is specific to this repo. Where both speak,
+> global wins unless a rule here says otherwise explicitly.
+>
 > For architecture and data flow, see [ARCHITECTURE.md](ARCHITECTURE.md).
 > For tasks, see [TASKS.md](TASKS.md) and [BACKLOG.md](BACKLOG.md).
-
----
-
-## 🚨 CRITICAL: NEVER DESTROY UNCOMMITTED WORK 🚨
-
-**NEVER run commands that could lose uncommitted changes:**
-- ❌ `git restore <file>`, `git checkout <file>`, `git reset --hard`, `git clean -fd`
-- ❌ `git merge`, `git merge --abort`, `git rebase`, `git cherry-pick`, `git stash`
-
-**Instead:**
-1. Run `git status` and `git diff` to see what would be lost
-2. Tell the user what you found
-3. Suggest commands for them to run
-4. Let the user decide and run the commands themselves
-
-### 🚨 A QUESTION IS NOT AN INSTRUCTION 🚨
-
-**"thoughts?" · "is that right?" · "what's going on with X?" · "I'm thinking the
-best approach might be…" · "should I…" — these ask for ANALYSIS. Answer, then
-STOP.**
-
-When the user describes *their* plan, they are thinking out loud and inviting
-critique — **not delegating it**. Doing the work they just said they wanted to do
-takes the task away from them.
 
 ---
 
@@ -135,21 +119,6 @@ if (!element) {
 
 ---
 
-## 🔧 WORKFLOW
-
-### TypeScript Build Configuration
-
-**CRITICAL**: Always use `npm run typecheck` before committing!
-
-- `npm run typecheck` now uses `tsc -b --noEmit` (same as build)
-- This catches **all** errors that would break deployment
-- **Do NOT** rely on `tsc --noEmit` alone - it's less strict
-- The project uses TypeScript 5.9.3 (local) with strict mode enabled
-
-**Why this matters**: We had 46 hidden errors that only showed in `tsc -b` (build) but not in `tsc --noEmit` (old typecheck). This caused build failures in deployment that passed local typechecking.
-
----
-
 ## 📦 Related local library
 
 **supergroup v2**: grouping + DAG library, the backbone of
@@ -169,14 +138,13 @@ if (!element) {
 - **Never run `npm run dev`** — Siggie keeps the app running themselves.
 - **Verify with `npm run build`** (~2s). `npx tsc --noEmit` is too weak and has
   let breakage through; `npm run typecheck` is `tsc -b --noEmit`, which caught
-  four real errors in one session that the bare form did not. (In a sandbox
-  `tsc -b` fails EPERM on `node_modules/.tmp`; the workaround is
+  four real errors in one session that the bare form did not, and 46 hidden ones
+  when it was introduced. TypeScript 5.9.3, strict mode. (In a sandbox `tsc -b`
+  fails EPERM on `node_modules/.tmp`; the workaround is
   `npx tsc --noEmit -p tsconfig.app.json --tsBuildInfoFile "$TMPDIR/app.tsbuildinfo"`.)
-- **`tsc` will NOT catch a stale union comparison.** When `'own-flip'` left the
-  `OwnershipVerdict` union, every surviving `x === 'own-flip'` narrowed to
-  `never` instead of erroring — so the typecheck stayed green while two live
-  sites silently stopped matching. **Grep for the old literal; do not trust tsc
-  for this.** Hit again later with `MergeMode` (`'bend'`, not `'full'`).
+- **The stale-union trap (global §Code style) has bitten this repo twice:**
+  `'own-flip'` leaving `OwnershipVerdict`, then `MergeMode` (`'bend'`, not
+  `'full'`). Grep for the old literal.
 - **`console.log` is swallowed in vitest here.** To surface a value, assert it
   against a sentinel string and read the diff.
 - **Lint baseline is 20 errors**, all pre-existing. Compare against the baseline
@@ -187,49 +155,15 @@ if (!element) {
   One such mistake put ~1128 lines of two sessions' implementation inside
   `b17db08`, a commit whose message claims it is docs-only.
 
-### Docs carry what a reader needs NOW, not answers to the past
+### Documentation rules live in the global CLAUDE.md
 
-**A live doc states what is true. It does not argue with what someone used to
-think.** Text that exists only to refute an earlier mistake, correct a previous
-draft, or defend a wording against an objection nobody will raise again is
-noise: the reader did not hold that belief and now has to load it to read past
-it. That history goes in [WORKLOG.md](../WORKLOG.md), which exists for exactly
-this.
+**§Docs carry what a reader needs NOW** (live docs state what is true; text that
+only refutes an earlier mistake belongs in [WORKLOG.md](../WORKLOG.md)) and
+**§Doc references are links** (every file reference is a markdown link, with two
+exceptions) are in `~/.claude/CLAUDE.md`. Read them there — they are not
+repeated here.
 
-Signs a paragraph is arguing with the past rather than informing:
-
-- emphasis defending a fact nobody disputes ("`Entity` **IS** a common
-  superclass")
-- "an earlier draft/version/objection…", "did not survive checking", "this
-  keeps getting re-conflated", "do not restore it"
-- a correction with no reader-facing consequence — if the fix already landed in
-  the text, the record of the fix belongs in WORKLOG
-
-**The test:** would a reader who has never seen the old version need this
-sentence? If not, cut it or move it.
-
-**What legitimately stays**, because it changes what someone would do:
-
-- a **decision** that would otherwise be reopened — state the decision and who
-  made it, not the misunderstanding it corrected
-- a **trap** that recurs — e.g. why numbers in older notes do not reconcile, or
-  why a native `title` must not go on a hover panel
-- **design rationale** a reader would actively wonder about ("why isn't the
-  whole row clickable?")
-
-### Doc references are links, and links are checked
-
-**Every reference to a file — code included — is a markdown link**, not a bare
-backticked name. A link can be verified; a backticked name cannot, which is how
-`import_types.ts` (a typo for `input_types.ts`) sat one line under the rename it
-was describing until a link pass found it.
-
-Two exceptions, both deliberate: a ref carrying a **line number**
-(`ExploreApp.tsx:301`) stays plain, because the line drifts and a link implies a
-precision the ref does not have; and a ref to a file that **does not exist** —
-one named as deleted, renamed, or living in another repo — obviously stays plain.
-
-To check after editing docs:
+What is repo-specific is the checker. Run it after editing docs:
 
 ```bash
 python3 - <<'EOF'
