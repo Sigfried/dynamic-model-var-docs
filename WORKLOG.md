@@ -111,16 +111,33 @@ problem.** `owns: owned` groups by the owned end, so the entity every arrow
 points at sits above the attributes pointing at it. Mirroring the arrow drew a
 backwards arrow on a forward edge to disguise the layout.
 
-Fixed as `PivotShape.rightAlignLabel`: the label moves to the last track and
-every leaf takes its own forward arrow, so the group reads
-`Condition.affected_body_site ——▶ BodySite` with the entity shared on the
-right. Siggie chose this over putting the arrow before the label.
+Fixed as `PivotShape.rightAlignLabel`: the label moves to the last track with
+ONE arrow on its own row, before the name, pointing at it:
+
+```
+                         ——▶ BodySite
+  Condition.affected_body_site
+  ImagingFile.anatomical_site
+```
+
+⚠️ First cut of this put the arrow on every LEAF instead, which repeated one
+fact N times — Siggie: *"i meant for the ----> to go on the target line"*. The
+sketch had said so; I read it as per-row.
 
 ⚠️ `headerColumn` needs a branch for it — a right-aligned shape authors its
 captions leaf-field-first (`[SRC_ATTR, ENTITY]`), the reverse of every other.
 
 Both tests covering this encoded the bug (one asserted a backward leaf IS
 mirrored; one asserted `owns: owned` has no arrow at all). Replaced.
+
+### The spec's tree order now carries its own arrows
+
+Siggie's ask, once their edits settled: put the arrows into the
+`expandable tree order` block the way `header layout` had them. That collapses
+the twelve header blocks into one caption table, as they predicted — the tree
+lines now say the whole shape and `headers` in `SHAPES` is a lookup.
+
+Verified `SHAPES` against the rewritten spec line by line; all twelve match.
 
 ### `belongs to / attributes` was a transcription error
 

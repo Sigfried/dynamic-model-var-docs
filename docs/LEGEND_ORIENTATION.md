@@ -79,62 +79,58 @@ Belongs to target / backward arrow / by entity (+ by attribute)
 - where only one row in expansion, goes on same line
   - comment this feature out until we get columns / headers worked out
 
-expandable tree order:
+expandable tree order, with the arrow each line carries:
 ```
-- owns (all arrows point at the target):
+- owns (own-fwd, ---->):
   - source entities:
     - src
-      - attr | tgt
-    - header layout:
-        Source entity
-          Attribute name ---> Target entity
+      - attr ----> tgt
   - attribute names:  (start collapsed)
     - attr
-      - src.attr | tgt
-    - header layout:
-        Attribute name
-          Source.attribute ---> Target entity
+      - src.attr ----> tgt
   - owned:
-    - tgt
+    - ----> tgt          (label right-aligned; the arrow points AT it)
       - src.attr
-    - header layout:
-        Target entity <----
-          Source.attribute
   - attributes: (start expanded)
     - attr
       - src.attr ----> tgt
-    - header layout:
-        Attribute name
-          Source.attribute ---> Target entity
-- belongs to (all arrows point back from source):
+- belongs to (own-bkwd, ----<):
   - owner/target entities:
-    - tgt
+    - tgt ----<
       - attr
         - src.attr
-    - header layout:
-        Target entity ----<
-          Attribute name
-            Source.attribute
   - attribute names:
     - attr
-      - tgt
+      - tgt ----<
         - src.attr
-    - header layout:
-        Attribute name
-          Target entity ----<
-            Source.attribute 
   - owned:
     - src
-      - attr | tgt
-    - header layout:
-        Source entity
-          Attribute name ----< Target entity
+      - attr ----< tgt
   - attributes:
     - attr
-      - src.attr | tgt
-    - header layout:
-        Attribute name
-          Source.attribute ----< Target entity
+      - tgt ----<
+        - src.attr
+```
+
+The header captions are the same field names in the same order, so they are a
+lookup rather than a second spec — `headers` in `SHAPES`:
+
+| pivot | owns | belongs to |
+|---|---|---|
+| source/owner entities | Source entity · Attribute name · Target entity | Target entity · Attribute name · Source.attribute |
+| attribute names | Attribute name · Source.attribute · Target entity | Attribute name · Target entity · Source.attribute |
+| owned | Source.attribute · Target entity | Source entity · Attribute name · Target entity |
+| attributes (total) | Attribute name · Source.attribute · Target entity | Attribute name · Target entity · Source.attribute |
+
+⚠️ `owns: owned` is the one layout that does not read owner-first down the
+page: it groups by the OWNED end. Its label is right-aligned into the last
+column with the arrow on that row, so the group still reads owner → owned
+across the line:
+
+```
+                         ----> BodySite
+  Condition.affected_body_site
+  ImagingFile.anatomical_site
 ```
 
 ### end of [sg] section

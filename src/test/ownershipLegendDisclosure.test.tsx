@@ -223,7 +223,7 @@ describe('ownership legend pivots', () => {
       });
     });
 
-    test('`owns: owned` right-aligns its label so the row reads owner-last', async () => {
+    test('`owns: owned` right-aligns its label, with one arrow on that row', async () => {
       /*
        * That pivot groups by the OWNED end, so the entity every arrow points at
        * would otherwise sit above the attributes pointing at it — the one place
@@ -231,17 +231,30 @@ describe('ownership legend pivots', () => {
        *
        * The fix is the LAYOUT, not the arrow (Siggie, 2026-09-15: "it breaks
        * the owner → attr → owned pattern; can we figure out a way to fix
-       * that?"). The label is right-aligned into the last track and every leaf
-       * carries its own forward arrow, so the group reads
-       * `Condition.affected_body_site ——▶ BodySite`.
+       * that?"). The label is right-aligned into the last track and the arrow
+       * goes on its row pointing at it:
+       *
+       *                            ——▶ BodySite
+       *     Condition.affected_body_site
+       *     ImagingFile.anatomical_site
        */
       const { find } = await setup();
       fireEvent.click(find(/30\s*owned/));
       const node = document.querySelector('.lt > .lt-node')!;
-      expect(node.querySelector('.lt-label')!.className).toContain('lt-label-right');
-      // The arrow moved to the leaves; the label carries none of its own.
-      expect(node.querySelector('.lt-label .lt-arrow')).toBeNull();
-      expect(node.querySelector('.lt-leaf .lt-arrow svg')).not.toBeNull();
+      const label = node.querySelector('.lt-label')!;
+      expect(label.className).toContain('lt-label-right');
+
+      /*
+       * ONE arrow, on the label's own row and BEFORE the name, so the row reads
+       * `——▶ BodySite` and the entity still ends the line. Not repeated per
+       * leaf — that said the same thing N times.
+       */
+      expect(label.querySelectorAll('.lt-arrow svg').length).toBe(1);
+      expect(node.querySelector('.lt-leaf .lt-arrow')).toBeNull();
+      // Arrow first, name second.
+      const kids = Array.from(label.children).map(c => c.className);
+      expect(kids.indexOf('lt-arrow')).toBeLessThan(
+        kids.findIndex(c => c.includes('cursor-pointer')));
     });
 
     test('a pivot whose label already names the target omits the target cell', async () => {

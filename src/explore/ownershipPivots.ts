@@ -120,21 +120,21 @@ export interface PivotShape {
    */
   arrow: 'leaf' | `label:${number}`;
   /**
-   * Push the node label to the RIGHT edge, and give every leaf its own arrow.
+   * Push the node label to the RIGHT edge, with ONE arrow on its own row.
    *
    * For `owns: owned` only, and it is a LAYOUT fix, not an arrow fix. That
    * pivot groups by the owned end, so the entity that every arrow points AT
    * sits above the attributes pointing at it — the one place the panel's
    * `owner → attribute → owned` reading runs backwards.
    *
-   * Right-aligning the label puts the owned entity last on the line again, so
-   * each row reads `Condition.affected_body_site ——▶ BodySite` across the
-   * group, with the label as a shared right-hand column:
+   * Right-aligning the label puts the owned entity back at the end of the
+   * line, and the arrow goes on the LABEL's row pointing at it — not on every
+   * leaf, which repeated one fact N times:
    *
    * ```
-   *                                BodySite
-   *   Condition.affected_body_site ——▶
-   *   ImagingFile.anatomical_site  ——▶
+   *                          ——▶ BodySite
+   *   Condition.affected_body_site
+   *   ImagingFile.anatomical_site
    * ```
    *
    * ⚠️ **This replaced mirroring the arrow**, which was wrong twice over: it
@@ -183,9 +183,9 @@ const SHAPES: Record<Pivot, { fwd: PivotShape; bkwd: PivotShape }> = {
    * the declaring class, so the leaf regains attr + target.
    */
   owned: {
-    /* The label is the OWNED entity, so it is right-aligned and every leaf
-       carries its own arrow pointing at it — see `rightAlignLabel`. */
-    fwd: { levels: ['entity'], leaf: ['srcAttr'], arrow: 'leaf',
+    /* The label is the OWNED entity: right-aligned, with ONE arrow on its own
+       row pointing at it — see `rightAlignLabel`. */
+    fwd: { levels: ['entity'], leaf: ['srcAttr'], arrow: 'label:0',
            rightAlignLabel: true, headers: [SRC_ATTR, ENTITY] },
     bkwd: { levels: ['entity'], leaf: ['attr', 'target'], arrow: 'leaf',
             headers: [SOURCE, ATTR, ENTITY] },

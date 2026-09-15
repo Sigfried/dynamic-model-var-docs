@@ -320,10 +320,17 @@ function PivotTable({ nodes, shape, forward, isOpen: nodeOpen, onToggle, path = 
                 aria-expanded={isOpen}
                 aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${n.key}`}
               >{isOpen ? '▾' : '▸'}</button>
+              {/* On a right-aligned label the arrow comes BEFORE the name, so
+                  the row reads `——▶ BodySite` and the entity still ends the
+                  line. Everywhere else it follows the name (`Organization ——◀`),
+                  where it means "arrows arrive here". */}
+              {labelArrow && shape.rightAlignLabel && (
+                <span className="lt-arrow"><TableArrow kind={kind} />&nbsp;</span>
+              )}
               {/* Only an ENTITY label is a class you can select; an attribute
                   name is not a thing the canvas can draw. */}
               {shape.levels[depth] === 'entity' ? classLink(n.key) : n.key}
-              {labelArrow && (
+              {labelArrow && !shape.rightAlignLabel && (
                 <span className="lt-arrow">&nbsp;<TableArrow kind={kind} /></span>
               )}
               {n.pairs.length > 1 && <span className="lt-count">{n.pairs.length}</span>}
@@ -347,11 +354,11 @@ function PivotTable({ nodes, shape, forward, isOpen: nodeOpen, onToggle, path = 
                           </span>
                         )}
                       </span>
-                      {/* The arrow, in its own track. A two-field leaf puts the
-                          target after it; a right-aligned-label shape leaves
-                          that track to the group's shared label above. Either
-                          way the row reads `field ——▶ entity` left to right. */}
-                      {(shape.leaf.length > 1 || shape.rightAlignLabel) && (
+                      {/* Only a two-field leaf draws an arrow of its own. A
+                          right-aligned-label shape puts its single arrow on the
+                          LABEL row instead — repeating it per leaf said the
+                          same thing N times (Siggie, 2026-09-15). */}
+                      {shape.leaf.length > 1 && (
                         <span className="lt-arrow"><TableArrow kind={kind} /></span>
                       )}
                       {shape.leaf.length > 1 && (
