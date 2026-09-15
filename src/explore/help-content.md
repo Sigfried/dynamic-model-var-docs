@@ -53,330 +53,6 @@ introduced and then use one word.
 
 <div style="margin-left: 40px">
 <details open>
-<summary><b>Ownership</b></summary>
-
-## Ownership
-- **TourMetadata:**
-- **Description:** Why boxes land where they do, and what the two kinds of line mean
-
-<!--
-I've moved this section to the top just while i'm working actively on it.
-
-The structure, which the steps below now follow:
-- explain ownership, why it's needed, the two edge types
-  - (association edges can be explained in a commented-out appendix, or not)
-- explain the rule and its exceptions, in this order:
-  - the default: an attribute owns what it points at -- owns-target-forward-by-default
-    - Exception, by entity: referred-to entities -- belongs-to-target-backward-by-entity
-    - Exception, by attribute: named back-pointers -- belongs-to-target-backward-by-attribute
-
-The induced pass (`child-following-parent`) is deliberately NOT a step here,
-and is not in the legend either: induced edges serve LAYOUT only, so there is
-nothing for a reader to do with them. Documented for maintainers in
-OWNERSHIP_CLASSIFICATION.md.
-
-The rule steps below are drafted against the LIVE classifier (re-probed
-2026-09-13): 89 forward, 55 by-entity exception, 5 by-attribute exception.
-They use the legend's own `label` strings from `OWNERSHIP_RULES`, so tour,
-legend and classifier say one thing; if a label changes there, change it
-here. ⚠️ The counts are hand-copied and a schema sync falsifies them silently —
-TASKS `markdown-everywhere` (c) is the fix.
--->
-
-### why-ownership
-
-- **Title:** Relationships between entities
-- **Tour:** Ownership
-- Only: sel=Participant~Condition~BodySite
-- **Anchor:** node-box:Condition
-- Position: bottom
-- Highlight: none
-- **Width:** 560
-- **Description:**
-  The canvas is laid out by **ownership** (aka, containment or has-a
-  relationships): an entity is drawn to the right of whatever owns it. That one
-  idea is what the whole diagram is about, but the schema doesn't specify
-  these relationships — so the Explorer works them out, and this tour is about
-  how.
-- Beats:
-  1. own-fwd
-     - ~~Title: none~~
-     - Keep: true
-     - Highlight: dim
-     - Spotlight: slot-row:Condition.affected_body_site
-     - Description:
-       **Condition** has two attributes pointing at other entities.
-
-       `affected_body_site` → **BodySite**, optional (`0..1`). Some conditions
-       occur at a specific body site.
-  2. own-bkwd
-     - ~~Title: none~~
-     - Keep: true
-     - Highlight: dim
-     - Spotlight: slot-row:Condition.associated_participant
-     - Description:
-       `associated_participant` → **Participant**, required (`1..1`). A
-       condition record must belong to someone in a study.
-  3. two-edge-types
-     - ~~Title: none~~
-     - Description:
-       Both attributes point from Condition at something else, but they don't
-       mean the same thing. A condition *belongs to* its participant: the
-       record makes no sense without one, which is why the schema marks
-       `associated_participant` required. A body site is just part of how the
-       condition is described.
-
-       Ownership is about which record depends on which — not about which end
-       the schema happened to put the pointer on.
-  4. optional-owners
-     - ~~Title: none~~
-     - Change: sel=Visit
-     - Anchor: node-box:Visit
-     - Description:
-       **Visit** shows that required-ness isn't the test. `associated_visit`
-       is optional (though the source data may require it), and the Explorer
-       still draws Visit as owning Condition: when a visit is present, the
-       condition was observed or recorded during it.
-
-### edge-types
-
-- **Title:** Edge types
-- **Tour:** Ownership
-- Only: sel=Participant~Condition~BodySite
-- **Anchor:** node-box:BodySite
-- Position: bottom
-- Spotlight: slot-row:Condition.affected_body_site
-- **Description:**
-  When the Explorer reads an attribute as :s[owning]{color=own-fwd} what it
-  points at, it draws the target to the **right** and gives the line a
-  forward-pointing arrow {{edge:own-fwd}}.
-  :::s{center color=entity}
-    {{relation:own-fwd:Condition.affected_body_site:BodySite}}
-  :::
-- Beats:
-  1. backwards
-     - Keep: true
-     - **Anchor:** node-box:Participant
-     - Spotlight: slot-row:Condition.associated_participant
-     - Description:
-       When it reads the attribute the other way — the entity declaring it
-       :s[belongs to]{color=own-bkwd} the target — it draws the target to the
-       **left** and points the arrow back at it {{edge:own-bkwd}}.
-       :::s{center color=entity}
-         {{relation:own-bkwd:Condition.associated_participant:Participant}}
-       :::
-
-       Those two are the only kinds of line on the canvas. Everything that
-       follows is about which one an attribute gets.
-
-### the-legend
-
-- **Title:** One rule, and where to check it
-- **Tour:** Ownership
-- Only: sel=Participant~Condition~BodySite&legend=1
-- **Action:** Opened the Legend panel — it is always in the Help menu.
-- **Anchor:** none
-- Highlight: none
-- **Width:** 560
-- **Description:**
-  The schema doesn't say which end owns which, so the Explorer decides. It
-  decides by **one rule with two exceptions**, listed in the **Legend**, which
-  is open now and always available from the Help menu.
-
-  Each entry shows how many attributes it decided, and opening one lists them
-  — so when a line looks wrong, the Legend is where to go and find out why it
-  was drawn that way.
-
-### owns-target-forward-by-default
-
-- **Title:** The rule: an attribute owns what it points at
-- **Tour:** Ownership
-- **Only:** sel=Questionnaire~QuestionnaireItem&legend=0
-- **Action:** Drew Questionnaire and the items it holds.
-- **Anchor:** node-box:Questionnaire
-- **Spotlight:** slot-row:Questionnaire.items
-- Highlight: ring
-- **Width:** 560
-- **Description:**
-  **:s[Owns target / forward arrow / by default]{color=own-fwd}** — 89
-  attributes, and the default for every one of them.
-
-  If an entity declares an attribute pointing at another entity, the thing it
-  points at is taken to be **part of it**. `items` holds QuestionnaireItems, so
-  the Questionnaire owns them: target on the right, arrow forward.
-  :::s{center color=entity}
-    {{relation:own-fwd:Questionnaire.items:QuestionnaireItem}}
-  :::
-- Beats:
-  1. not about cardinality
-     - Only: sel=Observation~Quantity&legend=0
-     - Action: Drew an Observation and a Quantity.
-     - Anchor: node-box:Quantity
-     - Spotlight: slot-row:Observation.value_quantity
-     - Description:
-       It has nothing to do with how many. `value_quantity` holds exactly one
-       Quantity (`0..1`) and is owned just the same — a Quantity is a fact
-       *about* the observation holding it, with no life of its own.
-
-       This rule is **total**: on its own it would decide every attribute in
-       the model. The next two steps are the only places it doesn't hold.
-
-### belongs-to-target-backward-by-entity
-
-- **Title:** Exception: entities that are referred to
-- **Tour:** Ownership
-- **Only:** sel=Participant~Specimen&legend=0
-- **Action:** Drew Specimen and the Participant it came from.
-- **Anchor:** node-box:Participant
-- **Spotlight:** slot-row:Specimen.source_participant
-- Highlight: ring
-- Position: bottom
-- **Width:** 580
-- **Description:**
-  **:s[Belongs to target / backward arrow / by entity]{color=own-bkwd}** — 55
-  attributes.
-
-  Five entities in this model are **referred to** rather than contained:
-  **Participant**, **Visit**, **Organization**, **ImagingStudy** and
-  **Person**. Each exists in its own right and is looked up, not held, so
-  pointing at one means belonging to it.
-  :::s{center color=entity}
-    {{relation:own-bkwd:Specimen.source_participant:Participant}}
-  :::
-- Beats:
-  1. so it flips
-     - Description:
-       That is why this one flips. The attribute is declared on **Specimen**,
-       but the ownership runs the other way, so Participant is drawn on the
-       **left** and the arrow points back at it {{edge:own-bkwd}}.
-
-       Every `associated_participant`, `associated_visit` and `performed_by`
-       in the model works this way — which is why participants and visits end
-       up on the left edge of most pictures.
-  2. said about the entity
-     - Description:
-       This exception is stated about the **entity**, not the attribute: name
-       Participant once and every one of the 21 attributes pointing at it
-       flips, including ones nobody has written yet.
-
-       The schema can't tell us which five — nothing in it distinguishes them
-       — so the list is recorded in the Explorer by hand, and it is a
-       judgement that can be argued with.
-
-### belongs-to-target-backward-by-attribute
-
-- **Title:** Exception: attributes that point back
-- **Tour:** Ownership
-- **Only:** sel=Questionnaire~QuestionnaireItem~QuestionnaireResponseItem&legend=0
-- **Action:** Drew a Questionnaire, its items, and a response item.
-- **Anchor:** node-box:QuestionnaireItem
-- **Spotlight:** slot-row:QuestionnaireResponseItem.has_questionnaire_item
-- Highlight: ring
-- **Width:** 580
-- **Description:**
-  **:s[Belongs to target / backward arrow / by attribute]{color=own-bkwd}** —
-  5 attributes, named one at a time.
-
-  `has_questionnaire_item` points at a **QuestionnaireItem** to say which
-  question was answered. It isn't holding that item: the item belongs to the
-  **Questionnaire**, which is still drawn owning it from the left.
-  :::s{center color=entity}
-    {{relation:own-bkwd:QuestionnaireResponseItem.has_questionnaire_item:QuestionnaireItem}}
-  :::
-- Beats:
-  1. why not by entity
-     - Description:
-       So this exception can't be said about the entity the way the last one
-       was. QuestionnaireItem **is** owned — by `Questionnaire.items` — and
-       calling it referred-to would strip it of that. The same holds for
-       **ResearchStudy**, owned by `ResearchStudyCollection.entries`.
-
-       These five are named as `Entity.attribute` pairs for the same reason:
-       two of them are called `part_of`, declared on different entities, and a
-       bare attribute name would flip any future third one silently.
-
-### bar-sides
-
-- **Title:** One side, two reasons
-- **Tour:** Ownership
-- **Only:** sel=Observation~ObservationSet~Participant~Visit~Organization&legend=0
-- **Action:** Drew Observation with the four entities that own it.
-- **Anchor:** node-box:Observation
-- **Highlight:** ring
-- **Width:** 560
-- **Description:**
-  Four entities own Observation, so all four are drawn to its **left** — that
-  is what the relation bar's **←** count means. But they are not all there for
-  the same reason.
-- Beats:
-  1. two rules, one side
-     - Description:
-       Participant, Visit and Organization are on the left because they are
-       **referred-to entities**: Observation points at each of them, so each
-       one flipped. ObservationSet is on the left because of the **default
-       rule** running normally — its `observations` list collects Observations,
-       so it owns them.
-
-       Position alone doesn't tell you which — that is what the Legend is for.
-  2. hover the count
-     - Description:
-       Hover the **←** count to see them listed, each with the attribute that
-       declares it.
-
-### rules-recap
-
-- **Title:** That's the whole of it
-- **Tour:** Ownership
-- Change: legend=1
-- **Anchor:** none
-- **Width:** 520
-- **Description:**
-  One rule and two exceptions decide every line on the canvas:
-
-  - An attribute :s[owns]{color=own-fwd} the entity it points at.
-  - Except when that entity is one of the five that are only ever
-    **referred to**, and then the attribute's own entity
-    :s[belongs to]{color=own-bkwd} it instead.
-  - Except when the attribute is one of the five named **back-pointers**,
-    which point at an owner rather than down at something owned.
-
-  And separately, an edge into an entity with subclasses is repeated into each
-  of them.
-
-  The Legend counts all four against the live schema every time it opens, so
-  when a line looks wrong, that is where to have the argument.
-
-<!--
-APPENDIX, parked: association edges.
-
-No slot classifies as `association` any more (ASSOCIATION_SLOTS is empty since
-2026-09-11), so there is nothing on the canvas to point at and the step below
-would be describing a line a reader can never see. Kept as a comment because
-the KIND still exists and the schema could need it again; see
-OWNERSHIP_CLASSIFICATION.md §When a schema needs it.
-
-### association-appendix
-
-- **Title:** When neither one owns the other
-- **Tour:** Ownership
-- **Anchor:** none
-- **Width:** 520
-- **Description:**
-  A third kind of line exists, though this model currently has none: an
-  **association**, drawn dashed and arrowed at both ends. It says two entities
-  are related and makes **no ownership claim in either direction**.
-
-  It is what a schema needs when the default rule would overclaim — when one
-  entity points at another (so it would be read as owning it) but the target
-  plainly outlives it and is reachable on its own, and no exception fits
-  because the claim is about this one pairing rather than about either end.
--->
-
-</details><!-- end of Ownership tour -->
-</div>
-
-<div style="margin-left: 40px">
-<details open>
 <summary><b>The BioData Catalyst Harmonized Model</b></summary>
 
 ## The BioData Catalyst Harmonized Model
@@ -1402,6 +1078,330 @@ OWNERSHIP_CLASSIFICATION.md §When a schema needs it.
   and time points all nest this way.
 
 </details><!-- end of Reading the diagram tour -->
+</div>
+
+<div style="margin-left: 40px">
+<details open>
+<summary><b>Ownership</b></summary>
+
+## Ownership
+- **TourMetadata:**
+- **Description:** Why boxes land where they do, and what the two kinds of line mean
+
+<!--
+I've moved this section to the top just while i'm working actively on it.
+
+The structure, which the steps below now follow:
+- explain ownership, why it's needed, the two edge types
+  - (association edges can be explained in a commented-out appendix, or not)
+- explain the rule and its exceptions, in this order:
+  - the default: an attribute owns what it points at -- owns-target-forward-by-default
+    - Exception, by entity: referred-to entities -- belongs-to-target-backward-by-entity
+    - Exception, by attribute: named back-pointers -- belongs-to-target-backward-by-attribute
+
+The induced pass (`child-following-parent`) is deliberately NOT a step here,
+and is not in the legend either: induced edges serve LAYOUT only, so there is
+nothing for a reader to do with them. Documented for maintainers in
+OWNERSHIP_CLASSIFICATION.md.
+
+The rule steps below are drafted against the LIVE classifier (re-probed
+2026-09-13): 89 forward, 55 by-entity exception, 5 by-attribute exception.
+They use the legend's own `label` strings from `OWNERSHIP_RULES`, so tour,
+legend and classifier say one thing; if a label changes there, change it
+here. ⚠️ The counts are hand-copied and a schema sync falsifies them silently —
+TASKS `markdown-everywhere` (c) is the fix.
+-->
+
+### why-ownership
+
+- **Title:** Relationships between entities
+- **Tour:** Ownership
+- Only: sel=Participant~Condition~BodySite
+- **Anchor:** node-box:Condition
+- Position: bottom
+- Highlight: none
+- **Width:** 560
+- **Description:**
+  The canvas is laid out by **ownership** (aka, containment or has-a
+  relationships): an entity is drawn to the right of whatever owns it. That one
+  idea is what the whole diagram is about, but the schema doesn't specify
+  these relationships — so the Explorer works them out, and this tour is about
+  how.
+- Beats:
+  1. own-fwd
+     - ~~Title: none~~
+     - Keep: true
+     - Highlight: dim
+     - Spotlight: slot-row:Condition.affected_body_site
+     - Description:
+       **Condition** has two attributes pointing at other entities.
+
+       `affected_body_site` → **BodySite**, optional (`0..1`). Some conditions
+       occur at a specific body site.
+  2. own-bkwd
+     - ~~Title: none~~
+     - Keep: true
+     - Highlight: dim
+     - Spotlight: slot-row:Condition.associated_participant
+     - Description:
+       `associated_participant` → **Participant**, required (`1..1`). A
+       condition record must belong to someone in a study.
+  3. two-edge-types
+     - ~~Title: none~~
+     - Description:
+       Both attributes point from Condition at something else, but they don't
+       mean the same thing. A condition *belongs to* its participant: the
+       record makes no sense without one, which is why the schema marks
+       `associated_participant` required. A body site is just part of how the
+       condition is described.
+
+       Ownership is about which record depends on which — not about which end
+       the schema happened to put the pointer on.
+  4. optional-owners
+     - ~~Title: none~~
+     - Change: sel=Visit
+     - Anchor: node-box:Visit
+     - Description:
+       **Visit** shows that required-ness isn't the test. `associated_visit`
+       is optional (though the source data may require it), and the Explorer
+       still draws Visit as owning Condition: when a visit is present, the
+       condition was observed or recorded during it.
+
+### edge-types
+
+- **Title:** Edge types
+- **Tour:** Ownership
+- Only: sel=Participant~Condition~BodySite
+- **Anchor:** node-box:BodySite
+- Position: bottom
+- Spotlight: slot-row:Condition.affected_body_site
+- **Description:**
+  When the Explorer reads an attribute as :s[owning]{color=own-fwd} what it
+  points at, it draws the target to the **right** and gives the line a
+  forward-pointing arrow {{edge:own-fwd}}.
+  :::s{center color=entity}
+    {{relation:own-fwd:Condition.affected_body_site:BodySite}}
+  :::
+- Beats:
+  1. backwards
+     - Keep: true
+     - **Anchor:** node-box:Participant
+     - Spotlight: slot-row:Condition.associated_participant
+     - Description:
+       When it reads the attribute the other way — the entity declaring it
+       :s[belongs to]{color=own-bkwd} the target — it draws the target to the
+       **left** and points the arrow back at it {{edge:own-bkwd}}.
+       :::s{center color=entity}
+         {{relation:own-bkwd:Condition.associated_participant:Participant}}
+       :::
+
+       Those two are the only kinds of line on the canvas. Everything that
+       follows is about which one an attribute gets.
+
+### the-legend
+
+- **Title:** One rule, and where to check it
+- **Tour:** Ownership
+- Only: sel=Participant~Condition~BodySite&legend=1
+- **Action:** Opened the Legend panel — it is always in the Help menu.
+- **Anchor:** none
+- Highlight: none
+- **Width:** 560
+- **Description:**
+  The schema doesn't say which end owns which, so the Explorer decides. It
+  decides by **one rule with two exceptions**, listed in the **Legend**, which
+  is open now and always available from the Help menu.
+
+  Each entry shows how many attributes it decided, and opening one lists them
+  — so when a line looks wrong, the Legend is where to go and find out why it
+  was drawn that way.
+
+### owns-target-forward-by-default
+
+- **Title:** The rule: an attribute owns what it points at
+- **Tour:** Ownership
+- **Only:** sel=Questionnaire~QuestionnaireItem&legend=0
+- **Action:** Drew Questionnaire and the items it holds.
+- **Anchor:** node-box:Questionnaire
+- **Spotlight:** slot-row:Questionnaire.items
+- Highlight: ring
+- **Width:** 560
+- **Description:**
+  **:s[Owns target / forward arrow / by default]{color=own-fwd}** — 89
+  attributes, and the default for every one of them.
+
+  If an entity declares an attribute pointing at another entity, the thing it
+  points at is taken to be **part of it**. `items` holds QuestionnaireItems, so
+  the Questionnaire owns them: target on the right, arrow forward.
+  :::s{center color=entity}
+    {{relation:own-fwd:Questionnaire.items:QuestionnaireItem}}
+  :::
+- Beats:
+  1. not about cardinality
+     - Only: sel=Observation~Quantity&legend=0
+     - Action: Drew an Observation and a Quantity.
+     - Anchor: node-box:Quantity
+     - Spotlight: slot-row:Observation.value_quantity
+     - Description:
+       It has nothing to do with how many. `value_quantity` holds exactly one
+       Quantity (`0..1`) and is owned just the same — a Quantity is a fact
+       *about* the observation holding it, with no life of its own.
+
+       This rule is **total**: on its own it would decide every attribute in
+       the model. The next two steps are the only places it doesn't hold.
+
+### belongs-to-target-backward-by-entity
+
+- **Title:** Exception: entities that are referred to
+- **Tour:** Ownership
+- **Only:** sel=Participant~Specimen&legend=0
+- **Action:** Drew Specimen and the Participant it came from.
+- **Anchor:** node-box:Participant
+- **Spotlight:** slot-row:Specimen.source_participant
+- Highlight: ring
+- Position: bottom
+- **Width:** 580
+- **Description:**
+  **:s[Belongs to target / backward arrow / by entity]{color=own-bkwd}** — 55
+  attributes.
+
+  Five entities in this model are **referred to** rather than contained:
+  **Participant**, **Visit**, **Organization**, **ImagingStudy** and
+  **Person**. Each exists in its own right and is looked up, not held, so
+  pointing at one means belonging to it.
+  :::s{center color=entity}
+    {{relation:own-bkwd:Specimen.source_participant:Participant}}
+  :::
+- Beats:
+  1. so it flips
+     - Description:
+       That is why this one flips. The attribute is declared on **Specimen**,
+       but the ownership runs the other way, so Participant is drawn on the
+       **left** and the arrow points back at it {{edge:own-bkwd}}.
+
+       Every `associated_participant`, `associated_visit` and `performed_by`
+       in the model works this way — which is why participants and visits end
+       up on the left edge of most pictures.
+  2. said about the entity
+     - Description:
+       This exception is stated about the **entity**, not the attribute: name
+       Participant once and every one of the 21 attributes pointing at it
+       flips, including ones nobody has written yet.
+
+       The schema can't tell us which five — nothing in it distinguishes them
+       — so the list is recorded in the Explorer by hand, and it is a
+       judgement that can be argued with.
+
+### belongs-to-target-backward-by-attribute
+
+- **Title:** Exception: attributes that point back
+- **Tour:** Ownership
+- **Only:** sel=Questionnaire~QuestionnaireItem~QuestionnaireResponseItem&legend=0
+- **Action:** Drew a Questionnaire, its items, and a response item.
+- **Anchor:** node-box:QuestionnaireItem
+- **Spotlight:** slot-row:QuestionnaireResponseItem.has_questionnaire_item
+- Highlight: ring
+- **Width:** 580
+- **Description:**
+  **:s[Belongs to target / backward arrow / by attribute]{color=own-bkwd}** —
+  5 attributes, named one at a time.
+
+  `has_questionnaire_item` points at a **QuestionnaireItem** to say which
+  question was answered. It isn't holding that item: the item belongs to the
+  **Questionnaire**, which is still drawn owning it from the left.
+  :::s{center color=entity}
+    {{relation:own-bkwd:QuestionnaireResponseItem.has_questionnaire_item:QuestionnaireItem}}
+  :::
+- Beats:
+  1. why not by entity
+     - Description:
+       So this exception can't be said about the entity the way the last one
+       was. QuestionnaireItem **is** owned — by `Questionnaire.items` — and
+       calling it referred-to would strip it of that. The same holds for
+       **ResearchStudy**, owned by `ResearchStudyCollection.entries`.
+
+       These five are named as `Entity.attribute` pairs for the same reason:
+       two of them are called `part_of`, declared on different entities, and a
+       bare attribute name would flip any future third one silently.
+
+### bar-sides
+
+- **Title:** One side, two reasons
+- **Tour:** Ownership
+- **Only:** sel=Observation~ObservationSet~Participant~Visit~Organization&legend=0
+- **Action:** Drew Observation with the four entities that own it.
+- **Anchor:** node-box:Observation
+- **Highlight:** ring
+- **Width:** 560
+- **Description:**
+  Four entities own Observation, so all four are drawn to its **left** — that
+  is what the relation bar's **←** count means. But they are not all there for
+  the same reason.
+- Beats:
+  1. two rules, one side
+     - Description:
+       Participant, Visit and Organization are on the left because they are
+       **referred-to entities**: Observation points at each of them, so each
+       one flipped. ObservationSet is on the left because of the **default
+       rule** running normally — its `observations` list collects Observations,
+       so it owns them.
+
+       Position alone doesn't tell you which — that is what the Legend is for.
+  2. hover the count
+     - Description:
+       Hover the **←** count to see them listed, each with the attribute that
+       declares it.
+
+### rules-recap
+
+- **Title:** That's the whole of it
+- **Tour:** Ownership
+- Change: legend=1
+- **Anchor:** none
+- **Width:** 520
+- **Description:**
+  One rule and two exceptions decide every line on the canvas:
+
+  - An attribute :s[owns]{color=own-fwd} the entity it points at.
+  - Except when that entity is one of the five that are only ever
+    **referred to**, and then the attribute's own entity
+    :s[belongs to]{color=own-bkwd} it instead.
+  - Except when the attribute is one of the five named **back-pointers**,
+    which point at an owner rather than down at something owned.
+
+  And separately, an edge into an entity with subclasses is repeated into each
+  of them.
+
+  The Legend counts all four against the live schema every time it opens, so
+  when a line looks wrong, that is where to have the argument.
+
+<!--
+APPENDIX, parked: association edges.
+
+No slot classifies as `association` any more (ASSOCIATION_SLOTS is empty since
+2026-09-11), so there is nothing on the canvas to point at and the step below
+would be describing a line a reader can never see. Kept as a comment because
+the KIND still exists and the schema could need it again; see
+OWNERSHIP_CLASSIFICATION.md §When a schema needs it.
+
+### association-appendix
+
+- **Title:** When neither one owns the other
+- **Tour:** Ownership
+- **Anchor:** none
+- **Width:** 520
+- **Description:**
+  A third kind of line exists, though this model currently has none: an
+  **association**, drawn dashed and arrowed at both ends. It says two entities
+  are related and makes **no ownership claim in either direction**.
+
+  It is what a schema needs when the default rule would overclaim — when one
+  entity points at another (so it would be read as owning it) but the target
+  plainly outlives it and is reachable on its own, and no exception fits
+  because the claim is about this one pairing rather than about either end.
+-->
+
+</details><!-- end of Ownership tour -->
 </div>
 
 <div style="margin-left: 40px">
