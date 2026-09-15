@@ -22,6 +22,7 @@
  * | `{{model-description:<Class>}}` | that class's `description` from the schema |
  * | `{{enum-description:<Enum>}}` | that enumeration's `description` |
  * | `{{category-label:<id>}}` | a category's display label (`admin` → "Admin / Study") |
+ * | `{{ownership-count:<key>}}` | a live count: `declared`/`forward`/`backward`, or `<rule-id>.<owners\|attrs\|owned\|total>` |
  *
  * **Returning undefined leaves the placeholder standing**, visibly, in the
  * popover. That is the designed behaviour for a name the schema no longer has
@@ -33,6 +34,7 @@
  */
 
 import type { DataService } from '../services/DataService';
+import type { OwnershipRule } from '../models/ownershipRules';
 import { ENTITY_CATEGORIES } from '../config/entityCategories';
 import { RANGE_COLORS, SIBLING_COLORS } from '../config/appConfig';
 import EdgeSample from './EdgeSample';
@@ -78,6 +80,36 @@ export function helpTextResolvers(dataService: DataService) {
       kind in EDGE_STYLE.kinds
         ? `![${EDGE_STYLE.kinds[kind as DrawnKind].label}](widget:edge:${kind})`
         : undefined,
+
+    /*
+     * `{{ownership-count:<key>}}` — a LIVE count, so prose can quote a number
+     * without transcribing it.
+     *
+     * The staleness this exists to end is not hypothetical: the tour said "38
+     * of the attributes in this model" as a hand-copied number that a rule
+     * change had already falsified (the forward count is 89), and the round of
+     * doc work ABOUT stale counts turned up three more. Any number a schema
+     * sync can move should be computed at render.
+     *
+     * Keys are either a schema-wide total — `declared`, `forward`, `backward`
+     * — or `<rule-id>.<owners|attrs|owned|total>`. An unknown key returns
+     * undefined and so leaves the placeholder visible, which is the point: a
+     * rule id that a classification change retires names itself on screen and
+     * fails the content test, rather than quietly rendering nothing.
+     */
+    'ownership-count': (key: string) => {
+      const counts = dataService.getOwnershipCounts();
+      const dot = key.lastIndexOf('.');
+      if (dot === -1) {
+        const total = counts[key as 'declared' | 'forward' | 'backward'];
+        return typeof total === 'number' ? String(total) : undefined;
+      }
+      const rule = counts.byRule.get(key.slice(0, dot) as OwnershipRule);
+      const field = key.slice(dot + 1);
+      return rule && field in rule
+        ? String(rule[field as keyof typeof rule])
+        : undefined;
+    },
 
     /*
      * `{{relation:own-fwd:Condition.affected_body_site:BodySite}}` — a whole

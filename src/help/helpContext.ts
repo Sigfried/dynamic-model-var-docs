@@ -64,6 +64,14 @@ export interface HelpApi {
    * file every render.
    */
   setTextResolvers: (resolvers: Record<string, TextResolver> | undefined) => void;
+  /**
+   * The resolvers now in force — whichever of the prop and the registered set
+   * won. Exposed for `<HelpMarkdown>`, which fills placeholders at RENDER
+   * because its string comes from a caller rather than from the content file
+   * (the provider fills that once, at parse time). Nothing else should read
+   * these: content reaching the popover is already filled.
+   */
+  textResolvers?: Record<string, TextResolver>;
   /** Host-provided inline widgets, by name. */
   widgets?: Record<string, WidgetRenderer>;
   /** Host-provided colour names for `:s[…]{color=…}` / `{bg=…}`. */
@@ -159,4 +167,22 @@ export function useHelp(): HelpApi {
   const ctx = useContext(HelpContext);
   if (!ctx) throw new Error('useHelp must be used inside <HelpProvider>');
   return ctx;
+}
+
+/**
+ * The help context if there is one, or undefined — for a component that can do
+ * something useful without a provider.
+ *
+ * `useHelp` throws, and rightly: a tour control outside the provider is a bug,
+ * and silently rendering nothing would hide it. But `<HelpMarkdown>` is not a
+ * tour control. It renders a string the way the popover renders prose, and
+ * every host-supplied part of that (resolvers, widgets, colours) is an
+ * ENRICHMENT — without them the markdown still renders, placeholders stay
+ * visible exactly as they do for an unresolved name, and a `widget:` image
+ * falls back to its alt text. Throwing instead would make any component that
+ * renders prose untestable without a provider, which is a real cost for no
+ * safety: the legend needs the markdown, not the tour.
+ */
+export function useHelpIfAny(): HelpApi | undefined {
+  return useContext(HelpContext) ?? undefined;
 }

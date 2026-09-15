@@ -343,6 +343,17 @@ body.help-mode {
   margin-bottom: 2px;
 }
 
+/* `.help-prose` — the same markdown block styles, for a caller OUTSIDE the
+   popover.
+
+   `<HelpMarkdown>` lets any component render a string the way a step's prose
+   renders (TASKS `markdown-everywhere`), and the legend is the first to use
+   it. Those callers need the paragraph, list and code styles below just as
+   much as the popover does, and duplicating the block into a second class is
+   how the two come to disagree. So every selector that styles markdown OUTPUT
+   names both; the ones that style the popover's own chrome (scrolling, the
+   dimmed past beat) stay on `.help-popover-body` alone, because they are about
+   the popover and not about markdown. */
 /* SUBTITLE inside a description: write `### text` in the markdown.
    *
    Every heading level collapses to one style deliberately. The popover is a
@@ -355,12 +366,8 @@ body.help-mode {
    Below the title, above `**bold**`: smaller and lighter than the title so it
    cannot be confused with it, but set apart from the body by weight and
    colour so it does not read as another bold run. */
-.help-popover-body h1,
-.help-popover-body h2,
-.help-popover-body h3,
-.help-popover-body h4,
-.help-popover-body h5,
-.help-popover-body h6 {
+.help-popover-body :is(h1, h2, h3, h4, h5, h6),
+.help-prose :is(h1, h2, h3, h4, h5, h6) {
   margin: 10px 0 4px;
   font-size: 1em;
   font-weight: 600;
@@ -368,28 +375,21 @@ body.help-mode {
   color: #334155;
 }
 /* A subtitle opening the block has no preceding text to separate from. */
-.help-popover-body > :first-child h1,
-.help-popover-body > :first-child h2,
-.help-popover-body > :first-child h3,
-.help-popover-body > :first-child h4,
-.help-popover-body > :first-child h5,
-.help-popover-body > :first-child h6,
-.help-popover-body > h1:first-child,
-.help-popover-body > h2:first-child,
-.help-popover-body > h3:first-child,
-.help-popover-body > h4:first-child,
-.help-popover-body > h5:first-child,
-.help-popover-body > h6:first-child { margin-top: 0; }
+.help-popover-body > :first-child :is(h1, h2, h3, h4, h5, h6),
+.help-popover-body > :is(h1, h2, h3, h4, h5, h6):first-child,
+.help-prose > :first-child :is(h1, h2, h3, h4, h5, h6),
+.help-prose > :is(h1, h2, h3, h4, h5, h6):first-child { margin-top: 0; }
 
 .help-popover-body p,
+.help-prose p,
 .help-popover-context p { margin: 0 0 6px; }
 
 /* Markdown BLOCK content in the body. `Description:` is read as a multi-line
    markdown block (2026-08-28), so a step's prose can carry lists and several
    paragraphs the way the draft was written -- these are the styles that block
    needs and a one-line description never did. */
-.help-popover-body ul,
-.help-popover-body ol {
+.help-popover-body :is(ul, ol),
+.help-prose :is(ul, ol) {
   margin: 0 0 6px;
   /* `list-style` is restored explicitly: the app's Tailwind preflight resets
      `ul` to `list-style: none`, so a list in a description rendered as
@@ -399,15 +399,19 @@ body.help-mode {
   list-style: disc outside;
   padding-left: 18px;
 }
-.help-popover-body ol { list-style: decimal outside; }
-.help-popover-body li {
+.help-popover-body ol,
+.help-prose ol { list-style: decimal outside; }
+.help-popover-body li,
+.help-prose li {
   margin: 2px 0;
   /* Preflight also sets `display: list-item` off in some resets; naming it
      keeps the marker whatever the host did. */
   display: list-item;
 }
-.help-popover-body > :last-child { margin-bottom: 0; }
-.help-popover-body code {
+.help-popover-body > :last-child,
+.help-prose > :last-child { margin-bottom: 0; }
+.help-popover-body code,
+.help-prose code {
   padding: 1px 4px;
   border-radius: 3px;
   background: #f1f5f9;
@@ -440,12 +444,14 @@ body.help-mode {
    underline and read as plain text -- Siggie, 2026-08-28: "links in `app-title`
    Description markdown are rendered as plain text". They open in a new tab
    because leaving the page mid-tour would throw away the tour's state. */
-.help-popover a {
+.help-popover a,
+.help-prose a {
   color: #0369a1;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
-.help-popover a:hover { color: #0284c7; }
+.help-popover a:hover,
+.help-prose a:hover { color: #0284c7; }
 
 /* The ACTION band: what the tour just DID.
 

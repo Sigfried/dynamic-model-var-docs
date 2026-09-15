@@ -194,6 +194,33 @@ export interface OwnershipPairGroup {
   pairs: OwnershipPair[];
 }
 
+/**
+ * One rule's four counts, in the order the legend's pivot line shows them:
+ * `owner → attribute → owned`, then the total. Always owner-first and
+ * owned-last, so the line itself teaches the direction (docs/LEGEND_ORIENTATION.md).
+ */
+export interface OwnershipRuleCounts {
+  /** Distinct entities that OWN, whichever end of the declaration that is. */
+  owners: number;
+  /** Distinct slot NAMES — `performed_by` counts once across its 11 sites. */
+  attrs: number;
+  /** Distinct entities that are OWNED. */
+  owned: number;
+  /** Attributes, i.e. pairs. Not distinct — this is the size of the group. */
+  total: number;
+}
+
+/** Schema-wide ownership totals, plus the per-rule counts. */
+export interface OwnershipCounts {
+  /** Class-to-class attributes the slot rules classified. Excludes induced. */
+  declared: number;
+  /** Of those, how many point from owner to owned. */
+  forward: number;
+  /** Of those, how many point from owned to owner. */
+  backward: number;
+  byRule: ReadonlyMap<OwnershipRule, OwnershipRuleCounts>;
+}
+
 /** How many ownership edges LEAVE one entity, and to whom. */
 export interface DivergenceInfo {
   entity: string;
@@ -1043,6 +1070,48 @@ export class DataService {
      */
     return [...groups.values()].sort(
       (a, b) => ruleRank(a.rule) - ruleRank(b.rule));
+  }
+
+  /**
+   * The four counts the legend shows per rule, plus the schema-wide totals
+   * that its intro prose narrates.
+   *
+   * One derivation, read by two callers: the legend's pivot lines and the
+   * `{{ownership-count:…}}` text resolver that lets authored prose quote a live
+   * number. Both existed as hand-typed numbers before — the tour's "38 of the
+   * attributes in this model" was already falsified by a rule change, and the
+   * docs ABOUT stale counts were found carrying three of them. A number that
+   * appears on screen should be computed, not transcribed.
+   *
+   * ⚠️ **`owners`, `attrs` and `owned` are DISTINCT counts, `total` is not.**
+   * A rule with 5 owners over 55 attributes is 5 entities each named many
+   * times. That contrast is the content — "52 names for 89 attributes" says
+   * the forward rule is mostly one-off naming, "9 names for 55" says the
+   * backward rule is a few repeated patterns.
+   *
+   * Induced pairs are excluded from `declared`: Rule 3 reads no attribute, so
+   * counting its edges among "the attributes in the schema" would inflate a
+   * number the schema itself can be checked against.
+   */
+  getOwnershipCounts(): OwnershipCounts {
+    const distinct = (ps: readonly OwnershipPair[], f: (p: OwnershipPair) => string) =>
+      new Set(ps.map(f)).size;
+
+    const byRule = new Map<OwnershipRule, OwnershipRuleCounts>();
+    let declared = 0, forward = 0, backward = 0;
+    for (const g of this.getOwnershipPairGroups()) {
+      byRule.set(g.rule, {
+        owners: distinct(g.pairs, p => p.owner),
+        attrs: distinct(g.pairs, p => p.slotName),
+        owned: distinct(g.pairs, p => p.owned),
+        total: g.pairs.length,
+      });
+      if (g.rule === 'child-following-parent') continue;
+      declared += g.pairs.length;
+      if (g.verdict === 'own-bkwd') backward += g.pairs.length;
+      else if (g.verdict === 'own-fwd') forward += g.pairs.length;
+    }
+    return { declared, forward, backward, byRule };
   }
 
   /**

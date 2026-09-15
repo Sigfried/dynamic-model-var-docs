@@ -79,9 +79,45 @@ interface Node {
 
 const DIRECTIVES = new Set(['textDirective', 'leafDirective', 'containerDirective']);
 
+/**
+ * A directive that is not ours, and carries no bracketed content, put back as
+ * the literal text the author wrote.
+ *
+ * `remark-directive` parses ANY `:name` as a directive, which collides with the
+ * `{{kind:arg}}` placeholder syntax: in an UNRESOLVED `{{model-description:Gone}}`
+ * the `:Gone}` is read as a directive named `Gone`, and since a nameless
+ * directive has no children it rendered as an empty span — so the placeholder
+ * reached the screen as `{{model-description}}`, stripped of the very argument
+ * that says which name went missing.
+ *
+ * That silently broke the contract `fillPlaceholders` is built on: an
+ * unresolved placeholder is left visible SO THAT schema drift names itself on
+ * screen. Naming the kind and dropping the class is the half that does not
+ * help. (Found 2026-09-15 while testing `<HelpMarkdown>`; it was never
+ * legend-specific — every tour placeholder had it.)
+ *
+ * Only the CHILDLESS case is restored. `:x[text]{a=1}` keeps the existing
+ * behaviour — the text survives, the unknown styling is dropped — because
+ * there the author's content is in the brackets and is not at risk.
+ */
+function literalize(node: Node): void {
+  const attrs = Object.entries(node.attributes ?? {})
+    .map(([k, v]) => (v === null || v === undefined || v === '' ? k : `${k}=${v}`))
+    .join(' ');
+  node.type = 'text';
+  (node as Node & { value: string }).value =
+    `:${node.name ?? ''}${attrs ? `{${attrs}}` : ''}`;
+  delete node.data;
+  delete node.children;
+}
+
 function visit(node: Node, colors: ColorMap | undefined): void {
   if (DIRECTIVES.has(node.type)) {
     const inline = node.type === 'textDirective';
+    if (node.name !== STYLE_DIRECTIVE && !node.children?.length) {
+      literalize(node);
+      return;
+    }
     const style = node.name === STYLE_DIRECTIVE ? styleOf(node.attributes, inline, colors) : '';
     node.data = {
       ...node.data,

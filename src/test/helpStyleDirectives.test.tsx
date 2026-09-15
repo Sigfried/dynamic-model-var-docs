@@ -98,4 +98,33 @@ describe('style directives in help markdown', () => {
     expect(body().querySelector('.help-styled')).toBeNull();
     expect(body().textContent).toBe('A kept and plain here.');
   });
+
+  /*
+   * `remark-directive` reads ANY `:name` as a directive, which collides with
+   * the `{{kind:arg}}` placeholder syntax. Found 2026-09-15: an UNRESOLVED
+   * `{{model-description:Gone}}` reached the screen as `{{model-description}}`,
+   * because `:Gone}` parsed as a childless directive and rendered as an empty
+   * span.
+   *
+   * That is not cosmetic. `fillPlaceholders` leaves an unresolved placeholder
+   * visible SO THAT schema drift names itself on screen; naming the kind while
+   * dropping the class is the half that does not help anyone find it.
+   */
+  test('an unresolved {{kind:arg}} placeholder keeps its ARGUMENT', () => {
+    setup('  x {{model-description:Gone}} y');
+    expect(body().textContent).toBe('x {{model-description:Gone}} y');
+  });
+
+  test('keeps a dotted argument, as a rule-count key has', () => {
+    setup('  x {{ownership-count:owns-target-forward-by-default.total}} y');
+    expect(body().textContent)
+      .toBe('x {{ownership-count:owns-target-forward-by-default.total}} y');
+  });
+
+  test('restoring a childless directive does not swallow a bracketed one', () => {
+    // `:x[text]` keeps the OLD behaviour: the author's content is in the
+    // brackets and was never at risk, so only the childless case is restored.
+    setup('  A :typo[kept]{size=.5em} here.');
+    expect(body().textContent).toBe('A kept here.');
+  });
 });

@@ -106,6 +106,64 @@ describe("dmvd's text resolvers", () => {
     expect(resolve['category-label']('admin')).toBe('Admin / Study');
     expect(resolve['category-label']('nope')).toBeUndefined();
   });
+
+  /*
+   * `ownership-count` exists so prose stops transcribing numbers a schema sync
+   * can move. These pin the GRAMMAR and the invariants, deliberately not the
+   * values — asserting `declared === 149` here would recreate exactly the
+   * hand-copied constant the resolver removes, in the file that is supposed to
+   * prove it is unnecessary. `data-integrity` is where a value is pinned.
+   */
+  describe('ownership-count', () => {
+    it('answers the schema-wide totals, which must sum', () => {
+      const n = (k: string) => Number(resolve['ownership-count'](k));
+      expect(n('forward') + n('backward')).toBe(n('declared'));
+      expect(n('declared')).toBeGreaterThan(0);
+    });
+
+    it('answers a rule count as `<rule-id>.<field>`', () => {
+      const n = (k: string) => Number(resolve['ownership-count'](k));
+      const rule = 'owns-target-forward-by-default';
+      // Distinct owners/attrs/owned can never exceed the pairs they are drawn
+      // from — the check that would catch the two being computed off different
+      // sets, which is how two counts on one line come to disagree.
+      for (const f of ['owners', 'attrs', 'owned']) {
+        expect(n(`${rule}.${f}`)).toBeGreaterThan(0);
+        expect(n(`${rule}.${f}`)).toBeLessThanOrEqual(n(`${rule}.total`));
+      }
+    });
+
+    it('sums every slot rule\'s total to the declared count', () => {
+      // The legend's three sections and the intro's 149 read the same data, so
+      // a rule added or retired cannot leave the prose narrating a stale whole.
+      const n = (k: string) => Number(resolve['ownership-count'](k));
+      const slotRules = [
+        'owns-target-forward-by-default',
+        'belongs-to-target-backward-by-entity',
+        'belongs-to-target-backward-by-attribute',
+      ];
+      expect(slotRules.reduce((s, r) => s + n(`${r}.total`), 0))
+        .toBe(n('declared'));
+    });
+
+    it('leaves an unknown key unresolved rather than answering zero', () => {
+      // A retired rule id must name itself on screen and fail the content
+      // test; `0` would render as a plausible number and hide the drift.
+      expect(resolve['ownership-count']('nope')).toBeUndefined();
+      expect(resolve['ownership-count']('nope.total')).toBeUndefined();
+      expect(resolve['ownership-count']('owns-target-forward-by-default.nope'))
+        .toBeUndefined();
+    });
+
+    it('excludes induced pairs from `declared`', () => {
+      // Rule 3 reads no attribute, so counting its edges among "the attributes
+      // in the schema" would inflate a number the schema can be checked against.
+      const n = (k: string) => Number(resolve['ownership-count'](k));
+      expect(n('child-following-parent.total')).toBeGreaterThan(0);
+      expect(n('declared')).toBeLessThan(
+        n('declared') + n('child-following-parent.total'));
+    });
+  });
 });
 
 /**

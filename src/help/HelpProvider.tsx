@@ -661,13 +661,14 @@ export function HelpProvider({
     positions, position: tourIndex === null ? undefined : positions[tourIndex],
     stepCount, tours, tourName, tourMeta: content.tourMeta,
     overviewOpen, setOverviewOpen,
+    ...(activeResolvers ? { textResolvers: activeResolvers } : {}),
     ...(widgets ? { widgets } : {}),
     ...(colors ? { colors } : {}),
     showAddresses, toggleAddresses,
     content, activeId, showEntry, dismissEntry, resolveAnchor, centerRect,
   }), [helpMode, toggleHelpMode, exitHelpMode, tourIndex, startTour, endTour,
        nextStep, prevStep, goToStep, positions, stepCount, tours, tourName,
-       overviewOpen, widgets, colors, showAddresses, toggleAddresses,
+       overviewOpen, activeResolvers, widgets, colors, showAddresses, toggleAddresses,
        content, activeId, showEntry, dismissEntry, resolveAnchor, centerRect]);
   /* `setRegistered` is a useState setter: React guarantees it stable, so it is
      deliberately absent from the dependency list above. */
