@@ -3,6 +3,18 @@
 TASKS [`legend-list-orientation`](TASKS.md). Settles which end every ownership
 rule is spoken from, and so unblocks the wording of `ownership-doc-rewrite`.
 
+**SHIPPED 2026-09-15.** Two parts of this file are still LIVE and the rest is
+the record of how they were arrived at:
+
+- **§The design's `[sg]` block** — the tree order and header captions for all
+  twelve pivots. `SHAPES` in
+  [ownershipPivots.ts](../src/explore/ownershipPivots.ts) is a transcription of
+  it, and two transcription errors have already been caught, so check one
+  against the other before trusting either.
+- **§Consequences for wording** — NOT acted on. `OWNERSHIP_RULES[].text` and
+  the Ownership tour both still say *referred-to entities* as if it named a
+  kind of thing. That rewording is `ownership-doc-rewrite`'s.
+
 ## The problem
 
 Siggie, 2026-09-13, reading the rendered panel: *"the legend dropdowns are just

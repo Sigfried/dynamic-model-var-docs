@@ -19,9 +19,9 @@
  * (`ownershipPivots.ts`), so a number cannot disagree with its own list.
  *
  * Every section groups **owner → attribute → owned**, so the top-level row
- * means the owner everywhere. It used to group on `p.range` in every section —
- * but `own-bkwd` flips ownership, so one key landed on opposite roles depending
- * on the section, at the same visual level with no cue.
+ * means the owner everywhere. ⚠️ Grouping on `p.range` instead looks equivalent
+ * and is not: `own-bkwd` flips ownership, so one key lands on opposite roles
+ * depending on the section, at the same visual level with no cue.
  *
  * The colors are read from the SAME constants the canvas strokes, never a
  * Tailwind approximation of them, for the same reason: a legend that can drift

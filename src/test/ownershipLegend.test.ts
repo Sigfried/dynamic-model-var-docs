@@ -117,12 +117,19 @@ describe('ownership legend', () => {
     for (const r of ranking) expect(r.owners).not.toContain(r.entity);
   });
   /*
-   * The two counts (TASKS `legend-two-counts`). The legend derives both from
-   * one grouping, so what is worth pinning is the relationship between them
-   * and the pairs — a second count computed a second way is how they come to
-   * disagree.
+   * Facts about the PAIRS, not about the panel.
+   *
+   * ⚠️ These were written for the old two-counts legend, which grouped every
+   * section on `p.range`. That panel is gone — it groups owner → attribute →
+   * owned now (docs/LEGEND_ORIENTATION.md) — and these tests survived the
+   * rewrite untouched, because `byTargetEntity` below is re-implemented
+   * LOCALLY and what it pins is the shape of the DATA: attributes sum to
+   * pairs, and the range-keyed exception is few entities over many attributes.
+   *
+   * So do not "fix" them to match the panel's grouping. If the panel is what
+   * you are changing, `ownershipLegendDisclosure.test.tsx` is the file.
    */
-  describe('two counts per rule', () => {
+  describe('the pairs, grouped by range', () => {
     const byTargetEntity = (pairs: OwnershipPairGroup['pairs']) => {
       const m = new Map<string, typeof pairs>();
       for (const p of pairs) {

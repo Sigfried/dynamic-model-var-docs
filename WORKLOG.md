@@ -206,10 +206,38 @@ The app already has shareable URL state for exactly this. The right move is a
 link into the server Siggie already runs on :5173, e.g.
 `?sel=BodySite~Condition&legend=1`. Recorded in memory.
 
-### Still open
+### Settled by the end of the session
 
-Siggie approved the dropped rule indent ("looks fine to me"). The count labels
-at panel width are superseded by the column work and want another look.
+Both LEGEND_ORIENTATION questions: the dropped rule indent reads fine ("looks
+fine to me"), and the count labels survived the column work. Reviewed in the
+running app across several rounds, which is also what produced the aligned
+table, `rightAlignLabel`, and the no-repetition rule.
+
+### Cleanup pass
+
+- LEGEND_ORIENTATION now says at the top which two parts of it are still LIVE
+  (the `[sg]` tree order, which `SHAPES` transcribes; and §Consequences for
+  wording, which is NOT acted on) and that the rest is the record of how they
+  were arrived at. 299 lines is too many to re-read to discover that.
+- `ownershipLegend.test.ts` called itself "the two counts" and cited
+  `legend-two-counts`, a task that no longer describes the panel. It tests
+  facts about the DATA and survived the rewrite untouched, which is exactly why
+  the stale framing was worth fixing — a future session would read it as the
+  panel's spec and "fix" it to match. Renamed, with a pointer to
+  `ownershipLegendDisclosure.test.tsx` as the file for panel behaviour.
+- `OwnershipLegend`'s header said "It used to group on `p.range`", which argues
+  with the past. Rewritten as the trap it actually is: that grouping looks
+  equivalent and is not.
+
+### For the next session
+
+Tours, not OWNERSHIP_CLASSIFICATION — Siggie has a demo. `ownership-doc-rewrite`
+(a) is unblocked now that the legend has settled which end each rule is spoken
+from, and two small concrete jobs fall out of this session's work: the tour's
+three hand-copied counts can become `{{ownership-count:…}}` (the resolver
+shipped, the tour already uses placeholders, `ExploreApp` already registers
+them — a text edit), and the `referred to` rewording lands in both
+`OWNERSHIP_RULES[].text` and the tour's step, so they go together.
 
 ## 2026-09-15 (later still) — the markdown-everywhere prelude; a placeholder bug nobody had seen
 
