@@ -251,10 +251,19 @@ describe('ownership legend pivots', () => {
        */
       expect(label.querySelectorAll('.lt-arrow svg').length).toBe(1);
       expect(node.querySelector('.lt-leaf .lt-arrow')).toBeNull();
-      // Arrow first, name second.
+      // Arrow first, name second (DOM order; the toggle's place is CSS).
       const kids = Array.from(label.children).map(c => c.className);
       expect(kids.indexOf('lt-arrow')).toBeLessThan(
         kids.findIndex(c => c.includes('cursor-pointer')));
+      /*
+       * The disclosure follows the label to the right edge. On an ordinary row
+       * it sits in the indent track beside the name; on a right-aligned one
+       * that edge is nowhere near the name, leaving the control stranded far
+       * from the entity it opens (Siggie, 2026-09-15). Asserted through the
+       * class, since jsdom does not apply the stylesheet.
+       */
+      expect(label.className).toContain('lt-label-right');
+      expect(label.querySelector('.lt-toggle')).not.toBeNull();
     });
 
     test('a pivot whose label already names the target omits the target cell', async () => {

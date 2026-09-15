@@ -88,9 +88,23 @@
   text-align: right;
   padding-right: 6px;
 }
-/* The triangle stays on the left, where every other row's is — right-aligning
-   the text must not move the control that opens it. */
-.lt-label-right > .lt-toggle { text-align: left; }
+/*
+ * The triangle follows the label to the right edge.
+ *
+ * It is `position: absolute; left: -13px` on an ordinary label, which puts it
+ * in the indent track beside the name it opens. On a right-aligned label that
+ * left edge is nowhere near the name — the control ends up stranded at the far
+ * left of a wide row, opening an entity the reader is not looking at (Siggie,
+ * 2026-09-15: "the expand/collapse would make more sense over by the target").
+ * So it is pinned to the RIGHT edge instead, past the entity name.
+ */
+.lt-label-right > .lt-toggle {
+  left: auto;
+  right: -12px;
+  text-align: left;
+}
+/* Room for it, so the triangle does not overhang the table's padding. */
+.lt-label-right { padding-right: 14px; }
 
 /* The disclosure triangle sits in the indent track to the LEFT of the label,
    so it never pushes the label out of alignment with its siblings. */
