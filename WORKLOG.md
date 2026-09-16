@@ -59,44 +59,50 @@ ANSWERED and SHIPPED respectively, so a future session does not re-litigate
 them — the Inheritance section was still written in the future tense with a
 three-beat table that is not what shipped, and is rewritten to match the code.
 
-### ⚠️ THE TWO RED TESTS ARE NOT PRE-EXISTING. I was wrong, twice.
+### The two red tests: two wrong diagnoses in a row, both from unverified git state
 
-`ownershipLegendDisclosure.test.tsx` ×2 look for `/52\s*attrs/` and find no
-button. I reported them as pre-existing twice, on the strength of a
-`git stash push -- <paths>` that printed **"No local changes to save"** — the
-Entity work was already COMMITTED, so the stash was a no-op and the run
-measured the unchanged tree. A no-op stash is indistinguishable from a
-successful one unless you read that line. **Check the stash actually stashed
-before concluding anything from it.**
+Worth writing out, because the same mistake produced both.
 
-Measured properly, at `81c479f` (before the Entity commit) against HEAD:
+`ownershipLegendDisclosure.test.tsx` ×2 looked for `/52\s*attrs/` and found no
+button. **Wrong diagnosis #1:** reported them pre-existing, twice, on the
+strength of a `git stash push -- <paths>` that printed **"No local changes to
+save"**. The work was already committed, so the stash was a no-op and the
+"before" run measured the unchanged tree. A no-op stash reads exactly like a
+successful one unless you read that line.
 
-| | before `28e74e3` | now |
-|---|---|---|
-| forward | 89 (52 attrs) | **90 (53 attrs)** |
-| backward | 60 | **59** |
-| by-attribute | 5 total, 4 attrs | **4 total, 3 attrs** |
+**Wrong diagnosis #2**, after actually measuring `81c479f` against HEAD and
+finding forward 89→90, backward 60→59, by-attribute 5→4: blamed `28e74e3`
+(Entity into `other`) and wrote a TASKS row calling it a classification bug,
+complete with a theory about `declaredOn` and inherited slots. Siggie: *"i did
+want to change the direction... and i didn't see this change in
+`git show 28e74e3`"*.
 
-So `28e74e3` (Entity into `other`) moved one slot from the by-attribute
-exception to the forward default. The missing pair is
-**`SdohObservation.related_questionnaire_item → QuestionnaireItem`**: it is
-still in `NAMED_BACK_POINTERS`, the slot still exists on the class, and it
-still produces a pair — but the pair now classifies FORWARD.
+They were right. **Siggie had commented the entry out of `NAMED_BACK_POINTERS`
+themselves**, with the reason on the line (*"this was a mistaken direction,
+makes more sense forward"*). It is not in `28e74e3` because it is in
+**`fb9811e` — my own commit**, where I bundled their in-flight `help-content.md`
+edits and swept up an `ownershipRules.ts` edit I never read or mentioned in the
+message. So: they changed it, I committed it blind, then I measured a
+difference and blamed the only commit I could see.
 
-The mechanism to check first: `NAMED_BACK_POINTERS` is keyed `Class.slot` and
-`SdohObservation` INHERITS that slot, so the `declaredOn` a pair is classified
-under is the lever. Something about listing Entity changed which class the
-inherited slot is attributed to. `classify()` is fine — this is about what
-facts reach it.
+The `declaredOn`/inheritance theory was pure invention to explain why an entry
+"still in the set" was not matching. It was not in the set. Removing a line
+from `NAMED_BACK_POINTERS` is the entire mechanism — an absent slot falls
+through to the total default, which is forward.
 
-**This is a real classification bug in committed code, not a test problem.** Do
-not "fix" the tests to 53/90. The tour's live counts render whatever the
-classifier says, so the Ownership tour is currently telling viewers a wrong
-number too.
+**The lesson, twice over: run `git status`/`git diff` before reasoning about
+what a commit did.** Both errors came from trusting an assumed working-tree
+state instead of looking.
 
-Options, undecided: fix the `declaredOn` attribution; or revert `28e74e3` and
-redo it. The Entity row itself is worth keeping — the bug is a side effect, not
-the feature.
+What was actually left was small: two tests hard-coding `52 attrs`, now 53, and
+a stale `149 = 89 + 60` comment. Fixed; suite is fully green. The tour needed
+nothing — its counts have been placeholders since `fb9811e`, so they followed
+the classifier down to 4 on their own, which is the payoff for that work.
+
+**The modelling decision, recorded where it lives:** an SDOH observation
+derived from a questionnaire item holds that item as part of what the
+observation IS, rather than pointing back at an owner. `ownershipRules.ts`
+carries that reasoning at the commented-out entry.
 
 ---
 ## 2026-09-16 — Entity gets a row, and a guard that was keyed on the wrong thing

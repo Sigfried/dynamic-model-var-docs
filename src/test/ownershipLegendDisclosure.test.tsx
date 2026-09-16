@@ -95,10 +95,10 @@ describe('ownership legend pivots', () => {
     fireEvent.click(find(/38\s*owners/));
     expect(find(/38\s*owners/).getAttribute('aria-expanded')).toBe('true');
     expect(find(/30\s*owned/).getAttribute('aria-expanded')).toBe('false');
-    expect(find(/52\s*attrs/).getAttribute('aria-expanded')).toBe('false');
+    expect(find(/53\s*attrs/).getAttribute('aria-expanded')).toBe('false');
 
-    fireEvent.click(find(/52\s*attrs/));
-    expect(find(/52\s*attrs/).getAttribute('aria-expanded')).toBe('true');
+    fireEvent.click(find(/53\s*attrs/));
+    expect(find(/53\s*attrs/).getAttribute('aria-expanded')).toBe('true');
     expect(find(/38\s*owners/).getAttribute('aria-expanded')).toBe('false');
   });
 
@@ -353,7 +353,7 @@ describe('ownership legend pivots', () => {
    */
   test('every attribute row carries a cardinality label', async () => {
     const { find } = await setup();
-    fireEvent.click(find(/52\s*attrs/));
+    fireEvent.click(find(/53\s*attrs/));
     const cards = Array.from(document.querySelectorAll('.lt-leaf .lt-card'))
       .map(c => c.textContent!.trim());
     expect(cards.length).toBeGreaterThan(50);
@@ -447,7 +447,9 @@ describe('ownership legend pivots', () => {
     await setup();
     const text = document.body.textContent!;
     expect(text).not.toContain('{{');
-    // The accounting that anchors the panel: 149 = 89 + 60.
+    // The accounting that anchors the panel: 149 = 90 forward + 59 backward
+    // (was 89 + 60 until SdohObservation.related_questionnaire_item left
+    // NAMED_BACK_POINTERS, 2026-09-16).
     expect(text.replace(/\s+/g, ' ')).toMatch(/149 attributes in the schema/);
   });
 });

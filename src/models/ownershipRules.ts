@@ -276,7 +276,16 @@ export const REFERRED_TO_ENTITIES = new Set<string>([
 export const NAMED_BACK_POINTERS = new Set<string>([
   'QuestionnaireItem.part_of',                        // → QuestionnaireItem (self)
   'QuestionnaireResponseItem.has_questionnaire_item', // → QuestionnaireItem
-  // 'SdohObservation.related_questionnaire_item',       // → QuestionnaireItem     // this was a mistaken direction, makes more sense forward
+  /*
+   * `SdohObservation.related_questionnaire_item` was here until 2026-09-16.
+   * Siggie: *"this was a mistaken direction, makes more sense forward"* — an
+   * SDOH observation derived from a questionnaire item holds that item as part
+   * of what the observation IS, rather than pointing back at an owner.
+   *
+   * Removing it is the whole change: a slot absent from this set falls through
+   * to the total default rule, which is forward. Counts moved 89→90 forward,
+   * 60→59 backward, 5→4 here.
+   */
   'ResearchStudy.part_of',                            // → ResearchStudy (self)
   'Participant.member_of_research_study',             // → ResearchStudy
 ]);
