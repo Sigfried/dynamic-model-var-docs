@@ -11,7 +11,7 @@
 import { describe, test, expect, beforeAll, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { loadModelData } from '../utils/dataLoader';
-import { DataService } from '../services/DataService';
+import { DataService, SKIP_SUBCLASS_EXPANSION } from '../services/DataService';
 import SelectionTable from '../explore/SelectionTable';
 import { categoryView } from '../config/categoryView';
 
@@ -223,6 +223,13 @@ describe('SelectionTable', () => {
         expect(depthOf(parent), `${parent} is a category root`).toBe(0);
         expect(depthOf(child), `${child} nests under ${parent}`).toBe(1);
       }
+      /*
+       * Nothing nests under Entity, though it is now in the same category as
+       * File (Siggie, 2026-09-16): the universal root is a row you can tick,
+       * not a heading. So File stays a category root at depth 0.
+       */
+      expect(depthOf('Entity'), 'Entity is a category root').toBe(0);
+      expect(depthOf('File'), 'File does not nest under Entity').toBe(0);
     });
 
     test('nesting matches the schema graph, not a hand-curated map', () => {
@@ -239,7 +246,10 @@ describe('SelectionTable', () => {
         const inCategory = new Set(group.classIds);
         for (const id of group.classIds) {
           const parent = ds.getIsaParent(id);
-          const nested = parent !== null && inCategory.has(parent);
+          // A SKIP_SUBCLASS_EXPANSION parent (Entity) never nests its
+          // children, even listed in the same category — see getCategoryTrees.
+          const nested = parent !== null && inCategory.has(parent)
+            && !SKIP_SUBCLASS_EXPANSION.has(parent);
           expected.set(id, [...(expected.get(id) ?? []), nested ? 1 : 0]);
         }
       }
@@ -291,10 +301,29 @@ describe('SelectionTable', () => {
       expect(onToggle).toHaveBeenCalledWith('Observation');
     });
 
-    test('Entity never appears — it is uncategorized by design', () => {
+    /*
+     * Was "Entity never appears — it is uncategorized by design". Reversed
+     * 2026-09-16 (Siggie): the goal is to be able to TALK about Entity without
+     * fishing for a class whose slot holds it, and the only route onto the
+     * canvas was clicking one of the 13 rows that range on it.
+     *
+     * What did NOT change is that Entity stays out of the inheritance tree
+     * (SKIP_SUBCLASS_EXPANSION), which is what keeps "↳ Entity" off the other
+     * 33 rows — see the outOfCategoryParent test below.
+     */
+    test('Entity is listed once, in `other`, as that category\'s root', () => {
       renderTable();
-      expect(ds.getCategoryTrees().flatMap(g => g.classIds)).not.toContain('Entity');
-      expect(document.querySelector('[data-class-row="Entity"]')).toBeNull();
+      const trees = ds.getCategoryTrees();
+      expect(trees.flatMap(g => g.classIds).filter(id => id === 'Entity')).toEqual(['Entity']);
+      /*
+       * Every member of `other` is a root EXCEPT ImagingFile, which nests
+       * under File as it always did: nothing nests under Entity, but Entity's
+       * presence does not flatten the rest of the category either.
+       */
+      expect(trees.find(t => t.id === 'other')!.roots.map(r => r.classId))
+        .toEqual(['Entity', 'Document', 'File', 'TimePoint', 'TimePeriod', 'Quantity']);
+      expect(rowsOf('Entity')).toHaveLength(1);
+      expect(depthOf('Entity')).toBe(0);
     });
   });
 });
@@ -334,7 +363,14 @@ describe('DataService.getCategoryTrees', () => {
       const inCategory = new Set(tree.classIds);
       for (const root of tree.roots) {
         const parent = ds.getIsaParent(root.classId);
-        if (parent && !inCategory.has(parent) && visible.has(parent)) {
+        /*
+         * `Entity` is visible since 2026-09-16 but still never named: the
+         * universal root says nothing a reader can act on, so the guard keys
+         * on SKIP_SUBCLASS_EXPANSION rather than on visibility. Without that
+         * exception this hint returns to 33 of 57 rows.
+         */
+        if (parent && !inCategory.has(parent) && visible.has(parent)
+            && !SKIP_SUBCLASS_EXPANSION.has(parent)) {
           expect(root.outOfCategoryParent).toBe(parent);
         } else {
           expect(root.outOfCategoryParent, `${root.classId}`).toBeUndefined();

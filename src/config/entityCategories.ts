@@ -108,10 +108,13 @@ export const DEFAULT_PINS = ['Demography', 'Condition', 'MeasurementObservation'
  * live schema (see assertAllClassesCategorized + entityCategories.test.ts).
  */
 export const UNCATEGORIZED_BY_DESIGN: Record<string, string> = {
-  // Universal root; in SKIP_SUBCLASS_EXPANSION (kept out of the inheritance
-  // tree). It IS drawn as a range node now — EXCLUDE_HAS_A_TARGETS is gone.
-  // (containmentGraph.ts) because it would attach to everything as noise.
-  Entity: 'Universal root class — too general to be a browsable entity.',
+  // Empty since 2026-09-16, when `Entity` — its only ever entry — was listed
+  // in `other` so it could be talked about without fishing for a class whose
+  // slot holds it. Kept because it is the recording mechanism the
+  // `findUncategorizedClasses` guard reads: a class an upstream sync adds and
+  // nobody categorizes fails the test unless its omission is DELIBERATE and
+  // written down here. That is the case Context and Activity hit in the
+  // 2026-08-12 sync.
 };
 
 /**
@@ -275,6 +278,25 @@ export const ENTITY_CATEGORIES: EntityCategory[] = [
     id: 'other',
     label: 'Files / Other',
     classIds: [
+      /*
+       * The universal root, listed first (Siggie, 2026-09-16) so it can be
+       * TALKED ABOUT without fishing for a class whose slot holds it. 13 slots
+       * range on Entity — every `focus`, plus Condition.associated_evidence
+       * and MeasurementObservation.associated_artifact — and before this the
+       * only way onto the canvas was clicking one of those rows.
+       *
+       * **Nothing nests under it, deliberately.** *Everything* nests under
+       * Entity — 37 classes directly, 53 in subtree — so drawing that would
+       * complicate the graph without adding any clarity. What Entity does add
+       * is its role as the schema's CATCH-ALL: a slot ranged on Entity accepts
+       * any class in the model, which is what `focus` uses it for.
+       *
+       * So it is a row you can tick, not a heading. `SKIP_SUBCLASS_EXPANSION`
+       * is what enforces that, in two places in `getCategoryTrees` — no
+       * children nested beneath it, and no "↳ Entity" hint on the other 33
+       * rows whose is-a parent it is.
+       */
+      'Entity',
       'Document',
       'File',
       'ImagingFile',

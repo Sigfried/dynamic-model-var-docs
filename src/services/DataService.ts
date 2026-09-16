@@ -30,7 +30,7 @@ import type { ToggleButtonData } from '../components/ItemsPanel';
 import type { SectionData, SectionItemData } from '../components/Section';
 import { APP_CONFIG, getAllElementTypeIds, SectionId, ACTIVE_VOCAB } from '../config/appConfig';
 import {
-  ENTITY_CATEGORIES, findUncategorizedClasses, UNCATEGORIZED_BY_DESIGN,
+  ENTITY_CATEGORIES, findUncategorizedClasses,
 } from '../config/entityCategories';
 import {
   buildContainmentGraph, classifySlotEdgeExplained,
@@ -111,8 +111,9 @@ export interface CategoryGroup {
  * into both categories — needs multi-category membership, which is explicitly
  * out of scope.
  *
- * A parent in UNCATEGORIZED_BY_DESIGN (i.e. `Entity`) does NOT set it: those
- * classes are roots with nothing useful to point at.
+ * A parent in SKIP_SUBCLASS_EXPANSION (i.e. `Entity`) does NOT set it: the
+ * universal root is nothing useful to point at, whether or not it is itself
+ * listed in a category.
  */
 export interface CategoryTreeNode {
   classId: string;
@@ -867,15 +868,29 @@ export class DataService {
       for (const classId of group.classIds) {
         const node = nodes.get(classId)!;
         const parent = this.getIsaParent(classId);
-        if (parent && inCategory.has(parent)) {
+        /*
+         * NOTHING nests under a SKIP_SUBCLASS_EXPANSION parent (Siggie,
+         * 2026-09-16), even when it is in the same category. `Entity` is
+         * listed in `other` so it can be ticked and talked about — it is a row,
+         * not a heading. Without this, listing it turned every other member of
+         * `other` into its child and pushed ImagingFile to depth 2.
+         */
+        if (parent && inCategory.has(parent) && !SKIP_SUBCLASS_EXPANSION.has(parent)) {
           nodes.get(parent)!.children.push(node);
         } else {
-          // A parent that is uncategorized BY DESIGN (Entity) is not a
-          // "different category" — it is hidden from the UI everywhere, so
-          // naming it would point at something the reader can never open.
-          // Measured 2026-08-27: without this guard, "↳ Entity" renders on 44
-          // of 53 rows and buries the two hints that carry information.
-          if (parent && !(parent in UNCATEGORIZED_BY_DESIGN)) {
+          // A parent kept out of the inheritance tree (Entity) is not a
+          // "different category" — it is the universal root, so naming it says
+          // nothing the reader can act on. Measured 2026-08-27: without this
+          // guard "↳ Entity" renders on 44 of 53 rows and buries the two hints
+          // that carry information; re-measured 2026-09-16 at 33 rows.
+          //
+          // ⚠️ Keyed on SKIP_SUBCLASS_EXPANSION, not UNCATEGORIZED_BY_DESIGN.
+          // Those coincided while Entity was the only uncategorized class, and
+          // came apart when it was listed in `other` (2026-09-16) — at which
+          // point the old key let the hint back onto all 33 rows. What the
+          // guard means is "too general to point at", which is exactly what
+          // SKIP_SUBCLASS_EXPANSION records.
+          if (parent && !SKIP_SUBCLASS_EXPANSION.has(parent)) {
             node.outOfCategoryParent = parent;
           }
           roots.push(node);
