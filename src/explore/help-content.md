@@ -604,10 +604,13 @@ introduced and then use one word.
 - **TourMetadata:**
 - **Description:** How to use the BDCHM Explorer: the panel, the boxes, and how to grow a diagram
 
+
+
+<!--
 ### linkml-context
-- **Title:** BDCHM Explorer
+- ~~**Title:** BDCHM Explorer:~~
 - **Tour:** Getting oriented
-- **Description:** <!-- redundant with `why` above. fix: figure out what goes where -->
+- **Description:** <!-- redundant with `why` above. fix: figure out what goes where-- >
   > Salvaged 2026-09-09 from the stash, where you had made this the first
   > step of Getting oriented. It repeats most of `why` at the end of tour 1.
   > Decide what goes where (TASKS `why-argument`), then delete this note.
@@ -644,7 +647,7 @@ introduced and then use one word.
 
   used to have this in the BDC context part of Walkthrough:
   (using [BDC's tools](https://biodatacatalyst.nhlbi.nih.gov/use-bdc/analyze-data/) or otherwise);
-  -->
+  -- >
 - **Anchor:** none
 - **Change:**
 - **Width:** 700
@@ -662,17 +665,17 @@ introduced and then use one word.
        - about 80 links to other entities indicating ownership or
          containment relationships (e.g., multiple Participant entities
          can "belong" to a single Person entity)
+-->
 
 ### bdchm-entities
 
-- **Title:** Model entities
+- **Title:** Using the BDCHM Explorer
 - **Tour:** Getting oriented
 - Only: panels=0
 - **Anchor:** none
 - **Highlight:** selection-tree
 - **Width:** 800
-- **Description:** [put some intro text here]
-
+- **Description:**
   This tour is about the app rather than the model: how to put entities on
   the canvas, what a box shows, and how to move from one entity to the ones
   it is connected to. It grows one small diagram a step at a time, from a
