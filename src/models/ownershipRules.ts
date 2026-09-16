@@ -225,17 +225,23 @@ export interface RuleSpec {
 export const ASSOCIATION_SLOTS = new Set<string>([]);
 
 /**
- * **Entities that are referred to rather than contained.** Pointing at one of
- * these never means owning it: they are the shared, independently-existing
- * things of this model, looked up rather than held. 55 attributes point at the
- * five of them.
+ * **Entities every arrival at which is a reference.** Pointing at one of these
+ * never means owning it: they are the shared, independently-existing things of
+ * this model, looked up rather than held.
+ *
+ * ⚠️ *Referred to* names a property of an ARRIVAL, not a kind of entity —
+ * `QuestionnaireItem` is owned by `Questionnaire.items` AND referred to by
+ * three other attributes, which is why it belongs in `NAMED_BACK_POINTERS`
+ * below and not here. What this set can say is the stronger claim that EVERY
+ * arrival is a reference. See docs/LEGEND_ORIENTATION.md §Consequences for
+ * wording.
  *
  * Keyed by RANGE, so the claim is about the ENTITY and holds at every site.
  * That is the safe key — it cannot silently capture an unrelated slot the way
  * a bare slot name can.
  *
  * All five are leaf classes (no subclasses), which is what keeps the induced
- * rule forward-only: there is no subtree under a referred-to entity for
+ * rule forward-only: there is no subtree under one of these for
  * ownership to be induced across. Re-check that after a schema sync — a
  * subclass added under any of these is the one change that would invalidate
  * `child-following-parent`'s restriction.
@@ -270,7 +276,7 @@ export const REFERRED_TO_ENTITIES = new Set<string>([
 export const NAMED_BACK_POINTERS = new Set<string>([
   'QuestionnaireItem.part_of',                        // → QuestionnaireItem (self)
   'QuestionnaireResponseItem.has_questionnaire_item', // → QuestionnaireItem
-  'SdohObservation.related_questionnaire_item',       // → QuestionnaireItem
+  // 'SdohObservation.related_questionnaire_item',       // → QuestionnaireItem     // this was a mistaken direction, makes more sense forward
   'ResearchStudy.part_of',                            // → ResearchStudy (self)
   'Participant.member_of_research_study',             // → ResearchStudy
 ]);
@@ -318,10 +324,10 @@ export const OWNERSHIP_RULES = [
     when: ({ range }) => REFERRED_TO_ENTITIES.has(range),
     verdict: 'own-bkwd',
     parentRule: 'owns-target-forward-by-default',
-    text: 'Referred-to entities are pointed at rather than contained — a Participant or a '
-      + 'Visit exists in its own right and is looked up, not held. Pointing at one means '
-      + 'belonging to it, so ownership runs backward. This is said about the ENTITY, so it '
-      + 'holds wherever that entity is pointed at.',
+    text: 'Some entities are only ever referred to, never contained — a Participant or a '
+      + 'Visit exists in its own right and is looked up, not held. Every attribute pointing '
+      + 'at one means belonging to it, so ownership runs backward. This is said about the '
+      + 'ENTITY, so it holds wherever that entity is pointed at.',
   },
   {
     id: 'belongs-to-target-backward-by-attribute',

@@ -1104,12 +1104,10 @@ and is not in the legend either: induced edges serve LAYOUT only, so there is
 nothing for a reader to do with them. Documented for maintainers in
 OWNERSHIP_CLASSIFICATION.md.
 
-The rule steps below are drafted against the LIVE classifier (re-probed
-2026-09-13): 89 forward, 55 by-entity exception, 5 by-attribute exception.
-They use the legend's own `label` strings from `OWNERSHIP_RULES`, so tour,
-legend and classifier say one thing; if a label changes there, change it
-here. ⚠️ The counts are hand-copied and a schema sync falsifies them silently —
-TASKS `markdown-everywhere` (c) is the fix.
+Every count below is LIVE — an `ownership-count` placeholder, resolved against
+the classifier at render — and the rule names are the legend's own `label`
+strings from `OWNERSHIP_RULES`, so tour, legend and classifier say one thing.
+If a label changes there, change it here. Do not hand-type a count.
 -->
 
 ### why-ownership
@@ -1227,8 +1225,9 @@ TASKS `markdown-everywhere` (c) is the fix.
 - Highlight: ring
 - **Width:** 560
 - **Description:**
-  **:s[Owns target / forward arrow / by default]{color=own-fwd}** — 89
-  attributes, and the default for every one of them.
+  **:s[Owns target / forward arrow / by default]{color=own-fwd}** —
+  {{ownership-count:owns-target-forward-by-default.total}} attributes, and the
+  default for every one of them.
 
   If an entity declares an attribute pointing at another entity, the thing it
   points at is taken to be **part of it**. `items` holds QuestionnaireItems, so
@@ -1252,7 +1251,7 @@ TASKS `markdown-everywhere` (c) is the fix.
 
 ### belongs-to-target-backward-by-entity
 
-- **Title:** Exception: entities that are referred to
+- **Title:** Exception: entities that are only ever referred to
 - **Tour:** Ownership
 - **Only:** sel=Participant~Specimen&legend=0
 - **Action:** Drew Specimen and the Participant it came from.
@@ -1262,13 +1261,14 @@ TASKS `markdown-everywhere` (c) is the fix.
 - Position: bottom
 - **Width:** 580
 - **Description:**
-  **:s[Belongs to target / backward arrow / by entity]{color=own-bkwd}** — 55
-  attributes.
+  **:s[Belongs to target / backward arrow / by entity]{color=own-bkwd}** —
+  {{ownership-count:belongs-to-target-backward-by-entity.total}} attributes.
 
-  Five entities in this model are **referred to** rather than contained:
-  **Participant**, **Visit**, **Organization**, **ImagingStudy** and
-  **Person**. Each exists in its own right and is looked up, not held, so
-  pointing at one means belonging to it.
+  {{ownership-count:belongs-to-target-backward-by-entity.owners}} entities in
+  this model are **only ever referred to**, never contained: **Participant**,
+  **Visit**, **Organization**, **ImagingStudy** and **Person**. Each exists in
+  its own right and is looked up, not held, so *every* attribute pointing at
+  one means belonging to it.
   :::s{center color=entity}
     {{relation:own-bkwd:Specimen.source_participant:Participant}}
   :::
@@ -1285,12 +1285,12 @@ TASKS `markdown-everywhere` (c) is the fix.
   2. said about the entity
      - Description:
        This exception is stated about the **entity**, not the attribute: name
-       Participant once and every one of the 21 attributes pointing at it
-       flips, including ones nobody has written yet.
+       Participant once and every attribute pointing at it flips, including
+       ones nobody has written yet.
 
-       The schema can't tell us which five — nothing in it distinguishes them
-       — so the list is recorded in the Explorer by hand, and it is a
-       judgement that can be argued with.
+       The schema can't tell us which entities these are — nothing in it
+       distinguishes them — so the list is recorded in the Explorer by hand,
+       and it is a judgement that can be argued with.
 
 ### belongs-to-target-backward-by-attribute
 
@@ -1304,7 +1304,8 @@ TASKS `markdown-everywhere` (c) is the fix.
 - **Width:** 580
 - **Description:**
   **:s[Belongs to target / backward arrow / by attribute]{color=own-bkwd}** —
-  5 attributes, named one at a time.
+  {{ownership-count:belongs-to-target-backward-by-attribute.total}} attributes,
+  named one at a time.
 
   `has_questionnaire_item` points at a **QuestionnaireItem** to say which
   question was answered. It isn't holding that item: the item belongs to the
@@ -1317,12 +1318,22 @@ TASKS `markdown-everywhere` (c) is the fix.
      - Description:
        So this exception can't be said about the entity the way the last one
        was. QuestionnaireItem **is** owned — by `Questionnaire.items` — and
-       calling it referred-to would strip it of that. The same holds for
-       **ResearchStudy**, owned by `ResearchStudyCollection.entries`.
+       putting it on the previous step's list would strip it of that. The same
+       holds for **ResearchStudy**, owned by `ResearchStudyCollection.entries`.
 
-       These five are named as `Entity.attribute` pairs for the same reason:
-       two of them are called `part_of`, declared on different entities, and a
-       bare attribute name would flip any future third one silently.
+       Being referred to is a property of the **arrival**, not of the entity:
+       one attribute owns a QuestionnaireItem and three others only refer to
+       it. That is why the previous step's list can only hold entities *every*
+       arrival at which is a reference, and why these have to be named one
+       attribute at a time.
+     - Anchor: node-box:Questionnaire
+     - Spotlight: slot-row:Questionnaire.items
+  2. named as pairs
+     - Description:
+       They are named as `Entity.attribute` pairs rather than by attribute
+       name alone: two of them are called `part_of`, declared on different
+       entities, and a bare attribute name would flip any future third one
+       silently.
 
 ### bar-sides
 
@@ -1363,11 +1374,14 @@ TASKS `markdown-everywhere` (c) is the fix.
   One rule and two exceptions decide every line on the canvas:
 
   - An attribute :s[owns]{color=own-fwd} the entity it points at.
-  - Except when that entity is one of the five that are only ever
-    **referred to**, and then the attribute's own entity
+  - Except when that entity is one of the
+    {{ownership-count:belongs-to-target-backward-by-entity.owners}} that are
+    **only ever referred to**, and then the attribute's own entity
     :s[belongs to]{color=own-bkwd} it instead.
-  - Except when the attribute is one of the five named **back-pointers**,
-    which point at an owner rather than down at something owned.
+  - Except when the attribute is one of the
+    {{ownership-count:belongs-to-target-backward-by-attribute.total}} named
+    **back-pointers**, which point at an owner rather than down at something
+    owned.
 
   And separately, an edge into an entity with subclasses is repeated into each
   of them.
@@ -1416,31 +1430,40 @@ OWNERSHIP_CLASSIFICATION.md §When a schema needs it.
 
 - **Title:** An entity and its parent class, one box
 - **Tour:** Inheritance
-- **Only:** sel=MeasurementObservation&panels=0
-- **Action:** Drew MeasurementObservation on its own.
-- **Anchor:** node-box:Observation
+- **Only:** panels=0
+- **Action:** Cleared the canvas.
+- **Anchor:** entity-row:MeasurementObservation
+- **Width:** 420
 - **Description:**
-  You asked for MeasurementObservation and the box is titled
-  **Observation**. MeasurementObservation is a subclass — an Observation
-  with a few extra attributes — and the Explorer draws a subclass INSIDE its
-  parent's box rather than as a second box joined by a line. The `⑃ 1` in
-  the header says one subclass is merged in.
+  Start from the panel, with nothing drawn. **MeasurementObservation** is the
+  entity we are about to tick — watch what the box it draws is called.
 - **Beats:**
-  1. inherited rows
+  1. the box that appears
+     - Change: sel=MeasurementObservation
+     - Action: Ticked MeasurementObservation for you.
+     - Anchor: node-box:Observation
+     - Width: 560
+     - Description:
+       You asked for MeasurementObservation and the box is titled
+       **Observation**. MeasurementObservation is a subclass — an Observation
+       with a few extra attributes — and the Explorer draws a subclass INSIDE
+       its parent's box rather than as a second box joined by a line. The
+       `⑃ 1` in the header says one subclass is merged in.
+  2. inherited rows
      - Description:
        ##### What it inherits
        The bold rows at the top are Observation's: the four `value_`
        attributes, who performed it, the participant and the visit.
        MeasurementObservation has all of them.
      - Anchor: slot-row:Observation.associated_participant
-  2. the child's header
+  3. the child's header
      - Description:
        ##### What it adds
        Below them a coloured header names the subclass, and the rows under
        it are the ones it adds: a normal range, a body site, the instrument.
        Everything under this header is MeasurementObservation's alone.
      - Anchor: child-header:MeasurementObservation
-  3. one is enough
+  4. one is enough
      - Description:
        ##### Merged even alone
        This happens with a single subclass, not only when siblings are drawn
