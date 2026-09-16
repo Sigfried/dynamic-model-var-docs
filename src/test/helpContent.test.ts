@@ -1791,12 +1791,19 @@ describe('TourMetadata', () => {
   });
 
   test('every authored TourAbbr is actually short', () => {
-    // The field exists to fit in front of a step title; one as long as the
-    // name it replaces defeats it.
+    /*
+     * The field exists to fit in front of a step title; one as long as the
+     * name it replaces defeats it.
+     *
+     * Cap raised from 16 to 24 on 2026-09-16 (Siggie: *"there's plenty of room
+     * for it"*) for `BDCHM Data Categories`, which says what the tour walks
+     * through where the bare abbreviation did not. 16 was never measured
+     * against the rendered title bar — it was a guess at authoring time.
+     */
     const long = [...content.tourMeta.values()]
-      .filter(m => m.abbr && m.abbr.length > 16)
+      .filter(m => m.abbr && m.abbr.length > 24)
       .map(m => `${m.name}: "${m.abbr}"`);
-    expect(long, `TourAbbr longer than 16 chars: ${long.join(', ')}`).toEqual([]);
+    expect(long, `TourAbbr longer than 24 chars: ${long.join(', ')}`).toEqual([]);
   });
 
   test('the description may run to a paragraph', () => {

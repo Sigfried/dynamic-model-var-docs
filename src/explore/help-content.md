@@ -57,7 +57,7 @@ introduced and then use one word.
 
 ## The BioData Catalyst Harmonized Model
 - **TourMetadata:**
-- **TourAbbr:** BDCHM
+- **TourAbbr:** BDCHM Data Categories
 - **Description:** Introduction to the model: what it contains and what it's for
 
 ### bdchm
@@ -75,57 +75,36 @@ introduced and then use one word.
 - Only: panels=0
 - **Anchor:** none
 - **Highlight:** selection-tree
-- **Width:** 800
+- **Width:** 500
 - **Description:** 
-  BioData Catalyst ([BDC](https://biodatacatalyst.nhlbi.nih.gov/))
-  is a cloud-based ecosystem where researchers can find and work with
-  [NHLBI](https://www.nhlbi.nih.gov/) data resources.
-  **BDCHM** currently harmonizes nine priority [TOPMed](https://topmed.nhlbi.nih.gov/)
+  BioData Catalyst ([BDC](https://biodatacatalyst.nhlbi.nih.gov/)) is a cloud-based ecosystem where researchers can find and work
+  with [NHLBI](https://www.nhlbi.nih.gov/) data resources. **BDCHM** currently harmonizes nine priority [TOPMed](https://topmed.nhlbi.nih.gov/)
   cohorts (e.g., the Framingham Heart Study and Women's Health Initiative)
   and the [INCLUDE Data Hub](https://portal.includedcc.org/), with more on their way.
-- Beats:
-  1. What's in the model?
-     - **Description:** 
-       The BDCHM schema provides a flexible, general purpose structure
-       for storing clinical trials data. BDCHM Explorer categorizes the
-       entities specified in the model into six areas to make it easier
-       to browse and comprehend. This tour will walk you through each
-       category.
-     - **Anchor:** selection-tree
 
-<!-- 
-### test
-- Title: test
+### model-categories
+
+- **Title:** Categories of data in the model
 - **Tour:** The BioData Catalyst Harmonized Model
-- Change: sel=Observation
-- Anchor: slot-row:Observation.age_at_observation
-- Position: top
-- Description:
-  blah blah blah blah blah blah blah blah blah blah 
-  blah blah blah blah blah blah blah blah blah blah 
-  blah blah blah blah blah blah blah blah blah blah 
-  blah blah blah blah blah blah blah blah blah blah 
-  blah blah blah blah blah blah blah blah blah blah 
-  blah blah blah blah blah blah blah blah blah blah 
-  blah blah blah blah blah blah blah blah blah blah 
-  blah blah blah blah blah blah blah blah blah blah 
-  blah blah blah blah blah blah blah blah blah blah 
-  blah blah blah blah blah blah blah blah blah blah 
-  blah blah blah blah blah blah blah blah blah blah 
-  blah blah blah blah blah blah blah blah blah blah 
-  blah blah blah blah blah blah blah blah blah blah 
-  blah blah blah blah blah blah blah blah blah blah 
-  blah blah blah blah blah blah blah blah blah blah 
-  blah blah blah blah blah blah blah blah blah blah 
-  blah blah blah blah blah blah blah blah blah blah 
+- Only: panels=0
+- **Anchor:** selection-tree
+-  **Position:** right
+- **OffsetX:** anchor.width * .3
+- **Highlight:** selection-tree
+- **Width:** 500
+- **Description:** 
+  What's in the model?
 
-- Anchor: slot row:Observation.associated_participant
-- **Anchor:** node-box:Observation
--->
+  The BDCHM schema provides a flexible, general purpose structure
+  for storing clinical trials data. BDCHM Explorer categorizes the
+  entities specified in the model into six areas to make it easier
+  to browse and comprehend. This tour will walk you through each
+  category.
+
 
 ### admin-study
 
-- **Title:** Category: Admin / Study
+- **Title:** 1. Admin / Study
 - **Tour:** The BioData Catalyst Harmonized Model
 - **Anchor:** category-row:admin
 - **Description:**
@@ -223,11 +202,11 @@ introduced and then use one word.
 
 ### clinical-records
 
-- **Title:** Category: Clinical
+- **Title:** 2. Clinical
 - **Tour:** The BioData Catalyst Harmonized Model
 - **Description:**
   Eight entities record *what happened to a participant medically*. Every one of
-  them is a record OF someone, usually AT an encounter — which is why Person,
+  them is a record **of** someone, usually **at** an encounter — which is why Person,
   Participant and Visit are drawn here too even though they belong to Admin.
   Take them away and Clinical is a pile of disconnected records.
 - **Anchor:** category-row:clinical
@@ -297,7 +276,7 @@ introduced and then use one word.
 
 ### observation-measurement
 
-- **Title:** Category: Observations / Measurements
+- **Title:** 3. Observations / Measurements
 - **Tour:** The BioData Catalyst Harmonized Model
 - **Description:**
   This is where the numbers live. Twelve entities, but only four ideas: an
@@ -372,7 +351,7 @@ introduced and then use one word.
 
 ### lab-biospecimen
 
-- **Title:** Category: Laboratory / Biospecimen
+- **Title:** 4. Laboratory / Biospecimen
 - **Tour:** The BioData Catalyst Harmonized Model
 - **Description:**
   Twelve entities about *physical material* — what was collected from a
@@ -452,13 +431,19 @@ introduced and then use one word.
 
 ### survey-questionnaire
 
-- **Title:** Category: Survey / Questionnaire
+- **Title:** 5. Survey / Questionnaire
 - **Tour:** The BioData Catalyst Harmonized Model
 - **Description:**
   Ten entities, and almost no connection to the rest of the model. This is the
   one category you can read entirely on its own — nothing outside it needs to
   be borrowed in, and only a couple of attributes reach out. It is two mirrored
   halves: the **questions** on the left, the **answers** on the right.
+  ### that's not true --
+  > **there are two (?) ways this section connects out to
+  > the rest
+  >   - **QuestionnaireResponse**.`associated_visit` *belongs to* a **Visit**,
+  >   - **QuestionnaireItem**s can be linked more deeply as
+  >     **SdohObservation**`.related_questionnaire`
 - **Anchor:** category-row:survey
 - Only: cat=survey
 <!-- - **Action:** Drew the whole Survey / Questionnaire category, the same as pressing its ⊞ button. -->
@@ -523,7 +508,7 @@ introduced and then use one word.
 
 ### other-files
 
-- **Title:** Category: Files / Other
+- **Title:** 6. Files / Other
 - **Tour:** The BioData Catalyst Harmonized Model
 - **Description:**
   The leftovers, and they are leftovers of two quite different kinds: **files**
