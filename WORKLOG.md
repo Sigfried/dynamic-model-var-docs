@@ -8,6 +8,54 @@ Newest first.
 
 
 ---
+## 2026-09-16 (latest) — `make sync-manual` never synced anything
+
+Siggie ran `make sync-manual`, and the downloaded `bdchm.yaml` still did not
+match `../NHLBI-BDC-DMC-HM/src/bdchm/schema/bdchm.yaml`.
+
+**The cause is visible in the sync's own output and had been for a while.** The
+fetch URL prints the commit it is pulling:
+`raw.githubusercontent.com/RTIInternational/NHLBI-BDC-DMC-HM/**769b278**/...`
+— a pinned SHA, not `main`. `sync-manual` ran `npm run download-data`, which
+invokes `download_source_data.py` with no flags, and the no-flag path downloads
+whatever `repo_sources["HM"]["commit"]` says. Only `--update` hits the GitHub
+API for the latest `main` SHA, rewrites the pin in the script, and then
+downloads. The daily Action passes `--update`; `sync-manual` did not. So a
+manual sync re-fetched the identical bytes every time and reported success —
+the failure mode is silent, and looks exactly like "upstream hasn't changed."
+
+`sync-manual` now runs `--update`, matching the Action. README's "to update
+data manually" pointed at `npm run download-data` in two places; both now say
+`make sync-manual`, and the Getting Started comment says "at the pinned
+upstream commit" instead of "Download/update", because for a first-time clone
+the pinned behavior is the correct one and the target should not be renamed
+away from it.
+
+**Why keep the pin at all** (do not "fix" this by tracking `main`): the pinned
+SHA is what makes a checkout reproducible and what makes the Action's PR a
+reviewable diff against a known base. The bug was a missing flag, not the
+existence of the pin.
+
+Synced `769b278 → d3c7c58` in the same commit (`07ab13a`). Only structural
+addition is `OccupationTypeEnum`; everything else is nested slot changes. No
+new classes, so the hand-curated `entityCategories` / `containmentGraph`
+override sets were not touched this time — but that is a fact about this diff,
+not a general reprieve; they still need checking whenever a sync adds classes.
+
+**Node 16 is the default in this shell and the build dies under it** —
+`vite` throws `SyntaxError: ... does not provide an export named 'constants'`
+from `node:fs/promises` before reaching any project code. That is
+environmental, not a signal about the sync. `export
+PATH="$HOME/.nvm/versions/node/v22.20.0/bin:$PATH"` first; there is no `.nvmrc`
+to make this automatic. Under 22: build green, 774 tests pass.
+
+**Still unconfirmed:** whether `d3c7c58` actually matches Siggie's local
+checkout. The script only ever reads the GitHub API — there is no code path
+that reads a local working copy — so if their copy has unpushed or uncommitted
+edits, a correct `--update` still will not match it, and the next report of
+"the sync is wrong" may be this and not a bug.
+
+---
 ## 2026-09-16 (later) — tour 1 authoring, and a cleanup for the handoff
 
 Short session, interrupted twice. Siggie was mid-demo-prep, started reading
