@@ -287,6 +287,103 @@ rows on a box that has both strips.
 
 ---
 
+### Move the category specs into LinkML `in_subset`
+
+**Blocked on an upstream PR. Write no code until it is approved and merged** —
+until then the field does not exist to read.
+
+LinkML has an `in_subset` field, declared against a `subsets:` block, that can
+tag classes, slots, enums or types. Our entity categories are exactly that kind
+of grouping, so they belong upstream in the model rather than hand-maintained
+here. This is the standing fix for
+[Hand-curated config rot](#hand-curated-config-rot): today a sync that adds a
+class silently drops it from the UI, and only the `findUncategorizedClasses`
+guard catches it. If the schema carries its own grouping, the category list
+arrives with the sync.
+
+As of `d3c7c58` upstream has **no** `in_subset` and no `subsets:` block —
+`grep -c in_subset bdchm.yaml` is 0. (The string does occur in
+`bdchm.processed.json`, as an empty list in a LinkML default-filled `any_of`
+block. It is not data.)
+
+**What migrates cleanly:** `classIds` — which classes are in a category — is
+exactly a subset membership, and LinkML allows a class in several subsets,
+which is what `DUAL_LISTED` already does by hand.
+
+**What does not, and has to stay here or find another home:**
+
+- `label` and the **order** categories appear in. `subsets:` carries a name and
+  description; presentation order is ours.
+- `pins` — outside classes drawn alongside a category's members. Explicitly
+  **explanatory, not structural** (Siggie, 2026-09-04): a mechanically derived
+  version was tried and rejected. The schema has no place for that judgment.
+- `SUBCLASS_OF`, `DEFAULT_PINS`, `UNCATEGORIZED_BY_DESIGN`. The last one is the
+  guard's recording mechanism and only gets more important — if the categories
+  come from upstream, a class in no subset is the same silent-disappearance
+  bug wearing a different hat.
+
+So the end state is a split, not a deletion: membership upstream, presentation
+and explanation in [entityCategories.ts](../src/config/entityCategories.ts).
+Worth deciding before the PR is written, because it determines how many subsets
+to propose and whether `other` is a real subset or the absence of one.
+
+**Sequence:** propose `subsets:` + `in_subset` upstream → PR approved and
+merged → sync → then teach [transform_schema.py](../scripts/transform_schema.py)
+to carry the field through (it is dropped today) and read it here.
+
+---
+
+### Enum detail in the Explore drawer
+
+Clicking a purple enum badge in the Explore drawer does nothing. This is by
+construction, not a bug in the handler: [DetailDrawer.tsx](../src/explore/DetailDrawer.tsx)
+`RangeBadge` renders a `<button>` only when `isEntity`, so class ranges
+(`Quantity`, `BodySite`, `Visit`) navigate and every enum falls to the inert
+`<span>` branch. Its doc comment states the rule outright — *"primitives and
+enums are plain badges."*
+
+**Nested Tabular already has the feature**, in components the Explore view does
+not import. `EntityTable` → [SlotDrilldown](../src/components/SlotDrilldown.tsx)
+→ [EnumDetailCard](../src/components/EnumDetailCard.tsx) opens an inline card on
+an enum badge, showing: description, `inherits`, `usedBy` (clickable
+`Class.slot` back-references), and a values table of key + description capped at
+`MAX_SHOWN = 15` with a "… N more values" row. Those components reach the app
+through `EntityExplorer` → [src/main.tsx](../src/main.tsx) → **previous.html**;
+`src/explore/` references none of them. ⚠️ Do not read a grep hit on
+`EnumDetailCard` as "the Explore view has this" — that mistake was made
+2026-09-16.
+
+**Two options, and they are genuinely different work:**
+
+**(a) Make the badge live.** Reuse the Nested Tabular card, or an equivalent, so
+an enum badge opens its values in place. Small, and it is the part Siggie
+noticed. `getRangeKind` already distinguishes enums reliably (do not suffix-test
+the name — `SpecimenCollectionMethodType` is an enum that does not end in
+`Enum`, the only one of 52).
+
+**(b) Decide what an enum's detail *is* in this view.** Does an enum become a
+navigable drawer target like a class — with its own back-navigation and
+`REFERENCED BY` — or an expansion in place? That is a design question about the
+drawer, not a wiring fix, and it is the one that has to be answered before (a)
+is more than a patch.
+
+**Scope, per Siggie 2026-09-16: everything Nested Tabular exposes**, not enums
+alone. Nested Tabular is believed to be a superset of Kitchen Sink — worth
+checking when this is picked up, not assumed. Enums are the visible instance
+because the badges are right there and dead.
+
+**The values got richer on 2026-09-16.** The `d3c7c58` sync added a large batch
+of `meaning:` CURIEs (OMOP, OBA) to these enums. `EnumDetailCard` does not show
+`meaning:` at all — its table is key + description — so even reusing it as-is
+leaves the newest data invisible. Whatever ends up in the Explore view should
+decide about `meaning:` deliberately.
+
+Not the same as [`schema-comments`](TASKS.md), which stays its own task: that is
+LinkML's `comments` field on slots and classes, which are silently discarded.
+Enums already surface `comments` through `getExtendedDescription`.
+
+---
+
 ## Code health
 
 ### Palettes that only half-exist
