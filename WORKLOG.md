@@ -8,6 +8,190 @@ Newest first.
 
 
 ---
+## 2026-09-16 — Entity gets a row, and a guard that was keyed on the wrong thing
+
+Siggie asked "would anything weird happen if we added Entity to Files/Other?"
+— goal being to talk about Entity in the demo without fishing for a class whose
+slot holds it. Answer was yes, three things; they said try it anyway. Worth
+recording because one of them is a trap that will recur.
+
+### The guard that coincided
+
+`getCategoryTrees` suppressed the "↳ Entity" out-of-category hint by testing
+`parent in UNCATEGORIZED_BY_DESIGN`. That read as a deliberate check and was
+actually a **proxy that worked only because Entity was that map's sole entry**.
+Listing Entity in `other` took it out of the map and put the hint back on 33
+rows across the other five categories — the same noise an August measurement
+had recorded at 44 of 53 rows, which is why the guard exists.
+
+Fixed by keying on `SKIP_SUBCLASS_EXPANSION`, which is what the guard MEANS
+("too general to point at"). The lesson is the general one: a predicate that
+happens to select the right set today is not the predicate you want written
+down. Two sets with one member in common are indistinguishable until they
+aren't.
+
+`UNCATEGORIZED_BY_DESIGN` is now empty and deliberately kept — it is the
+mechanism `findUncategorizedClasses` reads, so a class an upstream sync adds
+and nobody categorizes still fails loudly. Deleting it would silently restore
+the Context/Activity bug of 2026-08-12.
+
+### Nothing nests under Entity
+
+First cut let nesting happen where the parent was in the same category, so
+every member of `other` became Entity's child and ImagingFile went to depth 2.
+Siggie, mid-turn: *"nothing should nest under entity"*, then the reasoning:
+*"everything nests under entity and so it would complicate the graph without
+adding additional clarity; but Entity plays an important role as a catch all."*
+That is the framing now in the code, at the `'Entity'` entry — it says why the
+flat row is right, not merely that it is.
+
+So `SKIP_SUBCLASS_EXPANSION` is checked in TWO places in `getCategoryTrees`
+now: no children nested beneath such a parent, and no hint naming it.
+
+### What ranging on Entity means — and what it does not
+
+Siggie proposed: an attribute like `associated_evidence` can exist without
+knowing what form the evidence takes, so Entity is a placeholder for whatever
+it will hold. **Half right, and the wrong half matters for the demo.** The
+schema descriptions name the candidates:
+
+- `Condition.associated_evidence` — "(e.g., an ImagingStudy, Procedure,
+  Observation)", multivalued
+- `MeasurementObservation.associated_artifact` — "the assay, file, or
+  questionnaire"
+- `focus` ×11 — "the entity or entities directly observed/measured". This one
+  IS genuinely open-ended.
+
+So it is not an unknown being deferred; it is a **known set with no common
+supertype below the root**. ImagingStudy/Procedure/Observation share no
+ancestor but Entity, so no narrower range is expressible under LinkML single
+inheritance. "Placeholder" invites "will it be filled in later?" — answer no,
+this is the permanent correct choice.
+
+⚠️ `associated_evidence` is the `any_of` case (BACKLOG): the schema has a
+structured `any_of` naming permitted classes, the app ignores it, and Assay
+shows as a false root. **Not verified this session** — the Entity range and the
+descriptions are measured, the `any_of` block itself was not opened in the raw
+YAML. Do that before repeating the claim.
+
+### Pre-existing failures, not from this work
+
+`ownershipLegendDisclosure.test.tsx` ×2 fail on `/52\s*attrs/` finding no
+element. Confirmed pre-existing by stashing. Untouched.
+
+---
+## 2026-09-15 (evening) — tours: ownership counts go live, and a plan for Getting oriented
+
+Siggie has a demo tomorrow morning and wants the tours to carry it rather than
+a canned script. Four asks, in their order: Getting oriented is "a complete
+mess"; does *Reading the diagram* fold into it; is Ownership out of sync with
+the last few days' work; Inheritance's first step needs the viewer to SEE the
+selection happen. They then left for a meeting, so most of this was done
+unattended and the interactive part is deliberately still open.
+
+### Ownership was NOT out of sync — the scheme, anyway
+
+Worth recording because it is the answer to a question that will be asked
+again. The tour was rewritten for one-rule-two-exceptions on 2026-09-13 and it
+matches `ownershipRules.ts` exactly: same three rules, same labels (quoted from
+`OWNERSHIP_RULES[].label`), induced deliberately absent, and `the-legend` step
+already describes the new pivot behaviour. Nothing structural to do.
+
+What WAS stale was the numbers and one word, which is `ownership-doc-rewrite`
+(i) and (ii). Both shipped.
+
+**The counts.** Probed the live classifier first rather than trusting the
+comment (declared 149 = 89 forward + 60 backward; by-entity 55 over 5 owners,
+by-attribute 5). The hand-copied 89/55/5 in the tour happened to still be
+right, which is exactly why they were dangerous — they had been transcribed
+from a re-probe two days earlier and nothing would have caught the next drift.
+All now resolve through `{{ownership-count:…}}`. So do three the handoff did
+not list: "Five entities in this model", and the recap's two bare "five"s.
+
+One number could NOT be made live: **"every one of the 21 attributes pointing
+at Participant"**. There is no resolver key for per-entity arrival counts —
+`byRule` is keyed by rule, not by range. Rather than leave one hand-copied
+number in a step whose whole point is that counts are computed, the sentence
+now says "every attribute pointing at it", which loses nothing: the beat's
+claim is about the *quantifier*, not the quantity.
+
+⚠️ **The placeholder-resolution test scans the raw file, comments included.**
+Rewriting the maintainer comment to say counts are live — writing the literal
+string `{{ownership-count:…}}` in it — failed `helpTextResolvers.test.ts`,
+because `…` is not a resolvable key. The comment now names the resolver without
+spelling a placeholder. Anyone writing ABOUT the syntax in this file hits this.
+
+**The `referred to` rewording.** LEGEND_ORIENTATION §Consequences settled that
+it names an ARRIVAL, not a kind of entity, and the tour said it the entity way
+in four places: the step title, the opening sentence, `OWNERSHIP_RULES[].text`,
+and the `REFERRED_TO_ENTITIES` doc comment. All now say **only ever referred
+to** — the stronger, true claim.
+
+The by-attribute step's beat was the one that mattered. It used to say calling
+QuestionnaireItem referred-to "would strip it of" its ownership, which gestures
+at the problem without stating it. It now says outright that one attribute owns
+a QuestionnaireItem and three others only refer to it, therefore referred-to is
+a property of the arrival — which is the QuestionnaireItem case the doc says
+not to reopen without answering. Split into two beats because that argument and
+the `Entity.attribute` keying reason are separate points and the beat was
+carrying both.
+
+### Getting oriented: diagnosed, not fixed
+
+Deliberately not fixed. Siggie asked for a proposal and a comparison "so we can
+quickly prune", which is a decision to make together, not work to hand over.
+Written up as docs/GETTING_ORIENTED_PROPOSAL.md — a temporary file, to delete
+once the decisions land in TASKS.
+
+The diagnosis: **four entries at the front all introduce the same thing.**
+Three of them (`linkml-context`, `selection-tree`, `selection-tree-mechanics`)
+were salvaged out of a stash on 2026-09-09 and never integrated, and each still
+carries the `> Salvaged…` note that says so. The reader is told "the left panel
+lists the entities" four times and ticks a checkbox twice — once on Person
+(`bdchm-entities`) and once on Participant (`selection-tree`), which also means
+the spine restarts at step 6. 12 steps → 8 with nothing lost: `linkml-context`
+duplicates `why`, `selection-tree` duplicates `bdchm-entities`, and
+`selection-tree-mechanics` describes TREE mode, where its own `entity-row:`
+anchors do not resolve — a good help-only entry and a broken tour step.
+
+Beyond the cuts the proposal promotes two of `entity-box`'s beats (blue rows;
+the relation bar) into steps, on the grounds that they are the two things a
+viewer needs to use the app at all and are currently buried under "a box has
+rows"; and collapses the three one-hop `grow-*` steps into one step with three
+beats, which is the tour's slowest stretch.
+
+**On folding in *Reading the diagram*:** half of it is already duplicated into
+Getting oriented — `one-edge`'s "a line leaves the row that made it" is in
+`grow-participant` beat 1 in nearly the same words, and `rows-and-dots` is most
+of `entity-box`. The two that are NOT duplicated, `which-way` and `loops`, are
+both about which SIDE a target lands on, which is Ownership's subject — and
+`which-way` already ends by handing off to it. So the recommendation is fold
+the first two in, move the last two to the head of Ownership, and lose the tour
+name. Flagged as a chooser question rather than a content one, with a smaller
+alternative (just cut the duplicated sentences) offered, because four tour
+names may be worth more than tidiness on a demo day.
+
+### Inheritance: show the change
+
+Done — Siggie's ask was concrete. `one-child` opened with the canvas already
+drawn and the popover saying "You asked for MeasurementObservation and the box
+is titled Observation", when the viewer had asked for nothing and pressed Next.
+The step reads as the tour correcting a mistake the viewer did not make, and
+the surprise it is built on is invisible.
+
+Now `Only: panels=0` with the popover on `entity-row:MeasurementObservation`
+("watch what the box it draws is called"), and a first beat carrying
+`Change: sel=MeasurementObservation` that anchors `node-box:Observation`. That
+is the `show-the-change` sequence from TASKS — anchor the unticked row, tick
+it, anchor what appeared — and the same shape `bdchm-entities` already uses as
+a trial. Added as a beat rather than a step so `one-child`'s three existing
+beats stay intact; they renumbered 2–4.
+
+⚠️ `entity-row:`/`entity-checkbox:` resolve in list mode only. List is the
+default so this is fine, but a demo driven from tree mode gets an unringed
+popover on the opening beat.
+
+---
 ## 2026-09-15 (later still²) — the legend's pivots, then its columns
 
 TASKS `legend-list-orientation`. Implements docs/LEGEND_ORIENTATION.md, which
