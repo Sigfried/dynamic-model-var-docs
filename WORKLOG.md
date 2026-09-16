@@ -8,6 +8,97 @@ Newest first.
 
 
 ---
+## 2026-09-16 (later) — tour 1 authoring, and a cleanup for the handoff
+
+Short session, interrupted twice. Siggie was mid-demo-prep, started reading
+GETTING_ORIENTED_PROPOSAL.md, ran out of time and went on a detour.
+
+### Siggie's tour 1 edits, committed
+
+Two commits (`4976788`, `cd7c136`). The substantive ones:
+
+- The opening step carried both the BDC context and "what's in the model?" as a
+  beat; the second became its own step, `model-categories`, anchored on the
+  selection tree with `OffsetX: anchor.width * .3` pushing the popover clear.
+- Category titles went from "Category: Admin / Study" to "1. Admin / Study".
+  The tour walks them in order and the numbering says so.
+- Survey's claim to have "almost no connection to the rest of the model" is
+  flagged IN PLACE as untrue, with the two connections that disprove it
+  (`QuestionnaireResponse.associated_visit`; `QuestionnaireItem` via
+  `SdohObservation`). Left as an authoring note, not silently reworded — it
+  renders as a subtitle + amber alert band, so it is visible in the popover.
+- `QuestionnaireItem.part_of` prose now leads with what it is FOR (an item can
+  be a section holding other sections) rather than with the loop mark, which is
+  a fact about how the diagram draws it.
+
+**Two things I nearly reported as bugs and were not.** A leading space on
+`-  **Position:**` parses fine, and `OffsetX: anchor.width * .3` resolves to
+`{of: 'width', times: 0.3}`. Parsed the file and printed the fields rather than
+reasoning about the grammar — both worries evaporated.
+
+**One that was real:** when the beat became a step, its body kept 5 spaces of
+beat indent while the first line had 2. Only the COMMON indent is stripped, so
+5 survived — four or more makes markdown render the paragraph as a grey
+monospace code block. Caught by printing the parsed description line by line.
+Worth remembering when promoting any beat to a step.
+
+**`TourAbbr` cap raised 16 → 24** (Siggie: *"there's plenty of room for it"*)
+for `BDCHM Data Categories`. 16 was a guess at authoring time and had never
+been measured against the rendered title bar; the comment on the test now says
+so, so the next person who finds it tight knows it is not a measured number.
+
+### The handoff cleanup
+
+GETTING_ORIENTED_PROPOSAL.md now opens with a status block: nothing in it has
+been actioned, the tour still has all 12 steps and all four `> Salvaged…`
+notes, and what Siggie was going to do is annotate the verdict table
+keep/cut/disagree. The three verdicts that are genuinely theirs are marked
+**[DECIDE #1/#2/#3]**; #2 (does *Reading the diagram* survive as a tour) is the
+only one with consequences. The Ownership and Inheritance sections are marked
+ANSWERED and SHIPPED respectively, so a future session does not re-litigate
+them — the Inheritance section was still written in the future tense with a
+three-beat table that is not what shipped, and is rewritten to match the code.
+
+### ⚠️ THE TWO RED TESTS ARE NOT PRE-EXISTING. I was wrong, twice.
+
+`ownershipLegendDisclosure.test.tsx` ×2 look for `/52\s*attrs/` and find no
+button. I reported them as pre-existing twice, on the strength of a
+`git stash push -- <paths>` that printed **"No local changes to save"** — the
+Entity work was already COMMITTED, so the stash was a no-op and the run
+measured the unchanged tree. A no-op stash is indistinguishable from a
+successful one unless you read that line. **Check the stash actually stashed
+before concluding anything from it.**
+
+Measured properly, at `81c479f` (before the Entity commit) against HEAD:
+
+| | before `28e74e3` | now |
+|---|---|---|
+| forward | 89 (52 attrs) | **90 (53 attrs)** |
+| backward | 60 | **59** |
+| by-attribute | 5 total, 4 attrs | **4 total, 3 attrs** |
+
+So `28e74e3` (Entity into `other`) moved one slot from the by-attribute
+exception to the forward default. The missing pair is
+**`SdohObservation.related_questionnaire_item → QuestionnaireItem`**: it is
+still in `NAMED_BACK_POINTERS`, the slot still exists on the class, and it
+still produces a pair — but the pair now classifies FORWARD.
+
+The mechanism to check first: `NAMED_BACK_POINTERS` is keyed `Class.slot` and
+`SdohObservation` INHERITS that slot, so the `declaredOn` a pair is classified
+under is the lever. Something about listing Entity changed which class the
+inherited slot is attributed to. `classify()` is fine — this is about what
+facts reach it.
+
+**This is a real classification bug in committed code, not a test problem.** Do
+not "fix" the tests to 53/90. The tour's live counts render whatever the
+classifier says, so the Ownership tour is currently telling viewers a wrong
+number too.
+
+Options, undecided: fix the `declaredOn` attribution; or revert `28e74e3` and
+redo it. The Entity row itself is worth keeping — the bug is a side effect, not
+the feature.
+
+---
 ## 2026-09-16 — Entity gets a row, and a guard that was keyed on the wrong thing
 
 Siggie asked "would anything weird happen if we added Entity to Files/Other?"

@@ -1,9 +1,28 @@
 # Getting oriented — proposed step list
 
-Working document for the 2026-09-15 session. **Delete when the tour is
-rewritten.** The decisions it produces go into
+Working document, written 2026-09-15. **Delete when the tour is rewritten.**
+The decisions it produces go into
 [help-content.md](../src/explore/help-content.md); the reasoning goes into
 WORKLOG.
+
+> ## ⚠️ Siggie — start here
+>
+> **2026-09-16.** You began reading this, ran out of time, and went on a
+> detour. **Nothing here has been actioned**: the tour still has all 12 steps
+> and all four `> Salvaged…` notes.
+>
+> **What you were going to annotate:** this file — marking each row of the
+> verdict table below **keep / cut / disagree**. The three places where the
+> verdict is genuinely yours to give, not mine, are marked
+> **[DECIDE #1 / #2 / #3]**. #2 is the one with real consequences (a tour
+> disappears from the chooser); #1 and #3 are small.
+>
+> Once those three are answered the rest is mechanical and a session can do it
+> without you.
+>
+> Two details drifted since this was written and are corrected in place:
+> `bdchm-entities` is now titled *Using the BDCHM Explorer*, and its
+> `[put some intro text here]` placeholder is filled.
 
 ---
 
@@ -18,7 +37,7 @@ lists the entities" four times, in four voices, and ticks a checkbox twice.
 | # | id | Title | Verdict |
 |---|---|---|---|
 | 1 | `linkml-context` | BDCHM Explorer | **CUT** — repeats `why` (last step of tour 1) almost verbatim, plus a LinkML paragraph and a `contents` beat that repeats itself. Its own comment says so. |
-| 2 | `bdchm-entities` | Model entities | **KEEP as opener** — holds `[put some intro text here]`; its two beats (panel → tick → box) are the real opening. |
+| 2 | `bdchm-entities` | Using the BDCHM Explorer | **KEEP as opener** — its two beats (panel → tick → box) are the real opening. Retitled, and its placeholder intro filled, 2026-09-16. |
 | 3 | `selection-tree` | Entities | **CUT, merge up** — same three moves as #2, on Participant instead of Person. |
 | 4 | `selection-tree-mechanics` | Choosing what to look at | **CUT the step, KEEP the entry** — it describes the panel's *tree* mode, where `entity-row:` anchors do not resolve. It is a good help-only entry and a broken tour step. |
 | 5 | `entity-box` | What a box shows | KEEP — rows, a blue row, the relation bar. |
@@ -34,7 +53,7 @@ lists the entities" four times, in four voices, and ticks a checkbox twice.
 `why`, #3's content is #2's, and #4 becomes a help-only entry (reachable from
 the Help menu, which is the only route into one).
 
-### Two smaller things
+### Two smaller things — **[DECIDE #1]**
 
 - **#2 opens on Person, #3 opens on Participant.** Pick one. Person is right:
   the whole tour is the Person → Participant → Visit → Observation → Quantity
@@ -78,7 +97,7 @@ except the duplication.
 
 ---
 
-## Should *Reading the diagram* be folded in?
+## Should *Reading the diagram* be folded in? — **[DECIDE #2]**
 
 **Partly — and it is already happening by accident.** Of its four steps, the
 first two are things Getting oriented already teaches:
@@ -111,7 +130,7 @@ a question about the chooser, not about the content.
 
 ---
 
-## Ownership — is it out of sync?
+## Ownership — is it out of sync? · **ANSWERED: no**
 
 **No. Checked against the live classifier, the legend and
 `OWNERSHIP_RULES` today.** The tour was rewritten for the one-rule-two-exception
@@ -125,7 +144,7 @@ scheme on 2026-09-13 and it matches:
   ("Each entry shows how many attributes it decided, and opening one lists
   them").
 
-Two things WERE stale and are **fixed in this session**:
+Two things WERE stale and **shipped 2026-09-15** (commit `fb9811e`):
 
 1. **The counts were hand-copied** (89 / 55 / 5, plus "Five entities", "21
    attributes", and two bare "five"s in the recap). All now resolve live
@@ -146,38 +165,32 @@ read well, which is for the browser.
 
 ---
 
-## Inheritance — the first step
+## Inheritance — the first step · **SHIPPED**
 
-**Agreed, and it is the clearest instance of `show-the-change` in the file.**
-`one-child` currently opens with the canvas already drawn and the popover
-explaining a surprise that has already happened:
+Commit `fb9811e`, 2026-09-15. Nothing to decide; recorded because the reason is
+worth keeping.
 
-> `Only: sel=MeasurementObservation` · `Anchor: node-box:Observation`
-> "You asked for MeasurementObservation and the box is titled **Observation**."
+`one-child` used to open with the canvas already drawn and the popover
+explaining a surprise that had already happened — *"You asked for
+MeasurementObservation and the box is titled Observation"* — when the viewer
+had asked for nothing and pressed Next. It read as the tour correcting a
+mistake the viewer did not make.
 
-The viewer did not ask for anything — they pressed Next. So the step reads as
-the tour correcting a mistake the viewer did not make.
-
-**Proposed: split it into three beats, the sequence from TASKS `show-the-change`
-(anchor the unchecked row → check it → anchor what appeared):**
-
-| beat | canvas | anchor | says |
-|---|---|---|---|
-| 1 | empty | `entity-row:MeasurementObservation` | "Here is MeasurementObservation in the panel. Tick it." |
-| 2 | MeasurementObservation | `entity-checkbox:MeasurementObservation` | *(the tick happens)* |
-| 3 | same | `node-box:Observation` | "The box that appeared is titled **Observation**." — then the existing text. |
-
-Beat 1 costs one popover and buys the whole step: the viewer sees the name they
-selected, then sees a different name on the box. That is the surprise the step
-is built on, and right now it is invisible.
+It now opens on the panel (`Only: panels=0`, anchored
+`entity-row:MeasurementObservation`, *"watch what the box it draws is called"*)
+and a first beat carries `Change: sel=MeasurementObservation` and anchors
+`node-box:Observation`. That is TASKS `show-the-change`'s sequence — anchor the
+unticked row, tick it, anchor what appeared — and the shape `bdchm-entities`
+already uses. Added as a step-plus-beat rather than three beats so the three
+existing beats stayed intact; they renumbered 2–4.
 
 ⚠️ `entity-row:` and `entity-checkbox:` **resolve in the panel's list mode
-only** (FORMAT.md §Anchors). List is the default, so this works — but if the
-demo is driven from tree mode, beats 1–2 will show an unringed popover.
+only** (FORMAT.md §Anchors). List is the default, so this works — but driven
+from tree mode the opening beat shows an unringed popover.
 
 ---
 
-## Open question for you
+## Open question for you — **[DECIDE #3]**
 
 **The LinkML / ingestion-pipeline paragraph** (currently buried in
 `linkml-context`, the step I want to cut) is the only orphan. It is the
