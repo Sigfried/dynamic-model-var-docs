@@ -132,7 +132,8 @@ sync-checkout:  ## Check out the sync branch to make fixes on it
 
 .PHONY: sync-manual
 sync-manual:  ## Run the sync yourself (Action does this daily)
-	npm run download-data
+	cd scripts && (test -d .venv || npm run --prefix .. setup-python) \
+	  && .venv/bin/python download_source_data.py --update
 
 .PHONY: sync-check
 sync-check:  ## Is upstream ahead? (no changes written)

@@ -106,7 +106,7 @@ Design and reference docs: [OWNERSHIP_CLASSIFICATION.md](docs/OWNERSHIP_CLASSIFI
 - **Model Schema**: [bdchm.yaml](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/blob/main/src/bdchm/schema/bdchm.yaml) → processed into [`public/source_data/HM/bdchm.processed.json`](public/source_data/HM/bdchm.processed.json)
 - **Variable Specs**: [Table S1 (Google Sheet)](https://docs.google.com/spreadsheets/d/1PDaX266_H0haa0aabMYQ6UNtEKT5-ClMarP0FvNntN8/edit?gid=0#gid=0) → `variable-specs-S1.tsv`
 
-**To update data manually**: `npm run download-data`
+**To update data manually**: `make sync-manual` — this picks up the latest upstream commit. (`npm run download-data` re-downloads the commit currently pinned in [`scripts/download_source_data.py`](scripts/download_source_data.py); use it only when you want that pin held.)
 
 The schema is read straight from [`bdchm.yaml`](public/source_data/HM/bdchm.yaml) by [`scripts/transform_schema.py`](scripts/transform_schema.py)
 via LinkML's `SchemaView` ([`scripts/induced_schema.py`](scripts/induced_schema.py)), which resolves imports
@@ -166,7 +166,8 @@ only at the test output.
 # Install dependencies
 npm install
 
-# Download/update source data
+# Download source data at the pinned upstream commit
+# (to move the pin to the latest upstream commit instead: make sync-manual)
 npm run download-data
 
 # Run development server
