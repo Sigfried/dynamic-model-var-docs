@@ -458,8 +458,8 @@ introduced and then use one word.
        ##### QuestionnaireItem
        *{{model-description:QuestionnaireItem}}*
 
-       `part_of` is a loop on this box, which is how a questionnaire nests
-       sections inside sections: an item can be a group holding other items.
+       Using `part_of`, QuestionnaireItems can serve as sections to
+       hold other sections or specific items.
      - Anchor: node-box:QuestionnaireItem
   3. QuestionnaireResponse
      - Description:
